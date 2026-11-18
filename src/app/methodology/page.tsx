@@ -18,7 +18,8 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-
 import { SAFETY_SCORE_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/registry";
 import { V9_PROVISIONAL_UNKNOWN_WEIGHT_THRESHOLD } from "@shared/types/safety-score-v9-public";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { METHODOLOGY_READING_STEPS, READER_GUIDE_COPY } from "./methodology-shared";
+import { METHODOLOGY_LINK_CLASS, METHODOLOGY_READING_STEPS, MethodologyFacts, READER_GUIDE_COPY } from "./methodology-shared";
+import { SAFETY_GRADE_FACTS } from "./sections/core/safety-scores-overview";
 import { METHODOLOGY_SECTIONS } from "@/lib/methodology-content";
 import { DEFINITIONS } from "@/lib/definitions";
 
@@ -46,7 +47,7 @@ const METHODOLOGY_FAQ_ITEMS = [
   {
     question: "How is the Pharos peg score calculated?",
     answer:
-      "The peg score is a composite 0–100 measure combining time-at-peg (50%) and event severity (50%), minus penalties for active depegs and erratic behavior. The tracking window spans up to 4 years but begins at a reviewed replay-coverage date when one exists; otherwise it falls back to the coin's age or earliest durable observation. It requires at least 7 days of tracking data.",
+      "The peg score is a composite 0–100 measure combining time-at-peg (50%) and event severity (50%), minus penalties for active depegs and erratic behavior. The tracking window spans up to 4 years but begins at a reviewed replay-coverage date when one exists; otherwise it falls back to the coin's age or earliest durable observation. It requires at least 7 days of tracking data and a usable price within the last UTC day; a coin with no usable price for a full UTC day reads NR.",
   },
   {
     question: "What is the DEWS early-warning system?",
@@ -130,33 +131,55 @@ export default function MethodologyPage() {
                 computations and live aggregates.
               </p>
             </div>
-            <div className="pharos-card-shell px-4 py-4 md:hidden">
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <p className="pharos-label">Reader guide</p>
-                  <p className="text-sm text-foreground">{READER_GUIDE_COPY}</p>
-                </div>
-                <MethodologyModeToggle className="w-full justify-between border-border/70 bg-background/90" />
-                <p className="text-xs leading-relaxed text-muted-foreground">
-                  Page rhythm: <span className="text-foreground">summary</span>, quick facts, worked example, technical
-                  notes.
-                </p>
-                <div className="mt-4 grid grid-cols-2 gap-2">
-                  {METHODOLOGY_READING_STEPS.map((step) => (
-                    <div key={step.label} className="rounded-md border border-border/50 bg-background/40 p-2">
-                      <p className="text-2xs font-semibold text-foreground">{step.label}</p>
-                      <p className="text-3xs text-muted-foreground leading-snug">{step.description}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
           </div>
           <div className="hidden pharos-card-shell px-4 py-4 md:block">
             <p className="pharos-label">Reader guide</p>
             <p className="mt-2 text-sm text-foreground">
               {READER_GUIDE_COPY} Use the jump rail toggle to switch modes without losing your place in the page.
             </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Answer first: what a grade means and its bands, before the reader meta. */}
+      <section aria-labelledby="methodology-at-a-glance" className="pharos-card-shell space-y-3 px-4 py-4">
+        <div className="space-y-1">
+          <p className="pharos-label">At a glance</p>
+          <h2 id="methodology-at-a-glance" className="text-lg font-semibold tracking-tight text-foreground">
+            What a Safety Score grade means
+          </h2>
+        </div>
+        <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
+          A grade answers one question: if the coin started bleeding tomorrow, how much of the loss would the holder
+          eat before the system stopped it? Backing ({formatWeight(pillarWeights.backing)}), Exit
+          ({formatWeight(pillarWeights.exit)}) and Economic Control ({formatWeight(pillarWeights.control)}) form the
+          score; peg behavior, caps and dependencies can constrain it. NR means a rating is genuinely unavailable,
+          never a low score.{" "}
+          <a href="#safety-scores-methodology" className={METHODOLOGY_LINK_CLASS}>
+            Full Safety Score method
+          </a>
+        </p>
+        <MethodologyFacts facts={SAFETY_GRADE_FACTS} />
+      </section>
+
+      <div className="pharos-card-shell px-4 py-4 md:hidden">
+        <div className="space-y-3">
+          <div className="space-y-2">
+            <p className="pharos-label">Reader guide</p>
+            <p className="text-sm text-foreground">{READER_GUIDE_COPY}</p>
+          </div>
+          <MethodologyModeToggle className="w-full justify-between border-border/70 bg-background/90" />
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Page rhythm: <span className="text-foreground">summary</span>, quick facts, worked example, technical
+            notes.
+          </p>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            {METHODOLOGY_READING_STEPS.map((step) => (
+              <div key={step.label} className="rounded-md border border-border/50 bg-background/40 p-2">
+                <p className="text-2xs font-semibold text-foreground">{step.label}</p>
+                <p className="text-3xs text-muted-foreground leading-snug">{step.description}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>

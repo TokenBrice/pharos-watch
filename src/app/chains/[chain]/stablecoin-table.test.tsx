@@ -77,4 +77,13 @@ describe("Chain detail StablecoinTable", () => {
     expect(screen.getByText("<$1")).toBeTruthy();
     expect(screen.getByRole("link", { name: /<\$1 on chain/ })).toBeTruthy();
   });
+
+  it("chips only a coin's highest exceptional state", () => {
+    const paused = { kind: "paused" as const, notice: { type: "warning" as const, title: "Mint paused", kind: "paused" as const } };
+    render(<StablecoinTable coins={[makeCoin(), makeCoin({ id: "dai-maker", name: "DAI", symbol: "DAI" })]} backingFilter={null}
+      coinStates={new Map([["usdc-circle", [paused, { kind: "dews" as const, band: "ALERT" as const }]]])} />);
+    const chips = document.querySelectorAll("[data-coin-state]");
+    expect([...chips].map((chip) => chip.getAttribute("data-coin-state"))).toEqual(["paused"]);
+    expect(chips[0].closest("tr")?.textContent).toContain("USD Coin");
+  });
 });

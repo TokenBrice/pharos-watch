@@ -15,6 +15,7 @@ import {
   projectWorkerRuntimeCoin,
   projectDetailCoin,
   projectListCoin,
+  projectAlerts,
   projectBlacklistStatus,
   projectGeniusProfile,
   projectMintAuthorityStatus,
@@ -47,6 +48,21 @@ describe("client registry field contract", () => {
       expect(compact?.yieldType, source.id).toBe(source.yieldConfig?.yieldType);
       expect(compact?.yieldType, source.id).toBe(details.get(source.id)?.yieldConfig?.yieldType);
     }
+  });
+
+  it("projects state-bearing notices as compact list alerts", () => {
+    const notices = [
+      { type: "info", title: "Caveat", message: "M" },
+      { type: "danger", title: "Halted", message: "M", kind: "paused", asOf: "2026-10-30" },
+      { type: "warning", title: "Exploit repaid", message: "M", kind: "history" },
+      { type: "info", title: "Wind-down", message: "M", kind: "deadline", deadline: "2027-01-31" },
+    ];
+    const projected = projectListCoin({ id: "alerts-test", notices }, STABLECOIN_CLIENT_LIST_FIELDS, "core-stablecoin");
+    expect(projected).toHaveProperty("alerts", [
+      { type: "danger", title: "Halted", kind: "paused", asOf: "2026-10-30" },
+      { type: "info", title: "Wind-down", kind: "deadline", deadline: "2027-01-31" },
+    ]);
+    expect(projectAlerts({ notices: notices.slice(0, 1) })).toBeUndefined();
   });
 
   it("preserves an unclassified yield-bearing coin rather than inventing a yield type", () => {

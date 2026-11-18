@@ -57,6 +57,14 @@ describe("ThresholdGauge", () => {
     expect(container.querySelector("[data-gauge-fill]")).not.toBeNull();
   });
 
+  it("draws a neutral reading without its coverage colour", () => {
+    const toned = render(<ThresholdGauge valuePct={113} ariaLabel="Collateral ratio" />).container;
+    const neutral = render(<ThresholdGauge valuePct={113} ariaLabel="Collateral ratio" neutral />).container;
+    const fillClass = (container: HTMLElement) => container.querySelector("[data-gauge-fill]")!.className;
+    expect(fillClass(neutral)).not.toBe(fillClass(toned));
+    expect(fillClass(neutral)).toContain("bg-muted-foreground");
+  });
+
   it("places par, threshold and shutdown in ratio order, with the value beyond them", () => {
     const { container } = render(
       <ThresholdGauge

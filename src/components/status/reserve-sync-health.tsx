@@ -69,7 +69,7 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         {scoreInputHold ? (
-          <div className={cn("rounded-lg border p-3 text-xs leading-relaxed text-state-warn-strong", SEVERITY_TONE_CLASS.watch.banner)}>
+          <div className={cn("rounded-lg border p-3 text-xs leading-relaxed text-state-warn-strong", SEVERITY_TONE_CLASS.caution.banner)}>
             <div className="text-sm font-medium text-state-warn-ink">
               Report-card inputs are conservative
             </div>

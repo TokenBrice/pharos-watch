@@ -28,6 +28,7 @@ import type { FilterTag } from "@shared/types/stablecoin-meta-primitives";
 import type { PegSummaryCoin } from "@shared/types/peg";
 import type { StablecoinData } from "@shared/types/supply";
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
+import type { CoinState } from "@shared/lib/coin-state";
 
 const SKELETON_ROW_COUNT = 10;
 
@@ -62,6 +63,7 @@ interface StablecoinTableViewProps {
   pegScores?: Map<string, PegSummaryCoin>;
   dexLiquidity?: DexLiquidityTableMap;
   reportCards?: Record<string, V9SafetyTableRow>;
+  coinStates?: ReadonlyMap<string, readonly CoinState[]>;
   pinnedStablecoinSet: ReadonlySet<string>;
   onTogglePinnedStablecoin?: (stablecoinId: string) => void;
   activeCursorIndex: number | null;
@@ -269,6 +271,7 @@ function StablecoinRows(props: StablecoinTableViewProps) {
             pegScores={props.pegScores}
             dexLiquidity={props.dexLiquidity}
             reportCards={props.reportCards}
+            coinState={props.coinStates?.get(coin.id)?.[0] ?? null}
             showPinnedControl={props.showPinnedControls}
             isPinned={props.pinnedStablecoinSet.has(coin.id)}
             onTogglePinned={props.onTogglePinnedStablecoin}

@@ -179,7 +179,7 @@ Each pair page ends with a "Related comparisons" section: "More {A} comparisons"
 - Query param `coins` accepts canonical ticker-issuer IDs only (for example `usdt-tether`). Unknown IDs, legacy DefiLlama/historical IDs, and raw ticker symbols are dropped rather than guessed.
 - Query param `range` stores the market-cap chart window. Accepted values are `7d`, `30d`, `90d`, `1y`, and `all`; `all` is the default and is cleared from the URL instead of persisted.
 - Static comparison landing pages are generated from `STATIC_COMPARISON_PAGES` in `src/lib/compare-pages.ts` and live at `/compare/<left-id>-vs-<right-id>/`.
-- Mobile selection renders selected-coin chips plus one add selector instead of all five selector slots up front. The underlying URL state and five-coin maximum are unchanged; desktop keeps the full slot grid.
+- Mobile selection renders selected-coin chips plus one add selector instead of all five selector slots up front. Each selected chip carries its coin's top exceptional state with specifics, because the phone matrix shows one column at a time. The underlying URL state and five-coin maximum are unchanged; desktop keeps the full slot grid.
 - The shared coin selector publishes an active-option reference only for a rendered option; empty results have no active option. Every dismissal clears search and option focus, Escape restores trigger focus, and disabled options remain unselectable.
 
 Static HTML never links a `/compare/?coins=` facet: `buildStaticCompareHref()` (`src/lib/compare-links.ts`) links the curated pair page when one exists (a coin's primary pair; for two coins, their pair) and otherwise `/compare/#coins=<ids>`, which crawlers read as `/compare/`. Once the query is readable, `useCompareSelection()` adopts that fragment into `?coins=` (an explicit `?coins=` selection wins on first load) and drops the fragment; later same-route `#coins=` navigations are re-adopted through the history-change signal. `buildLiveCompareUrl()` stays for client-side navigation and the pair pages' "Open live compare" tool links.
@@ -188,7 +188,7 @@ Initial load normalizes the `coins` URL param to the accepted canonical ID list.
 
 ### Data dependencies
 
-Compare composes stablecoins, peg summary, Bluechip, DEX, report cards, redemption, yield, stress and aggregate mint/burn queries plus per-coin supply/flow histories. `useCompareDataModel` owns query/window construction; successful aggregate evidence is required to claim tracking coverage.
+Compare composes stablecoins, peg summary, Bluechip, DEX, report cards, redemption, yield, stress and aggregate mint/burn queries plus per-coin supply/flow histories, and the coin exceptional-state ladder (`useCoinStates`, which shares the peg-summary and stress reads and adds published DDR verdicts; [design rule](./design-language.md#coin-exceptional-state)). `useCompareDataModel` owns query/window construction; successful aggregate evidence is required to claim tracking coverage.
 
 Per-coin detail imports settle independently: a failed import keeps that coin's list metadata without inventing evidence or suppressing successful enrichment for other coins. A superseded selection's batch cannot publish late results.
 
@@ -217,6 +217,8 @@ Compare includes client-side share/export rendering:
 ### Compare table context
 
 The horizontally scrollable matrix is the comparable-field surface at every width; preserve accessible/narrow-screen access. Directional market-cap/issuance/yield fields are not universal winners.
+
+Overview opens with `Current state`: each coin's exceptional states, the top one with its specifics. `None` appears only once the live peg summary has loaded; before that a coin without a curated state shows a dash. Under a critical or paused state, a Peg Score whose current price is unavailable, unusable or inherited is muted with that reason, since the score reads recorded history, not today's peg. `How to read this set` names the members in an exceptional state, most decision-critical first, and a same-peg set is told to read those states before the substitution read.
 
 The matrix uses the shared contextual methodology labels for Peg Score, Liquidity Score, and Safety. Missing source coverage renders as a dash rather than zero. External Bluechip says "Not rated" only when a usable publication omits that coin, including a successfully loaded empty map; no whole-feed publication means a dash, not an unrated verdict. A rated coin whose audit flag the source omits reads "audit not reported" beside its grade, and a source that positively reports no audit reads "no audit flag". Every rated cell carries the grade's neutral original observation date in its tooltip and accessible text; operator retained/stale labels are not shown. Time at peg · up to 90d renders `recent90d` occupancy; only a partial-coverage window adds an inline whole-day basis marker (`· 2d`, full basis in its tooltip), described by the section's record-derived caveat; missing stats stay a dash and a null occupancy never reads as 100% or 0%. Directional fields such as issuance flow, market-cap change, and yield are not styled as universal winners because their desirability depends on the comparison task.
 

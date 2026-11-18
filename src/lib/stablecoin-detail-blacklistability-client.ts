@@ -44,10 +44,10 @@ const STATUS_LABELS: Record<BlacklistabilityClientStatus, string> = {
 };
 
 const STATUS_TONES: Record<BlacklistabilityClientStatus, SeverityTone> = {
-  freezable: "watch",
+  freezable: "caution",
   "not-freezable": "ok",
-  possible: "watch",
-  inherited: "watch",
+  possible: "caution",
+  inherited: "caution",
 };
 
 function statusValue(value: unknown): BlacklistabilityClientStatus | null {

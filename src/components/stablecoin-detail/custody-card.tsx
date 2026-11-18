@@ -41,7 +41,7 @@ const SEGMENT_FILL: Record<Exclude<CustodyShareSegmentKind, "provider">, string>
   unidentified: CUSTODY_STATE_CLASSES.unidentified,
   unsplit: HATCHED_SEGMENT_FILL,
   unattributed: HATCHED_SEGMENT_FILL,
-  undisclosed: SEVERITY_TONE_CLASS.watch.bar,
+  undisclosed: SEVERITY_TONE_CLASS.caution.bar,
 };
 
 /** Track per rung state: lit, half-lit, empty with a solid edge (known absent), dashed (unknown). */
@@ -54,7 +54,7 @@ const RUNG_TRACK_CLASS: Record<CustodyProtectionState, string> = {
 
 const RUNG_TEXT_CLASS: Record<CustodyProtectionState, string> = {
   met: SEVERITY_TONE_CLASS.ok.text,
-  partial: SEVERITY_TONE_CLASS.watch.text,
+  partial: SEVERITY_TONE_CLASS.caution.text,
   failed: SEVERITY_TONE_CLASS.rose.text,
   unknown: "text-muted-foreground",
 };
@@ -160,7 +160,7 @@ function HeldBy({ summary }: { summary: CustodyClientSummary }) {
               data-legend-kind={segment.kind}
               className={cn(
                 "inline-flex items-center gap-1.5 text-xs",
-                segment.kind === "undisclosed" ? SEVERITY_TONE_CLASS.watch.text : "text-muted-foreground",
+                segment.kind === "undisclosed" ? SEVERITY_TONE_CLASS.caution.text : "text-muted-foreground",
               )}
             >
               <span aria-hidden="true" className={cn("h-2 w-2 shrink-0 rounded-sm", fill)} />
@@ -230,7 +230,7 @@ function ProtectionRung({ rung }: { rung: CustodyProtectionRung }) {
         )}
       >
         {rung.state === "partial" ? (
-          <span className={cn("absolute inset-y-0 left-0 w-1/2 rounded-full", SEVERITY_TONE_CLASS.watch.bar)} />
+          <span className={cn("absolute inset-y-0 left-0 w-1/2 rounded-full", SEVERITY_TONE_CLASS.caution.bar)} />
         ) : null}
       </span>
       <span

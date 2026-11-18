@@ -1,15 +1,18 @@
 import type { SafetyScoreV9CurrentCard, SafetyScoreV9EvidenceFreshness } from "../../types/safety-score-v9-public";
+import { scoreToGrade } from "../../types/safety-score-v9-grade";
 import { resolveV9PublicWitnessText, resolveV9PublicWitnessTexts } from "../../types/safety-score-v9-public-witness-texts";
 import type { V9MintPosture } from "./control-primitives";
 import { readableV9PublicText } from "./public-witness-texts";
 
 export interface SafetyScoreV9TopDriver {
-  kind: "cap-bound" | "pillar-bound" | "withheld";
-  /** Machine key for the cap, or the weakest pillar when score-bearing. */
+  kind: "cap-bound" | "peg-bound" | "pillar-bound" | "withheld";
+  /** Machine key for the cap, `peg`, or the weakest pillar when score-bearing. */
   label: string | null;
-  /** Binding cap limit or weakest pillar score. */
+  /** Binding cap limit, published peg multiplier, or weakest pillar score. */
   value: number | null;
-  /** Public explanation of the existing binding cap, weakest pillar, or withholding. */
+  /** Peg-bound only: the published pillar quality the multiplier discounted. */
+  quality?: number;
+  /** Public explanation of the existing binding cap, peg discount, weakest pillar, or withholding. */
   reason: string | null;
   evidenceFreshness: SafetyScoreV9EvidenceFreshness;
 }
@@ -81,6 +84,21 @@ export function projectTopDriver(card: SafetyScoreV9CurrentCard): SafetyScoreV9T
       label: card.bindingCap.kind,
       value: card.bindingCap.limit,
       reason: card.bindingCap.reason,
+      evidenceFreshness,
+    };
+  }
+  // The waterfall's peg step names the driver when it moved the grade: pillar
+  // quality and the peg-discounted base score grade differently. Published
+  // stages only; nothing is recomputed.
+  const { aggregatedQualityScore: quality, pegMultiplier, baseAssetScore } = card.scoreTrace.stages;
+  if (quality !== null && pegMultiplier !== null && baseAssetScore !== null &&
+      scoreToGrade(quality) !== scoreToGrade(baseAssetScore)) {
+    return {
+      kind: "peg-bound",
+      label: "peg",
+      value: pegMultiplier,
+      quality,
+      reason: "Measured historical peg behaviour discounts the structural score.",
       evidenceFreshness,
     };
   }

@@ -163,8 +163,9 @@ describe("selector snapshot contract", () => {
       }
     }
     // Captured from the pre-schema hand guards, not calculated by the new parser.
-    // Re-baselined when selector-v2.10-v2.12 joined the retained replay matrix.
-    expect(sha256Hex(JSON.stringify(sids))).toBe("97065aa5942284692d31d7548dc7d0efd1f71237227203324e88b0fb8003523f");
+    // Re-baselined when selector-v2.10-v2.13 joined the retained replay matrix; the
+    // retained versions' fingerprints are unchanged (v2.12 hash without v2.13: 97065aa5…).
+    expect(sha256Hex(JSON.stringify(sids))).toBe("62d22b606d3ff836d9990a4279e9053723e99aafa2879bc53169e1facff88c3b");
   });
 
   it.each([12, 13])("runs the safety gate before projection at JSON depth %i", (depth) => {

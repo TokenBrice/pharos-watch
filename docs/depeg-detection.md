@@ -6,7 +6,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 runs every 15 minute
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.48`<!-- GENERATED-END: methodology-version-depeg-detection -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.49`<!-- GENERATED-END: methodology-version-depeg-detection -->
 - **Runtime/version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-dews/`
@@ -547,6 +547,16 @@ Detection contributes eligible episodes, observed price intervals and audit prov
 - An open lifecycle alone cannot activate the current-depeg penalty: it needs a
   trusted off-peg observation, no explicit gap and age ≤1200 seconds. Historical
   observed peaks still contribute severity/spread when current coverage is unavailable.
+- Since v6.49 `/api/peg-summary` publishes `pegScore`, `pegPct` and `recent90d`
+  as null on a row with `currentPriceUnavailable: true` (no price row, a rejected
+  price, or a nominal-only reference such as `protocol-par`), which names the reason,
+  once the coin's daily price history (`supply_history.price`, observations only)
+  holds no observed price on the current or previous UTC day: detection needs an
+  observed price, so an event-free window without one is unobserved, not time at
+  peg. A shorter miss keeps the score; a failed history read withholds it. Events,
+  worst deviation, the active flag and tracking coverage stay published. The
+  analytics producer keeps its event-derived values for Safety Score capture, which
+  applies its own current-price admission.
 
 ## Edge Cases & Guardrails
 

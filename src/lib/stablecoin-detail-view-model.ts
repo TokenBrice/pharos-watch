@@ -20,6 +20,7 @@ import type {
   StablecoinDetailViewModel,
 } from "@/lib/stablecoin-detail-view-model-types";
 import { isThreatBand, resolveMechanismArchetype } from "@shared/lib/classification";
+import { resolveCoinStates } from "@shared/lib/coin-state";
 import { getReserves } from "@shared/lib/reserve-templates";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { deriveStablecoinVerdict } from "@shared/lib/stablecoin-verdict";
@@ -104,6 +105,19 @@ export function buildStablecoinDetailViewModel({
   const stressBand = featureAvailability.stressSignal && isThreatBand(featureAvailability.stressSignal.band)
     ? featureAvailability.stressSignal.band
     : null;
+  // A live (non-archived, fixed-peg) depeg: the resolver outlook leads and supersedes curated
+  // non-danger depeg notices (a danger one stays critical, as in the lead slot).
+  const liveDepeg = coin.status !== "frozen" && !isNavToken && pegScoreResult?.activeDepeg === true;
+  const coinStates = resolveCoinStates({
+    status: coin.status,
+    notices: liveDepeg ? coin.notices?.filter((notice) => notice.kind !== "depeg" || notice.type === "danger") : coin.notices,
+    activeDepeg: liveDepeg,
+    deviationBps: pegPrice.deviationBps,
+    ddrTier: supplemental.ddrVerdict?.tier,
+    ddrMethodologyVersion: supplemental.ddrVerdict?.methodologyVersion,
+    dewsBand: stressBand,
+    nowSec: supplemental.nowSec,
+  });
   const verdict = deriveStablecoinVerdict({
     status: coin.status,
     reportCardGrade: reportCard?.grade ?? null,
@@ -140,6 +154,9 @@ export function buildStablecoinDetailViewModel({
     resolvedMechanismArchetype,
     mintAuthority,
     redemptionBackstop: redemptionBackstop ?? null,
+    coinStates,
+    priceUnusable: pegPrice.priceUnusable,
+    priceInheritedFrom: summaryData.priceDerivation?.inheritedFrom ?? null,
     savedAssessment,
     pendingReads: {
       reportCard: reportCardPending,
@@ -197,6 +214,7 @@ export function buildStablecoinDetailViewModel({
     staleQueries: buildDetailStaleQueries(queries, supplemental, id),
     featureStates,
     verdict,
+    coinStates,
     mintAuthority,
     hero,
   };

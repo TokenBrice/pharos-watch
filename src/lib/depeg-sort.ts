@@ -9,6 +9,8 @@ export interface DepegTrackerRow {
   pendingIncident?: DepegPendingIncident | null;
   /** Latest trusted observation of this coin's open confirmed incident. */
   openIncidentEvidence?: OpenIncidentEvidence | null;
+  /** Circulating USD; null is unavailable, undefined is not read yet. */
+  marketCapUsd?: number | null;
 }
 
 /** The row's current deviation was read against a closed reference market, so it is held. */

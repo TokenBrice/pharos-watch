@@ -1574,6 +1574,18 @@ describe("Safety Score v9 public projection", () => {
       evidenceFreshness: "current",
     });
 
+    // A grade-moving peg multiplier outranks the weakest pillar, never a binding cap.
+    const pegStages = { aggregatedQualityScore: 52, pegMultiplier: 0.51, baseAssetScore: 26.52 };
+    const pegBound = structuredClone(pillarBound);
+    Object.assign(pegBound.scoreTrace.stages, pegStages);
+    expect(projectTopDriver(pegBound)).toMatchObject({ kind: "peg-bound", label: "peg", value: 0.51, quality: 52 });
+    const pegWithinGrade = structuredClone(pillarBound);
+    Object.assign(pegWithinGrade.scoreTrace.stages, { ...pegStages, baseAssetScore: 51 });
+    expect(projectTopDriver(pegWithinGrade)?.kind).toBe("pillar-bound");
+    const cappedPeg = structuredClone(capBound);
+    Object.assign(cappedPeg.scoreTrace.stages, pegStages);
+    expect(projectTopDriver(cappedPeg)?.kind).toBe("cap-bound");
+
     const withheld = projectSafetyScoreV9Card(fixture("withheld", {
       score: null,
       grade: "NR",

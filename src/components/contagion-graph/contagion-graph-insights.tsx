@@ -1,11 +1,13 @@
 "use client";
 
+import { CoinStateChip } from "@/components/coin-state-chip";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import type { ResolvedLink } from "@/components/contagion-graph/contagion-graph-graph";
 import type { GraphNode } from "@/lib/contagion-layout";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@shared/lib/format";
 import type { HubExposure } from "@shared/lib/dependency-exposure";
+import type { CoinState } from "@shared/lib/coin-state";
 import { graphNodeLabel } from "@/components/contagion-graph/contagion-graph-model";
 import { describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
 
@@ -19,6 +21,8 @@ interface ContagionGraphInsightsProps {
   logos?: Record<string, string>;
   onTraceNode: (nodeId: string) => void;
   onUseAsExposureRoot?: (coinId: string) => void;
+  /** Live exceptional states: the selection's own, then those of its published upstreams. */
+  coinStates?: ReadonlyMap<string, readonly CoinState[]>;
   /** Detail pages draw only the focus coin's incident-and-dependent closure, which cannot date full-graph exposure. */
   detailScope?: boolean;
   variant?: "overlay" | "panel";
@@ -82,10 +86,19 @@ export function ContagionGraphInsights({
   logos,
   onTraceNode,
   onUseAsExposureRoot,
+  coinStates,
   detailScope = false,
   variant = "overlay",
 }: ContagionGraphInsightsProps) {
   if (!inspectedNode) return null;
+  const ownState = coinStates?.get(inspectedNode.id)?.[0];
+  const upstreamIncidents = [...new Set(fullLinks.filter(link => link.srcId === inspectedNode.id).map(link => link.tgtId))]
+    .flatMap(id => {
+      // As on the hubs board: pre-launch and deadline states are scheduled, not incidents.
+      const state = coinStates?.get(id)?.find(s => s.kind !== "pre-launch" && s.kind !== "deadline");
+      const node = nodeMap.get(id);
+      return state && node ? [{ node, state }] : [];
+    });
 
   const dependentSummary = summarizeNodeLinks({
     nodeId: inspectedNode.id,
@@ -142,6 +155,7 @@ export function ContagionGraphInsights({
             </p>
           </div>
         </div>
+        {ownState ? <CoinStateChip state={ownState} showDetail /> : null}
 
         <div className="grid grid-cols-2 gap-1.5">
           <MiniMetric label="Dependents" value={`${dependentCount} (${dependentSummary.count} visible)`} />
@@ -171,6 +185,20 @@ export function ContagionGraphInsights({
             </span>
           </p>
         </div>
+
+        {upstreamIncidents.length > 0 && (
+          <div className="space-y-1">
+            <p className="pharos-label">Live incidents upstream</p>
+            <ul className="space-y-1">
+              {upstreamIncidents.map(({ node, state }) => (
+                <li key={node.id} className="flex flex-wrap items-center gap-1.5 text-2xs">
+                  <span className="font-medium text-foreground">{graphNodeLabel(node)}</span>
+                  <CoinStateChip state={state} />
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <button
           type="button"

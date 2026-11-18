@@ -449,11 +449,37 @@ describe("TimelineClient", () => {
     render(<TimelineClient />);
     const banner = screen.getByRole("region", { name: /Currently open/ });
     const links = within(banner).getAllByRole("link");
-    expect(links.map((link) => link.getAttribute("data-depeg-event-id"))).toEqual(["202", "201"]);
+    expect(links.map((link) => link.getAttribute("data-depeg-event-id"))).toEqual(["201", "202"]);
     // The canonical path helper appends the fragment without a redundant slash.
     expect(links[0].getAttribute("href")).toBe("/stablecoin/eurs-stasis#peg-history");
     expect(within(banner).getByText("3 threshold crossings")).toBeTruthy();
     expect(banner.querySelector("[data-event-id]")).toBeNull();
+  });
+
+  it("lists the census newest first, collapsing past five", () => {
+    mockEvents([makeTapeEvent()]);
+    const now = Math.floor(Date.now() / 1000);
+    mockActiveEvents([
+      activeEvent({ id: 400, stablecoinId: "retired-coin", symbol: "OLD" }),
+      ...Array.from({ length: 6 }, (_, i) => activeEvent({ id: 305 - i, startedAt: now - 600 * (6 - i) })),
+    ]);
+    render(<TimelineClient />);
+    const banner = screen.getByRole("region", { name: "Currently open · 6 incidents" });
+    const census = () => [...banner.querySelectorAll(":scope > div > a")].map((link) => link.getAttribute("data-depeg-event-id"));
+    expect(census()).toEqual(["300", "301", "302", "303", "304"]);
+    fireEvent.click(within(banner).getByRole("button", { name: "Show all 6" }));
+    expect(census()).toEqual(["300", "301", "302", "303", "304", "305"]);
+    expect(banner.querySelector("details summary")?.textContent).toContain("+1 on frozen or retired coins");
+    screen.getByText("6 open incidents");
+  });
+
+  it("names inactive-coin records without an empty census heading", () => {
+    mockEvents([makeTapeEvent()]);
+    mockActiveEvents([activeEvent({ id: 400, stablecoinId: "retired-coin", symbol: "OLD" })]);
+    render(<TimelineClient />);
+    expect(screen.queryByRole("region", { name: /Currently open/ })).toBeNull();
+    const footnote = screen.getByRole("region", { name: "1 open on frozen or retired coins" });
+    expect(footnote.querySelector("details a")?.getAttribute("data-depeg-event-id")).toBe("400");
   });
 
   it.each([
@@ -509,7 +535,7 @@ describe("TimelineClient", () => {
     });
     render(<TimelineClient />);
     const region = screen.getByRole("region", { name: "Open at last observation" });
-    expect(region.textContent).toContain("All incidents open at last observation · independent of feed filters");
+    expect(region.textContent).toContain("Incidents open at last observation, newest first · independent of feed filters");
     expect(region.textContent).toContain("Observed open for 1h as of 2026-10-26 00:00 UTC");
     expect(region.textContent).not.toMatch(/OPEN|Currently open|active/);
     expect(within(region).getByRole("link", { name: "USDC depeg incident 123, open at last observation" })).toBeTruthy();

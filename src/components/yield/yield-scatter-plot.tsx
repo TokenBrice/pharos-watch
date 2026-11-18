@@ -486,7 +486,7 @@ export function YieldScatterPlot({
       <span
         className={cn(
           "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5",
-          SEVERITY_TONE_CLASS.watch.banner,
+          SEVERITY_TONE_CLASS.caution.banner,
         )}
       >
         <span className={cn("h-2.5 w-2.5 rounded-full", YIELD_ZONE_OUTLIER_DOT_CLASS)} />
@@ -499,7 +499,7 @@ export function YieldScatterPlot({
       <span
         className={cn(
           "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5",
-          SEVERITY_TONE_CLASS.watch.banner,
+          SEVERITY_TONE_CLASS.caution.banner,
         )}
       >
         <span className={cn("h-2.5 w-2.5 rounded-full", YIELD_ZONE_OUTLIER_DOT_CLASS)} />
@@ -695,7 +695,7 @@ export function YieldScatterPlot({
               <span className="hidden md:inline">= high safety with yield that clears the local benchmark</span>
             )}
           </span>
-          <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5", SEVERITY_TONE_CLASS.alert.banner)}>
+          <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5", SEVERITY_TONE_CLASS.danger.banner)}>
             <span className={cn("h-2.5 w-2.5 rounded-full", YIELD_ZONE_STYLES["danger-zone"].dot)} />
             <span className="text-foreground font-medium">Danger zone</span>
             <span className="hidden md:inline">= high APY on low safety</span>

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
-import { RISK_BUDGET_FILTER_KEYS, YIELD_FILTER_AXIS_REGISTRY, YIELD_LANDING_RISK_BUDGET, buildYieldViewModel, prepareYieldUniverse, riskBudgetUrlValue } from "@/lib/yield-view-model";
+import { RISK_BUDGET_FILTER_KEYS, YIELD_FILTER_AXIS_REGISTRY, YIELD_LANDING_RISK_BUDGET, buildYieldViewModel, describeYieldPickLiveState, prepareYieldUniverse, riskBudgetUrlValue, selectTopPysRows } from "@/lib/yield-view-model";
+import type { CoinState } from "@shared/lib/coin-state";
 import type { YieldViewModelUrlParams } from "@/lib/yield-view-config";
 import { formatTvlOption } from "@/lib/yield-view-model-helpers";
 
@@ -498,6 +499,34 @@ describe("buildYieldViewModel", () => {
     const hidden = buildYieldViewModel(prepareYieldUniverse(advisoryRows, null), { risk: "any", warnings: "hide" });
     expect(hidden.visibleRows.map((row) => row.id)).toEqual(["advisory"]);
     expect(hidden.visibleRows[0].warningSignals).toEqual(["aging", "data-stale", "benchmark-degraded"]);
+  });
+
+  it("keeps blocked coins and venues out of the landing band and hero pick", () => {
+    const paused: CoinState = { kind: "paused", notice: { type: "warning", title: "Deposits disabled", kind: "paused" } };
+    const depeg = (deviationBps: number): CoinState => ({ kind: "depeg", deviationBps, ddrTier: null, ddrMethodologyVersion: null });
+    const universe = prepareYieldUniverse([
+      makeYieldRanking({ id: "usdg-paxos", symbol: "USDG", pharosYieldScore: 90,
+        provenance: makeYieldProvenance({ sourceKey: "linked-variant:steakusdg-steakhouse:onchain:steakusdg-steakhouse" }) }),
+      makeYieldRanking({ id: "depegged", symbol: "DPG", pharosYieldScore: 85 }),
+      makeYieldRanking({ id: "dews-alert", symbol: "DWS", pharosYieldScore: 80 }),
+      makeYieldRanking({ id: "calm", symbol: "CLM", pharosYieldScore: 70 }),
+    ], null, new Map<string, readonly CoinState[]>([
+      ["steakusdg-steakhouse", [{ kind: "quarantined" }, depeg(-150), paused, { kind: "dews", band: "ALERT" }]],
+      ["depegged", [depeg(-420)]],
+      ["dews-alert", [{ kind: "dews", band: "ALERT" }]],
+    ]));
+
+    expect(buildYieldViewModel(universe, {}).visibleRows.map((row) => row.id)).toEqual(["dews-alert", "calm"]);
+    const all = buildYieldViewModel(universe, { risk: "any" }).visibleRows;
+    expect(all.map((row) => row.id)).toEqual(["usdg-paxos", "depegged", "dews-alert", "calm"]);
+    // The venue's states join under its symbol, except its DEWS band.
+    expect(all[0].coinStates).toEqual([{ kind: "quarantined" }, depeg(-150), paused].map((state) => ({ ...state, venue: "steakUSDG" })));
+    // A DEWS band alone does not disqualify.
+    expect(selectTopPysRows(all).map((row) => row.id)).toEqual(["dews-alert", "calm"]);
+    // Until the peg summary and day clock are read the pick stands, qualified.
+    expect([{ isError: false }, { isError: true }, { data: {}, isError: true }].map((peg) => describeYieldPickLiveState(peg, true)))
+      .toEqual(["live state pending", "live peg state unavailable", null]);
+    expect(describeYieldPickLiveState({ data: {}, isError: false }, false)).toBe("live state pending");
   });
 
   it("applies the opportunistic landing band only when the URL omits risk", () => {

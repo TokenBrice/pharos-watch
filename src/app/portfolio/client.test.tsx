@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { renderToStaticMarkup, renderToString } from "react-dom/server";
 import { readFileSync } from "node:fs";
 import { compile } from "tailwindcss";
@@ -37,6 +37,7 @@ const reportCardsState: {
   meta: {},
 };
 const reportQueryOptions = vi.hoisted(() => vi.fn());
+const coinStates = vi.hoisted(() => ({ byId: new Map() as ReadonlyMap<string, readonly unknown[]> }));
 const bootstrapScript = readFileSync("public/portfolio-bootstrap.js", "utf8");
 
 vi.mock("@/hooks/api-hooks", () => ({
@@ -44,6 +45,10 @@ vi.mock("@/hooks/api-hooks", () => ({
     reportQueryOptions(options);
     return { ...reportCardsState, refetch: vi.fn() };
   },
+}));
+
+vi.mock("@/hooks/use-coin-states", () => ({
+  useCoinStates: () => ({ byId: coinStates.byId, liveReady: true }),
 }));
 
 vi.mock("@/lib/logos", () => ({
@@ -113,7 +118,19 @@ describe("PortfolioClient URL sync", () => {
     reportCardsState.data = undefined;
     reportCardsState.isLoading = false;
     reportQueryOptions.mockClear();
+    coinStates.byId = new Map();
     window.history.replaceState(null, "", "/portfolio/");
+  });
+
+  it("leads with exceptional holdings and names what known-only subtotals leave out", () => {
+    coinStates.byId = new Map([["usdc-circle", [{ kind: "dews", band: "ALERT" }]], ["usdt-tether", [{ kind: "critical", notice: { type: "danger", title: "Halted" } }]]]);
+    portfolioState = { ...basePortfolioState(), holdings: [{ coinId: "usdc-circle", amount: 100 }, { coinId: "usdt-tether", amount: 300 }], totalUsd: 400 };
+    reportCardsState.data = makeReportCardsV9Response({ cards: [makeV9Card({ id: "usdc-circle" }), makeReportCardsV9PipelineGapCard("control", "A", { id: "usdt-tether" })] });
+    render(<PortfolioClient />);
+    const callout = screen.getByRole("region", { name: "Holdings in an exceptional state" });
+    expect(within(callout).getAllByRole("listitem").map((item) => item.textContent)).toEqual(["USDT$300Critical notice · Halted", "USDC$100DEWS Alert"]);
+    screen.getByText("Sum of your entered amounts at face value, not live prices");
+    expect(screen.getByText("exit · known-only subtotal").parentElement?.textContent).toContain("100 USD of 400 USD · excludes USDT");
   });
 
   it("renders the empty editor without requesting report cards", () => {

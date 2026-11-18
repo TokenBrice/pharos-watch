@@ -30,7 +30,7 @@ const TITLE = "Regulatory standing";
  */
 const DISCLOSURE_STATE_TONE: Record<IssuerDisclosureState, string> = {
   published: "text-foreground",
-  gap: SEVERITY_TONE_CLASS.watch.text,
+  gap: SEVERITY_TONE_CLASS.caution.text,
   unrecorded: "text-muted-foreground",
 };
 

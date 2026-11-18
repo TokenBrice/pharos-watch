@@ -304,7 +304,7 @@ export function HomeAltClient({ children }: { children?: ReactNode }) {
   return (
     <div id="data" tabIndex={-1}>
       <div className="space-y-3">
-        <BelowFold forced={false} reserveClassName="min-h-[1396px] lg:min-h-[594px]" rootMargin="0px">
+        <BelowFold forced={false} reserveClassName="min-h-[1584px] lg:min-h-[594px]" rootMargin="0px">
           <HomeAltMiniCardGrid />
         </BelowFold>
       </div>

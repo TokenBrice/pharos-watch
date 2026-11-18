@@ -21,8 +21,8 @@ const QUIET_COUNT_CLASS = "border-border/60 bg-transparent text-muted-foreground
 // Color is reserved for a non-zero, non-OK count; zero and healthy stay quiet.
 const SEVERITY_CLASS: Record<WorkspaceModeSeverity, string> = {
   healthy: QUIET_COUNT_CLASS,
-  watch: SEVERITY_TONE_CLASS.watch.pill,
-  critical: SEVERITY_TONE_CLASS.alert.pill,
+  watch: SEVERITY_TONE_CLASS.caution.pill,
+  critical: SEVERITY_TONE_CLASS.danger.pill,
   unknown: "border-dashed border-border bg-transparent text-muted-foreground",
 };
 

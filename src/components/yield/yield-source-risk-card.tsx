@@ -49,8 +49,8 @@ export interface YieldSourceRiskCardProps {
 
 const POSTURE_TONE = {
   clean: SEVERITY_TONE_CLASS.ok.pill,
-  watch: SEVERITY_TONE_CLASS.watch.pill,
-  speculative: SEVERITY_TONE_CLASS.alert.pill,
+  watch: SEVERITY_TONE_CLASS.caution.pill,
+  speculative: SEVERITY_TONE_CLASS.danger.pill,
 } as const;
 
 function formatPenalty(sourceRisk: YieldSourceRisk): string {

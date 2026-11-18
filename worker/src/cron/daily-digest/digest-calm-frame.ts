@@ -16,7 +16,7 @@ export function buildCalmNarrativeFrame(data: DigestInputData): DigestCalmNarrat
   if (dewsChange) {
     return {
       label: "Quiet DEWS divergence",
-      detail: `${dewsChange.symbol} moved ${dewsChange.from} to ${dewsChange.to} while the headline regime stayed orderly.`,
+      detail: `${dewsChange.symbol} moved ${dewsChange.from} to ${dewsChange.to} while PSI's headline band held.`,
       candidateId: (data.editorialCandidates ?? []).find((candidate) => candidate.symbols.includes(dewsChange.symbol))?.id,
     };
   }
@@ -40,6 +40,6 @@ export function buildCalmNarrativeFrame(data: DigestInputData): DigestCalmNarrat
 
   return {
     label: "Documented quiet",
-    detail: "No active depeg, flow, DEWS, or liquidity signal displaced the regime frame; the story is what did not break.",
+    detail: "No active depeg, flow, DEWS, or liquidity signal displaced the PSI band as the frame; the story is what did not break.",
   };
 }

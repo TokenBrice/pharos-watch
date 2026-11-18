@@ -50,7 +50,7 @@ describe("digest publishes unavailable inputs as unavailable", () => {
       },
     });
     expect(classifyRegime(input)).toBe("WATCHFUL");
-    expect(buildUserPrompt(input)).toContain("Market regime: WATCHFUL");
+    expect(buildUserPrompt(input)).toContain("Writing register: observant");
     expect(buildUserPrompt(input)).toContain("mint-burn-gauge-unavailable");
     expect(classifyRegime({ ...input, stabilityIndex: { score: 50, band: "CRISIS", components: { severity: 50, breadth: 5, trend: 0 } } })).toBe("CRISIS");
   });
@@ -203,7 +203,7 @@ describe("digest publishes unavailable inputs as unavailable", () => {
     // input.ts folds qualityReasons into the persisted top-level degradedSources.
     const input = dayInput({ ...active.value, degradedSources: [...(active.qualityReasons ?? [])] });
     expect(classifyRegime(input)).toBe("WATCHFUL");
-    expect(buildUserPrompt(input)).toContain("Market regime: WATCHFUL");
+    expect(buildUserPrompt(input)).toContain("Writing register: observant");
   });
   it("cannot certify CALM when the eight-row display cap hides a fresh depeg", async () => {
     const nowSec = Math.floor(Date.now() / 1_000);
@@ -252,8 +252,8 @@ describe("digest publishes unavailable inputs as unavailable", () => {
     expect(classifyRegime(input)).toBe("WATCHFUL");
     const prompt = buildUserPrompt(input);
     expect(prompt).toContain(`Flight-to-Quality: unavailable (${classificationReason})`);
-    expect(prompt).toContain("Market regime: WATCHFUL");
-    expect(prompt).not.toContain("Market regime: CALM");
+    expect(prompt).toContain("Writing register: observant");
+    expect(prompt).not.toContain("Writing register: quiet");
   });
   it("reports an unobserved market-cap total as unavailable, not as a $0.00 subtotal", () => {
     const input = dayInput({

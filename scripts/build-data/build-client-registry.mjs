@@ -69,6 +69,7 @@ const MICA_COMPLIANCE_FIELDS = [
 ];
 const LIVE_RESERVE_ADAPTER_FIELD = "liveReserveAdapter";
 const HAS_CURATED_RESERVES_FIELD = "hasCuratedReserves";
+const ALERTS_FIELD = "alerts";
 const GENIUS_FIELD = "genius";
 const LISTING_CLASS_FIELD = "listingClass";
 const CHAIN_IDS_FIELD = "chainIds";
@@ -172,6 +173,8 @@ export function projectListCoin(coin, listFields, listingClass, sourceById) {
   if (mintAuthorityStatus !== undefined) projected[MINT_AUTHORITY_STATUS_FIELD] = mintAuthorityStatus;
   const yieldType = coin?.yieldConfig?.yieldType;
   if (typeof yieldType === "string") projected.yieldType = yieldType;
+  const alerts = projectAlerts(coin);
+  if (alerts) projected[ALERTS_FIELD] = alerts;
   return projected;
 }
 
@@ -188,6 +191,27 @@ export function projectLiveReserveAdapter(coin) {
   if (coin?.liveReservesConfig?.suspended) return undefined;
   const adapter = coin?.liveReservesConfig?.adapter;
   return typeof adapter === "string" && adapter.length > 0 ? adapter : undefined;
+}
+
+/**
+ * State-bearing notices for cross-coin surfaces: every danger notice plus paused
+ * and deadline notices, never resolved history. Messages stay in the detail
+ * projection; undefined when none apply.
+ */
+export function projectAlerts(coin) {
+  const alerts = [];
+  for (const notice of coin?.notices ?? []) {
+    if (notice?.kind === "history") continue;
+    if (notice?.type !== "danger" && notice?.kind !== "paused" && notice?.kind !== "deadline") continue;
+    alerts.push({
+      type: notice.type,
+      title: notice.title,
+      ...(notice.kind ? { kind: notice.kind } : {}),
+      ...(notice.deadline ? { deadline: notice.deadline } : {}),
+      ...(notice.asOf ? { asOf: notice.asOf } : {}),
+    });
+  }
+  return alerts.length > 0 ? alerts : undefined;
 }
 
 export function projectBlacklistStatus(coin) {
@@ -579,6 +603,9 @@ export function validateListProjection(slim, sourceCoin, index, listFields, list
   }
   if (slim.yieldType !== sourceCoin?.yieldConfig?.yieldType) {
     throw new Error(`[client-registry] entry ${index} (${slim.id}): field yieldType diverges from source`);
+  }
+  if (JSON.stringify(slim[ALERTS_FIELD]) !== JSON.stringify(projectAlerts(sourceCoin))) {
+    throw new Error(`[client-registry] entry ${index} (${slim.id}): field ${ALERTS_FIELD} diverges from source`);
   }
 }
 

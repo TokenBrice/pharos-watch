@@ -138,7 +138,7 @@ DEX full and website table responses assess cohort freshness from the newest pub
 
 A failed liquidity producer-status read is not an empty advisory: each row carries `advisoryUnavailableReason: "dex-advisory-read-failed"` and a non-null warning, the response emits a `199` advisory, and cache policy is `no-store`. Successful zero-row status reads retain a nullable advisory with no failure reason.
 
-DDR secondary errata/lock-deferral read failures retain immutable forecasts with `_meta.degradedReason: "secondary-overlay-unavailable"` and `errata-overlay-read-failed` / `lock-deferral-overlay-read-failed` details; responses are `no-store`. Canonical projection failures return `503` for `/api/depeg-events`, naming `incident-projection-read-failed`, `incident-projection-invalid`, or `incident-projection-dangling-reference` (missing active first/current events, membership, or constituent link targets, including single-event incidents); see [projection admission](./depeg-detection.md#api). A stored event whose direction, source or close reason cannot be classified returns `503` with `reason` (`invalid-direction`, `invalid-source`, or `invalid-close-reason`) and the offending `eventId`; readable peers are not published as a partial ledger, and another refused row uses `reason: "unreadable-row"`. These failures never return raw history or successful empty cohorts; genuinely empty cohorts remain successful. `/api/peg-summary` retains accepted history as degraded/no-store with that reason (body `degradedReason`) and its original clock, or returns `503`. Non-NAV assets with missing/nominal primary prices expose `currentPriceUnavailable: true` and null deviation, excluded from observed at-peg counts.
+DDR secondary errata/lock-deferral read failures retain immutable forecasts with `_meta.degradedReason: "secondary-overlay-unavailable"` and `errata-overlay-read-failed` / `lock-deferral-overlay-read-failed` details; responses are `no-store`. Canonical projection failures return `503` for `/api/depeg-events`, naming `incident-projection-read-failed`, `incident-projection-invalid`, or `incident-projection-dangling-reference` (missing active first/current events, membership, or constituent link targets, including single-event incidents); see [projection admission](./depeg-detection.md#api). A stored event whose direction, source or close reason cannot be classified returns `503` with `reason` (`invalid-direction`, `invalid-source`, or `invalid-close-reason`) and the offending `eventId`; readable peers are not published as a partial ledger, and another refused row uses `reason: "unreadable-row"`. These failures never return raw history or successful empty cohorts; genuinely empty cohorts remain successful. `/api/peg-summary` retains accepted history as degraded/no-store with that reason (body `degradedReason`) and its original clock, or returns `503`. Non-NAV assets with missing/nominal primary prices expose `currentPriceUnavailable: true` and null deviation, excluded from observed at-peg counts. Since depeg/DEWS v6.49, such an asset with no observed price on the current or previous UTC daily snapshot also publishes null `pegScore`, `pegPct` and `recent90d` (`currentPriceUnavailable` is the reason; a shorter miss keeps them).
 
 `/api/peg-summary` publishes `summary.medianDeviationBps: null` when no admitted live deviations exist, even if historical coin analytics remain available. Readers render null as `—`, independently of valid numeric cohort and historical-event counts; an observed parity price yields `0 bps`. External clients must accept `number | null`. Deploy and verify null-tolerant Pages readers before enabling the Worker producer; retain those readers on producer rollback.
 
@@ -668,7 +668,7 @@ Historical and active depeg incidents with constituent threshold-crossing counts
 
 ```json
 {
-  "currentVersion": "6.48"
+  "currentVersion": "6.49"
 }
 ```
 
@@ -706,7 +706,7 @@ Per-coin peg scores, reference evidence, coverage-aware recent metrics, and aggr
 
 ```json
 {
-  "currentVersion": "6.48"
+  "currentVersion": "6.49"
 }
 ```
 
@@ -1128,8 +1128,8 @@ Freshness threshold: 1800 s.
 
 ```json
 {
-  "currentVersion": "6.48",
-  "methodologyVersion": "6.48"
+  "currentVersion": "6.49",
+  "methodologyVersion": "6.49"
 }
 ```
 

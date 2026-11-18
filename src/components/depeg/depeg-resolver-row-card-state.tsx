@@ -1,18 +1,27 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { formatDdrDirection, formatDdrReason, formatUtcTimestamp, getMissingReasons } from "@/components/depeg/depeg-resolver-row-card-model";
+import {
+  formatDdrDirection,
+  formatDdrReason,
+  formatUtcTimestamp,
+  getMissingReasons,
+  getResolution,
+  getTierMeta,
+  getTierVocabulary,
+  isCurrentForecast,
+} from "@/components/depeg/depeg-resolver-row-card-model";
 import type { DdrPublicPredictionState, DdrV2ResponseRow } from "@shared/types/depeg-resolver";
 import { CoinLockup, LiveFacts, LockMetadataStrip, StageLabel } from "@/components/depeg/depeg-resolver-row-card-shared";
-import { DDR_REVIEW_TONE_CLASSES } from "@shared/lib/classification";
+import { DDR_REVIEW_TONE_CLASSES, DEPEG_PENDING_STATE_LABELS } from "@shared/lib/classification";
 
 const STATE_COPY: Record<
   Exclude<DdrPublicPredictionState, "frozen">,
   { badge: string; title: string; body: string; tone: string }
 > = {
   pending_lock: {
-    badge: "Pending lock",
-    title: "Prediction lock pending",
+    badge: "Not locked yet",
+    title: DEPEG_PENDING_STATE_LABELS.ddrLock,
     body: "This incident has not reached forecast readiness or the 72h backstop. DDR shows live facts only until the official lock run.",
     tone: "border-state-info bg-state-info-subtle text-state-info",
   },
@@ -42,14 +51,29 @@ const STATE_COPY: Record<
   },
 };
 
+/**
+ * A row's verdict in reader words wherever it is named outside its card: the
+ * tier for a current forecast, else the state (`compact` uses short forms).
+ */
+export function describeDdrVerdict(row: DdrV2ResponseRow, compact = false): { label: string; accent: string } {
+  if (!isCurrentForecast(row)) {
+    const copy = STATE_COPY[row.prediction.state];
+    return { label: compact ? copy.badge : copy.title, accent: "text-muted-foreground" };
+  }
+  const meta = getTierMeta(getResolution(row).tier, getTierVocabulary(row));
+  return { label: compact ? meta.short : meta.label, accent: meta.accent };
+}
+
 export function StateOnlyCard({
   row,
   state,
   logos,
+  marketCapUsd,
 }: {
   row: DdrV2ResponseRow;
   state: Exclude<DdrPublicPredictionState, "frozen">;
   logos?: Record<string, string>;
+  marketCapUsd?: number | null;
 }) {
   const copy = STATE_COPY[state];
   const deferralReason = row.prediction.deferralReason ?? row.live.degradedReason;
@@ -63,7 +87,7 @@ export function StateOnlyCard({
       <div className="space-y-3.5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <CoinLockup row={row} logos={logos} logoSize={52} />
+            <CoinLockup row={row} logos={logos} logoSize={52} marketCapUsd={marketCapUsd} />
           </div>
           <span className="shrink-0 rounded-full border border-border/70 bg-background/60 px-2 py-0.5 text-xs text-muted-foreground">
             {formatDdrDirection(row)}

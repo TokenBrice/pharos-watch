@@ -146,7 +146,7 @@ export const LIQUID_WITHIN_ONE_DAY_WATCH_BELOW_PCT = 60;
 const CHIP_TONES = {
   ok: SEVERITY_TONE_CLASS.ok.pill,
   info: SEVERITY_TONE_CLASS.info.pill,
-  watch: SEVERITY_TONE_CLASS.watch.pill,
+  watch: SEVERITY_TONE_CLASS.caution.pill,
 } as const;
 
 /** Rounds to at most 1 decimal and trims trailing zeros, e.g. 12.56 -> "12.6%", 71 -> "71%".

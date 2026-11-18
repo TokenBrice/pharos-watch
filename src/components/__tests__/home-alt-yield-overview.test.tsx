@@ -5,14 +5,18 @@ import { render, screen, within } from "@testing-library/react";
 
 const useYieldRankingsSummaryMock = vi.fn();
 const refetchMock = vi.fn();
+const coinStatesById = new Map<string, readonly unknown[]>();
 const NOW = Date.parse("2026-10-10T12:00:00Z");
 
 vi.mock("@/hooks/api-hooks", () => ({
+  usePegSummary: () => ({ data: {}, isError: false }),
   useYieldRankingsSummary: () => ({
     error: null, meta: null, dataUpdatedAt: NOW, refetch: refetchMock,
     ...useYieldRankingsSummaryMock(),
   }),
 }));
+
+vi.mock("@/hooks/use-coin-states", () => ({ useCoinStates: () => ({ byId: coinStatesById, liveReady: true, clockReady: true }) }));
 
 vi.mock("@/lib/logos", () => ({ logosById: {}, getLogoSrc: () => undefined }));
 
@@ -73,6 +77,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.clearAllMocks();
   vi.useRealTimers();
+  coinStatesById.clear();
 });
 
 describe("HomeAltYieldOverview", () => {
@@ -111,6 +116,16 @@ describe("HomeAltYieldOverview", () => {
     expect(screen.getByText("Best-paid risk in view", { exact: false }).textContent).toContain("USDC");
     expect(screen.queryByText("DJED")).toBeNull();
     expect(screen.getByRole("button", { name: /Universe: Yield rows, 2 in view of 3 · Opportunistic/ })).toBeTruthy();
+  });
+
+  it("passes over a critical coin's landing row", () => {
+    coinStatesById.set("usdc-circle", [{ kind: "critical", notice: { type: "danger", title: "Chain halted" } }]);
+    useYieldRankingsSummaryMock.mockReturnValue({ data: makeSummaryPayload({ coveredCount: 2, trackedCount: 2 }), isLoading: false });
+
+    render(<HomeAltYieldOverview />);
+
+    expect(screen.getByText("Best-paid risk in view", { exact: false }).textContent).toContain("USDT");
+    expect(screen.queryByText("USDC")).toBeNull();
   });
 
   it("reports coverage as unknown when the payload carries no safety snapshot", () => {

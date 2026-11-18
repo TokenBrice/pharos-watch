@@ -24,7 +24,7 @@ import {
 
 // Notices carry only a tone: neutral is informational, watch is an active
 // (amber) condition. Nothing in the reserve module is red.
-const AMBER = "watch";
+const AMBER = "caution";
 const NEUTRAL = "neutral";
 
 function makeReserves(overrides: Partial<ReserveResult> & { mode: ReservePresentationMode }): ReserveResult {

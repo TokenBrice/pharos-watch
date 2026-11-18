@@ -29,6 +29,7 @@ import {
   LIABILITY_RECONCILIATION_VALUES,
 } from "./reserve-assurance";
 import {
+  COIN_NOTICE_KIND_VALUES,
   COIN_NOTICE_TYPE_VALUES,
   FEATURED_CONTENT_TYPE_VALUES,
   LAUNCH_MILESTONE_TYPE_VALUES,
@@ -395,8 +396,19 @@ export const CoinNoticeSchema = /* @__PURE__ */ (() => z
     type: z.enum(COIN_NOTICE_TYPE_VALUES),
     title: z.string(),
     message: z.string(),
+    /** What the notice means for holders; absent = a standing caveat. */
+    kind: z.enum(COIN_NOTICE_KIND_VALUES).optional(),
+    /** The date holders must act by; required with, and only with, `kind: "deadline"`. */
+    deadline: StrictIsoDateSchema.optional(),
+    /** The date the notice text was last written or confirmed, shown so readers can judge staleness. */
+    asOf: StrictIsoDateSchema.optional(),
   })
-  .strict())();
+  .strict()
+  .superRefine((notice, ctx) => {
+    if ((notice.kind === "deadline") !== (notice.deadline !== undefined)) {
+      issue(ctx, ["deadline"], "a notice carries a deadline date exactly when its kind is \"deadline\"");
+    }
+  }))();
 
 export const YieldConfigSchema = /* @__PURE__ */ (() => z
   .object({

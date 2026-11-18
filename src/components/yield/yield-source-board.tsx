@@ -36,7 +36,7 @@ function SourceRiskDriverChips({ drivers }: { drivers: readonly YieldSourceBoard
               role="button"
               tabIndex={0}
               aria-label={`${driver.label}: ${pluralize(driver.count, "row")}`}
-              className={cn("pharos-focus-ring inline-flex cursor-help items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium", SEVERITY_TONE_CLASS.watch.pill)}
+              className={cn("pharos-focus-ring inline-flex cursor-help items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium", SEVERITY_TONE_CLASS.caution.pill)}
             >
               <span>{driver.label}</span>
               <span className="pharos-numeric text-3xs opacity-75">{driver.count}</span>
@@ -134,7 +134,7 @@ export function YieldSourceBoard({ model, activeFilters, onFilterChange }: Yield
                     description="Anomalies flag source-observation quality issues such as low venue TVL or APY that diverges from recent history. Click for the audit list."
                     open={openDisclosure === "anomalies"}
                     controls={disclosureId}
-                    toneClass={cn(SEVERITY_TONE_CLASS.watch.pill, "hover:bg-state-warn-solid/15")}
+                    toneClass={cn(SEVERITY_TONE_CLASS.caution.pill, "hover:bg-state-warn-solid/15")}
                     onClick={() => toggleDisclosure("anomalies")}
                   />
                 ) : null}

@@ -44,11 +44,12 @@ export interface CommandPaletteSearchResult extends CommandPaletteSectionedItem 
   imageSquare?: boolean;
   imageDarkInvert?: boolean;
   icon?: ReactNode;
-  frozen?: boolean;
+  /** Tracked coin behind a stablecoin or recent-coin row; the palette shows its highest exceptional state. */
+  coinId?: string;
   /** Live USD market cap, shown right-aligned on stablecoin rows. */
   marketCap?: number;
   marketCapAsOf?: number;
-  /** Live peg/NAV health state, shown on stablecoin rows. */
+  /** Static NAV classification, shown on stablecoin rows. */
   stablecoinHealth?: CommandPaletteStablecoinHealth;
   /** Render the sublabel in the mono face (tickers, dates - data, not prose). */
   mono?: boolean;
@@ -227,7 +228,7 @@ function buildSearchResult(
           : descriptor.kind === "recent" && !descriptor.logoId
             ? <FileText className="h-4 w-4" />
             : undefined,
-    frozen: descriptor.frozen,
+    coinId: descriptor.kind === "stablecoin" || descriptor.kind === "recent" ? descriptor.logoId : undefined,
     marketCap: descriptor.kind === "stablecoin" ? descriptor.marketCapUsd : undefined,
     marketCapAsOf: descriptor.kind === "stablecoin" ? descriptor.marketCapAsOf : undefined,
     stablecoinHealth: descriptor.kind === "stablecoin" ? descriptor.stablecoinHealth : undefined,

@@ -326,6 +326,15 @@ function weeklyPeriodFromMeta(meta: Record<string, unknown> | null): { startAt: 
   return Number.isFinite(startAt) && Number.isFinite(endAt) ? { startAt, endAt } : null;
 }
 
+/**
+ * Digest regimes are prompt-internal registers (prompt/regime.ts), never market
+ * states. TENSION and WATCHFUL are no public vocabulary, so naming one is hard.
+ * CRISIS and CALM are also PSI/DEWS bands, so a "regime at CRISIS"-style claim
+ * is only a soft cue to name the PSI band instead.
+ */
+const INTERNAL_REGISTER_WORD = /\b(?:TENSION|WATCHFUL)\b/u;
+const REGIME_BAND_PHRASE = /\b[Rr]egime:? (?:(?:is|was|at|of|in) )?(?:CRISIS|CALM)\b/u;
+
 export function validateDigestModelOutput(
   parsed: ParsedDigestResponse,
   profile: DigestValidationProfile,
@@ -387,6 +396,25 @@ export function validateDigestModelOutput(
       code: "unbound-safety-copy",
       severity: "hard",
       message: "Copy references an unavailable canonical input; omit that topic entirely.",
+    });
+  }
+  const publicCopy = `${parsed.digestTitle}\n${parsed.digestText}\n${parsed.digestExtended}`;
+  const registerWord = INTERNAL_REGISTER_WORD.exec(publicCopy);
+  if (registerWord) {
+    issues.push({
+      code: "internal-register-word",
+      severity: "hard",
+      excerpt: registerWord[0],
+      message: `Copy names the internal writing register ("${registerWord[0]}"); describe market state with PSI's published band.`,
+    });
+  }
+  const regimePhrase = REGIME_BAND_PHRASE.exec(publicCopy);
+  if (regimePhrase) {
+    issues.push({
+      code: "regime-band-phrase",
+      severity: "soft",
+      excerpt: regimePhrase[0],
+      message: `Copy calls the market state a regime ("${regimePhrase[0]}"); name PSI's published band instead.`,
     });
   }
   if (profile.kind === "weekly") {

@@ -78,11 +78,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/stablecoins/coins.generated.json",
-      "sha256": "c828febf11efa0f8367640ea54174bf830c67f3404513f8426a4adf7dc71aaba"
+      "sha256": "75286dbbabdf8c96c32c37b79a25f1b542f95f30782b9fa1974edd01ec5ea622"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-full.generated.json",
-      "sha256": "d505456b4019ac0b0c2d5542718483e2d0457df1750a0e71c48301a42ba25940"
+      "sha256": "f9614aca42172ccc4056f5d3fb4f1a6ece99e0119cfe27ebdae309b9a408eb40"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-runtime.generated.json",
@@ -1042,7 +1042,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/stablecoin-lifecycle.ts",
-      "sha256": "3b989c76edf4d190d84d568f7505ba0473ee066a4dd82df7b38a794a46f9e265"
+      "sha256": "3de378c6dd1834ba700c52ecfb232e24bf31df637e11f9d5c593e43b9abbc911"
     },
     {
       "path": "shared/types/stablecoin-meta-control-schemas.ts",
@@ -1054,7 +1054,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/stablecoin-meta-primitives.ts",
-      "sha256": "2ae0d4a1c18804ed51fb5621f5fe84cc0454f54b09c90d1d075215d2e27c8731"
+      "sha256": "b63ffb35898ceb05b36d8f4997e7ee062e6b85b73dcd001df46c7377d49ea988"
     },
     {
       "path": "shared/types/stablecoin-taxonomy.ts",
@@ -1311,7 +1311,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-17-block-26434658-shock-coverage.json.gz"
     }
   ],
-  "digest": "8e1b332bda25e06c89021e54415343cd0d7e85cb6186eb71d9d3401bc08fe78c"
+  "digest": "88051c0610ecde1597fbd47c50e782d4a2c16cb33477d1dd039daa846eeaf501"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

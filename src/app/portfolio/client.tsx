@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useCallback, useState, useRef } from "react";
 import Link from "next/link";
 import { useReportCardsV9Table } from "@/hooks/api-hooks";
+import { useCoinStates } from "@/hooks/use-coin-states";
+import { CoinStateChip } from "@/components/coin-state-chip";
 import { logosById } from "@/lib/logos";
 import { usePortfolio } from "@/hooks/use-portfolio";
 import { trackEvent } from "@/lib/analytics";
@@ -16,8 +18,9 @@ import {
   PortfolioHeroStrip,
   PortfolioHoldingsEditor,
   PortfolioLoadingState,
+  PortfolioStateCallout,
 } from "./components";
-import { buildHeldCardIds } from "./model";
+import { buildHeldCardIds, rankExceptionalHoldings } from "./model";
 import { PORTFOLIO_PRESETS } from "./presets";
 import { buildV9PortfolioProjection } from "@/lib/safety-score-v9-consumers";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,6 +33,10 @@ import { describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-
 // ---------------------------------------------------------------------------
 // PortfolioClient
 // ---------------------------------------------------------------------------
+
+function holdingSymbols(ids: readonly string[]): string {
+  return ids.map((id) => CLIENT_TRACKED_META_BY_ID.get(id)?.symbol ?? id).join(", ");
+}
 
 export function PortfolioClient() {
   const logos = logosById;
@@ -48,6 +55,11 @@ export function PortfolioClient() {
     refetch: refetchReportCards,
     meta: reportCardsMeta,
   } = useReportCardsV9Table({ enabled: portfolio.initialized && portfolio.holdings.length > 0 });
+  const coinStates = useCoinStates({ enabled: portfolio.initialized && portfolio.holdings.length > 0 });
+  const exceptionalHoldings = useMemo(
+    () => rankExceptionalHoldings(portfolio.holdings, coinStates.byId),
+    [coinStates.byId, portfolio.holdings],
+  );
 
   // Clean up toast timer on unmount
   useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, []);
@@ -123,10 +135,16 @@ export function PortfolioClient() {
         ]}
       />
       </>}
-      <PortfolioHeroStrip holdingCount={portfolio.holdings.length} totalUsd={portfolio.totalUsd} />
+      <PortfolioHeroStrip
+        holdingCount={portfolio.holdings.length}
+        totalUsd={portfolio.totalUsd}
+        faceValueNote={exceptionalHoldings.length > 0}
+      />
+      <PortfolioStateCallout holdings={exceptionalHoldings} totalUsd={portfolio.totalUsd} />
       <PortfolioHoldingsEditor
         holdings={portfolio.holdings}
         heldCardIds={heldCardIds}
+        coinStatesById={coinStates.byId}
         logos={logos}
         toast={toast}
         onSetAmount={portfolio.setAmount}
@@ -160,7 +178,8 @@ export function PortfolioClient() {
                 Portfolio aggregate only; this is not an asset safety grade.
               </p>
               {v9Projection.value.partialEvidence && <p className="mt-2 text-xs text-muted-foreground">
-                Partial evidence. Known-only score covers {v9Projection.value.coverageUsd.score} USD of {v9Projection.value.coverageUsd.total} USD;
+                Partial evidence. Known-only score covers {v9Projection.value.coverageUsd.score} USD of {v9Projection.value.coverageUsd.total} USD
+                {v9Projection.value.coverageUsd.excludedIds.score.length > 0 && ` (excludes ${holdingSymbols(v9Projection.value.coverageUsd.excludedIds.score)})`};
                 unavailable holdings and pillar readings are excluded from these subtotals, not scored as zero. Rated holding scores retain any priced-unknown assumptions described below.
               </p>}
             </div>
@@ -171,7 +190,10 @@ export function PortfolioClient() {
                 <div key={pillar} className="rounded-lg border border-border/60 px-3 py-3">
                   <dt className="pharos-label">{pillar === "control" ? ECONOMIC_CONTROL_LABEL : pillar}{v9Projection.value.partialEvidence && " · known-only subtotal"}</dt>
                   <dd className="mt-1 pharos-numeric text-lg font-semibold">{score === null ? "Unavailable" : `${score}/100`}</dd>
-                  {v9Projection.value.partialEvidence && <p className="mt-1 text-xs text-muted-foreground">Included holdings: {v9Projection.value.coverageUsd.pillars[pillar]} USD of {v9Projection.value.coverageUsd.total} USD</p>}
+                  {v9Projection.value.partialEvidence && <p className="mt-1 text-xs text-muted-foreground">
+                    Included holdings: {v9Projection.value.coverageUsd.pillars[pillar]} USD of {v9Projection.value.coverageUsd.total} USD
+                    {v9Projection.value.coverageUsd.excludedIds.pillars[pillar].length > 0 && ` · excludes ${holdingSymbols(v9Projection.value.coverageUsd.excludedIds.pillars[pillar])}`}
+                  </p>}
                 </div>
                 );
               })}
@@ -205,6 +227,7 @@ export function PortfolioClient() {
               {heldCards.map((card) => {
                 const meta = CLIENT_TRACKED_META_BY_ID.get(card.id);
                 const partial = describePartialEvidence(card);
+                const state = coinStates.byId.get(card.id)?.[0];
                 return (
                   <Link key={card.id} href={buildStablecoinUrl(card.id)} className="pharos-card-shell p-3">
                     <p className="truncate text-sm font-medium">{meta?.symbol ?? card.id}</p>
@@ -214,6 +237,7 @@ export function PortfolioClient() {
                     {partial && <p className="mt-2 text-xs text-muted-foreground" title={partial.summary}>
                       {partial.gaps.map(formatPartialEvidenceGap).join(" · ")}
                     </p>}
+                    {state ? <CoinStateChip state={state} className="mt-2" /> : null}
                   </Link>
                 );
               })}

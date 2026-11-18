@@ -7,8 +7,9 @@ import { TopNav } from "@/components/top-nav";
 import { NAV_GROUPS } from "@/lib/nav-config";
 import { cleanupFrontendTest, installMatchMediaMock } from "@/test-utils/frontend";
 
-const { useHealthMock, pathnameMock } = vi.hoisted(() => ({
+const { useHealthMock, useHomepageSnapshotMock, pathnameMock } = vi.hoisted(() => ({
   useHealthMock: vi.fn(),
+  useHomepageSnapshotMock: vi.fn(() => ({ data: undefined as unknown })),
   pathnameMock: { current: "/" as string },
 }));
 
@@ -34,6 +35,7 @@ vi.mock("@/components/psi-beacon/regime-bar", () => ({
 
 vi.mock("@/hooks/api-hooks", () => ({
   useHealth: useHealthMock,
+  useHomepageSnapshot: useHomepageSnapshotMock,
 }));
 
 const DropdownOpenContext = createContext(false);
@@ -221,6 +223,22 @@ describe("TopNav", () => {
     expect(document.activeElement).toBe(trigger);
   });
 
+
+  it("badges Depeg with a neutral open-incident count once read", () => {
+    installMatchMediaMock(true);
+    const { unmount } = render(<TopNav />);
+    const depegLink = () => document.querySelector<HTMLAnchorElement>('nav[aria-label="Quick links"] a[href^="/depeg"]')!;
+    expect(depegLink().textContent).not.toMatch(/active depeg/);
+    unmount();
+
+    useHomepageSnapshotMock.mockReturnValue({ data: { incidents: { data: { activeDepegCount: 18 } } } });
+    render(<TopNav />);
+    expect(depegLink().textContent).toContain(", 18 active depegs");
+    const badge = depegLink().querySelector('[aria-hidden="true"].rounded-full')!;
+    // Neutral: some incidents are always open.
+    expect([badge.textContent, /red|danger|amber|warn/.test(badge.className)]).toEqual(["18", false]);
+    useHomepageSnapshotMock.mockReturnValue({ data: undefined });
+  });
 
   it("keeps the Status link a neutral destination with no health metadata", () => {
     installMatchMediaMock(true);

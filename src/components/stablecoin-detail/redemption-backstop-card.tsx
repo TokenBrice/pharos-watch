@@ -788,7 +788,7 @@ function RedemptionBackstopCard({
             {viewModel.modelConfidenceLabel}
           </Badge>
           {stateChip ? (
-            <Badge variant="outline" className={cn("text-xs", SEVERITY_TONE_CLASS.watch.pill)}>
+            <Badge variant="outline" className={cn("text-xs", SEVERITY_TONE_CLASS.caution.pill)}>
               {stateChip}
             </Badge>
           ) : null}

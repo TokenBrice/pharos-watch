@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useId } from "react";
+import { useCallback, useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useJustEntered } from "@/hooks/use-just-entered";
 import type { TablePaginationProps } from "@/components/table-pagination";
@@ -12,10 +12,12 @@ import {
   SAFETY_GRADE_VALUES,
   SCREENER_LIFECYCLE_VALUES,
   SCREENER_FILTER_DEFAULTS,
+  SCREENER_STATE_VALUES,
   hasActiveFilters,
   type BlacklistableValue,
   type SafetyEvidenceValue,
   type ScreenerFilters,
+  type ScreenerStateValue,
 } from "@/lib/screener-filters";
 import {
   MINT_AUTHORITY_FILTER_VALUES,
@@ -26,12 +28,15 @@ import {
   type MintAuthorityStatusKind,
 } from "@shared/lib/classification";
 import {
+  COIN_STATE_LABELS,
   CUSTODY_MODEL_LABELS,
   GOVERNANCE_LABELS_SHORT,
   MECHANISM_ARCHETYPE_LABELS,
   PEG_METADATA,
   SAFETY_EVIDENCE_LABELS,
+  THREAT_BAND_LABELS,
 } from "@shared/lib/classification";
+import { DEADLINE_HORIZON_DAYS } from "@shared/lib/coin-state";
 import { CUSTODY_MODEL_VALUES } from "@shared/types/custody";
 import { GOVERNANCE_TYPE_VALUES, MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
 import type { CustodyModel } from "@shared/types/custody";
@@ -65,6 +70,13 @@ const BLACKLISTABLE_OPTIONS: readonly FilterPillOption<BlacklistableValue>[] =
   BLACKLISTABLE_VALUES.map((value) => ({ value, label: BLACKLISTABLE_LABELS[value] }));
 const LIFECYCLE_OPTIONS: readonly FilterPillOption<StablecoinStatus>[] =
   SCREENER_LIFECYCLE_VALUES.map((value) => ({ value, label: LIFECYCLE_LABELS[value] }));
+const STATE_OPTIONS: readonly FilterPillOption<ScreenerStateValue>[] = SCREENER_STATE_VALUES.map((value) => ({
+  value,
+  // The DEWS pill matches a band floor, not any reading, so its visible label names the floor.
+  label: value === "dews" ? `${COIN_STATE_LABELS.dews} ${THREAT_BAND_LABELS.ALERT}+` : COIN_STATE_LABELS[value],
+  title: value === "dews" ? `DEWS ${THREAT_BAND_LABELS.ALERT} or worse`
+    : value === "deadline" ? `Holder deadline within ${DEADLINE_HORIZON_DAYS} days, or recently passed` : undefined,
+}));
 const MINT_AUTHORITY_OPTIONS: readonly FilterPillOption<MintAuthorityStatusKind>[] =
   MINT_AUTHORITY_FILTER_VALUES.map((value) => ({
     value,
@@ -113,6 +125,9 @@ export function ScreenerToolbar({
   rightSlot,
 }: ScreenerToolbarProps) {
   const groupId = useId();
+  const filtersId = `${groupId}-filters`;
+  const pickerShortlist = filters.coins.length > 0;
+  const [showPhoneFilters, setShowPhoneFilters] = useState(false);
   const update = useCallback(
     <K extends keyof ScreenerFilters>(key: K, value: ScreenerFilters[K]) => {
       // A URL can carry a ceiling with no control of its own. When the visible
@@ -142,6 +157,7 @@ export function ScreenerToolbar({
   const justEnteredMintAuthority = useJustEntered(filters.mintAuthority);
   const justEnteredMintAuthorityScores = useJustEntered(filters.mintAuthorityScores);
   const justEnteredLifecycle = useJustEntered(filters.lifecycle);
+  const justEnteredStates = useJustEntered(filters.states);
   const justEnteredPegs = useJustEntered(filters.pegs);
 
   const active = hasActiveFilters(filters);
@@ -182,195 +198,218 @@ export function ScreenerToolbar({
         </div>
       </div>
 
-      {filters.coins.length > 0 ? (
+      {pickerShortlist ? (
         <p className="rounded-md border border-frost-blue/25 bg-frost-blue/5 px-3 py-2 text-sm text-foreground">
           Showing the exact {filters.coins.length}-coin Picker shortlist. Reset filters to restore the full universe.
         </p>
       ) : null}
 
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(12rem,0.8fr)_minmax(12rem,0.8fr)_minmax(14rem,1fr)]">
-        <div className="space-y-2">
-          <span className="pharos-label" id={`${groupId}-safety-grades`}>
-            Safety grade
-          </span>
-          {/* Grade pills keep the semantic green→red ramp (a data-driven
-              indicator), so they use the pill shape + focus ring but their own
-              grade color instead of the neutral control-pill-active fill. */}
-          <div className="flex flex-wrap gap-1.5" role="group" aria-labelledby={`${groupId}-safety-grades`}>
-            {SAFETY_GRADE_VALUES.map((grade) => {
-              const isActive = filters.safetyGrades.includes(grade);
-              return (
-                <button
-                  key={grade}
-                  type="button"
-                  aria-pressed={isActive}
-                  onClick={() => update("safetyGrades", toggleFilterValue(filters.safetyGrades, grade))}
-                  className={`pharos-focus-ring pharos-control-pill px-2.5 py-1 font-semibold ${getSafetyGradeBadgeClassName(grade)} ${isActive ? "opacity-100 ring-1 ring-inset ring-current brightness-110" : "opacity-70"} ${justEnteredSafety.has(grade) ? "pharos-chip-animate-in" : ""}`}
-                >
-                  {grade}
-                </button>
-              );
-            })}
+      {pickerShortlist ? (
+        <button
+          type="button"
+          aria-expanded={showPhoneFilters}
+          aria-controls={filtersId}
+          onClick={() => setShowPhoneFilters((open) => !open)}
+          className="pharos-focus-ring pharos-control-pill min-h-11 px-3 py-1 md:hidden"
+        >
+          {showPhoneFilters ? "Hide filters" : "Show filters"}
+        </button>
+      ) : null}
+
+      {/* With an exact Picker shortlist, phone results start near the top; the filters wait behind the toggle. */}
+      <div id={filtersId} className={pickerShortlist && !showPhoneFilters ? "hidden space-y-3 md:block" : "space-y-3"}>
+        <FilterPillGroup
+          kicker="Exceptional state"
+          options={STATE_OPTIONS}
+          selected={filters.states}
+          justEntered={justEnteredStates}
+          onChange={(next) => update("states", next)}
+        />
+
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(12rem,0.8fr)_minmax(12rem,0.8fr)_minmax(14rem,1fr)]">
+          <div className="space-y-2">
+            <span className="pharos-label" id={`${groupId}-safety-grades`}>
+              Safety grade
+            </span>
+            {/* Grade pills keep the semantic green→red ramp (a data-driven
+                indicator), so they use the pill shape + focus ring but their own
+                grade color instead of the neutral control-pill-active fill. */}
+            <div className="flex flex-wrap gap-1.5" role="group" aria-labelledby={`${groupId}-safety-grades`}>
+              {SAFETY_GRADE_VALUES.map((grade) => {
+                const isActive = filters.safetyGrades.includes(grade);
+                return (
+                  <button
+                    key={grade}
+                    type="button"
+                    aria-pressed={isActive}
+                    onClick={() => update("safetyGrades", toggleFilterValue(filters.safetyGrades, grade))}
+                    className={`pharos-focus-ring pharos-control-pill px-2.5 py-1 font-semibold ${getSafetyGradeBadgeClassName(grade)} ${isActive ? "opacity-100 ring-1 ring-inset ring-current brightness-110" : "opacity-70"} ${justEnteredSafety.has(grade) ? "pharos-chip-animate-in" : ""}`}
+                  >
+                    {grade}
+                  </button>
+                );
+              })}
+            </div>
           </div>
+          <ThresholdField
+            label="DEWS Stress"
+            min={0}
+            max={100}
+            step={1}
+            minValue={filters.dewsMin}
+            onMinChange={(v) => update("dewsMin", v)}
+            defaultMin={SCREENER_FILTER_DEFAULTS.dewsMin}
+          />
+          <ThresholdField
+            label="V10 Mint Component"
+            min={0}
+            max={100}
+            step={1}
+            minValue={filters.mintAuthorityScoreMin}
+            onMinChange={(v) => update("mintAuthorityScoreMin", v)}
+            defaultMin={SCREENER_FILTER_DEFAULTS.mintAuthorityScoreMin}
+          />
+          <ThresholdField
+            label="Supply (USD)"
+            min={0}
+            step={1_000_000}
+            minValue={filters.supplyMin}
+            onMinChange={(v) => update("supplyMin", v)}
+            defaultMin={0}
+            placeholder="No threshold"
+          />
         </div>
-        <ThresholdField
-          label="DEWS Stress"
-          min={0}
-          max={100}
-          step={1}
-          minValue={filters.dewsMin}
-          onMinChange={(v) => update("dewsMin", v)}
-          defaultMin={SCREENER_FILTER_DEFAULTS.dewsMin}
-        />
-        <ThresholdField
-          label="V10 Mint Component"
-          min={0}
-          max={100}
-          step={1}
-          minValue={filters.mintAuthorityScoreMin}
-          onMinChange={(v) => update("mintAuthorityScoreMin", v)}
-          defaultMin={SCREENER_FILTER_DEFAULTS.mintAuthorityScoreMin}
-        />
-        <ThresholdField
-          label="Supply (USD)"
-          min={0}
-          step={1_000_000}
-          minValue={filters.supplyMin}
-          onMinChange={(v) => update("supplyMin", v)}
-          defaultMin={0}
-          placeholder="No threshold"
+
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+          <ThresholdField
+            label="Safety Score"
+            min={0}
+            max={100}
+            step={1}
+            minValue={filters.safetyScoreMin}
+            onMinChange={(v) => update("safetyScoreMin", v)}
+            defaultMin={SCREENER_FILTER_DEFAULTS.safetyScoreMin}
+          />
+          <ThresholdField
+            label="Backing"
+            min={0}
+            max={100}
+            step={1}
+            minValue={filters.safetyBackingMin}
+            onMinChange={(v) => update("safetyBackingMin", v)}
+            defaultMin={SCREENER_FILTER_DEFAULTS.safetyBackingMin}
+          />
+          <ThresholdField
+            label="Exit"
+            min={0}
+            max={100}
+            step={1}
+            minValue={filters.safetyExitMin}
+            onMinChange={(v) => update("safetyExitMin", v)}
+            defaultMin={SCREENER_FILTER_DEFAULTS.safetyExitMin}
+          />
+          <ThresholdField
+            label="Economic Control"
+            min={0}
+            max={100}
+            step={1}
+            minValue={filters.safetyControlMin}
+            onMinChange={(v) => update("safetyControlMin", v)}
+            defaultMin={SCREENER_FILTER_DEFAULTS.safetyControlMin}
+          />
+        </div>
+
+        <div className="grid gap-3 lg:grid-cols-[minmax(10rem,0.6fr)_minmax(10rem,0.6fr)_minmax(14rem,0.8fr)_minmax(20rem,1.4fr)]">
+          <ThresholdField
+            label="PegScore"
+            min={0}
+            max={100}
+            step={1}
+            minValue={filters.pegScoreMin}
+            onMinChange={(v) => update("pegScoreMin", v)}
+            defaultMin={SCREENER_FILTER_DEFAULTS.pegScoreMin}
+          />
+          <ThresholdField
+            label="Liquidity Score"
+            min={0}
+            max={100}
+            step={1}
+            minValue={filters.liquidityScoreMin}
+            onMinChange={(v) => update("liquidityScoreMin", v)}
+            defaultMin={SCREENER_FILTER_DEFAULTS.liquidityScoreMin}
+          />
+          <FilterPillGroup
+            kicker="V10 Evidence"
+            options={SAFETY_EVIDENCE_OPTIONS}
+            selected={filters.safetyEvidence}
+            justEntered={justEnteredEvidence}
+            onChange={(next) => update("safetyEvidence", next)}
+          />
+          <FilterPillGroup
+            kicker="Custody Model"
+            options={CUSTODY_MODEL_OPTIONS}
+            selected={filters.custodyModels}
+            justEntered={justEnteredCustody}
+            onChange={(next) => update("custodyModels", next)}
+          />
+        </div>
+
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,0.7fr)_minmax(0,1.45fr)_minmax(0,0.95fr)_minmax(0,0.75fr)]">
+          <FilterPillGroup
+            kicker="Type"
+            options={TYPE_OPTIONS}
+            selected={filters.types}
+            justEntered={justEnteredTypes}
+            onChange={(next) => update("types", next)}
+          />
+          <FilterPillGroup
+            kicker="Mechanism"
+            options={MECHANISM_OPTIONS}
+            selected={filters.mechanisms}
+            justEntered={justEnteredMechanisms}
+            onChange={(next) => update("mechanisms", next)}
+          />
+          <FilterPillGroup
+            kicker="Blacklistable"
+            options={BLACKLISTABLE_OPTIONS}
+            selected={filters.blacklistable}
+            justEntered={justEnteredBlacklistable}
+            onChange={(next) => update("blacklistable", next)}
+          />
+          <FilterPillGroup
+            kicker="Lifecycle"
+            options={LIFECYCLE_OPTIONS}
+            selected={filters.lifecycle}
+            justEntered={justEnteredLifecycle}
+            onChange={(next) => update("lifecycle", next)}
+          />
+        </div>
+
+        <div className="grid gap-3 lg:grid-cols-2">
+          <FilterPillGroup
+            kicker="Mint authority route"
+            options={MINT_AUTHORITY_OPTIONS}
+            selected={filters.mintAuthority}
+            justEntered={justEnteredMintAuthority}
+            onChange={(next) => update("mintAuthority", next)}
+          />
+          <FilterPillGroup
+            kicker="V10 Mint Component"
+            options={MINT_AUTHORITY_SCORE_OPTIONS}
+            selected={filters.mintAuthorityScores}
+            justEntered={justEnteredMintAuthorityScores}
+            onChange={(next) => update("mintAuthorityScores", next)}
+          />
+        </div>
+
+        <FilterPillGroup
+          kicker="Peg"
+          options={PEG_OPTIONS}
+          selected={filters.pegs}
+          justEntered={justEnteredPegs}
+          onChange={(next) => update("pegs", next)}
         />
       </div>
-
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-        <ThresholdField
-          label="Safety Score"
-          min={0}
-          max={100}
-          step={1}
-          minValue={filters.safetyScoreMin}
-          onMinChange={(v) => update("safetyScoreMin", v)}
-          defaultMin={SCREENER_FILTER_DEFAULTS.safetyScoreMin}
-        />
-        <ThresholdField
-          label="Backing"
-          min={0}
-          max={100}
-          step={1}
-          minValue={filters.safetyBackingMin}
-          onMinChange={(v) => update("safetyBackingMin", v)}
-          defaultMin={SCREENER_FILTER_DEFAULTS.safetyBackingMin}
-        />
-        <ThresholdField
-          label="Exit"
-          min={0}
-          max={100}
-          step={1}
-          minValue={filters.safetyExitMin}
-          onMinChange={(v) => update("safetyExitMin", v)}
-          defaultMin={SCREENER_FILTER_DEFAULTS.safetyExitMin}
-        />
-        <ThresholdField
-          label="Economic Control"
-          min={0}
-          max={100}
-          step={1}
-          minValue={filters.safetyControlMin}
-          onMinChange={(v) => update("safetyControlMin", v)}
-          defaultMin={SCREENER_FILTER_DEFAULTS.safetyControlMin}
-        />
-      </div>
-
-      <div className="grid gap-3 lg:grid-cols-[minmax(10rem,0.6fr)_minmax(10rem,0.6fr)_minmax(14rem,0.8fr)_minmax(20rem,1.4fr)]">
-        <ThresholdField
-          label="PegScore"
-          min={0}
-          max={100}
-          step={1}
-          minValue={filters.pegScoreMin}
-          onMinChange={(v) => update("pegScoreMin", v)}
-          defaultMin={SCREENER_FILTER_DEFAULTS.pegScoreMin}
-        />
-        <ThresholdField
-          label="Liquidity Score"
-          min={0}
-          max={100}
-          step={1}
-          minValue={filters.liquidityScoreMin}
-          onMinChange={(v) => update("liquidityScoreMin", v)}
-          defaultMin={SCREENER_FILTER_DEFAULTS.liquidityScoreMin}
-        />
-        <FilterPillGroup
-          kicker="V10 Evidence"
-          options={SAFETY_EVIDENCE_OPTIONS}
-          selected={filters.safetyEvidence}
-          justEntered={justEnteredEvidence}
-          onChange={(next) => update("safetyEvidence", next)}
-        />
-        <FilterPillGroup
-          kicker="Custody Model"
-          options={CUSTODY_MODEL_OPTIONS}
-          selected={filters.custodyModels}
-          justEntered={justEnteredCustody}
-          onChange={(next) => update("custodyModels", next)}
-        />
-      </div>
-
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,0.7fr)_minmax(0,1.45fr)_minmax(0,0.95fr)_minmax(0,0.75fr)]">
-        <FilterPillGroup
-          kicker="Type"
-          options={TYPE_OPTIONS}
-          selected={filters.types}
-          justEntered={justEnteredTypes}
-          onChange={(next) => update("types", next)}
-        />
-        <FilterPillGroup
-          kicker="Mechanism"
-          options={MECHANISM_OPTIONS}
-          selected={filters.mechanisms}
-          justEntered={justEnteredMechanisms}
-          onChange={(next) => update("mechanisms", next)}
-        />
-        <FilterPillGroup
-          kicker="Blacklistable"
-          options={BLACKLISTABLE_OPTIONS}
-          selected={filters.blacklistable}
-          justEntered={justEnteredBlacklistable}
-          onChange={(next) => update("blacklistable", next)}
-        />
-        <FilterPillGroup
-          kicker="Lifecycle"
-          options={LIFECYCLE_OPTIONS}
-          selected={filters.lifecycle}
-          justEntered={justEnteredLifecycle}
-          onChange={(next) => update("lifecycle", next)}
-        />
-      </div>
-
-      <div className="grid gap-3 lg:grid-cols-2">
-        <FilterPillGroup
-          kicker="Mint authority route"
-          options={MINT_AUTHORITY_OPTIONS}
-          selected={filters.mintAuthority}
-          justEntered={justEnteredMintAuthority}
-          onChange={(next) => update("mintAuthority", next)}
-        />
-        <FilterPillGroup
-          kicker="V10 Mint Component"
-          options={MINT_AUTHORITY_SCORE_OPTIONS}
-          selected={filters.mintAuthorityScores}
-          justEntered={justEnteredMintAuthorityScores}
-          onChange={(next) => update("mintAuthorityScores", next)}
-        />
-      </div>
-
-      <FilterPillGroup
-        kicker="Peg"
-        options={PEG_OPTIONS}
-        selected={filters.pegs}
-        justEntered={justEnteredPegs}
-        onChange={(next) => update("pegs", next)}
-      />
     </div>
   );
 }

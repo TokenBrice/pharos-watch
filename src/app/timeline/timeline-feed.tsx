@@ -29,6 +29,7 @@ interface TimelineFeedProps {
   hasData: boolean;
   visibleEvents: readonly TapeEvent[];
   openIncidents: readonly DepegEvent[] | null;
+  inactiveOpenIncidents: readonly DepegEvent[] | null;
   activeStatus: TimelineActiveStatus;
   /** Latched by the client once the census's first read settles (`tapeSlotSettled`). */
   tapeSettled: boolean;
@@ -70,6 +71,7 @@ export function TimelineFeed({
   hasData,
   visibleEvents,
   openIncidents,
+  inactiveOpenIncidents,
   activeStatus,
   tapeSettled,
   activeHealth,
@@ -160,6 +162,7 @@ export function TimelineFeed({
 
       <OpenIncidentsSection
         incidents={openIncidents}
+        inactive={inactiveOpenIncidents}
         status={activeStatus}
         health={activeHealth}
         onRetry={refetchActive}

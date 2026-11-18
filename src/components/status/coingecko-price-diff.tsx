@@ -29,10 +29,10 @@ function formatConfidenceLabel(value: string | null): string {
 
 function getDiffBadgeClass(diffPct: number): string {
   if (diffPct >= 20) {
-    return SEVERITY_TONE_CLASS.alert.pill;
+    return SEVERITY_TONE_CLASS.danger.pill;
   }
   if (diffPct >= 10) {
-    return SEVERITY_TONE_CLASS.watch.pill;
+    return SEVERITY_TONE_CLASS.caution.pill;
   }
   return PRICE_DIVERGENCE_ELEVATED_PILL_CLASS;
 }

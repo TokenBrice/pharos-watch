@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { buildStablecoinUrl } from "@shared/lib/urls";
@@ -201,7 +201,10 @@ export function SummaryBandSkeleton() {
 }
 
 interface OpenIncidentsSectionProps {
+  /** The census: open incidents on active-registry coins, newest first. */
   incidents: readonly DepegEvent[] | null;
+  /** Open records on frozen or retired coins, named apart from the census. */
+  inactive?: readonly DepegEvent[] | null;
   status: TimelineActiveStatus;
   health: DataHealthInfo;
   onRetry: () => void;
@@ -209,13 +212,61 @@ interface OpenIncidentsSectionProps {
   nowMs: number;
 }
 
-export function OpenIncidentsSection({ incidents, status, health, onRetry, logos, nowMs }: OpenIncidentsSectionProps) {
+/** Census rows shown before "Show all"; the heading always counts the whole census. */
+const OPEN_INCIDENT_PREVIEW = 5;
+
+export function OpenIncidentsSection({ incidents, inactive, status, health, onRetry, logos, nowMs }: OpenIncidentsSectionProps) {
+  const [showAll, setShowAll] = useState(false);
   const retained = status === "retained";
+  const openCount = (incidents?.length ?? 0) + (inactive?.length ?? 0);
   // A retained empty census never asserts current zero; only a material age warns.
-  if (retained && incidents?.length === 0) return <DataHealthBanner entries={[health]} />;
-  if (status === "available" && incidents?.length === 0) return null;
+  if (retained && incidents && openCount === 0) return <DataHealthBanner entries={[health]} />;
+  if (status === "available" && incidents && openCount === 0) return null;
   // An unfinished census is not a reader notice; only a failed read is.
   if (status === "incomplete" && !incidents?.length) return null;
+  const incidentRow = (event: DepegEvent) => (
+    <Link
+      key={event.id}
+      href={`${buildStablecoinUrl(event.stablecoinId)}#peg-history`}
+      data-depeg-event-id={event.id}
+      aria-label={retained
+        ? `${event.symbol} depeg incident ${event.id}, open at last observation`
+        : `${event.symbol} active depeg incident ${event.id}`}
+      className="pharos-focus-ring flex flex-wrap items-center gap-2 border-b border-border/60 px-3 py-2 font-mono text-xs hover:bg-muted/30"
+    >
+      <StablecoinLogo src={getLogoSrc(logos, event.stablecoinId)} name={event.symbol} size={22} />
+      <span className="font-semibold">{event.symbol}</span>
+      <span className="text-amber-700 dark:text-amber-400">
+        {retained ? retainedIncidentPrefix(event, health.dataUpdatedAt) : openIncidentPrefix(event, nowMs)}
+      </span>
+      <time dateTime={new Date(event.startedAt * 1000).toISOString()} className="text-muted-foreground">
+        Started {new Date(event.startedAt * 1000).toISOString().replace("T", " ").slice(0, 16)} UTC
+      </time>
+      {event.constituentEventCount != null ? (
+        <span className="text-muted-foreground">{event.constituentEventCount} threshold {event.constituentEventCount === 1 ? "crossing" : "crossings"}</span>
+      ) : null}
+    </Link>
+  );
+  const inactiveDisclosure = (summary: string) => inactive?.length ? (
+    <details className="group">
+      <summary className="pharos-focus-ring flex min-h-11 cursor-pointer list-none items-center gap-2 px-3 font-mono text-[11px] text-muted-foreground hover:bg-muted/30 sm:min-h-0 sm:py-1.5">
+        <span aria-hidden="true" className="transition-transform group-open:rotate-90">▸</span>
+        {summary}
+      </summary>
+      <div className="border-t border-border/60">{inactive.map(incidentRow)}</div>
+    </details>
+  ) : null;
+  // An empty census with open records only on frozen or retired coins is a footnote,
+  // not an amber "Currently open · 0 incidents" heading over an empty list.
+  if (incidents?.length === 0 && inactive?.length) {
+    const summary = `${inactive.length} open on frozen or retired coins`;
+    return (
+      <section role="region" aria-label={summary} className="space-y-1">
+        {retained ? <DataHealthBanner entries={[health]} /> : null}
+        {inactiveDisclosure(summary)}
+      </section>
+    );
+  }
   return (
     <section
       role="region"
@@ -245,32 +296,21 @@ export function OpenIncidentsSection({ incidents, status, health, onRetry, logos
       ) : (
         <div className="border-y border-amber-500/30">
           <p className="px-3 py-1 font-mono text-[11px] text-muted-foreground">
-            {retained ? "All incidents open at last observation" : "All active incidents"} · independent of feed filters
+            {retained ? "Incidents open at last observation" : "Incidents on active coins"}, newest first · independent of feed filters
             {health.dataUpdatedAt > 0 ? ` · Updated ${timeAgo(Math.floor(health.dataUpdatedAt / 1000), nowMs / 1000)}` : ""}
           </p>
-          {incidents.map((event) => (
-            <Link
-              key={event.id}
-              href={`${buildStablecoinUrl(event.stablecoinId)}#peg-history`}
-              data-depeg-event-id={event.id}
-              aria-label={retained
-                ? `${event.symbol} depeg incident ${event.id}, open at last observation`
-                : `${event.symbol} active depeg incident ${event.id}`}
-              className="pharos-focus-ring flex flex-wrap items-center gap-2 border-b border-border/60 px-3 py-2 font-mono text-xs hover:bg-muted/30"
+          {(showAll ? incidents : incidents.slice(0, OPEN_INCIDENT_PREVIEW)).map(incidentRow)}
+          {incidents.length > OPEN_INCIDENT_PREVIEW ? (
+            <button
+              type="button"
+              onClick={() => setShowAll((open) => !open)}
+              aria-expanded={showAll}
+              className="pharos-focus-ring flex min-h-11 w-full items-center border-b border-border/60 px-3 font-mono text-[11px] uppercase tracking-wider text-muted-foreground hover:bg-muted/30 hover:text-foreground sm:min-h-0 sm:py-1.5"
             >
-              <StablecoinLogo src={getLogoSrc(logos, event.stablecoinId)} name={event.symbol} size={22} />
-              <span className="font-semibold">{event.symbol}</span>
-              <span className="text-amber-700 dark:text-amber-400">
-                {retained ? retainedIncidentPrefix(event, health.dataUpdatedAt) : openIncidentPrefix(event, nowMs)}
-              </span>
-              <time dateTime={new Date(event.startedAt * 1000).toISOString()} className="text-muted-foreground">
-                Started {new Date(event.startedAt * 1000).toISOString().replace("T", " ").slice(0, 16)} UTC
-              </time>
-              {event.constituentEventCount != null ? (
-                <span className="text-muted-foreground">{event.constituentEventCount} threshold {event.constituentEventCount === 1 ? "crossing" : "crossings"}</span>
-              ) : null}
-            </Link>
-          ))}
+              {showAll ? `Show the ${OPEN_INCIDENT_PREVIEW} newest` : `Show all ${incidents.length}`}
+            </button>
+          ) : null}
+          {inactiveDisclosure(`+${inactive?.length ?? 0} on frozen or retired coins`)}
         </div>
       )}
     </section>

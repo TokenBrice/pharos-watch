@@ -29,7 +29,11 @@ vi.mock("../../stablecoins/client-registry", async (importOriginal) => {
     id: "structural",
     flags: { ...base.flags, backing: "crypto-backed" as const, governance: "decentralized" as const },
   };
-  const coins = [reviewed, unreviewed, structural];
+  const halted = { ...reviewed, id: "halted", alerts: [
+    { type: "warning" as const, title: "Redemptions paused", kind: "paused" as const },
+    { type: "danger" as const, title: "Chain halted" },
+  ] };
+  const coins = [reviewed, unreviewed, structural, halted];
   return {
     ...actual,
     CLIENT_TRACKED_STABLECOINS: coins,
@@ -85,7 +89,7 @@ describe("buildSelectorRows", () => {
       .map((row) => row.id);
     expect(eligibleIds("onchain-only")).toEqual(["structural"]);
     expect(eligibleIds("regulated-only")).toEqual([]);
-    expect(eligibleIds("any")).toEqual(["usdc-circle", "unreviewed", "structural"]);
+    expect(eligibleIds("any")).toEqual(["usdc-circle", "unreviewed", "structural", "halted"]);
   });
 
   it.each([
@@ -240,6 +244,12 @@ describe("buildSelectorRows", () => {
       pegScoreAndDews: "peg-v3+dews-v3",
     });
     expect(result.datasetHash).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  it("carries the highest curated holder notice", () => {
+    const rows = buildSelectorRows(EMPTY_ARGS).rows;
+    expect(rows.get("halted")!.holderNotice).toEqual({ kind: "critical", title: "Chain halted" });
+    expect(rows.get("usdc-circle")!.holderNotice).toBeNull();
   });
 
   it("keeps an unread supply distinct from an explicit zero", () => {

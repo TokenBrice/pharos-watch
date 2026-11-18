@@ -14,7 +14,8 @@ function hasObservedDeviation(row: DepegTrackerRow): boolean {
 
 export function statusLabel(row: DepegTrackerRow): string {
   if (row.coin.activeDepeg) return "open";
-  if (row.pendingIncident) return "pending";
+  // A threshold crossing awaiting confirmation (the hero's "Awaiting confirmation" figure).
+  if (row.pendingIncident) return "awaiting";
   if (row.coin.depegEventCoverageLimited) return "floor";
   if (row.dews?.band === "DANGER" || row.dews?.band === "WARNING") return row.dews.band.toLowerCase();
   if (!hasObservedDeviation(row) || !Number.isFinite(row.dews?.score)) {

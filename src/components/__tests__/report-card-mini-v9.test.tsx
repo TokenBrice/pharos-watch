@@ -90,6 +90,20 @@ describe("ReportCardMiniV9 viewport radar", () => {
     expect(html).toContain("min-height:140px");
   });
 
+  it("names a binding cap but no weakest pillar for an uncapped F card", () => {
+    const uncapped = { ...card, score: 0, grade: "F" as const };
+    const capped = {
+      ...uncapped, score: 10,
+      bindingCap: { kind: "active-depeg:f", limit: 10, source: "active-depeg" as const, reason: "A current severe depeg binds.", binding: true },
+    };
+    const cappedHtml = renderToStaticMarkup(<ReportCardMiniV9 card={capped} identity={identity} />);
+    expect(cappedHtml).toContain("Binding cap · ");
+    expect(cappedHtml).toContain('title="A current severe depeg binds."');
+    expect(cappedHtml).not.toContain("Evidence age"); // the table projection carries no freshness verdict
+    expect(cappedHtml.match(/<a /g)).toHaveLength(1); // the chip never nests a link in the card link
+    expect(renderToStaticMarkup(<ReportCardMiniV9 card={uncapped} identity={identity} />)).not.toMatch(/Binding cap|Weakest pillar|Score withheld/);
+  });
+
   it("keeps data-pipeline-unavailable wording only for cause A and hides the radar below two pillars", () => {
     const gap = projectV9TableCard(makeReportCardsV9PipelineGapCard("control", "A", { id: "usdt-tether" }));
     const html = renderToStaticMarkup(<ReportCardMiniV9 card={gap} identity={identity} />);

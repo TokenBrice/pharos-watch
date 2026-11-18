@@ -5,10 +5,12 @@ import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { useYieldAdapterManifest, useYieldRankingsSummary } from "@/hooks/api-hooks";
+import { usePegSummary, useYieldAdapterManifest, useYieldRankingsSummary } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { useWatchlist } from "@/hooks/use-watchlist";
+import { useCoinStates } from "@/hooks/use-coin-states";
+import { CoinStateChip } from "@/components/coin-state-chip";
 import { YieldLeaderboard, type YieldLeaderboardHandle } from "@/components/yield/yield-leaderboard";
 import { YieldLeaderboardControls } from "@/components/yield/yield-leaderboard-controls";
 import { YieldRiskBudgetSlider } from "@/components/yield/yield-risk-budget-slider";
@@ -27,6 +29,8 @@ import { cn } from "@/lib/utils";
 import { YieldApiWarnings, YieldDataHealth } from "@/components/yield/yield-data-health";
 import {
   buildYieldViewModel,
+  describeYieldPickLiveState,
+  isYieldBlockingCoinState,
   prepareYieldUniverse,
   RISK_BUDGET_FILTER_KEYS,
   riskBudgetUrlValue,
@@ -165,21 +169,28 @@ function formatHeroRiskContext(
   row: YieldViewModelRow,
   riskFreeRate: number,
   benchmarks: YieldBenchmarkRegistry | null | undefined,
+  liveStateNote: string | null = null,
 ): ReactNode {
   // E5: judge the hero zone against the row's own benchmark — a missing row
   // rate resolves from the registry by benchmarkKey before the USD frame.
   const benchmark = resolveYieldRowBenchmark(row, benchmarks, riskFreeRate);
   const zone = resolveYieldZone(row.safetyScore, row.apy30d, benchmark.rate);
   const opportunitySafety = isOpportunityDerivedSafety(row.provenance?.safetyProvenance);
-  const safetyLabel = opportunitySafety ? "opportunity safety" : "safety";
+  // An opportunity grade starts from the row coin's own Safety Score and is then
+  // adjusted for venue and market, so the label names whose grade it builds on.
+  const safetyLabel = opportunitySafety ? `opportunity safety (${row.symbol} base)` : "safety";
   const safety = row.safetyGrade && row.safetyGrade !== "NR" ? `${row.safetyGrade} ${safetyLabel}` : opportunitySafety ? "Opportunity safety NR" : "Safety NR";
   const pys = row.pharosYieldScore !== null ? `PYS ${row.pharosYieldScore.toFixed(1)}` : "PYS NR";
   const posture = row.sourcePosture ? row.sourcePosture.replaceAll("-", " ") : "posture unknown";
-  const warningCount = selectInvestmentWarningSignals(row.warningSignals).length;
+  const states = row.coinStates ?? [];
+  // Counts what the warnings filter hides: investment signals plus blocking coin/venue states.
+  const warningCount = selectInvestmentWarningSignals(row.warningSignals).length + states.filter(isYieldBlockingCoinState).length;
   const parts = [safety, pys, posture, `${warningCount} warning${warningCount === 1 ? "" : "s"}`];
   if (zone !== null) parts.unshift(YIELD_ZONE_LABELS[zone]);
+  if (liveStateNote) parts.push(liveStateNote);
   return (
     <span title={opportunitySafety ? YIELD_OPPORTUNITY_SAFETY_DESCRIPTION : undefined}>
+      {states[0] ? <CoinStateChip state={states[0]} className="mr-1.5 align-middle" /> : null}
       {parts.join(" · ")}
     </span>
   );
@@ -213,7 +224,7 @@ function YieldWorkbenchFallbackNotice({ stablecoinId }: { stablecoinId: string |
   return (
     <section
       aria-label="Yield workbench fallback"
-      className={cn("rounded-xl border px-4 py-3 text-sm text-foreground", SEVERITY_TONE_CLASS.watch.banner)}
+      className={cn("rounded-xl border px-4 py-3 text-sm text-foreground", SEVERITY_TONE_CLASS.caution.banner)}
     >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p>
@@ -273,6 +284,9 @@ export function YieldClient() {
 
   const rankings = useMemo(() => dedupeYieldRankings(data?.rankings ?? []), [data?.rankings]);
   const watchlist = useWatchlist();
+  const coinStates = useCoinStates();
+  // Query state only (useCoinStates owns the fetch): it qualifies the hero pick until depegs are known.
+  const pegSummary = usePegSummary({ enabled: false });
   const urlParams = useMemo(
     () => ({
       risk: searchParams.get("risk"),
@@ -294,7 +308,10 @@ export function YieldClient() {
     }),
     [searchParams],
   );
-  const yieldUniverse = useMemo(() => prepareYieldUniverse(rankings, watchlist.idSet), [rankings, watchlist.idSet]);
+  const yieldUniverse = useMemo(
+    () => prepareYieldUniverse(rankings, watchlist.idSet, coinStates.byId),
+    [coinStates.byId, rankings, watchlist.idSet],
+  );
   // The landing risk band is implicit, so only URL params make Reset meaningful.
   const hasExplicitFilterParams = useMemo(
     () => Object.values(urlParams).some((value) => value != null && value.trim() !== ""),
@@ -536,7 +553,7 @@ export function YieldClient() {
                     Best-paid risk in view <span className="text-foreground/70">· {topPysRow.symbol}</span>
                   </span>
                   <span className="block text-2xs font-normal text-muted-foreground">
-                    {formatHeroRiskContext(topPysRow, data.riskFreeRate, heroBenchmarks)}
+                    {formatHeroRiskContext(topPysRow, data.riskFreeRate, heroBenchmarks, describeYieldPickLiveState(pegSummary, coinStates.clockReady))}
                   </span>
                 </span>
               ) : (

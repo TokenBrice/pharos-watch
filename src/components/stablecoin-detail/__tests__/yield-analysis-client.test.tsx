@@ -196,6 +196,24 @@ describe("YieldAnalysisClient", () => {
     expect(screen.getByRole("button", { name: "Reset to all sources" })).toBeTruthy();
   });
 
+  it("leads with decision-critical notices above the yield figures, never history", async () => {
+    setRankingsQuery({ data: makeResponse([makeRanking()]) });
+    const deadline = new Date(Date.now() + 9 * 86_400_000).toISOString().slice(0, 10);
+    const { container } = render(
+      <YieldAnalysisClient
+        id="usdn-smardex"
+        staticCoin={staticCoin("usdn-smardex", "SMARDEX USDN", "USDN", true)}
+        notices={[{ type: "warning", title: "Paused", message: "M.", kind: "paused" }, { type: "warning", title: "Wind-down", message: "M.", kind: "deadline", deadline },
+          { type: "info", title: "Caveat", message: "M." }, { type: "warning", title: "Exploit", message: "M.", kind: "history" }]}
+      />,
+    );
+    const stack = container.querySelector("[data-notice-stack]")!;
+    expect(stack.textContent).toContain("Paused");
+    expect(stack.textContent).not.toMatch(/Caveat|Exploit/);
+    expect(stack.compareDocumentPosition(screen.getByTestId("pys-breakdown")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await waitFor(() => expect(stack.textContent).toContain("in 9 days"));
+  });
+
   it("retains the workbench without reader notices for refresh errors and quality advisories (ADR-42)", () => {
     setRankingsQuery({
       data: makeResponse([makeRanking()]),

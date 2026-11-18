@@ -218,14 +218,20 @@ function redactPublicDocSource(markdown: string): string {
   );
 }
 
+/** The one-line `> **Agent navigation**` blockquote routes agents through long docs; HTML readers skip it. */
+function removeAgentNavigation(markdown: string): string {
+  return markdown.replace(/^> \*\*Agent navigation\*\*.*$/m, "");
+}
+
 export function preparePublicDocMarkdown(
   markdown: string,
   {
     absoluteLinks = false,
     stripTitle = false,
-  }: { absoluteLinks?: boolean; stripTitle?: boolean } = {},
+    stripAgentNavigation = false,
+  }: { absoluteLinks?: boolean; stripTitle?: boolean; stripAgentNavigation?: boolean } = {},
 ): string {
-  const redacted = redactPublicDocSource(markdown);
+  const redacted = redactPublicDocSource(stripAgentNavigation ? removeAgentNavigation(markdown) : markdown);
   const withoutTitle = stripTitle ? stripLeadingMarkdownH1(redacted) : redacted;
   return rewritePublicDocLinks(withoutTitle, { absolute: absoluteLinks });
 }

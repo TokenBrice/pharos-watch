@@ -21,11 +21,12 @@ import { buildLiveCompareUrl } from "@/lib/compare-links";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import { PEG_SCORE_HEADER_TITLE } from "@/lib/definitions";
 import { EmptyStateIllustration } from "@/components/empty-state-illustration";
+import { CoinStateChip } from "@/components/coin-state-chip";
 import { SafetyGradeBadge } from "@/components/safety-scores/safety-grade-badge";
 import { StablecoinIdentity } from "@/components/stablecoin-identity";
 import { StablecoinIdentityTransition } from "@/components/view-transitions";
 import { RowSparkline } from "@/components/row-sparkline";
-import { SafetyScoreTopDriver } from "@/components/safety-scores/safety-score-top-driver";
+import { SafetyScoreTopDriver, type SafetyScoreTopDriverProps } from "@/components/safety-scores/safety-score-top-driver";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatCompactUsd } from "@shared/lib/format";
 import {
@@ -34,12 +35,14 @@ import {
   getMechanismArchetypeLabel,
   SAFETY_EVIDENCE_BADGE_CLASSES,
   SAFETY_EVIDENCE_LABELS,
+  THREAT_BAND_LABELS,
+  THREAT_BAND_STYLES,
+  type ThreatBand,
 } from "@shared/lib/classification";
 import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import type { ScreenerRow, ScreenerSortKey } from "@/lib/screener-filters";
 import type { DataTableSortControls } from "@/components/data-table-shell";
 import type { QueryKey } from "@tanstack/react-query";
-import type { SafetyScoreV9TopDriver } from "@shared/lib/safety-score-v9/public-top-driver";
 import { describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
 
 // M1: keys feeding the screener table's visible data (supply, peg, DEWS,
@@ -76,7 +79,7 @@ const COLUMNS: readonly DataTableColumn<ScreenerSortKey>[] = [
     label: "DEWS",
     sortKey: "dewsScore",
     className: "text-right",
-    title: "Depeg Early Warning System stress score (0-100)",
+    title: "Depeg Early Warning System stress band and score (0-100)",
   },
   {
     id: "liquidityScore",
@@ -303,6 +306,17 @@ function ScoreValue({ value }: { value: number | null }) {
   );
 }
 
+/** DEWS as its band word beside the score, never a bare number. */
+function DewsReading({ score, band }: { score: number | null; band?: ThreatBand | null }) {
+  if (score == null) return <span className="text-muted-foreground">—</span>;
+  return (
+    <span className="inline-flex items-baseline gap-1">
+      {band ? <span className={`text-xs font-medium ${THREAT_BAND_STYLES[band].textCls}`}>{THREAT_BAND_LABELS[band]}</span> : null}
+      <span className="pharos-numeric text-foreground">{score.toFixed(0)}</span>
+    </span>
+  );
+}
+
 function ScreenerEmptyState({
   hasActiveFilters,
   onClearFilters,
@@ -370,6 +384,7 @@ function ScreenerMobileCard({ row, logo }: { row: ScreenerRow; logo?: string }) 
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        {row.states?.[0] ? <CoinStateChip state={row.states[0]} showDetail /> : null}
         {row.safetyGrade !== null || row.ratingStatus === "pipeline-gap" ? (
           <SafetyGradeBadge
             grade={row.safetyGrade}
@@ -380,7 +395,7 @@ function ScreenerMobileCard({ row, logo }: { row: ScreenerRow; logo?: string }) 
           <span className="rounded-full border border-border/60 px-2 py-1">Grade —</span>
         )}
         <MobileMetricPill>Peg <ScoreValue value={row.pegScore} /></MobileMetricPill>
-        <MobileMetricPill>DEWS <ScoreValue value={row.dewsScore} /></MobileMetricPill>
+        <MobileMetricPill>DEWS <DewsReading score={row.dewsScore} band={row.dewsBand} /></MobileMetricPill>
         <MobileMetricPill>Liq <ScoreValue value={row.liquidityScore} /></MobileMetricPill>
         <V9Profile row={row} compact />
         <SafetyScoreTopDriver driver={topDriver} coinId={row.id} subjectLabel={row.symbol} />
@@ -456,6 +471,7 @@ function ScreenerTableRow({
             />
           </Link>
         </StablecoinIdentityTransition>
+        {row.states?.[0] ? <CoinStateChip state={row.states[0]} className="mt-1 flex w-fit" /> : null}
       </TableCell>
       <TableCell className="text-right pharos-numeric">
         {row.supplyUsd != null ? formatCompactUsd(row.supplyUsd) : (
@@ -463,7 +479,9 @@ function ScreenerTableRow({
         )}
       </TableCell>
       <DesktopScoreCell value={row.pegScore} />
-      <DesktopScoreCell value={row.dewsScore} />
+      <TableCell className="text-right">
+        <DewsReading score={row.dewsScore} band={row.dewsBand} />
+      </TableCell>
       <DesktopScoreCell value={row.liquidityScore} />
       <TableCell className="text-center">
         {row.safetyGrade !== null || row.ratingStatus === "pipeline-gap" ? (
@@ -522,10 +540,9 @@ function ScreenerTableRow({
 
 
 // ScreenerRow intentionally remains the existing scalar projection; it does
-// not carry the card freshness enum, so this path reports age as unknown
-// rather than fetching or reconstructing the V9 card.
-function projectScreenerTopDriver(row: ScreenerRow): SafetyScoreV9TopDriver | null {
-  const evidenceFreshness = "unknown" as const;
+// not carry the card freshness enum, so the chip names no evidence age rather
+// than fetching or reconstructing the V9 card.
+function projectScreenerTopDriver(row: ScreenerRow): SafetyScoreTopDriverProps["driver"] {
   if (row.ratingStatus === "pipeline-gap" || row.ratingStatus === null) return null;
   if (row.safetyGrade === null || row.safetyGrade === "NR") {
     return {
@@ -533,7 +550,6 @@ function projectScreenerTopDriver(row: ScreenerRow): SafetyScoreV9TopDriver | nu
       label: null,
       value: null,
       reason: "Safety Score is not rated.",
-      evidenceFreshness,
     };
   }
   if (row.safetyBindingCapReason !== null) {
@@ -542,7 +558,6 @@ function projectScreenerTopDriver(row: ScreenerRow): SafetyScoreV9TopDriver | nu
       label: row.safetyBindingCapReason,
       value: null,
       reason: row.safetyBindingCapReason,
-      evidenceFreshness,
     };
   }
   if (row.safetyWeakestPillar !== null && row.safetyWeakestScore !== null) {
@@ -554,7 +569,6 @@ function projectScreenerTopDriver(row: ScreenerRow): SafetyScoreV9TopDriver | nu
       label: row.safetyWeakestPillar,
       value: measured == null ? null : row.safetyWeakestScore,
       reason: null,
-      evidenceFreshness,
     };
   }
   return null;

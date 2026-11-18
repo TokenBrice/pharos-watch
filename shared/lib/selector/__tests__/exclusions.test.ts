@@ -73,6 +73,20 @@ describe("universal exclusions", () => {
   });
 
 
+  it("gates every profile on critical and paused notices", () => {
+    const critical = { kind: "critical", title: "Chain halted" } as const;
+    const paused = { kind: "paused", title: "Redemptions paused" } as const;
+    for (const profile of ["treasury", "yield", "trading"] as const) {
+      expect(evaluateExclusions(makeRow({ holderNotice: critical }), makeInput({ profile })))
+        .toEqual({ id: "test-coin", reason: "critical-notice", severity: "hard", detail: "Chain halted" });
+      expect(evaluateExclusions(makeRow({ holderNotice: paused }), makeInput({ profile })))
+        .toEqual(expect.objectContaining({ reason: "paused-notice", severity: "hard" }));
+    }
+    const depeg = { activeDepeg: true, currentDeviationBps: 900 };
+    expect(evaluateExclusions(makeRow({ ...depeg, holderNotice: critical }), makeInput())?.reason).toBe("critical-notice");
+    expect(evaluateExclusions(makeRow({ ...depeg, holderNotice: paused }), makeInput())?.reason).toBe("active-depeg");
+  });
+
   it("F grade always excluded", () => {
     expect(evaluateExclusions(makeRow({ safetyGrade: "F" }), makeInput())).toEqual(
       expect.objectContaining({ reason: "safety-grade-floor" }),

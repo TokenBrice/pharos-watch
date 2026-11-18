@@ -39,8 +39,8 @@ const CONSUMER_LABELS: Record<OracleRiskRole, string> = {
 /** Restrained score-pill tint, as on the Control strip: neutral unless the input is the problem. */
 const SCORE_PILL_TONE_CLASS: Record<PillarStripTone, string> = {
   neutral: SEVERITY_TONE_CLASS.neutral.pill,
-  warn: SEVERITY_TONE_CLASS.watch.pill,
-  critical: SEVERITY_TONE_CLASS.alert.pill,
+  warn: SEVERITY_TONE_CLASS.caution.pill,
+  critical: SEVERITY_TONE_CLASS.danger.pill,
 };
 
 /**
@@ -50,11 +50,11 @@ const SCORE_PILL_TONE_CLASS: Record<PillarStripTone, string> = {
  */
 const BRANCH_TIER_TAG_CLASS: Record<OracleRiskTier, string> = {
   "oracleless": SEVERITY_TONE_CLASS.neutral.pill,
-  "privileged-internal-pricing": SEVERITY_TONE_CLASS.watch.pill,
+  "privileged-internal-pricing": SEVERITY_TONE_CLASS.caution.pill,
   "redundant-with-failover": SEVERITY_TONE_CLASS.neutral.pill,
   "medianized-with-delay": SEVERITY_TONE_CLASS.neutral.pill,
   "standard-external": SEVERITY_TONE_CLASS.neutral.pill,
-  "single-source-or-laggy": SEVERITY_TONE_CLASS.watch.pill,
+  "single-source-or-laggy": SEVERITY_TONE_CLASS.caution.pill,
   "opaque-or-unknown": "border-dashed border-muted-foreground/50 text-muted-foreground",
 };
 

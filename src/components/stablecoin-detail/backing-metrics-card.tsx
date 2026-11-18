@@ -107,9 +107,11 @@ export interface BackingMetricsView {
   headline: BackingMetricsHeadline;
   /**
    * Header status chip: the coverage band of a collateral ratio or a hedge
-   * coverage headline; null for every other headline.
+   * coverage headline; null for every other headline. `neutral`: a full or
+   * over band read from a review rather than a live feed, or on a coin in a
+   * depeg, critical or paused state, is not a calm green claim.
    */
-  coverage: { tone: CollateralCoverageTone; label: string } | null;
+  coverage: { tone: CollateralCoverageTone; label: string; neutral: boolean } | null;
   visual: BackingMetricsVisual | null;
   /** Parent symbol when the reviewed metrics describe the parent's system ("via USDe"). */
   via: string | null;
@@ -163,6 +165,8 @@ export interface BackingMetricsInput {
    */
   parent?: { symbol: string; backing: MechanismBackingView | null } | null;
   nowSec?: number;
+  /** The coin is in a depeg, critical or paused state (`resolveCoinStates`). */
+  distressed?: boolean;
 }
 
 const SHARED_BOOK_BASIS = "vs Sky/Maker debt";
@@ -267,6 +271,11 @@ function asCaption(label: string): string {
 function coverageFor(ratio: number): { tone: CollateralCoverageTone; label: string } {
   const tone = getCollateralCoverageTone(ratio * 100);
   return { tone, label: COLLATERAL_COVERAGE_LABELS[tone] };
+}
+
+/** The chip's tone class: the coverage band, or neutral where green would be a calm claim. */
+function coverageChipClass(coverage: NonNullable<BackingMetricsView["coverage"]>): string {
+  return coverage.neutral ? SEVERITY_TONE_CLASS.neutral.pill : COLLATERAL_COVERAGE_PILL_CLASSES[coverage.tone];
 }
 
 function distinctSorted(values: readonly (number | null)[]): number[] {
@@ -442,7 +451,7 @@ export function buildBackingMetricsView(input: BackingMetricsInput): BackingMetr
     : null;
 
   let headline: BackingMetricsHeadline;
-  let coverage: BackingMetricsView["coverage"] = null;
+  let coverage: { tone: CollateralCoverageTone; label: string } | null = null;
   let visual: BackingMetricsVisual | null = null;
   let via: string | null = null;
   let pool: (SubCandidate | null)[] = [];
@@ -681,7 +690,10 @@ export function buildBackingMetricsView(input: BackingMetricsInput): BackingMetr
   return {
     title: backingHeadline ? "Backing mechanics" : "Collateralization",
     headline,
-    coverage,
+    coverage: coverage && {
+      ...coverage,
+      neutral: coverage.tone !== "under" && (headline.source !== "live-ratio" || input.distressed === true),
+    },
     visual,
     via,
     sharedBookNote: showsSharedBook,
@@ -793,6 +805,7 @@ function BackingVisual({ view }: { view: BackingMetricsView }) {
           threshold={visual.threshold}
           shutdown={visual.shutdown}
           showValueLabel={false}
+          neutral={view.coverage?.neutral === true}
         />
       ) : null}
       {visual?.kind === "share" ? (
@@ -823,7 +836,7 @@ function BackingVisual({ view }: { view: BackingMetricsView }) {
 
 function CoverageChip({ coverage }: { coverage: NonNullable<BackingMetricsView["coverage"]> }) {
   return (
-    <Badge variant="outline" className={cn("shrink-0 text-2xs font-medium", COLLATERAL_COVERAGE_PILL_CLASSES[coverage.tone])}>
+    <Badge variant="outline" className={cn("shrink-0 text-2xs font-medium", coverageChipClass(coverage))}>
       {coverage.label}
     </Badge>
   );
@@ -1029,7 +1042,7 @@ export function BackingMetricsCard({
       <RailMetricCard
         anchorTwin={anchorTwin ? BACKING_METRICS_ANCHOR_ID : undefined}
         title={view.title}
-        chip={view.coverage ? { label: view.coverage.label, toneClass: COLLATERAL_COVERAGE_PILL_CLASSES[view.coverage.tone] } : null}
+        chip={view.coverage ? { label: view.coverage.label, toneClass: coverageChipClass(view.coverage) } : null}
         value={view.headline.value}
         valueCaption={view.headline.basis}
         visual={view.visual || view.sharedBookNote || view.headline.hint ? <BackingVisual view={view} /> : undefined}

@@ -1,4 +1,6 @@
 import type { TapeEvent } from "@shared/types/tape-event";
+import { SEVERITY_RANK } from "@shared/types/tape-event-constants";
+import { DAY_MS } from "@shared/lib/time-constants";
 
 export function eventClassSlug(type: string): string {
   const dot = type.indexOf(".");
@@ -65,15 +67,18 @@ export function collapseByCoinClass(events: ReadonlyArray<TapeEvent>): Collapsed
   return result;
 }
 
-// Homepage-strip variant: after the coin+class collapse, merge `dews.escalated`
-// and `dews.deescalated` entries that share the same band transition
-// (e.g. CALM → WATCH) across coins. A 15-min cycle that flips dozens of coins
-// would otherwise dominate the strip with near-identical rows.
+// Homepage-strip variant. Low-band DEWS churn (CALM ↔ WATCH) is folded out;
+// after the coin+class collapse, `dews.escalated` and `dews.deescalated`
+// entries that share the same band transition (e.g. WATCH → ALERT) merge
+// across coins, so one sweep is one cell; warning-and-above entries from the
+// last 24 hours (by the viewer clock `nowMs`; none while it is unknown) are then
+// pinned ahead of routine notices, newest first within each tier. Older ones
+// keep their chronological place.
 //
-// /timeline keeps the per-coin granularity by using `collapseByCoinClass`
-// directly.
-export function collapseForHomepageStrip(events: ReadonlyArray<TapeEvent>): CollapsedTapeEntry[] {
-  const base = collapseByCoinClass(events);
+// /timeline keeps the per-coin granularity (and the churn) by using
+// `collapseByCoinClass` directly.
+export function collapseForHomepageStrip(events: ReadonlyArray<TapeEvent>, nowMs = 0): CollapsedTapeEntry[] {
+  const base = collapseByCoinClass(events.filter((event) => lowBandDirection(event) === null));
   const result: CollapsedTapeEntry[] = [];
   const indexByKey = new Map<string, number>();
   for (const entry of base) {
@@ -96,7 +101,9 @@ export function collapseForHomepageStrip(events: ReadonlyArray<TapeEvent>): Coll
       existing.coinIds = [...(existing.coinIds ?? []), coinId];
     }
   }
-  return result;
+  const pinned = (entry: CollapsedTapeEntry) => SEVERITY_RANK[entry.event.severity] >= SEVERITY_RANK.warning
+    && nowMs > 0 && nowMs - entry.event.ts <= DAY_MS;
+  return [...result.filter(pinned), ...result.filter((entry) => !pinned(entry))];
 }
 
 export type LowBandDirection = "calm-to-watch" | "watch-to-calm";

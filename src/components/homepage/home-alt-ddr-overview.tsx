@@ -29,7 +29,7 @@ import {
   NOW_DOT_TONE,
 } from "@/components/depeg/depeg-resolver-row-card-model";
 import { groupTiersByVocabulary, isResolverBookAvailable } from "@/components/depeg/depeg-resolver-book-summary";
-import { DDR_VERDICT_CLASSES, type DdrTierVocabulary } from "@shared/lib/classification";
+import { DDR_VERDICT_CLASSES, DEPEG_PENDING_STATE_LABELS, type DdrTierVocabulary } from "@shared/lib/classification";
 
 // Above this many open depegs the board splits into two balanced columns so all
 // forecasts stay visible without an over-tall single list.
@@ -174,7 +174,9 @@ function ForecastRow({ item, logoSrc }: { item: ForecastItem; logoSrc: string | 
       </span>
       <span className="flex shrink-0 items-center justify-end gap-2.5">
         <span className={cn("w-auto text-right sm:w-24 text-2xs font-semibold", item.tier == null ? "text-muted-foreground" : getTierMeta(item.tier, item.vocabulary).accent)}>
-          {item.tier == null ? item.state.replaceAll("_", " ") : getTierMeta(item.tier, item.vocabulary).short}
+          {item.tier != null
+            ? getTierMeta(item.tier, item.vocabulary).short
+            : item.state === "pending_lock" ? DEPEG_PENDING_STATE_LABELS.ddrLock : item.state.replaceAll("_", " ")}
         </span>
         <span className="w-auto text-right sm:w-28">
           <DurationCell item={item} />

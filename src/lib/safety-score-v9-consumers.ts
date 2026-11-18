@@ -229,7 +229,13 @@ export interface V9PortfolioProjection {
   assetGrade: null;
   pillars: Record<"backing" | "exit" | "control", number | null>;
   partialEvidence: boolean;
-  coverageUsd: { total: number; score: number; pillars: Record<"backing" | "exit" | "control", number> };
+  coverageUsd: {
+    total: number;
+    score: number;
+    pillars: Record<"backing" | "exit" | "control", number>;
+    /** Positive holdings each known-only subtotal leaves out, so a label can name them. */
+    excludedIds: { score: string[]; pillars: Record<"backing" | "exit" | "control", string[]> };
+  };
   dependencyExposure: Array<{
     upstreamAssetId: string;
     dependentAssetId: string;
@@ -259,6 +265,10 @@ export function buildV9PortfolioProjection(
   let scoredUsd = 0;
   let partialEvidence = false;
   const pillarUsd = { backing: 0, exit: 0, control: 0 };
+  const excludedIds: V9PortfolioProjection["coverageUsd"]["excludedIds"] = {
+    score: [],
+    pillars: { backing: [], exit: [], control: [] },
+  };
   let totalUsd = 0;
 
   for (const holding of positiveHoldings) {
@@ -267,13 +277,20 @@ export function buildV9PortfolioProjection(
     totalUsd += holding.amount;
     partialEvidence ||= card.partialEvidence !== null || card.ratingStatus !== "rated";
     if (card.ratingStatus === "not-rated") return { status: "unavailable", reason: "portfolio-card-not-rated" };
-    if (card.ratingStatus === "pipeline-gap" || card.score === null) continue;
+    if (card.ratingStatus === "pipeline-gap" || card.score === null) {
+      excludedIds.score.push(holding.coinId);
+      for (const pillar of ["backing", "exit", "control"] as const) excludedIds.pillars[pillar].push(holding.coinId);
+      continue;
+    }
     scoredUsd += holding.amount;
     weightedScore += card.score * holding.amount;
     for (const pillar of ["backing", "exit", "control"] as const) {
       const value = card.pillars[pillar];
       // aggregationDisposition is optional and defaults to "included".
-      if (value.aggregationDisposition === "excluded-a-b" || value.score === null) continue;
+      if (value.aggregationDisposition === "excluded-a-b" || value.score === null) {
+        excludedIds.pillars[pillar].push(holding.coinId);
+        continue;
+      }
       weightedPillars[pillar] += value.score * holding.amount;
       pillarUsd[pillar] += holding.amount;
     }
@@ -300,7 +317,7 @@ export function buildV9PortfolioProjection(
       score: scoredUsd > 0 ? Math.round(weightedScore / scoredUsd) : null,
       assetGrade: null,
       partialEvidence,
-      coverageUsd: { total: totalUsd, score: scoredUsd, pillars: pillarUsd },
+      coverageUsd: { total: totalUsd, score: scoredUsd, pillars: pillarUsd, excludedIds },
       pillars: {
         backing: pillarUsd.backing > 0 ? Math.round(weightedPillars.backing / pillarUsd.backing) : null,
         exit: pillarUsd.exit > 0 ? Math.round(weightedPillars.exit / pillarUsd.exit) : null,

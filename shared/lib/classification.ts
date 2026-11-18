@@ -43,6 +43,7 @@ export * from "./classification/brand";
 export * from "./classification/reserve-risk";
 export * from "./classification/tape";
 export * from "./classification/verdict";
+export * from "./classification/coin-state";
 export type { BadgeStyle } from "./classification/common";
 
 const DEX_DURABILITY_STYLES = {
