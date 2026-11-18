@@ -1,4 +1,5 @@
 import type { DdrResponse, DdrRow } from "@shared/types/depeg-resolver";
+import type { DdrActiveEventInput } from "@shared/lib/depeg-resolver";
 import type { DdrV2StoreContracts } from "../depeg-resolver-v2-contracts";
 
 /** Admitted publication projection, owned by one resolver run. Null means unavailable. */
@@ -47,10 +48,20 @@ export interface DdrEventDbRow {
 
 export interface CurrentDeviationMapResult {
   byCoin: Map<string, number | null>;
+  observedAtByCoin: Map<string, number>;
   healthy: boolean;
   degradedReason: string | null;
   dataAsOf: number | null;
 }
+
+export type DdrActiveObservationInput = DdrActiveEventInput & {
+  currentDeviationObservedAtSec?: number | null;
+};
+
+/** The assessment store retains the original quote clock for training. */
+export type DdrAssessmentRow = DdrRow & {
+  currentDeviationObservedAtSec?: number;
+};
 
 export interface QueryRowsResult<T> {
   rows: T[];
@@ -65,5 +76,5 @@ export interface DdrPendingPromotionOutcomeRow {
   outcome_at: number;
 }
 
-export type DdrDiagnosticResponse = Omit<DdrResponse, "rows"> & { rows: DdrRow[] };
+export type DdrDiagnosticResponse = Omit<DdrResponse, "rows"> & { rows: DdrAssessmentRow[] };
 export type DdrLineage = NonNullable<DdrResponse["_meta"]["lineage"]>;

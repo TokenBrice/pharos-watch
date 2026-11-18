@@ -55,11 +55,15 @@ export function classifyEvidenceKinds(
 
   // Keep the raw divergence; only an independently stressed DEX leg may supply
   // escalation evidence when Broker spread is the sole primary observation.
-  const marketEvidence = hasLoneMentoBrokerPrice(input) && input
-    ? hasStressEvidence(signals.diverg) && (input.independentDexPrices ?? []).some((price) => hasStressEvidence(computeDivergSignal({
-        ...input, price: null, dexPriceUsd: price, prevDivergValue: undefined, prevDivergAvailable: false,
-      })))
-    : hasStressEvidence(signals.diverg);
+  const divergence = signals.diverg;
+  const currentMarketStress = divergence.available && (divergence.currentDivergenceValue === undefined
+    ? divergence.value : divergence.currentDivergenceValue ?? 0) >= EVIDENCE_STRESS_THRESHOLD;
+  const marketEvidence = currentMarketStress && (!hasLoneMentoBrokerPrice(input) || !input
+    || (input.referenceAdmission ? input.independentDexDivergence === true
+      : (input.independentDexPrices ?? []).some((price) => hasStressEvidence(computeDivergSignal({
+          ...input, price: null, dexPriceUsd: price, venueSpreadBps: null, carriedReferenceDivergence: undefined,
+          prevDivergValue: undefined, prevDivergAvailable: false,
+        })))));
   if (marketEvidence) {
     kinds.add("market-price");
   }

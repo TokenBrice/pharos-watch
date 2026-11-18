@@ -8,6 +8,7 @@ import { getConditionBand, getPsiDailySampleBudget } from "@shared/lib/psi-polic
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { PSI_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { round1 } from "@shared/lib/math";
+import { PSI_DAILY_HAS_REPAIR_SQL } from "../lib/psi-sample-projection";
 
 interface SnapshotPsiDailyOptions {
   completionReason?: string;
@@ -108,13 +109,17 @@ export async function snapshotPsiDaily(
   // stability_index is keyed by a surrogate `id`, so `computed_at` carries no
   // UNIQUE constraint for INSERT OR REPLACE to resolve against; a plain upsert
   // appends a second row for the day. Delete-then-insert in one batch keeps the
-  // midnight-keyed row single-valued and is idempotent across re-runs.
-  await db.batch([
-    db.prepare("DELETE FROM stability_index WHERE computed_at = ?").bind(yesterdayMidnight),
+  // midnight-keyed row single-valued and is idempotent across re-runs. The
+  // repair guard belongs in the write batch so a concurrent repair wins.
+  const hasRepair = `EXISTS (SELECT 1 FROM stability_index WHERE computed_at = ?1 AND (${PSI_DAILY_HAS_REPAIR_SQL}))`;
+  const [, inserted] = await db.batch([
+    // SAFETY: hasRepair is a fixed predicate and the day is bound once.
+    db.prepare(`DELETE FROM stability_index WHERE computed_at = ?1 AND NOT ${hasRepair}`).bind(yesterdayMidnight),
     db
+      // SAFETY: hasRepair is a fixed predicate. All six values are bound below.
       .prepare(
         `INSERT INTO stability_index (computed_at, score, band, components, input_snapshot, methodology_version)
-         VALUES (?, ?, ?, ?, ?, ?)`
+         SELECT ?1, ?, ?, ?, ?, ? WHERE NOT ${hasRepair}`
       )
       .bind(
         yesterdayMidnight,
@@ -140,6 +145,10 @@ export async function snapshotPsiDaily(
       ),
   ]);
   throwIfAborted(signal);
+
+  if (inserted?.meta.changes === 0) {
+    return createCronResult({ itemCount: 0, metadata: { reason: "reference-market-repair-preserved" } });
+  }
 
   logWorkerEventArgs("handler", "info", `[snapshot-psi] yesterday avg=${score} band=${band} samples=${row.cnt}`);
   return createCronResult({

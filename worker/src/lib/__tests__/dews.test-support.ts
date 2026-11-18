@@ -27,6 +27,7 @@ export function makeDewsInput(overrides: Partial<DEWSInput> = {}): DEWSInput {
     burnVolume24hUsd: null,
     mintVolume24hUsd: null,
     burnBaseline30dUsd: null,
+    flowEpochIssue: null,
     flowDataAgeDays: 0,
     flowValuation24h: "complete",
     flowBurnBaselineValuation: "complete",

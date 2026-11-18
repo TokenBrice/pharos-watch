@@ -252,21 +252,31 @@ describe("snapshotPsiDaily re-run idempotency (real schema)", () => {
     expect(rows[0].score).toBe(85);
   });
 
-  it("replaces the stored row when a re-run produces a different score", async () => {
+  it.each([false, true])("handles a rerun with a different raw score (repaired=%s)", async (repaired) => {
     const { sqlite, db } = createLatestSchemaSqlite();
     const yesterdayMidnight = yesterdayMidnightFrom(Date.now());
 
     seedSample(sqlite, yesterdayMidnight + 3_600, 90);
     await snapshotPsiDaily(db);
+    const marker = JSON.stringify({ referenceMarketRepair: {
+      method: "samples", sampleScores: { [yesterdayMidnight + 3_600]: 92 },
+    } });
+    if (repaired) {
+      sqlite.prepare("UPDATE stability_index SET score = 92, band = 'BEDROCK', input_snapshot = ?").run(marker);
+    }
 
     seedSample(sqlite, yesterdayMidnight + 7_200, 70);
-    await snapshotPsiDaily(db);
+    const result = await snapshotPsiDaily(db);
 
     const rows = sqlite
-      .prepare("SELECT score FROM stability_index WHERE computed_at = ?")
-      .all(yesterdayMidnight) as { score: number }[];
+      .prepare("SELECT score, input_snapshot FROM stability_index WHERE computed_at = ?")
+      .all(yesterdayMidnight);
 
     expect(rows).toHaveLength(1);
-    expect(rows[0].score).toBe(80);
+    expect(rows[0]?.score).toBe(repaired ? 92 : 80);
+    if (repaired) {
+      expect(rows[0]?.input_snapshot).toBe(marker);
+      expect(JSON.parse(result.metadata ?? "{}").reason).toBe("reference-market-repair-preserved");
+    }
   });
 });

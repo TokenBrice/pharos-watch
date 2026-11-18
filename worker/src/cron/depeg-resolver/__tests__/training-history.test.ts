@@ -5,7 +5,7 @@ import { DDR_INELIGIBLE_AUDIT_VERDICTS } from "@shared/types/depeg-audit";
 import { auditVerdictNotInSql } from "../../../lib/depeg-audit";
 import { HISTORICAL_ROW_CAP, TRAINING_ROLLUP_BACKFILL_EVENT_CAP, TRAINING_WINDOW_SEC } from "../constants";
 import { loadDdrHistoricalEvents } from "../context";
-import { readDdrTrainingHistory, type DdrTrainingHistoryRow } from "../training-history";
+import { readDdrOpenTrainingHistory, readDdrTrainingHistory, type DdrTrainingHistoryRow } from "../training-history";
 import { seedAssessmentSample, seedHistoricalEvent } from "./context.test-support";
 import { NOW_SEC } from "./depeg-resolver.test-support";
 
@@ -43,7 +43,27 @@ async function legacyHistory(db: D1Database, directions = ["below"]): Promise<Dd
   return result.results ?? [];
 }
 
+// Compare the original columns. Successor rows add receipt fields and an explicit null for an undated assessment.
+function legacyComparable(rows: DdrTrainingHistoryRow[]): string {
+  return JSON.stringify(rows.map((row) => ({
+    ...row, severity_observations_json: row.severity_observations_json == null ? null : JSON.stringify(
+      JSON.parse(row.severity_observations_json), (key, value) => key === "quoteObservedAt" && value === null ? undefined : value),
+  })), (key, value) => ["peer_basis_json", "first_price", "last_price", "peg_reference"].includes(key) ? undefined : value);
+}
+
 describe("DDR training corpus rollup", () => {
+  it("excludes reviewed empty-coverage artifacts while leaving raw assessment history intact", async () => {
+    const { sqlite, db } = fixtures.open();
+    for (const id of [1, 2, 3, 4]) seedHistoricalEvent(sqlite, { id, coin: `coin-${id}`, startedAt });
+    seedAssessmentSample(sqlite, 1, "coin-1", startedAt, startedAt + 300, -450);
+    sqlite.exec(`UPDATE depeg_events SET disposition = 'repaired', admitted_coverage_json = '[ ]' WHERE id IN (1, 3);
+                 UPDATE depeg_events SET ended_at = NULL WHERE id IN (3, 4)`);
+    expect((await readDdrTrainingHistory(db, ["below"], windowStart)).map((row) => row.id)).toEqual([2]);
+    expect((await readDdrOpenTrainingHistory(db, ["below"], windowStart)).map((row) => row.id)).toEqual([4]);
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM depeg_resolver_assessments WHERE event_id = 1").get()).toEqual({ n: 1 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM depeg_events").get()).toEqual({ n: 4 });
+  });
+
   it("returns byte-identical history including window edges, empty samples, audit exclusions and ambiguous onset", async () => {
     const { sqlite, db } = fixtures.open();
     for (const [id, date] of [[1, windowStart - 1], [2, windowStart], [3, windowStart + 1], [4, startedAt]]) {
@@ -88,10 +108,31 @@ describe("DDR training corpus rollup", () => {
     const prepare = vi.spyOn(db, "prepare");
     const rolled = await readDdrTrainingHistory(db, ["below", "above"], windowStart);
     expect(prepare.mock.calls).toHaveLength(1);
-    expect(JSON.stringify(rolled)).toBe(JSON.stringify(await legacyHistory(db, ["below", "above"])));
+    expect(legacyComparable(rolled)).toBe(JSON.stringify(await legacyHistory(db, ["below", "above"])));
     expect(rolled.map((row) => row.id)).toEqual([2, 3, 4, 6]);
     expect(rolled.find((row) => row.id === 3)?.severity_observations_json).toBe("[]");
     expect(rolled.find((row) => row.id === 4)?.first_seen_bps).toBeNull();
+  });
+
+  it("keeps explicit quote clocks and clock absence in trigger-maintained rows", async () => {
+    const { sqlite, db } = fixtures.open();
+    seedHistoricalEvent(sqlite, { id: 1, coin: "coin", startedAt });
+    seedAssessmentSample(sqlite, 1, "coin", startedAt, startedAt + 300, -600);
+    const read = () => JSON.parse(String(sqlite.prepare(
+      "SELECT severity_observations_json FROM depeg_resolver_training_corpus WHERE event_id = 1",
+    ).get()?.severity_observations_json));
+    expect(read()).toContainEqual({ observedAt: startedAt + 300, deviationBps: -600, quoteObservedAt: null });
+    sqlite.exec("UPDATE depeg_resolver_training_corpus SET severity_observations_json = json_remove(severity_observations_json, '$[0].quoteObservedAt') WHERE event_id = 1");
+    const prepare = vi.spyOn(db, "prepare");
+    await readDdrTrainingHistory(db, ["below"], windowStart);
+    expect(read()[0]).toHaveProperty("quoteObservedAt", null);
+    expect(prepare.mock.calls.some(([sql]) => sql.includes("ddr-training-backfill"))).toBe(true);
+    prepare.mockClear();
+    await readDdrTrainingHistory(db, ["below"], windowStart);
+    expect(prepare.mock.calls).toHaveLength(1);
+    sqlite.prepare("UPDATE depeg_resolver_assessments SET row_json = ? WHERE event_id = 1 AND assessed_at = ?")
+      .run(JSON.stringify({ currentDeviationBps: -610, currentDeviationObservedAtSec: startedAt + 120 }), startedAt + 300);
+    expect(read()).toContainEqual({ observedAt: startedAt + 300, deviationBps: -610, quoteObservedAt: startedAt + 120 });
   });
 
   it("keeps inclusive observation boundaries and rejects every mismatched assessment identity", async () => {
@@ -112,7 +153,7 @@ describe("DDR training corpus rollup", () => {
       sqlite.prepare("UPDATE depeg_resolver_assessments SET stablecoin_id = ?, direction = ?, started_at = ?, assessed_at = ? WHERE event_id = 1")
         .run(sample.coin, sample.direction, sample.start, sample.at);
       const rolled = await readDdrTrainingHistory(db, ["below"], windowStart);
-      expect(JSON.stringify(rolled)).toBe(JSON.stringify(await legacyHistory(db)));
+      expect(legacyComparable(rolled)).toBe(JSON.stringify(await legacyHistory(db)));
       expect(JSON.parse(rolled[0].severity_observations_json ?? "[]")).toHaveLength(sample.count);
     }
   });
@@ -126,7 +167,7 @@ describe("DDR training corpus rollup", () => {
     expect(sqlite.prepare("SELECT event_id FROM depeg_resolver_training_corpus WHERE event_id = 1").get()).toBeUndefined();
     sqlite.prepare("UPDATE depeg_events SET ended_at = ? WHERE id = 1").run(startedAt + 72 * 3600);
     const assertEquivalent = async () => {
-      expect(JSON.stringify(await readDdrTrainingHistory(db, ["below"], windowStart)))
+      expect(legacyComparable(await readDdrTrainingHistory(db, ["below"], windowStart)))
         .toBe(JSON.stringify(await legacyHistory(db)));
     };
     await assertEquivalent();
@@ -160,13 +201,13 @@ describe("DDR training corpus rollup", () => {
     const prepare = vi.spyOn(db, "prepare");
     const expected = JSON.stringify(await legacyHistory(db));
     prepare.mockClear();
-    expect(JSON.stringify(await readDdrTrainingHistory(db, ["below"], windowStart))).toBe(expected);
+    expect(legacyComparable(await readDdrTrainingHistory(db, ["below"], windowStart))).toBe(expected);
     expect(prepare.mock.calls.some(([sql]) => sql.includes("ddr-training-history-live"))).toBe(true);
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM depeg_resolver_training_corpus").get()?.n)
       .toBe(TRAINING_ROLLUP_BACKFILL_EVENT_CAP);
-    expect(JSON.stringify(await readDdrTrainingHistory(db, ["below"], windowStart))).toBe(expected);
+    expect(legacyComparable(await readDdrTrainingHistory(db, ["below"], windowStart))).toBe(expected);
     prepare.mockClear();
-    expect(JSON.stringify(await readDdrTrainingHistory(db, ["below"], windowStart))).toBe(expected);
+    expect(legacyComparable(await readDdrTrainingHistory(db, ["below"], windowStart))).toBe(expected);
     expect(prepare.mock.calls).toHaveLength(1);
   });
 
@@ -177,7 +218,7 @@ describe("DDR training corpus rollup", () => {
     sqlite.exec("UPDATE depeg_resolver_training_corpus SET started_at = started_at - 1");
     const original = db.prepare.bind(db);
     const prepare = vi.spyOn(db, "prepare");
-    expect(JSON.stringify(await readDdrTrainingHistory(db, ["below"], windowStart))).toBe(expected);
+    expect(legacyComparable(await readDdrTrainingHistory(db, ["below"], windowStart))).toBe(expected);
     expect(prepare.mock.calls.some(([sql]) => sql.includes("ddr-training-history-live"))).toBe(true);
     sqlite.exec("DELETE FROM depeg_resolver_training_corpus");
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -185,13 +226,13 @@ describe("DDR training corpus rollup", () => {
       if (sql.includes("ddr-training-backfill")) throw new Error("backfill unavailable");
       return original(sql);
     });
-    expect(JSON.stringify(await readDdrTrainingHistory(db, ["below"], windowStart))).toBe(expected);
+    expect(legacyComparable(await readDdrTrainingHistory(db, ["below"], windowStart))).toBe(expected);
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM depeg_resolver_training_corpus").get()?.n).toBe(0);
     prepare.mockImplementation((sql) => {
       if (sql.includes("/* pharos:ddr-training-history */")) throw new Error("rollup unreadable");
       return original(sql);
     });
-    expect(JSON.stringify(await readDdrTrainingHistory(db, ["below"], windowStart))).toBe(expected);
+    expect(legacyComparable(await readDdrTrainingHistory(db, ["below"], windowStart))).toBe(expected);
     prepare.mockImplementation(() => { throw new Error("database unavailable"); });
     await expect(readDdrTrainingHistory(db, ["below"], windowStart)).rejects.toThrow("database unavailable");
   });
@@ -210,7 +251,7 @@ describe("DDR training corpus rollup", () => {
     }
   });
 
-  it("preserves the 60000 cap and id tie-break without reading assessments on the complete path", async () => {
+  it("preserves the 60000 cap and id tie-break without assessment lookups for refreshed rollups", async () => {
     const { sqlite, db } = fixtures.open();
     sqlite.exec(`
       WITH RECURSIVE n(id) AS (SELECT 1 UNION ALL SELECT id + 1 FROM n WHERE id <= ${HISTORICAL_ROW_CAP})
@@ -223,11 +264,11 @@ describe("DDR training corpus rollup", () => {
     const rows = await readDdrTrainingHistory(db, ["below"], windowStart);
     expect(prepare.mock.calls).toHaveLength(1);
     const sql = prepare.mock.calls[0][0];
-    expect(sql).not.toContain("depeg_resolver_assessments");
     const plan = sqlite.prepare(`EXPLAIN QUERY PLAN ${sql}`).all(windowStart, ...auditVerdictNotInSql("provenance_audit_verdict", DDR_INELIGIBLE_AUDIT_VERDICTS).binds, "below");
     expect(JSON.stringify(plan)).toContain("idx_depeg_pending_outcomes_training_identity");
-    expect(JSON.stringify(plan)).toContain("COVERING INDEX idx_depeg_training_history");
-    expect(JSON.stringify(rows)).toBe(JSON.stringify(await legacyHistory(db)));
+    expect(JSON.stringify(plan)).toContain("INDEX idx_depeg_training_history");
+    expect(JSON.stringify(plan)).not.toContain("idx_ddr_assessments_event");
+    expect(legacyComparable(rows)).toBe(JSON.stringify(await legacyHistory(db)));
     expect(rows).toHaveLength(HISTORICAL_ROW_CAP);
     expect(rows[0].id).toBe(1);
     expect(rows[rows.length - 1].id).toBe(HISTORICAL_ROW_CAP);

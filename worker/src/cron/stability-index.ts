@@ -1,11 +1,19 @@
 import { includePsiEventDeviation } from "../lib/psi-recompute";
 import { logWorkerEventArgs } from "../lib/structured-log";
-import { getCirculatingRawOrNull, getPrevWeekRawOrNull, isOutageFallbackCarry } from "@shared/lib/supply";
+import { getCirculatingRawOrNull, getUsdMarketCapBaselineOrNull, hasDatedUsdValuation, isOutageFallbackCarry } from "@shared/lib/supply";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC, DEX_PROTOCOL_SOURCE_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { CORE_PSI_ELIGIBLE_IDS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
-import { derivePegRates, normalizePegType } from "@shared/lib/peg-rates";
-import { getReferenceMarket, getReferenceMarketClosureStart, isReferenceDeviationHeld } from "@shared/lib/reference-market-hours";
+import { derivePegRates, getPegReference, isParityPrice, normalizePegType } from "@shared/lib/peg-rates";
+import { getCommodityOuncesAtQuote } from "@shared/lib/commodity-median";
+import { getReferenceMarket, getReferenceMarketClosureStart, getReferenceSessionState, isReferenceDeviationHeld } from "@shared/lib/reference-market-hours";
 import { deriveAuthoritativePegSignal } from "./authoritative-peg-signal";
+import { assessDetectionReference, assessIndependentPeerMove, attachDetectionReferenceContext, sourceObservationClock } from "./depeg-detection/reference-policy";
+import { admittedDeviationBps, evaluateReferenceAdmission } from "@shared/lib/reference-admission";
+import { getPublishedReferenceEvidence, readAdmittedNativeEventObservation } from "../lib/psi-reference";
+import { computePsiStressBreadth } from "../lib/psi-replay";
+import { asRawDeviationBps, type ReferenceAdmission } from "@shared/types/reference-admission";
 import { PSI_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { round1 } from "@shared/lib/math";
 import { DEWS_GENERATION_CONSUMER_MAX_AGE_SEC } from "@shared/lib/api-freshness";
@@ -13,28 +21,52 @@ import type { CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
 import { getPriceCache } from "../lib/price-cache";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
-import { computeStabilityIndex, DEWS_STRESS_BREADTH_SCALE, getDepreciationFactor } from "../lib/stability-index";
+import { computeStabilityIndex, getDepreciationFactor } from "../lib/stability-index";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { loadPublishedStressSignalGeneration } from "../lib/stress-signals-current-rows";
 import { canonicalizePsiStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggregate-universe";
 import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-registry";
 import { classifyPsiUniverseCoverage } from "@shared/lib/psi-policy";
-import { isDewsAlertBand } from "@shared/lib/classification";
 import { throwIfAborted } from "../lib/abort";
-import { getNativeEventPrice, isNativePegEvent, type NativeEventPriceEvidence } from "@shared/lib/depeg-quote-domain";
-import { isObservedPrice, isReplaySafePriceSource } from "@shared/lib/pricing-source-policy";
+import { isNativePegEvent, type NativeEventPriceEvidence } from "@shared/lib/depeg-quote-domain";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { hasPeerDeviationReceipt, readPeerDeviationMarks } from "../lib/depeg-observation-marks";
+import { loadDexPoolChallengers } from "../lib/depeg-helpers";
+import { getDepegRecoveryThresholdBps, getDepegThresholdBps } from "../lib/depeg-threshold-policy";
+import { COINGECKO_NATIVE_IMPLIED_SOURCE } from "../lib/native-peg-implied-prices";
+import { POOL_CHALLENGE_MIN_TVL } from "../lib/price-depeg-voting-policy";
+import { isEarlierSupplyPerimeter, isAmbiguousSupplyPerimeterDay } from "@shared/lib/supply-perimeter-changes";
+import { isReplaySafePriceSource } from "@shared/lib/pricing-source-policy";
 import { protocolParProvider } from "../lib/authoritative-price-sources/protocol-par";
 import { decodeNativeEventQuote, NATIVE_EVENT_QUOTE_CACHE_PREFIX } from "../lib/native-peg-quote-cache";
+import { isRecord } from "@shared/lib/type-guards";
 
 type PsiActiveDepegRow = NativeEventPriceEvidence & {
+  id: number;
   stablecoin_id: string;
   current_native_quote: string | null;
   last_trusted_price_at: number | null;
+  pending_reason?: string | null;
+  peer_basis_json?: string | null;
+  peak_deviation_bps: number;
+  peak_price?: number | null;
+  peak_peg_reference?: number | null;
+  peak_quote_domain?: string | null;
+  direction?: string;
 };
 
 const REPLAY_PRICE_CACHE_TTL_SEC = 6 * 60 * 60;
 const DEWS_STRESS_MAX_AGE_SEC = DEWS_GENERATION_CONSUMER_MAX_AGE_SEC;
+
+interface PsiEventContribution {
+  startedAt: number;
+  bps: number;
+  observedAt: number | null;
+  legacySampleAt?: number;
+  basis?: "peer-relative";
+  confidence?: "low";
+}
 
 /** Contributor bps of the last sample published before the closure, within the replay-price budget; null when unreadable. */
 async function loadPreClosureContributorBps(
@@ -61,7 +93,11 @@ async function loadPreClosureContributorBps(
   }
 }
 
-export async function computeAndStoreStabilityIndex(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
+export async function computeAndStoreStabilityIndex(
+  db: D1Database,
+  signal?: AbortSignal,
+  options?: { referenceMode?: "legacy" | "per-observation" },
+): Promise<CronResult> {
   const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict" });
   if (stablecoinsCache.kind !== "ok") {
     return createCronResult({
@@ -76,7 +112,11 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
     });
   }
 
+  const clocked = stablecoinsCache.payload.fxReferenceObservations !== undefined;
+  const perObservation = options?.referenceMode === "per-observation" || clocked;
+  const selections = clocked ? stablecoinsCache.payload.selectedPegReferences : undefined;
   const tracked = stablecoinsCache.payload.peggedAssets.filter((coin) => CORE_PSI_ELIGIBLE_IDS.has(coin.id));
+  const now = Math.floor(Date.now() / 1000);
 
   let totalMcapUsd = 0;
   let pairedMcapUsd = 0;
@@ -87,6 +127,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   const supplyUnavailableIds: string[] = [];
   const carriedSupplyIds: string[] = [];
   const trendUnavailableIds: string[] = [];
+  const nativeQuantityMomentum: Record<string, number> = {};
   for (const coin of tracked) {
     const mcap = getCirculatingRawOrNull(coin);
     if (mcap == null || !Number.isFinite(mcap) || mcap < 0) {
@@ -98,7 +139,23 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
     // Routine main-path carries (chain dropout, coverage restore) stay observed.
     if (isOutageFallbackCarry(coin)) carriedSupplyIds.push(coin.id);
     totalMcapUsd += mcap;
-    const prevWeek = getPrevWeekRawOrNull(coin);
+    const clock = coin.supplyObservedAt;
+    const week = coin.supplyChangeBaselines?.week;
+    const paired = isRecord(week) && typeof week.observedAt === "number" && Number.isSafeInteger(week.observedAt) &&
+      week.observedAt > 0 && typeof clock === "number" && Number.isSafeInteger(clock) && clock <= now &&
+      clock > 0 && now - clock <= DAY_SECONDS &&
+      bucketUnixSecondsToUtcDay(clock) - bucketUnixSecondsToUtcDay(week.observedAt) === 7 * DAY_SECONDS &&
+      hasDatedUsdValuation(coin.supplySource, clock, coin.valuationPriceUsd, coin.valuationObservedAtSec, now) &&
+      !isOutageFallbackCarry(coin) && !isAmbiguousSupplyPerimeterDay(coin.id, week.observedAt) &&
+      !isAmbiguousSupplyPerimeterDay(coin.id, clock) &&
+      isEarlierSupplyPerimeter(coin.id, clock) === isEarlierSupplyPerimeter(coin.id, week.observedAt);
+    const prevWeek = paired || week === undefined ? getUsdMarketCapBaselineOrNull(coin, "week") : null;
+    if (paired && typeof week.circulatingNative === "number" && Number.isFinite(week.circulatingNative) &&
+        week.circulatingNative > 0 && coin.circulatingNative != null && Number.isFinite(coin.circulatingNative) &&
+        coin.circulatingNative >= 0) {
+      const change = ((coin.circulatingNative - week.circulatingNative) / week.circulatingNative) * 100;
+      if (Number.isFinite(change)) nativeQuantityMomentum[coin.id] = change;
+    }
     if (prevWeek != null && Number.isFinite(prevWeek) && prevWeek >= 0) {
       pairedMcapUsd += mcap;
       pairedPrevWeek += prevWeek;
@@ -165,14 +222,18 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   // Active depegs — use current price to compute live deviation
   let activeDepegs: D1Result<PsiActiveDepegRow>;
   try {
-    activeDepegs = await db
-      .prepare(`SELECT e.stablecoin_id, e.peg_reference, e.started_at, e.peg_type, e.source,
-                       e.start_price, e.ended_at, e.recovery_price, e.last_trusted_price_at, p.quote_mode,
-                       nq.value AS current_native_quote
+    const query = (receipt: boolean) => db
+      .prepare(`SELECT e.id, e.stablecoin_id, e.peg_reference, e.started_at, e.peg_type, e.source, e.pending_reason, e.direction,
+                       e.start_price, e.peak_deviation_bps, e.ended_at, e.recovery_price, e.last_trusted_price_at, p.quote_mode,
+                       nq.value AS current_native_quote${receipt ? ", e.peer_basis_json, e.peak_price, e.peak_peg_reference, e.peak_quote_domain" : ""}
                 FROM depeg_events e LEFT JOIN depeg_event_provenance p ON p.event_id = e.id
                 LEFT JOIN cache nq ON nq.key = '${NATIVE_EVENT_QUOTE_CACHE_PREFIX}' || e.id
                 WHERE e.ended_at IS NULL`)
       .all<PsiActiveDepegRow>();
+    activeDepegs = await query(true).catch((error: unknown) => {
+      if (error instanceof Error && /no such column: e\.peer_basis_json\b/i.test(error.message)) return query(false);
+      throw error;
+    });
   } catch (err) {
     logWorkerEventArgs("handler", "warn", "[stability-index] depeg query failed:", err);
     const depegEventsFailureReason = String(err);
@@ -189,18 +250,19 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
       },
     });
   }
-  const now = Math.floor(Date.now() / 1000);
 
-  const priceById = new Map<string, number>();
+  const priceById = new Map<string, { price: number; observedAt: number | null }>();
   for (const coin of tracked) {
-    if (isObservedPrice(coin) && coin.price != null && typeof coin.price === "number" && coin.price > 0) {
-      priceById.set(coin.id, coin.price);
+    if (coin.priceSource !== COINGECKO_NATIVE_IMPLIED_SOURCE &&
+        isParityPrice(coin) && coin.price != null && typeof coin.price === "number" && coin.price > 0) {
+      priceById.set(coin.id, { price: coin.price, observedAt: perObservation || coin.id === "xagm-matrixdock"
+        ? sourceObservationClock(coin) : coin.priceObservedAt ?? null });
     }
   }
 
   // Keep already-open depegs in PSI when the current stablecoins snapshot temporarily
   // lacks a usable price but we still have a recent replay-safe positive cached price.
-  const replayPriceById = new Map<string, number>();
+  const replayPriceById = new Map<string, { price: number; observedAt: number | null }>();
   try {
     const replayPriceCache = await getPriceCache(db);
     for (const [assetId, cached] of replayPriceCache) {
@@ -214,9 +276,10 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
         Number.isFinite(cached.price) &&
         cached.price > 0 &&
         Number.isFinite(cached.updatedAt) &&
+        cached.updatedAt <= now &&
         now - cached.updatedAt < REPLAY_PRICE_CACHE_TTL_SEC
       ) {
-        replayPriceById.set(assetId, cached.price);
+        replayPriceById.set(assetId, { price: cached.price, observedAt: cached.hasExplicitClocks && cached.observedAtMode === "upstream" ? cached.observedAt ?? null : null });
       }
     }
   } catch (error) {
@@ -224,7 +287,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   }
 
   // Read DEWS stress signals (from previous 15-min cycle) for stress breadth
-  let dewsStressBreadth = 0;
+  let dewsRows: { stablecoin_id: string; band: string }[] = [];
   let dewsUnavailable = false;
   let dewsFailureReason: string | null = null;
   let dewsLatestComputedAt: number | null = null;
@@ -236,6 +299,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
     dewsFailureReason = publishedDews.status !== "ok" ? publishedDews.reason : "generation-coverage-unverified";
   } else {
     const rows = publishedDews.rows.filter((row) => CORE_PSI_ELIGIBLE_IDS.has(row.stablecoin_id));
+    dewsRows = rows;
     dewsRowsRead = rows.length;
     for (const row of rows) {
       if (!Number.isFinite(row.computed_at)) {
@@ -251,16 +315,6 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
       if (rowAgeSec > DEWS_STRESS_MAX_AGE_SEC) {
         dewsUnavailable = true;
         dewsFailureReason ??= `stress_signals latest row for ${row.stablecoin_id} is stale (ageSec=${rowAgeSec}, maxAgeSec=${DEWS_STRESS_MAX_AGE_SEC})`;
-      }
-    }
-
-    if (!dewsUnavailable) {
-      // Count stressed coins weighted by mcap after dependency freshness is proven.
-      for (const row of rows) {
-        if (!isDewsAlertBand(row.band)) continue;
-        const coinMcap = mcapById.get(row.stablecoin_id);
-        if (coinMcap == null) continue;
-        dewsStressBreadth += Math.sqrt(coinMcap / 1e9) * DEWS_STRESS_BREADTH_SCALE;
       }
     }
   }
@@ -305,87 +359,236 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   }[] = [];
   let replayPriceFallbackCount = 0;
   let openDepegsWithoutPrice = 0;
-  // Detection's reference derivation: a non-USD reference moves after an event opens.
-  const { rates: pegRates, sources: pegRateSources, counts: pegRateCounts } = derivePegRates(
+  const dewsStressBreadth = computePsiStressBreadth(dewsRows, mcapById, new Set(grouped.keys()));
+  const hasScheduledEvent = [...grouped.keys()].some((id) => getReferenceMarket(PSI_ELIGIBLE_META_BY_ID.get(id)?.flags.pegCurrency) != null);
+  const legacyPegRates = perObservation ? null : derivePegRates(
     stablecoinsCache.payload.peggedAssets,
-    PSI_ELIGIBLE_META_BY_ID,
+    TRACKED_META_BY_ID,
     stablecoinsCache.payload.fxFallbackRates,
   );
   const closedSince = { metal: getReferenceMarketClosureStart("metal", now), fx: getReferenceMarketClosureStart("fx", now) };
   const baselines = new Map<number, Awaited<ReturnType<typeof loadPreClosureContributorBps>>>();
-  const heldContributorIds: string[] = [];
+  const heldContributorIds = new Set<string>();
+  const eventContributions: Record<number, PsiEventContribution> = {};
+  const referenceAdmissions: Record<number, ReferenceAdmission> = {};
+  const peerSubjectIds = new Set([...grouped].flatMap(([id, events]) =>
+    events.some(hasPeerDeviationReceipt) ? [id] : []));
+  let previous: Partial<Record<number, PsiEventContribution>> = {};
+  if ((perObservation && hasScheduledEvent) || peerSubjectIds.size > 0) {
+    try {
+      const row = await db.prepare(
+        "SELECT input_snapshot FROM stability_index_samples WHERE stored_at <= ? ORDER BY stored_at DESC LIMIT 1",
+      ).bind(now).first<{ input_snapshot: string }>();
+      if (row) {
+        const snapshot: unknown = JSON.parse(row.input_snapshot);
+        if (!isRecord(snapshot) || (snapshot.eventContributions !== undefined && !isRecord(snapshot.eventContributions))) {
+          throw new Error("invalid PSI contribution snapshot");
+        }
+        previous = (snapshot.eventContributions ?? {}) as Partial<Record<number, PsiEventContribution>>;
+      }
+    } catch (error) {
+      logWorkerEventArgs("handler", "warn", "[stability-index] prior admitted contributions unreadable:", error);
+      // An admitted candidate can still predate the durable carry.
+      return createCronResult({
+        status: "degraded", itemCount: 0,
+        metadata: { reason: "prior-contribution-unavailable", preservedCurrentSample: true },
+      });
+    }
+  }
+  const peerAssets = peerSubjectIds.size
+    ? stablecoinsCache.payload.peggedAssets.filter((asset) => !TRACKED_META_BY_ID.get(asset.id)?.flags.navToken)
+    : [];
+  const peerAssetById = new Map(peerAssets.filter((asset) => peerSubjectIds.has(asset.id)).map((asset) => [asset.id, asset]));
+  const peerRates = derivePegRates(peerAssets, TRACKED_META_BY_ID, undefined);
+  let peerPools: Awaited<ReturnType<typeof loadDexPoolChallengers>> | undefined;
+  if (peerAssetById.size > 0) {
+    attachDetectionReferenceContext(peerRates.rates, peerAssets, TRACKED_META_BY_ID,
+      new Set((activeDepegs.results ?? []).map(({ stablecoin_id }) => stablecoin_id)), null);
+    try {
+      peerPools = await loadDexPoolChallengers(db, POOL_CHALLENGE_MIN_TVL, DEX_PROTOCOL_SOURCE_FRESHNESS_SEC, now);
+    } catch (error) {
+      logWorkerEventArgs("handler", "warn", "[stability-index] peer corroboration unavailable:", error);
+    }
+  }
 
   for (const [coinId, events] of grouped) {
     const mcapUsd = mcapById.get(coinId);
-    if (mcapUsd == null) continue;
+    if (legacyPegRates && !peerSubjectIds.has(coinId) && mcapUsd == null) continue;
     const meta = PSI_ELIGIBLE_META_BY_ID.get(coinId);
+    const market = getReferenceMarket(meta?.flags.pegCurrency);
+    const session = market == null ? null : getReferenceSessionState(market, now);
     const currentPrice = priceById.get(coinId);
-    const replayPrice = replayPriceById.get(coinId);
-    const usdPrice = currentPrice ?? replayPrice;
+    const dynamicWeight = coinId === "xagm-matrixdock";
+    const commodityEntitlement = dynamicWeight ? tracked.find((asset) => asset.id === coinId)?.commodityEntitlement : undefined;
+    // The price cache does not preserve the parity-unit proof for these two assets.
+    const replayPrice = coinId === "xofm-mento" || coinId === "susd-solayer" ? undefined : replayPriceById.get(coinId);
+    const usdQuote = currentPrice ?? replayPrice;
     if (currentPrice == null && replayPrice != null && events.some((event) => !isNativePegEvent(event))) {
       replayPriceFallbackCount++;
     }
 
     const aggregate = { worstBps: 0, earliestStart: Infinity };
-    let worstAbsRawBps = Number.NaN;
+    const legacyAggregate = { worstBps: 0, earliestStart: Infinity };
+    const legacyEvents = events.filter((event) => !hasPeerDeviationReceipt(event));
     let missingPrice = false;
-    for (const e of events) {
-      const native = isNativePegEvent(e);
-      const price = native
-        ? getNativeEventPrice(e, now, decodeNativeEventQuote(e.current_native_quote))
-        : usdPrice;
-      const nonUsd = !native && normalizePegType(e.peg_type) !== "peggedUSD";
-      const current = nonUsd && price != null && meta
-        ? deriveAuthoritativePegSignal({
-          price,
-          pegCurrency: meta.flags.pegCurrency,
-          pegType: e.peg_type,
-          pegRates,
-          pegRateSources,
-          pegRateCounts,
-          commodityOunces: meta.commodityOunces,
-        })
-        : null;
-      // A non-USD reference moves after the event opens: without today's authoritative
-      // reference the event is unpriced, never scored against its opening reference.
-      const depegSignal = nonUsd
-        ? current?.kind === "signal" ? current.signal : null
-        : price != null ? deriveDepegSignal(price, e.peg_reference) : null;
-      if (!depegSignal) {
+    let unsupportedBasis = false;
+    let legacyMaxAbsBps = 0;
+    for (const event of events) {
+      const pegKey = normalizePegType(event.peg_type);
+      const native = isNativePegEvent(event);
+      const peerRelative = hasPeerDeviationReceipt(event);
+      const quoteMode = event.quote_mode;
+      if (quoteMode != null && quoteMode !== "usd" && quoteMode !== "native-peg") {
+        if (legacyPegRates && !peerRelative) {
+          unsupportedBasis = missingPrice = true;
+          continue;
+        }
+        return createCronResult({
+          status: "degraded", itemCount: 0,
+          metadata: { reason: "event-quote-basis-unsupported", eventId: event.id, preservedCurrentSample: true },
+        });
+      }
+      const currentNative = native ? decodeNativeEventQuote(event.current_native_quote) : null;
+      const nativeQuote = native ? readAdmittedNativeEventObservation(event, now) : null;
+      const quoteUnit = { assetId: coinId, commodityEntitlement,
+        quoteObservedAtSec: native ? nativeQuote?.observedAt : usdQuote?.observedAt };
+      const eventReference = native ? getCommodityOuncesAtQuote(event.peg_reference, quoteUnit) : event.peg_reference;
+      if (legacyPegRates && !peerRelative) {
+        const price = native ? nativeQuote?.value : usdQuote?.price;
+        const current = !native && pegKey !== "peggedUSD"
+          ? deriveAuthoritativePegSignal({
+            price, pegCurrency: meta?.flags.pegCurrency, pegType: event.peg_type, ...quoteUnit,
+            pegRates: legacyPegRates.rates, pegRateSources: legacyPegRates.sources,
+            pegRateCounts: legacyPegRates.counts, commodityOunces: meta?.commodityOunces,
+          })
+          : null;
+        const deviation = current
+          ? current.kind === "signal" ? current.signal : null
+          : price != null && eventReference != null ? deriveDepegSignal(price, eventReference) : null;
+        if (deviation) {
+          includePsiEventDeviation(legacyAggregate, deviation.bps, event.started_at);
+          legacyMaxAbsBps = Math.max(legacyMaxAbsBps, deviation.absRawBps);
+        } else {
+          missingPrice = true;
+        }
+        continue;
+      }
+      let observedAt = usdQuote?.observedAt ?? null;
+      let bps: number | null = null;
+      if (peerRelative) {
+        const stored = event.peg_type == null ? undefined : readPeerDeviationMarks({ ...event, peg_type: event.peg_type })
+          .find((mark) => mark.availableAt <= now);
+        bps = stored?.rawBps ?? null;
+        observedAt = stored?.quoteObservedAt ?? null;
+        const asset = peerAssetById.get(coinId);
+        if (stored && asset && meta && peerPools?.has(coinId)) {
+          const reference = assessDetectionReference({
+            asset, meta, pegRates: peerRates.rates, pegRateSources: peerRates.sources, now, signal: null,
+          });
+          const current = reference && assessIndependentPeerMove({
+            asset, reference, native: null, pools: peerPools.get(coinId), now,
+            threshold: getDepegThresholdBps(event.peg_type), recoveryThreshold: getDepegRecoveryThresholdBps(event.peg_type),
+          });
+          const clock = sourceObservationClock(asset);
+          if (current && clock != null && clock >= event.started_at && clock > stored.quoteObservedAt) {
+            bps = current.signal.rawBps;
+            observedAt = clock;
+          }
+        }
+      } else if (native) {
+        const quote = nativeQuote;
+        observedAt = quote?.observedAt ?? null;
+        const traded = quote != null && quote.observedAt === currentNative?.observedAt &&
+          quote.value === currentNative.value && currentNative.derivation?.kind === "traded-pair";
+        if (quote && eventReference != null && (traded || (session?.open && quote.observedAt >= session.sessionOpenedAtSec))) {
+          bps = deriveDepegSignal(quote.value, eventReference)?.bps ?? null;
+        }
+      } else if (pegKey === "peggedUSD") {
+        bps = usdQuote ? deriveDepegSignal(usdQuote.price, event.peg_reference)?.bps ?? null : null;
+      }
+      if (market && pegKey && bps == null && !peerRelative && !native) {
+        const reference = getPublishedReferenceEvidence(selections?.[pegKey],
+          `stablecoins:${stablecoinsCache.updatedAt}`, now);
+        const pegRef = reference && getPegReference(pegKey, { [pegKey]: reference.usdPerUnit }, meta?.commodityOunces, quoteUnit);
+        const signal = pegRef != null && usdQuote ? deriveDepegSignal(usdQuote.price, pegRef) : null;
+        const raw = signal && Number.isFinite(signal.rawBps) ? asRawDeviationBps(signal.rawBps) : null;
+        const admission = evaluateReferenceAdmission({ ...(reference ?? { kind: "none" }),
+          decisionAtSec: now, quoteObservedAtSec: observedAt, rawDeviationBps: raw,
+        });
+        referenceAdmissions[event.id] = admission;
+        bps = admittedDeviationBps(raw, admission);
+      }
+      if (market) {
+        let carried = previous[event.id];
+        const evidenceAt = carried?.observedAt ?? carried?.legacySampleAt;
+        if (carried?.startedAt !== event.started_at || !Number.isFinite(carried.bps) ||
+            (peerRelative && (carried.basis !== "peer-relative" || carried.observedAt == null)) ||
+            evidenceAt == null || !Number.isSafeInteger(evidenceAt) || evidenceAt > now ||
+            evidenceAt < event.started_at - (peerRelative ? DEPEG_PRIMARY_PRICE_MAX_AGE_SEC : 0)) {
+          carried = undefined;
+        }
+        if (bps != null && observedAt != null && (peerRelative || observedAt >= event.started_at) &&
+            (carried?.observedAt == null || observedAt > carried.observedAt)) {
+          carried = { startedAt: event.started_at, bps, observedAt,
+            ...(peerRelative ? { basis: "peer-relative", confidence: "low" } as const : {}),
+          };
+        } else {
+          const closureStart = session?.closureStartSec;
+          if (!peerRelative && !dynamicWeight && !carried && closureStart != null && events.length === 1 && event.started_at < closureStart) {
+            if (!baselines.has(closureStart)) {
+              baselines.set(closureStart, await loadPreClosureContributorBps(db, closureStart));
+            }
+            const baseline = baselines.get(closureStart);
+            const legacyBps = baseline?.bpsById.get(coinId);
+            if (baseline && baseline.storedAt >= event.started_at && legacyBps != null) {
+              carried = { startedAt: event.started_at, bps: legacyBps, observedAt: null, legacySampleAt: baseline.storedAt };
+            }
+          }
+          if (carried) heldContributorIds.add(coinId);
+        }
+        bps = carried?.bps ?? null;
+        if (carried) eventContributions[event.id] = carried;
+        else {
+          const reason = !native && pegKey !== "peggedUSD" && referenceAdmissions[event.id]?.kind === "none"
+            ? "selected-reference-unavailable" : "admitted-contribution-unavailable";
+          return createCronResult({
+            status: "degraded", itemCount: 0,
+            metadata: { reason, eventId: event.id, preservedCurrentSample: true },
+          });
+        }
+      }
+      if (bps == null) {
         missingPrice = true;
         continue;
       }
-      includePsiEventDeviation(aggregate, depegSignal.bps, e.started_at);
-      worstAbsRawBps = Number.isNaN(worstAbsRawBps) ? depegSignal.absRawBps : Math.max(worstAbsRawBps, depegSignal.absRawBps);
+      includePsiEventDeviation(aggregate, bps, event.started_at);
     }
 
-    let { worstBps, earliestStart } = aggregate;
-    const market = getReferenceMarket(meta?.flags.pegCurrency);
-    const coinClosedSince = market == null ? null : closedSince[market];
-    // A closed FX or metal market holds a coin at its pre-closure contribution, even when unpriced
-    // now, while detection has trusted none of its events since the closure began; a severe
-    // reading or promotion inside the closure keeps it live. No admissible baseline is
-    // unknown evidence, not calm.
-    if (
-      coinClosedSince != null &&
-      events.every((e) => Math.max(e.started_at, e.last_trusted_price_at ?? 0) < coinClosedSince) &&
-      isReferenceDeviationHeld(meta?.flags.pegCurrency, now, worstAbsRawBps)
-    ) {
-      if (!baselines.has(coinClosedSince)) {
-        baselines.set(coinClosedSince, await loadPreClosureContributorBps(db, coinClosedSince));
+    const closureStart = session?.closureStartSec;
+    if (legacyPegRates && legacyEvents.length && !dynamicWeight && !unsupportedBasis && closureStart != null &&
+        legacyEvents.every((event) => Math.max(event.started_at, event.last_trusted_price_at ?? 0) < closureStart) &&
+        isReferenceDeviationHeld(meta?.flags.pegCurrency, now, legacyMaxAbsBps)) {
+      if (!baselines.has(closureStart)) {
+        baselines.set(closureStart, await loadPreClosureContributorBps(db, closureStart));
       }
-      const held = baselines.get(coinClosedSince)?.bpsById.get(coinId);
+      const baseline = baselines.get(closureStart);
+      const held = baseline && !events.some((event) => hasPeerDeviationReceipt(event) && event.started_at <= baseline.storedAt)
+        ? baseline.bpsById.get(coinId) : undefined;
+      missingPrice = held == null;
       if (held == null) {
-        openDepegsWithoutPrice++;
-        continue;
+        legacyAggregate.earliestStart = Infinity;
+      } else {
+        legacyAggregate.worstBps = held;
+        legacyAggregate.earliestStart = Math.min(...legacyEvents.map((event) => event.started_at));
+        heldContributorIds.add(coinId);
       }
-      worstBps = held;
-      earliestStart = Math.min(...events.map((e) => e.started_at));
-      heldContributorIds.push(coinId);
-    } else {
-      if (missingPrice) openDepegsWithoutPrice++;
-      if (earliestStart === Infinity) continue;
     }
+    if (legacyAggregate.earliestStart !== Infinity) {
+      includePsiEventDeviation(aggregate, legacyAggregate.worstBps, legacyAggregate.earliestStart);
+    }
+    if (missingPrice) openDepegsWithoutPrice++;
+    const { worstBps, earliestStart } = aggregate;
+    if (mcapUsd == null || earliestStart === Infinity) continue;
     const ageDays = Math.max(0, (now - earliestStart) / DAY_SECONDS);
 
     depegs.push({ bps: worstBps, mcapUsd, depegAgeDays: ageDays });
@@ -447,6 +650,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
         depegCount: depegs.length,
         totalMcapUsd,
         mcap7dChangePct,
+        ...(Object.keys(nativeQuantityMomentum).length ? { nativeQuantityMomentum } : {}),
         dewsStressBreadth,
         dewsUnavailable,
         dewsFailureReason,
@@ -464,11 +668,14 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
           status: universeCoverageStatus,
         },
         contributors,
+        referenceScoringMode: perObservation ? "per-observation" : "legacy",
+        eventContributions,
+        referenceAdmissions,
+        ...(heldContributorIds.size > 0 ? { heldContributorIds: [...heldContributorIds] } : {}),
         ...(closedSince.metal != null || closedSince.fx != null
           ? {
             referenceMarketClosedSince: closedSince,
             referenceMarketBaselineAt: Object.fromEntries([...baselines].map(([since, base]) => [since, base?.storedAt ?? null])),
-            heldContributorIds,
           }
           : {}),
         methodologyVersion: PSI_METHODOLOGY_VERSION,

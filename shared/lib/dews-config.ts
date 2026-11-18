@@ -15,6 +15,11 @@ export const DEWS_SIGNAL_WEIGHTS = {
 
 export type DewsSignalKey = keyof typeof DEWS_SIGNAL_WEIGHTS;
 
+export const DEWS_BURN_MATERIALITY_MIN_USD = 50_000;
+export const DEWS_BURN_MATERIALITY_SUPPLY_FRACTION = 0.0001;
+export const DEWS_BURN_MATERIALITY_MAX_USD = 1_000_000;
+export const DEWS_USDT_FLOW_ID = "usdt-tether";
+
 export const DEWS_SIGNAL_LABELS: Record<DewsSignalKey, string> = {
   supply: "Supply Velocity",
   pool: "Pool Balance Drift",
@@ -32,7 +37,7 @@ export const DEWS_SIGNAL_SHORT_LABELS: Record<DewsSignalKey, string> = {
 };
 
 export const DEWS_SIGNAL_DESCRIPTIONS: Record<DewsSignalKey, string> = {
-  supply: "rapid redemptions (bank run), measured from 1-day and 7-day supply contraction rates",
+  supply: "rapid redemptions (bank run), measured from 1-day and 7-day native token supply contraction rates",
   pool: "one-sided selling pressure in DEX pools, blending balance stress, pool stress, and worst-pool imbalance",
   liq: "LPs fleeing, measured from 7-day score and TVL changes against a positive-TVL history row with confidence at least 0.5 within 36 hours of the target; missing anchors are unavailable",
   price: "N-source consensus failures across CoinGecko, DefiLlama list, GeckoTerminal, Binance, Coinbase, Curve on-chain, and DEX prices; maps confidence levels (high/single-source/low/fallback) to stress values",

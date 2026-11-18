@@ -133,6 +133,6 @@ export interface DdrHistoricalEvent {
   recoveryPrice: number | null;
   closeReason?: string | null;
   onsetDeviationBps?: number | null;
-  /** Observations retain their evidence clock, never the row's final untimed peak. */
-  severityObservations?: { observedAt: number; deviationBps: number }[];
+  /** The quote clock records provenance. When present, availableAt is the assessment that admitted the comparison. */
+  severityObservations?: { observedAt: number; availableAt?: number; deviationBps: number }[];
 }

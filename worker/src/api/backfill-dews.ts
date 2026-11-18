@@ -1,8 +1,13 @@
+import { admittedDepegOnset, type DepegTransitionEvidence } from "../lib/tape-projectors/depeg";
+import { reviewedDepegDisputeSql } from "@shared/data/depegs/reviewed-depeg-disposition-sql";
+import { BRZ_UNVERIFIED_PEAK_EVENT_IDS } from "@shared/data/depegs/backfill-replay-suppressions";
 import { isDewsAlertBand, isThreatBand } from "@shared/lib/classification";
+import { isDdrIneligibleAuditVerdict } from "@shared/lib/depeg-audit";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { resolvePsiInclusiveStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import { percentileNearestRank } from "@shared/lib/stats";
-import { isAmbiguousSupplyPerimeterDay, isEarlierSupplyPerimeter } from "@shared/lib/supply-perimeter-changes";
+import { hasComparableSupplyPerimeter, hasNativeSupplyEvidence, isMissingNativeSupplyColumn, readNativeSupplyCheckpoint, type NativeSupplyHistoryRow } from "../lib/dews/native-quantity";
+import { parseDexVolumeAvailabilityRecord } from "@shared/lib/dex-volume-availability";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { errorResponse, jsonResponse, methodNotAllowedResponse } from "../lib/api-response";
@@ -19,15 +24,17 @@ import type {
 } from "../lib/dews/contracts";
 import { malformedInputDegradesRun } from "../lib/dews/malformed-input";
 import { computeAndStoreDEWS } from "../lib/dews/service";
-import { getDexLiquidityTrendTolerances, selectLiquidityObservation, selectTrendBaseline } from "../lib/dex-liquidity-response";
+import { getDexLiquidityTrendTolerances, getDexTvlObservedAt, selectLiquidityObservation, selectObservedTrendBaseline } from "../lib/dex-liquidity-response";
 import type { DexHistoryRow } from "../lib/dex-liquidity-response";
 import { parseOptionalDayWindow } from "../lib/backfill-day-window";
+import { EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL } from "../lib/depeg-event-projection";
 
-interface DepegEventRow {
-  stablecoin_id: string;
-  started_at: number;
-  ended_at: number | null;
+interface DepegEventRow extends DepegTransitionEvidence {
   peak_deviation_bps: number | null;
+  provenance_audit_verdict?: string | null;
+  incident_key: string | null;
+  is_effective: number;
+  reviewed_dispute?: number;
 }
 
 interface EventResult {
@@ -329,43 +336,135 @@ async function handleRefreshCurrentRepair(
   });
 }
 
+function isIneligibleBacktestEvent(event: DepegEventRow): boolean {
+  return event.reviewed_dispute === 1 || isDdrIneligibleAuditVerdict(event.provenance_audit_verdict)
+    || (event.disposition === "repaired" && event.admitted_coverage_json === "[]");
+}
+
+function historicalBacktestResponse(
+  results: EventResult[],
+  excludedTargets: { auditIneligible: number; onsetUnavailable: number },
+): Response {
+  const evaluableEvents = results.filter((result) => result.predicted !== null).length;
+  const detections = results.filter((result) => result.predicted === true);
+  const leadTimes = detections.flatMap(({ leadTimeDays }) => leadTimeDays == null ? [] : [leadTimeDays]);
+  const avgLeadTimeDays = leadTimes.length === 0 ? null
+    : Math.round(leadTimes.reduce((sum, days) => sum + days, 0) / leadTimes.length * 10) / 10;
+  return jsonResponse({
+    summary: {
+      totalEvents: results.length,
+      evaluableEvents,
+      excludedEvents: results.length - evaluableEvents,
+      excludedTargets,
+      partialEvents: results.filter((result) => result.evaluation.availability === "partial").length,
+      truePositives: detections.length,
+      tpRate: evaluableEvents === 0 ? null : `${Math.round(detections.length / evaluableEvents * 100)}%`,
+      avgLeadTimeDays,
+      note: "Backtest uses supply_history + dex_liquidity_history only. Pool balance, price confidence, blacklist, and flow signals are unavailable for historical data.",
+    },
+    events: results,
+  });
+}
+
 async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
-  const events = await db
+  const selectEvents = (withPeerReceipt: boolean) => db
     .prepare(
-      "SELECT stablecoin_id, started_at, ended_at, peak_deviation_bps FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at ASC",
+      `SELECT events.id, events.stablecoin_id, events.started_at, events.ended_at, events.peak_deviation_bps,
+              events.start_price, events.peg_reference, events.direction,
+              ${withPeerReceipt ? "events.peer_basis_json," : ""}
+              events.peg_type, events.provenance_audit_verdict,
+              events.admitted_coverage_json, events.disposition, events.confirmation_sources, events.pending_reason,
+              events.price_coverage_json, events.last_trusted_price_at, events.price_coverage_gap_started_at, canonical.incident_key,
+              ${reviewedDepegDisputeSql("events")} AS reviewed_dispute,
+              ${EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL} AS is_effective
+         FROM depeg_events_with_provenance events
+         LEFT JOIN depeg_resolver_incident_event_links link ON link.event_id = events.id
+         LEFT JOIN depeg_resolver_incidents owner ON owner.incident_key = link.incident_key
+         LEFT JOIN depeg_resolver_incidents canonical
+           ON canonical.incident_key = COALESCE(owner.superseded_by_incident_key, owner.incident_key)
+          AND canonical.incident_state = 'active'
+        WHERE ended_at IS NOT NULL OR canonical.incident_key IS NOT NULL
+        ORDER BY events.started_at ASC, events.id ASC`,
     )
     .all<DepegEventRow>();
 
-  if (!events.results.length) {
+  const events = await selectEvents(true).catch((error: unknown) => {
+    if (error instanceof Error && /no such column: events\.peer_basis_json\b/i.test(error.message)) return selectEvents(false);
+    throw error;
+  });
+
+  const completed = events.results.filter((event) => event.ended_at != null && event.is_effective !== 0);
+  if (completed.length === 0) {
     return errorResponse(404, "No completed depeg events found");
   }
 
-  const eventDays = events.results.map((event) => bucketUnixSecondsToUtcDay(event.started_at));
-  const historyStartDay = Math.min(...eventDays) - 14 * DAY_SECONDS;
-  const historyEndDay = Math.max(...eventDays) + 2 * DAY_SECONDS;
+  const firstAdmittedByIncident = new Map<string, number>();
+  const ineligibleIncidents = new Set<string>();
+  for (const event of events.results) {
+    if (event.incident_key == null) continue;
+    if (isIneligibleBacktestEvent(event)) {
+      ineligibleIncidents.add(event.incident_key);
+      continue;
+    }
+    const onset = admittedDepegOnset(event);
+    const firstOnset = firstAdmittedByIncident.get(event.incident_key);
+    if (onset != null && (firstOnset == null || onset < firstOnset)) {
+      firstAdmittedByIncident.set(event.incident_key, onset);
+    }
+  }
+
+  const excludedTargets = { auditIneligible: 0, onsetUnavailable: 0 };
+  const targets = completed.flatMap((event) => {
+    if (isIneligibleBacktestEvent(event)
+      || (event.incident_key != null && ineligibleIncidents.has(event.incident_key))) {
+      excludedTargets.auditIneligible++;
+      return [];
+    }
+    const onset = event.incident_key == null
+      ? admittedDepegOnset(event) : firstAdmittedByIncident.get(event.incident_key);
+    if (onset == null || onset > event.ended_at!) {
+      excludedTargets.onsetUnavailable++;
+      return [];
+    }
+    const peakUnverified = event.stablecoin_id === "brz-transfero"
+      && (BRZ_UNVERIFIED_PEAK_EVENT_IDS as readonly number[]).includes(event.id);
+    return [{ stablecoin_id: event.stablecoin_id, started_at: onset,
+      peak_deviation_bps: peakUnverified ? null : event.peak_deviation_bps }];
+  }).sort((left, right) => left.started_at - right.started_at);
+
+  const firstTarget = targets[0];
+  const lastTarget = targets[targets.length - 1];
+  if (!firstTarget || !lastTarget) return historicalBacktestResponse([], excludedTargets);
+
+  const historyStartDay = bucketUnixSecondsToUtcDay(firstTarget.started_at) - 14 * DAY_SECONDS;
+  const historyEndDay = bucketUnixSecondsToUtcDay(lastTarget.started_at) + 2 * DAY_SECONDS;
   const liquidityTolerance = getDexLiquidityTrendTolerances().week;
-  const liquidityHistoryStart = historyStartDay - liquidityTolerance;
-  const supplyRows = await db
+  const liquidityHistoryStart = historyStartDay - liquidityTolerance - DAY_SECONDS;
+  type SupplyRow = NativeSupplyHistoryRow & { circulating_usd: number };
+  const readSupply = (native: boolean) => db
     .prepare(
-      `SELECT stablecoin_id, snapshot_date, circulating_usd
+      `SELECT stablecoin_id, snapshot_date, circulating_usd${native ? ", circulating_native, supply_provenance" : ""}
        FROM supply_history
        WHERE snapshot_date BETWEEN ? AND ?
        ORDER BY snapshot_date ASC`,
     )
     .bind(historyStartDay, historyEndDay)
-    .all<{ stablecoin_id: string; snapshot_date: number; circulating_usd: number }>();
+    .all<SupplyRow>();
+  const supplyRows = await readSupply(true).catch((error: unknown) => {
+    if (!isMissingNativeSupplyColumn(error)) throw error;
+    return readSupply(false);
+  });
 
-  const supplyIndex = new Map<string, Map<number, number>>();
+  const supplyIndex = new Map<string, Map<number, SupplyRow>>();
   for (const row of supplyRows.results) {
-    if (!supplyIndex.has(row.stablecoin_id)) supplyIndex.set(row.stablecoin_id, new Map());
-    if (Number.isFinite(row.circulating_usd) && row.circulating_usd >= 0) {
-      supplyIndex.get(row.stablecoin_id)!.set(row.snapshot_date, row.circulating_usd);
-    }
+    const history = supplyIndex.get(row.stablecoin_id) ?? new Map<number, SupplyRow>();
+    history.set(row.snapshot_date, row);
+    supplyIndex.set(row.stablecoin_id, history);
   }
 
   const liqRows = await db
     .prepare(
-      `SELECT stablecoin_id, snapshot_date, liquidity_score, total_tvl_usd, coverage_class, coverage_confidence, methodology_version
+      `SELECT stablecoin_id, snapshot_date, liquidity_score, total_tvl_usd, volume_availability_json, coverage_class, coverage_confidence, methodology_version
        FROM dex_liquidity_history
        WHERE snapshot_date BETWEEN ? AND ?
        ORDER BY snapshot_date ASC`,
@@ -376,26 +475,25 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
       snapshot_date: number;
       liquidity_score: number | null;
       total_tvl_usd: number | null;
+      volume_availability_json?: string | null;
       coverage_confidence: number | null;
       coverage_class: string | null;
       methodology_version: string | null;
     }>();
 
-  const liqIndex = new Map<string, (DexHistoryRow & { liquidity_score: number | null })[]>();
+  const liqIndex = new Map<string, (DexHistoryRow & { liquidity_score: number | null; observedTvl: number | null })[]>();
   for (const row of liqRows.results) {
     if (!liqIndex.has(row.stablecoin_id)) liqIndex.set(row.stablecoin_id, []);
     liqIndex.get(row.stablecoin_id)!.push({
       ...row,
       total_tvl_usd: row.total_tvl_usd ?? 0,
+      observedTvl: row.total_tvl_usd,
     });
   }
 
   const results: EventResult[] = [];
-  let tpCount = 0;
-  let totalLeadTimeDays = 0;
-  let leadTimeCount = 0;
 
-  for (const event of events.results) {
+  for (const event of targets) {
     const coinSupply = supplyIndex.get(event.stablecoin_id);
     const coinLiq = liqIndex.get(event.stablecoin_id) ?? [];
     const preDepegScores: EventResult["preDepegScores"] = [];
@@ -408,39 +506,53 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
       const targetDay = event.started_at - d * DAY_SECONDS;
       const dayMidnight = bucketUnixSecondsToUtcDay(targetDay);
 
-      const current = coinSupply?.get(dayMidnight) ?? null;
-      const anchor = (days: number) => {
-        const date = dayMidnight - days * DAY_SECONDS;
-        return isAmbiguousSupplyPerimeterDay(event.stablecoin_id, dayMidnight) || isAmbiguousSupplyPerimeterDay(event.stablecoin_id, date)
-          || (!isEarlierSupplyPerimeter(event.stablecoin_id, dayMidnight) && isEarlierSupplyPerimeter(event.stablecoin_id, date))
-          ? null : coinSupply?.get(date) ?? null;
+      const currentRow = coinSupply?.get(dayMidnight);
+      const mcapUsd = currentRow?.circulating_usd;
+      const dayRow = coinSupply?.get(dayMidnight - DAY_SECONDS);
+      const weekRow = coinSupply?.get(dayMidnight - 7 * DAY_SECONDS);
+      const useNativeSupply = currentRow && hasNativeSupplyEvidence(currentRow);
+      const current = useNativeSupply ? readNativeSupplyCheckpoint(currentRow, targetDay)?.quantity ?? null : mcapUsd ?? null;
+      const anchor = (row: SupplyRow | undefined, days: number, native = useNativeSupply) => {
+        if (!row || current == null || !hasComparableSupplyPerimeter(event.stablecoin_id, dayMidnight, row.snapshot_date)) return null;
+        if (native) return readNativeSupplyCheckpoint(row, targetDay - days * DAY_SECONDS)?.quantity ?? null;
+        return Number.isFinite(row.circulating_usd) && row.circulating_usd >= 0 ? row.circulating_usd : null;
       };
-      const prevDay = anchor(1);
-      const prevWeek = anchor(7);
+      const prevDay = anchor(dayRow, 1);
+      const prevWeek = anchor(weekRow, 7);
+      const legacySupplyUsd = useNativeSupply ? {
+        day: hasNativeSupplyEvidence(dayRow) ? null : anchor(dayRow, 1, false),
+        week: hasNativeSupplyEvidence(weekRow) ? null : anchor(weekRow, 7, false),
+      } : undefined;
+      const dayAvailable = prevDay != null || legacySupplyUsd?.day != null;
+      const weekAvailable = prevWeek != null || legacySupplyUsd?.week != null;
 
-      if (current == null) {
+      if (mcapUsd == null || !Number.isFinite(mcapUsd) || mcapUsd < 0) {
         if (d > 0) evaluationReasons.add("current-supply-unavailable");
         continue;
       }
-      if (d > 0 && (prevDay == null || prevWeek == null)) evaluationReasons.add("supply-anchor-unavailable");
+      if (d > 0 && (!dayAvailable || !weekAvailable)) evaluationReasons.add("supply-anchor-unavailable");
 
       const liqNow = selectLiquidityObservation(coinLiq, dayMidnight, liquidityTolerance);
       const liq7dScore = selectLiquidityObservation(coinLiq, dayMidnight - 7 * DAY_SECONDS, liquidityTolerance);
+      const capture = liqNow ? getDexTvlObservedAt(
+        parseDexVolumeAvailabilityRecord(liqNow.volume_availability_json), targetDay,
+      ) : null;
       const liq7d = liqNow
-        ? selectTrendBaseline(coinLiq, dayMidnight - 7 * DAY_SECONDS, liquidityTolerance, liqNow.methodology_version)
+        ? selectObservedTrendBaseline(coinLiq, capture, 7 * DAY_SECONDS, liquidityTolerance, liqNow.methodology_version)
         : null;
 
       const input: HistoricalDEWSInput = {
         stablecoinId: event.stablecoin_id,
-        mcapUsd: current,
+        mcapUsd,
         circulatingCurrent: current,
-        circulatingPrevDay: prevDay ?? current,
-        circulatingPrevWeek: prevWeek ?? current,
-        circulatingPrevDayAvailable: prevDay != null,
-        circulatingPrevWeekAvailable: prevWeek != null,
+        circulatingPrevDay: prevDay,
+        circulatingPrevWeek: prevWeek,
+        legacySupplyUsd,
+        circulatingPrevDayAvailable: dayAvailable,
+        circulatingPrevWeekAvailable: weekAvailable,
         liquidityScore: liqNow?.liquidity_score ?? null,
         liquidityScore7dAgo: liq7dScore?.liquidity_score ?? null,
-        tvlCurrent: liqNow?.total_tvl_usd ?? null,
+        tvlCurrent: capture == null ? null : liqNow?.observedTvl ?? null,
         tvl7dAgo: liq7d?.total_tvl_usd ?? null,
       };
 
@@ -466,14 +578,6 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
       }
     }
 
-    if (predicted) {
-      tpCount++;
-      if (leadTimeDays !== null) {
-        totalLeadTimeDays += leadTimeDays;
-        leadTimeCount++;
-      }
-    }
-
     results.push({
       stablecoinId: event.stablecoin_id,
       startedAt: event.started_at,
@@ -491,26 +595,7 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
     });
   }
 
-  const totalEvents = results.length;
-  const evaluableEvents = results.filter((result) => result.predicted !== null).length;
-  const excludedEvents = totalEvents - evaluableEvents;
-  const partialEvents = results.filter((result) => result.evaluation.availability === "partial").length;
-  const tpRate = evaluableEvents > 0 ? Math.round((tpCount / evaluableEvents) * 100) : null;
-  const avgLeadTime = leadTimeCount > 0 ? Math.round((totalLeadTimeDays / leadTimeCount) * 10) / 10 : null;
-
-  return jsonResponse({
-    summary: {
-      totalEvents,
-      evaluableEvents,
-      excludedEvents,
-      partialEvents,
-      truePositives: tpCount,
-      tpRate: tpRate == null ? null : `${tpRate}%`,
-      avgLeadTimeDays: avgLeadTime,
-      note: "Backtest uses supply_history + dex_liquidity_history only. Pool balance, price confidence, blacklist, and flow signals are unavailable for historical data.",
-    },
-    events: results,
-  });
+  return historicalBacktestResponse(results, excludedTargets);
 }
 
 interface BacktestMetricsPerAnchor {

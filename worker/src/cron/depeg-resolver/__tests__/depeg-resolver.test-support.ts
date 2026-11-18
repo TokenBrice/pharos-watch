@@ -79,11 +79,9 @@ export function activeRow(overrides: Partial<DdrEventDbRow> = {}): DdrEventDbRow
 }
 
 export function supplyHistory(startedAt: number) {
-  return [
-    { date: startedAt - 30 * DAY, usd: 1_000_000_000 },
-    { date: startedAt - 7 * DAY, usd: 1_000_000_000 },
-    { date: startedAt, usd: 1_000_000_000 },
-  ];
+  return [startedAt - 30 * DAY, startedAt - 7 * DAY, startedAt].map((date) => ({
+    date, usd: 1_000_000_000, native: 1_000_000_000, nativeObservedAt: date,
+  }));
 }
 
 export function loadedContext(overrides: Partial<DdrLoadedContext> = {}): DdrLoadedContext {

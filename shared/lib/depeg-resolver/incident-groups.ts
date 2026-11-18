@@ -61,14 +61,17 @@ function timedSeverityFragments(event: DdrHistoricalEvent, incidentStartedAt: nu
     fragments.push({ offsetSec: event.startedAt - incidentStartedAt, peakDeviationBps: event.onsetDeviationBps });
   }
   for (const observation of event.severityObservations ?? []) {
+    const availableAt = observation.availableAt ?? observation.observedAt;
     if (
       !Number.isFinite(observation.observedAt) ||
+      !Number.isFinite(availableAt) ||
       !Number.isFinite(observation.deviationBps) ||
       observation.observedAt < event.startedAt ||
-      (event.endedAt != null && observation.observedAt > event.endedAt)
+      availableAt < observation.observedAt ||
+      (event.endedAt != null && availableAt > event.endedAt)
     ) continue;
     fragments.push({
-      offsetSec: observation.observedAt - incidentStartedAt,
+      offsetSec: availableAt - incidentStartedAt,
       peakDeviationBps: observation.deviationBps,
     });
   }

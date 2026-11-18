@@ -24,8 +24,9 @@
 
 import { decodeJsonString } from "../../cache-json";
 import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";
-import { booleanValue, readRecord } from "@shared/lib/type-guards";
+import { booleanValue, numberValue, readRecord } from "@shared/lib/type-guards";
 import type { PersistedJsonDecodeReason } from "../contracts";
+import type { DewsReferenceDivergence } from "../types";
 
 
 
@@ -34,7 +35,16 @@ export type LegacyDecodeResult<T> =
   | { ok: false; reason: PersistedJsonDecodeReason };
 
 
-type DecodedStressSignal = { value: number; available?: boolean; componentCoverage?: number | null };
+type DecodedStressSignal = { value: number; available?: boolean; componentCoverage?: number | null; referenceDivergence?: unknown };
+
+export function readReferenceDivergence(value: unknown, computedAt: number): DewsReferenceDivergence | undefined {
+  const row = readRecord(value);
+  const observedAtSec = numberValue(row?.observedAtSec);
+  const stress = numberValue(row?.value);
+  if (observedAtSec == null || !Number.isSafeInteger(observedAtSec) || observedAtSec <= 0 || observedAtSec > computedAt
+    || stress == null || stress < 0 || stress > 100) return undefined;
+  return { value: stress, observedAtSec };
+}
 /**
  * Decodes a `stress_signals.signals_json` blob and unwraps the envelope if
  * present. Pre-envelope rows pass through unchanged; envelope rows surface as

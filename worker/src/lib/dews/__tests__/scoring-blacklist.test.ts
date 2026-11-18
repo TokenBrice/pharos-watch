@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import type { StablecoinData } from "@shared/types/supply";
 import { buildDewsScoringResult } from "../scoring";
+import { hydrateDexPrices } from "../source-state/hydration";
 import type { DewsSourceState } from "../contracts";
 import { emptyDewsDependencyDiagnostics } from "./source-state.test-support";
 
 function createAsset(id: string, symbol = "USDA"): StablecoinData {
   return {
     id, name: id, symbol, pegType: "peggedUSD", price: 1, priceConfidence: "high",
+    circulatingNative: 10_000_000, supplyObservedAt: 1,
     circulating: { peggedUSD: 10_000_000 },
     circulatingPrevDay: { peggedUSD: 10_000_000 },
     circulatingPrevWeek: { peggedUSD: 10_000_000 },
@@ -44,16 +47,64 @@ function createSourceState(): DewsSourceState {
 }
 
 describe("buildDewsScoringResult peg reference admission", () => {
+  it.each([
+    { parityQuoteUnit: undefined, primaryDevBps: 0 },
+    { parityQuoteUnit: "raw-token" as const, primaryDevBps: undefined },
+  ])("uses Solayer's observed price for confidence and checks its published unit ($parityQuoteUnit)", ({ parityQuoteUnit, primaryDevBps }) => {
+    const asset = { ...createAsset("susd-solayer"), parityQuoteUnit, priceSource: "coingecko", priceObservedAt: 1_795_000_000 };
+    const state = createSourceState();
+    state.dexPrices.dexPriceMap.set(asset.id, { dexPriceUsd: 1.0001, updatedAt: asset.priceObservedAt, sourceTotalTvl: 5e6 });
+    const [row] = scoreRows(new Map([[asset.id, asset]]), state);
+    expect(row.band).toBe("CALM");
+    expect(row.signals.price).toMatchObject({ value: 0, available: true, confidence: "high" });
+    expect(row.signals.diverg).toMatchObject({ primaryDevBps, dexDevBps: 1 });
+  });
+
+  it("quarantines EURC relabelled as USD before applying the fixed denominator", () => {
+    const eurc = { ...createAsset("eurc-circle"), price: 1.1 };
+    const usd = createAsset("usdt-tether");
+    const state = createSourceState();
+    state.nativeHistory = new Map([[usd.id, { day: 10_000_000, week: 10_000_000 }]]);
+    const malformed: string[] = [];
+    const { results } = buildDewsScoringResult({
+      assetById: new Map([[eurc.id, eurc], [usd.id, usd]]), pegRates: {}, sourceState: state,
+      registerMalformedPersistedInput: (failure) => { if (failure.degradesRun) malformed.push(failure.stablecoinId); },
+    });
+    expect(malformed).toEqual([eurc.id]);
+    expect(results.map((row) => row.stablecoinId)).toEqual([usd.id]);
+  });
+
+  it("applies the silver entitlement only to the DEWS leg bearing its quote clock", () => {
+    const now = Date.parse("2026-11-17T16:00:00Z") / 1000;
+    const ozPerToken = 0.998380822;
+    const asset = { ...createAsset("xagm-matrixdock"), pegType: "peggedSILVER", price: 30 * ozPerToken,
+      priceSource: "coingecko", priceObservedAt: now, priceObservedAtMode: "upstream" as const,
+      commodityEntitlement: { source: "matrixdock-frs" as const, generation: "ethereum:123", quoteObservedAtSec: now,
+        ozPerToken, observedAtSec: now - 60 } };
+    const state = createSourceState();
+    state.references = new Map([["peggedSILVER", { kind: "fallback", usdPerUnit: 30, preCloseUsdPerUnit: 29,
+      observation: { pegKey: "peggedSILVER", usdPerUnit: 30, source: "gold-api.com", cadence: "intraday", observedAtSec: now - 60 } }]]);
+    state.nativeHistory = new Map([[asset.id, { day: 10_000_000, week: 10_000_000 }]]);
+    state.dexPrices.dexPriceMap.set(asset.id, { dexPriceUsd: 29, updatedAt: now - 30, sourceTotalTvl: 10e6 });
+    const [row] = buildDewsScoringResult({ assetById: new Map([[asset.id, asset]]), nowSec: now, pegRates: {},
+      sourceState: state, registerMalformedPersistedInput: () => {} }).results;
+    expect(row.signals.diverg).toMatchObject({ available: true, primaryDevBps: 0, dexDevBps: undefined,
+      referenceAdmission: { primary: { status: "admitted" }, dex: { status: "unavailable" } } });
+  });
+
   it("retains peer contagion across an isolated-flow WARNING crossing", () => {
     const sourceState = createSourceState();
     const assets = ["usdt-tether", "usdc-circle"].map<StablecoinData>((id, i) => ({ ...createAsset(id),
-      priceConfidence: i ? "low" : "fallback", circulating: { peggedUSD: 1e10 },
-      circulatingPrevDay: { peggedUSD: i ? 1.08e10 : 1e11 }, circulatingPrevWeek: { peggedUSD: i ? 1.08e10 : 1e11 } }));
+      priceConfidence: i ? "low" : "fallback", circulating: { peggedUSD: 1e10 }, circulatingNative: 1e10 }));
+    sourceState.nativeHistory = new Map(assets.map((asset, i) => {
+      const anchor = i ? 1.08e10 : 1e11;
+      return [asset.id, { day: anchor, week: anchor }];
+    }));
     assets.forEach((a, i) => sourceState.dexPrices.dexPriceMap.set(a.id, { dexPriceUsd: i ? 0.99 : 0.9, sourceTotalTvl: 2e6, updatedAt: 1 }));
     const score = () => scoreRows(new Map(assets.map((a) => [a.id, a])), sourceState).find((r) => r.stablecoinId === "usdc-circle")!;
     const base = score();
     sourceState.mintBurn.mintBurnAgeSecById.set("usdc-circle", 0);
-    sourceState.mintBurn.mintBurnMap.set("usdc-circle", { isolated: true, burn24h: 3e6, mint24h: 5e5,
+    sourceState.mintBurn.mintBurnMap.set("usdc-circle", { isolated: true, epochIssue: null, burn24h: 3e6, mint24h: 5e5,
       burnBaseline: 7e5, mintBaseline: 0, baselineDays: 30, valuation24h: "complete", burnBaselineValuation: "complete" });
     expect(base.score).toBe(63);
     const raised = score();
@@ -62,6 +113,25 @@ describe("buildDewsScoringResult peg reference admission", () => {
     assets.shift();
     expect(score().amplifiers.contagion).toBe(1);
   });
+  it("applies only other coins' bumps across an ordinary WARNING crossing", () => {
+    const state = createSourceState();
+    const recipient = { ...createAsset("usdc-circle"), priceConfidence: "low" as const,
+      circulating: { peggedUSD: 1e10 }, circulatingNative: 1e10 };
+    const peer = { ...recipient, id: "usdt-tether", priceConfidence: "fallback" as const };
+    state.dexPrices.dexPriceMap.set(recipient.id, { dexPriceUsd: 0.99, sourceTotalTvl: 2e6, updatedAt: 1 });
+    state.dexPrices.dexPriceMap.set(peer.id, { dexPriceUsd: 0.9, sourceTotalTvl: 2e6, updatedAt: 1 });
+    const results = [1.08e10, 1.09e10].map((anchor) => {
+      state.nativeHistory = new Map([[peer.id, { day: 1e11, week: 1e11 }], [recipient.id, { day: anchor, week: anchor }]]);
+      const firstPass = scoreRows(new Map([[recipient.id, recipient]]), state)[0]!;
+      const final = scoreRows(new Map<string, StablecoinData>([[peer.id, peer], [recipient.id, recipient]]), state)
+        .find((row) => row.stablecoinId === recipient.id)!;
+      expect(final.amplifiers.contagion).toBe(1.15);
+      return { firstPass, final };
+    });
+    expect(results.map(({ firstPass }) => firstPass.band)).toEqual(["ALERT", "WARNING"]);
+    expect(results[1].final.score).toBeGreaterThanOrEqual(results[0].final.score);
+  });
+
   it("fails a missing peg type closed instead of scoring a non-USD coin against $1", () => {
     const eurc = {
       ...createAsset("eurc-circle"), pegType: undefined, price: 1.09, priceConfidence: "high",
@@ -69,12 +139,14 @@ describe("buildDewsScoringResult peg reference admission", () => {
       circulatingPrevWeek: { peggedEUR: 50_000_000 },
     } as unknown as StablecoinData;
 
+    const state = createSourceState();
+    state.nativeHistory = new Map([[eurc.id, { day: 10_000_000, week: 10_000_000 }]]);
     const result = buildDewsScoringResult({
       assetById: new Map([["eurc-circle", eurc]]),
       pegRates: { peggedEUR: 1.09 },
       pegRateSources: { peggedEUR: "fallback" },
       pegRateContributorCounts: { peggedEUR: 2 },
-      sourceState: createSourceState(),
+      sourceState: state,
       registerMalformedPersistedInput: () => {},
     });
 
@@ -91,16 +163,106 @@ describe("buildDewsScoringResult peg reference admission", () => {
     expect(row!.evidenceKinds).not.toContain("market-price");
     expect(row!.score).toBe(0);
   });
-  it.each([[1_794_844_800, true, 0, 0], [1_794_758_400, false, 0, 0], [1_794_758_400, true, 2_800, 0], [1_794_758_400, true, 0, 42]])(
-    "closed metal market withholds gold divergence (%s, %s, DEX %s, previous %s)", (nowSec, available, dex, prev) => {
-    const xaut = { ...createAsset("xaut-tether", "XAUT"), pegType: "peggedGOLD", price: 3_800 } as StablecoinData;
-    const sourceState = createSourceState();
-    if (dex) sourceState.dexPrices.dexPriceMap.set(xaut.id, { dexPriceUsd: dex, sourceTotalTvl: 2e6, updatedAt: 1 });
-    if (prev) sourceState.previousSignals.prevSignals.set(xaut.id, { signals: { diverg: { value: prev, available } }, computedAt: 1, ageSec: 1 });
-    const row = buildDewsScoringResult({ assetById: new Map([[xaut.id, xaut]]), nowSec, pegRates: { peggedGOLD: 3_880 },
-      pegRateSources: { peggedGOLD: "fallback" }, sourceState, registerMalformedPersistedInput: () => {} }).results[0];
-    expect(row.signals.diverg).toMatchObject(available ? { available, ...(prev && { value: prev }) }
-      : { available, unavailableReason: "reference-market-closed" });
+
+  it("keeps the USD identity spread with a live clock and a legacy DEX row", async () => {
+    const nowSec = Date.parse("2026-11-21T00:00:00Z") / 1000;
+    const asset = { ...createAsset("usdc-circle"), price: 1.0015, priceSource: "coinbase", priceObservedAt: nowSec - 60 };
+    const clock = nowSec - 60;
+    const state = createSourceState();
+    state.dexPrices = await hydrateDexPrices({ nowSec, registerSourceFailure: () => {}, registerMalformedPersistedInput: () => {},
+      db: mockD1([{ match: "FROM dex_prices", rows: [{ stablecoin_id: asset.id, dex_price_usd: 0.9985,
+        source_total_tvl: 2e6, updated_at: nowSec - 20, source_pool_count: 1,
+        price_sources_json: JSON.stringify([{ protocol: "curve", price: 0.9985, tvl: 2e6,
+          observedAt: clock, aggregateObservedAt: clock }]) }] }]) });
+    const [row] = buildDewsScoringResult({ assetById: new Map([[asset.id, asset]]), nowSec, pegRates: {},
+      sourceState: state, registerMalformedPersistedInput: () => {} }).results;
+    expect(row.signals.diverg).toMatchObject({ available: true, primaryDevBps: 15, dexDevBps: 15, venueSpreadBps: 30, value: 13 });
+    expect(row.evidenceKinds).toContain("market-price");
+  });
+
+  it.each([
+    ["fresh spread", 4_000, 3_800, 60, "coinbase", "dex:curve", 35, true],
+    ["carry only", null, null, 60, "coinbase", "dex:curve", 70, false],
+    ["carry with calm spread", 4_000, 4_000, 60, "coinbase", "dex:curve", 70, false],
+    ["fetch timestamp only", 4_000, 3_800, 60, "coinbase", "dex:curve", 70, false],
+    ["stale primary", 4_000, 3_800, 3_600, "coinbase", "dex:curve", 70, false],
+    ["shared provider", 4_000, 3_800, 60, "coinbase", "market:coinbase", 70, false],
+    ["successive Curve aggregates", 4_000, 3_800, 900, "dex-promoted", "dex:curve", 70, false],
+    ["hourly publisher's protocol lane", 4_000, 3_800, 900, "aerodrome-dex", "dex:curve", 70, false],
+    ["display-only lineage", 4_000, 3_800, 60, "coinbase", null, 70, false],
+    ["unknown aggregate provider", 4_000, 3_800, 60, "coinbase", "unknown", 70, false],
+    ["incomplete aggregate lineage", 4_000, 3_800, 60, "coinbase", "incomplete", 70, false],
+  ] as const)("scores closure evidence (%s)", async (label, price, dex, age, priceSource, family, value, evidence) => {
+    const nowSec = Date.parse("2026-11-21T00:00:00Z") / 1000;
+    const friday = nowSec - 2 * 3600 - 60;
+    const xaut = { ...createAsset("xaut-tether", "XAUT"), pegType: "peggedGOLD", price, priceSource,
+      priceObservedAt: nowSec - age, priceObservedAtMode: label === "fetch timestamp only" ? "local_fetch" as const : "upstream" as const };
+    const state = createSourceState();
+    state.nativeHistory = new Map([[xaut.id, { day: 10_000_000, week: 10_000_000 }]]);
+    state.references = new Map([["peggedGOLD", { kind: "fallback", usdPerUnit: 4_000,
+      observation: { pegKey: "peggedGOLD", usdPerUnit: 4_000, source: "gold-api.com", cadence: "intraday", observedAtSec: friday } }]]);
+    if (dex != null) {
+      const clock = nowSec - 60;
+      const sources = [{ protocol: "curve", price: dex, tvl: 2e6, observedAt: clock, aggregateObservedAt: clock }];
+      state.dexPrices = await hydrateDexPrices({ nowSec, registerSourceFailure: () => {}, registerMalformedPersistedInput: () => {},
+        db: mockD1([{ match: "FROM dex_prices", rows: [{ stablecoin_id: xaut.id, dex_price_usd: dex,
+          source_total_tvl: 2e6, updated_at: nowSec - 20, source_pool_count: family === "incomplete" ? 2 : 1,
+          price_sources_json: JSON.stringify(family == null ? sources : { aggregateObservedAt: clock, sources,
+            aggregateContributors: [{ venueFamily: "dex:curve", providerFamily: family }] }) }] }]) });
+    }
+    if (evidence) {
+      const prior = { value: 0, available: true, currentDivergenceValue: 0 };
+      state.previousSignals.prevSignals.set(xaut.id, { signals: { diverg: prior }, computedAt: nowSec - 900, ageSec: 900 });
+    } else state.previousSignals.referenceDivergenceById = new Map([[xaut.id, { value: 70, observedAtSec: friday }]]);
+    const row = buildDewsScoringResult({ assetById: new Map([[xaut.id, xaut]]), nowSec, pegRates: { peggedGOLD: 4_000 },
+      pegRateSources: { peggedGOLD: "fallback" }, sourceState: state, registerMalformedPersistedInput: () => {} }).results[0]!;
+    expect(row.signals.diverg.value).toBe(value);
+    expect(row.evidenceKinds.includes("market-price")).toBe(evidence);
+    if (evidence) expect(row.signals.diverg.venueSpreadBps).toBe(526);
+    else expect(row.signals.diverg).toMatchObject({ referenceCarried: true, referenceDivergence: { value: 70, observedAtSec: friday } });
+    if (price == null) expect(row).toMatchObject({ score: 35, band: "WATCH" });
+  });
+
+  it("uses the legacy USD buckets and open-market reference without new evidence", () => {
+    const asset = { ...createAsset("eurc-circle"), pegType: "peggedEUR", price: 1.089, priceConfidence: "high" as const,
+      circulating: { peggedEUR: 173.9e9 }, circulatingPrevDay: { peggedEUR: 176e9 },
+      circulatingPrevWeek: { peggedEUR: 185e9 }, supplyObservedAt: undefined };
+    const state = createSourceState();
+    const score = (when: string) => buildDewsScoringResult({ assetById: new Map([[asset.id, asset]]),
+      nowSec: Date.parse(when) / 1000, pegRates: { peggedEUR: 1.1 }, pegRateSources: { peggedEUR: "fallback" },
+      sourceState: state, registerMalformedPersistedInput: () => {} }).results[0]!;
+    const open = score("2026-11-17T16:00:00Z");
+    expect(open.signals.supply).toMatchObject({ available: true, value: expect.closeTo(23.9, 1), delta7d: -6 });
+    expect(open.signals.diverg).toMatchObject({ available: true, primaryDevBps: 100 });
+    state.previousSignals.prevSignals.set(asset.id, { signals: { diverg: { value: 18, available: true } }, computedAt: 1, ageSec: 60 });
+    expect(score("2026-11-21T16:00:00Z").signals.diverg).toMatchObject({ available: true, value: 18 });
+    state.references = new Map();
+    expect(score("2026-11-17T16:00:00Z").signals.diverg.available).toBe(false);
+  });
+
+  it("compares each lookback in its own unit during a native-history rollout", () => {
+    const asset = { ...createAsset("usdc-circle"), circulatingNative: 100e6,
+      circulating: { peggedUSD: 98e6 }, circulatingPrevWeek: { peggedUSD: 100e6 } };
+    const state = createSourceState();
+    state.nativeHistory = new Map([[asset.id, { day: 100e6 }]]);
+    const score = () => scoreRows(new Map([[asset.id, asset]]), state)[0]!.signals.supply;
+    expect(score()).toMatchObject({ delta1d: 0, delta7d: -2, componentCoverage: 1 });
+    state.nativeHistory = new Map([[asset.id, { day: 100e6, week: null }]]);
+    expect(score()).toMatchObject({ delta1d: 0, delta7d: null, componentCoverage: 0.6 });
+  });
+
+  it.each([809_363, null])("compares metal native units under USD revaluation (%s)", (quantity) => {
+    const xaut = { ...createAsset("xaut-tether", "XAUT"), pegType: "peggedGOLD",
+      circulating: { peggedGOLD: 3.154e9 }, circulatingPrevDay: { peggedGOLD: 3.154e9 },
+      circulatingPrevWeek: { peggedGOLD: 3.234e9 }, circulatingNative: quantity };
+    const state = createSourceState();
+    state.nativeHistory = new Map([[xaut.id, { day: 809_363, week: 809_381 }]]);
+    state.dexPrices.dexPriceMap.set(xaut.id, { dexPriceUsd: 1, sourceTotalTvl: 2e6, updatedAt: 1 });
+    const row = buildDewsScoringResult({ assetById: new Map([[xaut.id, xaut]]), pegRates: { peggedGOLD: 1 },
+      pegRateSources: { peggedGOLD: "fallback" }, sourceState: state, registerMalformedPersistedInput: () => {} }).results[0]!;
+    expect(row.signals.supply).toMatchObject(quantity == null
+      ? { available: false, unavailableReason: "supply-native-quantity-unavailable", delta7d: null }
+      : { available: true, delta1d: 0, value: expect.closeTo(0, 1) });
   });
 });
 
@@ -108,6 +270,7 @@ describe("buildDewsScoringResult blacklist attribution", () => {
   it.each([0, 1, 2])("Broker provenance: %s", (confirmed) => {
     const asset = { ...createAsset("usdt-tether"), price: 0.98, priceSource: "mento-broker", agreeSources: confirmed === 1 ? ["kraken"] : [], priceConfidence: "fallback" as const };
     const state = createSourceState();
+    state.nativeHistory = new Map([[asset.id, { day: 10_000_000, week: 10_000_000 }]]);
     if (confirmed === 2) state.dexPrices.dexPriceMap.set(asset.id, { dexPriceUsd: 0.98, independentPrices: [0.98], sourceTotalTvl: 1e6, updatedAt: 1 });
     const row = scoreRows(new Map([[asset.id, asset]]), state)[0];
     expect(row.band).toBe(confirmed ? "ALERT" : "WATCH");

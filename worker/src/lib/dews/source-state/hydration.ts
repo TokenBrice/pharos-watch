@@ -1,3 +1,5 @@
+import { MATCHING_CACHE_VERSION_KEY_SQL } from "../../db-cache";
+import { YIELD_RANKINGS_READ_KEYS } from "../../yield-rankings-coin-cache";
 /**
  * DEWS source-state hydration loaders.
  *
@@ -8,8 +10,12 @@
  * happens here; that belongs in the orchestrator.
  */
 
-import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { DAY_SECONDS, HOUR_SECONDS } from "@shared/lib/time-constants";
+import { MINT_BURN_FLOW_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/registry";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { parseDexVolumeAvailabilityRecord } from "@shared/lib/dex-volume-availability";
+import { DEWS_USDT_FLOW_ID } from "@shared/lib/dews-config";
+import { readDewsDexAggregateFamilies } from "../reference-evidence";
 import { resolveCronTimeoutBudget } from "../../cron-timeouts";
 import { decodeJsonString } from "../../cache-json";
 import { runWithOverloadRetry } from "../../d1-overload-retry";
@@ -17,7 +23,7 @@ import { BLACKLIST_PUBLIC_EVENT_SQL, type BlacklistPersistedRow } from "../../bl
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEventArgs } from "../../structured-log";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../dex-liquidity";
-import { getDexLiquidityTrendTolerances, selectLiquidityObservation, selectTrendBaseline } from "../../dex-liquidity-response";
+import { getDexLiquidityTrendTolerances, getDexTvlObservedAt, selectLiquidityObservation, selectObservedTrendBaseline } from "../../dex-liquidity-response";
 import type { DexHistoryRow } from "../../dex-liquidity-response";
 import {
   CONTRACT_CONFIGS,
@@ -31,10 +37,10 @@ import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../dex-cron-constants";
 import { DEX_PROTOCOL_SOURCE_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { isCanonicalMintBurnPair } from "../../mint-burn-canonical-chain";
 import { readPublishedMintBurnGauge } from "../../mint-burn-published-gauge";
-import { MINT_BURN_CONFIGS } from "../../mint-burn-contracts";
+import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../../mint-burn-contracts";
 import { isGrandfatheredMintBurnConfig } from "../../mint-burn-publication";
 import { mintBurnConfigKey } from "../../mint-burn-contract-identity";
-import { decodeMintBurnScanCoverage, mintBurnScanCoverageAdmits, mintBurnScanFingerprint,
+import { decodeMintBurnScanCoverage, mintBurnScanCoverageAdmits, isMintBurnWriterEpochSchemaMissing, mintBurnScanFingerprint, prepareMintBurnWriterEpochCoverage,
   prepareMintBurnScanCoverage, type MintBurnScanSegment } from "../../mint-burn-pipeline/scan-coverage";
 import { readMintBurnWindowContext } from "../../mint-burn-flows-service";
 import { hasMintBurnClassificationReview } from "../../mint-burn-classification";
@@ -84,7 +90,7 @@ import {
   type YieldSourceRisk,
 } from "@shared/types/yield";
 import { readRecord as getObject, stringValue as getString } from "@shared/lib/type-guards";
-import { decodeLegacyStressSignals } from "./legacy-bridge";
+import { decodeLegacyStressSignals, readReferenceDivergence } from "./legacy-bridge";
 import {
   loadPreviousStressSignalCurrentRows,
   type PreviousStressSignalCurrentRow,
@@ -237,7 +243,7 @@ export async function hydrateDexLiquidity(ctx: HydrationContext): Promise<DexLiq
   try {
     dexLiqRows = await ctx.db
       .prepare(
-        `SELECT stablecoin_id, weighted_balance_ratio, avg_pool_stress, top_pools_json, liquidity_score, total_tvl_usd, updated_at, methodology_version
+        `SELECT stablecoin_id, weighted_balance_ratio, avg_pool_stress, top_pools_json, liquidity_score, total_tvl_usd, volume_availability_json, updated_at, methodology_version
          FROM dex_liquidity
          WHERE ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
       )
@@ -302,17 +308,24 @@ export async function hydrateDexPrices(ctx: HydrationContext): Promise<DexPriceH
   let succeeded = false;
   try {
     const dexPriceRows = await ctx.db
-      .prepare("SELECT stablecoin_id, dex_price_usd, source_total_tvl, updated_at, price_sources_json FROM dex_prices")
-      .all<{ stablecoin_id: string; dex_price_usd: number; source_total_tvl: number; updated_at: number; price_sources_json: string | null }>();
+      .prepare(`SELECT stablecoin_id, dex_price_usd, source_total_tvl, source_pool_count, updated_at, price_sources_json
+        FROM dex_prices`)
+      .all<{ stablecoin_id: string; dex_price_usd: number; source_total_tvl: number; source_pool_count: number;
+        updated_at: number; price_sources_json: string | null }>();
     for (const row of dexPriceRows.results ?? []) {
-      const decoded = decodeJsonString<{ observedAt: number; independentPrices: number[] }, PersistedJsonDecodeReason>(row.price_sources_json, {
+      const decoded = decodeJsonString<{
+        observedAt: number;
+        aggregateFamilies: string[];
+        independentQuotes: { price: number; observedAtSec: number }[];
+      }, PersistedJsonDecodeReason>(row.price_sources_json, {
         updatedAt: row.updated_at, missingReason: "missing", parseErrorReason: "json-parse-failed",
         normalize: (payload) => {
           const clock = getDexAggregateObservedAt(payload, ctx.nowSec);
-          return clock.aggregateClockReason != null
-            ? { ok: false, reason: clock.aggregateClockReason }
-            : { ok: true, payload: { observedAt: clock.aggregateObservedAt!, independentPrices:
-              (getDexPriceSourceEntries(payload) ?? []).flatMap((value) => {
+          if (clock.aggregateClockReason != null) return { ok: false, reason: clock.aggregateClockReason };
+          const entries = getDexPriceSourceEntries(payload) ?? [];
+          const aggregateFamilies = readDewsDexAggregateFamilies(getObject(payload)?.aggregateContributors, row.source_pool_count);
+          return { ok: true, payload: { observedAt: clock.aggregateObservedAt!, aggregateFamilies, independentQuotes:
+              entries.flatMap((value) => {
                 if (!value || typeof value !== "object") return [];
                 const source = value as Record<string, unknown>;
                 if (typeof source.protocol !== "string") return [];
@@ -325,7 +338,7 @@ export async function hydrateDexPrices(ctx: HydrationContext): Promise<DexPriceH
                     maxAgeSec: Math.min(DEX_PROTOCOL_SOURCE_FRESHNESS_SEC, registry.maxTrustedAgeSec ?? DEX_PROTOCOL_SOURCE_FRESHNESS_SEC),
                     maxFutureSkewSec: 0,
                   }).accepted) return [];
-                return [source.price];
+                return [{ price: source.price, observedAtSec: source.observedAt }];
               }),
             } };
         },
@@ -348,7 +361,11 @@ export async function hydrateDexPrices(ctx: HydrationContext): Promise<DexPriceH
         dexPriceUsd: row.dex_price_usd,
         sourceTotalTvl: row.source_total_tvl,
         updatedAt: aggregateObservedAt!,
-        ...(decoded.ok && decoded.payload.independentPrices.length > 0 ? { independentPrices: decoded.payload.independentPrices } : {}),
+        ...(decoded.ok && decoded.payload.aggregateFamilies.length > 0 ? { aggregateFamilies: decoded.payload.aggregateFamilies } : {}),
+        ...(decoded.ok && decoded.payload.independentQuotes.length > 0 ? {
+          independentQuotes: decoded.payload.independentQuotes,
+          independentPrices: decoded.payload.independentQuotes.map((quote) => quote.price),
+        } : {}),
       });
     }
     succeeded = true;
@@ -370,14 +387,23 @@ export async function hydrateDexLiquidityHistory(
 ): Promise<DexLiquidityHistoryHydration> {
   const target7d = ctx.nowSec - 7 * DAY_SECONDS;
   const tolerance = getDexLiquidityTrendTolerances().week;
-  const liqHistCutoff = target7d - tolerance;
+  const captureById = new Map([...currentLiquidityById].map(([id, row]) => [
+    id, getDexTvlObservedAt(parseDexVolumeAvailabilityRecord(row.volume_availability_json), row.updated_at ?? 0),
+  ]));
+  // History is indexed by UTC day and the serving capture may predate this run.
+  const earliestCapture = [...captureById.values()].reduce<number>(
+    (earliest, capturedAt) => capturedAt == null ? earliest : Math.min(earliest, capturedAt), ctx.nowSec,
+  );
+  const firstClockedBucket = Math.floor((earliestCapture - 7 * DAY_SECONDS - tolerance) / DAY_SECONDS) * DAY_SECONDS;
+  const liqHistCutoff = [...captureById.values()].some((clock) => clock != null)
+    ? Math.min(target7d - tolerance, firstClockedBucket) : target7d - tolerance;
   const liqHist7dMap = new Map<string, LiquidityHistorySnapshot>();
   let liqHistRowsRead = 0;
   try {
     const liqHistRows = await ctx.db
       .prepare(
         `SELECT /* pharos:dews:dex-liquidity-history */
-           stablecoin_id, snapshot_date, liquidity_score, total_tvl_usd, coverage_class, coverage_confidence, methodology_version
+           stablecoin_id, snapshot_date, liquidity_score, total_tvl_usd, volume_availability_json, coverage_class, coverage_confidence, methodology_version
          FROM dex_liquidity_history
          WHERE snapshot_date >= ?
          ORDER BY snapshot_date ASC`,
@@ -388,6 +414,7 @@ export async function hydrateDexLiquidityHistory(
         snapshot_date: number;
         liquidity_score: number | null;
         total_tvl_usd: number | null;
+        volume_availability_json?: string | null;
         coverage_confidence: number | null;
         coverage_class: string | null;
         methodology_version: string | null;
@@ -404,13 +431,13 @@ export async function hydrateDexLiquidityHistory(
       const scoreBaseline = selectLiquidityObservation(history, target7d, tolerance);
       const current = currentLiquidityById.get(id);
       const tvlBaseline = current
-        ? selectTrendBaseline(history, target7d, tolerance, current.methodology_version)
+        ? selectObservedTrendBaseline(history, captureById.get(id) ?? null, 7 * DAY_SECONDS, tolerance, current.methodology_version)
         : null;
-      if (scoreBaseline) {
+      if (scoreBaseline || tvlBaseline) {
         liqHist7dMap.set(id, {
-          score: scoreBaseline.liquidity_score ?? null,
+          score: scoreBaseline?.liquidity_score ?? null,
           tvl: tvlBaseline?.total_tvl_usd ?? null,
-          date: scoreBaseline.snapshot_date,
+          date: scoreBaseline?.snapshot_date ?? tvlBaseline!.snapshot_date,
         });
       }
     }
@@ -489,6 +516,7 @@ export async function hydratePreviousStressSignals(ctx: HydrationContext): Promi
     string,
     { signals: Record<string, { value: number; available?: boolean }>; computedAt: number; ageSec: number }
   >();
+  const referenceDivergenceById: NonNullable<PreviousStressSignalsHydration["referenceDivergenceById"]> = new Map();
   const prevSignalStaleIds = new Set<string>();
   let generationUnavailable = false;
   let prevSignalRowsRead = 0;
@@ -505,12 +533,15 @@ export async function hydratePreviousStressSignals(ctx: HydrationContext): Promi
     prevSignalRowsRead = prevRows.length;
     for (const row of prevRows) {
       const ageSec = getRowAgeSec(row.computed_at, ctx.nowSec);
-      if (ageSec == null || ageSec > DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC) {
+      if (ageSec == null) {
         prevSignalStaleIds.add(row.stablecoin_id);
         continue;
       }
+      const stale = ageSec > DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC;
+      if (stale) prevSignalStaleIds.add(row.stablecoin_id);
       const decoded = decodeLegacyStressSignals(row.signals_json, row.computed_at);
       if (!decoded.ok) {
+        if (stale) continue;
         ctx.registerMalformedPersistedInput({
           source: "stress_signals",
           context: "stress_signals.signals_json",
@@ -521,6 +552,11 @@ export async function hydratePreviousStressSignals(ctx: HydrationContext): Promi
         });
         continue;
       }
+      const divergence = decoded.payload.diverg;
+      const reference = divergence?.available === true
+        ? readReferenceDivergence(divergence.referenceDivergence, row.computed_at) : undefined;
+      if (reference) referenceDivergenceById.set(row.stablecoin_id, reference);
+      if (stale) continue;
       prevSignals.set(row.stablecoin_id, {
         signals: decoded.payload,
         computedAt: row.computed_at,
@@ -530,7 +566,50 @@ export async function hydratePreviousStressSignals(ctx: HydrationContext): Promi
   } catch (error) {
     ctx.registerSourceFailure("stress-signals", error);
   }
-  return { prevSignals, prevSignalStaleIds, generationUnavailable, rowsRead: prevSignalRowsRead };
+  return { prevSignals, referenceDivergenceById, prevSignalStaleIds, generationUnavailable, rowsRead: prevSignalRowsRead };
+}
+
+const dustInclusiveActivation = MINT_BURN_FLOW_METHODOLOGY_CHANGELOG.find((entry) => entry.version === "6.41")?.effectiveAt;
+
+function knownFlowAccountingTransition(end: number): MintBurnSnapshot["epochIssue"] {
+  // v6.41 changed the population prospectively. Exclude the entire activation hour from both epochs.
+  if (dustInclusiveActivation == null) return "mint-burn-baseline-accounting-transition";
+  const lastLegacyEnd = Math.floor(dustInclusiveActivation / HOUR_SECONDS) * HOUR_SECONDS;
+  const firstInclusiveStart = lastLegacyEnd + HOUR_SECONDS;
+  if (end <= lastLegacyEnd || end - 30 * DAY_SECONDS >= firstInclusiveStart) return undefined;
+  return end - DAY_SECONDS < firstInclusiveStart
+    ? "mint-burn-current-accounting-transition" : "mint-burn-baseline-accounting-transition";
+}
+
+type EpochSegment = MintBurnScanSegment & { writer_epoch?: string | null };
+
+function writerEpochForWindow(
+  configs: readonly MintBurnContractConfig[], proof: ReadonlyMap<string, readonly EpochSegment[]>,
+  firstWrites: ReadonlyMap<string, number>, start: number, end: number,
+): { kind: "ok"; epoch: string } | { kind: "legacy" | "missing" | "mixed" } {
+  const epochs = new Set<string>();
+  let complete = true;
+  for (const config of configs) {
+    const key = mintBurnConfigKey(config);
+    const firstWrite = firstWrites.get(key);
+    if (firstWrite == null) continue;
+    const rows = (proof.get(key) ?? []).filter((row) => row.from_timestamp < end && row.to_timestamp > start);
+    // A rollback can rewrite an older hour after activation, including the partial boundary hour.
+    if (rows.some((row) => row.dirty_hour_ts != null)) complete = false;
+    // Continuous scan proof is required from the first full UTC hour.
+    const requiredStart = Math.max(start, Math.ceil(firstWrite / HOUR_SECONDS) * HOUR_SECONDS);
+    if (requiredStart >= end) continue;
+    if (!mintBurnScanCoverageAdmits([config], proof, requiredStart, end)) complete = false;
+    for (const { writer_epoch, to_timestamp } of rows) {
+      if (to_timestamp <= requiredStart) continue;
+      if (typeof writer_epoch !== "string" || writer_epoch.trim() !== writer_epoch || writer_epoch === "") complete = false;
+      else epochs.add(writer_epoch);
+    }
+  }
+  if (epochs.size > 1) return { kind: "mixed" };
+  if (!complete) return { kind: "missing" };
+  const [epoch] = epochs;
+  return epoch ? { kind: "ok", epoch } : { kind: "legacy" };
 }
 
 export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHydration> {
@@ -543,6 +622,7 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
     const published = await readPublishedMintBurnGauge(ctx.db, ctx.nowSec);
     const end = published.kind === "ok" && published.gauge.window != null
       ? published.gauge.window.end : Math.floor(ctx.nowSec / 3600) * 3600;
+    const knownTransition = knownFlowAccountingTransition(end);
     let publication = published.kind === "ok" ? published.gauge.publication : null;
     if (published.kind === "ok" && publication == null && published.gauge.window != null) {
       // Retained pre-admission publications describe only the pinned incumbent roster.
@@ -560,19 +640,33 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
       && leg.reason === "reactivation-pending" && MINT_BURN_CONFIGS.some((config) => config.enabled !== false
         && mintBurnConfigKey(config) === leg.configKey && mintBurnScanFingerprint(config) === leg.configFingerprint)) ?? [];
     const isolatedCoinIds = new Set(isolatedLegs.map((leg) => leg.stablecoinId));
-    const canonicalConfigs = MINT_BURN_CONFIGS.filter((config) => config.enabled !== false
-      && isCanonicalMintBurnPair(config.stablecoinId, config.chain.chainId)
-      && (publishedPairs.some(([id, chain]) => id === config.stablecoinId && chain === config.chain.chainId)
-        || isolatedLegs.some((leg) => leg.stablecoinId === config.stablecoinId && leg.chainId === config.chain.chainId)));
-    const isolatedConfigs = canonicalConfigs.filter((config) => isolatedCoinIds.has(config.stablecoinId));
+    const isPublished = (id: string, chain: string) => publishedPairs.some(([asset, leg]) => id === asset && chain === leg);
+    const scopedConfigs = MINT_BURN_CONFIGS.filter((config) => config.enabled !== false
+      && (config.stablecoinId === DEWS_USDT_FLOW_ID || isCanonicalMintBurnPair(config.stablecoinId, config.chain.chainId))
+      && (isPublished(config.stablecoinId, config.chain.chainId)
+        || (config.stablecoinId !== DEWS_USDT_FLOW_ID && isolatedLegs.some((leg) =>
+          leg.stablecoinId === config.stablecoinId && leg.chainId === config.chain.chainId))));
+    const isolatedConfigs = scopedConfigs.filter((config) => isolatedCoinIds.has(config.stablecoinId));
     const isolatedPairs = isolatedConfigs
       .filter((config) => !publication?.legs.some((leg) => leg.stablecoinId === config.stablecoinId
         && leg.chainId === config.chain.chainId && leg.status !== "admitted" && leg.reason !== "reactivation-pending"))
       .map((config) => [config.stablecoinId, config.chain.chainId] as const);
-    const canonicalPairs = new Set([...publishedPairs, ...isolatedPairs].filter(([id, chain]) => isCanonicalMintBurnPair(id, chain))
-      .map(([id, chain]) => `${id}|${chain}`));
-    const scopedCoinIds = new Set([...canonicalPairs].map((pair) => pair.split("|")[0]));
-    const scopedPairsJson = JSON.stringify([...canonicalPairs].map((pair) => pair.split("|")));
+    const pairs = [...scopedConfigs.map((config) => [config.stablecoinId, config.chain.chainId] as const)
+      .filter(([id, chain]) => isPublished(id, chain)), ...isolatedPairs];
+    const scopedPairs = new Set(pairs.map(([id, chain]) => `${id}|${chain}`));
+    const epochConfigsById = new Map<string, MintBurnContractConfig[]>();
+    for (const config of scopedConfigs) {
+      if (!scopedPairs.has(`${config.stablecoinId}|${config.chain.chainId}`)) continue;
+      const configs = epochConfigsById.get(config.stablecoinId) ?? [];
+      configs.push(config);
+      epochConfigsById.set(config.stablecoinId, configs);
+    }
+    const scopedCoinIds = new Set(pairs.map(([id]) => id));
+    const scopedPairsJson = JSON.stringify([...scopedPairs].map((pair) => pair.split("|")));
+    const usdtChainIds = [...new Set(scopedConfigs.filter((config) => config.stablecoinId === DEWS_USDT_FLOW_ID)
+      .map((config) => config.chain.chainId))].sort();
+    const usdtPartial = MINT_BURN_CONFIGS.some((config) => config.stablecoinId === DEWS_USDT_FLOW_ID
+      && !usdtChainIds.includes(config.chain.chainId));
     const scanCoverageById = new Map(published.kind === "ok" && published.gauge.window != null
       ? published.gauge.coins.filter((coin) => scopedCoinIds.has(coin.id))
         .map((coin) => [coin.id, coin.scanCoverage] as const) : []);
@@ -583,7 +677,7 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
       total_mint: number;
       latest_hour_ts: number | null;
     };
-    const snapshot = await runWithOverloadRetry(() => ctx.db.batch([
+    const readSnapshot = (withEpoch: boolean) => runWithOverloadRetry(() => ctx.db.batch([
       ctx.db
       .prepare(
         `SELECT /* pharos:dews:mint-burn-24h */
@@ -619,13 +713,36 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
         .bind(end - 30 * DAY_SECONDS, end),
       ...(isolatedCoinIds.size > 0
         ? [prepareMintBurnScanCoverage(ctx.db, isolatedConfigs, end - 30 * DAY_SECONDS, end)] : []),
+      ...(withEpoch ? [
+        ctx.db.prepare(`SELECT config_key, MIN(from_timestamp) AS first_write
+          FROM mint_burn_writer_epoch_coverage WHERE config_key IN (SELECT value FROM json_each(?))
+          GROUP BY config_key`).bind(JSON.stringify(scopedConfigs.map(mintBurnConfigKey))),
+        prepareMintBurnWriterEpochCoverage(ctx.db, [...epochConfigsById.values()].flat(), end - 30 * DAY_SECONDS, end),
+      ] : []),
     ]), 3, undefined, { waitOutResourceWindow: true });
+    let hasEpochs = scopedPairs.size > 0;
+    const snapshot = await readSnapshot(hasEpochs).catch((error: unknown) => {
+      if (!hasEpochs || !isMintBurnWriterEpochSchemaMissing(error)) throw error;
+      hasEpochs = false;
+      return readSnapshot(false);
+    });
     const isolatedProof = isolatedCoinIds.size > 0
       ? decodeMintBurnScanCoverage(snapshot[3] as D1Result<MintBurnScanSegment>) : new Map<string, MintBurnScanSegment[]>();
     const mb24h = snapshot[0] as D1Result<FlowRow>;
     const mb30d = snapshot[1] as D1Result<FlowRow>;
+    const firstWrites = new Map<string, number>();
+    const writerProof = new Map<string, EpochSegment[]>();
+    if (hasEpochs) {
+      const starts = snapshot[snapshot.length - 2] as D1Result<{ config_key: string; first_write: number }>;
+      for (const row of starts.results) firstWrites.set(row.config_key, row.first_write);
+      for (const row of (snapshot[snapshot.length - 1] as D1Result<EpochSegment>).results) {
+        const segments = writerProof.get(row.config_key) ?? [];
+        segments.push(row);
+        writerProof.set(row.config_key, segments);
+      }
+    }
     const dirtyIds = new Set((snapshot[2].results as Array<{ stablecoin_id: string; chain_id: string }>)
-      .filter((row) => canonicalPairs.has(`${row.stablecoin_id}|${row.chain_id}`)).map((row) => row.stablecoin_id));
+      .filter((row) => scopedPairs.has(`${row.stablecoin_id}|${row.chain_id}`)).map((row) => row.stablecoin_id));
     mintBurnRowsRead = (mb24h.results?.length ?? 0) + (mb30d.results?.length ?? 0);
 
     const mb24hMap = new Map<string, {
@@ -636,7 +753,7 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
       classification: MintBurnClassificationTally;
     }>();
     for (const row of mb24h.results) {
-      if (!canonicalPairs.has(`${row.stablecoin_id}|${row.chain_id}`)) continue;
+      if (!scopedPairs.has(`${row.stablecoin_id}|${row.chain_id}`)) continue;
       const aggregate = mb24hMap.get(row.stablecoin_id)
         ?? { total_burn: 0, total_mint: 0, latest_hour_ts: null, valuation: emptyMintBurnValuationTally(), classification: emptyMintBurnClassificationTally() };
       aggregate.total_burn += row.total_burn;
@@ -659,7 +776,7 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
       classification: MintBurnClassificationTally;
     }>();
     for (const row of mb30d.results) {
-      if (!canonicalPairs.has(`${row.stablecoin_id}|${row.chain_id}`)) continue;
+      if (!scopedPairs.has(`${row.stablecoin_id}|${row.chain_id}`)) continue;
       const aggregate = mb30dMap.get(row.stablecoin_id)
         ?? { avg_burn: 0, avg_mint: 0, latest_hour_ts: null, valuation: emptyMintBurnValuationTally(), classification: emptyMintBurnClassificationTally() };
       // A proven 30-day scan includes quiet days, not only event-bearing days.
@@ -675,7 +792,7 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
       }
       mb30dMap.set(row.stablecoin_id, aggregate);
     }
-    const mintBurnIds = new Set([...mb24hMap.keys(), ...mb30dMap.keys(), ...scanCoverageById.keys()]);
+    const mintBurnIds = new Set([...mb24hMap.keys(), ...mb30dMap.keys(), ...scanCoverageById.keys(), ...isolatedPairs.map(([id]) => id)]);
 
     for (const stablecoinId of mintBurnIds) {
       const scanCoverage = scanCoverageById.get(stablecoinId);
@@ -689,8 +806,26 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
       if (!scanComplete || dirtyIds.has(stablecoinId)) continue;
       const latestWindow = mb24hMap.get(stablecoinId);
       const baseline = mb30dMap.get(stablecoinId);
+      const configs = epochConfigsById.get(stablecoinId) ?? [];
+      const currentEpoch = writerEpochForWindow(configs, writerProof, firstWrites, end - DAY_SECONDS, end);
+      let epochIssue: MintBurnSnapshot["epochIssue"] = null;
+      if (currentEpoch.kind === "legacy") {
+        epochIssue = undefined;
+      } else if (currentEpoch.kind === "mixed") {
+        epochIssue = "mint-burn-current-accounting-epoch-mixed";
+      } else if (currentEpoch.kind !== "ok") {
+        epochIssue = knownTransition === "mint-burn-current-accounting-transition"
+          ? knownTransition : "mint-burn-current-accounting-epoch-missing";
+      } else {
+        const baselineEpoch = writerEpochForWindow(configs, writerProof, firstWrites, end - 30 * DAY_SECONDS, end);
+        if (baselineEpoch.kind !== "ok" || baselineEpoch.epoch !== currentEpoch.epoch) {
+          epochIssue = knownTransition === "mint-burn-baseline-accounting-transition" ? knownTransition
+            : baselineEpoch.kind === "missing" ? "mint-burn-accounting-epoch-missing" : "mint-burn-accounting-epoch-mixed";
+        }
+      }
       if (summarizeMintBurnClassification(latestWindow?.classification ?? emptyMintBurnClassificationTally()).completeness !== "complete"
-        || summarizeMintBurnClassification(baseline?.classification ?? emptyMintBurnClassificationTally()).completeness !== "complete") continue;
+        || (epochIssue == null
+          && summarizeMintBurnClassification(baseline?.classification ?? emptyMintBurnClassificationTally()).completeness !== "complete")) continue;
       const latestHourTs = end;
       const ageSec = getRowAgeSec(latestHourTs, ctx.nowSec);
       if (ageSec != null) mintBurnAgeSecById.set(stablecoinId, ageSec);
@@ -699,7 +834,11 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
       }
       // Only fully proven windows admit quiet zero; gross values remain observed subtotals.
       mintBurnMap.set(stablecoinId, {
-        ...(isolated ? { isolated: true } : {}),
+        ...(stablecoinId === DEWS_USDT_FLOW_ID ? {
+          scope: usdtPartial ? "partial-admitted-chains" : "all-admitted-chains",
+          chainIds: usdtChainIds,
+        } : isolated ? { isolated: true } : {}),
+        epochIssue,
         burn24h: latestWindow?.total_burn ?? 0,
         mint24h: latestWindow?.total_mint ?? 0,
         burnBaseline: baseline?.avg_burn ?? 0,
@@ -779,6 +918,7 @@ export async function hydrateYieldWarnings(ctx: HydrationContext): Promise<Yield
 
 export async function hydrateYieldRankingsCache(ctx: HydrationContext): Promise<YieldRankingsHydration> {
   const yieldSourceRisk = new Map<string, YieldSourceRisk>();
+  const overdueSourceIds = new Set<string>();
   const yieldRankChangeAttribution = new Map<string, YieldRankChangeAttribution>();
   const diagnostics: StablecoinsDependencyDiagnostics = {
     generationId: null, updatedAt: null, ageSeconds: null,
@@ -787,9 +927,10 @@ export async function hydrateYieldRankingsCache(ctx: HydrationContext): Promise<
   let yieldRankingsAgeSec: number | null = null;
   let yieldRankingsRetained = false;
   try {
+    // SAFETY: the key selector contains only static, versioned publication keys.
     const rankingsCache = await ctx.db
-      .prepare("SELECT /* pharos:dews:yield-rankings-cache */ value, updated_at FROM cache WHERE key = ?")
-      .bind("yield-rankings")
+      .prepare(`SELECT /* pharos:dews:yield-rankings-cache */ value, updated_at FROM cache WHERE key = ${MATCHING_CACHE_VERSION_KEY_SQL}`)
+      .bind(...YIELD_RANKINGS_READ_KEYS)
       .first<{ value: string | null; updated_at: number | null }>();
     const decoded = decodeJsonString<unknown[], PersistedJsonDecodeReason>(rankingsCache?.value ?? null, {
       updatedAt: rankingsCache?.updated_at ?? null,
@@ -846,6 +987,7 @@ export async function hydrateYieldRankingsCache(ctx: HydrationContext): Promise<
 
         const sourceRisk = normalizeYieldSourceRisk(row?.sourceRisk);
         if (sourceRisk) yieldSourceRisk.set(stablecoinId, sourceRisk);
+        if (getObject(row?.provenance)?.sourceFreshness === "stale") overdueSourceIds.add(stablecoinId);
 
         const rankChangeAttribution = normalizeYieldRankChangeAttribution(row?.rankChangeAttribution);
         if (rankChangeAttribution) yieldRankChangeAttribution.set(stablecoinId, rankChangeAttribution);
@@ -867,6 +1009,7 @@ export async function hydrateYieldRankingsCache(ctx: HydrationContext): Promise<
   }
   return {
     yieldSourceRisk,
+    overdueSourceIds,
     yieldRankChangeAttribution,
     yieldRankingsAgeSec,
     yieldRankingsRetained,

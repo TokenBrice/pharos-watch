@@ -1,20 +1,28 @@
+import { getMintBurnPressureUnavailableReason } from "../mint-burn-scoring";
 import { z } from "zod";
 import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { DEWS_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
-import { getPegReference, normalizePegType } from "@shared/lib/peg-rates";
-import { deriveDepegSignal } from "@shared/lib/depeg-signals";
-import { isReferenceDeviationHeld } from "@shared/lib/reference-market-hours";
-import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { getPegReference, isParityPrice, normalizePegType } from "@shared/lib/peg-rates";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { deriveDepegSignal } from "@shared/lib/depeg-signals";
+import { getReferenceMarket, getReferenceMarketClosureStart, isReferenceDeviationHeld } from "@shared/lib/reference-market-hours";
+import { getPegTaxonomyByType, pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
+import { evaluateReferenceAdmission, REFERENCE_INTRADAY_BUDGET_SEC } from "@shared/lib/reference-admission";
+import { asRawDeviationBps } from "@shared/types/reference-admission";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { computeDEWS } from "../dews";
 import type { DEWSInput, DEWSResult, PoolEntry } from "../dews";
 import type { TopPoolsUnavailableReason } from "./types";
 import { isAuthoritativeDepegPegReference } from "../depeg-trust-policy";
-import type { ContagionAmplifiers, DewsScoringResult, DewsScoringState, PersistedJsonDecodeReason } from "./contracts";
+import type { DewsScoringResult, DewsScoringState, PersistedJsonDecodeReason } from "./contracts";
 import { decodeJsonString } from "../cache-json";
-import { CONTAGION_BUMP_DANGER, CONTAGION_BUMP_WARNING, CONTAGION_AMPLIFIER_CAP } from "../dews-contagion-policy";
+import { CONTAGION_BUMP_DANGER, CONTAGION_BUMP_WARNING } from "../dews-contagion-policy";
 import { CONTRACT_CONFIGS } from "../blacklist-contracts";
 import { numberValue } from "@shared/lib/type-guards";
+import { getDewsPrimaryQuoteClock, hasIndependentDewsVenues } from "./reference-evidence";
+import { computeDivergSignal } from "./signal-families";
+import { EVIDENCE_STRESS_THRESHOLD } from "@shared/lib/dews-config";
+import { hasLoneMentoBrokerPrice } from "./evidence-policy";
 
 // Missing `extra`/`balanceRatio` means "no balance measurement" (null), never perfect balance; a missing
 // or invalid TVL, or a non-numeric ratio, makes the entry unreadable.
@@ -118,26 +126,28 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
   let insufficientDataCount = 0;
   const noCurrentSupplyIds: string[] = [];
 
-  const scored: Array<{ meta: (typeof DEWS_ELIGIBLE_STABLECOINS)[number]; input: DEWSInput; firstPass: DEWSResult; contagionEligible: boolean }> =
-    [];
+  const scored: Array<{ input: DEWSInput; firstPass: DEWSResult }> = [];
   for (const meta of DEWS_ELIGIBLE_STABLECOINS) {
     const asset = assetById.get(meta.id);
     if (!asset) continue;
-
-    // "No supply buckets at all" is not "redeemed to zero": only an explicitly
-    // present zero may retire the coin's current and 7-day rows, which are
-    // never resurrected. An absent record skips the coin without writing.
-    const current = getCirculatingRawOrNull(asset);
-    if (current === null) continue;
-    if (current <= 0) {
-      noCurrentSupplyIds.push(meta.id);
+    const pegType = normalizePegType(asset.pegType) ?? null;
+    if (pegType != null && pegType !== pegTypeFromCurrency(meta.flags.pegCurrency)) {
+      registerMalformedPersistedInput({ source: "stablecoins", context: "stablecoins.pegType", stablecoinId: meta.id,
+        reason: "invalid-shape", degradesRun: true });
       continue;
     }
 
-    const prevDay = getPrevDayRawOrNull(asset);
-    const prevWeek = getPrevWeekRawOrNull(asset);
-    const hasPrevDayAnchor = prevDay !== null;
-    const hasPrevWeekAnchor = prevWeek !== null;
+    // Retire only on observed zero. When native quantity exists it owns the verdict.
+    const current = getCirculatingRawOrNull(asset);
+    if (asset.circulatingNative === 0 || (asset.circulatingNative == null && current === 0)) {
+      noCurrentSupplyIds.push(meta.id);
+      continue;
+    }
+    if (current === null) continue;
+
+    const nativeHistory = sourceState.nativeHistory?.get(meta.id);
+    const useNativeSupply = asset.supplyObservedAt != null && (nativeHistory != null
+      || (asset.circulatingNative !== undefined && sourceState.nativeHistory === null));
 
     const dexLiq = sourceState.dexLiquidity.dexLiqMap.get(meta.id);
     const dexPrice = sourceState.dexPrices.dexPriceMap.get(meta.id);
@@ -153,8 +163,9 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
     const mintBurn = sourceState.mintBurn.mintBurnMap.get(meta.id);
     const mintBurnAgeSec = sourceState.mintBurn.mintBurnAgeSecById.get(meta.id) ?? null;
     const yieldSourceRisk = sourceState.yieldRankings.yieldSourceRisk.get(meta.id) ?? null;
+    const yieldSourceOverdue = sourceState.yieldRankings.overdueSourceIds?.has(meta.id) === true;
     const yieldRankChangeAttribution = sourceState.yieldRankings.yieldRankChangeAttribution.get(meta.id) ?? null;
-    const hasYieldRankingEvidence = yieldSourceRisk != null || yieldRankChangeAttribution != null;
+    const hasYieldRankingEvidence = yieldSourceOverdue || yieldSourceRisk != null || yieldRankChangeAttribution != null;
 
     const hasBlacklistTracking = BLACKLIST_TRACKED_ID_SET.has(meta.id);
     const blacklistCounts = hasBlacklistTracking ? sourceState.blacklist.blacklistCounts.get(meta.id) : undefined;
@@ -166,11 +177,14 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       registerMalformedPersistedInput,
     );
 
-    const pegType = normalizePegType(asset.pegType) ?? null;
-    const hasPegReference = pegType != null
+    const market = getReferenceMarket(getPegTaxonomyByType(pegType ?? undefined)?.currency);
+    const scheduled = market != null && nowSec != null && sourceState.references !== undefined;
+    const selected = pegType == null ? undefined : sourceState.references?.get(pegType);
+    const hasPegReference = scheduled ? selected != null : pegType != null
       && (pegType === "peggedUSD" || Object.prototype.hasOwnProperty.call(pegRates, pegType));
-    const pegRateSource = pegType == null ? null : pegRateSources[pegType] ?? null;
-    const pegRateContributorCount = pegType == null ? null : pegRateContributorCounts[pegType] ?? null;
+    const pegRateSource = scheduled ? selected?.kind ?? null : pegType == null ? null : pegRateSources[pegType] ?? null;
+    const pegRateContributorCount = scheduled ? selected?.kind === "median" ? selected.contributors.length : null
+      : pegType == null ? null : pegRateContributorCounts[pegType] ?? null;
     const pegReferenceTrusted =
       hasPegReference &&
       isAuthoritativeDepegPegReference({
@@ -179,36 +193,62 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
         pegRateSource,
         pegRateContributorCount,
       });
-    const pegRef = pegReferenceTrusted && pegType != null
-      ? getPegReference(pegType, pegRates, meta.commodityOunces) ?? 0
-      : 0;
-    const price = isObservedPrice(asset) ? asset.price ?? null : null;
-    // A closed FX or metal market holds the reference unless an admitted leg (primary or DEX) moved severely.
-    const legMoves = [price, dexPrice?.dexPriceUsd ?? null].flatMap((leg) => {
-      const signal = leg == null ? null : deriveDepegSignal(leg, pegRef);
-      return signal ? [signal.absRawBps] : [];
-    });
-    const referenceMarketClosed = pegRef > 0 && nowSec != null && isReferenceDeviationHeld(
-      meta.flags?.pegCurrency, nowSec, legMoves.length > 0 ? Math.max(...legMoves) : Number.NaN,
-    );
+    const pegRefAt = (quoteObservedAtSec: number | null) => pegReferenceTrusted && pegType != null
+      ? getPegReference(pegType, scheduled && selected ? { [pegType]: selected.usdPerUnit } : pegRates, meta.commodityOunces, {
+        assetId: meta.id, commodityEntitlement: asset.commodityEntitlement, quoteObservedAtSec,
+      }) : null;
+    const pegRef = pegRefAt(asset.priceObservedAt ?? null) ?? pegRefAt(dexPrice?.updatedAt ?? null) ?? 0;
+    const price = isParityPrice(asset) ? asset.price ?? null : null;
+    const closureStart = scheduled ? getReferenceMarketClosureStart(market, nowSec) : null;
+    const legacyMarketHeld = !scheduled && market != null && nowSec != null && pegRef > 0
+      && isReferenceDeviationHeld(meta.flags.pegCurrency, nowSec, Math.max(
+        deriveDepegSignal(price ?? NaN, pegRef)?.absRawBps ?? 0,
+        deriveDepegSignal(dexPrice?.dexPriceUsd ?? NaN, pegRef)?.absRawBps ?? 0,
+      ));
+    const primaryClock = !scheduled || price == null ? null : getDewsPrimaryQuoteClock(asset, nowSec);
+    const reference = pegReferenceTrusted ? selected : undefined;
+    const evaluateLeg = (leg: number | null, quoteObservedAtSec: number | null) => {
+      const legPegRef = pegRefAt(quoteObservedAtSec);
+      const raw = leg == null || legPegRef == null ? null : deriveDepegSignal(leg, legPegRef)?.rawBps;
+      return evaluateReferenceAdmission({
+        ...(legPegRef != null && reference ? reference : { kind: "none" }),
+        decisionAtSec: nowSec!,
+        quoteObservedAtSec,
+        rawDeviationBps: raw != null && Number.isFinite(raw) ? asRawDeviationBps(raw) : null,
+      });
+    };
+    const referenceAdmission = scheduled ? {
+      primary: evaluateLeg(price, primaryClock),
+      dex: evaluateLeg(dexPrice?.dexPriceUsd ?? null, dexPrice?.updatedAt ?? null),
+    } : undefined;
+    const priorReference = sourceState.previousSignals.referenceDivergenceById?.get(meta.id);
+    const carriedReferenceDivergence = closureStart != null && priorReference != null
+      && priorReference.observedAtSec >= closureStart - REFERENCE_INTRADAY_BUDGET_SEC ? priorReference : undefined;
+    const venueSpreadBps = !scheduled ? undefined
+      : primaryClock != null && price != null && dexPrice && hasIndependentDewsVenues(asset, dexPrice)
+        ? numberValue(deriveDepegSignal(price, dexPrice.dexPriceUsd)?.absBps) : null;
     const pegReferenceUnavailableReason = pegType == null
       ? "peg-type-unavailable"
       : !hasPegReference
         ? "peg-reference-missing"
         : !pegReferenceTrusted
           ? "peg-reference-untrusted"
-          : referenceMarketClosed
+          : closureStart != null || legacyMarketHeld
             ? "reference-market-closed"
-            : null;
+            : referenceAdmission && ![referenceAdmission.primary, referenceAdmission.dex].some((leg) => leg.status === "admitted")
+              ? (price != null ? referenceAdmission.primary.reason : referenceAdmission.dex.reason)
+              : null;
     const input: DEWSInput = {
       stablecoinId: meta.id,
       mcapUsd: current,
       pegType,
-      circulatingCurrent: current,
-      circulatingPrevDay: prevDay ?? current,
-      circulatingPrevWeek: prevWeek ?? current,
-      circulatingPrevDayAvailable: hasPrevDayAnchor,
-      circulatingPrevWeekAvailable: hasPrevWeekAnchor,
+      circulatingCurrent: useNativeSupply ? asset.circulatingNative ?? null : current,
+      circulatingPrevDay: useNativeSupply ? nativeHistory?.day ?? null : getPrevDayRawOrNull(asset),
+      circulatingPrevWeek: useNativeSupply ? nativeHistory?.week ?? null : getPrevWeekRawOrNull(asset),
+      legacySupplyUsd: useNativeSupply && nativeHistory ? {
+        day: nativeHistory.day === undefined ? getPrevDayRawOrNull(asset) : null,
+        week: nativeHistory.week === undefined ? getPrevWeekRawOrNull(asset) : null,
+      } : undefined,
       weightedBalanceRatio: dexLiq?.weighted_balance_ratio ?? null,
       avgPoolStress: dexLiq?.avg_pool_stress ?? null,
       topPools: topPools.pools,
@@ -219,12 +259,16 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       tvl7dAgo: liqHist?.tvl ?? null,
       priceConfidence: asset.priceConfidence ?? null,
       prevPriceConfidence: (prev?.price as { confidence?: string })?.confidence ?? null,
+      observedPrice: isObservedPrice(asset) ? asset.price ?? null : null,
       price,
       priceSource: asset.priceSource ?? null,
       agreeSources: asset.agreeSources,
       pegRef,
-      pegReferenceAvailable: pegReferenceTrusted && !referenceMarketClosed,
+      pegReferenceAvailable: pegReferenceTrusted && !legacyMarketHeld,
       pegReferenceUnavailableReason,
+      referenceAdmission,
+      carriedReferenceDivergence,
+      venueSpreadBps,
       pegRateSource,
       pegRateContributorCount,
       dexPriceUsd: dexPrice?.dexPriceUsd ?? null,
@@ -235,6 +279,10 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       blacklistSourceOk: sourceState.blacklist.blacklistSourceOk,
       burnVolume24hUsd: mintBurn?.burn24h ?? null,
       flowIsolated: mintBurn?.isolated === true,
+      flowScope: mintBurn?.scope,
+      flowChainIds: mintBurn?.chainIds,
+      flowHolderPressureWithheld: getMintBurnPressureUnavailableReason(meta.id) != null,
+      flowEpochIssue: mintBurn?.epochIssue,
       mintVolume24hUsd: mintBurn?.mint24h ?? null,
       burnBaseline30dUsd: mintBurn?.burnBaseline ?? null,
       flowDataAgeDays: mintBurnAgeSec == null ? null : mintBurnAgeSec / DAY_SECONDS,
@@ -243,12 +291,15 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       flowBurnBaselineValuation: mintBurn?.burnBaselineValuation ?? null,
       yieldWarnings: sourceState.yieldWarnings.yieldWarnings.get(meta.id) ?? [],
       yieldSourceRisk,
+      yieldSourceOverdue,
       yieldRankChangeAttribution,
       psiScore: sourceState.psi.latestPsiScore,
       prevPoolValue: prev?.pool?.value ?? (previousUnavailable ? 0 : undefined),
       prevPoolAvailable: prev?.pool?.available === true,
       prevPoolComponentCoverage: numberValue((prev?.pool as { componentCoverage?: unknown } | undefined)?.componentCoverage),
-      prevDivergValue: prev?.diverg?.value,
+      prevDivergValue: referenceAdmission
+        ? numberValue((prev?.diverg as { currentDivergenceValue?: unknown } | undefined)?.currentDivergenceValue) ?? undefined
+        : prev?.diverg?.value,
       prevDivergAvailable: prev?.diverg?.available === true,
       contagionAmplifier: 1,
       sourceAges: {
@@ -264,48 +315,52 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
         previousSignals: sourceState.previousSignals.prevSignalStaleIds.has(meta.id),
         mintBurn: sourceState.mintBurn.mintBurnStaleIds.has(meta.id),
         yieldRankings: hasYieldRankingEvidence && sourceState.yieldRankings.yieldRankingsRetained,
-        pegReference: !pegReferenceTrusted,
+        pegReference: scheduled ? pegReferenceUnavailableReason != null : !pegReferenceTrusted,
       },
     };
+    if (referenceAdmission && dexPrice?.independentQuotes && hasLoneMentoBrokerPrice(input)) {
+      input.independentDexDivergence = dexPrice.independentQuotes.some(({ price: dex, observedAtSec }) => {
+        const signal = computeDivergSignal({
+          ...input, price: null, dexPriceUsd: dex, venueSpreadBps: null, carriedReferenceDivergence: undefined,
+          prevDivergAvailable: false,
+          referenceAdmission: { primary: referenceAdmission.primary, dex: evaluateLeg(dex, observedAtSec) },
+        });
+        return signal.available && signal.value >= EVIDENCE_STRESS_THRESHOLD;
+      });
+    }
 
     const firstPass = computeDEWS(input);
     if (!firstPass) {
       insufficientDataCount++;
       continue;
     }
-    const contagionBase = input.flowIsolated ? computeDEWS({ ...input, burnVolume24hUsd: null }) : firstPass;
-    const contagionEligible = contagionBase != null && contagionBase.band !== "DANGER" && contagionBase.band !== "WARNING";
-    scored.push({ meta, input, firstPass, contagionEligible });
+    scored.push({ input, firstPass });
   }
 
-  const amplifiers: ContagionAmplifiers = { byPegType: {}, triggeringIds: [] };
+  const peerBumps = new Map<string, { id: string; strongest: number; second: number }>();
   for (const { input, firstPass } of scored) {
     const bump =
       firstPass.band === "DANGER" ? CONTAGION_BUMP_DANGER : firstPass.band === "WARNING" ? CONTAGION_BUMP_WARNING : 1;
     // An unavailable peg type has no contagion cohort to amplify.
     if (bump <= 1 || input.pegType == null) continue;
-    const current = amplifiers.byPegType[input.pegType] ?? 1;
-    if (bump > current) {
-      amplifiers.byPegType[input.pegType] = Math.min(bump, CONTAGION_AMPLIFIER_CAP);
+    const current = peerBumps.get(input.pegType);
+    if (!current || bump > current.strongest) {
+      peerBumps.set(input.pegType, { id: input.stablecoinId, strongest: bump, second: current?.strongest ?? 1 });
+    } else {
+      current.second = Math.max(current.second, bump);
     }
-    amplifiers.triggeringIds.push(input.stablecoinId);
   }
 
-  // Isolated flow cannot remove peer amplification by crossing WARNING itself.
-  for (const { meta, input, firstPass, contagionEligible } of scored) {
-    const contagion = input.pegType == null ? 1 : input.flowIsolated && contagionEligible
-      ? Math.max(1, ...scored.filter((peer) => peer.meta.id !== meta.id && peer.input.pegType === input.pegType)
-        .map((peer) => peer.firstPass.band === "DANGER" ? CONTAGION_BUMP_DANGER
-          : peer.firstPass.band === "WARNING" ? CONTAGION_BUMP_WARNING : 1))
-      : amplifiers.byPegType[input.pegType] ?? 1;
-    const applicable = contagion > 1 && contagionEligible;
-    const finalResult = applicable ? computeDEWS({ ...input, contagionAmplifier: contagion }) : firstPass;
+  for (const { input, firstPass } of scored) {
+    const bumps = input.pegType == null ? undefined : peerBumps.get(input.pegType);
+    const contagion = (bumps?.id === input.stablecoinId ? bumps.second : bumps?.strongest) ?? 1;
+    const finalResult = contagion > 1 ? computeDEWS({ ...input, contagionAmplifier: contagion }) : firstPass;
     if (!finalResult) {
       insufficientDataCount++;
       continue;
     }
     results.push({
-      stablecoinId: meta.id,
+      stablecoinId: input.stablecoinId,
       score: finalResult.score,
       band: finalResult.band,
       signals: finalResult.signals,

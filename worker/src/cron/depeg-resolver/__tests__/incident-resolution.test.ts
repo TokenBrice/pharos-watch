@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
+import { forecastReadinessScore } from "@shared/lib/depeg-resolver";
+import { summarizeDexVolumeWindow } from "@shared/lib/dex-volume-availability";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { buildDewsStablecoinIdsDigest } from "../../../lib/dews-publication-pointer";
 import { D1_MAX_BOUND_PARAMETERS } from "../../../lib/d1-primitives";
@@ -20,6 +22,7 @@ import {
   stablecoinsCache,
   supplyHistory,
 } from "./depeg-resolver.test-support";
+import { getReferenceSessionState } from "@shared/lib/reference-market-hours";
 import { buildCurrentDeviationMap, loadDdrContext } from "../context";
 import { buildSupplyContext, deriveMintSurge, resolveDdrIncidents } from "../incident-resolution";
 import {
@@ -159,29 +162,56 @@ describe("buildSupplyContext", () => {
 
   it("keeps two post-onset snapshots uncovered instead of manufacturing onset evidence", () => {
     expect(buildSupplyContext([
-      { date: startedAt + 1, usd: 1_000_000 },
-      { date: NOW_SEC, usd: 1_000_000 },
+      { date: startedAt + 1, usd: 1_000_000, native: 1_000_000, nativeObservedAt: startedAt + 1 },
+      { date: NOW_SEC, usd: 1_000_000, native: 1_000_000, nativeObservedAt: NOW_SEC },
     ], startedAt, NOW_SEC, [], false)).toMatchObject({
       covered: false, change7dPct: null, mintSurge: null, mintSurgeCoverage: "unavailable",
     });
   });
 
+  it("uses the legacy USD comparison only when both checkpoints lack native evidence", () => {
+    const older = { date: startedAt - 30 * DAY, usd: 100 };
+    const onset = { date: startedAt, usd: 80 };
+    expect(buildSupplyContext([older, onset], startedAt, startedAt, [], false))
+      .toMatchObject({ covered: true, change7dPct: -20, change30dPct: -20 });
+    expect(buildSupplyContext([older, { ...onset, usd: 0 }], startedAt, startedAt, [], false))
+      .toMatchObject({ covered: false, change7dPct: -100 });
+    expect(buildSupplyContext([older, { ...onset, native: null }], startedAt, startedAt, [], false))
+      .toMatchObject({ covered: false, change7dPct: null, change30dPct: null });
+  });
+
   it("requires the 7d baseline even when onset and current supply are measured", () => {
     expect(buildSupplyContext([
-      { date: startedAt, usd: 1_000_000 },
-      { date: NOW_SEC, usd: 1_000_000 },
+      { date: startedAt, usd: 1_000_000, native: 1_000_000, nativeObservedAt: startedAt },
+      { date: NOW_SEC, usd: 1_000_000, native: 1_000_000, nativeObservedAt: NOW_SEC },
     ], startedAt, NOW_SEC, [], false)).toMatchObject({
       covered: false, change7dPct: null, mintSurge: null,
     });
   });
 
-  it("keeps unavailable current supply null and accepts measured stable event-window supply", () => {
+  it.each([false, true])("withholds changes for sparse native checkpoints with measured mint/burn coverage %s", (hasCoverage) => {
     const snapshots = [
-      { date: startedAt - 7 * DAY, usd: 1_000_000 },
-      { date: startedAt, usd: 1_000_000 },
+      { date: startedAt - 100 * DAY, usd: 1_000_000, native: 100, nativeObservedAt: startedAt - 100 * DAY },
+      { date: startedAt, usd: 1_000_000, native: 100, nativeObservedAt: startedAt },
+    ];
+    expect(buildSupplyContext(snapshots, startedAt, startedAt + 1, [], hasCoverage)).toMatchObject({
+      covered: false, change7dPct: null, change30dPct: null,
+      mintSurge: hasCoverage ? false : null, mintSurgeCoverage: hasCoverage ? "mint-burn-hourly" : "unavailable",
+    });
+  });
+
+  it.each([
+    { onsetNative: 100, expected: 0 },
+    { onsetNative: 88, expected: -12 },
+    { onsetNative: 0, expected: -100 },
+    { onsetNative: null, expected: null },
+  ])("uses native quantity, not the $968k mark, with onset $onsetNative", ({ onsetNative, expected }) => {
+    const snapshots = [
+      { date: startedAt - 7 * DAY, usd: 1_000_000, native: 100, nativeObservedAt: startedAt - 7 * DAY },
+      { date: startedAt, usd: 968_000, native: onsetNative, nativeObservedAt: startedAt },
     ];
     expect(buildSupplyContext(snapshots, startedAt, NOW_SEC, [], false)).toMatchObject({
-      covered: true, change7dPct: 0, change30dPct: null, mintSurge: false,
+      covered: expected !== null, change7dPct: expected, change30dPct: null, mintSurge: expected === null ? null : false,
     });
     expect(buildSupplyContext(snapshots, startedAt, startedAt - 8 * DAY, [], false).change30dPct).toBeNull();
   });
@@ -330,6 +360,30 @@ describe("loadDdrContext", () => {
     expect(result.byCoin.get("usdc-circle")).toBe(provenance.expected);
   });
 
+  it("keeps legacy FX deviation, applies quote age only to recorded clocks and excludes quarantined rows", async () => {
+    const asset = { symbol: "FIX", price: 0.97, pegType: "peggedUSD", circulating: { peggedUSD: 100 } };
+    const db = mockResolverD1([{
+      match: "FROM cache WHERE key = ?",
+      rows: [{ updated_at: NOW_SEC, value: JSON.stringify({
+        peggedAssets: [
+          { ...asset, id: "eurc-circle", price: 1.08 * 0.97, pegType: "peggedEUR", circulating: { peggedEUR: 100 } },
+          { ...asset, id: "usdc-circle", priceUpdatedAt: NOW_SEC - 7 * 3600, currentPeg: { admittedDeviationBps: -300 } },
+          { ...asset, id: "sofid-sofi", priceObservedAt: null, priceUpdatedAt: NOW_SEC },
+          { ...asset, id: "usdt-tether", priceUpdatedAt: NOW_SEC - 7 * 3600 },
+          { ...asset, id: "dai-makerdao", priceObservedAt: NOW_SEC - 7 * 3600 },
+          { ...asset, id: "benji-franklin-templeton", currentPeg: { currentDeviationBps: -300 } },
+        ],
+        fxFallbackRates: { peggedEUR: 1.08 },
+      }) }],
+    }]);
+    const result = await buildCurrentDeviationMap(db, NOW_SEC);
+    expect(Object.fromEntries(result.byCoin)).toEqual({
+      "eurc-circle": -300, "usdc-circle": -300, "sofid-sofi": null, "usdt-tether": -300,
+      "dai-makerdao": null, "benji-franklin-templeton": null,
+    });
+    expect(result.observedAtByCoin.size).toBe(0);
+  });
+
   it.each([undefined, {}, { peggedUSD: 0 }])("keeps DDR positive supply admission when current supply is %j", async (circulating) => {
     const db = mockResolverD1([{
       match: "FROM cache WHERE key = ?",
@@ -342,6 +396,48 @@ describe("loadDdrContext", () => {
       }],
     }]);
     expect((await buildCurrentDeviationMap(db, NOW_SEC)).byCoin.get("usdc-circle")).toBeNull();
+  });
+
+  it.each([
+    ["2026-11-20T20:59:30Z", "admitted", 0, -320],
+    ["2026-11-20T20:59:30Z", "legacy", 0, -320],
+    ["2026-11-20T20:59:30Z", "admitted", 1, null],
+    ["2026-11-20T22:00:00Z", "held-closed-session", 0, null],
+    ["2026-11-20T22:00:00Z", "admitted", 0, null],
+  ] as const)("uses the paired verdict at %s (%s, quote clock offset %d)", async (asOf, status, offset, expected) => {
+    const now = Date.parse(asOf) / 1000;
+    const quoteAt = Date.parse("2026-11-20T20:59:00Z") / 1000;
+    const db = mockResolverD1([{
+      match: "FROM cache WHERE key = ?",
+      rows: [{ updated_at: now, value: JSON.stringify({ fxFallbackRates: { peggedGOLD: 4_000 }, peggedAssets: [{
+        id: "xaut-tether", symbol: "XAUT", pegType: "peggedGOLD", price: 3_872,
+        priceObservedAt: quoteAt + offset,
+        circulating: { peggedGOLD: 100_000_000 },
+        currentPeg: status === "legacy" ? undefined : {
+          currentDeviationBps: -320, admittedDeviationBps: -320,
+          referenceAdmission: {
+            status, reason: status === "admitted" ? "live-reference" : "reference-market-closed",
+            kind: "fallback", source: "gold-api.com", cadence: "intraday",
+            referenceObservedAtSec: quoteAt, quoteObservedAtSec: quoteAt, decisionAtSec: quoteAt + 1,
+            budgetSec: 21_600, sessionOpenedAtSec: getReferenceSessionState("metal", quoteAt).sessionOpenedAtSec,
+            generation: null, policyVersion: 1,
+          },
+        },
+      }] }) }],
+    }]);
+    const result = await buildCurrentDeviationMap(db, now);
+    expect(result.byCoin.get("xaut-tether")).toBe(expected);
+    expect(result.observedAtByCoin.get("xaut-tether")).toBe(expected == null ? undefined : quoteAt);
+  });
+
+  it("does not manufacture live-price readiness from an admitted lifetime peak", () => {
+    const active = activeInput({ peakDeviationBps: -160, currentDeviationBps: null });
+    const [row] = resolveDdrIncidents(loadedContext({ active: [active] }), NOW_SEC);
+    expect(row.currentDeviationBps).toBeNull();
+    expect(row.peakDeviationBps).toBe(-160);
+    expect(row.inputs?.breakDepthBps).toBe(160);
+    expect(row.resolution.tier).toBe("insufficient_signal");
+    expect(forecastReadinessScore(row).strictEarlyLockReady).toBe(false);
   });
 
   it("accepts a producer-cadence-old cache and leaves thin non-USD peg references null", async () => {
@@ -415,6 +511,10 @@ describe("loadDdrContext", () => {
 
   it("hydrates live DDR inputs from DEWS signals, DEX TVL history, and Safety Score history", async () => {
     const row = activeRow();
+    const dexCapturedAt = NOW_SEC - 120;
+    const dexVolumeRecord = (asOfSec: number, volumeUsd: number, tvlUsd: number) => JSON.stringify({
+      "24h": summarizeDexVolumeWindow([{ observedAtSec: asOfSec, volumeUsd, tvlUsd }], "24h", { asOfSec, maxObservationAgeSec: 3600 }).availability,
+    });
     const card = makeWorkerV9Card({
       id: "usdc-circle",
       score: 90,
@@ -481,6 +581,10 @@ describe("loadDdrContext", () => {
           stablecoin_id: "usdc-circle",
           snapshot_date: snapshot.date,
           circulating_usd: snapshot.usd,
+          circulating_native: snapshot.native,
+          supply_provenance: JSON.stringify({
+            supplySource: "defillama", supplyObservedAt: snapshot.nativeObservedAt, supplyChainGuard: null,
+          }),
         })),
       },
       {
@@ -497,6 +601,7 @@ describe("loadDdrContext", () => {
             stablecoin_id: "usdc-circle",
             total_tvl_usd: 100,
             total_volume_24h_usd: 50,
+            volume_availability_json: dexVolumeRecord(dexCapturedAt - 7 * DAY, 50, 100),
             snapshot_date: NOW_SEC - 7 * DAY,
             coverage_class: "primary",
             coverage_confidence: 1,
@@ -506,6 +611,7 @@ describe("loadDdrContext", () => {
             stablecoin_id: "usdc-circle",
             total_tvl_usd: 200,
             total_volume_24h_usd: 100,
+            volume_availability_json: dexVolumeRecord(dexCapturedAt - 30 * DAY, 100, 200),
             snapshot_date: NOW_SEC - 30 * DAY,
             coverage_class: "primary",
             coverage_confidence: 1,
@@ -522,6 +628,7 @@ describe("loadDdrContext", () => {
             concentration_hhi: 0.8,
             total_tvl_usd: 40,
             total_volume_24h_usd: 20,
+            volume_availability_json: dexVolumeRecord(dexCapturedAt, 20, 40),
             updated_at: NOW_SEC - 60,
             methodology_version: LIQUIDITY_METHODOLOGY_VERSION,
           },
@@ -782,6 +889,22 @@ describe("loadDdrContext", () => {
 });
 
 describe("resolveDdrIncidents", () => {
+  it("grades a 12% gold-token contraction as a weak R3 anchor despite a 3.2% market-cap decline", () => {
+    const active = activeInput({ stablecoinId: "xaut-tether", symbol: "XAUT", pegType: "peggedGOLD" });
+    const context = loadedContext({
+      active: [active],
+      mintBurnCoveredEventIds: new Set([active.id]),
+      supplyByCoin: new Map([[active.stablecoinId, [
+        { date: active.startedAt - 7 * DAY, usd: 1_000_000, native: 100, nativeObservedAt: active.startedAt - 7 * DAY },
+        { date: active.startedAt, usd: 968_000, native: 88, nativeObservedAt: active.startedAt },
+      ]]]),
+    });
+    const [row] = resolveDdrIncidents(context, NOW_SEC);
+    expect(row.relatedContext).toMatchObject({ supplyChange7dPct: -12, mintSurge: false });
+    expect(row.inputs?.circulatingUsd).toBe(968_000);
+    expect(row.resolution.factors).toContainEqual(expect.objectContaining({ code: "R3_no_supply_anomaly", severity: "weak" }));
+  });
+
   it("passes blacklist surge, TVL collapse, and Safety Score into Stage 1 factors", () => {
     const active = activeInput({ stablecoinId: "usda-avalon", symbol: "USDA" });
     const context = loadedContext({
@@ -854,10 +977,10 @@ describe("resolveDdrIncidents", () => {
         [
           active.stablecoinId,
           [
-            { date: NOW_SEC - 30 * DAY, usd: 100 },
-            { date: active.startedAt - 7 * DAY, usd: 100 },
-            { date: active.startedAt, usd: 100 },
-            { date: NOW_SEC, usd: 50 },
+            { date: NOW_SEC - 30 * DAY, usd: 100, native: 100, nativeObservedAt: NOW_SEC - 30 * DAY },
+            { date: active.startedAt - 7 * DAY, usd: 100, native: 100, nativeObservedAt: active.startedAt - 7 * DAY },
+            { date: active.startedAt, usd: 100, native: 100, nativeObservedAt: active.startedAt },
+            { date: NOW_SEC, usd: 50, native: 50, nativeObservedAt: NOW_SEC },
           ],
         ],
       ]),
@@ -902,7 +1025,9 @@ describe("resolveDdrIncidents", () => {
     const context = loadedContext({
       active: [active],
       activeCoinIds: [active.stablecoinId],
-      supplyByCoin: new Map([[active.stablecoinId, supplyHistory(active.startedAt)]]),
+      supplyByCoin: new Map([[active.stablecoinId, [
+        NOW_SEC - 30 * DAY, active.startedAt - 7 * DAY, active.startedAt, NOW_SEC,
+      ].map((date) => ({ date, usd: 1_000_000_000, native: 1_000_000_000, nativeObservedAt: date }))]]),
       liqByCoin: new Map([
         [
           active.stablecoinId,
@@ -1013,7 +1138,10 @@ describe("resolveDdrIncidents", () => {
     const map = <T>(row: T) => new Map([[id, row]]);
     const context = loadedContext({
       active: [activeInput({ stablecoinId: id, startedAt: now - DAY })],
-      supplyByCoin: map(perimeter ? [{ date: now - 30 * DAY, usd: 699e6 }, { date: Math.floor(now / DAY) * DAY, usd: 268e6 }] : [{ date: now - DAY, usd: 1_000_000 }]),
+      supplyByCoin: map((perimeter
+        ? [{ date: now - 30 * DAY, usd: 699e6, native: 699e6 }, { date: Math.floor(now / DAY) * DAY, usd: 268e6, native: 268e6 }]
+        : [{ date: now - DAY, usd: 1_000_000, native: 1_000_000 }])
+        .map((snapshot) => ({ ...snapshot, nativeObservedAt: snapshot.date }))),
       dewsByCoin: map({
         stablecoin_id: id,
         score: 80,

@@ -20,13 +20,20 @@ import { buildPsiChartData, getDisplayedPsi, getPsiBandStreak, upsertPsiHistoryP
 import { getPsiEventScores } from "@shared/lib/psi-events";
 import { round1 } from "@shared/lib/math";
 import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggregate-universe";
+import { loadPsiSampleAverage } from "../lib/psi-sample-projection";
 
 import { isRecord } from "@shared/lib/type-guards";
-import { StabilityIndexDailyProvenanceSchema, type StabilityIndexHeadlineAggregates, type StabilityIndexInputDegradation } from "@shared/types/stability";
+import { StabilityIndexDailyProvenanceSchema, StabilityIndexReferenceMarketRepairSchema, type StabilityIndexHeadlineAggregates, type StabilityIndexInputDegradation } from "@shared/types/stability";
 
 function readDailyProvenance(value: unknown) {
   const parsed = StabilityIndexDailyProvenanceSchema.safeParse(value);
   return parsed.success ? parsed.data : undefined;
+}
+
+function readReferenceMarketRepair(method: unknown, reason: unknown) {
+  return StabilityIndexReferenceMarketRepairSchema.safeParse({
+    method, reason: typeof reason === "string" && reason ? reason : "reason-unavailable",
+  }).data;
 }
 
 function componentAvailability(
@@ -142,8 +149,13 @@ export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Re
     END
     END
   END AS daily_provenance`;
+  const repairProjection = `CASE WHEN json_valid(input_snapshot)
+    THEN json_extract(input_snapshot, '$.referenceMarketRepair.method') END AS repair_method,
+    CASE WHEN json_valid(input_snapshot)
+    THEN json_extract(input_snapshot, '$.referenceMarketRepair.reason') END AS repair_reason`;
   const historyQuery = `SELECT computed_at, score, band, components, methodology_version,
-    ${dailyProvenanceProjection} FROM stability_index ORDER BY computed_at DESC${detail ? (days === null ? "" : ` LIMIT ${days + 1}`) : " LIMIT 91"}`;
+    ${dailyProvenanceProjection}, ${repairProjection}
+    FROM stability_index ORDER BY computed_at DESC${detail ? (days === null ? "" : ` LIMIT ${days + 1}`) : " LIMIT 91"}`;
 
   // Latest valid sample (live score). If a compute cycle was skipped (insufficient inputs),
   // the previous sample remains the source of truth.
@@ -151,18 +163,13 @@ export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Re
     db
       .prepare("SELECT stored_at, score, band, components, input_snapshot, methodology_version FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
       .first<{ stored_at: number; score: number; band: string; components: string; input_snapshot: string | null; methodology_version: string | null }>(),
-    db
-      .prepare("SELECT AVG(score) as avg FROM stability_index_samples WHERE stored_at > ?")
-      .bind(now - DAY_SECONDS)
-      .first<{ avg: number | null }>(),
-    db
-      .prepare("SELECT AVG(score) as avg FROM stability_index_samples WHERE stored_at >= ?")
-      .bind(todayMidnight)
-      .first<{ avg: number | null }>(),
+    loadPsiSampleAverage(db, now - DAY_SECONDS, now),
+    loadPsiSampleAverage(db, todayMidnight, now, true),
     db
       .prepare(historyQuery)
       .bind(now - 91 * DAY_SECONDS)
-      .all<{ computed_at: number; score: number; band: string; components: string; methodology_version: string | null; daily_provenance: string | null }>(),
+      .all<{ computed_at: number; score: number; band: string; components: string; methodology_version: string | null; daily_provenance: string | null;
+        repair_method: string | null; repair_reason: string | null }>(),
     days !== null
       ? db.prepare(`SELECT computed_at, score, band FROM stability_index
           WHERE CASE WHEN json_valid(components) THEN json_type(components) = 'object' ELSE 0 END
@@ -231,6 +238,8 @@ export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Re
       ? decodePsiObjectField(r.daily_provenance, r.computed_at, "history.dailyProvenance")
       : undefined;
     const dailyProvenance = provenance?.ok ? readDailyProvenance(provenance.value) : undefined;
+    const referenceMarketRepair = readReferenceMarketRepair(r.repair_method, r.repair_reason);
+    const repair = referenceMarketRepair ? { referenceMarketRepair } : {};
     if (!detail) {
       return {
         date: r.computed_at,
@@ -238,6 +247,7 @@ export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Re
         band: r.band,
         methodologyVersion: resolveMethodologyVersion(r.methodology_version, r.computed_at),
         ...(dailyProvenance ? { dailyProvenance } : {}),
+        ...repair,
         ...componentAvailability(undefined, dailyProvenance?.componentSampleCounts),
       };
     }
@@ -260,6 +270,7 @@ export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Re
       ...componentAvailability(decodedHistoryComponents.value, dailyProvenance?.componentSampleCounts),
       methodologyVersion: resolveMethodologyVersion(r.methodology_version, r.computed_at),
       ...(dailyProvenance ? { dailyProvenance } : {}),
+      ...repair,
     };
   }).filter((row): row is NonNullable<typeof row> => row !== null);
 

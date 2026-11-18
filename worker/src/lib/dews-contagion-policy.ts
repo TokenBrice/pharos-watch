@@ -1,6 +1,6 @@
 
 
-/** Cross-asset contagion amplifier applied to a same-peg-type coin when another is DANGER. */
+/** Strongest other same-peg first-pass band sets the amplifier at any recipient band. */
 export const CONTAGION_BUMP_DANGER = 1.15;
 
 /** Cross-asset contagion amplifier applied to a same-peg-type coin when another is WARNING. */

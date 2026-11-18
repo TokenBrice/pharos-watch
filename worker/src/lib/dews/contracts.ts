@@ -4,6 +4,8 @@ import type { MintBurnValuationCompleteness } from "@shared/types/mint-burn";
 import type { YieldRankChangeAttribution, YieldSourceRisk } from "@shared/types/yield";
 import type { DEWSResult } from "../dews";
 import type { DexAggregateClockReason } from "../depeg-trust-policy";
+import type { ReferenceAdmissionInput } from "@shared/lib/reference-admission";
+import type { DEWSInput, DewsReferenceDivergence } from "./types";
 
 export interface SourceFailure {
   source: string;
@@ -36,6 +38,7 @@ export interface DexLiquidityRow {
   top_pools_json: string | null;
   liquidity_score: number | null;
   total_tvl_usd: number | null;
+  volume_availability_json?: string | null;
   updated_at: number | null;
   methodology_version: string | null;
 }
@@ -67,6 +70,8 @@ export interface LiquidityHistorySnapshot {
 export interface DexPriceSnapshot {
   dexPriceUsd: number;
   independentPrices?: number[];
+  aggregateFamilies?: readonly string[];
+  independentQuotes?: readonly { price: number; observedAtSec: number }[];
   sourceTotalTvl: number;
   updatedAt: number;
 }
@@ -74,6 +79,9 @@ export interface DexPriceSnapshot {
 export interface MintBurnSnapshot {
   /** Independently proven canonical leg of a partially/fully isolated coin; stress-only. */
   isolated?: boolean;
+  scope?: DEWSInput["flowScope"];
+  chainIds?: DEWSInput["flowChainIds"];
+  epochIssue?: DEWSInput["flowEpochIssue"];
   /** Known-valuation subtotals (see `mint_burn_hourly`). */
   burn24h: number;
   mint24h: number;
@@ -92,13 +100,6 @@ export type BlacklistCountByStablecoinId = Map<string, { count24h: number; count
 export type DewsComputedRow = DEWSResult & {
   stablecoinId: string;
 };
-
-export interface ContagionAmplifiers {
-  /** Amplifier per pegType, defaults to 1.0 when no contagion detected. */
-  byPegType: Record<string, number>;
-  /** Coins whose first-pass DANGER/WARNING band contributed. */
-  triggeringIds: string[];
-}
 
 export interface DexLiquidityHydration {
   dexLiqRows: { results: DexLiquidityRow[] };
@@ -138,6 +139,7 @@ export interface BlacklistHydration {
 
 export interface PreviousStressSignalsHydration {
   prevSignals: Map<string, { signals: Record<string, { value: number; available?: boolean }>; computedAt: number; ageSec: number }>;
+  referenceDivergenceById?: Map<string, DewsReferenceDivergence>;
   prevSignalStaleIds: Set<string>;
   /** True when the accepted-generation pointer itself was unreadable or invalid. */
   generationUnavailable: boolean;
@@ -161,6 +163,7 @@ export interface YieldWarningsHydration {
 
 export interface YieldRankingsHydration {
   yieldSourceRisk: Map<string, YieldSourceRisk>;
+  overdueSourceIds?: Set<string>;
   yieldRankChangeAttribution: Map<string, YieldRankChangeAttribution>;
   /** Age of the admitted rankings generation; null when none was admitted. */
   yieldRankingsAgeSec: number | null;
@@ -175,6 +178,9 @@ export interface LatestPsiHydration {
 }
 
 export interface DewsSourceState {
+  references?: ReadonlyMap<string, DewsReferenceEvidence>;
+  /** Null records a failed history read, while a missing entry means no native checkpoints. */
+  nativeHistory?: ReadonlyMap<string, { day?: number | null; week?: number | null }> | null;
   dexLiquidity: DexLiquidityHydration;
   dexPrices: DexPriceHydration;
   liquidityHistory: DexLiquidityHistoryHydration;
@@ -192,9 +198,15 @@ export interface DewsSourceState {
   };
 }
 
+type ReferenceEvidence<T extends ReferenceAdmissionInput> = Omit<T, "rawDeviationBps" | "quoteObservedAtSec" | "decisionAtSec">;
+export type DewsReferenceEvidence = { usdPerUnit: number } & (
+  ReferenceEvidence<Extract<ReferenceAdmissionInput, { kind: "fx" | "fallback" }>>
+  | ReferenceEvidence<Extract<ReferenceAdmissionInput, { kind: "median" }>>
+);
+
 export interface DewsScoringState {
   assetById: Map<string, StablecoinData>;
-  /** Evaluation clock; without it no metal-market closure is applied. */
+  /** Evaluation clock for per-leg admission and reference sessions. */
   nowSec?: number;
   pegRates: Record<string, number>;
   pegRateSources?: Record<string, PegRateSource>;
