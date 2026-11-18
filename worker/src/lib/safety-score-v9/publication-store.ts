@@ -19,6 +19,8 @@ import {
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 import { SafetyScoreIndexSchema } from "@shared/types/safety-score-index";
 import { projectV9CompactPartialEvidence } from "@shared/types/safety-score-v9-causes";
+import { scoreToGrade } from "@shared/types/safety-score-v9-grade";
+import { V9_QUALITY_PILLARS } from "@shared/types/safety-score-v9-quality-pillars";
 import type { SafetyScoreCaptureArchiveCacheRows } from "@shared/types/safety-score-capture-archive";
 import {
   stageV9PublicMaterialization,
@@ -309,6 +311,7 @@ export async function persistSafetyScoreV9Publication(
 
   let publicationValue: string | null = null;
   let scoreIndexValue: string | null = null;
+  let scorecardPillarsValue: string | null = null;
   let acceptedProjections: { baseline: string; lender: string; cohort: string } | null = null;
   let acceptedMaterialization: V9AcceptedPublicMaterializationSource | null = null;
   let stagedMaterialization: V9StagedPublicMaterialization | null = null;
@@ -371,6 +374,16 @@ export async function persistSafetyScoreV9Publication(
         },
       ])),
     }));
+    scorecardPillarsValue = stableJsonStringifyV1({
+      publicationGenerationId: publication.publicationGenerationId,
+      resultDigest: publication.resultDigest,
+      ratings: Object.fromEntries(publication.cards.filter(card => card.ratingStatus === "rated").map(card => [
+        card.id, Object.fromEntries(V9_QUALITY_PILLARS.flatMap(pillar => {
+          const { score } = card.pillars[pillar];
+          return score === null ? [] : [[pillar, { score, grade: scoreToGrade(score) }]];
+        })),
+      ])),
+    });
   } else if (input.publication !== undefined) {
     throw new Error(
       "Held Safety Score v9 health must retain the existing publication",
@@ -486,6 +499,11 @@ export async function persistSafetyScoreV9Publication(
     statements.push(cacheStatement.bind(
       SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex,
       scoreIndexValue,
+      input.publicationClockSec,
+    ));
+    statements.push(cacheStatement.bind(
+      SAFETY_SCORE_V9_CACHE_KEYS.scorecardPillars,
+      scorecardPillarsValue,
       input.publicationClockSec,
     ));
     const cohort = shardSafetyScoreV9CohortStoredValue(acceptedProjections!.cohort);

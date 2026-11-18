@@ -21,6 +21,7 @@ it("renders a PNG through the production Satori and resvg pipeline in workerd", 
   const metadata = makeScorecardMetadataFixture();
   const identity = metadata.publication;
   const resultDigest = "d".repeat(64);
+  const pillars = [{ id: "backing", score: 90, grade: "A+" }, { id: "exit", score: 88, grade: "A+" }, { id: "control", score: 83, grade: "A" }];
   const row = {
     score_index: stableJsonStringifyV1({
       schemaVersion: 2, safetyScoreIdentity: identity, publicationResultDigest: resultDigest,
@@ -40,6 +41,7 @@ it("renders a PNG through the production Satori and resvg pipeline in workerd", 
       evaluationBuildDigest: identity.evaluationBuildDigest, resultDigest,
     }),
     result_digest: resultDigest, publication_updated_at: metadata.publishedAtSec,
+    pillar_ratings: stableJsonStringifyV1(Object.fromEntries(pillars.map(({ id, ...rating }) => [id, rating]))),
   };
   writeFileSync(config, JSON.stringify({
     name: "og-runtime-test",
@@ -86,7 +88,7 @@ it("renders a PNG through the production Satori and resvg pipeline in workerd", 
       const bytes = Buffer.from(await response.arrayBuffer());
       const captured = decodeSocialScorecardMetadata(response.headers.get(SOCIAL_SCORECARD_METADATA_HEADER));
       expect(captured.imageSha256).toBe(sha256HexFromBytes(bytes));
-      expect(captured.subject).toMatchObject(path.endsWith("usdc-circle") ? { grade: "A", score: 82 } : { ratedCount: 1, totalCount: 1 });
+      expect(captured.subject).toMatchObject(path.endsWith("usdc-circle") ? { grade: "A", score: 82, pillars } : { ratedCount: 1, totalCount: 1 });
       const image = sharp(bytes);
       expect(await image.metadata()).toMatchObject({ format: "png", width: SOCIAL_PREVIEW_WIDTH, height: SOCIAL_PREVIEW_HEIGHT });
       await image.raw().toBuffer();

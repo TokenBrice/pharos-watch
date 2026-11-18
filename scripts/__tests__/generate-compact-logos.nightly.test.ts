@@ -100,8 +100,7 @@ describe("generateCompactLogos", () => {
     expect(compactMeta.height).toBe(32);
 
     expect(JSON.parse(readFileSync(paths.mapPath, "utf8"))).toEqual({
-      "/logos/alpha.png": { "32": "/logos/compact/alpha.webp", "100": "/logos/compact/alpha-100.webp" },
-      "/logos/beta.jpg": { "32": "/logos/compact/beta.webp", "100": "/logos/compact/beta-100.webp" },
+      "/logos": { sizes: [32, 100], sources: ["alpha.png", "beta.jpg"] },
     });
     expect((await sharp(join(paths.compactDir, "alpha-100.webp")).metadata()).width).toBe(100);
   });
@@ -118,8 +117,7 @@ describe("generateCompactLogos", () => {
     expect(result.ok).toBe(true);
     expect(result.generated).toBe(4);
     expect(JSON.parse(readFileSync(paths.mapPath, "utf8"))).toEqual({
-      "/chains/large.png": { "56": "/chains/compact/large.webp", "100": "/chains/compact/large-100.webp" },
-      "/chains/small.png": { "56": "/chains/compact/small.webp", "100": "/chains/compact/small-100.webp" },
+      "/chains": { sizes: [56, 100], sources: ["large.png", "small.png"] },
     });
     const meta = await sharp(join(paths.compactChainsDir, "large.webp")).metadata();
     expect([meta.width, meta.height]).toEqual([56, 56]);

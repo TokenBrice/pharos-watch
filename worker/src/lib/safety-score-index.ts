@@ -1,4 +1,5 @@
 import { SafetyScoreIndexSchema } from "@shared/types/safety-score-index";
+import { ScorecardPillarRatingsSchema, type ScorecardPillarRatings } from "@shared/types/social-scorecard";
 import { V9PublicationHealthSchema, type V9PublicationHealth, type SafetyGradesResponse } from "@shared/types/report-cards-v9";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-publication";
@@ -16,6 +17,7 @@ export interface SafetyScoreGradeSnapshot {
   publicationHealth: V9PublicationHealth;
   completeness: { expectedCount: number };
   cards: SafetyGradesResponse["grades"];
+  scorecardPillars?: { id: string; ratings: ScorecardPillarRatings };
 }
 
 export type ActiveSafetyScoreIndex =
@@ -26,7 +28,9 @@ export type ActiveSafetyScoreIndex =
 /** One D1 read binds the small projection to the accepted envelope and health.
  * Never inflate the publication as a request-time fallback, including rollout.
  */
-export async function loadActiveSafetyScoreIndex(db: D1Database, signal?: AbortSignal): Promise<ActiveSafetyScoreIndex> {
+export async function loadActiveSafetyScoreIndex(
+  db: D1Database, signal?: AbortSignal, pillarSubjectId?: string,
+): Promise<ActiveSafetyScoreIndex> {
   const unavailable = (reason: string): ActiveSafetyScoreIndex => ({
     kind: "error", reason, detail: `Canonical Safety Score index unavailable: ${reason}`, snapshot: null,
   });
@@ -37,18 +41,27 @@ export async function loadActiveSafetyScoreIndex(db: D1Database, signal?: AbortS
       h.value AS health, h.updated_at AS health_updated_at,
       json_extract(p.value, '$.identity') AS publication_identity,
       json_extract(p.value, '$.identity.resultDigest') AS result_digest,
-      p.updated_at AS publication_updated_at
+      p.updated_at AS publication_updated_at,
+      CASE WHEN json_valid(og.value) THEN CASE WHEN
+        json_extract(og.value, '$.publicationGenerationId') = json_extract(p.value, '$.identity.publicationGenerationId')
+        AND json_extract(og.value, '$.resultDigest') = json_extract(p.value, '$.identity.resultDigest')
+        THEN json_quote(json_extract(og.value, ?)) END
+      END AS pillar_ratings
       FROM cache p
       LEFT JOIN cache i ON i.key = ?
       LEFT JOIN cache h ON h.key = ?
+      LEFT JOIN cache og ON og.key = ? AND og.updated_at = p.updated_at
       WHERE p.key = ?`).bind(
+      pillarSubjectId === undefined ? null : `$.ratings.${JSON.stringify(pillarSubjectId)}`,
       SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex,
       SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth,
+      pillarSubjectId === undefined ? null : SAFETY_SCORE_V9_CACHE_KEYS.scorecardPillars,
       SAFETY_SCORE_V9_CACHE_KEYS.publication,
     ).first<{
       score_index: string | null; index_updated_at: number | null;
       health: string | null; health_updated_at: number | null;
       publication_identity: string | null; result_digest: string | null; publication_updated_at: number;
+      pillar_ratings: string | null;
     }>();
     throwIfAborted(signal);
     if (!row) return unavailable("v9-snapshot-unavailable");
@@ -84,12 +97,15 @@ export async function loadActiveSafetyScoreIndex(db: D1Database, signal?: AbortS
       publicationGenerationId: index.safetyScoreIdentity.publicationGenerationId,
       publishedAtSec: index.publishedAtSec,
     }, health);
+    const pillars = pillarSubjectId !== undefined && index.scores[pillarSubjectId]?.ratingStatus === "rated"
+      && row.pillar_ratings != null ? ScorecardPillarRatingsSchema.safeParse(JSON.parse(row.pillar_ratings)) : null;
     const snapshot: SafetyScoreGradeSnapshot = {
       lifecycle: "active", safetyScoreIdentity: index.safetyScoreIdentity,
       methodology: { version: index.safetyScoreIdentity.methodologyVersion },
       asOfSec: index.asOfSec, updatedAt: index.publishedAtSec, publicationHealth: effectiveHealth,
       completeness: { expectedCount: index.expectedCount },
       cards: Object.entries(index.scores).map(([id, entry]) => ({ id, ...entry })),
+      ...(pillars?.success && pillarSubjectId !== undefined ? { scorecardPillars: { id: pillarSubjectId, ratings: pillars.data } } : {}),
     };
     return effectiveHealth.status === "held"
       ? { kind: "held", reason: "v9-publication-held", detail: "Canonical Safety Score V9 ratings are held at the last verified snapshot", snapshot }

@@ -58,6 +58,12 @@
   "r2BucketLifecycles": {
     "pharos-social-previews": { "enabledObjectDeletionRules": [] }
   },
+  "r2BucketLocks": {
+    "pharos-social-previews": [
+      { "id": "scorecards-v1-permanent", "enabled": true, "prefix": "scorecards/v1/", "condition": { "type": "Indefinite" } },
+      { "id": "evergreen-v2-permanent", "enabled": true, "prefix": "evergreen/v2/", "condition": { "type": "Indefinite" } }
+    ]
+  },
   "accessApplications": [
     {
       "type": "self_hosted",

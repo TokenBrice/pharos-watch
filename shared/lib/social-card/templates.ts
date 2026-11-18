@@ -509,16 +509,23 @@ function scorecardLens(measure: SocialCardAssets["measure"], where: string, ring
 /**
  * The dated scorecard: the only card that shows a grade, so the grade is the
  * hero in the lens, coloured by its family, and its date is the one outlined
- * pill. Sealed editions carry no pillar scores; without them the identity
- * stacks like a dossier's, with no empty pillar heading.
+ * pill. Editions sealed before scorecard-5, or with no scored pillar, carry
+ * none; without them the identity stacks like a dossier's, with no empty
+ * pillar heading. Tickers run to the registry's longest (20 characters) and
+ * fit down rather than fail.
  */
 export function buildSocialScorecardElement(card: SocialScorecardCard, assets: SocialCardAssets): SocialCardElement {
   const where = `Scorecard ${card.identity.symbol}`;
   const { measure } = assets;
-  const subject = identity(where, "identity", card.identity);
+  const subject = identity(where, "identity", card.identity, 20);
   count(where, "pillars", card.pillars, 0, 4);
-  const score = finite(where, "score", card.score);
-  if (score < 0 || score > 100) throw new SocialCardError(`${where} score: ${score} is outside 0-100`);
+  // A bar or figure outside 0-100 would misstate the score, so it fails instead of clamping.
+  const percent = (field: string, value: number) => {
+    const checked = finite(where, field, value);
+    if (checked < 0 || checked > 100) throw new SocialCardError(`${where} ${field}: ${checked} is outside 0-100`);
+    return checked;
+  };
+  const score = percent("score", card.score);
   const color = gradeColor(`${where} grade`, card.grade);
   const hero = scorecardLens(measure, where, color, { text: card.grade, color, size: 132 }, String(Math.round(score)), "Safety Score");
   const pill = asOfPill(where, card.asOf);
@@ -527,7 +534,7 @@ export function buildSocialScorecardElement(card: SocialScorecardCard, assets: S
     // A name that only repeats the ticker ("GHO", "Dai") is not printed twice.
     const repeated = subject.name.toLowerCase() === subject.symbol.toLowerCase();
     const identityLines = fitStack(measure, where, [
-      { field: "identity.symbol", text: subject.symbol, face: "display-800", sizes: steps(112, 48, 4), lineHeight: 1, tracking: -0.035, width: COLUMN.width, maxLines: 1 },
+      { field: "identity.symbol", text: subject.symbol, face: "display-800", sizes: steps(112, 36, 4), lineHeight: 1, tracking: -0.035, width: COLUMN.width, maxLines: 1 },
       ...(repeated ? [] : [{ field: "identity.name", text: subject.name, face: "display-600" as const, sizes: steps(32, 24), lineHeight: 1.15, width: COLUMN.width, maxLines: 2, gap: 12 }]),
     ], BODY.bottom - BODY.top, 88 + 24 + 36 + pillHeight);
     return canvas(DARK.ground, ...hero,
@@ -539,13 +546,13 @@ export function buildSocialScorecardElement(card: SocialScorecardCard, assets: S
   }
   const pillars = card.pillars.map((pillar, index) => ({
     name: budget(where, `pillars[${index}].name`, pillar.name, 20),
-    score: finite(where, `pillars[${index}].score`, pillar.score),
+    score: percent(`pillars[${index}].score`, pillar.score),
     grade: pillar.grade,
     color: gradeColor(`${where} pillars[${index}].grade`, pillar.grade),
   }));
   // Identity: the logo beside the ticker, the full name under it.
   const textWidth = COLUMN.width - 72 - 18;
-  const ticker = fitBlock(measure, where, { field: "identity.symbol", text: subject.symbol, face: "display-800", sizes: steps(66, 40, 2), lineHeight: 1, tracking: -0.03, width: textWidth, maxLines: 1 });
+  const ticker = fitBlock(measure, where, { field: "identity.symbol", text: subject.symbol, face: "display-800", sizes: steps(66, 30, 2), lineHeight: 1, tracking: -0.03, width: textWidth, maxLines: 1 });
   const name = fitBlock(measure, where, { field: "identity.name", text: subject.name, face: "display-600", sizes: steps(28, 22), lineHeight: 1.15, width: textWidth, maxLines: 2 });
   const identityHeight = Math.max(72, ticker.height + 6 + name.height);
   // Pillar rows: the name column takes the longest name, the bar takes what is left.
@@ -556,10 +563,12 @@ export function buildSocialScorecardElement(card: SocialScorecardCard, assets: S
   const pillarsHeight = 24 + 12 + pillars.length * rowHeight + (pillars.length - 1) * 12;
   const roomy = identityHeight + pillarsHeight + pillHeight + 40 + 36 <= BODY.bottom - BODY.top;
   if (!roomy && identityHeight + pillarsHeight + pillHeight + 24 + 24 > BODY.bottom - BODY.top) throw new SocialCardError(`${where}: the scorecard column overflows`);
+  // The fill is exactly score/100 of the track: no minimum stub, so an observed zero is an empty track.
+  const fill = (score: number) => Math.round((barWidth * score) / 100);
   const row = (pillar: (typeof pillars)[number], index: number) => h("div", { alignItems: "center", height: rowHeight, marginTop: index > 0 ? 12 : 0 },
     h("div", { width: nameColumn }, label(measure, pillar.name, "display-600", nameSize, DARK.text).node),
     h("div", { width: barWidth, height: 10, borderRadius: 5, background: DARK.line },
-      h("div", { width: Math.max(10, Math.round((barWidth * Math.min(100, Math.max(0, pillar.score))) / 100)), height: 10, borderRadius: 5, background: pillar.color })),
+      fill(pillar.score) > 0 ? h("div", { width: fill(pillar.score), height: 10, borderRadius: 5, background: pillar.color }) : null),
     h("div", { width: 56, justifyContent: "flex-end" }, label(measure, String(Math.round(pillar.score)), "mono-700", 26, DARK.text).node),
     h("div", { width: 44, marginLeft: 12 }, label(measure, pillar.grade, "mono-700", 26, pillar.color).node));
   return canvas(DARK.ground, ...hero,

@@ -275,13 +275,14 @@ function renderSupplementalRoute(definition: EndpointDefinition): string {
 function renderOgRoute(): string {
   return [
     "### `GET /api/og/*`", "",
-    "Image routes, omitted from OpenAPI. Canonical page discovery uses destination-specific, grade-free `/og/v2/<identity>.png` assets; a missing public preview mapping fails generation rather than substituting the homepage.", "",
+    "Image routes omitted from OpenAPI. Active stablecoin dossiers use a current dated scorecard with a destination-specific evergreen fallback. Other canonical previews use the generated evergreen map.", "",
     "The retired numerical families (`stablecoin/:id`, `chain/:id`, `page/:slug`, `depeg`, `safety-scores` and `stability-index`, with or without the `v2/` prefix) answer `301` to the absolute evergreen image of their former destination from a table frozen at retirement; an unknown id redirects to the home image ([OG Images](./og-images.md#8-dynamic-worker-cards-apiog)).", "",
     "`/api/og/v2/scorecard/:id` returns an admitted PNG and `X-Pharos-Scorecard` evidence for the Pages dated-sharing creator. `POST /_site-data/scorecard` admits the browser session under the configured Pages rollout policy and seals the resulting metadata and pixels in permanent R2 storage; retained public Pages HTML and PNG are not latest-rating aliases.", "",
+    "`/api/og/v2/dossier/:id?fallback=<hash>` serves the same admitted PNG and metadata for a rated active coin. If a current scorecard is unavailable, it sends a short-lived `302` to the evergreen PNG identified by the 64-character lowercase hex hash. An absent or invalid fallback selects the home evergreen PNG.", "",
     "- **Path:** `/api/og/*` and `/api/og/v2/*`",
-    "- **Parameters:** Route-specific path segments select the retired family and id, or the scorecard subject.",
-    "- **Success response schema:** a bodyless `301` redirect, or scorecard PNG image bytes; not represented by a JSON component schema.",
-    "- **Policy:** API-key authentication exempt; unavailable on the site-data lane; one-year redirect caching, source-bounded scorecard caching.",
+    "- **Parameters:** Path segments select the family and subject. The dossier route accepts the evergreen image hash as `fallback`.",
+    "- **Success response:** a bodyless `301` or `302` redirect, or scorecard PNG image bytes.",
+    "- **Policy:** API-key authentication exempt and unavailable on the site-data lane. Legacy redirects cache for one year, dossier fallbacks for three minutes, and scorecard PNGs for up to 60 seconds within the source freshness budget.",
   ].join("\n");
 }
 export function renderGeneratedBlock(spec: OpenApiSpec): string {

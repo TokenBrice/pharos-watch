@@ -879,19 +879,11 @@ function canonicalUrlForRoute(route) {
   return `${PHAROS_ORIGIN}${route === "/" ? "/" : route}`;
 }
 
-// Returns the same-origin path that must exist in `out/` for an og:image / twitter:image
-// reference, or `null` for external URLs (e.g. the dynamic /api/og/* worker route) that
-// are not served by the static export.
-function localOgImagePath(value) {
+// The static export must include every same-origin image.
+function localOgImagePath(value, parsed) {
   if (!value) return null;
   if (value.startsWith("/")) return value;
-  let parsed;
-  try {
-    parsed = new URL(value);
-  } catch {
-    return null;
-  }
-  if (parsed.hostname !== PHAROS_HOSTNAME) return null;
+  if (parsed?.hostname !== PHAROS_HOSTNAME) return null;
   return parsed.pathname;
 }
 
@@ -1354,6 +1346,8 @@ const SAFETY_RESULTS_REGION_LABEL = "Safety score cards";
 const SAFETY_RESULTS_REGION_ID = "data";
 registerCommonJs();
 registerEsm();
+const { API_HOSTNAME } = await import("../../shared/lib/runtime-origins.ts");
+const { dossierOgFallbackPath } = await import("../../shared/lib/social-preview-asset.ts");
 const { admitSafetyScoresPreviewRows, SAFETY_SCORES_PREVIEW_PROJECTION_VERSIONS, SAFETY_SCORES_PREVIEW_MAX_ROWS } =
   await import("../../src/lib/safety-grade-snapshot.ts");
 const SAFETY_PROFILE_HREF_PATTERN = /^\/stablecoin\/[^/]+\/$/;
@@ -1934,7 +1928,16 @@ export function collectSeoStaticCheckResult({
       ["og:image", record.ogImage],
       ["twitter:image", record.twitterImage],
     ]) {
-      const localPath = localOgImagePath(value);
+      const preview = URL.parse(value);
+      let localPath = localOgImagePath(value, preview);
+      if (preview?.hostname === API_HOSTNAME) {
+        const id = /^\/stablecoin\/([^/]+)\/$/.exec(record.route)?.[1];
+        localPath = id ? dossierOgFallbackPath(preview, id) : null;
+        if (!localPath) {
+          errors.push(`${record.route}: ${field} has an invalid API-hosted dossier preview`);
+          continue;
+        }
+      }
       if (!localPath) continue;
       if (missingOgImagePaths.has(localPath)) {
         errors.push(`${record.route}: ${field} references missing file ${localPath}`);

@@ -7,6 +7,7 @@ import {
   buildStablecoinDetailMetadata,
   composeDescription,
   getLatestDatedMilestoneDate,
+  getPageSocialPreview,
   hasVolatileAmount,
 } from "@/lib/page-metadata";
 import { isStablecoinTitleTreatment } from "@/lib/stablecoin-title-cohort";
@@ -268,7 +269,7 @@ describe("buildPageMetadata", () => {
     expect(metadata.robots).toEqual({ index: false, follow: false });
   });
 
-  it("keeps canonical social claims evergreen and destination-specific while preserving SEO copy", () => {
+  it("keeps evergreen copy and selects the dated image only for active dossiers", () => {
     const home = buildPageMetadata({
       title: "Track 999 stablecoins", description: "999 coins currently tracked.", canonical: "/",
     });
@@ -277,10 +278,21 @@ describe("buildPageMetadata", () => {
     expect(home.openGraph).not.toMatchObject({ title: expect.stringContaining("999") });
     expect(home.openGraph).not.toMatchObject({ description: expect.stringContaining("999") });
     const usdc = buildStablecoinDetailMetadata(TRACKED_META_BY_ID.get("usdc-circle")!);
-    const lusd = buildStablecoinDetailMetadata(TRACKED_META_BY_ID.get("lusd-liquity")!);
-    expect(usdc.openGraph?.images).not.toEqual(lusd.openGraph?.images);
-    expect(usdc.openGraph).toMatchObject({
-      images: [expect.objectContaining({ url: expect.stringMatching(/^\/og\/v2\//), alt: expect.stringContaining("USDC") })],
-    });
+    const fallback = getPageSocialPreview("/stablecoin/usdc-circle/").url.slice("/og/v2/image-".length, -".png".length);
+    const image = { url: `https://api.pharos.watch/api/og/v2/dossier/usdc-circle?fallback=${fallback}`,
+      width: 1200, height: 630, type: "image/png", alt: "USD Coin (USDC) Safety Score scorecard, dated" };
+    expect(usdc.openGraph).toMatchObject({ images: [image] });
+    expect(usdc.twitter).toMatchObject({ images: [image] });
+    for (const [path, metadata] of [
+      ...["frozen", "quarantined", "delisted", "pre-launch"].map(status => {
+        const coin = TRACKED_STABLECOINS.find(candidate => candidate.status === status)!;
+        return [`/stablecoin/${coin.id}/`, buildStablecoinDetailMetadata(coin)] as const;
+      }),
+      ["/stablecoin/a7a5-old-vector/yield/", buildPageMetadata({
+        title: "Yield", description: "Yield profile", canonical: "/stablecoin/a7a5-old-vector/yield/",
+      })],
+    ] as const) {
+      expect(metadata.openGraph).toMatchObject({ images: [{ url: getPageSocialPreview(path).url }] });
+    }
   });
 });

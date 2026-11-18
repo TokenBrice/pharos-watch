@@ -155,12 +155,23 @@ function renderCompactVariant(srcPath: string, size: number): Promise<Buffer> {
     .toBuffer();
 }
 
+/**
+ * Per collection, its sizes and the source names that have variants. The client derives each
+ * path from the naming above (src/lib/logo-variants.ts), so the eagerly bundled map stays small.
+ */
 function renderVariantMap(variants: readonly PlannedVariant[]): string {
-  const map: Record<string, Record<number, string>> = {};
+  const map: Record<string, { sizes: Set<number>; sources: Set<string> }> = {};
   for (const variant of variants) {
-    (map[variant.canonicalSrc] ??= {})[variant.size] = variant.compactSrc;
+    const prefix = variant.canonicalSrc.slice(0, variant.canonicalSrc.lastIndexOf("/"));
+    const collection = (map[prefix] ??= { sizes: new Set(), sources: new Set() });
+    collection.sizes.add(variant.size);
+    collection.sources.add(variant.sourceName);
   }
-  const sortedMap = Object.fromEntries(Object.entries(map).sort(([left], [right]) => left.localeCompare(right)));
+  const sortedMap = Object.fromEntries(Object.entries(map).sort(([left], [right]) => left.localeCompare(right))
+    .map(([prefix, { sizes, sources }]) => [prefix, {
+      sizes: [...sizes].sort((left, right) => left - right),
+      sources: [...sources].sort((left, right) => left.localeCompare(right)),
+    }]));
   return `${JSON.stringify(sortedMap, null, 2)}\n`;
 }
 

@@ -179,7 +179,6 @@
     "analyze:gsc-performance": "node --import tsx scripts/maintenance/analyze-gsc-performance.mjs",
     "fetch:gsc-search-analytics": "node scripts/maintenance/fetch-gsc-search-analytics.mjs",
     "analyze:web-vitals": "node scripts/maintenance/analyze-web-vitals.mjs",
-    "build:og-editorial": "node scripts/maintenance/build-og-editorial.mjs",
     "build:safety-score-map": "tsx scripts/maintenance/build-safety-score-map.ts --edition=daily",
     "build:daily-social": "tsx scripts/maintenance/build-daily-social.ts",
     "publish:daily-social": "tsx scripts/maintenance/publish-daily-social.ts",

@@ -108,10 +108,9 @@ const DYNAMIC_ROUTE_DEFINITIONS = [
     }),
   ),
   defineDynamicRouteFromDescriptor("og-image", async (routeCtx) => {
-    // `handleOg` answers retired families with their frozen 301 and owns the
-    // malformed-URI 400 for /api/og/v2/scorecard/:id, so no outer guard is needed here.
+    // The handler owns capture decoding for the dated routes and legacy redirects.
     const { handleOg } = await import("../api/og");
-    return handleOg(routeCtx.db, routeCtx.url.pathname).then(
+    return handleOg(routeCtx.db, routeCtx.url.pathname, routeCtx.url.searchParams.get("fallback")).then(
       (response) => response ?? errorResponse(404, "Unknown OG route"),
     );
   }),

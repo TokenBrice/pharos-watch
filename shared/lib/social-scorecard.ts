@@ -5,7 +5,7 @@ import { stableJsonStringifyV1 } from "./stable-json";
 import { SOCIAL_PREVIEW_HEIGHT, SOCIAL_PREVIEW_WIDTH } from "./social-preview";
 
 export const SOCIAL_SCORECARD_METADATA_HEADER = "X-Pharos-Scorecard";
-export const SOCIAL_SCORECARD_RENDERER_REVISION = "scorecard-4";
+export const SOCIAL_SCORECARD_RENDERER_REVISION = "scorecard-5";
 export const SOCIAL_SCORECARD_OVERVIEW_ID = "safety-scores";
 /** Why a coin has no dated scorecard: it has no published grade. Worker route and Pages creator answer it alike. */
 export const SOCIAL_SCORECARD_REASON_HEADER = "X-Scorecard-Reason";

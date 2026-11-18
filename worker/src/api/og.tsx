@@ -1,4 +1,6 @@
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
+import { isEvergreenImageHash } from "@shared/lib/social-preview-asset";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { handleScorecardOg } from "./og-scorecard";
 // Frozen once from the evergreen map in effect when the numerical families were
 // retired (scripts/maintenance/state/social-preview-images.json at dfa0f3cf70).
@@ -7,7 +9,7 @@ import LEGACY_OG_IMAGE_HASHES from "./og-legacy-redirects.json";
 
 /** Retired families, plus their never-referenced `/api/og/v2/*` aliases. */
 const LEGACY_OG_PATTERN = /^\/api\/og\/(?:v2\/)?(stablecoin\/.+|chain\/.+|page\/.+|depeg|safety-scores|stability-index)$/;
-const SCORECARD_OG_PATTERN = /^\/api\/og\/v2\/scorecard\/([^/]+)$/;
+const DATED_OG_PATTERN = /^\/api\/og\/v2\/(scorecard|dossier)\/([^/]+)$/;
 const LEGACY_OG_IMAGES = new Map<string, string>(Object.entries(LEGACY_OG_IMAGE_HASHES));
 const HOME_IMAGE_HASH = LEGACY_OG_IMAGES.get("page/home")!;
 
@@ -31,12 +33,22 @@ function decodeOgCapture(raw: string): string | Response {
   }
 }
 
-export async function handleOg(db: D1Database, path: string): Promise<Response | null> {
+export async function handleOg(db: D1Database, path: string, fallback: string | null = null): Promise<Response | null> {
   const legacy = LEGACY_OG_PATTERN.exec(path);
   if (legacy) return legacyOgRedirect(legacy[1]);
-  const scorecard = SCORECARD_OG_PATTERN.exec(path);
-  if (!scorecard) return null;
-  const id = decodeOgCapture(scorecard[1]);
-  // handleScorecardOg fails closed on its own source and render errors.
-  return id instanceof Response ? id : handleScorecardOg(db, id);
+  const dated = DATED_OG_PATTERN.exec(path);
+  if (!dated) return null;
+  const id = decodeOgCapture(dated[2]);
+  if (id instanceof Response) return id;
+  if (dated[1] === "scorecard") return handleScorecardOg(db, id);
+  if (ACTIVE_IDS.has(id)) {
+    const scorecard = await handleScorecardOg(db, id);
+    if (scorecard.ok) return scorecard;
+  }
+  // The Worker edge cache ignores OG queries and admits only 200 responses.
+  const hash = isEvergreenImageHash(fallback) ? fallback : HOME_IMAGE_HASH;
+  return new Response(null, {
+    status: 302,
+    headers: { Location: `${SITE_ORIGIN}/og/v2/image-${hash}.png`, "Cache-Control": "public, max-age=180" },
+  });
 }
