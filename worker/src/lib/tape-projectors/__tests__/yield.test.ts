@@ -1,45 +1,9 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import type { D1Database, D1PreparedStatement } from "@shared/types/cloudflare-runtime";
 import { projectYieldWarningEmitted, projectYieldPysDropped } from "../yield";
-import { mockTapeD1, tapeInsertBindsForType } from "./test-support";
 
 const SEC = 1_700_000_000;
-
-// Substring matchers — the mock-d1 helper does a substring search against the
-// raw SQL emitted by the projector, so each pattern only has to be unique
-// enough to disambiguate the projector's two queries.
-const MATCH_FETCH_HISTORY = "is_best = 1 AND recorded_at > ?";
-const MATCH_PRIOR_HISTORY = "WITH warning_coins(";
-const MATCH_FETCH_DECISIONS = "WHERE created_at > ?";
-const MATCH_PRIOR_DECISIONS = "WITH pys_coins(";
-const MATCH_CACHE = "FROM cache WHERE key";
-
-// Seed the watermark cache so `since > 0`; the prior-row lookup is guarded
-// behind `since > 0`, so tests that exercise the diff path against an existing
-// snapshot must supply a non-zero watermark.
-function historyTables(
-  samples: Record<string, unknown>[],
-  priors: Record<string, unknown>[] = [],
-  watermark: number = SEC - 1,
-): MockTableConfig[] {
-  const defaultStablecoinId = samples.find((sample) => typeof sample.stablecoin_id === "string")?.stablecoin_id;
-  const priorRows = priors.map((row) => ({
-    ...(defaultStablecoinId && typeof row.stablecoin_id !== "string" ? { stablecoin_id: defaultStablecoinId } : {}),
-    ...row,
-  }));
-  return [
-    {
-      match: MATCH_CACHE,
-      rows: priorRows.length > 0
-        ? [{ key: "tape-projector:cursor:yield.warning_emitted", value: String(watermark) }]
-        : [],
-    },
-    { match: MATCH_FETCH_HISTORY, rows: samples },
-    { match: MATCH_PRIOR_HISTORY, rows: priorRows },
-  ];
-}
 
 /**
  * Cloudflare's documented D1 ceiling: 1000 queries per Worker invocation
@@ -94,174 +58,114 @@ function withInvocationQueryCeiling(db: D1Database, ceiling = D1_QUERIES_PER_INV
   }) as D1Database;
 }
 
-// Seed the watermark cache so `since > 0`; the prior-row lookup is guarded
-// behind `since > 0` (it has no useful work to do on a cold projector).
-function decisionTables(
-  samples: Record<string, unknown>[],
-  priors: Record<string, unknown>[] = [],
-  watermark: number = SEC - 1,
-): MockTableConfig[] {
-  const defaultStablecoinId = samples.find((sample) => typeof sample.stablecoin_id === "string")?.stablecoin_id;
-  const priorRows = priors.map((row) => ({
-    ...(defaultStablecoinId && typeof row.stablecoin_id !== "string" ? { stablecoin_id: defaultStablecoinId } : {}),
-    ...row,
-  }));
-  return [
-    {
-      match: MATCH_CACHE,
-      rows: priorRows.length > 0
-        ? [{ key: "tape-projector:cursor:yield.pys_dropped", value: String(watermark) }]
-        : [],
-    },
-    { match: MATCH_FETCH_DECISIONS, rows: samples },
-    { match: MATCH_PRIOR_DECISIONS, rows: priorRows },
-  ];
+type YieldSqlite = ReturnType<typeof fixtures.open>["sqlite"];
+
+function readEvents(sqlite: YieldSqlite) {
+  return sqlite.prepare("SELECT type, severity, payload_json FROM tape_events ORDER BY ts, coin_id").all()
+    .map(({ type, severity, payload_json }) => ({ type, severity, payload: JSON.parse(String(payload_json)) as unknown }));
+}
+
+function seedCursor(sqlite: YieldSqlite, type: string, timestamp: number) {
+  sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+    .run(`tape-projector:cursor:${type}`, String(timestamp), timestamp);
+}
+
+function expectCursor(sqlite: YieldSqlite, type: string, timestamp: number) {
+  expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(`tape-projector:cursor:${type}`))
+    .toEqual({ value: String(timestamp) });
+}
+
+function prepareWarningHistory(sqlite: YieldSqlite, isBest = 1) {
+  return sqlite.prepare(`INSERT INTO yield_history
+    (stablecoin_id, source_key, recorded_at, is_best, apy, data_source, warning_signals)
+    VALUES (?, ?, ?, ${isBest}, 5, 'defillama', ?)`);
 }
 
 describe("yield.warning_emitted projector", () => {
   it("emits when warning_signals goes empty → non-empty", async () => {
-    const db = mockTapeD1(
-      historyTables([
-        {
-          stablecoin_id: "usdt-tether",
-          source_key: "aave-v3:usdt",
-          recorded_at: SEC,
-          warning_signals: null,
-        },
-        {
-          stablecoin_id: "usdt-tether",
-          source_key: "aave-v3:usdt",
-          recorded_at: SEC + 900,
-          warning_signals: JSON.stringify(["reward-heavy"]),
-        },
-      ]),
-    ) as MockD1Database;
+    const { db, sqlite } = fixtures.open();
+    const insert = prepareWarningHistory(sqlite);
+    insert.run("usdt-tether", "aave-v3:usdt", SEC, null);
+    insert.run("usdt-tether", "aave-v3:usdt", SEC + 900, '["reward-heavy"]');
 
-    await projectYieldWarningEmitted(db);
-    const inserts = tapeInsertBindsForType(db, "yield.warning_emitted");
-    expect(inserts).toHaveLength(1);
-    // bind order: eventId, type, severity, ts, ...
-    expect(inserts[0]![1]).toBe("yield.warning_emitted");
-    // reward-heavy is a notice-level signal
-    expect(inserts[0]![2]).toBe("notice");
+    expect(await projectYieldWarningEmitted(db)).toEqual({ projected: 1, advanced: SEC + 900 });
+    expect(readEvents(sqlite)).toEqual([{
+      type: "yield.warning_emitted",
+      severity: "notice",
+      payload: { signals: ["reward-heavy"], prevSignals: [], newSignals: ["reward-heavy"], sourceKey: "aave-v3:usdt" },
+    }]);
+    expectCursor(sqlite, "yield.warning_emitted", SEC + 900);
   });
 
   it("classifies severe signals (tvl-outflow, negative-trend) as warning severity", async () => {
-    const db = mockTapeD1(
-      historyTables([
-        {
-          stablecoin_id: "dai-makerdao",
-          source_key: "spark:dai",
-          recorded_at: SEC + 900,
-          warning_signals: JSON.stringify(["tvl-outflow"]),
+    const { db, sqlite } = fixtures.open();
+    const insert = prepareWarningHistory(sqlite);
+    insert.run("dai-makerdao", "spark:dai", SEC - 2, '["reward-heavy"]');
+    insert.run("dai-makerdao", "spark:dai", SEC + 900, '["reward-heavy","tvl-outflow"]');
+    insert.run("dai-makerdao", "spark:dai", SEC + 1800, '["reward-heavy","tvl-outflow","negative-trend"]');
+    const insertNonBest = prepareWarningHistory(sqlite, 0);
+    insertNonBest.run("dai-makerdao", "aave-v3:dai", SEC - 1, '["tvl-outflow"]');
+    insertNonBest.run("dai-makerdao", "aave-v3:dai", SEC + 1200, '["negative-trend"]');
+    seedCursor(sqlite, "yield.warning_emitted", SEC);
+
+    expect(await projectYieldWarningEmitted(db)).toEqual({ projected: 2, advanced: SEC + 1800 });
+    expect(readEvents(sqlite)).toEqual([
+      {
+        type: "yield.warning_emitted",
+        severity: "warning",
+        payload: {
+          signals: ["reward-heavy", "tvl-outflow"], prevSignals: ["reward-heavy"],
+          newSignals: ["tvl-outflow"], sourceKey: "spark:dai",
         },
-      ]),
-    ) as MockD1Database;
-
-    await projectYieldWarningEmitted(db);
-    const inserts = tapeInsertBindsForType(db, "yield.warning_emitted");
-    expect(inserts).toHaveLength(1);
-    expect(inserts[0]![2]).toBe("warning");
-  });
-
-  it("emits when a NEW signal appears on top of an existing snapshot", async () => {
-    // Prior batch already had ["reward-heavy"]; new row adds "tvl-outflow".
-    const db = mockTapeD1(
-      historyTables(
-        [
-          {
-            stablecoin_id: "frax-finance",
-            source_key: "curve:frax",
-            recorded_at: SEC + 900,
-            warning_signals: JSON.stringify(["reward-heavy", "tvl-outflow"]),
-          },
-        ],
-        [
-          {
-            warning_signals: JSON.stringify(["reward-heavy"]),
-          },
-        ],
-      ),
-    ) as MockD1Database;
-
-    await projectYieldWarningEmitted(db);
-    const inserts = tapeInsertBindsForType(db, "yield.warning_emitted");
-    expect(inserts).toHaveLength(1);
-    // tvl-outflow is severe → warning
-    expect(inserts[0]![2]).toBe("warning");
+      },
+      {
+        type: "yield.warning_emitted",
+        severity: "warning",
+        payload: {
+          signals: ["reward-heavy", "tvl-outflow", "negative-trend"], prevSignals: ["reward-heavy", "tvl-outflow"],
+          newSignals: ["negative-trend"], sourceKey: "spark:dai",
+        },
+      },
+    ]);
+    expectCursor(sqlite, "yield.warning_emitted", SEC + 1800);
   });
 
   it("emits nothing when warning_signals is empty/null", async () => {
-    const db = mockTapeD1(
-      historyTables([
-        {
-          stablecoin_id: "usdc-circle",
-          source_key: "aave-v3:usdc",
-          recorded_at: SEC + 900,
-          warning_signals: null,
-        },
-        {
-          stablecoin_id: "dai-makerdao",
-          source_key: "spark:dai",
-          recorded_at: SEC + 900,
-          warning_signals: JSON.stringify([]),
-        },
-      ]),
-    ) as MockD1Database;
+    const { db, sqlite } = fixtures.open();
+    const insert = prepareWarningHistory(sqlite);
+    insert.run("usdc-circle", "aave-v3:usdc", SEC + 900, null);
+    insert.run("dai-makerdao", "spark:dai", SEC + 900, "[]");
 
-    await projectYieldWarningEmitted(db);
-    expect(tapeInsertBindsForType(db, "yield.warning_emitted")).toHaveLength(0);
-  });
-
-  it("produces a stable eventId across re-runs (idempotency)", async () => {
-    function buildDb(): MockD1Database {
-      return mockTapeD1(
-        historyTables([
-          {
-            stablecoin_id: "usdt-tether",
-            source_key: "aave-v3:usdt",
-            recorded_at: SEC + 900,
-            warning_signals: JSON.stringify(["yield-spike"]),
-          },
-        ]),
-      ) as MockD1Database;
-    }
-    const dbA = buildDb();
-    const dbB = buildDb();
-    await projectYieldWarningEmitted(dbA);
-    await projectYieldWarningEmitted(dbB);
-    const a = tapeInsertBindsForType(dbA, "yield.warning_emitted");
-    const b = tapeInsertBindsForType(dbB, "yield.warning_emitted");
-    expect(a).toHaveLength(1);
-    expect(b).toHaveLength(1);
-    // eventId stable → unique-index absorbs duplicates on re-insert.
-    expect(a[0]![0]).toBe(b[0]![0]);
+    const result = await projectYieldWarningEmitted(db);
+    expect(readEvents(sqlite)).toEqual([]);
+    expect(result).toEqual({ projected: 0, advanced: SEC + 900 });
+    expectCursor(sqlite, "yield.warning_emitted", SEC + 900);
   });
 
   it("emits no events when there are no new history rows", async () => {
-    const db = mockTapeD1(historyTables([])) as MockD1Database;
-    const result = await projectYieldWarningEmitted(db);
-    expect(result.projected).toBe(0);
-    expect(tapeInsertBindsForType(db, "yield.warning_emitted")).toHaveLength(0);
+    const { db, sqlite } = fixtures.open();
+    prepareWarningHistory(sqlite).run("usdt-tether", "aave-v3:usdt", SEC, '["reward-heavy"]');
+    seedCursor(sqlite, "yield.warning_emitted", SEC);
+
+    expect(await projectYieldWarningEmitted(db)).toEqual({ projected: 0, advanced: null });
+    expect(readEvents(sqlite)).toEqual([]);
+    expectCursor(sqlite, "yield.warning_emitted", SEC);
   });
 
   it("expands a full timestamp batch before advancing the warning cursor", async () => {
-    const rows = [
-      { stablecoin_id: "coin-a", source_key: "src-a", recorded_at: SEC, warning_signals: JSON.stringify(["reward-heavy"]) },
-      { stablecoin_id: "coin-b", source_key: "src-b", recorded_at: SEC, warning_signals: JSON.stringify(["reward-heavy"]) },
-      { stablecoin_id: "coin-c", source_key: "src-c", recorded_at: SEC, warning_signals: JSON.stringify(["reward-heavy"]) },
-    ];
-    const db = mockTapeD1([
-      { match: MATCH_CACHE, rows: [] },
-      { match: MATCH_FETCH_HISTORY, matchBinds: [0, 2], rows: rows.slice(0, 2) },
-      { match: MATCH_FETCH_HISTORY, matchBinds: [0, SEC], rows },
-      { match: MATCH_PRIOR_HISTORY, rows: [] },
-    ]) as MockD1Database;
+    const { db, sqlite } = fixtures.open();
+    const insert = prepareWarningHistory(sqlite);
+    const sources = ["src-a", "src-b", "src-c"];
+    for (const source of sources) insert.run(source, source, SEC, '["reward-heavy"]');
+    insert.run("later", "src-later", SEC + 900, '["reward-heavy"]');
 
-    const result = await projectYieldWarningEmitted(db, { maxRows: 2 });
-
-    expect(result.advanced).toBe(SEC);
-    expect(tapeInsertBindsForType(db, "yield.warning_emitted")).toHaveLength(3);
+    expect(await projectYieldWarningEmitted(db, { maxRows: 2 })).toEqual({ projected: 3, advanced: SEC });
+    expect(readEvents(sqlite)).toEqual(sources.map((sourceKey) => ({
+      type: "yield.warning_emitted",
+      severity: "notice",
+      payload: { signals: ["reward-heavy"], prevSignals: [], newSignals: ["reward-heavy"], sourceKey },
+    })));
+    expectCursor(sqlite, "yield.warning_emitted", SEC);
   });
   it("uses source_key DESC to choose the prior row at a shared timestamp", async () => {
     const { db, sqlite } = fixtures.open();
@@ -283,126 +187,63 @@ describe("yield.warning_emitted projector", () => {
 
 });
 
+function preparePysDecisions(sqlite: YieldSqlite) {
+  return sqlite.prepare(`INSERT INTO yield_source_decisions
+    (generation_id, stablecoin_id, selected_source_key, selected_confidence_tier,
+     selected_data_source, selected_apy_30d, selected_score, selected_reason, alternatives_json, created_at)
+    VALUES (?, 'usdt-tether', 'aave-v3:usdt', 'high', 'defillama', 5, ?, 'best', '[]', ?)`);
+}
+
 describe("yield.pys_dropped projector", () => {
   it.each([
     { name: "emits when selected_score drops by >= the threshold", prevScore: 80, score: 55, severity: "warning" },
     { name: "classifies a >=40-point drop as severe", prevScore: 70, score: 20, severity: "severe" },
   ])("$name", async ({ prevScore, score, severity }) => {
-    const db = mockTapeD1(
-      decisionTables(
-        [
-          {
-            stablecoin_id: "usdt-tether",
-            selected_source_key: "aave-v3:usdt",
-            selected_score: score,
-            created_at: SEC + 900,
-          },
-        ],
-        [
-          { selected_score: prevScore },
-        ],
-      ),
-    ) as MockD1Database;
+    const { db, sqlite } = fixtures.open();
+    const insert = preparePysDecisions(sqlite);
+    insert.run("generation-1", prevScore, SEC);
+    insert.run("generation-2", score, SEC + 900);
+    seedCursor(sqlite, "yield.pys_dropped", SEC);
 
-    await projectYieldPysDropped(db);
-    const inserts = tapeInsertBindsForType(db, "yield.pys_dropped");
-    expect(inserts).toHaveLength(1);
-    expect(inserts[0]![1]).toBe("yield.pys_dropped");
-    // The 25-point drop is warning [20,40); the 50-point drop is severe.
-    expect(inserts[0]![2]).toBe(severity);
+    expect(await projectYieldPysDropped(db)).toEqual({ projected: 1, advanced: SEC + 900 });
+    expect(readEvents(sqlite)).toEqual([{
+      type: "yield.pys_dropped",
+      severity,
+      payload: { prevScore, newScore: score, delta: prevScore - score, sourceKey: "aave-v3:usdt" },
+    }]);
+    expectCursor(sqlite, "yield.pys_dropped", SEC + 900);
   });
 
   it.each([
     { name: "the drop is below threshold", prevScore: 80, score: 73 },
     { name: "scores are equal or rising", prevScore: 75, score: 85 },
   ])("emits nothing when $name", async ({ prevScore, score }) => {
-    const db = mockTapeD1(
-      decisionTables(
-        [
-          {
-            stablecoin_id: "usdt-tether",
-            selected_source_key: "aave-v3:usdt",
-            selected_score: score,
-            created_at: SEC + 900,
-          },
-        ],
-        [
-          { selected_score: prevScore },
-        ],
-      ),
-    ) as MockD1Database;
-
-    await projectYieldPysDropped(db);
-    expect(tapeInsertBindsForType(db, "yield.pys_dropped")).toHaveLength(0);
-  });
-
-  it("emits nothing when there is no prior score (first observation)", async () => {
-    const db = mockTapeD1(
-      decisionTables([
-        {
-          stablecoin_id: "newcoin-xyz",
-          selected_source_key: "aave-v3:xyz",
-          selected_score: 40,
-          created_at: SEC + 900,
-        },
-      ]),
-    ) as MockD1Database;
-
-    await projectYieldPysDropped(db);
-    expect(tapeInsertBindsForType(db, "yield.pys_dropped")).toHaveLength(0);
-  });
-
-  it("produces a stable eventId across re-runs (idempotency)", async () => {
-    function buildDb(): MockD1Database {
-      return mockTapeD1(
-        decisionTables(
-          [
-            {
-              stablecoin_id: "usdt-tether",
-              selected_source_key: "aave-v3:usdt",
-              selected_score: 55,
-              created_at: SEC + 900,
-            },
-          ],
-          [
-            { selected_score: 80 },
-          ],
-        ),
-      ) as MockD1Database;
-    }
-    const dbA = buildDb();
-    const dbB = buildDb();
-    await projectYieldPysDropped(dbA);
-    await projectYieldPysDropped(dbB);
-    const a = tapeInsertBindsForType(dbA, "yield.pys_dropped");
-    const b = tapeInsertBindsForType(dbB, "yield.pys_dropped");
-    expect(a).toHaveLength(1);
-    expect(b).toHaveLength(1);
-    expect(a[0]![0]).toBe(b[0]![0]);
-  });
-
-  it("emits no events when there are no new decisions", async () => {
-    const db = mockTapeD1(decisionTables([])) as MockD1Database;
-    const result = await projectYieldPysDropped(db);
-    expect(result.projected).toBe(0);
-    expect(tapeInsertBindsForType(db, "yield.pys_dropped")).toHaveLength(0);
-  });
-
-  it("uses generation_id DESC to choose the prior row at a shared timestamp", async () => {
     const { db, sqlite } = fixtures.open();
-    const insert = sqlite.prepare(`INSERT INTO yield_source_decisions
-      (generation_id, stablecoin_id, selected_source_key, selected_confidence_tier,
-       selected_data_source, selected_apy_30d, selected_score, selected_reason, alternatives_json, created_at)
-      VALUES (?, 'usdt-tether', 'aave-v3:usdt', 'high', 'defillama', 5, ?, 'best', '[]', ?)`);
-    insert.run("generation-1", 80, SEC - 1);
-    insert.run("generation-2", 95, SEC - 1);
-    insert.run("generation-3", 80, SEC + 900);
+    const insert = preparePysDecisions(sqlite);
+    insert.run("generation-1", prevScore, SEC);
+    insert.run("generation-2", score, SEC + 900);
+    seedCursor(sqlite, "yield.pys_dropped", SEC);
 
-    await projectYieldPysDropped(db, { since: SEC - 1 });
-    const events = sqlite.prepare("SELECT severity, payload_json FROM tape_events WHERE type = 'yield.pys_dropped'").all();
-    expect(events.map(row => ({ severity: row.severity, payload: JSON.parse(String(row.payload_json)) }))).toEqual([{
-      severity: "notice", payload: { prevScore: 95, newScore: 80, delta: 15, sourceKey: "aave-v3:usdt" },
+    const result = await projectYieldPysDropped(db);
+    expect(readEvents(sqlite)).toEqual([]);
+    expect(result).toEqual({ projected: 0, advanced: SEC + 900 });
+    expectCursor(sqlite, "yield.pys_dropped", SEC + 900);
+  });
+
+  it("classifies a 15-point drop from an untied prior as notice", async () => {
+    const { db, sqlite } = fixtures.open();
+    const insert = preparePysDecisions(sqlite);
+    insert.run("generation-1", 95, SEC);
+    insert.run("generation-2", 80, SEC + 900);
+    seedCursor(sqlite, "yield.pys_dropped", SEC);
+
+    expect(await projectYieldPysDropped(db)).toEqual({ projected: 1, advanced: SEC + 900 });
+    expect(readEvents(sqlite)).toEqual([{
+      type: "yield.pys_dropped",
+      severity: "notice",
+      payload: { prevScore: 95, newScore: 80, delta: 15, sourceKey: "aave-v3:usdt" },
     }]);
+    expectCursor(sqlite, "yield.pys_dropped", SEC + 900);
   });
 });
 

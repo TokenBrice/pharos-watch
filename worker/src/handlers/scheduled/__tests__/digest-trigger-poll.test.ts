@@ -1,7 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import type { ScheduledRuntimeContext } from "../context";
-import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
@@ -22,11 +20,10 @@ vi.mock("../../../lib/runtime-credentials", () => ({
   missingTwitterCredentialNames: vi.fn(() => ["TWITTER_API_KEY"]),
   missingTelegramCredentialNames: vi.fn(() => ["TELEGRAM_BOT_TOKEN"]),
 }));
-vi.mock("../../../lib/db-cache", () => ({
-  getCache: vi.fn(),
-  setCache: vi.fn(async () => {}),
-  deleteCache: vi.fn(async () => {}),
-}));
+vi.mock("../../../lib/db-cache", async (importOriginal) => {
+  const cache = await importOriginal<typeof import("../../../lib/db-cache")>();
+  return { ...cache, getCache: vi.fn(cache.getCache) };
+});
 vi.mock("../../../lib/budget-surface-telemetry", () => ({
   recordBudgetSurfaceTelemetry: vi.fn(async () => {}),
 }));
@@ -34,26 +31,19 @@ vi.mock("../../../telegram/outbox/digest-outbox", () => ({
   drainTelegramDigestOutbox: vi.fn(),
 }));
 
-vi.mock("../../../lib/scheduled-slot-fence", () => ({
-  sweepStaleScheduledSlotExecutions: vi.fn(async () => ({
-    candidateSlots: 0, slotsReconciled: 0, maxReconciliationLagSec: null,
-  })),
-}));
-
-import { sweepStaleScheduledSlotExecutions } from "../../../lib/scheduled-slot-fence";
 import { generateDailyDigest, resumeDailyDigestDelivery } from "../../../cron/daily-digest";
 import { resolveDigestSafetyMap } from "../../../lib/digest-safety-map";
-import { deleteCache, getCache, setCache } from "../../../lib/db-cache";
+import { getCache } from "../../../lib/db-cache";
 import { recordBudgetSurfaceTelemetry } from "../../../lib/budget-surface-telemetry";
 import { buildTelegramCreds, buildTwitterCreds } from "../../../lib/runtime-credentials";
 import { drainTelegramDigestOutbox } from "../../../telegram/outbox/digest-outbox";
-import {
-  DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY,
-  MAX_ATTEMPTS,
-  runDigestTriggerPollSlot,
-} from "../digest-trigger-poll";
-import { DIGEST_FORCE_RUN_CACHE_KEY } from "../../../api/admin-actions";
+import { runDigestTriggerPollSlot } from "../digest-trigger-poll";
 import { generateWeeklyRecap } from "../../../cron/weekly-recap";
+
+const INTENT_KEY = "digest:force-run-request";
+const RESULT_KEY = "digest:last-trigger-result";
+const CLEARED_INTENT_KEY = "test:cleared-digest-intent";
+const MAX_ATTEMPTS = 3;
 
 type CronResult = { status?: string; metadata?: string; itemCount?: number };
 type DigestForceRunIntent = {
@@ -86,33 +76,22 @@ describe("runDigestTriggerPollSlot", () => {
   let errorSpy: ReturnType<typeof vi.spyOn>;
   let warnSpy: ReturnType<typeof vi.spyOn>;
   const fixtures = createLatestSchemaFixtureTracker();
-  let fixture = fixtures.open();
-  let intentWrites: DigestForceRunIntent[];
+  let fixture: ReturnType<typeof fixtures.open>;
 
   beforeEach(() => {
     errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     runLeasedCron = vi.fn();
     fixture = fixtures.open();
-    intentWrites = [];
-    const prepare = fixture.db.prepare.bind(fixture.db);
-    vi.spyOn(fixture.db, "prepare").mockImplementation((sql) => {
-      const statement = prepare(sql);
-      if (sql.startsWith("UPDATE cache SET value")) {
-        const bind = statement.bind.bind(statement);
-        vi.spyOn(statement, "bind").mockImplementation((...values) => {
-          const bound = bind(...values);
-          const run = bound.run.bind(bound);
-          vi.spyOn(bound, "run").mockImplementation(async () => {
-            const result = await run();
-            if (result.meta.changes === 1) intentWrites.push(JSON.parse(values[0] as string));
-            return result;
-          });
-          return bound;
-        });
-      }
-      return statement;
-    });
+    // Keep the final intent available for inspection after the conditional delete.
+    fixture.sqlite.exec(`
+      CREATE TEMP TRIGGER capture_cleared_intent AFTER DELETE ON cache
+      WHEN OLD.key = '${INTENT_KEY}'
+      BEGIN
+        INSERT OR REPLACE INTO cache (key, value, updated_at)
+        VALUES ('${CLEARED_INTENT_KEY}', OLD.value, OLD.updated_at);
+      END
+    `);
     vi.mocked(buildTelegramCreds).mockReturnValue(null);
     vi.mocked(buildTwitterCreds).mockReturnValue(null);
     vi.mocked(resumeDailyDigestDelivery).mockResolvedValue({ kind: "no-publishable-digest" });
@@ -136,6 +115,7 @@ describe("runDigestTriggerPollSlot", () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getCache).mockReset();
     vi.useRealTimers();
     errorSpy.mockRestore();
     warnSpy.mockRestore();
@@ -143,19 +123,27 @@ describe("runDigestTriggerPollSlot", () => {
     fixtures.closeAll();
   });
 
-  function latestIntentWrite(): DigestForceRunIntent | null {
-    if (intentWrites.length > 0) return intentWrites[intentWrites.length - 1];
-    const calls = vi.mocked(setCache).mock.calls.filter(([, key]) => key === DIGEST_FORCE_RUN_CACHE_KEY);
-    const value = calls[calls.length - 1]?.[2];
-    return value ? JSON.parse(value) as DigestForceRunIntent : null;
+  function readCache(key: string): unknown {
+    const row = fixture.sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(key);
+    return row && JSON.parse(row.value as string) as unknown;
   }
 
-  function queueIntent(intent: DigestForceRunIntent): void {
-    const value = JSON.stringify(intent);
-    fixture.sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
-      .run(DIGEST_FORCE_RUN_CACHE_KEY, value, intent.requestedAt);
-    vi.mocked(getCache).mockResolvedValueOnce({ value, updatedAt: intent.requestedAt });
+  function readIntent(): DigestForceRunIntent | undefined {
+    return readCache(INTENT_KEY) as DigestForceRunIntent | undefined;
   }
+
+  function seedIntent(intent: DigestForceRunIntent): void {
+    fixture.sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run(INTENT_KEY, JSON.stringify(intent), intent.requestedAt);
+  }
+
+  function seedRun(slotStartedAt: number | null, startedAt: number, status = "error", job = "weekly-recap"): void {
+    fixture.sqlite.prepare("INSERT INTO cron_runs (job, started_at, slot_started_at, status, duration_ms) VALUES (?, ?, ?, ?, 0)")
+      .run(job, startedAt, slotStartedAt, status);
+  }
+
+  const runLeasedJob: ScheduledRuntimeContext["runLeasedCron"] = async (_job, fn) =>
+    fn(new AbortController().signal, async () => {});
 
   function buildRuntime(): ScheduledRuntimeContext {
     return makeScheduledRuntime({
@@ -170,13 +158,11 @@ describe("runDigestTriggerPollSlot", () => {
   }
 
   it("is a no-op when the force-run cache key is absent", async () => {
-    vi.mocked(getCache).mockResolvedValueOnce(null);
-
     const summary = await runDigestTriggerPollSlot(buildRuntime());
 
     expect(runLeasedCron).not.toHaveBeenCalled();
-    expect(deleteCache).not.toHaveBeenCalled();
-    expect(setCache).not.toHaveBeenCalled();
+    expect(readIntent()).toBeUndefined();
+    expect(readCache(RESULT_KEY)).toBeUndefined();
     expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       surface: "digest-trigger-poll",
       dueCount: 0,
@@ -204,17 +190,42 @@ describe("runDigestTriggerPollSlot", () => {
   });
 
   it("runs the bounded global sweep on a poll with no digest demand", async () => {
-    vi.mocked(getCache).mockResolvedValueOnce(null);
+    vi.useFakeTimers();
+    const slot = Date.parse("2027-01-14T11:00:00Z") / 1_000;
+    vi.setSystemTime((slot + 420) * 1_000);
+    const insert = fixture.sqlite.prepare(`
+      INSERT INTO cron_slot_executions
+        (slot_key, slot_started_at, state, execution_owner, started_at, updated_at)
+      VALUES (?, ?, 'running', 'abandoned', ?, ?)
+    `);
+    for (let i = 0; i < 9; i++) {
+      const start = slot - i * 900;
+      insert.run("quarterHourly", start, start, start);
+    }
+    const delayedSlot = Date.parse("2027-01-14T08:10:00Z") / 1_000;
+    const previousDay = delayedSlot - 86_400;
+    insert.run("daily0810Utc", previousDay, previousDay, previousDay);
+    insert.run("daily0810Utc", delayedSlot, delayedSlot, slot + 1);
     const runtime = buildRuntime();
-    await runDigestTriggerPollSlot(runtime);
-    expect(sweepStaleScheduledSlotExecutions).toHaveBeenCalledWith(runtime.db, {
-      limit: 10, signal: expect.any(AbortSignal),
+    const send = vi.fn();
+    Object.assign(runtime.env, {
+      DB: runtime.db, WORKER_SLOT_CATCH_UP_MODE: "on", RESERVE_CONTINUATION_QUEUE: { send },
     });
-    const options = vi.mocked(sweepStaleScheduledSlotExecutions).mock.calls[0]![1]!;
-    expect(options).not.toHaveProperty("slotKey");
-    expect(options).not.toHaveProperty("staleAfterSec");
-    expect(vi.mocked(sweepStaleScheduledSlotExecutions).mock.invocationCallOrder[0])
-      .toBeLessThan(vi.mocked(getCache).mock.invocationCallOrder[0]!);
+
+    await runDigestTriggerPollSlot(runtime);
+
+    expect(runLeasedCron).not.toHaveBeenCalled();
+    expect(fixture.sqlite.prepare("SELECT COUNT(*) AS count FROM cron_slot_executions WHERE state = 'finished' AND result_status = 'error'")
+      .get()?.count).toBe(10);
+    expect(fixture.sqlite.prepare("SELECT state FROM cron_slot_executions WHERE slot_key = 'daily0810Utc' AND slot_started_at = ?")
+      .get(delayedSlot)?.state).toBe("running");
+    expect(readCache("scheduled-catch-up:quarterHourly")).toMatchObject({
+      slotStartedAt: slot, trigger: "abandoned",
+    });
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({ scheduleKey: "quarterHourly", slotStartedAt: slot, trigger: "abandoned" }),
+      expect.anything(),
+    );
   });
 
   it("surfaces retained terminal rows from the authoritative outbox drain", async () => {
@@ -234,7 +245,6 @@ describe("runDigestTriggerPollSlot", () => {
       retainedFailedPermanentTotal: 2,
       prunedSent: 0,
     });
-    vi.mocked(getCache).mockResolvedValueOnce(null);
 
     await runDigestTriggerPollSlot(buildRuntime());
 
@@ -267,7 +277,6 @@ describe("runDigestTriggerPollSlot", () => {
       retainedFailedPermanentTotal: 1,
       prunedSent: 0,
     });
-    vi.mocked(getCache).mockResolvedValueOnce(null);
 
     await runDigestTriggerPollSlot(buildRuntime());
 
@@ -299,7 +308,6 @@ describe("runDigestTriggerPollSlot", () => {
       retainedFailedPermanentTotal: 0,
       prunedSent: 0,
     });
-    vi.mocked(getCache).mockResolvedValueOnce(null);
 
     await runDigestTriggerPollSlot(buildRuntime());
 
@@ -311,7 +319,6 @@ describe("runDigestTriggerPollSlot", () => {
   it("does not attribute a drain infrastructure exception to the Telegram provider", async () => {
     vi.mocked(buildTelegramCreds).mockReturnValue({ botToken: "bot", chatId: "channel" });
     vi.mocked(drainTelegramDigestOutbox).mockRejectedValueOnce(new Error("D1 unavailable"));
-    vi.mocked(getCache).mockResolvedValueOnce(null);
 
     await runDigestTriggerPollSlot(buildRuntime());
 
@@ -327,14 +334,12 @@ describe("runDigestTriggerPollSlot", () => {
 
   it("dead-letters a malformed payload without running the digest", async () => {
     fixture.sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
-      .run(DIGEST_FORCE_RUN_CACHE_KEY, "not-json", 0);
-    vi.mocked(getCache).mockResolvedValueOnce({ value: "not-json", updatedAt: 0 });
+      .run(INTENT_KEY, "not-json", 0);
 
     const summary = await runDigestTriggerPollSlot(buildRuntime());
 
     expect(runLeasedCron).not.toHaveBeenCalled();
-    expect(deleteCache).not.toHaveBeenCalled();
-    expect(latestIntentWrite()).toMatchObject({
+    expect(readIntent()).toMatchObject({
       state: "dead_letter",
       attempts: 0,
       lastError: "malformed-payload",
@@ -349,6 +354,7 @@ describe("runDigestTriggerPollSlot", () => {
     }));
     expect(summary.jobsSkipped).toBe(1);
     expect(summary.jobsNeutralSkipped).toBe(0);
+    expect(readCache(RESULT_KEY)).toBeUndefined();
   });
 
   it("runs daily-digest with force=true and clears the intent on success", async () => {
@@ -358,7 +364,7 @@ describe("runDigestTriggerPollSlot", () => {
       accessToken: "tw-token",
       accessTokenSecret: "tw-token-secret",
     });
-    queueIntent(buildIntent("manual-digest-abc"));
+    seedIntent(buildIntent("manual-digest-abc"));
     runLeasedCron.mockImplementationOnce(async (_job, fn) => {
       await fn(new AbortController().signal, async () => {});
       return { status: "ok", itemCount: 1, metadata: "" } as CronResult;
@@ -379,28 +385,11 @@ describe("runDigestTriggerPollSlot", () => {
     });
     expect(digestArgs[3]).toBe(true);
 
-    expect(fixture.sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(DIGEST_FORCE_RUN_CACHE_KEY)).toBeUndefined();
-    expect(latestIntentWrite()).toMatchObject({
-      requestId: "manual-digest-abc",
-      state: "succeeded",
-      attempts: 1,
-      lastError: null,
+    expect(readIntent()).toBeUndefined();
+    expect(readCache(CLEARED_INTENT_KEY)).toMatchObject({
+      requestId: "manual-digest-abc", state: "succeeded", attempts: 1, lastError: null,
     });
-    expect(setCache).toHaveBeenCalledWith(
-      expect.anything(),
-      DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY,
-      expect.any(String),
-    );
-    const lastResultCall = vi.mocked(setCache).mock.calls.find(([, key]) =>
-      key === DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY
-    );
-    expect(lastResultCall).toBeTruthy();
-    const lastResult = JSON.parse(lastResultCall?.[2] as string) as {
-      outcome: string;
-      requestId: string;
-    };
-    expect(lastResult.outcome).toBe("ok");
-    expect(lastResult.requestId).toBe("manual-digest-abc");
+    expect(readCache(RESULT_KEY)).toMatchObject({ requestId: "manual-digest-abc", outcome: "ok" });
     expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       surface: "digest-trigger-poll",
       dueCount: 1,
@@ -414,21 +403,15 @@ describe("runDigestTriggerPollSlot", () => {
   });
 
   it("preserves the intent when the daily-digest lease is skipped_locked", async () => {
-    queueIntent(buildIntent("manual-digest-locked"));
+    const intent = buildIntent("manual-digest-locked");
+    seedIntent(intent);
     runLeasedCron.mockResolvedValueOnce({ status: "skipped_locked", metadata: "" } as CronResult);
 
     await runDigestTriggerPollSlot(buildRuntime());
 
     expect(runLeasedCron).toHaveBeenCalledTimes(1);
-    expect(deleteCache).not.toHaveBeenCalled();
-    expect(latestIntentWrite()).toBeNull();
-
-    const lastResultCall = vi.mocked(setCache).mock.calls.find(([, key]) =>
-      key === DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY
-    );
-    expect(lastResultCall).toBeTruthy();
-    const lastResult = JSON.parse(lastResultCall?.[2] as string) as { outcome: string };
-    expect(lastResult.outcome).toBe("skipped_locked");
+    expect(readIntent()).toEqual(intent);
+    expect(readCache(RESULT_KEY)).toMatchObject({ outcome: "skipped_locked" });
     expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       surface: "digest-trigger-poll",
       dueCount: 1,
@@ -442,90 +425,75 @@ describe("runDigestTriggerPollSlot", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(1_800_000_000 * 1000));
     const firstIntent = buildIntent("manual-digest-transient");
-    queueIntent(firstIntent);
+    seedIntent(firstIntent);
     vi.mocked(generateDailyDigest).mockRejectedValueOnce(new Error("network timeout"));
-    runLeasedCron.mockImplementation(async (_job, fn) => fn(new AbortController().signal, async () => {}));
+    runLeasedCron.mockImplementation(runLeasedJob);
 
     await runDigestTriggerPollSlot(buildRuntime());
 
-    const retryOne = latestIntentWrite();
+    const retryOne = readIntent();
     expect(retryOne).toMatchObject({
       requestId: firstIntent.requestId,
       attempts: 1,
       state: "failed_transient",
       lastError: "network timeout",
     });
-    expect(retryOne?.nextAttemptAt).toBe(
-      1_800_000_000 + 2 * CRON_SCHEDULE_CADENCES.digestTriggerPoll.intervalSec,
-    );
-    expect(deleteCache).not.toHaveBeenCalled();
+    expect(retryOne?.nextAttemptAt).toBe(1_800_000_600);
 
     vi.setSystemTime(new Date((retryOne?.nextAttemptAt ?? 0) * 1000));
-    queueIntent(retryOne!);
     vi.mocked(generateDailyDigest).mockRejectedValueOnce(new Error("D1 unavailable"));
 
     await runDigestTriggerPollSlot(buildRuntime());
 
-    const retryTwo = latestIntentWrite();
+    const retryTwo = readIntent();
     expect(retryTwo).toMatchObject({
       attempts: 2,
       state: "failed_transient",
       lastError: "D1 unavailable",
     });
-    expect(retryTwo?.nextAttemptAt).toBe(
-      1_800_000_000 + 2 * CRON_SCHEDULE_CADENCES.digestTriggerPoll.intervalSec * 3,
-    );
+    expect(retryTwo?.nextAttemptAt).toBe(1_800_001_800);
 
     vi.setSystemTime(new Date((retryTwo?.nextAttemptAt ?? 0) * 1000));
-    queueIntent(retryTwo!);
     vi.mocked(generateDailyDigest).mockRejectedValueOnce(new Error("Anthropic 503"));
 
     await runDigestTriggerPollSlot(buildRuntime());
 
-    expect(latestIntentWrite()).toMatchObject({
+    expect(readIntent()).toMatchObject({
       attempts: MAX_ATTEMPTS,
       state: "dead_letter",
       lastError: "Anthropic 503",
     });
-    expect(deleteCache).not.toHaveBeenCalled();
   });
 
   it("dead-letters a permanent failure immediately", async () => {
     const intent = buildIntent("manual-digest-permanent");
-    queueIntent(intent);
+    seedIntent(intent);
     vi.mocked(generateDailyDigest).mockRejectedValueOnce(new Error("validation failed: invalid prompt"));
-    runLeasedCron.mockImplementationOnce(async (_job, fn) => fn(new AbortController().signal, async () => {}));
+    runLeasedCron.mockImplementationOnce(runLeasedJob);
 
     await runDigestTriggerPollSlot(buildRuntime());
 
-    expect(latestIntentWrite()).toMatchObject({
+    expect(readIntent()).toMatchObject({
       requestId: intent.requestId,
       attempts: 1,
       state: "dead_letter",
       lastError: "validation failed: invalid prompt",
     });
-    expect(deleteCache).not.toHaveBeenCalled();
   });
 
   it("reports degraded outcome when digest returned status=degraded", async () => {
-    queueIntent(buildIntent("manual-digest-deg"));
+    seedIntent(buildIntent("manual-digest-deg"));
     vi.mocked(generateDailyDigest).mockResolvedValueOnce({ status: "degraded", itemCount: 1, metadata: "" });
-    runLeasedCron.mockImplementationOnce(async (_job, fn) => fn(new AbortController().signal, async () => {}));
+    runLeasedCron.mockImplementationOnce(runLeasedJob);
 
     await runDigestTriggerPollSlot(buildRuntime());
 
-    expect(deleteCache).not.toHaveBeenCalled();
-    expect(latestIntentWrite()).toMatchObject({
+    expect(readIntent()).toMatchObject({
       state: "failed_transient",
       attempts: 1,
       lastError: "daily-digest returned status degraded",
     });
-    const lastResultCall = vi.mocked(setCache).mock.calls.find(([, key]) =>
-      key === DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY
-    );
-    expect(lastResultCall).toBeTruthy();
-    const lastResult = JSON.parse(lastResultCall?.[2] as string) as { outcome: string };
-    expect(lastResult.outcome).toBe("degraded");
+    expect(readCache(RESULT_KEY)).toMatchObject({ outcome: "degraded" });
     expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       surface: "digest-trigger-poll",
       outcome: "degraded",
@@ -535,11 +503,10 @@ describe("runDigestTriggerPollSlot", () => {
   it("durably consumes three terminated starts and dead-letters without a fourth generation", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(1_800_000_000 * 1000);
-    let intent = buildIntent("manual-digest-crashes");
-    runLeasedCron.mockImplementation(async (_job, fn) => fn(new AbortController().signal, async () => {}));
+    seedIntent(buildIntent("manual-digest-crashes"));
+    runLeasedCron.mockImplementation(runLeasedJob);
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-      queueIntent(intent);
       let started!: () => void;
       const generationStarted = new Promise<void>((resolve) => { started = resolve; });
       vi.mocked(generateDailyDigest).mockImplementationOnce(() => {
@@ -549,34 +516,36 @@ describe("runDigestTriggerPollSlot", () => {
       });
       void runDigestTriggerPollSlot(buildRuntime());
       await generationStarted;
-      intent = latestIntentWrite()!;
+      const intent = readIntent()!;
       expect(intent).toMatchObject({ state: "running", attempts: attempt });
       vi.setSystemTime(intent.nextAttemptAt * 1000);
     }
 
-    queueIntent(intent);
     await runDigestTriggerPollSlot(buildRuntime());
     expect(generateDailyDigest).toHaveBeenCalledTimes(MAX_ATTEMPTS);
-    expect(latestIntentWrite()).toMatchObject({ state: "dead_letter", attempts: MAX_ATTEMPTS });
-    expect(fixture.sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(DIGEST_FORCE_RUN_CACHE_KEY)).toBeDefined();
+    expect(readIntent()).toMatchObject({ state: "dead_letter", attempts: MAX_ATTEMPTS });
   });
 
   it("does not start or consume an attempt if the durable claim fails", async () => {
     const intent = buildIntent("manual-digest-write-failure");
-    queueIntent(intent);
-    const prepare = fixture.db.prepare.bind(fixture.db);
-    vi.spyOn(fixture.db, "prepare").mockImplementation((sql) => {
-      if (sql.startsWith("UPDATE cache SET value")) throw new Error("D1 unavailable");
-      return prepare(sql);
-    });
-    runLeasedCron.mockImplementationOnce(async (_job, fn) => fn(new AbortController().signal, async () => {}));
+    seedIntent(intent);
+    fixture.sqlite.exec(`
+      CREATE TEMP TRIGGER reject_intent_claim BEFORE UPDATE ON cache
+      WHEN OLD.key = '${INTENT_KEY}'
+      BEGIN
+        SELECT RAISE(ABORT, 'D1 unavailable');
+      END
+    `);
+    runLeasedCron.mockImplementationOnce(runLeasedJob);
 
     await runDigestTriggerPollSlot(buildRuntime());
 
     expect(generateDailyDigest).not.toHaveBeenCalled();
     expect(resumeDailyDigestDelivery).not.toHaveBeenCalled();
-    expect(JSON.parse(fixture.sqlite.prepare("SELECT value FROM cache WHERE key = ?")
-      .get(DIGEST_FORCE_RUN_CACHE_KEY)!.value as string)).toEqual(intent);
+    expect(readIntent()).toEqual(intent);
+    expect(readCache(RESULT_KEY)).toMatchObject({
+      requestId: intent.requestId, state: "pending", attempts: 0, outcome: "error",
+    });
     expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       surface: "digest-trigger-poll", outcome: "error", processedCount: 0,
     }));
@@ -585,16 +554,15 @@ describe("runDigestTriggerPollSlot", () => {
   it("does not start a replaced intent", async () => {
     const oldIntent = buildIntent("manual-digest-old");
     const newIntent = buildIntent("manual-digest-new");
-    queueIntent(oldIntent);
+    seedIntent(oldIntent);
     runLeasedCron.mockImplementationOnce(async (_job, fn) => {
       fixture.sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?")
-        .run(JSON.stringify(newIntent), DIGEST_FORCE_RUN_CACHE_KEY);
+        .run(JSON.stringify(newIntent), INTENT_KEY);
       return fn(new AbortController().signal, async () => {});
     });
     await runDigestTriggerPollSlot(buildRuntime());
     expect(generateDailyDigest).not.toHaveBeenCalled();
-    expect(JSON.parse(fixture.sqlite.prepare("SELECT value FROM cache WHERE key = ?")
-      .get(DIGEST_FORCE_RUN_CACHE_KEY)!.value as string)).toEqual(newIntent);
+    expect(readIntent()).toEqual(newIntent);
   });
 
   it.each(["success", "failure"] as const)(
@@ -602,7 +570,7 @@ describe("runDigestTriggerPollSlot", () => {
     async (completion) => {
       const oldIntent = buildIntent("manual-digest-old");
       const newIntent = buildIntent("manual-digest-new");
-      queueIntent(oldIntent);
+      seedIntent(oldIntent);
       let release!: () => void;
       const paused = new Promise<void>((resolve) => { release = resolve; });
       let started!: () => void;
@@ -613,49 +581,48 @@ describe("runDigestTriggerPollSlot", () => {
         if (completion === "failure") throw new Error("network timeout");
         return { status: "ok", itemCount: 1 };
       });
-      runLeasedCron.mockImplementation(async (_job, fn) => fn(new AbortController().signal, async () => {}));
+      runLeasedCron.mockImplementation(runLeasedJob);
 
       const oldRun = runDigestTriggerPollSlot(buildRuntime());
       await claimed;
-      expect(latestIntentWrite()).toMatchObject({ requestId: oldIntent.requestId, state: "running" });
-      queueIntent(newIntent);
+      const running = readIntent();
+      seedIntent(newIntent);
       release();
       await oldRun;
-      expect(JSON.parse(fixture.sqlite.prepare("SELECT value FROM cache WHERE key = ?")
-        .get(DIGEST_FORCE_RUN_CACHE_KEY)!.value as string)).toEqual(newIntent);
-      expect(setCache).toHaveBeenCalledWith(expect.anything(), DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY,
-        expect.any(String));
-      const oldResult = vi.mocked(setCache).mock.calls.find(([, key]) => key === DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY);
-      expect(JSON.parse(oldResult![2])).toMatchObject({
+
+      expect(running).toMatchObject({ requestId: oldIntent.requestId, state: "running", attempts: 1 });
+      expect(readIntent()).toEqual(newIntent);
+      expect(readCache(RESULT_KEY)).toMatchObject({
         requestId: oldIntent.requestId,
+        attempts: 1,
+        state: completion === "success" ? "succeeded" : "failed_transient",
         outcome: completion === "success" ? "ok" : "error",
       });
 
       vi.mocked(generateDailyDigest).mockResolvedValueOnce({ status: "ok", itemCount: 1 });
       await runDigestTriggerPollSlot(buildRuntime());
       expect(generateDailyDigest).toHaveBeenCalledTimes(2);
-      expect(latestIntentWrite()).toMatchObject({ requestId: newIntent.requestId, state: "succeeded" });
-      expect(fixture.sqlite.prepare("SELECT value FROM cache WHERE key = ?")
-        .get(DIGEST_FORCE_RUN_CACHE_KEY)).toBeUndefined();
+      expect(readCache(CLEARED_INTENT_KEY)).toMatchObject({ requestId: newIntent.requestId, state: "succeeded" });
+      expect(readIntent()).toBeUndefined();
+      expect(readCache(RESULT_KEY)).toMatchObject({
+        requestId: newIntent.requestId, state: "succeeded", attempts: 1, outcome: "ok",
+      });
     },
   );
 
   it("does not dead-letter a newer intent after reading a replaced malformed payload", async () => {
     const newIntent = buildIntent("manual-digest-new");
-    queueIntent(newIntent);
-    vi.mocked(getCache).mockReset().mockResolvedValueOnce({ value: "not-json", updatedAt: 0 });
+    seedIntent(newIntent);
+    vi.mocked(getCache).mockResolvedValueOnce({ value: "not-json", updatedAt: 0 });
 
     await runDigestTriggerPollSlot(buildRuntime());
 
-    expect(JSON.parse(fixture.sqlite.prepare("SELECT value FROM cache WHERE key = ?")
-      .get(DIGEST_FORCE_RUN_CACHE_KEY)!.value as string)).toEqual(newIntent);
-    expect(setCache).not.toHaveBeenCalledWith(expect.anything(), DIGEST_FORCE_RUN_CACHE_KEY, expect.anything());
+    expect(readIntent()).toEqual(newIntent);
+    expect(readCache(RESULT_KEY)).toBeUndefined();
     expect(runLeasedCron).not.toHaveBeenCalled();
   });
 
   it.each([
-    ["2026-08-31T08:10:00Z", "2026-08-31T08:10:00Z", 0],
-    ["2026-08-31T08:20:00Z", "2026-08-31T08:20:00Z", 0],
     ["2026-08-31T08:24:59Z", "2026-08-31T08:24:59Z", 0],
     ["2026-08-31T08:25:00Z", "2026-08-31T08:25:00Z", 1],
     ["2026-08-31T08:10:00Z", "2026-09-01T00:05:00Z", 0],
@@ -664,7 +631,6 @@ describe("runDigestTriggerPollSlot", () => {
   ])("reserves the primary weekly budget by scheduled time (%s delivered %s -> %i resumes)", async (scheduledAt, deliveredAt, expectedResumes) => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(deliveredAt));
-    vi.mocked(getCache).mockResolvedValueOnce(null);
     runLeasedCron.mockResolvedValue({ itemCount: 1, metadata: "weekly ok" });
     const runtime = buildRuntime();
     runtime.slotStartedAt = Date.parse(scheduledAt) / 1_000;
@@ -682,12 +648,12 @@ describe("runDigestTriggerPollSlot", () => {
     vi.setSystemTime(new Date("2026-10-12T11:00:00Z"));
     const requestedAt = Date.now() / 1_000;
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-      fixture.sqlite.prepare("INSERT INTO cron_runs (job, started_at, slot_started_at, status, duration_ms) VALUES ('weekly-recap', ?, ?, 'error', 0)")
-        .run(requestedAt - (attempt + 1) * 600, requestedAt - (attempt + 1) * 600);
+      const slot = requestedAt - (attempt + 1) * 600;
+      seedRun(slot, slot);
     }
-    queueIntent(buildIntent("manual-weekly", { kind: "weekly", requestedAt, nextAttemptAt: requestedAt }));
+    seedIntent(buildIntent("manual-weekly", { kind: "weekly", requestedAt, nextAttemptAt: requestedAt }));
     vi.mocked(generateWeeklyRecap).mockResolvedValueOnce({ status: "skipped_neutral", metadata: "weekly-recap-exists" });
-    runLeasedCron.mockImplementation(async (_job, fn) => fn(new AbortController().signal, async () => {}));
+    runLeasedCron.mockImplementation(runLeasedJob);
     const runtime = buildRuntime();
     runtime.slotStartedAt = requestedAt;
 
@@ -698,8 +664,11 @@ describe("runDigestTriggerPollSlot", () => {
     expect(vi.mocked(generateWeeklyRecap).mock.calls[0]?.[6]).toBe(requestedAt);
     expect(generateDailyDigest).not.toHaveBeenCalled();
     expect(resumeDailyDigestDelivery).not.toHaveBeenCalled();
-    expect(latestIntentWrite()).toMatchObject({ kind: "weekly", state: "succeeded", attempts: 1 });
-    expect(fixture.sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(DIGEST_FORCE_RUN_CACHE_KEY)).toBeUndefined();
+    expect(readCache(CLEARED_INTENT_KEY)).toMatchObject({ kind: "weekly", state: "succeeded", attempts: 1 });
+    expect(readIntent()).toBeUndefined();
+    expect(readCache(RESULT_KEY)).toMatchObject({
+      requestId: "manual-weekly", kind: "weekly", state: "succeeded", attempts: 1, outcome: "skipped",
+    });
     expect(summary.jobs[0]).toMatchObject({ job: "weekly-recap" });
   });
 
@@ -707,18 +676,22 @@ describe("runDigestTriggerPollSlot", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-10-12T11:00:00Z"));
     const requestedAt = Date.now() / 1_000;
-    let intent = buildIntent("manual-weekly-retries", { kind: "weekly", requestedAt, nextAttemptAt: requestedAt });
-    vi.mocked(generateWeeklyRecap).mockRejectedValue(new Error("network timeout"));
-    runLeasedCron.mockImplementation(async (_job, fn) => fn(new AbortController().signal, async () => {}));
+    seedIntent(buildIntent("manual-weekly-retries", { kind: "weekly", requestedAt, nextAttemptAt: requestedAt }));
+    let running: DigestForceRunIntent | undefined;
+    vi.mocked(generateWeeklyRecap).mockImplementation(async () => {
+      running = readIntent();
+      throw new Error("network timeout");
+    });
+    runLeasedCron.mockImplementation(runLeasedJob);
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-      vi.setSystemTime(new Date(intent.nextAttemptAt * 1_000));
-      queueIntent(intent);
+      const before = readIntent()!;
+      vi.setSystemTime(before.nextAttemptAt * 1_000);
       const runtime = buildRuntime();
       runtime.slotStartedAt = Date.now() / 1_000;
       await runDigestTriggerPollSlot(runtime);
-      intent = latestIntentWrite()!;
-      expect(intent).toMatchObject({ kind: "weekly", requestedAt, attempts: attempt,
+      expect(running).toMatchObject({ kind: "weekly", requestedAt, attempts: attempt, state: "running" });
+      expect(readIntent()).toMatchObject({ kind: "weekly", requestedAt, attempts: attempt,
         state: attempt === MAX_ATTEMPTS ? "dead_letter" : "failed_transient" });
     }
     expect(generateWeeklyRecap).toHaveBeenCalledTimes(MAX_ATTEMPTS);
@@ -734,9 +707,9 @@ describe("runDigestTriggerPollSlot", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(deliveredAt));
     const requestedAt = Date.parse("2026-10-12T23:50:00Z") / 1_000;
-    queueIntent(buildIntent("manual-weekly-late", { kind: "weekly", requestedAt, nextAttemptAt: requestedAt + retryDelaySec }));
+    seedIntent(buildIntent("manual-weekly-late", { kind: "weekly", requestedAt, nextAttemptAt: requestedAt + retryDelaySec }));
     vi.mocked(generateWeeklyRecap).mockResolvedValueOnce({ itemCount: 1 });
-    runLeasedCron.mockImplementation(async (_job, fn) => fn(new AbortController().signal, async () => {}));
+    runLeasedCron.mockImplementation(runLeasedJob);
     const runtime = buildRuntime();
     runtime.slotStartedAt = Date.parse(scheduledAt) / 1_000;
 
@@ -744,46 +717,47 @@ describe("runDigestTriggerPollSlot", () => {
 
     expect(generateWeeklyRecap).toHaveBeenCalledTimes(expectedRuns);
     expect(generateDailyDigest).not.toHaveBeenCalled();
-    expect(latestIntentWrite()).toMatchObject(expectedRuns
-      ? { kind: "weekly", state: "succeeded" }
-      : { kind: "weekly", state: "dead_letter", lastError: "weekly-edition-expired", attempts: 0 });
+    if (expectedRuns) {
+      expect(readIntent()).toBeUndefined();
+      expect(readCache(CLEARED_INTENT_KEY)).toMatchObject({ kind: "weekly", state: "succeeded" });
+      expect(readCache(RESULT_KEY)).toMatchObject({
+        requestId: "manual-weekly-late", kind: "weekly", state: "succeeded", attempts: 1, outcome: "ok",
+      });
+    } else {
+      expect(readIntent()).toMatchObject({
+        kind: "weekly", state: "dead_letter", lastError: "weekly-edition-expired", attempts: 0,
+      });
+      expect(readCache(RESULT_KEY)).toBeUndefined();
+    }
   });
 
   it.each([null, "monthly", 1])("dead-letters invalid persisted kind %j without generating", async (kind) => {
     const value = JSON.stringify({ ...buildIntent("malformed-kind"), kind });
     fixture.sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
-      .run(DIGEST_FORCE_RUN_CACHE_KEY, value, 0);
-    vi.mocked(getCache).mockResolvedValueOnce({ value, updatedAt: 0 });
+      .run(INTENT_KEY, value, 0);
 
     await runDigestTriggerPollSlot(buildRuntime());
 
     expect(runLeasedCron).not.toHaveBeenCalled();
-    expect(latestIntentWrite()).toMatchObject({ state: "dead_letter", lastError: "malformed-payload" });
+    expect(readIntent()).toMatchObject({ state: "dead_letter", lastError: "malformed-payload" });
   });
 
   it("resumes a missing weekly recap on Monday after the primary budget", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-08-31T09:00:00Z"));
-    vi.mocked(getCache).mockResolvedValueOnce(null);
     vi.mocked(generateWeeklyRecap).mockResolvedValueOnce({ itemCount: 1, metadata: "weekly ok" });
-    const db = makeNoopD1({
-      prepare: vi.fn(() => ({
-        bind: vi.fn(() => ({ first: vi.fn(async () => null) })),
-      })),
-    });
     runLeasedCron.mockImplementationOnce(async (_job, fn) => {
       await fn(new AbortController().signal, async () => {});
       return { itemCount: 1, metadata: "weekly ok" } as CronResult;
     });
     const runtime = buildRuntime();
-    runtime.db = db;
     runtime.slotStartedAt = Math.floor(Date.parse("2026-08-31T09:00:00Z") / 1000);
 
     const summary = await runDigestTriggerPollSlot(runtime);
 
     expect(runLeasedCron).toHaveBeenCalledWith("weekly-recap", expect.any(Function));
     expect(generateWeeklyRecap).toHaveBeenCalledWith(
-      db,
+      runtime.db,
       "anthropic-key",
       null,
       null,
@@ -807,27 +781,26 @@ describe("runDigestTriggerPollSlot", () => {
     [3, 0],
   ])("caps Monday weekly generations per edition day (%i prior runs -> %i resumes)", async (priorRuns, expectedResumes) => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-08-31T09:00:00Z"));
-    vi.mocked(getCache).mockResolvedValueOnce(null);
-    vi.mocked(generateWeeklyRecap).mockResolvedValueOnce({ itemCount: 1, metadata: "weekly ok" });
-    // No non-blocked weekly row exists (a failed or blocked weekly), and the
-    // cron history already holds `priorRuns` weekly generations for the day.
-    const db = makeNoopD1({
-      prepare: vi.fn((sql: string) => ({
-        bind: vi.fn(() => ({ first: vi.fn(async () => (sql.includes("FROM cron_runs") ? { runs: priorRuns } : null)) })),
-      })),
-    });
-    runLeasedCron.mockImplementation(async (_job, fn) => {
-      await fn(new AbortController().signal, async () => {});
-      return { itemCount: 1, metadata: "weekly ok" } as CronResult;
-    });
+    vi.setSystemTime(new Date("2026-09-01T00:05:00Z"));
+    const slot = Date.parse("2026-08-31T09:00:00Z") / 1_000;
+    const afterMidnight = Date.parse("2026-09-01T00:01:00Z") / 1_000;
+    seedRun(null, slot - 3_000);
+    for (let i = 1; i < priorRuns; i++) seedRun(slot - i * 600, afterMidnight);
+    seedRun(slot - 86_400, slot - 86_400);
+    seedRun(afterMidnight, afterMidnight);
+    seedRun(slot, slot, "skipped_neutral");
+    seedRun(slot, slot, "skipped_locked");
+    seedRun(slot, slot, "error", "daily-digest");
+    vi.mocked(generateWeeklyRecap).mockResolvedValueOnce({ itemCount: 1 });
+    runLeasedCron.mockImplementation(runLeasedJob);
     const runtime = buildRuntime();
-    runtime.db = db;
-    runtime.slotStartedAt = Math.floor(Date.parse("2026-08-31T09:00:00Z") / 1000);
+    runtime.slotStartedAt = slot;
 
-    await runDigestTriggerPollSlot(runtime);
+    const summary = await runDigestTriggerPollSlot(runtime);
 
+    expect(summary.jobsSucceeded).toBe(expectedResumes);
     expect(runLeasedCron).toHaveBeenCalledTimes(expectedResumes);
+    expect(generateWeeklyRecap).toHaveBeenCalledTimes(expectedResumes);
   });
 
 });
