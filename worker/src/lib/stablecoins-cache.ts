@@ -141,7 +141,7 @@ function normalizePayload(
       return { kind: "error", reason: "published-contract-invalid" };
     }
     const missingPriceObservedAtIds = new Set<string>();
-    for (const row of obj.peggedAssets) {
+    for (const row of obj.peggedAssets as readonly { id: string }[]) {
       if (!("priceObservedAt" in row)) missingPriceObservedAtIds.add(row.id);
     }
     return {

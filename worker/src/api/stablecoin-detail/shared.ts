@@ -42,7 +42,7 @@ export function hasCurrentCommodityHistory(id: string, detail: Record<string, un
 export function admitCommodityDetailCache(id: string, cached: DetailCacheEntry): DetailCacheEntry {
   if (!cached || commodityHistoryVersion(id) === undefined) return cached;
   try {
-    const detail = JSON.parse(cached.value);
+    const detail = JSON.parse(cached.value) as Record<string, unknown> | null;
     return detail && hasCurrentCommodityHistory(id, detail) ? cached : null;
   } catch {
     return null;

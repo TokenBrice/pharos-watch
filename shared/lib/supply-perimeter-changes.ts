@@ -55,6 +55,16 @@ export const SUPPLY_PERIMETER_CHANGES = [
     evidenceUrl: "https://solscan.io/token/HAYQtfJEQ9DbDbaHEhxfGsWbSZ3ywthdsVB3PuB72DYe",
     marketWide: false,
   },
+  // Legacy FRAX, 2026-11-19: DefiLlama PR #1001 counts only legacy FRAX under id 6 (frxUSD and canonical L2
+  // FRAX removed; list total $136.7M -> $76.0M, no Fraxtal row). Pharos carried the old quantity under the
+  // chain-dropout quarantine until the reviewed Fraxtal exclusion takes effect at this clock.
+  {
+    stablecoinId: "frax-frax",
+    changedAt: Date.parse("2026-11-19T20:00:00Z") / 1000,
+    chainIds: ["ethereum", "fraxtal"],
+    evidenceUrl: "https://github.com/DefiLlama/peggedassets-server/pull/1001",
+    marketWide: false,
+  },
 ] as const;
 
 /** A reviewed perimeter record enables the Kinesis wrapper publication and snapshot together. */

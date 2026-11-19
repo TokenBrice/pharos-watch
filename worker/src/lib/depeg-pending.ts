@@ -428,7 +428,7 @@ export function pendingClosureRevision(row: PendingDepegRow, heldAt = row.refere
 function storedPendingClosureRevision(row: PendingDepegRow): unknown {
   if (!row.peer_basis_json) return null;
   try {
-    return JSON.parse(row.peer_basis_json)?.closureRevision;
+    return (JSON.parse(row.peer_basis_json) as { closureRevision?: unknown } | null)?.closureRevision;
   } catch {
     return null;
   }

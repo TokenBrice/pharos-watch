@@ -30,6 +30,9 @@ jobs:
           SMOKE_API_KEY: ${{ secrets.PHAROS_API_KEY }}
           SMOKE_API_REQUIRE_KEY: "true"
           SMOKE_API_SCOPE: full
+          # D1 rejects reads for a 10-second resource window when overloaded. The default 1.5 s
+          # retry lands inside that window, so one throttle failed both attempts (2026-11-19).
+          SMOKE_API_RETRY_DELAY_MS: "11000"
 
   pages-assets:
     name: Live Pages assets

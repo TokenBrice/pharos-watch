@@ -146,6 +146,27 @@ export const REVIEWED_CHAIN_SUPPLY_COLLAPSES: readonly ReviewedChainSupplyCollap
     excludeOmittedUntil: Date.parse("2026-11-27T00:12:36Z") / 1000,
     evidenceUrl: "https://explorer.tempo.xyz/token/0x20c000000000000000000000850e533bd762b72c",
   },
+  // 2026-11-19: BSC transaction 0x79a04103…d5e0 (block 134368693, status 1) burned 69,858,138.73 satUSD:
+  // totalSupply() reads 79,357,330.65 at block 134368692 and 9,499,191.93 at block 134544023, matching
+  // the list's lower BSC row ($9.44M). The held $78.87M baseline is a disproven pre-burn level.
+  {
+    assetId: "satusd-river", chainId: "bsc",
+    policy: "accept-observed-collapse",
+    reviewedAt: Date.parse("2026-11-19T17:34:00Z") / 1000,
+    evidenceUrl: "https://bscscan.com/tx/0x79a04103f46e69e1a276bb06ec56ec149a74df2caa9f7c859fc2b6fab942d5e0",
+  },
+  // Legacy FRAX, 2026-11-19: DefiLlama peggedassets-server PR #1001 (merged 2026-11-16 19:48 UTC) stopped
+  // counting frxUSD and canonical L2 FRAX under id 6. Its list no longer carries a Fraxtal row and reports
+  // $75,995,076 in total (Ethereum $70,872,282), against the $136,725,501 Pharos still carries with the
+  // held $10,926,256 Fraxtal baseline. The omitted stock is frxUSD, tracked as its own asset. The review
+  // takes effect at the perimeter clock in SUPPLY_PERIMETER_CHANGES; re-read the list before renewing.
+  {
+    assetId: "frax-frax", chainId: "fraxtal",
+    policy: "exclude-omitted",
+    reviewedAt: Date.parse("2026-11-19T20:00:00Z") / 1000,
+    excludeOmittedUntil: Date.parse("2026-12-03T20:00:00Z") / 1000,
+    evidenceUrl: "https://github.com/DefiLlama/peggedassets-server/pull/1001",
+  },
   // HyperEVM block 50654180 reads 43,067.502661 frxUSD, already included under
   // the provider's Hyperliquid L1 row; exclude the omitted old $3.749M identity.
   {
