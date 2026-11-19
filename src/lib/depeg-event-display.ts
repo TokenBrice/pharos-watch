@@ -1,3 +1,4 @@
+import { composeDescription } from "./page-metadata";
 import { hasUnverifiedDepegPeak } from "./depeg-event-config";
 import type { DepegEvent } from "@shared/types/peg";
 import { formatDeviationBps, formatIsoDate, formatLongDate, formatPrice, formatUsdPriceAdaptive } from "@shared/lib/format";
@@ -228,19 +229,22 @@ export function buildDepegEventDescription(
   const deviation = formatEventDeviation(event);
   const move = `${subject} ${verb}${deviation ? ` ${deviation}` : ""} ${event.direction} ${event.peakBasis ? "the peer median" : "its peg"}${disputedQualifier(event)}`;
   const outcome = buildDepegEventOutcome(event, false);
+  // Whole sentences only, within the search-snippet budget: a part that does not fit is dropped.
   if (getDepegEventOnset(event).qualified) {
-    return `${subject} depeg ${depegDirectionLabel(event.direction, event.peakBasis)}${deviation ? `, peak ${deviation}` : ""}${disputedQualifier(event)}. ${describeQualifiedOnset(event, includeTime)} ${outcome}`;
+    return composeDescription([
+      `${subject} depeg ${depegDirectionLabel(event.direction, event.peakBasis)}${deviation ? `, peak ${deviation}` : ""}${disputedQualifier(event)}.`,
+      describeQualifiedOnset(event, includeTime),
+      outcome,
+    ], META_DESCRIPTION_MAX_CHARS);
   }
-  const base = includeTime
-    ? `${move} at ${formatEventUtcTime(event.startedAt)} on ${formatEventLongDate(event.startedAt)}. ${outcome}`
-    : `${move} on ${formatEventLongDate(event.startedAt)}. ${outcome}`;
-  // A review qualifier can push the sentence past the 180-character meta budget; shorten the tail first.
-  const tails = includeTime ? ["Timeline and methodology.", ""] : ["Event timeline and Pharos methodology context.", "Timeline and methodology.", ""];
-  for (const tail of tails) {
-    const text = tail ? `${base} ${tail}` : base;
-    if (text.length <= META_DESCRIPTION_MAX_CHARS || !tail) return text;
-  }
-  return base;
+  const when = includeTime
+    ? `at ${formatEventUtcTime(event.startedAt)} on ${formatEventLongDate(event.startedAt)}`
+    : `on ${formatEventLongDate(event.startedAt)}`;
+  return composeDescription([
+    `${move} ${when}.`,
+    outcome,
+    includeTime ? ["Timeline and methodology."] : ["Event timeline and Pharos methodology context.", "Timeline and methodology."],
+  ], META_DESCRIPTION_MAX_CHARS);
 }
 
 export function buildDepegEventSynopsis(event: DepegEventDisplayInput): string {
