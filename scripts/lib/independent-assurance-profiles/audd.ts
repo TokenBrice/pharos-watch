@@ -4,7 +4,7 @@ export const PROFILE: CompilerProfile = {
   product: "AUDD",
   profile: "audd-v1",
   officialIndexUrl: "https://www.audd.digital/transparency/",
-  reportUrl: "https://www.audd.digital/wp-content/uploads/2026/11/202610_AUDC-Agreed-upon-procedures-report-Oct26_.pdf",
+  reportUrl: "https://www.audd.digital/documents/assurance/2026-10-agreed-upon-procedures.pdf",
   reportDate: "2026-10-31",
   reportAsOf: "2026-10-31T23:59:00Z",
   reportTimeZone: "UTC (as printed in the report)",

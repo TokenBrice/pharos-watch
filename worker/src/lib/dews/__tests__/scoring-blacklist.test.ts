@@ -66,17 +66,14 @@ function hydrateDexSpread(id: string, price: number, nowSec: number, family: str
 }
 
 describe("buildDewsScoringResult peg reference admission", () => {
-  it.each([
-    { parityQuoteUnit: undefined, primaryDevBps: 0 },
-    { parityQuoteUnit: "raw-token" as const, primaryDevBps: undefined },
-  ])("uses Solayer's observed price for confidence and checks its published unit ($parityQuoteUnit)", ({ parityQuoteUnit, primaryDevBps }) => {
+  it.each([undefined, "raw-token"] as const)("uses Solayer's observed price for confidence and checks its published unit (%s)", (parityQuoteUnit) => {
     const asset = { ...createAsset("susd-solayer"), parityQuoteUnit, priceSource: "coingecko", priceObservedAt: 1_795_000_000 };
     const state = createSourceState();
     state.dexPrices.dexPriceMap.set(asset.id, { dexPriceUsd: 1.0001, updatedAt: asset.priceObservedAt, sourceTotalTvl: 5e6 });
     const [row] = scoreRows(new Map([[asset.id, asset]]), state);
     expect(row.band).toBe("CALM");
     expect(row.signals.price).toMatchObject({ value: 0, available: true, confidence: "high" });
-    expect(row.signals.diverg).toMatchObject({ primaryDevBps, dexDevBps: 1 });
+    expect(row.signals.diverg).toMatchObject({ primaryDevBps: undefined, dexDevBps: 1 });
   });
 
   it("quarantines EURC relabelled as USD before applying the fixed denominator", () => {

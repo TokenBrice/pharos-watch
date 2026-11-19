@@ -180,8 +180,8 @@ function assuranceFenceCases() {
   const agoraReviewed =
     `https://fdr-prod-docs-files-public.s3.us-east-1.amazonaws.com${new URL(ausd.reportUrl).pathname}?X-Amz-Signature=fixture`;
   const fiddIndex = `<a href="${FIDD_VIEWER_URL}">September</a>`;
-  const auddIndex = indexFixture("audd-independent-assurance.html") +
-    '<a href="https://www.audd.digital/wp-content/uploads/2026/11/202610_AUDC-Agreed-upon-procedures-report-Oct26_.pdf">October 2026</a>';
+  const auddIndex = indexFixture("audd-independent-assurance.html");
+  const auddHost = "https://www.audd.digital";
   return [
     {
       adapter: "agora-independent-assurance",
@@ -206,14 +206,19 @@ function assuranceFenceCases() {
       newerHtml: indexFixture("usdpt-independent-assurance.html") +
         '<a href="https://learn.anchorage.com/10.31.26_USDPT_Stablecoin_Attestation_Report.pdf">Oct</a>',
     },
-    {
-      adapter: "audd-independent-assurance",
-      coinId: "audd-novatti",
-      product: "AUDD",
-      html: auddIndex,
-      newerHtml: auddIndex +
-        '<a href="https://www.audd.digital/wp-content/uploads/2026/12/AUDC-Agreed-upon-procedures-report-Nov26_.pdf">November 2026</a>',
-    },
+    ...[
+      ["/wp-content/uploads/2026/11/202610_AUDC-Agreed-upon-procedures-report-Oct26_.pdf",
+        "/wp-content/uploads/2026/12/AUDC-Agreed-upon-procedures-report-Nov26_.pdf"],
+      ["/documents/assurance/2026-10-agreed-upon-procedures.pdf", "/documents/assurance/2026-11-agreed-upon-procedures.pdf"],
+    ].map(([oct, nov]) => {
+      const reportUrl = auddHost + oct;
+      const featured = oct.startsWith("/documents/") ? `<a href="${oct}">Agreed-upon procedures</a>` : "";
+      const html = auddIndex + featured + `<a href="${reportUrl}">October 2026</a>`;
+      return {
+        adapter: "audd-independent-assurance", coinId: "audd-novatti", product: "AUDD",
+        reportUrl: featured ? undefined : reportUrl, html, newerHtml: html + `<a href="${auddHost}${nov}">November 2026</a>`,
+      } as const;
+    }),
     {
       adapter: "cadd-independent-assurance",
       coinId: "cadd-cad-digital",
@@ -271,25 +276,21 @@ describe("independent-assurance manifest framework", () => {
   it.each(assuranceFenceCases())(
     "$adapter keeps the reviewed index and redirect hosts fail-closed and lets a newer report reach the PDF gates",
     async (testCase) => {
+      if ("reportUrl" in testCase && testCase.reportUrl) {
+        vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue({
+          ...getIndependentAssuranceManifest(testCase.product), reportUrl: testCase.reportUrl,
+        });
+      }
       const options = "options" in testCase ? testCase.options : undefined;
-      await expect(
-        verifyAssuranceIndex(testCase.adapter, testCase.coinId, testCase.product, testCase.html, options),
-      ).rejects.toThrow("PDF byte length");
-      await expect(
-        verifyAssuranceIndex(testCase.adapter, testCase.coinId, testCase.product, testCase.html, {
-          ...options,
-          indexRedirect: "https://unreviewed.example/index",
-        }),
-      ).rejects.toThrow(/index response host .* is not in the reviewed allowlist/);
-      await expect(
-        verifyAssuranceIndex(testCase.adapter, testCase.coinId, testCase.product, testCase.html, {
-          ...options,
-          reportRedirect: "https://unreviewed.example/report.pdf",
-        }),
-      ).rejects.toThrow(/PDF response host .* is not in the reviewed allowlist/);
-      await expect(
-        verifyAssuranceIndex(testCase.adapter, testCase.coinId, testCase.product, testCase.newerHtml, options),
-      ).rejects.toThrow("PDF byte length");
+      const verifyCase = (html: string, redirects = {}) =>
+        verifyAssuranceIndex(testCase.adapter, testCase.coinId, testCase.product, html, { ...options, ...redirects });
+      for (const html of [testCase.html, testCase.newerHtml]) {
+        await expect(verifyCase(html)).rejects.toThrow("PDF byte length");
+      }
+      await expect(verifyCase(testCase.html, { indexRedirect: "https://unreviewed.example/index" }))
+        .rejects.toThrow(/index response host .* is not in the reviewed allowlist/);
+      await expect(verifyCase(testCase.html, { reportRedirect: "https://unreviewed.example/report.pdf" }))
+        .rejects.toThrow(/PDF response host .* is not in the reviewed allowlist/);
     },
   );
   it("rejects an unreviewed index redirect before reading its body", async () => {
@@ -319,6 +320,7 @@ describe("independent-assurance manifest framework", () => {
       const reviewed = getIndependentAssuranceManifest(testCase.product);
       vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue({
         ...reviewed,
+        ...("reportUrl" in testCase && testCase.reportUrl ? { reportUrl: testCase.reportUrl } : {}),
         reportByteLength: PDF_BYTES.length,
         reportSha256: createHash("sha256").update(PDF_BYTES).digest("hex"),
       });
@@ -1258,36 +1260,14 @@ describe("BRLA Notion reviewed discovery", () => {
     expect(warnings).toEqual([]);
   });
 
-  it("fails closed when the root page title drifts", async () => {
-    installBrlaFetch({
-      rootRecord: {
-        recordMap: {
-          block: {
-            [BRLA_NOTION_PIN.rootPageId]: {
-              spaceId: "space",
-              value: { value: { id: BRLA_NOTION_PIN.rootPageId, type: "page", properties: { title: [["Rebranded page"]] }, content: BRLA_NOTION_PIN.rootContent } },
-            },
-          },
-        },
-      },
-    });
-    await expect(verifyBrlaNotionDiscovery(discoveryArgs())).rejects.toThrow("page identity drifted");
-  });
-
-  it("fails closed when the root child tree changes (e.g. a new year group)", async () => {
-    installBrlaFetch({
-      rootRecord: {
-        recordMap: {
-          block: {
-            [BRLA_NOTION_PIN.rootPageId]: {
-              spaceId: "space",
-              value: { value: { id: BRLA_NOTION_PIN.rootPageId, type: "page", properties: { title: [[BRLA_NOTION_PIN.rootPageTitle]] }, content: [...BRLA_NOTION_PIN.rootContent, "new-block-id"] } },
-            },
-          },
-        },
-      },
-    });
-    await expect(verifyBrlaNotionDiscovery(discoveryArgs())).rejects.toThrow("index structure changed");
+  it.each([
+    ["page identity drifted", { properties: { title: [["Rebranded page"]] } }],
+    ["index structure changed", { content: [...BRLA_NOTION_PIN.rootContent, "new-block-id"] }],
+  ])("rejects a changed Notion root with %s", async (error, changes) => {
+    const rootRecord = structuredClone(ROOT_RECORD);
+    Object.assign(rootRecord.recordMap.block[BRLA_NOTION_PIN.rootPageId].value.value, changes);
+    installBrlaFetch({ rootRecord });
+    await expect(verifyBrlaNotionDiscovery(discoveryArgs())).rejects.toThrow(error);
   });
 
   it("fails closed when the report attachment drifts", async () => {

@@ -47,6 +47,10 @@ Instrument identity, complete measurement perimeter and matching units constrain
 
 Adapter-specific completeness, unit, source-clock and binding-version rules live in the [adapter-specific evidence boundaries](process/live-reserves-appendix.md#adapter-specific-evidence-boundaries), with remaining packet rules in [packet admission details](process/live-reserves-appendix.md#packet-admission-details); HCHF's [versioned ownership boundary](process/live-reserves-appendix.md#adapter-specific-evidence-boundaries) also governs retained-snapshot admission. Every class still obeys the shared gates below.
 
+Ripio's wARS, wBRL, wCOP and wMXN adapters use the issuer's current [wFIAT index](https://www.ripio.com/en/wfiat-attestations) and pin their currency-specific September 30, 2026 certifications. AUDD recognizes dated `/documents/assurance/YYYY-MM-agreed-upon-procedures.pdf` links and legacy report filenames. Exact reviewed URL and byte checks still govern AUDD admission.
+
+USDY accepts the First Citizens Bank label for its existing deposit category ID. M0 measures snapshot lag against the latest indexed Ethereum MinterGateway collateral update and retains its direct on-chain collateral lower bound. Avant reconciles long and short perpetual positions as contextual observations and keeps whole-token composition unresolved.
+
 Liquity V2 branches may declare reviewed `kind: plain-token` to value the configured direct balance/decimals without ERC4626 probes (including Felix WHYPE and Base Dollar WETH). Declared `erc4626` branches require readable asset identity even on an executed revert; undeclared branches retain strict introspection, where only an executed aggregate-member revert proves a nonreceipt. Funded receipts require readable conversion totals and underlying decimals; missing evidence withholds whole-book valuation through the existing partial-book contract, never raw-share or share-decimal substitution.
 
 ### Snapshot admission gates

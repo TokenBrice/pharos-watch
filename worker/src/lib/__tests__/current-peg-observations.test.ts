@@ -33,8 +33,9 @@ describe("current peg observations", () => {
   });
 
   it.each([
+    ["usdc-circle", "peggedUSD", "coingecko", undefined, 100],
     ["xagm-matrixdock", "peggedSILVER", "coingecko", undefined, null],
-    ["susd-solayer", "peggedUSD", "protocol-redeem", undefined, 100],
+    ["susd-solayer", "peggedUSD", "protocol-redeem", undefined, null],
     ["susd-solayer", "peggedUSD", "protocol-redeem", "accrued-token", null],
     ["xofm-mento", "peggedXOF", "mento-broker", undefined, null],
   ] as const)("revalidates the unit of a stored %s peg block (%s, %s, %s)", (id, pegType, priceSource, parityQuoteUnit, expected) => {
@@ -43,9 +44,10 @@ describe("current peg observations", () => {
       pegReferenceUnavailable: false, currentPriceUnavailable: false, primaryTrust: "authoritative", dexPriceCheck: null,
     } });
     const readPeg = createCurrentPegReader({ peggedAssets: [asset], asOf: AS_OF });
-    expect(readPeg(asset)).toMatchObject(expected == null
-      ? { currentDeviationBps: null, pegReference: null, pegReferenceUnavailable: true }
-      : { currentDeviationBps: expected, pegReference: { valueUsd: 1 }, pegReferenceUnavailable: false });
+    expect(readPeg(asset)).toMatchObject({
+      currentDeviationBps: expected, pegReference: expected == null ? null : { valueUsd: 1 },
+      pegReferenceUnavailable: expected == null,
+    });
   });
 
   it("uses the pinned XAGm weight for the current silver reference", () => {
@@ -127,7 +129,7 @@ describe("current peg observations", () => {
     expect(result).toMatchObject({ admittedDeviationBps: null, referenceAdmission: { reason: "quote-clock-unavailable" } });
   });
 
-  it("preserves legacy Solayer parity until a quote carries its unit", () => {
+  it("requires a comparable Solayer market quote", () => {
     const makeSolayer = (priceSource: string, parityQuoteUnit?: "accrued-token" | "raw-token") =>
       makeAsset({ id: "susd-solayer", pegType: "peggedUSD", price: 1, priceObservedAt: AS_OF, priceSource, parityQuoteUnit });
     const legacy = makeSolayer("protocol-redeem");
@@ -135,7 +137,7 @@ describe("current peg observations", () => {
       source_pool_count: 2, source_total_tvl: 1e7, deviation_from_primary_bps: -100 }]]);
     for (const fxReferenceObservations of [undefined, {}]) {
       expect(deriveCurrentPegObservationMap({ peggedAssets: [legacy], asOf: AS_OF, fxReferenceObservations, dexPrices }).get(legacy.id))
-        .toMatchObject({ currentDeviationBps: 0, dexPriceCheck: { dexDeviationBps: -100 } });
+        .toMatchObject({ currentDeviationBps: null, dexPriceCheck: null });
     }
     for (const asset of [makeSolayer("protocol-redeem", "accrued-token"), makeSolayer("coinbase", "raw-token")]) {
       expect(deriveCurrentPegObservationMap({ peggedAssets: [asset], asOf: AS_OF, fxReferenceObservations: {} }).get(asset.id))

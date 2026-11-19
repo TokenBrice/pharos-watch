@@ -14,7 +14,7 @@
   "pegMechanism": "WBRL is issued and managed by Ripio against local fiat reserves. The wFIAT whitepaper expressly denies token holders any issuer redemption right or claim to funds. Exits depend on secondary-market liquidity, available Ripio on/off-ramp flows, or issuer-managed market operations.",
   "proofOfReserves": {
     "type": "agreed-upon-procedures",
-    "url": "https://action.ripio.com/en/wfiat-attestations",
+    "url": "https://www.ripio.com/en/wfiat-attestations",
     "provider": "Pablo Eduardo Soto, partner at SLD y Asociados S.A. (certification under Argentine Technical Resolution 37 Section VI; the document states it does not constitute an audit or a review and expresses no professional opinion)",
     "attestorTier": "niche",
     "cadence": "ad-hoc",
@@ -112,13 +112,13 @@
     "semantics": "attestation-mix",
     "breakerScope": "wbrl-ripio",
     "display": {
-      "url": "https://action.ripio.com/en/wfiat-attestations",
+      "url": "https://www.ripio.com/en/wfiat-attestations",
       "label": "Ripio wFIAT attestations"
     },
     "inputs": {
       "primary": {
         "kind": "http-html",
-        "url": "https://action.ripio.com/en/wfiat-attestations"
+        "url": "https://www.ripio.com/en/wfiat-attestations"
       }
     },
     "params": {
@@ -135,8 +135,8 @@
         }
       ],
       "reviewedReport": {
-        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wBRL%2006.30.2026%20Certification%20vf.pdf?hsLang=en",
-        "balanceDate": "2026-06-30"
+        "url": "https://statics.ripio.com/wfiat-attestations/Token%20wBRL%2009.30.2026%20Certification.pdf",
+        "balanceDate": "2026-09-30"
       }
     }
   },

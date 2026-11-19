@@ -1,5 +1,19 @@
 [
   {
+    "version": "6.51",
+    "title": "Solayer sUSD Peg Comparison Needs A Unit-Qualified Quote",
+    "date": "2026-11-19",
+    "effectiveAt": 1795122000,
+    "summary": "Solayer sUSD accrues value inside each token, so its published price is an accrued valuation per raw token (about $1.18), not a quote that can be compared with $1. Quotes that carry no unit were still treated as parity quotes, which displayed a false +1,814 bps deviation. They no longer are.",
+    "impact": [
+      "For `susd-solayer`, a primary peg comparison now requires a dated market quote that declares `parityQuoteUnit: \"accrued-token\"`. A quote with no unit, including the protocol valuation, still publishes its USD price but leaves the current deviation and the current-peg DEX comparison unavailable. No producer stamps the unit today, so sUSD shows no current deviation until one does.",
+      "Peg summary and current-peg observations withhold parity for it, DEWS omits its primary divergence, and depeg detection is unchanged: the valuation was already refused as an event quote and a qualifying independent trade is still accepted.",
+      "Every other asset keeps its existing parity rule. No event, score input or history row is rewritten."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.50",
     "title": "Admitted depeg observations and stress inputs",
     "date": "2026-11-19",

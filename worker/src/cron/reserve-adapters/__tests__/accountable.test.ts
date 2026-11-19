@@ -495,42 +495,26 @@ describe("adaptAccountableDashboard", () => {
   });
 
 
-  it("fails closed on an unparseable Apyx Accountable reserves_split value", async () => {
+  it.each([
+    ["not-a-number", /Accountable reserves_split bucket "Other" has invalid value/],
+    [0, /zero value: Other, SATA, STRC/],
+  ])("rejects invalid Apyx reserves_split with Other at %s", async (other, error) => {
     const config = apxusd.liveReservesConfig as LiveReservesConfig;
-
     await expect(runAccountablePayload(config, {
       collateralization: 1.001022,
       ts: "1780583904415",
       reserves: {
-        total_reserves: { value: 476_302_149.26, name: "Total Reserves" },
+        total_reserves: { value: other === 0 ? 180_040_870.38 : 476_302_149.26, name: "Total Reserves" },
+        ...(other === 0 ? { total_supply: 180_040_870.38 / 1.001022, inventory: 0, pol: 0 } : {}),
         reserves_split: [
-          { value: -296_181_048.36, name: "STRC" },
+          { value: other === 0 ? 0 : -296_181_048.36, name: "STRC" },
           { value: 180_040_870.38, name: "Cash & Equivalents" },
           { value: 0, name: "SATA" },
-          { value: "not-a-number", name: "Other" },
+          { value: other, name: "Other" },
+          ...(other === 0 ? [{ value: 0, name: "Inventory" }, { value: 0, name: "Protocol Owned Liquidity" }] : []),
         ],
       },
-    })).rejects.toThrow(/Accountable reserves_split bucket "Other" has invalid value/);
-  });
-
-  it("rejects Apyx Accountable mapped buckets that would be silently dropped as zero", async () => {
-    const config = apxusd.liveReservesConfig as LiveReservesConfig;
-
-    await expect(runAccountablePayload(config, {
-      collateralization: 1.001022,
-      ts: "1780583904415",
-      reserves: {
-        total_reserves: { value: 180_040_870.38, name: "Total Reserves" },
-        total_supply: 180_040_870.38 / 1.001022, inventory: 0, pol: 0,
-        reserves_split: [
-          { value: 0, name: "STRC" },
-          { value: 180_040_870.38, name: "Cash & Equivalents" },
-          { value: 0, name: "SATA" },
-          { value: 0, name: "Other" },
-          { value: 0, name: "Inventory" }, { value: 0, name: "Protocol Owned Liquidity" },
-        ],
-      },
-    })).rejects.toThrow(/zero value: Other, SATA, STRC/);
+    })).rejects.toThrow(error);
   });
 
   it("rejects Accountable bucket totals that materially diverge from total_reserves", () => {
@@ -1089,10 +1073,16 @@ describe("adaptAccountableDashboard", () => {
     }).valid).toBe(true);
   });
 
-  it("keeps XSY location-only buckets conservative and fully mapped", async () => {
+  it.each([0, 8.2])("keeps XSY location-only buckets conservative with Hyperevm at %s", async (value) => {
     const config = utyxsy.liveReservesConfig as LiveReservesConfig;
+    const params = utyxsy.liveReservesConfig.params;
+    const historical = value > 0 ? { ...config, params: {
+      ...params,
+      riskMap: { ...params.riskMap, Hyperevm: "high" },
+      sourceKeyMap: { ...params.sourceKeyMap, Hyperevm: "accountable:xsy:deployment:hyperevm" },
+    } } : config;
 
-    const result = await runAccountablePayload(config, {
+    const result = await runAccountablePayload(historical, {
       collateralization: 1.03,
       ts: "1781945117382",
       reserves: {
@@ -1107,7 +1097,7 @@ describe("adaptAccountableDashboard", () => {
           { name: "Monad", value: 700_000 },
           { name: "Bybit", value: 600_000 },
           { name: "Bnb_smartchain", value: 12.5 },
-          { name: "Hyperevm", value: 8.2 },
+          { name: "Hyperevm", value },
           { name: "Hyperliquid", value: 4.1 },
           { name: "Megaeth", value: 1.9 },
           { name: "Sei", value: 0.1 },
@@ -1119,7 +1109,7 @@ describe("adaptAccountableDashboard", () => {
     expect(result.metadata).toMatchObject({
       bucket: "reserves_split",
       breakdownCount: 14,
-      mappedBucketCount: 14,
+      mappedBucketCount: value > 0 ? 14 : 13,
     });
     expect(result.metadata?.unknownBucketCount).toBeUndefined();
     expect(result.metadata?.unknownExposurePct).toBeUndefined();

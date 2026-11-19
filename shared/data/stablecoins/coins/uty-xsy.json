@@ -118,7 +118,6 @@
         "Monad": "high",
         "Bybit": "high",
         "Bnb_smartchain": "high",
-        "Hyperevm": "high",
         "Hyperliquid": "high",
         "Megaeth": "high",
         "Sei": "high"
@@ -134,7 +133,6 @@
         "Monad": "accountable:xsy:deployment:monad",
         "Bybit": "accountable:xsy:deployment:bybit",
         "Bnb_smartchain": "accountable:xsy:deployment:bnb-smartchain",
-        "Hyperevm": "accountable:xsy:deployment:hyperevm",
         "Hyperliquid": "accountable:xsy:deployment:hyperliquid",
         "Megaeth": "accountable:xsy:deployment:megaeth",
         "Sei": "accountable:xsy:deployment:sei"

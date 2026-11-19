@@ -107,7 +107,6 @@ export function isParityPrice(asset: PegRateAsset): boolean {
   if (!isObservedPrice(asset)) return false;
   if (asset.id !== "xofm-mento" && asset.id !== "susd-solayer") return true;
   if (asset.id === "susd-solayer") {
-    if (asset.parityQuoteUnit === undefined) return true;
     if (asset.parityQuoteUnit !== "accrued-token") return false;
   }
   if (!Number.isSafeInteger(asset.priceObservedAt) || (asset.priceObservedAt ?? 0) <= 0) return false;

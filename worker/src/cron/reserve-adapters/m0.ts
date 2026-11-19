@@ -42,6 +42,8 @@ interface M0GraphQlResponse {
   errors?: Array<{ message?: string }>;
 }
 
+const M0_ONCHAIN_GATEWAY_ADDRESS = "0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E";
+
 // M0's Protocol API retired the off-chain CollateralCurrent composition feed in
 // 2026-08 (the resolver survives in the schema but returns the gateway 500
 // envelope). The supported replacement is the on-chain-indexed Minter Gateway
@@ -58,13 +60,13 @@ const M0_TOTAL_COLLATERAL_QUERY = `
       id
       collateral
     }
-    collateralUpdateds(first: 1, orderBy: timestamp, orderDirection: desc) {
+    collateralUpdateds: indexer_dyn_stateful_minter_gateway_collateral_updated(
+      where: {chain_id: {_eq: 1}, contract_address: {_ilike: "${M0_ONCHAIN_GATEWAY_ADDRESS.toLowerCase()}"}}
+      order_by: [{block_timestamp: desc}, {log_index: desc}]
+      limit: 1
+    ) {
       timestamp
-      blockTimestamp
-    }
-    minterGateway_latestUpdateTimestampSnapshots(first: 1, orderBy: timestamp, orderDirection: desc) {
-      timestamp
-      value
+      blockTimestamp: block_timestamp
     }
   }
 `;
@@ -109,7 +111,6 @@ const M0_TOTAL_COLLATERAL_SOURCE_KEY = "m0:eligible-collateral";
 // partial discovery fails closed, and the observation's freshness is the
 // OLDEST contributing update timestamp rather than an invented clock.
 const M0_ONCHAIN_CHAIN = "ethereum";
-const M0_ONCHAIN_GATEWAY_ADDRESS = "0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E";
 // keccak256("CollateralUpdated(address,uint240,uint240,bytes32,uint40)")
 const M0_ONCHAIN_COLLATERAL_UPDATED_TOPIC0 = "0x8c7a373ea6d1cedfcb77f0e5520921cc5d5a1a16b960c0c13c0f96b8dc24caa8";
 const M0_ONCHAIN_SELECTORS = {

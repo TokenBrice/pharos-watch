@@ -20,13 +20,18 @@ const coin: ReserveAdapterCoin = TRACKED_SOURCE_COINS.find((entry) => entry.id =
 const config = coin.liveReservesConfig!;
 const NOW = Date.parse("2026-10-25T12:00:00Z") / 1000;
 const adapt = (source = html) => adaptOndoUsdyPortfolio(source, coin, NOW);
+const portfolio = () => JSON.parse(extractEscapedJsonValueAfterKey(html, '\\"portfolio\\":', "test"));
+const asHtml = (portfolio: unknown) => JSON.stringify({ portfolio }).replaceAll('"', '\\"');
 
 describe("Ondo USDY dated portfolio categories", () => {
-  it("reconciles four fund-level slices and preserves reviewed identities/classifications", () => {
-    const result = adapt();
+  it.each([false, true])("reconciles four reviewed slices with the First Citizens label %s", (renamed) => {
+    const result = adapt(renamed ? html.replace("Silicon Valley Bank - Bank Deposits", "First Citizens Bank - Bank Deposits") : html);
     const values = [2094366235.88, 309364703.11, 599553.01, 10820.67];
     expect(result.slices).toEqual(reserves.reserves.map((slice, index) => ({
-      ...slice, pct: values[index] / 2404341312.6700006 * 100,
+      ...slice, ...(renamed && index === 2 ? {
+        name: "First Citizens Bank deposits (issuer portfolio category)",
+        issuerOrObligor: "First Citizens Bank",
+      } : {}), pct: values[index] / 2404341312.6700006 * 100,
     })));
     expect(result.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBeCloseTo(100, 10);
     expect(result.metadata).toMatchObject({
@@ -36,15 +41,11 @@ describe("Ondo USDY dated portfolio categories", () => {
       unknownExposurePct: values[3] / 2404341312.6700006 * 100,
       details: { sourceClockPolicy: "date-only-utc-start", sourceAgeBudgetSec: 604800, sourceAgeBudgetCap: "adapter" },
     });
-    expect(result.metadata).not.toHaveProperty("collateralizationRatio");
-    expect(result.metadata).not.toHaveProperty("reportedCollateralizationRatio");
-    expect(result.metadata).not.toHaveProperty("redemption");
+    for (const key of ["collateralizationRatio", "reportedCollateralizationRatio", "redemption", "positions", "holdings"]) {
+      expect(result.metadata).not.toHaveProperty(key);
+    }
     expect(result.slices.every((slice) => slice.maturityDaysMax === undefined)).toBe(true);
-    // The published payload stays a summary: one slice per reviewed category and
-    // no per-position rows copied into metadata.
     expect(result.slices).toHaveLength(4);
-    expect(result.metadata).not.toHaveProperty("positions");
-    expect(result.metadata).not.toHaveProperty("holdings");
     expect(result.metadata?.details).not.toHaveProperty("positions");
     expect(validateAdapterOutput(result, { adapter: getReserveAdapter(config.adapter)!, now: NOW }).valid).toBe(true);
   });
@@ -72,24 +73,24 @@ describe("Ondo USDY dated portfolio categories", () => {
     expect(() => adapt(html.replaceAll('\\"portfolio\\"', '\\"absent\\"'))).toThrow("layout-changed");
     expect(() => adapt(html.replace('2094366235.88', 'invalid'))).toThrow("parse-failed");
     expect(() => adapt(html.replace('8a072b79-7c71-472b-8093-0a9c3347fb8f', 'unknown'))).toThrow("layout-changed");
-    const portfolio = JSON.parse(extractEscapedJsonValueAfterKey(html, '\\"portfolio\\":', "test"));
-    portfolio.positions.push({ ...portfolio.positions[0], _id: "unknown", name: "Unknown category", value: 0 });
-    expect(() => adapt(JSON.stringify({ portfolio }).replaceAll('"', '\\"'))).toThrow("layout-changed");
+    const book = portfolio();
+    book.positions.push({ ...book.positions[0], _id: "unknown", name: "Unknown category", value: 0 });
+    expect(() => adapt(asHtml(book))).toThrow("layout-changed");
   });
 
   it("rejects missing categories and missing or duplicate reviewed keys", () => {
-    const portfolio = JSON.parse(extractEscapedJsonValueAfterKey(html, '\\"portfolio\\":', "test"));
-    portfolio.positions.pop();
-    const source = JSON.stringify({ portfolio }).replaceAll('"', '\\"');
-    expect(() => adapt(source)).toThrow();
-    expect(() => adaptOndoUsdyPortfolio(html, { ...coin, reserves: [] }, NOW)).toThrow("unreviewed-category");
-    expect(() => adaptOndoUsdyPortfolio(html, { ...coin, reserves: [...coin.reserves!, coin.reserves![0]] }, NOW)).toThrow("unreviewed-category");
+    const book = portfolio();
+    book.positions.pop();
+    expect(() => adapt(asHtml(book))).toThrow();
+    for (const reserves of [[], [...coin.reserves!, coin.reserves![0]]]) {
+      expect(() => adaptOndoUsdyPortfolio(html, { ...coin, reserves }, NOW)).toThrow("unreviewed-category");
+    }
   });
 
   it("rejects a fifth portfolio category even when its value is zero", () => {
-    const portfolio = JSON.parse(extractEscapedJsonValueAfterKey(html, '\\"portfolio\\":', "test"));
-    portfolio.positions.push({ ...portfolio.positions[0], _id: "unknown", name: "Unknown category", value: 0 });
-    expect(() => adapt(JSON.stringify({ portfolio }).replaceAll('"', '\\"'))).toThrow();
+    const book = portfolio();
+    book.positions.push({ ...book.positions[0], _id: "unknown", name: "Unknown category", value: 0 });
+    expect(() => adapt(asHtml(book))).toThrow();
   });
 
   it("keeps observed zero categories from becoming positive exposure", () => {
@@ -109,8 +110,9 @@ describe("Ondo USDY dated portfolio categories", () => {
   it("fetches one bounded source with the caller signal and no RPC or liability reads", async () => {
     vi.mocked(fetchTextWithRetry).mockResolvedValue(html);
     const signal = new AbortController().signal;
+    const expected = adapt();
     expect(await fetchOndoUsdyReserves(coin, config, signal, { nowSec: NOW })).toEqual({
-      ...adapt(), metadata: { ...adapt().metadata, details: { ...adapt().metadata!.details, sourceAgeBudgetCap: "scoring" } },
+      ...expected, metadata: { ...expected.metadata, details: { ...expected.metadata!.details, sourceAgeBudgetCap: "scoring" } },
     });
     expect(fetchTextWithRetry).toHaveBeenLastCalledWith("https://ondo.finance/usdy", signal, 12_000, { nowSec: NOW }, { maxResponseBytes: 2_000_000 });
   });

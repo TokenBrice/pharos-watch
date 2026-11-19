@@ -404,20 +404,21 @@ describe("handlePegSummary", () => {
     });
     expect(body.summary?.worstCurrent?.bps ?? null).toBe(count ? raw : null);
   });
-  it("keeps the executable XOFm proceeds and accrued Solayer valuation outside the parity census", async () => {
-    vi.spyOn(Date, "now").mockReturnValue(OPEN_FX_QUOTE_AT * 1000);
+  it.each(["accrued-token", undefined] as const)("keeps XOFm proceeds and Solayer valuation (%s) outside the parity census", async (parityQuoteUnit) => {
+    const now = OPEN_FX_QUOTE_AT;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
     const assets = [
-      makeAsset({ id: "xofm-mento", pegType: "peggedXOF", priceSource: "mento-broker", price: 0.98 / 600, priceObservedAt: OPEN_FX_QUOTE_AT }),
+      makeAsset({ id: "xofm-mento", pegType: "peggedXOF", priceSource: "mento-broker", price: 0.98 / 600, priceObservedAt: now }),
       makeAsset({ id: "susd-solayer", pegType: "peggedUSD", priceSource: "cached", agreeSources: ["protocol-redeem"],
-        parityQuoteUnit: "accrued-token", price: 1.181399598224652, priceObservedAt: OPEN_FX_QUOTE_AT }),
-      makeAsset({ id: "usdc-circle", pegType: "peggedUSD", price: 1, priceObservedAt: OPEN_FX_QUOTE_AT }),
+        parityQuoteUnit, price: 1.181399598224652, priceObservedAt: now }),
+      makeAsset({ id: "usdc-circle", pegType: "peggedUSD", price: 1, priceObservedAt: now }),
     ];
     const body = await readSummary(
-      makePegSummaryDb(assets, { peggedXOF: 1 / 600 }, [], { updatedAt: OPEN_FX_QUOTE_AT, fxReferenceObservations: {} }),
+      makePegSummaryDb(assets, { peggedXOF: 1 / 600 }, [], { updatedAt: now, fxReferenceObservations: {} }),
     );
     for (const asset of assets.slice(0, 2)) {
       expect(body.coins.find(({ id }) => id === asset.id)).toMatchObject({
-        price: asset.price, priceObservedAt: OPEN_FX_QUOTE_AT, currentPriceUnavailable: false,
+        price: asset.price, priceObservedAt: now, currentPriceUnavailable: false,
         currentDeviationBps: null, admittedDeviationBps: null,
       });
     }
