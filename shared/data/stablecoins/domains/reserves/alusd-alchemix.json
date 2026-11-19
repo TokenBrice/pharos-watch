@@ -1,5 +1,209 @@
 {
   "id": "alusd-alchemix",
+  "reserves": [
+    {
+      "name": "InfiniFi siUSD position (Ethereum MYT)",
+      "pct": 37.297539,
+      "risk": "high",
+      "coinId": "iusd-infinifi",
+      "depType": "collateral",
+      "intermediary": {
+        "kind": "vault-share",
+        "label": "siUSD",
+        "chain": "ethereum",
+        "contract": "0xdbdc1ef57537e34680b898e1febd3d68c7389bcb",
+        "verified": true
+      },
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "infiniFi (siUSD staked iUSD)",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Yearn yvUSD vault position (Ethereum MYT)",
+      "pct": 36.845661,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Yearn V3 USD yVault (yvUSD) and its strategies",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Fluid Lite USD vault position (Ethereum MYT)",
+      "pct": 18.160703,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Fluid Lite USD Vault (fLiteUSD)",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "smart-contract",
+        "leverage"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Aave V3 USDC supply (Optimism MYT)",
+      "pct": 7.287543,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave V3 Optimism USDC reserve (aOptUSDCn)",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Fluid fUSDC lending position (Arbitrum MYT)",
+      "pct": 0.246706,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Fluid USD Coin (fUSDC) lending vault on Arbitrum",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Euler eUSDC-1 vault position (Arbitrum MYT)",
+      "pct": 0.117031,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Euler EVK Vault eUSDC-1 on Arbitrum",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Aave V3 USDC supply (Arbitrum MYT)",
+      "pct": 0.044812,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave V3 Arbitrum USDC reserve (aArbUSDCn)",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Auto Finance autoUSD position (Ethereum MYT)",
+      "pct": 6e-06,
+      "risk": "high",
+      "coinId": "autousd-auto-finance",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Auto Finance autoUSD Autopool",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-11-19",
+    "reviewer": "Alchemix contributor submission (t0rbik, issue #2113, PR #2129); pinned on-chain reads independently reproduced in Pharos PR review 2026-11-19",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Ethereum MYT vault (Morpho VaultV2) adapters(), totalAssets() and adapter realAssets() at block 26443250, hash 0xba8a86f0640eeeafed3c3bacdd419d3f67bb7213603b7a1389cb85c24409860f",
+        "url": "https://etherscan.io/address/0x9B44efCa3e2a707B63Dc00CE79d646E5E5D24bA5"
+      },
+      {
+        "label": "Optimism MYT vault adapters(), totalAssets() and adapter realAssets() at block 159710914, hash 0x68687b771298ce35918aa4402939221295892fa5c6fecee48976536a039550ed",
+        "url": "https://optimistic.etherscan.io/address/0xAf510a560744880410f0f65e3341A020FBC2cA41"
+      },
+      {
+        "label": "Arbitrum MYT vault adapters(), totalAssets() and adapter realAssets() at block 525377731, hash 0x23c0b37aa96bbb731241ed2a954bd8ff6787fd9c0935842f90cfb9d6eb0c300e",
+        "url": "https://arbiscan.io/address/0xEba62B842081CeF5a8184318Dc5C4E4aACa9f651"
+      },
+      {
+        "label": "Ethereum AlchemistV3 (alUSD): myt(), transmuter(), totalDebt(), totalSyntheticsIssued()",
+        "url": "https://etherscan.io/address/0xeb83112d925268bede86654c13d423a987587e3e"
+      },
+      {
+        "label": "Optimism AlchemistV3 (alUSD)",
+        "url": "https://optimistic.etherscan.io/address/0x930750a3510e703535e943e826aba3c364ffc1de"
+      },
+      {
+        "label": "Arbitrum AlchemistV3 (alUSD)",
+        "url": "https://arbiscan.io/address/0x930750a3510e703535e943e826aba3c364ffc1de"
+      },
+      {
+        "label": "Alchemix V3 MYTStrategy adapter source (realAssets, params)",
+        "url": "https://github.com/alchemix-finance/v3/blob/master/src/MYTStrategy.sol"
+      },
+      {
+        "label": "Current MYT architecture and DAO-managed strategy allocation",
+        "url": "https://docs.alchemix.fi/user/concepts/myt-and-yield"
+      },
+      {
+        "label": "Pharos data-correction issue with the full read set",
+        "url": "https://github.com/TokenBrice/pharos-watch/issues/2113"
+      }
+    ],
+    "rationale": "Issuer-submitted, on-chain-reproducible composition of the three V3 alUSD MYT vaults (Morpho VaultV2) on Ethereum, Optimism and Arbitrum. Each vault enumerates its strategy adapters through adaptersLength() and adapters(i); each adapter reports realAssets() in USDC. At the pinned blocks the adapters sum exactly to each vault's totalAssets() and idle USDC is zero on all three vaults. Each adapter's target was read from the adapter itself: siUSD 0xdbdc1ef5… (staked iUSD), Yearn yvUSD 0x696d02db…, Fluid Lite USD 0x273da948…, Aave V3 aTokens on Optimism and Arbitrum, Fluid fUSDC 0x1a996cb5… and Euler eUSDC-1 0x0a1ecc5f… on Arbitrum, and Auto Finance autoUSD 0xa7569a44…. Pharos review on 2026-11-19 reproduced the three block hashes, each vault's adapter roster, every realAssets() value, totalAssets() and the zero idle USDC balance at the pinned blocks, and confirmed asset() or UNDERLYING_ASSET_ADDRESS() on every target except the autoUSD adapter, whose 0.51 USDC position exposes no target getter and keeps the submitter's source-based label. yvUSD and the Fluid Lite USD vault are multi-strategy vaults: their USDC denomination does not establish constituent exposure, so both rows stay unlinked as baskets needing a split. Risk, liquidity-horizon and risk-factor labels remain the submitter's proposals aligned to existing Pharos rows for the same venues.",
+    "compositionBasis": "USDC-denominated realAssets() of every registered strategy adapter across the three V3 alUSD MYT vaults, as a share of their combined totalAssets() (8,819,966.392128 USDC), read at Ethereum block 26443250, Optimism block 159710914 and Arbitrum block 525377731 on 2026-11-18",
+    "compositionAsOf": "2026-11-18",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "Scope is selected-slices: the weights are shares of gross V3 MYT vault assets, not of whole-token backing. The composition covers all assets of the three MYT vaults, not only the shares backing alUSD: at the pinned blocks the Alchemist and Transmuter together held 97.4% of Ethereum vault shares, 99.8% on Optimism and 99.6% on Arbitrum, and the remainder belongs to other MYT holders pro rata. Borrower collateral above debt is borrower equity, so vault assets exceed the alUSD they secure (totalSyntheticsIssued 5,403,581 alUSD across the three Alchemists). alUSD supply outside V3 issuance (legacy and DAO-minted supply, largely held by DAO market-operations Safes or locked in the Multichain wrapper) is not backed by these vaults and is described in issue #2113. Allocations are mutable by the DAO allocator and will drift from this snapshot. The internal composition of each venue (yvUSD strategies, Fluid Lite, infiniFi) is not decomposed here.",
+    "knownUnknownExposurePct": 55.006364,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 1,
+        "reserveName": "Yearn yvUSD vault position (Ethereum MYT)",
+        "pct": 36.845661,
+        "disposition": "basket-needs-split",
+        "rationale": "yvUSD is a Yearn V3 multi-strategy vault whose asset() is USDC; the adapter reports one USDC-denominated position and the reviewed reads do not split the vault's current strategy allocations.",
+        "candidateCoinIds": [
+          "usdc-circle"
+        ]
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "Fluid Lite USD vault position (Ethereum MYT)",
+        "pct": 18.160703,
+        "disposition": "basket-needs-split",
+        "rationale": "The Fluid Lite USD vault runs leveraged strategies on USDC deposits; the adapter reports one USDC-denominated position and the reviewed reads do not split the vault's current holdings.",
+        "candidateCoinIds": [
+          "usdc-circle"
+        ]
+      }
+    ]
+  },
   "custodyProfile": {
     "providers": [
       {
@@ -11,23 +215,31 @@
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
     "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (CurB01USDU)",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB01USDU); V3 contract sources replaced the V2 Alchemist links by issuer submission 2026-11-18 (#2113); V3 Alchemist myt() and debtToken() bindings reproduced on-chain in PR #2129 review 2026-11-19",
     "confidence": "verified",
     "sources": [
       {
-        "label": "AlchemistV2 on Etherscan",
-        "url": "https://etherscan.io/address/0x5C6374a2ac4EBC38DeA0Fc1F8716e5Ea1AdD94dd"
+        "label": "Ethereum AlchemistV3 (alUSD) on Etherscan",
+        "url": "https://etherscan.io/address/0xeb83112d925268bede86654c13d423a987587e3e"
       },
       {
-        "label": "Alchemix collateral de-pegging documentation",
-        "url": "https://v2-docs.alchemix.fi/resources/guides/vault-losses-and-collateral-de-pegging"
+        "label": "Ethereum alUSD MYT vault (Morpho VaultV2) on Etherscan",
+        "url": "https://etherscan.io/address/0x9B44efCa3e2a707B63Dc00CE79d646E5E5D24bA5"
+      },
+      {
+        "label": "Optimism alUSD MYT vault on Optimistic Etherscan",
+        "url": "https://optimistic.etherscan.io/address/0xAf510a560744880410f0f65e3341A020FBC2cA41"
+      },
+      {
+        "label": "Arbitrum alUSD MYT vault on Arbiscan",
+        "url": "https://arbiscan.io/address/0xEba62B842081CeF5a8184318Dc5C4E4aACa9f651"
       },
       {
         "label": "Current MYT architecture and DAO-managed strategy allocation",
         "url": "https://docs.alchemix.fi/user/concepts/myt-and-yield"
       }
     ],
-    "uncertainty": "Current V3 collateral is held through MYT ERC-4626 vaults and allocated strategy contracts; the issuer states V2 positions migrated in April 2026. Pinned MYT asset() reads confirm USDC denomination on Ethereum, Arbitrum and Optimism, but do not establish strategy-level custody shares. Legal segregation, insolvency treatment, and reuse restrictions remain unknown. Legacy V2 residual holdings and each underlying issuer or strategy retain separate custody and freeze exposure.",
+    "uncertainty": "Current V3 collateral is held through MYT ERC-4626 vaults and allocated strategy contracts; the issuer states V2 positions migrated in April 2026. Pinned MYT asset() reads confirm USDC denomination on Ethereum, Arbitrum and Optimism; strategy-level shares are recorded in the reserve composition from an issuer-submitted 2026-11-18 read (issue #2113). Legal segregation, insolvency treatment, and reuse restrictions remain unknown. Legacy V2 residual holdings and each underlying issuer or strategy retain separate custody and freeze exposure.",
     "knownUnknownExposurePct": 100
   }
 }
