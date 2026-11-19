@@ -478,6 +478,12 @@ export const DEPEG_BLIND_EVENT_REVIEWS: readonly z.infer<typeof DepegBlindEventR
     sources: ["https://api.pharos.watch/api/stablecoins", "https://api.pharos.watch/api/dex-liquidity", "https://api.pharos.watch/api/depeg-events?active=true", "https://api.exchange.coinbase.com/products/AUDD-USDC/ticker"],
     reviewedAt: Date.UTC(2026, 10, 19, 17, 41) / 1000, expiresAt: Date.UTC(2026, 10, 26, 17, 41) / 1000,
   },
+  {
+    eventId: 90605, stablecoinId: "usdx-kava", owner: "ops",
+    reason: "Reviewed 2026-11-19 23:29 UTC: event 90605 remains open and blind, last trusted at 17:46:26 UTC. The Kava pricefeed RPC header and markets API return HTTP 502. Pharos publishes no primary or DEX price, so current deviation and DEX priced-contributor TVL and family count are unavailable. Reassess when Kava recovers or another trusted quote is admitted.",
+    sources: ["https://api.pharos.watch/api/depeg-events?active=true&stablecoin=usdx-kava", "https://api.pharos.watch/api/stablecoins", "https://api.pharos.watch/api/dex-liquidity", "https://rpc.kava.io/header", "https://api.kava.io/kava/pricefeed/v1beta1/markets"],
+    reviewedAt: Date.UTC(2026, 10, 19, 23, 29) / 1000, expiresAt: Date.UTC(2026, 10, 22, 23, 29) / 1000,
+  },
 ];
 
 export function resolveDepegBlindEventReviews(nowSec: number, reviews: readonly unknown[] = DEPEG_BLIND_EVENT_REVIEWS) {
