@@ -91,9 +91,9 @@
     {
       "type": "danger",
       "title": "Exploited: do not deposit",
-      "message": "On 2026-11-18 K3 Capital reported malicious activity involving sBOLD and paused its contracts, and Liquity advised users not to deposit into sBOLD until further notice. Liquity V2 and BOLD are not affected. On-chain, sBOLD's share supply was inflated to about 4.4e19 while the vault's assets fell to about 4.5 BOLD, so a share currently redeems for effectively nothing. Pharos withholds sBOLD's supply and market cap until the incident is resolved.",
+      "message": "On 2026-11-18, between 12:25 and 12:33 UTC, attackers drained about 3.43M BOLD — nearly all vault assets — from K3 Capital's sBOLD vault; K3 paused the vault at 13:05 UTC and it remains paused. K3's 2026-11-19 post-mortem (ChainSecurity analysis) traces the root cause to the vault's swap() leaving the 1inch router an unused token approval: attackers inflated the sBOLD share price with donations, redeemed at the inflated price, then used the leftover approval to take back the donated collateral. Liquity V2, BOLD and 1inch were not exploited, and no Liquity liquidations were involved. More than half of the loss (about 986 ETH) went to block builders and validators; K3 has identified counterparties holding about 894.5 ETH plus 131,316 yBOLD, offers a 15% recovery bounty, and plans to convert recovered ETH to BOLD and redeem affected depositors case by case. The vault's remaining assets are about 4.5 BOLD against 4.4e19 shares, so a pre-exploit share redeems for effectively nothing. Pharos withholds sBOLD's supply and market cap until the incident is resolved. Sources: K3 post-mortem https://x.com/k3_capital/status/2123395654214967426 ; Liquity https://x.com/LiquityProtocol/status/2123408020579496280",
       "kind": "paused",
-      "asOf": "2026-11-18"
+      "asOf": "2026-11-19"
     },
     {
       "type": "info",
