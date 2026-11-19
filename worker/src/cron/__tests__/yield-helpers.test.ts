@@ -16,7 +16,6 @@ import {
   DETERMINISTIC_APY_SANITY_MAX,
   computeApyFromRate,
   computeApyFromPrice,
-  computeSpikeCappedMean,
   computeYieldStability,
   detectWarningSignals,
   isDeterministicApyWithinSanityBounds,
@@ -116,21 +115,17 @@ describe("computeApyFromRate", () => {
   });
 
   it("returns negative APY for decreasing rate", () => {
-    const apy = computeApyFromRate(0.99, 1.0, 7);
-    expect(apy).toBeLessThan(0);
+    expect(computeApyFromRate(0.99, 1.0, 7)).toBeLessThan(0);
   });
 
   it("computes expected APY for a 7-day vault rate change", () => {
     // Rate went from 1.0 to 1.001 over 7 days
     // (1.001)^(365.25/7) - 1 ≈ 0.05343 → 5.34%
-    const apy = computeApyFromRate(1.001, 1.0, 7);
-    expect(apy).toBeCloseTo(5.34, 0);
+    expect(computeApyFromRate(1.001, 1.0, 7)).toBeCloseTo(5.34, 0);
   });
 
   it("aliases computeApyFromPrice", () => {
-    const rateApy = computeApyFromRate(1.05, 1.0, 30);
-    const priceApy = computeApyFromPrice(1.05, 1.0, 30);
-    expect(rateApy).toBe(priceApy);
+    expect(computeApyFromRate(1.05, 1.0, 30)).toBe(computeApyFromPrice(1.05, 1.0, 30));
   });
 
   it("flags extreme deterministic annualization as outside the sanity envelope", () => {
@@ -238,28 +233,6 @@ describe("computeYieldStability", () => {
     const stable = computeYieldStability([5, 5.1, 4.9, 5.05])!;
     const volatile = computeYieldStability([1, 10, 2, 9])!;
     expect(stable).toBeGreaterThan(volatile);
-  });
-});
-
-describe("computeSpikeCappedMean", () => {
-  const fill = (count: number, value: number) => Array<number>(count).fill(value);
-  it.each([
-    ["clean", [...fill(12, 4), ...fill(12, 4.4)], 4.2, 0],
-    ["flat", fill(24, 5), 5, 0],
-    ["spike capped at 2x", [...fill(23, 4), 40], 100 / 24, 1],
-    ["exactly 2x kept", [...fill(23, 4), 8], 100 / 24, 0],
-    ["too few samples", [...fill(22, 4), 40], 128 / 23, 0],
-    ["zero median", [...fill(13, 0), ...fill(11, 10)], 110 / 24, 0],
-    ["negative median", [...fill(23, -1), 50], 27 / 24, 0],
-    ["2% floor", [...fill(22, 0.5), 1.5, 6], 14.5 / 24, 1],
-    ["sustained", [...fill(20, 4), ...fill(4, 40)], 10, 0],
-    ["half faded", [...fill(36, 4), ...fill(4, 40)], 6, 4],
-    ["#2095-like", [...fill(406, 7.02), ...fill(9, 27.8)], (406 * 7.02 + 9 * 14.04) / 415, 9],
-  ])("%s", (_name, samples, mean, capped) => {
-    const result = computeSpikeCappedMean(samples);
-    expect(result.mean).toBeCloseTo(mean, 10);
-    expect(result.cappedSamples).toBe(capped);
-    if (!capped) expect(result.mean).toBe(result.rawMean);
   });
 });
 

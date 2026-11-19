@@ -412,7 +412,7 @@ export const DEFINITIONS = {
   },
   excessYield: {
     label: "Excess yield",
-    short: "30-day average APY minus its benchmark rate.",
+    short: "30-day APY minus its benchmark rate.",
     methodologyPath: YIELD_PATH,
   },
   yieldStability: {

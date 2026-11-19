@@ -60,6 +60,10 @@ export interface EvaluatedYieldSource {
   comparisonAnchorObservedAt: number | null;
   apy7d: number;
   apy30d: number;
+  /** Plain mean of the 30-day samples, the warning baseline; absent means `apy30d` is that mean. Not published. */
+  apy30dSampleMean?: number;
+  /** Anchor of a share-price `apy30d` (yield v8.57); null or absent when `apy30d` is the sample mean. */
+  apy30dAnchorObservedAt?: number | null;
   apyVarianceScore: number | null;
   stdDev30d: number | null;
   apyMin30d: number | null;
@@ -288,7 +292,8 @@ function finalizeYieldEvaluation(accumulator: YieldEvaluationAccumulator): Evalu
     const unit = row.returnDenomination;
     if (unit == null || unit === "VAR" || row.sourceFreshness !== "fresh") continue;
     const cohort = cohortInputs.get(unit) ?? [];
-    cohort.push(medianInputs[index]);
+    // The warning cohort keeps the sample mean, so a share-price figure cannot move another row's divergence baseline.
+    cohort.push({ ...medianInputs[index], apy_30d: row.apy30dSampleMean ?? row.apy30d });
     cohortInputs.set(unit, cohort);
   }
   const cohortMedians = new Map(Array.from(cohortInputs, ([unit, rows]) => [
@@ -297,7 +302,7 @@ function finalizeYieldEvaluation(accumulator: YieldEvaluationAccumulator): Evalu
   for (const source of accumulator.evaluatedSources) {
     source.warnings = [...new Set([...source.warnings, ...detectWarningSignals({
       currentApy: source.currentApy,
-      apy30d: source.apy30d,
+      apy30d: source.apy30dSampleMean ?? source.apy30d,
       apyReward: source.apyReward,
       medianApy: source.sourceFreshness === "fresh" && source.returnDenomination != null
         ? cohortMedians.get(source.returnDenomination) ?? null : null,

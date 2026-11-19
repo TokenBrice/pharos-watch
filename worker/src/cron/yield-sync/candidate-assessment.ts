@@ -267,8 +267,8 @@ export function assessYieldSourceGroup(
     const sourceFreshness = staleComparisonAnchor || transportOverdue || ageTier === "stale"
       ? "stale" : ageTier === "unknown" ? "unknown" : "fresh";
     const {
-      apy7d, apy30d, yieldStability, apyVarianceScore, stdDev30d, apyMin30d, apyMax30d,
-      distinctObservationDays30d, sourceObservationVerified,
+      apy7d, apy30d, apy30dSampleMean, apy30dAnchorObservedAt, yieldStability, apyVarianceScore, stdDev30d,
+      apyMin30d, apyMax30d, distinctObservationDays30d, sourceObservationVerified,
     } = computeYieldCandidateStatistics(
       y, historyRows, historySelection.usedLegacyHistory, input.startSec, input.sevenDaysAgoSec, sourceFreshness,
     );
@@ -353,8 +353,8 @@ export function assessYieldSourceGroup(
     const anomalies: string[] = [];
     if (historySelection.usedLegacyHistory) anomalies.push("legacy-history-fallback");
     if (y.sourceTvlUsd != null && y.sourceTvlUsd < LOW_SOURCE_TVL_USD) anomalies.push("low-source-tvl");
-    if (historyRows.length > 0 && apy30d > 0 && y.currentApy / apy30d > 2) anomalies.push("source-yield-spike");
-    if (historyRows.length > 0 && apy30d > 0.5 && y.currentApy === 0) anomalies.push("source-zero-vs-history");
+    if (historyRows.length > 0 && apy30dSampleMean > 0 && y.currentApy / apy30dSampleMean > 2) anomalies.push("source-yield-spike");
+    if (historyRows.length > 0 && apy30dSampleMean > 0.5 && y.currentApy === 0) anomalies.push("source-zero-vs-history");
     if (staleComparisonAnchor) anomalies.push("anchor-stale");
     if (sourceFreshness === "stale") anomalies.push("source-stale");
     if (sourceFreshness === "unknown") anomalies.push("source-freshness-unknown");
@@ -396,6 +396,8 @@ export function assessYieldSourceGroup(
       comparisonAnchorObservedAt: y.comparisonAnchorObservedAt ?? null,
       apy7d,
       apy30d,
+      apy30dSampleMean,
+      apy30dAnchorObservedAt,
       apyVarianceScore,
       stdDev30d,
       apyMin30d,

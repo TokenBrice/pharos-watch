@@ -622,7 +622,7 @@ export function YieldInstrumentBoard({
       <div className={cn(BOARD_SUBGRID_CLASS, "hidden border-b border-border/60 bg-background/45 px-3 py-2 lg:grid")}>
         <HeaderCell label="#" className="justify-end" />
         <HeaderCell label="Coin" />
-        <HeaderCell label="APY 30d" title="30-day average annual percentage yield" />
+        <HeaderCell label="APY 30d" title="30-day annual percentage yield" />
         <HeaderCell label="Safety" title="Pharos Safety Grade / Score" />
         <HeaderCell
           label="PYS"

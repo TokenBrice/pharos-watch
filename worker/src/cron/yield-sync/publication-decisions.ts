@@ -272,6 +272,7 @@ export function buildYieldSourceProvenance(params: {
       : source.sourceMaxAgeSeconds ?? getRankingStaleThresholdMs(source.dataSource, source.sourceKey) / 1000,
     comparisonAnchorObservedAt,
     comparisonAnchorAgeSeconds,
+    apy30dAnchorObservedAt: source.apy30dAnchorObservedAt ?? null,
     confidenceTier: source.confidenceTier,
     calculationMode: source.calculationMode,
     evidenceClass: source.evidenceClass,

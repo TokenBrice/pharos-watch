@@ -13,6 +13,7 @@ import { buildHistoryKey, pickHistoryRowsForSource } from "../yield-sync/history
 import type { YieldHistorySnapshotRow } from "../yield-sync/history-repository";
 import { buildYieldSourceRisk } from "../yield-sync/source-risk";
 import { computeTvlWeightedMedianApy, computeYieldCandidateStatistics } from "../yield-sync/candidate-statistics";
+import { computeApyFromRate } from "../yield-helpers";
 import { evaluateYieldSourcesCooperative } from "../yield-sync/evaluation";
 import type { EvaluatedYieldSource } from "../yield-sync/evaluation";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
@@ -1962,14 +1963,14 @@ describe("current anchor-only resolution", () => {
     const input = baseEvaluationInput();
     const sourceKey = "onchain:coin-a";
     input.resolved = [{ id: "coin-a", symbol: "A", yield: resolvedYield({
-      sourceKey, dataSource: "onchain", currentApy: apy, apyBase: apy, exchangeRate: 1,
+      sourceKey, dataSource: "onchain", currentApy: apy, apyBase: apy, exchangeRate: (1 + apy / 100) ** (7 / 365.25),
     }) }];
     input.sourceHistory.set(buildHistoryKey("coin-a", sourceKey), [{
       ...historyLegacyRow(input.startSec - 7 * DAY_SECONDS), stablecoin_id: "coin-a", source_key: sourceKey,
       data_source: "onchain", apy: 0, apy_base: null, exchange_rate: 1,
     }]);
     const result = await evaluateYieldSourcesCooperative(input, { yieldToEventLoop: () => Promise.resolve() });
-    expect(result.evaluatedSources[0]).toMatchObject({ currentApy: apy, apy7d: apy, apy30d: apy });
+    expect(result.evaluatedSources[0]).toMatchObject({ currentApy: apy, apy7d: apy, apy30d: expect.closeTo(apy, 10) });
     expect(result.bestSourceKeyByCoin.get("coin-a")).toBe(sourceKey);
   });
 });
@@ -2165,16 +2166,32 @@ describe("yield source-risk registry", () => {
 });
 
 describe("computeYieldCandidateStatistics", () => {
-  it("caps apy30d only; 7d mean, deviation and max stay raw", () => {
-    const rows: YieldHistorySnapshotRow[] = Array.from({ length: 24 }, (_, index) => ({
-      stablecoin_id: "a", source_key: "k", recorded_at: 1776700000 - index, is_best: 1,
-      apy: index === 3 ? 40 : 4, source_tvl_usd: null, data_source: "defillama", yield_source: null, yield_type: null,
-    }));
-    const stats = computeYieldCandidateStatistics(resolvedYield({ currentApy: 4 }), rows, false, 1776729600, 0);
-    expect(stats).toMatchObject({ apy30dCappedSamples: 1, apyMax30d: 40 });
-    expect(stats.apy30d).toBeCloseTo(104 / 25, 10);
-    for (const plain of [stats.apy30dRawMean, stats.apy7d]) expect(plain).toBeCloseTo(5.44, 10);
-    expect(stats.stdDev30d).toBeCloseTo(Math.sqrt((24 * 1.44 ** 2 + 34.56 ** 2) / 25), 10);
+  const startSec = 1776729600;
+  const row = (daysAgo: number, apy: number, rate: number, source_key = "onchain:a") => historyLegacyRow(
+    startSec - daysAgo * DAY_SECONDS, { source_key, data_source: "onchain", apy, exchange_rate: rate });
+  const rows = [row(20, 6, 1.01), row(31, 0, 2), row(29, 0, 1), row(29.5, 9, 0.5, "b"), row(3, 8, 1.03)];
+  const onchain = resolvedYield({ dataSource: "onchain", sourceKey: "onchain:a", exchangeRate: 0.99, currentApy: 0 });
+
+  it("on-chain apy30d uses the oldest own rate; warnings keep the sample mean", async () => {
+    const input = baseEvaluationInput({ resolved: [{ id: "coin-a", symbol: "A", yield: onchain }] });
+    input.sourceHistory.set(buildHistoryKey("coin-a", "onchain:a"), rows);
+    const { evaluatedSources: [source] } = await evaluateYieldSourcesCooperative(input);
+    expect(source.apy30d).toBe(computeApyFromRate(0.99, 1, 29));
+    expect(source).toMatchObject({ apy30dSampleMean: 5.75, apy30dAnchorObservedAt: startSec - 29 * DAY_SECONDS,
+      anomalies: expect.arrayContaining(["source-zero-vs-history"]), warnings: expect.arrayContaining(["zero-yield"]) });
+    expect(source.stdDev30d).toBeCloseTo(Math.sqrt((3.25 ** 2 + 0.25 ** 2 + 2.25 ** 2 + 5.75 ** 2) / 4), 10);
+  });
+
+  it.each([
+    ["a young anchor", onchain, [row(6, 6, 1)], false],
+    ["legacy history", onchain, rows, true],
+    ["another lane", { ...onchain, dataSource: "defillama" as const }, rows, false],
+    ["a reward leg", { ...onchain, apyReward: 1 }, rows, false],
+    ["an out-of-bound result", { ...onchain, exchangeRate: 5 }, rows, false],
+  ])("keeps the sample mean with %s", (_name, y, history, legacy) => {
+    const result = computeYieldCandidateStatistics(y, history, legacy, startSec, startSec - 7 * DAY_SECONDS, "fresh");
+    expect(result.apy30d).toBe(result.apy30dSampleMean);
+    expect(result.apy30dAnchorObservedAt).toBeNull();
   });
 });
 

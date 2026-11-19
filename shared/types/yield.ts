@@ -148,6 +148,8 @@ const YieldRankingProvenanceSchema = z.object({
   sourceMaxAgeSeconds: z.number().nullable().optional(),
   comparisonAnchorObservedAt: z.number().nullable().optional(),
   comparisonAnchorAgeSeconds: z.number().nullable().optional(),
+  /** Set when `apy30d` is measured from the share price since this anchor (yield v8.57); null when it is the sample mean. */
+  apy30dAnchorObservedAt: z.number().nullable().optional(),
   confidenceTier: z.enum(YIELD_SOURCE_CONFIDENCE_TIER_VALUES),
   calculationMode: z.enum(YIELD_CALCULATION_MODE_VALUES).optional(),
   evidenceClass: z.enum(YIELD_EVIDENCE_CLASS_VALUES).optional(),

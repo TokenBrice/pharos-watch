@@ -1,5 +1,24 @@
 [
   {
+    "version": "8.57",
+    "title": "On-Chain Rate Sources Measure 30-Day APY From The Share Price",
+    "date": "2026-11-19",
+    "effectiveAt": 1795132800,
+    "summary": "A source read from an on-chain exchange rate, once it has a rate at least seven days old, now publishes its 30-day APY as the annualized change of that share price over the window. Each of its samples is already a trailing seven-day rate change, so the average of a month of samples lagged the share price and reached about 37 days back. Every other source keeps the simple average.",
+    "impact": [
+      "`apy30d` for a `dataSource: onchain` row with a positive exchange rate and no reward leg is `((rate_now / rate_oldest) ^ (365.25 / elapsedDays) - 1) * 100`, the formula each sample already uses. `rate_oldest` is the oldest positive rate the same source key published in the 30-day window and must be at least seven days old. Linked-variant projections of such a source qualify the same way.",
+      "The figure is signed, so a share price that fell over the window publishes a negative 30-day APY. PYS, `excessYield`, `yieldToRisk` and source arbitration follow the published value.",
+      "DeFiLlama, protocol-API, price-derived, rate-derived and report-clock rows, special-case Tier 1 estimators, rows on legacy history, and results that are non-finite or above the 300% deterministic sanity bound keep the simple average. `provenance.apy30dAnchorObservedAt` names the anchor of a share-price figure and is null for an average.",
+      "`apy7d`, `yieldStability`, `apyVariance30d`, `apyMin30d` and `apyMax30d` still use the samples. The `yield-spike`, `negative-trend` and `zero-yield` warnings, the `yield-divergence` cohort median and the zero-yield source rejection keep the sample average as their 30-day baseline, so none of them changes.",
+      "On production history read 2026-11-19, 88 of 303 live rows qualify and the other 215 are unchanged. The median move is 0.07 percentage points; 12 rows move by 0.25 or more and 4 by 1 or more. stUSDS and its USDS projection rise from 7.3% to 8.5%. sUSDat and its USDat projection go from +20.7% to -24.5%: the share price fell 2.3% over the window while the lagging average was still positive.",
+      "Known limit: the figure assumes one rate definition per source key across the window. A change of contract, selector or decimals needs a new source key or a history handoff.",
+      "This replaces the spike cap proposed in PR #2114, whose own on-chain check showed capped spikes were earned yield, and implements the share-price alternative that PR recommended.",
+      "Planned activation is provisionally 2026-11-20 00:00 UTC (1795132800), following the next-UTC-midnight convention; re-date effectiveAt at release."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "8.56",
     "title": "Cadence-aware yield and comparable benchmarks",
     "date": "2026-11-19",
