@@ -153,6 +153,13 @@
 /depeg/kau-2026-01-01-up/ /stablecoin/kau-kinesis/ 301
 /depeg/kau-2026-01-01-up /stablecoin/kau-kinesis/ 301
 
+# AUDD incident of 2026-11-14 (#2134): the public projection now reports the
+# open constituent's peak (4.37%) for an incident whose worst constituent
+# reached 9.60%, so it fell under the 500 bps page threshold and the published
+# page is no longer built. The coin page lists the events.
+/depeg/audd-2026-11-14-down/ /stablecoin/audd-novatti/ 301
+/depeg/audd-2026-11-14-down /stablecoin/audd-novatti/ 301
+
 # Reviewed removal of DGLD, EURS, IDRT and USDX price-feed artifacts
 # (2026-10-30): bad upstream price prints with no economic trade at the stored
 # deviation. The coin page remains the canonical surface.
