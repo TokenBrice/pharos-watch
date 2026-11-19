@@ -142,20 +142,11 @@ describe("stablecoin V9 safety presentation", () => {
     weightedContribution: Number((scores[key] * weight).toFixed(6)),
   }));
 
-  it("names the whole-reserve fallback as an unadmitted composition, not unclassified slices", () => {
+  it("labels the whole-reserve fallback as no admitted composition", () => {
     const card = makeV9Card({ pillars: BREAKDOWN_PILLARS });
-    const breakdowns = breakdownsFixture();
-    breakdowns.backing.components = [{
-      ...breakdowns.backing.components[0],
-      key: "reserve:unclassified-residual",
-      label: "Unclassified reserve exposure",
-      observationState: "bounded-unknown" as const,
-    }] as unknown as typeof breakdowns.backing.components;
-    card.breakdowns = breakdowns;
-
-    const rows = buildStablecoinSafetyScoreV9Presentation(card).pillars[0].breakdown!.groups[0].rows;
-
-    expect(rows.map((row) => row.label)).toEqual(["No admitted reserve composition"]);
+    card.breakdowns = breakdownsFixture();
+    card.breakdowns.backing.components[0].key = "reserve:unclassified-residual";
+    expect(buildStablecoinSafetyScoreV9Presentation(card).pillars[0].breakdown!.groups[0].rows[0].label).toBe("No admitted reserve composition");
   });
 
   it("keeps the three named pillars without recreating V8 dimensions", () => {

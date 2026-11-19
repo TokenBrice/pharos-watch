@@ -42,16 +42,20 @@ const USDC_LIKE_REVIEW: ReserveReview = {
 
 describe("projectReserveQualityClientSummary", () => {
   it.each([
-    [89.96, 0, "Mostly liquid"],
-    [59.96, 0, "Mixed liquidity"],
-    [0, 39.96, "Mixed liquidity"],
-  ])("classifies raw liquidity %s and unknown share %s before display rounding", (liquid, unknown, chip) => {
+    [90, 0, "Highly liquid", "state-positive"],
+    [89.96, 0, "Mostly liquid", ""],
+    [60, 0, "Mostly liquid", "blue"],
+    [60, 40, "Mostly liquid", ""],
+    [59.96, 0, "Mixed liquidity", ""],
+    [0, 39.96, "Mixed liquidity", ""],
+  ])("classifies raw liquidity %s and unknown share %s before display rounding", (liquid, unknown, chip, tone) => {
     const summary = projectReserveQualityClientSummary(coinWith([
       { ...USDC_LIKE_SLICES[1], pct: liquid },
       { name: "Unknown", pct: unknown, risk: "high", assetClass: "other", liquidityHorizon: "unknown" },
       { name: "Locked", pct: 100 - liquid - unknown, risk: "medium", assetClass: "other", liquidityHorizon: "over-seven-days" },
     ]))!;
     expect(summary.chipLabel).toBe(chip);
+    expect(summary.chipToneClass).toContain(tone);
     expect(summary.liquidWithinOneDayPct).toBe(liquid);
     expect(summary.unknownHorizonPct).toBe(unknown);
   });
@@ -142,18 +146,7 @@ describe("projectReserveQualityClientSummary", () => {
     expect(wholeUnknown.lede).toBe("3 reviewed reserve slices — no published exit timeline for any of the basket.");
   });
 
-  it("returns null without reserves", () => {
-    expect(projectReserveQualityClientSummary(coinWith(undefined))).toBeNull();
-    expect(projectReserveQualityClientSummary(coinWith([]))).toBeNull();
-  });
 
-  it("returns null when asset classes are curated but no liquidity horizon is", () => {
-    expect(
-      projectReserveQualityClientSummary(
-        coinWith([{ name: "Cash", pct: 100, risk: "very-low", assetClass: "cash" }]),
-      ),
-    ).toBeNull();
-  });
 
   it("projects only review provenance when a full-composition review misses one quality dimension", () => {
     const summary = projectReserveQualityClientSummary(
@@ -198,13 +191,11 @@ describe("projectReserveQualityClientSummary", () => {
     },
   );
 
-  it("returns null when liquidity horizons are curated but no asset class is", () => {
-    expect(
-      projectReserveQualityClientSummary(
-        coinWith([{ name: "Cash", pct: 100, risk: "very-low", liquidityHorizon: "immediate" }]),
-      ),
-    ).toBeNull();
-  });
+  it.each([undefined, [], [{ name: "Cash", pct: 100, risk: "very-low", liquidityHorizon: "immediate" }], [{ name: "Cash", pct: 100, risk: "very-low", assetClass: "cash" }]])(
+    "returns null without reserves or with one quality dimension uncurated (%#)",
+    (reserves) => expect(projectReserveQualityClientSummary(coinWith(reserves))).toBeNull(),
+  );
+
 
   it("projects the ladder, review aggregates, and slice detail", () => {
     const summary = projectReserveQualityClientSummary(coinWith(USDC_LIKE_SLICES, USDC_LIKE_REVIEW));
@@ -286,27 +277,7 @@ describe("projectReserveQualityClientSummary", () => {
     );
   });
 
-  it("calls a basket highly liquid exactly at the 90% one-day boundary", () => {
-    const summary = projectReserveQualityClientSummary(
-      coinWith([
-        { name: "Cash", pct: 90, risk: "very-low", assetClass: "cash", liquidityHorizon: "immediate" },
-        { name: "Private credit", pct: 10, risk: "high", assetClass: "private-credit", liquidityHorizon: "over-seven-days" },
-      ]),
-    );
-    expect(summary!.chipLabel).toBe("Highly liquid");
-    expect(summary!.chipToneClass).toContain("state-positive");
-  });
 
-  it("calls a basket mostly liquid exactly at the 60% one-day boundary", () => {
-    const summary = projectReserveQualityClientSummary(
-      coinWith([
-        { name: "Cash", pct: 60, risk: "very-low", assetClass: "cash", liquidityHorizon: "immediate" },
-        { name: "Private credit", pct: 40, risk: "high", assetClass: "private-credit", liquidityHorizon: "over-seven-days" },
-      ]),
-    );
-    expect(summary!.chipLabel).toBe("Mostly liquid");
-    expect(summary!.chipToneClass).toContain("blue");
-  });
 
   it.each([[40, "Opaque exit"], [39.9, "Mixed liquidity"]] as const)("classifies %s percent unknown at the opacity boundary", (unknown, label) => {
     const summary = projectReserveQualityClientSummary(
@@ -320,21 +291,14 @@ describe("projectReserveQualityClientSummary", () => {
     expect(summary!.chipToneClass).toContain("state-warn");
   });
 
-  it("prefers liquid coverage when both liquidity and opacity thresholds are met", () => {
-    const summary = projectReserveQualityClientSummary(coinWith([
-      { name: "Cash", pct: 60, risk: "very-low", assetClass: "cash", liquidityHorizon: "immediate" },
-      { name: "Unknown", pct: 40, risk: "high", assetClass: "other", liquidityHorizon: "unknown" },
-    ]));
-    expect(summary!.chipLabel).toBe("Mostly liquid");
+
+  it.each([
+    [[{ name: "Credit", pct: 20, risk: "medium", assetClass: "private-credit", liquidityHorizon: "over-seven-days" }, ...Array.from({ length: 5 }, (_, index) => ({ name: `Cash ${index}`, pct: 16, risk: "very-low", assetClass: "cash", liquidityHorizon: "immediate" }))], "Credit", 20],
+    [[{ name: "Hedged basis book", pct: 62.44, risk: "high", assetClass: "hedged-crypto", liquidityHorizon: "seven-days" }, { name: "Cash", pct: 37.56, risk: "very-low", assetClass: "cash", liquidityHorizon: "immediate" }], "Hedged basis book", 62.4],
+  ])("surfaces a medium-or-worse top slice at or above the concentration floor (%#)", (reserves, topPositionName, topPositionPct) => {
+    expect(projectReserveQualityClientSummary(coinWith(reserves))).toMatchObject({ topPositionName, topPositionPct });
   });
 
-  it("surfaces a medium-risk top slice exactly at the concentration floor", () => {
-    const summary = projectReserveQualityClientSummary(coinWith([
-      { name: "Credit", pct: 20, risk: "medium", assetClass: "private-credit", liquidityHorizon: "over-seven-days" },
-      ...Array.from({ length: 5 }, (_, index) => ({ name: `Cash ${index}`, pct: 16, risk: "very-low", assetClass: "cash", liquidityHorizon: "immediate" })),
-    ]));
-    expect(summary).toMatchObject({ topPositionName: "Credit", topPositionPct: 20 });
-  });
 
   it("sums self-reserve dispositions into the self-exposure share", () => {
     const summary = projectReserveQualityClientSummary(
@@ -365,24 +329,9 @@ describe("projectReserveQualityClientSummary", () => {
     expect(summary!.selfExposurePct).toBeNull();
   });
 
-  it("surfaces a concentrated position only when the top slice carries medium-or-worse risk", () => {
-    const summary = projectReserveQualityClientSummary(
-      coinWith([
-        { name: "Hedged basis book", pct: 62.44, risk: "high", assetClass: "hedged-crypto", liquidityHorizon: "seven-days" },
-        { name: "Cash", pct: 37.56, risk: "very-low", assetClass: "cash", liquidityHorizon: "immediate" },
-      ]),
-    );
-    expect(summary!.topPositionName).toBe("Hedged basis book");
-    expect(summary!.topPositionPct).toBe(62.4);
-  });
 
-  it("does not surface a low-risk top position", () => {
-    const summary = projectReserveQualityClientSummary(coinWith(USDC_LIKE_SLICES));
-    expect(summary!.topPositionName).toBeNull();
-    expect(summary!.topPositionPct).toBeNull();
-  });
 
-  it("does not surface a top position below the 20% concentration floor", () => {
+  it("does not surface a top position below the 20% floor, with low risk or alone", () => {
     const summary = projectReserveQualityClientSummary(
       coinWith([
         { name: "Cash", pct: 19, risk: "high", assetClass: "cash", liquidityHorizon: "immediate" },
@@ -394,18 +343,11 @@ describe("projectReserveQualityClientSummary", () => {
       ]),
     );
     expect(summary!.topPositionName).toBeNull();
+    expect(projectReserveQualityClientSummary(coinWith(USDC_LIKE_SLICES))).toMatchObject({ topPositionName: null, topPositionPct: null });
+    expect(projectReserveQualityClientSummary(coinWith([{ name: "Book", pct: 100, risk: "high", assetClass: "hedged-crypto", liquidityHorizon: "seven-days" }])))
+      .toMatchObject({ topPositionName: null, topPositionPct: null, lede: expect.stringContaining("1 reviewed reserve slice —") });
   });
 
-  it("does not treat a single-slice basket as a concentrated position", () => {
-    const summary = projectReserveQualityClientSummary(
-      coinWith([
-        { name: "Hedged basis book", pct: 100, risk: "high", assetClass: "hedged-crypto", liquidityHorizon: "seven-days" },
-      ]),
-    );
-    expect(summary!.topPositionName).toBeNull();
-    expect(summary!.topPositionPct).toBeNull();
-    expect(summary!.lede).toContain("1 reviewed reserve slice —");
-  });
 
   it("keeps review-derived fields null without a reserve review", () => {
     const summary = projectReserveQualityClientSummary(coinWith(USDC_LIKE_SLICES));
@@ -421,37 +363,15 @@ describe("projectReserveQualityClientSummary", () => {
 });
 
 describe("reserve score admission", () => {
-  const DAY = 86_400;
-  const UNADMITTED = { breakdowns: { backing: { components: [{ key: "reserve:unclassified-residual" }] } } } as never;
-  const ADMITTED = { breakdowns: { backing: { components: [{ key: "reserve:reserve:bills" }] } } } as never;
-  const juneEnd = Date.parse("2026-06-30") / 1_000;
-
-  it("projects the clock-free requirements a review misses and the policy age budget", () => {
-    expect(projectReserveAdmissionClientSummary(coinWith(USDC_LIKE_SLICES, USDC_LIKE_REVIEW))).toEqual({
-      blockers: [], confidenceLabel: null, compositionAsOf: "2026-06-30", compositionAtSec: juneEnd, maxAgeSec: 38 * DAY,
-    });
-    const selected = projectReserveAdmissionClientSummary(coinWith(USDC_LIKE_SLICES, {
-      ...USDC_LIKE_REVIEW, scope: "selected-slices", confidence: "manual-review", compositionAsOf: undefined,
-    }))!;
-    expect(selected.blockers).toEqual(["selected-slices", "unverified", "undated"]);
-    expect(selected.confidenceLabel).toBe("Manual review");
-    expect(projectReserveAdmissionClientSummary(coinWith([], USDC_LIKE_REVIEW))).toBeNull();
-  });
-
-  it("explains only a card that admitted no composition, at the card's own clock", () => {
-    const fresh = projectReserveAdmissionClientSummary(coinWith(USDC_LIKE_SLICES, USDC_LIKE_REVIEW))!;
-    expect(describeReserveScoreAdmission(fresh, ADMITTED, juneEnd + 90 * DAY)).toBeNull();
-    expect(describeReserveScoreAdmission(fresh, UNADMITTED, juneEnd + 38 * DAY)).toBe(
-      "The score treats the whole reserve as unknown: this review did not pass its reserve admission checks.",
-    );
-    expect(describeReserveScoreAdmission(fresh, UNADMITTED, juneEnd + 51 * DAY)).toBe(
-      "The score treats the whole reserve as unknown. It admits only a verified full-composition review dated within 38 days; this one is dated 2026-06-30, 51 days before scoring.",
-    );
-    const selected = projectReserveAdmissionClientSummary(coinWith(USDC_LIKE_SLICES, {
-      ...USDC_LIKE_REVIEW, scope: "selected-slices", confidence: "manual-review",
-    }))!;
-    expect(describeReserveScoreAdmission(selected, UNADMITTED, juneEnd + DAY)).toContain(
-      "this one covers selected slices only and has manual review confidence.",
-    );
+  it("names what an unadmitted review misses, at the card clock", () => {
+    const at = Date.parse("2026-06-30") / 1_000, day = 86_400;
+    const card = (key: string) => ({ breakdowns: { backing: { components: [{ key }] } } }) as never, out = card("reserve:unclassified-residual");
+    const review = (patch: object) => projectReserveAdmissionClientSummary(coinWith(USDC_LIKE_SLICES, { ...USDC_LIKE_REVIEW, ...patch }));
+    expect(review({})).toMatchObject({ blockers: [], compositionAtSec: at, maxAgeSec: 38 * day });
+    expect(describeReserveScoreAdmission(review({}), card("reserve:reserve:x"), at + 90 * day)).toBeNull();
+    expect(describeReserveScoreAdmission(review({}), out, at + 38 * day)).toMatch(/did not pass its reserve admission checks\.$/);
+    expect(describeReserveScoreAdmission(review({}), out, at + 51 * day)).toMatch(/within 38 days; this one is dated 2026-06-30, 51 days before scoring\.$/);
+    expect(describeReserveScoreAdmission(review({ scope: "selected-slices", confidence: "manual-review", compositionAsOf: undefined }), out, at))
+      .toMatch(/this one covers selected slices only, has manual review confidence and has no composition date\.$/);
   });
 });

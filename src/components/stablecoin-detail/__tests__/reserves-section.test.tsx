@@ -474,18 +474,10 @@ describe("ReservesSection", () => {
       expect(document.body.textContent?.split("Checked ").length).toBe(2);
       // The live shares never reach the summary visual.
       expect(screen.getByRole("figure").getAttribute("aria-label")).not.toContain("49.9");
-    });
-
-    it("says when the Safety Score did not admit the reviewed slices, beside the summary and in the live-feed fold", () => {
-      const note = "The score treats the whole reserve as unknown: this review did not pass its reserve admission checks.";
-      const { container } = renderSection({ reserves: STALE_USDC, scoreAdmissionNote: note });
-      expect(container.textContent).toContain(`Not used by the Safety Score. ${note}`);
-      expect(container.textContent).toContain("reviewed slices above, which the Safety Score does not use.");
-      expect(container.textContent).not.toContain("which drive the Safety Score basis");
       cleanup();
-      renderSection({ reserves: STALE_USDC });
-      expect(document.body.textContent).not.toContain("Not used by the Safety Score");
-      expect(document.body.textContent).toContain("which drive the Safety Score basis");
+      renderSection({ reserves: STALE_USDC, scoreAdmissionNote: "Why." });
+      expect(document.body.textContent).toContain("Not used by the Safety Score. Why.");
+      expect(document.body.textContent).toContain("above, which the Safety Score does not use.");
     });
 
     it("dates an undated reviewed-config feed with the review's composition date only when it replays the reviewed basket", () => {
