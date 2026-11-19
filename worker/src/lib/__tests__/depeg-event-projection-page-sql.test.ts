@@ -427,7 +427,7 @@ describe("public depeg page effective onset", () => {
     const capturingDb = createSqliteD1(fixture.sqlite, { onAll: (sql) => { snapshotSql = sql; } });
     await prepareActiveIncidentProjections(capturingDb, null).all();
     const snapshotPlan = queryPlan(fixture, snapshotSql, []);
-    expect(snapshotPlan.some((detail) => detail === "SCAN alias")).toBe(false);
+    expect(snapshotPlan.some((detail) => /^SCAN (alias|member_link)\b/.test(detail))).toBe(false);
     expect(snapshotPlan).toContain(`SEARCH alias USING INDEX ${ALIAS_INDEX} (superseded_by_incident_key=? AND incident_state=?)`);
 
     const countSql: string[] = [];
