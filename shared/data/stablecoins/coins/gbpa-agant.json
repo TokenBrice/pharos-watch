@@ -36,22 +36,22 @@
   "geckoId": "agant-gbp",
   "proofOfReserves": {
     "type": "attestation",
-    "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true",
+    "url": "https://www.nephosgroup.com/wp-content/uploads/2026/11/Final-Agant_GBPA_Proof_of_Reserves_30_October_2026-Signed.pdf",
     "provider": "Nephos Accountants Limited; the report disclaims a formal assurance engagement despite its ISAE 3000 examination opening.",
     "attestorTier": "niche",
     "cadence": "monthly",
     "attestorJurisdiction": "United Kingdom",
     "latestReport": {
-      "periodEnd": "2026-09-30",
+      "periodEnd": "2026-10-30",
       "assuranceMethod": "attestation",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewer": "GLM reserve renewal 2026-11-19 (stale-composition drain), report period moved in lockstep with the reserves sidecar",
       "confidence": "manual-review",
       "sources": [
         {
-          "label": "Nephos GBPA reserve attestation as of September 30, 2026",
-          "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true"
+          "label": "Nephos GBPA proof-of-reserves report as of October 30, 2026 (signed PDF, published November 4, 2026)",
+          "url": "https://www.nephosgroup.com/wp-content/uploads/2026/11/Final-Agant_GBPA_Proof_of_Reserves_30_October_2026-Signed.pdf"
         }
       ]
     }

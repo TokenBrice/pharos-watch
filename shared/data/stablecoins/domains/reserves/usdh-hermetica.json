@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "STRCx",
-      "pct": 67.103949,
+      "pct": 24.84471,
       "risk": "high",
       "assetClass": "tokenized-security",
       "issuerOrObligor": "Backed Assets (JE) Limited via Kraken xStocks; STRCx exposure to Strategy, Inc.",
@@ -19,7 +19,7 @@
     },
     {
       "name": "Other unitemized Ethereum Settlement Wallet assets",
-      "pct": 4.999138,
+      "pct": 2.504773,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Hermetica protocol Ethereum settlement wallet",
@@ -34,7 +34,7 @@
     },
     {
       "name": "Stacks Redeeming Reserve",
-      "pct": 0.386036,
+      "pct": 1.771492,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Hermetica protocol redemption-liquidity wallet on Stacks",
@@ -47,7 +47,7 @@
     },
     {
       "name": "Reserve Fund USDC",
-      "pct": 4.810651,
+      "pct": 5.016966,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -61,7 +61,7 @@
     },
     {
       "name": "Unitemized Copper custodied assets",
-      "pct": 22.700226,
+      "pct": 40.702056,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Hermetica protocol assets held with Copper Markets (Switzerland) AG",
@@ -72,16 +72,47 @@
         "liquidity"
       ],
       "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Clear Street custodied STRC",
+      "pct": 24.829813,
+      "risk": "high",
+      "assetClass": "public-credit",
+      "issuerOrObligor": "Strategy Inc. Variable Rate Series A Perpetual Stretch Preferred Stock (STRC), held at Clear Street",
+      "riskFactors": [
+        "credit",
+        "market",
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Clear Street custodied USD",
+      "pct": 0.330191,
+      "risk": "low",
+      "assetClass": "cash",
+      "issuerOrObligor": "Hermetica protocol USD balance held at Clear Street (U.S. broker-dealer)",
+      "riskFactors": [
+        "counterparty",
+        "custody"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Unknown wave W1R31 STRCx contractual-liquidity review; prior September composition retained",
+    "reviewedAt": "2026-11-19",
+    "reviewer": "GLM reserve renewal 2026-11-19 (stale-composition drain)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Hermetica September 2026 report; snapshot September 30, published October 1",
-        "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026"
+        "label": "Hermetica October 2026 report; snapshot October 31 23:59 UTC, published November 5",
+        "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-october-2026"
+      },
+      {
+        "label": "Hermetica integrates Clear Street (2026-10-05); U.S. broker-dealer executes, settles and custodies reserve securities",
+        "url": "https://blog.hermetica.fi/p/hermetica-integrates-clear-street"
       },
       {
         "label": "Hermetica STRCx credit-instrument backing integration",
@@ -92,33 +123,33 @@
         "url": "https://sppdownloaddocumentservice.l-p-a.com/api/DownloadDocument/UPI/CH1500008482/BF%20Final%20Terms%20AND%20Summary%20%28PDF%29"
       }
     ],
-    "rationale": "Scoped September 30, 2026 14:00 UTC backing review from the report published October 1, fetched October 2. Total reported assets are $2,081,799.60 against $1,981,448.18 USDh. The new Ethereum Settlement Wallet 0x1046a6AD45B60264c83A4b93F6D2c6078C73c1d5 holds $1,501,041.77, including $1,396,969.74 of STRCx credit-instrument backing and $104,072.03 unitemized assets. Copper holds $472,573.22 of aggregate BTC, USDT and USDC without instrument weights; Ceffu holds $0. Stacks Redeeming Reserve holds $8,036.50 without instrument itemization; Reserve Fund holds $100,148.12 USDC and $0 USDh. Percentages are independently calculated against reported total backing and rounded to six decimals. Location amounts sum to $2,081,799.61: the one-cent reporting discrepancy is not a balancing asset or favourable coverage claim. This review and latestReport.periodEnd move together; only Copper's custody subtotal is independently attested, not the whole book, legal safeguards or hedge reconciliation. October 3 metadata-only research retains the September composition unchanged. STRCx final terms dated May 8, 2026, clauses VI.v and VIII.ii, require successful KYC before redemption acceptance, permit five Business Days after token receipt to instruct payment, and permit further postponement under underlying illiquidity. The conservative over-seven-days bucket records these documented restrictions, not a guaranteed settlement maximum, immediate secondary-market sale, or measured liquidity. The perpetual instrument has no finite maturity maximum; no numeric maturity is invented.",
-    "compositionBasis": "September 30, 2026 Hermetica report: disclosed STRCx and USDC plus explicit unclassified settlement-wallet, Copper and Stacks residuals; six-decimal shares of reported $2,081,799.60 backing",
-    "compositionAsOf": "2026-09-30",
+    "rationale": "Scoped October 31, 2026 23:59 UTC backing review from the report published November 5, fetched November 19. Total reported backing is $1,996,189.05 against $1,894,175.36 USDh (105.39% coverage, matching the report's stated ratio). The Ethereum Settlement Wallet holds $545,947.39, of which 5,003.00 STRCx are worth $495,947.39 at $99.13 per share, leaving $50,000.00 unitemized. Clear Street custodies $502,241.24, itemized as 5,000 STRC shares worth $495,650.00 at $99.13 plus $6,591.24 USD. Copper holds $812,489.98 in aggregate including unrealized P&L, without instrument weights; Ceffu holds $0. The Stacks Redeeming Reserve holds $35,362.33 unitemized; the Reserve Fund holds $100,148.12 USDC and $0.00 USDh. Percentages are independently calculated against reported total backing and rounded to six decimals. Location amounts sum to $1,996,189.06; the one-cent discrepancy is reporting rounding, not a balancing asset or favourable coverage claim. October adds the Clear Street location and rebalances the book: STRCx falls from 67.1% to 24.84% while unitemized Copper rises to 40.70%. Clear Street's STRC is the directly held listed share, not the STRCx wrapper, so it is classified public-credit with the conservative high tier (STRC is unlisted in the canonical symbol map, consistent with the STRCx and STRCon treatment) and an unknown liquidity horizon because the report states no liquidation or settlement terms; the Clear Street USD balance is cash with the same unstated-horizon treatment. The STRCx slice retains the over-seven-days horizon recording the May 8, 2026 final-terms redemption restrictions (KYC before acceptance, five Business Days to instruct payment, postponement under underlying illiquidity), not a guaranteed settlement maximum or measured liquidity; the perpetual instruments have no finite maturity maximum, so no numeric maturity is invented. Copper's subtotal carries a signed custodian balance attestation within its stated scope; Clear Street's is supported by its monthly brokerage statement, and the $502,241.24 subtotal follows Hermetica's reporting basis (the statement shows $6,591.23 trade-date cash and a separate $3,150.06 accrued balance that Hermetica excludes); the whole book, legal safeguards and hedge reconciliation are not independently attested.",
+    "compositionBasis": "October 31, 2026 Hermetica report (23:59 UTC snapshot): itemized STRCx, Clear Street STRC and USD, and Reserve Fund USDC plus explicit unclassified settlement-wallet, Copper and Stacks residuals; six-decimal shares of reported $1,996,189.05 backing",
+    "compositionAsOf": "2026-10-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "28.085400% instrument composition remains unknown: 4.999138% other Ethereum Settlement Wallet assets, 22.700226% unitemized Copper BTC/USDT/USDC, and 0.386036% Stacks Redeeming Reserve. Location totals do not prove instrument weights, delta neutrality, liquidity or holder safeguards.",
-    "knownUnknownExposurePct": 28.0854,
+    "knownUnknownExposure": "44.978321% instrument composition remains unknown: 2.504773% other Ethereum Settlement Wallet assets, 40.702056% unitemized Copper custodied assets, and 1.771492% Stacks Redeeming Reserve. Location totals do not prove instrument weights, delta neutrality, liquidity or holder safeguards.",
+    "knownUnknownExposurePct": 44.978321,
     "nonLinkDispositions": [
       {
         "reserveIndex": 1,
         "reserveName": "Other unitemized Ethereum Settlement Wallet assets",
-        "pct": 4.999138,
+        "pct": 2.504773,
         "disposition": "insufficient-evidence",
-        "rationale": "September report itemizes STRCx, not the remaining $104,072.03 in the settlement wallet; the residual remains unclassified unknown."
+        "rationale": "October report itemizes STRCx, not the remaining $50,000.00 in the settlement wallet; the residual remains unclassified unknown."
       },
       {
         "reserveIndex": 2,
         "reserveName": "Stacks Redeeming Reserve",
-        "pct": 0.386036,
+        "pct": 1.771492,
         "disposition": "insufficient-evidence",
-        "rationale": "September report gives the $8,036.50 Stacks wallet total without token contents; the residual remains unclassified unknown."
+        "rationale": "October report gives the $35,362.33 Stacks wallet total without token contents; the residual remains unclassified unknown."
       },
       {
         "reserveIndex": 4,
         "reserveName": "Unitemized Copper custodied assets",
-        "pct": 22.700226,
+        "pct": 40.702056,
         "disposition": "insufficient-evidence",
-        "rationale": "Copper's scoped attestation covers aggregate BTC, USDT and USDC including unrealized P&L, without weights or a hedge reconciliation; no instrument split is inferred."
+        "rationale": "Copper's scoped attestation covers an aggregate balance including unrealized P&L, without instrument weights or a hedge reconciliation; no instrument split is inferred."
       }
     ]
   },
@@ -165,7 +196,7 @@
         "url": "https://blog.hermetica.fi/p/hermetica-integrates-clear-street"
       }
     ],
-    "uncertainty": "The September 30, 2026 report identifies $472,573.22 at Copper and $0.00 at Ceffu, plus the new Ethereum Settlement Wallet 0x1046a6AD45B60264c83A4b93F6D2c6078C73c1d5, Stacks Redeeming Reserve and Reserve Fund. Copper Markets (Switzerland) AG signs a scoped off-exchange custody balance attestation covering aggregate BTC, USDT and USDC, not whole-protocol liabilities or legal holder safeguards. The settlement wallet contains $1,396,969.74 of STRCx credit-instrument backing, but its remaining assets, the Copper asset split and Stacks Redeeming Reserve contents are unitemized. Wallet key control, account-level segregation, insolvency terms and rehypothecation protections remain unknown. Current composition and latest report both use September 30; custody unknowns remain separately charged.",
+    "uncertainty": "The September 30, 2026 report identifies $472,573.22 at Copper and $0.00 at Ceffu, plus the new Ethereum Settlement Wallet 0x1046a6AD45B60264c83A4b93F6D2c6078C73c1d5, Stacks Redeeming Reserve and Reserve Fund. Copper Markets (Switzerland) AG signs a scoped off-exchange custody balance attestation covering aggregate BTC, USDT and USDC, not whole-protocol liabilities or legal holder safeguards. The settlement wallet contains $1,396,969.74 of STRCx credit-instrument backing, but its remaining assets, the Copper asset split and Stacks Redeeming Reserve contents are unitemized. Wallet key control, account-level segregation, insolvency terms and rehypothecation protections remain unknown. The custody amounts cited here are from September 30, 2026; custody unknowns remain separately charged.",
     "knownUnknownExposurePct": 100
   }
 }

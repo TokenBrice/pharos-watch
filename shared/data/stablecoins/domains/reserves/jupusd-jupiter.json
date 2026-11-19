@@ -4,7 +4,7 @@
     {
       "sourceKey": "jupusd:usdtb",
       "name": "USDtb",
-      "pct": 88.5,
+      "pct": 72.2,
       "risk": "low",
       "coinId": "usdtb-ethena",
       "depType": "collateral",
@@ -21,7 +21,7 @@
     {
       "sourceKey": "jupusd:usdc",
       "name": "USDC",
-      "pct": 11.5,
+      "pct": 27.8,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -37,17 +37,17 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-29",
-    "reviewer": "Pharos reserve curation review 2026-08-29",
+    "reviewedAt": "2026-11-19",
+    "reviewer": "GLM reserve renewal 2026-11-19 (stale-composition drain)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "JupUSD live reserve API data (re-opened 2026-08-29)",
-        "url": "https://api.jupusd.money/api/data"
+        "label": "JupUSD timestamped reserve snapshots (newest observed 2026-11-19T18:00:45.197Z)",
+        "url": "https://api.jupusd.money/api/snapshots"
       },
       {
-        "label": "JupUSD timestamped reserve snapshots (latest observed 2026-08-26)",
-        "url": "https://api.jupusd.money/api/snapshots"
+        "label": "JupUSD live reserve API data (read 2026-11-19; matches newest snapshot amounts)",
+        "url": "https://api.jupusd.money/api/data"
       },
       {
         "label": "Jupiter JupUSD documentation",
@@ -58,9 +58,9 @@
         "url": "https://developers.jup.ag/docs/jupusd"
       }
     ],
-    "rationale": "Re-reviewed 2026-08-29. The live JupUSD data endpoint currently returns positive USDtb and USDC holdings only; the response sums to 44,791,782.679719 USDtb and 3,552,440.966654 USDC (92.6518% / 7.3482% of the returned holdings). The timestamped snapshots endpoint also responds, with its newest observed entry at 2026-08-26T16:00:23.988Z and the same two reserve identities. Jupiter's documentation identifies USDtb and USDC as the reserve collateral. The runtime adapter owns these volatile live percentages; to avoid date-bumping a static composition from an undated API response, the curated July 14 snapshot rows and compositionAsOf remain unchanged. Both reviewed rows are mapped to tracked upstream stablecoins and the live response contains no unknown holding.",
-    "compositionBasis": "JupUSD live reserve API holdings; curated static snapshot captured 2026-07-14 (runtime feed remains the source of current percentages)",
-    "compositionAsOf": "2026-07-14",
+    "rationale": "Renewed 2026-11-19. The dated primary source is the issuer's timestamped snapshots endpoint; its newest entry at 2026-11-19T18:00:45.197Z lists holdings in only two token identities, USDtb (mint 8yXrtJ54jZtE84xEBzTESKuegjcAkAuDrdAhRd8i8n3T) and USDC (mint EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v), across anchorage, coinbase and program reserve accounts. Weights were computed by summing the snapshot's account amounts per token and dividing by total holdings of 40,081,981.84: USDtb 28,949,734.11 (72.2263%) and USDC 11,132,247.73 (27.7737%), rounded to 72.2/27.8. Holdings cover 100.30% of the 39,963,258.57 JupUSD total supply. The live data endpoint read the same day returns identical amounts. The same endpoint's 2026-07-13T18:00:43.210Z snapshot reproduces the prior curated mix (88.6278% / 11.3722%), confirming continuity with the July curation; the book has since drifted from the documented 90/10 target. The runtime adapter owns current live percentages. Both reviewed rows are mapped to tracked upstream stablecoins and the snapshot contains no unknown holding.",
+    "compositionBasis": "JupUSD timestamped reserve snapshot holdings at 2026-11-19T18:00:45.197Z (issuer transparency API; runtime feed remains the source of current percentages)",
+    "compositionAsOf": "2026-11-19",
     "scope": "full-composition",
     "knownUnknownExposure": "Both direct reserve assets are identified and linked to tracked upstream stablecoins; their underlying reserve composition is reviewed on those assets.",
     "knownUnknownExposurePct": 0
