@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { mockD1Strict } from "@shared/test-utils/mock-d1";
 import { evaluateAdapterSnapshotAdmission, expectWarningEffect, runAdapter } from "./reserve-adapter.test-support";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
@@ -17,6 +18,24 @@ const POLICY_ID = "8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61";
 const DJED_NAME_HEX = "446a65644d6963726f555344";
 const SHEN_NAME_HEX = "5368656e4d6963726f555344";
 const POOL_NFT_NAME_HEX = "446a6564537461626c65436f696e4e4654";
+
+// djed-coti is frozen, so replay the adapter against its archived config.
+const DJED_COIN = {
+  id: "djed-coti",
+  name: "Djed Stablecoin",
+  symbol: "DJED",
+  liveReservesConfig: {
+    adapter: "djed-cardano",
+    version: 1,
+    semantics: "collateral-mix",
+    inputs: { primary: { kind: "http-json", url: KOIOS } },
+    params: {
+      bankAddress: BANK_ADDRESS,
+      djedUnit: { policyId: POLICY_ID, assetNameHex: DJED_NAME_HEX, decimals: 6 },
+      shenUnit: { policyId: POLICY_ID, assetNameHex: SHEN_NAME_HEX, decimals: 6 },
+    },
+  },
+} as unknown as StablecoinMeta;
 
 const ADA_LOVELACE = 25_034_263_750_000n; // 25,034,263.75 ADA in the bank
 const DJED_MINTED = 1_000_000_000_000_000_000n; // 1e18 micro DJED
@@ -100,7 +119,7 @@ function djedNetwork(overrides: DjedNetworkOverrides = {}) {
 }
 
 function runDjed(overrides: DjedNetworkOverrides = {}) {
-  return runAdapter("djed-cardano", "djed-coti", {
+  return runAdapter("djed-cardano", DJED_COIN, {
     network: djedNetwork(overrides),
     nowSec: TIP.block_time,
   });
@@ -211,7 +230,7 @@ describe("djed-cardano", () => {
     const row = network.json[`${KOIOS}/address_info`] as Array<{ utxo_set: Array<{ asset_list: Array<Record<string, string>> }> }>;
     row[0]!.utxo_set[0]!.asset_list.push({ policy_id: "ab12".repeat(28), asset_name: "4a756e6b", quantity: "77" });
 
-    const { result } = await runAdapter("djed-cardano", "djed-coti", {
+    const { result } = await runAdapter("djed-cardano", DJED_COIN, {
       network,
       nowSec: TIP.block_time,
     });
@@ -220,7 +239,7 @@ describe("djed-cardano", () => {
   });
 
   it("degrades on material on-chain vs list supply divergence without replacing the on-chain liability", async () => {
-    const { result } = await runAdapter("djed-cardano", "djed-coti", {
+    const { result } = await runAdapter("djed-cardano", DJED_COIN, {
       network: djedNetwork(),
       nowSec: TIP.block_time,
       ctx: { db: djedCacheDb(4_020_000) },
@@ -235,7 +254,7 @@ describe("djed-cardano", () => {
     expect(result.metadata?.details?.supplyDivergencePct as number).toBeGreaterThan(10);
   });
   it.each([0.8, 1.2])("compares cached USD to matched-generation valued units at price %s", async (price) => {
-    const { result } = await runAdapter("djed-cardano", "djed-coti", {
+    const { result } = await runAdapter("djed-cardano", DJED_COIN, {
       network: djedNetwork({ djedPrice: price }), nowSec: TIP.block_time,
       ctx: { db: djedCacheDb(DJED_CIRCULATING * price, price) },
     });
@@ -245,7 +264,7 @@ describe("djed-cardano", () => {
   });
 
   it.each([[null, 1], [DJED_CIRCULATING, null], [0, 1]] as const)("retains unavailable reconciliation without replacing the on-chain liability (%s,%s)", async (supply, price) => {
-    const { result } = await runAdapter("djed-cardano", "djed-coti", {
+    const { result } = await runAdapter("djed-cardano", DJED_COIN, {
       network: djedNetwork(), nowSec: TIP.block_time, ctx: { db: djedCacheDb(supply, price) },
     });
     expect(result.metadata?.details).toMatchObject({ supplyReconciliationUnavailableReason: "list-supply-or-price-unavailable" });
