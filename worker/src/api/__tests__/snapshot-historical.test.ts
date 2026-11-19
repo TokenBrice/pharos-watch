@@ -27,6 +27,7 @@ function snapshotRow(envelope = structuredClone(historicalSnapshot)) {
   return {
     payload,
     row: {
+      snapshot_date: envelope.snapshotDate,
       payload_gz: gzipSync(payload),
       methodology_versions: JSON.stringify({
         ...envelope.methodologyVersions,
@@ -201,6 +202,8 @@ describe("historical snapshot recorded safety contracts", () => {
       publicationGenerationId: "report-cards:v9:1",
     } as const;
     const card = { id: "usdc-circle", score: 80, grade: "A-" };
+    // Production report4/5/6 rows store not-rated coins this way.
+    const notRatedCard = { id: "cdxusd-cod3x", score: null, grade: "NR" };
     const envelope = {
       snapshotDate: "2026-09-15",
       generatedAt: 1789000000,
@@ -218,7 +221,7 @@ describe("historical snapshot recorded safety contracts", () => {
         methodology: { version: "9.49", policy: { id: "safety-score-v9", semanticDigest: "a".repeat(64) } },
         asOfSec: 1788999000,
         updatedAt: 1789000000,
-        completeness: { expectedCount: 1, ratedCount: 1, notRatedCount: 0, notRatedIds: [] },
+        completeness: { expectedCount: 2, ratedCount: 1, notRatedCount: 1, notRatedIds: [notRatedCard.id] },
         source: {
           candidateId: "candidate-v9.49", factSetDigest: "d".repeat(64), resultDigest: "e".repeat(64),
           sourceGenerations: { registry: "registry-1" },
@@ -229,21 +232,10 @@ describe("historical snapshot recorded safety contracts", () => {
           schemaVersion: 1, status: "current", acceptedPublicationGenerationId: "report-cards:v9:1",
           acceptedAtSec: 1789000000, attemptedAtSec: 1789000000, heldSinceSec: null, reasons: [],
         },
-        cards: [card],
+        cards: [notRatedCard, card],
       },
     };
-    const payload = JSON.stringify(envelope);
-    const row = {
-      snapshot_date: envelope.snapshotDate,
-      payload_gz: gzipSync(payload),
-      methodology_versions: JSON.stringify({
-        ...envelope.methodologyVersions,
-        safetyScoreIdentity: identity,
-      }),
-      content_hash: createHash("sha256").update(payload).digest("hex"),
-      byte_size: Buffer.byteLength(payload),
-      created_at: envelope.generatedAt,
-    };
+    const { payload, row } = snapshotRow(envelope as never);
     const db = database(row);
 
     const index = await handleSnapshotsIndex(db);
@@ -264,6 +256,9 @@ describe("historical snapshot recorded safety contracts", () => {
       safetyScoreIdentity: identity,
       scores: { reportCard: card },
     });
+
+    Object.assign(card, { score: null });
+    expect((await handleSnapshotDay(database(snapshotRow(envelope as never).row), envelope.snapshotDate)).status).toBe(500);
   });
 
 
