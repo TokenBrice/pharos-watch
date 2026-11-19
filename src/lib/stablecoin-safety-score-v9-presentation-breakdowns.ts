@@ -12,6 +12,7 @@ import { resolveV9EffectiveScoringWeight } from "@shared/types/safety-score-v9-p
 import { humanizeSafetyScoreV9Value } from "@/lib/stablecoin-safety-score-v9-presentation-helpers";
 import { describeExitRouteVenue, describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
 import { resolveControlComponentRoles } from "@/lib/pillar-evidence-strips";
+import { V9_UNADMITTED_RESERVE_COMPONENT_KEY } from "@/lib/reserve-score-admission";
 import type { ControlComponentRole } from "@shared/lib/classification";
 import {
   isV9BridgeRouteComponentFor,
@@ -223,7 +224,9 @@ function backingGroups(
     const groupKey = component.source === "mechanism" ? "mechanism" : "reserves";
     const row = makeRow({
       key: component.key,
-      label: component.label,
+      // The published label reads as if reviewed slices went unclassified; the
+      // component actually stands in for a composition the score never admitted.
+      label: component.key === V9_UNADMITTED_RESERVE_COMPONENT_KEY ? "No admitted reserve composition" : component.label,
       score: component.score,
       weight: resolveV9EffectiveScoringWeight(component),
       status: causeLabel(component.cause) ?? humanizeSafetyScoreV9Value(component.observationState),

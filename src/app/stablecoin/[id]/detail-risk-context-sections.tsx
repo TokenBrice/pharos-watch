@@ -29,6 +29,7 @@ import { LazySection } from "@/components/lazy-section";
 import { Button } from "@/components/ui/button";
 import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
 import { useUtcDayNowMs } from "@/hooks/use-utc-day-clock";
+import { describeReserveScoreAdmission } from "@/lib/reserve-score-admission";
 import type { MechanismBackingView } from "@/lib/mechanism-backing";
 import type { TransferReviewView } from "@/lib/transfer-review";
 import { cn } from "@/lib/utils";
@@ -464,6 +465,11 @@ export function DetailRiskContextSections({
     ? reportCardsResponse.documentationOnlyLimited
     : undefined;
   const showScoreCard = reportCard != null && reportCardsResponse != null;
+  const reserveScoreNote = describeReserveScoreAdmission(
+    viewModel.coin.reserveAdmissionSummary,
+    reportCard,
+    reportCardsResponse?.asOfSec,
+  );
   // Pair side by side only when a reviewed composition fills the Reserves
   // half (a live-feed-only module would leave a mostly empty box beside the
   // score) and is short enough to sit level with the score.
@@ -537,6 +543,7 @@ export function DetailRiskContextSections({
                 isLoading={reservesLoading}
                 qualitySummary={qualitySummary}
                 lookThrough={viewModel.coin.reserveLookThrough ?? null}
+                scoreAdmissionNote={reserveScoreNote}
               />
             </div>
           ) : null}

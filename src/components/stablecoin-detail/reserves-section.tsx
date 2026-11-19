@@ -67,6 +67,11 @@ export interface ReservesSectionProps {
   /** Layout chosen by the page: `module` (default) or `tile` beside the Safety Score. */
   variant?: EvidenceModuleVariant;
   stripForm?: boolean;
+  /**
+   * Set when the published Safety Score admitted no reserve composition
+   * (`describeReserveScoreAdmission`): why the reviewed slices are not its basis.
+   */
+  scoreAdmissionNote?: string | null;
 }
 
 const FEED_STATUS_ANCHOR_ID = "reserve-feed-status";
@@ -386,15 +391,18 @@ function LiveFeedDetail({
   datedLabel,
   note,
   relation,
+  reviewedDrivesScore,
 }: {
   slices: readonly ReserveCompositionSlice[];
   datedLabel: string | null;
   note: string | null;
   relation: "differs" | "matches" | "unreviewed";
+  reviewedDrivesScore: boolean;
 }) {
+  const reviewedRole = reviewedDrivesScore ? "which drive the Safety Score basis" : "which the Safety Score does not use";
   const relationText = {
-    differs: "This composition can differ from the reviewed slices above, which drive the Safety Score basis.",
-    matches: "This composition matches the reviewed slices above, which drive the Safety Score basis.",
+    differs: `This composition can differ from the reviewed slices above, ${reviewedRole}.`,
+    matches: `This composition matches the reviewed slices above, ${reviewedRole}.`,
     unreviewed: "No reviewed reserve composition exists yet, so these figures do not drive the Safety Score basis.",
   }[relation];
   return (
@@ -528,6 +536,7 @@ export function ReservesSection({
   lookThrough = null,
   variant = "module",
   stripForm,
+  scoreAdmissionNote = null,
 }: ReservesSectionProps) {
   // The reviewed basis is the curated `coin.reserves`. The quality summary is
   // derived from it but only exists when slices carry both asset class and
@@ -758,6 +767,7 @@ export function ReservesSection({
                 datedLabel={footnote?.text ?? null}
                 note={buildReserveCompositionNote(reserves)}
                 relation={!hasReviewedBasis ? "unreviewed" : liveMatchesReviewed ? "matches" : "differs"}
+                reviewedDrivesScore={scoreAdmissionNote == null}
               />
             ) : null}
             {feedStatus ? <FeedStatusDetail status={feedStatus} onRetry={onRetry} isFetching={isFetching} /> : null}
@@ -778,6 +788,11 @@ export function ReservesSection({
           </EvidenceFooter>
         }
       >
+        {hasReviewedBasis && scoreAdmissionNote ? (
+          <p className={SLICE_LINE_CLASS}>
+            <span className="font-medium text-foreground">Not used by the Safety Score.</span> {scoreAdmissionNote}
+          </p>
+        ) : null}
         <FactGrid aria-label="Reserve facts" items={facts} />
       </EvidenceModule>
     </TooltipProvider>

@@ -7,6 +7,8 @@ import {
   formatReserveQualityPct,
   projectReserveQualityClientSummary,
 } from "../stablecoin-detail-reserve-quality-client";
+import { projectReserveAdmissionClientSummary } from "../stablecoin-detail-reserve-admission-client";
+import { describeReserveScoreAdmission } from "../reserve-score-admission";
 
 function coinWith(reserves: unknown, reserveReview?: unknown): StablecoinMeta {
   return { id: "test-coin", reserves, reserveReview } as unknown as StablecoinMeta;
@@ -415,5 +417,41 @@ describe("projectReserveQualityClientSummary", () => {
     expect(summary!.compositionBasis).toBeNull();
     expect(summary!.knownUnknownExposureNote).toBeNull();
     expect(summary!.sources).toEqual([]);
+  });
+});
+
+describe("reserve score admission", () => {
+  const DAY = 86_400;
+  const UNADMITTED = { breakdowns: { backing: { components: [{ key: "reserve:unclassified-residual" }] } } } as never;
+  const ADMITTED = { breakdowns: { backing: { components: [{ key: "reserve:reserve:bills" }] } } } as never;
+  const juneEnd = Date.parse("2026-06-30") / 1_000;
+
+  it("projects the clock-free requirements a review misses and the policy age budget", () => {
+    expect(projectReserveAdmissionClientSummary(coinWith(USDC_LIKE_SLICES, USDC_LIKE_REVIEW))).toEqual({
+      blockers: [], confidenceLabel: null, compositionAsOf: "2026-06-30", compositionAtSec: juneEnd, maxAgeSec: 38 * DAY,
+    });
+    const selected = projectReserveAdmissionClientSummary(coinWith(USDC_LIKE_SLICES, {
+      ...USDC_LIKE_REVIEW, scope: "selected-slices", confidence: "manual-review", compositionAsOf: undefined,
+    }))!;
+    expect(selected.blockers).toEqual(["selected-slices", "unverified", "undated"]);
+    expect(selected.confidenceLabel).toBe("Manual review");
+    expect(projectReserveAdmissionClientSummary(coinWith([], USDC_LIKE_REVIEW))).toBeNull();
+  });
+
+  it("explains only a card that admitted no composition, at the card's own clock", () => {
+    const fresh = projectReserveAdmissionClientSummary(coinWith(USDC_LIKE_SLICES, USDC_LIKE_REVIEW))!;
+    expect(describeReserveScoreAdmission(fresh, ADMITTED, juneEnd + 90 * DAY)).toBeNull();
+    expect(describeReserveScoreAdmission(fresh, UNADMITTED, juneEnd + 38 * DAY)).toBe(
+      "The score treats the whole reserve as unknown: this review did not pass its reserve admission checks.",
+    );
+    expect(describeReserveScoreAdmission(fresh, UNADMITTED, juneEnd + 51 * DAY)).toBe(
+      "The score treats the whole reserve as unknown. It admits only a verified full-composition review dated within 38 days; this one is dated 2026-06-30, 51 days before scoring.",
+    );
+    const selected = projectReserveAdmissionClientSummary(coinWith(USDC_LIKE_SLICES, {
+      ...USDC_LIKE_REVIEW, scope: "selected-slices", confidence: "manual-review",
+    }))!;
+    expect(describeReserveScoreAdmission(selected, UNADMITTED, juneEnd + DAY)).toContain(
+      "this one covers selected slices only and has manual review confidence.",
+    );
   });
 });
