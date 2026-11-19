@@ -425,7 +425,7 @@ describe("fetchGoldTokens", () => {
     const header = vi.spyOn(evmRpc, "fetchEvmBlockHeader").mockResolvedValue({ number: 50, hash, timestamp: now - 300 });
     const supply = vi.spyOn(evmRpc, "fetchEvmUint256AtBlock").mockImplementation(async (_chain, _address, call) =>
       call === DECIMALS_SELECTOR ? 6n : (call === TOTAL_SUPPLY_SELECTOR ? 110n : reconciles ? 10n : 11n) * 1_000_000n);
-    mockFetch([
+    const fetchMock = mockFetch([
       { match: "/prices/current/", body: { coins: { "coingecko:tether-gold": { price, timestamp: now - 60 } } } },
       { match: "/protocol/", body: {} },
       { match: "app.tether.to/transparency.json", body: { data_formatted: [{ iso: "xaut", id: now - 900,
@@ -441,6 +441,9 @@ describe("fetchGoldTokens", () => {
         valuationPriceUsd: 4_020, valuationObservedAtSec: now - 60, supplyObservedAt: now - 300 }
         : { circulating: { peggedGOLD: 500_000 }, supplyObservedAt: capClock, circulatingNative: null });
       if (price === 4_020) expect(header.mock.calls.map(([, block]) => block)).toContain("finalized");
+      // Workers rejects redirect: "error" before sending.
+      expect(fetchMock.mock.calls.filter(([url]) => String(url).includes("tether.to")).map(([, init]) => init?.redirect))
+        .toEqual(price === 4_020 ? ["manual"] : []);
       expect(supply.mock.calls.filter(([chain, _address, _call, block, opts]) =>
         chain === "ethereum" && block === 50 && opts?.stateBlockHash === hash)).toHaveLength(price === 4_020 ? 3 : 0);
     } finally {
