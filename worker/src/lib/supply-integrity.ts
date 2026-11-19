@@ -155,6 +155,50 @@ const REVIEWED_SUPPLY_VALUE_REBASELINES: readonly {
     ],
     reason: "Re-read 2026-11-12 19:31 UTC: Blockscout confirms successful ERC-4626 burns of 49,142,568.684564 wiTRY at block 26386490 (November 10 19:05:11 UTC) and 26,222,383.020347 wiTRY at block 26393072 (November 11 17:06:59 UTC). Current Ethereum totalSupply is 63,440,233.768206 wiTRY and Blockscout market cap is $1,542,627.76; the 19:03 UTC publication is $1,542,921.47, within 2% of the unchanged $1,543,091.36 baseline. The MegaETH OFT leg remains the same locked float and is not added. Only the obsolete pre-redemption comparison is retired; supply, history and clocks are unchanged. Owner: ops.",
   },
+  {
+    stablecoinId: "ethenausdc-steakhouse",
+    baselineUsd: 25_929_860.88,
+    reviewedAt: Date.parse("2026-11-19T17:45:00Z") / 1000,
+    expiresAt: Date.parse("2026-11-26T17:45:00Z") / 1000,
+    evidenceUrls: [
+      "https://basescan.org/tx/0x7ad9f3b376475729496ba72a3836d93b5ac53d06fc066533752da7b4d1241075",
+      "https://basescan.org/token/0xbeeff0be997cca5b1c13a7433c2004637975739e",
+    ],
+    reason: "Read 2026-11-19 17:33 UTC: Base totalSupply() of the vault share token fell from 99,390,916.34 at block 56598347 to 25,524,865.59 at block 59596285 through redemptions, including one 24,618,000-share burn; convertToAssets(1e18) is 1.016221 USDC. The 17:30 UTC published $25,929,860.88 is that share count at the admitted NAV, so the 0.26x move against the 2026-11-12 daily row is a real contraction.",
+  },
+  {
+    stablecoinId: "sparkusdtbc-spark",
+    baselineUsd: 63_190_000,
+    reviewedAt: Date.parse("2026-11-19T17:45:00Z") / 1000,
+    expiresAt: Date.parse("2026-11-26T17:45:00Z") / 1000,
+    evidenceUrls: [
+      "https://etherscan.io/tx/0x4c452fffa92f00645208c8d1794c6fa079a69846d5bede43e472d11d14a7e270",
+      "https://etherscan.io/token/0xb0c424116172b55cbb6dd3136f5989f7959e5b91",
+    ],
+    reason: "Read 2026-11-19 17:33 UTC: Ethereum totalSupply() of the vault share token rose from 15,709,626.26 at block 26424305 to 61,993,737.99 at block 26450651 through deposits; convertToAssets(1e18) is 1.019509 USDT, about $63.19M. The 17:30 UTC published $62,847,023.92 is the same stock one read earlier, so the 3.93x move against the 2026-11-16 daily row is real issuance.",
+  },
+  {
+    stablecoinId: "copm-minteo",
+    baselineUsd: 2_951_481.27,
+    reviewedAt: Date.parse("2026-11-19T17:45:00Z") / 1000,
+    expiresAt: Date.parse("2026-11-26T17:45:00Z") / 1000,
+    evidenceUrls: [
+      "https://stablecoins.llama.fi/stablecoin/460",
+      "https://polygonscan.com/token/0x12050c705152931cfee3dd56c52fb09dea816c23",
+    ],
+    reason: "Read 2026-11-19 17:33 UTC: Polygon totalSupply() rose from 4,142,024,675.75 COPM at block 97445420 to 9,629,729,613.75 at block 97602778, and DefiLlama id 460 reports $2,951,481.27 (Polygon $2,915,821.84, Celo $31,125.15, Solana $4,534.28). The 2.30x move against the 2026-11-17 daily row is real issuance at an unchanged COP rate.",
+  },
+  {
+    stablecoinId: "satusd-river",
+    baselineUsd: 17_659_939.62,
+    reviewedAt: Date.parse("2026-11-19T17:45:00Z") / 1000,
+    expiresAt: Date.parse("2026-11-26T17:45:00Z") / 1000,
+    evidenceUrls: [
+      "https://bscscan.com/tx/0x79a04103f46e69e1a276bb06ec56ec149a74df2caa9f7c859fc2b6fab942d5e0",
+      "https://stablecoins.llama.fi/stablecoin/218",
+    ],
+    reason: "Read 2026-11-19 17:33 UTC: BSC block 134368693 burned 69,858,138.73 satUSD, leaving 9,499,191.93 at block 134544023, and DefiLlama id 218 reports $17,659,939.62 in total. Releasing the reviewed BSC chain quarantine moves the published value from the carried $87,084,505.35 to that level, a real redemption.",
+  },
 ];
 
 export interface ReviewedSupplyCarry {
