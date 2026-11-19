@@ -106,17 +106,15 @@ describe("adaptM0Collateral", () => {
     expect(result.metadata?.redemption).toBeUndefined();
   });
 
-  it("degrades when the total snapshot lags known collateral updates materially", () => {
+  it.each([false, true])("degrades material collateral lag with legacy snapshots %s", (legacy) => {
     const result = adaptM0Collateral({
       data: {
         ...SAMPLE_PAYLOAD.data,
-        collateralUpdateds: [
-          // 13h after the total snapshot at 1787171387.
-          { timestamp: "1787218187", blockTimestamp: "1787218187" },
-        ],
-        minterGateway_latestUpdateTimestampSnapshots: [
-          { timestamp: "1787218187", value: "1787218187" },
-        ],
+        collateralUpdateds: [legacy
+          ? { timestamp: "1787218187", blockTimestamp: "1787218187" }
+          : { timestamp: 1787218144, blockTimestamp: 1787218187 }],
+        minterGateway_latestUpdateTimestampSnapshots: legacy
+          ? [{ timestamp: "1787218187", value: "1787218187" }] : undefined,
       },
     });
 
@@ -157,30 +155,12 @@ describe("adaptM0Collateral", () => {
     expect(result.slices).toHaveLength(1);
   });
 
-  // Observed 2026-08-08 (and still true for retired Collateral* resolvers on
-  // 2026-08-20): protocol-api.m0.org answers dead resolvers with its gateway
-  // error envelope (`{"status":false,"statusCode":500,"message":"fetch failed"}`).
-  // HTTP 500 already throws in the transport, but the envelope must never be
-  // adapted into a snapshot if the gateway ever returns it with a 200.
-  it("refuses the M0 gateway error envelope instead of publishing an empty snapshot", () => {
-    expect(() => adaptM0Collateral(
-      { status: false, statusCode: 500, message: "fetch failed", result: {} } as never,
-    )).toThrow(/missing minterGateway_totalCollateralSnapshots/);
-  });
-
-  it("refuses an empty snapshot list", () => {
-    expect(() => adaptM0Collateral({ data: { minterGateway_totalCollateralSnapshots: [] } }))
-      .toThrow(/missing minterGateway_totalCollateralSnapshots/);
-  });
-
-  it("refuses a non-numeric total collateral value", () => {
-    expect(() => adaptM0Collateral({
-      data: {
-        minterGateway_totalCollateralSnapshots: [
-          { timestamp: "1787171387", value: "fetch failed" },
-        ],
-      },
-    })).toThrow(/not a usable number/);
+  it.each([
+    [{ status: false, statusCode: 500, message: "fetch failed", result: {} } as never, /missing minterGateway_totalCollateralSnapshots/],
+    [{ data: { minterGateway_totalCollateralSnapshots: [] } }, /missing minterGateway_totalCollateralSnapshots/],
+    [{ data: { minterGateway_totalCollateralSnapshots: [{ timestamp: "1787171387", value: "fetch failed" }] } }, /not a usable number/],
+  ])("refuses an invalid indexer response %#", (payload, error) => {
+    expect(() => adaptM0Collateral(payload)).toThrow(error);
   });
 
   it("emits no publishable slices when the total collateral reports zero", () => {
@@ -217,11 +197,16 @@ describe("fetchM0Reserves", () => {
     const { result, network } = await runAdapter("m0", "m-m0", {
       network: {
         json: {
-          "https://protocol-api.m0.org/graphql": (request: Request) => {
+          "https://protocol-api.m0.org/graphql": async (request: Request) => {
             expect(request.method).toBe("POST");
             expect(request.headers.get("authorization")).toBe("ApiKey test-key");
             // The keyed POST never follows a redirect to another origin.
             expect(request.redirect).toBe("manual");
+            const { query } = await request.json<{ query: string }>();
+            expect(query).toContain("collateralUpdateds: indexer_dyn_stateful_minter_gateway_collateral_updated");
+            expect(query).toContain('chain_id: {_eq: 1}, contract_address: {_ilike: "0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e"}');
+            expect(query).toContain("blockTimestamp: block_timestamp");
+            expect(query).not.toContain("minterGateway_latestUpdateTimestampSnapshots");
             return SAMPLE_PAYLOAD;
           },
         },

@@ -281,22 +281,23 @@ describe("adaptAttestationPdfIndex", () => {
     });
   });
 
-  it.each([wars, wbrl, wcop, wmxn])("reads $id's reviewed balance date rather than its upload folder", (coin) => {
+  const ripioSeptember = ["wARS", "wBRL", "wCOP", "wMXN"].map((symbol) =>
+    `<a href="https://statics.ripio.com/wfiat-attestations/Token%20${symbol}%2009.30.2026%20Certification.pdf"></a>`,
+  ).join("");
+  const ripioCases = [wars, wbrl, wcop, wmxn].flatMap((coin) => [true, false].map((june) => ({ coin, id: coin.id, june })));
+  it.each(ripioCases)("reads $id's balance date (June: $june)", ({ coin, june }) => {
     const config = coin.liveReservesConfig as LiveReservesConfig;
     const params = parseLiveReserveAdapterParams("attestation-pdf-index", config.params);
+    if (june) params.reviewedReport = { url: coin.proofOfReserves.latestReport.sources[0].url, balanceDate: "2026-06-30" };
     const report = params.reviewedReport!;
-    const result = adaptAttestationPdfIndex(ripioJune.html, params, { indexUrl: ripioJune.sourceUrl });
-    const balanceDateMs = Date.parse(`${report.balanceDate}T00:00:00Z`);
-    // The published report date comes from the month.day.year filename in the
-    // reviewed URL; derive it so advancing the reviewed report does not need a
-    // literal edit here.
-    const numericDate = report.url.match(/(\d{2})\.(\d{2})\.(\d{4})/);
-    expect(numericDate, "reviewed report URL carries a month.day.year date").not.toBeNull();
-    const reportDate = `${numericDate![3]}-${numericDate![1]}-${numericDate![2]}`;
-
+    const sourceTimestamp = Date.parse(report.balanceDate) / 1000;
+    expect(report.url).toMatch(/\d{2}\.\d{2}\.\d{4}/);
+    const result = adaptAttestationPdfIndex(june ? ripioJune.html : ripioSeptember, params, {
+      indexUrl: june ? ripioJune.sourceUrl : coin.liveReservesConfig.inputs.primary.url,
+    });
     expect(result.metadata).toMatchObject({
-      sourceTimestamp: balanceDateMs / 1000,
-      reportDate,
+      sourceTimestamp,
+      reportDate: june ? "2026-06-30" : "2026-09-30",
       reportDatePrecision: "day",
       reportBalanceDate: report.balanceDate,
       reportPdfUrl: report.url,
@@ -305,15 +306,13 @@ describe("adaptAttestationPdfIndex", () => {
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).not.toHaveProperty("redemption");
     expect(config.scoring?.maxSourceAgeSec).toBeUndefined();
-    const inCycle = expectValidAdapterOutput("attestation-pdf-index", result, {
-      now: balanceDateMs / 1000 + 100 * 86_400,
-    });
-    expect(inCycle.warnings.some((warning) => warning.code === "stale-source-data")).toBe(false);
-    const validation = expectValidAdapterOutput("attestation-pdf-index", result, {
-      now: balanceDateMs / 1000 + 151 * 86_400,
-    });
-    expect(validation.warnings).toContainEqual(expect.objectContaining({ code: "stale-source-data", effect: "degraded" }));
-    expect(validation.warnings.some((warning) => warning.code === "stale-redemption-source-timestamp")).toBe(false);
+    const validate = (days: number) => expectValidAdapterOutput("attestation-pdf-index", result, {
+      now: sourceTimestamp + days * 86_400,
+    }).warnings;
+    expect(validate(100).some(({ code }) => code === "stale-source-data")).toBe(false);
+    const expired = validate(151);
+    expect(expired).toContainEqual(expect.objectContaining({ code: "stale-source-data", effect: "degraded" }));
+    expect(expired.some(({ code }) => code === "stale-redemption-source-timestamp")).toBe(false);
   });
 
   it("keeps USDU's reviewed reserve clock without fabricated redemption", () => {

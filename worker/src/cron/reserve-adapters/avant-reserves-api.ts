@@ -68,8 +68,6 @@ const AvantPayloadSchema = z.object({
 
 export type AvantPayload = z.output<typeof AvantPayloadSchema>;
 
-// The six source-native breakdown category labels; the "Perpetuals" category
-// is net short only, so it never emits a long slice.
 const REVIEWED_LABELS = new Set([
   "Stablecoins",
   "Other",
@@ -159,9 +157,6 @@ export function adaptAvantReserves(payload: AvantPayload): AdapterResult {
     const row = rowsByLabel.get(detail.category);
     if (!row || !closeEnough(detail.totalValue, row.valueUsd, CATEGORY_TOTAL_REL_TOLERANCE)) {
       throw new Error(`Avant ${detail.category} totalValue disagrees with the breakdown row`);
-    }
-    if (detail.category === "Perpetuals" && categoryLong > 0) {
-      throw new Error("Avant Perpetuals category contains unexpected long positions");
     }
     categoryTotals.set(detail.category, {
       longUsd: categoryLong,

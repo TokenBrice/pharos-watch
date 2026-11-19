@@ -22,10 +22,15 @@ const PortfolioSchema = z.object({
     value: z.number().finite().nonnegative(),
   })).length(4),
 });
-const CATEGORIES: Record<string, { name: string; sourceKey: string }> = {
+const FIRST_CITIZENS_LABEL = "First Citizens Bank - Bank Deposits";
+const CATEGORIES: Record<string, { name: string; sourceKey: string; alias?: string }> = {
   "8a072b79-7c71-472b-8093-0a9c3347fb8f": { name: "US Treasuries", sourceKey: "usdy-issuer-portfolio:us-treasuries" },
   "7fb61f13-51eb-4e1a-8966-1a8896acb3a2": { name: "SHVon \u2014 iShares 0\u20131 Year Treasury Bond ETF (Ondo Tokenized)", sourceKey: "usdy-issuer-portfolio:shvon" },
-  "58033c63-82e8-413d-a5f4-48b2aacc88ab": { name: "Silicon Valley Bank - Bank Deposits", sourceKey: "usdy-issuer-portfolio:svb-bank-deposits" },
+  "58033c63-82e8-413d-a5f4-48b2aacc88ab": {
+    name: "Silicon Valley Bank - Bank Deposits",
+    sourceKey: "usdy-issuer-portfolio:svb-bank-deposits",
+    alias: FIRST_CITIZENS_LABEL,
+  },
   "67eace75-8a5b-4bff-a375-84df65697ddb": { name: "Other Cash and Cash Equivalents", sourceKey: "usdy-issuer-portfolio:other-cash-and-equivalents" },
 };
 
@@ -63,11 +68,19 @@ export function adaptOndoUsdyPortfolio(
   const slices = portfolio.positions.map((row) => {
     const category = CATEGORIES[row._id];
     const reviewed = coin.reserves?.filter((slice) => slice.sourceKey === category?.sourceKey);
-    if (!category || row.name !== category.name || seen.has(row._id) || reviewed?.length !== 1) {
+    if (!category || (row.name !== category.name && row.name !== category.alias)
+      || seen.has(row._id) || reviewed?.length !== 1) {
       throw htmlLayoutChangedError("ondo-usdy", "duplicate-or-unreviewed-category");
     }
     seen.add(row._id);
-    return { ...reviewed[0], pct: row.value / portfolio.total * 100 };
+    return {
+      ...reviewed[0],
+      ...(row.name === FIRST_CITIZENS_LABEL ? {
+        name: "First Citizens Bank deposits (issuer portfolio category)",
+        issuerOrObligor: "First Citizens Bank",
+      } : {}),
+      pct: row.value / portfolio.total * 100,
+    };
   });
   const sum = portfolio.positions.reduce((total, row) => total + row.value, 0);
   if (!Number.isFinite(sum) || Math.abs(sum - portfolio.total) > 0.01) {

@@ -24,7 +24,7 @@ import { NEWER_UNREVIEWED_REPORT_WARNING_CODE } from "../../lib/live-reserves/st
 import { formatValidIsoDate, lastDayOfMonth, monthNumberFromLabel } from "./report-date";
 import { AGORA_INDEPENDENT_ASSURANCE_PROFILE } from "./agora-independent-assurance-profile";
 import { ANCHORAGE_ASSURANCE_PROFILES } from "./anchorage-independent-assurance-profile";
-import { AUDD_INDEPENDENT_ASSURANCE_PROFILE } from "./audd-independent-assurance-profile";
+import { AUDD_INDEPENDENT_ASSURANCE_PROFILE, isAuddAssurancePath } from "./audd-independent-assurance-profile";
 import { CADD_INDEPENDENT_ASSURANCE_PROFILE } from "./cadd-independent-assurance-profile";
 import { FDUSD_INDEPENDENT_ASSURANCE_PROFILE } from "./fdusd-independent-assurance-profile";
 import { RLUSD_INDEPENDENT_ASSURANCE_PROFILE } from "./rlusd-independent-assurance-profile";
@@ -372,7 +372,10 @@ function collectReportCandidates(html: string, indexUrl: string, profile: Indepe
     .map((anchor) => ({ url: normalizeUrl(anchor.href, indexUrl), text: anchor.text }));
   const unique = new Map<string, ReportCandidate>();
   for (const candidate of candidates) {
-    unique.set(`${candidate.url}\n${candidate.text}`, candidate);
+    // AUDD links the same modern PDF in its summary and monthly archive.
+    const identity = profile.product === "AUDD" && isAuddAssurancePath(candidate.url)
+      ? candidate.url : `${candidate.url}\n${candidate.text}`;
+    unique.set(identity, candidate);
   }
   return [...unique.values()];
 }

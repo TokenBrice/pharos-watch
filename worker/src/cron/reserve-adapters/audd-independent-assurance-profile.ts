@@ -2,6 +2,12 @@ import { ASSURANCE_RECONCILIATION_TOLERANCES } from "@shared/lib/independent-ass
 import type { IndependentAssuranceProfile } from "./independent-assurance-types";
 import { formatValidIsoDate, lastDayOfMonth } from "./report-date";
 
+const AUDD_ASSURANCE_PATH = /^\/documents\/assurance\/(20\d{2})-(0[1-9]|1[0-2])-agreed-upon-procedures\.pdf$/i;
+
+export function isAuddAssurancePath(href: string): boolean {
+  return AUDD_ASSURANCE_PATH.test(new URL(href, "https://www.audd.digital").pathname);
+}
+
 // AUDD's monthly William Buck ASRS 4400 report is an agreed-upon-procedures
 // engagement ("not an assurance engagement; we do not express an opinion or an
 // assurance conclusion"), so the adapter publishes through the
@@ -32,7 +38,7 @@ export const AUDD_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = {
   },
   reconciliation: ASSURANCE_RECONCILIATION_TOLERANCES.AUDD,
   isReportCandidate: (href) =>
-    /Agreed[+_-]upon[+_-]procedures[+_-]report/i.test(decodeURIComponent(href)),
+    isAuddAssurancePath(href) || /Agreed[+_-]upon[+_-]procedures[+_-]report/i.test(decodeURIComponent(href)),
   reportDateFromCandidate: auddReportDate,
 };
 
@@ -42,7 +48,14 @@ const AUDD_REPORT_MONTHS: Readonly<Record<string, number>> = {
 };
 
 function auddReportDate(href: string): string | null {
-  const fileName = decodeURIComponent(new URL(href).pathname.split("/").pop() ?? "");
+  const pathname = new URL(href).pathname;
+  const datedPath = pathname.match(AUDD_ASSURANCE_PATH);
+  if (datedPath) {
+    const year = Number(datedPath[1]);
+    const month = Number(datedPath[2]);
+    return formatValidIsoDate(year, month, lastDayOfMonth(year, month)!);
+  }
+  const fileName = decodeURIComponent(pathname.split("/").pop() ?? "");
   const match = fileName.match(/report[+_-]?([A-Za-z]{3,4})[+._-]?(?:20)?(\d{2})_?\.pdf$/i);
   if (!match) return null;
   const month = AUDD_REPORT_MONTHS[match[1].toLowerCase()];

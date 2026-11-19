@@ -14,7 +14,7 @@
   "pegMechanism": "Issuer-controlled wFIAT token: the Ripio affiliate mints WMXN against local Mexican-peso reserves and burns supply as needed, targeting 1 WMXN = 1 MXN through available on/off-ramp conversion and DEX arbitrage. The wFIAT whitepaper expressly denies token holders any issuer redemption right or claim to funds.",
   "proofOfReserves": {
     "type": "agreed-upon-procedures",
-    "url": "https://action.ripio.com/en/wfiat-attestations",
+    "url": "https://www.ripio.com/en/wfiat-attestations",
     "provider": "Pablo Eduardo Soto, partner at SLD y Asociados S.A. (certification under Argentine Technical Resolution 37 Section VI; the document states it does not constitute an audit or a review and expresses no professional opinion)",
     "attestorTier": "niche",
     "cadence": "ad-hoc",
@@ -118,13 +118,13 @@
     "semantics": "attestation-mix",
     "breakerScope": "wmxn-ripio",
     "display": {
-      "url": "https://action.ripio.com/en/wfiat-attestations",
+      "url": "https://www.ripio.com/en/wfiat-attestations",
       "label": "Ripio wFIAT attestations"
     },
     "inputs": {
       "primary": {
         "kind": "http-html",
-        "url": "https://action.ripio.com/en/wfiat-attestations"
+        "url": "https://www.ripio.com/en/wfiat-attestations"
       }
     },
     "params": {
@@ -141,8 +141,8 @@
         }
       ],
       "reviewedReport": {
-        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wMXN%2006.30.2026%20Certification%20vf.pdf?hsLang=en",
-        "balanceDate": "2026-06-30"
+        "url": "https://statics.ripio.com/wfiat-attestations/Token%20wMXN%2009.30.2026%20Certification.pdf",
+        "balanceDate": "2026-09-30"
       }
     }
   },
