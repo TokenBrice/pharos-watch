@@ -252,7 +252,7 @@ describe("buildDewsScoringResult peg reference admission", () => {
     if (price == null) expect(row).toMatchObject({ score: 35, band: "WATCH" });
   });
 
-  it("uses the legacy USD buckets and open-market reference without new evidence", () => {
+  it("withholds undated EUR dollar caps and uses the open-market reference without new evidence", () => {
     const asset = { ...createAsset("eurc-circle"), pegType: "peggedEUR", price: 1.089, priceConfidence: "high" as const,
       circulating: { peggedEUR: 173.9e9 }, circulatingPrevDay: { peggedEUR: 176e9 },
       circulatingPrevWeek: { peggedEUR: 185e9 }, supplyObservedAt: undefined };
@@ -261,12 +261,12 @@ describe("buildDewsScoringResult peg reference admission", () => {
       nowSec: Date.parse(when) / 1000, pegRates: { peggedEUR: 1.1 }, pegRateSources: { peggedEUR: "fallback" },
       sourceState: state, registerMalformedPersistedInput: () => {} }).results[0]!;
     const open = score("2026-11-17T16:00:00Z");
-    expect(open.signals.supply).toMatchObject({ available: true, value: expect.closeTo(23.9, 1), delta7d: -6 });
+    expect(open.signals.supply).toMatchObject({ available: false, unavailableReason: "supply-history-anchors-missing" });
     expect(open.signals.diverg).toMatchObject({ available: true, primaryDevBps: 100 });
     state.previousSignals.prevSignals.set(asset.id, { signals: { diverg: { value: 18, available: true } }, computedAt: 1, ageSec: 60 });
     expect(score("2026-11-21T16:00:00Z").signals.diverg).toMatchObject({ available: true, value: 18 });
     state.references = new Map();
-    expect(score("2026-11-17T16:00:00Z").signals.diverg.available).toBe(false);
+    expect(score("2026-11-17T16:00:00Z")).toBeUndefined();
   });
 
   it("compares each lookback in its own unit during a native-history rollout", () => {

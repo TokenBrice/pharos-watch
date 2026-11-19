@@ -409,7 +409,9 @@ export async function fillMissingSupplyHistory(
     const observedAt = provenance?.supplyObservedAt;
     const asset = assetsById.get(row.stablecoin_id);
     const coverage = classifySupplyCoverage(provenance);
-    const legacyUsdEligible = asset?.pegType === "peggedUSD" && asset.supplySource === "defillama" &&
+    // A non-USD list cap carries its provider's valuation, so only that provider's dated row compares with it.
+    const legacyUsdEligible = (asset?.pegType === "peggedUSD" ||
+      (asset?.supplyObservedAt == null && provenance?.supplySource === "defillama")) && asset?.supplySource === "defillama" &&
       !asset.supplyGapFill && !asset.frozen && !asset.supplyRestored && Number.isFinite(row.circulating_usd) &&
       row.circulating_usd >= 0 && !isEarlierSupplyPerimeter(asset.id, row.snapshot_date) &&
       !isAmbiguousSupplyPerimeterDay(asset.id, row.snapshot_date);
@@ -497,8 +499,9 @@ export async function fillMissingSupplyHistory(
     if (!history) continue;
     const baselines: SupplyChangeBaselines = { ...asset.supplyChangeBaselines };
     const currentUsd = getCirculatingRawOrNull(asset);
-    const undatedUsdList = clock == null && asset.pegType === "peggedUSD" && asset.supplySource === "defillama";
-    if ((!undatedUsdList && (clock == null || !Number.isSafeInteger(clock) || clock <= 0 || clock > now || now - clock > DAY_SECONDS)) ||
+    const undatedList = clock == null && asset.supplySource === "defillama";
+    const undatedNonUsdList = undatedList && asset.pegType !== "peggedUSD";
+    if ((!undatedList && (clock == null || !Number.isSafeInteger(clock) || clock <= 0 || clock > now || now - clock > DAY_SECONDS)) ||
       asset.frozen || currentUsd == null ||
       classifySupplyCoverage(buildSupplyObservationProvenance(asset)) !== "complete") {
       asset.supplyChangeBaselines = { day: null, week: null, month: null };
@@ -519,9 +522,13 @@ export async function fillMissingSupplyHistory(
       // remain usable for dates on which there was no historical assessment.
       if (asset.pegType !== "peggedUSD" || history.assessedDates.has(targetDate)) baselines[window] = null;
       const legacyUsd = history.legacyUsd.get(targetDate);
-      if (legacyUsd != null && baselines[window] === undefined && keys.length === 1 && readLegacy(asset) == null &&
+      // An undated non-USD list cap replaces the provider bucket with the cap snapshotted on that UTC date.
+      const snapshottedListCap = undatedNonUsdList && !history.assessedDates.has(targetDate);
+      if (legacyUsd != null && (baselines[window] === undefined || snapshottedListCap) && keys.length === 1 &&
+        (readLegacy(asset) == null || snapshottedListCap) &&
         currentUsd > 0 && Math.abs(legacyUsd - currentUsd) / currentUsd <= MAX_LEGACY_BASELINE_RELATIVE_CHANGE) {
         asset[field] = { [keys[0]!]: legacyUsd };
+        if (snapshottedListCap) delete baselines[window];
         fillCount++;
       }
       if (clock == null) continue;
@@ -561,6 +568,8 @@ export async function fillMissingSupplyHistory(
       }
     }
     if (Object.keys(baselines).length > 0) asset.supplyChangeBaselines = baselines;
+    // Every window then reads its snapshotted bucket; an empty map would withhold them all.
+    else if (undatedNonUsdList) delete asset.supplyChangeBaselines;
   }
 
   return fillCount;

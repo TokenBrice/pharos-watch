@@ -315,47 +315,6 @@ describe("stablecoin intake admission", () => {
       ? { day: { observedAt, circulatingUsd: 110, circulatingNative: 90 } } : { day: null });
   });
 
-  it("keeps unrelated USD list buckets when a main-format close falls outside the lookback", async () => {
-    const { now, db, sqlite } = datedHistoryFixture();
-    const asset = makePeggedAsset({ supplySource: "defillama", circulating: { peggedUSD: 100 },
-      circulatingPrevDay: { peggedUSD: 99 }, circulatingPrevWeek: { peggedUSD: 97 } });
-    const insert = sqlite.prepare(`INSERT INTO supply_history
-      (stablecoin_id, snapshot_date, circulating_usd, supply_provenance) VALUES (?, ?, ?, ?)`);
-    const close = now - 29 * DAY_SECONDS;
-    insert.run(asset.id, bucketUnixSecondsToUtcDay(close), 95, historyProvenance("coingecko-fallback", close));
-    await fillMissingSupplyHistory(db, [asset]);
-    expect(asset.supplyChangeBaselines).toBeUndefined();
-    expect(getUsdMarketCapBaselineOrNull(asset, "day")).toBe(99);
-    expect(getUsdMarketCapBaselineOrNull(asset, "week")).toBe(97);
-
-    insert.run(asset.id, bucketUnixSecondsToUtcDay(now - DAY_SECONDS), 96, "malformed");
-    await fillMissingSupplyHistory(db, [asset]);
-    expect(asset.supplyChangeBaselines).toEqual({ day: null });
-    expect(getUsdMarketCapBaselineOrNull(asset, "day")).toBeNull();
-    expect(getUsdMarketCapBaselineOrNull(asset, "week")).toBe(97);
-  });
-
-  it("keeps undated DefiLlama USD deltas when snapshots refuse native quantity", async () => {
-    const now = 1_777_000_000;
-    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
-    const { db, sqlite } = fixtures.open();
-    const asset = makePeggedAsset({ supplySource: "defillama", circulating: { peggedUSD: 100e9 },
-      circulatingPrevDay: { peggedUSD: 99e9 }, circulatingPrevWeek: { peggedUSD: 97e9 },
-      circulatingPrevMonth: { peggedUSD: 94e9 } });
-    const insert = sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, supply_provenance) VALUES (?, ?, ?, ?)");
-    const provenance = JSON.stringify({ supplySource: "defillama", supplyObservedAt: null,
-      supplyChainGuard: null, nativeQuantityUnavailable: true });
-    for (const [days, cap] of [[1, 99e9], [7, 97e9], [30, 94e9]]) {
-      insert.run(asset.id, bucketUnixSecondsToUtcDay(now) - days * DAY_SECONDS, cap, provenance);
-    }
-    await fillMissingSupplyHistory(db, [asset]);
-    expect((["day", "week", "month"] as const).map(window => getUsdMarketCapBaselineOrNull(asset, window)))
-      .toEqual([99e9, 97e9, 94e9]);
-    asset.supplyChangeBaselines = { week: null };
-    await fillMissingSupplyHistory(db, [asset]);
-    expect(getUsdMarketCapBaselineOrNull(asset, "week")).toBeNull();
-  });
-
   it("fills empty ordinary USD buckets from plausible unassessed closes on the exact UTC dates", async () => {
     const { now, db, sqlite } = datedHistoryFixture();
     const asset = makePeggedAsset({ supplySource: "defillama", circulating: { peggedUSD: 100 } });
@@ -458,17 +417,31 @@ describe("stablecoin intake admission", () => {
     expect(getCirculatingRawOrNull(asset)).toBe(100_000_000);
   });
 
-  it("distinguishes an unclocked non-USD weekly cap from a legacy USD list bucket with no D1 history", async () => {
-    const db = fixtures.open().db;
-    const rows = ["peggedEUR", "peggedUSD"].map((pegType) => makePeggedAsset({
-      id: pegType, pegType, circulating: { [pegType]: 110_000_000 }, circulatingPrevWeek: { [pegType]: 110_000_000 },
-    }));
+  it("keeps USD list buckets but compares non-USD list caps only with the provider's snapshotted caps", async () => {
+    const { now, db, sqlite } = datedHistoryFixture();
+    // A non-USD list values each prior balance at today's price; D1 holds the cap it reported on that date.
+    const listed = JSON.stringify({ supplySource: "defillama", supplyObservedAt: null, supplyChainGuard: null,
+      nativeQuantityUnavailable: true });
+    const insert = sqlite.prepare(`INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, supply_provenance)
+      VALUES (?, ?, ?, ?)`);
+    const close = (days: number) => historyProvenance("coingecko-fallback", now - days * DAY_SECONDS);
+    for (const [days, usd, provenance] of [[1, 514, listed], [2, 600, close(2)], [7, 519, close(7)], [30, 480, "malformed"]] as const) {
+      for (const id of ["eurc-circle", "usd"]) insert.run(id, bucketUnixSecondsToUtcDay(now) - days * DAY_SECONDS, usd, provenance);
+    }
+    const list = (id = "eurc-circle", pegType = "peggedEUR") => makePeggedAsset({ id, pegType, supplySource: "defillama",
+      circulating: { x: 503 }, circulatingPrevDay: { x: 513 }, circulatingPrevWeek: { x: 512 }, circulatingPrevMonth: { x: 511 } });
+    const windows = ["day", "week", "month"] as const;
+    const rows = [list(), list("unhistoried"), list("usd", "peggedUSD")];
     await fillMissingSupplyHistory(db, rows);
-    const [eur, usd] = shared.normalizeStablecoinsPayload({ peggedAssets: rows }, 1_777_000_000).peggedAssets;
-    expect(eur.supplyChangeBaselines).toEqual({});
-    expect(usd.supplyChangeBaselines).toBeUndefined();
+    expect(rows.map((row) => row.supplyChangeBaselines)).toEqual([{ week: null, month: null }, {}, { week: null, month: null }]);
+    expect(rows.flatMap((row) => windows.map((window) => getUsdMarketCapBaselineOrNull(row, window))))
+      .toEqual([514, null, null, null, null, null, 513, null, null]);
+    sqlite.prepare("UPDATE supply_history SET supply_provenance = ?").run(listed);
+    const complete = list();
+    expect(await fillMissingSupplyHistory(db, [complete])).toBe(3);
+    expect(complete.supplyChangeBaselines).toBeUndefined();
+    expect(windows.map((window) => getUsdMarketCapBaselineOrNull(complete, window))).toEqual([514, 519, 480]);
   });
-
   it("withholds at the original pre-fetch abort boundary after the FX await", async () => {
     const controller = new AbortController();
     vi.spyOn(shared, "loadFreshFxRates").mockImplementation(async () => {

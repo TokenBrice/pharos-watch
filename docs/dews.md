@@ -77,7 +77,7 @@ Weights sum to 1.15 but only available signals participate, so redistribution no
 
 ### S_supply — Supply Velocity
 
-Velocity compares each lookback in one unit. When the current stock and its lookback both have native counts and stock clocks, it compares token counts. A lookback that predates native observations uses current and historical USD stock. A rejected native checkpoint or a change in supply perimeter withholds the affected leg. The size damper uses USD capitalization. Historical reconstruction follows the same unit selection.
+Velocity compares each lookback in one unit. When the current stock and its lookback both have native counts and stock clocks, it compares token counts. A lookback that predates native observations uses current and historical USD stock. A rejected native checkpoint or a change in supply perimeter withholds the affected leg. A non-USD stock without a stock clock withholds both legs: its published lookbacks are dated dollar caps, so an FX or metal move would read as a redemption. The size damper uses USD capitalization. Historical reconstruction follows the same unit selection.
 
 Measures supply contraction rate. Only negative changes contribute stress.
 
