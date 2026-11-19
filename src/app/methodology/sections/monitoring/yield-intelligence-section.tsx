@@ -268,7 +268,11 @@ export function YieldIntelligenceMethodologySection() {
                   </p>
                   <p>
                     Trailing APY metrics are computed from source-specific history rather than a mixed coin-level series, so
-                    source switches no longer contaminate the displayed 7d/30d averages.
+                    source switches no longer contaminate the displayed 7d/30d averages. The 30-day APY caps isolated
+                    spikes: a sample above twice the window&apos;s median (and above 2% APY) counts as that cap, so a few
+                    short reward bursts cannot lift the headline above what the source paid on a typical day. The 7-day
+                    APY, stability and the 30-day range keep every raw sample. The cap fades out as more of the window sits above it and is gone at 15%, so a sustained level counts in full; a short real one-off distribution is
+                    understated by this rule.
                   </p>
                   <p>
                     Read-time <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">data-stale</code> warnings are also

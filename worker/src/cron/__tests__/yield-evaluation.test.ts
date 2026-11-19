@@ -12,7 +12,7 @@ import {
 import { buildHistoryKey, pickHistoryRowsForSource } from "../yield-sync/history-evidence";
 import type { YieldHistorySnapshotRow } from "../yield-sync/history-repository";
 import { buildYieldSourceRisk } from "../yield-sync/source-risk";
-import { computeTvlWeightedMedianApy } from "../yield-sync/candidate-statistics";
+import { computeTvlWeightedMedianApy, computeYieldCandidateStatistics } from "../yield-sync/candidate-statistics";
 import { evaluateYieldSourcesCooperative } from "../yield-sync/evaluation";
 import type { EvaluatedYieldSource } from "../yield-sync/evaluation";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
@@ -2164,52 +2164,31 @@ describe("yield source-risk registry", () => {
   });
 });
 
+describe("computeYieldCandidateStatistics", () => {
+  it("caps apy30d only; 7d mean, deviation and max stay raw", () => {
+    const rows: YieldHistorySnapshotRow[] = Array.from({ length: 24 }, (_, index) => ({
+      stablecoin_id: "a", source_key: "k", recorded_at: 1776700000 - index, is_best: 1,
+      apy: index === 3 ? 40 : 4, source_tvl_usd: null, data_source: "defillama", yield_source: null, yield_type: null,
+    }));
+    const stats = computeYieldCandidateStatistics(resolvedYield({ currentApy: 4 }), rows, false, 1776729600, 0);
+    expect(stats).toMatchObject({ apy30dCappedSamples: 1, apyMax30d: 40 });
+    expect(stats.apy30d).toBeCloseTo(104 / 25, 10);
+    for (const plain of [stats.apy30dRawMean, stats.apy7d]) expect(plain).toBeCloseTo(5.44, 10);
+    expect(stats.stdDev30d).toBeCloseTo(Math.sqrt((24 * 1.44 ** 2 + 34.56 ** 2) / 25), 10);
+  });
+});
+
 describe("computeTvlWeightedMedianApy", () => {
-  it("returns null for empty input", () => {
-    expect(computeTvlWeightedMedianApy([])).toBeNull();
-  });
-
-  it("returns null when all rows have null TVL", () => {
-    expect(computeTvlWeightedMedianApy([
-      { apy_30d: 5, source_tvl_usd: null },
-      { apy_30d: 3, source_tvl_usd: null },
-    ])).toBeNull();
-  });
-
-  it("returns null when all rows have zero TVL", () => {
-    expect(computeTvlWeightedMedianApy([
-      { apy_30d: 5, source_tvl_usd: 0 },
-    ])).toBeNull();
-  });
-
-  it("returns the APY of a single valid row", () => {
-    expect(computeTvlWeightedMedianApy([
-      { apy_30d: 5, source_tvl_usd: 1_000_000 },
-    ])).toBe(5);
-  });
-
-  it("returns TVL-weighted median, not simple median", () => {
-    const result = computeTvlWeightedMedianApy([
-      { apy_30d: 10, source_tvl_usd: 100_000 },
-      { apy_30d: 3, source_tvl_usd: 10_000_000 },
-    ]);
-    expect(result).toBe(3);
-  });
-
-  it("filters out rows with zero or negative APY", () => {
-    const result = computeTvlWeightedMedianApy([
-      { apy_30d: 0, source_tvl_usd: 100_000_000 },
-      { apy_30d: 5, source_tvl_usd: 1_000_000 },
-    ]);
-    expect(result).toBe(5);
-  });
-
-  it("picks median from sorted valid rows for balanced TVL", () => {
-    const result = computeTvlWeightedMedianApy([
-      { apy_30d: 2, source_tvl_usd: 1_000_000 },
-      { apy_30d: 5, source_tvl_usd: 1_000_000 },
-      { apy_30d: 8, source_tvl_usd: 1_000_000 },
-    ]);
-    expect(result).toBe(5);
+  const row = (apy_30d: number, source_tvl_usd: number | null) => ({ apy_30d, source_tvl_usd });
+  it.each([
+    ["returns null for empty input", [], null],
+    ["returns null when all rows have null TVL", [row(5, null), row(3, null)], null],
+    ["returns null when all rows have zero TVL", [row(5, 0)], null],
+    ["returns the APY of a single valid row", [row(5, 1_000_000)], 5],
+    ["returns TVL-weighted median, not simple median", [row(10, 100_000), row(3, 10_000_000)], 3],
+    ["filters out rows with zero or negative APY", [row(0, 100_000_000), row(5, 1_000_000)], 5],
+    ["picks median from sorted valid rows for balanced TVL", [row(2, 1_000_000), row(5, 1_000_000), row(8, 1_000_000)], 5],
+  ])("%s", (_name, rows, expected) => {
+    expect(computeTvlWeightedMedianApy(rows)).toBe(expected);
   });
 });

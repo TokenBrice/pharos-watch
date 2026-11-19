@@ -16,6 +16,7 @@ import {
   DETERMINISTIC_APY_SANITY_MAX,
   computeApyFromRate,
   computeApyFromPrice,
+  computeSpikeCappedMean,
   computeYieldStability,
   detectWarningSignals,
   isDeterministicApyWithinSanityBounds,
@@ -214,14 +215,13 @@ describe("derivePysNullReason", () => {
 });
 
 describe("computeYieldStability", () => {
-  it("returns null for fewer than 2 samples", () => {
-    expect(computeYieldStability([])).toBeNull();
-    expect(computeYieldStability([5])).toBeNull();
-  });
-
-  it("returns null for near-zero mean (insufficient signal)", () => {
-    expect(computeYieldStability([0, 0, 0])).toBeNull();
-    expect(computeYieldStability([1e-11, 0, 1e-11, 0])).toBeNull();
+  it.each([
+    ["fewer than 2 samples", [[], [5]]],
+    ["near-zero mean (insufficient signal)", [[0, 0, 0], [1e-11, 0, 1e-11, 0]]],
+    // mean = 5e-10 (above 1e-10 guard), variance overflows to Infinity → cv = Infinity
+    ["CV is Infinity (tiny mean, extreme variance)", [[1e-9, 1e200, -1e200, 1e-9]]],
+  ])("returns null for %s", (_name, series) => {
+    for (const samples of series) expect(computeYieldStability(samples)).toBeNull();
   });
 
   it("returns 1 for perfectly stable yields", () => {
@@ -239,94 +239,57 @@ describe("computeYieldStability", () => {
     const volatile = computeYieldStability([1, 10, 2, 9])!;
     expect(stable).toBeGreaterThan(volatile);
   });
+});
 
-  it("returns null when CV is Infinity (tiny mean, extreme variance)", () => {
-    // mean = 5e-10 (above 1e-10 guard), variance overflows to Infinity → cv = Infinity
-    expect(computeYieldStability([1e-9, 1e200, -1e200, 1e-9])).toBeNull();
+describe("computeSpikeCappedMean", () => {
+  const fill = (count: number, value: number) => Array<number>(count).fill(value);
+  it.each([
+    ["clean", [...fill(12, 4), ...fill(12, 4.4)], 4.2, 0],
+    ["flat", fill(24, 5), 5, 0],
+    ["spike capped at 2x", [...fill(23, 4), 40], 100 / 24, 1],
+    ["exactly 2x kept", [...fill(23, 4), 8], 100 / 24, 0],
+    ["too few samples", [...fill(22, 4), 40], 128 / 23, 0],
+    ["zero median", [...fill(13, 0), ...fill(11, 10)], 110 / 24, 0],
+    ["negative median", [...fill(23, -1), 50], 27 / 24, 0],
+    ["2% floor", [...fill(22, 0.5), 1.5, 6], 14.5 / 24, 1],
+    ["sustained", [...fill(20, 4), ...fill(4, 40)], 10, 0],
+    ["half faded", [...fill(36, 4), ...fill(4, 40)], 6, 4],
+    ["#2095-like", [...fill(406, 7.02), ...fill(9, 27.8)], (406 * 7.02 + 9 * 14.04) / 415, 9],
+  ])("%s", (_name, samples, mean, capped) => {
+    const result = computeSpikeCappedMean(samples);
+    expect(result.mean).toBeCloseTo(mean, 10);
+    expect(result.cappedSamples).toBe(capped);
+    if (!capped) expect(result.mean).toBe(result.rawMean);
   });
 });
 
 describe("detectWarningSignals", () => {
-  const base = {
-    currentApy: 5,
-    apy30d: 5,
-    apyReward: null,
-    medianApy: 5,
-    sourceTvlUsd: null,
-    prevTvlUsd: null,
-  };
+  const base = { currentApy: 5, apy30d: 5, apyReward: null, medianApy: 5, sourceTvlUsd: null, prevTvlUsd: null };
 
   it("returns empty array for stable conditions", () => {
     expect(detectWarningSignals(base)).toEqual([]);
   });
 
-  it("detects yield-divergence when current > 3x median", () => {
-    const signals = detectWarningSignals({ ...base, currentApy: 16, medianApy: 5 });
-    expect(signals).toContain("yield-divergence");
-  });
-
-  it("skips median divergence when the median is unavailable", () => {
-    expect(detectWarningSignals({ ...base, currentApy: 16, medianApy: null })).not.toContain("yield-divergence");
-  });
-
-  it("detects negative-trend when current < 70% of 30d avg", () => {
-    const signals = detectWarningSignals({ ...base, currentApy: 3, apy30d: 5 });
-    expect(signals).toContain("negative-trend");
-  });
-
-  it("detects reward-heavy when reward > 80% of total", () => {
-    const signals = detectWarningSignals({ ...base, apyReward: 4.5 });
-    expect(signals).toContain("reward-heavy");
-  });
-
-  it("detects tvl-outflow when TVL drops >20%", () => {
-    const signals = detectWarningSignals({ ...base, sourceTvlUsd: 70_000_000, prevTvlUsd: 100_000_000 });
-    expect(signals).toContain("tvl-outflow");
-  });
-
-  it("does not flag tvl-outflow when prevTvlUsd is zero", () => {
-    const signals = detectWarningSignals({ ...base, sourceTvlUsd: 0, prevTvlUsd: 0 });
-    expect(signals).not.toContain("tvl-outflow");
-  });
-
-  it("detects zero-yield when current is 0 but 30d average > 0.5%", () => {
-    const signals = detectWarningSignals({ ...base, currentApy: 0, apy30d: 2 });
-    expect(signals).toContain("zero-yield");
-  });
-
-  it("does not flag zero-yield when 30d average is also near zero", () => {
-    const signals = detectWarningSignals({ ...base, currentApy: 0, apy30d: 0.3 });
-    expect(signals).not.toContain("zero-yield");
-  });
-
-  it("does not flag yield-spike for low-APY coins below absolute floor", () => {
+  it.each([
+    ["detects yield-divergence when current > 3x median", { currentApy: 16 }, ["yield-divergence"], []],
+    ["skips median divergence when the median is unavailable", { currentApy: 16, medianApy: null }, [], ["yield-divergence"]],
+    ["detects negative-trend when current < 70% of 30d avg", { currentApy: 3, apy30d: 5 }, ["negative-trend"], []],
+    ["detects reward-heavy when reward > 80% of total", { apyReward: 4.5 }, ["reward-heavy"], []],
+    ["detects tvl-outflow when TVL drops >20%", { sourceTvlUsd: 70_000_000, prevTvlUsd: 100_000_000 }, ["tvl-outflow"], []],
+    ["does not flag tvl-outflow when prevTvlUsd is zero", { sourceTvlUsd: 0, prevTvlUsd: 0 }, [], ["tvl-outflow"]],
+    ["detects zero-yield when current is 0 but 30d average > 0.5%", { currentApy: 0, apy30d: 2 }, ["zero-yield"], []],
+    ["does not flag zero-yield when 30d average is also near zero", { currentApy: 0, apy30d: 0.3 }, [], ["zero-yield"]],
     // 0.5% → 1.1% is a 2.2x ratio but too small to matter
-    const signals = detectWarningSignals({ ...base, currentApy: 1.1, apy30d: 0.5, medianApy: 5 });
-    expect(signals).not.toContain("yield-spike");
-  });
-
-
-  it("does not flag negative-trend for very low baseline APY", () => {
+    ["does not flag yield-spike for low-APY coins below absolute floor", { currentApy: 1.1, apy30d: 0.5 }, [], ["yield-spike"]],
     // 0.8% → 0.5% is a 37.5% drop but too small to matter
-    const signals = detectWarningSignals({ ...base, currentApy: 0.5, apy30d: 0.8, medianApy: 5 });
-    expect(signals).not.toContain("negative-trend");
-  });
-
-
-  it("does not flag yield-spike at exact 2x threshold (requires exceeding)", () => {
-    const signals = detectWarningSignals({ ...base, currentApy: 10, apy30d: 5 });
-    expect(signals).not.toContain("yield-spike");
-  });
-
-  it("flags yield-spike just above 2x threshold", () => {
-    const signals = detectWarningSignals({ ...base, currentApy: 10.01, apy30d: 5 });
-    expect(signals).toContain("yield-spike");
-  });
-
-  it("handles negative currentApy without crashing", () => {
-    const signals = detectWarningSignals({ ...base, currentApy: -1, apy30d: 5 });
-    expect(signals).toContain("negative-trend");
-    expect(signals).not.toContain("yield-spike");
+    ["does not flag negative-trend for very low baseline APY", { currentApy: 0.5, apy30d: 0.8 }, [], ["negative-trend"]],
+    ["does not flag yield-spike at exact 2x threshold (requires exceeding)", { currentApy: 10, apy30d: 5 }, [], ["yield-spike"]],
+    ["flags yield-spike just above 2x threshold", { currentApy: 10.01, apy30d: 5 }, ["yield-spike"], []],
+    ["handles negative currentApy without crashing", { currentApy: -1, apy30d: 5 }, ["negative-trend"], ["yield-spike"]],
+  ] as const)("%s", (_name, overrides, present, absent) => {
+    const signals = detectWarningSignals({ ...base, ...overrides });
+    for (const signal of present) expect(signals).toContain(signal);
+    for (const signal of absent) expect(signals).not.toContain(signal);
   });
 });
 
@@ -799,19 +762,12 @@ describe("parseWarningSignals", () => {
     expect(parseWarningSignals('[1, "yield-spike", null, true]')).toBeNull();
   });
 
-  it("returns unavailable and logs warning for malformed JSON", () => {
+  it.each([
+    ["malformed JSON", "{not valid json", "[yield-sync] failed to parse warning_signals"],
+    ["non-array JSON", '{"key": "value"}', "[yield-sync] warning_signals is not an array"],
+  ])("returns unavailable and logs warning for %s", (_name, raw, message) => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    expect(parseWarningSignals("{not valid json")).toBeNull();
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("[yield-sync] failed to parse warning_signals"),
-    );
-  });
-
-  it("returns unavailable and logs warning for non-array JSON", () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    expect(parseWarningSignals('{"key": "value"}')).toBeNull();
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("[yield-sync] warning_signals is not an array"),
-    );
+    expect(parseWarningSignals(raw)).toBeNull();
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining(message));
   });
 });
