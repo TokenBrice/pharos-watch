@@ -46,7 +46,7 @@ export function normalizePegType(pegType: string | undefined): string | undefine
 }
 
 function normalizeFallbackRates(fallbackRates: Record<string, number> | undefined): Record<string, number> {
-  const normalized: Record<string, number> = Object.create(null);
+  const normalized: Record<string, number> = Object.create(null) as Record<string, number>;
   for (const [pegType, rate] of Object.entries(fallbackRates ?? {})) {
     const peg = normalizePegType(pegType);
     if (!peg || typeof rate !== "number" || !Number.isFinite(rate) || rate <= 0) continue;
@@ -211,8 +211,8 @@ export function derivePegRates(
   const rates: Record<string, number> = Object.create(null) as Record<string, number>;
   const sources: Record<string, PegRateSource> = Object.create(null) as Record<string, PegRateSource>;
   const counts: Record<string, number> = Object.create(null) as Record<string, number>;
-  const observations: NonNullable<PegRatesResult["observations"]> = Object.create(null);
-  const contributors: NonNullable<PegRatesResult["contributors"]> = Object.create(null);
+  const observations: NonNullable<PegRatesResult["observations"]> = Object.create(null) as NonNullable<PegRatesResult["observations"]>;
+  const contributors: NonNullable<PegRatesResult["contributors"]> = Object.create(null) as NonNullable<PegRatesResult["contributors"]>;
   const selectedObservations = new Map<string, FxReferenceEvidence>();
   if (clocked) {
     for (const [peg, raw] of Object.entries(fxReferenceObservations)) {

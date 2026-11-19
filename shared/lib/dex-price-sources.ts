@@ -6,9 +6,9 @@ export function getDexPriceSourceEntries(
   if (Array.isArray(payload)) return payload as unknown[];
   if (payload == null || typeof payload !== "object" || !("aggregateObservedAt" in payload) ||
     !("sources" in payload) || !Array.isArray(payload.sources)) return null;
-  if (purpose === "display" && "displaySources" in payload && Array.isArray(payload.displaySources)) return payload.displaySources;
+  if (purpose === "display" && "displaySources" in payload && Array.isArray(payload.displaySources)) return payload.displaySources as unknown[];
   if (purpose === "affirmative" && "lineageSources" in payload && Array.isArray(payload.lineageSources)) {
-    return [...payload.sources, ...payload.lineageSources];
+    return [...(payload.sources as unknown[]), ...(payload.lineageSources as unknown[])];
   }
-  return payload.sources;
+  return payload.sources as unknown[];
 }

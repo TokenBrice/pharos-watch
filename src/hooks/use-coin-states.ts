@@ -45,7 +45,8 @@ export function useCoinStates({ enabled = true }: { enabled?: boolean } = {}): C
   const byId = useMemo(() => {
     const pegById = new Map((pegCoins ?? []).map((coin) => [coin.id, coin]));
     // The dossier's book gate and row choice, so a chip never names a verdict the page does not.
-    const verdictById = isDdrBookUsable(resolverData) ? selectCurrentDdrVerdicts(resolverData!.rows) : new Map();
+    const verdictById: ReturnType<typeof selectCurrentDdrVerdicts> = isDdrBookUsable(resolverData)
+      ? selectCurrentDdrVerdicts(resolverData!.rows) : new Map<never, never>();
     const nowSec = dayIndex === null ? null : (dayIndex * DAY_MS) / 1000;
     const map = new Map<string, readonly CoinState[]>();
     for (const meta of CLIENT_TRACKED_STABLECOINS) {

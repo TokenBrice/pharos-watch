@@ -138,7 +138,7 @@ function normalizeActiveIncidentProjection(row: ActiveIncidentProjectionRow): [n
   if (row.covered_members_json !== undefined) {
     let members: Pick<DepegRow, "id" | "started_at" | "ended_at" | "admitted_coverage_json" | "disposition">[];
     try {
-      members = JSON.parse(row.covered_members_json);
+      members = JSON.parse(row.covered_members_json) as typeof members;
       if (!Array.isArray(members) || members.some((member) => member == null || typeof member !== "object"
         || !Number.isSafeInteger(member.started_at) || (member.ended_at != null && !Number.isSafeInteger(member.ended_at)))) return null;
     } catch {

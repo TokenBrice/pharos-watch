@@ -153,7 +153,7 @@ function admitStored(row: StoredRow, config: MintBurnContractConfig, now: number
 function supersedingReceiptJson(receipt: Receipt, priorJson: string): string {
   const prior = parseJsonObject(priorJson);
   const { supersededReceipts, ...previous } = prior ?? {};
-  const history = Array.isArray(supersededReceipts) ? supersededReceipts : [];
+  const history: unknown[] = Array.isArray(supersededReceipts) ? supersededReceipts : [];
   return JSON.stringify({ ...receipt, supersededReceipts: [...history, prior ? previous : priorJson] });
 }
 
