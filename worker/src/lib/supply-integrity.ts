@@ -157,15 +157,16 @@ const REVIEWED_SUPPLY_VALUE_REBASELINES: readonly {
   },
   {
     stablecoinId: "ethenausdc-steakhouse",
-    baselineUsd: 35_929_397.87,
-    reviewedAt: Date.parse("2026-11-19T19:15:00Z") / 1000,
-    expiresAt: Date.parse("2026-11-26T19:15:00Z") / 1000,
+    baselineUsd: 44_945_335,
+    reviewedAt: Date.parse("2026-11-19T19:22:00Z") / 1000,
+    expiresAt: Date.parse("2026-11-26T19:22:00Z") / 1000,
     evidenceUrls: [
       "https://basescan.org/tx/0x7ad9f3b376475729496ba72a3836d93b5ac53d06fc066533752da7b4d1241075",
       "https://basescan.org/tx/0x1bf5757de82df999164ce8fd2aeb7a60377b30d773b1b6b2349ae0f43c92a737",
+      "https://basescan.org/tx/0x9eb64a8143b438b6aab903981aecd743238b02dc79799f521ce8a031cf271979",
       "https://basescan.org/token/0xbeeff0be997cca5b1c13a7433c2004637975739e",
     ],
-    reason: "Re-read 2026-11-19 19:14 UTC, replacing the 17:45 review at $25,929,860.88: Base totalSupply() of the vault share token fell from 99,390,916.34 at block 56598347 to 25,524,865.59 at block 59596285 through redemptions, including one 24,618,000-share burn, then rose to 35,370,689.03 at block 59626519 after one 9,840,812.38-share mint at block 59604819 (18:02:19 UTC). convertToAssets(1e18) is 1.016245 USDC, about $35.95M; the 19:00 UTC publication is $35,929,397.87. The 0.36x reading against the 2026-11-12 daily row is a real contraction followed by a real deposit.",
+    reason: "Re-read 2026-11-19 19:22 UTC, replacing the 17:45 review at $25,929,860.88: Base totalSupply() of the vault share token fell from 99,390,916.34 at block 56598347 to 25,524,865.59 at block 59596285 through redemptions, including one 24,618,000-share burn, then rose to 44,226,825.51 at block 59628829 after two mints: 9,840,812.38 shares at 18:02:19 UTC and 8,856,124.98 at 19:18:09 UTC. convertToAssets(1e18) is 1.016246 USDC, about $44.95M. The vault is being refilled in tranches, so a later publication can leave this band and keep the finding. The 0.26x reading against the 2026-11-12 daily row was a real contraction and the rise since is real deposits.",
   },
   {
     stablecoinId: "sparkusdtbc-spark",
