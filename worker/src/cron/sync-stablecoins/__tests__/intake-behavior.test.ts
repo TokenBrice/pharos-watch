@@ -419,7 +419,7 @@ describe("stablecoin intake admission", () => {
 
   it("keeps USD list buckets but compares non-USD list caps only with the provider's snapshotted caps", async () => {
     const { now, db, sqlite } = datedHistoryFixture();
-    // A non-USD list values each prior balance at today's price; D1 holds the cap it reported on that date.
+    // Non-USD list buckets price old balances at today's rate; D1 keeps each day's cap.
     const listed = JSON.stringify({ supplySource: "defillama", supplyObservedAt: null, supplyChainGuard: null,
       nativeQuantityUnavailable: true });
     const insert = sqlite.prepare(`INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, supply_provenance)

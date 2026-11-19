@@ -397,7 +397,7 @@ describe("computeAndStoreDEWS", () => {
   it.each([
     [true, "usdt-tether", 99_000_000, 98_000_000],
     [false, "usdt-tether", 99_000_000, 98_000_000],
-    // An undated non-USD lookback is a dollar cap: an FX move is not a redemption.
+    // Undated non-USD lookbacks are dollar caps.
     [false, "eurc-euro-coin", null, null],
   ] as const)("uses legacy USD stock without native history (clock %s, %s)", async (hasClock, id, day, week) => {
     vi.mocked(getCache).mockImplementation(async (_db, key) => {
