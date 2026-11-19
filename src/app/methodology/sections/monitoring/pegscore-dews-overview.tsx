@@ -5,6 +5,7 @@ import {
   MethodologyPreconditions,
   WorkedExample,
 } from "../../methodology-shared";
+import { DEPEG_PEER_DIVERGENCE_DESCRIPTION, DEPEG_REFERENCE_SESSION_DESCRIPTION } from "@/lib/methodology-content";
 
 export function PegScoreDewsOverview() {
   return (
@@ -57,8 +58,14 @@ export function PegScoreDewsOverview() {
           <p>
             Non-USD fiat pegs use the live fiat FX rate as their primary reference whenever it is available, even when three or more same-peg assets are tracked. A fiat peer median is only a fallback and must contain at least three contributors. Commodity references may use a peer median once at least three same-metal coins contribute; a direct gold or silver spot reference needs no peers. Thinner peer groups or an empty peer set fail closed. The same authority gate covers the displayed deviation: while no trustworthy reference is available, peg surfaces report the current deviation as reference unavailable instead of quoting a self-referential number. Once a live row is already open, a fresh non-cached multi-source primary cluster can retire it after recovery even if that source mix is still too soft to open brand-new events directly.
           </p>
+          <p>{DEPEG_REFERENCE_SESSION_DESCRIPTION}</p>
+          <p>{DEPEG_PEER_DIVERGENCE_DESCRIPTION}</p>
           <p>
-            FX and spot gold and silver trade on regular markets, but tokens such as EURC, XAUT and PAXG trade around the clock. From Friday 21:00 to Sunday 23:00 UTC, on Christmas and New Year&apos;s Day, and for gold and silver also on Good Friday, every FX, gold and silver reference repeats the last close. During those closures detection holds the tokens pegged to them: no new depeg, peak, direction change or recovery, pending candidates wait, the DEWS divergence signal keeps its last reading, and the site shows &ldquo;Reference market closed&rdquo; instead of a current deviation. Only a move of 25% or more, which no closed session explains, is still acted on, and it needs confirmers of the same size. Since v6.48 the historical replay follows the same rule, and history recorded earlier was repaired once: events that began during a closure and ended within six hours of the reopen were removed, and longer ones count toward the Stability Index from the reopen. Events that published resolver forecasts depend on stay as recorded.
+            When the cache supplies FX reference evidence, DEWS evaluates primary and DEX comparisons at
+            their original quote times. Only newly admitted divergence can escalate a scheduled peg on
+            market-price evidence. When the publisher omits FX evidence, DEWS uses the published
+            reference and carries the previous divergence through a closure unless a price move reaches
+            the severe threshold.
           </p>
           <p>
             An event whose price comes from a single source that can never confirm a depeg on its own (for example CoinGecko alone) now recovers once that source has stayed inside the recovery band for 24 continuous hours with no contradicting DEX or pool evidence; trusted sources keep the 15-minute rule.
@@ -96,6 +103,8 @@ export function PegScoreDewsOverview() {
             is unavailable when no known time remains, and PegScore requires seven known days.
             Recorded historical peaks remain adverse evidence, but a stale open lifecycle alone cannot
             activate the current-depeg penalty.
+            A legacy incident that opened during a reference-market closure still counts if its recorded
+            peak reached the severe threshold.
           </p>
           <p>
             Since peg methodology 6.49, a coin with no usable price for a full UTC day (no observed quote, a

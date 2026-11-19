@@ -8,16 +8,21 @@ import { allocationReviewClockSec as reviewAdmissionClockSec } from "../../types
 import { isRedemptionSettlementFaster } from "./settlement-order";
 export { isRedemptionSettlementFaster, resolveMoreConservativeRedemptionSettlement } from "./settlement-order";
 
+/** First whole Unix second at which reviewed settlement terms are too old. */
+export function reviewedRedemptionSettlementExpirySec(reviewed: RedemptionV9RouteReviewTerms): number | null {
+  const reviewSec = reviewed.reviewedAt ? Date.parse(reviewed.reviewedAt) / 1_000 : Number.NaN;
+  return Number.isFinite(reviewSec) ? reviewSec + V9_REVIEW_EVIDENCE_MAX_AGE_SEC + 1 : null;
+}
+
 /** Completed settlement bounds require current settlement-scoped sources, never target/process gaps. */
 export function resolveReviewedRedemptionSettlementDelay(
   reviewed: RedemptionV9RouteReviewTerms | undefined,
   clockSec: number,
 ): number | undefined {
-  if (!reviewed || reviewed.missingScoringFields?.includes("settlement")) return undefined;
-  const reviewSec = reviewed.reviewedAt ? Date.parse(reviewed.reviewedAt) / 1_000 : Number.NaN;
+  if (!reviewed || !Number.isFinite(clockSec) || reviewed.missingScoringFields?.includes("settlement")) return undefined;
+  const expirySec = reviewedRedemptionSettlementExpirySec(reviewed);
   const reviewAdmissionSec = reviewed.reviewedAt ? reviewAdmissionClockSec(reviewed.reviewedAt) : Number.NaN;
-  if (!Number.isFinite(reviewSec) || reviewAdmissionSec > clockSec ||
-      clockSec - reviewSec > V9_REVIEW_EVIDENCE_MAX_AGE_SEC ||
+  if (expirySec === null || reviewAdmissionSec > clockSec || clockSec > expirySec - 1 ||
       !(reviewed.docs ?? []).some((doc) => doc.supports?.includes("settlement"))) return undefined;
   if (!reviewed.businessDayTerms) return reviewed.settlementDelaySec;
   const bound = maximumBusinessDaySettlement(reviewed.businessDayTerms, clockSec);
@@ -40,15 +45,6 @@ export function resolveReviewedRedemptionSettlement(
   if (!isRedemptionSettlementFaster(reviewedModel, config.settlementModel)) {
     return reviewedModel;
   }
-  const reviewedAtSec = reviewed.reviewedAt
-    ? Date.parse(reviewed.reviewedAt) / 1_000
-    : Number.NaN;
-  const reviewAdmissionSec = reviewed.reviewedAt ? reviewAdmissionClockSec(reviewed.reviewedAt) : Number.NaN;
-  const current =
-    resolveReviewedRedemptionSettlementDelay(reviewed, clockSec) !== undefined &&
-    (reviewed.docs?.length ?? 0) > 0 &&
-    Number.isFinite(reviewedAtSec) &&
-    reviewAdmissionSec <= clockSec &&
-    clockSec - reviewedAtSec <= V9_REVIEW_EVIDENCE_MAX_AGE_SEC;
-  return current ? reviewedModel : config.settlementModel;
+  return resolveReviewedRedemptionSettlementDelay(reviewed, clockSec) !== undefined
+    ? reviewedModel : config.settlementModel;
 }

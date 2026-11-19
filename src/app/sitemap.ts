@@ -17,7 +17,7 @@ import costsData from "@shared/data/funding/costs.json";
 import donationsData from "@shared/data/funding/donations.json";
 import aiSummaries from "../../data/ai-summaries.json";
 import type { StablecoinAiSummariesById } from "@shared/types/editorial";
-import { CostsFileSchema, DonationsFileSchema } from "@shared/lib/funding/schema";
+import { CostsFileSchema, TransferDonationsFileSchema } from "@shared/lib/funding/schema";
 import { changelogs } from "@/data/changelogs";
 import {
   COLLIDING_DEPEG_EVENT_SLUGS,
@@ -37,7 +37,7 @@ export const dynamic = "force-static";
  */
 const LAST_EDITED: Record<string, string> = sitemapDates;
 const fundingCosts = CostsFileSchema.parse(costsData);
-const fundingDonations = DonationsFileSchema.parse(donationsData);
+const fundingDonations = TransferDonationsFileSchema.parse(donationsData);
 const typedSummaries = aiSummaries as StablecoinAiSummariesById;
 const TOP_STABLECOINS_DATASET = PUBLIC_DATASET_CURRENT_EXPORTS["top-stablecoins"] as {
   _meta: { asOfISO: string };

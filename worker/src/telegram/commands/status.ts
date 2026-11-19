@@ -102,10 +102,12 @@ async function describeFollowedDepegs(
   if (mine.length === 0) return "No coin you follow is off peg right now.";
   const shown = mine.slice(0, MAX_LISTED_DEPEGS).map(formatDepeg).join(", ");
   const more = mine.length > MAX_LISTED_DEPEGS ? `, and ${mine.length - MAX_LISTED_DEPEGS} more` : "";
-  return `<b>Off peg now:</b> ${escapeHtml(shown)}${more}`;
+  return `<b>${mine.some((depeg) => depeg.peerRelative || depeg.peerOpening || depeg.peakBasisUnavailable) ? "Active incidents" : "Off peg now"}:</b> ${escapeHtml(shown)}${more}`;
 }
 
 function formatDepeg(depeg: ActiveDepeg): string {
   const symbol = TRACKED_META_BY_ID.get(depeg.stablecoinId)?.symbol ?? depeg.stablecoinId;
-  return `${symbol} (peak ${(Math.abs(depeg.peakDeviationBps) / 100).toFixed(1)}% ${depeg.direction})`;
+  const opening = depeg.peerOpening && !depeg.peerRelative ? "peer-relative opening, lower confidence; " : "";
+  if (depeg.peakBasisUnavailable) return `${symbol} (${opening}peak comparison unavailable)`;
+  return `${symbol} (${opening}peak ${(Math.abs(depeg.peakDeviationBps) / 100).toFixed(1)}% ${depeg.direction}${depeg.peerRelative ? " peer median, lower confidence" : depeg.peerOpening ? " peg" : ""})`;
 }

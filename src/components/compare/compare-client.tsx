@@ -29,12 +29,11 @@ export function CompareClient() {
 
   const data = useCompareDataModel({ selectedIds, flowHours, radarCohort, range });
   const { comparisonCoins, flowUpdatedAt, freshnessQueries, globalError, handleRetry,
-    hasPrimaryData, pegRates, radarCards, shareAsOfUpdatedAt } = data;
+    hasPrimaryData, radarCards, shareAsOfUpdatedAt } = data;
 
   const share = useCompareShareActions({
     comparisonCoins,
     logos,
-    pegRates,
     radarCards,
     axisOrder: ["backing", "exit", "control"],
     axisLabels: { backing: "Backing", exit: "Exit", control: "Control" },

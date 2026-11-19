@@ -1,4 +1,6 @@
+import { deriveSupplyFromMarketCap } from "@/lib/stablecoin-detail-derive";
 import { normalizeStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { StablecoinLiveSummarySchema } from "@shared/types/stablecoin-live-summary";
 import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
 import type { FrozenSnapshot } from "@shared/lib/stablecoins/frozen-snapshots";
@@ -25,8 +27,14 @@ export function projectFrozenSnapshotLiveSummary(snapshot: FrozenSnapshot): Stab
     circulatingPrevDay: row.circulatingPrevDay,
     circulatingPrevWeek: row.circulatingPrevWeek,
     circulatingPrevMonth: row.circulatingPrevMonth,
-    // Archived list rows carry USD peg buckets only, so native token-count checkpoints are unavailable.
     nativeSupply: { current: null, prevWeek: null, prevMonth: null },
   });
-  return parsed.success ? normalizeStablecoinLiveSummary(parsed.data) : null;
+  if (!parsed.success) return null;
+
+  const summary = normalizeStablecoinLiveSummary(parsed.data);
+  const current = row.circulatingNative === undefined && summary.priceSource !== "missing"
+    ? deriveSupplyFromMarketCap(getCirculatingRawOrNull(summary), summary.price)
+    : row.circulatingNative;
+  summary.nativeSupply.current = typeof current === "number" && Number.isFinite(current) && current >= 0 ? current : null;
+  return summary;
 }

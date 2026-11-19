@@ -1,12 +1,16 @@
 import { DEPEG_SECONDARY_THRESHOLD_RATIO } from "@shared/lib/depeg-config";
 import type { DepegAuditVerdict } from "@shared/types/depeg-audit";
+import type { DepegEventDisposition, DepegEventQuoteDomain } from "@shared/types/peg";
 import { isDdrIneligibleAuditVerdict } from "@shared/lib/depeg-audit";
+import { isNativePegEvent } from "@shared/lib/depeg-quote-domain";
+import { getPegTaxonomyByType } from "@shared/lib/peg-taxonomy";
 import { isCoinGeckoHistoryAllowed } from "../../../src/lib/solomon-usdv-identity";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { sleep } from "../../../src/lib/abort";
 import { cgHeaders, cgUrl } from "../../../src/lib/coingecko";
 import { mapWithConcurrency } from "../../../src/lib/concurrency";
 import { getDepegThresholdBps } from "../../../src/lib/depeg-threshold-policy";
+import { getNativePegQueryCurrencies } from "../../../src/lib/native-peg-quotes";
 import { USER_AGENT } from "../../../src/lib/constants";
 import type { DepegRow } from "../../../src/lib/depeg-helpers";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
@@ -19,6 +23,22 @@ import {
 import { logWorkerEvent } from "../../../src/lib/structured-log";
 
 export type Verdict = DepegAuditVerdict | "skipped" | "error";
+
+type AuditProtectionReason = Extract<DepegEventDisposition, "restored-evidenced" | "repaired"> | "reviewed-dispute" | "reviewed-peak-unverified";
+
+export interface AuditDepegRow extends DepegRow {
+  quote_mode?: string | null;
+  quote_currency?: string | null;
+  peak_peg_reference?: number | null;
+  peak_quote_domain?: DepegEventQuoteDomain | null;
+  recovery_peg_reference?: number | null;
+  admitted_coverage_json?: string | null;
+  audit_preimage?: string;
+  protection_reason?: AuditProtectionReason | null;
+}
+
+type AuditSkipReason = AuditProtectionReason | "quote-domain-unavailable" | "matching-quotes-unavailable"
+  | "invalid-peg-reference" | "dated-reference-unavailable" | "unclocked-native-quote" | "provider-history-unavailable";
 
 /**
  * Machine-readable reason a batch could not use CoinGecko at all. Reported on
@@ -36,10 +56,11 @@ export interface AuditedEvent {
   cgMaxSameDirectionBps?: number | null;
   cgMaxOppositeDirectionBps?: number | null;
   verdict: Verdict;
+  reason?: AuditSkipReason;
 }
 
 export interface AuditEventOutcome {
-  event: DepegRow;
+  event: AuditDepegRow;
   auditedEvent: AuditedEvent;
   attemptedCgFetch: boolean;
   upstreamError: boolean;
@@ -94,19 +115,21 @@ function toAuditedEvent(
     symbol: event.symbol,
     startedAt: event.started_at,
     peakBps: event.peak_deviation_bps,
-    cgMaxBps: cgDeviation.cgMaxBps,
+    cgMaxBps: cgDeviation.cgMaxBps == null ? null : Math.round(cgDeviation.cgMaxBps),
   };
   if ("cgMaxSameDirectionBps" in cgDeviation) {
-    auditedEvent.cgMaxSameDirectionBps = cgDeviation.cgMaxSameDirectionBps;
+    auditedEvent.cgMaxSameDirectionBps = cgDeviation.cgMaxSameDirectionBps == null
+      ? cgDeviation.cgMaxSameDirectionBps : Math.round(cgDeviation.cgMaxSameDirectionBps);
   }
   if ("cgMaxOppositeDirectionBps" in cgDeviation) {
-    auditedEvent.cgMaxOppositeDirectionBps = cgDeviation.cgMaxOppositeDirectionBps;
+    auditedEvent.cgMaxOppositeDirectionBps = cgDeviation.cgMaxOppositeDirectionBps == null
+      ? cgDeviation.cgMaxOppositeDirectionBps : Math.round(cgDeviation.cgMaxOppositeDirectionBps);
   }
   return { ...auditedEvent, verdict };
 }
 
 function buildAuditEventOutcome(
-  event: DepegRow,
+  event: AuditDepegRow,
   verdict: Verdict,
   options: {
     cgDeviation?: Parameters<typeof toAuditedEvent>[2];
@@ -115,11 +138,15 @@ function buildAuditEventOutcome(
     rejectedByValidationCount?: number;
     rejectedByTimestampCount?: number;
     falsePositiveFound?: boolean;
+    reason?: AuditSkipReason;
   } = {},
 ): AuditEventOutcome {
   return {
     event,
-    auditedEvent: toAuditedEvent(event, verdict, options.cgDeviation ?? { cgMaxBps: null }),
+    auditedEvent: {
+      ...toAuditedEvent(event, verdict, options.cgDeviation ?? { cgMaxBps: null }),
+      ...(options.reason ? { reason: options.reason } : {}),
+    },
     attemptedCgFetch: options.attemptedCgFetch ?? verdict !== "skipped",
     upstreamError: options.upstreamError ?? false,
     rejectedByValidationCount: options.rejectedByValidationCount ?? 0,
@@ -134,20 +161,47 @@ function buildAuditEventOutcome(
 }
 
 async function auditSingleEventWithCoinGecko(
-  event: DepegRow,
+  event: AuditDepegRow,
   validationReferences: PriceValidationReferences | undefined,
   waitForCgFetchStart: () => Promise<void>,
   coingeckoApiKey: string,
 ): Promise<AuditEventOutcome> {
+  if (event.protection_reason) return buildAuditEventOutcome(event, "skipped", { reason: event.protection_reason });
+
   const meta = TRACKED_META_BY_ID.get(event.stablecoin_id);
   const geckoId = meta?.geckoId;
 
   if (!geckoId || !isCoinGeckoHistoryAllowed(geckoId)) {
-    return buildAuditEventOutcome(event, "skipped", { attemptedCgFetch: false });
+    return buildAuditEventOutcome(event, "skipped", { reason: "provider-history-unavailable" });
   }
 
+  if (!Number.isFinite(event.peg_reference) || event.peg_reference <= 0) {
+    return buildAuditEventOutcome(event, "skipped", { reason: "invalid-peg-reference" });
+  }
+  const pegCurrency = getPegTaxonomyByType(event.peg_type)?.currency;
+  if (
+    (event.quote_mode != null && event.quote_mode !== "usd" && event.quote_mode !== "native-peg") ||
+    (event.quote_mode == null && event.source !== "live" && pegCurrency !== "USD" && event.peg_reference === 1)
+  ) {
+    return buildAuditEventOutcome(event, "skipped", { reason: "quote-domain-unavailable" });
+  }
+  const native = isNativePegEvent(event);
+  if (native ? event.peg_reference !== 1 : pegCurrency !== "USD") {
+    return buildAuditEventOutcome(event, "skipped", { reason: "dated-reference-unavailable" });
+  }
+  const supportedQuoteCurrencies = native
+    ? getNativePegQueryCurrencies(pegCurrency).filter((unit) => unit.toUpperCase() === pegCurrency) : ["usd"];
+  const quoteCurrency = event.quote_currency ?? supportedQuoteCurrencies[0];
+  if (!quoteCurrency || !supportedQuoteCurrencies.includes(quoteCurrency)) {
+    return buildAuditEventOutcome(event, "skipped", { reason: "matching-quotes-unavailable" });
+  }
+
+  // CoinGecko market_chart returns timestamp/value pairs without traded-pair
+  // identity or the FX observation used by a native conversion.
+  if (native) return buildAuditEventOutcome(event, "skipped", { reason: "unclocked-native-quote" });
+
   const threshold = getDepegThresholdBps(event.peg_type);
-  const falsePositiveBar = Math.round(threshold * DEPEG_SECONDARY_THRESHOLD_RATIO);
+  const falsePositiveBar = threshold * DEPEG_SECONDARY_THRESHOLD_RATIO;
   const validationContext = buildPriceValidationContext({
     stablecoinId: event.stablecoin_id,
     pegType: event.peg_type,
@@ -162,7 +216,7 @@ async function auditSingleEventWithCoinGecko(
     await waitForCgFetchStart();
 
     const cgEndpoint = cgUrl(
-      `/coins/${geckoId}/market_chart/range?vs_currency=usd&from=${from}&to=${to}&precision=full`,
+      `/coins/${geckoId}/market_chart/range?vs_currency=${quoteCurrency}&from=${from}&to=${to}&precision=full`,
       coingeckoApiKey,
     );
     const cgFetchHeaders = cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey);
@@ -207,12 +261,7 @@ async function auditSingleEventWithCoinGecko(
         rejectedByValidationCount++;
         return false;
       }
-      const verdict = validatePriceCandidate(
-        cgPrice,
-        validationContext,
-        "historical_backfill",
-        validationReferences,
-      );
+      const verdict = validatePriceCandidate(cgPrice, validationContext, "historical_backfill", validationReferences);
       if (!verdict.accepted) {
         rejectedByValidationCount++;
         return false;
@@ -223,6 +272,7 @@ async function auditSingleEventWithCoinGecko(
     if (validatedPrices.length === 0) {
       const invalidClocksOnly = rawPrices.length > 0 && rejectedByTimestampCount === rawPrices.length;
       return buildAuditEventOutcome(event, invalidClocksOnly ? "error" : "no_data", {
+        attemptedCgFetch: true,
         upstreamError: invalidClocksOnly,
         rejectedByValidationCount,
         rejectedByTimestampCount,
@@ -235,7 +285,7 @@ async function auditSingleEventWithCoinGecko(
     for (const [, cgPrice] of validatedPrices) {
       const cgSignal = getDeviationSignal(cgPrice, event.peg_reference);
       if (cgSignal == null) continue;
-      const cgBps = cgSignal.absBps;
+      const cgBps = cgSignal.absRawBps;
       if (cgBps > maxCgBps) maxCgBps = cgBps;
       if (cgSignal.direction === event.direction) {
         if (cgBps > maxSameDirectionBps) maxSameDirectionBps = cgBps;
@@ -299,7 +349,7 @@ async function auditSingleEventWithCoinGecko(
 
 export async function runCoinGeckoAuditBatch(
   db: D1Database,
-  events: readonly DepegRow[],
+  events: readonly AuditDepegRow[],
   coingeckoApiKey: string | null,
 ): Promise<{ outcomes: AuditEventOutcome[]; attemptedCgFetches: number; errorReason?: AuditCgErrorReason }> {
   // A keyless fetch would hit the free public CoinGecko API, whose datacenter
@@ -309,9 +359,12 @@ export async function runCoinGeckoAuditBatch(
   // count as attempted upstream errors so the existing outage logic marks
   // upstreamReachable=false and skips provenance persistence.
   if (!coingeckoApiKey) {
+    const outcomes = events.map((event) => event.protection_reason
+      ? buildAuditEventOutcome(event, "skipped", { reason: event.protection_reason })
+      : buildAuditEventOutcome(event, "error", { upstreamError: true }));
     return {
-      outcomes: events.map((event) => buildAuditEventOutcome(event, "error", { upstreamError: true })),
-      attemptedCgFetches: events.length,
+      outcomes,
+      attemptedCgFetches: outcomes.filter((outcome) => outcome.attemptedCgFetch).length,
       errorReason: "coingecko_api_key_missing",
     };
   }

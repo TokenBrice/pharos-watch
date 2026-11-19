@@ -529,17 +529,19 @@ describe("CemeteryRegister", () => {
     const entries: CemeteryEntry[] = [
       { ...fixture(0), id: "peg-var", pegCurrency: "VAR" },
       { ...fixture(1), id: "peg-other", pegCurrency: "OTHER" },
+      { ...fixture(2), id: "peg-usd", pegCurrency: "USD" },
     ];
     render(<Harness entries={entries} rows={buildCemeteryRegisterRows(entries)} />);
 
     const varRow = mainRow("peg-var");
-    expect(within(varRow).getByText("CPI")).toBeTruthy();
+    expect(within(varRow).getByText("Variable")).toBeTruthy();
     expect(within(varRow).queryByText("VAR")).toBeNull();
     expect(within(mainRow("peg-other")).getByText("Other")).toBeTruthy();
+    expect(within(mainRow("peg-usd")).getByText("US Dollar")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Open autopsy for Coin 0 (C0)" }));
     const autopsy = document.getElementById("autopsy-peg-var")!;
-    expect(within(autopsy).getByText("CPI")).toBeTruthy();
+    expect(within(autopsy).getByText("Variable")).toBeTruthy();
     expect(within(autopsy).queryByText("VAR")).toBeNull();
   });
 

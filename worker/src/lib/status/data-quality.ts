@@ -12,6 +12,8 @@ import {
   STATUS_ONCHAIN_MONITORING_ACTIVE_WINDOW_SEC,
 } from "@shared/lib/status-thresholds";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { isKinesisWrapperSupplyId } from "@shared/lib/onchain-supply-probe";
+import { isKinesisWrapperSupplyCutoverActive } from "@shared/lib/supply-perimeter-changes";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import type { ActivePriceCoverageHealth, DataQuality, StablecoinPublicationHealth } from "@shared/types/status";
@@ -90,6 +92,8 @@ export async function getDataQuality(
         priceObservedAtMode?: string | null;
         nominalPriceReference?: unknown;
         circulating?: Record<string, number>;
+        circulatingNative?: number | null;
+        supplySource?: string | null;
       }>)
     : [];
   const stablecoinAssetMap = new Map(stablecoinAssets.map((asset) => [asset.id, asset]));
@@ -340,12 +344,18 @@ export async function getDataQuality(
       if (onchainRows.results && onchainRows.results.length > 0) {
         for (const row of onchainRows.results) {
           const asset = stablecoinAssetMap.get(row.stablecoin_id);
-          if (!asset?.price || asset.price <= 0 || !asset.circulating) continue;
-          const circulatingUsd = getCirculatingRawOrNull(asset);
-          if (circulatingUsd === null) continue;
-          const llamaSupply = circulatingUsd / asset.price;
-          if (llamaSupply > 0) {
-            const divergence = Math.abs(row.total_supply - llamaSupply) / llamaSupply;
+          if (!asset || !Number.isFinite(row.total_supply) || row.total_supply < 0) continue;
+          const kinesis = isKinesisWrapperSupplyId(asset.id);
+          // A legacy Horizon row under a canonical ID is native program supply.
+          if (kinesis && (isKinesisWrapperSupplyCutoverActive(asset.id, now) || asset.supplySource === "onchain-total-supply")) continue;
+          let nativeSupply = asset.circulatingNative;
+          if (nativeSupply === undefined && asset.price != null && asset.price > 0) {
+            const circulatingUsd = getCirculatingRawOrNull(asset);
+            if (circulatingUsd != null && circulatingUsd > 0) nativeSupply = circulatingUsd / asset.price;
+          }
+          if (nativeSupply != null && Number.isFinite(nativeSupply) && nativeSupply >= 0) {
+            const divergence = nativeSupply === 0 ? (row.total_supply > 0 ? Infinity : 0)
+              : Math.abs(row.total_supply - nativeSupply) / nativeSupply;
             if (divergence > STATUS_ONCHAIN_DIVERGENCE_PER_COIN_THRESHOLD) onchainSupplyDivergences++;
           }
         }

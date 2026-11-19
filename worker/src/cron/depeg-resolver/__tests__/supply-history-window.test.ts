@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { parseSupplyObservationProvenance } from "@shared/lib/supply-provenance";
 import {
+  type ActiveSupplyHistoryRow,
+  type DdrSupplySnapshot,
   readActiveSupplyHistory,
   resolveSupplyWindowStart,
   SUPPLY_CONTEXT_LOOKBACK_ROWS,
@@ -9,6 +12,14 @@ import { buildSupplyContext } from "../incident-resolution";
 
 const DAY = 86_400;
 
+function openSupplyHistoryFixture() {
+  const { sqlite, db } = createLatestSchemaSqlite();
+  if (!sqlite.prepare("SELECT name FROM pragma_table_info('supply_history') WHERE name = 'circulating_native'").get()) {
+    sqlite.exec("ALTER TABLE supply_history ADD COLUMN circulating_native REAL");
+  }
+  return { db };
+}
+
 async function seedSeries(
   db: D1Database,
   coinId: string,
@@ -16,36 +27,46 @@ async function seedSeries(
   rowCount: number,
 ): Promise<void> {
   const insert = db.prepare(
-    "INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd) VALUES (?, ?, ?)",
+    "INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, circulating_native, supply_provenance) VALUES (?, ?, ?, ?, ?)",
   );
   for (let i = 0; i < rowCount; i++) {
-    await insert.bind(coinId, firstDateSec + i * DAY, 1_000_000 + i * 1_000).run();
+    const date = firstDateSec + i * DAY;
+    const provenance = JSON.stringify({ supplySource: "defillama", supplyObservedAt: date, supplyChainGuard: null });
+    await insert.bind(coinId, date, 1_000_000 + i * 1_000, 900_000 + i * 500, provenance).run();
   }
 }
 
-async function fullSeries(db: D1Database, coinId: string): Promise<{ date: number; usd: number }[]> {
+function supplySnapshot(row: ActiveSupplyHistoryRow): DdrSupplySnapshot {
+  return {
+    date: row.snapshot_date, usd: row.circulating_usd, native: row.circulating_native,
+    nativeObservedAt: parseSupplyObservationProvenance(row.supply_provenance).provenance?.supplyObservedAt ?? null,
+  };
+}
+
+async function fullSeries(db: D1Database, coinId: string): Promise<DdrSupplySnapshot[]> {
   const result = await db
     .prepare(
-      "SELECT snapshot_date, circulating_usd FROM supply_history WHERE stablecoin_id = ? ORDER BY snapshot_date ASC",
+      "SELECT stablecoin_id, snapshot_date, circulating_usd, circulating_native, supply_provenance " +
+      "FROM supply_history WHERE stablecoin_id = ? ORDER BY snapshot_date ASC",
     )
     .bind(coinId)
-    .all<{ snapshot_date: number; circulating_usd: number }>();
-  return (result.results ?? []).map((row) => ({ date: row.snapshot_date, usd: row.circulating_usd }));
+    .all<ActiveSupplyHistoryRow>();
+  return (result.results ?? []).map(supplySnapshot);
 }
 
 async function windowedSeries(
   db: D1Database,
   coinId: string,
   windowStartSec: number,
-): Promise<{ date: number; usd: number }[]> {
+): Promise<DdrSupplySnapshot[]> {
   const result = await readActiveSupplyHistory(db, [coinId], windowStartSec);
   expect(result.error).toBeNull();
-  return result.rows.map((row) => ({ date: row.snapshot_date, usd: row.circulating_usd }));
+  return result.rows.map(supplySnapshot);
 }
 
 describe("DDR supply-history window", () => {
   it("reproduces the full-series supply context for every lookup the resolver performs", async () => {
-    const { db } = createLatestSchemaSqlite();
+    const { db } = openSupplyHistoryFixture();
     const nowSec = 1_800_000_000;
     // A coin listed long before its active depeg event, with a daily series.
     const firstDate = nowSec - 900 * DAY;
@@ -72,7 +93,7 @@ describe("DDR supply-history window", () => {
   });
 
   it("preserves the coverage guard and final-row fallback for a stale series with no rows in the window", async () => {
-    const { db } = createLatestSchemaSqlite();
+    const { db } = openSupplyHistoryFixture();
     const nowSec = 1_800_000_000;
     const firstDate = nowSec - 900 * DAY;
     // The coin stopped publishing snapshots long before the window starts.
@@ -86,12 +107,11 @@ describe("DDR supply-history window", () => {
     expect(windowed).toEqual(full.slice(-SUPPLY_CONTEXT_LOOKBACK_ROWS));
     expect(buildSupplyContext(windowed, startedAt, nowSec, [], false))
       .toEqual(buildSupplyContext(full, startedAt, nowSec, [], false));
-    // Two retained rows still satisfy the `snapshots.length < 2` guard exactly.
-    expect(buildSupplyContext(full, startedAt, nowSec, [], false).covered).toBe(true);
+    expect(buildSupplyContext(full, startedAt, nowSec, [], false).covered).toBe(false);
   });
 
   it("keeps a single-row coin uncovered, matching the unbounded read", async () => {
-    const { db } = createLatestSchemaSqlite();
+    const { db } = openSupplyHistoryFixture();
     const nowSec = 1_800_000_000;
     await seedSeries(db, "new-coin", nowSec - 400 * DAY, 1);
     const startedAt = nowSec - 10 * DAY;
@@ -108,9 +128,9 @@ describe("DDR supply-history window", () => {
   });
 
   it("keeps the nowSec - 30d lookup for a cohort whose events all started inside the last month", async () => {
-    const { db } = createLatestSchemaSqlite();
+    const { db } = openSupplyHistoryFixture();
     const nowSec = 1_800_000_000;
-    await seedSeries(db, "recent-coin", nowSec - 400 * DAY, 400);
+    await seedSeries(db, "recent-coin", nowSec - 400 * DAY, 401);
     // Every active event started recently, so `min(startedAt) - 7d` is *newer*
     // than the `nowSec - 30d` target the 30-day change also resolves.
     const startedAt = nowSec - 2 * DAY;
@@ -126,7 +146,7 @@ describe("DDR supply-history window", () => {
   });
 
   it("does not leak rows from another coin's series through the correlated lookback", async () => {
-    const { db } = createLatestSchemaSqlite();
+    const { db } = openSupplyHistoryFixture();
     const nowSec = 1_800_000_000;
     await seedSeries(db, "coin-a", nowSec - 500 * DAY, 500);
     await seedSeries(db, "coin-b", nowSec - 20 * DAY, 20);

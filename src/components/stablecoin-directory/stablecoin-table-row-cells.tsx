@@ -199,15 +199,15 @@ function MarketCells({ row, model }: RowCellsProps) {
           {model.meta?.flags.navToken ? (
             <span
               className="text-muted-foreground"
-              title={model.meta.flags.pegCurrency === "VAR" ? "CPI-indexed, price tracks inflation" : "NAV token, price appreciates with yield"}
+              title="Variable net asset value per token"
             >
-              {model.meta.flags.pegCurrency === "VAR" ? "CPI" : "NAV"}
+              NAV
             </span>
           ) : (
             <span className={`inline-flex items-center gap-0.5 ${model.pegDeviationColorClass}`}>
               {model.absPegDeviationBps !== null ? <DeviationIcon absBps={model.absPegDeviationBps} /> : null}
-              {model.referenceMarketClosed
-                ? <span title="Reference market closed">Mkt closed</span>
+              {model.referenceNote
+                ? <span>{model.referenceNote}</span>
                 : model.pegDeviationBps == null ? "N/A" : formatBps(model.pegDeviationBps)}
             </span>
           )}

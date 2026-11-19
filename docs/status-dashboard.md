@@ -442,8 +442,12 @@ Unknown FX provenance is never healthy. A present non-USD rate whose metadata ge
 
 ## Data quality status
 
+Depeg candidate hold receipts use the relevant candidate wait budget. Gaps that were blind before a scheduled closure remain actionable. Mento publication coverage qualifies only gaps first observed during the matching closure. The separate Missing tile should be read with its own producer clock and coverage fields.
+
 Computed from publication/price coverage, blacklist gaps, on-chain integrity and reserve health. Read-failure impact is source-specific.
 `DATA_QUALITY_STATUS_RULES` in `worker/src/lib/status/evaluation-rules.ts` is the single ordered rule list. Cause order is preserved before overall-cause retention caps are applied.
+
+On-chain divergence uses a published native supply when available. Legacy rows without a native supply field use the published USD supply divided by price. An explicit unavailable native value skips the comparison. Kinesis wrapper cutover rows skip comparison with legacy Horizon observations because those observations cover the native program.
 
 Compact Pipeline summaries honor `stablecoinsCacheStatus`, `blacklistGapStatus`, `onchainSupplyQueryStatus` and `onchainSupplyMonitoring` before formatting counts. Unread source placeholders never become zero missing prices, zero gaps or zero stale feeds. These evidence gaps keep Pipeline in Triage attention without changing the severity thresholds below; successful observed zeros and healthy sibling measurements remain visible. The blacklist-gap row caps at Watch because the public ratio cannot prove the server-owned Critical tier; its Stale column names that cap.
 
@@ -995,6 +999,8 @@ The retained operator-only historical depeg audit is separate from this live car
 Measurements normally come from the 15-minute self-check and remain valid for 30 minutes, not a Cloudflare fetch per browser poll. Live fallback may refresh capacity history; observations coalesce by UTC hour without hourly-throttling the fetch, while `capacity.hourlyMinMax24h` retains the trailing-24h extremes. Displayed bytes use binary units while the platform limit remains decimal 10 GB. Per-table census is API-only, reuses same-UTC-day cache under the cron lease (not a separate claim), and has a 50-hour serving budget. Growth/exhaustion forecasts use the shortest valid regression and remain advisory; utilization thresholds own health. The projected-monthly `quota` floors are a separate ops-only cost signal and never appear in public health.
 
 ## Mint/Burn Reconciliation Card
+
+A complete corrected UTC day can supersede its compatible receipt. The current retained receipt drives status and the sentinel. Prior versions remain operator evidence.
 
 The operator card is **Mint/Burn Integrity**, a permanent per-contract native conservation diagnostic. The API field name `mintBurnReconciliation` remains; `conservationVersion: 1` identifies the native verdict. Reconciliation uses a private diagnostic scope from the publication context's same admission/policy snapshot: current admissions plus enabled previously admitted or grandfathered members in the producer's active-ID universe, including automatic pauses. Explicit and shared-bucket disables, never-admitted pending legs and retained inactive configs stay excluded; public flow consumers keep the publication scope. Supply-cache/comparison availability is independent. The unmatched circulating-supply comparison and unused native summary counts are retired without aliases; older payloads without native proof remain unverified.
 

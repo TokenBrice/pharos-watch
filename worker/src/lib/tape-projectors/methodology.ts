@@ -37,6 +37,7 @@ import {
 } from "@shared/lib/methodology-versions/constants";
 import type { MethodologyChangelogEntry } from "@shared/types/editorial-content";
 
+import { batchExecute } from "../db";
 import {
   buildTapeEventId,
   severityForMethodologyBump,
@@ -178,6 +179,18 @@ export async function projectMethodologyBumps(
       buildEvent: (entry) => buildMethodologyEvent(spec, entry),
     }, options);
     total += result.projected;
+    if (spec.domain === "yield" && options?.dryRun !== true) {
+      const corrected = spec.changelog.find((entry) => entry.version === "8.55");
+      if (corrected) {
+        const event = buildMethodologyEvent(spec, corrected);
+        // Main projected the provisional clock into an already-linked permalink.
+        await batchExecute(db, [db.prepare(
+          `UPDATE tape_events SET ts = ?, payload_json = ?
+            WHERE source_table = ? AND source_row_id = ? AND transition = ? AND type = ? AND ts = ?`,
+        ).bind(event.ts, JSON.stringify(event.payload), event.sourceTable, event.sourceRowId,
+          event.transition, event.type, 1_795_046_400_000)]);
+      }
+    }
   }
   return { projected: total, advanced: null };
 }

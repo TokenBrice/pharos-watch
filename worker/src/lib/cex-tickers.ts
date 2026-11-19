@@ -30,6 +30,7 @@ import {
   recordProviderEnvironmentBlocked,
 } from "./pricing-provider-runtime-state";
 import { logWorkerEvent } from "./structured-log";
+import { validatePricingSourceFreshness } from "./pricing-source-freshness";
 
 const CEX_REQUEST_TIMEOUT_MS = 10_000;
 const CEX_REQUEST_RETRIES = 1;
@@ -37,6 +38,7 @@ const COINBASE_PRODUCT_FETCH_CONCURRENCY = 1;
 const KRAKEN_TICKER_ENDPOINT = "api.kraken.com/0/public/Ticker";
 const BITSTAMP_TICKER_ENDPOINT = "www.bitstamp.net/api/v2/ticker/";
 const COINBASE_TICKER_ENDPOINT = "api.exchange.coinbase.com/products/{product}/ticker";
+const COINBASE_BOOK_ENDPOINT = "api.exchange.coinbase.com/products/{product}/book";
 const BINANCE_TICKER_URLS = [
   "https://data-api.binance.vision/api/v3/ticker/price",
   "https://api.binance.com/api/v3/ticker/price",
@@ -76,9 +78,6 @@ const KRAKEN_RESPONSE_KEY_TO_SYMBOL = new Map<string, string>(
   KRAKEN_MARKETS.flatMap((market) => market.responseKeys.map((key) => [key, market.symbol] as const)),
 );
 const BITSTAMP_PAIR_TO_SYMBOL = new Map<string, string>(BITSTAMP_MARKETS.map((market) => [market.pair, market.symbol]));
-const COINBASE_PRODUCT_TO_SYMBOL = new Map<string, string>(
-  COINBASE_PRODUCTS.map((product) => [product.productId, product.symbol]),
-);
 
 export const BINANCE_KNOWN_SYMBOLS: readonly string[] = [
   ...new Set(BINANCE_MARKETS.map((market) => market.symbol)),
@@ -125,6 +124,7 @@ function incrementRejectionReason(
 }
 
 interface TickerRowOptions<T> {
+  quoteBasisBySymbol?: Map<string, "bid-ask-midpoint" | "last-trade">;
   observedAtBySymbol?: Map<string, number>;
   getObservedAt?: (row: T) => number | null;
   rejectionReasonCounts?: Partial<Record<PricingProviderRejectionReason, number>>;
@@ -152,6 +152,7 @@ function applyTickerRows<T>(
     const price = quote?.midpoint ?? lastTrade;
     if (price != null) {
       results.set(symbol, price);
+      options.quoteBasisBySymbol?.set(symbol, quote ? "bid-ask-midpoint" : "last-trade");
       const { observedAtBySymbol, getObservedAt } = options;
       if (observedAtBySymbol && getObservedAt) {
         const observedAt = getObservedAt(row);
@@ -392,8 +393,14 @@ export function fetchBinancePricesForRun(
 
 export interface CexTickerBatch {
   prices: Map<string, number>;
+  quoteBasisBySymbol?: Map<string, "bid-ask-midpoint" | "last-trade">;
   observedAtBySymbol: Map<string, number>;
   diagnostics: PricingProviderAttemptDiagnostic[];
+}
+
+export interface CoinbaseQuoteBatch extends CexTickerBatch {
+  quoteAssetBySymbol: Map<string, "USD" | "USDC">;
+  clockBySymbol: Map<string, "book" | "trade">;
 }
 
 export async function fetchKrakenPrices(
@@ -403,7 +410,10 @@ export async function fetchKrakenPrices(
   const prices = new Map<string, number>();
   const observedAtBySymbol = new Map<string, number>();
   const rejectionReasonCounts: Partial<Record<PricingProviderRejectionReason, number>> = {};
-  const value: CexTickerBatch = { prices, observedAtBySymbol, diagnostics: [] };
+  // The batch Ticker response has no trade timestamp. Its last-trade fallback
+  // stays undated, even when the HTTP request and its order book are current.
+  const quoteBasisBySymbol = new Map<string, "bid-ask-midpoint" | "last-trade">();
+  const value: CexTickerBatch = { prices, quoteBasisBySymbol, observedAtBySymbol, diagnostics: [] };
   const requestedPairs = KRAKEN_MARKETS.filter((market) => symbols.includes(market.symbol)).map(
     (market) => market.requestPair,
   );
@@ -429,7 +439,7 @@ export async function fetchKrakenPrices(
       ([, market]) => market.b?.[0],
       ([, market]) => market.a?.[0],
       ([, market]) => market.c?.[0],
-      { rejectionReasonCounts },
+      { rejectionReasonCounts, quoteBasisBySymbol },
     );
 
     const rejectionCount = rejectionReasonCounts["wide-spread"] ?? 0;
@@ -503,11 +513,14 @@ export async function fetchBitstampPrices(signal?: AbortSignal): Promise<Fetcher
 export async function fetchCoinbasePrices(
   symbols: string[],
   signal?: AbortSignal,
-): Promise<FetcherOutcome<CexTickerBatch>> {
+): Promise<FetcherOutcome<CoinbaseQuoteBatch>> {
   const prices = new Map<string, number>();
   const observedAtBySymbol = new Map<string, number>();
   const rejectionReasonCounts: Partial<Record<PricingProviderRejectionReason, number>> = {};
-  const value: CexTickerBatch = { prices, observedAtBySymbol, diagnostics: [] };
+  let wideBooks = 0;
+  const value: CoinbaseQuoteBatch = {
+    prices, observedAtBySymbol, diagnostics: [], quoteAssetBySymbol: new Map(), clockBySymbol: new Map(),
+  };
   const requestedProducts = COINBASE_PRODUCTS.filter((product) => symbols.includes(product.symbol));
   let transportFailures = 0;
   let transportAttempts = 0;
@@ -519,8 +532,34 @@ export async function fetchCoinbasePrices(
       transportAttempts++;
       let responseStatus: number | null = null;
       try {
+        const productUrl = `${CEX_PROVIDER_AUDIT_CONFIG.coinbase.metadataUrl}/${product.productId}`;
+        const storeQuote = (price: number, observedAt: number, clock: "book" | "trade") => {
+          prices.set(product.symbol, price);
+          observedAtBySymbol.set(product.symbol, observedAt);
+          value.quoteAssetBySymbol.set(product.symbol, product.quoteAsset);
+          value.clockBySymbol.set(product.symbol, clock);
+        };
+        const { payload: book } = await fetchCexJson<{
+          bids?: [string, string, number][];
+          asks?: [string, string, number][];
+          time?: string;
+          auction_mode?: boolean;
+        }>(`${productUrl}/book?level=1`, signal);
+        const bookQuote = midpointFromBidAsk(book?.bids?.[0]?.[0], book?.asks?.[0]?.[0]);
+        const bookTime = parseCoinbaseTime(book?.time);
+        if (bookQuote && bookTime != null && !book?.auction_mode && validatePricingSourceFreshness({
+          source: "coinbase", observedAt: bookTime, maxFutureSkewSec: 0,
+        }).accepted) {
+          if (bookQuote.wideSpread) {
+            wideBooks++;
+            return;
+          }
+          storeQuote(bookQuote.midpoint, bookTime, "book");
+          return;
+        }
+
         const result = await fetchJsonWithRetry<{ bid?: string; ask?: string; price?: string; time?: string }>(
-          `${CEX_PROVIDER_AUDIT_CONFIG.coinbase.metadataUrl}/${product.productId}/ticker`,
+          `${productUrl}/ticker`,
           {
             signal,
             headers: { Accept: "application/json", "User-Agent": USER_AGENT },
@@ -551,14 +590,11 @@ export async function fetchCoinbasePrices(
           return;
         }
         const lastTrade = parseCexPrice(payload.price);
-        const price = quote?.midpoint ?? lastTrade;
-        if (price != null) {
-          const symbol = COINBASE_PRODUCT_TO_SYMBOL.get(product.productId) ?? product.symbol;
-          prices.set(symbol, price);
-          const observedAt = parseCoinbaseTime(payload.time);
-          if (observedAt != null) {
-            observedAtBySymbol.set(symbol, observedAt);
-          }
+        const observedAt = parseCoinbaseTime(payload.time);
+        if (lastTrade != null && observedAt != null && validatePricingSourceFreshness({
+          source: "coinbase", observedAt, maxFutureSkewSec: 0,
+        }).accepted) {
+          storeQuote(lastTrade, observedAt, "trade");
         }
       } catch (err) {
         if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
@@ -582,6 +618,9 @@ export async function fetchCoinbasePrices(
     return { kind: "upstream-error", value, reason: "all Coinbase product requests failed" };
   }
   const rejectionCount = rejectionReasonCounts["wide-spread"] ?? 0;
+  if (wideBooks > 0) {
+    value.diagnostics.push(wideSpreadDiagnostic("coinbase", COINBASE_BOOK_ENDPOINT, wideBooks, prices.size > 0, 200));
+  }
   if (rejectionCount > 0) {
     value.diagnostics.push(
       wideSpreadDiagnostic("coinbase", COINBASE_TICKER_ENDPOINT, rejectionCount, prices.size > 0, null),

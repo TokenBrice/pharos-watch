@@ -14,6 +14,7 @@ import { fetchSfraxStockSupply } from "./sfrax-supply";
 import { fetchEvmBlockNumber, fetchEvmBlockHeader, fetchEvmUint256AtBlock, type EvmBlockHeader, type EvmRpcOptions } from "../../../lib/evm-rpc";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
+import { isKinesisWrapperSupplyCutoverActive } from "@shared/lib/supply-perimeter-changes";
 import {
   CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS,
   CURATED_AGGREGATE_ESCROW_RESIDUALS,
@@ -21,6 +22,7 @@ import {
   reviewedOnchainSupplyReader,
   onchainSupplyProbeFamily,
   getOnchainSupplyHoldReason,
+  isKinesisWrapperSupplyId,
   isOnchainSupplyPartitionExcluded,
   selectCuratedAggregateOnchainSupplyProbeContracts,
   selectSupplementalOnchainSupplyProbeContract,
@@ -50,6 +52,8 @@ import {
   probeTrackedTokenSupply,
 } from "../../reserve-adapters/helpers";
 import { fetchMoveFungibleAssetSupply, fetchSolanaTokenSupply } from "../../../lib/chain-observation";
+import { observeSolanaTokenSupply } from "../../../lib/native-token-supply";
+import { jsonRequestExecutor } from "../../../lib/json-request";
 import { mapWithConcurrency } from "../../../lib/concurrency";
 import type { PeggedAsset } from "../enrich-prices";
 import { isSupplyObservationWithinRestoreCeiling, rescaleChainPartition } from "../shared";
@@ -102,6 +106,7 @@ export interface OnChainMcapChainRow {
 
 export interface OnChainMcapResult {
   mcap: number;
+  nativeSupply?: number;
   supplySource: SupplementalOnChainSupplySource;
   observedAt?: number | null;
   /** Display-label keys are retained for public compatibility. */
@@ -226,9 +231,6 @@ async function readContractSupplyRaw(input: {
   }
 
   if (input.family === "aptos") {
-    if (reader === "usdy-aptos" || reader === "buidl-aptos") {
-      return fetchAptosSupply(supplyContract.address, supplyContract.decimals, input.signal, reader === "buidl-aptos" ? "BUIDL" : "USDY");
-    }
     if (!input.rpcUrl) throw new Error("Aptos supply probe REST endpoint is unavailable");
     const observation = await fetchMoveFungibleAssetSupply(
       supplyContract.address,
@@ -347,6 +349,9 @@ async function adjustOnChainSupplyForExcludedBalances(input: {
 
 interface ContractOnChainMcapResult {
   mcap: number;
+  nativeSupply?: number;
+  rawSupply?: bigint;
+  decimals?: number;
   supplySource: SupplementalOnChainSupplySource;
   observedAt: number;
   chain: string;
@@ -393,14 +398,16 @@ async function fetchOnChainSupplyForContract(input: {
       throwIfAborted(supplySignal);
       const mcap = observation.supply * input.priceUsd;
       if (!Number.isFinite(mcap) || mcap < 0 || (mcap === 0 && !allowZeroSupply)) return reject("supply-valuation-invalid");
-      return { mcap, supplySource: "onchain-total-supply", observedAt: observation.observedAt,
+      return { mcap, nativeSupply: observation.supply, supplySource: "onchain-total-supply", observedAt: observation.observedAt,
         chain: supplyContract.chain, chainLabel: contractChainLabel(supplyContract) };
     }
     if (!isFixedDecimalDeployment(supplyContract)) return reject("amount-encoding-unavailable");
     const decimals = supplyContract.decimals;
     const rpcOptions = joinedSupplyRpcOptions({ ...input, signal: supplySignal });
+    const stateClockRequired = input.meta.id === "buidl-blackrock" || isKinesisWrapperSupplyId(input.meta.id)
+      || input.meta.id === "susds-sky" || input.meta.id === "paxg-paxos";
     const needsJoinedBlock = family === "evm" && (
-      !!CURATED_ONCHAIN_SUPPLY_EXCLUSIONS[input.meta.id] ||
+      stateClockRequired || !!CURATED_ONCHAIN_SUPPLY_EXCLUSIONS[input.meta.id] ||
       (!!CURATED_AGGREGATE_ESCROW_RESIDUALS[input.meta.id] &&
         CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS[input.meta.id] === supplyContract.chain)
     );
@@ -415,7 +422,21 @@ async function fetchOnChainSupplyForContract(input: {
       input.observedBlocks?.set(supplyContract.chain, observedBlock);
     }
     if (observedBlock) observedAt = observedBlock.timestamp;
-    const raw = observedBlock
+    const reader = reviewedOnchainSupplyReader(input.meta, supplyContract);
+    const clockedSupply = family === "solana" && stateClockRequired
+      ? await observeSolanaTokenSupply(supplyContract.address, supplySignal, { jsonRequestExecutor }, rpcUrl, fallbackRpcUrl)
+      : reader === "buidl-aptos" || reader === "usdy-aptos"
+        ? await fetchAptosSupply(supplyContract.address, decimals, supplySignal, reader === "buidl-aptos" ? "BUIDL" : "USDY")
+        : undefined;
+    if (clockedSupply === null) return reject("state-clock-unavailable", undefined, "legs-unreadable");
+    if (clockedSupply) {
+      observedAt = clockedSupply.observedAt;
+      const stateAge = Math.floor(Date.now() / 1000) - observedAt;
+      if (stateClockRequired && (stateAge < 0 || stateAge > JOINED_SUPPLY_OBSERVATION_MAX_AGE_SEC)) {
+        return reject("supply-state-stale-or-future");
+      }
+    }
+    const raw = clockedSupply ? clockedSupply.rawSupply : observedBlock
       ? await fetchEvmUint256AtBlock(supplyContract.chain, supplyContract.address, TOTAL_SUPPLY_SELECTOR,
         observedBlock.number, { ...rpcOptions, stateBlockHash: observedBlock.hash })
       : await readContractSupplyRaw({
@@ -478,7 +499,7 @@ async function fetchOnChainSupplyForContract(input: {
           `[fiat-cg] ${chainLabel} supply fallback for ${input.meta.symbol}: ${supply.toFixed(2)} units -> $${mcap.toFixed(2)} mcap`,
         );
       }
-      return { mcap, supplySource, observedAt, observedBlock, chain: input.supplyContract.chain, chainLabel };
+      return { mcap, nativeSupply: supply, rawSupply: supplyRaw, decimals, supplySource, observedAt, observedBlock, chain: input.supplyContract.chain, chainLabel };
     }
   } catch (err) {
     throwIfAborted(supplySignal);
@@ -490,42 +511,39 @@ async function fetchOnChainSupplyForContract(input: {
 }
 
 /**
- * Value the canonical-chain lockbox balance so a reallocating aggregate can
- * publish free float separately from escrow it cannot attribute to a configured
- * representation leg.
+ * Read canonical-chain lockboxes against the same pinned state as total supply.
  */
-async function fetchEscrowHeldMcap(input: {
+async function fetchEscrowBalances(input: {
   meta: StablecoinMeta;
-  escrowAddress: string;
+  escrowAddresses: readonly string[];
   supplyContract: NonNullable<StablecoinMeta["contracts"]>[number];
-  priceUsd: number;
   chainRpcs?: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
   curated?: { rpcUrl?: string; fallbackRpcUrl?: string };
   observedBlock: EvmBlockHeader;
   onFailure?: (reason: PartitionReadFailure) => void;
-}): Promise<number | null> {
+}): Promise<bigint[] | null> {
   if (!isFixedDecimalDeployment(input.supplyContract)) {
     logWorkerEventArgs("handler", "warn",
       `[fiat-cg] ${contractChainLabel(input.supplyContract)} escrow balance probe skipped for ${input.meta.symbol}: contract has no fixed-decimal amount encoding`,
     );
     return null;
   }
-  const decimals = input.supplyContract.decimals;
-
   try {
     const rpcOptions = joinedSupplyRpcOptions(input);
-    const balance = await fetchEvmUint256AtBlock(input.supplyContract.chain, input.supplyContract.address,
-      encodeBalanceOfCallData(input.escrowAddress), input.observedBlock.number,
-      { ...rpcOptions, stateBlockHash: input.observedBlock.hash });
-    await confirmJoinedSupplyBlock(input.supplyContract.chain, input.observedBlock, rpcOptions);
-    if (balance == null || balance <= 0n) {
-      input.onFailure?.(balance == null ? "legs-unreadable" : "partition-invalid");
-      return null;
+    const balances: bigint[] = [];
+    for (const escrowAddress of input.escrowAddresses) {
+      const balance = await fetchEvmUint256AtBlock(input.supplyContract.chain, input.supplyContract.address,
+        encodeBalanceOfCallData(escrowAddress), input.observedBlock.number,
+        { ...rpcOptions, stateBlockHash: input.observedBlock.hash });
+      if (balance == null || balance < 0n) {
+        input.onFailure?.(balance == null ? "legs-unreadable" : "partition-invalid");
+        return null;
+      }
+      balances.push(balance);
     }
-
-    const mcap = (Number(balance) / 10 ** decimals) * input.priceUsd;
-    return Number.isFinite(mcap) && mcap > 0 ? mcap : null;
+    await confirmJoinedSupplyBlock(input.supplyContract.chain, input.observedBlock, rpcOptions);
+    return balances;
   } catch (err) {
     throwIfAborted(input.signal);
     input.onFailure?.(err instanceof OnchainSupplyValidationError ? "partition-invalid" : "legs-unreadable");
@@ -552,6 +570,7 @@ export async function fetchOnChainMcap(
   dwellirNative?: DwellirNativeCapability,
   onFailure?: (reason: PartitionReadFailure) => void,
 ): Promise<SingleContractOnChainMcapResult | null> {
+  if (isKinesisWrapperSupplyId(meta.id) && !isKinesisWrapperSupplyCutoverActive(meta.id, Math.floor(Date.now() / 1000))) return null;
   const supplyContract = selectSupplementalOnchainSupplyProbeContract(meta);
   if (!supplyContract) {
     const holdReason = getOnchainSupplyHoldReason(meta.id);
@@ -581,6 +600,7 @@ export async function fetchOnChainMcap(
   return result
     ? {
         mcap: result.mcap,
+        nativeSupply: result.nativeSupply,
         supplySource: result.supplySource,
         observedAt: result.observedAt,
         chain: result.chain,
@@ -600,6 +620,7 @@ export async function fetchCuratedAggregateOnChainMcap(
   legConcurrency = 1,
 ): Promise<OnChainMcapResult | null> {
   throwIfAborted(signal);
+  if (isKinesisWrapperSupplyId(meta.id) && !isKinesisWrapperSupplyCutoverActive(meta.id, Math.floor(Date.now() / 1000))) return null;
   if (!Number.isInteger(legConcurrency) || legConcurrency < 1) {
     throw new RangeError("legConcurrency requires a positive integer");
   }
@@ -621,8 +642,12 @@ export async function fetchCuratedAggregateOnChainMcap(
   const observedBlocks = new Map<string, EvmBlockHeader>();
 
   let totalMcap = 0;
+  let totalNativeSupply = 0;
   const chainCirculating: Record<string, OnChainMcapChainRow> = {};
   const canonicalSupplyChain = CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS[meta.id];
+  const residual = CURATED_AGGREGATE_ESCROW_RESIDUALS[meta.id];
+  const escrowRoutes = residual?.escrowByChain ? Object.entries(residual.escrowByChain) : null;
+  const representations = new Map<string, ContractOnChainMcapResult>();
   let canonicalResult: ContractOnChainMcapResult | null = null;
   let representationMcap = 0;
   // Read a bounded batch of legs before opening the next one; bodies drain
@@ -663,9 +688,17 @@ export async function fetchCuratedAggregateOnChainMcap(
           canonicalResult = result;
         } else {
           representationMcap += result.mcap;
+          if (escrowRoutes) {
+            if (representations.has(result.chain)) {
+              onFailure?.("partition-invalid");
+              return null;
+            }
+            representations.set(result.chain, result);
+          }
         }
       } else {
         totalMcap += result.mcap;
+        totalNativeSupply += result.nativeSupply ?? Number.NaN;
       }
 
       const existing = chainCirculating[result.chainLabel];
@@ -677,25 +710,25 @@ export async function fetchCuratedAggregateOnChainMcap(
   }
 
   if (canonicalSupplyChain) {
-    if (!canonicalResult || representationMcap >= canonicalResult.mcap) {
+    if (!canonicalResult || (!escrowRoutes && representationMcap >= canonicalResult.mcap)) {
       onFailure?.("partition-invalid");
       return null;
     }
     totalMcap = canonicalResult.mcap;
+    totalNativeSupply = canonicalResult.nativeSupply ?? Number.NaN;
 
-    const residual = CURATED_AGGREGATE_ESCROW_RESIDUALS[meta.id];
     if (residual) {
       const canonicalLeg = selectedContracts.find(({ config }) => config.chain === canonicalSupplyChain);
-      if (!canonicalLeg || !canonicalResult.observedBlock) {
+      const decimals = canonicalResult.decimals;
+      if (!canonicalLeg || !canonicalResult.observedBlock || decimals == null) {
         onFailure?.("partition-invalid");
         return null;
       }
 
-      const escrowMcap = await fetchEscrowHeldMcap({
+      const escrowBalances = await fetchEscrowBalances({
         meta,
-        escrowAddress: residual.escrowAddress,
+        escrowAddresses: residual.escrowByChain ? Object.values(residual.escrowByChain) : [residual.escrowAddress],
         supplyContract: canonicalLeg.contract,
-        priceUsd,
         chainRpcs,
         signal,
         curated: canonicalLeg.config,
@@ -703,20 +736,47 @@ export async function fetchCuratedAggregateOnChainMcap(
         onFailure,
       });
       throwIfAborted(signal);
+      if (!escrowBalances) return null;
+      const escrowRaw = escrowBalances.reduce((total, balance) => total + balance, 0n);
+      const valueRaw = (raw: bigint) => (Number(raw) / 10 ** decimals) * priceUsd;
+      let canonicalMcap: number;
+      let unattributedMcap: number;
       // Fail closed: the escrow read is the whole point of the refinement, so an
       // unreadable or nonsensical balance must not quietly republish the
       // unattributed remainder as canonical-chain float.
-      if (escrowMcap == null || escrowMcap < representationMcap || escrowMcap >= canonicalResult.mcap) {
-        if (escrowMcap != null) onFailure?.("partition-invalid");
-        return null;
+      if (escrowRoutes) {
+        const canonicalRaw = canonicalResult.rawSupply;
+        if (canonicalRaw == null || escrowRaw > canonicalRaw || representations.size !== escrowRoutes.length) {
+          onFailure?.("partition-invalid");
+          return null;
+        }
+        let residualRaw = 0n;
+        for (const [index, [chain]] of escrowRoutes.entries()) {
+          const remote = representations.get(chain);
+          const balance = escrowBalances[index]!;
+          if (remote?.rawSupply == null || remote.decimals !== canonicalResult.decimals || balance < remote.rawSupply) {
+            onFailure?.("partition-invalid");
+            return null;
+          }
+          residualRaw += balance - remote.rawSupply;
+        }
+        canonicalMcap = valueRaw(canonicalRaw - escrowRaw);
+        unattributedMcap = valueRaw(residualRaw);
+      } else {
+        const escrowMcap = valueRaw(escrowRaw);
+        if (!Number.isFinite(escrowMcap) || escrowMcap < representationMcap || escrowMcap >= canonicalResult.mcap) {
+          onFailure?.("partition-invalid");
+          return null;
+        }
+        canonicalMcap = canonicalResult.mcap - escrowMcap;
+        unattributedMcap = escrowMcap - representationMcap;
       }
 
       chainCirculating[canonicalResult.chainLabel] = {
-        current: canonicalResult.mcap - escrowMcap,
+        current: canonicalMcap,
         chainId: canonicalResult.chain,
       };
-      const unattributedMcap = escrowMcap - representationMcap;
-      if (unattributedMcap > 0) {
+      if (unattributedMcap > 0 || escrowRoutes) {
         chainCirculating[residual.unattributedChainLabel] = { current: unattributedMcap };
       }
     } else {
@@ -727,12 +787,13 @@ export async function fetchCuratedAggregateOnChainMcap(
     }
   }
 
-  if (!Number.isFinite(totalMcap) || totalMcap <= 0) {
+  if (!Number.isFinite(totalMcap) || totalMcap < 0 || (totalMcap === 0 && !isKinesisWrapperSupplyId(meta.id))) {
     onFailure?.("partition-invalid");
     return null;
   }
   return {
     mcap: totalMcap,
+    nativeSupply: Number.isFinite(totalNativeSupply) ? totalNativeSupply : undefined,
     supplySource: "onchain-total-supply",
     observedAt,
     chainCirculating,

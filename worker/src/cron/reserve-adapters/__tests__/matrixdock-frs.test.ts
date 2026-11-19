@@ -38,8 +38,8 @@ describe("adaptMatrixdockFrsState", () => {
     ]);
     expect(result.metadata?.totalReserveQuantity).toBeCloseTo(72_927, 6);
     expect(result.metadata?.supplyTokens).toBeCloseTo(73_032.046081582, 6);
-    // reserve oz / total supply == ozPerToken
-    expect(result.metadata?.collateralizationRatio).toBeCloseTo(0.998561644, 8);
+    expect(result.metadata?.details?.ozPerToken).toBeCloseTo(0.998561644, 8);
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(1, 8);
     expect(result.metadata?.freshnessMode).toBe("not-applicable");
     expect(result.metadata?.observedBlock).toEqual({ chain: "ethereum", number: 12_345, timestamp: NOW });
     expect(result.warnings).toBeUndefined();
@@ -66,7 +66,7 @@ describe("adaptMatrixdockFrsState", () => {
   it("admits six-hour cross-chain skew and rejects a greater skew", () => {
     const coherent = { ...STATE, suiCheckpointTimestamp: NOW - 6 * 3600 };
     expect(adaptMatrixdockFrsState(coherent, PARAMS).metadata?.collateralizationRatio)
-      .toBeCloseTo(0.998561644, 8);
+      .toBeCloseTo(1, 8);
     expect(() => adaptMatrixdockFrsState({
       ...coherent, suiCheckpointTimestamp: coherent.suiCheckpointTimestamp - 1,
     }, PARAMS)).toThrow("Ethereum/Sui observation skew");

@@ -33,7 +33,7 @@ describe("fetchOndoUsdyOracleSource", () => {
     );
     expect(result).toEqual(expect.objectContaining({
       dataSource: "protocol-api",
-      sourceKey: "protocol-api:ondo-usdy-oracle",
+      sourceKey: "protocol-api:ondo-usdy-continuous-oracle",
     }));
     expect(result!.currentApy).toBeCloseTo(7.4855, 4);
   });
@@ -54,7 +54,7 @@ describe("fetchOndoUsdyOracleSource", () => {
       currentApy: 0,
       observationKind: "anchor-only",
       exchangeRate: expect.closeTo(1.085, 2),
-      sourceKey: "protocol-api:ondo-usdy-oracle",
+      sourceKey: "protocol-api:ondo-usdy-continuous-oracle",
     }));
   });
 

@@ -11,8 +11,11 @@ import { createKnownPoolIdentityIndex } from "../pool-identity";
 import { initSourcePoolGraph } from "../pool-helpers";
 import { buildChainAddressKey } from "../token-resolution";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
+import { computeDexPrices } from "../dex-price-publisher";
+import { filterRetainedPools, projectRetainedPoolPrice } from "../scoring-helpers";
+import { readPublicPriceRows, seedPublishedDexGeneration } from "./scoring-test-support";
 
-const SOLANA_POOL_ADDRESS = "11111111111111111111111111111111";
+const SOLANA_POOL_ADDRESS = "11111111111111111111111111111112";
 const SOLANA_USDC_MINT = "UsdcMint";
 const SOLANA_USDT_MINT = "UsdtMint";
 
@@ -23,8 +26,8 @@ function makeSolanaDirectPool(overrides: Partial<DexApiPool> = {}): DexApiPool {
     poolAddress: SOLANA_POOL_ADDRESS,
     poolType: "raydium-amm",
     tokens: [
-      { address: SOLANA_USDC_MINT, symbol: "USDC", decimals: 6 },
-      { address: SOLANA_USDT_MINT, symbol: "USDT", decimals: 6 },
+      { address: SOLANA_USDC_MINT, symbol: "USDC", decimals: 6, priceUsd: 1 },
+      { address: SOLANA_USDT_MINT, symbol: "USDT", decimals: 6, priceUsd: 1 },
     ],
     price: 1,
     tvlUsd: 4_000_000,
@@ -392,27 +395,66 @@ describe("integrateDirectApiLiquidityPhase", () => {
     ]);
   });
 
-  it("drops exact duplicate evidence when no matching primary top-pool row was counted", async () => {
-    const knownPoolIndex = createKnownPoolIdentityIndex();
-    knownPoolIndex.exactKeys.add(`solana:${SOLANA_POOL_ADDRESS}`);
-    const metrics = new Map();
-    const priceObservations = new Map();
-
-    const result = await runDirectApiScenario({
-      knownPoolIndex,
-      metrics,
-      priceObservations,
+  it.each([
+    ["new", -30, -60, true],
+    ["new", undefined, -60, false],
+    ["new", 1, -60, false],
+    ["new", -4_500, -60, false],
+    ["new", -30, undefined, false],
+    ["exact", -120, -60, true],
+    ["exact", undefined, -60, false],
+    ["incompatible", -30, -60, false],
+  ] as const)("admits a ratio through retention and publication only with both clocks and compatible identity (%s, %s, %s)", async (mode, ratioOffset, markOffset, admitted) => {
+    const nowSec = 1_790_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    const poolKey = `solana:${SOLANA_POOL_ADDRESS}`;
+    const ratioObservedAtSec = ratioOffset == null ? undefined : nowSec + ratioOffset;
+    const mark = markOffset == null ? undefined : { priceUsd: 0.87, observedAtSec: nowSec + markOffset, source: "coinbase+kraken" };
+    const pool = makeSolanaDirectPool({ price: 1 / 0.87, ratioObservedAtSec });
+    for (const token of pool.tokens) delete token.priceUsd;
+    const stablecoinPriceById = Object.assign(new Map([["usdt-tether", 0.87]]), {
+      marketMarks: new Map(mark ? [["usdt-tether", mark]] : []),
     });
-
-    expect(result.directApiDedupSkippedByAddress).toBe(1);
-    expect(metrics.size).toBe(0);
-    expect(priceObservations.get("usdc-circle")).toEqual([
-      expect.objectContaining({
-        poolKey: `solana:${SOLANA_POOL_ADDRESS}`,
-        identityConfidence: "exact",
-        sourceFamily: "direct_api",
-      }),
-    ]);
+    const knownPoolIndex = createKnownPoolIdentityIndex();
+    const metric = initSourcePoolGraph("usdc-circle", "USDC");
+    const metrics = new Map([["usdc-circle", metric]]);
+    const priceObservations = new Map();
+    if (mode !== "new") {
+      knownPoolIndex.exactKeys.add(poolKey);
+      metric.pools.push({ poolId: poolKey, project: mode === "exact" ? "raydium" : "orca", chain: "solana",
+        tvlUsd: 5_000_000, symbol: "USDT / USDC", volumeUsd1d: 100_000, poolType: "raydium-amm", source: "dl" });
+    }
+    await runDirectApiScenario({ knownPoolIndex, metrics, priceObservations, directApiPools: [pool], stablecoinPriceById });
+    const retained = filterRetainedPools(metric.pools);
+    const observedAt = admitted ? Math.min(ratioObservedAtSec!, mark!.observedAtSec) : undefined;
+    expect(retained).toEqual([expect.objectContaining({
+      poolId: poolKey, source: mode === "new" ? "direct_api" : "dl", tvlUsd: mode === "new" ? 4_000_000 : 5_000_000,
+    })]);
+    const counterpartyPrice = { ...mark, stablecoinId: "usdt-tether" };
+    const observation = expect.objectContaining({
+      price: expect.closeTo(1), observedAt, poolKey, identityConfidence: "exact", sourceFamily: "direct_api",
+      counterpartyPrice,
+    });
+    expect(retained[0]?.price).toEqual(admitted ? expect.closeTo(1) : undefined);
+    expect(retained[0]?.priceObservedAt).toBe(observedAt);
+    expect(retained[0]?.priceCounterparty).toEqual(admitted ? counterpartyPrice : undefined);
+    expect(projectRetainedPoolPrice(retained[0]!)).toEqual(admitted ? observation : null);
+    expect(priceObservations.get("usdc-circle")).toEqual(admitted ? [observation] : undefined);
+    const { db, sqlite, generationId } = seedPublishedDexGeneration({ nowSec });
+    try {
+      await computeDexPrices({ db, generationId, nowSec, retainedPoolsByStablecoin: new Map([["usdc-circle", retained]]),
+        exactPriceEvidenceByStablecoin: priceObservations, primaryPrices: new Map([["usdc-circle", 1]]) });
+      const rows = readPublicPriceRows(sqlite);
+      expect(rows).toEqual(admitted ? [expect.objectContaining({
+        stablecoin_id: "usdc-circle", dex_price_usd: expect.closeTo(1), source_pool_count: 1, source_total_tvl: 4_000_000,
+      })] : []);
+      if (admitted) expect(JSON.parse(rows[0]!.price_sources_json!).displaySources).toEqual([expect.objectContaining({
+        protocol: "raydium", observedAt, aggregateObservedAt: null, displayAggregateObservedAt: observedAt,
+        upstreamKeys: [poolKey, "venue:coinbase", "venue:kraken"], sourceFamily: "direct_api",
+      })]);
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("does not overwrite retained exact-pool evidence when protocol compatibility fails", async () => {
@@ -472,22 +514,27 @@ describe("integrateDirectApiLiquidityPhase", () => {
     });
   });
 
-  it("records explicit zero coverage for a configured chain that returned no pools", async () => {
+  it.each([100_000, 0, null])("retains PancakeSwap's own clock for volume %s and keeps empty chain counts", async (volume24hUsd) => {
     const usdc = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
     const usdt = "0xdac17f958d2ee523a2206206994597c13d831ec7";
-    const pancakeEthereumPool = makeSolanaDirectPool({
-      source: "pancakeswap",
-      chain: "ethereum",
-      poolAddress: "0x00000000000000000000000000000000000000aa",
-      poolType: "pancakeswap-v3-1bp",
-      tokens: [
-        { address: usdc, symbol: "USDC", decimals: 6 },
-        { address: usdt, symbol: "USDT", decimals: 6 },
-      ],
-    });
+    const volumeWindowEndSec = 1_800_000_000;
+    const pancakeEthereumPool = {
+      ...makeSolanaDirectPool({
+        source: "pancakeswap", chain: "ethereum", volume24hUsd,
+        poolAddress: "0x00000000000000000000000000000000000000aa", poolType: "pancakeswap-v3-1bp",
+        tokens: [
+          { address: usdc, symbol: "USDC", decimals: 6 },
+          { address: usdt, symbol: "USDT", decimals: 6 },
+        ],
+      }),
+      volumeWindowEndSec: volume24hUsd == null ? null : volumeWindowEndSec,
+    };
+    const metrics = new Map();
 
     const result = await runDirectApiScenario({
       directApiPools: [pancakeEthereumPool],
+      metrics,
+      volumeObservedAtSec: volumeWindowEndSec + 600,
       chainAddressToId: new Map([
         [buildChainAddressKey("ethereum", usdc), "usdc-circle"],
         [buildChainAddressKey("ethereum", usdt), "usdt-tether"],
@@ -502,6 +549,10 @@ describe("integrateDirectApiLiquidityPhase", () => {
       "pancakeswap:bsc": 0,
       "pancakeswap:ethereum": 1,
       "pancakeswap:base": 0,
+    });
+    expect(metrics.get("usdc-circle")?.pools[0]?.volumeReading).toMatchObject({
+      volume24hUsd,
+      observedAtSec: pancakeEthereumPool.volumeWindowEndSec,
     });
   });
 });

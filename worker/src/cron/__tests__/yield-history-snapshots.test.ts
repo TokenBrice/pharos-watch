@@ -8,6 +8,7 @@ import {
 } from "../../lib/yield-history-ownership-handoffs";
 import { buildYieldHistoryEvaluationInputsCooperative } from "../yield-sync/history-evidence";
 import { loadYieldHistorySnapshots } from "../yield-sync/history-repository";
+import { computeYieldCandidateStatistics } from "../yield-sync/candidate-statistics";
 import { purgeYieldHistoryOwnershipHandoffs } from "../yield-sync/history-repair";
 import type { YieldHistorySnapshotRow } from "../yield-sync/history-repository";
 import { evaluateYieldSourcesCooperative, type EvaluateYieldSourcesResult } from "../yield-sync/evaluation";
@@ -15,6 +16,7 @@ import { baseEvaluationInput, resolvedYield } from "./yield-evaluation.test-supp
 import { cleanupFalseLinkedVariantSourceSwitches } from "../yield-sync/history-repair";
 import { drainDecisionRowsBeforeCutoff, drainRowsBeforeCutoff, pruneYieldTables } from "../yield-sync/history";
 import { classifyDecisionRetention } from "../yield-sync/publication-decisions";
+import { buildYieldStorageRows } from "../yield-sync/publication-rows";
 import type { EvaluatedYieldSource } from "../yield-sync/evaluation";
 
 function createDb(): { sqlite: DatabaseSync; db: D1Database } {
@@ -29,8 +31,10 @@ function insertHistory(
     recordedAt: number;
     isBest?: number;
     apy?: number;
+    sourceObservedAt?: number | null;
     sourceTvlUsd?: number | null;
     publicationState?: string | null;
+    pysInputsAtPublish?: string | null;
   },
 ): void {
   sqlite
@@ -38,8 +42,8 @@ function insertHistory(
       `INSERT INTO yield_history (
       stablecoin_id, source_key, recorded_at, is_best, apy, apy_base,
       source_tvl_usd, data_source, yield_source, yield_type, exchange_rate,
-      publication_state
-    ) VALUES (?, ?, ?, ?, ?, NULL, ?, 'defillama', 'Test', 'lending', NULL, ?)`,
+      publication_state, source_observed_at, pys_inputs_at_publish
+    ) VALUES (?, ?, ?, ?, ?, NULL, ?, 'defillama', 'Test', 'lending', NULL, ?, ?, ?)`,
     )
     .run(
       row.stablecoinId,
@@ -49,6 +53,8 @@ function insertHistory(
       row.apy ?? 1,
       row.sourceTvlUsd ?? null,
       row.publicationState === undefined ? "published" : row.publicationState,
+      row.sourceObservedAt ?? null,
+      row.pysInputsAtPublish ?? null,
     );
 }
 
@@ -58,6 +64,72 @@ describe("loadYieldHistorySnapshots", () => {
   afterEach(() => {
     sqlite?.close();
     sqlite = null;
+  });
+
+  it("counts each USYC NAV report once, without rewriting its publication history", async () => {
+    const fixture = createDb();
+    sqlite = fixture.sqlite;
+    const stablecoinId = "usyc-hashnote";
+    const sourceKey = "protocol-api:hashnote-usyc";
+    const startSec = Date.UTC(2026, 10, 16, 15) / 1000;
+    const sevenDaysAgoSec = startSec - 7 * DAY_SECONDS;
+    const friday = startSec - 3 * DAY_SECONDS - HOUR_SECONDS;
+    for (const [daysAgo, apy, sourceObservedAt] of [
+      [6, 3, startSec - 8 * DAY_SECONDS],
+      [3, 4, friday], [2, 4, friday], [1, 4, friday],
+      [0.5, 100, null], [0.025, 7, startSec - HOUR_SECONDS],
+    ] as const) {
+      insertHistory(sqlite, { stablecoinId, sourceKey, recordedAt: startSec - Math.round(daysAgo * DAY_SECONDS),
+        apy, sourceObservedAt, isBest: 1 });
+    }
+    const { historyRows } = await loadYieldHistorySnapshots(fixture.db, [stablecoinId], startSec, sevenDaysAgoSec, {
+      sourceKeysByStablecoin: new Map([[stablecoinId, new Set([sourceKey])]]),
+    });
+    expect(historyRows).toHaveLength(6);
+    const stats = computeYieldCandidateStatistics(resolvedYield({ sourceKey, dataSource: "protocol-api",
+      yieldType: "nav-appreciation", currentApy: 8, sourceObservedAt: startSec - HOUR_SECONDS }),
+    historyRows, false, startSec, sevenDaysAgoSec, "fresh");
+    expect(stats).toMatchObject({ apy7d: 6, apy30d: 5, distinctObservationDays30d: 3, apyMin30d: 3, apyMax30d: 8 });
+    expect(stats.stdDev30d).toBeCloseTo(Math.sqrt(14 / 3));
+  });
+
+  it.each([
+    ["protocol-api:kong:ethereum:0xvault", "protocol-api", 1],
+    ["clockless-pool", "defillama", null],
+    ["linked-variant:ybold-yearn:protocol-api:yearn:ybold", "protocol-api", null],
+  ] as const)("counts verified observation days for %s and keeps its publications", async (sourceKey, dataSource, expectedCount) => {
+    const fixture = createDb();
+    sqlite = fixture.sqlite;
+    const startSec = Date.UTC(2026, 10, 16, 1) / 1000;
+    const sevenDaysAgoSec = startSec - 7 * DAY_SECONDS;
+    const blockAt = expectedCount == null ? null : startSec - 2 * HOUR_SECONDS;
+    const yieldSource = resolvedYield({ sourceKey, dataSource, sourceObservedAt: blockAt, sourceFetchedAt: startSec });
+    const input = baseEvaluationInput({
+      startSec, sevenDaysAgoSec, resolved: [{ id: "coin-a", symbol: "A", yield: yieldSource }],
+      dlPoolsMeta: { mode: "direct-fetch", ageSeconds: 0, updatedAt: startSec, poolCount: 1, fallbackMode: null },
+    });
+    const { evaluatedSources } = await evaluateYieldSourcesCooperative(input);
+    const { historyRows: [published] } = buildYieldStorageRows({
+      evaluatedSources, publicationViews: new Map(), startSec, generationId: "test",
+    });
+    const publishedInputs = String(published.pys_inputs_at_publish);
+    expect(JSON.parse(publishedInputs).sourceObservationVerified).toBe(blockAt == null ? undefined : true);
+    for (const age of [0.5 * HOUR_SECONDS, 1.5 * HOUR_SECONDS, ...[2, 3, 4, 5, 6, 7].map((day) => day * DAY_SECONDS)]) {
+      const recordedAt = startSec - age;
+      const providerDelivery = age < 2 * HOUR_SECONDS;
+      insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey, recordedAt, apy: 4,
+        sourceObservedAt: providerDelivery ? blockAt : recordedAt,
+        pysInputsAtPublish: providerDelivery ? publishedInputs : null });
+    }
+    const { historyRows } = await loadYieldHistorySnapshots(fixture.db, ["coin-a"], startSec, sevenDaysAgoSec, {
+      sourceKeysByStablecoin: new Map([["coin-a", new Set([sourceKey])]]),
+    });
+    expect(historyRows).toHaveLength(8);
+    const stats = computeYieldCandidateStatistics({ ...yieldSource, sourceObservedAt: null },
+      historyRows, false, startSec, sevenDaysAgoSec, "unknown");
+    expect(stats).toMatchObject({ distinctObservationDays30d: expectedCount, apy30d: 37 / 9 });
+    expect(computeYieldCandidateStatistics(yieldSource, historyRows, true, startSec, sevenDaysAgoSec,
+      blockAt == null ? "unknown" : "fresh").distinctObservationDays30d).toBe(expectedCount);
   });
 
   it("keeps published and legacy anchors when newer staged rows compete", async () => {

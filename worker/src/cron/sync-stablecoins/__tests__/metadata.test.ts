@@ -530,6 +530,26 @@ describe("stablecoins pricing metadata", () => {
     }
   });
 
+  it("puts only new in-closure Mento gaps in the scheduled tile count", () => {
+    const close = Date.UTC(2026, 9, 30, 21) / 1000;
+    const persistent = "chfm-mento";
+    const newGap = "cadm-mento";
+    const rows = (missing: string[]) => ACTIVE_STABLECOINS.map((asset) => ({
+      ...identity(asset), price: missing.includes(asset.id) ? null : 1,
+      priceSource: missing.includes(asset.id) ? "missing" : "coingecko",
+    }));
+    const previous = evaluateStablecoinActivePriceCoverage(rows([persistent]), undefined, { nowSec: close - 900 });
+    const assets = rows([persistent, newGap]);
+    const metadata = JSON.parse(buildStablecoinsSyncResult({
+      ...syncInput(assets), syncStartSec: close + 900, previousActivePriceCoverage: previous,
+    }).metadata!);
+    expect(metadata.activePriceCoverage.scheduledClosureGapIds).toEqual([newGap]);
+    expect(metadata.activePriceCoverage.alertEligibleIds).toContain(persistent);
+    expect(metadata.priceSourceHealth.active).toMatchObject({
+      sourceDistribution: { missing: 2 }, acknowledgedMissingCount: 0, scheduledClosureMissingCount: 1,
+    });
+  });
+
   it("publishes known exposure subtotal with unavailable-member coverage, keeping observed zero", () => {
     const assets = ACTIVE_STABLECOINS.map((asset): PeggedAsset => {
       const circulating: Record<string, number> =

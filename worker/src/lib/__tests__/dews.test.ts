@@ -12,7 +12,7 @@ function computeDews(input: DEWSInput) {
 
 describe("computeDEWS", () => {
   const broker = { price: 0.98, priceSource: "mento-broker", priceConfidence: "fallback", circulatingCurrent: 5e9, circulatingPrevWeek: 5e9 };
-  it.each([[0, 100, true], [0, 0, false], [100, 0, false], [1, 2, false]])(
+  it.each([[0, 1_000_000, true], [0, 100, false], [0, 0, false], [100, 0, false], [1, 2, false]])(
     "isolated flow cannot lower stress (%s/%s)", (mint, burn, admitted) => {
       const input = makeDewsInput({ price: null, flowIsolated: true, mintVolume24hUsd: mint, burnVolume24hUsd: burn,
         burnBaseline30dUsd: 10, flowBaselineDays: 30 });
@@ -296,6 +296,7 @@ describe("computeDEWS", () => {
     const structured = computeDews(
       makeDewsInput({
         yieldWarnings: [],
+        yieldSourceOverdue: true,
         yieldSourceRisk: {
           sourceRiskPenalty: 1.5,
           rewardShare: 0.9,

@@ -1,6 +1,10 @@
-import type { DatabaseSync, SQLInputValue } from "node:sqlite";
+import { DatabaseSync, type SQLInputValue } from "node:sqlite";
+import { readFileSync, readdirSync } from "node:fs";
+import { URL } from "node:url";
 import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
+import { queryTapeEvents } from "../../tape-event-store";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => {
@@ -16,7 +20,10 @@ import { projectScoreDowngraded, projectScoreUpgraded } from "../score";
 import { SOURCE_RECONCILIATION_LOOKBACK_SEC } from "../types";
 import { MINT_BURN_CONFIGS } from "../../mint-burn-contracts";
 import { mintBurnConfigKey } from "../../mint-burn-contract-identity";
-import { mintBurnScanFingerprint } from "../../mint-burn-pipeline/scan-coverage";
+import { commitMintBurnMaterializedCoverage, mintBurnScanFingerprint } from "../../mint-burn-pipeline/scan-coverage";
+import { collectAffectedHours, recalcAffectedHours } from "../../mint-burn-pipeline/persistence";
+import { aggregateFlowCacheKey, finalizeMintBurnFlowResponse } from "../../mint-burn-flows-service";
+import { readMintBurnDisabledKeys, syncMintBurnPublicationPolicy } from "../../mint-burn-publication";
 
 type Row = Record<string, unknown>;
 
@@ -64,7 +71,90 @@ function insertFlow(sqlite: DatabaseSync, overrides: Row) {
     VALUES (${entries.map(() => "?").join(", ")})`).run(...entries.map(([, value]) => value as SQLInputValue));
 }
 
+const migrations = new URL("../../../../migrations/", import.meta.url);
+const rollbackProtection = "0315_mint_burn_rollback_protection.sql";
+
+function applyPreRollbackProtectionMigrations(sqlite: DatabaseSync) {
+  for (const name of readdirSync(migrations).filter((name) => name.endsWith(".sql") && name < rollbackProtection).sort()) {
+    sqlite.exec(readFileSync(new URL(name, migrations), "utf8"));
+  }
+}
+
 describe("mint_burn projector", () => {
+  it("retires a prior $12M MUSD spoke claim and blocks legacy writers from counting new spoke rows", async () => {
+    using sqlite = new DatabaseSync(":memory:");
+    applyPreRollbackProtectionMigrations(sqlite);
+    const db = createSqliteD1(sqlite);
+    const spoke = { stablecoin_id: "meusd-mezo", symbol: "MUSD", amount: 12_000_000, amount_usd: 12_000_000 };
+    insertFlow(sqlite, { ...spoke, id: "old-spoke" });
+    insertFlow(sqlite, { ...spoke, id: "issuer", chain_id: "mezo" });
+    sqlite.exec(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, mint_volume_usd, net_flow_usd)
+      VALUES ('meusd-mezo', 'ethereum', 1699999200, 1, 12000000, 12000000),
+             ('meusd-mezo', 'mezo', 1699999200, 1, 12000000, 12000000);
+      INSERT INTO cache (key, value, updated_at) VALUES ('mint-burn-flows:v8:aggregate:24', '{}', 1),
+        ('mint-burn-flows:v8:coin:meusd-mezo:24', '{}', 1), ('mint-burn-flows:v8:coin:usdt-tether:24', '{}', 1);
+      INSERT INTO tape_events (event_id, type, severity, ts, coin_id, chain, title, summary, payload_json,
+        source_table, source_row_id, transition, created_at)
+      VALUES ('false-claim', 'mint_burn.large_mint', 'notice', 1700000000000, 'meusd-mezo', 'ethereum',
+        'MUSD minted $12.0M', '', '{}', 'mint_burn_events', 'old-spoke', 'updated', 1700000000)`);
+
+    sqlite.exec(readFileSync(new URL(rollbackProtection, migrations), "utf8"));
+    insertFlow(sqlite, { ...spoke, id: "new-legacy-spoke" });
+    sqlite.exec("UPDATE mint_burn_events SET flow_type = 'standard' WHERE id = 'old-spoke'");
+    expect(sqlite.prepare(`SELECT id FROM mint_burn_events m WHERE ${mintBurnTapeEligibleSql("m")} ORDER BY id`).all())
+      .toEqual([{ id: "issuer" }]);
+    expect(sqlite.prepare("SELECT chain_id, mint_count, mint_volume_usd FROM mint_burn_hourly ORDER BY chain_id").all())
+      .toEqual([{ chain_id: "ethereum", mint_count: 0, mint_volume_usd: 0 }, { chain_id: "mezo", mint_count: 1, mint_volume_usd: 12_000_000 }]);
+    expect(sqlite.prepare("SELECT key FROM cache WHERE key LIKE 'mint-burn-flows:%'").all())
+      .toEqual([{ key: "mint-burn-flows:v8:coin:usdt-tether:24" }]);
+    expect(sqlite.prepare("SELECT suppression_reason FROM tape_events WHERE event_id = 'false-claim'").get())
+      .toEqual({ suppression_reason: "flow-claim-retracted" });
+    expect((await queryTapeEvents(db, { filters: { coinIds: ["meusd-mezo"] }, limit: 10, cursor: null, includeTotal: true })).total)
+      .toBe(0);
+  });
+
+  it("fences an in-flight $12M MUSD cache write through migration and legacy policy sync", async () => {
+    using sqlite = new DatabaseSync(":memory:");
+    applyPreRollbackProtectionMigrations(sqlite);
+    const db = createSqliteD1(sqlite);
+    const spoke = MINT_BURN_CONFIGS.find((config) => config.stablecoinId === "meusd-mezo" && config.chain.chainId === "ethereum")!;
+    const spokeKey = mintBurnConfigKey(spoke);
+    const cacheKey = aggregateFlowCacheKey(24);
+    const policy = () => String(sqlite.prepare("SELECT disabled_keys FROM mint_burn_publication_policy WHERE id = 1").get()?.disabled_keys);
+    const oldPolicy = '["operator-disabled"]';
+    sqlite.prepare("INSERT INTO mint_burn_publication_policy (id, disabled_keys, updated_at) VALUES (1, ?, ?)").run(oldPolicy, SEC);
+    sqlite.exec(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, mint_volume_usd, net_flow_usd)
+      VALUES ('meusd-mezo', 'ethereum', 1699999200, 1, 12000000, 12000000)`);
+    const stale = sqlite.prepare("SELECT mint_count, mint_volume_usd FROM mint_burn_hourly").get()!;
+    expect(stale).toEqual({ mint_count: 1, mint_volume_usd: 12_000_000 });
+
+    sqlite.exec(`BEGIN; ${readFileSync(new URL(rollbackProtection, migrations), "utf8")} COMMIT;`);
+    // The rollback Worker's upsert supplies only the env-derived keys.
+    sqlite.prepare(`INSERT INTO mint_burn_publication_policy (id, disabled_keys, updated_at) VALUES (1, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET disabled_keys = excluded.disabled_keys, updated_at = excluded.updated_at`)
+      .run(oldPolicy, SEC + 1);
+    expect(JSON.parse(policy())).toEqual(expect.arrayContaining(["operator-disabled", spokeKey]));
+    expect(await readMintBurnDisabledKeys(db)).toEqual(new Set(["operator-disabled"]));
+    const response = await finalizeMintBurnFlowResponse(db, cacheKey, SEC,
+      { coins: [stale] }, { timestamp: SEC, status: "ok" }, oldPolicy);
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ reason: "mint-burn-publication-scope-changed" });
+    const readCache = () => sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(cacheKey);
+    expect(readCache()).toBeUndefined();
+
+    const corrected = sqlite.prepare("SELECT mint_count, mint_volume_usd FROM mint_burn_hourly").get()!;
+    expect(corrected).toEqual({ mint_count: 0, mint_volume_usd: 0 });
+    expect((await finalizeMintBurnFlowResponse(db, cacheKey, SEC + 1,
+      { coins: [corrected] }, { timestamp: SEC + 1, status: "ok" }, policy())).status).toBe(200);
+    const current = readCache();
+    expect(current).toBeDefined();
+    await syncMintBurnPublicationPolicy(db, ["operator-disabled"], SEC + 2);
+    expect(readCache()).toEqual(current);
+    await syncMintBurnPublicationPolicy(db, ["operator-disabled", spokeKey], SEC + 3);
+    expect(await readMintBurnDisabledKeys(db)).toEqual(new Set(["operator-disabled", spokeKey]));
+    expect(readCache()).toBeUndefined();
+  });
+
   it.each(["pending", "accepted", "invalidated"])("withholds unaccepted range-proof Tape claims (%s)", (lifecycle) => {
     const { sqlite } = fixtures.open();
     sqlite.prepare(`INSERT INTO mint_burn_supply_proofs
@@ -78,6 +168,55 @@ describe("mint_burn projector", () => {
     expect(sqlite.prepare(`SELECT id FROM mint_burn_events m WHERE ${mintBurnTapeEligibleSql("m")}`).all())
       .toEqual(lifecycle === "accepted" ? [{ id: "event" }] : []);
   });
+
+  it.each([["usdz-anzen", "bridge_transfer"], ["ousd-origin-protocol", "protocol_internal"]])(
+    "preserves %s claims through a proof gap and retracts a proved %s", async (stablecoinId, excludedClass) => {
+      const { db, sqlite } = fixtures.open();
+      const config = MINT_BURN_CONFIGS.find((entry) => entry.stablecoinId === stablecoinId)!;
+      const hour = Math.floor(SEC / 3600) * 3600 - 3600;
+      const key = mintBurnConfigKey(config);
+      const insert = (id: string) => insertFlow(sqlite, { id, stablecoin_id: stablecoinId, symbol: config.symbol,
+        block_number: 101, timestamp: hour + 10 });
+      const hours = collectAffectedHours([{ stablecoin_id: stablecoinId, chain_id: "ethereum", timestamp: hour }]);
+      const certify = async (revision: string) => {
+        await recalcAffectedHours(db, hours, { materializationRevision: revision });
+        await commitMintBurnMaterializedCoverage(db, {
+          configKey: key, configFingerprint: mintBurnScanFingerprint(config), chainId: "ethereum",
+          fromBlock: 100, toBlock: 102, fromTimestamp: hour, toTimestamp: hour + 3600,
+          finalizedBlock: 102, acceptedAt: SEC, materializedStablecoinId: stablecoinId,
+          materialization: { hours: [hour], revision },
+        }, []);
+      };
+      insert("ordinary");
+      insert("control");
+      await certify("initial");
+      expect((await projectMintBurnLargeFlows(db)).projected).toBe(2);
+      const claim = (id: string) => sqlite.prepare(
+        "SELECT event_id, suppressed_at, suppression_reason FROM tape_events WHERE source_row_id = ?",
+      ).get(id);
+      const ordinary = claim("ordinary");
+      const control = claim("control");
+
+      sqlite.prepare("INSERT INTO mint_burn_dirty_hours VALUES (?, 'ethereum', ?)").run(stablecoinId, hour);
+      sqlite.prepare("UPDATE mint_burn_events SET flow_type = ? WHERE id = 'control'").run(excludedClass);
+      insert("late-ordinary");
+      await projectMintBurnLargeFlows(db);
+      expect(claim("ordinary")).toEqual(ordinary);
+      expect(claim("control")).toEqual(control);
+      expect(claim("late-ordinary")).toBeUndefined();
+
+      await recalcAffectedHours(db, hours);
+      await projectMintBurnLargeFlows(db);
+      expect(claim("control")).toEqual(control);
+      expect(claim("late-ordinary")).toBeUndefined();
+
+      await certify("recovered");
+      await projectMintBurnLargeFlows(db);
+      expect(claim("ordinary")).toEqual(ordinary);
+      expect(claim("late-ordinary")).toMatchObject({ suppressed_at: null });
+      expect(claim("control")).toMatchObject({ suppressed_at: SEC, suppression_reason: "flow-claim-retracted" });
+    },
+  );
 
   it("projects admitted legs only and honors the operator disable policy before limiting rows", async () => {
     const { db, sqlite } = fixtures.open();
@@ -325,8 +464,8 @@ describe("mint_burn projector", () => {
   });
 });
 
-const MATCH_FETCH_SAMPLES = "WHERE stored_at > ?";
-const MATCH_PRIOR_BAND = "WHERE stored_at <= ?";
+const MATCH_FETCH_SAMPLES = "WHERE s.stored_at > ?";
+const MATCH_PRIOR_BAND = "WHERE s.stored_at <= ?";
 
 function tables(samples: Row[], priors: Row[] = []): MockTableConfig[] {
   return [
@@ -419,6 +558,38 @@ describe("psi projector", () => {
     await projectPsiBandShifts(db, { since: 0 });
     expect(select.all()).toEqual(events);
     expect(cursor.get()).toEqual({ value: String(SEC + 900) });
+  });
+
+  it.each([
+    [false, 92], [true, 70],
+  ])("supersedes a PSI transition and retains its permalink after exact sample repair (reversed=%s)", async (reversed, corrected) => {
+    const { db, sqlite } = fixtures.open();
+    const day = SEC - (SEC % 86400);
+    const at = day + 900;
+    const insert = sqlite.prepare("INSERT INTO stability_index_samples (stored_at, score, band, methodology_version, components, input_snapshot) VALUES (?, ?, ?, '3.3', '{}', '{}')");
+    insert.run(day, 92, "BEDROCK");
+    insert.run(at, 88.2, "STEADY");
+    await projectPsiBandShifts(db);
+    const select = sqlite.prepare("SELECT event_id, suppressed_at, suppression_reason FROM tape_events");
+    const original = select.get();
+    sqlite.prepare("INSERT INTO stability_index (computed_at, score, band, components, input_snapshot) VALUES (?, 92, 'BEDROCK', '{}', ?)")
+      .run(day, JSON.stringify({ referenceMarketRepair: { method: "samples",
+        sampleScores: { [reversed ? day : at]: corrected } } }));
+    await projectPsiBandShifts(db, { since: day, until: at, dryRun: true });
+    expect(select.get()).toEqual(original);
+    await projectPsiBandShifts(db, { since: day, until: at });
+    expect(select.all()).toContainEqual({ ...original, suppressed_at: expect.any(Number), suppression_reason: "psi-sample-corrected" });
+    const visible = sqlite.prepare("SELECT type FROM tape_events WHERE suppressed_at IS NULL");
+    expect(visible.all()).toEqual(reversed ? [{ type: "psi.shifted_up" }] : []);
+    expect(sqlite.prepare("SELECT score FROM stability_index_samples WHERE stored_at = ?").get(at)).toEqual({ score: 88.2 });
+    const correctedClaim = select.all().find((row) => row.event_id !== original?.event_id);
+    sqlite.prepare("UPDATE stability_index SET input_snapshot = '{}' WHERE computed_at = ?").run(day);
+    await projectPsiBandShifts(db, { since: day, until: at });
+    expect(visible.all()).toEqual([{ type: "psi.shifted_down" }]);
+    expect(select.all()).toContainEqual(original);
+    if (reversed) expect(select.all()).toContainEqual({
+      ...correctedClaim, suppressed_at: expect.any(Number), suppression_reason: "psi-sample-corrected",
+    });
   });
 
   it("derives the same nonempty shift identity independently of persistence", async () => {

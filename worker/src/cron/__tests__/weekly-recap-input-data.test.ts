@@ -13,6 +13,7 @@ import type {
 import { SUPPLY_PERIMETER_CHANGES as P, getLatestSupplyPerimeterChange as latest } from "@shared/lib/supply-perimeter-changes";
 import { buildWeeklyInputData } from "../weekly-recap/input-data";
 import type { DailyDigestSourceRow } from "../weekly-recap/types";
+import type { WeeklyBlacklistActivity } from "../weekly-recap/blacklist";
 import { buildWeeklyPrompt } from "../weekly-recap/prompt";
 
 const START_SEC = 1_786_665_600;
@@ -74,6 +75,10 @@ function digestInput(overrides: Partial<DigestInputData> = {}): DigestInputData 
     },
     ...overrides,
   };
+}
+
+function currentDepegQuote(bps: number, day: number) {
+  return { severityBasis: "current" as const, currentBps: bps, pegReference: 1, priceObservedAt: START_SEC + day * 86_400 };
 }
 
 function row(index: number, overrides: Partial<DigestInputData> = {}): DailyDigestSourceRow {
@@ -234,11 +239,11 @@ describe("weekly recap canonical candidate aggregation", () => {
   it("calculates depeg spike metrics from all observations independently of impact representatives", () => {
     const rows = Array.from({ length: 7 }, (_, index) => row(index));
     rows[0] = row(0, { topDepegs: [
-      { stablecoinId: "coin", symbol: "COIN", startedAt: START_SEC, bps: -100, mcapUsd: 1_000_000_000 },
+      { stablecoinId: "coin", symbol: "COIN", startedAt: START_SEC, bps: -100, mcapUsd: 1_000_000_000, ...currentDepegQuote(-100, 0) },
     ] });
     rows[1] = row(1, { topDepegs: [
-      { stablecoinId: "coin", symbol: "COIN", startedAt: START_SEC, bps: -500, mcapUsd: 10_000_000 },
-      { stablecoinId: "other", symbol: "OTHER", startedAt: START_SEC, bps: -400, mcapUsd: 10_000_000 },
+      { stablecoinId: "coin", symbol: "COIN", startedAt: START_SEC, bps: -500, mcapUsd: 10_000_000, ...currentDepegQuote(-500, 1) },
+      { stablecoinId: "other", symbol: "OTHER", startedAt: START_SEC, bps: -400, mcapUsd: 10_000_000, ...currentDepegQuote(-400, 1) },
     ] });
     const weekly = buildWeeklyInputData(rows)!;
     expect(weekly.weeklySignals.topDepegSignals.find((signal) => signal.symbol === "COIN")?.bps).toBe(100);
@@ -246,13 +251,34 @@ describe("weekly recap canonical candidate aggregation", () => {
     expect(weekly.spikeMetrics.maxDepegImpact).toMatchObject({ symbol: "COIN", bps: 100, mcapUsd: 1_000_000_000 });
   });
 
-  it("uses the magnitude of signed recovered depeg peaks for the weekly maximum", () => {
+  it("does not date a quote at or after the weekly cutoff", () => {
+    const cutoff = START_SEC + 6 * 86_400;
+    const rows = Array.from({ length: 7 }, (_, index) => row(index));
+    rows[5] = row(5, { topDepegs: [
+      { stablecoinId: "timed", symbol: "TIMED", startedAt: START_SEC, bps: -500, mcapUsd: 10_000_000, ...currentDepegQuote(-500, 5) },
+    ] });
+    rows[6] = row(6, { topDepegs: [
+      { stablecoinId: "late", symbol: "LATE", startedAt: START_SEC, bps: -1500, mcapUsd: 10_000_000, ...currentDepegQuote(-1500, 6) },
+    ] });
+    const weekly = buildWeeklyInputData(rows, [], undefined, undefined, {
+      current: { start: START_SEC, end: cutoff }, prior: { start: START_SEC - 7 * 86_400, end: START_SEC },
+    })!;
+    expect(weekly.spikeMetrics.maxDepeg).toMatchObject({ symbol: "TIMED", bps: 500 });
+    expect(buildWeeklyPrompt(weekly)).toContain("stored lifetime peak 1500 bps");
+  });
+
+  it("retains recovered lifetime peaks as context without overriding the dated maximum", () => {
     const rows = Array.from({ length: 7 }, (_, index) => row(index));
     rows[0] = row(0, { resolvedDepegs: [
       { stablecoinId: "coin", symbol: "COIN", startedAt: START_SEC, peakBps: -900, mcapUsd: 10_000_000, durationHours: 5 },
     ] });
-    rows[1] = row(1, { topDepegs: [{ symbol: "OTHER", bps: 400, mcapUsd: 10_000_000 }] });
-    expect(buildWeeklyInputData(rows)?.spikeMetrics.maxDepeg).toMatchObject({ symbol: "COIN", bps: 900, kind: "resolved" });
+    rows[1] = row(1, { topDepegs: [{ symbol: "OTHER", bps: 400, mcapUsd: 10_000_000, ...currentDepegQuote(400, 1) }] });
+    const weekly = buildWeeklyInputData(rows)!;
+    expect(weekly.spikeMetrics.maxDepeg).toMatchObject({ symbol: "OTHER", bps: 400, kind: "active" });
+    expect(weekly.weeklySignals.topDepegSignals.find((event) => event.symbol === "COIN")).toMatchObject({
+      bps: 900, severityBasis: "peak-fallback",
+    });
+    expect(buildWeeklyPrompt(weekly)).toContain("stored lifetime peak 900 bps (peak time unknown)");
   });
 
   it("bounds the weekly depeg maximum by the weakest daily persisted-magnitude census", () => {
@@ -269,7 +295,7 @@ describe("weekly recap canonical candidate aggregation", () => {
       { stablecoinId: "usd-golf", symbol: "GOLF", bps: -500, mcapUsd: 200_000_000 },
       { stablecoinId: "usd-hotel", symbol: "HOTEL", bps: -400, mcapUsd: 150_000_000 },
     ];
-    const topDepegs = ranked.map((event) => ({ ...event, startedAt: START_SEC }));
+
     const activeKeys = [
       ...ranked,
       { stablecoinId: "usd-nano", symbol: "NANO", bps: -4200, mcapUsd: 2_000_000 },
@@ -277,7 +303,7 @@ describe("weekly recap canonical candidate aggregation", () => {
     const week = (activeDepegCount: number, includeNano: boolean) => Array.from({ length: 7 }, (_, index) => row(index, {
       activeDepegCount,
       depegSignalKeys: { active: includeNano ? activeKeys : activeKeys.slice(0, ranked.length), resolved: [] },
-      topDepegs,
+      topDepegs: ranked.map((event) => ({ ...event, startedAt: START_SEC, ...currentDepegQuote(event.bps, index) })),
     }));
 
     const bounded = buildWeeklyInputData(week(9, true))!;
@@ -287,7 +313,7 @@ describe("weekly recap canonical candidate aggregation", () => {
     const boundedPrompt = buildWeeklyPrompt(bounded);
     expect(boundedPrompt.split("\n").find((line) => line.includes("Worst depeg by bps")))
       .toMatch(/8 of 9 active depeg events on 2026-08-14/);
-    expect(boundedPrompt).toContain("Top depeg signals by absolute market impact (magnitudes for 8 of 9 active depeg events on 2026-08-14)");
+    expect(boundedPrompt).toContain("Top depeg signals by absolute market impact (persisted rows for 8 of 9 active depeg events on 2026-08-14)");
 
     // A persisted slice that covers the census is a complete-population maximum.
     const complete = buildWeeklyInputData(week(8, false))!;
@@ -309,8 +335,8 @@ describe("weekly recap canonical candidate aggregation", () => {
     expect(weekly.spikeMetrics.depegObservationBounds).toEqual([
       { kind: "resolved", shown: 1, total: 3, date: "2026-08-14" },
     ]);
-    expect(buildWeeklyPrompt(weekly).split("\n").find((line) => line.includes("Worst depeg by bps")))
-      .toMatch(/1 of 3 recovered depeg events on 2026-08-14/);
+    expect(weekly.spikeMetrics.maxDepeg).toBeNull();
+    expect(buildWeeklyPrompt(weekly)).toMatch(/Undated lifetime depeg peaks.*1 of 3 recovered depeg events on 2026-08-14/);
   });
 
   it("rejects malformed grade transitions while preserving comparable valid transitions", () => {
@@ -351,8 +377,8 @@ describe("weekly recap canonical candidate aggregation", () => {
       ],
       activeDepegCount: 2,
       topDepegs: [
-        { stablecoinId: "chronic", symbol: "CHR", bps: -2500, mcapUsd: 75_000_000, startedAt: chronicStartedAt },
-        { stablecoinId: "fresh", symbol: "NEW", bps: -2500, mcapUsd: 75_000_000, startedAt: freshStartedAt },
+        { stablecoinId: "chronic", symbol: "CHR", bps: -2500, mcapUsd: 75_000_000, startedAt: chronicStartedAt, ...currentDepegQuote(-2500, 2) },
+        { stablecoinId: "fresh", symbol: "NEW", bps: -2500, mcapUsd: 75_000_000, startedAt: freshStartedAt, ...currentDepegQuote(-2500, 2) },
       ],
     });
     const weekly = buildWeeklyInputData(rows);
@@ -371,9 +397,9 @@ describe("weekly recap canonical candidate aggregation", () => {
     rows[2] = row(2, {
       activeDepegCount: 3,
       topDepegs: [
-        { stablecoinId: "suppressed-critical", symbol: "SUP", bps: -2500, mcapUsd: 3_000_000_000, startedAt, suppressReason: "known bad upstream quote" },
-        { stablecoinId: "noncritical-large", symbol: "BIG", bps: -900, mcapUsd: 5_000_000_000, startedAt },
-        { stablecoinId: "critical-small", symbol: "CRIT", bps: -2500, mcapUsd: 75_000_000, startedAt },
+        { stablecoinId: "suppressed-critical", symbol: "SUP", bps: -2500, mcapUsd: 3_000_000_000, startedAt, suppressReason: "known bad upstream quote", ...currentDepegQuote(-2500, 2) },
+        { stablecoinId: "noncritical-large", symbol: "BIG", bps: -900, mcapUsd: 5_000_000_000, startedAt, ...currentDepegQuote(-900, 2) },
+        { stablecoinId: "critical-small", symbol: "CRIT", bps: -2500, mcapUsd: 75_000_000, startedAt, ...currentDepegQuote(-2500, 2) },
       ],
     });
     expect(buildWeeklyInputData(rows)?.weeklySignals.riskLeaderboard.map((entry) => entry.id)).toEqual([
@@ -393,6 +419,7 @@ describe("weekly recap canonical candidate aggregation", () => {
         bps: -(200 + index * 50),
         mcapUsd: 100_000_000,
         startedAt: chronicStartedAt,
+        ...currentDepegQuote(-(200 + index * 50), index),
       }],
     }));
     const last = JSON.parse(rows[6]!.input_data) as DigestInputData;
@@ -697,7 +724,12 @@ describe("weekly recap safety identity", () => {
       safetyRow(0, [v8Transition(1_784_916_000)], v8Identity),
       ...Array.from({ length: 6 }, (_, index) => safetyRow(index + 1, [], v8Identity)),
     ];
-    const degraded = buildWeeklyInputData(rows, [], unavailable("v9-identity-mismatch"), SAFETY_PERIODS);
+    const quiet = (eventPeriod: typeof SAFETY_PERIODS.current): WeeklyBlacklistActivity => ({
+      coverage: { reason: null, receipt: { version: 1, generation: "fixture", rosterFingerprint: "fixture", eventPeriod } },
+      eventCount: 0, totalAmountUsd: 0, unpricedEventCount: 0, topEvents: [],
+    });
+    const degraded = buildWeeklyInputData(rows, [], unavailable("v9-identity-mismatch"), SAFETY_PERIODS,
+      SAFETY_PERIODS, { current: quiet(SAFETY_PERIODS.current), prior: quiet(SAFETY_PERIODS.prior) });
     const restored = buildWeeklyInputData(rows, [], available(v8Identity), SAFETY_PERIODS);
 
     expect(degraded).toMatchObject({

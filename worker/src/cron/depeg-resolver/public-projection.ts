@@ -34,7 +34,7 @@ import type {
   DdrSealedPublicPrediction,
 } from "../depeg-resolver-v2-contracts";
 import { DAY, DDR_SNAPSHOT_TTL_SEC } from "./constants";
-import type { DdrDiagnosticResponse, DdrLineage } from "./types";
+import type { DdrAssessmentRow, DdrDiagnosticResponse, DdrLineage } from "./types";
 import { firstPublicationByPredictionId, sealedByIncident } from "./storage-adapters";
 
 function buildFrozenDuration(row: DdrRow, lockedAt: number): DdrV2PredictionRow["frozen"]["duration"] {
@@ -55,7 +55,7 @@ function buildFrozenDuration(row: DdrRow, lockedAt: number): DdrV2PredictionRow[
 }
 
 export function buildSealPayload(
-  row: DdrRow,
+  { currentDeviationObservedAtSec: _currentDeviationObservedAtSec, ...row }: DdrAssessmentRow,
   incident: DdrCanonicalIncident,
   lockedAt: number,
   lockTiming: DdrLockTiming,
@@ -171,7 +171,7 @@ function buildBasePublicRow(
 }
 
 function buildLiveOverlay(
-  row: DdrRow,
+  row: DdrAssessmentRow,
   nowSec: number,
   durationMedianResolveAt: number | null,
 ): DdrV2LiveOverlay {
@@ -186,6 +186,7 @@ function buildLiveOverlay(
     ageSec: row.ageSec,
     peakDeviationBps: row.peakDeviationBps,
     currentDeviationBps: row.currentDeviationBps ?? null,
+    ...(row.currentDeviationObservedAtSec == null ? {} : { currentDeviationObservedAtSec: row.currentDeviationObservedAtSec }),
     eventState: "active",
     updatedAt: nowSec,
     stale: durationExceeded,

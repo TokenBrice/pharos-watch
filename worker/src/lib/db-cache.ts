@@ -31,17 +31,26 @@ export type PolicyCacheRead<T> =
   | { state: "missing" | "invalid"; value: null; updatedAt: number | null; usable: false; reason?: FreshnessTimestampReason }
   | { state: "fresh" | "stale"; value: T; updatedAt: number; usable: boolean };
 
+/** A versioned representation is valid only alongside its accepted base publication. */
+export const MATCHING_CACHE_VERSION_KEY_SQL = `(SELECT COALESCE(version.key, base.key) FROM cache AS base
+  LEFT JOIN cache AS version ON version.key = ? AND version.updated_at = base.updated_at WHERE base.key = ?)`;
+
 export async function getCache(
   db: D1Database,
   key: string,
   signal?: AbortSignal,
+  preferredVersionKey?: string,
 ): Promise<{ value: string; updatedAt: number } | null> {
   throwIfAborted(signal);
+  // SAFETY: both variants use static SQL and bind every cache key.
+  const query = preferredVersionKey
+    ? `SELECT value, updated_at FROM cache WHERE key = ${MATCHING_CACHE_VERSION_KEY_SQL}`
+    : "SELECT value, updated_at FROM cache WHERE key = ?";
   const row = await runWithOverloadRetry(
     () =>
       db
-        .prepare("SELECT value, updated_at FROM cache WHERE key = ?")
-        .bind(key)
+        .prepare(query)
+        .bind(...(preferredVersionKey ? [preferredVersionKey, key] : [key]))
         .first<{ value: string; updated_at: number }>(),
     3,
     signal,

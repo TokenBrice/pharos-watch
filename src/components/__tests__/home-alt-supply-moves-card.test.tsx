@@ -21,7 +21,7 @@ vi.mock("@/hooks/use-stablecoins", () => ({
 }));
 
 vi.mock("@/lib/stablecoin-static-data", () => ({
-  ACTIVE_STABLECOIN_ID_SET: new Set(["usdr-real", "usdc-circle", "eur-stasis", "usdai-usd-ai", "usdt-tether", "dai-maker", "usds-sky", "pyusd-paypal"]),
+  ACTIVE_STABLECOIN_ID_SET: new Set(["usdr-real", "usdc-circle", "eur-stasis", "usdai-usd-ai", "usdt-tether", "dai-maker", "usds-sky", "pyusd-paypal", "xaut-tether"]),
 }));
 
 vi.mock("next/image", () => ({
@@ -74,6 +74,38 @@ describe("SupplyMovesCard", () => {
     expect(peakLink.textContent).toContain("+202%");
   });
 
+  it("omits a repriced position when its token count is unchanged", () => {
+    const coin = makeStablecoin({ id: "xaut-tether", symbol: "XAUT", currentSupply: 49_000_000, previousWeekSupply: 50_000_000 });
+    coin.circulatingNative = 50_000_000;
+    useStablecoinsMock.mockReturnValue({ data: { peggedAssets: [coin] }, isLoading: false, dataUpdatedAt: Date.now() });
+    render(<SupplyMovesCard />);
+    expect(screen.queryByRole("link", { name: /peak 7-day supply mover/ })).toBeNull();
+    expect(screen.getByText("No qualifying 7-day supply moves")).toBeTruthy();
+  });
+
+  it.each([undefined, {}])("distinguishes a legacy weekly series from a withheld comparison (%j)", (supplyChangeBaselines) => {
+    const { supplyChangeBaselines: _baselines, ...legacy } = makeStablecoin({
+      id: "usdc-circle", symbol: "USDC", currentSupply: 25_000_000, previousWeekSupply: 20_000_000,
+    });
+    useStablecoinsMock.mockReturnValue({ data: { peggedAssets: [{ ...legacy, supplyChangeBaselines }] }, isLoading: false, dataUpdatedAt: Date.now() });
+    render(<SupplyMovesCard />);
+    if (supplyChangeBaselines === undefined) {
+      expect(screen.getByRole("link", { name: "USDC — peak 7-day supply mover: +25.0%" })).toBeTruthy();
+    } else {
+      expect(screen.getByText("7-day supply moves unavailable")).toBeTruthy();
+    }
+  });
+
+  it.each(["current", "week"])("uses dated USD stock when the %s native count is absent", (missing) => {
+    const coin = makeStablecoin({ id: "usdc-circle", symbol: "USDC", currentSupply: 25_000_000, previousWeekSupply: 20_000_000 });
+    coin.circulatingPrevWeek = { peggedUSD: 10_000_000 };
+    if (missing === "week") coin.supplyChangeBaselines.week.circulatingNative = null;
+    else coin.circulatingNative = null;
+    useStablecoinsMock.mockReturnValue({ data: { peggedAssets: [coin] }, isLoading: false, dataUpdatedAt: Date.now() });
+    render(<SupplyMovesCard />);
+    expect(screen.getByRole("link", { name: "USDC — peak 7-day supply mover: +25.0%" })).toBeTruthy();
+  });
+
   it.each(["current", "previous week"] as const)("skips coins with unavailable %s supply", (unavailable) => {
     const coin = makeStablecoin({
       id: "usdr-real",
@@ -82,7 +114,10 @@ describe("SupplyMovesCard", () => {
       previousWeekSupply: 20_000_000,
     });
     if (unavailable === "current") coin.circulating = {};
-    else coin.circulatingPrevWeek = {};
+    else {
+      Object.assign(coin, { supplyChangeBaselines: {} });
+      coin.circulatingPrevWeek = {};
+    }
     useStablecoinsMock.mockReturnValue({
       data: {
         peggedAssets: [
@@ -251,15 +286,23 @@ function makeStablecoin({
   currentSupply: number;
   previousWeekSupply: number;
   supplyObservedAt?: number;
-}): StablecoinData {
-  return makeStablecoinFixture({
-    id,
-    name: symbol,
-    symbol,
-    pegType: "USD",
-    priceConfidence: "high",
-    circulating: { peggedUSD: currentSupply },
-    circulatingPrevWeek: { peggedUSD: previousWeekSupply },
-    ...(supplyObservedAt == null ? {} : { supplyObservedAt }),
-  });
+}): StablecoinData & { supplyChangeBaselines: { week: { circulatingUsd: number; circulatingNative: number | null } } } {
+  return {
+    ...makeStablecoinFixture({
+      id,
+      name: symbol,
+      symbol,
+      pegType: "USD",
+      priceConfidence: "high",
+      circulating: { peggedUSD: currentSupply },
+      circulatingPrevWeek: { peggedUSD: previousWeekSupply },
+      circulatingNative: currentSupply,
+      ...(supplyObservedAt == null ? {} : { supplyObservedAt }),
+    }),
+    supplyChangeBaselines: { week: {
+      observedAt: (supplyObservedAt ?? Math.floor(Date.now() / 1000)) - 7 * 86_400,
+      circulatingUsd: previousWeekSupply,
+      circulatingNative: previousWeekSupply,
+    } },
+  };
 }

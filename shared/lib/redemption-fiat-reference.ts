@@ -4,7 +4,7 @@ import type { PegSummaryCoin } from "../types/peg";
 export interface RedemptionFiatReferenceContext {
   clockSec: number;
   pegDataById: Readonly<Record<string, Pick<PegSummaryCoin,
-    "pegCurrency" | "pegReference" | "pegReferenceUnavailable"> | undefined>>;
+    "pegCurrency" | "pegReference" | "pegReferenceUnavailable" | "referenceAdmission"> | undefined>>;
 }
 
 export const REDEMPTION_FIAT_REFERENCE_MAX_AGE_SEC = 86_400;
@@ -18,7 +18,10 @@ export function resolveRedemptionFiatReference(
   let conflicting = false;
   for (const peg of Object.values(context.pegDataById)) {
     const reference = peg?.pegReference;
-    if (peg?.pegCurrency !== currency || peg.pegReferenceUnavailable || reference?.source !== "fx" ||
+    const admission = peg?.referenceAdmission;
+    const datedFx = admission?.kind === "fx" && admission.referenceObservedAtSec === reference?.asOf
+      && admission.decisionAtSec <= context.clockSec && (admission.status === "held-closed-session" || admission.status === "stale-reference");
+    if (peg?.pegCurrency !== currency || (peg.pegReferenceUnavailable && !datedFx) || reference?.source !== "fx" ||
         !Number.isFinite(reference.valueUsd) || reference.valueUsd <= 0 ||
         !Number.isSafeInteger(reference.asOf) || reference.asOf <= 0 || reference.asOf > context.clockSec ||
         context.clockSec - reference.asOf > REDEMPTION_FIAT_REFERENCE_MAX_AGE_SEC) continue;

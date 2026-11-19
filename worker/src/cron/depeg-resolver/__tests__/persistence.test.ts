@@ -40,9 +40,12 @@ describe("persistDepegResolverReviewArtifacts", () => {
     });
   });
 
-  it("stores real assessment checkpoints and an independently readable review snapshot", async () => {
+  it.each([null, -320])("stores assessment checkpoints and quote timing for %j", async (deviationBps) => {
     const { db, sqlite } = fixtures.open();
-    const result = await persistDepegResolverReviewArtifacts(db, diagnostic(), DEFAULT_DDR_V2_STORE_CONTRACTS);
+    const snapshot = diagnostic();
+    snapshot.rows[0].currentDeviationBps = deviationBps;
+    if (deviationBps != null) snapshot.rows[0].currentDeviationObservedAtSec = NOW_SEC - 120;
+    const result = await persistDepegResolverReviewArtifacts(db, snapshot, DEFAULT_DDR_V2_STORE_CONTRACTS);
     expect(result).toEqual({ assessmentWriteCount: 3, reviewRows: 0, reviewError: null, reviewDegraded: false, reviewDegradedReason: null });
     expect(sqlite.prepare("SELECT checkpoint, assessed_at FROM depeg_resolver_assessments WHERE event_id = 42 ORDER BY checkpoint").all())
       .toEqual([
@@ -50,6 +53,11 @@ describe("persistDepegResolverReviewArtifacts", () => {
         { checkpoint: "first", assessed_at: NOW_SEC },
         { checkpoint: "latest", assessed_at: NOW_SEC },
       ]);
+    expect(sqlite.prepare(
+      "SELECT json_extract(row_json, '$.currentDeviationBps') AS deviationBps, " +
+      "json_extract(row_json, '$.currentDeviationObservedAtSec') AS quoteObservedAt " +
+      "FROM depeg_resolver_assessments WHERE event_id = 42 AND checkpoint = 'latest'",
+    ).get()).toEqual({ deviationBps, quoteObservedAt: deviationBps == null ? null : NOW_SEC - 120 });
     const review = await loadDepegResolverReviewSnapshot(db);
     expect(review.kind).toBe("ok");
     if (review.kind !== "ok") throw new Error("Expected persisted review snapshot");

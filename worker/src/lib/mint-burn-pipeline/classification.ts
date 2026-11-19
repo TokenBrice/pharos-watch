@@ -15,6 +15,7 @@ import {
   classifyBridgeAwareBurnRows,
   type MintBurnTxContext,
 } from "../mint-burn-bridge-classifier";
+import { classifyOriginDollarFeeMints } from "../mint-burn-bridge-classifier-protocols";
 import type { MintBurnContractConfig } from "../mint-burn-contracts";
 import { budgetExhausted } from "../evm-logs";
 import type { RpcEndpoint } from "../chain-registry";
@@ -41,6 +42,7 @@ interface BridgeClassificationOptions {
   deadlineMs?: number;
   blockHashesByTx?: ReadonlyMap<string, string>;
   rangeSupplyProof?: MintBurnSupplyProofEvidence;
+  requireCanonicalReceipt?: boolean;
 }
 
 interface TxContextResolution {
@@ -143,7 +145,7 @@ async function resolveTxContextBatch(
   for (const txHash of txHashes) {
     const cacheKey = `${txHash}:${options?.blockHashesByTx?.get(txHash) ?? "unverified"}`;
     const cached = txContextCache.get(cacheKey);
-    if (cached !== undefined) {
+    if (cached !== undefined && (!options?.requireCanonicalReceipt || cached?.supplyProofContext)) {
       resolutions.set(txHash, { context: cached, shortfall: false });
     } else {
       uncached.push(txHash);
@@ -174,8 +176,11 @@ async function resolveTxContextBatch(
         && (batch.tx?.blockHash == null || (typeof batch.tx.blockHash === "string" && batch.tx.blockHash.toLowerCase() === expectedHash))
         && batch.receipt.logs.length > 0
         && batch.receipt.logs.every((log) => log.blockHash?.toLowerCase() === expectedHash));
-      const resolution = hashMatches ? toTxContext(batch) : { context: null, shortfall: true,
+      let resolution = hashMatches ? toTxContext(batch) : { context: null, shortfall: true,
         ...(batch.unavailableReason ? { unavailableReason: batch.unavailableReason } : {}) };
+      if (options?.requireCanonicalReceipt && !resolution.shortfall && !resolution.context?.supplyProofContext) {
+        resolution = { context: null, shortfall: true };
+      }
       if (!resolution.shortfall) {
         txContextCache.set(`${txHash}:${expectedHash ?? "unverified"}`, resolution.context);
       } else {
@@ -282,7 +287,8 @@ export async function classifyBridgeBurnRows(
   }
 
   const requiresSupplyProof = requiresReviewedSupplyBurnProof(config) && options?.rangeSupplyProof?.status !== "proven";
-  if (!config.bridgeDetection && !requiresSupplyProof) {
+  const rebaseVault = config.originDollarRebaseVault;
+  if (!config.bridgeDetection && !requiresSupplyProof && !rebaseVault) {
     classifyBridgeAwareBurnRows(rows, undefined, new Map());
     const burnRows = rows.filter((row) => row.direction === "burn");
     return {
@@ -295,11 +301,15 @@ export async function classifyBridgeBurnRows(
   }
 
   const burnRows = rows.filter((row) => row.direction === "burn");
-  const txHashes = [...new Set((config.bridgeDetection ? rows : burnRows).map((row) => row.tx_hash))];
+  const receiptRequiredHashes = new Set(rows
+    .filter((row) => config.bridgeDetection || (rebaseVault && row.direction === "mint"))
+    .map((row) => row.tx_hash));
+  const txHashes = [...new Set([...receiptRequiredHashes, ...(requiresSupplyProof ? burnRows.map((row) => row.tx_hash) : [])])];
   const batchResults = await mapWithConcurrency(
     chunkTxHashes(txHashes),
     TX_CONTEXT_BATCH_CONCURRENCY,
-    (txHashBatch) => resolveTxContextBatch(rpcEndpoints, txHashBatch, budget, txContextCache, signal, options),
+    (txHashBatch) => resolveTxContextBatch(rpcEndpoints, txHashBatch, budget, txContextCache, signal,
+      rebaseVault ? { ...options, requireCanonicalReceipt: true } : options),
   );
   const txContextByHash = new Map<string, MintBurnTxContext | null>();
   let txContextShortfalls = 0;
@@ -314,7 +324,7 @@ export async function classifyBridgeBurnRows(
   for (const txHash of txHashes) {
     const resolution = resolutions.get(txHash) ?? { context: null, shortfall: true };
     txContextByHash.set(txHash, resolution.context);
-    if (resolution.shortfall && config.bridgeDetection) {
+    if (resolution.shortfall && receiptRequiredHashes.has(txHash)) {
       txContextShortfalls++;
       if (resolution.unavailableReason === "rpc-request-not-started") txContextRequestsNotStarted++;
       deferredTxHashes.push(txHash);
@@ -322,6 +332,7 @@ export async function classifyBridgeBurnRows(
   }
 
   classifyBridgeAwareBurnRows(rows, config.bridgeDetection, txContextByHash);
+  if (rebaseVault) classifyOriginDollarFeeMints(rows, config.contractAddress, rebaseVault, txContextByHash);
   if (requiresSupplyProof) applyReviewedSupplyBurnAdmission(rows, config, txContextByHash);
 
   let effectiveBurns = 0;

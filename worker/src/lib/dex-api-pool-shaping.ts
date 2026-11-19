@@ -16,10 +16,12 @@ import { canonicalExitRouteScopedId, canonicalExitRouteAssetKey } from "@shared/
 import type { DexApiFetchResult, DexApiPool, DexApiPoolToken } from "./dex-api-types";
 import {
   derivePoolVolume24hUsd,
-  deriveTokenUsdPrice,
+  deriveTokenInventoryUsdPrice,
+  deriveTokenUsdObservation,
   getTokenReferenceUsdPrice,
   isTrackedDexApiToken,
   resolveStablecoinIdForDexApiToken,
+  type DexValuationPrices,
 } from "./dex-api-token-pricing";
 
 /** Min TVL for a pool's price to be considered as a price observation */
@@ -73,6 +75,13 @@ export function isEligibleDirectApiPool(
   minTvlUsd = DIRECT_API_POOL_MIN_TVL_USD,
 ): boolean {
   return pool.tvlUsd >= minTvlUsd && pool.tvlUsd <= DIRECT_API_MAX_POOL_TVL_USD;
+}
+
+function canUsePoolPrice(pool: DexApiPool): boolean {
+  return isEligibleDirectApiPool(pool, DIRECT_API_PRICE_MIN_TVL_USD) && !(
+    pool.executionCapabilityGate?.family === "balancer-amm" &&
+    pool.executionCapabilityGate.reason === "paused-or-swap-disabled"
+  );
 }
 
 export function isPreferredDirectApiPool(
@@ -296,7 +305,7 @@ function capabilityGate(
  * incomplete-exact-capture. The same API response's spot `price` (tokens[0]
  * denominated in tokens[1], decimal-adjusted) plus the other token's direct
  * reference implies the counter reference — the same derivation
- * deriveTokenUsdPrice already uses for display pricing. Only price resolution
+ * used for inventory valuation. Only price resolution
  * may be repaired this way; identity or balance failures stay gated.
  */
 function applyRaydiumPoolImpliedReferences(
@@ -554,7 +563,7 @@ function derivePoolBalanceMetrics(
             validationReferences,
             trackedStablecoinPrices,
           ) ??
-          deriveTokenUsdPrice(
+          deriveTokenInventoryUsdPrice(
             pool,
             index,
             chainAddressToId,
@@ -622,6 +631,7 @@ export function convertToGtNewPools(
   trackedStablecoinPrices?: Map<string, number>,
   fallbackCounters?: LiquidityFallbackCounters,
   volumeObservedAtSec?: number,
+  priceAssessedAtSec = Math.floor(Date.now() / 1000),
 ): Map<string, GtNewPool[]> {
   const result = new Map<string, GtNewPool[]>();
 
@@ -657,14 +667,12 @@ export function convertToGtNewPools(
       const pairSymbols = pool.tokens.map((t) => getDisplayTokenSymbol(t));
       const symbolStr = pairSymbols.join(" / ");
 
-      const tokenPrice = deriveTokenUsdPrice(
-        pool,
-        i,
-        chainAddressToId,
-        symbolToChainScopedIds,
-        validationReferences,
-        trackedStablecoinPrices,
+      const observation = deriveTokenUsdObservation(
+        pool, i, stablecoinId, chainAddressToId, symbolToChainScopedIds, trackedStablecoinPrices, priceAssessedAtSec,
       );
+      const admittedPrice = observation?.counterpartyPrice && (
+        !canUsePoolPrice(pool) || !isPlausibleDexObservationPrice(stablecoinId, observation.price, validationReferences)
+      ) ? null : observation;
       const executionCapability = buildAmmExecutionCapability(
         pool,
         i,
@@ -684,8 +692,9 @@ export function convertToGtNewPools(
         ...(volumeObservedAtSec != null ? { volumeObservedAtSec } : {}),
         qualityMultiplier,
         maturityDays: 30,
-        price: tokenPrice ?? 0,
-        priceObservedAt: pool.priceObservedAt ?? null,
+        price: admittedPrice?.price ?? 0,
+        priceObservedAt: admittedPrice?.observedAt ?? null,
+        ...(admittedPrice?.counterpartyPrice ? { priceCounterparty: admittedPrice.counterpartyPrice } : {}),
         symbol: symbolStr,
         poolType: pool.poolType,
         sourceFamily: "direct_api",
@@ -708,7 +717,7 @@ export function convertToGtNewPools(
           volumeMeasured: volume24hUsd != null,
           balanceMeasured: balanceMetrics != null,
           maturityMeasured: false,
-          priceMeasured: tokenPrice != null && tokenPrice > 0,
+          priceMeasured: admittedPrice != null,
           synthetic: false,
         },
       };
@@ -717,7 +726,7 @@ export function convertToGtNewPools(
         // Every shaped direct-API pool carries the hardcoded 30d maturity default.
         fallbackCounters.directApiMaturityDefaulted++;
         if (balanceMetrics == null) fallbackCounters.directApiBalanceUnmeasured++;
-        if (!(tokenPrice != null && tokenPrice > 0)) fallbackCounters.directApiPriceUnmeasured++;
+        if (admittedPrice == null) fallbackCounters.directApiPriceUnmeasured++;
       }
 
       const existing = result.get(stablecoinId) ?? [];
@@ -734,16 +743,13 @@ export function extractPriceObservations(
   chainAddressToId: Map<string, string>,
   symbolToChainScopedIds: Map<string, Map<string, string[]>>,
   validationReferences?: PriceValidationReferences,
-  trackedStablecoinPrices?: Map<string, number>,
+  trackedStablecoinPrices?: DexValuationPrices,
+  priceAssessedAtSec = Math.floor(Date.now() / 1000),
 ): Map<string, DexPriceObs[]> {
   const result = new Map<string, DexPriceObs[]>();
 
   for (const pool of pools) {
-    if (
-      pool.executionCapabilityGate?.family === "balancer-amm" &&
-      pool.executionCapabilityGate.reason === "paused-or-swap-disabled"
-    ) continue;
-    if (!isEligibleDirectApiPool(pool, DIRECT_API_PRICE_MIN_TVL_USD)) continue;
+    if (!canUsePoolPrice(pool)) continue;
     const identity = buildPoolIdentity({
       chain: pool.chain,
       protocol: pool.source,
@@ -764,23 +770,24 @@ export function extractPriceObservations(
       );
       if (!stablecoinId) continue;
 
-      const price = deriveTokenUsdPrice(
+      const observation = deriveTokenUsdObservation(
         pool,
         i,
+        stablecoinId,
         chainAddressToId,
         symbolToChainScopedIds,
-        validationReferences,
         trackedStablecoinPrices,
+        priceAssessedAtSec,
       );
-      if (price == null || price <= 0) continue;
+      if (!observation) continue;
 
-      if (validationReferences && !isPlausibleDexObservationPrice(stablecoinId, price, validationReferences)) {
+      if ((observation.counterpartyPrice || validationReferences) &&
+        !isPlausibleDexObservationPrice(stablecoinId, observation.price, validationReferences)) {
         continue;
       }
 
       const obs: DexPriceObs = {
-        price,
-        observedAt: pool.priceObservedAt ?? null,
+        ...observation,
         tvl: pool.tvlUsd,
         chain: pool.chain,
         protocol: pool.source,

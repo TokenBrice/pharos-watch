@@ -182,10 +182,15 @@ export function getCommodityProtocolSlugIssue(coin: StablecoinMeta): string | nu
   );
 }
 
-function getPegRuntimeSupportIssue(coin: StablecoinMeta): string | null {
+export function getPegRuntimeSupportIssue(coin: Pick<StablecoinMeta, "flags" | "status">): string | null {
   if (!isActiveStablecoinMeta(coin)) return null;
 
   const pegCurrency = coin.flags.pegCurrency;
+  if (pegCurrency === "OTHER" && !coin.flags.navToken) {
+    return "active non-NAV asset cannot use pegCurrency OTHER: add its canonical peg currency and wire an " +
+      "independent same-unit reference before promotion; a token's own price is not its peg reference";
+  }
+
   const pegType = normalizePegTypeFromCurrency(pegCurrency);
   const pegClass = classifyPegClass(pegCurrency, pegType, Boolean(coin.flags.navToken));
   if (pegClass !== "unknown") return null;

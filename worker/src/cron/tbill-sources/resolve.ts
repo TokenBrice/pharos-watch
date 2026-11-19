@@ -1,6 +1,6 @@
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { logCronEvent } from "../../lib/cron-logger";
-import { assessYieldBenchmarkRate } from "@shared/lib/yield-benchmark-freshness";
+import { assessYieldBenchmarkRate, isYieldBenchmarkFixingEffective } from "@shared/lib/yield-benchmark-freshness";
 import type { YieldBenchmarkKey } from "@shared/types/yield";
 import type { Env } from "../../lib/env";
 import { throwIfAborted } from "../../lib/abort";
@@ -38,10 +38,16 @@ function benchmarkCircuitKey(key: string): string {
   return `${TREASURY_CIRCUIT_PREFIX}${key}`;
 }
 
+interface PendingBenchmarkRejection {
+  rate: number;
+  recordDate: string | null;
+  fetchedAt: number | null;
+}
+
 function buildRetainedBenchmark(
   previous: ParsedYieldBenchmarkMeta | null,
   fallbackMode: string,
-  rejected?: { rate: number; recordDate: string | null; fetchedAt: number } | null,
+  rejected: PendingBenchmarkRejection | null,
 ): ParsedYieldBenchmarkMeta | null {
   if (
     previous?.lastMarketRate != null &&
@@ -68,8 +74,7 @@ function buildRetainedBenchmark(
       lastMarketRecordDate: previous.lastMarketRecordDate,
       lastMarketFetchedAt: previous.lastMarketFetchedAt,
       lastMarketSource: previous.lastMarketSource,
-      // Only the immediately preceding rejection is confirmation evidence; a
-      // failed or non-publishing run clears it so two unrelated values cannot pair.
+      // A run without a rejection clears confirmation evidence.
       lastRejectedMarketRate: rejected?.rate ?? null,
       lastRejectedMarketRecordDate: rejected?.recordDate ?? null,
       lastRejectedMarketFetchedAt: rejected?.fetchedAt ?? null,
@@ -125,8 +130,10 @@ function buildResolvedBenchmark(params: {
 export interface BenchmarkRateConfirmation {
   key: YieldBenchmarkKey;
   rate: number;
+  recordDate: string;
   previousMarketRate: number;
   previousRejectedMarketRate: number;
+  previousRejectedMarketRecordDate: string;
   previousRejectedMarketFetchedAt: number | null;
   confirmedAt: number;
 }
@@ -156,9 +163,14 @@ export async function resolveBenchmarkProvider(params: {
   const allowed = await shouldAttemptFetch(db, circuitSource);
   const previousBenchmark = previous[key] ?? null;
   const previousMarketRate = previousBenchmark?.lastMarketRate ?? null;
+  const previousRejection = previousBenchmark?.lastRejectedMarketRate == null ? null : {
+    rate: previousBenchmark.lastRejectedMarketRate,
+    recordDate: previousBenchmark.lastRejectedMarketRecordDate ?? null,
+    fetchedAt: previousBenchmark.lastRejectedMarketFetchedAt ?? null,
+  };
   let parsed: BenchmarkFetchResult | null = null;
   let source: string | null = null;
-  let rejected: BenchmarkFetchResult | null = null;
+  let rejected: PendingBenchmarkRejection | null = null;
   let confirmation: BenchmarkRateConfirmation | null = null;
   const responseDiagnostics: BenchmarkProviderAttemptDiagnostic[] = [];
 
@@ -172,10 +184,17 @@ export async function resolveBenchmarkProvider(params: {
       responseDiagnostics.push(...outcome?.responseDiagnostics ?? []);
       if (!fetched) continue;
       const assessment = assessYieldBenchmarkRate(
-        key, fetched.rate, previousMarketRate, previousBenchmark?.lastRejectedMarketRate ?? null,
+        key, fetched.rate, previousMarketRate,
+        previousRejection ? { recordDate: fetched.recordDate, nowSec: fetchedAt, previousRejection } : undefined,
       );
       if (!assessment.accepted) {
-        rejected ??= fetched;
+        rejected ??= previousRejection?.recordDate
+          && previousRejection.fetchedAt != null
+          && isYieldBenchmarkFixingEffective(key, previousRejection.recordDate, previousRejection.fetchedAt)
+          && (fetched.recordDate <= previousRejection.recordDate
+            || !isYieldBenchmarkFixingEffective(key, fetched.recordDate, fetchedAt))
+          ? previousRejection
+          : { rate: fetched.rate, recordDate: fetched.recordDate, fetchedAt };
         if (provider.rejectionDiagnostic === "record") {
           await recordBenchmarkRateOutOfBand(db, key, fetched.rate, previousMarketRate);
         }
@@ -183,13 +202,15 @@ export async function resolveBenchmarkProvider(params: {
       }
       parsed = fetched;
       source = provider.sourceSelection === "observation" ? fetched.source ?? provider.source : provider.source;
-      if (assessment.confirmedLevelShift && previousMarketRate != null) {
+      if (assessment.confirmedLevelShift && previousMarketRate != null && previousRejection?.recordDate) {
         confirmation = {
           key,
           rate: fetched.rate,
+          recordDate: fetched.recordDate,
           previousMarketRate,
-          previousRejectedMarketRate: previousBenchmark?.lastRejectedMarketRate ?? fetched.rate,
-          previousRejectedMarketFetchedAt: previousBenchmark?.lastRejectedMarketFetchedAt ?? null,
+          previousRejectedMarketRate: previousRejection.rate,
+          previousRejectedMarketRecordDate: previousRejection.recordDate,
+          previousRejectedMarketFetchedAt: previousRejection.fetchedAt,
           confirmedAt: fetchedAt,
         };
       }
@@ -206,11 +227,8 @@ export async function resolveBenchmarkProvider(params: {
   }
   const meta = parsed
     ? buildResolvedBenchmark({ key, rate: parsed.rate, recordDate: parsed.recordDate, fetchedAt, source: source! })
-    : buildRetainedBenchmark(
-        previousBenchmark,
-        fallbackMode,
-        rejected ? { rate: rejected.rate, recordDate: rejected.recordDate, fetchedAt } : null,
-      ) ?? (policy.terminalFallback === "hardcoded-usd" ? buildHardcodedUsdBenchmark(fallbackMode) : null);
+    : buildRetainedBenchmark(previousBenchmark, fallbackMode, rejected)
+      ?? (policy.terminalFallback === "hardcoded-usd" ? buildHardcodedUsdBenchmark(fallbackMode) : null);
   if (recordThisOutcome && policy.outcomeTiming === "after-meta") {
     await recordOutcome(db, circuitSource, parsed != null);
   }

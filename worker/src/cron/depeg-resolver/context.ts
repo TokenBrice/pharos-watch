@@ -1,11 +1,11 @@
-import { deriveCurrentPegObservationMap } from "../../lib/current-peg-observations";
+import { projectCurrentPegDeviation } from "@shared/lib/current-peg-projection";
+import { createCurrentPegReader, hasUsableCurrentPrice } from "../../lib/current-peg-observations";
 import { DDR_INELIGIBLE_AUDIT_VERDICTS } from "@shared/types/depeg-audit";
 import { auditVerdictNotInSql } from "../../lib/depeg-audit";
 import {
   groupIncidents,
   quarantinedCoins,
   structuralClass,
-  type DdrActiveEventInput,
   type DdrHistoricalEvent,
   type DdrIncident,
   type DdrSafetyContextProvenance,
@@ -18,11 +18,20 @@ import { chunkArray } from "../../lib/collections";
 import { buildInClause } from "../../lib/d1-primitives";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { classifySupplyAmountCoverage, classifySupplyCoverage, parseSupplyObservationProvenance } from "@shared/lib/supply-provenance";
+import { hasNativeSupplyEvidence, readNativeSupplyCheckpoint } from "../../lib/dews/native-quantity";
+import { normalizePegType } from "@shared/lib/peg-rates";
+import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
+import { isRecord } from "@shared/lib/type-guards";
+import { REFERENCE_INTRADAY_BUDGET_SEC } from "@shared/lib/reference-admission";
+import { getReferenceMarket, getReferenceSessionState } from "@shared/lib/reference-market-hours";
+import { ReferenceAdmissionSchema } from "@shared/types/reference-admission";
 import type { StablecoinData } from "@shared/types/supply";
 import {
   getDexLiquidityTrendTolerances,
   selectLiquidityObservation,
-  selectTrendBaseline,
+  getDexTvlObservedAt,
+  selectObservedTrendBaseline,
   type DexHistoryRow,
 } from "../../lib/dex-liquidity-response";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
@@ -46,10 +55,14 @@ import {
 import { MINT_BURN_COVERED_COIN_IDS } from "./mint-burn-coverage";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import { readMintBurnWindowContext } from "../../lib/mint-burn-flows-service";
-import { decodeMintBurnScanCoverage, mintBurnScanCoverageAdmits, prepareMintBurnScanCoverage, type MintBurnScanSegment } from "../../lib/mint-burn-pipeline/scan-coverage";
-import { readDdrOpenTrainingHistory, readDdrTrainingHistory } from "./training-history";
+import { decodeMintBurnScanCoverage, isMintBurnWriterEpochSchemaMissing, mintBurnScanCoverageAdmits, prepareMintBurnScanCoverage, type MintBurnScanSegment } from "../../lib/mint-burn-pipeline/scan-coverage";
+import { needsCurrentMintBurnReceiptClassification } from "../../lib/mint-burn-published-gauge";
+import { readDdrOpenTrainingHistory, readDdrTrainingHistory, type DdrTrainingHistoryRow } from "./training-history";
+import { readPendingObservationReceipt, readAdmittedPeerObservation, type DepegObservationReceipt } from "../../lib/depeg-pending";
+import { isPairedDepegPeak } from "../../lib/depeg-helpers";
 import type {
   CurrentDeviationMapResult,
+  DdrActiveObservationInput,
   DdrEventDbRow,
   DdrLineage,
   DdrStructuralContext,
@@ -67,13 +80,23 @@ export interface DdrMintBurnHourlyRow {
   netFlowUsd: number;
   valuation: MintBurnValuationTally;
 }
+export interface DdrSupplySnapshot {
+  date: number;
+  usd: number | null;
+  /** A known coverage gap withholds changes even when the USD total is complete. */
+  comparisonPartial?: true;
+  /** Omitted for USD-only history; null when reported native evidence failed admission. */
+  native?: number | null;
+  nativeObservedAt?: number | null;
+}
+
 export interface DdrLoadedContext {
-  active: DdrActiveEventInput[];
+  active: DdrActiveObservationInput[];
   activeCoinIds: string[];
   activeEventById: Map<number, DdrEventDbRow>;
   incidents: DdrIncident[];
   quarantined: Set<string>;
-  supplyByCoin: Map<string, { date: number; usd: number }[]>;
+  supplyByCoin: Map<string, DdrSupplySnapshot[]>;
   mintBurnHourlyByCoin: Map<string, DdrMintBurnHourlyRow[]>;
   mintBurnCoveredEventIds: Set<number>;
   dewsByCoin: Map<string, { stablecoin_id: string; score: number; band: string; signals_json: string | null; computed_at: number }>;
@@ -174,6 +197,8 @@ export interface ActiveSupplyHistoryRow {
   stablecoin_id: string;
   snapshot_date: number;
   circulating_usd: number;
+  circulating_native: number | null;
+  supply_provenance: string | null;
 }
 
 /**
@@ -196,21 +221,22 @@ export interface ActiveSupplyHistoryRow {
  * count/date/amount fingerprint) — against 32,179 rows read for the previous
  * unbounded read on the same cohort.
  */
-const ACTIVE_SUPPLY_HISTORY_SQL =
-  "SELECT h.stablecoin_id, h.snapshot_date, h.circulating_usd " +
-  "FROM supply_history h " +
-  "JOIN (SELECT value AS coin_id FROM json_each(?)) c ON c.coin_id = h.stablecoin_id " +
-  "WHERE h.snapshot_date >= ? " +
-  "UNION ALL " +
-  "SELECT h.stablecoin_id, h.snapshot_date, h.circulating_usd " +
-  "FROM supply_history h " +
-  "JOIN (SELECT value AS coin_id FROM json_each(?)) c ON c.coin_id = h.stablecoin_id " +
-  "WHERE h.snapshot_date IN (" +
-  "SELECT h2.snapshot_date FROM supply_history h2 " +
-  "WHERE h2.stablecoin_id = c.coin_id AND h2.snapshot_date < ? " +
-  "ORDER BY h2.snapshot_date DESC " +
-  `LIMIT ${SUPPLY_CONTEXT_LOOKBACK_ROWS}) ` +
-  "ORDER BY stablecoin_id, snapshot_date ASC";
+function activeSupplyHistorySql(native: boolean): string {
+  const quantityColumn = native ? "h.circulating_native" : "NULL AS circulating_native";
+  const select = "SELECT h.stablecoin_id, h.snapshot_date, h.circulating_usd, " + quantityColumn + ", h.supply_provenance " +
+    "FROM supply_history h " +
+    "JOIN (SELECT value AS coin_id FROM json_each(?)) c ON c.coin_id = h.stablecoin_id ";
+  return select + "WHERE h.snapshot_date >= ? UNION ALL " + select +
+    "WHERE h.snapshot_date IN (" +
+    "SELECT h2.snapshot_date FROM supply_history h2 " +
+    "WHERE h2.stablecoin_id = c.coin_id AND h2.snapshot_date < ? " +
+    "ORDER BY h2.snapshot_date DESC " +
+    `LIMIT ${SUPPLY_CONTEXT_LOOKBACK_ROWS}) ` +
+    "ORDER BY stablecoin_id, snapshot_date ASC";
+}
+
+const ACTIVE_SUPPLY_HISTORY_SQL = activeSupplyHistorySql(true);
+const ACTIVE_SUPPLY_HISTORY_USD_SQL = activeSupplyHistorySql(false);
 
 export async function readActiveSupplyHistory(
   db: D1Database,
@@ -218,17 +244,62 @@ export async function readActiveSupplyHistory(
   windowStartSec: number,
 ): Promise<QueryRowsResult<ActiveSupplyHistoryRow>> {
   const rows: ActiveSupplyHistoryRow[] = [];
+  let sql = ACTIVE_SUPPLY_HISTORY_SQL;
   for (const chunk of chunkArray(activeCoinIds)) {
     if (chunk.length === 0) continue;
     const coinIdsJson = JSON.stringify(chunk);
-    const result = await queryRows("supply_history", () => db
-      .prepare(ACTIVE_SUPPLY_HISTORY_SQL)
+    const readChunk = () => queryRows("supply_history", () => db
+      .prepare(sql)
       .bind(coinIdsJson, windowStartSec, coinIdsJson, windowStartSec)
       .all<ActiveSupplyHistoryRow>());
+    let result = await readChunk();
+    if (sql === ACTIVE_SUPPLY_HISTORY_SQL && result.error != null &&
+      /\bno such column:\s*(?:h\.)?circulating_native\b/i.test(result.error)) {
+      // Before 0306, retain the indexed USD history for exposure and measured flows.
+      sql = ACTIVE_SUPPLY_HISTORY_USD_SQL;
+      result = await readChunk();
+    }
     if (result.error) return { rows: [], error: result.error };
     rows.push(...result.rows);
   }
   return { rows, error: null };
+}
+
+function readAdmittedDeviation(
+  asset: StablecoinData,
+  pegCurrency: string,
+  currentPeg: StablecoinData["currentPeg"],
+  nowSec: number,
+): { deviationBps: number | null; observedAtSec: number | null } {
+  const unavailable = { deviationBps: null, observedAtSec: null };
+  const registryPegType = pegTypeFromCurrency(pegCurrency);
+  if (!hasUsableCurrentPrice(asset) || (registryPegType != null && normalizePegType(asset.pegType) !== registryPegType)) {
+    return unavailable;
+  }
+  // The critical-fields cache reader preserves an omitted source clock; priceUpdatedAt also dates local updates.
+  const quoteClock = asset.priceObservedAt;
+  const observedAtSec = typeof quoteClock === "number" && Number.isSafeInteger(quoteClock) &&
+    quoteClock > 0 && quoteClock <= nowSec ? quoteClock : null;
+  if (quoteClock !== undefined && (observedAtSec == null || nowSec - observedAtSec > REFERENCE_INTRADAY_BUDGET_SEC)) {
+    return unavailable;
+  }
+  const deviationBps = projectCurrentPegDeviation(currentPeg, pegCurrency === "USD", observedAtSec);
+  if (deviationBps == null) return unavailable;
+  if (currentPeg?.referenceAdmission === undefined) return { deviationBps, observedAtSec };
+
+  const verdict = ReferenceAdmissionSchema.safeParse(currentPeg.referenceAdmission).data;
+  if (verdict?.status !== "admitted" ||
+    verdict.quoteObservedAtSec !== observedAtSec || verdict.decisionAtSec > nowSec ||
+    verdict.reason === "daily-fixing-above-band" || verdict.cadence !== "intraday" ||
+    nowSec - verdict.referenceObservedAtSec > verdict.budgetSec) return unavailable;
+
+  const market = getReferenceMarket(pegCurrency);
+  if (market) {
+    const session = getReferenceSessionState(market, nowSec);
+    if (session.open ? verdict.sessionOpenedAtSec !== session.sessionOpenedAtSec
+      : verdict.decisionAtSec < session.closureStartSec) return unavailable;
+  }
+  return { deviationBps, observedAtSec };
 }
 
 export async function buildCurrentDeviationMap(
@@ -236,32 +307,33 @@ export async function buildCurrentDeviationMap(
   nowSec: number,
 ): Promise<CurrentDeviationMapResult> {
   const cache = await loadStablecoinsCache(db, { mode: "lenient", contract: "critical-fields" });
-  if (!hasUsableStablecoinsPayload(cache) || cache.updatedAt == null || nowSec - cache.updatedAt > CURRENT_PRICE_MAX_AGE_SEC) {
+  if (!hasUsableStablecoinsPayload(cache) || cache.updatedAt == null || cache.updatedAt > nowSec ||
+    nowSec - cache.updatedAt > CURRENT_PRICE_MAX_AGE_SEC) {
     const reason = !hasUsableStablecoinsPayload(cache)
       ? `stablecoins-cache-${cache.kind === "error" || cache.kind === "degraded" ? cache.reason : "unusable"}`
       : "stablecoins-cache-stale";
-    return { byCoin: new Map(), healthy: false, degradedReason: reason, dataAsOf: cache.updatedAt ?? null };
+    return { byCoin: new Map(), observedAtByCoin: new Map(), healthy: false, degradedReason: reason, dataAsOf: cache.updatedAt ?? null };
   }
 
   const assets = cache.payload.peggedAssets as StablecoinData[];
-  const observations = deriveCurrentPegObservationMap({
-    peggedAssets: assets,
-    fxFallbackRates: cache.payload.fxFallbackRates,
-    asOf: cache.updatedAt,
-  });
+  const readPeg = createCurrentPegReader({ ...cache.payload, peggedAssets: assets, asOf: cache.updatedAt });
   const out = new Map<string, number | null>();
+  const observedAtByCoin = new Map<string, number>();
 
   for (const asset of assets) {
     const meta = TRACKED_META_BY_ID.get(asset.id);
     if (!meta || meta.flags.navToken) continue;
     const supply = getCirculatingRawOrNull(asset);
-    // DDR requires positive observed supply in addition to canonical live-price admission.
-    out.set(asset.id, supply === null || supply <= 0
-      ? null
-      : observations.get(asset.id)?.currentDeviationBps ?? null);
+    if (!WORKER_ACTIVE_IDS.has(asset.id) || supply === null || supply <= 0) {
+      out.set(asset.id, null);
+      continue;
+    }
+    const { deviationBps, observedAtSec } = readAdmittedDeviation(asset, meta.flags.pegCurrency, readPeg(asset), nowSec);
+    out.set(asset.id, deviationBps);
+    if (deviationBps != null && observedAtSec != null) observedAtByCoin.set(asset.id, observedAtSec);
   }
 
-  return { byCoin: out, healthy: true, degradedReason: null, dataAsOf: cache.updatedAt };
+  return { byCoin: out, observedAtByCoin, healthy: true, degradedReason: null, dataAsOf: cache.updatedAt };
 }
 
 export async function loadPolicyUniverseEvents(db: D1Database): Promise<DdrEventDbRow[]> {
@@ -325,6 +397,18 @@ export async function loadActiveConfirmedEvents(db: D1Database): Promise<DdrEven
   });
 }
 
+/** A promoted outcome records prices, but only its matched receipt attests their basis. */
+function matchesPendingObservation(row: DdrTrainingHistoryRow, receipt: DepegObservationReceipt | null | undefined,
+  at: number | null, price: number | null, bps: number | null): boolean {
+  if (!receipt || at == null || price == null || bps == null || at !== receipt.observedAt || price !== receipt.price ||
+      at < row.started_at || (row.ended_at != null && at > row.ended_at) || (bps < 0 ? "below" : "above") !== row.direction ||
+      !isPairedDepegPeak(price, receipt.pegReference, bps) || !isPairedDepegPeak(price, receipt.pegReference, receipt.bps)) return false;
+  if (receipt.basis === "benchmark") return receipt.referenceAdmission?.status === "admitted" &&
+    receipt.referenceAdmission.quoteObservedAtSec === at;
+  if (receipt.basis === "native-peg") return receipt.pegReference === 1 && !!receipt.venue?.trim() && receipt.venue !== "unknown";
+  return readAdmittedPeerObservation({ ...row, started_at: at, start_price: price, peg_reference: receipt.pegReference }, receipt) != null;
+}
+
 /** The same bounded, audit-eligible temporal corpus used by loadDdrContext. */
 export async function loadDdrHistoricalEvents(
   db: D1Database,
@@ -341,16 +425,37 @@ export async function loadDdrHistoricalEvents(
     // nonnumeric sample values rather than coercing missing evidence to zero.
     const samples: unknown = JSON.parse(row.severity_observations_json ?? "[]");
     const severityObservations: NonNullable<DdrHistoricalEvent["severityObservations"]> = [];
-    if (Array.isArray(samples)) {
+    const registryCurrency = TRACKED_META_BY_ID.get(row.stablecoin_id)?.flags.pegCurrency;
+    const pegType = normalizePegType(row.peg_type);
+    const registryPegType = pegTypeFromCurrency(registryCurrency);
+    const pegMatches = registryPegType == null || registryPegType === pegType;
+    const fixedUsd = pegType === "peggedUSD" && (registryCurrency == null || registryCurrency === "USD");
+    const legacyPromotion = pegMatches && row.peer_basis_json == null;
+    if (pegMatches && Array.isArray(samples)) {
       for (const sample of samples) {
-        if (sample != null && typeof sample === "object" &&
-          typeof sample.observedAt === "number" && typeof sample.deviationBps === "number" &&
-          Number.isFinite(sample.observedAt) && Number.isFinite(sample.deviationBps)) {
-          severityObservations.push({ observedAt: sample.observedAt, deviationBps: sample.deviationBps });
-        }
+        if (!isRecord(sample) || typeof sample.deviationBps !== "number" || !Number.isFinite(sample.deviationBps)) continue;
+        // Legacy samples enter at their assessment landmark when no quote clock was recorded.
+        const assessedAt = sample.observedAt;
+        const observedAt = sample.quoteObservedAt ?? (fixedUsd || legacyPromotion ? assessedAt : null);
+        if (typeof observedAt !== "number" || typeof assessedAt !== "number" ||
+          !Number.isSafeInteger(observedAt) || !Number.isSafeInteger(assessedAt) ||
+          observedAt > assessedAt || observedAt < row.started_at || (row.ended_at != null && assessedAt > row.ended_at)) continue;
+        severityObservations.push({
+          observedAt,
+          ...(observedAt === assessedAt ? {} : { availableAt: assessedAt }),
+          deviationBps: sample.deviationBps,
+        });
       }
     }
-    if (row.last_seen_at != null && row.last_seen_bps != null) {
+    const receipts = !fixedUsd && pegMatches ? readPendingObservationReceipt(row.peer_basis_json) : null;
+    const onset = receipts?.onset;
+    const hasOnset = fixedUsd || legacyPromotion || (onset?.pegReference === row.peg_reference &&
+      matchesPendingObservation(row, onset, row.started_at, row.first_price, row.first_seen_bps));
+    // Earlier promotions stored only onset and peak. Either can attest the last print if its full pair matches.
+    const latest = receipts?.latest ? [receipts.latest] : [receipts?.peak, onset];
+    const hasLatest = fixedUsd || legacyPromotion || latest.some((receipt) =>
+      matchesPendingObservation(row, receipt, row.last_seen_at, row.last_price, row.last_seen_bps));
+    if (hasLatest && row.last_seen_at != null && row.last_seen_bps != null) {
       severityObservations.push({ observedAt: row.last_seen_at, deviationBps: row.last_seen_bps });
     }
     return {
@@ -361,7 +466,7 @@ export async function loadDdrHistoricalEvents(
       endedAt: row.ended_at,
       recoveryPrice: row.recovery_price,
       closeReason: row.close_reason,
-      onsetDeviationBps: row.first_seen_bps,
+      onsetDeviationBps: hasOnset ? row.first_seen_bps : null,
       severityObservations,
     };
   });
@@ -383,7 +488,7 @@ export async function loadDdrContext(
     };
   }
 
-  const active: DdrActiveEventInput[] = activeRows.map((r) => ({
+  const active: DdrActiveObservationInput[] = activeRows.map((r) => ({
     id: r.id,
     stablecoinId: r.stablecoin_id,
     symbol: r.symbol,
@@ -393,6 +498,7 @@ export async function loadDdrContext(
     startedAt: r.started_at,
     pegReference: r.peg_reference,
     currentDeviationBps: currentDeviation.byCoin.get(r.stablecoin_id) ?? null,
+    currentDeviationObservedAtSec: currentDeviation.observedAtByCoin.get(r.stablecoin_id) ?? null,
   }));
   const activeCoinIds = [...new Set(active.map((a) => a.stablecoinId))];
   const directions = [...new Set(active.map((a) => a.direction))];
@@ -413,10 +519,21 @@ export async function loadDdrContext(
     nowSec,
   );
   const supplyResult = await readActiveSupplyHistory(db, activeCoinIds, supplyWindowStart);
-  const supplyByCoin = new Map<string, { date: number; usd: number }[]>();
+  const supplyByCoin = new Map<string, DdrSupplySnapshot[]>();
   for (const s of supplyResult.rows) {
     const list = supplyByCoin.get(s.stablecoin_id) ?? [];
-    list.push({ date: s.snapshot_date, usd: s.circulating_usd });
+    const { provenance } = parseSupplyObservationProvenance(s.supply_provenance);
+    const amountPartial = classifySupplyAmountCoverage(provenance) === "partial";
+    // Retain the date so an older whole-coin observation cannot replace a rejected endpoint.
+    const snapshot: DdrSupplySnapshot = { date: s.snapshot_date, usd: amountPartial ? null : s.circulating_usd };
+    if (classifySupplyCoverage(provenance) === "partial") {
+      snapshot.comparisonPartial = true;
+    } else if (hasNativeSupplyEvidence(s)) {
+      const checkpoint = readNativeSupplyCheckpoint(s, nowSec);
+      snapshot.native = checkpoint?.quantity ?? null;
+      snapshot.nativeObservedAt = checkpoint?.observedAt ?? null;
+    }
+    list.push(snapshot);
     supplyByCoin.set(s.stablecoin_id, list);
   }
 
@@ -439,8 +556,13 @@ export async function loadDdrContext(
   };
   const mintBurnResult = await queryRows<MintBurnStoredRow>("mint_burn_hourly", async () => {
     if (mintBurnCoinIds.length === 0) return { results: [] };
-    const scope = await readMintBurnWindowContext(db, nowSec,
-      MINT_BURN_CONFIGS.filter((config) => WORKER_ACTIVE_IDS.has(config.stablecoinId)));
+    const configs = MINT_BURN_CONFIGS.filter((config) => WORKER_ACTIVE_IDS.has(config.stablecoinId));
+    const scope = await readMintBurnWindowContext(db, nowSec, configs).catch((error: unknown) => {
+      if (!isMintBurnWriterEpochSchemaMissing(error)) throw error;
+      // Before 0312, ordinary scan proof is still valid for coins whose receipt rules did not change.
+      return readMintBurnWindowContext(db, nowSec, configs.filter((config) =>
+        !needsCurrentMintBurnReceiptClassification(config.stablecoinId)));
+    });
     partialMintBurnCoinIds = scope.partialCoinIds;
     scanConfigs = scope.configs.filter((config) => mintBurnCoinIds.includes(config.stablecoinId));
     if (scanConfigs.length === 0) return { results: [] };
@@ -459,7 +581,6 @@ export async function loadDdrContext(
     scanSegments = decodeMintBurnScanCoverage(snapshot[1] as D1Result<MintBurnScanSegment>);
     return snapshot[0] as D1Result<MintBurnStoredRow>;
   });
-  const scanCoverageError = mintBurnResult.error;
   const mintBurnCoveredEventIds = new Set(active.filter((event) => {
     const end = Math.floor(event.startedAt / 3600) * 3600;
     if (partialMintBurnCoinIds.has(event.stablecoinId)) return false;
@@ -524,12 +645,18 @@ export async function loadDdrContext(
       updated_at: number;
       methodology_version: string | null;
     }>());
-  const liqRows = liqResult.rows.map(({ volume_availability_json, ...row }) => ({
+  const liqRows = liqResult.rows.map((row) => ({
     ...row,
-    total_volume_24h_usd: measuredVolume24h(row.total_volume_24h_usd, volume_availability_json),
+    capturedAt: getDexTvlObservedAt(parseDexVolumeAvailabilityRecord(row.volume_availability_json),
+      Math.min(nowSec, row.updated_at)),
+    total_volume_24h_usd: measuredVolume24h(row.total_volume_24h_usd, row.volume_availability_json),
   }));
   const liqByCoin = new Map(liqRows.map((l) => [l.stablecoin_id, l]));
 
+  const { day: onsetToleranceSec, week: trend7dToleranceSec } = getDexLiquidityTrendTolerances();
+  const historyStart = liqRows.reduce((earliest, row) => row.capturedAt == null ? earliest :
+    Math.min(earliest, row.capturedAt - 31 * DAY - trend7dToleranceSec),
+  resolveDexHistoryWindowStart(active.map((event) => event.startedAt), nowSec));
   const liqHistResult = await queryRowsChunked("dex_liquidity_history", activeCoinIds, (inClauseSql, binds) => db
     .prepare(
       `SELECT stablecoin_id, total_tvl_usd, total_volume_24h_usd, volume_availability_json, snapshot_date, coverage_class, coverage_confidence, methodology_version ` +
@@ -537,12 +664,13 @@ export async function loadDdrContext(
         `WHERE stablecoin_id IN (${inClauseSql}) AND snapshot_date >= ? ` +
         `ORDER BY stablecoin_id, snapshot_date DESC`,
     )
-    .bind(...binds, resolveDexHistoryWindowStart(active.map((event) => event.startedAt), nowSec))
+    .bind(...binds, historyStart)
     .all<DdrDexHistoryRow & { volume_availability_json?: string | null }>());
   const liqHistoryByCoin = new Map<string, DdrDexHistoryRow[]>();
   for (const { volume_availability_json, ...stored } of liqHistResult.rows) {
     const row: DdrDexHistoryRow = {
       ...stored,
+      volume_availability_json,
       total_volume_24h_usd: measuredVolume24h(stored.total_volume_24h_usd, volume_availability_json),
     };
     const rows = liqHistoryByCoin.get(row.stablecoin_id) ?? [];
@@ -553,13 +681,12 @@ export async function loadDdrContext(
   const liqTvlChange30dByCoin = new Map<string, number>();
   const liqVolumeChange30dByCoin = new Map<string, number>();
   const liqTvlChangeSinceOnsetByEventId = new Map<number, number>();
-  const target7d = nowSec - 7 * DAY;
   const target30d = nowSec - 30 * DAY;
-  const { week: trend7dToleranceSec } = getDexLiquidityTrendTolerances();
   for (const row of liqRows) {
     const currentTvl = row.total_tvl_usd;
     const history = liqHistoryByCoin.get(row.stablecoin_id) ?? [];
-    const baseline7d = selectTrendBaseline(history, target7d, trend7dToleranceSec, row.methodology_version);
+    const capture = row.capturedAt;
+    const baseline7d = selectObservedTrendBaseline(history, capture, 7 * DAY, trend7dToleranceSec, row.methodology_version);
     if (
       currentTvl != null &&
       Number.isFinite(currentTvl) &&
@@ -571,7 +698,7 @@ export async function loadDdrContext(
         ((currentTvl - baseline7d.total_tvl_usd) / baseline7d.total_tvl_usd) * 100,
       );
     }
-    const baseline30d = selectTrendBaseline(history, target30d, trend7dToleranceSec, row.methodology_version);
+    const baseline30d = selectObservedTrendBaseline(history, capture, 30 * DAY, trend7dToleranceSec, row.methodology_version);
     if (
       currentTvl != null &&
       Number.isFinite(currentTvl) &&
@@ -585,8 +712,12 @@ export async function loadDdrContext(
     }
     for (const event of active) {
       if (event.stablecoinId !== row.stablecoin_id || event.startedAt < nowSec - DDR_ONSET_TVL_LOOKBACK_SEC) continue;
-      const onsetHistory = history.filter((entry) => entry.snapshot_date <= event.startedAt);
-      const onsetBaseline = selectTrendBaseline(onsetHistory, event.startedAt, trend7dToleranceSec, row.methodology_version);
+      if (capture == null || capture < event.startedAt) continue;
+      const onsetHistory = history.filter((entry) => getDexTvlObservedAt(
+        parseDexVolumeAvailabilityRecord(entry.volume_availability_json), event.startedAt,
+      ) != null);
+      const onsetBaseline = selectObservedTrendBaseline(onsetHistory, capture, capture - event.startedAt,
+        onsetToleranceSec, row.methodology_version);
       if (currentTvl != null && Number.isFinite(currentTvl) && onsetBaseline && onsetBaseline.total_tvl_usd > 0) {
         liqTvlChangeSinceOnsetByEventId.set(
           event.id,
@@ -617,7 +748,7 @@ export async function loadDdrContext(
   // failures still degrade the run like any other resolver health input.
   const redemptionResult = await queryRows("redemption_backstop", async () => {
     try {
-      return { results: await loadRedemptionBackstopLiveSignalRows(db, activeCoinIds) };
+      return { results: await loadRedemptionBackstopLiveSignalRows(db, activeCoinIds, nowSec) };
     } catch (error) {
       if (error instanceof RedemptionBackstopSnapshotUnavailableError && error.cause == null) return { results: [] };
       throw error;
@@ -705,7 +836,6 @@ export async function loadDdrContext(
   const resolverHealthFailures = [
     supplyResult.error,
     mintBurnResult.error,
-    scanCoverageError,
     dewsResult.error,
     liqResult.error,
     liqHistResult.error,

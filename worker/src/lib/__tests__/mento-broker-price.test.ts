@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { encodeAbiParameters, parseAbiParameters } from "viem/utils";
 import { sha256Hex } from "@shared/lib/sha256";
 import { loadFreshFxRates } from "../../cron/sync-stablecoins/shared";
-import { MENTO_POOL_EXCHANGE_ABI_PARAMETERS } from "@shared/lib/mento-contracts";
+import { MENTO_POOL_EXCHANGE_ABI_PARAMETERS, MENTO_POOL_SPREAD_FIXIDITY_SCALE } from "@shared/lib/mento-contracts";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 const blockNumber = vi.fn(), blockHeader = vi.fn(), multicall = vi.fn();
 vi.mock("../evm-rpc", () => ({ fetchEvmBlockNumber: (...args: unknown[]) => blockNumber(...args),
@@ -148,7 +148,10 @@ describe("Mento V2 Broker guarded prices", () => {
       outputLimits: config(1), outputState: encode("uint32,uint32,int48,int48,int48", [0, 0, 0, 0, -1]),
     }],
   ])("withholds %s", async (_name, overrides) => { fixture(overrides); expect(await fetchPrice("cadm-mento", context())).toBeNull(); });
-  it.each([["xofm-mento", "peggedXOF", 0.0017], ["zarm-mento", "peggedZAR", 0.06]] as const)("%s prefers verified Broker, failing closed", async (id, pegType, par) => {
+  it.each([
+    ["xofm-mento", "peggedXOF", 0.0017 * 1.01 / 0.98, MENTO_POOL_SPREAD_FIXIDITY_SCALE / 50n],
+    ["zarm-mento", "peggedZAR", 0.06, 0n],
+  ] as const)("%s prefers the verified Broker exit, failing closed", async (id, pegType, par, spread) => {
     const now = nowSec();
     const rates = JSON.stringify({ [pegType]: par });
     const meta = { usableSyncAt: now, mode: "live", ratesSha256: sha256Hex(rates),
@@ -163,7 +166,7 @@ describe("Mento V2 Broker guarded prices", () => {
       sourceDateByPeg: meta.sourceDateByPeg, maxAgeSec: 21600 });
     const asset = { id, name: id, symbol: id, pegType, circulating: { [pegType]: 1e6 }, price: par,
       priceSource: "protocol-par", priceObservedAtMode: "nominal_reference", priceSyncedAt: now } as PeggedAsset;
-    fixture({}, 0n, id);
+    fixture({}, spread, id);
     const overrides = await fetchAuthoritativeLivePriceOverrides([asset, ...context().assetsById.values()], undefined, refs);
     expect(overrides.get(id)?.source).toBe("mento-broker");
     const apply = (quotes = overrides) => applyProtocolPriceOverrides({ assets: [asset], overrides: quotes,
@@ -171,6 +174,10 @@ describe("Mento V2 Broker guarded prices", () => {
     apply();
     settleNominalPriceReferences([asset], now, refs);
     expect(asset.priceSource).toBe("mento-broker");
+    expect(asset.priceDerivation).toMatchObject({
+      inheritedFrom: "cusd-celo", parentSource: "coingecko", parentObservedAt: now - 20, parentReplaySafe: true,
+    });
+    if (id === "xofm-mento") expect(asset.price).toBeCloseTo(par * 0.98, 12);
     expect(await mentoBrokerProvider.fetchLivePrice!({ ...asset, priceSource: "binance", priceConfidence: "single-source", agreeSources: ["binance"] }, context())).toBeNull();
     expect(classifyPrimaryDepegTrust(asset, now)).toBe("confirm_required");
     expect(evaluateStablecoinActivePriceCoverage([asset], [id]).nominalReferenceIds).toEqual([]);

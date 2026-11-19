@@ -1,3 +1,4 @@
+import { OXR_MAX_SNAPSHOT_AGE_SEC } from "@shared/lib/reference-admission";
 import { logWorkerEventArgs } from "./structured-log";
 import { z } from "zod";
 import {
@@ -9,8 +10,8 @@ import { fetchJsonWithRetry } from "./fetch-retry";
 
 /**
  * Real-time FX rate provider using Open Exchange Rates.
- * Free tier: 1,000 requests/month. At 1/hour = ~720/month, safely within free tier.
- * Basic plan ($12/mo, 10K/month) allows 15-min polling if needed later.
+ * The producer reserves one request per open-session hour. Failures retry in
+ * the next eligible hour, so transport retries cannot double free-tier usage.
  */
 
 const OpenExchangeRatesSchema = z.object({
@@ -21,15 +22,13 @@ const OpenExchangeRatesSchema = z.object({
 });
 
 const OPEN_EXCHANGE_RATES_REQUEST_TIMEOUT_MS = 5_000;
-const OPEN_EXCHANGE_RATES_MAX_RETRIES = 1;
-/**
- * OXR publishes hourly snapshots on the plan Pharos uses. One missed hourly update
- * is tolerated; an older snapshot is a stale upstream response, not a live rate.
- */
-const OPEN_EXCHANGE_RATES_MAX_OBSERVATION_AGE_SEC = 2 * 3600;
-const OPEN_EXCHANGE_RATES_MAX_FUTURE_SKEW_SEC = 5 * 60;
-
 export type RealtimeFxObservationRejection = "timestamp-missing" | "timestamp-stale" | "timestamp-future";
+
+export function getRealtimeFxTimestampRejection(observedAt: number | null, nowSec: number): RealtimeFxObservationRejection | null {
+  if (observedAt == null || !Number.isSafeInteger(observedAt) || observedAt <= 0) return "timestamp-missing";
+  if (observedAt > nowSec) return "timestamp-future";
+  return nowSec - observedAt > OXR_MAX_SNAPSHOT_AGE_SEC ? "timestamp-stale" : null;
+}
 
 /** One OXR snapshot: every rate carries the provider's observation time, never the fetch time. */
 export interface RealtimeFxObservation {
@@ -43,6 +42,7 @@ export interface RealtimeFxFetchResult {
   /** Set when a successful response was rejected for its upstream timestamp. */
   rejection: { reason: RealtimeFxObservationRejection; upstreamTimestamp: number | null } | null;
   completed: boolean;
+  statusCode?: number;
 }
 
 /**
@@ -61,19 +61,16 @@ export async function fetchRealtimeFxRates(
 
   try {
     const symbols = Object.keys(REALTIME_FX_CURRENCY_TO_PEG).join(",");
+    let statusCode: number | undefined;
     const fetchResult = await fetchJsonWithRetry<unknown>(
       `https://openexchangerates.org/api/latest.json?app_id=${apiKey}&symbols=${symbols}&base=USD`,
       { signal, headers: { Accept: "application/json" } },
-      OPEN_EXCHANGE_RATES_MAX_RETRIES,
-      { timeoutMs: OPEN_EXCHANGE_RATES_REQUEST_TIMEOUT_MS },
+      0,
+      { timeoutMs: OPEN_EXCHANGE_RATES_REQUEST_TIMEOUT_MS, onResponse: ({ status }) => { statusCode = status; } },
     );
-    if (!fetchResult) {
-      logWorkerEventArgs("lib", "warn", "[fx-realtime] Open Exchange Rates returned no response");
-      return { observation: null, rejection: null, completed: false };
-    }
-    if (!fetchResult.response.ok) {
-      logWorkerEventArgs("lib", "warn", `[fx-realtime] Open Exchange Rates returned ${fetchResult.response.status}`);
-      return { observation: null, rejection: null, completed: true };
+    if (!fetchResult || !fetchResult.response.ok) {
+      statusCode ??= fetchResult?.response.status;
+      return { observation: null, rejection: null, completed: statusCode != null, statusCode };
     }
     const data = OpenExchangeRatesSchema.parse(fetchResult.body);
 
@@ -81,14 +78,7 @@ export async function fetchRealtimeFxRates(
       typeof data.timestamp === "number" && Number.isFinite(data.timestamp) && data.timestamp > 0
         ? Math.floor(data.timestamp)
         : null;
-    const rejectionReason: RealtimeFxObservationRejection | null =
-      upstreamTimestamp == null
-        ? "timestamp-missing"
-        : upstreamTimestamp - nowSec > OPEN_EXCHANGE_RATES_MAX_FUTURE_SKEW_SEC
-          ? "timestamp-future"
-          : nowSec - upstreamTimestamp > OPEN_EXCHANGE_RATES_MAX_OBSERVATION_AGE_SEC
-            ? "timestamp-stale"
-            : null;
+    const rejectionReason = getRealtimeFxTimestampRejection(upstreamTimestamp, nowSec);
     if (rejectionReason != null || upstreamTimestamp == null) {
       logWorkerEventArgs(
         "lib",

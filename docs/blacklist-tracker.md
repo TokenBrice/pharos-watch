@@ -4,7 +4,7 @@ FreezeWatch tracks observed stablecoin blacklist, freeze, release and destroy ev
 
 ## Methodology And Ownership
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-blacklist-tracker -->`v4.62`<!-- GENERATED-END: methodology-version-blacklist-tracker -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-blacklist-tracker -->`v4.63`<!-- GENERATED-END: methodology-version-blacklist-tracker -->
 - **Public changelog:** [Blacklist Tracker history](https://pharos.watch/methodology/blacklist-tracker-changelog/)
 
 ## Public Exposure Contract
@@ -107,7 +107,7 @@ Circle mirror actions are suppressed only when an emitted event-time zero proves
 
 ### Coverage and limitations
 
-Coverage advances only through contiguous evidence across every required event family. A bounded scan, incomplete pagination, provider failure or unresolved frontier is not full catch-up. Freshness uses the oldest required deployment's proven full-coverage success; rebuilding a summary or finishing a run cannot renew that observation clock. A deployment that has never succeeded leaves coverage freshness unavailable. Observations from other deployments can still contribute to the summary.
+Coverage advances only through contiguous evidence across every required event family. A bounded scan, incomplete pagination, provider failure or unresolved frontier is not full catch-up. Freshness uses the oldest required deployment's proven full-coverage success; rebuilding a summary or finishing a run cannot renew that observation clock. A deployment that has never succeeded leaves coverage freshness unavailable. Observations from other deployments can still contribute to the summary. If a finalized-header read fails while extending a scan, the weekly recap retains the previously verified interval when its generation, contract roster and scan bounds still match. The extension requires fresh header evidence.
 
 Tron event scans prefer admitted Dwellir JSON-RPC, with TronGrid fallback. The provider change preserves the configured event families and historical event identities. RPC scans retain the 15-minute indexing margin and cannot pass a validated solidified head no older than ten minutes; stale head evidence cannot certify catch-up. Block hashes bind event timestamps, and complete block-log context proves transaction-local identities and execution order. An emitted destroy amount can resolve that event's quantity, while amountless freezes still require the confirmed transfer-replay evidence above.
 
@@ -116,6 +116,8 @@ RLUSD clawbacks lack a dedicated event in the verified ABI and are not event-cov
 The hero address check reuses the ledger address search (`q`) and adds no endpoint. It answers only for a complete address (EVM `0x` plus 40 hex digits, or a Tron `T` address) with the ledger unfiltered and a settled, non-stale read whose total is exact: it states the recorded event count and the latest event's coin and date, or that no event is recorded on the contracts Pharos scans. A loading, failed or stale read shows no sentence. An empty result is bounded by the coverage limits above and is not a statement about current state. The page also prerenders a registry block with no live figures: the reviewed exposure classes with their active-coin counts, and the event-tracked assets with profile links.
 
 ## Storage Semantics
+
+For the reviewed Ethereum USDT contract, an address that remains blocked after a wipe can contribute an active balance observed at a finalized block. The balance observation has its own clock and a 12-hour budget. The historical destruction amount and latest-freeze-action count retain their separate ledger semantics.
 
 Event history, the historical freeze ledger and local net-active state are separate views. A release does not erase history or a prior successful ledger observation. A destroy may replace a snapshot with a better emitted seizure/burn amount, without adding destroyed funds to the active frozen total.
 

@@ -16,12 +16,13 @@ import type { runMintBurnConfigPhase, MintBurnRunConfigPhaseResult } from "./run
 async function recalcMintBurnAffectedHours(
   db: D1Database,
   affectedHours: Map<string, MintBurnAffectedHour>,
+  revision: string,
   signal?: AbortSignal,
 ): Promise<{ failed: boolean; error: string | null }> {
   if (affectedHours.size === 0) return { failed: false, error: null };
 
   try {
-    await recalcAffectedHours(db, affectedHours, { signal });
+    await recalcAffectedHours(db, affectedHours, { signal, materializationRevision: revision });
     return { failed: false, error: null };
   } catch (error) {
     rethrowIfAborted(error, signal);
@@ -81,13 +82,21 @@ export async function publishMintBurnScan(
     hours.set(key, hour);
     pendingHours.set(bucket, hours);
   }
+  const revision = crypto.randomUUID();
+  const withMaterialization = (proof: MintBurnScanCoverage): MintBurnScanCoverage => ({
+    ...proof,
+    materialization: { revision, hours: [...input.affectedHours.values()]
+      .filter((hour) => hour.stablecoinId === proof.materializedStablecoinId && hour.chainId === proof.chainId
+        && hour.hourTs <= proof.toTimestamp && hour.hourTs + 3600 > proof.fromTimestamp)
+      .map((hour) => hour.hourTs) },
+  });
   const commitProofs = async (includesKey: (key: string) => boolean) => {
     for (const [key, nextLastBlock] of input.pendingCursorUpdates) {
       if (!includesKey(key)) continue;
       throwIfAborted(input.signal);
       const proof = input.pendingScanCoverage.get(key);
       if (proof?.toBlock !== nextLastBlock) continue;
-      await upsertMintBurnSyncState(db, key, nextLastBlock, "monotonic-max", proof);
+      await upsertMintBurnSyncState(db, key, nextLastBlock, "monotonic-max", withMaterialization(proof));
       input.lastBlocksAfterRun.set(key, nextLastBlock);
     }
     for (const proof of repairProofs) {
@@ -97,9 +106,9 @@ export async function publishMintBurnScan(
         try {
           const supplyRange = supplyRepairRanges.get(`${proof.configKey}:${proof.fromBlock}`);
           if (supplyRange && proof.toBlock <= supplyRange.toBlock) {
-            await commitMintBurnSupplyProofRepair(db, supplyRange.config, proof);
+            await commitMintBurnSupplyProofRepair(db, supplyRange.config, withMaterialization(proof));
           } else {
-            await upsertMintBurnSyncState(db, proof.configKey, proof.toBlock, "monotonic-max", proof);
+            await upsertMintBurnSyncState(db, proof.configKey, proof.toBlock, "monotonic-max", withMaterialization(proof));
             input.lastBlocksAfterRun.set(proof.configKey,
               Math.max(input.lastBlocksAfterRun.get(proof.configKey) ?? 0, proof.toBlock));
           }
@@ -131,7 +140,7 @@ export async function publishMintBurnScan(
   };
   const isolatedPendingKeys = new Set([...pendingBuckets.values()].flatMap((keys) => [...keys]));
   const isAdmitted = (key: string) => !isolatedPendingKeys.has(key);
-  const recalcResult = await recalcMintBurnAffectedHours(db, admittedHours, input.signal);
+  const recalcResult = await recalcMintBurnAffectedHours(db, admittedHours, revision, input.signal);
   const recalcFailed = recalcResult.failed;
   const recalcError = recalcResult.error;
   if (recalcFailed) holdRepairProofs(isAdmitted);
@@ -141,7 +150,7 @@ export async function publishMintBurnScan(
   // pending cursor replays its raw rows and existing materialization debt.
   for (const [bucket, keys] of pendingBuckets) {
     const includesKey = (key: string) => keys.has(key);
-    const result = await recalcMintBurnAffectedHours(db, pendingHours.get(bucket) ?? new Map(), input.signal);
+    const result = await recalcMintBurnAffectedHours(db, pendingHours.get(bucket) ?? new Map(), revision, input.signal);
     if (result.failed) {
       holdRepairProofs(includesKey);
       for (const key of keys) pendingMaterializationFailures.push({

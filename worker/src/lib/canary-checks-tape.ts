@@ -1,5 +1,6 @@
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { STATUS_ALLOWED_FUTURE_SKEW_SEC } from "@shared/lib/status-thresholds";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { ZEPHYR_MAX_FUTURE_SKEW_SEC } from "./yield-source-adapters/zephyr";
 import { throwIfAborted } from "./abort";
 import { getCaches } from "./db-cache";
@@ -52,14 +53,18 @@ const TAPE_CLASS_SOURCES: readonly TapeClassSource[] = [
   },
 ] as const;
 
-// The score clock must match the organic-only relation the projectors read
-// (`SAFETY_SCORE_HISTORY_TAPE_SOURCE_SQL`): methodology boundary baselines are
-// written at the snapshot day but never advance a projector cursor. Two scalar
-// MAX subqueries keep each read an index seek instead of a full-table scan.
+// Match SAFETY_SCORE_HISTORY_TAPE_SOURCE_SQL when selecting legacy rows.
+const UNMIRRORED_SCORE_ROW_SQL = `legacy.prev_grade IS NOT NULL AND NOT EXISTS (
+  SELECT 1 FROM safety_score_history_v2 v2
+   WHERE v2.stablecoin_id = legacy.stablecoin_id AND v2.legacy_recorded_at = legacy.recorded_at
+)`;
+
+// Methodology baselines share the snapshot day and never advance the cursor.
 const SOURCE_CLOCK_SQL = `SELECT /* pharos:canary:tape-class-liveness */
   (SELECT MAX(stored_at) FROM stability_index_samples) AS psi_at,
   (SELECT MAX(computed_at) FROM stress_signals) AS dews_at,
-  (SELECT MAX(recorded_at) FROM safety_grade_history WHERE prev_grade IS NOT NULL) AS score_legacy_at,
+  (SELECT MAX(legacy.recorded_at) FROM safety_grade_history legacy
+    WHERE ${UNMIRRORED_SCORE_ROW_SQL}) AS score_legacy_at,
   (SELECT MAX(recorded_at)
      FROM safety_score_history_v2
     WHERE transition_kind = 'organic-grade-change'
@@ -67,25 +72,25 @@ const SOURCE_CLOCK_SQL = `SELECT /* pharos:canary:tape-class-liveness */
   (SELECT MAX(recorded_at) FROM yield_history WHERE is_best = 1) AS yield_history_at,
   (SELECT MAX(created_at) FROM yield_source_decisions) AS yield_decisions_at`;
 
-// Numbered parameters reuse each class's cursor across the two score relations.
+function oldestUnprojectedScoreSql(cursorParameter: string): string {
+  // Legacy-only rows have a UTC day bucket but no write clock. Give the entire
+  // recorded day before starting the lag timer, and prefer V2 for mirrored rows.
+  return `SELECT MIN(clock) FROM (
+    SELECT MIN(legacy.recorded_at) - MIN(legacy.recorded_at) % ${DAY_SECONDS} + ${DAY_SECONDS} AS clock
+      FROM safety_grade_history legacy
+     WHERE legacy.recorded_at > ${cursorParameter} AND ${UNMIRRORED_SCORE_ROW_SQL}
+    UNION ALL
+    SELECT MIN(created_at) AS clock FROM safety_score_history_v2
+      WHERE transition_kind = 'organic-grade-change' AND prev_grade IS NOT NULL AND recorded_at > ${cursorParameter}
+  )`;
+}
+
 const UNPROJECTED_CLOCK_SQL = `SELECT /* pharos:canary:tape-oldest-unprojected */
   (SELECT MIN(stored_at) FROM stability_index_samples WHERE stored_at > ?1) AS "psi.band_changed",
   (SELECT MIN(computed_at) FROM stress_signals WHERE computed_at > ?2) AS "dews.escalated",
   (SELECT MIN(computed_at) FROM stress_signals WHERE computed_at > ?3) AS "dews.deescalated",
-  (SELECT MIN(clock) FROM (
-    SELECT MIN(recorded_at) AS clock FROM safety_grade_history
-      WHERE prev_grade IS NOT NULL AND recorded_at > ?4
-    UNION ALL
-    SELECT MIN(recorded_at) AS clock FROM safety_score_history_v2
-      WHERE transition_kind = 'organic-grade-change' AND prev_grade IS NOT NULL AND recorded_at > ?4
-  )) AS "score.upgraded",
-  (SELECT MIN(clock) FROM (
-    SELECT MIN(recorded_at) AS clock FROM safety_grade_history
-      WHERE prev_grade IS NOT NULL AND recorded_at > ?5
-    UNION ALL
-    SELECT MIN(recorded_at) AS clock FROM safety_score_history_v2
-      WHERE transition_kind = 'organic-grade-change' AND prev_grade IS NOT NULL AND recorded_at > ?5
-  )) AS "score.downgraded",
+  (${oldestUnprojectedScoreSql("?4")}) AS "score.upgraded",
+  (${oldestUnprojectedScoreSql("?5")}) AS "score.downgraded",
   (SELECT MIN(recorded_at) FROM yield_history WHERE is_best = 1 AND recorded_at > ?6) AS "yield.warning_emitted",
   (SELECT MIN(created_at) FROM yield_source_decisions WHERE created_at > ?7) AS "yield.pys_dropped"`;
 
@@ -193,6 +198,7 @@ export async function checkTapeClassLiveness(
       cursorReadAt,
       allowedFutureSkewSec,
       lagBudgetSec,
+      scoreLegacyWaitClock: "end-of-recorded-utc-day",
       evaluatedCount,
       classes,
     };

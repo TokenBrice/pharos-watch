@@ -1,5 +1,18 @@
 [
   {
+    "version": "4.54",
+    "title": "Settlement-clocked redemption capacity",
+    "date": "2026-11-19",
+    "effectiveAt": 1795053600,
+    "summary": "Ordinary Circle bank payouts are multi-day, and capacity is assigned to the settlement horizon the route can support. Held current peg data cannot clear an open downside incident.",
+    "impact": [
+      "USDC's immediate buffer is removed. Delayed capacity can appear as eventual USD with immediate fields unavailable. Reviewed Mento closure bounds age to reopening, where current-session quote evidence is required.",
+      "JupUSD uses its documented buffer and USD3 needs a dated admitted valuation for its native throttle. EURI counts eligible days after qualified receipt and withholds an exact bound outside reviewed coverage."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "4.53",
     "title": "Scheduled Mento closures as delayed routes; withheld settlement terms",
     "date": "2026-10-31",

@@ -19,12 +19,10 @@ import {
   logWorkerEventArgs,
 } from "../../lib/structured-log";
 import { type EvaluatedYieldSource } from "./evaluation";
+import { getUsycNavFreshness, OPTIONAL_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 import { compareCandidates } from "./candidate-selection";
 import { buildYieldSourceRisk } from "./source-risk";
-import {
-  getRankingStaleThresholdMs,
-  getComparisonAnchorStaleThresholdMs,
-} from "../../lib/yield-ranking-helpers";
+import { getComparisonAnchorStaleThresholdMs, getRankingStaleThresholdMs } from "../../lib/yield-ranking-helpers";
 import {
   buildHistoryKey,
 } from "./history-evidence";
@@ -48,7 +46,8 @@ import {
 import {
   benchmarkRecordAgeSeconds,
   classifyYieldBenchmarkFreshness,
-  YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
+  getYieldBenchmarkComparisonApy,
+  getYieldBenchmarkRecordMaxAgeSeconds,
 } from "@shared/lib/yield-benchmark-freshness";
 import {
   YIELD_BENCHMARK_SCORE_TTL_SEC,
@@ -134,6 +133,7 @@ function evaluatedSourceToRanking(
 ) {
   const meta = TRACKED_META_BY_ID.get(source.id);
   const benchmarkRate = finiteBaseValue(source.benchmarkRate, "benchmarkRate", source.id);
+  const { benchmarkFreshness: _benchmarkFreshness, ...sourceProvenance } = provenance ?? {};
   const sourceRisk = buildYieldSourceRisk({ source, provenance, isBest: true });
   return {
     id: source.id,
@@ -163,16 +163,17 @@ function evaluatedSourceToRanking(
     safetyReason: source.safetyReason,
     yieldToRisk: finiteBaseValue(source.yieldToRisk, "yieldToRisk", source.id),
     excessYield: finiteBaseValue(source.excessYield, "excessYield", source.id),
-    benchmarkKey: source.benchmarkKey,
-    benchmarkLabel: source.benchmarkLabel,
-    benchmarkCurrency: source.benchmarkCurrency,
-    // Optional, not nullable: omitted rather than nulled when it is not a number.
-    ...(benchmarkRate != null ? { benchmarkRate } : {}),
-    benchmarkRecordDate: source.benchmarkRecordDate,
-    benchmarkIsFallback: source.benchmarkIsFallback,
-    benchmarkFallbackMode: source.benchmarkFallbackMode,
-    benchmarkSelectionMode: source.benchmarkSelectionMode,
-    benchmarkIsProxy: source.benchmarkIsProxy,
+    ...(source.benchmarkRate != null ? {
+      benchmarkKey: source.benchmarkKey,
+      benchmarkLabel: source.benchmarkLabel,
+      benchmarkCurrency: source.benchmarkCurrency,
+      ...(benchmarkRate != null ? { benchmarkRate } : {}),
+      benchmarkRecordDate: source.benchmarkRecordDate,
+      benchmarkIsFallback: source.benchmarkIsFallback,
+      benchmarkFallbackMode: source.benchmarkFallbackMode,
+      benchmarkSelectionMode: source.benchmarkSelectionMode,
+      benchmarkIsProxy: source.benchmarkIsProxy,
+    } : {}),
     yieldStability: finiteBaseValue(source.yieldStability, "yieldStability", source.id),
     apyVariance30d: finiteBaseValue(source.stdDev30d, "apyVariance30d", source.id),
     apyMin30d: finiteBaseValue(source.apyMin30d, "apyMin30d", source.id),
@@ -188,12 +189,11 @@ function evaluatedSourceToRanking(
     ...(decisionLedger ? { decisionLedger } : {}),
     provenance: provenance
       ? {
-          ...provenance,
+          ...sourceProvenance,
           safetyProvenance: source.safetyProvenance,
           safetyReason: source.safetyReason,
           safetyScoreIdentity: source.safetyScoreIdentity ?? null,
           sourceFreshness: source.sourceFreshness,
-          benchmarkFreshness: source.benchmarkFreshness,
           calculationMode: source.calculationMode,
           evidenceClass: source.evidenceClass,
           evidenceCompleteness: source.evidenceCompleteness,
@@ -269,7 +269,7 @@ function buildUniqueAltCandidates(
 ): EvaluatedYieldSource[] {
   const bySourceKey = new Map<string, EvaluatedYieldSource>();
   for (const candidate of candidates) {
-    if (candidate.sourceKey === selected.sourceKey) {
+    if (candidate.rejected || candidate.sourceKey === selected.sourceKey) {
       continue;
     }
     const existing = bySourceKey.get(candidate.sourceKey);
@@ -424,7 +424,7 @@ function publishBenchmarkRecordBounds(
           : {
             ...meta,
             maxFetchAgeSec: YIELD_BENCHMARK_SCORE_TTL_SEC,
-            maxRecordAgeSec: YIELD_BENCHMARK_RECORD_MAX_AGE_SEC[key],
+            maxRecordAgeSec: getYieldBenchmarkRecordMaxAgeSeconds(key, meta.recordDate),
             recordAgeSec: benchmarkRecordAgeSeconds(meta.recordDate, publishedAtSec),
           },
       ];
@@ -508,8 +508,7 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
     const sourceObservedAt =
       provenance != null && typeof provenance.sourceObservedAt === "number"
         ? provenance.sourceObservedAt
-        : input.startSec;
-    const updatedAtMs = sourceObservedAt * 1000;
+        : source.sourceObservedAt;
     const staleThresholdMs = getRankingStaleThresholdMs(source.dataSource, source.sourceKey);
     const comparisonAnchorAgeSeconds =
       provenance != null && typeof provenance.comparisonAnchorAgeSeconds === "number"
@@ -518,14 +517,15 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
     const staleComparisonAnchor =
       comparisonAnchorAgeSeconds != null &&
       comparisonAnchorAgeSeconds * 1000 > getComparisonAnchorStaleThresholdMs(source.dataSource, source.sourceKey);
-    const staleSource =
-      (updatedAtMs > 0 && updatedAtMs < input.startSec * 1000 - staleThresholdMs) ||
-      staleComparisonAnchor;
-    const benchmarkFreshness =
-      source.benchmarkFreshness ??
+    const overdueObservation = source.sourceKey === OPTIONAL_YIELD_SOURCES.hashnote.sourceKey
+      ? getUsycNavFreshness(sourceObservedAt, input.startSec) === "stale"
+      : source.sourceMaxAgeSeconds == null && sourceObservedAt != null && sourceObservedAt > 0
+        && (input.startSec - sourceObservedAt) * 1000 > staleThresholdMs;
+    const staleSource = source.sourceFreshness === "stale" || overdueObservation || staleComparisonAnchor;
+    const benchmarkFreshness = source.benchmarkRate == null ? undefined : source.benchmarkFreshness ??
       classifyYieldBenchmarkFreshness(source.benchmarkMeta, {
         recordDate: source.benchmarkMeta.recordDate,
-        maxRecordAgeSec: YIELD_BENCHMARK_RECORD_MAX_AGE_SEC[source.benchmarkKey],
+        maxRecordAgeSec: getYieldBenchmarkRecordMaxAgeSeconds(source.benchmarkKey, source.benchmarkMeta.recordDate),
       });
     if (staleSource) {
       if (!ranking.warningSignals.includes("data-stale")) {
@@ -556,7 +556,7 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
       ranking.provenance = {
         ...ranking.provenance,
         sourceFreshness: effectiveSourceFreshness,
-        benchmarkFreshness,
+        ...(benchmarkFreshness != null ? { benchmarkFreshness } : {}),
         evidenceCompleteness: Math.max(
           0,
           Number(
@@ -590,7 +590,7 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
 
   return {
     rankings,
-    riskFreeRate: input.riskFreeRate,
+    riskFreeRate: getYieldBenchmarkComparisonApy({ ...input.riskFreeRateMeta, key: "USD", rate: input.riskFreeRate }),
     benchmarks,
     scalingFactor: PYS_SCALING_FACTOR,
     medianApy: input.medianApy,
@@ -602,7 +602,7 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
       benchmark: {
         ...input.riskFreeRateMeta,
         maxFetchAgeSec: YIELD_BENCHMARK_SCORE_TTL_SEC,
-        maxRecordAgeSec: YIELD_BENCHMARK_RECORD_MAX_AGE_SEC[input.riskFreeRateMeta.key ?? "USD"],
+        maxRecordAgeSec: getYieldBenchmarkRecordMaxAgeSeconds(input.riskFreeRateMeta.key ?? "USD", input.riskFreeRateMeta.recordDate),
         recordAgeSec: benchmarkRecordAgeSeconds(input.riskFreeRateMeta.recordDate, input.startSec),
       },
       benchmarks,

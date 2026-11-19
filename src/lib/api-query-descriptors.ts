@@ -37,7 +37,7 @@ import type {
 import type { MintBurnEventsResponse, MintBurnFlowsResponse, MintBurnPerCoinResponse } from "@shared/types/mint-burn";
 import type { RedemptionBackstopsResponse } from "@shared/types/redemption";
 import type { RedemptionBackstopCoinResponse } from "@shared/types/redemption";
-import type { YieldRankingsCoinResponse } from "@shared/types/yield";
+import type { YieldRanking, YieldRankingsCoinResponse } from "@shared/types/yield";
 import type {
   SafetyScoreHistoryResponse,
   SafetyScoreHistoryV2Response,
@@ -120,6 +120,29 @@ function defineTapeEventsQuery() {
   );
 }
 
+/** Older Workers may still publish USD benchmark metrics for a native-unit yield. */
+function qualifyYieldRankings<
+  Row extends Pick<YieldRanking, "warningSignals" | "pharosYieldScore"> & { provenance?: { sourceKey?: string | null } | null },
+  Response extends { rankings: Row[] },
+>(response: Response, hasUnitMismatch: (row: Row) => boolean): Response {
+  return {
+    ...response,
+    rankings: response.rankings.map((row) => {
+      if (!hasUnitMismatch(row)) return row;
+      return {
+        ...row,
+        pharosYieldScore: null,
+        pysNullReason: "missing-inputs",
+        ...("excessYield" in row ? { excessYield: null } : {}),
+        ...("yieldToRisk" in row ? { yieldToRisk: null } : {}),
+        benchmarkKey: undefined,
+        benchmarkLabel: undefined,
+        benchmarkRate: undefined,
+      };
+    }),
+  };
+}
+
 const DATA_SURFACE_PRODUCER_INTERVAL_MS = {
   stablecoins: DATA_SURFACE_DESCRIPTORS.stablecoins.producerIntervalSec * 1000,
   dexLiquidity: DATA_SURFACE_DESCRIPTORS.dexLiquidity.producerIntervalSec * 1000,
@@ -139,9 +162,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
   stablecoinLiveSummary: defineParameterizedApiQuery(
     "meta",
     // Schema loading stays outside the shared shell's eager module graph.
-    createLazySchema<StablecoinLiveSummary>(async () =>
-      (await import("@shared/types/stablecoin-live-summary")).StablecoinLiveSummarySchema,
-    ),
+    createLazySchema<StablecoinLiveSummary>(async () => (await import("@shared/types/stablecoin-live-summary")).StablecoinLiveSummarySchema),
     (stablecoinId: string) => ({
       queryKey: ["stablecoin-live-summary", stablecoinId] as const,
       reconcileMeta: reconcileStablecoinLiveSummary<StablecoinLiveSummary>,
@@ -156,9 +177,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.stablecoins,
     },
     "meta",
-    createLazySchema<StablecoinListResponse>(
-      async () => (await import("@shared/types/supply")).StablecoinListResponseSchema,
-    ),
+    createLazySchema<StablecoinListResponse>(async () => (await import("@shared/types/supply")).StablecoinListResponseSchema),
   ),
   homepageSnapshot: defineApiQuery(
     { queryKey: ["homepage-snapshot"] as const, path: API_PATHS.homepageSnapshot(), producerIntervalMs: CRON_15MIN },
@@ -247,7 +266,13 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
   ),
   yieldRankingsCoin: defineParameterizedApiQuery(
     "meta",
-    createLazySchema<YieldRankingsCoinResponse>(async () => (await import("@shared/types/yield")).YieldRankingsCoinResponseSchema),
+    createLazySchema<YieldRankingsCoinResponse>(async () => {
+      const [{ YieldRankingsCoinResponseSchema }, { hasYieldBenchmarkUnitMismatch }] = await Promise.all([
+        import("@shared/types/yield"),
+        import("@shared/lib/yield-benchmark-freshness"),
+      ]);
+      return YieldRankingsCoinResponseSchema.transform((response) => qualifyYieldRankings(response, hasYieldBenchmarkUnitMismatch));
+    }),
     (stablecoinId: string) => ({
       queryKey: ["yield-rankings-coin", stablecoinId] as const,
       path: API_PATHS.yieldRankingsCoin(stablecoinId),
@@ -277,9 +302,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       producerIntervalMs: CRON_DAILY_DIGEST,
     },
     "meta",
-    createLazySchema<DigestArchiveResponse>(
-      async () => (await import("@shared/types/digest")).DigestArchiveResponseSchema,
-    ),
+    createLazySchema<DigestArchiveResponse>(async () => (await import("@shared/types/digest")).DigestArchiveResponseSchema),
   ),
   digestPromo: defineApiQuery(
     {
@@ -585,7 +608,13 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     },
     "meta",
     createLazySchema<YieldRankingsResponse>(
-      async () => (await import("@shared/types/yield")).YieldRankingsResponseSchema,
+      async () => {
+        const [{ YieldRankingsResponseSchema }, { hasYieldBenchmarkUnitMismatch }] = await Promise.all([
+          import("@shared/types/yield"),
+          import("@shared/lib/yield-benchmark-freshness"),
+        ]);
+        return YieldRankingsResponseSchema.transform((response) => qualifyYieldRankings(response, hasYieldBenchmarkUnitMismatch));
+      },
     ),
   ),
   yieldRankingsSummary: defineApiQuery(
@@ -596,7 +625,13 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     },
     "meta",
     createLazySchema<YieldRankingsSummaryResponse>(
-      async () => (await import("@shared/types/yield-summary")).YieldRankingsSummaryResponseSchema,
+      async () => {
+        const [{ YieldRankingsSummaryResponseSchema }, { hasYieldBenchmarkUnitMismatch }] = await Promise.all([
+          import("@shared/types/yield-summary"),
+          import("@shared/lib/yield-benchmark-freshness"),
+        ]);
+        return YieldRankingsSummaryResponseSchema.transform((response) => qualifyYieldRankings(response, hasYieldBenchmarkUnitMismatch));
+      },
     ),
   ),
   yieldAdapterManifest: defineParameterizedStaticApiQuery(

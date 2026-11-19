@@ -32,6 +32,7 @@ export const SOCIAL_CARD_RENDER_SOURCES = [
   "shared/lib/classification/domain.ts",
   "shared/lib/classification/grades.ts",
   "shared/lib/report-card-core.ts",
+  "shared/lib/format.ts",
   "shared/lib/social-preview.ts",
   ...Object.values(SOCIAL_CARD_FONTS).map(({ file }) => `${SOCIAL_CARD_FONT_DIR}/${file}`),
 ] as const;

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  buildFxLookup,
+  buildHistoricalReferenceLookup,
+  findHistoricalFxValuationRate,
   fetchHistoricalSecondaryFxRates,
 } from "../../../src/lib/backfill-fx";
 import {
@@ -9,6 +10,7 @@ import {
   parseSupplyData,
 } from "../../../src/lib/historical-depeg-extraction";
 
+import { fetchCgPriceHistoryHourly } from "../../../src/lib/historical-market-prices";
 import { executeBackfillForCoin } from "../backfill-depegs/execution";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
@@ -39,7 +41,7 @@ async function drainRetryBackoff<T>(promise: Promise<T>): Promise<T> {
 }
 
 describe("historical FX configuration", () => {
-  it("skips a non-USD coin without any FX reference and performs no writes", async () => {
+  it("skips a coin without historical supply and performs no writes", async () => {
     const meta = ACTIVE_STABLECOINS.find((coin) => coin.id === "brz-transfero");
     expect(meta).toBeDefined();
     if (!meta) throw new Error("missing BRZ fixture");
@@ -47,17 +49,14 @@ describe("historical FX configuration", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     const outcome = await executeBackfillForCoin({
-      db: mockD1(),
+      db: mockD1([{ match: "FROM depeg_events WHERE", rows: [] }]),
       prepared: {
         meta,
         geckoId: "unused-because-missing-fx-skips-first",
         supplyTokens: [],
-        currentSupplyUsd: null,
       },
-      pegRates: { peggedUSD: 1 },
-      fxRates: undefined,
       fxSeries: {},
-      commoditySeries: {},
+      commodityPeers: {},
       replayWindow: null,
       coingeckoApiKey: null,
       dryRun: false,
@@ -67,10 +66,10 @@ describe("historical FX configuration", () => {
     expect(outcome).toEqual({
       status: "skipped",
       eventCount: 0,
-      reason: "missing-fx-reference",
+      reason: "missing-historical-supply",
     });
     expect(applyBackfillEvents).not.toHaveBeenCalled();
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("missing-fx-reference"));
+    expect(warnSpy).toHaveBeenCalled();
   });
 
 });
@@ -96,7 +95,7 @@ describe("parseSupplyData", () => {
     ], () => 2)).toEqual([{ ts: 100, supply: 200 }]);
   });
 
-  it("drops absent and invalid buckets but preserves explicit observed zero", () => {
+  it("keeps rejected USD and native checkpoints unavailable and preserves explicit observed zero", () => {
     expect(parseSupplyData([
       { date: "100" },
       { date: "200", circulating: {} },
@@ -105,7 +104,10 @@ describe("parseSupplyData", () => {
       { date: "500", totalCirculatingUSD: { peggedUSD: Number.POSITIVE_INFINITY } },
       { date: "600", circulating: { peggedUSD: 0 } },
       { date: "700", totalCirculatingUSD: { peggedJPY: 0 }, circulating: { peggedJPY: 200_000_000 } },
-    ])).toEqual([{ ts: 600, supply: 0 }, { ts: 700, supply: 0 }]);
+    ])).toEqual([
+      { ts: 300, supply: null }, { ts: 400, supply: null }, { ts: 500, supply: null },
+      { ts: 600, supply: 0 }, { ts: 700, supply: 0 },
+    ]);
   });
 
   it.each([
@@ -142,7 +144,8 @@ describe("parseSupplyData", () => {
   });
 
   it("does not admit non-USD native supply without a conversion reference", () => {
-    expect(parseSupplyData([{ date: "1000", circulating: { peggedJPY: 200_000_000 } }])).toEqual([]);
+    expect(parseSupplyData([{ date: "1000", circulating: { peggedJPY: 200_000_000 } }]))
+      .toEqual([{ ts: 1000, supply: null }]);
   });
 });
 
@@ -172,39 +175,42 @@ describe("findNearestSupply", () => {
   });
 });
 
-describe("buildFxLookup", () => {
-  it("falls back to static rate when no series is available", () => {
-    const lookup = buildFxLookup([], 1.11);
-    expect(lookup(1_700_000_000)).toBe(1.11);
-  });
+it.each([3_600, 86_400])("rejects daily samples from long native ranges (gap %s)", async (gap) => {
+  vi.useFakeTimers();
+  const startSec = Date.parse("2026-01-01T00:00:00Z") / 1000;
+  const fetchSpy = mockFetch([{
+    match: "/market_chart/range",
+    respond: (input) => {
+      const from = Number(new URL(input.url).searchParams.get("from"));
+      return { body: { prices: [[from * 1000, 1.02], [(from + gap) * 1000, 1.02]] } };
+    },
+  }], { requireMatch: true });
+  const pending = fetchCgPriceHistoryHourly("euro-coin", { startSec, endSec: startSec + 120 * 86400 },
+    "eur", null, undefined, true);
+  await vi.runAllTimersAsync();
+  expect(await pending).toHaveLength(gap === 3600 ? 4 : 0);
+  expect(fetchSpy).toHaveBeenCalledTimes(2);
+});
 
-  it("linearly interpolates between surrounding daily FX snapshots", () => {
-    const lookup = buildFxLookup(
-      [
-        { timestamp: 1_000, rate: 1.0 },
-        { timestamp: 2_000, rate: 1.2 },
-      ],
-      1.5,
-    );
-    // 75% of the way from 1_000 to 2_000 → 1.0 + 0.75 * 0.2 = 1.15
-    expect(lookup(1_750)).toBeCloseTo(1.15, 10);
-    // midpoint → 1.0 + 0.5 * 0.2 = 1.1
-    expect(lookup(1_500)).toBeCloseTo(1.1, 10);
-    // exact match → returns rate directly
-    expect(lookup(1_000)).toBe(1.0);
-    expect(lookup(2_000)).toBe(1.2);
-  });
-
-  it("clamps to boundary rates outside the series range", () => {
-    const lookup = buildFxLookup(
-      [
-        { timestamp: 1_000, rate: 1.0 },
-        { timestamp: 2_000, rate: 1.2 },
-      ],
-      1.5,
-    );
-    expect(lookup(500)).toBe(1.0);
-    expect(lookup(3_000)).toBe(1.2);
+describe("dated historical references", () => {
+  it.each([[2, false], [3, true]])("requires three same-unit peers besides the subject (%s)", (count, usable) => {
+    const ts = 1_700_000_000;
+    const peers = ["kag-kinesis", "a", "b", "c"].slice(0, count + 1).map((assetId, index) => ({
+      assetId, sourceId: assetId, commodityOunces: 0.5,
+      prices: [{ timestamp: ts - 60 - index, price: index === 0 ? 4 : 15 }, { timestamp: ts + 60, price: 45 }],
+    }));
+    const ref = buildHistoricalReferenceLookup({
+      subjectId: "kag-kinesis", commodityPeers: { SILVER: peers },
+    });
+    expect(ref.referenceAt("SILVER", ts)).toEqual(usable ? {
+      usdPerUnit: 30, observedAtSec: ts - 63, source: "peer-median", kind: "median", contributors: ["a", "b", "c"],
+      contributorEvidence: peers.slice(1).map(({ assetId, prices }) => ({
+        assetId, provenanceKey: assetId, observedAtSec: prices[0]!.timestamp, derivation: "spot-derived", observedAtMode: "upstream",
+      })),
+    } : null);
+    expect(ref.referenceAt("SILVER", ts - 120)).toBeNull();
+    expect(ref.referenceAt("SILVER", ts + 3 * 3600)).toBeNull();
+    expect(ref.referenceAt("GOLD", ts)).toBeNull();
   });
 });
 
@@ -212,7 +218,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
   it.each([[false, false], [true, false], [false, true], [true, true]])(
     "merges overlapping month writes (retained=%s, unavailable=%s)", async (retained, unavailable) => {
       const { db, sqlite } = fxFixtures.open();
-      vi.spyOn(Date, "now").mockReturnValue(Date.parse("2025-06-16T00:00:00Z"));
+      vi.spyOn(Date, "now").mockReturnValue(Date.parse("2025-07-01T00:00:00Z"));
       vi.spyOn(console, "warn").mockImplementation(() => {});
       const seed = retained ? { "2025-06-13": {}, "2025-06-14": { ars: 1_180 } } : {};
       if (retained) sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
@@ -240,7 +246,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
       const cache = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("fx-history-secondary:2025-06") as { value: string };
       expect(JSON.parse(cache.value)).toEqual({
         ...seed, "2025-06-14": { ...(seed["2025-06-14"] ?? {}), ...(!unavailable ? { cnh: 7.2 } : {}), kes: 129 },
-        "2025-06-15": {},
+        "2025-06-15": null,
       });
       expect(series.KES).toEqual([{ timestamp: Date.parse("2025-06-14T00:00:00Z") / 1000, rate: 1 / 129 }]);
       const fetchCount = fetchSpy.mock.calls.length;
@@ -266,7 +272,11 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     expect(second.KES).toEqual([{ timestamp, rate: 1 / 129 }]);
     const cache = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("fx-history-secondary:2025-06") as { value: string };
     expect(JSON.parse(cache.value)).toEqual({ "2025-06-14": { cnh: 7.2, kes: 129 } });
-    expect(buildFxLookup(second.KES, 1 / 150)(timestamp)).toBe(1 / 129);
+    const lookup = buildHistoricalReferenceLookup({ subjectId: "kes" });
+    expect(lookup.referenceAt("KES", timestamp + 86400)).toBeNull();
+    expect(findHistoricalFxValuationRate(second, "KES", "kes", timestamp)).toBeNull();
+    expect(findHistoricalFxValuationRate(second, "KES", "kes", timestamp + 86400)).toBe(1 / 129);
+    expect(findHistoricalFxValuationRate(second, "KES", "kes", timestamp + 2 * 86400)).toBeNull();
   });
 
   it("preserves partial dated evidence after a confirmed unavailable refetch", async () => {
@@ -474,7 +484,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     const cacheWrite = firstDb.getHistory().find((entry) => entry.sql.includes("INSERT INTO cache"));
     const cachedValue = cacheWrite?.binds[1];
     expect(typeof cachedValue).toBe("string");
-    expect(JSON.parse(cachedValue as string)).toEqual({ "2025-06-14": {} });
+    expect(JSON.parse(cachedValue as string)).toEqual({ "2025-06-14": null });
 
     const secondDb = mockD1([
       {
@@ -492,10 +502,31 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
-  it("retries a 200 secondary FX day without a usd map instead of caching it as empty", async () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+  it.each([null, "2025-06", "2025"])("retries provisional double 404s after grace (cache %s)", async (period) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2025-06-14T00:01:00Z"));
+    const { db, sqlite } = fxFixtures.open();
+    if (period) sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run(`fx-history-secondary:${period}`, '{"2025-06-14":{}}', 1);
     const fetchSpy = mockFetch([
-      { match: "cdn.jsdelivr.net", body: { date: "2025-06-14" } },
+      { match: "cdn.jsdelivr.net", outcomes: [{ body: {}, status: 404 }, { body: { usd: { ars: 1200 } } }] },
+      { match: ".currency-api.pages.dev", body: {}, status: 404 },
+    ], { requireMatch: true });
+    expect((await fetchHistoricalSecondaryFxRates(db, ["ARS"], "2025-06-14", "2025-06-14")).ARS).toEqual([]);
+    vi.setSystemTime(new Date("2025-06-22T00:01:00Z"));
+    expect((await fetchHistoricalSecondaryFxRates(db, ["ARS"], "2025-06-14", "2025-06-14")).ARS)
+      .toEqual([{ timestamp: Date.parse("2025-06-14T00:00:00Z") / 1000, rate: 1 / 1200 }]);
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+  });
+
+  it.each([
+    { date: "2025-06-14" },
+    { date: "2025-06-14", usd: { kes: 0 } },
+    { date: "2025-06-13", usd: { kes: 130 } },
+  ])("retries an invalid 200 secondary FX day before accepting a corrected publication (%j)", async (body) => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const fetchSpy = mockFetch([
+      { match: "cdn.jsdelivr.net", body },
     ], { requireMatch: true });
     const db = mockD1([
       {
@@ -510,10 +541,10 @@ describe("fetchHistoricalSecondaryFxRates", () => {
       fetchHistoricalSecondaryFxRates(db, ["KES"], "2025-06-14", "2025-06-14"),
     ).resolves.toEqual({ KES: [] });
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO cache"))).toBe(false);
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("secondary FX validation failed"));
-
-    await fetchHistoricalSecondaryFxRates(db, ["KES"], "2025-06-14", "2025-06-14");
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    mockFetch([{ match: "cdn.jsdelivr.net", body: { date: "2025-06-14", usd: { kes: 129 } } }]);
+    await expect(fetchHistoricalSecondaryFxRates(db, ["KES"], "2025-06-14", "2025-06-14"))
+      .resolves.toEqual({ KES: [{ timestamp: Date.parse("2025-06-14") / 1000, rate: 1 / 129 }] });
   });
 
   it("skips a non-JSON 200 secondary FX day instead of aborting the run", async () => {
@@ -642,80 +673,59 @@ describe("extractDepegEvents", () => {
     });
   });
 
-  it("uses the current supply fallback when historical supply is absent", () => {
-    const belowFloor = extractDepegEvents(
-      [
-        { timestamp: 1_000, price: 0.5 },
-        { timestamp: 2_000, price: 1.0 },
-      ],
-      () => 1,
-      "peggedUSD",
-      [],
-      undefined,
-      undefined,
-      { missingSupplyUsd: 999_999 },
-    );
-    expect(belowFloor).toEqual([]);
+  it.each([{ supply: [] }, { supply: [{ ts: 999, supply: 0 }] }, { supply: [{ ts: 1001, supply: 2e9 }] }])(
+    "requires a prior positive historical floor (%j)", ({ supply }) => {
+      const prices = [0.98, 0.97, 1].map((price, index) => ({ timestamp: 1000 + index * 1000, price }));
+      expect(extractDepegEvents(prices, () => 1, "peggedUSD", supply)).toEqual([]);
+    },
+  );
 
-    const largeCapSinglePoint = extractDepegEvents(
-      [
-        { timestamp: 1_000, price: 0.98 },
-        { timestamp: 2_000, price: 1.0 },
-      ],
-      () => 1,
-      "peggedUSD",
-      [],
-      undefined,
-      undefined,
-      { missingSupplyUsd: 2_000_000_000 },
-    );
-    expect(largeCapSinglePoint).toEqual([]);
-
-    const largeCapConfirmed = extractDepegEvents(
-      [
-        { timestamp: 1_000, price: 0.98 },
-        { timestamp: 2_000, price: 0.97 },
-        { timestamp: 3_000, price: 1.0 },
-      ],
-      () => 1,
-      "peggedUSD",
-      [],
-      undefined,
-      undefined,
-      { missingSupplyUsd: 2_000_000_000 },
-    );
-    expect(largeCapConfirmed).toHaveLength(1);
-    expect(largeCapConfirmed[0]).toMatchObject({
-      direction: "below",
-      startedAt: 1_000,
-      peakPrice: 0.97,
-      recoveryPrice: 1.0,
-    });
+  it.each([false, true])("cannot corroborate a wick through a 48-hour blind gap (%s)", (nearbySupport) => {
+    const points = [{ timestamp: 1000, price: 0.75 }, { timestamp: 173800, price: 0.98 },
+      { timestamp: 177400, price: 0.84 }, { timestamp: 181000, price: nearbySupport ? 0.845 : 1 },
+      { timestamp: 184600, price: 1 }];
+    const events = extractDepegEvents(points, () => 1, "peggedUSD", [{ ts: 1000, supply: 6e6 }]);
+    expect(events.map(({ peakDeviationBps }) => peakDeviationBps)).toEqual(nearbySupport ? [-1600] : []);
   });
 
-  it("does not replace observed historical zero with a positive current fallback", () => {
+  it("records at-par evidence independently of earlier off-peg duration", () => {
+    const prices = [{ timestamp: 1000, price: 0.98 }, { timestamp: 4600, price: 0.98 },
+      { timestamp: 87400, price: 1 }];
+    const events = extractDepegEvents(prices, () => 1, "peggedUSD", [{ ts: 1000, supply: 6e6 }],
+      undefined, undefined, { maxObservationGapSec: 26 * 3600 });
+    expect(events).toMatchObject([{ endedAt: 87400, recoveryPrice: 1,
+      admittedCoverage: [{ fromSec: 1000, toSec: 4600 }] }]);
+  });
+
+  it("keeps a held weekend sample out of peaks and observed duration", () => {
+    const friday = Date.parse("2026-11-13T19:00:00Z") / 1000;
+    const sunday = Date.parse("2026-11-15T22:00:00Z") / 1000;
     const prices = [
-      { timestamp: 1_000, price: 0.98 },
-      { timestamp: 1_500, price: 0.97 },
-      { timestamp: 2_000, price: 1 },
+      ...[0.98, 0.98, 0.86].map((price, i) => ({ timestamp: friday + i * 3600, price })),
+      { timestamp: friday + 4 * 3600, price: 0.87 },
+      { timestamp: sunday, price: 1 },
     ];
-    const options = { missingSupplyUsd: 2_000_000 };
-    const observedZero = parseSupplyData([{ date: "1000", circulating: { peggedUSD: 0 } }]);
-    expect(extractDepegEvents(prices, () => 1, "peggedUSD", observedZero, undefined, undefined, options)).toEqual([]);
-    expect(extractDepegEvents(prices, () => 1, "peggedUSD", [], undefined, undefined, options)).toHaveLength(1);
+    const events = extractDepegEvents(prices, () => 1, "peggedEUR", [{ ts: friday, supply: 6e6 }]);
+    expect(events).toMatchObject([{
+      startedAt: friday, endedAt: sunday, peakDeviationBps: -200, recoveryPegReference: 1,
+      admittedCoverage: [{ fromSec: friday, toSec: friday + 7200 }],
+    }]);
   });
 
-  it("supports daily native-peg confirmation windows with wider point gaps", () => {
+  it.each([
+    { start: OPEN + 1_000, gapDays: 1, peak: 1.03 },
+    { start: Date.parse("2026-11-13T00:00:00Z") / 1000, gapDays: 3, peak: 1.02 },
+  ])("supports native confirmation across $gapDays day(s) with an open-time budget", ({ start, gapDays, peak }) => {
     const day = 24 * 3_600;
     const events = extractDepegEvents(
       [
-        { timestamp: OPEN + 1_000, price: 1.02 },
-        { timestamp: OPEN + 1_000 + day, price: 1.03 },
-        { timestamp: OPEN + 1_000 + 2 * day, price: 1.0 },
+        { timestamp: start, price: 1.02 },
+        { timestamp: start + gapDays * day, price: 1.03 },
+        { timestamp: start + (gapDays + 1) * day, price: 1.0 },
       ],
       () => 1,
       "peggedEUR",
-      [{ ts: OPEN + 1_000, supply: 50_000_000 }],
+      [{ ts: start, supply: 50_000_000 }],
       { peggedEUR: 1.08 },
       undefined,
       {
@@ -728,9 +738,9 @@ describe("extractDepegEvents", () => {
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({
       direction: "above",
-      startedAt: OPEN + 1_000,
-      endedAt: OPEN + 1_000 + 2 * day,
-      peakPrice: 1.03,
+      startedAt: start,
+      endedAt: start + (gapDays + 1) * day,
+      peakPrice: peak,
     });
   });
 

@@ -5,6 +5,8 @@ import { CHAIN_META, resolveChainId } from "@shared/types/chain-identity";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import { createCronResult, type CronMetadataRecord } from "../lib/cron-result";
 import { canonicalizeChainCirculating } from "@shared/lib/chains/circulating";
+import { isKinesisWrapperSupplyCutoverActive } from "@shared/lib/supply-perimeter-changes";
+import { isKinesisWrapperSupplyId } from "@shared/lib/onchain-supply-probe";
 import { formatIsoDate } from "@shared/lib/format";
 import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
 import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-registry";
@@ -155,9 +157,14 @@ export async function snapshotChainSupply(
     if (!expectedActiveIdSet.has(String(asset.id))) continue;
     const canonicalChainCirculating = canonicalizeChainCirculating(asset.chainCirculating);
     const restored = asset.supplyRestored === true;
-    // Legacy rows without an observation clock inherit the admitted cache
-    // clock; a carried-forward row never does.
-    const stale = nowSec - (asset.supplyObservedAt ?? cache.updatedAt) > CACHE_MAX_AGE_SEC;
+    const kinesis = isKinesisWrapperSupplyId(asset.id);
+    const wrapper = kinesis && isKinesisWrapperSupplyCutoverActive(asset.id, nowSec);
+    const requiresStateClock = asset.id === "buidl-blackrock" || wrapper;
+    const totalObservedAt = asset.supplyObservedAt ?? (requiresStateClock ? null : cache.updatedAt);
+    const observations = asset.chainPartition ? [totalObservedAt, asset.chainPartition.observedAt] : [totalObservedAt];
+    const stale = observations.some((at) =>
+      at == null || !Number.isSafeInteger(at) || at <= 0 || at > nowSec || nowSec - at > CACHE_MAX_AGE_SEC) ||
+      (kinesis && wrapper !== (asset.supplySource === "onchain-total-supply"));
     if (restored) restoredOnlyIds.add(String(asset.id));
     if (stale) staleSupplyIds.add(String(asset.id));
 

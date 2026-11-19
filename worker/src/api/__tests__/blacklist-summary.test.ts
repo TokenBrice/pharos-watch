@@ -22,7 +22,9 @@ afterEach(() => {
 
 function makeBlacklistSummaryFallbackTables() {
   return [
-    { match: "blacklist-summary-fence-capture", rows: [], first: { generation: null, summaryValue: null } },
+    { match: "blacklist-summary-fence-capture", rows: [], first: {
+      generation: null, summaryValue: null, rollbackValue: null, rollbackUpdatedAt: null,
+    } },
     ...["blacklist_events", "blacklist_current_balances"].map((table) => ({
       match: "SELECT value FROM cache WHERE key = ?",
       matchBinds: [`blacklist:identity-reconcile:v1:${table}`],
@@ -76,6 +78,7 @@ function makeBlacklistSummaryFallbackTables() {
     { match: "FROM blacklist_sync_state", rows: [] },
     { match: "cron_runs", rows: [], first: null },
     { match: "blacklist-summary-snapshot-write", rows: [] },
+    { match: "DELETE FROM cache WHERE key = ? AND changes() = 1", rows: [] },
   ];
 }
 
@@ -116,12 +119,41 @@ describe("handleBlacklistSummary", () => {
       .get(BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY) as { value: string; updated_at: number };
     const snapshot = JSON.parse(stored.value) as { payload: BlacklistSummaryResponse };
     expect(JSON.parse(stored.value)).toMatchObject({
-      version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION, materializedAt: now, freshnessTs: now - 30,
+      version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION, generation: null, materializedAt: now, freshnessTs: now - 30,
       payload: { totalEvents: 0, chart: [] },
     });
     expect(stored.updated_at).toBe(now);
     const response = await handleBlacklistSummary(db);
     expect(await readJsonResponse(response, 200)).toEqual(snapshot.payload);
+  });
+
+  it.each(["newer rollback snapshot", "rollback repair generation"])("rebuilds after a %s", async (transition) => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const now = Math.floor(Date.now() / 1000);
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(now * 1000);
+    const v5Key = "blacklist:summary:producer:v5";
+    const insert = sqlite.prepare(`INSERT INTO blacklist_events
+      (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+       timestamp, amount_usd_at_event, explorer_tx_url, explorer_address_url)
+      VALUES (?, 'USDC', 'ethereum', 'Ethereum', ?, '0xaddress', ?, ?, ?, 125, '', '')`);
+    insert.run("freeze", "blacklist", "0xfreeze", 1, now - 10);
+    expect(await materializeBlacklistSummarySnapshot(db, now - 1, now - 1)).toEqual({ written: true });
+    expect(await readJsonResponse(await handleBlacklistSummary(db), 200))
+      .toMatchObject({ totalEvents: 1, stats: { activeAddressCount: 1 } });
+
+    insert.run("release", "unblacklist", "0xrelease", 2, now - 5);
+    if (transition === "newer rollback snapshot") {
+      sqlite.prepare("INSERT INTO cache VALUES (?, ?, ?)").run(v5Key, JSON.stringify({
+        version: 5, materializedAt: now, freshnessTs: now, payload: { ...makeValidSummaryPayload(), totalEvents: 99 },
+      }), now);
+    } else {
+      sqlite.prepare("INSERT INTO cache VALUES ('blacklist:derived-generation', 'rollback-rotation', ?)").run(now);
+    }
+    expect(await readJsonResponse(await handleBlacklistSummary(db), 200))
+      .toMatchObject({ totalEvents: 2, stats: { activeAddressCount: 0, activeFrozenTotal: 0 } });
+    const rebuilt = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY);
+    expect(JSON.parse(String(rebuilt?.value))).toMatchObject({ version: 6, payload: { totalEvents: 2 } });
   });
 
   it.each([0, 60, 86400])("serves retained snapshots aged %ss without live scans, hydration or freshness rewrites", async (age) => {
@@ -132,8 +164,9 @@ describe("handleBlacklistSummary", () => {
     const db = mockD1([{
       match: "blacklist-summary-snapshot-read",
       rows: [{
+        generation: null,
         value: JSON.stringify({
-          version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION, materializedAt: snapshotAt, freshnessTs: snapshotAt, payload,
+          version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION, generation: null, materializedAt: snapshotAt, freshnessTs: snapshotAt, payload,
         }),
         updated_at: snapshotAt,
       }],
@@ -153,8 +186,9 @@ describe("handleBlacklistSummary", () => {
     const db = mockD1([{
       match: "blacklist-summary-snapshot-read",
       rows: [{
+        generation: null,
         key: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY,
-        value: JSON.stringify({ version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION, materializedAt: now, freshnessTs: null, freshnessStatus, payload }),
+        value: JSON.stringify({ version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION, generation: null, materializedAt: now, freshnessTs: null, freshnessStatus, payload }),
         updated_at: now,
       }],
     }]);
@@ -173,8 +207,8 @@ describe("handleBlacklistSummary", () => {
       payload[field] = field === "chart" || field === "chains" ? [{}] : {};
       payload.totalEvents = 99;
       const db = mockD1([
-        { match: "blacklist-summary-snapshot-read", rows: [{ value: JSON.stringify({
-          version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION, materializedAt: now, freshnessTs: now, payload,
+        { match: "blacklist-summary-snapshot-read", rows: [{ generation: null, value: JSON.stringify({
+          version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION, generation: null, materializedAt: now, freshnessTs: now, payload,
         }) }] },
         ...makeBlacklistSummaryFallbackTables(),
       ]);
@@ -192,8 +226,8 @@ describe("handleBlacklistSummary", () => {
       delete payload[field];
       payload.totalEvents = 99;
       const db = mockD1([
-        { match: "blacklist-summary-snapshot-read", rows: [{ value: JSON.stringify({
-          version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION, materializedAt: now, freshnessTs: now, payload,
+        { match: "blacklist-summary-snapshot-read", rows: [{ generation: null, value: JSON.stringify({
+          version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION, generation: null, materializedAt: now, freshnessTs: now, payload,
         }) }] },
         ...makeBlacklistSummaryFallbackTables(),
       ]);

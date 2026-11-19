@@ -237,11 +237,11 @@ export async function refreshPoolPrices(input: RefreshGraph & {
     byCoinOmitted: 0,
     batchFailures: {} as Record<string, number>,
     batchSplits: 0,
-    failures: [] as Array<{ stablecoinId: string; poolId: string; observedAt: number | null; reason: string }>,
+    failures: [] as Array<{ stablecoinId: string; poolId: string; observedAt: number | null; reason: string; poolReadAt?: number }>,
     failuresOmitted: 0,
   };
   const omittedCoins = new Set<string>();
-  function unchanged(contributor: Contributor, reason: string) {
+  function unchanged(contributor: Contributor, reason: string, poolReadAt?: number) {
     summary.unchangedByReason[reason] = (summary.unchangedByReason[reason] ?? 0) + 1;
     if (summary.byCoin[contributor.stablecoinId] || Object.keys(summary.byCoin).length < 25) {
       const coin = summary.byCoin[contributor.stablecoinId] ??= {};
@@ -252,6 +252,7 @@ export async function refreshPoolPrices(input: RefreshGraph & {
     if (summary.failures.length < 8) summary.failures.push({
       stablecoinId: contributor.stablecoinId, poolId: contributor.pool.poolId,
       observedAt: contributor.evidence.observedAt ?? null, reason,
+      ...(poolReadAt == null ? {} : { poolReadAt }),
     });
     else summary.failuresOmitted++;
   }
@@ -306,7 +307,7 @@ export async function refreshPoolPrices(input: RefreshGraph & {
       for (const candidate of batch.candidates) for (const contributor of candidate.contributors) unchanged(contributor, deferredReason);
       continue;
     }
-    const observedAt = Math.floor(Date.now() / 1000);
+    const poolReadAt = Math.floor(Date.now() / 1000);
     const timeout = createTimeoutSignal({
       timeoutMs: PRICE_REFRESH_POLICY.requestTimeoutMs,
       timeoutReason: new DOMException("DEX price refresh timed out", "TimeoutError"),
@@ -392,18 +393,14 @@ export async function refreshPoolPrices(input: RefreshGraph & {
           const quote = deployments.includes(tokenIds[1]!);
           const side = base !== quote ? base ? "base" : "quote" : null;
           const price = side === "base" ? parsed.baseTokenPriceUsd : parsed.quoteTokenPriceUsd;
-          const support = Math.min(contributor.pool.tvlUsd, contributor.evidence.tvl, parsed.tvlUsd);
           reason = !side ? "tracked-leg-mismatch"
             : !Number.isFinite(price) || price <= 0 ? "invalid-price"
               : !Number.isFinite(parsed.tvlUsd) || parsed.tvlUsd < CG_ONCHAIN_MIN_RESERVE_USD ? "invalid-support-tvl"
                 : evaluatePoolPriceCoherence(side, parsed).verdict === "reject" ? "incoherent-price"
-                  : !isPlausibleDexObservationPrice(contributor.stablecoinId, price, input.references) ? "implausible-price" : null;
-          if (!reason) {
-            Object.assign(contributor.pool, { price, priceObservedAt: observedAt, priceSource: "cg_onchain", priceEvidenceTvlUsd: support });
-            summary.refreshed++;
-          }
+                  : !isPlausibleDexObservationPrice(contributor.stablecoinId, price, input.references) ? "implausible-price"
+                    : "market-observation-unverified";
         }
-        if (reason) unchanged(contributor, reason);
+        if (reason) unchanged(contributor, reason, poolReadAt);
       }
     }
   }

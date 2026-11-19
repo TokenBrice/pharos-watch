@@ -41,6 +41,8 @@ export interface YieldHistorySnapshotRow {
   stablecoin_id: string;
   source_key: string | null;
   recorded_at: number;
+  source_observed_at?: number | null;
+  source_observation_verified?: number | null;
   is_best: number | null;
   apy: number;
   apy_base?: number | null;
@@ -235,7 +237,10 @@ export async function loadYieldHistorySnapshots(
         const attempt = await db
           .prepare(
             `SELECT /* pharos:yield-sync:history-window */
-               h.stablecoin_id, h.source_key, h.recorded_at, h.is_best, h.apy, h.apy_base, h.source_tvl_usd, h.data_source, h.yield_source, h.yield_type, h.exchange_rate
+               h.stablecoin_id, h.source_key, h.recorded_at, h.source_observed_at, h.is_best, h.apy, h.apy_base, h.source_tvl_usd, h.data_source, h.yield_source, h.yield_type, h.exchange_rate,
+               CASE WHEN h.source_observed_at IS NOT NULL AND json_valid(h.pys_inputs_at_publish)
+                 THEN json_type(h.pys_inputs_at_publish, '$.sourceObservationVerified') = 'true'
+               END AS source_observation_verified
              FROM yield_history h INDEXED BY ${read.index}
              WHERE ${read.predicate}
                AND h.recorded_at >= ?

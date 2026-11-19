@@ -80,8 +80,11 @@ export function makeJoinPoints(amounts: readonly (readonly [number, number])[]):
 }
 
 /** The reviewed Ethereum QuoterV2 route every last-known-good scenario quotes against. */
-export function makeV3LkgRoute(points: readonly (readonly [number, number])[]) {
-  const measuredTarget = makeV3Target();
+export function makeV3LkgRoute(
+  points: readonly (readonly [number, number])[],
+  measuredTarget = makeV3Target(),
+  quotedAt = 1_060,
+) {
   const deployment = getDexMeasuredExecutionDeployment(measuredTarget.adapterProfileId, measuredTarget.chain);
   if (deployment == null) throw new Error("missing Ethereum QuoterV2 deployment");
   const profile = buildDexMeasuredExecutionProfile({
@@ -89,7 +92,7 @@ export function makeV3LkgRoute(points: readonly (readonly [number, number])[]) {
     target: measuredTarget,
     targetGenerationId: "target-generation-lkg",
     quoteGenerationId: "quote-generation-lkg",
-    quotedAt: 1_060,
+    quotedAt,
     blockNumber: 25_536_894,
     endpointAddress: deployment.endpointAddress,
     endpointCodeHash: deployment.expectedCodeHash,

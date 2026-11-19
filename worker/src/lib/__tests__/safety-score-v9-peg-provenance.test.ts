@@ -82,6 +82,34 @@ function build(
 const USDG_LEGACY_EVENTS = legacyEvents();
 
 describe("Safety Score V9 peg provenance", () => {
+  it.each([false, true])("seals blind coverage without counting an unadmitted incident (explicit: %s)", (explicit) => {
+    const assetId = "idrt-rupiah-token";
+    const clockSec = 1_795_000_000;
+    const retained = event({
+      id: 90769, stablecoinId: assetId, symbol: "IDRT", pegType: "peggedIDR", source: "live",
+      startedAt: explicit ? 1_786_414_400 : 1_786_241_817,
+      endedAt: explicit ? 1_786_416_400 : 1_786_248_132,
+      peakDeviationBps: -249, priceCoverage: null,
+      ...(explicit ? { admittedCoverage: [] } : {}),
+    });
+    const trackingStartSec = clockSec - 120 * DAY_SEC;
+    const makeSummary = (events: DepegEvent[]) => buildSafetyScoreV9PegProvenanceSummary({
+      assetId, events, trackingStartSec, clockSec, pegCurrency: "IDR",
+      expectedLegacyInclusive: projectSafetyScoreV9PegScoreResult(computePegScore(events, trackingStartSec, clockSec, "IDR")),
+    });
+    const summary = makeSummary([retained]);
+    expect(summary).toMatchObject({ eventCount: 0, legacyInclusive: { result: { eventCount: 0 } },
+      verifiedOnlyDiagnostic: { result: { eventCount: 0 } } });
+    expect(summary.eventSetSha256).not.toBe(makeSummary([]).eventSetSha256);
+    const { sourceGeneration, baseInputGenerationId, methodologyVersion } = singleAssetFixedInput(publicationEvents());
+    const entry = buildSafetyScoreV9PegProvenanceSeedCacheEntry({
+      sourceGeneration, clockSec, pegProvenanceById: { [assetId]: summary },
+      safetyScoreIdentity: { model: "v9-input", schemaVersion: 1, methodologyVersion, evaluationBuildDigest: DIGEST,
+        baseInputGenerationId, publicationGenerationId: sourceGeneration },
+    });
+    expect(parseSafetyScoreV9PegProvenanceSeed(entry.value).pegProvenanceById[assetId]).toEqual(summary);
+  });
+
   it("projects summary and score results to identical narrow bytes", () => {
     const summary = pegSummary(USDG_LEGACY_EVENTS);
     const result = computePegScore(USDG_LEGACY_EVENTS, TRACKING_START_SEC, CLOCK_SEC);
@@ -315,6 +343,28 @@ describe("Safety Score V9 peg provenance", () => {
     expect(serialized).not.toContain('"peakPrice"');
     expect(serialized).not.toContain('"recoveryPrice"');
     expect(serialized).not.toContain('"confirmationSources"');
+  });
+
+  it("captures projected recovery rows and retains verified empty repairs in the event digest", () => {
+    const closed = event({ id: 55, startedAt: CLOCK_SEC - DAY_SEC, peakDeviationBps: -300, source: "live" });
+    const projected: DepegEvent = {
+      ...closed, analyticRecoveryAt: null, onsetBasis: "peer-relative", peakBasis: "peer-relative",
+      peakPeerMedianUsd: 1, peakReview: "unverified", retired: true,
+    };
+    const repaired: DepegEvent = {
+      ...projected, id: 56, disposition: "repaired", admittedCoverage: [], provenance: { pegScoreEligible: false },
+    };
+    const capture = (events: DepegEvent[]) => captureSafetyScoreV9PegProvenanceById(
+      { clockSec: CLOCK_SEC, pegDataById: { [ASSET_ID]: pegSummary(events) } },
+      { clockSec: CLOCK_SEC, eventsByCoin: new Map([[ASSET_ID, events]]) },
+    )[ASSET_ID]!;
+
+    const ordinary = capture([closed]);
+    expect(capture([projected])).toEqual(ordinary);
+    const withRepair = capture([projected, repaired]);
+    expect(withRepair.legacyInclusive.result).toEqual(ordinary.legacyInclusive.result);
+    expect(withRepair.eventSetSha256).not.toBe(ordinary.eventSetSha256);
+    expect(() => capture([projected, { ...repaired, admittedCoverage: undefined }])).toThrow(/partial provenance/);
   });
 
   it("rejects summary tampering and raw-event attachment", () => {

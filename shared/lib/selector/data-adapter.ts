@@ -1,3 +1,4 @@
+import { projectCurrentPegDeviation } from "../current-peg-projection";
 import { CLIENT_ACTIVE_META_BY_ID, CLIENT_TRACKED_STABLECOINS } from "../stablecoins/client-registry";
 import { resolveMechanismArchetype } from "../classification";
 import { resolveCoinStates } from "../coin-state";
@@ -24,6 +25,7 @@ import type {
 import type {
   PegSummaryResponse,
 } from "../../types/peg";
+import type { AdmittedDeviationBps, ReferenceAdmission } from "../../types/reference-admission";
 import type {
   ReportCardsV9CurrentResponse,
 } from "../../types/report-cards-v9-current";
@@ -43,10 +45,15 @@ import type {
 } from "../../types/yield-evidence-schemas";
 import type { ReportCardsV9TableResponse } from "../../types/report-cards-v9-projections";
 
+type SelectorPegRow = PegSummaryResponse["coins"][number] & {
+  referenceAdmission?: ReferenceAdmission | null;
+  admittedDeviationBps?: AdmittedDeviationBps;
+};
+
 export interface BuildSelectorRowsArgs {
   stablecoinsData: StablecoinListResponse | null;
   pegCurrency?: SelectorInput["pegCurrency"] | null;
-  pegData: PegSummaryResponse | null;
+  pegData: (Omit<PegSummaryResponse, "coins"> & { coins: SelectorPegRow[] }) | null;
   reportData: ReportCardsV9CurrentResponse | ReportCardsV9TableResponse | null;
   stressData: StressSignalsAllResponse | null;
   dexData: DexLiquidityMap | null;
@@ -111,9 +118,12 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
         ? "yield-opportunity"
         : "safety-score-v9";
     const bluechip = args.bluechipData?.[id];
-    // `dexDeviationBps` is the DEX-vs-primary source disagreement, not the
-    // peg-domain deviation, so it cannot stand in for an unread peg deviation.
-    const currentDeviationBps = peg?.currentDeviationBps ?? null;
+    const referenceStatus = peg?.referenceAdmission?.status;
+    const currentDeviationBps = peg && isObservedPrice(peg) && peg.price !== null
+      ? projectCurrentPegDeviation(peg, meta.flags.pegCurrency === "USD", peg.priceObservedAt) : null;
+    const currentDeviationUnavailableNotice = referenceStatus === "held-closed-session"
+      ? "Reference market closed"
+      : referenceStatus === "stale-reference" ? "Reference not yet updated" : undefined;
     // Notices alone resolve to critical, then paused (deadlines need a clock).
     const holderNotice = resolveCoinStates({ notices: meta.alerts })[0];
 
@@ -134,6 +144,7 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
       pegScore: peg?.pegScore ?? null,
       activeDepeg: peg?.activeDepeg ?? false,
       currentDeviationBps,
+      currentDeviationUnavailableNotice,
       depegEventCount: peg?.eventCount ?? 0,
       lastEventAt: peg?.lastEventAt ?? null,
 
@@ -241,6 +252,7 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
         mechanismArchetype: row.mechanismArchetype,
         activeDepeg: row.activeDepeg,
         currentDeviationBps: row.currentDeviationBps,
+        currentDeviationUnavailableNotice: row.currentDeviationUnavailableNotice,
         depegEventCount: row.depegEventCount,
         safetyResilienceScore: row.safetyResilienceScore,
         safetyDecentralizationScore: row.safetyDecentralizationScore,

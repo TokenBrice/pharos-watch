@@ -1,9 +1,7 @@
 import {
   YieldRankingsResponseSchema,
 } from "@shared/types/yield";
-import {
-  getCache,
-} from "../../lib/db-cache";
+import { readYieldRankingsCache } from "../../lib/yield-rankings-coin-cache";
 import {
   logWorkerEventArgs,
 } from "../../lib/structured-log";
@@ -49,7 +47,7 @@ function readCachedMethodologyVersion(methodology: unknown): string | null {
 export async function loadPreviousYieldPublicationSnapshot(
   db: D1Database,
 ): Promise<PreviousYieldPublicationSnapshot> {
-  const previousCache = await getCache(db, "yield-rankings");
+  const previousCache = await readYieldRankingsCache(db);
   const previousRankings = readCachedJson<{ rankings?: unknown; methodology?: unknown }>(
     "yield-sync",
     "yield-rankings",

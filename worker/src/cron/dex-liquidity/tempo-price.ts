@@ -120,6 +120,7 @@ export async function refreshTempoPathUsdPrice(input: {
           observedAt: Math.min(header.timestamp, quoteClock!), blockNumber } };
       },
       onResults: (value) => {
+        delete pool.priceCounterparty;
         Object.assign(pool, { price: value.priceUsd, priceObservedAt: value.observedAt,
           priceSource: "direct_api", priceEvidenceTvlUsd: value.supportUsd });
         result = value;

@@ -79,7 +79,10 @@ type ScanCounters = {
   };
 };
 
+export type BlacklistCommittedScan = { fromCursor: number; toCursor: number };
+
 type ScanState = {
+  committedScans: Record<string, BlacklistCommittedScan>;
   totalFetchedEvents: number;
   contractsSkipped: number;
   apiErrors: number;
@@ -316,6 +319,10 @@ async function finalizeSuccessfulConfigScan(
     return;
   }
 
+  if (attempt.expectedCursor > 0 && result.nextCursor != null && result.nextCursor > attempt.expectedCursor &&
+    state.coverageVerdicts[configState.configKey] === "covered") {
+    state.committedScans[configState.configKey] = { fromCursor: attempt.expectedCursor, toCursor: result.nextCursor };
+  }
   configState.cursorValue = Math.max(configState.cursorValue, result.nextCursor ?? configState.cursorValue);
   configState.lastOutcome = result.coverageOutcome;
   configState.consecutiveSkips = 0;
@@ -552,6 +559,7 @@ export async function scanBlacklistConfigs(args: ScanBlacklistConfigsArgs): Prom
     coverageOutcomeCounts: {},
     configLag: {},
     coverageVerdicts: {},
+    committedScans: {},
     tronRpc: {},
     coverageFailureConfigs: [],
   };

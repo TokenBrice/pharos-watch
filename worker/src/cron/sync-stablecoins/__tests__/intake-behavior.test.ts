@@ -10,12 +10,17 @@ import { MIN_VALID_ASSET_COUNT } from "../../../lib/stablecoin-intake-policy";
 import { makePeggedAsset } from "./_fixtures";
 import * as shared from "../shared";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { getCirculatingRawOrNull, getUsdMarketCapBaselineOrNull } from "@shared/lib/supply";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { StablecoinDataSchema } from "@shared/types/supply";
+import { fillMissingSupplyHistory } from "../phase-helpers";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { fetchFiatCoinGeckoTokens, FIAT_CG_METAS } from "../supplemental-assets/fiat-cg";
 import * as supplementalPrices from "../supplemental-assets/shared";
 import * as onchainSupply from "../supplemental-assets/onchain-supply";
 import * as structuredLog from "../../../lib/structured-log";
+import { fxRatesCacheRows } from "../../../lib/__tests__/fx-rate-state.test-support";
+import { getReferenceSessionState } from "@shared/lib/reference-market-hours";
 
 const fixtures = createLatestSchemaFixtureTracker();
 const cgData = { "fixture-usd": { usd: 1, usd_market_cap: 100, last_updated_at: 1_777_000_000 } };
@@ -39,7 +44,62 @@ function upstream(body: unknown) {
   });
 }
 
+function intakeRows(overrides: Parameters<typeof makePeggedAsset>[0] = {}) {
+  return Array.from({ length: MIN_VALID_ASSET_COUNT }, (_, index) => makePeggedAsset({
+    id: `intake-fixture-${index}`, circulating: { peggedUSD: 100 }, ...overrides,
+  }));
+}
+
+function datedHistoryFixture() {
+  const now = 1_777_000_000;
+  vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+  return { now, ...fixtures.open() };
+}
+
+function historyProvenance(supplySource: string | undefined, supplyObservedAt: number) {
+  return JSON.stringify({ supplySource, supplyObservedAt, supplyChainGuard: null });
+}
+
 describe("stablecoin intake admission", () => {
+  it("projects selected same-provider FX evidence from the digest-bound intake read", async () => {
+    const nowSec = Date.parse("2026-11-20T21:55:00Z") / 1000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    const { db, sqlite } = fixtures.open();
+    const observedAtSec = nowSec - 300;
+    const observation = { pegKey: "peggedEUR", usdPerUnit: 1.1, source: "openExchangeRates",
+      cadence: "intraday", observedAtSec };
+    const evidence = { sessionOpenedAtSec: getReferenceSessionState("fx", nowSec).sessionOpenedAtSec,
+      preCloseUsdPerUnit: 1.09, firstInSessionObservedAtSec: observedAtSec };
+    for (const row of fxRatesCacheRows(nowSec - 30, { peggedEUR: 1.1 }, {
+      sourceUpdatedAtByPeg: { peggedEUR: observedAtSec }, observations: { peggedEUR: observation },
+      referenceSourceSamples: { "peggedEUR:openExchangeRates": { observation, evidence } },
+    })) sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(row.key, row.value, row.updated_at);
+    upstream({ peggedAssets: intakeRows() });
+    const result = await loadStablecoinsIntake({ db, syncStartSec: nowSec, fallbackToCoingecko: async () => fallbackResult });
+    if (result.kind !== "main") throw new Error("Expected main intake");
+    expect(result.validationReferences?.fxReferenceEvidenceByPeg?.peggedEUR).toMatchObject({
+      ...evidence, observation, generation: expect.stringMatching(/^fx:/),
+    });
+  });
+
+  it("keeps a reported DefiLlama USD cap when the same-packet quote cannot value its units", async () => {
+    const nowSec = 1_777_000_000;
+    const { db } = fixtures.open();
+    upstream({ peggedAssets: [
+      ...intakeRows(),
+      makePeggedAsset({ id: "1", symbol: "USDT", price: 10, priceSource: "defillama",
+        circulating: { peggedUSD: 100_000_000 } }),
+    ] });
+    const result = await loadStablecoinsIntake({ db, syncStartSec: nowSec, fallbackToCoingecko: async () => fallbackResult });
+    if (result.kind !== "main") throw new Error("Expected main intake");
+    expect(result.assets.find((row) => row.id === "usdt-tether")).toMatchObject({
+      circulating: { peggedUSD: 100_000_000 },
+      circulatingNative: null,
+      valuationPriceUsd: null,
+      valuationObservedAtSec: null,
+    });
+  });
+
   it.each(["onchain-total-supply", "coingecko-fallback"])(
     "keeps preferred STAC with a fresh price after failed native reads and a cached %s row", async (supplySource) => {
       const nowSec = 1_777_000_000;
@@ -50,6 +110,7 @@ describe("stablecoin intake admission", () => {
         pegMechanism: meta.flags.backing, price: 1.05, priceSource: "coingecko",
         priceConfidence: "single-source", priceObservedAt: nowSec - 60, priceObservedAtMode: "upstream",
         circulating: { peggedUSD: 300 }, supplySource, supplyObservedAt: nowSec - 120,
+        circulatingNative: 200, valuationPriceUsd: 1.5, valuationObservedAtSec: nowSec - 240,
         chainCirculating: { Ethereum: { chainId: "ethereum", current: 100 }, Solana: { chainId: "solana", current: 200 } },
         chains: ["Ethereum", "Solana"],
       });
@@ -87,6 +148,8 @@ describe("stablecoin intake admission", () => {
         if (supplySource === "onchain-total-supply") {
           expect(published).toMatchObject({ circulating: previous.circulating, chainCirculating: previous.chainCirculating,
             supplySource, supplyObservedAt: nowSec - 120, supplyRestored: true });
+          expect(StablecoinDataSchema.parse(published)).toMatchObject({ circulatingNative: 200,
+            valuationPriceUsd: 1.5, valuationObservedAtSec: nowSec - 240 });
           expect(getCirculatingRawOrNull(published)).toBe(300);
         } else {
           expect(published).toMatchObject({ circulating: {},
@@ -177,14 +240,20 @@ describe("stablecoin intake admission", () => {
     const rows = Array.from({ length: MIN_VALID_ASSET_COUNT }, (_, index) => makePeggedAsset({
       id: `intake-fixture-${index}`, circulating: { peggedUSD: index === 0 ? 0 : 100 },
     }));
+    rows.push(makePeggedAsset({ id: "199", price: 0.17939308404234408, circulating: { peggedREAL: 201_972.94022000663 } }));
     upstream({ peggedAssets: [...rows, null], fxFallbackRates: { EUR: 1.1, BAD: "missing" } });
     const fallbackToCoingecko = vi.fn(async () => fallbackResult);
     const result = await loadStablecoinsIntake({ db, syncStartSec: 1_777_000_000, fallbackToCoingecko });
     expect(result.kind).toBe("main");
     if (result.kind !== "main") throw new Error("Expected the healthy intake cohort");
-    expect(result.rawAssetCount).toBe(MIN_VALID_ASSET_COUNT + 1);
+    expect(result.rawAssetCount).toBe(MIN_VALID_ASSET_COUNT + 2);
     expect(result.droppedMalformedAssets).toBe(1);
     expect(result.assets.find((asset) => asset.id === "intake-fixture-0")?.circulating).toEqual({ peggedUSD: 0 });
+    expect(result.assets.find((asset) => asset.id === "brlm-mento")).toMatchObject({
+      circulatingNative: 201_972.94022000663 / 0.17939308404234408,
+      valuationPriceUsd: 0.17939308404234408,
+      valuationObservedAtSec: null,
+    });
     expect(result.fxFallbackRates).toEqual({ EUR: 1.1 });
     expect(result.previousCacheState).toEqual({ state: "missing" });
     expect(result.cgData).toEqual(cgData);
@@ -215,6 +284,7 @@ describe("stablecoin intake admission", () => {
     expect(events).toEqual(["fx", "Loading DefiLlama stablecoin intake", "Loaded DefiLlama stablecoin intake"]);
     expect(supplemental.fetchSupplementalTrackedTokens).toHaveBeenCalledWith(
       cgData, undefined, undefined, undefined, fxFallbackRates, db, expect.any(Map), undefined, undefined, 1_777_000_000, result.replayPriceCache,
+      { validationReferences, previousTrustedPrices: expect.any(Map) },
     );
     expect(result.fxFallbackRates).toBe(fxFallbackRates);
     expect(result.validationReferences).toBe(validationReferences);
@@ -223,6 +293,180 @@ describe("stablecoin intake admission", () => {
       chainCirculating: { Ethereum: { current: 100, circulatingPrevDay: 90 } },
       supplyObservedAt: 1_776_999_940,
     });
+  });
+
+  it.each([60, null, -60])("admits list USD baselines only with a known source clock (%s seconds)", async (ageSec) => {
+    const { now, db, sqlite } = datedHistoryFixture();
+    const id = "intake-fixture-0";
+    const observedAt = now - 60 - 86_400;
+    sqlite.prepare(`INSERT INTO supply_history
+      (stablecoin_id, snapshot_date, circulating_usd, circulating_native, supply_provenance) VALUES (?, ?, ?, ?, ?)`)
+      .run(id, bucketUnixSecondsToUtcDay(observedAt), 110, 90, historyProvenance("defillama", observedAt));
+    upstream({ peggedAssets: intakeRows({
+      supplySource: "defillama", supplyObservedAt: ageSec == null ? undefined : now - ageSec,
+    }) });
+    const result = await loadStablecoinsIntake({ db, syncStartSec: now, fallbackToCoingecko: async () => fallbackResult });
+    if (result.kind !== "main") throw new Error("Expected main intake");
+    const asset = result.assets.find((row) => row.id === id)!;
+    await fillMissingSupplyHistory(db, [asset]);
+    const [published] = shared.normalizeStablecoinsPayload({ peggedAssets: [asset] }, now).peggedAssets;
+    expect(published.supplyObservedAt).toBe(ageSec === 60 ? now - 60 : undefined);
+    expect(published.supplyChangeBaselines).toEqual(ageSec === 60
+      ? { day: { observedAt, circulatingUsd: 110, circulatingNative: 90 } } : { day: null });
+  });
+
+  it("keeps unrelated USD list buckets when a main-format close falls outside the lookback", async () => {
+    const { now, db, sqlite } = datedHistoryFixture();
+    const asset = makePeggedAsset({ supplySource: "defillama", circulating: { peggedUSD: 100 },
+      circulatingPrevDay: { peggedUSD: 99 }, circulatingPrevWeek: { peggedUSD: 97 } });
+    const insert = sqlite.prepare(`INSERT INTO supply_history
+      (stablecoin_id, snapshot_date, circulating_usd, supply_provenance) VALUES (?, ?, ?, ?)`);
+    const close = now - 29 * DAY_SECONDS;
+    insert.run(asset.id, bucketUnixSecondsToUtcDay(close), 95, historyProvenance("coingecko-fallback", close));
+    await fillMissingSupplyHistory(db, [asset]);
+    expect(asset.supplyChangeBaselines).toBeUndefined();
+    expect(getUsdMarketCapBaselineOrNull(asset, "day")).toBe(99);
+    expect(getUsdMarketCapBaselineOrNull(asset, "week")).toBe(97);
+
+    insert.run(asset.id, bucketUnixSecondsToUtcDay(now - DAY_SECONDS), 96, "malformed");
+    await fillMissingSupplyHistory(db, [asset]);
+    expect(asset.supplyChangeBaselines).toEqual({ day: null });
+    expect(getUsdMarketCapBaselineOrNull(asset, "day")).toBeNull();
+    expect(getUsdMarketCapBaselineOrNull(asset, "week")).toBe(97);
+  });
+
+  it("keeps undated DefiLlama USD deltas when snapshots refuse native quantity", async () => {
+    const now = 1_777_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const { db, sqlite } = fixtures.open();
+    const asset = makePeggedAsset({ supplySource: "defillama", circulating: { peggedUSD: 100e9 },
+      circulatingPrevDay: { peggedUSD: 99e9 }, circulatingPrevWeek: { peggedUSD: 97e9 },
+      circulatingPrevMonth: { peggedUSD: 94e9 } });
+    const insert = sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, supply_provenance) VALUES (?, ?, ?, ?)");
+    const provenance = JSON.stringify({ supplySource: "defillama", supplyObservedAt: null,
+      supplyChainGuard: null, nativeQuantityUnavailable: true });
+    for (const [days, cap] of [[1, 99e9], [7, 97e9], [30, 94e9]]) {
+      insert.run(asset.id, bucketUnixSecondsToUtcDay(now) - days * DAY_SECONDS, cap, provenance);
+    }
+    await fillMissingSupplyHistory(db, [asset]);
+    expect((["day", "week", "month"] as const).map(window => getUsdMarketCapBaselineOrNull(asset, window)))
+      .toEqual([99e9, 97e9, 94e9]);
+    asset.supplyChangeBaselines = { week: null };
+    await fillMissingSupplyHistory(db, [asset]);
+    expect(getUsdMarketCapBaselineOrNull(asset, "week")).toBeNull();
+  });
+
+  it("fills empty ordinary USD buckets from plausible unassessed closes on the exact UTC dates", async () => {
+    const { now, db, sqlite } = datedHistoryFixture();
+    const asset = makePeggedAsset({ supplySource: "defillama", circulating: { peggedUSD: 100 } });
+    const insert = sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd) VALUES (?, ?, ?)");
+    for (const [days, usd] of [[1, 99], [7, 95], [30, 85], [29, 90]]) {
+      insert.run(asset.id, bucketUnixSecondsToUtcDay(now) - days * DAY_SECONDS, usd);
+    }
+    const rejected = { ...asset, supplyChangeBaselines: { day: null }, circulating: { peggedUSD: 130 } };
+    const multiplePegs = { ...asset, circulating: { peggedUSD: 95, peggedEUR: 5 } };
+    for (const [row, expected] of [[asset, [99, 95, 85]], [rejected, [null, 95, null]],
+      [multiplePegs, [null, null, null]]] as const) {
+      expect(await fillMissingSupplyHistory(db, [row])).toBe(expected.filter(x => x != null).length);
+      expect((["day", "week", "month"] as const).map(window => getUsdMarketCapBaselineOrNull(row, window))).toEqual(expected);
+    }
+    expect(asset.supplyChangeBaselines).toBeUndefined();
+    expect(rejected.supplyChangeBaselines).toEqual({ day: null });
+    const dayAt = now - DAY_SECONDS;
+    sqlite.prepare("UPDATE supply_history SET circulating_native = 99, supply_provenance = ? WHERE snapshot_date = ?")
+      .run(historyProvenance("defillama", dayAt), bucketUnixSecondsToUtcDay(dayAt));
+    const dated = { ...asset, circulatingPrevDay: null, supplyObservedAt: now, supplyChangeBaselines: { day: null } };
+    expect(await fillMissingSupplyHistory(db, [dated])).toBe(0);
+    expect(getUsdMarketCapBaselineOrNull(dated, "day")).toBeNull();
+    expect(dated.circulatingPrevDay).toBeNull();
+  });
+
+  it("retains each rejected EUR valuation when only the weekly close becomes admissible", async () => {
+    const { now, db, sqlite } = datedHistoryFixture();
+    const bucket = { peggedEUR: 110 };
+    const asset = makePeggedAsset({ id: "eurc-circle", pegType: "peggedEUR", supplySource: "coingecko-fallback",
+      supplyObservedAt: now, circulating: bucket, circulatingPrevDay: bucket, circulatingPrevWeek: bucket,
+      circulatingPrevMonth: bucket });
+    for (const days of [1, 7, 30]) {
+      const stockAt = now - days * DAY_SECONDS;
+      sqlite.prepare(`INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, circulating_native,
+        valuation_price_usd, valuation_observed_at_sec, supply_provenance) VALUES (?, ?, 100, 100, 1, ?, ?)`)
+        .run(asset.id, bucketUnixSecondsToUtcDay(stockAt), stockAt - DAY_SECONDS, historyProvenance("onchain-total-supply", stockAt));
+    }
+    await fillMissingSupplyHistory(db, [asset]);
+    expect(asset.supplyChangeBaselines).toEqual({ day: null, week: null, month: null });
+
+    const weekAt = now - 7 * DAY_SECONDS;
+    sqlite.prepare("UPDATE supply_history SET valuation_observed_at_sec = ? WHERE stablecoin_id = ? AND snapshot_date = ?")
+      .run(weekAt, asset.id, bucketUnixSecondsToUtcDay(weekAt));
+    await fillMissingSupplyHistory(db, [asset]);
+    expect(asset.supplyChangeBaselines).toEqual({ day: null, week: {
+      observedAt: weekAt, circulatingUsd: 100, circulatingNative: 100,
+    }, month: null });
+    expect(getUsdMarketCapBaselineOrNull(asset, "day")).toBeNull();
+    expect(getUsdMarketCapBaselineOrNull(asset, "month")).toBeNull();
+    const [wire] = shared.normalizeStablecoinsPayload({ peggedAssets: [asset] }, now).peggedAssets;
+    expect([wire.circulatingPrevDay, wire.circulatingPrevWeek, wire.circulatingPrevMonth]).toEqual([
+      {}, { peggedEUR: 100 }, {},
+    ]);
+    expect(asset.circulatingPrevWeek).toEqual(bucket);
+  });
+
+  it("compares same-source XAUT dollar caps while withholding unscoped native quantities", async () => {
+    const { now, db, sqlite } = datedHistoryFixture();
+    const asset = makePeggedAsset({ id: "xaut-tether", pegType: "peggedGOLD", supplySource: "coingecko-fallback",
+      supplyObservedAt: now, circulating: { peggedGOLD: 3_300_000_000 }, circulatingNative: null });
+    const weekAt = now - 7 * DAY_SECONDS;
+    sqlite.prepare(`INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, circulating_native, supply_provenance)
+      VALUES (?, ?, ?, ?, ?)`).run(asset.id, bucketUnixSecondsToUtcDay(weekAt), 3_000_000_000, 1_000_000, historyProvenance(asset.supplySource, weekAt));
+    await fillMissingSupplyHistory(db, [asset]);
+    expect(asset.supplyChangeBaselines?.week).toEqual({
+      observedAt: weekAt, circulatingUsd: 3_000_000_000, circulatingNative: null,
+    });
+  });
+
+  it("compares dated DefiLlama caps with undated optional token valuations", async () => {
+    const { now, db, sqlite } = datedHistoryFixture();
+    const stockAt = now - 60;
+    const weekAt = stockAt - 7 * DAY_SECONDS;
+    const asset = makePeggedAsset({ id: "usdt-tether", pegType: "peggedUSD", supplySource: "defillama",
+      supplyObservedAt: stockAt, circulating: { peggedUSD: 100_000_000 }, circulatingPrevWeek: { peggedUSD: 98_000_000 },
+      circulatingNative: 100_000_000 / 0.999, valuationPriceUsd: 0.999, valuationObservedAtSec: null });
+    sqlite.prepare(`INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, circulating_native,
+      valuation_price_usd, supply_provenance) VALUES (?, ?, ?, ?, ?, ?)`)
+      .run(asset.id, bucketUnixSecondsToUtcDay(weekAt), 98_000_000, 98_000_000 / 0.999, 0.999, historyProvenance(asset.supplySource, weekAt));
+
+    await fillMissingSupplyHistory(db, [asset]);
+    const [wire] = shared.normalizeStablecoinsPayload({ peggedAssets: [asset] }, now).peggedAssets;
+    expect(wire.supplyChangeBaselines?.week).toEqual({ observedAt: weekAt, circulatingUsd: 98_000_000, circulatingNative: null });
+    expect(getCirculatingRawOrNull(wire)! - getUsdMarketCapBaselineOrNull(wire, "week")!).toBe(2_000_000);
+    expect(wire.circulatingPrevWeek).toEqual({ peggedUSD: 98_000_000 });
+  });
+
+  it("withholds a weekly ZSD dollar comparison when the current valuation is undated", async () => {
+    const { now, db, sqlite } = datedHistoryFixture();
+    const asset = makePeggedAsset({ id: "zsd-zephyr-protocol", supplySource: "zephyr-protocol-stats",
+      supplyObservedAt: now, circulating: { peggedUSD: 100_000_000 }, circulatingNative: 100_000_000,
+      valuationPriceUsd: 1, valuationObservedAtSec: null });
+    const weekAt = now - 7 * DAY_SECONDS;
+    sqlite.prepare(`INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, circulating_native,
+      valuation_price_usd, valuation_observed_at_sec, supply_provenance) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+      .run(asset.id, bucketUnixSecondsToUtcDay(weekAt), 98_000_000, 100_000_000, 0.98, weekAt, historyProvenance(asset.supplySource, weekAt));
+    await fillMissingSupplyHistory(db, [asset]);
+    expect(getUsdMarketCapBaselineOrNull(asset, "week")).toBeNull();
+    expect(asset.circulatingNative).toBe(100_000_000);
+    expect(getCirculatingRawOrNull(asset)).toBe(100_000_000);
+  });
+
+  it("distinguishes an unclocked non-USD weekly cap from a legacy USD list bucket with no D1 history", async () => {
+    const db = fixtures.open().db;
+    const rows = ["peggedEUR", "peggedUSD"].map((pegType) => makePeggedAsset({
+      id: pegType, pegType, circulating: { [pegType]: 110_000_000 }, circulatingPrevWeek: { [pegType]: 110_000_000 },
+    }));
+    await fillMissingSupplyHistory(db, rows);
+    const [eur, usd] = shared.normalizeStablecoinsPayload({ peggedAssets: rows }, 1_777_000_000).peggedAssets;
+    expect(eur.supplyChangeBaselines).toEqual({});
+    expect(usd.supplyChangeBaselines).toBeUndefined();
   });
 
   it("withholds at the original pre-fetch abort boundary after the FX await", async () => {

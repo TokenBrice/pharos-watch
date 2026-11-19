@@ -4,7 +4,6 @@ import type {
   LiveReservesConfig,
   LiveReserveWarning,
 } from "@shared/types/live-reserves";
-import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -32,6 +31,7 @@ import { buildDocumentedRedemptionTelemetry } from "./redemption";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 import { decodeAddressWord, decodeStrictBoolWord, decodeUint256Word } from "./abi-decode";
 import { validateDecimals } from "./slice-math";
+import { chainlinkNavMaxOracleAgeSec } from "./chainlink-nav-freshness";
 
 /** Ondo-style getPrice() — returns single uint256 with 18 decimals. */
 const GET_PRICE_SELECTOR = "0x98d5fdca";
@@ -44,7 +44,6 @@ const MINIMUM_REDEMPTION_USD_SELECTOR = "0x8f8eb812";
 const WITHDRAW_TOKEN_SOURCES_SELECTOR = "0x2021065d";
 const AVAILABLE_TO_WITHDRAW_SELECTOR = "0x6cde714a";
 const DEFAULT_REDEEM_PAUSED_SELECTOR = "0xb235d468";
-const DEFAULT_MAX_ORACLE_AGE_SEC = 2 * DAY_SECONDS;
 
 // Verified source: https://etherscan.io/address/0x93358db73B6cd4b98D89c8F5f230E81a95c2643a#code
 // The manager delegates each redemption to the pinned router, whose default OUSG/USDC
@@ -378,7 +377,7 @@ export async function fetchChainlinkNavCore(
   }
 
   if (updatedAt > 0) {
-    const maxOracleAgeSec = params.maxOracleAgeSec ?? DEFAULT_MAX_ORACLE_AGE_SEC;
+    const maxOracleAgeSec = chainlinkNavMaxOracleAgeSec(params);
     const now = ctx?.nowSec ?? Math.floor(Date.now() / 1000);
     if (updatedAt > now + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC) {
       throw new Error(`chainlink-nav: oracle data timestamp is in the future (${updatedAt - now}s)`);

@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -9,12 +9,14 @@ import { mockFetch, mockFetchStrict } from "@shared/test-utils/mock-fetch";
 import { loadPublicDatasetLiveInputs, testExports } from "../maintenance/generate-public-datasets";
 import {
   buildTopicSpecs, buildTopicArtifacts,
+  isProjectionEnvelope, PUBLIC_DATASETS_REQUIRE_CURRENT_SAFETY,
   projectScoresLatest, projectDepegHistory,
   validateDepegHistoryCoverage, validateScoresLatestDisplayProjection,
 } from "../lib/public-dataset-projections";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import type { V9OpenEvidence } from "@shared/types/safety-score-v9-public";
+import { PublicSnapshotEnvelopeSchema } from "@shared/types/public-snapshot";
 import * as depegSnapshot from "../../src/lib/depeg-event-snapshot";
 import { copyDatasetWorkspace, datasetBytes } from "./generate-public-datasets.test-support";
 import * as depegCapture from "../lib/depeg-ledger-capture";
@@ -98,8 +100,11 @@ async function writeBundle(root: string, date = DATE) {
   return dirs;
 }
 
-function runGenerator(root: string, args: string[] = [], env: Partial<NodeJS.ProcessEnv> = {}) {
-  return execFileAsync(process.execPath, ["--import", "data:text/javascript,globalThis.fetch=async()=>{throw new TypeError('offline fixture')}", "--import", "tsx", "scripts/maintenance/generate-public-datasets.ts", ...args], {
+function runGenerator(root: string, args: string[] = [], env: Partial<NodeJS.ProcessEnv> = {}, snapshot?: unknown) {
+  const fetchFixture = snapshot === undefined
+    ? "globalThis.fetch=async()=>{throw new TypeError('offline fixture')}"
+    : `globalThis.fetch=async()=>Response.json(${JSON.stringify(snapshot)})`;
+  return execFileAsync(process.execPath, ["--import", `data:text/javascript,${encodeURIComponent(fetchFixture)}`, "--import", "tsx", "scripts/maintenance/generate-public-datasets.ts", ...args], {
     cwd: root, timeout: 15_000,
     env: { ...process.env, API_BASE_URL: "", SMOKE_API_BASE: "", PUBLIC_DATASETS_API_URL: "",
       PUBLIC_DATASETS_DATE: DATE, PUBLIC_DATASETS_REQUIRE_API: "", PUBLIC_DATASETS_ALLOW_STUB: "", PUBLIC_DATASETS_ALLOW_EXISTING_ON_FETCH_FAILURE: "",
@@ -270,12 +275,81 @@ describe("generate-public-datasets", () => {
     expect(csv[0].split(",")).toEqual([
       "id", "symbol", "name", "pegType", "pegMechanism", "price", "circulatingUsd",
       "chainCount", "chains", "supplyUnavailableReason", "supplyProvenance",
+      "frozen", "frozenAt", "archiveCapturedAt", "archivalCirculatingUsd", "chainUnavailableReason",
+      "priceSource", "priceObservedAt", "priceObservedAtMode", "nominalReferenceUsd", "nominalReferenceSource",
     ]);
     for (const [id, supply, reason] of [["unknown", "", "absent"], ["zero", "0", ""]]) {
       expect(csv.find((line) => line.startsWith(`${id},`))?.split(",")).toEqual([
         id, "USDC", "USD Coin", "peggedUSD", "fiat-backed", "1", supply, "1", "ethereum", reason, "",
+        "false", "", "", "", "", "", "", "", "", "",
       ]);
     }
+  });
+
+  it.each([
+    [[null, 7, " ", " Ethereum ", "Ethereum"], 1, "Ethereum", null],
+    [[null], null, "", "chain-evidence-unavailable"],
+  ] as const)("admits only string chain identities in legacy envelopes (%j)", (chains, chainCount, labels, chainUnavailableReason) => {
+    const base = makeEnvelope();
+    const envelope = PublicSnapshotEnvelopeSchema.parse({
+      ...base, stablecoins: [{ ...base.stablecoins[0], chains }],
+    });
+    expect(isProjectionEnvelope(envelope)).toBe(true);
+    if (!isProjectionEnvelope(envelope)) throw new Error("expected a legacy projection envelope");
+    expect(specFor("top-stablecoins", envelope).rows[0]).toMatchObject({ chainCount, chains: labels, chainUnavailableReason });
+  });
+
+  it.each([
+    [{ id: "vndc-jade-labs" }, { frozen: true, circulatingUsd: null, price: null,
+      archivalCirculatingUsd: 54_603_183.1248958, archiveCapturedAt: expect.stringMatching(/^2025-12-09/) }],
+    [{ id: "hbd-hive", chains: [], supplySource: "onchain-circulating-supply" }, { chainCount: 1, chains: "Hive" }],
+    [{ id: "zsd-zephyr-protocol", chains: [], supplySource: "zephyr-scanner" }, { chainCount: 1, chains: "Zephyr" }],
+    [{ id: "zys-zephyr-protocol", chains: [], supplySource: "zephyr-scanner" }, { chainCount: 1, chains: "Zephyr" }],
+    [{ id: "280", pegType: "peggedCNY" }, { pegType: "peggedCNH", circulatingUsd: 1_000_000 }],
+    [{ priceSource: "protocol-par", priceObservedAtMode: "nominal_reference" }, { price: null, nominalReferenceUsd: 1 }],
+    [{ priceSource: "coingecko", priceObservedAtMode: "upstream", priceObservedAt: 1_778_999_900 },
+      { price: 1, nominalReferenceUsd: null, priceObservedAt: 1_778_999_900 }],
+  ] satisfies [Record<string, unknown>, Record<string, unknown>][])("preserves admitted ranking evidence for %j", (patch, expected) => {
+    const base = makeEnvelope();
+    const envelope = { ...base, stablecoins: [{ ...base.stablecoins[0]!, ...patch }] };
+    expect(specFor("top-stablecoins", envelope).rows[0]).toMatchObject(expected);
+  });
+
+  function renderLegacyRanking(base: ReturnType<typeof makeEnvelope>, stablecoins: unknown[]) {
+    const envelope = PublicSnapshotEnvelopeSchema.parse({ ...base, stablecoins });
+    if (!isProjectionEnvelope(envelope)) throw new Error("expected a legacy projection envelope");
+    return render(specFor("top-stablecoins", envelope)).json.rows;
+  }
+
+  it("keeps rejected ranking prices unavailable while admitting legacy omissions", () => {
+    const base = makeEnvelope();
+    const market = { ...base.stablecoins[0], price: 0.98, priceSource: "coingecko" };
+    const rows = renderLegacyRanking(base, [
+      { ...market, id: "usdt-tether", priceObservedAtMode: false },
+      { ...market, id: "zero-par", price: 0, priceSource: "protocol-par", priceObservedAtMode: "nominal_reference" },
+      { ...market, id: "legacy" },
+    ]);
+    expect(rows).toEqual([
+      expect.objectContaining({ id: "usdt-tether", price: null, priceObservedAtMode: "unsupported" }),
+      expect.objectContaining({ id: "zero-par", price: null, nominalReferenceUsd: null, nominalReferenceSource: null }),
+      expect.objectContaining({ id: "legacy", price: 0.98 }),
+    ]);
+  });
+
+  it("withholds the ranking price and clock only when the snapshot refuses the market quote", () => {
+    const base = makeEnvelope();
+    const priceObservedAt = base.generatedAt - 15;
+    const market = { ...base.stablecoins[0], price: 0.98, priceSource: "coingecko",
+      priceObservedAt, priceObservedAtMode: "upstream" };
+    const currentPeg = { currentDeviationBps: null, pegReference: null, primaryTrust: "unusable", dexPriceCheck: null };
+    const rows = renderLegacyRanking(base, [
+      { ...market, id: "usdt-tether", currentPeg: { ...currentPeg, currentPriceUnavailable: true, pegReferenceUnavailable: false } },
+      { ...market, id: "usdc-circle", currentPeg: { ...currentPeg, currentPriceUnavailable: false, pegReferenceUnavailable: true } },
+    ]);
+    expect(rows).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "usdt-tether", price: null, priceObservedAt: null }),
+      expect.objectContaining({ id: "usdc-circle", price: 0.98, priceObservedAt }),
+    ]));
   });
 
   it.each([
@@ -321,7 +395,7 @@ describe("generate-public-datasets", () => {
   it.each([
     {
       topic: "depeg-history",
-      header: "id,stablecoinId,symbol,direction,peakDeviationBps,startedAtISO,endedAtISO,durationSec,startPrice,peakPrice,recoveryPrice,pegReference,source,auditVerdict,retired",
+      header: "id,stablecoinId,symbol,direction,peakDeviationBps,startedAtISO,endedAtISO,durationSec,startPrice,peakPrice,recoveryPrice,pegReference,source,auditVerdict,retired,peakStatus,admittedCoverage,firstAdmissibleObservationAtISO,admittedDurationSec,analyticRecoveryStatus,onsetBasis,peakBasis,peakPeerMedianUsd,analyticRecoveryAt,peakPegReference,peakQuoteDomain,recoveryPegReference,disposition",
     },
     {
       topic: "scores-latest",
@@ -642,6 +716,23 @@ describe("generate-public-datasets", () => {
 
     expect(() => projectScoresLatest(archivedEnvelope, { historical: false }))
       .toThrow("invalid V9 Safety publication");
+    expect(() => specFor("scores-latest", archivedEnvelope, [], { historical: true, requireCurrentSafety: true }))
+      .toThrow("invalid V9 Safety publication");
+    vi.stubEnv(PUBLIC_DATASETS_REQUIRE_CURRENT_SAFETY, "1");
+    expect(() => specFor("scores-latest", archivedEnvelope, [], { historical: true }))
+      .toThrow("invalid V9 Safety publication");
+  });
+
+  it.each([
+    ["matches the envelope", (base: ReturnType<typeof makeCurrentEnvelope>) => base, null],
+    ["missing current publication", () => makeEnvelope(), "no accepted current Safety projection"],
+    ["mismatched identity", (base: ReturnType<typeof makeCurrentEnvelope>) => ({ ...base, safetyScoreIdentity: null }), "identity does not match"],
+    ["future publication", (base: ReturnType<typeof makeCurrentEnvelope>) => ({ ...base, generatedAt: base.reportCards.updatedAt - 1 }), "clocks do not precede"],
+  ] as const)("checks a prior-date latest refresh with %s", (_, input, error) => {
+    vi.stubEnv(PUBLIC_DATASETS_REQUIRE_CURRENT_SAFETY, "1");
+    const project = () => specFor("scores-latest", input(makeCurrentEnvelope()), [], { historical: true });
+    if (error) expect(project).toThrow(error);
+    else expect(project().displayProjection?.safety).toBeTruthy();
   });
 
   it("requires a valid projection on the current scores alias", async () => {
@@ -745,10 +836,15 @@ describe("generate-public-datasets", () => {
     void mechanismArchetype;
     void pegReferenceId;
     void jurisdiction;
-    const envelope = { ...makeEnvelope(), stablecoins: [legacyCoin] };
+    const envelope = { ...makeEnvelope(), stablecoins: [legacyCoin, { ...legacyCoin, id: "unclassified-test-coin" }] };
     const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
     const pegSpec = specFor("peg-mechanism-distribution", envelope, undefined, { historical: true });
+    const latest = specFor("peg-mechanism-distribution", envelope, undefined, { historical: false });
+    expect(latest.rows).toEqual(pegSpec.rows);
+    expect(latest.rows).toHaveLength(2);
+    expect(latest.rows).toContainEqual(expect.objectContaining({ pegReferenceId: "unknown", coinCount: 1 }));
+    expect(latest.metadataNote).toMatch(/enrichment sha256:[0-9a-f]{64}/);
 
     expect(warning).toHaveBeenCalledWith(
       expect.stringContaining("using current catalog metadata as an approximation"),
@@ -792,16 +888,29 @@ describe("generate-public-datasets", () => {
     };
     expect(json._meta).toMatchObject({
       ...ledgerMeta, sourceObservationStartedAtISO: inputs.depegCapture.observationStartedAtISO,
-      methodologyLabel: "depeg-dews v7.0", freshnessContract: expect.stringContaining("retrospective windowed event history"),
+      methodologyLabel: "depeg-dews v7.0",
+      freshnessContract: expect.stringContaining("incomplete coverage (source watermark and common ledger generation unavailable)"),
     });
-    expect(ndjsonMeta._meta).toMatchObject(ledgerMeta);
+    expect(ndjsonMeta._meta).toMatchObject({ ...ledgerMeta, freshnessContract: json._meta.freshnessContract });
     expect(JSON.parse(artifacts.ndjson.split("\n")[1]!).id).toBe("42");
     expect(artifacts.csv).toContain(`As of: ${inputs.depegCapture.observedAtISO}`);
     expect(artifacts.csv).toContain(`Source generation: ${inputs.depegCapture.captureId}`);
     expect(artifacts.csv).toContain("retrospective windowed event history");
+    expect(artifacts.csv).toContain("incomplete coverage (source watermark and common ledger generation unavailable)");
     expect(artifacts.csv).not.toContain("point-in-time sample");
     const market = buildTopicArtifacts(specs.find((spec) => spec.topic === "top-stablecoins")!, inputs.asOfISO);
     expect(JSON.parse(market.json)._meta.asOfISO).toBe(snapshotClock);
+    const proof = { generation: "b".repeat(64), coveredFromSec: 1, coveredThroughSec: Date.parse("2026-05-17") / 1000 };
+    const attested = { ...spec, depegCapture: { ...inputs.depegCapture, shardSource: "fetched-ledger" as const, apiTotal: inputs.depegCapture.eventCount, ledgerProof: proof } };
+    expect(render({ ...attested, depegCapture: { ...attested.depegCapture, shardSource: undefined } }, inputs.asOfISO)
+      .json._meta.sourceGeneration).toBe(inputs.depegCapture.captureId);
+    expect(render(attested, inputs.asOfISO).json._meta).toMatchObject({
+      sourceGeneration: proof.generation,
+      sourceCoverage: { coveredFromSec: proof.coveredFromSec, coveredThroughSec: proof.coveredThroughSec },
+      freshnessContract: expect.stringContaining("complete source coverage"),
+    });
+    expect(render({ ...attested, depegCapture: { ...attested.depegCapture, ledgerProof: { ...proof, coveredThroughSec: proof.coveredThroughSec - 1 } } },
+      inputs.asOfISO).json._meta.freshnessContract).toContain("partial source coverage");
   });
 
   it("rejects depeg exports without ledger provenance", () => {
@@ -826,6 +935,20 @@ describe("generate-public-datasets", () => {
   });
 
 
+  it("exports reviewed peak status and preserves the raw close beside admitted coverage", () => {
+    const brl = { ...makeEvent(null), id: 89169, stablecoinId: "brz-transfero", pegType: "peggedBRL" };
+    const closedAt = Date.parse("2026-05-16T12:00:00Z") / 1000;
+    const end = closedAt - 21 * 3_600;
+    const covered = { ...brl, endedAt: closedAt, admittedCoverage: [{ fromSec: end - 3_600, toSec: end }] };
+    expect(depegRows([covered])[0]).toMatchObject({
+      peakStatus: "unverified", peakPrice: brl.peakPrice, recoveryPrice: brl.recoveryPrice,
+      endedAtISO: "2026-05-16T12:00:00.000Z", admittedDurationSec: 3_600,
+      admittedCoverage: covered.admittedCoverage, analyticRecoveryStatus: "unknown",
+    });
+    expect(depegRows([brl])[0]).toMatchObject({ admittedCoverage: null, admittedDurationSec: null, analyticRecoveryStatus: null });
+    expect(depegRows([{ ...covered, admittedCoverage: [] }])[0]).toMatchObject({ admittedCoverage: [], admittedDurationSec: 0 });
+  });
+
   it("retains confirmed depegs with pendingReason provenance", () => {
     const rows = depegRows([makeEvent("low-confidence")]);
 
@@ -846,7 +969,7 @@ describe("generate-public-datasets", () => {
       const artifacts = artifactsFor(specFor("depeg-history", undefined, [event], { depegCapture: makeCapture(1) }));
       expect(JSON.parse(artifacts.json).rows[0].retired).toBe(true);
       expect(artifacts.csv.split("\n")[1]).toContain("retired");
-      expect(artifacts.csv).toContain(",true\n");
+      expect(artifacts.csv).toContain(",true,");
     }
   });
 
@@ -857,7 +980,7 @@ describe("generate-public-datasets", () => {
   });
 
   it("enforces independent 90-day UTC window boundaries", () => {
-    const times = ["2026-02-14T23:59:59Z", "2026-02-15T00:00:00Z", "2026-02-15T00:00:01Z",
+    const times = ["2026-02-15T23:59:59Z", "2026-02-16T00:00:00Z", "2026-02-16T00:00:01Z",
       "2026-05-16T23:59:58Z", "2026-05-16T23:59:59Z", "2026-05-17T00:00:00Z"];
     const events = times.map((time, id) => ({ ...makeEvent(null), id, startedAt: Date.parse(time) / 1000 }));
     expect(depegRows(events).map((row) => row.id)).toEqual([4, 3, 2, 1]);
@@ -879,6 +1002,29 @@ describe("generate-public-datasets", () => {
 
 
 describe("PR mirror integrity mode", () => {
+  it("rejects a mismatched Safety generation before replacing either current scores target", async () => {
+    const root = await makeRoot();
+    await copyDatasetWorkspace(root);
+    await mkdir(path.join(root, "data"));
+    await symlink(depegSnapshot.DEPEG_EVENT_DATA_DIR, path.join(root, "data/depeg-events"));
+    const dirs = await writeBundle(root);
+    const envelope = makeCurrentEnvelope();
+    const rejected = PublicSnapshotEnvelopeSchema.parse({
+      ...envelope, dews: [], liquidity: [], fxFallbackRates: null,
+      psi: { computedAt: envelope.generatedAt, score: 88, band: "stable", components: null, methodologyVersion: "1" },
+      safetyScoreIdentity: { ...envelope.safetyScoreIdentity, publicationGenerationId: "different-generation" },
+    });
+    const scorePath = path.join(dirs.datasetsDir, "scores-latest", `${DATE}.json`);
+    const before = await readFile(scorePath, "utf8");
+    for (const [redirectDate, importDate] of [[DATE, "2026-05-15"], ["2026-05-15", DATE]]) {
+      await writeFile(dirs.redirectsPath, buildPublicDatasetRedirectBlock(redirectDate));
+      await writeFile(dirs.currentDatasetModulePath, buildPublicDatasetCurrentModule(importDate));
+      await expect(runGenerator(root, [], { PUBLIC_DATASETS_API_URL: "https://api.example.test" }, rejected))
+        .rejects.toMatchObject({ code: 1, stderr: expect.stringContaining("Safety publication identity does not match") });
+      expect(await readFile(scorePath, "utf8")).toBe(before);
+    }
+  });
+
   it("projects reviewed retirement slots without moving redirect layout and rejects destination drift", async () => {
     const redirects = await readFile(path.resolve("public/_redirects"), "utf8");
     expect(projectRetiredPublicRouteRedirects(redirects)).toBe(redirects);

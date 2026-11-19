@@ -16,10 +16,33 @@ const ObservationsSchema = z.array(z.object({
   chain: z.string().optional(),
   target: z.string().optional(),
   price: z.number().finite().positive(),
+  recentActivity: z.object({
+    evidence: z.literal("positive-volume-m5"),
+    collectedAt: z.number().int().positive(),
+  }).optional(),
   observedAt: z.number().int().positive().nullable(),
   observedAtMode: PriceObservedAtModeSchema.nullable(),
 }));
 export type PriceCorroborationObservation = z.infer<typeof ObservationsSchema>[number];
+
+// For exact-address display fallback the registry TTL bounds collection age.
+function stagingClock(row: PriceCorroborationObservation): number | null {
+  if (row.recentActivity) {
+    if (row.source !== "dexscreener-exact" || !row.chain || !row.target) return null;
+    const { collectedAt } = row.recentActivity;
+    if (row.observedAt === null && row.observedAtMode === "unknown") return collectedAt;
+    return row.observedAt === collectedAt && row.observedAtMode === "local_fetch" ? collectedAt : null;
+  }
+  return row.observedAtMode == null || row.observedAtMode === "unknown" ? null : row.observedAt;
+}
+
+/** Both v1 readers on rollback require a dated local fetch for qualified DEX activity. */
+export function toV1PriceObservation(row: PriceCorroborationObservation): PriceCorroborationObservation {
+  if (row.recentActivity && stagingClock(row) != null) {
+    return { ...row, observedAt: row.recentActivity.collectedAt, observedAtMode: "local_fetch" };
+  }
+  return row;
+}
 
 export interface PriceObservationEffectiveness {
   stagingStatus: "missing" | "future" | "expired" | "invalid" | "read-error" | "ok";
@@ -44,7 +67,7 @@ export async function writePriceCorroborationObservations(
   signal?: AbortSignal,
 ): Promise<void> {
   await setCacheIfNewer(db, PRICE_CORROBORATION_OBSERVATIONS_KEY,
-    JSON.stringify(observations), slotStartedAt, signal);
+    JSON.stringify(observations.map(toV1PriceObservation)), slotStartedAt, signal);
 }
 
 async function loadObservationCache(
@@ -85,19 +108,21 @@ async function loadObservationCache(
       const source = getPricingSourceRegistryEntry(observation.source);
       const maxAge = source?.maxTrustedAgeSec;
       if (!isObservedPrice({ priceSource: observation.source, priceObservedAtMode: observation.observedAtMode }) ||
+        (observation.source === "jupiter" && observation.observedAtMode !== "upstream") ||
         !source || source.isRetired || source.trustTier === "cached_replay" || !maxAge || maxAge <= 0) {
         summary.discarded.sourceIneligible++;
         continue;
       }
-      if (observation.observedAt == null || observation.observedAtMode == null || observation.observedAtMode === "unknown") {
+      const clock = stagingClock(observation);
+      if (clock == null) {
         summary.discarded.unknownTime++;
         continue;
       }
-      if (observation.observedAt > nowSec) {
+      if (clock > nowSec) {
         summary.discarded.futureTime++;
         continue;
       }
-      const headroom = maxAge - (nowSec - observation.observedAt);
+      const headroom = maxAge - (nowSec - clock);
       if (headroom <= 0) {
         summary.discarded.sourceExpired++;
         continue;
@@ -105,7 +130,7 @@ async function loadObservationCache(
       summary.eligibleObservationCount++;
       summary.minimumFreshnessHeadroomSec = Math.min(summary.minimumFreshnessHeadroomSec ?? headroom, headroom);
       const rows = byId.get(observation.id) ?? [];
-      rows.push(observation);
+      rows.push(observation.recentActivity ? { ...observation, observedAt: null, observedAtMode: "unknown" } : observation);
       byId.set(observation.id, rows);
     }
   } catch (error) {
@@ -129,7 +154,7 @@ export async function loadPriceCorroborationObservations(
   let superseded = 0;
   for (const [id, observations] of hourly.byId) {
     const newestBySource = new Map<string, PriceCorroborationObservation>();
-    for (const row of [...observations].sort((a, b) => (b.observedAt ?? 0) - (a.observedAt ?? 0))) {
+    for (const row of [...observations].sort((a, b) => stagingClock(b)! - stagingClock(a)!)) {
       if (newestBySource.has(row.source)) superseded++;
       else newestBySource.set(row.source, row);
     }
@@ -154,7 +179,7 @@ export async function loadPriceCorroborationObservations(
   summary.minimumFreshnessHeadroomSec = null;
   for (const rows of hourly.byId.values()) {
     for (const row of rows) {
-      const headroom = getPricingSourceRegistryEntry(row.source)!.maxTrustedAgeSec! - (nowSec - row.observedAt!);
+      const headroom = getPricingSourceRegistryEntry(row.source)!.maxTrustedAgeSec! - (nowSec - stagingClock(row)!);
       summary.minimumFreshnessHeadroomSec = Math.min(summary.minimumFreshnessHeadroomSec ?? Infinity, headroom);
     }
   }

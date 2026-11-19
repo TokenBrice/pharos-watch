@@ -4,7 +4,11 @@ import { bindBackfillSql, createBackfillDatabase } from "../lib/backfill-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getEndpointDefinition, getStatusPageActions } from "@shared/lib/api-endpoints";
 import * as stabilityBackfill from "../backfills/backfill-stability-index";
+import * as supplyBackfill from "../backfills/backfill-supply-history";
+import * as backfillFx from "../../src/lib/backfill-fx";
+import { seedPsiPairedHistory } from "../../src/api/__tests__/psi-replay.test-support";
 import { invalidateBlacklistDerivedCaches } from "../../src/lib/blacklist-cache-invalidation";
+import { getBlacklistDerivedCacheKeys } from "../../src/lib/blacklist-cache-keys";
 
 const TRON_USDT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
 
@@ -33,12 +37,55 @@ describe("one-shot backfill operator lane", () => {
     await runOneShotBackfillCli(["--help"], { client, write });
     expect(write.mock.calls[0]![0]).toContain("default remote");
     for (const args of [[], ["unknown", "--execute"], ["backfill-supply-history"],
-      ["backfill-supply-history", "--query", "dry-run=true"], ["backfill-depegs", "--query", "dryRun=true"],
+      ["backfill-depegs", "--query", "dryRun=true"],
       ["bootstrap-jltxx-reserves", "--execute"], ["backfill-depegs", "--execute", "--bogus"]]) {
       await expect(runOneShotBackfillCli(args, { client, write })).rejects.toThrow();
     }
     expect(client.queryRaw).not.toHaveBeenCalled();
     expect(client.executeStatementsRaw).not.toHaveBeenCalled();
+  });
+
+  it("registers the supply preview without execute and passes a read-only intent", async () => {
+    const handler = vi.spyOn(supplyBackfill, "handleBackfillSupplyHistoryTrusted").mockImplementationOnce(async ({ url }) =>
+      Response.json({ dryRun: url.searchParams.get("dry-run") === "true" }));
+    const write = vi.fn();
+    const client = { queryRaw: vi.fn(), executeStatementsRaw: vi.fn() };
+    await runOneShotBackfillCli(["backfill-supply-history", "--query", "dry-run=true"], { client, write, env: {} });
+    expect(handler).toHaveBeenCalledOnce();
+    expect(write).toHaveBeenCalledWith('{"dryRun":true}\n');
+    expect(client.executeStatementsRaw).not.toHaveBeenCalled();
+  });
+
+  it("replays a retained non-USD slot through the registered, read-only PSI command", async () => {
+    const { sqlite } = fixtures.open();
+    const day = Date.parse("2026-03-05T00:00:00Z") / 1000;
+    const observedAt = day + 12 * 3600;
+    seedPsiPairedHistory(sqlite, day, "paxg-paxos", 1e9, 3900);
+    sqlite.prepare(`INSERT INTO depeg_events (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps,
+      started_at, ended_at, start_price, peg_reference) VALUES (1, 'paxg-paxos', 'PAXG', 'peggedGOLD', 'below', -300, ?, ?, 3900, 3800)`)
+      .run(observedAt, observedAt + 3600);
+    sqlite.prepare(`INSERT INTO depeg_event_provenance (event_id, source_kind, quote_mode, created_at, updated_at)
+      VALUES (1, 'live', 'usd', ?, ?)`).run(observedAt, observedAt);
+    sqlite.prepare(`INSERT INTO stability_index_samples (stored_at, score, band, components, input_snapshot)
+      VALUES (?, 65, 'TREMOR', '{}', '{}')`).run(observedAt + 60);
+    sqlite.prepare(`INSERT INTO stability_index (computed_at, score, band, components, input_snapshot)
+      VALUES (?, 100, 'BEDROCK', '{}', '{}')`).run(day);
+    const peers = vi.spyOn(backfillFx, "fetchHistoricalCommodityPeers").mockResolvedValue({
+      GOLD: ["a", "b", "c"].map((assetId) => ({
+        peg: "GOLD", assetId, sourceId: assetId, commodityOunces: 1, prices: [{ timestamp: observedAt - 60, price: 4000 }],
+      })),
+    });
+    const write = vi.fn();
+    const client = { queryRaw: (sql: string) => envelope(sqlite.prepare(sql).all()), executeStatementsRaw: vi.fn() };
+    await runOneShotBackfillCli([
+      "backfill-stability-index", "--query", `dry-run=true&startDay=${day}&endDay=${day}`,
+    ], { client, write, env: {} });
+    expect(JSON.parse(write.mock.calls[0]![0])).toMatchObject({
+      dryRun: true, daysBackfilled: 1, daysChanged: 1, maxAbsoluteScoreDelta: expect.any(Number),
+    });
+    expect(peers).toHaveBeenCalledWith(expect.objectContaining({ endSec: day + 86400 }), null, ["GOLD"], expect.any(Object));
+    expect(client.executeStatementsRaw).not.toHaveBeenCalled();
+    expect(sqlite.prepare("SELECT score FROM stability_index WHERE computed_at = ?").get(day)).toEqual({ score: 100 });
   });
 
   it("requires explicit availability consent for each atomic job before any D1 access", async () => {
@@ -161,7 +208,10 @@ describe("remote D1 backfill statements", () => {
     expect(await db.prepare("SELECT value FROM cache WHERE key = ?").bind("test").first("value")).toBe("quote ' ?");
     expect(sqlite.prepare("SELECT name FROM sqlite_master WHERE name LIKE '_pharos_backfill_%'").all()).toEqual([]);
     await expect(db.batch([db.prepare("SELECT 1"), db.prepare("DELETE FROM cache")])).rejects.toThrow("nonreturning-writes");
-    expect(await invalidateBlacklistDerivedCaches(db)).toEqual({ attempted: 5, deleted: 5, failed: 0 });
+    const keys = getBlacklistDerivedCacheKeys();
+    for (const key of keys) sqlite.prepare("INSERT INTO cache (key,value,updated_at) VALUES (?,'stale',123)").run(key);
+    expect(await invalidateBlacklistDerivedCaches(db)).toEqual({ attempted: 8, deleted: 8, failed: 0 });
+    expect(sqlite.prepare("SELECT key FROM cache WHERE value = 'stale'").all()).toEqual([]);
     expect(sqlite.prepare("SELECT value FROM cache WHERE key = 'blacklist:derived-generation'").get()).toBeDefined();
   });
 

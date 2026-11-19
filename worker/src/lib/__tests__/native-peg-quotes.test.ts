@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import type * as FetchRetry from "../fetch-retry";
 
 const fetchWithRetryMock = vi.fn();
@@ -16,6 +17,7 @@ import {
   normalizeSupportedPegCurrency,
 } from "../native-peg-quotes";
 import type { PricingProviderAttemptDiagnostic } from "../pricing-provider-diagnostics";
+import { decodeNativeEventQuote, persistActiveNativeEventQuotes } from "../native-peg-quote-cache";
 
 function makeJsonResponse(body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -49,7 +51,8 @@ describe("native-peg-quotes", () => {
   it("normalizes supported fiat pegs and exposes CoinGecko query currencies", () => {
     expect(normalizeSupportedPegCurrency(" eur ")).toBe("EUR");
     expect(normalizeSupportedPegCurrency("gold")).toBeNull();
-    expect(getNativePegQueryCurrencies("CNH")).toEqual(["cny", "cnh"]);
+    expect(getNativePegQueryCurrencies("CNY")).toEqual(["cny"]);
+    expect(getNativePegQueryCurrencies("CNH")).toEqual([]);
     expect(getNativePegQueryCurrencies("ARS")).toEqual(["ars"]);
     expect(getNativePegQueryCurrencies("BRL")).toEqual(["brl"]);
     expect(getNativePegQueryCurrencies("KGS")).toEqual([]);
@@ -60,6 +63,7 @@ describe("native-peg-quotes", () => {
   it("keeps every active non-USD peg covered by a native-peg mapping or exception", () => {
     // CoinGecko does not expose native vs-currency quotes for these registry labels.
     const intentionallyUnsupported: Record<string, true> = {
+      CNH: true,
       COP: true,
       GHS: true,
       GOLD: true,
@@ -79,7 +83,7 @@ describe("native-peg-quotes", () => {
     }
   });
 
-  it("fetches direct native quotes for supported non-USD fiat pegs", async () => {
+  it("labels supported fiat-denominated quotes as conversions with an undated FX leg", async () => {
     fetchWithRetryMock
       .mockResolvedValueOnce(makeJsonResponse({
         "euro-coin": {
@@ -115,6 +119,9 @@ describe("native-peg-quotes", () => {
       price: 1.0012,
       updatedAt: 1_699_999_940,
     });
+    expect(quotes.get("eurc-circle")?.derivation).toEqual({
+      kind: "conversion", lineage: { fxSource: "openExchangeRates" },
+    });
     expect(quotes.get("wclp-ripio")).toMatchObject({
       stablecoinId: "wclp-ripio",
       geckoId: "chilean-peso",
@@ -126,31 +133,45 @@ describe("native-peg-quotes", () => {
     expect(quotes.has("usdt-tether")).toBe(false);
   });
 
-  it("falls through alternate CoinGecko query currencies for CNH/CNY-style pegs", async () => {
-    fetchWithRetryMock
-      .mockResolvedValueOnce(makeJsonResponse({
-        "anchorx": {
-          last_updated_at: 1_699_999_940,
-        },
-      }))
-      .mockResolvedValueOnce(makeJsonResponse({
-        "anchorx": {
-          cnh: 1.002,
-          last_updated_at: 1_699_999_940,
-        },
-      }));
+  it("withholds offshore CNH when the provider lists only onshore CNY", async () => {
+    const diagnostics: PricingProviderAttemptDiagnostic[] = [];
 
     const quotes = await fetchCurrentNativePegQuotes([
       { stablecoinId: "axcnh-anchorx", geckoId: "anchorx", pegCurrency: "CNH" },
+    ], undefined, undefined, { diagnostics });
+
+    expect(fetchWithRetryMock).not.toHaveBeenCalled();
+    expect(quotes.has("axcnh-anchorx")).toBe(false);
+    expect(diagnostics).toMatchObject([{ rejectionReasonCounts: { "unsupported-quote": 1 } }]);
+  });
+
+  it.each([
+    ["eur", "conversion"], ["eur", "traded-pair"], ["usd", "traded-pair"], [undefined, "traded-pair"],
+  ] as const)("preserves %s %s lineage and the original clock only for matching units", async (vsCurrency, kind) => {
+    fetchWithRetryMock.mockResolvedValueOnce(makeJsonResponse(EUR_PAYLOAD));
+    const quotes = await fetchCurrentNativePegQuotes(EUR_REQUESTS);
+    const quote = quotes.get("eurc-circle")!;
+    quote.vsCurrency = vsCurrency;
+    if (kind === "traded-pair") quote.derivation = { kind, lineage: { venue: "kraken", pair: "EURC/EUR" } };
+    const db = mockD1([
+      { match: "SELECT e.id, e.stablecoin_id", rows: [{
+        id: 1, stablecoin_id: "eurc-circle", peg_type: "peggedEUR", quote_mode: "native-peg",
+      }] },
+      { match: "INSERT INTO cache", rows: [] },
+      { match: "DELETE FROM cache", rows: [] },
     ]);
 
-    expect(fetchWithRetryMock).toHaveBeenCalledTimes(2);
-    expect(fetchWithRetryMock.mock.calls[0]?.[0]).toContain("vs_currencies=cny");
-    expect(fetchWithRetryMock.mock.calls[1]?.[0]).toContain("vs_currencies=cnh");
-    expect(quotes.get("axcnh-anchorx")).toMatchObject({
-      pegCurrency: "CNH",
-      vsCurrency: "cnh",
-      price: 1.002,
+    await persistActiveNativeEventQuotes(db, quotes);
+
+    const write = db.getHistory().find(({ sql }) => sql.includes("INSERT INTO cache"));
+    if (vsCurrency !== "eur") {
+      expect(write).toBeUndefined();
+      return;
+    }
+    expect(write?.binds[0]).toBe(kind === "traded-pair" ? "depeg-native-quote:1" : "depeg-native-indicative:v1:1");
+    expect(decodeNativeEventQuote(String(write?.binds[1]))).toEqual({
+      value: 1.0012, source: "coingecko", observedAt: T0 - 60,
+      derivation: quote.derivation,
     });
   });
 

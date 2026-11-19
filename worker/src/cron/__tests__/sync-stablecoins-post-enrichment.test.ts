@@ -44,6 +44,8 @@ import { isAbortResult, runDepegPipeline, runPostEnrichmentPricePipeline } from 
 import type { PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
 import { buildPriceValidationContext, type PriceValidationContext } from "../../lib/price-validation";
 import { createAuthoritativeLivePriceOverrideStats } from "../../lib/authoritative-price-sources";
+import { computePriceConsensus } from "../../lib/price-consensus";
+import { applyConsensusResults, prevalidatePrices, type PrimaryPriceWithFiatPremiumEvidence } from "../sync-stablecoins/pricing";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
@@ -76,10 +78,11 @@ function makeAsset(overrides: Partial<PeggedAsset> = {}): PeggedAsset {
   });
 }
 
-function nativeQuote(updatedAt = 1_700_000_000) {
+function nativeQuote(updatedAt = 1_700_000_000, status = "admitted") {
   return new Map([["eurc-circle", {
     stablecoinId: "eurc-circle", pegCurrency: "EUR", nativePrice: 1,
     priceUsd: 1.08, updatedAt, referencePriceUsd: 1.08, referenceType: "fresh",
+    referenceAdmission: { status, decisionAtSec: 1_700_000_050 },
   }]]);
 }
 
@@ -382,7 +385,49 @@ describe("runPostEnrichmentPricePipeline", () => {
     expect(asset.priceSource).toBe("coingecko");
   });
 
-  it("corrects an undated incumbent whose priceUpdatedAt is only this run's application stamp", async () => {
+  it.each([1.122, null])("keeps a held FX conversion indicative with incumbent %s", async (price) => {
+    const asset = makeAsset({ price });
+    fetchCurrentNativePegImpliedUsdQuotesMock.mockResolvedValue(nativeQuote(1_700_000_000, "held-closed-session"));
+
+    const result = await runPostEnrichmentPricePipeline(nativePipelineInput(asset), "");
+
+    expect(result).toMatchObject({ nativePegCorrectionCount: 0, nativePegFillCount: 0 });
+    expect(asset.price).toBe(price);
+  });
+
+  it.each([true, false])("publishes BRZ pool-backed premiums when upstreams are independent (%s)", async (independent) => {
+    const asset = makeAsset({ id: "brz-transfero", symbol: "BRZ", pegType: "peggedREAL", price: null });
+    const premium = 0.2 * 1.23;
+    const syncStartSec = Math.floor(Date.now() / 1000);
+    const sources = ["curve-dex", "uniswap-v3-dex"];
+    const observedAt = syncStartSec - 60;
+    const consensus = computePriceConsensus(sources.map((source) => ({
+      source, price: premium, observedAt, observedAtMode: "upstream", weight: 1,
+    })), 0.2, 50)!;
+    const input = {
+      ...nativePipelineInput(asset),
+      syncStartSec,
+      validationReferences: { rates: { peggedREAL: 0.2 }, type: "fresh" as const, updatedAt: observedAt },
+      primaryPriceResults: new Map<string, PrimaryPriceWithFiatPremiumEvidence>([[asset.id, {
+        ...consensus,
+        dlPrice: null, cgPrice: null, candidateSources: sources,
+        fiatPremiumEvidence: {
+          "curve-dex": { priceUsd: premium, observedAtSec: observedAt, upstreamKeys: ["ethereum:pool-a"] },
+          "uniswap-v3-dex": { priceUsd: premium, observedAtSec: observedAt, upstreamKeys: [independent ? "ethereum:pool-b" : "ethereum:pool-a"] },
+        },
+      }]]),
+    };
+
+    applyConsensusResults({ ...input, reason: "primary" });
+    expect(asset.price).toBe(independent ? premium : null);
+    prevalidatePrices({ ...input, logLabel: "premium test" });
+    const result = await runPostEnrichmentPricePipeline(input, "");
+
+    expect(result).toMatchObject({ rejectedCount: 0, nativePegCorrectionCount: 0 });
+    expect(asset.price).toBe(independent ? premium : null);
+  });
+
+  it("corrects an undated incumbent despite its newer sync clock", async () => {
     // A DefiLlama list quote carries no source observation. `stampPriceMetadata`
     // records observedAt=null and puts the sync clock in priceUpdatedAt, which is
     // a publication stamp, not evidence that the incumbent is fresher.
@@ -392,7 +437,8 @@ describe("runPostEnrichmentPricePipeline", () => {
       ["defillama"], ["defillama"], 1_700_000_050, "defillama", null,
     );
     expect(asset.priceObservedAt).toBeNull();
-    expect(asset.priceUpdatedAt).toBe(1_700_000_050);
+    expect(asset.priceUpdatedAt).toBeNull();
+    expect(asset.priceSyncedAt).toBe(1_700_000_050);
     fetchCurrentNativePegImpliedUsdQuotesMock.mockResolvedValue(nativeQuote(1_700_000_000));
 
     const result = await runPostEnrichmentPricePipeline(nativePipelineInput(asset), "");

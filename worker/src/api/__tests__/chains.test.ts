@@ -14,6 +14,7 @@ vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => mockWorkerRunti
   stablecoins: [
     { id: "usdt-tether", flags: { backing: "rwa-backed" }, commodityOunces: undefined },
     { id: "usdc-circle", flags: { backing: "rwa-backed" }, commodityOunces: undefined },
+    { id: "eurc-circle", flags: { pegCurrency: "EUR", backing: "rwa-backed" }, commodityOunces: undefined },
     { id: "dai-makerdao", flags: { backing: "crypto-backed" }, commodityOunces: undefined },
   ],
 }));
@@ -119,6 +120,70 @@ describe("handleChains", () => {
     const body = await response.json() as { chains: Array<{ totalUsd: number; healthFactors: { quality: number | null } }> };
     expect(body.chains[0]?.totalUsd).toBe(100);
     expect(body.chains[0]?.healthFactors.quality).toBeNull();
+  });
+  const eurcAsset = (supply: number, overrides: Record<string, unknown> = {}) =>
+    asset("eurc-circle", { Ethereum: { current: supply } }, { pegType: "peggedEUR", circulating: { peggedEUR: supply }, ...overrides });
+
+  const readChains = async (cache: ReturnType<typeof stablecoinsCache>) => (await handleChains(mockD1([cache]))).json();
+
+  function eurFallbackCache(assets: unknown[]) {
+    const cache = stablecoinsCache(assets);
+    cache.first.value = JSON.stringify({ ...JSON.parse(cache.first.value), fxFallbackRates: { peggedEUR: 1.1 } });
+    return cache;
+  }
+
+  it("reads a non-USD cohort reference from a cache predating currentPeg", async () => {
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(activeV9());
+    const cache = eurFallbackCache([eurcAsset(100, { price: 1.1 })]);
+    expect(await readChains(cache)).toMatchObject({ chains: [{ pegStabilityCoverage: { observedScore: 100 } }] });
+  });
+  it("expires a clocked comparison from an otherwise usable list generation", async () => {
+    const now = Date.parse("2026-11-18T16:00:00Z") / 1000;
+    const quoteAt = now - 21_600;
+    const refAt = now - 18_000;
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    try {
+      vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(activeV9());
+      const eurc = eurcAsset(100_000_000, {
+        price: 1.078, priceObservedAt: quoteAt,
+        currentPeg: {
+          currentDeviationBps: -200, admittedDeviationBps: -200,
+          pegReference: { valueUsd: 1.1, source: "fx", contributorCount: 0, asOf: refAt },
+          pegReferenceUnavailable: false, currentPriceUnavailable: false, primaryTrust: "authoritative", dexPriceCheck: null,
+          referenceAdmission: {
+            status: "admitted", reason: "live-reference", kind: "fx", source: "openExchangeRates", cadence: "intraday",
+            quoteObservedAtSec: quoteAt, referenceObservedAtSec: refAt, decisionAtSec: now, budgetSec: 21_600,
+            sessionOpenedAtSec: Date.parse("2026-11-15T22:00:00Z") / 1000, generation: "stablecoins:test", policyVersion: 1,
+          },
+        },
+      });
+      const cache = stablecoinsCache([eurc], 0);
+      expect(await readChains(cache)).toMatchObject({
+        chains: [{ healthFactors: { pegStability: 60 }, pegStabilityCoverage: { coverage: 1 } }],
+      });
+      clock.mockReturnValue((now + 1) * 1000);
+      expect(await readChains(cache)).toMatchObject({
+        chains: [{ healthFactors: { pegStability: null }, pegStabilityCoverage: { coverage: 0 } }],
+      });
+    } finally {
+      clock.mockRestore();
+    }
+  });
+  it.each([false, true])("excludes ineligible assets from the legacy chain reference cohort (published block: %s)", async (published) => {
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(activeV9());
+    const eur = { pegType: "peggedEUR", circulating: { peggedEUR: 100_000_000 } };
+    const eurc = eurcAsset(100_000_000, {
+      price: 1.1,
+      currentPeg: published ? {
+        currentDeviationBps: -435, pegReference: { valueUsd: 1.15, source: "median", contributorCount: 5, asOf: 1 },
+        pegReferenceUnavailable: false, currentPriceUnavailable: false, primaryTrust: "authoritative", dexPriceCheck: null,
+      } : undefined,
+    });
+    const ineligible = ["49", "53", "55", "56"].map((id) => asset(id, {}, { ...eur, price: 1.15 }));
+    const cache = eurFallbackCache([eurc, ...ineligible]);
+    expect(await readChains(cache)).toMatchObject({
+      chains: [{ healthFactors: { pegStability: 100 }, pegStabilityCoverage: { coverage: 1 } }],
+    });
   });
   it("returns 503 when the stablecoins cache is missing", async () => {
     const response = await handleChains(mockD1([

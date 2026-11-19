@@ -8,6 +8,7 @@ import {
 } from "../lib/social-card-catalog";
 import { discoverSocialPreviewPages } from "../lib/social-preview-build";
 import { resolveMechanismArchetype } from "../../shared/lib/classification";
+import { BRZ_UNVERIFIED_PEAK_EVENT_IDS } from "../../shared/data/depegs/backfill-replay-suppressions";
 import { isDisputedAuditVerdict } from "../../shared/lib/depeg-audit";
 import { formatDeathDate } from "../../shared/lib/format";
 import type { SocialCardSpec } from "../../shared/lib/social-card/spec";
@@ -81,6 +82,17 @@ describe("social card catalog", () => {
       expect(ruler.kind === "peg-ruler" && ruler.lows[index].price).toBeCloseTo(event.peakPrice!, 3);
     });
     expect(byPath.get("/depeg/rubt-2026-02-19/")).toMatchObject({ title: "RUBT: depeg above peg", facts: [] });
+  });
+
+  it("withholds the four reviewed BRZ peaks from retained incident previews", () => {
+    const events = readDepegEventSnapshot({ missing: "throw" }).filter(event =>
+      event.stablecoinId === "brz-transfero" && BRZ_UNVERIFIED_PEAK_EVENT_IDS.some(id => id === event.id));
+    expect(events).toHaveLength(BRZ_UNVERIFIED_PEAK_EVENT_IDS.length);
+    for (const event of events) {
+      const card = byPath.get(`/depeg/${event.slug}/`);
+      expect(card).toMatchObject({ title: "BRZ: peak unverified", facts: [] });
+      expect(card).not.toHaveProperty("ruler");
+    }
   });
 
   it.each([

@@ -32,12 +32,8 @@ import type {
 
 const DL_YIELDS_URL = "https://yields.llama.fi/pools";
 /**
- * B10 — row staleness and cache acceptance must agree. `evaluation.ts` nulls a DL
- * row's PYS as `source-stale` past `STALE_THRESHOLD_MS` (3x the hourly
- * `sync-yield-data` interval), so serving a 6h-old snapshot kept ~68 board rows on
- * one timestamp and flipped the whole DL tier at once when the loader finally
- * refetched. Derive the acceptance bound from the same contract: past it, prefer a
- * direct fetch (or publish the snapshot with a non-null `fallbackMode`).
+ * DeFiLlama /pools omits per-pool timestamps. Batch age is transport evidence only;
+ * past this budget, try a direct fetch without manufacturing a new observation clock.
  */
 const MAX_DL_CACHE_AGE_SEC = STALE_THRESHOLD_MS / 1000;
 

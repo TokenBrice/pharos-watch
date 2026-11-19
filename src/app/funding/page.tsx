@@ -10,7 +10,7 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 import { buildMonthlyFunding, computeCostsTotal, summarizeDonations } from "@shared/lib/funding/helpers";
 import costsData from "@shared/data/funding/costs.json";
 import donationsData from "@shared/data/funding/donations.json";
-import { CostsFileSchema, DonationsFileSchema } from "@shared/lib/funding/schema";
+import { CostsFileSchema, TransferDonationsFileSchema } from "@shared/lib/funding/schema";
 
 export const metadata = buildPageMetadata({
   title: "Funding: Costs, Donations & Public Ledger",
@@ -25,7 +25,7 @@ const BUILD_TIMESTAMP_SEC = Math.floor(Date.now() / 1000);
 
 export default function FundingPage() {
   const costs = CostsFileSchema.parse(costsData);
-  const donations = DonationsFileSchema.parse(donationsData);
+  const donations = TransferDonationsFileSchema.parse(donationsData);
   const summary = summarizeDonations(donations.donations, BUILD_TIMESTAMP_SEC);
   const months = buildMonthlyFunding(donations.donations, costs, BUILD_TIMESTAMP_SEC);
   const founderOneTimeUsd = costs.one_time

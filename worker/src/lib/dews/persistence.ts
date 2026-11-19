@@ -154,8 +154,19 @@ async function deleteLatestStressSignalRowsForIds(
 }
 
 function buildStressSignalsEnvelope(result: DewsComputedRow): string {
+  const divergence = result.signals.diverg;
+  const current = divergence?.currentDivergenceValue;
   return JSON.stringify({
-    signals: result.signals,
+    // Legacy readers use only value/available. The clocked reference component is retained separately.
+    signals: divergence?.referenceCarried === true ? {
+      ...result.signals,
+      diverg: {
+        ...divergence,
+        value: current ?? 0,
+        available: current != null,
+        ...(current == null ? { unavailableReason: "reference-market-closed" } : {}),
+      },
+    } : result.signals,
     amplifiers: result.amplifiers,
     baseScore: result.baseScore,
     finalScore: result.finalScore,

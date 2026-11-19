@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { hasObservedDisplayPrice, resolveCurrentDeviation, resolveCurrentPeg } from "@/lib/current-peg";
-import { memo, useId, useMemo, type ReactNode } from "react";
+import { formatComparisonPrice, hasObservedDisplayPrice, resolveCurrentDeviation, resolveCurrentPeg } from "@/lib/current-peg";
+import { memo, useId, type ReactNode } from "react";
 import {
   BACKING_LABELS_SHORT,
   COLLATERAL_QUALITY_LABELS,
@@ -19,20 +19,14 @@ import {
   formatSignedCurrency,
   formatSignedPercent,
 } from "@shared/lib/format";
-import { formatNativePrice, formatPegOccupancy } from "@shared/lib/peg-format";
+import { formatPegOccupancy } from "@shared/lib/peg-format";
 import { GENIUS_STATUS_SHORT_LABELS } from "@shared/lib/genius";
 import { MICA_STATUS_BADGE_STYLES } from "@shared/lib/mica";
-import { getPegReference } from "@shared/lib/peg-rates";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import { buildSupplyObservationProvenance, classifySupplyCoverage } from "@shared/lib/supply-provenance";
+import { getSupplyChangePercent } from "@/components/stablecoin-directory/stablecoin-table-logic";
 import { getVariantAccessibleLabel } from "@shared/lib/variant-display";
 import { projectTopDriver } from "@shared/lib/safety-score-v9/public-top-driver";
-import {
-  getCirculatingRawOrNull,
-  getPrevDayRawOrNull,
-  getPrevMonthRawOrNull,
-  getPrevWeekRawOrNull,
-} from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { CoinStateChip } from "@/components/coin-state-chip";
 import { SafetyScoreTopDriver } from "@/components/safety-scores/safety-score-top-driver";
@@ -85,7 +79,6 @@ function renderFlowPressure(coin: ComparisonCoinEntry): ReactNode {
 
 interface ComparisonTableProps {
   coins: ComparisonCoinEntry[];
-  pegRates: Record<string, number>;
   logos?: Record<string, string>;
   detailErrors?: Record<string, boolean>;
 }
@@ -171,13 +164,9 @@ function formatCurrentSupply(coin: ComparisonCoinEntry): ReactNode {
   return current == null ? NULL_VALUE : formatCurrency(current);
 }
 
-function formatSupplyChange(coin: ComparisonCoinEntry, previous: number | null): ReactNode {
-  // Both operands must be observed: a missing current supply is not a -100% change,
-  // and a partial-coverage remainder (K-031) is not comparable with a prior total.
-  const current = getCirculatingRawOrNull(coin.data);
-  if (current == null || previous == null || previous <= 0) return NULL_VALUE;
-  if (classifySupplyCoverage(buildSupplyObservationProvenance(coin.data)) === "partial") return NULL_VALUE;
-  return formatSignedPercent(((current - previous) / previous) * 100);
+function formatSupplyChange(coin: ComparisonCoinEntry, window: "day" | "week" | "month"): ReactNode {
+  const change = getSupplyChangePercent(coin.data, window);
+  return change == null ? NULL_VALUE : formatSignedPercent(change);
 }
 
 function formatCount(value: number | null | undefined, singular: string, plural = `${singular}s`): ReactNode {
@@ -257,7 +246,7 @@ function safetyGradeLabel(coin: ComparisonCoinEntry): ReactNode {
   return partial === null ? label : <span title={partial.summary}>{label} · {partial.gaps.map(formatPartialEvidenceGap).join(" · ")}</span>;
 }
 
-function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
+function buildSections(): ComparisonSection[] {
   return [
     {
       key: "overview",
@@ -269,12 +258,12 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
           key: "price",
           label: "Price",
           numeric: true,
-          render: (coin) => {
-            const ref = coin.data.currentPeg && !coin.meta.flags.navToken
-              ? coin.data.currentPeg.pegReference?.valueUsd ?? null
-              : getPegReference(coin.data.pegType, pegRates, coin.meta.commodityOunces);
-            return formatNativePrice(hasObservedDisplayPrice(coin.data) ? coin.data.price : null, coin.meta.flags.pegCurrency, ref);
-          },
+          render: (coin) => formatComparisonPrice(
+            coin.data,
+            coin.meta.flags.pegCurrency ?? "USD",
+            coin.meta.flags.navToken ? coin.navPriceReference ?? null : undefined,
+            coin.pegDetails,
+          ),
         },
         {
           key: "deviation",
@@ -284,16 +273,16 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
             const read = resolveCurrentDeviation(
               coin.data, coin.pegDetails, coin.meta.flags.navToken ? null : coin.meta.flags.pegCurrency,
             );
-            return read.referenceMarketClosed
-              ? <span className="text-muted-foreground">Reference market closed</span>
+            return read.referenceNote
+              ? <span className="text-muted-foreground">{read.referenceNote}</span>
               : formatComparisonBps(read.deviationBps);
           },
         },
         { key: "peg-score", label: <MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel>, numeric: true, render: renderPegScore },
         { key: "market-cap", label: "Market cap", numeric: true, render: formatCurrentSupply },
-        { key: "supply-24h", label: "Market-cap change · 24h", numeric: true, render: (coin) => formatSupplyChange(coin, getPrevDayRawOrNull(coin.data)) },
-        { key: "supply-7d", label: "Market-cap change · 7d", numeric: true, render: (coin) => formatSupplyChange(coin, getPrevWeekRawOrNull(coin.data)) },
-        { key: "supply-30d", label: "Market-cap change · 30d", numeric: true, render: (coin) => formatSupplyChange(coin, getPrevMonthRawOrNull(coin.data)) },
+        { key: "supply-24h", label: "Market-cap change · 24h", numeric: true, render: (coin) => formatSupplyChange(coin, "day") },
+        { key: "supply-7d", label: "Market-cap change · 7d", numeric: true, render: (coin) => formatSupplyChange(coin, "week") },
+        { key: "supply-30d", label: "Market-cap change · 30d", numeric: true, render: (coin) => formatSupplyChange(coin, "month") },
         { key: "safety", label: <MethodologyLabel topic="safetyScore">Safety</MethodologyLabel>, numeric: true, render: safetyGradeLabel },
         { key: "liquidity", label: <MethodologyLabel topic="liquidityScore">Liquidity</MethodologyLabel>, numeric: true, render: (coin) => formatScore100(coin.liquidity?.liquidityScore) },
         {
@@ -434,8 +423,9 @@ function FrozenBadge({ frozenAt }: { frozenAt?: string }) {
   );
 }
 
-export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, logos, detailErrors }: ComparisonTableProps) {
-  const sections = useMemo(() => buildSections(pegRates), [pegRates]);
+const sections = buildSections();
+
+export const ComparisonTable = memo(function ComparisonTable({ coins, logos, detailErrors }: ComparisonTableProps) {
 
   if (coins.length === 0) {
     return <div className="pharos-empty-note py-8 text-center">Select stablecoins above to compare them side-by-side.</div>;

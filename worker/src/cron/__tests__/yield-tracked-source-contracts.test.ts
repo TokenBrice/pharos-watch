@@ -162,7 +162,7 @@ describe("tracked holder source contracts", () => {
     );
     const onOutcome = vi.fn();
     const entry = TRACKED_OPTIONAL_SOURCE_REGISTRY.find((candidate) => candidate.stablecoinId === "usdy-ondo-finance"
-      && candidate.sourceKey === "protocol-api:ondo-usdy-oracle");
+      && candidate.sourceKey === "protocol-api:ondo-usdy-continuous-oracle");
     expect(entry).toBeDefined();
 
     // A reader failure is one failed optional source, not a whole-run abort.

@@ -1,27 +1,68 @@
+import { getReferenceSessionState } from "@shared/lib/reference-market-hours";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { summarizeDexVolumeWindow } from "@shared/lib/dex-volume-availability";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { hydrateDexLiquidity, hydrateDexLiquidityHistory, hydrateDexPrices, hydrateLatestPsiScore, hydrateMintBurn, hydrateYieldRankingsCache, hydrateYieldWarnings } from "../source-state/hydration";
 import { DEWS_PSI_FRESHNESS_BUDGET_SEC, DEWS_YIELD_RANKINGS_RETENTION_BUDGET_SEC } from "../source-state/budgets";
 import { computeDEWS } from "../../dews";
 import { makeDewsInput } from "../../__tests__/dews.test-support";
-import { makeDexLiquidityRow } from "../../../test-helpers/__shared/fixtures";
-import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { makeAsset, makeDexLiquidityRow } from "../../../test-helpers/__shared/fixtures";
+import { createLatestSchemaFixtureTracker, createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { loadDewsSourceState } from "../source-state";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { resolveCronTimeoutBudget } from "../../cron-timeouts";
 import { aggregateFlowCacheKey } from "../../mint-burn-flow-cache-keys";
 import { getMintBurnConfigsForStablecoin, MINT_BURN_CONFIGS } from "../../mint-burn-contracts";
 import { mintBurnConfigKey } from "../../mint-burn-contract-identity";
-import { mintBurnScanCoverageStatements, mintBurnScanFingerprint } from "../../mint-burn-pipeline/scan-coverage";
+import { commitMintBurnMaterializedCoverage, decodeMintBurnScanCoverage, mintBurnScanCoverageAdmits, mintBurnScanCoverageStatements, mintBurnScanFingerprint, prepareMintBurnWriterEpochCoverage, type MintBurnScanSegment } from "../../mint-burn-pipeline/scan-coverage";
+import { computeFlowSignal, computeYieldSignal } from "../signal-families";
+import { assembleDewsScoringInput, loadDewsNativeHistory } from "../input-assembly";
+import { getDewsPrimaryQuoteClock, hasIndependentDewsVenues, readDewsDexAggregateFamilies } from "../reference-evidence";
+import type { StablecoinData } from "@shared/types/supply";
+
+function dexClock(asOfSec: number): string {
+  const clock = { asOfSec, maxObservationAgeSec: 3600 };
+  return JSON.stringify({ "24h": summarizeDexVolumeWindow([], "24h", clock).availability, "7d": summarizeDexVolumeWindow([], "7d", clock).availability });
+}
 
 const RUN_AT = 1_800_000_000;
 const YIELD_BUDGET_SEC = CRON_INTERVALS["sync-yield-data"]
   + resolveCronTimeoutBudget("sync-yield-data").configuredTimeoutMs / 1000;
 afterEach(() => vi.useRealTimers());
 
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
+
+const hydrateFlow = (db: D1Database, nowSec = RUN_AT) =>
+  hydrateMintBurn({ db, nowSec, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn() });
+
+function nativeHistoryDb(rows: [string, number, number][]) {
+  return mockD1([{ match: "pharos:dews:native-supply-history", rows: rows.map(([stablecoin_id, snapshot_date, circulating_native]) => ({
+    stablecoin_id, snapshot_date, circulating_native,
+    supply_provenance: JSON.stringify({ supplySource: "onchain-circulating-supply", supplyObservedAt: snapshot_date, supplyChainGuard: null }),
+  })) }]);
+}
+
 describe("DEWS hydration timestamp admission", () => {
+  it("requires a fresh upstream quote and complete, independent aggregate lineage", () => {
+    const asset = makeAsset({
+      price: 1, priceSource: "binance", priceObservedAt: RUN_AT - 60, priceObservedAtMode: "upstream",
+    });
+    const aggregate = [{ providerFamily: "curve-dex", venueFamily: "curve-onchain" }];
+    const dex = { dexPriceUsd: 1, sourceTotalTvl: 100_000, updatedAt: RUN_AT };
+
+    expect(getDewsPrimaryQuoteClock(asset, RUN_AT)).toBe(RUN_AT - 60);
+    expect(getDewsPrimaryQuoteClock(asset, RUN_AT + 3600)).toBeNull();
+    expect(getDewsPrimaryQuoteClock({ ...asset, priceSource: "cached" }, RUN_AT)).toBeNull();
+    expect(readDewsDexAggregateFamilies(aggregate, 2)).toEqual([]);
+    expect(readDewsDexAggregateFamilies([{ ...aggregate[0], venueFamily: "unknown" }], 1)).toEqual([]);
+    expect(hasIndependentDewsVenues(asset, { ...dex, aggregateFamilies: readDewsDexAggregateFamilies(aggregate, 1) })).toBe(true);
+    expect(hasIndependentDewsVenues(asset, {
+      ...dex, aggregateFamilies: readDewsDexAggregateFamilies([{ ...aggregate[0], venueFamily: "binance" }], 1),
+    })).toBe(false);
+  });
   it.each(["ethereum", "tron", "both", "gap", "debt", "unpriced", "unresolved", "fingerprint", "disabled"])(
-    "proves isolated canonical flow: %s", async (state) => {
+    "proves each admitted USDT chain during isolation: %s", async (state) => {
       const { sqlite, db } = createLatestSchemaSqlite();
       const end = Math.floor(RUN_AT / 3600) * 3600;
       const configs = getMintBurnConfigsForStablecoin("usdt-tether");
@@ -30,28 +71,28 @@ describe("DEWS hydration timestamp admission", () => {
         const value = JSON.parse(sqlite.prepare("SELECT value FROM cache").get()!.value as string);
         value.coins[0].coverage.windows.window24h = { complete: false, unavailableReason: "scan-coverage-incomplete" };
         value.publication.legs = configs.map((config) => {
-          const admitted = state === "tron" && config.chain.chainId === "ethereum"
-            || state === "ethereum" && config.chain.chainId === "tron";
+          const admitted = state !== "both" && (state === "ethereum" ? config.chain.chainId === "tron" : config.chain.chainId === "ethereum");
           return { ...value.publication.legs[0],
           configKey: mintBurnConfigKey(config), configFingerprint: mintBurnScanFingerprint(config), chainId: config.chain.chainId,
           status: admitted ? "admitted" : "pending-admission", reason: admitted ? null : "reactivation-pending" };
         });
         if (state === "disabled") value.publication.legs[0].status = "disabled";
-        if (state === "fingerprint") value.publication.legs[0].configFingerprint = "old";
+        if (state === "fingerprint") value.publication.legs[1].configFingerprint = "old";
         sqlite.prepare("UPDATE cache SET value = ?").run(JSON.stringify(value));
-        const config = configs.find((c) => c.chain.chainId === "ethereum")!;
+        const chainId = state === "ethereum" ? "tron" : "ethereum";
+        const config = configs.find((c) => c.chain.chainId === chainId)!;
         await db.batch(mintBurnScanCoverageStatements(db, { configKey: mintBurnConfigKey(config),
-          configFingerprint: mintBurnScanFingerprint(config), chainId: "ethereum", fromBlock: 1, toBlock: 2,
+          configFingerprint: mintBurnScanFingerprint(config), chainId, fromBlock: 1, toBlock: 2,
           fromTimestamp: end - (state === "gap" ? 29 : 30) * 86400, toTimestamp: end,
           finalizedBlock: 2, acceptedAt: end }));
-        insertBurnHour(sqlite, end - 3600);
+        insertBurnHour(sqlite, end - 3600, chainId);
         if (state === "debt") sqlite.prepare("INSERT INTO mint_burn_dirty_hours VALUES ('usdt-tether', 'ethereum', ?)").run(end - 3600);
         if (state === "unpriced") sqlite.exec("UPDATE mint_burn_hourly SET burn_unpriced_event_count = 1");
         if (state === "unresolved") sqlite.exec("UPDATE mint_burn_hourly SET burn_unresolved_event_count = 1");
         const result = await hydrateMintBurn({ db, nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn() });
         const snapshot = result.mintBurnMap.get("usdt-tether");
-        if (["ethereum", "tron", "both", "unpriced"].includes(state)) {
-          expect(snapshot).toMatchObject({ isolated: true, burn24h: 700000,
+        if (["ethereum", "tron", "unpriced"].includes(state)) {
+          expect(snapshot).toMatchObject({ scope: "partial-admitted-chains", chainIds: [chainId], burn24h: 700000,
             valuation24h: state === "unpriced" ? "partial" : "complete" });
         } else expect(snapshot).toBeUndefined();
       } finally { sqlite.close(); }
@@ -82,7 +123,8 @@ describe("DEWS hydration timestamp admission", () => {
                 windows: { window24h: window, window7d: window, window30d: window, window90d: window } } }] };
           sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(aggregateFlowCacheKey(24), JSON.stringify(value), RUN_AT);
         }
-        if (["eventful", "compact", "compact-missing-pairs", "missing", "incomplete", "pending", "disabled"].includes(state) || state.startsWith("scope-missing")) {
+        if (state === "compact") insertBurnHour(sqlite, end - 3600, "tron", 100_000_000);
+        if (["eventful", "compact-missing-pairs", "missing", "incomplete", "pending", "disabled"].includes(state) || state.startsWith("scope-missing")) {
           insertBurnHour(sqlite, end - 3600);
         }
         if (state === "classification-unknown") {
@@ -109,13 +151,213 @@ describe("DEWS hydration timestamp admission", () => {
         const hydrated = await hydrateMintBurn({ db, nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn() });
         const snapshot = hydrated.mintBurnMap.get("usdt-tether");
         if (state === "quiet" || state === "eventful" || state === "compact" || state === "scope-missing") {
-          expect(snapshot).toMatchObject({ burn24h: state === "quiet" ? 0 : 700_000, baselineDays: 30,
-            burnBaseline: state === "quiet" ? 0 : 700_000 / 30 });
+          const burn = state === "compact" ? 100_000_000 : state === "quiet" ? 0 : 700_000;
+          const chainIds = state === "compact" ? ["ethereum", "tron"] : ["ethereum"];
+          expect(snapshot).toMatchObject({ burn24h: burn, baselineDays: 30, burnBaseline: burn / 30, chainIds,
+            scope: state === "compact" ? "all-admitted-chains" : "partial-admitted-chains" });
+          const signal = computeFlowSignal(makeDewsInput({ burnVolume24hUsd: burn, mintVolume24hUsd: 0,
+            burnBaseline30dUsd: burn / 30, flowBaselineDays: 30, flowHolderPressureWithheld: true,
+            flowScope: snapshot!.scope, flowChainIds: snapshot!.chainIds, flowEpochIssue: snapshot!.epochIssue }));
+          expect(signal).toMatchObject({ available: false, burnVolume24hUsd: burn, flowChainIds: chainIds,
+            unavailableReason: "mint-burn-usdt-holder-pressure-unavailable" });
+          expect(signal.net24hUsd).toBeUndefined();
         } else expect(snapshot).toBeUndefined();
       } finally {
         MINT_BURN_CONFIGS[configIndex] = originalConfig;
         sqlite.close();
       }
+    },
+  );
+  it.each(["2026-11-10T08:00:00Z", "2026-11-10T09:00:00Z", "2026-12-10T09:00:00Z"])(
+    "uses legacy flow for an empty epoch table regardless of the historical date %s", async (when) => {
+      const { sqlite, db } = fixtures.open();
+      const end = Date.parse(when) / 1000;
+      insertAdmittedMintBurnGauge(sqlite, end, end);
+      const hydrated = await hydrateFlow(db, end);
+      expect(hydrated.mintBurnMap.get("usdt-tether")).toBeDefined();
+      expect(hydrated.mintBurnMap.get("usdt-tether")?.epochIssue).toBeUndefined();
+    },
+  );
+
+  it("preserves the hours on either side of a legacy rewrite, including a partial scan boundary", async () => {
+    const { sqlite, db } = fixtures.open();
+    const end = Math.floor(RUN_AT / 3600) * 3600;
+    const config = getMintBurnConfigsForStablecoin("usdc-circle").find((leg) => leg.chain.chainId === "ethereum")!;
+    const configKey = mintBurnConfigKey(config);
+    const proof = { configKey, configFingerprint: mintBurnScanFingerprint(config), chainId: "ethereum",
+      materializedStablecoinId: config.stablecoinId, fromBlock: 1, toBlock: 10,
+      fromTimestamp: end - 60 * 86400, toTimestamp: end + 1800, finalizedBlock: 20, acceptedAt: end + 7200 };
+    const admits = async (start: number, stop: number) => mintBurnScanCoverageAdmits([config], decodeMintBurnScanCoverage(
+      await prepareMintBurnWriterEpochCoverage(db, [config], start, stop).all<MintBurnScanSegment>()), start, stop);
+    await commitMintBurnMaterializedCoverage(db, proof, []);
+    await commitMintBurnMaterializedCoverage(db, proof, []);
+    sqlite.prepare("INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts) VALUES (?, 'ethereum', ?)").run(config.stablecoinId, end);
+    await commitMintBurnMaterializedCoverage(db, {
+      ...proof, fromBlock: 11, toBlock: 20, fromTimestamp: end + 1810, toTimestamp: end + 3600,
+    }, []);
+    expect(await admits(end, end + 3600)).toBe(false);
+    expect(await admits(end - 86400, end)).toBe(true);
+
+    const dirty = end - 75 * 3600;
+    await db.batch([
+      db.prepare("INSERT INTO mint_burn_dirty_hours VALUES (?, 'ethereum', ?)").bind(config.stablecoinId, dirty),
+      db.prepare("DELETE FROM mint_burn_dirty_hours WHERE stablecoin_id = ? AND hour_ts = ?").bind(config.stablecoinId, dirty),
+    ]);
+    expect(await admits(dirty, dirty + 3600)).toBe(false);
+    expect(await admits(proof.fromTimestamp, dirty)).toBe(true);
+    expect(await admits(dirty + 3600, end)).toBe(true);
+    expect(sqlite.prepare("SELECT from_block, to_block FROM mint_burn_writer_epoch_coverage").all()).toEqual([{ from_block: 1, to_block: 20 }]);
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM mint_burn_scan_coverage WHERE config_key = ?").get(configKey)).toEqual({ n: 1 });
+  });
+
+  it("invalidates the oldest burn included by a gauge one hour behind wall time", async () => {
+    const { sqlite, db } = fixtures.open();
+    const wall = Math.floor(RUN_AT / 3600) * 3600;
+    const end = wall - 3600;
+    const start = end - 30 * 86400;
+    const id = "usdc-circle";
+    sqlite.function("unixepoch", () => wall);
+    insertAdmittedMintBurnGauge(sqlite, end, wall, id);
+    sqlite.prepare(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
+      mint_unpriced_event_count, burn_unpriced_event_count, mint_unresolved_event_count, burn_unresolved_event_count,
+      mint_volume_usd, burn_volume_usd, net_flow_usd)
+      VALUES (?, 'ethereum', ?, 0, 1, 0, 0, 0, 0, 0, 10000, -10000)`).run(id, start);
+    sqlite.prepare("UPDATE mint_burn_writer_epoch_hours SET writer_epoch = 'holder-accounting-v2', revision = 'original' WHERE hour_ts = ?").run(start);
+    for (const config of getMintBurnConfigsForStablecoin(id).filter((leg) => leg.chain.chainId === "ethereum")) {
+      await commitMintBurnMaterializedCoverage(db, { configKey: mintBurnConfigKey(config), configFingerprint: mintBurnScanFingerprint(config),
+        chainId: "ethereum", materializedStablecoinId: id, fromBlock: 1, toBlock: 10, fromTimestamp: start, toTimestamp: end,
+        finalizedBlock: 10, acceptedAt: end }, []);
+    }
+    const hydrate = async () => (await hydrateFlow(db, wall)).mintBurnMap.get(id);
+    expect(await hydrate()).toMatchObject({ epochIssue: null, burnBaseline: 10000 / 30 });
+    sqlite.prepare("DELETE FROM mint_burn_hourly WHERE stablecoin_id = ? AND hour_ts = ?").run(id, start);
+    expect(await hydrate()).toMatchObject({ epochIssue: "mint-burn-accounting-epoch-missing" });
+  });
+
+  it.each([
+    ["comparable", null, "older", "older", 24, true],
+    ["mixed baseline", "mint-burn-accounting-epoch-mixed", "older", "newer", 24, true],
+    ["legacy baseline", null, null, "newer", 24, true],
+    ["legacy hour rewritten after activation", "mint-burn-accounting-epoch-missing", "rewrite", "newer", 24, true],
+    ["gap after activation in baseline", "mint-burn-accounting-epoch-missing", "gap", "newer", 24, true],
+    ["mixed current window", "mint-burn-current-accounting-epoch-mixed", "older", "newer", 12, false],
+    ["legacy current hours", null, null, "newer", 12, true],
+    ["gap after activation in current window", "mint-burn-current-accounting-epoch-missing", "gap", "newer", 12, false],
+    ["no recent proof after activation", "mint-burn-current-accounting-epoch-missing", "gap", null, 24, false],
+  ] as const)("requires one writer epoch across complete finalized scans (%s)", async (_mode, reason, firstEpoch, lastEpoch, splitHours, available) => {
+    const { sqlite, db } = fixtures.open();
+    const end = Math.floor(RUN_AT / 3600) * 3600;
+    const id = "usdc-circle";
+    insertAdmittedMintBurnGauge(sqlite, end, RUN_AT, id);
+    if (lastEpoch) {
+      sqlite.prepare(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
+        mint_unpriced_event_count, burn_unpriced_event_count, mint_unresolved_event_count, burn_unresolved_event_count,
+        mint_volume_usd, burn_volume_usd, net_flow_usd)
+        VALUES (?, 'ethereum', ?, 1, 1, 0, 0, 0, 0, 100000, 700000, -600000)`).run(id, end - 3600);
+      sqlite.prepare("UPDATE mint_burn_writer_epoch_hours SET writer_epoch = ?, revision = 'fixture' WHERE hour_ts = ?").run(lastEpoch, end - 3600);
+    }
+    const write = sqlite.prepare(`INSERT INTO mint_burn_writer_epoch_coverage
+      VALUES (?, ?, 'ethereum', ?, ?, ?, ?, ?, ?)`);
+    const boundary = end - splitHours * 3600;
+    for (const config of getMintBurnConfigsForStablecoin(id).filter((leg) => leg.chain.chainId === "ethereum")) {
+      const key = mintBurnConfigKey(config);
+      const fingerprint = mintBurnScanFingerprint(config);
+      if (firstEpoch === "gap") write.run(key, fingerprint, id, "newer", 1, 10, end - 40 * 86400, end - 39 * 86400);
+      else if (firstEpoch && firstEpoch !== "rewrite") write.run(key, fingerprint, id, firstEpoch, 1, 10, end - 30 * 86400, boundary);
+      if (lastEpoch) write.run(key, fingerprint, id, lastEpoch, 11, 20, boundary, end);
+    }
+    if (firstEpoch === "rewrite") {
+      sqlite.prepare("INSERT INTO mint_burn_writer_epoch_hours (stablecoin_id, chain_id, hour_ts) VALUES (?, 'ethereum', ?)")
+        .run(id, boundary - 3600);
+    }
+    const state = await hydrateFlow(db);
+    const flow = state.mintBurnMap.get(id);
+    expect(flow?.epochIssue).toBe(reason);
+    expect(flow?.baselineDays).toBe(30);
+    const signal = computeFlowSignal(makeDewsInput({ stablecoinId: id, flowEpochIssue: flow?.epochIssue,
+      burnVolume24hUsd: flow?.burn24h, mintVolume24hUsd: flow?.mint24h, burnBaseline30dUsd: flow?.burnBaseline, flowBaselineDays: 30 }));
+    expect(signal).toMatchObject({ available, burnVolume24hUsd: lastEpoch ? 700_000 : 0, mintVolume24hUsd: lastEpoch ? 100_000 : 0 });
+    if (!available) {
+      expect(signal).toMatchObject({ unavailableReason: reason, value: 0 });
+      expect(signal).not.toHaveProperty("burnToMintRatio");
+    } else if (reason) expect(signal).toMatchObject({ burnToMintRatio: 7, burnSurgeUnavailableReason: reason, componentCoverage: 0.4 });
+    else expect(signal.burnSurge).toBe(30);
+  });
+
+  it("selects only same-perimeter native history on the requested dates", async () => {
+    const day = Date.parse("2026-11-15T00:00:00Z") / 1000;
+    const asset = (id: string, circulatingNative?: number | null) => ({ id, circulatingNative, supplyObservedAt: day + 60, supplySource: "onchain-circulating-supply" }) as StablecoinData;
+    const db = nativeHistoryDb([
+      ["xaut-tether", day - 86400, 809_363],
+      ["xaut-tether", day - 7 * 86400, 809_381],
+      ["xaut-tether", day - 2 * 86400, 1],
+      ["gho-aave", day - 7 * 86400, 50],
+      ["gho-aave", day - 86400, 0],
+      ["usdt-tether", day - 86400, 100],
+    ]);
+    const results = await loadDewsNativeHistory(db, [asset("xaut-tether", 809_363), asset("gho-aave", 5),
+      asset("usdt-tether", null), asset("usdc-circle")], day + 180);
+    expect(Object.fromEntries(results)).toEqual({
+      "xaut-tether": { day: 809_363, week: 809_381 },
+      "gho-aave": { day: 0, week: null },
+      "usdt-tether": { day: null, week: null },
+    });
+  });
+
+  it.each([[30, true], [90, false], [undefined, false]] as const)("checks asset clock offset %s against the DEWS read", async (offset, admitted) => {
+    const asset = { id: "xaut-tether", circulatingNative: 809_363,
+      supplySource: "onchain-circulating-supply", supplyObservedAt: offset == null ? undefined : RUN_AT + offset } as StablecoinData;
+    const day = Math.floor(RUN_AT / 86400) * 86400;
+    const db = nativeHistoryDb([[asset.id, day - 86400, 809_363], [asset.id, day - 7 * 86400, 809_381]]);
+    const anchors = await loadDewsNativeHistory(db, [asset], RUN_AT + 60);
+    expect(anchors.get(asset.id)).toEqual(admitted ? { day: 809_363, week: 809_381 } : offset == null ? undefined : { day: null, week: null });
+  });
+
+  it("keeps equal rates attached to the clock and source of each accepted selection", async () => {
+    const pegKey = "peggedEUR";
+    const { sqlite, db } = fixtures.open();
+    const publish = sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+    publish.run("fx-rates", JSON.stringify({ [pegKey]: 1.1 }), RUN_AT);
+    const opened = getReferenceSessionState("fx", RUN_AT).sessionOpenedAtSec!;
+    for (const [clock, source, session, generationShift] of [
+      [RUN_AT - 120, "chainlink", opened, 0],
+      [RUN_AT - 60, "openExchangeRates", opened - 7 * 86400, 0],
+      [RUN_AT, "openExchangeRates", opened, -1],
+    ] as const) {
+      const generation = `stablecoins:${clock + generationShift}`;
+      publish.run("stablecoins", JSON.stringify({ peggedAssets: [{ id: "eurc-circle", symbol: "EURC", pegType: pegKey }],
+        fxReferenceObservations: {}, fxFallbackRates: { [pegKey]: 1.1 }, selectedPegReferences: { [pegKey]: {
+          kind: "fx", generation, observation: { pegKey, source, cadence: "intraday", usdPerUnit: 1.1, observedAtSec: clock },
+          repricing: { source, sessionOpenedAtSec: session, preCloseUsdPerUnit: 1.2 },
+        } } }), clock);
+      const result = await assembleDewsScoringInput({ db, nowSec: RUN_AT, registerSourceFailure: vi.fn(),
+        registerMalformedPersistedInput: vi.fn() });
+      expect(result.kind).toBe("ok");
+      if (result.kind !== "ok") continue;
+      const selection = result.sourceState.references?.get(pegKey);
+      if (generationShift !== 0) {
+        expect(selection).toBeUndefined();
+        continue;
+      }
+      expect(selection).toMatchObject({ kind: "fx", generation, usdPerUnit: 1.1, observation: { observedAtSec: clock, source } });
+      expect(selection?.kind === "fx" ? selection.preCloseUsdPerUnit : undefined).toBe(session === opened ? 1.2 : undefined);
+    }
+  });
+
+  it.each([["fresh", false], ["stale", true], ["unknown", false], [undefined, false]] as const)(
+    "uses the selected row's %s cadence verdict independently of a seven-hour raw age", async (sourceFreshness, overdue) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(RUN_AT * 1000);
+      const state = await hydrateYieldRankingsCache({
+        db: mockD1([{ match: "pharos:dews:yield-rankings-cache", rows: [], first: {
+          updated_at: RUN_AT, value: JSON.stringify({ rankings: [{ id: "a7a5-a7a5",
+            provenance: { sourceFreshness }, sourceRisk: { sourceAgeSeconds: 7 * 3600 } }] }),
+        } }]),
+        nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn(),
+      });
+      const signal = computeYieldSignal(makeDewsInput({ yieldSourceRisk: state.yieldSourceRisk.get("a7a5-a7a5"),
+        yieldSourceOverdue: state.overdueSourceIds?.has("a7a5-a7a5") }));
+      expect(signal).toMatchObject({ available: overdue, value: overdue ? 15 : 0, sourceAgeSeconds: 7 * 3600 });
     },
   );
   it.each([
@@ -236,7 +478,7 @@ describe("DEWS hydration timestamp admission", () => {
     ] }]);
     const hydrated = await hydrateDexLiquidityHistory({ db, nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn() },
       new Map([["test", makeDexLiquidityRow({ stablecoin_id: "test" })]]));
-    expect(hydrated.liqHist7dMap.get("test")).toEqual(admitted ? { score: 73, tvl: 100, date: target - distance } : undefined);
+    expect(hydrated.liqHist7dMap.get("test")).toEqual(admitted ? { score: 73, tvl: null, date: target - distance } : undefined);
     expect(db.getHistory()[0].binds).toEqual([RUN_AT - 8.5 * 86400]);
     expect(db.getHistory()[0].sql).toContain("coverage_confidence");
   });
@@ -251,7 +493,7 @@ describe("DEWS hydration timestamp admission", () => {
         registerMalformedPersistedInput: vi.fn() }, new Map(["daily", "old"].map(id =>
         [id, makeDexLiquidityRow({ stablecoin_id: id })])));
       expect(hydrated.liqHistRowsRead).toBe(1);
-      expect([...hydrated.liqHist7dMap]).toEqual([["daily", { score: 80, tvl: 100, date: 1727308800 }]]);
+      expect([...hydrated.liqHist7dMap]).toEqual([["daily", { score: 80, tvl: null, date: 1727308800 }]]);
     } finally { sqlite.close(); }
   });
 
@@ -266,10 +508,10 @@ describe("DEWS hydration timestamp admission", () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     const date = RUN_AT - 7 * 86400;
     try {
-      sqlite.prepare("INSERT INTO dex_liquidity (stablecoin_id, symbol, total_tvl_usd, liquidity_score, updated_at, methodology_version) VALUES ('usdt-tether', 'USDT', 200, 80, ?, ?)")
-        .run(RUN_AT, current);
-      sqlite.prepare("INSERT INTO dex_liquidity_history (stablecoin_id, total_tvl_usd, liquidity_score, snapshot_date, coverage_class, coverage_confidence, methodology_version) VALUES ('usdt-tether', 100, 73, ?, 'primary', 0.9, ?)")
-        .run(date, historical);
+      sqlite.prepare("INSERT INTO dex_liquidity (stablecoin_id, symbol, total_tvl_usd, liquidity_score, updated_at, methodology_version, volume_availability_json) VALUES ('usdt-tether', 'USDT', 200, 80, ?, ?, ?)")
+        .run(RUN_AT, current, dexClock(RUN_AT - 1800));
+      sqlite.prepare("INSERT INTO dex_liquidity_history (stablecoin_id, total_tvl_usd, liquidity_score, snapshot_date, coverage_class, coverage_confidence, methodology_version, volume_availability_json) VALUES ('usdt-tether', 100, 73, ?, 'primary', 0.9, ?, ?)")
+        .run(date, historical, dexClock(date - 1800));
       const hydrated = await loadDewsSourceState({
         db, nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn(),
       });
@@ -293,10 +535,26 @@ describe("DEWS hydration timestamp admission", () => {
         nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn(),
       }, identity === "absent-current" ? new Map() : new Map([["usdt-tether", current]]));
       expect(hydrated.liqHist7dMap.get("usdt-tether")).toEqual({
-        score: 73, tvl: identity === "legacy" ? 100 : null, date: history.snapshot_date,
+        score: 73, tvl: null, date: history.snapshot_date,
       });
     },
   );
+
+  it("chooses TVL by the served capture clock, ignoring unclocked and later observations", async () => {
+    const capture = RUN_AT - 3600;
+    const date = RUN_AT - 7 * 86400;
+    const observation = { stablecoin_id: "usdt-tether", liquidity_score: 80, coverage_class: "primary",
+      coverage_confidence: 0.9, methodology_version: "6.95" };
+    const hydrated = await hydrateDexLiquidityHistory({
+      db: mockD1([{ match: "FROM dex_liquidity_history", rows: [
+        { ...observation, snapshot_date: date, total_tvl_usd: 1000 },
+        { ...observation, snapshot_date: date - 86400, total_tvl_usd: 200, volume_availability_json: dexClock(date - 3600) },
+        { ...observation, snapshot_date: date - 2 * 86400, total_tvl_usd: 500, volume_availability_json: dexClock(capture + 1) },
+      ] }]), nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn(),
+    }, new Map([["usdt-tether", makeDexLiquidityRow({ updated_at: RUN_AT, methodology_version: "6.95",
+      volume_availability_json: dexClock(capture) })]]));
+    expect(hydrated.liqHist7dMap.get("usdt-tether")).toEqual({ score: 80, tvl: 200, date });
+  });
 
   it("hydrates only trusted fresh dex prices and never turns a failed read into a zero count", async () => {
     const registerMalformedPersistedInput = vi.fn();
@@ -323,7 +581,8 @@ describe("DEWS hydration timestamp admission", () => {
       .toEqual([["missing", "aggregate-clock-unavailable", false], ["malformed", "json-parse-failed", false],
         ["future", "aggregate-clock-future", false], ["invalid", "aggregate-clock-invalid", false]]);
     expect([...hydrated.dexPriceMap]).toEqual([
-      ["trusted", { dexPriceUsd: 1, sourceTotalTvl: 2_000_000, updatedAt: RUN_AT - 60, independentPrices: [0.98] }],
+      ["trusted", { dexPriceUsd: 1, sourceTotalTvl: 2_000_000, updatedAt: RUN_AT - 60,
+        independentPrices: [0.98], independentQuotes: [{ price: 0.98, observedAtSec: RUN_AT - 60 }] }],
       ["crash", { dexPriceUsd: 0.4, sourceTotalTvl: 5_000_000, updatedAt: RUN_AT - 60 }],
     ]);
     expect(hydrated.trustedCount).toBe(2);
@@ -439,6 +698,7 @@ function insertAdmittedMintBurnGauge(
   sqlite: ReturnType<typeof createLatestSchemaSqlite>["sqlite"],
   end: number,
   cacheUpdatedAt: number,
+  stablecoinId = "usdt-tether",
 ): void {
   const window = { complete: true, unavailableReason: null };
   const value = {
@@ -446,12 +706,12 @@ function insertAdmittedMintBurnGauge(
     updatedAt: end,
     publication: {
       evaluatedAt: RUN_AT, requiredBaselineSec: 90 * 86400, freshnessBudgetSec: 7200,
-      legs: [{ configKey: "synthetic", configFingerprint: "synthetic-v1", stablecoinId: "usdt-tether", chainId: "ethereum",
+      legs: [{ configKey: "synthetic", configFingerprint: "synthetic-v1", stablecoinId, chainId: "ethereum",
         status: "admitted", reason: null, admittedAt: null, baselineFrom: end - 90 * 86400, baselineTo: end,
         coveredSeconds: 90 * 86400, frontierAgeSec: 0 }],
     },
     window: { start: end - 86400, end, semantics: "closed-utc-hours" },
-    coins: [{ stablecoinId: "usdt-tether", symbol: "USDT", pressureShiftScore: null, netFlow24hUsd: null,
+    coins: [{ stablecoinId, symbol: stablecoinId === "usdt-tether" ? "USDT" : "USDC", pressureShiftScore: null, netFlow24hUsd: null,
       coverage: { startBlock: 1, lastSyncedBlock: 2, lagBlocks: 0, historyStartAt: end - 90 * 86400,
         has24hWindow: true, has30dWindow: true, has90dWindow: true, isPartial: false, status: "full",
         windows: { window24h: window, window7d: window, window30d: window, window90d: window } } }],
@@ -460,8 +720,8 @@ function insertAdmittedMintBurnGauge(
     .run(aggregateFlowCacheKey(24), JSON.stringify(value), cacheUpdatedAt);
 }
 
-function insertBurnHour(sqlite: ReturnType<typeof createLatestSchemaSqlite>["sqlite"], hour: number): void {
+function insertBurnHour(sqlite: ReturnType<typeof createLatestSchemaSqlite>["sqlite"], hour: number, chain = "ethereum", burn = 700000): void {
   sqlite.prepare(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
     mint_unpriced_event_count, burn_unpriced_event_count, mint_volume_usd, burn_volume_usd, net_flow_usd)
-    VALUES ('usdt-tether', 'ethereum', ?, 0, 1, 0, 0, 0, 700000, -700000)`).run(hour);
+    VALUES ('usdt-tether', ?, ?, 0, 1, 0, 0, 0, ?, ?)`).run(chain, hour, burn, -burn);
 }

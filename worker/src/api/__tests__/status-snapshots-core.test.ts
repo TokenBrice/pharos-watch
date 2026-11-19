@@ -52,7 +52,7 @@ function fixtureMockD1(
     sectionOverrides: {
       sentinel: [{ match: "SELECT 1", rows: [], first: { "1": 1 } }],
       derived: [
-    { match: "WHERE key IN ('yield-rankings'", rows: [] },
+    { match: "pharos:yield-rankings-health", rows: [] },
     { match: "SELECT key, value FROM cache WHERE key IN (", rows: [] },
     { match: "SELECT key, LENGTH(value) as bytes FROM cache", rows: [] },
     { match: "FROM mint_burn_hourly INDEXED BY idx_mbh_ts", rows: [] },

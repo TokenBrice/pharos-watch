@@ -17,6 +17,7 @@ export interface PublicDatasetMetadata {
   methodologyLabel: string;
   freshnessContract?: string;
   sourceGeneration?: string;
+  sourceCoverage?: { coveredFromSec: number; coveredThroughSec: number };
   sourceObservationStartedAtISO?: string;
   windowSnapshotAsOfISO?: string;
   metadataStatus?: "approximated";
@@ -38,6 +39,7 @@ function metadataFields(metadata: PublicDatasetMetadata, variant: DatasetVariant
     sourceUrl: metadata.sourceUrl(variant),
     methodologyLabel: metadata.methodologyLabel,
     freshnessContract: metadata.freshnessContract ?? FRESHNESS_CONTRACT,
+    ...(metadata.sourceCoverage ? { sourceCoverage: metadata.sourceCoverage } : {}),
     ...(metadata.sourceGeneration ? { sourceGeneration: metadata.sourceGeneration } : {}),
     ...(metadata.sourceObservationStartedAtISO ? { sourceObservationStartedAtISO: metadata.sourceObservationStartedAtISO } : {}),
     ...(metadata.windowSnapshotAsOfISO ? { windowSnapshotAsOfISO: metadata.windowSnapshotAsOfISO } : {}),
@@ -51,7 +53,7 @@ function preambleLine(metadata: PublicDatasetMetadata, variant: DatasetVariant):
   const provenance = metadata.sourceGeneration
     ? ` | Source generation: ${metadata.sourceGeneration} | Source observation started: ${metadata.sourceObservationStartedAtISO} | Window snapshot as of: ${metadata.windowSnapshotAsOfISO}`
     : "";
-  return `Pharos pharos.watch | Endpoint: ${metadata.endpoint} | As of: ${metadata.asOfISO} | URL: ${metadata.sourceUrl(variant)} | Methodology: ${metadata.methodologyLabel} | Freshness: ${metadata.freshnessContract ?? FRESHNESS_CONTRACT}${provenance}${suffix}`;
+  return `Pharos pharos.watch | Endpoint: ${metadata.endpoint} | As of: ${metadata.asOfISO} | URL: ${metadata.sourceUrl(variant)} | Methodology: ${metadata.methodologyLabel} | Freshness: ${metadata.freshnessContract ?? FRESHNESS_CONTRACT}${provenance}${metadata.sourceCoverage ? ` | Source coverage (Unix seconds): [${metadata.sourceCoverage.coveredFromSec}, ${metadata.sourceCoverage.coveredThroughSec})` : ""}${suffix}`;
 }
 
 export function buildPublicDatasetArtifacts<T>({

@@ -113,7 +113,7 @@ export interface HeroCardViewModel {
     deviationBps: number | null;
     pegReferenceUnavailable: boolean;
     /** The peg's reference market was shut at the observation: the deviation is held. */
-    referenceMarketClosed: boolean;
+    referenceNote: string | null;
     isNavToken: boolean;
     limitedDepegCoverageNote: string | null;
     /** Why the price cannot read as a calm peg reading (no usable price, or an inherited quote under a critical/paused state). */
@@ -162,7 +162,7 @@ export interface BuildHeroCardViewModelParams {
   pegRef: number | null;
   deviationBps: number | null;
   pegReferenceUnavailable: boolean;
-  referenceMarketClosed: boolean;
+  referenceNote: string | null;
   pegScoreResult: PegSummaryCoin | null;
   liquidityData: DexLiquidityData | undefined;
   yieldRanking: YieldRanking | null;
@@ -225,10 +225,9 @@ function resolveEffectivePegScore(isNavToken: boolean, pegScoreResult: PegSummar
   return isNavToken || pegScoreResult?.pegScore == null ? null : pegScoreResult.pegScore;
 }
 
-function buildSupplyTrend(nativeSupply: NativeSupplyCheckpoints | null, supply: number | null): HeroSupplyTrendViewModel {
-  // Positive trends keep the compact projection's paired clock/checkpoints. An observed
-  // exhausted supply is zero in either basis and must not resurrect an older positive sample.
-  const current = supply === 0 ? 0 : nativeSupply?.current ?? null;
+function buildSupplyTrend(nativeSupply: NativeSupplyCheckpoints | null): HeroSupplyTrendViewModel {
+  // Keep the current native quantity paired with its own checkpoints.
+  const current = nativeSupply?.current ?? null;
   const safePrevWeek = current == null ? null : posOrNull(nativeSupply?.prevWeek ?? null);
   const safePrevMonth = current == null ? null : posOrNull(nativeSupply?.prevMonth ?? null);
   return {
@@ -354,7 +353,7 @@ export function buildStablecoinDetailHeroViewModel({
   pegRef,
   deviationBps,
   pegReferenceUnavailable,
-  referenceMarketClosed,
+  referenceNote,
   pegScoreResult,
   liquidityData,
   yieldRanking,
@@ -462,7 +461,7 @@ export function buildStablecoinDetailHeroViewModel({
       pegRef,
       deviationBps,
       pegReferenceUnavailable,
-      referenceMarketClosed,
+      referenceNote,
       isNavToken,
       limitedDepegCoverageNote: buildLimitedDepegCoverageNote(coinData, isNavToken, pegScoreResult, deviationBps),
       caveat: priceCaveat,
@@ -472,7 +471,7 @@ export function buildStablecoinDetailHeroViewModel({
       supply,
       safePrevDay,
       prevDayTrendClass: getTrendClass(mcap !== null && safePrevDay !== null, mcap ?? 0, safePrevDay ?? 0),
-      supplyTrend: buildSupplyTrend(nativeSupply, supply),
+      supplyTrend: buildSupplyTrend(nativeSupply),
     },
     peg: { activeDepeg: pegScoreResult?.activeDepeg === true },
     tertiaryMetrics,

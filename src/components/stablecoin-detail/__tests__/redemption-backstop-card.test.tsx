@@ -418,6 +418,7 @@ describe("RedemptionBackstopCard", () => {
     const html = renderToStaticMarkup(
       <RedemptionBackstopCard entry={{
         ...BASE_ENTRY,
+        capacityBasis: "issuer-term-redemption",
         capacityConfidence: "documented-bound",
         capacityProfile: {
           eventualUsd: 30_000_000,
@@ -430,8 +431,7 @@ describe("RedemptionBackstopCard", () => {
 
     expect(html).toContain("Eventual Redeemability");
     expect(html).toContain("$30.0M");
-    expect(html).toContain("eventual redeemability of current supply");
-    expect(html).toContain("not as an immediate cash buffer");
+    expect(html).toContain("eventual redeemability of current supply under documented terms");
     expect(html).not.toContain("Eventual route capacity is unquantified");
   });
 

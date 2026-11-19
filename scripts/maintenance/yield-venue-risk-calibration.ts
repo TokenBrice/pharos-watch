@@ -20,6 +20,8 @@ import {
   venueRiskWeightedOf,
 } from "@shared/lib/yield-source-risk-registry";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import type { YieldRanking, YieldRankingsResponse } from "@shared/types/yield";
+import { getUsycNavFreshness, getYieldSourceAgingThresholdMs, OPTIONAL_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 
 export function getCalibrationConcentrationReason(
   input: PysSourceRiskPenaltyInput,
@@ -44,36 +46,32 @@ function loadKey(): string {
 
 const API = process.env.PHAROS_API_BASE ?? "https://api.pharos.watch";
 
-interface Row {
-  id: string;
-  symbol: string;
-  apy30d: number;
-  pharosYieldScore: number | null;
-  safetyScore: number | null;
-  benchmarkRate: number | null;
-  benchmarkCurrency: string | null;
-  yieldStability: number | null;
-  sourceRisk: {
-    sourceRiskPenalty?: number | null;
-    rewardShare?: number | null;
-    sourceDepthRatio?: number | null;
-    sourceAgeSeconds?: number | null;
-    sourceSwitchCount30d?: number | null;
-    observationCount30d?: number | null;
-    venueProtocol?: string | null;
-    venueRiskTier?: string | null;
-  } | null;
+export function resolveCalibrationSourceOverdue(
+  row: Pick<YieldRanking, "dataSource" | "provenance">,
+  assessedAt: number,
+): boolean | undefined {
+  const { sourceKey, sourceObservedAt, sourceFreshness, sourceMaxAgeSeconds } = row.provenance ?? {};
+  if (sourceKey === OPTIONAL_YIELD_SOURCES.hashnote.sourceKey) {
+    const tier = getUsycNavFreshness(sourceObservedAt, assessedAt);
+    return tier === "unknown" ? undefined : tier === "aging" || tier === "stale";
+  }
+
+  // Hydration already classified the exact product's retained fixing and fetch.
+  if (row.dataSource === "rate-derived") {
+    return sourceFreshness == null || sourceFreshness === "unknown" ? undefined : sourceFreshness === "stale";
+  }
+  if (sourceKey == null || sourceObservedAt == null || !Number.isFinite(sourceObservedAt) || sourceObservedAt <= 0
+      || !Number.isFinite(assessedAt) || assessedAt < sourceObservedAt
+      || sourceMaxAgeSeconds == null || !Number.isFinite(sourceMaxAgeSeconds) || sourceMaxAgeSeconds <= 0) return undefined;
+  const ageMs = (assessedAt - sourceObservedAt) * 1000;
+  return ageMs > getYieldSourceAgingThresholdMs(row.dataSource, sourceKey, sourceMaxAgeSeconds * 1000);
 }
 
 async function main(): Promise<void> {
   const res = await fetch(`${API}/api/yield-rankings`, { headers: { "X-API-Key": loadKey() } });
   if (!res.ok) throw new Error(`API ${res.status}`);
-  const body = (await res.json()) as {
-    rankings: Row[];
-    scalingFactor: number;
-    riskFreeRate: number;
-    methodology?: { version?: string };
-  };
+  const body = (await res.json()) as YieldRankingsResponse;
+  const assessedAt = Math.floor(Date.now() / 1000);
   const rows = body.rankings;
   const scalingFactor = body.scalingFactor;
   const usdBenchmarkRate = body.riskFreeRate;
@@ -82,7 +80,7 @@ async function main(): Promise<void> {
   // reconstruction. Threading it into a pre-8.43 payload reports phantom drift on
   // every non-USD row; skipping it on a post-8.43 payload understates the score.
   const publishedVersion = body.methodology?.version ?? null;
-  const parsedVersion = publishedVersion == null ? Number.NaN : Number.parseFloat(publishedVersion);
+  const parsedVersion = Number.parseFloat((publishedVersion ?? "").replace(/^v/i, ""));
   const appliesHurdleRebase = Number.isFinite(parsedVersion) && parsedVersion >= 8.43;
 
   let recomputeMatch = 0;
@@ -105,7 +103,7 @@ async function main(): Promise<void> {
   const driftRows: Array<{ symbol: string; published: number; recomputed: number }> = [];
   const venueRowCount = new Map<string, number>();
 
-  const scoreRow = (row: Row, sourceRiskPenalty: number, rebase: boolean): number =>
+  const scoreRow = (row: YieldRanking, sourceRiskPenalty: number, rebase: boolean): number =>
     computePYS({
       apy30d: row.apy30d,
       safetyScore: row.safetyScore,
@@ -141,6 +139,7 @@ async function main(): Promise<void> {
       rewardShare: sr.rewardShare ?? null,
       sourceDepthRatio: sr.sourceDepthRatio ?? null,
       sourceAgeSeconds: sr.sourceAgeSeconds ?? null,
+      sourceOverdue: resolveCalibrationSourceOverdue(row, assessedAt),
       sourceSwitchCount30d: sr.sourceSwitchCount30d ?? null,
       observationCount30d: sr.observationCount30d ?? null,
     };

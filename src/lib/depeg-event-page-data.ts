@@ -1,5 +1,5 @@
 import type { DepegEventEntry } from "@shared/types/peg";
-import { buildNoindexDepegEventSlugs, selectStaticDepegEventPages } from "@/lib/depeg-event-config";
+import { buildNoindexDepegEventSlugs } from "@/lib/depeg-event-config";
 import { DEPEG_EVENT_DATA_DIR, readDepegEventPageEntries } from "@/lib/depeg-event-snapshot";
 import {
   buildSameDayDirectionCollisionSlugs,
@@ -20,11 +20,11 @@ function readDepegEventEntries(): readonly DepegEventEntry[] {
 }
 
 /**
- * Every generated event page is permanent and linked from `/depeg/archive/`
- * (`selectStaticDepegEventPages`). Thin pages in `NOINDEX_DEPEG_EVENT_SLUGS`
+ * Every generated event page is permanent and linked from `/depeg/archive/`.
+ * Thin pages in `NOINDEX_DEPEG_EVENT_SLUGS`
  * are served `noindex, follow` and stay out of the sitemap.
  */
-export const DEPEG_EVENT_ENTRIES: readonly DepegEventEntry[] = selectStaticDepegEventPages(readDepegEventEntries());
+export const DEPEG_EVENT_ENTRIES: readonly DepegEventEntry[] = readDepegEventEntries();
 
 export const NOINDEX_DEPEG_EVENT_SLUGS: ReadonlySet<string> = buildNoindexDepegEventSlugs(DEPEG_EVENT_ENTRIES);
 

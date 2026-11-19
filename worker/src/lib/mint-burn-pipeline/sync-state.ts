@@ -3,7 +3,7 @@ import { runWithOverloadRetry } from "../d1-overload-retry";
 import { batchExecute, buildInClause } from "../db";
 import type { MintBurnContractConfig } from "../mint-burn-contracts";
 import type { MintBurnSyncStateMode } from "./types";
-import { mintBurnScanCoverageStatements, type MintBurnScanCoverage } from "./scan-coverage";
+import { commitMintBurnMaterializedCoverage, type MintBurnScanCoverage } from "./scan-coverage";
 
 // D1 allows at most 100 bound parameters per statement, so keep config-key
 // reads below that ceiling with a small safety margin.
@@ -88,9 +88,8 @@ export async function upsertMintBurnSyncState(
       .bind(configKey, lastBlock);
     // The cursor is monotonic and the coverage merge/compact converge on the
     // same interval, so replaying a commit whose outcome was lost is safe.
-    const batch = proof ? [cursor, ...mintBurnScanCoverageStatements(db, proof)] : null;
     await runWithOverloadRetry(async () => {
-      if (batch) await db.batch(batch);
+      if (proof) await commitMintBurnMaterializedCoverage(db, proof, [cursor]);
       else await cursor.run();
     });
     return;

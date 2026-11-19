@@ -9,6 +9,7 @@ const pricingStageMocks = vi.hoisted(() => ({
   fetchPrimaryPrices: vi.fn(),
   enrichMissingPrices: vi.fn(),
   fetchNativePegImpliedUsdQuotes: vi.fn(),
+  fetchNativePegQuotes: vi.fn(),
 }));
 
 vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) => {
@@ -75,6 +76,11 @@ vi.mock("../../lib/native-peg-implied-prices", async (importOriginal) => ({
   fetchCurrentNativePegImpliedUsdQuotes: pricingStageMocks.fetchNativePegImpliedUsdQuotes,
 }));
 
+vi.mock("../../lib/native-peg-quotes", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/native-peg-quotes")>()),
+  fetchCurrentNativePegQuotes: pricingStageMocks.fetchNativePegQuotes,
+}));
+
 import {
   applyTrackedAssetOverrides,
   computePriceStalenessSummary,
@@ -84,7 +90,7 @@ import {
 } from "../sync-stablecoins/phase-helpers";
 import { runStablecoinsPricingStage } from "../sync-stablecoins/stages";
 import type { PeggedAsset, PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
-import type { PriceValidationReferences } from "../../lib/price-validation";
+import { projectFxReferenceEvidence, type PriceValidationReferences } from "../../lib/price-validation";
 import { makePrimaryPriceResultFixture } from "../sync-stablecoins/__tests__/_fixtures";
 
 function makePricedAsset(): PeggedAsset {
@@ -243,44 +249,58 @@ describe("sync-stablecoins stage helpers", () => {
   });
 
 
-  it("reports native-peg fills and corrections in the price-validation log and metadata", async () => {
-    const filled = makeEurAsset("eutbl-spiko");
-    const corrected = makeEurAsset("eursafo-spiko", 0.9);
+  it.each([
+    ["2026-11-20T21:55:00Z", "2026-11-20T21:50:00Z", "openExchangeRates", "intraday", "fill"],
+    ["2026-11-20T21:55:00Z", "2026-11-20T21:50:00Z", "openExchangeRates", "intraday", "correct"],
+    ["2026-11-20T21:55:00Z", "2026-11-20T21:50:00Z", "openExchangeRates", "intraday", "conversion"],
+    ["2026-11-21T10:00:00Z", "2026-11-20T14:00:00Z", "frankfurter", "business-daily", "hold"],
+  ] as const)("uses projected FX evidence at %s (%s, %s, %s, %s)", async (run, fx, source, cadence, action) => {
+    const now = Date.parse(run) / 1000;
+    const fxAt = Date.parse(fx) / 1000;
+    const rates = { peggedEUR: 1.1 };
+    const clocks = { peggedEUR: fxAt };
     const references: PriceValidationReferences = {
-      rates: { peggedEUR: 1.1 },
-      type: "fresh",
-      updatedAt: syncStartSec - 30,
-      typeByPeg: { peggedEUR: "fresh" },
+      rates, type: "fresh", updatedAt: fxAt, updatedAtByPeg: clocks,
+      fxReferenceEvidenceByPeg: projectFxReferenceEvidence({
+        rates, usableSyncAt: now - 10, usableAgeSec: 10, mode: "live", metadataIdentity: "verified",
+        sourceUpdatedAtByPeg: clocks, sourceCadenceByPeg: { peggedEUR: cadence },
+        sourceModeByPeg: { peggedEUR: "live" }, sourceDateByPeg: {}, sourceLastSuccessAtBySource: {},
+        consecutiveFallbackRuns: 0,
+        observations: { peggedEUR: { pegKey: "peggedEUR", usdPerUnit: 1.1, source, cadence, observedAtSec: fxAt } },
+        referenceSessionEvidenceByPeg: { peggedEUR: {
+          sessionOpenedAtSec: Date.parse("2026-11-15T22:00:00Z") / 1000,
+          preCloseUsdPerUnit: 1.09,
+          firstInSessionObservedAtSec: fxAt,
+        } },
+      }),
     };
-    const quote = (stablecoinId: string) => ({
-      stablecoinId, pegCurrency: "EUR", vsCurrency: "USD",
-      nativePrice: 1.1, priceUsd: 1.1, updatedAt: syncStartSec - 30,
-      referencePriceUsd: 1.1, referenceType: "fresh" as const,
-    });
-    pricingStageMocks.fetchNativePegImpliedUsdQuotes.mockResolvedValue(new Map([
-      ["eutbl-spiko", quote("eutbl-spiko")],
-      ["eursafo-spiko", quote("eursafo-spiko")],
-    ]));
-    const infos = vi.spyOn(console, "info").mockImplementation(() => {});
-
-    const result = await runStablecoinsPricingStage({
-      db: priceDb(),
-      assets: [filled, corrected],
-      previousAssetsById: new Map(),
-      syncStartSec,
-      validationReferences: references,
-    });
-
-    expect(filled).toMatchObject({ price: 1.1, priceSource: "coingecko-native-implied" });
-    expect(corrected).toMatchObject({ price: 1.1, priceSource: "coingecko-native-implied" });
-    expect("priceCacheEntries" in result ? result.metadata : null).toMatchObject({
-      nativePegFillCount: 1,
-      nativePegCorrectionCount: 1,
-    });
-    const messages = infos.mock.calls.flat().join(" ");
-    expect(messages).toContain("Filled 1 missing non-USD fiat prices via direct native quotes");
-    expect(messages).toContain("Corrected 1 weak non-USD fiat prices via direct native quotes");
-    infos.mockRestore();
+    const asset = makeEurAsset("eurc-circle", action === "fill" ? undefined : 1.122);
+    if (action === "correct") {
+      asset.priceSource = "defillama";
+      asset.priceObservedAt = null;
+      asset.priceObservedAtMode = "unknown";
+    } else if (action !== "fill") {
+      asset.priceObservedAt = now - 30;
+    }
+    pricingStageMocks.fetchNativePegQuotes.mockResolvedValue(new Map([[asset.id, {
+      stablecoinId: asset.id, pegCurrency: "EUR", vsCurrency: "eur", price: 1, updatedAt: now - 30,
+      derivation: action === "conversion"
+        ? { kind: "conversion", lineage: {} }
+        : { kind: "traded-pair", lineage: { venue: "verified-venue", pair: "EURC/EUR" } },
+    }]]));
+    const actual = await vi.importActual<typeof import("../../lib/native-peg-implied-prices")>("../../lib/native-peg-implied-prices");
+    pricingStageMocks.fetchNativePegImpliedUsdQuotes.mockImplementation(actual.fetchCurrentNativePegImpliedUsdQuotes);
+    const wall = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    try {
+      const result = await runStablecoinsPricingStage({
+        db: priceDb(), assets: [asset], previousAssetsById: new Map(), syncStartSec: now, validationReferences: references,
+      });
+      expect("priceCacheEntries" in result ? result.metadata : null).toMatchObject({
+        nativePegFillCount: Number(action === "fill"), nativePegCorrectionCount: Number(action === "correct"),
+      });
+      if (action === "fill" || action === "correct") expect(asset).toMatchObject({ price: 1.1, priceSource: "coingecko-native-implied", priceObservedAt: fxAt });
+      else expect(asset.price).toBe(1.122);
+    } finally { wall.mockRestore(); }
   });
 
   it("quarantines malformed and supply-invalid rows per asset while keeping observed zero supply", () => {

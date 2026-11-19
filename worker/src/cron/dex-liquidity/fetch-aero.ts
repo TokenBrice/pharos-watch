@@ -220,6 +220,7 @@ async function fetchAeroSlipstreamChain(
           priceUsd: isTracked(input, chain, token.address) ? undefined : token.priceUsd,
         })),
         price: pool.price,
+        ratioObservedAtSec: capture.blockTimestamp,
         tvlUsd: pool.tvlUsd,
         // Pool state carries no trailing volume: no observation, not zero.
         volume24hUsd: null,

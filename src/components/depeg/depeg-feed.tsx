@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { formatDuration, formatEventDate, formatBps } from "@shared/lib/format";
+import { getDepegEventClosurePresentation } from "@/lib/depeg-event-display";
 import { deviationColorClass, deviationBorderClass } from "@/lib/severity-colors";
 import type { DepegEvent } from "@shared/types/peg";
 
@@ -100,6 +101,9 @@ export function DepegFeed({
           </p>
         ) : visible.map((evt) => {
           const isOngoing = evt.endedAt === null;
+          const { end, isRecovery } = getDepegEventClosurePresentation(evt);
+          const showRecordedDuration = end != null && !isRecovery
+            && (evt.analyticRecoveryAt !== undefined || evt.admittedCoverage !== undefined);
           const newIndex = newIndexMap.get(evt.id);
           return (
             <Link
@@ -148,7 +152,7 @@ export function DepegFeed({
               </div>
 
               <span className="pharos-numeric text-xs text-muted-foreground flex-shrink-0">
-                {formatDuration(evt.startedAt, evt.endedAt)}
+                {showRecordedDuration ? "Recorded duration " : ""}{formatDuration(evt.startedAt, end)}
               </span>
             </Link>
           );

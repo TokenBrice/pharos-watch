@@ -23,7 +23,7 @@ import { WEEK_SECONDS } from "@shared/lib/time-constants";
 import { ACTIVE_STABLECOIN_ID_SET } from "@/lib/stablecoin-static-data";
 import { classifyOpenIncidentEvidence, selectActiveDepegCoins } from "@shared/lib/active-depegs";
 import { resolveQueryViewState } from "@/lib/query-view-state";
-import { isCurrentDeviationHeld, resolvePriceObservedAtSec } from "@/lib/current-peg";
+import { readPublishedDeviation } from "@/lib/current-peg";
 import type { PegSummaryCoin } from "@shared/types/peg";
 import {
   DEPEG_DIRECTION_CLASSES,
@@ -41,8 +41,7 @@ interface ActiveRow {
   id: string;
   symbol: string;
   bps: number | null;
-  /** The peg's reference market was shut at the observation: the deviation is held. */
-  held: boolean;
+  referenceNote: string | null;
   ageSec: number | null;
   evidence: OpenIncidentEvidence;
   /** Circulating USD; null when the supply read has no observation for the coin. */
@@ -104,14 +103,13 @@ export function ActiveDepegsCard(): React.JSX.Element {
     const eventsById = new Map((data?.events ?? []).map((event) => [event.stablecoinId, event]));
     return activeCoins.map((coin: PegSummaryCoin) => {
       const event = eventsById.get(coin.id);
-      const held = isCurrentDeviationHeld(coin.pegCurrency, resolvePriceObservedAtSec(coin), coin.currentDeviationBps);
-      const bps = held ? null : coin.currentDeviationBps;
+      const { deviationBps: bps, referenceNote } = readPublishedDeviation(coin.pegCurrency, coin);
       const marketCapUsd = marketCaps.get(coin.id) ?? null;
       return {
         id: coin.id,
         symbol: coin.symbol ?? event?.symbol ?? coin.id,
         bps,
-        held,
+        referenceNote,
         ageSec: event && nowSec > 0 ? Math.max(0, nowSec - event.startedAt) : null,
         evidence: classifyOpenIncidentEvidence(data?.events, coin.id, nowSec),
         marketCapUsd,
@@ -229,9 +227,7 @@ function DepegRow({
           className={`shrink-0 font-semibold pharos-numeric ${colorClass}`}
           title={row.exposureUsd != null ? `${formatCompactUsdShort(row.exposureUsd)} ${below ? "below" : "above"} peg` : undefined}
         >
-          {row.held ? (
-            <span title="Reference market closed">Mkt closed</span>
-          ) : row.bps == null ? "Observation unavailable" : (
+          {row.referenceNote ? row.referenceNote : row.bps == null ? "Observation unavailable" : (
             <><span aria-hidden="true" className="mr-0.5">{below ? "↓" : "↑"}</span>{Math.abs(row.bps).toFixed(0)}</>
           )}
         </span>

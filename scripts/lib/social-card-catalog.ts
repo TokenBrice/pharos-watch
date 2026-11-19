@@ -70,14 +70,17 @@ import { STATIC_COMPARE_PAIRS, buildStaticComparisonSlug } from "../../src/lib/c
 import {
   buildDepegEventDescription,
   buildDepegEventTitle,
+  depegDirectionLabel,
   formatEventPrice,
+  getDepegEventOnset,
   formatEventUtcTime,
   getDepegEventClosurePresentation,
 } from "../../src/lib/depeg-event-display";
+import { hasUnverifiedDepegPeak } from "../../src/lib/depeg-event-config";
 import { COLLIDING_DEPEG_EVENT_SLUGS, DEPEG_EVENT_ENTRIES } from "../../src/lib/depeg-event-page-data";
 import { readDepegEventSnapshot } from "../../src/lib/depeg-event-snapshot";
 import { PROTOCOL_LOGOS, prettifyProtocol } from "../../src/lib/dex-display-constants";
-import { DIGEST_ENTRIES } from "../../src/lib/digest-registry";
+import { DIGEST_CORRECTIONS, DIGEST_ENTRIES } from "../../src/lib/digest-registry";
 import { ARCHETYPE_CONTENT } from "../../src/lib/mechanism-explainers";
 import { PEG_HUB_PEGS, PEG_HUB_SLUGS } from "../../src/lib/peg-landing";
 import { PUBLIC_ROUTE_PATHS } from "../../src/lib/public-route-inventory";
@@ -828,18 +831,20 @@ function depegCard(event: DepegEventEntry): SocialCardSpec {
   const id = identity(coin?.symbol ?? event.symbol, coin?.name ?? event.symbol, coinLogo(event.stablecoinId));
   const disputed = isDisputedAuditVerdict(event.provenance?.auditVerdict);
   const open = event.endedAt === null;
-  const figure = !open && !disputed && isPlausible(event);
+  const unverified = hasUnverifiedDepegPeak(event);
+  const figure = !open && !disputed && !unverified && isPlausible(event);
   const collision = COLLIDING_DEPEG_EVENT_SLUGS.has(event.slug);
   const closure = getDepegEventClosurePresentation(event);
   const level = getPegDeviationLevel(Math.abs(event.peakDeviationBps));
-  const peak = figure ? formatEventPrice(event.peakPrice, event.pegType, event.pegReference) : null;
-  const duration = event.endedAt !== null ? formatApproxDurationSeconds(event.endedAt - event.startedAt, { style: "long" }) : "";
-  const title = figure ? `${id.symbol}: ${formatDeviationBps(event.peakDeviationBps)} ${event.direction} peg`
-    : disputed ? `${id.symbol}: disputed depeg record` : open ? `${id.symbol}: open depeg ${event.direction} peg` : `${id.symbol}: depeg ${event.direction} peg`;
+  const peak = figure ? formatEventPrice(event.peakPrice, event, "peak") : null;
+  const duration = event.endedAt !== null ? formatApproxDurationSeconds((event.analyticRecoveryAt ?? event.endedAt) - event.startedAt, { style: "long" }) : "";
+  const direction = depegDirectionLabel(event.direction, event.peakBasis);
+  const title = figure ? `${id.symbol}: ${formatDeviationBps(event.peakDeviationBps)} ${direction}`
+    : unverified ? `${id.symbol}: peak unverified` : disputed ? `${id.symbol}: disputed depeg record` : open ? `${id.symbol}: open depeg ${direction}` : `${id.symbol}: depeg ${direction}`;
   const pill = open ? { text: "Ongoing", tone: "severity" as const }
     : disputed ? { text: DEPEG_AUDIT_DISPUTED_BADGE.label, tone: "neutral" as const }
       : figure && level !== "healthy" ? { text: PEG_DEVIATION_LEVEL_LABELS[level], tone: "severity" as const } : undefined;
-  const rulerLow = figure && event.direction === "below" && event.pegType === "peggedUSD"
+  const rulerLow = figure && !event.peakBasis && event.direction === "below" && event.pegType === "peggedUSD"
     && event.peakPrice !== null && event.peakPrice > 0 && event.peakPrice < 1 ? event.peakPrice : null;
   // Open, disputed and implausible records publish no figure: the SEO helpers drop it at zero deviation.
   const copyEvent = figure ? event : { ...event, peakDeviationBps: 0 };
@@ -851,9 +856,10 @@ function depegCard(event: DepegEventEntry): SocialCardSpec {
     ...(pill ? { pill } : {}),
     facts: figure ? [
       fit(B.record.fact, peak && `${event.direction === "below" ? "Low" : "High"} ${peak}`),
-      fit(B.record.fact, closure.isRecovery ? `Recovered after ${duration}` : closure.label),
+      event.peakBasis ? "Lower confidence" : undefined,
+      fit(B.record.fact, closure.isRecovery && !getDepegEventOnset(event).qualified ? `Recovered after ${duration}` : closure.label),
     ].filter((fact): fact is string => !!fact) : [],
-    ...(rulerLow !== null ? { ruler: { peg: 1, floor: rulerFloor(rulerLow), low: Math.round(rulerLow * 10_000) / 10_000, currencySymbol: "$" } } : {}),
+    ...(rulerLow !== null ? { ruler: { peg: 1, floor: rulerFloor(rulerLow), low: rulerLow < 0.01 ? rulerLow : Math.round(rulerLow * 10_000) / 10_000, currencySymbol: "$" } } : {}),
   }, {
     title: buildDepegEventTitle(copyEvent, collision),
     description: buildDepegEventDescription(copyEvent, collision, coin?.name ?? null),
@@ -864,7 +870,7 @@ function depegHubRuler(): SocialCardHubSubject {
   const bySlug = new Map(readDepegEventSnapshot({ missing: "throw" }).map((event) => [event.slug, event]));
   const lows = DEPEG_HUB_LOWS.map(({ slug, name, logoId }) => {
     const event = bySlug.get(slug);
-    if (!event || event.endedAt === null || isDisputedAuditVerdict(event.provenance?.auditVerdict) || !isPlausible(event)
+    if (!event || event.endedAt === null || event.peakBasis || hasUnverifiedDepegPeak(event) || isDisputedAuditVerdict(event.provenance?.auditVerdict) || !isPlausible(event)
       || event.pegType !== "peggedUSD" || event.direction !== "below" || event.peakPrice === null || !(event.peakPrice > 0 && event.peakPrice < 1)) {
       throw new Error(`Depeg hub low must be a closed, undisputed, plausible USD low: ${slug}`);
     }
@@ -881,14 +887,18 @@ function depegHubRuler(): SocialCardHubSubject {
 function digestCard(digest: (typeof DIGEST_ENTRIES)[number]): SocialCardSpec {
   const day = dayLabel(digest.date);
   const weekly = digest.digestType === "weekly";
+  const correctionExcerpt = DIGEST_CORRECTIONS.get(digest.date)?.excerpt;
   // Early editions repeat the title as the text's first paragraph.
-  const lead = firstSentence(digest.text.startsWith(digest.title) ? digest.text.slice(digest.title.length) : digest.text);
+  const lead = correctionExcerpt ?? firstSentence(digest.text.startsWith(digest.title) ? digest.text.slice(digest.title.length) : digest.text);
   return record(`/digest/${digest.date}/`, {
     label: weekly ? "Weekly recap" : "Daily digest", accent: "ink", masthead: true,
     dateline: digest.editionNumber > 0 ? `No. ${digest.editionNumber} · ${day}` : day,
     title: mustFit(`digest title for ${digest.date}`, B.record.title, digest.title),
     dek: fit(B.record.dek, lead),
-  }, { title: digest.title, description: CLAUSE_DASH.test(lead) ? `${weekly ? "Weekly recap" : "Daily digest"} for ${day}.` : `${day}: ${lead}` });
+  }, {
+    title: digest.title,
+    description: correctionExcerpt ?? (CLAUSE_DASH.test(lead) ? `${weekly ? "Weekly recap" : "Daily digest"} for ${day}.` : `${day}: ${lead}`),
+  });
 }
 
 function methodologyLaneCard(lane: (typeof METHODOLOGY_CHANGELOG_REGISTRY)[number]): SocialCardSpec {

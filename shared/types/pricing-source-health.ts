@@ -9,7 +9,6 @@ export const PRICE_SOURCE_HEALTH_BUCKET_KEYS = [
   "defillama",
   "defillama-list",
   "coingecko-mirror",
-  "cg-ticker",
   "geckoterminal",
   "binance",
   "kraken",

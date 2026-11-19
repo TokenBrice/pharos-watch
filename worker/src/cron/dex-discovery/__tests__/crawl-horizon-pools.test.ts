@@ -98,14 +98,46 @@ describe("Horizon pool discovery", () => {
       protocol: "stellar-sdex",
       dexId: "stellar-sdex",
       symbol: "EURC / USDC",
-      tvlUsd: 220,
-      priceUsd: 1.1,
+      tvlUsd: null,
+      priceUsd: null,
       poolType: "stellar-constant-product",
       feeTier: 30,
       baseToken: EURC_ADDRESS,
       quoteToken: USDC_ADDRESS,
       quoteSymbol: "USDC",
     });
+    expect(JSON.parse(stageContext.pools[0]!.rawJson!).valuation).toEqual({
+      kind: "estimated", tvlUsd: 220, reason: "counterparty-market-mark-unavailable",
+    });
+  });
+
+  it.each(["missing", "stale", "market"])("values a Stellar USDC/EURC pool using %s quote evidence", async (mode) => {
+    const row = poolRow();
+    row.reserves[0]!.amount = "100000.0000000";
+    row.reserves[1]!.amount = "110000.0000000";
+    mockFetch([{ match: "reserves=USDC%3AGA5Z", body: payload([row]) }], { requireMatch: true });
+    const stageContext = context({ stablecoinId: "usdc-circle" });
+    const mark = { priceUsd: 1.122, source: "kraken+coinbase",
+      observedAtSec: stageContext.value.nowSec - (mode === "stale" ? 1_801 : 300) };
+    const trackedStablecoinPrices = Object.assign(new Map([["eurc-circle", mark.priceUsd]]), {
+      marketMarks: new Map(mode === "missing" ? [] : [["eurc-circle", mark]]),
+    });
+    await crawlHorizonPoolsStage({
+      coinTargets: [target("stellar", USDC_ADDRESS)], context: stageContext.value, trackedStablecoinPrices,
+    });
+    const pool = stageContext.pools[0]!;
+    const valuation = JSON.parse(pool.rawJson!).valuation;
+    if (mode === "market") {
+      expect(pool.priceUsd).toBeCloseTo(1.02);
+      expect(pool.tvlUsd).toBeCloseTo(224_400);
+      expect(valuation).toMatchObject({
+        kind: "market", observedAtSec: mark.observedAtSec, counterparty: { ...mark, stablecoinId: "eurc-circle" },
+      });
+    } else {
+      expect(pool).toMatchObject({ priceUsd: null, tvlUsd: null });
+      expect(valuation).toMatchObject({ kind: "estimated", reason: "counterparty-market-mark-unavailable" });
+      expect(valuation.tvlUsd).toBeCloseTo(220_000);
+    }
   });
 
   it("withholds the tracked leg's price when the counter-leg is a NAV token", async () => {

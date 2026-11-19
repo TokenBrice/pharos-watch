@@ -45,6 +45,7 @@ interface HistoryCard {
   grade: ReportCardGrade;
   score: number | null;
   operationallyAffected: boolean;
+  recovering: boolean;
 }
 
 export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
@@ -55,7 +56,7 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
   let identity: SafetyScorePublicationIdentity;
   let liveCards: HistoryCard[];
   let degradedReportCardInputs: boolean;
-  let currentAffectedAssetIds: Set<string>;
+  let pendingAffectedAssetIds: Set<string>;
   let previousAffectedCache:
     | { value: string; updatedAt: number }
     | null;
@@ -95,7 +96,7 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
         "Safety Score v9 attempt metadata does not match the active publication",
       );
     }
-    currentAffectedAssetIds = new Set(
+    const currentAffectedAssetIds = new Set(
       attempt?.outcome === "published-partial"
         ? attempt.affectedAssetIds
         : [],
@@ -105,6 +106,7 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
         ? []
         : parseOperationallyAffectedAssetIds(affectedCache.value),
     );
+    const currentAttemptPublished = attempt?.outcome === "published-clean" || attempt?.outcome === "published-partial";
     liveCards = active.snapshot.cards
       .filter((card) => !FROZEN_IDS.has(card.id))
       .flatMap((card) => card.ratingStatus === "pipeline-gap" || card.grade === null ? [] : [{
@@ -114,7 +116,9 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
         operationallyAffected:
           currentAffectedAssetIds.has(card.id) ||
           previouslyAffectedAssetIds.has(card.id),
+        recovering: currentAttemptPublished && previouslyAffectedAssetIds.has(card.id) && !currentAffectedAssetIds.has(card.id),
       }]);
+    pendingAffectedAssetIds = new Set([...currentAffectedAssetIds, ...previouslyAffectedAssetIds]);
     degradedReportCardInputs = liveCards.some(
       (card) => card.operationallyAffected,
     );
@@ -152,6 +156,7 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
   let suppressedTransitions = 0;
   let suppressedIdentityTransitions = 0;
   let identityBoundaryBaselines = 0;
+  let recoveryBaselines = 0;
   const stmts: D1PreparedStatement[] = [];
 
   for (const card of liveCards) {
@@ -183,8 +188,30 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
       requiresIdentityBoundary = true;
     }
 
+    const alreadyRestored = card.recovering && latestV2?.transition_kind === "restoration-baseline" &&
+      previousAffectedCache !== null && latestV2.recorded_at >= previousAffectedCache.updatedAt;
+    if (alreadyRestored) pendingAffectedAssetIds.delete(card.id);
+    const operationallyAffected = card.operationallyAffected && !alreadyRestored;
+    const recordedAt = latestV2 && latestV2.recorded_at >= snapshotDay
+      ? Math.max(nowSec, latestV2.recorded_at + 1) : snapshotDay;
+    if (card.recovering && !alreadyRestored) {
+      // Pin the clean observation so a retry can recognize a committed recovery.
+      recoveryBaselines++;
+      stmts.push(prepareSafetyScoreHistoryBoundaryWrite(db, {
+        stablecoinId: card.id,
+        recordedAt: Math.max(recordedAt, nowSec),
+        grade: card.grade,
+        score: card.score,
+        transitionKind: "restoration-baseline",
+        identity,
+        createdAt: nowSec,
+      }));
+      pendingAffectedAssetIds.delete(card.id);
+      continue;
+    }
+
     if (requiresIdentityBoundary) {
-      if (card.operationallyAffected) {
+      if (operationallyAffected) {
         suppressedIdentityTransitions++;
         suppressedTransitions++;
         continue;
@@ -193,7 +220,7 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
       stmts.push(
         prepareSafetyScoreHistoryBoundaryWrite(db, {
           stablecoinId: card.id,
-          recordedAt: snapshotDay,
+          recordedAt,
           grade: card.grade,
           score: card.score,
           transitionKind: "methodology-boundary-baseline",
@@ -205,7 +232,7 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
     }
 
     if (!latest) {
-      if (card.operationallyAffected) {
+      if (operationallyAffected) {
         suppressedSeeds++;
         continue;
       }
@@ -225,14 +252,14 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
     }
 
     if (latest.grade !== card.grade) {
-      if (card.operationallyAffected) {
+      if (operationallyAffected) {
         suppressedTransitions++;
         continue;
       }
       changed++;
       stmts.push(prepareSafetyScoreHistoryV2Write(db, {
         stablecoinId: card.id,
-        recordedAt: snapshotDay,
+        recordedAt,
         grade: card.grade,
         score: card.score,
         prevGrade: latest.grade,
@@ -251,11 +278,11 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
   if (stmts.length > 0) {
     await batchExecute(db, stmts, { signal });
   }
-  if (currentAffectedAssetIds.size > 0) {
+  if (pendingAffectedAssetIds.size > 0) {
     await setCache(
       db,
       OPERATIONALLY_AFFECTED_HISTORY_CACHE_KEY,
-      JSON.stringify([...currentAffectedAssetIds].sort()),
+      JSON.stringify([...pendingAffectedAssetIds].sort()),
       signal,
     );
   } else if (previousAffectedCache !== null) {
@@ -266,7 +293,7 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
   }
   return createCronResult({
     ...(degradedReportCardInputs || suppressedIdentityTransitions > 0 ? { status: "degraded" as const } : {}),
-    itemCount: seeded + changed + identityBoundaryBaselines,
+    itemCount: seeded + changed + identityBoundaryBaselines + recoveryBaselines,
     // A completed scan is a confirmed observation even when no grade moved:
     // `outputPublishedAt` advances so producer freshness measures delivery,
     // not grade volatility. The held/stale early returns above stay clockless.
@@ -286,7 +313,8 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
       modelPublicationGenerationId: identity.publicationGenerationId,
       seeded,
       changed,
-      v2RowsWritten: seeded + changed + identityBoundaryBaselines,
+      v2RowsWritten: seeded + changed + identityBoundaryBaselines + recoveryBaselines,
+      recoveryBaselines,
       skipped,
       degradedReportCardInputs,
       gradeHistorySuppressed: degradedReportCardInputs,

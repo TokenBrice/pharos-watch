@@ -44,6 +44,21 @@ function closeCommand(id: number, endedAt: number): DepegPersistenceCommand {
 }
 
 describe("persistDepegCommands", () => {
+  it("persists both USD trade clocks independently of the paired recovery clocks and clears them on exit", async () => withSqliteD1(async (db) => {
+    const id = insertOpenEvent(db.sqlite, "test-recovery", 100);
+    const clocks = () => db.sqlite.prepare(`SELECT recovery_usd_first_seen_at AS firstUsd, recovery_usd_observed_at AS lastUsd,
+      recovery_first_seen_at AS firstPair, recovery_last_seen_at AS lastPair FROM depeg_events WHERE id = ?`).get(id);
+    const begin: DepegPersistenceCommand = { type: "begin-recovery", id, source: "native", firstSeenAt: 200, lastSeenAt: 200, usdObservedAt: 250 };
+    await persistDepegCommands(db, [begin, { type: "continue-recovery", id, lastSeenAt: 260, usdObservedAt: 280 }]);
+    expect(clocks()).toEqual({ firstUsd: 250, lastUsd: 280, firstPair: 200, lastPair: 260 });
+    await persistDepegCommands(db, [{ type: "begin-recovery", id, source: "native", firstSeenAt: 301, lastSeenAt: 301 }]);
+    expect(clocks()).toEqual({ firstUsd: null, lastUsd: null, firstPair: 301, lastPair: 301 });
+    for (const terminal of [{ type: "clear-recovery" as const, id }, closeCommand(id, 400)]) {
+      await persistDepegCommands(db, [begin, terminal]);
+      expect(clocks()).toEqual({ firstUsd: null, lastUsd: null, firstPair: null, lastPair: null });
+    }
+  }));
+
   it("retains sealed source events without granting deletion authority", async () => withSqliteD1(async (db) => {
     const { prediction } = await sealPredictionFixture(db);
     await persistDepegCommands(db, [{ type: "delete-event", id: prediction.eventId }]);

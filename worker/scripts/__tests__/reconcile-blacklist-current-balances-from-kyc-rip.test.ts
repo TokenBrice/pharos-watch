@@ -1,5 +1,4 @@
 import { runOperatorCli } from "./operator-cli.test-support";
-import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import type { BlacklistSummaryResponse } from "@shared/types/blacklist";
@@ -69,15 +68,15 @@ describe("current-balance kyc.rip reconciliation", () => {
   it("[entrypoint integration] supports short help and direct-run usage exit codes", async () => {
     expect(parseCurrentBalanceArgs(["-h"])).toMatchObject({ apply: false, help: true, remote: true });
 
-    const tsx = join(process.cwd(), "node_modules/.bin/tsx");
-    const help = await runOperatorCli(tsx, [SCRIPT_NAME, "--help"], {
+    const cli = ["--import", "tsx", SCRIPT_NAME];
+    const help = await runOperatorCli(process.execPath, [...cli, "--help"], {
       cwd: process.cwd(),
       encoding: "utf8",
     });
     expect(help.status).toBe(0);
     expect(help.stdout).toContain(`Usage: tsx ${SCRIPT_NAME}`);
 
-    const unconfirmed = await runOperatorCli(tsx, [SCRIPT_NAME, "--apply"], {
+    const unconfirmed = await runOperatorCli(process.execPath, [...cli, "--apply"], {
       cwd: process.cwd(),
       encoding: "utf8",
     });

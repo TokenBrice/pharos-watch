@@ -39,7 +39,95 @@ function depegRow(overrides: Record<string, unknown> = {}): Record<string, unkno
   };
 }
 
+function peerQuote(observedAt: number, price: number, bps: number, quoteObservedAt = observedAt) {
+  return { basis: "peer-relative", observedAt, price, pegReference: 1.1, bps,
+    corroboration: { basis: "peer-relative", confidence: "low", quoteObservedAt,
+      contributors: ["one", "two", "three"].map((id) => ({ id, provenanceKey: id, observedAtSec: quoteObservedAt })),
+      corroborator: { source: "pool:curve:defillama", observedAtSec: quoteObservedAt } } };
+}
+
+function seedEurcOpening(sqlite: ReturnType<typeof fixtures.open>["sqlite"], started: number,
+  peak: number, reason: string, receipt: object) {
+  sqlite.prepare(`INSERT INTO depeg_events
+    (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peg_reference, source, pending_reason, peer_basis_json)
+    VALUES ('eurc-circle','EURC','peggedEUR','below',?, ?,1.067,1.1,'live',?,?)`)
+    .run(peak, started, reason, JSON.stringify(receipt));
+}
+
 describe("depeg projector", () => {
+  it("publishes a Saturday opening on its validated peer median and original magnitude", async () => {
+    const { db, sqlite } = fixtures.open();
+    const started = Date.parse("2026-11-14T12:00:00Z") / 1000;
+    seedEurcOpening(sqlite, started, -500, "low-confidence+peer-relative", { onset: peerQuote(started, 1.067, -300) });
+    expect((await projectDepegOpened(db, { since: started - 1 })).projected).toBe(1);
+    const identity = sqlite.prepare("SELECT id, event_id, created_at FROM tape_events").get();
+    sqlite.exec(`UPDATE tape_events SET title = 'EURC depeg opened (−500 bps)', summary = 'Trading below peg.',
+      severity = 'warning', payload_json = '{"signedDeviationBps":-500}'`);
+    expect((await projectDepegOpened(db, { since: started - 1 })).projected).toBe(1);
+    expect(sqlite.prepare("SELECT id, event_id, created_at FROM tape_events").get()).toEqual(identity);
+    expect((await projectDepegOpened(db, { since: started - 1 })).projected).toBe(0);
+    const payload = JSON.parse(String(sqlite.prepare("SELECT payload_json FROM tape_events").get()?.payload_json));
+    expect(payload).toMatchObject({ basis: "peer-relative", confidence: "low", peerDeviationBps: -300 });
+    expect(payload).not.toHaveProperty("absDeviationBps");
+    expect(sqlite.prepare("SELECT title, summary FROM tape_events").get()).toEqual({
+      title: expect.stringContaining("−300 bps from the peer median (lower confidence)"),
+      summary: expect.stringContaining("−300 bps from the peer median (lower confidence)"),
+    });
+  });
+
+  it("repairs a rollback opening from the benchmark onset when only the peak was peer-relative", async () => {
+    const { db, sqlite } = fixtures.open();
+    const start = Date.parse("2026-11-13T21:55:00Z") / 1000;
+    const at = start + 900;
+    const onset = { basis: "benchmark", price: 1.067, pegReference: 1.10, bps: -300, observedAt: start };
+    const peak = peerQuote(at, 1.02, -727);
+    const source = sqlite.prepare(`INSERT INTO depeg_events (id, stablecoin_id, symbol, peg_type, direction,
+      started_at, start_price, peg_reference, peak_price, peak_peg_reference, peak_deviation_bps, source, pending_reason, peer_basis_json)
+      VALUES (?, 'eurc-circle','EURC','peggedEUR','below',?,1.067,1.10,1.02,1.10,-727,'live','low-confidence+peer-relative',?)`);
+    source.run(1, start - 60, JSON.stringify({ onset: { ...onset, basis: "peer-relative" } }));
+    source.run(2, start, JSON.stringify({ onset, peak }));
+    const legacy = sqlite.prepare(`INSERT INTO tape_events (event_id, type, severity, ts, title, summary,
+      payload_json, source_table, source_row_id, transition, created_at)
+      VALUES (?, 'depeg.opened', 'warning', ?, 'EURC depeg opened (−727 bps)', 'Trading below peg.',
+        '{"signedDeviationBps":-727}', 'depeg_events', ?, 'opened', ?)`);
+    for (const [id, ts] of [[1, start - 60], [2, start]]) legacy.run(String(id), ts * 1000, String(id), ts);
+    const options = { since: start - 61, maxRows: 1 };
+    expect((await projectDepegOpened(db, options)).projected).toBe(1);
+    const row = sqlite.prepare("SELECT title, payload_json FROM tape_events WHERE source_row_id = '2'").get()!;
+    expect(row.title).toBe("EURC depeg opened (−300 bps)");
+    expect(JSON.parse(String(row.payload_json))).toMatchObject({ basis: "benchmark", signedDeviationBps: -300 });
+    expect((await projectDepegOpened(db, options)).projected).toBe(0);
+
+    // Coverage proves the opening time. Only an absent receipt can use the legacy benchmark magnitude.
+    const coverage = JSON.stringify([{ fromSec: start, toSec: start + 1 }]);
+    const update = sqlite.prepare("UPDATE depeg_events SET admitted_coverage_json = ?, peer_basis_json = ? WHERE id = 2");
+    sqlite.exec("DELETE FROM tape_events WHERE source_row_id = '2'");
+    for (const receipt of [JSON.stringify({ onset: { ...onset, price: 1.02 }, peak }),
+      JSON.stringify({ pending: { onset: { ...onset, basis: "peer-relative" } }, peak }), "invalid"]) {
+      update.run(coverage, receipt);
+      expect((await projectDepegOpened(db, options)).projected).toBe(0);
+    }
+    update.run(coverage, JSON.stringify({ peak }));
+    expect((await projectDepegOpened(db, options)).projected).toBe(1);
+    expect(sqlite.prepare("SELECT title FROM tape_events WHERE source_row_id = '2'").get()?.title).toBe(row.title);
+  });
+
+  it("uses a benchmark onset for a subsequently peer-confirmed event", async () => {
+    const { db, sqlite } = fixtures.open();
+    const started = Date.parse("2026-11-13T21:53:20Z") / 1000;
+    const onset = { basis: "benchmark", observedAt: started, price: 1.067, pegReference: 1.1, bps: -300 };
+    const latest = peerQuote(started + 1000, 1.02, -727, started + 970);
+    seedEurcOpening(sqlite, started, -727, "confirmation-window", { onset, latest });
+    expect((await projectDepegOpened(db, { since: started - 1 })).projected).toBe(1);
+    const row = sqlite.prepare("SELECT title, payload_json FROM tape_events").get()!;
+    expect(row.title).toBe("EURC depeg opened (−300 bps)");
+    expect(JSON.parse(String(row.payload_json))).toMatchObject({ signedDeviationBps: -300, pegReference: 1.1 });
+    sqlite.exec(`UPDATE tape_events SET title = 'EURC depeg opened (−727 bps)', payload_json = '{"signedDeviationBps":-727}'`);
+    expect((await projectDepegOpened(db, { since: started - 1 })).projected).toBe(1);
+    expect(sqlite.prepare("SELECT title FROM tape_events").get()?.title).toBe("EURC depeg opened (−300 bps)");
+    expect((await projectDepegOpened(db, { since: started - 1 })).projected).toBe(0);
+  });
+
   it("reconciles delayed confirmations behind the watermark without duplicating identities or regressing progress", async () => {
     const { db, sqlite } = fixtures.open();
     const insert = sqlite.prepare(`INSERT INTO depeg_events
@@ -217,8 +305,8 @@ describe("depeg projector", () => {
   });
 
   it.each([
-    { failure: "checkpoint", retained: 102 },
-    { failure: "event batch", retained: 100 },
+    { failure: "checkpoint", retained: 0 },
+    { failure: "event batch", retained: 99 },
   ])("retains first-observation identities after a partial $failure failure and retry", async ({ failure, retained }) => {
     const { db, sqlite } = fixtures.open();
     const seed = sqlite.prepare(`INSERT INTO depeg_events
@@ -239,12 +327,13 @@ describe("depeg projector", () => {
     await expect(projectDepegPeakWorsened(db)).rejects.toThrow("injected peak failure");
     const original = sqlite.prepare("SELECT * FROM tape_events ORDER BY id").all();
     expect(original).toHaveLength(retained);
-    expect(new Set(original.map((row) => row.ts))).toEqual(new Set([SEC * 1000]));
+    expect(original.every((row) => row.ts === SEC * 1000)).toBe(true);
     const seen = JSON.parse(String(sqlite.prepare(
       "SELECT value FROM cache WHERE key = 'tape-projector:peak-worsened-seen'",
     ).get()?.value));
     expect(Object.keys(seen)).toHaveLength(201);
-    expect(new Set(Object.values(seen))).toEqual(new Set([100]));
+    expect(Object.values(seen).filter((bps) => bps === 200)).toHaveLength(retained);
+    expect(Object.values(seen).filter((bps) => bps === 100)).toHaveLength(201 - retained);
 
     sqlite.exec("DROP TRIGGER fail_peak");
     vi.mocked(Date.now).mockReturnValue((SEC + 60) * 1000);

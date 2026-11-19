@@ -9,6 +9,7 @@ import { assessFreshnessTimestamp } from "../lib/api-freshness-age";
 import {
   CACHE_TTL_SECONDS,
   DETAIL_STALE_CACHE_MAX_AGE_SECONDS,
+  admitCommodityDetailCache,
   createDetailResponseHelpers,
   createFreshCacheHitResponse,
   createStaleCacheHitResponse,
@@ -205,7 +206,7 @@ function scheduleStablecoinDetailRefresh(config: {
 
 const resolveStablecoinDetail = async (db: D1Database, id: string, ctx: ExecutionContext, coingeckoApiKey?: string | null): Promise<Response> => {
     const cacheKey = `detail:${id}`;
-    const cached = await getCache(db, cacheKey);
+    const cached = admitCommodityDetailCache(id, await getCache(db, cacheKey));
     const meta = TRACKED_META_BY_ID.get(id);
     // Preserve the legacy provider lookup for unknown IDs, but never schedule
     // new collection for a known non-active catalog record.

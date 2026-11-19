@@ -15,7 +15,7 @@ import { createStaticSlugRoute } from "@/lib/static-slug-page";
 import { formatIsoTimestamp } from "@shared/lib/format";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import type { DigestContentEntry } from "@shared/types/digest";
-import { DIGEST_BY_DATE, DIGEST_ENTRIES, INDEXABLE_DIGEST_ENTRIES, isDigestIndexable } from "@/lib/digest-registry";
+import { DIGEST_BY_DATE, DIGEST_CORRECTIONS, DIGEST_ENTRIES, INDEXABLE_DIGEST_ENTRIES, isDigestIndexable } from "@/lib/digest-registry";
 import { getDigestModelLabel } from "@/lib/digest-model-label";
 
 type DigestWithLlmMetadata = DigestContentEntry & {
@@ -52,6 +52,9 @@ function formatDate(dateStr: string): string {
 }
 
 function buildDigestMetadataDescription(digest: DigestContentEntry, formattedDate: string): string {
+  const correction = DIGEST_CORRECTIONS.get(digest.date);
+  if (correction) return correction.excerpt;
+
   const summary = summarizeText(digest.text, 180);
   // summarizeText only ends in "…" when the first sentence is longer than the budget.
   const firstSentence = summary.endsWith("…") ? null : summary;
@@ -70,6 +73,7 @@ function buildDigestMetadataDescription(digest: DigestContentEntry, formattedDat
 function renderDigestDetail(digest: DigestContentEntry) {
   const persistedMetadata = digest as DigestWithLlmMetadata;
   const formatted = formatDate(digest.date);
+  const correction = DIGEST_CORRECTIONS.get(digest.date);
   const extendedParagraphs = splitDigestParagraphs(digest.extended);
   const isWeekly = digest.digestType === "weekly";
   const editionLabel = isWeekly ? "Weekly Recap" : "Daily Digest";
@@ -98,7 +102,7 @@ function renderDigestDetail(digest: DigestContentEntry) {
               description: buildDigestMetadataDescription(digest, formatted),
               image: [`${SITE_URL}${getPageSocialPreview(`/digest/${digest.date}/`).url}`],
               datePublished: formatIsoTimestamp(digest.generatedAt),
-              dateModified: formatIsoTimestamp(digest.generatedAt),
+              dateModified: correction ? `${correction.date}T00:00:00Z` : formatIsoTimestamp(digest.generatedAt),
               mainEntityOfPage: `${SITE_URL}/digest/${digest.date}/`,
             }),
           )}
@@ -114,6 +118,12 @@ function renderDigestDetail(digest: DigestContentEntry) {
       </div>
 
       <article className="space-y-6">
+        {correction && (
+          <aside className="pharos-card-shell rounded-[1.5rem] px-5 py-5" aria-label="Editorial correction">
+            <p className="pharos-kicker">Correction · <time dateTime={correction.date}>{formatDate(correction.date)}</time></p>
+            <p className="mt-3 leading-relaxed">{correction.text}</p>
+          </aside>
+        )}
         <div className="pharos-card-shell rounded-[1.5rem] px-5 py-5">
           <p className="pharos-kicker">Executive Summary</p>
           <p className="mt-3 text-[1.1rem] leading-8 text-foreground/92" style={EDITORIAL_BODY_STYLE}>

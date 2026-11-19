@@ -1,3 +1,5 @@
+import { isPairedDepegPeak } from "../../lib/depeg-helpers";
+import { readAdmittedPeerOnset, readAdmittedPeerPeak, readPendingObservationReceipt } from "../../lib/depeg-pending";
 import type { V9RatingStatus, V9CompactPartialEvidence } from "@shared/types/safety-score-v9-causes";
 import {
   TELEGRAM_CONTEXT_BUDGET_SEC,
@@ -84,6 +86,9 @@ export interface StatusForCoin {
         status: "active";
         direction: "above" | "below";
         peakDeviationBps: number;
+        peerRelative?: true;
+        peerOpening?: true;
+        peakBasisUnavailable?: true;
         pegReference: number;
         startedAt: number;
       };
@@ -156,15 +161,10 @@ export async function loadStatusForCoin(db: D1Database, stablecoinId: string): P
       loadTelegramSafetyState(db),
       db
         .prepare(
-          "SELECT direction, peak_deviation_bps, peg_reference, started_at FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1",
+          "SELECT direction, peak_deviation_bps, peg_reference, started_at, stablecoin_id, peg_type, start_price, peak_price, peak_peg_reference, peak_quote_domain, peer_basis_json FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1",
         )
         .bind(stablecoinId)
-        .first<{
-          direction: "above" | "below";
-          peak_deviation_bps: number;
-          peg_reference: number;
-          started_at: number;
-        }>(),
+        .first<StatusDepegRow>(),
       db
         .prepare(
           `SELECT liquidity_score, total_tvl_usd, updated_at, coverage_class, coverage_confidence
@@ -294,13 +294,33 @@ export async function loadStatusForCoin(db: D1Database, stablecoinId: string): P
           direction: depegRow.direction,
           peakDeviationBps: depegRow.peak_deviation_bps,
           pegReference: depegRow.peg_reference,
+          ...statusComparisonBasis(depegRow),
           startedAt: depegRow.started_at,
         }
       : { status: "stable" },
   };
 }
 
+type StatusDepegRow = Parameters<typeof readAdmittedPeerPeak>[0] & {
+  direction: "above" | "below"; peg_reference: number;
+};
+
+function statusComparisonBasis(row: StatusDepegRow) {
+  if (!row.peer_basis_json) return {};
+  const opening = readAdmittedPeerOnset(row) ? { peerOpening: true as const } : {};
+  if (readAdmittedPeerPeak(row)) return { ...opening, peerRelative: true as const };
+  const peak = readPendingObservationReceipt(row.peer_basis_json)?.peak;
+  const knownPeak = peak && peak.basis !== "peer-relative" && peak.observedAt >= row.started_at &&
+    peak.price === row.peak_price && peak.pegReference === row.peak_peg_reference &&
+    isPairedDepegPeak(peak.price, peak.pegReference, row.peak_deviation_bps);
+  return (opening.peerOpening || peak?.basis === "peer-relative") && !knownPeak
+    ? { ...opening, peakBasisUnavailable: true as const } : opening;
+}
+
 export interface ActiveDepeg {
+  peerRelative?: true;
+  peerOpening?: true;
+  peakBasisUnavailable?: true;
   stablecoinId: string;
   direction: "above" | "below";
   peakDeviationBps: number;
@@ -315,14 +335,15 @@ export async function loadActiveDepegs(db: D1Database): Promise<ActiveDepeg[] | 
   try {
     const result = await db
       .prepare(
-        "SELECT stablecoin_id, direction, peak_deviation_bps, started_at FROM depeg_events WHERE ended_at IS NULL ORDER BY started_at DESC",
+        "SELECT stablecoin_id, direction, peak_deviation_bps, started_at, peg_reference, peg_type, start_price, peak_price, peak_peg_reference, peak_quote_domain, peer_basis_json FROM depeg_events WHERE ended_at IS NULL ORDER BY started_at DESC",
       )
-      .all<{ stablecoin_id: string; direction: "above" | "below"; peak_deviation_bps: number; started_at: number }>();
+      .all<StatusDepegRow>();
     return (result.results ?? []).map((row) => ({
       stablecoinId: row.stablecoin_id,
       direction: row.direction,
       peakDeviationBps: row.peak_deviation_bps,
       startedAt: row.started_at,
+      ...statusComparisonBasis(row),
     }));
   } catch {
     return null;

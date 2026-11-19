@@ -14,8 +14,10 @@ import {
   type DeterministicOnChainHealthState,
 } from "../yield-sync/cache";
 import { buildNextDeterministicOnChainHealthState } from "../yield-sync/state";
+import { resolvedYield } from "./yield-evaluation.test-support";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
 import { YIELD_POOL_MAP } from "../../lib/yield-config/yield-config-pools";
+import { getSupplementalFamilyStaleThresholdSec } from "../yield-sync/family-registry";
 
 describe("parseRiskFreeRateCache", () => {
   const nowSec = 1710500000;
@@ -152,6 +154,50 @@ describe("parseDlStablecoinPoolsCache", () => {
 
 describe("parseYieldSupplementalSourcesCache", () => {
   const nowSec = 1710500000;
+
+  it("preserves vault evidence while limiting what rollback can admit", () => {
+    const maxAge = getSupplementalFamilyStaleThresholdSec("yearnKong");
+    for (const [observedAt, rollbackUpdatedAt, rollbackApy] of [
+      [null, nowSec, 5],
+      [nowSec - 300, nowSec - 300, 5],
+      [nowSec - maxAge, nowSec - maxAge, 5],
+      [nowSec - 7 * 86400, nowSec, null],
+    ] as const) {
+      const candidate = { symbol: "USDC", address: null, chain: "ethereum", yield: resolvedYield({
+        dataSource: "protocol-api", sourceKey: "protocol-api:yearn:ethereum:usdc",
+        sourceFetchedAt: nowSec, sourceObservedAt: observedAt,
+      }) };
+      const raw = buildYieldSupplementalFamilyCache([candidate], nowSec);
+      expect(JSON.parse(raw)).toMatchObject({ version: 1, updatedAt: rollbackUpdatedAt, data: [
+        { yield: { currentApy: rollbackApy, sourceObservedAt: observedAt ?? nowSec, sourceObservedAtV2: observedAt } },
+      ] });
+      expect(parseYieldSupplementalSourcesCache(raw, nowSec, nowSec)).toMatchObject({
+        candidates: [candidate], updatedAt: nowSec, ageSeconds: 0, rejectedCount: 0,
+      });
+    }
+  });
+
+  it("keeps the independent USDC vault on rollback when the USDT vault expires", () => {
+    const maxAge = getSupplementalFamilyStaleThresholdSec("yearnKong");
+    const [usdc, usdt] = [
+      { symbol: "USDC", currentApy: 4, sourceObservedAt: null },
+      { symbol: "USDT", currentApy: 5, sourceObservedAt: nowSec - maxAge + 1 },
+    ].map(({ symbol, ...quote }) => ({
+      symbol,
+      yield: resolvedYield({
+        ...quote, dataSource: "protocol-api", sourceKey: `protocol-api:yearn:ethereum:${symbol.toLowerCase()}`,
+        sourceFetchedAt: nowSec,
+      }),
+    }));
+    const raw = buildYieldSupplementalFamilyCache([usdc, usdt], nowSec);
+    expect(JSON.parse(raw)).toMatchObject({ updatedAt: nowSec, data: [
+      { symbol: "USDC", yield: { currentApy: 4 } },
+      { symbol: "USDT", yield: { currentApy: null, currentApyV2: 5 } },
+    ] });
+    expect(parseYieldSupplementalSourcesCache(raw, nowSec, nowSec + 2)).toMatchObject({
+      candidates: [usdc, usdt], ageSeconds: 2, rejectedCount: 0,
+    });
+  });
 
   it("rejects legacy array format", () => {
     const raw = JSON.stringify([{

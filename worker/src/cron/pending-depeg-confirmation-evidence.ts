@@ -1,4 +1,7 @@
-import { DEPEG_DEX_PROTOCOL_CORROBORATION_MIN } from "@shared/lib/depeg-config";
+import { getClockedTradedNativeQuote, independenceKey, isIndependentDexObservation, isIndependentVenue, knownPoolVenue } from "./depeg-detection/reference-policy";
+import { selectIndependentChallengerPools } from "./dex-liquidity/price-lineage";
+import { normalizePegType } from "@shared/lib/peg-rates";
+import { DEPEG_DEX_PROTOCOL_CORROBORATION_MIN, DEX_FRESHNESS_SEC, DEX_PROTOCOL_SOURCE_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { BINANCE_MARKETS } from "@shared/lib/pricing-provider-config";
 import { CIRCUIT_SOURCE, USER_AGENT } from "../lib/constants";
 import { divergingProtocolGroupsOutvote, POOL_CHALLENGE_HIGH_TVL_USD } from "../lib/price-depeg-voting-policy";
@@ -9,10 +12,13 @@ import {
   dexPoolIndependentGroupKey,
   dexProtocolGroupKey,
   isNativeOriginPending,
+  readDexPriceLineage,
+  type DexPriceLineage,
 } from "../lib/depeg-helpers";
 import {
   chooseIndependentOffchainDepegConfirmer,
   getDexAggregateRejectionReason,
+  isFreshDexPoolObservation,
   isTrustedDexPriceRow,
   type OffchainDepegConfirmerKey,
 } from "../lib/depeg-trust-policy";
@@ -52,6 +58,7 @@ type OffchainUnavailableReason =
   | "non-ok"
   | "empty-response"
   | "upstream-error"
+  | "reference-observation-unadmitted"
   | `${ConfirmationTimestampStatus}-timestamp`;
 
 type OffchainConfirmerResult =
@@ -72,6 +79,8 @@ async function evaluateOffchainConfirmer(args: {
   geckoId: string;
   pegReference: number;
   threshold: number;
+  recoveryThreshold: number | undefined;
+  allowsUsdObservation: ConfirmationEvidenceInput["allowsUsdObservation"];
   direction: PendingDepegState["direction"];
   agreeSources: string[] | undefined;
   priceSource: string | null | undefined;
@@ -86,6 +95,8 @@ async function evaluateOffchainConfirmer(args: {
     geckoId,
     pegReference,
     threshold,
+    recoveryThreshold,
+    allowsUsdObservation,
     direction,
     agreeSources,
     priceSource,
@@ -147,8 +158,11 @@ async function evaluateOffchainConfirmer(args: {
 
     const timestampStatus = classifyConfirmationTimestamp(observedAt, now);
     if (offchainPrice && offchainPrice > 0 && timestampStatus === "fresh") {
+      if (allowsUsdObservation && !allowsUsdObservation(offchainPrice, observedAt)) {
+        return { kind: "unavailable", sourceKey: confirmerKey, reason: "reference-observation-unadmitted" };
+      }
       const offchainSignal = deriveDepegSignal(offchainPrice, pegReference);
-      const status = classifyDirectionalSignal(offchainSignal, threshold, direction);
+      const status = classifyDirectionalSignal(offchainSignal, threshold, direction, recoveryThreshold);
       logWorkerEvent({
         scope: "lib",
         job: "confirm-pending-depegs",
@@ -215,6 +229,9 @@ export async function collectConfirmationEvidence(
     meta,
     pegReference,
     threshold,
+    recoveryThreshold,
+    allowsUsdObservation,
+    pendingSourceKeys,
     nativeSignal,
     nativePegQuote: suppliedNativePegQuote,
     nativeQuoteImplausibility: plannedNativeQuoteImplausibility,
@@ -250,7 +267,22 @@ export async function collectConfirmationEvidence(
 
   const geckoId = meta?.geckoId;
   const isNativeOrigin = isNativeOriginPending(pendingState.reason);
-  const nativePegQuote = isNativeQuoteForPending(row, suppliedNativePegQuote) ? suppliedNativePegQuote : undefined;
+  const overlapsPendingVenue = (venue: string | undefined) =>
+    pendingSourceKeys?.has(independenceKey(venue, row.stablecoin_id)) ?? false;
+  const isIndependentConfirmer = (venue: string | undefined) =>
+    isIndependentVenue(asset, venue) && !overlapsPendingVenue(venue);
+  const isIndependentDexConfirmer = (sample: DexPriceLineage & { protocol?: string; sourceFamily?: string }) => {
+    if (!isIndependentDexObservation(asset, sample)) return false;
+    if (!pendingSourceKeys) return true;
+    const lineage = readDexPriceLineage(sample);
+    return !overlapsPendingVenue(sample.protocol) && !overlapsPendingVenue(sample.sourceFamily) &&
+      !(lineage.upstreamKeys ?? lineage.pricePoolKeys)?.some((key) =>
+        key.startsWith("venue:") ? overlapsPendingVenue(key.slice(6)) : pendingSourceKeys.has(key));
+  };
+  const tradedNative = isNativeQuoteForPending(row, suppliedNativePegQuote)
+    ? getClockedTradedNativeQuote(suppliedNativePegQuote, now) : undefined;
+  const nativePegQuote = tradedNative && isIndependentVenue(asset, tradedNative.derivation?.lineage.venue)
+    ? tradedNative : undefined;
   const nativeQuoteImplausibility: NativeQuoteImplausibility | null =
     plannedNativeQuoteImplausibility ??
     (!isNativeOrigin && nativePegQuote
@@ -266,13 +298,15 @@ export async function collectConfirmationEvidence(
     // recovery; the plan already recorded its machine-readable reason.
     addSource(evidence.unavailableSources, `${nativeSourceKey}:${nativeQuoteImplausibility.reason}`);
   } else if (nativeSignal != null && nativePegQuote != null && !isNativeOrigin) {
-    evidence.offchainStatus = classifyDirectionalSignal(nativeSignal, threshold, pendingState.direction);
+    evidence.offchainStatus = classifyDirectionalSignal(nativeSignal, threshold, pendingState.direction, recoveryThreshold);
     evidence.offchainSourceKey = nativeSourceKey;
     if (evidence.offchainStatus === "confirm") {
-      // Native quotes have reference 1; normalize the price into this USD-origin
-      // pending event's admitted peg reference before it reaches peak selection.
-      const eventDomainPrice = nativePegQuote != null ? nativePegQuote.price * pegReference : null;
-      evidence.offchainPeakCandidate = { bps: nativeSignal.bps, price: eventDomainPrice, quoteDomain: "usd" };
+      const pegType = normalizePegType(row.peg_type);
+      evidence.offchainPeakCandidate = { bps: nativeSignal.rawBps, price: nativePegQuote.price,
+        quoteDomain: pegType === "peggedUSD" ? "usd" : `native:${pegType}`, pegReference: 1,
+        receipt: { basis: "native-peg", observedAt: nativePegQuote.updatedAt, price: nativePegQuote.price,
+          pegReference: 1, bps: nativeSignal.rawBps, venue: nativePegQuote.derivation?.lineage.venue } };
+
       addSource(evidence.confirmingSources, nativeSourceKey);
     } else if (isOpposingConfirmationStatus(evidence.offchainStatus)) {
       addSource(evidence.opposingSources, nativeSourceKey);
@@ -293,13 +327,15 @@ export async function collectConfirmationEvidence(
         thresholdBps: threshold,
       },
     });
-  } else if (geckoId && !isNativeOrigin) {
+  } else if (geckoId && !isNativeOrigin && isIndependentConfirmer("coingecko")) {
     const result = await evaluateOffchainConfirmer({
       db,
       symbol: row.symbol,
       geckoId,
       pegReference,
       threshold,
+      recoveryThreshold,
+      allowsUsdObservation,
       direction: pendingState.direction,
       agreeSources: asset?.agreeSources,
       priceSource: asset?.priceSource,
@@ -321,7 +357,7 @@ export async function collectConfirmationEvidence(
         evidence.offchainStatus = result.status;
         evidence.offchainSourceKey = result.sourceKey;
         if (result.status === "confirm") {
-          evidence.offchainPeakCandidate = { bps: result.signal?.bps, price: result.price, quoteDomain: "usd" };
+          evidence.offchainPeakCandidate = { bps: result.signal?.rawBps, price: result.price, quoteDomain: "usd", pegReference };
           addSource(evidence.confirmingSources, result.sourceKey);
         } else if (isOpposingConfirmationStatus(result.status)) {
           addSource(evidence.opposingSources, result.sourceKey);
@@ -334,12 +370,18 @@ export async function collectConfirmationEvidence(
   if (isNativeOrigin) {
     addSource(evidence.unavailableSources, "dex:usd-native-origin");
   } else if (dexRow != null && isTrustedDexPriceRow(dexRow, now, "depeg")) {
-    const aggregateRejectionReason = getDexAggregateRejectionReason(dexRow, now, "depeg");
+    const aggregateRejectionReason = getDexAggregateRejectionReason(dexRow, now, "depeg") ??
+      (!isIndependentDexConfirmer(dexRow) ? "independence-unverified" : null) ??
+      (allowsUsdObservation && !allowsUsdObservation(dexRow.dex_price_usd, dexRow.aggregateObservedAt, DEX_FRESHNESS_SEC)
+        ? "reference-observation-unadmitted" : null);
     const affirmative = aggregateRejectionReason == null;
     if (!affirmative) addSource(evidence.unavailableSources, `dex:${aggregateRejectionReason}`);
     const dexSignal = deriveDepegSignal(dexRow.dex_price_usd, pegReference);
-    const aggregateDexStatus = classifyDirectionalSignal(dexSignal, threshold, pendingState.direction);
-    const protocolSources = dexPriceSources.get(row.stablecoin_id);
+    const aggregateDexStatus = classifyDirectionalSignal(dexSignal, threshold, pendingState.direction, recoveryThreshold);
+    const protocolSources = dexPriceSources.get(row.stablecoin_id)?.filter((source) =>
+      isIndependentDexConfirmer(source) &&
+      (!allowsUsdObservation || (isFreshDexPoolObservation(source.observedAt, now) &&
+        allowsUsdObservation(source.price, source.observedAt, DEX_PROTOCOL_SOURCE_FRESHNESS_SEC))));
     const confirmGroups = collectDexProtocolCorroborations(
       protocolSources,
       pegReference,
@@ -350,7 +392,7 @@ export async function collectConfirmationEvidence(
     const recoverGroups = collectDexProtocolCorroborations(
       protocolSources,
       pegReference,
-      threshold,
+      recoveryThreshold ?? threshold,
       pendingState.direction,
       "recover",
     );
@@ -361,19 +403,16 @@ export async function collectConfirmationEvidence(
       pendingState.direction,
       "contradict",
     );
-    if (aggregateDexStatus === "confirm" && confirmGroups.length >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN) {
-      if (affirmative) {
-        evidence.dexStatus = "confirm";
-        evidence.dexConfirmationKeys = buildDexConfirmationKeys(confirmGroups.map((group) => group.key));
-        addSources(evidence.confirmingSources, evidence.dexConfirmationKeys);
-        evidence.dexPeakCandidates = [
-          { bps: dexSignal?.bps, price: dexRow.dex_price_usd, quoteDomain: "usd" },
-          ...confirmGroups.map((group) => ({ bps: group.signal.bps, price: group.source.price, quoteDomain: "usd" as const })),
-        ];
-      } else {
-        // Publication-fresh agreement can veto rejection without proving confirmation.
-        evidence.dexConfirmationVeto = true;
-      }
+    if (!affirmative && confirmGroups.length >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN) {
+      evidence.dexConfirmationVeto = true;
+    } else if (affirmative && aggregateDexStatus === "confirm" && confirmGroups.length >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN) {
+      evidence.dexStatus = "confirm";
+      evidence.dexConfirmationKeys = buildDexConfirmationKeys(confirmGroups.map((group) => group.key));
+      addSources(evidence.confirmingSources, evidence.dexConfirmationKeys);
+      evidence.dexPeakCandidates = [
+        { bps: dexSignal?.rawBps, price: dexRow.dex_price_usd, quoteDomain: "usd", pegReference },
+        ...confirmGroups.map((group) => ({ bps: group.signal.rawBps, price: group.source.price, quoteDomain: "usd" as const, pegReference })),
+      ];
     } else if (affirmative && aggregateDexStatus === "recover" && recoverGroups.length >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN) {
       evidence.dexStatus = "recover";
       const keys = buildDexConfirmationKeys(recoverGroups.map((group) => group.key));
@@ -422,11 +461,11 @@ export async function collectConfirmationEvidence(
     if (BINANCE_SYMBOLS.has(cexSymbol)) addSource(evidence.unavailableSources, "cex:binance");
   } else {
     const cexPrice = cexPrices.get(cexSymbol);
-    if (cexPrice && cexPrice > 0) {
+    if (cexPrice && cexPrice > 0 && !allowsUsdObservation && isIndependentConfirmer("binance")) {
       const cexSignal = deriveDepegSignal(cexPrice, pegReference);
-      evidence.cexStatus = classifyDirectionalSignal(cexSignal, threshold, pendingState.direction);
+      evidence.cexStatus = classifyDirectionalSignal(cexSignal, threshold, pendingState.direction, recoveryThreshold);
       if (evidence.cexStatus === "confirm") {
-        evidence.cexPeakCandidate = { bps: cexSignal?.bps, price: cexPrice, quoteDomain: "usd" };
+        evidence.cexPeakCandidate = { bps: cexSignal?.rawBps, price: cexPrice, quoteDomain: "usd", pegReference };
         addSource(evidence.confirmingSources, "cex:binance");
       } else if (isOpposingConfirmationStatus(evidence.cexStatus)) {
         addSource(evidence.opposingSources, "cex:binance");
@@ -464,15 +503,30 @@ export async function collectConfirmationEvidence(
   if (isNativeOrigin) {
     addSource(evidence.unavailableSources, "pool:usd-native-origin");
   } else if (pools?.length) {
-    for (const pool of pools) {
+    const eligiblePools = pools.filter((pool) => {
+      if (!knownPoolVenue(pool) || !isIndependentDexConfirmer(pool)) {
+        addSource(evidence.unavailableSources, "pool:independence-unverified");
+        return false;
+      }
+      if (!isFreshDexPoolObservation(pool.observedAt, now)) {
+        addSource(evidence.unavailableSources, "pool:observation-clock-unusable");
+        return false;
+      }
+      if (allowsUsdObservation && !allowsUsdObservation(pool.price, pool.observedAt, DEX_PROTOCOL_SOURCE_FRESHNESS_SEC)) {
+        addSource(evidence.unavailableSources, "pool:reference-observation-unadmitted");
+        return false;
+      }
+      return true;
+    });
+    for (const pool of selectIndependentChallengerPools(eligiblePools)) {
       const poolSignal = deriveDepegSignal(pool.price, pegReference);
       if (poolSignal == null) continue;
       const poolGroupKey = dexPoolIndependentGroupKey(pool);
-      const currentPoolStatus = classifyDirectionalSignal(poolSignal, threshold, pendingState.direction);
+      const currentPoolStatus = classifyDirectionalSignal(poolSignal, threshold, pendingState.direction, recoveryThreshold);
       if (currentPoolStatus === "confirm") {
         const existing = poolConfirmGroups.get(poolGroupKey);
         const candidate = { key: poolGroupKey, pool, signal: poolSignal };
-        if (existing == null || poolSignal.absBps > existing.signal.absBps) {
+        if (existing == null || poolSignal.absRawBps > existing.signal.absRawBps) {
           poolConfirmGroups.set(poolGroupKey, candidate);
         }
         if (pool.tvlUsd >= POOL_CHALLENGE_HIGH_TVL_USD) {

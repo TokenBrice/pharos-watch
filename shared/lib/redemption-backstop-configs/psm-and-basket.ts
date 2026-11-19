@@ -596,9 +596,8 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
     unresolvedOutputDisposition: "reviewed-external",
     executionModel: "deterministic-basket",
     outputAssetType: "stable-basket",
-    // The RToken's `redemptionAvailable()` throttle is a USD capacity bound over
-    // RToken units; it does not observe which receipt tokens the basket pays out,
-    // so requiring the unresolved receipt identities would discard every read.
+    // The throttle is measured in shares. Only a same-block basket valuation
+    // marks it in USD, and the USD mark does not establish a downstream unwind.
     capacityModel: { kind: "reserve-sync-metadata" },
     reviewedAt: REVIEWED_EXIT_CREDIT_AT,
     costModel: fixedFee(

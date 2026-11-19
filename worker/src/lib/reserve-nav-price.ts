@@ -6,7 +6,9 @@ import { validatePricingSourceFreshness } from "./pricing-source-freshness";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { logWorkerEventArgs } from "./structured-log";
 import { toErrorMessage } from "@shared/lib/error-utils";
-import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
+import { computeLiveReserveConfigFingerprint, parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
+import { chainlinkNavMaxOracleAgeSec } from "../cron/reserve-adapters/chainlink-nav-freshness";
 import { PinnedNativeShareObservationSchema, ReserveNavSupplyAdmissionReviewSchema, type PinnedNativeShareObservation, type ReserveNavSupplyScopeReason } from "@shared/types/reserve-nav-supply";
 import { hasConsistentSnapshotState } from "./live-reserves/store-snapshot-state";
 
@@ -32,11 +34,13 @@ export interface ReserveNavSnapshotRow extends ReserveNavPriceRow {
 }
 
 /** Both price consensus and supplemental supply consume the same bound success. */
+type ReserveNavPriceQuote = NavTelemetryQuote & { maxAgeSec?: number };
+
 export function decodeCurrentReserveNavPrice(
   row: ReserveNavSnapshotRow,
   meta: Pick<StablecoinMeta, "liveReservesConfig">,
   nowSec = Math.floor(Date.now() / 1000),
-): NavTelemetryQuote | null {
+): ReserveNavPriceQuote | null {
   const config = meta.liveReservesConfig;
   if (!config || config.suspended || row.source !== config.adapter ||
       row.config_fingerprint !== computeLiveReserveConfigFingerprint(config) ||
@@ -48,14 +52,22 @@ export function decodeCurrentReserveNavPrice(
   if (config.adapter === "jpmorgan-nav" &&
       (!row.attempt_id || row.state_config_fingerprint !== row.config_fingerprint ||
        row.last_attempt_id !== row.attempt_id || row.pending_attempt_id != null)) return null;
-  return decodeReserveNavPrice(row, nowSec);
+  if (config.adapter !== "chainlink-nav") return decodeReserveNavPrice(row, nowSec);
+  try {
+    const params = parseLiveReserveAdapterParams("chainlink-nav", config.params);
+    return decodeReserveNavPrice(row, nowSec, chainlinkNavMaxOracleAgeSec(params));
+  } catch {
+    return null;
+  }
 }
 
 // Allows rounded issuer assets and modest cross-observation drift, not a missing funded leg.
 const JPMORGAN_CLASS_ASSETS_SUPPLY_TOLERANCE = 0.005;
 
 /** A successful fetch does not refresh the issuer/oracle evidence clock. */
-export function decodeReserveNavPrice(row: ReserveNavPriceRow, nowSec = Math.floor(Date.now() / 1000)): NavTelemetryQuote | null {
+export function decodeReserveNavPrice(
+  row: ReserveNavPriceRow, nowSec = Math.floor(Date.now() / 1000), maxAgeSec?: number,
+): ReserveNavPriceQuote | null {
   if (!isReserveNavPriceSource(row.source) || !Number.isFinite(row.fetched_at) || row.fetched_at <= 0 ||
       row.fetched_at > nowSec || nowSec - row.fetched_at > LIVE_RESERVE_FRESHNESS_SEC) return null;
   if (typeof row.metadata !== "string") return null;
@@ -70,7 +82,10 @@ export function decodeReserveNavPrice(row: ReserveNavPriceRow, nowSec = Math.flo
   const navPerToken = parsePositiveNumber(metadata.navPerToken);
   const sourceTimestamp = parsePositiveNumber(metadata.sourceTimestamp) ?? parsePositiveNumber(metadata.oracleUpdatedAt);
   if (navPerToken == null || sourceTimestamp == null) return null;
-  const freshness = validatePricingSourceFreshness({ source: row.source, observedAt: sourceTimestamp, observedAtMode: "upstream", nowSec });
+  const freshness = validatePricingSourceFreshness({
+    source: row.source, observedAt: sourceTimestamp, observedAtMode: "upstream", nowSec, maxAgeSec,
+    ...(maxAgeSec !== undefined ? { maxFutureSkewSec: MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } : {}),
+  });
   if (!freshness.accepted) return null;
   const details = metadata.details as Record<string, unknown> | null | undefined;
   const classAssetsUsd = row.source === "jpmorgan-nav" && metadata.freshnessMode === "verified" &&
@@ -79,7 +94,8 @@ export function decodeReserveNavPrice(row: ReserveNavPriceRow, nowSec = Math.flo
     Date.parse(`${details.dealingDate}T00:00:00Z`) / 1000 === sourceTimestamp
     ? parsePositiveNumber(details.classAssetsUsd) : null;
   return {
-    source: row.source, price: navPerToken, observedAt: Math.floor(sourceTimestamp), observedAtMode: "upstream",
+    source: row.source, price: navPerToken, observedAt: freshness.observedAt!, observedAtMode: "upstream",
+    ...(maxAgeSec !== undefined ? { maxAgeSec } : {}),
     metadata: {
       reserveFetchedAt: row.fetched_at, navPerToken,
       ...(classAssetsUsd != null ? { classAssetsUsd } : {}),

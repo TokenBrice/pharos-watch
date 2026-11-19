@@ -1,10 +1,16 @@
 import { BLACKLIST_RECENT_WINDOW_SEC } from "@shared/lib/status-thresholds";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 
 export const BLACKLIST_GAP_METRICS_CACHE_VERSION = 3;
-export const BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION = 5;
+export const BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION = 6;
 export const BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY =
   `blacklist:summary:producer:v${BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION}`;
+export const BLACKLIST_SUMMARY_ROLLBACK_CACHE_KEY = "blacklist:summary:producer:v5";
+export const BLACKLIST_EVENT_COVERAGE_KEY = "blacklist:event-coverage:v1";
+export const BLACKLIST_EVENT_COVERAGE_PROGRESS_KEY = "blacklist:event-coverage-progress:v1";
 export const BLACKLIST_DERIVED_GENERATION_KEY = "blacklist:derived-generation";
+export const BLACKLIST_POST_WIPE_BALANCE_PREFIX = "blacklist:post-wipe-balance:";
+export const BLACKLIST_POST_WIPE_MAX_AGE_SEC = 2 * API_FRESHNESS_MAX_AGE_SEC.blacklistSummary;
 // SAFETY: the key is a fixed constant; SQL randomness prevents ABA when an operator replays an import.
 export const BLACKLIST_DERIVED_GENERATION_ROTATION_SQL = `INSERT INTO cache (key, value, updated_at)
   VALUES ('${BLACKLIST_DERIVED_GENERATION_KEY}', lower(hex(randomblob(16))), unixepoch())
@@ -29,6 +35,9 @@ export function getBlacklistDerivedCacheKeys(recentWindowSec = BLACKLIST_RECENT_
   ];
   return [
     BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY,
+    BLACKLIST_SUMMARY_ROLLBACK_CACHE_KEY,
+    BLACKLIST_EVENT_COVERAGE_KEY,
+    BLACKLIST_EVENT_COVERAGE_PROGRESS_KEY,
     ...metricOptions.flatMap((options) => [
       getBlacklistGapMetricsCacheKey(options, "producer"),
       getBlacklistGapMetricsCacheKey(options, "request"),

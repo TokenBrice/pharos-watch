@@ -1,7 +1,35 @@
+import { hasComparablePegQuote } from "@shared/lib/current-peg-projection";
+import { deriveCurrentPegObservationMap } from "@shared/lib/current-peg-observations";
+import { hasPublishedDeviation } from "@shared/lib/depeg-signals";
+import { currentAdmissionUnavailableReason } from "@shared/lib/reference-admission";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
+import type { StablecoinData } from "@shared/types/supply";
 export { deriveCurrentPegObservationMap, hasUsableCurrentPrice } from "@shared/lib/current-peg-observations";
 export type { CurrentPegObservation } from "@shared/lib/current-peg-observations";
 import { getDexTrustPolicy, isAffirmativeDexPriceRow, isTrustedDexPriceRow, readDexAggregateObservedAt } from "./depeg-trust-policy";
 import type { CurrentPegDexPrice } from "@shared/lib/current-peg-observations";
+
+/** Older cache generations can precede the per-asset block. Derive their cohort just once. */
+export function createCurrentPegReader(options: Parameters<typeof deriveCurrentPegObservationMap>[0]) {
+  let observations: ReturnType<typeof deriveCurrentPegObservationMap> | undefined;
+  return (asset: StablecoinData) => {
+    const peg = asset.currentPeg;
+    if (peg && (hasPublishedDeviation(peg) || options.fxReferenceObservations === undefined)) {
+      if (!hasComparablePegQuote(asset)) {
+        return { ...peg, currentDeviationBps: null, pegReference: null, pegReferenceUnavailable: true };
+      }
+      const admission = peg.referenceAdmission;
+      const currency = WORKER_TRACKED_META_BY_ID.get(asset.id)?.flags.pegCurrency;
+      if (options.now != null && admission?.status === "admitted" && currency && currency !== "USD" &&
+          currentAdmissionUnavailableReason(admission, currency, asset.priceObservedAt, options.now)) {
+        return { ...peg, currentDeviationBps: null, admittedDeviationBps: null, pegReferenceUnavailable: true };
+      }
+      return peg;
+    }
+    observations ??= deriveCurrentPegObservationMap(options);
+    return observations.get(asset.id);
+  };
+}
 
 export interface CurrentPegDexRow extends Omit<CurrentPegDexPrice, "expiresAt"> {
   stablecoin_id: string;
@@ -17,7 +45,7 @@ export function selectCurrentPegDexPrices(rows: CurrentPegDexRow[], now: number)
     const aggregateObservedAt = readDexAggregateObservedAt(row.price_sources_json, now);
     if (aggregateObservedAt == null || !isAffirmativeDexPriceRow({ ...row, aggregateObservedAt }, now, "ui")) continue;
     prices.set(row.stablecoin_id, {
-      ...row, expiresAt: Math.min(row.updated_at, aggregateObservedAt) + getDexTrustPolicy("ui").maxAgeSec,
+      ...row, observedAtSec: aggregateObservedAt, expiresAt: Math.min(row.updated_at, aggregateObservedAt) + getDexTrustPolicy("ui").maxAgeSec,
     });
   }
   return prices;

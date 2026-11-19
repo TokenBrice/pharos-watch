@@ -38,6 +38,8 @@ export interface ResolvedYield {
   project?: string;
   chain?: string | null;
   sourceObservedAt?: number | null;
+  sourceFetchedAt?: number | null;
+  returnDenomination?: string;
   comparisonAnchorObservedAt?: number | null;
   sourceRisk?: YieldSourceRisk | null;
   /** Explicit venue for the row; first input to `resolveYieldVenueProtocol`. */

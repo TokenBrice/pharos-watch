@@ -12,6 +12,8 @@ Current source of truth is the per-coin JSON registry under `shared/data/stablec
 
 ## Source Of Truth
 
+An active non-NAV asset needs an independently supported peg unit. An unsupported OTHER reference stays ineligible for active promotion. Record VAR using the asset's variable reference.
+
 [Stablecoin Data Registry](../stablecoin-data.md#source-files) owns the catalog source-file table, the generated projections, and the single supported regeneration entry point (`npm run bootstrap:generated`). Do not restate that table here. Two additional static files are addition-specific and are not part of it:
 
 | File                    | Purpose                                                        |

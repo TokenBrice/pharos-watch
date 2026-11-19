@@ -1,11 +1,10 @@
+import { createCurrentPegReader } from "../lib/current-peg-observations";
+import { hasFxReferenceEvidence } from "@shared/lib/current-peg-observations";
+import { hasPublishedDeviation } from "@shared/lib/depeg-signals";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { aggregateChains } from "@shared/lib/chains/aggregator";
-import { derivePegRates } from "@shared/lib/peg-rates";
 import { CHAIN_META } from "@shared/types/chain-identity";
-import {
-  WORKER_ACTIVE_IDS,
-  WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID,
-} from "@shared/lib/stablecoins/worker-runtime-registry";
+import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { isCoreAggregateStablecoinId } from "@shared/lib/stablecoins/aggregate-universe";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { errorResponse, jsonResponseWithHeaders } from "../lib/api-response";
@@ -150,7 +149,7 @@ export const handleChains = async (db: D1Database, url?: URL): Promise<Response>
     return errorResponse(503, "Data not yet available");
   }
 
-  const { peggedAssets, fxFallbackRates } = stablecoinsResult.payload;
+  const { peggedAssets } = stablecoinsResult.payload;
   const activePeggedAssets = peggedAssets.filter(isActiveChainAggregateAsset);
 
   // Optional chain scope: publish the full per-chain coin rows the chain-detail
@@ -163,12 +162,10 @@ export const handleChains = async (db: D1Database, url?: URL): Promise<Response>
     return errorResponse(400, "Unknown chain");
   }
 
-  // Derive peg rates for non-USD peg stability calculation
-  const { rates: pegRates } = derivePegRates(activePeggedAssets, TRACKED_META_BY_ID, fxFallbackRates);
-
   const activeSource = await loadActiveSafetyScoreIndex(db);
   const safetyScores: Record<string, number> = {};
-  const reportCards = buildV9ExpectedDependencyMeta(activeSource, Math.floor(Date.now() / 1000));
+  const now = Math.floor(Date.now() / 1000);
+  const reportCards = buildV9ExpectedDependencyMeta(activeSource, now);
   const safetyScoreIdentity =
     activeSource.kind === "error" ? null : activeSource.snapshot.safetyScoreIdentity;
   if (activeSource.kind !== "error" && reportCards.status === "fresh") {
@@ -177,10 +174,22 @@ export const handleChains = async (db: D1Database, url?: URL): Promise<Response>
     }
   }
 
+  const hasFxEvidence = hasFxReferenceEvidence(stablecoinsResult.payload.fxReferenceObservations);
+  const readPeg = createCurrentPegReader({
+    ...stablecoinsResult.payload,
+    peggedAssets: hasFxEvidence ? peggedAssets : activePeggedAssets,
+    asOf: stablecoinsResult.updatedAt,
+    now,
+  });
   const response = aggregateChains({
-    peggedAssets: activePeggedAssets,
+    peggedAssets: activePeggedAssets.map((asset) => {
+      const peg = asset.currentPeg;
+      // A legacy list comparison uses the list's cohort. Explicit refusals still hold.
+      const useChainReference = !hasFxEvidence && peg?.currentDeviationBps != null &&
+        !peg.currentPriceUnavailable && !peg.pegReferenceUnavailable && !hasPublishedDeviation(peg);
+      return { ...asset, currentPeg: readPeg(useChainReference ? { ...asset, currentPeg: undefined } : asset) };
+    }),
     safetyScores,
-    pegRates,
     updatedAt: stablecoinsResult.updatedAt,
     ...(detailChainId != null ? { detailChainId } : {}),
   });

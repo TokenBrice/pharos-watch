@@ -4,6 +4,7 @@
  */
 
 import type { CompareRadarCohort } from "@/lib/compare-data-model-types";
+import { getQuoteMatchedNavPriceReference } from "@/lib/nav-price-reference";
 import { COMPARE_COLORS } from "@/lib/compare-config";
 import type {
   BluechipRating,
@@ -82,6 +83,7 @@ export interface ComparisonCoinEntry {
   data: StablecoinData;
   meta: ComparisonMeta;
   pegDetails?: PegSummaryCoin | null;
+  navPriceReference?: number | null;
   liquidity?: DexLiquidityData | null;
   safetyCard?: V9ConsumerCard | null;
   redemption?: RedemptionBackstopEntry | null;
@@ -234,6 +236,9 @@ export function deriveComparisonCoins({
         data,
         meta,
         pegDetails: pegCoin ?? null,
+        ...(meta.flags.navToken ? {
+          navPriceReference: getQuoteMatchedNavPriceReference(meta.flags.pegCurrency ?? "USD", data.priceObservedAt, pegCoinMap),
+        } : {}),
         liquidity: dexCoin ?? null,
         safetyCard: cardMap.get(id) ?? null,
         redemption: redemptionMap?.[id] ?? null,

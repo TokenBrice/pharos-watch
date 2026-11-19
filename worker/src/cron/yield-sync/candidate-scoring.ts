@@ -8,7 +8,7 @@ interface PenaltyFieldsInput {
   apy30d: number;
   safetyScore: number;
   apyVarianceScore: number | null;
-  benchmarkRate: number;
+  benchmarkRate: number | null;
   benchmarkCurrency: string;
   usdBenchmarkRate: number | null;
   sourceRiskPenalty: number;

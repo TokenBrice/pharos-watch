@@ -1,3 +1,5 @@
+import { BRZ_UNVERIFIED_PEAK_EVENT_IDS } from "@shared/data/depegs/brz-unverified-peak-event-ids";
+
 /**
  * Page-generation policy for `/depeg/[event]/`.
  *
@@ -48,17 +50,23 @@ interface DepegEventIndexCandidate {
 }
 
 interface DepegEventPageCandidate {
+  id?: number;
+  stablecoinId?: string;
   peakDeviationBps: number;
 }
 
 interface DepegEventStaticPageCandidate extends DepegEventIndexCandidate, DepegEventPageCandidate {}
+
+export function hasUnverifiedDepegPeak(event: { id?: number; stablecoinId?: string; peakReview?: "unverified" }): boolean {
+  return event.peakReview === "unverified" || (event.stablecoinId === "brz-transfero" && BRZ_UNVERIFIED_PEAK_EVENT_IDS.some(id => id === event.id));
+}
 
 export function getPeakDeviationMagnitudeBps(event: DepegEventPageCandidate): number {
   return Math.abs(event.peakDeviationBps);
 }
 
 export function hasDedicatedDepegEventPage(event: DepegEventPageCandidate): boolean {
-  return getPeakDeviationMagnitudeBps(event) >= MIN_DEPEG_PAGE_DEVIATION_BPS;
+  return hasUnverifiedDepegPeak(event) || getPeakDeviationMagnitudeBps(event) >= MIN_DEPEG_PAGE_DEVIATION_BPS;
 }
 
 function sortNewestDeterministic<T extends DepegEventIndexCandidate>(events: readonly T[]): T[] {
@@ -92,7 +100,11 @@ export function selectIndexableDepegEvents<T extends DepegEventIndexCandidate>(
 export function selectStaticDepegEventPages<T extends DepegEventStaticPageCandidate>(
   events: readonly T[],
 ): readonly T[] {
-  return selectIndexableDepegEvents(events.filter(hasDedicatedDepegEventPage));
+  const selected = new Set(selectIndexableDepegEvents(events.filter(hasDedicatedDepegEventPage)));
+  for (const event of events) {
+    if (hasUnverifiedDepegPeak(event)) selected.add(event);
+  }
+  return sortNewestDeterministic([...selected]);
 }
 
 /**
@@ -222,6 +234,10 @@ export function buildNoindexDepegEventSlugs(
       ?? ranked.find((event) => event.endedAt != null)
       ?? ranked[0];
     for (const event of cluster) {
+      if (hasUnverifiedDepegPeak(event)) {
+        noindex.add(event.slug);
+        continue;
+      }
       if (SEARCH_IMPRESSION_DEPEG_EVENT_SLUGS.has(event.slug)) continue;
       const thinLowConfidence = isLowConfidenceDepegEvent(event) && event.endedAt == null;
       if (thinLowConfidence || event !== lead) noindex.add(event.slug);

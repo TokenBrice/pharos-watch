@@ -10,6 +10,7 @@ import { getRpcAuthHeaders, registryRpcUrls } from "./chain-registry";
 
 interface SolanaTokenSupplyResponse {
   result?: {
+    context?: { slot?: number };
     value?: {
       amount?: string;
     };
@@ -412,18 +413,35 @@ interface SolanaMintSupplyObservation {
   rawSupply: bigint;
   decimals: number;
   slot: number;
+  observedAt?: number;
+}
+
+async function fetchSolanaSlotTime(
+  rpcUrl: string,
+  slot: number,
+  signal: AbortSignal,
+  ctx: ChainObservationContext,
+): Promise<number | null> {
+  const time = await getChainObservationRequests(ctx).post<{ result?: number | null }>(
+    rpcUrl,
+    { jsonrpc: "2.0", id: 1, method: "getBlockTime", params: [slot] },
+    signal, 10_000, { headers: getRpcAuthHeaders(rpcUrl) },
+  );
+  const observedAt = time.result;
+  return typeof observedAt === "number" && Number.isSafeInteger(observedAt) && observedAt > 0 ? observedAt : null;
 }
 
 /**
  * SPL mint supply and decimals from one `getAccountInfo` (jsonParsed) read of
  * the mint account. Unlike `getTokenSupply`, keyless public endpoints serve
  * this method, and the parsed account proves the address is an SPL mint owned
- * by a token program. Returns null when no endpoint yields a well-formed mint.
+ * by a token program. A clocked read requires block time from the same RPC.
  */
 export async function fetchSolanaMintSupply(
   mintAddress: string,
   signal: AbortSignal,
   ctx: ChainObservationContext,
+  options?: { requireStateClock: true },
 ): Promise<SolanaMintSupplyObservation | null> {
   let lastError: unknown = null;
   const rpcUrls = [...new Set([
@@ -459,7 +477,10 @@ export async function fetchSolanaMintSupply(
       ) {
         continue;
       }
-      return { rawSupply: BigInt(supply), decimals: decimals as number, slot: slot as number };
+      const observation = { rawSupply: BigInt(supply), decimals: decimals as number, slot: slot as number };
+      if (!options?.requireStateClock) return observation;
+      const observedAt = await fetchSolanaSlotTime(rpcUrl, observation.slot, signal, ctx);
+      if (observedAt != null) return { ...observation, observedAt };
     } catch (error) {
       lastError = new Error(redactProviderUrls(toErrorMessage(error)));
     }
@@ -484,6 +505,29 @@ export async function fetchSolanaTokenSupply(
   rpcUrl?: string,
   fallbackRpcUrl?: string,
 ): Promise<bigint | null> {
+  return (await readSolanaTokenSupply(mintAddress, signal, ctx, rpcUrl, fallbackRpcUrl, false))?.rawSupply ?? null;
+}
+
+export async function observeSolanaTokenSupply(
+  mintAddress: string,
+  signal: AbortSignal,
+  ctx: ChainObservationContext,
+  rpcUrl?: string,
+  fallbackRpcUrl?: string,
+): Promise<{ rawSupply: bigint; slot: number; observedAt: number } | null> {
+  const read = await readSolanaTokenSupply(mintAddress, signal, ctx, rpcUrl, fallbackRpcUrl, true);
+  return read?.slot != null && read.observedAt != null
+    ? { rawSupply: read.rawSupply, slot: read.slot, observedAt: read.observedAt } : null;
+}
+
+async function readSolanaTokenSupply(
+  mintAddress: string,
+  signal: AbortSignal,
+  ctx: ChainObservationContext,
+  rpcUrl: string | undefined,
+  fallbackRpcUrl: string | undefined,
+  requireClock: boolean,
+): Promise<{ rawSupply: bigint; slot?: number; observedAt?: number } | null> {
   let lastError: unknown = null;
   const configuredRpc = ctx?.chainRpcs?.get("solana");
   const rpcUrls = [...new Set([
@@ -502,7 +546,7 @@ export async function fetchSolanaTokenSupply(
           jsonrpc: "2.0",
           id: 1,
           method: "getTokenSupply",
-          params: [mintAddress],
+          params: requireClock ? [mintAddress, { commitment: "finalized" }] : [mintAddress],
         },
         signal,
         10_000,
@@ -515,11 +559,12 @@ export async function fetchSolanaTokenSupply(
         continue;
       }
 
-      try {
-        return BigInt(amount);
-      } catch {
-        continue;
-      }
+      const rawSupply = BigInt(amount);
+      if (!requireClock) return { rawSupply };
+      const slot = body.result?.context?.slot;
+      if (typeof slot !== "number" || !Number.isSafeInteger(slot) || slot <= 0) continue;
+      const observedAt = await fetchSolanaSlotTime(rpcUrl, slot, signal, ctx);
+      if (observedAt != null) return { rawSupply, slot, observedAt };
     } catch (error) {
       lastError = new Error(redactProviderUrls(toErrorMessage(error)));
       continue;

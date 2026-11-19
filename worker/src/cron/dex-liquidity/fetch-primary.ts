@@ -31,6 +31,7 @@ import {
   buildPoolFingerprint,
 } from "./pool-helpers";
 import { resolvePermanentLiquidity } from "./permanent-liquidity";
+import { resolveCurveBasePoolOverlap } from "./process-pool-protocol-enrichment";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import {
@@ -445,14 +446,14 @@ export async function fetchDataSources(
 
   if (curveCircuitAllowed) {
     const curveResults = await mapWithConcurrency(CURVE_CHAINS, DEX_CURVE_FETCH_CONCURRENCY, async (chain) => {
-      const observedAt = Math.floor(Date.now() / 1000);
+      const readStartedAtSec = Math.floor(Date.now() / 1000);
       const result = await fetchJsonWithRetry<CurveApiPayload>(
         `${CURVE_API_BASE}/${CURVE_API_CHAIN_PATHS[chain] ?? chain}`,
         { headers: { "User-Agent": USER_AGENT }, signal },
         2,
         { timeoutMs: PRIMARY_SOURCE_JSON_TIMEOUT_MS, maxResponseBytes: CURVE_MAX_RESPONSE_BYTES },
       );
-      if (result?.body) result.body.observedAt = observedAt;
+      if (result?.body) result.body.readStartedAtSec = readStartedAtSec;
       return result;
     });
     curvePayloads = curveResults.map((result) => result?.body ?? null);
@@ -661,6 +662,7 @@ export async function buildCurveLookups(
           executionCoins.every((coin) => coin !== null);
 
         const permanentLiquidity = resolvePermanentLiquidity(chain, pool.address, pool.totalSupply);
+        const curveBasePoolOverlap = resolveCurveBasePoolOverlap(chain, pool, coinBalances);
         const entry: CurvePoolEntry = {
           poolAddress: pool.address,
           apiIsBroken: false,
@@ -679,7 +681,8 @@ export async function buildCurveLookups(
           balanceDetails,
           tokenPrices,
           ...(permanentLiquidity ? { permanentLiquidity } : {}),
-          priceObservedAt: json.observedAt ?? null,
+          ...(curveBasePoolOverlap ? { curveBasePoolOverlap } : {}),
+          priceObservedAt: null,
           ...(poolIdentityComplete && retainCompositePoolIdentity
             ? { poolCoins: poolCoins as NonNullable<CurvePoolEntry["poolCoins"]> }
             : {}),
@@ -760,7 +763,7 @@ export async function buildCurveLookups(
             const obs = priceObservations.get(resolved.stablecoinId) ?? [];
             obs.push({
               price: coin.usdPrice,
-              observedAt: json.observedAt ?? null,
+              observedAt: null,
               tvl: pool.usdTotal,
               chain,
               protocol: "curve",

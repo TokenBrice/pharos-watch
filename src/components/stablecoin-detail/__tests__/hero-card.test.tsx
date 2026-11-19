@@ -100,7 +100,7 @@ const coinData: StablecoinData = {
 type HeroPriceProps = Parameters<typeof HeroPriceMetric>[0]["price"];
 
 const priceState = (overrides: Partial<HeroPriceProps> = {}): HeroPriceProps => ({
-  pegRef: 1, deviationBps: null, pegReferenceUnavailable: false, referenceMarketClosed: false,
+  pegRef: 1, deviationBps: null, pegReferenceUnavailable: false, referenceNote: null,
   isNavToken: false, limitedDepegCoverageNote: null, caveat: null, ...overrides,
 });
 
@@ -271,7 +271,7 @@ function makeHeroProps(overrides: HeroBuilderOverrides = {}): HeroBuilderParams 
     pegRef: 1,
     deviationBps: -2,
     pegReferenceUnavailable: false,
-    referenceMarketClosed: false,
+    referenceNote: null,
     pegScoreResult,
     liquidityData,
     yieldRanking,
@@ -306,7 +306,8 @@ describe("HeroCard", () => {
     const now = 1_790_793_000;
     const day = 86_400;
     const summary = projectStablecoinLiveSummary({
-      price: 1, priceSource: "coingecko", currentCirculatingUSD: { peggedUSD: 200 }, currentSupplyObservedAt: now,
+      price: 1, priceSource: "coingecko", currentCirculatingUSD: { peggedUSD: 200 },
+      currentCirculatingNative: 200, currentSupplyObservedAt: now,
       tokens: [
         { date: now - 33 * day, totalCirculating: { peggedUSD: 50 } },
         { date: now - 30 * day, totalCirculating: { peggedUSD: 80 } },
@@ -434,10 +435,10 @@ describe("HeroCard", () => {
   });
 
   it("names the closed reference market instead of a held deviation", () => {
-    const html = renderHero({ referenceMarketClosed: true, deviationBps: null });
+    const html = renderHero({ referenceNote: "Reference market closed", deviationBps: null });
     expect(html).toContain("Reference market closed");
     // A missing peg state outranks the closure: a NAV token keeps its own label.
-    expect(renderHero({ referenceMarketClosed: true, deviationBps: null, isNavToken: true })).toContain("NAV token — no fixed peg");
+    expect(renderHero({ referenceNote: "Reference market closed", deviationBps: null, isNavToken: true })).toContain("NAV token — no fixed peg");
   });
 
   it.each(["card", "cell"] as const)("withholds the %s peg deviation when its observed price is unusable", (variant) => {

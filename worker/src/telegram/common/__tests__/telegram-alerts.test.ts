@@ -297,6 +297,7 @@ describe("depeg direction glyphs", () => {
     ["vchf-vnx", "VCHF", "CHF", 0.98, 1, "₣0.9800, 2.0% below ₣1.00"],
     ["brl-example", "BRL", "BRL", 0.98, 1, "R$0.9800, 2.0% below R$1.00"],
     ["xaut-tether", "XAUT", "GOLD", 3500, 3550, "$3500.0000, 2.0% below $3550.00"],
+    ["idrt-rupiah-token", "IDRT", "USD", 0.00005718, 0.0000592, "$0.00005718, 2.0% below $0.0000592"],
   ] as const)("uses canonical currency formatting for %s", (stablecoinId, symbol, priceCurrency, price, pegReference, expected) => {
     const line = formatDepegTriggeredLine({
       stablecoinId, symbol, direction: "below",

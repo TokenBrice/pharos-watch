@@ -1,3 +1,4 @@
+import { loadPsiSampleAverage } from "../../lib/psi-sample-projection";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { DigestInputData } from "@shared/types/digest";
 import { DigestSafetyMapCaptureSchema, type DigestSafetyMapCapture } from "@shared/types/digest-safety-map-contract";
@@ -13,7 +14,7 @@ import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { getConditionBand } from "@shared/lib/psi-policy";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
-import { deriveCurrentPegObservationMap, type CurrentPegObservation } from "../../lib/current-peg-observations";
+import { deriveCurrentPegObservationMap } from "../../lib/current-peg-observations";
 import { sha256Hex } from "../../lib/hash";
 import { DAY_SECONDS, HOUR_SECONDS } from "@shared/lib/time-constants";
 import { assessFreshnessTimestamp } from "../../lib/api-freshness-age";
@@ -23,7 +24,7 @@ import {
   collectLiquidityShifts,
   collectMintBurnFlows,
   collectResolvedDepegs,
-  collectSupplyVelocity,
+  collectNativeSupplyMovers,
 } from "./collectors-market";
 import {
   collectDewsStress,
@@ -42,7 +43,7 @@ import type {
   CollectorResult,
 } from "./collectors-shared";
 import { collectorDegraded, collectorResult } from "./collectors-shared";
-import type { DepegLifecycleFlag } from "../../lib/depeg-lifecycle";
+import { reconcilePartialDigestLifecycleQueue, type DigestLifecycleFlag } from "./lifecycle-review";
 import { buildRecentDigestMeta, type RecentDigestMetaEntry } from "./runtime-helpers";
 import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../../lib/digest-sql-filters";
 import { buildEditorialCandidates } from "./editorial-candidates";
@@ -76,7 +77,7 @@ export interface DailyDigestInputBuildResult {
   /** leadSignalIds of recent editions (newest first), for the lead quota. */
   recentLeadSignalIds: (string | null)[];
   /** Owner-review lifecycle flags over the full open depeg-event set. */
-  lifecycleFlags: DepegLifecycleFlag[];
+  lifecycleFlags: DigestLifecycleFlag[];
   /** Trailing titles (newest first, up to 30) for long-window title dedupe. */
   recentTitles: string[];
   stablecoinsCacheReason: string | null;
@@ -216,10 +217,6 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   let coreCoinCount = 0;
   let baselineCoinCount = 0;
   const carriedSupplyIds: string[] = [];
-  let biggestSupplyChange: DigestInputData["biggestSupplyChange"] = null;
-  const supplyChanges7d: NonNullable<DigestInputData["supplyChanges7d"]> = [];
-  let biggestAbsChange = 0;
-
   for (const coin of coreAggregateStablecoinAssets) {
     const mcap = getCirculatingRawOrNull(coin);
     const prevWeek = getPrevWeekRawOrNull(coin);
@@ -235,27 +232,12 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     coreCoinCount += 1;
     // A coin with no prior-week bucket has no measurable 7-day change. Counting
     // its whole market cap as growth publishes a fabricated delta, so it leaves
-    // both sides of the aggregate and cannot become the week's biggest mover.
+    // both sides of the aggregate.
     if (prevWeek == null) continue;
     baselineCoinCount += 1;
     baselineMcapUsd += mcap;
     totalPrevWeek += prevWeek;
 
-    if (mcap > 1_000_000) {
-      const change7d = mcap - prevWeek;
-      supplyChanges7d.push({ stablecoinId: coin.id, coin: coin.symbol, change7d });
-      const absChange = Math.abs(change7d);
-      if (absChange > biggestAbsChange) {
-        biggestAbsChange = absChange;
-        biggestSupplyChange = {
-          id: coin.id,
-          symbol: coin.symbol,
-          name: coin.name,
-          changeUsd: change7d,
-          currentMcap: mcap,
-        };
-      }
-    }
   }
 
   const nowSec = Math.floor(Date.now() / 1000);
@@ -264,17 +246,18 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   const evidence: DigestEvidence = {};
   const stablecoinsCacheIsFresh =
     stablecoinsCacheResult.updatedAt != null &&
+    stablecoinsCacheResult.updatedAt <= nowSec &&
     nowSec - stablecoinsCacheResult.updatedAt <= API_FRESHNESS_MAX_AGE_SEC.stablecoins;
-  // Current peg references come from the same authority `/api/peg-summary`
-  // publishes, derived from the full stablecoins payload (not the tracked
-  // subset). A stale cache cannot witness a current reference, so its map stays
-  // empty and USD-quote events keep their stored peak, never the latched
-  // event reference.
-  const currentPegObservationById: ReadonlyMap<string, CurrentPegObservation> = stablecoinsCacheIsFresh
+  // Use the full stablecoins payload for peg references. The collector also
+  // checks each published reference verdict against the selected quote clock.
+  const currentPegObservationById = stablecoinsCacheIsFresh
     ? deriveCurrentPegObservationMap({
         peggedAssets: stablecoinAssets,
         fxFallbackRates: stablecoinsCacheResult.payload.fxFallbackRates,
+        fxReferenceObservations: stablecoinsCacheResult.payload.fxReferenceObservations,
+        generation: `stablecoins:${stablecoinsCacheResult.updatedAt}`,
         asOf: stablecoinsCacheResult.updatedAt,
+        now: nowSec,
       })
     : new Map();
 
@@ -310,8 +293,17 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   }
 
   const activeDepegsResult = await collectActiveDepegs(ctx);
-  collectorResults.push(activeDepegsResult);
-  const { activeDepegCount, activeDepegSignalKeys, topDepegs, lifecycleFlags } = activeDepegsResult.value;
+  const { activeDepegCount, activeDepegSignalKeys, topDepegs } = activeDepegsResult.value;
+  const reconciledLifecycleFlags = ctx.stablecoinsCacheIsFresh
+    ? await reconcilePartialDigestLifecycleQueue(db, activeDepegsResult.value, nowSec)
+    : null;
+  const lifecycleFlags = reconciledLifecycleFlags ?? activeDepegsResult.value.lifecycleFlags;
+  // A partial result can update the queue only after unreadable incidents have
+  // been reconciled with prior evidence. Keep the writer's source-wide guard.
+  collectorResults.push(reconciledLifecycleFlags == null ? activeDepegsResult : {
+    ...activeDepegsResult,
+    qualityReasons: activeDepegsResult.qualityReasons?.map((reason) => `${reason}:partial`),
+  });
 
   const [latestSample, latestDaily, avg24hRow, yesterdayRow] = await Promise.all([
     db
@@ -322,10 +314,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
         "SELECT score, band, components, computed_at as stored_at FROM stability_index ORDER BY computed_at DESC LIMIT 1",
       )
       .first<{ score: number; band: string; components: string; stored_at: number }>(),
-    db
-      .prepare("SELECT AVG(score) as avg FROM stability_index_samples WHERE stored_at > ? AND stored_at <= ?")
-      .bind(nowSec - DAY_SECONDS, nowSec)
-      .first<{ avg: number | null }>(),
+    loadPsiSampleAverage(db, nowSec - DAY_SECONDS, nowSec),
     db
       .prepare("SELECT score, band FROM stability_index WHERE computed_at = ?")
       .bind(yesterdayTs)
@@ -372,13 +361,13 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
 
   const yesterdayIndex = yesterdayRow ? { score: yesterdayRow.score, band: yesterdayRow.band } : null;
 
-  const [blacklistActivityResult, supplyVelocityResult] = await Promise.all([
+  const [blacklistActivityResult, nativeSupplyResult] = await Promise.all([
     collectBlacklistActivity(ctx),
-    collectSupplyVelocity(ctx),
+    collectNativeSupplyMovers(ctx),
   ]);
-  collectorResults.push(blacklistActivityResult, supplyVelocityResult);
+  collectorResults.push(blacklistActivityResult, nativeSupplyResult);
   const blacklistActivity = blacklistActivityResult.value;
-  const supplyVelocity = supplyVelocityResult.value;
+  const { supplyVelocity, supplyChanges7d, biggestSupplyChange } = nativeSupplyResult.value;
 
   const mentionedSymbols = new Set<string>();
   for (const d of topDepegs) mentionedSymbols.add(d.symbol);
@@ -490,7 +479,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
           end: mintBurnFlows?.provenance?.window?.end ?? null,
         },
         supplyVelocity: {
-          label: "UTC snapshots: today, yesterday, 7d ago",
+          label: "Native quantity checkpoints: today, yesterday, 7d ago",
           dates: [todayTs, yesterdayTs, todayTs - 7 * DAY_SECONDS],
         },
         psi: {

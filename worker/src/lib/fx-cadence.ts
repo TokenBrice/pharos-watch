@@ -1,6 +1,7 @@
 import { PRIMARY_CURRENCY_TO_PEG, SECONDARY_FX_CURRENCY_TO_PEG } from "./fx-config";
+import type { FxSourceCadence } from "@shared/types/fx-reference";
 
-export type FxSourceCadence = "intraday" | "calendar-daily" | "business-daily";
+export type { FxSourceCadence } from "@shared/types/fx-reference";
 type NaturalFxSourceCadence = Exclude<FxSourceCadence, "intraday">;
 
 const BUSINESS_DAILY_FX_PEGS: ReadonlySet<string> = new Set(

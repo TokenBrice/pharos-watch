@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { OPTIONAL_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 import {
   findPublishedYieldRow,
   getYieldRankingsCachePayload,
@@ -208,10 +209,11 @@ describe("tracked optional source anchors", () => {
         ) VALUES (?, ?, 0, 'defillama', ?, ?, ?, ?)`,
       );
       const nowSec = 1_747_000_000;
-      insertHistory.run("usdy-ondo-finance", "protocol-api:ondo-usdy-oracle", 1.09, nowSec - 8 * 86_400, "gen-failed", "failed");
-      insertHistory.run("usdy-ondo-finance", "protocol-api:ondo-usdy-oracle", 1.08, nowSec - 9 * 86_400, "gen-staged", "staged");
-      insertHistory.run("usdy-ondo-finance", "protocol-api:ondo-usdy-oracle", 1.07, nowSec - 10 * 86_400, "gen-published", "published");
-      insertHistory.run("usdy-ondo-finance", "protocol-api:ondo-usdy-oracle", 1.06, nowSec - 11 * 86_400, null, null);
+      const { stablecoinId, sourceKey } = OPTIONAL_YIELD_SOURCES.ondo;
+      insertHistory.run(stablecoinId, sourceKey, 1.09, nowSec - 8 * 86_400, "gen-failed", "failed");
+      insertHistory.run(stablecoinId, sourceKey, 1.08, nowSec - 9 * 86_400, "gen-staged", "staged");
+      insertHistory.run(stablecoinId, sourceKey, 1.07, nowSec - 10 * 86_400, "gen-published", "published");
+      insertHistory.run(stablecoinId, sourceKey, 1.06, nowSec - 11 * 86_400, null, null);
 
       const row = await loadOndoOracleAnchorRow(createSqliteD1(sqlite), nowSec);
 
@@ -226,6 +228,7 @@ describe("tracked optional source anchors", () => {
     const sqlite = createLatestSchemaSqlite().sqlite;
     try {
       const nowSec = 1_747_000_000;
+      const { stablecoinId, sourceKey } = OPTIONAL_YIELD_SOURCES.ondo;
       sqlite
         .prepare(
           `INSERT INTO yield_history_daily (
@@ -233,7 +236,7 @@ describe("tracked optional source anchors", () => {
             data_source, exchange_rate, publication_state
           ) VALUES (?, ?, ?, ?, 1, 0, 'protocol-api', ?, 'published')`,
         )
-        .run("usdy-ondo-finance", "protocol-api:ondo-usdy-oracle", nowSec - 40 * 86_400, nowSec - 40 * 86_400, 1.11);
+        .run(stablecoinId, sourceKey, nowSec - 40 * 86_400, nowSec - 40 * 86_400, 1.11);
 
       const row = await loadOndoOracleAnchorRow(createSqliteD1(sqlite), nowSec);
 
@@ -248,13 +251,14 @@ describe("tracked optional source anchors", () => {
     const sqlite = createLatestSchemaSqlite().sqlite;
     try {
       const nowSec = 1_747_000_000;
+      const { stablecoinId, sourceKey } = OPTIONAL_YIELD_SOURCES.ondo;
       sqlite
         .prepare(
           `INSERT INTO yield_history (
             stablecoin_id, source_key, apy, data_source, exchange_rate, recorded_at, publication_state
           ) VALUES (?, ?, 0, 'protocol-api', ?, ?, 'published')`,
         )
-        .run("usdy-ondo-finance", "protocol-api:ondo-usdy-oracle", 1.09, nowSec - 10 * 86_400);
+        .run(stablecoinId, sourceKey, 1.09, nowSec - 10 * 86_400);
       sqlite
         .prepare(
           `INSERT INTO yield_history_daily (
@@ -262,7 +266,7 @@ describe("tracked optional source anchors", () => {
             data_source, exchange_rate, publication_state
           ) VALUES (?, ?, ?, ?, 1, 0, 'protocol-api', ?, 'published')`,
         )
-        .run("usdy-ondo-finance", "protocol-api:ondo-usdy-oracle", nowSec - 40 * 86_400, nowSec - 40 * 86_400, 1.11);
+        .run(stablecoinId, sourceKey, nowSec - 40 * 86_400, nowSec - 40 * 86_400, 1.11);
 
       const row = await loadOndoOracleAnchorRow(createSqliteD1(sqlite), nowSec);
 
@@ -392,12 +396,27 @@ describe("appendOptionalYieldCandidate", () => {
     input?: Parameters<typeof makeCandidateInput>[0];
     expected: YieldCandidateAppendStatus;
     expectedLength: number;
+    expectedClocks?: Partial<ResolvedYieldCandidate["yield"]>;
   }> = [
     {
       label: "returns appended when a candidate is accepted",
       input: { chain: "base" },
       expected: "appended",
       expectedLength: 1,
+    },
+    {
+      label: "moves a legacy supplemental vault fetch clock out of observation provenance",
+      input: { chain: "base", yield: { sourceKey: "protocol-api:yearn:base:0xpool", sourceObservedAt: 200 } },
+      expected: "appended",
+      expectedLength: 1,
+      expectedClocks: { sourceObservedAt: null, sourceFetchedAt: 200 },
+    },
+    {
+      label: "preserves an indexed APY clock independent of its fetch clock",
+      input: { chain: "base", yield: { sourceKey: "protocol-api:yearn:base:0xpool", sourceObservedAt: 100, sourceFetchedAt: 200 } },
+      expected: "appended",
+      expectedLength: 1,
+      expectedClocks: { sourceObservedAt: 100, sourceFetchedAt: 200 },
     },
     {
       label: "returns duplicate when an identical source key already exists",
@@ -448,7 +467,7 @@ describe("appendOptionalYieldCandidate", () => {
     },
   ];
 
-  it.each(cases)("$label", ({ input, expected, expectedLength }) => {
+  it.each(cases)("$label", ({ input, expected, expectedLength, expectedClocks }) => {
     const resolved = input?.resolved ?? [];
     const status = appendOptionalYieldCandidate(makeCandidateInput({ ...input, resolved }));
 
@@ -456,6 +475,9 @@ describe("appendOptionalYieldCandidate", () => {
     expect(resolved).toHaveLength(expectedLength);
     if (expected === "appended") {
       expect(resolved[0]?.yield?.chain).toBe("base");
+    }
+    if (expectedClocks) {
+      expect(resolved[0]?.yield).toMatchObject(expectedClocks);
     }
   });
 });

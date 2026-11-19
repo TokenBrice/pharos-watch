@@ -8,6 +8,7 @@ import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import { loadPriceValidationReferences } from "../../lib/price-validation";
+import type { DexValuationPrices } from "../../lib/dex-api-token-pricing";
 import type { DiscoveryCrawlTier, DiscoveryMeta, DiscoveryRunCheckpoint } from "./types";
 import { DISCOVERY_TIERS, STAGED_POOL_FRESH_HOURS } from "./types";
 import {
@@ -561,6 +562,14 @@ export async function syncDexDiscovery(
   try {
     throwIfAborted(signal);
     const validationReferences = await loadPriceValidationReferences(db);
+    let marketPrices: Promise<DexValuationPrices | undefined> | undefined;
+    const loadMarketPrices = () => marketPrices ??= import("../dex-liquidity/orchestrator-phases/lookups")
+      .then(({ loadTrackedStablecoinMaps }) => loadTrackedStablecoinMaps(db, Math.floor(Date.now() / 1000)))
+      .then(({ stablecoinPriceById }) => stablecoinPriceById)
+      .catch((err) => {
+        logWorkerEventArgs("handler", "warn", "Horizon market marks unavailable", toErrorMessage(err));
+        return undefined;
+      });
     deploymentOutcomesWritten += await upsertDexDeploymentOutcomes(
       db,
       buildStaticInaccessibleDeploymentOutcomes(nowSec),
@@ -781,6 +790,7 @@ export async function syncDexDiscovery(
               metadata: { runSeq, tier: candidate.tier, coinsCrawled, poolsDiscovered },
             });
           } : undefined,
+          loadMarketPrices,
         );
         const discoveredPools = result.pools.filter((pool) => pool.source !== "cg_tickers");
         const discoveredPoolCount = discoveredPools.length;

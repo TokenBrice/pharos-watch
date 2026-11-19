@@ -1,3 +1,5 @@
+import { isMentoMarketClosed, mostRecentMentoClosureEnd, resolveMentoFxMarketReopen } from "@shared/lib/reference-market-hours";
+export { resolveMentoFxMarketReopen } from "@shared/lib/reference-market-hours";
 import { STABLECOIN_PUBLICATION_WAIVERS, STABLECOIN_PRICE_GAP_REVIEWS, STABLECOIN_MARKET_HOURS_CALENDARS, type StablecoinPublicationWaiver, type StablecoinPriceGapReview } from "./stablecoin-publication-reviews";
 export { STABLECOIN_PUBLICATION_WAIVERS, STABLECOIN_PRICE_GAP_REVIEWS, STABLECOIN_MARKET_HOURS_CALENDARS } from "./stablecoin-publication-reviews";
 export type { StablecoinPublicationWaiver, StablecoinPriceGapReview } from "./stablecoin-publication-reviews";
@@ -18,6 +20,7 @@ import type {
 } from "@shared/types/status";
 import { parseJsonObject } from "./json-parse";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { HOUR_SECONDS } from "@shared/lib/time-constants";
 
 export const ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS = 2;
 
@@ -66,15 +69,20 @@ export interface StablecoinPriceCoverageAsset {
   supplyObservedAt?: number | null;
 }
 
-export type MissingActivePriceDetail = ActivePriceCoverageGap;
+export type MissingActivePriceDetail = ActivePriceCoverageGap & {
+  /** First missing publication's generation clock for reviewed market-hours assets. */
+  firstMissingAt?: number;
+};
 
 /** The writer has measured current counts; only prior-generation continuity
  * can be unknown. The public reader also represents unavailable current data. */
 export type StablecoinActivePriceCoverage = {
   [Key in Exclude<keyof ActivePriceCoverageHealth,
-    "status" | "observedAt" | "unavailableReason" | "maxConsecutiveMissingGenerations" | "nominalReferenceMarketCapUsd" | "affectedMarketCapUsd">]-?: NonNullable<ActivePriceCoverageHealth[Key]>;
+    "status" | "observedAt" | "unavailableReason" | "missingActiveAssets" | "maxConsecutiveMissingGenerations" | "nominalReferenceMarketCapUsd" | "affectedMarketCapUsd">]-?: NonNullable<ActivePriceCoverageHealth[Key]>;
 } & {
   complete: boolean;
+  evaluatedAt?: number;
+  missingActiveAssets: MissingActivePriceDetail[];
   maxConsecutiveMissingGenerations: ActivePriceCoverageHealth["maxConsecutiveMissingGenerations"];
   nominalReferenceMarketCapUsd: number | null;
   affectedMarketCapUsd: number | null;
@@ -111,6 +119,7 @@ export type PersistedMissingActivePriceState = readonly [
   lastKnownMarketCapObservedAt?: number | null,
   lastKnownMarketCapSource?: MissingActivePriceDetail["lastKnownMarketCapSource"],
   marketCapUsd?: number | null,
+  firstMissingAt?: number,
 ];
 
 export interface CompactedStablecoinActivePriceCoverage extends StablecoinActivePriceCoverage {
@@ -124,45 +133,7 @@ export interface ResolvedStablecoinPublicationWaivers {
   invalidWaiverIds: string[];
 }
 
-/** Exact UTC rules verified at the registry's pinned MarketHoursBreaker commit. */
-function isMentoMarketClosed(nowSec: number): boolean {
-  const clock = new Date(nowSec * 1000);
-  const day = clock.getUTCDay();
-  const hour = clock.getUTCHours();
-  const month = clock.getUTCMonth();
-  const date = clock.getUTCDate();
-  return (day === 5 && hour >= 21) || day === 6 || (day === 0 && hour < 23)
-    || (month === 11 && ((date === 24 || date === 31) && hour >= 22 || date === 25))
-    || (month === 0 && date === 1);
-}
 
-/** End of the reviewed MarketHoursBreaker closure containing `nowSec`, or null while open.
- *  The checked calendar is the standing Mento FX source review above; callers defer
- *  settlement to this instant rather than treating the scheduled closure as impairment. */
-export function resolveMentoFxMarketReopen(nowSec: number): number | null {
-  if (!Number.isFinite(nowSec) || nowSec < 0 || !isMentoMarketClosed(nowSec)) return null;
-  // Reviewed closure edges fall on UTC hour marks; walk to the first open hour.
-  let candidate = Math.floor(nowSec / 3_600) * 3_600 + 3_600;
-  for (let hours = 0; hours < 24 * 8; hours += 1, candidate += 3_600) {
-    if (!isMentoMarketClosed(candidate)) return candidate;
-  }
-  return null;
-}
-
-function mostRecentMentoClosureEnd(nowSec: number): number {
-  const clock = new Date(nowSec * 1000);
-  const year = clock.getUTCFullYear();
-  const midnight = Date.UTC(year, clock.getUTCMonth(), clock.getUTCDate()) / 1000;
-  let sundayReopen = midnight - clock.getUTCDay() * 86_400 + 23 * 3600;
-  if (sundayReopen > nowSec) sundayReopen -= 7 * 86_400;
-  // Reject nominal ends still inside another closure (for example Christmas on Sunday).
-  return Math.max(...[
-    sundayReopen,
-    Date.UTC(year, 11, 26) / 1000,
-    Date.UTC(year, 0, 2) / 1000,
-    Date.UTC(year - 1, 11, 26) / 1000,
-  ].filter((end) => end <= nowSec && isMentoMarketClosed(end - 1) && !isMentoMarketClosed(end)));
-}
 
 type StablecoinMarketHoursCalendar = {
   calendarId: string;
@@ -181,6 +152,7 @@ export function resolveStablecoinMarketHours(
 ): {
   closedById: ReadonlyMap<string, ActivePriceCoverageScheduledClosure>;
   alertSuppressedIds: ReadonlySet<string>;
+  closureWindow: { start: number; end: number } | null;
   expiredCalendarIds: string[];
   invalidCalendarIds: string[];
 } {
@@ -189,12 +161,17 @@ export function resolveStablecoinMarketHours(
   const expiredCalendarIds = new Set<string>();
   const invalidCalendarIds = new Set<string>();
   const activeIds = new Set(expectedActiveIds);
-  const closed = validReviewSeconds(nowSec) && isMentoMarketClosed(nowSec);
-  // Compact history has no per-generation clocks. Require the equivalent number
-  // of open-market cadence periods without changing the measured missing streak.
-  const reopeningGate = validReviewSeconds(nowSec)
-    && nowSec - mostRecentMentoClosureEnd(nowSec)
-      < ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS * CRON_INTERVALS["sync-stablecoins"];
+  const reopen = validReviewSeconds(nowSec) ? resolveMentoFxMarketReopen(nowSec) : null;
+  const lastReopen = reopen == null && validReviewSeconds(nowSec) ? mostRecentMentoClosureEnd(nowSec) : null;
+  const reopeningGate = lastReopen != null
+    && nowSec - lastReopen < ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS * CRON_INTERVALS["sync-stablecoins"];
+  const closureEnd = reopen ?? (reopeningGate ? lastReopen : null);
+  let closureWindow: { start: number; end: number } | null = null;
+  if (closureEnd != null) {
+    let start = Math.floor(Math.min(nowSec, closureEnd - 1) / HOUR_SECONDS) * HOUR_SECONDS;
+    while (isMentoMarketClosed(start - 1)) start -= HOUR_SECONDS;
+    closureWindow = { start, end: closureEnd };
+  }
   for (const calendar of calendars) {
     if (!calendar.assets.some((asset) => activeIds.has(asset.stablecoinId))) continue;
     if (!validReviewSeconds(nowSec) || calendar.calendarId !== "mento-fx"
@@ -212,8 +189,8 @@ export function resolveStablecoinMarketHours(
     }
     for (const asset of calendar.assets) {
       if (!activeIds.has(asset.stablecoinId)) continue;
-      if (closed || reopeningGate) alertSuppressedIds.add(asset.stablecoinId);
-      if (!closed) continue;
+      if (closureWindow) alertSuppressedIds.add(asset.stablecoinId);
+      if (reopen == null) continue;
       closedById.set(asset.stablecoinId, {
         calendarId: calendar.calendarId,
         reason: "market-closed",
@@ -226,8 +203,19 @@ export function resolveStablecoinMarketHours(
       });
     }
   }
-  return { closedById, alertSuppressedIds,
+  return { closedById, alertSuppressedIds, closureWindow,
     expiredCalendarIds: [...expiredCalendarIds].sort(), invalidCalendarIds: [...invalidCalendarIds].sort() };
+}
+
+export function isScheduledClosureGap(
+  marketHours: ReturnType<typeof resolveStablecoinMarketHours>,
+  stablecoinId: string,
+  firstMissingAt: number | undefined,
+): boolean {
+  const { closureWindow } = marketHours;
+  return closureWindow != null && firstMissingAt != null
+    && firstMissingAt >= closureWindow.start && firstMissingAt < closureWindow.end
+    && marketHours.alertSuppressedIds.has(stablecoinId);
 }
 
 export function resolveStablecoinScheduledPriceClosures(
@@ -460,26 +448,43 @@ function acceptedObservation(asset: StablecoinPriceCoverageAsset | undefined): {
 }
 
 const WORKER_ACTIVE_IDS = WORKER_ACTIVE_STABLECOINS.map((stablecoin) => stablecoin.id);
+const MARKET_HOURS_ASSET_IDS = new Set<string>(
+  STABLECOIN_MARKET_HOURS_CALENDARS.flatMap((calendar) => calendar.assets.map((asset) => asset.stablecoinId)),
+);
+
+interface MissingActivePriceParseOptions {
+  nowSec?: number;
+  observedAt?: number;
+  reviewsById?: ReadonlyMap<string, StablecoinPriceGapReview>;
+  marketHours?: ReturnType<typeof resolveStablecoinMarketHours>;
+}
 
 export function parseMissingActivePriceDetail(
   value: unknown,
-  options: { nowSec?: number; reviewsById?: ReadonlyMap<string, StablecoinPriceGapReview> } = {},
+  options: MissingActivePriceParseOptions = {},
 ): MissingActivePriceDetail | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const entry = value as Record<string, unknown>;
   if (typeof entry.stablecoinId !== "string") return null;
   const streak = numberValue(entry.consecutiveMissingGenerations);
   const consecutiveMissingGenerations = streak != null && Number.isInteger(streak) && streak >= 1 ? streak : null;
+  const nowSec = options.nowSec ?? Math.floor(Date.now() / 1000);
+  const currentPrice = numberValue(entry.currentPrice);
+  const priced = currentPrice != null && currentPrice > 0;
   // Registry truth at read time: a persisted acknowledgement is never trusted,
   // so a registry edit or an expired review takes effect immediately.
-  const review = positiveFiniteNumberOrNull(entry.currentPrice) != null
-    ? null
+  const review = priced ? null
     : options.reviewsById
       ? options.reviewsById.get(entry.stablecoinId) ?? null
-      : activePriceGapReviewForId(entry.stablecoinId, options.nowSec ?? Math.floor(Date.now() / 1000));
-  const marketHours = resolveStablecoinMarketHours([entry.stablecoinId], options.nowSec ?? Math.floor(Date.now() / 1000));
-  const scheduledClosure = positiveFiniteNumberOrNull(entry.currentPrice) != null ? null
-    : marketHours.closedById.get(entry.stablecoinId) ?? null;
+      : activePriceGapReviewForId(entry.stablecoinId, nowSec);
+  const observedAt = options.observedAt ?? nowSec;
+  const gapStart = entry.firstMissingAt;
+  const firstMissingAt = !priced && consecutiveMissingGenerations != null && MARKET_HOURS_ASSET_IDS.has(entry.stablecoinId)
+    && typeof gapStart === "number" && Number.isSafeInteger(gapStart)
+    && validReviewSeconds(gapStart) && gapStart <= Math.min(observedAt, nowSec) ? gapStart : undefined;
+  const marketHours = options.marketHours ?? resolveStablecoinMarketHours([entry.stablecoinId], nowSec);
+  const closureGap = isScheduledClosureGap(marketHours, entry.stablecoinId, firstMissingAt);
+  const scheduledClosure = closureGap ? marketHours.closedById.get(entry.stablecoinId) ?? null : null;
   return {
     stablecoinId: entry.stablecoinId,
     symbol: stringOrNull(entry.symbol) ?? entry.stablecoinId,
@@ -488,11 +493,12 @@ export function parseMissingActivePriceDetail(
     lastKnownMarketCapObservedAt: dateSecondsOrNull(entry.lastKnownMarketCapObservedAt),
     lastKnownMarketCapSource: entry.lastKnownMarketCapSource === "publication" || entry.lastKnownMarketCapSource === "supply_history"
       ? entry.lastKnownMarketCapSource : null,
-    currentPrice: numberValue(entry.currentPrice),
+    currentPrice,
     currentSource: stringOrNull(entry.currentSource),
     currentObservedAt: dateSecondsOrNull(entry.currentObservedAt),
     currentConfidence: stringOrNull(entry.currentConfidence),
     consecutiveMissingGenerations,
+    ...(firstMissingAt === undefined ? {} : { firstMissingAt }),
     streakUnavailableReason: consecutiveMissingGenerations == null
       ? entry.streakUnavailableReason === "previous-coverage-read-failed"
         ? "previous-coverage-read-failed" : "previous-coverage-malformed"
@@ -502,7 +508,7 @@ export function parseMissingActivePriceDetail(
     lastAcceptedObservedAt: dateSecondsOrNull(entry.lastAcceptedObservedAt),
     rejectionReason: stringOrNull(entry.rejectionReason) ?? "no-accepted-price",
     scheduledClosure,
-    alertEligible: review == null && !marketHours.alertSuppressedIds.has(entry.stablecoinId)
+    alertEligible: !priced && review == null && !closureGap
       && (consecutiveMissingGenerations == null
         || consecutiveMissingGenerations >= ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS),
     acknowledgedGap: review == null || scheduledClosure != null ? null : acknowledgementFromReview(review),
@@ -511,7 +517,7 @@ export function parseMissingActivePriceDetail(
 
 export function parsePersistedMissingActivePriceState(
   value: unknown,
-  options: { nowSec?: number; reviewsById?: ReadonlyMap<string, StablecoinPriceGapReview> } = {},
+  options: MissingActivePriceParseOptions = {},
 ): MissingActivePriceDetail | null {
   if (!Array.isArray(value)) return null;
   const fields: readonly unknown[] = value;
@@ -529,6 +535,7 @@ export function parsePersistedMissingActivePriceState(
     lastKnownMarketCapObservedAt: fields[8],
     lastKnownMarketCapSource: fields[9],
     marketCapUsd: fields[10],
+    firstMissingAt: fields[11],
     currentPrice: null,
   }, options);
 }
@@ -538,6 +545,13 @@ export function parseMissingActivePriceDetailsById(
   coverage: Record<string, unknown>,
   options: Parameters<typeof parseMissingActivePriceDetail>[1] = {},
 ): Map<string, MissingActivePriceDetail> {
+  const evaluatedAt = coverage.evaluatedAt;
+  // The cron wrapper can start before coverage is evaluated. Validate the
+  // persisted onset against that generation's evaluation clock when available.
+  if (options.observedAt != null && typeof evaluatedAt === "number" && Number.isSafeInteger(evaluatedAt)
+    && evaluatedAt >= options.observedAt && evaluatedAt <= (options.nowSec ?? options.observedAt)) {
+    options = { ...options, observedAt: evaluatedAt };
+  }
   const detailsById = new Map<string, MissingActivePriceDetail>();
   if (Array.isArray(coverage.missingActiveState)) {
     for (const value of coverage.missingActiveState.slice(0, WORKER_ACTIVE_IDS.length)) {
@@ -554,7 +568,11 @@ export function parseMissingActivePriceDetailsById(
   return detailsById;
 }
 
-function parsePreviousCoverageMetadata(metadataJson: string): PreviousStablecoinActivePriceCoverage | null {
+function parsePreviousCoverageMetadata(
+  metadataJson: string,
+  observedAt: number,
+  nowSec: number,
+): PreviousStablecoinActivePriceCoverage | null {
   try {
     const metadata = parseJsonObject(metadataJson, { onFailure: () => undefined });
     if (!metadata) return null;
@@ -577,7 +595,9 @@ function parsePreviousCoverageMetadata(metadataJson: string): PreviousStablecoin
       ...coverage, status: coverage.complete === true ? "complete" : "incomplete", observedAt: null,
     }).success) return null;
     const parseOptions = {
-      reviewsById: resolveStablecoinPriceGapReviews(WORKER_ACTIVE_IDS, Math.floor(Date.now() / 1000)).activeById,
+      nowSec,
+      observedAt,
+      reviewsById: resolveStablecoinPriceGapReviews(WORKER_ACTIVE_IDS, nowSec).activeById,
     };
     const missingActiveIds = Array.isArray(coverage.missingActiveIds)
       ? coverage.missingActiveIds
@@ -614,19 +634,22 @@ export function compactStablecoinActivePriceCoverage(
     ...coverage,
     missingActiveAssets: coverage.missingActiveAssets.slice(0, retainedDetailCount),
     missingActiveAssetsTruncated: Math.max(0, coverage.missingActiveAssets.length - retainedDetailCount),
-    missingActiveState: coverage.missingActiveAssets.map((detail) => [
-      detail.stablecoinId,
-      detail.consecutiveMissingGenerations,
-      detail.lastAcceptedPrice,
-      boundedStateString(detail.lastAcceptedSource),
-      detail.lastAcceptedObservedAt,
-      boundedStateString(detail.rejectionReason) ?? "no-accepted-price",
-      detail.streakUnavailableReason ?? null,
-      detail.lastKnownMarketCapUsd ?? null,
-      detail.lastKnownMarketCapObservedAt ?? null,
-      detail.lastKnownMarketCapSource ?? null,
-      detail.marketCapUsd,
-    ]),
+    missingActiveState: coverage.missingActiveAssets.map((detail): PersistedMissingActivePriceState => {
+      const state = [
+        detail.stablecoinId,
+        detail.consecutiveMissingGenerations,
+        detail.lastAcceptedPrice,
+        boundedStateString(detail.lastAcceptedSource),
+        detail.lastAcceptedObservedAt,
+        boundedStateString(detail.rejectionReason) ?? "no-accepted-price",
+        detail.streakUnavailableReason ?? null,
+        detail.lastKnownMarketCapUsd ?? null,
+        detail.lastKnownMarketCapObservedAt ?? null,
+        detail.lastKnownMarketCapSource ?? null,
+        detail.marketCapUsd,
+      ] satisfies PersistedMissingActivePriceState;
+      return detail.firstMissingAt === undefined ? state : [...state, detail.firstMissingAt];
+    }),
   };
 }
 
@@ -653,7 +676,7 @@ export async function loadPreviousStablecoinActivePriceCoverage(
         LIMIT 1`,
     ).bind(beforeStartedAt).first<{ metadata: string; started_at: number }>();
     if (!row) return { status: "missing" };
-    const coverage = parsePreviousCoverageMetadata(row.metadata);
+    const coverage = parsePreviousCoverageMetadata(row.metadata, row.started_at, beforeStartedAt);
     return coverage ? { status: "ok", coverage: { ...coverage, observedAt: row.started_at } }
       : { status: "read-error", reason: "previous-coverage-malformed" };
   } catch (error) {
@@ -670,7 +693,8 @@ export async function seedAbsentActivePriceCoverageMarketCaps(
   nowSec: number,
 ): Promise<void> {
   const gaps = coverage.missingActiveAssets.filter((gap) =>
-    gap.rejectionReason === "active-row-missing" && !hasActivePriceGapMarketCapEvidence(gap, nowSec),
+    gap.rejectionReason === "active-row-missing" && !getOnchainSupplyHoldReason(gap.stablecoinId)
+      && !hasActivePriceGapMarketCapEvidence(gap, nowSec),
   );
   if (gaps.length === 0) return;
   try {
@@ -765,11 +789,15 @@ export function evaluateStablecoinActivePriceCoverage(
         ? previousDetail?.consecutiveMissingGenerations ?? null
         : 0;
     const consecutiveMissingGenerations = previousStreak == null ? null : previousStreak + 1;
+    const firstMissingAt = previousStreak != null && MARKET_HOURS_ASSET_IDS.has(stablecoinId)
+      ? consecutiveMissingGenerations === 1 ? nowSec : previousDetail?.firstMissingAt
+      : undefined;
     const previousAccepted = acceptedObservation(options.previousAcceptedAssetsById?.get(stablecoinId));
     const previousAsset = options.previousAcceptedAssetsById?.get(stablecoinId);
     // A reviewed supply hold withholds prior packets too: no retained last-known cap.
-    const capDetail = getOnchainSupplyHoldReason(stablecoinId) ? undefined : previousDetail;
-    const previousCap = capDetail === previousDetail ? getCirculatingRawOrNull(previousAsset) : null;
+    const supplyHeld = getOnchainSupplyHoldReason(stablecoinId) != null;
+    const capDetail = supplyHeld ? undefined : previousDetail;
+    const previousCap = supplyHeld ? null : getCirculatingRawOrNull(previousAsset);
     const lastKnownMarketCapUsd = marketCapUsd ?? previousCap
       ?? capDetail?.lastKnownMarketCapUsd ?? capDetail?.marketCapUsd ?? null;
     const lastKnownMarketCapObservedAt = marketCapUsd != null
@@ -778,18 +806,19 @@ export function evaluateStablecoinActivePriceCoverage(
         ? dateSecondsOrNull(previousAsset?.supplyObservedAt)
         : capDetail?.lastKnownMarketCapUsd != null
           ? capDetail.lastKnownMarketCapObservedAt ?? null
-          : options.previousCoverage?.observedAt ?? null;
+          : capDetail?.marketCapUsd != null ? options.previousCoverage?.observedAt ?? null : null;
     const lastKnownMarketCapSource = marketCapUsd != null || previousCap != null
       ? "publication" : capDetail?.lastKnownMarketCapSource
         ?? (capDetail?.marketCapUsd != null ? "publication" : null);
     const lastAcceptedPrice = previousAccepted?.price ?? previousDetail?.lastAcceptedPrice ?? null;
     const lastAcceptedSource = previousAccepted?.source ?? previousDetail?.lastAcceptedSource ?? null;
     const lastAcceptedObservedAt = previousAccepted?.observedAt ?? previousDetail?.lastAcceptedObservedAt ?? null;
-    const scheduledClosure = marketHours.closedById.get(stablecoinId) ?? null;
+    const closureGap = isScheduledClosureGap(marketHours, stablecoinId, firstMissingAt);
+    const scheduledClosure = closureGap ? marketHours.closedById.get(stablecoinId) ?? null : null;
     if (scheduledClosure) scheduledClosureGapIds.push(stablecoinId);
     const acknowledgedReview = scheduledClosure ? null : resolvedReviews.activeById.get(stablecoinId) ?? null;
     if (acknowledgedReview) acknowledgedGapIds.push(stablecoinId);
-    const alertEligible = acknowledgedReview == null && !marketHours.alertSuppressedIds.has(stablecoinId)
+    const alertEligible = acknowledgedReview == null && !closureGap
       && (consecutiveMissingGenerations == null || consecutiveMissingGenerations >= ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS);
     if (alertEligible) alertEligibleIds.push(stablecoinId);
     maxConsecutiveMissingGenerations = maxConsecutiveMissingGenerations == null || consecutiveMissingGenerations == null
@@ -809,6 +838,7 @@ export function evaluateStablecoinActivePriceCoverage(
       currentObservedAt: dateSecondsOrNull(asset?.priceObservedAt ?? asset?.priceUpdatedAt),
       currentConfidence: typeof asset?.priceConfidence === "string" ? asset.priceConfidence : null,
       consecutiveMissingGenerations,
+      ...(firstMissingAt === undefined ? {} : { firstMissingAt }),
       streakUnavailableReason: consecutiveMissingGenerations == null
         ? options.previousCoverage?.unavailableReason ?? previousDetail?.streakUnavailableReason ?? "previous-coverage-malformed"
         : null,
@@ -824,6 +854,7 @@ export function evaluateStablecoinActivePriceCoverage(
 
   return {
     complete: missingActiveIds.length === 0,
+    evaluatedAt: nowSec,
     expectedActiveCount: expectedActiveIds.length,
     presentActiveCount,
     pricedActiveCount: pricedActiveIds.length,

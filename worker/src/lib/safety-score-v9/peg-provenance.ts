@@ -1,4 +1,5 @@
-import { computePegScore, type PegScoreResult } from "@shared/lib/peg-score";
+import { computePegScore, getPegIncidentCoverage, type PegScoreResult } from "@shared/lib/peg-score";
+import { isScoredPegEvent, PegReferenceHoldSchema } from "@shared/lib/peg-utils";
 import { DepegAuditVerdictSchema } from "@shared/types/depeg-audit";
 import { isPegScoreExcludedAuditVerdict } from "@shared/lib/depeg-audit";
 import { CanonicalTextSchema, Sha256Schema, UnixSecondsSchema } from "@shared/types/safety-schema-primitives";
@@ -7,6 +8,7 @@ import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitive
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
   DEPEG_EVENT_CLOSE_REASON_VALUES,
+  DepegEventSchema,
   DepegPriceCoverageSchema,
   refineDepegEventChronology,
   type PegSummaryCoin,
@@ -115,6 +117,12 @@ const PegProvenanceEventSchema = z
       .default(null),
     provenance: PegEventProvenanceSchema.nullable().optional().default(null),
     priceCoverage: DepegPriceCoverageSchema.nullable().optional(),
+    admittedCoverage: DepegEventSchema.shape.admittedCoverage,
+    referenceHold: PegReferenceHoldSchema.optional(),
+    disposition: DepegEventSchema.shape.disposition,
+    peakPegReference: DepegEventSchema.shape.peakPegReference,
+    peakQuoteDomain: DepegEventSchema.shape.peakQuoteDomain,
+    recoveryPegReference: DepegEventSchema.shape.recoveryPegReference,
   })
   .strict()
   .superRefine((event, ctx) => {
@@ -188,6 +196,8 @@ const PegScoreResultSchema: z.ZodType<PegScoreResult> = z
     lastEventAt: SafeTimestampSchema.nullable(),
     trackingSpanDays: z.number().int().nonnegative(),
     unknownCoverageSeconds: FiniteNumberSchema.nonnegative().optional(),
+    lastAffectedAtSec: SafeTimestampSchema.nullable().optional(),
+    lastUncertainAffectedAtSec: SafeTimestampSchema.nullable().optional(),
   })
   .strict();
 
@@ -410,6 +420,7 @@ export interface BuildSafetyScoreV9PegProvenanceSummaryInput {
   trackingStartSec: number | null;
   clockSec: number;
   expectedLegacyInclusive: SafetyScoreV9PegScoreProjection;
+  pegCurrency?: string;
 }
 
 export interface CaptureSafetyScoreV9PegProvenanceInput {
@@ -458,15 +469,14 @@ function assertEventProvenance(event: CanonicalPegEvent, clockSec: number): void
     );
   }
 
-  // The input-corruption erratum (docs/runbooks/depeg-artifact-removal.md)
-  // quarantines a live event that had no replay provenance by recording only an
-  // excluding audit verdict; its public provenance is exactly
-  // `{"auditVerdict":"disputed"}`, with no clock. That is complete audit
-  // evidence, not partial provenance: the event classifies as audit-excluded.
-  if (
-    event.source === "live" &&
+  // The public projector records a verified repair or dispute with an empty
+  // ledger and an exclusion flag, including when no replay provenance exists.
+  const reviewedEmpty = event.admittedCoverage?.length === 0 && provenance.pegScoreEligible === false;
+  const liveAuditVerdict = event.source === "live" &&
     (provenance.sourceKind == null || provenance.sourceKind === "live") &&
-    isPegScoreExcludedAuditVerdict(provenance.auditVerdict) &&
+    isPegScoreExcludedAuditVerdict(provenance.auditVerdict);
+  if (
+    (liveAuditVerdict || (reviewedEmpty && provenance.sourceKind == null && provenance.auditVerdict == null)) &&
     provenance.confidenceTier == null &&
     provenance.pegScoreEligible !== true &&
     (provenance.updatedAt == null || provenance.updatedAt <= clockSec) &&
@@ -499,7 +509,7 @@ function assertEventProvenance(event: CanonicalPegEvent, clockSec: number): void
   }
 
   const excludedByAudit = isPegScoreExcludedAuditVerdict(provenance.auditVerdict);
-  if (provenance.pegScoreEligible === excludedByAudit) {
+  if (provenance.pegScoreEligible === excludedByAudit && !reviewedEmpty) {
     throw new Error(
       `[safety-score-v9-peg-provenance] ${eventLabel(event)} has contradictory peg-score eligibility`,
     );
@@ -559,7 +569,7 @@ function assertEventProvenance(event: CanonicalPegEvent, clockSec: number): void
 
 function classifyEvent(event: CanonicalPegEvent): SafetyScoreV9PegEvidenceClass {
   const provenance = event.provenance;
-  if (isPegScoreExcludedAuditVerdict(provenance?.auditVerdict)) {
+  if (!isScoredPegEvent(event)) {
     return "audit-excluded";
   }
   if (provenance?.confidenceTier != null) {
@@ -606,7 +616,11 @@ function updateClassStats(
 }
 
 function parseEvent(value: DepegEvent, index: number): CanonicalPegEvent {
-  const parsed = PegProvenanceEventSchema.safeParse(value);
+  const {
+    analyticRecoveryAt: _analyticRecoveryAt, onsetBasis: _onsetBasis, peakBasis: _peakBasis,
+    peakPeerMedianUsd: _peakPeerMedianUsd, peakReview: _peakReview, retired: _retired, ...scoreEvent
+  } = value;
+  const parsed = PegProvenanceEventSchema.safeParse(scoreEvent);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     const path = issue?.path.length ? ` at ${issue.path.join(".")}` : "";
@@ -627,14 +641,6 @@ function resolveEffectiveTrackingStart(
     (earliest, event) => Math.min(earliest, event.startedAt),
     Number.POSITIVE_INFINITY,
   );
-}
-
-function scoreCoverageEvents(
-  events: readonly CanonicalPegEvent[],
-  trackingStartSec: number | null,
-): CanonicalPegEvent[] {
-  if (trackingStartSec == null) return [];
-  return events.filter((event) => (event.endedAt ?? Number.POSITIVE_INFINITY) > trackingStartSec);
 }
 
 export function projectSafetyScoreV9PegScoreResult(
@@ -717,8 +723,11 @@ export function buildSafetyScoreV9PegProvenanceSummary(
     parsedEvents,
     trackingStartSec,
   );
-  const coverageEvents = scoreCoverageEvents(parsedEvents, effectiveTrackingStartSec)
-    .sort(canonicalEventOrder);
+  const { coverageEvents, eligibleEvents } = effectiveTrackingStartSec === null
+    ? { coverageEvents: [], eligibleEvents: [] }
+    : getPegIncidentCoverage(parsedEvents, effectiveTrackingStartSec, clockSec, input.pegCurrency);
+  const eligibleIds = new Set(eligibleEvents.map((event) => event.id));
+  coverageEvents.sort(canonicalEventOrder);
   const classifiedEvents = coverageEvents.map((event) => ({
     event,
     evidenceClass: classifyEvent(event),
@@ -726,13 +735,14 @@ export function buildSafetyScoreV9PegProvenanceSummary(
 
   const classes = emptyClassStats();
   for (const classified of classifiedEvents) {
-    updateClassStats(classes[classified.evidenceClass], classified.event);
+    if (eligibleIds.has(classified.event.id)) updateClassStats(classes[classified.evidenceClass], classified.event);
   }
 
   const legacyInclusiveResult = computePegScore(
     coverageEvents,
     effectiveTrackingStartSec,
     clockSec,
+    input.pegCurrency,
   );
   assertLegacyInclusiveMatch(
     assetId,
@@ -747,6 +757,7 @@ export function buildSafetyScoreV9PegProvenanceSummary(
     verifiedOnlyEvents,
     effectiveTrackingStartSec,
     clockSec,
+    input.pegCurrency,
   );
 
   const eventSetSha256 = domainDigest(EVENT_SET_DIGEST_DOMAIN, {
@@ -765,7 +776,7 @@ export function buildSafetyScoreV9PegProvenanceSummary(
     clockSec,
     trackingStartSec,
     effectiveTrackingStartSec,
-    eventCount: coverageEvents.length,
+    eventCount: eligibleEvents.length,
     eventSetSha256,
     classes,
     hasUnprovenancedLegacyBackfill:
@@ -816,6 +827,7 @@ export function captureSafetyScoreV9PegProvenanceById(
       events: source.eventsByCoin.get(assetId) ?? [],
       trackingStartSec: pegSummary.historyCoverage?.startedAt ?? null,
       clockSec,
+      pegCurrency: pegSummary.pegCurrency,
       expectedLegacyInclusive: projectSafetyScoreV9PegScoreResult(pegSummary),
     });
   }

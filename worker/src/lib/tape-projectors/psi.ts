@@ -20,6 +20,10 @@ import { PSI_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/consta
 import type { TapeEventSeverity } from "@shared/types/tape-event";
 
 import { buildTapeEventId } from "../tape-event-helpers";
+import { D1_BATCH_SIZE } from "../constants";
+import { chunkArray } from "../collections";
+import { PSI_SAMPLE_PROJECTION_SQL, projectPsiSample } from "../psi-sample-projection";
+import { insertTapeEvents } from "../tape-event-store";
 import type { TapeEventInsert } from "../tape-event-types";
 import {
   finalizeProjectorBatch,
@@ -65,18 +69,19 @@ interface PsiSampleRow {
   stored_at: number;
   score: number;
   band: string;
-  methodology_version: string;
+  methodology_version: string | null;
+  corrected_score?: number | null;
+  original_band?: string;
 }
 
 async function fetchPreviousBand(db: D1Database, atOrBefore: number): Promise<PsiSampleRow | null> {
   if (atOrBefore <= 0) return null;
-  const sql = `SELECT stored_at, score, band, methodology_version
-                 FROM stability_index_samples
-                 WHERE stored_at <= ?
-                 ORDER BY stored_at DESC
+  const sql = `${PSI_SAMPLE_PROJECTION_SQL}
+                 WHERE s.stored_at <= ?
+                 ORDER BY s.stored_at DESC
                  LIMIT 1`;
   const row = await db.prepare(sql).bind(atOrBefore).first<PsiSampleRow>();
-  return row ?? null;
+  return row ? projectPsiSample(row) : null;
 }
 
 async function fetchSamplesSince(
@@ -85,15 +90,14 @@ async function fetchSamplesSince(
   until: number | null,
   limit: number,
 ): Promise<PsiSampleRow[]> {
-  const untilClause = until != null ? " AND stored_at <= ?" : "";
-  const sql = `SELECT stored_at, score, band, methodology_version
-                 FROM stability_index_samples
-                 WHERE stored_at > ?${untilClause}
-                 ORDER BY stored_at ASC
+  const untilClause = until != null ? " AND s.stored_at <= ?" : "";
+  const sql = `${PSI_SAMPLE_PROJECTION_SQL}
+                 WHERE s.stored_at > ?${untilClause}
+                 ORDER BY s.stored_at ASC
                  LIMIT ?`;
   const binds: unknown[] = until != null ? [since, until, limit] : [since, limit];
   const result = await db.prepare(sql).bind(...binds).all<PsiSampleRow>();
-  return result.results ?? [];
+  return (result.results ?? []).map(projectPsiSample);
 }
 
 function buildPsiEvent(
@@ -104,7 +108,13 @@ function buildPsiEvent(
   const type = direction === "up" ? "psi.shifted_up" : "psi.shifted_down";
   const tsMs = curr.stored_at * 1000;
   const transition = "updated";
-  const sourceRowId = `${curr.stored_at}:${curr.band}`;
+  const originalPrev = bandRank(prev.original_band ?? prev.band);
+  const originalCurr = bandRank(curr.original_band ?? curr.band);
+  const reversesOriginal = curr.band === (curr.original_band ?? curr.band) &&
+    originalPrev >= 0 && originalCurr >= 0 && originalPrev !== originalCurr &&
+    direction !== (originalCurr > originalPrev ? "down" : "up");
+  // Keep the old claim addressable when its unique source key would collide.
+  const sourceRowId = `${curr.stored_at}:${curr.band}${reversesOriginal ? `:corrected:${direction}` : ""}`;
   const severity = severityForPsiShift(direction, curr.band);
   const verb = direction === "up" ? "improved" : "shifted to";
   return {
@@ -151,30 +161,52 @@ export async function projectPsiBandShifts(
 
   let previous = await fetchPreviousBand(db, since);
   const events: TapeEventInsert[] = [];
+  const corrections: Array<{ ts: number; keep: string | null }> = [];
+  const explicitReplay = options?.since != null || options?.until != null;
   let maxCursor = since;
 
   for (const curr of samples) {
     if (curr.stored_at > maxCursor) maxCursor = curr.stored_at;
-    if (!previous) {
-      previous = curr;
-      continue;
+    if (previous) {
+      const prevRank = bandRank(previous.band);
+      const newRank = bandRank(curr.band);
+      if (prevRank >= 0 && newRank >= 0) {
+        const transition = prevRank === newRank ? null
+          : buildPsiEvent(newRank > prevRank ? "down" : "up", previous, curr);
+        if (transition) events.push(transition);
+        if (explicitReplay || curr.corrected_score != null || previous.corrected_score != null) {
+          corrections.push({ ts: curr.stored_at * 1000, keep: transition?.eventId ?? null });
+        }
+      }
     }
-    if (previous.band === curr.band) {
-      previous = curr;
-      continue;
-    }
-    const prevRank = bandRank(previous.band);
-    const newRank = bandRank(curr.band);
-    if (prevRank < 0 || newRank < 0) {
-      // Unknown band label — skip the row but advance the baseline so we
-      // don't re-emit on the next sample with the same label.
-      previous = curr;
-      continue;
-    }
-    const direction: "up" | "down" = newRank > prevRank ? "down" : "up";
-    events.push(buildPsiEvent(direction, previous, curr));
     previous = curr;
   }
 
+  if (corrections.length > 0 && !options?.dryRun) {
+    const byTime = new Map(events.map((event) => [event.ts, event]));
+    for (const batch of chunkArray(corrections, D1_BATCH_SIZE - 1)) {
+      const kept: TapeEventInsert[] = [];
+      for (const { ts } of batch) {
+        const event = byTime.get(ts);
+        if (event) kept.push(event);
+        byTime.delete(ts);
+      }
+      const suppress = db.prepare(
+        `UPDATE tape_events SET suppressed_at = ?2, suppression_reason = 'psi-sample-corrected'
+         WHERE source_table = 'stability_index_samples' AND type IN ('psi.shifted_up', 'psi.shifted_down')
+         AND suppressed_at IS NULL AND ts IN (
+           SELECT json_extract(value, '$.ts') FROM json_each(?1)
+         ) AND NOT EXISTS (
+           SELECT 1 FROM json_each(?1) WHERE json_extract(value, '$.ts') = tape_events.ts
+           AND json_extract(value, '$.keep') = tape_events.event_id
+         )`,
+      ).bind(JSON.stringify(batch), Math.floor(Date.now() / 1000));
+      await insertTapeEvents(db, kept, suppress);
+    }
+    const result = await finalizeProjectorBatch(db, {
+      events: [...byTime.values()], maxCursor, cursorKey: CURSOR_KEY, options,
+    });
+    return { ...result, projected: events.length };
+  }
   return finalizeProjectorBatch(db, { events, maxCursor, cursorKey: CURSOR_KEY, options });
 }

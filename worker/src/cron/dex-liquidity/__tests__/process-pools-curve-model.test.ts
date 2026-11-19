@@ -23,6 +23,7 @@ import type {
 } from "../process-pool-types";
 import type { CurvePoolEntry, LlamaPool } from "../types";
 import { processPoolMetrics } from "../process-pools";
+import { resolveCurveBasePoolOverlap } from "../process-pool-protocol-enrichment";
 import { computeLiquidityScore } from "../pool-helpers";
 import { summarizeRetainedPoolVolume } from "../scoring-helpers";
 import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
@@ -54,7 +55,7 @@ function entry(overrides: Partial<CurvePoolEntry> = {}): CurvePoolEntry {
     A: 200,
     balanceRatio: 1,
     tvl: 10_000_000,
-    registryId: "factory-stable-ng",
+    registryId: "main",
     isMetaPool: false,
     creationTs: 0,
     balanceDetails: [],
@@ -146,14 +147,35 @@ function compositeCapability(
 }
 
 describe("buildCurveStableswapExecutionModel", () => {
+  it.each([
+    { baseMatches: true, lpBalance: 8_600_000, expected: 8_600_000 },
+    { baseMatches: false, lpBalance: 8_600_000, expected: undefined },
+    { baseMatches: true, lpBalance: null, expected: undefined },
+    { baseMatches: true, lpBalance: 13_000_000, expected: undefined },
+  ])("admits only a valued, bound Curve base LP leg ($baseMatches, $lpBalance)", ({ baseMatches, lpBalance, expected }) => {
+    const policy = CURVE_R3_METAPOOL_POLICIES.find((candidate) => candidate.stablecoinId === "lusd-liquity")!;
+    const result = resolveCurveBasePoolOverlap(policy.chain, {
+      address: policy.poolAddress, isMetaPool: true, usdTotal: 12_900_000,
+      basePoolAddress: baseMatches ? policy.metapool.basePoolAddress : USDC,
+    }, policy.poolTokens.map((token, index) => ({
+      coin: { address: token.address, isBasePoolLpToken: index === 1 },
+      decimals: token.decimals,
+      usdBalance: index === 1 ? lpBalance : 4_300_000,
+    })));
+    expect(result).toEqual(expected === undefined ? undefined : {
+      basePoolKey: `ethereum:${policy.metapool.basePoolAddress}`, lpLegTvlUsd: expected,
+    });
+  });
+
   it.each([2_000_000, 5_000_000])(
     "keeps quality retention on the Curve metapool TVL of %s through scoring",
     (retainedTvl) => {
       const poolAddress = "0x1111111111111111111111111111111111111111";
-      const curveData = entry({
+      const curveBasePoolOverlap = { basePoolKey: `ethereum:${THREEPOOL}`, lpLegTvlUsd: retainedTvl / 2 };
+      const curveData = { ...entry({
         poolAddress, isMetaPool: true, registryId: "factory",
         balanceRatio: 0.5, tvl: retainedTvl,
-      });
+      }), curveBasePoolOverlap };
       const pool: LlamaPool = {
         pool: poolAddress, chain: "ethereum", project: "curve", symbol: "USDC-USDT",
         tvlUsd: 10_000_000, volumeUsd1d: 250_000, volumeUsd7d: 1_750_000,
@@ -168,6 +190,7 @@ describe("buildCurveStableswapExecutionModel", () => {
       expect(rejections).toEqual([]);
       const metric = scorePoolGraph(metrics.get("usdc-circle")!);
       expect(metric.topPools[0]?.extra?.measurement?.balanceMeasured).toBe(true);
+      expect(metric.topPools[0]).toMatchObject({ curveBasePoolOverlap });
       metric.volumeAvailability = summarizeRetainedPoolVolume(
         metric.topPools.map((pool) => ({ reading: pool.volumeReading, tvlUsd: pool.tvlUsd })),
         { asOfSec: 1_000, maxObservationAgeSec: DEX_VOLUME_OBSERVATION_MAX_AGE_SEC },
@@ -340,12 +363,13 @@ describe("buildCurveStableswapExecutionModel", () => {
     ).toBeNull();
   });
 
-  it("retains only a plain StableSwap-NG rate-input candidate for a later pinned capture", () => {
+  it.each([1, 1.01, 1.24])("requires pinned StableSwap-NG inputs at source mark %s", (quoteUsd) => {
     const rateBearing = entry({
+      registryId: "factory-stable-ng",
       poolAddress: "0x744793b5110f6ca9cc7cdfe1ce16677c3eb192ef",
       executionCoins: [
         { address: USDC, symbol: "USDC", decimals: 6, balance: 5_000_000, usdPrice: 1 },
-        { address: USDT, symbol: "sUSDe", decimals: 18, balance: 5_000_000, usdPrice: 1.24 },
+        { address: USDT, symbol: "sUSDe", decimals: 18, balance: 5_000_000, usdPrice: quoteUsd },
       ],
     });
     const capability = buildCurveStableswapExecutionCapability(
@@ -356,12 +380,12 @@ describe("buildCurveStableswapExecutionModel", () => {
     );
 
     expect(capability.executionModel).toBeNull();
-    expect(capability.gate).toEqual({ family: "curve-stableswap", reason: "rate-bearing-inputs" });
+    expect(capability.gate).toEqual({ family: "curve-stableswap", reason: "incomplete-exact-capture" });
     expect(capability.rateInputCandidate).toEqual({
       poolAddress: "0x744793b5110f6ca9cc7cdfe1ce16677c3eb192ef",
       coins: [
         { address: USDC, symbol: "USDC", decimals: 6, referencePriceUsd: 1 },
-        { address: USDT, symbol: "sUSDe", decimals: 18, referencePriceUsd: 1.24 },
+        { address: USDT, symbol: "sUSDe", decimals: 18, referencePriceUsd: quoteUsd },
       ],
     });
     expect(
@@ -696,6 +720,7 @@ describe("buildCurveStableswapExecutionModel", () => {
     });
     const stableTwin = entry({
       poolAddress: "0x2cf99a343e4ecf49623e82f2ec6a9b62e16ff3fe",
+      registryId: "factory-stable-ng",
       A: 750,
       tvl: 51_629,
     });

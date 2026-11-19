@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
-import { mockWorkerRuntimeRegistry } from "../../test-helpers/cron";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
+import { makeFxCurrentPeg } from "@shared/test-utils/boundary-contract-vectors.test-support";
 import { loadPegAnalyticsCache, publishPegAnalyticsCache } from "../peg-analytics-cache";
+import { loadStablecoinsCache } from "../stablecoins-cache";
 import type * as PegScoreModule from "@shared/lib/peg-score";
 
 const sqliteFixtures = createLatestSchemaFixtureTracker();
@@ -18,6 +19,10 @@ const { STABLECOINS_MOCK } = vi.hoisted(() => ({
       launchDate: "2019-07-19",
       commodityOunces: undefined,
       flags: { pegCurrency: "USD", governance: "centralized", navToken: false },
+    },
+    {
+      id: "eurc-circle", name: "Euro Coin", symbol: "EURC",
+      flags: { pegCurrency: "EUR", governance: "centralized", navToken: false },
     },
     {
       id: "sofid-sofi",
@@ -37,7 +42,10 @@ const { STABLECOINS_MOCK } = vi.hoisted(() => ({
   ],
 }));
 
-vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => mockWorkerRuntimeRegistry({ stablecoins: STABLECOINS_MOCK }));
+vi.mock("@shared/lib/stablecoins/worker-runtime-registry", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@shared/lib/stablecoins/worker-runtime-registry")>(),
+  WORKER_ACTIVE_STABLECOINS: STABLECOINS_MOCK,
+}));
 
 vi.mock("@shared/lib/peg-score", () => ({
   PEG_SCORE_LOOKBACK_SEC: 126_230_400,
@@ -79,14 +87,6 @@ vi.mock("@shared/lib/peg-score", () => ({
   coinTrackingStart: vi.fn(() => 0),
 }));
 
-vi.mock("@shared/lib/peg-rates", () => ({
-  derivePegRates: vi.fn(() => ({ rates: { USD: 1 }, sources: {} })),
-  getPegReference: vi.fn(() => 1),
-  normalizePegType: vi.fn((pegType: string | undefined) =>
-    pegType === "peggedBRL" ? "peggedREAL" : pegType,
-  ),
-}));
-
 vi.mock("@shared/lib/methodology-versions/registry", () => ({
   getMethodologyVersionAt: vi.fn(() => "test-methodology"),
 }));
@@ -104,6 +104,52 @@ import { coinTrackingStart, computePegScore } from "@shared/lib/peg-score";
 import { getFirstSeenDates } from "../supply-history-db";
 
 describe("derivePegAnalyticsSnapshot", () => {
+  it("carries raw clock presence through the published cache alias into the Safety peg summary", async () => {
+    const observedAt = 1_793_000_000;
+    const eur = makeStablecoin({ id: "eurc-circle", pegType: "peggedEUR", price: 1.11,
+      priceUpdatedAt: observedAt, priceObservedAtMode: "upstream" });
+    const { priceObservedAt: _clock, ...legacy } = eur;
+    const usd = makeStablecoin({ id: "usdt-tether", priceUpdatedAt: observedAt, priceObservedAt: null });
+    async function read(currentPeg?: typeof eur.currentPeg) {
+      const cache = await loadStablecoinsCache(db, { contract: "published", preloadedCache: {
+        updatedAt: observedAt, value: JSON.stringify({ peggedAssets: [{ ...legacy, currentPeg }, usd], fxFallbackRates: { peggedEUR: 1.10 } }),
+      } });
+      if (cache.kind !== "ok") throw new Error(cache.reason);
+      expect(cache.payload.peggedAssets[0]?.priceObservedAt).toBe(observedAt);
+      expect(cache.payload.peggedAssets[1]?.priceObservedAt).toBeNull();
+      return derivePegAnalyticsSnapshot(db, { ...cache.payload, missingPriceObservedAtIds: cache.missingPriceObservedAtIds, methodologyAsOf: cache.updatedAt });
+    }
+    const unclocked = await read();
+    expect(unclocked.pegDataById.get(eur.id)).not.toHaveProperty("priceObservedAt");
+    expect(unclocked.pegDataById.get(eur.id)?.currentDeviationBps).toBe(91);
+    expect(unclocked.pegDataById.get(usd.id)?.priceObservedAt).toBeNull();
+    const explicit = await read(makeFxCurrentPeg("admitted", 91, observedAt));
+    expect(explicit.pegDataById.get(eur.id)).toMatchObject({ currentDeviationBps: null, admittedDeviationBps: null });
+    expect(explicit.admittedPegById.has(eur.id)).toBe(false);
+  });
+  it("withholds an unclocked EUR denominator from analytics and Safety on an admitted generation", async () => {
+    const now = Date.parse("2026-11-16T15:00Z") / 1000;
+    const asset = makeStablecoin({ id: "eurc-circle", pegType: "peggedEUR", price: 1.11,
+      priceObservedAtMode: "upstream", priceObservedAt: now - 60 });
+    const snapshot = await derivePegAnalyticsSnapshot(db, {
+      peggedAssets: [asset], fxFallbackRates: { peggedEUR: 1.10 }, fxReferenceObservations: {}, methodologyAsOf: now,
+    });
+    expect(snapshot.pegDataById.get(asset.id)).toMatchObject({ currentDeviationBps: null, admittedDeviationBps: null });
+    expect(snapshot.admittedPegById.get(asset.id)?.admission).toMatchObject({
+      status: "unavailable", decisionAtSec: snapshot.nowSec, generation: `stablecoins:${now}`,
+    });
+    const { referenceAdmission, admittedDeviationBps: _deviation, ...legacyPeg } = makeFxCurrentPeg("stale-reference", null, now);
+    const legacy = await derivePegAnalyticsSnapshot(db, {
+      peggedAssets: [{ ...asset, currentPeg: legacyPeg }], fxFallbackRates: { peggedEUR: 1.10 }, methodologyAsOf: now,
+    });
+    expect(legacy.pegDataById.get(asset.id)?.currentDeviationBps).toBe(91);
+    expect(legacy.admittedPegById.has(asset.id)).toBe(false);
+    const explicit = await derivePegAnalyticsSnapshot(db, {
+      peggedAssets: [{ ...asset, currentPeg: { ...legacyPeg, referenceAdmission } }],
+      fxFallbackRates: { peggedEUR: 1.10 }, methodologyAsOf: now,
+    });
+    expect(explicit.pegDataById.get(asset.id)).toMatchObject({ currentDeviationBps: null, admittedDeviationBps: null });
+  });
   it("publishes the uncapped observation boundary separately from scoring coverage", async () => {
     const firstObservation = 1_500_000_000;
     vi.mocked(getFirstSeenDates).mockResolvedValue(new Map([["usdt-tether", firstObservation]]));
@@ -209,6 +255,28 @@ describe("derivePegAnalyticsSnapshot", () => {
     expect(snapshot.pegDataById.get("usdt-tether")?.depegEventCoverageLimited).toBe(false);
   });
 
+  it.each(["valid", "invalid-reason", "superseded-peak", "different-clock", "old-gap"])("preserves legacy coverage for a %s detector hold", async (shape) => {
+    const lastTrustedAtSec = 1_794_730_000;
+    const hold = { reason: shape !== "invalid-reason" ? "reference-market-closed" : "quote-unavailable", declaredAtSec: lastTrustedAtSec + 60,
+      lastTrustedAtSec, lastTrustedPeakBps: -500 };
+    const intervals = [[lastTrustedAtSec - 60, lastTrustedAtSec]];
+    const db = mockD1([
+      { match: "pharos:depeg-event-projection:active-incidents", rows: [] },
+      { match: "depeg_events_with_provenance", rows: [{
+        id: 1, stablecoin_id: "paxg-paxos", peg_type: "peggedGOLD", started_at: lastTrustedAtSec - 60,
+        ended_at: null, source: "live", peak_deviation_bps: shape === "superseded-peak" ? -600 : -500, direction: "below",
+        price_coverage_json: JSON.stringify({ intervals, referenceHold: hold, lastObservationKind: "blind" }),
+        last_trusted_price_at: lastTrustedAtSec + (shape === "different-clock" ? 1 : 0),
+        price_coverage_gap_started_at: hold.declaredAtSec + (shape === "old-gap" ? 1 : 0),
+      }] },
+    ]);
+    const snapshot = await derivePegAnalyticsSnapshot(db, { peggedAssets: [], methodologyAsOf: hold.declaredAtSec });
+    const event = snapshot.eventsByCoin.get("paxg-paxos")?.[0];
+    expect(event?.priceCoverage?.intervals).toEqual(intervals);
+    if (shape === "valid") expect(event).toMatchObject({ referenceHold: hold });
+    else expect(event).not.toHaveProperty("referenceHold");
+  });
+
   it("loads depeg provenance so audited false positives are excluded from scoring", async () => {
     db = mockD1([
       { match: "pharos:depeg-event-projection:active-incidents", rows: [] },
@@ -255,6 +323,7 @@ describe("derivePegAnalyticsSnapshot", () => {
       [expect.objectContaining({ provenance: expect.objectContaining({ auditVerdict: "false_positive" }) })],
       expect.any(Number),
       expect.any(Number),
+      "USD",
     );
   });
 
@@ -439,7 +508,9 @@ describe("derivePegAnalyticsSnapshot", () => {
     });
     const snapshot = await derivePegAnalyticsSnapshot(db, { peggedAssets: [observed], methodologyAsOf: now });
     expect(snapshot.pegDataById.get("sofid-sofi")?.currentPriceUnavailable).toBeUndefined();
-    expect(snapshot.pegDataById.get("sofid-sofi")?.currentDeviationBps).toBe(-10);
+    expect(snapshot.pegDataById.get("sofid-sofi")).toMatchObject({
+      currentDeviationBps: -10, priceObservedAt: now - 30, priceSource: "coingecko+kraken",
+    });
     for (const failed of [
       { ...observed, price: null, priceSource: "missing", priceConfidence: null },
       { ...observed, price: 1, priceSource: "protocol-par", priceObservedAt: null, priceObservedAtMode: "nominal_reference" as const },

@@ -12,11 +12,15 @@ import { fuzzyDateRange } from "@shared/lib/classification/resolve-implementatio
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import type { DepegEvent } from "@shared/types/peg";
+import type { FxReferenceEvidenceMap } from "@shared/types/fx-reference";
 import type { StablecoinData } from "@shared/types/supply";
 import type { PegSummaryCoin } from "@shared/types/peg";
 import { isValidIsoDateOnly, parseIsoDateOrUtcInstantSec } from "@shared/types/date-primitives";
+import { getReferenceMarket } from "@shared/lib/reference-market-hours";
+import { PegReferenceHoldSchema, type PegScoreEvent } from "@shared/lib/peg-utils";
+import { AdmittedDeviationBpsSchema, ReferenceAdmissionSchema, type ReferenceAdmission } from "@shared/types/reference-admission";
 
-import { type DepegRow } from "./depeg-helpers";
+import { matchesDepegReferenceHoldRow, type DepegRow } from "./depeg-helpers";
 import {
   EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL,
   IncidentProjectionUnavailableError,
@@ -24,11 +28,14 @@ import {
   rowToPublicDepegEvent,
 } from "./depeg-event-projection";
 import { getFirstSeenDates } from "./supply-history-db";
-import { deriveCurrentPegObservationMap } from "./current-peg-observations";
+import { deriveCurrentPegObservationMap, hasUsableCurrentPrice } from "./current-peg-observations";
+import { parseJson } from "./json-parse";
 
 export interface DerivePegAnalyticsOptions {
   peggedAssets: StablecoinData[];
+  missingPriceObservedAtIds?: ReadonlySet<string>;
   fxFallbackRates?: Record<string, number>;
+  fxReferenceObservations?: FxReferenceEvidenceMap;
   methodologyAsOf: number;
   includeNavTokens?: boolean;
 }
@@ -38,6 +45,10 @@ export interface PegAnalyticsSnapshot {
   allEvents: DepegEvent[];
   eventsByCoin: Map<string, DepegEvent[]>;
   pegDataById: Map<string, PegSummaryCoin>;
+  legacyFxReferenceIds?: ReadonlySet<string>;
+  admittedPegById: Map<string, { admission: ReferenceAdmission; deviationBps: number | null; reference: PegSummaryCoin["pegReference"] }>;
+  lastAffectedAtById: Map<string, number | null>;
+  lastUncertainAffectedAtById?: Map<string, number>;
 }
 
 /**
@@ -95,10 +106,6 @@ function resolveTrackingAnchor(
   };
 }
 
-function hasUsableCurrentPrice(asset: StablecoinData): asset is StablecoinData & { price: number } {
-  return isObservedPrice(asset) && typeof asset.price === "number" && Number.isFinite(asset.price) && asset.price > 0;
-}
-
 function buildPriceFirstSeenObservations(
   assets: readonly StablecoinData[],
   fallbackObservedAtSec: number,
@@ -140,9 +147,19 @@ export async function derivePegAnalyticsSnapshot(
     .bind(fourYearsAgoSec)
     .all<DepegRow>();
 
-  const allEvents = (eventsResult.results ?? []).map((row) =>
-    rowToPublicDepegEvent(row, activeIncidentProjectionLoad.projections),
-  );
+  const allEvents = (eventsResult.results ?? []).map((row): PegScoreEvent => {
+    const projection = activeIncidentProjectionLoad.projections;
+    if (row.ended_at === null && row.price_coverage_json?.includes('"referenceHold"')) {
+      const decoded = parseJson(row.price_coverage_json);
+      if (decoded.ok && decoded.value && typeof decoded.value === "object" && "referenceHold" in decoded.value) {
+        const { referenceHold, ...coverage } = decoded.value;
+        const hold = PegReferenceHoldSchema.safeParse(referenceHold);
+        const event = rowToPublicDepegEvent({ ...row, price_coverage_json: JSON.stringify(coverage) }, projection);
+        return hold.success && matchesDepegReferenceHoldRow(row, hold.data) ? { ...event, referenceHold: hold.data } : event;
+      }
+    }
+    return rowToPublicDepegEvent(row, projection);
+  });
   const eventsByCoin = new Map<string, DepegEvent[]>();
   for (const event of allEvents) {
     const list = eventsByCoin.get(event.stablecoinId) ?? [];
@@ -150,16 +167,28 @@ export async function derivePegAnalyticsSnapshot(
     eventsByCoin.set(event.stablecoinId, list);
   }
 
-  const priceById = new Map(options.peggedAssets.map((asset) => [asset.id, asset]));
+  // The public list may alias a missing clock to priceUpdatedAt. Such an alias is never a quote observation.
+  const missingPriceObservedAtIds = options.missingPriceObservedAtIds;
+  const peggedAssets = missingPriceObservedAtIds ? options.peggedAssets.map((asset) =>
+    missingPriceObservedAtIds.has(asset.id) ? { ...asset, priceObservedAt: null } : asset
+  ) : options.peggedAssets;
+  const priceById = new Map(peggedAssets.map((asset) => [asset.id, asset]));
   const currentPegObservationById = deriveCurrentPegObservationMap({
-    peggedAssets: options.peggedAssets,
+    peggedAssets,
     fxFallbackRates: options.fxFallbackRates,
+    fxReferenceObservations: options.fxReferenceObservations,
+    generation: `stablecoins:${options.methodologyAsOf}`,
     asOf: options.methodologyAsOf,
+    now: nowSec,
   });
   const methodologyVersion = getMethodologyVersionAt("depeg-dews", options.methodologyAsOf);
   const trackingFallbackStart = nowSec - PEG_SCORE_LOOKBACK_SEC;
 
   const pegDataById = new Map<string, PegSummaryCoin>();
+  const legacyFxReferenceIds = new Set<string>();
+  const admittedPegById: PegAnalyticsSnapshot["admittedPegById"] = new Map();
+  const lastAffectedAtById = new Map<string, number | null>();
+  const lastUncertainAffectedAtById = new Map<string, number>();
   for (const meta of WORKER_ACTIVE_STABLECOINS) {
     if (!includeNavTokens && meta.flags.navToken) continue;
 
@@ -178,7 +207,8 @@ export async function derivePegAnalyticsSnapshot(
     // with no usable price observation has an UNOBSERVED deviation, not a
     // withheld or quiet one. Downstream scoring must be able to tell the two
     // apart instead of reading the shared null as "at peg".
-    const currentPegObservation = currentPegObservationById.get(meta.id) ?? {
+    const observation = currentPegObservationById.get(meta.id);
+    const currentPegObservation = observation ?? {
       currentDeviationBps: null,
       pegReference: null,
       pegReferenceUnavailable: false,
@@ -194,9 +224,28 @@ export async function derivePegAnalyticsSnapshot(
     );
     const scoreResult = meta.flags.navToken
       ? { ...NULL_PEG_SCORE_RESULT }
-      : computePegScore(events, trackingStart, nowSec);
-    const recent90d = meta.flags.navToken ? null : computeRecentPegStats(events, trackingStart, nowSec);
+      : computePegScore(events, trackingStart, nowSec, meta.flags.pegCurrency);
+    const recent90d = meta.flags.navToken ? null : computeRecentPegStats(events, trackingStart, nowSec, meta.flags.pegCurrency);
+    lastAffectedAtById.set(meta.id, scoreResult.lastAffectedAtSec ?? null);
+    if (scoreResult.lastUncertainAffectedAtSec != null) lastUncertainAffectedAtById.set(meta.id, scoreResult.lastUncertainAffectedAtSec);
 
+    const clocked = options.fxReferenceObservations !== undefined;
+    const capturedPeg = asset?.currentPeg;
+    if (observation?.legacyFxReference === true) legacyFxReferenceIds.add(meta.id);
+    const needsAdmission = observation?.legacyFxReference !== true && getReferenceMarket(meta.flags.pegCurrency) !== null &&
+      (clocked || capturedPeg?.referenceAdmission !== undefined || capturedPeg?.admittedDeviationBps !== undefined);
+    const packet = needsAdmission && !clocked && capturedPeg ? capturedPeg : currentPegObservation;
+    const admission = ReferenceAdmissionSchema.safeParse("referenceAdmission" in packet ? packet.referenceAdmission : undefined);
+    const admittedDeviation = AdmittedDeviationBpsSchema.safeParse("admittedDeviationBps" in packet ? packet.admittedDeviationBps : undefined);
+    if (needsAdmission && admission.success && admission.data.decisionAtSec <= nowSec &&
+        (admission.data.status !== "admitted" || admission.data.quoteObservedAtSec === asset?.priceObservedAt)) admittedPegById.set(meta.id, {
+      admission: admission.data,
+      deviationBps: admission.data.status === "admitted" && admission.data.kind === packet.pegReference?.source && asset && isObservedPrice(asset)
+        ? admittedDeviation.data ?? null : null,
+      reference: packet.pegReference,
+    });
+
+    const projected = admittedPegById.get(meta.id);
     pegDataById.set(meta.id, {
       id: meta.id,
       symbol: meta.symbol,
@@ -204,14 +253,16 @@ export async function derivePegAnalyticsSnapshot(
       pegType: asset?.pegType ?? "",
       pegCurrency: meta.flags.pegCurrency,
       governance: meta.flags.governance,
-      ...(!isObservedPrice(asset ?? {}) ? {
-        // PegSummaryCoin.priceSource is optional, not nullable: a null list source is published as absent.
+      ...(asset ? {
         priceSource: asset?.priceSource ?? undefined,
         priceObservedAtMode: asset?.priceObservedAtMode,
+        ...(asset.priceObservedAt === undefined || missingPriceObservedAtIds?.has(meta.id) ? {} : { priceObservedAt: asset.priceObservedAt }),
       } : {}),
       ...(asset?.nominalPriceReference ? { nominalPriceReference: asset.nominalPriceReference } : {}),
-      currentDeviationBps: currentPegObservation.currentDeviationBps,
-      pegReference: currentPegObservation.pegReference,
+      currentDeviationBps: needsAdmission ? projected?.deviationBps ?? null : packet.currentDeviationBps,
+      ...(needsAdmission ? { admittedDeviationBps: projected?.deviationBps ?? null } : {}),
+      ...(projected ? { referenceAdmission: projected.admission } : {}),
+      pegReference: packet.pegReference,
       ...(currentPegObservation.pegReferenceUnavailable ? { pegReferenceUnavailable: true } : {}),
       ...(currentPegObservation.currentPriceUnavailable ? { currentPriceUnavailable: true } : {}),
       ...(currentPegObservation.currentSupplyUnavailable ? { currentSupplyUnavailable: true } : {}),
@@ -238,5 +289,9 @@ export async function derivePegAnalyticsSnapshot(
     allEvents,
     eventsByCoin,
     pegDataById,
+    admittedPegById,
+    legacyFxReferenceIds,
+    lastAffectedAtById,
+    lastUncertainAffectedAtById,
   };
 }

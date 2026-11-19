@@ -1,4 +1,5 @@
 import type { PoolProcessingRejection } from "./pool-rejection-types";
+import type { DexMarketMark } from "../../lib/dex-api-token-pricing";
 
 export interface LlamaPool {
   pool: string;
@@ -170,6 +171,7 @@ export interface DexPoolVolumeReading {
 }
 
 export interface PoolEntry extends Omit<DexLiquidityPool, "source" | "extra"> {
+  curveBasePoolOverlap?: { basePoolKey: string; lpLegTvlUsd: number };
   poolId: string;
   /** Candidate metadata only; never an exact aggregate or physical identity. */
   candidateFingerprint?: string;
@@ -189,6 +191,8 @@ export interface PoolEntry extends Omit<DexLiquidityPool, "source" | "extra"> {
   source: LiquidityPoolSourceFamily;
   /** Original price-row observation clock; absent/null means unknown, never publication time. */
   priceObservedAt?: number | null;
+  /** The independent USD constituent when the retained mark was ratio-derived. */
+  priceCounterparty?: DexPriceObs["counterpartyPrice"];
   /**
    * Family of the registry row that actually observed `price` when the
    * resolver attached a cross-source price (value row and price row come from
@@ -238,9 +242,12 @@ export interface PoolEntry extends Omit<DexLiquidityPool, "source" | "extra"> {
 export type PoolMeasurementFlags = NonNullable<NonNullable<DexLiquidityPool["extra"]>["measurement"]>;
 
 export interface DexPriceObs {
+  /** Filled after collapsing multiple quotes; null poisons an incomplete group. */
+  mergedLineage?: import("./price-lineage").DexObservationLineage | null;
   price: number;
   /** Original quote clock, preserved across retention and aggregation. */
   observedAt?: number | null;
+  counterpartyPrice?: DexMarketMark & { stablecoinId: string } & import("./price-lineage").DexPriceLineage;
   tvl: number;
   /** Price-only exchange evidence: observed 24h USD flow, never liquidity. */
   observedVolumeUsd?: number;
@@ -288,6 +295,7 @@ export interface ScoreComponents {
 }
 
 export interface CurvePoolEntry {
+  curveBasePoolOverlap?: PoolEntry["curveBasePoolOverlap"];
   poolAddress?: string;
   apiIsBroken?: boolean;
   A: number;
@@ -362,8 +370,8 @@ export interface DataSources {
 }
 
 export interface CurveApiPayload {
-  /** Bounded local-read clock captured before this live API request. */
-  observedAt?: number;
+  generatedTimeMs?: unknown;
+  readStartedAtSec?: number;
   data?: { poolData?: CurvePool[] };
 }
 
@@ -407,6 +415,7 @@ export interface GtNewPool {
   dexId: string;
   name: string;
   tvlUsd: number;
+  curveBasePoolOverlap?: PoolEntry["curveBasePoolOverlap"];
   /** Provider 24h volume reading; null when the source published no usable value. */
   volume24hUsd: number | null;
   qualityMultiplier: number;
@@ -415,6 +424,8 @@ export interface GtNewPool {
   price: number;
   /** Original price-row clock, independent of value/volume refresh clocks. */
   priceObservedAt?: number | null;
+  /** A ratio-derived price requires this independently admitted USD constituent. */
+  priceCounterparty?: DexPriceObs["counterpartyPrice"];
   /** Pool symbol (e.g., "USDC / USDT") */
   symbol: string;
   /** Discovery/source-specific pool type used for quality weighting */
@@ -437,9 +448,9 @@ export interface GtNewPool {
   /** Optional per-pool 7d volume when source provides it */
   volume7dUsd?: number | null;
   /**
-   * Observation clock of `volume24hUsd` / `volume7dUsd`: the live fetch clock,
-   * or a staged row's refresh time. Absent means no clock proves the reading's
-   * window, so it is classified missing (DEC-19).
+   * Observation clock of `volume24hUsd` / `volume7dUsd`: the provider window end
+   * when required, otherwise the source's read clock. Absent means the window
+   * is unproven and the reading is classified missing (DEC-19).
    */
   volumeObservedAtSec?: number | null;
   /** Dead-pool signature of the 24h reading (see DexPoolVolumeReading.deadPoolSignature). */

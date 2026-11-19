@@ -284,8 +284,8 @@ describe("yield-history-cleanup", () => {
 
   it("[entrypoint integration] prints direct-run guard refusals without an unhandled rejection", async () => {
     const result = await runOperatorCli(
-      join(process.cwd(), "node_modules/.bin/tsx"),
-      ["worker/scripts/yield-history-cleanup.ts", "--execute"],
+      process.execPath,
+      ["--import", "tsx", "worker/scripts/yield-history-cleanup.ts", "--execute"],
       {
         cwd: process.cwd(),
         encoding: "utf8",

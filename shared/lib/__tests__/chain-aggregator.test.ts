@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { aggregateChains, type ChainAggregatorInput } from "../chains/aggregator";
 import { CLIENT_TRACKED_META_BY_ID } from "../stablecoins/client-registry";
+import { evaluateReferenceAdmission } from "../reference-admission";
+import { asRawDeviationBps } from "../../types/reference-admission";
 import { TRACKED_STABLECOINS } from "../stablecoins/registry";
 
 function makeInput(overrides: Partial<ChainAggregatorInput> = {}): ChainAggregatorInput {
@@ -567,30 +569,73 @@ describe("aggregateChains", () => {
     expect(eth.healthBand).toBeNull();
   });
 
-  it("excludes non-USD holdings lacking a reference rather than assuming dollar parity", () => {
-    const input = makeInput();
-    input.peggedAssets[0].pegType = "peggedEUR";
-    input.peggedAssets[0].price = 1.2;
-    input.peggedAssets[1].price = 1;
-    const missing = aggregateChains(input).chains.find((chain) => chain.id === "ethereum")!;
-    const referenced = aggregateChains({
-      ...input, pegRates: { peggedUSD: 1, peggedEUR: 1 },
-    }).chains.find((chain) => chain.id === "ethereum")!;
-    expect(missing.healthFactors.pegStability).toBe(100);
-    expect(referenced.healthFactors.pegStability).toBe(45);
-    expect(missing.healthScore).toBeNull();
-    expect(missing.healthBand).toBeNull();
-    expect(referenced.healthScore).not.toBeNull();
-    // The missing-reference supply stays in the coverage denominator rather than vanishing.
-    expect(missing.pegStabilityCoverage).toMatchObject({
-      status: "partial",
-      observedSupplyUsd: 250,
-      eligibleSupplyUsd: 550,
-      noPegReferenceSupplyUsd: 300,
-      neutralImputedSupplyUsd: 0,
-      observedScore: 100,
+  it("uses supplied legacy cohort rates only when the per-asset peg block is absent", () => {
+    const input = makeInput({ pegRates: { peggedEUR: 1.1 } });
+    const coin = input.peggedAssets[0];
+    Object.assign(coin, { id: "eurc-circle", pegType: "peggedEUR", price: 1.1 });
+    const coverage = () => aggregateChains(input).chains.find((chain) => chain.id === "bsc")!.pegStabilityCoverage;
+    expect(coverage()).toMatchObject({ observedSupplyUsd: 200, observedScore: 100 });
+    coin.currentPeg = { pegReference: null, pegReferenceUnavailable: true, currentPriceUnavailable: false };
+    expect(coverage()).toMatchObject({ observedSupplyUsd: 0, noPegReferenceSupplyUsd: 200 });
+  });
+
+  it("uses the legacy EUR rate only until the publisher explicitly withholds the reading", () => {
+    const input = makeInput({
+      peggedAssets: [{ id: "eurc-circle", symbol: "EURC", price: 1.078, pegType: "peggedEUR",
+        chainCirculating: { ethereum: { current: 50_000_000 } } }],
+      safetyScores: { "eurc-circle": 90 }, pegRates: { peggedEUR: 1.1 },
     });
-    expect(referenced.pegStabilityCoverage?.status).toBe("complete");
+    expect(aggregateChains(input).chains[0]).toMatchObject({
+      healthFactors: { pegStability: 60 }, pegStabilityCoverage: { observedSupplyUsd: 50_000_000 },
+    });
+    input.peggedAssets[0].currentPeg = {
+      currentDeviationBps: null, pegReference: { source: "fx", valueUsd: 1.1, contributorCount: 0, asOf: input.updatedAt },
+      pegReferenceUnavailable: false, currentPriceUnavailable: false,
+    };
+    expect(aggregateChains(input).chains[0]).toMatchObject({
+      healthScore: null, pegStabilityCoverage: { observedSupplyUsd: 0, eligibleSupplyUsd: 50_000_000 },
+    });
+  });
+
+  it("keeps held allocations in the peg denominator and releases the composite on matching admission", () => {
+    const observe = (date: string, legacy = false) => {
+      const observedAt = Date.parse(date) / 1000;
+      const observation = { pegKey: "peggedEUR", usdPerUnit: 1.1, source: "openExchangeRates",
+        cadence: "intraday", observedAtSec: observedAt } as const;
+      const deviation = asRawDeviationBps(-900);
+      const verdict = evaluateReferenceAdmission({ kind: "fx", observation,
+        quoteObservedAtSec: observedAt, decisionAtSec: observedAt, rawDeviationBps: deviation,
+        preCloseUsdPerUnit: 1.09 });
+      const input = makeInput();
+      input.peggedAssets[0] = { id: "eurc-circle", symbol: "EURC", pegType: "peggedEUR", price: 1.001,
+        priceSource: "coingecko", priceObservedAt: observedAt, priceObservedAtMode: "upstream",
+        chainCirculating: { ethereum: { current: 300 } },
+        currentPeg: {
+          pegReference: { source: "fx", valueUsd: 1.1, contributorCount: 0, asOf: observedAt },
+          pegReferenceUnavailable: !legacy && verdict.status !== "admitted", currentPriceUnavailable: false,
+          ...(!legacy && { referenceAdmission: verdict, admittedDeviationBps: verdict.status === "admitted" ? deviation : null }),
+        } };
+      input.peggedAssets[1].price = 1;
+      return aggregateChains({ ...input, updatedAt: observedAt, safetyScores: { "eurc-circle": 75, "usdc-circle": 88 } })
+        .chains.find((chain) => chain.id === "ethereum")!;
+    };
+    const held = observe("2026-11-14T15:00:00Z");
+    const admitted = observe("2026-11-13T15:00:00Z");
+    const legacy = observe("2026-11-14T15:00:00Z", true);
+    expect(legacy.healthScore).toBe(admitted.healthScore);
+    expect(legacy.pegStabilityCoverage).toEqual(admitted.pegStabilityCoverage);
+    expect(held.healthFactors.pegStability).toBe(100);
+    expect(held.healthScore).toBeNull();
+    expect(held.healthBand).toBeNull();
+    expect(held.pegStabilityCoverage).toMatchObject({
+      status: "partial", observedSupplyUsd: 250, eligibleSupplyUsd: 550,
+      noPegReferenceSupplyUsd: 300, neutralImputedSupplyUsd: 0, observedScore: 100,
+    });
+    expect(admitted.pegStabilityCoverage).toMatchObject({
+      status: "complete", observedSupplyUsd: 550, eligibleSupplyUsd: 550, noPegReferenceSupplyUsd: 0,
+    });
+    expect(admitted.healthFactors.pegStability).toBeLessThan(100);
+    expect(admitted.healthScore).not.toBeNull();
   });
 
   it("keeps nominal-only supply unobserved and mixed nominal supply in the peg denominator", () => {
@@ -620,7 +665,7 @@ describe("aggregateChains", () => {
       name: "Ondo US Dollar Yield",
       price: 1.15,
       priceSource: "coingecko",
-      priceObservedAtMode: "upstream",
+      priceObservedAtMode: "upstream" as const,
       pegType: "peggedUSD",
       chainCirculating: { ethereum: { current: 900_000_000 } },
     };
@@ -698,6 +743,19 @@ describe("aggregateChains", () => {
       neutralImputedSupplyUsd: 0,
       observedScore: null,
     });
+  });
+
+  it("keeps the fixed USD reference when the published quote is unavailable", () => {
+    const supplyUsd = 100_000_000;
+    const { chains: [chain] } = aggregateChains(makeInput({ peggedAssets: [{
+      id: "usdc-circle", symbol: "USDC", pegType: "peggedUSD", price: null,
+      currentPeg: { currentDeviationBps: null, pegReference: null, pegReferenceUnavailable: true, currentPriceUnavailable: true },
+      chainCirculating: { ethereum: { current: supplyUsd } },
+    }] }));
+    expect(chain.pegStabilityCoverage).toMatchObject({
+      noUsablePriceSupplyUsd: supplyUsd, noPegReferenceSupplyUsd: 0, observedSupplyUsd: 0, observedScore: null,
+    });
+    expect(chain.healthFactors.pegStability).toBeNull();
   });
 
   it("assigns tier 1 chain environment to ethereum", () => {

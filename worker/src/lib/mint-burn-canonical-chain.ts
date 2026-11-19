@@ -14,6 +14,7 @@
 const NON_ETHEREUM_CANONICAL_CHAIN_BY_STABLECOIN = new Map<string, string>([
   ["bd-basedollar", "base"],
   ["copm-minteo", "polygon"],
+  ["meusd-mezo", "mezo"],
   ["usdai-usd-ai", "arbitrum"],
 ]);
 
@@ -23,4 +24,9 @@ function getCanonicalMintBurnChainId(stablecoinId: string): string {
 
 export function isCanonicalMintBurnPair(stablecoinId: string, chainId: string): boolean {
   return getCanonicalMintBurnChainId(stablecoinId) === chainId;
+}
+
+/** Ethereum MUSD changes the NTT register's supply. Issuance originates on Mezo. */
+export function isMintBurnBridgeSpoke(stablecoinId: string, chainId: string): boolean {
+  return stablecoinId === "meusd-mezo" && chainId === "ethereum";
 }

@@ -491,7 +491,7 @@ describe("enrichMissingPrices", () => {
             priceUsd: "0.0005",
             priceNative: "0.0005",
             liquidity: { usd: 100_000, base: 125_000, quote: 125_000 },
-            volume: { h24: 25_000 },
+            volume: { h24: 25_000, h6: 400, h1: 100, m5: 10 },
             pairCreatedAt: maturePairCreatedAt(),
           },
         ],
@@ -810,7 +810,7 @@ describe("enrichMissingPrices", () => {
         baseToken: { address: "BaseCase", name: "Base", symbol: "BASE" },
         quoteToken: { address: tokenAddress, name: "Test", symbol: "TEST" },
         priceUsd: "4", priceNative: "4", liquidity: { usd: 100_000, base: 0, quote: 0 },
-        volume: null, pairCreatedAt: null,
+        volume: { h24: 25_000, h6: 400, h1: 100, m5: 10 }, pairCreatedAt: null,
       }],
     }]);
     const result = await runDexScreenerPass(assets, undefined, undefined);

@@ -34,6 +34,8 @@ they can trip up to ~30 minutes early.
 
 ## Where to see them
 
+Queue `updatedAt` records assembly, while per-flag `evaluatedAt` dates the original evaluation. Omitted legacy `priceObservedAt` leaves the quote clock unknown.
+
 - **Cache:** D1 `cache` table, key `depeg:lifecycle-flags` —
   `{ updatedAt, flags: [{ stablecoinId, symbol, kind, currentBps, ageDays, mcapUsd }] }`,
   sorted by |deviation| × mcap. The cache key, the

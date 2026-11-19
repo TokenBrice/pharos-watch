@@ -94,7 +94,7 @@ describe("fetchBeefySources", () => {
         sourcePool: "Aave-USDC", sourceTvlUsd: 12_500_000, dataSource: "protocol-api",
         exchangeRate: null, sourceKey: "protocol-api:beefy:avalanche:Aave-USDC",
         yieldSource: "Beefy: Aave USDC", yieldType: "lending-opportunity",
-        sourceObservedAt: 1_790_121_600, comparisonAnchorObservedAt: null,
+        sourceObservedAt: null, sourceFetchedAt: 1_790_121_600, comparisonAnchorObservedAt: null,
       },
     }]);
   });
@@ -522,7 +522,7 @@ describe("fetchMorphoVaultSources", () => {
         sourceTvlUsd: 142_917_322, dataSource: "protocol-api", exchangeRate: null,
         sourceKey: "protocol-api:morpho-vault:ethereum:0x9ef4cb75fed5b3913219e881e0ff0b10a6761cf3",
         yieldSource: "Morpho: Gauntlet USDC Prime", yieldType: "lending-opportunity",
-        sourceObservedAt: 1_790_121_600, comparisonAnchorObservedAt: null,
+        sourceObservedAt: null, sourceFetchedAt: 1_790_121_600, comparisonAnchorObservedAt: null,
       },
     });
   });
@@ -697,7 +697,7 @@ describe("fetchPendleMarketSources", () => {
         sourceTvlUsd: 82_000_000, dataSource: "protocol-api", exchangeRate: null,
         sourceKey: "protocol-api:pendle:ethereum:0xabc",
         yieldSource: "Pendle fixed yield: Global Dollar USDG", yieldType: "fixed-yield",
-        sourceObservedAt: 1_790_121_600, comparisonAnchorObservedAt: null,
+        sourceObservedAt: null, sourceFetchedAt: 1_790_121_600, comparisonAnchorObservedAt: null,
       },
     });
   });
@@ -968,16 +968,21 @@ describe("fetchYearnKongSources", () => {
     expect(await fetchYearnKongSources()).toEqual({ candidates: [], degraded: false });
   });
 
-  it("labels non-Yearn vaults as Kong", async () => {
+  it.each([
+    { label: "indexed", blockTime: "1790035200", observedAt: 1_790_035_200 },
+    { label: "missing", blockTime: undefined, observedAt: null },
+    { label: "invalid", blockTime: "1.790121e9", observedAt: null },
+    { label: "future", blockTime: "1790121601", observedAt: null },
+  ])("labels non-Yearn vaults as Kong and uses a $label APY clock", async ({ blockTime, observedAt }) => {
     vi.spyOn(Date, "now").mockReturnValue(1_790_121_600_000);
-    mockYieldSourceRoutes([
+    const fetchSpy = mockYieldSourceRoutes([
       {
         match: "kong.yearn.fi",
         matchBody: '"chainId":1}',
         body: {
           data: {
             vaults: [
-              kongVault({ name: "Steakhouse USDC", yearn: false }),
+              kongVault({ name: "Steakhouse USDC", yearn: false, apy: { net: 0.03, blockTime } }),
             ],
           },
         },
@@ -985,6 +990,7 @@ describe("fetchYearnKongSources", () => {
       { match: "kong.yearn.fi", body: { data: { vaults: [] } } },
     ]);
     const { candidates: results } = await fetchYearnKongSources();
+    expect(fetchSpy.mock.calls[0]?.[1]?.body).toContain("apy { net blockTime }");
     expect(results[0]).toStrictEqual({
       stablecoinId: undefined, symbol: "USDC", chain: "ethereum", address: null,
       yield: {
@@ -992,7 +998,7 @@ describe("fetchYearnKongSources", () => {
         sourceTvlUsd: 50_000_000, dataSource: "protocol-api", exchangeRate: null,
         sourceKey: "protocol-api:kong:ethereum:0xabc",
         yieldSource: "Kong: Steakhouse USDC", yieldType: "lending-opportunity",
-        sourceObservedAt: 1_790_121_600, comparisonAnchorObservedAt: null,
+        sourceObservedAt: observedAt, sourceFetchedAt: 1_790_121_600, comparisonAnchorObservedAt: null,
       },
     });
   });
@@ -1057,7 +1063,7 @@ describe("fetchYearnKongSources", () => {
       .mockReturnValueOnce(1_790_121_600_000)
       .mockReturnValueOnce(1_790_121_601_000)
       .mockReturnValue(1_790_121_602_000);
-    const vault = kongVault({ address: "0xAbC", apy: { net: 0.03 } });
+    const vault = kongVault({ address: "0xAbC", apy: { net: 0.03, blockTime: "1790121000" } });
     mockYieldSourceRoutes([
       ...[1, 8453].map((chainId) => ({
         match: "kong.yearn.fi", matchBody: `"chainId":${chainId}}`,
@@ -1069,7 +1075,8 @@ describe("fetchYearnKongSources", () => {
     expect(candidates.map((result) => result.yield.sourceKey)).toEqual([
       "protocol-api:yearn:ethereum:0xabc", "protocol-api:yearn:base:0xabc",
     ]);
-    expect(candidates.map((result) => result.yield.sourceObservedAt)).toEqual([1_790_121_601, 1_790_121_602]);
+    expect(candidates.map((result) => result.yield.sourceObservedAt)).toEqual([1_790_121_000, 1_790_121_000]);
+    expect(candidates.map((result) => result.yield.sourceFetchedAt)).toEqual([1_790_121_601, 1_790_121_602]);
   });
 
   it("reports a degraded fetch when a chain query fails", async () => {
@@ -1128,6 +1135,7 @@ describe("fetchYearnYboldSource", () => {
   afterEach(cleanupYieldSourceTest);
 
   it("publishes the yBOLD vault TVL with the staked ysyBOLD net APR", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(1_790_121_600_000);
     mockYieldSourceRoutes(ydaemonRoutes());
 
     await expect(fetchYearnYboldSource()).resolves.toEqual(
@@ -1142,6 +1150,8 @@ describe("fetchYearnYboldSource", () => {
         sourceKey: "protocol-api:yearn:ybold",
         yieldSource: "Yearn yBOLD Stability Pool vault",
         yieldType: "lending-vault",
+        sourceObservedAt: null,
+        sourceFetchedAt: 1_790_121_600,
       }),
     );
   });

@@ -74,11 +74,9 @@ function OpenIncidentList({ rows }: { rows: readonly OpenIncidentRow[] }) {
       <ul className="mt-1.5">
         {visible.map((row) => {
           // Basis points, like the worst-move chip and the homepage card.
-          const deviation = row.held
-            ? "Mkt closed"
-            : row.deviationBps == null
-              ? "—"
-              : `${row.deviationBps < 0 ? "−" : row.deviationBps > 0 ? "+" : ""}${Math.abs(row.deviationBps).toFixed(0)} bps`;
+          const deviation = row.referenceNote ?? (row.deviationBps == null
+            ? "—"
+            : `${row.deviationBps < 0 ? "−" : row.deviationBps > 0 ? "+" : ""}${Math.abs(row.deviationBps).toFixed(0)} bps`);
           const verdict = row.ddr ? describeDdrVerdict(row.ddr, true) : { label: "—", accent: "text-muted-foreground" };
           const cap = row.marketCapUsd == null ? "—" : formatCompactUsdShort(row.marketCapUsd);
           return (
@@ -86,11 +84,11 @@ function OpenIncidentList({ rows }: { rows: readonly OpenIncidentRow[] }) {
               <Link
                 prefetch={false}
                 href={buildStablecoinUrl(row.id, "#depeg-resolver")}
-                aria-label={`${row.symbol}: ${row.held ? "reference market closed" : row.deviationBps == null ? "deviation unavailable" : deviation}, DDR ${row.ddr ? verdict.label : "no forecast read"}, market cap ${row.marketCapUsd == null ? "unavailable" : cap}`}
+                aria-label={`${row.symbol}: ${row.referenceNote ?? (row.deviationBps == null ? "deviation unavailable" : deviation)}, DDR ${row.ddr ? verdict.label : "no forecast read"}, market cap ${row.marketCapUsd == null ? "unavailable" : cap}`}
                 className="pharos-focus-ring -mx-1 flex min-h-11 items-center gap-x-2 rounded-sm px-1 text-xs hover:bg-muted/50 sm:min-h-8"
               >
                 <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{row.symbol}</span>
-                <span className="pharos-numeric w-18 shrink-0 text-right text-foreground" title={row.held ? "Reference market closed" : undefined}>
+                <span className="pharos-numeric w-18 shrink-0 text-right text-foreground" title={row.referenceNote ?? undefined}>
                   {deviation}
                 </span>
                 <span className={cn("w-24 shrink-0 truncate", verdict.accent)}>{verdict.label}</span>

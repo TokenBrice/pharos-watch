@@ -244,6 +244,7 @@ const PhysicalRouteFeesSchema = z.strictObject({
 });
 const PhysicalSettlementLegSchema = z.strictObject({
   leg: z.string().min(1),
+  calendar: z.literal("london-banking").optional(),
   maximumBusinessDays: PhysicalBoundSchema,
   typicalBusinessDays: z.union([NonNegativeNumberSchema, z.literal("several-business-days")]).nullable().optional(),
 });
@@ -270,6 +271,7 @@ export const PhysicalToUsdRouteSchema = z.strictObject({
   vaultLocations: z.array(z.enum(["london", "zurich", "singapore", "hong-kong", "eu", "other"])).min(1),
   barClass: z.enum(["good-delivery", "kilobar", "small-bar-or-coin"]),
   saleLocation: z.enum(["in-vault", "delivered"]).default("in-vault"),
+  saleCalendar: z.literal("lbma-usd-settlement").optional(),
   deliveryScope: z.enum(["same-jurisdiction", "cross-border"]).default("same-jurisdiction"),
   fineness: z.number().finite().min(0).max(1).nullable().optional(),
   eligibility: z.literal("verified-customer"),

@@ -9,6 +9,7 @@ import { mockTapeD1, tapeInsertBinds, tapeInsertBindsForType } from "../../lib/t
 import { projectCemeteryEntries } from "../../lib/tape-projectors/cemetery";
 import { projectLifecycleFrozen } from "../../lib/tape-projectors/lifecycle";
 import { projectMethodologyBumps } from "../../lib/tape-projectors/methodology";
+import { queryTapeEvents } from "../../lib/tape-event-store";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { SOURCE_RECONCILIATION_LOOKBACK_SEC } from "../../lib/tape-projectors/types";
 import { mockD1 } from "@shared/test-utils/mock-d1";
@@ -39,6 +40,7 @@ function baseTables(): MockTableConfig[] {
     { match: "FROM cache WHERE key", rows: [] },
     { match: "INDEXED BY idx_tape_source_key", rows: [] },
     { match: "INDEXED BY idx_tape_type_ts", rows: [] },
+    { match: "UPDATE tape_events SET ts = ?, payload_json = ?", rows: [] },
     { match: MATCH_DEPEG_OPEN_PEAK, rows: [] },
     { match: MATCH_DEPEG_OPENED, rows: [] },
     { match: MATCH_DEPEG_RESOLVED, rows: [] },
@@ -397,6 +399,43 @@ describe("projectTape", () => {
     ).all()).toEqual(sqlite.prepare(
       "SELECT event_id, source_table, source_row_id, transition FROM tape_events ORDER BY event_id",
     ).all());
+  });
+
+  it("reconciles the provisional yield v8.55 clock on upgrade without replacing or reviving its Tape row", async () => {
+    const { db, sqlite } = fixtures.open();
+    await projectMethodologyBumps(db);
+    const source = sqlite.prepare(
+      "SELECT * FROM tape_events WHERE source_table = 'methodology:yield' AND source_row_id = '8.55'",
+    );
+    const fresh = source.get()!;
+    const oldTs = 1_795_046_400_000;
+    const oldId = String(fresh.event_id).replace(/^\d+/, String(oldTs));
+    const provisional = sqlite.prepare(`
+      UPDATE tape_events SET event_id = ?, ts = ?, payload_json = ?, suppressed_at = ?, suppression_reason = ?
+       WHERE id = ?
+    `);
+    const oldPayload = JSON.stringify({ effectiveAt: oldTs / 1000, impact: ["Pending deployment"] });
+    const read = () => queryTapeEvents(db, {
+      filters: { typeExact: ["methodology.bumped:yield"] }, limit: 2, cursor: null, includeTotal: false,
+    });
+    sqlite.exec("DELETE FROM tape_events WHERE source_table = 'methodology:yield' AND source_row_id = '8.56'");
+    provisional.run(oldId, oldTs, oldPayload, null, null, fresh.id!);
+
+    await projectMethodologyBumps(db, { dryRun: true });
+    expect(source.get()).toMatchObject({ ts: oldTs, payload_json: oldPayload });
+    expect(await projectMethodologyBumps(db)).toEqual({ projected: 1, advanced: null });
+    const { rows } = await read();
+    expect(rows.map((row) => [row.methodology_version, row.ts]))
+      .toEqual([["8.56", 1_795_053_600_000], ["8.55", 1_795_013_063_000]]);
+    expect(JSON.parse(rows[0]!.payload_json)).toMatchObject({ effectiveAt: 1_795_053_600 });
+    expect(source.get()).toEqual({ ...fresh, event_id: oldId });
+
+    provisional.run(oldId, oldTs, oldPayload, SEC, "editorial-suppression", fresh.id!);
+    expect(await projectMethodologyBumps(db)).toEqual({ projected: 0, advanced: null });
+    expect(source.get()).toEqual({
+      ...fresh, event_id: oldId, suppressed_at: SEC, suppression_reason: "editorial-suppression",
+    });
+    expect((await read()).rows.map((row) => row.methodology_version)).not.toContain("8.55");
   });
 
   it("emits cemetery.entry.added on first observation", async () => {

@@ -186,14 +186,14 @@ export function NonUsdHero({
       sub={
         <div className="divide-y divide-border/50">
           <HeroMetricRow
-            label="Share of all stablecoins"
+            label="Share of tracked core supply"
             value={trendStats ? formatPercent(trendStats.latestSharePct, 2) : "—"}
             detail={shareDetail}
           />
           <HeroMetricRow
             label="1-year change"
             value={formatSignedPercent(trendStats?.yearlyMarketCapChangePct, 1, "—")}
-            detail={trendStats?.valueCoverageIncomplete ? "provider history · partial coverage" : "provider history"}
+            detail={trendStats?.valueCoverageIncomplete ? "tracked core history · partial coverage" : "tracked core history"}
           />
           <HeroMetricRow label="Non-USD pegs" value={snapshot.altPegCount} detail="with core coins" />
         </div>

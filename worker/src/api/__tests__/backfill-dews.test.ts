@@ -1,3 +1,4 @@
+import { summarizeDexVolumeWindow } from "@shared/lib/dex-volume-availability";
 import { describe, expect, it, vi } from "vitest";
 import { matchMarker, mockD1 } from "@shared/test-utils/mock-d1";
 import { readJsonResponse, makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
@@ -143,6 +144,14 @@ import { handleBackfillDEWS } from "../backfill-dews";
 
 stubCryptoForAuth();
 
+function dexClock(asOfSec: number): string {
+  const clock = { asOfSec, maxObservationAgeSec: 3600 };
+  return JSON.stringify({ "24h": summarizeDexVolumeWindow([], "24h", clock).availability, "7d": summarizeDexVolumeWindow([], "7d", clock).availability });
+}
+
+const supplyProvenance = (supplyObservedAt: number) =>
+  JSON.stringify({ supplySource: "defillama", supplyObservedAt, supplyChainGuard: null });
+
 describe("handleBackfillDEWS", () => {
   it("separates unavailable and partial history from measured false negatives", async () => {
     const day = 20_000 * 86_400;
@@ -154,9 +163,11 @@ describe("handleBackfillDEWS", () => {
     ];
     const db = mockD1([
       { match: "FROM depeg_events", rows: ids.map((stablecoin_id) => ({
-        stablecoin_id, started_at: day, ended_at: day + 3600, peak_deviation_bps: 200,
+        stablecoin_id, peg_type: "peggedUSD", started_at: day, ended_at: day + 3600, peak_deviation_bps: 200,
       })) },
-      { match: "FROM supply_history", rows: supplyRows },
+      { match: "FROM supply_history", rows: supplyRows.map((row) => ({
+        ...row, circulating_native: row.circulating_usd, supply_provenance: supplyProvenance(row.snapshot_date),
+      })) },
       { match: "FROM dex_liquidity_history", rows: [] },
     ]);
     const scorer = vi.mocked(computeHistoricalDEWS);
@@ -192,7 +203,7 @@ describe("handleBackfillDEWS", () => {
 
   it("reports a nullable detection rate when no pre-event history can be evaluated", async () => {
     const db = mockD1([
-      { match: "FROM depeg_events", rows: [{ stablecoin_id: "missing", started_at: 1_710_000_000, ended_at: 1_710_003_600, peak_deviation_bps: 200 }] },
+      { match: "FROM depeg_events", rows: [{ stablecoin_id: "missing", peg_type: "peggedUSD", started_at: 1_710_000_000, ended_at: 1_710_003_600, peak_deviation_bps: 200 }] },
       { match: "FROM supply_history", rows: [] },
       { match: "FROM dex_liquidity_history", rows: [] },
     ]);
@@ -202,18 +213,20 @@ describe("handleBackfillDEWS", () => {
     }>(response, 200);
     expect(body.summary).toMatchObject({ evaluableEvents: 0, excludedEvents: 1, tpRate: null });
   });
-  it.each([["usdt-tether", 1710000000, true, true], ["gho-aave", 1794614400, false, false], ["gho-aave", 1794528000, false, false], ["gho-aave", 1795132800, true, false]] as const)("reconstructs %s supply and liquidity history", async (id, startedAt, dayOk, weekOk) => {
+  it.each([["usdt-tether", 1710000000, true, true, true], ["usdt-tether", 1710000000, true, true, false], ["gho-aave", 1794614400, false, false, true], ["gho-aave", 1794528000, false, false, true], ["gho-aave", 1795132800, true, false, true]] as const)("reconstructs %s supply and liquidity history", async (id, startedAt, dayOk, weekOk, native) => {
     vi.mocked(computeHistoricalDEWS).mockClear();
     const day = Math.floor(startedAt / 86400) * 86400;
+    const unitsPerUsd = native ? 0.5 : 1;
     const db = mockD1([
       {
         match: "FROM depeg_events",
-        rows: [{ stablecoin_id: id, started_at: startedAt, ended_at: startedAt + 7200, peak_deviation_bps: -150 }],
+        rows: [{ stablecoin_id: id, peg_type: "peggedUSD", started_at: startedAt, ended_at: startedAt + 7200, peak_deviation_bps: -150 }],
       },
       {
         match: "FROM supply_history",
         rows: [[0, 100_000_000], [1, 99_500_000], [7, 98_000_000]].map(([days, circulating_usd]) => ({
           stablecoin_id: id, snapshot_date: day - days * 86400, circulating_usd,
+          ...(native ? { circulating_native: circulating_usd / 2, supply_provenance: supplyProvenance(day - days * 86400) } : {}),
         })),
       },
       {
@@ -221,6 +234,7 @@ describe("handleBackfillDEWS", () => {
         rows: [[0, 81, 2_200_000], [7, 77, 2_000_000]].map(([days, liquidity_score, total_tvl_usd]) => ({
           stablecoin_id: id, snapshot_date: day - days * 86400, liquidity_score, total_tvl_usd,
           coverage_confidence: 0.5, methodology_version: null,
+          volume_availability_json: dexClock(day - days * 86400),
         })),
       },
     ]);
@@ -232,9 +246,10 @@ describe("handleBackfillDEWS", () => {
     expect(computeHistoricalDEWS).toHaveBeenCalledWith(
       expect.objectContaining({
         stablecoinId: id,
-        circulatingCurrent: 100_000_000,
-        circulatingPrevDay: dayOk ? 99_500_000 : 100_000_000,
-        circulatingPrevWeek: weekOk ? 98_000_000 : 100_000_000,
+        mcapUsd: 100_000_000,
+        circulatingCurrent: startedAt === 1794528000 ? null : 100_000_000 * unitsPerUsd,
+        circulatingPrevDay: dayOk ? 99_500_000 * unitsPerUsd : null,
+        circulatingPrevWeek: weekOk ? 98_000_000 * unitsPerUsd : null,
         circulatingPrevDayAvailable: dayOk, circulatingPrevWeekAvailable: weekOk,
         liquidityScore: 81,
         liquidityScore7dAgo: 77,
@@ -251,7 +266,7 @@ describe("handleBackfillDEWS", () => {
     expect(historyReads.find((entry) => entry.sql.includes("FROM supply_history"))?.binds)
       .toEqual([day - 14 * 86400, day + 2 * 86400]);
     expect(historyReads.find((entry) => entry.sql.includes("FROM dex_liquidity_history"))?.binds)
-      .toEqual([day - 15.5 * 86400, day + 2 * 86400]);
+      .toEqual([day - 16.5 * 86400, day + 2 * 86400]);
   });
 
   it.each([0.5, 0.499, null])("replays the earliest weekly anchor with confidence %s and unchanged supply bounds", async (confidence) => {
@@ -259,12 +274,12 @@ describe("handleBackfillDEWS", () => {
     const day = 20000 * 86400;
     const evaluation = day - 7 * 86400;
     const db = mockD1([
-      { match: "FROM depeg_events", rows: [{ stablecoin_id: "usdt-tether", started_at: day + 3600, ended_at: day + 7200, peak_deviation_bps: -150 }] },
+      { match: "FROM depeg_events", rows: [{ stablecoin_id: "usdt-tether", peg_type: "peggedUSD", started_at: day + 3600, ended_at: day + 7200, peak_deviation_bps: -150 }] },
       { match: "FROM supply_history", rows: [{ stablecoin_id: "usdt-tether", snapshot_date: evaluation, circulating_usd: 100_000_000 }] },
       { match: "FROM dex_liquidity_history", rows: [
-        { stablecoin_id: "usdt-tether", snapshot_date: day - 15 * 86400, liquidity_score: 70, total_tvl_usd: 100, coverage_confidence: confidence, methodology_version: null },
+        { stablecoin_id: "usdt-tether", snapshot_date: day - 15 * 86400, liquidity_score: 70, total_tvl_usd: 100, coverage_confidence: confidence, methodology_version: null, volume_availability_json: dexClock(day - 15 * 86400) },
         { stablecoin_id: "usdt-tether", snapshot_date: day - 14 * 86400, liquidity_score: 99, total_tvl_usd: 1000, coverage_confidence: 0.49, methodology_version: null },
-        { stablecoin_id: "usdt-tether", snapshot_date: evaluation, liquidity_score: 80, total_tvl_usd: 200, coverage_confidence: 0.5, methodology_version: null },
+        { stablecoin_id: "usdt-tether", snapshot_date: evaluation, liquidity_score: 80, total_tvl_usd: 200, coverage_confidence: 0.5, methodology_version: null, volume_availability_json: dexClock(evaluation) },
       ] },
     ]);
     const request = makeApiRequest("/api/backfill-dews", { adminKey: "secret" });
@@ -275,7 +290,7 @@ describe("handleBackfillDEWS", () => {
       tvl7dAgo: confidence === 0.5 ? 100 : null,
     }));
     const history = db.getHistory();
-    expect(history.find((entry) => entry.sql.includes("FROM dex_liquidity_history"))?.binds).toEqual([day - 15.5 * 86400, day + 2 * 86400]);
+    expect(history.find((entry) => entry.sql.includes("FROM dex_liquidity_history"))?.binds).toEqual([day - 16.5 * 86400, day + 2 * 86400]);
     expect(history.find((entry) => entry.sql.includes("FROM supply_history"))?.binds).toEqual([day - 14 * 86400, day + 2 * 86400]);
   });
 
@@ -294,9 +309,10 @@ describe("handleBackfillDEWS", () => {
         .run(day, day + 3600);
       sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd) VALUES ('usdt-tether', ?, 100000000)")
         .run(evaluation);
-      const insert = sqlite.prepare("INSERT INTO dex_liquidity_history (stablecoin_id, snapshot_date, total_tvl_usd, liquidity_score, coverage_class, coverage_confidence, methodology_version) VALUES ('usdt-tether', ?, ?, ?, 'primary', 0.9, ?)");
-      insert.run(evaluation, 200, 80, current);
-      insert.run(evaluation - 7 * 86400, 100, 73, historical);
+      const insert = sqlite.prepare("INSERT INTO dex_liquidity_history (stablecoin_id, snapshot_date, total_tvl_usd, liquidity_score, coverage_class, coverage_confidence, methodology_version, volume_availability_json) VALUES ('usdt-tether', ?, ?, ?, 'primary', 0.9, ?, ?)");
+      insert.run(evaluation, 200, 80, current, dexClock(evaluation));
+      insert.run(evaluation - 7 * 86400, 100, 73, historical, dexClock(evaluation - 7 * 86400));
+      insert.run(evaluation - 6 * 86400, 9999, 90, current, dexClock(evaluation + 1));
       const response = await handleBackfillDEWS({ db, url: makeApiUrl("/api/backfill-dews"), trustedAdmin: true });
       expect(response.status).toBe(200);
       expect(computeHistoricalDEWS).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
@@ -487,6 +503,36 @@ describe("handleBackfillDEWS", () => {
 });
 
 describe("historical reconstruction evidence boundaries", () => {
+  it("matches a mixed-basis benchmark onset against the stored row and quote clock", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const start = Date.parse("2026-11-14T12:00:00Z") / 1000;
+    try {
+      const insert = sqlite.prepare(`INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction,
+        peak_deviation_bps, started_at, ended_at, start_price, peg_reference, pending_reason, peer_basis_json)
+        VALUES ('eurc-circle','EURC','peggedEUR','below',-727,?,?,1.067,1.1,'low-confidence+peer-relative',?)`);
+      for (const [offset, priorQuote] of [[0, false], [3600, true]] as const) {
+        const at = start + offset;
+        const onset = { basis: "benchmark", observedAt: at, price: 1.067, pegReference: 1.1, bps: -300,
+          referenceAdmission: { status: "admitted", reason: "closed-session-traded-median", kind: "median", source: "peer-median",
+            cadence: "intraday", referenceObservedAtSec: at - 30, quoteObservedAtSec: at - Number(priorQuote),
+            decisionAtSec: at, budgetSec: 86400, sessionOpenedAtSec: null, generation: null, policyVersion: 1 } };
+        insert.run(at, at + 1200, JSON.stringify({ onset, latest: { basis: "peer-relative", observedAt: at + 900,
+          price: 1.02, pegReference: 1.1, bps: -727 } }));
+      }
+      const response = await handleBackfillDEWS({ db, url: makeApiUrl("/api/backfill-dews"), trustedAdmin: true });
+      expect(await readJsonResponse(response, 200)).toMatchObject({
+        summary: { totalEvents: 1, excludedTargets: { onsetUnavailable: 1 } },
+        events: [{ stablecoinId: "eurc-circle", startedAt: start }],
+      });
+      sqlite.exec("ALTER TABLE depeg_events DROP COLUMN peer_basis_json");
+      const legacy = await handleBackfillDEWS({ db, url: makeApiUrl("/api/backfill-dews"), trustedAdmin: true });
+      expect(await readJsonResponse(legacy, 200)).toMatchObject({ summary: { totalEvents: 0,
+        excludedTargets: { onsetUnavailable: 2 } } });
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("does not turn unread historical price evidence into maximum price stress", async () => {
     const { computeHistoricalDEWS: realComputeDEWS } = await vi.importActual<typeof import("../../lib/dews")>(
       "../../lib/dews",
@@ -502,24 +548,24 @@ describe("historical reconstruction evidence boundaries", () => {
       ).run(eventDay, eventDay + 3_600);
 
       const insertSupply = sqlite.prepare(
-        "INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd) VALUES ('usdt-tether', ?, ?)",
+        "INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, circulating_native, supply_provenance) VALUES ('usdt-tether', ?, ?, ?, ?)",
       );
       for (let d = 0; d <= 7; d++) {
-        insertSupply.run(eventDay - d * 86_400, 100_000_000);
+        insertSupply.run(eventDay - d * 86_400, 100_000_000, 100_000_000, supplyProvenance(eventDay - d * 86_400));
       }
 
       // A sustained 25% TVL drop: the current leg carries a score while the
       // seven-day score leg is an explicit null, so only the TVL leg is readable.
       const insertLiquidity = sqlite.prepare(
         `INSERT INTO dex_liquidity_history
-           (stablecoin_id, snapshot_date, total_tvl_usd, liquidity_score, coverage_class, coverage_confidence, methodology_version)
-         VALUES ('usdt-tether', ?, ?, ?, 'primary', 0.9, '6.98')`,
+           (stablecoin_id, snapshot_date, total_tvl_usd, liquidity_score, coverage_class, coverage_confidence, methodology_version, volume_availability_json)
+         VALUES ('usdt-tether', ?, ?, ?, 'primary', 0.9, '6.98', ?)`,
       );
       for (let d = 8; d <= 14; d++) {
-        insertLiquidity.run(eventDay - d * 86_400, 1_000_000, null);
+        insertLiquidity.run(eventDay - d * 86_400, 1_000_000, null, dexClock(eventDay - d * 86_400));
       }
       for (let d = 0; d <= 7; d++) {
-        insertLiquidity.run(eventDay - d * 86_400, 750_000, 80);
+        insertLiquidity.run(eventDay - d * 86_400, 750_000, 80, dexClock(eventDay - d * 86_400));
       }
 
       const response = await handleBackfillDEWS({ db, url: makeApiUrl("/api/backfill-dews"), trustedAdmin: true });

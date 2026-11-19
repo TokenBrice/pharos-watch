@@ -41,7 +41,7 @@ function applyTriggerLifecycle(
   evidence?: DigestEvidence,
 ): DigestNextTrigger | null {
   const previous = previousTriggers.get(trigger.id);
-  if (!previous) return trigger;
+  if (!previous || (previous.supplyValuationPriceUsd == null) !== (trigger.supplyValuationPriceUsd == null)) return trigger;
   if (previous.thresholdValue != null && triggerHit(previous, data, previousData, evidence).status === "hit") {
     return trigger;
   }
@@ -274,6 +274,7 @@ function supplyVelocityTrigger(
     ...(velocity.stablecoinId != null ? { stablecoinId: velocity.stablecoinId } : {}),
     label: `${symbol} 1d supply velocity`,
     metric: "supply-1d-usd",
+    ...(velocity.quantityEvidence ? { supplyValuationPriceUsd: velocity.quantityEvidence.valuationPriceUsd } : {}),
     comparator: "abs-gte",
     thresholdValue: threshold,
     thresholdLabel: `${formatCurrency(threshold, 0)} 1d move`,
@@ -294,6 +295,7 @@ function weeklySupplyTrigger(
     stablecoinId: mover.id,
     label: `${symbol} weekly supply move`,
     metric: "supply-7d-usd",
+    ...(mover.quantityEvidence ? { supplyValuationPriceUsd: mover.quantityEvidence.valuationPriceUsd } : {}),
     comparator: "abs-gte",
     thresholdValue: threshold,
     thresholdLabel: `${formatCurrency(threshold, 0)} 7d move`,
@@ -421,12 +423,27 @@ function supplyObservation<T extends { stablecoinId?: string; coin: string }>(
   return matches.length === 1 ? matches[0] : undefined;
 }
 
+function supplyTriggerAmount(
+  trigger: DigestNextTrigger,
+  evidence: NonNullable<DigestInputData["biggestSupplyChange"]>["quantityEvidence"],
+  legacyAmount: number | undefined,
+  baseline: "dayAgo" | "weekAgo",
+): number | null {
+  const price = trigger.supplyValuationPriceUsd;
+  if (price == null) return evidence == null ? legacyAmount ?? null : null;
+  const checkpoint = evidence?.[baseline];
+  if (!evidence || !checkpoint) return null;
+  const amount = (evidence.current.quantity - checkpoint.quantity) * price;
+  return Number.isFinite(amount) ? amount : null;
+}
+
 function supply1dOutcome(trigger: DigestNextTrigger, data: DigestInputData, threshold: number) {
   const velocity = supplyObservation(data.supplyVelocity ?? [], trigger);
-  if (!velocity) return { status: "unavailable" as const, detail: `${trigger.symbol} has no current supply-velocity observation.` };
+  const amount = supplyTriggerAmount(trigger, velocity?.quantityEvidence, velocity?.change1d, "dayAgo");
+  if (amount == null) return { status: "unavailable" as const, detail: `${trigger.symbol} has no current supply-velocity observation.` };
   return {
-    status: Math.abs(velocity.change1d) >= threshold ? "hit" as const : "missed" as const,
-    detail: `${trigger.symbol} moved ${signedCurrency(velocity.change1d)} over 1d versus ${trigger.thresholdLabel}.`,
+    status: Math.abs(amount) >= threshold ? "hit" as const : "missed" as const,
+    detail: `${trigger.symbol} moved ${signedCurrency(amount)} over 1d versus ${trigger.thresholdLabel}.`,
   };
 }
 
@@ -437,15 +454,16 @@ function supply7dOutcome(trigger: DigestNextTrigger, data: DigestInputData, thre
     && (trigger.stablecoinId != null
       ? biggestChange.id === trigger.stablecoinId
       : biggestChange.symbol.toUpperCase() === symbol)
-    ? { coin: biggestChange.symbol, change7d: biggestChange.changeUsd }
+    ? { coin: biggestChange.symbol, change7d: biggestChange.changeUsd, quantityEvidence: biggestChange.quantityEvidence }
     : null;
   const weeklyChange = supplyObservation(data.supplyChanges7d ?? [], trigger)
     ?? biggestWeeklyChange
     ?? supplyObservation(data.supplyVelocity ?? [], trigger);
-  if (!weeklyChange) return { status: "unavailable" as const, detail: `${trigger.symbol} has no current weekly supply observation.` };
+  const amount = supplyTriggerAmount(trigger, weeklyChange?.quantityEvidence, weeklyChange?.change7d, "weekAgo");
+  if (amount == null) return { status: "unavailable" as const, detail: `${trigger.symbol} has no current weekly supply observation.` };
   return {
-    status: Math.abs(weeklyChange.change7d) >= threshold ? "hit" as const : "missed" as const,
-    detail: `${trigger.symbol} moved ${signedCurrency(weeklyChange.change7d)} over 7d versus ${trigger.thresholdLabel}.`,
+    status: Math.abs(amount) >= threshold ? "hit" as const : "missed" as const,
+    detail: `${trigger.symbol} moved ${signedCurrency(amount)} over 7d versus ${trigger.thresholdLabel}.`,
   };
 }
 

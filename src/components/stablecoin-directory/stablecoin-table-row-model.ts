@@ -1,13 +1,12 @@
-import { getStablecoinTableRowRiskLevel, getSupplyChangePercent, resolveDisplayedNativePrice } from "@/components/stablecoin-directory/stablecoin-table-logic";
-import { resolveCurrentDeviation, resolveCurrentPeg } from "@/lib/current-peg";
+import { getStablecoinTableRowRiskLevel, getMarketCapBaseline, getSupplyChangePercent, resolveDisplayedNativePrice } from "@/components/stablecoin-directory/stablecoin-table-logic";
+import { formatObservedPrice, resolveCurrentDeviation, resolveDisplayPegReference } from "@/lib/current-peg";
 import type { StablecoinTableRowVariant } from "@/components/stablecoin-directory/stablecoin-table-row-types";
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
 import { resolveMintAuthorityScoreDisplay, resolveMintAuthorityStatus } from "@/lib/mint-authority-display";
 import { deviationColorClass } from "@/lib/severity-colors";
-import { formatNativePrice } from "@shared/lib/peg-format";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { buildSupplyObservationProvenance, classifySupplyCoverage } from "@shared/lib/supply-provenance";
 import { getVariantAccessibleLabel, getVariantDisplay } from "@shared/lib/variant-display";
 import type { DexLiquidityTableMap } from "@shared/types/dex-liquidity";
@@ -31,20 +30,19 @@ export function buildStablecoinTableRowModel({
   variant: StablecoinTableRowVariant;
 }) {
   const circulating = getCirculatingRawOrNull(coin);
-  const prevDay = getPrevDayRawOrNull(coin);
-  const prevWeek = getPrevWeekRawOrNull(coin);
+  const prevDay = getMarketCapBaseline(coin, "day");
+  const prevWeek = getMarketCapBaseline(coin, "week");
   const meta = TRACKED_META_BY_ID.get(coin.id);
   const pegSummary = pegScores?.get(coin.id);
   const pegScore = pegSummary?.pegScore ?? null;
   const liquidityScore = dexLiquidity?.[coin.id]?.liquidityScore ?? null;
-  const pegRef = resolveCurrentPeg(coin, pegSummary)?.pegReference?.valueUsd ?? null;
-  // NAV tokens have no peg reference, but their observed price is still shown,
-  // converted to the peg currency (USD fallback inside formatNativePrice).
-  const displayedNativePrice = resolveDisplayedNativePrice(coin, pegSummary, pegScores);
-  // A NAV token prints NAV/CPI and has no fixed peg for a reference market to hold.
-  const { deviationBps: currentDeviationBps, referenceMarketClosed } = resolveCurrentDeviation(
+  const currency = meta?.flags.pegCurrency ?? "USD";
+  const pegRef = resolveDisplayPegReference(coin, pegSummary, currency);
+  // A NAV token has no fixed peg for a reference market to hold.
+  const { deviationBps: currentDeviationBps, referenceNote } = resolveCurrentDeviation(
     coin, pegSummary, meta?.flags.navToken ? null : meta?.flags.pegCurrency,
   );
+  const displayedPrice = resolveDisplayedNativePrice(coin, pegSummary, pegScores);
   const absPegDeviationBps = currentDeviationBps == null ? null : Math.abs(currentDeviationBps);
   const riskLevel = getStablecoinTableRowRiskLevel(coin, pegScores, reportCards);
   const isOverview = variant === "figmaOverview";
@@ -62,8 +60,8 @@ export function buildStablecoinTableRowModel({
     blacklistStatus: getResolvedBlacklistStatus(coin.id),
     mintAuthorityStatus: resolveMintAuthorityStatus(meta?.mintAuthoritySummary),
     mintAuthorityScore: resolveMintAuthorityScoreDisplay(reportCards?.[coin.id]?.mint),
-    change24h: getSupplyChangePercent(coin, prevDay),
-    change7d: getSupplyChangePercent(coin, prevWeek),
+    change24h: getSupplyChangePercent(coin, "day"),
+    change7d: getSupplyChangePercent(coin, "week"),
     supplySparklineValues: classifySupplyCoverage(buildSupplyObservationProvenance(coin)) === "partial"
       ? [] : [prevWeek, prevDay, circulating],
     isOverview,
@@ -80,10 +78,10 @@ export function buildStablecoinTableRowModel({
     pegRef,
     pegDeviationBps: currentDeviationBps,
     absPegDeviationBps,
-    referenceMarketClosed,
-    priceCell: displayedNativePrice == null
-      ? "—"
-      : formatNativePrice(coin.price, displayedNativePrice.currency, displayedNativePrice.reference),
+    referenceNote,
+    priceCell: displayedPrice
+      ? formatObservedPrice(displayedPrice.value == null ? null : coin.price, displayedPrice.currency, displayedPrice.reference)
+      : "—",
     pegDeviationColorClass: absPegDeviationBps === null
       ? "text-muted-foreground"
       : deviationColorClass(absPegDeviationBps),

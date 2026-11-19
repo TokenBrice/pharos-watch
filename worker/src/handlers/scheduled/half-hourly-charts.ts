@@ -27,7 +27,6 @@ import { IncidentProjectionUnavailableError } from "../../lib/depeg-event-projec
 import { derivePegAnalyticsSnapshot } from "../../lib/peg-analytics";
 import { publishPegAnalyticsCache } from "../../lib/peg-analytics-cache";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
-import type { StablecoinData } from "@shared/types/supply";
 import { runCronSentinel } from "../../cron/cron-sentinel";
 import { buildTelegramOperatorCreds } from "../../lib/runtime-credentials";
 import { syncStablecoinCharts } from "../../cron/sync-stablecoin-charts";
@@ -175,14 +174,12 @@ async function loadHourlyV9CaptureState(
 async function refreshPegAnalyticsCache(db: D1Database): Promise<boolean> {
   const stablecoins = await loadStablecoinsCache(db, { mode: "strict" });
   if (stablecoins.kind !== "ok") return false;
-  const { peggedAssets, fxFallbackRates } = stablecoins.payload as {
-    peggedAssets: StablecoinData[];
-    fxFallbackRates?: Record<string, number>;
-  };
+  const { peggedAssets, fxFallbackRates, fxReferenceObservations } = stablecoins.payload;
   try {
     return await publishPegAnalyticsCache(db, await derivePegAnalyticsSnapshot(db, {
       peggedAssets,
       fxFallbackRates,
+      fxReferenceObservations,
       methodologyAsOf: stablecoins.updatedAt,
       includeNavTokens: true,
     }));

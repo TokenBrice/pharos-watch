@@ -6,6 +6,7 @@ import {
 import type { RedemptionCapacityModel } from "@shared/lib/redemption-backstops";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import { getLatestSuccessfulReserveSnapshotMetadata } from "../live-reserves/store";
+import { mentoFpmmIds, resolveMentoFpmmDelay } from "./mento-phase";
 import {
   readRedemptionBackstopLiveMetadata,
   evaluateRedemptionCapacityEvidenceAdmission,
@@ -91,9 +92,29 @@ export async function resolveReserveSyncCapacity(
       ? options.reserveSnapshotMetadata
       : await getLatestSuccessfulReserveSnapshotMetadata(db, stablecoinId, now);
   const admission = evaluateRedemptionCapacityEvidenceAdmission(stablecoinId, retainedSnapshot, now);
-  const liveMetadata =
+  let liveMetadata =
     (admission.eligible ? options.redemptionLiveMetadata : undefined)
     ?? readRedemptionBackstopLiveMetadata(stablecoinId, retainedSnapshot, now);
+  const mentoFpmm = mentoFpmmIds.has(stablecoinId);
+  if (mentoFpmm && liveMetadata.canUseCapacity) {
+    const delay = resolveMentoFpmmDelay(stablecoinId, liveMetadata, liveMetadata.sourceTimestamp, now, liveMetadata.immediateRedeemableUsd);
+    liveMetadata = delay != null ? { ...liveMetadata, settlementDelaySec: delay } : {
+      ...liveMetadata,
+      canUseCapacity: false,
+      capacityReason: "Mento FPMM capacity requires an observation from the current market phase",
+      capacityRejectionReason: "redeemable-capacity-unobserved",
+      settlementDelaySec: null,
+      routeStatus: null,
+      routeStatusSource: null,
+      routeStatusReason: null,
+      routeStatusReviewedAt: null,
+    };
+  }
+  // Older packets for these two adapters used the wrong units or payout book.
+  const capacityBasisUnverified = liveMetadata.canUseCapacity &&
+    (stablecoinId === "jupusd-jupiter" ||
+      (stablecoinId === "usd3-reserve-protocol" &&
+        (liveMetadata.sourceTimestamp == null || liveMetadata.immediateRedeemableUsd == null)));
 
   // A validated async marker invalidates immediate/scoring cash even on an
   // unknown route or a configured fallback. A measured pause remains zero.
@@ -144,15 +165,16 @@ export async function resolveReserveSyncCapacity(
   }
 
   if (
+    !capacityBasisUnverified &&
     liveMetadata.canUseCapacity &&
     liveMetadata.capacityConfidence != null &&
     (liveMetadata.immediateRedeemableUsd != null ||
       (liveMetadata.immediateRedeemableRatio != null && supplyUsd != null))
   ) {
-    const rawCapacityUsd =
-      liveMetadata.immediateRedeemableUsd != null
-        ? liveMetadata.immediateRedeemableUsd
-        : (supplyUsd as number) * (liveMetadata.immediateRedeemableRatio as number);
+    const paused = liveMetadata.routeStatus === "paused";
+    // Retained packets can contain inventory observed behind a closed gate.
+    const rawCapacityUsd = paused ? 0 : liveMetadata.immediateRedeemableUsd
+      ?? (supplyUsd as number) * (liveMetadata.immediateRedeemableRatio as number);
     // Confidence resolution, most conservative source first: an adapter that
     // marks this run's capacity documented-bound (e.g. sBOLD when its
     // collateral-health gate is restricted or unreadable) always downgrades,
@@ -160,7 +182,8 @@ export async function resolveReserveSyncCapacity(
     // dUSD), and only then does the adapter-derived live confidence apply.
     // The measured capacity value is used in all three cases; only its
     // confidence label changes.
-    const capacityKind = (liveMetadata.settlementDelaySec ?? 0) > 0 && liveMetadata.capacityKind === "live-direct"
+    const delayed = !paused && liveMetadata.settlementDelaySec != null && liveMetadata.settlementDelaySec > 0;
+    const capacityKind = delayed && liveMetadata.capacityKind === "live-direct"
       ? "documented-bound" as const
       : liveMetadata.capacityKind;
     const liveCapacityConfidence =
@@ -178,6 +201,7 @@ export async function resolveReserveSyncCapacity(
       supplyUsd,
       dailyLimitUsd: liveMetadata.dailyLimitUsd,
       queueDepthUsd: liveMetadata.queueDepthUsd,
+      delayed,
       capacityProfileConfidence: liveCapacityConfidence,
       settlementBoundUnproven: liveMetadata.settlementBoundUnproven,
       applyDailyLimit: true,
@@ -197,10 +221,8 @@ export async function resolveReserveSyncCapacity(
     return {
       consumedReserveCapacity: true,
       ...capacityFields,
-      eventualCapacityUsd:
-        model.eventualCapacityModel === "supply-full" && hasSupplyCeiling ? supplyUsd : undefined,
-      eventualCapacityRatio:
-        model.eventualCapacityModel === "supply-full" && hasPositiveSupply ? 1 : undefined,
+      eventualCapacityUsd: model.eventualCapacityModel === "supply-full" && hasSupplyCeiling ? supplyUsd : undefined,
+      eventualCapacityRatio: model.eventualCapacityModel === "supply-full" && hasPositiveSupply ? 1 : undefined,
       provider: REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_METADATA,
       sourceMode:
         REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS[REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_METADATA]
@@ -209,7 +231,7 @@ export async function resolveReserveSyncCapacity(
       capacityConfidence: liveCapacityConfidence,
       // routeFamily=null: recomputed with the real routeFamily in redemption-backstop-sources.ts; not read downstream here.
       capacityBasis: resolveCapacityBasis(null, model, liveCapacityConfidence),
-      capacitySemantics,
+      capacitySemantics: delayed ? "eventual-only" : capacitySemantics,
       ...(capacityKind ? { capacityKind } : {}),
       ...(liveMetadata.freshnessKind ? { freshnessKind: liveMetadata.freshnessKind } : {}),
       ...(liveMetadata.sourceTimestamp != null ? { sourceTimestamp: liveMetadata.sourceTimestamp } : {}),
@@ -231,7 +253,7 @@ export async function resolveReserveSyncCapacity(
     };
   }
 
-  const canUseConfiguredFallback = liveMetadata.routeStatus == null || liveMetadata.routeStatus === "open";
+  const canUseConfiguredFallback = !mentoFpmm && (liveMetadata.routeStatus == null || liveMetadata.routeStatus === "open");
   if (canUseConfiguredFallback && model.fallbackRatio != null && supplyUsd != null && supplyUsd > 0) {
     const capacityFields = buildBoundedCapacityFields({
       rawCapacityUsd: supplyUsd * model.fallbackRatio,
@@ -304,6 +326,9 @@ export async function resolveReserveSyncCapacity(
     capacityBasis: resolveCapacityBasis(null, model, unquantifiedConfidence),
     capacitySemantics,
     ...pickRouteStatusFields(liveMetadata),
-    notes: [...liveMetadata.capacityNotes, liveMetadata.capacityReason ?? "Live reserve metadata unavailable"],
+    ...(capacityBasisUnverified ? { capacityRejectionReason: "redeemable-capacity-unobserved" as const } : {}),
+    notes: [...liveMetadata.capacityNotes, capacityBasisUnverified
+      ? "Live capacity lacks an admitted payout or valuation basis"
+      : liveMetadata.capacityReason ?? "Live reserve metadata unavailable"],
   };
 }

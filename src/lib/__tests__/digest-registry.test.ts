@@ -47,6 +47,16 @@ describe("digest registry", () => {
     expect(registry.isDigestIndexable(registry.DIGEST_BY_DATE.get("2026-10-10")!)).toBe(false);
   });
 
+  it("publishes the March 1 correction beside the original edition", async () => {
+    const archive = storedEntry("2026-03-01", Date.UTC(2026, 2, 1, 8) / 1000, "daily", 1);
+    const registry = await loadRegistryWith([archive]);
+    expect([...registry.DIGEST_CORRECTIONS.keys()]).toEqual(["2026-03-01"]);
+    const correction = registry.DIGEST_CORRECTIONS.get("2026-03-01");
+    expect(correction?.date).toBe("2026-11-18");
+    for (const eventId of [76764, 76716, 76729]) expect(correction?.text).toContain(String(eventId));
+    expect(registry.DIGEST_BY_DATE.get("2026-03-01")).toMatchObject({ text: archive.text, extended: archive.extended });
+  });
+
   it("normalizes legacy snapshots that predate edition metadata", () => {
     const [entry] = DigestStoredSnapshotSchema.parse([{
       date: "2026-08-26",

@@ -5,8 +5,10 @@ import type { YieldBenchmarkFreshness } from "@shared/lib/yield-benchmark-freshn
 import { assessYieldEvidence } from "@shared/lib/yield-evidence";
 import {
   PENDLE_SUPPLEMENTAL_FETCH_CADENCE_MS,
+  OPTIONAL_YIELD_SOURCES,
+  getUsycNavFreshness,
   SLOW_NAV_SOURCE_KEYS,
-  getYieldSourceProducerCadenceMs,
+  getYieldSourceAgingThresholdMs,
   isSupplementalOnchainSource,
 } from "@shared/lib/yield-source-cadence";
 import type { YieldRowSafetyResolution } from "@shared/lib/yield-opportunity-risk";
@@ -183,8 +185,7 @@ export type YieldSourceFreshness = "fresh" | "stale" | "unknown";
 
 /** `aging` boundary: the midpoint between a class cadence and its stale bound. */
 export function getRankingAgingThresholdMs(dataSource: string, sourceKey?: string | null): number {
-  const cadenceMs = getYieldSourceProducerCadenceMs(dataSource, sourceKey);
-  return cadenceMs + (getRankingStaleThresholdMs(dataSource, sourceKey) - cadenceMs) / 2;
+  return getYieldSourceAgingThresholdMs(dataSource, sourceKey, getRankingStaleThresholdMs(dataSource, sourceKey));
 }
 
 export type YieldSourceAgeTier = "fresh" | "aging" | "stale" | "unknown";
@@ -200,8 +201,16 @@ export function classifyYieldSourceAgeTier(input: {
   dataSource: string;
   sourceKey?: string | null;
   sourceAgeSeconds: number | null;
+  sourceObservedAt?: number | null;
+  nowSec?: number;
+  productFreshness?: YieldBenchmarkFreshness;
 }): YieldSourceAgeTier {
+  if (input.sourceKey === OPTIONAL_YIELD_SOURCES.hashnote.sourceKey && input.nowSec != null) {
+    return getUsycNavFreshness(input.sourceObservedAt, input.nowSec);
+  }
+  if (input.productFreshness === "stale") return "stale";
   if (input.sourceAgeSeconds == null || !Number.isFinite(input.sourceAgeSeconds)) return "unknown";
+  if (input.productFreshness != null) return "fresh";
   const ageMs = input.sourceAgeSeconds * 1000;
   if (ageMs > getRankingStaleThresholdMs(input.dataSource, input.sourceKey)) return "stale";
   return ageMs > getRankingAgingThresholdMs(input.dataSource, input.sourceKey) ? "aging" : "fresh";
@@ -230,6 +239,7 @@ export function classifyYieldSourceFreshness(input: {
  */
 const LONG_HORIZON_NAV_ANCHOR_SOURCE_KEYS = new Set([
   "protocol-api:ondo-usdy-oracle",
+  OPTIONAL_YIELD_SOURCES.ondo.sourceKey,
   "protocol-api:midas-mmev-nav-oracle",
 ]);
 

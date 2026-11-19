@@ -3,6 +3,7 @@ import { isOperationalYieldAdvisory, selectInvestmentWarningSignals } from "../y
 
 const OPERATIONAL = [
   "aging", "data-stale", "data-freshness-unknown", "reference-benchmark-degraded", "benchmark-degraded", "benchmark-stale",
+  "benchmark-unit-mismatch",
 ];
 
 describe("yield warning signal selection", () => {

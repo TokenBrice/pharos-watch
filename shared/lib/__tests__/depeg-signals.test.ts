@@ -5,9 +5,19 @@ import {
   deriveDepegSignal,
   pickMoreSevereBps,
   relativeBps,
+  readDeviationProjection,
   signalCrossesThreshold,
   signalsShareDirection,
 } from "../depeg-signals";
+
+describe("readDeviationProjection", () => {
+  it("reserves undefined for omission and permits an unaccompanied number only for USD", () => {
+    expect(readDeviationProjection({}, false, 100)).toBeUndefined();
+    expect(readDeviationProjection({ admittedDeviationBps: null }, true, 100)).toBeNull();
+    expect(readDeviationProjection({ admittedDeviationBps: -2.5 }, false, 100)).toBeNull();
+    expect(readDeviationProjection({ admittedDeviationBps: -2.5 }, true, 100)).toBe(-2.5);
+  });
+});
 
 describe("relativeBps", () => {
   it("preserves signed raw and rounded forms on both sides of rounding boundaries", () => {
@@ -115,6 +125,15 @@ describe("threshold helpers", () => {
     expect(roundedToThreshold.bps).toBe(-100);
     expect(roundedToThreshold.absRawBps).toBeCloseTo(99.5);
     expect(signalCrossesThreshold(roundedToThreshold, 100)).toBe(false);
+  });
+
+  it("normalizes integer bps tails while preserving sub-bps moves", () => {
+    for (const [price, ref, bps] of [[1.4, 1.12, 2500], [0.8475, 1.13, -2500], [1.122, 1.1, 200]] as const) {
+      expect(deriveDepegSignal(price, ref)?.rawBps).toBe(bps);
+    }
+    expect(deriveDepegSignal(1.12199, 1.1)!.rawBps).toBeLessThan(200);
+    expect(deriveDepegSignal(1.12201, 1.1)!.rawBps).toBeGreaterThan(200);
+    expect(signalCrossesThreshold(deriveDepegSignal(1.399999, 1.12), 2500)).toBe(false);
   });
 });
 

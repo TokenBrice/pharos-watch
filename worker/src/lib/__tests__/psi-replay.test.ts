@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildHistoricalDewsMap,
   computeHistoricalDewsStressBreadth,
+  replayHistoricalPsiForDay,
 } from "../psi-replay";
 import { buildSupplySnapshotMap } from "../psi-recompute";
 import { psiDepegRow, psiSupplyPair, replayPsiDay, DAY } from "./psi.test-support";
@@ -55,7 +56,7 @@ describe("psi-replay", () => {
   it("replays v2.x without stress breadth but v3.x with stress breadth", () => {
     const day = 1_746_384_000;
     const supplyRows = [
-      ...psiSupplyPair({ stablecoinId: "usdt-tether", day, currentMcap: 100_000_000_000, priorMcap: 100_000_000_000 }),
+      ...psiSupplyPair({ stablecoinId: "usdt-tether", day, currentMcap: 100_000_000_000, priorMcap: 100_000_000_000, currentPrice: 0.99 }),
       ...psiSupplyPair({ stablecoinId: "usdc-circle", day, currentMcap: 64_000_000_000, priorMcap: 64_000_000_000 }),
     ];
     const depegEvents = [psiDepegRow({ stablecoinId: "usdt-tether", day, startedOffsetSec: -DAY, endedOffsetSec: null, peakDeviationBps: -100 })];
@@ -68,7 +69,7 @@ describe("psi-replay", () => {
     const v30 = replayPsiDay(day, "3.0", supplyRows, depegEvents, dewsByDay);
 
     expect(v21.input.dewsStressBreadth).toBeUndefined();
-    expect(v30.input.dewsStressBreadth).toBeGreaterThan(5);
+    expect(v30.input.dewsStressBreadth).toBe(12);
     expect(v21.result?.score).toBeGreaterThan(v30.result?.score ?? -Infinity);
     expect((v21.result?.score ?? 0) - (v30.result?.score ?? 0)).toBe(5);
   });
@@ -76,7 +77,7 @@ describe("psi-replay", () => {
   it("keeps crisis-like replay sensitivity when adding bounded stress breadth", () => {
     const day = 1_746_384_000;
     const replay = replayPsiDay(day, "3.0", [
-      ...psiSupplyPair({ stablecoinId: "usdt-tether", day, currentMcap: 145_000_000_000, priorMcap: 145_000_000_000 }),
+      ...psiSupplyPair({ stablecoinId: "usdt-tether", day, currentMcap: 145_000_000_000, priorMcap: 145_000_000_000, currentPrice: 0.97 }),
       ...psiSupplyPair({ stablecoinId: "usdc-circle", day, currentMcap: 60_000_000_000, priorMcap: 60_000_000_000 }),
     ], [psiDepegRow({ stablecoinId: "usdt-tether", day, startedOffsetSec: -DAY, endedOffsetSec: null, peakDeviationBps: -300 })], buildHistoricalDewsMap([
         { stablecoin_id: "usdt-tether", snapshot_date: day, band: "WARNING" },
@@ -103,25 +104,49 @@ describe("psi-replay", () => {
     expect(replay.result?.score).toBeLessThan(20);
   });
 
-  it("uses peak deviation as a start-day floor when the daily snapshot misses an intraday shock", () => {
-    const day = 1_678_579_200; // 2023-03-11
-    const replay = replayPsiDay(day, "3.2", [
-      ...psiSupplyPair({ stablecoinId: "usdc-circle", day, currentMcap: 43_000_000_000, priorMcap: 43_500_000_000, currentPrice: 0.998, priorPrice: 1 }),
-      ...psiSupplyPair({ stablecoinId: "usdt-tether", day, currentMcap: 73_000_000_000, priorMcap: 72_000_000_000, currentPrice: 1.001, priorPrice: 1 }),
-    ], [psiDepegRow({ stablecoinId: "usdc-circle", day, startedOffsetSec: 6 * 3600, endedOffsetSec: null, peakDeviationBps: -1200 })], buildHistoricalDewsMap([
-        { stablecoin_id: "usdc-circle", snapshot_date: day, band: "WARNING" },
-      ]));
+  it.each([undefined, [0, 3600, 23 * 3600]])("weights an hour of admitted overlap using slots %j", (offsets) => {
+    const day = Date.UTC(2026, 10, 15) / 1000;
+    const reopen = day + 23 * 3600;
+    const supply = psiSupplyPair({ stablecoinId: "usdt-tether", day, currentMcap: 1e9, priorMcap: 1e9 });
+    const event = {
+      ...psiDepegRow({ stablecoinId: "usdt-tether", day, startedOffsetSec: 23 * 3600, endedOffsetSec: null, peakDeviationBps: -200 }),
+      start_price: 0.98, admittedCoverage: [{ fromSec: reopen, toSec: day + DAY }],
+    };
+    const replay = replayHistoricalPsiForDay({
+      day, now: day + DAY, methodologyVersion: "2.1", depegEvents: [event],
+      supplyByCoin: buildSupplySnapshotMap(supply), sampleSlots: offsets?.map((offset) => day + offset),
+    });
+    expect(replay.result?.components.breadth).toBe(offsets ? 1 : 0.13);
+  });
 
-    expect(replay.input.depegs).toEqual([
-      { bps: -1200, mcapUsd: 43_000_000_000, depegAgeDays: 0 },
-    ]);
-    expect(replay.result?.band).toBe("MELTDOWN");
+  it.each([0.995, undefined])("ignores a 20:00 quote at the sole 02:00 slot with onset price %s", (startPrice) => {
+    const day = Date.UTC(2026, 10, 16) / 1000;
+    const event = { ...psiDepegRow({
+      stablecoinId: "usdt-tether", day, startedOffsetSec: 3600, endedOffsetSec: null, peakDeviationBps: -120,
+    }), start_price: startPrice };
+    const run = (price: number) => {
+      const supply = psiSupplyPair({ stablecoinId: "usdt-tether", day, currentMcap: 1e9, priorMcap: 1e9 });
+      return replayHistoricalPsiForDay({
+        day, now: day + DAY, methodologyVersion: "2.1", depegEvents: [event], sampleSlots: [day + 7200],
+        supplyByCoin: buildSupplySnapshotMap(supply.map((row) => ({ ...row, price, price_observed_at: row.snapshot_date + 20 * 3600 }))),
+      });
+    };
+    const early = run(0.985);
+    expect(early.result).toEqual(run(0.999).result);
+    expect(early.input.priceBasis).toBe("sample-as-of");
+    if (startPrice == null) {
+      expect(early.result).toBeNull();
+      expect(early.unavailableReason).toBe("open-depeg-inputs-unavailable");
+    } else {
+      expect(early.input.depegs[0]?.bps).toBe(-50);
+      expect(early.result?.components.severity).toBe(30);
+    }
   });
 
   it("replays legacy UST depeg rows against the canonical shadow asset", () => {
     const day = 1_652_140_800; // 2022-05-10
     const replay = replayPsiDay(day, "1.0", [
-      ...psiSupplyPair({ stablecoinId: "ust-terra", day, currentMcap: 15_682_326_993, priorMcap: 18_700_360_530 }),
+      ...psiSupplyPair({ stablecoinId: "ust-terra", day, currentMcap: 15_682_326_993, priorMcap: 18_700_360_530, currentPrice: 0.01 }),
       ...psiSupplyPair({ stablecoinId: "usdt-tether", day, currentMcap: 82_000_000_000, priorMcap: 81_500_000_000, currentPrice: 1, priorPrice: 1 }),
     ], [psiDepegRow({ stablecoinId: "ust-terra-classic", day, startedOffsetSec: -28_700, endedOffsetSec: null, peakDeviationBps: -9900 })]);
 

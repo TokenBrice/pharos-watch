@@ -118,6 +118,7 @@ describe("yield config registry", () => {
           selector: "0x3ba0b9a9",
           decimals: 6,
           inputAmount: `0x${"0".repeat(64)}`,
+          returnDenomination: "XAUt",
         });
       } else {
         const contract = coin.contracts?.find(

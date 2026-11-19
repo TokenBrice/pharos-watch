@@ -492,6 +492,7 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
       {
         generationId: quoteGenerationId,
         publishedAt: latestPublishedAt,
+        targetCapturedAt: current.quotedTarget.capturedAt,
         status: current.status,
         operationalFailure:
           current.status === "failed" && isOperationalDexMeasuredFailure(current.failureReason),
@@ -620,6 +621,7 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
           recordCycle({
             generationId: row.generation_id,
             publishedAt: row.quote_published_at,
+            targetCapturedAt: quotedTarget.capturedAt,
             status: row.status,
             operationalFailure: row.status === "failed" && isOperationalDexMeasuredFailure(row.failure_reason),
             profile,

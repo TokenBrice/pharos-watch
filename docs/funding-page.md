@@ -27,6 +27,8 @@ The [funding-update workflow](../.codex/skills/funding-update/SKILL.md) owns rec
 
 `SupporterKeyNote` derives coin names from reviewed eligibility registry, respects paused claims, and links `/api/#supporter-key`. Direct-transfer/Giveth copy must distinguish signable donating wallets from exchange withdrawals/streams. Team access points to `/api/#partner-access`; `#supporters` remains the inbound API ledger anchor. Public mentions state donations become claimable only after the Sunday reconciliation appears on Funding and ships.
 
+The PR gate compares donation changes with the ledger at the base revision. A typed transfer replacing a published transaction-keyed donation must carry `legacy_credit: true` on the receipt with the original sender, token, block timestamp and amount. Keep the reviewed discriminator on later edits so the claims Worker can write the rollback credit atomically.
+
 Worker embeds the same committed ledger used by Pages. Donation edits require both deployments through the automation registry; cost-only edits remain Pages-only. If ledger removal/correction invalidates evidence behind an issued donor key, the operator must also deactivate it: runtime does not recheck the ledger after issuance. Adding eligible coins/deployments requires curation and funding drift-test updates, not changing a display symbol.
 
 ## Ownership & cadence

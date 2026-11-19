@@ -24,7 +24,7 @@ import * as cohortCache from "../../lib/yield-rankings-coin-cache";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 
 const NOW = Date.parse("2026-04-23T12:00:00Z") / 1000;
-const COHORT_CACHE_KEY = "yield-rankings:coin-cohort:v2";
+const COHORT_CACHE_KEY = "yield-rankings:coin-cohort:v3";
 const databases: DatabaseSync[] = [];
 const coinUrl = (id = "usdc-circle") => new URL(`https://site-api.pharos.watch/api/yield-rankings-coin?stablecoin=${id}`);
 afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); for (const db of databases.splice(0)) db.close(); });
@@ -93,10 +93,45 @@ async function fixture(held = false, pipelineGap = false, safetyPublishedAt = NO
       publicationAttempt: { ...input.publicationAttempt, outcome: "held", publicationGenerationId: null, attemptedAtSec: heldAt },
     });
   }
-  return { sqlite, db, input };
+  return { sqlite, db, input, payload };
 }
 
 describe("rankings score-index hydration", () => {
+  it.each(["USYC", "USYC-age-only", "product-fetch", "product-fixing"] as const)("expires a cohort on the %s deadline", async (source) => {
+    const { db, sqlite, payload } = await fixture();
+    const isUsyc = source === "USYC" || source === "USYC-age-only";
+    const usycObservedAt = Date.parse("2026-04-22T10:45:00Z") / 1000;
+    const id = isUsyc ? "usyc-hashnote" : "ustbl-spiko";
+    const recordAt = Date.parse("2026-04-21T00:00:00Z") / 1000;
+    const deadline = isUsyc ? Date.parse("2026-04-23T12:45:00Z") / 1000 : NOW + 15 * 60;
+    const benchmark = {
+      ...payload.benchmarks!.USD!,
+      recordDate: "2026-04-21",
+      fetchedAt: source === "product-fetch" ? deadline - 48 * 3600 : NOW,
+      maxRecordAgeSec: source === "product-fixing" ? deadline - recordAt : 5 * 86400,
+    };
+    payload.benchmarks = { USD: benchmark };
+    payload.rankings = [makeYieldRanking({
+      id, dataSource: isUsyc ? "protocol-api" : "rate-derived", benchmarkKey: "USD",
+      provenance: makeYieldProvenance({
+        sourceKey: isUsyc ? "protocol-api:hashnote-usyc" : "rate-derived",
+        sourceObservedAt: source === "USYC-age-only" ? undefined : isUsyc ? usycObservedAt : recordAt,
+        sourceAgeSeconds: isUsyc ? NOW - usycObservedAt : NOW - recordAt,
+      }),
+    })];
+    sqlite.prepare("UPDATE cache SET value = ? WHERE key = 'yield-rankings'").run(JSON.stringify(payload));
+
+    vi.setSystemTime(deadline * 1000);
+    const fresh = YieldRankingsCoinResponseSchema.parse(await (await handleYieldRankingsCoin(db, coinUrl(id))).json());
+    expect(fresh.rankings[0].provenance?.sourceFreshness).toBe("fresh");
+    expect(readPublishedCohort(sqlite)?.validUntil).toBe(deadline + 1);
+
+    vi.setSystemTime((deadline + 1) * 1000);
+    const stale = YieldRankingsCoinResponseSchema.parse(await (await handleYieldRankingsCoin(db, coinUrl(id))).json());
+    expect(stale.rankings[0].pysNullReason).toBe("source-stale");
+    expect(readPublishedCohort(sqlite)?.validUntil).toBeGreaterThan(deadline + 1);
+  });
+
   it.each([false, true])("replays full/summary/coin qualification without changing published inputs (held=%s)", async held => {
     const { db, sqlite } = await fixture(held);
     const published = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = 'yield-rankings'").get();
@@ -329,7 +364,7 @@ describe("rankings score-index hydration", () => {
     expect(second.headers.get("Warning")).toBe(fullResponse.headers.get("Warning"));
     // No full ranking read/admission and no unrelated selected/alternate safety
     // hydration on a different coin's cache miss.
-    expect(prepare.mock.calls.filter(([sql]) => sql === "SELECT value, updated_at FROM cache WHERE key = ?")).toHaveLength(0);
+    expect(prepare.mock.calls.filter(([sql]) => sql.startsWith("SELECT value, updated_at FROM cache WHERE key = ("))).toHaveLength(0);
     expect(safety.mock.calls.every(([input]) => input.yieldType === "lending-opportunity")).toBe(true);
     expect(safety.mock.calls.length).toBeLessThanOrEqual(1);
   });
@@ -345,9 +380,9 @@ describe("rankings score-index hydration", () => {
       expect(YieldRankingsCoinResponseSchema.parse(await response.json()).projection.totalCount).toBe(2);
     }
     // Exactly one full-population hydration, and the waiter did not start another.
-    expect(prepare.mock.calls.filter(([sql]) => sql === "SELECT value, updated_at FROM cache WHERE key = ?")).toHaveLength(1);
+    expect(prepare.mock.calls.filter(([sql]) => sql.startsWith("SELECT value, updated_at FROM cache WHERE key = ("))).toHaveLength(1);
     expect((await request("usdt-tether")).status).toBe(200);
-    expect(prepare.mock.calls.filter(([sql]) => sql === "SELECT value, updated_at FROM cache WHERE key = ?")).toHaveLength(1);
+    expect(prepare.mock.calls.filter(([sql]) => sql.startsWith("SELECT value, updated_at FROM cache WHERE key = ("))).toHaveLength(1);
   });
 
   it("logs the lease claim and measured build duration once, without logging warm reads", async () => {
@@ -678,7 +713,7 @@ describe("rankings score-index hydration", () => {
     let coin = YieldRankingsCoinResponseSchema.parse(await (await handleYieldRankingsCoin(db, url)).json());
     expect(coin.rankings).toEqual(full.rankings.filter((row) => row.id === "usdc-circle"));
     expect(coin.rankings[0].provenance?.sourceAgeSeconds).toBe(30);
-    expect(prepare.mock.calls.filter(([sql]) => sql === "SELECT value, updated_at FROM cache WHERE key = ?")).toHaveLength(2); // cold cohort + explicit full baseline
+    expect(prepare.mock.calls.filter(([sql]) => sql.startsWith("SELECT value, updated_at FROM cache WHERE key = ("))).toHaveLength(2); // cold cohort + explicit full baseline
     // Protocol-API source aging boundary is five hours; the hourly publisher
     // clock is not a substitute for the independently aging source.
     vi.setSystemTime((NOW + 18_001) * 1000);
@@ -687,7 +722,7 @@ describe("rankings score-index hydration", () => {
     expect(coin.rankings).toEqual(full.rankings.filter((row) => row.id === "usdc-circle"));
     expect(coin.rankings[0].warningSignals).toContain("aging");
     expect(coin.provenance).toEqual(full.provenance);
-    expect(prepare.mock.calls.filter(([sql]) => sql === "SELECT value, updated_at FROM cache WHERE key = ?")).toHaveLength(4);
+    expect(prepare.mock.calls.filter(([sql]) => sql.startsWith("SELECT value, updated_at FROM cache WHERE key = ("))).toHaveLength(4);
   });
 
   it("invalidates comparator coverage on mutable Safety health/index failure without renewing the yield clock", async () => {

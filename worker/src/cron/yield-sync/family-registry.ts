@@ -147,6 +147,8 @@ const YIELD_SOURCE_KEY_ROUTES: readonly YieldSourceKeyRoute[] = [
     { routeOrder: 1, prefix: "protocol-api:vaults-fyi:", venueProtocol: "vaults-fyi", chainSegmentIndex: 2, family: null },
     { routeOrder: 2, prefix: "protocol-api:bima-susbd", venueProtocol: "bima", chainSegmentIndex: null, family: null },
     { routeOrder: 3, prefix: "protocol-api:etherfuse-cetes-current-issuance", venueProtocol: "etherfuse", chainSegmentIndex: null, family: null },
+    { routeOrder: OPTIONAL_YIELD_SOURCES.ondo.routeOrder, prefix: OPTIONAL_YIELD_SOURCES.ondo.legacySourceKey,
+      venueProtocol: OPTIONAL_YIELD_SOURCES.ondo.venueProtocol, chainSegmentIndex: null, family: null },
   ].sort((a, b) => a.routeOrder - b.routeOrder).map(({ routeOrder: _routeOrder, ...route }) => route),
   ...SUPPLEMENTAL_SOURCE_FAMILY_KEYS.flatMap((family) =>
     SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY[family].routes.map((route) => ({ ...route, family })),
@@ -158,4 +160,15 @@ export function resolveYieldSourceKeyRoute(
 ): YieldSourceKeyRoute | null {
   if (!sourceKey) return null;
   return YIELD_SOURCE_KEY_ROUTES.find((route) => sourceKey.startsWith(route.prefix)) ?? null;
+}
+
+export function isSupplementalVaultYieldSource(sourceKey: string): boolean {
+  const family = resolveYieldSourceKeyRoute(sourceKey)?.family;
+  return family === "morpho" || family === "pendle" || family === "yearnKong" || family === "beefy";
+}
+
+export function requiresYieldProviderObservationClock(source: { dataSource: string; sourceKey: string }): boolean {
+  const sourceKey = source.sourceKey.replace(/^linked-variant:[^:]+:/, "");
+  return source.dataSource === "defillama" || source.dataSource === "defillama-auto"
+    || sourceKey === OPTIONAL_YIELD_SOURCES.ybold.sourceKey || isSupplementalVaultYieldSource(sourceKey);
 }

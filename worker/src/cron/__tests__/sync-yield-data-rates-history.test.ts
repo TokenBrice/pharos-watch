@@ -70,21 +70,21 @@ describe("syncYieldData", () => {
     // sDAI (navToken: true) gets a DL pool with 0% APY.
     // The resolve logic should also try price-derived and pick the non-zero source.
     const nowSec = Math.floor(Date.now() / 1000);
+    const latestQuoteAt = nowSec - 3600;
     const db = makeYieldHistoryDb([], {
       createDb: yieldMockD1,
       additionalTables: [
         {
-          match:
-            "SELECT price, snapshot_date, price_observed_at FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1",
-          matchBinds: ["100"],
+          match: "yield-sync:price-latest",
+          matchBinds: ["100", nowSec - 47 * 86400, Number.MAX_VALUE, nowSec - 38 * 86400, nowSec],
           rows: [],
-          first: { price: 1.05, snapshot_date: nowSec, price_observed_at: nowSec },
+          first: { price: 1.05, price_observed_at: latestQuoteAt },
         },
         {
-          match: "FROM supply_history",
-          matchBinds: ["100", nowSec - 45 * 86400, nowSec - 7 * 86400],
+          match: "yield-sync:price-anchor",
+          matchBinds: ["100", nowSec - 47 * 86400, Number.MAX_VALUE, nowSec - 45 * 86400, latestQuoteAt - 7 * 86400],
           rows: [],
-          first: { price: 1.01, snapshot_date: nowSec - 30 * 86400, price_observed_at: nowSec - 30 * 86400 },
+          first: { price: 1.01, price_observed_at: nowSec - 30 * 86400 },
         },
       ],
     });
@@ -131,8 +131,8 @@ describe("syncYieldData", () => {
       }>;
     };
     const ranking = rankingsPayload.rankings.find((entry) => entry.id === "100");
-    expect(ranking?.provenance?.sourceObservedAt).toBe(nowSec);
-    expect(ranking?.provenance?.sourceAgeSeconds).toBe(0);
+    expect(ranking?.provenance?.sourceObservedAt).toBe(latestQuoteAt);
+    expect(ranking?.provenance?.sourceAgeSeconds).toBe(nowSec - latestQuoteAt);
     expect(ranking?.provenance?.comparisonAnchorObservedAt).toBe(nowSec - 30 * 86400);
     expect(ranking?.provenance?.comparisonAnchorAgeSeconds).toBe(30 * 86400);
   });
@@ -170,6 +170,7 @@ describe("syncYieldData", () => {
 
   it("computes trailing APY from source-specific history instead of mixed coin-level history", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
+    const latestQuoteAt = nowSec - 3600;
     const db = makeYieldHistoryDb([
       makeYieldHistoryRow({
         stablecoin_id: "100",
@@ -202,17 +203,16 @@ describe("syncYieldData", () => {
           }],
         },
         {
-          match:
-            "SELECT price, snapshot_date, price_observed_at FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1",
-          matchBinds: ["100"],
+          match: "yield-sync:price-latest",
+          matchBinds: ["100", nowSec - 47 * 86400, Number.MAX_VALUE, nowSec - 38 * 86400, nowSec],
           rows: [],
-          first: { price: 1.05, snapshot_date: nowSec, price_observed_at: nowSec },
+          first: { price: 1.05, price_observed_at: latestQuoteAt },
         },
         {
-          match: "FROM supply_history",
-          matchBinds: ["100", nowSec - 45 * 86400, nowSec - 7 * 86400],
+          match: "yield-sync:price-anchor",
+          matchBinds: ["100", nowSec - 47 * 86400, Number.MAX_VALUE, nowSec - 45 * 86400, latestQuoteAt - 7 * 86400],
           rows: [],
-          first: { price: 1.01, snapshot_date: nowSec - 30 * 86400, price_observed_at: nowSec - 30 * 86400 },
+          first: { price: 1.01, price_observed_at: nowSec - 30 * 86400 },
         },
       ],
     });

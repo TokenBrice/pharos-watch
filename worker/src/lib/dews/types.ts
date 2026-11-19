@@ -9,6 +9,12 @@
 import type { DewsSignalKey } from "@shared/lib/dews-config";
 import type { MintBurnValuationCompleteness } from "@shared/types/mint-burn";
 import type { YieldRankChangeAttribution, YieldSourceRisk } from "@shared/types/yield";
+import type { ReferenceAdmission } from "@shared/types/reference-admission";
+
+export interface DewsReferenceDivergence {
+  value: number;
+  observedAtSec: number;
+}
 
 export type DEWSEvidenceKind = "market-price" | "dex-liquidity" | "flow" | "issuer-control" | "yield" | "systemic";
 
@@ -63,16 +69,28 @@ export interface SignalResult {
   spreadBps?: number;
   primaryDevBps?: number;
   dexDevBps?: number;
+  venueSpreadBps?: number;
+  referenceDivergence?: DewsReferenceDivergence;
+  referenceCarried?: boolean;
+  /** Unsmoothed current stress for scheduled-reference market evidence. */
+  currentDivergenceValue?: number | null;
+  referenceAdmission?: { primary: ReferenceAdmission; dex: ReferenceAdmission };
   events24h?: number;
   events7d?: number;
   spikeRatio?: number;
   burnSurge?: number;
+  burnSurgeUnavailableReason?: string;
+  burnMaterialityUsd?: number;
+  burnVolume24hUsd?: number;
+  mintVolume24hUsd?: number;
   burnToMintRatio?: number;
   net24hUsd?: number;
   /** Partial-coin evidence never describes the full coin's net. */
-  flowScope?: "isolated-canonical-leg";
+  flowScope?: "isolated-canonical-leg" | "partial-admitted-chains" | "all-admitted-chains";
+  flowChainIds?: readonly string[];
   isolatedNet24hUsd?: number;
   baselineDays?: number;
+  sourceAgeSeconds?: number;
   warnings?: string[];
   unavailableReason?: string;
 }
@@ -82,9 +100,11 @@ export interface DEWSInput {
   mcapUsd: number;
   /** Null when the cache row omitted an admitted peg type (R1). */
   pegType: string | null;
-  circulatingCurrent: number;
-  circulatingPrevDay: number;
-  circulatingPrevWeek: number;
+  circulatingCurrent: number | null;
+  circulatingPrevDay: number | null;
+  circulatingPrevWeek: number | null;
+  /** USD anchors for lookbacks that predate the first native checkpoint. */
+  legacySupplyUsd?: { day?: number | null; week?: number | null };
   circulatingPrevDayAvailable?: boolean;
   circulatingPrevWeekAvailable?: boolean;
   weightedBalanceRatio: number | null;
@@ -99,6 +119,8 @@ export interface DEWSInput {
   tvl7dAgo: number | null;
   priceConfidence: string | null;
   prevPriceConfidence: string | null;
+  /** Observed primary quote for confidence, even when its unit is ineligible for parity. */
+  observedPrice?: number | null;
   price: number | null;
   /** Admitted primary provenance; agreeing source families may confirm a Broker mark. */
   priceSource?: string | null;
@@ -106,6 +128,10 @@ export interface DEWSInput {
   pegRef: number;
   pegReferenceAvailable?: boolean;
   pegReferenceUnavailableReason?: string | null;
+  referenceAdmission?: SignalResult["referenceAdmission"];
+  carriedReferenceDivergence?: DewsReferenceDivergence;
+  venueSpreadBps?: number | null;
+  independentDexDivergence?: boolean;
   pegRateSource?: string | null;
   pegRateContributorCount?: number | null;
   dexPriceUsd: number | null;
@@ -118,6 +144,13 @@ export interface DEWSInput {
   // Mint/burn flow (optional — from mint_burn_hourly)
   /** Only an independently proven canonical leg; may raise stress, never dilute it. */
   flowIsolated?: boolean;
+  flowScope?: SignalResult["flowScope"];
+  flowChainIds?: readonly string[];
+  flowHolderPressureWithheld?: boolean;
+  /** Omitted for legacy history. Null means the post-activation portions have comparable writer proof. */
+  flowEpochIssue?: "mint-burn-current-accounting-transition" | "mint-burn-baseline-accounting-transition"
+    | "mint-burn-current-accounting-epoch-mixed" | "mint-burn-current-accounting-epoch-missing"
+    | "mint-burn-accounting-epoch-mixed" | "mint-burn-accounting-epoch-missing" | null;
   burnVolume24hUsd: number | null;
   mintVolume24hUsd: number | null;
   burnBaseline30dUsd: number | null;
@@ -138,6 +171,7 @@ export interface DEWSInput {
   // Structured yield-risk evidence. Nullable, omitted, or neutral rows remain
   // no-ops; populated stress drivers use the active DEWS methodology weights.
   yieldSourceRisk?: YieldSourceRisk | null;
+  yieldSourceOverdue?: boolean;
   yieldRankChangeAttribution?: YieldRankChangeAttribution | null;
   // Systemic backdrop (optional — latest PSI score from previous cycle)
   psiScore: number | null;
@@ -165,6 +199,7 @@ export interface DEWSInput {
 export type HistoricalDEWSInput = Pick<DEWSInput,
   | "stablecoinId" | "mcapUsd"
   | "circulatingCurrent" | "circulatingPrevDay" | "circulatingPrevWeek"
+  | "legacySupplyUsd"
   | "circulatingPrevDayAvailable" | "circulatingPrevWeekAvailable"
   | "liquidityScore" | "liquidityScore7dAgo" | "tvlCurrent" | "tvl7dAgo"
 >;

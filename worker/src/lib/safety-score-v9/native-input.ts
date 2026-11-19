@@ -18,8 +18,11 @@ import {
   SafetyScoreV9InputIdentitySchema,
   type SafetyScoreV9InputIdentity,
 } from "@shared/types/safety-score-publication";
-import { BaseInputGenerationIdSchema, Sha256Schema } from "@shared/types/safety-schema-primitives";
+import { BaseInputGenerationIdSchema, Sha256Schema, UnixSecondsSchema } from "@shared/types/safety-schema-primitives";
 import { LenderCollateralBackingSchema } from "@shared/types/safety-score-v9-lender-book";
+import { CurrentPegSchema } from "@shared/types/current-peg";
+import { AdmittedDeviationBpsSchema, ReferenceAdmissionSchema } from "@shared/types/reference-admission";
+import { DirectMetalReferencesSchema } from "./reference-evidence";
 import { canonicalizeLenderBookObservation } from "@shared/lib/safety-score-v9/lender-book-registry";
 import {
   normalizeFixedInput,
@@ -129,6 +132,15 @@ export const NativeSafetyScoreV9InputSchema = z
     inputMethodologyVersions: ReportCardsFixedInputMethodologyVersionsSchema,
     dexLiqMap: z.record(z.string(), NativeDexLiquidityRowSchema),
     lenderCollateralBacking: NativeLenderCollateralBackingSchema.optional(),
+    pegEvidenceById: z.record(z.string(), z.strictObject({
+      lastAffectedAtSec: UnixSecondsSchema.nullable().optional(),
+      lastUncertainAffectedAtSec: UnixSecondsSchema.optional(),
+      legacyFxReference: CurrentPegSchema.shape.legacyFxReference,
+      referenceAdmission: ReferenceAdmissionSchema.optional(),
+      admittedDeviationBps: AdmittedDeviationBpsSchema.optional(),
+      activeDiscountEventId: z.number().int().positive().optional(),
+    })).optional(),
+    directMetalReferences: DirectMetalReferencesSchema.optional(),
     baseInputGenerationId: BaseInputGenerationIdSchema,
   })
   .strict();

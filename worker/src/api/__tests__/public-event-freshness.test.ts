@@ -44,8 +44,8 @@ for (const feed of feeds) {
         const timestamp = state === "fresh" ? NOW - 30 : state === "retained-old" ? NOW - 8 * 86_400 : null;
         const db = mockD1([
           { match: "FROM cron_runs", rows: [], first: { started_at: timestamp }, ...(state === "lookup_failed" ? { throwError: new Error("history unavailable") } : {}) },
-          { match: `FROM ${feed.table}`, rows: populated ? [feed.row] : [] },
           ...(feed.name === "depeg-events" ? [{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }] : []),
+          { match: `FROM ${feed.table}`, rows: populated ? [feed.row] : [] },
           ...(feed.name === "mint-burn-events" ? mintBurnScopeTables : []),
         ]);
         const response = await feed.handler(db, new URL(`https://x/api/${feed.name}?${feed.query}`));
@@ -70,8 +70,8 @@ for (const feed of feeds) {
     if (feed.offset != null) {
       it("never counts an unobserved offset as population", async () => {
         const db = mockD1([
-          { match: `FROM ${feed.table}`, rows: [] },
           ...(feed.name === "depeg-events" ? [{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }] : []),
+          { match: `FROM ${feed.table}`, rows: [] },
           ...(feed.name === "mint-burn-events" ? mintBurnScopeTables : []),
         ]);
         const response = await feed.handler(db, new URL(`https://x/api/${feed.name}?${feed.query}&offset=${feed.offset}`));

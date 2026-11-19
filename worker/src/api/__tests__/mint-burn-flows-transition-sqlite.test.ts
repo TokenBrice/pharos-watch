@@ -8,6 +8,7 @@ import { MINT_BURN_WATERMARK_MAX_AGE_SEC, mintBurnWindowCoverage, resolveMintBur
 import { makeMintBurnScanSegments, mintBurnScenario } from "../../test-helpers/__shared/mint-burn";
 import { hydrateMintBurn } from "../../lib/dews/source-state/hydration";
 import { aggregateFlowCacheKey } from "../../lib/mint-burn-flow-cache-keys";
+import { MINT_BURN_RECEIPT_CLASSIFICATION_VERSION } from "../../lib/mint-burn-published-gauge";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => { fixtures.closeAll(); vi.useRealTimers(); });
@@ -52,6 +53,7 @@ async function openPublishedTransition() {
   fixture.sqlite.prepare("INSERT INTO cache (key,value,updated_at) VALUES (?,?,?)")
     .run(aggregateFlowCacheKey(24), JSON.stringify({
       gauge: { score: null }, coins, updatedAt: now, publication: data.publication,
+      receiptClassificationVersion: MINT_BURN_RECEIPT_CLASSIFICATION_VERSION,
       window: { start: end - DAY, end, semantics: "closed-utc-hours", watermark: data.watermark },
     }), now);
   const context = { db: fixture.db, nowSec: now, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn() };
@@ -168,14 +170,19 @@ describe("bounded legacy transition and common scan watermark", () => {
     const excluded = ACTIVE_MINT_BURN_CONFIGS.find((source) => source.stablecoinId === "paxg-paxos")!;
     const scanCoverage = makeMintBurnScanSegments(END).map((segment) =>
       segment.config_key === mintBurnConfigKey(excluded) ? { ...segment, from_timestamp: CUTOVER + HOUR } : segment);
-    const db = mintBurnScenario({ nowSec: END + 300, rows: {
-      scanCoverage,
-      hourly: [{ stablecoin_id: "usdt-tether", chain_id: "ethereum", hour_ts: END - HOUR,
-        mint_count: 1, burn_count: 0, mint_volume_usd: 200_000, burn_volume_usd: 0, net_flow_usd: 200_000,
-        mint_unpriced_event_count: 0, burn_unpriced_event_count: 0 }],
-      baseline: [{ stablecoin_id: "usdt-tether", chain_id: "ethereum", day_ts: Math.floor(END / DAY) * DAY - DAY,
-        daily_net: 100_000, daily_abs: 100_000 }],
-    } });
+    const db = mintBurnScenario({
+      nowSec: END + 300,
+      stablecoinsCache: JSON.stringify({ peggedAssets: [{ id: config.stablecoinId, symbol: config.symbol,
+        circulating: { peggedUSD: 1_000_000 }, chainCirculating: { Ethereum: { current: 1_000_000 } } }] }),
+      rows: {
+        scanCoverage,
+        hourly: [{ stablecoin_id: config.stablecoinId, chain_id: "ethereum", hour_ts: END - HOUR,
+          mint_count: 1, burn_count: 0, mint_volume_usd: 200_000, burn_volume_usd: 0, net_flow_usd: 200_000,
+          mint_unpriced_event_count: 0, burn_unpriced_event_count: 0 }],
+        baseline: [{ stablecoin_id: config.stablecoinId, chain_id: "ethereum", day_ts: Math.floor(END / DAY) * DAY - DAY,
+          daily_net: 100_000, daily_abs: 100_000 }],
+      },
+    });
     const response = await flowResponse(db);
     const body = await response.json() as { gauge: { score: number | null; scoreScope: string; scanCoverage: { complete: boolean; excludedCoins: number } } };
     expect(body.gauge.score).not.toBeNull();

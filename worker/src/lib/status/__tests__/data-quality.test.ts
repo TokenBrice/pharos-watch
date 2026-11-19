@@ -45,6 +45,22 @@ function stablecoinsPayload(): string {
         price: 1,
         circulating: { peggedUSD: 0 },
       },
+      {
+        id: "kau-kinesis",
+        symbol: "KAU",
+        price: 50,
+        circulating: { peggedGOLD: 5_000 },
+        circulatingNative: 100,
+        supplySource: "coingecko-fallback",
+      },
+      {
+        id: "kag-kinesis",
+        symbol: "KAG",
+        price: 50,
+        circulating: { peggedSILVER: 500 },
+        circulatingNative: 10,
+        supplySource: "onchain-total-supply",
+      },
     ],
   });
 }
@@ -107,7 +123,7 @@ describe("getDataQuality repair debt", () => {
       {
         match: "MAX(updated_at) as latest",
         rows: [],
-        first: { latest: NOW - 60, tracked: 3 },
+        first: { latest: NOW - 60, tracked: 5 },
       },
       {
         match: "HAVING latest_update < ?",
@@ -120,6 +136,8 @@ describe("getDataQuality repair debt", () => {
           { stablecoin_id: "usdt-tether", total_supply: 100_000_000 },
           { stablecoin_id: "null-bucket", total_supply: 100 },
           { stablecoin_id: "zero-bucket", total_supply: 100 },
+          { stablecoin_id: "kau-kinesis", total_supply: 50 },
+          { stablecoin_id: "kag-kinesis", total_supply: 1_000 },
         ],
       },
       {
@@ -171,8 +189,8 @@ describe("getDataQuality repair debt", () => {
       tronAtSafeHead: true,
       arbitrumAtSafeHead: true,
     });
-    expect(quality.onchainSupplyDivergences).toBe(1);
-    expect(quality.onchainDivergenceRatio).toBe(1 / 3);
+    expect(quality.onchainSupplyDivergences).toBe(2);
+    expect(quality.onchainDivergenceRatio).toBe(2 / 5);
     expect(quality.totalStablecoins).toBe(400);
     expect(quality.missingPrices).toBe(7);
   });

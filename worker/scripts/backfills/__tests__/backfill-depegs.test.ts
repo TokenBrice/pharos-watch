@@ -7,8 +7,13 @@ import { makeNoopD1 } from "../../../src/test-helpers/noop-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { registerStablecoinParameterContract } from "../../../src/test-helpers/__shared/endpoint-contracts";
 import { applyBackfillEvents, buildBackfillEventsFingerprint, handleBackfillDepegsTrusted } from "../backfill-depegs";
+import { loadExistingReplayRows } from "../backfill-depegs-preview";
 import { loadIncompleteBackfillReplayWindow } from "../backfill-depegs-window";
-import type { BackfillReplayWindow } from "../../../src/lib/backfill-day-window";
+import { buildReplayWindow, type BackfillReplayWindow } from "../../../src/lib/backfill-day-window";
+import { createBackfillDatabase } from "../../lib/backfill-d1";
+import * as history from "../../../src/lib/historical-market-prices";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { executeBackfillForCoin, type ApplyBackfillEventsFn } from "../backfill-depegs/execution";
 
 stubCryptoForAuth();
 const fixtures = createLatestSchemaFixtureTracker();
@@ -31,6 +36,39 @@ describe("handleBackfillDepegs", () => {
     expect(await readJsonResponse(res, 400)).toEqual({
       error: "Invalid contextDays. Use an integer between 0 and 90.",
     });
+  });
+
+  it.each([false, true])("uses hourly evidence for coverage and never completes a padding-only window (%s)", async (paddingOnly) => {
+    const { db, sqlite } = fixtures.open();
+    const day = Date.parse("2026-03-05T00:00:00Z") / 1000;
+    const ts = (hours: number) => day + (hours - (paddingOnly ? 48 : 0)) * 3600;
+    const prices = [0, 1, 2, 25, 26, 27].map((hour, index) => ({
+      timestamp: ts(hour), price: index === 0 || index === 5 ? 1 : 0.97,
+    }));
+    vi.spyOn(history, "fetchMarketBackfillPriceSeries").mockResolvedValue({
+      prices, diagnostics: {
+        granularity: "hourly", quoteMode: "usd", quoteCurrency: "usd", sourcesUsed: ["coingecko"],
+        mergeReasons: [], perSourceStats: [], policyAdjustments: [], finalPointCount: prices.length,
+      },
+    });
+    const apply = vi.fn<ApplyBackfillEventsFn>(async (...args) => { await applyBackfillEvents(db, ...args); });
+    const outcome = await executeBackfillForCoin({
+      db, prepared: { meta: TRACKED_META_BY_ID.get("usdt-tether")!, geckoId: "tether",
+        supplyTokens: [{ date: String(ts(0)), totalCirculatingUSD: { peggedUSD: 2_000_000 } }] },
+      fxSeries: {}, commodityPeers: {}, replayWindow: buildReplayWindow(day, day + 86400, 2),
+      coingeckoApiKey: null, dryRun: false, applyBackfillEvents: apply,
+    });
+    if (paddingOnly) {
+      expect(outcome).toMatchObject({ status: "skipped", reason: "no-admitted-observations-in-comparison-window" });
+      expect(apply).not.toHaveBeenCalled();
+      expect(sqlite.prepare("SELECT count(*) AS count FROM depeg_backfill_runs").get()).toEqual({ count: 0 });
+    } else {
+      expect(outcome).toMatchObject({ status: "applied", eventCount: 1 });
+      const row = sqlite.prepare("SELECT admitted_coverage_json FROM depeg_events").get()!;
+      expect(JSON.parse(String(row.admitted_coverage_json))).toEqual([
+        { fromSec: ts(1), toSec: ts(2) }, { fromSec: ts(25), toSec: ts(26) },
+      ]);
+    }
   });
 
   it("combines delete and first insert chunk into a single batch (total <= D1 100-statement limit)", async () => {
@@ -92,6 +130,82 @@ describe("handleBackfillDepegs", () => {
     });
     await applyBackfillEvents(db, { id: "usdt-tether", symbol: "USDT" }, [], { startDay: 0, endDay: 1e10 } as unknown as BackfillReplayWindow);
     expect(calls).toEqual([{ size: 1 }]);
+  });
+
+  it.each([
+    { id: 24994, stablecoinId: "paxg-paxos", disposition: "restored-evidenced" },
+    { id: 89169, stablecoinId: "brz-transfero", disposition: null },
+  ])("retains reviewed event $id during a replay swap", async ({ id, stablecoinId, disposition }) => {
+    const { db, sqlite } = fixtures.open();
+    sqlite.prepare(`INSERT INTO depeg_events (id, stablecoin_id, symbol, peg_type, direction,
+      peak_deviation_bps, started_at, ended_at, start_price, peg_reference, source, disposition)
+      VALUES (?, ?, 'TEST', 'peggedGOLD', 'above', 400, 1000, 2000, 1.04, 1, 'backfill', ?)`)
+      .run(id, stablecoinId, disposition);
+    await applyBackfillEvents(db, { id: stablecoinId, symbol: "TEST" }, [], null);
+    expect(sqlite.prepare("SELECT id, disposition FROM depeg_events").all()).toEqual([{ id, disposition }]);
+  });
+
+  it.each(["reviewed", "changed", "inserted"])("aborts an inspected swap when history is %s before apply", async (change) => {
+    const { db, sqlite } = fixtures.open();
+    sqlite.exec(`INSERT INTO depeg_events (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps,
+      started_at, ended_at, start_price, peg_reference, source)
+      VALUES (1, 'usdt-tether', 'USDT', 'peggedUSD', 'below', -200, 1000, 2000, 0.98, 1, 'backfill')`);
+    const rows = await loadExistingReplayRows(db, "usdt-tether", null);
+    const row = rows.existingBackfillRows[0]!;
+    if (change === "reviewed") sqlite.exec(`INSERT INTO depeg_event_provenance
+      (event_id, source_kind, audit_verdict, public_json, created_at, updated_at)
+      VALUES (1, 'market', 'confirmed', '{"auditVerdict":"disputed"}', 1, 1)`);
+    if (change === "changed") sqlite.exec("UPDATE depeg_events SET peak_deviation_bps = -300 WHERE id = 1");
+    if (change === "inserted") sqlite.exec(`INSERT INTO depeg_events
+      (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peg_reference)
+      VALUES ('usdt-tether', 'USDT', 'peggedUSD', 'below', -200, 1100, 2200, 0.98, 1)`);
+    await expect(applyBackfillEvents(db, { id: "usdt-tether", symbol: "USDT" }, [{
+      startedAt: 1200, endedAt: 2400, direction: "below", pegType: "peggedUSD", pegRef: 1,
+      startPrice: 0.98, peakPrice: 0.97, peakDeviationBps: -300, recoveryPrice: 1,
+    }], null, {
+      runId: "race", sourceType: "market", expectedEventCount: 1, expectedFingerprint: "race",
+      removedCount: 1, addedCount: 1, replayWindow: null, replacePreimages: [{ id: 1, preimage: row.replay_preimage! }],
+    })).rejects.toThrow();
+    expect(sqlite.prepare("SELECT id FROM depeg_events ORDER BY id").all()).toEqual(change === "inserted" ? [{ id: 1 }, { id: 2 }] : [{ id: 1 }]);
+    if (change === "reviewed") expect((await loadExistingReplayRows(db, "usdt-tether", null)).protectedBackfillRows)
+      .toEqual([expect.objectContaining({ id: 1 })]);
+  });
+
+  it.each([0, 1, 2, "linked"] as const)("checks deletion identities through atomic imports (%s)", async (count) => {
+    const { sqlite } = fixtures.open();
+    const insert = sqlite.prepare(`INSERT INTO depeg_events (id, stablecoin_id, symbol, peg_type, direction,
+      peak_deviation_bps, started_at, ended_at, start_price, peg_reference, source)
+      VALUES (?, 'usdt-tether', 'USDT', 'peggedUSD', 'below', -200, ?, ?, 0.98, 1, 'backfill')`);
+    for (let id = 1; id <= (count === "linked" ? 1 : count); id++) insert.run(id, id * 1000, id * 1000 + 500);
+    const envelope = (results: unknown[] = [], changes = 0) => ({ success: true, results, meta: { changes, duration: 0 } });
+    const db = createBackfillDatabase({
+      queryRaw(sql) {
+        return JSON.stringify(sql.split(";").filter((part) => part.trim()).map((part) => {
+          const stmt = sqlite.prepare(part);
+          return stmt.columns().length ? envelope(stmt.all()) : envelope([], Number(stmt.run().changes));
+        }));
+      },
+      executeStatementsRaw(statements) {
+        if (count === "linked") sqlite.exec(`INSERT INTO depeg_resolver_incident_event_links
+          (incident_key, event_id, relation, linked_at) VALUES ('test-link', 1, 'observed', 1001)`);
+        sqlite.exec("BEGIN");
+        try {
+          for (const sql of statements) sqlite.prepare(sql).run();
+          sqlite.exec("COMMIT");
+          return JSON.stringify([envelope([{ "Total queries executed": statements.length }])]);
+        } catch (error) { sqlite.exec("ROLLBACK"); throw error; }
+      },
+    }, { atomicImports: true });
+    const { existingBackfillRows } = await loadExistingReplayRows(db, "usdt-tether", null);
+    const swap = applyBackfillEvents(db, { id: "usdt-tether", symbol: "USDT" }, [{
+      startedAt: 3000, endedAt: 4000, direction: "below", pegType: "peggedUSD",
+      pegRef: 1, startPrice: 0.98, peakPrice: 0.98, peakDeviationBps: -200, recoveryPrice: 1,
+    }], null, { runId: "test-import", sourceType: "market", expectedEventCount: 1, expectedFingerprint: "test",
+      removedCount: existingBackfillRows.length, addedCount: 1, replayWindow: null,
+      replacePreimages: existingBackfillRows.map((row) => ({ id: row.id, preimage: row.replay_preimage! })) });
+    if (count === "linked") await expect(swap).rejects.toThrow();
+    else await expect(swap).resolves.toMatchObject({ provenanceMismatchCount: 0 });
+    expect(sqlite.prepare("SELECT started_at FROM depeg_events").all()).toEqual([{ started_at: count === "linked" ? 1000 : 3000 }]);
   });
 
   it("blocks backfill replays that would delete sealed DDRv2 backfill events", async () => {

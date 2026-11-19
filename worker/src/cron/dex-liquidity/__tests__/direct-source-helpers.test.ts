@@ -47,6 +47,8 @@ const book = (base: string, quote: string, ask = 20) => word(base) + word(quote)
 afterEach(() => vi.restoreAllMocks());
 it.each(["observed", "stale-quote", "wrong-book", "malformed", "runtime", "reorg", "quote-failed", "zero", "inverted", "crossed"])("Tempo native capture: %s", async (mode) => {
   const pool = { poolId: "tempo:0x0e97fc372f446f247f99ba27614fb2ec87a502a765dedf7e20890909189eed2f", project: "tempo", chain: "Tempo", symbol: "OUSD / pathUSD", tvlUsd: 60_000, volumeUsd1d: null, poolType: "cg-amm", source: "cg_onchain" as const, priceSource: undefined as "direct_api" | undefined };
+  const previousCounterparty = { stablecoinId: "usdc-circle", priceUsd: 1, source: "kraken", observedAtSec: 9950 };
+  const pricedPool = { ...pool, priceCounterparty: previousCounterparty };
   const header = { number: 1, timestamp: 9999, hash: `0x${"a".repeat(64)}` as const };
   vi.spyOn(rpc, "fetchEvmBlockNumber").mockResolvedValue(1);
   vi.spyOn(rpc, "fetchEvmBlockHeader").mockResolvedValueOnce(header).mockResolvedValue({ ...header, timestamp: mode === "reorg" ? 9998 : 9999 });
@@ -55,8 +57,9 @@ it.each(["observed", "stale-quote", "wrong-book", "malformed", "runtime", "reorg
     mode === "malformed" ? "0x" : word(6), word(6), word(6), word(path), word(ousd),
     book(mode === "wrong-book" ? usdt : ousd, path, mode === "crossed" ? -20 : 0), book(usdt, ousd),
   ]).mockResolvedValueOnce(mode === "quote-failed" ? null : [word(mode === "zero" ? 0 : 50_010e6), word(mode === "inverted" ? 51_000e6 : 49_985e6)]);
-  const result = await refreshTempoPathUsdPrice({ sourcePools: new Map([["pathusd-bridge", { stablecoinId: "pathusd-bridge", symbol: "pathUSD", pools: [pool] }]]), stablecoinPriceById: new Map([["usdt-tether", 1.01]]), stablecoinPriceProvenanceById: new Map([["usdt-tether", { referencePriceSourceId: "kraken+coinbase", referencePriceObservedAt: mode === "stale-quote" ? 1 : 9900 }]]), nowSec: 10000 });
+  const result = await refreshTempoPathUsdPrice({ sourcePools: new Map([["pathusd-bridge", { stablecoinId: "pathusd-bridge", symbol: "pathUSD", pools: [pricedPool] }]]), stablecoinPriceById: new Map([["usdt-tether", 1.01]]), stablecoinPriceProvenanceById: new Map([["usdt-tether", { referencePriceSourceId: "kraken+coinbase", referencePriceObservedAt: mode === "stale-quote" ? 1 : 9900 }]]), nowSec: 10000 });
   expect(result.status).toBe(mode === "observed" ? "observed" : "unavailable");
-  expect(pool).toMatchObject({ tvlUsd: 60_000, source: "cg_onchain", priceSource: mode === "observed" ? "direct_api" : undefined });
+  expect(pricedPool).toMatchObject({ tvlUsd: 60_000, source: "cg_onchain", priceSource: mode === "observed" ? "direct_api" : undefined });
+  expect(pricedPool.priceCounterparty).toEqual(mode === "observed" ? undefined : previousCounterparty);
   if (result.status === "observed") expect(result).toMatchObject({ supportUsd: expect.closeTo(50_000), observedAt: 9900, priceUsd: expect.closeTo(0.505 * (49504950496 / 50010000000 + 49504950496 / 49985000000)) });
 });

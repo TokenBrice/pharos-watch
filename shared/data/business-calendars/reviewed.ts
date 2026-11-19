@@ -1,16 +1,23 @@
 import { ReviewedBusinessCalendarSchema, type BusinessCalendarId, type ReviewedBusinessCalendar } from "../../types/business-calendars";
 
+const luxembourgExtensionReviewedAt = "2026-11-18";
+
 // Explicit tables only: no holiday-generation rules and no extrapolation past coverage.
 const tables: ReviewedBusinessCalendar[] = [
   {
     id: "luxembourg-banking-target", timezone: "Europe/Luxembourg",
-    coverage: { from: "2026-01-01", to: "2027-12-31" }, weekendDays: [0, 6],
+    coverage: { from: "2026-01-01", to: "2028-12-31" }, weekendDays: [0, 6],
     holidays: [
       "2026-01-01", "2026-04-03", "2026-04-06", "2026-05-01", "2026-05-09", "2026-05-14", "2026-05-25", "2026-06-23", "2026-08-15", "2026-11-01", "2026-12-24", "2026-12-25", "2026-12-26",
       "2027-01-01", "2027-03-26", "2027-03-29", "2027-05-01", "2027-05-06", "2027-05-09", "2027-05-17", "2027-06-23", "2027-08-15", "2027-11-01", "2027-12-24", "2027-12-25", "2027-12-26",
+      "2028-01-01", "2028-04-14", "2028-04-17", "2028-05-01", "2028-05-09", "2028-05-25", "2028-06-05", "2028-06-23", "2028-08-15", "2028-11-01", "2028-12-24", "2028-12-25", "2028-12-26",
     ],
-    sourceUrls: ["https://www.abbl.lu/professionals/public-and-bank-holidays/"], reviewedAt: "2026-10-05",
-    notes: "Luxembourg statutory and bank holidays include all TARGET closures. Christmas Eve afternoon is conservatively excluded as a whole settlement day. Individual compensatory employee leave is not an additional jurisdiction-wide bank closure.",
+    sourceUrls: [
+      "https://www.abbl.lu/professionals/public-and-bank-holidays/",
+      "https://itm.public.lu/fr/conditions-travail/conges/jours-feries.html",
+      "https://eur-lex.europa.eu/eli/guideline/2022/912/2024-12-01/eng",
+    ], reviewedAt: luxembourgExtensionReviewedAt,
+    notes: "ABBL lists 2026 and 2027. The 2028 extension combines Luxembourg's published statutory dates and TARGET closing days; Christmas Eve is already Sunday. Christmas Eve afternoon is conservatively excluded as a whole settlement day. Individual compensatory leave is not a bank closure.",
   },
   {
     id: "brazil-b3-national", timezone: "America/Sao_Paulo",
@@ -50,3 +57,18 @@ const tables: ReviewedBusinessCalendar[] = [
 export const REVIEWED_BUSINESS_CALENDARS: Readonly<Record<BusinessCalendarId, ReviewedBusinessCalendar>> = Object.fromEntries(
   tables.map((table) => [table.id, ReviewedBusinessCalendarSchema.parse(table)]),
 ) as Record<BusinessCalendarId, ReviewedBusinessCalendar>;
+
+const luxembourg = REVIEWED_BUSINESS_CALENDARS["luxembourg-banking-target"];
+const earlierLuxembourg = {
+  ...luxembourg,
+  coverage: { ...luxembourg.coverage, to: "2027-12-31" },
+  holidays: luxembourg.holidays.filter((date) => date < "2028-01-01"),
+  sourceUrls: luxembourg.sourceUrls.slice(0, 1),
+  reviewedAt: "2026-10-05",
+  notes: "ABBL public and bank holidays, with Christmas Eve conservatively treated as closed all day.",
+};
+
+export function reviewedBusinessCalendarAt(id: BusinessCalendarId, clockSec: number): ReviewedBusinessCalendar {
+  return id === luxembourg.id && clockSec < Date.parse(luxembourgExtensionReviewedAt) / 1_000
+    ? earlierLuxembourg : REVIEWED_BUSINESS_CALENDARS[id];
+}

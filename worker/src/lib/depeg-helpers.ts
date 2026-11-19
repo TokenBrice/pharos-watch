@@ -1,8 +1,12 @@
+import { z } from "zod";
 import { logWorkerEvent, logWorkerEventArgs } from "./structured-log";
 import { MAX_OPEN_DEPEG_EVENTS } from "./depeg-threshold-policy";
 import { DEX_FRESHNESS_SEC, DEX_PROTOCOL_SOURCE_FRESHNESS_SEC } from "@shared/lib/depeg-config";
+import { readDexPriceLineage, type DexPriceLineage } from "../cron/dex-liquidity/price-lineage";
+export { readDexPriceLineage, type DexPriceLineage } from "../cron/dex-liquidity/price-lineage";
+import { PegReferenceHoldSchema, type PegScoreEvent } from "@shared/lib/peg-utils";
 import { DepegAuditVerdictSchema } from "@shared/types/depeg-audit";
-import { DEPEG_EVENT_CLOSE_REASON_VALUES, DepegPriceCoverageSchema } from "@shared/types/peg";
+import { DEPEG_EVENT_CLOSE_REASON_VALUES, DepegPriceCoverageSchema, DepegEventQuoteDomainSchema, DepegEventDispositionSchema, DepegAdmittedCoverageSchema } from "@shared/types/peg";
 import type { DepegEvent, DepegEventCloseReason } from "@shared/types/peg";
 import {
   loadPublishedDexPoolChallengers,
@@ -40,6 +44,13 @@ export interface DepegRow {
   recovery_first_seen_at?: number | null;
   confirmation_sources: string | null;
   pending_reason: string | null;
+  peak_peg_reference?: number | null;
+  peak_quote_domain?: DepegEvent["peakQuoteDomain"] | null;
+  recovery_peg_reference?: number | null;
+  reference_hold_json?: string | null;
+  admitted_coverage_json?: string | null;
+  disposition?: string | null;
+  peer_basis_json?: string | null;
   provenance_json?: string | null;
   price_coverage_json?: string | null;
   last_trusted_price_at?: number | null;
@@ -52,7 +63,7 @@ export interface DepegRow {
 
 /** Column list for the detector's depeg_events SELECT shape. */
 export const DEPEG_EVENTS_DEPEGROW_COLUMNS =
-  "id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source, recovery_first_seen_at, price_coverage_json, last_trusted_price_at, price_coverage_gap_started_at";
+  "id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source, recovery_first_seen_at, price_coverage_json, last_trusted_price_at, price_coverage_gap_started_at, peak_peg_reference, peak_quote_domain, recovery_peg_reference, admitted_coverage_json, disposition";
 
 const OPEN_DEPEG_LIMIT_MESSAGES = {
   detection: "Skipped depeg detection because the open-event query reached its limit",
@@ -71,7 +82,7 @@ export function logOpenDepegEventLimitReached(pass: keyof typeof OPEN_DEPEG_LIMI
   });
 }
 
-export interface DexPriceRow {
+export interface DexPriceRow extends DexPriceLineage {
   stablecoin_id: string;
   dex_price_usd: number;
   deviation_from_primary_bps: number | null;
@@ -82,15 +93,15 @@ export interface DexPriceRow {
   aggregateClockReason?: DexAggregateClock["aggregateClockReason"];
 }
 
-export type PendingDepegReasonFlag = "confirmation-window" | "large-cap" | "low-confidence" | "extreme-move";
+export type PendingDepegReasonFlag = "confirmation-window" | "large-cap" | "low-confidence" | "extreme-move" | "peer-relative";
 export const NATIVE_ORIGIN_PENDING_REASON_FLAG = "native-origin";
 /**
  * Stored reason is a "+"-joined list of flags in canonical order:
- * confirmation-window > extreme-move > large-cap > low-confidence.
+ * confirmation-window > extreme-move > large-cap > low-confidence > peer-relative.
  */
 export type PendingDepegReason = string;
 
-const REASON_ORDER: PendingDepegReasonFlag[] = ["confirmation-window", "extreme-move", "large-cap", "low-confidence"];
+const REASON_ORDER: PendingDepegReasonFlag[] = ["confirmation-window", "extreme-move", "large-cap", "low-confidence", "peer-relative"];
 
 export function buildPendingReason(flags: Iterable<PendingDepegReasonFlag>): PendingDepegReason {
   const set = new Set(flags);
@@ -101,7 +112,7 @@ export function parsePendingReason(reason: PendingDepegReason | null | undefined
   const result = new Set<PendingDepegReasonFlag>();
   if (!reason) return result;
   for (const part of reason.split("+")) {
-    if (part === "confirmation-window" || part === "large-cap" || part === "low-confidence" || part === "extreme-move") {
+    if (part === "confirmation-window" || part === "large-cap" || part === "low-confidence" || part === "extreme-move" || part === "peer-relative") {
       result.add(part);
     }
   }
@@ -123,7 +134,7 @@ export function isNativeOriginPending(reason: PendingDepegReason | null | undefi
 }
 
 /** Per-protocol price source stored in dex_prices.price_sources_json */
-export interface DexPoolSource {
+export interface DexPoolSource extends DexPriceLineage {
   protocol: string;
   chain: string;
   price: number;
@@ -169,7 +180,7 @@ export async function loadDexPoolChallengers(
   minPoolTvlUsd: number,
   maxAgeSec: number,
   nowSec: number,
-): Promise<Map<string, Array<{ price: number; tvlUsd: number; protocol: string; chain: string; observedAt?: number; sourceFamily?: string }>>> {
+): Promise<Map<string, Array<DexPriceLineage & { price: number; tvlUsd: number; protocol: string; chain: string; observedAt?: number; sourceFamily?: string }>>> {
   let loaded;
   try {
     loaded = await loadPublishedDexPoolChallengers(db, minPoolTvlUsd, maxAgeSec, nowSec);
@@ -211,8 +222,9 @@ export async function loadDexPoolChallengers(
         tvlUsd: row.tvlUsd,
         protocol: row.protocol,
         chain: row.chain,
-        observedAt: row.priceObservedAt === undefined ? row.snapshotAt : row.priceObservedAt ?? undefined,
+        observedAt: row.priceObservedAt ?? undefined,
         sourceFamily: row.sourceFamily,
+        ...readDexPriceLineage(row),
       })),
     ]),
   );
@@ -247,30 +259,32 @@ export function collectDexProtocolCorroborations(
   mode: "confirm" | "recover" | "contradict",
 ): DexProtocolCorroboration[] {
   if (!protocolSources || protocolSources.length === 0) return [];
-  const groups = new Map<string, DexProtocolCorroboration>();
+  const groups: Array<{ identities: Set<string>; best: DexProtocolCorroboration }> = [];
   for (const source of protocolSources) {
     const signal = deriveDepegSignal(source.price, pegRef);
-    if (signal == null) continue;
-
-    const matches =
-      mode === "recover"
-        ? signalIsWithinThreshold(signal, threshold)
-        : signalCrossesThreshold(signal, threshold) &&
-          (mode === "confirm" ? signal.direction === direction : signal.direction !== direction);
+    if (signal == null || source.pricePoolKeys?.length === 0 || source.upstreamKeys?.length === 0) continue;
+    const matches = mode === "recover"
+      ? signalIsWithinThreshold(signal, threshold)
+      : signalCrossesThreshold(signal, threshold) &&
+        (mode === "confirm" ? signal.direction === direction : signal.direction !== direction);
     if (!matches) continue;
 
     const key = dexProtocolGroupKey(source);
-    const existing = groups.get(key);
-    if (
-      existing == null ||
-      (mode === "recover"
-        ? signal.absBps < existing.signal.absBps
-        : signal.absBps > existing.signal.absBps)
-    ) {
-      groups.set(key, { key, source, signal });
+    const identities = new Set([`family:${key}`, `protocol:${normalizeDexGroupPart(source.protocol, "unknown")}`,
+      ...(source.pricePoolKeys ?? []), ...(source.upstreamKeys ?? [])]);
+    let best = { key, source, signal };
+    // A conversion pool can link several apparently distinct source families.
+    for (let i = groups.length - 1; i >= 0; i--) {
+      const group = groups[i];
+      if (![...identities].some((id) => group.identities.has(id))) continue;
+      for (const id of group.identities) identities.add(id);
+      if (mode === "recover" ? group.best.signal.absRawBps < best.signal.absRawBps
+        : group.best.signal.absRawBps > best.signal.absRawBps) best = group.best;
+      groups.splice(i, 1);
     }
+    groups.push({ identities, best });
   }
-  return [...groups.values()];
+  return groups.map((group) => group.best);
 }
 
 export function countDexProtocolCorroborations(
@@ -329,7 +343,7 @@ export async function loadDexPrices(
           maxAgeSec,
         });
       }
-      const decoded = decodeJsonString<{ sources: DexPoolSource[] } & DexAggregateClock, DexJsonDecodeReason>(row.price_sources_json, {
+      const decoded = decodeJsonString<{ sources: DexPoolSource[] } & DexAggregateClock & DexPriceLineage, DexJsonDecodeReason>(row.price_sources_json, {
         updatedAt: row.updated_at,
         missingReason: "missing",
         parseErrorReason: "json-parse-failed",
@@ -338,7 +352,7 @@ export async function loadDexPrices(
           // A null/primitive element is not a DexPoolSource and would throw in
           // the per-source clock filter; quarantine the row instead (R8).
           return sources != null && sources.every((source) => source != null && typeof source === "object" && !Array.isArray(source))
-            ? { ok: true, payload: { sources: sources as DexPoolSource[], ...getDexAggregateObservedAt(parsed, nowSec) } }
+            ? { ok: true, payload: { sources: sources as DexPoolSource[], ...readDexPriceLineage(parsed), ...getDexAggregateObservedAt(parsed, nowSec) } }
             : { ok: false, reason: "invalid-shape" };
         },
       });
@@ -360,6 +374,7 @@ export async function loadDexPrices(
         continue;
       }
       const priceRow = dexPriceRows.get(row.stablecoin_id)!;
+      Object.assign(priceRow, readDexPriceLineage(decoded.payload));
       priceRow.aggregateObservedAt = decoded.payload.aggregateObservedAt;
       if (decoded.payload.aggregateClockReason) priceRow.aggregateClockReason = decoded.payload.aggregateClockReason;
       const sources = decoded.payload.sources
@@ -371,7 +386,7 @@ export async function loadDexPrices(
           return sourceAgeSec >= 0 && sourceAgeSec <= maxAgeSec &&
             aggregateAgeSec >= 0 && aggregateAgeSec <= DEX_FRESHNESS_SEC;
         })
-        .map((source) => ({ ...source, updatedAt: source.observedAt! }));
+        .map((source) => ({ ...source, ...readDexPriceLineage(source), updatedAt: source.observedAt! }));
       if (sources.length > 0) {
         dexPriceSources.set(row.stablecoin_id, sources);
       }
@@ -389,11 +404,13 @@ export async function loadDexPrices(
 export function buildInsertDepegEventStmt(
   db: D1Database,
   event: DepegEvent,
+  peerBasis?: string | null,
 ): D1PreparedStatement {
   return db
     .prepare(
-      `INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference, source, confirmation_sources, pending_reason, price_coverage_json, last_trusted_price_at, price_coverage_gap_started_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'live', ?, ?, ?, ?, ?)`,
+      `INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference, source, confirmation_sources, pending_reason, price_coverage_json, last_trusted_price_at, price_coverage_gap_started_at,
+        peak_peg_reference, peak_quote_domain, peer_basis_json, admitted_coverage_json)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'live', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       event.stablecoinId,
@@ -410,6 +427,10 @@ export function buildInsertDepegEventStmt(
       event.priceCoverage ? serializeDepegPriceCoverage(event.priceCoverage) : null,
       event.priceCoverage?.lastTrustedObservationAt ?? null,
       event.priceCoverage?.gapStartedAt ?? null,
+      event.peakPegReference ?? null,
+      event.peakQuoteDomain ?? null,
+      peerBasis ?? null,
+      event.admittedCoverage === undefined ? null : JSON.stringify(DepegAdmittedCoverageSchema.parse(event.admittedCoverage)),
     );
 }
 
@@ -440,7 +461,7 @@ export function serializeDepegPriceCoverage(coverage: NonNullable<DepegEvent["pr
   });
 }
 
-function invalidRowPriceCoverage(row: DepegRow, reason: string): null {
+function invalidRowPriceCoverage(row: Pick<DepegRow, "id">, reason: string): null {
   logWorkerEvent({
     scope: "handler",
     level: "warn",
@@ -474,8 +495,69 @@ function unreadablePriceCoverage(): NonNullable<DepegEvent["priceCoverage"]> {
   return { intervals: [], atParIntervals: [], lastTrustedObservationAt: null, gapStartedAt: null };
 }
 
+/** Withhold metadata when the stored observation no longer reproduces its deviation. */
+export function isPairedDepegPeak(price: number | null | undefined, reference: number | null | undefined, bps: number): reference is number {
+  if (price == null || reference == null) return false;
+  const signal = deriveDepegSignal(price, reference);
+  return signal != null && (signal.bps === bps || Math.abs(signal.rawBps - bps) <= 1e-8);
+}
+
+export function readDepegPeakQuote(
+  row: Pick<DepegRow, "peak_price" | "peak_peg_reference" | "peak_quote_domain" | "peak_deviation_bps">,
+): Pick<DepegEvent, "peakPegReference" | "peakQuoteDomain"> {
+  const peakPegReference = row.peak_peg_reference;
+  const peakQuoteDomain = DepegEventQuoteDomainSchema.safeParse(row.peak_quote_domain).data;
+  return (peakQuoteDomain === "usd" || (peakQuoteDomain === "native-peg" && peakPegReference === 1)) &&
+    isPairedDepegPeak(row.peak_price, peakPegReference, row.peak_deviation_bps)
+    ? { peakPegReference, peakQuoteDomain } : {};
+}
+
+type DepegCoverageRow = Pick<DepegRow, "id" | "admitted_coverage_json" | "disposition"> & Partial<Pick<DepegRow, "started_at" | "ended_at">>;
+
+/** Undefined allows legacy coverage. Null identifies unreadable evidence. */
+export function readDepegCoverageLedger(row: DepegCoverageRow): DepegEvent["admittedCoverage"] | null {
+  if (row.disposition != null && !DepegEventDispositionSchema.safeParse(row.disposition).success) return null;
+  // A reviewed interval ledger with missing samples has no admitted duration.
+  if (row.admitted_coverage_json == null) return row.disposition === "admitted-coverage" ? [] : undefined;
+  try {
+    const intervals = DepegAdmittedCoverageSchema.parse(JSON.parse(row.admitted_coverage_json));
+    return intervals.some((span) => (row.started_at != null && span.fromSec < row.started_at) ||
+      (row.ended_at != null && span.toSec > row.ended_at)) ? null : intervals;
+  } catch {
+    return invalidRowPriceCoverage(row, "invalid-admitted-coverage");
+  }
+}
+
+export function readDepegAdmittedCoverage(row: DepegCoverageRow): DepegEvent["admittedCoverage"] {
+  const ledger = readDepegCoverageLedger(row);
+  return ledger === null ? [] : ledger;
+}
+
+const storedReferenceHoldSchema = z.object({
+  hold: PegReferenceHoldSchema,
+  source: z.string().min(1),
+  referenceAt: z.number().int().positive(),
+  reopenAt: z.number().int().positive(),
+});
+export type StoredReferenceHold = z.output<typeof storedReferenceHoldSchema>;
+
+export function matchesDepegReferenceHoldRow(row: DepegRow, hold: StoredReferenceHold["hold"]): boolean {
+  return row.ended_at === null && hold.lastTrustedAtSec === row.last_trusted_price_at &&
+    hold.lastTrustedPeakBps === row.peak_deviation_bps && row.price_coverage_gap_started_at != null &&
+    hold.declaredAtSec >= row.price_coverage_gap_started_at;
+}
+
+export function readDepegReferenceHold(row: DepegRow): StoredReferenceHold | undefined {
+  if (!row.reference_hold_json) return undefined;
+  try {
+    const hold = storedReferenceHoldSchema.safeParse(JSON.parse(row.reference_hold_json));
+    if (hold.success && matchesDepegReferenceHoldRow(row, hold.data.hold)) return hold.data;
+  } catch { /* Malformed hold evidence supplies no active penalty. */ }
+  return undefined;
+}
+
 /** Convert a snake_case D1 row to a camelCase DepegEvent */
-export function rowToDepegEvent(row: DepegRow): DepegEvent {
+export function rowToDepegEvent(row: DepegRow): PegScoreEvent {
   const direction = parseDepegDirection(row);
   const source = parseDepegSource(row);
   const closeReason = parseDepegCloseReason(row);
@@ -507,6 +589,10 @@ export function rowToDepegEvent(row: DepegRow): DepegEvent {
       replayVersion: row.provenance_replay_version ?? null,
     };
   }
+  const admittedCoverage = readDepegAdmittedCoverage(row);
+  const disposition = DepegEventDispositionSchema.safeParse(row.disposition);
+  const recoveryRef = row.recovery_peg_reference;
+  const hold = row.ended_at == null ? readDepegReferenceHold(row)?.hold : undefined;
   return {
     id: row.id,
     stablecoinId: row.stablecoin_id,
@@ -518,6 +604,13 @@ export function rowToDepegEvent(row: DepegRow): DepegEvent {
     endedAt: row.ended_at,
     startPrice: row.start_price,
     peakPrice: row.peak_price,
+    ...readDepegPeakQuote(row),
+    ...(row.recovery_price != null && Number.isFinite(row.recovery_price) && row.recovery_price > 0 &&
+      typeof recoveryRef === "number" && Number.isFinite(recoveryRef) && recoveryRef > 0
+      ? { recoveryPegReference: recoveryRef } : {}),
+    ...(admittedCoverage !== undefined ? { admittedCoverage } : {}),
+    ...(hold ? { referenceHold: hold } : {}),
+    ...(disposition.success ? { disposition: disposition.data } : {}),
     recoveryPrice: row.recovery_price,
     pegReference: row.peg_reference,
     source,

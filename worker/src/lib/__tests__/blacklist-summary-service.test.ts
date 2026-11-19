@@ -6,8 +6,8 @@ import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../
 import { loadBlacklistCurrentBalanceMap, upsertBlacklistCurrentBalance } from "../blacklist-current-balances";
 import { CONTRACT_CONFIGS, getBlacklistConfigsForSymbolAndChain } from "../blacklist-contracts";
 import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
-import { invalidateBlacklistDerivedCaches } from "../blacklist-cache-invalidation";
-import { BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY, getBlacklistDerivedCacheKeys } from "../blacklist-cache-keys";
+import { captureBlacklistSummaryFence, invalidateBlacklistDerivedCaches } from "../blacklist-cache-invalidation";
+import { BLACKLIST_SUMMARY_ROLLBACK_CACHE_KEY, BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY, getBlacklistDerivedCacheKeys } from "../blacklist-cache-keys";
 import { materializeBlacklistGapMetrics } from "../blacklist-gaps";
 
 const sqliteFixtures = createLatestSchemaFixtureTracker();
@@ -23,25 +23,99 @@ function pauseSummaryWrite(db: D1Database) {
   const gate = new Promise<void>((resolve) => { resume = resolve; });
   const paused = new Promise<void>((resolve) => { reached = resolve; });
   const prepare = db.prepare.bind(db);
+  const batch = db.batch.bind(db);
+  const writes = new WeakSet<D1PreparedStatement>();
   let used = false;
   db.prepare = (sql) => {
-    const wrap = (statement: D1PreparedStatement): D1PreparedStatement => new Proxy(statement, {
-      get(target, key) {
-        if (key === "bind") return (...args: unknown[]) => wrap(target.bind(...args));
-        if (key === "run") return async () => {
-          if (!used) { used = true; reached(); await gate; }
-          return target.run();
-        };
-        const value = Reflect.get(target, key);
-        return typeof value === "function" ? value.bind(target) : value;
-      },
-    });
-    return sql.includes("blacklist-summary-snapshot-write") ? wrap(prepare(sql)) : prepare(sql);
+    const statement = prepare(sql);
+    if (sql.includes("blacklist-summary-snapshot-write")) {
+      const bind = statement.bind.bind(statement);
+      statement.bind = (...args: unknown[]) => {
+        const bound = bind(...args);
+        writes.add(bound);
+        return bound;
+      };
+    }
+    return statement;
+  };
+  db.batch = async <T>(statements: D1PreparedStatement[]) => {
+    if (!used && statements.some((statement) => writes.has(statement))) {
+      used = true;
+      reached();
+      await gate;
+    }
+    return batch<T>(statements);
   };
   return { paused, resume };
 }
 
 describe("blacklist summary freeze aggregates", () => {
+  function setupFreezeRace(pinDatabaseClock = false) {
+    const { sqlite, db } = sqliteFixtures.open();
+    const now = Math.floor(Date.now() / 1000);
+    if (pinDatabaseClock) sqlite.function("unixepoch", () => now);
+    const insert = sqlite.prepare(`INSERT INTO blacklist_events
+      (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+       timestamp, amount_usd_at_event, explorer_tx_url, explorer_address_url)
+      VALUES (?, 'USDC', 'ethereum', 'Ethereum', ?, '0xabc', ?, ?, ?, 125, '', '')`);
+    insert.run("freeze", "blacklist", "tx-freeze", 1, now - 150);
+    const release = () => insert.run("release", "unblacklist", "tx-release", 2, now - 20);
+    const read = async () => (await handleBlacklistSummary(db)).json() as Promise<BlacklistSummaryResponse>;
+    return { sqlite, db, now, release, read };
+  }
+
+  it("rebuilds after an equal-clock rollback unfreeze and only retires v5 on a winning v6 write", async () => {
+    const { sqlite, db, now, release, read } = setupFreezeRace();
+    const legacyWrite = sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+    const readLegacy = () => sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(BLACKLIST_SUMMARY_ROLLBACK_CACHE_KEY);
+    legacyWrite.run(BLACKLIST_SUMMARY_ROLLBACK_CACHE_KEY, "old-freeze-summary", now);
+    expect(await materializeBlacklistSummarySnapshot(db, now, now)).toEqual({ written: true });
+    expect(readLegacy()).toBeUndefined();
+    const frozen = await read();
+    expect(frozen.stats).toMatchObject({ activeAddressCount: 1, activeFrozenTotal: 125 });
+
+    const gate = pauseSummaryWrite(db);
+    const superseded = materializeBlacklistSummarySnapshot(db, now, now);
+    await gate.paused;
+    release();
+    legacyWrite.run(BLACKLIST_SUMMARY_ROLLBACK_CACHE_KEY, "new-release-summary", now);
+    gate.resume();
+    expect(await superseded).toEqual({ written: false, reason: "superseded" });
+    expect(readLegacy()).toEqual({ value: "new-release-summary" });
+    const released = await read();
+    expect(released).toMatchObject({ totalEvents: 2, stats: { activeAddressCount: 0, activeFrozenTotal: 0 } });
+    expect(readLegacy()).toBeUndefined();
+  });
+
+  it("publishes config lag after its own repair invalidates a v5 snapshot", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const now = Math.floor(Date.now() / 1000);
+    await materializeBlacklistSummarySnapshot(db, now - 1, now - 1);
+    sqlite.prepare("UPDATE cache SET key = ?, value = json_remove(json_set(value, '$.version', 5), '$.generation') WHERE key = ?")
+      .run(BLACKLIST_SUMMARY_ROLLBACK_CACHE_KEY, BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY);
+    const fence = await captureBlacklistSummaryFence(db);
+    await invalidateBlacklistDerivedCaches(db, fence);
+    const [config] = getBlacklistConfigsForSymbolAndChain("USDT", "ethereum");
+    const behind = { configKey: config.configKey, symbol: "USDT" as const, chainName: "Ethereum", lastSucceededAt: now - 6 * 3600 };
+    expect(await materializeBlacklistSummarySnapshot(db, now, behind.lastSucceededAt, [behind], fence)).toEqual({ written: true });
+    expect(await (await handleBlacklistSummary(db)).json()).toMatchObject({ refresh: { observedAt: now, behindConfigs: [behind] } });
+  });
+
+  it("rejects a paused cron write after a same-second request rebuild retires v5", async () => {
+    const { sqlite, db, now, release, read } = setupFreezeRace(true);
+    const gate = pauseSummaryWrite(db);
+    const delayed = materializeBlacklistSummarySnapshot(db, now, now);
+    await gate.paused;
+    release();
+    sqlite.prepare("INSERT INTO cache VALUES (?, ?, ?)").run(BLACKLIST_SUMMARY_ROLLBACK_CACHE_KEY, "release-summary", now);
+    const rebuilt = await read();
+    gate.resume();
+    expect(rebuilt).toMatchObject({ totalEvents: 2, stats: { activeAddressCount: 0, activeFrozenTotal: 0 } });
+    expect(sqlite.prepare("SELECT 1 FROM cache WHERE key = ?").get(BLACKLIST_SUMMARY_ROLLBACK_CACHE_KEY)).toBeUndefined();
+    expect(await delayed).toEqual({ written: false, reason: "superseded" });
+    expect(await read()).toEqual(rebuilt);
+  });
+
   it.each([
     ["ethereum", 125], ["ethereum", 0], ["tron", 125], ["tron", 0],
   ] as const)("retains last-success %s amount %s through a failed ledger refresh", async (chainId, amount) => {
@@ -426,7 +500,8 @@ describe("blacklist summary freeze aggregates", () => {
     vi.useFakeTimers();
     const { sqlite, db } = sqliteFixtures.open();
     const other = createSqliteD1(sqlite);
-    const fence = { generation: null as string | null, summaryValue: null };
+    const fence = { generation: null as string | null, summaryValue: "prior-summary", rollbackValue: null, rollbackUpdatedAt: null };
+    sqlite.prepare("INSERT INTO cache VALUES (?, ?, 0)").run(BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY, fence.summaryValue);
     const current = () => sqlite.prepare("SELECT value FROM cache WHERE key = 'blacklist:derived-generation'").get()?.value;
     const batch = db.batch.bind(db);
     let escaped: unknown;
@@ -447,6 +522,7 @@ describe("blacklist summary freeze aggregates", () => {
     expect((await pending).failed).toBe(0);
     expect(current()).not.toBe(escaped);
     expect(fence.generation).toBe(foreign ? null : current());
+    expect(fence.summaryValue).toBe(foreign ? "prior-summary" : null);
     request!.gate.resume();
     expect((await request!.pending).status).toBe(503);
     await invalidateBlacklistDerivedCaches(db, fence);
@@ -455,8 +531,12 @@ describe("blacklist summary freeze aggregates", () => {
 
   it.each(["fence-capture", "blacklist-gap-aggregate", "snapshot-write"])("retries producer %s across a D1 resource window", async (stage) => {
     vi.useFakeTimers();
-    const { db } = sqliteFixtures.open();
+    const { sqlite } = sqliteFixtures.open();
     const started = Date.now();
+    const check = () => {
+      if (Date.now() - started < 10_000) throw new Error("D1 DB is overloaded: consumed within a 10 second window");
+    };
+    const db = createSqliteD1(sqlite, { onRun(sql) { if (sql.includes(stage)) check(); } });
     const prepare = db.prepare.bind(db);
     db.prepare = (sql) => {
       const wrap = (statement: D1PreparedStatement): D1PreparedStatement => new Proxy(statement, {
@@ -468,10 +548,7 @@ describe("blacklist summary freeze aggregates", () => {
           return typeof value === "function" ? value.bind(target) : value;
         },
       });
-      const check = () => {
-        if (Date.now() - started < 10_000) throw new Error("D1 DB is overloaded: consumed within a 10 second window");
-      };
-      return sql.includes(stage) ? wrap(prepare(sql)) : prepare(sql);
+      return stage !== "snapshot-write" && sql.includes(stage) ? wrap(prepare(sql)) : prepare(sql);
     };
     const pending = materializeBlacklistSummarySnapshot(db).catch((error: unknown) => error);
     await vi.runAllTimersAsync();

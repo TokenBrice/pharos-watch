@@ -1240,7 +1240,7 @@ describe("handleYieldRankings", () => {
 
   it("returns 503 when cache is empty", async () => {
     const res = await handleYieldRankings(mockD1([
-      { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+      { match: "SELECT value, updated_at FROM cache WHERE key =", matchBinds: ["yield-rankings:v2", "yield-rankings"], rows: [], first: null },
     ]));
     expect(res.status).toBe(503);
   });
@@ -1706,6 +1706,101 @@ describe("handleYieldRankings", () => {
         expect(row.pharosYieldScore).not.toBeNull();
         expect(row.warningSignals.includes("reference-benchmark-degraded")).toBe(state === "retained");
       }
+    }
+  });
+
+  it.each(["live", "publish-time", "degraded"] as const)("honors issuer and fixing clocks with %s safety", async (branch) => {
+    const sunday = Date.parse("2027-01-17T12:00:00Z") / 1000;
+    const friday = Date.parse("2027-01-15T00:00:00Z") / 1000;
+    const reportAt = friday + 11 * 3600 + 45 * 60;
+    const expectedAt = Date.parse("2027-01-19T11:45:00Z") / 1000;
+    const staleAfter = expectedAt + 2 * 3600;
+    const template = v748RankingsPayload;
+    const makePayload = (now: number): YieldRankingsResponse => ({
+      ...template,
+      benchmarks: { USD: { ...template.benchmarks.USD, recordDate: "2027-01-15", fetchedAt: now, maxRecordAgeSec: 5 * 86400 } },
+      provenance: {
+        ...template.provenance,
+        safetySnapshot: { ...template.provenance.safetySnapshot, publishedAt: branch === "degraded" ? friday : now },
+      },
+      rankings: [
+        makeYieldRanking({
+          id: "usyc-hashnote", dataSource: "protocol-api", safetyScore: 66, safetyGrade: "B-",
+          warningSignals: ["aging"],
+          provenance: makeYieldProvenance({ sourceKey: "protocol-api:hashnote-usyc", sourceObservedAt: reportAt }),
+        }),
+        makeYieldRanking({
+          id: "ustbl-spiko", dataSource: "rate-derived", benchmarkKey: "USD", safetyScore: 66, safetyGrade: "B-",
+          warningSignals: ["aging"],
+          provenance: makeYieldProvenance({ sourceKey: "rate-derived", sourceObservedAt: friday, sourceMaxAgeSeconds: 5 * 86400 }),
+        }),
+      ],
+    });
+    if (branch !== "live") loadActiveSafetyScoreIndexMock.mockRejectedValue(new Error("D1 unavailable"));
+    for (const [now, freshness, aging] of [
+      [sunday, "fresh", false], [expectedAt - 1, "fresh", false],
+      [expectedAt, "fresh", true], [staleAfter, "fresh", true], [staleAfter + 1, "stale", false],
+    ] as const) {
+      vi.setSystemTime(now * 1000);
+      const { rankings } = await readJsonResponse(await handleYieldRankings(makeCacheDb(makePayload(now), now)), 200) as YieldRankingsResponse;
+      const nav = rankings.find((row) => row.dataSource === "protocol-api")!;
+      expect(nav.provenance).toMatchObject({ sourceFreshness: freshness, sourceMaxAgeSeconds: staleAfter - reportAt });
+      expect(nav.warningSignals.includes("aging")).toBe(aging);
+      if (freshness === "stale") expect(nav.pysNullReason).toBe("source-stale");
+      const fixing = rankings.find((row) => row.dataSource === "rate-derived")!;
+      expect(fixing.provenance).toMatchObject({ sourceFreshness: "fresh", sourceMaxAgeSeconds: 5 * 86400 });
+      expect(fixing.warningSignals).not.toContain("aging");
+    }
+  });
+
+  it.each(["warning", "legacy-source", "legacy-linked-source"] as const)("withholds the xGLD comparison identified by %s", async (identity) => {
+    const publishedAt = Math.floor(Date.now() / 1000);
+    const template = v748RankingsPayload;
+    const payload: YieldRankingsResponse = {
+      ...template,
+      rankings: [makeYieldRanking({
+        id: identity === "legacy-linked-source" ? "xaut-tether" : "xgld-unitas", dataSource: "onchain", yieldType: "nav-appreciation",
+        apy30d: 5, yieldStability: 1, excessYield: 1, benchmarkRate: 4,
+        warningSignals: identity === "warning" ? ["benchmark-unit-mismatch"] : [],
+        provenance: makeYieldProvenance({
+          sourceKey: identity === "legacy-linked-source" ? "linked-variant:xgld-unitas:onchain:xgld-unitas"
+            : identity === "legacy-source" ? "onchain:xgld-unitas" : "onchain:quoted-in-xaut",
+          sourceObservedAt: publishedAt, benchmarkFreshness: "healthy",
+        }),
+      })],
+    };
+    for (const branch of ["live", "degraded"] as const) {
+      if (branch === "degraded") loadActiveSafetyScoreIndexMock.mockRejectedValue(new Error("D1 unavailable"));
+      const { rankings: [row] } = await readJsonResponse(await handleYieldRankings(makeCacheDb(payload, publishedAt)), 200) as YieldRankingsResponse;
+      expect(row).toMatchObject({ apy30d: 5, excessYield: null, pharosYieldScore: null, pysNullReason: "missing-inputs" });
+      expect(row.warningSignals).toContain("benchmark-unit-mismatch");
+      expect(row.benchmarkRate).toBeUndefined();
+      expect(row.provenance).toMatchObject({ scoreQualification: "NR", scoreQualified: false });
+      expect(row.provenance?.benchmarkFreshness).toBeUndefined();
+    }
+  });
+
+  it("hydrates a legacy MXN slot through the Easter-adjusted placement deadline", async () => {
+    const deadline = Date.parse("2026-04-02T12:00:00Z") / 1000;
+    const template = v748RankingsPayload;
+    const payload: YieldRankingsResponse = {
+      ...template,
+      benchmarks: {
+        USD: { ...template.benchmarks.USD, recordDate: "2026-04-02", fetchedAt: deadline - 60 },
+        MXN: { ...template.benchmarks.USD, key: undefined, currency: "MXN", recordDate: "2026-03-26",
+          fetchedAt: deadline - 60, maxRecordAgeSec: 5 * 86400 },
+      },
+      rankings: [makeYieldRanking({
+        id: "rated-coin", yieldType: "nav-appreciation", benchmarkKey: "MXN", benchmarkCurrency: "MXN",
+        provenance: makeYieldProvenance({ sourceObservedAt: deadline - 60 }),
+      })],
+    };
+    const db = makeCacheDb(payload, deadline);
+    for (const now of [deadline, deadline + 1]) {
+      vi.setSystemTime(now * 1000);
+      const { rankings: [row] } = await readJsonResponse(await handleYieldRankings(db), 200) as YieldRankingsResponse;
+      expect(row.provenance?.benchmarkFreshness).toBe(now === deadline ? "healthy" : "stale");
+      expect(row.pysNullReason).toBe(now === deadline ? null : "benchmark-stale");
     }
   });
 

@@ -3,6 +3,9 @@ import { FRONTEND_API_QUERY_DESCRIPTORS } from "../api-query-descriptors";
 import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
 import { internV9PublicWitnessTexts } from "@shared/lib/safety-score-v9/public-witness-texts";
 import { resolveSchemaLike } from "@shared/lib/schema-like";
+import { makeFxCurrentPeg } from "@shared/test-utils/boundary-contract-vectors.test-support";
+import { makeStablecoin } from "@shared/test-utils/stablecoin";
+import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
 import {
   StabilityIndexLightResponseSchema,
   STABILITY_INDEX_QUERY_DESCRIPTOR,
@@ -10,8 +13,42 @@ import {
 import { makeReportCardsV9Response } from "@/test/fixtures/safety-score-v9";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { getPollingWindow } from "../api-query-polling";
+import { makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
+import { projectYieldRankingsSummary } from "@shared/lib/yield-rankings-summary";
 
 describe("frontend API query descriptors", () => {
+  it("retains admission evidence from both the stablecoins and peg-summary wire shapes", async () => {
+    const currentPeg = makeFxCurrentPeg("stale-reference", null);
+    const asset = { ...makeStablecoin({ id: "eurc-circle" }), currentPeg };
+    const list = await resolveSchemaLike(FRONTEND_API_QUERY_DESCRIPTORS.stablecoins.schema);
+    expect(list?.safeParse({ peggedAssets: [asset] })).toMatchObject({
+      success: true, data: { peggedAssets: [{ currentPeg }] },
+    });
+    const summary = await resolveSchemaLike(FRONTEND_API_QUERY_DESCRIPTORS.pegSummary.schema);
+    const coin = { ...makePegSummaryCoin({ id: asset.id }), ...currentPeg };
+    expect(summary?.safeParse({ coins: [coin], summary: null, methodology: {
+      version: "1.0", versionLabel: "v1.0", currentVersion: "1.0", currentVersionLabel: "v1.0",
+      changelogPath: "/methodology/", asOf: 1_795_000_000, isCurrent: true,
+    } })).toMatchObject({
+      success: true, data: { coins: [{ referenceAdmission: currentPeg.referenceAdmission, admittedDeviationBps: null }] },
+    });
+  });
+
+  it("keeps valid weekly archive dates and drops malformed coverage fields without dropping the edition", async () => {
+    const schema = await resolveSchemaLike(FRONTEND_API_QUERY_DESCRIPTORS.digestArchive.schema);
+    const entry = {
+      digestType: "weekly", digestText: "Recap", digestTitle: null, digestExtended: null,
+      generatedAt: 1_788_120_000, psiScore: null, psiBand: null, totalMcapUsd: null,
+    };
+    expect(schema?.safeParse({ digests: [
+      { ...entry, weekStart: "2026-08-25", weekEnd: "2026-08-30" },
+      { ...entry, weekStart: "2026-02-30", weekEnd: "2026-08-30" },
+    ] })).toMatchObject({ success: true, data: { digests: [
+      { weekStart: "2026-08-25", weekEnd: "2026-08-30" },
+      { weekStart: undefined, weekEnd: "2026-08-30" },
+    ] } });
+  });
+
   it("keeps the chart-only history transport separate from full history cache identity", () => {
     const descriptor = FRONTEND_API_QUERY_DESCRIPTORS.dexLiquidityHistory("usdt-tether", 90);
     expect(descriptor.path).toBe("/api/dex-liquidity-chart-history?stablecoin=usdt-tether&days=90");
@@ -49,7 +86,7 @@ describe("frontend API query descriptors", () => {
     const day = 86_400;
     const summary = projectStablecoinLiveSummary({
       price: 1, priceSource: "coingecko", priceConfidence: "high",
-      currentCirculatingUSD: { peggedUSD: 200 }, currentSupplyObservedAt: now,
+      currentCirculatingUSD: { peggedUSD: 200 }, currentCirculatingNative: 200, currentSupplyObservedAt: now,
       tokens: [
         { date: now - 33 * day, totalCirculatingUSD: { peggedUSD: 50 }, totalCirculating: { peggedUSD: 50 } },
         { date: now - 30 * day, totalCirculatingUSD: { peggedUSD: 80 }, totalCirculating: { peggedUSD: 80 } },
@@ -61,6 +98,20 @@ describe("frontend API query descriptors", () => {
     expect(summary.circulatingPrevWeek).toEqual({ peggedUSD: 140 });
     expect(summary.circulatingPrevMonth).toEqual({ peggedUSD: 80 });
     expect(summary.nativeSupply).toEqual({ current: 200, prevWeek: 140, prevMonth: 80 });
+  });
+
+  it.each([null, undefined])("preserves the compact detail quote clock (%s) and a present empty baseline map", (priceObservedAt) => {
+    const priceUpdatedAt = 1_800_000_000;
+    const summary = projectStablecoinLiveSummary({
+      price: 3_000, priceSource: "coingecko", priceObservedAt, priceUpdatedAt,
+      supplyChangeBaselines: {},
+      currentCirculatingNative: null,
+      tokens: [{ date: priceUpdatedAt, totalCirculating: { peggedGOLD: 100 } }],
+    }, "paxg-paxos");
+    expect(summary).toMatchObject({
+      priceObservedAt: priceObservedAt === undefined ? priceUpdatedAt : null,
+      priceUpdatedAt, supplyChangeBaselines: {}, nativeSupply: { current: null },
+    });
   });
 
   it.each([null, 1_790_793_000])("withholds unmatched canonical-clock checkpoints rather than extending the window (%s)", (clock) => {
@@ -287,6 +338,32 @@ describe("frontend API query descriptors", () => {
     expect(FRONTEND_API_QUERY_DESCRIPTORS.yieldRankingsSummary.queryKey).not.toEqual(
       FRONTEND_API_QUERY_DESCRIPTORS.yieldRankings.queryKey,
     );
+  });
+
+  it.each(["source-key", "explicit-warning"] as const)("qualifies mismatched xGLD yield in each Pages rankings decoder by %s", async (evidence) => {
+    const xgld = makeYieldRanking({
+      id: "xgld-unitas", currentApy: 6, excessYield: 2, pharosYieldScore: 25, benchmarkRate: 4,
+      ...(evidence === "source-key"
+        ? { provenance: makeYieldProvenance({ sourceKey: "onchain:xgld-unitas" }) }
+        : { warningSignals: ["benchmark-unit-mismatch"] }),
+    });
+    const usd = makeYieldRanking();
+    const full = { rankings: [xgld, usd], riskFreeRate: 4, scalingFactor: 8, medianApy: 5, updatedAt: 1_800_000_000 };
+    const fullSchema = await resolveSchemaLike(FRONTEND_API_QUERY_DESCRIPTORS.yieldRankings.schema);
+    const coinSchema = await resolveSchemaLike(FRONTEND_API_QUERY_DESCRIPTORS.yieldRankingsCoin(xgld.id).schema);
+    const summarySchema = await resolveSchemaLike(FRONTEND_API_QUERY_DESCRIPTORS.yieldRankingsSummary.schema);
+    const unscored = { currentApy: 6, pharosYieldScore: null, pysNullReason: "missing-inputs", benchmarkRate: undefined };
+    expect(fullSchema?.safeParse(full)).toMatchObject({
+      success: true, data: { rankings: [{ ...unscored, excessYield: null }, usd] },
+    });
+    expect(coinSchema?.safeParse({
+      ...full, rankings: [xgld], projection: {
+        stablecoinId: xgld.id, generationId: null, updatedAt: full.updatedAt, totalCount: 2, unavailableReason: null,
+      },
+    })).toMatchObject({ success: true, data: { rankings: [{ ...unscored, excessYield: null }] } });
+    expect(summarySchema?.safeParse(projectYieldRankingsSummary(full))).toMatchObject({
+      success: true, data: { rankings: [unscored, { pharosYieldScore: 50, benchmarkRate: 4.25 }] },
+    });
   });
 
   it("opts full and detail readers into compact freshness without changing table requests", () => {

@@ -1,4 +1,4 @@
-import { buildDirectHubExposures, edgeShare, type ExposureOptions, type HubExposure, type SupplyOf } from "@shared/lib/dependency-exposure";
+import { buildDirectHubExposures, edgeShare, exposureFootprint, type ExposureOptions, type HubExposure, type SupplyOf } from "@shared/lib/dependency-exposure";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
 import { hubDirectKnown } from "./known";
 import { createWidthScale, ribbonCenterline, ribbonPath, type RibbonStation } from "./geometry";
@@ -126,6 +126,7 @@ export type WatershedModel =
     otherBasins: WatershedOtherBasin[];
     edges: WatershedEdgeFact[];
     hubExposures: Map<string, HubExposure>;
+    hubFootprint(hubId: string): Pick<ReturnType<typeof exposureFootprint>, "direct" | "indirect">;
     /** Hubs whose direct USD is a statistic (see hubDirectKnown). */
     directKnown: Set<string>;
     layers: Map<string, number>;
@@ -370,6 +371,7 @@ export function buildWatershedModel(input: WatershedInput): WatershedModel {
     ok: true, width: layout.width, height, layout,
     columns: Array.from({ length: columnCount }, (_, layer) => ({ layer, x: columnX(layer) })),
     nodes, ribbons, deltas: placedDeltas, otherBasins, edges: facts, hubExposures, directKnown, layers,
+    hubFootprint: hubId => exposureFootprint([hubId], edges, supplyOf, { ...options, topPaths: 0 }),
     participantCount: participants.length, mainBasinIds: main,
     widthScale: { pxPerUsd: scale.pxPerUsd, maxEdgeUsd: scale.maxEdgeUsd, floorPx: scale.floorPx, floorUsd: scale.floorUsd },
     disclosures,

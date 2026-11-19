@@ -287,6 +287,7 @@ function makeDetailHelpers(): DetailResponseHelpers {
     staleCacheOrError: vi.fn((status: number, message: string) =>
       new Response(JSON.stringify({ error: message }), { status })),
     trySupplyHistoryFallback: vi.fn(async () => null),
+    serveWrapperHistory: async () => Response.json({ tokens: [] }),
   };
 }
 

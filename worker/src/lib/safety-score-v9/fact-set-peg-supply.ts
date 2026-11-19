@@ -1,6 +1,8 @@
 import { normalizeFailureDomains } from "@shared/lib/safety-score-v9/primitives";
 import { resolveChainId } from "@shared/types/chain-identity";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { getReferenceMarket } from "@shared/lib/reference-market-hours";
+import { getPegReferenceEvidence, hasCurrentPegAdmission } from "./reference-evidence";
 import { isV9RepresentationGroupRoute } from "@shared/lib/safety-score-v9/facts";
 import { deriveV9WindowedPegScore } from "@shared/lib/safety-score-v9/formula";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
@@ -200,25 +202,25 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
     ? `peg:${reference.referenceKind}:${reference.referenceKey}`
     : `peg:unresolved:${context.asset.assetId}`;
   const directionalPeg = context.fixedInput.safetyScoreV9DirectionalPeg;
-  const activeDepegAssetId = configuredReferenceId ?? context.asset.assetId;
-  // The summary's any-direction open-event peak stays the consistency witness;
-  // a directional capture carries the discount-only peak beside it, and that is
-  // the one the active-depeg caps may read. Legacy captures use one map for both.
-  const anyOpenPeakBps = context.fixedInput.activeDepegPeakBpsById[activeDepegAssetId] ?? null;
+  const assetId = context.asset.assetId;
+  const capAssetIds = configuredReferenceId === null ? [assetId] :
+    directionalPeg === undefined ? [configuredReferenceId] : [assetId, configuredReferenceId];
+  const anyOpenPeakBps = context.fixedInput.activeDepegPeakBpsById[assetId] ?? null;
   const directionalDiscountPeakById = directionalPeg?.activeDiscountPeakBpsById;
-  const hasDirectionalDiscountEntry =
-    directionalDiscountPeakById !== undefined &&
-    Object.prototype.hasOwnProperty.call(directionalDiscountPeakById, activeDepegAssetId);
-  // R1/R2: a witness peak with no directional entry is a producer inconsistency,
-  // never "no active discount". `null` is the captured "open premiums only".
-  const directionalDiscountEntryMissing =
-    directionalPeg !== undefined && anyOpenPeakBps !== null && !hasDirectionalDiscountEntry;
-  const activeDepegBps = directionalPeg === undefined
-    ? anyOpenPeakBps
-    : hasDirectionalDiscountEntry
-      ? directionalDiscountPeakById![activeDepegAssetId] ?? null
-      : null;
-  if (directionalDiscountEntryMissing) {
+  const inconsistentAssetId = directionalPeg === undefined ? undefined : capAssetIds.find((id) =>
+    context.fixedInput.activeDepegPeakBpsById[id] != null &&
+    !Object.prototype.hasOwnProperty.call(directionalDiscountPeakById, id));
+  let activeDepegBps: number | null = null;
+  let controllingAssetId: string | null = null;
+  for (const id of capAssetIds) {
+    const peak = directionalPeg === undefined
+      ? context.fixedInput.activeDepegPeakBpsById[id] : directionalDiscountPeakById?.[id];
+    if (peak != null && peak > (activeDepegBps ?? 0)) {
+      activeDepegBps = peak;
+      controllingAssetId = id;
+    }
+  }
+  if (inconsistentAssetId !== undefined) {
     // Fail closed for the ordinary asset and for every configured-reference
     // child: an unverifiable discount state is neither a cap nor a clean peg.
     return {
@@ -229,7 +231,7 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
         responsibility: "producer-failed",
         policyRuleId: "v9.peg.current",
         message:
-          `The directional peg input carries no discount entry for ${activeDepegAssetId} despite an open-event peak of ${anyOpenPeakBps} bps.`,
+          `The directional peg input carries no discount entry for ${inconsistentAssetId} despite an open-event peak.`,
       }).status,
       pegKey,
       sourceGenerationId: source.generationId,
@@ -244,30 +246,26 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
       failureDomains: reference?.failureDomains ?? [],
     };
   }
+  const controllingEventId = controllingAssetId === null ? undefined :
+    context.fixedInput.pegEvidenceById?.[controllingAssetId]?.activeDiscountEventId;
+  const capEvidenceIds = controllingAssetId === null ? [] : [addEvidence(context, createV9EvidenceReference({
+    evidenceId: `${assetId}:active-discount:${controllingAssetId}${controllingEventId === undefined ? "" : `:${controllingEventId}`}`,
+    sourceId: "report-cards-active-depeg-peak",
+    sourceGenerationId: source.generationId,
+    disposition: "observed",
+    observedAtSec: context.fixedInput.clockSec,
+    contentSha256: domainDigest("safety-score-v9.active-discount.v1", {
+      assetId: controllingAssetId,
+      eventId: controllingEventId ?? null,
+      activeDepegBps,
+    }),
+  }, context.fixedInput.clockSec))];
   if (reference?.referenceKind === "nav" && configuredReferenceId !== null && activeDepegBps !== null) {
-    const evidenceId = addEvidence(
-      context,
-      createV9EvidenceReference(
-        {
-          evidenceId: `${context.asset.assetId}:peg-reference-active-depeg`,
-          sourceId: "report-cards-active-depeg-peak",
-          sourceGenerationId: source.generationId,
-          disposition: "observed",
-          observedAtSec: source.observedAtSec,
-          contentSha256: domainDigest("safety-score-v9.peg-reference-active-depeg.v1", {
-            pegReferenceId: configuredReferenceId,
-            activeDepegBps,
-          }),
-          maxAgeSec: source.maxAgeSec,
-        },
-        context.fixedInput.clockSec,
-      ),
-    );
     return {
       status: createV9FactStatus({
         applicability: requiredV9Applicability("v9.peg.current"),
         observationState: "known",
-        evidenceRefIds: [evidenceId],
+        evidenceRefIds: capEvidenceIds,
       }),
       pegKey,
       sourceGenerationId: source.generationId,
@@ -312,6 +310,8 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
     };
   }
   if (!peg || !isObservedPrice(peg)) {
+    const hasAuditedDiscount = directionalPeg !== undefined && activeDepegBps !== null &&
+      reference !== null && !unresolvedReference;
     return {
       status: missingLocalFact(context, {
         componentKey: "peg",
@@ -320,6 +320,7 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
         responsibility: "producer-failed",
         policyRuleId: "v9.peg.current",
         message: "No observed peg fact exists for the asset in the exact fixed input.",
+        evidenceRefIds: capEvidenceIds,
       }).status,
       pegKey,
       sourceGenerationId: source.generationId,
@@ -328,14 +329,23 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
       methodologyVersion: context.fixedInput.methodologyVersion,
       pegScore: null,
       currentDeviationBps: null,
-      activeDepeg: null,
-      activeDepegBps: null,
+      activeDepeg: hasAuditedDiscount ? true : null,
+      activeDepegBps: hasAuditedDiscount ? activeDepegBps : null,
       trackingSpanDays: null,
       failureDomains: reference?.failureDomains ?? [],
     };
   }
-  const observedAtSec = peg.priceObservedAt ?? source.observedAtSec;
-  const evidenceId = addEvidence(
+  const historyEvidence = context.fixedInput.pegEvidenceById?.[assetId];
+  const referenceEvidence = getReferenceMarket(peg.pegCurrency) === null ? undefined :
+    getPegReferenceEvidence(context.fixedInput, assetId);
+  const admission = referenceEvidence?.referenceAdmission;
+  const observedAtSec = peg.priceObservedAt === undefined ? source.observedAtSec : peg.priceObservedAt;
+  const quoteClockKnown = typeof observedAtSec === "number" && Number.isSafeInteger(observedAtSec) &&
+    observedAtSec > 0 && observedAtSec <= context.fixedInput.clockSec;
+  const currentDeviationBps = referenceEvidence === undefined ? peg.currentDeviationBps : referenceEvidence.admittedDeviationBps ?? null;
+  const referenceAdmitted = referenceEvidence === undefined ||
+    hasCurrentPegAdmission(peg.pegCurrency, admission, peg.priceObservedAt, peg.pegReference?.source, context.fixedInput.clockSec);
+  const evidenceId = !quoteClockKnown ? null : addEvidence(
     context,
     createV9EvidenceReference(
       {
@@ -344,17 +354,16 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
         sourceGenerationId: source.generationId,
         disposition: "observed",
         observedAtSec,
-        contentSha256: domainDigest("safety-score-v9.peg-fact.v1", peg),
+        contentSha256: domainDigest("safety-score-v9.peg-fact.v1", admission ? { peg, admission } : peg),
         maxAgeSec: source.maxAgeSec,
       },
       context.fixedInput.clockSec,
     ),
   );
-  const evidence = context.evidence.get(evidenceId)!;
+  const evidence = evidenceId === null ? null : context.evidence.get(evidenceId)!;
+  const evidenceRefIds = evidenceId === null ? capEvidenceIds : [evidenceId, ...capEvidenceIds];
   const activeDepeg =
-    directionalPeg === undefined && configuredReferenceId === null
-      ? peg.activeDepeg
-      : activeDepegBps !== null;
+    activeDepegBps !== null || (directionalPeg === undefined && configuredReferenceId === null && peg.activeDepeg);
   // A directional capture carries the premium-weighted score for every captured
   // peg row. An absent entry is unavailable, never a silent fallback to the
   // summary's unweighted score (R1/R2).
@@ -364,24 +373,22 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
     )
       ? directionalPeg.pegScoreById[context.asset.assetId]
       : undefined;
-  const pegScore = directionalPeg === undefined
-    ? deriveSafetyScoreV9PegScore(peg, context.fixedInput.clockSec)
-    : capturedDirectionalPegScore === undefined
-      ? null
-      : deriveSafetyScoreV9PegScore(
-          {
-            pegScore: capturedDirectionalPegScore,
-            activeDepeg: peg.activeDepeg,
-            lastEventAt: peg.lastEventAt,
-          },
-          context.fixedInput.clockSec,
-        );
+  const historyScore = directionalPeg === undefined ? peg.pegScore : capturedDirectionalPegScore ?? null;
+  const uncertainEnd = historyEvidence?.lastUncertainAffectedAtSec;
+  const lastAffectedAtSec = uncertainEnd == null ? historyEvidence?.lastAffectedAtSec :
+    Math.max(historyEvidence?.lastAffectedAtSec ?? uncertainEnd, uncertainEnd);
+  // Legacy captures only recorded the event start. An explicit unknown end with an event still withholds the quiet floor.
+  const pegScore = lastAffectedAtSec === null && peg.lastEventAt !== null ? historyScore : deriveSafetyScoreV9PegScore({
+    pegScore: historyScore, activeDepeg: peg.activeDepeg || activeDepeg,
+    lastEventAt: lastAffectedAtSec === undefined ? peg.lastEventAt : lastAffectedAtSec,
+  }, context.fixedInput.clockSec);
   const quietPegObservation =
     reference !== null &&
     !unresolvedReference &&
     pegScore !== null &&
-    peg.currentDeviationBps === null &&
+    referenceEvidence === undefined && currentDeviationBps === null &&
     peg.currentPriceUnavailable !== true &&
+    peg.pegReferenceUnavailable !== true &&
     activeDepeg === false &&
     peg.eventCount === 0 &&
     peg.worstDeviationBps === null;
@@ -392,21 +399,20 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
   // parent's discount instead, which the exact key set above already witnesses.
   const directionalConsistencyHolds =
     directionalPeg === undefined ||
-    configuredReferenceId !== null ||
     ((!peg.activeDepeg || anyOpenPeakBps !== null) &&
-      (activeDepegBps === null || peg.activeDepeg) &&
+      (directionalDiscountPeakById?.[assetId] == null || peg.activeDepeg) &&
       capturedDirectionalPegScore !== undefined);
   const complete =
     reference !== null &&
     !unresolvedReference &&
+    referenceAdmitted &&
     pegScore !== null &&
-    (peg.currentDeviationBps !== null || quietPegObservation) &&
+    (currentDeviationBps !== null || quietPegObservation) &&
     (!activeDepeg || activeDepegBps !== null) &&
     directionalConsistencyHolds;
   const hasPartialActiveDepegEvidence =
     reference !== null &&
     !unresolvedReference &&
-    pegScore !== null &&
     activeDepeg &&
     activeDepegBps !== null;
   // Owner ruling 2026-07-29 (P4, nxusd-nereus): when the producer reports that
@@ -423,11 +429,11 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
     reference !== null &&
     !unresolvedReference &&
     pegScore !== null &&
-    peg.currentDeviationBps === null &&
+    currentDeviationBps === null &&
     peg.currentPriceUnavailable === true &&
     (activeDepeg || peg.eventCount > 0 || peg.worstDeviationBps !== null);
   let status: V9FactStatusV2;
-  if (evidence.freshness.state === "stale") {
+  if (evidence?.freshness.state === "stale") {
     status = missingLocalFact(context, {
       componentKey: "peg",
       reasonCode: "missing-peg-input",
@@ -436,9 +442,9 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
       policyRuleId: "v9.peg.current",
       message: "The last-known peg observation is stale.",
       observationState: "stale",
-      evidenceRefIds: [evidenceId],
+      evidenceRefIds,
     }).status;
-  } else if (!complete) {
+  } else if (!complete || !quoteClockKnown) {
     status = missingLocalFact(context, {
       componentKey: "peg",
       reasonCode:
@@ -459,15 +465,21 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
         ? "No usable price observation exists for this asset and its tracked peg record is adverse, so the current deviation is unobservable rather than at peg."
         : unresolvedReference
           ? `The configured peg reference ${reference?.referenceKey ?? "unknown"} could not be resolved; child peg metrics are withheld.`
-          : "The peg row lacks an explicit reference, score, deviation, or active-depeg peak.",
-      observationState: "bounded-unknown",
-      evidenceRefIds: [evidenceId],
+          : admission && admission.status !== "admitted"
+            ? `The current peg reference was not admitted: ${admission.reason}.`
+            : !quoteClockKnown
+              ? "The current peg row has no valid asset-specific quote clock."
+              : !referenceAdmitted
+                ? "The retained reference admission does not cover the current quote and session."
+                : "The peg row lacks an explicit reference, score, deviation, or active-depeg peak.",
+      observationState: evidenceRefIds.length === 0 ? "missing" : "bounded-unknown",
+      evidenceRefIds,
     }).status;
   } else {
     status = createV9FactStatus({
       applicability: requiredV9Applicability("v9.peg.current"),
       observationState: "known",
-      evidenceRefIds: [evidenceId],
+      evidenceRefIds,
     });
   }
   return {
@@ -477,10 +489,13 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
     referenceKind: reference?.referenceKind ?? "other",
     referenceKey: reference?.referenceKey ?? `unresolved:${context.asset.assetId}`,
     methodologyVersion: peg.methodologyVersion,
-    pegScore: complete || hasPartialActiveDepegEvidence ? pegScore : null,
+    pegScore: complete || hasPartialActiveDepegEvidence ||
+      ((!referenceAdmitted || peg.pegReferenceUnavailable === true) &&
+        !unresolvedReference && reference !== null && directionalConsistencyHolds)
+      ? pegScore : null,
     // The v8 peg summary reports signed deviation; the v9 peg fact carries the
     // magnitude per its nonnegative schema contract.
-    currentDeviationBps: complete ? Math.abs(peg.currentDeviationBps ?? 0) : null,
+    currentDeviationBps: complete && quoteClockKnown ? Math.abs(currentDeviationBps ?? 0) : null,
     activeDepeg: complete ? activeDepeg : hasPartialActiveDepegEvidence ? true : null,
     activeDepegBps: (complete && activeDepeg) || hasPartialActiveDepegEvidence ? activeDepegBps : null,
     trackingSpanDays: peg.trackingSpanDays,

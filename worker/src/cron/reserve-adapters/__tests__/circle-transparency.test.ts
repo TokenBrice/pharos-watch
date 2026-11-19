@@ -3,11 +3,15 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";
 import { adaptCircleTransparency } from "../circle-transparency";
+import { validateAdapterOutput } from "../validate";
+import { getReserveAdapter } from "../index";
 import {
   buildReviewedReserveClassifications,
   buildSafetyScoreV9ReviewedCuratedFallbackReserveRows,
 } from "../../../lib/safety-score-v9/extension-reserves";
 import type { V9ExtensionRegistryMeta } from "../../../lib/safety-score-v9/extension-shared";
+import { resolveRedemptionCapacity } from "../../../lib/redemption-backstop/capacity";
+import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 const CIRCLE_HTML = readFileSync(join(FIXTURES_DIR, "circle-usdc.html"), "utf8");
@@ -101,7 +105,20 @@ describe("Circle USDC disclosure boundaries", () => {
 });
 
 describe("adaptCircleTransparency", () => {
-  it("uses Circle's reserve disclosure date when the page exposes one", () => {
+  it.each(["usdc-circle", "eurc-circle"])("models %s bank redemptions as multi-day and eventual-only", async (stablecoinId) => {
+    const config = getRedemptionBackstopConfig(stablecoinId)!;
+    const now = Date.parse("2026-11-26T12:00:00Z") / 1000;
+    const capacity = await resolveRedemptionCapacity(
+      {} as D1Database, stablecoinId, config.capacityModel, 68_000_000_000, now,
+      { reserveSnapshotMetadata: null },
+    );
+    expect(config.settlementModel).toBe("days");
+    expect(capacity).toMatchObject({
+      immediateCapacityUsd: null, immediateCapacityRatio: null, eventualCapacityUsd: 68_000_000_000,
+    });
+  });
+
+  it("uses Circle's reserve disclosure date without attributing it to contextual redemption terms", () => {
     const result = adaptCircleTransparency(`${CIRCLE_HTML}<div>As of Aug 06, 2026</div>`, "usdc");
 
     expect(result.metadata).toMatchObject({
@@ -109,12 +126,32 @@ describe("adaptCircleTransparency", () => {
       sourceTimestamp: Date.UTC(2026, 10, 5) / 1000,
       redemption: {
         capacityKind: "documented-bound",
-        freshnessKind: "verified-source-timestamp",
-        sourceTimestamp: Date.UTC(2026, 10, 5) / 1000,
+        freshnessKind: "unverified",
         routeStatus: "unknown",
         holderEligibility: "verified-customer",
       },
     });
+    expect(result.metadata?.redemption?.sourceTimestamp).toBeUndefined();
+  });
+
+  it.each(["usdc", "eurc"])("retains the %s chart across its recorded weekly refresh day", (coinType) => {
+    const html = readFileSync(join(FIXTURES_DIR, "circle-transparency-2026-10-01.html"), "utf8");
+    const result = adaptCircleTransparency(html, coinType);
+    const nowSec = Date.parse("2026-10-01T13:16:17Z") / 1000;
+    expect(result.metadata?.sourceTimestamp).toBe(Date.parse("2026-09-24") / 1000);
+    expect(result.metadata?.redemption?.sourceTimestamp).toBeUndefined();
+    expect(validateAdapterOutput(result, { now: nowSec, adapter: getReserveAdapter("circle-transparency")! }).valid).toBe(true);
+  });
+
+  it.each(["usdc", "eurc"])("admits the archived %s chart through its expected publication window", (coinType) => {
+    const html = readFileSync(join(FIXTURES_DIR, "circle-transparency-2026-10-01.html"), "utf8");
+    const result = adaptCircleTransparency(html, coinType);
+    const adapter = getReserveAdapter("circle-transparency")!;
+    const staleAt = Date.parse("2026-09-24") / 1_000 + 8 * 86400 + 1;
+    const hasStaleWarning = (now: number) => validateAdapterOutput(result, { adapter, now }).warnings
+      .some(({ code }) => code === "stale-source-data");
+    expect(hasStaleWarning(staleAt)).toBe(true);
+    expect(hasStaleWarning(Date.parse("2026-10-01T13:16:17Z") / 1_000)).toBe(false);
   });
 
   it("normalizes current absolute-value USDC disclosures into percentages", () => {

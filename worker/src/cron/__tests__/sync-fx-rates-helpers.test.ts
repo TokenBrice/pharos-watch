@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { sha256Hex } from "@shared/lib/sha256";
+import { evaluateReferenceAdmission, type ReferenceAdmissionInput } from "@shared/lib/reference-admission";
+import { asRawDeviationBps } from "@shared/types/reference-admission";
 import { isValidFxRate } from "../../lib/fx-config";
-import { getFxSourceStatus, type FxRateState, type FxSourceCadence } from "../../lib/fx-rate-state";
-import { FxSyncRunState } from "../sync-fx-rates-helpers";
+import { getFxReferenceTypeFromState, getFxSourceStatus, hydrateFxRateState, loadFxRateState, type FxRateState, type FxSourceCadence } from "../../lib/fx-rate-state";
+import { FxSyncRunState, persistFxSyncResult } from "../sync-fx-rates-helpers";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { buildPricingOperatorConditions } from "../operator-watch-pricing";
 
 const syncStartSec = Math.floor(Date.parse("2025-06-15T12:00:00Z") / 1000);
 
@@ -51,7 +56,7 @@ describe("FxSyncRunState realtime overlays", () => {
   it("applies a realtime overlay when the current run already has a reference", () => {
     const state = createState();
     state.usableRates.peggedMYR = 0.222222;
-    state.markLive("peggedMYR", syncStartSec - 120, "calendar-daily", "2025-06-15");
+    state.markLive("peggedMYR", syncStartSec - 1200, "calendar-daily", "2025-06-15");
 
     const applied = state.applyRealtimeOverlayRates({ observedAt: syncStartSec - 600, rates: new Map([["peggedMYR", 0.223333]]) });
 
@@ -265,7 +270,7 @@ describe("FxSyncRunState source-day admission", () => {
   );
 
   it.each([
-    ["2025-06-15T08:00:00Z", "2025-06-15"],
+    ["2025-06-13T12:15:00Z", "2025-06-13"],
     ["2025-06-15T12:00:00Z", "2025-06-13"],
     ["2026-04-06T19:00:00Z", "2026-04-02"],
   ])("admits dated primary rates at %s with source day %s", (clock, date) => {
@@ -280,15 +285,372 @@ describe("FxSyncRunState source-day admission", () => {
     expect(state.hasFreshFullFxCoverage()).toBe(true);
   });
 
-  it.each([301, 86400])("rejects a raw ExchangeRate-API epoch %s seconds ahead", (ahead) => {
+  it.each([60, 301, 86400])("keeps the dated reference after an ExchangeRate-API epoch %s seconds ahead", (ahead) => {
     const state = createState();
-    state.applyExchangeRateApiRates({ time_last_update_unix: syncStartSec + ahead, rates: { MYR: 4.5 } }, [["MYR", "peggedMYR"]]);
-    expect(state.usableRates).toEqual({});
+    const mappings = [["MYR", "peggedMYR"]] as const;
+    state.applySecondaryRates({ endpoint: "jsdelivr", payload: { date: "2025-06-15", usd: { myr: 4.6 } } }, mappings);
+    state.applyExchangeRateApiRates({ time_last_update_unix: syncStartSec + ahead, rates: { MYR: 4.5 } }, mappings);
+    expect(published(state).observations?.peggedMYR).toMatchObject({
+      source: "fawazahmed0", usdPerUnit: 1 / 4.6, observedAtSec: unix("2025-06-15T00:00:00Z"),
+    });
   });
 
   it("preserves an admissible ExchangeRate-API epoch without clamping it", () => {
     const state = createState();
-    state.applyExchangeRateApiRates({ time_last_update_unix: syncStartSec + 60, rates: { MYR: 4.5 } }, [["MYR", "peggedMYR"]]);
-    expect(state.sourceUpdatedAtByPeg.peggedMYR).toBe(syncStartSec + 60);
+    state.applyExchangeRateApiRates({ time_last_update_unix: syncStartSec - 60, rates: { MYR: 4.5 } }, [["MYR", "peggedMYR"]]);
+    expect(published(state).observations?.peggedMYR).toMatchObject({
+      source: "exchangeRateApi", usdPerUnit: 1 / 4.5, observedAtSec: syncStartSec - 60,
+    });
+  });
+});
+
+const unix = (iso: string) => Date.parse(iso) / 1000;
+
+function publicationAt(clock: string | number, prevState: FxRateState | null = null): FxSyncRunState {
+  return new FxSyncRunState({
+    prevState, syncStartSec: typeof clock === "number" ? clock : unix(clock), expectedPegKeys: ["peggedARS", "peggedTRY", "peggedREAL"],
+    initialSources: {}, validateRate: isValidFxRate,
+  });
+}
+
+function published(state: FxSyncRunState): FxRateState {
+  state.enforcePublicationOrder();
+  const value = JSON.stringify(state.usableRates);
+  return hydrateFxRateState(
+    { value, updatedAt: state.syncStartSec },
+    { value: JSON.stringify({ ...state.buildPersistedMeta(), ratesSha256: sha256Hex(value) }), updatedAt: state.syncStartSec },
+  )!;
+}
+
+const arsMappings = [["ars", "peggedARS"]] as const;
+const tryBrlMappings = { TRY: "peggedTRY", BRL: "peggedREAL" };
+const eurMapping = { EUR: "peggedEUR" };
+const secondaryArs = (state: FxSyncRunState, date: string | undefined, ars: number) =>
+  state.applySecondaryRates({ endpoint: "jsdelivr", payload: { date, usd: { ars } } }, arsMappings);
+const ecbBrl = (state: FxSyncRunState, date: string) => state.applyFrankfurterRates({ BRL: 5.5 }, date, tryBrlMappings);
+const overlay = (state: FxSyncRunState, pegKey: string, observedAt: number, rate: number) =>
+  state.applyRealtimeOverlayRates({ observedAt, rates: new Map([[pegKey, rate]]) });
+const oxrArs = (state: FxSyncRunState, observedAt: number, ars: number) =>
+  overlay(state, "peggedARS", observedAt, 1 / ars);
+const chainlinkRound = (pegKey: string, price: number, updatedAt: number, chainId: string) =>
+  new Map([[pegKey, { pegKey, price, updatedAt, chainId, proxyAddress: "0xfeed" }]]);
+
+function admitAt(
+  at: number,
+  reference: Omit<Extract<ReferenceAdmissionInput, { kind: "fx" | "fallback" }>, "decisionAtSec" | "quoteObservedAtSec" | "rawDeviationBps">,
+) {
+  return evaluateReferenceAdmission({ ...reference, quoteObservedAtSec: at, decisionAtSec: at, rawDeviationBps: asRawDeviationBps(0) });
+}
+
+describe("FX references across publications", () => {
+  it("carries a legacy ECB fixing through a sibling refresh until 16:00 UTC", () => {
+    const legacy = publicationAt("2026-11-17T17:00:00Z");
+    legacy.usableRates.peggedEUR = 1.1;
+    legacy.markLive("peggedEUR", unix("2026-11-17T16:00:00Z"), "business-daily", "2026-11-17");
+    let prior: FxRateState = { ...published(legacy), observations: undefined, selectedReferenceEvidence: undefined };
+    for (const [clock, expected] of [
+      ["2026-11-18T14:59:00Z", 1.1],
+      ["2026-11-18T15:01:00Z", 1.1],
+      ["2026-11-18T16:01:00Z", undefined],
+    ] as const) {
+      const run = publicationAt(clock, prior);
+      run.applyFrankfurterRates({ GBP: 0.8 }, "2026-11-18", { GBP: "peggedGBP", EUR: "peggedEUR" });
+      prior = published(run);
+      expect(prior.rates.peggedEUR).toBe(expected);
+    }
+  });
+
+  it("retains the legacy status of a secondary FX rate only until its first clocked provider publication", () => {
+    const legacy = buildPrevState({ peggedARS: 1 / 800 });
+    const first = publicationAt("2026-11-17T15:30:00Z", legacy);
+    first.usableRates = { ...legacy.rates };
+    first.inheritPrevious("peggedARS");
+    const carried = published(first);
+    expect(carried.legacyDetectionPegs).toEqual(["peggedARS"]);
+    expect(carried.observations).toBeUndefined();
+    const next = publicationAt("2026-11-17T16:00:00Z", carried);
+    next.usableRates = { ...carried.rates };
+    next.inheritPrevious("peggedARS");
+    expect(next.buildPersistedMeta().legacyDetectionPegs).toEqual(["peggedARS"]);
+    secondaryArs(next, "2026-11-17", 801);
+    expect(published(next)).toMatchObject({ observations: { peggedARS: { source: "fawazahmed0" } } });
+    expect(next.buildPersistedMeta().legacyDetectionPegs).toBeUndefined();
+  });
+
+  it("retains a migrated OXR peg only through repeats of its first observation", () => {
+    const firstAt = unix("2026-11-18T12:59:00Z");
+    const peg = "peggedREAL";
+    let prior = buildPrevState({ [peg]: 0.193 });
+    for (const [delta, expected] of [[0, true], [900, true], [3600, false]] as const) {
+      const observedAt = delta === 900 ? firstAt : firstAt + delta;
+      const run = publicationAt(firstAt + 60 + delta, prior);
+      run.usableRates[peg] = prior.rates[peg];
+      run.markLive(peg, observedAt, "intraday", null, "openExchangeRates");
+      prior = published(run);
+      expect(prior.observations?.[peg]?.observedAtSec).toBe(observedAt);
+      expect(prior.legacyDetectionPegs?.includes(peg) ?? false).toBe(expected);
+    }
+  });
+
+  it("preserves the newer dated ARS fixing through stale and undated mirror reads", () => {
+    const tuesday = publicationAt("2026-11-17T15:30:00Z");
+    secondaryArs(tuesday, "2026-11-17", 800);
+    let previous = published(tuesday);
+    for (const [clock, date, ars] of [
+      ["2026-11-18T16:00:00Z", "2026-11-13", 810],
+      ["2026-11-18T16:30:00Z", "2026-11-13", 810],
+      ["2026-11-18T17:00:00Z", undefined, 820],
+    ] as const) {
+      const wednesday = publicationAt(clock, previous);
+      expect(getFxReferenceTypeFromState(previous, "peggedARS", 21600, wednesday.syncStartSec)).toBe("fresh");
+      secondaryArs(wednesday, date, ars);
+      previous = published(wednesday);
+      expect(previous.observations?.peggedARS).toEqual({
+        pegKey: "peggedARS", usdPerUnit: 1 / 800, source: "fawazahmed0", cadence: "calendar-daily",
+        observedAtSec: unix("2026-11-17T00:00:00Z"),
+      });
+      expect(previous.sourceDateByPeg.peggedARS).toBe("2026-11-17");
+      expect(getFxReferenceTypeFromState(previous, "peggedARS", 21600, wednesday.syncStartSec)).toBe("fresh");
+    }
+    const rejected = publicationAt("2026-11-18T17:30:00Z", previous);
+    ecbBrl(rejected, "2026-11-18");
+    secondaryArs(rejected, undefined, 1600);
+    expect(published(rejected).observations?.peggedARS).toBeUndefined();
+  });
+
+  it("keeps the newer BRL observation and logs an attempted publication regression", async () => {
+    const initial = publicationAt("2026-11-13T15:30:00Z");
+    initial.applyFrankfurterRates({ BRL: 1 / 0.17803 }, "2026-11-13", tryBrlMappings);
+    overlay(initial, "peggedREAL", initial.syncStartSec - 5400, 0.17730);
+    overlay(initial, "peggedREAL", initial.syncStartSec - 1800, 0.17729);
+    const next = publicationAt("2026-11-13T16:00:00Z", published(initial));
+    next.applyFrankfurterRates({ BRL: 1 / 0.17803 }, "2026-11-13", tryBrlMappings);
+    expect(next.usableRates.peggedREAL).toBe(0.17729);
+
+    // Force the final boundary to catch a writer that bypasses source selection.
+    next.usableRates.peggedREAL = 0.17803;
+    next.markLive("peggedREAL", initial.syncStartSec - 3600);
+    expect(published(next).observations?.peggedREAL).toMatchObject({ usdPerUnit: 0.17729, source: "openExchangeRates" });
+    const { db, sqlite } = createLatestSchemaSqlite();
+    try {
+      await persistFxSyncResult(db, next, next.buildPersistedMeta(), next.syncStartSec, []);
+      const selected = (await loadFxRateState(db))!.selectedReferenceEvidence!.peggedREAL;
+      expect(admitAt(next.syncStartSec, { kind: "fx", observation: selected, ...selected.repricing }))
+        .toMatchObject({ status: "admitted", referenceObservedAtSec: initial.syncStartSec - 1800 });
+      const alerts = await buildPricingOperatorConditions(db, { caches: {}, nowSec: next.syncStartSec });
+      expect(alerts).toContainEqual(expect.objectContaining({ id: `fx-reference-regression:${next.syncStartSec}`, active: true }));
+
+      const late = publicationAt("2026-11-13T15:45:00Z", published(initial));
+      late.usableRates.peggedREAL = 0.17803;
+      late.markLive("peggedREAL", initial.syncStartSec - 3600);
+      late.enforcePublicationOrder();
+      const skipped = await persistFxSyncResult(db, late, late.buildPersistedMeta(), late.syncStartSec, []);
+      expect(JSON.parse(skipped.metadata!)).toMatchObject({ cacheWriteMode: "skipped-newer" });
+      const afterSkip = await buildPricingOperatorConditions(db, { caches: {}, nowSec: next.syncStartSec });
+      expect(afterSkip.filter((condition) => condition.id.startsWith("fx-reference-regression"))).toEqual(
+        alerts.filter((condition) => condition.id.startsWith("fx-reference-regression")));
+    } finally { sqlite.close(); }
+  });
+
+  it("keeps a rejected ECB regime anchored across omissions until independently confirmed", () => {
+    const tuesday = publicationAt("2026-11-17T16:00:00Z");
+    tuesday.applyFrankfurterRates({ TRY: 25, BRL: 5.5 }, "2026-11-17", tryBrlMappings);
+    let prior = published(tuesday);
+    for (const clock of ["2026-11-18T16:00:00Z", "2026-11-18T16:30:00Z"]) {
+      const attempt = publicationAt(clock, prior);
+      attempt.applyFrankfurterRates({ TRY: 40, BRL: 5.5 }, "2026-11-18", tryBrlMappings);
+      prior = published(attempt);
+      expect(prior.rates.peggedTRY).toBeUndefined();
+      expect(prior.lastAcceptedBaselines?.peggedTRY).toEqual({ usdPerUnit: 1 / 25, observedAtSec: unix("2026-11-17T13:10:00Z") });
+    }
+    const confirmed = publicationAt("2026-11-18T17:00:00Z", prior);
+    overlay(confirmed, "peggedTRY", confirmed.syncStartSec, 1 / 40);
+    confirmed.confirmRegimeChanges({ time_last_update_unix: confirmed.syncStartSec - 60, rates: { TRY: 40 } }, [["TRY", "peggedTRY"]]);
+    expect(published(confirmed).observations?.peggedTRY?.usdPerUnit).toBe(1 / 40);
+  });
+
+  it.each([175, 210])("holds a Chainlink JPY move to %s after omission until the fiat baseline is corroborated", (yenPerUsd) => {
+    const mappings = { ...tryBrlMappings, JPY: "peggedJPY" };
+    const tuesday = publicationAt("2026-11-17T16:00:00Z");
+    tuesday.applyFrankfurterRates({ JPY: 150, BRL: 5.5 }, "2026-11-17", mappings);
+    const omitted = publicationAt("2026-11-18T16:00:00Z", published(tuesday));
+    omitted.applyFrankfurterRates({ BRL: 5.5 }, "2026-11-18", mappings);
+    const wednesday = publicationAt("2026-11-18T16:30:00Z", published(omitted));
+    const moved = 1 / yenPerUsd;
+    const rounds = chainlinkRound("peggedJPY", moved, wednesday.syncStartSec, "ethereum");
+    expect(wednesday.applyChainlinkQuotes(rounds)).toBe(0);
+    expect(wednesday.usableRates.peggedJPY).toBeUndefined();
+    expect(wednesday.buildPersistedMeta().lastAcceptedBaselines?.peggedJPY?.usdPerUnit).toBe(1 / 150);
+
+    overlay(wednesday, "peggedJPY", wednesday.syncStartSec - 60, moved);
+    wednesday.confirmRegimeChanges({ time_last_update_unix: wednesday.syncStartSec - 120, rates: { JPY: yenPerUsd } }, [["JPY", "peggedJPY"]]);
+    expect(wednesday.applyChainlinkQuotes(rounds)).toBe(1);
+    const final = published(wednesday);
+    expect(final.observations?.peggedJPY).toMatchObject({ source: "chainlink", usdPerUnit: Number(moved.toFixed(6)) });
+    for (const source of ["openExchangeRates", "exchangeRateApi"]) {
+      expect(final.referenceSourceSamples?.[`peggedJPY:${source}`]?.observation.usdPerUnit).toBe(moved);
+    }
+  });
+
+  it.each([true, false])("corroborates a sub-20%% OXR move across publications with a dated incumbent=%s", (dated) => {
+    const initial = publicationAt("2026-11-17T16:00:00Z");
+    ecbBrl(initial, "2026-11-17");
+    initial.usableRates.peggedARS = 1 / 800;
+    initial.markLive("peggedARS", dated ? initial.syncStartSec : null);
+    const omitted = publicationAt("2026-11-18T16:00:00Z", published(initial));
+    ecbBrl(omitted, "2026-11-18");
+    if (dated) expect(omitted.ensureCachedRate("peggedARS", "stale incumbent")).toBe(true);
+    expect(oxrArs(omitted, omitted.syncStartSec, 900)).toBe(0);
+    expect(omitted.hasRegimeCandidates()).toBe(true);
+    const next = publicationAt("2026-11-18T17:00:00Z", published(omitted));
+    expect(oxrArs(next, next.syncStartSec, 900)).toBe(0);
+    next.confirmRegimeChanges({ time_last_update_unix: next.syncStartSec - 60, rates: { ARS: 900 } }, arsMappings);
+    const final = published(next);
+    expect(final.rates.peggedARS).toBe(1 / 900);
+    expect(final.previousRegimeByPeg?.peggedARS?.previous.observedAtSec).toBe(dated ? initial.syncStartSec : null);
+  });
+
+  it.each([false, true])("recovers a daily fixing after OXR expiry with a secondary poll=%s", (poll) => {
+    const initial = publicationAt("2026-11-18T00:30:00Z");
+    const midnight = unix("2026-11-18T00:00:00Z");
+    secondaryArs(initial, "2026-11-18", 780);
+    expect(oxrArs(initial, midnight, 770)).toBe(1);
+    secondaryArs(initial, "2026-11-18", 780);
+    const next = publicationAt("2026-11-18T01:00:00Z", published(initial));
+    secondaryArs(next, "2026-11-18", 780);
+    const live = published(next);
+    expect(live.observations?.peggedARS).toMatchObject({ source: "openExchangeRates", usdPerUnit: 1 / 770 });
+    const expired = publicationAt("2026-11-18T06:30:00Z", live);
+    if (poll) secondaryArs(expired, "2026-11-18", 780);
+    else expired.ensureCachedRate("peggedARS", "secondary poll skipped");
+    expect(published(expired).observations?.peggedARS).toMatchObject({
+      source: "fawazahmed0", cadence: "calendar-daily", usdPerUnit: 1 / 780, observedAtSec: midnight,
+    });
+  });
+
+  it("uses a still-current business-daily alternative after the newer calendar-daily one expires", () => {
+    const friday = publicationAt("2026-11-13T16:00:00Z");
+    ecbBrl(friday, "2026-11-13");
+    const sunday = publicationAt("2026-11-15T12:00:00Z", published(friday));
+    sunday.applySecondaryRates({ endpoint: "jsdelivr", payload: { date: "2026-11-15", usd: { brl: 5.4 } } }, [["BRL", "peggedREAL"]]);
+    const previous = published(sunday);
+    expect(previous.observations?.peggedREAL?.source).toBe("fawazahmed0");
+    const monday = publicationAt("2026-11-16T12:00:00Z", previous);
+    expect(published(monday).observations?.peggedREAL).toMatchObject({ source: "frankfurter", usdPerUnit: 1 / 5.5 });
+  });
+
+  it("keeps the corrected Friday close and withholds Sunday's first unchanged OXR quote", () => {
+    const friday = publicationAt("2026-11-13T19:00:00Z");
+    friday.applyFrankfurterRates({ EUR: 1 / 1.10 }, "2026-11-13", eurMapping);
+    overlay(friday, "peggedEUR", friday.syncStartSec, 1.10);
+    const corrected = publicationAt("2026-11-13T20:00:00Z", published(friday));
+    overlay(corrected, "peggedEUR", friday.syncStartSec, 1.11);
+    const closed = published(corrected);
+    expect(closed.rates.peggedEUR).toBe(1.11);
+    expect(closed.referenceSourceSamples?.["peggedEUR:openExchangeRates"]).toMatchObject({
+      observation: { usdPerUnit: closed.rates.peggedEUR, observedAtSec: friday.syncStartSec },
+      evidence: { firstInSessionObservedAtSec: friday.syncStartSec },
+    });
+    const sunday = publicationAt("2026-11-15T22:30:00Z", closed);
+    overlay(sunday, "peggedEUR", sunday.syncStartSec - 60, 1.11);
+    const selected = published(sunday).selectedReferenceEvidence!.peggedEUR;
+    expect(admitAt(sunday.syncStartSec, { kind: "fx", observation: selected, ...selected.repricing }).reason)
+      .toBe("reference-not-repriced");
+  });
+
+  it.each([
+    [false, false, false], [true, false, false], [false, true, false], [true, true, false], [false, true, true],
+  ])("orders legacy ECB rereads with verified=%s, overlay=%s, ambiguous clock=%s", (verified, realtime, ambiguous) => {
+    const legacy = publicationAt(ambiguous ? "2026-11-13T18:00:00Z" : "2026-11-13T16:00:00Z");
+    legacy.usableRates.peggedREAL = 1 / 5.5;
+    legacy.markLive("peggedREAL", legacy.syncStartSec, "business-daily", "2026-11-13", verified ? "frankfurter" : undefined);
+    const next = publicationAt(ambiguous ? "2026-11-13T18:30:00Z"
+      : realtime ? "2026-11-13T16:30:00Z" : "2026-11-15T12:00:00Z", published(legacy));
+    ecbBrl(next, "2026-11-13");
+    const oxrClock = unix(ambiguous ? "2026-11-13T17:30:00Z" : "2026-11-13T15:00:00Z");
+    if (realtime) overlay(next, "peggedREAL", oxrClock, 1 / 5.6);
+    const selected = published(next);
+    if (ambiguous) {
+      expect(selected.rates.peggedREAL).toBe(1 / 5.5);
+      expect(selected.sourceUpdatedAtByPeg.peggedREAL).toBe(legacy.syncStartSec);
+      expect(selected.observations?.peggedREAL).toBeUndefined();
+      return;
+    }
+    expect(selected.observations?.peggedREAL).toMatchObject({
+      source: realtime && !verified ? "openExchangeRates" : "frankfurter",
+      observedAtSec: verified ? legacy.syncStartSec : realtime ? oxrClock : unix("2026-11-13T13:10:00Z"),
+    });
+    expect(selected.lastAcceptedBaselines?.peggedREAL?.observedAtSec).toBe(selected.observations?.peggedREAL?.observedAtSec);
+  });
+
+  it("retains losing Friday metal spot evidence and holds the unchanged Sunday quote", () => {
+    const spot = (state: FxSyncRunState, rate: number, observedAtSec: number) => state.applyResolvedMetals({
+      sources: { "gold-api.com": "partial", "commodity-peer-median": "unavailable" },
+      resolvedByPeg: { peggedGOLD: { rate, source: "gold-api.com", updatedAt: observedAtSec } },
+    });
+    const friday = publicationAt("2026-11-13T21:00:00Z");
+    spot(friday, 2900, friday.syncStartSec - 3600);
+    friday.applyChainlinkQuotes(chainlinkRound("peggedGOLD", 2901, friday.syncStartSec - 60, "arbitrum"));
+    const late = publicationAt("2026-11-13T21:30:00Z", published(friday));
+    spot(late, 2910, late.syncStartSec - 3600);
+    const closed = published(late);
+    expect(closed.observations?.peggedGOLD?.source).toBe("chainlink");
+    const sunday = publicationAt("2026-11-15T23:30:00Z", closed);
+    spot(sunday, 2910, sunday.syncStartSec - 900);
+    const reopened = published(sunday);
+    const evidence = reopened.referenceSessionEvidenceByPeg?.peggedGOLD;
+    expect(evidence?.preCloseUsdPerUnit).toBe(2910);
+    expect(admitAt(sunday.syncStartSec, {
+      kind: "fallback", observation: reopened.observations!.peggedGOLD, ...evidence,
+    }).reason).toBe("reference-not-repriced");
+  });
+
+  it.each([
+    [1.11, 1.11, "reference-not-repriced"],
+    [1.20, 1.10, "live-reference"],
+  ] as const)("keeps a losing OXR sample at %s only when its price is valid", (loser, preCloseUsdPerUnit, sundayReason) => {
+    const friday = publicationAt("2026-11-13T21:00:00Z");
+    friday.applyFrankfurterRates({ EUR: 1 / 1.10 }, "2026-11-13", eurMapping);
+    overlay(friday, "peggedEUR", friday.syncStartSec - 3600, 1.10);
+    friday.applyChainlinkQuotes(chainlinkRound("peggedEUR", 1.10, friday.syncStartSec - 300, "base"));
+    const late = publicationAt("2026-11-13T21:30:00Z", published(friday));
+    expect(overlay(late, "peggedEUR", late.syncStartSec - 3600, loser)).toBe(0);
+    const closed = published(late);
+    expect(closed.observations?.peggedEUR?.source).toBe("chainlink");
+    const sunday = publicationAt("2026-11-15T22:30:00Z", closed);
+    overlay(sunday, "peggedEUR", sunday.syncStartSec - 900, 1.11);
+    const reopened = published(sunday);
+    const evidence = reopened.referenceSessionEvidenceByPeg?.peggedEUR;
+    expect(evidence?.preCloseUsdPerUnit).toBe(preCloseUsdPerUnit);
+    expect(admitAt(sunday.syncStartSec, {
+      kind: "fx", observation: reopened.observations!.peggedEUR, ...evidence,
+    }).reason).toBe(sundayReason);
+  });
+
+  it.each([
+    ["2026-11-09T16:00:00Z", 600, null, "reference-not-repriced"],
+    ["2026-11-13T20:00:00Z", 0, 1 / 770, "reference-before-reopen"],
+  ] as const)("uses the first sample and budgets the prior close from %s", (priorClock, delay, preCloseUsdPerUnit, firstReason) => {
+    const previous = publicationAt(priorClock);
+    secondaryArs(previous, priorClock.slice(0, 10), 780);
+    expect(oxrArs(previous, previous.syncStartSec, 770)).toBe(1);
+    const clock = (hour: string) => `2026-11-15T${hour}:${delay === 0 ? "00" : "10"}:00Z`;
+    const reopenedRate = delay === 0 ? 770 : 775;
+    const opened = publicationAt(clock("22"), published(previous));
+    const openingSec = unix("2026-11-15T22:00:00Z");
+    expect(oxrArs(opened, openingSec + delay, reopenedRate)).toBe(1);
+    const admit = (state: FxRateState) => admitAt(state.usableSyncAt, {
+      kind: "fx", observation: state.observations!.peggedARS,
+      ...state.referenceSessionEvidenceByPeg?.peggedARS,
+    });
+    const first = published(opened);
+    expect(admit(first).reason).toBe(firstReason);
+    const again = publicationAt(clock("23"), first);
+    expect(oxrArs(again, again.syncStartSec, reopenedRate)).toBe(1);
+    const last = published(again);
+    expect(last.referenceSessionEvidenceByPeg?.peggedARS).toEqual({
+      sessionOpenedAtSec: openingSec, firstInSessionObservedAtSec: openingSec + delay, preCloseUsdPerUnit,
+    });
+    expect(admit(last).status).toBe("admitted");
   });
 });

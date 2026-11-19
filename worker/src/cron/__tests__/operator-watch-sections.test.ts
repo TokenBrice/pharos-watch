@@ -27,6 +27,9 @@ import {
 } from "../operator-watch-pricing";
 import { loadMintBurnStuckConfigs, MINT_BURN_EXTENDED_ATTEMPT_STATE_KEY } from "../mint-burn/run-state";
 import { loadProbeOperatorWatch } from "../operator-watch-probe";
+import { recordFxAdmissionCoverage } from "../../lib/fx-admission-coverage";
+import { deriveCurrentPegObservationMap } from "../../lib/current-peg-observations";
+import { makeAsset } from "../../test-helpers/__shared/fixtures";
 
 describe("loadProbeOperatorWatch", () => {
   const NOW = 1_750_000_000;
@@ -394,7 +397,7 @@ describe("pricing operator conditions", () => {
       rows: ratings == null
         ? []
         : [{ key: "bluechip-ratings", value: JSON.stringify(ratings), updated_at: NOW - 3600 }],
-    }]);
+    }, { match: "FROM cache WHERE key IN", rows: [] }, { match: "FROM cache AS coverage", rows: [] }]);
   }
 
   function conditionsFor(
@@ -403,6 +406,57 @@ describe("pricing operator conditions", () => {
   ) {
     return buildPricingOperatorConditions(bluechipDb(ratings), { caches, nowSec: NOW });
   }
+
+  it("pages on two measured FX hours, resetting across missing, superseded, and admitted generations", async () => {
+    const { db, sqlite } = createLatestSchemaSqlite();
+    try {
+      const start = Date.parse("2026-11-16T12:00:00Z") / 1000;
+      const put = sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES ('stablecoins', ?, ?)");
+      const publish = async (slot: number, id: string, previousId: string, previousSlot: number, admitted = false, quoteOffset = 0) => {
+        const at = start + slot * 900;
+        const asset = makeAsset({ id: "brz-transfero", price: 0.18, priceSource: "coinbase",
+          pegType: "peggedREAL", priceObservedAt: at + quoteOffset, priceObservedAtMode: "upstream" });
+        asset.currentPeg = deriveCurrentPegObservationMap({
+          peggedAssets: [asset], asOf: at, generation: `stablecoins:${at}`, fxFallbackRates: { peggedREAL: 0.18 },
+          fxReferenceObservations: admitted ? { peggedREAL: { pegKey: "peggedREAL", usdPerUnit: 0.18,
+            source: "openExchangeRates", cadence: "intraday", observedAtSec: at, repricing: {
+              sessionOpenedAtSec: Date.parse("2026-11-15T22:00:00Z") / 1000, preCloseUsdPerUnit: 0.179,
+            } } } : {},
+        }).get(asset.id);
+        put.run(JSON.stringify({ fxAdmissionCoverageGeneration: id }), at);
+        await recordFxAdmissionCoverage(db, [asset], at, start + previousSlot * 900, id, previousId);
+        return (await buildPricingOperatorConditions(db, { caches: {}, nowSec: at }))
+          .find((condition) => condition.id === "reference-admission-outage:BRL");
+      };
+      for (let i = 0; i <= 8; i++) {
+        expect(await publish(i, String(i), String(i - 1), i - 1)).toMatchObject({ active: i === 8, unknown: false });
+      }
+      expect(await publish(9, "9b", "9a", 9)).toMatchObject({ active: false });
+      expect(await publish(10, "10", "9b", 9, true)).toMatchObject({ active: false, unknown: false });
+      put.run(JSON.stringify({ fxAdmissionCoverageGeneration: "other" }), start + 9_000);
+      expect((await buildPricingOperatorConditions(db, { caches: {}, nowSec: start + 9_000 }))
+        .find((condition) => condition.id === "reference-admission-outage:BRL")).toMatchObject({ unknown: true });
+      expect(await publish(11, "11", "other", 10, false, 60)).toMatchObject({ active: false, unknown: true });
+    } finally { sqlite.close(); }
+  });
+
+  it("routes measured OXR restriction, recovery, and only committed publication events", async () => {
+    const { db, sqlite } = createLatestSchemaSqlite();
+    try {
+      const put = sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+      const event = (eventType: string, metadata: Record<string, unknown>) =>
+        put.run(`cron:event:sync-fx-rates:${eventType}`, JSON.stringify({ job: "sync-fx-rates", eventType, metadata }), NOW);
+      const read = async () => pricingOperatorRuleIds(await buildPricingOperatorConditions(db, { caches: {}, nowSec: NOW }));
+      event("openexchange-rates-quota-limited", { attemptedAt: NOW - 30, statusCode: 403 });
+      event("fx-regime-shift-confirmed", { generation: NOW, pegKey: "peggedTRY" });
+      expect(await read()).toEqual(["openexchange-rates-quota-limited"]);
+      put.run("fx-oxr-last-success", String(NOW - 10), NOW);
+      for (const type of ["fx-regime-shift-confirmed", "fx-reference-regression"]) {
+        event(type, { generation: NOW, publishedGeneration: NOW, pegKey: "peggedTRY" });
+      }
+      expect(await read()).toEqual(["fx-regime-shift-confirmed", "fx-reference-regression"]);
+    } finally { sqlite.close(); }
+  });
 
   it("stays quiet for a healthy FX cache and completed daily lanes", async () => {
     const conditions = await conditionsFor({
@@ -431,7 +485,7 @@ describe("pricing operator conditions", () => {
         warning: "peggedEUR business-daily reference is 2 publishes behind (latest 2026-08-18, expected 2026-08-21)",
       },
     });
-    const fx = conditions.filter((condition) => condition.section === "fx-rates");
+    const fx = conditions.filter((condition) => condition.section === "fx-rates" && condition.active);
     expect(fx).toEqual([
       expect.objectContaining({
         id: "source-stale",
@@ -459,8 +513,7 @@ describe("pricing operator conditions", () => {
         warning: "peggedCHF intraday reference is 8h old",
       },
     });
-    expect(conditions.filter((condition) => condition.section === "fx-rates").map((condition) => condition.active))
-      .toEqual([false, false]);
+    expect(conditions.filter((condition) => condition.section === "fx-rates" && condition.active)).toEqual([]);
   });
 
   it("raises a daily lane that has not published since its slot, after the grace period", async () => {
@@ -494,10 +547,10 @@ describe("pricing operator conditions", () => {
     const conditions = await conditionsFor({
       [CACHE_FRESHNESS_LANES.fxRates.cacheKey]: { publishedAt: null },
     });
-    expect(conditions.filter((condition) => condition.section === "fx-rates")).toEqual([
+    expect(conditions.filter((condition) => condition.section === "fx-rates")).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: "source-stale", active: false, unknown: true }),
       expect.objectContaining({ id: "cached-fallback", active: false, unknown: true }),
-    ]);
+    ]));
     expect(pricingOperatorRuleIds(conditions)).toEqual([]);
   });
 

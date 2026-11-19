@@ -134,6 +134,7 @@ describe("DefiLlama outage publication with a complete previous publication", ()
         circulating: previous.circulating,
         circulatingPrevDay: previous.circulatingPrevDay,
       });
+      expect(row.supplyChangeBaselines, meta.id).toBeUndefined();
       if (meta.id === REFILLED.id) continue;
       // R2: a carried high-confidence quote is not this run's observation and is not republished.
       expect(row, meta.id).toMatchObject({ price: null, priceConfidence: null, consensusSources: [], agreeSources: [] });

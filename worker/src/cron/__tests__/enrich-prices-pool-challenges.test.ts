@@ -45,14 +45,15 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
       symbol: "dUSD",
       geckoId: "dtrinity-usd",
     })];
-    installPrimaryPriceRoutes({ coingecko: { body: { "dtrinity-usd": { usd: 0.995 } } } });
+    const observedAt = Math.floor(Date.now() / 1000) - 60;
+    installPrimaryPriceRoutes({ coingecko: { body: { "dtrinity-usd": { usd: 0.995, last_updated_at: observedAt } } } });
     const db = makePoolChallengeDb([{
       stablecoin_id: "dusd-dtrinity",
       price_sources_json: JSON.stringify(sources),
-      updated_at: Math.floor(Date.now() / 1000) - 60,
+      updated_at: observedAt,
     }]);
     const dlListPrices = new Map([
-      ["dusd-dtrinity", { price: 0.994, observedAt: null, observedAtMode: "unknown" as const }],
+      ["dusd-dtrinity", { price: 0.994, observedAt, observedAtMode: "upstream" as const }],
     ]);
     return fetchPrimaryPrices(assets, db, undefined, undefined, undefined, undefined, dlListPrices);
   }
@@ -106,6 +107,51 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
 });
 
 describe("applyPoolChallenge", () => {
+  it("counts two pool protocols only when their known USD conversions are disjoint", () => {
+    const firstPool = "base:0x0000000000000000000000000000000000000001";
+    const secondPool = "base:0x0000000000000000000000000000000000000002";
+    const first = { price: 0.92, tvlUsd: 1_000_000, protocol: "aerodrome", chain: "base" };
+    const second = { ...first, protocol: "aero" };
+    const withLineage = (pool: typeof first, poolKey: string, venue: string) => ({
+      ...pool, pricePoolKeys: [poolKey], upstreamKeys: [poolKey, venue],
+    });
+    const bitstamp = withLineage(first, firstPool, "venue:bitstamp");
+    for (const { offered, expected } of [
+      { offered: [bitstamp], expected: 1 },
+      { offered: [bitstamp, withLineage(second, secondPool, "venue:bitstamp")], expected: 1 },
+      { offered: [bitstamp, { ...second, pricePoolKeys: [], upstreamKeys: [] }], expected: 1 },
+      { offered: [bitstamp, second], expected: 1 },
+      { offered: [bitstamp, withLineage(second, secondPool, "venue:kraken")], expected: 0.92 },
+      { offered: [first, second], expected: 0.92 },
+    ]) {
+      const { results, pegTypes, stats } = makePoolChallengeInputs({
+        assetId: "dola-inverse-finance", result: makePriceConsensusResult(),
+      });
+      applyPoolChallenge(results, new Map([["dola-inverse-finance", offered]]), pegTypes, stats);
+      expect(results.get("dola-inverse-finance")?.price).toBe(expected);
+    }
+  });
+
+  it("uses the selected primary receipt to exclude a pool, independent of configured routes", () => {
+    const coin = "usg-tangent";
+    const offered = ["bitstamp", "kraken"].map((venue, index) => {
+      const poolKey = `ethereum:0x${String(index + 1).repeat(40)}`;
+      return {
+        price: 0.92, tvlUsd: 1_000_000, protocol: ["uniswap-v3", "balancer"][index]!, chain: "ethereum",
+        pricePoolKeys: [poolKey], upstreamKeys: [poolKey, `venue:${venue}`],
+      };
+    });
+    for (const result of [
+      makePriceConsensusResult(),
+      makePriceConsensusResult({ upstreamKeys: offered[0]!.upstreamKeys, pricePoolKeys: offered[0]!.pricePoolKeys }),
+    ]) {
+      const { results, pegTypes, stats } = makePoolChallengeInputs({ assetId: coin, result });
+      const expected = result.upstreamKeys ? 1 : 0.92;
+      applyPoolChallenge(results, new Map([[coin, offered]]), pegTypes, stats);
+      expect(results.get(coin)?.price).toBe(expected);
+    }
+  });
+
   it("uses bounded price evidence rather than unrelated retained TVL for conflicting protocol medians", () => {
     const pool = (poolId: string, project: string, price: number, tvlUsd: number, priceEvidenceTvlUsd?: number): PoolEntry => ({
       poolId, project, price, tvlUsd, priceEvidenceTvlUsd,

@@ -411,6 +411,7 @@ describe("document data bootstrap", () => {
     const detail = StablecoinDetailResponseSchema.parse({
       price: 1, priceSource: "coingecko", priceConfidence: "single-source",
       priceUpdatedAt: supplyAt, currentCirculatingUSD: { peggedUSD: 100 },
+      currentCirculatingNative: 100,
       currentSupplyObservedAt: supplyAt,
       tokens: [{ date: supplyAt - 7 * 86400, totalCirculating: { peggedUSD: 90 }, totalCirculatingUSD: { peggedUSD: 90 } }],
     });

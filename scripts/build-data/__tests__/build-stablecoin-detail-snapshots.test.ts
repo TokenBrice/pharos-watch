@@ -510,7 +510,7 @@ describe("stablecoin detail snapshot generator", () => {
     const sourceClock = 1_799_999_900;
     const day = 86_400;
     const detail = { price: 1, priceSource: "coingecko",
-      currentSupplyObservedAt: sourceClock, currentCirculatingUSD: { peggedUSD: 200 }, tokens: [[33, 50], [30, 80], [10, 100], [7, 140], [3, 160]].map(([days, supply]) => ({
+      currentSupplyObservedAt: sourceClock, currentCirculatingUSD: { peggedUSD: 200 }, currentCirculatingNative: 200, tokens: [[33, 50], [30, 80], [10, 100], [7, 140], [3, 160]].map(([days, supply]) => ({
         date: sourceClock - days * day, totalCirculatingUSD: { peggedUSD: supply }, totalCirculating: { peggedUSD: supply },
       })) };
     const history = [{ date: sourceClock, circulatingUsd: 100, price: 1 }];
@@ -544,7 +544,7 @@ describe("stablecoin detail snapshot generator", () => {
           return id === unavailableId
             ? { id, status: "unavailable", reason: "detail-cache-missing", sources }
             : bulkEntry(id, sourceClock * 1000, {
-              liveSummary: projectStablecoinLiveSummary(StablecoinDetailResponseSchema.parse(detail)), supplyHistory: history,
+              liveSummary: projectStablecoinLiveSummary(StablecoinDetailResponseSchema.parse(detail), id), supplyHistory: history,
               freshness: { liveSummary: { status: "fresh", maxAgeSec: 300 }, supplyHistory: { status: "fresh", maxAgeSec: 86_400 } },
             });
         }) });

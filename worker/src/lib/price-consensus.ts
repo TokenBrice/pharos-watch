@@ -33,6 +33,8 @@ export interface SourcePrice {
   weight: number;
   observedAt?: number | null;
   observedAtMode?: PriceObservedAtMode | null;
+  nonVotingReason?: "venue-mirror" | "unproven-pool-independence" | "undated-trade";
+  upstreamKeys?: readonly string[];
   metadata?: Record<string, unknown>;
 }
 
@@ -45,14 +47,25 @@ export interface ConsensusResult {
   agreeSources: string[];
   disagreeSources: string[];
   allPrices: Record<string, number>;
+  upstreamKeysBySource?: UpstreamKeysBySource;
+  diagnosticPrices?: Record<string, number>;
   observedAt: number | null;
   observedAtMode: PriceObservedAtMode | null;
   observedAtBySource: Record<string, number | null>;
   observedAtModeBySource: Record<string, PriceObservedAtMode | null>;
 }
 
+export type UpstreamKeysBySource = Readonly<Record<string, readonly string[] | undefined>>;
+
 export interface ConsensusOptions {
   mode?: "fixed" | "nav";
+}
+
+export function haveDisjointPriceInputs(
+  left: Pick<SourcePrice, "upstreamKeys">,
+  right: Pick<SourcePrice, "upstreamKeys">,
+): boolean {
+  return !left.upstreamKeys?.some((key) => right.upstreamKeys?.includes(key));
 }
 
 function independentSourceFamily(source: SourcePrice): string {
@@ -76,6 +89,9 @@ function collapseRepeatedSourceQuotes(sources: readonly SourcePrice[]): SourcePr
     const representative = entries.reduce((best, candidate) => (candidate.weight > best.weight ? candidate : best));
     return {
       ...representative,
+      upstreamKeys: entries.some((entry) => entry.upstreamKeys !== undefined)
+        ? [...new Set(entries.flatMap((entry) => entry.upstreamKeys ?? []))]
+        : undefined,
       price: median(entries.map((entry) => entry.price)) ?? representative.price,
       weight: Math.max(...entries.map((entry) => entry.weight)),
       observedAt: observedAtValues.length > 0 ? Math.min(...observedAtValues) : null,
@@ -148,13 +164,37 @@ export function computePriceConsensus(
   thresholdBps: number,
   options?: ConsensusOptions,
 ): ConsensusResult | null {
-  const independentSources = collapsePriceSourcesByIndependentFamily(sources, pegRef);
+  const independentSources = collapsePriceSourcesByIndependentFamily(
+    sources.filter((source) => source.nonVotingReason == null), pegRef,
+  );
+  // A sole undated trade can supply a display mark with its own unknown clock.
+  const undatedDisplay = independentSources.length === 0
+    ? sources.find((source) => source.nonVotingReason === "undated-trade")
+    : undefined;
+  if (undatedDisplay) independentSources.push(undatedDisplay);
   if (independentSources.length === 0) return null;
 
   const allPrices: Record<string, number> = {};
-  for (const s of independentSources) allPrices[s.source] = s.price;
+  const upstreamKeysBySource: Record<string, readonly string[]> = {};
+  for (const s of independentSources) {
+    allPrices[s.source] = s.price;
+    if (s.upstreamKeys) upstreamKeysBySource[s.source] = s.upstreamKeys;
+  }
+  const priceInputs = {
+    allPrices,
+    ...(Object.keys(upstreamKeysBySource).length > 0 && { upstreamKeysBySource }),
+  };
   const observedAtBySource = buildObservedAtRecord(independentSources);
   const observedAtModeBySource = buildObservedAtModeRecord(independentSources);
+  const diagnosticSources = sources.filter((source) => source.nonVotingReason != null && source !== undatedDisplay);
+  const diagnosticPrices = diagnosticSources.length > 0
+    ? { diagnosticPrices: Object.fromEntries(diagnosticSources.map(({ source, price }) => [source, price])) }
+    : {};
+  const clusterThresholdBps = (options?.mode ?? (pegRef == null || pegRef <= 0 ? "nav" : "fixed")) === "nav"
+    ? 500 : thresholdBps;
+  const diagnosticDisagreements = (price: number): string[] => diagnosticSources
+    .filter((source) => !pricesAgreeWithinBps(price, source.price, clusterThresholdBps))
+    .map((source) => source.source);
 
   if (independentSources.length === 1) {
     const s = independentSources[0]!;
@@ -165,17 +205,15 @@ export function computePriceConsensus(
       priceEstimator: "selected_source",
       confidence: "single-source",
       agreeSources: [s.source],
-      disagreeSources: [],
-      allPrices,
+      disagreeSources: diagnosticDisagreements(s.price),
+      ...priceInputs,
+      ...diagnosticPrices,
       observedAt: observedAtBySource[s.source] ?? null,
       observedAtMode: observedAtModeBySource[s.source] ?? null,
       observedAtBySource,
       observedAtModeBySource,
     };
   }
-
-  const mode = options?.mode ?? (pegRef === null || pegRef <= 0 ? "nav" : "fixed");
-  const clusterThresholdBps = mode === "nav" ? 500 : thresholdBps;
 
   // Agreement clusters must be fully pairwise, not just "close to the same anchor".
   // That prevents transitive chains like 1.000 / 1.004 / 1.008 from being treated as
@@ -198,8 +236,9 @@ export function computePriceConsensus(
       priceEstimator: "cluster_median",
       confidence: "high",
       agreeSources,
-      disagreeSources,
-      allPrices,
+      disagreeSources: [...disagreeSources, ...diagnosticDisagreements(clusterPrice)],
+      ...priceInputs,
+      ...diagnosticPrices,
       observedAt: pickConservativeObservedAt(agreeSources, observedAtBySource),
       observedAtMode: pickConservativeObservedAtMode(agreeSources, observedAtModeBySource),
       observedAtBySource,
@@ -216,8 +255,12 @@ export function computePriceConsensus(
     priceEstimator: "selected_source",
     confidence: "low",
     agreeSources: [chosen.source],
-    disagreeSources: independentSources.filter((s) => s !== chosen).map((s) => s.source),
-    allPrices,
+    disagreeSources: [
+      ...independentSources.filter((source) => source !== chosen).map((source) => source.source),
+      ...diagnosticDisagreements(chosen.price),
+    ],
+    ...priceInputs,
+    ...diagnosticPrices,
     observedAt: observedAtBySource[chosen.source] ?? null,
     observedAtMode: observedAtModeBySource[chosen.source] ?? null,
     observedAtBySource,
@@ -232,7 +275,7 @@ function findMaximalAgreementClusters(sources: SourcePrice[], thresholdBps: numb
   for (let i = 0; i < sources.length; i++) {
     const neighbors = new Set<number>();
     for (let j = 0; j < sources.length; j++) {
-      if (i !== j && pricesAgreeWithinBps(sources[i]!.price, sources[j]!.price, thresholdBps)) {
+      if (i !== j && haveDisjointPriceInputs(sources[i]!, sources[j]!) && pricesAgreeWithinBps(sources[i]!.price, sources[j]!.price, thresholdBps)) {
         neighbors.add(j);
       }
     }

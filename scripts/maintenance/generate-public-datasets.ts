@@ -258,6 +258,21 @@ function readRedirectRules(path: string): Map<string, { destination: string; sta
   return rules;
 }
 
+function overwritesCurrentScores(snapshotDate: string, dirs = DEFAULT_ARTIFACT_DIRS): boolean {
+  const scoresPath = `/datasets/scores-latest/${snapshotDate}`;
+  if (existsSync(dirs.redirectsPath)) {
+    const rules = readRedirectRules(dirs.redirectsPath);
+    for (const variant of ["csv", "json", "ndjson"] as const) {
+      const rule = rules.get(`/datasets/scores-latest/latest.${variant}`);
+      if (rule?.status === "200" && rule.destination === `${scoresPath}.${variant}`) return true;
+    }
+    const sheets = rules.get("/sheets/scores-latest.csv");
+    if (sheets?.status === "200" && sheets.destination === `${scoresPath}.csv`) return true;
+  }
+  return existsSync(dirs.currentDatasetModulePath)
+    && readFileSync(dirs.currentDatasetModulePath, "utf8").includes(`from "../../../public${scoresPath}.json"`);
+}
+
 interface JsonArtifactMetadata {
   rowCount: number;
   actualRowCount: number;
@@ -579,8 +594,11 @@ async function main(): Promise<void> {
     );
   }
 
+  const historical = isHistoricalSnapshotDate(requestedSnapshotDate);
+  const repointCurrent = !historical || values["repoint-current"];
   const specs = buildTopicSpecs(envelope, depegEvents, snapshotDate, {
-    historical: isHistoricalSnapshotDate(requestedSnapshotDate),
+    historical,
+    requireCurrentSafety: values["repoint-current"] || overwritesCurrentScores(snapshotDate),
     depegCapture,
   });
   if (apiBase) {
@@ -598,7 +616,6 @@ async function main(): Promise<void> {
     totalWritten += result.written;
     totalPruned += pruneOldSnapshots(join(DATASETS_DIR, spec.topic), snapshotDate);
   }
-  const repointCurrent = !isHistoricalSnapshotDate(requestedSnapshotDate) || values["repoint-current"];
   if (repointCurrent) {
     if (writePublicDatasetRedirects(snapshotDate).changed) totalWritten += 1;
     if (writePublicDatasetCurrentModule(snapshotDate).changed) totalWritten += 1;

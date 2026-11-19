@@ -5,6 +5,9 @@ import {
   type PegClass,
 } from "@shared/lib/peg-price-bounds";
 import { PEG_HARDCODED_PRICE_BOUNDS, pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
+import type { ReferenceAdmissionInput } from "@shared/lib/reference-admission";
+import { sha256Hex } from "@shared/lib/sha256";
+import type { FxReferenceObservationMap } from "@shared/types/fx-reference";
 import { getFxReferenceTypeFromState, getFxSourceStatus, loadFxRateState, type FxRateState } from "./fx-rate-state";
 import { inferFxSourceCadence } from "./fx-cadence";
 import { sanitizeRecordValues } from "./normalizers";
@@ -40,7 +43,31 @@ export interface PriceValidationReferences {
   sourceModeByPeg?: FxRateState["sourceModeByPeg"];
   sourceCadenceByPeg?: FxRateState["sourceCadenceByPeg"];
   sourceDateByPeg?: FxRateState["sourceDateByPeg"];
+  /** Same-generation FX source and repricing evidence for session-aware translations. */
+  fxReferenceEvidenceByPeg?: Readonly<Partial<Record<string, SelectedFxReferenceEvidence>>>;
   maxAgeSec?: number;
+}
+
+type SelectedFxReferenceEvidence = Pick<Extract<ReferenceAdmissionInput, { kind: "fx" | "fallback" }>,
+  "observation" | "preCloseUsdPerUnit" | "firstInSessionObservedAtSec" | "generation"> & {
+  sessionOpenedAtSec?: number;
+};
+
+// This is the additive state projected by the FX cache reader in L1.
+type FxStateWithSelectedObservations = FxRateState & {
+  observations?: FxReferenceObservationMap;
+  referenceSessionEvidenceByPeg?: Partial<Record<string, Pick<SelectedFxReferenceEvidence,
+    "preCloseUsdPerUnit" | "firstInSessionObservedAtSec" | "sessionOpenedAtSec">>>;
+};
+
+export function projectFxReferenceEvidence(state: FxStateWithSelectedObservations): PriceValidationReferences["fxReferenceEvidenceByPeg"] {
+  if (state.metadataIdentity !== "verified" || !state.observations) return undefined;
+  const generation = `fx:${state.usableSyncAt}:${sha256Hex(JSON.stringify(state.rates))}`;
+  return Object.fromEntries(Object.entries(state.observations).flatMap(([pegKey, observation]) =>
+    observation.pegKey === pegKey && observation.usdPerUnit === state.rates[pegKey] &&
+      observation.observedAtSec === state.sourceUpdatedAtByPeg[pegKey]
+      ? [[pegKey, { ...state.referenceSessionEvidenceByPeg?.[pegKey], observation, generation }]]
+      : []));
 }
 
 export interface PriceValidationDecision {
@@ -74,6 +101,7 @@ const MAX_PRICE = 100_000;
 const DEFAULT_REFERENCE_STALE_SEC = 6 * 3600;
 
 const FIAT_FX_REFERENCE_UPPER_RATIO = PEG_HARDCODED_PRICE_BOUNDS.USD[1];
+export const FIAT_UPPER_BAND_REQUIRES_CORROBORATION = "fiat_upper_band_requires_corroboration";
 
 function sanitizeRates(input: unknown): Record<string, number> {
   return sanitizeRecordValues(input, (value) => (
@@ -194,6 +222,7 @@ export async function loadPriceValidationReferences(
       sourceModeByPeg: state.sourceModeByPeg,
       sourceCadenceByPeg: state.sourceCadenceByPeg,
       sourceDateByPeg: state.sourceDateByPeg,
+      fxReferenceEvidenceByPeg: projectFxReferenceEvidence(state),
       maxAgeSec,
     };
   } catch (error) {
@@ -402,7 +431,9 @@ function evaluateReferenceBand(
   if (price >= upperBound) {
     return buildDecision({
       accepted: false,
-      reasonCode: "reference_upper_bound_exceeded",
+      reasonCode: context.pegClass === "fiat_fx"
+        ? FIAT_UPPER_BAND_REQUIRES_CORROBORATION
+        : "reference_upper_bound_exceeded",
       referenceType,
       referencePrice,
       candidateRatio,

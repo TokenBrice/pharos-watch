@@ -13,7 +13,7 @@ import {
   MethodologySectionShell,
   WorkedExample,
 } from "../../methodology-shared";
-import { STABILITY_INDEX_SECTION_CONTENT } from "@/lib/methodology-content";
+import { PSI_REFERENCE_ADMISSION_DESCRIPTION, STABILITY_INDEX_SECTION_CONTENT } from "@/lib/methodology-content";
 import { PSI_BAND_CLASSES, METHODOLOGY_SECTION_ACCENT_CLASSES, METHODOLOGY_TABLE_ACCENT_CLASSES } from "@shared/lib/classification";
 import { PSI_COMPONENT_LIMITS, PSI_CONDITION_BANDS } from "@shared/lib/psi-policy";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
@@ -52,7 +52,7 @@ const STABILITY_COMPONENT_ROWS = [
       component: "Stress Breadth",
       range: `0–${PSI_COMPONENT_LIMITS.stressBreadth}`,
       formula: `min(${PSI_COMPONENT_LIMITS.stressBreadth}, dewsStressBreadth)`,
-      purpose: "Early-warning pressure from DEWS stress signals before full depegs",
+      purpose: "DEWS stress signals from assets without a depeg contribution at the sample time",
     },
   },
   {
@@ -61,7 +61,7 @@ const STABILITY_COMPONENT_ROWS = [
       component: "Trend",
       range: `−${PSI_COMPONENT_LIMITS.trend} to +${PSI_COMPONENT_LIMITS.trend}`,
       formula: `clamp(-${PSI_COMPONENT_LIMITS.trend}, ${PSI_COMPONENT_LIMITS.trend}, mcap7dChangePct)`,
-      purpose: "7-day stablecoin market-cap momentum (supports or offsets penalties)",
+      purpose: "USD market-cap change seven UTC dates apart. Historical pairs omit assets with explicitly partial supply at either endpoint. Legacy live publications use the reported prior week.",
     },
   },
 ];
@@ -106,6 +106,7 @@ export function StabilityIndexMethodologySection() {
         snapshots. Its monetary aggregate contains active core stablecoins and cash equivalents; tracked variants and
         stable-value investment products remain browsable but do not count as independent supply.
       </p>
+      <p>{PSI_REFERENCE_ADMISSION_DESCRIPTION}</p>
       <p>
         Methodology v3.69 applies the same closed-market rule to history: a gold, silver or FX depeg that began while
         its market was shut and stayed under 25% no longer counts if it ended within six hours of the reopen, and
@@ -226,16 +227,11 @@ export function StabilityIndexMethodologySection() {
               coin; each coin contributes once using the worst current deviation.
             </li>
             <li>
-              <span className="text-foreground font-medium">Current references:</span> a non-USD event (gold, silver,
-              fiat FX) is scored against today&apos;s reference, as detection does, not the gold or FX price on the day it
-              opened; without a trustworthy reference it is left unpriced. While its FX or metal market is closed (weekends and
-              listed holidays), an FX, gold or silver token keeps the deviation it had at the close unless it moves 25% or more.
-            </li>
-            <li>
-              <span className="text-foreground font-medium">Native quote domains:</span> non-USD native events never
-              divide a USD price by a native reference. Live and historical inputs use timestamped native start or
-              recovery evidence retained in D1, strictly as-of and younger than six hours. Continuous native quotes
-              are not retained; other windows disclose unavailable price evidence rather than inventing a deviation.
+              <span className="text-foreground font-medium">Native quote domains:</span> PSI compares prices and
+              references in the same unit. Live sampling can use a validated native trade or a fresh legacy quote
+              in open-session compatibility mode. Historical replay draws on timestamped native start
+              or recovery evidence within the six-hour as-of budget.
+              Windows without retained evidence disclose the gap.
             </li>
             <li>
               <span className="text-foreground font-medium">Daily provenance:</span> daily scores average all samples,

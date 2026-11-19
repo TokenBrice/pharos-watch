@@ -1,16 +1,22 @@
 import { logWorkerEvent, logWorkerEventArgs } from "../../lib/structured-log";
-import { ChainPartitionProvenanceSchema, StablecoinListResponseSchema, SupplyChainGuardProvenanceSchema } from "@shared/types/supply";
+import { ChainPartitionProvenanceSchema, decodePublishedPegType, StablecoinListResponseSchema, SupplyChainGuardProvenanceSchema } from "@shared/types/supply";
 import { PriceDerivationSchema } from "@shared/types/price";
 import type { PriceSourceHealth } from "@shared/types/status";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { CHAIN_META } from "@shared/types/chain-identity";
+import { REFERENCE_INTRADAY_BUDGET_SEC } from "@shared/lib/reference-admission";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
-import { CURATED_AGGREGATE_ESCROW_RESIDUALS, getOnchainSupplyHoldReason, isOnchainSupplyPartitionExcluded, prefersOnChainSupplyMcap, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract, SFRAX_STOCK_PERIMETER, isSfraxStockContractRoster } from "@shared/lib/onchain-supply-probe";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
+import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
+import { CURATED_AGGREGATE_ESCROW_RESIDUALS, getOnchainSupplyHoldReason, isKinesisWrapperSupplyId, isOnchainSupplyPartitionExcluded, prefersOnChainSupplyMcap, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract, SFRAX_STOCK_PERIMETER, isSfraxStockContractRoster } from "@shared/lib/onchain-supply-probe";
+import { isKinesisWrapperSupplyCutoverActive } from "@shared/lib/supply-perimeter-changes";
 import { deriveSfraxStockPerimeter } from "@shared/lib/sfrax-supply";
 import { chainSupplyReconciles } from "@shared/lib/chains/circulating";
 import { SFRAX_STOCK_MAX_AGE_SEC } from "@shared/types/sfrax-supply";
 import {
   getCirculatingRawOrNull,
+  projectUsdMarketCapBaselineBuckets,
   SUPPLEMENTAL_RESTORE_MAX_AGE_SEC,
   SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC,
 } from "@shared/lib/supply";
@@ -22,13 +28,14 @@ import { isCommodityPeg } from "@shared/lib/filter-tags";
 import type { BackingType, PegCurrency } from "@shared/types/core";
 import type { PeggedAsset } from "./enrich-prices-shared";
 import { reviewedGapFillDecision } from "./supply-gap-reviewed-pairs";
-import type { PriceValidationReferences } from "../../lib/price-validation";
-import { loadFxRateState, getFxReferenceTypeFromState } from "../../lib/fx-rate-state";
-import { validateCompositePricingSourceFreshness } from "../../lib/pricing-source-freshness";
+import { projectFxReferenceEvidence, type PriceValidationReferences } from "../../lib/price-validation";
+import type { FxReferenceEvidenceMap } from "@shared/types/fx-reference";
+import { type FxRateState, loadFxRateState, getFxReferenceTypeFromState } from "../../lib/fx-rate-state";
+import { validateCompositePricingSourceFreshness, validatePricingSourceFreshness, type ValidatePricingSourceFreshnessInput } from "../../lib/pricing-source-freshness";
+import { chainlinkNavMaxOracleAgeSec } from "../reserve-adapters/chainlink-nav-freshness";
 
 const INVALID_STABLECOINS_CACHE_KEY = "stablecoins:invalid-last";
 const VALIDATION_ISSUES_MAX_CHARS = 400;
-const FX_REFERENCE_MAX_AGE_SEC = 6 * 3600;
 const MISSING_PRICE_SOURCE = "missing";
 const CURATED_AGGREGATE_SUPPLY_CHAIN_LABELS_BY_ID = new Map(
   ACTIVE_STABLECOINS.flatMap((meta) => {
@@ -128,6 +135,7 @@ export function reviewedOnchainSupplyHoldFields(asset: Pick<PeggedAsset,
 >, runStartedAt?: number): Pick<PeggedAsset,
   "supplySource" | "supplyUnavailableReason" | "supplyObservedAt" | "supplyRestored" | "supplyRestoreMode" | "supplyGapFill" | "supplyChainGuard"
   | "circulating" | "circulatingPrevDay" | "circulatingPrevWeek" | "circulatingPrevMonth" | "chainCirculating" | "chains" | "supplyPerimeter" | "chainPartition"
+  | "circulatingNative" | "valuationPriceUsd" | "valuationObservedAtSec" | "supplyChangeBaselines"
 > | null {
   const assetId = String(asset.id);
   const reason = getOnchainSupplyHoldReason(assetId);
@@ -159,6 +167,10 @@ export function reviewedOnchainSupplyHoldFields(asset: Pick<PeggedAsset,
     supplyChainGuard: undefined,
     supplyPerimeter: undefined,
     chainPartition: undefined,
+    circulatingNative: undefined,
+    valuationPriceUsd: undefined,
+    valuationObservedAtSec: undefined,
+    supplyChangeBaselines: undefined,
     circulating: {},
     circulatingPrevDay: null,
     circulatingPrevWeek: null,
@@ -166,6 +178,33 @@ export function reviewedOnchainSupplyHoldFields(asset: Pick<PeggedAsset,
     chainCirculating,
     chains: Object.keys(chainCirculating),
   };
+}
+
+export function assetPriceObservationClock(asset: PeggedAsset): number | null {
+  const source = asset.priceSource ?? "defillama";
+  if ((source === "defillama" || source === "defillama-list" || source === "dexscreener-exact") &&
+      asset.priceObservedAtMode !== "upstream") return null;
+  // Older payloads may only contain priceUpdatedAt. A present null is explicit.
+  return asset.priceObservedAt === undefined ? asset.priceUpdatedAt ?? null : asset.priceObservedAt;
+}
+
+export function chainlinkNavAgeForAsset(assetId: string): number | undefined {
+  const config = ACTIVE_META_BY_ID.get(assetId)?.liveReservesConfig;
+  if (config?.adapter !== "chainlink-nav" || config.suspended) return undefined;
+  return chainlinkNavMaxOracleAgeSec(parseLiveReserveAdapterParams("chainlink-nav", config.params));
+}
+
+export function validateAssetPricingSourceFreshness(assetId: string, input: ValidatePricingSourceFreshnessInput) {
+  const parts = splitCompositePriceSource(input.source);
+  const navAge = parts.includes("chainlink-nav") ? chainlinkNavAgeForAsset(assetId) : undefined;
+  if (navAge === undefined) return validateCompositePricingSourceFreshness(input);
+  const nav = validatePricingSourceFreshness({
+    ...input, source: "chainlink-nav", maxAgeSec: navAge, maxFutureSkewSec: MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC,
+  });
+  const others = parts.filter((part) => part !== "chainlink-nav");
+  return nav.accepted && others.length > 0
+    ? validateCompositePricingSourceFreshness({ ...input, source: others.join("+") })
+    : nav;
 }
 
 export function normalizeStablecoinsPayload(payload: StablecoinsPayload, runStartedAt?: number): StablecoinsPayload {
@@ -186,12 +225,8 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload, runStar
       } = asset as PeggedAsset & { gecko_id?: unknown };
       const hasUsablePrice = typeof asset.price === "number" && Number.isFinite(asset.price) && asset.price > 0;
       const confidence = asset.priceConfidence;
-      const priceUpdatedAt =
-        typeof asset.priceUpdatedAt === "number" && Number.isFinite(asset.priceUpdatedAt) ? asset.priceUpdatedAt : null;
-      const priceObservedAt =
-        typeof asset.priceObservedAt === "number" && Number.isFinite(asset.priceObservedAt)
-          ? asset.priceObservedAt
-          : priceUpdatedAt;
+      const observationClock = assetPriceObservationClock(asset);
+      const priceObservedAt = Number.isFinite(observationClock) ? observationClock : null;
       const priceObservedAtMode =
         asset.priceObservedAtMode === "upstream" ||
         asset.priceObservedAtMode === "local_fetch" ||
@@ -214,6 +249,12 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload, runStar
       const supplyChainGuard = SupplyChainGuardProvenanceSchema.safeParse(asset.supplyChainGuard);
       const priceDerivation = PriceDerivationSchema.safeParse(asset.priceDerivation);
       const hold = reviewedOnchainSupplyHoldFields(asset, runStartedAt);
+      const historicalBuckets = (window: "day" | "week" | "month", previous: PeggedAsset["circulatingPrevDay"]) => {
+        const legacy = toPegBuckets(previous);
+        // An outage carry without assessed closes retains its previous packet on the v1 wire.
+        if (asset.supplyRestored && Object.keys(asset.supplyChangeBaselines ?? {}).length === 0) return legacy;
+        return projectUsdMarketCapBaselineBuckets(asset, window, legacy);
+      };
 
       return {
         ...rest,
@@ -221,7 +262,7 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload, runStar
         price: hasUsablePrice ? asset.price : null,
         priceSource: hasUsablePrice ? (asset.priceSource ?? MISSING_PRICE_SOURCE) : MISSING_PRICE_SOURCE,
         priceConfidence: hasUsablePrice ? normalizedConfidence : null,
-        priceUpdatedAt: hasUsablePrice ? (priceObservedAt ?? priceUpdatedAt) : null,
+        priceUpdatedAt: hasUsablePrice ? priceObservedAt : null,
         priceObservedAt: hasUsablePrice ? priceObservedAt : null,
         priceObservedAtMode: hasUsablePrice ? priceObservedAtMode : null,
         priceSyncedAt: hasUsablePrice ? priceSyncedAt : null,
@@ -239,9 +280,9 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload, runStar
           : {}),
         ...(asset.id === SFRAX_STOCK_PERIMETER.assetId && !hold && asset.supplyPerimeter ? { supplyPerimeter: asset.supplyPerimeter } : {}),
         ...(supplyChainGuard.success ? { supplyChainGuard: supplyChainGuard.data } : {}),
-        circulatingPrevDay: toPegBuckets(asset.circulatingPrevDay),
-        circulatingPrevWeek: toPegBuckets(asset.circulatingPrevWeek),
-        circulatingPrevMonth: toPegBuckets(asset.circulatingPrevMonth),
+        circulatingPrevDay: historicalBuckets("day", asset.circulatingPrevDay),
+        circulatingPrevWeek: historicalBuckets("week", asset.circulatingPrevWeek),
+        circulatingPrevMonth: historicalBuckets("month", asset.circulatingPrevMonth),
         ...hold,
       };
     }),
@@ -325,12 +366,16 @@ export function stampPriceMetadata(
 ): void {
   asset.priceSource = source;
   delete asset.priceDerivation;
+  delete asset.priceQuoteBasis;
+  delete asset.pricePoolKeys;
+  delete asset.upstreamKeys;
+  delete asset.parityQuoteUnit;
   asset.priceSelectedSource = selectedSource ?? source;
   asset.priceConfidence = confidence ?? null;
   asset.priceObservedAt = observedAt;
   asset.priceObservedAtMode = observedAtMode ?? null;
   asset.priceSyncedAt = syncedAt ?? observedAt ?? null;
-  asset.priceUpdatedAt = observedAt ?? syncedAt ?? null;
+  asset.priceUpdatedAt = observedAt;
   if (consensusSources !== undefined) {
     asset.consensusSources = consensusSources;
   }
@@ -345,6 +390,10 @@ export function stampPriceMetadata(
 export function clearPriceMetadata(asset: PeggedAsset): void {
   asset.price = null;
   delete asset.priceDerivation;
+  delete asset.priceQuoteBasis;
+  delete asset.pricePoolKeys;
+  delete asset.upstreamKeys;
+  delete asset.parityQuoteUnit;
   asset.priceSource = undefined;
   asset.priceSelectedSource = null;
   asset.priceConfidence = null;
@@ -399,14 +448,18 @@ function markRestoredSupply(asset: PeggedAsset, nowSec: number): PeggedAsset | n
     if (partition && !partition.expired) restored.chainPartition = partition.asset.chainPartition;
     else delete restored.chainPartition;
   }
-  if (!validateCompositePricingSourceFreshness({
+  const priceObservedAt = assetPriceObservationClock(restored);
+  if (!validateAssetPricingSourceFreshness(restored.id, {
     source: restored.priceSource ?? "",
-    observedAt: restored.priceObservedAt ?? restored.priceUpdatedAt,
+    observedAt: priceObservedAt,
     observedAtMode: restored.priceObservedAtMode,
     nowSec,
     requireObservedAt: true,
   }).accepted) {
     clearPriceMetadata(restored);
+  } else {
+    restored.priceObservedAt = priceObservedAt;
+    restored.priceUpdatedAt = priceObservedAt;
   }
   return restored;
 }
@@ -446,6 +499,7 @@ export async function loadPreviousStablecoinsById(db: D1Database): Promise<Previ
               delete row.circulatingPrevMonth;
             }
           }
+          if (asset.pegType !== undefined) asset.pegType = decodePublishedPegType(asset.id, asset.pegType);
           return [String(asset.id), stampPreviousSupplyObservedAt(asset, cacheUpdatedAt)];
         }),
       ),
@@ -477,7 +531,11 @@ export function isSupplyObservationWithinRestoreCeiling(observedAt: number, nowS
 }
 
 function isWithinRestoreCeiling(previous: PeggedAsset, nowSec: number): boolean {
-  if (previous.supplySource === "coingecko-fallback" && prefersOnChainSupplyMcap(previous)) return false;
+  const kinesis = isKinesisWrapperSupplyId(previous.id);
+  if (kinesis && isKinesisWrapperSupplyCutoverActive(previous.id, nowSec) !== (previous.supplySource === "onchain-total-supply")) {
+    return false;
+  }
+  if (previous.supplySource === "coingecko-fallback" && prefersOnChainSupplyMcap(previous) && !kinesis) return false;
   // Cached on-chain packets must still satisfy today's deployment roster. A
   // removed or expanded aggregate, an ambiguous multi-contract footprint or a
   // reviewed hold cannot re-enter through generic carry-forward. Ordinary
@@ -540,6 +598,10 @@ export function restorePreferredNativeSupply(
       chains: restored.chains,
       supplySource: restored.supplySource,
       supplyObservedAt: restored.supplyObservedAt,
+      circulatingNative: restored.circulatingNative,
+      valuationPriceUsd: restored.valuationPriceUsd,
+      valuationObservedAtSec: restored.valuationObservedAtSec,
+      supplyChangeBaselines: restored.supplyChangeBaselines,
       supplyChainGuard: restored.supplyChainGuard,
       supplyRestored: true,
       supplyUnavailableReason: undefined,
@@ -565,6 +627,7 @@ function hasReconciledCuratedAggregateSupplyPacket(
   const chainCirculating = asset.chainCirculating;
   const observedChainLabels = Object.keys(chainCirculating ?? {}).sort();
   const residualLabel = CURATED_AGGREGATE_ESCROW_RESIDUALS[String(asset.id)]?.unattributedChainLabel;
+  if (asset.id === "susds-sky" && residualLabel && !observedChainLabels.includes(residualLabel)) return false;
   if (residualLabel && observedChainLabels.includes(residualLabel)) {
     expectedChainLabels = [...expectedChainLabels, residualLabel].sort();
   }
@@ -771,8 +834,8 @@ export function mergeSupplementalLastKnownGood(
         merged.priceSource = asset.priceSource;
         merged.priceSelectedSource = asset.priceSelectedSource ?? null;
         merged.priceConfidence = asset.priceConfidence ?? null;
-        merged.priceUpdatedAt = asset.priceUpdatedAt ?? null;
-        merged.priceObservedAt = asset.priceObservedAt ?? asset.priceUpdatedAt ?? null;
+        merged.priceObservedAt = assetPriceObservationClock(asset);
+        merged.priceUpdatedAt = merged.priceObservedAt;
         merged.priceObservedAtMode = asset.priceObservedAtMode ?? null;
         merged.priceSyncedAt = asset.priceSyncedAt ?? null;
         merged.consensusSources = asset.consensusSources;
@@ -858,7 +921,7 @@ export function restoreMissingTrackedAssets(
       });
       continue;
     }
-    if (prefersOnChainSupplyMcap(meta)) {
+    if (prefersOnChainSupplyMcap(meta) && (!isKinesisWrapperSupplyId(id) || isKinesisWrapperSupplyCutoverActive(id, nowSec))) {
       const restoredBase = previous ? markRestoredSupply(previous, nowSec) : null;
       // A prior row that cannot name its observation clock keeps only identity
       // and price: the native supply packet is withheld, never re-dated.
@@ -950,21 +1013,28 @@ export function withholdUnclockedCarriedSupply(assets: PeggedAsset[]): string[] 
     delete asset.supplyObservedAt;
     delete asset.supplyGapFill;
     delete asset.supplyPerimeter;
+    delete asset.circulatingNative;
+    delete asset.valuationPriceUsd;
+    delete asset.valuationObservedAtSec;
+    delete asset.supplyChangeBaselines;
     withheldIds.push(String(asset.id));
   }
   return withheldIds;
 }
 
+export interface StablecoinsFxSelection {
+  fxFallbackRates?: Record<string, number>;
+  fxReferenceObservations?: FxReferenceEvidenceMap;
+  detectionFxState?: FxRateState | null;
+}
+
 export async function loadFreshFxRates(
   db: D1Database,
   logPrefix = "[sync-stablecoins]",
-): Promise<{
-  fxFallbackRates?: Record<string, number>;
-  validationReferences?: PriceValidationReferences;
-}> {
+): Promise<StablecoinsFxSelection & { validationReferences?: PriceValidationReferences }> {
   const fxState = await loadFxRateState(db);
   if (!fxState) {
-    return {};
+    return { fxReferenceObservations: {}, detectionFxState: null };
   }
 
   const nowSec = Math.floor(Date.now() / 1000);
@@ -976,7 +1046,7 @@ export async function loadFreshFxRates(
   let globalUpdatedAt: number | null = null;
 
   for (const pegKey of Object.keys(fxState.rates)) {
-    const type = getFxReferenceTypeFromState(fxState, pegKey, FX_REFERENCE_MAX_AGE_SEC, nowSec);
+    const type = getFxReferenceTypeFromState(fxState, pegKey, REFERENCE_INTRADAY_BUDGET_SEC, nowSec);
     typeByPeg[pegKey] = type;
     updatedAtByPeg[pegKey] = fxState.sourceUpdatedAtByPeg[pegKey] ?? null;
     if (type === "fresh") {
@@ -1000,7 +1070,7 @@ export async function loadFreshFxRates(
         ? `${fxState.usableAgeSec}s usable age`
         : `${Math.max(0, nowSec - fxState.usableSyncAt)}s usable age`;
     logWorkerEventArgs("handler", "warn", `${logPrefix} Ignoring FX references with no fresh source data (${ageDescriptor})`);
-    return {};
+    return { ...(fxState.selectedReferenceEvidence === undefined ? {} : { fxReferenceObservations: {} }), detectionFxState: fxState };
   }
 
   if (hasStalePeg) {
@@ -1008,6 +1078,11 @@ export async function loadFreshFxRates(
   }
 
   return {
+    detectionFxState: fxState,
+    ...(fxState.selectedReferenceEvidence === undefined ? {} : {
+      fxReferenceObservations: Object.fromEntries(Object.entries(fxState.selectedReferenceEvidence)
+        .filter(([peg, observation]) => observation.usdPerUnit === freshOrStaticRates[peg])),
+    }),
     fxFallbackRates: freshOrStaticRates,
     validationReferences: {
       rates: fxState.rates,
@@ -1018,7 +1093,8 @@ export async function loadFreshFxRates(
       sourceModeByPeg: fxState.sourceModeByPeg,
       sourceCadenceByPeg: fxState.sourceCadenceByPeg,
       sourceDateByPeg: fxState.sourceDateByPeg,
-      maxAgeSec: FX_REFERENCE_MAX_AGE_SEC,
+      fxReferenceEvidenceByPeg: projectFxReferenceEvidence(fxState),
+      maxAgeSec: REFERENCE_INTRADAY_BUDGET_SEC,
     },
   };
 }

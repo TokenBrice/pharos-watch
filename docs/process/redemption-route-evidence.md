@@ -6,6 +6,8 @@ These dated source reviews preserve exact external citations and unresolved pred
 
 ## Configured-route bound evidence
 
+A modeled PAXG physical exit includes the London vault and the LBMA USD sale legs with their own calendar coverage. Quantoz EURI counts five qualifying business days after actual receipt. Beyond reviewed coverage, including unsupported 2028 dates, show a days estimate with no exact settlement bound.
+
 ### Existing-route bound review (2026-10-14)
 
 The [structured redemption history](https://pharos.watch/methodology/redemption-backstop-changelog/) owns the review/release record. The source-specific records below retain exact citations or blockers not fully duplicated in config `docs`; they are not a current coverage census. Their source/review dates are provenance, never renewed runtime observations or proof of zero capacity.

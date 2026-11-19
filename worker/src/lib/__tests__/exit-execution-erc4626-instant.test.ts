@@ -2,11 +2,12 @@ import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { decodeFunctionData, encodeAbiParameters, parseAbi, parseAbiParameters, toFunctionSelector } from "viem/utils";
 import { sha256Hex } from "@shared/lib/sha256";
 import type { ExitExecutionCertificate, ExitExecutionModelReview } from "@shared/types/exit-route";
-import { ExitExecutionRequestPointSchema } from "@shared/types/exit-route";
+import { ExitExecutionCertificateSchema, ExitExecutionRequestPointSchema } from "@shared/types/exit-route";
 import { observeErc4626InstantExit } from "../exit-execution/erc4626-instant";
 import { observeReviewedExitExecutionRoutes } from "../exit-execution/runtime";
 import { evaluateV9Exit, projectV9ExitEvaluationRoute, selectV9ExitStressRequest, resolveV9ExitCapacityAtRequest } from "@shared/lib/safety-score-v9/exit";
 import { admitExitExecutionCertificate, exitExecutionInputGenerationId, exitExecutionReviewDigest, resolveExitExecutionBoundPoint } from "@shared/lib/safety-score-v9/exit-execution";
+import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { loadV9CandidateMethodologyPolicy, loadV9MethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
 import { getRedemptionBackstopConfig, validateRedemptionOutputIdentity } from "@shared/lib/redemption-backstops";
 import { RedemptionBackstopConfigSchema } from "@shared/lib/redemption-backstop-configs/schema";
@@ -30,7 +31,8 @@ const state = vi.hoisted(() => ({ liquidity: 1_000_000_000_000_000n, idleLiquidi
   feeShares: 0n, unexplainedSupplyDelta: 0n, feeRecipientDelta: null as bigint | null,
   deferIlliquid: false, escrow: false, optimisticMax: false, corruptOnlyFunded: false, zeroPreviewAt: 0n, preview: "ok",
   totalSupply: 1_000_000_000_000_000n, totalSupplyReadFails: false,
-  feeGetter: "feeRecipient", feeRecipient: 3n, feeGetterChanged: false, feeBalanceFails: false, holderBurnMismatch: false, inverseOffset: 0n, outputDust: 0n }));
+  feeGetter: "feeRecipient", feeRecipient: 3n, feeGetterChanged: false, feeBalanceFails: false, holderBurnMismatch: false, inverseOffset: 0n, outputDust: 0n,
+  blockTimestamp: null as number | null }));
 const initialState = { ...state };
 const word = (value: bigint) => `0x${value.toString(16).padStart(64, "0")}` as `0x${string}`;
 vi.mock("@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json", () => ({
@@ -40,7 +42,7 @@ vi.mock("../evm-rpc", async (importOriginal) => ({
   ...(await importOriginal<typeof EvmRpcModule>()),
   MULTICALL3_ADDRESS: "0xca11bde05977b3631167028862be2a173976ca11",
   fetchEvmBlockNumber: async () => 100,
-  fetchEvmBlockHeader: async () => ({ number: 100, hash: state.reorg && state.headers++ > 0 ? `0x${"2".repeat(64)}` : HASH, timestamp: CLOCK }),
+  fetchEvmBlockHeader: async () => ({ number: 100, hash: state.reorg && state.headers++ > 0 ? `0x${"2".repeat(64)}` : HASH, timestamp: state.blockTimestamp ?? CLOCK }),
   fetchEvmCodeAtBlock: async () => state.code ? "0x6001" : "0x6000",
   fetchEvmStorageAtBlock: async () => word(0n),
   fetchEvmRpcBatchDetailed: async (_chain: string, calls: { method: string; params: unknown[] }[]) => {
@@ -720,42 +722,110 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
       priceLeg: expect.objectContaining({ leg: "output", observedAtSec: CLOCK }),
     }));
   });
-  it("measures EUR-denominated vault exits with observed token prices and a proven fresh FX reference", async () => {
+  it("admits a full in-kind EUR vault receipt at a 3% market premium to a closed-session fixing", async () => {
+    const clockSec = Date.parse("2026-10-04T12:00:00Z") / 1000;
+    vi.setSystemTime(clockSec * 1000);
+    state.blockTimestamp = clockSec;
     const cache: StablecoinsCacheLoadOk = {
-      kind: "ok", updatedAt: CLOCK - 60,
+      kind: "ok", updatedAt: clockSec - 60,
       payload: { peggedAssets: [
-        makeAsset({ id: "fixture-vault", price: 1.2, priceSource: "coingecko", priceObservedAt: CLOCK }),
-        makeAsset({ id: "fixture-underlying", pegType: "peggedEUR", price: 1.2, priceSource: "coingecko", priceObservedAt: CLOCK }),
+        makeAsset({ id: "fixture-vault", price: 1.2, priceSource: "coingecko", priceObservedAt: clockSec - 86_400 }),
+        makeAsset({ id: "fixture-underlying", pegType: "peggedEUR", price: 1.236, priceSource: "coingecko", priceObservedAt: clockSec }),
       ] },
     };
     const fxRateState: FxRateState = {
-      rates: { peggedEUR: 1.2 }, usableSyncAt: CLOCK - 20, usableAgeSec: 20, mode: "live",
-      sourceUpdatedAtByPeg: { peggedEUR: CLOCK - 30 }, sourceModeByPeg: { peggedEUR: "live" },
-      sourceCadenceByPeg: { peggedEUR: "intraday" }, sourceDateByPeg: { peggedEUR: new Date(CLOCK * 1_000).toISOString().slice(0, 10) },
+      rates: { peggedEUR: 1.2 }, usableSyncAt: clockSec - 20, usableAgeSec: 20, mode: "live",
+      sourceUpdatedAtByPeg: { peggedEUR: clockSec - 30 }, sourceModeByPeg: { peggedEUR: "live" },
+      sourceCadenceByPeg: { peggedEUR: "intraday" }, sourceDateByPeg: { peggedEUR: "2026-10-04" },
       sourceLastSuccessAtBySource: {},
       metadataIdentity: "verified", consecutiveFallbackRuns: 0,
     };
     const db = { prepare() { throw new Error("preloaded price and FX state must not read D1"); } } as unknown as D1Database;
-    const call = { assetId: "fixture-vault", circulatingUsd: 210_000_000, clockSec: CLOCK, db, stablecoinsCache: cache, fxRateState, reviews: [review] };
+    const call = { assetId: "fixture-vault", circulatingUsd: 210_000_000, clockSec, db, stablecoinsCache: cache, fxRateState, reviews: [review] };
     const result = await observeReviewedExitExecutionRoutes(call);
     expect(result.failures).toEqual([]);
-    expect(result.observations[0]).toMatchObject({ scoreEligible: true, completionRatio: 1 });
+    expect(result.observations[0]).toMatchObject({
+      scoreEligible: true, completionRatio: 1, executionCostBps: 0, allInCostBps: 0,
+    });
     const reference = result.observations[0]!.executionCertificate!.points[0]!.outputs[0]!;
-    expect(reference).toMatchObject({ unitValueUsd: 1.2, expectedUnitValueUsd: 1.2,
-      sourceId: "coingecko+fx-rates:peggedEUR", observedAtSec: CLOCK - 30 });
-    expect(reference.sourceGenerationId).not.toBe(`stablecoins:${CLOCK - 60}`);
-    for (const invalid of [
-      null,
-      { ...fxRateState, metadataIdentity: "generation-mismatch" as const },
-      { ...fxRateState, sourceUpdatedAtByPeg: { peggedEUR: null } },
-      { ...fxRateState, sourceUpdatedAtByPeg: { peggedEUR: CLOCK + 1 } },
-      { ...fxRateState, sourceUpdatedAtByPeg: { peggedEUR: CLOCK - 86_400 } },
-    ]) {
-      expect((await observeReviewedExitExecutionRoutes({ ...call, fxRateState: invalid })).failures)
-        .toContainEqual(expect.objectContaining({ modelId: "erc4626-instant", reason: "execution-price-reference-unavailable", responsibility: "producer-failed" }));
-    }
+    expect(reference).toMatchObject({ unitValueUsd: 1.236, expectedUnitValueUsd: 1.2,
+      sourceId: "coingecko+fx-rates:peggedEUR", observedAtSec: clockSec - 30 });
+    const certificate = structuredClone(result.observations[0]!.executionCertificate!);
+    const point = certificate.points[0]!;
+    const verify = () => admitExitExecutionCertificate({
+      certificate, envelope: loadV9CandidateMethodologyPolicy(clockSec), assetId: "fixture-vault",
+      clockSec, inputGenerationId: certificate.inputGenerationId,
+      observationGenerationId: certificate.observationGenerationId, request: point, reviews: [review],
+    });
+    expect(verify()).toMatchObject({ state: "observed" });
+    certificate.reviewDigest = exitExecutionReviewDigest(review);
+    expect(verify()).toMatchObject({ state: "unavailable", reason: "execution-cost-understated" });
+    expect((await observeReviewedExitExecutionRoutes({ ...call, fxRateState: null })).failures)
+      .toContainEqual(expect.objectContaining({ reason: "execution-price-reference-unavailable" }));
+    cache.payload.fxReferenceObservations = {};
+    const missingAdmission = await observeReviewedExitExecutionRoutes(call);
+    expect(missingAdmission.observations[0]).toMatchObject({ scoreEligible: true, outputUnitValueUsd: 1.236 });
+    expect(missingAdmission.observations[0]?.outputExpectedUnitValueUsd).toBeUndefined();
     cache.payload.peggedAssets[1]!.priceSource = "protocol-par";
     expect((await observeReviewedExitExecutionRoutes(call)).failures)
       .toContainEqual(expect.objectContaining({ modelId: "erc4626-instant", reason: "execution-price-reference-unavailable", responsibility: "producer-failed" }));
+  });
+
+  it.each(["admitted", "empty", "aliased", "stripped"] as const)("keeps EUR payout retention separate from execution cost (%s)", async (mode) => {
+    const circulatingUsd = 210_000_000;
+    const clockSec = CLOCK;
+    const payout = makeAsset({ id: "fixture-underlying", pegType: "peggedEUR", price: 0.99, priceSource: "coingecko", priceObservedAt: clockSec });
+    if (mode !== "empty") Object.assign(payout, { currentPeg: {
+      pegReference: { valueUsd: 1.1, source: "fx", contributorCount: 1, asOf: clockSec - 30 },
+      referenceAdmission: { status: "admitted", reason: "live-reference", kind: "fx", source: "openExchangeRates",
+        cadence: "intraday", referenceObservedAtSec: clockSec - 30, quoteObservedAtSec: clockSec,
+        decisionAtSec: clockSec, budgetSec: 21_600, sessionOpenedAtSec: null, generation: "eur-fixture", policyVersion: 1 },
+    } });
+    const produced = await observeReviewedExitExecutionRoutes({ assetId: "fixture-vault", circulatingUsd, clockSec, reviews: [review],
+      stablecoinsCache: {
+        kind: "ok", updatedAt: clockSec,
+        ...(mode === "aliased" ? { missingPriceObservedAtIds: new Set([payout.id]) } : {}),
+        payload: { peggedAssets: [payout], ...(mode === "empty" ? { fxReferenceObservations: {} } : {}) },
+      },
+    });
+    expect(produced.failures).toEqual([]);
+    const observation = produced.observations[0]!;
+    expect(observation).toMatchObject({ executionCostBps: 0, completionRatio: 1 });
+    expect(observation.outputExpectedUnitValueUsd).toBe(mode === "admitted" || mode === "stripped" ? 1.1 : undefined);
+    if (mode === "stripped") {
+      delete observation.outputUnitValueUsd;
+      delete observation.outputExpectedUnitValueUsd;
+      delete observation.outputUnitValueSourceId;
+      delete observation.outputUnitValueObservedAt;
+    }
+    const hasBasis = mode === "admitted";
+    const certificate = ExitExecutionCertificateSchema.parse(JSON.parse(JSON.stringify(observation.executionCertificate)));
+    // The previous reader requires this exact v1 review match before valuing any receipt.
+    const previousReviewDigest = domainDigest("safety-score-v10.exit-execution-review.v1", review);
+    expect(certificate.reviewDigest).not.toBe(previousReviewDigest);
+    expect(observation.routeId).toBe(`execution:${previousReviewDigest}`);
+    const draft = makeV9FixedInput({ assetId: "fixture-vault", clockSec, includeDexObservations: false, includeDexCoverage: false,
+      aggregateCirculating: { peggedUSD: circulatingUsd } });
+    draft.redemptionGenerationId = "redemption:fixture-certified";
+    draft.redemptionStale = false;
+    draft.inputFreshness.redemptionBackstops = { updatedAt: clockSec, ageSeconds: 0, stale: false };
+    const row = makeSupplyFullRedemption({ stablecoinId: "fixture-vault", updatedAt: clockSec });
+    row.capacityProfile = { ...row.capacityProfile!, exitRouteObservations: [observation] };
+    draft.redemptionBackstopMap[row.stablecoinId] = row;
+    const fixed = rebuildFixed(draft);
+    const extension = makeV9Extension({ assetId: "fixture-vault", clockSec, registryFingerprint: fixed.registryFingerprint });
+    extension.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, "fixture-vault");
+    const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!;
+    const route = asset.exitRoutes.find((entry) => entry.routeId === observation.routeId)!;
+    const projected = projectV9ExitEvaluationRoute(route);
+    expect(projected.outputResolved).toBe(hasBasis);
+    if (hasBasis) expect(projected.outputValueRetention).toBeCloseTo(0.9);
+    else {
+      expect(route.output).toMatchObject({ kind: "tracked-stablecoin", valuation: null });
+      expect(asset.gaps).toContainEqual(expect.objectContaining({ reasonCode: "unresolved-exit-output" }));
+    }
+    const evaluated = evaluateV9Exit({ assetId: "fixture-vault", clockSec, circulatingUsd, routes: [projected] },
+      loadV9CandidateMethodologyPolicy(clockSec));
+    expect(evaluated.routes[0]?.included).toBe(hasBasis);
   });
 });

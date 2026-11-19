@@ -1,4 +1,5 @@
 import { STATUS_ONCHAIN_FRESH_WINDOW_SEC } from "@shared/lib/status-thresholds";
+import { isKinesisWrapperSupplyCutoverActive } from "@shared/lib/supply-perimeter-changes";
 import { isValidIsoDateOnly } from "@shared/types/date-primitives";
 import { throwIfAborted } from "../lib/abort";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../lib/circuit-breaker";
@@ -17,6 +18,7 @@ const KINESIS_KAG_HORIZON = "https://kag-mainnet.kinesisgroup.io";
 
 interface KinesisChainConfig {
   stablecoinId: string;
+  nativeProgramId: string;
   chain: string;
   baseUrl: string;
   circuitSource: string;
@@ -25,12 +27,14 @@ interface KinesisChainConfig {
 const KINESIS_CHAINS: KinesisChainConfig[] = [
   {
     stablecoinId: "kau-kinesis",
+    nativeProgramId: "kau-kinesis-native-program",
     chain: "kinesis-kau",
     baseUrl: KINESIS_KAU_HORIZON,
     circuitSource: CIRCUIT_SOURCE.KINESIS_KAU,
   },
   {
     stablecoinId: "kag-kinesis",
+    nativeProgramId: "kag-kinesis-native-program",
     chain: "kinesis-kag",
     baseUrl: KINESIS_KAG_HORIZON,
     circuitSource: CIRCUIT_SOURCE.KINESIS_KAG,
@@ -163,6 +167,7 @@ export async function syncKinesisSupply(
   let invalidPayloadReason: string | undefined;
   let fetchFailures = 0;
   let persistenceFailures = 0;
+  const runStartedAt = Math.floor(Date.now() / 1000);
   let outputPublishedAt: number | null = null;
   const chainResults: Array<{ chain: string; status: string; circulation?: number; reason?: string }> = [];
 
@@ -228,13 +233,15 @@ export async function syncKinesisSupply(
     try {
       // Write to onchain_supply for independent supply verification
       const nowSec = Math.floor(Date.now() / 1000);
+      const stablecoinId = isKinesisWrapperSupplyCutoverActive(config.stablecoinId, runStartedAt)
+        ? config.nativeProgramId : config.stablecoinId;
       await runWithOverloadRetry(
         () =>
           db
             .prepare(
               "INSERT OR REPLACE INTO onchain_supply (stablecoin_id, chain, supply, updated_at) VALUES (?, ?, ?, ?)",
             )
-            .bind(config.stablecoinId, config.chain, parsed.circulation, observedAt)
+            .bind(stablecoinId, config.chain, parsed.circulation, observedAt)
             .run(),
         3,
         signal,

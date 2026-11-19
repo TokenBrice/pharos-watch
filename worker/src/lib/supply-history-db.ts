@@ -1,8 +1,75 @@
+import { isKinesisWrapperSupplyId } from "@shared/lib/onchain-supply-probe";
+import { isAmbiguousSupplyPerimeterDay, isKinesisWrapperSupplyCutoverActive } from "@shared/lib/supply-perimeter-changes";
+import { classifySupplyCoverage, parseSupplyObservationProvenance } from "@shared/lib/supply-provenance";
+import type { SupplyObservationProvenance } from "@shared/types/supply";
+import { isDailyStockObservation } from "./dews/native-quantity";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { readCacheWithPolicy, writeCacheWithPolicy, type CachePolicy } from "./db-cache";
 import { chunkArray, executeAtomicBatch } from "./db";
 import { D1_BATCH_SIZE } from "./constants";
 import { SNAPSHOT_SUPPLY_LAST_WRITE_KEY } from "./supply-snapshot-completion";
+
+/** Daily history must use the same program or wrapper perimeter as the current publication. */
+export function matchesCurrentSupplyPerimeter(id: string, day: number, rawProvenance: string | null | undefined, now: number): boolean {
+  if (!isKinesisWrapperSupplyId(id)) return true;
+  const wrapper = isKinesisWrapperSupplyCutoverActive(id, now);
+  const { provenance, invalid } = parseSupplyObservationProvenance(rawProvenance);
+  return !invalid && !isAmbiguousSupplyPerimeterDay(id, day) && isKinesisWrapperSupplyCutoverActive(id, day) === wrapper &&
+    (provenance?.supplySource === "onchain-total-supply") === wrapper;
+}
+
+export interface HistoricalSupplyQuantityRow {
+  snapshot_date: number;
+  circulating_usd: number;
+  circulating_native: number | null;
+  valuation_price_usd: number | null;
+  valuation_observed_at_sec: number | null;
+  price: number | null;
+  price_observed_at: number | null;
+}
+
+// An independent quote takes precedence over the legacy conversion price and its clock.
+const SUPPLY_HISTORY_INDEPENDENT_QUOTE_PRICE_SQL =
+  "CASE WHEN json_valid(supply_provenance) THEN json_extract(supply_provenance, '$.marketQuote.price') END";
+export const SUPPLY_HISTORY_MARKET_PRICE_SQL =
+  `COALESCE(${SUPPLY_HISTORY_INDEPENDENT_QUOTE_PRICE_SQL}, price)`;
+export const SUPPLY_HISTORY_MARKET_PRICE_CLOCK_SQL =
+  `CASE WHEN (${SUPPLY_HISTORY_INDEPENDENT_QUOTE_PRICE_SQL}) IS NOT NULL
+    THEN json_extract(supply_provenance, '$.marketQuote.observedAt') WHEN price IS NOT NULL THEN price_observed_at END`;
+
+const SUPPLY_HISTORY_SEPARATE_MARKET_QUOTE_SQL =
+  `(circulating_native IS NOT NULL OR CASE WHEN json_valid(supply_provenance)
+    THEN json_type(supply_provenance, '$.nativeQuantityUnavailable') = 'true' END)`;
+
+// The cron supplies the legacy observation clock. Historical backfill preserves the legacy clock as stored.
+export const SUPPLY_HISTORY_REPAIR_MARKET_QUOTE_SQL = `UPDATE supply_history SET
+  price = CASE WHEN ${SUPPLY_HISTORY_SEPARATE_MARKET_QUOTE_SQL} THEN NULL ELSE ?1 END,
+  price_observed_at = CASE WHEN ${SUPPLY_HISTORY_SEPARATE_MARKET_QUOTE_SQL} THEN NULL
+    WHEN ?3 THEN ?2 ELSE price_observed_at END,
+  supply_provenance = CASE WHEN ${SUPPLY_HISTORY_SEPARATE_MARKET_QUOTE_SQL}
+    THEN json_set(supply_provenance, '$.marketQuote', json_object('price', ?1, 'observedAt', ?2))
+    ELSE supply_provenance END
+  WHERE stablecoin_id = ?4 AND snapshot_date = ?5 AND ${SUPPLY_HISTORY_MARKET_PRICE_SQL} IS NULL
+    AND (circulating_native IS NULL OR json_valid(supply_provenance))`;
+
+/** A pre-0306 USD cap can recover its units only at its own observed stock and price clock. */
+export function historicalSupplyQuantity(
+  id: string, pegType: string | undefined, row: HistoricalSupplyQuantityRow,
+  provenance: SupplyObservationProvenance | null, through: number,
+): number | null {
+  if (provenance?.nativeQuantityUnavailable) return null;
+  const native = row.circulating_native;
+  if (native != null) return Number.isFinite(native) && native >= 0 ? native : null;
+  const observedAt = provenance?.supplyObservedAt;
+  if (pegType !== "peggedUSD" || id === "xaut-tether" || isKinesisWrapperSupplyId(id) ||
+    row.valuation_price_usd != null || row.valuation_observed_at_sec != null ||
+    (provenance?.supplySource !== "defillama" && provenance?.supplySource !== "coingecko-fallback") ||
+    classifySupplyCoverage(provenance) !== "complete" ||
+    observedAt == null || !isDailyStockObservation(id, row.snapshot_date, observedAt, through) ||
+    row.price_observed_at !== observedAt || row.price == null || !Number.isFinite(row.price) || row.price <= 0) return null;
+  const recovered = row.circulating_usd / row.price;
+  return Number.isFinite(recovered) && (recovered > 0 || row.circulating_usd === 0) ? recovered : null;
+}
 
 /** Shared D1 SQL for supply_history upserts. */
 const SUPPLY_HISTORY_UPSERT_PREFIX =
@@ -22,9 +89,8 @@ export const SUPPLY_HISTORY_INSERT_MISSING_SQL =
 /**
  * Daily-snapshot upsert: also records the price's actual observation clock
  * (`price_observed_at`, migration 0253) and the observation's validated
- * supply provenance (`supply_provenance` JSON, migration 0287). The admin
- * backfill above leaves both NULL (unknown), so its prices are never
- * mint/burn event-time evidence and its chain coverage is never complete.
+ * supply provenance (`supply_provenance` JSON, migration 0287). The operator
+ * backfill also records clocks and provenance when its historical observations supply them.
  */
 export const SUPPLY_SNAPSHOT_UPSERT_PREFIX =
   "INSERT OR REPLACE INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at, supply_provenance)";

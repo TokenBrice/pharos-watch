@@ -318,7 +318,7 @@ describe("validatePriceCandidate", () => {
     const result = validatePriceCandidate(1.0, context, "dex_observation", freshRefs);
 
     expect(result.accepted).toBe(false);
-    expect(result.reasonCode).toBe("reference_upper_bound_exceeded");
+    expect(result.reasonCode).toBe("fiat_upper_band_requires_corroboration");
   });
 
   it("keeps lower-nominal fiat pegs on bounded fiat validation paths", () => {
@@ -356,7 +356,7 @@ describe("validatePriceCandidate", () => {
     const noReference: PriceValidationReferences = { rates: {}, type: "none", updatedAt: null };
 
     expect(validatePriceCandidate(rate, context, "fallback_enrichment", references).reasonCode).toBe("within_reference_band");
-    expect(validatePriceCandidate(rate * 1.2, context, "fallback_enrichment", references).reasonCode).toBe("reference_upper_bound_exceeded");
+    expect(validatePriceCandidate(rate * 1.2, context, "fallback_enrichment", references).reasonCode).toBe("fiat_upper_band_requires_corroboration");
     expect(validatePriceCandidate(rate, context, "fallback_enrichment", noReference).accepted).toBe(true);
     expect(validatePriceCandidate(1, context, "fallback_enrichment", noReference).reasonCode).toBe("hardcoded_upper_bound_exceeded");
   });
@@ -376,7 +376,7 @@ describe("validatePriceCandidate", () => {
     const nearBoundEur = validatePriceCandidate(1.28, eur, "fallback_enrichment", freshRefs);
 
     expect(highEur.accepted).toBe(false);
-    expect(highEur.reasonCode).toBe("reference_upper_bound_exceeded");
+    expect(highEur.reasonCode).toBe("fiat_upper_band_requires_corroboration");
     expect(highEur.boundsUsed?.max).toBeCloseTo(1.08 * 1.19, 6);
     expect(nearBoundEur.accepted).toBe(true);
 
@@ -432,13 +432,13 @@ describe("validatePriceCandidate", () => {
   });
 
   it("shares fixed-peg evaluation logic with direct reference validation", () => {
-    const context = buildPriceValidationContext({ pegType: "peggedEUR", pegCurrency: "EUR" });
-    const result = validatePriceCandidateAgainstReference(3.0, context, "fallback_enrichment", {
-      price: 1.08,
+    const context = buildPriceValidationContext({ pegType: "peggedJPY", pegCurrency: "JPY" });
+    const result = validatePriceCandidateAgainstReference(1.5071416, context, "historical_backfill", {
+      price: 1,
       type: "fresh",
     });
 
     expect(result.accepted).toBe(false);
-    expect(result.reasonCode).toBe("reference_upper_bound_exceeded");
+    expect(result.reasonCode).toBe("fiat_upper_band_requires_corroboration");
   });
 });

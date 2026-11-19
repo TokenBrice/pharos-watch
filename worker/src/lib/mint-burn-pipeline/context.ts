@@ -8,6 +8,7 @@ import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { protocolParProvider } from "../authoritative-price-sources/protocol-par";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { SUPPLY_HISTORY_MARKET_PRICE_CLOCK_SQL, SUPPLY_HISTORY_MARKET_PRICE_SQL } from "../supply-history-db";
 
 /**
  * Event-time price admission window (DEC-08): a price values an event only when
@@ -226,7 +227,11 @@ async function loadMintBurnPriceHistoryRows(
     const historyInClause = buildInClause(idChunk);
     const priceHistoryRows = await db
       .prepare(
-        `SELECT stablecoin_id, snapshot_date, price, price_observed_at FROM supply_history WHERE stablecoin_id IN (${historyInClause.sql})${snapshotStart.length ? " AND snapshot_date >= ?" : ""} AND price IS NOT NULL AND price_observed_at IS NOT NULL ORDER BY stablecoin_id, snapshot_date ASC`,
+        `SELECT stablecoin_id, snapshot_date, ${SUPPLY_HISTORY_MARKET_PRICE_SQL} AS price,
+           ${SUPPLY_HISTORY_MARKET_PRICE_CLOCK_SQL} AS price_observed_at
+         FROM supply_history WHERE stablecoin_id IN (${historyInClause.sql})${snapshotStart.length ? " AND snapshot_date >= ?" : ""}
+           AND ${SUPPLY_HISTORY_MARKET_PRICE_SQL} IS NOT NULL AND ${SUPPLY_HISTORY_MARKET_PRICE_CLOCK_SQL} IS NOT NULL
+         ORDER BY stablecoin_id, snapshot_date ASC`,
       )
       .bind(...historyInClause.binds, ...snapshotStart)
       .all<SupplyHistoryPriceRow>();

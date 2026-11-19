@@ -49,11 +49,11 @@ export function buildYieldDegradationReasons(params: {
   }
   const benchmarkByKey = new Map(
     selectedSources
-      .filter((source) => source.benchmarkKey !== "USD")
+      .filter((source) => source.benchmarkKey !== "USD" && source.benchmarkRate != null)
       .map((source) => [source.benchmarkKey, source] as const),
   );
   for (const [key, source] of benchmarkByKey) {
-    if (source.benchmarkFreshness === "healthy") continue;
+    if (source.benchmarkFreshness == null || source.benchmarkFreshness === "healthy") continue;
     const reason = source.benchmarkFallbackMode ?? source.benchmarkFreshness;
     degradationReasons.push(`risk-free-rate:${key}:${reason}`);
   }

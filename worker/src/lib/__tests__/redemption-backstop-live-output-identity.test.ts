@@ -15,13 +15,13 @@ afterEach(() => vi.unstubAllGlobals());
 
 const NOW = 1_780_000_000;
 
-// Verified at Ethereum block 25737172: redemptionAvailable() returned
-// 5,000,000.00 against a supply of 22,834,920.56 (config note, reviewed
-// 2026-08-12). The throttle read is the route's direct redeemable bound.
+// The throttle and share supply come from the reviewed Ethereum block 25737172.
+// The synthetic pinned basket below tests a non-par USD value per share.
 const USD3_SUPPLY_USD = 22_834_920.56;
 const REDEMPTION_AVAILABLE_RAW = 5_000_000n * 10n ** 18n;
 const TOTAL_SUPPLY_RAW = 22_834_920_564_803_451_236_744_370n;
 const ONE = 10n ** 18n;
+const BASKET_VALUE_USD = 24_000_000;
 
 const MAIN_SELECTOR = "0xdffeadd0";
 const ASSET_REGISTRY_SELECTOR = "0x979d7e86";
@@ -67,10 +67,10 @@ function usdPrice(): `0x${string}` {
 
 function redemptionBasketQuote(): `0x${string}` {
   const entries: Array<[`0x${string}`, bigint]> = [
-    [SUSDS, 25n * ONE],
-    [STATIC_AAVE_USDC, 25_000_000n],
-    [WCUSDCV3, 25_000_000n],
-    [STEAK_USDC, 25n * ONE],
+    [SUSDS, 6_000_000n * ONE],
+    [STATIC_AAVE_USDC, 6_000_000n * 10n ** 6n],
+    [WCUSDCV3, 6_000_000n * 10n ** 6n],
+    [STEAK_USDC, 6_000_000n * ONE],
   ];
   return encodeAbiParameters(
     [{ type: "address[]" }, { type: "uint256[]" }],
@@ -79,10 +79,8 @@ function redemptionBasketQuote(): `0x${string}` {
 }
 
 /**
- * USD3's capacity is live-only: `reserve-protocol-dtf` reads the RToken's own
- * `redemptionAvailable()` throttle as the direct redeemable bound. The throttle
- * is a USD bound over RToken units and does not observe which receipt tokens the
- * basket pays out, so the unresolved receipt identities cannot gate it.
+ * USD3's live-only capacity combines the RToken's native throttle and verified
+ * full basket valuation at the same block. The payout receipts remain unresolved.
  */
 describe("usd3-reserve-protocol live redemption throttle", () => {
   it("admits the fresh redemptionAvailable() bound instead of rejecting it as an unobserved output identity", async () => {
@@ -94,7 +92,7 @@ describe("usd3-reserve-protocol live redemption throttle", () => {
       block: { number: 25_737_172, timestamp: NOW - 12 },
       rpc: {
         [`${RTOKEN}:${MAIN_SELECTOR}`]: addressWord(MAIN),
-        [`${RTOKEN}:${BASKETS_NEEDED_SELECTOR}`]: 100n * ONE,
+        [`${RTOKEN}:${BASKETS_NEEDED_SELECTOR}`]: BigInt(BASKET_VALUE_USD) * ONE,
         [`${RTOKEN}:${REDEMPTION_AVAILABLE_SELECTOR}`]: REDEMPTION_AVAILABLE_RAW,
         [`${RTOKEN}:${TOTAL_SUPPLY_SELECTOR}`]: TOTAL_SUPPLY_RAW,
         [`${RTOKEN}:${DECIMALS_SELECTOR}`]: 18n,
@@ -122,9 +120,13 @@ describe("usd3-reserve-protocol live redemption throttle", () => {
       },
     };
 
+    const capacityRatioOfSupply = Number(REDEMPTION_AVAILABLE_RAW) / Number(TOTAL_SUPPLY_RAW);
+    const capacityUsd = capacityRatioOfSupply * BASKET_VALUE_USD;
     const run = await runAdapter("reserve-protocol-dtf", coin, { network, nowSec: NOW });
     expect(run.result.metadata?.redemption).toMatchObject({
-      capacityUsd: 5_000_000,
+      capacityUsd: expect.closeTo(capacityUsd, 6),
+      capacityRatioOfSupply: expect.closeTo(capacityRatioOfSupply, 12),
+      sourceTimestamp: NOW - 12,
       capacityKind: "live-direct",
       freshnessKind: "same-run-onchain",
       routeStatus: "open",
@@ -155,8 +157,8 @@ describe("usd3-reserve-protocol live redemption throttle", () => {
 
     expect(entry.capacityRejectionReason).toBeUndefined();
     expect(entry.resolutionState).toBe("resolved");
-    expect(entry.immediateCapacityUsd).toBe(5_000_000);
-    expect(entry.immediateCapacityRatio).toBeCloseTo(5_000_000 / USD3_SUPPLY_USD, 12);
+    expect(entry.immediateCapacityUsd).toBeCloseTo(capacityUsd, 6);
+    expect(entry.immediateCapacityRatio).toBeCloseTo(capacityUsd / USD3_SUPPLY_USD, 12);
     expect(entry.capacityKind).toBe("live-direct");
     expect(entry.score).not.toBeNull();
   });

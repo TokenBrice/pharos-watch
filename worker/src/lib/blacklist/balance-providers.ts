@@ -7,7 +7,8 @@ import {
   type RateLimitedFetch,
   budgetExhausted,
 } from "../evm-logs";
-import { fetchEtherscanProxyHex, fetchJsonRpcHexAtUrl, parseUint256Hex } from "../evm-rpc";
+import { fetchEtherscanProxyHex, fetchEvmUint256AtBlock, fetchJsonRpcHexAtUrl, parseUint256Hex,
+  type RecentFinalizedRpcPin } from "../evm-rpc";
 import { getChainRpc, hasRegistryRpc, registryRpcEndpoints, type ChainRpcConfig } from "../chain-registry";
 import { fetchJsonWithRetry } from "../fetch-retry";
 import { rethrowIfAborted, throwIfAborted } from "../abort";
@@ -22,6 +23,7 @@ interface EvmBalanceOptions {
   deadlineMs?: number;
   onProviderAttempt?: (provider: "drpc" | "chain_rpc" | "etherscan") => void;
   maxRetries?: number;
+  finalizedPin?: RecentFinalizedRpcPin;
 }
 
 async function fetchEvmBalanceAtTag(
@@ -173,6 +175,19 @@ export async function fetchEvmTokenBalanceRaw(
 ): Promise<bigint | null> {
   if (config.chain.evmChainId == null) return null;
   if (blockNumberOrTag !== "latest" && (!Number.isSafeInteger(blockNumberOrTag) || blockNumberOrTag < 0)) return null;
+  const pin = options.finalizedPin;
+  if (pin) {
+    if (blockNumberOrTag !== pin.header.number) return null;
+    return fetchEvmUint256AtBlock(config.chain.chainId, config.contractAddress, encodeBalanceOfCallData(address), blockNumberOrTag, {
+      chainRpcs, signal, deadlineMs: options.deadlineMs, maxRetries: 0, excludeSupplementalRpc: true,
+      stateBlockHash: pin.header.hash, recentStatePin: pin,
+      beforeRequest: () => {
+        if (budgetExhausted(budget)) return false;
+        budget.count++;
+        return true;
+      },
+    });
+  }
 
   // Transport fallback is shared; the caller retains historical/snapshot evidence semantics.
   if (drpcApiKey) {
@@ -224,10 +239,11 @@ export async function fetchEvmTokenBalance(
   budget: SubrequestBudget,
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
+  options: EvmBalanceOptions = { maxRetries: 1 },
 ): Promise<number | null> {
   const raw = await fetchEvmTokenBalanceRaw(
     config, address, blockNumberOrTag, etherscanApiKey, drpcApiKey, rateLimit, budget, signal, chainRpcs,
-    { maxRetries: 1 },
+    options,
   );
   return raw == null ? null : decimalNumberFromBigInt(raw, config.decimals);
 }

@@ -4,13 +4,14 @@ import {
   inferHas24hActivity,
   resolveCoinNetFlow,
   resolvePressureScore,
+  resolvePressureUnavailableNote,
   resolvePressureState,
   resolveNetDirection,
   resolveBaselineDailyNetUsd,
 } from "@shared/lib/mint-burn-coin-helpers";
 import { emptyMintBurnClassificationTally, summarizeMintBurnClassification } from "@shared/lib/mint-burn-classification";
 import { MINT_BURN_NET_SUBSET_MIN_WEIGHT_SHARE as floor, sumMintBurnSignedNets } from "@shared/lib/mint-burn-valuation-display";
-import { MintBurnFlowsResponseSchema, type MintBurnCoinFlow } from "@shared/types/mint-burn";
+import { MintBurnCoinFlowSchema, MintBurnFlowsResponseSchema, type MintBurnCoinFlow } from "@shared/types/mint-burn";
 import { makeInactiveMintBurnFlowCoin, makeMintBurnCoinValuation as valuation24h, makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
 
 const PARTIAL_MINT_SIDE = { completeness: "partial", mintCompleteness: "partial", unpricedMintEventCount: 2 } as const;
@@ -22,6 +23,15 @@ function stubCoin(overrides: Partial<MintBurnCoinFlow> = {}): MintBurnCoinFlow {
     ...overrides,
   });
 }
+
+it("preserves the optional treasury hold without changing legacy pressure parsing", () => {
+  const legacy = makeMintBurnFlowCoin({ pressureShiftScore: 42 });
+  expect(resolvePressureScore(MintBurnCoinFlowSchema.parse(legacy))).toBe(42);
+  const held = MintBurnCoinFlowSchema.parse({ ...legacy, pressureUnavailableReason: "treasury-boundary-unverified" });
+  expect(resolvePressureScore(held)).toBeNull();
+  expect(resolvePressureState(held)).toBe("nr");
+  expect(resolvePressureUnavailableNote(held)).toContain("Treasury-to-holder");
+});
 
 describe("inferHas24hActivity", () => {
   it("keeps classification uncertainty in totals and withholds every derived claim", () => {

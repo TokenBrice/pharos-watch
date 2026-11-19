@@ -13,10 +13,11 @@ describe.each(["USDY", "BUIDL"] as const)("%s Aptos supply", (symbol) => {
   }] } } });
   const read = () => fetchAptosSupply(address, 6, new AbortController().signal, symbol);
   it("reads complete supply and identity at the same observed ledger version", async () => {
-    const fetcher = vi.fn().mockResolvedValueOnce(Response.json(ledger())).mockResolvedValueOnce(Response.json(fixture()))
+    const head = ledger();
+    const fetcher = vi.fn().mockResolvedValueOnce(Response.json(head)).mockResolvedValueOnce(Response.json(fixture()))
       .mockResolvedValueOnce(Response.json(supplyView()));
     vi.stubGlobal("fetch", fetcher);
-    expect(await read()).toBe(1683249289n);
+    expect(await read()).toEqual({ rawSupply: 1683249289n, observedAt: Number(BigInt(head.ledger_timestamp) / 1_000_000n) });
     const url = new URL(fetcher.mock.calls[1][0]);
     expect(decodeURIComponent(url.pathname)).toContain(type);
     expect(url.searchParams.get("ledger_version")).toBe("7764535205");
@@ -47,7 +48,7 @@ describe.each(["USDY", "BUIDL"] as const)("%s Aptos supply", (symbol) => {
     for (const response of [Response.json(supplyView("0")), new Response("unavailable", { status: 503 })]) {
       vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(Response.json(ledger())).mockResolvedValueOnce(Response.json(fixture()))
         .mockResolvedValueOnce(response));
-      if (response.ok) expect(await read()).toBe(0n);
+      if (response.ok) expect(await read()).toMatchObject({ rawSupply: 0n });
       else await expect(read()).rejects.toThrow();
     }
   });

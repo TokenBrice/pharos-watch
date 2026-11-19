@@ -81,7 +81,24 @@ export function getDexMeasuredExecutionFreshnessMaxSec(): number {
   return DEX_MEASURED_FRESHNESS_MAX_SEC;
 }
 
+const DexMeasuredExecutionMarketMarkSchema = /* @__PURE__ */ (() => z.object({
+  stablecoinId: z.string().min(1),
+  priceUsd: z.number().finite().positive(),
+  source: z.string().trim().min(1).max(128),
+  observedAtSec: z.number().int().positive(),
+  observedAtMode: z.literal("upstream").optional(),
+}))();
+
 export const DexMeasuredExecutionObservationHistorySchema = /* @__PURE__ */ (() => ExitRouteObservationHistorySchema
+  .extend({
+    valuationObservations: z.array(z.object({
+      quoteGenerationId: z.string().min(1).max(128),
+      targetCapturedAt: z.number().int().nonnegative().optional(),
+      quotedAt: z.number().int().nonnegative(),
+      tokenIn: DexMeasuredExecutionMarketMarkSchema.optional(),
+      tokenOut: DexMeasuredExecutionMarketMarkSchema.optional(),
+    })).optional(),
+  })
   .superRefine((history, ctx) => {
     if (history.conservativeCapacityCurve.length !== DEX_MEASURED_CAPACITY_NOTIONALS_USD.length) {
       ctx.addIssue({
@@ -95,6 +112,12 @@ export type DexMeasuredExecutionObservationHistory = z.infer<
   typeof DexMeasuredExecutionObservationHistorySchema
 >;
 
+/** Quote-time marks are join evidence and do not belong to the public route history. */
+export function toDexMeasuredExecutionPublicHistory(history: DexMeasuredExecutionObservationHistory) {
+  const { valuationObservations: _valuationObservations, ...publicHistory } = history;
+  return publicHistory;
+}
+
 export function isDexMeasuredExecutionObservationHistoryMature(
   history: DexMeasuredExecutionObservationHistory | null | undefined,
 ): boolean {
@@ -107,6 +130,7 @@ const DexMeasuredExecutionTokenSchema = /* @__PURE__ */ (() => z.object({
   decimals: z.number().int().min(0).max(255),
   referencePriceUsd: z.number().finite().positive(),
   trackedAssetId: z.string().min(1).optional(),
+  marketMark: DexMeasuredExecutionMarketMarkSchema.optional(),
 }))();
 
 /**
@@ -361,7 +385,7 @@ export const DexMeasuredExecutionPublicProfileSchema = /* @__PURE__ */ (() => De
   curveCompositeProof: true,
   uniswapV4PoolProof: true,
 }).extend({
-  observationHistory: DexMeasuredExecutionObservationHistorySchema.optional(),
+  observationHistory: DexMeasuredExecutionObservationHistorySchema.transform(toDexMeasuredExecutionPublicHistory).optional(),
   poolProvenance: DexMeasuredExecutionPoolProvenanceSchema.optional(),
   registryProvenance: DexMeasuredExecutionRegistryProvenanceSchema.optional(),
   stableSwapNgFactoryProvenance: DexMeasuredExecutionStableSwapNgFactoryProvenanceSchema.optional(),
@@ -539,6 +563,22 @@ function relativeDifference(left: number, right: number): number {
   return Math.abs(left / right - 1);
 }
 
+function matchesMeasuredMarketMark(
+  quoted: DexMeasuredExecutionProfile["tokenIn"],
+  target: DexMeasuredExecutionTarget["tokenIn"],
+  capturedAt: number,
+): boolean {
+  const left = quoted.marketMark;
+  const right = target.marketMark;
+  // A legacy writer omitted the mark. The numerical snapshot still has to match,
+  // and closure admission separately requires each quote's own evidence.
+  if (!left) return true;
+  return right != null && left.stablecoinId === right.stablecoinId && left.stablecoinId === target.trackedAssetId &&
+    left.priceUsd === right.priceUsd && left.priceUsd === quoted.referencePriceUsd &&
+    right.priceUsd === target.referencePriceUsd &&
+    left.source === right.source && left.observedAtSec === right.observedAtSec && left.observedAtSec <= capturedAt;
+}
+
 function rawAmountToUsd(rawAmount: string, decimals: number, referencePriceUsd: number): number | null {
   try {
     const amount = BigInt(rawAmount);
@@ -687,6 +727,8 @@ export function validateDexMeasuredExecutionProfile(input: {
     profile.tokenOut.decimals === quotedTarget.tokenOut.decimals &&
     profile.tokenIn.trackedAssetId === quotedTarget.tokenIn.trackedAssetId &&
     profile.tokenOut.trackedAssetId === quotedTarget.tokenOut.trackedAssetId &&
+    matchesMeasuredMarketMark(profile.tokenIn, quotedTarget.tokenIn, quotedTarget.capturedAt) &&
+    matchesMeasuredMarketMark(profile.tokenOut, quotedTarget.tokenOut, quotedTarget.capturedAt) &&
     profile.feePips === quotedTarget.feePips &&
     profile.tickSpacing === quotedTarget.tickSpacing &&
     profile.hookAddress === quotedTarget.hookAddress &&

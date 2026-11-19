@@ -23,7 +23,7 @@ import {
   pickPeakCandidate,
   type PromotionDecisionInput,
 } from "./pending-depeg-confirmation";
-import { getPendingExpiryLimitSec } from "../lib/depeg-pending";
+import { getPendingExpiryLimitSec, readPendingObservationReceipt, type DepegObservationReceipt } from "../lib/depeg-pending";
 
 const TEMPORAL_CONFIRMATION_LABEL = `temporal:${Math.round(DEPEG_PENDING_MIN_AGE_SEC / 60)}m`;
 
@@ -52,36 +52,61 @@ export function evaluatePromotionDecision(args: PromotionDecisionInput): D1Prepa
   const nativeOriginSampleWithheld = isNativeOrigin && plan.nativeQuoteImplausibility != null;
   const hasSourceConfirmation =
     !nativeOriginSampleWithheld &&
-    (primaryConfirmationSources.length >= (isNativeOrigin ? 1 : 2) ||
+    (plan.independentConfirmation != null || primaryConfirmationSources.length >= (isNativeOrigin ? 1 : 2) ||
       hasHardConfirmation ||
       (evidence.offchainStatus === "confirm" && !parsePendingReason(pendingState.reason).has("low-confidence")));
   if (temporalSameDirectionConfirmed && hasSourceConfirmation) {
+    const startedAt = plan.eventStartedAt ?? pendingState.firstSeenAt;
     const currentSignal =
       authoritativePrice != null
         ? deriveDepegSignal(authoritativePrice, pegReference)
         : null;
     const currentDirectionalSignal =
-      classifyDirectionalSignal(currentSignal, threshold, pendingState.direction) === "confirm"
+      classifyDirectionalSignal(currentSignal, threshold, pendingState.direction, plan.recoveryThreshold) === "confirm"
         ? currentSignal
         : null;
+    const pendingReceipt = readPendingObservationReceipt(row.peer_basis_json);
+    const trustedObservationAt = plan.trustedObservationAt != null &&
+      plan.trustedObservationAt >= startedAt && plan.trustedObservationAt <= now
+      ? plan.trustedObservationAt : pendingState.lastSeenAt;
+    const currentCorroboration = plan.independentConfirmation?.peerReceipt
+      ? JSON.parse(plan.independentConfirmation.peerReceipt) as unknown : undefined;
+    const currentReceipt: DepegObservationReceipt | null = currentDirectionalSignal && authoritativePrice != null
+      ? {
+          basis: isNativeOrigin ? "native-peg" : currentCorroboration ? "peer-relative" : "benchmark",
+          observedAt: trustedObservationAt,
+          price: authoritativePrice,
+          pegReference,
+          bps: currentDirectionalSignal.rawBps,
+          venue: isNativeOrigin ? plan.nativePegQuote?.derivation?.lineage.venue : undefined,
+          corroboration: currentCorroboration,
+        }
+      : null;
     const quoteDomain = pendingPeakQuoteDomain(row, pendingState);
+    const rawPendingPeak = pendingState.peakPegReference != null
+      ? deriveDepegSignal(pendingState.peakPrice, pendingState.peakPegReference)?.rawBps : undefined;
+    const pendingPeak = { bps: rawPendingPeak ?? pendingState.peakSeenBps, price: pendingState.peakPrice, quoteDomain,
+      pegReference: pendingState.peakPegReference ?? (isNativeOrigin || row.peg_type === "peggedUSD" ? 1 : null),
+      receipt: pendingState.peakPegReference != null ? pendingReceipt?.peak : null };
     const peak = pickPeakCandidate(
       [
-        { bps: pendingState.peakSeenBps, price: pendingState.peakPrice, quoteDomain },
-        { bps: currentDirectionalSignal?.bps, price: authoritativePrice, quoteDomain },
+        pendingPeak,
+        { bps: currentDirectionalSignal?.rawBps, price: authoritativePrice, quoteDomain, pegReference, receipt: currentReceipt },
         ...(evidence.offchainPeakCandidate ? [evidence.offchainPeakCandidate] : []),
         ...(evidence.cexPeakCandidate ? [evidence.cexPeakCandidate] : []),
         ...evidence.dexPeakCandidates,
         ...(evidence.poolStatus === "confirm" ? evidence.poolConfirmations.map((confirmation) => ({
-          bps: confirmation.signal.bps,
+          bps: confirmation.signal.rawBps,
+          pegReference,
           price: confirmation.pool.price,
           quoteDomain: "usd" as const,
         })) : []),
       ],
-      { bps: pendingState.peakSeenBps, price: pendingState.peakPrice, quoteDomain },
+      pendingPeak,
     );
     const confirmedBy = confirmationSourceList(
       TEMPORAL_CONFIRMATION_LABEL,
+      plan.independentConfirmation?.source,
       primaryConfirmationSources,
       evidence.offchainStatus === "confirm" ? evidence.offchainSourceKey : null,
       evidence.dexStatus === "confirm" ? evidence.dexConfirmationKeys : [],
@@ -92,36 +117,48 @@ export function evaluatePromotionDecision(args: PromotionDecisionInput): D1Prepa
     );
     // The outcome ledger records the same agreeing families as the event and
     // its decision reason, including the primary families that admitted it.
-    const outcomeEvidence = primaryConfirmationSources.length === 0
-      ? evidence
-      : { ...evidence, confirmingSources: [...evidence.confirmingSources, ...primaryConfirmationSources] };
+    const outcomeEvidence = { ...evidence, confirmingSources: [...evidence.confirmingSources, ...primaryConfirmationSources,
+      ...(plan.independentConfirmation ? [plan.independentConfirmation.source] : [])] };
     const event: DepegEvent = {
       id: 0,
       stablecoinId: row.stablecoin_id,
       symbol: row.symbol,
       pegType: row.peg_type,
       direction: pendingState.direction,
-      peakDeviationBps: peak.bps,
-      startedAt: pendingState.firstSeenAt,
+      peakDeviationBps: Math.round(peak.bps),
+      startedAt,
       endedAt: null,
       startPrice: pendingState.firstPrice,
       peakPrice: peak.price,
+      peakPegReference: peak.pegReference ?? undefined,
+      peakQuoteDomain: peak.quoteDomain === "usd" ? "usd" : "native-peg",
       recoveryPrice: null,
-      pegReference,
+      pegReference: pendingState.pegReference,
       source: "live",
       confirmationSources: confirmedBy || null,
       pendingReason: pendingState.reason,
       closeReason: null,
       provenance: null,
-      // The confirmation run observes this endpoint, not every instant of pending history.
-      priceCoverage: { intervals: [[now, now]], lastTrustedObservationAt: now, gapStartedAt: null },
+      ...(pendingReceipt?.onset && (pendingReceipt.onset.basis === "native-peg" || pendingReceipt.onset.basis === "peer-relative") &&
+        pendingReceipt.onset.observedAt === startedAt ? {
+          admittedCoverage: trustedObservationAt > startedAt + 1
+            ? [{ fromSec: startedAt, toSec: startedAt + 1 },
+              { fromSec: trustedObservationAt, toSec: trustedObservationAt + 1 }]
+            : [{ fromSec: startedAt, toSec: Math.max(trustedObservationAt, startedAt) + 1 }],
+        } : {}),
+      priceCoverage: {
+        intervals: [[trustedObservationAt, trustedObservationAt]], lastTrustedObservationAt: trustedObservationAt, gapStartedAt: null,
+      },
     };
 
     logWorkerEventArgs("handler", "info",
       `[depeg-confirm] PROMOTED ${row.symbol}: ${pendingState.firstSeenBps}bps confirmed by ${confirmedBy || "(none)"}${pendingState.reason ? ` (${pendingState.reason})` : ""}`
     );
+    const eventReceipt = pendingReceipt || plan.independentConfirmation?.nativeReceipt || currentCorroboration || peak.receipt
+      ? JSON.stringify({ onset: pendingReceipt?.onset, latest: pendingReceipt?.latest, peak: peak.receipt ?? null, confirmation: plan.independentConfirmation?.nativeReceipt ?? currentCorroboration })
+      : null;
     return [
-      buildInsertDepegEventStmt(db, event),
+      buildInsertDepegEventStmt(db, event, eventReceipt),
       buildPendingOutcomeStmt(
         db,
         row,
@@ -139,12 +176,12 @@ export function evaluatePromotionDecision(args: PromotionDecisionInput): D1Prepa
   const hasSameDirectionConfirmation = statuses.includes("confirm") || evidence.dexConfirmationVeto === true;
   const hasOpposingEvidence =
     statuses.some(isOpposingConfirmationStatus) ||
-    (isNativeOrigin && isOpposingConfirmationStatus(primaryStatus));
+    ((isNativeOrigin || plan.independentBasis) && isOpposingConfirmationStatus(primaryStatus));
   const canRejectOpposingEvidence =
     hasOpposingEvidence &&
     !hasSameDirectionConfirmation &&
     (!primarySameDirectionDepegged || evidence.hardOpposingSources.length >= 2);
-  const isExpired = age > DEPEG_PENDING_EXPIRY_SEC;
+  const isExpired = age > DEPEG_PENDING_EXPIRY_SEC && !plan.preserveUntilReopen;
   const expiryLimitSec = getPendingExpiryLimitSec({
     primarySameDirectionDepegged,
     isExtremeMove: isExtremeMovePending(pendingState.reason),

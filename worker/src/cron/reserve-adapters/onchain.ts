@@ -1,5 +1,6 @@
 import { createAdapterJsonRequestExecutor } from "./request";
-import { encodeBalanceOfCallData, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
+import { decodeFunctionResult, encodeFunctionData, parseAbi, toFunctionSelector } from "viem/utils";
+import { DECIMALS_SELECTOR, encodeBalanceOfCallData, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
 import {
   fetchEtherscanUint256AtBlock,
   fetchEvmMulticall3Aggregate3AtBlock,
@@ -467,6 +468,59 @@ const TRON_ZERO_OWNER_ADDRESS_HEX41 = "41000000000000000000000000000000000000000
 interface TronTriggerConstantContractResponse {
   result?: { result?: boolean };
   constant_result?: string[];
+  transaction?: { ret?: { ret?: string }[] };
+}
+
+// TRON mainnet uses a chain-specific Multicall3 deployment.
+// https://tronscan.org/#/contract/TEazPvZwDjDtFeJupyo7QunvnrnUjPH8ED/code
+const TRON_MULTICALL3 = "0x32a4f47a74a6810bd0bf861cabab99656a75de9e";
+const TRON_MULTICALL3_ABI = parseAbi([
+  "function aggregate((address target, bytes callData)[] calls) view returns (uint256 blockNumber, bytes[] returnData)",
+]);
+
+/** Read supply, decimals and the executing block clock in the same solidified TVM simulation. */
+export async function fetchTronStateBoundErc20TotalSupply(
+  contractAddress: string,
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<{ raw: bigint; decimals: number; observedAt: number } | null> {
+  if (ctx?.observedBlock?.chain === "tron") return null;
+  const token = await tronBase58ToHex(contractAddress);
+  if (!token) return null;
+  const calldata = encodeFunctionData({
+    abi: TRON_MULTICALL3_ABI,
+    functionName: "aggregate",
+    args: [[
+      { target: token as `0x${string}`, callData: TOTAL_SUPPLY_SELECTOR },
+      { target: token as `0x${string}`, callData: DECIMALS_SELECTOR },
+      { target: TRON_MULTICALL3, callData: toFunctionSelector("getCurrentBlockTimestamp()") },
+    ]],
+  });
+  return readTronConstantContract(
+    "/walletsolidity/triggerconstantcontract",
+    {
+      owner_address: TRON_ZERO_OWNER_ADDRESS_HEX41,
+      contract_address: `41${TRON_MULTICALL3.slice(2)}`,
+      function_selector: "aggregate((address,bytes)[])",
+      parameter: calldata.slice(10),
+      visible: false,
+    },
+    signal,
+    ctx,
+    (result) => {
+      const [blockNumber, values] = decodeFunctionResult({
+        abi: TRON_MULTICALL3_ABI,
+        functionName: "aggregate",
+        data: `0x${result}`,
+      });
+      if (blockNumber <= 0n || values.length !== 3 || values.some((value) => !/^0x[0-9a-f]{64}$/i.test(value))) return null;
+      const raw = BigInt(values[0]!);
+      const decimals = Number(BigInt(values[1]!));
+      const observedAt = Number(BigInt(values[2]!));
+      return decimals <= 255 && Number.isSafeInteger(observedAt) && observedAt > 0
+        ? { raw, decimals, observedAt } : null;
+    },
+  );
 }
 
 /**
@@ -486,25 +540,35 @@ export async function fetchTronErc20TotalSupply(
   if (!contractHex) return null;
   const contractHex41 = `41${contractHex.slice(2)}`;
 
-  const headers: Record<string, string> = {};
-  if (ctx?.trongridApiKey) headers["TRON-PRO-API-KEY"] = ctx.trongridApiKey;
-
-  const request = {
+  return readTronConstantContract("/wallet/triggerconstantcontract", {
     owner_address: TRON_ZERO_OWNER_ADDRESS_HEX41,
     contract_address: contractHex41,
     function_selector: TRON_TOTAL_SUPPLY_FUNCTION_SELECTOR,
     parameter: "",
     visible: false,
-  };
-  for (const provider of ctx?.dwellirNative ? ["dwellir", "trongrid"] : ["trongrid"]) {
+  }, signal, ctx, (raw) => BigInt(`0x${raw}`));
+}
+
+async function readTronConstantContract<T>(
+  path: "/wallet/triggerconstantcontract" | "/walletsolidity/triggerconstantcontract",
+  request: Record<string, unknown>,
+  signal: AbortSignal,
+  ctx: AdapterContext | undefined,
+  decode: (result: string) => T | null,
+): Promise<T | null> {
+  const headers: Record<string, string> = {};
+  if (ctx?.trongridApiKey) headers["TRON-PRO-API-KEY"] = ctx.trongridApiKey;
+
+  const useDwellir = ctx?.dwellirNative && path === "/wallet/triggerconstantcontract";
+  for (const provider of useDwellir ? ["dwellir", "trongrid"] : ["trongrid"]) {
     throwIfAborted(signal);
     try {
       const json = provider === "dwellir"
         ? await ctx!.dwellirNative!.readJson<TronTriggerConstantContractResponse>(
-          "tron", "/wallet/triggerconstantcontract", signal, createAdapterJsonRequestExecutor(ctx), request,
+          "tron", path, signal, createAdapterJsonRequestExecutor(ctx), request,
         )
         : await fetchJsonPostWithRetry<TronTriggerConstantContractResponse>(
-          "https://api.trongrid.io/wallet/triggerconstantcontract",
+          `https://api.trongrid.io${path}`,
           request,
           signal,
           10_000,
@@ -512,10 +576,11 @@ export async function fetchTronErc20TotalSupply(
           { headers },
         );
 
-      if (json.result?.result !== true) continue;
+      if (json.result?.result !== true || json.transaction?.ret?.[0]?.ret === "FAILED") continue;
       const raw = json.constant_result?.[0];
-      if (!raw) continue;
-      return BigInt(`0x${raw}`);
+      if (typeof raw !== "string" || !/^[0-9a-f]+$/i.test(raw)) continue;
+      const decoded = decode(raw);
+      if (decoded != null) return decoded;
     } catch (error) {
       rethrowIfAborted(error, signal);
     }

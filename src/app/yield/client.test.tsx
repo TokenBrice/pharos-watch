@@ -400,6 +400,28 @@ describe("YieldClient", () => {
     expect(props).toHaveProperty("benchmarkAgeEvidence");
   });
 
+  it.each([false, true])("uses an effective Treasury comparison only when a comparable row is visible (xGLD only=%s)", (xgldOnly) => {
+    const response = makeResponse();
+    const xgld = projectYieldRankingsSummary({
+      ...response,
+      rankings: [makeYieldRanking({
+        id: "xgld-unitas", safetyScore: 80,
+        provenance: makeYieldProvenance({ sourceKey: "onchain:xgld-unitas" }),
+      })],
+    }).rankings[0];
+    useYieldRankingsSummaryMock.mockReturnValue({
+      data: {
+        ...response,
+        rankings: xgldOnly ? [xgld] : [xgld, ...response.rankings],
+        riskFreeRate: 4.04,
+        benchmarks: { USD: { key: "USD", rate: 4, source: "fred-dgs3mo", isFallback: false } },
+      },
+      meta: null, isLoading: false, error: null, dataUpdatedAt: 1_776_000_000, refetch: vi.fn(),
+    });
+    render(<YieldClient />);
+    expect(scatterPropsMock.mock.calls.at(-1)?.[0]).toMatchObject({ benchmarkRate: xgldOnly ? null : 4.04 });
+  });
+
   it("keeps the build-static adapter manifest out of live freshness aggregation", () => {
     render(<YieldClient />);
 

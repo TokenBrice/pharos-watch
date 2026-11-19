@@ -8,6 +8,7 @@ import {
   getYieldBenchmarkGapReferenceText,
   resolveYieldRowBenchmark,
 } from "@/lib/yield-benchmark";
+import { hasYieldBenchmarkUnitMismatch } from "@shared/lib/yield-benchmark-freshness";
 import { getYieldDataSourceMeta } from "@/lib/yield-data-source";
 import { buildYieldPresentationContext, buildYieldPysBreakdown } from "@/lib/yield-presentation-context";
 import {
@@ -131,6 +132,7 @@ export function buildYieldDetailModel(
     }),
   );
   const resolvedBenchmark = resolveYieldRowBenchmark(ranking, rankingResponse.benchmarks, rankingResponse.riskFreeRate);
+  const benchmarkUnitMismatch = hasYieldBenchmarkUnitMismatch(ranking);
   const sourceExplorer = buildYieldSourceExplorerModel(ranking, sourceClock);
   const availableSourceKeys = new Set(sourceExplorer.historySources.map((source) => source.sourceKey));
   const validatedSourceKeys = [...requestedSourceKeys].filter((sourceKey) => availableSourceKeys.has(sourceKey));
@@ -138,9 +140,9 @@ export function buildYieldDetailModel(
   return {
     status: "ready",
     ranking,
-    benchmarkSubtitle: getYieldBenchmarkGapReferenceText(ranking, { includePeriod: false }),
+    benchmarkSubtitle: benchmarkUnitMismatch ? resolvedBenchmark.label : getYieldBenchmarkGapReferenceText(ranking, { includePeriod: false }),
     benchmarkRate: resolvedBenchmark.rate,
-    medianApy: rankingResponse.medianApy ?? null,
+    medianApy: benchmarkUnitMismatch ? null : rankingResponse.medianApy ?? null,
     benchmarkIsFallback: resolvedBenchmark.isFallback,
     sourceExplorer,
     sourceDepthLens: sourceExplorer.sourceDepthLens,

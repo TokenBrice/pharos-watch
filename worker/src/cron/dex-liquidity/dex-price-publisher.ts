@@ -4,11 +4,17 @@ import { relativeBps } from "@shared/lib/depeg-signals";
 import { DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { executeAtomicBatch } from "../../lib/db";
+import { DEX_PROTOCOL_SOURCE_MIN_TVL_USD } from "../../lib/dex-cron-constants";
+import { isFreshDexPoolObservation } from "../../lib/depeg-trust-policy";
+import { validatePricingSourceFreshness } from "../../lib/pricing-source-freshness";
 import { logWorkerEvent, logWorkerEventArgs } from "../../lib/structured-log";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { DexPriceObs, LiquidityMetrics } from "./types";
 import { dexPriceConfidenceForSourceFamily } from "./constants";
-import { isPlausibleDexObservationPrice } from "./price-sanity";
+import { classifyDexObservationPrice } from "./price-sanity";
+import { admitsRollbackDexVote, configuredPrimaryUpstreamKeys, getDexGroupLineage, getDexObservationLineage, selectIndependentChallengerPools, type DexPriceLineage } from "./price-lineage";
+import { pricesAgreeWithinBps } from "../../lib/price-divergence";
+import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
 import { dexPriceEvidenceWeight } from "./coingecko-tickers-shared";
 import { aggregateProtocolSources, buildDexPriceObservationsFromRetainedPools, collapseDuplicateObservations, hasDexPricePrimaryReference, oldestPriceObservation } from "./scoring-helpers";
 import { DEX_LIQUIDITY_SCORING_BATCH_SIZE, assertCurrentDexScoringGeneration, flushScoringStatements, pruneExpiredDexPriceStages, type DexPriceStageRetentionResult } from "./dex-scoring-stage-store";
@@ -16,6 +22,34 @@ import { DEX_LIQUIDITY_SCORING_BATCH_SIZE, assertCurrentDexScoringGeneration, fl
 const PRIMARY_PRICE_OUTLIER_MAX_DEVIATION_RATIO = 2.5;
 const DISPLAY_PRICE_RATIO_MIN = 0.5,
   DISPLAY_PRICE_RATIO_MAX = 2.0;
+
+/** The rollback reader gates independent votes on this clock and ignores lineage. */
+function projectAggregateClock(clock: number | null, lineage: DexPriceLineage | null, claimedKeys: ReadonlySet<string>) {
+  return clock != null && !admitsRollbackDexVote(lineage?.upstreamKeys, claimedKeys)
+    ? { aggregateObservedAt: null, displayAggregateObservedAt: clock }
+    : { aggregateObservedAt: clock };
+}
+
+function projectProtocolSources(
+  sources: ReturnType<typeof aggregateProtocolSources>, clock: number | null, primaryKeys: ReadonlySet<string>, nowSec: number,
+) {
+  const admissible = new Set(sources.filter((source) => admitsRollbackDexVote(source.upstreamKeys, primaryKeys)));
+  const current = new Set(sources.filter((source) => source.tvl >= DEX_PROTOCOL_SOURCE_MIN_TVL_USD &&
+    isFreshDexPoolObservation(source.observedAt, nowSec) &&
+    validatePricingSourceFreshness({ source: `${source.protocol}-dex`, observedAt: source.observedAt, nowSec }).accepted));
+  const currentKeys = new Set([...admissible].flatMap((source) => current.has(source) ? source.upstreamKeys ?? [] : []));
+  // A stale, unregistered, or thin protocol cannot link otherwise independent current sources.
+  const candidates = [...admissible].filter((source) => current.has(source) || admitsRollbackDexVote(source.upstreamKeys, currentKeys));
+  const selected = new Set(selectIndependentChallengerPools(candidates, (source) => current.has(source) ? source.observedAt! : 0));
+  const displaySources = sources.map((source) => clock == null ? source : { ...source, ...(selected.has(source)
+    ? { aggregateObservedAt: clock }
+    : { aggregateObservedAt: null, displayAggregateObservedAt: clock }) });
+  // Keep complete current receipts for readers that can check which upstreams supplied the primary quote.
+  const lineageSources = sources.filter((source) => source.upstreamKeys?.length &&
+    (selected.has(source) || (current.has(source) && !admissible.has(source))))
+    .map((source) => clock == null ? source : { ...source, aggregateObservedAt: clock });
+  return { displaySources, votingSources: displaySources.filter((_, index) => selected.has(sources[index]!)), lineageSources };
+}
 
 // The completeness fence compares the generation's row counts against the
 // generation's own recorded expectation, not the running bundle's active
@@ -176,11 +210,19 @@ export async function computeDexPrices({
     // enter dex_prices while merely being hidden from price_sources_json.
     const plausibleObservations: DexPriceObs[] = [];
     const rejectedObservations: DexPriceObs[] = [];
+    const admittedAtSec = Math.max(nowSec, admissionNowSec);
+    const currentLineage = collapsedObservations.flatMap((row) => {
+      const lineage = getDexObservationLineage(row);
+      return lineage && row.observedAt != null && row.observedAt <= admittedAtSec &&
+        admittedAtSec - row.observedAt < DEX_FRESHNESS_SEC ? [{ row, lineage }] : [];
+    });
     for (const observation of collapsedObservations) {
-      (isPlausibleDexObservationPrice(id, observation.price, references)
-        ? plausibleObservations
-        : rejectedObservations
-      ).push(observation);
+      const status = classifyDexObservationPrice(id, observation.price, references);
+      const deciding = status === "provisional" ? currentLineage.find(({ row }) => row === observation) : undefined;
+      const corroborated = deciding && currentLineage.some(({ row, lineage }) =>
+        pricesAgreeWithinBps(row.price, observation.price, DIVERGENCE_THRESHOLD_BPS) &&
+        lineage.upstreamKeys.every((key) => !deciding.lineage.upstreamKeys.includes(key)));
+      (status === "accepted" || corroborated ? plausibleObservations : rejectedObservations).push(observation);
     }
     if (rejectedObservations.length > 0) {
       rejectedObservationCount += rejectedObservations.length;
@@ -224,7 +266,6 @@ export async function computeDexPrices({
     }
     observedIds.add(id);
 
-    const admittedAtSec = Math.max(nowSec, admissionNowSec);
     const inBudgetObservations = plausibleObservations.filter((observation) =>
       typeof observation.observedAt === "number" && Number.isFinite(observation.observedAt) &&
       observation.observedAt > 0 && observation.observedAt <= admittedAtSec &&
@@ -283,11 +324,25 @@ export async function computeDexPrices({
     // The clock covers every published input (price, count, TVL), not the display-source filter.
     const aggregateObservedAt = oldestPriceObservation(publishedObservations);
     const protocolSources = aggregateProtocolSources(sanePriceObs);
-    if (aggregateObservedAt != null) {
-      for (const source of protocolSources) source.aggregateObservedAt = aggregateObservedAt;
-    }
-
+    const lineage = getDexGroupLineage(medianInputObs);
+    const countedLineage = publishedObservations === medianInputObs ? lineage : getDexGroupLineage(publishedObservations);
     const meta = TRACKED_META_BY_ID.get(id);
+    const primaryKeys = configuredPrimaryUpstreamKeys(id);
+    // The old fallback reads protocol prices even when their voting clock is withheld.
+    const { displaySources, votingSources, lineageSources } = projectProtocolSources(protocolSources, aggregateObservedAt, primaryKeys, admittedAtSec);
+    const hasDisplayOnlySources = votingSources.length !== displaySources.length;
+    // Main also treats protocol sources as individual fallback challengers.
+    const sources = votingSources.filter((source) => source.upstreamKeys === undefined);
+    const priceSources = {
+      ...(hasDisplayOnlySources && aggregateObservedAt != null
+        ? { aggregateObservedAt: null, displayAggregateObservedAt: aggregateObservedAt }
+        : projectAggregateClock(aggregateObservedAt, lineage, primaryKeys)),
+      sources,
+      ...(lineageSources.length > 0 && { lineageSources }),
+      ...(sources.length !== displaySources.length && { displaySources }),
+      ...(lineage && { pricePoolKeys: lineage.pricePoolKeys, upstreamKeys: lineage.upstreamKeys }),
+      aggregateContributors: countedLineage?.aggregateContributors ?? [],
+    };
     const symbol = meta?.symbol ?? id;
 
     await queuePriceStatement(
@@ -318,9 +373,7 @@ export async function computeDexPrices({
           Math.round(totalTvl),
           deviationBps,
           primaryPrice,
-          JSON.stringify(protocolSources.length === 0 && aggregateObservedAt != null
-            ? { aggregateObservedAt, sources: [] }
-            : protocolSources),
+          JSON.stringify(priceSources),
           nowSec,
           generationId,
         ),

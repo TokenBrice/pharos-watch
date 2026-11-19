@@ -217,6 +217,23 @@ describe("fetchEvmTokenBalanceRaw", () => {
     expect(onProviderAttempt).toHaveBeenCalledExactlyOnceWith(provider);
   });
 
+  it.each([["0x00", 0n], [null, null]] as const)("reads pinned state without an unpinned fallback for %s", async (result, expected) => {
+    const now = Math.floor(Date.now() / 1000);
+    const header = { number: 100, timestamp: now - 1, hash: `0x${"a".repeat(64)}` as const };
+    const fetchMock = mockFetch([{ match: "chain-rpc.test", body: { jsonrpc: "2.0", id: 1, result } }], { requireMatch: true });
+    const budget = createBudget(10);
+    expect(await fetchEvmTokenBalanceRaw(
+      ethereumConfig, "0x0000000000000000000000000000000000000abc", header.number,
+      "etherscan-key", "drpc-key", async (fn) => fn(), budget,
+      undefined, chainRpcFixture(["https://chain-rpc.test"]),
+      { finalizedPin: { chainId: "ethereum", header, finalized: header, observedAtSec: now, maxAgeSec: 300 } },
+    )).toBe(expected);
+    const history = fetchMock.getHistory();
+    expect(history).toHaveLength(1);
+    expect(JSON.parse(history[0]!.body!).params[1]).toEqual({ blockHash: header.hash, requireCanonical: true });
+    expect(budget.count).toBe(1);
+  });
+
   it.each(["0x", "-1", "0xzz", "0x" + "ff".repeat(33)])("rejects invalid uint256 %s and tries the next provider", async (result) => {
     const fetchMock = mockFetch([
       { match: "drpc.org", body: { id: 1, result } },

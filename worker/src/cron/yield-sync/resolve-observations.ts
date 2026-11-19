@@ -12,7 +12,7 @@ import { YIELD_VARIANT_MAP } from "../../lib/yield-config/yield-config-variants"
 import { YIELD_WEIGHTED_POOL_GROUPS } from "../../lib/yield-config/yield-config-weighted-pools";
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import { INTENTIONAL_GAP_REASONS } from "../../lib/yield-config/yield-config-rate-sources";
-import { resolveBenchmarkForStablecoin, type ParsedYieldBenchmarkRegistry } from "./benchmarks";
+import type { ParsedYieldBenchmarkRegistry } from "./benchmarks";
 import { STANDALONE_TRACKED_OPTIONAL_SOURCE_REGISTRY, TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID } from "./sources-optional";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { throwIfAborted } from "../../lib/abort";
@@ -164,6 +164,7 @@ export async function resolveTrackedYieldSources(params: {
         startSec: params.startSec,
         nativePoolId,
         sourceTvlUsd,
+        returnDenomination: rateConfig.returnDenomination,
       });
       if (observation.source) {
         resolved.push({ id, symbol, yield: observation.source });
@@ -238,6 +239,7 @@ export async function resolveTrackedYieldSources(params: {
           dataSource: "defillama",
           exchangeRate: null,
           sourceKey: fullPool.pool,
+          sourceObservedAt: null,
           yieldSource: isVariantPool ? variant.yieldSource : undefined,
           yieldType: resolveYieldTypeLabel({
             id,
@@ -297,12 +299,9 @@ export async function resolveTrackedYieldSources(params: {
         benchmarkCurrency: null,
         nowSec: params.startSec,
       });
-      const benchmarkSelection = resolveBenchmarkForStablecoin({
-        stablecoinId: id,
-        benchmarks: params.riskFreeRates,
-        benchmarkCurrency: dependencies.productKey,
-      });
-      const rateDerived = deriveBenchmarkRateYield(rateDerivedConfig, benchmarkSelection.meta);
+      const rateDerived = dependencies.productKey && dependencies.productMeta
+        ? deriveBenchmarkRateYield(rateDerivedConfig, dependencies.productKey, dependencies.productMeta)
+        : null;
       if (rateDerived) {
         resolved.push({ id, symbol, yield: rateDerived });
         hasAnySource = true;

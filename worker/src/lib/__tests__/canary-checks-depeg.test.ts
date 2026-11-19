@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { pendingClosureRevision } from "../depeg-pending";
+import { makePendingDepegRow } from "../../test-helpers/pending-depeg-fixtures";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
@@ -240,14 +242,35 @@ describe("depeg canary checks", () => {
     });
   });
 
-  it.each([[9_060, 0], [2e5, 1]])("exempts metal-market holds; a gap %ss old stays blind: %s", async (age, blind) => {
-    const db = pending({ severe_recent: 0 }, [{ stablecoin_id: "xaut-tether", first_seen_at: NOW - age, reason: "large-cap" }]);
-    expect(await checkDepegPendingConfirmation(db, NOW)).toMatchObject({ status: blind ? "error" : "ok", metadata: { referenceMarketHeldCount: 1 } });
+  it.each([
+    [9_060, 0, "fresh", "large-cap"],
+    [9_060, 0, "expired", "large-cap"],
+    [9_060, 0, "renewed-marker", "large-cap"],
+    [9_060, 0, "legacy-write", "large-cap"],
+    [9_060, 0, "missing", "large-cap"],
+    [200_000, 1, "fresh", "large-cap"],
+    [200_000, 1, "fresh", "large-cap+extreme-move"],
+  ] as const)("requires a recent candidate-specific hold for age %s with %s blind events and %s verdict", async (age, blind, verdict, reason) => {
+    const heldAt = verdict === "missing" ? null : (verdict === "expired" || verdict === "renewed-marker") ? NOW - 901 : NOW - 60;
+    const row = makePendingDepegRow({ stablecoin_id: "xaut-tether", first_seen_at: NOW - age,
+      reason, reference_market_held_at: heldAt });
+    const db = pending({ severe_recent: 0 }, [{ ...row, peer_basis_json: JSON.stringify({ closureRevision: pendingClosureRevision(row) }),
+      ...(verdict === "renewed-marker" && { reference_market_held_at: NOW - 60 }),
+      ...(verdict === "legacy-write" && { last_price: 0.75 }) }]);
+    const exempted = verdict === "fresh" && age === 9_060;
+    expect(await checkDepegPendingConfirmation(db, NOW)).toMatchObject({
+      status: exempted ? "ok" : "error", metadata: { referenceMarketHeldCount: exempted ? 1 : 0 },
+    });
     const now = Date.UTC(2026, 10, 15, 16) / 1000;
     const { db: events, sqlite } = fixtures.open();
     sqlite.prepare(`INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price,
       peg_reference, last_trusted_price_at) VALUES ('xaut-tether', 'XAUT', 'peggedGOLD', 'below', -200, ?, 3800, 3880, ?)`).run(now - 3e5, now - age);
+    const close = Date.UTC(2026, 10, 13, 22) / 1000;
+    sqlite.prepare("UPDATE depeg_events SET price_coverage_gap_started_at = ?").run(close + 60);
     expect(await checkDepegOpenCoverage(events, now)).toMatchObject({ metadata: { blindEventCount: blind } });
+    if (blind) expect(await checkDepegOpenCoverage(events, close + 60)).toMatchObject({
+      metadata: { blindEventCount: 1 },
+    });
   });
 
   it("names open events whose trusted price stopped advancing", async () => {

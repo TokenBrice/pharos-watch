@@ -19,7 +19,11 @@ import { createD1CostTracker } from "../lib/d1-cost";
 import { loadStablecoinsIntake } from "./sync-stablecoins/intake";
 import { syncViaCoingeckoFallback } from "./sync-stablecoins/fallback";
 
+const PUBLISH_FX_REFERENCE_EVIDENCE = false;
+
 export interface SyncStablecoinsOptions {
+  /** Enable only after the deployed Worker cohort and rollback target both understand clocked publications. */
+  publishFxReferenceEvidence?: boolean;
   cmcApiKey?: string;
   coingeckoApiKey?: string | null;
   chainRpcs?: Map<string, ChainRpcConfig>;
@@ -51,6 +55,7 @@ export async function syncStablecoins(
     dwellirNative,
     reportProgress,
     jupiterApiKey,
+    publishFxReferenceEvidence = PUBLISH_FX_REFERENCE_EVIDENCE,
   } = options;
   const startAbort = returnIfAborted(signal, "start");
   if (startAbort) return withD1Cost(startAbort);
@@ -74,7 +79,7 @@ export async function syncStablecoins(
     reportProgress,
     fallbackToCoingecko: (cgData) => syncViaCoingeckoFallback(
       db, cgData, cmcApiKey, syncStartSec, signal, coingeckoApiKey,
-      reportProgress, jupiterApiKey, chainRpcs, dwellirNative,
+      reportProgress, jupiterApiKey, chainRpcs, dwellirNative, publishFxReferenceEvidence,
     ),
   });
   if (intake.kind === "withheld") return withD1Cost(intake.result);
@@ -98,7 +103,7 @@ export async function syncStablecoins(
     trackedCoverage,
     previousAssetsById,
     previousCacheState,
-    fxFallbackRates,
+    fxFallbackRates, fxReferenceObservations, detectionFxState,
     validationReferences,
   } = intake;
   const { state: _guardState, ...supplyChainGuardMetadata } = supplyChainGuard;
@@ -127,7 +132,9 @@ export async function syncStablecoins(
     previousAssetsById,
     previousCacheState,
     previousActivePriceCoverage,
-    fxFallbackRates,
+    fxFallbackRates, detectionFxState,
+    fxReferenceObservations,
+    publishFxReferenceEvidence,
     db,
     syncStartSec,
     signal,

@@ -152,6 +152,10 @@ describe("V9 contagion input decision", () => {
     }
     expect(hasV9ContagionInput(["README.md", "src/app/page.tsx", "shared/lib/blacklist.ts"])).toBe(false);
   });
+
+  it("runs contagion for an isolated change to the physical reference calendar", () => {
+    expect(hasV9ContagionInput(["shared/data/business-calendars/physical.ts"])).toBe(true);
+  });
 });
 
 describe("V9 resource lane selection", () => {

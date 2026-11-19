@@ -1,23 +1,76 @@
 import { logWorkerEventArgs } from "../../../lib/structured-log";
+import { isKinesisWrapperSupplyId } from "@shared/lib/onchain-supply-probe";
+import { isKinesisWrapperSupplyCutoverActive } from "@shared/lib/supply-perimeter-changes";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { isDedicatedSingleTokenGoldProtocolSlug } from "@shared/lib/commodity-protocols";
-import { fetchTextWithRetry } from "../../../lib/fetch-retry";
+import { fetchJsonWithRetry, fetchTextWithRetry } from "../../../lib/fetch-retry";
 import { CIRCUIT_SOURCE, DEFILLAMA_API, USER_AGENT } from "../../../lib/constants";
 import { throwIfAborted } from "../../../lib/abort";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../../lib/circuit-breaker";
-import type { ChainRpcConfig } from "../../../lib/chain-registry";
+import { hasRegistryRpc, type ChainRpcConfig } from "../../../lib/chain-registry";
+import { fetchEvmBlockHeader, fetchEvmUint256AtBlock } from "../../../lib/evm-rpc";
+import { DECIMALS_SELECTOR, encodeBalanceOfCallData, TOTAL_SUPPLY_SELECTOR } from "../../../lib/evm-selectors";
+import { parseXautTransparencyDisclosure } from "../../../lib/safety-score-v9/xaut-supply-observer";
+import {
+  buildXautTransparencySource, xautCirculatingLiabilityReconciles, XAUT_ASSET_ID, XAUT_CANONICAL_CHAIN_ID,
+  XAUT_CANONICAL_TOKEN_ADDRESS, XAUT_DISCLOSURE_MAX_AGE_SEC, XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC, XAUT_TREASURY_ADDRESS,
+} from "../../../lib/safety-score-v9/xaut-supply-attribution-contract";
 import type { DwellirNativeCapability } from "../../../lib/dwellir-native";
 import type { PeggedAsset } from "../enrich-prices";
 import {
+  admitCommodityValuation,
   fetchCommodityTokens,
   fetchSupplementalPriceData,
   resolveCuratedAggregateSupplementalSupply,
   resolveSupplementalCoinGeckoMcap,
+  resolveSupplementalCoinGeckoPrice,
+  resolveSupplementalPrice,
   toPositiveFiniteNumber,
   type CoinGeckoMcapData,
+  type CommodityValuationEvidence,
+  type SupplementalPriceResolution,
 } from "./shared";
 
 const GOLD_METAS = ACTIVE_STABLECOINS.filter((stablecoin) => stablecoin.flags.pegCurrency === "GOLD");
+
+async function readXautSupply(price: SupplementalPriceResolution | null, chainRpcs?: Map<string, ChainRpcConfig>, signal?: AbortSignal) {
+  const source = buildXautTransparencySource();
+  if (price?.observedAt == null || !source || !hasRegistryRpc(chainRpcs?.get(XAUT_CANONICAL_CHAIN_ID))) return null;
+  const options = { chainRpcs, signal: signal ?? AbortSignal.timeout(10_000), timeoutMs: 10_000 };
+  try {
+    const result = await fetchJsonWithRetry(source.url, { signal: options.signal, redirect: "error" }, 0, {
+      timeoutMs: options.timeoutMs, maxResponseBytes: 1_000_000,
+    });
+    const disclosure = result?.response.ok ? parseXautTransparencyDisclosure(result.body) : null;
+    const now = Math.floor(Date.now() / 1000);
+    if (!disclosure || disclosure.sourceTimestampSec > now || now - disclosure.sourceTimestampSec > XAUT_DISCLOSURE_MAX_AGE_SEC ||
+        BigInt(disclosure.quarantinedRaw) !== 0n || price.observedAt > now) return null;
+    const block = await fetchEvmBlockHeader(XAUT_CANONICAL_CHAIN_ID, "finalized", options);
+    if (!block || block.timestamp > now || now - block.timestamp > XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC ||
+        Math.abs(block.timestamp - price.observedAt) > XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC) return null;
+    const pinned = { ...options, stateBlockHash: block.hash };
+    const decimals = await fetchEvmUint256AtBlock(XAUT_CANONICAL_CHAIN_ID, XAUT_CANONICAL_TOKEN_ADDRESS, DECIMALS_SELECTOR, block.number, pinned);
+    if (decimals !== 6n) return null;
+    const total = await fetchEvmUint256AtBlock(XAUT_CANONICAL_CHAIN_ID, XAUT_CANONICAL_TOKEN_ADDRESS, TOTAL_SUPPLY_SELECTOR, block.number, pinned);
+    const treasury = await fetchEvmUint256AtBlock(XAUT_CANONICAL_CHAIN_ID, XAUT_CANONICAL_TOKEN_ADDRESS,
+      encodeBalanceOfCallData(XAUT_TREASURY_ADDRESS), block.number, pinned);
+    const confirmed = await fetchEvmBlockHeader(XAUT_CANONICAL_CHAIN_ID, block.number, options);
+    if (confirmed?.number !== block.number || confirmed.hash !== block.hash || confirmed.timestamp !== block.timestamp || total == null || treasury == null ||
+        !xautCirculatingLiabilityReconciles({ canonicalTotalSupplyRaw: total, treasuryBalanceRaw: treasury,
+          disclosedTotalAuthorizedRaw: BigInt(disclosure.totalAuthorizedRaw), disclosedNotIssuedRaw: BigInt(disclosure.notIssuedRaw) })) return null;
+    // The canonical amount includes bridged stock once, through its L1 lockbox.
+    const circulatingNative = Number(total - treasury) / 1_000_000;
+    const mcap = circulatingNative * price.price;
+    return Number.isFinite(mcap) && mcap >= 0 ? {
+      mcap, circulatingNative, supplySource: "onchain-circulating-supply", supplyObservedAt: block.timestamp,
+      valuationPriceUsd: price.price, valuationObservedAtSec: price.observedAt,
+    } : null;
+  } catch (error) {
+    throwIfAborted(signal);
+    logWorkerEventArgs("handler", "warn", "[gold] XAUT scoped supply read failed:", error);
+    return null;
+  }
+}
 // Only these DefiLlama protocol slugs represent one gold token; issuer or
 // protocol umbrella slugs can report an aggregate mcap for multiple products.
 
@@ -27,8 +80,10 @@ export async function fetchGoldTokens(
   db?: D1Database,
   chainRpcs?: Map<string, ChainRpcConfig>,
   dwellirNative?: DwellirNativeCapability,
+  evidence?: CommodityValuationEvidence,
 ): Promise<PeggedAsset[]> {
   throwIfAborted(signal);
+  const nowSec = Math.floor(Date.now() / 1000);
   try {
     const priceData = await fetchSupplementalPriceData(GOLD_METAS, "gold", signal, db);
 
@@ -88,6 +143,7 @@ export async function fetchGoldTokens(
     }
 
     for (const token of GOLD_METAS) {
+      if (isKinesisWrapperSupplyCutoverActive(token.id, nowSec)) continue;
       if (mcapMap[token.id] != null && mcapMap[token.id] > 0) continue;
       const mcap = resolveSupplementalCoinGeckoMcap(cgData, token.geckoId);
       if (mcap != null) {
@@ -103,12 +159,27 @@ export async function fetchGoldTokens(
       priceData,
       cgData,
       resolveSupply: async (meta) => {
-        const aggregate = await resolveCuratedAggregateSupplementalSupply(meta, priceData, cgData, chainRpcs, signal, dwellirNative);
+        if (meta.id === XAUT_ASSET_ID) {
+          const quote = admitCommodityValuation(meta, resolveSupplementalPrice(priceData, cgData, meta.geckoId), evidence);
+          const scoped = await readXautSupply(quote, chainRpcs, signal);
+          if (scoped) return scoped;
+          return { mcap: mcapMap[meta.id] ?? null, supplySource: mcapSourceById[meta.id] ?? "coingecko-fallback",
+            supplyObservedAt: observedAtById[meta.id], circulatingNative: null };
+        }
+        const aggregate = await resolveCuratedAggregateSupplementalSupply(meta, priceData, cgData, chainRpcs, signal, dwellirNative, evidence);
+        if (aggregate) return aggregate;
+        if (isKinesisWrapperSupplyCutoverActive(meta.id, nowSec)) return { mcap: null, supplySource: "onchain-supply-withheld" };
+        const mcap = mcapMap[meta.id] ?? null;
+        const cgQuote = mcap != null && mcapSourceById[meta.id] === "coingecko-fallback" && !isKinesisWrapperSupplyId(meta.id)
+          ? admitCommodityValuation(meta, resolveSupplementalCoinGeckoPrice(cgData, meta.geckoId), evidence) : null;
+        const native = mcap != null && cgQuote && cgQuote.observedAt === observedAtById[meta.id] ? mcap / cgQuote.price : null;
         return {
-          mcap: aggregate?.mcap ?? mcapMap[meta.id] ?? 0,
-          supplySource: aggregate?.supplySource ?? mcapSourceById[meta.id] ?? "coingecko-fallback",
-          supplyObservedAt: aggregate ? aggregate.supplyObservedAt : observedAtById[meta.id],
-          chainCirculating: aggregate?.chainCirculating,
+          circulatingNative: Number.isFinite(native) ? native : null,
+          valuationPriceUsd: Number.isFinite(native) ? cgQuote?.price : null,
+          valuationObservedAtSec: Number.isFinite(native) ? cgQuote?.observedAt : null,
+          mcap,
+          supplySource: mcapSourceById[meta.id] ?? "coingecko-fallback",
+          supplyObservedAt: observedAtById[meta.id],
         };
       },
     });

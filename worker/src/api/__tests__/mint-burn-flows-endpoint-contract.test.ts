@@ -6,6 +6,7 @@ import { handleMintBurnFlows } from "../mint-burn-flows";
 import { MintBurnFlowsResponseSchema, MintBurnPerCoinResponseSchema } from "@shared/types/mint-burn";
 import { flowResponse, makeFlowHourlyRow } from "./mint-burn-flows.test-support";
 import { aggregateFlowCacheKey, perCoinFlowCacheKey } from "../../lib/mint-burn-flow-cache-keys";
+import { MINT_BURN_RECEIPT_CLASSIFICATION_VERSION } from "../../lib/mint-burn-published-gauge";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getMintBurnConfigsForStablecoin } from "../../lib/mint-burn-contracts";
 import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
@@ -50,11 +51,16 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(body).toHaveProperty("hourly");
     expect(Array.isArray(body.coins)).toBe(true);
     expect(body).not.toHaveProperty("stablecoinId");
-    expect(parsed.data?.publication).toMatchObject({ legsScope: "non-admitted", admittedCount: 132, pendingAdmissionCount: 4 });
+    expect(parsed.data?.publication).toMatchObject({ legsScope: "non-admitted", admittedCount: 131, pendingAdmissionCount: 4 });
+    expect(parsed.data?.publication?.legs).toContainEqual(expect.objectContaining({
+      stablecoinId: "meusd-mezo", chainId: "ethereum", status: "disabled", reason: "operator-disabled",
+    }));
     expect(parsed.data?.publication?.legs.every((leg) => leg.status !== "admitted")).toBe(true);
     const cached = (db as MockD1Database).getHistory().find((entry) => entry.sql.includes("INSERT INTO cache")
       && entry.binds[0] === aggregateFlowCacheKey(24));
-    expect(JSON.parse(String(cached?.binds[1])).publication).toEqual(body.publication);
+    expect(JSON.parse(String(cached?.binds[1]))).toMatchObject({
+      publication: body.publication, receiptClassificationVersion: MINT_BURN_RECEIPT_CLASSIFICATION_VERSION,
+    });
   });
 
   it("per-coin mode returns shape matching MintBurnPerCoinResponseSchema", async () => {

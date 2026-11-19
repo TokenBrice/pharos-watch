@@ -1,7 +1,11 @@
+import { DepegEventProjectionEvidenceSchema, DepegLedgerProofSchema } from "./depeg-event-projection";
+import type { PegCurrency } from "./core";
 import { type DepegAuditVerdict, DepegAuditVerdictSchema } from "./depeg-audit";
 import { MethodologyEnvelopeSchema } from "./methodology-envelope";
 import { z } from "zod";
 import { DepegPrimaryTrustSchema, NominalPriceReferenceSchema, PriceConfidenceSchema, PriceObservedAtModeSchema } from "./price";
+import { issue } from "./safety-schema-primitives";
+import { AdmittedDeviationBpsSchema, ReferenceAdmissionSchema } from "./reference-admission";
 
 export const DepegTimestampSchema = z.number().int().nonnegative();
 
@@ -52,6 +56,19 @@ export function refineDepegEventChronology(
   }
 }
 
+const PegReferenceKindSchema = z.enum(["median", "fx", "fallback"]);
+
+export interface HistoricalReferenceLookup {
+  /** Latest eligible same-unit reference observed at or before atSec. */
+  referenceAt(pegCurrency: PegCurrency, atSec: number): {
+    usdPerUnit: number;
+    observedAtSec: number;
+    source: string;
+    kind: z.infer<typeof PegReferenceKindSchema>;
+    contributors?: readonly string[];
+  } | null;
+}
+
 export const PegSummaryCoinSchema = z.object({
   id: z.string(),
   symbol: z.string(),
@@ -60,12 +77,14 @@ export const PegSummaryCoinSchema = z.object({
   pegCurrency: z.string(),
   governance: z.string(),
   currentDeviationBps: z.number().nullable(),
+  referenceAdmission: ReferenceAdmissionSchema.optional(),
+  admittedDeviationBps: AdmittedDeviationBpsSchema.optional(),
   pegReference: z
     .object({
       valueUsd: z.number().positive(),
       /** Unscaled commodity reference; never the per-token peg value. */
       usdPerTroyOunce: z.number().finite().positive().optional(),
-      source: z.enum(["median", "fx", "fallback"]),
+      source: PegReferenceKindSchema,
       contributorCount: z.number().int().nonnegative(),
       asOf: z.number().int().positive(),
     })
@@ -141,6 +160,8 @@ export const PegSummaryCoinSchema = z.object({
     .object({
       dexPrice: z.number(),
       dexDeviationBps: z.number(),
+      observedAtSec: z.number().int().positive().optional(),
+      referenceAdmission: ReferenceAdmissionSchema.optional(),
       agrees: z.boolean(),
       sourcePools: z.number(),
       sourceTvl: z.number(),
@@ -161,6 +182,7 @@ export interface DepegEventSearchEntry {
   direction: DepegDirection;
   peakDeviationBps: DepegEvent["peakDeviationBps"];
   startedAt: DepegEvent["startedAt"];
+  peakReview?: DepegEvent["peakReview"];
   /** Reviewed audit verdict; absent when the ledger records none. */
   auditVerdict?: DepegAuditVerdict;
 }
@@ -168,7 +190,27 @@ export interface DepegEventSearchEntry {
 export const DepegEventCloseReasonSchema = z.enum(DEPEG_EVENT_CLOSE_REASON_VALUES);
 export type DepegEventCloseReason = z.infer<typeof DepegEventCloseReasonSchema>;
 
-const DepegEventObjectSchema = z.object({
+export const DepegEventQuoteDomainSchema = z.enum(["usd", "native-peg"]);
+export type DepegEventQuoteDomain = z.infer<typeof DepegEventQuoteDomainSchema>;
+
+export const DepegEventDispositionSchema = z.enum(["restored-evidenced", "admitted-coverage", "repaired"]);
+export type DepegEventDisposition = z.infer<typeof DepegEventDispositionSchema>;
+
+export const DepegAdmittedCoverageSchema = z.array(z.object({
+  fromSec: DepegTimestampSchema,
+  toSec: DepegTimestampSchema,
+})).superRefine((intervals, ctx) => {
+  let previousEnd = -1;
+  for (const [index, { fromSec, toSec }] of intervals.entries()) {
+    if (fromSec < previousEnd || toSec <= fromSec) {
+      issue(ctx, [index], "Admitted intervals must be ordered, non-overlapping and non-empty");
+    }
+    previousEnd = toSec;
+  }
+});
+export type DepegAdmittedCoverage = z.infer<typeof DepegAdmittedCoverageSchema>;
+
+const DepegEventObjectSchema = DepegEventProjectionEvidenceSchema.extend({
   id: z.number(),
   stablecoinId: z.string(),
   symbol: z.string(),
@@ -181,6 +223,11 @@ const DepegEventObjectSchema = z.object({
   peakPrice: z.number().nullable(),
   recoveryPrice: z.number().nullable(),
   pegReference: z.number(),
+  peakPegReference: z.number().finite().positive().optional(),
+  peakQuoteDomain: DepegEventQuoteDomainSchema.optional(),
+  recoveryPegReference: z.number().finite().positive().optional(),
+  admittedCoverage: DepegAdmittedCoverageSchema.optional(),
+  disposition: DepegEventDispositionSchema.optional(),
   source: z.enum(["live", "backfill"]),
   /** Raw threshold-crossing rows grouped into this public incident. */
   constituentEventCount: z.number().int().positive().optional(),
@@ -262,6 +309,7 @@ export type DepegPendingIncident = z.infer<typeof DepegPendingIncidentSchema>;
 
 export const DepegEventsResponseSchema = z.object({
   events: z.array(DepegEventSchema),
+  ledgerProof: DepegLedgerProofSchema.optional(),
   total: z.number(),
   totalExact: z.boolean().optional(),
   nextCursor: z.string().nullable().optional(),

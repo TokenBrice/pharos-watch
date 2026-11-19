@@ -12,7 +12,7 @@ import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { getDexAggregateRejectionReason, isAffirmativeDexPriceRow } from "../depeg-trust-policy";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "@shared/lib/depeg-closure";
-import { buildUpsertPendingDepegStmt, normalizePendingDepegRow, type PendingDepegUpsertParams } from "../depeg-pending";
+import { buildUpsertPendingDepegStmt, normalizePendingDepegRow, type PendingDepegRow, type PendingDepegUpsertParams } from "../depeg-pending";
 import { isExtremeMovePending, parsePendingReason } from "../depeg-helpers";
 import { computePegScore } from "@shared/lib/peg-score";
 import { mergeDepegSeconds, mergeUnknownDepegSeconds } from "@shared/lib/peg-utils";
@@ -88,6 +88,20 @@ describe("buildInsertDepegEventStmt + rowToDepegEvent provenance", () => {
     }
   });
 
+  it("keeps absent, empty and invalid admitted coverage distinct from inferred legacy duration", () => {
+    const row = { ...baseDepegRow, ended_at: 300, peak_price: 0.988, peak_peg_reference: 1,
+      peak_quote_domain: "usd" as const, recovery_price: 1.005, recovery_peg_reference: 1.004 };
+    expect(rowToDepegEvent(row)).not.toHaveProperty("admittedCoverage");
+    expect(rowToDepegEvent({ ...row, admitted_coverage_json: '[{"fromSec":104,"toSec":150}]',
+      disposition: "admitted-coverage" })).toMatchObject({ peakQuoteDomain: "usd", peakPegReference: 1,
+      recoveryPegReference: 1.004, admittedCoverage: [{ fromSec: 104, toSec: 150 }], disposition: "admitted-coverage" });
+    for (const json of ["[]", '[{"fromSec":90,"toSec":110}]', '[{"fromSec":303,"toSec":301}]']) {
+      expect(rowToDepegEvent({ ...row, admitted_coverage_json: json }).admittedCoverage).toEqual([]);
+    }
+    expect(rowToDepegEvent({ ...row, disposition: "admitted-coverage" }).admittedCoverage).toEqual([]);
+    expect(rowToDepegEvent({ ...row, disposition: "unrecognized" }).admittedCoverage).toEqual([]);
+  });
+
   it("rejects invalid producer coverage on the write path", () => {
     expect(() => serializeDepegPriceCoverage({
       intervals: [[200, 100]], lastTrustedObservationAt: 200, gapStartedAt: null,
@@ -147,6 +161,16 @@ describe("collectDexProtocolCorroborations", () => {
     );
 
     expect(groups.map((group) => group.key).sort()).toEqual(["independent-provider", "poisoned-provider"]);
+  });
+
+  it("counts two families sharing a price-forming pool once, retaining the deeper raw price", () => {
+    const pool = "ethereum:0x0000000000000000000000000000000000000001";
+    const sources = ["curve", "uniswap"].map((sourceFamily, i) => ({
+      protocol: sourceFamily, sourceFamily, chain: "ethereum", tvl: 2_000_000, updatedAt: 1,
+      pricePoolKeys: [pool], price: i ? 0.97996 : 0.97999,
+    }));
+    expect(collectDexProtocolCorroborations(sources, 1, 100, "below", "confirm").map((item) => item.source.price))
+      .toEqual([0.97996]);
   });
 
   it("admits recovery groups at the documented raw recovery-band boundary", () => {
@@ -334,6 +358,19 @@ describe("normalizePendingDepegRow", () => {
 });
 
 describe("buildUpsertPendingDepegStmt", () => {
+  it("withholds a pending peak reference after an old writer changes the price and FX basis", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    await buildUpsertPendingDepegStmt(db, {
+      stablecoinId: "eurc-circle", symbol: "EURC", pegType: "peggedEUR", direction: "below",
+      bps: -200, seenAt: 1_700_000_000, price: 1.078, pegReference: 1.10, reason: "confirmation-window",
+    }).run();
+    const read = () => normalizePendingDepegRow(sqlite.prepare("SELECT * FROM depeg_pending").get() as unknown as PendingDepegRow);
+    expect(read().peakPegReference).toBe(1.10);
+    sqlite.prepare("UPDATE depeg_pending SET peak_price = ?, peak_seen_bps = -400").run(1.12 * 0.96);
+    expect(read().peakPegReference).toBeNull();
+    sqlite.close();
+  });
+
   it("refreshes same-direction rows and resets opposite-direction rows when executed", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
 
@@ -345,8 +382,14 @@ describe("buildUpsertPendingDepegStmt", () => {
       });
       await stmt.run();
     };
-    await upsert({});
-    await upsert({ bps: -350, seenAt: 1_700_000_900, price: 0.965 });
+    await upsert({ rawBps: -200.00000000000017 });
+    await upsert({ bps: -350, rawBps: -350.01, seenAt: 1_700_000_899, price: 0.964999 });
+    // Reproduce an in-flight candidate written by the fractional-bps producer.
+    sqlite.exec("UPDATE depeg_pending SET first_seen_bps = -200.5, last_seen_bps = -350.01, peak_seen_bps = -350.01");
+    const oldRow = sqlite.prepare("SELECT * FROM depeg_pending").get() as unknown as PendingDepegRow;
+    expect(normalizePendingDepegRow(oldRow)).toMatchObject({ firstSeenBps: -200, lastSeenBps: -350, peakSeenBps: -350 });
+    // A deeper price can share the same rounded bps in all public pending fields.
+    await upsert({ bps: -350, rawBps: -350.02, seenAt: 1_700_000_900, price: 0.964998 });
 
     const sameDirectionRow = sqlite.prepare("SELECT * FROM depeg_pending").get();
 
@@ -357,9 +400,9 @@ describe("buildUpsertPendingDepegStmt", () => {
       first_price: 0.98,
       last_seen_bps: -350,
       last_seen_at: 1_700_000_900,
-      last_price: 0.965,
+      last_price: 0.964998,
       peak_seen_bps: -350,
-      peak_price: 0.965,
+      peak_price: 0.964998,
     });
 
     // Anchored to the tolerance: two observations inside it must preserve
@@ -389,17 +432,17 @@ describe("buildUpsertPendingDepegStmt", () => {
       peak_seen_bps: -280,
     });
 
-    await upsert({ direction: "above", bps: 180, seenAt: 1_700_003_900, price: 1.018, reason: "low-confidence" });
+    await upsert({ direction: "above", bps: 180, seenAt: afterGapAt + 1, price: 1.018, reason: "low-confidence" });
 
     const flippedRow = sqlite.prepare("SELECT * FROM depeg_pending").get();
 
     expect(flippedRow).toMatchObject({
       direction: "above",
       first_seen_bps: 180,
-      first_seen_at: 1_700_003_900,
+      first_seen_at: afterGapAt + 1,
       first_price: 1.018,
       last_seen_bps: 180,
-      last_seen_at: 1_700_003_900,
+      last_seen_at: afterGapAt + 1,
       last_price: 1.018,
       peak_seen_bps: 180,
       peak_price: 1.018,

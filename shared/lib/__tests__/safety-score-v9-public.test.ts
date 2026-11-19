@@ -484,7 +484,11 @@ describe("Safety Score v9 public projection", () => {
       expect(projectV9DetailNeighborhoodCard(card).pillars!.exit).toEqual(priced);
       expect(reader.card.safeParse(card).success).toBe(true);
       expect(reader.table.safeParse(projectV9TableCard(card)).success).toBe(true);
-      if (routes.length > 1) expect(card.breakdowns!.exit.alternatives.some((route) => route.label.includes("Negligible"))).toBe(true);
+      if (routes.length > 1) {
+        expect(card.breakdowns!.exit.alternatives.some((route) => route.label.includes("Negligible"))).toBe(true);
+        const withNewReason = { ...card, reasonCodes: [...card.reasonCodes, "negligible-dex-route"] };
+        expect(reader.card.safeParse(withNewReason).success).toBe(false);
+      }
     }
   });
 

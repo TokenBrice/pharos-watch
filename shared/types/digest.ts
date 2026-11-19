@@ -229,6 +229,21 @@ export interface DigestEditorialCandidate {
   suppressReason?: string;
 }
 
+const DigestSupplyCheckpointSchema = z.object({
+  quantity: z.number().finite().nonnegative(),
+  observedAt: z.number().int().positive(),
+});
+
+export const DigestSupplyQuantityEvidenceSchema = z.object({
+  basis: z.literal("native-quantity"),
+  current: DigestSupplyCheckpointSchema,
+  weekAgo: DigestSupplyCheckpointSchema,
+  dayAgo: DigestSupplyCheckpointSchema.optional(),
+  valuationPriceUsd: z.number().finite().positive(),
+  valuationObservedAt: z.number().int().positive(),
+});
+export type DigestSupplyQuantityEvidence = z.output<typeof DigestSupplyQuantityEvidenceSchema>;
+
 export interface DigestDataQuality {
   generatedAt: number;
   stablecoinsCacheUpdatedAt: number | null;
@@ -388,6 +403,7 @@ export interface DigestInputData {
     name: string;
     changeUsd: number;
     currentMcap: number;
+    quantityEvidence?: DigestSupplyQuantityEvidence;
   } | null;
   stabilityIndex: {
     score: number;
@@ -416,6 +432,7 @@ export interface DigestInputData {
     coin: string;
     change1d: number;
     change7d: number;
+    quantityEvidence?: DigestSupplyQuantityEvidence;
     signal: string;
   }[];
   supplyChanges7d?: {
@@ -423,6 +440,7 @@ export interface DigestInputData {
     stablecoinId?: string;
     coin: string;
     change7d: number;
+    quantityEvidence?: DigestSupplyQuantityEvidence;
   }[];
   safetyScores?: DigestSafetyScores;
   resolvedDepegs?: {
@@ -606,6 +624,7 @@ export const DigestNextTriggerSchema = z.object({
   comparator: z.enum(["abs-gte", "gte", "lte", "band-gte"]),
   thresholdLabel: z.string(),
   thresholdValue: z.number().optional(),
+  supplyValuationPriceUsd: z.number().finite().positive().optional(),
   symbol: z.string().optional(),
   stablecoinId: z.string().optional(),
   candidateId: z.string().optional(),
@@ -694,6 +713,8 @@ export const DigestArchiveEntrySchema = z.object({
   riskTape: z.array(DigestRiskTapeItemSchema).nullable().optional(),
   digestType: DigestKindSchema.optional(),
   editionNumber: z.number().optional(),
+  weekStart: DigestSafetyMapUtcDateSchema.optional().catch(undefined),
+  weekEnd: DigestSafetyMapUtcDateSchema.optional().catch(undefined),
   /**
    * Editorial style policy that produced the edition. Absent on editions
    * authored before the policy existed; those read back as `pre-policy` rather
@@ -878,6 +899,7 @@ const DigestSnapshotInputDataSchema = z
         name: z.string(),
         changeUsd: z.number(),
         currentMcap: z.number(),
+        quantityEvidence: DigestSupplyQuantityEvidenceSchema.optional(),
       })
       .passthrough()
       .nullable()
@@ -923,6 +945,7 @@ const DigestSnapshotInputDataSchema = z
             coin: z.string(),
             change1d: z.number(),
             change7d: z.number(),
+            quantityEvidence: DigestSupplyQuantityEvidenceSchema.optional(),
             signal: z.string(),
           })
           .passthrough(),

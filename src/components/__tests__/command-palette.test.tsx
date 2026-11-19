@@ -6,6 +6,8 @@ import type { ImgHTMLAttributes } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { CommandPalette } from "@/components/command-palette/command-palette-root";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
+import { FX_REOPEN_QUOTE_AT, makeFxCurrentPeg } from "@shared/test-utils/boundary-contract-vectors.test-support";
+import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import { STABLECOINS_QUERY_KEY } from "@shared/lib/query-keys";
 import type { StablecoinListResponse } from "@shared/types/supply";
 
@@ -149,6 +151,24 @@ describe("CommandPalette", () => {
     // Calm coins add nothing: one state, one chip.
     expect(document.querySelectorAll("[data-coin-state]")).toHaveLength(1);
   });
+
+  it.each([["stale-reference", null, "Depeg"], ["admitted", -120, "Depeg · 1.20% below peg"]] as const)(
+    "uses the incident's %s severity in the shared state chip", async (status, admittedBps, title) => {
+      const { useCoinStates } = await vi.importActual<typeof import("@/hooks/use-coin-states")>("@/hooks/use-coin-states");
+      useCoinStatesMock.mockImplementation(useCoinStates);
+      const meta = { updatedAt: Date.now() / 1000, ageSeconds: 0, status: "fresh" };
+      const { pegSummary, stressSignals, depegResolver } = FRONTEND_API_QUERY_DESCRIPTORS;
+      queryClient.setQueryData(pegSummary.queryKey, { meta, data: { coins: [
+        { id: "eurc-circle", activeDepeg: true, priceObservedAt: FX_REOPEN_QUOTE_AT, ...makeFxCurrentPeg(status, admittedBps) },
+      ] } });
+      queryClient.setQueryData(stressSignals.queryKey, { meta, data: { signals: {} } });
+      queryClient.setQueryData(depegResolver.queryKey, { meta, data: { rows: [] } });
+      renderPalette();
+      fireEvent.change(screen.getByRole("combobox", { name: "Search" }), { target: { value: "EURC" } });
+      const chip = screen.getByRole("option", { name: /EURCDepeg/ }).querySelector("[data-coin-state=depeg]");
+      expect(chip?.getAttribute("title")).toBe(title);
+    },
+  );
 
   it("shows live market caps when the stablecoin observer resolves while open", async () => {
     vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => {})));

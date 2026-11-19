@@ -17,6 +17,7 @@ import { type ParsedYieldBenchmarkMeta, type ParsedYieldBenchmarkRegistry } from
 import {
   type YieldBenchmarkFreshness,
   classifyYieldBenchmarkFreshness,
+  getYieldBenchmarkComparisonApy,
   YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
 } from "@shared/lib/yield-benchmark-freshness";
 import { type YieldSourceFreshness } from "../../lib/yield-ranking-helpers";
@@ -52,6 +53,10 @@ export interface EvaluatedYieldSource {
   dataSource: string;
   exchangeRate: number | null;
   sourceObservedAt: number | null;
+  sourceObservationVerified?: boolean;
+  sourceFetchedAt?: number | null;
+  sourceMaxAgeSeconds?: number;
+  returnDenomination?: string | null;
   comparisonAnchorObservedAt: number | null;
   apy7d: number;
   apy30d: number;
@@ -66,11 +71,11 @@ export interface EvaluatedYieldSource {
   safetyReason: YieldSafetyReason | null;
   safetyScoreIdentity?: SafetyScorePublicationIdentity | null;
   yieldToRisk: number | null;
-  excessYield: number;
+  excessYield: number | null;
   benchmarkKey: YieldBenchmarkKey;
   benchmarkLabel: string;
   benchmarkCurrency: string;
-  benchmarkRate: number;
+  benchmarkRate: number | null;
   /**
    * Reference (USD) risk-free rate the row's hurdle was re-based onto, retained
    * so the publish-time audit snapshot can replay the score (yield v8.43, B4).
@@ -88,7 +93,7 @@ export interface EvaluatedYieldSource {
   pharosYieldScore: number | null;
   pysNullReason: YieldPysNullReason | null;
   sourceFreshness: YieldSourceFreshness;
-  benchmarkFreshness: YieldBenchmarkFreshness;
+  benchmarkFreshness?: YieldBenchmarkFreshness;
   calculationMode: YieldCalculationMode;
   evidenceClass: YieldEvidenceClass;
   evidenceCompleteness: number;
@@ -177,8 +182,6 @@ export interface PreparedYieldEvaluation {
   resolvedWithYield: ResolvedYieldEntryWithYield[];
   resolvedCountByCoin: Map<string, number>;
   resolvedByCoin: Map<string, ResolvedYieldEntryWithYield[]>;
-  /** USD reference freshness for the run (A3), classified once per publication. */
-  referenceBenchmarkFreshness: YieldBenchmarkFreshness;
   /** Reference rate handed to the v8.43 re-base; null when that entry is not healthy. */
   usdBenchmarkRate: number | null;
 }
@@ -223,14 +226,13 @@ function prepareYieldEvaluation(input: EvaluateYieldSourcesInput): PreparedYield
   });
   const usdBenchmarkRate =
     referenceBenchmarkFreshness === "healthy" && Number.isFinite(input.riskFreeRates.USD.rate)
-      ? input.riskFreeRates.USD.rate
+      ? getYieldBenchmarkComparisonApy({ ...input.riskFreeRates.USD, key: "USD" })
       : null;
 
   return {
     resolvedWithYield,
     resolvedCountByCoin,
     resolvedByCoin,
-    referenceBenchmarkFreshness,
     usdBenchmarkRate,
   };
 }
@@ -263,7 +265,6 @@ function evaluateYieldSourceGroup(
     derivedPenaltyInputByKey: assessment.derivedPenaltyInputByKey,
     bestRowsByCoin: input.bestRowsByCoin,
     safetySnapshotUnavailable: input.safetySnapshotAvailable === false,
-    referenceBenchmarkFreshness: prepared.referenceBenchmarkFreshness,
     usdBenchmarkRate: prepared.usdBenchmarkRate,
   });
   if (!selection) return;
@@ -275,22 +276,31 @@ function evaluateYieldSourceGroup(
   accumulator.evaluatedSources.push(...selection.evaluatedSources);
 }
 
+const MIN_STRESS_COHORT_SIZE = 3;
+
 function finalizeYieldEvaluation(accumulator: YieldEvaluationAccumulator): EvaluateYieldSourcesResult {
   const bestRows = accumulator.evaluatedSources.filter((source) =>
     accumulator.bestSourceKeyByCoin.get(source.id) === source.sourceKey && !source.rejected,
   );
-  const medianApy = computeTvlWeightedMedianApy(
-    bestRows.map((row) => ({
-      apy_30d: row.apy30d,
-      source_tvl_usd: row.sourceTvlUsd,
-    })),
-  );
+  const medianInputs = bestRows.map((row) => ({ apy_30d: row.apy30d, source_tvl_usd: row.sourceTvlUsd }));
+  const cohortInputs = new Map<string, typeof medianInputs>();
+  for (const [index, row] of bestRows.entries()) {
+    const unit = row.returnDenomination;
+    if (unit == null || unit === "VAR" || row.sourceFreshness !== "fresh") continue;
+    const cohort = cohortInputs.get(unit) ?? [];
+    cohort.push(medianInputs[index]);
+    cohortInputs.set(unit, cohort);
+  }
+  const cohortMedians = new Map(Array.from(cohortInputs, ([unit, rows]) => [
+    unit, computeTvlWeightedMedianApy(rows, MIN_STRESS_COHORT_SIZE),
+  ]));
   for (const source of accumulator.evaluatedSources) {
     source.warnings = [...new Set([...source.warnings, ...detectWarningSignals({
       currentApy: source.currentApy,
       apy30d: source.apy30d,
       apyReward: source.apyReward,
-      medianApy,
+      medianApy: source.sourceFreshness === "fresh" && source.returnDenomination != null
+        ? cohortMedians.get(source.returnDenomination) ?? null : null,
       sourceTvlUsd: source.sourceTvlUsd,
       prevTvlUsd: source.prevTvlUsd,
     })])];
@@ -303,7 +313,7 @@ function finalizeYieldEvaluation(accumulator: YieldEvaluationAccumulator): Evalu
     rowsRejected: accumulator.rowsRejected,
     divergenceFlags: accumulator.divergenceFlags,
     sourceSwitches: accumulator.sourceSwitches,
-    medianApy,
+    medianApy: computeTvlWeightedMedianApy(medianInputs),
   };
 }
 

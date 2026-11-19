@@ -1,5 +1,6 @@
 import type { DigestEventPeriod, DigestForwardLookOutcome, DigestInputData, DigestSafetyContext } from "@shared/types/digest";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
+import type { WeeklyBlacklistObservation } from "./blacklist";
 
 export type WeeklyRiskKind = "depeg" | "dews" | "mint-burn" | "blacklist" | "grade" | "yield" | "liquidity" | "supply";
 
@@ -13,7 +14,11 @@ export interface WeeklyDepegSignal {
   severityScore: number;
   mcapUsd: number;
   bps: number;
-  date: string;
+  date?: string;
+  severityBasis: NonNullable<DigestInputData["topDepegs"][number]["severityBasis"]>;
+  observedAt?: number;
+  /** A verified onset or recovery inside the weekly event period. */
+  eventAt?: number;
   kind: "active" | "resolved";
   critical: boolean;
   /** Event started before this week's window — a standing condition, not fresh weekly news. */
@@ -23,8 +28,8 @@ export interface WeeklyDepegSignal {
 
 export type SpikeDepeg = Pick<
   WeeklyDepegSignal,
-  "id" | "date" | "symbol" | "bps" | "mcapUsd" | "impactScore" | "kind" | "critical"
->;
+  "id" | "symbol" | "bps" | "mcapUsd" | "impactScore" | "kind" | "critical" | "severityBasis"
+> & { date: string; observedAt: number };
 
 export interface WeeklyRiskLeaderboardSignal {
   id: string;
@@ -34,6 +39,7 @@ export interface WeeklyRiskLeaderboardSignal {
   impactScore: number;
   severityScore: number;
   date?: string;
+  eventAt?: number;
   critical?: boolean;
   /** Signal predates this week's window — a standing condition, not fresh news. */
   carriedOver?: boolean;
@@ -66,6 +72,7 @@ export interface WeeklyInputData {
   weekStartDate: string;
   weekEndDate: string;
   periodType: "trailing-daily-editions";
+  eventPeriods?: { current: DigestEventPeriod; prior: DigestEventPeriod };
   /** Scheduled half-open event periods, independent of available edition dates. */
   gradeTransitionPeriods?: { current: DigestEventPeriod; prior: DigestEventPeriod };
   safetyContext?: DigestSafetyContext;
@@ -91,6 +98,7 @@ export interface WeeklyInputData {
   totalBlacklistEventsThisWeek: number | null;
   totalBlacklistAmountUsd: number | null;
   blacklistUnpricedEventCount?: number | null;
+  blacklistLedgerObservations?: { current: WeeklyBlacklistObservation | null; prior: WeeklyBlacklistObservation | null };
   metricUnavailableReasons?: Partial<Record<"mcapEnd" | "activeDepegObs" | "uniqueDepegSignals" | "blacklistEvents" | "blacklistUsd" | "gradeTransitions", string[]>>;
   /** Null when canonical safety evidence is unavailable; zero is an observed quiet week. */
   gradeTransitionCount: number | null;
@@ -129,8 +137,6 @@ export interface WeeklyInputData {
     psiDominantBand: { current: string | null; prior: string | null };
     activeDepegObservations: { current: number | null; prior: number | null };
     uniqueDepegSignals: { current: number | null; prior: number | null };
-    blacklistEvents: { current: number | null; prior: number | null };
-    blacklistUsd: { current: number | null; prior: number | null };
     /** Unavailable canonical safety evidence withholds both comparison counts. */
     gradeTransitions: { current: number | null; prior: number | null };
     gauge: { current: number | null; prior: number | null };

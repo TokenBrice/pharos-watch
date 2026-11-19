@@ -130,9 +130,10 @@ export async function runCoingeckoLowVolumePass(
       quote.price,
       COINGECKO_LOW_VOLUME_SOURCE,
       "fallback",
-      quote.observedAt ?? nowSec,
-      quote.observedAtMode ?? "local_fetch",
+      quote.observedAt,
+      quote.observedAtMode ?? "unknown",
     );
+    assets[index].priceSyncedAt = nowSec;
     resolved++;
   }
 

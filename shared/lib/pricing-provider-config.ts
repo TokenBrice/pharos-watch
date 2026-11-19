@@ -73,21 +73,26 @@ export const BITSTAMP_MARKETS = [
 ] as const;
 
 export const COINBASE_PRODUCTS = [
-  { symbol: "USDT", productId: "USDT-USD" },
-  { symbol: "PAXG", productId: "PAXG-USD" },
-  { symbol: "USDS", productId: "USDS-USD" },
-  { symbol: "USD1", productId: "USD1-USD" },
+  { symbol: "USDT", productId: "USDT-USD", quoteAsset: "USD" },
+  { symbol: "PAXG", productId: "PAXG-USD", quoteAsset: "USD" },
+  { symbol: "USDS", productId: "USDS-USD", quoteAsset: "USD" },
+  { symbol: "USD1", productId: "USD1-USD", quoteAsset: "USD" },
   // Coinbase HONEY-USD is Solana Hivemapper, not Berachain's Bera USD.
   // 2026-09-27: Coinbase lists AUDD on its USDC-quoted FX-stablecoin book
-  // (`fx_stablecoin: true`, USDC treated at USD par). Coinbase's AUDD asset
+  // (`fx_stablecoin: true`). Coinbase's AUDD asset
   // pins to the Novatti AUDD Ethereum contract 0x4cce605e..., which matches
   // audd-novatti exactly; CoinGecko's AUDD ticker set lists this market.
-  { symbol: "AUDD", productId: "AUDD-USDC" },
-  // 2026-10-30: Coinbase's XSGD-USDC FX-stablecoin book treats USDC at USD par
-  // under the AUDD precedent; Coinbase's XSGD asset pins the tracked StraitsX
-  // Ethereum contract. Sparse last-trade prints are rejected by the 600 s clock.
-  { symbol: "XSGD", productId: "XSGD-USDC" },
+  { symbol: "AUDD", productId: "AUDD-USDC", quoteAsset: "USDC" },
+  // 2026-10-30: Coinbase's XSGD asset pins the tracked StraitsX Ethereum contract.
+  { symbol: "XSGD", productId: "XSGD-USDC", quoteAsset: "USDC" },
 ] as const;
+
+// 2026-10-30 venue inventory identified Kraken USD as the only CoinGecko market for each asset.
+export const REVIEWED_COINGECKO_KRAKEN_MIRRORS: ReadonlySet<string> = new Set([
+  "audx-aussie-dollar-token",
+  "qcad-stablecorp",
+]);
+
 export const CEX_PROVIDER_AUDIT_CONFIG = {
   binance: { metadataUrl: "https://api.binance.com/api/v3/exchangeInfo" },
   kraken: { metadataUrl: "https://api.kraken.com/0/public/AssetPairs" },

@@ -511,6 +511,9 @@ describe("handleRemediateBlacklistAmountGaps", () => {
       "blacklist:gap-metrics:v3:86400:core",
       "blacklist:gap-metrics:v3:86400:full",
       "blacklist:summary:producer:v5",
+      "blacklist:summary:producer:v6",
+      "blacklist:event-coverage:v1",
+      "blacklist:event-coverage-progress:v1",
     ];
     for (const key of cacheKeys) {
       sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, '{}', 1)").run(key);
@@ -543,8 +546,8 @@ describe("handleRemediateBlacklistAmountGaps", () => {
       providerFailed: 0,
     });
     expect(body.cacheInvalidation).toEqual({
-      attempted: 5,
-      deleted: 5,
+      attempted: cacheKeys.length,
+      deleted: cacheKeys.length,
       failed: 0,
     });
 

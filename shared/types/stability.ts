@@ -68,6 +68,11 @@ export const StabilityIndexCurrentSchema = z.object({
   componentsUnavailable: StabilityIndexUnavailableComponentsSchema.optional(),
 });
 
+export const StabilityIndexReferenceMarketRepairSchema = z.discriminatedUnion("method", [
+  z.object({ method: z.enum(["samples", "replay-delta", "replayed-with-rule"]) }),
+  z.object({ method: z.literal("unavailable"), reason: z.string().min(1) }),
+]);
+
 export const StabilityIndexHistoryPointSchema = z.object({
   date: z.number(),
   score: z.number(),
@@ -75,6 +80,7 @@ export const StabilityIndexHistoryPointSchema = z.object({
   components: StabilityIndexComponentsSchema.optional(),
   methodologyVersion: z.string(),
   dailyProvenance: StabilityIndexDailyProvenanceSchema.optional(),
+  referenceMarketRepair: StabilityIndexReferenceMarketRepairSchema.optional(),
   componentsUnavailable: StabilityIndexUnavailableComponentsSchema.optional(),
 });
 

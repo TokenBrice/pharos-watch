@@ -8,7 +8,7 @@ Per-coin, forward-looking stress score (0-100) for depeg stress. It is not a cal
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both resolve their published version and changelog through `shared/lib/methodology-versions/registry.ts`.
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-dews -->`v6.49`<!-- GENERATED-END: methodology-version-depeg-dews -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-dews -->`v6.50`<!-- GENERATED-END: methodology-version-depeg-dews -->
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical constants:** `shared/lib/methodology-versions/constants.ts`
 
@@ -40,7 +40,7 @@ The market-price gate uses the final divergence sub-signal, after whole-bps deri
 
 **Systemic backdrop amplifier:** When PSI drops below 75 (below the STEADY band; 75 is STEADY's floor), individual DEWS scores are amplified by up to 30%. At PSI=40, amplification is ~14%. At PSI=0, amplification is 30%. This reflects that individual coin stress is more dangerous during systemic instability.
 
-**Contagion Amplifier:** On top of the PSI amplifier, DEWS applies a bounded per-peg-type contagion amplifier derived from the same cycle's first-pass results. If any tracked stablecoin's first-pass band is `DANGER` (bump `1.15x`) or `WARNING` (bump `1.08x`), the other coins sharing its `pegType` are re-scored with that multiplier — the amplifier takes the largest qualifying bump, not a sum, so multiple DANGER coins on one peg type still cap at `1.15x`. The hard defensive cap is `1.2x` (`CONTAGION_AMPLIFIER_CAP`) for future bump values; different peg types do not share contagion risk. A coin that is itself `DANGER` or `WARNING` on the first pass does **not** contagion-amplify itself — its first-pass result carries forward unchanged. The resulting per-coin amplifier is surfaced on `/api/stress-signals` as `amplifiers.contagion` (default `1.0` when no contagion is detected or for legacy cached rows).
+**Contagion Amplifier:** Every recipient band uses the largest qualifying first-pass bump from another coin sharing its peg type. DANGER contributes 1.15× and WARNING 1.08×, bounded by the 1.2× defensive cap. A coin supplies no bump to itself. `amplifiers.contagion` carries the applied multiplier.
 
 ---
 
@@ -76,6 +76,8 @@ Weights sum to 1.15 but only available signals participate, so redistribution no
 ## Sub-Signal Details
 
 ### S_supply — Supply Velocity
+
+Velocity compares each lookback in one unit. When the current stock and its lookback both have native counts and stock clocks, it compares token counts. A lookback that predates native observations uses current and historical USD stock. A rejected native checkpoint or a change in supply perimeter withholds the affected leg. The size damper uses USD capitalization. Historical reconstruction follows the same unit selection.
 
 Measures supply contraction rate. Only negative changes contribute stress.
 
@@ -124,7 +126,7 @@ Supply and liquidity `componentCoverage` and nullable deltas survive current, sp
 
 ### S_price — Price Confidence Degradation
 
-Maps `priceConfidence` field: high=0, single-source=25, low=60, fallback=80, null price=100. The null-price maximum is live semantics; a reconstruction that never read price evidence (default `GET /api/backfill-dews`) tags the family unavailable instead of scoring it.
+Maps `priceConfidence` field: high=0, single-source=25, low=60, fallback=80, null price=100. An observed primary quote supplies confidence even when its unit prevents a parity comparison. The null-price maximum is live semantics; a reconstruction that never read price evidence (default `GET /api/backfill-dews`) tags the family unavailable instead of scoring it.
 A missing, blank or unrecognised `priceConfidence` is unvalidated evidence, not a high-confidence reading: it scores as the worst known tier (80) and the signal carries a `price-confidence-unmapped` warning.
 +15 transition bonus when confidence degrades from previous reading, capped at 100. The `high` → `single-source` reclassification is exempt: it is treated as a labelling change from the consensus honesty fix, not a real degradation, and adds no bonus.
 
@@ -132,12 +134,14 @@ A missing, blank or unrecognised `priceConfidence` is unvalidated evidence, not 
 
 Max of: primary deviation from peg, DEX deviation from peg, cross-source spread (all in bps).
 
-The primary price must pass `isObservedPrice(...)`. Nominal par references are not observations and enter DEWS as `null`. Primary and independently admitted DEX deviations are evaluated separately against the admitted peg reference; cross-source spread exists only when both legs are observed, finite and positive. With neither valid leg, divergence is unavailable rather than a measured calm zero. A stressed DEX-only leg qualifies as `market-price` evidence and is not WATCH-capped merely because the primary observation is missing. Since v6.47, while its reference market is closed (`shared/lib/reference-market-hours.ts`) a non-USD fiat or GOLD/SILVER asset whose primary and DEX legs both sit below the 2,500 bps severe band (raw bps; no priced leg also counts as held) has no admitted reference, because FX feeds, spot and the tokens priced off them repeat the last close while the asset trades: divergence carries the asset's last available reading through the closure, so DEWS bands and PSI stress breadth do not step at the edges, and is unavailable with `reference-market-closed` only when there is no previous reading. A non-USD coin priced only by the Mento Broker keeps its WATCH cap through a closure: its escalation evidence needs an independently stressed DEX leg read against a live reference, and none exists until the market reopens.
+Without an FX evidence generation, DEWS compares both legs with the published cohort rate. During a scheduled closure it carries the previous divergence unless an observed leg reaches 2,500 bps. When an FX evidence generation is present, DEWS admits primary and DEX reference comparisons separately at their original quote clocks. A producer-verified legacy asset keeps the cohort-rate comparison when its own peg lacks an observation. A scheduled-peg cross-venue spread requires fresh independent lineage. Scheduled-reference carry preserves the original observation clock, and smoothing uses the preceding current measurement. Only current admitted reference divergence supplies scheduled-peg market-price escalation evidence on this path. An unavailable comparison leaves its component unobserved. A fixed USD peg uses the $1 identity and independently observed venue prices.
+
+When a commodity entitlement receipt is present, each quote must match the receipt's clock before it contributes to divergence, closure severity or an independently sourced venue spread. Without the receipt and an FX evidence generation, DEWS uses the legacy static commodity unit. Persisted `diverg.value` and `diverg.available` describe current stress when scheduled-reference carry is active. The clocked carry remains in `diverg.referenceDivergence` for evidence-aware consumers.
 
 - DEX publisher selection and input admission follow [Stage 1 of depeg detection](./depeg-detection.md#stage-1----detection). Hydrated source ages and snapshots use the original aggregate clock, never publication time or surviving protocol lanes; clock-unavailable rows are marked stale, never fresh evidence, with `missing` or canonical `aggregate-clock-*` decoder reasons; malformed eligible JSON retains decoder telemetry.
 - **Anchors:** `[0bps, 0] → [25bps, 10] → [50bps, 25] → [75bps, 50] → [100bps, 75] → [200bps, 90] → [500bps, 100]`
 - **Non-USD peg dampening:** `value *= 0.7`
-- Averaged with the previous reading only when that reading was available.
+- Smoothing uses an eligible prior current reading.
 
 Historical `stress_signal_history` rows do not retain the underlying DEX trust metadata (`source_total_tvl`, per-row freshness context) needed to replay this gate exactly. The Wave 5.9 repair path therefore refreshes current rows and prunes unrecomputable daily history from the Mar 9, 2026 trust-floor boundary onward instead of pretending those stored snapshots can be deterministically recomputed.
 
@@ -152,6 +156,8 @@ Only public events (`suppression_reason IS NULL`) enter either window. Suppresse
 
 ### S_flow — Mint/Burn Flow
 
+Use observed issuance-chain scope and exclude receipt-proven bridge and protocol-internal movements. USDT retains observed gross volumes and chain scope while holder pressure is unavailable. Before a scanner configuration records its first finalized writer epoch, DEWS scores its admitted flow with the legacy burn surge and burn-to-mint ratio. An empty or pre-0312 ledger uses that same path. Epoch checks begin at the first full UTC hour covered by that writer. Earlier hours in either lookback retain legacy coverage. For epoch-scored flow the activity taper spans $50,000 to $1 million. Inconsistent or missing proof after activation withholds the affected component. A valid current window with an incompatible baseline can use the burn-to-mint ratio at 40% component weight.
+
 Hourly rows and materialization debt use enabled legs named in the published scope, intersected with DEWS's canonical-chain rule. Pending first admissions and disabled legs do not contribute. A retained publication without scope metadata uses only its published coins' pinned grandfathered configs after reapplying current admission and disable policy; new configs cannot inherit that fallback. Its original scan proof, watermark, valuation and debt gates remain required. Failed policy reads and an empty admitted scope never prove quiet zero.
 
 Since v6.45, an established `reactivation-pending` leg must match its enabled current configuration before DEWS can consider isolated evidence. For a coin with such an isolated leg, the canonical bucket independently needs current-fingerprint durable scan proof over the full 30 days through the published watermark; this includes the 24h window and checks debt in the same batch as flow rows. The same rule covers an admitted canonical leg whose other chain is isolated, and a fully isolated coin with independently proved canonical history. Legacy assurance cannot substitute for this proof. Classification, valuation and freshness gates below still apply.
@@ -165,6 +171,8 @@ Requires complete 24h/30d coverage at one published common closed-hour watermark
 - 60/40 blend of surge and ratio scores
 
 ### S_yield — Yield Anomaly
+
+Selected-row freshness follows the source's cadence verdict. Raw age remains diagnostic. Yield divergence requires a sufficiently populated cohort sharing the return denomination. The reward-share evidence contributes once.
 
 Available for yield-bearing coins with warning signals in `yield_data` or populated structured yield stress in the published `yield-rankings` cache. Maps active warning signals to stress points:
 
@@ -187,7 +195,7 @@ Structured Yield Intelligence source-risk and rank-attribution evidence adds the
 | --- | ---: |
 | `sourceRisk.rewardShare > 0.5` | 20 |
 | `sourceRisk.sourceDepthRatio < 0.001` | 35 |
-| `sourceRisk.sourceAgeSeconds > 6h` | 15 |
+| Selected yield source exceeds its cadence budget | 15 |
 | `sourceRisk.sourceSwitchCount30d > 0` | 20 |
 | `sourceRisk.sourceRiskPenalty >= 1.5` | 20 |
 | `sourceRisk.venueRiskTier = "medium"` | 10 |

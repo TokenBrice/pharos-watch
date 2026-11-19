@@ -1,3 +1,4 @@
+import { handleMintBurnEvents } from "../mint-burn-events";
 import { flowResponse } from "./mint-burn-flows.test-support";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createRequire } from "node:module";
@@ -17,13 +18,15 @@ import { computeFlowSignal } from "../../lib/dews/signal-families";
 import { makeDewsInput } from "../../lib/__tests__/dews.test-support";
 import { rebuildRetainedLegacyValuationHours } from "../../cron/mint-burn/valuation-rebuild";
 import { MINT_BURN_EVENT_RETENTION_SEC } from "../../cron/mint-burn/retention";
-import { mintBurnScanCoverageStatements, mintBurnScanFingerprint } from "../../lib/mint-burn-pipeline/scan-coverage";
+import { commitMintBurnMaterializedCoverage, mintBurnScanCoverageStatements, mintBurnScanFingerprint } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
 import { compactMintBurnPublication, syncMintBurnPublicationPolicy } from "../../lib/mint-burn-publication";
 import { checkMintBurnPublicationCoverage } from "../../lib/canary-checks-mintburn";
 import { aggregateFlowCacheKey } from "../../lib/mint-burn-flow-cache-keys";
-import { drainMintBurnMaterializationDebt } from "../../lib/mint-burn-pipeline/materialization-debt";
+import { drainMintBurnMaterializationDebt, rebuildMintBurnMaterializationHours } from "../../lib/mint-burn-pipeline/materialization-debt";
+import { healNullPrices } from "../../lib/mint-burn-pipeline/price-heal";
 import { finalizeMintBurnFlowResponse } from "../../lib/mint-burn-flows-service";
+import { MINT_BURN_RECEIPT_CLASSIFICATION_VERSION } from "../../lib/mint-burn-published-gauge";
 // Frozen at origin/main 49da34e78 so shallow CI clones and later releases retain this oracle.
 const prB = createRequire(import.meta.url)("./fixtures/pr-b-mint-burn-readers.cjs") as
   Pick<typeof FlowSchemas, "MintBurnFlowsResponseSchema" | "MintBurnPerCoinResponseSchema">
@@ -76,6 +79,106 @@ describe("mint/burn valuation completeness on real SQLite", () => {
     vi.useRealTimers();
     vi.restoreAllMocks();
     fixtures.closeAll();
+  });
+  it("retains a valued USDT authorization as supply flow and excludes it from holder pressure", async () => {
+    const { db } = await provenFixture();
+    await produce(db, [
+      event("mint", NOW - 10 * 86400, 5_000_000),
+      event("mint", NOW - HOUR, 1_000_000_000),
+    ]);
+    const result = buildCoinSummaries(await aggregateData(db), new Map([["usdt-tether", 1e11]]), null);
+    expect(result.coins.find((coin) => coin.stablecoinId === "usdt-tether")).toMatchObject({
+      netFlow24hUsd: 1e9, mintVolume24hUsd: 1e9, baselineDataDays: 30,
+      pressureShiftScore: null, pressureShiftState: "nr", pressureUnavailableReason: "treasury-boundary-unverified",
+    });
+    expect(computeGaugeScore(result.gaugeInputs)).toBeNull();
+    expect(result).toMatchObject({ scoredMcapUsd: 0, partialValuationInputs: 0 });
+  });
+  it.each([["usdz-anzen", "bridge_transfer"], ["ousd-origin-protocol", "protocol_internal"]] as const)("requires current %s receipts and hour revision through rollback", async (id, excludedClass) => {
+    const { db, sqlite } = await provenFixture();
+    const end = Math.floor(NOW / HOUR) * HOUR;
+    const config = MINT_BURN_CONFIGS.find((entry) => entry.stablecoinId === id)!;
+    sqlite.prepare("UPDATE mint_burn_scan_coverage SET from_timestamp = ? WHERE config_key = ?")
+      .run(end - HOUR, mintBurnConfigKey(config));
+    const hour = end - HOUR;
+    const excluded = { ...event("mint", hour + 30, 12_000_000, id), block_number: config.startBlock + 1, flow_type: excludedClass };
+    const ordinary = { ...event("mint", hour + 60, 200_000, id), block_number: config.startBlock + 1 };
+    const currentHours = collectAffectedHours([ordinary]);
+    await produce(db, [{ ...event("mint", hour - HOUR + 60, 1_000_000, id), block_number: config.startBlock }]);
+    await insertMintBurnRows(db, [excluded, ordinary]);
+    const certify = async (revision: string) => {
+      await recalcAffectedHours(db, currentHours, { materializationRevision: revision });
+      await commitMintBurnMaterializedCoverage(db, {
+        configKey: mintBurnConfigKey(config), configFingerprint: mintBurnScanFingerprint(config),
+        chainId: config.chain.chainId, fromBlock: config.startBlock, toBlock: config.startBlock + 1,
+        fromTimestamp: hour, toTimestamp: end, finalizedBlock: config.startBlock + 1, acceptedAt: NOW,
+        materializedStablecoinId: id, materialization: { revision, hours: [hour] },
+      }, []);
+    };
+    await certify("initial");
+    const result = buildCoinSummaries(await aggregateData(db), new Map(), null);
+    expect(result.coins.find((coin) => coin.stablecoinId === id)).toMatchObject({
+      netFlow24hUsd: null, pressureShiftScore: null, mintVolume24hUsd: 200_000, mintCount24h: 1,
+      coverage: { has24hWindow: false },
+    });
+    const detail = await flowResponse(db, `?stablecoin=${id}`);
+    expect(detail.status).toBe(200);
+    const body = await detail.json<{ hourly: { hourTs: number; mintVolumeUsd: number }[] }>();
+    expect(body).toMatchObject({ receiptClassificationVersion: MINT_BURN_RECEIPT_CLASSIFICATION_VERSION, netFlowUsd: null, mintVolumeUsd: 200_000, mintCount: 1 });
+    expect(body.hourly.reduce((sum, hour) => sum + hour.mintVolumeUsd, 0)).toBe(200_000);
+    for (const scope of ["all", "counted"] as const) {
+      const events = await handleMintBurnEvents(db, new URL(`https://x/api/mint-burn-events?stablecoin=${id}&scope=${scope}&limit=1`));
+      const page = await events.json<{ total: number; events: { amountUsd: number }[] }>();
+      expect(page.total).toBe(scope === "counted" ? 1 : 3);
+      expect(page.events).toHaveLength(1);
+      expect(page.events[0].amountUsd).toBe(200_000);
+    }
+    // Main's replay enqueues the hour, writes flow_type without the receipt column, and rebuilds unstamped.
+    sqlite.prepare("INSERT OR IGNORE INTO mint_burn_dirty_hours VALUES (?, ?, ?)").run(id, config.chain.chainId, hour);
+    sqlite.prepare("UPDATE mint_burn_events SET flow_type = 'standard' WHERE id = ?").run(excluded.id);
+    await recalcAffectedHours(db, currentHours);
+    expect(sqlite.prepare("SELECT flow_type FROM mint_burn_events WHERE id = ?").get(excluded.id)).toEqual({ flow_type: excludedClass });
+    expect(sqlite.prepare("SELECT revision, writer_epoch FROM mint_burn_writer_epoch_hours WHERE stablecoin_id = ? AND hour_ts = ?").get(id, hour))
+      .toEqual({ revision: null, writer_epoch: null });
+    const latestHour = async () => {
+      const response = await flowResponse(db, `?stablecoin=${id}`);
+      expect(response.status).toBe(200);
+      const detail = await response.json<{ hourly: { hourTs: number; netFlowUsd: number | null }[] }>();
+      return detail.hourly[detail.hourly.length - 1]!;
+    };
+    const count = async () => {
+      const response = await handleMintBurnEvents(db, new URL(`https://x/api/mint-burn-events?stablecoin=${id}&scope=counted`));
+      return (await response.json<{ total: number }>()).total;
+    };
+    // The shared watermark moves the end of the dense series before the rewritten hour.
+    expect((await latestHour()).hourTs).toBeLessThan(hour);
+    expect(await count()).toBe(0);
+    await certify("recovered");
+    expect(await latestHour()).toMatchObject({ hourTs: hour, netFlowUsd: 200_000 });
+    expect(await count()).toBe(1);
+  });
+  it("keeps a verified USDz mint counted when its missing price is repaired", async () => {
+    const { db, sqlite } = fixtures.open();
+    const id = "usdz-anzen";
+    const hour = Math.floor(NOW / HOUR) * HOUR - HOUR;
+    const config = MINT_BURN_CONFIGS.find((entry) => entry.stablecoinId === id)!;
+    const mint = { ...event("mint", hour + 60, null, id), amount: 12_000_000, block_number: config.startBlock + 1 };
+    await insertMintBurnRows(db, [mint]);
+    await recalcAffectedHours(db, collectAffectedHours([mint]), { materializationRevision: "verified" });
+    await commitMintBurnMaterializedCoverage(db, {
+      configKey: mintBurnConfigKey(config), configFingerprint: mintBurnScanFingerprint(config), chainId: config.chain.chainId,
+      fromBlock: config.startBlock, toBlock: mint.block_number, fromTimestamp: hour, toTimestamp: hour + HOUR,
+      finalizedBlock: mint.block_number, acceptedAt: NOW, materializedStablecoinId: id,
+      materialization: { revision: "verified", hours: [hour] },
+    }, []);
+    sqlite.prepare(`INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at)
+      VALUES (?, ?, 50_000_000, 1, ?)`).run(id, Math.floor(hour / 86400) * 86400, mint.timestamp);
+    const repair = await healNullPrices(db, NOW);
+    expect(repair.healed).toBe(1);
+    await rebuildMintBurnMaterializationHours(db, repair.affectedHours);
+    const counted = await handleMintBurnEvents(db, new URL(`https://x/api/mint-burn-events?stablecoin=${id}&scope=counted`));
+    expect(await counted.json()).toMatchObject({ total: 1, events: [{ amountUsd: 12_000_000 }] });
+    expect(await (await flowResponse(db, `?stablecoin=${id}`)).json()).toMatchObject({ mintCount: 1, mintVolumeUsd: 12_000_000 });
   });
   it.each([["per-coin", 720, 0], ["aggregate", 720, 0], ["aggregate", 168, 1], ["per-coin", 24, 1]] as const)(
     "bounds %s cache writes at hours=%s", async (scope, hours, expectedWrites) => {
@@ -298,34 +401,34 @@ to_timestamp, finality_tag, finalized_block, accepted_at) VALUES (?, ?, ?, 1, 2,
     sqlite.exec(`
 INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
 mint_unpriced_event_count, burn_unpriced_event_count, mint_volume_usd, burn_volume_usd, net_flow_usd)
-VALUES ('usdt-tether', 'ethereum', ${baselineHour}, 1, 0, 0, 0, 5000000, 0, 5000000),
+VALUES ('usdp-paxos', 'ethereum', ${baselineHour}, 1, 0, 0, 0, 5000000, 0, 5000000),
 ('usdai-usd-ai', 'arbitrum', ${baselineHour}, 1, 0, 0, 0, 5000000, 0, 5000000),
 ('usdc-circle', 'ethereum', ${shortBaselineHour}, 1, 0, 0, 0, 5000000, 0, 5000000);
 `);
     await produce(db, [
-      event("mint", NOW - 2 * HOUR, null),
-      event("burn", NOW - 2 * HOUR + 60, 1_000_000),
+      event("mint", NOW - 2 * HOUR, null, "usdp-paxos"),
+      event("burn", NOW - 2 * HOUR + 60, 1_000_000, "usdp-paxos"),
       event("burn", NOW - 3 * HOUR, null, "usdc-circle"),
       event("mint", NOW - HOUR, 2_000_000, "usdai-usd-ai", "arbitrum"),
     ]);
     const data = await aggregateData(db);
     const summaries = buildCoinSummaries(
       data,
-      new Map([["usdt-tether", 100_000_000_000], ["usdai-usd-ai", 1_000_000_000], ["usdc-circle", 50_000_000_000]]),
+      new Map([["usdp-paxos", 100_000_000_000], ["usdai-usd-ai", 1_000_000_000], ["usdc-circle", 50_000_000_000]]),
       null,
     );
     const { coins, gaugeInputs } = summaries;
     const byId = new Map(coins.map((coin) => [coin.stablecoinId, coin]));
-    const usdt = byId.get("usdt-tether")!;
-    expect(usdt.valuation.window24h).toEqual({
+    const usdp = byId.get("usdp-paxos")!;
+    expect(usdp.valuation.window24h).toEqual({
       completeness: "partial", mintCompleteness: "partial", burnCompleteness: "complete", unpricedMintEventCount: 1,
       unpricedBurnEventCount: 0,
     });
-    expect(usdt).toMatchObject({
+    expect(usdp).toMatchObject({
       burnVolume24hUsd: 1_000_000, netFlow24hUsd: null, netFlowDirection24h: null, pressureShiftScore: null,
       pressureShiftState: "nr", netFlow7dUsd: null, netFlow30dUsd: null,
     });
-    expect(usdt.valuation).toMatchObject({
+    expect(usdp.valuation).toMatchObject({
       netFlow7dBound: { kind: "lower", valueUsd: -1_000_000 }, netFlow30dBound: { kind: "lower", valueUsd: 4_000_000 },
     });
     const usdc = byId.get("usdc-circle")!;
@@ -341,7 +444,7 @@ VALUES ('usdt-tether', 'ethereum', ${baselineHour}, 1, 0, 0, 0, 5000000, 0, 5000
     expect(summaries).toMatchObject({
       partialValuationInputs: 1, partialValuationMcapUsd: 100_000_000_000, scoredMcapUsd: 1_000_000_000,
     });
-    expect(usdt.gaugeWeightUsd).toBe(100_000_000_000);
+    expect(usdp.gaugeWeightUsd).toBe(100_000_000_000);
     expect(usdai.gaugeWeightUsd).toBe(1_000_000_000);
     expect(byId.get(emptyCoin)!.gaugeWeightUsd).toBeNull();
     const empty = byId.get(emptyCoin)!;
@@ -357,9 +460,10 @@ VALUES ('usdt-tether', 'ethereum', ${baselineHour}, 1, 0, 0, 0, 5000000, 0, 5000
     expect(empty.netFlow24hUsd).toBe(0);
     sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(aggregateFlowCacheKey(24),
       JSON.stringify({ gauge: { score: null }, coins, updatedAt: NOW, publication: data.publication,
+        receiptClassificationVersion: MINT_BURN_RECEIPT_CLASSIFICATION_VERSION,
         window: { start: Math.floor(NOW / HOUR) * HOUR - 86400, end: Math.floor(NOW / HOUR) * HOUR, semantics: "closed-utc-hours" } }), NOW);
     const hydration = await hydrateMintBurn(hydrationContext(db));
-    const snapshot = hydration.mintBurnMap.get("usdt-tether")!;
+    const snapshot = hydration.mintBurnMap.get("usdp-paxos")!;
     expect(snapshot.valuation24h).toBe("partial");
     expect(computeFlowSignal(makeDewsInput({
       burnVolume24hUsd: snapshot.burn24h, mintVolume24hUsd: snapshot.mint24h, burnBaseline30dUsd: 100_000, flowBaselineDays: 14,
@@ -391,7 +495,7 @@ VALUES ('usdt-tether', 'ethereum', ${baselineHour}, 1, 0, 0, 0, 5000000, 0, 5000
       coverage: { isPartial: true, status: "partial-history", unavailableReason: "scan-coverage-incomplete" } });
     expect(Object.values(coin.coverage.windows!)).toEqual(Array(4).fill(incomplete));
     expect((await data()).partialChainIds).toEqual(new Set([chain]));
-    expect(result).toMatchObject({ partialValuationInputs: 1, partialValuationMcapUsd: 100, scoredMcapUsd: 10,
+    expect(result).toMatchObject({ partialValuationInputs: 0, partialValuationMcapUsd: 0, scoredMcapUsd: 10,
       flightToQuality: null, flightToQualityReason: "flow-window-unavailable" });
     const complete = result.coins.find((c) => c.stablecoinId === risk)!;
     expect(complete).toEqual(before.coins.find((c) => c.stablecoinId === risk));

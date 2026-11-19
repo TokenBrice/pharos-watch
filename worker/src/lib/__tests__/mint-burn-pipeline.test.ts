@@ -1,3 +1,6 @@
+import { readFileSync, readdirSync } from "node:fs";
+import { DatabaseSync } from "node:sqlite";
+import { URL } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mintBurnAlchemyEndpoint } from "../mint-burn-pipeline/rpc";
 
@@ -68,6 +71,7 @@ import { makeMintBurnRow } from "../../test-helpers/__shared/fixtures";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { drainMintBurnMaterializationDebt } from "../mint-burn-pipeline/materialization-debt";
+import { toEventSelector } from "viem/utils";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
@@ -92,6 +96,45 @@ const rpc = [mintBurnAlchemyEndpoint("https://rpc.invalid")];
 describe("mint-burn shared pipeline modules", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("can insert a receipt-aware OUSD event at the documented rollout floor", async () => {
+    const guide = readFileSync(new URL("../../../../docs/deployment-process.md", import.meta.url), "utf8");
+    const rollout = guide.split("### Reference and supply rollout")[1]?.split("\n##")[0];
+    const floor = rollout?.match(/worker\/migrations\/(\d{4}_[\w-]+\.sql)\)/)?.[1];
+    const directory = new URL("../../../migrations/", import.meta.url);
+    const migrations = readdirSync(directory).filter((name) => name.endsWith(".sql")).sort();
+    expect(migrations).toContain(floor);
+    using sqlite = new DatabaseSync(":memory:");
+    for (const name of migrations.slice(0, migrations.indexOf(floor!) + 1)) {
+      sqlite.exec(readFileSync(new URL(name, directory), "utf8"));
+    }
+    const row = makeRow({ stablecoin_id: "ousd-origin-protocol", symbol: "OUSD", flow_type: "protocol_internal" });
+    expect(await insertMintBurnRows(createSqliteD1(sqlite), [row])).toEqual({ inserted: 1, ignored: 0 });
+    expect(sqlite.prepare("SELECT receipt_flow_exclusion FROM mint_burn_events WHERE id = ?").get(row.id))
+      .toEqual({ receipt_flow_exclusion: "protocol_internal" });
+  });
+
+  it("keeps an unresolved $12M USDz burn out of legacy totals until receipt-aware classification resolves it", async () => {
+    const { db, sqlite } = fixtures.open();
+    const reason = "known-bridge-pool-without-bridge-signal";
+    const row = makeRow({ stablecoin_id: "usdz-anzen", symbol: "USDz", direction: "burn", flow_type: "standard",
+      amount: 12_000_000, amount_usd: 12_000_000, burn_type: "review_required", burn_review_reason: reason });
+    await insertMintBurnRows(db, [row]);
+    const review = () => sqlite.prepare(`SELECT burn_type, burn_review_reason, usdz_receipt_review
+      FROM mint_burn_events WHERE id = ?`).get(row.id);
+    const legacyReclassify = () => sqlite.prepare(`UPDATE mint_burn_events
+      SET flow_type = 'standard', burn_type = 'effective_burn', burn_review_reason = NULL WHERE id = ?`).run(row.id);
+    legacyReclassify();
+    expect(review()).toEqual({ burn_type: "review_required", burn_review_reason: reason, usdz_receipt_review: reason });
+    await recalcAffectedHours(db, collectAffectedHours([row]));
+    expect(sqlite.prepare("SELECT burn_count, burn_volume_usd, burn_unresolved_event_count FROM mint_burn_hourly").get())
+      .toEqual({ burn_count: 0, burn_volume_usd: 0, burn_unresolved_event_count: 1 });
+
+    await updateEventClassifications(db, [{ ...row, flow_type: "bridge_transfer", burn_type: "bridge_burn", burn_review_reason: null }]);
+    expect(review()).toEqual({ burn_type: "bridge_burn", burn_review_reason: null, usdz_receipt_review: null });
+    expect(sqlite.prepare("SELECT receipt_flow_exclusion FROM mint_burn_events WHERE id = ?").get(row.id))
+      .toEqual({ receipt_flow_exclusion: "bridge_transfer" });
   });
 
   it("tracks affected hours when inserts land even if the batch includes duplicates", async () => {
@@ -194,6 +237,61 @@ describe("mint-burn shared pipeline modules", () => {
     });
     expect(vi.mocked(getAlchemyTransactionContextBatchMany)).toHaveBeenCalledTimes(1);
     expect(vi.mocked(classifyBridgeAwareBurnRows)).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["fee-before", "fee-after", "missing-checkpoint", "wrong-vault", "rollback-replay"] as const)("classifies a trustee fee separately from an ordinary OUSD mint (%s)", async (variant) => {
+    const config = MINT_BURN_CONFIGS.find((entry) => entry.stablecoinId === "ousd-origin-protocol")!;
+    const token = config.contractAddress, vault = config.originDollarRebaseVault!;
+    const trustee = "0x1111111111111111111111111111111111111111";
+    const word = (value: bigint) => value.toString(16).padStart(64, "0");
+    const trusteeWord = trustee.slice(2).padStart(64, "0");
+    const tx = `0x${"1".repeat(64)}`, blockNumber = 26_028_859;
+    const replay = variant === "rollback-replay";
+    const feeRaw = replay ? 7_000n * 10n ** 18n : 7n;
+    const ordinaryRaw = replay ? 200_000n * 10n ** 18n : 7n;
+    const yieldRaw = replay ? 20_000n * 10n ** 18n : 11n;
+    const mint = (amount: bigint) => ({
+      address: token, topics: [toEventSelector("Transfer(address,address,uint256)"), `0x${word(0n)}`, `0x${trusteeWord}`], data: `0x${word(amount)}`,
+    });
+    const distribution = { address: variant === "wrong-vault" ? trustee : vault, topics: [toEventSelector("YieldDistribution(address,uint256,uint256)")], data: `0x${trusteeWord}${word(yieldRaw)}${word(feeRaw)}` };
+    const checkpoint = { address: token, topics: [toEventSelector("TotalSupplyUpdatedHighres(uint256,uint256,uint256)")], data: `0x${word(100n)}${word(100n)}${word(1n)}` };
+    const feeIndex = variant === "fee-after" ? 3 : 2;
+    const ordered = variant === "fee-after"
+      ? [mint(ordinaryRaw), distribution, mint(feeRaw)]
+      : [mint(ordinaryRaw), mint(feeRaw), distribution];
+    if (variant !== "missing-checkpoint") ordered.push(checkpoint);
+    const receiptLogs = ordered.map((log, index) => ({ ...log, logIndex: `0x${(index + 1).toString(16)}` }));
+    const rows = [feeIndex, 1].map((index) => makeRow({ id: `ethereum-${tx}-${index}`, chain_id: "ethereum", stablecoin_id: config.stablecoinId,
+      tx_hash: tx, block_number: blockNumber, amount_raw: String(index === feeIndex ? feeRaw : ordinaryRaw),
+      ...(replay ? { amount_usd: index === feeIndex ? 7_000 : 200_000 } : {}),
+      direction: "mint", counterparty: trustee }));
+    const cache = new Map([[`${tx}:unverified`, { to: vault, inputSelector: "0x", logTopics: [], logAddresses: [], receiptLogs,
+      supplyProofContext: { from: trustee, input: "0x", blockNumber, blockHash: tx, success: true } }]]);
+    await classifyBridgeBurnRows(rows, config, rpc, { count: 0, limit: 10 }, cache);
+    expect(rows[0]).toMatchObject(variant === "missing-checkpoint"
+      ? { flow_type: "standard", burn_type: "review_required", burn_review_reason: "ousd-trustee-fee-unproven" }
+      : { flow_type: variant === "wrong-vault" ? "standard" : "protocol_internal", burn_type: null });
+    expect(rows[1]).toMatchObject({ flow_type: "standard", burn_type: null });
+
+    const { sqlite, db } = fixtures.open(), affected = collectAffectedHours(rows);
+    await persistMintBurnRows(db, rows, affected);
+    await recalcAffectedHours(db, affected);
+    expect(sqlite.prepare("SELECT mint_count, mint_unresolved_event_count FROM mint_burn_hourly").get())
+      .toEqual({ mint_count: variant === "wrong-vault" ? 2 : 1, mint_unresolved_event_count: variant === "missing-checkpoint" ? 1 : 0 });
+    if (replay) {
+      expect(sqlite.prepare("SELECT mint_volume_usd FROM mint_burn_hourly").get())
+        .toEqual({ mint_volume_usd: 200_000 });
+    }
+    if (variant === "missing-checkpoint") {
+      const fee = rows[0]!;
+      const stored = sqlite.prepare("SELECT flow_type, burn_type, burn_review_reason FROM mint_burn_events WHERE id = ?");
+      sqlite.prepare("UPDATE mint_burn_events SET flow_type = 'standard', burn_type = NULL, burn_review_reason = NULL WHERE id = ?").run(fee.id);
+      expect(stored.get(fee.id)).toEqual({
+        flow_type: "standard", burn_type: "review_required", burn_review_reason: "ousd-trustee-fee-unproven",
+      });
+      await updateEventClassifications(db, [{ ...fee, flow_type: "protocol_internal", burn_type: null, burn_review_reason: null }]);
+      expect(stored.get(fee.id)).toEqual({ flow_type: "protocol_internal", burn_type: null, burn_review_reason: null });
+    }
   });
 
   it("fetches tx contexts with bounded concurrency", async () => {

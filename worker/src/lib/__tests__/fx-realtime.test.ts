@@ -65,7 +65,7 @@ describe("fetchRealtimeFxRates", () => {
   it.each([
     ["missing", undefined, "timestamp-missing"],
     ["stale beyond one missed hourly publish", NOW_SEC - 2 * 3600 - 1, "timestamp-stale"],
-    ["future-skewed", NOW_SEC + 5 * 60 + 1, "timestamp-future"],
+    ["future-skewed", NOW_SEC + 1, "timestamp-future"],
   ] as const)("rejects a %s upstream timestamp instead of stamping the fetch time", async (_label, timestamp, reason) => {
     mockFetch([{ match: () => true, body: { timestamp, rates: { EUR: 0.925 } } }]);
 
@@ -76,55 +76,23 @@ describe("fetchRealtimeFxRates", () => {
     expect(result.rejection).toEqual({ reason, upstreamTimestamp: timestamp ?? null });
   });
 
-  it("admits snapshots at the inclusive age and future-skew boundaries", async () => {
-    for (const timestamp of [NOW_SEC - 2 * 3600, NOW_SEC + 5 * 60]) {
+  it("admits snapshots at the inclusive age and decision-clock boundaries", async () => {
+    for (const timestamp of [NOW_SEC - 2 * 3600, NOW_SEC]) {
       mockFetch([{ match: () => true, body: { timestamp, rates: { EUR: 0.925 } } }]);
       const result = await fetchRealtimeFxRates("test-key", undefined, NOW_SEC);
       expect(result.observation?.observedAt).toBe(timestamp);
     }
   });
 
-  it("returns no observation on API failure", async () => {
-    vi.useFakeTimers();
-    const firstResponse = new Response("down", { status: 500 });
-    const secondResponse = new Response("still down", { status: 500 });
-    const firstCancel = vi.spyOn(firstResponse.body!, "cancel");
-    const secondCancel = vi.spyOn(secondResponse.body!, "cancel");
-    const fetchMock = mockFetch([{
-      match: () => true,
-      outcomes: [{ response: firstResponse }, { response: secondResponse }],
-    }]);
+  it.each([403, 429, 500])("returns HTTP %s without retrying and cancels the error body", async (status) => {
+    const response = new Response("error", { status, headers: { "Retry-After": "1" } });
+    const cancel = vi.spyOn(response.body!, "cancel");
+    const fetchMock = mockFetch([{ match: () => true, outcomes: [{ response }] }]);
 
-    const pending = fetchRealtimeFxRates("test-key", undefined, NOW_SEC);
-    await vi.advanceTimersByTimeAsync(1_000);
-    const result = await pending;
+    const result = await fetchRealtimeFxRates("test-key", undefined, NOW_SEC);
 
-    expect(result.completed).toBe(false);
-    expect(result.observation).toBeNull();
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(firstCancel).toHaveBeenCalledOnce();
-    expect(secondCancel).toHaveBeenCalledOnce();
-  });
-
-  it("retries a rate-limited OXR response before returning rates", async () => {
-    vi.useFakeTimers();
-    const rateLimited = new Response(JSON.stringify({ error: "rate limited" }), {
-      status: 429,
-      headers: { "Retry-After": "1" },
-    });
-    const cancel = vi.spyOn(rateLimited.body!, "cancel");
-    const fetchMock = mockFetch([{
-      match: () => true,
-      outcomes: [{ response: rateLimited }, { body: { timestamp: NOW_SEC - 600, rates: { EUR: 0.925 } } }],
-    }]);
-
-    const pending = fetchRealtimeFxRates("test-key", undefined, NOW_SEC);
-    await vi.advanceTimersByTimeAsync(1_000);
-    const result = await pending;
-
-    expect(result.completed).toBe(true);
-    expect(result.observation?.rates.get("peggedEUR")).toBeCloseTo(1 / 0.925, 4);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result).toMatchObject({ completed: true, observation: null, statusCode: status });
+    expect(fetchMock).toHaveBeenCalledOnce();
     expect(cancel).toHaveBeenCalledOnce();
   });
 

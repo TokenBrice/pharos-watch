@@ -1,18 +1,26 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as currentPeg from "../../../lib/current-peg-observations";
+import { buildPricingOperatorConditions } from "../../operator-watch-pricing";
+import { FxSyncRunState } from "../../sync-fx-rates-helpers";
+import { handleStablecoins } from "../../../api/cache-handlers";
 import { handlePegSummary } from "../../../api/peg-summary";
 import { CurrentPegSchema } from "@shared/types/current-peg";
+import type { FxReferenceEvidenceMap } from "@shared/types/fx-reference";
 import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
 import { overlayCanonicalDetail } from "../../../api/stablecoin-detail/price";
 import { DEX_PRICE_CHECK_FRESHNESS_SEC } from "../../../lib/dex-cron-constants";
-import { mockD1 } from "@shared/test-utils/mock-d1";
-import { encodeResponseReadyCacheValue, getResponseReadyCacheKey } from "../../../lib/api-cache-read";
-import { RESPONSE_READY_CACHE_SCHEMA_IDS } from "../../../lib/response-ready-cache-contracts";
+import { getResponseReadyCacheKey } from "../../../lib/api-cache-read";
 import { commitReplayPriceCache, validateAndWriteStablecoinsCache, type ValidateAndCacheInput } from "../cache-publication";
-import { loadPreviousStablecoinsById, mergeSupplementalLastKnownGood, normalizeStablecoinsPayload } from "../shared";
+import { fxRatesCacheRows } from "../../../lib/__tests__/fx-rate-state.test-support";
+import { loadFreshFxRates, loadPreviousStablecoinsById, mergeSupplementalLastKnownGood, normalizeStablecoinsPayload } from "../shared";
 import { normalizeChainCirculating } from "../phase-helpers";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getCache } from "../../../lib/db-cache";
+import { isValidFxRate } from "../../../lib/fx-config";
+import { loadFxRateState, persistFxRateState } from "../../../lib/fx-rate-state";
+import { loadStablecoinsCache, prepareStablecoinsGenerationCompanion } from "../../../lib/stablecoins-cache";
+import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { getPriceCache } from "../../../lib/price-cache";
 import { makePeggedAsset } from "./_fixtures";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
@@ -26,12 +34,275 @@ async function readCompanion(db: D1Database) {
   return JSON.parse((await getCache(db, getResponseReadyCacheKey("stablecoins")))!.value) as { body: string };
 }
 
+async function readCompanionList(db: D1Database) {
+  return StablecoinListResponseSchema.parse(JSON.parse((await readCompanion(db)).body));
+}
+
+function legacyFxAsset(at: number, price: number, id = "eurc-circle", pegType = "peggedEUR") {
+  return makePeggedAsset({ id, pegType, pegMechanism: "fiat-backed", price, priceSource: "coingecko",
+    priceObservedAt: at, priceObservedAtMode: "upstream", circulating: { [pegType]: 1e8 }, chainCirculating: {}, chains: [] });
+}
+
 function publish(input: ValidateAndCacheInput, blocked = () => ({ metadata: "blocked" })) {
   return validateAndWriteStablecoinsCache(input, blocked);
 }
 
 describe("validateAndWriteStablecoinsCache", () => {
   const syncStartSec = 1_777_000_000;
+  it("publishes an independent mark alongside an explicitly unavailable native quantity", async () => {
+    const { db } = fixtures.open();
+    vi.spyOn(Date, "now").mockReturnValue(syncStartSec * 1000);
+    const asset = makePeggedAsset({
+      id: "usdt-tether", pegMechanism: "fiat-backed", price: 1, priceSource: "coingecko",
+      priceObservedAt: syncStartSec, priceObservedAtMode: "upstream",
+      circulating: { peggedUSD: 100_000_000 }, circulatingNative: null,
+      chainCirculating: {}, chains: [],
+    });
+    expect(await publish({ db, syncStartSec, validationContext: "main", assets: [asset] })).toMatchObject({ written: true });
+    const response = await overlayCanonicalDetail(db, asset.id, Response.json({ price: 10, priceSource: "defillama" }));
+    expect(projectStablecoinLiveSummary(StablecoinDetailResponseSchema.parse(await response.json()), asset.id)).toMatchObject({
+      price: 1, circulating: { peggedUSD: 100_000_000 }, nativeSupply: { current: null },
+    });
+  });
+
+  it("measures two open hours across winning publications while public FX evidence is off", async () => {
+    const { db } = fixtures.open();
+    const start = Date.parse("2026-11-17T12:00:00Z") / 1000;
+    const clock = vi.spyOn(Date, "now");
+    for (let interval = 0; interval <= 8; interval++) {
+      const at = start + interval * 900;
+      clock.mockReturnValue(at * 1000);
+      expect(await publish({ db, syncStartSec: at, validationContext: "main", assets: [legacyFxAsset(at, 1.1)],
+        fxReferenceObservations: {} })).toMatchObject({ written: true });
+    }
+    const served = JSON.parse((await readCompanion(db)).body);
+    expect(served.fxReferenceObservations).toBeUndefined();
+    expect(served.peggedAssets[0].currentPeg.referenceAdmission).toBeUndefined();
+    const conditions = await buildPricingOperatorConditions(db, { nowSec: start + 7200, caches: {} });
+    expect(conditions.find((condition) => condition.id === "reference-admission-outage:EUR"))
+      .toMatchObject({ active: true, unknown: false });
+  });
+  it.each([false, true])("measures each legacy FX source separately with stale EUR = %s", async (staleEur) => {
+    const { db, sqlite } = fixtures.open();
+    const start = Date.parse("2026-11-17T12:00:00Z") / 1000;
+    const clock = vi.spyOn(Date, "now");
+    for (let i = 0; i <= 9; i++) {
+      const at = start + i * 900;
+      clock.mockReturnValue(at * 1000);
+      for (const row of fxRatesCacheRows(at - 60, { peggedEUR: 1.1, peggedREAL: 0.2 }, {
+        sourceUpdatedAtByPeg: { peggedEUR: staleEur ? start - 72 * 3600 : at - 60, peggedREAL: at - 60 },
+      })) {
+        sqlite.prepare("INSERT OR REPLACE INTO cache(key,value,updated_at) VALUES(?,?,?)").run(row.key, row.value, row.updated_at);
+      }
+      const selection = await loadFreshFxRates(db);
+      expect(selection).not.toHaveProperty("fxReferenceObservations");
+      const assets = [legacyFxAsset(at - 60, 1.122), legacyFxAsset(at - 60, 0.2, "brz-transfero", "peggedREAL")];
+      expect(await publish({ db, ...selection, assets, validationContext: "main", syncStartSec: at,
+        publishFxReferenceEvidence: i === 9 })).toMatchObject({ written: true });
+    }
+    const served = JSON.parse((await readCompanion(db)).body);
+    expect(served.fxReferenceObservations).toBeUndefined();
+    expect(served.peggedAssets[0].currentPeg.currentDeviationBps).toBe(staleEur ? null : 200);
+    const conditions = await buildPricingOperatorConditions(db, { nowSec: start + 9 * 900, caches: {} });
+    expect(conditions.find((row) => row.id === "reference-admission-outage:EUR")).toMatchObject({ active: staleEur, unknown: false });
+    expect(conditions.find((row) => row.id === "reference-admission-outage:BRL")).toMatchObject({ active: false, unknown: false });
+  });
+
+  it("uses legacy EUR freshness with clocked GBP in the list, peg summary and watch", async () => {
+    const { db, sqlite } = fixtures.open();
+    const start = Date.parse("2026-11-18T10:00:00Z") / 1000;
+    const clock = vi.spyOn(Date, "now");
+    for (const row of fxRatesCacheRows(start - 60, { peggedEUR: 1.1 })) {
+      sqlite.prepare("INSERT INTO cache VALUES (?, ?, ?)").run(row.key, row.value, row.updated_at);
+    }
+    for (let interval = 0; interval <= 9; interval++) {
+      const at = start + interval * 900;
+      clock.mockReturnValue(at * 1000);
+      if (interval % 2 === 0) {
+        const state = new FxSyncRunState({ prevState: await loadFxRateState(db), syncStartSec: at,
+          expectedPegKeys: ["peggedEUR", "peggedGBP"], initialSources: {}, validateRate: isValidFxRate });
+        state.applyFrankfurterRates({ GBP: 0.8 }, "2026-11-17", { EUR: "peggedEUR", GBP: "peggedGBP" });
+        state.enforcePublicationOrder();
+        await persistFxRateState(db, state.usableRates, state.buildPersistedMeta(), at);
+      }
+      const asset = legacyFxAsset(at - 60, 1.122);
+      const selection = await loadFreshFxRates(db);
+      expect(selection.fxReferenceObservations).toHaveProperty("peggedGBP");
+      expect(await publish({ db, ...selection, assets: [asset], validationContext: "main", syncStartSec: at,
+        publishFxReferenceEvidence: interval === 9 })).toMatchObject({ written: true });
+      if (interval < 8) continue;
+      const served = await readCompanionList(db);
+      expect(served.peggedAssets[0].currentPeg?.currentDeviationBps).toBe(200);
+      const summary = await handlePegSummary(db);
+      expect(summary.status).toBe(200);
+      expect(await summary.json()).toMatchObject({ coins: expect.arrayContaining([
+        expect.objectContaining({ id: asset.id, currentDeviationBps: 200 }),
+      ]), summary: { totalTracked: 1 } });
+      const conditions = await buildPricingOperatorConditions(db, { nowSec: at, caches: {} });
+      expect(conditions.find((row) => row.id === "reference-admission-outage:EUR"))
+        .toMatchObject({ active: false, unknown: false, label: "EUR without an admitted reference for 0 open-session minutes" });
+    }
+  });
+
+  it("keeps the verified legacy gold median in the list and peg summary when only GBP is clocked", async () => {
+    const { db } = fixtures.open();
+    const at = Date.parse("2026-11-18T15:00:00Z") / 1000;
+    vi.spyOn(Date, "now").mockReturnValue(at * 1000);
+    await persistFxRateState(db, { peggedGOLD: 4_100, peggedGBP: 1.27 }, {
+      usableSyncAt: at, mode: "live", consecutiveFallbackRuns: 0, legacyDetectionPegs: ["peggedGOLD"],
+      sourceUpdatedAtByPeg: { peggedGOLD: at - 600, peggedGBP: at - 300 },
+      sourceModeByPeg: { peggedGOLD: "live", peggedGBP: "live" },
+      observations: { peggedGBP: { pegKey: "peggedGBP", usdPerUnit: 1.27,
+        observedAtSec: at - 300, source: "openExchangeRates", cadence: "intraday" } },
+    }, at);
+    const assets = ["paxg-paxos", "xaut-tether", "kau-kinesis"].map((id, index) => {
+      const meta = WORKER_TRACKED_META_BY_ID.get(id)!;
+      return makePeggedAsset({ id, symbol: meta.symbol, pegType: "peggedGOLD", pegMechanism: "rwa-backed",
+        price: 4165.60 * (meta.commodityOunces ?? 1) * (index === 1 ? 0.9997 : 1),
+        priceSource: "coingecko", priceObservedAt: at - 120, priceObservedAtMode: index === 2 ? "local_fetch" : "upstream",
+        circulating: { peggedGOLD: 1e8 }, chainCirculating: {}, chains: [] });
+    });
+    expect(await publish({ db, ...await loadFreshFxRates(db), assets, validationContext: "main",
+      syncStartSec: at, publishFxReferenceEvidence: true })).toMatchObject({ written: true });
+    const served = await readCompanionList(db);
+    expect(served.peggedAssets[0].currentPeg).toMatchObject({ legacyFxReference: true, currentDeviationBps: 0,
+      pegReference: { source: "median", valueUsd: 4165.60, asOf: at } });
+    expect(await (await handlePegSummary(db)).json()).toMatchObject({
+      summary: { totalTracked: 3 },
+      coins: expect.arrayContaining([
+        expect.objectContaining({ id: "paxg-paxos", currentDeviationBps: 0, pegReference: expect.objectContaining({ valueUsd: 4165.60 }) }),
+        expect.objectContaining({ id: "xaut-tether", currentDeviationBps: -3 }),
+      ]),
+    });
+  });
+
+  it("admits a legacy EUR peer median only while its original contributor clocks support the comparison", async () => {
+    const { db } = fixtures.open();
+    const start = Date.parse("2026-11-17T12:00:00Z") / 1000;
+    const clock = vi.spyOn(Date, "now");
+    for (let i = 0; i <= 9; i++) {
+      const at = start + i * 900;
+      clock.mockReturnValue(at * 1000);
+      const assets = ["eurc-circle", "eure-monerium", "eurcv-societe-generale-forge", "eurs-stasis"].map((id, j) => ({
+        ...legacyFxAsset(at - 60, j === 0 ? 1.122 : 1.1, id),
+        priceObservedAt: i === 9 && j === 3 ? undefined : at - 60, priceUpdatedAt: at - 60,
+      }));
+      expect(await publish({ db, assets, validationContext: "main", syncStartSec: at })).toMatchObject({ written: true });
+      if (i === 8) {
+        const current = JSON.parse((await readCompanion(db)).body).peggedAssets[0].currentPeg;
+        expect(current).toMatchObject({ currentDeviationBps: 200, pegReference: { source: "median", valueUsd: 1.1, contributorCount: 4 } });
+        expect(current.referenceAdmission).toBeUndefined();
+        const conditions = await buildPricingOperatorConditions(db, { nowSec: at, caches: {} });
+        expect(conditions.find((row) => row.id === "reference-admission-outage:EUR")).toMatchObject({ active: false, unknown: false });
+      }
+    }
+    const receipt = await getCache(db, "fx-reference-admission-coverage:v1");
+    expect(JSON.parse(receipt!.value).currencies.EUR.missingSince).toBe(start + 9 * 900);
+  });
+
+  it.each([undefined, {}])("serves the equal-clock replacement after companion failure with FX evidence %j", async (fxReferenceObservations) => {
+    const { db, sqlite } = fixtures.open();
+    vi.spyOn(Date, "now").mockReturnValue(syncStartSec * 1000);
+    const asset = makePeggedAsset({ id: "usdc-circle", pegMechanism: "fiat-backed", price: 1, priceSource: "pyth",
+      priceObservedAt: syncStartSec - 20, priceObservedAtMode: "upstream", circulating: { peggedUSD: 1e8 }, chainCirculating: {}, chains: [] });
+    const input = { db, assets: [asset], syncStartSec, fxReferenceObservations, validationContext: "main" as const };
+    expect(await publish(input)).toMatchObject({ written: true });
+    const key = getResponseReadyCacheKey("stablecoins");
+    const companion = (await getCache(db, key))!;
+    const firstGeneration = JSON.parse((await readCompanion(db)).body).fxAdmissionCoverageGeneration;
+    sqlite.exec(`CREATE TRIGGER reject_companion BEFORE INSERT ON cache WHEN NEW.key = '${key}'
+      BEGIN SELECT RAISE(FAIL, 'companion failed'); END`);
+    expect(await publish({ ...input, assets: [{ ...asset, price: 0.98 }] })).toMatchObject({ written: true, responseReadyCacheError: "Error" });
+    sqlite.exec("DROP TRIGGER reject_companion");
+    expect(JSON.parse((await getCache(db, "stablecoins"))!.value).fxAdmissionCoverageGeneration).not.toBe(firstGeneration);
+    await prepareStablecoinsGenerationCompanion(db, key, companion.value, syncStartSec, firstGeneration).run();
+    expect(await getCache(db, key)).toBeNull();
+    expect(await (await handleStablecoins(db)).json()).toMatchObject({ peggedAssets: [{ price: 0.98 }] });
+  });
+  it.each(["main", "fallback"] as const)("round trips the accepted prices, denominator, clocks and dated supply through %s", async (validationContext) => {
+    const { db } = fixtures.open();
+    const now = Date.parse("2027-03-29T16:00:00Z") / 1000;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const repricing = { sessionOpenedAtSec: Date.parse("2027-03-28T21:00:00Z") / 1000, preCloseUsdPerUnit: 0.19, source: "openExchangeRates" } as const;
+    const fx = { pegKey: "peggedREAL", usdPerUnit: 0.2, cadence: "intraday", source: "openExchangeRates", observedAtSec: now - 120, repricing } as const;
+    const contributors = ["a", "b", "c"].map((assetId, i) => ({
+      assetId, derivation: "traded-market" as const, provenanceKey: assetId, observedAtSec: now - 180 + i,
+    }));
+    const silver = { pegKey: "peggedSILVER", usdPerUnit: 30, cadence: "intraday", source: "peer-median", observedAtSec: now - 180, contributors } as const;
+    const baselines = { week: { observedAt: now - 7 * 86400, circulatingUsd: 2_000_000, circulatingNative: null } };
+    const asset = Object.assign(makePeggedAsset({
+      id: "brz-transfero", pegType: fx.pegKey, pegMechanism: "fiat-backed", price: 0.204, priceSource: "coingecko",
+      priceObservedAt: now - 60, priceObservedAtMode: "upstream", circulating: { peggedREAL: 2_000_000 }, chainCirculating: {}, chains: [],
+    }), { supplyChangeBaselines: baselines });
+    const input = { assets: [asset], db, syncStartSec: now, validationContext, publishFxReferenceEvidence: true, fxFallbackRates: { [fx.pegKey]: fx.usdPerUnit } };
+    const generations: FxReferenceEvidenceMap[] = [{ [fx.pegKey]: fx, [silver.pegKey]: silver }, {}];
+    for (const evidence of generations) {
+      expect(await publish({ ...input, fxReferenceObservations: evidence })).toMatchObject({ written: true });
+      for (const contract of ["published", "critical-fields"] as const) {
+        const decoded = await loadStablecoinsCache(db, { contract });
+        if (decoded.kind !== "ok") throw new Error(decoded.reason);
+        expect(decoded.payload.fxReferenceObservations).toEqual(evidence);
+        expect(decoded.payload.peggedAssets[0].supplyChangeBaselines).toEqual(baselines);
+        const current = decoded.payload.peggedAssets[0].currentPeg!;
+        expect(current.referenceAdmission).toMatchObject({ quoteObservedAtSec: now - 60, generation: `stablecoins:${now}` });
+        if (evidence[fx.pegKey]) {
+          expect(current.referenceAdmission).toMatchObject({ status: "admitted", referenceObservedAtSec: fx.observedAtSec });
+          expect(current.admittedDeviationBps).toBeCloseTo(200);
+          expect(decoded.payload.selectedPegReferences).toMatchObject({
+            peggedREAL: { kind: "fx", repricing }, peggedSILVER: { kind: "median", contributors },
+          });
+        } else {
+          expect(current.referenceAdmission?.reason).toBe("reference-clock-unavailable");
+          expect(current).toMatchObject({ admittedDeviationBps: null, currentDeviationBps: null,
+            pegReference: null, pegReferenceUnavailable: true, dexPriceCheck: null });
+        }
+      }
+    }
+    const undated = { ...asset, priceObservedAt: null, priceUpdatedAt: now - 60 };
+    await publish({ ...input, assets: [undated], fxReferenceObservations: { [fx.pegKey]: fx } });
+    const fromPages = await readCompanionList(db);
+    expect(fromPages.peggedAssets[0]).toMatchObject({ priceObservedAt: null, currentPeg: {
+      referenceAdmission: { reason: "quote-clock-unavailable", quoteObservedAtSec: null }, admittedDeviationBps: null,
+    } });
+  });
+
+  it("publishes XAGm's quote and matched entitlement with an incomparable rollback peg", async () => {
+    const { db, sqlite } = fixtures.open();
+    const id = "xagm-matrixdock", now = Date.parse("2027-03-30T14:00:00Z") / 1000;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const config = WORKER_TRACKED_META_BY_ID.get(id)!.liveReservesConfig!;
+    const ozPerToken = 0.998380822;
+    const metadata = { freshnessMode: "not-applicable", observedBlock: { chain: "ethereum", number: 100, timestamp: now - 120 },
+      details: { proofKind: "matrixdock-frs-fallback-reserve-feed", reserveUnit: "troy-oz", ozPerToken } };
+    sqlite.prepare(`INSERT INTO reserve_composition (stablecoin_id, slices, fetched_at, source, attempt_id, metadata,
+      adapter_source_model, adapter_evidence_class, config_fingerprint) VALUES (?, ?, ?, ?, 'a', ?, 'single-bucket', 'weak-live-probe', ?)`)
+      .run(id, '[{"name":"Silver","risk":"medium","pct":100}]', now - 60, config.adapter, JSON.stringify(metadata), computeLiveReserveConfigFingerprint(config));
+    sqlite.prepare(`INSERT INTO reserve_sync_state (stablecoin_id, adapter_key, breaker_key, last_attempted_at, last_success_at,
+      last_status, warning_count, warnings, metadata, last_success_attempt_id) VALUES (?, ?, 'xagm', ?, ?, 'ok', 0, '[]', '{}', 'a')`)
+      .run(id, config.adapter, now - 60, now - 60);
+    const asset = makePeggedAsset({ id, pegType: "peggedSILVER", pegMechanism: "commodity", price: ozPerToken * 30,
+      priceObservedAt: now, priceObservedAtMode: "upstream", priceSource: "coingecko", circulating: { peggedSILVER: 2_000_000 }, chainCirculating: {}, chains: [] });
+    const input = { db, assets: [asset], validationContext: "main" as const, syncStartSec: now, fxFallbackRates: { peggedSILVER: 30 } };
+    await publish(input);
+    let [coin] = (await readCompanionList(db)).peggedAssets;
+    expect(coin).toMatchObject({ pegType: "entitlement-priced", price: 29.95142466 });
+    expect(coin.commodityEntitlement).toEqual({ ozPerToken, observedAtSec: now - 120, source: "matrixdock-frs", generation: "ethereum:100", quoteObservedAtSec: now });
+    expect(coin.currentPeg?.currentDeviationBps).toBe(0);
+    expect((await loadPreviousStablecoinsById(db)).previousAssetsById.get(id)?.pegType).toBe("peggedSILVER");
+    const summary = await handlePegSummary(db);
+    expect(await summary.json()).toMatchObject({ coins: expect.arrayContaining([
+      expect.objectContaining({ id, pegType: "peggedSILVER", price: 29.95142466, currentDeviationBps: 0 }),
+    ]), summary: { totalTracked: 1, coinsAtPeg: 1 } });
+    sqlite.prepare("UPDATE reserve_sync_state SET last_success_attempt_id = 'different'").run();
+    await publish(input);
+    [coin] = (await readCompanionList(db)).peggedAssets;
+    expect(coin).toMatchObject({ pegType: "entitlement-priced", price: 29.95142466 });
+    expect(coin.commodityEntitlement).toBeUndefined();
+    expect(coin.currentPeg?.currentDeviationBps).toBeNull();
+    expect(await (await handlePegSummary(db)).json()).toMatchObject({ coins: expect.arrayContaining([
+      expect.objectContaining({ id, pegType: "peggedSILVER", price: 29.95142466, currentDeviationBps: null }),
+    ]), summary: { totalTracked: 0, coinsAtPeg: 0 } });
+  });
   it.each(["defillama", "onchain-total-supply", "missing", "clock", "newer"])("fences bootstrap against %s", async (source) => {
     const { db, sqlite } = fixtures.open();
     const row = makePeggedAsset({ id: "buidl-blackrock", pegMechanism: "fiat-backed", circulating: { peggedUSD: 100 }, chainCirculating: {}, chains: [],
@@ -143,7 +414,7 @@ describe("validateAndWriteStablecoinsCache", () => {
     expect(merged.assets[0]!.supplyUnavailableReason).toBe("economic-float-unreconciled");
   });
 
-  it("writes byte-identical canonical and replay-price payloads for main and fallback policies", async () => {
+  it("publishes the same content with distinct generation IDs for main and fallback policies", async () => {
     const fxFallbackRates = { EUR: 1.1 };
     const priceCacheEntries = [{
       id: "fixture-usd",
@@ -177,10 +448,12 @@ describe("validateAndWriteStablecoinsCache", () => {
       });
     }
 
+    expect((await getCache(mainDb, "stablecoins"))!.value).not.toBe((await getCache(fallbackDb, "stablecoins"))!.value);
     for (const db of [mainDb, fallbackDb]) {
-      expect(await getCache(db, "stablecoins")).toEqual({
-        value: JSON.stringify({ peggedAssets: [], fxFallbackRates }), updatedAt: syncStartSec,
-      });
+      const cached = (await getCache(db, "stablecoins"))!;
+      expect(cached.updatedAt).toBe(syncStartSec);
+      expect(JSON.parse(cached.value)).toEqual({ peggedAssets: [], fxFallbackRates, fxAdmissionCoverageGeneration: expect.any(String) });
+      expect((await readCompanion(db)).body).toBe(cached.value);
       expect([...(await getPriceCache(db))]).toEqual([["fixture-usd", {
         price: 1, source: "coingecko", confidence: "single-source",
         updatedAt: syncStartSec - 30, observedAt: syncStartSec - 30,
@@ -248,24 +521,10 @@ describe("validateAndWriteStablecoinsCache", () => {
   });
 
   it("keeps canonical stablecoins publication successful when response-ready cache write fails", async () => {
-    const body = JSON.stringify({ peggedAssets: [] });
-    const responseReadyBody = encodeResponseReadyCacheValue(body, RESPONSE_READY_CACHE_SCHEMA_IDS.stablecoins);
-    const db = mockD1(
-      [
-        {
-          match: "INSERT INTO cache",
-          matchBinds: ["stablecoins", body, syncStartSec],
-          rows: [],
-          runMeta: { changes: 1 },
-        },
-        {
-          match: "INSERT INTO cache",
-          matchBinds: [getResponseReadyCacheKey("stablecoins"), responseReadyBody, syncStartSec],
-          rows: [],
-          throwError: new Error("response-ready write failed"),
-        },
-      ],
-    );
+    const { db, sqlite } = fixtures.open();
+    const key = getResponseReadyCacheKey("stablecoins");
+    sqlite.exec(`CREATE TRIGGER reject_first_companion BEFORE INSERT ON cache WHEN NEW.key = '${key}'
+      BEGIN SELECT RAISE(FAIL, 'response-ready write failed'); END`);
 
     const result = await publish({
       assets: [], db, syncStartSec, validationContext: "main",
@@ -316,7 +575,7 @@ describe("validateAndWriteStablecoinsCache", () => {
     expect(sqlite.prepare("SELECT key FROM cache WHERE key = ?").all("stablecoins:invalid-last")).toHaveLength(1);
   });
   it("strips upstream frozen fields from non-registry assets before publishing", async () => {
-    const db = mockD1([{ match: "INSERT INTO cache", rows: [], runMeta: { changes: 1 } }]);
+    const { db } = fixtures.open();
     const result = await publish({
       assets: [makePeggedAsset({
         id: "upstream-controlled-active-coin", pegMechanism: "fiat-backed", price: 1, priceSource: "defillama",
@@ -326,11 +585,7 @@ describe("validateAndWriteStablecoinsCache", () => {
     }, () => ({ status: "degraded", itemCount: 0, metadata: "blocked" }));
 
     expect(result).toMatchObject({ written: true, skippedBecauseNewer: false });
-    const stablecoinsWrite = db.getHistory().find((entry) => entry.binds[0] === "stablecoins");
-    expect(stablecoinsWrite).toBeDefined();
-    const published = JSON.parse(stablecoinsWrite?.binds[1] as string) as {
-      peggedAssets: Array<{ frozen?: boolean; frozenAt?: string }>;
-    };
+    const published = StablecoinListResponseSchema.parse(JSON.parse((await getCache(db, "stablecoins"))!.value));
     expect(published.peggedAssets[0].frozen).toBeUndefined();
     expect(published.peggedAssets[0].frozenAt).toBeUndefined();
   });

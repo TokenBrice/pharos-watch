@@ -2,6 +2,7 @@ import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { MintBurnContractConfig } from "../mint-burn-contracts";
 import { mintBurnConfigKey } from "../mint-burn-contract-identity";
+import { needsCurrentMintBurnReceiptClassification } from "../mint-burn-published-gauge";
 import legacyFingerprints from "./legacy-cutover-fingerprints.json";
 
 /** Last closed hour before T1 deployed at 12:03Z; remove after 2027-01-18T12:00Z
@@ -113,6 +114,8 @@ export interface MintBurnScanCoverage {
   toTimestamp: number;
   finalizedBlock: number;
   acceptedAt: number;
+  materializedStablecoinId?: string;
+  materialization?: { revision: string; hours: number[] };
 }
 
 const fingerprintCache = new WeakMap<MintBurnContractConfig, { source: string; fingerprint: string }>();
@@ -179,6 +182,95 @@ export function mintBurnScanCoverageStatements(db: D1Database, proof: MintBurnSc
   ];
 }
 
+export const MINT_BURN_WRITER_EPOCH = "holder-accounting-v2";
+
+export function isMintBurnWriterEpochSchemaMissing(error: unknown): boolean {
+  return error instanceof Error && /no such table: (?:main\.)?mint_burn_writer_epoch_(?:coverage|hours)\b/i.test(error.message);
+}
+
+/** A separate ledger keeps ordinary scan proof readable by rollback Workers. */
+export async function commitMintBurnMaterializedCoverage(
+  db: D1Database,
+  proof: MintBurnScanCoverage,
+  before: D1PreparedStatement[],
+  after: D1PreparedStatement[] = [],
+): Promise<void> {
+  const scan = mintBurnScanCoverageStatements(db, proof);
+  const legacy = [...before, ...scan, ...after];
+  const coinId = proof.materializedStablecoinId;
+  if (coinId == null) { await db.batch(legacy); return; }
+  const match = `config_key = ? AND config_fingerprint = ? AND chain_id = ? AND writer_epoch = ?
+    AND from_block <= ? AND to_block >= ?`;
+  const identity = [proof.configKey, proof.configFingerprint, proof.chainId, MINT_BURN_WRITER_EPOCH,
+    proof.toBlock + 1, proof.fromBlock - 1];
+  // A previous Worker may rewrite a bucket after the new materialization batch settles its debt.
+  const unsettled = `EXISTS (SELECT 1 FROM mint_burn_dirty_hours
+    WHERE stablecoin_id = ? AND chain_id = ? AND hour_ts >= ? AND hour_ts < ?)
+    OR EXISTS (SELECT 1 FROM json_each(?) expected
+      LEFT JOIN mint_burn_writer_epoch_hours h
+        ON h.stablecoin_id = ? AND h.chain_id = ? AND h.hour_ts = expected.value
+      WHERE h.revision IS NULL OR h.revision IS NOT ?)`;
+  const guardBinds = [coinId, proof.chainId, proof.fromTimestamp - proof.fromTimestamp % 3600, proof.toTimestamp,
+    JSON.stringify(proof.materialization?.hours ?? []), coinId, proof.chainId,
+    proof.materialization?.revision ?? null];
+  // SAFETY: All SQL fragments are source-owned; dynamic values use bindings.
+  const epoch = db.prepare(`/* pharos:mint-burn-writer-epoch:merge */
+    INSERT INTO mint_burn_writer_epoch_coverage
+      (config_key, config_fingerprint, chain_id, stablecoin_id, writer_epoch, from_block, to_block, from_timestamp, to_timestamp)
+    SELECT ?, ?, ?, ?, ?, MIN(from_block), MAX(to_block), MIN(from_timestamp), MAX(to_timestamp)
+    FROM (SELECT from_block, to_block, from_timestamp, to_timestamp
+      FROM mint_burn_writer_epoch_coverage WHERE ${match}
+      UNION ALL SELECT ?, ?, ?, ?)
+    HAVING NOT (${unsettled})
+    ON CONFLICT(config_key, config_fingerprint, writer_epoch, from_block) DO UPDATE SET
+      to_block = excluded.to_block, from_timestamp = excluded.from_timestamp, to_timestamp = excluded.to_timestamp`)
+    .bind(proof.configKey, proof.configFingerprint, proof.chainId, coinId, MINT_BURN_WRITER_EPOCH, ...identity,
+      proof.fromBlock, proof.toBlock, proof.fromTimestamp, proof.toTimestamp, ...guardBinds);
+  const compact = db.prepare(`/* pharos:mint-burn-writer-epoch:compact */
+    DELETE FROM mint_burn_writer_epoch_coverage WHERE ${match}
+      AND from_block > (SELECT MIN(from_block) FROM mint_burn_writer_epoch_coverage WHERE ${match})
+      AND NOT (${unsettled})`).bind(...identity, ...identity, ...guardBinds);
+  const materialization = proof.materialization;
+  const certifyHours = materialization?.hours.length ? [db.prepare(`/* pharos:mint-burn-writer-epoch:certify-hours */
+    UPDATE mint_burn_writer_epoch_hours
+    SET writer_epoch = ? WHERE stablecoin_id = ? AND chain_id = ? AND revision = ?
+      AND hour_ts IN (SELECT value FROM json_each(?)) AND NOT (${unsettled})`)
+    .bind(MINT_BURN_WRITER_EPOCH, coinId, proof.chainId, materialization.revision,
+      JSON.stringify(materialization.hours), ...guardBinds)] : [];
+  try {
+    await db.batch([...before, ...scan, epoch, compact, ...certifyHours, ...after]);
+  } catch (error) {
+    // D1 rolls back the whole batch against a pre-migration database.
+    if (!isMintBurnWriterEpochSchemaMissing(error)) throw error;
+    await db.batch(legacy);
+  }
+}
+
+export function prepareMintBurnWriterEpochCoverage(
+  db: D1Database, configs: readonly MintBurnContractConfig[], start: number, end: number,
+): D1PreparedStatement {
+  const identities = JSON.stringify(configs.map((config) =>
+    [mintBurnConfigKey(config), mintBurnScanFingerprint(config), config.chain.chainId, config.stablecoinId]));
+  return db.prepare(`WITH scope AS (
+      SELECT json_extract(value, '$[0]') AS config_key, json_extract(value, '$[1]') AS config_fingerprint,
+        json_extract(value, '$[2]') AS chain_id, json_extract(value, '$[3]') AS stablecoin_id FROM json_each(?)
+    )
+    SELECT /* pharos:dews:mint-burn-writer-epoch */ c.config_key, c.from_block, c.to_block,
+      c.from_timestamp, c.to_timestamp, c.writer_epoch, NULL AS dirty_hour_ts
+    FROM scope JOIN mint_burn_writer_epoch_coverage c USING (config_key, config_fingerprint, chain_id, stablecoin_id)
+    WHERE c.to_timestamp > ? AND c.from_timestamp < ?
+    UNION ALL
+    SELECT scope.config_key, 0, 0, h.hour_ts, h.hour_ts + 3600, NULL, h.hour_ts
+    FROM scope JOIN mint_burn_writer_epoch_hours h USING (stablecoin_id, chain_id)
+    WHERE h.hour_ts < ? AND h.hour_ts > ? - 3600
+      AND (h.writer_epoch IS NULL OR EXISTS (
+        SELECT 1 FROM mint_burn_writer_epoch_coverage c
+        WHERE c.config_key = scope.config_key AND c.config_fingerprint = scope.config_fingerprint
+          AND c.chain_id = h.chain_id AND c.writer_epoch != h.writer_epoch
+          AND c.from_timestamp < h.hour_ts + 3600 AND c.to_timestamp > h.hour_ts))
+    ORDER BY 1, 2`).bind(identities, start, end, end, start);
+}
+
 export interface MintBurnScanSegment {
   config_key: string;
   from_block: number;
@@ -191,6 +283,11 @@ export interface MintBurnScanSegment {
   current_fingerprint?: number;
 }
 
+/** Materialized hours with revised receipt semantics must survive the legacy-writer invalidation triggers. */
+export function mintBurnHourRevisionSql(alias: string): string {
+  return `${alias}.writer_epoch = '${MINT_BURN_WRITER_EPOCH}' AND length(trim(${alias}.revision)) > 0`;
+}
+
 /** Include proof and materialization debt in the same snapshot as the certified data. */
 export function prepareMintBurnScanCoverage(
   db: D1Database, configs: readonly MintBurnContractConfig[], fromTimestamp: number, toTimestamp: number,
@@ -198,6 +295,21 @@ export function prepareMintBurnScanCoverage(
   const identities = configs.map((config) =>
     [mintBurnConfigKey(config), mintBurnScanFingerprint(config), config.chain.chainId, config.stablecoinId]);
   const identitiesJson = JSON.stringify(identities);
+  const revised = identities.filter(([, , , id]) => needsCurrentMintBurnReceiptClassification(id));
+  // Include missing stamps on pre-migration materializations and tombstones left by deleted hours.
+  const invalidRevisions = revised.length ? `UNION ALL
+    SELECT json_extract(i.value, '$[0]'), 0, 0, h.hour_ts, h.hour_ts, h.hour_ts, 1
+    FROM json_each(?) i JOIN mint_burn_hourly h
+      ON h.stablecoin_id = json_extract(i.value, '$[3]') AND h.chain_id = json_extract(i.value, '$[2]')
+    LEFT JOIN mint_burn_writer_epoch_hours stamp USING (stablecoin_id, chain_id, hour_ts)
+    WHERE h.hour_ts >= ? AND h.hour_ts < ? AND stamp.hour_ts IS NULL
+    UNION ALL
+    SELECT json_extract(i.value, '$[0]'), 0, 0, stamp.hour_ts, stamp.hour_ts, stamp.hour_ts, 1
+    FROM json_each(?) i JOIN mint_burn_writer_epoch_hours stamp
+      ON stamp.stablecoin_id = json_extract(i.value, '$[3]') AND stamp.chain_id = json_extract(i.value, '$[2]')
+    WHERE stamp.hour_ts >= ? AND stamp.hour_ts < ? AND (${mintBurnHourRevisionSql("stamp")}) IS NOT TRUE` : "";
+  const revisionBinds = revised.length ? [JSON.stringify(revised), fromTimestamp, toTimestamp,
+    JSON.stringify(revised), fromTimestamp, toTimestamp] : [];
   return db.prepare(`
     SELECT /* pharos:mint-burn-scan-coverage:read */
       c.config_key, c.from_block, c.to_block, c.from_timestamp, c.to_timestamp, NULL AS dirty_hour_ts,
@@ -211,8 +323,9 @@ export function prepareMintBurnScanCoverage(
     FROM json_each(?) i JOIN mint_burn_dirty_hours d
       ON d.stablecoin_id = json_extract(i.value, '$[3]') AND d.chain_id = json_extract(i.value, '$[2]')
     WHERE d.hour_ts >= ? AND d.hour_ts < ?
+    ${invalidRevisions}
     ORDER BY config_key, from_block
-  `).bind(identitiesJson, fromTimestamp, toTimestamp, identitiesJson, fromTimestamp, toTimestamp);
+  `).bind(identitiesJson, fromTimestamp, toTimestamp, identitiesJson, fromTimestamp, toTimestamp, ...revisionBinds);
 }
 
 export function decodeMintBurnScanCoverage(

@@ -11,7 +11,19 @@ import {
   type DefiLlamaListFillDefaultQuote,
 } from "@shared/lib/pricing-source-policy";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
-import { getReferencePriceForContext, isFixedPegContext, isSevereFixedPegDownside, validatePriceCandidate, type PriceValidationContext, type PriceValidationDecision, type PriceValidationReferences } from "./price-validation";
+import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
+import { pricesAgreeWithinBps } from "./price-divergence";
+import { haveDisjointPriceInputs, type UpstreamKeysBySource } from "./price-consensus";
+import {
+  FIAT_UPPER_BAND_REQUIRES_CORROBORATION,
+  getReferencePriceForContext,
+  isFixedPegContext,
+  isSevereFixedPegDownside,
+  validatePriceCandidate,
+  type PriceValidationContext,
+  type PriceValidationDecision,
+  type PriceValidationReferences,
+} from "./price-validation";
 import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/price";
 
 const WEAK_FIXED_PEG_JUMP_WITHHOLD_BPS = 2_000;
@@ -45,6 +57,8 @@ export interface PublishablePriceInput {
   confidence: PriceConfidence | null | undefined;
   agreeSources?: string[];
   candidatePrices?: Record<string, number>;
+  upstreamKeysBySource?: UpstreamKeysBySource;
+  fiatPremiumEvidence?: FiatPremiumEvidence;
   mode: "primary_authoritative" | "fallback_enrichment";
   validationContext: PriceValidationContext;
   validationReferences?: PriceValidationReferences;
@@ -52,6 +66,13 @@ export interface PublishablePriceInput {
   /** Per-response DefiLlama list fill-default marker carried from intake. */
   listFillDefault?: DefiLlamaListFillDefaultQuote | null;
 }
+
+/** Dated USD candidates with all verified upstream price-formation identities. */
+export type FiatPremiumEvidence = Readonly<Record<string, {
+  priceUsd: number;
+  observedAtSec: number;
+  upstreamKeys: readonly string[];
+} | undefined>>;
 
 export interface PriceAssetPublicationLike {
   priceConfidence?: PriceConfidence | null;
@@ -129,7 +150,31 @@ function hasIndependentSevereSourceFamilyCorroboration(sources: string[]): boole
   return independentFamilyCount >= 2 && !allListAggregators;
 }
 
-function hasIndependentSevereCandidateCorroboration(input: PublishablePriceInput): boolean {
+function hasFiatPremiumCorroboration(input: PublishablePriceInput): boolean {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const matchingQuotes = Object.entries(input.fiatPremiumEvidence ?? {}).flatMap(([source, quote]) => {
+    const entry = getPricingSourceRegistryEntry(source);
+    if (!quote || !entry || entry.isRetired || source === "mento-broker" ||
+      (entry.trustTier !== "hard_market" && entry.trustTier !== "soft_dex" && source !== "curve-onchain") ||
+      quote.priceUsd !== input.candidatePrices?.[source] ||
+      !Number.isSafeInteger(quote.observedAtSec) || quote.observedAtSec <= 0 || quote.observedAtSec > nowSec ||
+      nowSec - quote.observedAtSec >= (entry.maxTrustedAgeSec ?? 0) ||
+      !pricesAgreeWithinBps(input.price, quote.priceUsd, DIVERGENCE_THRESHOLD_BPS)) return [];
+    if (quote.upstreamKeys.length === 0 || quote.upstreamKeys.some((key) => !key || key !== key.trim())) return [];
+    const upstream = new Set(quote.upstreamKeys);
+    return [{ source, quote, upstream }];
+  });
+  const selectedSources = sourceParts(input.source);
+  return matchingQuotes.some((selected) => selectedSources.includes(selected.source) &&
+    matchingQuotes.some((other) => other.source !== selected.source &&
+      [...other.upstream].every((key) => !selected.upstream.has(key)) &&
+      pricesAgreeWithinBps(selected.quote.priceUsd, other.quote.priceUsd, DIVERGENCE_THRESHOLD_BPS)));
+}
+
+export function hasIndependentSevereCandidateCorroboration(
+  input: Pick<PublishablePriceInput, "candidatePrices" | "upstreamKeysBySource" | "validationContext" | "validationReferences">,
+  requireAuthoritative = false,
+): boolean {
   if (!input.candidatePrices) return false;
 
   const severeSources = Object.entries(input.candidatePrices)
@@ -146,7 +191,14 @@ function hasIndependentSevereCandidateCorroboration(input: PublishablePriceInput
     ))
     .map(([source]) => source);
 
-  return hasIndependentSevereSourceFamilyCorroboration(severeSources);
+  const keys = input.upstreamKeysBySource;
+  if (!keys) return hasIndependentSevereSourceFamilyCorroboration(severeSources);
+
+  const candidates = severeSources.filter((source) => keys[source]?.length !== 0);
+  return candidates.some((source, index) => candidates.slice(index + 1).some((other) =>
+    hasIndependentSevereSourceFamilyCorroboration([source, other]) &&
+    (!requireAuthoritative || hasDepegAuthoritativeSource([source, other])) &&
+    haveDisjointPriceInputs({ upstreamKeys: keys[source] }, { upstreamKeys: keys[other] })));
 }
 
 function hasSevereDownsidePublicationCorroboration(input: PublishablePriceInput): boolean {
@@ -159,6 +211,7 @@ function hasSevereDownsidePublicationCorroboration(input: PublishablePriceInput)
   }
 
   if (
+    !input.upstreamKeysBySource &&
     input.confidence === "high" &&
     hasIndependentSevereSourceFamilyCorroboration(
       input.agreeSources && input.agreeSources.length > 0
@@ -260,8 +313,11 @@ function evaluatePriceForPublication(input: PublishablePriceInput): PricePublica
     candidateRatio: decision.candidateRatio,
     boundsUsed: decision.boundsUsed,
   };
-  if (!decision.accepted) {
-    return { ...base, accepted: false, reason: decision.reasonCode, gates: ["price-validation"] };
+  const needsFiatPremiumCorroboration = decision.reasonCode === FIAT_UPPER_BAND_REQUIRES_CORROBORATION;
+  const corroboratedFiatPremium = needsFiatPremiumCorroboration && hasFiatPremiumCorroboration(input);
+  if (!decision.accepted && !corroboratedFiatPremium) {
+    return { ...base, accepted: false, reason: decision.reasonCode, gates: needsFiatPremiumCorroboration
+      ? ["price-validation", "fiat-upper-band-corroboration"] : ["price-validation"] };
   }
 
   if (isUncorroboratedDefiLlamaReferenceQuote({
@@ -292,11 +348,13 @@ function evaluatePriceForPublication(input: PublishablePriceInput): PricePublica
     return { ...base, accepted: false, reason: "weak_fallback_depeg_requires_corroboration", gates: ["price-validation", "fallback-depeg-corroboration"] };
   }
 
-  if (shouldWithholdTemporalJump(input)) {
+  if (!corroboratedFiatPremium && shouldWithholdTemporalJump(input)) {
     return { ...base, accepted: false, reason: "temporal_jump_requires_corroboration", gates: ["price-validation", "temporal-jump-corroboration"] };
   }
 
-  return { ...base, accepted: true, reason: decision.reasonCode, gates: ["price-validation"] };
+  return corroboratedFiatPremium
+    ? { ...base, accepted: true, reason: "corroborated_fiat_premium", gates: ["price-validation", "fiat-upper-band-corroboration"] }
+    : { ...base, accepted: true, reason: decision.reasonCode, gates: ["price-validation"] };
 }
 
 function validatePriceForPublication(input: PublishablePriceInput): PublishablePriceDecision {
@@ -333,6 +391,8 @@ export function validatePublishedAssetPrice(input: {
     priceListFillDefault?: DefiLlamaListFillDefaultQuote | null;
   };
   candidatePrices?: Record<string, number>;
+  upstreamKeysBySource?: UpstreamKeysBySource;
+  fiatPremiumEvidence?: FiatPremiumEvidence;
   validationContext: PriceValidationContext;
   validationReferences?: PriceValidationReferences;
   previousTrustedPrice?: TrustedPriceReference | null;
@@ -343,6 +403,8 @@ export function validatePublishedAssetPrice(input: {
     confidence: input.asset.priceConfidence ?? null,
     agreeSources: input.asset.agreeSources,
     candidatePrices: input.candidatePrices,
+    upstreamKeysBySource: input.upstreamKeysBySource,
+    fiatPremiumEvidence: input.fiatPremiumEvidence,
     mode: priceValidationModeForAsset(input.asset),
     validationContext: input.validationContext,
     validationReferences: input.validationReferences,

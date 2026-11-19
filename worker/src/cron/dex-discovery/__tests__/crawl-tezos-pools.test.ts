@@ -6,6 +6,7 @@ import { discoveryContext } from "./discovery.test-support";
 
 const UUSD_ADDRESS = "KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW";
 const USDT_ADDRESS = "KT1XnTn74bUtxHfDtBmm2bGZAQfhPbvKWR8o";
+const WUSDC_ADDRESS = "KT18fp5rcTW7mbWDmzFwjLDUhs5MeJmagDSZ";
 const POOL_ADDRESS = "KT1JeWiS8j1kic4PHx7aTnEr9p4xVtJNzk5b";
 
 function target(address = UUSD_ADDRESS): ContractDeployment {
@@ -64,12 +65,12 @@ describe("Tezos uUSD pool discovery", () => {
     vi.restoreAllMocks();
   });
 
-  it("discovers holder contracts and emits a staged stable pool from current token reserves", async () => {
+  it.each(["uUSD/wUSDC FlatYouves", "", "Vortex uUSD/wUSDC"])("retains verified Youves depth but no ratio price (alias %s)", async (alias) => {
     const fetchMock = mockCensus(
-      [{ account: { address: POOL_ADDRESS, alias: "uUSD/USDT FlatYouves" }, balance: "20000000000000000" }],
+      [{ account: { address: POOL_ADDRESS, alias }, balance: "50000000000000000" }],
       [
-        balanceRow(POOL_ADDRESS, "uUSD/USDT FlatYouves", UUSD_ADDRESS, "0", "20000000000000000", "uUSD", "12"),
-        balanceRow(POOL_ADDRESS, "uUSD/USDT FlatYouves", USDT_ADDRESS, "0", "15000000000", "USDt", "6"),
+        balanceRow(POOL_ADDRESS, alias, UUSD_ADDRESS, "0", "50000000000000000", "uUSD", "12"),
+        balanceRow(POOL_ADDRESS, alias, WUSDC_ADDRESS, "17", "49500000000", "wUSDC", "6"),
       ],
     );
     const stageContext = context();
@@ -99,14 +100,14 @@ describe("Tezos uUSD pool discovery", () => {
       chain: "tezos",
       protocol: "youves-flat",
       dexId: "flatyouves",
-      symbol: "uUSD / USDt",
-      tvlUsd: 30000,
-      priceUsd: 0.75,
-      balanceRatio: expect.closeTo(0.75), // over-held uUSD
+      symbol: "uUSD / wUSDC",
+      tvlUsd: 99000,
+      priceUsd: null,
+      balanceRatio: expect.closeTo(0.99, 4),
       poolType: "tezos-flat-curve",
       baseToken: UUSD_ADDRESS,
-      quoteToken: USDT_ADDRESS,
-      quoteSymbol: "USDt",
+      quoteToken: WUSDC_ADDRESS,
+      quoteSymbol: "wUSDC",
     });
   });
 

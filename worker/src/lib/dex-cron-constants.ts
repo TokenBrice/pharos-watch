@@ -4,6 +4,9 @@ import { CRON_INTERVALS, DEX_LIQUIDITY_STAGE_LEAD_SEC } from "@shared/lib/cron-j
 /** Minimum per-pool liquidity required for a DEX price observation to be stored. */
 export const DEX_PRICE_OBSERVATION_MIN_TVL_USD = 50_000;
 
+/** Minimum quoted depth for a protocol to enter primary consensus. */
+export const DEX_PROTOCOL_SOURCE_MIN_TVL_USD = 50_000;
+
 /**
  * UI-facing peg-summary DEX price check freshness window.
  * `dex_prices.updated_at` is stamped with the hourly DEX source-stage clock,

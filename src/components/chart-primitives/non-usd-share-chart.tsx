@@ -150,10 +150,10 @@ export function NonUsdShareChart({
       data={chartData}
       tsKey="ts"
       isLoading={isLoading}
-      title="Share of total stablecoin market outside USD"
+      title="Non-USD share of tracked core stablecoin supply"
       loadingTitle="Non-USD Market Share"
       subtitle={
-        <p className="pharos-meta">Commodity and other non-USD pegs as a share of all stablecoins, from provider-wide snapshots.</p>
+        <p className="pharos-meta">Commodity and other non-USD pegs as a share of tracked core stablecoin supply. Retired assets count only before their recorded retirement dates.</p>
       }
       coverageNote={
         coverageStartLabel ? (
@@ -187,8 +187,8 @@ export function NonUsdShareChart({
       closeFocusLabel="Return share chart to overview"
       focusedHeightClassName={FOCUSED_CHART_HEIGHT}
       ariaLabel={asOfLabel
-        ? `Share of total stablecoin market outside USD chart showing ${formatPercent(latestShare)} share as of ${asOfLabel}; ${coverageLabel(latestSample?.coverage)}`
-        : "Share of total stablecoin market outside USD chart; data unavailable"}
+        ? `Non-USD share of tracked core stablecoin supply chart showing ${formatPercent(latestShare)} share as of ${asOfLabel}; ${coverageLabel(latestSample?.coverage)}`
+        : "Non-USD share of tracked core stablecoin supply chart; data unavailable"}
       emptyMessage="No market share data available"
       series={SHARE_SERIES}
       tooltip={<ShareTooltip />}
@@ -196,7 +196,7 @@ export function NonUsdShareChart({
       yTickFormatter={formatPercentTick}
       tableColumns={SHARE_TABLE_COLUMNS}
       tableCaption={(_rows, truncated, total) =>
-        `Share of total stablecoin market outside USD over ${total} points${truncated ? "; showing the latest 90" : ""}.`
+        `Non-USD share of tracked core stablecoin supply over ${total} points${truncated ? "; showing the latest 90" : ""}.`
       }
       cardClassName="pharos-card-shell animate-in fade-in duration-300"
       framed={false}

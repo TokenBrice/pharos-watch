@@ -55,7 +55,7 @@ vi.mock("@/lib/digest", () => ({
   EDITORIAL_META_STYLE: {},
   formatDigestTriggerRate: () => "—",
   parseDigestParagraph: (paragraph: string) => ({ bodyText: paragraph }),
-  splitDigestParagraphs: () => [],
+  splitDigestParagraphs: (text: string | null) => text ? [text] : [],
   getDigestBodyParagraphs: ({ digest }: { digest: string }) => [digest],
 }));
 
@@ -96,6 +96,26 @@ afterEach(() => {
 });
 
 describe("DigestArchiveClient build-time lead", () => {
+  it.each([
+    ["2026-08-25", "2026-08-30", "August 25, 2026 – August 30, 2026"],
+    [undefined, undefined, "Published August 31, 2026"],
+    ["2026-08-29", "2026-08-28", "Published August 31, 2026"],
+    ["2026-08-25", "2026-09-01", "Published August 31, 2026"],
+  ])("uses only ordered observed weekly bounds (%s to %s)", (weekStart, weekEnd, expected) => {
+    useDigestArchiveMock.mockReturnValue({
+      data: { digests: [{
+        ...digest(leadEdition.generatedAt, "Recap"), digestType: "weekly",
+        digestExtended: "Actual editions were read.", weekStart, weekEnd,
+      }] },
+      isLoading: false, dataUpdatedAt: 0, error: null, refetch: vi.fn(), meta: null,
+    });
+    useUrlFiltersMock.mockReturnValue({
+      searchParams: new URLSearchParams(), setParam: vi.fn(), replaceParams: vi.fn(),
+    });
+    render(<DigestArchiveClient />);
+    expect(screen.getByText(expected)).toBeTruthy();
+  });
+
   function mockArchive(overrides: Record<string, unknown> = {}) {
     useDigestArchiveMock.mockReturnValue({
       data: undefined, isLoading: true, dataUpdatedAt: 0, error: null, refetch: vi.fn(), meta: null,

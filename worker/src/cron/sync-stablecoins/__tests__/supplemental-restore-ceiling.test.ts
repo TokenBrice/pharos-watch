@@ -221,6 +221,24 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
     }
   });
 
+  it("withholds sBOLD’s pre-hold stock, valuation and baselines through publication and both restore paths", () => {
+    const id = "sbold-k3-capital";
+    const poisoned = asset({
+      id, symbol: "sBOLD", supplySource: "onchain-total-supply", supplyObservedAt: NOW_SEC - 60,
+      circulatingNative: 4.4e19, circulating: { peggedUSD: 4.8e19 }, circulatingPrevDay: { peggedUSD: 4.8e19 },
+      chainCirculating: { Ethereum: { current: 4.8e19 } }, valuationPriceUsd: 1.09, valuationObservedAtSec: NOW_SEC - 60,
+      supplyChangeBaselines: { day: { observedAt: NOW_SEC - 86400, circulatingUsd: 4.8e19, circulatingNative: 4.4e19 } },
+    });
+    for (const row of [...restores(poisoned), ...normalizeStablecoinsPayload({ peggedAssets: [poisoned] }, NOW_SEC).peggedAssets]) {
+      expect(row).toMatchObject({ supplySource: "onchain-supply-withheld", supplyUnavailableReason: "economic-float-unreconciled",
+        circulating: {}, chainCirculating: { Ethereum: { current: null } } });
+      expect(getCirculatingRawOrNull(row)).toBeNull();
+      for (const key of ["circulatingNative", "valuationPriceUsd", "valuationObservedAtSec", "supplyObservedAt", "supplyRestored", "supplyChangeBaselines"] as const) {
+        expect(row[key]).toBeUndefined();
+      }
+    }
+  });
+
   it("clears admitted chain partition provenance when the reviewed supply hold withholds the row", () => {
     const current = asset({
       id: "sfrax-frax", symbol: "sFRAX", supplySource: "coingecko-fallback", circulating: { peggedUSD: 100 },
@@ -426,6 +444,18 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
     expect(result.expiredRestoreIds).toEqual([]);
     expect(result.assets).toEqual([current]);
     expect(result.assets[0]).toBe(current);
+  });
+
+  it.each([false, true])("requires corrected SkyLink evidence for generic sUSDS partition carry (%s)", (corrected) => {
+    const current = asset({ id: "susds-sky", symbol: "sUSDS", supplySource: "coingecko-fallback", circulating: { peggedUSD: 100 } });
+    const previous = asset({ ...current, supplySource: "onchain-total-supply", supplyObservedAt: NOW_SEC - 60,
+      chainCirculating: { Ethereum: { current: corrected ? 50 : 60 }, Base: { current: 10 }, Optimism: { current: 10 },
+        Arbitrum: { current: 10 }, Unichain: { current: 10 },
+        ...(corrected ? { "sUSDS unattributed SkyLink escrow": { current: 10 } } : {}) },
+    });
+
+    expect(restoreCuratedAggregateChainPartition(current, previous, NOW_SEC)?.asset.chainCirculating)
+      .toEqual(corrected ? previous.chainCirculating : undefined);
   });
 
   it("restores last-known-good supply observed inside the ceiling", () => {

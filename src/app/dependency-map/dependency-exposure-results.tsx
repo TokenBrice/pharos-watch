@@ -11,6 +11,7 @@ import type { DependencyExposureResult } from "@/hooks/use-dependency-exposure-m
 import type { ExposureRootOption } from "./dependency-exposure-controls";
 import { useDependencyScenarios } from "@/hooks/use-dependency-scenarios";
 import { DependencyScenarioChange, DependencyScenarioView, selectDependencyScenario } from "./dependency-scenario-view";
+import { formatFootprintLayer, formatFootprintOverlap } from "@/lib/dependency-watershed/footprint-display";
 import { describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
 
 export function DependencyExposureResults({ result, publication, roots, options, inspectedId, onInspect, networkUpdated, held }: {
@@ -35,15 +36,9 @@ export function DependencyExposureResults({ result, publication, roots, options,
   const clocks = [...new Set(publication.nodes.filter(card => card?.circulatingUsdAtEvaluation !== null).map(card => `${publication.publicationGenerationId} at ${typeof card.supplyAsOfSec === "number" && Number.isFinite(card.supplyAsOfSec) ? new Date(card.supplyAsOfSec * 1000).toISOString() : "unknown"}`))];
   const roles = rootCards.flatMap(card => (Array.isArray(card?.roles) ? card.roles : []).filter(role => role && typeof role.upstreamAssetId === "string").map((role, index) => ({ root: card!.id, role, index })));
   const nodeById = new Map(publication.nodes.map(node => [node.id, node]));
-  const knownRows = result.rows.filter(row => row.exposureUsd !== null);
-  const directAvailable = knownRows.some(row => row.minHop === 1) || (result.direct.complete && knownRows.length > 0);
-  const indirectAvailable = knownRows.some(row => row.minHop > 1) || (result.indirect.complete && knownRows.length > 0);
-  const directUsd = directAvailable ? `${formatCurrency(result.direct.knownUsd, 2)}${result.direct.complete ? "" : " (known supply only)"}` : "USD unavailable";
-  const indirectUsd = indirectAvailable ? `${formatCurrency(result.indirect.knownUsd, 2)}${result.indirect.complete ? "" : " (known supply only)"}` : "USD unavailable";
-  const overlapUsd = knownRows.length > 0 ? `${formatCurrency(result.direct.overlapUsd + result.indirect.overlapUsd, 2)}${result.direct.complete && result.indirect.complete ? "" : " (known supply only)"}` : "USD unavailable";
   if (roots.length === 0) return <section aria-label="Exposure results"><p className="text-sm text-muted-foreground">Choose one or more upstream coins to trace exposure</p></section>;
   return <section className="space-y-4" aria-label="Exposure results">
-    <div className="space-y-2"><h3 className="text-lg font-semibold">{result.reached} mapped dependents · direct {directUsd} · indirect {indirectUsd} (includes {overlapUsd} counted in more than one layer)</h3><p className="text-sm font-medium">Linked coins; not a loss forecast</p><p className="text-sm text-muted-foreground">Results use the full published graph and ignore Focus, Type and Limit. USD totals include known supply only; unknown values are not zero.</p></div>
+    <div className="space-y-2"><h3 className="text-lg font-semibold">{result.reached} mapped dependents · direct {formatFootprintLayer(result.direct)} · indirect {formatFootprintLayer(result.indirect)} · {formatFootprintOverlap(result.direct, result.indirect)}</h3><p className="text-sm font-medium">Linked coins; not a loss forecast</p><p className="text-sm text-muted-foreground">Results use the full published graph and ignore Focus, Type and Limit. USD totals include known supply only; unknown values are not zero.</p></div>
     <p className="break-all text-xs text-muted-foreground">Publication {publication.publicationGenerationId} · methodology {publication.methodologyVersion} · asOfSec {publication.asOfSec} · supply clock {clocks.length ? clocks.join("; ") : "not published"}</p>
     {held && <p role="status" className="text-sm">Held publication. Results use the retained publication and its supply clock.</p>}
     {rootCards.map(card => {

@@ -5,6 +5,7 @@ import { REDEMPTION_ACCESS_PASSPORT_LABELS, REDEMPTION_HOLDER_ELIGIBILITY_LABELS
 import type { RedemptionHolderEligibility } from "@shared/types/redemption";
 
 const BASE_PROPS = {
+  accessModel: "issuer-api" as const,
   accessLabel: "Issuer / institutional",
   holderEligibility: "verified-customer" as const,
   settlementLabel: "Same day",
@@ -24,7 +25,7 @@ const RESTRICTED_ELIGIBILITIES = (
 
 describe("RedemptionRouteRail", () => {
   it("names the access gate with the published passport vocabulary and the full access label", () => {
-    const restricted = renderToStaticMarkup(<RedemptionRouteRail {...BASE_PROPS} accessModel="issuer-api" />);
+    const restricted = renderToStaticMarkup(<RedemptionRouteRail {...BASE_PROPS} />);
 
     expect(restricted).toContain(REDEMPTION_ACCESS_PASSPORT_LABELS["issuer-api"]);
     expect(restricted).not.toContain(REDEMPTION_ACCESS_PASSPORT_LABELS["permissionless-onchain"]);

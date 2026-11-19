@@ -39,7 +39,7 @@ export const CBRT_TLREF_JSON_SNIPPET = JSON.stringify({
 });
 
 export function frankfurterBody(extraRates: Record<string, number> = {}) {
-  return { base: "USD", date: "2025-06-15", rates: { ...FX_FRANKFURTER_RATES, ...extraRates } };
+  return { base: "USD", date: "2025-06-13", rates: { ...FX_FRANKFURTER_RATES, ...extraRates } };
 }
 
 export function secondaryBody(
@@ -144,22 +144,21 @@ export function makeFxRatesMeta(
   };
 }
 
+function chainlinkFxChain(chainId: string, chainName: string, explorerUrl: string): ChainRpcConfig {
+  return {
+    chainId,
+    chainName,
+    type: "evm",
+    endpoints: [registryRpcEndpoint(`https://rpc.${chainId}.test`)],
+    explorerUrl,
+  };
+}
+
 const CHAINLINK_FX_CHAINS = {
-  base: {
-    chainId: "base",
-    chainName: "Base",
-    type: "evm",
-    endpoints: [registryRpcEndpoint("https://rpc.base.test")],
-    explorerUrl: "https://basescan.org",
-  },
-  ethereum: {
-    chainId: "ethereum",
-    chainName: "Ethereum",
-    type: "evm",
-    endpoints: [registryRpcEndpoint("https://rpc.ethereum.test")],
-    explorerUrl: "https://etherscan.io",
-  },
-} satisfies Record<string, ChainRpcConfig>;
+  base: chainlinkFxChain("base", "Base", "https://basescan.org"),
+  ethereum: chainlinkFxChain("ethereum", "Ethereum", "https://etherscan.io"),
+  arbitrum: chainlinkFxChain("arbitrum", "Arbitrum", "https://arbiscan.io"),
+};
 
 /**
  * FX fetch routes plus the matching scheduled chain RPC map for one Chainlink
@@ -576,6 +575,7 @@ export function makeFxRatesDb({
   cacheRows = {},
   extraTables = [],
 }: FxRatesDbOptions = {}): MockD1Database {
+  const lastOxrAttempt = cacheRows["fx-oxr-last-attempt"];
   const cacheTables = [
     // loadFxRateState reads the rates/meta pair in one statement.
     {
@@ -589,6 +589,12 @@ export function makeFxRatesDb({
     ...(stablecoins ? [cacheReadTable("stablecoins", stablecoins)] : []),
     ...(cadence ? [cacheReadTable("sync-fx-rates:cadence", cadence)] : []),
     ...Object.entries(cacheRows).map(([key, row]) => cacheReadTable(key, row)),
+    {
+      match: "SELECT updated_at FROM cache WHERE key = ?",
+      matchBinds: ["fx-oxr-last-attempt"],
+      rows: [],
+      first: lastOxrAttempt ? { updated_at: lastOxrAttempt.updatedAt } : null,
+    },
   ];
   const hasCircuitTable = extraTables.some((table) => table.match.includes("circuit"));
   return mockD1([

@@ -16,13 +16,15 @@ import { getFreshSingleSourceNavParentId, resolveVaultNavSupplyPrice } from "../
 import { buildPriceReasonablenessOptions, buildPriceValidationContext, isReasonablePrice } from "../../../lib/price-validation";
 import { validatePublishedAssetPrice } from "../../../lib/price-publish-policy";
 import { buildPreviousTrustedPriceLookup } from "../pricing";
-import { validateCompositePricingSourceFreshness, validatePricingSourceFreshness } from "../../../lib/pricing-source-freshness";
+import { validatePricingSourceFreshness } from "../../../lib/pricing-source-freshness";
 import { loadReserveNavSupplyPrice, reserveNavSupplyScopeReason } from "../../../lib/reserve-nav-price";
 import { loadReplayPriceCacheForTrustedContinuity, restoreCuratedAggregateChainPartition, restorePreferredNativeSupply, reviewedOnchainSupplyHoldFields } from "../shared";
+import { assetPriceObservationClock, validateAssetPricingSourceFreshness } from "../shared";
 import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap, fetchOnChainSupplyPartition, fetchPinnedNativeShares, prefersOnChainSupplyMcap, toPublicChainCirculating } from "./onchain-supply";
 import {
   fetchSupplementalPriceData,
   buildSupplementalAsset,
+  getCoinGeckoCapQuantity,
   pegTypeKey,
   resolveLowVolumeCoinGeckoPrice,
   resolveSupplementalContractPrice,
@@ -202,6 +204,10 @@ export async function fetchFiatCoinGeckoTokens(
           return buildSupplementalAsset({
             meta, priceResolution: hbdPriceResolution, nowSec, mcap, supplySource: "onchain-circulating-supply",
             supplyObservedAt: hiveSupply.observedAt,
+            chainLabels: ["Hive"],
+            circulatingNative: hiveSupply.supply,
+            valuationPriceUsd: valuationPrice,
+            valuationObservedAtSec: hbdPriceResolution?.observedAt,
           });
         }
         // USD is the base currency; fxFallbackRates omits peggedUSD. Default to 1.0 for
@@ -218,8 +224,8 @@ export async function fetchFiatCoinGeckoTokens(
           const candidate = buildSupplementalAsset({
             meta, ...priceQuote, nowSec, mcap: null, supplySource: "onchain-supply-withheld",
           });
-          if (replaySnapshot === null || !validateCompositePricingSourceFreshness({
-            source: candidate.priceSource || "defillama", observedAt: candidate.priceObservedAt ?? candidate.priceUpdatedAt,
+          if (replaySnapshot === null || !validateAssetPricingSourceFreshness(meta.id, {
+            source: candidate.priceSource || "defillama", observedAt: assetPriceObservationClock(candidate),
             observedAtMode: candidate.priceObservedAtMode, nowSec: syncStartSec ?? runNowSec,
           }).accepted || !validatePublishedAssetPrice({
             asset: candidate, validationContext: buildPriceValidationContext({ stablecoinId: meta.id }),
@@ -232,12 +238,16 @@ export async function fetchFiatCoinGeckoTokens(
         // for supply valuation only; the published price stays with the live
         // override stage. Fail-closed: no trusted NAV -> the coin stays out.
         let navSupplyPrice: number | undefined;
+        let navSupplyObservedAt: number | null | undefined;
         const requiresClassScope = nativeWorkflow === "pinned-native-shares";
         const reserveNav = navLikeAsset && (!priceResolution || requiresClassScope)
           ? await loadReserveNavSupplyPrice(meta, db, nowSec) : null;
         if (navLikeAsset && !priceResolution) {
           const navUsdRate = meta.flags.pegCurrency === "USD" ? 1 : pegReferencePrice;
-          if (reserveNav && navUsdRate != null) navSupplyPrice = reserveNav.price * navUsdRate;
+          if (reserveNav && navUsdRate != null) {
+            navSupplyPrice = reserveNav.price * navUsdRate;
+            if (meta.flags.pegCurrency === "USD") navSupplyObservedAt = reserveNav.observedAt;
+          }
         }
         if (navLikeAsset && !priceResolution && navSupplyPrice == null) {
           // A same-run single-source quote must not displace a trusted composite for stricter vaults.
@@ -245,6 +255,7 @@ export async function fetchFiatCoinGeckoTokens(
           const navOverride = await resolveVaultNavSupplyPrice(meta.id, navParents, db, signal, chainRpcs, previousAssetsById);
           if (navOverride) {
             navSupplyPrice = navOverride.price;
+            navSupplyObservedAt = navOverride.observedAt;
             logWorkerEventArgs(
               "handler",
               "info",
@@ -272,6 +283,7 @@ export async function fetchFiatCoinGeckoTokens(
         let supplyObservedAt = mcap && meta.geckoId ? cgData[meta.geckoId]?.last_updated_at ?? null : null;
         let chainCirculating: PeggedAsset["chainCirculating"] = {};
         let supplyPerimeter: PeggedAsset["supplyPerimeter"];
+        let circulatingNative: number | undefined;
 
         // Fallback: on-chain totalSupply × market/peg-reference price when CG has no market cap.
         // This keeps preview-only plain-par fiat assets in supply coverage without inventing a live market quote.
@@ -279,6 +291,7 @@ export async function fetchFiatCoinGeckoTokens(
           const aggregateOnChainMcap = await fetchCuratedAggregateOnChainMcap(meta, priceForSupply, chainRpcs, signal, dwellirNative);
           if (aggregateOnChainMcap) {
             mcap = aggregateOnChainMcap.mcap;
+            circulatingNative = aggregateOnChainMcap.nativeSupply;
             supplySource = aggregateOnChainMcap.supplySource;
             supplyObservedAt = aggregateOnChainMcap.observedAt ?? null;
             chainCirculating = toPublicChainCirculating(aggregateOnChainMcap.chainCirculating);
@@ -290,6 +303,7 @@ export async function fetchFiatCoinGeckoTokens(
           const onChainMcap = await fetchOnChainMcap(meta, priceForSupply, chainRpcs, signal, dwellirNative);
           if (onChainMcap) {
             mcap = onChainMcap.mcap;
+            circulatingNative = onChainMcap.nativeSupply;
             supplySource = onChainMcap.supplySource;
             supplyObservedAt = onChainMcap.observedAt ?? null;
             chainCirculating = toPublicChainCirculating(onChainMcap.chainCirculating);
@@ -330,6 +344,7 @@ export async function fetchFiatCoinGeckoTokens(
           const nativeSupply = Number(BigInt(nativeShares.rawShares)) / 10 ** nativeShares.decimals;
           mcap = nativeSupply * priceForSupply;
           if (!Number.isFinite(mcap) || mcap <= 0) return null;
+          circulatingNative = nativeSupply;
           supplySource = "onchain-total-supply";
           supplyObservedAt = nativeShares.observedAt;
           chainCirculating = { Ethereum: { chainId: nativeShares.chain, current: mcap } };
@@ -364,6 +379,12 @@ export async function fetchFiatCoinGeckoTokens(
           supplySource,
           supplyObservedAt,
           supplyPerimeter,
+          circulatingNative,
+          valuationPriceUsd: circulatingNative == null ? null : priceForSupply,
+          valuationObservedAtSec: circulatingNative == null ? null
+            : priceResolution ? priceResolution.observedAt : navSupplyObservedAt,
+          ...(supplySource === "coingecko-fallback" ? getCoinGeckoCapQuantity(meta, cgData[meta.geckoId!], mcap,
+            supplyObservedAt, previousTrustedPrices.get(meta.id)) : {}),
           circulatingPrevDay: null,
           circulatingPrevWeek: null,
           circulatingPrevMonth: null,
@@ -386,8 +407,9 @@ export async function fetchFiatCoinGeckoTokens(
             });
           };
           const carryPartition = () => {
+            const previous = previousAssetsById?.get(meta.id);
             const restored = restoreCuratedAggregateChainPartition(
-              asset, previousAssetsById?.get(meta.id), Math.floor(Date.now() / 1000), true,
+              asset, previous, Math.floor(Date.now() / 1000), true,
             );
             if (restored?.expired) summary.carryExpired++;
             else if (restored?.asset.chainPartition?.admission === "carried") summary.carried++;

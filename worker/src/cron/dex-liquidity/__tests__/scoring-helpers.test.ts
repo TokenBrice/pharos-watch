@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import {
   accumulateGlobalAggregate,
+  netGlobalCurveBaseLpOverlap,
   aggregateProtocolSources,
   applyPoolVolumeEligibility,
   classifyCoverage,
@@ -78,12 +79,15 @@ describe("source-stage exact-pool price refresh", () => {
     expect(measurePriceRefreshDemand(context(graph([pool(0, { chain: "sui", poolId: `sui:0x${"a".repeat(64)}`, project: "cetus" })]))).networks)
       .toEqual([{ network: "sui-network", pools: 1, requests: 1 }]);
     const result = await run(metrics);
-    expect(result).toMatchObject({ requests: 2, breakerWrites: 2, refreshed: 32, unchangedByReason: {} });
+    expect(result).toMatchObject({ requests: 2, breakerWrites: 2, refreshed: 0,
+      unchangedByReason: { "market-observation-unverified": 32 },
+      failures: expect.arrayContaining([expect.objectContaining({
+        reason: "market-observation-unverified", poolReadAt: now, observedAt: now - 6 * 3600,
+      })]),
+    });
     expect(fetch.mock.calls.map(([url]) => url.split("/multi/")[1]!.split("?")[0]!.split(",").length)).toEqual([30, 1]);
     expect(cg.onchainRateLimit).toHaveBeenNthCalledWith(2, 1, undefined);
-    [...pools, quote].forEach((value, i) => expect(value).toEqual({
-      ...originals[i], price: i === 31 ? 0.998 : 1.002, priceObservedAt: now, priceSource: "cg_onchain", priceEvidenceTvlUsd: i === 31 ? 80_000 : 30_000,
-    }));
+    expect([...pools, quote]).toEqual(originals);
     expect(score()).toEqual(before);
     expect(before.score).not.toBeNull();
   });
@@ -100,11 +104,13 @@ describe("source-stage exact-pool price refresh", () => {
     metrics.get("usdc-circle")!.pools.push(unobservedRecent);
     vi.stubGlobal("fetch", vi.fn(async () => reply([row(1), row(2)])));
     expect(measurePriceRefreshDemand({ ...context(metrics), priceObservations, observedThisRun })).toMatchObject({ pools: 2, observedThisRun: 1, requests: 1 });
-    expect(await run(metrics, { priceObservations, observedThisRun })).toMatchObject({ refreshed: 2 });
+    expect(await run(metrics, { priceObservations, observedThisRun })).toMatchObject({
+      refreshed: 0, unchangedByReason: { "market-observation-unverified": 2 },
+    });
     expect(fresh.priceObservedAt).toBe(now - 30);
-    expect(fallback).toMatchObject({ price: 1.002, priceEvidenceTvlUsd: 60_000, priceObservedAt: now, source: "dl" });
+    expect(fallback.price).toBeUndefined();
     expect(buildDexPriceObservationsFromRetainedPools(new Map([["usdc-circle", [fallback]]]), priceObservations).get("usdc-circle"))
-      .toEqual([expect.objectContaining({ price: 1.002, observedAt: now, sourceFamily: "cg_onchain", tvl: 60_000 })]);
+      .toEqual([expect.objectContaining({ observedAt: now - 1000, sourceFamily: "direct_api", tvl: 60_000 })]);
   });
 
   it.each([
@@ -118,13 +124,15 @@ describe("source-stage exact-pool price refresh", () => {
     ["invalid-support-tvl", () => [row(1, { reserve_in_usd: "999" })]],
     ["incoherent-price", () => [row(1, { base_token_price_quote_token: "0" })]],
     ["implausible-price", () => [row(1, { base_token_price_usd: "1000" })]],
-  ] as const)("keeps all original fields for %s while publishing a healthy sibling", async (reason, rows) => {
+  ] as const)("keeps all original fields for %s and a valid read without a market clock", async (reason, rows) => {
     const pools = [pool(0), pool(1)];
     const original = structuredClone(pools[1]);
     vi.stubGlobal("fetch", vi.fn(async () => reply([row(0), ...rows()])));
     const result = await run(graph(pools));
-    expect(result).toMatchObject({ refreshed: 1, unchangedByReason: { [reason]: 1 }, failures: [expect.objectContaining({ poolId: pools[1]!.poolId, observedAt: original!.priceObservedAt, reason })] });
-    expect(pools[0]!.priceObservedAt).toBe(now);
+    expect(result).toMatchObject({ refreshed: 0, unchangedByReason: { [reason]: 1, "market-observation-unverified": 1 },
+      failures: expect.arrayContaining([expect.objectContaining({ poolId: pools[1]!.poolId, observedAt: original!.priceObservedAt, reason })]),
+    });
+    expect(pools[0]!.priceObservedAt).toBe(now - 6 * 3600);
     expect(pools[1]).toEqual(original);
   });
 
@@ -170,8 +178,10 @@ describe("source-stage exact-pool price refresh", () => {
     const fetch = vi.fn(async () => { vi.mocked(Date.now).mockReturnValue(now * 1000 + clock[fetch.mock.calls.length - 1]!); return reply([row(0)]); });
     vi.stubGlobal("fetch", fetch);
     const result = await run(graph(pools), { readinessDeadlineMs: now * 1000 + (kind === "deadline" ? 150_000 : 260_000) });
-    expect(result).toMatchObject({ requests: clock.length, refreshed: 1, elapsedMs: clock[clock.length - 1], stopReason: kind, unchangedByReason: { "budget-exhausted": 1 } });
-    expect(pools[0]!.priceObservedAt).toBe(now);
+    expect(result).toMatchObject({ requests: clock.length, refreshed: 0, elapsedMs: clock[clock.length - 1], stopReason: kind,
+      unchangedByReason: { "budget-exhausted": 1, "market-observation-unverified": 1 },
+    });
+    expect(pools[0]!.priceObservedAt).toBe(now - 6 * 3600);
     expect(pools[30]!.priceObservedAt).toBe(now - 6 * 3600);
     expect(fetch).toHaveBeenCalledTimes(clock.length);
   });
@@ -199,10 +209,12 @@ describe("source-stage exact-pool price refresh", () => {
     });
     vi.stubGlobal("fetch", fetch);
     const result = await run(graph(pools));
-    expect(result).toMatchObject({ requests: 3, batchSplits: 1, refreshed: rejectHalf ? 2 : 4,
+    expect(result).toMatchObject({ requests: 3, batchSplits: 1, refreshed: 0,
       batchFailures: { "coingecko-batch-rejected": 1, ...(rejectHalf ? { "split-batch-rejected": 1 } : {}) } });
-    expect(result.unchangedByReason).toEqual(rejectHalf ? { "batch-rejected": 2 } : {});
-    expect(pools.map((p) => p.priceObservedAt)).toEqual(pools.map((_, i) => rejectHalf && i < 2 ? now - 6 * 3600 : now));
+    expect(result.unchangedByReason).toEqual(rejectHalf
+      ? { "batch-rejected": 2, "market-observation-unverified": 2 }
+      : { "market-observation-unverified": 4 });
+    expect(pools.every((p) => p.priceObservedAt === now - 6 * 3600)).toBe(true);
     expect(responses.every((res) => res.bodyUsed)).toBe(true);
   });
 
@@ -225,9 +237,9 @@ describe("source-stage exact-pool price refresh", () => {
     response.relationships.quote_token.data.id = `${network}_${chain === "sui" ? "0x2::sui::SUI" : address(100)}`;
     const fetch = vi.fn(async (_url: string) => reply([response]));
     vi.stubGlobal("fetch", fetch);
-    expect(await run(graph([p]))).toMatchObject({ requests: 1, refreshed: 1, unchangedByReason: {} });
+    expect(await run(graph([p]))).toMatchObject({ requests: 1, refreshed: 0, unchangedByReason: { "market-observation-unverified": 1 } });
     expect(new URL(fetch.mock.calls[0]![0]).pathname.split("/multi/")[1]).toBe(encodeURIComponent(expected));
-    expect(p).toMatchObject({ price: 1.002, priceObservedAt: now });
+    expect(p).toMatchObject({ price: 0.99, priceObservedAt: now - 6 * 3600 });
   });
 
   it("splits long encoded ids before HTTP 414", async () => {
@@ -238,7 +250,9 @@ describe("source-stage exact-pool price refresh", () => {
     });
     vi.stubGlobal("fetch", fetch);
     expect(measurePriceRefreshDemand(context(graph(pools)))).toMatchObject({ pools: 8, requests: 4 });
-    expect(await run(graph(pools))).toMatchObject({ requests: 4, refreshed: 8, stopReason: "completed", unchangedByReason: {} });
+    expect(await run(graph(pools))).toMatchObject({ requests: 4, refreshed: 0, stopReason: "completed",
+      unchangedByReason: { "market-observation-unverified": 8 },
+    });
     expect(fetch).toHaveBeenCalledTimes(4);
   });
 
@@ -268,7 +282,9 @@ describe("source-stage exact-pool price refresh", () => {
     }
     const before = structuredClone(bad), fetch = vi.fn(async (_url: string) => reply([row(1)]));
     vi.stubGlobal("fetch", fetch);
-    expect(await run(metrics, { primaryPrices: new Map([["usdc-circle", 1], ["retired", 1]]), protocolTvlCaps: new Map(gate === "quarantine" ? [["balancer", 150_000]] : []) })).toMatchObject({ refreshed: 1, demand: { pools: 1 } });
+    expect(await run(metrics, { primaryPrices: new Map([["usdc-circle", 1], ["retired", 1]]), protocolTvlCaps: new Map(gate === "quarantine" ? [["balancer", 150_000]] : []) })).toMatchObject({
+      unchangedByReason: { "market-observation-unverified": 1 }, demand: { pools: 1 },
+    });
     expect(fetch.mock.calls[0]![0]).not.toContain(address(0));
     expect(bad).toEqual(before);
   });
@@ -749,5 +765,35 @@ describe("accumulateGlobalAggregate", () => {
     expect(protoTvl["balancer"]).toBe(5_000_000);
     expect(chainTvl["ethereum"]).toBe(5_000_000);
     expect(seenTvl.get("ethereum:0xabc")).toMatchObject({ tvl: 5_000_000, reading: higher.volumeReading });
+  });
+
+  it.each([
+    { baseChain: "ethereum", baseTvlUsd: 20_000_000, overlapTvl: 8_600_000 },
+    { baseChain: "ethereum", baseTvlUsd: 3_000_000, overlapTvl: 3_000_000 },
+    { baseChain: "base", baseTvlUsd: 20_000_000, overlapTvl: 0 },
+    { baseChain: null, baseTvlUsd: 0, overlapTvl: 0 },
+  ])("nets $overlapTvl from repeated metapool attributions with base $baseChain TVL $baseTvlUsd", ({
+    baseChain, baseTvlUsd, overlapTvl,
+  }) => {
+    const seen = new Map<string, GlobalPoolAggregateEntry>();
+    const protocols: Record<string, number> = {};
+    const chainTvl: Record<string, number> = {};
+    const chains = new Set<string>();
+    const baseAddress = "0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7";
+    const metapool = {
+      ...makePool({ chain: "ethereum", project: "curve", poolId: "0xed279fdd11ca84beef15af5d39bb4d4bee23f0ca", tvlUsd: 12_900_000 }),
+      curveBasePoolOverlap: { basePoolKey: `ethereum:${baseAddress}`, lpLegTvlUsd: 8_600_000 },
+    };
+    const base = baseChain ? [makePool({ chain: baseChain, project: "curve", poolId: baseAddress, tvlUsd: baseTvlUsd })] : [];
+    const metaDelta = accumulateGlobalAggregate([metapool], protocols, chainTvl, chains, seen);
+    const laterDelta = accumulateGlobalAggregate([...base, metapool], protocols, chainTvl, chains, seen);
+    expect(metaDelta.poolCount + laterDelta.poolCount).toBe(1 + base.length);
+    const deduction = netGlobalCurveBaseLpOverlap(seen, protocols, chainTvl);
+    const totalTvl = 12_900_000 + baseTvlUsd - overlapTvl;
+    expect(metaDelta.totalTvl + laterDelta.totalTvl - deduction).toBe(totalTvl);
+    expect(protocols.curve).toBe(totalTvl);
+    expect(chainTvl.ethereum).toBe(totalTvl - (baseChain === "base" ? baseTvlUsd : 0));
+    expect(seen.get(`ethereum:${metapool.poolId}`)?.tvl).toBe(12_900_000 - overlapTvl);
+    expect(metapool.tvlUsd).toBe(12_900_000);
   });
 });

@@ -4,7 +4,7 @@ import { CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { runCadenceBucketPublication } from "../lib/cadence-bucket";
-import { isFreshFxObservation, loadFxRateState, type FxRatesMeta } from "../lib/fx-rate-state";
+import { getEcbFixingClocks, isFreshFxObservation, loadFxRateState, type FxRatesMeta } from "../lib/fx-rate-state";
 import type { ChainlinkReferenceQuoteSnapshot } from "../lib/chainlink-feeds";
 import {
   EXPECTED_FX_PEG_KEYS,
@@ -55,7 +55,6 @@ const FX_SOURCE_TTL_SEC = {
   "secondary:jsdelivr": 6 * 3600,
   "secondary:pages.dev": 6 * 3600,
   "secondary:jsdelivr-versioned": 6 * 3600,
-  openExchangeRates: 6 * 3600,
   metals: FX_CADENCE_SEC,
   chainlink: FX_CADENCE_SEC,
 } as const;
@@ -140,6 +139,8 @@ async function runFxRatePublication(
     const prevState = await loadFxRateState(db);
     const sourceLastSuccessAtBySource = { ...prevState?.sourceLastSuccessAtBySource };
     let fallbackSecondaryCandidate: SecondaryCurrencyLoadResult | null = null;
+    let exchangeRateApiRead: ReturnType<typeof loadExchangeRateApiPayload> | undefined;
+    const loadExchangeRateApi = () => exchangeRateApiRead ??= loadExchangeRateApiPayload(signal, syncStartSec);
     const loadSecondaryForFallback = async () => {
       const candidate = await loadSecondaryCurrencyCandidate(signal);
       fallbackSecondaryCandidate = candidate;
@@ -170,20 +171,23 @@ async function runFxRatePublication(
     const commodityPeerMedian = await loadCommodityPeerMedianReference(db, syncStartSec);
 
     const frankfurterAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.FX_FRANKFURTER);
-    const frankfurterResult = frankfurterAllowed
+    const frankfurterRead = frankfurterAllowed
       ? await loadFrankfurterPayload(PRIMARY_FX_CURRENCIES, signal)
       : { ok: false as const, kind: "unavailable" as const, statusCode: null };
+    const frankfurterResult = frankfurterRead.ok && !getEcbFixingClocks(frankfurterRead.data.date, syncStartSec)
+      ? { ok: false as const, kind: "invalid-payload" as const, issues: "invalid-ecb-fixing-clock" }
+      : frankfurterRead;
 
+    if (frankfurterAllowed && !frankfurterResult.ok) {
+      await runBestEffort("recordOutcome:fx-frankfurter-failure", async () => {
+        await recordOutcome(db, CIRCUIT_SOURCE.FX_FRANKFURTER, false);
+      });
+    }
     if (!frankfurterResult.ok && frankfurterResult.kind === "unavailable") {
-      if (frankfurterAllowed) {
-        await runBestEffort("recordOutcome:fx-frankfurter-failure", async () => {
-          await recordOutcome(db, CIRCUIT_SOURCE.FX_FRANKFURTER, false);
-        });
-      }
       const cachedRateCount = Object.keys(syncState.prevRates).length;
       const liveFallback = await syncState.tryLiveFullSetFallback("error", {
         loadSecondaryCurrencyCandidate: loadSecondaryForFallback,
-        loadExchangeRateApiPayload: () => loadExchangeRateApiPayload(signal),
+        loadExchangeRateApiPayload: loadExchangeRateApi,
         primaryMappings,
         secondaryMappings,
       });
@@ -248,10 +252,11 @@ async function runFxRatePublication(
           }
         }
       } else if (frankfurterResult.kind === "invalid-payload") {
+        syncState.validationIssues = frankfurterResult.issues;
         const cachedRateCount = Object.keys(syncState.prevRates).length;
         const liveFallback = await syncState.tryLiveFullSetFallback("invalid-payload", {
           loadSecondaryCurrencyCandidate: loadSecondaryForFallback,
-          loadExchangeRateApiPayload: () => loadExchangeRateApiPayload(signal),
+          loadExchangeRateApiPayload: loadExchangeRateApi,
           primaryMappings,
           secondaryMappings,
         });
@@ -270,24 +275,21 @@ async function runFxRatePublication(
       }
     }
 
-    const openExchangeRatesDue = openExchangeRatesKey != null && isFxSourceDue(
-      "openExchangeRates",
-      sourceLastSuccessAtBySource,
-      syncStartSec,
-    );
-    if (openExchangeRatesKey && openExchangeRatesDue) {
-      syncState.sources.openExchangeRates = await runOpenExchangeRatesOverlay(
+    if (openExchangeRatesKey) {
+      const status = await runOpenExchangeRatesOverlay(
         db,
         syncState,
         openExchangeRatesKey,
         signal,
         runBestEffort,
       );
-      if (syncState.sources.openExchangeRates === "ok" || syncState.sources.openExchangeRates === "partial") {
+      syncState.sources.openExchangeRates = status === "skipped" ? prevState?.sources?.openExchangeRates ?? "cached" : status;
+      if (status === "ok" || status === "partial") {
         sourceLastSuccessAtBySource.openExchangeRates = syncStartSec;
       }
-    } else if (openExchangeRatesKey) {
-      syncState.sources.openExchangeRates = prevState?.sources?.openExchangeRates ?? "cached";
+      if (syncState.hasRegimeCandidates()) {
+        syncState.confirmRegimeChanges(await loadExchangeRateApi(), [...primaryMappings, ...secondaryMappings]);
+      }
     }
 
     if (frankfurterResult.ok) {
@@ -374,10 +376,12 @@ async function runFxRatePublication(
     } else {
       syncState.sources.chainlink = prevState?.sources?.chainlink ?? "cached";
     }
+    syncState.enforcePublicationOrder();
     syncState.maybeRecoverFromCachedFallback();
 
     const missing = syncState.getMissingPegKeys();
     if (Object.keys(syncState.usableRates).length === 0) {
+      await syncState.flushCronEvents(db);
       throw new Error("sync-fx-rates produced zero usable rates");
     }
     if (missing.length > 0) {

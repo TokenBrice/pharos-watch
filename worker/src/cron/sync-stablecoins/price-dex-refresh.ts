@@ -18,7 +18,7 @@ import {
 import { clearPriceMetadata, loadPreviousStablecoinsById } from "./shared";
 import { applyTrackedAssetOverrides } from "./phase-helpers";
 import { buildDexScreenerTargets, runDexScreenerPass, type DexScreenerBatchTarget } from "./enrich-prices-dexscreener-pass";
-import { DEX_REFRESH_CACHE_KEY, PRICE_CORROBORATION_OBSERVATIONS_KEY, type PriceCorroborationObservation } from "./price-corroboration-observations";
+import { DEX_REFRESH_CACHE_KEY, PRICE_CORROBORATION_OBSERVATIONS_KEY, toV1PriceObservation, type PriceCorroborationObservation } from "./price-corroboration-observations";
 import { loadFxRatesForPriceBounds } from "./enrich-prices-progress";
 import type { PeggedAsset } from "./enrich-prices-shared";
 import { resolveStablecoinPriceGapReviews } from "../../lib/stablecoin-publication-coverage";
@@ -458,11 +458,13 @@ export async function runPriceDexRefresh(params: {
           continue;
         }
         const asset = plan.cohort.find((asset) => asset.id === outcome.assetId);
-        if (!asset || !hasPublishableCurrentPrice(asset) || asset.priceObservedAt == null) continue;
-        const target = { id: asset.id, chain: outcome.chain, target: outcome.target, observedAt: asset.priceObservedAt };
+        if (!asset || !hasPublishableCurrentPrice(asset) || (asset.priceObservedAt == null && !outcome.recentActivity)) continue;
+        const target = { id: asset.id, chain: outcome.chain, target: outcome.target,
+          ...(asset.priceObservedAt == null ? {} : { observedAt: asset.priceObservedAt }) };
         plan.targetsById.set(asset.id, target);
         observations.push({ ...target, source: "dexscreener-exact", price: asset.price!,
-          observedAt: asset.priceObservedAt, observedAtMode: asset.priceObservedAtMode ?? null });
+          recentActivity: outcome.recentActivity, observedAt: asset.priceObservedAt ?? null,
+          observedAtMode: asset.priceObservedAtMode ?? null });
       }
       // A 429/Cloudflare-1015 refusal throttles the shared egress IP; issuing the
       // remaining batches this slot would only collect the same refusal. They stay
@@ -487,7 +489,7 @@ export async function runPriceDexRefresh(params: {
   await recordProviderOutcomeSafe({ db: params.db, circuitSource: CIRCUIT_SOURCE.DEXSCREENER_PRICES_REFRESH,
     attempted: summary.attemptedBatches, successful: successfulBatches });
   const written = await setCacheIfNewer(params.db, DEX_REFRESH_CACHE_KEY, JSON.stringify({
-    observations: [...addressObservations, ...shortLived.observations, ...observations],
+    observations: [...addressObservations, ...shortLived.observations, ...observations.map(toV1PriceObservation)],
     targets: [...plan.targetsById.values()],
     // Hints outlive the slots that produced them but never a delisting.
     addressTargets: [...addressTargets.values()].filter((target) => previousAssetsById.has(target.id)),

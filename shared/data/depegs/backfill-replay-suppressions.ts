@@ -595,8 +595,6 @@ export const BACKFILL_REPLAY_SUPPRESSIONS: readonly BackfillReplaySuppression[] 
     ],
     reviewedAt: "2026-10-31",
   },
-  // BRZ rows 89169, 89170, 89172 and 89173 (2023-02/03) stay: CoinMarketCap shows a real 7-23% premium
-  // in those windows, so they are real episodes with inflated peaks, not artifacts.
   {
     coinId: "brz-transfero",
     direction: "below",
@@ -792,3 +790,5 @@ export function findBackfillReplaySuppression(
       backfillEpisodeInSuppressionWindow(episode, entry),
   ) ?? null;
 }
+
+export { BRZ_UNVERIFIED_PEAK_EVENT_IDS } from "./brz-unverified-peak-event-ids";

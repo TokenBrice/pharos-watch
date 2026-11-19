@@ -7,7 +7,7 @@ vi.mock("../../../lib/structured-log", () => ({
 }));
 
 import type { DexApiPool } from "../../../lib/dex-api-types";
-import type { PriceValidationReferences } from "../../../lib/price-validation";
+import { buildPriceValidationContext, getFreshReferencePriceForContext, type PriceValidationReferences } from "../../../lib/price-validation";
 import { getTokenReferenceUsdPrice } from "../../../lib/dex-api-token-pricing";
 import { computeUniswapV4PoolId, UNISWAP_V4_HOOK_FREE_ADDRESS } from "../uniswap-v4";
 import {
@@ -152,6 +152,52 @@ describe("measured execution target inventory", () => {
       expect(getTokenReferenceUsdPrice(tokens[0], chain, common.chainAddressToId, common.symbolToChainScopedIds, stale)).toBe(1.08);
     },
   );
+
+  it.each([null, -120, 0, 60] as const)("requires an in-closure market mark in both EURC/USDC directions (%s)", (quoteOffset) => {
+    const closureStart = Date.parse("2026-11-13T22:00:00Z") / 1000;
+    const capturedAt = closureStart + 120;
+    const fridayFixing = Date.parse("2026-11-13T15:00:00Z") / 1000;
+    const eurc = "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c";
+    const candidate: UniV3ExecutionCandidate = {
+      chain: "ethereum", poolAddress: POOL, feePips: 500, tvlUsd: 4_000_000,
+      token0Price: 1 / 1.13, token1Price: 1.13,
+      tokens: [{ address: eurc, symbol: "EURC", decimals: 6 }, { address: USDC, symbol: "USDC", decimals: 6 }],
+    };
+    const validationReferences: PriceValidationReferences = {
+      type: "fresh", rates: { peggedEUR: 1.10 }, updatedAt: fridayFixing,
+      typeByPeg: { peggedEUR: "fresh" }, updatedAtByPeg: { peggedEUR: fridayFixing },
+      sourceModeByPeg: { peggedEUR: "live" },
+      sourceCadenceByPeg: { peggedEUR: "business-daily" }, sourceDateByPeg: { peggedEUR: "2026-11-13" },
+    };
+    expect(getFreshReferencePriceForContext(buildPriceValidationContext({ stablecoinId: "eurc-circle" }),
+      validationReferences, capturedAt)).toBe(1.10);
+    const prices: [string, number][] = [["usdc-circle", 1]];
+    if (quoteOffset != null) prices.push(["eurc-circle", 1.13]);
+    const stablecoinPriceById = Object.assign(new Map(prices), {
+      closureValuationRejectedAssetIds: new Set<string>(),
+      marketMarks: new Map(quoteOffset == null ? [] : [["eurc-circle", {
+        priceUsd: 1.13, source: "kraken+coinbase", observedAtSec: closureStart + quoteOffset, observedAtMode: "upstream" as const,
+      }]]),
+    });
+    const build = (stablecoinId: string) => buildUniV3MeasuredExecutionTarget({
+      candidate, capturedAt, stablecoinId, stablecoinPriceById, validationReferences,
+      retainedTvlUsd: candidate.tvlUsd, chainAddressToId: addressMap([[eurc, "eurc-circle"], [USDC, "usdc-circle"]]),
+    });
+    logWorkerEventMock.mockClear();
+    if (quoteOffset == null || quoteOffset < 0) {
+      expect([build("eurc-circle"), build("usdc-circle")]).toEqual([null, null]);
+      expect(stablecoinPriceById.closureValuationRejectedAssetIds).toEqual(new Set(["eurc-circle"]));
+      expect(logWorkerEventMock).toHaveBeenCalledWith(expect.objectContaining({
+        event: "dex_measured_valuation_unavailable",
+        metadata: expect.objectContaining({ reason: "reference-market-closed-without-current-token-mark" }),
+      }));
+    } else {
+      const mark = { stablecoinId: "eurc-circle", ...stablecoinPriceById.marketMarks.get("eurc-circle")! };
+      expect(build("eurc-circle")?.tokenIn).toMatchObject({ referencePriceUsd: 1.13, marketMark: mark });
+      expect(build("usdc-circle")?.tokenOut).toMatchObject({ referencePriceUsd: 1.13, marketMark: mark });
+      expect(stablecoinPriceById.closureValuationRejectedAssetIds.size).toBe(0);
+    }
+  });
 
   it("builds a Base Slipstream shadow target with tick-spacing identity", () => {
     const candidate: SlipstreamExecutionCandidate = {

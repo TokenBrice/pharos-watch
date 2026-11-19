@@ -107,6 +107,8 @@ vi.mock("../../lib/blacklist-contracts", () => ({
       ? config.events.find((event) => event.signature === signature || event.signature.split("(")[0] === signature)
       : undefined,
   getBlacklistConfigsForSymbolAndChain: () => [],
+  // This fixture roster has no Ethereum USDT configuration.
+  getBlacklistConfigByContract: () => undefined,
 }));
 
 // Real implementations by default; individual tests inject repair-stage throws.
@@ -239,7 +241,9 @@ import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../
 import { BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY } from "../../lib/blacklist-cache-keys";
 
 const mockD1 = createMockD1Preset([
-  { match: "blacklist-summary-fence-capture", rows: [], first: { generation: null, summaryValue: null } },
+  { match: "blacklist-summary-fence-capture", rows: [], first: {
+    generation: null, summaryValue: null, rollbackValue: null, rollbackUpdatedAt: null,
+  } },
   { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
   { match: "SELECT value FROM cache WHERE key = ?", rows: [], first: null },
   { match: "blacklist:decode-retry:", rows: [] },
@@ -292,6 +296,7 @@ function makeDb(syncStateRows: Record<string, unknown>[] = [], tables: Parameter
   return mockD1([
     ...tables,
     ...emptyBlacklistAggregateTables(),
+    { match: "blacklist-summary-latest-event-type-history", rows: [] },
     { match: "blacklist_sync_state", rows: syncStateRows },
     { match: "blacklist_events", rows: [] },
   ]);

@@ -43,6 +43,7 @@ export interface YieldVariant {
 
 export interface OnChainRateConfig {
   stablecoinId: string;
+  returnDenomination?: string;
   chain: string;
   contract: string;
   selector: string;

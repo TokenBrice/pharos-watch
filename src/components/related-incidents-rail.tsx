@@ -2,7 +2,8 @@ import Link from "next/link";
 import { formatDeviationBps, formatIsoDate } from "@shared/lib/format";
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
-import { MECHANISM_ARCHETYPE_SHORT_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
+import { DEPEG_AUDIT_DISPUTED_BADGE, MECHANISM_ARCHETYPE_SHORT_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
+import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 import depegEventRelatedData from "@/generated/depeg-event-related-data.json";
 import type { MechanismArchetype } from "@shared/types/stablecoin-taxonomy";
 import type { PegCurrency } from "@shared/types/core";
@@ -33,6 +34,8 @@ interface RelatedItem {
   symbol: string;
   startedAt: number;
   peakDeviationBps: number;
+  peakReview?: DepegEventSearchEntry["peakReview"];
+  auditVerdict?: DepegEventSearchEntry["auditVerdict"];
   direction: "above" | "below";
 }
 
@@ -49,6 +52,8 @@ function toRelatedItem(event: DepegEventSearchEntry): RelatedItem {
     symbol: event.symbol,
     startedAt: event.startedAt,
     peakDeviationBps: event.peakDeviationBps,
+    peakReview: event.peakReview,
+    auditVerdict: event.auditVerdict,
     direction: event.direction,
   };
 }
@@ -170,7 +175,10 @@ export function RelatedIncidentsRail({
                       {item.symbol}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      peak {formatDeviationBps(item.peakDeviationBps)} {item.direction === "below" ? "below" : "above"} peg
+                      {item.peakReview === "unverified"
+                        ? "Peak unverified"
+                        : `peak ${formatDeviationBps(item.peakDeviationBps)} ${item.direction === "below" ? "below" : "above"} peg`}
+                      {isDisputedAuditVerdict(item.auditVerdict) ? ` (${DEPEG_AUDIT_DISPUTED_BADGE.label})` : ""}
                     </span>
                   </Link>
                 </li>

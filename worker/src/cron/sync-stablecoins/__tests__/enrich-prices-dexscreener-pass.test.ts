@@ -44,7 +44,7 @@ function exactPool(tokenAddress: string, pairAddress: string, priceUsd: string, 
     quoteToken: { address: "0xusdc", name: "USD Coin", symbol: "USDC" },
     priceUsd,
     priceNative: null,
-    volume: { h24: 10_000, h6: 0, h1: 0, m5: 0 },
+    volume: { h24: 10_000, h6: 500, h1: 100, m5: 25 },
     liquidity: { usd: liquidityUsd, base: 50_000, quote: 50_000 },
     pairCreatedAt: null,
   };
@@ -134,37 +134,40 @@ describe("runDexScreenerPass", () => {
     });
   });
 
-  it("keeps valid exact pricing beside rejected rows and leaves absent/zero volume as valid rows", async () => {
+  it("separates exact recent trading from unclocked, liquid rows without recent activity", async () => {
     const actual = await vi.importActual<typeof import("../../../lib/dexscreener")>("../../../lib/dexscreener");
     const { volume: _volume, ...absentVolume } = exactPool("0xabc", "0xpair1", "0.99");
     const zeroVolume = { ...exactPool("0xabc", "0xpair2", "1.01"), volume: { h24: 0, h6: 0, h1: 0, m5: 0 } };
     const rejected = { ...exactPool("0xabc", "", "5", 1_000_000) };
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify([absentVolume, zeroVolume, rejected]))));
+    const recent = exactPool("0xabc", "0xpair3", "1.002");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify([absentVolume, zeroVolume, rejected, recent]))));
     vi.mocked(fetchDsTokenPoolsWithStatus).mockImplementationOnce(actual.fetchDsTokenPoolsWithStatus);
 
     const asset = makeMissingAsset({ id: "exact-usd", symbol: "EXACT", address: "0xabc", chains: ["Base"] });
     const result = await runDexScreenerPass([asset], undefined, undefined);
 
     await expect(vi.mocked(fetchDsTokenPoolsWithStatus).mock.results[0]?.value).resolves.toMatchObject({
-      ok: true, degraded: true, rejectedPairCount: 1, pairs: [absentVolume, zeroVolume],
+      ok: true, degraded: true, rejectedPairCount: 1, pairs: [absentVolume, zeroVolume, recent],
     });
     expect(result).toMatchObject({ resolved: 1, failures: [] });
-    expect(asset).toMatchObject({ price: 1.0, priceSource: "dexscreener-exact", priceConfidence: "fallback" });
+    expect(asset).toMatchObject({ price: 1.002, priceSource: "dexscreener-exact", priceConfidence: "fallback",
+      priceObservedAt: null, priceUpdatedAt: null, priceObservedAtMode: "unknown", priceSyncedAt: expect.any(Number) });
   });
 
   it.each([
     { label: "both observed sub-floor Polygon pools", liquidity: 46_409.29, symbol: "PHT", price: "0.01587", reason: "missing-liquidity" },
-    { label: "threshold pool with PHP reference despite sparse turnover", liquidity: DEXSCREENER_MIN_LIQUIDITY_USD, symbol: "PHT", price: "0.01587", reason: null },
+    { label: "threshold pool with recent trade", liquidity: DEXSCREENER_MIN_LIQUIDITY_USD, symbol: "PHT", price: "0.01587", reason: null },
+    { label: "threshold pool with only older trading", liquidity: DEXSCREENER_MIN_LIQUIDITY_USD, symbol: "PHT", price: "0.01587", reason: "missing-recent-trade-evidence" },
     { label: "wrong token symbol", liquidity: DEXSCREENER_MIN_LIQUIDITY_USD, symbol: "PHOENIX", price: "0.01587", reason: "symbol-mismatch" },
     { label: "dollar-par quote for a PHP token", liquidity: DEXSCREENER_MIN_LIQUIDITY_USD, symbol: "PHT", price: "1", reason: "price-rejected" },
-  ])("applies existing exact-PHT liquidity, identity and FX guards: $label", async ({ liquidity, symbol, price, reason }) => {
+  ])("applies exact-PHT liquidity, identity and FX guards: $label", async ({ liquidity, symbol, price, reason }) => {
     vi.spyOn(ACTIVE_META_BY_ID, "get").mockReturnValue(TRACKED_META_BY_ID.get("pht-pht"));
     const address = "0xe75220cb014dfb2d354bb59be26d7458bb8d0706";
     const pool = {
       ...exactPool(address, "0xbfb7ac32af23b8b5d892ef4c6e366dd47484da08", price, liquidity),
       chainId: "polygon",
       baseToken: { address, name: "PHT Stablecoin", symbol },
-      volume: { h24: 5.63, h6: 5.63, h1: 0, m5: 0 },
+      volume: { h24: 5.63, h6: 5.63, h1: 5.63, m5: reason === "missing-recent-trade-evidence" ? 0 : 5.63 },
     };
     vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValueOnce({
       ok: true,

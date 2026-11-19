@@ -3,10 +3,12 @@ import type { PegRateSource } from "@shared/lib/peg-rates";
 import type { DepegQuoteDomain } from "@shared/lib/depeg-quote-domain";
 import type { PegAssetBase } from "@shared/types/price";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
-import type { DepegEventCloseReason } from "@shared/types/peg";
-import type { DepegPriceCoverage } from "@shared/types/peg";
+import type { StablecoinData } from "@shared/types/supply";
+import type { DepegEventCloseReason, DepegEventQuoteDomain } from "@shared/types/peg";
+import type { DepegAdmittedCoverage, DepegPriceCoverage } from "@shared/types/peg";
 import type {
   DepegRow,
+  StoredReferenceHold,
   DexPoolSource,
   DexPriceRow,
 } from "../../lib/depeg-helpers";
@@ -67,7 +69,11 @@ export type DepegDetectionResult =
   | { status: "completed"; census: DepegObservationCensus }
   | { status: "held"; reason: DepegHoldReason; census: DepegObservationCensus | null };
 
-export interface DexPoolChallenger {
+type PriceLineage = Pick<DexPriceRow, "pricePoolKeys" | "upstreamKeys">;
+export type DepegPricingAsset = PegAssetBase & PriceLineage &
+  Pick<StablecoinData, "commodityEntitlement" | "parityQuoteUnit" | "priceQuoteBasis">;
+
+export interface DexPoolChallenger extends PriceLineage {
   price: number;
   tvlUsd: number;
   protocol: string;
@@ -82,6 +88,7 @@ export interface HydratedDepegDetection {
   pegRates: Record<string, number>;
   pegRateSources: Record<string, PegRateSource>;
   pegRateCounts: Record<string, number>;
+  referenceContext?: import("./reference-policy").DetectionReferenceContext;
   dexPriceRows: Map<string, DexPriceRow>;
   dexPriceSources: Map<string, DexPoolSource[]>;
   dexPoolChallengers: Map<string, DexPoolChallenger[]>;
@@ -92,16 +99,20 @@ export interface HydratedDepegDetection {
 export interface DepegDetectionRow extends DepegRow {
   quote_mode?: DepegQuoteDomain["quote_mode"];
   recovery_last_seen_at?: number | null;
+  recovery_evidence_source?: "dex" | "native" | null;
+  recovery_usd_observed_at?: number | null;
+  recovery_usd_first_seen_at?: number | null;
 }
 
 export interface DepegAssetDecisionInput {
   now: number;
-  asset: PegAssetBase;
+  asset: DepegPricingAsset;
   meta?: StablecoinMeta;
   existing?: DepegDetectionRow;
   pegRates: Record<string, number>;
   pegRateSources: Record<string, PegRateSource>;
   pegRateCounts: Record<string, number>;
+  referenceContext?: import("./reference-policy").DetectionReferenceContext;
   dexRow?: DexPriceRow;
   protocolSources?: DexPoolSource[];
   challengerPools?: DexPoolChallenger[];
@@ -122,12 +133,13 @@ export type DepegPersistenceCommand =
       id: number;
       endedAt: number;
       recoveryPrice: number | null;
+      recoveryPegReference?: number | null;
       closeReason: DepegEventCloseReason;
     }
-  | { type: "update-peak"; id: number; peakDeviationBps: number; peakPrice: number | null }
-  | { type: "record-price-coverage"; id: number; coverage: DepegPriceCoverage }
-  | { type: "begin-recovery"; id: number; firstSeenAt: number; lastSeenAt: number }
-  | { type: "continue-recovery"; id: number; lastSeenAt: number }
+  | { type: "update-peak"; id: number; peakDeviationBps: number; peakPrice: number | null; peakPegReference?: number | null; peakQuoteDomain?: DepegEventQuoteDomain | null; peakReceipt?: string }
+  | { type: "record-price-coverage"; id: number; coverage: DepegPriceCoverage; referenceHold?: StoredReferenceHold; admittedCoverage?: DepegAdmittedCoverage }
+  | { type: "begin-recovery"; id: number; firstSeenAt: number; lastSeenAt: number; source?: "dex" | "native"; usdObservedAt?: number }
+  | { type: "continue-recovery"; id: number; lastSeenAt: number; usdObservedAt?: number }
   | { type: "clear-recovery"; id: number }
   | { type: "delete-event"; id: number };
 
@@ -136,6 +148,8 @@ export interface DepegAssetDecision {
   seenEventIds: number[];
   deadBandNotice?: DepegDeadBandReceipt;
   priceCoverage?: DepegPriceCoverage;
+  referenceHold?: StoredReferenceHold;
+  admittedCoverage?: DepegAdmittedCoverage;
   /** Absent for untracked and NAV rows, which are outside the census. */
   observation?: DepegObservationOutcome;
   commands: DepegPersistenceCommand[];

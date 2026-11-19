@@ -52,7 +52,7 @@ import { insertDigestRecord } from "../digest/platform";
 import { DAILY_EXEMPLAR, SYSTEM_PROMPT } from "../daily-digest/prompt/policy";
 import { classifyRegime, DIGEST_WRITING_REGISTER } from "../daily-digest/prompt/regime";
 import { ALLOWED_TONES, hasBlockingDigestQualityIssues, parseDigestModelResponse, validateDigestModelOutput, type DigestValidationProfile, type ParsedDigestResponse } from "../daily-digest/response";
-import { collectActiveDepegs, collectLiquidityShifts, collectMintBurnFlows, collectResolvedDepegs, collectSupplyVelocity } from "../daily-digest/collectors-market";
+import { collectActiveDepegs, collectLiquidityShifts, collectMintBurnFlows, collectResolvedDepegs, collectNativeSupplyMovers } from "../daily-digest/collectors-market";
 import { collectDewsStress, collectGradeTransitions, collectSafetyScores, collectYieldAnomalies } from "../daily-digest/collectors-risk";
 import { collectCrossDayTrends, collectHistoricalContext, collectPsiContributors, collectTotalMcapAth } from "../daily-digest/collectors-history";
 import { buildDigestIntelligence, parseStoredDigestInput } from "../daily-digest/digest-intelligence";
@@ -477,7 +477,7 @@ describe("market and risk collectors", () => {
   it("re-bins the published gauge, includes FTQ chains, and never reads hourly rows", async () => {
     const db = mockD1([publishedGaugeTable()]); const result = await collectMintBurnFlows(makeCollectorCtx(db));
     expect(result.value).toMatchObject({ gaugeScore: PUBLISHED_GAUGE_SCORE, gaugeBand: "HEALTHY", classificationSource: "safety-score-v9-publication", topChains: [{ chainId: "ethereum", netUsd: 150e6 }, { chainId: "arbitrum", netUsd: -3e6 }] });
-    expect(result.value?.topPressure.map(({ symbol }) => symbol)).toEqual(["USDT", "USDC"]); expect(buildUserPrompt({ ...BASE_DIGEST_INPUT, mintBurnFlows: result.value! })).toContain("Top chains by net flow"); expect(db.getHistory().some(({ sql }) => sql.includes("mint_burn_hourly"))).toBe(false);
+    expect(result.value?.topPressure.map(({ symbol }) => symbol)).toEqual(["XAUT", "USDC"]); expect(buildUserPrompt({ ...BASE_DIGEST_INPUT, mintBurnFlows: result.value! })).toContain("Top chains by net flow"); expect(db.getHistory().some(({ sql }) => sql.includes("mint_burn_hourly"))).toBe(false);
   });
   it("separates a withheld net's unavailable 24h window from its missing valuation", async () => {
     const coins = publishedGaugePayload().coins as Record<string, unknown>[];
@@ -616,7 +616,7 @@ describe("market and risk collectors", () => {
       { match: "FROM supply_history WHERE stablecoin_id IN", rows: [], throwError: new Error("D1 unavailable") },
     ]) });
     expect(result.value?.gaugeScore).toBe(PUBLISHED_GAUGE_SCORE);
-    expect(result.value?.topPressure.map((coin) => coin.symbol)).toEqual(["USDT", "USDC"]);
+    expect(result.value?.topPressure.map((coin) => coin.symbol)).toEqual(["XAUT", "USDC"]);
     expect(result.degradedReasons).toContain("mint-burn-pressure-supply-query");
     expect(result.qualityReasons).toContain("mint-burn-pressure-supply-unavailable");
   });
@@ -796,9 +796,10 @@ describe("market and risk collectors", () => {
     };
     const base = publishedGaugePayload();
     const coins = base.coins as Record<string, unknown>[];
-    // Mixed USDC: unpriced mint plus priced burns; USDT's baseline is partial.
+    // USDC has an unpriced mint and priced burns. XAUT has a partial baseline.
     const mixed = publishedGaugePayload({
-      coins: [{ ...coins[0], pressureShiftScore: null, valuation: { ...(coins[0].valuation as object), baseline: "partial" } }, { ...coins[1], valuation: partialMint }, coins[2]],
+      coins: [coins[0], { ...coins[1], valuation: partialMint }, coins[2],
+        { ...coins[3], pressureShiftScore: null, valuation: { ...(coins[3].valuation as object), baseline: "partial" } }],
       chains: [{ chainId: "ethereum", netFlow24hUsd: 150_000_000, valuation: "partial" }, { chainId: "arbitrum", netFlow24hUsd: -3_000_000, valuation: "complete" }],
     });
     const result = await collectMintBurnFlows(ctxFor([publishedGaugeTable({ value: JSON.stringify(mixed) })]));
@@ -866,6 +867,49 @@ describe("market and risk collectors", () => {
     ctx.trackedStablecoinAssets.push(variant); (ctx.trackedStablecoinIds as Set<string>).add(variant.id); ctx.stablecoinAssetById.set(variant.id, variant); ctx.mcapById.set(variant.id, 1e9);
     const result = await collectActiveDepegs(ctx); expect(ctx.coreAggregateStablecoinIds.has(variant.id)).toBe(false); expect(result.value.topDepegs[0]).toMatchObject({ stablecoinId: "susds-sky", symbol: "sUSDS" });
   });
+  it.each(["unknown", "publish-clock"] as const)("keeps the stored USD peak for an %s quote", async (mode) => {
+    const ctx = ctxFor(depegTable([activeRows.usdc]));
+    const asset = ctx.stablecoinAssetById.get("usdc-circle")!;
+    asset.priceObservedAtMode = mode === "unknown" ? "unknown" : "upstream";
+    asset.priceUpdatedAt = ctx.nowSec;
+    if (mode === "publish-clock") asset.priceObservedAt = null;
+    const { value } = await collectActiveDepegs(ctx);
+    expect(value.topDepegs[0]).toMatchObject({ severityBasis: "peak-fallback", peakBps: activeRows.usdc.peak_deviation_bps });
+    expect(value.topDepegs[0]).not.toHaveProperty("priceObservedAt");
+  });
+  it("ranks a fresh fixed-USD composite on its current deviation", async () => {
+    const ctx = ctxFor(depegTable([activeRows.usdt]));
+    const quoteAt = ctx.nowSec - 45;
+    const asset = ctx.stablecoinAssetById.get("usdt-tether")!;
+    Object.assign(asset, { price: 0.98, priceSource: "kraken+pyth+redstone", priceConfidence: "high",
+      priceSelectedSource: "pyth", priceObservedAtMode: "local_fetch", priceObservedAt: quoteAt });
+    expect((await collectActiveDepegs(ctx)).value.topDepegs[0]).toMatchObject({
+      severityBasis: "current", currentBps: -200, peakBps: -500, priceObservedAt: quoteAt,
+    });
+    asset.priceObservedAt = ctx.nowSec - 3600;
+    expect((await collectActiveDepegs(ctx)).value.topDepegs[0].severityBasis).toBe("peak-fallback");
+    asset.priceObservedAt = quoteAt;
+    ctx.currentPegObservationById = new Map([[asset.id, currentPegObservation(1, { admittedDeviationBps: null })]]);
+    expect((await collectActiveDepegs(ctx)).value.topDepegs[0].severityBasis).toBe("peak-fallback");
+  });
+  function scheduledObservation(valueUsd: number, bps: number | null, observedAt: number, kind: "fx" | "fallback" = "fallback",
+    decisionAtSec = observedAt) {
+    const referenceAt = bps == null ? observedAt - 43 * 3_600 : observedAt;
+    const clocks = {
+      kind, source: kind === "fx" ? "openExchangeRates" : "gold-api.com", cadence: "intraday",
+      referenceObservedAtSec: referenceAt, quoteObservedAtSec: observedAt, decisionAtSec,
+      budgetSec: 21_600, sessionOpenedAtSec: bps == null ? null : observedAt - 3_600,
+      generation: "digest-fixture", policyVersion: 1,
+    } as const;
+    return currentPegObservation(valueUsd, {
+      pegReference: { valueUsd, source: kind, contributorCount: 1, asOf: referenceAt },
+      admittedDeviationBps: bps,
+      referenceAdmission: bps == null
+        ? { ...clocks, status: "held-closed-session", reason: "reference-market-closed" }
+        : { ...clocks, status: "admitted", reason: "live-reference" },
+    });
+  }
+
   it("measures a USD-quoted gold event against the current reference, not the latched one", async () => {
     const now = Math.floor(Date.now() / 1000);
     const ctx = ctxFor(depegTable([{
@@ -874,7 +918,7 @@ describe("market and risk collectors", () => {
     }]));
     const asset = makeAsset({ id: "xaum-matrixdock", symbol: "XAUM", pegType: "peggedGOLD", price: 3902, priceObservedAt: now });
     track(ctx, asset);
-    ctx.currentPegObservationById = new Map([[asset.id, currentPegObservation(3902)]]);
+    ctx.currentPegObservationById = new Map([[asset.id, scheduledObservation(3902, 0, now)]]);
     const result = await collectActiveDepegs(ctx);
     // At today's par against today's gold reference. The latched 4051 reference
     // would have published ~-368 bps from the same live price.
@@ -894,7 +938,7 @@ describe("market and risk collectors", () => {
     }]));
     const asset = makeAsset({ id: "xagm-matrixdock", symbol: "XAGM", pegType: "peggedSILVER", price: 30.411, priceObservedAt: now });
     track(ctx, asset, 100e6);
-    ctx.currentPegObservationById = new Map([[asset.id, currentPegObservation(30)]]);
+    ctx.currentPegObservationById = new Map([[asset.id, scheduledObservation(30, 137, now)]]);
     const result = await collectActiveDepegs(ctx);
     expect(result.value.topDepegs[0]).toMatchObject({
       currentBps: 137, severityBasis: "current", pegReference: 30, pegReferenceBasis: "current", currentPriceUsd: 30.411,
@@ -934,34 +978,49 @@ describe("market and risk collectors", () => {
     },
   );
   it("holds a weekend metal deviation instead of ranking it as current", async () => {
-    // Sunday 16:00 UTC: spot metals repeat Friday's close while the token trades.
-    const now = 1_794_758_400;
+    // The same Friday quote was admitted just before the close and held by the digest just after.
+    const now = Date.parse("2026-11-13T22:01:00Z") / 1_000;
+    const quoteAt = now - 120;
     const ctx = ctxFor(depegTable([{ stablecoin_id: "paxg-paxos", symbol: "PAXG", peg_type: "peggedGOLD", source: "live", direction: "below", peak_deviation_bps: -600, started_at: now - 10 * 86_400, peg_reference: 4000 }]));
     ctx.nowSec = now;
-    const asset = makeAsset({ id: "paxg-paxos", symbol: "PAXG", pegType: "peggedGOLD", price: 3900, priceObservedAt: now });
+    const published = scheduledObservation(4000, -250, quoteAt);
+    const asset = Object.assign(makeAsset({ id: "paxg-paxos", symbol: "PAXG", pegType: "peggedGOLD", price: 3900, priceObservedAt: quoteAt }), { currentPeg: published });
     track(ctx, asset);
-    ctx.currentPegObservationById = new Map([[asset.id, currentPegObservation(4000)]]);
+    ctx.currentPegObservationById = new Map([[asset.id, scheduledObservation(4000, null, quoteAt, "fallback", now)]]);
     const { value, qualityReasons } = await collectActiveDepegs(ctx);
     expect(value.topDepegs[0]).toMatchObject({ severityBasis: "peak-fallback", bps: -600 });
     expect(value.topDepegs[0].currentBps).toBeUndefined();
     expect(qualityReasons).toEqual(["active-depeg-reference-market-closed"]);
   });
-  it("keeps a USD-peg event on the current reference of one", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const ctx = ctxFor(depegTable([{ ...activeRows.usdc, started_at: now - 3_600, peg_reference: 1 }]));
-    ctx.stablecoinAssetById.get("usdc-circle")!.price = 0.98;
-    const result = await collectActiveDepegs(ctx);
-    expect(result.value.topDepegs[0]).toMatchObject({
-      currentBps: -200, severityBasis: "current", pegReference: 1, currentPriceUsd: 0.98, priceObservedAt: now,
-    });
-    expect(result.qualityReasons).toBeUndefined();
+  it.each([
+    ["upstream", "pyth", "current"],
+    ["legacy", "pyth", "current"],
+    ["legacy", "binance", "peak-fallback"],
+  ] as const)("reads the %s USD quote clock from %s", async (clock, source, basis) => {
+    const ctx = ctxFor(depegTable([{ ...activeRows.usdc, peak_deviation_bps: -1000, peg_reference: 1 }]));
+    const asset = ctx.stablecoinAssetById.get("usdc-circle")!;
+    asset.price = 0.98;
+    asset.priceSource = source;
+    asset.priceUpdatedAt = ctx.nowSec - 60;
+    if (clock === "legacy") {
+      // The critical-fields reader preserves omission on pre-clock cache rows.
+      const legacyAsset: Partial<typeof asset> = asset;
+      delete legacyAsset.priceObservedAt;
+      delete legacyAsset.priceObservedAtMode;
+    } else {
+      asset.priceObservedAt = asset.priceUpdatedAt;
+    }
+    const { value } = await collectActiveDepegs(ctx);
+    expect(value.topDepegs[0]).toMatchObject({ severityBasis: basis, peakBps: -1000 });
+    expect(value.topDepegs[0].currentBps).toBe(basis === "current" ? -200 : undefined);
+    expect(value.topDepegs[0].priceObservedAt).toBe(basis === "current" ? asset.priceUpdatedAt : undefined);
   });
   it("keeps a native-quote event on the event-native reference", async () => {
     const now = Math.floor(Date.now() / 1000);
     const ctx = ctxFor(depegTable([{
       stablecoin_id: "eurc-circle", symbol: "EURC", peg_type: "peggedEUR", source: "live", quote_mode: "native-peg",
       direction: "below", peak_deviation_bps: -800, started_at: now - 3 * 86_400, peg_reference: 1,
-      current_native_quote: JSON.stringify({ value: 0.92, observedAt: now - 60, source: "coingecko" }),
+      current_native_quote: JSON.stringify({ value: 0.92, observedAt: now - 60, source: "coingecko", derivation: { kind: "traded-pair", lineage: { venue: "bitstamp", pair: "EURC/EUR" } } }),
     }]));
     ctx.trackedStablecoinIds = new Set([...ctx.trackedStablecoinIds, "eurc-circle"]);
     ctx.mcapById.set("eurc-circle", 250e6);
@@ -999,13 +1058,16 @@ describe("market and risk collectors", () => {
       : quoteState === "future" ? now + 60 : now - 30;
     if (quoteState !== "missing") sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
       .run(`${NATIVE_EVENT_QUOTE_CACHE_PREFIX}101`,
-        quoteState === "malformed" ? "{invalid" : JSON.stringify({ value: 0.98, observedAt: quoteAt, source: "coingecko" }), quoteAt);
+        quoteState === "malformed" ? "{invalid" : JSON.stringify({ value: 0.98, observedAt: quoteAt, source: "coingecko", derivation: { kind: "traded-pair", lineage: { venue: "bitstamp", pair: "EURC/EUR" } } }), quoteAt);
     const ctx = makeCollectorCtx(db);
     const asset = makeAsset({ id: "eurc-circle", symbol: "EURC", pegType: "peggedEUR", price: 1.1, priceObservedAt: now });
     const native = quoteMode === "native-peg" || (quoteMode == null && source === "live");
     track(ctx, asset, 100e6);
     // USD-quoted rows measure against the current reference; the native rows ignore it.
-    ctx.currentPegObservationById = new Map([[asset.id, currentPegObservation(native ? null : pegReference)]]);
+    ctx.currentPegObservationById = new Map([[
+      asset.id,
+      native ? currentPegObservation(null) : scheduledObservation(pegReference, pegReference === 1 ? 1000 : 0, now, "fx"),
+    ]]);
     const result = await collectActiveDepegs(ctx);
     expect(result.degradedReasons).toEqual([]);
     expect(result.value.activeDepegCount).toBe(1);
@@ -1027,9 +1089,76 @@ describe("market and risk collectors", () => {
       }
     }
   });
+  it("uses the legacy weekly bucket and daily USD snapshots until native evidence exists", async () => {
+    const now = ctxFor([]).todayTs;
+    const rows = [[0, 101.4e9], [1, 101.35e9], [7, 100e9]].map(([days, usd]) => ({
+      stablecoin_id: "usdt-tether", snapshot_date: now - days * 86_400, circulating_usd: usd, circulating_native: null,
+    }));
+    const ctx = ctxFor([{ match: "FROM supply_history WHERE stablecoin_id IN", rows }]);
+    const result = await collectNativeSupplyMovers(ctx);
+    expect(result.degradedReasons).toEqual([]);
+    expect(result.value.biggestSupplyChange).toMatchObject({ symbol: "USDT", changeUsd: 5e9 });
+    expect(result.value.biggestSupplyChange?.quantityEvidence).toBeUndefined();
+    expect(result.value.supplyVelocity).toEqual([{ stablecoinId: "usdt-tether", coin: "USDT",
+      change1d: 50e6, change7d: 1.4e9, signal: "decelerating" }]);
+    const noHistory = ctxFor([{ match: "FROM supply_history WHERE stablecoin_id IN", rows: [] }]);
+    noHistory.coreAggregateStablecoinAssets = noHistory.coreAggregateStablecoinAssets.map((coin) =>
+      ({ ...coin, circulatingPrevWeek: {} }));
+    expect((await collectNativeSupplyMovers(noHistory)).degradedReasons).toEqual(["supply-movers-unavailable"]);
+  });
+  it("withholds supply movers and velocity when today's native quantity is explicitly unavailable", async () => {
+    const today = ctxFor([]).todayTs;
+    const rows = [[0, 110e6], [1, 101e6], [7, 100e6]].map(([days, usd]) => {
+      const date = today - days * 86_400;
+      return {
+        stablecoin_id: "usdt-tether", snapshot_date: date, circulating_usd: usd,
+        circulating_native: days === 0 ? null : 100e6,
+        valuation_price_usd: days === 0 ? null : usd / 100e6,
+        valuation_observed_at_sec: days === 0 ? null : date,
+        supply_provenance: JSON.stringify({
+          supplySource: "defillama", supplyObservedAt: date, supplyChainGuard: null,
+          ...(days === 0 ? { nativeQuantityUnavailable: true, marketQuote: { price: 1.1, observedAt: date } } : {}),
+        }),
+      };
+    });
+    const ctx = ctxFor([{ match: "FROM supply_history WHERE stablecoin_id IN", rows }]);
+    ctx.coreAggregateStablecoinAssets = [makeAsset({
+      id: "usdt-tether", symbol: "USDT", price: 1.1,
+      circulating: { peggedUSD: 110e6 }, circulatingPrevWeek: { peggedUSD: 100e6 },
+    })];
+    const result = await collectNativeSupplyMovers(ctx);
+    expect(result.value).toStrictEqual({ biggestSupplyChange: null, supplyChanges7d: [] });
+    expect(result.degradedReasons).toEqual(["supply-movers-unavailable"]);
+  });
+  it("uses the paired pre-midnight valuation for weekly supply and daily velocity", async () => {
+    const today = ctxFor([]).todayTs;
+    const rows = [[0, 110e9], [1, 101e9], [7, 100e9]].map(([days, quantity]) => {
+      const date = today - days * 86_400;
+      const at = date + (days === 0 ? -15 : 10);
+      return { stablecoin_id: "usdt-tether", snapshot_date: date, circulating_native: quantity,
+        valuation_price_usd: 1, valuation_observed_at_sec: at,
+        supply_provenance: JSON.stringify({ supplySource: "coingecko-fallback", supplyObservedAt: at, supplyChainGuard: null }) };
+    });
+    const ctx = ctxFor([{ match: "FROM supply_history WHERE stablecoin_id IN", rows }]);
+    ctx.coreAggregateStablecoinAssets = ctx.coreAggregateStablecoinAssets.filter(({ id }) => id === "usdt-tether");
+    const { value } = await collectNativeSupplyMovers(ctx);
+    expect(value.biggestSupplyChange).toMatchObject({ id: "usdt-tether", changeUsd: 10e9,
+      quantityEvidence: { valuationObservedAt: today - 15 } });
+    expect(value.supplyVelocity).toMatchObject([{ change1d: 9e9, change7d: 10e9, signal: "accelerating" }]);
+    rows[0].valuation_observed_at_sec = today - 3600;
+    expect((await collectNativeSupplyMovers(ctx)).value.biggestSupplyChange).toBeNull();
+  });
   it("covers velocity and silent collector failures", async () => {
-    const now = ctxFor([]).todayTs; const rows = [{ stablecoin_id: "usdt-tether", snapshot_date: now, circulating_usd: 101.4e9 }, { stablecoin_id: "usdt-tether", snapshot_date: now - 86_400, circulating_usd: 101.35e9 }, { stablecoin_id: "usdt-tether", snapshot_date: now - 7 * 86_400, circulating_usd: 100e9 }];
-    expect((await collectSupplyVelocity(ctxFor([{ match: "FROM supply_history WHERE stablecoin_id IN", rows }]))).value).toEqual([expect.objectContaining({ coin: "USDT", signal: "decelerating" })]);
+    const now = ctxFor([]).todayTs;
+    const rows = [[0, 101.4e9], [1, 101.35e9], [7, 100e9]].map(([days, quantity]) => ({
+      stablecoin_id: "usdt-tether", snapshot_date: now - days * 86_400, circulating_native: quantity,
+      supply_provenance: JSON.stringify({ supplySource: "defillama", supplyObservedAt: now - days * 86_400, supplyChainGuard: null }),
+      valuation_price_usd: 1, valuation_observed_at_sec: now,
+    }));
+    const result = await collectNativeSupplyMovers(ctxFor([{ match: "FROM supply_history WHERE stablecoin_id IN", rows }]));
+    expect(result.value.supplyVelocity).toEqual([expect.objectContaining({
+      coin: "USDT", signal: "decelerating", quantityEvidence: expect.objectContaining({ basis: "native-quantity" }),
+    })]);
     expect((await collectResolvedDepegs(ctxFor([{ match: "depeg_events", rows: [], throwError: new Error("boom") }]))).degradedReasons).toContain("resolved-depegs-query");
     expect((await collectLiquidityShifts(ctxFor([{ match: "dex_liquidity", rows: [], throwError: new Error("boom") }]))).degradedReasons).toContain("liquidity-shifts-query");
   });
@@ -1525,7 +1654,7 @@ describe("daily digest PSI source admission", () => {
     const scenario = makeDailyDigestScenario({ db: { prependTables: [
       { match: "SELECT score, band, components, stored_at FROM stability_index_samples", rows: [], first: sample },
       { match: "SELECT score, band, components, computed_at as stored_at", rows: [], first: daily },
-      { match: "SELECT AVG(score)", rows: [], first: { avg: null } },
+      { match: "stability_index_samples AS s LEFT JOIN stability_index AS d", rows: [], first: { avg: null } },
     ] } });
     vi.mocked(loadStablecoinsCache).mockResolvedValue(scenario.sourcePayload);
     vi.mocked(loadActiveSafetyScoreCohort).mockResolvedValue(scenario.safetySource);
@@ -1545,7 +1674,7 @@ describe("daily digest PSI source admission", () => {
     const scenario = makeDailyDigestScenario({ db: { prependTables: [
       { match: "SELECT score, band, components, stored_at FROM stability_index_samples", rows: [], first: sample },
       { match: "SELECT score, band, components, computed_at as stored_at", rows: [], first: daily },
-      { match: "SELECT AVG(score)", rows: [], first: { avg: null } },
+      { match: "stability_index_samples AS s LEFT JOIN stability_index AS d", rows: [], first: { avg: null } },
     ] } });
     vi.mocked(loadStablecoinsCache).mockResolvedValue(scenario.sourcePayload);
     vi.mocked(loadActiveSafetyScoreCohort).mockResolvedValue(scenario.safetySource);
@@ -1817,7 +1946,7 @@ describe("daily digest generation", () => {
     });
 
     it("fails before model generation when the input collection fails", async () => {
-      const db = makeDailyDigestScenario({ db: { transformTables: (tables) => [...tables.filter((table) => table.match !== "SELECT AVG(score) as avg FROM stability_index_samples WHERE stored_at > ?"), { match: "SELECT AVG(score) as avg FROM stability_index_samples WHERE stored_at > ?", rows: [], throwError: new Error("D1 read failed") }] } }).db;
+      const db = makeDailyDigestScenario({ db: { transformTables: (tables) => [...tables.filter((table) => table.match !== "stability_index_samples AS s LEFT JOIN stability_index AS d"), { match: "stability_index_samples AS s LEFT JOIN stability_index AS d", rows: [], throwError: new Error("D1 read failed") }] } }).db;
       await expect(invoke(db)).rejects.toThrow("D1 read failed"); expect(fetchWithRetry).not.toHaveBeenCalled();
     });
 

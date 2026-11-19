@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { DAY_SECONDS, HOUR_SECONDS } from "@shared/lib/time-constants";
 
 vi.mock("../../../lib/fetch-retry", () => ({
   fetchTextWithRetry: vi.fn(),
@@ -54,6 +54,7 @@ describe("fetchPancakeSwapPools", () => {
       .mockImplementation(async () => textResult(response({ data: { pools: [] } })));
     const result = await fetchPancakeSwapPools("graph-key");
     expect(result.pools[0]?.volume24hUsd).toBeNull();
+    expect(result.pools[0]).toHaveProperty("volumeWindowEndSec", null);
     expect(result.pools).toHaveLength(1);
     expect(result.warnings?.some((warning) => warning.includes("volume batch failures"))).toBe(true);
   });
@@ -67,7 +68,7 @@ describe("fetchPancakeSwapPools", () => {
   });
 
 
-  it("normalizes v3 pools and sums hourly trailing volume across a UTC boundary", async () => {
+  it("sums the previous 24 completed hours across a UTC boundary", async () => {
     const now = new Date("2026-04-08T13:37:00Z");
     vi.useFakeTimers();
     vi.setSystemTime(now);
@@ -85,14 +86,14 @@ describe("fetchPancakeSwapPools", () => {
         const body = JSON.parse(String(init?.body));
         expect(body.query).toContain("poolHourDatas");
         expect(body.query).not.toContain("poolDayDatas");
-        expect(body.query).toContain(`periodStartUnix_gt: ${oldestIncludedHourStart}`);
-        expect(body.query).toContain(`periodStartUnix_lte: ${currentHourStart}`);
+        expect(body.query).toContain(`periodStartUnix_gte: ${oldestIncludedHourStart}`);
+        expect(body.query).toContain(`periodStartUnix_lt: ${currentHourStart}`);
         return textResult(response({
           data: {
             poolHourDatas: [
-              { periodStartUnix: currentHourStart, volumeUSD: "15000", pool: { id: "0xpool" } },
-              { periodStartUnix: currentHourStart - 13 * 3600, volumeUSD: "25000", pool: { id: "0xpool" } },
-              { periodStartUnix: currentHourStart - 23 * 3600, volumeUSD: "10000", pool: { id: "0xpool" } },
+              { periodStartUnix: currentHourStart - HOUR_SECONDS, volumeUSD: "15000", pool: { id: "0xpool" } },
+              { periodStartUnix: currentHourStart - 13 * HOUR_SECONDS, volumeUSD: "25000", pool: { id: "0xpool" } },
+              { periodStartUnix: oldestIncludedHourStart, volumeUSD: "10000", pool: { id: "0xpool" } },
             ],
           },
         }));
@@ -107,6 +108,7 @@ describe("fetchPancakeSwapPools", () => {
     expect(pool.source).toBe("pancakeswap");
     expect(pool.poolType).toBe("pancakeswap-v3-1bp");
     expect(pool.volume24hUsd).toBe(50000);
+    expect(pool).toHaveProperty("volumeWindowEndSec", currentHourStart);
     expect(pool.feeRate).toBeCloseTo(0.0001);
   });
 
@@ -201,6 +203,9 @@ describe("fetchPancakeSwapPools", () => {
   });
 
   it("batches hourly lookups to stay under the subgraph row cap and sums per-pool rows", async () => {
+    const windowEndSec = Date.parse("2026-04-08T13:00:00Z") / 1000;
+    vi.useFakeTimers();
+    vi.setSystemTime(windowEndSec * 1000);
     const pagePools = Array.from({ length: 41 }, (_, index) => makePool(`0xpool${index}`));
 
     vi.mocked(fetchTextWithRetry)
@@ -218,8 +223,9 @@ describe("fetchPancakeSwapPools", () => {
         return textResult(response({
           data: {
             poolHourDatas: [
-              { periodStartUnix: 1_700_000_000, volumeUSD: "1000", pool: { id: "0xpool0" } },
-              { periodStartUnix: 1_699_996_400, volumeUSD: "500", pool: { id: "0xpool0" } },
+              { periodStartUnix: windowEndSec - HOUR_SECONDS, volumeUSD: "1000", pool: { id: "0xpool0" } },
+              { periodStartUnix: windowEndSec - 2 * HOUR_SECONDS, volumeUSD: "500", pool: { id: "0xpool0" } },
+              { periodStartUnix: windowEndSec, volumeUSD: "1000", pool: { id: "0xpool1" } },
             ],
           },
         }));
@@ -230,7 +236,7 @@ describe("fetchPancakeSwapPools", () => {
         return textResult(response({
           data: {
             poolHourDatas: [
-              { periodStartUnix: 1_700_000_000, volumeUSD: "2000", pool: { id: "0xpool40" } },
+              { periodStartUnix: windowEndSec - HOUR_SECONDS, volumeUSD: "2000", pool: { id: "0xpool40" } },
             ],
           },
         }));
@@ -243,6 +249,8 @@ describe("fetchPancakeSwapPools", () => {
     expect(result.degraded).toBe(false);
     expect(result.pools).toHaveLength(41);
     expect(result.pools[0]?.volume24hUsd).toBe(1500);
+    expect(result.pools[1]).toMatchObject({ volume24hUsd: null, volumeWindowEndSec: null });
+    expect(result.pools[2]).toMatchObject({ volume24hUsd: 0, volumeWindowEndSec: windowEndSec });
     expect(result.pools[40]?.volume24hUsd).toBe(2000);
   });
 

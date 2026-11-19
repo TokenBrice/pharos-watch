@@ -5,7 +5,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { DepegResolverModule } from "@/components/depeg/depeg-resolver-module";
 import { StablecoinDepegResolverRows } from "@/components/depeg/depeg-resolver-row-card-parts";
 import { compareResolverUrgency, rankOpenIncidents, summarizeResolverBook } from "@/components/depeg/depeg-resolver-book-summary";
-import { getDisplayedLivePeakDeviationBps } from "@/components/depeg/depeg-resolver-row-card-model";
+import { getDisplayedLivePeakDeviationBps, getLiveCurrentDeviationBps, isLiveCurrentDeviationHeld } from "@/components/depeg/depeg-resolver-row-card-model";
 import { DDR_METHODOLOGY_VERSION, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/depeg-resolver";
 import {
   DdrV2ResponseRowSchema,
@@ -15,6 +15,7 @@ import {
   type DdrRow,
   type DdrV2ResponseRow,
 } from "@shared/types/depeg-resolver";
+import { FX_REOPEN_QUOTE_AT, makeFxCurrentPeg } from "@shared/test-utils/boundary-contract-vectors.test-support";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
 import { DDR_TEST_META, makeDdrSourceRow, makeFrozenDdrV2Row } from "./depeg-resolver-test-support";
 
@@ -309,6 +310,19 @@ describe("DepegResolverModule", () => {
       expect(rankOpenIncidents([coin("calm", -10, false), coin("big", -14), coin("nocap", -9_000), coin("small", -4_500)],
         [tiered("big", "at_risk", -14), tiered("small", "recovery_likely", -4_500, "closed_pending_review")], new Map([["small", 49e6], ["big", 1.5e9]])))
         .toMatchObject([{ id: "small", ddr: null }, { id: "big", ddr: { stablecoinId: "big" } }, { id: "nocap", ddr: null, marketCapUsd: null }]);
+    });
+
+    it("ranks admitted zero ahead of stale-reference exposure in the confirmed census", () => {
+      const coin = (id: string, status: "admitted" | "stale-reference") => makePegSummaryCoin({
+        id, activeDepeg: true, pegCurrency: "EUR", priceObservedAt: FX_REOPEN_QUOTE_AT,
+        ...makeFxCurrentPeg(status, status === "admitted" ? 0 : null),
+      });
+      const rows = rankOpenIncidents([coin("stale", "stale-reference"), coin("live", "admitted")],
+        [], new Map([["stale", 1e9], ["live", 1e6]]));
+      expect(rows).toMatchObject([
+        { id: "live", deviationBps: 0, referenceNote: null },
+        { id: "stale", deviationBps: null, referenceNote: "Reference not yet updated" },
+      ]);
     });
 
     it("captions the count as a new worst, never as past their worst", () => {
@@ -703,6 +717,21 @@ describe("DepegResolverModule", () => {
 });
 
 describe("displayed live peak", () => {
+  it("uses the admitted DDR observation clock to show weekend gold divergence", () => {
+    const weekend = Date.parse("2026-11-14T14:00:00Z") / 1000;
+    const legacy = {
+      ...makePredictionRow(makeSourceRow(), { updatedAt: weekend, currentDeviationBps: -400 }),
+      pegCurrency: "GOLD",
+    };
+    const admitted = DdrV2ResponseRowSchema.parse({
+      ...legacy, live: { ...legacy.live, currentDeviationObservedAtSec: weekend - 60 },
+    });
+    expect(isLiveCurrentDeviationHeld(legacy)).toBe(true);
+    expect(getLiveCurrentDeviationBps(legacy)).toBeNull();
+    expect(isLiveCurrentDeviationHeld(admitted)).toBe(false);
+    expect(getLiveCurrentDeviationBps(admitted)).toBe(-400);
+  });
+
   it.each([
     ["active and deeper", "active", "below", -129, -742, -742],
     ["active but shallower", "active", "below", -320, -180, -320],

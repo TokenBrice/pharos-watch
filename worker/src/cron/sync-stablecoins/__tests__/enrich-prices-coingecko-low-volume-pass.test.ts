@@ -80,7 +80,7 @@ describe("runCoingeckoLowVolumePass", () => {
     ["expired quote", -7 * 86400 - 1, false],
     ["invalid zero clock", null, false],
     ["absent upstream clock", undefined, true],
-  ] as const)("admits sparse-market quotes only with valid observation clocks: %s", async (_name, offset, accepted) => {
+  ] as const)("keeps sparse-market quote clocks separate from sync time: %s", async (_name, offset, accepted) => {
     const actual = await vi.importActual<{ fetchCoingeckoSimplePrices: typeof fetchCoingeckoSimplePrices }>(
       "../../../lib/coingecko-simple-price",
     );
@@ -99,8 +99,10 @@ describe("runCoingeckoLowVolumePass", () => {
     if (accepted) {
       expect(asset).toMatchObject({
         price: 0.842295, priceSource: "coingecko-low-volume",
-        priceObservedAt: observedAt ?? nowSec,
-        priceObservedAtMode: observedAt == null ? "local_fetch" : "upstream",
+        priceObservedAt: observedAt ?? null,
+        priceUpdatedAt: observedAt ?? null,
+        priceSyncedAt: nowSec,
+        priceObservedAtMode: observedAt == null ? "unknown" : "upstream",
       });
     } else {
       expect(asset.price).toBeNull();

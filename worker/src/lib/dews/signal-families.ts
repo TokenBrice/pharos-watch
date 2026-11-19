@@ -11,7 +11,12 @@
 
 import { clamp } from "@shared/lib/math";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import {
+  DEWS_BURN_MATERIALITY_MAX_USD, DEWS_BURN_MATERIALITY_MIN_USD, DEWS_BURN_MATERIALITY_SUPPLY_FRACTION,
+} from "@shared/lib/dews-config";
 import type { YieldRankChangeAttribution, YieldSourceRisk } from "@shared/types/yield";
+import { admittedDeviationBps } from "@shared/lib/reference-admission";
+import { asRawDeviationBps, type ReferenceAdmission } from "@shared/types/reference-admission";
 import type { DEWSInput, SignalResult, WorstPoolComponentStatus, WorstPoolUnavailableReason } from "./types";
 import { piecewiseLinear } from "./compatibility";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
@@ -55,12 +60,18 @@ export const YIELD_WARNING_SCORES: Record<string, number> = {
 
 export function computeSupplySignal(input: Pick<DEWSInput,
   "circulatingCurrent" | "circulatingPrevDay" | "circulatingPrevWeek" | "mcapUsd"
-  | "circulatingPrevDayAvailable" | "circulatingPrevWeekAvailable"
+  | "circulatingPrevDayAvailable" | "circulatingPrevWeekAvailable" | "legacySupplyUsd"
 >): SignalResult {
-  const { circulatingCurrent, circulatingPrevDay, circulatingPrevWeek, mcapUsd } = input;
-  const prevDayAvailable = (input.circulatingPrevDayAvailable ?? true)
+  const { circulatingCurrent, legacySupplyUsd, mcapUsd } = input;
+  const circulatingPrevDay = legacySupplyUsd?.day ?? input.circulatingPrevDay;
+  const circulatingPrevWeek = legacySupplyUsd?.week ?? input.circulatingPrevWeek;
+  if (circulatingCurrent == null || !Number.isFinite(circulatingCurrent) || circulatingCurrent < 0) {
+    return { value: 0, available: false, componentCoverage: 0, delta1d: null, delta7d: null,
+      unavailableReason: "supply-native-quantity-unavailable" };
+  }
+  const prevDayAvailable = (input.circulatingPrevDayAvailable ?? true) && circulatingPrevDay != null
     && Number.isFinite(circulatingPrevDay) && circulatingPrevDay >= 0;
-  const prevWeekAvailable = (input.circulatingPrevWeekAvailable ?? true)
+  const prevWeekAvailable = (input.circulatingPrevWeekAvailable ?? true) && circulatingPrevWeek != null
     && Number.isFinite(circulatingPrevWeek) && circulatingPrevWeek >= 0;
   const componentCoverage = (prevDayAvailable ? 0.6 : 0) + (prevWeekAvailable ? 0.4 : 0);
 
@@ -73,10 +84,12 @@ export function computeSupplySignal(input: Pick<DEWSInput,
 
   // An observed zero anchor remains admitted with no contraction stress; an
   // absent anchor has no delta and contributes neither weight nor calm.
+  const currentDay = legacySupplyUsd?.day != null ? mcapUsd : circulatingCurrent;
+  const currentWeek = legacySupplyUsd?.week != null ? mcapUsd : circulatingCurrent;
   const delta1d = !prevDayAvailable ? null
-    : circulatingPrevDay > 0 ? (circulatingCurrent - circulatingPrevDay) / circulatingPrevDay : 0;
+    : circulatingPrevDay > 0 ? (currentDay - circulatingPrevDay) / circulatingPrevDay : 0;
   const delta7d = !prevWeekAvailable ? null
-    : circulatingPrevWeek > 0 ? (circulatingCurrent - circulatingPrevWeek) / circulatingPrevWeek : 0;
+    : circulatingPrevWeek > 0 ? (currentWeek - circulatingPrevWeek) / circulatingPrevWeek : 0;
 
   // Only contraction contributes stress
   const norm1d =
@@ -289,7 +302,7 @@ export function computeLiquiditySignal(input: Pick<DEWSInput,
 }
 
 export function computePriceSignal(input: DEWSInput): SignalResult {
-  const { price, priceConfidence, prevPriceConfidence } = input;
+  const { observedPrice: price = input.price, priceConfidence, prevPriceConfidence } = input;
 
   // No price at all = maximum concern. We deliberately return available:true
   // (not available:false) so the 100 stress points feed the DEWS score even
@@ -324,44 +337,13 @@ export function computePriceSignal(input: DEWSInput): SignalResult {
   };
 }
 
-export function computeDivergSignal(input: DEWSInput): SignalResult {
-  const { price, dexPriceUsd, pegRef, pegType } = input;
-
-  // A closed metal market repeats the last close: carry the last reading through the
-  // closure instead of measuring the trading legs against it.
-  if (input.pegReferenceUnavailableReason === "reference-market-closed" && input.prevDivergAvailable === true &&
-    input.prevDivergValue !== undefined) {
-    return { value: input.prevDivergValue, available: true };
-  }
-
-  // Admit each observed price leg independently against the same peg reference.
-  if (input.pegReferenceAvailable === false || !Number.isFinite(pegRef) || pegRef <= 0) {
-    return {
-      value: 0,
-      available: false,
-      unavailableReason: input.pegReferenceUnavailableReason ?? "peg-reference-unavailable",
-    };
-  }
-
-  // Canonical derivation rejects missing, non-finite and non-positive prices.
-  const primary = price === null ? null : deriveDepegSignal(price, pegRef);
-  const dex = dexPriceUsd === null ? null : deriveDepegSignal(dexPriceUsd, pegRef);
-  if (primary === null && dex === null) {
-    return { value: 0, available: false, unavailableReason: "invalid-price" };
-  }
-  const primaryDevBps = primary?.absBps;
-  const dexDevBps = dex?.absBps;
-  const crossSpreadBps = primary !== null && dex !== null && price !== null && dexPriceUsd !== null
-    ? deriveDepegSignal(price, dexPriceUsd)?.absBps ?? 0
-    : 0;
-  const worstBps = Math.max(primaryDevBps ?? 0, dexDevBps ?? 0, crossSpreadBps);
-
+function divergenceScore(bps: number, pegType: string | null): number {
   // Cross-source price divergence curve (basis points).
   //   25bps: normal bid-ask spread noise
   //   50-75bps: meaningful divergence, worth monitoring
   //   100-200bps: serious disagreement between sources
   //   500bps+: extreme — data error or genuine crisis
-  let value = piecewiseLinear(worstBps, [
+  return (pegType === "peggedUSD" ? 1 : 0.7) * piecewiseLinear(bps, [
     [0, 0],
     [25, 10],
     [50, 25],
@@ -370,24 +352,55 @@ export function computeDivergSignal(input: DEWSInput): SignalResult {
     [200, 90],
     [500, 100],
   ]);
+}
 
-  // Dampen for non-USD pegs (noisier pricing)
-  if (pegType !== "peggedUSD") {
-    value *= 0.7;
+export function computeDivergSignal(input: DEWSInput): SignalResult {
+  const { price, dexPriceUsd, pegRef, pegType, referenceAdmission } = input;
+  if (!referenceAdmission && input.pegReferenceUnavailableReason === "reference-market-closed"
+    && input.prevDivergAvailable && input.prevDivergValue !== undefined) {
+    return { value: input.prevDivergValue, available: true };
+  }
+  const readLeg = (leg: number | null, admission?: ReferenceAdmission) => {
+    const signal = leg == null ? null : deriveDepegSignal(leg, pegRef);
+    if (!signal || !Number.isFinite(signal.rawBps)) return undefined;
+    if (!admission) return referenceAdmission !== undefined || input.pegReferenceAvailable === false ? undefined : signal.absBps;
+    const admitted = admittedDeviationBps(asRawDeviationBps(signal.rawBps), admission);
+    return admitted == null ? undefined : signal.absBps;
+  };
+  const primaryDevBps = readLeg(price, referenceAdmission?.primary);
+  const dexDevBps = readLeg(dexPriceUsd, referenceAdmission?.dex);
+  const venueSpreadBps = input.venueSpreadBps !== undefined ? input.venueSpreadBps
+    : primaryDevBps != null && dexDevBps != null && price != null && dexPriceUsd != null
+      ? deriveDepegSignal(price, dexPriceUsd)?.absBps ?? null : null;
+  const referenceBps = primaryDevBps == null && dexDevBps == null ? null
+    : Math.max(primaryDevBps ?? 0, dexDevBps ?? 0);
+  const referenceLeg = referenceBps === primaryDevBps ? referenceAdmission?.primary : referenceAdmission?.dex;
+  const referenceDivergence = referenceBps != null && referenceLeg?.status === "admitted"
+    ? { value: divergenceScore(referenceBps, pegType),
+      observedAtSec: Math.min(referenceLeg.quoteObservedAtSec, referenceLeg.referenceObservedAtSec) }
+    : input.carriedReferenceDivergence;
+  const referenceCarried = referenceBps == null && referenceDivergence != null;
+  const worstBps = referenceBps == null ? venueSpreadBps : Math.max(referenceBps, venueSpreadBps ?? 0);
+  if (worstBps == null && !referenceDivergence) {
+    return { value: 0, available: false,
+      unavailableReason: input.pegReferenceUnavailableReason ?? "invalid-price",
+      ...(referenceAdmission ? { referenceAdmission } : {}) };
   }
 
-  // Smooth only against an available previous reading (see computePoolSignal).
-  if (input.prevDivergValue !== undefined && input.prevDivergAvailable === true) {
-    value = (value + input.prevDivergValue) / 2;
-  }
+  const currentDivergenceValue = worstBps == null ? null : divergenceScore(worstBps, pegType);
+  const smoothed = currentDivergenceValue != null && input.prevDivergValue != null && input.prevDivergAvailable === true
+    ? (currentDivergenceValue + input.prevDivergValue) / 2 : currentDivergenceValue;
+  const value = Math.max(smoothed ?? 0, referenceCarried ? referenceDivergence?.value ?? 0 : 0);
 
   return {
     value,
     available: true,
-    // Already canonical integers from `deriveDepegSignal`.
-    spreadBps: worstBps,
+    ...(worstBps == null ? {} : { spreadBps: worstBps }),
     primaryDevBps,
     dexDevBps,
+    ...(venueSpreadBps == null ? {} : { venueSpreadBps }),
+    ...(referenceAdmission ? { referenceAdmission, currentDivergenceValue } : {}),
+    ...(referenceDivergence ? { referenceDivergence, referenceCarried, currentDivergenceValue } : {}),
   };
 }
 
@@ -444,6 +457,11 @@ export function computeBlacklistSignal(input: DEWSInput): SignalResult {
 
 export function computeFlowSignal(input: DEWSInput): SignalResult {
   const baselineDays = input.flowBaselineDays ?? 0;
+  const flowScope = input.flowScope ?? (input.flowIsolated ? "isolated-canonical-leg" : undefined);
+  const scope = {
+    ...(flowScope ? { flowScope } : {}),
+    ...(input.flowChainIds ? { flowChainIds: input.flowChainIds } : {}),
+  };
 
   // Unavailable if mint/burn values are missing, the baseline is too thin, or
   // the latest hourly source row is stale.
@@ -452,14 +470,15 @@ export function computeFlowSignal(input: DEWSInput): SignalResult {
     input.mintVolume24hUsd === null ||
     input.burnBaseline30dUsd === null
   ) {
-    return { value: 0, available: false, baselineDays, unavailableReason: "mint-burn-data-missing" };
+    return { value: 0, available: false, baselineDays, ...scope, unavailableReason: input.flowHolderPressureWithheld
+      ? "mint-burn-usdt-holder-pressure-unavailable" : "mint-burn-data-missing" };
   }
   if (baselineDays < 7) {
-    return { value: 0, available: false, baselineDays, unavailableReason: "mint-burn-baseline-too-short" };
+    return { value: 0, available: false, baselineDays, ...scope, unavailableReason: "mint-burn-baseline-too-short" };
   }
   if (input.flowDataAgeDays === null || !Number.isFinite(input.flowDataAgeDays) ||
     input.flowDataAgeDays > DEWS_MINT_BURN_FRESHNESS_BUDGET_SEC / DAY_SECONDS) {
-    return { value: 0, available: false, baselineDays, unavailableReason: "mint-burn-stale" };
+    return { value: 0, available: false, baselineDays, ...scope, unavailableReason: "mint-burn-stale" };
   }
   // Missing USD valuation is never read as zero dollars (D11-2): unpriced 24h
   // burns understate the surge and unpriced 24h mints overstate the ratio, and
@@ -469,17 +488,27 @@ export function computeFlowSignal(input: DEWSInput): SignalResult {
       value: 0,
       available: false,
       baselineDays,
+      ...scope,
       unavailableReason: input.flowValuation24h === "partial" ? "mint-burn-valuation-partial" : "mint-burn-valuation-unknown",
     };
   }
-  if (input.flowBurnBaselineValuation !== "complete") {
-    return { value: 0, available: false, baselineDays, unavailableReason: input.flowBurnBaselineValuation === "partial"
+  const volumes = { burnVolume24hUsd: input.burnVolume24hUsd, mintVolume24hUsd: input.mintVolume24hUsd };
+  if (input.flowHolderPressureWithheld) {
+    return { value: 0, available: false, ...scope, ...volumes, baselineDays,
+      unavailableReason: "mint-burn-usdt-holder-pressure-unavailable" };
+  }
+  const epochIssue = input.flowEpochIssue;
+  if (epochIssue === "mint-burn-current-accounting-transition" || epochIssue === "mint-burn-current-accounting-epoch-mixed"
+    || epochIssue === "mint-burn-current-accounting-epoch-missing") {
+    return { value: 0, available: false, ...scope, ...volumes, baselineDays, unavailableReason: epochIssue };
+  }
+  const surgeAvailable = epochIssue == null;
+  if (surgeAvailable && input.flowBurnBaselineValuation !== "complete") {
+    return { value: 0, available: false, ...scope, ...volumes, baselineDays, unavailableReason: input.flowBurnBaselineValuation === "partial"
       ? "mint-burn-baseline-valuation-partial" : "mint-burn-baseline-valuation-unknown" };
   }
-
-  // Burn surge: how much 24h burns exceed the 30d daily average
-  const burnSurge =
-    input.burnBaseline30dUsd > 0
+  const burnSurge = !surgeAvailable ? null
+    : input.burnBaseline30dUsd > 0
       ? input.burnVolume24hUsd / input.burnBaseline30dUsd
       : input.burnVolume24hUsd > 1e6
         ? 5
@@ -488,7 +517,7 @@ export function computeFlowSignal(input: DEWSInput): SignalResult {
   const ratio =
     input.mintVolume24hUsd > 0 ? input.burnVolume24hUsd / input.mintVolume24hUsd : input.burnVolume24hUsd > 0 ? 10 : 0;
 
-  const surgeScore = piecewiseLinear(burnSurge, [
+  const surgeScore = burnSurge == null ? null : piecewiseLinear(burnSurge, [
     // Burn surge curve: 24h burn volume vs 30d daily average.
     //   1x: at baseline — minimal concern
     //   2-3x: elevated redemptions, early stress signal
@@ -516,17 +545,24 @@ export function computeFlowSignal(input: DEWSInput): SignalResult {
 
   const net24h = input.mintVolume24hUsd - input.burnVolume24hUsd;
   if (input.flowIsolated && net24h >= 0) {
-    return { value: 0, available: false, baselineDays, flowScope: "isolated-canonical-leg",
+    return { value: 0, available: false, baselineDays, ...scope, ...volumes,
       unavailableReason: "mint-burn-isolated-no-outflow" };
   }
-  const value = clamp(0.6 * surgeScore + 0.4 * ratioScore, 0, 100);
+  const burnMaterialityUsd = clamp(input.mcapUsd * DEWS_BURN_MATERIALITY_SUPPLY_FRACTION,
+    DEWS_BURN_MATERIALITY_MIN_USD, DEWS_BURN_MATERIALITY_MAX_USD);
+  const materiality = epochIssue === undefined ? 1 : clamp(input.burnVolume24hUsd / burnMaterialityUsd, 0, 1);
+  const value = clamp(materiality * (surgeScore == null ? ratioScore : 0.6 * surgeScore + 0.4 * ratioScore), 0, 100);
 
   return {
     value,
     available: true,
-    burnSurge: Math.round(burnSurge * 100) / 100,
+    ...(burnSurge != null ? { burnSurge: Math.round(burnSurge * 100) / 100 }
+      : { burnSurgeUnavailableReason: epochIssue ?? undefined, componentCoverage: 0.4 }),
+    ...scope,
+    ...volumes,
+    ...(epochIssue === undefined ? {} : { burnMaterialityUsd }),
     burnToMintRatio: Math.round(ratio * 100) / 100,
-    ...(input.flowIsolated ? { flowScope: "isolated-canonical-leg" as const, isolatedNet24hUsd: net24h }
+    ...(input.flowIsolated ? { isolatedNet24hUsd: net24h }
       : { net24hUsd: net24h }),
     baselineDays,
   };
@@ -544,9 +580,9 @@ export function computeFlowSignal(input: DEWSInput): SignalResult {
  * needing per-bucket resolution at saturation) is the trigger to revisit caps.
  */
 function computeStructuredYieldSignal(
-  input: Pick<DEWSInput, "yieldSourceRisk" | "yieldRankChangeAttribution">,
+  input: Pick<DEWSInput, "yieldSourceRisk" | "yieldRankChangeAttribution" | "yieldSourceOverdue">,
 ): { value: number; warnings: string[] } | null {
-  if (input.yieldSourceRisk == null && input.yieldRankChangeAttribution == null) {
+  if (input.yieldSourceRisk == null && input.yieldRankChangeAttribution == null && !input.yieldSourceOverdue) {
     return null;
   }
   const sourceRisk: YieldSourceRisk | null | undefined = input.yieldSourceRisk;
@@ -562,7 +598,7 @@ function computeStructuredYieldSignal(
     value += 35;
     warnings.push("structured-thin-source-depth");
   }
-  if (typeof sourceRisk?.sourceAgeSeconds === "number" && sourceRisk.sourceAgeSeconds > 6 * 60 * 60) {
+  if (input.yieldSourceOverdue === true) {
     value += 15;
     warnings.push("structured-stale-source");
   }
@@ -603,13 +639,17 @@ function computeStructuredYieldSignal(
 
 export function computeYieldSignal(input: DEWSInput): SignalResult {
   const structuredSignal = computeStructuredYieldSignal(input);
+  const structuredReward = structuredSignal?.warnings.includes("structured-reward-heavy");
+  const sourceAgeSeconds = input.yieldSourceRisk?.sourceAgeSeconds;
+  const age = typeof sourceAgeSeconds === "number" ? { sourceAgeSeconds } : {};
 
   if (input.yieldWarnings.length === 0 && !structuredSignal) {
-    return { value: 0, available: false };
+    return { value: 0, available: false, ...age };
   }
 
   const warningSum = input.yieldWarnings.reduce(
-    (acc, w) => acc + (Object.prototype.hasOwnProperty.call(YIELD_WARNING_SCORES, w) ? YIELD_WARNING_SCORES[w]! : 0),
+    (acc, w) => acc + (w === "reward-heavy" && structuredReward ? 0 : Object.prototype.hasOwnProperty.call(YIELD_WARNING_SCORES, w)
+      ? YIELD_WARNING_SCORES[w]! : 0),
     0,
   );
   const value = clamp(warningSum + (structuredSignal?.value ?? 0), 0, 100);
@@ -619,12 +659,13 @@ export function computeYieldSignal(input: DEWSInput): SignalResult {
   // non-stress flag such as `zero-yield`) are not a measured clean reading:
   // publish no verdict rather than a zero that renormalisation reads as calm.
   if (value === 0) {
-    return { value, available: false, unavailableReason: "yield-warnings-unscored", warnings };
+    return { value, available: false, unavailableReason: "yield-warnings-unscored", warnings, ...age };
   }
 
   return {
     value,
     available: true,
     warnings,
+    ...age,
   };
 }

@@ -1,7 +1,7 @@
 import { logWorkerEventArgs } from "./structured-log";
 import type { ZodType } from "zod";
 import { D1_INT32_MAX } from "./d1-constants";
-import { getCache, getCacheUpdatedAt, setCacheIfNewer } from "./db-cache";
+import { getCache, getCacheUpdatedAt} from "./db-cache";
 import { buildFreshnessMeta, addFreshnessHeaders, type FreshnessMeta } from "./api-freshness";
 import { errorResponse, withErrorHandler, withRepresentationEtag } from "./api-response";
 import { validatePayloadWithSchema } from "./api-schema";
@@ -124,21 +124,6 @@ export function encodeResponseReadyCacheValue(body: string, schemaId: string): s
     body,
     bodySha256: sha256HexFromUtf8Chunks([body]),
   } satisfies ResponseReadyCacheEnvelope);
-}
-
-export async function writeResponseReadyCache(
-  db: D1Database,
-  cacheKey: string,
-  body: string,
-  updatedAt: number,
-  options: { schemaId: string },
-): Promise<void> {
-  await setCacheIfNewer(
-    db,
-    getResponseReadyCacheKey(cacheKey),
-    encodeResponseReadyCacheValue(body, options.schemaId),
-    updatedAt,
-  );
 }
 
 async function getResponseReadyCache(

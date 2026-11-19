@@ -1,3 +1,4 @@
+import type { PriceCorroborationObservation } from "./price-corroboration-observations";
 import { DS_CHAIN_MAP } from "@shared/lib/chains";
 import { resolveChainId } from "@shared/types/chain-identity";
 import { median } from "@shared/lib/stats";
@@ -49,7 +50,7 @@ export type DexScreenerTargetOutcome = {
   chain: string;
   target: string;
   candidateAt: number;
-} & ({ result: "empty"; rejectionClass: string } | { result: "resolved"; observedAt?: number });
+} & ({ result: "empty"; rejectionClass: string } | { result: "resolved"; observedAt?: number; recentActivity?: PriceCorroborationObservation["recentActivity"] });
 
 export interface DexScreenerPassResult extends EnrichPassResult {
   targetOutcomes?: DexScreenerTargetOutcome[];
@@ -205,12 +206,17 @@ function resolveDexScreenerAddressPrice(
 ): { price: number | null; rejectionClass: string | null } {
   const matched = pairs.filter((pair) => getDsTrackedTokenSide(pair, target.address, target.chain) !== null);
   if (matched.length === 0) return { price: null, rejectionClass: pairs.length === 0 ? "empty-response" : "identity-mismatch" };
-  const liquid = matched.filter((pair) => !((pair.liquidity?.usd ?? 0) < DEXSCREENER_MIN_LIQUIDITY_USD));
+  const liquid = matched.filter((pair) => Number.isFinite(pair.liquidity?.usd) &&
+    pair.liquidity!.usd >= DEXSCREENER_MIN_LIQUIDITY_USD);
   if (liquid.length === 0) return { price: null, rejectionClass: "missing-liquidity" };
   const symbolMatched = liquid.filter((pair) => !target.expectedSymbol ||
     getDsTrackedTokenSymbol(pair, target.address, target.chain)?.toUpperCase() === target.expectedSymbol.toUpperCase());
   if (symbolMatched.length === 0) return { price: null, rejectionClass: "symbol-mismatch" };
-  const prices = symbolMatched
+  // The five-minute volume bucket shows recent trading. It supplies no
+  // timestamp for the price itself, so keep the market observation clock null.
+  const traded = symbolMatched.filter((pair) => Number.isFinite(pair.volume?.m5) && pair.volume!.m5 > 0);
+  if (traded.length === 0) return { price: null, rejectionClass: "missing-recent-trade-evidence" };
+  const prices = traded
     .map((pair) => getDsTrackedTokenPriceUsd(pair, target.address, target.chain).priceUsd)
     .filter((price): price is number => typeof price === "number" && Number.isFinite(price) && price > 0);
 
@@ -443,12 +449,12 @@ export async function runDexScreenerPass(
               continue;
             }
 
-            applyResolvedPrice(assets[entry.index], exactPrice, "dexscreener-exact", "fallback");
+            applyResolvedPrice(assets[entry.index], exactPrice, "dexscreener-exact", "fallback", null, "unknown");
             resolved += 1;
             resolvedAssetIds.add(entry.asset.id);
+            const collectedAt = Math.floor(Date.now() / 1000);
             targetOutcomes.push({ assetId: entry.asset.id, chain: target.chain, target: target.address,
-              result: "resolved", candidateAt: Math.floor(Date.now() / 1000),
-              observedAt: assets[entry.index].priceObservedAt ?? undefined });
+              result: "resolved", candidateAt: collectedAt, recentActivity: { evidence: "positive-volume-m5", collectedAt } });
           }
           assetAttempts.push(...targetOutcomes.map((outcome) => outcome.result === "empty"
             ? { assetId: outcome.assetId, adapter: "dexscreener-exact", source: "dexscreener-exact",

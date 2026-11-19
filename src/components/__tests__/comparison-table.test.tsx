@@ -1,3 +1,6 @@
+import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
+import { FX_REOPEN_QUOTE_AT, makeFxCurrentPeg } from "@shared/test-utils/boundary-contract-vectors.test-support";
+import { getQuoteMatchedNavPriceReference } from "@/lib/nav-price-reference";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ComparisonTable } from "@/components/compare/comparison-table";
@@ -25,7 +28,7 @@ function makeData(circulating: number): StablecoinData {
     pegMechanism: "fiat-backed",
     price: 1,
     circulating: { peggedUSD: circulating },
-    circulatingPrevWeek: { peggedUSD: circulating * 0.98 },
+    supplyChangeBaselines: { week: { observedAt: 1_788_048_000, circulatingUsd: circulating * 0.98, circulatingNative: null } },
   });
 }
 
@@ -110,7 +113,6 @@ function makeCoin(id: string, symbol: string): ComparisonCoinEntry {
   } as unknown as ComparisonCoinEntry;
 }
 
-const PEG_RATES: Record<string, number> = { USD: 1 };
 
 function metricRow(html: string, label: string): string | undefined {
   const row = html.split("</tr>").find((chunk) => chunk.includes(label));
@@ -123,7 +125,7 @@ describe("ComparisonTable", () => {
     const burning = makeCoin("usdc", "USDC");
     burning.flow = { ...burning.flow!, netFlow24hUsd: -2_000_000, pressureShiftScore: -28 };
     const html = renderToStaticMarkup(
-      <ComparisonTable coins={[minting, burning]} pegRates={PEG_RATES} logos={{}} />,
+      <ComparisonTable coins={[minting, burning]} logos={{}} />,
     );
     expect(html).toContain("+$1.00M");
     expect(html).toContain("-$2.00M");
@@ -137,7 +139,7 @@ describe("ComparisonTable", () => {
     const calm = makeCoin("usdc-circle", "USDC");
     calm.coinStates = [];
     const unknown = makeCoin("usdt-tether", "USDT");
-    const html = renderToStaticMarkup(<ComparisonTable coins={[halted, calm, unknown]} pegRates={PEG_RATES} logos={{}} />);
+    const html = renderToStaticMarkup(<ComparisonTable coins={[halted, calm, unknown]} logos={{}} />);
     const firstRow = html.split("</tr>").find((chunk) => chunk.includes('scope="row"'));
     for (const text of ["Current state", "Critical notice · Initia chain halted", ">None<", "No comparable data available"]) expect(firstRow).toContain(text);
     const pegScore = metricRow(html, "Peg Score");
@@ -148,7 +150,7 @@ describe("ComparisonTable", () => {
   it("keeps a pipeline-gap card out of the withheld top-driver chip", () => {
     const coin = makeCoin("xmd", "XMD");
     coin.safetyCard = makeReportCardsV9PipelineGapCard();
-    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />);
+    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} logos={{}} />);
     expect(html).toContain("Pipeline gap — no Safety Score published");
     expect(html).not.toContain("Score withheld");
     const driverRow = html.match(/<tr\b[^>]*>(?:(?!<\/tr>)[\s\S])*Top driver(?:(?!<\/tr>)[\s\S])*<\/tr>/)?.[0];
@@ -162,7 +164,7 @@ describe("ComparisonTable", () => {
       ...coin.safetyCard!,
       evidence: { level: "limited", freshness: "unknown", reasons: [] },
     };
-    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />);
+    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} logos={{}} />);
     expect(html).toContain("Limited · Freshness not assessed");
     expect(html).toContain("Evidence age not assessed");
     expect(html).not.toContain("Evidence age unknown");
@@ -174,25 +176,55 @@ describe("ComparisonTable", () => {
     coin.data.priceConfidence = "fallback";
     coin.data.currentPeg = { currentDeviationBps: -2000, pegReference: null, pegReferenceUnavailable: false,
       currentPriceUnavailable: false, primaryTrust: "unusable", dexPriceCheck: null };
-    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={{}} />);
+    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} />);
     expect(html).toContain("-2000 bps");
     expect(html).toContain("Fallback");
   });
 
-  it("keeps a NAV currency conversion with a quote-bound block", () => {
+  it("keeps the fixed EUR quote in USD when the quote-matched summary rejects its legacy reference", () => {
+    const coin = makeCoin("eurc-circle", "EURC");
+    coin.meta.flags.pegCurrency = "EUR";
+    const rejected = makeFxCurrentPeg("stale-reference", null);
+    coin.data = { ...coin.data, id: coin.id, pegType: "peggedEUR", price: 1.122, priceSource: "coingecko",
+      priceObservedAt: FX_REOPEN_QUOTE_AT,
+      currentPeg: { ...rejected, referenceAdmission: undefined, admittedDeviationBps: undefined } };
+    coin.pegDetails = { ...makePegSummaryCoin({ id: coin.id, price: 1.122, priceObservedAt: FX_REOPEN_QUOTE_AT }), ...rejected };
+    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} />);
+    expect(metricRow(html, "Price")).toContain("$1.1220");
+    expect(html).toContain("Reference not yet updated");
+  });
+
+  it.each([
+    ["admitted", FX_REOPEN_QUOTE_AT, "€1.1000"],
+    ["stale-reference", FX_REOPEN_QUOTE_AT, "$1.2100"],
+    ["admitted", FX_REOPEN_QUOTE_AT - 60, "$1.2100"],
+  ] as const)("matches NAV pricing to the quote clock and %s FX evidence", (status, quoteAt, expected) => {
     const coin = makeCoin("eutbl-spiko", "EUTBL");
     coin.meta.flags = { ...coin.meta.flags, pegCurrency: "EUR", navToken: true };
-    coin.data = { ...coin.data, pegType: "peggedEUR", price: 1.21, currentPeg: {
+    coin.data = { ...coin.data, pegType: "peggedEUR", price: 1.21, priceObservedAt: quoteAt, currentPeg: {
       currentDeviationBps: null, pegReference: null, pegReferenceUnavailable: false,
       currentPriceUnavailable: false, primaryTrust: "unusable", dexPriceCheck: null,
     } };
-    expect(renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={{ peggedEUR: 1.1 }} />)).toContain("€1.1000");
+    const peer = {
+      ...makePegSummaryCoin({ pegCurrency: "EUR", pegType: "peggedEUR", priceObservedAt: FX_REOPEN_QUOTE_AT, price: 1.1 }),
+      ...makeFxCurrentPeg(status, status === "admitted" ? 0 : null),
+    };
+    coin.navPriceReference = getQuoteMatchedNavPriceReference("EUR", quoteAt, [peer]);
+    expect(metricRow(renderToStaticMarkup(<ComparisonTable coins={[coin]} />), "Price")).toContain(expected);
+  });
+
+  it("uses the observed USD price without a published per-coin conversion", () => {
+    const coin = makeCoin("idrx-idrx", "IDRX");
+    coin.meta.flags.pegCurrency = "IDR";
+    coin.data = { ...coin.data, pegType: "peggedIDR", priceSource: "coingecko", price: 0.0000551640254 };
+    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} />);
+    expect(metricRow(html, "Price")).toContain("$0.00005516");
   });
 
   it.each([false, true])("distinguishes whole-feed availability (%s) from an unrated coin", (available) => {
     const coin = makeCoin("usdt", "USDT");
     coin.bluechipPublicationAvailable = available;
-    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />);
+    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} logos={{}} />);
     const row = html.match(/<tr\b[^>]*>(?:(?!<\/tr>)[\s\S])*External Bluechip(?:(?!<\/tr>)[\s\S])*<\/tr>/)?.[0];
     expect(row).toContain(available ? "Not rated" : "No comparable data available");
     if (!available) {
@@ -219,7 +251,7 @@ describe("ComparisonTable", () => {
       observationState: state,
       observationReason: state === "retained" ? "http-500" : null,
     };
-    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />);
+    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} logos={{}} />);
     const externalRow = html.match(/<tr\b[^>]*>(?:(?!<\/tr>)[\s\S])*External Bluechip(?:(?!<\/tr>)[\s\S])*<\/tr>/)?.[0];
     expect(externalRow).toBeDefined();
     expect(externalRow).toContain(`<span title="${text}">A · audit not reported<span class="sr-only"> · ${text}</span></span></td>`);
@@ -237,7 +269,7 @@ describe("ComparisonTable", () => {
     expect(recent).toMatchObject({ pegPct: 100, observedDays: 2, coverageLimited: true });
     const coin = makeCoin("usdt", "USDT");
     coin.pegDetails = { ...coin.pegDetails!, recent90d: recent };
-    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />);
+    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} logos={{}} />);
     const row = occupancyRow(html);
     expect(row).toContain("100.00%");
     expect(row).toContain('100.00%<span class="text-muted-foreground" title="Based on 2d · Partial 90-day coverage"> · 2d<span class="sr-only"> of partial 90-day coverage</span></span>');
@@ -256,7 +288,7 @@ describe("ComparisonTable", () => {
   ])("renders $label occupancy with a basis marker only for limited coverage", ({ recent, value, basis }) => {
     const coin = makeCoin("usdt", "USDT");
     coin.pegDetails = { ...coin.pegDetails!, recent90d: { ...coin.pegDetails!.recent90d!, ...recent } };
-    const row = occupancyRow(renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />));
+    const row = occupancyRow(renderToStaticMarkup(<ComparisonTable coins={[coin]} logos={{}} />));
     expect(row).toContain(value);
     if (basis) expect(row).toContain(basis);
     else expect(row).not.toMatch(/Based on|Partial 90-day coverage/);
@@ -267,7 +299,7 @@ describe("ComparisonTable", () => {
   it("keeps missing recent stats a dash without a basis", () => {
     const coin = makeCoin("usdt", "USDT");
     coin.pegDetails = { ...coin.pegDetails!, recent90d: null };
-    const row = occupancyRow(renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />));
+    const row = occupancyRow(renderToStaticMarkup(<ComparisonTable coins={[coin]} logos={{}} />));
     expect(row).toContain("—");
     expect(row).not.toContain("Based on");
   });
@@ -281,7 +313,7 @@ describe("ComparisonTable", () => {
     const coin = makeCoin("test", "TST");
     coin.meta = { ...coin.meta, flags: { ...coin.meta.flags, navToken: nav } };
     coin.pegDetails = { ...coin.pegDetails!, currentDeviationBps: deviation, activeDepeg: false, depegEventCoverageLimited: limited };
-    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />);
+    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} logos={{}} />);
     const row = html.match(/<tr[^>]*>(?:(?!<\/tr>)[\s\S])*Open recorded incident[\s\S]*?<\/tr>/)?.[0];
     expect(row).toContain(">No<");
     expect(row).not.toContain("At peg");
@@ -290,7 +322,7 @@ describe("ComparisonTable", () => {
   it.each([true, null])("distinguishes an open incident from missing event coverage (%s)", (active) => {
     const coin = makeCoin("test", "TST");
     coin.pegDetails = active === null ? null : { ...coin.pegDetails!, activeDepeg: active };
-    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />);
+    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} logos={{}} />);
     const row = html.match(/<tr[^>]*>(?:(?!<\/tr>)[\s\S])*Open recorded incident[\s\S]*?<\/tr>/)?.[0];
     expect(row).toContain(active === null ? "—" : ">Yes<");
     expect(row).not.toContain(">No<");
@@ -299,14 +331,15 @@ describe("ComparisonTable", () => {
   it("keeps missing current supply unavailable instead of $0 or a -100% change", () => {
     const missing = makeCoin("usdt", "USDT");
     missing.data = { ...missing.data, circulating: {}, circulatingPrevWeek: { peggedUSD: 98_000_000_000 } };
-    const missingHtml = renderToStaticMarkup(<ComparisonTable coins={[missing]} pegRates={PEG_RATES} logos={{}} />);
+    const missingHtml = renderToStaticMarkup(<ComparisonTable coins={[missing]} logos={{}} />);
 
     expect(missingHtml).not.toContain("$0.00");
     expect(missingHtml).not.toMatch(/-100\.0+%|-100%/);
 
     const explicitZero = makeCoin("usdt", "USDT");
-    explicitZero.data = { ...explicitZero.data, circulating: { peggedUSD: 0 }, circulatingPrevWeek: { peggedUSD: 98_000_000_000 } };
-    const zeroHtml = renderToStaticMarkup(<ComparisonTable coins={[explicitZero]} pegRates={PEG_RATES} logos={{}} />);
+    explicitZero.data = { ...explicitZero.data, supplyChangeBaselines: undefined,
+      circulating: { peggedUSD: 0 }, circulatingPrevWeek: { peggedUSD: 98_000_000_000 } };
+    const zeroHtml = renderToStaticMarkup(<ComparisonTable coins={[explicitZero]} logos={{}} />);
 
     expect(zeroHtml).toContain("$0.00");
     expect(zeroHtml).toMatch(/-100\.0+%|-100%/);
@@ -319,10 +352,10 @@ describe("ComparisonTable", () => {
     const coin = makeCoin("test", "TST");
     coin.meta.flags.pegCurrency = currency;
     // A fixed native balance revalues by 10% in USD; no token issuance.
+    const baseline = { circulatingUsd: 1000, observedAt: 1_788_048_000, circulatingNative: null };
     coin.data = { ...coin.data, pegType, price, circulating: { [pegType]: 1100 },
-      circulatingPrevDay: { [pegType]: 1000 }, circulatingPrevWeek: { [pegType]: 1000 },
-      circulatingPrevMonth: { [pegType]: 1000 } };
-    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={{ [currency]: price }} />);
+      supplyChangeBaselines: { day: baseline, week: baseline, month: baseline } };
+    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} />);
     for (const window of ["24h", "7d", "30d"]) {
       const row = html.match(/<tr\b[^>]*>[\s\S]*?<\/tr>/g)?.find((row) => row.includes(`Market-cap change · ${window}`));
       expect(row).toContain("+10.00%");
@@ -337,7 +370,7 @@ describe("ComparisonTable", () => {
       reason: "supply-chain-dropout", status: "chains-unavailable", partialCoverage: true,
       chains: [{ chainLabel: "HyperEVM", listCurrentUsd: null, baselineUsd: 10, baselineObservedAt: 1, baselineSource: "state", resolution: "unavailable" }],
     } };
-    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} />);
+    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} />);
     const rows = html.match(/<tr\b[^>]*>[\s\S]*?<\/tr>/g)?.filter((row) => row.includes("Market-cap change ·"));
     expect(rows).toHaveLength(3);
     for (const row of rows ?? []) {
@@ -346,16 +379,17 @@ describe("ComparisonTable", () => {
     }
   });
 
-  it("withholds market-cap deltas when historical buckets are missing", () => {
+  it.each([
+    [undefined, "+25.00%"], [{}, "No comparable data available"], [{ week: null }, "No comparable data available"],
+  ] as const)("distinguishes omitted and withheld weekly market caps (%j)", (supplyChangeBaselines, expected) => {
     const coin = makeCoin("test", "TST");
-    coin.data = { ...coin.data, circulatingPrevDay: {}, circulatingPrevWeek: {}, circulatingPrevMonth: {} };
-    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} />);
+    coin.data = { ...coin.data, supplyChangeBaselines, circulatingPrevDay: {}, circulatingPrevMonth: {},
+      circulatingPrevWeek: { peggedUSD: 80_000_000_000 } };
+    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} />);
     const rows = html.match(/<tr\b[^>]*>[\s\S]*?<\/tr>/g)?.filter((row) => row.includes("Market-cap change ·"));
     expect(rows).toHaveLength(3);
-    for (const row of rows ?? []) {
-      expect(row).toContain("No comparable data available");
-      expect(row).not.toContain("%");
-    }
+    expect(rows?.find((row) => row.includes("7d"))).toContain(expected);
+    for (const row of rows?.filter((row) => !row.includes("7d")) ?? []) expect(row).toContain("No comparable data available");
   });
 
   it("does not report an unassessed binding cap as 'None' for non-rated cards", () => {
@@ -365,7 +399,7 @@ describe("ComparisonTable", () => {
     pipelineGap.safetyCard = makeReportCardsV9PipelineGapCard("control", "A", { id: "usdc" });
 
     const html = renderToStaticMarkup(
-      <ComparisonTable coins={[notRated, pipelineGap]} pegRates={PEG_RATES} logos={{}} />,
+      <ComparisonTable coins={[notRated, pipelineGap]} logos={{}} />,
     );
 
     const row = metricRow(html, "Binding cap");
@@ -376,7 +410,7 @@ describe("ComparisonTable", () => {
 
   it("keeps 'None' for a rated card without a binding cap", () => {
     const coin = makeCoin("usdt", "USDT");
-    const row = metricRow(renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} />), "Binding cap");
+    const row = metricRow(renderToStaticMarkup(<ComparisonTable coins={[coin]} />), "Binding cap");
     expect(row).toContain(">None<");
   });
 
@@ -395,7 +429,7 @@ describe("ComparisonTable", () => {
       },
     };
 
-    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />);
+    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} logos={{}} />);
 
     const variantRow = metricRow(html, "Variant relationship");
     expect(variantRow).toContain("Savings variant of Tether (USDT)");
@@ -409,7 +443,7 @@ describe("ComparisonTable", () => {
     const coin = makeCoin("savings-unknown", "SUNK");
     coin.meta = { ...coin.meta, variantOf: "unknown-parent", variantKind: "savings-passthrough" };
     const row = metricRow(
-      renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />),
+      renderToStaticMarkup(<ComparisonTable coins={[coin]} logos={{}} />),
       "Variant relationship",
     );
     expect(row).toContain("Savings variant of an untracked asset");

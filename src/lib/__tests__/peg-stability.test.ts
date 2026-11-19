@@ -162,6 +162,17 @@ describe("computePegStability", () => {
     expect(result!.trackingSpan).toBe("5y");
   });
 
+  it("keeps a covered event with a held legacy close out of recovery continuity", () => {
+    const startedAt = Date.parse("2026-11-13T17:00:00Z") / 1000;
+    const endedAt = Date.parse("2026-11-14T06:00:00Z") / 1000;
+    const event = makeEvent({
+      pegType: "peggedGOLD", startedAt, endedAt, peakDeviationBps: -180, recoveryPrice: 3_000, closeReason: null,
+      admittedCoverage: [{ fromSec: startedAt, toSec: startedAt + 3_600 }],
+    });
+    expect(computePegStability([event], startedAt - 20 * 86_400, endedAt + 86_400))
+      .toMatchObject({ latestClosure: "unknown_closed", currentStreakDays: null });
+  });
+
   it.each([
     ["recovered-primary", null, "recovered", 10],
     ["recovered-dex", 1, "recovered", 10],

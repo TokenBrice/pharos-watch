@@ -15,7 +15,7 @@ import {
 import { enrichMissingPrices, type EnrichmentStats } from "./enrich-prices";
 import type { PeggedAsset } from "./enrich-prices-shared";
 import { clearPriceMetadata, loadPreviousStablecoinsById } from "./shared";
-import { writePriceCorroborationObservations } from "./price-corroboration-observations";
+import { writePriceCorroborationObservations, type PriceCorroborationObservation } from "./price-corroboration-observations";
 import { applyTrackedAssetOverrides } from "./phase-helpers";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 
@@ -104,7 +104,7 @@ function fallbackObservation(asset: PeggedAsset | undefined): CorroborationObser
   return {
     source: asset.priceSource,
     price: asset.price as number,
-    observedAt: asset.priceObservedAt ?? asset.priceUpdatedAt ?? null,
+    observedAt: asset.priceObservedAt === undefined ? asset.priceUpdatedAt ?? null : asset.priceObservedAt,
     observedAtMode: asset.priceObservedAtMode ?? null,
   };
 }
@@ -134,16 +134,18 @@ export function buildPriceCorroborationCacheEntries(params: {
     const observations = [
       fallbackObservation(params.fallbackProbes.get(published.id)),
       ...addressObservations(params.addressQuotes.get(published.id)),
-    ].filter((observation): observation is CorroborationObservation => observation != null);
+    ].filter((observation): observation is CorroborationObservation =>
+      observation != null && (observation.source !== "dexscreener-exact" || observation.observedAt != null));
     const reference = hasPublishableCurrentPrice(published)
       ? {
           source: published.priceSource ?? "unknown",
           price: published.price as number,
-          observedAt: published.priceObservedAt ?? published.priceUpdatedAt ?? null,
+          observedAt: published.priceObservedAt === undefined ? published.priceUpdatedAt ?? null : published.priceObservedAt,
           observedAtMode: published.priceObservedAtMode ?? null,
         }
       : observations[0];
-    if (!reference) continue;
+    // A clockless exact quote is eligible only through the expiring activity receipt.
+    if (!reference || (reference.source === "dexscreener-exact" && reference.observedAt == null)) continue;
 
     const priorSources = sourceList(published);
     const agreeingObservations = observations.filter((observation) =>
@@ -194,7 +196,7 @@ export async function runPriceCorroboration(params: {
   const fallbackProbes = cohort.map(cloneAsFallbackProbe);
   // Published rows omit provider identifiers and NAV hints needed by fallback validation.
   applyTrackedAssetOverrides(fallbackProbes);
-  const dexTargets = new Map<string, { chain: string; target: string }>();
+  const dexTargets = new Map<string, Pick<PriceCorroborationObservation, "chain" | "target" | "recentActivity">>();
   const fallbackStats = await enrichMissingPrices(
     fallbackProbes,
     params.cmcApiKey,
@@ -208,7 +210,7 @@ export async function runPriceCorroboration(params: {
     params.chainRpcs,
     (outcomes) => {
       for (const outcome of outcomes) {
-        if (outcome.result === "resolved") dexTargets.set(outcome.assetId, { chain: outcome.chain, target: outcome.target });
+        if (outcome.result === "resolved") dexTargets.set(outcome.assetId, { chain: outcome.chain, target: outcome.target, recentActivity: outcome.recentActivity });
       }
     },
   );

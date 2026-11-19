@@ -23,7 +23,7 @@ export interface ParsedYieldBenchmarkMeta extends YieldBenchmarkMeta {
   lastMarketRecordDate: string | null;
   lastMarketFetchedAt: number | null;
   lastMarketSource: string | null;
-  /** Out-of-band level retained by the previous run; the next identical level confirms a shift. */
+  /** Pending out-of-band level; a later effective fixing can confirm a shift. */
   lastRejectedMarketRate?: number | null;
   lastRejectedMarketRecordDate?: string | null;
   lastRejectedMarketFetchedAt?: number | null;

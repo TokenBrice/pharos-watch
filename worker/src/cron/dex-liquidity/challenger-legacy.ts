@@ -1,14 +1,16 @@
+import { readDexPriceLineage } from "./price-lineage";
 import { decodeJsonString } from "../../lib/cache-json";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import { logMalformedJsonPath } from "../../lib/json-decode-observability";
 import type { DexPriceChallengerLoadRow } from "./challenger-types";
-import { getDexPriceSourceEntries } from "../../lib/depeg-trust-policy";
+import { getDexPriceSourceEntries } from "@shared/lib/dex-price-sources";
 
 interface LegacyDexPoolSource {
   protocol: string;
   chain: string;
   price: number;
   tvl: number;
+  observedAt?: unknown;
 }
 
 interface LegacyChallengerPoolRow {
@@ -17,6 +19,7 @@ interface LegacyChallengerPoolRow {
   protocol?: unknown;
   sourceFamily?: unknown;
   priceUsd?: unknown;
+  lineagePriceUsd?: unknown;
   tvlUsd?: unknown;
   priceObservedAt?: unknown;
 }
@@ -37,7 +40,7 @@ function decodeLegacyJsonArray<T>(
     missingReason: "missing",
     parseErrorReason: "json-parse-failed",
     normalize: (parsed) => {
-      const sources = options.source === "dex_prices" ? getDexPriceSourceEntries(parsed) : parsed;
+      const sources = options.source === "dex_prices" ? getDexPriceSourceEntries(parsed, "legacy-challenger") : parsed;
       return Array.isArray(sources)
         ? { ok: true, payload: sources as T[] }
         : { ok: false, reason: "invalid-shape" };
@@ -97,11 +100,14 @@ export async function loadLegacyDexPoolChallengers(
         },
       );
       for (const pool of stored ?? []) {
-        const price = typeof pool.priceUsd === "number" ? pool.priceUsd : Number(pool.priceUsd);
+        const lineage = readDexPriceLineage(pool);
+        const price = lineage.upstreamKeys?.length && lineage.pricePoolKeys?.length && typeof pool.lineagePriceUsd === "number"
+          ? pool.lineagePriceUsd : Number(pool.priceUsd);
         const tvlUsd = typeof pool.tvlUsd === "number" ? pool.tvlUsd : Number(pool.tvlUsd);
         if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(tvlUsd) || tvlUsd < minPoolTvlUsd) continue;
         qualifying.push({
           stablecoinId: row.stablecoin_id,
+          ...lineage,
           poolId: typeof pool.poolId === "string" ? pool.poolId : "",
           chain: typeof pool.chain === "string" ? pool.chain : "unknown",
           protocol: typeof pool.protocol === "string" ? pool.protocol : "unknown",
@@ -122,7 +128,9 @@ export async function loadLegacyDexPoolChallengers(
     // Rows written before the challenger projection existed keep the historical
     // display-slice fallback rather than losing legacy evidence entirely.
     if (qualifying.length === 0 && row.top_pools_json != null) {
-      const pools = decodeLegacyJsonArray<Array<{ project?: unknown; chain?: unknown; tvlUsd?: unknown; price?: unknown; poolId?: unknown }>[number]>(
+      const pools = decodeLegacyJsonArray<LegacyChallengerPoolRow & {
+        project?: unknown; price?: unknown; displayPrice?: unknown; challengerTvlUsd?: unknown; priceEvidenceTvlUsd?: unknown;
+      }>(
         row.top_pools_json,
         {
           stablecoinId: row.stablecoin_id,
@@ -136,11 +144,13 @@ export async function loadLegacyDexPoolChallengers(
       }
       if (!Array.isArray(pools) || pools.length === 0) continue;
       for (const pool of pools) {
-        const price = typeof pool.price === "number" ? pool.price : Number(pool.price);
-        const tvlUsd = typeof pool.tvlUsd === "number" ? pool.tvlUsd : Number(pool.tvlUsd);
-        if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(tvlUsd) || tvlUsd < minPoolTvlUsd) continue;
+        const hasBoundedProjection = typeof pool.challengerTvlUsd === "number";
+        const price = hasBoundedProjection ? pool.displayPrice : Number(pool.price);
+        const tvlUsd = Math.min(Number(pool.tvlUsd), Number(pool.challengerTvlUsd ?? pool.priceEvidenceTvlUsd ?? pool.tvlUsd));
+        if (typeof price !== "number" || !Number.isFinite(price) || price <= 0 || !Number.isFinite(tvlUsd) || tvlUsd < minPoolTvlUsd) continue;
         qualifying.push({
           stablecoinId: row.stablecoin_id,
+          ...readDexPriceLineage(pool),
           poolId: typeof pool.poolId === "string" ? pool.poolId : "",
           chain: typeof pool.chain === "string" ? pool.chain : "unknown",
           protocol: typeof pool.project === "string" ? pool.project : "unknown",
@@ -149,6 +159,7 @@ export async function loadLegacyDexPoolChallengers(
           tvlUsd,
           snapshotAt: row.updated_at,
           publishedAt: row.updated_at,
+          ...(typeof pool.priceObservedAt === "number" && { priceObservedAt: pool.priceObservedAt }),
         });
       }
     }
@@ -180,6 +191,8 @@ export async function loadLegacyDexPoolChallengers(
 
     const qualifying: DexPriceChallengerLoadRow[] = [];
     for (const source of sources) {
+        // Protocol summaries with receipts belong to the promotion surface.
+        if (readDexPriceLineage(source).upstreamKeys !== undefined) continue;
         const price = typeof source.price === "number" ? source.price : Number(source.price);
         const tvl = Number(source.tvl);
         if (
@@ -200,6 +213,7 @@ export async function loadLegacyDexPoolChallengers(
           tvlUsd: tvl,
           snapshotAt: row.updated_at,
           publishedAt: row.updated_at,
+          ...(typeof source.observedAt === "number" && { priceObservedAt: source.observedAt }),
         });
     }
     if (qualifying.length > 0) {

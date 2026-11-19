@@ -11,6 +11,9 @@ import {
 } from "../maintenance/sync-depeg-events";
 import { createTempRepoTracker } from "./helpers/test-state";
 import { SnapshotIntegrityError } from "../lib/sync-from-api";
+import { readDepegEventPageEntries, readDepegEventSnapshot } from "../../src/lib/depeg-event-snapshot";
+import { buildDepegEventTitle } from "../../src/lib/depeg-event-display";
+import { projectDepegHistory } from "../lib/public-dataset-projections";
 import { readDepegLedgerCapture } from "../lib/depeg-ledger-capture";
 
 const { cleanup, makeRoot } = createTempRepoTracker("depeg-event-shards-test");
@@ -46,6 +49,101 @@ function event(overrides: Partial<DepegEvent> = {}): DepegEvent {
 }
 
 describe("sync-depeg-events", () => {
+  function depegSyncFixture() {
+    const dataDir = makeRoot();
+    return { dataDir, args: ["--api-url", "https://api.example.test", "--output", join(dataDir, "index.json")] };
+  }
+  const missingManifest = () => Response.json({ reason: "ledger-manifest-unavailable" }, { status: 503 });
+  const eursIncident = () => event({ id: 91041, stablecoinId: "eurs-stasis", symbol: "EURS", pegType: "peggedEUR", peakDeviationBps: -775 });
+
+  it("uses an unverified traversal when the first page has no manifest", async () => {
+    const { dataDir, args } = depegSyncFixture();
+    const fetchMock = vi.fn(async (url: string) => new URL(url).searchParams.has("ledgerGeneration")
+      ? missingManifest()
+      : Response.json({ events: [event()], total: 1, nextCursor: null }));
+    vi.stubGlobal("fetch", fetchMock);
+    await runDepegSync(args);
+    expect(fetchMock.mock.calls.map(([url]) => new URL(url).searchParams.get("ledgerGeneration"))).toEqual(["latest", null]);
+    expect(readDepegLedgerCapture(dataDir).ledgerProof).toBeUndefined();
+    expect(readDepegLedgerCapture(dataDir).eventCount).toBe(1);
+  });
+
+  it("fails a pinned continuation when its manifest vanishes, even with retained-data fallback", async () => {
+    const { dataDir, args } = depegSyncFixture();
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ events: [event()], total: 1 })));
+    await runDepegSync(args);
+    const ledgerProof = { generation: "a".repeat(64), coveredFromSec: 1, coveredThroughSec: 2_000_000_000 };
+    const fetchMock = vi.fn(async (url: string) => new URL(url).searchParams.has("cursor")
+      ? missingManifest()
+      : Response.json({ events: Array.from({ length: 1000 }, (_, i) => event({ id: i + 1 })),
+        ledgerProof, nextCursor: "next", totalExact: true, total: 1001 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(runDepegSync([...args, "--allow-existing-on-fetch-failure"])).rejects.toThrow(SnapshotIntegrityError);
+    expect(fetchMock.mock.calls.map(([url]) => new URL(url).searchParams.get("ledgerGeneration")))
+      .toEqual(["latest", ledgerProof.generation]);
+    expect(readDepegLedgerCapture(dataDir).eventCount).toBe(1);
+  });
+
+  it("captures the corrected event while retaining its dedicated page in the index", async () => {
+    const { dataDir, args } = depegSyncFixture();
+    let peakDeviationBps = -600;
+    const ledgerProof = { generation: "b".repeat(64), coveredFromSec: 1, coveredThroughSec: 2_000_000_000 };
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({
+      events: [event({ peakDeviationBps })], total: 1, totalExact: true, nextCursor: null, ledgerProof,
+    })));
+    await runDepegSync(args);
+    peakDeviationBps = -100;
+    await runDepegSync(args);
+    const dataset = projectDepegHistory(readDepegEventSnapshot({ missing: "throw" }, dataDir), "2026-05-15");
+    expect(dataset).toMatchObject([{ peakDeviationBps: -100 }]);
+    expect(readDepegEventPageEntries(dataDir)).toMatchObject([{ slug: "usdc-2026-05-15", peakDeviationBps: -600 }]);
+    expect(readDepegLedgerCapture(dataDir)).toMatchObject({ eventCount: 1, apiTotal: 1, ledgerProof });
+  });
+
+  it("publishes the current review and values at a retained same-event permalink", async () => {
+    const { dataDir, args } = depegSyncFixture();
+    let row = eursIncident();
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ events: [row], total: 1 })));
+    await runDepegSync(args);
+    const [published] = readDepegEventPageEntries(dataDir);
+    expect(buildDepegEventTitle(published, false)).toContain("7.75% Below Peg");
+
+    row = { ...row, peakDeviationBps: -10, peakPrice: 0.999, provenance: { auditVerdict: "false_positive", pegScoreEligible: false } };
+    await runDepegSync(args);
+
+    const [corrected] = readDepegEventPageEntries(dataDir);
+    expect(corrected).toMatchObject({
+      id: published.id, slug: published.slug, peakDeviationBps: -10, peakPrice: 0.999,
+      provenance: { auditVerdict: "false_positive", pegScoreEligible: false },
+    });
+    expect(buildDepegEventTitle(corrected, false)).toContain("0.10% Below Peg (Disputed)");
+  });
+
+  it("keeps the reviewed peak at its reserved URL through consolidation", async () => {
+    const { dataDir, args } = depegSyncFixture();
+    const original = eursIncident();
+    const revised = event({ ...original, peakDeviationBps: -210, peakPrice: 0.979,
+      provenance: { auditVerdict: "repaired", pegScoreEligible: true } });
+    const representative = event({ ...revised, id: 91042, constituentEventCount: 2 });
+    let row = original;
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => new URL(url).pathname.endsWith("/depeg-resolver")
+      ? Response.json({ rows: [{
+        eventId: original.id, stablecoinId: original.stablecoinId, direction: "below", incidentKey: "ddr2:eurs",
+        live: { currentEventId: representative.id, eventState: "active" },
+      }] })
+      : Response.json({ events: [row], total: 1 })));
+    await runDepegSync(args);
+    const [published] = readDepegEventPageEntries(dataDir);
+    expect(published.peakDeviationBps).toBe(-775);
+
+    row = revised;
+    await runDepegSync(args);
+    row = representative;
+    await runDepegSync(args);
+    expect(readDepegEventSnapshot({ missing: "throw" }, dataDir)).toMatchObject([{ id: representative.id }]);
+    expect(readDepegEventPageEntries(dataDir)).toMatchObject([{ ...revised, slug: published.slug }]);
+  });
+
   it("assigns deterministic slugs for same-coin same-day events", () => {
     const entries = assignSlugs([event({ id: 2, direction: "above" }), event({ id: 1, direction: "below" })]);
 
@@ -165,7 +263,7 @@ describe("sync-depeg-events", () => {
       await expect(attempt).rejects.toMatchObject({ code: "EISDIR" });
       expect(warning).not.toHaveBeenCalled();
     }
-    expect(readFileSync(shardPath, "utf8") !== before).toBe(failure !== "fetch");
+    expect(readFileSync(shardPath, "utf8") !== before).toBe(failure === "metadata/capture.json");
   });
 
   it("round-trips legacy event fields through the shared stored schema", async () => {
@@ -193,14 +291,14 @@ describe("sync-depeg-events", () => {
 
     expect(
       findMissingStaticDepegArchiveSlugs(
-        [published, subthreshold],
-        [subthreshold, replacement],
+        [published],
+        preserveStaticDepegArchiveEntries([published], [subthreshold, replacement]),
       ),
     ).toEqual([published.slug]);
     expect(() =>
       assertStaticDepegArchivePreserved(
-        [published, subthreshold],
-        [subthreshold, replacement],
+        [published],
+        preserveStaticDepegArchiveEntries([published], [subthreshold, replacement]),
       ),
     ).toThrow("Depeg static archive lost 1 published slug(s): usdc-2026-05-15");
   });
@@ -209,7 +307,7 @@ describe("sync-depeg-events", () => {
     const subthreshold: DepegEventEntry = { ...event({ peakDeviationBps: -300 }), slug: "usdc-2026-05-15" };
     const published: DepegEventEntry = { ...event({ peakDeviationBps: -800 }), slug: "usdc-2026-05-15" };
 
-    expect(() => assertStaticDepegArchivePreserved([subthreshold], [])).not.toThrow();
+    expect(preserveStaticDepegArchiveEntries([], [subthreshold])).toEqual([]);
     expect(() => assertStaticDepegArchivePreserved([published], [], true)).not.toThrow();
   });
 
@@ -271,12 +369,12 @@ describe("sync-depeg-events", () => {
     for (let capture = 0; capture < 2; capture++) {
       await runDepegSync(args);
       const captured = DepegEventStoredSnapshotSchema.parse(JSON.parse(readFileSync(shardPath, "utf8")));
-      expect(captured.find((entry) => entry.id === original.id)).toEqual(published);
+      expect(captured.find((entry) => entry.id === original.id)).toBeUndefined();
       expect(captured.find((entry) => entry.id === representative.id)).toMatchObject({
         slug: "usda-2026-07-06-down", peakDeviationBps: -129,
       });
-      expect(JSON.parse(readFileSync(indexPath, "utf8"))).toEqual([expect.objectContaining({ slug: published.slug })]);
-      expect(readDepegLedgerCapture(dataDir)).toMatchObject({ eventCount: 2, apiTotal: 1 });
+      expect(JSON.parse(readFileSync(indexPath, "utf8"))).toEqual([expect.objectContaining({ slug: published.slug, retainedPage: published })]);
+      expect(readDepegLedgerCapture(dataDir)).toMatchObject({ eventCount: 1, apiTotal: 1 });
     }
     expect(fetchMock.mock.calls.filter(([url]) => url.endsWith("/depeg-resolver")).map(([url]) => url))
       .toEqual(Array(2).fill("https://api.example.test/_site-data/depeg-resolver"));
@@ -389,9 +487,11 @@ describe("sync-depeg-events", () => {
     const root = makeRoot();
     const indexPath = join(root, "data/depeg-events/index.json");
     const total = 21_001;
+    const ledgerProof = { generation: "a".repeat(64), coveredFromSec: 1, coveredThroughSec: 1_795_000_000 };
     const fetchMock = vi.fn((input: string) => {
       const url = new URL(input);
       const offset = Number(url.searchParams.get("cursor") ?? 0);
+      expect(url.searchParams.get("ledgerGeneration")).toBe(offset === 0 ? "latest" : ledgerProof.generation);
       const length = Math.min(1000, total - offset);
       const events = Array.from({ length }, (_, index) => event({
         id: offset + index + 1,
@@ -400,7 +500,7 @@ describe("sync-depeg-events", () => {
       }));
       return Promise.resolve(new Response(JSON.stringify({
         events,
-        total,
+        total, totalExact: true, ledgerProof,
         nextCursor: offset + length < total ? String(offset + length) : null,
       })));
     });
@@ -415,8 +515,9 @@ describe("sync-depeg-events", () => {
     expect(shard.some((entry) => entry.id === total)).toBe(true);
     expect(readDepegLedgerCapture(join(root, "data/depeg-events"))).toMatchObject({
       schemaVersion: 1,
+      shardSource: "fetched-ledger",
       eventCount: total,
-      apiTotal: total,
+      apiTotal: total, ledgerProof,
       captureId: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
       sourceUrl: "https://api.example.test/api/depeg-events",
     });

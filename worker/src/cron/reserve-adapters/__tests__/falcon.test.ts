@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { adaptFalconTransparency, type FalconTransparencyResponse } from "../falcon";
 import { expectValidAdapterOutput, runAdapter } from "./reserve-adapter.test-support";
+import { resolveRedemptionCapacity } from "../../../lib/redemption-backstop/capacity";
+import { liveSnapshot } from "../../../lib/__tests__/redemption-backstop-sources.test-support";
 
 function falconPayload(
   assets: Array<{ label: string; [venue: string]: string | number }>,
@@ -37,6 +39,24 @@ const LIVE_CAPTURE = JSON.parse(
 ) as FalconTransparencyResponse;
 
 describe("adaptFalconTransparency", () => {
+  it("publishes the seven-day buffer only as delayed capacity", async () => {
+    const result = adaptFalconTransparency(falconPayload(
+      [{ label: "USDC", fireblocks: "10000000" }, { label: "BTC", multisig: "90000000" }],
+      { supply: "100000000", insurance: "0" },
+    ));
+    const capacity = await resolveRedemptionCapacity(
+      {} as D1Database, "usdf-falcon", { kind: "reserve-sync-metadata" }, 100_000_000, FIXTURE_TIMESTAMP,
+      { reserveSnapshotMetadata: liveSnapshot("usdf-falcon", result.metadata, {
+        fetchedAt: FIXTURE_TIMESTAMP, source: "falcon",
+      }) },
+    );
+    expect(capacity).toMatchObject({
+      capacitySemantics: "eventual-only", immediateCapacityUsd: null, immediateCapacityRatio: null,
+      settlementDelaySec: 604800,
+      capacityProfile: { immediateUsd: null, eventualUsd: 10_000_000, scoringHorizon: "eventual" },
+    });
+  });
+
   it("groups Falcon asset-level reserves into reserve buckets", () => {
     const payload = falconPayload([
       { label: "USDC", ceffu: "20", fireblocks: "10" },

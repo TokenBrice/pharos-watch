@@ -340,6 +340,30 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     });
   });
 
+  it("withholds every retained cap and its provenance while sBOLD supply is held", async () => {
+    const id = "sbold-k3-capital";
+    const nowSec = 1_790_000_000;
+    const poisoned = { id, price: null, circulating: { peggedUSD: 4.4e19 }, supplyObservedAt: nowSec - 900 };
+    const previous = priceCoverage([], [id], { nowSec: nowSec - 900 });
+    Object.assign(previous.missingActiveAssets[0]!, {
+      marketCapUsd: 4.4e19, lastKnownMarketCapUsd: 4.4e19,
+      lastKnownMarketCapSource: "publication", lastKnownMarketCapObservedAt: nowSec - 900,
+    });
+    const db = mockD1([]);
+    const prepare = vi.spyOn(db, "prepare");
+    for (const previousDetails of [[], previous.missingActiveAssets]) {
+      const next = priceCoverage([], [id], {
+        nowSec, previousAcceptedAssetsById: new Map([[id, poisoned]]),
+        previousCoverage: { ...previous, missingActiveAssets: previousDetails, observedAt: nowSec - 900 },
+      });
+      await seedAbsentCaps(db, next, nowSec);
+      expect(next.missingActiveAssets[0]).toMatchObject({
+        marketCapUsd: null, lastKnownMarketCapUsd: null, lastKnownMarketCapObservedAt: null, lastKnownMarketCapSource: null,
+      });
+    }
+    expect(prepare).not.toHaveBeenCalled();
+  });
+
   it("seeds legacy prior-gap cap only with its publication clock", () => {
     const nowSec = 1_790_000_000;
     const previous = priceCoverage([
@@ -566,7 +590,7 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
       complete: false, pricedActiveCount: 0, missingPriceCount: ids.length, missingActiveIds: ids,
       acknowledgedGapIds: [], acknowledgedGapCount: 0,
       scheduledClosureGapIds: closed ? ids : [],
-      alertEligibleIds: closed || date === "2026-11-01T23:00:00Z" || date === "2027-01-03T23:00:00Z" ? [] : ids,
+      alertEligibleIds: closed ? [] : ids,
       expiredGapReviewIds: [], invalidGapReviewIds: [], affectedMarketCapUsd: 500,
     });
     for (const gap of result.missingActiveAssets) {
@@ -601,15 +625,23 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     expect(resolveMarketHours(ids, nowSec + gateSec, [calendar]).alertSuppressedIds.size).toBe(0);
   });
 
-  it("retains raw closure streaks while requiring the normal open-market cadence gate after reopen", () => {
+  it.each([
+    ["pre-close", "2026-10-30T20:59:00Z", false],
+    ["inside closure", "2026-10-30T21:00:00Z", true],
+    ["at reopen", "2026-11-01T23:00:00Z", false],
+  ] as const)("retains raw %s streaks across the reopening gate", (_, started, exempt) => {
     const id = "chfm-mento";
     const ids = [id];
     const assets = [unpricedUsd(id)];
     const reopen = Date.UTC(2026, 10, 1, 23) / 1000;
-    const first = priceCoverage(assets, ids, { nowSec: reopen - 3600, priceGapReviews: [] });
-    const previous = { ...first, missingActiveAssets: [{ ...first.missingActiveAssets[0], consecutiveMissingGenerations: 800 }] };
+    const first = priceCoverage(assets, ids, { nowSec: Date.parse(started) / 1000, priceGapReviews: [] });
+    const compact = compactCoverage({
+      ...first, missingActiveAssets: [{ ...first.missingActiveAssets[0], consecutiveMissingGenerations: 800 }],
+    }, 0);
+    const previous = { ...compact, missingActiveAssets: [parseCompactGap(compact.missingActiveState[0], { nowSec: reopen })!] };
     const interval = CRON_INTERVALS["sync-stablecoins"];
-    for (const [elapsed, eligible] of [[0, false], [interval, false], [2 * interval - 1, false], [2 * interval, true]] as const) {
+    for (const elapsed of [0, interval, 2 * interval - 1, 2 * interval]) {
+      const eligible = !exempt || elapsed >= 2 * interval;
       const result = priceCoverage(assets, ids, {
         nowSec: reopen + elapsed, priceGapReviews: [], previousCoverage: previous,
       });
@@ -624,6 +656,23 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     expect(priceCoverage(assets, ids, {
       nowSec: weekday + interval, priceGapReviews: [], previousCoverage: fresh,
     }).alertEligibleIds).toEqual(ids);
+  });
+
+  it("carries a pre-close Mento warning until an observed recovery starts a new gap", () => {
+    const id = "chfm-mento";
+    const close = Date.UTC(2026, 9, 30, 21) / 1000;
+    const asset = unpricedUsd(id);
+    const first = priceCoverage([asset], [id], { nowSec: close - 1800 });
+    const persistent = priceCoverage([asset], [id], { nowSec: close - 900, previousCoverage: first });
+    const during = priceCoverage([asset], [id], { nowSec: close, previousCoverage: persistent });
+    expect(during).toMatchObject({ alertEligibleIds: [id], scheduledClosureGapIds: [] });
+    const recovered = priceCoverage([{ ...asset, price: 1, priceSource: "mento-fpmm" }], [id], {
+      nowSec: close + 900, previousCoverage: during,
+    });
+    expect(recovered).toMatchObject({ pricedActiveIds: [id], missingActiveIds: [], alertEligibleIds: [] });
+    const newGap = priceCoverage([asset], [id], { nowSec: close + 1800, previousCoverage: recovered });
+    expect(newGap).toMatchObject({ alertEligibleIds: [], scheduledClosureGapIds: [id] });
+    expect(newGap.missingActiveAssets[0]).toMatchObject({ firstMissingAt: close + 1800, consecutiveMissingGenerations: 1 });
   });
 
   it("keeps the reviewed calendar identities and lanes exact and never classifies priced assets as gaps", () => {

@@ -142,9 +142,9 @@ describe("fetchTbillRate", () => {
     });
   }
 
-  function mockUsdRate(rate: string) {
+  function mockUsdRate(rate: string, recordDate = FRESH_FRED_OBSERVATION_DATE) {
     mockTbillByUrl({
-      "id=DGS3MO": new Response(`DATE,DGS3MO\n${FRESH_FRED_OBSERVATION_DATE},${rate}\n`),
+      "id=DGS3MO": new Response(`DATE,DGS3MO\n${recordDate},${rate}\n`),
       "home.treasury.gov": new Response(TREASURY_XML_SNIPPET.replaceAll("3.71", rate).replaceAll("3.72", rate)),
     });
   }
@@ -1206,7 +1206,7 @@ describe("fetchTbillRate", () => {
     });
   });
 
-  it("accepts a persistent genuine level shift on the second consecutive observation", async () => {
+  it("keeps a level shift pending on same-date retry and confirms it on a later effective fixing", async () => {
     mockUsdRate("2.4");
     installBaselineUsdCache();
 
@@ -1217,18 +1217,34 @@ describe("fetchTbillRate", () => {
       fallbackMode: "usd-rate-out-of-band-retained",
       isFallback: true,
       lastRejectedMarketRate: 2.4,
+      lastRejectedMarketRecordDate: FRESH_FRED_OBSERVATION_DATE,
     });
 
     installWrittenBenchmarkCache();
-    const second = await runBenchmarks();
-    const metadata = runMetadata(second);
-    expect(second.status).toBe("ok");
+    vi.setSystemTime(FROZEN_NOW.getTime() + 3600_000);
+    const repeated = await runBenchmarks();
+    expect(repeated.status).toBe("degraded");
+    expect(runMetadata(repeated).benchmarkRateConfirmations).toBeUndefined();
+    expect(latestCachePayload()).toMatchObject({
+      rate: 3.72, lastRejectedMarketRate: 2.4, lastRejectedMarketRecordDate: FRESH_FRED_OBSERVATION_DATE,
+      lastRejectedMarketFetchedAt: FROZEN_NOW.getTime() / 1000,
+    });
+
+    installWrittenBenchmarkCache();
+    const laterFixingDate = "2026-06-25";
+    mockUsdRate("2.4", laterFixingDate);
+    vi.setSystemTime(FROZEN_NOW.getTime() + 7200_000);
+    const confirmed = await runBenchmarks();
+    const metadata = runMetadata(confirmed);
+    expect(confirmed.status).toBe("ok");
     expect(metadata.benchmarkRateConfirmations).toEqual([
       expect.objectContaining({
         key: "USD",
         rate: 2.4,
+        recordDate: laterFixingDate,
         previousMarketRate: 3.72,
         previousRejectedMarketRate: 2.4,
+        previousRejectedMarketRecordDate: FRESH_FRED_OBSERVATION_DATE,
       }),
     ]);
     expect(metadata.quality).toEqual({

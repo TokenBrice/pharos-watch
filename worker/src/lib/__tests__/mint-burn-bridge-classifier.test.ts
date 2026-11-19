@@ -54,20 +54,40 @@ describe("receipt-bound bridge classification", () => {
     }
   });
 
-  it("covers every bridge config positively, with explicitly synthetic EURC and GLDon send evidence", () => {
+  it("covers every bridge config positively, using synthetic rebindings where needed", () => {
     for (const config of bridgeConfigs) {
       const originals = config.stablecoinId === "eurc-circle"
         ? BRIDGE_RECEIPTS.filter((fixture) => ["v1-send-direct", "v1-receive-direct", "v2-send-direct", "v2-receive"].includes(fixture.name))
         : config.stablecoinId === "gldon-ondo" ? [sample("usdai-send")]
+          : config.stablecoinId === "usdz-anzen" ? [sample("usdai-send"), sample("gldon-receive")]
           : BRIDGE_RECEIPTS.filter((fixture) => receiptConfig(fixture, bridgeConfigs) === config && !fixture.name.startsWith("native-") && fixture.name !== "economic-burn");
       expect(originals.length, config.stablecoinId).toBeGreaterThan(0);
       for (const original of originals) {
         const source = receiptConfig(original, bridgeConfigs), fixture = source === config ? original : rebindReceipt(original, source, config);
+        if (config.stablecoinId === "usdz-anzen" && original.name === "gldon-receive") {
+          logFor(fixture, BRIDGE_TOPICS.oftReceived).topics[2] = zero;
+          logFor(fixture, BRIDGE_TOPICS.transfer).topics[2] = `0x${"0".repeat(60)}dead`;
+        }
         const rows = receiptRows(fixture, config);
         classify(fixture, config, rows);
         expect(rows.some((row) => row.flow_type === "bridge_transfer"), fixture.name).toBe(true);
       }
     }
+  });
+
+  it.each([true, false])("classifies the USDz OFT burn separately from an issuer burn (packet proof %s)", (withPacket) => {
+    const source = arrange("usdai-send");
+    const config = bridgeConfigs.find((entry) => entry.stablecoinId === "usdz-anzen")!;
+    const fixture = rebindReceipt(source.fixture, source.config, config);
+    const bridgeTransfer = logFor(fixture, BRIDGE_TOPICS.transfer);
+    fixture.logs.unshift({ ...bridgeTransfer, topics: [...bridgeTransfer.topics], logIndex: "0x0", data: `0x${word(1n)}` });
+    if (!withPacket) fixture.logs = fixture.logs.filter((log) => log.topics[0] !== BRIDGE_TOPICS.packetSent);
+    const rows = receiptRows(fixture, config);
+    classify(fixture, config, rows);
+    expect(rows.map((row) => [row.flow_type, row.burn_type])).toEqual([
+      ["standard", "effective_burn"],
+      withPacket ? ["bridge_transfer", "bridge_burn"] : ["standard", "review_required"],
+    ]);
   });
 
   it.each(["wrong-emitter", "other-token", "other-amount", "other-account", "other-row-id", "duplicate-log-index", "no-receipt", "one-proof"] as const)(

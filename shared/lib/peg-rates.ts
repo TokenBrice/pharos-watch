@@ -1,11 +1,20 @@
+import { FxReferenceEvidenceSchema, type FxReferenceEvidence } from "../types/fx-reference";
+import type { StablecoinData } from "../types/supply";
+import { getCommodityOuncesAtQuote, type CommodityQuoteUnit } from "./commodity-median";
 import type { PegAssetBase } from "../types/price";
+import type { ReferenceContributor, ReferenceAdmission } from "../types/reference-admission";
 import type { StablecoinMeta } from "../types/stablecoin-meta-schemas";
 import { normalizeLegacyPegType } from "./peg-price-bounds";
 import { MIN_PEER_MEDIAN_CONTRIBUTORS } from "./peg-reference-trust";
-import { PEG_TAXONOMY } from "./peg-taxonomy";
+import { getPegTaxonomyByType, PEG_TAXONOMY, pegTypeFromCurrency } from "./peg-taxonomy";
 import { median } from "./stats";
 import { getCirculatingRawOrNull } from "./supply";
 import { isObservedPrice } from "./pricing-source-policy";
+import { getPricingSourceRegistryEntry } from "./pricing-source-registry";
+import { normalizePricingSourceKeys } from "./pricing-sources";
+import { isClosureBullionContributor, REFERENCE_INTRADAY_BUDGET_SEC } from "./reference-admission";
+import { getReferenceSessionState, type ReferenceSessionState } from "./reference-market-hours";
+import { isRecord } from "./type-guards";
 
 /**
  * Coins excluded from the commodity peer-median reference.
@@ -14,12 +23,22 @@ import { isObservedPrice } from "./pricing-source-policy";
  */
 export const COMMODITY_MEDIAN_EXCLUDES = new Set(["dgld-gold-token-sa"]);
 
-export type PegRateSource = "median" | "fx" | "fallback";
+export type PegRateSource = Exclude<ReferenceAdmission["kind"], "none">;
+
+type PegRateAsset = PegAssetBase & Pick<StablecoinData, "commodityEntitlement" | "priceDerivation" | "parityQuoteUnit">;
+type SelectedContributor = ReferenceContributor & { assetId?: string };
+type LocalMedianRow = { price: number; contributor: ReferenceContributor & { assetId: string } };
+
+type PegRateMeta = Pick<StablecoinMeta, "commodityOunces"> & {
+  flags?: Partial<Pick<StablecoinMeta["flags"], "navToken" | "pegCurrency">>;
+};
 
 export interface PegRatesResult {
   rates: Record<string, number>;
   sources: Record<string, PegRateSource>;
   counts: Record<string, number>;
+  observations?: Partial<Record<string, FxReferenceEvidence>>;
+  contributors?: Partial<Record<string, readonly SelectedContributor[]>>;
 }
 
 export function normalizePegType(pegType: string | undefined): string | undefined {
@@ -27,7 +46,7 @@ export function normalizePegType(pegType: string | undefined): string | undefine
 }
 
 function normalizeFallbackRates(fallbackRates: Record<string, number> | undefined): Record<string, number> {
-  const normalized: Record<string, number> = {};
+  const normalized: Record<string, number> = Object.create(null);
   for (const [pegType, rate] of Object.entries(fallbackRates ?? {})) {
     const peg = normalizePegType(pegType);
     if (!peg || typeof rate !== "number" || !Number.isFinite(rate) || rate <= 0) continue;
@@ -36,7 +55,7 @@ function normalizeFallbackRates(fallbackRates: Record<string, number> | undefine
   return normalized;
 }
 
-function addPegRateAliases(result: PegRatesResult): void {
+function addPegRateAliases(result: Required<PegRatesResult>): void {
   for (const entry of Object.values(PEG_TAXONOMY)) {
     const canonical = entry.canonicalPegType;
     if (!canonical || result.rates[canonical] == null) continue;
@@ -48,10 +67,82 @@ function addPegRateAliases(result: PegRatesResult): void {
       if (result.counts[canonical] != null && result.counts[alias] == null) {
         result.counts[alias] = result.counts[canonical];
       }
+      result.observations[alias] = result.observations[canonical];
+      result.contributors[alias] = result.contributors[canonical];
     }
   }
 }
 
+function isBullionPeg(peg: string): boolean {
+  return peg === "peggedGOLD" || peg === "peggedSILVER";
+}
+
+function isEligibleBullionContributor(row: ReferenceContributor, session: ReferenceSessionState, now: number): boolean {
+  const at = row.observedAtSec;
+  if (at === null || !Number.isSafeInteger(at) || at <= 0 || at > now || now - at > REFERENCE_INTRADAY_BUDGET_SEC) return false;
+  if (!session.open) return at >= session.closureStartSec && isClosureBullionContributor(row);
+  return at > session.sessionOpenedAtSec &&
+    (row.observedAtMode === "upstream" || (row.observedAtMode === undefined && row.derivation === "traded-market"));
+}
+
+function distinctAssetRows(rows: LocalMedianRow[]): LocalMedianRow[] {
+  const byAsset = new Map<string, LocalMedianRow | null>();
+  for (const row of rows) {
+    const member = row.contributor;
+    const prior = byAsset.get(member.assetId);
+    if (prior === undefined) {
+      byAsset.set(member.assetId, row);
+    } else if (prior && (prior.price !== row.price || prior.contributor.observedAtSec !== member.observedAtSec ||
+      prior.contributor.provenanceKey !== member.provenanceKey || prior.contributor.derivation !== member.derivation ||
+      prior.contributor.observedAtMode !== member.observedAtMode)) {
+      // Conflicting rows cannot establish one price and receipt for this asset.
+      byAsset.set(member.assetId, null);
+    }
+  }
+  return [...byAsset.values()].filter((row) => row !== null);
+}
+
+/** The selected price must measure the token in the same unit as parity. */
+export function isParityPrice(asset: PegRateAsset): boolean {
+  if (!isObservedPrice(asset)) return false;
+  if (asset.id !== "xofm-mento" && asset.id !== "susd-solayer") return true;
+  if (asset.id === "susd-solayer") {
+    if (asset.parityQuoteUnit === undefined) return true;
+    if (asset.parityQuoteUnit !== "accrued-token") return false;
+  }
+  if (!Number.isSafeInteger(asset.priceObservedAt) || (asset.priceObservedAt ?? 0) <= 0) return false;
+  const selected = normalizePricingSourceKeys(asset.priceSource);
+  const sources = selected.length === 1 && selected[0] === "cached"
+    ? normalizePricingSourceKeys(asset.agreeSources?.length ? asset.agreeSources : asset.consensusSources)
+    : selected;
+  const valuationSource = asset.id === "xofm-mento" ? "mento-broker" : "protocol-redeem";
+  return sources.length > 0 && sources.every((key) => {
+    if (key === valuationSource) return false;
+    const source = getPricingSourceRegistryEntry(key);
+    return source && !source.isProtocolOverride && (source.trustTier === "hard_market"
+      || source.trustTier === "soft_dex" || source.trustTier === "soft_aggregator");
+  });
+}
+
+export function selectedFxMedianContributor(
+  asset: PegRateAsset,
+  observedAtSec = asset.priceObservedAt ?? null,
+): ReferenceContributor & { assetId: string } {
+  const sources = normalizePricingSourceKeys(asset.priceSource);
+  const source = sources.length === 1 ? getPricingSourceRegistryEntry(sources[0]) : undefined;
+  const family = source?.depegSourceFamily;
+  return {
+    assetId: asset.id,
+    observedAtSec,
+    ...(asset.priceObservedAt != null && asset.priceObservedAtMode ? { observedAtMode: asset.priceObservedAtMode } : {}),
+    provenanceKey: family ?? asset.priceSource?.trim() ?? "",
+    derivation: asset.priceDerivation?.navMethod || family?.endsWith("-nav") ? "nav"
+      : source?.trustTier === "hard_oracle" || source?.key.endsWith("-oracle") ? "oracle"
+      : !asset.priceDerivation && source?.trustTier === "hard_market" && family?.startsWith("market:")
+        && source.supportsUpstreamObservedAt && asset.priceObservedAt != null && asset.priceObservedAtMode === "upstream"
+        ? "traded-market" : "spot-derived",
+  };
+}
 
 /**
  * Derive peg reference rates from the DefiLlama data itself.
@@ -69,35 +160,47 @@ function addPegRateAliases(result: PegRatesResult): void {
  * Returns a map of pegType -> USD value of 1 unit of the peg currency.
  */
 export function derivePegRates(
-  assets: PegAssetBase[],
-  metaById?: ReadonlyMap<string, Pick<StablecoinMeta, "commodityOunces">>,
+  assets: PegRateAsset[],
+  metaById?: ReadonlyMap<string, PegRateMeta>,
   fallbackRates?: Record<string, number>,
+  fxReferenceObservations?: unknown,
+  decisionAtSec = Math.floor(Date.now() / 1000),
+  legacyBullionPegs?: readonly string[],
 ): PegRatesResult {
-  const groups = new Map<string, number[]>();
+  const groups = new Map<string, LocalMedianRow[]>();
+  const clocked = isRecord(fxReferenceObservations);
+  const metalSession = clocked ? getReferenceSessionState("metal", decisionAtSec) : null;
+  const fiatSession = clocked ? getReferenceSessionState("fx", decisionAtSec) : null;
 
-  for (const a of assets) {
-    if (!isObservedPrice(a)) continue;
-    const peg = normalizePegType(a.pegType);
-    let price = a.price;
+  for (const asset of assets) {
+    const meta = metaById?.get(asset.id);
+    const flags = meta?.flags;
+    if (flags?.navToken || flags?.pegCurrency === "OTHER" || flags?.pegCurrency === "VAR"
+      || !isParityPrice(asset)) continue;
+    const peg = normalizePegType(asset.pegType);
+    const registryPeg = pegTypeFromCurrency(flags?.pegCurrency);
+    if (registryPeg && peg !== registryPeg) continue;
+    let price = asset.price;
     if (!peg || price == null || typeof price !== "number" || !Number.isFinite(price) || price <= 0) continue;
 
     // Only use coins with meaningful supply to avoid garbage data
-    const supply = getCirculatingRawOrNull(a);
+    const supply = getCirculatingRawOrNull(asset);
     if (supply === null || supply < 1_000_000) continue;
 
     // For gold/silver tokens, normalize price to "per troy ounce"
-    if ((peg === "peggedGOLD" || peg === "peggedSILVER") && metaById) {
-      if (COMMODITY_MEDIAN_EXCLUDES.has(a.id)) continue;
-      const meta = metaById.get(a.id);
-      const oz = meta?.commodityOunces;
-      if (oz && oz > 0) {
-        price = price / oz; // e.g. $162/gram → $162 / (1/31.1035) = ~$5039/oz
-      }
+    if (isBullionPeg(peg)) {
+      if (COMMODITY_MEDIAN_EXCLUDES.has(asset.id)) continue;
+      const oz = getCommodityOuncesAtQuote(meta?.commodityOunces, {
+        assetId: asset.id, commodityEntitlement: asset.commodityEntitlement, quoteObservedAtSec: asset.priceObservedAt,
+      });
+      if (oz == null || !Number.isFinite(oz) || oz <= 0) continue;
+      price /= oz;
     }
 
-    const prices = groups.get(peg) ?? [];
-    prices.push(price);
-    groups.set(peg, prices);
+    if (!Number.isFinite(price)) continue;
+    const rows = groups.get(peg) ?? [];
+    rows.push({ price, contributor: selectedFxMedianContributor(asset) });
+    groups.set(peg, rows);
   }
 
   // Use only live cached FX rates — no stale hardcoded defaults.
@@ -108,47 +211,77 @@ export function derivePegRates(
   const rates: Record<string, number> = Object.create(null) as Record<string, number>;
   const sources: Record<string, PegRateSource> = Object.create(null) as Record<string, PegRateSource>;
   const counts: Record<string, number> = Object.create(null) as Record<string, number>;
-  for (const [peg, prices] of groups.entries()) {
-    // Keep the scoring reference unrounded; display medians round at the API edge.
-    // median() returns null for empty groups, so no separate empty-array guard is needed.
-    const medianValue = median(prices);
-    if (medianValue == null) continue;
-
-    // A live FX rate is authoritative for fiat pegs regardless of peer count.
-    // Peer medians remain a fallback only when an FX rate is unavailable.
-    // This prevents a broad peer group, including the evaluated asset itself,
-    // from shifting the displayed peg away from the actual fiat unit.
-    // Commodity pegs (gold/silver) use peer median — XAUT/PAXG are arbitraged
-    // against spot within seconds, so the median is a live reference. metals.dev
-    // spot is only fetched once per day and can be >1.5% stale, causing false depegs.
-    const fallback = Object.prototype.hasOwnProperty.call(mergedFallbacks, peg)
-      ? mergedFallbacks[peg]
-      : undefined;
-    const isCommodityPeg = peg === "peggedGOLD" || peg === "peggedSILVER";
-    if (fallback && (!isCommodityPeg || prices.length < MIN_PEER_MEDIAN_CONTRIBUTORS)) {
-      rates[peg] = fallback;
-      sources[peg] = isCommodityPeg ? "fallback" : "fx";
-      counts[peg] = prices.length;
-      continue;
+  const observations: NonNullable<PegRatesResult["observations"]> = Object.create(null);
+  const contributors: NonNullable<PegRatesResult["contributors"]> = Object.create(null);
+  const selectedObservations = new Map<string, FxReferenceEvidence>();
+  if (clocked) {
+    for (const [peg, raw] of Object.entries(fxReferenceObservations)) {
+      if (getPegTaxonomyByType(peg)?.canonicalPegType !== peg) continue;
+      const parsed = FxReferenceEvidenceSchema.safeParse(raw);
+      if (!parsed.success || parsed.data.pegKey !== peg) continue;
+      const observation = parsed.data;
+      mergedFallbacks[peg] ??= observation.usdPerUnit;
+      if (mergedFallbacks[peg] !== observation.usdPerUnit) continue;
+      if (metalSession && isBullionPeg(peg) && observation.source === "peer-median") {
+        // The producer's aggregate cannot be repriced from a partial list of receipts.
+        const cohort = observation.contributors ?? [];
+        if (cohort.length < MIN_PEER_MEDIAN_CONTRIBUTORS || (observation.publishedAtSec ?? 0) > decisionAtSec ||
+          !cohort.every((member) => isEligibleBullionContributor(member, metalSession, decisionAtSec))) {
+          delete mergedFallbacks[peg];
+          continue;
+        }
+      }
+      selectedObservations.set(peg, observation);
     }
-
-    rates[peg] = medianValue;
+  }
+  for (const [peg, group] of groups) {
+    const bullion = isBullionPeg(peg);
+    const fallback = mergedFallbacks[peg];
+    const producer = selectedObservations.get(peg);
+    const clockedBullion = bullion && metalSession !== null && !legacyBullionPegs?.includes(peg);
+    const clockedFiat = fiatSession !== null && !fallback && getPegTaxonomyByType(peg)?.pegClass === "fiat_fx";
+    let rows = group;
+    if (clockedBullion) {
+      rows = distinctAssetRows(rows.filter(({ contributor }) => isEligibleBullionContributor(contributor, metalSession, decisionAtSec)));
+    } else if (clockedFiat) {
+      const earliest = Math.max(1, decisionAtSec - REFERENCE_INTRADAY_BUDGET_SEC,
+        fiatSession.open ? fiatSession.sessionOpenedAtSec + 1 : fiatSession.closureStartSec);
+      rows = distinctAssetRows(rows.filter(({ contributor: { observedAtSec: at, observedAtMode, provenanceKey } }) =>
+        observedAtMode === "upstream" && provenanceKey !== "" && provenanceKey !== "cached" &&
+        at !== null && Number.isSafeInteger(at) && at >= earliest && at <= decisionAtSec));
+    }
+    if (bullion && producer?.source === "peer-median") {
+      rows = rows.filter(({ contributor }) => contributor.observedAtSec !== null && contributor.observedAtSec > producer.observedAtSec);
+    }
+    counts[peg] = rows.length;
+    if ((clockedFiat || clockedBullion || (bullion && fallback)) && rows.length < MIN_PEER_MEDIAN_CONTRIBUTORS) continue;
+    if (fallback && !bullion) continue;
+    // Keep the scoring reference unrounded; display medians round at the API edge.
+    rates[peg] = median(rows.map(({ price }) => price))!;
     sources[peg] = "median";
-    counts[peg] = prices.length;
+    contributors[peg] = rows.map(({ contributor }) => contributor);
   }
 
   for (const [peg, fallback] of Object.entries(mergedFallbacks)) {
     if (peg in rates) continue;
     rates[peg] = fallback;
-    sources[peg] = peg === "peggedGOLD" || peg === "peggedSILVER" ? "fallback" : "fx";
-    counts[peg] = 0;
+    const observation = selectedObservations.get(peg);
+    if (observation) observations[peg] = observation;
+    if (observation?.source === "peer-median") {
+      sources[peg] = "median";
+      contributors[peg] = observation.contributors ?? [];
+      counts[peg] = contributors[peg].length;
+    } else {
+      sources[peg] = isBullionPeg(peg) ? "fallback" : "fx";
+      counts[peg] ??= 0;
+    }
   }
 
   // Fallback: USD is always 1
   if (!rates["peggedUSD"]) rates["peggedUSD"] = 1;
   if (!sources["peggedUSD"]) sources["peggedUSD"] = "median";
 
-  const result = { rates, sources, counts };
+  const result = { rates, sources, counts, observations, contributors };
   addPegRateAliases(result);
   return result;
 }
@@ -162,7 +295,8 @@ export function derivePegRates(
 export function getPegReference(
   pegType: string | undefined,
   rates: Record<string, number>,
-  commodityOunces?: number
+  commodityOunces?: number,
+  unit?: CommodityQuoteUnit,
 ): number | null {
   if (!pegType) return null;
   const peg = normalizePegType(pegType);
@@ -171,8 +305,9 @@ export function getPegReference(
   const rate = rates[peg];
   if (typeof rate !== "number" || !Number.isFinite(rate) || rate <= 0) return null;
   // For gold/silver tokens, scale the per-ounce rate by the token's weight
-  if ((peg === "peggedGOLD" || peg === "peggedSILVER") && commodityOunces && commodityOunces > 0) {
-    return rate * commodityOunces;
+  if (peg === "peggedGOLD" || peg === "peggedSILVER") {
+    const ounces = getCommodityOuncesAtQuote(commodityOunces, unit);
+    return ounces != null && ounces > 0 && Number.isFinite(ounces) ? rate * ounces : null;
   }
   return rate;
 }

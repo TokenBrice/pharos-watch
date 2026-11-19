@@ -22,7 +22,7 @@ import { CONFIDENCE_LEVEL_COLORS, ORACLE_BRAND_SWATCH_CLASSES } from "@shared/li
 import { formatCurrency, formatUsdPriceAdaptive, timeAgo } from "@shared/lib/format";
 import { normalizePegType } from "@shared/lib/peg-rates";
 import { getPegTaxonomyByCurrency, getPegTaxonomyByType } from "@shared/lib/peg-taxonomy";
-import { isCurrentDeviationHeld, resolvePriceObservedAtSec } from "@/lib/current-peg";
+import { isCurrentDeviationHeld, referenceAdmissionNote, resolvePriceObservedAtSec } from "@/lib/current-peg";
 import { resolvePriceTransparencySourceStatus, type SourceStatus } from "./price-transparency-status";
 
 interface PriceTransparencyCardProps {
@@ -30,7 +30,7 @@ interface PriceTransparencyCardProps {
   /** Null when neither the peg row nor the admitted summary was read: unread provenance, not zero sources. */
   consensusSources: string[] | null;
   agreeSources: string[] | null;
-  dexPriceCheck: PegSummaryCoin["dexPriceCheck"];
+  dexPriceCheck?: PegSummaryCoin["dexPriceCheck"];
   /**
    * The hero's peg unit (`coin.flags.pegCurrency`) and USD-per-unit reference.
    * With both, a non-dollar peg reads in its own unit first, like the hero
@@ -60,8 +60,8 @@ const DOT_SEPARATED_ROW_CLASS =
 const SOURCE_DEPTH_TARGET = 3;
 
 /**
- * The DEX check agrees when its deviation is within 50 bps of the primary
- * price's deviation (`agrees` in shared/lib/current-peg-observations.ts).
+ * Clocked DEX checks compare quotes directly. Legacy checks compare peg
+ * deviations (`agrees` in shared/lib/current-peg-observations.ts).
  * ponytail: display copy of that literal; import it once it is exported.
  */
 const DEX_AGREEMENT_THRESHOLD_LABEL = "0.5%";
@@ -455,13 +455,14 @@ export function PriceTransparencyCard({
   // The glyph tracks the verdict. `CircleCheck`/`TriangleAlert` is the house
   // severity glyph vocabulary (`src/components/severity-icon.tsx`).
   const DexAgreementIcon = dexPriceCheck?.agrees ? CircleCheck : TriangleAlert;
-  // The DEX check reads against the peg's reference, which repeats its last close while that
-  // market is shut: the deviation is held there. The row's peg type names the reference unit.
-  const dexDeviationHeld = isCurrentDeviationHeld(
-    navToken ? null : getPegTaxonomyByType(coinData.pegType)?.currency,
-    resolvePriceObservedAtSec(coinData),
-    dexPriceCheck?.dexDeviationBps,
-  );
+  const dexCurrency = navToken ? null : getPegTaxonomyByType(coinData.pegType)?.currency;
+  const dexAdmission = navToken ? null : dexPriceCheck?.referenceAdmission;
+  const dexObservedAt = resolvePriceObservedAtSec({ priceObservedAt: dexPriceCheck?.observedAtSec });
+  const dexReferenceNote = dexAdmission
+    ? referenceAdmissionNote(dexAdmission) ?? (dexAdmission.status !== "admitted" || dexAdmission.quoteObservedAtSec !== dexObservedAt
+      ? "Reference comparison unavailable" : null)
+    : isCurrentDeviationHeld(dexCurrency, dexObservedAt ?? resolvePriceObservedAtSec(coinData), dexPriceCheck?.dexDeviationBps)
+      ? "Reference market closed" : null;
   const priceLabel = !hasNoPrice && coinData.price != null ? formatPriceIn(coinData.price, unit) : "N/A";
   const usdPriceLabel = nativeUnit && !hasNoPrice && coinData.price != null ? formatPriceIn(coinData.price, USD_UNIT) : null;
   const confidenceLabel = hasNoPrice
@@ -472,13 +473,13 @@ export function PriceTransparencyCard({
   const confidenceTone = hasNoPrice
     ? "text-muted-foreground"
     : CONFIDENCE_LEVEL_COLORS[coinData.priceConfidence as keyof typeof CONFIDENCE_LEVEL_COLORS] ?? "text-muted-foreground";
-  const dexPriceLabel = dexPriceCheck ? formatPriceIn(dexPriceCheck.dexPrice, unit) : null;
+  const dexPriceLabel = dexPriceCheck ? formatPriceIn(dexPriceCheck.dexPrice, dexReferenceNote ? USD_UNIT : unit) : null;
   // Segments never break inside themselves ("0.01% / deviation"); the row's dots never orphan.
   const dexDetail = dexPriceCheck
     ? [
         pluralize(dexPriceCheck.sourcePools, "DEX price source"),
         `${formatCurrency(dexPriceCheck.sourceTvl)} TVL`,
-        dexDeviationHeld ? "Reference market closed" : `${formatBpsAsPercent(dexPriceCheck.dexDeviationBps)} from reference`,
+        dexReferenceNote ?? `${formatBpsAsPercent(dexPriceCheck.dexDeviationBps)} from reference`,
       ].map((segment) => (
         <span key={segment} className="whitespace-nowrap">{segment}</span>
       ))

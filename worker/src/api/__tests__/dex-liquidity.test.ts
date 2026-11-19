@@ -16,6 +16,15 @@ function mockDexD1(tables: MockTableConfig[]) {
   return mockD1([...tables, makeDexDeploymentOutcomeFallbackTable(), { match: "cron_runs", rows: [], first: null }]);
 }
 
+function recordedVolume(asOfSec: number, volume24hUsd: number | null) {
+  const clock = { asOfSec, maxObservationAgeSec: 86_400 };
+  const daily = volume24hUsd == null ? [] : [{ volumeUsd: volume24hUsd, observedAtSec: asOfSec }];
+  return JSON.stringify({
+    "24h": summarizeDexVolumeWindow(daily, "24h", clock).availability,
+    "7d": summarizeDexVolumeWindow(daily.map(() => ({ volumeUsd: null, observedAtSec: null })), "7d", clock).availability,
+  });
+}
+
 describe("handleDexLiquidity", () => {
   const row = makeDexLiquidityRow();
 
@@ -41,14 +50,21 @@ describe("handleDexLiquidity", () => {
     ["3.2", "3.1", 100, 300],
   ] as const)("serves only same-epoch day/week TVL trends (%s vs %s)", async (current, historical, day, week) => {
     const now = 1_790_000_000;
+    const observedAt = now - 600;
+    const snapshotDate = Math.floor(observedAt / 86_400) * 86_400;
     vi.spyOn(Date, "now").mockReturnValue(now * 1000);
     const { sqlite, db } = createLatestSchemaSqlite();
     try {
-      sqlite.prepare("INSERT INTO dex_liquidity (stablecoin_id, symbol, total_tvl_usd, total_volume_24h_usd, liquidity_score, updated_at, coverage_class, coverage_confidence, methodology_version) VALUES ('usdt-tether', 'USDT', 400, 123, 80, ?, 'primary', 0.9, ?)")
-        .run(now, current);
-      const insertHistory = sqlite.prepare("INSERT INTO dex_liquidity_history (stablecoin_id, total_tvl_usd, snapshot_date, coverage_class, coverage_confidence, methodology_version) VALUES ('usdt-tether', ?, ?, 'primary', 0.9, ?)");
-      insertHistory.run(200, now - 86400, historical);
-      insertHistory.run(100, now - 7 * 86400, historical);
+      sqlite.prepare(`INSERT INTO dex_liquidity
+        (stablecoin_id, symbol, total_tvl_usd, total_volume_24h_usd, liquidity_score, updated_at,
+         coverage_class, coverage_confidence, methodology_version, volume_availability_json)
+        VALUES ('usdt-tether', 'USDT', 400, 123, 80, ?, 'primary', 0.9, ?, ?)`)
+        .run(now, current, recordedVolume(observedAt, 123));
+      const insertHistory = sqlite.prepare(`INSERT INTO dex_liquidity_history
+        (stablecoin_id, total_tvl_usd, snapshot_date, coverage_class, coverage_confidence, methodology_version, volume_availability_json)
+        VALUES ('usdt-tether', ?, ?, 'primary', 0.9, ?, ?)`);
+      insertHistory.run(200, snapshotDate - 86_400, historical, recordedVolume(observedAt - 86_400, 0));
+      insertHistory.run(100, snapshotDate - 7 * 86_400, historical, recordedVolume(observedAt - 7 * 86_400, 0));
       const body = DexLiquidityMapSchema.parse(await (await handleDexLiquidity(db)).json());
       expect(body["usdt-tether"]).toMatchObject({
         tvlChange24h: day, tvlChange7d: week, liquidityScore: 80, totalVolume24hUsd: 123,
@@ -61,6 +77,8 @@ describe("handleDexLiquidity", () => {
 
   it("publishes no TVL trend for an unobserved zero-pool placeholder row", async () => {
     const now = 1_790_000_000;
+    const observedAt = now - 600;
+    const snapshotDate = Math.floor(observedAt / 86_400) * 86_400;
     vi.spyOn(Date, "now").mockReturnValue(now * 1000);
     const { sqlite, db } = createLatestSchemaSqlite();
     try {
@@ -68,26 +86,30 @@ describe("handleDexLiquidity", () => {
         `INSERT INTO dex_liquidity
            (stablecoin_id, symbol, total_tvl_usd, total_volume_24h_usd, total_volume_7d_usd,
             pool_count, pair_count, chain_count, liquidity_score, effective_tvl_usd,
-            coverage_class, coverage_confidence, methodology_version, updated_at)
-         VALUES (?, ?, ?, 0, 0, 0, 0, 0, ?, ?, ?, ?, ?, ?)`,
+            coverage_class, coverage_confidence, methodology_version, updated_at, volume_availability_json)
+         VALUES (?, ?, ?, 0, 0, 0, 0, 0, ?, ?, ?, ?, ?, ?, ?)`,
       );
       // Producer placeholder: a tracked coin that retained no pool this
       // publication stores TVL 0, no score and coverage_class 'unobserved'.
-      insertPublished.run("usdc-circle", "USDC", 0, null, 0, "unobserved", 0, LIQUIDITY_METHODOLOGY_VERSION, now);
+      insertPublished.run(
+        "usdc-circle", "USDC", 0, null, 0, "unobserved", 0, LIQUIDITY_METHODOLOGY_VERSION, now, recordedVolume(observedAt, null),
+      );
       // Control: a measured coin with the same history shape still trends.
       insertPublished.run(
         "usdt-tether", "USDT", 6_000_000_000, 90, 5_400_000_000,
-        "primary", 0.9, LIQUIDITY_METHODOLOGY_VERSION, now,
+        "primary", 0.9, LIQUIDITY_METHODOLOGY_VERSION, now, recordedVolume(observedAt, 0),
       );
       const insertHistory = sqlite.prepare(
         `INSERT INTO dex_liquidity_history
-           (stablecoin_id, total_tvl_usd, snapshot_date, coverage_class, coverage_confidence, methodology_version)
-         VALUES (?, ?, ?, 'primary', 0.9, ?)`,
+           (stablecoin_id, total_tvl_usd, snapshot_date, coverage_class, coverage_confidence, methodology_version, volume_availability_json)
+         VALUES (?, ?, ?, 'primary', 0.9, ?, ?)`,
       );
-      insertHistory.run("usdc-circle", 5_000_000_000, now - 86_400, LIQUIDITY_METHODOLOGY_VERSION);
-      insertHistory.run("usdc-circle", 4_800_000_000, now - 7 * 86_400, LIQUIDITY_METHODOLOGY_VERSION);
-      insertHistory.run("usdt-tether", 5_000_000_000, now - 86_400, LIQUIDITY_METHODOLOGY_VERSION);
-      insertHistory.run("usdt-tether", 4_000_000_000, now - 7 * 86_400, LIQUIDITY_METHODOLOGY_VERSION);
+      const dayVolume = recordedVolume(observedAt - 86_400, 0);
+      const weekVolume = recordedVolume(observedAt - 7 * 86_400, 0);
+      insertHistory.run("usdc-circle", 5_000_000_000, snapshotDate - 86_400, LIQUIDITY_METHODOLOGY_VERSION, dayVolume);
+      insertHistory.run("usdc-circle", 4_800_000_000, snapshotDate - 7 * 86_400, LIQUIDITY_METHODOLOGY_VERSION, weekVolume);
+      insertHistory.run("usdt-tether", 5_000_000_000, snapshotDate - 86_400, LIQUIDITY_METHODOLOGY_VERSION, dayVolume);
+      insertHistory.run("usdt-tether", 4_000_000_000, snapshotDate - 7 * 86_400, LIQUIDITY_METHODOLOGY_VERSION, weekVolume);
 
       const body = await (await handleDexLiquidity(db)).json() as Record<string, {
         totalTvlUsd: number;
@@ -117,12 +139,16 @@ describe("handleDexLiquidity", () => {
 
   it("withholds TVL trends when a current version projection is omitted", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const unprojected = makeDexLiquidityRow();
+    const unprojected = makeDexLiquidityRow({
+      updated_at: now,
+      volume_availability_json: recordedVolume(now, 10_000_000),
+    });
     Reflect.deleteProperty(unprojected, "methodology_version");
     const db = mockDexD1([
       { match: "dex_liquidity_history", rows: [1, 7].map((days) => ({
         stablecoin_id: "usdt-tether", total_tvl_usd: 100, snapshot_date: now - days * 86400,
         coverage_class: "primary", coverage_confidence: 0.9, methodology_version: null,
+        volume_availability_json: recordedVolume(now - days * 86_400, 0),
       })) },
       { match: "dex_prices", rows: [] },
       { match: "dex_liquidity", rows: [unprojected] },
@@ -219,14 +245,26 @@ describe("handleDexLiquidity", () => {
   });
 
   it.each([
-    ["stale", -7 * 86_400, 0, "stale-price"],
-    ["other publication", -60, 0, "publication-mismatch"],
-    ["future", 120, 0, "future-timestamp"],
-    ["fresh", -30, -30, null],
-    ["aggregate-only", -30, -30, null],
-    ["inclusive price budget", -86_400, -86_400, null],
-  ] as const)("uses the price's own clock for %s evidence", async (_label, priceOffset, liquidityOffset, reason) => {
+    ["stale publication", -7 * 86_400, 0, -7 * 86_400 - 60, "stale-price"],
+    ["other publication", -60, 0, -120, "publication-mismatch"],
+    ["future publication", 120, 0, -120, "future-timestamp"],
+    ["missing constituent", -30, -30, null, "missing-timestamp"],
+    ["future constituent", -30, -30, 1, "future-timestamp"],
+    ["fresh", -30, -30, -90, null],
+    ["partial conversion lineage", -30, -30, -90, null],
+    ["aggregate-only", -30, -30, -60, null],
+    ["inclusive price budget", -30, -30, -86_400, null],
+    ["expired constituent", -30, -30, -86_401, "stale-price"],
+  ] as const)("uses the price's own clock for %s evidence", async (label, priceOffset, liquidityOffset, observedOffset, reason) => {
     const now = 1_790_000_000;
+    const aggregateObservedAt = observedOffset == null ? null : now + observedOffset;
+    const clock = label === "partial conversion lineage"
+      ? { aggregateObservedAt: null, displayAggregateObservedAt: aggregateObservedAt, upstreamKeys: [], pricePoolKeys: [] }
+      : { aggregateObservedAt };
+    const protocol = { protocol: "curve", chain: "Ethereum", price: 0.81, tvl: 1_000_000, ...clock };
+    const priceSources = label === "aggregate-only" ? { aggregateObservedAt, sources: [] }
+      : label === "partial conversion lineage" ? { ...clock, sources: [], displaySources: [protocol] }
+      : [protocol];
     vi.spyOn(Date, "now").mockReturnValue(now * 1000);
     try {
       const db = mockDexD1([
@@ -234,8 +272,7 @@ describe("handleDexLiquidity", () => {
         { match: "dex_prices", rows: [{
           stablecoin_id: row.stablecoin_id, dex_price_usd: 0.81, deviation_from_primary_bps: -1900,
           source_pool_count: 2, source_total_tvl: 1_000_000,
-          price_sources_json: JSON.stringify(_label === "aggregate-only" ? { aggregateObservedAt: now - 60, sources: [] }
-            : [{ protocol: "curve", chain: "Ethereum", price: 0.81, tvl: 1_000_000 }]),
+          price_sources_json: JSON.stringify(priceSources),
           updated_at: now + priceOffset,
         }] },
         { match: "dex_liquidity", rows: [makeDexLiquidityRow({ updated_at: now + liquidityOffset })] },
@@ -246,11 +283,12 @@ describe("handleDexLiquidity", () => {
       expect(coin.dexPriceUnavailableReason).toBe(reason);
       expect(coin.dexPriceUpdatedAt).toBe(now + priceOffset);
       expect(coin.dexPriceMaxAgeSec).toBe(86_400);
-      expect(coin.dexPriceAgeSeconds).toBe(reason === "future-timestamp" ? null : -priceOffset);
+      expect(coin.dexPriceAgeSeconds).toBe(observedOffset == null || observedOffset > 0 ? null : -observedOffset);
       if (reason == null) {
         expect(coin.dexPriceUsd).toBe(0.81);
         expect(coin.priceSourceCount).toBe(2);
-        expect(coin.priceSources).toHaveLength(_label === "aggregate-only" ? 0 : 1);
+        expect(coin.priceSources).toHaveLength(label === "aggregate-only" ? 0 : 1);
+        if (label !== "aggregate-only") expect(coin.priceSources?.[0]?.price).toBe(0.81);
       } else {
         expect(coin.dexPriceUsd).toBeNull();
         expect(coin.dexDeviationBps).toBeNull();
@@ -606,7 +644,7 @@ describe("handleDexLiquidity", () => {
           deviation_from_primary_bps: -10,
           source_pool_count: 2,
           source_total_tvl: 1_250_000,
-          price_sources_json: JSON.stringify([{ source: "curve" }]),
+          price_sources_json: JSON.stringify([{ source: "curve", aggregateObservedAt: 1_699_999_950 }]),
           updated_at: 1_700_000_010,
         }],
       },

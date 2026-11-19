@@ -1,14 +1,15 @@
 import { downloadCsvWithPreamble } from "@/lib/exports/csv";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
-import { resolveCurrentDeviationBps, resolveCurrentPeg } from "@/lib/current-peg";
+import { hasObservedDisplayPrice, hasPublishedDeviation, resolveCurrentDeviation, resolveCurrentDeviationBps, resolveDisplayPegReference } from "@/lib/current-peg";
 import { createTableComparator } from "@/lib/table-comparator";
 import { getReportCardGradeRank } from "@shared/lib/report-card-core";
 import { resolveMintAuthorityScoreDisplay, resolveMintAuthorityStatus } from "@/lib/mint-authority-display";
-import { getNavPriceReference } from "@/lib/nav-price-reference";
+import { getQuoteMatchedNavPriceReference } from "@/lib/nav-price-reference";
 import type { ColumnId } from "@/hooks/use-preferences";
 import { GRADE_FILTER_TAGS, getFilterTags, gradeMatchesFilter } from "@shared/lib/filter-tags";
+import { pegCurrencySymbol } from "@shared/lib/peg-format";
 import { getPegTaxonomyByCurrency } from "@shared/lib/peg-taxonomy";
-import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
+import { getCirculatingRawOrNull, getUsdMarketCapBaselineOrNull } from "@shared/lib/supply";
 import { buildSupplyObservationProvenance, classifySupplyCoverage } from "@shared/lib/supply-provenance";
 import {
   CLIENT_ACTIVE_IDS as ACTIVE_IDS,
@@ -52,19 +53,16 @@ interface SortState {
 export type StablecoinTableRowRiskLevel = "depeg" | "poor" | "warning" | "normal";
 
 export interface DisplayedNativePrice {
-  /** USD price converted into the peg quantity the Price cell prints; null when the cell prints "N/A". */
+  /** Unrounded price in the unit the cell displays. */
   value: number | null;
-  /** Peg currency the cell prints (and its symbol). */
+  /** Currency the cell prints. */
   currency: string;
   /** Reference used for the conversion; null when the cell prints the USD quote. */
   reference: number | null;
 }
 
 /**
- * The Price column's displayed unit: one authority for the cell and its sort,
- * so sorting never orders a different unit than the reader sees. Null when the
- * cell prints "—" (no observed price source, or a non-USD fiat peg with no
- * published reference).
+ * Share the Price column's visibility and unit between the cell and the sort.
  */
 export function resolveDisplayedNativePrice(
   coin: StablecoinData,
@@ -74,26 +72,45 @@ export function resolveDisplayedNativePrice(
   if (!isObservedPrice(coin)) return null;
   const meta = TRACKED_META_BY_ID.get(coin.id);
   const currency = meta?.flags.pegCurrency ?? "USD";
-  const pegRef = resolveCurrentPeg(coin, pegSummary)?.pegReference?.valueUsd ?? null;
-  const reference = meta?.flags.navToken ? getNavPriceReference(currency, pegScores) : pegRef;
+  const reference = meta?.flags.navToken
+    ? getQuoteMatchedNavPriceReference(currency, coin.priceObservedAt, pegScores)
+    : resolveDisplayPegReference(coin, pegSummary, currency);
   const usesUsdSymbol = getPegTaxonomyByCurrency(currency)?.nativePriceUsesUsdSymbol === true;
-  if (reference == null && !meta?.flags.navToken && !usesUsdSymbol) return null;
-  const value = coin.price == null
-    ? null
-    : !usesUsdSymbol && reference != null && Number.isFinite(reference) && reference > 0
-      ? coin.price / reference
-      : coin.price;
-  return { value, currency, reference };
+  if (reference == null && !meta?.flags.navToken && pegCurrencySymbol(currency) !== "$"
+    && !resolveCurrentDeviation(coin, pegSummary, meta?.flags.pegCurrency).referenceNote
+    && (hasPublishedDeviation(coin.currentPeg) || !hasPublishedDeviation(pegSummary))) return null;
+
+  const price = hasObservedDisplayPrice(coin) ? coin.price : null;
+  const value = price != null && !usesUsdSymbol && reference != null ? price / reference : price;
+  return {
+    value: Number.isFinite(value) ? value : null,
+    currency: usesUsdSymbol || reference == null ? "USD" : currency,
+    reference,
+  };
 }
 
-/** Partial-chain remainders cannot be compared with historical totals, and a
- *  carried observation is not this window's supply. */
-export function getSupplyChangePercent(coin: StablecoinData, previous: number | null): number | null {
+export function getSupplyChangeBaseline(coin: StablecoinData, window: "day" | "week" | "month") {
+  return coin.supplyChangeBaselines?.[window];
+}
+
+export function getMarketCapBaseline(coin: StablecoinData, window: "day" | "week" | "month"): number | null {
+  if (coin.supplyRestored === true || classifySupplyCoverage(buildSupplyObservationProvenance(coin)) !== "complete") return null;
+  return getUsdMarketCapBaselineOrNull(coin, window);
+}
+
+export function getSupplyChangePercent(
+  coin: StablecoinData,
+  window: "day" | "week" | "month" | number | null,
+): number | null {
+  if (window !== "day" && window !== "week" && window !== "month") return null;
   const current = getCirculatingRawOrNull(coin);
+  const previous = getMarketCapBaseline(coin, window);
   if (current == null || previous == null || previous <= 0) return null;
-  if (coin.supplyRestored === true) return null;
-  if (classifySupplyCoverage(buildSupplyObservationProvenance(coin)) === "partial") return null;
   return ((current - previous) / previous) * 100;
+}
+
+export function usesLegacyChangeWindow(rows: readonly StablecoinData[], window: "day" | "week"): boolean {
+  return rows.some((coin) => coin.supplyChangeBaselines?.[window] === undefined && getSupplyChangePercent(coin, window) != null);
 }
 
 const SORT_KEY_TO_COLUMN: Record<StablecoinTableSortKey, ColumnId> = {
@@ -232,8 +249,8 @@ export function sortStablecoins({
     name: (r) => r.name.toLowerCase(),
     price: (r) => resolveDisplayedNativePrice(r, pegScores?.get(r.id), pegScores)?.value ?? null,
     mcap: (r) => getCirculatingRawOrNull(r),
-    change24h: (r) => getSupplyChangePercent(r, getPrevDayRawOrNull(r)),
-    change7d: (r) => getSupplyChangePercent(r, getPrevWeekRawOrNull(r)),
+    change24h: (r) => getSupplyChangePercent(r, "day"),
+    change7d: (r) => getSupplyChangePercent(r, "week"),
     stability: (r) => pegScores?.get(r.id)?.pegScore ?? null,
     liquidity: (r) => dexLiquidity?.[r.id]?.liquidityScore ?? null,
     grade: (r) => {
@@ -315,16 +332,16 @@ export function exportStablecoinsCsv(
       { header: "Price", accessor: (row) => isObservedPrice(row) ? row.price ?? null : null },
       { header: "Market Cap (USD)", accessor: (row) => getCirculatingRawOrNull(row) },
       {
-        header: "24h Change (%)",
+        header: usesLegacyChangeWindow(sorted, "day") ? "24h Change (%)" : "24h Market Cap Change (%)",
         accessor: (row) => {
-          const change = getSupplyChangePercent(row, getPrevDayRawOrNull(row));
+          const change = getSupplyChangePercent(row, "day");
           return change == null ? null : Number(change.toFixed(2));
         },
       },
       {
-        header: "7d Change (%)",
+        header: usesLegacyChangeWindow(sorted, "week") ? "7d Change (%)" : "7d Market Cap Change (%)",
         accessor: (row) => {
-          const change = getSupplyChangePercent(row, getPrevWeekRawOrNull(row));
+          const change = getSupplyChangePercent(row, "week");
           return change == null ? null : Number(change.toFixed(2));
         },
       },

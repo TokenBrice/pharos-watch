@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 
 vi.mock("../fetch-retry", () => ({
@@ -8,6 +8,11 @@ vi.mock("../fetch-retry", () => ({
 import { fetchJsonWithRetry } from "../fetch-retry";
 import { isValidFxRate } from "../fx-config";
 import { loadCommodityPeerMedianReference, resolveMetalReferenceRates, type MetalPegKey } from "../fx-metals";
+import { evaluateReferenceAdmission } from "@shared/lib/reference-admission";
+import { asRawDeviationBps } from "@shared/types/reference-admission";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { FxSyncRunState } from "../../cron/sync-fx-rates-helpers";
+import { getFxReferenceTypeFromState, loadFxRateState, persistFxRateState } from "../fx-rate-state";
 
 const validateMetalRate = (pegKey: MetalPegKey, rate: number): boolean =>
   pegKey === "peggedGOLD"
@@ -21,9 +26,53 @@ function okResult(body: Record<string, unknown>) {
   return { response: new Response(JSON.stringify(body), { status: 200 }), body };
 }
 
+const silverContributors = (observedAtSec: number) => ["silver-a", "silver-b", "silver-c"].map((assetId) => ({
+  assetId, observedAtSec, provenanceKey: "coingecko", derivation: "spot-derived" as const,
+}));
+
 describe("resolveMetalReferenceRates", () => {
+  const fixtures = createLatestSchemaFixtureTracker();
+  afterEach(() => fixtures.closeAll());
   beforeEach(() => {
     vi.mocked(fetchJsonWithRetry).mockReset();
+  });
+
+  it.each([
+    [null, 60, 2_910, "peer-median"],
+    ["2026-11-02T10:44:00Z", 86_400, 3_110, "gold-api.com"],
+  ] as const)("uses the in-budget metal evidence with spot time %s and oldest peer age %d", async (spotTime, peerAge, spotPrice, source) => {
+    const now = Date.parse("2026-11-02T10:45:00Z") / 1000;
+    vi.mocked(fetchJsonWithRetry).mockResolvedValueOnce(okResult({ price: spotPrice, ...(spotTime ? { updatedAt: spotTime } : {}) }))
+      .mockResolvedValueOnce(null);
+    const contributors = silverContributors(now - 30).map((c, i) => ({ ...c, observedAtSec: i === 0 ? now - peerAge : c.observedAtSec }));
+    const resolved = await resolveMetalReferenceRates({
+      syncStartSec: now, validateRate: validateMetalRate, prevRates: {},
+      commodityPeerMedian: { rates: { peggedGOLD: 2900 }, counts: { peggedGOLD: 3 }, contributorsByPeg: { peggedGOLD: contributors } },
+    });
+    const run = new FxSyncRunState({ syncStartSec: now, expectedPegKeys: ["peggedGOLD"], prevState: null,
+      validateRate: () => true, initialSources: {} });
+    // A prior direct observation in this session supplies the independent repricing anchor for spot.
+    run.usableRates.peggedGOLD = 2900;
+    run.markLive("peggedGOLD", now - 3 * 3600, "intraday", null, "gold-api.com");
+    run.markLive("peggedGOLD", now - 2 * 3600, "intraday", null, "gold-api.com");
+    run.applyResolvedMetals(resolved);
+    const { db } = fixtures.open();
+    const meta = run.buildPersistedMeta();
+    expect(meta.directMetalReferences?.peggedGOLD).toMatchObject({
+      observation: { source: "gold-api.com", observedAtSec: spotTime ? now - 60 : now - 2 * 3600 },
+      generation: `fx:${now}`, firstInSessionObservedAtSec: now - 3 * 3600,
+    });
+    await persistFxRateState(db, run.usableRates, meta, now);
+    const hydrated = await loadFxRateState(db);
+    const observation = hydrated!.selectedReferenceEvidence!.peggedGOLD;
+    expect(observation.source).toBe(source);
+    expect(observation.observedAtSec).toBe(now - 60);
+    expect(getFxReferenceTypeFromState(hydrated, "peggedGOLD", 21600, now)).toBe("fresh");
+    const common = { decisionAtSec: now, quoteObservedAtSec: now, rawDeviationBps: asRawDeviationBps(0) };
+    const verdict = observation.source === "peer-median"
+      ? evaluateReferenceAdmission({ ...common, kind: "median", pegKey: observation.pegKey, contributors: observation.contributors! })
+      : evaluateReferenceAdmission({ ...common, kind: "fallback", observation, ...observation.repricing });
+    expect(verdict.reason).toBe("live-reference");
   });
 
   it("does not carry forward cached metal rates outside current bounds", async () => {
@@ -31,7 +80,7 @@ describe("resolveMetalReferenceRates", () => {
 
     const result = await resolveMetalReferenceRates({
       prevRates: { peggedGOLD: 100, peggedSILVER: 1_000 },
-      commodityPeerMedian: { rates: {}, counts: {}, updatedAt: null },
+      commodityPeerMedian: { rates: {}, counts: {}, contributorsByPeg: {} },
       syncStartSec: 1_800_000_000,
       validateRate: validateMetalRate,
     });
@@ -53,7 +102,7 @@ describe("resolveMetalReferenceRates", () => {
 
     const live = await resolveMetalReferenceRates({
       prevRates: {},
-      commodityPeerMedian: { rates: {}, counts: {}, updatedAt: null },
+      commodityPeerMedian: { rates: {}, counts: {}, contributorsByPeg: {} },
       syncStartSec: 1_800_000_000,
       validateRate: validateMetalRate,
     });
@@ -65,7 +114,7 @@ describe("resolveMetalReferenceRates", () => {
     vi.mocked(fetchJsonWithRetry).mockReset().mockResolvedValue(null);
     const peer = await resolveMetalReferenceRates({
       prevRates: {},
-      commodityPeerMedian: { rates: { peggedGOLD: 2_900 }, counts: { peggedGOLD: 3 }, updatedAt: null },
+      commodityPeerMedian: { rates: { peggedGOLD: 2_900 }, counts: { peggedGOLD: 3 }, contributorsByPeg: {} },
       syncStartSec: 1_800_000_000,
       validateRate: validateMetalRate,
     });
@@ -79,7 +128,6 @@ describe("resolveMetalReferenceRates", () => {
     ["2026-09-22T16:41:36Z", 1_790_095_296],
     ["2026-09-21T16:41:36Z", 1_790_008_896],
     ["invalid", null],
-    ["2027-01-01T00:00:00Z", null],
   ])("preserves actual provider time without refreshing it: %s", async (updatedAt, expected) => {
     vi.mocked(fetchJsonWithRetry).mockResolvedValue({
       response: new Response(null, { status: 200 }),
@@ -87,7 +135,7 @@ describe("resolveMetalReferenceRates", () => {
     });
     const result = await resolveMetalReferenceRates({
       prevRates: {},
-      commodityPeerMedian: { rates: {}, counts: {}, updatedAt: null },
+      commodityPeerMedian: { rates: {}, counts: {}, contributorsByPeg: {} },
       syncStartSec: 1_790_095_300,
       validateRate: validateMetalRate,
     });
@@ -95,6 +143,21 @@ describe("resolveMetalReferenceRates", () => {
       source: "gold-api.com",
       updatedAt: expected,
     });
+  });
+
+  it("keeps the cached fallback when the spot clock is ahead of the generation", async () => {
+    const syncStartSec = 1_800_000_000;
+    vi.mocked(fetchJsonWithRetry).mockResolvedValueOnce(okResult({
+      price: 2950, updatedAt: new Date((syncStartSec + 1) * 1000).toISOString(),
+    })).mockResolvedValueOnce(null);
+    const result = await resolveMetalReferenceRates({
+      prevRates: { peggedGOLD: 2900 },
+      commodityPeerMedian: { rates: {}, counts: {}, contributorsByPeg: {} },
+      syncStartSec,
+      validateRate: validateMetalRate,
+    });
+    expect(result.resolvedByPeg.peggedGOLD).toEqual({ rate: 2900, source: "cached", updatedAt: null });
+    expect(result.sources["gold-api.com"]).toBe("error");
   });
 
   it("re-anchors silver from a corroborated fresh spot when the cached reference is stale", async () => {
@@ -106,7 +169,7 @@ describe("resolveMetalReferenceRates", () => {
     const result = await resolveMetalReferenceRates({
       prevRates: { peggedGOLD: 2_900, peggedSILVER: 40.448374 },
       prevRateIsFresh: (pegKey) => pegKey !== "peggedSILVER",
-      commodityPeerMedian: { rates: {}, counts: {}, updatedAt: null },
+      commodityPeerMedian: { rates: {}, counts: {}, contributorsByPeg: {} },
       freshChainlinkRates: { peggedSILVER: 50.39 },
       syncStartSec,
       validateRate: validateWithPriorDelta,
@@ -128,7 +191,7 @@ describe("resolveMetalReferenceRates", () => {
     const result = await resolveMetalReferenceRates({
       prevRates: { peggedGOLD: 2_900, peggedSILVER: 40.448374 },
       prevRateIsFresh: () => true,
-      commodityPeerMedian: { rates: {}, counts: {}, updatedAt: null },
+      commodityPeerMedian: { rates: {}, counts: {}, contributorsByPeg: {} },
       syncStartSec,
       validateRate: validateWithPriorDelta,
     });
@@ -154,7 +217,7 @@ describe("resolveMetalReferenceRates", () => {
     const result = await resolveMetalReferenceRates({
       prevRates: { peggedGOLD: 2_900, peggedSILVER: 40.448374 },
       prevRateIsFresh: () => true,
-      commodityPeerMedian: { rates: {}, counts: {}, updatedAt: null },
+      commodityPeerMedian: { rates: {}, counts: {}, contributorsByPeg: {} },
       syncStartSec,
       validateRate: validateWithPriorDelta,
     });
@@ -174,7 +237,7 @@ describe("resolveMetalReferenceRates", () => {
     const result = await resolveMetalReferenceRates({
       prevRates: { peggedGOLD: 5_000, peggedSILVER: 40.448374 },
       prevRateIsFresh: () => false,
-      commodityPeerMedian: { rates: {}, counts: {}, updatedAt: null },
+      commodityPeerMedian: { rates: {}, counts: {}, contributorsByPeg: {} },
       freshChainlinkRates: {},
       syncStartSec,
       validateRate: validateWithPriorDelta,
@@ -199,7 +262,7 @@ describe("resolveMetalReferenceRates", () => {
       commodityPeerMedian: {
         rates: { peggedSILVER: 50.5 },
         counts: { peggedSILVER: 3 },
-        updatedAt: syncStartSec - 120,
+        contributorsByPeg: { peggedSILVER: silverContributors(syncStartSec - 120) },
       },
       freshChainlinkRates: {},
       syncStartSec,
@@ -221,7 +284,7 @@ describe("resolveMetalReferenceRates", () => {
     const result = await resolveMetalReferenceRates({
       prevRates: { peggedGOLD: 2_900, peggedSILVER: 50 },
       prevRateIsFresh: () => false,
-      commodityPeerMedian: { rates: {}, counts: {}, updatedAt: null },
+      commodityPeerMedian: { rates: {}, counts: {}, contributorsByPeg: {} },
       freshChainlinkRates: {},
       syncStartSec,
       validateRate: validateWithPriorDelta,
@@ -244,7 +307,7 @@ describe("resolveMetalReferenceRates", () => {
       commodityPeerMedian: {
         rates: { peggedSILVER: 50.5 },
         counts: { peggedSILVER: 2 },
-        updatedAt: syncStartSec - 120,
+        contributorsByPeg: { peggedSILVER: silverContributors(syncStartSec - 120) },
       },
       syncStartSec,
       validateRate: validateMetalRate,
@@ -257,7 +320,7 @@ describe("resolveMetalReferenceRates", () => {
       commodityPeerMedian: {
         rates: { peggedSILVER: 50.5 },
         counts: { peggedSILVER: 3 },
-        updatedAt: syncStartSec - 120,
+        contributorsByPeg: { peggedSILVER: silverContributors(syncStartSec - 120) },
       },
       syncStartSec,
       validateRate: validateMetalRate,
@@ -272,7 +335,7 @@ describe("resolveMetalReferenceRates", () => {
 
 
 describe("commodity peer observation provenance", () => {
-  it.each([null, 1_799_000_000, 1_800_003_600])("rejects missing, stale, or future quotes in a new cache: %s", async (observedAt) => {
+  it.each([null, 1_799_000_000, 1_800_000_001])("rejects missing, stale, or future quotes in a new cache: %s", async (observedAt) => {
     const now = 1_800_000_000;
     const asset = {
       id: "paxg-paxos", name: "Pax Gold", symbol: "PAXG", pegType: "peggedGOLD",
@@ -282,7 +345,34 @@ describe("commodity peer observation provenance", () => {
     const db = mockD1([{ match: "cache", rows: [], first: {
       value: JSON.stringify({ peggedAssets: [asset], fxFallbackRates: {} }), updated_at: now,
     } }]);
-    expect(await loadCommodityPeerMedianReference(db, now)).toEqual({ rates: {}, counts: {}, updatedAt: null });
+    expect(await loadCommodityPeerMedianReference(db, now)).toEqual({ rates: {}, counts: {}, contributorsByPeg: {} });
+  });
+
+  it.each(["kraken", "kraken+coingecko"])("keeps the fetch-stamped %s quote out of the closure quorum", async (third) => {
+    const now = Date.parse("2026-11-14T12:00:00Z") / 1000;
+    // Kraken's adapter can return an undated last trade when the bid or ask is missing.
+    // The published price has a fetch clock and no quote-level book evidence in that case.
+    const rows = [
+      ["coinbase", "upstream"], ["bitstamp", "upstream"], [third, "local_fetch"],
+      ["chainlink-nav", "upstream"], ["kava-pricefeed", "upstream"],
+    ] as const;
+    const peggedAssets = rows.map(([priceSource, priceObservedAtMode], index) => ({
+      id: `gold-${index}`, name: "Gold", symbol: "GOLD", pegType: "peggedGOLD", price: 2900 + index,
+      priceSource, priceObservedAtMode, priceObservedAt: now - 60, circulating: { peggedGOLD: 10_000_000 },
+    }));
+    const db = mockD1([{ match: "cache", rows: [], first: {
+      value: JSON.stringify({ peggedAssets, fxFallbackRates: {} }), updated_at: now,
+    } }]);
+    const median = await loadCommodityPeerMedianReference(db, now);
+    const contributors = median.contributorsByPeg.peggedGOLD!;
+    expect(contributors.map(({ derivation }) => derivation)).toEqual(["traded-market", "traded-market", "spot-derived", "nav", "oracle"]);
+    expect(contributors.map(({ provenanceKey }) => provenanceKey).slice(0, 3)).toEqual([
+      "market:coinbase", "market:bitstamp", third === "kraken" ? "market:kraken" : third,
+    ]);
+    expect(evaluateReferenceAdmission({
+      kind: "median", pegKey: "peggedGOLD", contributors,
+      decisionAtSec: now, quoteObservedAtSec: now, rawDeviationBps: asRawDeviationBps(0),
+    }).reason).toBe("reference-market-closed");
   });
 
   it("preserves the oldest admitted quote time instead of cache publication time", async () => {
@@ -298,7 +388,9 @@ describe("commodity peer observation provenance", () => {
     expect(await loadCommodityPeerMedianReference(db, now)).toEqual({
       rates: { peggedGOLD: 2900 },
       counts: { peggedGOLD: 2 },
-      updatedAt: now - 120,
+      contributorsByPeg: { peggedGOLD: peggedAssets.map((asset) => ({
+        assetId: asset.id, observedAtSec: asset.priceObservedAt, observedAtMode: "upstream", provenanceKey: "coingecko", derivation: "spot-derived",
+      })) },
     });
   });
 
@@ -318,7 +410,8 @@ describe("commodity peer observation provenance", () => {
     };
 
     const thin = await load([silverAsset("silver-a", 50), silverAsset("silver-b", 51)]);
-    expect(thin).toEqual({ rates: { peggedSILVER: 50.5 }, counts: { peggedSILVER: 2 }, updatedAt: now - 60 });
+    expect(thin.counts.peggedSILVER).toBe(2);
+    expect(thin.contributorsByPeg.peggedSILVER).toHaveLength(2);
     const thinResolved = await resolveMetalReferenceRates({
       prevRates: {},
       prevRateIsFresh: () => true,
@@ -330,7 +423,7 @@ describe("commodity peer observation provenance", () => {
 
     const broad = await load([
       silverAsset("silver-a", 50),
-      silverAsset("silver-b", 50.5),
+      silverAsset("silver-b", 50.50000049),
       silverAsset("silver-c", 51),
     ]);
     const broadResolved = await resolveMetalReferenceRates({
@@ -341,7 +434,7 @@ describe("commodity peer observation provenance", () => {
       validateRate: validateMetalRate,
     });
     expect(broadResolved.resolvedByPeg.peggedSILVER).toMatchObject({
-      rate: 50.5,
+      rate: 50.50000049,
       source: "commodity-peer-median",
       updatedAt: now - 60,
     });

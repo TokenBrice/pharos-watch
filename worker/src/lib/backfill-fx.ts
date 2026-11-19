@@ -2,11 +2,17 @@ import { logWorkerEventArgs } from "./structured-log";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { COMMODITY_MEDIAN_EXCLUDES } from "@shared/lib/peg-rates";
 import { isCommodityPeg } from "@shared/lib/filter-tags";
-import { buildCommodityPeerMedianSeries, type CommodityPeg } from "@shared/lib/commodity-median";
+import { findCommodityPeerMedian, type CommodityMedianSource, type CommodityPeg } from "@shared/lib/commodity-median";
+import { DAY_SECONDS, HOUR_SECONDS } from "@shared/lib/time-constants";
+import { isTargetFixingDay } from "@shared/lib/reference-market-hours";
+import type { StablecoinData } from "@shared/types/supply";
+import type { ReferenceContributor } from "@shared/types/reference-admission";
+import type { FxReferenceEvidence } from "@shared/types/fx-reference";
+import { loadStablecoinsCache } from "./stablecoins-cache";
+import type { HistoricalReferenceLookup } from "@shared/types/peg";
 import {
   enumerateDates,
-  interpolateRateAtTimestamp,
-  mergeDateRates,
+  findAsOfSnapshot,
   type TimestampedRatePoint,
 } from "@shared/lib/rate-series";
 import { USER_AGENT } from "./constants";
@@ -33,16 +39,22 @@ function isValidSecondaryFxCacheDate(date: string, prefix: string): boolean {
   return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0, 10) === date;
 }
 
+type SecondaryFxCache = Record<string, Record<string, number> | null>;
+
 /** Keep dated entries whose date starts with `prefix` ("YYYY-" or "YYYY-MM-"). */
 function normalizeSecondaryFxCache(
   parsed: unknown,
   prefix: string,
-): Record<string, Record<string, number>> {
+): SecondaryFxCache {
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
 
-  const normalized: Record<string, Record<string, number>> = {};
+  const normalized: SecondaryFxCache = {};
   for (const [date, rawRates] of Object.entries(parsed as Record<string, unknown>)) {
     if (!isValidSecondaryFxCacheDate(date, prefix)) continue;
+    if (rawRates === null) {
+      normalized[date] = null;
+      continue;
+    }
     if (!rawRates || typeof rawRates !== "object" || Array.isArray(rawRates)) continue;
 
     const rawRateKeys = Object.keys(rawRates);
@@ -63,6 +75,12 @@ const lastUtcDayOfMonth = (period: string) => new Date(Date.UTC(Number(period.sl
 
 const SECONDARY_FX_FETCH_CONCURRENCY = 6;
 const COMMODITY_MEDIAN_FETCH_CONCURRENCY = 6;
+const SECONDARY_FX_PUBLICATION_GRACE_SEC = 7 * DAY_SECONDS;
+export const HISTORICAL_INTRADAY_PAIRING_SEC = 2 * HOUR_SECONDS;
+
+function isRecentSecondaryFxDate(date: string): boolean {
+  return Date.now() / 1000 - Date.parse(`${date}T00:00:00Z`) / 1000 < SECONDARY_FX_PUBLICATION_GRACE_SEC;
+}
 
 function invertCurrencyToPegMap(
   currencyToPeg: Readonly<Record<string, string>>,
@@ -105,7 +123,7 @@ export type { CommodityPeg } from "@shared/lib/commodity-median";
 /**
  * Fetch daily historical FX rates from api.frankfurter.dev (ECB data).
  * Returns USD-per-unit time series keyed by currency code.
- * On failure, returns {} — callers fall back to current rates.
+ * On failure, returns {} so callers can preserve existing history.
  */
 export async function fetchHistoricalFxRates(
   currencies: string[],
@@ -191,7 +209,8 @@ async function fetchHistoricalSecondaryFxDay(
   }
   if (!result?.response.ok) {
     logWorkerEventArgs("lib", "warn", `[backfill-depegs] secondary FX API returned ${result?.response.status ?? "no response"} for ${date}`);
-    return primaryMissing && result?.response.status === 404 ? { kind: "unavailable" } : { kind: "transient" };
+    return primaryMissing && result?.response.status === 404 && !isRecentSecondaryFxDate(date)
+      ? { kind: "unavailable" } : { kind: "transient" };
   }
 
   let raw: unknown;
@@ -207,10 +226,11 @@ async function fetchHistoricalSecondaryFxDay(
     logWorkerEventArgs("lib", "warn", `[backfill-depegs] secondary FX validation failed for ${date}: ${parsed.error.message}`);
     return { kind: "transient" };
   }
+  if (parsed.data.date != null && parsed.data.date !== date) return { kind: "transient" };
   const rates = sanitizeFxRates(parsed.data.usd);
   return Object.keys(rates).length > 0
     ? { kind: "rates", rates }
-    : { kind: "unavailable" };
+    : { kind: "transient" };
 }
 
 export async function fetchHistoricalSecondaryFxRates(
@@ -219,6 +239,7 @@ export async function fetchHistoricalSecondaryFxRates(
   startDate: string,
   endDate: string,
   signal?: AbortSignal,
+  dryRun = false,
 ): Promise<Record<string, FxTimeSeries[]>> {
   if (currencies.length === 0) return {};
 
@@ -227,11 +248,11 @@ export async function fetchHistoricalSecondaryFxRates(
     normalized.map((currency) => [currency, []]),
   );
 
-  const decodeCache = (value: string, prefix: string) => decodeJsonString<Record<string, Record<string, number>>, "json-parse-failed">(
+  const decodeCache = (value: string, prefix: string) => decodeJsonString<SecondaryFxCache, "json-parse-failed">(
     value,
     { parseErrorReason: "json-parse-failed", normalize: (parsed) => ({ ok: true, payload: normalizeSecondaryFxCache(parsed, prefix) }) },
   );
-  const legacyYearCaches = new Map<string, Record<string, Record<string, number>>>();
+  const legacyYearCaches = new Map<string, SecondaryFxCache>();
 
   // One cache row per month: a year of all-currency quotes, bound twice by the
   // compare-and-swap below, outgrew the operator CLI's 1 MiB argv limit (E2BIG).
@@ -243,7 +264,7 @@ export async function fetchHistoricalSecondaryFxRates(
     const wantedDates = enumerateDates(rangeStart, rangeEnd);
 
     const cacheKey = `fx-history-secondary:${period}`;
-    let monthCache: Record<string, Record<string, number>> = {};
+    let monthCache: SecondaryFxCache = {};
     let cacheChanged = false;
     let cached = await getCache(db, cacheKey, signal);
     if (cached) {
@@ -264,18 +285,16 @@ export async function fetchHistoricalSecondaryFxRates(
       }
       for (const [date, rates] of Object.entries(legacyYearCaches.get(year)!)) {
         if (!date.startsWith(`${period}-`)) continue;
-        monthCache[date] = rates;
+        monthCache[date] = rates ?? {};
         cacheChanged = true;
       }
     }
 
     const missingDates = wantedDates.filter((date) => {
       const cachedRates = monthCache[date];
-      // Empty maps are confirmed no-data; successful partial maps are not complete.
-      return !cachedRates || (
-        Object.keys(cachedRates).length > 0 &&
-        normalized.some((currency) => cachedRates[currency.toLowerCase()] == null)
-      );
+      // Null is a confirmed post-grace miss. Unversioned empty maps are provisional.
+      return cachedRates !== null && (!cachedRates ||
+        normalized.some((currency) => cachedRates[currency.toLowerCase()] == null));
     });
     for (let i = 0; i < missingDates.length; i += SECONDARY_FX_FETCH_CONCURRENCY) {
       const chunk = missingDates.slice(i, i + SECONDARY_FX_FETCH_CONCURRENCY);
@@ -284,19 +303,19 @@ export async function fetchHistoricalSecondaryFxRates(
       );
       for (const [date, outcome] of fetched) {
         if (outcome.kind === "rates") {
-          mergeDateRates(monthCache, date, outcome.rates);
+          monthCache[date] = { ...monthCache[date], ...outcome.rates };
           cacheChanged = true;
-        } else if (outcome.kind === "unavailable") {
+        } else if (outcome.kind === "unavailable" && !isRecentSecondaryFxDate(date)) {
           // A later unavailable response must not erase dated evidence already read.
-          if (!monthCache[date]) {
-            monthCache[date] = {};
+          if (Object.keys(monthCache[date] ?? {}).length === 0) {
+            monthCache[date] = null;
             cacheChanged = true;
           }
         }
       }
     }
 
-    while (cacheChanged) {
+    while (cacheChanged && !dryRun) {
       const write = await runWithOverloadRetry(() => db.prepare(
         `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
          ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
@@ -311,7 +330,12 @@ export async function fetchHistoricalSecondaryFxRates(
       const decoded = decodeCache(cached.value, `${period}-`);
       if (decoded.ok) {
         for (const [date, rates] of Object.entries(decoded.payload)) {
-          mergeDateRates(monthCache, date, rates);
+          const local = monthCache[date];
+          if (rates != null && Object.keys(rates).length > 0) {
+            monthCache[date] = { ...local, ...rates };
+          } else if (local === undefined || local != null && Object.keys(local).length === 0 && rates === null) {
+            monthCache[date] = rates;
+          }
         }
       }
     }
@@ -336,68 +360,108 @@ export async function fetchHistoricalSecondaryFxRates(
   return result;
 }
 
-/**
- * Build a commodity peg reference time series from the peer-median of all tracked
- * gold/silver token CG prices, bucketed by day.
- *
- * This mirrors derivePegRates() in the live system: gold/silver tokens are tightly
- * arbitraged, so their median price is a reliable spot reference. metals.dev daily
- * prices can diverge from CG market prices by 3–5% on days with large intraday moves,
- * causing false depeg events for every gold token simultaneously.
- */
-export async function buildCommodityMedianSeriesFromCg(
+export type HistoricalCommoditySources = Partial<Record<CommodityPeg, CommodityMedianSource[]>>;
+export type ReplayHistoricalReferenceLookup = {
+  referenceAt(
+    peg: Parameters<HistoricalReferenceLookup["referenceAt"]>[0],
+    atSec: number,
+    subjectId?: string,
+  ): (NonNullable<ReturnType<HistoricalReferenceLookup["referenceAt"]>> & {
+    contributorEvidence?: readonly ReferenceContributor[];
+    observation?: FxReferenceEvidence;
+  }) | null;
+  entitlementAt?(assetId: string, quoteAt: number): StablecoinData["commodityEntitlement"];
+};
+
+export function hasHistoricalCommodityWeight(meta: { id: string; commodityOunces?: number }): meta is { id: string; commodityOunces: number } {
+  return meta.id !== "xagm-matrixdock" && meta.commodityOunces != null && meta.commodityOunces > 0;
+}
+
+export async function fetchHistoricalCommodityPeers(
   range?: HistoricalMarketBackfillRange,
   coingeckoApiKey: string | null = null,
   pegs: readonly CommodityPeg[] = ["GOLD", "SILVER"],
-): Promise<Record<string, FxTimeSeries[]>> {
+  db?: D1Database,
+): Promise<HistoricalCommoditySources> {
   const pegSet = new Set<string>(pegs);
-  const allCommodityCoins = ACTIVE_STABLECOINS.filter(
-    (m) => pegSet.has(m.flags.pegCurrency) && isCommodityPeg(m.flags.pegCurrency) && !m.flags.navToken
-      && !COMMODITY_MEDIAN_EXCLUDES.has(m.id),
-  );
-  const sources: Array<{
-    peg: CommodityPeg;
-    commodityOunces?: number | null;
-    prices: { timestamp: number; price: number }[];
-  }> = [];
-
-  await mapWithConcurrency(allCommodityCoins, COMMODITY_MEDIAN_FETCH_CONCURRENCY, async (meta) => {
-    const geckoId = TRACKED_META_BY_ID.get(meta.id)?.geckoId;
-    if (!geckoId) return;
-    const prices = await fetchCgPriceHistoryHourly(geckoId, range, "usd", coingeckoApiKey);
-    if (prices.length === 0) return;
-    sources.push({
-      peg: meta.flags.pegCurrency as CommodityPeg,
-      commodityOunces: meta.commodityOunces,
-      prices,
-    });
-  });
-
-  const result = buildCommodityPeerMedianSeries(sources);
-  for (const peg of ["GOLD", "SILVER"] as const) {
-    const tokenCount = sources.filter((source) => source.peg === peg).length;
-    if (tokenCount > 0) {
-      logWorkerEventArgs("lib", "info", `[backfill-depegs] Commodity median (${peg}): ${result[peg].length} daily points from ${tokenCount} tokens`);
+  // Reserve composition history keeps hashes only. Use a retained accepted quote receipt when its exact clock matches.
+  let xagmEntitlement: StablecoinData["commodityEntitlement"];
+  if (db && pegSet.has("SILVER")) {
+    const cache = await loadStablecoinsCache(db, { mode: "strict" });
+    if (cache.kind === "ok") {
+      const row = cache.payload.peggedAssets.find(({ id }) => id === "xagm-matrixdock");
+      const receipt = row?.commodityEntitlement;
+      if (receipt?.source === "matrixdock-frs" && /^ethereum:[1-9]\d*$/.test(receipt.generation ?? "") &&
+        receipt.quoteObservedAtSec != null && receipt.quoteObservedAtSec === row?.priceObservedAt &&
+        receipt.quoteObservedAtSec >= (range?.startSec ?? 0) && receipt.quoteObservedAtSec <= (range?.endSec ?? Infinity)) {
+        xagmEntitlement = receipt;
+      }
     }
   }
-
-  return result;
+  const allCommodityCoins = ACTIVE_STABLECOINS.filter(
+    (m) => pegSet.has(m.flags.pegCurrency) && isCommodityPeg(m.flags.pegCurrency) && !m.flags.navToken
+      && !COMMODITY_MEDIAN_EXCLUDES.has(m.id) && (hasHistoricalCommodityWeight(m) || (m.id === "xagm-matrixdock" && xagmEntitlement)),
+  );
+  const sources: HistoricalCommoditySources = {};
+  const fetched = await mapWithConcurrency(allCommodityCoins, COMMODITY_MEDIAN_FETCH_CONCURRENCY, async (meta) => {
+    const geckoId = TRACKED_META_BY_ID.get(meta.id)?.geckoId;
+    if (!geckoId) return null;
+    const prices = await fetchCgPriceHistoryHourly(geckoId, range, "usd", coingeckoApiKey, undefined, true);
+    return {
+      peg: meta.flags.pegCurrency as CommodityPeg,
+      assetId: meta.id,
+      sourceId: `coingecko:${geckoId}`,
+      commodityOunces: meta.commodityOunces,
+      prices: meta.id === "xagm-matrixdock" ? prices.flatMap((point) =>
+        point.timestamp === xagmEntitlement?.quoteObservedAtSec ? [{ ...point, commodityEntitlement: xagmEntitlement }] : []) : prices,
+    };
+  });
+  for (const source of fetched) {
+    if (source) (sources[source.peg] ??= []).push(source);
+  }
+  return sources;
 }
 
-/**
- * Build a lookup function that returns the FX rate (USD per unit) at a given
- * timestamp, using linear interpolation between the two surrounding daily ECB
- * snapshots.  Nearest-neighbor caused up to 12 h timing mismatch with hourly
- * CoinGecko prices, adding ~50-80 bps of noise that inflated non-USD depeg
- * event counts.  Linear interpolation reduces that error to ~5-15 bps.
- *
- * Outside the series range the boundary rate is returned (no extrapolation).
- * If the series is empty, returns the static fallback.
- */
-export function buildFxLookup(series: FxTimeSeries[], fallback: number): (timestamp: number) => number {
-  if (series.length === 0) return () => fallback;
-
-  return (timestamp: number): number => {
-    return interpolateRateAtTimestamp(series, timestamp) ?? fallback;
+export function buildHistoricalReferenceLookup(opts: {
+  subjectId?: string;
+  commodityPeers?: HistoricalCommoditySources;
+  commoditySpot?: Partial<Record<CommodityPeg, { source: string; prices: readonly (FxTimeSeries & { observation?: FxReferenceEvidence })[] }>>;
+}): ReplayHistoricalReferenceLookup {
+  const xagm = opts.commodityPeers?.SILVER?.find((source) => source.assetId === "xagm-matrixdock");
+  return {
+    entitlementAt(id, quoteAt) {
+      if (id !== "xagm-matrixdock") return undefined;
+      return findAsOfSnapshot(xagm?.prices, quoteAt, (point) => point.timestamp, 0)?.commodityEntitlement;
+    },
+    referenceAt(peg, atSec, subjectId = opts.subjectId) {
+      if (!Number.isSafeInteger(atSec) || atSec <= 0) return null;
+      if (peg === "GOLD" || peg === "SILVER") {
+        const spot = opts.commoditySpot?.[peg];
+        const quote = findAsOfSnapshot(spot?.prices, atSec, (entry) => entry.timestamp, HISTORICAL_INTRADAY_PAIRING_SEC);
+        if (spot && quote && Number.isFinite(quote.rate) && quote.rate > 0) {
+          return { usdPerUnit: quote.rate, observedAtSec: quote.timestamp, source: spot.source, kind: "fallback",
+            ...(quote.observation ? { observation: quote.observation } : {}) };
+        }
+        if (!subjectId) return null;
+        const peers = findCommodityPeerMedian(opts.commodityPeers?.[peg] ?? [], subjectId, atSec, HISTORICAL_INTRADAY_PAIRING_SEC);
+        return peers ? { ...peers, source: "peer-median", kind: "median" } : null;
+      }
+      return null;
+    },
   };
+}
+
+/** UTC fixing labels support bounded valuation without supplying an observation clock. */
+export function findHistoricalFxValuationRate(
+  series: Readonly<Record<string, readonly FxTimeSeries[]>>,
+  peg: Parameters<HistoricalReferenceLookup["referenceAt"]>[0],
+  subjectId: string,
+  atSec: number,
+): number | null {
+  const secondary = SECONDARY_PEG_TO_FX[peg];
+  const code = PEG_TO_FX[peg] ?? secondary ?? (peg === "OTHER" ? OTHER_COIN_FX[subjectId] : undefined);
+  if (!code) return null;
+  const day = findAsOfSnapshot(series[code], atSec - DAY_SECONDS, (entry) => entry.timestamp, DAY_SECONDS - 1);
+  return day && Number.isFinite(day.rate) && day.rate > 0 && (secondary || isTargetFixingDay(day.timestamp))
+    ? day.rate : null;
 }

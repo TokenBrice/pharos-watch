@@ -1,3 +1,10 @@
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { prepareDepegLedgerManifest } from "../../../scripts/prepare-depeg-ledger-manifest";
+import { DEPEG_LEDGER_MANIFEST_KEY } from "@shared/types/depeg-event-projection";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { sha256Hex } from "../../lib/hash";
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { DepegEventsResponseSchema } from "@shared/types/peg";
 import { afterEach, describe, it, expect, vi } from "vitest";
@@ -109,6 +116,87 @@ describe("handleDepegEvents", () => {
       .run(key, firstId, currentId, "b".repeat(64));
     return { sqlite, db, key };
   }
+
+  it("unions admitted member intervals, preserves the stored close, and applies reviewed exclusions to the family", async () => {
+    const { sqlite, db } = seedIncident(101, 102, [101, 102]);
+    const start = 1_700_000_000;
+    const update = sqlite.prepare("UPDATE depeg_events SET admitted_coverage_json = ?, disposition = 'admitted-coverage' WHERE id = ?");
+    const first = { fromSec: start + 1, toSec: start + 50 };
+    const last = { fromSec: start + 1000, toSec: start + 1050 };
+    update.run(JSON.stringify([first]), 101);
+    update.run(JSON.stringify([last]), 102);
+    sqlite.prepare("UPDATE depeg_events SET ended_at = ?, recovery_price = 1 WHERE id = 102").run(start + 1200);
+    const readEvent = async () => {
+      const response = await handleDepegEvents(db, new URL("https://x/api/depeg-events"));
+      return (await readJsonResponse(response, 200) as { events: Record<string, unknown>[] }).events[0];
+    };
+    expect(await readEvent()).toMatchObject({
+      id: 102, startedAt: start, endedAt: start + 1200, analyticRecoveryAt: null, admittedCoverage: [first, last],
+    });
+    sqlite.prepare("UPDATE depeg_events SET admitted_coverage_json = '[]', disposition = 'repaired' WHERE id = 101").run();
+    expect(await readEvent()).toMatchObject({
+      id: 102, endedAt: start + 1200, admittedCoverage: [], provenance: { pegScoreEligible: false },
+    });
+  });
+
+  it("keeps the peer median outside the fiat conversion field and retains a reviewed BRZ peak", async () => {
+    const reference = 0.2;
+    const price = 0.24;
+    const sample = { basis: "peer-relative", observedAt: 1_700_000_100, price, pegReference: reference, bps: 2000 };
+    // Enriched D1 rows use the original peak receipt vocabulary consumed by Telegram.
+    const response = await handleDepegEvents(mockEvents([{
+      ...makeDepegRow({
+        id: 89170, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", direction: "above",
+        started_at: sample.observedAt, start_price: price, peg_reference: reference, peak_deviation_bps: 2000, peak_price: price,
+      }),
+      peak_peg_reference: reference, peak_quote_domain: "usd", peer_basis_json: JSON.stringify({ onset: sample, peak: sample }),
+    }], 1), new URL("https://x/api/depeg-events"));
+    const event = (await readJsonResponse(response, 200) as { events: Record<string, unknown>[] }).events[0];
+    expect(event).toMatchObject({ peakPrice: price, onsetBasis: "peer-relative", peakBasis: "peer-relative", peakPeerMedianUsd: reference, peakReview: "unverified" });
+    expect(event).not.toHaveProperty("peakPegReference");
+  });
+
+  it("pins exact full-ledger pages to the source manifest and refuses same-count revisions", async () => {
+    const { db, sqlite } = fixtures.open();
+    sqlite.exec(`WITH RECURSIVE ids(n) AS (VALUES(1) UNION ALL SELECT n + 1 FROM ids WHERE n < 1001)
+      INSERT INTO depeg_events (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peg_reference)
+      SELECT n, 'usdt-tether', 'USDT', 'peggedUSD', 'below', -200, 1700000000 + n, 0.98, 1 FROM ids`);
+    const url = new URL("https://x/api/depeg-events?limit=1000");
+    type Page = { events: unknown[]; total: number; nextCursor: string | null };
+    const readPage = async () => (await (await handleDepegEvents(db, url)).json()) as Page;
+    const first = await readPage();
+    url.searchParams.set("ledgerGeneration", "latest");
+    expect(await (await handleDepegEvents(db, url)).json()).toMatchObject({ reason: "ledger-manifest-unavailable" });
+    const directory = mkdtempSync(join(tmpdir(), "pharos-ledger-test-"));
+    const path = join(directory, "export.sqlite");
+    let prepared: Awaited<ReturnType<typeof prepareDepegLedgerManifest>>;
+    try {
+      sqlite.prepare("VACUUM INTO ?").run(path);
+      const receipt = {
+        version: 1, scope: "whole-public-depeg-ledger", snapshotSha256: await sha256Hex(readFileSync(path)),
+        coveredFromSec: 1_700_000_000, coveredThroughSec: 1_700_100_000, attestedAtSec: 1_700_200_000,
+        attestedBy: "fixture source", coverageEvidenceRef: "source-coverage-fixture",
+      };
+      await expect(prepareDepegLedgerManifest(path, { ...receipt, snapshotSha256: "0".repeat(64) })).rejects.toThrow("SHA-256");
+      await expect(prepareDepegLedgerManifest(path, { ...receipt, coveredFromSec: undefined })).rejects.toThrow();
+      prepared = await prepareDepegLedgerManifest(path, receipt);
+      expect(await sha256Hex(readFileSync(path))).toBe(receipt.snapshotSha256);
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+    const { manifest } = prepared;
+    sqlite.exec(prepared.sql);
+    const generation = await sha256Hex(stableJsonStringifyV1(manifest));
+    const ledgerProof = { generation, coveredFromSec: manifest.coveredFromSec, coveredThroughSec: manifest.coveredThroughSec };
+    expect(await (await handleDepegEvents(db, url)).json()).toMatchObject({ ledgerProof, nextCursor: first.nextCursor });
+    url.searchParams.set("ledgerGeneration", generation);
+    url.searchParams.set("cursor", first.nextCursor!);
+    expect(await (await handleDepegEvents(db, url)).json()).toMatchObject({ ledgerProof, nextCursor: null });
+    sqlite.prepare("UPDATE depeg_events SET peak_deviation_bps = -500 WHERE id = 1").run();
+    expect(await readJsonResponse(await handleDepegEvents(db, url), 409)).toMatchObject({ reason: "ledger-page-changed" });
+    sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(
+      JSON.stringify({ ...manifest, coveredThroughSec: manifest.coveredThroughSec - 1 }), DEPEG_LEDGER_MANIFEST_KEY,
+    );
+    expect(await readJsonResponse(await handleDepegEvents(db, url), 409)).toMatchObject({ reason: "ledger-generation-changed" });
+  });
 
   it.each([
     { name: "first event", first: 101, current: 102, events: [102], links: [101, 102] },

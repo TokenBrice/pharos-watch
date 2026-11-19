@@ -89,6 +89,54 @@ describe("alert job fan-out", () => {
       .toEqual([{ state: "suppressed_duplicate", n: 2 }]);
   });
 
+  it.each(["peer-relative", "legacy-null"] as const)("isolates %s input from the rollback planner and delivers its rendered text", async (scenario) => {
+    const { sqlite, db } = fixture();
+    addDirectFollower(sqlite, "100");
+    sqlite.exec("UPDATE telegram_subscriptions SET stablecoin_id = 'eurc-circle'");
+    const events = depegEvents(300);
+    events.depegIds = ["eurc-circle"];
+    events.depegTriggered = [{ stablecoinId: "eurc-circle", symbol: "EURC", direction: "below", deviationBps: 300,
+      price: 1.067, pegReference: scenario === "peer-relative" ? 1.1 : null,
+      ...(scenario === "peer-relative" ? { peakBasis: scenario } : {}) }];
+    const spec = await buildTelegramAlertJobSpec({ events, detectedAt: NOW, baselineDigestInput: "b" });
+    await enqueueTelegramJob(db, spec);
+    expect(sqlite.prepare("SELECT job_id FROM telegram_jobs WHERE state IN ('planning','ready') AND state = 'planning'").all()).toEqual([]);
+    expect((await fanOutPlanningTelegramJobs(db, NOW)).deliveriesPlanned).toBe(1);
+    expect(sqlite.prepare("SELECT state, payload_json FROM telegram_jobs").get()).toEqual({ state: "ready", payload_json: JSON.stringify(spec.payload) });
+    expect(sqlite.prepare("SELECT job_id FROM telegram_reference_alert_plans").all()).toEqual([]);
+    const body = String(sqlite.prepare("SELECT body FROM telegram_deliveries").get()?.body);
+    expect(body).toContain(scenario === "peer-relative" ? "peer median" : "3.0%");
+    if (scenario === "peer-relative") expect(body).toContain("lower confidence");
+    expect((await enqueueTelegramJob(db, spec)).created).toBe(false);
+  });
+
+  it("stages peak, reference and recovery prices that need adaptive USD precision", async () => {
+    const { sqlite, db } = fixture();
+    addDirectFollower(sqlite, "100");
+    sqlite.exec("UPDATE telegram_subscriptions SET stablecoin_id = 'vndc-jade-labs', depeg_worsening_bps_step = 250");
+    const coin = { stablecoinId: "vndc-jade-labs", symbol: "VNDC" };
+    const below = { ...coin, direction: "below" as const };
+    const scenarios = [
+      { events: { depegTriggered: [{ ...below, deviationBps: 500, price: 0.000038, pegReference: 0.00004 }] },
+        text: "$0.000038, 5.0% below $0.00004" },
+      { events: { depegWorsening: [{ ...below, previousDeviationBps: 120, currentDeviationBps: 500,
+        price: 0.0038, pegReference: 0.004 }] }, text: "5.0% below $0.004 ($0.0038)" },
+      { events: { depegResolved: [{ ...coin, peakDeviationBps: 500, durationMinutes: 15,
+        recoveryPrice: 0.00004 }] }, text: "is back on peg at $0.00004" },
+    ];
+    for (const { events, text } of scenarios) {
+      const spec = await buildTelegramAlertJobSpec({
+        events: { ...depegEvents(500), depegTriggered: [], depegIds: [coin.stablecoinId], ...events },
+        detectedAt: NOW, baselineDigestInput: "b",
+      });
+      await enqueueTelegramJob(db, spec);
+      expect(sqlite.prepare("SELECT job_id FROM telegram_jobs WHERE state = 'planning'").all()).toEqual([]);
+      expect(sqlite.prepare("SELECT job_id FROM telegram_reference_alert_plans").all()).toEqual([{ job_id: spec.jobId }]);
+      expect((await fanOutPlanningTelegramJobs(db, NOW)).deliveriesPlanned).toBe(1);
+      expect(sqlite.prepare("SELECT body FROM telegram_deliveries WHERE job_id = ?").get(spec.jobId)?.body).toContain(text);
+    }
+  });
+
   it("fails closed when preset membership cannot be resolved", async () => {
     const { sqlite, db } = fixture();
     addDirectFollower(sqlite, "100");

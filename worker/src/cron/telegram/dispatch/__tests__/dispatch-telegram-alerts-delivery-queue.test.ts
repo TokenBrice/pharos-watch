@@ -187,7 +187,7 @@ describe("dispatchTelegramAlerts", () => {
       noWorkRun: false,
     });
     // No DEWS rows were readable, so the three DEWS keys stay unwritten (R2).
-    expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM cache").get()).toEqual({ count: 3 });
+    expect(readCacheValue(harness.sqlite, "alert:depeg-pending-recoveries")).toBe("{}");
     expect(readCacheValue(harness.sqlite, "alert:dews-snapshot")).toBeNull();
     expect(readCacheValue(harness.sqlite, "alert:reserve-observed-snapshot")).not.toBeNull();
     expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_jobs").get()).toEqual({ count: 0 });

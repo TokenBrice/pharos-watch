@@ -37,7 +37,7 @@ function liveReadingFor(reason: ExclusionReason, row: MergedRow): string {
     case "active-depeg":
       return row.currentDeviationBps != null
         ? `${Math.round(row.currentDeviationBps)} bps deviation`
-        : "active depeg flag";
+        : row.currentDeviationUnavailableNotice ?? "active depeg flag";
     case "peg-score-floor":
       return row.pegScore != null
         ? `PegScore ${Math.round(row.pegScore)}`

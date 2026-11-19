@@ -112,6 +112,28 @@ describe("direct dependency exposure", () => {
 });
 
 describe("look-through dependency exposure", () => {
+  it("distinguishes an observed zero from an incomplete footprint with no known supply", () => {
+    const edges = [edge("root", "missing", "serial", null), edge("root", "observed", "serial", null)];
+    const unavailable = exposureFootprint(["root"], edges, () => null, opts);
+    expect(unavailable.direct).toMatchObject({ complete: false, hasKnownUsd: false });
+    expect(unavailable.indirect).toMatchObject({ complete: true, hasKnownUsd: false, overlapUpperBoundUsd: null });
+
+    const withZero = exposureFootprint(["root"], edges, id => id === "observed"
+      ? { usd: 0, asOf: null, basis: "market-cap-proxy" }
+      : null, opts);
+    expect(withZero.direct).toMatchObject({ complete: false, hasKnownUsd: true, knownUsd: 0 });
+    expect(withZero.indirect).toMatchObject({ complete: true, hasKnownUsd: true, overlapUpperBoundUsd: 0 });
+  });
+
+  it("retains an observed indirect zero when the direct supply is unavailable", () => {
+    const edges = [edge("root", "bridge", "serial", null), edge("bridge", "observed", "serial", null)];
+    const result = exposureFootprint(["root"], edges, id => id === "observed"
+      ? { usd: 0, asOf: null, basis: "publication-circulating" }
+      : null, opts);
+    expect(result.direct).toMatchObject({ complete: false, hasKnownUsd: false });
+    expect(result.indirect).toMatchObject({ complete: true, hasKnownUsd: true, knownUsd: 0, overlapUpperBoundUsd: 0 });
+  });
+
   const capturedEdges = snapshot.edges as ReportCardsV9DependencyEdge[];
   const capturedSupply: SupplyOf = id => {
     const usd = (snapshot.supplyUsdById as Record<string, number>)[id];
@@ -176,6 +198,51 @@ describe("look-through dependency exposure", () => {
     expect(descendant.indirect.complete).toBe(false);
   });
 
+  it.each([
+    ["basket", 1, 40, true], ["serial", null, 0, false],
+  ] as const)("admits direct basket dollars only when an unknown indirect %s leaves them independent", (indirectKind, bridgeWeight, directUsd, complete) => {
+    const edges = [edge("root", "bridge", "basket", bridgeWeight), edge("root", "coin", "basket", 0.4),
+      edge("bridge", "coin", indirectKind, null)];
+    const supplyOf: SupplyOf = id => id === "bridge" ? { usd: 0, asOf: null, basis: "publication-circulating" } : supply(id);
+    const result = exposureFootprint(["root"], edges, supplyOf, opts);
+    expect(result.rows.find(row => row.id === "coin")).toMatchObject({ share: null, exposureUsd: null });
+    expect(result.direct).toMatchObject({ knownUsd: directUsd, complete });
+    expect(result.indirect).toMatchObject({ knownUsd: 0, complete: false });
+  });
+
+  it("retains parent integrity on an independent basket subtotal", () => {
+    const result = exposureFootprint(["root", "other"], [
+      edge("root", "bridge", "basket", 0.7), edge("other", "bridge", "basket", 0.6),
+      edge("root", "coin", "basket", null), edge("bridge", "coin", "basket", 0.4),
+    ], supply, opts);
+    expect(result.rows.find(row => row.id === "coin")).toMatchObject({ share: null, exposureUsd: null });
+    expect(result.indirect.knownUsd).toBeCloseTo(52);
+    expect(result.indirect).toMatchObject({ hasKnownUsd: true, integrityFlag: true, complete: false });
+  });
+
+  it.each([[10, 10], [0, 0], [null, 0]])("bounds fan-out overlap by the upstream's admitted USD (%s)", (parentUsd, overlapUsd) => {
+    const edges = [edge("root", "parent", "serial", null), edge("parent", "child", "serial", null),
+      edge("parent", "sibling", "serial", null)];
+    const supplyOf: SupplyOf = id => id === "parent"
+      ? parentUsd === null ? null : { usd: parentUsd, asOf: null, basis: "publication-circulating" }
+      : supply(id);
+    const result = exposureFootprint(["root"], edges, supplyOf, opts);
+    expect(result.direct.hasKnownUsd).toBe(parentUsd !== null);
+    expect(result.indirect).toMatchObject({ knownUsd: 200, overlapUsd });
+  });
+
+  it.each(["a", "z"])("withholds overlap for tied serial parents when %s has the smaller supply", (small) => {
+    const edges = [edge("root", "a", "serial", null), edge("root", "z", "serial", null),
+      edge("a", "child", "serial", null), edge("z", "child", "serial", null)];
+    const supplyOf: SupplyOf = id => id === small ? { usd: 1, asOf: null, basis: "market-cap-proxy" } : supply(id);
+    const result = exposureFootprint(["root"], edges, supplyOf, opts);
+    expect(result.direct.knownUsd).toBe(101);
+    expect(result.indirect).toMatchObject({
+      knownUsd: 100, overlapUsd: 0, overlapUpperBoundUsd: null,
+      overlapUnavailableReason: "serial-parent-attribution-ambiguous",
+    });
+  });
+
   it("terminates cycles, marks only their shares unknown, and propagates uncertainty", () => {
     const edges = [edge("root", "a", "serial", null), edge("a", "b", "serial", null),
       edge("b", "a", "serial", null), edge("b", "descendant", "serial", null)];
@@ -225,6 +292,37 @@ describe("look-through dependency exposure", () => {
     expect(result.indirect.overlapUsd).toBe(30);
     const sameUpstream = [edge("root", "dai", "basket", 0.4), edge("root", "usds", "basket", 0.4)];
     expect(exposureFootprint(["root"], sameUpstream, supply, sharedOpts).direct.knownUsd).toBe(30);
+    const nested = exposureFootprint(["root"], [...sameUpstream, edge("dai", "wrapper", "serial", null)], supply, sharedOpts);
+    expect(nested.indirect).toMatchObject({ knownUsd: 40, overlapUsd: 30, overlapUpperBoundUsd: 30 });
+    const siblings = exposureFootprint(["root"], [
+      ...sameUpstream, edge("dai", "wrapper-a", "serial", null), edge("usds", "wrapper-b", "serial", null),
+    ], supply, sharedOpts);
+    expect(siblings.indirect).toMatchObject({ knownUsd: 80, overlapUpperBoundUsd: 30 });
+    const unmatched = exposureFootprint(["root"], [...sameUpstream, edge("dai", "wrapper", "basket", null)], supply, sharedOpts);
+    expect(unmatched.indirect).toMatchObject({
+      overlapUpperBoundUsd: null, overlapUnavailableReason: "shared-book-claims-unmatched",
+    });
+  });
+
+  it.each([
+    [null, "usds", null, "shared-book-claims-unmatched"],
+    [0, "usds", 0, undefined],
+    [null, "dai", 30, undefined],
+  ] as const)("bounds shared-book overlap with USDS supply %s and wrapper parent %s", (memberUsd, parent, overlapUpperBoundUsd, reason) => {
+    const sharedOpts: ExposureOptions = { ...opts, sharedBooks: {
+      bookIdOf: id => id === "dai" || id === "usds" ? "sky" : null,
+      measuredHoldingUsd: (_book, upstream) => upstream === "root" ? 30 : null,
+    } };
+    const supplyOf: SupplyOf = id => id === "usds"
+      ? memberUsd === null ? null : { usd: memberUsd, asOf: null, basis: "market-cap-proxy" }
+      : supply(id);
+    const result = exposureFootprint(["root"], [
+      edge("root", "dai", "basket", 0.4), edge("root", "usds", "basket", 0.4),
+      edge(parent, "wrapper", "serial", null),
+    ], supplyOf, sharedOpts);
+    expect(result.direct.knownUsd).toBe(30);
+    expect(result.indirect).toMatchObject({ knownUsd: 40, overlapUpperBoundUsd });
+    expect(result.indirect.overlapUnavailableReason).toBe(reason);
   });
 });
 

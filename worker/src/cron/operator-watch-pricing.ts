@@ -5,7 +5,13 @@ import { assessBluechipRating } from "@shared/lib/bluechip-freshness";
 import { formatIsoDate } from "@shared/lib/format";
 import type { BluechipRatingsMap } from "@shared/types/bluechip";
 import type { CacheStatus } from "@shared/types/status";
-import { getCache } from "../lib/db-cache";
+import { HOUR_SECONDS } from "@shared/lib/time-constants";
+import { getReferenceSessionState } from "@shared/lib/reference-market-hours";
+import { getCache, getCaches } from "../lib/db-cache";
+import { cronEventCacheKey } from "../lib/cron-logger";
+import { loadFxAdmissionCoverage } from "../lib/fx-admission-coverage";
+import { OXR_LAST_SUCCESS_KEY, REALTIME_FX_CURRENCY_TO_PEG } from "../lib/fx-config";
+import { parseJsonObject } from "../lib/json-parse";
 import { readBluechipRatingsCache } from "../lib/bluechip-cache";
 import { includeActiveTrackedIds } from "./shared/exclude-frozen";
 import type { OperatorWatchCondition } from "./operator-watch-types";
@@ -13,10 +19,8 @@ import type { OperatorWatchCondition } from "./operator-watch-types";
 /**
  * Pricing and FX operator conditions for the freshness sentinel.
  *
- * These read state the sentinel already built (`buildCacheStatuses`) plus one
- * bounded `bluechip-ratings` cache row. Producer absence stays with the existing
- * `producer-stale` condition: a missing cache row or clock is `unknown`, never a
- * coverage failure, so a failed read cannot page as if the producer failed (R2).
+ * FX alerts use committed producer events and the admission coverage of the
+ * served stablecoins generation. An unreadable coverage row remains unknown.
  */
 
 const BLUECHIP_COVERAGE_LABEL_LIMIT = 5;
@@ -54,6 +58,55 @@ function fxConditions(fx: CachedStatus | undefined): OperatorWatchCondition[] {
       unknown,
     },
   ];
+}
+
+const publicationAlerts = ["fx-regime-shift-confirmed", "fx-reference-regression"] as const;
+const quotaAlert = "openexchange-rates-quota-limited";
+
+async function fxEvidenceConditions(db: D1Database, now: number): Promise<OperatorWatchCondition[]> {
+  const eventKey = (type: string) => cronEventCacheKey("sync-fx-rates", type);
+  const rows = await getCaches(db, [OXR_LAST_SUCCESS_KEY, eventKey(quotaAlert), ...publicationAlerts.map(eventKey)]);
+  const metadata = (type: string) => {
+    const event = parseJsonObject(rows.get(eventKey(type))?.value);
+    return event?.job === "sync-fx-rates" && event.eventType === type &&
+      event.metadata && typeof event.metadata === "object" ? event.metadata as Record<string, unknown> : null;
+  };
+  const quota = metadata(quotaAlert);
+  const attemptedAt = quota?.attemptedAt;
+  const restricted = (quota?.statusCode === 429 || quota?.statusCode === 403) &&
+    typeof attemptedAt === "number" && Number.isSafeInteger(attemptedAt) && attemptedAt > 0 && attemptedAt <= now;
+  const successAt = Number(rows.get(OXR_LAST_SUCCESS_KEY)?.value);
+  const recovered = Number.isSafeInteger(successAt) && successAt > 0 && successAt <= now;
+  const conditions: OperatorWatchCondition[] = [{
+    section: "fx-rates", id: quotaAlert, active: restricted && !(recovered && successAt > attemptedAt),
+    unknown: !restricted,
+    label: `Open Exchange Rates HTTP ${quota?.statusCode} access restriction (${attemptedAt})`,
+  }];
+  for (const type of publicationAlerts) {
+    const event = metadata(type);
+    const generation = event?.publishedGeneration;
+    if (typeof generation !== "number" || !Number.isSafeInteger(generation) || generation <= 0 ||
+        generation > now || generation !== event?.generation) continue;
+    conditions.push({
+      section: "fx-rates", id: `${type}:${generation}`, active: true,
+      label: type === "fx-reference-regression"
+        ? `T1 FX reference regression for ${event.pegKey} in generation ${generation} (rollback decision for both Workers)`
+        : `Confirmed FX regime change for ${event.pegKey} in generation ${generation}`,
+    });
+  }
+  const coverage = await loadFxAdmissionCoverage(db, now).catch(() => null);
+  const session = getReferenceSessionState("fx", now);
+  for (const currency of Object.keys(REALTIME_FX_CURRENCY_TO_PEG)) {
+    const row = coverage?.currencies[currency];
+    const measured = row != null && row.decisionAt <= now && row.sessionOpenedAt === session.sessionOpenedAtSec;
+    const age = measured && row.missingSince != null ? row.decisionAt - row.missingSince : 0;
+    conditions.push({
+      section: "fx-rates", id: `reference-admission-outage:${currency}`,
+      active: session.open && measured && age >= 2 * HOUR_SECONDS, unknown: session.open && !measured,
+      label: `${currency} without an admitted reference for ${Math.floor(age / 60)} open-session minutes`,
+    });
+  }
+  return conditions;
 }
 
 function dailyLaneConditions(input: PricingOperatorWatchInput): OperatorWatchCondition[] {
@@ -147,7 +200,8 @@ export function pricingOperatorRuleIds(conditions: readonly OperatorWatchConditi
   for (const condition of conditions) {
     if (!condition.active || condition.unknown) continue;
     if (condition.section === "fx-rates") {
-      fired.add(condition.id === "source-stale" ? "fx-source-stale" : "fx-cached-fallback");
+      const [rule] = condition.id.split(":");
+      fired.add(rule === "source-stale" || rule === "cached-fallback" ? `fx-${rule}` : rule);
     } else if (condition.section === "daily-lane") {
       fired.add(condition.id.endsWith("-coverage") ? "bluechip-coverage" : "daily-lane-completion");
     }
@@ -162,6 +216,7 @@ export async function buildPricingOperatorConditions(
 ): Promise<OperatorWatchCondition[]> {
   return [
     ...fxConditions(input.caches[CACHE_FRESHNESS_LANES.fxRates.cacheKey]),
+    ...await fxEvidenceConditions(db, input.nowSec),
     ...dailyLaneConditions(input),
     await bluechipCoverageCondition(db, input.nowSec, signal),
   ];

@@ -88,14 +88,18 @@ function dedupeCandidates(candidates: ResolvedYieldCandidate[]): {
     }
 
     droppedCount += 1;
-    // B27: the freshest observation wins and TVL only breaks an exact tie, so a
-    // transient APY spike no longer displaces the current value.
+    const candidateObservedAt = candidate.yield.sourceObservedAt;
+    const existingObservedAt = existing.yield.sourceObservedAt;
+    // Retrieval can order two clockless deliveries without dating either APY.
     const recency = compareObservationRecency(
-      candidate.yield.sourceObservedAt,
-      existing.yield.sourceObservedAt,
+      candidateObservedAt,
+      existingObservedAt,
     );
-    const keepCandidate = recency > 0
-      || (recency === 0 && (candidate.yield.sourceTvlUsd ?? 0) > (existing.yield.sourceTvlUsd ?? 0));
+    const deliveryRecency = !Number.isFinite(candidateObservedAt) && !Number.isFinite(existingObservedAt)
+      ? compareObservationRecency(candidate.yield.sourceFetchedAt, existing.yield.sourceFetchedAt)
+      : recency;
+    const keepCandidate = deliveryRecency > 0
+      || (deliveryRecency === 0 && (candidate.yield.sourceTvlUsd ?? 0) > (existing.yield.sourceTvlUsd ?? 0));
     const kept = keepCandidate ? candidate : existing;
     const discarded = keepCandidate ? existing : candidate;
     if (keepCandidate) byDedupKey.set(dedupKey, candidate);
@@ -141,8 +145,8 @@ async function loadSupplementalCatchUpEvidence(
     const parsed = parseYieldSupplementalSourcesCache(row.value, row.updatedAt, nowSec);
     if (!parsed || parsed.updatedAt !== row.updatedAt || parsed.ageSeconds >= maxAgeSec
       || parsed.sourceCount !== parsed.candidates.length) continue;
-    const payload = JSON.parse(row.value) as { source?: unknown; updatedAt?: unknown; sourceCount?: unknown; data?: unknown };
-    if (payload.source !== "sync-yield-supplemental" || payload.updatedAt !== row.updatedAt
+    const payload = JSON.parse(row.value) as { source?: unknown; updatedAt?: unknown; updatedAtV2?: unknown; sourceCount?: unknown; data?: unknown };
+    if (payload.source !== "sync-yield-supplemental" || (payload.updatedAtV2 ?? payload.updatedAt) !== row.updatedAt
       || payload.sourceCount !== parsed.candidates.length || !Array.isArray(payload.data)
       || payload.data.length !== parsed.candidates.length) continue;
     provenFamilies.push({ family, updatedAt: parsed.updatedAt, snapshotHash: supplementalFamilySnapshotHash(row) });

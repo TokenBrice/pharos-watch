@@ -1,6 +1,11 @@
+import { toErrorMessage } from "@shared/lib/error-utils";
+import { isRecord } from "@shared/lib/type-guards";
+import { readDexPriceLineage, type DexPriceLineage } from "./price-lineage";
 import { loadLegacyDexPoolChallengers } from "./challenger-legacy";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
+import { isFreshDexPoolObservation } from "../../lib/depeg-trust-policy";
 import { recordRuntimeFallbackUsage } from "../../lib/runtime-fallback-telemetry";
+import { CHALLENGER_LINEAGE_PRICE } from "./challenger-types";
 import type {
   DexPriceChallengerLoadRow,
   DexPriceChallengerLoadDiagnostics,
@@ -14,6 +19,30 @@ export type {
 };
 
 type LegacyDexPoolChallengerLoadResult = Awaited<ReturnType<typeof loadLegacyDexPoolChallengers>>;
+
+function isChallengerObservationFresh(row: DexPriceChallengerLoadRow, nowSec: number): boolean {
+  return (row.priceObservedAt == null && row.upstreamKeys === undefined) ||
+    isFreshDexPoolObservation(row.priceObservedAt, nowSec);
+}
+
+function readStoredChallengerLineage(json: string | null | undefined): DexPriceLineage & { priceUsd?: number } {
+  if (json == null) return {};
+  try {
+    const receipt: unknown = JSON.parse(json);
+    if (isRecord(receipt)) {
+      if (Object.keys(receipt).length === 0) return {};
+      if ("pricePoolKeys" in receipt && "upstreamKeys" in receipt) {
+        const lineage = readDexPriceLineage(receipt);
+        return {
+          ...lineage,
+          ...(lineage.upstreamKeys?.length && lineage.pricePoolKeys?.length &&
+            typeof receipt.priceUsd === "number" && { priceUsd: receipt.priceUsd }),
+        };
+      }
+    }
+  } catch { /* Malformed receipts cannot establish independence. */ }
+  return { pricePoolKeys: [], upstreamKeys: [] };
+}
 
 async function hasLegacyCandidatesWithoutSnapshots(
   db: D1Database,
@@ -81,11 +110,11 @@ export async function loadPublishedDexPoolChallengers(
 
   // Read the visibility pointer and its exact generation in one SQLite snapshot.
   // LEFT JOIN preserves authoritative empty pointers during publication cleanup.
-  const joined = await db.prepare(
+  const readSnapshot = async (storeLineage: boolean) => db.prepare(
     `SELECT heads.stablecoin_id, publication.snapshot_at, publication.published_at,
             heads.has_rows, heads.source_coverage_complete,
             payload.pool_id, payload.chain, payload.protocol, payload.source_family,
-            payload.price_usd, payload.tvl_usd, payload.price_observed_at, 2 AS storage_version
+            payload.price_usd, payload.tvl_usd, payload.price_observed_at, ${storeLineage ? "payload.price_lineage_json" : "NULL"} AS price_lineage_json, 2 AS storage_version
        FROM dex_price_challenger_heads_v2 heads
        JOIN dex_price_challenger_publications_v2 publication
          ON publication.publication_id = heads.publication_id AND publication.sealed = 1
@@ -97,7 +126,7 @@ export async function loadPublishedDexPoolChallengers(
      SELECT snapshots.stablecoin_id, snapshots.snapshot_at, snapshots.published_at,
             snapshots.has_rows, snapshots.source_coverage_complete,
             payload.pool_id, payload.chain, payload.protocol, payload.source_family,
-            payload.price_usd, payload.tvl_usd, NULL AS price_observed_at, 1 AS storage_version
+            payload.price_usd, payload.tvl_usd, NULL AS price_observed_at, NULL AS price_lineage_json, 1 AS storage_version
        FROM dex_price_challenger_snapshots snapshots
        LEFT JOIN dex_price_challengers payload
          ON payload.stablecoin_id = snapshots.stablecoin_id
@@ -115,11 +144,16 @@ export async function loadPublishedDexPoolChallengers(
     chain: string;
     protocol: string;
     source_family: string;
-    price_usd: number;
+    price_usd: number | typeof CHALLENGER_LINEAGE_PRICE;
     tvl_usd: number;
     price_observed_at: number | null;
+    price_lineage_json?: string | null;
     storage_version: number;
   }>();
+  const joined = await readSnapshot(true).catch((error: unknown) => {
+    if (!/no such column: (?:payload\.)?price_lineage_json\b/i.test(toErrorMessage(error))) throw error;
+    return readSnapshot(false);
+  });
   const snapshotByCoin = new Map<string, (NonNullable<typeof joined.results>)[number]>();
   const rowsByCoinAndSnapshot = new Map<string, DexPriceChallengerLoadRow[]>();
   for (const row of joined.results ?? []) {
@@ -127,22 +161,33 @@ export async function loadPublishedDexPoolChallengers(
     if (row.pool_id == null) continue;
     const key = `${row.stablecoin_id}:${row.snapshot_at}`;
     const existing = rowsByCoinAndSnapshot.get(key) ?? [];
+    const { priceUsd: lineagePrice, ...lineage } = readStoredChallengerLineage(row.price_lineage_json);
+    const priceUsd = row.price_usd === CHALLENGER_LINEAGE_PRICE ? lineagePrice : row.price_usd;
+    // Preserve authoritative membership even when the only receipt is unusable.
+    rowsByCoinAndSnapshot.set(key, existing);
+    if (typeof priceUsd !== "number") continue;
     existing.push({
+      ...lineage,
       stablecoinId: row.stablecoin_id,
       poolId: row.pool_id,
       chain: row.chain,
       protocol: row.protocol,
       sourceFamily: row.source_family,
-      priceUsd: row.price_usd,
+      priceUsd,
       tvlUsd: row.tvl_usd,
       snapshotAt: row.snapshot_at,
       publishedAt: row.published_at,
       ...(row.storage_version === 2 ? { priceObservedAt: row.price_observed_at } : {}),
     });
-    rowsByCoinAndSnapshot.set(key, existing);
   }
 
+  const expiredObservationSnapshots = new Map<string, number>();
   for (const snapshot of snapshotByCoin.values()) {
+    const key = `${snapshot.stablecoin_id}:${snapshot.snapshot_at}`;
+    const rows = rowsByCoinAndSnapshot.get(key) ?? [];
+    const freshRows = rows.filter((row) => isChallengerObservationFresh(row, nowSec));
+    if (freshRows.length < rows.length) expiredObservationSnapshots.set(snapshot.stablecoin_id, snapshot.snapshot_at);
+
     const ageSec = nowSec - snapshot.snapshot_at;
     if (ageSec > maxAgeSec) {
       staleSnapshotCoins.push(snapshot.stablecoin_id);
@@ -156,9 +201,6 @@ export async function loadPublishedDexPoolChallengers(
       continue;
     }
 
-    const key = `${snapshot.stablecoin_id}:${snapshot.snapshot_at}`;
-    const rows = rowsByCoinAndSnapshot.get(key) ?? [];
-
     if (snapshot.has_rows === 0) {
       challengersByStablecoin.set(snapshot.stablecoin_id, []);
       publishedCoins.add(snapshot.stablecoin_id);
@@ -166,10 +208,10 @@ export async function loadPublishedDexPoolChallengers(
       continue;
     }
 
-    if (rows.length > 0) {
+    if (rowsByCoinAndSnapshot.has(key)) {
       challengersByStablecoin.set(
         snapshot.stablecoin_id,
-        rows
+        freshRows
           .filter((row) => Number.isFinite(row.priceUsd) && row.priceUsd > 0 && Number.isFinite(row.tvlUsd) && row.tvlUsd >= minPoolTvlUsd)
           .sort((a, b) => b.tvlUsd - a.tvlUsd || a.poolId.localeCompare(b.poolId)),
       );
@@ -188,8 +230,12 @@ export async function loadPublishedDexPoolChallengers(
     for (const [coinId, legacyRows] of loadedLegacy) {
       if (publishedCoins.has(coinId)) continue;
       if (!legacyFallbackCoins.has(coinId) && snapshotByCoin.has(coinId)) continue;
-      if (legacyRows && legacyRows.length > 0) {
-        challengersByStablecoin.set(coinId, legacyRows);
+      const expiredSnapshot = expiredObservationSnapshots.get(coinId);
+      const freshLegacyRows = legacyRows.filter((row) =>
+        isChallengerObservationFresh(row, nowSec) &&
+        (row.priceObservedAt != null || expiredSnapshot === undefined || row.snapshotAt > expiredSnapshot));
+      if (freshLegacyRows.length > 0) {
+        challengersByStablecoin.set(coinId, freshLegacyRows);
         legacyFallbackCoins.add(coinId);
         legacyUsedCoins.add(coinId);
       }

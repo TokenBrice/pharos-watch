@@ -1,5 +1,6 @@
-import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { WORKER_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { filterCoreAggregateStablecoins } from "@shared/lib/stablecoins/aggregate-universe";
+import { isActiveStablecoinMeta, isFrozenStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { isCommodityPeg } from "@shared/lib/filter-tags";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { NonUsdShareResponseSchema, type NonUsdSharePoint } from "@shared/types/supply";
@@ -13,23 +14,17 @@ import { NON_USD_SHARE_MAX_DAYS } from "@shared/lib/api-endpoints/queries";
 
 export const NON_USD_SHARE_HISTORY_KEY = "non-usd-share:daily:v1";
 
-const CORE_AGGREGATE_ACTIVE_STABLECOINS = filterCoreAggregateStablecoins(WORKER_ACTIVE_STABLECOINS);
-
-/** IDs of commodity-pegged stablecoins (gold, silver). */
-const CORE_IDS = CORE_AGGREGATE_ACTIVE_STABLECOINS.map((c) => c.id);
-
-const COMMODITY_IDS = CORE_AGGREGATE_ACTIVE_STABLECOINS.filter((c) => isCommodityPeg(c.flags.pegCurrency)).map(
-  (c) => c.id,
-);
-
-/** IDs of fiat non-USD stablecoins (EUR, GBP, BRL, VAR, etc.). */
-const FIAT_NON_USD_IDS = CORE_AGGREGATE_ACTIVE_STABLECOINS.filter(
-  (c) => c.flags.pegCurrency !== "USD" && !isCommodityPeg(c.flags.pegCurrency),
-).map((c) => c.id);
-
-const COMMODITY_ID_SET = new Set(COMMODITY_IDS);
-const FIAT_NON_USD_ID_SET = new Set(FIAT_NON_USD_IDS);
-const COHORT_IDENTITY = JSON.stringify([CORE_IDS, COMMODITY_IDS, FIAT_NON_USD_IDS]);
+// First observed history supplies the lower bound. Frozen rows contribute only before their lifecycle cutoff.
+const CORE_MEMBERS = new Map(filterCoreAggregateStablecoins(WORKER_TRACKED_STABLECOINS).flatMap((coin) => {
+  const inactiveFrom = isFrozenStablecoinMeta(coin) && coin.frozenAt != null
+    ? Date.parse(coin.frozenAt) / 1000
+    : null;
+  if (!isActiveStablecoinMeta(coin) && (inactiveFrom == null || !Number.isFinite(inactiveFrom))) return [];
+  const pegCurrency = coin.flags.pegCurrency;
+  const bucket = isCommodityPeg(pegCurrency) ? "commodity" : pegCurrency === "USD" ? "usd" : "fiat-non-usd";
+  return [[coin.id, { bucket, inactiveFrom }] as const];
+}));
+const COHORT_IDENTITY = JSON.stringify(Object.fromEntries(CORE_MEMBERS));
 
 // A day is published only when the core assets observed before it but missing
 // on it (valued at their previous row) leave its total and each non-USD cohort
@@ -71,28 +66,23 @@ function prepareRows(
   latestSnapshotBinds: readonly unknown[],
 ): D1PreparedStatement {
   return db.prepare(
-      `WITH
-         core_ids(id) AS (SELECT value FROM json_each(?)),
-         commodity_ids(id) AS (SELECT value FROM json_each(?)),
-         fiat_non_usd_ids(id) AS (SELECT value FROM json_each(?))
+      `WITH core_members AS (
+         SELECT key AS id, value ->> '$.bucket' AS bucket, value ->> '$.inactiveFrom' AS inactive_from
+         FROM json_each(?)
+       )
        SELECT
          snapshot_date,
          ROUND(SUM(circulating_usd), 2) AS total,
-         ROUND(SUM(CASE WHEN stablecoin_id IN (SELECT id FROM commodity_ids) THEN circulating_usd ELSE 0 END), 2) AS commodity,
-         ROUND(SUM(CASE WHEN stablecoin_id IN (SELECT id FROM fiat_non_usd_ids) THEN circulating_usd ELSE 0 END), 2) AS fiat_non_usd
+         ROUND(SUM(CASE WHEN bucket = 'commodity' THEN circulating_usd ELSE 0 END), 2) AS commodity,
+         ROUND(SUM(CASE WHEN bucket = 'fiat-non-usd' THEN circulating_usd ELSE 0 END), 2) AS fiat_non_usd
        FROM supply_history
-       WHERE stablecoin_id IN (SELECT id FROM core_ids)
-         AND snapshot_date >= ?${latestSnapshotFilter}
+       JOIN core_members ON stablecoin_id = core_members.id
+       WHERE snapshot_date >= ?${latestSnapshotFilter}
+         AND (inactive_from IS NULL OR snapshot_date < inactive_from)
        GROUP BY snapshot_date
        ORDER BY snapshot_date ASC`,
     )
-    .bind(
-      JSON.stringify(CORE_IDS),
-      JSON.stringify(COMMODITY_IDS),
-      JSON.stringify(FIAT_NON_USD_IDS),
-      cutoff,
-      ...latestSnapshotBinds,
-    );
+    .bind(COHORT_IDENTITY, cutoff, ...latestSnapshotBinds);
 }
 
 /** Per-coin gaps: consecutive rows of one asset more than a day apart, and each
@@ -105,19 +95,24 @@ function prepareCoinHistoryGaps(
 ): D1PreparedStatement {
   return db.prepare(
       `WITH
-         core_ids(id) AS (SELECT value FROM json_each(?)),
+         core_members AS (
+           SELECT key AS id, value ->> '$.inactiveFrom' AS inactive_from
+           FROM json_each(?)
+         ),
          bounded_history AS (
            SELECT stablecoin_id, snapshot_date, circulating_usd
            FROM supply_history
-           WHERE stablecoin_id IN (SELECT id FROM core_ids)
-             AND snapshot_date >= ?${latestSnapshotFilter}
+           JOIN core_members ON stablecoin_id = core_members.id
+           WHERE snapshot_date >= ?${latestSnapshotFilter}
+             AND (inactive_from IS NULL OR snapshot_date < inactive_from)
            UNION ALL
            SELECT history.stablecoin_id, history.snapshot_date, history.circulating_usd
-           FROM core_ids
-           JOIN supply_history history ON history.stablecoin_id = core_ids.id
+           FROM core_members
+           JOIN supply_history history ON history.stablecoin_id = core_members.id
              AND history.snapshot_date = (
                SELECT MAX(snapshot_date) FROM supply_history
-               WHERE stablecoin_id = core_ids.id AND snapshot_date < ?${latestSnapshotFilter}
+               WHERE stablecoin_id = core_members.id AND snapshot_date < ?${latestSnapshotFilter}
+                 AND (inactive_from IS NULL OR snapshot_date < inactive_from)
              )
          ),
          coin_history AS (
@@ -133,7 +128,7 @@ function prepareCoinHistoryGaps(
        FROM coin_history
        WHERE next_date IS NULL OR (next_date >= ? AND next_date - snapshot_date > ${DAY_SECONDS})`,
     )
-    .bind(JSON.stringify(CORE_IDS), cutoff, ...latestSnapshotBinds, cutoff, ...latestSnapshotBinds, cutoff);
+    .bind(COHORT_IDENTITY, cutoff, ...latestSnapshotBinds, cutoff, ...latestSnapshotBinds, cutoff);
 }
 
 /**
@@ -154,13 +149,14 @@ function sumUnobservedValueByDate(
       if (rows[mid]!.snapshot_date <= gap.previous_date) low = mid + 1;
       else high = mid;
     }
-    const nextDate = gap.next_date ?? Number.POSITIVE_INFINITY;
+    const member = CORE_MEMBERS.get(gap.stablecoin_id);
+    const nextDate = Math.min(gap.next_date ?? Number.POSITIVE_INFINITY, member?.inactiveFrom ?? Number.POSITIVE_INFINITY);
     for (let index = low; index < rows.length && rows[index]!.snapshot_date < nextDate; index++) {
       const date = rows[index]!.snapshot_date;
       const unobserved = unobservedByDate.get(date) ?? { total: 0, commodity: 0, fiatNonUsd: 0 };
       unobserved.total += gap.previous_usd;
-      if (COMMODITY_ID_SET.has(gap.stablecoin_id)) unobserved.commodity += gap.previous_usd;
-      else if (FIAT_NON_USD_ID_SET.has(gap.stablecoin_id)) unobserved.fiatNonUsd += gap.previous_usd;
+      if (member?.bucket === "commodity") unobserved.commodity += gap.previous_usd;
+      else if (member?.bucket === "fiat-non-usd") unobserved.fiatNonUsd += gap.previous_usd;
       unobservedByDate.set(date, unobserved);
     }
   }

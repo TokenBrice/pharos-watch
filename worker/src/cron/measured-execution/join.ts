@@ -13,9 +13,11 @@ import {
   toDexMeasuredExecutionPublicProfile,
   validateDexMeasuredExecutionProfile,
   type DexMeasuredExecutionProfile,
+  type DexMeasuredExecutionTarget,
   type DexMeasuredExecutionValidationReason,
 } from "@shared/types/measured-execution";
 import type { DexExecutionCapabilityGate } from "@shared/types/dex-execution";
+import { DEX_MEASURED_CLOSURE_VALUATION_UNAVAILABLE } from "./valuation-admission";
 import type { PoolEntry } from "../dex-liquidity/types";
 import {
   CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID,
@@ -336,6 +338,7 @@ export function buildDexMeasuredExecutionRetainedRoutePools(input: {
   poolsByStablecoin: ReadonlyMap<string, readonly PoolEntry[]>;
   evidence: LoadedDexMeasuredQuoteEvidence | null;
   nowSec: number;
+  rejectsQuotedTarget?: (target: DexMeasuredExecutionTarget, history?: LoadedDexMeasuredQuote["observationHistory"]) => boolean;
 }): DexMeasuredExecutionRetainedRoutePools {
   const retained = new Map<string, PoolEntry[]>();
   if (!input.evidence) return retained;
@@ -421,7 +424,8 @@ export function buildDexMeasuredExecutionRetainedRoutePools(input: {
     const stablecoinId = targets[0]!.stablecoinId;
     const physicalPoolKey =
       `${stablecoinId}:${profile.chain.toLowerCase()}:${canonicalExitRouteScopedId(profile.chain, profile.poolId)}`;
-    if (currentPoolKeys.has(physicalPoolKey) || retainedPoolKeys.has(physicalPoolKey)) continue;
+    if (currentPoolKeys.has(physicalPoolKey) || retainedPoolKeys.has(physicalPoolKey) ||
+      packet.some(({ quote }) => input.rejectsQuotedTarget?.(quote.quotedTarget, quote.observationHistory))) continue;
     retainedPoolKeys.add(physicalPoolKey);
     const pools = retained.get(stablecoinId) ?? [];
     pools.push({
@@ -502,7 +506,8 @@ export function buildDexMeasuredExecutionRetainedRoutePools(input: {
 
     const physicalPoolKey =
       `${target.stablecoinId}:${profile.chain.toLowerCase()}:${canonicalExitRouteScopedId(profile.chain, profile.poolId)}`;
-    if (currentPoolKeys.has(physicalPoolKey) || retainedPoolKeys.has(physicalPoolKey)) continue;
+    if (currentPoolKeys.has(physicalPoolKey) || retainedPoolKeys.has(physicalPoolKey) ||
+      input.rejectsQuotedTarget?.(target, quote.observationHistory)) continue;
     retainedPoolKeys.add(physicalPoolKey);
     const pools = retained.get(target.stablecoinId) ?? [];
     pools.push({
@@ -549,6 +554,7 @@ export function joinDexMeasuredExecutionEvidence(input: {
   poolsByStablecoin: Map<string, PoolEntry[]>;
   evidence: LoadedDexMeasuredQuoteEvidence | null;
   nowSec: number;
+  rejectsQuotedTarget?: (target: DexMeasuredExecutionTarget, history?: LoadedDexMeasuredQuote["observationHistory"]) => boolean;
 }): DexMeasuredExecutionJoinDiagnostics {
   const diagnostics: DexMeasuredExecutionJoinDiagnostics = {
     targetCount: 0,
@@ -609,6 +615,10 @@ export function joinDexMeasuredExecutionEvidence(input: {
         }));
         if (packet.some(({ quote }) => !quote)) {
           failPacket("quote-missing", "atomic-direction-missing");
+          continue;
+        }
+        if (packet.some(({ quote }) => input.rejectsQuotedTarget?.(quote!.quotedTarget, quote!.observationHistory))) {
+          failPacket("invalid-observation", DEX_MEASURED_CLOSURE_VALUATION_UNAVAILABLE);
           continue;
         }
         for (const entry of packet) {
@@ -704,6 +714,10 @@ export function joinDexMeasuredExecutionEvidence(input: {
       const quote = input.evidence.byTargetId.get(target.targetId);
       if (!quote) {
         fail("quote-missing");
+        continue;
+      }
+      if (input.rejectsQuotedTarget?.(quote.quotedTarget, quote.observationHistory)) {
+        fail("invalid-observation", DEX_MEASURED_CLOSURE_VALUATION_UNAVAILABLE);
         continue;
       }
       const profile = materializeDexMeasuredQuoteProfile(quote);

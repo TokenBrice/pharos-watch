@@ -1,4 +1,23 @@
-import type { SupplyRestoreMode } from "../types/supply";
+import type { StablecoinData, SupplyRestoreMode } from "../types/supply";
+import { bucketUnixSecondsToUtcDay } from "./time-buckets";
+
+export type SupplyChangeBaselines = NonNullable<StablecoinData["supplyChangeBaselines"]>;
+
+/** A directly reported USD cap carries its stock clock. A separate valuation must belong to that UTC date. */
+export function hasDatedUsdValuation(
+  supplySource: string | null | undefined,
+  stockAt: number,
+  valuationPrice: number | null | undefined,
+  valuationAt: number | null | undefined,
+  asOf: number,
+): boolean {
+  if (valuationPrice == null && valuationAt == null) {
+    return supplySource === "defillama" || supplySource === "coingecko" || supplySource === "coingecko-fallback";
+  }
+  return valuationPrice != null && Number.isFinite(valuationPrice) && valuationPrice > 0 &&
+    valuationAt != null && Number.isSafeInteger(valuationAt) && valuationAt > 0 && valuationAt <= asOf &&
+    bucketUnixSecondsToUtcDay(valuationAt) === bucketUnixSecondsToUtcDay(stockAt);
+}
 
 /**
  * Carry-forward ceiling for last-known-good supplemental supply. Restores
@@ -88,4 +107,45 @@ export function getPrevWeekRawOrNull(c: { circulatingPrevWeek?: PegBucketRecord 
 /** Previous-month USD supply; absent or invalid buckets remain null. */
 export function getPrevMonthRawOrNull(c: { circulatingPrevMonth?: PegBucketRecord }): number | null {
   return sumPegBucketsOrNull(c.circulatingPrevMonth);
+}
+
+/** V1 readers take historical USD caps from peg buckets. Preserve only evidenced attribution. */
+export function projectUsdMarketCapBaselineBuckets(
+  asset: { circulating?: PegBucketRecord; supplyChangeBaselines?: SupplyChangeBaselines },
+  window: keyof SupplyChangeBaselines,
+  legacy: Record<string, number>,
+): Record<string, number> {
+  const baselines = asset.supplyChangeBaselines;
+  const baseline = baselines?.[window];
+  if (baseline === null || (baselines && Object.keys(baselines).length === 0)) return {};
+  if (baseline === undefined) return legacy;
+  const bucketTotal = sumPegBucketsOrNull(legacy);
+  const close = baseline.circulatingUsd;
+  if (bucketTotal !== null && Math.abs(bucketTotal - close) <= Number.EPSILON * bucketTotal) return legacy;
+
+  // Old Workers sum every bucket. Keep a measured total when D1 cannot apportion it across pegs.
+  const keys = Object.keys(asset.circulating ?? {});
+  const [peg] = keys;
+  return peg && keys.length === 1 && Object.keys(legacy).every((key) => key === peg)
+    ? { [peg]: close } : { unattributed: close };
+}
+
+/** An empty map records an unsuccessful comparison. Older and partial maps can use legacy buckets. */
+export function getUsdMarketCapBaselineOrNull(
+  coin: {
+    supplyChangeBaselines?: SupplyChangeBaselines;
+    circulatingPrevDay?: PegBucketRecord;
+    circulatingPrevWeek?: PegBucketRecord;
+    circulatingPrevMonth?: PegBucketRecord;
+  },
+  window: keyof SupplyChangeBaselines,
+): number | null {
+  const baseline = coin.supplyChangeBaselines?.[window];
+  if (baseline !== undefined) {
+    return baseline != null && Number.isSafeInteger(baseline.observedAt) && baseline.observedAt > 0
+      && Number.isFinite(baseline.circulatingUsd) && baseline.circulatingUsd >= 0 ? baseline.circulatingUsd : null;
+  }
+  if (coin.supplyChangeBaselines !== undefined && Object.keys(coin.supplyChangeBaselines).length === 0) return null;
+  if (window === "day") return getPrevDayRawOrNull(coin);
+  return window === "week" ? getPrevWeekRawOrNull(coin) : getPrevMonthRawOrNull(coin);
 }

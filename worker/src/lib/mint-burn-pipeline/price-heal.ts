@@ -1,5 +1,9 @@
 import { getCache, setCache } from "../db-cache";
+import { chunkArray, executeAtomicBatch } from "../db";
+import { MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL } from "../mint-burn-hourly-valuation";
 import { executeMintBurnMaintenanceMutations } from "./materialization-debt";
+import { mintBurnHourlyBucketAggregatesSql } from "./hourly-aggregates";
+import { isMintBurnWriterEpochSchemaMissing, MINT_BURN_WRITER_EPOCH, mintBurnHourRevisionSql } from "./scan-coverage";
 import {
   hasMintBurnEventPriceEvidenceSince,
   loadMintBurnPriceContextBatch,
@@ -45,6 +49,78 @@ interface HealPriceResolution {
   price: number;
   priceTimestamp: number;
   priceSource: string;
+}
+
+type HealableEvent = { event: NullPriceEvent; resolution: HealPriceResolution };
+
+async function healVerifiedHours(db: D1Database, healable: HealableEvent[]): Promise<Set<string>> {
+  const groups = new Map<string, HealableEvent[]>();
+  for (const entry of healable) {
+    const { stablecoin_id, chain_id, timestamp } = entry.event;
+    const key = JSON.stringify([stablecoin_id, chain_id, Math.floor(timestamp / 3600) * 3600]);
+    const group = groups.get(key);
+    if (group) group.push(entry);
+    else groups.set(key, [entry]);
+  }
+  let verified;
+  try {
+    verified = (await db.prepare(`SELECT candidate.value AS key, stamp.revision
+      FROM json_each(?) candidate JOIN mint_burn_writer_epoch_hours stamp
+        ON (stamp.stablecoin_id, stamp.chain_id, stamp.hour_ts) =
+           (json_extract(candidate.value, '$[0]'), json_extract(candidate.value, '$[1]'), json_extract(candidate.value, '$[2]'))
+      WHERE ${mintBurnHourRevisionSql("stamp")}`)
+      .bind(JSON.stringify([...groups.keys()])).all<{ key: string; revision: string }>()).results;
+  } catch (error) {
+    if (!isMintBurnWriterEpochSchemaMissing(error)) throw error;
+    return new Set();
+  }
+
+  const aggregates = `SELECT ${mintBurnHourlyBucketAggregatesSql()} FROM mint_burn_events
+    WHERE stablecoin_id = ? AND chain_id = ? AND timestamp >= ? AND timestamp < ?`;
+  const healed = new Set<string>();
+  // Each triplet compares the receipt, updates only valuations, then restores the
+  // exact receipt cleared by the generic hourly trigger. Dirty hours take the normal debt path.
+  for (const chunk of chunkArray(verified, 30)) {
+    const statements = chunk.flatMap(({ key, revision }) => {
+      const group = groups.get(key)!;
+      const { stablecoin_id: coin, chain_id: chain, timestamp } = group[0].event;
+      const hour = Math.floor(timestamp / 3600) * 3600;
+      const bucket = [coin, chain, hour];
+      const range = [...bucket, hour + 3600];
+      const prices = group.map(({ event, resolution }) =>
+        [event.id, event.timestamp, resolution.price, resolution.priceTimestamp, resolution.priceSource]);
+      return [
+        db.prepare(`WITH rebuilt AS (${aggregates})
+          UPDATE mint_burn_events SET
+            amount_usd = amount * json_extract(price.value, '$[2]'), price_used = json_extract(price.value, '$[2]'),
+            price_timestamp = json_extract(price.value, '$[3]'), price_source = json_extract(price.value, '$[4]'),
+            price_repair_reason = CASE WHEN price_repair_status = 'pending_aggregate' THEN NULL ELSE price_repair_reason END,
+            price_repair_status = CASE WHEN price_repair_status = 'pending_aggregate' THEN 'recovered' ELSE price_repair_status END
+          FROM json_each(?) price
+          WHERE mint_burn_events.id = json_extract(price.value, '$[0]') AND timestamp = json_extract(price.value, '$[1]')
+            AND stablecoin_id = ? AND chain_id = ? AND amount_usd IS NULL
+            AND EXISTS (SELECT 1 FROM mint_burn_hourly h
+              JOIN mint_burn_writer_epoch_hours stamp USING (stablecoin_id, chain_id, hour_ts), rebuilt
+              WHERE (h.stablecoin_id, h.chain_id, h.hour_ts) = (?, ?, ?)
+                AND stamp.writer_epoch = ? AND stamp.revision = ?
+                AND h.mint_count IS rebuilt.mint_count AND h.burn_count IS rebuilt.burn_count
+                AND h.mint_unresolved_event_count IS rebuilt.mint_unresolved_event_count
+                AND h.burn_unresolved_event_count IS rebuilt.burn_unresolved_event_count
+                AND NOT EXISTS (SELECT 1 FROM mint_burn_dirty_hours WHERE (stablecoin_id, chain_id, hour_ts) = (?, ?, ?)))
+          RETURNING id`).bind(...range, JSON.stringify(prices), coin, chain, ...bucket, MINT_BURN_WRITER_EPOCH, revision, ...bucket),
+        db.prepare(`UPDATE mint_burn_hourly SET (${MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL}) = (${aggregates})
+          WHERE (stablecoin_id, chain_id, hour_ts) = (?, ?, ?) AND changes() > 0`).bind(...range, ...bucket),
+        db.prepare(`UPDATE mint_burn_writer_epoch_hours SET writer_epoch = ?, revision = ?
+          WHERE (stablecoin_id, chain_id, hour_ts) = (?, ?, ?) AND changes() = 1`)
+          .bind(MINT_BURN_WRITER_EPOCH, revision, ...bucket),
+      ];
+    });
+    const results = await executeAtomicBatch(db, statements, { returnResults: true });
+    for (let index = 0; index < results.length; index += 3) {
+      for (const row of results[index].results as Array<{ id: string }>) healed.add(row.id);
+    }
+  }
+  return healed;
 }
 
 interface PriceHealResult {
@@ -130,7 +206,7 @@ export async function healNullPrices(
     ? { timestamp: lastInspected.timestamp, id: lastInspected.id }
     : null);
 
-  const healable: Array<{ event: NullPriceEvent; resolution: HealPriceResolution }> = [];
+  const healable: HealableEvent[] = [];
   for (const event of nullEvents) {
     const resolution = resolveMintBurnEventPrice(event.stablecoin_id, event.timestamp, priceContext);
     if (!resolution) continue;
@@ -148,7 +224,8 @@ export async function healNullPrices(
     return { healed: 0, affectedHours: new Map() };
   }
 
-  const mutations = healable.map(({ event, resolution }) => ({
+  const verifiedHeals = await healVerifiedHours(db, healable);
+  const mutations = healable.filter(({ event }) => !verifiedHeals.has(event.id)).map(({ event, resolution }) => ({
     enqueue: db.prepare(
       `INSERT OR REPLACE INTO mint_burn_dirty_hours (stablecoin_id, chain_id, hour_ts)
        SELECT stablecoin_id, chain_id, (timestamp / 3600) * 3600
@@ -172,5 +249,5 @@ export async function healNullPrices(
   // Checkpoint only after successful inspection/writes; failures replay safely
   // and any committed source mutation already carries durable materialization debt.
   await setCache(db, SCAN_CURSOR_KEY, nextCursor);
-  return { healed, affectedHours };
+  return { healed: healed + verifiedHeals.size, affectedHours };
 }

@@ -3,6 +3,7 @@ import {
   normalizePegType,
   type PegRateSource,
 } from "@shared/lib/peg-rates";
+import type { CommodityQuoteUnit } from "@shared/lib/commodity-median";
 import { isAuthoritativeDepegPegReference } from "@shared/lib/peg-reference-trust";
 import { deriveDepegSignal, type DepegSignal } from "@shared/lib/depeg-signals";
 
@@ -44,24 +45,13 @@ export function deriveAuthoritativePegSignal(input: {
   pegRateSources: Record<string, PegRateSource>;
   pegRateCounts: Record<string, number>;
   commodityOunces?: number;
-}): AuthoritativePegSignalResult {
+} & CommodityQuoteUnit): AuthoritativePegSignalResult {
   const pegType = normalizePegType(input.pegType ?? undefined);
   const evidence: PegReferenceEvidence = {
     pegType,
     source: pegType ? input.pegRateSources[pegType] : undefined,
     contributorCount: pegType ? input.pegRateCounts[pegType] : undefined,
   };
-
-  // VAR/OTHER are unreviewed floating pegs: their derived "reference" is a
-  // peer median of unrelated coins, not a peg. Measuring a coin against that
-  // median can open an event whose deviation is another peer's level (RAI
-  // 2026-03-25, 13,603 bps against SILK's quote), so fail closed here.
-  if (
-    input.pegCurrency === "VAR" || input.pegCurrency === "OTHER" ||
-    pegType === "peggedVAR" || pegType === "peggedOTHER"
-  ) {
-    return { kind: "rejected", reason: "non-authoritative-reference", evidence };
-  }
 
   if (!isAuthoritativeDepegPegReference({
     pegCurrency: input.pegCurrency,
@@ -73,7 +63,7 @@ export function deriveAuthoritativePegSignal(input: {
     return { kind: "rejected", reason: "non-authoritative-reference", evidence };
   }
 
-  const pegReference = getPegReference(pegType, input.pegRates, input.commodityOunces);
+  const pegReference = getPegReference(pegType, input.pegRates, input.commodityOunces, input);
   if (pegReference == null || !Number.isFinite(pegReference) || pegReference <= 0) {
     return { kind: "rejected", reason: "invalid-reference", evidence };
   }

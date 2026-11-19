@@ -99,6 +99,9 @@ export function resolveCoinNetFlow(coin: MintBurnCoinFlow, window: MintBurnNetWi
  * pressure shift; `null` when the published score stands.
  */
 export function resolvePressureUnavailableNote(coin: MintBurnCoinFlow): string | null {
+  if (coin.pressureUnavailableReason === "treasury-boundary-unverified") {
+    return "Treasury-to-holder flows are unverified; holder pressure unavailable";
+  }
   const classification = [coin.classification?.window24h, coin.classification?.baseline]
     .find((verdict) => verdict && verdict.completeness !== "complete");
   if (classification) return classification.unavailableReason === "classification-unresolved"

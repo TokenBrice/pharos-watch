@@ -54,7 +54,7 @@ vi.mock("@/hooks/use-compare-selection", () => ({
 vi.mock("@/hooks/use-compare-data-model", () => ({
   useCompareDataModel: () => ({
     comparisonCoins: [], detailErrors: [], flowCardData: [], flowSeries: [],
-    freshnessQueries: [], radarCards: [], supplySeries: [], pegRates: {},
+    freshnessQueries: [], radarCards: [], supplySeries: [],
   }),
 }));
 vi.mock("@/hooks/use-compare-share-actions", () => ({

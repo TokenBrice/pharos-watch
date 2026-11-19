@@ -1,3 +1,4 @@
+import * as perimeters from "@shared/lib/supply-perimeter-changes";
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, it, expect, vi } from "vitest";
 import { mockD1 as baseMockD1 } from "@shared/test-utils/mock-d1";
@@ -93,8 +94,8 @@ describe("handleSupplyHistory", () => {
       price: offset === -6000 ? null : 1,
       supplyProvenance: null,
     })));
-    expect(response.headers.get("X-Data-Updated-At")).toBe(String(now - 300));
-    expect(response.headers.get("X-Data-Age")).toBe("300");
+    expect(response.headers.get("X-Data-Updated-At")).toBe(String(now));
+    expect(response.headers.get("X-Data-Age")).toBe("0");
   });
 
   it("accepts long history windows for all-time market structure overlays", async () => {
@@ -129,76 +130,26 @@ describe("handleSupplyHistory", () => {
     db.assertAllMatchesUsed();
   });
 
-  it("includes freshness headers from the completed supply snapshot marker", async () => {
-    const nowSec = 1_765_000_000;
-    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
-    const db = mockD1(
-      [
-        {
-          match: "FROM cache",
-          matchBinds: ["snapshot-supply:last-write"],
-          rows: [{
-            key: "snapshot-supply:last-write",
-            value: JSON.stringify({ snapshotDate: row.snapshot_date }),
-            updated_at: nowSec - 300,
-          }],
-          first: {
-            key: "snapshot-supply:last-write",
-            value: JSON.stringify({ snapshotDate: row.snapshot_date }),
-            updated_at: nowSec - 300,
-          },
-        },
-        {
-          match: "FROM supply_history",
-          matchBinds: ["usdt-tether", nowSec - 365 * 86_400, row.snapshot_date],
-          rows: [row],
-        },
-      ],
-    );
-
-    const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=usdt-tether"));
-
-    expect(res.status).toBe(200);
-    expect(res.headers.get("X-Data-Age")).toBe("300");
-    expect(res.headers.get("Warning")).toBeNull();
-    db.assertAllMatchesUsed();
-  });
-
-  it("reports stale freshness when the completed snapshot marker is old", async () => {
-    const nowSec = 1_765_000_000;
-    const markerUpdatedAt = nowSec - 9 * 86_400;
-    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
-    const db = mockD1(
-      [
-        {
-          match: "FROM cache",
-          matchBinds: ["snapshot-supply:last-write"],
-          rows: [{
-            key: "snapshot-supply:last-write",
-            value: JSON.stringify({ snapshotDate: row.snapshot_date }),
-            updated_at: markerUpdatedAt,
-          }],
-          first: {
-            key: "snapshot-supply:last-write",
-            value: JSON.stringify({ snapshotDate: row.snapshot_date }),
-            updated_at: markerUpdatedAt,
-          },
-        },
-        {
-          match: "FROM supply_history",
-          matchBinds: ["usdt-tether", nowSec - 365 * 86_400, row.snapshot_date],
-          rows: [row],
-        },
-      ],
-    );
-
-    const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=usdt-tether"));
-
-    expect(res.status).toBe(200);
-    expect(res.headers.get("X-Data-Age")).toBe(String(9 * 86_400));
-    expect(res.headers.get("Warning")).toContain("Response is stale");
-    expect(db.getHistory().some((entry) => entry.sql.includes("FROM cron_runs"))).toBe(false);
-    db.assertAllMatchesUsed();
+  it.each([0, 3])("uses the coin observation even when the completed marker is newer (%s days)", async (days) => {
+    const now = 1_800_000_000;
+    const observedAt = now - days * 86_400 - 900;
+    const snapshotDate = now - days * 86_400 - 1_800;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const { db, sqlite } = fixtures.open();
+    const provenance = { supplySource: "defillama", supplyObservedAt: observedAt, supplyChainGuard: null };
+    sqlite.prepare(`INSERT INTO supply_history
+      (stablecoin_id, snapshot_date, circulating_usd, price, circulating_native,
+       valuation_price_usd, valuation_observed_at_sec, supply_provenance)
+      VALUES ('usdt-tether', ?, 0, 2, 0, 1, ?, ?)`).run(snapshotDate, observedAt, JSON.stringify(provenance));
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('snapshot-supply:last-write', ?, ?)")
+      .run(JSON.stringify({ snapshotDate: now - 60 }), now - 60);
+    const response = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=usdt-tether"));
+    expect(response.headers.get("X-Data-Updated-At")).toBe(String(observedAt));
+    expect(response.headers.get("X-Data-Age")).toBe(String(now - observedAt));
+    expect(await readJsonResponse(response, 200)).toEqual([{
+      date: snapshotDate, circulatingUsd: 0, price: 2, circulatingNative: 0,
+      valuationPriceUsd: 1, valuationObservedAtSec: observedAt, supplyProvenance: provenance,
+    }]);
   });
 
   it("fences completed publication inclusively and returns chronological history", async () => {
@@ -212,6 +163,28 @@ describe("handleSupplyHistory", () => {
       { date: now - 10, circulatingUsd: 90, price: 1, supplyProvenance: null },
       { date: now, circulatingUsd: 100, price: 1, supplyProvenance: null },
     ]);
+  });
+
+  it.each(["kau-kinesis", "kag-kinesis"])("switches %s from program to wrapper only on its own cutover", async (id) => {
+    const now = 1_800_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const { db, sqlite } = fixtures.open();
+    const insert = sqlite.prepare(`INSERT INTO supply_history
+      (stablecoin_id, snapshot_date, circulating_usd, circulating_native, supply_provenance)
+      VALUES (?, ?, ?, ?, ?)`);
+    insert.run(id, now - 2 * 86_400, 500_000_000, null, null);
+    const provenance = { supplySource: "onchain-total-supply", supplyObservedAt: now - 100, supplyChainGuard: null };
+    insert.run(id, now - 86_400, 220_000_000, 1_640_000, JSON.stringify(provenance));
+    const url = new URL(`https://x/api/supply-history?stablecoin=${id}`);
+    const before = await handleSupplyHistory(db, url, null);
+    expect(await readJsonResponse(before, 200)).toEqual([{ date: now - 2 * 86_400,
+      circulatingUsd: 500_000_000, price: null, supplyProvenance: null }]);
+    vi.spyOn(perimeters, "isKinesisWrapperSupplyCutoverActive").mockImplementation((asset, at) => asset === id && at >= now - 86_400);
+    const response = await handleSupplyHistory(db, url, null);
+    expect(await readJsonResponse(response, 200)).toEqual([{
+      date: now - 86_400, circulatingUsd: 220_000_000, circulatingNative: 1_640_000, price: null,
+      supplyProvenance: provenance,
+    }]);
   });
 
   it("publishes recorded, partial, legacy and malformed provenance per row without touching supply (K-031)", async () => {
@@ -245,8 +218,8 @@ describe("handleSupplyHistory", () => {
       { date: now - 2 * 86_400, circulatingUsd: 99_000, price: null, supplyProvenance: null },
       { date: now - 86_400, circulatingUsd: 100_000, price: 1, supplyProvenance: complete },
     ]);
-    // The completed-marker clock still owns freshness; provenance never renews it.
-    expect(response.headers.get("X-Data-Age")).toBe("3600");
+    // The newest legacy observation uses its date when its precise clock is absent.
+    expect(response.headers.get("X-Data-Age")).toBe("86400");
     warn.mockRestore();
   });
 

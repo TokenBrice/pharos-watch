@@ -20,6 +20,7 @@ export function advanceDepegPriceCoverage(
       lastObservationKind: observation,
     };
   }
+  if (previous?.gapStartedAt != null && now < previous.gapStartedAt) return previous;
   const atPar = observation === "trusted-at-par";
   const previousKind = previous?.lastObservationKind ??
     (previous?.gapStartedAt == null ? "trusted-off-peg" : "blind");

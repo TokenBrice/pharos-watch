@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import type { StablecoinData } from "@shared/types/supply";
+import { FX_REOPEN_QUOTE_AT, makeFxCurrentPeg } from "@shared/test-utils/boundary-contract-vectors.test-support";
 import { buildStablecoinTableRowModel } from "@/components/stablecoin-directory/stablecoin-table-row-model";
 import { makeChainGapGuard, makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
@@ -76,6 +78,36 @@ describe("buildStablecoinTableRowModel peg deviation", () => {
     expect(model.absPegDeviationBps).toBeNull();
   });
 
+  it("shows the observed USD quote during a legacy FX session hold", () => {
+    const at = Date.parse("2026-11-14T16:00:00Z") / 1000;
+    const coin = makeStablecoin({
+      id: "eurc-circle", pegType: "peggedEUR", price: 1.122, priceSource: "coingecko", priceObservedAt: at,
+      currentPeg: {
+        currentDeviationBps: 200, currentPriceUnavailable: false, pegReferenceUnavailable: false,
+        pegReference: { valueUsd: 1.1, source: "fx", contributorCount: 0, asOf: at - 86_400 },
+        dexPriceCheck: null, primaryTrust: "unusable",
+      },
+    });
+    const model = buildStablecoinTableRowModel({ coin, density: "spacious", variant: "default" });
+    expect(model).toMatchObject({ priceCell: "$1.1220", pegDeviationBps: null, referenceNote: "Reference market closed" });
+  });
+
+  it("shows the observed USD quote when a legacy block cannot borrow modern summary evidence", () => {
+    const { referenceAdmission: _admission, admittedDeviationBps: _admitted, ...currentPeg } = makeFxCurrentPeg("admitted", 200);
+    const coin = makeStablecoin({
+      id: "eurc-circle", pegType: "peggedEUR", price: 1.122, priceSource: "coingecko",
+      priceObservedAt: FX_REOPEN_QUOTE_AT - 3600, currentPeg,
+    });
+    const summary = {
+      ...makePegSummaryCoin({ id: coin.id, pegType: coin.pegType, price: coin.price, priceObservedAt: FX_REOPEN_QUOTE_AT }),
+      ...makeFxCurrentPeg("stale-reference", null),
+    };
+    const model = buildStablecoinTableRowModel({
+      coin, pegScores: new Map([[coin.id, summary]]), density: "spacious", variant: "default",
+    });
+    expect(model).toMatchObject({ priceCell: "$1.1220", pegDeviationBps: null, referenceNote: null });
+  });
+
   it.each([
     ["USD", "usdc-circle", "peggedUSD", 0.98, 1, -200, 200],
     ["non-USD", "eurc-circle", "peggedEUR", 1.08, 1.2, -1000, 1000],
@@ -121,12 +153,11 @@ describe("buildStablecoinTableRowModel peg deviation", () => {
 
 describe("buildStablecoinTableRowModel NAV price", () => {
   const observed = { priceSource: "coingecko", priceConfidence: "high" } as const;
-  const eurPeer = makePegSummaryCoin({
-    id: "eurc-circle",
-    pegType: "peggedEUR",
-    pegCurrency: "EUR",
-    pegReference: { valueUsd: 1.1, source: "median", contributorCount: 3, asOf: 1_700_000_000 },
-  });
+  const eurPeer = {
+    ...makePegSummaryCoin({ id: "eurc-circle", pegType: "peggedEUR", pegCurrency: "EUR", price: 1.1,
+      priceObservedAt: FX_REOPEN_QUOTE_AT }),
+    ...makeFxCurrentPeg("admitted", 0),
+  };
 
   it("shows a USD NAV token's observed price without a peg reference", () => {
     const model = buildStablecoinTableRowModel({
@@ -139,9 +170,15 @@ describe("buildStablecoinTableRowModel NAV price", () => {
     expect(model.priceCell).toBe("$1.0834");
   });
 
-  it.each([[true, "€1.1000"], [false, "$1.2100"]] as const)("formats a non-USD NAV quote with peer reference=%s", (peer, priceCell) => {
+  it.each([
+    ["matching clock", FX_REOPEN_QUOTE_AT, true, "€1.0200"],
+    ["older NAV quote", FX_REOPEN_QUOTE_AT - 3600, true, "$1.1220"],
+    ["missing NAV clock", null, true, "$1.1220"],
+    ["missing direct FX", FX_REOPEN_QUOTE_AT, false, "$1.1220"],
+  ] as const)("formats an EUTBL NAV quote with %s", (_label, priceObservedAt, peer, priceCell) => {
     const model = buildStablecoinTableRowModel({
-      coin: makeStablecoin({ id: "eutbl-spiko", pegType: "peggedEUR", price: 1.21, ...observed }),
+      coin: makeStablecoin({ id: "eutbl-spiko", pegType: "peggedEUR", price: 1.122, priceObservedAt,
+        priceUpdatedAt: FX_REOPEN_QUOTE_AT, ...observed }),
       pegScores: new Map(peer ? [[eurPeer.id, eurPeer]] : []),
       density: "spacious", variant: "default",
     });
@@ -159,6 +196,13 @@ describe("buildStablecoinTableRowModel NAV price", () => {
 });
 
 describe("buildStablecoinTableRowModel supply changes", () => {
+  function baselines(day: number | null, week: number) {
+    return {
+      ...(day == null ? {} : { day: { circulatingUsd: day, circulatingNative: null, observedAt: 1_700_000_000 - 86_400 } }),
+      week: { circulatingUsd: week, circulatingNative: null, observedAt: 1_700_000_000 - 7 * 86_400 },
+    };
+  }
+
   it.each([true, undefined] as const)("withholds partial-chain changes and incompatible sparkline (explicit partial=%s)", (partialCoverage) => {
     const model = buildStablecoinTableRowModel({
       coin: makeStablecoin({
@@ -166,6 +210,7 @@ describe("buildStablecoinTableRowModel supply changes", () => {
         circulatingPrevDay: { peggedUSD: 100 },
         circulatingPrevWeek: { peggedUSD: 100 },
         supplyChainGuard: makeChainGapGuard(partialCoverage),
+        supplyChangeBaselines: baselines(100, 100),
       }),
       density: "spacious",
       variant: "default",
@@ -176,11 +221,35 @@ describe("buildStablecoinTableRowModel supply changes", () => {
     expect(model.supplySparklineValues).toEqual([]);
   });
 
-  it("retains complete coverage and a measured zero change", () => {
-    const model = buildStablecoinTableRowModel({ coin: makeCoin(1), density: "spacious", variant: "default" });
+  it.each([[800_000, 25], [1_000_000, 0]])("uses dated baselines for complete supply coverage (week=%s)", (week, change7d) => {
+    const coin = {
+      ...makeCoin(1),
+      circulatingPrevDay: { peggedUSD: 500_000 },
+      circulatingPrevWeek: { peggedUSD: 500_000 },
+      supplyChangeBaselines: baselines(1_000_000, week),
+    };
+    const model = buildStablecoinTableRowModel({ coin, density: "spacious", variant: "default" });
     expect(model.change24h).toBe(0);
-    expect(model.change7d).toBe(0);
-    expect(model.supplySparklineValues).toEqual([1_000_000, 1_000_000, 1_000_000]);
+    expect(model.change7d).toBe(change7d);
+    expect(model.supplySparklineValues).toEqual([week, 1_000_000, 1_000_000]);
+  });
+
+  it.each([undefined, baselines(null, 800_000)])("uses each available dated or legacy market-cap window for EUR (%j)", (map) => {
+    const coin = { ...makeCoin(1), pegType: "peggedEUR", circulatingPrevDay: { peggedEUR: 500_000 },
+      circulatingPrevWeek: { peggedEUR: 400_000 }, supplyChangeBaselines: map };
+    const model = buildStablecoinTableRowModel({ coin, density: "spacious", variant: "default" });
+    expect(model.change24h).toBe(100);
+    expect(model.change7d).toBe(map && "week" in map ? 25 : 150);
+    expect(model.supplySparklineValues).toEqual([map && "week" in map ? 800_000 : 400_000, 500_000, 1_000_000]);
+  });
+
+  it("keeps legacy USD changes and sparkline anchors until the publisher explicitly withholds them", () => {
+    const coin = { ...makeCoin(1), circulating: { peggedUSD: 110_000_000 },
+      circulatingPrevDay: { peggedUSD: 100_000_000 }, circulatingPrevWeek: { peggedUSD: 100_000_000 } };
+    const model = (supplyChangeBaselines?: StablecoinData["supplyChangeBaselines"]) =>
+      buildStablecoinTableRowModel({ coin: { ...coin, supplyChangeBaselines }, density: "spacious", variant: "default" });
+    expect(model()).toMatchObject({ change24h: 10, change7d: 10, supplySparklineValues: [100_000_000, 100_000_000, 110_000_000] });
+    expect(model({})).toMatchObject({ change24h: null, change7d: null, supplySparklineValues: [null, null, 110_000_000] });
   });
 
   it("keeps a carried supply observation out of the change cells", () => {
@@ -190,6 +259,7 @@ describe("buildStablecoinTableRowModel supply changes", () => {
         circulatingPrevDay: { peggedUSD: 95_000_000 },
         circulatingPrevWeek: { peggedUSD: 90_000_000 },
         supplyRestored: true,
+        supplyChangeBaselines: baselines(95_000_000, 90_000_000),
         supplyObservedAt: 1_700_000_000,
       }),
       density: "spacious",
@@ -218,6 +288,7 @@ describe("buildStablecoinTableRowModel supply changes", () => {
     const model = buildStablecoinTableRowModel({
       coin: makeStablecoin({
         circulating: {},
+        supplyChangeBaselines: baselines(100, 100),
         circulatingPrevDay: { peggedUSD: 100 },
         circulatingPrevWeek: { peggedUSD: 100 },
       }),
@@ -236,6 +307,7 @@ describe("buildStablecoinTableRowModel supply changes", () => {
         circulating: { peggedUSD: 50 },
         circulatingPrevDay: {},
         circulatingPrevWeek: { peggedUSD: 40 },
+        supplyChangeBaselines: baselines(null, 40),
       }),
       density: "spacious",
       variant: "default",
@@ -249,6 +321,7 @@ describe("buildStablecoinTableRowModel supply changes", () => {
     const model = buildStablecoinTableRowModel({
       coin: makeStablecoin({
         circulating: { peggedUSD: 0 },
+        supplyChangeBaselines: baselines(100, 100),
         circulatingPrevDay: { peggedUSD: 100 },
         circulatingPrevWeek: { peggedUSD: 100 },
       }),

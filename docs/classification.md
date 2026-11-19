@@ -46,6 +46,8 @@ Active Pharos taxonomy no longer exposes `algorithmic` as a standalone backing b
 
 ### Peg Currency
 
+Use a variable reference and neutral Variable labeling for VAR. Active non-NAV OTHER promotions require a supported independent peg unit. A lone asset supplies no reference for itself.
+
 `PEG_CURRENCY_VALUES` in `shared/types/core.ts` is the runtime authority. It covers the tracked fiat pegs (including COP, CLP, GHS, KES, PEN, CZK, PLN, and AED), `GOLD`, `SILVER`, `VAR` (variable/CPI-linked), and `OTHER`; do not maintain a second literal enum here. Czech koruna, Polish zloty, and UAE dirham assets use `CZK`, `PLN`, and `AED` rather than `OTHER`.
 
 ### Boolean Flags

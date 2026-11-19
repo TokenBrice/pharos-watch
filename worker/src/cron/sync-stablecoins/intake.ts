@@ -1,7 +1,7 @@
 import { REGISTRY_BY_LLAMA_ID } from "@shared/lib/stablecoin-id-registry";
 import { FROZEN_SNAPSHOTS } from "@shared/lib/stablecoins/frozen-snapshots";
 import type { FrozenSnapshot } from "@shared/lib/stablecoins/frozen-snapshots";
-import { detectDefiLlamaListFillDefaultPrices } from "@shared/lib/pricing-source-policy";
+import { detectDefiLlamaListFillDefaultPrices, isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { CIRCUIT_SOURCE, DEFILLAMA_BASE } from "../../lib/constants";
@@ -14,10 +14,15 @@ import { logWorkerEvent } from "../../lib/structured-log";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import type { PriceCacheEntry } from "../../lib/price-cache";
 import type { PriceValidationReferences } from "../../lib/price-validation";
+import { validatePublishedAssetPrice } from "../../lib/price-publish-policy";
 import { reportStablecoinsStage, returnIfAborted } from "./runtime";
 import { createCronResult } from "../../lib/cron-result";
 import { isRecord } from "@shared/lib/type-guards";
+import { isKinesisWrapperSupplyId } from "@shared/lib/onchain-supply-probe";
+import { isKinesisWrapperSupplyCutoverActive } from "@shared/lib/supply-perimeter-changes";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import type { PeggedAsset } from "./enrich-prices";
+import { buildPreviousTrustedPriceLookup, createValidationContextResolver } from "./pricing";
 import {
   admitPeggedAssetRows,
   applyTrackedAssetOverrides,
@@ -38,6 +43,7 @@ import {
 } from "./supply-gap-reconciliation";
 import { guardChainDropouts, loadChainDropoutState, type SupplyChainGuardResult } from "./chain-dropout-guard";
 import {
+  clearPriceMetadata,
   hydrateGeckoIdAliases,
   loadFreshFxRates,
   loadReplayPriceCacheForTrustedContinuity,
@@ -46,19 +52,20 @@ import {
   mergeSupplementalLastKnownGood,
   pegMechanismFromBacking,
   restoreMissingTrackedAssets,
+  validateAssetPricingSourceFreshness,
   withholdUnclockedCarriedSupply,
   type CronResult,
   type PreviousStablecoinsCacheState,
+  type StablecoinsFxSelection,
   type TrackedCoverageRestoreResult,
 } from "./shared";
 
-interface StablecoinsIntakeMainResult {
+interface StablecoinsIntakeMainResult extends StablecoinsFxSelection {
   kind: "main";
   assets: PeggedAsset[];
   rawAssetCount: number;
   droppedMalformedAssets: number;
   canonicalDeduplication: CanonicalDeduplicationResult;
-  fxFallbackRates?: Record<string, number>;
   validationReferences: PriceValidationReferences | undefined;
   previousAssetsById: Map<string, PeggedAsset>;
   previousCacheState: PreviousStablecoinsCacheState;
@@ -196,6 +203,7 @@ async function fetchDefillamaStablecoinsPayload(
 export function mergeFrozenSnapshots(
   upstream: PeggedAsset[],
   snapshots: FrozenSnapshot[],
+  syncStartSec: number,
 ): PeggedAsset[] {
   if (snapshots.length === 0) {
     return upstream;
@@ -213,14 +221,20 @@ export function mergeFrozenSnapshots(
       continue;
     }
     const row = { ...(snapshot.peggedAssetRow as unknown as PeggedAsset) };
-    // The captured row's price was read by DefiLlama at freeze time, not by this
-    // run. Keep that clock so downstream freshness admission cannot stamp the
-    // undated value as a current list observation.
-    if (row.price != null && row.priceObservedAt == null && row.priceUpdatedAt == null) {
-      const capturedAtSec = Math.floor(Date.parse(snapshot.capturedAt) / 1_000);
-      row.priceObservedAt = capturedAtSec;
-      row.priceUpdatedAt = capturedAtSec;
-      row.priceObservedAtMode = "unknown";
+    if (row.price != null) {
+      if (row.priceObservedAt == null && row.priceUpdatedAt == null) {
+        const capturedAtSec = Math.floor(Date.parse(snapshot.capturedAt) / 1_000);
+        row.priceObservedAt = capturedAtSec;
+        row.priceUpdatedAt = capturedAtSec;
+        row.priceObservedAtMode = "unknown";
+      }
+      // Use the archived clock for expiry before live list admission drops clocks without upstream provenance.
+      if (!validateAssetPricingSourceFreshness(row.id, {
+        source: row.priceSource ?? "defillama",
+        observedAt: row.priceObservedAt ?? row.priceUpdatedAt,
+        observedAtMode: row.priceObservedAtMode,
+        nowSec: syncStartSec,
+      }).accepted) clearPriceMetadata(row);
     }
     additions.push(row);
     upstreamIds.add(snapshot.id);
@@ -244,7 +258,7 @@ export async function loadStablecoinsIntake(
     fallbackToCoingecko: (cgData: CoinGeckoMcapData) => Promise<CronResult>;
   },
 ): Promise<StablecoinsIntakeResult> {
-  const { fxFallbackRates: freshFxFallbackRates, validationReferences } = await loadFreshFxRates(input.db);
+  const { fxFallbackRates: freshFxFallbackRates, fxReferenceObservations, detectionFxState, validationReferences } = await loadFreshFxRates(input.db);
   const preFetchAbort = returnIfAborted(input.signal, "fetch-stablecoins-and-supplementals");
   if (preFetchAbort) return { kind: "withheld", result: preFetchAbort };
   await reportStablecoinsStage(input.reportProgress, "intake", "Loading DefiLlama stablecoin intake");
@@ -268,6 +282,7 @@ export async function loadStablecoinsIntake(
   }
 
   const replayPriceCache = await loadReplayPriceCacheForTrustedContinuity(input.db, true).catch(() => null);
+  const previousTrustedPrices = buildPreviousTrustedPriceLookup(previousAssetsById, input.syncStartSec, replayPriceCache ?? undefined);
   const supplementalTokensPromise = fetchSupplementalTrackedTokens(
     cgData,
     input.signal,
@@ -280,6 +295,10 @@ export async function loadStablecoinsIntake(
     input.reportPartitionSummary,
     input.syncStartSec,
     replayPriceCache,
+    {
+      validationReferences,
+      previousTrustedPrices,
+    },
   );
 
   const [dlFetchResult, supplementalTokens] = await Promise.all([
@@ -379,7 +398,7 @@ export async function loadStablecoinsIntake(
   // reassign `assets` rather than mutating the raw array, and nothing
   // references the raw array (or the payload wrapper) past this point, so both
   // become collectible as soon as validation/dedupe produce replacement arrays.
-  let assets = mergeFrozenSnapshots(rowAdmission.rows, FROZEN_SNAPSHOTS);
+  let assets = mergeFrozenSnapshots(rowAdmission.rows, FROZEN_SNAPSHOTS, input.syncStartSec);
   if (fillDefaultPrices.size > 0) {
     for (const asset of assets) {
       const price = asset.price;
@@ -482,7 +501,31 @@ export async function loadStablecoinsIntake(
   const supplementalAssets = [...goldTokens, ...silverTokens, ...fiatCgTokens];
   // BUIDL's reviewed native stock is primary even if DefiLlama relists it.
   // A skipped/failed supplemental read follows preferred-native restore/withhold, never list supply.
-  assets = assets.filter((asset) => asset.id !== "buidl-blackrock");
+  assets = assets.filter((asset) => asset.id !== "buidl-blackrock" && !isKinesisWrapperSupplyCutoverActive(asset.id, input.syncStartSec));
+  for (const asset of assets) {
+    if (asset.frozen) continue;
+    const clock = asset.supplyObservedAt;
+    // Fetch and sync timestamps cannot establish when a list balance was observed.
+    if (clock == null || !Number.isSafeInteger(clock) || clock <= 0 || clock > input.syncStartSec) {
+      delete asset.supplyObservedAt;
+    }
+    delete asset.circulatingNative;
+    delete asset.valuationPriceUsd;
+    delete asset.valuationObservedAtSec;
+  }
+  const validationContexts = createValidationContextResolver();
+  const listObservations = new Map(assets.filter((asset) => !asset.frozen).map((asset) => [
+    asset, {
+      usd: getCirculatingRawOrNull(asset),
+      price: !asset.priceListFillDefault && isObservedPrice(asset) && validatePublishedAssetPrice({
+        asset,
+        validationContext: validationContexts.get(asset),
+        validationReferences,
+        previousTrustedPrice: previousTrustedPrices.get(asset.id),
+      }).accepted ? asset.price : null,
+      priceObservedAt: asset.priceObservedAtMode === "upstream" ? asset.priceObservedAt : null,
+    },
+  ]));
   const supplementalResolution = mergeSupplementalLastKnownGood(
     supplementalAssets,
     previousAssetsById,
@@ -619,6 +662,26 @@ export async function loadStablecoinsIntake(
     });
   }
 
+  for (const asset of assets) {
+    const observation = listObservations.get(asset);
+    if (!observation || observation.usd == null || asset.supplyRestored || asset.supplyGapFill || asset.supplyChainGuard ||
+      observation.usd !== getCirculatingRawOrNull(asset)) continue;
+    if (isKinesisWrapperSupplyId(asset.id)) continue;
+    const price = observation.price;
+    const native = price != null && Number.isFinite(price) && price > 0 ? observation.usd / price : null;
+    if (native == null || !Number.isFinite(native)) {
+      asset.circulatingNative = null;
+      asset.valuationPriceUsd = null;
+      asset.valuationObservedAtSec = null;
+      continue;
+    }
+    const priceClock = observation.priceObservedAt;
+    asset.circulatingNative = native;
+    asset.valuationPriceUsd = price;
+    asset.valuationObservedAtSec = priceClock != null && Number.isSafeInteger(priceClock) &&
+      priceClock > 0 && priceClock <= input.syncStartSec ? priceClock : null;
+  }
+
   await reportStablecoinsStage(input.reportProgress, "intake", "Loaded DefiLlama stablecoin intake", {
     itemsDone: assets.length,
     itemsTotal: rawAssetCount,
@@ -636,6 +699,7 @@ export async function loadStablecoinsIntake(
     droppedMalformedAssets,
     canonicalDeduplication,
     fxFallbackRates: freshFxFallbackRates ?? dlFxFallbackRates,
+    fxReferenceObservations, detectionFxState,
     validationReferences,
     previousAssetsById,
     previousCacheState,

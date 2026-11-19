@@ -11,7 +11,7 @@ import {
   parseAlertSafetySnapshotEnvelope,
   type AlertSafetySourceAssessment,
 } from "../../../lib/alert-safety-source-cache";
-import { getCache, setCache } from "../../../lib/db-cache";
+import { getCache, getCaches, setCache } from "../../../lib/db-cache";
 import { loadPresetQueryFailureCount, PRESET_QUERY_FAILURE_CACHE_KEY } from "../../../lib/status/telegram-preset-failure-count";
 import { loadSafetyScoreV9PublicationAttempt, type V9PublicationAttempt } from "../../../lib/safety-score-v9/publication-attempts";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../../lib/safety-score-v9/consumer-freshness";
@@ -108,6 +108,7 @@ export interface DispatchSourceData {
   dewsAlertableCache: CachedValue;
   dewsCandidatesCache?: CachedValue;
   depegCache: CachedValue;
+  depegRecoveriesCache?: CachedValue;
   safetyCache: CachedValue;
   safetySourceAssessment?: AlertSafetySourceAssessment;
   publicationAttempt?: V9PublicationAttempt | null;
@@ -174,7 +175,7 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
     dewsCache,
     dewsAlertableCache,
     dewsCandidatesCache,
-    depegCache,
+    depegCaches,
     safetyCache,
     safetySourceAssessment,
     publicationAttempt,
@@ -185,16 +186,19 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
     loadDewsRows(db, snoozeNowSec),
     db
       .prepare(
+        // The active rows are bounded by the open incident set. Read the observation
+        // fields when 0307 exists and continue serving legacy alerts before it lands.
         `SELECT /* pharos:telegram-dispatch:active-depegs */
-           id AS event_id, stablecoin_id, symbol, direction, peak_deviation_bps, start_price, peak_price, peg_reference, started_at
-         FROM depeg_events WHERE ended_at IS NULL`,
+           depeg.*, depeg.id AS event_id, provenance.quote_mode
+         FROM depeg_events depeg LEFT JOIN depeg_event_provenance provenance ON provenance.event_id = depeg.id
+         WHERE depeg.ended_at IS NULL`,
       )
       .all<ActiveDepegRowWithEventId>()
       .then((result) => result.results ?? []),
     getCache(db, SNAPSHOT_KEYS.dews),
     getCache(db, SNAPSHOT_KEYS.dewsAlertable),
     getCache(db, SNAPSHOT_KEYS.dewsCandidates),
-    getCache(db, SNAPSHOT_KEYS.depeg),
+    getCaches(db, [SNAPSHOT_KEYS.depeg, SNAPSHOT_KEYS.depegRecoveries]),
     getCache(db, SNAPSHOT_KEYS.safety),
     // Envelope-first: the publication writer persists a thin projection, so
     // the five-minute alert lane never decodes the full V9 publication when
@@ -213,7 +217,8 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
     dewsCache,
     dewsAlertableCache,
     dewsCandidatesCache,
-    depegCache,
+    depegCache: depegCaches.get(SNAPSHOT_KEYS.depeg) ?? null,
+    depegRecoveriesCache: depegCaches.get(SNAPSHOT_KEYS.depegRecoveries) ?? null,
     safetyCache,
     safetySourceAssessment,
     publicationAttempt,
@@ -241,7 +246,11 @@ export function buildDispatchSnapshotState(sourceData: DispatchSourceData, nowSe
     (id) => id,
     nowSec,
   );
-  const previousDepegSnapshot = parseSnapshotMap<DepegSnapshot>(sourceData.depegCache);
+  const activeBaseline = parseSnapshotMap<DepegSnapshot>(sourceData.depegCache);
+  const retries = sourceData.depegRecoveriesCache;
+  const previousDepegSnapshot = activeBaseline && retries && retries.updatedAt === sourceData.depegCache?.updatedAt
+    ? { ...parseSnapshotMap<DepegSnapshot>(retries), ...activeBaseline }
+    : activeBaseline;
   const safetySourceAssessment: AlertSafetySourceAssessment =
     sourceData.safetySourceAssessment ?? {
       state: "missing",
@@ -301,7 +310,7 @@ export function buildDispatchSnapshotState(sourceData: DispatchSourceData, nowSe
 
   // The canonical builder persists event identity. Legacy snapshots without
   // eventId retain the stablecoin-only diff until the next baseline write.
-  const currentDepegSnapshot = buildDepegSnapshot(sourceData.activeDepegRows);
+
 
   // Reserve-drift (C123): the four-hourly producer owns a versioned source
   // envelope. A missing, corrupt, stale, or wrong-generation source is never
@@ -351,6 +360,13 @@ export function buildDispatchSnapshotState(sourceData: DispatchSourceData, nowSe
         ? previousReserveDispatchedIds
         : parsedCurrentReserveDriftIds;
 
+  const depeg = buildDepegSnapshot(sourceData.activeDepegRows);
+  // Fresh baselines survive a silent seed. A previously withheld resolution also survives a stale seed.
+  if (mustSeedSnapshots && previousDepegSnapshot && isSnapshotMissingOrStale(sourceData.depegCache, nowSec)) {
+    for (const [coinId, previous] of Object.entries(previousDepegSnapshot)) {
+      if (previous.recoveryPending && !depeg[coinId]) depeg[coinId] = previous;
+    }
+  }
   const currentSnapshots = {
     dews: !dewsAvailable ? (previousDewsSnapshot ?? {}) : mustSeedSnapshots ? seededDews.observed : dewsPlan.nextObserved,
     dewsAlertable: !dewsAvailable ? previousDewsAlertableSnapshot : mustSeedSnapshots ? seededDews.alertable : dewsPlan.nextAlertable,
@@ -360,7 +376,7 @@ export function buildDispatchSnapshotState(sourceData: DispatchSourceData, nowSe
     // that opened in this run is still detected on the next normal run.
     depeg: mustSeedSnapshots && previousDepegSnapshot != null && !isSnapshotMissingOrStale(sourceData.depegCache, nowSec)
       ? previousDepegSnapshot
-      : currentDepegSnapshot,
+      : depeg,
     safety:
       currentSafetySnapshot != null && safetySourceAssessment.generation != null
         ? buildAlertSafetySnapshotEnvelope(

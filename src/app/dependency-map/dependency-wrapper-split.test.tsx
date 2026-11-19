@@ -82,6 +82,7 @@ for (const surface of ["hero", "desktop", "mobile"] as const) {
       } else if (surface === "mobile") {
         expect(content.querySelectorAll("dd")[0]!.textContent).toBe("Unavailable");
         expect(content.querySelectorAll("dd")[1]!.textContent).toBe("Unavailable");
+        expect(content.textContent).toContain("direct USD unavailable · indirect USD unavailable · Overlap bound unavailable");
       }
     });
   });

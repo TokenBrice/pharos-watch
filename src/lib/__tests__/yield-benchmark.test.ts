@@ -197,6 +197,17 @@ describe("resolveYieldBenchmarkDisplayHealth", () => {
     expect(resolveYieldBenchmarkDisplayHealth(entry(12 * DAY), NOW + 1)).toEqual({ warning: true, marker: "12d old" });
   });
 
+  it.each([undefined, 5 * DAY])("uses the Easter-adjusted CETES deadline with legacy bound %s", (maxRecordAgeSec) => {
+    const deadline = Date.parse("2026-04-02T12:00:00Z");
+    const placement = { key: "MXN" as const, fetchedAt: deadline / 1000 - 60, recordDate: "2026-03-26", maxRecordAgeSec };
+    expect(resolveYieldBenchmarkAge(placement, deadline)).toMatchObject({ stale: false, boundSeconds: 7.5 * DAY });
+    expect(resolveYieldBenchmarkAge(placement, deadline + 1000).stale).toBe(true);
+    expect(resolveYieldBenchmarkDisplayHealth(placement, deadline).warning).toBe(false);
+    expect(resolveYieldBenchmarkDisplayHealth(placement, deadline + 1000).warning).toBe(true);
+    expect(resolveYieldBenchmarkAge({ ...placement, recordDate: "2026-04-02" },
+      Date.parse("2026-04-02T05:59:59Z")).stale).toBe(true);
+  });
+
   it("keeps scoring-stale, fallback and calendar-bounded records neutral while the fetch generation is fresh", () => {
     const cases = [
       entry(60, { recordDate: "2026-08-01" }),
@@ -246,7 +257,7 @@ describe("resolveYieldRowBenchmark", () => {
     const { benchmarkRate: _drop, ...row } = buildRanking("foreign", key);
     const usdOnly: YieldBenchmarkRegistry = { USD: BENCHMARKS.USD };
     const resolved = resolveYieldRowBenchmark(row, usdOnly, null);
-    expect(resolved.rate).toBe(4.25);
+    expect(resolved.rate).toBeCloseTo(4.25 + 4.25 ** 2 / 400);
     expect(resolved.key).toBe("USD");
     expect(resolved.label).toBe("USD 3M T-Bill (display fallback)");
     expect(resolved.selectionMode).toBe("native");
@@ -317,11 +328,35 @@ describe("resolveYieldRowBenchmark", () => {
     expect(unavailable.displayFallback).toBe(false);
     expect(resolveYieldZone(80, 3, unavailable.rate)).toBeNull();
   });
+
+  it("converts a raw keyed CMT quote once and preserves normalized producer fields", () => {
+    const registry = { USD: { ...BENCHMARKS.USD!, rate: 4 } };
+    const row = makeYieldRanking({ benchmarkKey: "USD", benchmarkRate: undefined });
+    expect(resolveYieldRowBenchmark(row, registry, 4.04).rate).toBe(4.04);
+    expect(resolveYieldRowBenchmark({ ...row, benchmarkRate: 4.04 }, registry, 4.04).rate).toBe(4.04);
+    expect(resolveYieldRowBenchmark(row, null, 4.04).rate).toBe(4.04);
+  });
 });
 
 
 
 describe("resolveYieldScatterBenchmarkFrame", () => {
+  it.each(["warning", "legacy-source"] as const)("excludes the xGLD comparison identified by %s from rows and frames", (identity) => {
+    const xgld = makeYieldRanking({
+      id: "xgld-unitas", benchmarkKey: "USD", benchmarkRate: 4,
+      warningSignals: identity === "warning" ? ["benchmark-unit-mismatch"] : [],
+      provenance: makeYieldProvenance({ sourceKey: identity === "legacy-source" ? "onchain:xgld-unitas" : "onchain:gold" }),
+    });
+    const summary = projectYieldRankingsSummary({
+      rankings: [xgld], updatedAt: 1, riskFreeRate: 4.04, scalingFactor: 8, medianApy: 5,
+    }).rankings[0];
+    for (const row of [xgld, summary]) {
+      expect(resolveYieldRowBenchmark(row, BENCHMARKS, 4.04)).toMatchObject({ publishedRate: null, rate: null });
+      expect(resolveYieldScatterBenchmarkFrame({ rankings: [row], benchmarks: BENCHMARKS }).referenceBenchmark).toBeNull();
+      expect(resolveYieldScatterBenchmarkFrame({ rankings: [row, buildRanking("eur", "EUR")], benchmarks: BENCHMARKS }).referenceBenchmark)
+        .toBe(BENCHMARKS.EUR);
+    }
+  });
   it("uses the provenance benchmark key when the top-level key is absent", () => {
     const { benchmarkKey: _benchmarkKey, ...rankingWithoutBenchmarkKey } = buildRanking("eur-fallback", "USD");
     const ranking: YieldRanking = {

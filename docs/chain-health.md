@@ -2,7 +2,7 @@
 
 Chain Health Score is the 0-100 composite used by `GET /api/chains`, `/chains/`, and `/chains/[chain]/` to summarize the quality and concentration of stablecoin supply on each supported chain.
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-chain-health -->`v1.8`<!-- GENERATED-END: methodology-version-chain-health -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-chain-health -->`v1.9`<!-- GENERATED-END: methodology-version-chain-health -->
 - **Runtime source:** `shared/lib/chains/health.ts` (the canonical implementation; no compatibility shim is retained)
 - **Version source:** `shared/lib/methodology-versions/registry.ts` (shared constants: `shared/lib/methodology-versions/constants.ts`)
 - **API source:** `worker/src/api/chains.ts`
@@ -12,7 +12,7 @@ Chain Health Score is the 0-100 composite used by `GET /api/chains`, `/chains/`,
 
 ## Inputs
 
-`GET /api/chains` loads the strict stablecoins cache, restricts it to `CORE_AGGREGATE_ACTIVE_IDS`, derives non-USD peg references with `derivePegRates(...)`, and hydrates Safety Score inputs only from a fresh accepted V9 publication. The endpoint returns `503` if the stablecoins cache is unavailable. A missing, held, stale, or invalid V9 dependency does not fail the route; the score map stays empty, so quality and the composite are `null`/NR.
+`GET /api/chains` loads the strict stablecoins cache, restricts it to `CORE_AGGREGATE_ACTIVE_IDS`, reads the published per-asset peg reference, and hydrates Safety Score inputs only from a fresh accepted V9 publication. The endpoint returns `503` if the stablecoins cache is unavailable. A missing, held, stale, or invalid V9 dependency does not fail the route; the score map stays empty, so quality and the composite are `null`/NR.
 
 The Chain Environment factor reads the static L2BEAT chain-risk snapshot in `shared/lib/chains/l2beat-risk.ts` before using the legacy Pharos resilience tier. The snapshot is sourced from `https://l2beat.com/api/scaling/summary` and is not fetched live at request time.
 
@@ -51,6 +51,10 @@ The weighted total is rounded to the nearest integer only after the [quality](#n
 Supply without a published Safety Score contributes to neither numerator nor denominator of `quality`; no rating is imputed. Below 50% rated supply, `quality` is `null` and the composite is NR rather than a judgement based on a minority of supply. At sufficient coverage the factor still describes only the rated portion. The independent [peg-coverage gate](#peg-coverage) must also pass.
 
 ## Peg Coverage
+
+Eligible supply includes held, stale and otherwise unpriced comparisons. When FX admission evidence is published, only admitted comparisons contribute observed peg coverage. A legacy publication compares the observed USD price with a reference derived from the assets eligible for the chain aggregate, or $1 for fixed USD pegs. The factor and composite can be unavailable when the observed share is below 95%. Chain history uses the admitted supply partition's own clock.
+
+A published current peg projection must match the quote clock for a scheduled peg. Fixed USD uses the dollar identity even when the quote is unavailable, so that supply counts in `noUsablePriceSupplyUsd`. A legacy reading uses the unrounded observed price and eligible reference for supply weighting. An explicit unavailable reading keeps the allocation in eligible supply and withholds its contribution to observed supply.
 
 Every chain row carries `pegStabilityCoverage`, computed by `assessPegStability(...)` in `shared/lib/chains/health.ts` against the chain's **positive supply excluding flagged NAV tokens** (every other coin on the chain, including coins with no peg reference, so missing-reference supply cannot inflate coverage):
 

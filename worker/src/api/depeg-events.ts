@@ -1,3 +1,8 @@
+import { DEPEG_LEDGER_MANIFEST_KEY, DEPEG_LEDGER_PAGE_SIZE, DepegLedgerManifestSchema } from "@shared/types/depeg-event-projection";
+import { Sha256Schema } from "@shared/types/safety-schema-primitives";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { getCache } from "../lib/db-cache";
+import { sha256Hex } from "../lib/hash";
 import { DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { logWorkerEventArgs } from "../lib/structured-log";
@@ -227,6 +232,50 @@ async function loadPendingIncidents(
 }
 
 
+function ledgerRefusal(status: number, reason: string): Response {
+  return jsonResponse({ error: "Verified depeg ledger page unavailable", reason }, {
+    status, headers: { "Cache-Control": CACHE_PROFILES.noStore },
+  });
+}
+
+async function verifyLedgerPage(db: D1Database, response: Response, generation: string, cursor: string | null) {
+  let cached: Awaited<ReturnType<typeof getCache>>;
+  try {
+    cached = await getCache(db, DEPEG_LEDGER_MANIFEST_KEY);
+  } catch (error) {
+    logWorkerEventArgs("api", "error", "[depeg-events] Ledger manifest read failed:", toErrorMessage(error));
+    return ledgerRefusal(503, "ledger-manifest-read-failed");
+  }
+  // Bound decode work independently of the writer's validated page count.
+  if (!cached || cached.value.length > 512_000) return ledgerRefusal(503, "ledger-manifest-unavailable");
+  let value: unknown;
+  try {
+    value = JSON.parse(cached.value);
+  } catch {
+    return ledgerRefusal(503, "ledger-manifest-invalid");
+  }
+  const parsed = DepegLedgerManifestSchema.safeParse(value);
+  if (!parsed.success || !Number.isSafeInteger(cached.updatedAt) || cached.updatedAt > Date.now() / 1000
+    || cached.updatedAt < parsed.data.coveredThroughSec) return ledgerRefusal(503, "ledger-manifest-invalid");
+  const manifest = parsed.data;
+  const digest = await sha256Hex(stableJsonStringifyV1(manifest));
+  if (generation !== "latest" && generation !== digest) return ledgerRefusal(409, "ledger-generation-changed");
+  const index = manifest.pages.findIndex((page) => cursor === page.cursor);
+  if (index < 0) return ledgerRefusal(409, "ledger-cursor-unattested");
+  const body = await response.json() as { events: DepegEvent[]; total: number; totalExact?: boolean; nextCursor: string | null };
+  const nextCursor = manifest.pages[index + 1]?.cursor ?? null;
+  const expectedCount = Math.min(DEPEG_LEDGER_PAGE_SIZE, manifest.total - index * DEPEG_LEDGER_PAGE_SIZE);
+  if (body.totalExact !== true || body.total !== manifest.total || body.events.length !== expectedCount
+    || body.nextCursor !== nextCursor || manifest.pages[index].sha256 !== await sha256Hex(stableJsonStringifyV1({
+      events: body.events, total: body.total, nextCursor,
+    }))) return ledgerRefusal(409, "ledger-page-changed");
+  const headers = new Headers(response.headers);
+  headers.set("Cache-Control", CACHE_PROFILES.noStore);
+  return jsonResponse({ ...body, ledgerProof: {
+    generation: digest, coveredFromSec: manifest.coveredFromSec, coveredThroughSec: manifest.coveredThroughSec,
+  } }, { headers: Object.fromEntries(headers.entries()) });
+}
+
 export const handleDepegEvents = async (db: D1Database, url: URL): Promise<Response> => {
     const params = url.searchParams;
     const stablecoin = params.get("stablecoin");
@@ -251,6 +300,13 @@ export const handleDepegEvents = async (db: D1Database, url: URL): Promise<Respo
       return parsedPagination;
     }
 
+    const ledgerGeneration = params.get("ledgerGeneration");
+    if (ledgerGeneration !== null && (stablecoin !== null || active || includePending || !parsedPagination.includeTotal
+      || parsedPagination.limit !== DEPEG_LEDGER_PAGE_SIZE || parsedPagination.offset !== 0
+      || (ledgerGeneration === "latest" ? params.has("cursor") : !Sha256Schema.safeParse(ledgerGeneration).success))) {
+      return ledgerRefusal(400, "invalid-ledger-page-request");
+    }
+
     const conditions: string[] = [];
     const filterBindings: (string | number)[] = [];
     let stablecoinId: string | null = null;
@@ -271,7 +327,7 @@ export const handleDepegEvents = async (db: D1Database, url: URL): Promise<Respo
     conditions.push(EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL);
 
     try {
-    return await buildPaginatedEventResponse<PublicDepegRow, DepegEvent>(db, {
+    const response = await buildPaginatedEventResponse<PublicDepegRow, DepegEvent>(db, {
       tableName: "depeg_events_public",
       orderBy: "effective_started_at DESC, id DESC",
       queryComment: "pharos:depeg-events",
@@ -326,6 +382,9 @@ export const handleDepegEvents = async (db: D1Database, url: URL): Promise<Respo
         };
       },
     });
+    return ledgerGeneration !== null && response.ok
+      ? await verifyLedgerPage(db, response, ledgerGeneration, params.get("cursor"))
+      : response;
     } catch (error) {
       if (error instanceof DepegEventRowUnreadableError) {
         // Keep the refused row visible to operators: the named 503 alone used to

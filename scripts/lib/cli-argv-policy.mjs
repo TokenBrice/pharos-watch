@@ -86,6 +86,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("scripts/maintenance/reconcile-dependency-graph.ts"),
     strict("scripts/maintenance/refresh-pages-release-data.ts"),
     strict("scripts/maintenance/register-telegram.ts"),
+    strict("scripts/maintenance/replay-reference-closures.ts"),
     strict("scripts/maintenance/retire-tests.ts"),
     strict("scripts/maintenance/run-focused-checks.ts"),
     strict("scripts/maintenance/run-release-rehearsal.ts"),

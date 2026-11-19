@@ -2,7 +2,8 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 import type { SlotDeadline } from "../../lib/cron-timeouts";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { getReferenceMarket } from "@shared/lib/reference-market-hours";
 import type { LiquidityFallbackCounters, LiquidityMetrics, LlamaPool } from "./types";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { createD1CostTracker } from "../../lib/d1-cost";
@@ -39,6 +40,8 @@ import { buildDexLiquidityPublicationGenerationId, persistScores, writeHistorica
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { isPreferredDirectApiPool, type DexApiPool } from "../../lib/dex-api-common";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
+import { getClosedReferenceDexValuation } from "../../lib/dex-api-token-pricing";
+import { CURVE_CHAINS } from "./constants";
 import { POOL_CHALLENGE_MIN_TVL } from "../../lib/price-depeg-voting-policy";
 import { buildDirectApiPoolIdentity } from "./direct-source-helpers";
 import {
@@ -538,6 +541,7 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     loadTrackedStablecoinMaps(ctx.db, ctx.syncStartSec),
   ]);
   const { stablecoinPriceById, primaryPriceById, stablecoinMcapById, stablecoinPriceProvenanceById } = trackedMaps;
+  Object.assign(stablecoinPriceById, { closureValuationRejectedAssetIds: new Set<string>() });
   const lookups = buildSymbolLookups();
 
   const directApiFetchers = buildDexDirectApiFetchers({
@@ -627,6 +631,18 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     metadata: {
       dlYieldsAvailable: dataSources.dlYieldsAvailable,
       dlProtocolsAvailable: dataSources.dlProtocolsAvailable,
+      curveBulkReads: dataSources.curvePayloads.flatMap((payload, index) => {
+        if (payload?.readStartedAtSec == null) return [];
+        const { readStartedAtSec } = payload;
+        const generationMs = payload.generatedTimeMs;
+        return [{
+          chain: CURVE_CHAINS[index],
+          readStartedAtSec,
+          cacheGeneratedAtSec: typeof generationMs === "number" && Number.isSafeInteger(generationMs) &&
+            generationMs > 0 && Math.floor(generationMs / 1000) <= Math.floor(Date.now() / 1000)
+            ? Math.floor(generationMs / 1000) : null,
+        }];
+      }),
     },
     counts: {
       defillamaPools: dataSources.rawPoolCount, curvePayloads: dataSources.curvePayloads.filter((payload) => payload != null).length,
@@ -986,6 +1002,7 @@ async function buildDexLiquidityPoolState(
   }), native: {
     usda: refreshUsdaV2Price({ metrics,
       sourceGenerationId: `dex-liquidity-scoring-stage:${ctx.sourceSlotStartedAt ?? ctx.syncStartSec}`,
+      marketMarks: sourceState.stablecoinPriceById.marketMarks,
       nowSec: Math.floor(Date.now() / 1000) }),
     pathUsd: await refreshTempoPathUsdPrice({ sourcePools: metrics,
       stablecoinPriceById: sourceState.stablecoinPriceById,
@@ -1031,7 +1048,17 @@ async function buildDexLiquidityPoolState(
     },
   });
 
+  const valuationTimes = [ctx.syncStartSec, Math.floor(Date.now() / 1000)];
+  const closureValuationRejectedAssetIds = new Set(sourceState.stablecoinPriceById.closureValuationRejectedAssetIds);
+  for (const { id } of ACTIVE_STABLECOINS) {
+    if (valuationTimes.some((at) => getClosedReferenceDexValuation(sourceState.stablecoinPriceById, id, at)?.mark === null)) {
+      closureValuationRejectedAssetIds.add(id);
+    }
+  }
   const poolState: DexLiquidityPoolState = {
+    closureValuationRejectedAssetIds: [...closureValuationRejectedAssetIds],
+    closureValuationMarketMarks: sourceState.stablecoinPriceById.marketMarks && [...sourceState.stablecoinPriceById.marketMarks]
+      .filter(([id]) => getReferenceMarket(TRACKED_META_BY_ID.get(id)?.flags.pegCurrency) != null),
     priceRefresh,
     registryEvaluatedAtSec: staged.registryEvaluatedAtSec,
     targetEnrichment: [...(quoterEnrichment?.telemetry ?? []), ...(v4Enrichment ?? [])],
@@ -1092,6 +1119,8 @@ async function scoreDexLiquidityPoolState(
     poolState.slipstreamMeasuredExecutionTargets,
     measuredTargetPublicationMode,
     poolState.registryEvaluatedAtSec,
+    new Set(poolState.closureValuationRejectedAssetIds),
+    poolState.closureValuationMarketMarks && new Map(poolState.closureValuationMarketMarks),
   );
   const funnel = diagnostics.measuredTargetFunnel;
   funnel.sourceFailures = [...new Set(sourceState.failedSources)].slice(0, 32);
@@ -1296,6 +1325,7 @@ async function persistDexLiquidityScoreState(
     ctx.db,
     {
       snapshotAt: ctx.syncStartSec,
+      admissionNowSec: Math.floor(Date.now() / 1000),
       generationId: publicationGenerationId,
       retainedPoolsByStablecoin: scoreState.retainedPoolsByStablecoin,
       minPoolTvlUsd: POOL_CHALLENGE_MIN_TVL,

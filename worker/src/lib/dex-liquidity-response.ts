@@ -27,6 +27,7 @@ import {
   getDexDiscoveryProviders,
 } from "@shared/lib/dex-deployment-coverage";
 import { liquidityTvlBasisEpoch } from "@shared/lib/dex-liquidity-evidence";
+import { parseDexVolumeAvailabilityRecord } from "@shared/lib/dex-volume-availability";
 
 const TREND_BASELINE_CONFIDENCE_MIN = 0.5;
 const TREND_24H_TOLERANCE_SEC = 12 * 3600;
@@ -40,6 +41,7 @@ export interface DexHistoryRow {
   coverage_class: string | null;
   coverage_confidence: number | null;
   methodology_version: string | null;
+  volume_availability_json?: string | null;
 }
 
 export interface DexPriceRow {
@@ -305,6 +307,10 @@ export function normalizeTopPools(
     if (!pool || typeof pool !== "object" || Array.isArray(pool)) continue;
     const poolRecord = pool as Record<string, unknown>;
     const cleaned = pickAllowedKeys(poolRecord, ALLOWED_POOL_KEYS);
+    if (cleaned.price === undefined && typeof poolRecord.displayPrice === "number" &&
+      Number.isFinite(poolRecord.displayPrice) && poolRecord.displayPrice > 0) {
+      cleaned.price = poolRecord.displayPrice;
+    }
     if (typeof poolRecord.chain === "string") {
       cleaned.chain = toChainDisplay(poolRecord.chain);
     }
@@ -359,11 +365,35 @@ export function selectTrendBaseline<T extends DexHistoryRow>(
   return selectHistoryObservation(history, targetSec, toleranceSec, liquidityTvlBasisEpoch(currentMethodologyVersion));
 }
 
+export function getDexTvlObservedAt(
+  volume: ReturnType<typeof parseDexVolumeAvailabilityRecord>,
+  latestPossibleSec: number,
+): number | null {
+  const observedAt = volume.status === "recorded" ? volume.record["24h"].asOfSec : null;
+  return observedAt != null && observedAt > 0 && observedAt <= latestPossibleSec ? observedAt : null;
+}
+
+export function selectObservedTrendBaseline<T extends DexHistoryRow>(
+  history: T[],
+  observedAt: number | null,
+  lookbackSec: number,
+  toleranceSec: number,
+  currentMethodologyVersion: string | null,
+): T | null {
+  if (observedAt == null || currentMethodologyVersion === undefined) return null;
+  return selectHistoryObservation(history, observedAt - lookbackSec, toleranceSec,
+    liquidityTvlBasisEpoch(currentMethodologyVersion), (row) => {
+      const sampleAt = getDexTvlObservedAt(parseDexVolumeAvailabilityRecord(row.volume_availability_json), observedAt);
+      return sampleAt != null && sampleAt < observedAt ? sampleAt : null;
+    });
+}
+
 function selectHistoryObservation<T extends DexHistoryRow>(
   history: T[],
   targetSec: number,
   toleranceSec: number,
   currentEpoch: number | null,
+  getObservationTime: (row: T) => number | null = (row) => row.snapshot_date,
 ): T | null {
   let best: T | null = null;
   let bestDistance = Number.POSITIVE_INFINITY;
@@ -378,7 +408,9 @@ function selectHistoryObservation<T extends DexHistoryRow>(
     }
     if (row.total_tvl_usd <= 0) continue;
 
-    const distance = Math.abs(row.snapshot_date - targetSec);
+    const observationTime = getObservationTime(row);
+    if (observationTime == null) continue;
+    const distance = Math.abs(observationTime - targetSec);
     if (distance > toleranceSec) continue;
     if (distance < bestDistance) {
       best = row;

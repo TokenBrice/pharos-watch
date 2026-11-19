@@ -212,7 +212,7 @@ export function adaptCircleTransparency(html: string, coinType: string): Adapter
       ),
       ...(displayAmount != null ? { displayAmount } : {}),
       ...(displayAmountRelativeDiff != null ? { displayAmountRelativeDiff } : {}),
-      redemption: buildDocumentedRedemptionTelemetry(sourceTimestamp, { holderEligibility: "verified-customer" }),
+      redemption: buildDocumentedRedemptionTelemetry(null, { holderEligibility: "verified-customer" }),
     },
   };
 }

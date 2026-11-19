@@ -7,6 +7,7 @@ import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtim
 import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import { sleepWithSignal } from "../../lib/abort";
 import { CIRCUIT_SOURCE, STELLAR_HORIZON_API, USER_AGENT } from "../../lib/constants";
+import { getAdmittedDexMarketMark, type DexMarketMark, type DexValuationPrices } from "../../lib/dex-api-token-pricing";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { IsolateLocalState } from "../../lib/isolate-local-state";
 import {
@@ -40,10 +41,10 @@ interface HorizonLiquidityPool {
   reserves: [HorizonReserve, HorizonReserve];
 }
 
-interface PricedHorizonPool {
-  priceUsd: number | null;
-  tvlUsd: number | null;
-}
+type HorizonPoolValuation =
+  | { kind: "market"; tvlUsd: number; priceUsd: number; observedAtSec: number; counterparty: DexMarketMark & { stablecoinId: string } }
+  | { kind: "estimated"; tvlUsd: number; reason: "counterparty-market-mark-unavailable" }
+  | { kind: "unavailable"; reason: "counterparty-unpriced" | "invalid-pool-valuation" };
 
 export interface HorizonPoolsStageResult {
   providerChecks: DexDeploymentProviderCheck[];
@@ -112,27 +113,37 @@ function priceHorizonPool(
   pool: HorizonLiquidityPool,
   trackedAsset: string,
   context: CrawlStageContext,
-): PricedHorizonPool {
+  trackedStablecoinPrices?: DexValuationPrices,
+): HorizonPoolValuation {
   const trackedReserve = pool.reserves.find((reserve) => reserve.asset === trackedAsset)!;
   const pairedReserve = pool.reserves.find((reserve) => reserve.asset !== trackedAsset)!;
   const pairedAsset = trackedClassicAssets.get(pairedReserve.asset);
-  if (!pairedAsset || trackedReserve.amount <= 0 || pairedReserve.amount <= 0) {
-    return { priceUsd: null, tvlUsd: null };
+  if (!pairedAsset || pairedAsset.stablecoinId === context.stablecoinId) {
+    return { kind: "unavailable", reason: "counterparty-unpriced" };
   }
-  const pairedPriceUsd = getReferencePriceForContext(
+  if (trackedReserve.amount <= 0 || pairedReserve.amount <= 0) {
+    return { kind: "unavailable", reason: "invalid-pool-valuation" };
+  }
+  const mark = getAdmittedDexMarketMark(trackedStablecoinPrices, pairedAsset.stablecoinId, context.nowSec);
+  const pairedPriceUsd = mark?.priceUsd ?? getReferencePriceForContext(
     buildPriceValidationContext({ stablecoinId: pairedAsset.stablecoinId }),
     context.references,
   );
-  if (pairedPriceUsd == null) return { priceUsd: null, tvlUsd: null };
+  if (pairedPriceUsd == null) return { kind: "unavailable", reason: "counterparty-unpriced" };
 
   const priceUsd = (pairedReserve.amount * pairedPriceUsd) / trackedReserve.amount;
-  if (!isPlausibleDexObservationPrice(context.stablecoinId, priceUsd, context.references)) {
-    return { priceUsd: null, tvlUsd: null };
-  }
   const tvlUsd = pairedReserve.amount * pairedPriceUsd * 2;
-  return Number.isFinite(tvlUsd) && tvlUsd >= 0
-    ? { priceUsd, tvlUsd }
-    : { priceUsd: null, tvlUsd: null };
+  if (!Number.isFinite(tvlUsd) || !isPlausibleDexObservationPrice(context.stablecoinId, priceUsd, context.references)) {
+    return { kind: "unavailable", reason: "invalid-pool-valuation" };
+  }
+  if (!mark) return { kind: "estimated", tvlUsd, reason: "counterparty-market-mark-unavailable" };
+  return {
+    kind: "market",
+    tvlUsd,
+    priceUsd,
+    observedAtSec: mark.observedAtSec,
+    counterparty: { ...mark, stablecoinId: pairedAsset.stablecoinId },
+  };
 }
 
 async function paceHorizonRequest(signal?: AbortSignal): Promise<void> {
@@ -170,6 +181,7 @@ async function crawlHorizonAssetPages(
   target: ContractDeployment,
   horizonAsset: string,
   context: CrawlStageContext,
+  trackedStablecoinPrices?: DexValuationPrices,
 ): Promise<DexDeploymentProviderCheck> {
   const url = new URL("/liquidity_pools", STELLAR_HORIZON_API);
   url.searchParams.set("reserves", horizonAsset);
@@ -223,7 +235,7 @@ async function crawlHorizonAssetPages(
           reserve.asset === horizonAsset ? target.address : toRepoStellarAsset(reserve.asset),
         );
         if (tokenIds.some((tokenId) => tokenId == null)) continue;
-        const priced = priceHorizonPool(pool, horizonAsset, context);
+        const valuation = priceHorizonPool(pool, horizonAsset, context, trackedStablecoinPrices);
         const pairedReserve = pool.reserves[trackedIndex === 0 ? 1 : 0];
         const pairedSymbol = pairedReserve.asset === "native" ? "XLM" : pairedReserve.asset.split(":", 1)[0]!;
         context.addPool(
@@ -234,7 +246,7 @@ async function crawlHorizonAssetPages(
             protocol: "stellar-sdex",
             dexId: "stellar-sdex",
             symbol: `${horizonAsset.split(":", 1)[0]} / ${pairedSymbol}`,
-            tvlUsd: priced.tvlUsd,
+            tvlUsd: valuation.kind === "market" ? valuation.tvlUsd : null,
             volume24h: null,
             qualityMultiplier: null,
             poolType: "stellar-constant-product",
@@ -244,9 +256,9 @@ async function crawlHorizonAssetPages(
             baseToken: tokenIds[0]!,
             quoteToken: tokenIds[1]!,
             quoteSymbol: pairedSymbol,
-            priceUsd: priced.priceUsd,
+            priceUsd: valuation.kind === "market" ? valuation.priceUsd : null,
             lockedLiqPct: null,
-            rawJson: JSON.stringify(pool),
+            rawJson: JSON.stringify({ ...pool, valuation }),
           }),
         );
       }
@@ -279,6 +291,7 @@ async function crawlHorizonAssetPages(
 export async function crawlHorizonPoolsStage(input: {
   coinTargets: ContractDeployment[];
   context: CrawlStageContext;
+  trackedStablecoinPrices?: DexValuationPrices;
 }): Promise<HorizonPoolsStageResult> {
   const providerChecks: DexDeploymentProviderCheck[] = [];
   const targets = input.coinTargets.filter((target) =>
@@ -299,7 +312,7 @@ export async function crawlHorizonPoolsStage(input: {
 
     await paceHorizonRequest(input.context.signal);
     if (input.context.timeExceeded()) return { providerChecks, stoppedEarly: true };
-    providerChecks.push(await crawlHorizonAssetPages(target, horizonAsset, input.context));
+    providerChecks.push(await crawlHorizonAssetPages(target, horizonAsset, input.context, input.trackedStablecoinPrices));
   }
 
   return { providerChecks };

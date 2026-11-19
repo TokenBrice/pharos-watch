@@ -8,7 +8,8 @@ import {
   initSourcePoolGraph,
 } from "./pool-helpers";
 import { buildPrimaryPoolKey } from "./pool-identity";
-import type { LiquidityFallbackCounters, SourcePoolGraph } from "./types";
+import type { CurvePoolEntry, LiquidityFallbackCounters, SourcePoolGraph } from "./types";
+import type { CurveBasePoolOverlapEvidence } from "./process-pool-protocol-enrichment";
 import type {
   PoolExecutionCapability,
   PoolProtocolEnrichment,
@@ -26,8 +27,8 @@ export function accumulatePoolMetrics(
   const meta = TRACKED_META_BY_ID.get(stablecoinId);
   if (!meta) return;
   const { pool, poolSymbols, protocol, chainNorm } = identity;
+  const curveData: (CurvePoolEntry & CurveBasePoolOverlapEvidence) | undefined = enrichment.curveData;
   const {
-    curveData,
     resolvedPoolType,
     qualityMultiplier,
     organicFraction,
@@ -79,16 +80,17 @@ export function accumulatePoolMetrics(
   // join, and a row that names another pool address never inherits it from a
   // shared coin-set fingerprint.
   const rowPoolAddress = canonicalEvmAddress(pool.pool);
-  const reviewedLock =
-    exactCurveAddress != null && (rowPoolAddress == null || rowPoolAddress === canonicalEvmAddress(exactCurveAddress))
-      ? curveData?.permanentLiquidity
-      : undefined;
+  const exactReviewedCurveJoin =
+    exactCurveAddress != null && (rowPoolAddress == null || rowPoolAddress === canonicalEvmAddress(exactCurveAddress));
+  const reviewedLock = exactReviewedCurveJoin ? curveData?.permanentLiquidity : undefined;
+  const curveBasePoolOverlap = exactReviewedCurveJoin ? curveData?.curveBasePoolOverlap : undefined;
   metric.pools.push({
     poolId: buildPrimaryPoolKey(chainNorm, pool.pool, pool.project, exactCurveAddress),
     candidateFingerprint: buildPoolFingerprint(chainNorm, pool.project, pool.underlyingTokens ?? []) ?? undefined,
     project: protocol,
     chain: chainNorm,
     tvlUsd: rawContribTvl,
+    ...(curveBasePoolOverlap ? { curveBasePoolOverlap } : {}),
     symbol: pool.symbol,
     volumeUsd1d,
     volumeUsd7d,

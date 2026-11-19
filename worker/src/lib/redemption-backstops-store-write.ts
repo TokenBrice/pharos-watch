@@ -1,12 +1,17 @@
-import { RedemptionBackstopDetailsSchema, RedemptionBackstopEntrySchema, type RedemptionBackstopEntry } from "@shared/types/redemption";
+import {
+  RedemptionBackstopDetailsSchema,
+  RedemptionBackstopSnapshotEntrySchema,
+  type RedemptionBackstopSnapshotEntry,
+} from "@shared/types/redemption";
 import { RedemptionReserveRunMetadataSchema } from "@shared/types/reserve-input";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixMillisecondsToUtcDay } from "@shared/lib/time-buckets";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { batchExecute } from "./db";
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { mentoFpmmIds, withholdMentoMarketPhase } from "./redemption-backstop-capacity/mento-phase";
 
-export type RedemptionBackstopSnapshotRecord = RedemptionBackstopEntry;
+export type RedemptionBackstopSnapshotRecord = RedemptionBackstopSnapshotEntry;
 
 export interface RedemptionBackstopRunRetentionResult {
   cutoff: number;
@@ -65,7 +70,7 @@ ${SNAPSHOT_RUN_ROW_INSERT_COLUMNS}
 ${SNAPSHOT_RUN_ROW_UPDATE_ASSIGNMENTS}`;
 
 
-function buildDetailsJson(record: RedemptionBackstopSnapshotRecord): string {
+function buildDetailsJson(record: RedemptionBackstopSnapshotRecord, mentoPhaseEntry?: RedemptionBackstopSnapshotEntry): string {
   return JSON.stringify(
     RedemptionBackstopDetailsSchema.parse({
       ...(record.reserveInput ? { reserveInput: record.reserveInput } : {}),
@@ -111,18 +116,26 @@ function buildDetailsJson(record: RedemptionBackstopSnapshotRecord): string {
       ...(record.notes ? { notes: record.notes } : {}),
       ...(record.capsApplied ? { capsApplied: record.capsApplied } : {}),
       ...(record.feeDescription ? { feeDescription: record.feeDescription } : {}),
+      ...(mentoPhaseEntry ? { mentoPhaseEntry } : {}),
     }),
   );
 }
 
 /** Admit both the public row and its deliberately selected persisted details. */
 export function validateRedemptionBackstopSnapshot(record: RedemptionBackstopSnapshotRecord): void {
-  RedemptionBackstopEntrySchema.parse(record);
+  RedemptionBackstopSnapshotEntrySchema.parse(record);
   buildDetailsJson(record);
 }
 
 function buildSnapshotRowValues(record: RedemptionBackstopSnapshotRecord): unknown[] {
-  RedemptionBackstopEntrySchema.parse(record);
+  const validated = RedemptionBackstopSnapshotEntrySchema.parse(record);
+  // Rollback readers see only the unavailable projection. The dated entry stays in this immutable run row.
+  const measuredPause = record.routeStatus === "paused" && record.immediateCapacityUsd === 0;
+  const poolBehindPayoutWarning = record.routeStatusSource === "market-implied" && record.mentoPoolStatus != null;
+  const mentoPhaseEntry = mentoFpmmIds.has(record.stablecoinId) &&
+    ((record.resolutionState === "resolved" && record.routeStatus === "open") || measuredPause || poolBehindPayoutWarning)
+    ? validated : undefined;
+  if (mentoPhaseEntry) record = withholdMentoMarketPhase(mentoPhaseEntry);
   return [
     record.stablecoinId,
     record.score,
@@ -146,7 +159,7 @@ function buildSnapshotRowValues(record: RedemptionBackstopSnapshotRecord): unkno
     record.queueEnabled ? 1 : 0,
     record.updatedAt,
     record.methodologyVersion,
-    buildDetailsJson(record),
+    buildDetailsJson(record, mentoPhaseEntry),
   ];
 }
 

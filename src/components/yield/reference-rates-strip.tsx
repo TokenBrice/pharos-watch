@@ -20,6 +20,7 @@ import type {
   YieldSafetySnapshotMeta,
   YieldSourceInputMeta,
 } from "@shared/types/yield";
+import { YIELD_BENCHMARK_KEY_VALUES } from "@shared/types/yield-vocabulary";
 
 interface ReferenceRatesStripProps {
   benchmarks?: YieldBenchmarkRegistry | null;
@@ -50,8 +51,11 @@ function getBenchmarkEntries(
   benchmarks: YieldBenchmarkRegistry | null | undefined,
   fallbackBenchmark: YieldBenchmarkMeta | null | undefined,
 ): YieldBenchmarkMeta[] {
-  const entries = benchmarks ? Object.values(benchmarks) : fallbackBenchmark ? [fallbackBenchmark] : [];
-  return entries.filter((b): b is YieldBenchmarkMeta => b != null);
+  if (!benchmarks) return fallbackBenchmark ? [fallbackBenchmark] : [];
+  return YIELD_BENCHMARK_KEY_VALUES.flatMap((key) => {
+    const meta = benchmarks[key];
+    return meta ? [{ ...meta, key }] : [];
+  });
 }
 
 function getBenchmarkRows(entries: YieldBenchmarkMeta[]): BenchmarkRow[] {

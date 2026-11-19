@@ -536,7 +536,9 @@ describe("buildCurveLookups", () => {
     ]);
     pool.coins[0]!.poolBalance = "120000000000";
     pool.coins[1]!.poolBalance = "80000000000";
-    const curvePayloads = [{ data: { poolData: [pool] } }] as CurveApiPayload[];
+    const curvePayloads = [{
+      generatedTimeMs: 1_800_000_000_000, readStartedAtSec: 1_800_000_240, data: { poolData: [pool] },
+    }] as CurveApiPayload[];
     const symbolToIds = new Map([
       ["USDC", ["usd-coin"]],
       ["USDT", ["tether"]],
@@ -559,6 +561,7 @@ describe("buildCurveLookups", () => {
 
     const entry = curvePoolMap.get("ethereum:0x1111111111111111111111111111111111111111");
     expect(entry).toBeDefined();
+    expect(entry!.priceObservedAt).toBeNull();
     expect(entry!.poolCoins).toBeUndefined();
     expect(curvePoolMap.get("ethereum:USDC-USDT")).toBe(entry);
     expect(entry!.balanceRatio).toBeCloseTo(80_000 / 120_000, 5);
@@ -569,6 +572,7 @@ describe("buildCurveLookups", () => {
     expect(priceObservations.get("usd-coin")).toEqual([
       expect.objectContaining({
         price: 1,
+        observedAt: null,
         tvl: 200_000,
         chain: "ethereum",
         protocol: "curve",
@@ -983,6 +987,10 @@ describe("buildCurveLookups", () => {
     const addressEntry = curvePoolMap.get(`ethereum:${CURVE_LUSD_3CRV_METAPOOL_ADDRESS}`);
     expect(addressEntry?.registryId).toBe("factory");
     expect(addressEntry?.tvl).toBe(11_900_000); // with the 3Crv leg, not usdTotalExcludingBasePool
+    expect(addressEntry?.curveBasePoolOverlap).toMatchObject({
+      basePoolKey: "ethereum:0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7",
+    });
+    expect(addressEntry?.curveBasePoolOverlap?.lpLegTvlUsd).toBeCloseTo(9_827_744.887, 2);
     // v7.2: 15% LUSD against 85% 3Crv is spare exit depth for LUSD, not imbalance.
     expect(addressEntry?.balanceRatio).toBeCloseTo(0.17, 2);
     expect(addressEntry?.balanceRatioById).toEqual({ "lusd-liquity": 1 });

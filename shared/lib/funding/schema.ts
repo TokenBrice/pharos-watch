@@ -12,6 +12,12 @@ const FUNDING_CHAIN_VALUES = [
 
 const UnixSecondsSchema = z.number().finite().int().min(946_684_800).max(4_102_444_800);
 const NonNegativeFiniteSchema = z.number().finite().nonnegative();
+const TransferIndexPattern = /^(?:0|[1-9][0-9]*)$/;
+const FundingTransferDiscriminatorSchema = z.string().refine((value) => {
+  if (value === "native") return true;
+  if (value.startsWith("log:")) return TransferIndexPattern.test(value.slice(4));
+  return value.startsWith("trace:") && value.slice(6).split(".").every((index) => TransferIndexPattern.test(index));
+}, "expected log:<index>, native, or trace:<path>");
 
 const FundingChainSchema = z.enum(FUNDING_CHAIN_VALUES).refine(
   (chain) => Object.prototype.hasOwnProperty.call(CHAIN_META, chain),
@@ -73,6 +79,9 @@ export const CostsFileSchema = z.object({
 export const DonationSchema = z.object({
   chain: FundingChainSchema,
   tx_hash: z.string().min(1),
+  transfer_discriminator: FundingTransferDiscriminatorSchema.optional(),
+  /** A verified discriminator for the original row in the transaction-keyed ledger. */
+  legacy_credit: z.literal(true).optional(),
   block_timestamp: UnixSecondsSchema,
   // Lowercase is the ledger invariant; donor-key eligibility compares on it.
   from_address: z.string().regex(/^0x[0-9a-f]{40}$/, "from_address must be a lowercase 0x address"),
@@ -84,21 +93,96 @@ export const DonationSchema = z.object({
   amount_decimal: NonNegativeFiniteSchema,
   usd_at_receipt: NonNegativeFiniteSchema,
   price_note: z.string().min(1),
+}).strict().superRefine((row, ctx) => {
+  const discriminator = row.transfer_discriminator;
+  if (discriminator === undefined) {
+    if (row.legacy_credit) ctx.addIssue({
+      code: "custom", path: ["legacy_credit"], message: "legacy_credit requires a verified transfer discriminator",
+    });
+    return;
+  }
+  if (!/^0x[0-9a-f]{64}$/i.test(row.tx_hash)) ctx.addIssue({
+    code: "custom", path: ["tx_hash"], message: "transfer identity requires a full transaction hash",
+  });
+  if (discriminator.startsWith("log:") !== (row.token_address !== null)) ctx.addIssue({
+    code: "custom", path: ["transfer_discriminator"], message: "ERC-20 receipts use a log index and native receipts use a trace or native identity",
+  });
+});
+
+export function fundingTransferId(chain: string, txHash: string, discriminator?: string): string {
+  const transaction = `${chain}:${txHash.toLowerCase()}`;
+  return discriminator === undefined ? transaction : `${transaction}:${discriminator}`;
+}
+
+const LedgerSchema = z.object({
+  last_updated_at: UnixSecondsSchema,
+  donations: z.array(DonationSchema),
 }).strict();
 
-export const DonationsFileSchema = z.object({
-  last_updated_at: UnixSecondsSchema,
-  donations: z.array(DonationSchema).superRefine((rows, ctx) => {
-    const seen = new Set<string>();
-    rows.forEach((row, index) => {
-      const key = `${row.chain}:${row.tx_hash.toLowerCase()}`;
-      if (seen.has(key)) {
-        ctx.addIssue({ code: "custom", path: [index, "tx_hash"], message: `duplicate donation ${key}` });
-      }
-      seen.add(key);
+/** Use after the claims Worker can atomically record transfer-level credits. */
+export const TransferDonationsFileSchema = LedgerSchema.superRefine(({ donations }, ctx) => {
+  const seen = new Set<string>();
+  const legacy = new Set<string>();
+  const unresolved = new Set<string>();
+  donations.forEach((row, index) => {
+    const transaction = fundingTransferId(row.chain, row.tx_hash);
+    const transfer = fundingTransferId(row.chain, row.tx_hash, row.transfer_discriminator);
+    const representsLegacy = row.transfer_discriminator === undefined || row.legacy_credit === true;
+    if (seen.has(transfer) || (representsLegacy && legacy.has(transaction))) {
+      ctx.addIssue({ code: "custom", path: ["donations", index, "tx_hash"], message: `duplicate donation ${transfer}` });
+    }
+    seen.add(transfer);
+    if (representsLegacy) legacy.add(transaction);
+    if (row.transfer_discriminator === undefined) unresolved.add(transaction);
+  });
+  donations.forEach((row, index) => {
+    if (row.transfer_discriminator !== undefined && unresolved.has(fundingTransferId(row.chain, row.tx_hash))) {
+      ctx.addIssue({
+        code: "custom", path: ["donations", index, "transfer_discriminator"],
+        message: "resolve the original ledger row's discriminator before accepting another receipt from this transaction",
+      });
+    }
+  });
+});
+
+/** Compare the proposed ledger to the published version before embedding it in Pages and the Worker. */
+export function assertDonationCreditContinuity(previous: DonationsFile, next: DonationsFile): void {
+  const byTransaction = new Map<string, Donation[]>();
+  for (const row of next.donations) {
+    const key = fundingTransferId(row.chain, row.tx_hash);
+    const rows = byTransaction.get(key);
+    if (rows) rows.push(row);
+    else byTransaction.set(key, [row]);
+  }
+  for (const old of previous.donations) {
+    if (old.transfer_discriminator !== undefined && !old.legacy_credit) continue;
+    const key = fundingTransferId(old.chain, old.tx_hash);
+    const rows = byTransaction.get(key);
+    if (!rows?.some((row) => row.transfer_discriminator !== undefined)) continue;
+    const alias = rows.find((row) => row.legacy_credit);
+    if (!alias || alias.from_address !== old.from_address || alias.token_address !== old.token_address ||
+        alias.amount_decimal !== old.amount_decimal || alias.block_timestamp !== old.block_timestamp ||
+        (old.transfer_discriminator !== undefined && old.transfer_discriminator !== alias.transfer_discriminator)) {
+      throw new Error(`Preserve legacy_credit on the exact published transfer for ${key}`);
+    }
+  }
+}
+
+// Keep the transaction fence until all claims writes use the new credit table.
+export const DonationsFileSchema = LedgerSchema.superRefine(({ donations }, ctx) => {
+  const seen = new Set<string>();
+  donations.forEach((row, index) => {
+    const key = fundingTransferId(row.chain, row.tx_hash);
+    if (row.transfer_discriminator !== undefined) ctx.addIssue({
+      code: "custom", path: ["donations", index, "transfer_discriminator"],
+      message: "transfer-level funding rows require transfer-level credits",
     });
-  }),
-}).strict();
+    if (seen.has(key)) ctx.addIssue({
+      code: "custom", path: ["donations", index, "tx_hash"], message: `duplicate donation ${key}`,
+    });
+    seen.add(key);
+  });
+});
 
 export type FundingChain = z.infer<typeof FundingChainSchema>;
 export type CostLineItem = z.infer<typeof CostLineItemSchema>;

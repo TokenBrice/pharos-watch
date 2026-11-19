@@ -721,7 +721,7 @@ async function fetchMentoDashboardSnapshot(
 const MENTO_REDEMPTION_TIMEOUT_MS = 8_000;
 
 export async function fetchMentoReserves(
-  _coin: ReserveAdapterCoin,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,
@@ -805,7 +805,7 @@ export async function fetchMentoReserves(
     });
     let redemptionMetadata: NonNullable<AdapterResult["metadata"]>;
     try {
-      redemptionMetadata = await fetchMentoRedemptionMetadata(params.redemption, redemptionTimeout.signal, ctx);
+      redemptionMetadata = await fetchMentoRedemptionMetadata(coin.id, params.redemption, redemptionTimeout.signal, ctx);
     } finally {
       redemptionTimeout.dispose();
     }
@@ -824,8 +824,8 @@ export async function fetchMentoReserves(
       metadata: { ...result.metadata, ...redemptionMetadata },
     };
   } catch (error) {
-    // A closed FX market is a measured, scheduled route state: capacity stays
-    // unavailable, but the reserve composition read is not degraded by it.
+    // A measured FX closure can withhold route telemetry without degrading
+    // an otherwise valid reserve composition.
     warnings.push(error instanceof MentoFxMarketClosedError
       ? reserveInfoWarning(
         "mento-redemption-fx-market-closed",

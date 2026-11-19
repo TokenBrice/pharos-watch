@@ -201,12 +201,15 @@ describe("buildPreviousTrustedPriceLookup", () => {
     )]).toEqual([]);
   });
 
-  it("uses replay update time when its observation timestamp is missing", () => {
+  it.each([
+    { syncedAt: null, price: 0.998, observedAt: NOW_SEC - 10 },
+    { syncedAt: NOW_SEC - 10, price: 1, observedAt: NOW_SEC - 60 },
+  ])("uses the update clock only for a legacy replay (sync clock $syncedAt)", ({ syncedAt, price, observedAt }) => {
     const lookup = buildPreviousTrustedPriceLookup(
       new Map([["coin", makeAsset()]]), NOW_SEC,
-      new Map([["coin", makeCacheEntry({ price: 0.998, observedAt: null, updatedAt: NOW_SEC - 10 })]]),
+      new Map([["coin", makeCacheEntry({ price: 0.998, observedAt: null, updatedAt: NOW_SEC - 10, syncedAt })]]),
     );
-    expect(lookup.get("coin")).toMatchObject({ price: 0.998, observedAt: NOW_SEC - 10 });
+    expect(lookup.get("coin")).toMatchObject({ price, observedAt });
   });
 
   it("returns previous-cache row when replay cache has no matching entry", () => {

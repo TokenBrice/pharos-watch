@@ -83,7 +83,8 @@ export async function fetchYearnYboldSource(signal?: AbortSignal): Promise<Resol
     sourceKey: OPTIONAL_YIELD_SOURCES.ybold.sourceKey,
     yieldSource: OPTIONAL_YIELD_SOURCES.ybold.yieldSource,
     yieldType: OPTIONAL_YIELD_SOURCES.ybold.yieldType,
-    sourceObservedAt: Math.floor(Date.now() / 1000),
+    sourceObservedAt: null,
+    sourceFetchedAt: Math.floor(Date.now() / 1000),
     comparisonAnchorObservedAt: null,
   };
 }
@@ -120,7 +121,7 @@ interface KongVault {
   yearn: boolean;
   asset: { symbol: string; address?: string | null };
   tvl: { close: number } | null;
-  apy: { net: number | null; monthlyNet: number | null } | null;
+  apy: { net: number | null; blockTime?: string | null } | null;
   meta: { category: string | null; isRetired: boolean | null } | null;
 }
 
@@ -234,7 +235,8 @@ function buildSupplementalCandidate(
   sourceKey: string,
   yieldSource: string,
   yieldType: NonNullable<ResolvedYield["yieldType"]>,
-  sourceObservedAt: number,
+  sourceFetchedAt: number,
+  sourceObservedAt: number | null = null,
 ): ResolvedYieldCandidate {
   return {
     ...identity,
@@ -250,6 +252,7 @@ function buildSupplementalCandidate(
       yieldSource,
       yieldType,
       sourceObservedAt,
+      sourceFetchedAt,
       comparisonAnchorObservedAt: null,
     },
   };
@@ -293,6 +296,7 @@ export async function fetchMorphoVaultSources(signal?: AbortSignal): Promise<Sup
           { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
         );
         if (!result?.response.ok) return { candidates: results, degraded: true };
+        const sourceFetchedAt = Math.floor(Date.now() / 1000);
 
         const body = result.body;
         const items = body.data?.vaults?.items;
@@ -319,7 +323,7 @@ export async function fetchMorphoVaultSources(signal?: AbortSignal): Promise<Sup
             { stablecoinId: trackedAsset.stablecoinId, symbol: trackedAsset.symbol, chain, address: vault.asset.address ?? null },
             apy * 100, vault.address, tvl,
             `protocol-api:morpho-vault:${chain}:${vault.address.toLowerCase()}`,
-            `Morpho: ${vault.name}`, "lending-opportunity", Math.floor(Date.now() / 1000),
+            `Morpho: ${vault.name}`, "lending-opportunity", sourceFetchedAt,
           ));
         }
         skip += items.length;
@@ -397,6 +401,7 @@ export async function fetchPendleMarketSources(signal?: AbortSignal): Promise<Su
           const body = await readResponseJsonWithinLimitWithSignal<{ total?: number; results?: PendleMarket[] }>(
             response, DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES, budget.signal,
           );
+          const sourceFetchedAt = Math.floor(Date.now() / 1000);
           if (!Array.isArray(body.results)) {
             degraded = true;
             break;
@@ -430,7 +435,7 @@ export async function fetchPendleMarketSources(signal?: AbortSignal): Promise<Su
               apy * 100, market.address, tvl,
               `protocol-api:pendle:${chain}:${market.address.toLowerCase()}`,
               `Pendle fixed yield: ${market.protocol} ${market.assetRepresentation}`,
-              "fixed-yield", Math.floor(Date.now() / 1000),
+              "fixed-yield", sourceFetchedAt,
             ));
           }
 
@@ -492,7 +497,7 @@ export async function fetchYearnKongSources(signal?: AbortSignal): Promise<Suppl
     address name yearn
     asset { symbol address }
     tvl { close }
-    apy { net monthlyNet }
+    apy { net blockTime }
     meta { category isRetired }
   }
 }`,
@@ -507,6 +512,7 @@ export async function fetchYearnKongSources(signal?: AbortSignal): Promise<Suppl
           degraded = true;
           continue;
         }
+        const sourceFetchedAt = Math.floor(Date.now() / 1000);
 
         const body = result.body;
         const vaults = body.data?.vaults;
@@ -529,6 +535,11 @@ export async function fetchYearnKongSources(signal?: AbortSignal): Promise<Suppl
 
           const netApy = vault.apy?.net;
           if (typeof netApy !== "number" || !Number.isFinite(netApy) || netApy <= 0) continue;
+          const blockTime = vault.apy?.blockTime;
+          const blockSec = typeof blockTime === "string" && /^[0-9]+$/.test(blockTime) ? Number(blockTime) : NaN;
+          const sourceObservedAt = Number.isSafeInteger(blockSec) && blockSec > 0 && blockSec <= sourceFetchedAt
+            ? blockSec
+            : null;
 
           const tvl = vault.tvl?.close;
           if (typeof tvl !== "number" || tvl < KONG_MIN_TVL_USD) continue;
@@ -552,7 +563,7 @@ export async function fetchYearnKongSources(signal?: AbortSignal): Promise<Suppl
             netApy * 100, vault.address, tvl,
             `protocol-api:${sourceNamespace}:${chain}:${vault.address.toLowerCase()}`,
             isK3Sbold ? "K3: sBOLD" : `${sourcePrefix}: ${vault.name}`,
-            isK3Sbold ? "lending-vault" : "lending-opportunity", Math.floor(Date.now() / 1000),
+            isK3Sbold ? "lending-vault" : "lending-opportunity", sourceFetchedAt, sourceObservedAt,
           ));
         }
       } catch (error) {
@@ -613,6 +624,7 @@ export async function fetchBeefySources(signal?: AbortSignal): Promise<Supplemen
     if (!apyRes?.response.ok || !vaultsRes?.response.ok || !tvlRes?.response.ok) {
       return { candidates: [], degraded: true };
     }
+    const sourceFetchedAt = Math.floor(Date.now() / 1000);
 
     const apyMap = apyRes.body;
     const vaults = vaultsRes.body;
@@ -640,7 +652,7 @@ export async function fetchBeefySources(signal?: AbortSignal): Promise<Supplemen
         { symbol: vault.assets[0], chain, address: vault.tokenAddress },
         apy * 100, vault.id, tvl,
         `protocol-api:beefy:${chain}:${vault.id}`,
-        `Beefy: ${vault.name || vault.id}`, "lending-opportunity", Math.floor(Date.now() / 1000),
+        `Beefy: ${vault.name || vault.id}`, "lending-opportunity", sourceFetchedAt,
       ));
     }
     return { candidates: results, degraded: false };

@@ -15,11 +15,36 @@ import {
 } from "../../lib/price-validation";
 import { POOL_CHALLENGE_HIGH_TVL_USD, POOL_CHALLENGE_MIN_TVL, corroboratingProtocolGroupsOutvote, divergingProtocolGroupsOutvote } from "../../lib/price-depeg-voting-policy";
 import { getDepegThresholdBps } from "../../lib/depeg-threshold-policy";
+import { readDexPriceLineage, selectIndependentChallengerPools, type DexPriceLineage } from "../dex-liquidity/price-lineage";
+import { isCanonicalPricePoolKey } from "@shared/lib/pricing-source-pool-provenance";
 import { loadDexPoolChallengers } from "../../lib/depeg-helpers";
-import { aggregateProtocolPrices, computeWeightedMedianPrice } from "../../lib/dex-price-estimators";
+import { aggregateProtocolPrices, computeWeightedMedianPrice, type AggregatedProtocolPrice } from "../../lib/dex-price-estimators";
 import { midDivergenceBps } from "../../lib/price-divergence";
+import { haveDisjointPriceInputs } from "../../lib/price-consensus";
+import { hasIndependentSevereCandidateCorroboration } from "../../lib/price-publish-policy";
+import { isIndependentDexObservation } from "../depeg-detection/reference-policy";
+import type { PegAssetBase } from "@shared/types/price";
 import type { ValidationContextResolver } from "./pricing";
 import type { PeggedAsset, PriceValidationStats, PrimaryPriceResult } from "./enrich-prices-shared";
+
+type ChallengerPool = DexPriceLineage & {
+  price: number;
+  tvlUsd: number;
+  protocol: string;
+  chain: string;
+  observedAt?: number;
+};
+
+function eligiblePoolChallenges(pools: ChallengerPool[], primary: PegAssetBase): ChallengerPool[] {
+  if (pools.every((pool) => pool.upstreamKeys === undefined && pool.pricePoolKeys === undefined)) return pools;
+
+  const independent = pools.filter((pool) => {
+    const lineage = readDexPriceLineage(pool);
+    return !!lineage.upstreamKeys?.length && !!lineage.pricePoolKeys?.length &&
+      isIndependentDexObservation(primary, pool);
+  });
+  return selectIndependentChallengerPools(independent);
+}
 
 /**
  * Downgrades 2-source clusters whose members are all list-style aggregators
@@ -86,7 +111,7 @@ export async function applyPrimaryPostConsensusHardening(params: {
  */
 export function applyPoolChallenge(
   results: Map<string, PrimaryPriceResult>,
-  poolChallengers: Map<string, Array<{ price: number; tvlUsd: number; protocol: string; chain: string; observedAt?: number }>>,
+  poolChallengers: Map<string, ChallengerPool[]>,
   assetPegTypes: Map<string, string | undefined>,
   stats: PriceValidationStats,
   references?: PriceValidationReferences,
@@ -100,8 +125,15 @@ export function applyPoolChallenge(
     const challengeSources = result.agreeSources.length > 0 ? result.agreeSources : [result.source];
     if (!isPoolChallengeEligibleConsensus(challengeSources)) continue;
 
-    const pools = poolChallengers.get(assetId);
-    if (!pools?.length) continue;
+    const offeredPools = poolChallengers.get(assetId);
+    if (!offeredPools?.length) continue;
+    const primary = {
+      id: assetId, symbol: assetId, pegType: assetPegTypes.get(assetId),
+      priceSource: result.selectedSource ?? result.source, agreeSources: challengeSources,
+      ...(result.pricePoolKeys !== undefined && { pricePoolKeys: result.pricePoolKeys }),
+      ...(result.upstreamKeys !== undefined && { upstreamKeys: result.upstreamKeys }),
+    };
+    const pools = eligiblePoolChallenges(offeredPools, primary);
     const protocolGroups = aggregateProtocolPrices(
       pools.map((pool) => ({
         protocol: pool.protocol,
@@ -146,6 +178,7 @@ export function applyPoolChallenge(
       result,
       protocolGroups: challengeableProtocolGroups,
       divergingProtocolGroups,
+      pools,
       pegType,
       poolChallengeBps,
       references,
@@ -194,19 +227,27 @@ export function applyPoolChallenge(
           result.source = "pool-tvl-weighted";
           result.selectedSource = "pool-tvl-weighted";
           result.priceEstimator = "selected_source";
-          const poolObservedAts = replacementProtocolGroups
-            .map((group) => group.observedAt)
-            .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
-          result.observedAt = poolObservedAts.length > 0
-            ? Math.min(...poolObservedAts)
-            : result.observedAt;
+          const selectedProtocols = new Set(replacementProtocolGroups.map((group) => group.protocol));
+          const selectedPools = pools.filter((pool) => selectedProtocols.has(pool.protocol) && pool.tvlUsd > 0 && pool.price > 0);
+          const clocks = selectedPools.flatMap((pool) => Number.isSafeInteger(pool.observedAt) && pool.observedAt! > 0 ? [pool.observedAt!] : []);
+          result.observedAt = clocks.length > 0 && clocks.length === selectedPools.length ? Math.min(...clocks) : null;
+          delete result.priceQuoteBasis;
+          delete result.pricePoolKeys;
+          delete result.upstreamKeys;
+          const sources = selectedPools.map((pool) => readDexPriceLineage(pool).upstreamKeys);
+          if (result.observedAt != null && sources.every((keys) => keys?.length)) {
+            result.upstreamKeys = [...new Set(sources.flatMap((keys) => keys!))].sort();
+            result.pricePoolKeys = result.upstreamKeys.filter(isCanonicalPricePoolKey);
+          }
           result.observedAtMode = "local_fetch";
           result.candidateSources = [...new Set([...result.candidateSources, "pool-tvl-weighted"])];
           result.agreeSources = ["pool-tvl-weighted"];
           result.disagreeSources = preReplacementVotingSources.filter((source) => source !== "pool-tvl-weighted");
           result.allPrices = { "pool-tvl-weighted": replacementPrice };
+          delete result.upstreamKeysBySource;
+          delete result.fiatPremiumEvidence;
           result.observedAtBySource = {
-            "pool-tvl-weighted": poolObservedAts.length > 0 ? Math.min(...poolObservedAts) : result.observedAt ?? null,
+            "pool-tvl-weighted": result.observedAt,
           };
           result.observedAtModeBySource = { "pool-tvl-weighted": "local_fetch" };
         }
@@ -217,10 +258,10 @@ export function applyPoolChallenge(
 }
 
 function filterChallengeableProtocolGroups(
-  protocolGroups: Array<{ price: number; tvl: number; observedAt?: number | null }>,
+  protocolGroups: AggregatedProtocolPrice[],
   validationContext: PriceValidationContext,
   references?: PriceValidationReferences,
-): Array<{ price: number; tvl: number; observedAt?: number | null }> {
+): AggregatedProtocolPrice[] {
   return protocolGroups.filter((group) => (
     validatePriceCandidate(group.price, validationContext, "dex_observation", references).accepted
   ));
@@ -228,13 +269,14 @@ function filterChallengeableProtocolGroups(
 
 function selectReplacementProtocolGroups(params: {
   result: PrimaryPriceResult;
-  protocolGroups: Array<{ price: number; tvl: number; observedAt?: number | null }>;
-  divergingProtocolGroups: Array<{ price: number; tvl: number; observedAt?: number | null }>;
+  protocolGroups: AggregatedProtocolPrice[];
+  divergingProtocolGroups: AggregatedProtocolPrice[];
+  pools: ChallengerPool[];
   pegType: string | undefined;
   poolChallengeBps: number;
   references?: PriceValidationReferences;
   validationContext: PriceValidationContext;
-}): Array<{ price: number; tvl: number; observedAt?: number | null }> {
+}): AggregatedProtocolPrice[] {
   // 2026-09-24 (vchf-vnx): the diverging-vs-corroborating majority rule lives in
   // `divergingProtocolGroupsOutvote` (worker/src/lib/constants.ts), shared with the
   // depeg recovery veto and pool confirmation, which carry the full rationale.
@@ -269,17 +311,17 @@ function selectReplacementProtocolGroups(params: {
     group.tvl >= POOL_CHALLENGE_HIGH_TVL_USD &&
     Math.abs(priceDeviationBps(group.price, pegRef)) >= depegThresholdBps &&
     midDivergenceBps(params.result.price, group.price) >= depegThresholdBps &&
-    hasHardCandidateAgreement(params.result, group.price)
+    hasHardCandidateAgreement(params.result, group.price, params.pools.filter((pool) => pool.protocol === group.protocol))
   ));
 }
 
 function selectHighTvlDirectionalReplacementGroups(params: {
-  protocolGroups: Array<{ price: number; tvl: number; observedAt?: number | null }>;
+  protocolGroups: AggregatedProtocolPrice[];
   pegRef: number;
   depegThresholdBps: number;
   poolChallengeBps: number;
   resultPrice: number;
-}): Array<{ price: number; tvl: number; observedAt?: number | null }> {
+}): AggregatedProtocolPrice[] {
   const eligibleGroups = params.protocolGroups.filter((group) => (
     group.tvl >= POOL_CHALLENGE_HIGH_TVL_USD &&
     Math.abs(priceDeviationBps(group.price, params.pegRef)) >= params.depegThresholdBps &&
@@ -287,7 +329,7 @@ function selectHighTvlDirectionalReplacementGroups(params: {
   ));
   if (eligibleGroups.length < 2) return [];
 
-  const byDirection = new Map<-1 | 1, Array<{ price: number; tvl: number; observedAt?: number | null }>>();
+  const byDirection = new Map<-1 | 1, AggregatedProtocolPrice[]>();
   for (const group of eligibleGroups) {
     const direction = priceDeviationBps(group.price, params.pegRef) < 0 ? -1 : 1;
     const groups = byDirection.get(direction) ?? [];
@@ -295,7 +337,7 @@ function selectHighTvlDirectionalReplacementGroups(params: {
     byDirection.set(direction, groups);
   }
 
-  let selected: Array<{ price: number; tvl: number; observedAt?: number | null }> = [];
+  let selected: AggregatedProtocolPrice[] = [];
   for (const groups of byDirection.values()) {
     if (groups.length < 2) continue;
     const coherentGroups = selectLargestCoherentProtocolGroup(groups, params.poolChallengeBps);
@@ -344,11 +386,13 @@ function selectLargestCoherentProtocolGroup<T extends { price: number; tvl: numb
   return selected;
 }
 
-function hasHardCandidateAgreement(result: PrimaryPriceResult, price: number): boolean {
+function hasHardCandidateAgreement(result: PrimaryPriceResult, price: number, pools: ChallengerPool[]): boolean {
   const candidatePrices = result.allPrices ?? {};
   return Object.entries(candidatePrices).some(([source, candidatePrice]) => {
     const isHard = isHardPricingTrustTier(getPricingSourceRegistryEntry(source)?.trustTier);
-    return isHard && midDivergenceBps(price, candidatePrice) <= DIVERGENCE_THRESHOLD_BPS;
+    const upstreamKeys = result.upstreamKeysBySource?.[source];
+    return isHard && midDivergenceBps(price, candidatePrice) <= DIVERGENCE_THRESHOLD_BPS &&
+      upstreamKeys?.length !== 0 && pools.every((pool) => haveDisjointPriceInputs(pool, { upstreamKeys }));
   });
 }
 
@@ -386,6 +430,15 @@ function hasCorroboratedSevereDownsideCandidate(
   const context = cachedContext ?? buildPriceValidationContext({ stablecoinId: assetId, pegType });
   if (!isSevereFixedPegDownside(result.price, context, references)) {
     return false;
+  }
+
+  if (result.upstreamKeysBySource) {
+    return hasIndependentSevereCandidateCorroboration({
+      candidatePrices: result.allPrices,
+      upstreamKeysBySource: result.upstreamKeysBySource,
+      validationContext: context,
+      validationReferences: references,
+    }, true);
   }
 
   const candidatePrices = result.allPrices ?? {};

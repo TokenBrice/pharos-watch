@@ -9,6 +9,8 @@ vi.mock("../../../lib/stablecoins-cache", async (importOriginal) => ({
 }));
 
 import { loadTrackedStablecoinMaps } from "../orchestrator-phases/lookups";
+import { computePriceConsensus } from "../../../lib/price-consensus";
+import { getClosedReferenceDexValuation } from "../../../lib/dex-api-token-pricing";
 
 const NOW_SEC = 1_700_000_000;
 
@@ -96,6 +98,40 @@ describe("loadTrackedStablecoinMaps", () => {
     expect(stablecoinMcapById).toEqual(new Map([["usdc-circle", 1_000_000]]));
   });
 
+  it.each([
+    ["market", "kraken+coinbase", NOW_SEC - 60, true],
+    ["clockless", "kraken+coinbase", null, false],
+    ["promoted DEX", "kraken+curve-dex", NOW_SEC - 60, false],
+  ] as const)("keeps original evidence only for a dated independent %s quote", async (_, source, priceObservedAt, admitted) => {
+    loadStablecoinsCache.mockResolvedValue({
+      kind: "ok", updatedAt: NOW_SEC,
+      payload: { peggedAssets: [makeAsset({
+        id: "eurc-circle", price: 1.13, priceSource: source, priceObservedAt,
+        priceConfidence: "high", agreeSources: source.split("+"),
+      })] },
+    });
+    const { stablecoinPriceById } = await loadTrackedStablecoinMaps({} as D1Database, NOW_SEC);
+    expect(stablecoinPriceById.marketMarks?.get("eurc-circle")).toEqual(admitted
+      ? { priceUsd: 1.13, observedAtSec: priceObservedAt, source, observedAtMode: "upstream" }
+      : undefined);
+  });
+
+  it("withholds a closed-session leg when its consensus uses a local fetch clock", async () => {
+    const at = Date.parse("2026-11-14T01:00:00Z") / 1000;
+    const quote = computePriceConsensus([
+      { source: "kraken", weight: 2, price: 1.05, observedAt: at - 60, observedAtMode: "local_fetch" },
+      { source: "coingecko", weight: 1, price: 1.051, observedAt: at - 30, observedAtMode: "upstream" },
+    ], 1.05, 100)!;
+    expect(quote).toMatchObject({ observedAt: at - 60, observedAtMode: "local_fetch" });
+    loadStablecoinsCache.mockResolvedValue({ kind: "ok", updatedAt: at, payload: { peggedAssets: [makeAsset({
+      id: "eurc-circle", price: quote.price, priceSource: quote.source, agreeSources: quote.agreeSources,
+      priceConfidence: quote.confidence, priceObservedAt: quote.observedAt, priceObservedAtMode: quote.observedAtMode,
+    })] } });
+    const { stablecoinPriceById } = await loadTrackedStablecoinMaps({} as D1Database, at);
+    expect(stablecoinPriceById.get("eurc-circle")).toBeCloseTo(1.0505);
+    expect(getClosedReferenceDexValuation(stablecoinPriceById, "eurc-circle", at)?.mark).toBeNull();
+  });
+
   it("admits fresh observed soft primaries only as comparison anchors", async () => {
     loadStablecoinsCache.mockResolvedValue({
       kind: "ok",
@@ -109,6 +145,7 @@ describe("loadTrackedStablecoinMaps", () => {
           makeAsset({ id: "stale", price: 1, priceObservedAt: NOW_SEC - 1_801 }),
           makeAsset({ id: "future", price: 1, priceObservedAt: NOW_SEC + 1 }),
           makeAsset({ id: "unclocked", price: 1, priceObservedAt: undefined, priceUpdatedAt: undefined }),
+          makeAsset({ id: "null-market-clock", price: 1, priceObservedAt: null, priceUpdatedAt: NOW_SEC }),
           makeAsset({ id: "nominal", price: 1, priceSource: "protocol-par" }),
           makeAsset({ id: "invalid", price: Number.NaN }),
           makeAsset({ id: "zero", price: 0 }),

@@ -23,6 +23,23 @@ export function exitExecutionReviewDigest(review: ExitExecutionModelReview): str
   return domainDigest("safety-score-v10.exit-execution-review.v1", review);
 }
 
+/** EUR vault receipts use market value in both cost legs and carry retention basis separately. */
+export function exitExecutionEurVaultReviewDigest(review: ExitExecutionModelReview): string {
+  return domainDigest("safety-score-v10.exit-execution-eur-vault-review.v2", review);
+}
+
+/** In-kind receipts with market-value costs and retention pinned by their output legs. */
+export function exitExecutionInKindReviewDigest(review: ExitExecutionModelReview): string {
+  return domainDigest("safety-score-v10.exit-execution-in-kind-review.v2", review);
+}
+
+export function exitExecutionReviewDigests(review: ExitExecutionModelReview): string[] {
+  const legacy = exitExecutionReviewDigest(review);
+  return review.producer.kind === "erc4626-instant" && !review.producer.externalShareToken
+    ? [legacy, exitExecutionInKindReviewDigest(review), exitExecutionEurVaultReviewDigest(review)]
+    : [legacy];
+}
+
 export function validateExitExecutionModelReviews(input: unknown, envelope: V9ValidatedPolicyEnvelope): ExitExecutionModelReview[] {
   const registry = z.object({ schemaVersion: z.literal(1), reviews: z.array(ExitExecutionModelReviewSchema) }).strict().parse(input);
   const seen = new Set<string>();
@@ -87,7 +104,8 @@ export function admitExitExecutionCertificate(args: {
   const certificate = parsed.data;
   const model = args.envelope.policy.semantic.exit.executionModels[certificate.modelId];
   if (!model || model.admission !== "enabled") return unavailable("execution-model-unreviewed", "method-unsupported");
-  const review = (args.reviews ?? validateExitExecutionModelReviews(reviewedModels, args.envelope)).find((entry) => exitExecutionReviewDigest(entry) === certificate.reviewDigest);
+  const review = (args.reviews ?? validateExitExecutionModelReviews(reviewedModels, args.envelope)).find((entry) =>
+    entry.identity.assetId === args.assetId && exitExecutionReviewDigests(entry).includes(certificate.reviewDigest));
   if (!review || review.modelId !== certificate.modelId || stableJsonStringifyV1(review.identity) !== stableJsonStringifyV1(certificate.identity) || review.holder !== certificate.holder || certificate.identity.assetId !== args.assetId) return unavailable("execution-identity-unreviewed", "method-unsupported");
   if (Date.parse(review.reviewedAt) / 1000 > args.clockSec || Date.parse(review.expiresAt) / 1000 < args.clockSec) return unavailable("execution-review-expired", "method-unsupported");
   if (certificate.inputGenerationId !== args.inputGenerationId || certificate.observationGenerationId !== args.observationGenerationId) return unavailable("execution-generation-mismatch");
@@ -119,7 +137,10 @@ export function admitExitExecutionCertificate(args: {
     }
     const executedValue = exitRawUsd(BigInt(point.executedRawInput), certificate.inputReference.decimals, certificate.inputReference.unitValueUsd);
     const outputValue = point.outputs.reduce((sum, leg) => sum + exitRawUsd(BigInt(leg.rawUnits), leg.decimals, leg.unitValueUsd), 0n);
-    const expectedOutputValue = point.outputs.reduce((sum, leg) => sum + exitRawUsd(BigInt(leg.rawUnits), leg.decimals, leg.expectedUnitValueUsd), 0n);
+    const marketCostReceipt = certificate.reviewDigest !== exitExecutionReviewDigest(review);
+    const expectedOutputValue = marketCostReceipt ? outputValue : point.outputs.reduce(
+      (sum, leg) => sum + exitRawUsd(BigInt(leg.rawUnits), leg.decimals, leg.expectedUnitValueUsd), 0n,
+    );
     if (executedValue <= 0n) return unavailable("execution-input-value-unavailable");
     let additionalFeeValue = 0n;
     for (const fee of point.fees.filter((entry) => entry.kind === "gas")) {

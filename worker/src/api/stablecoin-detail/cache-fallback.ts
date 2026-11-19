@@ -1,6 +1,6 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
-import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { getCirculatingRawOrNull, projectUsdMarketCapBaselineBuckets } from "@shared/lib/supply";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { buildNativeSupplyBuckets, getLatestDetailTokenDate, type DetailResponseHelpers } from "./shared";
 
@@ -9,16 +9,18 @@ function buildCacheFallbackToken(
   circulatingUsd: Record<string, number> | undefined,
   pegType: string,
   price: number | null | undefined,
+  native?: number | null,
 ): Record<string, unknown> | null {
   // The cache already stores provider-native USD circulating buckets. Wrapping
   // them for the canonical accessor preserves that contract without applying
   // any price conversion.
   const supplyUsd = getCirculatingRawOrNull({ circulating: circulatingUsd });
-  if (supplyUsd == null || supplyUsd < 0) return null;
+  if (supplyUsd == null) return null;
   return {
     date,
     totalCirculatingUSD: circulatingUsd,
-    totalCirculating: buildNativeSupplyBuckets(pegType, supplyUsd, price),
+    totalCirculating: native === undefined ? buildNativeSupplyBuckets(pegType, supplyUsd, price)
+      : native === null ? {} : { [pegType]: native },
   };
 }
 
@@ -46,11 +48,17 @@ export async function handleCacheBackedDetail(
   }
 
   const currentDay = bucketUnixSecondsToUtcDay(stablecoinsCache.updatedAt);
+  const historicalToken = (window: "day" | "week" | "month", days: number, legacy: Record<string, number>) => {
+    const baseline = coin.supplyChangeBaselines?.[window];
+    const date = baseline ? bucketUnixSecondsToUtcDay(baseline.observedAt) : currentDay - days * DAY_SECONDS;
+    return buildCacheFallbackToken(date, projectUsdMarketCapBaselineBuckets(coin, window, legacy), config.pegType,
+      coin.price, baseline?.circulatingNative);
+  };
   const tokens = [
-    buildCacheFallbackToken(currentDay - 30 * DAY_SECONDS, coin.circulatingPrevMonth, config.pegType, coin.price),
-    buildCacheFallbackToken(currentDay - 7 * DAY_SECONDS, coin.circulatingPrevWeek, config.pegType, coin.price),
-    buildCacheFallbackToken(currentDay - DAY_SECONDS, coin.circulatingPrevDay, config.pegType, coin.price),
-    buildCacheFallbackToken(currentDay, coin.circulating, config.pegType, coin.price),
+    historicalToken("month", 30, coin.circulatingPrevMonth),
+    historicalToken("week", 7, coin.circulatingPrevWeek),
+    historicalToken("day", 1, coin.circulatingPrevDay),
+    buildCacheFallbackToken(currentDay, coin.circulating, config.pegType, coin.price, coin.circulatingNative),
   ].filter((token): token is Record<string, unknown> => token !== null);
 
   if (tokens.length === 0) {

@@ -7,6 +7,7 @@ import { createCronResult, createNeutralSkippedCronResult } from "../lib/cron-re
 import type { TelegramCreds } from "../telegram/delivery/telegram";
 import type { TwitterCreds } from "../lib/twitter";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
 import { parseJson, parseJsonObject } from "../lib/json-parse";
 import {
@@ -26,6 +27,7 @@ import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_INTERNAL_DIGEST_SQL_FILTER, NON_WEEK
 import { REGIME_CRITICAL_DIGEST_DEGRADED_SOURCES } from "./digest-input-quality";
 import { buildRecentDigestMeta } from "./daily-digest/runtime-helpers";
 import { buildWeeklyInputData } from "./weekly-recap/input-data";
+import { collectWeeklyBlacklistPeriods } from "./weekly-recap/blacklist";
 import { WEEKLY_SYSTEM_PROMPT, buildWeeklyLeadRequirements, buildWeeklyPrompt } from "./weekly-recap/prompt";
 import type { DailyDigestSourceRow } from "./weekly-recap/types";
 import type { DigestSafetyContext } from "@shared/types/digest";
@@ -107,10 +109,16 @@ export async function generateWeeklyRecap(
     });
   }
 
-  // Check the scheduled edition day. A non-blocked row with retryable channel
-  // state remains eligible for duplicate-safe delivery recovery.
   const digestDate = formatIsoDate(scheduledAtSec);
   const editionDayStart = bucketUnixSecondsToUtcDay(scheduledAtSec);
+  // A manual generation before the primary slot cannot observe the full period.
+  const eventCutoff = editionDayStart + CRON_SCHEDULE_CADENCES.daily0810Utc.offsetSec;
+  if (scheduledAtSec < eventCutoff) {
+    return createNeutralSkippedCronResult("weekly-event-cutoff-not-reached", { eventCutoff });
+  }
+
+  // A non-blocked edition with retryable channel state remains eligible for
+  // duplicate-safe delivery recovery.
   const editionDayEnd = editionDayStart + DAY_SECONDS;
   const existing = await db
     .prepare(
@@ -286,8 +294,7 @@ export async function generateWeeklyRecap(
     },
   });
   // Two seven-day UTC edition windows, bounded by the scheduled slot.
-  const todayTs = bucketUnixSecondsToUtcDay(scheduledAtSec);
-  const weekBoundary = todayTs - 6 * DAY_SECONDS;
+  const weekBoundary = editionDayStart - 6 * DAY_SECONDS;
   const cutoff = weekBoundary - 7 * DAY_SECONDS;
   const dailyRows = await db
     .prepare(
@@ -369,10 +376,16 @@ export async function generateWeeklyRecap(
       reason: "source-load-failed",
     };
   }
+  // A recovery run can read later editions. Its weekly event cutoff stays at the primary slot.
+  const eventPeriods = {
+    current: { start: eventCutoff - 7 * DAY_SECONDS, end: eventCutoff },
+    prior: { start: eventCutoff - 14 * DAY_SECONDS, end: eventCutoff - 7 * DAY_SECONDS },
+  };
+  const blacklist = await collectWeeklyBlacklistPeriods(db, eventPeriods, signal);
   const weeklyData = buildWeeklyInputData(currentRows, priorRows, safetyContext, {
-    current: { start: todayTs - 7 * DAY_SECONDS, end: todayTs },
-    prior: { start: todayTs - 14 * DAY_SECONDS, end: todayTs - 7 * DAY_SECONDS },
-  }, { start: weekBoundary, end: scheduledAtSec });
+    current: { start: editionDayStart - 7 * DAY_SECONDS, end: editionDayStart },
+    prior: { start: editionDayStart - 14 * DAY_SECONDS, end: editionDayStart - 7 * DAY_SECONDS },
+  }, eventPeriods, blacklist);
   if (!weeklyData) {
     await reportCronProgress(reportProgress, {
       stage: "input-unavailable",

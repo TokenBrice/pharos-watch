@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
+import { mockD1, mockD1Strict, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 
@@ -197,6 +197,8 @@ function makeTables(overrides: Partial<{
   styleGateModes: { daily: "shadow" | "enforce"; weekly: "shadow" | "enforce" };
 }> = {}): MockTableConfig[] {
   return [
+    { match: "pharos:weekly-blacklist-coverage", rows: [] },
+    { match: "FROM blacklist_events", rows: [] },
     ...(["daily", "weekly"] as const).map((kind): MockTableConfig => ({
       match: "SELECT value, updated_at FROM cache WHERE key = ?",
       matchBinds: [DIGEST_STYLE_GATE_MODE_CACHE_KEYS[kind]],
@@ -567,6 +569,16 @@ describe("generateWeeklyRecap", () => {
     expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
   });
 
+  it("skips a manual Monday run before the weekly event cutoff", async () => {
+    const cutoff = Date.parse("2026-03-30T08:10:00Z") / 1000;
+    const db = mockD1Strict([]);
+    const result = await generateWeeklyRecap(db, "anthropic-key", null, null, undefined, undefined, cutoff - 1);
+    expect(result.status).toBe("skipped_neutral");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ reason: "weekly-event-cutoff-not-reached", eventCutoff: cutoff });
+    expect(db.getHistory()).toEqual([]);
+    expect(fetchWithRetry).not.toHaveBeenCalled();
+  });
+
   it("uses the Monday scheduled slot when execution starts after midnight Tuesday", async () => {
     vi.setSystemTime(new Date("2026-03-31T00:01:00.000Z"));
     vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
@@ -589,6 +601,10 @@ describe("generateWeeklyRecap", () => {
       scheduledAtSec: mondaySlotSec,
     });
     const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
+    const currentStart = mondaySlotSec - 7 * 86_400;
+    expect(db.getHistory().filter(({ sql }) => sql.includes("FROM blacklist_events")).map(({ binds }) => binds)).toEqual([
+      [currentStart, mondaySlotSec], [currentStart - 7 * 86_400, currentStart],
+    ]);
     expect(JSON.parse(String(insert?.binds[3])).gradeTransitionPeriods).toEqual({
       current: { start: Date.parse("2026-03-23T00:00:00Z") / 1000, end: Date.parse("2026-03-30T00:00:00Z") / 1000 },
       prior: { start: Date.parse("2026-03-16T00:00:00Z") / 1000, end: Date.parse("2026-03-23T00:00:00Z") / 1000 },
@@ -1128,12 +1144,11 @@ describe("generateWeeklyRecap", () => {
 
   it("keys carried-over depegs to the declared window when the first edition is missing", async () => {
     // Monday 2026-03-30 08:10 slot: the declared current window is
-    // [Tue 2026-03-24 00:00, scheduledAt]. Tuesday's edition failed, so the six
+    // [Mon 2026-03-23 08:10, scheduledAt]. Tuesday's edition failed, so the six
     // readable editions start Wednesday and are still above the five-row floor.
     const scheduledAtSec = Math.floor(Date.UTC(2026, 2, 30, 8, 10, 0) / 1000);
-    const declaredWindowStartSec = Math.floor(Date.UTC(2026, 2, 24, 0, 0, 0) / 1000);
     const editionBaseSec = Math.floor(Date.UTC(2026, 2, 25, 8, 5, 0) / 1000);
-    const depegStartedAt = declaredWindowStartSec + 3_600;
+    const depegStartedAt = Math.floor(Date.UTC(2026, 2, 23, 14) / 1000);
     const leadSignalId = `weekly:depeg:pmusd-protocol:${depegStartedAt}`;
     const template = buildDailyRows()[0]!;
     const { sqlite, db } = createLatestSchemaSqlite();
@@ -1161,7 +1176,7 @@ describe("generateWeeklyRecap", () => {
         title: "PMUSD Depeg Leads",
         text: "PMUSD spent the week 5284 bps below peg on $65M while PSI stayed in BEDROCK.",
         extended: [
-          "PMUSD opened the trailing edition window 5284 bps below its peg on $65M of supply and never recovered, so the weekly recap should treat it as the fresh critical event inside the declared window rather than a standing condition inherited from a prior recap. Tuesday's daily edition is missing, but the declared window still opened on Tuesday at midnight, and the readable Wednesday to Monday editions all show the same open event. That read gap must not demote a genuinely new critical.",
+          "PMUSD opened the trailing edition window 5284 bps below its peg on $65M of supply and never recovered, so the weekly recap should treat it as the fresh critical event inside the declared window rather than a standing condition inherited from a prior recap. Tuesday's daily edition is missing, but the declared window still opened on Monday at 08:10 UTC, and the readable Wednesday to Monday editions all show the same open event. That read gap must not demote a genuinely new critical.",
           "PSI opened the trailing edition window at 90 and closed at 86, never leaving BEDROCK but losing four points across five daily notes. USDT stayed near 1.00 in every fixture row, which makes the week's story less about a broken peg and more about calm data refusing to become a headline. The recap should notice the drift without inventing a crisis.",
           "The active depeg observations rose from 0 to 4 as the week progressed, but the recap input separates those observations from unique signals. That distinction matters because one persistent condition should not masquerade as five independent events just because it survived five daily snapshots. It is burden, not necessarily breadth.",
           "Blacklist activity accumulated 10 fixture events while grade transitions appeared on alternating days, giving the model enough secondary texture without overwhelming the market-cap arc. The Bank Run Gauge climbed from 10 to 14, a mild range that supports watchfulness rather than panic. Weekly structure should tie those pieces together instead of stapling them into a list.",
@@ -1227,6 +1242,10 @@ describe("generateWeeklyRecap", () => {
           bps: -5284,
           direction: "below",
           mcapUsd: 65_000_000,
+          severityBasis: "current",
+          currentBps: -5284,
+          pegReference: 1,
+          priceObservedAt: rows[criticalRowIndex]!.generated_at,
           startedAt: criticalStartedAt,
           impactScore: 343.5,
         }],

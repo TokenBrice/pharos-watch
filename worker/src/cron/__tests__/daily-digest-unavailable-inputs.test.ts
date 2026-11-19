@@ -11,6 +11,7 @@ import { collectActiveDepegs, collectBlacklistActivity, collectMintBurnFlows, co
 import { collectDewsStress } from "../daily-digest/collectors-risk";
 import { resolveDailyDigestEditionNumber } from "../digest/publish";
 import { buildWeeklyInputData } from "../weekly-recap/input-data";
+import type { WeeklyBlacklistActivity } from "../weekly-recap/blacklist";
 import { buildWeeklyPrompt } from "../weekly-recap/prompt";
 
 const QUIET_INPUT: DigestInputData = {
@@ -98,6 +99,7 @@ describe("digest publishes unavailable inputs as unavailable", () => {
       { ...rows[0], stablecoin_id: "coin-0", started_at: 999, close_reason: "superseded" },
     ] }]));
     ctx.trackedStablecoinIds = new Set([...rows.map((row) => row.stablecoin_id), "usr-resolv"]);
+    ctx.nowSec = 3000;
     ctx.mcapById = new Map(rows.slice(0, 11).map((row, index) => [row.stablecoin_id, index === 9 ? 1_000_000 : 100_000_000]));
     const active = await collectActiveDepegs(ctx);
     const resolved = await collectResolvedDepegs(ctx);
@@ -277,13 +279,10 @@ describe("digest publishes unavailable inputs as unavailable", () => {
     const day = dayInput({ activeDepegCount: 2, blacklistActivity: { eventCount: 1, totalAmountUsd: 5, topEvents: [] } });
     const partial = rollupDigestInputs(Array.from({ length: 5 }, () => day));
     expect(partial.activeDepegObs).toBeNull();
-    expect(partial.blacklistEvents).toBeNull();
-    expect(partial.blacklistUsd).toBeNull();
     expect(partial.days).toBe(5);
 
     const full = rollupDigestInputs(Array.from({ length: 7 }, () => day));
     expect(full.activeDepegObs).toBe(14);
-    expect(full.blacklistEvents).toBe(7);
   });
 
   it("withholds only failed metrics across seven editions and names the failed observations", () => {
@@ -299,24 +298,23 @@ describe("digest publishes unavailable inputs as unavailable", () => {
     }));
     const rollup = rollupDigestInputs(days, undefined, { start: 1000, end: 2000 });
     expect(rollup).toMatchObject({
-      activeDepegObs: null, uniqueDepegSignals: null, blacklistEvents: null, blacklistUsd: null,
+      activeDepegObs: null, uniqueDepegSignals: null,
       gradeTransitions: 0,
     });
     expect(rollup.unavailableReasons.activeDepegObs).toContain("active-depegs-query");
-    expect(rollup.unavailableReasons.blacklistEvents).toContain("blacklist-activity-query");
     const weekly = buildWeeklyInputData(days.map((inputData, index) => ({
       generated_at: 1_772_000_000 + index * 86400, digest_title: "Day", digest_text: "Day",
       input_data: JSON.stringify(inputData),
     })))!;
     const prompt = buildWeeklyPrompt(weekly);
     expect(prompt).toContain("Active depeg observations across daily editions: N/A (active-depegs-query)");
-    expect(prompt).toContain("Total blacklist events: N/A (blacklist-activity-query");
+    expect(prompt).toContain("Total blacklist events: N/A (weekly-blacklist-event-period-unavailable");
     expect(prompt).not.toContain("Total blacklist events: 0");
     expect(prompt).not.toContain("Active depeg observations across daily editions: 0");
     expect(weekly.degradedSources).toContain("blacklist-activity-query");
   });
 
-  it("retains sub-threshold daily freezes for weekly accounting without promoting candidates", async () => {
+  it("retains sub-threshold daily freezes without promoting daily candidates", async () => {
     const collected = await collectBlacklistActivity(makeCollectorCtx(mockD1([{
       match: "FROM blacklist_events",
       rows: [{ symbol: "USDC", chain_name: "Ethereum", event_type: "blacklist", amount_usd_at_event: 1_000_000 }],
@@ -325,22 +323,36 @@ describe("digest publishes unavailable inputs as unavailable", () => {
     expect(collected.value).toMatchObject({ eventCount: 1, totalAmountUsd: 1_000_000, editorialEligible: false });
     expect(buildEditorialCandidates(input, null).some((candidate) => candidate.kind === "blacklist")).toBe(false);
     expect(buildUserPrompt(input)).not.toContain("Blacklist activity (rolling last 24h)");
-    expect(rollupDigestInputs(Array.from({ length: 7 }, () => input))).toMatchObject({
-      blacklistEvents: 7, blacklistUsd: 7_000_000, blacklistUnpricedEvents: 0,
-    });
   });
 
-  it("preserves unpriced counts and labels weekly known amounts as a lower bound", () => {
-    const input = dayInput({
-      blacklistActivity: { eventCount: 2, totalAmountUsd: 5, unpricedEventCount: 1, topEvents: [] },
-    });
+  it.each([
+    { name: "verified quiet", reason: null, eventCount: 0, knownUsd: 0, unpriced: 0, exactCount: 0, exactUsd: 0 },
+    { name: "unverified coverage", reason: "weekly-blacklist-coverage-missing", eventCount: 2, knownUsd: 35, unpriced: 0, exactCount: null, exactUsd: null },
+    { name: "verified with unpriced events", reason: null, eventCount: 2, knownUsd: 35, unpriced: 1, exactCount: 2, exactUsd: null },
+  ] as const)("publishes weekly blacklist ledger evidence for $name", (fixture) => {
+    const receipt = { version: 1 as const, generation: "fixture", rosterFingerprint: "fixture", eventPeriod: { start: 1_771_000_000, end: 1_773_000_000 } };
+    const quiet: WeeklyBlacklistActivity = {
+      coverage: { receipt, reason: null }, eventCount: 0, totalAmountUsd: 0, unpricedEventCount: 0, topEvents: [],
+    };
+    const current: WeeklyBlacklistActivity = {
+      ...quiet,
+      coverage: fixture.reason ? { receipt: null, reason: fixture.reason } : quiet.coverage,
+      eventCount: fixture.eventCount, totalAmountUsd: fixture.knownUsd, unpricedEventCount: fixture.unpriced,
+    };
     const weekly = buildWeeklyInputData(Array.from({ length: 7 }, (_, index) => ({
       generated_at: 1_772_000_000 + index * 86400, digest_title: "Day", digest_text: "Day",
-      input_data: JSON.stringify(input),
-    })))!;
-    expect(weekly).toMatchObject({ totalBlacklistEventsThisWeek: 14, totalBlacklistAmountUsd: 35, blacklistUnpricedEventCount: 7 });
-    expect(buildWeeklyPrompt(weekly)).toContain("at least $35.00 known subtotal (7 unpriced events)");
-    expect(buildWeeklyPrompt(weekly)).not.toContain("$35.00 affected");
+      input_data: JSON.stringify(dayInput({
+        blacklistActivity: { eventCount: 99, totalAmountUsd: 999, topEvents: [] },
+      })),
+    })), [], undefined, undefined, undefined, { current, prior: quiet })!;
+    expect(weekly).toMatchObject({
+      totalBlacklistEventsThisWeek: fixture.exactCount, totalBlacklistAmountUsd: fixture.exactUsd,
+      blacklistLedgerObservations: {
+        current: { eventCount: fixture.eventCount, knownAmountUsd: fixture.knownUsd, unpricedEventCount: fixture.unpriced },
+        prior: { eventCount: 0, knownAmountUsd: 0 },
+      },
+    });
+    if (fixture.exactUsd === null) expect(buildWeeklyPrompt(weekly)).toContain("$35.00 known subtotal");
   });
 
   it.each(["partial", "legacy"] as const)("withholds weekly ecosystem mcap for %s supply coverage", (coverage) => {

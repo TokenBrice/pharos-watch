@@ -42,9 +42,12 @@ import {
   BluechipRatingSchema,
 } from "@shared/types/bluechip";
 import {
+  DepegEventSchema,
   DepegEventsResponseSchema,
   PegSummaryResponseSchema,
 } from "@shared/types/peg";
+import { PegReferenceHoldSchema } from "@shared/lib/peg-utils";
+import { FxReferenceEvidenceSchema, SelectedPegReferenceSchema } from "@shared/types/fx-reference";
 import {
   DexLiquidityMapSchema,
   DexLiquidityHistoryResponseSchema,
@@ -245,13 +248,22 @@ export const PUBLIC_API_RESPONSE_SCHEMAS = {
   NonUsdShareResponse: NonUsdShareResponseSchema,
   SnapshotsIndexResponse: SnapshotsIndexResponseSchema,
   SnapshotCoinResponse: SnapshotCoinResponseSchema,
-  StablecoinListResponse: StablecoinListResponseSchema.extend(FreshnessEnvelopeShape),
+  StablecoinListResponse: StablecoinListResponseSchema.extend({
+    ...FreshnessEnvelopeShape,
+    // The runtime map decoders quarantine invalid entries. Document the normalized values.
+    fxReferenceObservations: z.record(z.string(), FxReferenceEvidenceSchema).optional(),
+    selectedPegReferences: z.record(z.string(), SelectedPegReferenceSchema).optional(),
+  }),
   StablecoinReservesResponse: StablecoinReservesResponseSchema,
   StablecoinChartResponse: StablecoinChartResponseSchema,
   PegSummaryResponse: PegSummaryResponseSchema,
   BluechipRatingsResponse: z.object(FreshnessEnvelopeShape).catchall(BluechipRatingSchema),
   DexLiquidityResponse: DexLiquidityMapSchema,
-  DepegEventsResponse: DepegEventsResponseSchema,
+  DepegEventsResponse: DepegEventsResponseSchema.extend({
+    events: z.array(DepegEventSchema.safeExtend({
+      referenceHold: PegReferenceHoldSchema.optional(),
+    })),
+  }),
   TapeEventsResponse: TapeEventsResponseSchema,
   UsdsStatusResponse: UsdsStatusResponseOutputSchema.extend(FreshnessEnvelopeShape),
   DexLiquidityHistoryResponse: DexLiquidityHistoryResponseSchema,

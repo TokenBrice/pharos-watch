@@ -20,11 +20,18 @@ describe("Curve authored configuration equivalence", () => {
   it("preserves every expanded post-A19 route and policy, including own optional keys and order", () => {
     const policies = [CURVE_DOLA_SUSDE_RATE_BEARING_POLICY, CURVE_USD1_METAPOOL_POLICY,
       CURVE_NXUSD_METAPOOL_POLICY, ...CURVE_R3_METAPOOL_POLICIES];
+    const routes = curveExpandedPostA19.routes.map((route) => ({
+      ...route,
+      terminalQuoteAsset: "USDC",
+      ...(route.stablecoinId === "pmusd-precious-metals"
+        ? { sellGuard: { minBalanceTokens: 100_000, smallQuoteTokens: 1_000, impactQuoteTokens: 100_000 } }
+        : {}),
+    }));
     expect(CURVE_POOL_CONFIGS).toHaveLength(39);
     expect(policies).toHaveLength(13);
     // Strict equality distinguishes omitted optional keys from own undefined keys,
     // including nested hop, token role, rate-provider and base-pool descriptors.
-    expect({ routes: CURVE_POOL_CONFIGS, policies }).toStrictEqual(curveExpandedPostA19);
+    expect({ routes: CURVE_POOL_CONFIGS, policies }).toStrictEqual({ routes, policies: curveExpandedPostA19.policies });
   });
 });
 

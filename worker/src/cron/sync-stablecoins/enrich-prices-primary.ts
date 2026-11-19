@@ -58,6 +58,7 @@ export async function fetchPrimaryPrices(
     references,
     binanceSession: options?.binanceSession,
   });
+  const nowSec = Math.floor(Date.now() / 1000);
 
   buildPrimaryConsensusResults({
     candidates: plan.candidates,
@@ -66,7 +67,7 @@ export async function fetchPrimaryPrices(
     dexRows: plan.dexRows,
     dexPriceSources: plan.dexPriceSources,
     dexPriceSourceTelemetry: plan.dexPriceSourceTelemetry,
-    nowSec: plan.nowSec,
+    nowSec,
     resolveDlListQuote,
     results,
     stats,
@@ -78,7 +79,7 @@ export async function fetchPrimaryPrices(
     candidates: plan.candidates,
     results,
     stats,
-    nowSec: plan.nowSec,
+    nowSec,
     references,
     validationContexts: contexts,
   });

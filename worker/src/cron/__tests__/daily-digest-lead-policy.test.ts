@@ -1,6 +1,6 @@
+import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import { describe, it, expect } from "vitest";
 import type { DigestEditorialCandidate, DigestInputData } from "@shared/types/digest";
-import type { StablecoinData } from "@shared/types/supply";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
   makeDigestSnapshotFixture,
@@ -57,11 +57,12 @@ async function replayCollector(seeds: DepegEventSeed[], nowSec: number) {
     peak_price: null,
     peg_reference: seed.pegReference ?? 1,
   }));
-  const stablecoinAssetById = new Map<string, StablecoinData>(
-    seeds
-      .filter((seed) => seed.currentPriceUsd != null)
-      .map((seed) => [seed.stablecoinId, { id: seed.stablecoinId, price: seed.currentPriceUsd, priceObservedAt: nowSec } as StablecoinData]),
-  );
+  const stablecoinAssetById = new Map(seeds
+    .filter((seed) => seed.currentPriceUsd != null)
+    .map((seed) => [seed.stablecoinId, makeAsset({
+      id: seed.stablecoinId, symbol: seed.symbol, price: seed.currentPriceUsd,
+      priceSource: "coingecko", priceObservedAt: nowSec, priceObservedAtMode: "upstream",
+    })]));
   const ctx: CollectorContext = {
     db: mockD1([{ match: "depeg_events", rows }]),
     trackedStablecoinAssets: [],
@@ -70,7 +71,9 @@ async function replayCollector(seeds: DepegEventSeed[], nowSec: number) {
     coreAggregateStablecoinIds: new Set(),
     stablecoinAssetById,
     mcapById: new Map(seeds.map((seed) => [seed.stablecoinId, seed.mcapUsd])),
-    currentPegObservationById: new Map(seeds.map((seed) => [seed.stablecoinId, currentPegObservation(seed.pegReference ?? 1)])),
+    currentPegObservationById: new Map(seeds.map((seed) => [seed.stablecoinId, currentPegObservation(seed.pegReference ?? 1, {
+      currentDeviationBps: seed.currentPriceUsd == null ? null : deriveDepegSignal(seed.currentPriceUsd, seed.pegReference ?? 1)?.bps ?? null,
+    })])),
     stablecoinsCacheIsFresh: true,
     nowSec,
     todayTs: nowSec - (nowSec % 86_400),

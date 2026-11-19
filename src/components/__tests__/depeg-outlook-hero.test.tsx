@@ -95,13 +95,14 @@ describe("DepegOutlookHero open incidents", () => {
   it("names the census top five with deviation, verdict and cap", () => {
     const frozen = makeFrozenDdrV2Row(makeDdrSourceRow({ resolution: { tier: "recovery_unlikely", factors: [] } }));
     const rows = Array.from({ length: 7 }, (_, i) => ({
-      id: `coin-${i}`, symbol: `C${i}`, deviationBps: i === 0 ? -4_510 : null, held: i === 1,
+      id: `coin-${i}`, symbol: `C${i}`, deviationBps: i === 0 ? -4_510 : null,
+      referenceNote: i === 1 ? "Reference market closed" : i === 2 ? "Reference not yet updated" : null,
       marketCapUsd: i === 0 ? 49e6 : null, ddr: i === 0 ? frozen : null,
     }));
     const html = markup({ openIncidents: rows, stats: { ...observedZero, activeDepegCount: 7 } });
     expect(html).toContain("Top 5 of 7 by holder exposure");
     expect(html).toContain('href="/stablecoin/coin-0#depeg-resolver"');
-    for (const text of ["−4510 bps", "Terminal", "$49.0M", "Mkt closed"]) expect(html).toContain(text);
+    for (const text of ["−4510 bps", "Terminal", "$49.0M", "Reference market closed", "Reference not yet updated"]) expect(html).toContain(text);
     expect(html).not.toContain("C5<");
     expect(html).toContain("Awaiting confirmation");
     expect(markup({ openIncidents: [] })).not.toContain("Open incidents");

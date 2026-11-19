@@ -139,10 +139,17 @@ describe("StablecoinTable", () => {
     downloadCsvWithPreambleMock.mockClear();
   });
 
-  it("explains that the shared table deltas measure USD market cap, not token issuance", () => {
-    render(<StablecoinTable data={[coin]} isLoading={false} activeFilters={[]} />);
-    expect(screen.getByText(/deltas reflect USD market-cap growth and decline, not token-supply change or price return/)).toBeTruthy();
-    expect(screen.queryByText(/deltas reflect supply expansion and contraction/)).toBeNull();
+  it("labels each directory and CSV change column by the USD balances it displays", () => {
+    localStorage.setItem("pharos-table-columns", JSON.stringify(["name", "change24h", "change7d"]));
+    const day = { observedAt: 1_790_000_000, circulatingUsd: 99_000_000, circulatingNative: null };
+    render(<StablecoinTable data={[{ ...coin, supplyChangeBaselines: { day } }]} isLoading={false} activeFilters={[]} />);
+    expect(screen.getByText(/MCap columns compare dated USD market caps/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Sort by MCap 24h" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Sort by 7d" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Export CSV" }));
+    expect(downloadCsvWithPreambleMock.mock.calls[0][1]).toEqual(expect.arrayContaining([
+      expect.objectContaining({ header: "24h Market Cap Change (%)" }), expect.objectContaining({ header: "7d Change (%)" }),
+    ]));
   });
 
   it("reads a missing stablecoins payload as unavailable instead of an empty filter result", () => {

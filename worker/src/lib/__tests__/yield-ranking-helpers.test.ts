@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { resolveYieldRowSafety } from "@shared/lib/yield-opportunity-risk";
-import { qualifyYieldEvidence, scoreYieldPys } from "../yield-ranking-helpers";
+import { classifyYieldSourceFreshness, qualifyYieldEvidence, scoreYieldPys } from "../yield-ranking-helpers";
 
 const evidence = {
   evidenceClass: "direct-onchain" as const,
@@ -26,6 +26,14 @@ function safety(yieldType: "nav-appreciation" | "lending-opportunity", underlyin
 }
 
 describe("normalized yield qualification and final scoring", () => {
+  it.each(["protocol-api:ondo-usdy-oracle", "protocol-api:ondo-usdy-continuous-oracle"])(
+    "keeps the %s anchor through exactly 45 days",
+    (sourceKey) => {
+      const input = { dataSource: "protocol-api", sourceKey, sourceAgeSeconds: 60 };
+      expect(classifyYieldSourceFreshness({ ...input, comparisonAnchorAgeSeconds: 45 * 86400 })).toBe("fresh");
+      expect(classifyYieldSourceFreshness({ ...input, comparisonAnchorAgeSeconds: 45 * 86400 + 1 })).toBe("stale");
+    },
+  );
   it.each(["nav-appreciation", "lending-opportunity"] as const)("consumes canonical %s safety without changing warning order", yieldType => {
     const resolution = safety(yieldType);
     const result = qualifyYieldEvidence({ ...evidence, safety: resolution });

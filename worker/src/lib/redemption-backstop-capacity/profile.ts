@@ -103,13 +103,14 @@ type BoundedCapacityFields = Pick<
 };
 
 // Callers admit the quantity and decide model semantics before this arithmetic
-// step. In particular, eventual capacity is never inferred from the live buffer.
+// step, including whether a measured amount is executable only after a delay.
 export function buildBoundedCapacityFields(params: {
   rawCapacityUsd: number;
   supplyUsd: number | null;
   dailyLimitUsd?: number | null;
   queueDepthUsd?: number | null;
   eventualCapacityUsd?: number | null;
+  delayed?: boolean;
   capacityProfileConfidence: RedemptionBackstopEntry["capacityConfidence"];
   settlementBoundUnproven?: boolean;
   applyDailyLimit: boolean;
@@ -118,12 +119,14 @@ export function buildBoundedCapacityFields(params: {
   const hasSupplyCeiling = supplyUsd != null;
   const hasPositiveSupply = supplyUsd != null && supplyUsd > 0;
   const capacityExceedsSupply = supplyUsd != null && rawCapacityUsd > supplyUsd;
-  const immediateCapacityUsd = Math.max(0, supplyUsd != null ? Math.min(supplyUsd, rawCapacityUsd) : rawCapacityUsd);
-  const immediateCapacityRatio = supplyUsd != null && supplyUsd > 0
-    ? Math.min(1, immediateCapacityUsd / supplyUsd)
+  const boundedCapacityUsd = Math.max(0, supplyUsd != null ? Math.min(supplyUsd, rawCapacityUsd) : rawCapacityUsd);
+  const immediateCapacityUsd = params.delayed ? null : boundedCapacityUsd;
+  const immediateCapacityRatio = immediateCapacityUsd != null && supplyUsd != null && supplyUsd > 0
+    ? immediateCapacityUsd / supplyUsd
     : null;
-  const dailyLimitCapsCapacity = params.applyDailyLimit && dailyLimitUsd != null && dailyLimitUsd < immediateCapacityUsd;
-  const scoringCapacityUsd = dailyLimitCapsCapacity && dailyLimitUsd != null ? Math.max(0, dailyLimitUsd) : immediateCapacityUsd;
+  const dailyLimitCapsCapacity = params.applyDailyLimit && dailyLimitUsd != null && dailyLimitUsd < boundedCapacityUsd;
+  const scoringCapacityUsd = dailyLimitCapsCapacity && dailyLimitUsd != null ? Math.max(0, dailyLimitUsd) : boundedCapacityUsd;
+  const eventualCapacityUsd = params.eventualCapacityUsd ?? (params.delayed ? boundedCapacityUsd : null);
   const scoringCapacityRatio = supplyUsd != null && supplyUsd > 0
     ? Math.min(1, scoringCapacityUsd / supplyUsd)
     : null;
@@ -136,9 +139,9 @@ export function buildBoundedCapacityFields(params: {
       immediateUsd: immediateCapacityUsd,
       ...(dailyLimitUsd != null ? { dailyLimitUsd } : {}),
       ...(params.queueDepthUsd != null ? { queuedUsd: params.queueDepthUsd } : {}),
-      ...(params.eventualCapacityUsd != null ? { eventualUsd: params.eventualCapacityUsd } : {}),
+      ...(eventualCapacityUsd != null ? { eventualUsd: eventualCapacityUsd } : {}),
       scoringUsd: scoringCapacityUsd,
-      scoringHorizon: dailyLimitCapsCapacity ? "daily" : params.queueDepthUsd != null ? "queued" : "immediate",
+      scoringHorizon: params.delayed ? "eventual" : dailyLimitCapsCapacity ? "daily" : params.queueDepthUsd != null ? "queued" : "immediate",
       capacityProfileConfidence: params.capacityProfileConfidence,
       ...(params.settlementBoundUnproven ? { settlementBoundUnproven: true } : {}),
     },

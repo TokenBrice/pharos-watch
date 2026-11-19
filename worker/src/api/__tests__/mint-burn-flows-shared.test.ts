@@ -12,6 +12,8 @@ import {
   withExtendedLaneHeads,
 } from "../../lib/mint-burn-flows-service";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
+import { perCoinFlowCacheKey } from "../../lib/mint-burn-flow-cache-keys";
+import { MINT_BURN_RECEIPT_CLASSIFICATION_VERSION } from "../../lib/mint-burn-published-gauge";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { makeMintBurnScanSegments } from "../../test-helpers/__shared/mint-burn";
 
@@ -90,6 +92,34 @@ describe("cachedFlowFallbackResponse", () => {
     expect(cached.headers.get("X-Data-Age")).toBe("unavailable");
     expect(cached.headers.get("Cache-Control")).toBe("no-store");
     expect(await cached.json()).toMatchObject({ _meta: { status: "unknown", reason: "freshness-lookup-failed" } });
+  });
+
+  it.each(["usdz-anzen", "ousd-origin-protocol"])("only serves and stores revised %s details after explicit proof filtering", async (stablecoinId) => {
+    const now = Math.floor(Date.now() / 1000);
+    const key = perCoinFlowCacheKey(stablecoinId, 24);
+    const db = mockD1([
+      { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+      { match: "INSERT INTO cache (key, value, updated_at)", rows: [], runMeta: { changes: 1 } },
+    ]);
+    const body = { stablecoinId, receiptClassificationVersion: MINT_BURN_RECEIPT_CLASSIFICATION_VERSION };
+    const freshness = { timestamp: now, status: "ok" as const };
+    const blocked = await finalizeMintBurnFlowResponse(db, key, now, body, freshness);
+    expect(blocked.status).toBe(503);
+    expect(blocked.headers.get("Cache-Control")).toBe("no-store");
+    await expect(blocked.json()).resolves.toMatchObject({ reason: "publication-scope-changed" });
+    expect(db.getHistory()).toEqual([]);
+    const stale = cachedFlowFallbackResponse({ value: JSON.stringify({ ...body, receiptClassificationVersion: 1 }), updatedAt: now });
+    expect(stale.status).toBe(503);
+
+    const response = await finalizeMintBurnFlowResponse(db, key, now, { stablecoinId }, freshness,
+      undefined, true, { receiptClassificationFiltered: true });
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject(body);
+    const write = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO cache"));
+    expect(write?.binds[0]).toBe(key);
+    const fallback = cachedFlowFallbackResponse({ value: String(write?.binds[1]), updatedAt: now });
+    expect(fallback.status).toBe(200);
+    await expect(fallback.json()).resolves.toMatchObject(body);
   });
 
 });

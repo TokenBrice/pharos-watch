@@ -5,6 +5,7 @@ import { ALLOWED_TONES, type DigestValidationProfile } from "../daily-digest/res
 import { buildSafetyMapCensusLines } from "../daily-digest/prompt";
 import { SUPPLY_ACCOUNTING_RULES } from "../daily-digest/prompt/policy";
 import { WEEKLY_ROLLUP_EXPECTED_DAYS } from "../daily-digest/collectors-shared";
+import { WEEKLY_BLACKLIST_QUERY_UNAVAILABLE, type WeeklyBlacklistObservation } from "./blacklist";
 import type { WeeklyInputData } from "./types";
 
 export const WEEKLY_SYSTEM_PROMPT = [
@@ -21,6 +22,8 @@ export const WEEKLY_SYSTEM_PROMPT = [
   "Find the week's narrative arc: what started, what ended, what is building.",
   "A weekly recap that reads like seven daily digests stapled together has failed.",
   "Do not turn seven observations of the same chronic active depeg into seven events. Separate active observations from unique signals.",
+  "Use observation clocks for depeg magnitudes. Stored lifetime peaks have unknown timing: never attribute them to an edition, recovery date, or the weekly period.",
+  "Use event-period blacklist totals only when coverage is confirmed. Describe partial ledger results as observed records, and do not infer quiet activity from missing coverage.",
   "STANDING CONDITIONS get one line each at most and never the headline; NEW THIS WEEK signals are the story.",
   "Do not dramatize suppressed, stale, zero-dollar, tiny, or artifact-prone signals. If the week was genuinely calm, say so clearly.",
   "Synthesize causally: reuse at most two numbers verbatim from the daily copy. Daily headlines may establish chronology or sequence, but never factual evidence.",
@@ -75,9 +78,7 @@ export function buildWeeklyPrompt(
   };
   const blacklistValue = data.totalBlacklistAmountUsd == null
     ? unavailable("blacklistUsd")
-    : (data.blacklistUnpricedEventCount ?? 0) > 0
-      ? `at least ${formatCurrency(data.totalBlacklistAmountUsd)} known subtotal (${data.blacklistUnpricedEventCount} unpriced events)`
-      : formatCurrency(data.totalBlacklistAmountUsd);
+    : formatCurrency(data.totalBlacklistAmountUsd);
   const lines: string[] = [
     `Weekly recap: trailing daily editions from ${data.weekStartDate} to ${data.weekEndDate}`,
     "",
@@ -88,13 +89,37 @@ export function buildWeeklyPrompt(
       : `Market cap: ${formatCurrency(data.mcapRange.start)} -> ${formatCurrency(data.mcapRange.end)} (${data.mcapRange.pctChange == null ? "N/A" : `${data.mcapRange.pctChange >= 0 ? "+" : ""}${data.mcapRange.pctChange.toFixed(2)}%`})`,
     `Active depeg observations across daily editions: ${data.activeDepegObservationsThisWeek ?? unavailable("activeDepegObs")}`,
     `Unique depeg signals reconstructed from daily inputs: ${data.uniqueDepegSignalsThisWeek ?? unavailable("uniqueDepegSignals")}`,
-    `Total blacklist events: ${data.totalBlacklistEventsThisWeek ?? unavailable("blacklistEvents")}, ${blacklistValue} affected`,
+    `Total blacklist events: ${data.totalBlacklistEventsThisWeek ?? unavailable("blacklistEvents")}. Total affected amount: ${blacklistValue}.`,
     `${safetyContextAvailable ? "Grade transitions" : "Risk transitions"}: ${data.gradeTransitionCount ?? unavailable("gradeTransitions")}`,
   ];
+  const bounds = (period: { start: number; end: number }) =>
+    `[${new Date(period.start * 1000).toISOString()}, ${new Date(period.end * 1000).toISOString()})`;
+  const knownBlacklistAmount = (observation: WeeklyBlacklistObservation) => observation.knownAmountUsd == null
+    ? "known amount unavailable"
+    : `${formatCurrency(observation.knownAmountUsd)} known subtotal`;
+  const currentBlacklist = data.blacklistLedgerObservations?.current;
+  if (currentBlacklist && (currentBlacklist.coverage.reason != null || currentBlacklist.unpricedEventCount > 0)) {
+    lines.push(`Current-period ledger observations: ${currentBlacklist.eventCount} recorded events, ${knownBlacklistAmount(currentBlacklist)} (${currentBlacklist.unpricedEventCount} recorded events unpriced).`);
+  }
+  if (data.eventPeriods) {
+    const { current, prior } = data.eventPeriods;
+    lines.push(`Depeg and blacklist event periods: current ${bounds(current)} and prior ${bounds(prior)}. Each recorded blacklist event counts once in its period.`);
+    const priorBlacklist = data.blacklistLedgerObservations?.prior;
+    const priorReason = priorBlacklist ? priorBlacklist.coverage.reason : WEEKLY_BLACKLIST_QUERY_UNAVAILABLE;
+    if (priorReason != null) {
+      lines.push(`Prior-period blacklist totals: N/A (${priorReason}).`);
+      if (priorBlacklist) {
+        lines.push(`Prior-period ledger observations: ${priorBlacklist.eventCount} recorded events, ${knownBlacklistAmount(priorBlacklist)} (${priorBlacklist.unpricedEventCount} recorded events unpriced).`);
+      }
+    } else if (priorBlacklist) {
+      const amount = priorBlacklist.unpricedEventCount === 0 && priorBlacklist.knownAmountUsd != null
+        ? `${formatCurrency(priorBlacklist.knownAmountUsd)} affected`
+        : `total affected amount unavailable (${knownBlacklistAmount(priorBlacklist)}, ${priorBlacklist.unpricedEventCount} unpriced events)`;
+      lines.push(`Prior-period blacklist totals: ${priorBlacklist.eventCount} events, ${amount}.`);
+    }
+  }
   if (data.gradeTransitionPeriods) {
     const { current, prior } = data.gradeTransitionPeriods;
-    const bounds = (period: typeof current) =>
-      `[${new Date(period.start * 1000).toISOString()}, ${new Date(period.end * 1000).toISOString()})`;
     lines.push(`Organic transition event periods: current ${bounds(current)}; prior ${bounds(prior)}. Count each history identity once in its event period, not once per daily capture.`);
   }
 
@@ -159,19 +184,22 @@ export function buildWeeklyPrompt(
   }
   // A maximum over the daily display slices must name the census it omitted,
   // never present the slice maximum as the observed population (ADR-34).
-  const depegMagnitudeBound = data.spikeMetrics.depegObservationBounds.length > 0
-    ? ` (magnitudes for ${data.spikeMetrics.depegObservationBounds
+  const formatDepegMagnitudeBound = (bounds: typeof data.spikeMetrics.depegObservationBounds) => bounds.length > 0
+    ? ` (persisted rows for ${bounds
         .map((bound) => `${bound.shown} of ${bound.total} ${bound.kind === "active" ? "active" : "recovered"} depeg events on ${bound.date}`)
         .join("; ")})`
     : "";
+  const depegMagnitudeBound = formatDepegMagnitudeBound(
+    data.spikeMetrics.depegObservationBounds.filter((bound) => bound.kind === "active"),
+  );
   if (data.spikeMetrics.maxDepeg) {
     lines.push(
-      `  Worst depeg by bps: ${data.spikeMetrics.maxDepeg.date} ${data.spikeMetrics.maxDepeg.symbol}, ${data.spikeMetrics.maxDepeg.bps} bps, ${formatCurrency(data.spikeMetrics.maxDepeg.mcapUsd)} mcap${depegMagnitudeBound}`,
+      `  Worst depeg by bps: ${data.spikeMetrics.maxDepeg.date} ${data.spikeMetrics.maxDepeg.symbol}, ${data.spikeMetrics.maxDepeg.bps} bps, ${formatCurrency(data.spikeMetrics.maxDepeg.mcapUsd)} mcap (among timed observations in the event period)${depegMagnitudeBound}`,
     );
   }
   if (data.spikeMetrics.maxDepegImpact) {
     lines.push(
-      `  Largest depeg market impact: ${data.spikeMetrics.maxDepegImpact.date} ${data.spikeMetrics.maxDepegImpact.symbol}, impact ${data.spikeMetrics.maxDepegImpact.impactScore}, ${data.spikeMetrics.maxDepegImpact.bps} bps${depegMagnitudeBound}`,
+      `  Largest depeg market impact: ${data.spikeMetrics.maxDepegImpact.date} ${data.spikeMetrics.maxDepegImpact.symbol}, impact ${data.spikeMetrics.maxDepegImpact.impactScore}, ${data.spikeMetrics.maxDepegImpact.bps} bps (among timed observations in the event period)${depegMagnitudeBound}`,
     );
   }
 
@@ -190,10 +218,6 @@ export function buildWeeklyPrompt(
     );
     lines.push(
       `  Unique depeg signals: current ${d.uniqueDepegSignals.current ?? "n/a"} / prior ${d.uniqueDepegSignals.prior ?? "n/a"}`,
-    );
-    lines.push(`  Blacklist events: current ${d.blacklistEvents.current ?? "n/a"} / prior ${d.blacklistEvents.prior ?? "n/a"}`);
-    lines.push(
-      `  Blacklist known USD subtotal: current ${d.blacklistUsd.current == null ? "n/a" : formatCurrency(d.blacklistUsd.current)} / prior ${d.blacklistUsd.prior == null ? "n/a" : formatCurrency(d.blacklistUsd.prior)} (valuation may be partial; not an exact affected total)`,
     );
     lines.push(
       `  ${safetyContextAvailable ? "Grade transitions" : "Risk transitions"}: current ${d.gradeTransitions.current ?? "n/a"} / prior ${d.gradeTransitions.prior ?? "n/a"}`,
@@ -221,8 +245,11 @@ export function buildWeeklyPrompt(
 
   lines.push("", "Weekly Risk Leaderboard (P1 lead must be the top unsuppressed item):");
   if (data.weeklySignals.riskLeaderboard.length > 0) {
-    const freshSignals = data.weeklySignals.riskLeaderboard.filter((signal) => !signal.carriedOver);
+    const freshSignals = data.weeklySignals.riskLeaderboard.filter((signal) =>
+      !signal.carriedOver && (signal.kind !== "depeg" || signal.eventAt != null));
     const standingSignals = data.weeklySignals.riskLeaderboard.filter((signal) => signal.carriedOver);
+    const undeterminedOnset = data.weeklySignals.riskLeaderboard.filter((signal) =>
+      signal.kind === "depeg" && !signal.carriedOver && signal.eventAt == null);
     const renderSignal = (signal: (typeof data.weeklySignals.riskLeaderboard)[number]): void => {
       const critical = signal.critical ? " | critical" : "";
       const suppression = signal.suppressReason ? ` | suppress: ${signal.suppressReason}` : "";
@@ -239,24 +266,34 @@ export function buildWeeklyPrompt(
       lines.push("  STANDING CONDITIONS (carried over from prior weeks; one line each at most, never the headline):");
       standingSignals.forEach(renderSignal);
     }
+    if (undeterminedOnset.length > 0) {
+      lines.push("  CURRENT OBSERVATIONS WITH UNKNOWN ONSET:");
+      undeterminedOnset.forEach(renderSignal);
+    }
   } else if (data.degradedSourcesThisWeek?.length) {
     lines.push(
       "  Risk leaderboard unavailable: this week's inputs were degraded (see Degraded inputs), so the absence of ranked signals is unverified; do not describe the week as calm.",
     );
+  } else if (data.weeklySignals.topDepegSignals.length > 0) {
+    lines.push("  No ranked signals from timed weekly evidence. See the undated lifetime peaks below for incident context.");
   } else {
     lines.push("  No material risk signals reconstructed from daily inputs.");
   }
 
   lines.push("", "Weekly Signals (synthesize from this, do not merely recap daily copy):");
-  if (data.weeklySignals.topDepegSignals.length > 0) {
-    lines.push(`  Top depeg signals by absolute market impact${depegMagnitudeBound}:`);
-    for (const signal of data.weeklySignals.topDepegSignals) {
-      const suppression = signal.suppressReason ? ` | suppress: ${signal.suppressReason}` : "";
-      const critical = signal.critical ? " | critical" : "";
-      lines.push(
-        `    ${signal.date} ${signal.symbol}: ${signal.label}, ${formatCurrency(signal.mcapUsd)} mcap, impact ${signal.impactScore}, severity ${signal.severityScore}${critical}${suppression}`,
-      );
-    }
+  const renderDepeg = (signal: (typeof data.weeklySignals.topDepegSignals)[number]): string => {
+    const suppression = signal.suppressReason ? ` | suppress: ${signal.suppressReason}` : "";
+    const critical = signal.critical ? " | critical" : "";
+    return `    ${signal.symbol}: ${signal.label}, ${formatCurrency(signal.mcapUsd)} mcap, impact ${signal.impactScore}, severity ${signal.severityScore}${critical}${suppression}`;
+  };
+  const timedDepegs = data.weeklySignals.topDepegSignals.filter((signal) => signal.severityBasis === "current");
+  const undatedPeaks = data.weeklySignals.topDepegSignals.filter((signal) => signal.severityBasis === "peak-fallback");
+  if (timedDepegs.length > 0) {
+    lines.push(`  Top depeg signals by absolute market impact${depegMagnitudeBound}:`, ...timedDepegs.map(renderDepeg));
+  }
+  if (undatedPeaks.length > 0) {
+    const contextBound = formatDepegMagnitudeBound(data.spikeMetrics.depegObservationBounds);
+    lines.push(`  Undated lifetime depeg peaks (incident context; peak times unavailable)${contextBound}:`, ...undatedPeaks.map(renderDepeg));
   }
   if (data.weeklySignals.topSupplySignals.length > 0) {
     lines.push("  Top supply/velocity signals:");
@@ -282,7 +319,7 @@ export function buildWeeklyPrompt(
     }
   }
   if (data.weeklySignals.topBlacklistEvents.length > 0) {
-    lines.push("  Top blacklist events:");
+    lines.push("  Top recorded blacklist events:");
     for (const event of data.weeklySignals.topBlacklistEvents) {
       lines.push(
         `    ${event.date} ${event.symbol} on ${event.chain}: ${event.type}, ${event.amountUsd == null ? "amount unknown" : formatCurrency(event.amountUsd)}`,
@@ -346,7 +383,8 @@ export function buildWeeklyLeadRequirements(data: WeeklyInputData): DigestValida
   // Only a critical that is NEW this week may hard-pin the weekly lead; a
   // carried-over chronic critical already headlined prior recaps.
   const topCritical = data.weeklySignals.riskLeaderboard.find(
-    (signal) => !signal.suppressReason && signal.critical && !signal.carriedOver,
+    (signal) => !signal.suppressReason && signal.critical && !signal.carriedOver &&
+      (signal.kind !== "depeg" || signal.eventAt != null),
   );
   if (!topCritical) return undefined;
   return [

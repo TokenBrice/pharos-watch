@@ -67,6 +67,31 @@ it("forwards history/cursors through the lazy route and traverses tied timestamp
   }
 });
 
+it("projects the weekly observation window only from a valid dated pair", async () => {
+  const { sqlite, db } = createLatestSchemaSqlite();
+  try {
+    const publication = Date.parse("2026-08-31T08:00:00Z") / 1000;
+    const insert = sqlite.prepare("INSERT INTO daily_digest (digest_text, generated_at, input_data, digest_meta) VALUES (?, ?, '{}', ?)");
+    for (const [name, type, weekStart, weekEnd] of [
+      ["valid", "weekly", "2026-08-24", "2026-08-30"],
+      ["future", "weekly", "2026-08-24", "2026-09-01"],
+      ["reversed", "weekly", "2026-08-30", "2026-08-24"],
+      ["malformed", "weekly", "2026-02-30", "2026-08-30"],
+      ["daily", "daily", "2026-08-24", "2026-08-30"],
+    ]) {
+      insert.run(name, publication, JSON.stringify({ type, weekStart, weekEnd }));
+    }
+    const { digests } = DigestArchiveResponseSchema.parse(await (await handleDigestArchive(db)).json());
+    expect(digests).toHaveLength(5);
+    for (const edition of digests) {
+      expect([edition.weekStart, edition.weekEnd]).toEqual(edition.digestText === "valid"
+        ? ["2026-08-24", "2026-08-30"] : [undefined, undefined]);
+    }
+  } finally {
+    sqlite.close();
+  }
+});
+
 it.each(["?cursor=1.2.3.4.5", "?history=all&cursor=bad", "?history=all&cursor=1.1.1.1.1", "?history=partial"])(
   "rejects invalid archive traversal parameters %s",
   async (query) => {

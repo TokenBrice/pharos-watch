@@ -17,6 +17,14 @@ export const DIGEST_BY_DATE: ReadonlyMap<string, DigestContentEntry> = new Map(
   DIGEST_ENTRIES.map((entry) => [entry.date, entry]),
 );
 
+export const DIGEST_CORRECTIONS: ReadonlyMap<string, { date: string; text: string; excerpt: string }> = new Map([
+  ["2026-03-01", {
+    date: "2026-11-18",
+    text: "The two KAU readings (events 76764 and 76716) and one KAG reading (event 76729) came from comparisons against closed gold and silver reference markets. Pharos removed all three events in the November 16, 2026 archive refresh and retracts this edition’s description of them as market volatility.",
+    excerpt: "Pharos retracted two KAU depeg claims and one KAG claim that used closed metal markets.",
+  }],
+]);
+
 export const DIGEST_DATES: ReadonlySet<string> = new Set(DIGEST_BY_DATE.keys());
 
 /**

@@ -17,9 +17,9 @@ import {
  * extension, and the accrued UI amount is the token's USD value. The market
  * lanes are unusable (DefiLlama list stopped pricing the asset, CoinGecko's
  * ticker is a stale thin-market print, and the only DEX pool sits far below
- * the $50K liquidity floors), so the executable price is the protocol's own
- * exchange rate: raw balance × exchange rate = accrued USD value, i.e. the
- * redemption conversion from raw sUSD into USD at par per accrued unit.
+ * the $50K liquidity floors). The protocol-redeem value measures accrued USD
+ * per raw token for valuation. A market parity check needs a separately
+ * observed price and reference in the same unit.
  */
 const SUSD_SOLAYER_ID = "susd-solayer";
 const SUSD_SOLAYER_MINT = "susdabGDNbhrnCa6ncrYo81u4s9GM8ecK2UwMyZiq4X";
@@ -177,14 +177,14 @@ export async function fetchSusdSolayerNavPrice(
   if (nowSec - blockTime > SUSD_OBSERVATION_MAX_AGE_SEC) return reject("stale-block");
   if (state.interest.lastUpdateTimestampSec > blockTime + SUSD_MAX_FUTURE_SKEW_SEC) return reject("rate-timestamp");
 
-  const exchangeRate = computeToken2022InterestBearingExchangeRate(state.interest, blockTime);
-  if (exchangeRate == null) return reject("rate-invalid");
-  if (exchangeRate < SUSD_NAV_MIN_EXCHANGE_RATE || exchangeRate > SUSD_NAV_MAX_EXCHANGE_RATE) {
+  const accruedUsdPerRawToken = computeToken2022InterestBearingExchangeRate(state.interest, blockTime);
+  if (accruedUsdPerRawToken == null) return reject("rate-invalid");
+  if (accruedUsdPerRawToken < SUSD_NAV_MIN_EXCHANGE_RATE || accruedUsdPerRawToken > SUSD_NAV_MAX_EXCHANGE_RATE) {
     return reject("rate-band");
   }
 
   return {
-    price: exchangeRate,
+    price: accruedUsdPerRawToken,
     source: PROTOCOL_REDEEM_SOURCE,
     confidence: "high",
     observedAt: blockTime,

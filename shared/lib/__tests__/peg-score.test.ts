@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { makePegEvent as makeEvent } from "@shared/test-utils/peg-fixtures";
+import { DepegEventSchema } from "@shared/types/peg";
+import type { PegScoreEvent } from "../peg-utils";
 import {
   computePegScore,
   computeRecentPegStats,
@@ -9,6 +11,169 @@ import {
 
 const NOW = Math.floor(Date.now() / 1000);
 const DAY = 86400;
+const sec = (iso: string) => Date.parse(iso) / 1000;
+
+describe("scheduled reference coverage", () => {
+  it("counts 30 hours of legacy severe weekend observations while excluding blind closure time", () => {
+    const start = sec("2026-11-21T00:00:00Z");
+    const now = start + 30 * 3600;
+    const from = now - 90 * DAY;
+    const event = makeEvent({
+      pegType: "peggedEUR", startedAt: start - 900, endedAt: null, peakDeviationBps: -3000,
+      priceCoverage: { intervals: [[start, now]], lastTrustedObservationAt: now, gapStartedAt: null, lastObservationKind: "trusted-off-peg" },
+    });
+    const quiet = computeRecentPegStats([], from, now, "EUR")!;
+    const result = computeRecentPegStats([event], from, now, "EUR")!;
+    expect(result.observedDays).toBeCloseTo(quiet.observedDays + 1.25);
+    expect(result.pegPct).toBeCloseTo(100 * (1 - 1.25 / (quiet.observedDays + 1.25)), 5);
+  });
+
+  it("penalizes a fresh severe weekend observation with a legacy ledger omission", () => {
+    const now = sec("2026-11-14T12:00:00Z");
+    const startedAt = now - 900;
+    const event = makeEvent({
+      stablecoinId: "eurc-circle", pegType: "peggedEUR", startedAt, endedAt: null, peakDeviationBps: -3000,
+      confirmationSources: "primary:coingecko+primary:market:kraken",
+      priceCoverage: { intervals: [[startedAt, now]], lastTrustedObservationAt: now, gapStartedAt: null, lastObservationKind: "trusted-off-peg" },
+    });
+    const from = now - 180 * DAY;
+    expect(computePegScore([event], from, now, "EUR")).toMatchObject({ pegScore: 49, activeDepeg: true });
+    expect(computePegScore([{ ...event, admittedCoverage: [] }], from, now, "EUR").pegScore).toBe(100);
+    expect(computePegScore([{ ...event, peakDeviationBps: -2400 }], from, now, "EUR").pegScore).toBe(100);
+    expect(computePegScore([event], from, now + 1201, "EUR").pegScore).toBe(99);
+  });
+
+  it("preserves blind time for uncovered events while excluding reviewed artifacts", () => {
+    const from = NOW - 20 * DAY;
+    const event = makeEvent({ startedAt: NOW - 10 * DAY, endedAt: NOW - 5 * DAY, peakDeviationBps: -180, admittedCoverage: [] });
+    const quiet = computeRecentPegStats([], from, NOW)!;
+    expect(computeRecentPegStats([event], from, NOW)?.observedDays).toBe(quiet.observedDays - 5);
+    expect(computeRecentPegStats([{ ...event, disposition: "repaired" }], from, NOW)?.observedDays).toBe(quiet.observedDays);
+    expect(computePegScore([{ ...event, admittedCoverage: [{ fromSec: event.startedAt, toSec: event.endedAt! }],
+      provenance: { pegScoreEligible: false } }], from, NOW)).toMatchObject({ pegPct: 100, excludedEventCount: 1 });
+  });
+
+  it.each([
+    ["explicitly admitted at close", 0, true, -1500, 1],
+    ["legacy at close", 0, false, -1500, 0],
+    ["legacy before close", -1, false, -1500, 1],
+    ["severe legacy opening at close", 0, false, -2500, 1],
+  ] as const)("counts a point separately from elapsed off-peg time (%s)", (_label, offset, explicit, peakDeviationBps, count) => {
+    const now = sec("2026-11-13T22:00:00Z") + offset;
+    const from = now - 90 * DAY;
+    const event = DepegEventSchema.parse(makeEvent({
+      pegType: "peggedGOLD", startedAt: now, peakDeviationBps,
+      ...(explicit ? { admittedCoverage: [{ fromSec: now, toSec: now + 1 }] }
+        : { priceCoverage: { intervals: [[now, now]], lastTrustedObservationAt: now, gapStartedAt: null } }),
+    }));
+    const quiet = computeRecentPegStats([], from, now, "GOLD")!;
+    expect(computeRecentPegStats([event], from, now, "GOLD")).toMatchObject({
+      incidentCount: count, thresholdCrossingCount: count, worstDeviationBps: count ? peakDeviationBps : null,
+      pegPct: 100, observedDays: quiet.observedDays,
+    });
+    expect(computePegScore([event], from, now, "GOLD").activeDepeg).toBe(count > 0);
+    if (!count) expect(computeRecentPegStats([event], from, now + 1, "GOLD")?.incidentCount).toBe(0);
+  });
+
+  it.each([false, true])("counts only admitted off-peg time on a retained closure-origin event (explicit: %s)", (explicit) => {
+    const start = sec("2025-03-30T00:00:00Z");
+    const reopen = sec("2025-03-30T21:00:00Z");
+    const end = sec("2025-04-01T00:00:00Z");
+    const event = makeEvent({
+      pegType: "peggedTRY", startedAt: start, endedAt: end, peakDeviationBps: -300,
+      ...(explicit ? { admittedCoverage: [{ fromSec: reopen + DAY, toSec: end }] } : {}),
+    });
+    const now = end + DAY;
+    const from = now - 90 * DAY;
+    const result = computeRecentPegStats([event], from, now, "TRY")!;
+    const quiet = computeRecentPegStats([], from, now, "TRY")!;
+    expect(quiet).toMatchObject({ coverageLimited: true, pegPct: 100, incidentCount: 0 });
+    expect(quiet.observedDays).toBeLessThan(66);
+    const offPegDays = (end - reopen) / DAY - (explicit ? 1 : 0);
+    expect(result).toMatchObject({ coverageLimited: true, incidentCount: 1 });
+    expect(result.pegPct).toBeCloseTo(100 * (1 - offPegDays / result.observedDays), 2);
+    expect(computeRecentPegStats([{ ...event, admittedCoverage: [] }], from, now, "TRY"))
+      .toMatchObject({ incidentCount: 0, worstDeviationBps: null, pegPct: 100 });
+    expect(computePegScore([event], from, now, "TRY"))
+      .toMatchObject({ lastEventAt: start, lastAffectedAtSec: end });
+  });
+
+  it.each(["2026-11-14T13:00:00Z", "2026-11-16T01:00:00Z"])("retains only detector-declared hold evidence at %s", (time) => {
+    const start = sec("2026-11-14T12:00:00Z");
+    const lastTrustedAtSec = start + 60;
+    const declaredAtSec = start + 120;
+    const event: PegScoreEvent = {
+      ...makeEvent({ pegType: "peggedGOLD", startedAt: start, endedAt: null, peakDeviationBps: -500 }),
+      admittedCoverage: [{ fromSec: start, toSec: lastTrustedAtSec + 1 }],
+      priceCoverage: { intervals: [[start, lastTrustedAtSec + 1]], lastTrustedObservationAt: lastTrustedAtSec,
+        gapStartedAt: declaredAtSec, lastObservationKind: "blind" },
+      referenceHold: { reason: "reference-market-closed", declaredAtSec, refreshedAtSec: sec(time) - 1200, lastTrustedAtSec, lastTrustedPeakBps: -500 },
+    };
+    const from = start - 90 * DAY;
+    const held = computePegScore([event], from, sec(time), "GOLD");
+    const generic = computePegScore([{ ...event, referenceHold: undefined } as PegScoreEvent], from, sec(time), "GOLD");
+    const exactEnd: PegScoreEvent = { ...event, admittedCoverage: [{ fromSec: start, toSec: lastTrustedAtSec }] };
+    const boundary = computePegScore([exactEnd], from, sec(time), "GOLD");
+    expect(generic.pegScore! - held.pegScore!).toBe(10);
+    expect(boundary.pegScore).toBe(generic.pegScore);
+    const expiredHold: PegScoreEvent = { ...event, referenceHold: { ...event.referenceHold!, refreshedAtSec: sec(time) - 1201 } };
+    expect(computePegScore([expiredHold], from, sec(time), "GOLD").pegScore).toBe(generic.pegScore);
+    expect(held.unknownCoverageSeconds).toBe(generic.unknownCoverageSeconds);
+    expect(held.lastAffectedAtSec).toBe(lastTrustedAtSec + 1);
+  });
+
+  it.each([false, true])("masks archived PAXG 91049 off-peg and at-par intervals unless admitted (%s)", (admitted) => {
+    const start = 1_794_690_066;
+    const end = 1_794_769_321;
+    const [fromSec, toSec] = [1_794_729_743, 1_794_767_488];
+    const event = makeEvent({ id: 91049, pegType: "peggedGOLD", startedAt: start, endedAt: end, peakDeviationBps: -156,
+      priceCoverage: { intervals: [[fromSec, toSec]], atParIntervals: [[1_794_768_404, end]],
+        lastTrustedObservationAt: end, gapStartedAt: 1_794_768_404 },
+      ...(admitted ? { admittedCoverage: [{ fromSec, toSec }] } : {}),
+    });
+    const from = start - 60 * DAY;
+    const now = sec("2026-11-16T12:00:00Z");
+    const quiet = computeRecentPegStats([], from, now, "GOLD")!;
+    const result = computeRecentPegStats([event], from, now, "GOLD")!;
+    expect(result).toMatchObject({ incidentCount: admitted ? 1 : 0, worstDeviationBps: admitted ? -156 : null });
+    expect((result.observedDays - quiet.observedDays) * DAY).toBeCloseTo(admitted ? 37_745 : 0);
+  });
+
+  it("records a chronology bound for USDB 90799 alongside an older dated incident", () => {
+    const clock = 1_795_000_000;
+    const olderEnd = clock - 1_200 * DAY;
+    const events = [
+      makeEvent({ startedAt: olderEnd - DAY, endedAt: olderEnd, peakDeviationBps: -9000 }),
+      makeEvent({ id: 90799, startedAt: 1_791_009_048, endedAt: 1_791_295_299, peakDeviationBps: -129,
+        priceCoverage: { intervals: [], lastTrustedObservationAt: null, gapStartedAt: 1_791_040_635 },
+      }),
+    ];
+    expect(computePegScore(events, clock - PEG_SCORE_LOOKBACK_SEC, clock, "USD")).toMatchObject({
+      eventCount: 2, lastAffectedAtSec: olderEnd, lastUncertainAffectedAtSec: 1_791_295_299,
+    });
+  });
+
+  it.each([false, true])("keeps confirmed VCHF 90796 through closure with legacy duration unknown (closed: %s)", (closed) => {
+    const start = 1_790_658_132;
+    const end = 1_792_477_916;
+    const event = makeEvent({ id: 90796, stablecoinId: "vchf-vnx", pegType: "peggedCHF", startedAt: start,
+      endedAt: closed ? end : null, peakDeviationBps: 740, confirmationSources: "temporal:15m+native:chf",
+      priceCoverage: { intervals: [], atParIntervals: [], lastObservationKind: "blind",
+        lastTrustedObservationAt: null, gapStartedAt: 1_791_040_635 },
+    });
+    const from = end - 90 * DAY;
+    const score = computePegScore([event], from, end, "CHF");
+    expect(score).toMatchObject({ eventCount: 1, worstDeviationBps: 740, activeDepeg: !closed,
+      pegPct: 100, lastAffectedAtSec: null });
+    expect(score.lastUncertainAffectedAtSec).toBe(closed ? end : undefined);
+    expect(computeRecentPegStats([event], from, end, "CHF")).toMatchObject({
+      incidentCount: 1, worstDeviationBps: 740, coverageLimited: true, pegPct: 100,
+    });
+    expect(computePegScore([{ ...event, admittedCoverage: [] }], from, end, "CHF")).toMatchObject({
+      eventCount: 0, worstDeviationBps: null, activeDepeg: false,
+    });
+  });
+});
 
 describe("coinTrackingStart", () => {
   const fourYearsAgo = NOW - PEG_SCORE_LOOKBACK_SEC;
@@ -382,6 +547,16 @@ describe("computeRecentPegStats", () => {
     const result = computeRecentPegStats([ended, straddling] as never, boundary - 30 * DAY, NOW);
     expect(result).toMatchObject({ observedDays: 90, coverageLimited: false, incidentCount: 1, thresholdCrossingCount: 1, worstDeviationBps: -200 });
     expect(result!.pegPct).toBeCloseTo(98.8888888889);
+  });
+
+  it("keeps an old unresolved event out of the recent census when its only admitted hour predates it", () => {
+    const start = NOW - 180 * DAY;
+    const event = makeEvent({ startedAt: start, peakDeviationBps: -500, constituentEventCount: 2,
+      admittedCoverage: [{ fromSec: start, toSec: start + 3600 }],
+    });
+    expect(computeRecentPegStats([event], start, NOW)).toMatchObject({ observedDays: 0, coverageLimited: true,
+      pegPct: null, incidentCount: 0, thresholdCrossingCount: 0, worstDeviationBps: null });
+    expect(computePegScore([event], start, NOW)).toMatchObject({ eventCount: 1, activeDepeg: true, worstDeviationBps: -500 });
   });
 
   it("ignores future-start incidents in both score and recent summaries", () => {

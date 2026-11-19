@@ -11,7 +11,6 @@ import {
   LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
   PRICE_DERIVED_STALE_THRESHOLD_MS,
   PENDLE_SUPPLEMENTAL_STALE_THRESHOLD_MS,
-  SLOW_NAV_SOURCE_STALE_THRESHOLD_MS,
   STALE_THRESHOLD_MS,
   SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
 } from "../../lib/yield-ranking-helpers";
@@ -137,9 +136,9 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources", () => {
       expectedRole: "degraded-canonical",
     },
     {
-      label: "keeps accepted slow NAV observations fresh through their three-day window",
-      boundary: "at threshold",
-      sourceObservedAt: (nowSec) => nowSec - SLOW_NAV_SOURCE_STALE_THRESHOLD_MS / 1000,
+      label: "keeps the previous USYC report eligible during the next report's grace period",
+      boundary: "during grace",
+      sourceObservedAt: () => Date.parse("2026-03-25T10:45:00Z") / 1000,
       overrides: {
         dataSource: "protocol-api",
         sourceKey: "protocol-api:hashnote-usyc",
@@ -148,9 +147,9 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources", () => {
       expectedRole: "canonical-holder",
     },
     {
-      label: "keeps accepted slow NAV observations fresh through their three-day window",
-      boundary: "after threshold",
-      sourceObservedAt: (nowSec) => nowSec - SLOW_NAV_SOURCE_STALE_THRESHOLD_MS / 1000 - 1,
+      label: "marks an old USYC report stale after the next report's grace period",
+      boundary: "after grace",
+      sourceObservedAt: () => Date.parse("2026-03-24T10:45:00Z") / 1000,
       overrides: {
         dataSource: "protocol-api",
         sourceKey: "protocol-api:hashnote-usyc",
@@ -788,7 +787,7 @@ describe("validateYieldRankingsPayloadForPublish", () => {
 });
 
 describe("buildYieldRankingsPayloadFromEvaluatedSources source-risk invariants", () => {
-  it("reproduces every published source-risk penalty and reward share from the row's published terms", () => {
+  it("reproduces published source risk from row evidence and fixture cadence verdicts", () => {
     const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
     const benchmark = makeBenchmarkMeta();
     // The scored penalties come from golden literals (never from the derivation this
@@ -818,6 +817,7 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources source-risk invariants",
     const thinDepthAlt = makeEvaluatedSource({
       sourceKey: "golden:thin-depth-bootstrap",
       yieldSource: "Golden Thin Depth",
+      observationCount30d: 3,
       sourceRisk: mergeSourceRiskGoldenFixtures(["low-source-depth", "bootstrap-observation-count"], {
         sourceRiskPenalty: 1.55,
       }),
@@ -891,8 +891,7 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources source-risk invariants",
     const altRows = payload.rankings.flatMap((ranking) => ranking.altSources ?? []);
     expect(altRows).toHaveLength(4);
 
-    // Invariant 1 — for every best row and every alternate row, the published penalty
-    // is exactly the derivation from that row's own published terms.
+    // The fixture supplies the overdue verdict, which is separate from published age telemetry.
     const penaltyRows = [
       ...payload.rankings.map((ranking) => ({ label: ranking.id, risk: ranking.sourceRisk })),
       ...altRows.map((alt) => ({ label: alt.sourceKey, risk: alt.sourceRisk })),
@@ -904,7 +903,7 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources source-risk invariants",
         derivePysSourceRiskPenalty({
           rewardShare: risk?.rewardShare ?? null,
           sourceDepthRatio: risk?.sourceDepthRatio ?? null,
-          sourceAgeSeconds: risk?.sourceAgeSeconds ?? null,
+          sourceOverdue: label === staleAgeAlt.sourceKey,
           sourceSwitchCount30d: risk?.sourceSwitchCount30d ?? null,
           observationCount30d: risk?.observationCount30d ?? null,
           venueRiskTier: risk?.venueRiskTier ?? null,

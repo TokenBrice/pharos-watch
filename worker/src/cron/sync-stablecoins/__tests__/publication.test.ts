@@ -78,7 +78,7 @@ describe("publication path authority", () => {
     expect(record.mock.calls).toEqual(path === "main" ? [[db, "defillama-stablecoins", true]] : []);
     expect(depeg).toHaveBeenCalledWith(
       db, assets, undefined, undefined, undefined,
-      path === "main" ? "" : "fallback-", path === "main" ? "" : " (CG fallback)", undefined, undefined,
+      path === "main" ? "" : "fallback-", path === "main" ? "" : " (CG fallback)", undefined, undefined, undefined,
     );
     expect(JSON.parse(result.metadata!)).toMatchObject({
       rowsRead: assets.length, rowsWritten: assets.length, rowsDropped: 0, cacheWriteSucceeded: true, depegPipelineSucceeded: true,
@@ -153,10 +153,10 @@ describe("publication path authority", () => {
 async function publishSupplyPacket(asset: PeggedAsset, path: "main" | "fallback"): Promise<PeggedAsset> {
   const { db, sqlite } = fixtures.open();
   const now = Math.floor(Date.now() / 1000);
-  const ordinary = makePeggedAsset({
+  const ordinary = Object.assign(makePeggedAsset({
     id: "usdc-circle", price: 1, priceSource: "coingecko", pegMechanism: "fiat-backed",
-    circulating: { peggedUSD: 100 }, chainCirculating: {}, chains: [], supplySource: "coingecko",
-  });
+    circulating: { peggedUSD: 100 }, chainCirculating: {}, chains: [], supplySource: "coingecko", supplyObservedAt: now,
+  }), { circulatingNative: 100, valuationPriceUsd: 1 });
   const healthy = WORKER_ACTIVE_STABLECOINS.filter((meta) => meta.id !== asset.id && meta.id !== ordinary.id)
     .map((meta) => makePeggedAsset({
       id: meta.id, name: meta.name, symbol: meta.symbol, price: 1, priceSource: "coingecko",
@@ -167,8 +167,11 @@ async function publishSupplyPacket(asset: PeggedAsset, path: "main" | "fallback"
   for (const row of [ordinary, asset]) {
     for (const days of [1, 7, 30]) {
       const snapshotDate = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() - days) / 1000;
-      sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd) VALUES (?, ?, ?)")
-        .run(row.id, snapshotDate, getCirculatingRawOrNull(row)! * 0.95);
+      const quantity = getCirculatingRawOrNull(row)! * 0.95;
+      const provenance = { supplySource: "coingecko", supplyObservedAt: now - days * 86_400, supplyChainGuard: null };
+      sqlite.prepare(`INSERT INTO supply_history
+        (stablecoin_id, snapshot_date, circulating_usd, circulating_native, supply_provenance) VALUES (?, ?, ?, ?, ?)`)
+        .run(row.id, snapshotDate, quantity, quantity, JSON.stringify(provenance));
     }
   }
   vi.spyOn(runtime, "checkStablecoinsPriceStaleness").mockResolvedValue({
@@ -237,6 +240,13 @@ describe("source-owned supply history publication", () => {
     expect(original[field]).toBeNull();
     const freshPacket = structuredClone(original);
     const published = await publishSupplyPacket(original, "main");
+    for (const row of [freshPacket, published]) {
+      expect([getPrevDayRawOrNull(row), getPrevWeekRawOrNull(row), getPrevMonthRawOrNull(row)]).toEqual([
+        bucket === "day" ? null : 90, bucket === "week" ? null : 80, bucket === "month" ? null : 70,
+      ]);
+    }
+    expect(published.supplyChangeBaselines).toEqual(freshPacket.supplyChangeBaselines);
+    expect(published.supplyChangeBaselines?.[bucket]).toBeNull();
     expect(readHistory(published)).toBeNull();
     expect(published.circulating).toEqual({ peggedEUR: 130 });
     expect(published.chainCirculating).toEqual(freshPacket.chainCirculating);
@@ -249,6 +259,10 @@ describe("source-owned supply history publication", () => {
     expect(carried.supplyRestored).toBe(true);
     const carriedPacket = structuredClone(carried);
     const publishedCarry = await publishSupplyPacket(carried, "fallback");
+    expect(publishedCarry.supplyChangeBaselines).toEqual(published.supplyChangeBaselines);
+    expect([publishedCarry.circulatingPrevDay, publishedCarry.circulatingPrevWeek, publishedCarry.circulatingPrevMonth])
+      .toEqual([published.circulatingPrevDay, published.circulatingPrevWeek, published.circulatingPrevMonth]);
+    expect(publishedCarry.supplyChangeBaselines?.[bucket]).toBeNull();
     expect(readHistory(publishedCarry)).toBeNull();
     expect(publishedCarry.circulating).toEqual({ peggedEUR: 130 });
     expect(publishedCarry.chainCirculating).toEqual(carriedPacket.chainCirculating);
@@ -272,7 +286,9 @@ describe("source-owned supply history publication", () => {
         mcap: 3_000_000, supplySource, observedAt: now, chainCirculating: { Ethereum: { current: 3_000_000, chainId: "ethereum" } },
       });
       expect((await reconcileTrackedSupplyGaps([asset], undefined, null, undefined, { peggedCAD: 0.72 })).totalReconciled).toBe(1);
+      expect([getPrevDayRawOrNull(asset), getPrevWeekRawOrNull(asset), getPrevMonthRawOrNull(asset)]).toEqual([null, null, null]);
       const published = await publishSupplyPacket(asset, "main");
+      expect(published.supplyChangeBaselines).toEqual({ day: null, week: null, month: null });
       expect([getPrevDayRawOrNull(published), getPrevWeekRawOrNull(published), getPrevMonthRawOrNull(published)]).toEqual([null, null, null]);
       expect(published).toMatchObject({
         circulating: { peggedCAD: 3_000_000 }, supplySource, supplyObservedAt: now,

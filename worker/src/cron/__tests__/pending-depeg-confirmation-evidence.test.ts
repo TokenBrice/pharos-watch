@@ -11,12 +11,16 @@ import type { CollectedConfirmationEvidence, ConfirmationEvidenceInput, DexPoolC
 import { collectConfirmationEvidence } from "../pending-depeg-confirmation-evidence";
 import { emptyEvidence } from "./pending-depeg-confirmation.test-support";
 import { makePendingDepegRow } from "../../test-helpers/pending-depeg-fixtures";
+import { tradedPair } from "../depeg-detection/__tests__/reference-fixtures";
 import { loadDexPrices } from "../../lib/depeg-helpers";
+import { buildStoredChallengerPoolsJson } from "../dex-liquidity/challenger-publish";
+import type { PoolEntry } from "../dex-liquidity/types";
 
 vi.mock("../../lib/circuit-breaker", () => ({ recordOutcomeSafe: vi.fn(async () => undefined) }));
 
 const NOW_SEC = 1_700_000_000;
 const COIN_ID = "usdt-tether";
+const poolAddress = (digit: string) => `ethereum:0x${digit.repeat(40)}`;
 const usdMeta: StablecoinMeta = { id: COIN_ID, name: "Tether", symbol: "USDT", geckoId: "tether", flags: { backing: "crypto-backed", pegCurrency: "USD", governance: "centralized", yieldBearing: false, rwa: false, navToken: false } };
 const brlMeta: StablecoinMeta = { id: "brz-transfero", name: "Brazilian Digital Token", symbol: "BRZ", geckoId: "brz", flags: { backing: "rwa-backed", pegCurrency: "BRL", governance: "centralized", yieldBearing: false, rwa: true, navToken: false } };
 
@@ -81,7 +85,7 @@ describe("collectConfirmationEvidence source-family independence", () => {
   it("collects an independent CoinGecko confirmation with a fresh timestamp", async () => {
     const fetchSpy = mockFetch([{ match: "api.coingecko.com/api/v3/simple/price", body: { tether: { usd: 0.95, last_updated_at: NOW_SEC - 30 } } }], { requireMatch: true });
     const evidence = await collect(input(), fetchSpy);
-    expect(evidence).toMatchObject({ offchainStatus: "confirm", offchainSourceKey: "coingecko-confirm", offchainPeakCandidate: { bps: -500, price: 0.95 } });
+    expect(evidence).toMatchObject({ offchainStatus: "confirm", offchainSourceKey: "coingecko-confirm", offchainPeakCandidate: { bps: expect.closeTo(-500, 9), price: 0.95 } });
     expect(evidence.confirmingSources).toContain("coingecko-confirm");
   });
 
@@ -139,7 +143,7 @@ describe("collectConfirmationEvidence DEX source grouping and freshness", () => 
   it("groups independent DEX protocol families and retains peak candidates", async () => {
     const evidence = await collect(noOffchain({ dexPriceRows: dexRows(), dexPriceSources: dexSources() }));
     expect(evidence).toMatchObject({ dexStatus: "confirm", dexConfirmationKeys: ["dex:curve", "dex:uniswap"] });
-    expect(evidence.dexPeakCandidates).toEqual([{ bps: -500, price: 0.95, quoteDomain: "usd" }, { bps: -500, price: 0.95, quoteDomain: "usd" }, { bps: -510, price: 0.949, quoteDomain: "usd" }]);
+    expect(evidence.dexPeakCandidates).toEqual([{ bps: expect.closeTo(-500, 9), price: 0.95, quoteDomain: "usd", pegReference: 1 }, { bps: expect.closeTo(-500, 9), price: 0.95, quoteDomain: "usd", pegReference: 1 }, { bps: expect.closeTo(-510, 9), price: 0.949, quoteDomain: "usd", pegReference: 1 }]);
     expect(evidence.confirmingSources).toEqual(["dex:curve", "dex:uniswap"]);
   });
 
@@ -214,8 +218,91 @@ describe("collectConfirmationEvidence DEX source grouping and freshness", () => 
 });
 
 describe("collectConfirmationEvidence pool challenger status classification", () => {
+  it("withholds pools, protocol votes and aggregates that overlap retained pending sources", async () => {
+    const poolKey = poolAddress("1");
+    const time = NOW_SEC - 30;
+    const samples = [
+      { protocol: "curve", sourceFamily: "curve", upstreamKeys: [poolKey, "venue:bitstamp"] },
+      { protocol: "uniswap", sourceFamily: "uniswap", upstreamKeys: ["venue:binance"] },
+    ].map((source) => ({ ...source, chain: "ethereum", price: 0.92, tvl: 2e6, tvlUsd: 2e6, updatedAt: time, observedAt: time }));
+    const dexPriceRows = dexRows(time, 0.92);
+    Object.assign(dexPriceRows.get(COIN_ID)!, { upstreamKeys: samples.flatMap((sample) => sample.upstreamKeys) });
+    const pendingSourceKeys = new Set([poolKey, "binance"]);
+    for (const asset of [undefined, makeAsset({ id: COIN_ID, price: 1, priceSource: "coingecko" })]) {
+      const args = { asset, dexPriceRows, pendingSourceKeys,
+        dexPriceSources: new Map([[COIN_ID, samples]]), poolChallengers: pools(samples) };
+      const blocked = await collect(noOffchain(args));
+      expect(blocked.confirmingSources).toEqual([]);
+      expect(blocked.unavailableSources).toContain("dex:independence-unverified");
+      const protocolOverlap = await collect(noOffchain({ ...args, dexPriceRows: dexRows(time, 0.92) }));
+      expect(protocolOverlap.dexStatus).toBe("insufficient");
+      const disjoint = await collect(noOffchain({ ...args, pendingSourceKeys: new Set(["pyth"]) }));
+      expect(disjoint).toMatchObject({ dexStatus: "confirm", poolStatus: "confirm" });
+    }
+  });
+
+  it("withholds a pool funded by the same named venue as a USD primary without ancestry", async () => {
+    const asset = makeAsset({ id: COIN_ID, symbol: "USDT", price: 0.98, priceSource: "kraken",
+      agreeSources: ["kraken"], priceConfidence: "single-source", priceObservedAtMode: "local_fetch" });
+    const pool = { price: 0.98, tvlUsd: 6_000_000, protocol: "uniswap-v3", chain: "ethereum",
+      sourceFamily: "direct_api", observedAt: NOW_SEC - 30 };
+    for (const [upstreamKeys, expected] of [
+      [["venue:bitstamp", "venue:kraken"], "insufficient"], [["venue:bitstamp"], "confirm"], [undefined, "confirm"],
+    ] as const) {
+      const candidate = upstreamKeys ? { ...pool, upstreamKeys } : pool;
+      const evidence = await collect(noOffchain({ asset, coingeckoAllowed: false, poolChallengers: pools([candidate]) }));
+      expect(evidence.poolStatus).toBe(expected);
+      expect(evidence.poolConfirmations).toHaveLength(expected === "confirm" ? 1 : 0);
+    }
+  });
+
+  it.each(["venue", "pool"] as const)("counts a shared conversion %s only once on both sides of publication", async (identity) => {
+    const coin = "usg-tangent";
+    const protocols = ["uniswap-v3", "balancer", "curve", "sushiswap"];
+    const venues = ["kraken", "kraken+binance", "binance", "coinbase"];
+    const poolKeys = ["1", "2", "3", "4"].map(poolAddress);
+    const [left, right, independent] = [poolAddress("a"), poolAddress("b"), poolAddress("c")];
+    const conversionPools = [[left], [left, right], [right], [independent]];
+    const retained: PoolEntry[] = protocols.map((project, index) => ({
+      poolId: poolKeys[index]!, project, stablecoinId: coin, chain: "ethereum", price: 0.98, source: "direct_api",
+      tvlUsd: index === 1 ? 2e6 : 1e6, priceObservedAt: NOW_SEC - 30 - index, symbol: "USG-USDC", volumeUsd1d: 100, poolType: "stable",
+      priceCounterparty: {
+        stablecoinId: index === 3 ? COIN_ID : "usdc-circle", source: identity === "venue" ? venues[index]! : "pyth",
+        priceUsd: 0.98, observedAtSec: NOW_SEC - 30,
+        ...(identity === "pool" && { upstreamKeys: conversionPools[index], pricePoolKeys: conversionPools[index] }),
+      },
+    }));
+    const samples = retained.map((pool, index) => ({
+      price: pool.price!, observedAt: pool.priceObservedAt!, tvlUsd: pool.tvlUsd, protocol: pool.project,
+      chain: pool.chain, sourceFamily: "direct_api", pricePoolKeys: [pool.poolId, ...(pool.priceCounterparty?.pricePoolKeys ?? [])],
+      upstreamKeys: [pool.poolId, ...(pool.priceCounterparty?.upstreamKeys ?? venues[index]!.split("+").map((venue) => `venue:${venue}`))],
+    }));
+    const pending = row({ stablecoin_id: coin, symbol: "USG" });
+    const asset = makeAsset({ id: coin, symbol: "USG", pegType: "peggedUSD", price: 0.98, priceSource: "pyth" });
+    for (const [indices, expected] of [
+      [[0, 1, 2], "insufficient"], [[2, 0, 1], "insufficient"], [[0, 2], "confirm"], [[0, 1, 2, 3], "confirm"],
+    ] as const) {
+      const evidence = await collect(noOffchain({
+        row: pending, asset,
+        poolChallengers: new Map([[coin, indices.map((index) => samples[index]!)]]),
+      }));
+      const stored = JSON.parse(buildStoredChallengerPoolsJson(coin, indices.map((index) => retained[index]!), 100_000, NOW_SEC)!);
+      expect(evidence.poolStatus).toBe(expected);
+      expect(stored.map((pool: { poolId: string }) => pool.poolId).sort()).toEqual([...indices].sort().map((index) => poolKeys[index]));
+      expect(stored.every((pool: { priceUsd?: number }) => pool.priceUsd === undefined)).toBe(true);
+    }
+  });
+
+  it.each([undefined, NOW_SEC - 6 * 3_600, NOW_SEC - 30])("requires an original clock for a high-TVL confirmer (%s)", async (observedAt) => {
+    const candidate = { price: 0.96, tvlUsd: 5_100_000, protocol: "curve", chain: "ethereum", sourceFamily: "curve", observedAt };
+    const evidence = await collect(noOffchain({ poolChallengers: pools([candidate]) }));
+    expect(evidence.poolStatus).toBe(observedAt === NOW_SEC - 30 ? "confirm" : "insufficient");
+    expect(evidence.poolConfirmations).toHaveLength(observedAt === NOW_SEC - 30 ? 1 : 0);
+  });
+
   const poolCases = [
     { label: "reports poolStatus='contradict' when at least one qualifying pool is opposite-direction above bar", values: [{ price: 0.997, tvlUsd: 5_000_000, protocol: "curve", sourceFamily: "curve" }, { price: 1.012, tvlUsd: 5_000_000, protocol: "uniswap", sourceFamily: "uniswap" }], status: "contradict", opposing: "pool:uniswap:uniswap", confirmations: 0 },
+    { label: "withholds a clocked high-TVL pool with legacy placeholder identity", values: [{ price: 0.98, tvlUsd: 6_000_000, protocol: "unknown", sourceFamily: "legacy-challenger-pools" }], status: "insufficient", confirmations: 0 },
     { label: "reports poolStatus='confirm' with highTvl=true when a single qualifying pool has TVL >= $5M", values: [{ price: 0.98, tvlUsd: 6_000_000, protocol: "curve", sourceFamily: "curve" }], status: "confirm", confirmations: 1 },
     { label: "reports poolStatus='recover' only when every qualifying pool is under the secondary bar", values: [{ price: 0.998, tvlUsd: 5_000_000, protocol: "curve", sourceFamily: "curve" }, { price: 0.999, tvlUsd: 5_000_000, protocol: "uniswap", sourceFamily: "uniswap" }], status: "recover", opposing: "pool:curve:curve", confirmations: 0 },
     // 2026-09-24 (vchf-vnx): two dormant diverging protocol groups (24h volume 0,
@@ -224,7 +311,7 @@ describe("collectConfirmationEvidence pool challenger status classification", ()
     { label: "withholds poolStatus='confirm' when two diverging groups are outvoted by four inside-bar groups", values: [{ price: 0.98, tvlUsd: 1_000_000, protocol: "uniswap-v3", sourceFamily: "cg_onchain" }, { price: 0.979, tvlUsd: 1_000_000, protocol: "kongswap", sourceFamily: "cg_onchain" }, { price: 0.997, tvlUsd: 1_000_000, protocol: "icpswap", sourceFamily: "cg_onchain" }, { price: 0.9975, tvlUsd: 1_000_000, protocol: "raydium", sourceFamily: "direct_api" }, { price: 0.998, tvlUsd: 1_000_000, protocol: "aerodrome", sourceFamily: "direct_api" }, { price: 0.9985, tvlUsd: 1_000_000, protocol: "meteora", sourceFamily: "cg_onchain" }], status: "insufficient", confirmations: 0 },
   ];
   it.each(poolCases)("$label", async ({ values, status, opposing, confirmations }) => {
-    const evidence = await collect(noOffchain({ poolChallengers: pools(values) }));
+    const evidence = await collect(noOffchain({ poolChallengers: pools(values.map((pool) => ({ ...pool, observedAt: NOW_SEC - 30 }))) }));
     expect(evidence.poolStatus).toBe(status);
     expect(evidence.poolConfirmations).toHaveLength(confirmations);
     if (opposing) expect(evidence.opposingSources).toContain(opposing);
@@ -244,7 +331,7 @@ describe("collectConfirmationEvidence pool challenger status classification", ()
         price: 1, tvlUsd: 6_000_000, protocol, sourceFamily: protocol,
       })),
     ];
-    const evidence = await collect(noOffchain({ poolChallengers: pools(values) }));
+    const evidence = await collect(noOffchain({ poolChallengers: pools(values.map((pool) => ({ ...pool, observedAt: NOW_SEC - 30 }))) }));
     expect(evidence.poolStatus).toBe(opposingCount <= 1 ? "confirm" : "insufficient");
     expect(evidence.poolConfirmations).toHaveLength(opposingCount <= 1 ? 1 : 0);
     expect(evidence.confirmingSources).toEqual(opposingCount <= 1 ? ["pool:curve:curve"] : []);
@@ -253,7 +340,7 @@ describe("collectConfirmationEvidence pool challenger status classification", ()
 
 describe("collectConfirmationEvidence native quote classification", () => {
   const nativeInput = (price: number) => input({
-    nativePegQuote: { stablecoinId: COIN_ID, geckoId: "tether", pegCurrency: "USD", price, updatedAt: NOW_SEC - 30 },
+    nativePegQuote: { stablecoinId: COIN_ID, geckoId: "tether", pegCurrency: "USD", price, updatedAt: NOW_SEC - 30, derivation: tradedPair },
     nativeSignal: deriveDepegSignal(price, 1),
   });
 
@@ -267,12 +354,44 @@ describe("collectConfirmationEvidence native quote classification", () => {
     expect(evidence.confirmingSources).toEqual([]);
   });
 
+  it.each(["binance", undefined])("withholds a same-venue or unidentified native pair (%s)", async (venue) => {
+    const plan = nativeInput(0.95);
+    const evidence = await collect({ ...plan,
+      asset: makeAsset({ id: COIN_ID, priceSource: "binance", agreeSources: ["binance"] }),
+      nativePegQuote: { ...plan.nativePegQuote!, derivation: { kind: "traded-pair", lineage: { venue } } },
+      meta: undefined,
+    });
+    expect(evidence.offchainStatus).toBe("insufficient");
+  });
+
+  it.each(["legacy-primary", "legacy-challenger", "shared", "distinct", "invalid"] as const)("checks %s pool ancestry for a Curve primary", async (route) => {
+    const curve = "ethereum:0x0000000000000000000000000000000000000001";
+    const other = "ethereum:0x0000000000000000000000000000000000000002";
+    const asset = { ...makeAsset({ id: COIN_ID, priceSource: "curve-onchain", agreeSources: ["curve-onchain"] }),
+      ...(route === "legacy-primary" ? {} : { pricePoolKeys: [curve] }) };
+    const candidate = { price: 0.95, observedAt: NOW_SEC - 30, tvlUsd: 6e6, protocol: "uniswap", sourceFamily: "uniswap",
+      ...(route === "legacy-challenger" ? {} : { pricePoolKeys: route === "shared" ? [curve, other] : route === "invalid" ? [] : [other] }) };
+    const evidence = await collect(noOffchain({ asset, poolChallengers: pools([candidate]) }));
+    expect(evidence.poolStatus).toBe(route === "shared" || route === "invalid" ? "insufficient" : "confirm");
+  });
+
+  it.each(["audx-aussie-dollar-token", "qcad-stablecorp"])("deduplicates the reviewed Kraken/CoinGecko mirror for %s", async (id) => {
+    const fetchSpy = mockFetch([], { requireMatch: true });
+    const plan = nativeInput(0.95);
+    const evidence = await collect({ ...plan,
+      asset: makeAsset({ id, priceSource: "kraken", agreeSources: ["kraken"] }),
+      nativePegQuote: undefined, nativeSignal: null,
+    }, fetchSpy);
+    expect(evidence.offchainStatus).toBe("insufficient");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("confirms off-chain status from a fresh native peg quote without querying CoinGecko", async () => {
     const fetchSpy = mockFetch([], { requireMatch: true });
     const evidence = await collect(nativeInput(0.95), fetchSpy);
     expect(evidence.offchainStatus).toBe("confirm");
     expect(evidence.offchainSourceKey).toBe("native:usd");
-    expect(evidence.offchainPeakCandidate).toEqual({ bps: -500, price: 0.95, quoteDomain: "usd" });
+    expect(evidence.offchainPeakCandidate).toMatchObject({ price: 0.95, quoteDomain: "usd", pegReference: 1 });
     expect(evidence.confirmingSources).toContain("native:usd");
   });
 
@@ -310,7 +429,7 @@ describe("collectConfirmationEvidence recover and opposing classification", () =
   it("confirms from a fresh Binance quote beyond the secondary bar", async () => {
     const evidence = await collect(noOffchain({ cexAllowed: true, cexPrices: new Map([["USDT", 0.95]]) }));
     expect(evidence.cexStatus).toBe("confirm");
-    expect(evidence.cexPeakCandidate).toEqual({ bps: -500, price: 0.95, quoteDomain: "usd" });
+    expect(evidence.cexPeakCandidate).toEqual({ bps: expect.closeTo(-500, 9), price: 0.95, quoteDomain: "usd", pegReference: 1 });
     expect(evidence.confirmingSources).toContain("cex:binance");
   });
 

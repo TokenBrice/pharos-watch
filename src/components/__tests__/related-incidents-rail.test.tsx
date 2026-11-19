@@ -20,4 +20,18 @@ describe("RelatedIncidentsRail", () => {
     expect(screen.getByText("Other Crypto CDP incidents")).toBeTruthy();
     expect(view.container.textContent).not.toMatch(/cdp incidents|fiat-cash/);
   });
+
+  it("keeps the reviewed BRZ link and omits its unverified peak magnitude", () => {
+    render(<RelatedIncidentsRail excludeEventId="brz-2023-02-07" pegCurrency="BRL" riskArchetype="fiat-cash" startedAt={1675728000} />);
+
+    const link = screen.getByRole("link", { name: /^2023-02-11\s*BRZ\s*Peak unverified$/ });
+    expect(link.getAttribute("href")).toBe("/depeg/brz-2023-02-11");
+  });
+
+  it("qualifies the disputed EURm peak in the generated related links", () => {
+    render(<RelatedIncidentsRail excludeEventId="eurs-2026-11-10" pegCurrency="EUR" riskArchetype="fiat-cash" startedAt={1794317479} />);
+
+    const link = screen.getByRole("link", { name: /EURm.*159\.8% above peg \(Disputed\)/ });
+    expect(link.getAttribute("href")).toBe("/depeg/eurm-2026-08-12");
+  });
 });

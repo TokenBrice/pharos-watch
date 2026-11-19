@@ -1,4 +1,4 @@
-import { DEPEG_PENDING_MIN_AGE_SEC } from "@shared/lib/depeg-config";
+import { DEPEG_PENDING_EXPIRY_SEC, DEPEG_PENDING_MIN_AGE_SEC } from "@shared/lib/depeg-config";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
@@ -10,8 +10,16 @@ import {
 } from "../../test-helpers/pending-depeg-fixtures";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 
-import { normalizePendingDepegRow, type PendingDepegRow } from "../../lib/depeg-pending";
-import { buildConfirmationPlan, type ConfirmationPlanInput } from "../pending-depeg-confirmation";
+import { buildPendingClosureHoldStatements, hasCurrentPendingClosureVerdict, buildUpsertPendingDepegStmt, normalizePendingDepegRow, type PendingDepegRow } from "../../lib/depeg-pending";
+import { evaluatePromotionDecision } from "../pending-depeg-confirmation-decision";
+import {
+  buildConfirmationPlan, SELECT_PENDING_CONFIRMATION_SQL,
+  type ConfirmationEvidenceInput, type ConfirmationPlanInput, type ConfirmationPlanReady,
+} from "../pending-depeg-confirmation";
+import { collectConfirmationEvidence } from "../pending-depeg-confirmation-evidence";
+
+import { attachDetectionReferenceContext, deriveDetectionPegRates } from "../depeg-detection/reference-policy";
+import { referenceState, tradedPair } from "../depeg-detection/__tests__/reference-fixtures";
 
 const NOW_SEC = 1_700_000_000;
 const openDbs: DatabaseSync[] = [];
@@ -38,6 +46,7 @@ type Spec = {
   rateSources?: Record<string, "median" | "fx" | "fallback">;
   rateCounts?: Record<string, number>;
   nativePrice?: number;
+  nativeOnsetVenue?: string;
   open?: boolean;
   now?: number;
   kind: "mutate" | "wait" | "ready";
@@ -63,34 +72,285 @@ const nativeBrz = (price: number): Partial<StablecoinData> => ({
 });
 const PLAN_CASES: Spec[] = [
   { label: "rejects an invalid stored peg reference", row: { id: 1, peg_reference: 0 }, kind: "mutate", outcome: "rejected", reason: "invalid-peg-reference:0" },
-  { label: "keeps the stored pending peg reference when the refreshed fiat median is thin", row: { id: 2, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", peg_reference: 0.18765951 }, asset: brz, meta: brlMeta, rates: { peggedREAL: 0.3 }, rateSources: { peggedREAL: "median" }, rateCounts: { peggedREAL: 1 }, kind: "ready", peg: 0.18765951 },
+  { label: "waits when the refreshed fiat median is thin despite a stored reference", row: { id: 2, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", peg_reference: 0.18765951 }, asset: brz, meta: brlMeta, rates: { peggedREAL: 0.3 }, rateSources: { peggedREAL: "median" }, rateCounts: { peggedREAL: 1 }, kind: "wait", reason: "peg-reference-unavailable" },
   { label: "waits instead of deleting when a thin fiat reference has no valid stored reference", row: { id: 3, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", peg_reference: 0 }, asset: brz, meta: brlMeta, rates: { peggedREAL: 0.3 }, rateSources: { peggedREAL: "median" }, rateCounts: { peggedREAL: 1 }, kind: "wait", reason: "peg-reference-unavailable" },
-  { label: "clears BRZ pending rows when the direct BRL quote is back inside threshold", row: { id: 4, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", direction: "above", first_seen_bps: 180, first_price: 0.190587, peg_reference: 0.18765951 }, asset: brz, meta: brlMeta, rates: { peggedREAL: 0.18765951 }, rateSources: { peggedREAL: "median" }, rateCounts: { peggedREAL: 2 }, nativePrice: 0.995, kind: "mutate", outcome: "recovered", reason: "native-peg-recovered" },
-  { label: "clears BRZ pending rows when the native quote is below the full confirmation bar", row: { id: 5, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", direction: "above", first_seen_bps: 180, first_price: 0.190587, peg_reference: 0.18765951 }, asset: brz, meta: brlMeta, rates: { peggedREAL: 0.18765951 }, rateSources: { peggedREAL: "median" }, rateCounts: { peggedREAL: 2 }, nativePrice: 1.01, kind: "mutate", outcome: "recovered", reason: "native-peg-recovered" },
+  { label: "clears BRZ pending rows when the direct BRL quote is back inside threshold", row: { id: 4, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", direction: "above", first_seen_bps: 180, first_price: 0.190587, peg_reference: 0.18765951 }, asset: brz, meta: brlMeta, rates: { peggedREAL: 0.18765951 }, rateSources: { peggedREAL: "fx" }, rateCounts: { peggedREAL: 2 }, nativePrice: 0.995, kind: "mutate", outcome: "recovered", reason: "native-peg-recovered" },
+  { label: "retains BRZ pending rows in the gap between recovery and promotion", row: { id: 5, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", direction: "above", first_seen_bps: 180, first_price: 0.190587, peg_reference: 0.18765951 }, asset: brz, meta: brlMeta, rates: { peggedREAL: 0.18765951 }, rateSources: { peggedREAL: "fx" }, rateCounts: { peggedREAL: 2 }, nativePrice: 1.01, kind: "ready", peg: 0.18765951 },
   { label: "clears a pending row when the authoritative primary recovered", row: { id: 6 }, asset: usdPyth, kind: "mutate", outcome: "recovered", reason: "authoritative-primary-recovered" },
+  { label: "orders a legacy USD recovery by the authoritative quote update", row: { last_seen_at: NOW_SEC - 120 },
+    asset: { ...usdPyth, priceObservedAtMode: undefined, priceObservedAt: undefined }, kind: "mutate", outcome: "recovered", reason: "authoritative-primary-recovered" },
+  { label: "withholds a legacy USD recovery older than the retained pending quote", row: { last_seen_at: NOW_SEC - 120 },
+    asset: { ...usdPyth, priceObservedAtMode: undefined, priceObservedAt: undefined, priceUpdatedAt: NOW_SEC - 121 }, kind: "ready", peg: 1 },
+  { label: "withholds an explicitly local-fetch USD recovery even with a fresh update", asset: { ...usdPyth, priceSource: "pyth+binance", priceConfidence: "high", agreeSources: ["pyth", "binance"], priceObservedAtMode: "local_fetch", priceObservedAt: null }, kind: "ready", peg: 1 },
   { label: "supersedes a pending row when an open event already exists", row: { id: 7 }, open: true, kind: "mutate", outcome: "superseded", reason: "open-event-already-exists" },
   { label: "does not promote before threshold observations span the full window", row: { id: 8, first_seen_at: NOW_SEC - DEPEG_PENDING_MIN_AGE_SEC + 60 }, kind: "wait", reason: "too-young" },
-  { label: "retains native-origin state while waiting for independent confirmation", row: { id: 9, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", first_seen_bps: -242, first_price: 0.18, peg_reference: 1, reason: "large-cap+native-origin" }, asset: { ...brz, price: 0.18, priceSource: "pyth", priceConfidence: "single-source", priceObservedAt: NOW_SEC - 30, priceUpdatedAt: NOW_SEC - 30, priceSyncedAt: NOW_SEC - 30, consensusSources: ["pyth"], agreeSources: ["pyth"] }, meta: brlMeta, rates: { peggedREAL: 0.18765951 }, rateSources: { peggedREAL: "median" }, rateCounts: { peggedREAL: 2 }, kind: "ready", peg: 1 },
-  { label: "credits a fresh independent primary source when a native-origin move persists", row: { id: 11, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", first_seen_bps: -940, first_price: 0.17, last_seen_bps: -940, last_price: 0.17, peak_seen_bps: -940, peak_price: 0.17, peg_reference: 1, reason: "large-cap+native-origin" }, asset: nativeBrz(0.0319021167), meta: brlMeta, rates: { peggedREAL: 0.18765951 }, rateSources: { peggedREAL: "fx" }, rateCounts: { peggedREAL: 1 }, kind: "ready", peg: 1, primarySources: ["primary:oracle:pyth"] },
-  { label: "records a fresh independent primary source when a native-origin move recovers", row: { id: 12, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", first_seen_bps: -242, first_price: 0.9758, peg_reference: 1, reason: "large-cap+native-origin" }, asset: nativeBrz(0.18765951), meta: brlMeta, rates: { peggedREAL: 0.18765951 }, rateSources: { peggedREAL: "fx" }, rateCounts: { peggedREAL: 1 }, kind: "mutate", outcome: "recovered", reason: "authoritative-primary-recovered", opposingSources: "primary:oracle:pyth+primary:authoritative" },
-  { label: "uses the refreshed registry peg type for the confirmation threshold", row: { id: 13, peg_type: "peggedREAL" }, asset: { pegType: "peggedUSD" }, kind: "ready", peg: 1, threshold: 100 },
+  { label: "waits on native-origin state when benchmark and native evidence are unavailable", row: { id: 9, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", first_seen_bps: -242, first_price: 0.18, peg_reference: 1, reason: "large-cap+native-origin" }, asset: { ...brz, price: 0.18, priceSource: "pyth", priceConfidence: "single-source", priceObservedAt: NOW_SEC - 30, priceUpdatedAt: NOW_SEC - 30, priceSyncedAt: NOW_SEC - 30, consensusSources: ["pyth"], agreeSources: ["pyth"] }, meta: brlMeta, rates: { peggedREAL: 0.18765951 }, rateSources: { peggedREAL: "median" }, rateCounts: { peggedREAL: 2 }, kind: "wait", reason: "peg-reference-unavailable" },
+  { label: "credits a fresh independent primary source when a native-origin move persists", row: { id: 11, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", first_seen_bps: -940, first_price: 0.17, last_seen_bps: -940, last_price: 0.17, peak_seen_bps: -940, peak_price: 0.17, peg_reference: 1, reason: "large-cap+native-origin" }, asset: nativeBrz(0.0319021167), meta: brlMeta, rates: { peggedREAL: 0.18765951 }, rateSources: { peggedREAL: "fx" }, rateCounts: { peggedREAL: 1 }, nativeOnsetVenue: "bitso", kind: "ready", peg: 1, primarySources: ["primary:oracle:pyth"] },
+  { label: "records a fresh independent primary source when a native-origin move recovers", row: { id: 12, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", first_seen_bps: -242, first_price: 0.9758, peg_reference: 1, reason: "large-cap+native-origin" }, asset: nativeBrz(0.18765951), meta: brlMeta, rates: { peggedREAL: 0.18765951 }, rateSources: { peggedREAL: "fx" }, rateCounts: { peggedREAL: 1 }, nativeOnsetVenue: "bitso", kind: "mutate", outcome: "recovered", reason: "authoritative-primary-recovered", opposingSources: "primary:oracle:pyth+primary:authoritative" },
+  { label: "withholds a pending event whose peg differs from its asset and registry", row: { id: 13, stablecoin_id: brlMeta.id, peg_type: "peggedUSD" }, asset: brz, meta: brlMeta, kind: "wait", reason: "peg-reference-unavailable" },
+  { label: "withholds a mismatched asset even with an agreeing pending peg and native quote", row: { stablecoin_id: brlMeta.id, peg_type: "peggedREAL" }, asset: { ...brz, pegType: "peggedUSD" }, meta: brlMeta, nativePrice: 1, kind: "wait", reason: "peg-reference-unavailable" },
   { label: "returns a ready plan for an aged pending row", row: { id: 10 }, kind: "ready", peg: 1 },
-  { label: "waits for a closed metal market to reopen", row: { id: 14 }, meta: goldMeta, now: 1_794_758_400, kind: "wait", reason: "reference-market-closed" },
-  { label: "holds on today's price, not a stale severe reading", row: { id: 15, last_seen_bps: -3000 }, asset: { price: 3_880, pegType: "peggedGOLD" }, meta: goldMeta, rates: { peggedGOLD: 3_880 }, rateSources: { peggedGOLD: "fallback" }, now: 1_794_758_400, kind: "wait", reason: "reference-market-closed" },
-  { label: "requires severe confirmers while the metal market is closed", row: { id: 16, last_seen_bps: -2800 }, asset: { price: 2_800, pegType: "peggedGOLD" }, meta: goldMeta, rates: { peggedGOLD: 3_880 }, rateSources: { peggedGOLD: "fallback" }, now: 1_794_758_400, kind: "ready", peg: 3_880, threshold: 2_500 },
-  { label: "holds a native-origin FX candidate while the FX market is closed", row: { id: 17, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", first_seen_bps: -242, first_price: 0.98, peg_reference: 1, reason: "large-cap+native-origin" }, asset: nativeBrz(0.18765951), meta: brlMeta, rates: { peggedREAL: 0.18765951 }, rateSources: { peggedREAL: "fx" }, rateCounts: { peggedREAL: 1 }, nativePrice: 0.98, now: 1_794_758_400, kind: "wait", reason: "reference-market-closed" },
+  { label: "does not mark a closure hold when the candidate lacks a current quote", row: { id: 14 }, meta: goldMeta, now: 1_794_758_400, kind: "wait", reason: "peg-reference-unavailable" },
+  { label: "holds from a current sub-band sample during the closure", row: { id: 15, peg_type: "peggedGOLD", last_seen_bps: -200 }, asset: { price: 3_880, pegType: "peggedGOLD" }, meta: goldMeta, rates: { peggedGOLD: 3_880 }, rateSources: { peggedGOLD: "fallback" }, now: 1_794_758_400, kind: "wait", reason: "reference-market-closed" },
+  { label: "holds a 24.996% primary reading below the raw closure cutoff", row: { id: 16, peg_type: "peggedEUR" }, asset: { price: 0.75004, pegType: "peggedEUR" }, meta: eurMeta, rates: { peggedEUR: 1 }, rateSources: { peggedEUR: "fx" }, nativePrice: 0.755, now: 1_794_758_400, kind: "wait", reason: "reference-market-closed" },
+  { label: "assesses a traded native-origin FX candidate through the closed session", row: { id: 17, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", first_seen_bps: -242, first_price: 0.98, peg_reference: 1, reason: "large-cap+native-origin" }, asset: nativeBrz(0.18765951), meta: brlMeta, rates: { peggedREAL: 0.18765951 }, rateSources: { peggedREAL: "fx" }, rateCounts: { peggedREAL: 1 }, nativePrice: 0.98, now: 1_794_758_400, kind: "ready", peg: 1, threshold: 150 },
+  { label: "does not treat a 24.5% native discount as recovery from a 25.5% weekend primary discount",
+    row: { id: 18, peg_type: "peggedEUR", last_seen_bps: -2550 }, asset: { price: 0.8195, pegType: "peggedEUR" },
+    meta: eurMeta, rates: { peggedEUR: 1.1 }, rateSources: { peggedEUR: "fx" }, nativePrice: 0.755,
+    now: 1_794_758_400, kind: "ready", peg: 1.1, threshold: 2500 },
+
 ];
 
 function makeInput(db: D1Database, spec: Omit<Spec, "label">): ConfirmationPlanInput {
-  const value = row(spec.row);
+  const value = row(spec.now == null ? spec.row : {
+    first_seen_at: spec.now - 1_000, last_seen_at: spec.now - 30, ...spec.row,
+  });
+  if (spec.nativeOnsetVenue) {
+    value.peer_basis_json = JSON.stringify({ onset: { basis: "native-peg", observedAt: value.first_seen_at,
+      price: value.first_price, pegReference: 1, bps: value.first_seen_bps, venue: spec.nativeOnsetVenue } });
+  }
   const pendingState = normalizePendingDepegRow(value);
-  const asset = spec.asset ? makeAsset({ id: value.stablecoin_id, symbol: value.symbol, ...spec.asset }) : undefined;
-  return { db, row: value, pendingState, asset, meta: spec.meta, pegRates: spec.rates ?? {}, pegRateSources: spec.rateSources ?? {}, pegRateCounts: spec.rateCounts ?? {}, nativePegQuote: spec.nativePrice == null ? undefined : { stablecoinId: value.stablecoin_id, geckoId: spec.meta?.geckoId ?? "brz", pegCurrency: spec.meta?.flags.pegCurrency ?? "BRL", price: spec.nativePrice, updatedAt: NOW_SEC - 60 }, openSet: spec.open ? new Set([value.stablecoin_id]) : new Set(), now: spec.now ?? NOW_SEC };
+  const now = spec.now ?? NOW_SEC;
+  const asset = spec.asset ? makeAsset({ id: value.stablecoin_id, symbol: value.symbol,
+    priceObservedAt: now - 30, priceUpdatedAt: now - 30, priceObservedAtMode: "upstream",
+    ...spec.asset, ...(spec.now ? { priceObservedAt: now - 30, priceUpdatedAt: now - 30 } : {}),
+  }) : undefined;
+  const pegRates = { ...spec.rates };
+  const referenceAt = spec.now ? Date.UTC(2026, 10, 13, 21, 55) / 1_000 : now - 60;
+  const fx = referenceState(pegRates, referenceAt);
+  attachDetectionReferenceContext(pegRates, [], new Map(), new Set(), fx, fx.repricingByPeg);
+  return { db, row: value, pendingState, asset, meta: spec.meta, pegRates, pegRateSources: spec.rateSources ?? {},
+    pegRateCounts: spec.rateCounts ?? {}, nativePegQuote: spec.nativePrice == null ? undefined : {
+      stablecoinId: value.stablecoin_id, geckoId: spec.meta?.geckoId ?? "brz", pegCurrency: spec.meta?.flags.pegCurrency ?? "BRL",
+      price: spec.nativePrice, updatedAt: now - 60, derivation: tradedPair,
+    }, openSet: spec.open ? new Set([value.stablecoin_id]) : new Set(), now };
 }
+
+function collectPlanEvidence(
+  db: D1Database,
+  plan: ConfirmationPlanReady,
+  now: number,
+  overrides: Partial<ConfirmationEvidenceInput>,
+) {
+  return collectConfirmationEvidence({
+    ...plan, db, now, dexPriceRows: new Map(), dexPriceSources: new Map(), poolChallengers: new Map(),
+    cexAllowed: false, cexPrices: null, coingeckoAllowed: false, coingeckoApiKey: undefined, signal: undefined,
+    ...overrides,
+  });
+}
+
+const curvePool = (stablecoinId: string, price: number, observedAt: number) =>
+  new Map([[stablecoinId, [{ price, observedAt, tvlUsd: 8e6, protocol: "curve", sourceFamily: "curve", chain: "ethereum" }]]]);
+const emptyFx = (now: number) => ({ ...referenceState({}, now - 60), observations: {} });
+
+async function planWithFx(
+  input: ConfirmationPlanInput,
+  fxState: Parameters<typeof deriveDetectionPegRates>[5],
+  rates?: Record<string, number>,
+) {
+  const { db, asset, meta, now } = input;
+  const selection = await deriveDetectionPegRates(db, asset ? [asset] : [], new Map([[meta!.id, meta!]]),
+    new Set(), rates, fxState, now);
+  return buildConfirmationPlan({ ...input, pegRates: selection.rates, pegRateSources: selection.sources, pegRateCounts: selection.counts });
+}
+
+const readSelectedPending = (sqlite: DatabaseSync) =>
+  sqlite.prepare(SELECT_PENDING_CONFIRMATION_SQL).get() as unknown as PendingDepegRow;
 
 afterEach(() => { for (const sqlite of openDbs.splice(0)) sqlite.close(); });
 
 describe("buildConfirmationPlan", () => {
+  it("requires the XAGm entitlement to match the challenger quote with legacy FX", async () => {
+    const { db } = fixture();
+    const now = Date.UTC(2026, 10, 18, 0, 3) / 1_000;
+    const id = "xagm-matrixdock";
+    const meta = { ...goldMeta, id, flags: { ...goldMeta.flags, pegCurrency: "SILVER" as const } };
+    const unit = 29.95142466;
+    const input = makeInput(db, { kind: "ready", now, meta, rates: { peggedSILVER: 30 },
+      rateSources: { peggedSILVER: "fallback" },
+      row: { stablecoin_id: id, peg_type: "peggedSILVER", peg_reference: unit },
+      asset: { pegType: "peggedSILVER", price: unit * 0.98, commodityEntitlement: {
+        source: "matrixdock-frs", generation: "ethereum:1250", ozPerToken: 0.998380822,
+        observedAtSec: now - 90, quoteObservedAtSec: now - 30,
+      } },
+    });
+    attachDetectionReferenceContext(input.pegRates, [], new Map(), new Set(), null);
+    const plan = buildConfirmationPlan(input);
+    if (plan.kind !== "ready") throw new Error("Expected a valid primary entitlement");
+    const status = async (observedAt: number) => (await collectPlanEvidence(db, plan, now, {
+      poolChallengers: curvePool(id, unit * 0.97, observedAt),
+    })).poolStatus;
+    expect(await status(now - 240)).toBe("insufficient");
+    expect(await status(now - 30)).toBe("confirm");
+  });
+
+  it("falls back to a legacy same-session stored reference only when independent FX evidence is absent", async () => {
+    const { db } = fixture();
+    const now = Date.UTC(2026, 10, 18, 12, 16, 40) / 1_000;
+    const input = makeInput(db, { kind: "ready", now, meta: eurMeta,
+      row: { stablecoin_id: eurMeta.id, peg_type: "peggedEUR", peg_reference: 1.1, first_price: 1.078, last_price: 1.078 },
+      asset: { pegType: "peggedEUR", price: 1.078, priceSource: "coingecko", circulating: { peggedEUR: 100e6 } },
+    });
+    expect(await planWithFx(input, null)).toMatchObject({ kind: "ready", pegReference: 1.1 });
+    expect(await planWithFx(input, emptyFx(now)))
+      .toEqual({ kind: "wait", reason: "peg-reference-unavailable" });
+  });
+
+  it("promotes a pending EURC move from a clocked Curve quote when the primary disappears", async () => {
+    const { sqlite, db } = fixture();
+    const now = Date.UTC(2026, 10, 18, 12, 15) / 1_000;
+    const meta = { ...eurMeta, id: "eurc-circle" };
+    for (const seenAt of [now - 1800, now - 900]) {
+      await buildUpsertPendingDepegStmt(db, { stablecoinId: meta.id, symbol: "EURC", pegType: "peggedEUR",
+        price: 1.078, pegReference: 1.1, bps: -200, direction: "below", reason: "low-confidence",
+        seenAt, quoteObservedAt: seenAt - 30, sourceKeys: ["coingecko"] }).run();
+    }
+    const pending = sqlite.prepare(SELECT_PENDING_CONFIRMATION_SQL).get() as unknown as PendingDepegRow;
+    const input = makeInput(db, { kind: "ready", meta, now, row: pending, rates: { peggedEUR: 1.1 }, rateSources: { peggedEUR: "fx" } });
+    const fx = referenceState(input.pegRates, now - 60);
+    attachDetectionReferenceContext(input.pegRates, [], new Map(), new Set(), fx, fx.repricingByPeg);
+    const plan = buildConfirmationPlan(input);
+    if (plan.kind !== "ready") throw new Error(`Expected secondary evaluation, got ${plan.kind}`);
+    const collect = (pool: { observedAt: number; upstreamKeys?: string[] }) => collectConfirmationEvidence({
+      ...plan, db, now, dexPriceRows: new Map(), dexPriceSources: new Map(), cexAllowed: false, cexPrices: null,
+      coingeckoAllowed: false, coingeckoApiKey: undefined, signal: undefined,
+      poolChallengers: new Map([[meta.id, [{ price: 1.078, tvlUsd: 8e6, protocol: "curve",
+        sourceFamily: "direct_api", chain: "ethereum", ...pool }]]]),
+    });
+    expect((await collect({ observedAt: now - 1800 })).poolStatus).toBe("insufficient");
+    expect((await collect({ observedAt: now - 25, upstreamKeys: ["venue:coingecko"] })).poolStatus).toBe("insufficient");
+    const evidence = await collect({ observedAt: now - 25 });
+    await db.batch(evaluatePromotionDecision({ db, plan, evidence, now }));
+    expect(sqlite.prepare("SELECT peak_deviation_bps, peak_price, peg_reference FROM depeg_events").all())
+      .toEqual([{ peak_deviation_bps: -200, peak_price: 1.078, peg_reference: 1.1 }]);
+  });
+
+  it.each([
+    { meta: eurMeta, peg: "peggedEUR", ref: 1.1, hour: 12, minute: 16, refresh: true },
+    { meta: { ...goldMeta, id: "paxg-paxos" }, peg: "peggedGOLD", ref: 4100, hour: 22, minute: 6, refresh: false },
+  ])("confirms $peg from an independent pool after losing the primary in a legacy session", async ({ meta, peg, ref, hour, minute, refresh }) => {
+    const { sqlite, db } = fixture();
+    const now = Date.UTC(2026, 10, 18, hour, minute, 40) / 1_000;
+    const price = ref * 0.98;
+    const pending = row({ stablecoin_id: meta.id, peg_type: peg, peg_reference: ref, first_seen_at: now - 1000,
+      last_seen_at: now - 100, first_price: price, last_price: price });
+    seed(sqlite, pending);
+    const input = makeInput(db, { kind: "ready", row: pending, now, meta });
+    if (refresh) expect(await planWithFx(input, null, { [peg]: 1.2 })).toMatchObject({ kind: "wait" });
+    expect(await planWithFx(input, emptyFx(now), {})).toMatchObject({ kind: "wait" });
+    const plan = await planWithFx(input, null, refresh ? { [peg]: ref } : {});
+    if (plan.kind !== "ready") throw new Error("Expected secondary confirmation against the legacy benchmark");
+    const evidence = await collectPlanEvidence(db, plan, now, { poolChallengers: curvePool(meta.id, price, now - 30) });
+    await db.batch(evaluatePromotionDecision({ db, plan, evidence, now }));
+    expect(sqlite.prepare("SELECT peak_deviation_bps, peg_reference FROM depeg_events").all())
+      .toEqual([{ peak_deviation_bps: -200, peg_reference: ref }]);
+  });
+
+  it("keeps a matched onset source after a legacy writer advances only the latest observation", async () => {
+    const { sqlite, db } = fixture();
+    const first = NOW_SEC - 960;
+    const args = { stablecoinId: "usdt-tether", symbol: "USDT", pegType: "peggedUSD", pegReference: 1,
+      price: 0.98, bps: -200, direction: "below" as const, reason: "low-confidence" };
+    await buildUpsertPendingDepegStmt(db, { ...args, seenAt: first, sourceKeys: ["binance"] }).run();
+    await buildUpsertPendingDepegStmt(db, { ...args, seenAt: first + 60, sourceKeys: ["kraken"] }).run();
+    sqlite.prepare("UPDATE depeg_pending SET last_seen_at = ?, updated_at = ?").run(first + 900, first + 900);
+    const read = async () => {
+      const row = readSelectedPending(sqlite);
+      const plan = buildConfirmationPlan(makeInput(db, { kind: "ready", row }));
+      if (plan.kind !== "ready") throw new Error("Expected a confirmable pending episode");
+      const evidence = await collectPlanEvidence(db, plan, NOW_SEC, { cexAllowed: true, cexPrices: new Map([["USDT", 0.98]]) });
+      return { keys: [...(plan.pendingSourceKeys ?? [])], confirming: evidence.confirmingSources };
+    };
+    expect(await read()).toEqual({ keys: ["binance"], confirming: [] });
+    sqlite.prepare("UPDATE depeg_pending SET first_price = 0.979, first_seen_bps = -210").run();
+    expect(await read()).toEqual({ keys: [], confirming: ["cex:binance"] });
+  });
+
+  const reopening = Date.UTC(2026, 10, 22, 23, 0, 15) / 1_000;
+  const closedQuote = Date.UTC(2026, 10, 22, 22, 41, 15) / 1_000;
+  it.each([
+    { id: "usdt-tether", peg: "peggedUSD", pegRef: 1, previousSource: "live" },
+    { id: "usdt-tether", peg: "peggedUSD", pegRef: 1, previousSource: "backfill" },
+    { id: "paxg-paxos", peg: "peggedGOLD", pegRef: 4100, meta: goldMeta },
+    { id: eurMeta.id, peg: "peggedEUR", pegRef: 1.1, meta: eurMeta },
+  ])("keeps the discovery onset for $id after recovery ($previousSource) or reopening", async ({ id, peg, pegRef, previousSource, meta }) => {
+    const { sqlite, db } = fixture();
+    const discovery = Date.UTC(2026, 10, 18, 12, 45) / 1_000;
+    if (previousSource) sqlite.prepare(`INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps,
+      started_at, ended_at, start_price, peak_price, peg_reference, source, close_reason)
+      VALUES ('usdt-tether', 'USDT', 'peggedUSD', 'below', -300, ?, ?, 0.97, 0.97, 1, ?, 'recovered-primary')`)
+      .run(discovery - 2700, discovery - 900, previousSource);
+    const first = previousSource ? discovery : reopening;
+    const quote = previousSource ? discovery - 960 : closedQuote;
+    const now = first + 900;
+    const args = { stablecoinId: id, symbol: id, pegType: peg, pegReference: pegRef, direction: "below" as const,
+      price: pegRef * 0.98, bps: -200, reason: "low-confidence" };
+    await buildUpsertPendingDepegStmt(db, { ...args, seenAt: first, quoteObservedAt: quote }).run();
+    await buildUpsertPendingDepegStmt(db, { ...args, seenAt: now, quoteObservedAt: first + 45 }).run();
+    const row = readSelectedPending(sqlite);
+    const input = makeInput(db, { kind: "ready", row, now, meta, rates: { [peg]: pegRef }, rateSources: { [peg]: "fallback" },
+      asset: { pegType: peg, price: args.price } });
+    attachDetectionReferenceContext(input.pegRates, [], new Map(), new Set(), null);
+    const plan = buildConfirmationPlan(input);
+    if (plan.kind !== "ready") throw new Error("Expected a confirmable pending episode");
+    expect(plan.pendingState.firstSeenAt).toBe(quote);
+    await db.batch(evaluatePromotionDecision({ db, plan, evidence: { ...plan.evidence, poolStatus: "confirm" }, now }));
+    expect(sqlite.prepare("SELECT started_at FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL").get(id))
+      .toEqual({ started_at: first });
+  });
+
+  it.each(["clocked", "legacy"] as const)("continues a severe pre-close pending using the %s weekend reference", (mode) => {
+    const { db } = fixture();
+    const close = Date.UTC(2026, 10, 13, mode === "legacy" ? 21 : 22) / 1000;
+    const now = Date.UTC(2026, 10, 14, 0, 30) / 1000;
+    const input = makeInput(db, { kind: "ready", now, meta: eurMeta, rates: { peggedEUR: 1.1 },
+      rateSources: { peggedEUR: "fx" }, asset: { pegType: "peggedEUR", price: 0.77, priceSource: "coingecko" },
+      row: { stablecoin_id: eurMeta.id, peg_type: "peggedEUR", first_seen_at: close - 1800, last_seen_at: close - 900,
+        first_seen_bps: -3000, last_seen_bps: -3000, peak_seen_bps: -3000, peg_reference: 1.1 } });
+    if (mode === "legacy") attachDetectionReferenceContext(input.pegRates, [], new Map(), new Set(), null);
+    const plan = buildConfirmationPlan(input);
+    expect(plan).toMatchObject({ kind: "ready", threshold: 2500 });
+    if (plan.kind !== "ready") throw new Error("Expected a weekend confirmation attempt");
+    expect(evaluatePromotionDecision({ db, plan, evidence: plan.evidence, now })).toEqual([]);
+    expect(buildConfirmationPlan({ ...input, asset: { ...input.asset!, price: 1.09 } }))
+      .toMatchObject({ kind: "wait", reason: "reference-market-closed" });
+    const withoutAsset = { ...input, asset: undefined };
+    expect(buildConfirmationPlan(withoutAsset)).toEqual(mode === "legacy"
+      ? { kind: "wait", reason: "reference-market-closed", legacyClosure: true }
+      : { kind: "wait", reason: "peg-reference-unavailable" });
+    expect(buildConfirmationPlan({ ...withoutAsset, now: Date.UTC(2026, 10, 16, 12) / 1000 }).kind).toBe("mutate");
+  });
+
+  it("ages a lagged quote from the run that found it and requires a later quote for persistence", async () => {
+    const { sqlite, db } = fixture();
+    const pending = { stablecoinId: "usdt-tether", symbol: "USDT", pegType: "peggedUSD", direction: "below" as const,
+      bps: -200, price: 0.98, pegReference: 1, reason: "confirmation-window" };
+    const write = (seenAt: number, quoteObservedAt: number) =>
+      buildUpsertPendingDepegStmt(db, { ...pending, seenAt, quoteObservedAt }).run();
+    const planAt = (now: number) => {
+      const row = sqlite.prepare("SELECT * FROM depeg_pending").get() as unknown as PendingDepegRow;
+      return buildConfirmationPlan({ ...makeInput(db, { kind: "ready" }), row, pendingState: normalizePendingDepegRow(row), now });
+    };
+
+    const oldTrade = NOW_SEC - DEPEG_PENDING_MIN_AGE_SEC;
+    const nextRun = NOW_SEC + DEPEG_PENDING_MIN_AGE_SEC;
+    await write(NOW_SEC, oldTrade);
+    expect(planAt(NOW_SEC)).toMatchObject({ kind: "wait", reason: "too-young" });
+    await write(nextRun, oldTrade);
+    expect(planAt(nextRun)).toMatchObject({ kind: "ready", age: DEPEG_PENDING_MIN_AGE_SEC, temporalSameDirectionConfirmed: false });
+    await write(nextRun, NOW_SEC + 1);
+    expect(planAt(nextRun)).toMatchObject({ kind: "ready", age: DEPEG_PENDING_MIN_AGE_SEC, temporalSameDirectionConfirmed: true });
+    const terminalAt = (now: number) => {
+      const plan = planAt(now);
+      if (plan.kind !== "ready") throw new Error("Expected an aged USD candidate");
+      return evaluatePromotionDecision({ db, plan, evidence: plan.evidence, now });
+    };
+    const expiry = NOW_SEC + DEPEG_PENDING_EXPIRY_SEC;
+    expect(terminalAt(expiry)).toHaveLength(0);
+    await db.batch(terminalAt(expiry + 1));
+    expect(sqlite.prepare("SELECT outcome FROM depeg_pending_outcomes").get()).toEqual({ outcome: "expired" });
+  });
+
   it.each([
     { stablecoinId: "another-coin", pegCurrency: "BRL" },
     { stablecoinId: "brz-transfero", pegCurrency: "EUR" },
@@ -115,7 +375,7 @@ describe("buildConfirmationPlan", () => {
     const { sqlite, db } = fixture();
     const input = makeInput(db, {
       row: { stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", peg_reference: 1, reason: "large-cap+native-origin" },
-      asset: brz, meta: brlMeta, nativePrice: 1, kind: "mutate",
+      asset: brz, meta: brlMeta, nativePrice: 1, nativeOnsetVenue: "bitso", kind: "mutate",
     });
     input.nativePegQuote = { ...input.nativePegQuote!, pegCurrency };
     seed(sqlite, input.row);
@@ -125,6 +385,25 @@ describe("buildConfirmationPlan", () => {
     await db.batch(plan.statements);
     expect(sqlite.prepare("SELECT outcome, final_decision_reason FROM depeg_pending_outcomes WHERE pending_id = ?").get(input.row.id))
       .toEqual({ outcome: "recovered", final_decision_reason: "native-peg-recovered" });
+  });
+
+  it.each(["native", "primary"] as const)("withholds an older %s recovery after a newer retained dislocation", (basis) => {
+    const { db } = fixture();
+    const input = makeInput(db, {
+      row: { stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", peg_reference: 1,
+        first_seen_at: NOW_SEC - 1_600, last_seen_at: NOW_SEC - 50, reason: "large-cap+native-origin" },
+      asset: nativeBrz(basis === "native" ? 0.18 : 0.193), meta: brlMeta,
+      rates: { peggedREAL: 0.193 }, rateSources: { peggedREAL: "fx" }, rateCounts: { peggedREAL: 1 },
+      nativePrice: basis === "native" ? 1 : undefined, nativeOnsetVenue: "bitso", kind: "ready",
+    });
+    if (input.nativePegQuote) input.nativePegQuote = { ...input.nativePegQuote, updatedAt: NOW_SEC - 700 };
+    input.asset = { ...input.asset!, priceObservedAt: NOW_SEC - 700 };
+    const plan = buildConfirmationPlan(input);
+    expect(plan.kind).toBe("ready");
+    if (plan.kind === "ready") {
+      expect(plan.primaryStatus).not.toBe("recover");
+      expect(plan.nativeSignal).toBeNull();
+    }
   });
 
   it("withholds an implausible native-origin sample as unavailable evidence", () => {
@@ -153,6 +432,7 @@ describe("buildConfirmationPlan", () => {
     const input = makeInput(db, {
       row: { id: 15, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", direction: "below", first_seen_bps: -6_000, first_price: 0.4, last_seen_bps: -6_000, last_price: 0.4, peak_seen_bps: -6_000, peak_price: 0.4, peg_reference: 1, reason: "large-cap+native-origin" },
       asset: nativeBrz(0.075),
+      nativeOnsetVenue: "bitso",
       meta: brlMeta,
       rates: { peggedREAL: 0.18765951 },
       rateSources: { peggedREAL: "fx" },
@@ -186,6 +466,40 @@ describe("buildConfirmationPlan", () => {
     expect(plan.evidence.unavailableSources).toContain("native:brl:native-quote-extreme-move");
   });
 
+  it("does not record a closure hold from a numeric fallback without denominator metadata", () => {
+    const { db } = fixture();
+    const input = makeInput(db, PLAN_CASES.find((spec) => spec.row?.id === 15)!);
+    input.pegRates = { ...input.pegRates };
+    expect(buildConfirmationPlan(input)).toEqual({ kind: "wait", reason: "reference-market-closed", legacyClosure: true });
+  });
+
+  it("binds a hold verdict to a pending episode revision", async () => {
+    const { sqlite, db } = fixture();
+    const input = makeInput(db, PLAN_CASES.find((spec) => spec.row?.id === 15)!);
+    seed(sqlite, input.row);
+    expect(buildConfirmationPlan(input)).toEqual({ kind: "wait", reason: "reference-market-closed" });
+    const readRow = () => sqlite.prepare("SELECT * FROM depeg_pending WHERE id = ?").get(input.row.id) as unknown as PendingDepegRow;
+    const updateHold = sqlite.prepare("UPDATE depeg_pending SET reference_market_held_at = ? WHERE id = ?");
+    const recordHold = (row: PendingDepegRow, at: number | null) => db.batch(buildPendingClosureHoldStatements(db, row, at));
+    await recordHold(input.row, input.now);
+    expect(readRow().reference_market_held_at).toBe(input.now);
+    expect(hasCurrentPendingClosureVerdict(readRow())).toBe(true);
+    updateHold.run(input.now + 60, input.row.id);
+    expect(hasCurrentPendingClosureVerdict(readRow())).toBe(false);
+    updateHold.run(null, input.row.id);
+    await recordHold(readRow(), null);
+    expect(JSON.parse(readRow().peer_basis_json!)).not.toHaveProperty("closureRevision");
+    await recordHold(readRow(), input.now);
+    sqlite.prepare("UPDATE depeg_pending SET peak_price = ? WHERE id = ?").run(0.7, input.row.id);
+    expect(hasCurrentPendingClosureVerdict(readRow())).toBe(false);
+    await buildUpsertPendingDepegStmt(db, {
+      stablecoinId: input.row.stablecoin_id, symbol: input.row.symbol, pegType: input.row.peg_type,
+      direction: "below", bps: -3_000, seenAt: input.now + 60, price: 0.7, pegReference: 1, reason: "large-cap",
+    }).run();
+    await recordHold(input.row, input.now);
+    expect(readRow().reference_market_held_at).toBeNull();
+  });
+
   it.each(PLAN_CASES)("$label", async (spec) => {
     const { sqlite, db } = fixture();
     const input = makeInput(db, spec);
@@ -211,7 +525,7 @@ describe("buildConfirmationPlan", () => {
     expect(plan.kind).toBe("ready");
     if (plan.kind !== "ready") throw new Error(`unexpected plan kind: ${plan.kind}`);
     expect(plan.pegReference).toBe(spec.peg);
-    expect(plan.outcomeState.pegReference).toBe(spec.peg);
+    expect(plan.outcomeState.pegReference).toBe(input.row.peg_reference);
     if (spec.threshold != null) expect(plan.threshold).toBe(spec.threshold);
     expect(plan.age).toBeGreaterThanOrEqual(DEPEG_PENDING_MIN_AGE_SEC);
     if (spec.primarySources) expect(plan.primaryConfirmationSources).toEqual(spec.primarySources);

@@ -135,9 +135,10 @@ export async function dispatchTelegramAlerts(
       await writeSnapshots(db, currentSnapshots);
       snapshotSeedCommitted = true;
     } else {
-      const { events, changeLogStatements } = await buildTelegramDispatchEvents(
+      const { events, changeLogStatements, nextDepegSnapshot } = await buildTelegramDispatchEvents(
         db, sourceData, snapshotState, getSymbol, signal,
       );
+      const nextSnapshots = { ...currentSnapshots, depeg: nextDepegSnapshot };
       const summary = summarizeTelegramDispatchEvents(events);
       eventOverrides = summary.eventsDetected;
       // The roll-up transitions and the baselines that consume them commit in
@@ -145,7 +146,7 @@ export async function dispatchTelegramAlerts(
       // re-detects every transition. The job, when present, goes first.
       const baselineStatements = [
         ...changeLogStatements,
-        ...buildTelegramSnapshotCacheEntries(currentSnapshots)
+        ...buildTelegramSnapshotCacheEntries(nextSnapshots)
           .map((entry) => prepareCacheUpsert(db, { ...entry, updatedAt: nowSec })),
       ];
       if (summary.total === 0) {
@@ -155,7 +156,7 @@ export async function dispatchTelegramAlerts(
         // A crash re-detects the same events and re-derives the same job id.
         const spec = await buildTelegramAlertJobSpec({
           events,
-          baselineDigestInput: JSON.stringify(currentSnapshots),
+          baselineDigestInput: JSON.stringify(nextSnapshots),
           detectedAt: nowSec,
         });
         alertJobId = spec.jobId;

@@ -1,12 +1,15 @@
 import { logWorkerEventArgs } from "../../src/lib/structured-log";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { DAY_SECONDS, HOUR_SECONDS } from "@shared/lib/time-constants";
+import { getReferenceMarket, isReferenceMarketClosed } from "@shared/lib/reference-market-hours";
 import { buildPriceReasonablenessOptions } from "../../src/lib/price-validation";
 import { fetchAuthoritativeHistoricalPriceSeries } from "../../src/lib/authoritative-price-sources";
 import { normalizeSupportedPegCurrency } from "../../src/lib/native-peg-quotes";
 import {
   collapsePricesToDailyTimestamps,
   fetchMarketBackfillPriceSeries,
+  isAdmittedHistoricalNativeQuote,
   type HistoricalMarketSourceDiagnostics,
 } from "../../src/lib/historical-market-prices";
 import {
@@ -18,53 +21,53 @@ import {
 import { eventOverlapsReplayWindow, timestampInReplayWindow } from "./backfill-depegs-window";
 import type { BackfillReplayWindow } from "../../src/lib/backfill-day-window";
 
-const BACKFILL_NATIVE_PEG_PENDING_MAX_GAP_SEC = 36 * 3600;
 const BACKFILL_NATIVE_PEG_EXTREME_SINGLE_POINT_BPS = 5000;
+export const HOURLY_REPLAY_MAX_GAP_SEC = 2 * HOUR_SECONDS;
 
 export interface BackfillCoinReplayResult {
   events: BackfillEvent[] | null;
   sourceKind: "market" | "authoritative" | "preserve-existing";
   authoritativeSource: string | null;
   marketDiagnostics: HistoricalMarketSourceDiagnostics | null;
+  maxObservationGapSec?: number;
+  assessed?: { timestamp: number; state: string | null; severeClosure?: true }[];
+  degradedReason?: "missing-historical-supply" | "no-admitted-observations" | "no-admitted-observations-in-comparison-window"
+    | "unclocked-reference" | "unclocked-native-quote" | "no-historical-prices";
 }
 
 export async function backfillCoin(opts: {
   meta: StablecoinMeta;
   geckoId: string;
-  getPegRef: (timestamp: number) => number;
+  getPegRef: (timestamp: number) => number | null;
   supplyByDate: SupplySnapshot[];
-  fxRates?: Record<string, number>;
+  admitUsdReference?: (timestamp: number, rawBps: number) => boolean;
   replayWindow?: BackfillReplayWindow | null;
   coingeckoApiKey?: string | null;
-  missingSupplyUsd?: number | null;
 }): Promise<BackfillCoinReplayResult> {
   const {
     meta,
     geckoId,
     getPegRef,
     supplyByDate,
-    fxRates,
+    admitUsdReference,
     replayWindow,
     coingeckoApiKey,
-    missingSupplyUsd,
   } = opts;
   const pegType = `pegged${meta.flags.pegCurrency}`;
   const nativePegCurrency = normalizeSupportedPegCurrency(meta.flags.pegCurrency);
   const candidateSupplySnapshots = replayWindow
     ? supplyByDate.filter((snapshot) => timestampInReplayWindow(snapshot.ts, replayWindow))
     : supplyByDate;
-  if (
-    supplyByDate.length === 0 &&
-    (typeof missingSupplyUsd !== "number" || !Number.isFinite(missingSupplyUsd))
-  ) {
+  if (!supplyByDate.some(({ supply }) => supply != null)) {
     logWorkerEventArgs("api", "warn",
-      `[backfill-depegs] no historical or current supply floor available for ${meta.symbol}; preserving existing backfill rows`,
+      `[backfill-depegs] no historical supply floor available for ${meta.symbol}; preserving existing backfill rows`,
     );
     return {
       events: null,
       sourceKind: "preserve-existing",
       authoritativeSource: null,
       marketDiagnostics: null,
+      degradedReason: "missing-historical-supply",
     };
   }
 
@@ -77,16 +80,18 @@ export async function backfillCoin(opts: {
     if (marketSeries != null && marketSeries.diagnostics.quoteMode === quoteMode) return marketSeries;
 
     const series = await fetchMarketBackfillPriceSeries(meta, geckoId, {
-      granularity: quoteMode === "native-peg" ? "daily" : "hourly",
+      granularity: "hourly",
+      requireIntraday: quoteMode === "native-peg",
       range: replayWindow
         ? {
             startSec: replayWindow.replayStartSec,
-            endSec: replayWindow.replayEndSec,
+            endSec: Math.min(replayWindow.replayEndSec ?? Infinity, Math.floor(Date.now() / 1000)),
           }
         : undefined,
       quote: {
         pegCurrency: meta.flags.pegCurrency,
         useNativePegQuote: quoteMode === "native-peg",
+        requireExactUnit: true,
       },
       coingeckoApiKey: coingeckoApiKey ?? null,
     });
@@ -119,7 +124,7 @@ export async function backfillCoin(opts: {
 
   const authoritativeHistory = await fetchAuthoritativeHistoricalPriceSeries(meta, {
     candidateTimestamps,
-    supplySnapshots: supplyByDate,
+    supplySnapshots: supplyByDate.filter((snapshot): snapshot is { ts: number; supply: number } => snapshot.supply != null),
     coingeckoApiKey: coingeckoApiKey ?? null,
   });
 
@@ -137,6 +142,7 @@ export async function backfillCoin(opts: {
         sourceKind: "preserve-existing",
         authoritativeSource: authoritativeHistory.source,
         marketDiagnostics: null,
+        degradedReason: "no-historical-prices",
       };
     }
     sourceKind = "authoritative";
@@ -154,6 +160,7 @@ export async function backfillCoin(opts: {
         sourceKind: "preserve-existing",
         authoritativeSource: null,
         marketDiagnostics,
+        degradedReason: "no-historical-prices",
       };
     }
     sourceKind = "market";
@@ -163,27 +170,75 @@ export async function backfillCoin(opts: {
     prices = prices.filter((point) => timestampInReplayWindow(point.timestamp, replayWindow));
   }
 
+  const quoteMode = marketDiagnostics?.quoteMode ?? "usd";
+  const referenceMarket = getReferenceMarket(meta.flags.pegCurrency);
+  if (quoteMode === "usd" && meta.flags.pegCurrency !== "USD" && referenceMarket !== "metal") {
+    return {
+      events: null,
+      sourceKind: "preserve-existing",
+      authoritativeSource: authoritativeHistory.source,
+      marketDiagnostics,
+      degradedReason: "unclocked-reference",
+    };
+  }
+  const admittedNativeClocks = quoteMode === "native-peg" ? new Set(prices
+    .filter((point) => marketDiagnostics?.quoteCurrency.toUpperCase() === meta.flags.pegCurrency
+      && isAdmittedHistoricalNativeQuote(point, meta.flags.pegCurrency))
+    .map((point) => point.timestamp)) : null;
+  if (admittedNativeClocks?.size === 0) {
+    return { events: null, sourceKind: "preserve-existing", authoritativeSource: null,
+      marketDiagnostics, degradedReason: "unclocked-native-quote" };
+  }
+  // DefiLlama's chart leg requests period=1d. A merged or unidentified series
+  // cannot use the daily budget because it may contain sparse hourly quotes.
+  const dailyOnly = marketDiagnostics?.granularity === "daily" ||
+    (marketDiagnostics?.sourcesUsed.length === 1 && marketDiagnostics.sourcesUsed[0] === "defillama");
+  const maxGapSec = quoteMode === "usd" && referenceMarket == null && dailyOnly
+    ? DAY_SECONDS + HOURLY_REPLAY_MAX_GAP_SEC : HOURLY_REPLAY_MAX_GAP_SEC;
+  const assessed: NonNullable<BackfillCoinReplayResult["assessed"]> = [];
+  let admitted = false;
+  let admittedInComparison = false;
   const extractedEvents = extractDepegEvents(
     prices,
     marketDiagnostics?.quoteMode === "native-peg" ? (() => 1) : getPegRef,
     pegType,
     supplyByDate,
-    fxRates,
+    quoteMode === "usd" && referenceMarket != null ? {} : undefined,
     buildPriceReasonablenessOptions({
       navToken: meta.flags.navToken,
       commodityOunces: meta.commodityOunces,
     }),
-    marketDiagnostics?.quoteMode === "native-peg"
-      ? {
+    {
+      ...(quoteMode === "native-peg" ? {
           forceConfirmation: true,
           confirmationMinPoints: BACKFILL_MIN_CONFIRM_POINTS,
-          confirmationMaxGapSec: BACKFILL_NATIVE_PEG_PENDING_MAX_GAP_SEC,
           extremeSinglePointBps: BACKFILL_NATIVE_PEG_EXTREME_SINGLE_POINT_BPS,
-          missingSupplyUsd,
+          admitReference: (timestamp: number) => admittedNativeClocks?.has(timestamp) === true
+            && !isReferenceMarketClosed(referenceMarket, timestamp),
+        } : { admitReference: admitUsdReference }),
+      quoteDomain: quoteMode,
+      confirmationMaxGapSec: maxGapSec,
+      maxObservationGapSec: maxGapSec,
+      onEvaluated(timestamp, state, severeClosure) {
+        assessed.push({ timestamp, state, ...(severeClosure ? { severeClosure: true } : {}) });
+        if (state != null) {
+          admitted = true;
+          if ((replayWindow?.compareStartSec == null || timestamp >= replayWindow.compareStartSec)
+            && (replayWindow?.compareEndSec == null || timestamp <= replayWindow.compareEndSec)) admittedInComparison = true;
         }
-      : { missingSupplyUsd },
+      },
+    },
   );
 
+  if (!admittedInComparison) {
+    return {
+      events: null,
+      sourceKind: "preserve-existing",
+      authoritativeSource: authoritativeHistory.source,
+      marketDiagnostics,
+      degradedReason: admitted ? "no-admitted-observations-in-comparison-window" : "no-admitted-observations",
+    };
+  }
   return {
     events: replayWindow
       ? extractedEvents.filter((event) => eventOverlapsReplayWindow(event, replayWindow))
@@ -191,5 +246,7 @@ export async function backfillCoin(opts: {
     sourceKind,
     authoritativeSource: authoritativeHistory.matched ? authoritativeHistory.source : null,
     marketDiagnostics,
+    assessed,
+    maxObservationGapSec: maxGapSec,
   };
 }

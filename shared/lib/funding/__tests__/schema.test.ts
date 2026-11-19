@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CostsFileSchema, DonationSchema, DonationsFileSchema } from "../schema";
+import { assertDonationCreditContinuity, CostsFileSchema, DonationSchema, DonationsFileSchema, TransferDonationsFileSchema } from "../schema";
 import { makeDonation } from "./funding.test-support";
 
 const DONATION = makeDonation();
@@ -19,6 +19,45 @@ describe("funding schemas", () => {
     if (!duplicate.success) {
       expect(duplicate.error.issues.map((issue) => issue.path)).toEqual([["donations", 1, "tx_hash"]]);
     }
+  });
+
+  it("distinguishes log receipts and requires evidence for the original receipt before adding a sibling", () => {
+    const tx_hash = `0x${"ab".repeat(32)}`;
+    const first = makeDonation({ tx_hash, transfer_discriminator: "log:0", legacy_credit: true });
+    const second = makeDonation({ tx_hash, transfer_discriminator: "log:7" });
+    const file = { last_updated_at: DONATION.block_timestamp, donations: [first, second] };
+    expect(TransferDonationsFileSchema.parse(file)).toEqual(file);
+    expect(DonationsFileSchema.safeParse(file).success).toBe(false);
+    expect(TransferDonationsFileSchema.safeParse({
+      ...file, donations: [first, { ...second, tx_hash: `0x${"AB".repeat(32)}`, transfer_discriminator: "log:0" }],
+    }).success).toBe(false);
+    expect(TransferDonationsFileSchema.safeParse({
+      ...file, donations: [makeDonation({ tx_hash }), second],
+    }).success).toBe(false);
+  });
+
+  it("requires the original transaction credit on the matching typed transfer across releases", () => {
+    const tx_hash = `0x${"ab".repeat(32)}`;
+    const old = makeDonation({ tx_hash, amount_decimal: 5, usd_at_receipt: 5 });
+    const base = { last_updated_at: old.block_timestamp, donations: [old] };
+    const original = { ...old, transfer_discriminator: "log:3" };
+    const sibling = { ...original, transfer_discriminator: "log:4", token_address: `0x${"12".repeat(20)}` };
+    const ledger = (rows: typeof base.donations) => TransferDonationsFileSchema.parse({ ...base, donations: rows });
+    expect(() => assertDonationCreditContinuity(base, ledger([original, sibling]))).toThrow("exact published transfer");
+    expect(() => assertDonationCreditContinuity(base, ledger([original, { ...sibling, legacy_credit: true }]))).toThrow();
+    const converted = ledger([{ ...original, legacy_credit: true }, sibling]);
+    expect(() => assertDonationCreditContinuity(base, converted)).not.toThrow();
+    expect(() => assertDonationCreditContinuity(converted, ledger([original, { ...original, transfer_discriminator: "log:4", legacy_credit: true }]))).toThrow();
+  });
+
+  it.each([
+    ["log:0", false, true], ["native", true, true], ["trace:0.2", true, true],
+    ["log:0", true, false], ["native", false, false], ["log:01", false, false],
+  ] as const)("validates the canonical %s discriminator for a native=%s receipt", (transfer_discriminator, native, valid) => {
+    expect(DonationSchema.safeParse(makeDonation({
+      tx_hash: `0x${"ab".repeat(32)}`, transfer_discriminator,
+      token_address: native ? null : DONATION.token_address,
+    })).success).toBe(valid);
   });
 
   it("rejects mixed-case and malformed sender addresses", () => {

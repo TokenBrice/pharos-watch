@@ -493,6 +493,8 @@ Completeness, unit and binding-version summaries are owned by [adapter-specific 
 
 ### Observation clocks and units
 
+Circle retains the chart's own report clock. Undated JupUSD holdings are contextual, and a USD3 throttle measures native shares unless a dated basket value supports USD. Use measured silver entitlement as the XAGm coverage denominator. Withhold unsupported DJED and MONEY solvency amounts.
+
 Reserve facts use their own material observation clocks, never a newer collection envelope. Solstice requires the selected timeline point's `ts`/`date`; envelope time remains diagnostic. Zephyr uses the oldest completely covered amount, selected price and coverage clock while retaining `capturedAt` separately; an unused alternative price cannot age or rescue the selected fact. Solstice version-two and Zephyr version-three bindings reject legacy packets that cannot establish these clock boundaries. Gemini report ordering and reviewed-date admission compare parsed instants; equivalent newest instants remain ambiguous when multiple entries claim them.
 
 Chronicle NAV supply diagnostics retain each deployment's exact raw amount and decimals. `totalSupplyRaw`, `totalSupplyFormatted` and aggregate `tokenDecimals` are present only when every readable contribution shares that scale; heterogeneous raw units are never summed into a public quantity. Unit validity and `supplyReadComplete` / `supplyCoverageComplete` remain independent.

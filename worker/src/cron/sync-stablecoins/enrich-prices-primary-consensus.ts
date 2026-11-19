@@ -1,6 +1,8 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import {
   getReferencePriceForContext,
+  validatePriceCandidate,
+  FIAT_UPPER_BAND_REQUIRES_CORROBORATION,
   buildPriceValidationContext,
   type PriceValidationReferences,
 } from "../../lib/price-validation";
@@ -17,7 +19,8 @@ import {
   type PrimaryCollectedQuotes,
 } from "../../lib/primary-price-collector";
 import type { DexPriceRow, DexPriceSourceLoadTelemetry } from "../../lib/depeg-helpers";
-import type { ValidationContextResolver } from "./pricing";
+import { isCanonicalPricePoolKey } from "@shared/lib/pricing-source-pool-provenance";
+import type { PrimaryPriceWithFiatPremiumEvidence, ValidationContextResolver } from "./pricing";
 import type {
   PrimaryConsensusQuoteMaps,
   PrimaryDexPriceSources,
@@ -65,31 +68,24 @@ export function buildPrimaryConsensusResults(params: {
     const geckoId = isUsableGeckoId(asset.geckoId) ? asset.geckoId : null;
     const cgQuote = geckoId ? (params.quoteMaps.cgQuotes.get(geckoId) ?? null) : null;
     const cgPrice = cgQuote?.price ?? null;
-    // Entries without an upstream observation timestamp resolve to the shared
-    // batch local-fetch clock recorded at collection time ("local_fetch" mode).
-    const cgObservedAtForAsset = cgQuote != null ? (cgQuote.observedAt ?? params.quoteMaps.cgObservedAt) : null;
-    const cgObservedAtModeForAsset =
-      cgQuote != null
-        ? (cgQuote.observedAtMode ?? (params.quoteMaps.cgObservedAt != null ? "local_fetch" : null))
-        : null;
-
     const collectedQuotes: PrimaryCollectedQuotes = {
-      cgPrice,
-      cgObservedAt: cgObservedAtForAsset,
-      cgObservedAtMode: cgObservedAtModeForAsset,
-      cgTickerPrice: params.quoteMaps.cgTickerPrices.get(asset.id) ?? null,
-      cgTickerObservedAt: params.quoteMaps.cgTickerObservedAt,
+      cgPrice: cgQuote?.observedAtMode === "upstream" ? cgPrice : null,
+      cgObservedAt: cgQuote?.observedAt ?? null,
+      cgObservedAtMode: cgQuote?.observedAtMode ?? null,
       dlListQuote,
       binancePrice: params.quoteMaps.binancePrices.get(asset.symbol.toUpperCase()) ?? null,
       binanceObservedAt: params.quoteMaps.binanceObservedAt,
       krakenPrice: params.quoteMaps.krakenPrices.get(asset.symbol.toUpperCase()) ?? null,
       krakenObservedAt: params.quoteMaps.krakenObservedAt,
+      krakenMarketObservedAt: params.quoteMaps.krakenObservedAtBySymbol.get(asset.symbol.toUpperCase()),
+      krakenQuoteBasis: params.quoteMaps.krakenQuoteBasisBySymbol.get(asset.symbol.toUpperCase()),
       bitstampPrice: params.quoteMaps.bitstampPrices.get(asset.symbol.toUpperCase()) ?? null,
       bitstampObservedAt: params.quoteMaps.bitstampObservedAtBySymbol.get(asset.symbol.toUpperCase()) ?? null,
       coinbasePrice: params.quoteMaps.coinbasePrices.get(asset.symbol.toUpperCase()) ?? null,
       coinbaseObservedAt: params.quoteMaps.coinbaseObservedAtBySymbol.get(asset.symbol.toUpperCase()) ?? null,
       curvePrice: params.quoteMaps.curvePrices.get(asset.id) ?? null,
       curveObservedAt: params.quoteMaps.curveObservedAtByCoinId.get(asset.id) ?? null,
+      curvePricePoolKeys: params.quoteMaps.curvePricePoolKeysByCoinId.get(asset.id),
       curveOraclePrice: params.quoteMaps.curveOraclePrice,
       curveOracleObservedAt: params.quoteMaps.curveOracleObservedAt,
       navQuote: params.quoteMaps.navPrices.get(asset.id),
@@ -128,11 +124,12 @@ export function buildPrimaryConsensusResults(params: {
       },
     };
     let sourceBuild = buildPrimarySourceCandidates(asset, collectedQuotes, sourceBuildOptions);
+    const votingSources = sourceBuild.sources.filter((source) => source.nonVotingReason == null);
     // As the sole leg the aggregate keeps its own window and publishes as single-source.
     if (
       eligibleDexAggregate &&
-      (sourceBuild.sources.length === 0 ||
-        isDexLegWithinCoLegBudget(eligibleDexAggregate.aggregateObservedAt!, sourceBuild.sources, params.nowSec))
+      (votingSources.length === 0 ||
+        isDexLegWithinCoLegBudget(eligibleDexAggregate.aggregateObservedAt!, votingSources, params.nowSec))
     ) {
       collectedQuotes.dexAggregateQuote = eligibleDexAggregate;
       sourceBuild = buildPrimarySourceCandidates(asset, collectedQuotes, sourceBuildOptions);
@@ -163,15 +160,53 @@ export function buildPrimaryConsensusResults(params: {
 
     if (!consensus) continue;
 
-    params.results.set(asset.id, {
+    const result: PrimaryPriceWithFiatPremiumEvidence = {
       ...consensus,
       dlPrice: dlListQuote?.price ?? null,
       cgPrice,
       // A lane held out only by the co-leg budget was still read this run: it
       // stays an available, non-voting candidate, so source depth is unchanged.
-      candidateSources: [...new Set([...Object.keys(consensus.allPrices), ...coLegHeldDexSources])],
+      candidateSources: [...new Set([
+        ...Object.keys(consensus.allPrices), ...Object.keys(consensus.diagnosticPrices ?? {}), ...coLegHeldDexSources,
+      ])],
       priceSourceConfidenceProfile,
-    });
+    };
+    if (consensus.priceEstimator === "selected_source" && consensus.selectedSource === "kraken") {
+      result.priceQuoteBasis = collectedQuotes.krakenQuoteBasis;
+    }
+    const needsPremiumEvidence = context.pegClass === "fiat_fx" &&
+      validatePriceCandidate(consensus.price, context, "primary_authoritative", params.references).reasonCode === FIAT_UPPER_BAND_REQUIRES_CORROBORATION;
+    if (needsPremiumEvidence || consensus.observedAt != null) {
+      const inputs = params.dexPriceSources.get(asset.id) ?? [];
+      const evidence = sources.flatMap((quote) => {
+        const at = quote.observedAt;
+        if (sources.some((other) => other !== quote && !other.nonVotingReason && other.source === quote.source &&
+          other.observedAt === at && other.price === quote.price)) return [];
+        if (quote.nonVotingReason || !at || consensus.observedAtBySource[quote.source] !== at ||
+          consensus.allPrices[quote.source] !== quote.price) return [];
+        let upstreamKeys: readonly string[] | undefined;
+        if (quote.source === "dex-promoted") {
+          upstreamKeys = eligibleDexAggregate?.upstreamKeys;
+        } else if (quote.source.endsWith("-dex")) {
+          const matching = inputs.filter((row) => `${row.protocol}-dex` === quote.source &&
+            row.price === quote.price && row.observedAt === at && row.pricePoolKeys === quote.metadata?.pricePoolKeys);
+          if (matching.length === 1) upstreamKeys = matching[0]?.upstreamKeys;
+        } else if (quote.source === "curve-onchain" || quote.observedAtMode === "upstream") {
+          upstreamKeys = quote.upstreamKeys;
+        }
+        return upstreamKeys?.length
+          ? [[quote.source, { priceUsd: quote.price, observedAtSec: at, upstreamKeys }] as const] : [];
+      });
+      const bySource = Object.fromEntries(evidence);
+      if (needsPremiumEvidence) result.fiatPremiumEvidence = bySource;
+      const selected = consensus.priceEstimator === "cluster_median" ? consensus.agreeSources : [consensus.selectedSource];
+      if (consensus.observedAt != null && selected.length && selected.every((key) => bySource[key]?.upstreamKeys.length)) {
+        result.upstreamKeys = [...new Set(selected.flatMap((key) => bySource[key]!.upstreamKeys))].sort();
+        const pools = result.upstreamKeys.filter(isCanonicalPricePoolKey);
+        if (pools.length) result.pricePoolKeys = pools;
+      }
+    }
+    params.results.set(asset.id, result);
 
     if (consensus.confidence === "high") {
       params.stats.high++;
@@ -187,7 +222,7 @@ export function buildPrimaryConsensusResults(params: {
 
     if (consensus.disagreeSources.length > 0) {
       const highWeightDisagrees = sources
-        .filter((source) => source.weight >= 2 && consensus.disagreeSources.includes(source.source))
+        .filter((source) => (source.weight >= 2 || source.nonVotingReason) && consensus.disagreeSources.includes(source.source))
         .map((source) => `${source.source}($${source.price.toFixed(4)})`);
       if (highWeightDisagrees.length > 0) {
         logWorkerEventArgs("handler", "info",

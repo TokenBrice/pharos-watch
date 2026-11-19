@@ -479,7 +479,7 @@ export function partialResponse(
   return result;
 }
 
-// Frozen reader vocabulary from 10555474f4, before issue #1918. Reader modules otherwise match that revision.
+// Frozen reader vocabulary from 10555474f4, before issue #1918.
 export const PRE_DUST_REASON_CODES = (
   "bounded-mechanism-review|bounded-unknown-reserve-exposure|correlated-exit-routes|critical-unresolved|future-dated-input-fact|historical-critical-input|implementation-parent-cycle|incomparable-route-requests|incomplete-dex-route-coverage|incomplete-oracle-liquidation-branch|" +
   "inherited-access-exposure|reviewed-possible-access|insufficient-evidence|material-bridge-supply-unmatched|material-dependency-unavailable|material-reserve-slice-unstructured|material-unknown-reserve-exposure|mint-control-question|missing-applicable-peg|missing-archetype|" +
@@ -518,7 +518,8 @@ function assertPreviousReaderSource() {
     semantic: policy.semantic,
     reasonCodes: policy.reasonRegistry.filter(reason => reason.defaultTreatment !== "diagnostic").map(reason => reason.code),
   }));
-  if (hash.digest("hex") !== "b2805c7f09646126823661a6da831b5fbc9be3435a83f4dccb271021d1841b63") throw new Error("Pre-dust reader source/refinement inputs changed");
+  // redemption.ts adds a separate snapshot-entry schema for dated Mento status. The reused reader schemas are unchanged.
+  if (hash.digest("hex") !== "2b6467afc3d6205036f4a0c7d2b78cf1a3e719cb0833f265a7e404271a429b1b") throw new Error("Pre-dust reader source/refinement inputs changed");
 }
 
 export async function previousReader() {

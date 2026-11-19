@@ -178,10 +178,13 @@ export function buildUserPrompt(
   }
 
   if (data.biggestSupplyChange) {
-    const { symbol, changeUsd, currentMcap } = data.biggestSupplyChange;
+    const { symbol, changeUsd, currentMcap, quantityEvidence } = data.biggestSupplyChange;
     const direction = changeUsd >= 0 ? "increase" : "decrease";
+    const quantity = quantityEvidence
+      ? ` (${(quantityEvidence.current.quantity - quantityEvidence.weekAgo.quantity).toLocaleString("en-US")} tokens at ${formatCurrency(quantityEvidence.valuationPriceUsd)} per token)`
+      : "";
     lines.push(
-      `Biggest 7d supply ${direction}: ${symbol} ${changeUsd >= 0 ? "+" : ""}${formatCurrency(changeUsd)} (now ${formatCurrency(currentMcap)})`,
+      `Biggest 7d supply ${direction}: ${symbol} ${changeUsd >= 0 ? "+" : ""}${formatCurrency(changeUsd)}${quantity} (now ${formatCurrency(currentMcap)} market cap)`,
     );
     if (data.historicalContext?.supplyMoverContext) {
       const context = data.historicalContext.supplyMoverContext;
@@ -215,7 +218,9 @@ export function buildUserPrompt(
     for (const velocity of data.supplyVelocity) {
       const day1 = `${velocity.change1d >= 0 ? "+" : ""}${formatCurrency(velocity.change1d)} 1d`;
       const day7 = `${velocity.change7d >= 0 ? "+" : ""}${formatCurrency(velocity.change7d)} 7d`;
-      lines.push(`  ${velocity.coin} | ${day1} vs ${day7} | ${velocity.signal}`);
+      const valuation = velocity.quantityEvidence
+        ? ` | token-count changes valued at ${formatCurrency(velocity.quantityEvidence.valuationPriceUsd)} per token` : "";
+      lines.push(`  ${velocity.coin} | ${day1} vs ${day7} | ${velocity.signal}${valuation}`);
     }
   }
 

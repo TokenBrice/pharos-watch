@@ -24,11 +24,15 @@ Use trusted `CF-Connecting-IP`, falling back to unknown, never client-controlled
 
 ### Auto-verification
 
+Verification uses the published current peg observation or derives it from the cache when the per-asset block is missing. On older caches without FX admission evidence, a fresh, eligible legacy deviation against the authoritative reference can confirm the report. A present evidence generation, including an empty one, requires an admitted comparison for scheduled pegs. A held comparison supplies its reason and stays pending.
+
+Confirmation and legacy closure checks use the unrounded deviation from the same observed price and reference. The issue snapshot formats the percentage after those checks.
+
 Only a data correction with valid attached stablecoin can verify. Read normalized stablecoins cache, nullable USD supply, price, cached peg type/reference and producer age. `verification.ts` owns arithmetic and shared threshold/reference helpers; DefiLlama list supply is already USD. Missing supply is explicitly unavailable, not zero; a finite observed zero remains measured. Commodity normalization uses reviewed metadata, and rate source is disclosed. NAV tokens have no fixed peg and are never compared to one. A cached peg unit that disagrees with the curated registry currency, or a derived reference that fails the shared peg-reference authority gate, reports `N/A` instead of a deviation.
 
 - `verified: confirmed`: a positive cached price is at/beyond the shared depeg threshold. This confirms observed deviation, not that the user's asserted correction is proven true.
-- `verified: unconfirmed`: missing/nonpositive price, missing reference or deviation below threshold; never proof the report is wrong.
-- `verified: pending`: verification did not run/complete, including no attached asset, missing cache row or unavailable cache.
+- `verified: unconfirmed`: an eligible deviation below threshold.
+- `verified: pending`: verification did not run/complete, including a missing asset, unavailable price or reference, or unreadable cache.
 
 Embed a dated-at-submission snapshot in the issue. Cached rates may include fallbacks; threshold/rate-source lookup may use tracked peg currency only when cached peg normalization fails. Snapshot age/evidence must not be presented as a live independent check.
 

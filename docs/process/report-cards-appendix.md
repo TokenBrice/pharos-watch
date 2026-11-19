@@ -577,9 +577,15 @@ XAUT remains explicitly `transparency-stale` until genuinely fresh original-date
 
 ## Scoped Evidence And Exit Evaluation
 
+When a peg summary omits its quote clock, the peg fact uses its source generation's observation time. Tracked exit outputs use the retained update time or the route observation time and the original review budget. A supplied clock must be valid and current. Scheduled pegs use their summary deviation and the existing fiat or commodity reference until the generation supplies reference evidence. An explicitly empty map activates admission. A history-only sidecar leaves the legacy reference path available.
+
+A supplied direct bullion map requires a benchmark generation available by the scoring clock and a sample within its 24-hour expiry. Older inputs retain their captured commodity marks. The vault certificate's review digest identifies its cost formula. Legacy receipts use their captured expected and market values, while new in-kind receipts use market value for both cost legs. EUR receipts from FX-admission generations also require a separate session-qualified retention basis.
+
 Control canonically retains normalized mint/oracle/bridge causes and the binding minimum without caller mutation, clamping the overall pillar at 90 while preserving raw component diagnostics. Effective upgrades/accountants/allocators compete on the authority ladder. Known age cap: <24m 84; no 24–<36m tier. Distinct resolved failures use original-date Control 55 through day 365, relaxing to 100 by 730; unknown dates retain 55, active incidents 25. No permanent history ceiling or duplicate holder-loss charge. Exit retains capacity/settlement/request horizons and confidence, not queue/offchain caps or diagnostic horizon winners.
 
 Producer overlays share dependency fields/role checks, bridge-supply rows and peg-reference kinds with facts; compilation retains evidence/path/envelope validation. Optional fields gain no defaults. Scoped proof owns gap responsibility, never observation labels/wrapper fallbacks. Peg provenance/fixed-input admission compare the same nine score fields, excluding summary/result metadata.
+
+Exact peg provenance projects display-only event fields out before strict validation and retains reviewed empty repairs and disputes as audit exclusions. When clocked peg evidence accompanies a tracked exit output, Safety revalidates the quote and reference clocks, freshness budgets and session at the fixed scoring clock. Legacy input without clocked evidence uses the legacy valuation path.
 
 A exclusion for unsupported adapters needs captured reader-boundary proof, not an enum. Per-chain census discloses supported scope/unsupported remainder, never unobserved safety. p4a.10 completeness uses the public selection budget: after budgeted eligible routes are observed, leftover `target-unresolved`, incomplete exact capture, quote deferral and reviewed model limits do not retain `incomplete-dex-route-coverage`. Exact-route gates remain strict. Missing current price carries cause; independently admitted adverse peg history survives.
 

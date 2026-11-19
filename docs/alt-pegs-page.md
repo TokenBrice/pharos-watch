@@ -20,6 +20,8 @@ The asset table reads scores from the compact DEX table projection (`useDexLiqui
 
 ### Permanent Series Boundary
 
+Non-USD share uses the date-effective tracked core denominator and requires the associated coverage floors. Independent cohort history has its own source perimeter.
+
 Current core-universe aggregates and historical provider-wide series are different populations. `useStablecoinCharts()` plus selected Worker-reconciled structural supply overlays supplies cohort history. Never append a current core sum to that history; no shadow core-history tail is implied. Latest history is dated provider-wide sample, not current core cap.
 
 Cohort history starts alongside the current stablecoin query, before the page's current-market loading return. Its mounted chart reuses the same canonical query key and producer-cadence options; there is no second history cache or polling policy.

@@ -138,8 +138,12 @@ describe("StablecoinTableRowCells supply availability", () => {
   function renderSupply(circulating: Record<string, number>, prevDay: Record<string, number> = { peggedUSD: 100 }) {
     const row = buildRow();
     row.coin.circulating = circulating;
-    row.coin.circulatingPrevDay = prevDay;
-    row.coin.circulatingPrevWeek = { peggedUSD: 100 };
+    Object.assign(row.coin, {
+      supplyChangeBaselines: {
+        day: { observedAt: 1_700_000_000, circulatingUsd: prevDay.peggedUSD },
+        week: { observedAt: 1_699_481_600, circulatingUsd: 100 },
+      },
+    });
     row.isVisible = (column) => ["mcap", "change24h", "change7d"].includes(column);
     const model = buildStablecoinTableRowModel({
       coin: row.coin, density: row.density, variant: "default",
@@ -185,7 +189,7 @@ describe("StablecoinTableRowCells supply availability", () => {
     }
   });
 
-  it("names the unchanged USD-valued history as a market-cap sparkline", () => {
+  it("names the dated USD-valued history as a market-cap sparkline", () => {
     vi.mocked(RowSparkline).mockClear();
     const html = renderSupply({ peggedEUR: 110 });
     expect(html).toContain("+10.00%");

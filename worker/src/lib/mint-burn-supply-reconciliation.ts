@@ -8,6 +8,7 @@ import {
 import { throwIfAborted, rethrowIfAborted } from "./abort";
 import { getCache, setCache, setCacheIfAbsent } from "./db-cache";
 import { decimalNumberFromBigInt } from "./bigint";
+import { parseJsonObject } from "./json-parse";
 import { fetchEvmBlockHeader, fetchEvmUint256AtBlock, resolveClosestBlockAtOrBeforeTimestamp,
   type EvmBlockSearchCache, type EvmRpcOptions } from "./evm-rpc";
 import { getMintBurnConservationEligibility, getMintBurnConservationRuntimeEntry, getMintBurnRangeProofEligibility,
@@ -26,12 +27,13 @@ const STATE_KEY = "mint-burn:daily-reconciliation-state";
 const MAX_CONFIGS = 8;
 const MAX_REQUESTS = 24;
 const MAX_ROWS = 20_000;
+const MAX_RECEIPT_BYTES = 64 * 1024;
 const WINDOW_DAYS = [1, 7, 30, 90] as const;
 type Classes = NonNullable<Receipt["classes"]>;
 type ClassTotal = Classes["counted"];
 type Checkpoint = NonNullable<Receipt["opening"]>;
 type LedgerRow = Pick<MintBurnRow, "amount_raw" | "direction" | "flow_type" | "burn_type" | "burn_review_reason">;
-type StoredRow = { config_key: string; day_ts: number; checked_at: number; receipt_json: string };
+type StoredRow = { config_key: string; day_ts: number; checked_at: number; status: Receipt["status"]; receipt_json: string };
 
 function emptyTotal(): ClassTotal { return { mintRaw: "0", burnRaw: "0", eventCount: 0 }; }
 function emptyClasses(): Classes {
@@ -122,7 +124,7 @@ function admitStored(row: StoredRow, config: MintBurnContractConfig, now: number
     const parsed = MintBurnSupplyReconciliationReceiptSchema.safeParse(JSON.parse(row.receipt_json));
     if (!parsed.success) return null;
     const receipt = parsed.data;
-    if (receipt.configKey !== row.config_key || receipt.day !== row.day_ts || receipt.checkedAt !== row.checked_at
+    if (receipt.configKey !== row.config_key || receipt.day !== row.day_ts || receipt.checkedAt !== row.checked_at || receipt.status !== row.status
       || receipt.configKey !== mintBurnConfigKey(config) || receipt.configFingerprint !== fingerprint(config)
       || receipt.chainId !== config.chain.chainId || receipt.stablecoinId !== config.stablecoinId
       || receipt.address.toLowerCase() !== config.contractAddress.toLowerCase() || receipt.decimals !== config.decimals
@@ -146,6 +148,13 @@ function admitStored(row: StoredRow, config: MintBurnContractConfig, now: number
       || JSON.stringify(review) !== JSON.stringify(receipt.classes.review)) return null;
     return receipt;
   } catch { return null; }
+}
+
+function supersedingReceiptJson(receipt: Receipt, priorJson: string): string {
+  const prior = parseJsonObject(priorJson);
+  const { supersededReceipts, ...previous } = prior ?? {};
+  const history = Array.isArray(supersededReceipts) ? supersededReceipts : [];
+  return JSON.stringify({ ...receipt, supersededReceipts: [...history, prior ? previous : priorJson] });
 }
 
 function checkpointMatches(left: Checkpoint, right: Checkpoint): boolean {
@@ -195,7 +204,9 @@ export async function readMintBurnSupplyReconciliation(db: D1Database, configs: 
   // Bound retained JSON in memory; the projection keeps only the latest day and window totals.
   for (let offset = 0; offset < configs.length; offset += 20) {
     const batch = configs.slice(offset, offset + 20);
-    const rows = await db.prepare(`SELECT config_key, day_ts, checked_at, receipt_json FROM mint_burn_supply_reconciliation
+    const rows = await db.prepare(`SELECT config_key, day_ts, checked_at, status,
+      CASE WHEN json_valid(receipt_json) THEN json_remove(receipt_json, '$.supersededReceipts') ELSE receipt_json END AS receipt_json
+      FROM mint_burn_supply_reconciliation
       WHERE config_key IN (SELECT value FROM json_each(?)) AND day_ts >= ? AND day_ts < ? ORDER BY day_ts`)
       .bind(JSON.stringify(batch.map(mintBurnConfigKey)), end - POLICY.retentionSec, end).all<StoredRow>();
     for (const config of batch) {
@@ -288,13 +299,18 @@ export async function runMintBurnSupplyReconciliation(input: PassInput): Promise
   const { db, now, configs, signal } = input;
   throwIfAborted(signal);
   await setCacheIfAbsent(db, STATE_KEY, JSON.stringify({ firstDay: Math.ceil(now / POLICY.daySec) * POLICY.daySec, cursor: 0 }), now, signal);
-  const state = JSON.parse((await getCache(db, STATE_KEY, signal))!.value) as { firstDay: number; cursor: number };
+  const state = JSON.parse((await getCache(db, STATE_KEY, signal))!.value) as {
+    firstDay: number; cursor: number; recheckDays?: Record<string, number>;
+  };
   if (!Number.isSafeInteger(state.firstDay) || state.firstDay % POLICY.daySec !== 0 || !Number.isSafeInteger(state.cursor) || state.cursor < 0) {
     throw new Error("daily-reconciliation-state-invalid");
   }
   const lastDay = Math.floor(now / POLICY.daySec) * POLICY.daySec - POLICY.daySec;
   if (state.firstDay > lastDay || !configs.length) return { processed: 0, requests: 0 };
   const ordered = [...configs].sort((a, b) => mintBurnConfigKey(a).localeCompare(mintBurnConfigKey(b)));
+  const floor = Math.max(state.firstDay, Math.ceil((now - MINT_BURN_EVENT_RETENTION_SEC) / POLICY.daySec) * POLICY.daySec);
+  const recheckDays = Object.fromEntries(Object.entries(state.recheckDays ?? {})
+    .filter(([, day]) => Number.isSafeInteger(day) && day >= floor && day <= lastDay));
   const caches = new Map<string, EvmBlockSearchCache>();
   const pins = new Map<string, Omit<Checkpoint, "supplyRaw">>();
   const initialRequests = input.budget.count;
@@ -311,30 +327,39 @@ export async function runMintBurnSupplyReconciliation(input: PassInput): Promise
   });
   let processed = 0;
   let visited = 0;
+  let reason: string | undefined;
   for (; visited < Math.min(MAX_CONFIGS, ordered.length); visited++) {
     throwIfAborted(signal);
     if (Date.now() >= deadlineMs || input.budget.count - initialRequests >= MAX_REQUESTS || input.budget.count >= input.budget.limit) break;
     const config = ordered[(state.cursor + visited) % ordered.length]!;
     const key = mintBurnConfigKey(config);
-    const stored = await db.prepare(`SELECT config_key, day_ts, checked_at, receipt_json FROM mint_burn_supply_reconciliation
+    const stored = await db.prepare(`SELECT config_key, day_ts, checked_at, status, receipt_json FROM mint_burn_supply_reconciliation
       WHERE config_key = ? AND day_ts >= ? AND day_ts <= ? ORDER BY day_ts`)
-      .bind(key, Math.max(state.firstDay, lastDay - MINT_BURN_EVENT_RETENTION_SEC), lastDay).all<StoredRow>();
+      .bind(key, Math.max(state.firstDay, floor - POLICY.daySec), lastDay).all<StoredRow>();
+    const storedByDay = new Map(stored.results.map((row) => [row.day_ts, row]));
     const receipts = new Map(stored.results.flatMap((row) => { const r = admitStored(row, config, now); return r ? [[r.day, r] as const] : []; }));
-    const settledDays = new Set(stored.results.filter((row) => {
-      try { return (JSON.parse(row.receipt_json) as { status?: unknown }).status !== "unavailable"; } catch { return true; }
-    }).map((row) => row.day_ts));
-    const floor = Math.max(state.firstDay, Math.ceil((now - MINT_BURN_EVENT_RETENTION_SEC) / POLICY.daySec) * POLICY.daySec);
-    // Missing days take priority; unavailable attempts retry while every raw sibling is retained.
+    // Missing days take priority; rotate retries and rechecks so neither can starve the other.
     let day: number | undefined;
     for (let candidate = floor; candidate <= lastDay; candidate += POLICY.daySec) {
-      if (!receipts.has(candidate) && !settledDays.has(candidate)) { day = candidate; break; }
+      if (!storedByDay.has(candidate)) { day = candidate; break; }
     }
-    if (day == null) day = [...receipts.values()].find((r) => r.status === "unavailable" && r.day >= floor && r.checkedAt < now - 6 * 3600)?.day;
-    if (day == null) continue;
-    let receipt = baseReceipt(config, day, now);
-    let ledgerSnapshot: string | null = null;
     const unsupported = lawReason(config);
     const siblings = configs.filter((c) => c.stablecoinId === config.stablecoinId && c.chain.chainId === config.chain.chainId);
+    if (day == null) {
+      const canRecheckSettled = !unsupported && siblings.length === 1;
+      const candidates = stored.results.filter((row) => row.day_ts >= floor
+        && (row.status === "unavailable" ? row.checked_at < now - 6 * 3600 : canRecheckSettled));
+      const lastRecheck = recheckDays[key] ?? floor - POLICY.daySec;
+      day = (candidates.find((row) => row.day_ts > lastRecheck) ?? candidates[0])?.day_ts;
+      if (day != null) recheckDays[key] = day;
+    }
+    if (day == null) continue;
+    const priorRow = storedByDay.get(day);
+    if (priorRow && priorRow.checked_at > now) continue;
+    const settled = priorRow != null && priorRow.status !== "unavailable";
+    let receipt = baseReceipt(config, day, now);
+    let ledgerSnapshot: string | null = null;
+    let coverageSnapshot: string | null = null;
     if (unsupported) receipt = { ...receipt, status: "unsupported-law", reason: unsupported };
     else if (siblings.length > 1) receipt.reason = "contract-attribution-unavailable";
     else {
@@ -346,19 +371,26 @@ export async function runMintBurnSupplyReconciliation(input: PassInput): Promise
             WHERE stablecoin_id = ? AND chain_id = ? AND timestamp >= ? AND timestamp < ? ORDER BY id LIMIT ?`)
             .bind(config.stablecoinId, config.chain.chainId, day, day + POLICY.daySec, MAX_ROWS + 1),
         ]);
-        if (!mintBurnScanCoverageAdmits([config], decodeMintBurnScanCoverage(coverage as D1Result<MintBurnScanSegment>), day, day + POLICY.daySec)) {
+        const segments = decodeMintBurnScanCoverage(coverage as D1Result<MintBurnScanSegment>);
+        if (!mintBurnScanCoverageAdmits([config], segments, day, day + POLICY.daySec)) {
           receipt.reason = "scan-coverage-incomplete-or-dirty";
         } else if (events.results.length > MAX_ROWS) receipt.reason = "daily-event-row-budget";
         else {
+          const rows = events.results as LedgerRow[];
+          const falseZeroLaw = allowsFalseZeroTransfers(config);
+          const current = settled ? receipts.get(day) : undefined;
+          if (current?.opening && current.closing
+            && JSON.stringify(reconcileMintBurnSupplyReceipt(current, rows, falseZeroLaw)) === JSON.stringify(current)) continue;
+          coverageSnapshot = JSON.stringify(segments.get(key));
           const options = optionsFor(config);
           const prior = receipts.get(day - POLICY.daySec);
           const previous = prior && prior.status !== "unavailable" && prior.status !== "unsupported-law" ? prior.closing ?? undefined : undefined;
           receipt.opening = await boundary(input, config, day, caches, pins, options, previous);
           receipt.closing = await boundary(input, config, day + POLICY.daySec, caches, pins, options, undefined,
             receipt.opening ?? undefined);
-          receipt.priceUsd = resolveMintBurnEventPrice(config.stablecoinId, now, input.priceContext)?.price ?? null;
-          receipt = reconcileMintBurnSupplyReceipt(receipt, events.results as LedgerRow[], allowsFalseZeroTransfers(config));
-          ledgerSnapshot = JSON.stringify((events.results as LedgerRow[]).map((row) =>
+          receipt.priceUsd = current?.priceUsd ?? resolveMintBurnEventPrice(config.stablecoinId, now, input.priceContext)?.price ?? null;
+          receipt = reconcileMintBurnSupplyReceipt(receipt, rows, falseZeroLaw);
+          ledgerSnapshot = JSON.stringify(rows.map((row) =>
             [row.amount_raw, row.direction, row.flow_type, row.burn_type, row.burn_review_reason]));
         }
       } catch (error) {
@@ -367,22 +399,41 @@ export async function runMintBurnSupplyReconciliation(input: PassInput): Promise
       }
     }
     throwIfAborted(signal);
-    // A settled receipt is immutable. Late maintenance cannot replace it with a pruned subset.
-    await db.prepare(`INSERT INTO mint_burn_supply_reconciliation (config_key, day_ts, status, checked_at, receipt_json)
-      SELECT ?, ?, ?, ?, ? WHERE (NOT EXISTS (SELECT 1 FROM mint_burn_dirty_hours
+    const unavailable = receipt.status === "unavailable" || receipt.status === "unsupported-law";
+    if (settled && unavailable) continue;
+    const json = settled ? supersedingReceiptJson(receipt, priorRow.receipt_json) : JSON.stringify(receipt);
+    if (settled && !admitStored({ ...priorRow, status: receipt.status, checked_at: now, receipt_json: json }, config, now)) continue;
+    if (settled && new TextEncoder().encode(json).byteLength > MAX_RECEIPT_BYTES) {
+      reason = "daily-reconciliation-supersession-budget";
+      continue;
+    }
+    // Preserve prior evidence in the same write that installs its fenced replacement.
+    const write = await db.prepare(`INSERT INTO mint_burn_supply_reconciliation (config_key, day_ts, status, checked_at, receipt_json)
+      SELECT ?, ?, ?, ?, ? WHERE
+      ((NOT EXISTS (SELECT 1 FROM mint_burn_dirty_hours
         WHERE stablecoin_id = ? AND chain_id = ? AND hour_ts >= ? AND hour_ts < ?)
+        AND (SELECT COALESCE(MIN(EXISTS (SELECT 1 FROM mint_burn_scan_coverage AS c
+          WHERE c.config_key = ? AND c.config_fingerprint = ? AND c.chain_id = ?
+            AND c.finality_tag = 'finalized' AND c.finalized_block >= c.to_block AND c.accepted_at >= c.to_timestamp
+            AND c.from_block = json_extract(proof.value, '$.from_block')
+            AND c.to_block = json_extract(proof.value, '$.to_block')
+            AND c.from_timestamp = json_extract(proof.value, '$.from_timestamp')
+            AND c.to_timestamp = json_extract(proof.value, '$.to_timestamp')
+        )), 0) FROM json_each(?) AS proof) = 1
         AND (SELECT json_group_array(json_array(amount_raw, direction, flow_type, burn_type, burn_review_reason))
           FROM (SELECT amount_raw, direction, flow_type, burn_type, burn_review_reason FROM mint_burn_events
             WHERE stablecoin_id = ? AND chain_id = ? AND timestamp >= ? AND timestamp < ? ORDER BY id LIMIT ?)) = ?)
-      OR ? IN ('unavailable', 'unsupported-law')
+      OR ? = 1)
+      AND (SELECT receipt_json FROM mint_burn_supply_reconciliation WHERE config_key = ? AND day_ts = ?) IS ?
       ON CONFLICT(config_key, day_ts) DO UPDATE SET
-      status = excluded.status, checked_at = excluded.checked_at, receipt_json = excluded.receipt_json
-      WHERE mint_burn_supply_reconciliation.status = 'unavailable'`)
-      .bind(key, day, receipt.status, now, JSON.stringify(receipt), config.stablecoinId,
-        config.chain.chainId, day, day + POLICY.daySec, config.stablecoinId, config.chain.chainId,
-        day, day + POLICY.daySec, MAX_ROWS + 1, ledgerSnapshot, receipt.status).run();
-    processed++;
+      status = excluded.status, checked_at = excluded.checked_at, receipt_json = excluded.receipt_json`)
+      .bind(key, day, receipt.status, now, json, config.stablecoinId,
+        config.chain.chainId, day, day + POLICY.daySec, key, mintBurnScanFingerprint(config), config.chain.chainId, coverageSnapshot,
+        config.stablecoinId, config.chain.chainId,
+        day, day + POLICY.daySec, MAX_ROWS + 1, ledgerSnapshot, Number(unavailable),
+        key, day, priorRow?.receipt_json ?? null).run();
+    processed += write.meta.changes ?? 0;
   }
-  await setCache(db, STATE_KEY, JSON.stringify({ firstDay: state.firstDay, cursor: (state.cursor + visited) % ordered.length }), signal);
-  return { processed, requests: input.budget.count - initialRequests };
+  await setCache(db, STATE_KEY, JSON.stringify({ firstDay: state.firstDay, cursor: (state.cursor + visited) % ordered.length, recheckDays }), signal);
+  return { processed, requests: input.budget.count - initialRequests, ...(reason ? { reason } : {}) };
 }

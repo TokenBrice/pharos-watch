@@ -64,10 +64,9 @@ function mockDbWithPrevRows(
       return { results: [] as T[] };
     };
     const first = async <T>() => {
-      if (sql.includes("FROM cache WHERE key = ?")) {
-        if (binds[0] === "dews:published-generation") return pointerRow as T | null;
-        if (binds[0] === "yield-rankings") return (rankingsCache ?? null) as T | null;
-        return null as T | null;
+      if (sql.includes("pharos:dews:yield-rankings-cache")) return (rankingsCache ?? null) as T | null;
+      if (sql.includes("FROM cache WHERE key = ?") && binds[0] === "dews:published-generation") {
+        return pointerRow as T | null;
       }
       return null as T | null;
     };
@@ -150,6 +149,19 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
     // The amplifiers envelope is stripped — downstream hydration defaults it
     // to { psi: 1, contagion: 1 } when re-scoring.
     expect((prev?.signals as Record<string, unknown>).amplifiers).toBeUndefined();
+  });
+
+  it.each([true, false])("reads a separately clocked reference component beyond the smoothing budget (%s)", async (clocked) => {
+    const observedAtSec = nowSec - 4 * 3600;
+    const sourceState = await loadDewsSourceState({
+      db: mockDbWithPrevRows([{ stablecoin_id: "xaut-tether", band: "WATCH", computed_at: nowSec - 3 * 3600,
+        signals_json: JSON.stringify({ signals: { diverg: { value: 65, available: true, currentDivergenceValue: null,
+          referenceCarried: true, ...(clocked ? { referenceDivergence: { value: 42, observedAtSec } } : {}) } } }) }]),
+      nowSec, registerSourceFailure: () => {}, registerMalformedPersistedInput: () => {},
+    });
+    expect(sourceState.previousSignals.prevSignals.has("xaut-tether")).toBe(false);
+    expect(sourceState.previousSignals.referenceDivergenceById?.get("xaut-tether"))
+      .toEqual(clocked ? { value: 42, observedAtSec } : undefined);
   });
 
   it("drops malformed legacy smoothing values instead of hydrating non-finite signals", async () => {
@@ -397,6 +409,7 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
       if (sql.includes("COUNT(DISTINCT date")) return "mint-burn-30d";
       if (sql.includes("FROM mint_burn_hourly")) return "mint-burn-24h";
       if (sql.includes("FROM yield_data")) return "yield-warnings";
+      if (sql.includes("pharos:dews:yield-rankings-cache")) return "cache:yield-rankings";
       if (sql.includes("FROM cache WHERE key = ?")) return `cache:${String(binds[0])}`;
       if (sql.includes("FROM stability_index_samples")) return "latest-psi-score";
       if (sql.includes("FROM stress_signals_latest")) return "previous-stress-latest";

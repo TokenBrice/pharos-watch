@@ -7,11 +7,11 @@ import {
   formatPercentChange,
   formatSupply,
 } from "@shared/lib/format";
-import { formatNativePrice, pegCurrencySymbol } from "@shared/lib/peg-format";
+import { pegCurrencySymbol } from "@shared/lib/peg-format";
 import { getPegDeviationLevel } from "@shared/lib/classification";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { DetailQuote } from "@/lib/stablecoin-detail-view-model-types";
-import { hasObservedDisplayPrice } from "@/lib/current-peg";
+import { formatObservedPrice, hasObservedDisplayPrice } from "@/lib/current-peg";
 import type { HeroCardViewModel } from "@/lib/stablecoin-detail-view-model";
 import { confidenceClass } from "@/lib/confidence";
 import { deviationColorClass } from "@/lib/severity-colors";
@@ -40,7 +40,7 @@ export function formatHeroNativePrice(
   pegRef: number | null,
   decimals?: number,
 ): string {
-  const formatted = groupFourFigurePrice(formatNativePrice(usdPrice, pegCurrency, pegRef, decimals));
+  const formatted = groupFourFigurePrice(formatObservedPrice(usdPrice, pegCurrency, pegRef, decimals));
   const symbol = pegCurrencySymbol(pegCurrency);
   if (symbol === "$" || !formatted.startsWith(symbol)) return formatted;
   return `${pegCurrency} ${formatted.slice(symbol.length)}`;
@@ -128,19 +128,17 @@ function CompactMetricCell({
 function formatPriceReferenceLine({
   deviationBps,
   pegReferenceUnavailable,
-  referenceMarketClosed,
+  referenceNote,
   isNavToken,
 }: {
   deviationBps: number | null;
   pegReferenceUnavailable: boolean;
-  referenceMarketClosed: boolean;
+  referenceNote: string | null;
   isNavToken: boolean;
 }): string {
-  // A peg with no fixture, or no usable reference, has a real state of its own; only a
-  // published deviation actually read against a closed market is held.
-  if (pegReferenceUnavailable) return "Peg reference unavailable";
   if (isNavToken) return "NAV token — no fixed peg";
-  if (referenceMarketClosed) return "Reference market closed";
+  if (referenceNote) return referenceNote;
+  if (pegReferenceUnavailable) return "Peg reference unavailable";
   return deviationBps == null ? "N/A" : formatBps(deviationBps);
 }
 
@@ -148,7 +146,7 @@ export function HeroPriceMetric({
   variant,
   coin,
   coinData,
-  price: { pegRef, deviationBps, pegReferenceUnavailable, referenceMarketClosed, isNavToken, limitedDepegCoverageNote, caveat },
+  price: { pegRef, deviationBps, pegReferenceUnavailable, referenceNote, isNavToken, limitedDepegCoverageNote, caveat },
 }: HeroPriceMetricProps & { variant: HeroMetricVariant }) {
   const observed = hasObservedDisplayPrice(coinData);
   const pegCurrency = coin.flags.pegCurrency ?? "USD";
@@ -167,11 +165,11 @@ export function HeroPriceMetric({
     : frozenAt
       ? `Last observed · ${frozenAt}`
       : caveat
-        ? `${formatPriceReferenceLine({ deviationBps, pegReferenceUnavailable, referenceMarketClosed, isNavToken })} · ${caveat}`
-        : formatPriceReferenceLine({ deviationBps, pegReferenceUnavailable, referenceMarketClosed, isNavToken });
+        ? `${formatPriceReferenceLine({ deviationBps, pegReferenceUnavailable, referenceNote, isNavToken })} · ${caveat}`
+        : formatPriceReferenceLine({ deviationBps, pegReferenceUnavailable, referenceNote, isNavToken });
   // Only a peg deviation is a risk reading; every other reference line is neutral. The
   // price caveat calms only an at-peg deviation: an off-peg one keeps its tone beside it.
-  const referenceClass = !observed || pegReferenceUnavailable || referenceMarketClosed || frozenAt || isNavToken || deviationBps == null
+  const referenceClass = !observed || pegReferenceUnavailable || referenceNote || frozenAt || isNavToken || deviationBps == null
     || (caveat && getPegDeviationLevel(Math.abs(deviationBps)) === "healthy")
     ? "text-muted-foreground"
     : deviationColorClass(Math.abs(deviationBps));

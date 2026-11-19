@@ -1,3 +1,5 @@
+import { reviewedDepegDisputeSql } from "@shared/data/depegs/reviewed-depeg-disposition-sql";
+import { BRZ_UNVERIFIED_PEAK_EVENT_IDS } from "@shared/data/depegs/backfill-replay-suppressions";
 import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
 import { buildReplayWindow, MAX_BACKFILL_REPLAY_CONTEXT_DAYS, type BackfillReplayWindow } from "../../src/lib/backfill-day-window";
 
@@ -55,7 +57,7 @@ export function eventOverlapsReplayWindow(
   replayWindow: BackfillReplayWindow | null,
 ): boolean {
   if (!replayWindow) return true;
-  const eventEnd = event.endedAt ?? event.startedAt;
+  const eventEnd = event.endedAt ?? Infinity;
   if (replayWindow.compareStartSec != null && eventEnd < replayWindow.compareStartSec) return false;
   if (replayWindow.compareEndSec != null && event.startedAt > replayWindow.compareEndSec) return false;
   return true;
@@ -82,14 +84,53 @@ export function backfillEpisodeCoveredByLiveEvent(
   episode: { startedAt: number; endedAt: number | null; direction: string },
   liveRow: { started_at: number; ended_at: number | null; direction: string },
 ): boolean {
+  if (episode.startedAt === liveRow.started_at) return true;
   if (episode.direction !== liveRow.direction) return false;
-  const episodeEnd = episode.endedAt ?? episode.startedAt;
-  const liveEnd = liveRow.ended_at ?? liveRow.started_at;
+  const episodeEnd = episode.endedAt ?? Infinity;
+  const liveEnd = liveRow.ended_at ?? Infinity;
   return episode.startedAt <= liveEnd && liveRow.started_at <= episodeEnd;
 }
 
 // Incident event links are append-only: a deleted member event, sealed or not,
 // leaves a dangling incident reference.
+export const REPLAY_PROTECTED_SQL = `(depeg_events.disposition IS NOT NULL OR
+  (depeg_events.stablecoin_id = 'brz-transfero' AND depeg_events.id IN (${BRZ_UNVERIFIED_PEAK_EVENT_IDS.join(", ")}))
+  OR ${reviewedDepegDisputeSql("depeg_events")})`;
+
+export const REPLAY_ROW_PREIMAGE_SQL = `json_array(depeg_events.id, depeg_events.stablecoin_id, depeg_events.symbol,
+  depeg_events.peg_type, depeg_events.direction, depeg_events.source, depeg_events.started_at, depeg_events.ended_at,
+  depeg_events.start_price, depeg_events.peak_price, depeg_events.peak_deviation_bps, depeg_events.recovery_price,
+  depeg_events.peg_reference, depeg_events.close_reason, depeg_events.recovery_first_seen_at, depeg_events.recovery_last_seen_at,
+  depeg_events.confirmation_sources, depeg_events.pending_reason, depeg_events.price_coverage_json,
+  depeg_events.last_trusted_price_at, depeg_events.price_coverage_gap_started_at, depeg_events.peak_peg_reference,
+  depeg_events.peak_quote_domain, depeg_events.recovery_peg_reference, depeg_events.admitted_coverage_json,
+  depeg_events.disposition, (SELECT json_array(p.audit_verdict, p.public_json, p.quote_mode, p.updated_at)
+    FROM depeg_event_provenance p WHERE p.event_id = depeg_events.id))`;
+
+export function buildReplayPreimageGuard(
+  db: D1Database,
+  stablecoinId: string,
+  preimages: readonly { id: number; preimage: string }[],
+  replacements: readonly { startedAt: number; endedAt: number | null; direction: string }[],
+): D1PreparedStatement {
+  return db.prepare(`INSERT INTO depeg_events (stablecoin_id) SELECT NULL WHERE
+    EXISTS (SELECT 1 FROM json_each(?) expected
+      LEFT JOIN depeg_events ON depeg_events.id = json_extract(expected.value, '$.id')
+      WHERE depeg_events.id IS NULL OR depeg_events.stablecoin_id != ?
+        OR ${REPLAY_ROW_PREIMAGE_SQL} IS NOT json_extract(expected.value, '$.preimage')
+        OR ${REPLAY_PROTECTED_SQL})
+    OR EXISTS (SELECT 1 FROM json_each(?) replacement
+      JOIN depeg_events ON depeg_events.stablecoin_id = ?
+       AND NOT EXISTS (SELECT 1 FROM json_each(?) expected WHERE expected.value = depeg_events.id)
+       AND (depeg_events.started_at = json_extract(replacement.value, '$.startedAt')
+        OR (depeg_events.direction = json_extract(replacement.value, '$.direction')
+          AND (json_extract(replacement.value, '$.endedAt') IS NULL
+            OR depeg_events.started_at <= json_extract(replacement.value, '$.endedAt'))
+          AND (depeg_events.ended_at IS NULL OR depeg_events.ended_at >= json_extract(replacement.value, '$.startedAt')))))`)
+    .bind(JSON.stringify(preimages), stablecoinId,
+      JSON.stringify(replacements.map(({ startedAt, endedAt, direction }) => ({ startedAt, endedAt, direction }))),
+      stablecoinId, JSON.stringify(preimages.map(({ id }) => id)));
+}
 const INCIDENT_MEMBER_DELETE_GUARD = ` AND id NOT IN (
   SELECT l.event_id
   FROM depeg_resolver_incident_event_links l
@@ -99,18 +140,23 @@ export function buildBackfillDeleteStmt(
   db: D1Database,
   stablecoinId: string,
   replayWindow: BackfillReplayWindow | null,
+  replaceEventIds?: readonly number[],
 ): D1PreparedStatement {
-  let sql = "DELETE FROM depeg_events WHERE stablecoin_id = ? AND source = 'backfill'";
+  let sql = "DELETE FROM depeg_events WHERE stablecoin_id = ? AND source = 'backfill' AND disposition IS NULL";
   const binds: unknown[] = [stablecoinId];
   if (replayWindow?.compareStartSec != null) {
-    sql += " AND COALESCE(ended_at, started_at) >= ?";
+    sql += " AND (ended_at IS NULL OR ended_at >= ?)";
     binds.push(replayWindow.compareStartSec);
   }
   if (replayWindow?.compareEndSec != null) {
     sql += " AND started_at <= ?";
     binds.push(replayWindow.compareEndSec);
   }
-  sql += INCIDENT_MEMBER_DELETE_GUARD;
+  if (replaceEventIds != null) {
+    sql += " AND id IN (SELECT value FROM json_each(?))";
+    binds.push(JSON.stringify(replaceEventIds));
+  }
+  sql += ` AND NOT ${REPLAY_PROTECTED_SQL}` + INCIDENT_MEMBER_DELETE_GUARD;
   return db.prepare(sql).bind(...binds);
 }
 
@@ -127,11 +173,11 @@ export async function loadDdrBackfillReplayConflicts(
     JOIN depeg_resolver_incident_event_links l ON l.event_id = e.id
     LEFT JOIN depeg_resolver_public_predictions p ON p.incident_key = l.incident_key
     WHERE e.stablecoin_id = ?
-      AND e.source = 'backfill'`;
+      AND e.source = 'backfill' AND e.disposition IS NULL`;
   const binds: unknown[] = [stablecoinId];
 
   if (replayWindow?.compareStartSec != null) {
-    sql += " AND COALESCE(e.ended_at, e.started_at) >= ?";
+    sql += " AND (e.ended_at IS NULL OR e.ended_at >= ?)";
     binds.push(replayWindow.compareStartSec);
   }
   if (replayWindow?.compareEndSec != null) {

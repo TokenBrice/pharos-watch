@@ -1,8 +1,14 @@
-import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
+import { projectCurrentPegDeviation } from "@shared/lib/current-peg-projection";
+import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC, PAR_ROUNDOFF_BPS } from "@shared/lib/depeg-config";
+import { currentAdmissionUnavailableReason } from "@shared/lib/reference-admission";
+import { createCurrentPegReader } from "../current-peg-observations";
 import { formatIsoDate } from "@shared/lib/format";
+import { normalizePegType } from "@shared/lib/peg-rates";
+import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS } from "@shared/lib/report-card-active-depeg";
-import { WORKER_ACTIVE_STABLECOINS, WORKER_TRACKED_META_BY_ID, type WorkerRuntimeStablecoinMeta } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { WORKER_ACTIVE_META_BY_ID, WORKER_ACTIVE_STABLECOINS, WORKER_TRACKED_META_BY_ID, type WorkerRuntimeStablecoinMeta } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
+import { ReferenceAdmissionSchema } from "@shared/types/reference-admission";
 import type { StablecoinData } from "@shared/types/supply";
 import type { RedemptionRouteStatus, RedemptionRouteStatusSource } from "@shared/types/redemption";
 import type { LiveReserveRedemptionOutputValuation } from "@shared/types/live-reserves";
@@ -10,7 +16,6 @@ import type { ReserveSnapshotMetadataRecord } from "../live-reserves/store";
 import { readRedemptionBackstopLiveMetadata } from "./live-metadata";
 
 import { classifyPrimaryDepegTrust } from "../depeg-trust-policy";
-import { deriveCurrentPegObservationMap } from "../current-peg-observations";
 
 export { formatIsoDate as formatUtcDate } from "@shared/lib/format";
 
@@ -45,10 +50,11 @@ export interface EvaluatedOpenIncident {
 export function buildRedemptionCurrentDepegObservationMap(options: {
   peggedAssets: StablecoinData[];
   fxFallbackRates?: Record<string, number>;
+  fxReferenceObservations?: unknown;
   stablecoinsGenerationAt: number | null;
   now: number;
 }): Map<string, RedemptionCurrentDepegObservation> {
-  const { peggedAssets, fxFallbackRates, stablecoinsGenerationAt, now } = options;
+  const { peggedAssets, stablecoinsGenerationAt, now } = options;
   const result = new Map<string, RedemptionCurrentDepegObservation>();
   if (
     stablecoinsGenerationAt == null ||
@@ -59,17 +65,15 @@ export function buildRedemptionCurrentDepegObservationMap(options: {
     return result;
   }
 
-  const currentPegObservationById = deriveCurrentPegObservationMap({
-    peggedAssets,
-    fxFallbackRates,
-    asOf: stablecoinsGenerationAt,
-  });
-
+  const readPeg = createCurrentPegReader({ ...options, asOf: stablecoinsGenerationAt });
   for (const asset of peggedAssets) {
-    const quoteObservedAt = asset.priceObservedAt ?? asset.priceUpdatedAt;
+    const meta = WORKER_ACTIVE_META_BY_ID.get(asset.id);
+    const quoteObservedAt = asset.priceObservedAt === undefined ? asset.priceUpdatedAt : asset.priceObservedAt;
     if (
+      !meta || meta.flags.navToken ||
       typeof quoteObservedAt !== "number" ||
-      !Number.isFinite(quoteObservedAt) ||
+      !Number.isSafeInteger(quoteObservedAt) ||
+      quoteObservedAt <= 0 ||
       quoteObservedAt > now ||
       now - quoteObservedAt > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC ||
       asset.priceSource === "cached" ||
@@ -78,17 +82,26 @@ export function buildRedemptionCurrentDepegObservationMap(options: {
       continue;
     }
 
-    const pegObservation = currentPegObservationById.get(asset.id);
-    const currentDeviationBps = pegObservation?.currentDeviationBps;
-    if (
-      pegObservation?.pegReferenceUnavailable ||
-      typeof currentDeviationBps !== "number" ||
-      !Number.isFinite(currentDeviationBps)
-    ) {
+    const pegType = normalizePegType(asset.pegType);
+    const registryPegType = normalizePegType(pegTypeFromCurrency(meta.flags.pegCurrency));
+    if (registryPegType != null && registryPegType !== pegType) continue;
+    const peg = readPeg(asset);
+    const deviation = projectCurrentPegDeviation(peg, registryPegType === "peggedUSD", asset.priceObservedAt);
+    if (!peg || deviation == null) continue;
+    if (peg.referenceAdmission === undefined) {
+      result.set(asset.id, { currentDeviationBps: deviation });
       continue;
     }
 
-    result.set(asset.id, { currentDeviationBps });
+    const admission = ReferenceAdmissionSchema.safeParse(peg.referenceAdmission);
+    if (
+      admission.data?.status === "admitted" &&
+      peg.pegReference?.source === admission.data.kind && peg.pegReference.asOf === admission.data.referenceObservedAtSec &&
+      currentAdmissionUnavailableReason(admission.data, meta.flags.pegCurrency,
+        asset.priceObservedAtMode === "upstream" ? asset.priceObservedAt : null, now) == null
+    ) {
+      result.set(asset.id, { currentDeviationBps: deviation });
+    }
   }
 
   return result;
@@ -242,7 +255,7 @@ export async function loadSevereActiveDepegAvailabilityMap(
     const currentObservation = currentObservationsById.get(row.stablecoin_id);
     const state = currentObservation == null
       ? "uncertain"
-      : currentObservation.currentDeviationBps <= -REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS
+      : currentObservation.currentDeviationBps <= -REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS + PAR_ROUNDOFF_BPS
         ? "severe"
         : "non-severe";
     const incident: EvaluatedOpenIncident = {
@@ -254,12 +267,12 @@ export async function loadSevereActiveDepegAvailabilityMap(
 
     if (state === "non-severe") continue;
     if (state === "severe") {
-      const activeDepegBps = Math.abs(currentObservation!.currentDeviationBps);
+      const activeDepegBps = Math.round(Math.abs(currentObservation!.currentDeviationBps));
       result.set(row.stablecoin_id, {
         routeStatus: "degraded",
         routeStatusSource: "market-implied",
         routeStatusReason:
-          `Open downside depeg incident started ${formatIsoDate(row.started_at)}; fresh authoritative current deviation is ${currentObservation!.currentDeviationBps} bps, so static redemption availability cannot score.`,
+          `Open downside depeg incident started ${formatIsoDate(row.started_at)}; fresh authoritative current deviation is ${Math.round(currentObservation!.currentDeviationBps)} bps, so static redemption availability cannot score.`,
         routeStatusReviewedAt,
         activeDepegBps,
         activeDepegStartedAt: row.started_at,
@@ -272,7 +285,7 @@ export async function loadSevereActiveDepegAvailabilityMap(
       routeStatus: "unknown",
       routeStatusSource: "market-implied",
       routeStatusReason:
-        `Open downside depeg incident started ${formatIsoDate(row.started_at)}, but no authoritative current deviation within ${DEPEG_PRIMARY_PRICE_MAX_AGE_SEC} seconds establishes present route availability; redemption score withheld.`,
+        `Open downside depeg incident started ${formatIsoDate(row.started_at)}, but no admitted authoritative deviation within ${DEPEG_PRIMARY_PRICE_MAX_AGE_SEC} seconds establishes present route availability; redemption score withheld.`,
       routeStatusReviewedAt,
       activeDepegStartedAt: row.started_at,
       activeDepegDirection: "below",
@@ -301,7 +314,7 @@ export async function loadSevereActiveDepegAvailabilityMap(
         routeStatus: "unknown",
         routeStatusSource: "market-implied",
         routeStatusReason:
-          `Output asset uncertainty: ${isParentImpairment ? "parent " : ""}${dependencySymbol} has an open downside depeg incident started ${formatIsoDate(incidentRow.started_at)}, but no authoritative current deviation within ${DEPEG_PRIMARY_PRICE_MAX_AGE_SEC} seconds establishes output availability; redemption score withheld.`,
+          `Output asset uncertainty: ${isParentImpairment ? "parent " : ""}${dependencySymbol} has an open downside depeg incident started ${formatIsoDate(incidentRow.started_at)}, but no admitted authoritative deviation within ${DEPEG_PRIMARY_PRICE_MAX_AGE_SEC} seconds establishes output availability; redemption score withheld.`,
         routeStatusReviewedAt,
         activeDepegStartedAt: incidentRow.started_at,
         activeDepegDirection: "below",
@@ -310,7 +323,7 @@ export async function loadSevereActiveDepegAvailabilityMap(
       continue;
     }
 
-    const activeDepegBps = Math.abs(evaluation.currentDeviationBps!);
+    const activeDepegBps = Math.round(Math.abs(evaluation.currentDeviationBps!));
     const outputImpairedShare = evaluation.outputImpairedShare;
     const impairedOutputDescription = outputImpairedShare === undefined
       ? "the reviewed payout includes this impaired asset, but its share is unquantified because admitted payout weights are unavailable"

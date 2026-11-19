@@ -51,8 +51,8 @@ vi.mock("@shared/data/funding/donations.json", () => {
         row("0xcc01", 1776372647, "0x90f79bf6eb2c4f870365e785982e1f101e93b906", 50, {
           chain: "gnosis", kind: "pool", token_address: "0xddafbb505ad214d7b80b1f830fccc89b60fb7a83",
         }),
-        row("0xee01", 1794877200, "0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc", 15),
-        row("0xee02", 1794880800, "0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc", 10),
+        row("0x" + "ee".repeat(32), 1794877200, "0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc", 15, { transfer_discriminator: "log:1", legacy_credit: true }),
+        row("0x" + "ee".repeat(32), 1794880800, "0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc", 10, { transfer_discriminator: "log:2" }),
       ],
     },
   };
@@ -255,14 +255,18 @@ describe("POST /api/donor-key-claims", () => {
     const extendedTo = async (response: Response) => DonorKeyClaimResponseSchema.parse(await response.json()).key.expiresAt;
     // As if the $10 row was listed after the claim, with the key at the given expiry.
     const uncredit = (expiresAt: number) => sqlite.exec(
-      `DELETE FROM api_key_donor_credits WHERE tx_hash = '0xee02'; UPDATE api_keys SET expires_at = ${expiresAt}`,
+      `DELETE FROM api_key_donor_transfer_credits WHERE transfer_discriminator = 'log:2'; UPDATE api_keys SET expires_at = ${expiresAt}`,
     );
 
     const issued = await issuedKey(await sign("termclaim0000001", at0));
     expect(issued.key.expiresAt).toBe(at0 + 75 * DAY); // $15 + $10
     await expect((await sign("termreplay000001", at0)).json()).resolves.toMatchObject({ reason: "claim_exists" });
+    // A rolled-back writer retains only the original transaction credit.
+    sqlite.exec("DELETE FROM api_key_donor_transfer_credits");
     uncredit(at0 + 45 * DAY);
-    expect(await extendedTo(await sign("termextend000001", at0 + 120))).toBe(at0 + 75 * DAY);
+    const attempts = await Promise.all([sign("termextend000001", at0 + 120), sign("termextend000004", at0 + 120)]);
+    expect(attempts.map(({ status }) => status).sort()).toEqual([200, 409]);
+    expect(await extendedTo(attempts.find(({ status }) => status === 200)!)).toBe(at0 + 75 * DAY);
     uncredit(at0 + 60);
     const later = at0 + 180;
     expect(await extendedTo(await sign("termextend000002", later))).toBe(later + 30 * DAY);

@@ -8,14 +8,14 @@ import { isAmbiguousSupplyPerimeterDay, isEarlierSupplyPerimeter } from "@shared
 import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";
 import { isRecord } from "@shared/lib/type-guards";
 import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
-import type { DdrRow } from "@shared/types/depeg-resolver";
 import {
   DEWS_MAX_AGE_SEC,
   DEX_LIQUIDITY_MAX_AGE_SEC,
   DAY,
   REDEMPTION_BACKSTOP_MAX_AGE_SEC,
 } from "./constants";
-import type { DdrLoadedContext, DdrMintBurnHourlyRow } from "./context";
+import type { DdrLoadedContext, DdrMintBurnHourlyRow, DdrSupplySnapshot } from "./context";
+import type { DdrAssessmentRow } from "./types";
 import {
   addMintBurnValuationTally,
   emptyMintBurnValuationTally,
@@ -30,13 +30,36 @@ const DDR_BLACKLIST_SURGE_SIGNAL_THRESHOLD = 55;
 const MINT_SURGE_NET_INFLOW_PCT = 20;
 const MINT_SURGE_WINDOW_SEC = 7 * DAY;
 
-function supplyAt(snapshots: { date: number; usd: number }[], ts: number): number | null {
-  let val: number | null = null;
+function supplyAt<Snapshot extends { date: number }>(snapshots: Snapshot[], ts: number): Snapshot | null {
+  let latest: Snapshot | null = null;
   for (const s of snapshots) {
-    if (s.date <= ts) val = Number.isFinite(s.usd) && s.usd >= 0 ? s.usd : null;
+    if (s.date <= ts) latest = s;
     else break;
   }
-  return val;
+  return latest;
+}
+
+function nativeQuantityAt(snapshot: DdrSupplySnapshot, targetAt: number): number | null {
+  const observedAt = snapshot.nativeObservedAt;
+  return Math.floor(snapshot.date / DAY) === Math.floor(targetAt / DAY) &&
+    observedAt != null && Number.isSafeInteger(observedAt) && observedAt > 0 && observedAt <= targetAt
+    ? snapshot.native ?? null : null;
+}
+
+function supplyChange(
+  snapshots: DdrSupplySnapshot[], endAt: number, baselineAt: number,
+): { pct: number | null; covered: boolean } {
+  const latest = supplyAt(snapshots, endAt);
+  const baseline = supplyAt(snapshots, baselineAt);
+  const missing = { pct: null, covered: false };
+  if (!latest || !baseline || latest.comparisonPartial || baseline.comparisonPartial) return missing;
+  const native = latest.native !== undefined || baseline.native !== undefined;
+  if (native && latest.date <= baseline.date) return missing;
+  const end = native ? nativeQuantityAt(latest, endAt) : latest.usd;
+  const start = native ? nativeQuantityAt(baseline, baselineAt) : baseline.usd;
+  if (end == null || start == null || !Number.isFinite(end) || end < 0 || !Number.isFinite(start) || start <= 0) return missing;
+  const pct = ((end - start) / start) * 100;
+  return Number.isFinite(pct) ? { pct, covered: native || end > 0 } : missing;
 }
 
 /**
@@ -47,7 +70,7 @@ function supplyAt(snapshots: { date: number; usd: number }[], ts: number): numbe
  * coins, the supply-history proxy decides.
  */
 export function deriveMintSurge(
-  snapshots: { date: number; usd: number }[],
+  snapshots: DdrSupplySnapshot[],
   startedAt: number,
   change7dPct: number | null,
   hourlyRows: DdrMintBurnHourlyRow[],
@@ -55,7 +78,7 @@ export function deriveMintSurge(
 ): Pick<DdrSupplyContext, "mintSurge" | "mintSurgeCoverage"> {
   if (hasMintBurnCoverage === null) return { mintSurge: null, mintSurgeCoverage: "unavailable" };
   if (hasMintBurnCoverage) {
-    const onset = supplyAt(snapshots, startedAt);
+    const onset = supplyAt(snapshots, startedAt)?.usd;
     if (onset == null || !Number.isFinite(onset) || onset <= 0) {
       return { mintSurge: null, mintSurgeCoverage: "unavailable" };
     }
@@ -96,7 +119,7 @@ export function deriveMintSurge(
  * context as the coin's full series for every lookup it performs.
  */
 export function buildSupplyContext(
-  snapshots: { date: number; usd: number }[],
+  snapshots: DdrSupplySnapshot[],
   startedAt: number,
   evaluatedAt: number,
   mintBurnHourly: DdrMintBurnHourlyRow[],
@@ -111,14 +134,10 @@ export function buildSupplyContext(
       mintSurgeCoverage: "unavailable" as const,
     };
   }
-  const onset = supplyAt(snapshots, startedAt);
-  const current = supplyAt(snapshots, evaluatedAt);
-  const d7 = supplyAt(snapshots, startedAt - 7 * DAY);
-  const d30 = supplyAt(snapshots, evaluatedAt - 30 * DAY);
-  const change7dPct = onset != null && d7 != null && d7 > 0 ? ((onset - d7) / d7) * 100 : null;
-  const change30dPct = current != null && d30 != null && d30 > 0 ? ((current - d30) / d30) * 100 : null;
+  const { pct: change7dPct, covered } = supplyChange(snapshots, startedAt, startedAt - 7 * DAY);
+  const { pct: change30dPct } = supplyChange(snapshots, evaluatedAt, evaluatedAt - 30 * DAY);
   return {
-    covered: onset != null && onset > 0 && change7dPct != null && Number.isFinite(change7dPct),
+    covered,
     change7dPct,
     change30dPct,
     ...deriveMintSurge(snapshots, startedAt, change7dPct, mintBurnHourly, hasMintBurnCoverage),
@@ -149,17 +168,17 @@ function dewsSignalAtLeast(
 /** Latest admitted supply snapshot no older than the dislocation-sizing budget; otherwise unavailable. */
 const DDR_DISLOCATION_SUPPLY_MAX_AGE_SEC = 3 * 86400;
 
-function latestCirculatingUsd(snapshots: readonly { date: number; usd: number }[], nowSec: number): number | null {
-  let latest: { date: number; usd: number } | null = null;
+function latestCirculatingUsd(snapshots: readonly DdrSupplySnapshot[], nowSec: number): number | null {
+  let latest: DdrSupplySnapshot | null = null;
   for (const snapshot of snapshots) {
     if (snapshot.date > nowSec) continue;
     if (latest == null || snapshot.date > latest.date) latest = snapshot;
   }
   if (latest == null || nowSec - latest.date > DDR_DISLOCATION_SUPPLY_MAX_AGE_SEC) return null;
-  return Number.isFinite(latest.usd) && latest.usd > 0 ? latest.usd : null;
+  return latest.usd != null && Number.isFinite(latest.usd) && latest.usd > 0 ? latest.usd : null;
 }
 
-export function resolveDdrIncidents(context: DdrLoadedContext, nowSec: number): DdrRow[] {
+export function resolveDdrIncidents(context: DdrLoadedContext, nowSec: number): DdrAssessmentRow[] {
   return context.active.map((ev) => {
     const meta = TRACKED_META_BY_ID.get(ev.stablecoinId);
     const coin = meta ? toStructural(meta, context.structuralContext) : fallbackStructural(ev.stablecoinId, ev.symbol, ev.pegType);
@@ -203,6 +222,10 @@ export function resolveDdrIncidents(context: DdrLoadedContext, nowSec: number): 
       redemptionCapacityRatio: redemptionFresh ? redemption.immediate_capacity_ratio : null,
       redemptionRouteFamily: redemptionFresh ? redemption.route_family : null,
     };
-    return resolveDepeg({ active: ev, coin, supply, live, nowSec, incidents: context.incidents, quarantined: context.quarantined });
+    const row: DdrAssessmentRow = resolveDepeg({ active: ev, coin, supply, live, nowSec, incidents: context.incidents, quarantined: context.quarantined });
+    if (row.currentDeviationBps != null && ev.currentDeviationObservedAtSec != null) {
+      row.currentDeviationObservedAtSec = ev.currentDeviationObservedAtSec;
+    }
+    return row;
   });
 }

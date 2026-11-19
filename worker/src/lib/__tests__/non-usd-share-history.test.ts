@@ -29,7 +29,6 @@ function unix(iso: string): number {
 }
 
 const COMMODITY_PEGS = new Set(["GOLD", "SILVER"]);
-const CORE_IDS = CORE_AGGREGATE_ACTIVE_STABLECOINS.map((c) => c.id);
 const COMMODITY_IDS = CORE_AGGREGATE_ACTIVE_STABLECOINS.filter((c) => COMMODITY_PEGS.has(c.flags.pegCurrency)).map(
   (c) => c.id,
 );
@@ -139,13 +138,6 @@ describe("non-USD share producer aggregation", () => {
         COIN_HISTORY_GAPS,
         {
           match: "FROM supply_history",
-          matchBinds: [
-            JSON.stringify(CORE_IDS),
-            JSON.stringify(COMMODITY_IDS),
-            JSON.stringify(FIAT_NON_USD_IDS),
-            cutoff,
-            completedSnapshotDate,
-          ],
           rows: [
             {
               snapshot_date: unix("2021-04-10T00:00:00Z"),
@@ -171,6 +163,11 @@ describe("non-USD share producer aggregation", () => {
     );
 
     const body = await computeHistory(db);
+    const aggregate = db.getHistory().find((entry) => entry.sql.includes("GROUP BY snapshot_date"));
+    expect(aggregate?.binds.slice(1)).toEqual([cutoff, completedSnapshotDate]);
+    expect(JSON.parse(String(aggregate?.binds[0]))["aeur-anchored-coins"]).toEqual({
+      bucket: "fiat-non-usd", inactiveFrom: unix("2026-07-11T00:00:00Z"),
+    });
     expect(
       db
         .getHistory()
@@ -223,6 +220,23 @@ describe("non-USD share producer aggregation", () => {
     const before = unix("2026-08-05T00:00:00Z");
     const partial = unix("2026-08-06T00:00:00Z");
     const after = unix("2026-08-07T00:00:00Z");
+
+    it("includes dated frozen coins before freeze and ends their coverage obligation at freeze", async () => {
+      const { db, sqlite } = fixtures.open();
+      const frozenAt = unix("2026-07-11T00:00:00Z");
+      const day = 86_400;
+      const insert = sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd) VALUES (?, ?, ?)");
+      for (const date of [frozenAt - 3 * day, frozenAt - 2 * day, frozenAt - day, frozenAt]) {
+        insert.run(largeUsdId!, date, 10_000_000);
+        if (date !== frozenAt - 2 * day) insert.run("aeur-anchored-coins", date, 1_117_775.59);
+      }
+      const { points } = await computeNonUsdShareHistory(db, frozenAt + 600, frozenAt - 3 * day);
+      expect(points.map(({ date, fiatNonUsd, total }) => [date, fiatNonUsd, total])).toEqual([
+        [frozenAt - 3 * day, 1_117_775.59, 11_117_775.59],
+        [frozenAt - day, 1_117_775.59, 11_117_775.59],
+        [frozenAt, 0, 10_000_000],
+      ]);
+    });
 
     it("omits the first window date when a dominant asset's predecessor is before cutoff", async () => {
       vi.spyOn(Date, "now").mockReturnValue((before + 30 * 86400 + 12 * 3600) * 1000);

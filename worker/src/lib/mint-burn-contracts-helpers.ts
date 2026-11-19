@@ -126,6 +126,7 @@ export function resolveMintBurnContractConfig(
     enabled: spec.enabled,
     tier: spec.tier,
     bridgeDetection: spec.bridgeDetection,
+    ...(spec.originDollarRebaseVault ? { originDollarRebaseVault: spec.originDollarRebaseVault } : {}),
     adapterKind,
     startBlockSource: spec.startBlockSource ?? (
       defaultedStartBlock ? "default-coverage-floor-2026-03-24" : "reviewed-contract-specific"

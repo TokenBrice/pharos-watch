@@ -1,3 +1,4 @@
+import { forDexPriceCandidateCollection } from "../price-sanity";
 import { logWorkerEventArgs } from "../../../lib/structured-log";
 import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
@@ -465,10 +466,10 @@ export async function runDirectApiFetchPhase(
         const execution = await executeDirectApiProvider(db, {
           name, circuitKey,
           fn: async (providerSignal) => {
-            const observedAt = Math.floor(Date.now() / 1000);
+            const readStartedAtSec = Math.floor(Date.now() / 1000);
             const fetched = await fn(providerSignal);
             for (const pool of fetched.pools) {
-              if (pool.priceObservedAt === undefined) pool.priceObservedAt = observedAt;
+              pool.readStartedAtSec = readStartedAtSec;
             }
             return fetched;
           },
@@ -737,6 +738,7 @@ export async function integrateDirectApiLiquidityPhase(params: {
     );
   }
 
+  const priceAssessedAtSec = Math.floor(Date.now() / 1000);
   let directApiGtPools = new Map<string, GtNewPool[]>();
   if (retainedDirectApiPools.length > 0) {
     directApiGtPools = convertToGtNewPools(
@@ -747,13 +749,33 @@ export async function integrateDirectApiLiquidityPhase(params: {
       params.stablecoinPriceById,
       params.fallbackCounters,
       params.volumeObservedAtSec,
+      priceAssessedAtSec,
     );
+    const pancakeVolumeWindowEnds = new Map<string, number>();
+    for (const pool of retainedDirectApiPools) {
+      if (
+        pool.source === "pancakeswap" &&
+        "volumeWindowEndSec" in pool &&
+        typeof pool.volumeWindowEndSec === "number"
+      ) {
+        pancakeVolumeWindowEnds.set(canonicalExitRouteAssetKey(pool.chain, pool.poolAddress), pool.volumeWindowEndSec);
+      }
+    }
+    for (const pools of directApiGtPools.values()) {
+      for (const pool of pools) {
+        if (pool.dexId !== "pancakeswap") continue;
+        pool.volumeObservedAtSec = pool.volume24hUsd == null
+          ? null
+          : pancakeVolumeWindowEnds.get(canonicalExitRouteAssetKey(pool.chain, pool.address)) ?? null;
+      }
+    }
     if (directApiGtPools.size > 0) {
       await mergeGtPools(params.metrics, directApiGtPools, params.db, params.fallbackCounters);
     }
   }
 
   let exactDuplicateGtPools = new Map<string, GtNewPool[]>();
+  let matchedExactDuplicateRatios = new Map<string, Set<string>>();
   if (exactDuplicatePoolsForEvidence.length > 0) {
     exactDuplicateGtPools = convertToGtNewPools(
       exactDuplicatePoolsForEvidence,
@@ -763,8 +785,9 @@ export async function integrateDirectApiLiquidityPhase(params: {
       params.stablecoinPriceById,
       undefined,
       params.volumeObservedAtSec,
+      priceAssessedAtSec,
     );
-    retainExactDuplicatePoolEvidence(params.metrics, exactDuplicateGtPools);
+    matchedExactDuplicateRatios = retainExactDuplicatePoolEvidence(params.metrics, exactDuplicateGtPools);
   }
 
   if (params.executionTargetContext) {
@@ -783,16 +806,35 @@ export async function integrateDirectApiLiquidityPhase(params: {
     );
   }
 
-  const directApiPoolsForPriceObservation = [...retainedDirectApiPools, ...exactDuplicatePoolsForEvidence];
-  if (directApiPoolsForPriceObservation.length > 0) {
+  if (retainedDirectApiPools.length > 0) {
     const directApiPriceObs = extractPriceObservations(
-      directApiPoolsForPriceObservation,
+      retainedDirectApiPools,
       params.chainAddressToId,
       params.symbolToChainScopedIds,
-      params.validationReferences,
+      forDexPriceCandidateCollection(params.validationReferences),
       params.stablecoinPriceById,
+      priceAssessedAtSec,
     );
     mergeDexPriceObservationMap(params.priceObservations, directApiPriceObs);
+  }
+  if (exactDuplicatePoolsForEvidence.length > 0) {
+    const duplicatePriceObservations = extractPriceObservations(
+      exactDuplicatePoolsForEvidence,
+      params.chainAddressToId,
+      params.symbolToChainScopedIds,
+      forDexPriceCandidateCollection(params.validationReferences),
+      params.stablecoinPriceById,
+      priceAssessedAtSec,
+    );
+    for (const [stablecoinId, observations] of duplicatePriceObservations) {
+      const matchedPoolIds = matchedExactDuplicateRatios.get(stablecoinId);
+      const admitted = observations.filter((observation) =>
+        !observation.counterpartyPrice || (observation.poolKey && matchedPoolIds?.has(observation.poolKey)),
+      );
+      if (admitted.length === 0) duplicatePriceObservations.delete(stablecoinId);
+      else duplicatePriceObservations.set(stablecoinId, admitted);
+    }
+    mergeDexPriceObservationMap(params.priceObservations, duplicatePriceObservations);
   }
 
   return {
@@ -848,7 +890,8 @@ function attachRegisteredDirectApiExecutionTargets(
 function retainExactDuplicatePoolEvidence(
   metrics: Map<string, SourcePoolGraph>,
   exactDuplicateGtPools: Map<string, GtNewPool[]>,
-): void {
+): Map<string, Set<string>> {
+  const matchedRatios = new Map<string, Set<string>>();
   for (const [stablecoinId, pools] of exactDuplicateGtPools) {
     const metric = metrics.get(stablecoinId);
     if (!metric) continue;
@@ -858,6 +901,20 @@ function retainExactDuplicatePoolEvidence(
         (candidate) => candidate.poolId === canonicalExitRouteAssetKey(pool.chain, pool.address),
       );
       if (!existingPool || !isCompatibleExactDuplicateEvidence(existingPool, pool)) continue;
+
+      if (!(typeof existingPool.price === "number" && existingPool.price > 0)) {
+        // An exact private candidate can survive even when the public pool mark is still provisional.
+        if (pool.priceCounterparty && pool.priceObservedAt != null) {
+          existingPool.price = pool.price;
+          existingPool.priceObservedAt = pool.priceObservedAt;
+          existingPool.priceCounterparty = pool.priceCounterparty;
+          existingPool.priceSource = "direct_api";
+          existingPool.priceEvidenceTvlUsd = pool.tvlUsd;
+        }
+        const matched = matchedRatios.get(stablecoinId) ?? new Set<string>();
+        matched.add(existingPool.poolId);
+        matchedRatios.set(stablecoinId, matched);
+      }
 
       const existingExtra = existingPool.extra ?? {};
       if (pool.ammExecutionModel && !existingExtra.ammExecutionModel && !existingExtra.executionCapabilityGate) {
@@ -877,6 +934,7 @@ function retainExactDuplicatePoolEvidence(
       }
     }
   }
+  return matchedRatios;
 }
 
 function isCompatibleExactDuplicateEvidence(existingPool: PoolEntry, incomingPool: GtNewPool): boolean {

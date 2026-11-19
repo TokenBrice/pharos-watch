@@ -238,9 +238,11 @@ describe("DEX scoring publication atomicity", () => {
     expect(row.source_total_tvl).toBe(0);
     expect(isTrustedDexPriceRow({ updated_at: NOW_SEC, source_total_tvl: row.source_total_tvl }, NOW_SEC, "ui")).toBe(false);
     expect(isTrustedDexPriceRow({ updated_at: NOW_SEC, source_total_tvl: row.source_total_tvl }, NOW_SEC, "depeg")).toBe(false);
-    expect(JSON.parse(row.price_sources_json)).toEqual([
-      { protocol: "cg-ticker-example", chain: "orderbook", price: 1.001, tvl: 0, sourceFamily: "cg_tickers" },
-    ]);
+    expect(JSON.parse(row.price_sources_json)).toEqual({
+      aggregateObservedAt: null, aggregateContributors: [], sources: [
+        { protocol: "cg-ticker-example", chain: "orderbook", price: 1.001, tvl: 0, sourceFamily: "cg_tickers" },
+      ],
+    });
   });
 
   it("uses observed ticker flow rather than synthetic TVL in a mixed price median", async () => {

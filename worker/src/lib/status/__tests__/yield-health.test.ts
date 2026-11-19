@@ -1274,6 +1274,24 @@ describe("yield benchmark and supplemental run-outcome evidence boundaries", () 
     expect(summary.benchmarkRegistry.unusedBenchmarkKeys ?? []).toEqual([]);
   });
 
+  it("reports the holiday-adjusted CETES bound for a legacy entry", async () => {
+    const deadline = Date.parse("2026-04-02T12:00:00Z") / 1000;
+    const placement = { ...benchmarkMeta("MXN", "banxico-cetes"), key: undefined, recordDate: "2026-03-26",
+      fetchedAt: deadline - 60, maxRecordAgeSec: 5 * 86400 };
+    for (const now of [deadline, deadline + 1]) {
+      const summary = await loadYieldHealthSummary(makeDb([
+        yieldCacheRow("yield-rankings", deadline, {
+          updatedAt: deadline,
+          rankings: [{ id: "cetes-etherfuse", benchmarkKey: "MXN" }],
+          benchmarks: { MXN: placement },
+        }),
+      ]), now, {});
+      expect(summary.benchmarkRegistry.benchmarks.MXN).toMatchObject({
+        maxRecordAgeSec: 7.5 * 86400, status: now === deadline ? "healthy" : "stale",
+      });
+    }
+  });
+
   it("lists only fetched registry entries as unused, never the empty registry slots", async () => {
     // `publishBenchmarkRecordBounds` publishes all 13 registry keys; currencies
     // without a feed stay explicit nulls and were never fetched.

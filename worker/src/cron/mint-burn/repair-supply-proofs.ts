@@ -3,7 +3,7 @@ import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { getMintBurnRangeProofEligibility, mintBurnConservationFingerprint } from "../../lib/mint-burn-conservation";
 import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts";
 import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
-import { mintBurnScanCoverageStatements, type MintBurnScanCoverage } from "../../lib/mint-burn-pipeline/scan-coverage";
+import { commitMintBurnMaterializedCoverage, type MintBurnScanCoverage } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { COVERAGE_REPAIR_MAX_BLOCKS } from "./repair-policy";
 import type { MintBurnCoverageGap } from "./repair-coverage";
 import { MINT_BURN_EVENT_RETENTION_SEC } from "./retention";
@@ -118,8 +118,7 @@ export async function commitMintBurnSupplyProofRepair(
   const key = mintBurnConfigKey(config);
   if (proof.configKey !== key) throw new Error("Supply-proof repair config mismatch");
   const cursor: SupplyProofRepairCursor = { fingerprint: mintBurnConservationFingerprint(config), lastBlock: proof.toBlock };
-  await runWithOverloadRetry(() => db.batch([
-    ...mintBurnScanCoverageStatements(db, proof),
+  await runWithOverloadRetry(() => commitMintBurnMaterializedCoverage(db, proof, [], [
     db.prepare(`INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
       ON CONFLICT(key) DO UPDATE SET value = CASE
         WHEN json_extract(CASE WHEN json_valid(cache.value) THEN cache.value ELSE '{}' END, '$.fingerprint') = json_extract(excluded.value, '$.fingerprint')

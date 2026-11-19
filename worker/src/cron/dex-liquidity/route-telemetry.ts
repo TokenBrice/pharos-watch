@@ -1,4 +1,4 @@
-import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
+import { canonicalExitRouteScopedKey, normalizeExitRouteCorrelationKey } from "@shared/types/exit-route-identity";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
 import type { DexLiquidityCronMetadata } from "../../lib/schemas";
 import type { LiquidityMetrics } from "./types";
@@ -16,6 +16,7 @@ export type TargetEnrichmentTelemetry = NonNullable<MeasuredTargetFunnel["enrich
 export interface DexRouteRemovalEvidence {
   omittedRouteIds: Set<string>;
   poolReasons: Map<string, string>;
+  closureValuationRejectedAssetIds?: ReadonlySet<string>;
 }
 
 const telemetryEncoder = new TextEncoder();
@@ -80,9 +81,12 @@ export function boundMeasuredTargetFunnelGroups(funnel: MeasuredTargetFunnel): v
   funnel.groups = bounded;
 }
 
-function physicalOutputKey(observation: ExitRouteObservation): string | null {
+export function physicalOutputKey(observation: ExitRouteObservation): string | null {
   if (observation.scope.kind !== "chain-contract" || !observation.output.assetKeys?.length) return null;
-  return `${canonicalExitRouteScopedKey(observation.scope.chain, observation.scope.contractOrPoolId)}:${[...observation.output.assetKeys].sort().join(",")}`;
+  if (!observation.scope.chain.trim() || !observation.scope.contractOrPoolId.trim()) return null;
+  const poolKey = canonicalExitRouteScopedKey(observation.scope.chain, observation.scope.contractOrPoolId);
+  const assetKeys = [...new Set(observation.output.assetKeys.map(normalizeExitRouteCorrelationKey))].sort();
+  return assetKeys[0] ? JSON.stringify([poolKey, assetKeys]) : null;
 }
 
 /** Reasons require exact route/pool evidence; coin-level aggregate gates are not causal proof. */

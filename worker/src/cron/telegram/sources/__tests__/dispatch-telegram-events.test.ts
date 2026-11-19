@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TELEGRAM_ALERT_POLICY } from "@shared/lib/telegram-delivery-policy";
 import { buildTelegramDispatchEvents } from "../dispatch-telegram-events";
+import { buildDepegSnapshot, type DepegSnapshot } from "../telegram-alert-snapshots";
+import { buildDispatchSnapshotState } from "../../dispatch/dispatch-telegram-state";
+import { formatConsolidatedMessage, formatDepegTriggeredLine, formatDepegWorseningLine } from "../../../../telegram/common/alerts-formatting";
 import { makeNoopD1 } from "../../../../test-helpers/noop-d1";
 import {
   activeDepeg,
@@ -28,6 +31,19 @@ vi.mock("../../../../lib/db-cache", () => ({
 function preparingD1() {
   return makeNoopD1({ prepare: vi.fn(() => ({ bind: vi.fn(() => ({ kind: "prepared" })) })) });
 }
+
+async function dispatchFromDepegCache(row: ReturnType<typeof activeDepeg>, previous: DepegSnapshot) {
+  const now = 1_800_000_000;
+  const sources = eventSources({
+    activeDepegRows: [row], dewsCache: { value: "{}", updatedAt: now },
+    depegCache: { value: JSON.stringify(previous), updatedAt: now },
+  });
+  const state = buildDispatchSnapshotState(sources, now);
+  const result = await buildTelegramDispatchEvents(preparingD1(), sources, state, () => row.symbol);
+  return { ...result, baseline: state.currentSnapshots.depeg };
+}
+
+const bilira = { stablecoin_id: "tryb-bilira", symbol: "TRYB", peg_type: "peggedTRY", source: "live" };
 
 describe("buildTelegramDispatchEvents", () => {
   beforeEach(() => {
@@ -230,6 +246,180 @@ describe("buildTelegramDispatchEvents", () => {
     } finally {
       sqlite.close();
     }
+  });
+
+  it.each([
+    ["peggedUSD", "recovered-dex", null, 1],
+    ["peggedUSD", "recovered-dex", 1, null],
+    ["peggedUSD", "recovered-primary", 1, 1],
+    ["peggedEUR", "recovered-primary", null, 1],
+  ] as const)("keeps a classified %s %s close on legacy coverage", async (pegType, reason, reference, price) => {
+    const { sqlite, db } = createClosedDepegFixture(reason);
+    try {
+      sqlite.prepare(`UPDATE depeg_events SET ended_at = 3100, last_trusted_price_at = 1600,
+        peg_type = ?, recovery_peg_reference = ?, recovery_price = ?, price_coverage_json = ? WHERE id = 1`).run(
+        pegType, reference, price,
+        JSON.stringify({ intervals: [[1000, 1600]], atParIntervals: reason === "recovered-dex" ? [] : [[1600, 1600]] }),
+      );
+      const result = await buildTelegramDispatchEvents(db, eventSources(),
+        eventSnapshots({ safeDepegSnapshot: priorDepeg() }), () => "DPG");
+      expect(result.events.depegResolved[0]?.durationMinutes).toBe(35);
+      expect(result.nextDepegSnapshot).toEqual({});
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("uses the observed recovery to time a resolution and a later reopening", async () => {
+    const { sqlite, db } = createClosedDepegFixture("recovered-primary");
+    try {
+      const setCoverage = sqlite.prepare(`UPDATE depeg_events SET last_trusted_price_at = 1300,
+        recovery_peg_reference = 1, admitted_coverage_json = '[]', price_coverage_json = ? WHERE id = 1`);
+      const dispatch = (reopened: boolean) => buildTelegramDispatchEvents(db,
+        eventSources({ activeDepegRows: reopened ? [activeDepeg()] : [] }),
+        eventSnapshots({ safeDepegSnapshot: priorDepeg() }), () => "DPG");
+      setCoverage.run(JSON.stringify({ intervals: [[1000, 1300]] }));
+      const held = await dispatch(false);
+      expect(held.events.depegResolved).toEqual([]);
+      expect(held.nextDepegSnapshot["coin-depeg"]).toMatchObject({ eventId: 1, recoveryPending: true });
+      setCoverage.run(JSON.stringify({ intervals: [[1000, 1300]], atParIntervals: [[1300, 1300]] }));
+      const retry = await buildTelegramDispatchEvents(db, eventSources(),
+        eventSnapshots({ safeDepegSnapshot: held.nextDepegSnapshot }), () => "DPG");
+      expect(retry.events.depegResolved[0]?.durationMinutes).toBe(5);
+      expect(retry.nextDepegSnapshot).toEqual({});
+      expect((await dispatch(true)).events.depegTriggered[0]?.reopenedAfterMinutes).toBe(10);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("advances to the replacement event while the previous recovery lacks evidence", async () => {
+    const { sqlite, db } = createClosedDepegFixture("recovered-dex");
+    try {
+      sqlite.exec(`UPDATE depeg_events SET peg_type = 'peggedEUR', recovery_peg_reference = 1.1,
+        recovery_price = 1.1, last_trusted_price_at = 1300,
+        price_coverage_json = '{"intervals":[[1000,1300]],"atParIntervals":[]}' WHERE id = 1`);
+      let previous = priorDepeg();
+      for (const peak of [280, 600, 1000]) {
+        const rows = [activeDepeg(peak)];
+        const state = eventSnapshots({ safeDepegSnapshot: previous });
+        state.currentSnapshots.depeg = buildDepegSnapshot(rows);
+        const { events, nextDepegSnapshot } = await buildTelegramDispatchEvents(
+          db, eventSources({ activeDepegRows: rows }), state, () => "DPG",
+        );
+        expect(events.depegResolved).toEqual([]);
+        expect(events.depegTriggered).toHaveLength(peak === 280 ? 1 : 0);
+        expect(events.depegTriggered[0]?.reopenedAfterMinutes).toBeUndefined();
+        expect(events.depegWorsening).toHaveLength(peak === 280 ? 0 : 1);
+        expect(nextDepegSnapshot).toEqual(state.currentSnapshots.depeg);
+        previous = nextDepegSnapshot;
+      }
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it.each(["trigger", "worsening"] as const)("pairs a %s alert with the stored peak reference only", async (kind) => {
+    const row = {
+      ...activeDepeg(341), stablecoin_id: "idrt-rupiah-token", symbol: "IDRT", peg_type: "peggedIDR",
+      start_price: 0.000061, peg_reference: 0.000062, peak_price: 0.00005718,
+      peak_peg_reference: 0.0000592, peak_quote_domain: "usd" as const,
+    };
+    const prior: DepegSnapshot = kind === "worsening" ? { "idrt-rupiah-token": {
+      stablecoinId: row.stablecoin_id, symbol: row.symbol, direction: row.direction,
+      deviationBps: 120, price: row.start_price, pegReference: row.peg_reference, eventId: row.event_id,
+    } } : {};
+    for (const reference of [row.peak_peg_reference, null]) {
+      const { events } = await buildTelegramDispatchEvents(
+        preparingD1(),
+        eventSources({ activeDepegRows: [{ ...row, peak_peg_reference: reference }] }),
+        eventSnapshots({ safeDepegSnapshot: prior }),
+        () => row.symbol,
+      );
+      const payload = kind === "worsening" ? events.depegWorsening : events.depegTriggered;
+      expect(payload).toEqual([expect.objectContaining({
+        price: 0.00005718, pegReference: reference, priceCurrency: "USD",
+      })]);
+    }
+  });
+
+  it.each(["reason flag", "peak receipt"] as const)("labels the peer benchmark in dispatched full and compact alerts (%s)", async (marker) => {
+    const row = {
+      ...activeDepeg(340), peak_price: 0.966, peak_peg_reference: 1,
+      ...(marker === "reason flag" ? { pending_reason: "confirmation-window+low-confidence+peer-relative" }
+        : { peer_basis_json: JSON.stringify({ peak: { basis: "peer-relative" } }) }),
+    };
+    const sources = eventSources({ activeDepegRows: [row] });
+    const { events } = await buildTelegramDispatchEvents(preparingD1(), sources, eventSnapshots(), () => "DPG");
+    const { events: worsening } = await buildTelegramDispatchEvents(preparingD1(), sources, eventSnapshots({
+      safeDepegSnapshot: { [row.stablecoin_id]: {
+        stablecoinId: row.stablecoin_id, symbol: row.symbol, direction: row.direction,
+        deviationBps: 120, price: 0.988, pegReference: 1, eventId: row.event_id, peakBasis: "peer-relative",
+      } },
+    }), () => "DPG");
+    const [trigger] = events.depegTriggered;
+    const [advance] = worsening.depegWorsening;
+    expect(trigger.peakBasis).toBe("peer-relative");
+    expect(formatDepegTriggeredLine(trigger)).toContain("3.4% below the peer median ($1.00) (lower confidence)");
+    expect(formatDepegWorseningLine(advance)).toContain("3.4% below the peer median ($1.00) (lower confidence)");
+    const compact = formatConsolidatedMessage({
+      dews: [], safety: [], reserve: [], depegResolved: [],
+      depegTriggered: [trigger, { ...trigger, stablecoinId: "another-coin" }], depegWorsening: [advance],
+    });
+    expect(compact).toContain("3.4% below the peer median (lower confidence)");
+    expect(compact).not.toMatch(/lost its peg|depeg deepened/);
+  });
+
+  it.each([
+    ["peer-relative", "benchmark"],
+    ["benchmark", "peer-relative"],
+    ["native-peg", "benchmark"],
+    ["benchmark", "native-peg"],
+  ] as const)("reseeds without worsening on a %s to %s peak change", async (before, after) => {
+    const rowWithBasis = (peak: number, basis: string) => ({
+      ...activeDepeg(peak),
+      peer_basis_json: JSON.stringify({ peak: { basis } }),
+    });
+    const dispatch = (peak: number, basis: string, previous: DepegSnapshot) =>
+      dispatchFromDepegCache(rowWithBasis(peak, basis), previous);
+
+    const changed = await dispatch(340, after, buildDepegSnapshot([rowWithBasis(120, before)]));
+    expect(changed.events.depegWorsening).toEqual([]);
+    expect(changed.events.depegTriggered).toEqual([]);
+    expect(changed.baseline["coin-depeg"]).toMatchObject({ deviationBps: 340, eventId: 2 });
+    expect(changed.baseline["coin-depeg"].peakBasis).toBe(after === "benchmark" ? undefined : after);
+
+    const next = await dispatch(900, after, changed.baseline);
+    expect(next.events.depegWorsening).toEqual([
+      expect.objectContaining({ previousDeviationBps: 340, currentDeviationBps: 900 }),
+    ]);
+  });
+
+  it("keeps widening a legacy native peak when its next row adds the native marker", async () => {
+    const prior = {
+      ...activeDepeg(160), ...bilira, peg_reference: 1, peak_price: 1.016,
+    };
+    const baseline = buildDepegSnapshot([prior]);
+    expect(baseline["tryb-bilira"]).toMatchObject({ peakBasis: "native-peg", priceCurrency: "TRY" });
+    const { events } = await dispatchFromDepegCache(
+      { ...prior, peak_deviation_bps: 340, peak_price: 1.034, peak_quote_domain: "native-peg" }, baseline);
+    expect(events.depegWorsening).toEqual([
+      expect.objectContaining({ previousDeviationBps: 160, currentDeviationBps: 340 }),
+    ]);
+  });
+
+  it("emits the first native worsening against a main-era snapshot", async () => {
+    const row = {
+      ...activeDepeg(600, "below", 42), ...bilira, start_price: 0.984, peak_price: 0.94,
+    };
+    const { events, nextDepegSnapshot } = await dispatchFromDepegCache(row, {
+      "tryb-bilira": { stablecoinId: row.stablecoin_id, symbol: row.symbol, eventId: 42,
+        direction: "below", deviationBps: 160, price: 0.984, pegReference: 1 },
+    });
+    expect(events.depegWorsening).toEqual([expect.objectContaining({
+      previousDeviationBps: 160, currentDeviationBps: 600, priceCurrency: "TRY", peakBasis: "native-peg",
+    })]);
+    expect(nextDepegSnapshot["tryb-bilira"]).toMatchObject({ eventId: 42, deviationBps: 600, peakBasis: "native-peg" });
   });
 
   it("emits depeg worsening only when a supported subscriber step is crossed", async () => {

@@ -213,12 +213,16 @@ describe("handleStatus", () => {
     });
   });
 
-  it("does not let a tiny on-chain monitor population escalate data quality via ratios alone", async () => {
+  it.each([
+    { evidence: "legacy", nativeSupply: undefined, divergences: 1 },
+    { evidence: "observed native", nativeSupply: 1, divergences: 0 },
+    { evidence: "unavailable native", nativeSupply: null, divergences: 0 },
+  ])("does not let a tiny on-chain monitor population escalate data quality with $evidence supply", async ({ nativeSupply, divergences }) => {
     const now = Math.floor(Date.now() / 1000);
     const onchainActiveWindowStart = now - 3 * 24 * 3600;
     const onchainFreshWindowStart = now - STATUS_ONCHAIN_FRESH_WINDOW_SEC;
     const stablecoinsCache = JSON.stringify({
-      peggedAssets: [{ id: "kau-kinesis", symbol: "KAU", price: 3000, circulating: { peggedXAU: 90_000_000 } }],
+      peggedAssets: [{ id: "kau-kinesis", symbol: "KAU", price: 3000, circulating: { peggedXAU: 90_000_000 }, circulatingNative: nativeSupply }],
     });
     const jobs = Object.keys(fixtureCRON_INTERVALS);
     const cronRows = [
@@ -282,8 +286,8 @@ describe("handleStatus", () => {
 
     expect(body.dataQuality.onchainSupplyMonitoring).toBe("active");
     expect(body.dataQuality.onchainSupplyTrackedCoins).toBe(2);
-    expect(body.dataQuality.onchainSupplyDivergences).toBe(1);
-    expect(body.dataQuality.onchainDivergenceRatio).toBe(0.5);
+    expect(body.dataQuality.onchainSupplyDivergences).toBe(divergences);
+    expect(body.dataQuality.onchainDivergenceRatio).toBe(divergences / 2);
     expect(body.dataQualityStatus).toBe("healthy");
     expect(body.rawOverallStatus).toBe("healthy");
     // As of the 2026-04-13 status-stability hardening,

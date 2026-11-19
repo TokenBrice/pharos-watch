@@ -4,6 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { refreshPagesReleaseData, shouldFailReleaseRefresh, type ReleaseRefreshDependencies } from "../maintenance/refresh-pages-release-data.ts";
 import { SnapshotIntegrityError } from "../lib/sync-from-api";
+import * as commandRunner from "../lib/command-runner.mts";
+import { PUBLIC_DATASETS_REQUIRE_CURRENT_SAFETY } from "../lib/public-dataset-projections";
 
 const tempDirs: string[] = [];
 
@@ -61,6 +63,29 @@ function concurrencyBarrier(parties: number) {
 }
 
 describe("Pages release data refresh", () => {
+  it("requires current Safety before a prior-date release can replace the latest bundle", async () => {
+    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-10-19T12:00:00Z"));
+    const spawn = vi.spyOn(commandRunner, "runSpawnCommand").mockResolvedValue({
+      status: 1, aborted: false, output: "Safety publication identity does not match the envelope identity\n",
+    });
+    const paths = fixture();
+    const redirects = readFileSync(join(paths.repoRoot, "public/_redirects"));
+    const result = await refreshPagesReleaseData({
+      ...paths,
+      dependencies: { digests: () => ok(), depegEvents: () => ok() },
+      env: { NODE_ENV: "test" },
+    });
+    expect(spawn).toHaveBeenCalledOnce();
+    expect(spawn).toHaveBeenCalledWith(
+      expect.objectContaining({ args: ["run", "generate:public-datasets", "--", "--repoint-current"] }),
+      { PUBLIC_DATASETS_DATE: "2026-10-18", [PUBLIC_DATASETS_REQUIRE_CURRENT_SAFETY]: "1" },
+    );
+    expect(result.publicDatasets).toEqual({ ok: false, rolledBack: true });
+    expect(readFileSync(join(paths.repoRoot, "public/_redirects"))).toEqual(redirects);
+    expect(readFileSync(join(paths.repoRoot, "public/datasets/latest.json"), "utf8")).toBe("committed\n");
+  });
+
   it("isolates a digest producer failure from successful depeg and dataset refreshes", async () => {
     vi.spyOn(process.stdout, "write").mockImplementation(() => true);
     const paths = fixture();

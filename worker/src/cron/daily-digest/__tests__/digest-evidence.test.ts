@@ -1,6 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { formatCurrency } from "@shared/lib/format";
+import { DAY_SECONDS, HOUR_SECONDS } from "@shared/lib/time-constants";
 import type { DigestEditorialCandidate, DigestInputData, DigestNextTrigger } from "@shared/types/digest";
 import { collectActiveDepegs, collectResolvedDepegs } from "../collectors-market";
 import { collectDewsStress, collectYieldAnomalies } from "../collectors-risk";
@@ -20,6 +22,8 @@ function input(at: number, current = true): DigestInputData {
 const trigger: DigestNextTrigger = { id: "trigger:depeg:usdt-tether", stablecoinId: "usdt-tether", symbol: "USDT", metric: "depeg-bps", comparator: "abs-gte", thresholdValue: 150, thresholdLabel: "150 bps", label: "Widening", rationale: "Stress", detail: "Widening" };
 
 describe("canonical comparable digest evidence", () => {
+  const fixtures = createLatestSchemaFixtureTracker();
+  afterEach(fixtures.closeAll);
   it.each([[true, false], [false, true], [false, false], [true, true]])("compares current=%s to current=%s without borrowing the peak", (before, after) => {
     const previous = { ...input(113600, before), nextTriggers: [trigger] };
     const current = input(200000, after);
@@ -56,7 +60,8 @@ describe("canonical comparable digest evidence", () => {
   });
 
   it.each(["recovered-primary", "coverage-lost-supply"])("requires positive closure: %s", async (closeReason) => {
-    const ctx = makeCollectorCtx(mockD1([{ match: "FROM depeg_events", rows: [{ stablecoin_id: "usdt-tether", symbol: "USDT", direction: "below", peak_deviation_bps: -900, started_at: 1, ended_at: 199999, close_reason: closeReason, recovery_price: closeReason === "recovered-primary" ? 1 : null }] }]));
+    const ctx = makeCollectorCtx(mockD1([{ match: "FROM depeg_events", rows: [{ stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD", direction: "below", peak_deviation_bps: -900, started_at: 1, ended_at: 199999, close_reason: closeReason, recovery_price: closeReason === "recovered-primary" ? 1 : null }] }]));
+    ctx.nowSec = 200000;
     ctx.evidence = {};
     await collectResolvedDepegs(ctx);
     const current = { ...input(200000), topDepegs: [], editorialCandidates: [] };
@@ -91,7 +96,7 @@ describe("canonical comparable digest evidence", () => {
     expect(buildForwardLookOutcomes(input(200000), previous, ctx.evidence)[0].status).toBe("unavailable");
   });
 
-  it("excludes reviewed disputes from active and resolved event counts while keeping the evidence rows", async () => {
+  it("excludes reviewed disputes from the active count while keeping the active evidence rows", async () => {
     const verdicts = ["disputed", "false_positive", "confirmed", null] as const;
     const activeRows = verdicts.map((audit_verdict, index) => ({
       stablecoin_id: `coin-${index}`, symbol: `C${index}`, direction: "below", peak_deviation_bps: -900,
@@ -104,18 +109,69 @@ describe("canonical comparable digest evidence", () => {
     const active = await collectActiveDepegs(activeCtx);
     expect(active.value.activeDepegCount).toBe(2);
     expect(activeCtx.evidence.activeDepegs).toHaveLength(4);
+  });
 
-    const resolvedRows = verdicts.map((audit_verdict, index) => ({
-      stablecoin_id: `coin-${index}`, symbol: `C${index}`, direction: "below", peak_deviation_bps: -900,
-      started_at: 1, ended_at: 2, close_reason: "recovered-primary", recovery_price: 1, audit_verdict,
-    }));
-    const resolvedCtx = makeCollectorCtx(mockD1([{ match: "FROM depeg_events", rows: resolvedRows }]));
-    resolvedCtx.evidence = {};
-    resolvedCtx.trackedStablecoinIds = new Set(resolvedRows.map((row) => row.stablecoin_id));
-    resolvedCtx.mcapById = new Map(resolvedRows.map((row) => [row.stablecoin_id, 1e9]));
-    const resolved = await collectResolvedDepegs(resolvedCtx);
-    expect(resolved.value.resolvedDepegCount).toBe(2);
-    expect(resolvedCtx.evidence.recoveredDepegs).toHaveLength(4);
+  it("admits only public recoveries into the count, signal keys and evidence", async () => {
+    const { db, sqlite } = fixtures.open();
+    const now = 1_795_017_600, start = now - 4 * HOUR_SECONDS, end = now - 600, restart = now - 300;
+    const insert = sqlite.prepare(`INSERT INTO depeg_events
+      (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price,
+       peg_reference, recovery_price, recovery_peg_reference, close_reason, last_trusted_price_at, price_coverage_json)
+      VALUES (?, ?, ?, ?, 'below', -310, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    const coverage = JSON.stringify({ intervals: [[start, end]], atParIntervals: [[end - 300, end]] });
+    insert.run(101, "eurc-circle", "EURC", "peggedEUR", start, end, 1.0659, 1.1, 1.1, 1.1, "recovered-dex", end, coverage);
+    insert.run(102, "usdt-tether", "USDT", "peggedUSD", start, end, 0.969, 1, 1, 1, "recovered-primary", null, null);
+    insert.run(103, "usdt-tether", "USDT", "peggedUSD", restart, null, 0.969, 1, null, null, null, null, null);
+    for (const [id, verdict] of [[104, "disputed"], [105, "false_positive"]] as const) {
+      insert.run(id, "usdc-circle", "USDC", "peggedUSD", start + id, end, 0.969, 1, 1, 1, "recovered-primary", null, null);
+      sqlite.prepare(`INSERT INTO depeg_event_provenance (event_id, source_kind, audit_verdict, created_at, updated_at)
+        VALUES (?, 'live', ?, ?, ?)`).run(id, verdict, end, end);
+    }
+    sqlite.prepare("UPDATE depeg_events SET disposition = 'repaired', admitted_coverage_json = '[]' WHERE id = 101").run();
+    const key = `ddr2:${"a".repeat(32)}`;
+    sqlite.prepare(`INSERT INTO depeg_resolver_incident_event_links (incident_key, event_id, relation, linked_at)
+      VALUES (?, 102, 'observed', ?), (?, 103, 'observed', ?)`).run(key, start, key, restart);
+    sqlite.prepare(`INSERT INTO depeg_resolver_incidents (incident_key, stablecoin_id, peg_currency, direction, first_event_id,
+      current_event_id, first_started_at, current_started_at, first_observed_peak_bucket_bps, source_fingerprint, created_at, updated_at)
+      VALUES (?, 'usdt-tether', 'USD', 'below', 102, 103, ?, ?, 300, ?, ?, ?)`).run(key, start, restart, "b".repeat(64), start, restart);
+    const ids = ["eurc-circle", "usdt-tether", "usdc-circle"];
+    const ctx = makeCollectorCtx(db);
+    Object.assign(ctx, { nowSec: now, trackedStablecoinIds: new Set(ids), mcapById: new Map(ids.map(id => [id, 1e8])), evidence: {} });
+    expect((await collectResolvedDepegs(ctx)).value).toEqual({
+      resolvedDepegCount: 0, resolvedDepegSignalKeys: [], resolvedDepegs: undefined,
+    });
+    expect(ctx.evidence?.recoveredDepegs).toEqual([]);
+
+    sqlite.prepare("UPDATE depeg_events SET disposition = NULL, admitted_coverage_json = NULL WHERE id = 101").run();
+    const { value } = await collectResolvedDepegs(ctx);
+    expect(value.resolvedDepegCount).toBe(1);
+    expect(value.resolvedDepegSignalKeys).toEqual([`eurc-circle:${start}:resolved`]);
+    expect(value.resolvedDepegs).toMatchObject([{ symbol: "EURC", durationHours: 4 }]);
+  });
+
+  it("uses admitted recovery time for daily counts, signal keys and duration", async () => {
+    const now = 1_795_010_400;
+    const id = "eurc-circle";
+    const closedRow = (ended_at: number, atPar: boolean) => {
+      const started_at = ended_at - 3.5 * HOUR_SECONDS - 300;
+      const last = ended_at - 900;
+      return {
+        id: ended_at, stablecoin_id: id, symbol: "EURC", peg_type: "peggedEUR", direction: "below",
+        peak_deviation_bps: -310, started_at, ended_at, close_reason: "recovered-dex", recovery_price: 1.1,
+        recovery_peg_reference: 1.1, last_trusted_price_at: last,
+        price_coverage_json: JSON.stringify({ intervals: [[started_at, last]], atParIntervals: atPar ? [[last, last]] : [] }),
+      };
+    };
+    const admitted = closedRow(now - 600, true);
+    const ctx = makeCollectorCtx(mockD1([{ match: "FROM depeg_events", rows: [
+      closedRow(now - 300, false), admitted, closedRow(now - DAY_SECONDS + 60, true),
+    ] }]));
+    Object.assign(ctx, { nowSec: now, trackedStablecoinIds: new Set([id]), mcapById: new Map([[id, 1e8]]), evidence: {} });
+    const result = await collectResolvedDepegs(ctx);
+    expect(result.value.resolvedDepegCount).toBe(1);
+    expect(result.value.resolvedDepegSignalKeys).toEqual([`${id}:${admitted.started_at}:resolved`]);
+    expect(result.value.resolvedDepegs).toMatchObject([{ endedAt: admitted.last_trusted_price_at, durationHours: 3 }]);
+    expect(ctx.evidence?.recoveredDepegs).toEqual(result.value.resolvedDepegs);
   });
 
   it("never resolves or scores an unavailable active-event query", async () => {
@@ -131,17 +187,18 @@ describe("canonical comparable digest evidence", () => {
   it("evaluates a native-peg depeg under the six-hour event-native budget", async () => {
     const NATIVE_QUOTE_AGE_SEC = 20 * 60;
     const DAY_SECONDS = 86_400;
-    // Wednesday 16:00 UTC, with the prior run also inside FX trading hours, so
-    // both legs are live native deviations rather than a closed-market hold.
     const now = 1_795_017_600;
-    const collect = async (at: number, quote: number) => {
+    const collect = async (at: number, quote: number, kind: "traded-pair" | "conversion" = "traded-pair") => {
       const ctx = makeCollectorCtx(mockD1([{
         match: "FROM depeg_events",
         rows: [{
           stablecoin_id: "eurc-circle", symbol: "EURC", peg_type: "peggedEUR", source: "live",
           direction: "below", peak_deviation_bps: -800, started_at: now - 3 * DAY_SECONDS,
           start_price: 0.985, peak_price: 0.92, peg_reference: 1, quote_mode: "native-peg",
-          current_native_quote: JSON.stringify({ value: quote, observedAt: at - NATIVE_QUOTE_AGE_SEC, source: "coingecko" }),
+          current_native_quote: JSON.stringify({
+            value: quote, observedAt: at - NATIVE_QUOTE_AGE_SEC, source: "coingecko",
+            derivation: { kind, lineage: { venue: "bitstamp", pair: "EURC/EUR" } },
+          }),
         }],
       }]));
       ctx.nowSec = at;
@@ -160,6 +217,9 @@ describe("canonical comparable digest evidence", () => {
       stablecoinId: "eurc-circle", quoteMode: "native-peg", severityBasis: "current",
       currentBps: -800, priceObservedAt: now - NATIVE_QUOTE_AGE_SEC,
     });
+    const converted = await collect(now, 0.92, "conversion");
+    expect(converted[0]).toMatchObject({ severityBasis: "peak-fallback" });
+    expect(converted[0].priceObservedAt).toBeUndefined();
     const armed = buildNextTriggers({ ...input(now), topDepegs: current })
       .find((row) => row.metric === "depeg-bps");
     expect(armed).toMatchObject({ stablecoinId: "eurc-circle", symbol: "EURC" });

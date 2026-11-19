@@ -55,6 +55,23 @@ function makeDbWithStablecoinsValue(value: string | null): D1Database {
 }
 
 describe("loadStablecoinsCache", () => {
+  it.each(["published", "critical-fields"] as const)("isolates invalid evidence and preserves the cutover in the %s decoder", async (contract) => {
+    const eur = { pegKey: "peggedEUR", source: "openExchangeRates", cadence: "intraday", usdPerUnit: 1.1, observedAtSec: 100 };
+    const read = (extra: Record<string, unknown>) => loadStablecoinsCache(makeDbWithStablecoinsValue(JSON.stringify({
+      peggedAssets: [makePublishedAsset()], ...extra,
+    })), { contract });
+    const result = await read({ fxReferenceObservations: {
+      peggedEUR: eur, peggedGBP: eur, peggedCHF: { ...eur, pegKey: "peggedCHF", repricing: { source: "chainlink", sessionOpenedAtSec: 99 } },
+    } });
+    expect(result).toMatchObject({ kind: "ok", payload: { fxReferenceObservations: { peggedEUR: eur } } });
+    if (result.kind === "ok") expect(Object.keys(result.payload.fxReferenceObservations!)).toEqual(["peggedEUR"]);
+    const old = await read({});
+    if (old.kind !== "ok") throw new Error(old.reason);
+    expect(old.payload).not.toHaveProperty("fxReferenceObservations");
+    expect(await read({ fxReferenceObservations: {} })).toMatchObject({ kind: "ok", payload: { fxReferenceObservations: {} } });
+    expect(await read({ fxReferenceObservations: null })).toMatchObject({ kind: "error", reason: "published-contract-invalid" });
+  });
+
   it.each(READ_INPUT_STATES.flatMap((state) => (["strict", "lenient"] as const).map((mode) => ({ state, mode }))))(
     "preserves $state evidence separately in $mode mode", async ({ state, mode }) => {
       const db = mockD1([{ match: "cache", rows: [], first: null,

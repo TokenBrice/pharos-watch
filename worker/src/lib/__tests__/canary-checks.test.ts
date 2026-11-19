@@ -37,6 +37,12 @@ const TAPE_CLASSES = [
   "score.downgraded", "yield.warning_emitted", "yield.pys_dropped",
 ];
 const TAPE_YIELD_INSERT = "INSERT INTO yield_history (stablecoin_id,source_key,recorded_at,is_best,apy,data_source) VALUES ('a','a',?,1,1,'a')";
+const TAPE_SCORE_V2_INSERT = `INSERT INTO safety_score_history_v2
+  (history_id, stablecoin_id, recorded_at, model, methodology_version,
+   evaluation_build_digest, base_input_generation_id, model_publication_generation_id,
+   transition_kind, grade, prev_grade, created_at, legacy_recorded_at)
+  VALUES (?, 'a', ?, 'v8', 'v8', '${"d".repeat(64)}',
+    'report-cards-input:v1:${"a".repeat(64)}', 'g', ?, 'A', ?, ?, ?)`;
 const TAPE_D1 = [
   { match: "canary:tape-oldest-unprojected", rows: [],
     first: Object.fromEntries(TAPE_CLASSES.map((name) => [name, NOW - 60])) },
@@ -752,6 +758,42 @@ describe("worker data invariant canaries", () => {
     }
   });
 
+  it.each([
+    ["v2", 8 * 3600],
+    ["legacy-only", 24 * 3600],
+    ["mirrored", 8 * 3600],
+  ] as const)("ages %s score rows from their queue clock", async (relation, queueOffset) => {
+    const { sqlite, db } = fixtures.open();
+    const day = Date.UTC(2026, 10, 17) / 1_000;
+    const createdAt = day + 8 * 3600;
+    const queueAt = day + queueOffset;
+    const insertV2 = sqlite.prepare(TAPE_SCORE_V2_INSERT);
+    insertV2.run("already-projected", day - 86400, "organic-grade-change", "B+", day - 7200, null);
+    if (relation !== "v2") {
+      sqlite.prepare("INSERT INTO safety_grade_history VALUES ('a', ?, 'A', NULL, 'B+', NULL, 'v8')").run(day);
+    }
+    if (relation !== "legacy-only") {
+      insertV2.run("new", day, "organic-grade-change", "B+", createdAt, relation === "mirrored" ? day : null);
+    }
+    for (const id of ["score.upgraded", "score.downgraded"]) {
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .run(tapeProjectorCursorKey(id), String(day - 86400), createdAt);
+    }
+    for (const [observedAt, waitingSec, status] of [
+      [createdAt + 540, relation === "legacy-only" ? 0 : 540, "ok"],
+      [queueAt + 5400, 5400, "ok"],
+      [queueAt + 5401, 5401, "degraded"],
+    ] as const) {
+      const result = await checkTapeClassLiveness(db, observedAt, {});
+      expect(result.status).toBe(status);
+      expect(result.metadata?.classes).toEqual(expect.arrayContaining(
+        ["score.upgraded", "score.downgraded"].map((eventClass) =>
+          expect.objectContaining({ eventClass, sourceMax: day, oldestUnprojectedAt: queueAt, waitingSec }),
+        ),
+      ));
+    }
+  });
+
   it.each([false, true])("tape cohort caught up %s", async (caught) => {
     const { sqlite, db } = fixtures.open();
     const expected = TAPE_CLASSES.map((eventClass, i) => {
@@ -775,17 +817,10 @@ describe("worker data invariant canaries", () => {
         VALUES ('g','a','a','a','a',1,'a','[]',${NOW - 7000});
     `);
     sqlite.prepare(TAPE_YIELD_INSERT).run(NOW - 8000);
-    const insertV2 = sqlite.prepare(
-      `INSERT INTO safety_score_history_v2
-         (history_id, stablecoin_id, recorded_at, model, methodology_version,
-          evaluation_build_digest, base_input_generation_id, model_publication_generation_id,
-          transition_kind, grade, prev_grade, created_at)
-       VALUES (?, 'a', ?, 'v8', 'v8', '${"d".repeat(64)}',
-         'report-cards-input:v1:${"a".repeat(64)}', 'g', ?, 'A', ?, 1)`,
-    );
-    insertV2.run("up", NOW - 10000, "organic-grade-change", "B+");
-    insertV2.run("down", NOW - 9000, "organic-grade-change", "B+");
-    insertV2.run("boundary", NOW, "methodology-boundary-baseline", null);
+    const insertV2 = sqlite.prepare(TAPE_SCORE_V2_INSERT);
+    insertV2.run("up", NOW - 10000, "organic-grade-change", "B+", NOW - 10000, null);
+    insertV2.run("down", NOW - 9000, "organic-grade-change", "B+", NOW - 9000, null);
+    insertV2.run("boundary", NOW, "methodology-boundary-baseline", null, NOW, null);
     const tape = async (at = NOW) => (await runCanaryChecks(db, { observedAt: at, mode: "status" }))
       .results.find((r) => r.checkId === "tape-class-liveness");
     const result = await tape();

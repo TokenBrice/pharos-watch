@@ -1,6 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeMintBurnConfig } from "../../../test-helpers/__shared/mint-burn-config";
+import * as evmRpc from "../../../lib/evm-rpc";
 import { fetchConservationBoundaries } from "../../../lib/mint-burn-conservation";
+import { MINT_BURN_CONFIGS } from "../../../lib/mint-burn-contracts";
+import { collectAffectedHours, recalcAffectedHours } from "../../../lib/mint-burn-pipeline/persistence";
+import { commitMintBurnMaterializedCoverage, mintBurnScanFingerprint } from "../../../lib/mint-burn-pipeline/scan-coverage";
+import { runMintBurnSupplyReconciliation } from "../../../lib/mint-burn-supply-reconciliation";
+import { mintBurnTapeEligibleSql } from "../../../lib/mint-burn-tape-claim";
 import { createMintBurnConfigSummary } from "../sync-config";
 import { mintBurnScanRequestFloor, syncMintBurnConfigWithRetries } from "../scan-with-retry";
 import { mintBurnConfigKey as configKey } from "../../../lib/mint-burn-contract-identity";
@@ -10,7 +17,8 @@ import type * as ScanRetryModule from "../scan-with-retry";
 vi.mock("../scan-with-retry", async (importOriginal) => ({
   ...await importOriginal<typeof ScanRetryModule>(), syncMintBurnConfigWithRetries: vi.fn(),
 }));
-vi.mock("../../../lib/mint-burn-conservation", () => ({
+vi.mock("../../../lib/mint-burn-conservation", async (importOriginal) => ({
+  ...await importOriginal<object>(),
   fetchConservationBoundaries: vi.fn(),
   conservationOnlyEventDefsFor: () => [],
   getMintBurnConservationEligibility: () => ({ supported: true }),
@@ -24,6 +32,7 @@ vi.mock("../run-state", () => ({
 }));
 
 const NOW = 1_800_000_000;
+const fixtures = createLatestSchemaFixtureTracker();
 const events = ["mint", "burn"].map((direction, index) => ({
   signature: `${direction}(uint256)`, topicHash: `0x${String(index + 1).repeat(64)}`,
   direction: direction as "mint" | "burn", amountEncoding: "first-data-uint256" as const,
@@ -75,7 +84,76 @@ beforeEach(() => {
     };
   });
 });
-afterEach(() => vi.useRealTimers());
+afterEach(() => { fixtures.closeAll(); vi.restoreAllMocks(); vi.useRealTimers(); });
+
+describe("mint/burn retained coverage", () => {
+  it("keeps a settled receipt when coverage is invalidated during the archive read", async () => {
+    const { db, sqlite } = fixtures.open();
+    const config = MINT_BURN_CONFIGS.find((entry) => entry.stablecoinId === "usds-sky")!;
+    const day = 86_400;
+    const start = Math.floor(NOW / day) * day - day;
+    sqlite.prepare("INSERT INTO cache (key,value,updated_at) VALUES (?,?,?)")
+      .run("mint-burn:daily-reconciliation-state", JSON.stringify({ firstDay: start, cursor: 0 }), NOW);
+    sqlite.prepare(`INSERT INTO mint_burn_scan_coverage
+      (config_key, config_fingerprint, chain_id, from_block, to_block, from_timestamp, to_timestamp, finality_tag, finalized_block, accepted_at)
+      VALUES (?, ?, 'ethereum', 99, 103, ?, ?, 'finalized', 103, ?)`)
+      .run(configKey(config), mintBurnScanFingerprint(config), start - 1, start + day, NOW);
+    sqlite.prepare(`INSERT INTO mint_burn_events
+      (id,stablecoin_id,symbol,chain_id,direction,amount,amount_raw,flow_type,tx_hash,block_number,timestamp,explorer_tx_url)
+      VALUES ('event','usds-sky','USDS','ethereum','mint',1,'20','standard','tx',101,?,'url')`).run(start + 10);
+    vi.spyOn(evmRpc, "resolveClosestBlockAtOrBeforeTimestamp").mockImplementation(async (_chain, timestamp) =>
+      timestamp < start ? 100 : 102);
+    vi.spyOn(evmRpc, "fetchEvmBlockHeader").mockImplementation(async (_chain, number) => typeof number === "number"
+      ? { number, timestamp: start - 1 + (number - 100) * day / 2, hash: `0x${number.toString(16).padStart(64, "0")}` }
+      : null);
+    const supply = (number: number | "latest" = 100) => 1_000n + BigInt((Number(number) - 100) * 5);
+    const boundaryRead = vi.spyOn(evmRpc, "fetchEvmUint256AtBlock").mockImplementation(async (_chain, _address, _selector, number) => supply(number));
+    const args = { db, configs: [config], now: NOW, budget: { count: 0, limit: 24 }, deadlineMs: Date.now() + 30_000,
+      rpcEndpointsByChain: new Map(), heads: new Map([["ethereum", 103]]), priceContext: { priceObservations: new Map(), priceHistory: new Map() } };
+    const receipt = () => sqlite.prepare("SELECT status, receipt_json FROM mint_burn_supply_reconciliation").get();
+    await runMintBurnSupplyReconciliation(args);
+    const original = receipt();
+    expect(original).toMatchObject({ status: "unexplained-residual" });
+    sqlite.exec("UPDATE mint_burn_events SET amount_raw = '10'");
+    boundaryRead.mockImplementationOnce(async (_chain, _address, _selector, number) => {
+      sqlite.exec("DELETE FROM mint_burn_scan_coverage");
+      return supply(number);
+    });
+    expect(await runMintBurnSupplyReconciliation({ ...args, now: NOW + 1 })).toMatchObject({ processed: 0 });
+    expect(receipt()).toEqual(original);
+  });
+
+  it.each(["usdz-anzen", "ousd-origin-protocol"])("gates large %s claims on current clean-hour proof", async (id) => {
+    const { db, sqlite } = fixtures.open();
+    const config = MINT_BURN_CONFIGS.find((entry) => entry.stablecoinId === id)!;
+    const hour = Math.floor(NOW / 3600) * 3600 - 3600;
+    sqlite.prepare(`INSERT INTO mint_burn_events
+      (id,stablecoin_id,symbol,chain_id,direction,amount,amount_usd,flow_type,tx_hash,block_number,timestamp,explorer_tx_url)
+      VALUES ('event',?,?,'ethereum','mint',1,50000000,'standard','tx',101,?,'url')`).run(id, config.symbol, hour + 10);
+    const hours = collectAffectedHours([{ stablecoin_id: id, chain_id: "ethereum", timestamp: hour }]);
+    const certify = async (revision: string) => {
+      await recalcAffectedHours(db, hours, { materializationRevision: revision });
+      await commitMintBurnMaterializedCoverage(db, {
+        configKey: configKey(config), configFingerprint: mintBurnScanFingerprint(config), chainId: "ethereum",
+        fromBlock: 100, toBlock: 102, fromTimestamp: hour, toTimestamp: hour + 3600, finalizedBlock: 102,
+        acceptedAt: NOW, materializedStablecoinId: id, materialization: { hours: [hour], revision },
+      }, []);
+    };
+    const claims = () => sqlite.prepare(`SELECT id FROM mint_burn_events AS e WHERE ${mintBurnTapeEligibleSql("e")}`).all();
+    await certify("initial");
+    sqlite.exec("UPDATE mint_burn_scan_coverage SET config_fingerprint = 'old'");
+    expect(claims()).toEqual([]);
+    sqlite.prepare("UPDATE mint_burn_scan_coverage SET config_fingerprint = ?").run(mintBurnScanFingerprint(config));
+    sqlite.prepare("INSERT INTO mint_burn_dirty_hours VALUES (?, 'ethereum', ?)").run(id, hour);
+    expect(claims()).toEqual([]);
+    sqlite.exec("DELETE FROM mint_burn_dirty_hours");
+    expect(claims()).toEqual([]);
+    await certify("recovered");
+    expect(claims()).toEqual([{ id: "event" }]);
+    sqlite.prepare("UPDATE mint_burn_events SET flow_type = ?").run(id === "usdz-anzen" ? "bridge_transfer" : "protocol_internal");
+    expect(claims()).toEqual([]);
+  });
+});
 
 describe("pending-admission catch-up budget", () => {
   it("serves admitted scans before pending conservation, with larger bounded pending ranges", async () => {

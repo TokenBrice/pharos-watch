@@ -37,6 +37,8 @@ import { mintBurnConfigKey } from "./mint-burn-contract-identity";
 import { MINT_BURN_HOURLY_CLASSIFICATION_TALLY_SQL, type MintBurnClassificationTallyRow, readMintBurnClassificationTallyRow, MINT_BURN_HOURLY_VALUATION_TALLY_SQL, type MintBurnValuationTallyRow, readMintBurnValuationTallyRow } from "./mint-burn-hourly-valuation";
 
 import { aggregateFlowCacheKey, FLOW_CACHE_PREFIX } from "./mint-burn-flow-cache-keys";
+import { MINT_BURN_RECEIPT_CLASSIFICATION_VERSION, needsCurrentMintBurnReceiptClassification } from "./mint-burn-published-gauge";
+import { isMintBurnBridgeSpoke } from "./mint-burn-canonical-chain";
 import {
   decodeMintBurnDisabledKeys, isGrandfatheredMintBurnConfig, mintBurnPreviouslyAdmitted, mintBurnPublicationDisabled, selectMintBurnStalledFrontiers,
   persistMintBurnAdmissions, persistMintBurnQuarantines, persistMintBurnResumptions,
@@ -194,7 +196,7 @@ export async function readMintBurnWindowContext(
     // Automatic pauses withhold flows, never unresolved operator conservation evidence.
     diagnosticConfigs: configs.filter((config) => scope.configs.includes(config)
       || (mintBurnPreviouslyAdmitted(config, admissions)
-        && !mintBurnPublicationDisabled(config, configs, admissions, disabledKeys))),
+        && !mintBurnPublicationDisabled(config, configs, admissions, disabledKeys, "diagnostic"))),
     publication: scope.publication,
     policy,
   };
@@ -371,6 +373,26 @@ export function aggregateHourlyRowsByChain(rows: HourlyRow[]): Map<string, FlowA
 
 export function mintBurnScanWindow(complete: boolean): MintBurnScanWindow {
   return { complete, unavailableReason: complete ? null : "scan-coverage-incomplete" };
+}
+
+/** A prior receipt policy's gross subtotals cannot be carried into a revised hour. */
+export function filterMintBurnReceiptClassifiedHours(
+  rows: HourlyRow[],
+  configs: readonly MintBurnContractConfig[],
+  segments: ReadonlyMap<string, readonly MintBurnScanSegment[]>,
+): HourlyRow[] {
+  const revisedPairs = new Map<string, MintBurnContractConfig[]>();
+  for (const config of configs) {
+    if (!needsCurrentMintBurnReceiptClassification(config.stablecoinId)) continue;
+    const pair = mintBurnPairKey(config.stablecoinId, config.chain.chainId);
+    const siblings = revisedPairs.get(pair) ?? [];
+    siblings.push(config);
+    revisedPairs.set(pair, siblings);
+  }
+  return rows.filter((row) => {
+    const revisedConfigs = revisedPairs.get(mintBurnPairKey(row.stablecoin_id, row.chain_id));
+    return !revisedConfigs || mintBurnScanCoverageAdmits(revisedConfigs, segments, row.hour_ts, row.hour_ts + 3600);
+  });
 }
 
 /**
@@ -567,10 +589,23 @@ function parseMintBurnCronMetadata(
 }
 
 
+function mintBurnDetailScopeChangedResponse(): Response {
+  return jsonResponse({ error: "Mint/burn detail awaits refresh", reason: "publication-scope-changed" }, { status: 503, noStore: true });
+}
+
 export function cachedFlowFallbackResponse(cached: { value: string; updatedAt: number }): Response {
   const parsed = readCachedJsonOr503<Record<string, unknown>>("mint-burn-flows", "mint-burn-flows", cached);
   if (!parsed.ok) {
     return parsed.response;
+  }
+  const { stablecoinId, chains } = parsed.data;
+  if (typeof stablecoinId === "string" && (
+    (needsCurrentMintBurnReceiptClassification(stablecoinId)
+      && parsed.data.receiptClassificationVersion !== MINT_BURN_RECEIPT_CLASSIFICATION_VERSION)
+    || (Array.isArray(chains) && chains.some((chain) => isRecord(chain) && typeof chain.chainId === "string"
+      && isMintBurnBridgeSpoke(stablecoinId, chain.chainId)))
+  )) {
+    return mintBurnDetailScopeChangedResponse();
   }
   const window = isRecord(parsed.data.window) ? parsed.data.window : null;
   const watermark = isRecord(window?.watermark) ? window.watermark : null;
@@ -629,8 +664,15 @@ export async function finalizeMintBurnFlowResponse(
   freshness: CronTimestampLookupResult,
   publicationPolicy?: string,
   persist = true,
+  options?: { receiptClassificationFiltered: true },
 ): Promise<Response> {
-  const { responseBody, response } = buildMintBurnFlowResponse(body, freshness);
+  if (typeof body.stablecoinId === "string" && needsCurrentMintBurnReceiptClassification(body.stablecoinId)
+    && !options?.receiptClassificationFiltered) return mintBurnDetailScopeChangedResponse();
+  const { receiptClassificationVersion: _version, ...flowBody } = body;
+  const { responseBody, response } = buildMintBurnFlowResponse({
+    ...flowBody,
+    ...(options?.receiptClassificationFiltered ? { receiptClassificationVersion: MINT_BURN_RECEIPT_CLASSIFICATION_VERSION } : {}),
+  }, freshness);
   const respondWithoutWrite = async (): Promise<Response> => {
     if (publicationPolicy !== undefined) {
       const current = await runWithOverloadRetry(() => prepareMintBurnPublicationPolicy(db).first<{ disabled_keys: string }>());

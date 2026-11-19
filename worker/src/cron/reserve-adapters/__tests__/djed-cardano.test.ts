@@ -29,7 +29,6 @@ const DJED_PRICE_USD = 1.0;
 // minted - bank stock = 1,467,573.426572 DJED circulating.
 const DJED_CIRCULATING = 1_467_573.426572;
 const RESERVE_USD = 25_034_263.75 * ADA_PRICE_USD; // ≈ 5,423,422.90
-const RATIO = RESERVE_USD / (DJED_CIRCULATING * DJED_PRICE_USD); // ≈ 3.6955
 
 interface DjedNetworkOverrides {
   bankStock?: bigint;
@@ -123,7 +122,7 @@ function djedCacheDb(circulating: number | null, price: number | null = 1) {
 }
 
 describe("djed-cardano", () => {
-  it("publishes the recorded bank census with a market-valued collateralization ratio", async () => {
+  it("publishes the recorded bank census and market-valued supply without asserting protocol coverage", async () => {
     const run = await runDjed();
     const { result } = run;
 
@@ -138,8 +137,8 @@ describe("djed-cardano", () => {
     expect(result.metadata?.totalReserveQuantity).toBeCloseTo(25_034_263.75, 4);
     expect(result.metadata?.totalReserveUsd).toBeCloseTo(RESERVE_USD, 2);
     expect(result.metadata?.supplyTokens).toBeCloseTo(DJED_CIRCULATING, 6);
-    expect(result.metadata?.totalLiabilitiesUsd).toBeCloseTo(DJED_CIRCULATING * DJED_PRICE_USD, 4);
-    expect(result.metadata?.collateralizationRatio).toBeCloseTo(RATIO, 3);
+    expect(result.metadata?.supplyUsd).toBeCloseTo(DJED_CIRCULATING * DJED_PRICE_USD, 4);
+    expect(result.metadata?.ratioUnavailableReason).toBe("not-comparable");
     expect(result.metadata?.observedBlock).toEqual({
       chain: "cardano",
       number: TIP.block_no,
@@ -183,7 +182,7 @@ describe("djed-cardano", () => {
       const run = await runDjed({ quoteOverrides: { [asset]: { timestamp, confidence } } });
       expectWarningEffect(run.result, "defillama-quote-quality", "degraded");
       expect(run.result.metadata?.totalReserveUsd).toBeCloseTo(RESERVE_USD, 2);
-      expect(run.result.metadata?.collateralizationRatio).toBeCloseTo(RATIO, 3);
+      expect(run.result.metadata?.collateralizationRatio).toBeUndefined();
       expect(run.result.metadata?.observedBlock).toMatchObject({ timestamp: TIP.block_time });
       const admission = evaluateAdapterSnapshotAdmission(run, TIP.block_time);
       expect(admission.eligible).toBe(false);
@@ -191,11 +190,20 @@ describe("djed-cardano", () => {
     });
   });
 
-  it("degrades but still publishes the ratio when the bank is undercollateralized", async () => {
-    const { result } = await runDjed({ adaPrice: 0.001 });
+  it.each([0.75, 1, 1.2])("does not use a $%s DJED market quote for bank liabilities, coverage, or SHEN equity", async (djedPrice) => {
+    const adaPrice = DJED_CIRCULATING * 0.9 / 25_034_263.75;
+    const run = await runDjed({ adaPrice, djedPrice });
+    const { result } = run;
 
-    expect(result.metadata?.collateralizationRatio).toBeLessThan(1);
-    expectWarningEffect(result, "reserve-undercollateralized", "degraded");
+    expect(result.metadata?.totalReserveUsd).toBeCloseTo(DJED_CIRCULATING * 0.9, 4);
+    expect(result.metadata?.supplyUsd).toBeCloseTo(DJED_CIRCULATING * djedPrice, 4);
+    expect(result.metadata?.totalLiabilitiesUsd).toBeUndefined();
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expect(result.metadata?.shareholderEquityUsd).toBeUndefined();
+    expect(result.metadata?.ratioUnavailableReason).toBe("not-comparable");
+    expect(result.metadata?.details?.coverageUnavailableReason).toBe("protocol-oracle-unavailable");
+    expect(result.warnings).toBeUndefined();
+    expect(evaluateAdapterSnapshotAdmission(run, TIP.block_time).eligible).toBe(true);
   });
 
   it("flags extraneous bank assets as info without valuing them", async () => {

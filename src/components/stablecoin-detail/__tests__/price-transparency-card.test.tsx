@@ -207,7 +207,8 @@ describe("PriceTransparencyCard", () => {
         coinData={{ ...makeCoinData("coingecko"), pegType: "peggedCHF", price: 1.189 }}
         consensusSources={["coingecko"]}
         agreeSources={["coingecko"]}
-        dexPriceCheck={{ agrees: true, dexPrice: 1.1866, dexDeviationBps: -20, sourcePools: 5, sourceTvl: 3_390_000 }}
+        dexPriceCheck={{ agrees: true, dexPrice: 1.1866, dexDeviationBps: -20, sourcePools: 5, sourceTvl: 3_390_000,
+          observedAtSec: Date.parse("2026-11-13T19:00:00Z") / 1000 }}
         pegCurrency="CHF"
         pegRef={1.19}
         compact={compact}
@@ -275,6 +276,24 @@ describe("PriceTransparencyCard", () => {
   });
 
   describe("DEX check verdict", () => {
+    it.each([
+      ["2026-10-30T20:50:00Z", "2026-10-30T21:05:00Z", "Reference market closed"],
+      ["2026-10-30T21:05:00Z", "2026-10-30T20:50:00Z", /from reference/],
+      ["2026-10-30T20:50:00Z", null, /from reference/],
+    ] as const)("uses the DEX observation clock (%s primary, %s DEX)", (primary, dex, expected) => {
+      render(<PriceTransparencyCard
+        coinData={{ ...makeCoinData("coingecko"), pegType: "peggedGOLD", price: 3500, priceObservedAt: Date.parse(primary) / 1000 }}
+        consensusSources={["coingecko"]}
+        agreeSources={["coingecko"]}
+        dexPriceCheck={{
+          agrees: false, dexPrice: 3430, dexDeviationBps: -200, sourcePools: 3, sourceTvl: 8_000_000,
+          observedAtSec: dex == null ? undefined : Date.parse(dex) / 1000,
+        }}
+      />);
+      expect(screen.getByText(expected)).toBeTruthy();
+      expect(screen.getByText("Disagrees")).toBeTruthy();
+    });
+
     it.each([
       { compact: false, sourcePools: 1 },
       { compact: true, sourcePools: 1 },

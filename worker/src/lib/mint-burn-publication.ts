@@ -7,6 +7,7 @@ import grandfatheredConfigKeys from "./mint-burn-pipeline/grandfathered-config-k
 import { FLOW_CACHE_PREFIX } from "./mint-burn-flow-cache-keys";
 import { batchExecute, executeAtomicBatch } from "./db";
 import { runWithOverloadRetry } from "./d1-overload-retry";
+import { isMintBurnBridgeSpoke } from "./mint-burn-canonical-chain";
 
 /** netFlow90dUsd is the longest published aggregate. */
 const MINT_BURN_ADMISSION_BASELINE_SEC = 90 * DAY_SECONDS;
@@ -125,6 +126,8 @@ export class MintBurnPublicationPolicyDecodeError extends Error {
   }
 }
 
+const LEGACY_SPOKE_POLICY_MARKER = "migration:0315";
+
 export function decodeMintBurnDisabledKeys(policy: string): Set<string> {
   let keys: unknown;
   try {
@@ -135,7 +138,8 @@ export function decodeMintBurnDisabledKeys(policy: string): Set<string> {
   if (!Array.isArray(keys) || !keys.every((key) => typeof key === "string")) {
     throw new MintBurnPublicationPolicyDecodeError("Invalid mint/burn publication policy");
   }
-  return new Set(keys);
+  // The migration appends a legacy-only spoke fence after the operator keys.
+  return new Set(keys[keys.length - 1] === LEGACY_SPOKE_POLICY_MARKER ? keys.slice(0, -2) : keys);
 }
 
 /** The durable disabled scope a rollout must not silently erase. */
@@ -167,8 +171,11 @@ export async function syncMintBurnPublicationPolicy(
     UNION SELECT value FROM json_each(?)`;
   await executeAtomicBatch(db, [
     db.prepare(`DELETE FROM cache WHERE key >= ? AND key < ?
-      AND COALESCE((SELECT disabled_keys FROM mint_burn_publication_policy WHERE id = 1), '[]') != ?`)
-      .bind(`${FLOW_CACHE_PREFIX}:`, `${FLOW_CACHE_PREFIX}:\uffff`, policy),
+      AND COALESCE((SELECT CASE
+        WHEN json_extract(CASE WHEN json_valid(disabled_keys) THEN disabled_keys ELSE '[]' END, '$[#-1]') = ?
+        THEN json_remove(disabled_keys, '$[#-1]', '$[#-1]') ELSE disabled_keys END
+      FROM mint_burn_publication_policy WHERE id = 1), '[]') != ?`)
+      .bind(`${FLOW_CACHE_PREFIX}:`, `${FLOW_CACHE_PREFIX}:\uffff`, LEGACY_SPOKE_POLICY_MARKER, policy),
     // A pause for a key that is gone from the active, admission and grandfathered
     // rosters can never be cleared by a scan, so drop it instead of withholding
     // retained history.
@@ -196,7 +203,9 @@ export function mintBurnPreviouslyAdmitted(
 export function mintBurnPublicationDisabled(
   config: MintBurnContractConfig, configs: readonly MintBurnContractConfig[],
   rows: readonly MintBurnAdmissionRow[], disabledKeys: ReadonlySet<string>,
+  scope: "public" | "diagnostic" = "public",
 ): "operator-disabled" | "shared-bucket-disabled" | null {
+  if (scope === "public" && isMintBurnBridgeSpoke(config.stablecoinId, config.chain.chainId)) return "operator-disabled";
   if (config.enabled === false || disabledKeys.has(mintBurnConfigKey(config))) return "operator-disabled";
   // shortcut: legacy hours have no contract attribution; split storage before individual sibling rollback.
   return configs.some((sibling) => sibling.stablecoinId === config.stablecoinId
@@ -273,6 +282,8 @@ export function resolveMintBurnPublication(
     publication.legs.push({
       configKey: key, configFingerprint: fingerprint, stablecoinId: config.stablecoinId, chainId: config.chain.chainId,
       status: disabled ? "disabled" : admitted ? "admitted" : "pending-admission", reason,
+      ...(disabled && isMintBurnBridgeSpoke(config.stablecoinId, config.chain.chainId)
+        ? { disposition: "bridge-spoke-non-issuer-flow" as const } : {}),
       admittedAt: prior && prior !== "grandfathered" ? prior.admitted_at : admitted && !prior ? now : null,
       baselineFrom: prior && prior !== "grandfathered" ? prior.baseline_from : tail?.from_timestamp ?? null,
       baselineTo: prior && prior !== "grandfathered" ? prior.baseline_to : frontier,

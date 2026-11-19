@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { DependencyWatershed } from "@/components/dependency-watershed/dependency-watershed";
+import { DependencyWatershed, downstreamHeadline } from "@/components/dependency-watershed/dependency-watershed";
 import { DependencyMapBasinList } from "@/components/dependency-watershed/dependency-map-basin-list";
 import { buildDependencyHubsModel } from "@shared/lib/dependency-hubs-model";
 import type { DependencyGraphResponse } from "@shared/types/dependency-graph";
@@ -103,14 +103,22 @@ describe("DependencyWatershed", () => {
   it("states the beam as a relationship, not an outcome", () => {
     const pub = publication(edges);
     const result = { rows: [{ id: "bbb", minHop: 1, share: 0.5, band: "material" as const, exposureUsd: 300, supplyUnknown: false, scoreUnknown: false, paths: [] }],
-      direct: { knownUsd: 300, excludedSupplyUnknownIds: [], unknownShareEdgeCount: 0, complete: true, overlapUsd: 0, integrityFlag: false },
-      indirect: { knownUsd: 0, excludedSupplyUnknownIds: [], unknownShareEdgeCount: 0, complete: true, overlapUsd: 0, integrityFlag: false },
+      direct: { knownUsd: 300, excludedSupplyUnknownIds: [], unknownShareEdgeCount: 0, complete: true, hasKnownUsd: true, overlapUsd: 0, overlapUpperBoundUsd: 0, integrityFlag: false },
+      indirect: { knownUsd: 0, excludedSupplyUnknownIds: [], unknownShareEdgeCount: 0, complete: true, hasKnownUsd: true, overlapUsd: 0, overlapUpperBoundUsd: 0, integrityFlag: false },
       reached: 1, bandCounts: { material: 1, minor: 0, trace: 0, unknown: 0 } };
     render(<DependencyWatershed publication={pub} overlay={{ roots: ["aaa"], rows: new Map([["bbb", { minHop: 1 }]]) }} result={result} labelOf={labelOf} onAddRoot={vi.fn()} fallback={null} />);
     expect(screen.getByText("Downstream of AAA: $300.00 of mapped dependent supply across 1 coin")).toBeTruthy();
     const detail = screen.getByText(/^direct \$300\.00/);
     expect(detail.textContent).toContain("indirect $0.00");
-    expect(detail.textContent).not.toContain("indirect USD unavailable");
+    expect(detail.textContent).toContain("Layer overlap upper bound $0.00");
+    for (const [reason, label] of [
+      ["shared-book-claims-unmatched", "unmatched shared-book claims"],
+      ["serial-parent-attribution-ambiguous", "ambiguous serial parent attribution"],
+    ] as const) {
+      expect(downstreamHeadline("AAA", {
+        ...result, indirect: { ...result.indirect, overlapUpperBoundUsd: null, overlapUnavailableReason: reason },
+      }).detail).toContain(`Overlap bound unavailable (${label})`);
+    }
     expect(screen.getByText("Linked coins; not a loss forecast")).toBeTruthy();
     expect(within(screen.getByRole("group", { name: /Dependency watershed/ })).getAllByRole("button")[0]!.getAttribute("aria-pressed")).toBe("true");
   });

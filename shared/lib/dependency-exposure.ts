@@ -8,7 +8,11 @@ export interface ExposureTotals {
   excludedSupplyUnknownIds: string[];
   unknownShareEdgeCount: number;
   complete: boolean;
+  hasKnownUsd?: boolean;
+  /** Known overlap subtotal. Footprints expose the full bound and its availability separately. */
   overlapUsd: number;
+  overlapUpperBoundUsd?: number | null;
+  overlapUnavailableReason?: "shared-book-claims-unmatched" | "serial-parent-attribution-ambiguous";
   integrityFlag: boolean;
 }
 export interface SharedBookIndex {
@@ -260,6 +264,9 @@ interface ExposureRow {
   paths: string[][];
 }
 
+type FootprintTotals = ExposureTotals & { hasKnownUsd: boolean; overlapUpperBoundUsd: number | null };
+type BookMember = { id: string; usd: number | null };
+
 // Keep only k candidates per vertex in a max-heap. This bounds work even when
 // the graph has exponentially many simple paths; cycles never revisit a vertex.
 function topExposurePaths(roots: readonly string[], edges: readonly ReportCardsV9DependencyEdge[], k: number) {
@@ -320,15 +327,28 @@ export function exposureFootprint(
   edges: readonly ReportCardsV9DependencyEdge[],
   supplyOf: SupplyOf,
   opts: ExposureOptions & { topPaths?: number },
-): { rows: ExposureRow[]; direct: ExposureTotals; indirect: ExposureTotals; reached: number; bandCounts: Record<ExposureBand, number> } {
+): { rows: ExposureRow[]; direct: FootprintTotals; indirect: FootprintTotals; reached: number; bandCounts: Record<ExposureBand, number> } {
   const shares = lookThroughShares(roots, edges), rootSet = new Set(roots);
   const incoming = byDependent(edges);
   const paths = topExposurePaths(roots, edges, Math.max(0, Math.floor(opts.topPaths ?? 3)));
   const materialShare = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.structural.materialExposureShare;
   const bandCounts: Record<ExposureBand, number> = { material: 0, minor: 0, trace: 0, unknown: 0 };
   const rows: ExposureRow[] = [];
-  const effective: ReportCardsV9DependencyEdge[] = [];
+  const direct: FootprintTotals = { ...totals(), hasKnownUsd: false, overlapUpperBoundUsd: 0 };
+  const indirect: FootprintTotals = { ...totals(), hasKnownUsd: false, overlapUpperBoundUsd: 0 };
   const upstreamShare = (id: string) => rootSet.has(id) ? 1 : shares.get(id)?.share ?? (shares.has(id) ? null : 0);
+  const layerOf = (upstream: string) => rootSet.has(upstream) ? direct : indirect;
+  const books = new Map<string, Map<string, BookMember[]>>();
+  const unvaluedBookMembers = new Set<string>();
+  const admittedUsd = new Map<string, number>();
+  const downstreamUsd = new Map<string, number>();
+  const unmatchedDownstream = new Set<string>();
+  function recordUsd(upstream: string, usd: number, matchOverlap = true) {
+    const layer = layerOf(upstream);
+    layer.knownUsd += usd;
+    layer.hasKnownUsd = true;
+    if (layer === indirect && matchOverlap) downstreamUsd.set(upstream, (downstreamUsd.get(upstream) ?? 0) + usd);
+  }
   for (const [id, value] of shares) {
     if (value.share === 0) continue;
     const group = incoming.get(id) ?? [];
@@ -339,76 +359,141 @@ export function exposureFootprint(
       // Materiality on any incoming edge determines score availability.
       scoreUnknown: group.some(edge => !v9DependencyEdgeScoreKnown(edge)),
       paths: paths.get(id) ?? [] });
-    let serial: ReportCardsV9DependencyEdge | undefined, serialShare = 0, basketShare = 0;
-    const basket: ReportCardsV9DependencyEdge[] = [];
+    let serial: { from: string; share: number } | undefined, basketShare = 0;
+    const basket: { from: string; share: number }[] = [];
+    const reachedLayers = new Set<FootprintTotals>();
+    const reachedIndirectParents = new Set<string>();
+    const unknownLayers = new Set<FootprintTotals>();
+    let reachedSerial = false;
+    let serialTieIncludesIndirect = false;
     for (const edge of group) {
       const upstream = upstreamShare(edge.from);
-      if (upstream === 0) continue;
       const weight = edgeShare(edge);
-      const contribution = upstream === null || weight === null ? null : upstream * weight;
-      if (edge.kind === "serial" && contribution !== null) {
-        if (!serial || contribution > serialShare) { serial = edge; serialShare = contribution; }
+      if (upstream === 0 || weight === 0) continue;
+      const layer = layerOf(edge.from);
+      reachedLayers.add(layer);
+      if (layer === indirect) reachedIndirectParents.add(edge.from);
+      reachedSerial ||= edge.kind === "serial";
+      if (upstream === null || weight === null) {
+        unknownLayers.add(layer);
+        continue;
+      }
+      const share = upstream * weight;
+      if (edge.kind === "serial") {
+        if (!serial || share > serial.share) {
+          serial = { from: edge.from, share };
+          serialTieIncludesIndirect = false;
+        } else if (share === serial.share && edge.from !== serial.from) {
+          const winnerIsIndirect = !rootSet.has(serial.from);
+          serialTieIncludesIndirect ||= layer === indirect || winnerIsIndirect;
+          if (layer === direct && winnerIsIndirect) serial = { from: edge.from, share };
+        }
       } else {
-        basket.push({ ...edge, kind: "basket", weight: contribution });
-        basketShare += contribution ?? 0;
+        basket.push({ from: edge.from, share });
+        basketShare += share;
       }
     }
-    if (value.share === null) effective.push({ from: id, to: id, kind: "basket", weight: null, materiality: "basket-weighted", upstreamScore: null });
-    else if (serial && serialShare >= basketShare) {
-      effective.push({ ...serial, kind: "basket", weight: serialShare }, ...basket.filter(edge => edge.weight === null));
+    // Basket paths add across layers. A competing serial path can change which
+    // contributions win, so an unresolved choice still quarantines both layers.
+    const independentBaskets = value.share === null && !reachedSerial && unknownLayers.size > 0;
+    const winningSerial = serial && serial.share >= basketShare ? serial : undefined;
+    const contributions = value.share !== null ? (winningSerial ? [winningSerial] : basket)
+      : independentBaskets ? basket.filter(({ from }) => !unknownLayers.has(layerOf(from))) : [];
+    const affectedLayers = value.share === null ? reachedLayers : new Set(contributions.map(({ from }) => layerOf(from)));
+    for (const layer of affectedLayers) {
+      const unresolved = value.share === null && (!independentBaskets || unknownLayers.has(layer));
+      layer.integrityFlag ||= unresolved || (value.share !== null && value.integrityFlag)
+        || (independentBaskets && invalidBasket(group.filter(edge => layerOf(edge.from) === layer && upstreamShare(edge.from) !== 0)));
+      if (unresolved) {
+        layer.unknownShareEdgeCount++;
+        if (layer === indirect) for (const from of reachedIndirectParents) unmatchedDownstream.add(from);
+      }
+      if (!supply) layer.excludedSupplyUnknownIds.push(id);
     }
-    else effective.push(...basket);
-  }
-  const bookIdOf = (id: string) => (incoming.get(id) ?? []).some(edge => edge.kind === "serial") ? null : opts.sharedBooks.bookIdOf(id);
-  const bookAmounts = new Map<string, Map<string, { direct: number; indirect: number }>>();
-  for (const edge of effective) {
-    const book = bookIdOf(edge.to), supply = supplyOf(edge.to);
-    if (!book || !supply || edge.weight === null) continue;
-    let holdings = bookAmounts.get(book);
-    if (!holdings) { holdings = new Map(); bookAmounts.set(book, holdings); }
-    const amounts = holdings.get(edge.from) ?? { direct: 0, indirect: 0 };
-    if (shares.get(edge.to)!.minHop === 1) amounts.direct += supply.usd * edge.weight;
-    else amounts.indirect += supply.usd * edge.weight;
-    holdings.set(edge.from, amounts);
-  }
-  function totalFor(direct: boolean): ExposureTotals {
-    const selected = effective.filter(edge => (shares.get(edge.to)!.minHop === 1) === direct);
-    const scaledOpts: ExposureOptions = { ...opts, sharedBooks: {
-      bookIdOf,
-      measuredHoldingUsd: (book, upstream) => {
-        const holding = opts.sharedBooks.measuredHoldingUsd(book, upstream), share = upstreamShare(upstream);
-        const amounts = bookAmounts.get(book)?.get(upstream);
-        if (holding === null || share === null || !amounts) return null;
-        const sum = amounts.direct + amounts.indirect;
-        return sum === 0 ? 0 : holding * share * (direct ? amounts.direct : amounts.indirect) / sum;
-      },
-    } };
-    const mapped = mappedDependentSupply(selected, supplyOf, scaledOpts);
-    const total: ExposureTotals = {
-      knownUsd: mapped.knownUsd, excludedSupplyUnknownIds: mapped.excludedSupplyUnknownIds,
-      unknownShareEdgeCount: mapped.unknownShareEdgeCount, complete: mapped.complete,
-      overlapUsd: 0, integrityFlag: mapped.integrityFlag,
-    };
-    const overlapBooks = new Map<string, Map<string, number>>();
-    for (const edge of selected) {
-      if (!shares.has(edge.from) || edge.weight === null) continue;
-      const supply = supplyOf(edge.to);
-      if (!supply) continue;
-      const book = bookIdOf(edge.to), amount = supply.usd * edge.weight;
-      if (!book) total.overlapUsd += amount;
-      else {
-        let holdings = overlapBooks.get(book);
-        if (!holdings) { holdings = new Map(); overlapBooks.set(book, holdings); }
-        holdings.set(edge.from, (holdings.get(edge.from) ?? 0) + amount);
+    const book = group.some(edge => edge.kind === "serial") ? null : opts.sharedBooks.bookIdOf(id);
+    for (const { from, share } of contributions) {
+      const layer = layerOf(from);
+      layer.integrityFlag ||= shares.get(from)?.integrityFlag ?? false;
+      const usd = supply ? supply.usd * share : null;
+      if (usd === null && layer === indirect) unmatchedDownstream.add(from);
+      if (book) {
+        const holdings = books.get(book) ?? new Map<string, BookMember[]>();
+        const members = holdings.get(from) ?? [];
+        members.push({ id, usd });
+        holdings.set(from, members);
+        books.set(book, holdings);
+        if (usd === null) unvaluedBookMembers.add(id);
+      } else if (usd !== null) {
+        // A serial tie preserves the child's dollars while leaving its parent attribution unresolved.
+        const ambiguous = winningSerial !== undefined && serialTieIncludesIndirect && usd > 0;
+        if (ambiguous) indirect.overlapUnavailableReason ??= "serial-parent-attribution-ambiguous";
+        recordUsd(from, usd, !ambiguous);
+        admittedUsd.set(id, (admittedUsd.get(id) ?? 0) + usd);
       }
     }
-    for (const [book, holdings] of overlapBooks) {
-      for (const [upstream, fallback] of holdings) total.overlapUsd += scaledOpts.sharedBooks.measuredHoldingUsd(book, upstream) ?? fallback;
-    }
-    total.integrityFlag ||= rows.some(row => (row.minHop === 1) === direct && shares.get(row.id)!.integrityFlag);
-    total.complete &&= !total.integrityFlag;
-    return total;
   }
+  const bookClaims = new Map<string, { usd: number; members: Set<string> }[]>();
+  const measuredBooks = new Set<string>();
+  for (const [book, holdings] of books) {
+    const claims: { usd: number; members: Set<string> }[] = [];
+    for (const [upstream, members] of holdings) {
+      const knownMembers = members.flatMap(({ id, usd }) => usd === null ? [] : [{ id, usd }]);
+      const modeledUsd = knownMembers.reduce((sum, member) => sum + member.usd, 0);
+      const holdingUsd = opts.sharedBooks.measuredHoldingUsd(book, upstream);
+      const share = upstreamShare(upstream);
+      const measuredUsd = holdingUsd !== null && share !== null ? holdingUsd * share : null;
+      if (measuredUsd !== null && measuredUsd > 0 && (modeledUsd !== 0 || knownMembers.length < members.length)) {
+        measuredBooks.add(book);
+      }
+      if (measuredUsd !== null && modeledUsd !== 0) {
+        recordUsd(upstream, measuredUsd);
+        claims.push({ usd: measuredUsd, members: new Set(knownMembers.filter(member => member.usd > 0).map(({ id }) => id)) });
+      } else if (knownMembers.length > 0) {
+        recordUsd(upstream, modeledUsd);
+        for (const { id, usd } of knownMembers) claims.push({ usd, members: new Set([id]) });
+      }
+    }
+    bookClaims.set(book, claims);
+  }
+  for (const [upstream, downstream] of downstreamUsd) {
+    indirect.overlapUsd += Math.min(downstream, admittedUsd.get(upstream) ?? 0);
+  }
+  for (const claims of bookClaims.values()) {
+    // A holding can overlap any of its member claims. Their union limits
+    // the bound when more than one holding is linked to the same member.
+    const matchedMembers = new Set<string>();
+    let holdingBound = 0;
+    for (const { usd, members } of claims) {
+      let downstream = 0;
+      for (const id of members) {
+        matchedMembers.add(id);
+        downstream += downstreamUsd.get(id) ?? 0;
+      }
+      holdingBound += Math.min(usd, downstream);
+    }
+    let downstreamBound = 0;
+    for (const id of matchedMembers) downstreamBound += downstreamUsd.get(id) ?? 0;
+    indirect.overlapUsd += Math.min(holdingBound, downstreamBound);
+  }
+  for (const id of unvaluedBookMembers) {
+    if ((downstreamUsd.get(id) ?? 0) > 0) unmatchedDownstream.add(id);
+  }
+  for (const id of unmatchedDownstream) {
+    const book = opts.sharedBooks.bookIdOf(id);
+    if (book && measuredBooks.has(book) && !incoming.get(id)?.some(edge => edge.kind === "serial")) {
+      indirect.overlapUnavailableReason = "shared-book-claims-unmatched";
+      break;
+    }
+  }
+  for (const layer of [direct, indirect]) {
+    layer.excludedSupplyUnknownIds.sort();
+    layer.complete = layer.excludedSupplyUnknownIds.length === 0 && layer.unknownShareEdgeCount === 0 && !layer.integrityFlag;
+  }
+  // A complete empty layer cannot stand in for observations in an incomplete footprint.
+  const hasKnownUsd = direct.hasKnownUsd || indirect.hasKnownUsd || (direct.complete && indirect.complete);
+  direct.hasKnownUsd ||= hasKnownUsd && direct.complete;
+  indirect.hasKnownUsd ||= hasKnownUsd && indirect.complete;
+  indirect.overlapUpperBoundUsd = !hasKnownUsd || indirect.overlapUnavailableReason ? null : indirect.overlapUsd;
   rows.sort((a, b) => a.minHop - b.minHop || a.id.localeCompare(b.id));
-  return { rows, direct: totalFor(true), indirect: totalFor(false), reached: rows.length, bandCounts };
+  return { rows, direct, indirect, reached: rows.length, bandCounts };
 }

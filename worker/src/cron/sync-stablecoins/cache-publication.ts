@@ -1,14 +1,25 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { FROZEN_IDS, FROZEN_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { formatSchemaLikeIssues } from "@shared/lib/schema-like";
-import { StablecoinDataSchema, type StablecoinData } from "@shared/types/supply";
+import { derivePegRates, normalizePegType, type PegRatesResult } from "@shared/lib/peg-rates";
+import { readRecord } from "@shared/lib/type-guards";
+import { getCommodityOuncesAtQuote } from "@shared/lib/commodity-median";
+import { REFERENCE_INTRADAY_BUDGET_SEC } from "@shared/lib/reference-admission";
+import { CommodityEntitlementSchema, StablecoinDataSchema, XAGM_ENTITLEMENT_PEG_TYPE, type StablecoinData, type StablecoinListResponse } from "@shared/types/supply";
+import type { FxReferenceEvidenceMap, SelectedPegReference } from "@shared/types/fx-reference";
 import { CurrentPegSchema } from "@shared/types/current-peg";
 import { deriveCurrentPegObservationMap, selectCurrentPegDexPrices, type CurrentPegDexRow } from "../../lib/current-peg-observations";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { MIN_VALID_ASSET_COUNT } from "../../lib/stablecoin-intake-policy";
-import { writeResponseReadyCache } from "../../lib/api-cache-read";
+import { encodeResponseReadyCacheValue, getResponseReadyCacheKey } from "../../lib/api-cache-read";
 import { RESPONSE_READY_CACHE_SCHEMA_IDS } from "../../lib/response-ready-cache-contracts";
-import { getCacheUpdatedAt, setCacheIfNewer, type CacheWriteResult } from "../../lib/db-cache";
+import { prepareCacheUpsert } from "../../lib/db-cache";
+import { executeAtomicBatch } from "../../lib/db";
+import { getLatestSuccessfulReserveSnapshotMetadata } from "../../lib/live-reserves/store";
+import { recordFxAdmissionCoverage } from "../../lib/fx-admission-coverage";
+import { getFxReferenceTypeFromState, hasVerifiedLegacyRate } from "../../lib/fx-rate-state";
+import { prepareStablecoinsGenerationCompanion } from "../../lib/stablecoins-cache";
 import { savePriceCache, type PriceCacheWriteEntry } from "../../lib/price-cache";
 import type { PeggedAsset } from "./enrich-prices";
 import { returnIfAborted } from "./runtime";
@@ -21,6 +32,7 @@ import {
   writeInvalidStablecoinsDiagnostic,
   type CronResult,
   type StablecoinsPayload,
+  type StablecoinsFxSelection,
 } from "./shared";
 
 /** One post-enrichment row withheld from publication because it failed the published row schema. */
@@ -44,9 +56,9 @@ export interface CacheValidationResult {
   quarantinedAssets: PublicationQuarantinedAsset[];
 }
 
-export interface ValidateAndCacheInput {
+export interface ValidateAndCacheInput extends StablecoinsFxSelection {
   assets: PeggedAsset[];
-  fxFallbackRates?: Record<string, number>;
+  publishFxReferenceEvidence?: boolean;
   db: D1Database;
   syncStartSec: number;
   signal?: AbortSignal;
@@ -55,7 +67,7 @@ export interface ValidateAndCacheInput {
 }
 
 type PublicationAdmission =
-  | { ok: true; payload: { peggedAssets: StablecoinData[]; fxFallbackRates?: Record<string, number> }; quarantined: PublicationQuarantinedAsset[]; quarantinedIndexes: Set<number> }
+  | { ok: true; payload: StablecoinListResponse; quarantined: PublicationQuarantinedAsset[]; quarantinedIndexes: Set<number> }
   | { ok: false; issues: string };
 
 /**
@@ -66,8 +78,10 @@ type PublicationAdmission =
  * schema drift that would otherwise publish a near-empty list). Intake already enforced that floor, so a
  * cohort without quarantined rows is never re-held here.
  */
-function admitPublishableAssets(payload: StablecoinsPayload): PublicationAdmission {
-  const envelope = StablecoinListResponseSchema.safeParse({ peggedAssets: [], fxFallbackRates: payload.fxFallbackRates });
+function admitPublishableAssets(payload: StablecoinsPayload, fxReferenceObservations?: FxReferenceEvidenceMap): PublicationAdmission {
+  const envelope = StablecoinListResponseSchema.safeParse({
+    peggedAssets: [], fxFallbackRates: payload.fxFallbackRates, fxReferenceObservations,
+  });
   if (!envelope.success) return { ok: false, issues: `envelope: ${formatSchemaLikeIssues(envelope.error.issues)}` };
 
   const admitted: StablecoinData[] = [];
@@ -102,10 +116,53 @@ function admitPublishableAssets(payload: StablecoinsPayload): PublicationAdmissi
   }
   return {
     ok: true,
-    payload: { peggedAssets: admitted, ...(envelope.data.fxFallbackRates ? { fxFallbackRates: envelope.data.fxFallbackRates } : {}) },
+    payload: { ...envelope.data, peggedAssets: admitted },
     quarantined,
     quarantinedIndexes,
   };
+}
+
+/** Contractual ounces are measured by the issuer's pinned token contract. */
+async function readXagmEntitlement(db: D1Database, now: number, quoteObservedAtSec: number | null) {
+  const snapshot = await getLatestSuccessfulReserveSnapshotMetadata(db, "xagm-matrixdock", now);
+  const details = snapshot?.metadata.details;
+  const block = readRecord(snapshot?.metadata.observedBlock);
+  // The issuer contract can attest its token unit even though it is not independent proof of reserves.
+  if (snapshot?.source !== "matrixdock-frs" || !snapshot.admission ||
+      snapshot.admission.reasons.some((reason) => reason !== "non-independent") ||
+      details?.proofKind !== "matrixdock-frs-fallback-reserve-feed" || details.reserveUnit !== "troy-oz" ||
+      block?.chain !== "ethereum" || typeof block.number !== "number" || !Number.isSafeInteger(block.number) || block.number <= 0 ||
+      typeof block.timestamp !== "number" || block.timestamp > snapshot.fetchedAt || block.timestamp > now) return undefined;
+  if (quoteObservedAtSec == null || quoteObservedAtSec > now) return undefined;
+  const entitlement = CommodityEntitlementSchema.safeParse({
+    source: "matrixdock-frs", generation: `ethereum:${block.number}`, quoteObservedAtSec,
+    ozPerToken: details.ozPerToken, observedAtSec: block.timestamp,
+  }).data;
+  return getCommodityOuncesAtQuote(undefined, { assetId: "xagm-matrixdock", commodityEntitlement: entitlement, quoteObservedAtSec }) != null
+    ? entitlement : undefined;
+}
+
+function selectedPegReferences(pegRates: PegRatesResult, generation: string, legacyFxPegs: ReadonlySet<string>): Record<string, SelectedPegReference> {
+  const selected: Record<string, SelectedPegReference> = Object.create(null);
+  for (const [pegKey, kind] of Object.entries(pegRates.sources)) {
+    if (normalizePegType(pegKey) !== pegKey || pegKey === "peggedUSD" || legacyFxPegs.has(pegKey)) continue;
+    if (kind === "median") {
+      const contributors = pegRates.contributors?.[pegKey];
+      if (contributors?.length) selected[pegKey] = {
+        kind, pegKey, generation, usdPerUnit: pegRates.rates[pegKey], contributors: [...contributors],
+      };
+    } else {
+      const reference = pegRates.observations?.[pegKey];
+      if (!reference || reference.pegKey !== pegKey || reference.source === "peer-median") continue;
+      const { repricing, contributors: _contributors, ...observation } = reference;
+      selected[pegKey] = { kind, generation, observation, ...(repricing ? {
+        repricing: {
+          ...repricing, source: observation.source, preCloseUsdPerUnit: repricing.preCloseUsdPerUnit ?? undefined,
+        },
+      } : {}) };
+    }
+  }
+  return selected;
 }
 
 /**
@@ -139,9 +196,27 @@ export async function validateAndWriteStablecoinsCache(
     delete asset.frozenAt;
   }
 
+  const now = Math.floor(Date.now() / 1000);
+  const xagm = assets.find(({ id }) => id === "xagm-matrixdock");
+  if (xagm) {
+    const entitlement = await readXagmEntitlement(db, now, xagm.priceObservedAtMode === "upstream" ? xagm.priceObservedAt ?? null : null).catch((error: unknown) => {
+      logWorkerEventArgs("handler", "warn", "[sync-stablecoins] XAGm entitlement unavailable:", error);
+      return undefined;
+    });
+    // The same cohort continues to depeg detection after a successful write.
+    xagm.commodityEntitlement = entitlement;
+  }
+
   const llamaData: StablecoinsPayload = { peggedAssets: assets, fxFallbackRates };
   const normalizedPayload = normalizeStablecoinsPayload(llamaData, syncStartSec);
-  const admission = admitPublishableAssets(normalizedPayload);
+  const publicFxEvidence = input.publishFxReferenceEvidence === true ? input.fxReferenceObservations : undefined;
+  if (publicFxEvidence !== undefined) {
+    // Legacy normalization aliases updatedAt. Admission needs the actual selected quote clock.
+    normalizedPayload.peggedAssets.forEach((row, i) => {
+      if (assets[i].priceObservedAt == null) row.priceObservedAt = null;
+    });
+  }
+  const admission = admitPublishableAssets(normalizedPayload, publicFxEvidence);
 
   if (!admission.ok) {
     const issueSummary = summarizeValidationIssues(admission.issues);
@@ -188,7 +263,21 @@ export async function validateAndWriteStablecoinsCache(
   }
 
   // One optional cohort read: unavailable DEX evidence never becomes an agreement verdict.
-  const now = Math.floor(Date.now() / 1000);
+  const fxReferenceObservations = admission.payload.fxReferenceObservations;
+  const fxState = input.detectionFxState ?? null;
+  const legacyFxPegs = fxState?.legacyDetectionPegs?.filter((peg) =>
+    hasVerifiedLegacyRate(fxState, peg) && !input.fxReferenceObservations?.[peg] &&
+    fxFallbackRates?.[peg] === fxState.rates[peg] &&
+    getFxReferenceTypeFromState(fxState, peg, REFERENCE_INTRADAY_BUDGET_SEC, now) === "fresh") ?? [];
+  const legacyFxPegSet = new Set(legacyFxPegs);
+  const generation = `stablecoins:${syncStartSec}`;
+  const pegRates = derivePegRates(admission.payload.peggedAssets, WORKER_TRACKED_META_BY_ID, fxFallbackRates,
+    fxReferenceObservations, now, legacyFxPegs);
+  if (fxReferenceObservations !== undefined) {
+    admission.payload.selectedPegReferences = selectedPegReferences(pegRates, generation, legacyFxPegSet);
+  }
+  const coverageGeneration = crypto.randomUUID();
+  admission.payload.fxAdmissionCoverageGeneration = coverageGeneration;
   const dexRows = await runWithOverloadRetry(() => db.prepare(
     "SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at, price_sources_json FROM dex_prices",
   ).all<CurrentPegDexRow>(), 1, signal).then((result) => result.results ?? []).catch((error: unknown) => {
@@ -196,7 +285,7 @@ export async function validateAndWriteStablecoinsCache(
     return [];
   });
   const observations = deriveCurrentPegObservationMap({
-    peggedAssets: admission.payload.peggedAssets, fxFallbackRates, asOf: syncStartSec, now,
+    peggedAssets: admission.payload.peggedAssets, pegRates, fxReferenceObservations, legacyFxPegs: legacyFxPegSet, generation, asOf: syncStartSec, now,
     dexPrices: selectCurrentPegDexPrices(dexRows, now),
   });
   for (const asset of admission.payload.peggedAssets) {
@@ -214,44 +303,70 @@ export async function validateAndWriteStablecoinsCache(
     validationContext === "fallback" ? "fallback-cache-write" : "persist-main-cache",
   );
   if (cacheWriteAbort) return cacheWriteAbort;
-  const stablecoinsCacheBody = JSON.stringify(admission.payload);
+  // The rollback Worker rederives from pegType using a static ounce.
+  const stablecoinsCacheBody = JSON.stringify({
+    ...admission.payload,
+    peggedAssets: admission.payload.peggedAssets.map((asset) =>
+      asset.id === "xagm-matrixdock" && normalizePegType(asset.pegType) === "peggedSILVER"
+        ? { ...asset, pegType: XAGM_ENTITLEMENT_PEG_TYPE } : asset),
+  });
   const bootstrap = admission.payload.peggedAssets.find(asset => asset.id === "buidl-blackrock"
     && asset.supplySource === "defillama" && asset.supplyRestored);
-  let cacheResult: CacheWriteResult;
-  if (bootstrap) {
-    // A delayed legacy carry cannot overwrite native success, even with a later
-    // run clock. UPDATE also refuses to bootstrap an absent canonical predecessor.
-    const result = await runWithOverloadRetry(() => db.prepare(`
+  // A delayed legacy carry cannot overwrite native success or bootstrap an absent predecessor.
+  const write = bootstrap ? db.prepare(`
       UPDATE cache SET value = ?, updated_at = ? WHERE key = 'stablecoins' AND updated_at <= ?
         AND EXISTS (SELECT 1 FROM json_each(cache.value, '$.peggedAssets') AS prior
           WHERE json_extract(prior.value, '$.id') = 'buidl-blackrock'
             AND json_extract(prior.value, '$.supplySource') = 'defillama'
             AND json_extract(prior.value, '$.supplyRestored') = 1
             AND json_extract(prior.value, '$.supplyObservedAt') = ?)
-    `).bind(stablecoinsCacheBody, syncStartSec, syncStartSec, bootstrap.supplyObservedAt).run(), 3, signal);
-    if (result.meta.changes !== 1) {
-      const updatedAt = await getCacheUpdatedAt(db, "stablecoins");
-      if (updatedAt != null && updatedAt > syncStartSec) return {
-        written: false, skippedBecauseNewer: true, cacheKey: "stablecoins", syncStartSec,
-        quarantinedAssets: admission.quarantined,
-      };
-      return {
-        written: false, skippedBecauseNewer: false, cacheKey: "stablecoins", syncStartSec,
-        quarantinedAssets: admission.quarantined,
-        blockedResult: { status: "degraded", itemCount: 0,
-          metadata: JSON.stringify({ reason: "buidl-bootstrap-predecessor-unavailable" }) },
-      };
-    }
-    cacheResult = { written: true, skippedBecauseNewer: false };
-  } else {
-    cacheResult = await setCacheIfNewer(db, "stablecoins", stablecoinsCacheBody, syncStartSec);
+    `).bind(stablecoinsCacheBody, syncStartSec, syncStartSec, bootstrap.supplyObservedAt)
+    : prepareCacheUpsert(db, { key: "stablecoins", value: stablecoinsCacheBody, updatedAt: syncStartSec }, "if-newer");
+  const responseReadyKey = getResponseReadyCacheKey("stablecoins");
+  // Identify exactly which accepted cohort the clocked write replaced, including equal-clock retries.
+  const [prior, committed] = await executeAtomicBatch(db, [
+    db.prepare(`SELECT updated_at, CASE WHEN json_valid(value) THEN json_extract(value, '$.fxAdmissionCoverageGeneration') END AS generation
+                FROM cache WHERE key = 'stablecoins'`), write,
+    // The fast reader uses the source clock. Invalidate a replaced equal-clock body in the same transaction.
+    db.prepare("DELETE FROM cache WHERE key = ? AND updated_at = ? AND changes() = 1").bind(responseReadyKey, syncStartSec),
+  ], { returnResults: true, signal });
+  const previous = prior.results[0] as { updated_at: number; generation: string | null } | undefined;
+  const written = committed.meta.changes === 1;
+  if (bootstrap && !written && (previous?.updated_at ?? 0) <= syncStartSec) {
+    return {
+      written: false, skippedBecauseNewer: false, cacheKey: "stablecoins", syncStartSec,
+      quarantinedAssets: admission.quarantined,
+      blockedResult: { status: "degraded", itemCount: 0,
+        metadata: JSON.stringify({ reason: "buidl-bootstrap-predecessor-unavailable" }) },
+    };
   }
+  const cacheResult = { written, skippedBecauseNewer: !written };
   let responseReadyCacheError: string | null = null;
   if (cacheResult.written) {
+    let coverageAssets = admission.payload.peggedAssets;
+    if (fxReferenceObservations === undefined) {
+      // Keep legacy display clock aliases out of the internal coverage measurement.
+      coverageAssets = coverageAssets.map((row, i) => ({ ...row, priceObservedAt: assets[i].priceObservedAt ?? null }));
+      if (input.fxReferenceObservations !== undefined) {
+        const internalPegRates = derivePegRates(coverageAssets, WORKER_TRACKED_META_BY_ID, fxFallbackRates,
+          input.fxReferenceObservations, now, legacyFxPegs);
+        const internal = deriveCurrentPegObservationMap({ peggedAssets: coverageAssets, pegRates: internalPegRates,
+          fxReferenceObservations: input.fxReferenceObservations, legacyFxPegs: legacyFxPegSet, generation, asOf: syncStartSec, now });
+        for (const row of coverageAssets) row.currentPeg = internal.get(row.id);
+      }
+    }
+    const legacy = {
+      state: fxState, decisionAt: now, contributors: pegRates.contributors,
+      pegs: input.fxReferenceObservations === undefined ? undefined : legacyFxPegSet,
+    };
+    await recordFxAdmissionCoverage(db, coverageAssets, syncStartSec,
+      previous?.updated_at ?? null, coverageGeneration, previous?.generation ?? null, legacy).catch((error: unknown) => {
+      logWorkerEventArgs("handler", "warn", "[sync-stablecoins] FX admission coverage write failed:", error);
+    });
     try {
-      await writeResponseReadyCache(db, "stablecoins", stablecoinsCacheBody, syncStartSec, {
-        schemaId: RESPONSE_READY_CACHE_SCHEMA_IDS.stablecoins,
-      });
+      const companion = prepareStablecoinsGenerationCompanion(db, responseReadyKey,
+        encodeResponseReadyCacheValue(stablecoinsCacheBody, RESPONSE_READY_CACHE_SCHEMA_IDS.stablecoins), syncStartSec, coverageGeneration);
+      await runWithOverloadRetry(() => companion.run(), 3, signal);
     } catch (error) {
       responseReadyCacheError = error instanceof Error ? error.name : "UnknownError";
     }

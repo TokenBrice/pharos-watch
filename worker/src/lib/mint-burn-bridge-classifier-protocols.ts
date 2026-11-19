@@ -2,6 +2,7 @@
 import { decodeAbiParameters, decodeEventLog, encodePacked, keccak256, parseAbiItem, parseAbiParameters, toEventSelector } from "viem/utils";
 import type { MintBurnCcipBridgeDetectionConfig, MintBurnCctpBridgeDetectionConfig, MintBurnLayerZeroOftBridgeDetectionConfig } from "./mint-burn-contracts";
 import type { MintBurnBridgeClassifiableRow, MintBurnTxContext } from "./mint-burn-bridge-classifier-types";
+import type { MintBurnRow } from "./mint-burn-pipeline/types";
 
 type Log = NonNullable<MintBurnTxContext["receiptLogs"]>[number];
 const ZERO = `0x${"0".repeat(64)}`;
@@ -38,6 +39,9 @@ const CCTP_RECEIVED = {
 const MESSAGE_SENT_DATA = parseAbiParameters("bytes message");
 const PACKET_SENT_DATA = parseAbiParameters("bytes payload, bytes options, address sendLibrary");
 const PACKET_DELIVERED_DATA = parseAbiParameters("(uint32 srcEid, bytes32 sender, uint64 nonce) origin, address receiver");
+const YIELD_DISTRIBUTION = topic("YieldDistribution(address,uint256,uint256)");
+const REBASE_CHECKPOINT = topic("TotalSupplyUpdatedHighres(uint256,uint256,uint256)");
+const REBASE_OPT_OUT = topic("AccountRebasingDisabled(address)");
 const address = (word: string | undefined): string | null => word && ADDRESS_WORD.test(word) ? `0x${word.slice(-40)}` : null;
 const addressWord = (value: string): `0x${string}` => `0x${value.slice(2).toLowerCase().padStart(64, "0")}`;
 function words(log: Log): string[] { return log.data.slice(2).match(/.{64}/g)?.map((word) => `0x${word}`) ?? []; }
@@ -79,8 +83,8 @@ function markBridgeTransfer(row: MintBurnBridgeClassifiableRow): void {
   row.burn_review_reason = null;
   row.bridge_review_reason = null;
 }
-function groupRowsByTx(rows: MintBurnBridgeClassifiableRow[]): Map<string, MintBurnBridgeClassifiableRow[]> {
-  const grouped = new Map<string, MintBurnBridgeClassifiableRow[]>();
+function groupRowsByTx<T extends MintBurnBridgeClassifiableRow>(rows: T[]): Map<string, T[]> {
+  const grouped = new Map<string, T[]>();
   for (const row of rows) { const group = grouped.get(row.tx_hash) ?? []; group.push(row); grouped.set(row.tx_hash, group); }
   return grouped;
 }
@@ -100,6 +104,57 @@ function transferRows(rows: MintBurnBridgeClassifiableRow[], transfer: Log): Min
 function markTransfer(rows: MintBurnBridgeClassifiableRow[], transfer: Log, used: Set<Log>): void {
   used.add(transfer);
   for (const row of transferRows(rows, transfer)) markBridgeTransfer(row);
+}
+
+/** Origin Dollar's rebase fee changes raw supply without a holder subscription. */
+export function classifyOriginDollarFeeMints(
+  rows: MintBurnRow[], tokenAddress: string, vaultAddress: string, contexts: ReadonlyMap<string, MintBurnTxContext | null>,
+): void {
+  const token = tokenAddress.toLowerCase(), vault = vaultAddress.toLowerCase();
+  for (const [hash, txRows] of groupRowsByTx(rows.filter((row) => row.direction === "mint"))) {
+    const context = contexts.get(hash) ?? null;
+    const receipt = receiptLogs(context);
+    const logs = receipt?.every((log, index) => index === 0 || Number(log.logIndex) === Number(receipt[index - 1].logIndex) + 1)
+      ? receipt : [];
+    const identity = context?.supplyProofContext;
+    const feeVerdicts = new Map<Log, boolean>();
+    const mintLogs = logs.filter((log) => isEvent(log, token, BRIDGE_TOPICS.transfer, 3, 1) && log.topics[1] === ZERO);
+    for (const [index, distribution] of logs.entries()) {
+      if (!isEvent(distribution, vault, YIELD_DISTRIBUTION, 1, 3)) continue;
+      const [trustee, yieldAmount, fee] = words(distribution);
+      if (!address(trustee) || trustee === ZERO || fee === ZERO) continue;
+      // The reviewed implementations emit the fee immediately before or after
+      // the distribution. A first-time contract recipient may opt out inside mint().
+      const following = logs[index + 1];
+      const optOut = following && isEvent(following, token, REBASE_OPT_OUT, 1, 1) && following.data === trustee;
+      const nextIndex = index + (optOut ? 2 : 1);
+      const candidates = [index - 1, nextIndex].flatMap((transferIndex) => {
+        const transfer = logs[transferIndex];
+        if (!transfer || !mintLogs.includes(transfer) || transfer.topics[2] !== trustee || transfer.data !== fee) return [];
+        const checkpoint = logs[Math.max(index, transferIndex) + 1];
+        const proven = BigInt(yieldAmount) > BigInt(fee) && checkpoint != null
+          && isEvent(checkpoint, token, REBASE_CHECKPOINT, 1, 3);
+        return [{ transfer, proven }];
+      });
+      const proven = candidates.find((candidate) => candidate.proven);
+      for (const candidate of proven ? [proven] : candidates) {
+        feeVerdicts.set(candidate.transfer, feeVerdicts.has(candidate.transfer) ? false : candidate.proven);
+      }
+    }
+    for (const row of txRows) {
+      const transfer = mintLogs.find((log) => row.id === `${row.chain_id}-${hash}-${Number(log.logIndex)}`
+        && address(log.topics[2]) === row.counterparty?.toLowerCase() && BigInt(log.data).toString() === row.amount_raw);
+      if (!transfer || !identity?.success || identity.blockNumber !== row.block_number) {
+        row.burn_type = "review_required";
+        row.burn_review_reason = "ousd-trustee-fee-context-unavailable";
+      } else if (feeVerdicts.get(transfer) === true) {
+        row.flow_type = "protocol_internal";
+      } else if (feeVerdicts.has(transfer)) {
+        row.burn_type = "review_required";
+        row.burn_review_reason = "ousd-trustee-fee-unproven";
+      }
+    }
+  }
 }
 
 function classifyCctp(rows: MintBurnBridgeClassifiableRow[], logs: Log[], detection: MintBurnCctpBridgeDetectionConfig, used: Set<Log>): void {

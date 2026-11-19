@@ -158,7 +158,7 @@ describe("getPriceCache", () => {
     expect(queries[0]).toContain("source, confidence, observed_at");
   });
 
-  it("distinguishes absent original clocks while retaining normalized timestamp fallbacks", async () => {
+  it("retains an explicitly unknown quote clock and falls back only for legacy rows", async () => {
     for (const [observedAt, syncedAt] of [[null, null], [null, 1800000010], [1799999900, null]] as const) {
       const { db } = makeDb({ fullRows: [{
         asset_id: "usdc-circle", price: 0.9998, updated_at: 1800000000,
@@ -167,7 +167,7 @@ describe("getPriceCache", () => {
         agree_sources_json: "[]", consensus_sources_json: "[]",
       }] });
       expect((await getPriceCache(db)).get("usdc-circle")).toMatchObject({
-        observedAt: observedAt ?? 1800000000,
+        observedAt: syncedAt == null ? observedAt ?? 1800000000 : observedAt,
         syncedAt: syncedAt ?? 1800000000,
         hasExplicitClocks: false,
       });

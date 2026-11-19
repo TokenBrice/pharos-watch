@@ -17,6 +17,10 @@ describe("fetchPrimaryPrices", () => {
     vi.unstubAllGlobals();
   });
 
+  function freshCgQuote(usd: number) {
+    return { usd, last_updated_at: Math.floor(Date.now() / 1000) - 60 };
+  }
+
   function makeFreshDlListPrices(entries: Array<[string, number]>) {
     const observedAt = Math.floor(Date.now() / 1000) - 60;
     return new Map(entries.map(([id, price]) => [id, { price, observedAt, observedAtMode: "upstream" as const }]));
@@ -51,7 +55,7 @@ describe("fetchPrimaryPrices", () => {
       geckoId: "resolv-usr",
     })];
 
-    installPrimaryPriceRoutes({ "coingecko.com": { body: { "resolv-usr": { usd: 0.145 } } } });
+    installPrimaryPriceRoutes({ "coingecko.com": { body: { "resolv-usr": freshCgQuote(0.145) } } });
 
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makeDexBridgeDb({
@@ -104,7 +108,7 @@ describe("fetchPrimaryPrices", () => {
       geckoId: "usd-coin",
     })];
 
-    installPrimaryPriceRoutes({ "coingecko.com": { body: { "usd-coin": { usd: 1.0001 } } } });
+    installPrimaryPriceRoutes({ "coingecko.com": { body: { "usd-coin": freshCgQuote(1.0001) } } });
 
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makeDexBridgeDb({
@@ -249,7 +253,7 @@ describe("fetchPrimaryPrices", () => {
   it("downgrades CG+DL-only consensus to single-source (DESIGN-4)", async () => {
     const assets = [makePeggedAsset({ id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether" })];
 
-    installPrimaryPriceRoutes({ coingecko: { body: { tether: { usd: 1.0001 } } } });
+    installPrimaryPriceRoutes({ coingecko: { body: { tether: freshCgQuote(1.0001) } } });
 
     const db = makeTestDb();
     const dlListPrices = makeFreshDlListPrices([["usdt-tether", 1.0002]]);
@@ -277,7 +281,7 @@ describe("fetchPrimaryPrices", () => {
   it("returns single-source when CG is the only source (no DL list price)", async () => {
     const assets = [makePeggedAsset({ id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether" })];
 
-    installPrimaryPriceRoutes({ coingecko: { body: { tether: { usd: 1.0001 } } } });
+    installPrimaryPriceRoutes({ coingecko: { body: { tether: freshCgQuote(1.0001) } } });
 
     const db = makeTestDb();
     const { results, stats } = await fetchPrimaryPrices(assets, db);
@@ -354,8 +358,8 @@ describe("fetchPrimaryPrices", () => {
     const assets = [makePeggedAsset({ id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether" })];
 
     installPrimaryPriceRoutes({
-      coingecko: { body: { tether: { usd: 1.0001 } } },
-      "api.kraken.com": { body: { error: [], result: { USDTZUSD: { c: ["1.0000"] } } } },
+      coingecko: { body: { tether: freshCgQuote(1.0001) } },
+      "api.kraken.com": { body: { error: [], result: { USDTZUSD: { a: ["1.0001"], b: ["0.9999"], c: ["1.0000"] } } } },
       "bitstamp.net": { body: [{ pair: "USDT/USD", market: "USDT/USD", last: "1.0002", timestamp: String(nowSec - 60) }] },
     });
 
@@ -371,7 +375,7 @@ describe("fetchPrimaryPrices", () => {
   it("returns low confidence when CG and DL list prices diverge beyond 50bps", async () => {
     const assets = [makePeggedAsset({ id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether" })];
 
-    installPrimaryPriceRoutes({ coingecko: { body: { tether: { usd: 0.99 } } } });
+    installPrimaryPriceRoutes({ coingecko: { body: { tether: freshCgQuote(0.99) } } });
 
     const db = makeTestDb();
     const dlListPrices = makeFreshDlListPrices([["usdt-tether", 1.05]]);
@@ -400,7 +404,7 @@ describe("fetchPrimaryPrices", () => {
       pegType: "peggedEUR",
     })];
 
-    installPrimaryPriceRoutes({ coingecko: { body: { "euro-coin": { usd: 1.08 } } } });
+    installPrimaryPriceRoutes({ coingecko: { body: { "euro-coin": freshCgQuote(1.08) } } });
 
     const db = makeTestDb();
     const dlListPrices = makeFreshDlListPrices([["eurc-circle", 1.8]]);
@@ -432,7 +436,7 @@ describe("fetchPrimaryPrices", () => {
       navToken: true,
     })];
 
-    installPrimaryPriceRoutes({ coingecko: { body: { ousg: { usd: 1.01 } } } });
+    installPrimaryPriceRoutes({ coingecko: { body: { ousg: freshCgQuote(1.01) } } });
 
     const db = makeTestDb();
     const dlListPrices = makeFreshDlListPrices([["ousg-ondo-finance", 110]]);

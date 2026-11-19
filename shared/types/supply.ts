@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { PriceConfidenceSchema, PriceObservedAtModeSchema, NominalPriceReferenceSchema, PriceSourceConfidenceProfileSchema } from "./price";
 import { CurrentPegSchema } from "./current-peg";
+import { FxReferenceEvidenceMapSchema, SelectedPegReferencesSchema } from "./fx-reference";
 import { SfraxStockPerimeterObservationSchema } from "./sfrax-supply";
 import { ContractDeploymentSchema } from "./stablecoin-meta-primitives";
-import { StrictIsoDateSchema } from "./safety-schema-primitives";
+import { NonNegativeFiniteSchema, StrictIsoDateSchema, UnixSecondsSchema } from "./safety-schema-primitives";
 import { PriceDerivationSchema } from "./price";
 
 /** Canonical producer refusal, not a measured zero or a provider-history fallback. */
@@ -12,7 +13,15 @@ export type SupplyUnavailableReason = z.infer<typeof SupplyUnavailableReasonSche
 
 export const PegBucketsSchema = z.record(z.string(), z.number());
 
+export const SupplyChangeBaselinesSchema = z.partialRecord(z.enum(["day", "week", "month"]), z.object({
+  observedAt: UnixSecondsSchema.positive(),
+  circulatingUsd: NonNegativeFiniteSchema,
+  circulatingNative: NonNegativeFiniteSchema.nullable(),
+}).nullable());
+
 const StablecoinDetailTokenSchema = z.object({
+  nativeSupplySource: z.literal("onchain-circulating-supply").optional(),
+  nativeSupplyObservedAt: UnixSecondsSchema.positive().optional(),
   date: z.number().optional(),
   totalCirculatingUSD: PegBucketsSchema.optional(),
   totalCirculating: PegBucketsSchema.optional(),
@@ -31,7 +40,10 @@ export const StablecoinDetailResponseSchema = z.object({
   currentPeg: CurrentPegSchema.optional(),
   /** Current admitted list USD buckets; distinct from the provider's dated token history. */
   currentCirculatingUSD: PegBucketsSchema.optional(),
+  currentCirculatingNative: NonNegativeFiniteSchema.nullish(),
+  commodityHistoryObservedAt: UnixSecondsSchema.positive().optional(),
   currentCirculatingPrevDayUSD: PegBucketsSchema.optional(),
+  supplyChangeBaselines: SupplyChangeBaselinesSchema.optional(),
   currentSupplyObservedAt: z.number().finite().positive().optional(),
   /** Canonical carry-forward provenance for the admitted current supply overlay. */
   currentSupplyRestored: z.boolean().optional(),
@@ -155,6 +167,11 @@ export const SupplyObservationProvenanceSchema = z.object({
   supplySource: z.string().nullable(),
   supplyObservedAt: z.number().int().nonnegative().nullable(),
   supplyChainGuard: SupplyChainGuardProvenanceSchema.nullable(),
+  nativeQuantityUnavailable: z.literal(true).optional(),
+  marketQuote: z.object({
+    price: z.number().finite().positive(),
+    observedAt: UnixSecondsSchema.positive().nullable(),
+  }).optional(),
 });
 export type SupplyObservationProvenance = z.infer<typeof SupplyObservationProvenanceSchema>;
 
@@ -165,6 +182,29 @@ export type SupplyObservationProvenance = z.infer<typeof SupplyObservationProven
  */
 export const SupplyRestoreModeSchema = z.enum(["outage-fallback"]);
 export type SupplyRestoreMode = z.infer<typeof SupplyRestoreModeSchema>;
+
+export type SupplyQuantityBasis = "native-quantity" | "usd-value";
+
+const supplyQuantityFields = {
+  circulatingNative: NonNegativeFiniteSchema.nullish(),
+  valuationPriceUsd: z.number().finite().positive().nullish(),
+  valuationObservedAtSec: UnixSecondsSchema.nullish(),
+};
+
+export const CommodityEntitlementSchema = z.object({
+  source: z.literal("matrixdock-frs").optional(),
+  generation: z.string().min(1).optional(),
+  quoteObservedAtSec: UnixSecondsSchema.positive().optional(),
+  ozPerToken: z.number().finite().positive(),
+  observedAtSec: UnixSecondsSchema.positive(),
+});
+
+/** XAGm's cache label withholds the static-ounce comparison on rollback. */
+export const XAGM_ENTITLEMENT_PEG_TYPE = "entitlement-priced";
+
+export function decodePublishedPegType(assetId: string, pegType: string): string {
+  return assetId === "xagm-matrixdock" && pegType === XAGM_ENTITLEMENT_PEG_TYPE ? "peggedSILVER" : pegType;
+}
 
 const StablecoinDataRawSchema = z.object({
   id: z.string(),
@@ -196,6 +236,13 @@ const StablecoinDataRawSchema = z.object({
   supplyGapFill: SupplyGapFillProvenanceSchema.optional(),
   supplyChainGuard: SupplyChainGuardProvenanceSchema.optional(),
   chainPartition: ChainPartitionProvenanceSchema.optional(),
+  ...supplyQuantityFields,
+  supplyChangeBaselines: SupplyChangeBaselinesSchema.optional(),
+  commodityEntitlement: CommodityEntitlementSchema.optional(),
+  priceQuoteBasis: z.enum(["bid-ask-midpoint", "last-trade"]).optional(),
+  upstreamKeys: z.array(z.string()).optional(),
+  pricePoolKeys: z.array(z.string()).optional(),
+  parityQuoteUnit: z.enum(["raw-token", "accrued-token"]).optional(),
   circulating: SupplyBucketsSchema,
   circulatingPrevDay: SupplyBucketsSchema.nullish(),
   circulatingPrevWeek: SupplyBucketsSchema.nullish(),
@@ -235,7 +282,7 @@ export const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) =>
   priceSource: asset.priceSource,
   priceConfidence: asset.priceConfidence ?? null,
   priceUpdatedAt: asset.priceUpdatedAt ?? null,
-  priceObservedAt: asset.priceObservedAt ?? asset.priceUpdatedAt ?? null,
+  priceObservedAt: asset.priceObservedAt === undefined ? asset.priceUpdatedAt ?? null : asset.priceObservedAt,
   priceObservedAtMode: asset.priceObservedAtMode ?? null,
   ...(asset.nominalPriceReference != null ? { nominalPriceReference: asset.nominalPriceReference } : {}),
   ...(asset.priceDerivation != null ? { priceDerivation: asset.priceDerivation } : {}),
@@ -255,6 +302,15 @@ export const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) =>
   ...(asset.supplyGapFill != null ? { supplyGapFill: asset.supplyGapFill } : {}),
   ...(asset.supplyChainGuard != null ? { supplyChainGuard: asset.supplyChainGuard } : {}),
   ...(asset.chainPartition != null ? { chainPartition: asset.chainPartition } : {}),
+  ...(asset.supplyChangeBaselines !== undefined ? { supplyChangeBaselines: asset.supplyChangeBaselines } : {}),
+  ...(asset.commodityEntitlement !== undefined ? { commodityEntitlement: asset.commodityEntitlement } : {}),
+  ...(asset.priceQuoteBasis !== undefined ? { priceQuoteBasis: asset.priceQuoteBasis } : {}),
+  ...(asset.pricePoolKeys !== undefined ? { pricePoolKeys: asset.pricePoolKeys } : {}),
+  ...(asset.upstreamKeys !== undefined ? { upstreamKeys: asset.upstreamKeys } : {}),
+  ...(asset.parityQuoteUnit !== undefined ? { parityQuoteUnit: asset.parityQuoteUnit } : {}),
+  ...(asset.circulatingNative !== undefined ? { circulatingNative: asset.circulatingNative } : {}),
+  ...(asset.valuationPriceUsd !== undefined ? { valuationPriceUsd: asset.valuationPriceUsd } : {}),
+  ...(asset.valuationObservedAtSec !== undefined ? { valuationObservedAtSec: asset.valuationObservedAtSec } : {}),
   circulating: asset.circulating,
   circulatingPrevDay: asset.circulatingPrevDay ?? {},
   circulatingPrevWeek: asset.circulatingPrevWeek ?? {},
@@ -270,6 +326,9 @@ export type StablecoinData = z.infer<typeof StablecoinDataSchema>;
 export const StablecoinListResponseSchema = z.object({
   peggedAssets: z.array(StablecoinDataSchema),
   fxFallbackRates: z.record(z.string(), z.number()).optional(),
+  fxReferenceObservations: FxReferenceEvidenceMapSchema.optional(),
+  selectedPegReferences: SelectedPegReferencesSchema.optional(),
+  fxAdmissionCoverageGeneration: z.string().uuid().optional(),
 });
 export type StablecoinListResponse = z.infer<typeof StablecoinListResponseSchema>;
 
@@ -277,6 +336,7 @@ const SupplyHistoryPointSchema = z.object({
   date: z.number(),
   circulatingUsd: z.number(),
   price: z.number().nullable(),
+  ...supplyQuantityFields,
   /** Chain-coverage provenance of this daily observation; null/absent = unrecorded (legacy), never complete. */
   supplyProvenance: SupplyObservationProvenanceSchema.nullable().optional(),
 });

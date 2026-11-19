@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { savePriceCache, getPriceCache } from "../../../lib/price-cache";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { createValidationContextResolver } from "../pricing";
 import { runSharedPriceCompletion } from "../post-enrichment";
@@ -101,6 +103,47 @@ describe("runSharedPriceCompletion authoritative repair", () => {
     }, "");
     expect(result).toMatchObject({ cachedFallbackCount: 1 });
     expect(asset).toMatchObject({ price: 1, priceSource: "cached", priceConfidence: "fallback", priceObservedAt: now - 30 });
+  });
+
+  it("publishes a clockless MONEY cache row with only its collection clock", async () => {
+    const { db, sqlite } = createLatestSchemaSqlite();
+    try {
+      const now = Math.floor(Date.now() / 1000);
+      const asset: PeggedAsset = { id: "money-defi-money", name: "MONEY", symbol: "MONEY", pegType: "peggedUSD", price: null };
+      await savePriceCache(db, [{ id: asset.id, price: 0.998, source: "coingecko-low-volume", confidence: "fallback",
+        observedAt: null, observedAtMode: "unknown", syncedAt: now - 60 }]);
+      const result = await runSharedPriceCompletion({ assets: [asset], db, syncStartSec: now,
+        validationContexts: createValidationContextResolver(), authoritativeOverrides: new Map(),
+        authoritativeOverrideStats: createAuthoritativeLivePriceOverrideStats(), priceCache: await getPriceCache(db),
+      }, "");
+      expect(result).toMatchObject({ cachedFallbackCount: 1 });
+      expect(asset).toMatchObject({ price: 0.998, priceObservedAt: null, priceUpdatedAt: null, priceSyncedAt: now - 60 });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it.each([
+    ["defillama", "unknown", 60, false],
+    ["chainlink-nav", "upstream", 5 * 86_400, true],
+    ["chainlink-nav", "upstream", 48 * 3600, false],
+  ] as const)("replays %s only within its original observation policy", async (source, mode, age, accepted) => {
+    const now = Math.floor(Date.now() / 1000);
+    const id = source === "defillama" ? "usdt-tether" : accepted ? "mre7yield-midas" : "eutbl-spiko";
+    const asset: PeggedAsset = { id, name: id, symbol: id, pegType: id === "eutbl-spiko" ? "peggedEUR" : "peggedUSD", price: null };
+    const observedAt = now - age;
+    const result = await runSharedPriceCompletion({
+      assets: [asset], db: mockD1([{ match: "FROM cache", rows: [] }]), syncStartSec: now,
+      validationContexts: createValidationContextResolver(),
+      authoritativeOverrides: new Map(), authoritativeOverrideStats: createAuthoritativeLivePriceOverrideStats(),
+      priceCache: new Map([[id, {
+        price: 1.001, updatedAt: observedAt, source, confidence: "single-source",
+        observedAt, observedAtMode: mode, syncedAt: observedAt, hasExplicitClocks: true,
+      }]]),
+    }, "");
+    expect(result).toMatchObject({ cachedFallbackCount: Number(accepted) });
+    if (accepted) expect(asset).toMatchObject({ priceSource: "cached", priceObservedAt: observedAt, priceUpdatedAt: observedAt });
+    else expect(asset.price).toBeNull();
   });
 
   it("withholds an uncorroborated AZND Curve exact-pool override", async () => {

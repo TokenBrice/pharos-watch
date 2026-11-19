@@ -104,6 +104,7 @@ describe("fetchAeroSlipstreamPools", () => {
       chain,
       poolAddress: CL_POOL,
       poolType: "aero-slipstream-1bp",
+      ratioObservedAtSec: 1,
       feeRate: 0.0001,
       tickSpacing: 1,
       volume24hUsd: null,

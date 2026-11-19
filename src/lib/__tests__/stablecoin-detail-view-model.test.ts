@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { FROZEN_SNAPSHOTS_BY_ID } from "@shared/lib/stablecoins/frozen-snapshots";
+import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
 import { projectFrozenSnapshotLiveSummary } from "@/lib/frozen-snapshot-live-summary";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
 import type { MintBurnFlowsResponse } from "@shared/types/mint-burn";
 import type { PegSummaryCoin, PegSummaryResponse } from "@shared/types/peg";
-import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
+import { StablecoinLiveSummarySchema, type StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
 import { makePegSummaryCoin as makePegSummaryCoinBase } from "@/test-utils/peg-summary-fixtures";
 import { makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
+import { FX_REOPEN_QUOTE_AT, makeFxCurrentPeg } from "@shared/test-utils/boundary-contract-vectors.test-support";
+import { formatObservedPrice } from "../current-peg";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { makePublishedProcessDiagnostic } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";
 import { buildStablecoinDetailViewModel } from "../stablecoin-detail-view-model";
@@ -85,14 +88,14 @@ describe("stablecoin detail view-model builder", () => {
     });
     expect(model.hero.coinData).toBe(model.coinData);
     expect(model.nativeSupply).toEqual({ current: 90, prevWeek: 80, prevMonth: 70 });
-    expect(model.supply).toBeCloseTo(100 / price);
+    expect(model.supply).toBeCloseTo(pegType === "peggedUSD" ? 100 / price : 90);
   });
   it("keeps explicit zero supply through the hero instead of reviving older positive checkpoints", () => {
     const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
     const params = makeReadyDetailParams({
       id: coin.id, coin,
       asset: { circulating: { peggedUSD: 0 }, price: 1, priceSource: "coingecko" },
-      nativeSupply: { current: 100, prevWeek: 200, prevMonth: 300 },
+      nativeSupply: { current: 0, prevWeek: 200, prevMonth: 300 },
     });
     const model = buildStablecoinDetailViewModel(params);
     expect(model.status).toBe("ready");
@@ -115,6 +118,53 @@ describe("stablecoin detail view-model builder", () => {
       expect(unavailable.status === "ready" && unavailable.hero.market.supply).toBeNull();
       expect(unavailable.status === "ready" && unavailable.hero.market.supplyTrend.current).toBe(100);
     }
+  });
+  it.each([[100, 200_000], [0, 200_000], [null, 200_000], [null, 0]] as const)(
+    "uses PAXG's native supply %s for the headline and trend at USD market cap %s",
+    (current, mcap) => {
+      const coin = TRACKED_META_BY_ID.get("paxg-paxos")!;
+      const model = buildStablecoinDetailViewModel(makeReadyDetailParams({
+        id: coin.id, coin,
+        asset: { price: 3_000, priceSource: "coingecko", circulating: { peggedGOLD: mcap } },
+        nativeSupply: { current, prevWeek: 90, prevMonth: 80 },
+      }));
+      expect(model).toMatchObject({ status: "ready", mcap, supply: current });
+      expect(model.status === "ready" && model.hero.market).toMatchObject({ supply: current, supplyTrend: { current } });
+    },
+  );
+
+  it("keeps legacy fallback and explicit PAXG quantity distinct across the compact Worker-to-Pages boundary", () => {
+    const coin = TRACKED_META_BY_ID.get("paxg-paxos")!;
+    const now = 1_795_000_000;
+    for (const [quantity, expected] of [[undefined, 200_000 / 3_000], [100, 100], [null, null]] as const) {
+      const wire = projectStablecoinLiveSummary({
+        currentCirculatingUSD: { peggedGOLD: 200_000 },
+        currentSupplyObservedAt: now - 240,
+        currentCirculatingNative: quantity,
+        price: 3_000, priceSource: "coingecko", priceObservedAt: now - 60,
+      }, coin.id);
+      const summary = StablecoinLiveSummarySchema.parse(JSON.parse(JSON.stringify(wire)));
+      expect(buildDetailMarketSnapshot(coin, summary, summary.nativeSupply, [], now * 1000))
+        .toMatchObject({ mcap: 200_000, supply: expected });
+    }
+  });
+
+  it.each([
+    [undefined, 210_000], [{}, null], [{ day: null }, null],
+    [{ day: { observedAt: 1_790_706_600, circulatingUsd: 200_000, circulatingNative: 100 } }, 200_000],
+  ] as const)("uses the dated detail day baseline (%j) before legacy buckets", (supplyChangeBaselines, expected) => {
+    const coin = TRACKED_META_BY_ID.get("paxg-paxos")!;
+    const params = makeReadyDetailParams({
+      id: coin.id, coin,
+      asset: {
+        circulating: { peggedGOLD: 210_000 },
+        circulatingPrevDay: { peggedGOLD: 210_000 },
+        supplyChangeBaselines,
+        price: 2_100,
+      },
+    });
+    const summary = params.queries.liveSummary.data!;
+    expect(buildDetailMarketSnapshot(coin, summary, null, [], 1_790_793_000_000).prevDay).toBe(expected);
   });
   it("keeps the retained dossier ready through a failed summary refresh and recovery", () => {
     const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
@@ -475,6 +525,45 @@ describe("stablecoin detail view-model builder", () => {
       "moralis-address",
     ]);
     expect(snapshot.agreeSources).toEqual(["coingecko", "alchemy-address"]);
+  });
+
+  it.each([
+    ["matching clock", FX_REOPEN_QUOTE_AT, 1.1, "€1.0200"],
+    ["older NAV quote", FX_REOPEN_QUOTE_AT - 3600, null, "$1.1220"],
+  ] as const)("formats the EUTBL detail price with %s", (_label, priceObservedAt, pegRef, price) => {
+    const coin = TRACKED_META_BY_ID.get("eutbl-spiko")!;
+    const peer = {
+      ...makePegSummaryCoin({ id: "eurc-circle", pegCurrency: "EUR", pegType: "peggedEUR",
+        price: 1.1, priceObservedAt: FX_REOPEN_QUOTE_AT }),
+      ...makeFxCurrentPeg("admitted", 0),
+    };
+    const view = buildStablecoinDetailViewModel(makeReadyDetailParams({
+      id: coin.id, coin, asset: { price: 1.122, priceObservedAt, priceUpdatedAt: FX_REOPEN_QUOTE_AT },
+      queries: { pegSummary: { data: { coins: [peer], summary: null } as PegSummaryResponse } },
+    }));
+    expect(view.status).toBe("ready");
+    if (view.status !== "ready") return;
+    expect(view.pegRef).toBe(pegRef);
+    expect(formatObservedPrice(view.coinData.price, coin.flags.pegCurrency, view.pegRef)).toBe(price);
+  });
+
+  it("uses the archived USD cap and observed quote only when native supply was omitted", () => {
+    const coin = TRACKED_META_BY_ID.get("gyen-gyen")!;
+    const archive = FROZEN_SNAPSHOTS_BY_ID.get(coin.id)!;
+    const market = (overrides: Record<string, unknown> = {}) => {
+      const summary = projectFrozenSnapshotLiveSummary({
+        ...archive, peggedAssetRow: { ...archive.peggedAssetRow, ...overrides },
+      })!;
+      return buildDetailMarketSnapshot(coin, summary, summary.nativeSupply, [], Date.parse(archive.capturedAt));
+    };
+
+    const legacy = market();
+    expect(legacy.supply).toBeCloseTo(702_066_781.49, 2);
+    expect(legacy.nativeSupply).toMatchObject({ prevWeek: null, prevMonth: null });
+    expect(market({ circulatingNative: 1_000 }).supply).toBe(1_000);
+    expect(market({ circulatingNative: null }).supply).toBeNull();
+    expect(market({ circulating: {} }).supply).toBeNull();
+    expect(market({ priceObservedAtMode: "nominal_reference" }).supply).toBeNull();
   });
 
   it("keeps unread peg provenance absent instead of a measured empty result", () => {

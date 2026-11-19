@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { getReferenceSessionState } from "@shared/lib/reference-market-hours";
 import { batchExecute } from "../../lib/db";
 import { dewsCache, dewsCoin, makeDb, publishShapedRankingsPayload } from "./compute-dews.test-support";
 import * as publishedMintBurn from "../../lib/mint-burn-published-gauge";
@@ -28,7 +29,8 @@ vi.mock("@shared/lib/psi-eligible", () => {
   };
 });
 
-vi.mock("@shared/lib/peg-rates", () => ({
+vi.mock("@shared/lib/peg-rates", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@shared/lib/peg-rates")>(),
   derivePegRates: vi.fn(() => ({
     rates: { peggedUSD: 1 },
     sources: { peggedUSD: "median" },
@@ -48,7 +50,8 @@ vi.mock("../../lib/db", async (importOriginal) => {
   };
 });
 
-vi.mock("../../lib/db-cache", () => ({
+vi.mock("../../lib/db-cache", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../../lib/db-cache")>(),
   getCache: vi.fn(async () => dewsCache()),
   setCache: vi.fn(async () => {}),
   setCacheIfNewer: vi.fn(async () => ({ written: true, skippedBecauseNewer: false })),
@@ -358,14 +361,26 @@ describe("computeAndStoreDEWS", () => {
   });
 
   it("preserves explicit zero supply-history anchors for DEWS scoring", async () => {
+    const now = Math.floor(Date.now() / 1000);
     vi.mocked(getCache).mockImplementation(async (_db, key) => {
       if (key === "dews:bootstrap-complete") return null;
       return dewsCache([dewsCoin({
-        circulatingPrevDay: { peggedUSD: 0 }, circulatingPrevWeek: { peggedUSD: 0 },
+        circulatingNative: 100_000_000,
+        supplyObservedAt: now,
+        supplySource: "onchain-circulating-supply",
       })]) as never;
     });
     const sqlSeen: string[] = [];
-    const db = makeDb(sqlSeen);
+    const day = Math.floor(now / 86_400) * 86_400;
+    const db = makeDb(sqlSeen, { nativeHistoryRows: [1, 7].map((offset) => {
+      const snapshotDate = day - offset * 86_400;
+      return {
+        stablecoin_id: "usdt-tether", snapshot_date: snapshotDate, circulating_native: 0,
+        supply_provenance: JSON.stringify({
+          supplySource: "onchain-circulating-supply", supplyObservedAt: snapshotDate, supplyChainGuard: null,
+        }),
+      };
+    }) });
 
     await computeAndStoreDEWS(db);
 
@@ -375,17 +390,16 @@ describe("computeAndStoreDEWS", () => {
         circulatingCurrent: 100_000_000,
         circulatingPrevDay: 0,
         circulatingPrevWeek: 0,
-        circulatingPrevDayAvailable: true,
-        circulatingPrevWeekAvailable: true,
       }),
     );
   });
 
-  it("marks supply-history anchors unavailable when both previous buckets are absent", async () => {
+  it.each([true, false])("uses legacy USD stock when native history is absent (clock present %s)", async (hasClock) => {
     vi.mocked(getCache).mockImplementation(async (_db, key) => {
       if (key === "dews:bootstrap-complete") return null;
       return dewsCache([dewsCoin({
-        circulatingPrevDay: undefined, circulatingPrevWeek: undefined,
+        circulatingNative: 90_000_000,
+        supplyObservedAt: hasClock ? Math.floor(Date.now() / 1000) : undefined,
       })]) as never;
     });
     const sqlSeen: string[] = [];
@@ -397,10 +411,8 @@ describe("computeAndStoreDEWS", () => {
       expect.objectContaining({
         stablecoinId: "usdt-tether",
         circulatingCurrent: 100_000_000,
-        circulatingPrevDay: 100_000_000,
-        circulatingPrevWeek: 100_000_000,
-        circulatingPrevDayAvailable: false,
-        circulatingPrevWeekAvailable: false,
+        circulatingPrevDay: 99_000_000,
+        circulatingPrevWeek: 98_000_000,
       }),
     );
   });
@@ -436,6 +448,8 @@ describe("computeAndStoreDEWS", () => {
         burnVolume24hUsd: 0,
         mintVolume24hUsd: 0,
         burnBaseline30dUsd: 3_500_000 / 30,
+        flowHolderPressureWithheld: true,
+        flowEpochIssue: null,
         flowDataAgeDays: expect.any(Number),
         flowBaselineDays: 30,
         sourceAges: expect.objectContaining({ mintBurn: 0 }),
@@ -732,7 +746,7 @@ describe("computeAndStoreDEWS", () => {
 
     await computeAndStoreDEWS(db);
 
-    expect(sqlSeen.some((sql) => sql.includes("FROM cache WHERE key = ?"))).toBe(true);
+    expect(sqlSeen.some((sql) => sql.includes("pharos:dews:yield-rankings-cache"))).toBe(true);
     expect(computeDEWS).toHaveBeenCalledWith(
       expect.objectContaining({
         stablecoinId: "usdt-tether",
@@ -1114,20 +1128,33 @@ describe("computeAndStoreDEWS", () => {
 
   it.each([
     { source: "median" as const, available: false, reference: 0, reason: "peg-reference-untrusted" },
-    { source: "fallback" as const, available: true, reference: 1.08, reason: null },
-  ])("uses $source authority for non-USD divergence", async ({ source, available, reference, reason }) => {
+    { source: "fx" as const, available: true, reference: 1.08, reason: null },
+    { source: null, available: false, reference: 0, reason: "peg-reference-missing" },
+  ])("uses the selected $source reference for non-USD divergence", async ({ source, available, reference, reason }) => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const observation = { pegKey: "peggedEUR", usdPerUnit: 1.08, source: "openExchangeRates",
+      cadence: "intraday", observedAtSec: nowSec - 60 };
+    const generation = `stablecoins:${nowSec}`;
+    const sessionOpenedAtSec = getReferenceSessionState("fx", nowSec).sessionOpenedAtSec;
     vi.mocked(getCache).mockImplementation(async (_db, key) => {
       if (key === "dews:bootstrap-complete") return null;
       return dewsCache([dewsCoin({
         id: "eurc-euro-coin", symbol: "EURC", pegType: "peggedEUR", price: 1.05,
+        priceSource: "coinbase", priceObservedAt: nowSec - 30, priceObservedAtMode: "upstream",
         circulating: { peggedEUR: 100_000_000 },
         circulatingPrevDay: { peggedEUR: 100_000_000 },
         circulatingPrevWeek: { peggedEUR: 100_000_000 },
-      })]) as never;
+      })], { fxFallbackRates: { peggedEUR: 1.08 }, fxReferenceObservations: source == null ? {} : { peggedEUR: observation },
+        selectedPegReferences: { peggedEUR: source === "median"
+        ? { kind: source, generation, pegKey: "peggedEUR", usdPerUnit: 1.08,
+          contributors: [{ observedAtSec: nowSec - 60, derivation: "traded-market", provenanceKey: "coinbase" }] }
+        : source == null ? undefined
+          : { kind: source, generation, observation, repricing: { source: observation.source, sessionOpenedAtSec, preCloseUsdPerUnit: 1.11 } },
+      } }) as never;
     });
     vi.mocked(derivePegRates).mockReturnValueOnce({
       rates: { peggedUSD: 1, peggedEUR: 1.08 },
-      sources: { peggedUSD: "median", peggedEUR: source },
+      sources: { peggedUSD: "median", peggedEUR: "fx" },
       counts: { peggedUSD: 1, peggedEUR: 1 },
     });
 
@@ -1137,9 +1164,32 @@ describe("computeAndStoreDEWS", () => {
       expect.objectContaining({
         stablecoinId: "eurc-euro-coin", pegType: "peggedEUR",
         pegRef: reference, pegReferenceAvailable: available,
-        pegReferenceUnavailableReason: reason, pegRateSource: source, pegRateContributorCount: 1,
+        pegReferenceUnavailableReason: reason, pegRateSource: source, pegRateContributorCount: source === "median" ? 1 : null,
+        referenceAdmission: expect.objectContaining({ primary: expect.objectContaining(available
+          ? { status: "admitted", generation, referenceObservedAtSec: nowSec - 60 }
+          : { status: "unavailable", reason: "no-reference" }) }),
       }),
     );
+  });
+
+  it.each([
+    ["2026-11-18T12:00:00Z", 1.065, true],
+    ["2026-11-14T12:00:00Z", 1.065, false],
+    ["2026-11-14T12:00:00Z", 0.75, true],
+  ] as const)("uses the legacy FX closure rule without an evidence generation at %s and %s", async (clock, price, available) => {
+    vi.setSystemTime(new Date(clock));
+    const asset = dewsCoin({ id: "eurc-euro-coin", symbol: "EURC", pegType: "peggedEUR", price });
+    vi.mocked(getCache).mockImplementation(async (_db, key) =>
+      key === "stablecoins" ? dewsCache([asset], { fxFallbackRates: { peggedEUR: 1.08 } }) as never : null);
+    vi.mocked(derivePegRates).mockReturnValueOnce({
+      rates: { peggedEUR: 1.08 }, sources: { peggedEUR: "fx" }, counts: { peggedEUR: 1 },
+    });
+    await computeAndStoreDEWS(makeDb([], { dexPriceRows: [] }));
+    expect(computeDEWS).toHaveBeenCalledWith(expect.objectContaining({
+      pegRef: 1.08, pegReferenceAvailable: available, referenceAdmission: undefined,
+      pegReferenceUnavailableReason: available ? null : "reference-market-closed",
+      staleFlags: expect.objectContaining({ pegReference: false }),
+    }));
   });
 
   it("includes blacklist counts for PYUSD and USD1 when those tracker rows exist", async () => {

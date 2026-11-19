@@ -16,6 +16,7 @@ const detail: DetailResponseHelpers = {
   resolveTokensWithSupplyHistoryFallback: async (tokens) => ({ tokens, observedAt: getLatestDetailTokenDate(tokens), fallback: false }),
   staleCacheOrError: (status, message) => new Response(message, { status }),
   trySupplyHistoryFallback: async () => null,
+  serveWrapperHistory: async () => Response.json({ tokens: [] }),
 };
 
 const fixtures = createLatestSchemaFixtureTracker();
@@ -79,6 +80,24 @@ describe("cache-backed native supply", () => {
     expect(sqlite.prepare("SELECT value FROM cache WHERE key = 'detail:probe'").get()).toBeUndefined();
   });
 
+  it("preserves the weekly native count at its dated EUR valuation and skips rejected windows", async () => {
+    const day = 1_728_000_000;
+    loadStablecoinsCacheMock.mockResolvedValue({ kind: "ok", updatedAt: day, payload: { peggedAssets: [{
+      id: "eurc-circle", price: 1.1, circulatingNative: 100, circulating: { peggedEUR: 110 },
+      circulatingPrevDay: { peggedEUR: 110 }, circulatingPrevMonth: { peggedEUR: 110 },
+      circulatingPrevWeek: { peggedEUR: 110 }, supplyChangeBaselines: { day: null, month: null, week: {
+        observedAt: day - 7 * 86_400 + 100, circulatingUsd: 100, circulatingNative: 100,
+      } },
+    }] } });
+    const response = await handleCacheBackedDetail(
+      { db: fixtures.open().db, stablecoinId: "eurc-circle", pegType: "peggedEUR" }, detail,
+    );
+    expect(await response.json()).toEqual({ tokens: [
+      { date: day - 7 * 86_400, totalCirculatingUSD: { peggedEUR: 100 }, totalCirculating: { peggedEUR: 100 } },
+      { date: day, totalCirculatingUSD: { peggedEUR: 110 }, totalCirculating: { peggedEUR: 100 } },
+    ] });
+  });
+
   it.each([1, 40])("preserves the %s-day-old fallback source clock without renewing detail cache", async (days) => {
     const now = 1_800_000_000;
     vi.useFakeTimers();
@@ -102,6 +121,26 @@ describe("cache-backed native supply", () => {
     expect(waitUntil).not.toHaveBeenCalled();
     expect(sqlite.prepare("SELECT updated_at FROM cache WHERE key = 'detail:probe'").get()).toEqual({ updated_at: observedAt - 10 });
     expect(await response.json()).toMatchObject({ _meta: { updatedAt: observedAt, status: "stale", reason: "detail-history-fallback" } });
+  });
+
+  it("restores pre-0306 USD native history only from the checkpoint's own complete stock and price evidence", async () => {
+    const { db, sqlite } = fixtures.open();
+    const today = Math.floor(Date.now() / 86_400_000) * 86_400;
+    const insert = sqlite.prepare(`INSERT INTO supply_history
+      (stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at, supply_provenance) VALUES (?, ?, ?, ?, ?, ?)`);
+    for (const [index, skew] of [0, 1, null].entries()) {
+      const day = today - (3 - index) * 86_400;
+      const clock = day + 600;
+      insert.run("usdc-circle", day, 980, 0.98, skew == null ? null : clock + skew,
+        JSON.stringify({ supplySource: "coingecko-fallback", supplyObservedAt: clock, supplyChainGuard: null }));
+    }
+    const helpers = createDetailResponseHelpers({
+      db, stablecoinId: "usdc-circle", pegType: "peggedUSD", cached: null,
+      execCtx: { waitUntil: vi.fn() } as unknown as ExecutionContext,
+    });
+    const response = await helpers.trySupplyHistoryFallback("test");
+    const { tokens } = await response!.json() as { tokens: { totalCirculating: Record<string, number> }[] };
+    expect(tokens.map(token => token.totalCirculating)).toEqual([{ peggedUSD: 1000 }, {}, {}]);
   });
 
   it("keeps stale external history stale when no supply-history rescue exists", async () => {

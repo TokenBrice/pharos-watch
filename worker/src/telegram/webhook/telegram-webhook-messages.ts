@@ -1,4 +1,5 @@
 import { formatCoinPayload } from "@shared/lib/telegram-mini-app-payloads";
+import { formatUsdPriceAdaptive } from "@shared/lib/format";
 import { formatRelativeAgeSeconds, formatRelativeDurationSeconds } from "@shared/lib/relative-time";
 import { isPausedSentinel } from "@shared/lib/telegram-delivery-policy";
 import {
@@ -467,6 +468,16 @@ function formatYieldLine(status: StatusForCoin, nowSec: number): string | null {
   return `Yield ${value.apy30d.toFixed(2)}% (30-day, ${escapeHtml(value.source)}), ${formatUpdated(value.provenance?.sourceObservedAt, nowSec)}`;
 }
 
+function formatActiveDepeg(depeg: Extract<StatusForCoin["depeg"], { status: "active" }>): string {
+  const percent = `${(Math.abs(depeg.peakDeviationBps) / 100).toFixed(1)}%`;
+  const opening = depeg.peerOpening ? `opened ${depeg.direction} the peer median (lower confidence)` : `off peg (${depeg.direction})`;
+  if (depeg.peakBasisUnavailable) return `${opening}, peak comparison unavailable`;
+  if (depeg.peerRelative) {
+    return `${depeg.peerOpening ? "peer-relative incident" : opening}, peak ${percent} ${depeg.direction} the peer median (lower confidence)`;
+  }
+  return `${opening}, peak ${percent}${depeg.peerOpening ? ` ${depeg.direction} peg` : ""}`;
+}
+
 /**
  * `/status <coin>` card. Every value names how old it is and an unavailable
  * value says so instead of disappearing. No freshness verdict is published
@@ -474,9 +485,9 @@ function formatYieldLine(status: StatusForCoin, nowSec: number): string | null {
  */
 export function buildStatusMessage(symbol: string, s: StatusForCoin, nowSec = Math.floor(Date.now() / 1000)): string {
   const name = `<b>${escapeHtml(symbol)}</b>`;
-  const price = s.priceUsd != null ? `$${s.priceUsd.toFixed(4)}` : null;
+  const price = s.priceUsd != null ? `$${formatUsdPriceAdaptive(s.priceUsd)}` : null;
   const headline = s.depeg.status === "active"
-    ? `${s.depeg.direction === "below" ? "▼" : "▲"} ${name} off peg (${s.depeg.direction}), peak ${(Math.abs(s.depeg.peakDeviationBps) / 100).toFixed(1)}%, since ${formatElapsed(s.depeg.startedAt, nowSec)}${price ? `. Price ${price}` : ""}`
+    ? `${s.depeg.direction === "below" ? "▼" : "▲"} ${name} ${formatActiveDepeg(s.depeg)}, since ${formatElapsed(s.depeg.startedAt, nowSec)}${price ? `. Price ${price}` : ""}`
     : price
       ? `${name} at ${price}, no active depeg`
       : `${name}: no recent price, no active depeg`;

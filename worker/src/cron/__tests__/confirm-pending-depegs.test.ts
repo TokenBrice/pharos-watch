@@ -8,6 +8,7 @@ import {
 } from "../../test-helpers/pending-depeg-fixtures";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { tradedPair } from "../depeg-detection/__tests__/reference-fixtures";
 import { DEPEG_PENDING_MIN_AGE_SEC } from "@shared/lib/depeg-config";
 import { MAX_OPEN_DEPEG_EVENTS } from "../../lib/depeg-threshold-policy";
 
@@ -103,6 +104,9 @@ import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { fetchCurrentNativePegQuotes } from "../../lib/native-peg-quotes";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
+import { decideDepegAsset } from "../depeg-detection/decision-engine";
+import { buildUpsertPendingDepegStmt } from "../../lib/depeg-pending";
+import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 
 const NOW_SEC = 1_700_000_000;
 const sqliteFixtures = createLatestSchemaFixtureTracker();
@@ -121,16 +125,16 @@ function insertOpenEvent(sqlite: DatabaseSync, stablecoinId: string, symbol: str
 }
 
 function insertPoolChallenger(sqlite: DatabaseSync, stablecoinId: string, price: number, tvlUsd: number): void {
-  sqlite.prepare(
-    `INSERT INTO dex_price_challenger_snapshots
-       (stablecoin_id, snapshot_at, published_at, has_rows, source_coverage_complete)
-     VALUES (?, ?, ?, 1, 1)`,
-  ).run(stablecoinId, NOW_SEC - 60, NOW_SEC - 60);
-  sqlite.prepare(
-    `INSERT INTO dex_price_challengers
-       (stablecoin_id, snapshot_at, pool_id, chain, protocol, source_family, price_usd, tvl_usd)
-     VALUES (?, ?, ?, 'Ethereum', 'curve', 'curve', ?, ?)`,
-  ).run(stablecoinId, NOW_SEC - 60, `${stablecoinId}:curve`, price, tvlUsd);
+  sqlite.prepare(`INSERT INTO dex_price_challenger_publications_v2
+       (publication_id, generation_id, snapshot_at, published_at, sealed)
+     VALUES (1, 'test-liquidity', ?, ?, 1)`).run(NOW_SEC - 60, NOW_SEC - 60);
+  sqlite.prepare(`INSERT INTO dex_price_challenger_payloads_v2
+       (publication_id, stablecoin_id, pool_id, chain, protocol, source_family, price_usd, tvl_usd, price_observed_at)
+     VALUES (1, ?, ?, 'Ethereum', 'curve', 'curve', ?, ?, ?)`)
+    .run(stablecoinId, `${stablecoinId}:curve`, price, tvlUsd, NOW_SEC - 60);
+  sqlite.prepare(`INSERT INTO dex_price_challenger_heads_v2 (stablecoin_id, publication_id, has_rows)
+     VALUES (?, 1, 1)`).run(stablecoinId);
+
 }
 
 function makeLowConfidenceAsset(pending: ReturnType<typeof makePendingRow>, price: number, geckoId = "tether") {
@@ -176,6 +180,56 @@ afterEach(() => {
 });
 
 describe("confirmPendingDepegs", () => {
+  it("withholds Binance confirmation when any qualifying pending quote used Binance", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(NOW_SEC * 1000);
+    vi.mocked(fetchBinancePricesDetailed).mockResolvedValue({
+      ...makeBinancePartialBatch(), value: { prices: new Map([["USDT", 0.98]]), diagnostics: [] },
+    });
+    const id = "usdt-tether";
+    const quote = (now: number, source: string, price = 0.98) => makeAsset({
+      id, symbol: "USDT", price, priceSource: source, agreeSources: [source], circulating: { peggedUSD: 1e8 },
+      priceConfidence: "single-source", priceObservedAtMode: "upstream", priceObservedAt: now, priceUpdatedAt: now,
+    });
+    for (const sources of [["kraken", "binance", "kraken"], ["kraken", "kraken", "kraken"]]) {
+      const { db, sqlite } = openFixture();
+      for (const [index, source] of sources.entries()) {
+        const now = NOW_SEC - 2700 + index * 900;
+        const decision = decideDepegAsset({ now, asset: quote(now, source), meta: PSI_ELIGIBLE_META_BY_ID.get(id),
+          pegRates: { peggedUSD: 1 }, pegRateSources: { peggedUSD: "median" }, pegRateCounts: { peggedUSD: 1 } });
+        const command = decision.commands.find((command) => command.type === "upsert-pending");
+        if (!command) throw new Error("Expected a qualifying pending observation");
+        await buildUpsertPendingDepegStmt(db, command.payload).run();
+      }
+      await confirmPendingDepegs(db, [quote(NOW_SEC, "coingecko", 1)]);
+      const events = sqlite.prepare("SELECT peak_deviation_bps FROM depeg_events").all();
+      expect(events).toEqual(sources.includes("binance") ? [] : [{ peak_deviation_bps: -200 }]);
+    }
+  });
+
+  it.each([
+    { id: "ust-terra", age: 1800, outcome: "promoted" },
+    { id: "iron-iron-finance", age: 1800, outcome: "promoted" },
+    { id: "ust-terra", age: 7 * 86400, outcome: "expired" },
+    { id: "unknown-historical-id", age: 7 * 86400, outcome: "expired" },
+  ])("records $outcome for $id after $age seconds", async ({ id, age, outcome }) => {
+    vi.spyOn(Date, "now").mockReturnValue(NOW_SEC * 1000);
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    const { sqlite, db } = openFixture();
+    const firstSeen = NOW_SEC - age;
+    const lastSeen = firstSeen + 1800;
+    const row = makePendingRow({ stablecoin_id: id, symbol: "HIST", first_seen_at: firstSeen,
+      last_seen_at: lastSeen, updated_at: lastSeen });
+    insertPending(sqlite, row);
+    const asset = makeAsset({ id, price: 0.98, circulating: { peggedUSD: 10_000_000 },
+      priceConfidence: "high", priceSource: "pyth+binance", agreeSources: ["pyth", "binance"],
+      priceUpdatedAt: lastSeen, priceObservedAt: lastSeen, priceObservedAtMode: "upstream" });
+    await confirmPendingDepegs(db, [asset]);
+    const result = lifecycle(sqlite, id, row.id);
+    expect(result.outcomes).toMatchObject([{ outcome }]);
+    expect(result.pending).toBeUndefined();
+    expect(result.events).toHaveLength(outcome === "promoted" ? 1 : 0);
+  });
+
   it("returns early when there are no pending rows", async () => {
     const { sqlite, db } = openFixture();
 
@@ -240,7 +294,7 @@ describe("confirmPendingDepegs", () => {
         symbol: pending.symbol,
         geckoId: undefined,
         price: 0.97,
-        priceSource: "pool-tvl-weighted",
+        priceSource: "defillama",
         priceConfidence: "low",
         priceObservedAt: NOW_SEC - 30,
         priceUpdatedAt: NOW_SEC - 30,
@@ -265,7 +319,7 @@ describe("confirmPendingDepegs", () => {
     });
   });
 
-  it("clears BRZ pending rows when the direct BRL quote is back inside threshold", async () => {
+  it("clears a native-domain BRZ candidate from a fresh traded pair", async () => {
     vi.spyOn(Date, "now").mockReturnValue(NOW_SEC * 1000);
     const { sqlite, db } = openFixture();
     const pending = makePendingRow({
@@ -275,17 +329,23 @@ describe("confirmPendingDepegs", () => {
       peg_type: "peggedREAL",
       direction: "above",
       first_seen_bps: 180,
-      first_price: 0.190587,
-      peg_reference: 0.18765951,
+      first_price: 1.018,
+      last_price: 1.018,
+      peak_price: 1.018,
+      peg_reference: 1,
+      reason: "large-cap+native-origin",
     });
     insertPending(sqlite, pending);
+    sqlite.prepare("UPDATE depeg_pending SET peer_basis_json = ? WHERE id = ?").run(
+      JSON.stringify({ onset: { basis: "native-peg", observedAt: pending.first_seen_at, venue: "bitso",
+        price: pending.first_price, bps: pending.first_seen_bps, pegReference: 1 } }), pending.id);
     vi.mocked(fetchCurrentNativePegQuotes).mockResolvedValue(new Map([
       [pending.stablecoin_id, {
         stablecoinId: pending.stablecoin_id,
         geckoId: "brz",
         pegCurrency: "BRL",
         price: 0.995,
-        updatedAt: NOW_SEC - 60,
+        updatedAt: NOW_SEC - 60, derivation: tradedPair,
       }],
     ]));
 

@@ -1,6 +1,14 @@
 import { YieldCoinCohortSchema, type YieldCoinCohort } from "@shared/types/yield";
+import { getCache, MATCHING_CACHE_VERSION_KEY_SQL } from "./db-cache";
 
-const COHORT_CACHE_KEY = "yield-rankings:coin-cohort:v2";
+export const YIELD_RANKINGS_VERSION_KEY = "yield-rankings:v2";
+export const YIELD_RANKINGS_READ_KEYS = [YIELD_RANKINGS_VERSION_KEY, "yield-rankings"] as const;
+
+export function readYieldRankingsCache(db: D1Database) {
+  return getCache(db, "yield-rankings", undefined, YIELD_RANKINGS_VERSION_KEY);
+}
+
+const COHORT_CACHE_KEY = "yield-rankings:coin-cohort:v3";
 const COHORT_LEASE_KEY = `${COHORT_CACHE_KEY}:lease`;
 
 type YieldCoinCache = { value: string; updatedAt: number };
@@ -18,12 +26,13 @@ export async function readYieldFreshnessAge(db: D1Database, now: number): Promis
 
 /** Read the published envelope and one complete row without transferring the cohort. */
 export function readYieldRankingsCoinCache(db: D1Database, stablecoinId: string): Promise<YieldCoinCache | null> {
+  // SAFETY: the version selector is static and the requested coin is bound.
   return db.prepare(`SELECT CASE WHEN json_valid(c.value) THEN CASE WHEN json_type(c.value) = 'object' AND json_type(c.value, '$.rankings') = 'array' THEN json_set(c.value, '$.rankings', json((
       SELECT json_group_array(json(r.value)) FROM json_each(c.value, '$.rankings') AS r
       WHERE json_extract(r.value, '$.id') = ?
     ))) ELSE c.value END ELSE c.value END AS value, c.updated_at AS updatedAt
-    FROM cache AS c WHERE c.key = 'yield-rankings'`)
-    .bind(stablecoinId).first<YieldCoinCache>();
+    FROM cache AS c WHERE c.key = ${MATCHING_CACHE_VERSION_KEY_SQL}`)
+    .bind(stablecoinId, ...YIELD_RANKINGS_READ_KEYS).first<YieldCoinCache>();
 }
 
 /** SQL selects only the requested comparator result, never the whole census. */

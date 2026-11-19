@@ -1,4 +1,4 @@
-import { derivePegRates } from "@shared/lib/peg-rates";
+import type { FxRateState } from "../../lib/fx-rate-state";
 import { DEX_PROTOCOL_SOURCE_FRESHNESS_SEC, DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import type { PegAssetBase } from "@shared/types/price";
@@ -6,7 +6,6 @@ import { MAX_OPEN_DEPEG_EVENTS } from "../../lib/depeg-threshold-policy";
 import { POOL_CHALLENGE_MIN_TVL } from "../../lib/price-depeg-voting-policy";
 import { throwIfAborted } from "../../lib/abort";
 import {
-  DEPEG_EVENTS_DEPEGROW_COLUMNS,
   loadDexPoolChallengers,
   loadDexPrices,
   logOpenDepegEventLimitReached,
@@ -16,6 +15,7 @@ import {
   type NativePegQuoteSession,
 } from "../../lib/native-peg-quotes";
 import type { DepegDetectionRow, HydratedDepegDetection } from "./types";
+import { deriveDetectionPegRates } from "./reference-policy";
 import { persistActiveNativeEventQuotes } from "../../lib/native-peg-quote-cache";
 
 export async function hydrateDepegDetection(
@@ -25,12 +25,8 @@ export async function hydrateDepegDetection(
   signal?: AbortSignal,
   coingeckoApiKey?: string | null,
   nativePegSession?: NativePegQuoteSession,
+  detectionFxState?: FxRateState | null,
 ): Promise<HydratedDepegDetection & { openRowsLimitReached: boolean }> {
-  const {
-    rates: pegRates,
-    sources: pegRateSources,
-    counts: pegRateCounts,
-  } = derivePegRates(assets, PSI_ELIGIBLE_META_BY_ID, fxFallbackRates);
   const syncStart = Math.floor(Date.now() / 1000);
   const now = syncStart;
 
@@ -56,10 +52,12 @@ export async function hydrateDepegDetection(
 
   throwIfAborted(signal);
   const openResult = await db
-    .prepare(`SELECT open_event.*, provenance.quote_mode
+    .prepare(`SELECT open_event.*, COALESCE(provenance.quote_mode,
+      CASE WHEN open_event.source = 'live' AND open_event.pending_reason IS NOT NULL
+        THEN CASE WHEN instr('+' || open_event.pending_reason || '+', '+native-origin+') > 0 THEN 'native-peg' ELSE 'usd' END
+      END) AS quote_mode
       FROM (
-        SELECT ${DEPEG_EVENTS_DEPEGROW_COLUMNS}, recovery_last_seen_at
-        FROM depeg_events WHERE ended_at IS NULL LIMIT ?
+        SELECT * FROM depeg_events WHERE ended_at IS NULL LIMIT ?
       ) AS open_event
       LEFT JOIN depeg_event_provenance AS provenance ON provenance.event_id = open_event.id`)
     .bind(MAX_OPEN_DEPEG_EVENTS)
@@ -73,12 +71,19 @@ export async function hydrateDepegDetection(
     await persistActiveNativeEventQuotes(db, nativePegQuotes, signal);
   }
 
+  throwIfAborted(signal);
+  const { rates: pegRates, sources: pegRateSources, counts: pegRateCounts, referenceContext } = await deriveDetectionPegRates(
+    db, openRowsLimitReached ? [] : assets, PSI_ELIGIBLE_META_BY_ID,
+    new Set(openRows.map((row) => row.stablecoin_id)), fxFallbackRates, detectionFxState, now,
+  );
+
   return {
     now,
     syncStart,
     pegRates,
     pegRateSources,
     pegRateCounts,
+    referenceContext,
     dexPriceRows,
     dexPriceSources,
     dexPoolChallengers,

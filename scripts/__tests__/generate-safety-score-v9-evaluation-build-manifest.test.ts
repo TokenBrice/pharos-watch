@@ -189,6 +189,7 @@ describe("Safety Score v9 evaluation-build manifest", () => {
       "worker/src/lib/safety-score-v9/fact-set.ts",
       "worker/src/lib/safety-score-v9/fact-set-exit.ts",
       "worker/src/lib/safety-score-v9/native-input.ts",
+      "shared/types/current-peg.ts",
       "worker/src/lib/report-cards-fixed-input.ts",
       "worker/src/lib/safety-score-v9/supply-attribution.ts",
       "shared/lib/safety-score-v9/mechanism-profiles.ts",

@@ -20,6 +20,7 @@ import {
   syncMintBurnPublicationPolicy,
 } from "../mint-burn-publication";
 import { aggregateFlowCacheKey } from "../mint-burn-flow-cache-keys";
+import { isMintBurnBridgeSpoke } from "../mint-burn-canonical-chain";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => { fixtures.closeAll(); vi.restoreAllMocks(); });
@@ -49,10 +50,15 @@ describe("mint/burn durable publication admission", () => {
     const legacy = MINT_BURN_CONFIGS.filter(isGrandfatheredMintBurnConfig);
     expect(legacy).toHaveLength(133);
     const scope = await readContext(db, end, MINT_BURN_CONFIGS);
-    expect(scope.configs).toEqual(legacy);
+    const enabledLegacy = legacy.filter((entry) => !isMintBurnBridgeSpoke(entry.stablecoinId, entry.chain.chainId));
+    expect(scope.configs).toEqual(enabledLegacy);
+    expect(scope.diagnosticConfigs).toEqual(legacy);
+    expect(scope.publication.legs.find((leg) => leg.stablecoinId === "meusd-mezo")).toMatchObject({
+      chainId: "ethereum", status: "disabled", reason: "operator-disabled",
+    });
     expect(scope.publication.legs.filter((leg) => leg.status === "admitted")
       .every((leg) => leg.reason === "legacy-grandfathered")).toBe(true);
-    expect(scope.watermark).toEqual(resolveMintBurnWatermark(end, legacy, new Map()));
+    expect(scope.watermark).toEqual(resolveMintBurnWatermark(end, enabledLegacy, new Map()));
   });
 
   it("requires 90 days of current-fingerprint proof, persists admission, and retains a stalled admitted leg", async () => {
@@ -167,7 +173,9 @@ describe("mint/burn durable publication admission", () => {
     const { publication } = await readContext(db, end, MINT_BURN_CONFIGS);
     const compact = compactMintBurnPublication(publication);
     expect(compact).toMatchObject({ legsScope: "non-admitted", legCount: MINT_BURN_CONFIGS.length,
-      admittedCount: 133, pendingAdmissionCount: 4, disabledCount: 0 });
+      admittedCount: publication.legs.filter((leg) => leg.status === "admitted").length,
+      pendingAdmissionCount: publication.legs.filter((leg) => leg.status === "pending-admission").length,
+      disabledCount: publication.legs.filter((leg) => leg.status === "disabled").length });
     expect(compact.legs).toEqual(publication.legs.filter((leg) => leg.status !== "admitted"));
     expect(new Set(compact.admittedPairs!.map((pair) => JSON.stringify(pair)))).toEqual(new Set(publication.legs
       .filter((leg) => leg.status === "admitted").map((leg) => JSON.stringify([leg.stablecoinId, leg.chainId]))));

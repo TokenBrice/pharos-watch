@@ -1,5 +1,19 @@
 [
   {
+    "version": "10.46",
+    "title": "Clocked peg evidence and independent discount caps",
+    "date": "2026-11-19",
+    "effectiveAt": 1795053600,
+    "summary": "Safety uses clocked peg and settlement evidence, gives admitted off-peg coverage its measured duration and can apply an audited active discount cap before historical peg scoring is eligible.",
+    "impact": [
+      "The deeper eligible child or parent discount can bind a wrapper grade. Quiet history begins after the last affected instant, and operational recoveries use a separate grade-history comparison baseline.",
+      "Physical-metal exits apply settlement calendars and require a qualified sample when direct bullion evidence is enabled. New in-kind vault receipts use a common market-value cost basis. EUR retention uses the captured FX reference until the producer enables reference admission.",
+      "The integrated fixed-input mover comparison and owner review govern acceptance."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "10.45",
     "title": "LayerZero provider review and thBILL lane exemptions",
     "date": "2026-11-15",

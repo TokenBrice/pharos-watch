@@ -3,12 +3,15 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { throwIfAborted } from "../../lib/abort";
 import { batchExecute, executeAtomicBatch } from "../../lib/db";
 import { isBlockedDexId } from "../../lib/dex-cron-constants";
+import { isFreshDexPoolObservation } from "../../lib/depeg-trust-policy";
 import { requireFiniteNumber } from "../../lib/number-utils";
 import type { PoolEntry } from "./types";
+import { getDexGroupLineage, selectIndependentChallengerPools, type DexPriceLineage } from "./price-lineage";
+import { CHALLENGER_LINEAGE_PRICE, hasChallengerPriceLineageColumn } from "./challenger-types";
 import { projectRetainedPoolPrice } from "./scoring-helpers";
 import { SCHEDULED_EVENT_WALL_CLOCK_LIMIT_MS } from "../../lib/cron-timeouts";
 
-export interface DexPriceChallengerPoolRow {
+export interface DexPriceChallengerPoolRow extends DexPriceLineage {
   stablecoinId: string;
   poolId: string;
   chain: string;
@@ -25,37 +28,32 @@ const CHALLENGER_HARD_CAP = 50;
 /** Bound prepared challenger rows independently of the full active asset set. */
 export const DEX_PRICE_CHALLENGER_BATCH_SIZE = 25;
 const CHALLENGER_D1_MAX_BOUND_PARAMETERS = 100;
-const CHALLENGER_PAYLOAD_COLUMN_COUNT = 9;
-const CHALLENGER_VALUES_TOKEN = "__CHALLENGER_VALUES__";
-const DEX_PRICE_CHALLENGER_PAYLOAD_INSERT_SQL =
-  `INSERT INTO dex_price_challenger_payloads_v2
-    (publication_id, stablecoin_id, pool_id, chain, protocol, source_family, price_usd, tvl_usd, price_observed_at)
-   VALUES ${CHALLENGER_VALUES_TOKEN}
-   ON CONFLICT(publication_id, stablecoin_id, pool_id) DO NOTHING`;
-
 function prepareMultiRowStatements(
   db: D1Database,
   rows: readonly (readonly unknown[])[],
+  storeLineage: boolean,
 ): D1PreparedStatement[] {
+  const columnCount = storeLineage ? 10 : 9;
   if (rows.length === 0) return [];
-  if (rows.some((row) => row.length !== CHALLENGER_PAYLOAD_COLUMN_COUNT)) {
+  if (rows.some((row) => row.length !== columnCount)) {
     throw new Error(
-      `DEX challenger publication expected ${CHALLENGER_PAYLOAD_COLUMN_COUNT} binds per row`,
+      `DEX challenger publication expected ${columnCount} binds per row`,
     );
   }
 
   const rowsPerStatement = Math.floor(
-    CHALLENGER_D1_MAX_BOUND_PARAMETERS / CHALLENGER_PAYLOAD_COLUMN_COUNT,
+    CHALLENGER_D1_MAX_BOUND_PARAMETERS / columnCount,
   );
   return chunkArray(rows, rowsPerStatement).map((rowChunk) => {
-    const placeholders = `(${new Array(CHALLENGER_PAYLOAD_COLUMN_COUNT).fill("?").join(", ")})`;
+    const placeholders = `(${new Array(columnCount).fill("?").join(", ")})`;
     const valuesSql = new Array(rowChunk.length).fill(placeholders).join(", ");
     return db
       .prepare(
-        DEX_PRICE_CHALLENGER_PAYLOAD_INSERT_SQL.replace(
-          CHALLENGER_VALUES_TOKEN,
-          valuesSql,
-        ),
+        `INSERT INTO dex_price_challenger_payloads_v2
+          (publication_id, stablecoin_id, pool_id, chain, protocol, source_family,
+           price_usd, tvl_usd, price_observed_at${storeLineage ? ", price_lineage_json" : ""})
+         VALUES ${valuesSql}
+         ON CONFLICT(publication_id, stablecoin_id, pool_id) DO NOTHING`,
       )
       .bind(...rowChunk.flat());
   });
@@ -63,25 +61,40 @@ function prepareMultiRowStatements(
 
 
 
+export function projectPoolChallenger(
+  stablecoinId: string,
+  pool: PoolEntry,
+  minPoolTvlUsd: number,
+  nowSec: number,
+): DexPriceChallengerPoolRow | null {
+  if (isBlockedDexId(pool.project)) return null;
+  const price = projectRetainedPoolPrice(pool);
+  if (!price || price.tvl < minPoolTvlUsd ||
+      (price.observedAt != null && !isFreshDexPoolObservation(price.observedAt, nowSec))) return null;
+  const lineage = getDexGroupLineage([price]);
+  if (lineage?.upstreamKeys.length === 0) return null;
+  return {
+    stablecoinId,
+    poolId: pool.poolId,
+    chain: price.chain,
+    protocol: price.protocol,
+    sourceFamily: price.sourceFamily!,
+    priceUsd: price.price,
+    tvlUsd: price.tvl,
+    priceObservedAt: price.observedAt ?? null,
+    ...(lineage && { pricePoolKeys: lineage.pricePoolKeys, upstreamKeys: lineage.upstreamKeys }),
+  };
+}
+
 export function selectDexPriceChallengerRowsFromPools(
   stablecoinId: string,
   pools: PoolEntry[],
   minPoolTvlUsd: number,
+  nowSec = Math.floor(Date.now() / 1000),
 ): DexPriceChallengerPoolRow[] {
-  const qualifying = pools.flatMap((pool): DexPriceChallengerPoolRow[] => {
-    if (isBlockedDexId(pool.project)) return [];
-    const price = projectRetainedPoolPrice(pool);
-    if (!price || price.tvl < minPoolTvlUsd) return [];
-    return [{
-      stablecoinId,
-      poolId: pool.poolId,
-      chain: price.chain,
-      protocol: price.protocol,
-      sourceFamily: price.sourceFamily!,
-      priceUsd: price.price,
-      tvlUsd: price.tvl,
-      priceObservedAt: price.observedAt ?? null,
-    }];
+  const qualifying = pools.flatMap((pool) => {
+    const row = projectPoolChallenger(stablecoinId, pool, minPoolTvlUsd, nowSec);
+    return row ? [row] : [];
   }).sort((a, b) => b.tvlUsd - a.tvlUsd || a.poolId.localeCompare(b.poolId));
 
   if (qualifying.length === 0) return [];
@@ -92,9 +105,8 @@ export function selectDexPriceChallengerRowsFromPools(
     const prev = byPoolId.get(pool.poolId);
     if (!prev || pool.tvlUsd > prev.tvlUsd) byPoolId.set(pool.poolId, pool);
   }
-  const dedupedQualifying = [...byPoolId.values()].sort(
-    (a, b) => b.tvlUsd - a.tvlUsd || a.poolId.localeCompare(b.poolId),
-  );
+  const uniquePools = [...byPoolId.values()];
+  const dedupedQualifying = selectIndependentChallengerPools(uniquePools);
 
   const totalQualifyingTvl = dedupedQualifying.reduce((sum, pool) => sum + pool.tvlUsd, 0);
 
@@ -134,6 +146,12 @@ export function selectDexPriceChallengerRowsFromPools(
     retainedTvl += pool.tvlUsd;
   }
 
+  // Pack independent representatives first. The reader may exclude a representative
+  // for primary overlap or expiry, so keep alternate receipts within the same cap.
+  for (const pool of uniquePools) {
+    if (selectedPools.length >= CHALLENGER_HARD_CAP) break;
+    if (pool.upstreamKeys && !selectedPoolIds.has(pool.poolId)) selectedPools.push(pool);
+  }
   return selectedPools;
 }
 
@@ -146,17 +164,20 @@ export function buildStoredChallengerPoolsJson(
   stablecoinId: string,
   pools: PoolEntry[],
   minPoolTvlUsd: number,
+  nowSec = Math.floor(Date.now() / 1000),
 ): string | null {
-  const rows = selectDexPriceChallengerRowsFromPools(stablecoinId, pools, minPoolTvlUsd);
+  const rows = selectDexPriceChallengerRowsFromPools(stablecoinId, pools, minPoolTvlUsd, nowSec);
   return rows.length === 0
     ? null
-    : JSON.stringify(rows.map(({ stablecoinId: _stablecoinId, ...row }) => row));
+    : JSON.stringify(rows.map(({ stablecoinId: _stablecoinId, priceUsd, ...row }) =>
+      row.upstreamKeys ? { ...row, lineagePriceUsd: priceUsd } : { ...row, priceUsd }));
 }
 
 export async function publishDexPriceChallengerSnapshots(
   db: D1Database,
   input: {
     snapshotAt: number;
+    admissionNowSec?: number;
     generationId: string;
     retainedPoolsByStablecoin: Map<string, PoolEntry[]>;
     minPoolTvlUsd: number;
@@ -166,6 +187,7 @@ export async function publishDexPriceChallengerSnapshots(
 ): Promise<{ publishedStablecoins: number; skippedStablecoins: number }> {
   const snapshotAt = Math.floor(requireFiniteNumber(input.snapshotAt, "dex-price-challengers: snapshotAt"));
   if (!input.generationId.trim()) throw new Error("DEX challenger publication requires a generation id");
+  const storeLineage = await hasChallengerPriceLineageColumn(db);
   const publicationAt = Math.floor(Date.now() / 1000);
   // Twice the platform wall ceiling protects every still-running invocation,
   // including its final in-flight D1 write; source snapshot age is unrelated.
@@ -186,19 +208,23 @@ export async function publishDexPriceChallengerSnapshots(
   for (const meta of ACTIVE_STABLECOINS) {
     throwIfAborted(signal);
     const pools = input.retainedPoolsByStablecoin.get(meta.id) ?? [];
-    const rows = selectDexPriceChallengerRowsFromPools(meta.id, pools, input.minPoolTvlUsd);
+    const rows = selectDexPriceChallengerRowsFromPools(meta.id, pools, input.minPoolTvlUsd, input.admissionNowSec ?? snapshotAt)
+      .filter((row) => storeLineage || row.upstreamKeys === undefined);
     if (input.consumeRetainedPools) {
       input.retainedPoolsByStablecoin.delete(meta.id);
       pools.length = 0;
     }
     const statementCount = Math.ceil(rows.length / Math.floor(
-      CHALLENGER_D1_MAX_BOUND_PARAMETERS / CHALLENGER_PAYLOAD_COLUMN_COUNT,
+      CHALLENGER_D1_MAX_BOUND_PARAMETERS / (storeLineage ? 10 : 9),
     ));
     if (pending.length + statementCount > DEX_PRICE_CHALLENGER_BATCH_SIZE) await flush();
     for (const statement of prepareMultiRowStatements(db, rows.map((row) => [
       publicationId, row.stablecoinId, row.poolId, row.chain, row.protocol,
-      row.sourceFamily, row.priceUsd, row.tvlUsd, row.priceObservedAt,
-    ]))) {
+      row.sourceFamily, row.upstreamKeys ? CHALLENGER_LINEAGE_PRICE : row.priceUsd, row.tvlUsd, row.priceObservedAt,
+      ...(storeLineage ? [row.upstreamKeys
+        ? JSON.stringify({ pricePoolKeys: row.pricePoolKeys, upstreamKeys: row.upstreamKeys, priceUsd: row.priceUsd })
+        : null] : []),
+    ]), storeLineage)) {
       pending.push(statement);
       if (pending.length >= DEX_PRICE_CHALLENGER_BATCH_SIZE) await flush();
     }

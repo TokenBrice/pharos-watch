@@ -92,6 +92,7 @@ export function addSecondaryPoolContribution(
     project: protocol,
     chain,
     tvlUsd: pool.tvlUsd,
+    ...(pool.curveBasePoolOverlap ? { curveBasePoolOverlap: pool.curveBasePoolOverlap } : {}),
     symbol: pool.symbol,
     volumeUsd1d: pool.volume24hUsd,
     volumeUsd7d: pool.volume7dUsd ?? null,
@@ -105,6 +106,7 @@ export function addSecondaryPoolContribution(
     source: pool.sourceFamily,
     ...(pool.price > 0 ? { price: pool.price } : {}),
     ...(pool.price > 0 ? { priceObservedAt: pool.priceObservedAt ?? null } : {}),
+    ...(pool.priceCounterparty ? { priceCounterparty: pool.priceCounterparty } : {}),
     ...(pool.priceSourceFamily != null ? { priceSource: pool.priceSourceFamily } : {}),
     ...(pool.priceEvidenceTvlUsd != null ? { priceEvidenceTvlUsd: pool.priceEvidenceTvlUsd } : {}),
     extra: {

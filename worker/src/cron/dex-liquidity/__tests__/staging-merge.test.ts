@@ -866,7 +866,7 @@ describe("mergeStagedPools", () => {
         quote_token: "USDC-GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
         price_usd: 1.1,
         locked_liq_pct: null,
-        raw_json: null,
+        raw_json: JSON.stringify({ valuation: { kind: "market", observedAtSec: now - 90 } }),
         discovered_at: now,
         refreshed_at: now,
       }),
@@ -882,6 +882,7 @@ describe("mergeStagedPools", () => {
       poolId: `stellar:${poolId}`,
       source: "horizon",
       tvlUsd: 220,
+      priceObservedAt: now - 90,
     });
   });
 
@@ -925,6 +926,41 @@ describe("mergeStagedPools", () => {
     expect(result.mergedCount).toBe(0);
     expect(result.skippedCount).toBe(1);
     expect(metrics.size).toBe(0);
+  });
+
+  it.each([
+    { scope: "tezos:", poolType: "tezos-stable-swap", protocol: "tezos-amm" },
+    { scope: "", poolType: "tezos-constant-product", protocol: "vortex" },
+  ])("keeps reviewed Youves TVL without a ratio price for legacy $poolType rows", async ({ scope, poolType, protocol }) => {
+    const now = 1710000000;
+    const address = "KT1JeWiS8j1kic4PHx7aTnEr9p4xVtJNzk5b";
+    const metrics = new Map<string, SourcePoolGraph>();
+    const db = createMockDb([makeStagedPoolRow({
+      pool_id: `${scope}${address}`,
+      stablecoin_id: "uusd-youves",
+      source: "tezos",
+      chain: "tezos",
+      protocol,
+      dex_id: protocol,
+      pool_type: poolType,
+      symbol: "uUSD/wUSDC",
+      base_token: "KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW",
+      quote_token: "KT18fp5rcTW7mbWDmzFwjLDUhs5MeJmagDSZ",
+      price_usd: 0.99,
+      raw_json: JSON.stringify({ identityReviewVersion: TEZOS_POOL_IDENTITY_REVIEW_VERSION }),
+      refreshed_at: now,
+    })]);
+
+    const result = await mergeStagedPools(db, metrics, makeKnownPoolIndex(), now, new Map());
+    const retained = metrics.get("uusd-youves")?.pools[0];
+    expect(result.mergedCount).toBe(1);
+    expect(retained).toMatchObject({
+      poolId: `tezos:${address}`, tvlUsd: 100_000,
+      extra: { measurement: { tvlMeasured: true, priceMeasured: false } },
+    });
+    expect(retained?.price).toBeUndefined();
+    expect(retained?.priceObservedAt).toBeUndefined();
+    expect(result.priceObservations.has("uusd-youves")).toBe(false);
   });
 
   it.each([null, "{}", "{", JSON.stringify({ nested: { identityReviewVersion: SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION } }), JSON.stringify({ identityReviewVersion: SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION })])("only replays factory-reviewed Slipstream writeback: %s", async (raw_json) => {

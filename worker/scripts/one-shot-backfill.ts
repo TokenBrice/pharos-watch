@@ -13,11 +13,16 @@ const jobs = {
   },
   "backfill-supply-history": {
     load: () => import("./backfills/backfill-supply-history").then((module) => module.handleBackfillSupplyHistoryTrusted),
-    atomicImportOrder: null, previewParameter: null,
+    atomicImportOrder: null, previewParameter: "dry-run",
     supportsGet: false, stagedCapture: false,
   },
   "backfill-stability-index": {
-    load: () => import("./backfills/backfill-stability-index").then((module) => module.handleBackfillStabilityIndex),
+    load: async () => {
+      const { handleBackfillStabilityIndex } = await import("./backfills/backfill-stability-index");
+      const { loadHistoricalPsiReferences } = await import("../src/lib/psi-replay-inputs");
+      return (context: Parameters<typeof handleBackfillStabilityIndex>[0]) =>
+        handleBackfillStabilityIndex({ ...context, loadReferences: loadHistoricalPsiReferences });
+    },
     atomicImportOrder: 1, previewParameter: "dry-run",
     supportsGet: false, stagedCapture: false,
   },
@@ -87,6 +92,7 @@ export const ATOMIC_IMPORT_BACKFILL_JOBS = Object.entries(jobs)
   .map(({ name }) => name);
 const USAGE = `Usage: npx tsx worker/scripts/one-shot-backfill.ts <job> [options]
 Jobs: ${ONE_SHOT_BACKFILL_JOBS.join(", ")}
+Offline command: prepare-depeg-ledger-manifest --sqlite <standalone-export> --attestation <source-receipt.json> --output-sql <new-file>
 --query <URL-encoded parameters> preserves each job's existing parameter names/defaults.
 --body-json <JSON> supplies the optional request body. --method GET|POST (default POST).
 --idempotency-key <intent> supplies a run identity (required by staged capture and live price repair).
@@ -105,6 +111,10 @@ type Dependencies = {
 };
 
 export async function runOneShotBackfillCli(argv: readonly string[], dependencies: Dependencies = {}): Promise<void> {
+  if (argv[0] === "prepare-depeg-ledger-manifest") {
+    const { runPrepareDepegLedgerManifest } = await import("./prepare-depeg-ledger-manifest");
+    return runPrepareDepegLedgerManifest(argv.slice(1));
+  }
   const { values, positionals } = parseStrictCliArgs(argv, { allowPositionals: true, options: {
     query: { type: "string" }, "body-json": { type: "string" }, method: { type: "string" },
     "idempotency-key": { type: "string" }, execute: { type: "boolean" }, database: { type: "string" }, local: { type: "boolean" },

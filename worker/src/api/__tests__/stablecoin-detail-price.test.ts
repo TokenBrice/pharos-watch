@@ -58,6 +58,32 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("missing detail price enrichment", () => {
+  it.each([undefined, null, 0])("distinguishes an omitted canonical USD quantity from %s through overlay and summary", async (native) => {
+    const result = await overlayCanonicalDetail(makeDb({
+      circulating: { peggedUSD: native === 0 ? 0 : 1001 }, price: 1.001, circulatingNative: native,
+    }), "usdt-tether", makeResponse(JSON.stringify({ tokens, currentCirculatingNative: 5 })));
+    const detail = StablecoinDetailResponseSchema.parse(await result.json());
+    expect(detail.currentCirculatingNative).toBe(native);
+    const projected = projectStablecoinLiveSummary(detail).nativeSupply.current;
+    if (native === undefined) expect(projected).toBeCloseTo(1000);
+    else expect(projected).toBe(native);
+  });
+
+  it.each([200_000, 0, null, undefined])("overlays the dated PAXG baseline (%s) through the compact and legacy fields", async (dated) => {
+    const amount = (circulatingUsd: number) => ({ day: { observedAt: NOW - 86_400, circulatingUsd, circulatingNative: null } });
+    const map = dated === undefined ? undefined : dated === null ? {} : amount(dated);
+    const result = await overlayCanonicalDetail(makeDb({
+      id: "paxg-pax-gold", pegType: "peggedGOLD", circulating: { peggedGOLD: 210_000 },
+      circulatingPrevDay: { peggedGOLD: 195_000 }, supplyChangeBaselines: map,
+    }), "paxg-pax-gold", makeResponse(JSON.stringify({ tokens, supplyChangeBaselines: amount(123) })));
+    const detail = StablecoinDetailResponseSchema.parse(await result.json());
+    expect(detail.currentCirculatingPrevDayUSD).toEqual(dated === null ? {} : { peggedGOLD: dated ?? 195_000 });
+    expect(detail.currentCirculatingNative).toBeUndefined();
+    expect(projectStablecoinLiveSummary(detail).nativeSupply.current).toBeCloseTo(210_000 / 0.997);
+    expect(detail.supplyChangeBaselines).toEqual(map);
+    expect(projectStablecoinLiveSummary(detail).supplyChangeBaselines).toEqual(map);
+  });
+
   it("keeps preferred withheld supply unavailable through detail and summary without a published reason", async () => {
     const history = [0, 1, 7, 30].map((days) => ({
       date: NOW - days * 86_400, totalCirculatingUSD: { peggedUSD: 900_000 }, totalCirculating: { peggedUSD: 800_000 },
@@ -227,10 +253,13 @@ describe("missing detail price enrichment", () => {
     expect(await overlayCanonicalDetail(makeDb({}, updatedAt), "usdt-tether", response)).toBe(response);
   });
 
-  it("accepts a fresh single-source quote and preserves the legacy observation timestamp fallback", async () => {
-    const result = await overlayCanonicalDetail(makeDb({ priceConfidence: "single-source", priceObservedAt: null }), "usdt-tether", makeResponse());
-    expect(await result.json()).toMatchObject({ price: 0.997, priceConfidence: "single-source", priceObservedAt: NOW - 70 });
-  });
+  it.each([[undefined, NOW - 70], [null, null]] as const)(
+    "accepts a fresh single-source quote and projects the observation timestamp from %s",
+    async (observedAt, expected) => {
+      const result = await overlayCanonicalDetail(makeDb({ priceConfidence: "single-source", priceObservedAt: observedAt }), "usdt-tether", makeResponse());
+      expect(await result.json()).toMatchObject({ price: 0.997, priceConfidence: "single-source", priceObservedAt: expected });
+    },
+  );
 
   it.each([null, "{bad-json", JSON.stringify({ peggedAssets: [] })])("fails closed for missing/corrupt/empty cache %s", async (value) => {
     const db = mockD1([{ match: "cache", rows: [], first: value == null ? null : { value, updated_at: NOW } }]);
@@ -368,6 +397,25 @@ describe("missing detail price enrichment", () => {
 });
 
 describe("detail response paths", () => {
+  it.each([
+    { kind: "unattributed", priorDay: { unattributed: 100_000_000 } },
+    { kind: "mixed-peg", priorDay: { peggedEUR: 60_000_000, peggedUSD: 40_000_000 } },
+  ])("preserves $kind EURC prior-day supply in detail and live summary", async ({ priorDay }) => {
+    const id = "eurc-circle";
+    const db = makeDb({
+      id, pegType: "peggedEUR", circulating: { peggedUSD: 70_000_000, peggedEUR: 40_000_000 },
+      circulatingPrevDay: priorDay,
+      supplyChangeBaselines: { day: { observedAt: NOW - 86_400, circulatingUsd: 100_000_000, circulatingNative: null } },
+    }, NOW - 60, 60);
+    const ctx = { waitUntil: vi.fn() } as unknown as ExecutionContext;
+
+    const detail = await handleStablecoinDetail(db, id, ctx);
+    expect(StablecoinDetailResponseSchema.parse(await detail.json()).currentCirculatingPrevDayUSD)
+      .toEqual(priorDay);
+    const summary = await handleStablecoinLiveSummary(db, id, ctx);
+    expect(await summary.json()).toHaveProperty("circulatingPrevDay", priorDay);
+  });
+
   it.each([false, true])("projects the actual canonical enrichment path with independent clocks and quarantine (%s)", async (quarantined) => {
     const db = makeDb({
       priceObservedAt: NOW - 120,

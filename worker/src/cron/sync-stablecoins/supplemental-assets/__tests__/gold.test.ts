@@ -123,6 +123,19 @@ describe("fetchGoldTokens curated aggregate supply", () => {
     expect(probeTrackedTokenSupplyMock).not.toHaveBeenCalled();
   });
 
+  it("retains the independently clocked CoinGecko cap when its valuation quote fails price admission", async () => {
+    selectCuratedAggregateContractsMock.mockReturnValue(null);
+    stubGoldUpstreams(99_000_000);
+    const capClock = Math.floor(Date.now() / 1000) - 60;
+
+    const [asset] = await fetchGoldTokens({ "pleasing-gold": { usd: 100_000, usd_market_cap: 78_852_290, last_updated_at: capClock } });
+
+    expect(asset).toMatchObject({ price: PGOLD_PRICE, circulating: { peggedGOLD: 78_852_290 },
+      supplySource: "coingecko-fallback", supplyObservedAt: capClock, circulatingNative: null,
+      valuationPriceUsd: null, valuationObservedAtSec: null,
+    });
+  });
+
   it("falls back to the upstream market cap when a configured leg cannot be read", async () => {
     selectCuratedAggregateContractsMock.mockImplementation((meta: StablecoinMeta) =>
       ["arbitrum", "apechain", "ethereum", "pharos"].map((chain) => ({

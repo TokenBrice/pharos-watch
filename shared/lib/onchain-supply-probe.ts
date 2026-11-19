@@ -141,6 +141,10 @@ export function prefersOnChainSupplyMcap(meta: Pick<StablecoinMeta, "id">): bool
   return REVIEWED_ONCHAIN_SUPPLY_PLANS[meta.id]?.preferMcap === true;
 }
 
+export function isKinesisWrapperSupplyId(id: string): boolean {
+  return id === "kau-kinesis" || id === "kag-kinesis";
+}
+
 export type SupplementalOnChainSupplySource = "onchain-total-supply" | "onchain-circulating-supply";
 
 export interface OnChainSupplyExclusionConfig {
@@ -197,6 +201,9 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
     ],
   },
   "hbd-hive": { nativeWorkflow: "hive-debt" },
+  // The registry identities cover the Ethereum wrappers, not the native programs.
+  "kau-kinesis": { preferMcap: true, aggregateContracts: [{ chain: "ethereum", allowZeroSupply: true }] },
+  "kag-kinesis": { preferMcap: true, aggregateContracts: [{ chain: "ethereum", allowZeroSupply: true }] },
   [ZEPHYR_ZSD_ASSET_ID]: { nativeWorkflow: "zephyr-scanner" },
   [ZEPHYR_ZYS_ASSET_ID]: { nativeWorkflow: "zephyr-scanner" },
   "jltxx-jpmorgan": { nativeWorkflow: "pinned-native-shares" },
@@ -774,6 +781,15 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
       supplyProbeChain("unichain"),
     ],
     canonicalSupplyChain: "ethereum",
+    escrowResidual: {
+      escrowByChain: {
+        base: "0x7f311a4d48377030bd810395f4ccfc03bdbe9ef3",
+        optimism: "0x467194771dae2967aef3ecbedd3bf9a310c76c65",
+        arbitrum: "0xa10c7ce4b876998858b1a9e12b10092229539400",
+        unichain: "0x1196f688c585d3e5c895ef8954ffb0dcdafc566a",
+      },
+      unattributedChainLabel: "sUSDS unattributed SkyLink escrow",
+    },
   },
   "sdai-sky": {
     aggregateContracts: [
@@ -1578,9 +1594,10 @@ export const CURATED_AGGREGATE_EXCLUDED_REPRESENTATIONS: Readonly<Record<string,
     plan.excludedRepresentations ? [[id, plan.excludedRepresentations]] : []),
 );
 
-export interface CuratedAggregateEscrowResidualConfig {
-  /** Canonical-chain lockbox that escrows every representation's supply. */
-  escrowAddress: string;
+export type CuratedAggregateEscrowResidualConfig = (
+  | { escrowAddress: string; escrowByChain?: never }
+  | { escrowByChain: Readonly<Record<string, string>>; escrowAddress?: never }
+) & {
   /**
    * Deliberately non-canonical `chainCirculating` label for escrowed supply
    * that no configured representation leg claims. `resolveChainId()` must
@@ -1588,7 +1605,7 @@ export interface CuratedAggregateEscrowResidualConfig {
    * instead of silently crediting it to the canonical chain.
    */
   unattributedChainLabel: string;
-}
+};
 
 /**
  * Canonical-chain escrow reads that split a reallocating aggregate's canonical
@@ -1694,10 +1711,10 @@ export function selectCuratedAggregateOnchainSupplyProbeContracts(
   // A roster speaks for the whole asset only when every registered deployment
   // participates. A summed roster that skips one under-counts; a canonical
   // lock/mint roster conserves remote supply but attributes the unprobed
-  // remainder to the canonical chain. Only explicit residual policies or exact
-  // reviewed escrow representations or unreadable ledgers excuse an unselected deployment.
+  // remainder to the canonical chain. Only shared lockboxes and explicit
+  // reviewed exclusions excuse an unselected deployment.
   if (
-    CURATED_AGGREGATE_ESCROW_RESIDUALS[meta.id] == null
+    CURATED_AGGREGATE_ESCROW_RESIDUALS[meta.id]?.escrowAddress == null
     && meta.contracts?.some((contract) => !selected.some((entry) => entry.contract === contract)
       && ![...representations, ...unreadable].some((review) => review.chain === contract.chain && review.address === contract.address))
   ) {

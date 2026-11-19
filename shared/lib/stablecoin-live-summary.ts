@@ -1,8 +1,8 @@
 import type { StablecoinDetailResponse } from "../types/supply";
 import { StablecoinLiveSummarySchema, type StablecoinLiveSummary } from "../types/stablecoin-live-summary";
 import { isObservedPrice } from "./pricing-source-policy";
-import { admitSupplyBuckets, sumPegBucketsOrNull } from "./supply";
-import { isEarlierSupplyPerimeter } from "./supply-perimeter-changes";
+import { admitSupplyBuckets, projectUsdMarketCapBaselineBuckets, sumPegBucketsOrNull } from "./supply";
+import { isAmbiguousSupplyPerimeterDay, isEarlierSupplyPerimeter } from "./supply-perimeter-changes";
 
 const DETAIL_BUCKET_MAX_BACKFILL_SEC = 86_400;
 
@@ -35,10 +35,12 @@ function detailBucketsAt(
 ): Record<string, number> {
   let chosen: Record<string, number> | undefined;
   let chosenDate = Number.NEGATIVE_INFINITY;
+  const scopedXaut = stablecoinId === "xaut-tether" && field === "totalCirculating";
   for (const token of detail.tokens ?? []) {
-    const date = token.date;
-    if (date == null || date > targetDate || isEarlierSupplyPerimeter(stablecoinId, date)) continue;
-    if (targetDate - date > DETAIL_BUCKET_MAX_BACKFILL_SEC) continue;
+    if (scopedXaut && token.nativeSupplySource !== "onchain-circulating-supply") continue;
+    const date = scopedXaut ? token.nativeSupplyObservedAt : token.date;
+    if (typeof date !== "number" || !Number.isFinite(date) || date <= 0 || date > targetDate || isEarlierSupplyPerimeter(stablecoinId, date)) continue;
+    if ((!scopedXaut && isAmbiguousSupplyPerimeterDay(stablecoinId, date)) || targetDate - date > DETAIL_BUCKET_MAX_BACKFILL_SEC) continue;
     if (date > chosenDate) {
       chosenDate = date;
       chosen = token[field];
@@ -57,6 +59,9 @@ export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse, s
     undefined,
   );
   const latestDate = latest?.date ?? null;
+  const historyClock = detail.commodityHistoryObservedAt;
+  const historyObservedAt = typeof historyClock === "number" && Number.isSafeInteger(historyClock) && historyClock > 0
+    ? historyClock : latestDate;
   // An explicit unavailable current overlay must never back-fill from provider history.
   const supplyUnavailable = detail.currentSupplyUnavailableReason != null ||
     (detail.currentCirculatingUSD !== undefined && admitSupplyBuckets(detail.currentCirculatingUSD).status !== "observed");
@@ -72,23 +77,28 @@ export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse, s
       : {};
     if (admitSupplyBuckets(circulating).status !== "observed") circulating = {};
   }
-  const supplyObservedAt = hasCurrentSupply ? detail.currentSupplyObservedAt ?? null : supplyUnavailable ? null : latestDate;
+  const supplyObservedAt = hasCurrentSupply ? detail.currentSupplyObservedAt ?? null : supplyUnavailable ? null : historyObservedAt;
   // A perimeter change applies only once the served generation has adopted it.
   if (isEarlierSupplyPerimeter(stablecoinId, supplyObservedAt ?? latestDate ?? Number.POSITIVE_INFINITY)) stablecoinId = "";
-  const observedPrice = isObservedPrice(detail) ? detail.price : null;
-  const currentUsd = sumPegBucketsOrNull(circulating);
-  const derivedNative = hasCurrentSupply && currentUsd != null && typeof observedPrice === "number" &&
-    Number.isFinite(observedPrice) && observedPrice > 0 ? currentUsd / observedPrice : null;
-  const currentNative = supplyUnavailable ? null : hasCurrentSupply
-    ? derivedNative != null && Number.isFinite(derivedNative) ? derivedNative : null
-    : sumPegBucketsOrNull(latest?.totalCirculating);
+  let currentNative = detail.currentCirculatingNative;
+  if (currentNative === undefined && !supplyUnavailable) {
+    if (hasCurrentSupply) {
+      const currentUsd = sumPegBucketsOrNull(circulating);
+      const price = isObservedPrice(detail) ? detail.price : null;
+      currentNative = currentUsd != null && price != null && price > 0 ? currentUsd / price : null;
+    } else {
+      currentNative = stablecoinId === "xaut-tether" ? null : sumPegBucketsOrNull(latest?.totalCirculating);
+    }
+  }
+  if (supplyUnavailable || currentNative == null || !Number.isFinite(currentNative) || currentNative < 0) currentNative = null;
+  const baselineAsset = { circulating, supplyChangeBaselines: detail.supplyChangeBaselines };
 
   return normalizeStablecoinLiveSummary(StablecoinLiveSummarySchema.parse({
     price: detail.price ?? null,
     priceSource: detail.priceSource ?? null,
     priceConfidence: detail.priceConfidence ?? null,
     priceUpdatedAt: detail.priceUpdatedAt ?? null,
-    priceObservedAt: detail.priceObservedAt ?? detail.priceUpdatedAt ?? null,
+    priceObservedAt: detail.priceObservedAt === undefined ? detail.priceUpdatedAt ?? null : detail.priceObservedAt,
     priceObservedAtMode: detail.priceObservedAtMode,
     priceSyncedAt: detail.priceSyncedAt,
     ...(detail.nominalPriceReference ? { nominalPriceReference: detail.nominalPriceReference } : {}),
@@ -100,10 +110,15 @@ export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse, s
     ...(supplyUnavailable || (hasCurrentSupply && detail.currentSupplyRestored === true) ? { supplyRestored: true } : {}),
     ...(hasCurrentSupply && detail.currentSupplyExcludedChains?.length ? { supplyExcludedChains: detail.currentSupplyExcludedChains } : {}),
     circulating,
+    ...(detail.supplyChangeBaselines !== undefined ? { supplyChangeBaselines: detail.supplyChangeBaselines } : {}),
     circulatingPrevDay: supplyUnavailable ? {} : hasCurrentSupply ? admittedDetailBuckets(detail.currentCirculatingPrevDayUSD)
-      : latestDate == null ? {} : detailBucketsAt(detail, latestDate - 86_400, "totalCirculatingUSD", stablecoinId),
-    circulatingPrevWeek: supplyObservedAt == null ? {} : detailBucketsAt(detail, supplyObservedAt - 7 * 86_400, "totalCirculatingUSD", stablecoinId),
-    circulatingPrevMonth: supplyObservedAt == null ? {} : detailBucketsAt(detail, supplyObservedAt - 30 * 86_400, "totalCirculatingUSD", stablecoinId),
+      : historyObservedAt == null ? {} : detailBucketsAt(detail, historyObservedAt - 86_400, "totalCirculatingUSD", stablecoinId),
+    circulatingPrevWeek: supplyObservedAt == null ? {} : projectUsdMarketCapBaselineBuckets(
+      baselineAsset, "week", detailBucketsAt(detail, supplyObservedAt - 7 * 86_400, "totalCirculatingUSD", stablecoinId),
+    ),
+    circulatingPrevMonth: supplyObservedAt == null ? {} : projectUsdMarketCapBaselineBuckets(
+      baselineAsset, "month", detailBucketsAt(detail, supplyObservedAt - 30 * 86_400, "totalCirculatingUSD", stablecoinId),
+    ),
     nativeSupply: {
       current: currentNative,
       prevWeek: currentNative == null || supplyObservedAt == null

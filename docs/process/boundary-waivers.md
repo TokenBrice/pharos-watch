@@ -9,7 +9,7 @@ Enforcement is part of the ESLint configuration and runs on every changed file:
 
 Bundle-graph enforcement is owned by `scripts/ci/check-runtime-reachability.ts` and its data table in `scripts/lib/runtime-reachability-policies.mts`. It detects transitive scheduled-runtime, mint/burn and memory-constrained-cron, public-safety-projection, Pages Functions and client-registry boundary violations that direct-import lint cannot see.
 
-The sole reviewed frontend→worker waiver is listed in `FRONTEND_TO_WORKER_WAIVED_FILES` in `eslint.config.mjs`. Every exempt file MUST have an entry below explaining why retirement is not feasible today.
+The reviewed frontend→worker waivers are listed in `FRONTEND_TO_WORKER_WAIVED_FILES` in `eslint.config.mjs`. Every exempt file MUST have an entry below explaining why retirement is not feasible today.
 
 ## Active Waivers
 
@@ -23,10 +23,22 @@ The sole reviewed frontend→worker waiver is listed in `FRONTEND_TO_WORKER_WAIV
   - `CONTRACT_CONFIGS` is constructed from `CONTRACT_CONFIG_SPECS` via `resolveBlacklistContractConfig`, which uses the same worker-resolution path.
   - In each case the refactor expands the change surface dramatically without removing the architectural exception.
 - **Mitigations:**
-  - The waiver list in `eslint.config.mjs` contains only this reviewed file; adding another requires a documented architectural review on this page.
+  - The waiver names the validator's exact path. Each addition requires a documented architectural review on this page.
   - The script header comment names the waiver and points to this document.
   - The script is build-time only (it never ships in any deployed bundle), so the cross-layer import has no runtime impact.
 - **Retirement plan:** None. The waiver is acceptable as long as it remains a single build-time validator and the registries remain worker-resident.
+
+### 2. `scripts/maintenance/replay-reference-closures.ts`
+
+- **Waiver ID:** `reference-closure-replay`
+- **Status:** Active for the closure replay operator tool.
+- **Reason:** The receipt exercises the Worker's detector, persistence, pending confirmer, FX publication state, PSI reference admission and DEWS divergence with captured evidence.
+- **What was tried:** The script uses shared session, admission and peg-selection contracts wherever they already exist. Moving the remaining implementation to `shared/` would pull in Worker database hydration and lifecycle persistence. A second implementation would allow the receipt to disagree with production.
+- **Mitigations:**
+  - The waiver names this exact entrypoint and its header points here.
+  - The Node CLI runs outside deployed bundles. Lifecycle writes use disposable in-memory SQLite and the confirmation transport uses captured responses.
+  - The optional `--d1` mode issues paginated event-ledger SELECTs. Results are written to the CLI's output directory.
+- **Retirement plan:** Remove the waiver if the production lifecycle exposes a runtime-neutral replay entrypoint with equivalent evidence and persistence semantics, or when the tool is retired.
 
 ## Adding a Waiver
 

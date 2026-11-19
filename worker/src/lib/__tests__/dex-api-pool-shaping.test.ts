@@ -5,7 +5,7 @@ import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capac
 import { addSecondaryPoolContribution } from "../../cron/dex-liquidity/pool-contribution";
 import { initSourcePoolGraph } from "../../cron/dex-liquidity/pool-helpers";
 import type { GtNewPool, SourcePoolGraph } from "../../cron/dex-liquidity/types";
-import { convertToGtNewPools, isPreferredDirectApiPool } from "../dex-api-pool-shaping";
+import { convertToGtNewPools, extractPriceObservations, isPreferredDirectApiPool } from "../dex-api-pool-shaping";
 import type { DexApiPool } from "../dex-api-types";
 
 function makeDirectPool(overrides: Partial<DexApiPool>): DexApiPool {
@@ -23,6 +23,45 @@ function makeDirectPool(overrides: Partial<DexApiPool>): DexApiPool {
     ...overrides,
   };
 }
+
+it.each([
+  ["missing quote", 99_980, null, null],
+  ["unclocked quote", 99_980, null, 0.87],
+  ["stale quote", 99_980, 98_199, 0.87],
+  ["future quote", 99_980, 100_001, 0.87],
+  ["undated ratio", undefined, 99_940, 0.87],
+  ["admitted", 99_980, 99_940, 0.87],
+] as const)("uses a Raydium ratio as USD evidence only with both admitted clocks (%s)", (mode, ratioObservedAtSec, quoteAt, quotePrice) => {
+  const assessedAt = 100_000;
+  const pool = makeDirectPool({
+    source: "raydium", chain: "solana", poolType: "raydium-clmm",
+    tokens: [
+      { address: "MintUsdt", symbol: "USDT", decimals: 6 },
+      { address: "MintUsdc", symbol: "USDC", decimals: 6 },
+    ],
+    price: 1 / 0.87, readStartedAtSec: assessedAt, ratioObservedAtSec, balances: [500_000, 570_000],
+  });
+  const tracked = new Map([["solana:MintUsdt", "usdt-tether"], ["solana:MintUsdc", "usdc-circle"]]);
+  const prices = Object.assign(new Map(quotePrice == null ? [] : [["usdc-circle", quotePrice]]), {
+    marketMarks: new Map(quoteAt == null || quotePrice == null ? [] : [["usdc-circle", {
+      priceUsd: quotePrice, observedAtSec: quoteAt, source: "kraken+coinbase",
+    }]]),
+  });
+  const observations = extractPriceObservations([pool], tracked, new Map(), undefined, prices, assessedAt);
+  const shaped = convertToGtNewPools([pool], tracked, new Map(), undefined, prices, undefined, undefined, assessedAt)
+    .get("usdt-tether")?.[0];
+  const admitted = mode === "admitted";
+  const counterpartyPrice = { stablecoinId: "usdc-circle", priceUsd: 0.87, observedAtSec: quoteAt, source: "kraken+coinbase" };
+  expect(shaped).toMatchObject({
+    tvlUsd: pool.tvlUsd, price: admitted ? expect.closeTo(1) : 0, priceObservedAt: admitted ? quoteAt : null,
+    measurement: { tvlMeasured: true, priceMeasured: admitted },
+  });
+  expect(shaped?.priceCounterparty).toEqual(admitted ? counterpartyPrice : undefined);
+  if (admitted) expect(observations.get("usdt-tether")).toEqual([expect.objectContaining({
+    price: expect.closeTo(1), observedAt: quoteAt, counterpartyPrice,
+  })]);
+  else expect(observations.size).toBe(0);
+});
 
 describe("Orca balance evidence", () => {
   it.each([false, true])("never labels withheld balances measured (normalization marker %s)", (balancesNormalized) => {

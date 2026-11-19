@@ -136,7 +136,7 @@ export const PEG_INTRO: Partial<Record<PegCurrency, string>> = {
 
   SILVER: `Silver-pegged stablecoins tokenize physical silver, tracking the spot silver market on-chain. Pharos monitors peg accuracy and supply for silver-backed tokens.`,
 
-  VAR: `CPI-pegged stablecoins (variable pegs) are designed to preserve purchasing power by tracking inflation indices rather than a fixed fiat price. Their target price appreciates over time as inflation accrues. Pharos monitors their peg performance relative to their variable target.`,
+  VAR: `Variable-reference assets can follow a basket, an index, or the net asset value of an investment strategy. Pharos publishes observed prices and tracked supply where available. Peg-deviation monitoring requires an eligible reference and is unavailable for NAV tokens.`,
 };
 
 export const PEG_MARKET_CONTEXT: Partial<Record<PegCurrency, string>> = {
@@ -168,7 +168,7 @@ export const PEG_MARKET_CONTEXT: Partial<Record<PegCurrency, string>> = {
   IDR: "IDR pegs provide Indonesian rupiah exposure; assess issuer licensing, local rails, and venue depth before relying on them for treasury flows.",
   GOLD: "Gold pegs are commodity exposure, not fiat cash equivalents; review custody, bar allocation, redemption terms, and tracking against spot gold rather than a fixed 1.00 target.",
   SILVER: "Silver pegs inherit commodity-market volatility and custody questions, so peg accuracy means tracking spot silver rather than holding a fiat unit.",
-  VAR: "CPI and index pegs intentionally move with a reference index, so the key question is whether the target definition, oracle path, and redemption mechanism remain credible.",
+  VAR: "Variable references can follow a basket, an index, or an asset strategy. Review how each asset defines and publishes its reference and how holders can redeem.",
   OTHER: "Other peg designs fall outside the main fiat and commodity buckets; start with the target definition, oracle source, collateral model, and whether Pharos has enough live evidence.",
 };
 

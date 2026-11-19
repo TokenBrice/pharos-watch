@@ -11,7 +11,7 @@ import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { validatePricingSourceFreshness } from "../../lib/pricing-source-freshness";
 import { isReasonablePrice } from "../../lib/price-validation";
 import type { PeggedAsset } from "./enrich-prices";
-import { pegTypeKey, getSupplementalChainLabels, toPositiveFiniteNumber } from "./supplemental-assets/shared";
+import { pegTypeKey, toPositiveFiniteNumber } from "./supplemental-assets/shared";
 
 export { ZEPHYR_ZSD_ASSET_ID, ZEPHYR_ZYS_ASSET_ID };
 
@@ -194,10 +194,10 @@ function buildZephyrPeggedAsset(
   if (meta.id === ZEPHYR_ZYS_ASSET_ID && stats.observedAtRejected) return null;
 
   const pKey = pegTypeKey(meta);
-  const priceForCirculatingMcap = priceResolution?.price != null
+  const externalValuation = priceResolution?.price != null
     && isReasonablePrice(priceResolution.price, pKey, undefined, { navToken: meta.flags.navToken })
-    ? priceResolution.price
-    : 1.0;
+    ? priceResolution : null;
+  const priceForCirculatingMcap = externalValuation?.price ?? 1.0;
   const circulatingMcap = meta.id === ZEPHYR_ZSD_ASSET_ID
     ? stats.supply * priceForCirculatingMcap
     : stats.mcap;
@@ -222,12 +222,15 @@ function buildZephyrPeggedAsset(
     priceSyncedAt: resolvedPrice.syncedAt,
     supplySource: ZEPHYR_SUPPLY_SOURCE,
     supplyObservedAt: stats.observedAt ?? null,
+    circulatingNative: stats.supply,
+    valuationPriceUsd: meta.id === ZEPHYR_ZSD_ASSET_ID ? priceForCirculatingMcap : stats.mcapPrice,
+    valuationObservedAtSec: (meta.id === ZEPHYR_ZSD_ASSET_ID ? externalValuation?.observedAt : stats.observedAt) ?? null,
     circulating: { [pKey]: circulatingMcap },
     circulatingPrevDay: null,
     circulatingPrevWeek: null,
     circulatingPrevMonth: null,
     chainCirculating: {},
-    chains: getSupplementalChainLabels(meta),
+    chains: ["Zephyr"],
   } as PeggedAsset;
 }
 

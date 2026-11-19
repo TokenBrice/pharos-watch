@@ -1,4 +1,4 @@
-import { REVIEWED_BUSINESS_CALENDARS } from "../data/business-calendars/reviewed";
+import { REVIEWED_BUSINESS_CALENDARS, reviewedBusinessCalendarAt } from "../data/business-calendars/reviewed";
 import type { ReviewedBusinessCalendar } from "../types/business-calendars";
 import { RedemptionBusinessDayTermsSchema, type RedemptionBusinessDayTerms } from "../types/redemption";
 import { isValidIsoDateOnly } from "../types/date-primitives";
@@ -24,19 +24,9 @@ const DAY_MS = 86_400_000; // Civil-date indexing only; elapsed time always uses
 function dateAt(index: number): string { return new Date(index * DAY_MS).toISOString().slice(0, 10); }
 function dayIndex(date: string): number { return Date.parse(`${date}T00:00:00Z`) / DAY_MS; }
 
-function calendarWalker(
-  terms: RedemptionBusinessDayTerms, calendar: ReviewedBusinessCalendar, clockSec: number,
-): CalendarWalkContext | { error: Extract<BusinessCalendarBound, { state: "unknown" }>["reason"] } {
-  const parsed = RedemptionBusinessDayTermsSchema.safeParse(terms);
-  if (!parsed.success || !Number.isFinite(clockSec)) return { error: "invalid-terms" as const };
-  if (terms.conditional) return { error: "conditional-terms" as const };
-  if (terms.assurance !== "binding-guarantee") return { error: "target-not-guarantee" as const };
-  const receiptDay = terms.cutoff.basis === "receipt-day";
-  if (terms.cutoff.time === null && !receiptDay) return { error: "cutoff-unreviewed" as const };
-  if (calendar.id !== terms.calendarId || calendar.timezone !== terms.cutoff.timezone) return { error: "calendar-mismatch" as const };
-  const reviewedSec = Date.parse(`${calendar.reviewedAt}T00:00:00Z`) / 1_000;
-  if (reviewedSec > clockSec) return { error: "calendar-review-future" as const };
-  if (clockSec - reviewedSec > BUSINESS_CALENDAR_BOUND_POLICY.reviewedMaxAgeSec) return { error: "calendar-review-stale" as const };
+type BusinessDayTable = Pick<ReviewedBusinessCalendar, "coverage" | "timezone" | "weekendDays" | "holidays">;
+
+function businessDayClock(calendar: BusinessDayTable) {
   const from = dayIndex(calendar.coverage.from), to = dayIndex(calendar.coverage.to);
   const holidays = new Set(calendar.holidays);
   const formatter = new Intl.DateTimeFormat("en-CA", {
@@ -69,11 +59,46 @@ function calendarWalker(
     return result;
   };
   const businessDay = (day: number) => !calendar.weekendDays.includes(new Date(day * DAY_MS).getUTCDay()) && !holidays.has(dateAt(day));
+  return { from, to, parts, instant, businessDay };
+}
+
+/** Advance a modeled leg from its actual local start, requiring coverage through completion. */
+export function advanceReviewedBusinessDays(calendar: BusinessDayTable, clockSec: number, days: number): number | null {
+  if (!Number.isFinite(clockSec) || !Number.isFinite(days) || days < 0) return null;
+  const { from, to, parts, instant, businessDay } = businessDayClock(calendar);
+  const start = parts(clockSec);
+  let day = dayIndex(start.date);
+  if (day < from || day > to) return null;
+  if (days === 0) return clockSec;
+  for (let remaining = Math.ceil(days); remaining > 0; remaining--) {
+    do { day++; } while (day <= to && !businessDay(day));
+    if (day > to) return null;
+  }
+  const end = instant(day, start.time.slice(0, 5));
+  return end === null ? null : end + Number(start.time.slice(6));
+}
+
+function calendarWalker(
+  terms: RedemptionBusinessDayTerms, calendar: ReviewedBusinessCalendar, clockSec: number,
+): CalendarWalkContext | { error: Extract<BusinessCalendarBound, { state: "unknown" }>["reason"] } {
+  const parsed = RedemptionBusinessDayTermsSchema.safeParse(terms);
+  if (!parsed.success || !Number.isFinite(clockSec)) return { error: "invalid-terms" as const };
+  if (terms.conditional) return { error: "conditional-terms" as const };
+  if (terms.assurance !== "binding-guarantee") return { error: "target-not-guarantee" as const };
+  const receiptDay = terms.cutoff.basis === "receipt-day";
+  if (terms.cutoff.time === null && !receiptDay) return { error: "cutoff-unreviewed" as const };
+  if (calendar.id !== terms.calendarId || calendar.timezone !== terms.cutoff.timezone) return { error: "calendar-mismatch" as const };
+  const reviewedSec = Date.parse(`${calendar.reviewedAt}T00:00:00Z`) / 1_000;
+  if (reviewedSec > clockSec) return { error: "calendar-review-future" as const };
+  if (clockSec - reviewedSec > BUSINESS_CALENDAR_BOUND_POLICY.reviewedMaxAgeSec) return { error: "calendar-review-stale" as const };
+  const { from, to, parts, instant, businessDay } = businessDayClock(calendar);
   const complete = (submissionDay: number, afterCutoff: boolean) => {
     if (submissionDay < from || submissionDay > to) return null;
     let day = submissionDay;
-    if (afterCutoff && businessDay(day)) day++;
-    while (day <= to && !businessDay(day)) day++;
+    if (!receiptDay) {
+      if (afterCutoff && businessDay(day)) day++;
+      while (day <= to && !businessDay(day)) day++;
+    }
     for (let remaining = terms.businessDays; remaining > 0 && day <= to; remaining--) {
       do { day++; } while (day <= to && !businessDay(day));
     }
@@ -82,10 +107,10 @@ function calendarWalker(
   return { from, to, parts, instant, businessDay, complete, cutoff: terms.cutoff.time ?? "00:00", receiptDay };
 }
 
-/** Latest end-of-day completion for one submission; T is the first accepted processing day. */
+/** Latest end-of-day completion from receipt or the first accepted processing day. */
 export function walkBusinessDaySettlement(
   terms: RedemptionBusinessDayTerms, submittedAtSec: number, clockSec: number,
-  calendar = REVIEWED_BUSINESS_CALENDARS[terms.calendarId],
+  calendar = reviewedBusinessCalendarAt(terms.calendarId, clockSec),
 ): BusinessCalendarBound {
   const walker = calendarWalker(terms, calendar, clockSec);
   if ("error" in walker) return { state: "unknown", reason: walker.error };
@@ -109,7 +134,7 @@ export function walkBusinessDaySettlement(
 export function maximumBusinessDaySettlement(
   terms: RedemptionBusinessDayTerms, clockSec: number,
   submissionWindow?: { from: string; to: string },
-  calendar = REVIEWED_BUSINESS_CALENDARS[terms.calendarId],
+  calendar = reviewedBusinessCalendarAt(terms.calendarId, clockSec),
 ): BusinessCalendarBound {
   const walker = calendarWalker(terms, calendar, clockSec);
   if ("error" in walker) return { state: "unknown", reason: walker.error };
@@ -135,4 +160,20 @@ export function maximumBusinessDaySettlement(
     }
   }
   return { state: "known", maximumElapsedSec: Math.ceil(maximum), completionDate: dateAt(completionDay), worstSubmissionDate: dateAt(worstDay), calendarId: calendar.id, calendarReviewedAt: calendar.reviewedAt, sourceUrls: calendar.sourceUrls };
+}
+
+/** The first local evaluation day whose full forward window cannot complete inside coverage. */
+export function firstBusinessDaySettlementCoverageLoss(
+  terms: RedemptionBusinessDayTerms,
+  calendar = REVIEWED_BUSINESS_CALENDARS[terms.calendarId],
+): number | null {
+  const reviewedSec = Date.parse(`${calendar.reviewedAt}T00:00:00Z`) / 1_000;
+  const walker = calendarWalker(terms, calendar, reviewedSec);
+  if ("error" in walker) return null;
+  let lastSubmission = walker.to;
+  while (lastSubmission >= walker.from && walker.complete(lastSubmission, !walker.receiptDay) === null) {
+    lastSubmission--;
+  }
+  const firstUncoveredEvaluation = lastSubmission - BUSINESS_CALENDAR_BOUND_POLICY.submissionHorizonDays + 2;
+  return walker.instant(Math.max(walker.from, firstUncoveredEvaluation), "00:00");
 }

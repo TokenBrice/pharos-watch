@@ -9,7 +9,7 @@ import { CHAIN_META } from "@shared/types/chain-identity";
 import donationsData from "@shared/data/funding/donations.json";
 import { formatIsoDate } from "@shared/lib/format";
 import { summarizeDonations } from "@shared/lib/funding/helpers";
-import { DonationsFileSchema } from "@shared/lib/funding/schema";
+import { TransferDonationsFileSchema } from "@shared/lib/funding/schema";
 import { DONOR_API_KEY_MIN_USD } from "@shared/lib/ops-limits";
 import { API_PAGE_ANCHORS, PUBLIC_API_ARTIFACTS, PUBLIC_API_HOST } from "@shared/lib/public-api-contract";
 import { ApiOfferCards } from "./api-offer-cards";
@@ -42,7 +42,7 @@ const DEVELOPER_RESOURCES = [
 const PILL_CLASS_NAME = "pharos-control-pill pharos-focus-ring gap-1.5";
 
 export default async function ApiPage() {
-  const ledger = DonationsFileSchema.parse(donationsData);
+  const ledger = TransferDonationsFileSchema.parse(donationsData);
   // Same count as the /funding/ "supporters since launch" figure.
   const supporterCount = summarizeDonations(ledger.donations, ledger.last_updated_at).lifetimeCommunityDonorCount;
   const { asOfDate, coins } = getCurrentDonorKeyQualifyingCoins();

@@ -12,27 +12,31 @@ function buildDepegPersistenceStatement(
       return buildUpsertPendingDepegStmt(db, command.payload);
     case "close-event":
       return db
-        .prepare("UPDATE depeg_events SET ended_at = ?, recovery_price = ?, close_reason = ?, recovery_first_seen_at = NULL, recovery_last_seen_at = NULL WHERE id = ?")
-        .bind(command.endedAt, command.recoveryPrice, command.closeReason, command.id);
+        .prepare("UPDATE depeg_events SET ended_at = ?, recovery_price = ?, close_reason = ?, recovery_peg_reference = ?, recovery_first_seen_at = NULL, recovery_last_seen_at = NULL, recovery_evidence_source = NULL, recovery_usd_first_seen_at = NULL, recovery_usd_observed_at = NULL, reference_hold_json = NULL WHERE id = ?")
+        .bind(command.endedAt, command.recoveryPrice, command.closeReason, command.recoveryPegReference ?? null, command.id);
     case "update-peak":
       return db
-        .prepare("UPDATE depeg_events SET peak_deviation_bps = ?, peak_price = ? WHERE id = ?")
-        .bind(command.peakDeviationBps, command.peakPrice, command.id);
+        .prepare(`UPDATE depeg_events SET peak_deviation_bps = ?, peak_price = ?, peak_peg_reference = ?, peak_quote_domain = ?, peer_basis_json = CASE WHEN ? IS NULL THEN peer_basis_json
+          ELSE json_set(CASE WHEN (CASE WHEN json_valid(peer_basis_json) THEN json_type(peer_basis_json) END) = 'object' THEN peer_basis_json ELSE '{}' END, '$.peak', json(?)) END WHERE id = ?`)
+        .bind(command.peakDeviationBps, command.peakPrice, command.peakPegReference ?? null, command.peakQuoteDomain ?? null,
+          command.peakReceipt ?? null, command.peakReceipt ?? null, command.id);
     case "record-price-coverage":
       return db.prepare(
-        "UPDATE depeg_events SET price_coverage_json = ?, last_trusted_price_at = ?, price_coverage_gap_started_at = ? WHERE id = ?",
-      ).bind(serializeDepegPriceCoverage(command.coverage), command.coverage.lastTrustedObservationAt, command.coverage.gapStartedAt, command.id);
+        "UPDATE depeg_events SET price_coverage_json = ?, last_trusted_price_at = ?, price_coverage_gap_started_at = ?, reference_hold_json = ?, admitted_coverage_json = COALESCE(?, admitted_coverage_json) WHERE id = ?",
+      ).bind(serializeDepegPriceCoverage(command.coverage), command.coverage.lastTrustedObservationAt, command.coverage.gapStartedAt,
+        command.referenceHold ? JSON.stringify(command.referenceHold) : null,
+        command.admittedCoverage ? JSON.stringify(command.admittedCoverage) : null, command.id);
     case "begin-recovery":
       return db
-        .prepare("UPDATE depeg_events SET recovery_first_seen_at = ?, recovery_last_seen_at = ? WHERE id = ?")
-        .bind(command.firstSeenAt, command.lastSeenAt, command.id);
+        .prepare("UPDATE depeg_events SET recovery_first_seen_at = ?, recovery_last_seen_at = ?, recovery_evidence_source = ?, recovery_usd_first_seen_at = ?, recovery_usd_observed_at = ? WHERE id = ?")
+        .bind(command.firstSeenAt, command.lastSeenAt, command.source ?? null, command.usdObservedAt ?? null, command.usdObservedAt ?? null, command.id);
     case "continue-recovery":
       return db
-        .prepare("UPDATE depeg_events SET recovery_last_seen_at = ? WHERE id = ?")
-        .bind(command.lastSeenAt, command.id);
+        .prepare("UPDATE depeg_events SET recovery_last_seen_at = ?, recovery_usd_observed_at = ? WHERE id = ?")
+        .bind(command.lastSeenAt, command.usdObservedAt ?? null, command.id);
     case "clear-recovery":
       return db
-        .prepare("UPDATE depeg_events SET recovery_first_seen_at = NULL, recovery_last_seen_at = NULL WHERE id = ? AND (recovery_first_seen_at IS NOT NULL OR recovery_last_seen_at IS NOT NULL)")
+        .prepare("UPDATE depeg_events SET recovery_first_seen_at = NULL, recovery_last_seen_at = NULL, recovery_evidence_source = NULL, recovery_usd_first_seen_at = NULL, recovery_usd_observed_at = NULL WHERE id = ? AND (recovery_first_seen_at IS NOT NULL OR recovery_last_seen_at IS NOT NULL OR recovery_usd_observed_at IS NOT NULL OR recovery_usd_first_seen_at IS NOT NULL)")
         .bind(command.id);
     case "delete-event":
       // Retain canonical source rows, including unsealed incidents. Evaluate

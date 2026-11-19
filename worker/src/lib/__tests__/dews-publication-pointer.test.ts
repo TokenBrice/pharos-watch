@@ -11,6 +11,9 @@ import {
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { persistDewsResults } from "../dews/persistence";
 import type { DewsComputedRow } from "../dews/contracts";
+import { hydratePreviousStressSignals } from "../dews/source-state/hydration";
+import { computeDEWS } from "../dews";
+import { makeDewsInput } from "./dews.test-support";
 
 const nowSec = 1_778_400_000;
 const pointerKey = "dews:published-generation";
@@ -74,6 +77,31 @@ describe("DEWS publication pointer reader", () => {
       await expect(readDewsPublishedGenerationResult(db, nowSec)).resolves.toMatchObject({
         status: "ok", computedAt: nowSec, expectedRowCount: 1,
       });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("keeps carried reference stress outside the legacy divergence reading", async () => {
+    const { sqlite, db } = openSqlitePublicationDb();
+    try {
+      const stablecoinId = "xaut-tether";
+      const referenceDivergence = { value: 70, observedAtSec: nowSec - 3 * 3600 };
+      const result = computeDEWS(makeDewsInput({ stablecoinId, pegType: "peggedGOLD", price: null,
+        pegReferenceUnavailableReason: "reference-market-closed", carriedReferenceDivergence: referenceDivergence }));
+      if (!result) throw new Error("Expected a DEWS result with carried reference stress");
+      await persistDewsResults({ db, results: [{ ...result, stablecoinId }], eligibleIds: new Set([stablecoinId]), degradedSources: [], nowSec });
+
+      for (const table of ["stress_signals", "stress_signal_publication_rows", "stress_signals_latest"]) {
+        const row = sqlite.prepare(`SELECT signals_json FROM ${table}`).get();
+        expect(JSON.parse(String(row?.signals_json)).signals.diverg).toMatchObject({
+          value: 0, available: false, unavailableReason: "reference-market-closed", referenceDivergence, referenceCarried: true,
+        });
+      }
+      const previous = await hydratePreviousStressSignals({ db, nowSec: nowSec + 900,
+        registerSourceFailure: () => {}, registerMalformedPersistedInput: () => {} });
+      expect(previous.prevSignals.get(stablecoinId)?.signals.diverg?.available).toBe(false);
+      expect(previous.referenceDivergenceById?.get(stablecoinId)).toEqual(referenceDivergence);
     } finally {
       sqlite.close();
     }

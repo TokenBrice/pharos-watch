@@ -9,11 +9,12 @@ const LedgerSchema = z.object({ chain_id: z.literal(1), ledger_version: IntegerS
 const SupplyViewSchema = z.array(z.object({ vec: z.array(IntegerSchema).length(1) })).length(1);
 
 /** Coin supply includes paired FA stock; native FA supply reads the metadata object directly. */
-export async function fetchAptosSupply(address: string, decimals: number, signal: AbortSignal, symbol: "USDY" | "BUIDL" = "USDY"): Promise<bigint> {
+export async function fetchAptosSupply(address: string, decimals: number, signal: AbortSignal, symbol: "USDY" | "BUIDL" = "USDY"): Promise<{ rawSupply: bigint; observedAt: number }> {
   const errorPrefix = `aptos-${symbol.toLowerCase()}`;
   if (!/^0x[0-9a-f]{64}$/.test(address) || decimals !== 6) throw new Error(`${errorPrefix}-identity-invalid`);
   const ledger = LedgerSchema.parse(await fetchJsonWithRetry<unknown>(APTOS_PUBLIC_REST_URL, signal, 10_000, undefined, BOUNDED_READ));
-  const age = Date.now() / 1000 - Number(BigInt(ledger.ledger_timestamp)) / 1_000_000;
+  const observedAt = Number(BigInt(ledger.ledger_timestamp) / 1_000_000n);
+  const age = Date.now() / 1000 - observedAt;
   if (!Number.isFinite(age) || age > NAV_SUPPLY_LEDGER_FRESHNESS.maxAgeSec || age < -NAV_SUPPLY_LEDGER_FRESHNESS.maxFutureSkewSec) throw new Error(`${errorPrefix}-ledger-stale-or-future`);
   const coin = symbol === "USDY";
   const type = coin ? `0x1::coin::CoinInfo<${address}::usdy::USDY>` : "0x1::fungible_asset::Metadata";
@@ -30,5 +31,5 @@ export async function fetchAptosSupply(address: string, decimals: number, signal
   ));
   const raw = BigInt(supply[0].vec[0]);
   if (raw >= 1n << 128n) throw new Error(`${errorPrefix}-supply-exceeds-u128`);
-  return raw;
+  return { rawSupply: raw, observedAt };
 }

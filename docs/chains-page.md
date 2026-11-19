@@ -64,6 +64,8 @@ Hooks use the shared cron-aligned chains preset and endpoint freshness budget, n
 
 `worker/src/api/chains.ts` uses strict stablecoins cache and active core-aggregate assets for every aggregate/reference. Commodity references missing from FX inputs are withheld, never replaced with $1. Safety hydration requires a fresh accepted publication; held/stale/unavailable input leaves the map empty. Source `updatedAt` remains the stablecoins-cache time; degraded supply or health uses no-store. Invalid/unavailable strict cache returns 503.
 
+The peg stability factor and its coverage use clocked comparisons that still meet their session and observation budgets when the Worker reads the cache. Legacy publications continue to use the legacy peg comparison.
+
 Every positive-supply chain has exactly `min(stablecoinCount, 5)` top rows; schema validation rejects older/partial payloads rather than merging another generation. Absent/empty/invalid supply buckets are excluded and counted in aggregate/per-chain coverage, including chains left with no observed row. The raw chain total and discrepancy are never silently clamped.
 
 ## Update Rules

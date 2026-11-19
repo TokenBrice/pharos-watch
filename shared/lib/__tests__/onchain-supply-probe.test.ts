@@ -649,7 +649,12 @@ it("fails a canonical roster closed on an unselected registered deployment unles
   const unselected = { chain: "polygon", address: "0x0000000000000000000000000000000000000001", decimals: 6 };
   const susds = TRACKED_META_BY_ID.get("susds-sky")!;
   expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["susds-sky"]).toBe("ethereum");
-  expect(CURATED_AGGREGATE_ESCROW_RESIDUALS["susds-sky"]).toBeUndefined();
+  expect(CURATED_AGGREGATE_ESCROW_RESIDUALS["susds-sky"]?.escrowByChain).toEqual({
+    base: "0x7f311a4d48377030bd810395f4ccfc03bdbe9ef3",
+    optimism: "0x467194771dae2967aef3ecbedd3bf9a310c76c65",
+    arbitrum: "0xa10c7ce4b876998858b1a9e12b10092229539400",
+    unichain: "0x1196f688c585d3e5c895ef8954ffb0dcdafc566a",
+  });
   expect(selectCuratedAggregateOnchainSupplyProbeContracts({
     ...susds,
     contracts: [...susds.contracts!, unselected],
@@ -674,7 +679,7 @@ it("keeps every tracked curated roster either complete or explicitly excused acr
       (contract) => !selected.some((entry) => entry.contract === contract),
     ).length ?? 0;
     expect(
-      unselectedCount === 0 || CURATED_AGGREGATE_ESCROW_RESIDUALS[meta.id] != null
+      unselectedCount === 0 || CURATED_AGGREGATE_ESCROW_RESIDUALS[meta.id]?.escrowAddress != null
         || unselectedCount === (CURATED_AGGREGATE_EXCLUDED_REPRESENTATIONS[meta.id]?.length ?? 0)
           + (REVIEWED_ONCHAIN_SUPPLY_PLANS[meta.id]?.unreadableDeployments?.length ?? 0),
       `${meta.id} publishes a curated roster with ${unselectedCount} unselected registered deployments and no reviewed accounting exclusion`,

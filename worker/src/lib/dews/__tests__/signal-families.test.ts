@@ -372,8 +372,45 @@ describe("DEWS signal family curves", () => {
       available: false,
       baselineDays: 30,
       flowScope: "isolated-canonical-leg",
+      burnVolume24hUsd: 1_000_000,
+      mintVolume24hUsd: 1_000_000,
       unavailableReason: "mint-burn-isolated-no-outflow",
     });
+  });
+
+  it.each([
+    [1, 33_170_000, 50_000, 0.002],
+    [95.485278, 33_170_000, 50_000, 0.190970556],
+    [500_000, 5e9, 500_000, 100],
+    [500_000, 100e9, 1_000_000, 50],
+  ])("tapers both stress ratios for $%s in burns at $%s market cap", (burn, mcapUsd, threshold, stress) => {
+    const result = computeFlowSignal(makeDewsInput({ mcapUsd, burnVolume24hUsd: burn, mintVolume24hUsd: 0,
+      burnBaseline30dUsd: burn / 30, flowBaselineDays: 30 }));
+    expect(result).toMatchObject({ available: true, burnMaterialityUsd: threshold, burnVolume24hUsd: burn, net24hUsd: -burn });
+    expect(result.value).toBeCloseTo(stress, 6);
+    expect(computeFlowSignal(makeDewsInput({ mcapUsd, burnVolume24hUsd: burn, mintVolume24hUsd: 0,
+      burnBaseline30dUsd: burn / 30, flowBaselineDays: 30, flowEpochIssue: undefined })).value).toBe(100);
+  });
+
+  it.each([
+    ["mint-burn-current-accounting-transition", false, 0],
+    ["mint-burn-baseline-accounting-transition", true, 5],
+    ["mint-burn-accounting-epoch-missing", true, 5],
+    [undefined, true, 5],
+    [null, true, 5],
+  ] as const)("scores only comparable flow components (%s)", (flowEpochIssue, available, value) => {
+    const result = computeFlowSignal(makeDewsInput({ mcapUsd: 1e9, burnVolume24hUsd: 100_000, mintVolume24hUsd: 100_000,
+      burnBaseline30dUsd: flowEpochIssue ? 23_333 : 100_000, flowBaselineDays: 30, flowEpochIssue }));
+    expect(result).toMatchObject({ value, available, burnVolume24hUsd: 100_000, mintVolume24hUsd: 100_000 });
+    if (flowEpochIssue == null) expect(result.burnSurge).toBe(1);
+    else expect(result.burnSurge).toBeUndefined();
+    if (available && flowEpochIssue != null) expect(result).toMatchObject({
+      burnSurgeUnavailableReason: flowEpochIssue, componentCoverage: 0.4,
+    });
+    if (!available) {
+      expect(result.unavailableReason).toBe(flowEpochIssue);
+      expect(result.burnToMintRatio).toBeUndefined();
+    }
   });
 
   it("never scores flow from valuation that missing prices could alter", () => {
@@ -387,10 +424,10 @@ describe("DEWS signal family curves", () => {
       .toEqual(unavailable("mint-burn-valuation-unknown"));
     // Unpriced baseline burns understate the baseline and would overstate the surge.
     expect(computeFlowSignal(makeDewsInput({ ...scored, flowBurnBaselineValuation: "partial" })))
-      .toEqual(unavailable("mint-burn-baseline-valuation-partial"));
+      .toMatchObject(unavailable("mint-burn-baseline-valuation-partial"));
     // A historical baseline cannot authorize a score without complete valuation.
     expect(computeFlowSignal(makeDewsInput({ ...scored, flowBurnBaselineValuation: "unknown" })))
-      .toEqual(unavailable("mint-burn-baseline-valuation-unknown"));
+      .toMatchObject(unavailable("mint-burn-baseline-valuation-unknown"));
     // Genuine empty activity stays a measured zero.
     expect(computeFlowSignal(makeDewsInput({ ...scored, burnVolume24hUsd: 0 }))).toMatchObject({ available: true, value: 0 });
   });
@@ -427,10 +464,17 @@ describe("DEWS signal family curves", () => {
     }
   });
 
+  it("counts a reward-heavy venue once and keeps both recorded attributions", () => {
+    expect(computeYieldSignal(makeDewsInput({ yieldWarnings: ["reward-heavy"],
+      yieldSourceRisk: { rewardShare: 0.9 } }))).toMatchObject({
+      value: 20, available: true, warnings: ["reward-heavy", "structured-reward-heavy"],
+    });
+  });
+
   it.each([
     ["structured-reward-heavy", { yieldSourceRisk: { rewardShare: 0.6 } }, 20],
     ["structured-thin-source-depth", { yieldSourceRisk: { sourceDepthRatio: 0.0005 } }, 35],
-    ["structured-stale-source", { yieldSourceRisk: { sourceAgeSeconds: 7 * 60 * 60 } }, 15],
+    ["structured-stale-source", { yieldSourceOverdue: true, yieldSourceRisk: { sourceAgeSeconds: 7 * 60 * 60 } }, 15],
     ["structured-source-switch", { yieldSourceRisk: { sourceSwitchCount30d: 1 } }, 20],
     ["structured-source-risk-penalty", { yieldSourceRisk: { sourceRiskPenalty: 1.5 } }, 20],
     ["structured-medium-risk-venue", { yieldSourceRisk: { venueRiskTier: "medium" } }, 10],

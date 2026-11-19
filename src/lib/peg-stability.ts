@@ -4,7 +4,8 @@ import { computePegScore } from "@shared/lib/peg-score";
 import { DAY_SECONDS } from "@/lib/constants";
 import { WEEK_SECONDS } from "@shared/lib/time-constants";
 import { classifyDepegClosure, isDepegRecovery, type DepegClosureClassification } from "@shared/lib/depeg-closure";
-import { isPegScoreExcludedAuditVerdict } from "@shared/lib/depeg-audit";
+import { isScoredPegEvent } from "@shared/lib/peg-utils";
+import { hasUnverifiedAnalyticRecovery } from "./depeg-event-display";
 
 interface PegStabilityMetrics {
   /** Record-derived peg occupancy estimate (0–100), not proof of continuous observation */
@@ -59,16 +60,17 @@ export function computePegStability(
   const depeggedNow = pegMetrics.activeDepeg;
   let latestClosed: DepegEvent | null = null;
   for (const event of events) {
-    if (isPegScoreExcludedAuditVerdict(event.provenance?.auditVerdict)) continue;
+    if (!isScoredPegEvent(event)) continue;
     if (event.endedAt == null || event.endedAt > nowSec) continue;
     if (latestClosed == null || event.endedAt >= latestClosed.endedAt!) {
       latestClosed = event;
     }
   }
-  const latestClosure = latestClosed ? classifyDepegClosure(latestClosed) : null;
+  const latestClosure = latestClosed == null ? null :
+    hasUnverifiedAnalyticRecovery(latestClosed) ? "unknown_closed" : classifyDepegClosure(latestClosed);
   const recovered = isDepegRecovery(latestClosure);
   const currentStreakDays = !depeggedNow && recovered && latestClosed
-    ? Math.floor((nowSec - latestClosed.endedAt!) / DAY_SECONDS)
+    ? Math.floor((nowSec - (latestClosed.analyticRecoveryAt ?? latestClosed.endedAt!)) / DAY_SECONDS)
     : null;
 
   return {

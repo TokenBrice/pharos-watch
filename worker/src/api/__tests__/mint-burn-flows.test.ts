@@ -612,12 +612,13 @@ describe("handleMintBurnFlows contract tests", () => {
         rows: { hourly: [makeFlowHourlyRow(now)], latestSuccessfulSync: [{ started_at: now - 120 }] },
       });
       const fresh = await refreshAggregateMintBurnFlowCache(db, 24);
-      const materialized = MintBurnFlowsResponseSchema.parse(await readJsonResponse(fresh, 200));
+      const rawMaterialized = await readJsonResponse(fresh, 200);
+      const materialized = MintBurnFlowsResponseSchema.parse(rawMaterialized);
       const cachedDb = mintBurnScenario({
         nowSec: now,
         flowCache: {
           key: "mint-burn-flows:v8:aggregate:24",
-          value: JSON.stringify(materialized),
+          value: JSON.stringify(rawMaterialized),
           updatedAt: now,
         },
       });

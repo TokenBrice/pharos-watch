@@ -1,5 +1,5 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { OPTIONAL_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
+import { getUsycNavFreshness, OPTIONAL_YIELD_SOURCES, USYC_NAV_FUTURE_SKEW_SEC } from "@shared/lib/yield-source-cadence";
 import { finiteDecimalNumberFromBigInt } from "../../lib/bigint";
 import { type ChainRpcConfig, getChainRpc, registryRpcUrls } from "../../lib/chain-registry";
 import { parseChainlinkLatestRoundData } from "../../lib/chainlink-round-data";
@@ -40,9 +40,7 @@ interface RePriceResponse {
 const HASHNOTE_PRICE_REPORTS_URL = "https://usyc.hashnote.com/api/price-reports";
 const HASHNOTE_TARGET_LOOKBACK_SEC = 7 * DAY_SECONDS;
 const HASHNOTE_MIN_LOOKBACK_SEC = 5 * DAY_SECONDS;
-const HASHNOTE_MAX_FRESHNESS_SEC = 3 * DAY_SECONDS;
-const HASHNOTE_MAX_FUTURE_SKEW_SEC = 5 * 60;
-const ONDO_USDY_ORACLE = "0xa0219aa5b31e65bc920b5b6dfb8edf0988121de0";
+const ONDO_USDY_ORACLE_WRAPPER = "0x87b126e5518b6a1Bb8465779b4607C45C643DF90";
 const ONDO_GET_PRICE_SELECTOR = "0x98d5fdca";
 const RE_REUSD_PRICE_URL = "https://api.re.xyz/price";
 const RE_REUSD_CONTRACT = "0x5086bf358635B81D8C47C66d1C8b9E567Db70c72";
@@ -74,7 +72,7 @@ export async function fetchHashnoteUsycSource(signal?: AbortSignal): Promise<Res
     }))
     .filter((report) => Number.isFinite(report.parsedTimestamp)
       && report.parsedTimestamp > 0
-      && report.parsedTimestamp <= nowSec + HASHNOTE_MAX_FUTURE_SKEW_SEC)
+      && report.parsedTimestamp <= nowSec + USYC_NAV_FUTURE_SKEW_SEC)
     .sort((a, b) => b.parsedTimestamp - a.parsedTimestamp);
   if (sortedReports.length < 2) return null;
 
@@ -82,8 +80,8 @@ export async function fetchHashnoteUsycSource(signal?: AbortSignal): Promise<Res
   const latestPrice = parseFloat(latest.price);
   const latestTimeSec = latest.parsedTimestamp;
   if (!Number.isFinite(latestPrice) || latestPrice <= 0) return null;
-  if (!Number.isFinite(latestTimeSec)) return null;
-  if (nowSec - latestTimeSec > HASHNOTE_MAX_FRESHNESS_SEC) return null;
+  const freshness = getUsycNavFreshness(latestTimeSec, nowSec);
+  if (freshness !== "fresh" && freshness !== "aging") return null;
 
   const targetAnchorSec = latestTimeSec - HASHNOTE_TARGET_LOOKBACK_SEC;
   let anchor = sortedReports[sortedReports.length - 1];
@@ -127,7 +125,7 @@ export async function fetchOndoUsdyOracleSource(
   const fallbackRpcUrl = registryRpcUrls(rpc)[1];
   const extraRpcUrls = fallbackRpcUrl ? [fallbackRpcUrl] : [];
   const currentPrice = await fetchEvmUint256AtBlock(
-    "ethereum", ONDO_USDY_ORACLE, ONDO_GET_PRICE_SELECTOR, "latest",
+    "ethereum", ONDO_USDY_ORACLE_WRAPPER, ONDO_GET_PRICE_SELECTOR, "latest",
     { extraRpcUrls, signal },
   );
   if (!currentPrice || currentPrice === 0n) return null;

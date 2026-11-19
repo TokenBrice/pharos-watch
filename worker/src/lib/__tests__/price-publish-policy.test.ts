@@ -18,7 +18,60 @@ const USD_CONTEXT: PriceValidationContext = {
   tracked: true,
 };
 
+describe("fiat upper-band publication", () => {
+  it.each([
+    ["reviewed-range premium", 1.23, "kraken", { kraken: 1.23, binance: 1.231 }, true],
+    ["exact boundary", 1.19, "kraken", { kraken: 1.19, binance: 1.19 }, true],
+    ["lone price", 1.23, "kraken", undefined, false],
+    ["different magnitude", 1.23, "kraken", { kraken: 1.23, binance: 1.48 }, false],
+    ["different magnitudes around the candidate", 1.23, "kraken+binance", { kraken: 1.225, binance: 1.235 }, false],
+    ["selected price lacks direct support", 1.23, "coingecko", { kraken: 1.23, binance: 1.23 }, false],
+    ["same family", 1.23, "coingecko", { coingecko: 1.23, "coingecko-low-volume": 1.23 }, false],
+    ["list aggregators only", 1.23, "coingecko", { coingecko: 1.23, "defillama-list": 1.23 }, false],
+    ["converted vote", 1.23, "kraken", { kraken: 1.23, "coingecko-native-implied": 1.23 }, false],
+    ["potential venue mirror", 1.23, "kraken", { kraken: 1.23, "cg-ticker": 1.23 }, false],
+    ["stale pool clock", 1.23, "kraken", { kraken: 1.23, "curve-dex": 1.23 }, false],
+  ] as const)("evaluates %s", (_name, ratio, source, quotes, accepted) => {
+    const par = 0.2;
+    const candidatePrices = quotes && Object.fromEntries(Object.entries(quotes).map(([key, value]) => [key, value * par]));
+    const now = Math.floor(Date.now() / 1000);
+    const fiatPremiumEvidence = Object.fromEntries(Object.entries(candidatePrices ?? {}).map(([key, priceUsd]) => [key, {
+      priceUsd,
+      observedAtSec: now - (key === "curve-dex" ? 6_000 : 60),
+      upstreamKeys: [`venue:${key === "cg-ticker" ? "kraken" : key}`],
+    }]));
+    const decision = validatePrimaryPriceCandidate({
+      price: par * ratio, source, confidence: "high", candidatePrices, fiatPremiumEvidence,
+      validationContext: { ...USD_CONTEXT, pegClass: "fiat_fx", pegType: "peggedREAL" },
+      validationReferences: { rates: { peggedREAL: par }, type: "fresh", updatedAt: null },
+    });
+    expect(decision).toEqual({
+      accepted, reason: accepted ? "corroborated_fiat_premium" : "fiat_upper_band_requires_corroboration",
+    });
+  });
+});
+
 describe("validatePrimaryPriceCandidate — severe downside with directional corroboration", () => {
+  it("requires disjoint upstreams for severe downside even when two source names agree", () => {
+    const pool = "ethereum:0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7";
+    const input = {
+      price: 0.45, source: "bitstamp", confidence: "high" as const,
+      agreeSources: ["bitstamp", "curve-onchain"],
+      candidatePrices: { bitstamp: 0.45, "curve-onchain": 0.45 },
+      validationContext: USD_CONTEXT,
+    };
+    expect(validatePrimaryPriceCandidate(input).accepted).toBe(true);
+    expect(validatePrimaryPriceCandidate({
+      ...input,
+      upstreamKeysBySource: { bitstamp: ["venue:bitstamp"], "curve-onchain": [pool, "venue:bitstamp"] },
+    })).toMatchObject({ accepted: false, reason: "severe_downside_requires_corroboration" });
+    expect(validatePrimaryPriceCandidate({
+      ...input, confidence: "low", source: "coinbase", agreeSources: ["coinbase"],
+      candidatePrices: { coinbase: 0.45, "curve-onchain": 0.36 },
+      upstreamKeysBySource: { coinbase: ["venue:coinbase"], "curve-onchain": [pool, "venue:bitstamp"] },
+    }).accepted).toBe(true);
+  });
+
   it("does not let the native CG-dependent leg bypass severe-downside or temporal-jump guards", () => {
     expect(validatePrimaryPriceCandidate({
       price: 0.38, source: "hive-native-cg", confidence: "single-source",

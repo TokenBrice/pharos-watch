@@ -1,5 +1,18 @@
 [
   {
+    "version": "5.2",
+    "title": "Clocked forecast and native supply evidence",
+    "date": "2026-11-19",
+    "effectiveAt": 1795053600,
+    "summary": "Held and expired comparisons cannot establish live deviation or forecast readiness. Supply factors use comparable token counts when recorded. Earlier history uses the change in reported USD supply.",
+    "impact": [
+      "Training distinguishes quote provenance from assessment-time landmark eligibility. Review dispositions and admitted event coverage govern eligible analytics.",
+      "Previously sealed forecast contents and identifiers retain their original inputs. Exposure and measured dollar-flow denominators remain USD-valued."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "5.1",
     "title": "Stage-1 contradiction fixes for supply coverage and live direction",
     "date": "2026-10-31",

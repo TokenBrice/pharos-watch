@@ -12,6 +12,7 @@ import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-ad
 import { evaluateLiveReserveAdmission } from "../../../lib/live-reserves/store-snapshot-state";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildReviewedReserveClassifications } from "../../../lib/safety-score-v9/extension-reserves";
+import { decodeCurrentReserveNavPrice } from "../../../lib/reserve-nav-price";
 
 const ORACLE_ADDRESS = "0x74f2199AEb743f68f05943e5715A33EaF2b61f53";
 const WRAPPER_ADDRESS = "0x00000000000000000000000000000000000000aa";
@@ -262,6 +263,25 @@ describe("parseOndoPriceData", () => {
 });
 
 describe("fetchChainlinkNavCore", () => {
+  it.each(["mre7yield-midas", "mglobal-midas-fasanara"])("uses the reviewed %s round window when reading the reserve NAV for pricing", (id) => {
+    const liveReservesConfig = TRACKED_META_BY_ID.get(id)!.liveReservesConfig!;
+    const fingerprint = computeLiveReserveConfigFingerprint(liveReservesConfig);
+    const observedAt = 1_781_083_007;
+    const maxAgeSec = liveReservesConfig.params?.maxOracleAgeSec as number;
+    const fetchedAt = observedAt + maxAgeSec;
+    const row = {
+      source: "chainlink-nav", fetched_at: fetchedAt,
+      metadata: JSON.stringify({ navPerToken: 1.23, sourceTimestamp: observedAt }),
+      attempt_id: "success", last_success_at: fetchedAt, last_success_attempt_id: "success",
+      config_fingerprint: fingerprint, state_config_fingerprint: fingerprint,
+      last_attempt_id: "success", pending_attempt_id: null,
+    };
+    expect(maxAgeSec).toBeGreaterThan(4 * 86400);
+    expect(decodeCurrentReserveNavPrice(row, { liveReservesConfig }, fetchedAt))
+      .toMatchObject({ price: 1.23, observedAt, maxAgeSec });
+    expect(decodeCurrentReserveNavPrice(row, { liveReservesConfig }, fetchedAt + 1)).toBeNull();
+  });
+
   it("throws when standard Chainlink NAV round data exceeds the configured freshness window", async () => {
     const updatedAt = 1_781_083_007;
     const maxOracleAgeSec = 604_800;

@@ -14,6 +14,8 @@ import {
   isDexExecutionProfileAdmittedForScoring,
 } from "@shared/lib/p4-exit-route-capability-policy";
 import { buildPoolFingerprint, initSourcePoolGraph } from "../pool-helpers";
+import { getDexGroupLineage } from "../price-lineage";
+import { projectRetainedPoolPrice } from "../scoring-helpers";
 import {
   EVM_V2_EXECUTION_DEPLOYMENTS,
   attachEvmV2CandidateToRetainedPool,
@@ -811,7 +813,7 @@ describe("constant-product V2 execution", () => {
     });
   });
 
-  it.each(["observed", "stale-parent", "future-parent", "implied-parent", "wrong-pool", "old-generation", "missing-capture", "thin"])("USDA native reserve price: %s", async (scenario) => {
+  it.each(["observed", "shared-upstream", "stale-parent", "future-parent", "implied-parent", "wrong-pool", "old-generation", "missing-capture", "thin"])("USDA native reserve price: %s", async (scenario) => {
     const result = await runReplay({ ...EVM_V2_REPLAY_CASES[4]!,
       poolAddress: "0xde66f1b24002c1d743ad1ef13cd4b2474295a6f6", pairTokenOrder: "stable-first" });
     const model = DexAmmExecutionModelSchema.parse(result.pool.extra?.ammExecutionModel);
@@ -825,11 +827,22 @@ describe("constant-product V2 execution", () => {
     if (scenario === "old-generation") model.capture!.sourceGenerationId = "previous";
     if (scenario === "missing-capture") delete model.capture;
     if (scenario === "thin") result.pool.tvlUsd = 49_999;
+    result.pool.priceCounterparty = { stablecoinId: "usdc-circle", priceUsd: 1, source: "kraken", observedAtSec: 1_699_999_999 };
     const before = { ...result.pool };
-    const observed = refreshUsdaV2Price(captureContext(result.metric));
-    if (scenario === "observed") {
+    const upstreamKeys = [`bsc:${PAIR}`, "venue:kraken"];
+    const mark = { priceUsd: 0.998, source: "kraken", observedAtSec: 1_699_999_880, upstreamKeys };
+    if (scenario === "shared-upstream") quote.referencePriceSourceId = mark.source;
+    const observed = refreshUsdaV2Price({ ...captureContext(result.metric), marketMarks: new Map([["usdt-tether", mark]]) });
+    if (scenario === "observed" || scenario === "shared-upstream") {
       expect(observed).toEqual({ status: "observed", priceUsd: 0.998, supportUsd: 3_992_000_000, observedAt: 1_699_999_880 });
       expect(result.pool).toMatchObject({ price: 0.998, priceSource: "direct_api", priceEvidenceTvlUsd: 3_992_000_000 });
+      expect(result.pool.priceCounterparty).toEqual({
+        stablecoinId: "usdt-tether", priceUsd: 0.998, source: quote.referencePriceSourceId, observedAtSec: 1_699_999_880,
+        ...(scenario === "shared-upstream" && { upstreamKeys }),
+      });
+      expect(getDexGroupLineage([projectRetainedPoolPrice(result.pool)!])?.upstreamKeys).toEqual(
+        scenario === "shared-upstream" ? [...upstreamKeys, result.pool.poolId].sort() : [],
+      );
     } else {
       expect(observed.status).toBe("unavailable");
       expect(result.pool).toEqual(before);

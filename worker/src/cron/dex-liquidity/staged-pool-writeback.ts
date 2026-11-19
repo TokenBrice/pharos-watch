@@ -7,6 +7,13 @@ import { isValidStagedPoolId } from "../dex-discovery/persistence";
 import { SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION, type StagedPool } from "../dex-discovery/types";
 import { getQualityMultiplier } from "./pool-helpers";
 import { isTrustworthyExactPoolId } from "./pool-identity";
+import {
+  checkedCurveOverlap,
+  checkedPancakeWindowEnd,
+  checkedRegistryClock,
+  isCurveWriteback,
+  isPancakeV3Writeback,
+} from "./registry-writeback-evidence";
 import type { SourcePoolGraph } from "./types";
 
 /**
@@ -87,23 +94,42 @@ export function buildStagedPoolWriteback(
       if (seen.has(dedupeKey)) continue;
       seen.add(dedupeKey);
 
+      const rowIdentity = { source: entry.source, protocol: entry.project, dexId: entry.project, poolType: entry.poolType };
+      const isCurve = isCurveWriteback(rowIdentity);
+      const isPancakeV3 = isPancakeV3Writeback(rowIdentity);
+      const chain = canonicalExitRouteChain(entry.chain);
+      const curvePriceObservedAtSec = isCurve ? checkedRegistryClock(entry.priceObservedAt, nowSec) : null;
+      const curveBasePoolOverlap = isCurve ? checkedCurveOverlap(chain, poolId, entry.tvlUsd, entry.curveBasePoolOverlap) : undefined;
+      const pancakeV3VolumeWindowEndSec = isPancakeV3
+        ? checkedPancakeWindowEnd(entry.volumeReading?.observedAtSec, nowSec)
+        : null;
       const measuredPrice =
+        (!isCurve || curvePriceObservedAtSec != null) &&
+        (entry.priceSource ?? entry.source) !== "direct_api" &&
         entry.extra?.measurement?.priceMeasured === true ? entry.price : undefined;
+      const priceUsd = measuredPrice != null && Number.isFinite(measuredPrice) && measuredPrice > 0 ? measuredPrice : null;
+      const volume24h = isPancakeV3
+        ? pancakeV3VolumeWindowEndSec != null ? entry.volumeReading?.volume24hUsd ?? null : null
+        : entry.volumeUsd1d;
+      const rawEvidence = {
+        ...(priceUsd != null && curvePriceObservedAtSec != null ? { curvePriceObservedAtSec } : {}),
+        ...(curveBasePoolOverlap ? { curveBasePoolOverlap } : {}),
+        ...(volume24h != null && pancakeV3VolumeWindowEndSec != null ? { pancakeV3VolumeWindowEndSec } : {}),
+        ...(entry.source === "direct_api" && entry.poolType.includes("slipstream")
+          ? { identityReviewVersion: SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION } : {}),
+      };
       pools.push({
         poolId,
         stablecoinId: metric.stablecoinId,
-        source: entry.source,
-        chain: canonicalExitRouteChain(entry.chain),
-        protocol: entry.project,
-        dexId: entry.project,
+        ...rowIdentity,
+        chain,
         symbol: entry.symbol,
         tvlUsd: entry.tvlUsd,
-        volume24h: entry.volumeUsd1d,
+        volume24h,
         qualityMultiplier: getQualityMultiplier(
           entry.poolType,
           entry.extra?.amplificationCoefficient,
         ),
-        poolType: entry.poolType,
         feeTier: entry.extra?.feeTier ?? null,
         balanceRatio: entry.extra?.balanceRatio ?? null,
         // Same stability rule the direct-API identity builder applies: a live
@@ -114,11 +140,9 @@ export function buildStagedPoolWriteback(
         baseToken: null,
         quoteToken: null,
         quoteSymbol: null,
-        priceUsd: measuredPrice != null && measuredPrice > 0 ? measuredPrice : null,
+        priceUsd,
         lockedLiqPct: entry.extra?.lockedLiquidityPct ?? null,
-        rawJson: entry.source === "direct_api" && entry.poolType.includes("slipstream")
-          ? JSON.stringify({ identityReviewVersion: SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION })
-          : null,
+        rawJson: Object.keys(rawEvidence).length > 0 ? JSON.stringify(rawEvidence) : null,
         discoveredAt: nowSec,
         refreshedAt: nowSec,
       });

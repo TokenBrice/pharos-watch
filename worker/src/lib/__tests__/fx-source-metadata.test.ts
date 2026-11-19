@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { hydrateFxRateState, getFxSourceStatus, type FxRateSourceMode } from "../fx-rate-state";
-import { applyRealtimeOverlaySourceMetadata, canCarryForwardFxRates, inheritFxSourceMetadata } from "../fx-source-metadata";
+import { canCarryForwardFxRates, inheritFxSourceMetadata } from "../fx-source-metadata";
 import type { FxSourceCadence } from "../fx-cadence";
 
 function sourceMaps() {
@@ -38,31 +38,6 @@ describe("FX carry-forward source metadata", () => {
     expect(getFxSourceStatus(maps.times.peggedEUR, maps.modes.peggedEUR, now, {
       pegKey: "peggedEUR", cadence: maps.cadences.peggedEUR, sourceDate: maps.dates.peggedEUR,
     })).toBe(status);
-  });
-
-  it("does not convert explicit intraday provenance into daily provenance during an overlay", () => {
-    const now = Date.parse("2026-10-08T22:00:00Z") / 1000;
-    const maps = sourceMaps();
-    maps.times.peggedEUR = now - 14 * 3600;
-    maps.modes.peggedEUR = "live";
-    maps.cadences.peggedEUR = "intraday";
-    maps.dates.peggedEUR = "2026-10-08";
-    applyRealtimeOverlaySourceMetadata("peggedEUR", now - 60, now, maps.times, maps.modes, maps.cadences, maps.dates);
-    expect(maps.cadences.peggedEUR).toBe("intraday");
-    expect(maps.dates.peggedEUR).toBeNull();
-    expect(maps.times.peggedEUR).toBe(now - 60);
-  });
-
-  it("preserves an explicitly calendar-daily incumbent during a fresh realtime overlay", () => {
-    const now = Date.parse("2026-10-08T22:00:00Z") / 1000;
-    const maps = sourceMaps();
-    maps.times.peggedEUR = now - 14 * 3600;
-    maps.modes.peggedEUR = "live";
-    maps.cadences.peggedEUR = "calendar-daily";
-    maps.dates.peggedEUR = "2026-10-08";
-    applyRealtimeOverlaySourceMetadata("peggedEUR", now - 60, now, maps.times, maps.modes, maps.cadences, maps.dates);
-    expect(maps.cadences.peggedEUR).toBe("calendar-daily");
-    expect(maps.dates.peggedEUR).toBe("2026-10-08");
   });
 
   it("infers natural daily cadence only for legacy metadata with no recorded cadence", () => {

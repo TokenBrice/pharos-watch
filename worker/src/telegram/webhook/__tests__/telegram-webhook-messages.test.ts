@@ -240,6 +240,14 @@ describe("buildStatusMessage 24h mint/burn flow (C122)", () => {
 describe("buildStatusMessage supply and DEX context", () => {
   const nowSec = Math.floor(Date.now() / 1000);
 
+  it.each([
+    [0.000055164025388120685, "$0.00005516"],
+    [0.0000431234, "$0.00004312"],
+  ])("preserves the observed precision of a sub-cent price (%s)", (priceUsd, expected) => {
+    const message = buildStatusMessage("IDRX", baseStatus({ priceUsd }), nowSec);
+    expect(message).toContain(expected);
+  });
+
   it("states unavailable liquidity and supply instead of omitting them or showing $0", () => {
     const message = buildStatusMessage("USDC", baseStatus({
       liquidity: null, liquidityUnavailableReason: "invalid-coverage-evidence", supplyUsd: null,

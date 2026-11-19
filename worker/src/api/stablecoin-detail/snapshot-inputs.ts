@@ -18,7 +18,7 @@ import { getCompletedSupplySnapshot } from "../../lib/supply-snapshot-completion
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { handleSupplyHistory } from "../supply-history";
 import { overlayCanonicalDetail } from "./price";
-import { CACHE_TTL_SECONDS, DETAIL_STALE_CACHE_MAX_AGE_SECONDS, createFreshCacheHitResponse } from "./shared";
+import { admitCommodityDetailCache, CACHE_TTL_SECONDS, DETAIL_STALE_CACHE_MAX_AGE_SECONDS, createFreshCacheHitResponse } from "./shared";
 
 /**
  * Internal build transport, not a provider/refresh endpoint. HTTP authentication is
@@ -56,6 +56,10 @@ export async function handleDetailSnapshotInputs(db: D1Database, url: URL): Prom
       sources.detailCacheUpdatedAt = cached?.updatedAt ?? null;
       if (!cached) {
         entries.push({ id, status: "unavailable", reason: "detail-cache-missing", sources });
+        continue;
+      }
+      if (!admitCommodityDetailCache(id, cached)) {
+        entries.push({ id, status: "unavailable", reason: "invalid-cache-input", sources });
         continue;
       }
       const now = Math.floor(Date.now() / 1000);

@@ -25,7 +25,7 @@ export {
   computeExcludedBalanceAdjustedSupplyRaw,
 } from "./supplemental-assets/onchain-supply";
 
-import type { CoinGeckoMcapData } from "./supplemental-assets/shared";
+import type { CoinGeckoMcapData, CommodityValuationEvidence } from "./supplemental-assets/shared";
 
 const COMMODITY_TOKENS = ACTIVE_STABLECOINS.filter(
   (stablecoin) => stablecoin.flags.pegCurrency === "GOLD" || stablecoin.flags.pegCurrency === "SILVER",
@@ -93,6 +93,7 @@ export async function fetchSupplementalTrackedTokens(
   reportPartitionSummary?: (summary: OnchainPartitionSummary) => void,
   syncStartSec?: number,
   replayPriceCache?: Map<string, PriceCacheEntry> | null,
+  commodityValuationEvidence?: CommodityValuationEvidence,
 ): Promise<{
   goldTokens: PeggedAsset[];
   silverTokens: PeggedAsset[];
@@ -102,8 +103,8 @@ export async function fetchSupplementalTrackedTokens(
   // Keep supplemental families serial. This path overlaps with the main
   // DefiLlama stablecoins fetch, so gold's batched protocol reads, silver's CG
   // pair, and fiat-cg's on-chain fallbacks must not stack in one trigger.
-  const goldTokens = await fetchGoldTokens(cgData, signal, db, chainRpcs, dwellirNative);
-  const silverTokens = await fetchSilverTokens(cgData, signal, coingeckoApiKey, db, chainRpcs, dwellirNative);
+  const goldTokens = await fetchGoldTokens(cgData, signal, db, chainRpcs, dwellirNative, commodityValuationEvidence);
+  const silverTokens = await fetchSilverTokens(cgData, signal, coingeckoApiKey, db, chainRpcs, dwellirNative, commodityValuationEvidence);
   const fiatCgTokens = await fetchFiatCoinGeckoTokens(cgData, signal, chainRpcs, fxFallbackRates, db, previousAssetsById, dwellirNative, reportPartitionSummary, syncStartSec, replayPriceCache);
 
   return { goldTokens, silverTokens, fiatCgTokens };

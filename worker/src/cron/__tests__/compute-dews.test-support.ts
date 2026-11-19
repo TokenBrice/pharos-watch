@@ -1,5 +1,8 @@
 import { vi } from "vitest";
+import { summarizeDexVolumeWindow } from "@shared/lib/dex-volume-availability";
+import { MINT_BURN_WRITER_EPOCH } from "../../lib/mint-burn-pipeline/scan-coverage";
 import * as publishedMintBurn from "../../lib/mint-burn-published-gauge";
+import type { NativeSupplyHistoryRow } from "../../lib/dews/native-quantity";
 import { buildHistoryKey } from "../yield-sync/history-evidence";
 import { buildYieldRankingsPayloadFromEvaluatedSources } from "../yield-sync/publication-rankings";
 import {
@@ -16,7 +19,7 @@ export function createDewsDb(prepare: (sql: string) => unknown): D1Database {
   return makeNoopD1({
     prepare,
     batch: async (statements: D1PreparedStatement[]) => Promise.all(statements.map((statement) =>
-      /^\s*SELECT\b/i.test((statement as D1PreparedStatement & { sql: string }).sql)
+      /^\s*(SELECT|WITH)\b/i.test((statement as D1PreparedStatement & { sql: string }).sql)
         ? statement.all()
         : statement.run(),
     )),
@@ -113,7 +116,16 @@ export function publishShapedRankingsPayload() {
   });
 }
 
+function dexCaptureClock(asOfSec: number): string {
+  const clock = { asOfSec, maxObservationAgeSec: 3_600 };
+  return JSON.stringify({
+    "24h": summarizeDexVolumeWindow([], "24h", clock).availability,
+    "7d": summarizeDexVolumeWindow([], "7d", clock).availability,
+  });
+}
+
 interface MakeDbOptions {
+  nativeHistoryRows?: NativeSupplyHistoryRow[];
   failDexLiquidity?: boolean;
   failDexPricesMissingTable?: boolean;
   dexMethodologyVersion?: string | null;
@@ -196,7 +208,10 @@ interface MakeDbOptions {
 }
 
 export function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
-  const proofEnd = Math.floor(Date.now() / 1000 / 3600) * 3600;
+  const nowSec = Math.floor(Date.now() / 1000);
+  const proofEnd = Math.floor(nowSec / 3600) * 3600;
+  const flowStart = proofEnd - 30 * 86400;
+  const historyCaptureSec = nowSec - 7 * 86400;
   const proofRows = [...(opts.mintBurn24hRows ?? []), ...(opts.mintBurn30dRows ?? [])];
   if (proofRows.length > 0 && opts.mintBurnProofAvailable !== false) {
     const complete = { complete: true, unavailableReason: null } as const;
@@ -222,81 +237,64 @@ export function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database 
   const stmt = (sql: string) => {
     sqlSeen.push(sql);
     const all = async <T>() => {
+      const result = (rows?: unknown[] | null) => ({ results: (rows ?? []) as T[] });
+      const idResult = (ids: Iterable<string>) => result(Array.from(ids, (stablecoin_id) => ({ stablecoin_id })));
       if (sql.includes("pharos:dews:publication-generation-ids")
         || sql.includes("pharos:dews:stress-latest-generation-ids")) {
-        return { results: [...computedSnapshotIds].map((stablecoin_id) => ({ stablecoin_id })) as T[] };
+        return idResult(computedSnapshotIds);
       }
       if (sql.includes("pharos:dews:stress-history-daily-ids")) {
-        return {
-          results: (opts.historySnapshotIds ?? [...computedSnapshotIds])
-            .map((stablecoin_id) => ({ stablecoin_id })) as T[],
-        };
+        return idResult(opts.historySnapshotIds ?? computedSnapshotIds);
       }
       if (sql.includes("pharos:dews:orphan-ids:stress_signals")) {
-        return {
-          results: (opts.signalIds ?? ["usdt-tether"]).map((stablecoin_id) => ({ stablecoin_id })) as T[],
-        };
+        return idResult(opts.signalIds ?? ["usdt-tether"]);
       }
       if (sql.includes("pharos:dews:orphan-ids:stress_signal_history")) {
-        return {
-          results: (opts.historyIds ?? ["usdt-tether"]).map((stablecoin_id) => ({ stablecoin_id })) as T[],
-        };
+        return idResult(opts.historyIds ?? ["usdt-tether"]);
       }
       if (/FROM dex_liquidity(?!_history)/.test(sql)) {
         if (opts.failDexLiquidity) {
           throw new Error("dex-liquidity unavailable");
         }
-        return {
-          results: (opts.dexLiqRows ?? [
-            {
-              stablecoin_id: "usdt-tether",
-              weighted_balance_ratio: 0.95,
-              avg_pool_stress: 0.05,
-              top_pools_json: "[]",
-              liquidity_score: 80,
-              total_tvl_usd: 1_500_000,
-              updated_at: Math.floor(Date.now() / 1000),
-              methodology_version: opts.dexMethodologyVersion ?? null,
-            },
-          ]) as T[],
-        };
+        return result(opts.dexLiqRows ?? [{
+          stablecoin_id: "usdt-tether",
+          weighted_balance_ratio: 0.95,
+          avg_pool_stress: 0.05,
+          top_pools_json: "[]",
+          liquidity_score: 80,
+          total_tvl_usd: 1_500_000,
+          updated_at: nowSec,
+          volume_availability_json: dexCaptureClock(nowSec),
+          methodology_version: opts.dexMethodologyVersion ?? null,
+        }]);
       }
       if (sql.includes("FROM dex_prices")) {
         if (opts.failDexPricesMissingTable) {
           throw new Error("no such table: dex_prices");
         }
-        return {
-          results: (opts.dexPriceRows ?? []) as T[],
-        };
+        return result(opts.dexPriceRows);
       }
       if (sql.includes("FROM stress_signals s")) {
-        return {
-          results: (opts.prevSignalRows ?? []) as T[],
-        };
+        return result(opts.prevSignalRows);
       }
       if (sql.includes("FROM dex_liquidity_history")) {
-        return {
-          results: [
-            {
-              stablecoin_id: "usdt-tether",
-              snapshot_date: Math.floor(Date.now() / 1000) - 7 * 86400,
-              liquidity_score: 73,
-              total_tvl_usd: 1_200_000,
-              coverage_confidence: 0.5,
-              methodology_version: opts.dexHistoryMethodologyVersion ?? null,
-            },
-          ] as T[],
-        };
+        return result([{
+          stablecoin_id: "usdt-tether",
+          snapshot_date: historyCaptureSec,
+          liquidity_score: 73,
+          total_tvl_usd: 1_200_000,
+          coverage_confidence: 0.5,
+          volume_availability_json: dexCaptureClock(historyCaptureSec),
+          methodology_version: opts.dexHistoryMethodologyVersion ?? null,
+        }]);
       }
       if (sql.includes("FROM blacklist_events")) {
-        return {
-          results: (opts.blacklistRows ?? []).map((row) => ({
-            chain_id: "ethereum",
-            config_key: null,
-            contract_address: null,
-            ...row,
-          })) as T[],
-        };
+        return result((opts.blacklistRows ?? []).map((row) => ({
+          chain_id: "ethereum",
+          config_key: null,
+          contract_address: null,
+          ...row,
+        })));
       }
       if (sql.includes("FROM yield_data")) {
         const rows = opts.yieldWarningRows ?? [];
@@ -304,34 +302,32 @@ export function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database 
           ? rows.filter((row) => row.is_best == null || row.is_best === 1)
           : rows;
         if (sql.includes("publication_state")) {
-          return {
-            results: bestRows.filter(
-              (row) => row.publication_state == null || row.publication_state === "published",
-            ) as T[],
-          };
+          return result(bestRows.filter((row) => row.publication_state == null || row.publication_state === "published"));
         }
-        return { results: bestRows as T[] };
+        return result(bestRows);
+      }
+      if (sql.includes("pharos:dews:native-supply-history")) {
+        return result(opts.nativeHistoryRows);
+      }
+      if (sql.includes("MIN(from_timestamp) AS first_write")) {
+        const keys = JSON.parse(String(boundArgs[0])) as string[];
+        return result(keys.map((config_key) => ({ config_key, first_write: flowStart })));
+      }
+      if (sql.includes("pharos:dews:mint-burn-writer-epoch")) {
+        const identities = JSON.parse(String(boundArgs[0])) as string[][];
+        return result(identities.map(([config_key]) => ({
+          config_key, from_block: 1, to_block: 100, from_timestamp: flowStart,
+          to_timestamp: proofEnd, writer_epoch: MINT_BURN_WRITER_EPOCH, dirty_hour_ts: null,
+        })));
       }
       if (sql.includes("FROM mint_burn_hourly")) {
-        const freshHourTs = Math.floor(Date.now() / 1000) - 3600;
-        if (sql.includes("pharos:dews:mint-burn-30d")) {
-          return {
-            results: (opts.mintBurn30dRows ?? []).map((row) => ({
-              chain_id: "ethereum",
-              latest_hour_ts: row.latest_hour_ts ?? freshHourTs,
-              ...row,
-            })) as T[],
-          };
-        }
-        return {
-          results: (opts.mintBurn24hRows ?? []).map((row) => ({
-            chain_id: "ethereum",
-            latest_hour_ts: row.latest_hour_ts ?? freshHourTs,
-            ...row,
-          })) as T[],
-        };
+        const rows = sql.includes("pharos:dews:mint-burn-30d") ? opts.mintBurn30dRows : opts.mintBurn24hRows;
+        return result((rows ?? []).map((row) => ({
+          ...row, chain_id: row.chain_id ?? "ethereum", latest_hour_ts: row.latest_hour_ts ?? proofEnd - 3600,
+          classification_unknown_mint_hours: 0, classification_unknown_burn_hours: 0,
+        })));
       }
-      return { results: [] as T[] };
+      return result();
     };
 
     const first = async <T>() => {
@@ -344,7 +340,7 @@ export function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database 
         }
         return (opts.dexPublicationLatest ?? null) as T | null;
       }
-      if (sql.includes("FROM cache WHERE key = ?")) {
+      if (sql.includes("pharos:dews:yield-rankings-cache")) {
         if (opts.yieldRankingsPayload === undefined) return null as T | null;
         return {
           value: JSON.stringify(opts.yieldRankingsPayload),

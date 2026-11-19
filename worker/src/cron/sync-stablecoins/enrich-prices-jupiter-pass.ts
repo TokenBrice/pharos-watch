@@ -6,7 +6,7 @@ import {
 import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { pricesAgreeWithinBps } from "../../lib/price-divergence";
 import { JupiterPriceEntrySchema, JupiterPriceResponseSchema, SolanaSlotResponseSchema } from "../../lib/schemas";
-import { throwIfAborted } from "../../lib/abort";
+import { FetchRequestNotStartedError, throwIfAborted } from "../../lib/abort";
 import { getRpcAuthHeaders, registryRpcUrls, type ChainRpcConfig } from "../../lib/chain-registry";
 import {
   applyJsonParseFailureDiagnostic,
@@ -26,6 +26,7 @@ import {
   type PeggedAsset,
 } from "./enrich-prices-shared";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { validatePricingSourceFreshness } from "../../lib/pricing-source-freshness";
 import {
   collectMissingPriceCandidates,
   type EnrichPassResult,
@@ -37,6 +38,8 @@ import {
 const JUPITER_PRICE_API = "https://api.jup.ag/price/v3";
 const JUPITER_MAX_IDS_PER_REQUEST = 50;
 const JUPITER_REQUEST_TIMEOUT_MS = 5_000;
+// Leave margin for bookkeeping and returning partial results inside the 25 s refresh envelope.
+const JUPITER_READ_BUDGET_MS = 20_000;
 const JUPITER_MAX_RETRIES = 0;
 const JUPITER_MIN_LIQUIDITY_USD = 50_000;
 const JUPITER_MAX_PRIMARY_AUGMENTATION_TARGETS = 25;
@@ -76,6 +79,7 @@ export async function runJupiterPass(
   jupiterApiKey?: string | null,
   chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<EnrichPassResult> {
+  const deadlineMs = Date.now() + JUPITER_READ_BUDGET_MS;
   let resolved = 0;
   const diagnostics: PricingProviderAttemptDiagnostic[] = [];
   const fallbackCandidates: JupiterCandidate[] = collectMissingPriceCandidates(assets, (asset) => {
@@ -118,79 +122,98 @@ export async function runJupiterPass(
     return { resolved, failures: [], diagnostics };
   }
 
+  let completedCalls = 0;
   let successfulCalls = 0;
-  let currentSolanaSlot: number | null | undefined;
-  const getCurrentSolanaSlot = async (): Promise<number | null> => {
-    if (currentSolanaSlot !== undefined) return currentSolanaSlot;
-    const result = await fetchSolanaCurrentSlot(signal, chainRpcs?.get("solana"));
-    currentSolanaSlot = result.slot;
-    diagnostics.push(...result.diagnostics);
-    return currentSolanaSlot;
-  };
+  let slotReference: SolanaObservation | null = null;
+  const blockTimes = new Map<number, number | null>();
 
-  for (let index = 0; index < candidates.length; index += JUPITER_MAX_IDS_PER_REQUEST) {
-    throwIfAborted(signal);
-    const batch = candidates.slice(index, index + JUPITER_MAX_IDS_PER_REQUEST);
-    const ids = batch.map((entry) => entry.mint);
+  try {
+    for (let index = 0; index < candidates.length; index += JUPITER_MAX_IDS_PER_REQUEST) {
+      throwIfAborted(signal);
+      const batch = candidates.slice(index, index + JUPITER_MAX_IDS_PER_REQUEST);
+      const ids = batch.map((entry) => entry.mint);
 
-    const stage = batch.every((entry) => entry.mode === "primary") ? "primary" : "fallback";
-    const { data, diagnostic } = await fetchJupiterPrices(ids, stage, signal, jupiterApiKey);
-    diagnostics.push(diagnostic);
-    if (!diagnostic.success || !data) {
-      logWorkerEventArgs("handler", "warn", `[enrich] Jupiter returned ${diagnostic.status ?? "no response"} for batch of ${ids.length}`);
-      continue;
-    }
-
-    successfulCalls += 1;
-    const batchHasUsableQuoteShape = batch.some((entry) => {
-      const payload = data[entry.mint];
-      return (
-        payload?.usdPrice != null
-        && Number.isFinite(payload.usdPrice)
-        && payload.usdPrice > 0
-        && typeof payload.blockId === "number"
-      );
-    });
-    if (!batchHasUsableQuoteShape) continue;
-
-    const currentSlot = await getCurrentSolanaSlot();
-    if (currentSlot == null) {
-      logWorkerEventArgs("handler", "warn", "[enrich] Jupiter block freshness check skipped because Solana slot reference is unavailable");
-      continue;
-    }
-    for (const entry of batch) {
-      const payload = data[entry.mint];
-      const usdPrice = payload?.usdPrice;
-      const blockId = payload?.blockId;
-      const liquidity = payload?.liquidity;
-      if (usdPrice == null || !Number.isFinite(usdPrice) || usdPrice <= 0) continue;
-      if (blockId == null || !isFreshJupiterBlock(blockId, currentSlot)) continue;
-      if (liquidity != null && (!Number.isFinite(liquidity) || liquidity < JUPITER_MIN_LIQUIDITY_USD)) continue;
-
-      if (!isUsableFallbackPrice(entry.asset, usdPrice, fxRates)) {
+      const stage = batch.every((entry) => entry.mode === "primary") ? "primary" : "fallback";
+      const { data, diagnostic } = await fetchJupiterPrices(ids, stage, deadlineMs, signal, jupiterApiKey);
+      diagnostics.push(diagnostic);
+      // A read cut short by the shared deadline is neutral for Jupiter's breaker.
+      if (diagnostic.errorClass === "no-response" && Date.now() >= deadlineMs) break;
+      completedCalls += 1;
+      if (!diagnostic.success || !data) {
+        logWorkerEventArgs("handler", "warn", `[enrich] Jupiter returned ${diagnostic.status ?? "no response"} for batch of ${ids.length}`);
         continue;
       }
 
-      if (entry.mode === "fallback") {
-        applyResolvedPrice(assets[entry.index], usdPrice, "jupiter", "fallback");
-        resolved += 1;
-      } else if (applyJupiterPrimaryAugmentation(assets[entry.index], usdPrice)) {
-        resolved += 1;
+      successfulCalls += 1;
+      const batchHasUsableQuoteShape = batch.some((entry) => {
+        const payload = data[entry.mint];
+        return (
+          payload?.usdPrice != null
+          && Number.isFinite(payload.usdPrice)
+          && payload.usdPrice > 0
+          && typeof payload.blockId === "number"
+        );
+      });
+      if (!batchHasUsableQuoteShape) continue;
+
+      if (!slotReference) {
+        slotReference = await fetchSolanaObservation("getSlot", solanaRpcUrls(chainRpcs?.get("solana")), diagnostics, deadlineMs, signal);
+      }
+      if (!slotReference.rpcUrl || slotReference.value == null) {
+        logWorkerEventArgs("handler", "warn", "[enrich] Jupiter quotes withheld: Solana slot reference unavailable");
+        continue;
+      }
+      for (const entry of batch) {
+        const payload = data[entry.mint];
+        const usdPrice = payload?.usdPrice;
+        const blockId = payload?.blockId;
+        const liquidity = payload?.liquidity;
+        if (usdPrice == null || !Number.isFinite(usdPrice) || usdPrice <= 0) continue;
+        if (blockId == null || !isFreshJupiterBlock(blockId, slotReference.value)) continue;
+        if (liquidity != null && (!Number.isFinite(liquidity) || liquidity < JUPITER_MIN_LIQUIDITY_USD)) continue;
+
+        if (!isUsableFallbackPrice(entry.asset, usdPrice, fxRates)) {
+          continue;
+        }
+
+        if (!blockTimes.has(blockId)) {
+          const block = await fetchSolanaObservation("getBlockTime", [slotReference.rpcUrl], diagnostics, deadlineMs, signal, [blockId]);
+          blockTimes.set(blockId, block.value);
+        }
+        const freshness = validatePricingSourceFreshness({
+          source: "jupiter", observedAt: blockTimes.get(blockId), requireObservedAt: true, maxFutureSkewSec: 0,
+        });
+        if (!freshness.accepted) {
+          const counts = diagnostic.rejectionReasonCounts ??= {};
+          const reason = freshness.reason === "stale_observed_at" ? "stale" : "price-rejected";
+          counts[reason] = (counts[reason] ?? 0) + 1;
+          continue;
+        }
+
+        if (entry.mode === "fallback") {
+          applyResolvedPrice(assets[entry.index], usdPrice, "jupiter", "fallback", freshness.observedAt, "upstream");
+          resolved += 1;
+        } else if (applyJupiterPrimaryAugmentation(assets[entry.index], usdPrice)) {
+          resolved += 1;
+        }
       }
     }
+  } catch (error) {
+    if (!(error instanceof FetchRequestNotStartedError && error.reason === "deadline-exceeded")) throw error;
   }
+  throwIfAborted(signal);
+  const failures = Date.now() >= deadlineMs ? ["jupiter-read-budget-exhausted"] : [];
 
   if (db) {
     await recordProviderOutcomeSafe({
       db,
       circuitSource: CIRCUIT_SOURCE.JUPITER_PRICES,
-      attempted: Math.ceil(candidates.length / JUPITER_MAX_IDS_PER_REQUEST),
+      attempted: completedCalls,
       successful: successfulCalls,
-      recordWhenNoAttempts: true,
     });
   }
 
-  return { resolved, failures: [], diagnostics };
+  return { resolved, failures, diagnostics };
 }
 
 function collectPrimaryAugmentationCandidates(assets: PeggedAsset[]): JupiterCandidate[] {
@@ -243,6 +266,7 @@ function applyJupiterPrimaryAugmentation(asset: PeggedAsset, jupiterPrice: numbe
 async function fetchJupiterPrices(
   ids: string[],
   stage: PricingProviderAttemptDiagnostic["stage"],
+  deadlineMs: number,
   signal?: AbortSignal,
   jupiterApiKey?: string | null,
 ): Promise<{
@@ -271,6 +295,7 @@ async function fetchJupiterPrices(
     JUPITER_MAX_RETRIES,
     {
       timeoutMs: JUPITER_REQUEST_TIMEOUT_MS,
+      deadlineMs,
       passthroughStatuses: JUPITER_PASSTHROUGH_STATUSES,
       returnFinalResponse: true,
     },
@@ -332,17 +357,24 @@ function isFreshJupiterBlock(blockId: number, currentSlot: number): boolean {
   return currentSlot - blockId <= JUPITER_MAX_SLOT_LAG;
 }
 
-async function fetchSolanaCurrentSlot(signal?: AbortSignal, configured?: ChainRpcConfig): Promise<{
-  slot: number | null;
-  diagnostics: PricingProviderAttemptDiagnostic[];
-}> {
-  const diagnostics: PricingProviderAttemptDiagnostic[] = [];
-
-  const rpcUrls = configured
+function solanaRpcUrls(configured?: ChainRpcConfig): readonly string[] {
+  return configured
     ? [...registryRpcUrls(configured), SOLANA_SLOT_RPC_URLS[2], ...SOLANA_SLOT_RPC_URLS]
       .filter((url, index, urls): url is string => typeof url === "string" && urls.indexOf(url) === index)
       .slice(0, SOLANA_SLOT_RPC_URLS.length)
     : SOLANA_SLOT_RPC_URLS;
+}
+
+type SolanaObservation = { value: number; rpcUrl: string } | { value: null; rpcUrl: null };
+
+async function fetchSolanaObservation(
+  method: "getSlot" | "getBlockTime",
+  rpcUrls: readonly string[],
+  diagnostics: PricingProviderAttemptDiagnostic[],
+  deadlineMs: number,
+  signal?: AbortSignal,
+  params?: [number],
+): Promise<SolanaObservation> {
   for (const rpcUrl of rpcUrls) {
     throwIfAborted(signal);
     const baseDiagnostic = {
@@ -364,13 +396,15 @@ async function fetchSolanaCurrentSlot(signal?: AbortSignal, configured?: ChainRp
         body: JSON.stringify({
           jsonrpc: "2.0",
           id: 1,
-          method: "getSlot",
+          method,
+          params,
         }),
         signal,
       },
       0,
       {
         timeoutMs: SOLANA_SLOT_REQUEST_TIMEOUT_MS,
+        deadlineMs,
         passthroughStatuses: JUPITER_PASSTHROUGH_STATUSES,
         returnFinalResponse: true,
       },
@@ -379,7 +413,7 @@ async function fetchSolanaCurrentSlot(signal?: AbortSignal, configured?: ChainRp
     if (!result) {
       diagnostics.push(buildPricingProviderDiagnostic(baseDiagnostic, {
         errorClass: "no-response",
-        errorMessage: "Solana slot reference returned no response",
+        errorMessage: `Solana ${method} returned no response`,
       }));
       continue;
     }
@@ -395,16 +429,17 @@ async function fetchSolanaCurrentSlot(signal?: AbortSignal, configured?: ChainRp
         ...nonOkDiagnostic,
         snippet: undefined,
         errorClass: "upstream-error",
-        errorMessage: "Solana slot reference returned non-OK",
+        errorMessage: `Solana ${method} returned non-OK`,
       });
       continue;
     }
 
     try {
-      const parsed = SolanaSlotResponseSchema.safeParse(JSON.parse(result.body));
-      if (!parsed.success) {
+      const payload = JSON.parse(result.body) as { error?: unknown } | null;
+      const parsed = SolanaSlotResponseSchema.safeParse(payload);
+      if (!parsed.success || payload?.error != null) {
         diagnostic.errorClass = "invalid-shape";
-        diagnostic.errorMessage = "Expected Solana getSlot JSON-RPC result";
+        diagnostic.errorMessage = `Expected Solana ${method} JSON-RPC result`;
         diagnostic.rejectionReasonCounts = { "invalid-shape": 1 };
         diagnostics.push(diagnostic);
         continue;
@@ -412,11 +447,11 @@ async function fetchSolanaCurrentSlot(signal?: AbortSignal, configured?: ChainRp
       diagnostic.success = true;
       diagnostic.responseRowCount = 1;
       diagnostics.push(diagnostic);
-      return { slot: parsed.data.result, diagnostics };
+      return { value: parsed.data.result, rpcUrl };
     } catch {
-      diagnostics.push({ ...diagnostic, errorClass: "malformed-json", errorMessage: "Invalid Solana slot JSON response" });
+      diagnostics.push({ ...diagnostic, errorClass: "malformed-json", errorMessage: `Invalid Solana ${method} JSON response` });
     }
   }
 
-  return { slot: null, diagnostics };
+  return { value: null, rpcUrl: null };
 }

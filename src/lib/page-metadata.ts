@@ -40,6 +40,7 @@ import { stripTermMarkup } from "@/lib/term-markup";
 import { getRouteCapabilities } from "@/lib/route-capabilities";
 
 interface BuildPageMetadataInput {
+  socialPreview?: PageSocialPreview;
   title: string;
   description: string;
   canonical: string;
@@ -477,10 +478,11 @@ export function buildPageMetadata({
   titleAbsolute = false,
   ogType = "website",
   publishedTime,
+  socialPreview,
 }: BuildPageMetadataInput): Metadata {
   const pathname = canonicalPathname(canonical);
   const publicRoute = getRouteCapabilities(pathname).chrome === "public";
-  const preview = getPageSocialPreview(publicRoute ? canonical : "/");
+  const preview = socialPreview ?? getPageSocialPreview(publicRoute ? canonical : "/");
   const socialTitle = preview.title;
   const socialDescription = preview.description;
   const resolvedImage = {

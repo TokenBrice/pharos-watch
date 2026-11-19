@@ -8,7 +8,7 @@ import {
 import { SolanaDexNativeTargetSchema, type SolanaDexNativeTarget, type SolanaDexShadowTarget } from "@shared/types/solana-dex-bank";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { DexApiPool } from "../../lib/dex-api-types";
-import { getMeasuredTokenReferenceUsdPrice } from "../../lib/dex-api-token-pricing";
+import { getAdmittedDexMarketMark, getMeasuredTokenReferenceUsdPrice, type DexValuationPrices } from "../../lib/dex-api-token-pricing";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { getDexMeasuredExecutionDeployment, isTickSpacingQuoterV2Profile, type DexMeasuredExecutionDeployment } from "./registry";
 import { normalizeEvmAddress } from "../../lib/evm-selectors";
@@ -115,7 +115,17 @@ function hasCoherentClSpotPrice(
 }
 export function buildMeasuredExecutionTargetValue(
   input: Omit<DexMeasuredExecutionTarget, "schemaVersion" | "targetId">,
+  valuation?: { tokenIn?: DexValuationPrices; tokenOut?: DexValuationPrices },
 ): DexMeasuredExecutionTarget {
+  function withMarketMark(leg: "tokenIn" | "tokenOut") {
+    const token = input[leg];
+    const id = token.trackedAssetId;
+    if (!id) return token;
+    const mark = getAdmittedDexMarketMark(valuation?.[leg], id, input.capturedAt);
+    return mark?.observedAtMode === "upstream" && mark.priceUsd === token.referencePriceUsd
+      ? { ...token, marketMark: { stablecoinId: id, ...mark } }
+      : token;
+  }
   return {
     schemaVersion: DEX_MEASURED_TARGET_SCHEMA_VERSION,
     targetId: buildDexMeasuredExecutionTargetId({
@@ -132,6 +142,8 @@ export function buildMeasuredExecutionTargetValue(
       ...(input.hookAddress ? { hookAddress: input.hookAddress } : {}),
     }),
     ...input,
+    tokenIn: withMarketMark("tokenIn"),
+    tokenOut: withMarketMark("tokenOut"),
   };
 }
 
@@ -214,7 +226,7 @@ export function buildPancakeMeasuredExecutionTargets(input: {
         retainedTvlUsd: pool.tvlUsd,
         retainedPoolPriceUsd: inputPrice,
         capturedAt: input.capturedAt,
-      });
+      }, { tokenIn: input.stablecoinPriceById, tokenOut: input.stablecoinPriceById });
       targets.set(buildMeasuredPoolDirectionKey(stablecoinId, poolId), target);
     }
   }
@@ -378,7 +390,7 @@ function buildClMeasuredExecutionTarget(
     retainedTvlUsd: input.retainedTvlUsd,
     retainedPoolPriceUsd: inputPrice,
     capturedAt: input.capturedAt,
-  });
+  }, { tokenIn: input.stablecoinPriceById, tokenOut: input.stablecoinPriceById });
 }
 
 const UNISWAP_V4_TARGET_MAX_TVL_RELATIVE_DRIFT = 0.02;
@@ -527,7 +539,7 @@ export function buildUniswapV4MeasuredExecutionTarget(input: {
     retainedTvlUsd: input.retainedTvlUsd,
     retainedPoolPriceUsd: inputPrice,
     capturedAt: input.capturedAt,
-  });
+  }, { tokenIn: input.stablecoinPriceById, tokenOut: input.stablecoinPriceById });
 }
 
 export function buildUniV3MeasuredExecutionTarget(

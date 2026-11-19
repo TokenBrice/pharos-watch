@@ -38,11 +38,15 @@ export const PAXG_REVIEWED_REDEMPTION_TERMS: ReviewedRedemptionTerms = {
       vaultLocations: ["london"],
       barClass: "good-delivery",
       saleLocation: "in-vault",
+      saleCalendar: "lbma-usd-settlement",
       deliveryScope: "same-jurisdiction",
       fineness: 0.995,
       eligibility: "verified-customer",
       fees: { issuerFeeBps: null, issuerFixedUsd: null, deliveryUsdPerLot: null, insuranceBps: null, assayUsdPerLot: null, taxBps: null, conversionBps: 0 },
-      settlementLegs: [{ leg: "issuer-release-in-vault", maximumBusinessDays: null, typicalBusinessDays: "several-business-days" }],
+      settlementLegs: [{
+        leg: "issuer-release-in-vault", calendar: "london-banking",
+        maximumBusinessDays: null, typicalBusinessDays: "several-business-days",
+      }],
       bestEffortIssuerCashOut: {
         operatingProcess: "Paxos platform five-second PAXG/USD conversion quote followed by withdrawal to the customer's own bank account.",
         lot: { minimumTokens: null, incrementTokens: null, bars: [] },

@@ -1,6 +1,6 @@
+import type { FxRateState } from "../lib/fx-rate-state";
 import { logWorkerEventArgs } from "../lib/structured-log";
-import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { derivePegRates } from "@shared/lib/peg-rates";
+import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { DEX_PROTOCOL_SOURCE_FRESHNESS_SEC, DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import type { PegAssetBase } from "@shared/types/price";
 import { CIRCUIT_SOURCE } from "../lib/constants";
@@ -14,7 +14,7 @@ import {
 } from "../lib/depeg-helpers";
 import {
   normalizePendingDepegRow,
-  SELECT_PENDING_DEPEGS_SQL,
+  buildPendingClosureHoldStatements,
   type PendingDepegRow,
 } from "../lib/depeg-pending";
 import { throwIfAborted } from "../lib/abort";
@@ -32,9 +32,11 @@ import {
 import type { PricingProviderAttemptDiagnostic } from "../lib/pricing-provider-diagnostics";
 import {
   buildConfirmationPlan,
+  SELECT_PENDING_CONFIRMATION_SQL,
 } from "./pending-depeg-confirmation";
 import { evaluatePromotionDecision } from "./pending-depeg-confirmation-decision";
 import { collectConfirmationEvidence } from "./pending-depeg-confirmation-evidence";
+import { deriveDetectionPegRates } from "./depeg-detection/reference-policy";
 import type { DepegStageResult } from "./depeg-detection/types";
 
 /**
@@ -59,11 +61,12 @@ export async function confirmPendingDepegs(
   coingeckoApiKey?: string | null,
   binanceSession?: BinanceFetchSession,
   nativePegSession?: NativePegQuoteSession,
+  detectionFxState?: FxRateState | null,
 ): Promise<DepegStageResult & { providerDiagnostics: PricingProviderAttemptDiagnostic[] }> {
   throwIfAborted(signal);
   const providerDiagnostics: PricingProviderAttemptDiagnostic[] = [];
   const pending = await db
-    .prepare(SELECT_PENDING_DEPEGS_SQL)
+    .prepare(SELECT_PENDING_CONFIRMATION_SQL)
     .all<PendingDepegRow>();
 
   const rows = pending.results ?? [];
@@ -73,7 +76,7 @@ export async function confirmPendingDepegs(
   const assetById = new Map(assets.map((a) => [a.id, a]));
   const nativePegQuotes = await fetchCurrentNativePegQuotes(
     rows.map((row) => {
-      const meta = ACTIVE_META_BY_ID.get(row.stablecoin_id);
+      const meta = PSI_ELIGIBLE_META_BY_ID.get(row.stablecoin_id);
       return {
         stablecoinId: row.stablecoin_id,
         geckoId: meta?.geckoId ?? null,
@@ -85,12 +88,6 @@ export async function confirmPendingDepegs(
     undefined,
     nativePegSession,
   );
-
-  const {
-    rates: pegRates,
-    sources: pegRateSources,
-    counts: pegRateCounts,
-  } = derivePegRates(assets, ACTIVE_META_BY_ID, fxFallbackRates);
 
   throwIfAborted(signal);
   const { dexPriceRows, dexPriceSources } = await loadDexPrices(db, now, DEX_PROTOCOL_SOURCE_FRESHNESS_SEC);
@@ -109,6 +106,10 @@ export async function confirmPendingDepegs(
     return { status: "held", reason: "depeg-open-event-limit-reached", providerDiagnostics };
   }
   const openSet = new Set(openEventRows.map((r) => r.stablecoin_id));
+  throwIfAborted(signal);
+  const { rates: pegRates, sources: pegRateSources, counts: pegRateCounts } = await deriveDetectionPegRates(
+    db, assets, PSI_ELIGIBLE_META_BY_ID, openSet, fxFallbackRates, detectionFxState, now,
+  );
 
   let cexPrices: Map<string, number> | null = null;
   const cexAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.BINANCE_PRICES);
@@ -155,12 +156,13 @@ export async function confirmPendingDepegs(
       row,
       pendingState,
       asset: assetById.get(row.stablecoin_id),
-      meta: ACTIVE_META_BY_ID.get(row.stablecoin_id),
+      meta: PSI_ELIGIBLE_META_BY_ID.get(row.stablecoin_id),
       pegRates,
       pegRateSources,
       pegRateCounts,
       nativePegQuote: nativePegQuotes.get(row.stablecoin_id),
       openSet,
+      challengerPools: poolChallengers.get(row.stablecoin_id),
       now,
     });
 
@@ -168,11 +170,14 @@ export async function confirmPendingDepegs(
       await executeCandidateMutations(plan.statements);
       continue;
     }
+    const heldAt = plan.kind === "wait" && plan.reason === "reference-market-closed" && !plan.legacyClosure ? now : null;
+    const holdWrites = buildPendingClosureHoldStatements(db, row, heldAt);
     if (plan.kind === "wait") {
+      await executeCandidateMutations(holdWrites);
       continue;
     }
 
-    const evidence = await collectConfirmationEvidence({
+    const evidence = plan.independentBasis ? plan.evidence : await collectConfirmationEvidence({
       ...plan,
       db,
       dexPriceRows,
@@ -186,12 +191,12 @@ export async function confirmPendingDepegs(
       now,
     });
 
-    await executeCandidateMutations(evaluatePromotionDecision({
+    await executeCandidateMutations([...holdWrites, ...evaluatePromotionDecision({
       db,
       plan,
       evidence,
       now,
-    }));
+    })]);
   }
 
   if (executedMutationCount > 0) {

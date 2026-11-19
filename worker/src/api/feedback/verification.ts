@@ -1,11 +1,16 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
+import { createCurrentPegReader, hasUsableCurrentPrice } from "../../lib/current-peg-observations";
+import { projectCurrentPegDeviation } from "@shared/lib/current-peg-projection";
+import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
 import { relativeBps } from "@shared/lib/depeg-signals";
 import { formatCurrency } from "@shared/lib/format";
-import { derivePegRates, getPegReference, normalizePegType } from "@shared/lib/peg-rates";
+import { normalizePegType } from "@shared/lib/peg-rates";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
-import { isAuthoritativeDepegPegReference } from "@shared/lib/peg-reference-trust";
+import { isReferenceDeviationHeld } from "@shared/lib/reference-market-hours";
 import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { currentAdmissionUnavailableReason } from "@shared/lib/reference-admission";
+import { ReferenceAdmissionSchema } from "@shared/types/reference-admission";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import type { VerificationResult } from "./types";
 import { getDepegThresholdBps } from "../../lib/depeg-threshold-policy";
@@ -26,52 +31,65 @@ export async function verifyDataCorrection(
     const meta = TRACKED_META_BY_ID.get(stablecoinId);
     const price = coin.price ?? null;
     const totalUsd = getCirculatingRawOrNull(coin);
-    const cacheAgeSec = Math.floor(Date.now() / 1000) - stablecoinsCache.updatedAt;
-    const pegRates = derivePegRates(
-      stablecoinsCache.payload.peggedAssets,
-      TRACKED_META_BY_ID,
-      stablecoinsCache.payload.fxFallbackRates,
-    );
+    const now = Math.floor(Date.now() / 1000);
+    const cacheAgeSec = now - stablecoinsCache.updatedAt;
     const pegType = normalizePegType(coin.pegType);
     const registryPegType = normalizePegType(pegTypeFromCurrency(meta?.flags.pegCurrency));
     const normalizedPegType = pegType ?? `pegged${meta?.flags.pegCurrency ?? "USD"}`;
     const thresholdBps = getDepegThresholdBps(normalizedPegType);
-    const pegRateSource = pegRates.sources[normalizedPegType] ?? null;
-    // NAV tokens have no fixed peg. A snapshot peg unit that disagrees with the
-    // curated registry currency cannot anchor a same-unit reference, and any
-    // derived reference must pass the shared authoritative-reference gate.
-    const pegRefEligible =
-      meta?.flags.navToken !== true
-      && (registryPegType == null || registryPegType === pegType)
-      && isAuthoritativeDepegPegReference({
-        pegType,
-        pegCurrency: meta?.flags.pegCurrency,
-        pegRateSource,
-        pegRateContributorCount: pegRates.counts[normalizedPegType] ?? null,
-      });
-    const pegRef = pegRefEligible
-      ? getPegReference(coin.pegType, pegRates.rates, meta?.commodityOunces)
+    const peg = createCurrentPegReader({ ...stablecoinsCache.payload, asOf: stablecoinsCache.updatedAt, now })(coin);
+    const admission = ReferenceAdmissionSchema.safeParse(peg?.referenceAdmission).data;
+    const quoteObservedAt = coin.priceObservedAt === undefined ? coin.priceUpdatedAt : coin.priceObservedAt;
+    const hasQuoteClock = typeof quoteObservedAt === "number" && Number.isSafeInteger(quoteObservedAt)
+      && quoteObservedAt > 0 && quoteObservedAt <= now;
+    const pegRefEligible = meta != null && !meta.flags.navToken && registryPegType === pegType;
+    const fixedUsd = registryPegType === "peggedUSD" && peg?.referenceAdmission == null;
+    const pegRef = pegRefEligible && !peg?.pegReferenceUnavailable
+      ? fixedUsd ? 1 : peg?.pegReference?.valueUsd
       : null;
+    const pegRateSource = fixedUsd ? null : peg?.pegReference?.source;
 
-    let deviationStr = "N/A";
-    let verifiedLabel: VerificationResult["verifiedLabel"] = "verified: unconfirmed";
-
-    if (price != null && price > 0 && pegRef != null) {
-      const deviation = relativeBps(price, pegRef);
-      if (deviation != null) {
-        const deviationPct = deviation.rawBps / 100;
-        deviationStr = `${deviation.rawBps >= 0 ? "+" : ""}${deviationPct.toFixed(3)}%`;
-        if (deviation.absRawBps >= thresholdBps) verifiedLabel = "verified: confirmed";
+    const hasPegRef = typeof pegRef === "number" && Number.isFinite(pegRef) && pegRef > 0;
+    let deviationBps: number | null = null;
+    let inconclusiveReason: string | null = null;
+    if (pegRefEligible && hasUsableCurrentPrice(coin) && !peg?.currentPriceUnavailable) {
+      const projected = projectCurrentPegDeviation(peg, fixedUsd, coin.priceObservedAt);
+      const unrounded = projected != null && hasPegRef ? relativeBps(coin.price, pegRef)?.rawBps ?? null : null;
+      if (fixedUsd) {
+        deviationBps = unrounded;
+      } else if (admission?.status === "admitted") {
+        inconclusiveReason = currentAdmissionUnavailableReason(admission, meta.flags.pegCurrency,
+          coin.priceObservedAtMode === "upstream" ? coin.priceObservedAt : null, now);
+        if (!inconclusiveReason && hasPegRef && peg?.pegReference?.source === admission.kind &&
+            peg.pegReference.asOf === admission.referenceObservedAtSec) deviationBps = unrounded;
+      } else if (peg?.referenceAdmission === undefined && peg?.admittedDeviationBps === undefined &&
+          unrounded != null && hasQuoteClock) {
+        if (cacheAgeSec < 0 || cacheAgeSec > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC || now - quoteObservedAt > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC) {
+          inconclusiveReason = "quote-over-budget";
+        } else if (isReferenceDeviationHeld(meta.flags.pegCurrency, quoteObservedAt, unrounded) ||
+            isReferenceDeviationHeld(meta.flags.pegCurrency, now, unrounded)) {
+          inconclusiveReason = "reference-market-closed";
+        } else {
+          deviationBps = unrounded;
+        }
+      } else {
+        inconclusiveReason = admission?.reason ?? "reference-admission-unavailable";
       }
     }
 
-    const verificationSummary = verifiedLabel === "verified: confirmed" ? "⚠️ Confirmed" : "✅ Unconfirmed";
+    if (deviationBps == null) inconclusiveReason ??= hasUsableCurrentPrice(coin) ? "eligible-deviation-unavailable" : "price-unavailable";
+    const confirmed = deviationBps != null && Math.abs(deviationBps) >= thresholdBps;
+    const verifiedLabel = inconclusiveReason ? "verified: pending" : confirmed ? "verified: confirmed" : "verified: unconfirmed";
+    const verificationSummary = inconclusiveReason
+      ? `Inconclusive: ${inconclusiveReason}`
+      : confirmed ? "\u26A0\uFE0F Confirmed" : "\u2705 Unconfirmed";
+    const deviationStr = deviationBps == null ? "N/A" : `${deviationBps >= 0 ? "+" : ""}${(deviationBps / 100).toFixed(3)}%`;
     const block = [
       "**--- Auto-Verification Snapshot (at time of submission) ---**",
       price != null ? `**Cached price:** $${price.toFixed(6)}` : "**Cached price:** N/A",
       `**USD circulating market cap:** ${totalUsd === null ? "N/A (supply unavailable)" : formatCurrency(totalUsd)}`,
       `**Peg deviation:** ${deviationStr}`,
-      `**Peg reference:** ${pegRef != null ? `$${pegRef.toFixed(6)}` : "N/A"}${pegRef != null && pegRateSource ? ` (${pegRateSource === "fx" ? "FX" : pegRateSource})` : ""}`,
+      `**Peg reference:** ${hasPegRef ? `$${pegRef.toFixed(6)}` : "N/A"}${hasPegRef && pegRateSource ? ` (${pegRateSource === "fx" ? "FX" : pegRateSource})` : ""}`,
       `**Depeg threshold:** ${thresholdBps} bps`,
       `**Cache age:** ${cacheAgeSec}s`,
       `**Verification result:** ${verificationSummary}`,

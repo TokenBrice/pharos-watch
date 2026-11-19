@@ -1,5 +1,8 @@
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
-import { classifyDepegClosure } from "@shared/lib/depeg-closure";
+import { classifyDepegClosure, isDepegRecovery } from "@shared/lib/depeg-closure";
+import { isNativePegEvent } from "@shared/lib/depeg-quote-domain";
+import { admittedDepegRecoveryAt } from "../../../lib/tape-projectors/depeg";
+import { reviewedDepegDisputeSql } from "@shared/data/depegs/reviewed-depeg-disposition-sql";
 import { crossesTelegramDepegWorseningStep } from "@shared/lib/telegram-delivery-policy";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { throwIfAborted } from "../../../lib/abort";
@@ -12,6 +15,7 @@ import {
   type DepegWorsening,
 } from "../../../telegram/common/alerts-formatting";
 import { buildAlertContextLines } from "./telegram-alert-context";
+import { projectDepegPeakBasis, projectDepegPeakPrice, type ActiveDepegRow, type DepegSnapshot } from "./telegram-alert-snapshots";
 import { prepareDispatchChangeLogStatements } from "./telegram-change-log-detection";
 import {
   buildReserveTransitions,
@@ -29,7 +33,7 @@ import {
 
 type DispatchSourceData = Awaited<ReturnType<typeof loadDispatchSourceData>>;
 type DispatchSnapshotState = ReturnType<typeof buildDispatchSnapshotState>;
-type ClosedDepegResolutionRow = {
+type ClosedDepegResolutionRow = Parameters<typeof admittedDepegRecoveryAt>[0] & Pick<ActiveDepegRow, "peak_quote_domain"> & {
   event_id: number;
   stablecoin_id: string;
   symbol: string;
@@ -133,31 +137,13 @@ export function countSuppressedSafetyChangesAtSeed(
     : 0;
 }
 
-function isRecoveryClosure(row: ClosedDepegResolutionRow): boolean {
-  const closure = classifyDepegClosure({
-    endedAt: row.ended_at,
-    closeReason: row.close_reason,
-    recoveryPrice: row.recovery_price,
-  });
-  return closure === "recovered" || closure === "legacy_recovered";
-}
-
-function eventPriceCurrency(stablecoinId: string, pegReference: number): string {
-  if (pegReference !== 1) return "USD";
-  return WORKER_TRACKED_META_BY_ID.get(stablecoinId)?.pegCurrency ?? "USD";
-}
-
-function activeDepegDisplayPrice(row: { start_price: number; peak_price?: number | null }): number {
-  return Number((row.peak_price ?? row.start_price) ?? 0);
-}
-
 export async function buildTelegramDispatchEvents(
   db: D1Database,
   sourceData: DispatchSourceData,
   snapshotState: DispatchSnapshotState,
   getSymbol: (stablecoinId: string, fallback?: string) => string,
   signal?: AbortSignal,
-): Promise<{ events: TelegramDispatchEvents; changeLogStatements: D1PreparedStatement[] }> {
+): Promise<{ events: TelegramDispatchEvents; changeLogStatements: D1PreparedStatement[]; nextDepegSnapshot: DepegSnapshot }> {
   const {
     dewsRows,
     activeDepegRows,
@@ -206,15 +192,23 @@ export async function buildTelegramDispatchEvents(
   const depegWorsening: DepegWorsening[] = activeDepegRows
     .flatMap((row) => {
       const previous = safeDepegSnapshot[row.stablecoin_id];
-      const currentDeviationBps = Math.abs(Number(row.peak_deviation_bps ?? 0));
       if (
         !previous ||
         (previous.eventId != null && previous.eventId !== row.event_id) ||
-        previous.direction !== row.direction ||
-        currentDeviationBps <= previous.deviationBps
+        previous.direction !== row.direction
       ) {
         return [];
       }
+      const peak = projectDepegPeakPrice(row);
+      // Main-era snapshots omitted both basis and currency even for a native event.
+      const legacyNativePeak = previous.peakBasis == null && previous.priceCurrency == null &&
+        previous.eventId != null && previous.pegReference === 1 &&
+        peak.peakBasis === "native-peg" && peak.priceCurrency != null && peak.priceCurrency !== "USD" &&
+        isNativePegEvent(row);
+      // The regular snapshot write keeps this peak as the next baseline even when comparison is skipped.
+      if (previous.peakBasis !== peak.peakBasis && !legacyNativePeak) return [];
+      const currentDeviationBps = Math.abs(Number(row.peak_deviation_bps ?? 0));
+      if (currentDeviationBps <= previous.deviationBps) return [];
       const crossesSupportedStep = TELEGRAM_DEPEG_STEPS.some((step) =>
         crossesTelegramDepegWorseningStep(previous.deviationBps, currentDeviationBps, step)
       );
@@ -225,12 +219,11 @@ export async function buildTelegramDispatchEvents(
         direction: row.direction,
         previousDeviationBps: previous.deviationBps,
         currentDeviationBps,
-        price: activeDepegDisplayPrice(row),
-        pegReference: Number(row.peg_reference ?? 1),
-        priceCurrency: eventPriceCurrency(row.stablecoin_id, Number(row.peg_reference ?? 1)),
+        ...peak,
       }];
     });
 
+  const nextDepegSnapshot = { ...snapshotState.currentSnapshots.depeg };
   const depegResolved: DepegResolved[] = [];
   const reopenedAfterMinutesByStablecoinId = new Map<string, number>();
   const resolvedCandidateIds = [...previousActiveIds].filter((stablecoinId) => {
@@ -252,10 +245,9 @@ export async function buildTelegramDispatchEvents(
       throwIfAborted(signal);
       const inClause = buildInClause(eventIdChunk);
       const chunkRows = await db.prepare(
-        `SELECT id AS event_id, stablecoin_id, symbol, peak_deviation_bps, started_at,
-                ended_at, recovery_price, peg_reference, close_reason
+        `SELECT id AS event_id, depeg_events.*
            FROM depeg_events
-          WHERE ended_at IS NOT NULL AND id IN (${inClause.sql})`,
+          WHERE ended_at IS NOT NULL AND id IN (${inClause.sql}) AND NOT ${reviewedDepegDisputeSql("depeg_events")}`,
       ).bind(...inClause.binds).all<ClosedDepegResolutionRow>();
       resolvedRows.push(...(chunkRows.results ?? []));
     }
@@ -267,8 +259,8 @@ export async function buildTelegramDispatchEvents(
       const inClause = buildInClause(idChunk);
       const chunkRows = await db
         .prepare(
-          `SELECT event.id AS event_id, event.stablecoin_id, event.symbol, event.peak_deviation_bps, event.started_at, event.ended_at, event.recovery_price, event.peg_reference, event.close_reason
-             FROM depeg_events event
+          `SELECT events.id AS event_id, events.*
+             FROM depeg_events events
              JOIN (
                SELECT stablecoin_id, MAX(ended_at) as ended_at
                  FROM depeg_events
@@ -276,8 +268,9 @@ export async function buildTelegramDispatchEvents(
                   AND stablecoin_id IN (${inClause.sql})
                 GROUP BY stablecoin_id
              ) latest
-               ON latest.stablecoin_id = event.stablecoin_id
-              AND latest.ended_at = event.ended_at`,
+               ON latest.stablecoin_id = events.stablecoin_id
+              AND latest.ended_at = events.ended_at
+            WHERE NOT ${reviewedDepegDisputeSql("events")}`,
         )
         .bind(...inClause.binds)
         .all<ClosedDepegResolutionRow>();
@@ -293,26 +286,37 @@ export async function buildTelegramDispatchEvents(
       const previous = safeDepegSnapshot[stablecoinId];
       if (!resolved || resolved.ended_at == null || resolved.started_at == null) continue;
       if (previous.eventId != null && resolved.event_id !== previous.eventId) continue;
-      if (!isRecoveryClosure(resolved)) continue;
-
       const reopened = currentRowByStablecoinId.get(stablecoinId);
+      const recoveryAt = admittedDepegRecoveryAt(resolved, { inferLegacyClose: true });
+      if (recoveryAt == null) {
+        // Retry a disappeared episode only until another active event takes its place.
+        if (!reopened && isDepegRecovery(classifyDepegClosure({
+          endedAt: resolved.ended_at, closeReason: resolved.close_reason, recoveryPrice: resolved.recovery_price,
+        }))) {
+          nextDepegSnapshot[stablecoinId] = { ...previous, eventId: resolved.event_id, recoveryPending: true };
+        }
+        continue;
+      }
+
       if (reopened) {
-        if (reopened.started_at != null && reopened.started_at >= resolved.ended_at) {
+        if (reopened.started_at != null && reopened.started_at >= recoveryAt) {
           reopenedAfterMinutesByStablecoinId.set(
             stablecoinId,
-            Math.max(1, Math.round((reopened.started_at - resolved.ended_at) / 60)),
+            Math.max(1, Math.round((reopened.started_at - recoveryAt) / 60)),
           );
         }
         continue;
       }
-      const durationSeconds = Math.max(0, resolved.ended_at - resolved.started_at);
+      const durationSeconds = Math.max(0, recoveryAt - resolved.started_at);
       depegResolved.push({
         stablecoinId,
         symbol: resolved.symbol ?? previous?.symbol ?? getSymbol(stablecoinId),
         durationMinutes: Math.max(1, Math.round(durationSeconds / 60)),
         peakDeviationBps: Math.abs(Number(resolved.peak_deviation_bps ?? 0)),
         recoveryPrice: resolved.recovery_price ?? null,
-        priceCurrency: eventPriceCurrency(stablecoinId, Number(resolved.peg_reference ?? 1)),
+        ...projectDepegPeakBasis(resolved),
+        priceCurrency: resolved.close_reason === "recovered-native"
+          ? WORKER_TRACKED_META_BY_ID.get(stablecoinId)?.pegCurrency : "USD",
       });
     }
   }
@@ -327,9 +331,7 @@ export async function buildTelegramDispatchEvents(
       symbol: row.symbol,
       direction: row.direction,
       deviationBps: Math.abs(Number(row.peak_deviation_bps ?? 0)),
-      price: activeDepegDisplayPrice(row),
-      pegReference: Number(row.peg_reference ?? 1),
-      priceCurrency: eventPriceCurrency(row.stablecoin_id, Number(row.peg_reference ?? 1)),
+      ...projectDepegPeakPrice(row),
       ...(reopenedAfterMinutesByStablecoinId.has(row.stablecoin_id)
         ? { reopenedAfterMinutes: reopenedAfterMinutesByStablecoinId.get(row.stablecoin_id) }
         : {}),
@@ -422,5 +424,6 @@ export async function buildTelegramDispatchEvents(
       reserveIds,
     },
     changeLogStatements,
+    nextDepegSnapshot,
   };
 }

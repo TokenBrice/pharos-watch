@@ -1,3 +1,6 @@
+import { mentoFpmmIds, mentoReview, nextMentoHour, projectMentoMarketPhase } from "./redemption-backstop-capacity/mento-phase";
+import { LIVE_RESERVE_FRESHNESS_SEC } from "./live-reserve-policy";
+import { resolveMentoFxMarketReopen } from "./stablecoin-publication-coverage";
 import { logWorkerEvent } from "./structured-log";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { assessConsumedRedemptionReserves, type ConsumedRedemptionReserveAssessment } from "./accepted-reserve-generation";
@@ -16,6 +19,7 @@ import type {  RedemptionBackstopEntry,
 } from "@shared/types/redemption";
 import {
   RedemptionBackstopEntrySchema,
+  RedemptionBackstopSnapshotEntrySchema,
   RedemptionBackstopDetailsSchema,
   RedemptionConfidenceDetailsSchema,
   RedemptionCostScenarioScoresSchema,
@@ -357,6 +361,13 @@ function toEntry(row: RedemptionBackstopRow, runId: string, rejectionReasons: st
     recordRowRejection(row, runId, "invalid-entry", rejectionReasons, parsed.error);
     return null;
   }
+  if (mentoFpmmIds.has(row.stablecoin_id) && details.mentoPhaseEntry !== undefined) {
+    const phase = RedemptionBackstopSnapshotEntrySchema.safeParse(details.mentoPhaseEntry);
+    if (phase.success && phase.data.stablecoinId === row.stablecoin_id &&
+        phase.data.updatedAt === row.updated_at && phase.data.methodologyVersion === row.methodology_version) {
+      return phase.data;
+    }
+  }
   return parsed.data;
 }
 
@@ -433,7 +444,7 @@ const REDEMPTION_ADMISSION_PAGE_SIZE = 50;
 async function queryRedemptionBackstopMapFromRunRows(
   db: D1Database,
   runId: string,
-  retainMap: boolean,
+  retainMap: boolean | ReadonlySet<string>,
 ): Promise<{ map: RedemptionBackstopMap; rawRowCount: number; validRowCount: number; rowRejectionReasons: string[] }> {
   const map: RedemptionBackstopMap = {};
   const validIds: Record<string, true> = {};
@@ -453,7 +464,9 @@ async function queryRedemptionBackstopMapFromRunRows(
         const entry = toEntry(row, runId, rowRejectionReasons);
         if (entry) {
           validIds[row.stablecoin_id] = true;
-          if (retainMap) map[row.stablecoin_id] = entry;
+          if (typeof retainMap === "boolean" ? retainMap : retainMap.has(row.stablecoin_id)) {
+            map[row.stablecoin_id] = entry;
+          }
         }
       }
       if (page.length < REDEMPTION_ADMISSION_PAGE_SIZE) break;
@@ -480,27 +493,21 @@ export interface RedemptionBackstopLiveSignalRow {
 export async function loadRedemptionBackstopLiveSignalRows(
   db: D1Database,
   stablecoinIds: readonly string[],
+  now = Math.floor(Date.now() / 1000),
 ): Promise<RedemptionBackstopLiveSignalRow[]> {
   if (stablecoinIds.length === 0) return [];
-  const { run } = await selectAdmittedRedemptionBackstopRun(db, false);
-  try {
-    const rows = await db.prepare(
-      `SELECT stablecoin_id, immediate_capacity_ratio, route_family, updated_at
-         FROM redemption_backstop_run_rows
-        WHERE snapshot_run_id = ?`,
-    ).bind(run.run_id).all<RedemptionBackstopLiveSignalRow>();
-    const requestedIds = new Set(stablecoinIds);
-    return (rows.results ?? []).filter((row) => requestedIds.has(row.stablecoin_id));
-  } catch (error) {
-    throw new RedemptionBackstopSnapshotUnavailableError("Failed to load immutable redemption backstop live signals", {
-      cause: error,
-    });
-  }
+  const { map } = await selectAdmittedRedemptionBackstopRun(db, new Set(stablecoinIds));
+  return Object.values(map).map((entry) => ({
+    stablecoin_id: entry.stablecoinId,
+    immediate_capacity_ratio: projectMentoMarketPhase(entry, now).immediateCapacityRatio,
+    route_family: entry.routeFamily,
+    updated_at: entry.updatedAt,
+  }));
 }
 
 async function selectAdmittedRedemptionBackstopRun(
   db: D1Database,
-  retainMap: boolean,
+  retainMap: boolean | ReadonlySet<string>,
 ): Promise<{ run: RedemptionBackstopRunRow; map: RedemptionBackstopMap }> {
   try {
     const recentRuns = await getRecentCompletedRedemptionBackstopRuns(db);
@@ -600,7 +607,23 @@ async function loadRedemptionBackstopCoinSnapshot(
   };
 }
 
+function redemptionBackstopPhaseValidUntil(coins: RedemptionBackstopMap, now: number): number {
+  const rows = Object.values(coins).filter((entry) => mentoFpmmIds.has(entry.stablecoinId));
+  if (rows.length === 0) return Infinity;
+  const nextHour = nextMentoHour(now);
+  const reopening = resolveMentoFxMarketReopen(now);
+  const transition = reopening ?? (resolveMentoFxMarketReopen(nextHour) != null ? nextHour : Infinity);
+  const reviewDeadline = reopening != null && mentoReview && mentoReview.reviewDeadline > now
+    ? mentoReview.reviewDeadline : Infinity;
+  const evidenceExpiry = Math.min(...rows.flatMap((entry) =>
+    entry.sourceTimestamp != null && (entry.resolutionState === "resolved" || entry.routeStatus === "paused" ||
+      (entry.routeStatusSource === "market-implied" && entry.settlementDelaySec != null))
+      ? [entry.sourceTimestamp + LIVE_RESERVE_FRESHNESS_SEC + 1] : []));
+  return Math.min(transition, reviewDeadline, evidenceExpiry);
+}
+
 export async function buildRedemptionBackstopsSnapshot(db: D1Database, stablecoinId?: string): Promise<RedemptionBackstopsResponse & {
+  phaseValidUntilSec?: number;
   projection?: { stablecoinId: string; generationId: string | null; updatedAt: number | null; totalCount: number; unavailableReason: "row-not-published" | null };
 }> {
   let loaded: RedemptionBackstopLoadResult;
@@ -615,7 +638,12 @@ export async function buildRedemptionBackstopsSnapshot(db: D1Database, stablecoi
     });
   }
 
+  const now = Math.floor(Date.now() / 1000);
   const coins = loaded.map;
+  for (const [id, entry] of Object.entries(coins)) {
+    coins[id] = projectMentoMarketPhase(entry, now);
+  }
+  const phaseValidUntilSec = redemptionBackstopPhaseValidUntil(coins, now);
   const updatedAt = loaded.latestUpdatedAt ?? 0;
   const snapshotMethodology = loaded.methodologyVersion
     ? {
@@ -626,6 +654,7 @@ export async function buildRedemptionBackstopsSnapshot(db: D1Database, stablecoi
 
   return {
     coins,
+    ...(Number.isFinite(phaseValidUntilSec) ? { phaseValidUntilSec } : {}),
     methodology: {
       ...buildMethodologyEnvelope({
         version: snapshotMethodology.version,

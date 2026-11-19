@@ -1,5 +1,10 @@
+import { summarizeDexVolumeWindow } from "@shared/lib/dex-volume-availability";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { readdirSync, readFileSync } from "node:fs";
+import { resolve as resolvePath } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { computeDuration, groupIncidents, structuralClass, type DdrStratumKey } from "@shared/lib/depeg-resolver";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { DDR_INELIGIBLE_AUDIT_VERDICTS } from "@shared/types/depeg-audit";
@@ -13,7 +18,7 @@ import {
   TRAINING_WINDOW_SEC,
 } from "../constants";
 import { buildDiagnosticSnapshot, buildDdrResponse } from "../public-projection";
-import { resolveDdrIncidents } from "../incident-resolution";
+import { buildSupplyContext, resolveDdrIncidents } from "../incident-resolution";
 import {
   activeInput,
   activeRow,
@@ -39,6 +44,11 @@ afterEach(() => {
 });
 const startedAt = NOW_SEC - 10 * 86400;
 const key: DdrStratumKey = { direction: "below", depth: "catastrophic", structural: "fragile", currency: "USD" };
+
+function dexClock(asOfSec: number, volumeUsd = 100): string {
+  const pool = { observedAtSec: asOfSec, volumeUsd, tvlUsd: 100 };
+  return JSON.stringify({ "24h": summarizeDexVolumeWindow([pool], "24h", { asOfSec, maxObservationAgeSec: 3600 }).availability });
+}
 
 describe("DDR historical context", () => {
   it("excludes pending and disabled legs from both mint-surge rows and its scan proof", async () => {
@@ -119,10 +129,10 @@ describe("DDR historical context", () => {
   ] as const)("admits 7d/30d TVL by stored epochs %s/%s without suppressing volume", async (current, historical, comparable) => {
     const { sqlite, db } = fixtures.open();
     seedResolverInputs(sqlite);
-    sqlite.prepare("INSERT INTO dex_liquidity (stablecoin_id, symbol, total_tvl_usd, total_volume_24h_usd, liquidity_score, updated_at, methodology_version) VALUES ('usdc-circle', 'USDC', 200, 300, 80, ?, ?)")
-      .run(NOW_SEC, current);
-    const insert = sqlite.prepare("INSERT INTO dex_liquidity_history (stablecoin_id, total_tvl_usd, total_volume_24h_usd, snapshot_date, coverage_class, coverage_confidence, methodology_version) VALUES ('usdc-circle', 100, 100, ?, 'primary', 0.9, ?)");
-    for (const days of [7, 30]) insert.run(NOW_SEC - days * 86400, historical);
+    sqlite.prepare("INSERT INTO dex_liquidity (stablecoin_id, symbol, total_tvl_usd, total_volume_24h_usd, liquidity_score, updated_at, methodology_version, volume_availability_json) VALUES ('usdc-circle', 'USDC', 200, 300, 80, ?, ?, ?)")
+      .run(NOW_SEC, current, dexClock(NOW_SEC - 1800, 300));
+    const insert = sqlite.prepare("INSERT INTO dex_liquidity_history (stablecoin_id, total_tvl_usd, total_volume_24h_usd, snapshot_date, coverage_class, coverage_confidence, methodology_version, volume_availability_json) VALUES ('usdc-circle', 100, 100, ?, 'primary', 0.9, ?, ?)");
+    for (const days of [7, 30]) insert.run(NOW_SEC - days * 86400, historical, dexClock(NOW_SEC - days * 86400 - 1800));
     const loaded = await loadDdrContext(db, [activeRow()], NOW_SEC);
     expect(loaded.kind).toBe("ok");
     if (loaded.kind !== "ok") throw new Error(loaded.reason);
@@ -136,10 +146,12 @@ describe("DDR historical context", () => {
     const { sqlite, db } = fixtures.open();
     seedResolverInputs(sqlite);
     const active = activeRow();
-    sqlite.prepare("INSERT INTO dex_liquidity (stablecoin_id, symbol, total_tvl_usd, total_volume_24h_usd, liquidity_score, updated_at, methodology_version) VALUES ('usdc-circle', 'USDC', 200, 300, 80, ?, '6.95')")
-      .run(NOW_SEC);
-    sqlite.prepare("INSERT INTO dex_liquidity_history (stablecoin_id, total_tvl_usd, total_volume_24h_usd, snapshot_date, coverage_class, coverage_confidence, methodology_version) VALUES ('usdc-circle', 100, 100, ?, 'primary', 0.9, '6.94')")
-      .run(active.started_at);
+    sqlite.prepare("INSERT INTO dex_liquidity (stablecoin_id, symbol, total_tvl_usd, total_volume_24h_usd, liquidity_score, updated_at, methodology_version, volume_availability_json) VALUES ('usdc-circle', 'USDC', 200, 300, 80, ?, '6.95', ?)")
+      .run(NOW_SEC, dexClock(NOW_SEC - 1800, 300));
+    const insert = sqlite.prepare(`INSERT INTO dex_liquidity_history (stablecoin_id, total_tvl_usd, total_volume_24h_usd, snapshot_date, coverage_class, coverage_confidence, methodology_version, volume_availability_json)
+      VALUES ('usdc-circle', ?, 100, ?, 'primary', 0.9, '6.94', ?)`);
+    insert.run(100, active.started_at - 86400, dexClock(active.started_at - 1800));
+    insert.run(400, active.started_at, dexClock(active.started_at + 1));
 
     const loaded = await loadDdrContext(db, [active], NOW_SEC);
     expect(loaded.kind).toBe("ok");
@@ -248,6 +260,30 @@ describe("DDR historical context", () => {
     expect(loaded.trainingRowsTruncated).toBe(false);
   });
 
+  it("requires each promoted EURC observation to match its own admitted receipt", async () => {
+    const { sqlite, db } = fixtures.open();
+    const at = Date.UTC(2026, 10, 14, 12) / 1000;
+    seedHistoricalEvent(sqlite, { id: 1, coin: "eurc-circle", startedAt: at });
+    sqlite.exec("UPDATE depeg_events SET peg_type = 'peggedEUR'; UPDATE depeg_pending_outcomes SET peg_type = 'peggedEUR'");
+    const read = async () => (await loadDdrHistoricalEvents(db, ["below"], at - 1)).historical[0];
+    const write = (onset: unknown, latest: unknown) => sqlite.prepare("UPDATE depeg_events SET peer_basis_json = ?")
+      .run(JSON.stringify({ onset, latest }));
+    const onset = { basis: "native-peg", venue: "kraken", pegReference: 1, observedAt: at, price: 0.95, bps: -500 };
+    const latest = { ...onset, observedAt: at + 300, price: 0.94, bps: -600 };
+    expect(await read()).toMatchObject({ onsetDeviationBps: -500,
+      severityObservations: [{ observedAt: at + 300, deviationBps: -600 }] });
+    seedAssessmentSample(sqlite, 1, "eurc-circle", at, at + 120, -550);
+    write({}, {});
+    expect(await read()).toMatchObject({ onsetDeviationBps: null, severityObservations: [] });
+    write(onset, { ...latest, observedAt: at });
+    expect(await read()).toMatchObject({ onsetDeviationBps: -500, severityObservations: [] });
+    write({ ...onset, basis: "benchmark" }, latest);
+    expect(await read()).toMatchObject({ onsetDeviationBps: null,
+      severityObservations: [{ observedAt: at + 300, deviationBps: -600 }] });
+    sqlite.exec("UPDATE depeg_events SET peer_basis_json = NULL, peg_type = 'peggedUSD'; UPDATE depeg_pending_outcomes SET peg_type = 'peggedUSD'");
+    expect(await read()).toMatchObject({ onsetDeviationBps: null, severityObservations: [] });
+  });
+
   it("leaves legacy, ambiguous promotion, and aggregate-only assessment evidence unsupported", async () => {
     const { sqlite, db } = fixtures.open();
     seedHistoricalEvent(sqlite, { id: 1, coin: "legacy", startedAt, timed: false });
@@ -261,6 +297,198 @@ describe("DDR historical context", () => {
     const incidents = groupIncidents(loaded.historical, () => "USD");
     expect(incidents.every((incident) => incident.fragments?.length === 0)).toBe(true);
     expect(computeDuration(key, 3600, incidents, new Set()).horizons.every((cell) => cell.rawAtRisk === 0)).toBe(true);
+  });
+
+  it.each([
+    ["peggedGOLD", "xaut-tether", 240],
+    ["peggedGOLD", "xaut-tether", -1],
+    ["peggedGOLD", "xaut-tether", 301],
+    ["peggedUSD", "usdc-circle", 240],
+  ] as const)("preserves the stored %s quote and gates %s at assessment for onset +%d", async (pegType, coin, quoteOffset) => {
+    const { sqlite, db } = fixtures.open();
+    seedHistoricalEvent(sqlite, { id: 1, coin, startedAt, timed: false });
+    sqlite.prepare("UPDATE depeg_events SET peg_type = ? WHERE id = 1").run(pegType);
+    seedAssessmentSample(sqlite, 1, coin, startedAt, startedAt + 300, -320);
+    const assertTraining = async (expected: readonly unknown[]) => {
+      const { historical } = await loadDdrHistoricalEvents(db, ["below"], NOW_SEC - TRAINING_WINDOW_SEC);
+      expect(historical[0]?.severityObservations).toEqual(expected);
+      const incidents = groupIncidents(historical, () => pegType === "peggedUSD" ? "USD" : "GOLD");
+      const cohortKey = { ...key, depth: "moderate", currency: pegType === "peggedUSD" ? "USD" : "non-USD" } as const;
+      expect(computeDuration(cohortKey, 270, incidents, new Set(), NOW_SEC).horizons[0].rawAtRisk).toBe(0);
+      expect(computeDuration(cohortKey, 300, incidents, new Set(), NOW_SEC).horizons[0].rawAtRisk).toBe(expected.length);
+    };
+    await assertTraining([{ observedAt: startedAt + 300, deviationBps: -320 }]);
+    sqlite.prepare("UPDATE depeg_resolver_assessments SET row_json = json_set(row_json, '$.currentDeviationObservedAtSec', ?) WHERE event_id = 1")
+      .run(startedAt + quoteOffset);
+    const stored = sqlite.prepare("SELECT severity_observations_json FROM depeg_resolver_training_corpus WHERE event_id = 1").get();
+    expect(JSON.parse(String(stored?.severity_observations_json))).toEqual([
+      expect.objectContaining({ observedAt: startedAt + 300, deviationBps: -320 }),
+    ]);
+    const expected = quoteOffset === 240 ? [{ observedAt: startedAt + 240, availableAt: startedAt + 300, deviationBps: -320 }] : [];
+    await assertTraining(expected);
+    sqlite.exec("DELETE FROM depeg_resolver_training_corpus WHERE event_id = 1");
+    await assertTraining(expected);
+    sqlite.exec("UPDATE depeg_events SET ended_at = NULL WHERE id = 1");
+    await assertTraining(expected);
+  });
+});
+
+describe("DDR supply history provenance", () => {
+  async function loadContext(db: D1Database, ...rows: ReturnType<typeof activeRow>[]) {
+    const result = await loadDdrContext(db, rows, NOW_SEC);
+    if (result.kind !== "ok") throw new Error(result.reason);
+    return result.context;
+  }
+
+  function chainGap(at: number, baselineUsd: number, partial?: { partialCoverage: true; quarantinedSince: number }) {
+    return JSON.stringify({
+      supplySource: "defillama", supplyObservedAt: at, supplyChainGuard: {
+        reason: "supply-chain-dropout", status: "chains-unavailable", ...partial,
+        chains: [{
+          chainId: "ethereum", chainLabel: "Ethereum", listCurrentUsd: 0,
+          baselineUsd, baselineObservedAt: at - 86_400, baselineSource: "state", resolution: "unavailable",
+        }],
+      },
+    });
+  }
+
+  it("retains a partial USD checkpoint as unavailable instead of treating it as issuance or skipping it", async () => {
+    const { sqlite, db } = fixtures.open();
+    seedResolverInputs(sqlite);
+    const onset = Math.floor(startedAt / 86_400) * 86_400;
+    const baseline = onset - 7 * 86_400;
+    const insert = sqlite.prepare(`INSERT INTO supply_history
+      (stablecoin_id, snapshot_date, circulating_usd, supply_provenance)
+      VALUES ('usdc-circle', ?, ?, ?)`);
+    insert.run(baseline - 86_400, 1_000_000_000, null);
+    insert.run(baseline, 400_000_000, chainGap(baseline, 600_000_000,
+      { partialCoverage: true, quarantinedSince: baseline - 86_400 }));
+    insert.run(onset, 1_000_000_000, null);
+
+    const context = await loadContext(db, activeRow({ started_at: onset }));
+    const snapshots = context.supplyByCoin.get("usdc-circle") ?? [];
+    expect(snapshots).toContainEqual({ date: baseline, usd: null, comparisonPartial: true });
+    expect(buildSupplyContext(snapshots, onset, NOW_SEC, [], false)).toMatchObject({
+      covered: false, change7dPct: null, mintSurge: null, mintSurgeCoverage: "unavailable",
+    });
+  });
+
+  it("uses SOFIUSD's complete stock for measured exit collapse while withholding change across a small chain gap", async () => {
+    const { sqlite, db } = fixtures.open();
+    seedResolverInputs(sqlite);
+    const id = "sofid-sofi";
+    sqlite.prepare("UPDATE cache SET value = json_set(value, '$.peggedAssets[0].id', ?) WHERE key = 'stablecoins'").run(id);
+    const day = 86_400;
+    const today = Math.floor(NOW_SEC / day) * day;
+    const onset = today - 10 * day;
+    const insert = sqlite.prepare(`INSERT INTO supply_history
+      (stablecoin_id, snapshot_date, circulating_usd, supply_provenance) VALUES (?, ?, 1000000000, ?)`);
+    for (const date of [today - 30 * day, onset - 7 * day, onset]) insert.run(id, date, null);
+    insert.run(id, today, chainGap(today, 10_000_000));
+
+    const context = await loadContext(db, activeRow({ stablecoin_id: id, symbol: "SOFIUSD", started_at: onset }));
+    context.safetyContext = { status: "v9-identified", reason: null, identity: null };
+    context.v9ExitByCoin.set(id, {
+      reasonCodes: [], pillarScore: 50, stressRequest: { requestedNotionalUsd: 1_000_000 },
+      primaryRoute: { key: "primary", score: 50, capacity: {
+        requestedNotionalUsd: 1_000_000, executableUsd: 500_000, completionRatio: 0.5,
+      } },
+    });
+    const [row] = resolveDdrIncidents(context, NOW_SEC);
+    expect(row.inputs?.circulatingUsd).toBe(1_000_000_000);
+    expect(row.relatedContext).toMatchObject({ supplyChange7dPct: 0, supplyChange30dPct: null });
+    expect(row.resolution.tier).toBe("at_risk");
+    expect(row.resolution.factors).toContainEqual(expect.objectContaining({ code: "K5_exit_collapse" }));
+  });
+
+  it.each([900, null])("withholds a same-day replacement when the quantity observation offset is %j", async (replacementOffset) => {
+    const { sqlite, db } = fixtures.open();
+    seedResolverInputs(sqlite);
+    if (!sqlite.prepare("SELECT name FROM pragma_table_info('supply_history') WHERE name = 'circulating_native'").get()) {
+      sqlite.exec("ALTER TABLE supply_history ADD COLUMN circulating_native REAL");
+    }
+    const midnight = Math.floor(startedAt / 86_400) * 86_400;
+    const onset = midnight + 300;
+    const insert = sqlite.prepare(`INSERT OR REPLACE INTO supply_history
+      (stablecoin_id, snapshot_date, circulating_usd, circulating_native, supply_provenance)
+      VALUES ('usdc-circle', ?, ?, ?, ?)`);
+    const provenance = (supplyObservedAt: number | null) =>
+      JSON.stringify({ supplySource: "onchain-total-supply", supplyObservedAt, supplyChainGuard: null });
+    const baseline = midnight - 7 * 86_400;
+    insert.run(baseline, 1_000_000, 100, provenance(baseline + 60));
+    insert.run(midnight, 900_000, 90, provenance(onset));
+    const resolve = async () => {
+      return resolveDdrIncidents(await loadContext(db, activeRow({ started_at: onset })), NOW_SEC)[0];
+    };
+    expect((await resolve()).relatedContext.supplyChange7dPct).toBe(-10);
+    insert.run(midnight, 880_000, 88, provenance(replacementOffset == null ? null : midnight + replacementOffset));
+    const replaced = await resolve();
+    expect(replaced.relatedContext.supplyChange7dPct).toBeNull();
+    expect(replaced.resolution.factors.some((factor) => factor.code === "R3_no_supply_anomaly")).toBe(false);
+  });
+
+  it("keeps USD inputs on the unchanged pre-0306 schema and degrades on a failed USD read", async () => {
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      const migrations = resolvePath(__dirname, "../../../../migrations");
+      for (const file of readdirSync(migrations).filter((name) => /^\d{4}_.*\.sql$/.test(name) && Number(name.slice(0, 4)) < 306).sort()) {
+        sqlite.exec(readFileSync(resolvePath(migrations, file), "utf8"));
+      }
+      seedResolverInputs(sqlite);
+      const event = activeRow();
+      const insert = sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd) VALUES (?, ?, ?)");
+      const baseline = event.started_at - 7 * 86_400;
+      insert.run(event.stablecoin_id, baseline, 1_100_000);
+      insert.run(event.stablecoin_id, event.started_at, 1_000_000);
+      const db = createSqliteD1(sqlite);
+      const usdt = activeRow({ id: 102, stablecoin_id: "usdt-tether", symbol: "USDT" });
+      const ousd = activeRow({ id: 103, stablecoin_id: "ousd-origin-protocol", symbol: "OUSD" });
+      const windowEnd = Math.floor(event.started_at / 3600) * 3600;
+      const hourly = sqlite.prepare(`INSERT INTO mint_burn_hourly
+        (stablecoin_id, chain_id, hour_ts, mint_count, burn_count, mint_unpriced_event_count, burn_unpriced_event_count,
+         mint_unresolved_event_count, burn_unresolved_event_count, mint_volume_usd, burn_volume_usd, net_flow_usd)
+        VALUES (?, 'ethereum', ?, 1, 0, 0, 0, 0, 0, 100, 0, 100)`);
+      for (const coin of [usdt, ousd]) {
+        hourly.run(coin.stablecoin_id, windowEnd - 3600);
+        for (const config of MINT_BURN_CONFIGS.filter((leg) => leg.stablecoinId === coin.stablecoin_id)) {
+          await db.batch(mintBurnScanCoverageStatements(db, {
+            configKey: mintBurnConfigKey(config), configFingerprint: mintBurnScanFingerprint(config), chainId: config.chain.chainId,
+            fromBlock: 1, toBlock: 2, finalizedBlock: 2, fromTimestamp: windowEnd - 7 * 86400, toTimestamp: NOW_SEC, acceptedAt: NOW_SEC,
+          }));
+        }
+      }
+      const context = await loadContext(db, event, usdt, ousd);
+      expect(context.mintBurnCoveredEventIds).toEqual(new Set([usdt.id]));
+      expect(context.mintBurnHourlyByCoin.get(usdt.stablecoin_id)?.map((row) => row.netFlowUsd)).toEqual([100]);
+      expect(context.mintBurnHourlyByCoin.has(ousd.stablecoin_id)).toBe(false);
+      const snapshots = context.supplyByCoin.get(event.stablecoin_id) ?? [];
+      expect(snapshots).toEqual([
+        { date: baseline, usd: 1_100_000 },
+        { date: event.started_at, usd: 1_000_000 },
+      ]);
+      expect(resolveDdrIncidents(context, NOW_SEC)[0].inputs).toMatchObject({
+        circulatingUsd: 1_000_000,
+        supply: { covered: true, change7dPct: (-100_000 / 1_100_000) * 100, mintSurge: null, mintSurgeCoverage: "unavailable" },
+      });
+      expect(buildSupplyContext(snapshots, event.started_at, NOW_SEC, [], true)).toMatchObject({
+        covered: true, change7dPct: (-100_000 / 1_100_000) * 100, mintSurge: false, mintSurgeCoverage: "mint-burn-hourly",
+      });
+
+      const unavailable = createSqliteD1(sqlite, { onAll(sql) {
+        if (sql.includes("FROM supply_history h")) throw new Error("read unavailable");
+      } });
+      await expect(loadDdrContext(unavailable, [event], NOW_SEC)).resolves.toMatchObject({
+        kind: "degraded", reason: expect.stringContaining("supply_history:read unavailable"),
+      });
+      const failedScan = createSqliteD1(sqlite, { onRun(sql) {
+        if (sql.includes("pharos:mint-burn-scan-coverage:read")) throw new Error("read unavailable");
+      } });
+      await expect(loadDdrContext(failedScan, [event], NOW_SEC)).resolves.toMatchObject({
+        kind: "degraded", reason: "mint_burn_hourly:read unavailable",
+      });
+    } finally {
+      sqlite.close();
+    }
   });
 });
 

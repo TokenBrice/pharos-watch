@@ -406,6 +406,7 @@ export const DdrV2LiveOverlaySchema = z.object({
   ageSec: z.number().int().nonnegative().nullable(),
   peakDeviationBps: z.number().nullable(),
   currentDeviationBps: z.number().nullable(),
+  currentDeviationObservedAtSec: z.number().int().positive().optional(),
   eventState: z.enum(["active", "closed_pending_review", "source_event_missing", "event_invalidated"]),
   updatedAt: z.number().int().nonnegative(),
   stale: z.boolean(),

@@ -1,3 +1,5 @@
+import { MATCHING_CACHE_VERSION_KEY_SQL } from "../db-cache";
+import { YIELD_RANKINGS_READ_KEYS, YIELD_RANKINGS_VERSION_KEY } from "../yield-rankings-coin-cache";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import {
   getCacheRatioThresholds,
@@ -47,7 +49,8 @@ import { loadActiveSafetyScoreIndex } from "../safety-score-index";
 import {
   benchmarkRecordAgeSeconds,
   classifyYieldBenchmarkFreshness,
-  YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
+  getYieldBenchmarkRecordMaxAgeSeconds,
+  hasYieldBenchmarkUnitMismatch,
 } from "@shared/lib/yield-benchmark-freshness";
 import { assessFreshnessTimestamp } from "../api-freshness-age";
 
@@ -443,6 +446,10 @@ function buildBenchmarkRegistryHealth(params: {
     const row = getObject(ranking);
     if (!row) continue;
     const provenance = getObject(row.provenance);
+    if (hasYieldBenchmarkUnitMismatch({
+      warningSignals: getStringArray(row.warningSignals) ?? [],
+      provenance: { sourceKey: getString(provenance?.sourceKey) },
+    })) continue;
     const publishedKey = getPublishedBenchmarkKey(row);
     if (!YIELD_BENCHMARK_KEY_VALUES.includes(publishedKey as YieldBenchmarkKey)) {
       // A6: an unrecognised key used to be coerced to USD, hiding it entirely.
@@ -464,7 +471,7 @@ function buildBenchmarkRegistryHealth(params: {
   const registry =
     getObject(params.rankingsPayload?.benchmarks) ??
     getObject(params.provenance?.benchmarks);
-  const legacyUsdMeta = getObject(params.provenance?.benchmark);
+  const legacyUsdMeta = registry == null ? getObject(params.provenance?.benchmark) : null;
   const benchmarks = Object.fromEntries(
     [...usage.entries()].map(([key, counts]) => {
       const meta = getObject(registry?.[key]) ?? (key === "USD" ? legacyUsdMeta : null);
@@ -472,7 +479,7 @@ function buildBenchmarkRegistryHealth(params: {
       const isFallback = getBoolean(meta?.isFallback);
       const fallbackMode = getString(meta?.fallbackMode);
       const recordDate = getString(meta?.recordDate);
-      const maxRecordAgeSec = YIELD_BENCHMARK_RECORD_MAX_AGE_SEC[key];
+      const maxRecordAgeSec = getYieldBenchmarkRecordMaxAgeSeconds(key, recordDate);
       const recordAgeSec = benchmarkRecordAgeSeconds(recordDate, params.now);
       // A1: the entry's health is a property of the feed only. Rows selecting
       // this key as a documented proxy are counted, never classified.
@@ -480,6 +487,7 @@ function buildBenchmarkRegistryHealth(params: {
       const status: YieldHealthFieldStatus = meta == null
         ? "unknown"
         : classifyYieldBenchmarkFreshness({
+            key,
             ageSeconds: ageSec,
             isFallback: isFallback === true,
             fallbackMode,
@@ -931,16 +939,16 @@ export async function loadYieldHealthSummary(
 ): Promise<YieldHealthSummary> {
   const rows = await db
     .prepare(
-      `SELECT key, value, updated_at
+      `SELECT /* pharos:yield-rankings-health */ key, value, updated_at
        FROM cache
-       WHERE key IN ('yield-rankings', 'yield-coverage-audit', ?)
+       WHERE key IN (${MATCHING_CACHE_VERSION_KEY_SQL}, 'yield-coverage-audit', ?)
           OR key LIKE 'yield:supplemental-sources:v1:%'`,
     )
-    .bind(getYieldSupplementalRunOutcomeCacheKey())
+    .bind(...YIELD_RANKINGS_READ_KEYS, getYieldSupplementalRunOutcomeCacheKey())
     .all<CacheRow>();
   const byKey = new Map((rows.results ?? []).map((row) => [row.key, row]));
 
-  const rankingsRow = byKey.get(YIELD_RANKINGS_CACHE_KEY) ?? null;
+  const rankingsRow = byKey.get(YIELD_RANKINGS_VERSION_KEY) ?? byKey.get(YIELD_RANKINGS_CACHE_KEY) ?? null;
   const rankingsPayload = safeJsonObjectParse(
     rankingsRow?.value ?? null,
     `yield-health:cache:${YIELD_RANKINGS_CACHE_KEY}`,

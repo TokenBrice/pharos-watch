@@ -12,7 +12,7 @@ import {
   type ResponsiveMethodologyPipelineProps,
   WorkedExample,
 } from "../../methodology-shared";
-import { MINT_BURN_FLOW_SECTION_CONTENT } from "@/lib/methodology-content";
+import { MINT_BURN_FLOW_SECTION_CONTENT, USDT_ISSUANCE_PRESSURE_DESCRIPTION } from "@/lib/methodology-content";
 import { METHODOLOGY_SECTION_ACCENT_CLASSES } from "@shared/lib/classification";
 import { GAUGE_BAND_RANGES, type GaugeBand } from "@shared/lib/mint-burn-gauge-bands";
 import { getPressureShiftState } from "@shared/lib/mint-burn-signals";
@@ -190,12 +190,13 @@ export function MintBurnFlowMethodologySection() {
                 exclude hours classified under earlier evidence. Gross observed subtotals stay published.
               </p>
               <p>
-                USDT Tron joins through that admission gate in the critical lane. Only Issue/Redeem count;
-                their paired zero-address Transfers would duplicate the same flow. Scans stop at a fresh
-                solidified head. Historical conservation remains unsupported because Tron cannot supply the
-                required historical state. Once admitted, Tron joins USDT&apos;s totals, pressure baseline and
-                tracked-chain gauge weight. The digest re-bins the published gauge and uses its coin nets;
-                DDR&apos;s mint-surge input includes all admitted chains. DEWS keeps Ethereum as USDT&apos;s
+                {USDT_ISSUANCE_PRESSURE_DESCRIPTION}
+              </p>
+              <p>
+                Tron uses the critical lane. The paired zero-address Transfers would duplicate the counted flow.
+                Scans stop at a fresh solidified head. Historical conservation remains unsupported because Tron cannot supply the
+                required historical state. The digest re-bins the published gauge and uses its coin nets for
+                flight-to-quality. DDR&apos;s mint-surge input includes all admitted chains. DEWS keeps Ethereum as USDT&apos;s
                 canonical chain. The 90-day admission baseline protects the published 90-day net from a
                 newly joined chain with shorter history.
               </p>

@@ -340,7 +340,7 @@ describe("AltPegsClient", () => {
     expect(hero.textContent).toContain("Non-USD stablecoin market cap");
     expect(hero.textContent).toContain("$80.0M");
     expect(hero.textContent).toContain(`${CORE_NON_USD_IDS.length} non-USD of`);
-    expect(screen.getByText("Share of all stablecoins").parentElement!.textContent).toMatch(/2\.60%.*as of/);
+    expect(screen.getByText("Share of tracked core supply").parentElement!.textContent).toMatch(/2\.60%.*as of/);
     expect(screen.queryByText("Partial supply")).toBeNull();
     expect(screen.getByTestId("cohort-mix").textContent).toContain("Commodities");
   });

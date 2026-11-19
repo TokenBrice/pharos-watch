@@ -248,6 +248,34 @@ describe("loadStatusForCoin", () => {
     }
   });
 
+  it("reports the peak against peers on a Saturday EURC status card", async () => {
+    const { db, sqlite } = createLatestSchemaSqlite();
+    try {
+      const started = Date.parse("2026-11-14T12:00:00Z") / 1000;
+      const onset = { basis: "peer-relative", observedAt: started, price: 1.067, pegReference: 1.1, bps: -300,
+      corroboration: { basis: "peer-relative", confidence: "low", quoteObservedAt: started,
+        contributors: ["one", "two", "three"].map((id) => ({ id, provenanceKey: id, observedAtSec: started })),
+        corroborator: { source: "pool:curve:defillama", observedAtSec: started } } };
+      sqlite.prepare(`INSERT INTO depeg_events
+        (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peg_reference, source, pending_reason, peer_basis_json)
+        VALUES ('eurc-circle','EURC','peggedEUR','below',-300,?,1.067,1.1,'live','low-confidence+peer-relative',?)`)
+        .run(started, JSON.stringify({ onset }));
+      const message = buildStatusMessage("EURC", await loadStatusForCoin(db, "eurc-circle"), started + 60);
+      expect(message).toContain("below the peer median (lower confidence)");
+      expect(message).toContain("peak 3.0%");
+      expect(message).not.toContain("off peg");
+      sqlite.prepare(`UPDATE depeg_events SET peak_deviation_bps=-500,peak_price=1.045,peak_peg_reference=1.1,
+        peak_quote_domain='usd',peer_basis_json=?`).run(JSON.stringify({ onset, peak: {
+        basis: "benchmark", observedAt: started + 172800, price: 1.045, pegReference: 1.1, bps: -500,
+      } }));
+      const mixed = buildStatusMessage("EURC", await loadStatusForCoin(db, "eurc-circle"), started + 172860);
+      expect(mixed).toContain("opened below the peer median (lower confidence), peak 5.0% below peg");
+
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("handles a fully unseeded coin gracefully (null everywhere)", async () => {
     const db = mockD1([
       { match: "FROM stress_signals", rows: [] },
