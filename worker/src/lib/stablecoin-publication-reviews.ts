@@ -89,7 +89,7 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     stablecoinId: "bd-basedollar",
     owner: "ops",
     reason:
-      "Reviewed 2026-11-07 19:45 UTC: the existing aerodrome-exact adapter correctly rejects inventory. At Base block 54451146 (hash 0xf15f11a772be79e3f39e6e3f684c421b8e9f621e6c6771d7605f83eec680dcd8), reviewed Aero BD/USDC pool 0x11cc6f32930c20e3cfb01fc35bd37ed20d3ed82f holds 11,990.64 BD and 9,204.12 USDC with balances matching reserves, below the unchanged 10,000 USDC output-inventory floor. GeckoTerminal reports $20,999.95 pool reserves and a $0.99493853 mark; DexScreener's legacy BD/USDC pool holds only $295.25. The larger BOARDED/BD pool has no trusted dollar quote leg and cannot replace the reviewed route. CoinGecko search returns no listing. The protocol's nominal collateral-redemption entitlement is not an observed dollar quote. Keep BD active and the price missing; all admission gates preserved. Owner ops rechecks inventory or an admissible alternate market by 2026-11-21 19:45 UTC.",
+      "Re-reviewed 2026-11-19 17:43 UTC: the existing aerodrome-exact adapter still correctly rejects inventory. At Base block 59598848 (hash 0xdb4efd232d0f5dfd18de40b2666ef97d6a1298fba0fd30fc3b9871480388b582), reviewed Aero BD/USDC pool 0x11cc6f32930c20e3cfb01fc35bd37ed20d3ed82f holds 7,474.12 BD and 6,258.75 USDC with balances matching getReserves(), both below the unchanged 10,000-unit inventory floor and lower than the 11,990.64 BD and 9,204.12 USDC of the 2026-11-07 review. CoinGecko search returns no listing and DefiLlama id 434 publishes no price. The protocol's nominal collateral-redemption entitlement is not an observed dollar quote. Keep BD active and the price missing; all admission gates preserved. Owner ops rechecks inventory or an admissible alternate market by 2026-11-26 17:43 UTC.",
     sources: [
       "https://basescan.org/address/0x11cc6f32930c20e3cfb01fc35bd37ed20d3ed82f#readContract",
       "https://api.coingecko.com/api/v3/search?query=base%20dollar",
@@ -97,8 +97,38 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
       "https://api.geckoterminal.com/api/v2/networks/base/tokens/0x252d36f435582ecb01686448d21e8c9ea0b2ca65/pools",
       "https://docs.basedollar.org/",
     ],
-    reviewedAt: Date.UTC(2026, 10, 7, 19, 45) / 1000,
-    expiresAt: Date.UTC(2026, 10, 21, 19, 45) / 1000,
+    reviewedAt: Date.UTC(2026, 10, 19, 17, 43) / 1000,
+    expiresAt: Date.UTC(2026, 10, 26, 17, 43) / 1000,
+  },
+  {
+    stablecoinId: "dllr-sovryn",
+    owner: "ops",
+    reason:
+      "Reviewed 2026-11-19 17:43 UTC: at 17:42 UTC CoinGecko sovryn-dollar reports $0.98964 with $256.78 of 24h volume last updated 2026-11-06T23:11:07Z and an empty tickers array, so its only mark is older than the seven-day low-volume budget. coins.llama.fi returns no quote for the gecko id or the Rootstock contract 0xc1411567d2670e24d9c4daaa7cda95686e1250aa, and DefiLlama id 160 publishes no price. Sovryn's mitigation and recovery manifest reports Mynt DLLR minting and redemption halted, so there is no protocol quote either. Keep DLLR active and the price missing; all admission gates preserved. Owner ops rechecks the Sovryn recovery status and any admissible market by 2026-11-26 17:43 UTC.",
+    sources: [
+      "https://api.coingecko.com/api/v3/simple/price?ids=sovryn-dollar,monerium-gbp-emoney&vs_currencies=usd&include_24hr_vol=true&include_last_updated_at=true",
+      "https://api.coingecko.com/api/v3/coins/sovryn-dollar/tickers",
+      "https://coins.llama.fi/prices/current/coingecko:sovryn-dollar,rsk:0xc1411567d2670e24d9c4daaa7cda95686e1250aa",
+      "https://stablecoins.llama.fi/stablecoin/160",
+      "https://forum.sovryn.com/t/sovryn-mitigation-and-recovery-manifest/3611",
+    ],
+    reviewedAt: Date.UTC(2026, 10, 19, 17, 43) / 1000,
+    expiresAt: Date.UTC(2026, 10, 26, 17, 43) / 1000,
+  },
+  {
+    stablecoinId: "gbpe-monerium",
+    owner: "ops",
+    reason:
+      "Reviewed 2026-11-19 17:43 UTC: at 17:42 UTC CoinGecko monerium-gbp-emoney reports $1.38 last updated 2026-11-18T18:16:06Z; its only ticker is one Oku Trade (Gnosis) print flagged stale, last traded 2026-11-18T10:15:05Z at 1.258 against its quote token. coins.llama.fi returns no quote for the gecko id or the Gnosis contract 0x8e34bfec4f6eb781f9743d9b4af99cd23f9b7053. GeckoTerminal's Gnosis pools hold $241.16 (GBPe/EURe, $6.04 of 24h volume) and $0.02 (GBPe/USDC.e), far below the unchanged $50K floor. Monerium states it offers no GBP IBANs, so there is no issuer quote lane. Keep GBPe active and the price missing; all admission gates preserved. Owner ops rechecks for an admissible market by 2026-11-26 17:43 UTC.",
+    sources: [
+      "https://api.coingecko.com/api/v3/simple/price?ids=sovryn-dollar,monerium-gbp-emoney&vs_currencies=usd&include_24hr_vol=true&include_last_updated_at=true",
+      "https://api.coingecko.com/api/v3/coins/monerium-gbp-emoney/tickers",
+      "https://coins.llama.fi/prices/current/coingecko:monerium-gbp-emoney,xdai:0x8e34bfec4f6eb781f9743d9b4af99cd23f9b7053",
+      "https://api.geckoterminal.com/api/v2/networks/xdai/tokens/0x8e34bfec4f6eb781f9743d9b4af99cd23f9b7053/pools",
+      "https://help.monerium.com/article/12-gbpe-ibans",
+    ],
+    reviewedAt: Date.UTC(2026, 10, 19, 17, 43) / 1000,
+    expiresAt: Date.UTC(2026, 10, 26, 17, 43) / 1000,
   },
   {
     stablecoinId: "idrt-rupiah-token",
