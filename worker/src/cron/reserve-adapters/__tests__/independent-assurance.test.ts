@@ -216,7 +216,7 @@ function assuranceFenceCases() {
       const html = auddIndex + featured + `<a href="${reportUrl}">October 2026</a>`;
       return {
         adapter: "audd-independent-assurance", coinId: "audd-novatti", product: "AUDD",
-        reportUrl, html, newerHtml: html + `<a href="${auddHost}${nov}">November 2026</a>`,
+        reportUrl: featured ? undefined : reportUrl, html, newerHtml: html + `<a href="${auddHost}${nov}">November 2026</a>`,
       } as const;
     }),
     {
@@ -276,7 +276,7 @@ describe("independent-assurance manifest framework", () => {
   it.each(assuranceFenceCases())(
     "$adapter keeps the reviewed index and redirect hosts fail-closed and lets a newer report reach the PDF gates",
     async (testCase) => {
-      if ("reportUrl" in testCase) {
+      if ("reportUrl" in testCase && testCase.reportUrl) {
         vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue({
           ...getIndependentAssuranceManifest(testCase.product), reportUrl: testCase.reportUrl,
         });
@@ -320,7 +320,7 @@ describe("independent-assurance manifest framework", () => {
       const reviewed = getIndependentAssuranceManifest(testCase.product);
       vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue({
         ...reviewed,
-        ...("reportUrl" in testCase ? { reportUrl: testCase.reportUrl } : {}),
+        ...("reportUrl" in testCase && testCase.reportUrl ? { reportUrl: testCase.reportUrl } : {}),
         reportByteLength: PDF_BYTES.length,
         reportSha256: createHash("sha256").update(PDF_BYTES).digest("hex"),
       });
