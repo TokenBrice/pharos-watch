@@ -8,7 +8,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-yield-methodology -->`v8.56`<!-- GENERATED-END: methodology-version-yield-methodology -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-yield-methodology -->`v8.57`<!-- GENERATED-END: methodology-version-yield-methodology -->
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/methodology-versions/registry.ts`
 
@@ -80,7 +80,7 @@ lookbackDays = (publication_time - anchor_time) / 86_400
 apy = ((rate_now / rate_anchor) ^ (365.25 / lookbackDays) - 1) * 100
 ```
 
-The anchor is the newest published positive exchange rate at least seven days old; annualization uses its actual elapsed interval, not a fixed seven days.
+The anchor is the newest published positive exchange rate at least seven days old; annualization uses its actual elapsed interval, not a fixed seven days. The row's `apy30d` applies the same formula to the oldest rate in the 30-day window: see [30-day APY of on-chain rate sources](#30-day-apy-of-on-chain-rate-sources).
 
 The generic exchange-rate reader rejects computed APY above `DETERMINISTIC_APY_SANITY_MAX = 300`. Rejected observations are not published as `onchain` rows and the suspicious current exchange rate is not written as a new anchor; the resolver continues through lower tiers so curated DeFiLlama, protocol-API, or rate-derived coverage can win. The post-V9 sync records the rejected Tier 1 count at `sourceCoverage.onChainEnvelopeRejectionCount` and bounded examples at `sourceCoverage.onChainEnvelopeRejections` with a truncation flag. Those examples are diagnostic sync metadata only; fallback resolution is unchanged. Negative APY remains allowed because it is bounded by the ratio formula and can be useful stress evidence.
 
@@ -433,13 +433,29 @@ Rollback compatibility is part of the contract. Production-shaped `v7.48` payloa
 | ---------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
 | `yieldStability` | `1 - CV(30d samples)`, rounded to two decimals | 0–1, higher = more consistent. Null for fewer than two samples, `abs(mean) < 1e-10`, or non-finite CV |
 | `yieldToRisk`    | `apy30d / (101 - safetyScore)`                                                 | Raw yield per unit of risk                                                                   |
-| `excessYield`    | `apy30d - benchmarkRate`                                                       | 30-day average APY above the row's selected benchmark                                        |
+| `excessYield`    | `apy30d - benchmarkRate`                                                       | 30-day APY above the row's selected benchmark                                                |
 | `effectiveYield` | `max(0, apy30d + 0.25 * excessYield + hurdleRebase)` | Benchmark-aware yield before risk and consistency penalties; rebase is zero for USD-currency rows or missing rates |
 | `rowUtility`     | `effectiveYield / sourceRisk.sourceRiskPenalty` after neutral/clamp resolution | Source-risk-adjusted utility term used before the safety penalty                             |
 | `apy7d`          | Timestamp-filtered 7d average                                                  | 7-day trailing APY (uses `recorded_at >= now - 7d`, not proportional slicing)                |
-| `apy30d`         | Simple average of 30d samples                                                  | 30-day trailing APY                                                                          |
-| `apyVariance30d` | Standard deviation of 30d APY samples | Published APY volatility measure (despite the field name, not variance) |
+| `apy30d`         | Simple average of 30d samples; share-price return for on-chain rate sources    | 30-day trailing APY; see [30-day APY of on-chain rate sources](#30-day-apy-of-on-chain-rate-sources) |
+| `apyVariance30d` | Standard deviation of 30d APY samples around their own mean | Published APY volatility measure (despite the field name, not variance) |
 | `medianApy` | Global TVL-weighted median over selected rows with finite positive APY and TVL | Persisted and published as null when no eligible observations exist; divergence warnings and chart reference lines are omitted |
+
+#### 30-day APY of on-chain rate sources
+
+Every sample of a Tier 1 rate source is already a trailing seven-day annualized change of its exchange rate, so the average of a month of samples is an average of overlapping seven-day figures. It lags the share price and reaches about 37 days back. Since v8.57 such a row's `apy30d` is measured from the share price itself (`resolveSharePriceApy30d` in `worker/src/cron/yield-sync/candidate-statistics.ts`):
+
+```
+apy30d = ((rate_now / rate_oldest) ^ (365.25 / elapsedDays) - 1) * 100
+```
+
+- `rate_oldest` is the oldest positive exchange rate this exact source key published as an `onchain` row inside the 30-day window. It must be at least seven days old, the same age the per-sample anchor requires. A bootstrap seed is a valid anchor. A source with less than 30 days of history annualizes over the span it has.
+- The figure is signed: a share price that fell over the window publishes a negative `apy30d`.
+- The rule applies only when the current observation is `dataSource: "onchain"` with a positive exchange rate and no reward leg, and the history is not the legacy fallback. Linked-variant projections of such a source carry the child's rate under their own key and qualify the same way. Special-case Tier 1 estimators publish no exchange rate and do not qualify.
+- Otherwise, or when the result is non-finite or above `DETERMINISTIC_APY_SANITY_MAX`, `apy30d` stays the simple average of the samples. DeFiLlama, protocol-API, price-derived, rate-derived and report-clock rows are unchanged.
+- `provenance.apy30dAnchorObservedAt` names the anchor of a share-price figure and is null when `apy30d` is the sample average.
+- `apy7d`, `yieldStability`, `apyVariance30d`, `apyMin30d` and `apyMax30d` keep using the samples. So do the `yield-spike`, `negative-trend` and `zero-yield` comparisons, the `yield-divergence` cohort median and the zero-yield source rejection, which read the sample average as their 30-day baseline. The published `medianApy` uses the published `apy30d`.
+- Limit: the figure assumes one rate definition per source key across the window. Changing a source's contract, selector or decimals needs a new source key or a history handoff; the upper sanity bound catches an upward rescale, not a downward one.
 
 ---
 
@@ -502,7 +518,7 @@ Benchmark descriptors in `worker/src/cron/tbill-sources/providers.ts` have indep
 
 ## Warning Signals (Phase 2)
 
-`yield-helpers.ts::detectWarningSignals()` runs in the sync cron and stores baseline results in the `warning_signals` column of `yield_data`. Rankings responses also add a read-time freshness signal. Frontend-visible warning keys are:
+`yield-helpers.ts::detectWarningSignals()` runs in the sync cron and stores baseline results in the `warning_signals` column of `yield_data`. Rankings responses also add a read-time freshness signal. In the conditions below `apy30d` is the 30-day sample average, which differs from the published `apy30d` only on [on-chain rate sources](#30-day-apy-of-on-chain-rate-sources). Frontend-visible warning keys are:
 
 | Signal             | Condition                                                                                                                                                                                                                                                                                                          | Meaning                                                                             |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
@@ -574,7 +590,7 @@ During a Worker rollback, Pages applies the same benchmark-unit guard to the ful
 
 - Full and summary rankings and history publish `_meta` with `updatedAt`, `ageSeconds`, `status`, `assessedAt`, `freshBudgetSec`, `degradedBudgetSec`, and nullable `reason`. Assessment fields are required whenever `_meta` is present.
 - Summary rows retain `benchmarkSelectionMode`, `benchmarkIsFallback`, benchmark age bounds, `provenance.sourceMaxAgeSeconds`, selected anomalies, and up to eight alternate lane projections (`yieldType`, `yieldSource`, `apy30d`). `alternateSourceCount` stays complete; source-board lanes disclose omissions and missing anomaly evidence. Feed fallback is independent of selection policy.
-- Detailed provenance retains nullable `sourceObservedAt` and `sourceAgeSeconds` without discarding other evidence. Unavailable `medianApy` remains null. Rankings, alternatives, and history preserve raw nonnegative `sourceRisk.rewardShare`, including ratios above 1. Public serialization does not replace unavailable values with zero or cap persisted evidence.
+- Detailed provenance retains nullable `sourceObservedAt` and `sourceAgeSeconds` without discarding other evidence. `apy30dAnchorObservedAt` is the anchor of a share-price `apy30d` and null for a sample average. Unavailable `medianApy` remains null. Rankings, alternatives, and history preserve raw nonnegative `sourceRisk.rewardShare`, including ratios above 1. Public serialization does not replace unavailable values with zero or cap persisted evidence.
 - Safety provenance preserves the accepted safety generation and its original `publishedAt`, with `maxAgeSeconds: 86400`; publishing a new yield generation never renews the safety clock. `safety-snapshot-coverage` is emitted only for measured coverage below the shared 0.75 floor; unavailable coverage names `safety-snapshot-unavailable`, while `safety-snapshot-held` is a quality advisory.
 - Publish-time and live-hydration Safety coverage preserve nullable `trackedCount`/`coverageRatio`: null is unavailable, never `0%`/complete. The canonical score-map producer returns an empty map with `coveredCount: 0`, null denominator/ratio, the upstream reason and null publication identity/time when its source is unavailable; that empty result is not measured coverage. The reference strip shows “Safety coverage unavailable” plus source reason; measured zero shows `0%`, and held accepted coverage keeps its measured percentage; the held reason stays in the API and `/status`. Current/held admission and source-age budgets remain separate and unchanged.
 - Rankings cache reads validate the schema and publication contract before transformation; malformed payloads return HTTP `503`, never a raw cached `200` fallback.

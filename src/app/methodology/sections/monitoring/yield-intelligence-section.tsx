@@ -268,7 +268,10 @@ export function YieldIntelligenceMethodologySection() {
                   </p>
                   <p>
                     Trailing APY metrics are computed from source-specific history rather than a mixed coin-level series, so
-                    source switches no longer contaminate the displayed 7d/30d averages.
+                    source switches no longer contaminate the displayed 7d/30d averages. For a source read from an on-chain
+                    exchange rate with at least seven days of rate history, the 30-day APY is the annualized change of
+                    that share price over the window, not an average of samples. It is the return a holder earned, and
+                    it is negative when the share price fell.
                   </p>
                   <p>
                     Read-time <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">data-stale</code> warnings are also

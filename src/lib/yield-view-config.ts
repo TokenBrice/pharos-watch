@@ -247,7 +247,7 @@ export const YIELD_PRESET_SPECS: readonly YieldPresetSpec[] = [
   {
     key: "new-rising",
     label: "New & rising",
-    description: "Current APY above 30d average, 7+ daily observations",
+    description: "Current APY above 30d APY, 7+ daily observations",
     overrides: { trending: "rising" },
   },
   {

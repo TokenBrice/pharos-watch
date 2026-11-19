@@ -696,7 +696,7 @@ describe("excess-yield tile help", () => {
     expect(metric).toMatchObject({ label: "30d Excess", methodologyTopic: "excessYield" });
     expect(METHODOLOGY_CONTEXT.excessYield).toMatchObject({
       title: "Excess yield",
-      summary: "30-day average APY minus its benchmark rate.",
+      summary: "30-day APY minus its benchmark rate.",
     });
   });
 });
