@@ -809,7 +809,7 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
         sqlite.prepare(`INSERT INTO supply_history
           (stablecoin_id, snapshot_date, circulating_usd, circulating_native, supply_provenance) VALUES (?, ?, ?, ?, ?)`)
           .run(asset.id, date, history * 1.1, history, JSON.stringify({
-            supplySource: "coingecko", supplyChainGuard: null, supplyObservedAt: Math.floor(now.getTime() / 1000) - days * 86_400 - (days === 1 ? daySkew : 0),
+            supplySource: asset.supplySource, supplyChainGuard: null, supplyObservedAt: Math.floor(now.getTime() / 1000) - days * 86_400 - (days === 1 ? daySkew : 0),
           }));
       }
     }

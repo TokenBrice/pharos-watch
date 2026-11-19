@@ -114,10 +114,14 @@ export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse, s
     circulatingPrevDay: supplyUnavailable ? {} : hasCurrentSupply ? admittedDetailBuckets(detail.currentCirculatingPrevDayUSD)
       : historyObservedAt == null ? {} : detailBucketsAt(detail, historyObservedAt - 86_400, "totalCirculatingUSD", stablecoinId),
     circulatingPrevWeek: supplyObservedAt == null ? {} : projectUsdMarketCapBaselineBuckets(
-      baselineAsset, "week", detailBucketsAt(detail, supplyObservedAt - 7 * 86_400, "totalCirculatingUSD", stablecoinId),
+      baselineAsset, "week", hasCurrentSupply && detail.currentCirculatingPrevWeekUSD !== undefined
+        ? admittedDetailBuckets(detail.currentCirculatingPrevWeekUSD)
+        : detailBucketsAt(detail, supplyObservedAt - 7 * 86_400, "totalCirculatingUSD", stablecoinId),
     ),
     circulatingPrevMonth: supplyObservedAt == null ? {} : projectUsdMarketCapBaselineBuckets(
-      baselineAsset, "month", detailBucketsAt(detail, supplyObservedAt - 30 * 86_400, "totalCirculatingUSD", stablecoinId),
+      baselineAsset, "month", hasCurrentSupply && detail.currentCirculatingPrevMonthUSD !== undefined
+        ? admittedDetailBuckets(detail.currentCirculatingPrevMonthUSD)
+        : detailBucketsAt(detail, supplyObservedAt - 30 * 86_400, "totalCirculatingUSD", stablecoinId),
     ),
     nativeSupply: {
       current: currentNative,

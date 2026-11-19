@@ -10,6 +10,7 @@ import {
   getPrevDayRawOrNull,
   getPrevMonthRawOrNull,
   getPrevWeekRawOrNull,
+  getUsdMarketCapBaselineOrNull,
   SUPPLEMENTAL_RESTORE_MAX_AGE_SEC,
 } from "@shared/lib/supply";
 import { makeChainBaseline as baseline, makeChainLeg as leg, makeChartPoint as chartPoint, makeDropoutUsdg, makeGapFill as gapFill } from "@shared/test-utils/stablecoin";
@@ -42,6 +43,8 @@ import {
   type ChainDropoutState,
 } from "../chain-dropout-guard";
 import { REVIEWED_CHAIN_SUPPLY_COLLAPSES } from "../chain-dropout-seed";
+import { mockD1 } from "@shared/test-utils/mock-d1";
+import { fillMissingSupplyHistory } from "../phase-helpers";
 
 const NOW = Date.parse("2026-10-09T06:00:00Z") / 1000;
 const DAY = 86400;
@@ -411,25 +414,30 @@ describe("chain dropout guard", () => {
     }
   });
 
-  it.each([false, true])("keeps carried history only while its chain bucket equals the baseline (aged day: %s)", async (aged) => {
+  it.each([
+    [false, "usdg-paxos", "peggedUSD"], [true, "usdg-paxos", "peggedUSD"], [false, "eurc-circle", "peggedEUR"],
+    [false, "eurc-circle", "peggedEUR", "matching"], [false, "eurc-circle", "peggedEUR", "chain-mismatch"],
+  ] as const)("checks carried history (aged day: %s, %s, %s, close: %s)", async (aged, id, peg, close?: string) => {
     const now = LATE_NOW;
+    const week = { observedAt: now - 8 * DAY, circulatingUsd: 980_000_000, circulatingNative: null };
     const state: ChainDropoutState = { version: 1, pairs: {} };
     if (aged) state.pairs[JSON.stringify(["usdg-paxos", "xlayer"])] = {
       assetId: "usdg-paxos", ...baseline("xlayer", 100_000_000, now - DAY, now - DAY), baselineSource: "state",
     };
     const asset: PeggedAsset = {
-      ...usdg(),
-      circulating: { peggedUSD: 900_000_000 },
-      circulatingPrevDay: { peggedUSD: aged ? 900_000_000 : 1_000_000_000 },
-      circulatingPrevWeek: { peggedUSD: 1_000_000_000 },
-      circulatingPrevMonth: { peggedUSD: 1_000_000_000 },
+      ...usdg(), id, pegType: peg,
+      circulating: { [peg]: 900_000_000 },
+      circulatingPrevDay: { [peg]: aged ? 900_000_000 : 1_000_000_000 },
+      circulatingPrevWeek: { [peg]: 1_000_000_000 },
+      circulatingPrevMonth: { [peg]: 1_000_000_000 },
+      ...(peg === "peggedEUR" ? { supplyChangeBaselines: { week } } : {}),
       chains: ["Ethereum", "X Layer"],
       chainCirculating: {
         Ethereum: leg(900_000_000),
         "X Layer": {
           current: 0,
           circulatingPrevDay: aged ? 0 : 100_000_000,
-          circulatingPrevWeek: 100_000_000,
+          circulatingPrevWeek: close === "chain-mismatch" ? 90_000_000 : 100_000_000,
           circulatingPrevMonth: 100_000_000,
         },
       },
@@ -437,12 +445,23 @@ describe("chain dropout guard", () => {
 
     const result = await runGuard(asset, { now, state });
 
-    expect(result.quarantinedAssetIds).toEqual(["usdg-paxos"]);
+    expect(result.quarantinedAssetIds).toEqual([id]);
     expect(asset).toMatchObject({ supplyRestored: true, supplyChainGuard: { status: "quarantined" } });
     expect(getCirculatingRawOrNull(asset)).toBe(1_000_000_000);
-    expect(getPrevDayRawOrNull(asset)).toBe(aged ? null : 1_000_000_000);
-    expect(getPrevWeekRawOrNull(asset)).toBe(1_000_000_000);
-    expect(getPrevMonthRawOrNull(asset)).toBe(1_000_000_000);
+    expect(getPrevDayRawOrNull(asset)).toBe(aged || peg !== "peggedUSD" ? null : 1_000_000_000);
+    expect(getPrevWeekRawOrNull(asset)).toBe(peg === "peggedUSD" ? 1_000_000_000 : null);
+    expect(getPrevMonthRawOrNull(asset)).toBe(peg === "peggedUSD" ? 1_000_000_000 : null);
+    expect(asset.supplyChangeBaselines).toBeUndefined();
+    if (peg === "peggedUSD") return;
+    vi.mocked(Date.now).mockReturnValue(now * 1000);
+    await fillMissingSupplyHistory(mockD1([{ match: "FROM supply_history", rows: close ? [{
+      stablecoin_id: id, snapshot_date: week.observedAt, circulating_usd: week.circulatingUsd,
+      supply_provenance: JSON.stringify({ supplySource: asset.supplySource, supplyObservedAt: week.observedAt, supplyChainGuard: null }),
+    }] : [] }]), [asset]);
+    const [wire] = normalizeStablecoinsPayload({ peggedAssets: [asset] }, now).peggedAssets;
+    expect(wire.supplyChangeBaselines?.week ?? null).toEqual(close === "matching" ? week : null);
+    expect(getPrevWeekRawOrNull(wire)).toBe(close === "matching" ? week.circulatingUsd : null);
+    expect(getUsdMarketCapBaselineOrNull(wire, "day")).toBeNull();
   });
 
   it.each([false, true])("keeps omitted quarantined chains sticky across generations (empty map: %s)", async (emptyMap) => {

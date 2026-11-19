@@ -428,7 +428,7 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
     }
     const peakUnverified = event.stablecoin_id === "brz-transfero"
       && (BRZ_UNVERIFIED_PEAK_EVENT_IDS as readonly number[]).includes(event.id);
-    return [{ stablecoin_id: event.stablecoin_id, started_at: onset,
+    return [{ stablecoin_id: event.stablecoin_id, pegType: event.peg_type, started_at: onset,
       peak_deviation_bps: peakUnverified ? null : event.peak_deviation_bps }];
   }).sort((left, right) => left.started_at - right.started_at);
 
@@ -513,9 +513,12 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
       const useNativeSupply = currentRow && hasNativeSupplyEvidence(currentRow);
       const current = useNativeSupply ? readNativeSupplyCheckpoint(currentRow, targetDay)?.quantity ?? null : mcapUsd ?? null;
       const anchor = (row: SupplyRow | undefined, days: number, native = useNativeSupply) => {
-        if (!row || current == null || !hasComparableSupplyPerimeter(event.stablecoin_id, dayMidnight, row.snapshot_date)) return null;
+        if (!row || current == null ||
+          !hasComparableSupplyPerimeter(event.stablecoin_id, dayMidnight, row.snapshot_date)) return null;
         if (native) return readNativeSupplyCheckpoint(row, targetDay - days * DAY_SECONDS)?.quantity ?? null;
-        return Number.isFinite(row.circulating_usd) && row.circulating_usd >= 0 ? row.circulating_usd : null;
+        // Historical caps for non-USD pegs can reflect FX or metal repricing alone.
+        return event.pegType === "peggedUSD" && Number.isFinite(row.circulating_usd) && row.circulating_usd >= 0
+          ? row.circulating_usd : null;
       };
       const prevDay = anchor(dayRow, 1);
       const prevWeek = anchor(weekRow, 7);

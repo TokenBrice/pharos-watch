@@ -84,6 +84,16 @@ describe("missing detail price enrichment", () => {
     expect(projectStablecoinLiveSummary(detail).supplyChangeBaselines).toEqual(map);
   });
 
+  it("uses canonical non-USD week and month buckets when dated windows are omitted", async () => {
+    const history = [7, 30].map((days) => ({ date: NOW - days * 86_400 - 60, totalCirculatingUSD: { peggedEUR: 110 } }));
+    const result = await overlayCanonicalDetail(makeDb({
+      id: "eurc-circle", pegType: "peggedEUR", circulating: { peggedEUR: 110 },
+      circulatingPrevWeek: { peggedEUR: 100 }, supplyChangeBaselines: { day: null },
+    }), "eurc-circle", makeResponse(JSON.stringify({ tokens: history })));
+    const summary = projectStablecoinLiveSummary(StablecoinDetailResponseSchema.parse(await result.json()), "eurc-circle");
+    expect([summary.circulatingPrevWeek, summary.circulatingPrevMonth]).toEqual([{ peggedEUR: 100 }, {}]);
+  });
+
   it("keeps preferred withheld supply unavailable through detail and summary without a published reason", async () => {
     const history = [0, 1, 7, 30].map((days) => ({
       date: NOW - days * 86_400, totalCirculatingUSD: { peggedUSD: 900_000 }, totalCirculating: { peggedUSD: 800_000 },

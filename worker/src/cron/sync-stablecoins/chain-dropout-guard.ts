@@ -4,7 +4,7 @@ import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { canonicalizeChainCirculating, normalizeChainSupplyValue } from "@shared/lib/chains/circulating";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
-import { getCirculatingRawOrNull, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC, SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC } from "@shared/lib/supply";
+import { getCirculatingRawOrNull, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC, SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC, type SupplyChangeBaselines } from "@shared/lib/supply";
 import { REVIEWED_ONCHAIN_SUPPLY_PLANS, selectCuratedAggregateOnchainSupplyProbeContracts } from "@shared/lib/onchain-supply-probe";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { FIXED_PEG_SEVERE_DOWNSIDE_RATIO } from "@shared/lib/pricing-source-policy";
@@ -19,7 +19,7 @@ import { fetchErc20TotalSupply } from "../reserve-adapters/onchain";
 import { fetchSolanaTokenSupply } from "../../lib/chain-observation";
 import { getPegReferencePriceUsd } from "./supply-gap-reconciliation";
 import { supplyObservationClock } from "./shared";
-import type { PeggedAsset } from "./enrich-prices-shared";
+import { pendingCarriedSupplyBaselines, type PeggedAsset } from "./enrich-prices-shared";
 import { REVIEWED_CHAIN_SUPPLY_COLLAPSES } from "./chain-dropout-seed";
 import { fetchCuratedAggregateOnChainMcap, toPublicChainCirculating } from "./supplemental-assets/onchain-supply";
 
@@ -644,14 +644,18 @@ export async function guardChainDropouts(input: {
     const partialCoverage = material && deficit > 0 && deficit <= CHAIN_DROPOUT_POLICY.partialCoverageMaxDeficitRatio * (aggregate + deficit);
     if (material && !partialCoverage) {
       asset.supplyRestored = true;
-      // The provider's aggregate history sums only the chains present in this
-      // packet; the carried total re-adds the dropped chains, so pairing the two
-      // would publish a synthetic move (R1). An observed bucket that already
-      // equals the carried baseline keeps its provider history (the carried
-      // chain's change is zero); an absent chain, an aged-away bucket or an
-      // ambiguous held total leaves the change unavailable until a fresh packet.
-      for (const bucket of ["circulatingPrevDay", "circulatingPrevWeek", "circulatingPrevMonth"] as const) {
-        if (ambiguous || !carriedHistoryBucketObserved(asset, unrepaired, bucket)) asset[bucket] = null;
+      let pending: SupplyChangeBaselines | undefined;
+      for (const [window, bucket] of [["day", "circulatingPrevDay"], ["week", "circulatingPrevWeek"], ["month", "circulatingPrevMonth"]] as const) {
+        const comparable = !ambiguous && carriedHistoryBucketObserved(asset, unrepaired, bucket);
+        const point = asset.supplyChangeBaselines?.[window];
+        if (pegKey !== "peggedUSD" && comparable && point) (pending ??= {})[window] = point;
+        if (pegKey !== "peggedUSD" || !comparable) asset[bucket] = null;
+      }
+      if (pegKey !== "peggedUSD") {
+        asset.circulatingNative = null;
+        // Keep dated candidates private until publication revalidates them against D1.
+        if (pending) Object.defineProperty(asset, pendingCarriedSupplyBaselines, { value: pending });
+        delete asset.supplyChangeBaselines;
       }
       const carriedClocks = unrepaired
         .map((candidate) => candidate.evidence.baselineObservedAt)
