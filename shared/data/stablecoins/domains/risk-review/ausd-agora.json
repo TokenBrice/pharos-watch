@@ -34,7 +34,7 @@
         "bridgeTypes": [
           "burnAndMint"
         ],
-        "note": "Agora adopted LayerZero's OFT standard to connect all AUSD deployments into one unified supply (AUSD0); the Agora-owned adapter 0x9CaB7Ede13dc56652E44D2404E969C212f22689b relays through LayerZero Endpoint V2."
+        "note": "Agora adopted LayerZero's OFT standard to connect its native AUSD deployments into one unified supply, with the Agora-owned adapter 0x9CaB7Ede13dc56652E44D2404E969C212f22689b relaying through LayerZero Endpoint V2. Third-party AUSD0 representations such as Plasma's are a separate mesh: their Ethereum peer is a third-party AUSD0 lockbox (0x38b8b7ca28e672018a299b20565aca8cf200c844), not Agora's adapter."
       },
       {
         "source": "docs",
@@ -446,7 +446,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At Plasma block 29979305 (2026-08-16 22:37:31Z), the authored address returned symbol/name AUSD0 and distinct runtime code; the native AUSD implementation() and proxyAdminAddress() surfaces reverted. This is the LayerZero AUSD0 OFT bridge representation, not an independent Agora native-issuance deployment. The reviewed Ethereum adapter control carries the route's bridge-mint/burn and administration evidence; exact current LayerZero peer bytes, DVN/validator configuration, and destination-specific rate limits were not replayed.",
+        "reviewNote": "At Plasma block 29979305 (2026-08-16 22:37:31Z), the authored address returned symbol/name AUSD0 and distinct runtime code; the native AUSD implementation() and proxyAdminAddress() surfaces reverted. This is the LayerZero AUSD0 OFT bridge representation, not an independent Agora native-issuance deployment. Its Ethereum peer is a third-party AUSD0 lockbox (0x38b8b7ca28e672018a299b20565aca8cf200c844, owner 0x03d5c290ec2c42245e6ab21418630c9e3d3fff37), not Agora's reviewed Ethereum adapter: pinned reads at Ethereum block 26420000 and Plasma block 37800000 show this route's adapter peers with that lockbox while Agora's MintBurnOFTAdapter carries no Plasma peer (report-cards evidence log, 2026-11-15). The Plasma-side adapter control carries the route's bridge-mint/burn and administration evidence; exact current DVN/validator configuration and destination-specific rate limits were not replayed.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-08-16",
         "observedBlock": 29979305,
@@ -459,6 +459,10 @@
           {
             "label": "Plasma Explorer: AUSD0 token",
             "url": "https://plasmascan.to/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
+          },
+          {
+            "label": "Etherscan: third-party AUSD0 lockbox, the route's Ethereum peer",
+            "url": "https://etherscan.io/address/0x38b8b7ca28e672018a299b20565aca8cf200c844"
           },
           {
             "label": "AUSD: Now Borderless Onchain",
