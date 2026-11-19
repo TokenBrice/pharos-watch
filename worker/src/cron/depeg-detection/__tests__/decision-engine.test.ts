@@ -307,23 +307,27 @@ describe("decideDepegAsset", () => {
   });
 
   it.each([
-    ["xofm-mento", "XOF", "peggedXOF", "mento-broker", 0.98],
-    ["susd-solayer", "USD", "peggedUSD", "protocol-redeem", 1.181399598224652],
-    ["susd-solayer", "USD", "peggedUSD", "protocol-redeem-cached-rate", 1.181399598224652],
-  ] as const)("withholds the %s %s valuation as an event quote above the supply floor", (id, pegCurrency, pegType, source, ratio) => {
+    ["mento-broker", undefined],
+    ["protocol-redeem", "accrued-token"],
+    ["protocol-redeem-cached-rate", "accrued-token"],
+    ["protocol-redeem", undefined],
+  ] as const)("withholds %s valuation (%s)", (source, parityQuoteUnit) => {
     const now = usdInput.now;
-    const meta = { ...usdMeta, id, flags: { ...usdMeta.flags, pegCurrency } };
-    const pegReference = pegCurrency === "USD" ? 1 : 0.0018;
-    const pricing = pegCurrency === "USD" ? usdPeg : clockedBenchmark(pegType, pegReference, now - 60);
-    const coin = { ...makeAsset({ id, pegType, price: pegReference * ratio, priceSource: source,
-      priceObservedAtMode: "upstream", priceObservedAt: now - 30, priceUpdatedAt: now - 30 }),
-      ...(id === "susd-solayer" ? { parityQuoteUnit: "accrued-token" as const } : {}) };
+    const solayer = source !== "mento-broker";
+    const id = solayer ? "susd-solayer" : "xofm-mento";
+    const pegCurrency = solayer ? "USD" : "XOF";
+    const pegType = solayer ? "peggedUSD" : "peggedXOF";
+    const meta: typeof usdMeta = { ...usdMeta, id, flags: { ...usdMeta.flags, pegCurrency } };
+    const pricing = solayer ? usdPeg : clockedBenchmark(pegType, 0.0018, now - 60);
+    const coin = { ...makeAsset({ id, pegType, price: solayer ? 1.181399598224652 : 0.0018 * 0.98, priceSource: source,
+      priceObservedAtMode: "upstream", priceObservedAt: now - 30, priceUpdatedAt: now - 30 }), parityQuoteUnit };
+    const input = { ...pricing, meta, now };
     for (const priceSource of [source, "cached"]) {
-      const decision = decideDepegAsset({ ...pricing, meta, now, asset: { ...coin, priceSource, agreeSources: [source] } });
+      const decision = decideDepegAsset({ ...input, asset: { ...coin, priceSource, agreeSources: [source] } });
       expect(decision.commands).toEqual([]);
       expect(decision.observation?.kind).toBe("unavailable");
     }
-    const traded = decideDepegAsset({ ...pricing, meta, now, asset: coin,
+    const traded = decideDepegAsset({ ...input, asset: coin,
       nativePegQuote: { stablecoinId: id, geckoId: id, pegCurrency, price: 0.97, updatedAt: now - 30,
         derivation: { kind: "traded-pair", lineage: { venue: "kraken", pair: `${coin.symbol}/${pegCurrency}` } } },
     });
