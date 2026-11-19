@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { useDependencyGraph } from "@/hooks/use-dependency-graph";
@@ -21,15 +21,6 @@ vi.mock("@/hooks/use-coin-states", () => ({ useCoinStates: useCoinStatesMock }))
 vi.mock("@/components/dependency-watershed/dependency-map-basin-list", () => ({
   DependencyMapBasinList: ({ model }: { model: { hubs: readonly unknown[] } }) => (
     <div data-testid="mobile-summary">summary:{model.hubs.length}</div>
-  ),
-}));
-
-vi.mock("./dependency-hubs-board", () => ({
-  DependencyHubsBoard: ({ model }: { model: { hubs: readonly unknown[] } }) => (
-    <div data-testid="dependency-hubs-board">board:{model.hubs.length}</div>
-  ),
-  LiveIncidentsUpstream: ({ coinStates }: { coinStates: ReadonlyMap<string, unknown> }) => (
-    <div data-testid="live-incidents">incidents:{[...coinStates.keys()].join(",")}</div>
   ),
 }));
 
@@ -102,7 +93,8 @@ describe("DependencyMapClient", () => {
       liveReady: true,
     });
     render(<DependencyMapClient />);
-    expect(screen.getByTestId("live-incidents").textContent).toBe("incidents:usdc-circle");
+    const incidents = screen.getByRole("region", { name: "Live incidents upstream" });
+    expect(within(incidents).getByRole("listitem").textContent).toMatch(/USD Coin.*Depeg.*below peg/);
     expect(await screen.findByRole("button", { name: /^USDC, .*Depeg/ })).toBeTruthy();
   });
 

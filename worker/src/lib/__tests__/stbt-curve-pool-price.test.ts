@@ -47,21 +47,25 @@ function trustedUsdc(observedAgoSec = 0, price = 1): PeggedAsset {
   } as PeggedAsset;
 }
 
-function mockHealthyPool(overrides: {
+function healthyPool(overrides: {
   coin0?: string;
   coin1?: string;
   stbtBalance?: bigint;
   crv3Balance?: bigint;
   impactOutput?: bigint;
-} = {}): void {
-  fetchEvmRpcBatchMock.mockResolvedValue([
+} = {}) {
+  return [
     addressWord(overrides.coin0 ?? STBT),
     addressWord(overrides.coin1 ?? CRV3),
     uintResult(overrides.stbtBalance ?? PINNED_STBT_BALANCE),
     uintResult(overrides.crv3Balance ?? PINNED_CRV3_BALANCE),
     uintResult(PINNED_SMALL_QUOTE),
     uintResult(overrides.impactOutput ?? PINNED_IMPACT_QUOTE),
-  ]);
+  ];
+}
+
+function mockHealthyPool(overrides?: Parameters<typeof healthyPool>[0]): void {
+  fetchEvmRpcBatchMock.mockResolvedValue(healthyPool(overrides));
 }
 
 describe("STBT exact Curve metapool price", () => {
@@ -127,12 +131,48 @@ describe("STBT exact Curve metapool price", () => {
   });
 
   it("routes every read through the Worker's configured chain RPCs before the public tail", async () => {
-    mockHealthyPool();
-    const chainRpcs: LivePriceContext["chainRpcs"] = new Map();
-    await fetchStbtCurvePoolPrice({ assetsById: new Map([["usdc-circle", trustedUsdc()]]), chainRpcs });
-    for (const mock of [fetchEvmBlockNumberMock, fetchEvmBlockTimestampMock, fetchEvmRpcBatchMock]) {
-      const call = mock.mock.calls[0] ?? [];
-      expect(call[call.length - 1]).toMatchObject({ chainRpcs });
+    const rpc = await vi.importActual<typeof import("../evm-rpc")>("../evm-rpc");
+    fetchEvmBlockNumberMock.mockImplementation(rpc.fetchEvmBlockNumber);
+    fetchEvmBlockTimestampMock.mockImplementation(rpc.fetchEvmBlockTimestamp);
+    fetchEvmRpcBatchMock.mockImplementation(rpc.fetchEvmRpcBatch);
+    const configured = "https://worker-rpc.example.test";
+    const publicRpc = "https://ethereum-rpc.publicnode.com";
+    const chainRpcs: LivePriceContext["chainRpcs"] = new Map([["ethereum", {
+      chainId: "ethereum", chainName: "Ethereum", type: "evm", explorerUrl: "",
+      endpoints: [{ url: configured, operator: "alchemy", keyed: false, position: "registry",
+        stateHistory: "archive", logsHistory: "unknown" }],
+    }]]);
+    const context = { assetsById: new Map([["usdc-circle", trustedUsdc()]]), chainRpcs };
+    const number = "0x1918128";
+    const pool = healthyPool();
+    const routeOrder: Array<[method: string, url: string]> = [];
+    const fetchRpc = vi.spyOn(globalThis, "fetch").mockImplementation(async (url, init) => {
+      const request = JSON.parse(init?.body as string);
+      const method = (Array.isArray(request) ? request[0].method : request.method) as string;
+      if (url === configured) {
+        // Let any speculative public request start before returning the configured failure.
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        routeOrder.push([method, configured]);
+        return new Response(null, { status: 403 });
+      }
+      if (url !== publicRpc) throw new Error(`Unexpected RPC URL: ${url}`);
+      routeOrder.push([method, publicRpc]);
+      return Response.json(Array.isArray(request)
+        ? request.map(({ id }, i) => ({ jsonrpc: "2.0", id, result: pool[i] }))
+        : { jsonrpc: "2.0", id: request.id, result: request.method === "eth_blockNumber" ? number : {
+          number, timestamp: `0x${Math.floor(Date.now() / 1000).toString(16)}`, hash: uintResult(1n),
+        } });
+    });
+    try {
+      await expect(fetchStbtCurvePoolPrice(context)).resolves.toMatchObject({ price: 0.99439 });
+      expect(fetchRpc.mock.calls.filter(([url]) => url === configured)).toHaveLength(3);
+      expect(fetchRpc.mock.calls.filter(([url]) => url === publicRpc)).toHaveLength(3);
+      for (const method of ["eth_blockNumber", "eth_getBlockByNumber", "eth_call"]) {
+        expect(routeOrder.filter(([name]) => name === method).map(([, url]) => url))
+          .toEqual([configured, publicRpc]);
+      }
+    } finally {
+      fetchRpc.mockRestore();
     }
   });
 

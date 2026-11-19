@@ -13,10 +13,11 @@ import {
 import {
   computeCapacityScore,
   computeModeledExitSizeUsd,
-  REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
+  computeRedemptionBackstopScore,
 } from "@shared/lib/redemption-backstop-scoring";
-import { selectV9ExitStressRequest } from "@shared/lib/safety-score-v9/exit";
+import { evaluateV9Exit, selectV9ExitStressRequest } from "@shared/lib/safety-score-v9/exit";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { makeExitRoute } from "./safety-score-v9-exit.test-support";
 
 const envelope = V9_CANDIDATE_POLICY_V1;
 
@@ -70,22 +71,17 @@ describe("shared breakpoint interpolation", () => {
 
 describe("policy-owned exit materiality", () => {
   it("uses the caller's breakpoint envelope at first-positive absolute and coverage boundaries", () => {
-    const v9Exit = V9_CANDIDATE_POLICY_V1.policy.semantic.exit;
-    const absoluteFloor = v9Exit.absoluteCapacityBreakpoints.find((point) => point.value > 0 && point.score > 0)!.value;
-    const coverageFloor = v9Exit.coverageRatioBreakpoints.find((point) => point.value > 0 && point.score > 0)!.value;
-
-    expect(hasMaterialExitCapacity({
-      executableCapacityUsd: absoluteFloor - 1,
-      requestedNotionalUsd: (absoluteFloor - 1) / (coverageFloor - 0.0001),
-    }, v9Exit)).toBe(false);
-    expect(hasMaterialExitCapacity({
-      executableCapacityUsd: absoluteFloor,
-      requestedNotionalUsd: absoluteFloor / (coverageFloor - 0.0001),
-    }, v9Exit)).toBe(true);
-    expect(hasMaterialExitCapacity({
-      executableCapacityUsd: absoluteFloor - 1,
-      requestedNotionalUsd: (absoluteFloor - 1) / coverageFloor,
-    }, v9Exit)).toBe(true);
+    const policy = {
+      absoluteCapacityBreakpoints: [{ value: 100_000, score: 0 }, { value: 200_001, score: 20 }],
+      coverageRatioBreakpoints: [{ value: 0.01, score: 0 }, { value: 0.125, score: 20 }],
+    };
+    for (const [executableCapacityUsd, requestedNotionalUsd, material] of [
+      [200_000, 1_600_001, false],
+      [200_001, 1_600_009, true],
+      [200_000, 1_600_000, true],
+    ] as const) {
+      expect(hasMaterialExitCapacity({ executableCapacityUsd, requestedNotionalUsd }, policy)).toBe(material);
+    }
   });
 
   it("treats a non-positive or non-finite executable capacity as immaterial", () => {
@@ -141,18 +137,27 @@ describe("shared component composition", () => {
       access: 100,
       settlement: 90,
       executionCertainty: 80,
-      capacity: 64,
+      capacity: 76,
       outputAssetQuality: 65,
       cost: 50,
     };
     const shared = composeExitComponentScore(components, EXIT_ROUTE_SCORING_TABLES.componentWeights);
-    expect(shared).toBe(76.25);
-    // Pure composition has no executable-evidence claim or route-family cap.
-    const domain = composeExitComponentScore(components, REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS);
-    expect(domain).toBe(76.25);
-
-    // The V9 pillar reads the same weights out of the validated policy
-    // envelope, so the ladder is bit-identical on both sides.
-    expect(composeExitComponentScore(components, envelope.policy.semantic.exit.componentWeights)).toBe(76.25);
+    expect(shared).toBe(79.25);
+    expect(computeRedemptionBackstopScore({
+      routeFamily: "stablecoin-redeem", executableCapacityUsd: 1_000_000,
+      accessScore: 100, settlementScore: 90, executionCertaintyScore: 80,
+      capacityScore: 76, outputAssetQualityScore: 65, costScore: 50,
+    }).score).toBe(79);
+    const route = makeExitRoute({
+      settlement: "immediate", execution: "deterministic-basket", outputQuality: "bluechip-collateral",
+      capacityEvidenceTier: "live-direct",
+      capacityCurve: [{
+        requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd: 1_000_000,
+        completionRatio: 1, executionCostBps: 100,
+      }],
+    });
+    const exit = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [route] }, envelope);
+    expect(exit.routes[0]?.components).toEqual(components);
+    expect(exit.score).toBe(79.25);
   });
 });

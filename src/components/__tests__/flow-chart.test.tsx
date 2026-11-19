@@ -284,14 +284,14 @@ describe("FlowChart", () => {
   });
 
   it("withholds a daily net containing an unproved hour", () => {
-    const hourTs = Date.UTC(2026, 9, 1) / 1000;
-    render(<FlowChart isLoading={false} hourly={[
-      { hourTs, mintVolumeUsd: 100, burnVolumeUsd: 0, netFlowUsd: 100 },
-      { hourTs: hourTs + 3600, mintVolumeUsd: 0, burnVolumeUsd: 0, netFlowUsd: null,
-        scanCoverage: { complete: false, unavailableReason: "scan-coverage-incomplete" } },
-      { hourTs: hourTs + 7200, mintVolumeUsd: 0, burnVolumeUsd: 50, netFlowUsd: -50 },
-      { hourTs: hourTs + 30 * 86400, mintVolumeUsd: 0, burnVolumeUsd: 0, netFlowUsd: 0 },
-    ]} />);
+    const start = Date.UTC(2026, 9, 1) / 1000;
+    render(<FlowChart isLoading={false} hourly={Array.from({ length: 30 * 24 }, (_, hour) => ({
+      hourTs: start + hour * 3600,
+      mintVolumeUsd: hour === 0 ? 100 : 0,
+      burnVolumeUsd: hour === 2 ? 50 : 0,
+      netFlowUsd: hour === 0 ? 100 : hour === 2 ? -50 : 0,
+      scanCoverage: hour === 1 ? { complete: false, unavailableReason: "scan-coverage-incomplete" } : undefined,
+    }))} />);
     expect(chartState.data[0]).toMatchObject({ mint: 100, burn: 50, net: null, scanComplete: false, cumulative: null, rollingNet: null });
     expect(chartState.data.at(-1)?.cumulative).toBeNull();
   });

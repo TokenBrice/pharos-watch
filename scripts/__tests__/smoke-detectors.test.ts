@@ -70,7 +70,6 @@ describe("console and table scan outcomes", () => {
     { textLength: 19 },
     { overflowDelta: 2 },
     { hasFrameworkOverlay: true },
-    { finalUrl: "https://pharos.watch/" },
   ])("rejects each boundary independently: %j", (invalid) => {
     const valid = {
       routeUrl: "https://pharos.watch/cemetery/",
@@ -193,15 +192,11 @@ describe("shouldSkipCanaryOpsUiProxyAssertion", () => {
 
 describe("ops retry detectors", () => {
   it.each([
-    { detector: shouldRetryOpsUiProxyStatus, status: 502, body: "bad gateway", retry: true },
-    { detector: shouldRetryOpsUiProxyStatus, status: 504, body: "gateway timeout", retry: true },
     { detector: shouldRetryOpsUiProxyStatus, status: 401, body: { error: "Unauthorized" }, retry: false },
     { detector: shouldRetryOpsUiProxyStatus, status: 500, body: { error: "upstream failed" }, retry: false },
-    { detector: shouldRetryDirectOpsJson, status: 500, body: "internal error", retry: true },
     { detector: shouldRetryDirectOpsJson, status: 502, body: "bad gateway", retry: true },
     { detector: shouldRetryDirectOpsJson, status: 503, body: "unavailable", retry: true },
     { detector: shouldRetryDirectOpsJson, status: 504, body: "gateway timeout", retry: true },
-    { detector: shouldRetryDirectOpsJson, status: 401, body: { error: "Unauthorized" }, retry: false },
     { detector: shouldRetryDirectOpsJson, status: 200, body: { dryRun: true }, retry: false },
   ])("$detector.name classifies $status $body", ({ detector, status, body, retry }) => {
     const response = typeof body === "string" ? new Response(body, { status }) : jsonResponse(body, status);

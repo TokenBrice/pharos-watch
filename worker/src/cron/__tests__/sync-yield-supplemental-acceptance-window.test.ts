@@ -289,13 +289,15 @@ describe("supplemental family cache acceptance window", () => {
   it("ignores a run-outcome row written by a different cache version", async () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
+    const morphoRow = supplementalFamilyCacheRow([], nowSec);
 
     installYieldCacheReader(vi.mocked(getCache), {
       ...freshRequiredFamilyRows(nowSec),
-      [getYieldSupplementalRunOutcomeCacheKey()]: cacheRow(
-        JSON.stringify({ version: 2, checkedAt: nowSec, degradedFamilies: ["morpho"] }),
-        nowSec,
-      ),
+      [getYieldSupplementalFamilyCacheKey("morpho")]: morphoRow,
+      [getYieldSupplementalRunOutcomeCacheKey()]: cacheRow({
+        version: 2, checkedAt: nowSec, degradedFamilies: ["morpho"],
+        familySnapshotHashes: { morpho: supplementalFamilySnapshotHash(morphoRow) },
+      }, nowSec),
     });
 
     const state = await loadYieldSyncState({ db, startSec: nowSec, chainRpcs: new Map() });

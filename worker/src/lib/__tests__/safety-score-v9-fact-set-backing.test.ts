@@ -1631,9 +1631,13 @@ describe("v10.19 frozen lender-book fact admission", () => {
     expect(repeated.quarantines).toEqual([]);
     expect(repeated.factSet.assets[0]!.lenderBook?.observation).toEqual(first.fixedInput.liveReserveProvenanceMap[assetId]!.lenderBookObservation);
     expect(retry.factSet).toEqual(repeated.factSet);
-    const other = context(book({ collateral: address(99) }));
-    const changed = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(other.fixedInput, other.extension);
+    const changed = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension({
+      ...first.fixedInput,
+      lenderCollateralBacking: source(first, { tokenToAssetId: { [`ethereum:${btc}`]: assetId } }),
+    }, first.extension);
     expect(changed.quarantines).toEqual([]);
+    expect(changed.factSet.sourceFingerprints).toEqual(repeated.factSet.sourceFingerprints);
+    expect(changed.factSet.assets[0]!.lenderBook?.collaterals[0]?.fallbackReason).toBe("self-collateral");
     expect(changed.factSet.v9FactSetDigest).not.toBe(repeated.factSet.v9FactSetDigest);
   });
 

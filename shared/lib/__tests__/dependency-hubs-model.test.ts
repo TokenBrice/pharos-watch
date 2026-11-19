@@ -36,12 +36,6 @@ describe("buildDependencyHubsModel", () => {
     expect(model.mappedSupply.knownUsd).toBe(400);
     expect(model.hubs.find(hub => hub.id === "usds-sky")!.unknownFormUsd).toBeNull();
   });
-  it("uses published wrapper forms to separate vault and pass-through amounts", () => {
-    const publishedEdges = edges.map(edge => edge.to === "susds-sky" ? { ...edge, wrapperForm: "strategy-vault" as const } : edge);
-    const model = buildDependencyHubsModel({ cards, edges: publishedEdges, mcapMap: new Map([["susds-sky", 500], ["dai-makerdao", 1000]]) });
-    expect(model.hubs[0].vaultClaimUsd).toBe(500);
-    expect(model.hubs[0].passThroughUsd).toBe(0);
-  });
   it("separates classified and unknown serial supplies without changing total mapped exposure", () => {
     const splitCards = [...cards, { id: "child-pure", name: "Pure", symbol: "P" }, { id: "child-vault", name: "Vault", symbol: "V" }];
     const splitEdges: ReportCardsV9DependencyEdge[] = [

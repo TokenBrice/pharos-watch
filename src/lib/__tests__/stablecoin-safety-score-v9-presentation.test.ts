@@ -206,21 +206,21 @@ describe("stablecoin V9 safety presentation", () => {
 
     const presentation = buildSafetyScoreV9Attribution(card);
 
-    // Six-decimal producer precision reads as noise in a sentence.
     expect(presentation.adverseMessages).toEqual(["Measured peg multiplier is 0.804."]);
-    // The issuer's gaps lead; ours are still named as ours rather than hidden.
-    expect(presentation.boundedGroups.map(({ key, messages }) => ({ key, messages }))).toEqual([
+    const visibleGroups = presentation.boundedGroups.map(({ label, messages }) => ({ label, messages }));
+    expect(JSON.stringify([presentation.adverseMessages, visibleGroups])).not.toMatch(
+      /peg:historical-performance|backing:(reserve-envelope|assurance-report)|missing-(reserve-composition|latest-assurance-report)/,
+    );
+    expect(visibleGroups).toEqual([
       {
-        key: "issuer-undisclosed",
+        label: "Issuer does not disclose",
         messages: ["No reserve composition is present in the exact fixed input."],
       },
       {
-        key: "published-evidence-expired",
+        label: "This was published, but our copy is out of date",
         messages: ["The published assurance report is outside our freshness window."],
       },
     ]);
-    // Machine keys must never reach the DOM.
-    expect(JSON.stringify(presentation.boundedGroups)).not.toContain("exit:missing-same-notional-route");
   });
 
   it("adapts numeric V9 breakdowns without inventing control weights", () => {

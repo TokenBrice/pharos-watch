@@ -1265,9 +1265,10 @@ describe("StablecoinMeta schema — mint authority", () => {
     })).toThrow(/requires at least one control/);
   });
 
-  it("validates Safe threshold and signer counts", () => {
+  it("rejects a Safe threshold above its owner count", () => {
     expect(() => parseMint({
-      controls: [makeSafeControl({ threshold: 4 }, { threshold: 4 })],
+      confidence: "probable",
+      controls: [makeSafeControl({ threshold: undefined }, { threshold: 4 })],
     })).toThrow(/threshold/);
   });
 

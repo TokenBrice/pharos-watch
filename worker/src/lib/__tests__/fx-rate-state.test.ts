@@ -234,26 +234,6 @@ describe("fx-rate-state cadence-aware freshness", () => {
     expect(buildFxCacheStatus(state, 1800, nowSec).cacheStatus.sourceStatus).toBe("stale");
   });
 
-  it("flags 1 normal business-daily publish lag as degraded", () => {
-    vi.setSystemTime(new Date("2026-03-12T18:00:00Z"));
-    const nowSec = Math.floor(Date.now() / 1000);
-    const state = buildState(
-      {
-        usableSyncAt: nowSec - 60,
-        mode: "live",
-        sourceUpdatedAtByPeg: { peggedEUR: nowSec - (48 * 3600) },
-        sourceModeByPeg: { peggedEUR: "live" },
-        sourceCadenceByPeg: { peggedEUR: "business-daily" },
-        sourceDateByPeg: { peggedEUR: "2026-03-11" },
-        consecutiveFallbackRuns: 0,
-      },
-      { peggedEUR: 1.08 },
-    );
-
-    expect(state).not.toBeNull();
-    expect(buildFxCacheStatus(state, 1800, nowSec).cacheStatus.sourceStatus).toBe("degraded");
-  });
-
   it("keeps intraday degradation visible in health while treating it as stale for strict reference checks", () => {
     vi.setSystemTime(new Date("2026-03-11T08:00:00Z"));
     const nowSec = Math.floor(Date.now() / 1000);

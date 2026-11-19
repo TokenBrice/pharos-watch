@@ -56,9 +56,9 @@ describe("adaptAttestationPdfIndex", () => {
   });
 
   it("rejects raw configured-slice drift above the existing two-point boundary", () => {
-    expect(() => adaptAttestationPdfIndex("", {
-      slices: [{ name: "Cash", pct: 102.01, risk: "low" }],
-    })).toThrow();
+    expect(() => adaptAttestationPdfIndex('<a href="/2026-08-31-report.pdf">Report</a>', {
+      slices: [{ name: "Cash", pct: 82.01, risk: "low" }, { name: "Fund", pct: 20, risk: "low" }],
+    })).toThrow("reserve percentages sum");
   });
 
   it.each(["2026-09-12-report.pdf", "USDU Examination Report - SEP 26 SIGNED.pdf"])("withholds freshness for unreviewed %s", (filename) => {

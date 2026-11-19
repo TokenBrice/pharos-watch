@@ -32,39 +32,34 @@ describe("runDataInvariantCanary", () => {
   });
 
   it("records shadow findings without changing scheduler health", async () => {
+    const okId = "dex-liquidity-current-publication";
+    const warnId = "dex-liquidity-global-row";
+    const results = [okId, warnId, ...ACTIVE_CANARY_CHECK_IDS.filter((id) => id !== okId && id !== warnId)]
+      .map((checkId) => ({
+        checkId,
+        status: checkId === warnId ? "degraded" : "ok",
+        severity: checkId === warnId ? "warning" : "info",
+        executionStatus: "completed", executionFailureReason: null,
+        durationMs: checkId === warnId ? 7 : 4,
+        ...(checkId === warnId ? { error: "warning" } : {}),
+      }));
     runAndPersistCanaryChecks.mockResolvedValueOnce({
       mode: "shadow",
       observedAt: 1_775_900_000,
-      totalChecks: 2,
-      okCount: 1,
+      totalChecks: results.length,
+      okCount: results.length - 1,
       degradedCount: 1,
       errorCount: 0,
       skippedCount: 0,
       worstStatus: "degraded",
       worstSeverity: "warning",
-      results: [
-        {
-          checkId: "ok-check",
-          status: "ok",
-          severity: "info",
-          executionStatus: "completed", executionFailureReason: null,
-          durationMs: 4,
-        },
-        {
-          checkId: "warn-check",
-          status: "degraded",
-          severity: "warning",
-          executionStatus: "completed", executionFailureReason: null,
-          durationMs: 7,
-          error: "warning",
-        },
-      ],
+      results,
     });
 
     const result = await runDataInvariantCanary(mockD1(), { mode: "shadow", observedAt: 1_775_900_000 });
 
     expect(result.status).toBe("ok");
-    expect(result.itemCount).toBe(2);
+    expect(result.itemCount).toBe(results.length);
     expect(runAndPersistCanaryChecks).toHaveBeenCalledWith(expect.anything(), {
       observedAt: 1_775_900_000,
       signal: undefined,
@@ -74,9 +69,11 @@ describe("runDataInvariantCanary", () => {
       mode: "shadow",
       observedStatus: "degraded",
       degradedCount: 1,
+      outputPublishedAt: 1_775_900_000,
       checks: [
-        { checkId: "ok-check", status: "ok", severity: "info", durationMs: 4 },
-        { checkId: "warn-check", status: "degraded", severity: "warning", durationMs: 7, error: "warning" },
+        { checkId: okId, status: "ok", severity: "info", durationMs: 4 },
+        { checkId: warnId, status: "degraded", severity: "warning", durationMs: 7, error: "warning" },
+        ...results.slice(2).map(() => expect.objectContaining({ status: "ok", severity: "info", durationMs: 4 })),
       ],
     });
   });
