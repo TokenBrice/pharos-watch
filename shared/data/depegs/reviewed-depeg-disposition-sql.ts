@@ -2,7 +2,13 @@ import { DISPUTED_AUDIT_VERDICTS } from "../../types/depeg-audit";
 
 const DISPUTED_VERDICTS_SQL = DISPUTED_AUDIT_VERDICTS.map((verdict) => `'${verdict}'`).join(", ");
 
-/** The alias is a static depeg_events table name or alias chosen by the reader. */
+/**
+ * The alias is a static depeg_events table name or alias chosen by the reader.
+ *
+ * An incident family is its root plus the incidents the root superseded. The lookup names both by
+ * key so every step is indexed; joining on the COALESCE of the two columns scanned all links per
+ * event. Keep SQL comments out of the string: some callers flatten it onto one line.
+ */
 export function reviewedDepegDisputeSql(
   event: "e" | "events" | "depeg_events",
   includeAutomatedFalsePositive = true,
@@ -17,8 +23,6 @@ export function reviewedDepegDisputeSql(
       SELECT member_link.event_id
         FROM depeg_resolver_incident_event_links source_link
         JOIN depeg_resolver_incidents owner ON owner.incident_key = source_link.incident_key
-        -- The family is its root plus the incidents it superseded. Naming both by key keeps every
-        -- lookup indexed; joining on the COALESCE of the two columns scanned all links per event.
         JOIN depeg_resolver_incident_event_links member_link ON member_link.incident_key IN (
           SELECT root.incident_key FROM depeg_resolver_incidents root
            WHERE root.incident_key = COALESCE(owner.superseded_by_incident_key, owner.incident_key)

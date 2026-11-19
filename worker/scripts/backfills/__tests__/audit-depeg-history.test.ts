@@ -258,7 +258,7 @@ describe("handleAuditDepegHistory method safety", () => {
     const rows = makeRows();
     const db = mockD1([
       { match: "WHERE e.ended_at IS NOT NULL ORDER BY e.started_at", rows },
-      { match: "key IN (", rows: [] },
+      { match: "FROM cache WHERE key IN (", rows: [] },
       ...additionalReads.map((match) => ({ match, rows })),
       {
         match: "FROM depeg_resolver_incident_event_links l",
