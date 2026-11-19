@@ -1166,6 +1166,19 @@ describe("chain dropout guard", () => {
     else expect(review?.expiresAt).toBe(reviewedAt + 14 * DAY);
   });
 
+  it("holds Legacy FRAX's reviewed Fraxtal exclusion permanently (far-future sentinel)", async () => {
+    const entry = REVIEWED_CHAIN_SUPPLY_COLLAPSES.find((candidate) => candidate.assetId === "frax-frax" && candidate.chainId === "fraxtal")!;
+    const asset: PeggedAsset = { ...usdg(), id: "frax-frax", circulating: { peggedUSD: 75_952_535 },
+      chainCirculating: { Ethereum: { current: 70_831_863 } } };
+    // Long past the retired 2026-12-03 expiry; a dated renewal would re-quarantine here.
+    const result = await runGuard(asset, { now: entry.reviewedAt + 400 * DAY, state: savedState(asset.id,
+      { chainId: "fraxtal", chainLabel: "Fraxtal", baselineUsd: 10_926_256, baselineObservedAt: entry.reviewedAt - 3 * DAY, quarantinedSince: entry.reviewedAt - 3 * DAY }) });
+    expect(getCirculatingRawOrNull(asset)).toBe(75_952_535);
+    expect(result.quarantinedAssetIds).toEqual([]);
+    expect(asset.supplyRestored).toBeUndefined();
+    expect(asset.supplyChainGuard?.chains[0].reviewedExclusion).toMatchObject({ reason: "reviewed-excluded", expiresAt: entry.excludeOmittedUntil });
+  });
+
   it("keeps low same-provider chart evidence quarantined and caches attempts hourly", async () => {
     const asset = usdg();
     mocks.chart.mockResolvedValue(chartPoint(0, NOW));

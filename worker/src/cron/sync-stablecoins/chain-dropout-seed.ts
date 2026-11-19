@@ -159,12 +159,16 @@ export const REVIEWED_CHAIN_SUPPLY_COLLAPSES: readonly ReviewedChainSupplyCollap
   // counting frxUSD and canonical L2 FRAX under id 6. Its list no longer carries a Fraxtal row and reports
   // $75,995,076 in total (Ethereum $70,872,282), against the $136,725,501 Pharos still carries with the
   // held $10,926,256 Fraxtal baseline. The omitted stock is frxUSD, tracked as its own asset. The review
-  // takes effect at the perimeter clock in SUPPLY_PERIMETER_CHANGES; re-read the list before renewing.
+  // takes effect at the perimeter clock in SUPPLY_PERIMETER_CHANGES. Re-read 2026-11-19 22:57 UTC
+  // (stablecoins.llama.fi/stablecoins?includePrices=true): id 6 totals $75,952,535 (Ethereum $70,831,863)
+  // with Fraxtal still absent, so the owner made the exclusion permanent (issue #2140). The registry has
+  // no no-expiry form: excludeOmittedUntil is the 2100-01-01 sentinel, and a restored Fraxtal row
+  // re-enters ordinary detection immediately.
   {
     assetId: "frax-frax", chainId: "fraxtal",
     policy: "exclude-omitted",
-    reviewedAt: Date.parse("2026-11-19T20:00:00Z") / 1000,
-    excludeOmittedUntil: Date.parse("2026-12-03T20:00:00Z") / 1000,
+    reviewedAt: Date.parse("2026-11-19T22:57:31Z") / 1000,
+    excludeOmittedUntil: Date.parse("2100-01-01T00:00:00Z") / 1000,
     evidenceUrl: "https://github.com/DefiLlama/peggedassets-server/pull/1001",
   },
   // Re-reviewed 2026-11-19 22:47 UTC: DefiLlama id 235 still lists no HyperEVM
