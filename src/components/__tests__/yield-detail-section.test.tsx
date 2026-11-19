@@ -398,9 +398,10 @@ describe("YieldDetailSection", () => {
     mockRankings([makeRanking({ excessYield: 3.55, benchmarkLabel: "CHF 3M compounded SARON", benchmarkRate: -0.05 })]);
     render(<YieldDetailSection stablecoinId="usdn-smardex" />);
     expect(screen.getByLabelText(/3.55 pp above CHF 3M compounded SARON \(-0.05%\)/).textContent?.replace(/\s+/g, " ")).toContain("+3.55 pp");
-    // The lead sentence spells the spread unit out; a move up is a glyph, not a colour.
+    // The lead sentence spells the spread unit out; a move up carries the glyph and the up tone.
     expect(screen.getByText(/APY over 30 days, 3\.55 percentage points above CHF 3M compounded SARON \(-0\.05%\)\./)).toBeTruthy();
     expect(screen.getByLabelText(/3.55 pp above/).textContent).toContain("▲");
+    expect(screen.getByLabelText(/3.55 pp above/).className).toContain("text-green-700");
   });
 
   it("keeps a USD history display fallback separate from the published foreign scoring hurdle", () => {
@@ -430,7 +431,7 @@ describe("YieldDetailSection", () => {
   it("normalizes sub-precision benchmark spreads without claiming a negative gap", () => {
     mockRankings([makeRanking({ excessYield: -0.0000596 })]);
     render(<YieldDetailSection stablecoinId="usdn-smardex" />);
-    expect(screen.getByText("+0.00 pp vs benchmark")).toBeTruthy();
+    expect(screen.getByText("+0.00 pp vs benchmark").className).toContain("text-muted-foreground");
     expect(screen.queryByText("-0.00 pp vs benchmark")).toBeNull();
   });
 

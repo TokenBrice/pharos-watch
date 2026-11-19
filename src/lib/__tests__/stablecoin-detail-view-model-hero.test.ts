@@ -7,6 +7,7 @@ import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { buildDetailHero } from "./stablecoin-detail-view-model.test-support";
 import { pegScoreColor } from "@/lib/severity-colors";
 import { METHODOLOGY_CONTEXT } from "@/lib/methodology-context";
+import { DIRECTION_TONE_CLASSES } from "@shared/lib/classification";
 
 const quietDeviations = vi.hoisted(() => ({ value: null as boolean | null }));
 vi.mock("@/lib/feature-flags", async (importOriginal) => {
@@ -82,9 +83,8 @@ describe("stablecoin detail hero view-model builder", () => {
       safePrevMonth: 950,
       hasPrevMonth: true,
     });
-    // Supply moves are not risk: neutral ink, the sign carries the direction.
-    expect(hero.market.supplyTrend.prevWeekTrendClass).toBe("text-foreground");
-    expect(hero.market.supplyTrend.prevMonthTrendClass).toBe("text-foreground");
+    expect(hero.market.supplyTrend.prevWeekTrendClass).toBe(DIRECTION_TONE_CLASSES.up);
+    expect(hero.market.supplyTrend.prevMonthTrendClass).toBe(DIRECTION_TONE_CLASSES.up);
   });
 
   it("derives hero display metrics and signal rail from raw detail inputs", () => {
@@ -165,14 +165,15 @@ describe("stablecoin detail hero view-model builder", () => {
     });
 
     expect(hero.market.supplyTrend.safePrevMonth).toBeNull();
-    expect(hero.market.prevDayTrendClass).toBe("text-foreground");
-    expect(hero.market.supplyTrend.prevWeekTrendClass).toBe("text-foreground");
+    expect(hero.market.prevDayTrendClass).toBe(DIRECTION_TONE_CLASSES.down);
+    expect(hero.market.supplyTrend.prevWeekTrendClass).toBe(DIRECTION_TONE_CLASSES.up);
     expect(hero.price.limitedDepegCoverageNote).toContain("Below $1.00M live-event floor");
 
     const pegMetric = hero.tertiaryMetrics.find((metric) => metric.key === "peg-score");
     expect(pegMetric?.display).toMatchObject({ value: "45", sub: "99.4% at peg" });
 
-    expect(hero.tertiaryMetrics.find((metric) => metric.key === "performance-vs-usd")?.display.value).toBe("+12.34%");
+    expect(hero.tertiaryMetrics.find((metric) => metric.key === "performance-vs-usd")?.display).toMatchObject({ value: "+12.34%", color: DIRECTION_TONE_CLASSES.up });
+    expect(hero.tertiaryMetrics.find((metric) => metric.key === "excess-yield")?.display.color).toBe(DIRECTION_TONE_CLASSES.down);
     expect(hero.desktopTertiaryMetrics.map((metric) => metric.key)).not.toContain("dews");
     expect(hero.signalRailItems.find((item) => item.key === "safety")).toMatchObject({
       primary: "B+",
@@ -663,18 +664,17 @@ describe("hero trend direction follows the printed percentage", () => {
   afterEach(() => { quietDeviations.value = null; });
   const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
 
-  it.each([false, true])("mutes a rounded zero and inks real moves neutrally (quiet=%s)", (quiet) => {
+  it.each([false, true])("mutes a rounded zero and tones real moves by direction (quiet=%s)", (quiet) => {
     quietDeviations.value = quiet;
     const trend = (mcap: number, prevDay: number) => buildDetailHero({ coin, mcap, prevDay }).market.prevDayTrendClass;
     expect(trend(100, 100)).toBe("text-muted-foreground");
     expect(trend(99.999, 100)).toBe("text-muted-foreground");
     expect(trend(100.001, 100)).toBe("text-muted-foreground");
-    // A market-cap move is not risk: no red or green, the sign carries the direction.
-    expect(trend(99, 100)).toBe("text-foreground");
-    expect(trend(101, 100)).toBe("text-foreground");
-    expect(trend(0, 100)).toBe("text-foreground");
+    expect(trend(99, 100)).toBe(DIRECTION_TONE_CLASSES.down);
+    expect(trend(101, 100)).toBe(DIRECTION_TONE_CLASSES.up);
+    expect(trend(0, 100)).toBe(DIRECTION_TONE_CLASSES.down);
     // Within the quiet threshold only the flag decides.
-    expect(trend(100.2, 100)).toBe(quiet ? "text-muted-foreground" : "text-foreground");
+    expect(trend(100.2, 100)).toBe(quiet ? "text-muted-foreground" : DIRECTION_TONE_CLASSES.up);
   });
 
   it("withholds the 24h change when current supply is partial", () => {

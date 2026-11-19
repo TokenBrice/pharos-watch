@@ -44,7 +44,7 @@ export const MINT_PRESSURE_TONE_CLASSES = {
   },
 } as const satisfies Record<MintPressureBand, { badge: string; value: string; panel: string }>;
 
-/** Receipt band and top minter/burner value text. */
+/** Mint and burn value text: receipt band, top minter/burner and counted event amounts. */
 export const FLOW_RECEIPT_TONE_CLASSES = {
   mint: "text-emerald-700 dark:text-emerald-400",
   burn: "text-red-700 dark:text-red-400",

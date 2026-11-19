@@ -23,6 +23,7 @@ import { formatCurrency, formatEventDate, formatProseList, formatSignedCurrency,
 import { clamp } from "@shared/lib/math";
 import { resolveMintBurnValuation } from "@shared/lib/mint-burn-valuation";
 import { getFlowDirectionUi } from "@/lib/flow-signal-ui";
+import { getNetColor } from "@shared/lib/classification/flows";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import {
@@ -52,7 +53,7 @@ interface FlowSummaryCardProps {
   stablecoinId: string;
 }
 
-/** Flows are not a risk verdict: signed figures stay neutral and carry a typographic minus. */
+/** Signed figures carry a typographic minus. */
 function formatSignedUsd(valueUsd: number): string {
   return formatSignedCurrency(valueUsd).replace("-", "−");
 }
@@ -65,8 +66,8 @@ const WINDOW_LONG_LABEL: Record<MintBurnNetWindow, string> = {
   "90d": "90 days",
 };
 const WINDOW_ADJECTIVE: Record<MintBurnNetWindow, string> = { "24h": "24-hour", "7d": "7-day", "30d": "30-day", "90d": "90-day" };
-const NEUTRAL_CHIP_CLASS =
-  "inline-flex items-center gap-1 rounded-full border border-border/70 bg-muted/40 px-2 py-0.5 text-2xs font-semibold text-foreground";
+/** Direction chip shape; its tone comes from `getFlowDirectionUi` (green minting, red burning, neutral otherwise). */
+const DIRECTION_CHIP_CLASS = "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-2xs font-semibold";
 /** Hairlines for the full 2×2 (phone) / 1×4 (sm+) net strip, by cell index. */
 const STRIP_CELL_BORDER_CLASS = [
   "",
@@ -219,6 +220,7 @@ function NetValue({ cell, className }: { cell: NetCell; className?: string }) {
     <FlowSignedNetValue
       net={cell.net}
       format={formatSignedUsd}
+      colorClassName={getNetColor}
       className={cn(cell.net.valueUsd === 0 && "text-muted-foreground", className)}
     />
   );
@@ -420,7 +422,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
         <div className="flex items-center gap-2">
           {/* A quiet coin's one sentence already says there was no activity. */}
           {isQuiet ? null : (
-            <span className={NEUTRAL_CHIP_CLASS}>
+            <span className={cn(DIRECTION_CHIP_CLASS, netSignal.badgeClass)}>
               {netDirection === "burning" ? <span aria-hidden="true">▼</span> : null}
               {netDirection === "minting" ? <span aria-hidden="true">▲</span> : null}
               {netSignal.label}
@@ -497,7 +499,9 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
                   {baselineDailyNetUsd != null ? (
                     <div className="min-w-0">
                       <dt className="pharos-label">Avg daily net · 30d</dt>
-                      <dd className="mt-0.5 pharos-numeric text-sm font-semibold text-foreground">{formatSignedUsd(baselineDailyNetUsd)}</dd>
+                      <dd className={cn("mt-0.5 pharos-numeric text-sm font-semibold", getNetColor(baselineDailyNetUsd))}>
+                        {formatSignedUsd(baselineDailyNetUsd)}
+                      </dd>
                     </div>
                   ) : null}
                 </dl>

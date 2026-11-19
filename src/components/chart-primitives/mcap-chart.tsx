@@ -7,7 +7,8 @@ import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title
 import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { usePreference } from "@/hooks/use-preferences";
-import { formatChartDate, formatCurrency, formatPercentChange, formatSignedPercent } from "@shared/lib/format";
+import { formatChartDate, formatCurrency, formatSignedPercent, roundForDisplay } from "@shared/lib/format";
+import { DIRECTION_TONE_CLASSES } from "@shared/lib/classification";
 import { CHART_BLUE } from "@/lib/chart-colors";
 import { ChartRangeToggle, ChartScaleToggle } from "@/components/chart-primitives/scale-toggle";
 import { ChartAreaGradient, DateTooltip, MonoYAxis, useNiceValueAxis, useSvgId } from "@/components/chart-primitives/axes";
@@ -221,13 +222,19 @@ function McapChartBody({
     };
   }, [stablecoinId, visibleData]);
 
-  // A supply change is a flow, not a risk verdict: neutral ink, explicit sign.
   const headerMcap = current ? current.mcap : readout?.mcap ?? null;
-  const headerDelta = current
-    ? current.mcap != null && current.prevDay != null && current.prevDay > 0
-      ? formatPercentChange(current.mcap, current.prevDay)
-      : null
-    : readout?.deltaPct != null ? formatSignedPercent(readout.deltaPct, 2) : null;
+  const currentDeltaRatio = current?.mcap != null && current.prevDay != null && current.prevDay > 0
+    ? relativeChangeRatio(current.mcap, current.prevDay)
+    : null;
+  const headerDeltaPct = current
+    ? currentDeltaRatio == null ? null : ratioToPercentage(currentDeltaRatio)
+    : readout?.deltaPct ?? null;
+  const headerDelta = headerDeltaPct == null ? null : formatSignedPercent(headerDeltaPct, 2);
+  // Direction tone from the printed value, as on the hero: a printed 0.00% stays muted.
+  const printedDeltaPct = headerDeltaPct == null ? 0 : roundForDisplay(headerDeltaPct, 2);
+  const headerDeltaClass = printedDeltaPct > 0
+    ? DIRECTION_TONE_CLASSES.up
+    : printedDeltaPct < 0 ? DIRECTION_TONE_CLASSES.down : "text-muted-foreground";
   const Title = embedded ? DetailSectionTitle : StablecoinModuleTitle;
 
   const header = (
@@ -242,7 +249,7 @@ function McapChartBody({
               {headerMcap != null ? formatCurrency(headerMcap) : "—"}
             </span>
             {headerDelta != null ? (
-              <span className="pharos-numeric text-xs text-muted-foreground">{headerDelta} 24h</span>
+              <span className={`pharos-numeric text-xs ${headerDeltaClass}`}>{headerDelta} 24h</span>
             ) : null}
             <span className="text-2xs text-muted-foreground">Line: daily UTC snapshots</span>
           </div>

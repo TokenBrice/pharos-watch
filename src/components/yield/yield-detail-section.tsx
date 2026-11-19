@@ -306,7 +306,12 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
                 <span
                   aria-label={formatYieldBenchmarkSpread(excessYield, benchmarkHurdleLabel, publishedBenchmarkRate)}
                   title="Spread over the benchmark, in percentage points"
-                  className="font-mono text-2xs tabular-nums text-muted-foreground"
+                  className={cn(
+                    "font-mono text-2xs tabular-nums",
+                    excessWithinDisplayPrecision
+                      ? "text-muted-foreground"
+                      : excessYield > 0 ? DIRECTION_TONE_CLASSES.up : DIRECTION_TONE_CLASSES.down,
+                  )}
                 >
                   {excessWithinDisplayPrecision ? null : (
                     <span aria-hidden="true">{excessYield >= 0 ? "▲\u00a0" : "▼\u00a0"}</span>
