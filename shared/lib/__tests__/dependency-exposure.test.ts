@@ -125,6 +125,15 @@ describe("look-through dependency exposure", () => {
     expect(withZero.indirect).toMatchObject({ complete: true, hasKnownUsd: true, overlapUpperBoundUsd: 0 });
   });
 
+  it("retains an observed indirect zero when the direct supply is unavailable", () => {
+    const edges = [edge("root", "bridge", "serial", null), edge("bridge", "observed", "serial", null)];
+    const result = exposureFootprint(["root"], edges, id => id === "observed"
+      ? { usd: 0, asOf: null, basis: "publication-circulating" }
+      : null, opts);
+    expect(result.direct).toMatchObject({ complete: false, hasKnownUsd: false });
+    expect(result.indirect).toMatchObject({ complete: true, hasKnownUsd: true, knownUsd: 0, overlapUpperBoundUsd: 0 });
+  });
+
   const capturedEdges = snapshot.edges as ReportCardsV9DependencyEdge[];
   const capturedSupply: SupplyOf = id => {
     const usd = (snapshot.supplyUsdById as Record<string, number>)[id];

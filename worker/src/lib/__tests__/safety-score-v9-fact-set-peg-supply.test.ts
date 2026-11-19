@@ -4,6 +4,7 @@ import { buildPeg, buildSupply } from "../safety-score-v9/fact-set-peg-supply";
 import { makeV9Extension, makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 import { factBuilderContext } from "./safety-score-v9-fact-builders.test-support";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
+import { getPegReferenceEvidence } from "../safety-score-v9/reference-evidence";
 
 describe("direct peg fact builder", () => {
   it.each([
@@ -106,6 +107,8 @@ describe("direct peg fact builder", () => {
         decisionAtSec: fixed.clockSec, budgetSec: 21_600, sessionOpenedAtSec: null, generation: "fixture-fx", policyVersion: 1,
       } },
     };
+    expect(getPegReferenceEvidence(context.fixedInput, assetId)).toEqual(generation === "history-only" ? undefined
+      : generation === "empty" ? {} : context.fixedInput.pegEvidenceById[assetId]);
     expect(buildPeg(context)).toMatchObject({
       status: { observationState: generation === "history-only" ? "known" : "bounded-unknown" },
       currentDeviationBps: generation === "history-only" ? 300 : null, pegScore: 91,

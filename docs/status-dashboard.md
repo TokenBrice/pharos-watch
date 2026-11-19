@@ -447,6 +447,8 @@ Depeg candidate hold receipts use the relevant candidate wait budget. Gaps that 
 Computed from publication/price coverage, blacklist gaps, on-chain integrity and reserve health. Read-failure impact is source-specific.
 `DATA_QUALITY_STATUS_RULES` in `worker/src/lib/status/evaluation-rules.ts` is the single ordered rule list. Cause order is preserved before overall-cause retention caps are applied.
 
+On-chain divergence uses a published native supply when available. Legacy rows without a native supply field use the published USD supply divided by price. An explicit unavailable native value skips the comparison. Kinesis wrapper cutover rows skip comparison with legacy Horizon observations because those observations cover the native program.
+
 Compact Pipeline summaries honor `stablecoinsCacheStatus`, `blacklistGapStatus`, `onchainSupplyQueryStatus` and `onchainSupplyMonitoring` before formatting counts. Unread source placeholders never become zero missing prices, zero gaps or zero stale feeds. These evidence gaps keep Pipeline in Triage attention without changing the severity thresholds below; successful observed zeros and healthy sibling measurements remain visible. The blacklist-gap row caps at Watch because the public ratio cannot prove the server-owned Critical tier; its Stale column names that cap.
 
 - `stale` if any of:

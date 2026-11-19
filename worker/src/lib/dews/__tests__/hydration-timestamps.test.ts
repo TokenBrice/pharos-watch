@@ -6,7 +6,7 @@ import { hydrateDexLiquidity, hydrateDexLiquidityHistory, hydrateDexPrices, hydr
 import { DEWS_PSI_FRESHNESS_BUDGET_SEC, DEWS_YIELD_RANKINGS_RETENTION_BUDGET_SEC } from "../source-state/budgets";
 import { computeDEWS } from "../../dews";
 import { makeDewsInput } from "../../__tests__/dews.test-support";
-import { makeDexLiquidityRow } from "../../../test-helpers/__shared/fixtures";
+import { makeAsset, makeDexLiquidityRow } from "../../../test-helpers/__shared/fixtures";
 import { createLatestSchemaFixtureTracker, createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { loadDewsSourceState } from "../source-state";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
@@ -17,6 +17,7 @@ import { mintBurnConfigKey } from "../../mint-burn-contract-identity";
 import { commitMintBurnMaterializedCoverage, decodeMintBurnScanCoverage, mintBurnScanCoverageAdmits, mintBurnScanCoverageStatements, mintBurnScanFingerprint, prepareMintBurnWriterEpochCoverage, type MintBurnScanSegment } from "../../mint-burn-pipeline/scan-coverage";
 import { computeFlowSignal, computeYieldSignal } from "../signal-families";
 import { assembleDewsScoringInput, loadDewsNativeHistory } from "../input-assembly";
+import { getDewsPrimaryQuoteClock, hasIndependentDewsVenues, readDewsDexAggregateFamilies } from "../reference-evidence";
 import type { StablecoinData } from "@shared/types/supply";
 
 function dexClock(asOfSec: number): string {
@@ -43,6 +44,23 @@ function nativeHistoryDb(rows: [string, number, number][]) {
 }
 
 describe("DEWS hydration timestamp admission", () => {
+  it("requires a fresh upstream quote and complete, independent aggregate lineage", () => {
+    const asset = makeAsset({
+      price: 1, priceSource: "binance", priceObservedAt: RUN_AT - 60, priceObservedAtMode: "upstream",
+    });
+    const aggregate = [{ providerFamily: "curve-dex", venueFamily: "curve-onchain" }];
+    const dex = { dexPriceUsd: 1, sourceTotalTvl: 100_000, updatedAt: RUN_AT };
+
+    expect(getDewsPrimaryQuoteClock(asset, RUN_AT)).toBe(RUN_AT - 60);
+    expect(getDewsPrimaryQuoteClock(asset, RUN_AT + 3600)).toBeNull();
+    expect(getDewsPrimaryQuoteClock({ ...asset, priceSource: "cached" }, RUN_AT)).toBeNull();
+    expect(readDewsDexAggregateFamilies(aggregate, 2)).toEqual([]);
+    expect(readDewsDexAggregateFamilies([{ ...aggregate[0], venueFamily: "unknown" }], 1)).toEqual([]);
+    expect(hasIndependentDewsVenues(asset, { ...dex, aggregateFamilies: readDewsDexAggregateFamilies(aggregate, 1) })).toBe(true);
+    expect(hasIndependentDewsVenues(asset, {
+      ...dex, aggregateFamilies: readDewsDexAggregateFamilies([{ ...aggregate[0], venueFamily: "binance" }], 1),
+    })).toBe(false);
+  });
   it.each(["ethereum", "tron", "both", "gap", "debt", "unpriced", "unresolved", "fingerprint", "disabled"])(
     "proves each admitted USDT chain during isolation: %s", async (state) => {
       const { sqlite, db } = createLatestSchemaSqlite();

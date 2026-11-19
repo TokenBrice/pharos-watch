@@ -349,7 +349,7 @@ export async function getDataQuality(
           // A legacy Horizon row under a canonical ID is native program supply.
           if (kinesis && (isKinesisWrapperSupplyCutoverActive(asset.id, now) || asset.supplySource === "onchain-total-supply")) continue;
           let nativeSupply = asset.circulatingNative;
-          if (nativeSupply === undefined && !kinesis && asset.price != null && asset.price > 0) {
+          if (nativeSupply === undefined && asset.price != null && asset.price > 0) {
             const circulatingUsd = getCirculatingRawOrNull(asset);
             if (circulatingUsd != null && circulatingUsd > 0) nativeSupply = circulatingUsd / asset.price;
           }

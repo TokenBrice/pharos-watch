@@ -340,10 +340,12 @@ describe("frontend API query descriptors", () => {
     );
   });
 
-  it("qualifies legacy xGLD yield in each Pages rankings decoder", async () => {
+  it.each(["source-key", "explicit-warning"] as const)("qualifies mismatched xGLD yield in each Pages rankings decoder by %s", async (evidence) => {
     const xgld = makeYieldRanking({
       id: "xgld-unitas", currentApy: 6, excessYield: 2, pharosYieldScore: 25, benchmarkRate: 4,
-      provenance: makeYieldProvenance({ sourceKey: "onchain:xgld-unitas" }),
+      ...(evidence === "source-key"
+        ? { provenance: makeYieldProvenance({ sourceKey: "onchain:xgld-unitas" }) }
+        : { warningSignals: ["benchmark-unit-mismatch"] }),
     });
     const usd = makeYieldRanking();
     const full = { rankings: [xgld, usd], riskFreeRate: 4, scalingFactor: 8, medianApy: 5, updatedAt: 1_800_000_000 };

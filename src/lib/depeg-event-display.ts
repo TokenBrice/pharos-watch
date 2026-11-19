@@ -15,6 +15,8 @@ import { classifyDepegClosure, isDepegRecovery } from "@shared/lib/depeg-closure
 import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 import { DEPEG_AUDIT_DISPUTED_BADGE, DEPEG_CLOSURE_LABELS } from "@shared/lib/classification";
 
+const META_DESCRIPTION_MAX_CHARS = 180;
+
 export const DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS = Date.parse("2026-07-18T00:00:00Z") / 1000;
 
 export type DepegEventDisplayInput = Pick<
@@ -229,10 +231,16 @@ export function buildDepegEventDescription(
   if (getDepegEventOnset(event).qualified) {
     return `${subject} depeg ${depegDirectionLabel(event.direction, event.peakBasis)}${deviation ? `, peak ${deviation}` : ""}${disputedQualifier(event)}. ${describeQualifiedOnset(event, includeTime)} ${outcome}`;
   }
-  if (!includeTime) {
-    return `${move} on ${formatEventLongDate(event.startedAt)}. ${outcome} Event timeline and Pharos methodology context.`;
+  const base = includeTime
+    ? `${move} at ${formatEventUtcTime(event.startedAt)} on ${formatEventLongDate(event.startedAt)}. ${outcome}`
+    : `${move} on ${formatEventLongDate(event.startedAt)}. ${outcome}`;
+  // A review qualifier can push the sentence past the 180-character meta budget; shorten the tail first.
+  const tails = includeTime ? ["Timeline and methodology.", ""] : ["Event timeline and Pharos methodology context.", "Timeline and methodology.", ""];
+  for (const tail of tails) {
+    const text = tail ? `${base} ${tail}` : base;
+    if (text.length <= META_DESCRIPTION_MAX_CHARS || !tail) return text;
   }
-  return `${move} at ${formatEventUtcTime(event.startedAt)} on ${formatEventLongDate(event.startedAt)}. ${outcome} Timeline and methodology.`;
+  return base;
 }
 
 export function buildDepegEventSynopsis(event: DepegEventDisplayInput): string {

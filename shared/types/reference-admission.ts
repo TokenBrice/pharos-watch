@@ -2,7 +2,7 @@ import { z } from "zod";
 import { FxMedianContributorSchema, FxReferenceSourceSchema, FxSourceCadenceSchema } from "./fx-reference";
 import { CanonicalTextSchema, UnixSecondsSchema } from "./safety-schema-primitives";
 
-export const ReferenceKindSchema = z.enum(["fx", "median", "fallback", "none"]);
+const ReferenceKindSchema = z.enum(["fx", "median", "fallback", "none"]);
 export const ReferenceContributorSchema = FxMedianContributorSchema;
 export type ReferenceContributor = z.output<typeof ReferenceContributorSchema>;
 

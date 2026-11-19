@@ -47,7 +47,7 @@ describe("formatRegisterDeathDate", () => {
 
 describe("formatCemeteryPeg", () => {
   it("maps every peg enum through the shared label authority", () => {
-    expect(formatCemeteryPeg("VAR")).toBe("CPI");
+    expect(formatCemeteryPeg("VAR")).toBe("Variable");
     expect(formatCemeteryPeg("OTHER")).toBe("Other");
     expect(formatCemeteryPeg("CNH")).toBe("Offshore Yuan");
     expect(formatCemeteryPeg("USD")).toBe("US Dollar");
@@ -81,8 +81,11 @@ describe("buildRegisterFilterOptions", () => {
   });
 
   it("labels the peg facet with the published peg name while keeping the enum as its value", () => {
-    const entries = [entry("v", "2026-01", { pegCurrency: "VAR" })];
+    const entries = [
+      entry("v", "2026-01", { pegCurrency: "VAR" }),
+      entry("v2", "2025-02", { pegCurrency: "VAR" }),
+    ];
     const pegOptions = buildRegisterFilterOptions(buildCemeteryStats(entries), buildCemeteryRegisterRows(entries));
-    expect(pegOptions.facets.peg).toEqual([{ value: "VAR", label: "CPI", count: 1 }]);
+    expect(pegOptions.facets.peg).toEqual([{ value: "VAR", label: "Variable", count: 2 }]);
   });
 });

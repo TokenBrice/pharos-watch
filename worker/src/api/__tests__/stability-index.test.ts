@@ -2,6 +2,7 @@ import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, it, expect, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { handleStabilityIndex } from "../stability-index";
+import { loadPsiSampleAverage } from "../../lib/psi-sample-projection";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { StabilityIndexResponseSchema } from "@shared/types/stability";
 import { getDisplayedPsi, getPsiBandStreak } from "@shared/lib/psi-view-model";
@@ -459,6 +460,8 @@ describe("daily PSI stored provenance compatibility", () => {
     const insertDay = sqlite.prepare("INSERT INTO stability_index (computed_at, score, band, components, input_snapshot) VALUES (?, ?, ?, '{}', ?)");
     insertDay.run(day, 60, "TREMOR", JSON.stringify({ referenceMarketRepair: { method: "samples", sampleScores: { [at]: 60 } } }));
     if (duplicate) insertDay.run(day, 88.2, "STEADY", "{}");
+    expect(await loadPsiSampleAverage(db, at, day + 86400 + 60)).toEqual({ avg: 90 });
+    expect(await loadPsiSampleAverage(db, at, day + 86400 + 60, true)).toEqual({ avg: 75 });
     const response = await handleStabilityIndex(db, new URL("https://x/api/stability-index"));
     expect(await readJsonResponse(response, 200)).toMatchObject({
       current: { score: 90, avg24h: 75, avg24hBand: "STEADY" },

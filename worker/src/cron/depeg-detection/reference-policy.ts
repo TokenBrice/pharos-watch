@@ -477,7 +477,7 @@ export function getTradedNativeEvidence(quote: NativePegQuote | undefined, now: 
   return signal == null ? null : { signal, quote: traded, venue };
 }
 
-export function findIndependentPool(
+function findIndependentPool(
   pools: DexPoolChallenger[] | undefined,
   asset: PegAssetBase,
   contributors: readonly PeerRelativeQuote[],
@@ -525,7 +525,7 @@ export function knownPoolVenue(pool: Pick<DexPoolChallenger, "protocol" | "sourc
   return independenceKey(pool.sourceFamily) ? independenceKey(pool.protocol) : "";
 }
 
-export function buildPeerReceipt(
+function buildPeerReceipt(
   asset: PegAssetBase,
   contributors: readonly PeerRelativeQuote[],
   native: ReturnType<typeof getTradedNativeEvidence>,

@@ -1,4 +1,4 @@
-import { BRZ_UNVERIFIED_PEAK_EVENT_IDS } from "@shared/data/depegs/backfill-replay-suppressions";
+import { BRZ_UNVERIFIED_PEAK_EVENT_IDS } from "@shared/data/depegs/brz-unverified-peak-event-ids";
 
 /**
  * Page-generation policy for `/depeg/[event]/`.

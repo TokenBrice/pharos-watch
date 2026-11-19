@@ -40,10 +40,3 @@ export function getQuoteMatchedNavPriceReference(
   return hasCurrencyEvidence ? null : legacyRate;
 }
 
-export function getNavPriceReference(
-  pegCurrency: string | undefined,
-  coins: PegSummaryCoins | undefined,
-  quote?: { priceObservedAt?: number | null } | null,
-): number | null {
-  return getQuoteMatchedNavPriceReference(pegCurrency ?? "USD", quote?.priceObservedAt, coins);
-}

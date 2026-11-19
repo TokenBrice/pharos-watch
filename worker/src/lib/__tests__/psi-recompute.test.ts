@@ -11,6 +11,27 @@ import {
   type PsiUniverseCache,
 } from "../psi-history-universe";
 import { buildPsiDayInput, buildPsiStabilityInput, psiDepegRow, psiSupplyPair, DAY } from "./psi.test-support";
+import { getPublishedReferenceEvidence, readAdmittedNativeEventObservation } from "../psi-reference";
+
+it("only passes repricing from the published generation, decision session and provider", () => {
+  const reopen = Date.UTC(2026, 7, 9, 21) / 1000;
+  const decision = reopen + 3600;
+  const observation = { pegKey: "peggedEUR", source: "openExchangeRates", cadence: "intraday",
+    observedAtSec: decision, usdPerUnit: 1.1 } as const;
+  const repricing = { source: observation.source, sessionOpenedAtSec: reopen,
+    preCloseUsdPerUnit: 1.09, firstInSessionObservedAtSec: reopen + 60 };
+  const selection = { kind: "fx", generation: "fixture-fx", observation, repricing } as const;
+  const denominator = { kind: "fx", generation: "fixture-fx", observation, usdPerUnit: 1.1 };
+
+  expect(getPublishedReferenceEvidence(selection, "other-generation", decision)).toBeUndefined();
+  expect(getPublishedReferenceEvidence(selection, selection.generation, decision)).toEqual({
+    ...denominator, preCloseUsdPerUnit: 1.09, firstInSessionObservedAtSec: reopen + 60,
+  });
+  expect(getPublishedReferenceEvidence(selection, selection.generation, decision + 7 * DAY)).toEqual(denominator);
+  expect(getPublishedReferenceEvidence({
+    ...selection, repricing: { ...repricing, source: "frankfurter" },
+  }, selection.generation, decision)).toEqual(denominator);
+});
 
 describe("buildSupplySnapshotMap", () => {
   it("returns an empty map for empty input", () => {
@@ -140,11 +161,14 @@ describe("buildStabilityInputForDay", () => {
   it("withholds an archived native AxCNH price with no offshore trade lineage", () => {
     const day = Date.UTC(2026, 7, 6) / 1000;
     const id = "axcnh-anchorx";
-    const result = buildStabilityInputForDay(day, day + 2 * DAY, [{
-      stablecoin_id: id, source: "live", peg_type: "peggedCNH", quote_mode: "native-peg",
+    const event = {
+      stablecoin_id: id, source: "live", peg_type: "peggedCNH", quote_mode: "native-peg" as const,
       peg_reference: 1, started_at: day + DAY - 3600, ended_at: null,
       start_price: 0.97, peak_deviation_bps: -300,
-    }], buildSupplySnapshotMap([{ stablecoin_id: id, snapshot_date: day, circulating_usd: 1e9 }]));
+    };
+    expect(readAdmittedNativeEventObservation(event, day + DAY, true)).toBeNull();
+    const result = buildStabilityInputForDay(day, day + 2 * DAY, [event],
+      buildSupplySnapshotMap([{ stablecoin_id: id, snapshot_date: day, circulating_usd: 1e9 }]));
     expect(result.openDepegsWithoutPrice).toBe(1);
     expect(result.depegs).toEqual([]);
   });

@@ -25,7 +25,7 @@ const FX_CALENDAR_DAILY_ROLLOVER_HOUR_UTC = 6;
 const ECB_PUBLICATION_OFFSET_SEC = 16 * HOUR_SECONDS;
 const berlinHour = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Berlin", hour: "2-digit", hourCycle: "h23" });
 /** A persisted per-peg source time further ahead of the reader clock than this is not admissible provenance. */
-export const FX_SOURCE_MAX_FUTURE_SKEW_SEC = 5 * 60;
+const FX_SOURCE_MAX_FUTURE_SKEW_SEC = 5 * 60;
 const SHA256_HEX_PATTERN = /^[0-9a-f]{64}$/;
 
 export type FxRateSyncMode = "live" | "cached-fallback";

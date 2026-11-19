@@ -110,6 +110,23 @@ const baseConfig: NextConfig = {
       if (splitChunks && typeof splitChunks === "object") {
         splitChunks.cacheGroups = {
           ...(splitChunks.cacheGroups ?? {}),
+          // Reuse the data and Lucide runtime that webpack otherwise emits in many route chunks.
+          pharosLogoData: {
+            test: /[\\/](?:logos|logo-variants\.generated)\.json$/,
+            name: "logo-data",
+            chunks: "all",
+            priority: 40,
+            enforce: true,
+            reuseExistingChunk: true,
+          },
+          iconRuntime: {
+            test: /[\\/]lucide-react[\\/]dist[\\/]esm[\\/](?!icons[\\/])/,
+            name: "icon-runtime",
+            chunks: "all",
+            priority: 40,
+            enforce: true,
+            reuseExistingChunk: true,
+          },
           // Keep generic store/React helpers out so non-chart consumers do not load Recharts.
           rechartsVendor: {
             test: rechartsVendorPattern,
