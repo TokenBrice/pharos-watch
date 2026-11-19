@@ -1,4 +1,3 @@
-import { composeDescription } from "./page-metadata";
 import { hasUnverifiedDepegPeak } from "./depeg-event-config";
 import type { DepegEvent } from "@shared/types/peg";
 import { formatDeviationBps, formatIsoDate, formatLongDate, formatPrice, formatUsdPriceAdaptive } from "@shared/lib/format";
@@ -17,6 +16,19 @@ import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 import { DEPEG_AUDIT_DISPUTED_BADGE, DEPEG_CLOSURE_LABELS } from "@shared/lib/classification";
 
 const META_DESCRIPTION_MAX_CHARS = 180;
+
+/** Joins whole sentences within the budget; a part with no fitting alternative is dropped. */
+function composeWithin(parts: ReadonlyArray<string | readonly string[]>, maxLength: number): string {
+  let out = "";
+  for (const part of parts) {
+    for (const text of typeof part === "string" ? [part] : part) {
+      if (!text) continue;
+      const next = out ? `${out} ${text}` : text;
+      if (next.length <= maxLength) { out = next; break; }
+    }
+  }
+  return out || (typeof parts[0] === "string" ? parts[0] : parts[0]?.[0] ?? "");
+}
 
 export const DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS = Date.parse("2026-07-18T00:00:00Z") / 1000;
 
@@ -231,7 +243,7 @@ export function buildDepegEventDescription(
   const outcome = buildDepegEventOutcome(event, false);
   // Whole sentences only, within the search-snippet budget: a part that does not fit is dropped.
   if (getDepegEventOnset(event).qualified) {
-    return composeDescription([
+    return composeWithin([
       `${subject} depeg ${depegDirectionLabel(event.direction, event.peakBasis)}${deviation ? `, peak ${deviation}` : ""}${disputedQualifier(event)}.`,
       describeQualifiedOnset(event, includeTime),
       outcome,
@@ -240,7 +252,7 @@ export function buildDepegEventDescription(
   const when = includeTime
     ? `at ${formatEventUtcTime(event.startedAt)} on ${formatEventLongDate(event.startedAt)}`
     : `on ${formatEventLongDate(event.startedAt)}`;
-  return composeDescription([
+  return composeWithin([
     `${move} ${when}.`,
     outcome,
     includeTime ? ["Timeline and methodology."] : ["Event timeline and Pharos methodology context.", "Timeline and methodology."],
