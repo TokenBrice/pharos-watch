@@ -173,7 +173,7 @@ describe("depeg event page metadata and briefing", () => {
       .map((match) => JSON.parse(match[1]))
       .find((entry) => entry["@type"] === "NewsArticle");
     expect(article).toBeDefined();
-    expect(article).not.toHaveProperty("datePublished");
+    expect(article).toHaveProperty("datePublished");
     expect(html).toContain("Recorded detector start");
     expect(html).toContain("First admissible observation");
     expect(html).toContain("no admissible onset is documented");

@@ -204,6 +204,18 @@ export function buildDepegEventTitle(event: DepegEventDisplayInput, includeTime:
   return `${base}: ${direction}${qualifier}`;
 }
 
+/** Search-snippet <title>: fits "<title> | Pharos" in 70 characters, dropping the figure before its qualifier. */
+export function buildDepegEventMetaTitle(event: DepegEventDisplayInput, includeTime: boolean): string {
+  const full = buildDepegEventTitle(event, includeTime);
+  if (`${full} | Pharos`.length <= 70) return full;
+  const date = formatEventTimestamp(event.startedAt, includeTime);
+  const base = getDepegEventOnset(event).qualified ? `${event.symbol} Depeg Recorded ${date}` : `${event.symbol} Depeg, ${date}`;
+  const direction = `${event.direction === "below" ? "Below" : "Above"} ${event.peakBasis ? "Peer Median" : "Peg"}`;
+  const qualifier = disputedQualifier(event);
+  return [`${base}: ${direction}${qualifier}`, `${base}: ${direction}`, base]
+    .find((title) => `${title} | Pharos`.length <= 70) ?? base;
+}
+
 export function getDepegEventClosurePresentation(event: EventClosureInput) {
   const closure = hasUnverifiedAnalyticRecovery(event) ? "unknown_closed" : classifyDepegClosure(event);
   const isRecovery = isDepegRecovery(closure);

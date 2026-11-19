@@ -36,7 +36,7 @@ import {
 import {
   buildDepegEventDescription,
   buildDepegEventSynopsis,
-  buildDepegEventTitle,
+  buildDepegEventMetaTitle, buildDepegEventTitle,
   depegDirectionLabel,
   formatEventNavigationLabel,
   formatEventPrice,
@@ -95,7 +95,7 @@ export async function generateMetadata(
   }
   const coin = TRACKED_META_BY_ID.get(event.stablecoinId);
   const isCollision = COLLIDING_DEPEG_EVENT_SLUGS.has(event.slug);
-  const title = buildDepegEventTitle(event, isCollision);
+  const title = buildDepegEventMetaTitle(event, isCollision);
   const description = buildDepegEventDescription(event, isCollision, coin?.name ?? null);
   return buildPageMetadata({
     title,
@@ -292,7 +292,8 @@ export default async function DepegEventPage(
     id: canonicalUrl,
     headline: heroTitle,
     description: heroDescription,
-    ...(!qualified ? { datePublished: formatIsoTimestamp(event.startedAt) } : {}),
+    // The record's publication date is its detector start, whether or not the onset is qualified.
+    datePublished: formatIsoTimestamp(event.startedAt),
     ...(event.endedAt != null || !qualified ? { dateModified: formatIsoTimestamp(modifiedAtSeconds) } : {}),
     image: [`${SITE_URL}${getPageSocialPreview(hasUnverifiedDepegPeak(event) ? "/depeg/" : canonicalUrl).url}`],
     mainEntityOfPage: canonicalUrl,
