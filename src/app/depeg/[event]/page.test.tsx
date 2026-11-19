@@ -173,7 +173,6 @@ describe("depeg event page metadata and briefing", () => {
       .map((match) => JSON.parse(match[1]))
       .find((entry) => entry["@type"] === "NewsArticle");
     expect(article).toBeDefined();
-    // The record's publication date is present; the onset itself stays qualified in the page body.
     expect(article).toHaveProperty("datePublished");
     expect(html).toContain("Recorded detector start");
     expect(html).toContain("First admissible observation");
