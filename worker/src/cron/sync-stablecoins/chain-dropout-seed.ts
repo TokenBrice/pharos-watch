@@ -167,13 +167,15 @@ export const REVIEWED_CHAIN_SUPPLY_COLLAPSES: readonly ReviewedChainSupplyCollap
     excludeOmittedUntil: Date.parse("2026-12-03T20:00:00Z") / 1000,
     evidenceUrl: "https://github.com/DefiLlama/peggedassets-server/pull/1001",
   },
-  // HyperEVM block 50654180 reads 43,067.502661 frxUSD, already included under
-  // the provider's Hyperliquid L1 row; exclude the omitted old $3.749M identity.
+  // Re-reviewed 2026-11-19 22:47 UTC: DefiLlama id 235 still lists no HyperEVM
+  // row (Hyperliquid L1 $43,034.45) and finalized HyperEVM block 51719285 reads
+  // 43,067.502661 frxUSD, unchanged since block 50654180; keep the old $3.749M
+  // identity excluded.
   {
     assetId: "frxusd-frax", chainId: "hyperevm",
     policy: "exclude-omitted",
-    reviewedAt: Date.parse("2026-11-07T19:45:46Z") / 1000,
-    excludeOmittedUntil: Date.parse("2026-11-21T19:45:46Z") / 1000,
+    reviewedAt: Date.parse("2026-11-19T22:47:00Z") / 1000,
+    excludeOmittedUntil: Date.parse("2026-12-03T22:47:00Z") / 1000,
     evidenceUrl: "https://purrsec.com/token/0x80eede496655fb9047dd39d9f418d5483ed600df",
   },
   // BSC block 133360128 (2026-11-13 13:31 UTC): the registry iUSD token has zero total supply, as

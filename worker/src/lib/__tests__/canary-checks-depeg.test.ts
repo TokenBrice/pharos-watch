@@ -24,7 +24,7 @@ const psi = PSI_HISTORICAL_PRICE_GAP_REVIEWS as StablecoinPriceGapReview[];
 const gaps = STABLECOIN_PRICE_GAP_REVIEWS as StablecoinPriceGapReview[];
 const gapCount = gaps.length;
 const authored = psi.slice();
-const [, review] = DEPEG_BLIND_EVENT_REVIEWS; // USD: no reference-market hold
+const [review] = DEPEG_BLIND_EVENT_REVIEWS; // USD: no reference-market hold
 
 afterEach(() => {
   fixtures.closeAll();
@@ -331,10 +331,10 @@ describe("depeg canary checks", () => {
 
   it("validates the blind review registry and rejects duplicates", () => {
     for (const entry of DEPEG_BLIND_EVENT_REVIEWS) {
-      const at = entry.eventId === 91044 ? 1794694800 : 1795110060;
+      const at = 1795110060;
       expect([DepegBlindEventReviewSchema.safeParse(entry).success, entry.reviewedAt, entry.expiresAt]).toEqual([true, at, at + 604800]);
     }
-    expect([...resolveDepegBlindEventReviews(1795110060).keys()]).toEqual([91044, 91042, 90793, 90748, 84563, 90804, 91037, 90807, 89787, 90773, 90738, 91052]);
+    expect([...resolveDepegBlindEventReviews(1795110060).keys()]).toEqual([91042, 90793, 90748, 84563, 90804, 91037, 90807, 89787, 90773, 90738, 91052]);
     expect(resolveDepegBlindEventReviews(review.reviewedAt, [review, review]).size).toBe(0);
     expect(resolveDepegBlindEventReviews(review.reviewedAt, [review, { ...review, reason: "" }]).size).toBe(0);
   });

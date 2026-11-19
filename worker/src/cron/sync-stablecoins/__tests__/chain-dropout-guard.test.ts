@@ -1132,7 +1132,7 @@ describe("chain dropout guard", () => {
   });
 
   it.each([0, 14 * DAY])("expires frxUSD's reviewed omitted HyperEVM identity after 14 days (%s)", async (offset) => {
-    const reviewedAt = Date.parse("2026-11-07T19:45:46Z") / 1000;
+    const reviewedAt = Date.parse("2026-11-19T22:47:00Z") / 1000;
     const asset: PeggedAsset = { ...usdg(), id: "frxusd-frax", circulating: { peggedUSD: 91_508_143.55 },
       chainCirculating: { Ethereum: { current: 91_465_070.06 }, "Hyperliquid L1": { current: 43_073.49 } } };
     const state = savedState(asset.id, { chainId: "hyperevm", chainLabel: "HyperEVM", baselineUsd: 3_749_116.70,
