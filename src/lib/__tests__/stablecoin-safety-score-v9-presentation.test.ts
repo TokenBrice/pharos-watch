@@ -142,6 +142,13 @@ describe("stablecoin V9 safety presentation", () => {
     weightedContribution: Number((scores[key] * weight).toFixed(6)),
   }));
 
+  it("labels the whole-reserve fallback as no admitted composition", () => {
+    const card = makeV9Card({ pillars: BREAKDOWN_PILLARS });
+    card.breakdowns = breakdownsFixture();
+    card.breakdowns.backing.components[0].key = "reserve:unclassified-residual";
+    expect(buildStablecoinSafetyScoreV9Presentation(card).pillars[0].breakdown!.groups[0].rows[0].label).toBe("No admitted reserve composition");
+  });
+
   it("keeps the three named pillars without recreating V8 dimensions", () => {
     const card = makeV9Card();
 

@@ -18,34 +18,34 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-29",
-    "reviewer": "GLM issue-sweep 2026-09-29 (ResvMultipliGate); Pharos reserve research",
+    "reviewedAt": "2026-11-19",
+    "reviewer": "GLM reserve renewal 2026-11-19 (stale-composition drain)",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Gate GUSD Flexible US Treasury product page (reviewed 2026-09-29)",
+        "label": "Gate exchange proof-of-reserves announcement, October 18, 2026 snapshot (published 2026-10-21)",
+        "url": "https://www.gate.com/announcements/article/102351"
+      },
+      {
+        "label": "Gate GUSD Flexible US Treasury product page (reviewed 2026-11-19)",
         "url": "https://www.gate.com/earn/staking/GUSD"
       },
       {
-        "label": "Gate GUSD hub page (reviewed 2026-09-29)",
+        "label": "Gate GUSD hub page (reviewed 2026-11-19)",
         "url": "https://www.gate.com/gusd"
       },
       {
-        "label": "Gate GUSD minting and RWA help article (2025-08-29; reviewed 2026-09-29)",
+        "label": "Gate GUSD minting and RWA help article (2025-08-29; reviewed 2026-11-19)",
         "url": "https://www.gate.com/help/lend/staking/46831"
       },
       {
-        "label": "Gate exchange proof-of-reserves announcement, July 27, 2026 snapshot (published 2026-08-03)",
-        "url": "https://www.gate.com/announcements/article/100959"
-      },
-      {
-        "label": "Gate exchange proof-of-reserves page (reviewed 2026-09-29)",
+        "label": "Gate exchange proof-of-reserves page (reviewed 2026-11-19; latest audit time 2026-10-18)",
         "url": "https://www.gate.com/proof-of-reserves"
       }
     ],
-    "rationale": "Re-verified 2026-09-29. The GUSD product page (total subscription 202.6 million GUSD, about $202.3 million, 3.50% APR) describes a principal-protected product backed by tokenized treasury bills and stablecoins with returns from Gate ecosystem revenue, Treasury RWAs, and stablecoin-backed yield assets; the GUSD hub page adds that holdings are reinforced with USDC reserves in U.S. dollars and short-term Treasuries. Every statement is category-level. The help article of 2025-08-29 commits to clear reserve audit reports and proof of funds from partner custodial banks on the product page, but no report, instrument schedule, allocation weight, named reserve vehicle, or custodian list is published on any reviewed surface. Gate's monthly exchange proof of reserves (latest reviewed snapshots: July 27, 2026 published August 3; August 19, 2026 announced August 24) books GUSD as a user asset whose platform reserves are held in the same tokens, which evidences custody of customer GUSD tokens rather than the assets backing issued GUSD. Subscription inputs USDT, USDC, and USD1 are minting inputs, and exchange custody balances are not reserve weights. The single undisclosed envelope is therefore retained with no defensible split.",
-    "compositionBasis": "Gate GUSD product, hub, and help disclosures plus Gate exchange proof-of-reserves announcements, all reviewed 2026-09-29; Gate publishes no product-level reserve composition",
-    "compositionAsOf": "2026-09-29",
+    "rationale": "Re-verified 2026-11-19; standing structure re-dated to this re-verification under the conservative-tier rule (the single row carries a high risk tier). The GUSD product page still describes a principal-protected product backed by tokenized treasury bills and stablecoins with returns from Gate ecosystem revenue, Treasury RWAs, and stablecoin-backed yield assets; the hub page still claims reinforcement with USDC reserves in U.S. dollars and short-term Treasuries. Every statement remains category-level. The help article's 2025-08-29 commitment to reserve audit reports and partner-custodial-bank proof of funds on the product page remains unfulfilled: no report, instrument schedule, allocation weight, named reserve vehicle, or custodian list is published on any reviewed surface. Gate's monthly exchange proof of reserves (latest dated snapshot October 18, 2026, published October 21; total reserves $8.688 billion, overall reserve ratio 118.49%) books GUSD as a user asset whose platform reserves are held in the same tokens, which evidences custody of customer GUSD tokens rather than the assets backing issued GUSD. Subscription inputs USDT, USDC, and USD1 are minting inputs, and exchange custody balances are not reserve weights. No slice weight was computed because Gate publishes none; the single undisclosed envelope is retained at 100 with no defensible split.",
+    "compositionBasis": "Gate GUSD product, hub, and help disclosures re-verified 2026-11-19 plus Gate exchange proof-of-reserves announcement (October 18, 2026 snapshot, published October 21); Gate publishes no product-level reserve composition, so the unchanged standing structure is re-dated to this re-verification",
+    "compositionAsOf": "2026-11-19",
     "scope": "full-composition",
     "knownUnknownExposure": "Gate does not publish current backing weights, instrument identities, reserve-vehicle terms, custody providers, legal segregation, or a product-specific reconciliation of issued GUSD to backing assets.",
     "knownUnknownExposurePct": 100,

@@ -102,29 +102,29 @@
     }
   },
   "proofOfReserves": {
-    "type": "agreed-upon-procedures",
-    "url": "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20September%202026.pdf",
-    "provider": "KAP Jojo Sunarjo & Rekan (registered public accountant; September 2026 agreed-upon-procedures report, not an audit opinion)",
-    "attestorTier": "niche",
-    "cadence": "ad-hoc",
+    "type": "attestation",
+    "url": "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Account%20IDRX%20as%20of%20Oct%2028%2C%202026.pdf",
+    "provider": "Crowe Teramihardja, Pradhono & Chandra (registered public accountant; SPA 3000 limited-assurance Reserve Account Report, October 2026)",
+    "attestorTier": "regional",
+    "cadence": "monthly",
     "attestorJurisdiction": "Indonesia",
-    "attestorLicense": "Registered Public Accountant licence 0444/KM.1/2013",
+    "attestorLicense": "Registered Public Accountants licence 487/KM.1/2011",
     "latestReport": {
-      "periodEnd": "2026-09-30",
-      "publishedAt": "2026-10-09",
-      "publishedAtBasis": "explicit",
-      "assuranceMethod": "agreed-upon-procedures",
+      "periodEnd": "2026-10-29",
+      "publishedAt": "2026-11-06",
+      "publishedAtBasis": "signed-date-standin",
+      "assuranceMethod": "review",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "partial",
-      "reviewer": "Sol curation campaign 2026-10-09 (Lane19Sygnum)",
+      "reviewer": "GLM reserve renewal 2026-11-19 (PoR lockstep)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "IDRX September 30, 2026 AUP; signed pages 3–4 rendered, signed October 7; reviewed 2026-10-09T10:35:35Z; enumerated chain subtotal does not establish whole-token liability coverage",
-          "url": "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20September%202026.pdf"
+          "label": "Crowe Teramihardja, Pradhono & Chandra IDRX Reserve Account Report as of October 29, 2026 at 14:12 WIB; SPA 3000 limited assurance, report 0008/TPC-AS/TBD/26, signed Jakarta November 6, 2026; file name and index record state October 28; circulation census enumerates seven approved chains, not the registry's full deployment list",
+          "url": "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Account%20IDRX%20as%20of%20Oct%2028%2C%202026.pdf"
         },
         {
-          "label": "IDRX public document API index record 19, created 2026-10-09T03:14:33.747Z; observed 2026-10-09T10:35:35Z",
+          "label": "IDRX public document index record 21, created 2026-11-11T05:20:49.445Z; observed 2026-11-19",
           "url": "https://idrx.co/api/documents?page=1&take=100"
         }
       ]

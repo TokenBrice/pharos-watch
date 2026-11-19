@@ -18,36 +18,32 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-04",
-    "reviewer": "Codex Goldfish designated-wallet verification",
-    "confidence": "verified",
+    "reviewedAt": "2026-11-19",
+    "reviewer": "GLM reserve renewal 2026-11-19 (stale-composition drain)",
+    "confidence": "probable",
     "sources": [
       {
-        "label": "Goldfish current collateral and trust disclosure (accessed 2026-09-04)",
-        "url": "https://goldfishgold.com/collateral"
+        "label": "Goldfish transparency reserve disclosure dated October 20, 2026: 1,000,000 troy oz Happy 2 in-situ gold in the GGBR Trust (25,000,000 GGBR supply observation separately dated October 27, 2026; accessed 2026-11-19)",
+        "url": "https://goldfishgold.com/transparency"
       },
       {
-        "label": "Goldfish current risk disclosures (accessed 2026-09-04)",
+        "label": "Goldfish current risk disclosures (accessed 2026-11-19)",
         "url": "https://goldfishgold.com/risk-disclosures"
-      },
-      {
-        "label": "Goldfish current terms (accessed 2026-09-04)",
-        "url": "https://goldfishgold.com/terms-of-service"
-      },
-      {
-        "label": "I-ON Digital June 30, 2026 Form 10-Q, filed August 19, 2026: GGBR lease and retained ION.au ownership/control",
-        "url": "https://www.sec.gov/Archives/edgar/data/1580490/000149315226039217/form10-q.htm"
       },
       {
         "label": "GGBR issuer release, September 9, 2026: announced August 19 trust restructuring and named trustee",
         "url": "https://www.globenewswire.com/news-release/2026/09/09/3358496/0/en/ggbr-inc-announces-new-trust-based-collateral-structure-for-goldfish-tokens.html"
+      },
+      {
+        "label": "I-ON Digital June 30, 2026 Form 10-Q, filed August 19, 2026: GGBR lease and retained ION.au ownership/control",
+        "url": "https://www.sec.gov/Archives/edgar/data/1580490/000149315226039217/form10-q.htm"
       }
     ],
-    "rationale": "The September 4, 2026 review recorded issuer disclosure of 1,000,000 Happy 2 in-situ ounces held by the GGBR Trust behind 25,000,000 GGBR (approximately 40:1). I-ON Digital's June 30, 2026 Form 10-Q, filed August 19, describes the earlier ION.au lease and retained ownership and/or management control. GGBR's September 9, 2026 issuer release says an August 19 trust restructuring replaced that lease-based intermediary and identifies Le Petit Bouffant, Ltd as trustee. The executed trust agreement, transfer/title instruments and geological report were not obtained, so the later issuer disclosure does not independently establish current legal title or safeguards. No reserve weight or composition date is refreshed.",
-    "compositionBasis": "Goldfish current collateral and trust disclosures: Happy 2 in-situ gold claims held by GGBR Trust for GGBR holders",
-    "compositionAsOf": "2026-09-04",
+    "rationale": "Renewal from the issuer transparency page (reached through the collateral link, accessed 2026-11-19), whose reserve disclosure is dated October 20, 2026: the GGBR Trust holds 1,000,000 troy ounces of Happy 2 in-situ gold for the beneficiaries of all 25,000,000 GGBR outstanding (approximately 40:1; the supply observation is separately dated October 27, 2026), unchanged since the September 4, 2026 review. The issuer discloses no other asset in the trust's reserve book, so the full book remains the single in-situ gold slice at 100%; no split was computed. The issuer's risk disclosures also describe trust holdings of digital assets and cash without reconciling them to this figure, so confidence is probable, not verified. I-ON Digital's Form 10-Q for the quarter ended September 30, 2026 was not filed by its November 16, 2026 due date (Form 12b-25 per EDGAR-tracked coverage). The executed trust agreement, transfer and title instruments and geological report remain unpublished. The slice keeps its conservative high risk tier.",
+    "compositionBasis": "Goldfish transparency reserve disclosure dated October 20, 2026: Happy 2 in-situ gold claims held by GGBR Trust for GGBR holders",
+    "compositionAsOf": "2026-10-20",
     "scope": "full-composition",
-    "knownUnknownExposure": "GGBR Inc. and the issuer-disclosed trustee Le Petit Bouffant, Ltd are identified. I-ON Digital's June 30, 2026 filing documents the historical ION.au lease intermediary; the issuer's September 9 release announces its replacement effective August 19 by the GGBR Trust. Current support still references ION.au and July 2025 risk disclosures describe digital assets and cash. The executed trust deed, title-transfer evidence, any remaining upstream custody allocation, legal enforceability and reconciliation remain unresolved. This review does not infer a different reserve allocation percentage.",
+    "knownUnknownExposure": "GGBR Inc. and the issuer-disclosed trustee Le Petit Bouffant, Ltd are identified. I-ON Digital's June 30, 2026 filing documents the historical ION.au lease intermediary; the issuer's September 9 release announces its replacement effective August 19 by the GGBR Trust. The risk disclosures re-read 2026-11-19 still state the Issuer holds only asset-backed digital assets and a very small amount of cash, which the issuer has not reconciled with the trust's in-situ gold. I-ON Digital's Form 10-Q for the quarter ended September 30, 2026 was not filed by its November 16, 2026 due date, so no current intermediary filing exists. The executed trust deed, title-transfer evidence, any remaining upstream custody allocation, legal enforceability and reconciliation remain unresolved. This review does not infer a different reserve allocation percentage.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

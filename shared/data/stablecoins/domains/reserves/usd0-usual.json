@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Hashnote USYC",
-      "pct": 100,
+      "pct": 1.9884,
       "risk": "low",
       "coinId": "usyc-hashnote",
       "depType": "collateral",
@@ -17,36 +17,143 @@
       ],
       "liquidityHorizon": "one-day",
       "sourceKey": "evm-branch-balances:ethereum:0x136471a34f6ef19fe571effc1ca711fdb8e49f2b"
+    },
+    {
+      "name": "U0R bUSD0 Zero Rate Vault",
+      "pct": 82.4198,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Usual U0R vault (USD0 loans collateralized by bUSD0)",
+      "riskFactors": [
+        "counterparty",
+        "credit",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "over-seven-days",
+      "sourceKey": "evm-branch-balances:ethereum:0xfe7c47895edb12a990b311df33b90cfea1d44c24"
+    },
+    {
+      "name": "EVK Vault eUSD0-4 (Euler)",
+      "pct": 2.8791,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Euler eUSD0-4 vault (USD0 loans collateralized by bUSD0)",
+      "riskFactors": [
+        "counterparty",
+        "credit",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "one-day",
+      "sourceKey": "evm-branch-balances:ethereum:0xd001f0a15d272542687b2677ba627f48a4333b5d"
+    },
+    {
+      "name": "M by M0 (via UsualM wrapper)",
+      "pct": 6.4199,
+      "risk": "low",
+      "coinId": "m-m0",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "M0 Foundation / M0 permissioned minters",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "one-day",
+      "sourceKey": "evm-branch-balances:ethereum:0x4cbc25559dbbd1272ec5b64c7b5f48a2405e6470"
+    },
+    {
+      "name": "Spiko USTBL",
+      "pct": 6.2559,
+      "risk": "low",
+      "coinId": "ustbl-spiko",
+      "depType": "collateral",
+      "assetClass": "money-market-fund",
+      "issuerOrObligor": "Spiko US T-Bills Money Market Fund",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days",
+      "sourceKey": "evm-branch-balances:ethereum:0xe4880249745eac5f1ed9d8f7df844792d560e750"
+    },
+    {
+      "name": "UsualUSDC",
+      "pct": 0.0369,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "one-day",
+      "sourceKey": "evm-branch-balances:ethereum:0xb672b3976baa3952bfb2ece8eefb784f8dab1424"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-11-19",
+    "reviewer": "GLM reserve renewal 2026-11-19 (stale-composition drain)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Usual USYC collateral factsheet",
-        "url": "https://docs.usual.money/resources-and-ecosystem/fact-sheets/collateral-assets/usyc-hashnote"
+        "label": "Pinned Ethereum eth_call reads at block 26451129 (hash 0x1bb117bb…ea46): Usual collateral registry, treasury balanceOf per registry token, Usual oracle getPrice, U0R and eUSD0-4 asset/totalAssets/totalSupply",
+        "url": "https://etherscan.io/address/0x43882c864a406d55411b8c166bca604709fdf624"
       },
       {
-        "label": "Circle USYC developer overview",
-        "url": "https://developers.circle.com/tokenized/usyc/overview"
+        "label": "Usual collateral treasury 0xdd82875f0840aad58a455a70b88eed9f59cec7c7",
+        "url": "https://etherscan.io/address/0xdd82875f0840aad58a455a70b88eed9f59cec7c7"
       },
       {
-        "label": "USD0 verified implementation: full collateral enumeration and valuation",
-        "url": "https://sourcify.dev/server/v2/contract/1/0xae12f6f805842e6dafe71a6d2b41b28ba5fc821e?fields=abi,sources"
+        "label": "U0R bUSD0 Zero Rate Vault token (asset() is USD0)",
+        "url": "https://etherscan.io/address/0xfe7c47895edb12a990b311df33b90cfea1d44c24"
       },
       {
         "label": "Usual UZR factsheet: U0R vault identity and USD0 lending against bUSD0",
         "url": "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/busd0/uzr.md"
+      },
+      {
+        "label": "Usual USYC collateral factsheet (fund identity, redemption)",
+        "url": "https://docs.usual.money/resources-and-ecosystem/fact-sheets/collateral-assets/usyc-hashnote"
+      },
+      {
+        "label": "Circle USYC developer overview (T+0 subscription and redemption)",
+        "url": "https://developers.circle.com/tokenized/usyc/overview"
       }
     ],
-    "rationale": "The exact July 14 onchain branch-balance capture identifies Hashnote USYC as 100% of observed USD0 collateral. Usual identifies USYC as USD0 collateral, and Circle identifies the token as an onchain share of Hashnote International Short Duration Yield Fund Ltd. with atomic T+0 subscriptions and redemptions under ordinary conditions.",
-    "compositionBasis": "Exact Usual DaoCollateral branch balances captured on July 14, 2026",
-    "compositionAsOf": "2026-07-14",
+    "rationale": "Renewed the expired 2026-07-14 single-slice composition from pinned reads at Ethereum block 26451129 (hash 0x1bb117bb14d52ccd3d0b15f274dc220817ae74a4345afbf5359445db65d8ea46, 2026-11-19T19:09:23Z). Usual's collateral registry 0x43882c864a406d55411b8c166bca604709fdf624 (the census the live adapter reads) lists seven tokens: USYC, UsualM, eUSD0-4, UsualUSDtb, UsualUSDC, USTBL and U0R. Treasury 0xdd82875f0840aad58a455a70b88eed9f59cec7c7 holds 444,700,000 U0R, 14,867,266.67 eUSD0-4, 34,667,969.26 UsualM, 30,614,944.19 USTBL, 9,385,175.32 USYC, 199,319.78 UsualUSDC and zero UsualUSDtb. Each balance is valued at Usual's oracle 0xb97e163ce6a8296f36112b042891cfe1e23c35bf getPrice at the same block (U0R 1.000835, equal to the vault's totalAssets/totalSupply; eUSD0-4 1.045744; USYC 1.144090; USTBL 1.103445; UsualUSDC 0.999750; UsualM 1.000000). The registry book is $540,005,354.89 against USD0 totalSupply 538,311,269.88 (coverage 1.0031), and each weight is the leg's value over that book. U0R (\"bUSD0 Zero Rate Vault\") and eUSD0-4 both return USD0 from asset(): they are USD0-denominated lending positions, not independent backing, so they carry high risk and self-reserve dispositions; about 85% of the book is a claim on USD0 itself. A WrappedM balance of 1,702.28 outside the registry, with no oracle price, is excluded as dust. An earlier explorer-based draft of this renewal overstated WrappedM by a factor of 1,000 and valued the vaults at stale or par rates; these pinned figures replace it.",
+    "compositionBasis": "Pinned Ethereum reads at block 26451129 (hash 0x1bb117bb14d52ccd3d0b15f274dc220817ae74a4345afbf5359445db65d8ea46, 2026-11-19T19:09:23Z): treasury balanceOf for every token in Usual's collateral registry, each valued at Usual's oracle getPrice at the same block, as a share of the registry book",
+    "compositionAsOf": "2026-11-19",
     "scope": "full-composition",
-    "knownUnknownExposure": "The July 14 allocation remains historical. At Ethereum block 26098750 (2026-10-01), the live USD0 TokenMapping enumerated seven accepted collateral tokens. The configured treasury held positive USYC, UsualM, EVK Vault eUSD0-4 (0xd001f0a15d272542687b2677ba627f48a4333b5d), UsualUSDC, USTBL and U0R (0xfe7c47895edb12a990b311df33b90cfea1d44c24), with zero UsualUSDtb. Same-block token balances, decimals and ClassicalOracle prices establish their gross protocol-accounting valuations. Both EVK Vault eUSD0-4 and U0R return USD0 as their asset; issuer UZR documentation describes lending USD0 against bUSD0. These circular USD0 loan claims cannot be treated as independent Treasury backing. Current economic composition requires complete producer branch coverage and an explicit treatment of circular claims; the historical 100% USYC allocation is not recertified. The October 9 campaign found only a June 2025 composition in the issuer risk policy, which is marked draft; its UZR factsheet identifies USD0 lending against bUSD0 but supplies no current circular-claim netting or independent-backing denominator. The timestamped research classification records this separate economic evidence gap without refreshing July holdings.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposure": "The treasury enumeration covers the whole book, but its economic reading is bounded. U0R (82.28%) and EVK Vault eUSD0-4 (2.75%) are claims denominated in USD0 itself, USD0 lent against bUSD0, so only 14.98% of the book (M by M0 6.73%, Spiko USTBL 6.23%, Hashnote USYC 1.98%, USDC 0.04%) is backing independent of USD0, and issuer UZR documentation supplies no circular-claim netting or independent-backing denominator. eUSD0-4 is valued at par because its ERC-4626 share price is not readable through a public GET surface; the assumption moves weights by under 0.03 percentage points. USYC and USTBL are converted at live market rates (1.14, 1.10) rather than official fund NAVs; a 2% rate error moves each of those weights by under 0.15 percentage points. Usual publishes no periodic attestation and on-chain balances stop at the token boundary: the treasury's USYC and USTBL shares evidence fund claims, not the underlying funds' holdings.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 1,
+        "reserveName": "U0R bUSD0 Zero Rate Vault",
+        "pct": 82.4198,
+        "disposition": "self-reserve",
+        "rationale": "U0R's underlying asset is USD0 itself (bUSD0 Zero Rate Vault, UIP-16): the treasury's U0R is a USD0-denominated lending claim, so linking it to a tracked coin would double-count USD0 rather than identify independent backing."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "EVK Vault eUSD0-4 (Euler)",
+        "pct": 2.8791,
+        "disposition": "self-reserve",
+        "rationale": "The Euler eUSD0-4 vault's underlying asset is USD0: the position is a USD0-denominated lending claim against bUSD0 borrowers and cannot be linked to an independent tracked reserve asset."
+      }
+    ]
   },
   "custodyProfile": {
     "providers": [

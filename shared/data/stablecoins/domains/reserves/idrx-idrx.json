@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "ORI030 Indonesian government security",
-      "pct": 16.593052382467484,
+      "pct": 25.01717445494797,
       "risk": "low",
       "assetClass": "government-security",
       "issuerOrObligor": "Government of the Republic of Indonesia",
@@ -15,11 +15,11 @@
         "concentration"
       ],
       "liquidityHorizon": "unknown",
-      "maturityDaysMax": 2115
+      "maturityDaysMax": 2086
     },
     {
       "name": "IDR bank deposits at PT Bank Ina Perdana Tbk",
-      "pct": 69.34270706087149,
+      "pct": 12.958064323432813,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "PT Bank Ina Perdana Tbk",
@@ -33,7 +33,7 @@
     },
     {
       "name": "IDR bank deposits at PT Bank Nationalnobu Tbk",
-      "pct": 0.28077929296015475,
+      "pct": 40.9138861517363,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "PT Bank Nationalnobu Tbk",
@@ -46,22 +46,8 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "name": "IDR bank deposits at PT Bank Rakyat Indonesia (Persero) Tbk",
-      "pct": 0.04243500513673491,
-      "risk": "very-low",
-      "assetClass": "bank-deposit",
-      "issuerOrObligor": "PT Bank Rakyat Indonesia (Persero) Tbk",
-      "riskFactors": [
-        "counterparty",
-        "liquidity",
-        "custody",
-        "concentration"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
       "name": "IDR bank deposits at PT Bank Mandiri (Persero) Tbk",
-      "pct": 0.04177413704600561,
+      "pct": 3.7847770369918656,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "PT Bank Mandiri (Persero) Tbk",
@@ -75,7 +61,7 @@
     },
     {
       "name": "IDR balance held at Duitku (PT Kharisma Catur Mandala)",
-      "pct": 6.644502401711431,
+      "pct": 6.424776826724829,
       "risk": "low",
       "assetClass": "cash",
       "issuerOrObligor": "PT Kharisma Catur Mandala",
@@ -89,7 +75,7 @@
     },
     {
       "name": "IDR balance held at PINTU (PT Pintu Kemana Saja)",
-      "pct": 4.126574546677933,
+      "pct": 6.2377360010317435,
       "risk": "low",
       "assetClass": "cash",
       "issuerOrObligor": "PT Pintu Kemana Saja",
@@ -103,7 +89,7 @@
     },
     {
       "name": "IDR balance held at Indodax (PT Indodax Nasional Indonesia)",
-      "pct": 2.928175173128774,
+      "pct": 4.6635852051344795,
       "risk": "low",
       "assetClass": "cash",
       "issuerOrObligor": "PT Indodax Nasional Indonesia",
@@ -117,16 +103,16 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-20",
-    "reviewer": "C07 bottom-up refinement 2026-10-21",
+    "reviewedAt": "2026-11-19",
+    "reviewer": "GLM reserve renewal 2026-11-19 (stale-composition drain)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "KAP Jojo Sunarjo & Rekan IDRX September 30, 2026 AUP reserve table and signed pages 3\u20134; signed October 7, 2026",
-        "url": "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20September%202026.pdf"
+        "label": "Crowe Teramihardja, Pradhono & Chandra IDRX Reserve Account Report, cut-off October 29, 2026 at 14:12 WIB; limited assurance under SPA 3000, report 0008/TPC-AS/TBD/26, signed Jakarta November 6, 2026; file name and index record state October 28, 2026",
+        "url": "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Account%20IDRX%20as%20of%20Oct%2028%2C%202026.pdf"
       },
       {
-        "label": "IDRX public document index record 19; published October 9, 2026 at 03:14:33Z",
+        "label": "IDRX public document index record 21; record created November 11, 2026 at 05:20:49Z",
         "url": "https://idrx.co/api/documents?page=1&take=100"
       },
       {
@@ -138,66 +124,59 @@
         "url": "https://www.bca.co.id/id/individu/produk/investasi-dan-asuransi/obligasi/pasar-perdana/-/media/Files/campaign/2026/ORI30/20260706-memorandum-ori030t6"
       }
     ],
-    "rationale": "The newly published September 2026 agreed-upon-procedures report presents the reserve account at September 30, 2026, 12:31 PM WIB. Its eight balances are ORI030 Rp4,005,850,153; Bank Ina Rp16,740,530,150; Bank Nationalnobu Rp67,784,983; BRI Rp10,244,545; Bank Mandiri Rp10,085,000; Duitku Rp1,604,097,929; PINTU Rp996,226,547; and Indodax Rp706,912,188. They sum exactly to the stated Rp24,141,731,495 reserves, against Rp24,033,769,441 reported circulation. Weights use each exact balance divided by this reserve denominator without decimal rounding. Signed pages 3\u20134 identify Jojo Sunarjo & Rekan and October 7, 2026, and explicitly disclaim an audit, review or assurance opinion. Report circulation enumerates Base, Polygon, Lisk, Kaia, BSC, Solana and Celo; this reserve allocation does not establish complete current multichain liability coverage. Neither the report nor account balances establish realization horizons, so no immediate-liquidity assumption is carried forward. New instrument research verified 2026-10-20: government-issued ORI030T3 and ORI030T6 memoranda dated July 6, 2026, hosted by named distribution partner BCA, bind principal maturity to July 15, 2029 and July 15, 2032 respectively. The report does not identify the held tranche. The ORI030 slice therefore uses only the conservative latest documented series maturity, July 15, 2032, or 2,115 calendar days from the unchanged September 30 composition snapshot. This is a contractual worst-case maturity maximum, not a tranche identification, weighted-average maturity, rapid sale guarantee or final settlement bound. Other reserve fields and weights retain the September report's scope and dates.",
-    "compositionBasis": "Eight institution/instrument balances in the September 30, 2026 AUP complete reserve table, divided by Rp24,141,731,495",
-    "compositionAsOf": "2026-09-30",
+    "rationale": "The issuer's document family changed: index record 21 is a Reserve Account Report carrying an independent limited-assurance conclusion under SPA 3000 from Crowe Teramihardja, Pradhono & Chandra (report 0008/TPC-AS/TBD/26, signed November 6, 2026), replacing the monthly agreed-upon-procedures series. The report body states a cut-off of October 29, 2026 at 14:12 WIB on every page; the file name and index record say October 28, and the body date is used. Its seven balances are ORI030 Rp4,005,850,153; Bank Ina Rp2,074,897,149; Bank Nationalnobu Rp6,551,295,287; Bank Mandiri Rp606,033,655; Duitku Rp1,028,760,993; PINTU Rp998,811,267; and Indodax Rp746,751,938. They sum exactly to the stated Rp16,012,400,442 reserve assets against 15,874,022,396 IDRX in circulation, an excess of Rp138,378,046. Weights are each exact balance divided by that denominator without rounding. Versus September 30, no Bank Rakyat Indonesia balance is reported, so its slice is removed; Nationalnobu rises from Rp67,784,983 to the largest bank balance; Bank Ina falls to Rp2,074,897,149; Mandiri rises to Rp606,033,655; the ORI030 balance is unchanged. Report criteria measure ORI030 at market price at the cut-off. The ORI030 slice keeps only the conservative July 15, 2032 latest documented series maturity, now 2,086 calendar days from the October 29 snapshot; the report does not identify the held tranche, and this is a contractual worst-case maximum, not a tranche identification, weighted-average maturity, rapid sale guarantee or final settlement bound. The accountant compared contract addresses with published addresses, observed banking and platform dashboards, and obtained a GHP Consulting Pte. Ltd. balance statement for the ORI030 account, consistent with the existing custody profile. Report circulation enumerates Polygon, Celo, Base, BSC, Kaia, Solana and Lisk; the registry also lists gnosis, etherlink and worldchain deployments, so the enumeration is not established as a complete current multichain liability census. Neither the report nor account balances establish realization horizons, so no immediate-liquidity assumption is carried.",
+    "compositionBasis": "Seven institution/instrument balances in the October 29, 2026 limited-assurance Reserve Account Report complete reserve table, divided by Rp16,012,400,442",
+    "compositionAsOf": "2026-10-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "All reported reserve balances are identified. The ORI030 exact tranche and underlying depository, enforceable segregation, bankruptcy remoteness, rehypothecation protections and stressed realization horizons are not established. Only a conservative maximum over the documented ORI030T3/T6 contractual maturities is known. A report-complete reserve table is not a complete current liability census.",
+    "knownUnknownExposure": "All seven reported reserve balances are identified. The ORI030 exact tranche and underlying depository, enforceable segregation, bankruptcy remoteness, rehypothecation protections and stressed realization horizons are not established, and report criteria measure ORI030 at market price at the cut-off. Only a conservative maximum over the documented ORI030T3/T6 contractual maturities is known. A report-complete reserve table is not a complete current liability census.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "ORI030 Indonesian government security",
-        "pct": 16.593052382467484,
+        "pct": 25.01717445494797,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The report identifies this IDR-denominated instrument or institution balance as an external reserve asset, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 1,
         "reserveName": "IDR bank deposits at PT Bank Ina Perdana Tbk",
-        "pct": 69.34270706087149,
+        "pct": 12.958064323432813,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The report identifies this IDR-denominated instrument or institution balance as an external reserve asset, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 2,
         "reserveName": "IDR bank deposits at PT Bank Nationalnobu Tbk",
-        "pct": 0.28077929296015475,
+        "pct": 40.9138861517363,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The report identifies this IDR-denominated instrument or institution balance as an external reserve asset, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 3,
-        "reserveName": "IDR bank deposits at PT Bank Rakyat Indonesia (Persero) Tbk",
-        "pct": 0.04243500513673491,
+        "reserveName": "IDR bank deposits at PT Bank Mandiri (Persero) Tbk",
+        "pct": 3.7847770369918656,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The report identifies this IDR-denominated instrument or institution balance as an external reserve asset, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 4,
-        "reserveName": "IDR bank deposits at PT Bank Mandiri (Persero) Tbk",
-        "pct": 0.04177413704600561,
+        "reserveName": "IDR balance held at Duitku (PT Kharisma Catur Mandala)",
+        "pct": 6.424776826724829,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The report identifies this IDR-denominated instrument or institution balance as an external reserve asset, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 5,
-        "reserveName": "IDR balance held at Duitku (PT Kharisma Catur Mandala)",
-        "pct": 6.644502401711431,
+        "reserveName": "IDR balance held at PINTU (PT Pintu Kemana Saja)",
+        "pct": 6.2377360010317435,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The report identifies this IDR-denominated instrument or institution balance as an external reserve asset, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 6,
-        "reserveName": "IDR balance held at PINTU (PT Pintu Kemana Saja)",
-        "pct": 4.126574546677933,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "The report identifies this IDR-denominated instrument or institution balance as an external reserve asset, not a tracked stablecoin dependency."
-      },
-      {
-        "reserveIndex": 7,
         "reserveName": "IDR balance held at Indodax (PT Indodax Nasional Indonesia)",
-        "pct": 2.928175173128774,
+        "pct": 4.6635852051344795,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The report identifies this IDR-denominated instrument or institution balance as an external reserve asset, not a tracked stablecoin dependency."
       }
@@ -262,7 +241,7 @@
     "confidence": "verified",
     "sources": [
       {
-        "label": "KAP Jojo Sunarjo & Rekan IDRX September 30, 2026 AUP reserve table and signed pages 3\u20134; signed October 7, 2026",
+        "label": "KAP Jojo Sunarjo & Rekan IDRX September 30, 2026 AUP reserve table and signed pages 3–4; signed October 7, 2026",
         "url": "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20September%202026.pdf"
       },
       {

@@ -474,6 +474,10 @@ describe("ReservesSection", () => {
       expect(document.body.textContent?.split("Checked ").length).toBe(2);
       // The live shares never reach the summary visual.
       expect(screen.getByRole("figure").getAttribute("aria-label")).not.toContain("49.9");
+      cleanup();
+      renderSection({ reserves: STALE_USDC, scoreAdmissionNote: "Why." });
+      expect(document.body.textContent).toContain("Not used by the Safety Score. Why.");
+      expect(document.body.textContent).toContain("above, which the Safety Score does not use.");
     });
 
     it("dates an undated reviewed-config feed with the review's composition date only when it replays the reviewed basket", () => {

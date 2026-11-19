@@ -18,31 +18,35 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-30",
-    "reviewer": "Grok T34 wave-2 unknown reduction",
-    "confidence": "verified",
+    "reviewedAt": "2026-11-19",
+    "reviewer": "GLM reserve renewal 2026-11-19 (stale-composition drain)",
+    "confidence": "probable",
     "sources": [
       {
-        "label": "Trevee scUSD treasury and backing addresses",
+        "label": "Etherscan snapshot of the scUSD BoringVault (0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae) as of 2026-11-19 18:05 UTC: verified BoringVault contract live, 596 transactions",
+        "url": "https://etherscan.io/address/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae"
+      },
+      {
+        "label": "Trevee treasury/backing-address documentation fetched 2026-11-19 (page dated 2025-10-02; accepted assets USDC, USDT, DAI, GHO, Sonic USDC.e unchanged)",
         "url": "https://docs.trevee.xyz/trevee-earn/sonic-scassets/treasury-backing-address"
       },
       {
-        "label": "Trevee documentation",
-        "url": "https://docs.trevee.xyz/"
+        "label": "Trevee collateral vault (Ethereum) documentation fetched 2026-11-19",
+        "url": "https://docs.trevee.xyz/trevee-earn/sonic-scassets/veda-vaults/collateral-vault-ethereum"
       },
       {
-        "label": "LlamaRisk Rings / scUSD Aave onboarding review",
+        "label": "LlamaRisk Rings / scUSD Aave onboarding review (strategy inventory corroboration)",
         "url": "https://llamarisk.com/research/2025-03-27t21-51-19-000z"
       },
       {
-        "label": "Ethereum public RPC vault balance reads",
-        "url": "https://ethereum.publicnode.com"
+        "label": "DefiLlama Rings scUSD circulating history read 2026-11-19 (~$0.34M circulating, corroborating redemption-driven contraction)",
+        "url": "https://stablecoins.llama.fi/stablecoin/238"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-30: Trevee treasury-backing-address docs still list the Ethereum Veda BoringVault as accepting USDC, USDT, DAI, GHO, and Sonic USDC.e, with funds deployed across external protocols under a published risk framework, and publish DeBank/Octav links rather than a dated asset-versus-strategy weight table. LlamaRisk independently describes the same multi-protocol strategy set (Aave, Morpho, Sky, Fluid, etc.) without a stable static split. Spot eth_call balanceOf reads of idle USDC/USDT/DAI/GHO on the vault address alone are not a full composition (strategies hold aTokens and other positions off the bare ERC-20 balances). The envelope therefore remains one explicit 100% mixed basket with knownUnknownExposurePct 100 rather than fabricating unsupported constituent weights.",
-    "compositionBasis": "Trevee disclosed Veda BoringVault backing architecture; independent LlamaRisk strategy inventory; on-chain idle-balance spot check confirming idle balances are not a full allocation",
+    "rationale": "Standing-structure renewal 2026-11-19: Trevee still publishes no dated constituent weights. The treasury/backing-address and collateral-vault pages (fetched 2026-11-19; page revisions dated 2025-10-02) still route every accepted stablecoin (USDC, USDT, DAI, GHO, Sonic USDC.e) into the single Ethereum Veda BoringVault deployed across whitelisted lending/staking strategies. An Etherscan read of the scUSD BoringVault contract as of 2026-11-19 18:05 UTC confirms the verified vault remains live (596 transactions), and DefiLlama corroborates circulating contracted to roughly $0.34M after Stream-Finance-era redemptions. Idle explorer balances are still not a full composition (strategies hold aTokens and other positions off bare ERC-20 balances), so the envelope remains one explicit 100% mixed basket with knownUnknownExposurePct 100 rather than fabricated constituent weights. Structure unchanged from the 2026-07-30 review; the conservative high risk tier is retained, so re-dating cannot improve the score through favorable tiers.",
+    "compositionBasis": "Issuer-documented standing structure re-verified 2026-11-19: Trevee documents the single Ethereum Veda BoringVault as the route for backing assets; no dated issuer weight table exists",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current balances by accepted stablecoin, lending protocol, and strategy are not published in a source suitable for a defensible static split; live wallet explorers change continuously and idle ERC-20 balances omit strategy positions.",
+    "knownUnknownExposure": "Current balances by accepted stablecoin, lending protocol, and strategy are still not published in a source suitable for a defensible static split; the issuer publishes backing addresses and live wallet explorers rather than a dated weight table, and idle ERC-20 balances omit strategy positions.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -59,7 +63,7 @@
         ]
       }
     ],
-    "compositionAsOf": "2026-07-30"
+    "compositionAsOf": "2026-11-19"
   },
   "custodyProfile": {
     "providers": [

@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "GBP cash in Griffin Bank designated trust account",
-      "pct": 31.392169,
+      "pct": 18.318298,
       "risk": "low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Griffin Bank",
@@ -18,7 +18,7 @@
     },
     {
       "name": "GBP State Street money-market fund reserve holdings",
-      "pct": 68.607831,
+      "pct": 81.681702,
       "risk": "low",
       "assetClass": "money-market-fund",
       "issuerOrObligor": "State Street; exact fund and underlying obligors undisclosed",
@@ -34,22 +34,26 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-15",
-    "reviewer": "Batch-64 review (Rev_GbpaAgant)",
+    "reviewedAt": "2026-11-19",
+    "reviewer": "GLM reserve renewal 2026-11-19 (stale-composition drain)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Nephos GBPA reserve attestation as of September 30, 2026",
-        "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true"
+        "label": "Nephos GBPA proof-of-reserves report as of October 30, 2026 (signed PDF)",
+        "url": "https://www.nephosgroup.com/wp-content/uploads/2026/11/Final-Agant_GBPA_Proof_of_Reserves_30_October_2026-Signed.pdf"
       },
       {
-        "label": "Agant public monthly reserve-report archive",
+        "label": "Nephos Group GBPA monthly attestation-report archive, June-October 2026",
+        "url": "https://www.nephosgroup.com/agant-reports/"
+      },
+      {
+        "label": "Agant trust-center GBPA proof-of-reserves listing (October 2026 report listed)",
         "url": "https://security.agant.io/resources"
       }
     ],
-    "rationale": "The retrieved September 30, 2026 Nephos report identifies GBP 597,711.32 cash at Griffin Bank and GBP 1,306,302.77 State Street MMF holdings, totaling GBP 1,904,014.09 against 1,900,346.94 issued GBPA across five networks. Percentages divide each reported balance by that reserve total and round to six decimals. The report confirms direct bank-statement observation, but its no-formal-assurance disclaimer conflicts with its examination opening; composition is retained without audit-grade assurance. Low legacy risk is conservative for named regulated bank/MMF exposure with incomplete legal and fund details.",
-    "compositionBasis": "September 30, 2026 Nephos reserve-account balance table, normalized to GBP 1,904,014.09",
-    "compositionAsOf": "2026-09-30",
+    "rationale": "Renewal from the October 30, 2026 Nephos report, published November 4, 2026. The retrieved reserve-account balance table identifies GBP 338,518.14 cash at Griffin Bank and GBP 1,509,459.98 State Street MMF holdings, totaling GBP 1,847,978.12 against 1,840,346.940355 issued GBPA across five networks (surplus GBP 7,631.18). Percentages divide each reported balance by that reserve total and round to six decimals. Versus September 30, the Griffin cash share fell from 31.392169 to 18.318298 percent: Griffin cash fell GBP 259,193.18 and State Street MMF holdings rose GBP 203,157.21 while total reserves declined; the two-account category set is unchanged. Balances were confirmed by direct bank-statement observation, but the report's no-formal-assurance disclaimer conflicts with its ISAE 3000 examination opening, and its summary sentence states the surplus as GBP 7,631.17 versus GBP 7,631.18 in the table; composition is retained without audit-grade assurance. Low legacy risk is conservative for named regulated bank/MMF exposure with incomplete legal and fund details.",
+    "compositionBasis": "October 30, 2026 Nephos reserve-account balance table, normalized to GBP 1,847,978.12",
+    "compositionAsOf": "2026-10-30",
     "scope": "full-composition",
     "knownUnknownExposure": "Both reported asset classes and immediate providers are identified. Exact State Street fund/share class, underlying securities, maturities, redemption horizon, custody succession and enforceable insolvency priority remain undisclosed.",
     "knownUnknownExposurePct": 0,
@@ -57,14 +61,14 @@
       {
         "reserveIndex": 0,
         "reserveName": "GBP cash in Griffin Bank designated trust account",
-        "pct": 31.392169,
+        "pct": 18.318298,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Off-chain GBP bank deposits do not create a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 1,
         "reserveName": "GBP State Street money-market fund reserve holdings",
-        "pct": 68.607831,
+        "pct": 81.681702,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Off-chain GBP MMF holdings do not create a tracked stablecoin dependency."
       }
