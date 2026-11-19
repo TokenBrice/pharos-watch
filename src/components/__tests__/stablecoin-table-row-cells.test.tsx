@@ -51,28 +51,30 @@ function buildRow(): StablecoinTableRowCellProps {
 describe("StablecoinTableRowCells peg deviation", () => {
   it.each([
     makeReportCardsV9PipelineGapCard("control", "A"),
-    makeReportCardsV9PartialCard("exit", "B"),
+    makeReportCardsV9PartialCard("exit", "B", { grade: "A-" }),
   ])("preserves $ratingStatus when rendering actual mobile and desktop safety cells", (card) => {
     const row = buildRow();
     const response = makeReportCardsV9Response({ cards: [card] });
     const table = buildV9SafetyTableMap(response, response.safetyScoreIdentity);
     if (table.status !== "available") throw new Error(table.reason);
     row.reportCards = table.value;
-    row.isVisible = (column) => column === "grade";
+    row.isVisible = (column) => column === "grade" || column === "name";
     const model = buildStablecoinTableRowModel({
       coin: row.coin, pegScores: row.pegScores, reportCards: row.reportCards,
       density: row.density, variant: "default",
     });
     const html = renderToStaticMarkup(<table><tbody><tr><StablecoinTableRowCells row={row} model={model} /></tr></tbody></table>);
-    expect(html).toContain(card.grade === null ? "data pipeline unavailable" : "awaiting curation");
+    const [mobile, desktop] = html.split("</td>");
+    expect(mobile).toContain(card.grade === null ? 'title="Pipeline gap · ' : 'title="Safety grade A- · ');
+    expect(desktop).toContain(card.grade === null ? "data pipeline unavailable" : "awaiting curation");
     expect(html).not.toContain("Partial evidence:");
     if (card.grade === null) {
-      expect(html).toContain("Pipeline gap");
+      expect(desktop).toContain("Pipeline gap");
       expect(html).not.toContain("Safety grade NR");
       expect(html).not.toContain("Pharos grade: F");
       expect(html).not.toContain("(0/100)");
     } else {
-      expect(html).toContain(`Pharos grade: ${card.grade}`);
+      expect(desktop).toContain(`Pharos grade: ${card.grade}`);
     }
   });
   it("renders the published bps instead of recomputing from a newer price", () => {

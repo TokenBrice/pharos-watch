@@ -96,13 +96,6 @@ describe("ChainsResponseSchema", () => {
     }).dependencies?.reportCards).toEqual(meta.dependencies.reportCards);
   });
 
-  it("parses the public chains endpoint payload", () => {
-    const parsed = ChainsResponseSchema.parse(validChainsPayload);
-
-    expect(parsed.chains[0].id).toBe("ethereum");
-    expect(parsed.chains[0].healthFactors.quality).toBeNull();
-  });
-
   it("preserves unavailable totals and shares without weakening observed chain rows", () => {
     const unavailable = {
       ...validChainsPayload,

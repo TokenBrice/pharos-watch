@@ -99,6 +99,7 @@ describe("Telegram Mini App shared contract", () => {
         catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
         operation,
       });
+      expect(direct).toEqual(operation);
       expect(request.operation).toEqual(direct);
     }
 

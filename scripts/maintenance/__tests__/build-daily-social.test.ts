@@ -32,7 +32,7 @@ describe("daily social renderer", () => {
       safetyAsOf: snapshot.asOf, safetyPublicationId: "test-publication",
       rows: snapshot.rows.map((row) => ({ ...row, symbol: "W".repeat(20), safetyGrade: "A+" })),
     });
-    expect(svg.split(`${"W".repeat(20)} (A+)`).length - 1).toBeGreaterThanOrEqual(5);
+    expect(svg.match(/>W{20} \(A\+\)<\/text>/g) ?? []).toHaveLength(5);
     expect(svg).toContain('lengthAdjust="spacingAndGlyphs"');
     expect(svg).toContain("(GRADE) = PHAROS SAFETY SCORE");
   });

@@ -233,6 +233,7 @@ describe("TapeForCoinTeaser", () => {
     mockEvents([other("m1", NOW)]);
     render(<TapeForCoinTeaser coinId="usde-ethena" />);
     const timeline = screen.getByRole("link", { name: "View all events on the timeline" });
+    expect(timeline.tabIndex).toBe(0);
     timeline.focus();
     expect(document.activeElement).toBe(timeline);
     expect(timeline.getAttribute("href")).toMatch(/^\/timeline\/?\?coin=usde-ethena$/);

@@ -381,7 +381,8 @@ describe("buildSafetyScoresPreview", () => {
   });
 
   it("rejects NR and pipeline-gap rows that carry rated values", () => {
-    const notRated = [{
+    const rated = ratedRow("asset-a", 85, "A");
+    const notRated = [rated, {
       stablecoinId: "asset-b",
       safetyScore: 50,
       safetyGrade: "NR",
@@ -389,7 +390,7 @@ describe("buildSafetyScoresPreview", () => {
     }];
     expect(buildSafetyScoresPreview(makePreviewDataset(notRated), PREVIEW_REGISTRY, PREVIEW_ASSESSED_AT_SEC))
       .toBeNull();
-    const pipelineGap = [{
+    const pipelineGap = [rated, {
       stablecoinId: "asset-c",
       safetyScore: null,
       safetyGrade: "NR",

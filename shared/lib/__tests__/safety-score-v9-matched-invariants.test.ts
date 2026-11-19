@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { MATCHED_V9_INVARIANTS, type MatchedV9Invariant } from "./safety-score-v9-matched-invariants.test-support";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
 import type { CompiledV9AssetInput, V9ScoringInput, V9StructuralSignal } from "@shared/types/safety-score-v9";
+import { evaluateV9ReserveExposures } from "../safety-score-v9/backing";
 import { evaluateV9Exit, type V9ExitEvaluationRoute } from "../safety-score-v9/exit";
 import {
   V9_CANDIDATE_POLICY_V1,
@@ -10,6 +11,7 @@ import {
   scoreV9Input,
 } from "../safety-score-v9-research";
 import { makeCompiledV9AssetInput } from "./safety-score-v9-score.test-support";
+import { asset, exposure } from "./safety-score-v9-backing.test-support";
 
 /**
  * Supply chosen so the pillar's grid-snapped stress request lands on the
@@ -139,8 +141,21 @@ function executeInvariant(invariant: MatchedV9Invariant): void {
       return;
     }
     case "scoring-facts": {
+      const reserve = exposure({ key: "matched", weight: 1 });
+      const local = evaluateV9ReserveExposures(asset([reserve]), V9_CANDIDATE_POLICY_V1);
+      const linked = evaluateV9ReserveExposures({
+        ...asset([{ ...reserve, trackedAssetId: "upstream" }]),
+        resolvedUpstreamExposures: [{
+          exposureKey: "matched", upstreamAssetId: "upstream", score: 100,
+          evidenceLevel: "strong", reasonCodes: [], failureDomains: [],
+        }],
+      }, V9_CANDIDATE_POLICY_V1);
+      expect(linked.contributions[0]?.score).toBeCloseTo(98.3);
       const score = (variant: (typeof invariant.variants)[keyof typeof invariant.variants]) =>
-        scoreSignals(variant.structuralSignals, { unresolved: [...variant.unresolved] });
+        scoreSignals(variant.structuralSignals, {
+          pillars: { backing: variant === invariant.variants.strong ? linked.score : local.score, exit: 90, control: 90 },
+          unresolved: [...variant.unresolved],
+        });
       const absent = score(invariant.variants.absent);
       const strong = score(invariant.variants.strong);
       const weak = score(invariant.variants.weak);
@@ -159,6 +174,8 @@ function executeInvariant(invariant: MatchedV9Invariant): void {
       return;
     }
     case "evidence-facts": {
+      expect(() => scoreSignals([], { unresolved: [...invariant.variants.criticalMissing.unresolved] }))
+        .toThrow(/unresolved facts contradict policy treatment/);
       const score = (variant: (typeof invariant.variants)[keyof typeof invariant.variants]) =>
         scoreSignals(variant.structuralSignals, {
           evidenceLevel: variant.evidenceLevel,

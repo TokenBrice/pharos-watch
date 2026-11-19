@@ -408,8 +408,9 @@ describe("rpc parity gate math", () => {
   });
 
   it("does not count failed reads as served latency", () => {
+    const failed = stepFailures({ state: true, logs: true, latest: true });
     const runs = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS, (chainId) => (
-      chainId === PARITY_REGISTRY_CHAIN ? { comparatorLatencyMs: null, dwellirLatencyMs: null } : {}
+      chainId === PARITY_REGISTRY_CHAIN ? { failedSteps: { dwellir: failed, comparator: failed } } : {}
     ));
     const summary = summaryFor(PARITY_REGISTRY_CHAIN, runs);
     expect(summary.latency.dwellir.warmRunMedian).toEqual({ p50Ms: null, p95Ms: null, samples: 0 });

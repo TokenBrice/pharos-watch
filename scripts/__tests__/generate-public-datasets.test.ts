@@ -791,19 +791,15 @@ describe("generate-public-datasets", () => {
     expect(ndjsonMeta._meta.displayProjection).toEqual(json._meta.displayProjection);
   });
 
-  it.each([
-    ["projects report9 without an open-evidence block", false],
-    ["marks explicit report9 missing counts unavailable", true],
-  ] as const)("%s", (_, explicit) => {
-    const envelope = makeCurrentEnvelope();
-    const reportCards = explicit
-      ? { ...envelope.reportCards, openEvidence: null, openEvidenceUnavailableReason: "publication-predates-open-evidence" as const }
-      : makeReportCardsV9Response({ cards: [makeV9Card({ id: "usdc-circle", score: 88, grade: "A+" })] });
-    const spec = specFor("scores-latest", withReport(reportCards));
+  it("marks explicit report9 missing counts unavailable", () => {
+    const { reportCards } = makeCurrentEnvelope();
+    const spec = specFor("scores-latest", withReport({
+      ...reportCards, openEvidence: null, openEvidenceUnavailableReason: "publication-predates-open-evidence",
+    }));
     expect(spec.rows[0]).toMatchObject({ stablecoinId: "usdc-circle", safetyScore: 88, safetyGrade: "A+" });
     expect(spec.displayProjection).toMatchObject({
       version: 2, openEvidence: null, openEvidenceUnavailableReason: "open-evidence-unavailable",
-      ...(explicit ? { safety: expect.objectContaining({ asOfSec: envelope.reportCards.asOfSec }) } : {}),
+      safety: expect.objectContaining({ asOfSec: reportCards.asOfSec }),
     });
   });
 

@@ -1,9 +1,9 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { createPrTestPlan, readPrTestPlan } from "../lib/pr-test-plan.mts";
-import { CRITICAL_TEST_FILES } from "../lib/critical-test-files.mts";
+import * as prTestSelection from "../lib/pr-test-selection.mts";
 import { runPrTests } from "../maintenance/run-pr-tests";
 
 const temporary: string[] = [];
@@ -20,8 +20,8 @@ const env: NodeJS.ProcessEnv = { NODE_ENV: "test", PR_BASE_SHA: "base" };
 const docOwnership = "scripts/__tests__/doc-ownership-registry.test.ts";
 const changeContract = "scripts/__tests__/pharos-change-contract.test.ts";
 
-function selectingSpawn() {
-  return vi.fn((file: string, args: string[]) => ({ status: 0, stdout: file === "git" ? "" : args[0] === "list"
+function selectingSpawn(changes = "") {
+  return vi.fn((file: string, args: string[]) => ({ status: 0, stdout: file === "git" ? changes : args[0] === "list"
     ? "scripts/__tests__/run-pr-tests.test.ts\nscripts/__tests__/critical-ownership.test.ts\n" : "", stderr: "" }));
 }
 /** Inject a selection so the suite never builds the real import graph. */
@@ -31,15 +31,10 @@ function selection(files: string[]) {
 
 describe("PR test runner prepared plans", () => {
   it("retains critical-owner files despite a retired coverage-deferral environment flag", () => {
-    const selected = ["scripts/__tests__/run-pr-tests.test.ts", "scripts/__tests__/critical-ownership.test.ts"];
-    const plain = selectingSpawn();
-    runPrTests({ argv: ["--base=base"], env, spawn: plain as never, planSelection: selection(selected) });
-    const deferred = selectingSpawn();
-    runPrTests({ argv: ["--base=base"], env: { ...env, PR_TESTS_DEFER_CRITICAL_OWNERS: "1" }, spawn: deferred as never, planSelection: selection(selected) });
-    const files = plain.mock.calls.find(([, args]) => args[0] === "run")![1].slice(1);
-    const remaining = deferred.mock.calls.find(([, args]) => args[0] === "run")?.[1].slice(1) ?? [];
-    expect(files.some((file) => CRITICAL_TEST_FILES.includes(file))).toBe(true);
-    expect(remaining).toEqual(files);
+    const spawn = selectingSpawn("worker/src/telegram/webhook/telegram-webhook-auth.ts\0");
+    runPrTests({ env: { ...env, PR_TESTS_DEFER_CRITICAL_OWNERS: "1" }, spawn: spawn as never, planSelection: selection([]) });
+    expect(spawn.mock.calls.find(([, args]) => args[0] === "run")?.[1])
+      .toContain("worker/src/telegram/webhook/__tests__/telegram-webhook-auth.test.ts");
   });
 
   it("executes only the requested prepared files without rerunning selection or native Vitest sharding", () => {
@@ -71,14 +66,18 @@ describe("PR test runner prepared plans", () => {
   it("uses the same deterministic partitions for local shards and prepared plans", () => {
     const path = planPath();
     const prepare = selectingSpawn();
-    const files = ["scripts/__tests__/run-pr-tests.test.ts", "scripts/__tests__/critical-ownership.test.ts"];
-    expect(runPrTests({ argv: ["--plan-out", path], env, spawn: prepare as never, planSelection: selection(files) })).toBe(0);
+    const shards = ["a", "b"].map((suffix) => Array.from({ length: 61 }, (_, index) =>
+      `scripts/__tests__/${index + 100}${suffix}.test.ts`));
+    const select = vi.spyOn(prTestSelection, "selectPrTestFiles").mockReturnValue(shards.flat());
+    onTestFinished(() => { select.mockRestore(); });
+    expect(runPrTests({ argv: ["--plan-out", path], env, spawn: prepare as never, planSelection: selection([]) })).toBe(0);
     expect(prepare.mock.calls.some(([, args]) => args[0] === "run")).toBe(false);
     const plan = readPrTestPlan(path);
-    for (let shard = 1; shard <= plan.shardCount; shard++) {
+    expect(plan.shards).toEqual(shards);
+    for (const [index, files] of shards.entries()) {
       const spawn = selectingSpawn();
-      expect(runPrTests({ argv: [`--shard=${shard}/${plan.shardCount}`], env, spawn: spawn as never, planSelection: selection(files) })).toBe(0);
-      expect(spawn.mock.calls.find(([, args]) => args[0] === "run")?.[1]).toEqual(["run", ...plan.shards[shard - 1], "--tagsFilter=!nightly"]);
+      expect(runPrTests({ argv: [`--shard=${index + 1}/2`], env, spawn: spawn as never, planSelection: selection([]) })).toBe(0);
+      expect(spawn.mock.calls.find(([, args]) => args[0] === "run")?.[1]).toEqual(["run", ...files, "--tagsFilter=!nightly"]);
     }
   });
 

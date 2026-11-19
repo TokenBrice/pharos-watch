@@ -2,7 +2,6 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
-  DERIVED_PROTECTED_TEST_FILES,
   applyRetirementPlan,
   formatRetirementPlan,
   planTestRetirement,
@@ -200,9 +199,16 @@ describe("retire-tests", () => {
   });
 
   it("protects the derived critical set by default", () => {
-    expect(DERIVED_PROTECTED_TEST_FILES.has("worker/src/telegram/webhook/__tests__/telegram-webhook-auth.test.ts")).toBe(true);
-    expect(DERIVED_PROTECTED_TEST_FILES.has("worker/src/lib/__tests__/auth.test.ts")).toBe(true);
-    expect(DERIVED_PROTECTED_TEST_FILES.has("scripts/__tests__/lane-only-helper.test.ts")).toBe(false);
+    const root = fixture();
+    for (const path of [
+      "worker/src/telegram/webhook/__tests__/telegram-webhook-auth.test.ts",
+      "worker/src/lib/__tests__/auth.test.ts",
+      LANE_ONLY,
+    ]) {
+      writeText(root, path, "");
+      const { errors } = planTestRetirement({ root, paths: [path] });
+      expect(errors.some((error) => error.startsWith(`${path}: derived into`))).toBe(path !== LANE_ONLY);
+    }
   });
 
   it("refuses a protected always-run contract without --replacement", () => {

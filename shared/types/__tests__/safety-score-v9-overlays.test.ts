@@ -137,10 +137,8 @@ describe("shared Safety Score V9 overlay boundaries", () => {
 
   it("rejects operational-resilience evidence references absent from sources", () => {
     expect(SafetyScoreV9OperationalResilienceOverlayFileSchema.safeParse(operationalFixture).success).toBe(true);
-    const malformed = structuredClone(operationalFixture) as Record<string, unknown> & {
-      overlays: Array<{ eligibility: { liveHistory: { sourceIds: string[] } } }>;
-    };
-    malformed.overlays[0]!.eligibility.liveHistory.sourceIds = ["missing-source"];
+    const malformed = structuredClone(operationalFixture);
+    malformed.overlays[0]!.eligibility.liveHistory.sourceIds.push("missing-source");
     expect(SafetyScoreV9OperationalResilienceOverlayFileSchema.safeParse(malformed).success).toBe(false);
   });
 

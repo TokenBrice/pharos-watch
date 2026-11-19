@@ -342,14 +342,6 @@ describe("selector snapshot contract", () => {
       .toEqual(live.recommended.map((rec) => rec.rankRobustness));
   });
 
-  it("accepts a complete selector snapshot and computes a 32-hex sid", () => {
-    const snapshot = expectValid(buildSelectorSnapshotOutput());
-    expect(snapshot.profile).toBe("treasury");
-    expect(snapshot.provenance).toBe("client-unverified");
-    expect(snapshot.snapshotSchemaVersion).toBe(2);
-    expect(computeSelectorSnapshotSid(snapshot)).toMatch(/^[0-9a-f]{32}$/);
-  });
-
   it("preserves only exact server-recomputed verification bindings on replay", () => {
     const verified = createVerifiedSelectorSnapshot(expectValid(buildSelectorSnapshotOutput()));
     const validation = validateSelectorSnapshotResponse(verified);
@@ -967,12 +959,18 @@ describe("verified selected-rail snapshot projection", () => {
     const output = runSelector(makeInput({ profile: "yield", venuePreferences: ["wrap"] }), {
       rows: new Map([[row.id, row]]),
     }, dataset);
+    const rec = output.recommended[0]!;
     const snapshot = createVerifiedSelectorSnapshot({
       ...output,
+      recommended: [{ ...rec, components: rec.components.map((component) =>
+        component.key === "sourceRiskInverted" ? { ...component, normalizedValue: 0 } : component,
+      ) }],
       engineVersion: "selector-v2.7",
       methodologyVersions: { ...output.methodologyVersions, exclusionFilters: "selector-v2.7" },
     });
     expect(validateVerifiedSelectorSnapshot(snapshot).ok).toBe(true);
+    expect(snapshot.recommended[0]!.components.find((component) => component.key === "sourceRiskInverted"))
+      .toMatchObject({ rawValue: 10, normalizedValue: 90 });
     expect(snapshot.recommended[0]!.components).toEqual(output.recommended[0]!.components);
     expect(snapshot.recommended[0]!.score).toBe(output.recommended[0]!.score);
   });

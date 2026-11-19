@@ -959,12 +959,10 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     };
     const review = buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!;
 
-    for (const point of review.executionCosts) {
-      expect(point.executionCostBps).toBe(
-        point.requestedNotionalUsd === observation.requestedNotionalUsd && point.maxCostBps === observation.maxCostBps
-          ? 30 : point.maxCostBps,
-      );
-    }
+    expect(review.executionCosts).toEqual(
+      [[100_000, 200], [1_000_000, 200], [5_000_000, 30], [25_000_000, 200]]
+        .map(([requestedNotionalUsd, executionCostBps]) => ({ requestedNotionalUsd, maxCostBps: 200, executionCostBps })),
+    );
     expect(review).toMatchObject({ executionCertainty: "bounded", modelConfidence: "high" });
     expect(review.output).toMatchObject({
       kind: "tracked-stablecoin",

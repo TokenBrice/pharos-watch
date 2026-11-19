@@ -191,15 +191,17 @@ async function runPriceScenario(scenario: PriceScenario): Promise<{
       .run(scenario.cacheValue, scenario.nowSec - 1);
   }
 
+  const belowPriceFloor = scenario.label === "does not publish retained priced pools below the DEX price observation floor";
   const steps: Array<{ rows: PublicPriceRow[]; diagnostics: unknown }> = [];
   for (const step of scenario.steps) {
     const stepNowSec = step.nowSec ?? scenario.nowSec;
+    const retainedPools = step.retainedPools ?? [];
     const diagnostics = await computePriceGeneration(
       fixture.db,
-      makePricePoolMap(step.retainedPools ?? []),
+      makePricePoolMap(belowPriceFloor ? retainedPools.map((pool) => ({ ...pool, tvlUsd: 49_999 })) : retainedPools),
       stepNowSec,
       fixture.generationId,
-      new Map(step.primaryPrices),
+      new Map(step.primaryPrices ?? (belowPriceFloor ? [["usdt-tether", 1]] : [])),
       step.exactPriceEvidence === undefined ? undefined : makeObservationMap(step.exactPriceEvidence),
     );
     steps.push({ rows: readPublicPriceRows(fixture.sqlite), diagnostics });
@@ -252,11 +254,11 @@ describe("DEX scoring publication atomicity", () => {
       tvlUsd: 100_000, price: 0.999, source: "direct_api",
     }]), NOW_SEC, GENERATION_ID, new Map([["usdc-circle", 1]]),
     new Map([["usdc-circle", [{
-      price: 1.001, tvl: 0, observedVolumeUsd: 100_000, chain: "orderbook",
+      price: 1.001, tvl: 0, observedVolumeUsd: 200_000, chain: "orderbook",
       protocol: "cg-ticker-example", sourceFamily: "cg_tickers",
     }]]]));
     expect(sqlite.prepare("SELECT dex_price_usd, source_total_tvl FROM dex_prices WHERE stablecoin_id = 'usdc-circle'").get())
-      .toEqual({ dex_price_usd: 0.999, source_total_tvl: 100_000 });
+      .toEqual({ dex_price_usd: 1.001, source_total_tvl: 100_000 });
   });
 
   it("keeps the previous dex_prices generation when a later staging batch fails", async () => {

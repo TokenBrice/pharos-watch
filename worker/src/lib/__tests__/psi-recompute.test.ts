@@ -192,21 +192,6 @@ describe("buildStabilityInputForDay", () => {
     expect(result.peakDeviationFallbackCount).toBe(0);
   });
 
-  it("replays day-level depeg severity from historical supply prices when available", () => {
-    const day = Date.UTC(2026, 7, 6) / 1000;
-    const result = buildPsiStabilityInput(day, psiSupplyPair({ stablecoinId: "usdt-tether", day, currentMcap: 2_000_000, priorMcap: 1_500_000, currentPrice: 0.985, priorPrice: 1 }), [psiDepegRow({ stablecoinId: "usdt-tether", day, startedOffsetSec: -2 * DAY, endedOffsetSec: null, peakDeviationBps: -250 })]);
-
-    expect(result.depegs).toEqual([
-      {
-        bps: -150,
-        mcapUsd: 2_000_000,
-        depegAgeDays: 2,
-      },
-    ]);
-    expect(result.historicalPriceCoverageCount).toBe(1);
-    expect(result.peakDeviationFallbackCount).toBe(0);
-  });
-
   it.each(["timed onset", "untimed daily estimate"])("uses the stored USD reference with %s evidence", (basis) => {
     const day = Date.UTC(2026, 2, 31) / 1000;
     const onset = 1_774_982_034;

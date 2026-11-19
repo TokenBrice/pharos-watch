@@ -119,7 +119,18 @@ describe("runPostDeployAcceptance", () => {
       "/api/stablecoins",
     );
     expect(run.probes.map((probe) => probe.id)).toEqual(["worker-health", "worker-route-sweep"]);
-    expect(deps.fetchJson.mock.calls).toHaveLength(39);
+    expect(deps.fetchJson.mock.calls.map(([, path]) => path).sort()).toEqual(`
+      stablecoins stablecoin/pyusd-paypal stablecoin-summary/usdt-tether stablecoin-reserves/iusd-infinifi
+      stablecoin-charts peg-summary health public-status-history blacklist blacklist-summary
+      depeg-events events usds-status bluechip-ratings dex-liquidity
+      dex-liquidity-history?stablecoin=usdt-tether supply-history?stablecoin=usdt-tether
+      daily-digest digest-archive snapshots/index yield-rankings yield-adapter-manifest
+      yield-history?stablecoin=usdt-tether safety-score-history?stablecoin=usdt-tether
+      safety-score-history-v2?stablecoin=usdt-tether&days=3650 stability-index report-cards/v9
+      safety-grades dependency-graph/v1 dependency-scenarios/v1 depeg-resolver depeg-resolver-review
+      redemption-backstops mint-burn-flows mint-burn-events?stablecoin=usdt-tether stress-signals
+      chains non-usd-share?days=90 telegram-pulse
+    `.trim().split(/\s+/).map((path) => `/api/${path}`).sort());
   });
 
   it("fails a healthy Worker when the active deployment version is stale", async () => {

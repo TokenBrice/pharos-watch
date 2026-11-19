@@ -307,7 +307,7 @@ describe("static import-graph PR test selection", () => {
   it("does not treat nested templates or expression regexes as unterminated", () => {
     const files = {
       ...BASE_FILES,
-      "worker/scripts/nested.ts": "const a = `${sqlString(`x`)}`;\nconst b = `'${value.replace(/'/g, \"''\")}'`;\n",
+      "scripts/__tests__/nested.test.ts": "const a = `'${value.replace(/'/g, \"''\")}'`;\nconst b = `${sqlString(`x}`)}`;\n",
     };
     const testFiles = Object.keys(files).filter((file) => /\.test\.ts$/.test(file)).sort();
     const graph = buildPrImportGraph({ cwd: CWD, fs: fixtureFs(files), testFiles });

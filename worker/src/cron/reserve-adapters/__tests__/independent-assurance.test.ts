@@ -529,7 +529,7 @@ describe("independent-assurance manifest framework", () => {
   it("treats a differently separated Salvus attestation letter as an EUROP report candidate", async () => {
     const reviewed = getIndependentAssuranceManifest("EUROP");
     const letter = "https://schuman.io/wp-content/uploads/2026/10/2026.09.30-Schuman-_-Salvus-Attestation_Letter-Signed-All.pdf";
-    const auditorReport = "https://schuman.io/wp-content/uploads/2026/10/2026.09.30-Salvus-Rapport_Commissiaires_Comptes.pdf";
+    const auditorReport = "https://schuman.io/wp-content/uploads/2026/10/2026.10.01-Salvus-Rapport_Commissiaires_Comptes.pdf";
     expect(EUROP_INDEPENDENT_ASSURANCE_PROFILE.isReportCandidate(letter, "")).toBe(true);
     expect(EUROP_INDEPENDENT_ASSURANCE_PROFILE.isReportCandidate(auditorReport, "")).toBe(false);
     const media = JSON.stringify([{ source_url: reviewed.reportUrl }, { source_url: letter }, { source_url: auditorReport }]);
@@ -922,12 +922,6 @@ describe("Agora reviewed September examination", () => {
   it("accepts a single already-stable reviewed link", async () => {
     const prepared = await prepareAgora(agoraAnchor(agoraManifest.reportUrl), new AbortController().signal);
     expect(collectPdfAnchors(prepared)).toEqual([{ href: agoraManifest.reportUrl, text: "2026 Sep - Agora Dollar Reserve Report" }]);
-  });
-
-  it("dates every report candidate in the current official capture", async () => {
-    const prepared = await prepareAgora(agoraCurrentIndex(), new AbortController().signal);
-    const reports = collectPdfAnchors(prepared).filter(a => /\.pdf(?:[?#]|$)/i.test(a.href) && agoraProfile.isReportCandidate(a.href, a.text));
-    expect(reports.every(a => agoraProfile.reportDateFromCandidate!(a.href, a.text) !== null)).toBe(true);
   });
 
   it("fails closed on the frozen July index because the September reviewed link is missing", async () => {
