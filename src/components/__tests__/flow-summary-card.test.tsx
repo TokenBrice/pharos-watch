@@ -169,8 +169,9 @@ describe("FlowSummaryCard", () => {
     expect(container.textContent).toContain(`${amber ? "More outflow than usual" : "Within its usual range"} · ±100 scale`);
     expect(container.textContent).toContain("Burned $4.00M");
     expect(container.textContent).toContain("Minted $1.00M");
-    // Flows are neutral: no direction colour on the figures, and the 90d asterisk is spelled out.
-    expect(container.querySelector(".text-red-600, .text-emerald-600, .text-state-danger, .text-state-positive")).toBeNull();
+    // Direction tones the chip and the signed nets; the 90d asterisk is spelled out.
+    expect(screen.getByText("Burning").closest("span")?.className).toContain("text-red-700");
+    expect(screen.getAllByText("−$3.00M")[0]!.className).toContain("text-red-700");
     expect(screen.getByText("−3.00% of supply")).toBeTruthy();
     expect(container.textContent).toMatch(/\* Includes hours recorded before pricing checks began/);
     expect(container.textContent).not.toMatch(/\bNR\b/);

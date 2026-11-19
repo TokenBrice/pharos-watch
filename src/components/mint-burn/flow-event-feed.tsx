@@ -15,8 +15,10 @@ import {
   timeAgo,
   formatEventDate,
 } from "@shared/lib/format";
+import { FLOW_RECEIPT_TONE_CLASSES } from "@shared/lib/classification";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import type { MintBurnEvent } from "@shared/types/mint-burn";
+import { cn } from "@/lib/utils";
 
 interface FlowEventFeedProps {
   stablecoinId: string;
@@ -36,7 +38,7 @@ const FLOW_EVENT_COLUMNS: readonly DataTableColumn[] = [
   { id: "amount", label: "Amount", className: "text-right" },
   { id: "tx", label: <><span className="sm:hidden">Chain</span><span className="sr-only">Transaction</span></>, className: "text-right" },
 ] as const;
-/** Event types are flows, not risk: one neutral chip, the sign lives on the amount. */
+/** One neutral type chip; the amount carries the sign and, for a counted mint or burn, its direction tone. */
 const EVENT_CHIP_CLASS =
   "inline-flex items-center whitespace-nowrap rounded-full border border-border/70 bg-muted/40 px-2 py-0.5 text-2xs font-medium text-foreground";
 
@@ -50,6 +52,12 @@ function getEventLabel(event: MintBurnEvent): string {
   if (event.flowType === "protocol_internal") return "Internal";
   if (event.direction === "burn" && event.burnType === "review_required") return "Burn · review";
   return event.direction === "mint" ? "Mint" : "Burn";
+}
+
+/** A plain mint reads green and a plain burn red; roundtrip, bridge, internal and review rows are not counted flow and stay neutral. */
+function flowAmountToneClass(evt: MintBurnEvent): string {
+  if (evt.flowType !== "standard" || evt.burnType === "review_required") return "text-foreground";
+  return evt.direction === "mint" ? FLOW_RECEIPT_TONE_CLASSES.mint : FLOW_RECEIPT_TONE_CLASSES.burn;
 }
 
 function formatFlowAmount(evt: MintBurnEvent): ReactNode {
@@ -133,7 +141,7 @@ export function FlowEventFeed({ stablecoinId, limit, scope = "all" }: FlowEventF
               <span className={EVENT_CHIP_CLASS}>{getEventLabel(evt)}</span>
             </TableCell>
             <TableCell className="hidden text-sm text-muted-foreground sm:table-cell">{chainName(evt.chainId)}</TableCell>
-            <TableCell className="whitespace-nowrap px-2 text-right font-mono text-sm tabular-nums text-foreground sm:px-3">
+            <TableCell className={cn("whitespace-nowrap px-2 text-right font-mono text-sm tabular-nums sm:px-3", flowAmountToneClass(evt))}>
               {/* Below sm the type column folds away; the sign shows direction and this names it. */}
               <span className="sr-only sm:hidden">{getEventLabel(evt)} </span>
               {formatFlowAmount(evt)}

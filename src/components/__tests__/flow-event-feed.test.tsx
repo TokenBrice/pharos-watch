@@ -74,17 +74,23 @@ describe("FlowEventFeed row fold", () => {
     expect(screen.getAllByLabelText("Go to next page").length).toBeGreaterThan(0);
   });
 
-  it("renders neutral type chips with signed amounts in one table at every width", () => {
-    mockEvents(2);
+  it("renders neutral type chips with direction-toned signed amounts in one table at every width", () => {
+    const roundtrip = { ...makeEvent(2), flowType: "atomic_roundtrip" as const };
+    useMintBurnEventsMock.mockReturnValue({ data: { events: [makeEvent(0), makeEvent(1), roundtrip], total: 3 }, isLoading: false, isError: false });
 
-    const { container } = render(<FlowEventFeed stablecoinId="dai-makerdao" limit={10} scope="counted" />);
+    const { container } = render(<FlowEventFeed stablecoinId="dai-makerdao" limit={10} scope="all" />);
 
     const rows = screen.getByTestId("mint-burn-event-feed-table").querySelectorAll("tbody tr");
     expect(rows[0].textContent).toContain("Mint");
     expect(rows[0].textContent).toContain("+$1.00K");
+    expect(rows[0].querySelector("td:nth-child(4)")?.className).toContain("text-emerald-700");
     expect(rows[1].textContent).toContain("Burn");
     expect(rows[1].textContent).toContain("−$2.00K");
-    expect(container.querySelector("[class*='emerald'], [class*='red-'], [class*='rose-']")).toBeNull();
+    expect(rows[1].querySelector("td:nth-child(4)")?.className).toContain("text-red-700");
+    // Not counted flow: the amount stays neutral.
+    expect(rows[2].querySelector("td:nth-child(4)")?.className).toContain("text-foreground");
+    // Type chips stay neutral; only the amounts carry direction.
+    expect(container.querySelector("tbody td:nth-child(2) [class*='emerald'], tbody td:nth-child(2) [class*='red-']")).toBeNull();
     expect(container.querySelector("ol")).toBeNull();
   });
 

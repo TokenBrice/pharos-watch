@@ -13,10 +13,10 @@
     0.7152,
     0.0722
   ],
-  "inputSha256": "729465548c3b1b433b71a390d0a23af11833ab278f62568462371a9af4fd5ef6",
+  "inputSha256": "25cd4ee31ab2ab3e36c5b9d1a43fb67ddb4d11aaca265a46c376e935058f0b55",
   "image": {
-    "sha256": "28180363c4848d9c8ee4dd0f1196d3289533ec97393bc42f8ca7ba71fb643e47",
-    "bytes": 148484,
+    "sha256": "04aefc317a7ce7283f60b6afb0c8238b4e95bad5bc4cf831340f1010d537e35b",
+    "bytes": 149086,
     "width": 798,
     "height": 798
   },
@@ -119,6 +119,11 @@
     {
       "logo": "/logos/cemetery/deusd.png",
       "sha256": "685581ab17a6581b2b6fd2a217eda5166afb7a81489b7d765958cd45c9f66df8",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/djed-coti.png",
+      "sha256": "b6ae9dc10a87fe741619b8f23d3ee6b310aa20cec0dc524d5f4d30857df2033b",
       "kernel": "lanczos3"
     },
     {
@@ -721,6 +726,10 @@
     {
       "id": "deusd-elixir-deusd-2025-11",
       "logo": "/logos/cemetery/deusd.png"
+    },
+    {
+      "id": "djed-coti",
+      "logo": "/logos/djed-coti.png"
     },
     {
       "id": "dsd-dynamic-set-dollar-2021-01",

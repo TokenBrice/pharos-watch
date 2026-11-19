@@ -229,10 +229,13 @@ function validateArchivedLegacyReportCards(
   ) {
     return "safety-score-publication-invalid";
   }
+  // A not-rated coin was archived with a null score and grade "NR"; every
+  // other card must carry a finite score.
   const isValidArchivedCard = (
     value: unknown,
-  ): value is { id: string; score: number; grade: string } =>
-    isRecord(value) && typeof value.id === "string" && value.id.length > 0 && isValidScoreEntry(value);
+  ): value is { id: string; score: number | null; grade: string } =>
+    isRecord(value) && typeof value.id === "string" && value.id.length > 0
+    && (isValidScoreEntry(value) || (value.score === null && value.grade === "NR"));
   const cards = Array.isArray(reportCards.cards) ? reportCards.cards : null;
   if (!cards || !cards.every(isValidArchivedCard)) {
     return "safety-score-cards-invalid";

@@ -7,7 +7,7 @@
   "jsonUrl": "https://pharos.watch/datasets/stablecoin-cemetery.json",
   "csvUrl": "https://pharos.watch/datasets/stablecoin-cemetery.csv",
   "sourceDataPath": "shared/lib/cemetery-merged.ts",
-  "sourceChecksum": "sha256:e0b8504aeb1ae8cb8b3160b96841de827036c2644a430c8877fb57285d73f366",
+  "sourceChecksum": "sha256:851c314055d6087dd6074369dca83cccbc5af970c4773cd723b41b664d532589",
   "sourceData": [
     {
       "path": "shared/data/dead-stablecoins.json",
@@ -16,7 +16,7 @@
     },
     {
       "path": "shared/lib/cemetery-merged.ts#frozenCemeteryProjection",
-      "checksum": "sha256:997d98d63f100cdce6eb60296b13e5f4857e111a9ea6f822b4b3851d512d8206",
+      "checksum": "sha256:7ff6e54d654f95172d3e9a80aeeb9c746dd762c6bc3f66e665b9d619c6c0d49d",
       "role": "Canonical frozen tracked-stablecoin projection merged into cemetery rows."
     },
     {
@@ -26,8 +26,8 @@
     }
   ],
   "recordsOrderedBy": "deathDate descending by year, month, then day (a month-precision date sorts as the start of its month, after that month's day-precision rows; an unparseable date sorts last), then peakMcapUsd descending (rows without a peak after rows with one), then symbol ascending, then id ascending (symbol and id compared by UTF-16 code unit)",
-  "rowCount": 133,
-  "updatedAt": "2026-11-16",
+  "rowCount": 134,
+  "updatedAt": "2026-11-19",
   "limitations": [
     "Death dates are month-level unless a row explicitly uses a day-level date.",
     "Peak market capitalization is optional and may be absent when no reliable public figure was curated.",
@@ -59,6 +59,34 @@
     "recordedAt": "UTC cemetery-entry/documentation date (YYYY-MM-DD); tracked rows default to frozenAt unless obituary.recordedAt explicitly overrides it. Distinct from deathDate; null when not recorded."
   },
   "rows": [
+    {
+      "id": "djed-coti",
+      "name": "Djed Stablecoin",
+      "symbol": "DJED",
+      "llamaId": "93",
+      "logoUrl": "https://pharos.watch/logos/djed-coti.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2026-11-17",
+      "deathDatePrecision": "day",
+      "peakMcapUsd": 5998937,
+      "epitaph": "The Djed bank set a closing date with ADA still in the vault",
+      "obituary": "COTI launched DJED on Cardano mainnet on January 31, 2023 as a Djed reserve-bank stablecoin: holders minted and burned DJED against an ADA reserve, and the SHEN reserve coin absorbed ADA volatility inside a 400% to 800% reserve-ratio band. Supply peaked at about $6.0M in December 2023 and stood near $3.8M in January 2026 before falling through the year. Pharos's July and October 2026 reviews found the reserve ratio below the 400% minting floor, and the official dashboard showed 332% with zero mintable DJED on October 30, so holders could burn DJED but not mint it. On November 17, 2026 the Djed team announced that DJED and SHEN services will wind down at 23:59 UTC on December 31, 2026. It told holders to redeem through djed.xyz after withdrawing any liquidity-pool or lending positions, said every redemption is subject to the reserve ratio, and said remaining funds will be allocated to outstanding DJED and SHEN holders once the wind-down completes. At the November 19 archive capture about $984K of DJED was still in circulation, down from $1.42M a month earlier, and traded near $0.972, while the Djed bank contract held about 22.4M ADA (about $3.45M). Pharos freezes DJED as an archived wind-down asset; the protocol redemption window that closes on December 31 is the holder exit, not a continuing stablecoin.",
+      "sourceUrl": "https://x.com/DjedStablecoin/status/2122757558788411893",
+      "sourceLabel": "Djed: DJED and SHEN wind-down announcement",
+      "archivedDataAvailable": true,
+      "contracts": [
+        {
+          "chain": "cardano",
+          "address": "8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61446a65644d6963726f555344",
+          "decimals": 6
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/stablecoin/djed-coti/",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-11-19"
+    },
     {
       "id": "zeusd-zoth",
       "name": "Zoth ZeUSD",

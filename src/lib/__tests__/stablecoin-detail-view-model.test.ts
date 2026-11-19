@@ -24,6 +24,7 @@ import { deriveDataHealth, isPublicWarning } from "../data-health";
 import { DATA_HEALTH_PRESETS } from "../data-health-config";
 import { buildStablecoinDetailClientCoin } from "../stablecoin-detail-client-coin";
 import { makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
+import { DIRECTION_TONE_CLASSES } from "@shared/lib/classification";
 
 function makePegSummaryCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummaryCoin {
   return makePegSummaryCoinBase({
@@ -650,14 +651,14 @@ describe("stablecoin detail view-model builder", () => {
     if (viewModel.status !== "ready") return;
     expect(viewModel.mcap).toBe(200);
     expect(viewModel.hero.market.supply).toBe(200 / 0.98);
-    expect(viewModel.hero.market.prevDayTrendClass).toBe("text-foreground");
+    expect(viewModel.hero.market.prevDayTrendClass).toBe(DIRECTION_TONE_CLASSES.down);
     expect(viewModel.hero.market.supplyTrend).toMatchObject({
       current: 150,
       safePrevWeek: 160,
       safePrevMonth: null,
       hasPrevMonth: false,
     });
-    expect(viewModel.hero.market.supplyTrend.prevWeekTrendClass).toBe("text-foreground");
+    expect(viewModel.hero.market.supplyTrend.prevWeekTrendClass).toBe(DIRECTION_TONE_CLASSES.down);
     // The incident count lives once, in the passport Record; the peg tile carries the score.
     expect(viewModel.hero.tertiaryMetrics.find((metric) => metric.key === "peg-score")?.display.value).toBe("45");
     expect(viewModel.hero.tertiaryMetrics.find((metric) => metric.key === "peg-score")?.display.sub ?? "").not.toContain("incident");

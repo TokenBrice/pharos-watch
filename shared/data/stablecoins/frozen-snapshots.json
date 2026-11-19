@@ -2778,5 +2778,78 @@
         }
       ]
     }
+  },
+  {
+    "id": "djed-coti",
+    "capturedAt": "2026-11-19T12:46:59.293Z",
+    "peggedAssetRow": {
+      "id": "djed-coti",
+      "name": "Djed StableCoin",
+      "symbol": "DJED",
+      "geckoId": "djed",
+      "pegType": "peggedUSD",
+      "pegMechanism": "crypto-backed",
+      "price": 0.9723760244498906,
+      "priceSource": "coingecko",
+      "priceConfidence": "single-source",
+      "priceUpdatedAt": 1795092349,
+      "priceObservedAt": 1795092349,
+      "priceObservedAtMode": "upstream",
+      "priceSyncedAt": 1795092318,
+      "consensusSources": [
+        "coingecko"
+      ],
+      "agreeSources": [
+        "coingecko"
+      ],
+      "supplySource": "defillama",
+      "circulatingNative": 1005206.0360107422,
+      "valuationPriceUsd": 0.9786368928632361,
+      "valuationObservedAtSec": null,
+      "circulating": {
+        "peggedUSD": 983731.711768923
+      },
+      "circulatingPrevDay": {
+        "peggedUSD": 1056484.1789224204
+      },
+      "circulatingPrevWeek": {
+        "peggedUSD": 1218706.621087596
+      },
+      "circulatingPrevMonth": {
+        "peggedUSD": 1418053.6325192116
+      },
+      "chainCirculating": {
+        "Cardano": {
+          "current": 983731.711768923,
+          "circulatingPrevDay": 1056484.1789224204,
+          "circulatingPrevWeek": 1218706.621087596,
+          "circulatingPrevMonth": 1418053.6325192116
+        }
+      },
+      "chains": [
+        "Cardano"
+      ],
+      "contracts": [
+        {
+          "chain": "cardano",
+          "address": "8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61446a65644d6963726f555344",
+          "decimals": 6
+        }
+      ],
+      "currentPeg": {
+        "currentDeviationBps": -276,
+        "pegReference": {
+          "valueUsd": 1,
+          "source": "median",
+          "contributorCount": 152,
+          "asOf": 1795092318
+        },
+        "pegReferenceUnavailable": false,
+        "currentPriceUnavailable": false,
+        "primaryTrust": "confirm_required",
+        "dexPriceCheck": null,
+        "dexPriceCheckExpiresAt": null
+      }
+    }
   }
 ]

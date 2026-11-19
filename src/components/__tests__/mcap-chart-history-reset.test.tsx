@@ -143,7 +143,7 @@ it.each([
 it("headlines the hero's live market cap and 24h change instead of the last daily snapshot", () => {
   render(<McapChart stablecoinId="bold-liquity" data={seed} current={{ mcap: 32_800_000, prevDay: 34_184_000 }} embedded />);
   expect(screen.getByText("$32.80M")).toBeTruthy();
-  expect(screen.getByText("-4.05% 24h")).toBeTruthy();
+  expect(screen.getByText("-4.05% 24h").className).toContain("text-red-700");
   // A missing prior day is no change at all, never a 0% one.
   cleanup();
   render(<McapChart stablecoinId="bold-liquity" data={seed} current={{ mcap: 32_800_000, prevDay: null }} embedded />);

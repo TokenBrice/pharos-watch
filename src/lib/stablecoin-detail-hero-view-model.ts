@@ -34,7 +34,7 @@ import {
   type HeroPassportCoin,
   type HeroPassportItemViewModel,
 } from "@/lib/stablecoin-detail-passport";
-import { getPegScoreTier, isDewsAlertBand, REPORT_CARD_GRADE_COLORS } from "@shared/lib/classification";
+import { DIRECTION_TONE_CLASSES, getPegScoreTier, isDewsAlertBand, REPORT_CARD_GRADE_COLORS } from "@shared/lib/classification";
 import type { CoinState } from "@shared/lib/coin-state";
 import type { StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
 import { CLIENT_TRACKED_META_BY_ID, type StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
@@ -217,8 +217,7 @@ function getTrendClass(hasPreviousValue: boolean, currentValue: number, previous
     const percentChange = Math.abs((currentValue - previousValue) / previousValue) * 100;
     if (percentChange < 0.5) return HERO_MUTED_CLASS;
   }
-  // A supply or market-cap move is not risk: neutral ink, the sign carries the direction.
-  return "text-foreground";
+  return currentValue > previousValue ? DIRECTION_TONE_CLASSES.up : DIRECTION_TONE_CLASSES.down;
 }
 
 function resolveEffectivePegScore(isNavToken: boolean, pegScoreResult: PegSummaryCoin | null): number | null {

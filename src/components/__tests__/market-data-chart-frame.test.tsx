@@ -33,7 +33,7 @@ afterEach(() => {
 
 it("labels only consecutive UTC-day observations as a 24h market-cap change", () => {
   const { rerender } = render(<McapChart data={data.slice(0, 2)} stablecoinId="test" controlledRange="all" />);
-  expect(screen.getByText("+10.00% 24h")).toBeTruthy();
+  expect(screen.getByText("+10.00% 24h").className).toContain("text-green-700");
   rerender(<McapChart data={[
     data[0], { ...data[1], date: START + 3 * 86_400 },
   ]} stablecoinId="test" controlledRange="all" />);

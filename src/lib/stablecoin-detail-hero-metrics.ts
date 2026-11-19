@@ -14,8 +14,9 @@ import { PEG_SCORE_EARLY_MAX_DAYS } from "@shared/lib/peg-score";
 import { projectTopDriver } from "@shared/lib/safety-score-v9/public-top-driver";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import { DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
-import { formatCurrency, formatIsoDate, formatIsoTimestamp, formatSignedPercent } from "@shared/lib/format";
+import { formatCurrency, formatIsoDate, formatIsoTimestamp, formatSignedPercent, roundForDisplay } from "@shared/lib/format";
 import {
+  DIRECTION_TONE_CLASSES,
   THREAT_BAND_LABELS,
   THREAT_BAND_STYLES,
   isThreatBand,
@@ -214,17 +215,19 @@ export function buildExcessYieldDisplay(yieldRanking: YieldRanking | null): Hero
   return {
     value: formatSignedPercent(yieldRanking.excessYield),
     sub: getYieldBenchmarkGapReferenceText(yieldRanking),
-    // A spread against T-bills is performance, not risk: neutral ink, the
-    // sign carries the direction.
-    color: "text-foreground",
+    color: signedPercentClass(yieldRanking.excessYield),
   };
 }
 
 export function buildPerformanceVsUsdDisplay(performanceVsUsd1y: number | null): HeroDisplayValue | null {
   if (performanceVsUsd1y === null) return null;
-  // A currency or commodity move against USD is context, not risk: neutral
-  // ink, the sign carries the direction.
-  return { value: formatSignedPercent(performanceVsUsd1y), color: "text-foreground" };
+  return { value: formatSignedPercent(performanceVsUsd1y), color: signedPercentClass(performanceVsUsd1y) };
+}
+
+/** Direction tone of a `formatSignedPercent` figure, read from the printed value: a printed 0.00% stays neutral ink. */
+function signedPercentClass(value: number): string {
+  const printed = roundForDisplay(value, 2);
+  return printed > 0 ? DIRECTION_TONE_CLASSES.up : printed < 0 ? DIRECTION_TONE_CLASSES.down : "text-foreground";
 }
 
 export function buildDewsDisplay(stressSignal: StressSignalEntry | null): HeroDewsDisplay {
