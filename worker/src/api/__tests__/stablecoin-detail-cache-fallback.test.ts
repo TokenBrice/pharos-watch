@@ -80,12 +80,12 @@ describe("cache-backed native supply", () => {
     expect(sqlite.prepare("SELECT value FROM cache WHERE key = 'detail:probe'").get()).toBeUndefined();
   });
 
-  it("preserves the weekly native count at its dated EUR valuation and skips rejected windows", async () => {
+  it("keeps the weekly EUR native count, skips rejected windows and never prices an omitted one", async () => {
     const day = 1_728_000_000;
     loadStablecoinsCacheMock.mockResolvedValue({ kind: "ok", updatedAt: day, payload: { peggedAssets: [{
       id: "eurc-circle", price: 1.1, circulatingNative: 100, circulating: { peggedEUR: 110 },
       circulatingPrevDay: { peggedEUR: 110 }, circulatingPrevMonth: { peggedEUR: 110 },
-      circulatingPrevWeek: { peggedEUR: 110 }, supplyChangeBaselines: { day: null, month: null, week: {
+      circulatingPrevWeek: { peggedEUR: 110 }, supplyChangeBaselines: { month: null, week: {
         observedAt: day - 7 * 86_400 + 100, circulatingUsd: 100, circulatingNative: 100,
       } },
     }] } });
@@ -94,6 +94,7 @@ describe("cache-backed native supply", () => {
     );
     expect(await response.json()).toEqual({ tokens: [
       { date: day - 7 * 86_400, totalCirculatingUSD: { peggedEUR: 100 }, totalCirculating: { peggedEUR: 100 } },
+      { date: day - 86_400, totalCirculatingUSD: { peggedEUR: 110 }, totalCirculating: {} },
       { date: day, totalCirculatingUSD: { peggedEUR: 110 }, totalCirculating: { peggedEUR: 100 } },
     ] });
   });

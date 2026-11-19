@@ -394,11 +394,16 @@ describe("computeAndStoreDEWS", () => {
     );
   });
 
-  it.each([true, false])("uses legacy USD stock when native history is absent (clock present %s)", async (hasClock) => {
+  it.each([
+    [true, "usdt-tether", 99_000_000, 98_000_000],
+    [false, "usdt-tether", 99_000_000, 98_000_000],
+    // An undated non-USD lookback is a dollar cap: an FX move is not a redemption.
+    [false, "eurc-euro-coin", null, null],
+  ] as const)("uses legacy USD stock without native history (clock %s, %s)", async (hasClock, id, day, week) => {
     vi.mocked(getCache).mockImplementation(async (_db, key) => {
       if (key === "dews:bootstrap-complete") return null;
       return dewsCache([dewsCoin({
-        circulatingNative: 90_000_000,
+        id, pegType: id === "usdt-tether" ? "peggedUSD" : "peggedEUR", circulatingNative: 90_000_000,
         supplyObservedAt: hasClock ? Math.floor(Date.now() / 1000) : undefined,
       })]) as never;
     });
@@ -407,14 +412,9 @@ describe("computeAndStoreDEWS", () => {
 
     await computeAndStoreDEWS(db);
 
-    expect(computeDEWS).toHaveBeenCalledWith(
-      expect.objectContaining({
-        stablecoinId: "usdt-tether",
-        circulatingCurrent: 100_000_000,
-        circulatingPrevDay: 99_000_000,
-        circulatingPrevWeek: 98_000_000,
-      }),
-    );
+    expect(computeDEWS).toHaveBeenCalledWith(expect.objectContaining({
+      stablecoinId: id, circulatingCurrent: 100_000_000, circulatingPrevDay: day, circulatingPrevWeek: week,
+    }));
   });
 
   it("keeps a mature mint/burn baseline when a fresh 24h row is quiet", async () => {

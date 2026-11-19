@@ -38,7 +38,9 @@ async function readXautSupply(price: SupplementalPriceResolution | null, chainRp
   if (price?.observedAt == null || !source || !hasRegistryRpc(chainRpcs?.get(XAUT_CANONICAL_CHAIN_ID))) return null;
   const options = { chainRpcs, signal: signal ?? AbortSignal.timeout(10_000), timeoutMs: 10_000 };
   try {
-    const result = await fetchJsonWithRetry(source.url, { signal: options.signal, redirect: "error" }, 0, {
+    // Workers rejects redirect: "error" before sending; manual keeps
+    // redirects fail-closed via the helper's non-2xx body cleanup.
+    const result = await fetchJsonWithRetry(source.url, { signal: options.signal, redirect: "manual" }, 0, {
       timeoutMs: options.timeoutMs, maxResponseBytes: 1_000_000,
     });
     const disclosure = result?.response.ok ? parseXautTransparencyDisclosure(result.body) : null;

@@ -150,6 +150,8 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
     const nativeHistory = sourceState.nativeHistory?.get(meta.id);
     const useNativeSupply = asset.supplyObservedAt != null && (nativeHistory != null
       || (asset.circulatingNative !== undefined && sourceState.nativeHistory === null));
+    // An undated non-USD list bucket is a dated dollar cap: FX and metal moves are not redemptions.
+    const usdCapHistoryOnly = !useNativeSupply && asset.supplyObservedAt == null && meta.flags.pegCurrency !== "USD";
 
     const dexLiq = sourceState.dexLiquidity.dexLiqMap.get(meta.id);
     const dexPrice = sourceState.dexPrices.dexPriceMap.get(meta.id);
@@ -254,8 +256,8 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       mcapUsd: current,
       pegType,
       circulatingCurrent: useNativeSupply ? asset.circulatingNative ?? null : current,
-      circulatingPrevDay: useNativeSupply ? nativeHistory?.day ?? null : getPrevDayRawOrNull(asset),
-      circulatingPrevWeek: useNativeSupply ? nativeHistory?.week ?? null : getPrevWeekRawOrNull(asset),
+      circulatingPrevDay: useNativeSupply ? nativeHistory?.day ?? null : usdCapHistoryOnly ? null : getPrevDayRawOrNull(asset),
+      circulatingPrevWeek: useNativeSupply ? nativeHistory?.week ?? null : usdCapHistoryOnly ? null : getPrevWeekRawOrNull(asset),
       legacySupplyUsd: useNativeSupply && nativeHistory ? {
         day: nativeHistory.day === undefined ? getPrevDayRawOrNull(asset) : null,
         week: nativeHistory.week === undefined ? getPrevWeekRawOrNull(asset) : null,

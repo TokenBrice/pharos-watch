@@ -51,8 +51,9 @@ export async function handleCacheBackedDetail(
   const historicalToken = (window: "day" | "week" | "month", days: number, legacy: Record<string, number>) => {
     const baseline = coin.supplyChangeBaselines?.[window];
     const date = baseline ? bucketUnixSecondsToUtcDay(baseline.observedAt) : currentDay - days * DAY_SECONDS;
+    // A non-USD bucket is a historical dollar cap; today's price cannot recover its token count.
     return buildCacheFallbackToken(date, projectUsdMarketCapBaselineBuckets(coin, window, legacy), config.pegType,
-      coin.price, baseline?.circulatingNative);
+      coin.price, config.pegType === "peggedUSD" ? baseline?.circulatingNative : baseline?.circulatingNative ?? null);
   };
   const tokens = [
     historicalToken("month", 30, coin.circulatingPrevMonth),
