@@ -21,7 +21,7 @@ const BLOCKER_CLAUSES: Record<Exclude<ReserveAdmissionBlocker, "unverified">, st
   undated: "has no composition date",
 };
 
-export function isV9ReserveCompositionUnadmitted(
+function isV9ReserveCompositionUnadmitted(
   card: Pick<SafetyScoreV9CurrentCard, "breakdowns"> | null | undefined,
 ): boolean {
   return card?.breakdowns?.backing.components.some(
