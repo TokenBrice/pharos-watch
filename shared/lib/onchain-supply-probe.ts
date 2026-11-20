@@ -801,14 +801,17 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
     canonicalSupplyChain: "ethereum",
   },
   // sUSDe has the same shape (llamaId null, CoinGecko detail provider), but its
-  // representations are LayerZero OFTs minted against the Ethereum OFT adapter
-  // 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2, which escrows canonical sUSDe.
-  // Ethereum totalSupply() is therefore the conserved global total and every
-  // reviewed representation is reallocated out of it. Legs outside
+  // reviewed representations are LayerZero OFTs minted against the Ethereum OFT
+  // adapter 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2, which escrows canonical
+  // sUSDe. Ethereum totalSupply() is therefore the conserved global total and
+  // every reviewed representation is reallocated out of it. Legs outside
   // buildChainRpcs() carry a verified public endpoint. The TON jetton and the
-  // Aptos fungible asset have no supported supply probe, so they stay
-  // unconfigured; the escrow-residual policy publishes their balances under the
-  // unattributed label rather than assigning them to the Ethereum bucket.
+  // Aptos fungible asset stay unconfigured: neither stock is proven to draw on
+  // the adapter escrow (an aptos probe family exists; proof precedes
+  // configuration), so the escrow residual is unallocated escrow — it does not
+  // contain their balances, and subtracting either stock requires the
+  // escrow-proof prerequisites in the evidence-log note beside escrowResidual
+  // below.
   "susde-ethena": {
     aggregateContracts: [
       { chain: "ethereum" },
@@ -841,12 +844,16 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
       supplyProbeChain("monad"),
     ],
     canonicalSupplyChain: "ethereum",
-    // The Ethereum OFT Adapter escrows every sUSDe representation, including the
-    // TON jetton and Aptos fungible asset that have no supply probe. Verified
-    // 2026-07-29 against canonical Ethereum totalSupply 1,240,195,620.187629:
-    // TON 2,397,958.18 (0.1934%) + Aptos 1,074,420.00 (0.0866%) + 13,587,459.52
-    // of escrow matching no reviewed route (1.0956%) were all being published as
-    // Ethereum float while the TON and Aptos controls reported a hard 0 share.
+    // The unprobed TON jetton and Aptos fungible asset are not proven to draw
+    // on the Ethereum OFT Adapter escrow: the 2026-07-29 reconciliation
+    // (canonical Ethereum totalSupply 1,240,195,620.187629; TON 2,397,958.18
+    // (0.1934%), Aptos 1,074,420.00 (0.0866%) and 13,587,459.52 of escrow
+    // matching no reviewed route (1.0956%) were all being published as Ethereum
+    // float while the TON and Aptos controls reported a hard 0 share) is
+    // arithmetic, not escrow proof. Neither stock may be subtracted from the
+    // residual without the escrow-proof requirements in
+    // docs/process/report-cards-evidence-log.md ("Escrow and Unmatched-Supply
+    // Rows — 2026-11-20").
     escrowResidual: {
       escrowAddress: "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
       unattributedChainLabel: "sUSDe unattributed OFT escrow",

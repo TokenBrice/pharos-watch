@@ -132,6 +132,34 @@ describe("doc-sync lane freshness matrix", () => {
   });
 });
 
+describe("doc-sync report-cards evidence log (#1683)", () => {
+  const FILE = "docs/process/report-cards-evidence-log.md";
+  const log = readFileSync(resolve(ROOT, FILE), "utf8");
+
+  it("rejects dropped prerequisites, weakened requirements, a swapped link target and an inverted historical claim", () => {
+    const drift = log
+      .replace("any extension must first prove that each added leg draws on the escrow being debited", "no extension must first prove that each added leg draws on the escrow being debited")
+      .replace("— and reconcile pending bridge messages and cross-read timing against the pinned reads; the unmatched row remains", "— or reconcile pending bridge messages and cross-read timing against the pinned reads; the unmatched row remains")
+      .replace("Blocker: the accepted supply partition behind an accepted generation", "Blocker: the join diagnostics")
+      .replace("reconcile the accepted supply partition's positive-share rows after any admitted provider-row exclusions", "join diagnostics may stand in for the accepted partition")
+      .replace("Aptos attribution stays blocked until a pinned peer setting or a bridging transfer proves the escrow binding", "Aptos attribution may join the residual without escrow proof")
+      .replace("does not prove the adapter ever paired with Tempo or that the Tempo token's only mint path is the adapter escrow", "proves the adapter pairing and the Tempo token's mint path")
+      .replace("[STON.fi Ethena staking page](https://ethena.ston.fi/)", "[STON.fi Ethena staking page](https://example.com/) (`[STON.fi Ethena staking page](https://ethena.ston.fi/)`)")
+      .replace("on reUSD, sUSN and nOPAL and no bridge-supply reason on sUSDe", "on reUSD, sUSN, nOPAL and sUSDe");
+    const failures = checkWithOverrides({ [FILE]: drift });
+    for (const label of [
+      "issue-1683 susn-extension-escrow-proof",
+      "issue-1683 susn-extension-timing-reconcile",
+      "issue-1683 nopal-accepted-partition-blocker",
+      "issue-1683 nopal-partition-reconciliation",
+      "issue-1683 susde-aptos-attribution-blocked",
+      "issue-1683 susde-tempo-peer-one-way",
+      "issue-1683 susde-ton-citation-link",
+      "issue-1683 historical reason-code claim",
+    ]) expect(failures).toContainEqual(expect.objectContaining({ file: FILE, label }));
+  });
+});
+
 describe("doc-sync methodology owner sentences", () => {
   it("rejects a methodology page owner doc that drops the shared rule", () => {
     const pricing = "docs/pricing-pipeline.md";
