@@ -1,10 +1,12 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { z } from "zod";
 import { CAPTURE_SUMMARY_SUFFIX, captureLookupKeys, parseMechanismCaptureSummary, verifyCaptureBody } from "../../scripts/lib/mechanism-measurement/capture-summary";
 import { createR2MeasurementsClient } from "../../scripts/lib/r2-measurements-client";
 import type { R2ObjectClient } from "../../scripts/lib/r2-object-client";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import mechanismReviewOverlaysAsset from "@shared/data/safety-score-v9/mechanism-review-overlays-v1.json";
 import { parseIsoDateOrUtcInstantSec } from "@shared/types/date-primitives";
 import {
@@ -15,16 +17,19 @@ import {
   writeCliHelpIfRequested,
 } from "../../scripts/lib/cli-args.mjs";
 import {
+  computeNativeDexLiquidityPayloadFingerprint,
+  NativeSafetyScoreV9InputSchema,
   normalizeSafetyScoreV9CompilerInput,
   parseSafetyScoreV9InputCacheValue,
   type SafetyScoreV9CompilerInput,
 } from "../src/lib/safety-score-v9/native-input";
 import { deriveSupplyModelExitRouteObservation } from "../src/lib/redemption-exit-route-observations";
-import { computeRedemptionPayloadFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
+import { computeRedemptionPayloadFingerprint, computeReportCardsRegistryFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
 import {
   buildSafetyScoreV9Candidate,
   type SafetyScoreV9CandidatePipelineResult,
 } from "../src/lib/safety-score-v9/candidate";
+import { resolveCapturedChainSupply } from "../src/lib/safety-score-v9/fact-set-peg-supply";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   loadSafetyScoreV9RegistryRef,
@@ -127,6 +132,10 @@ Options:
   --rederive-current-redemption   Explicit current-curation scenario: rederive captured
                                   undisclosed-reviewed fee observations. Incompatible
                                   with accepted captures or capture-time registry modes.
+  --admit-asset <id>              Add a local registry-active asset to a native v4 capture
+                                  for an admission scenario (repeatable).
+  --supply-observations <path>    JSON observations keyed by admitted asset ID, required for
+                                  assets without usable captured supply.
   --allow-future-reviews          Replay even when curated review dates postdate the capture
                                   clock. Those reviews are rejected at that clock, silently
                                   dropping the asset's curated reserve composition, so their
@@ -138,6 +147,19 @@ Options:
                                   must be partitioned by attribution before it is read as an
                                   equivalence result.
   -h, --help                      Show this help`;
+
+const AdmissionSupplyObservationsSchema = NativeSafetyScoreV9InputSchema.shape.replaySupplyObservationsById.unwrap();
+
+interface AssetAdmissionScenario {
+  kind: "asset-admission";
+  sourceBaseInputGenerationId: string;
+  registryFingerprint: string;
+  assets: Array<{
+    assetId: string;
+    captureIdSuffix: string;
+    supplyObservation?: z.infer<typeof AdmissionSupplyObservationsSchema.valueType>;
+  }>;
+}
 
 export interface SafetyScoreV9ReplayArtifact {
   schemaVersion: 1;
@@ -155,7 +177,7 @@ export interface SafetyScoreV9ReplayArtifact {
   replayScenario?: {
     kind: "current-redemption-rederivation";
     sourceBaseInputGenerationId: string;
-  };
+  } | AssetAdmissionScenario;
 }
 
 const CAPTURE_SHA256_PATTERN = /^[a-f0-9]{64}$/u;
@@ -300,6 +322,57 @@ export function rederiveUndisclosedFeeObservations(
   };
 }
 
+function buildAssetAdmissionScenario(
+  capturedInput: SafetyScoreV9CompilerInput,
+  assetIds: string[],
+  observations: z.infer<typeof AdmissionSupplyObservationsSchema>,
+) {
+  const { baseInputGenerationId, ...input } = capturedInput;
+  const updatedAt = input.inputFreshness.dexLiquidity.updatedAt;
+  if (input.schemaVersion !== 4 || updatedAt == null) {
+    throw new Error("--admit-asset requires a native v4 capture with a captured DEX generation");
+  }
+  assertCliUsage(new Set(assetIds).size === assetIds.length, "--admit-asset IDs must be unique");
+  for (const id of Object.keys(observations)) {
+    assertCliUsage(assetIds.includes(id), `Supply observation provided for unrequested asset ${id}`);
+  }
+  const dexLiqMap = { ...input.dexLiqMap };
+  const assets = [...assetIds].sort().map((assetId) => {
+    assertCliUsage(ACTIVE_META_BY_ID.has(assetId), `${assetId} is not active in the local registry`);
+    assertCliUsage(!input.activeAssetIds.includes(assetId), `${assetId} is already active in the capture`);
+    dexLiqMap[assetId] ??= { updatedAt };
+    const admission = { assetId, captureIdSuffix: `+admit:${assetId}` };
+    const supplyObservation = observations[assetId];
+    if (getCirculatingRawOrNull(input.aggregateCirculatingById[assetId]) !== null ||
+      resolveCapturedChainSupply(capturedInput, assetId) !== null) {
+      assertCliUsage(supplyObservation === undefined, `${assetId} already has usable captured supply`);
+      return admission;
+    }
+    if (supplyObservation === undefined) throw new Error(`${assetId} requires a --supply-observations entry`);
+    const { observedAtSec, retrievedAtSec } = supplyObservation;
+    assertCliUsage(getCirculatingRawOrNull(supplyObservation) !== null, `${assetId} requires observed USD supply buckets`);
+    assertCliUsage(observedAtSec === null || observedAtSec <= Math.min(input.clockSec, retrievedAtSec),
+      `${assetId} supply observation time must not follow the capture clock or retrieval time`);
+    return { ...admission, supplyObservation };
+  });
+  const replayScenario: AssetAdmissionScenario = {
+    kind: "asset-admission",
+    sourceBaseInputGenerationId: baseInputGenerationId,
+    registryFingerprint: computeReportCardsRegistryFingerprint(),
+    assets,
+  };
+  return {
+    fixedInput: {
+      ...input,
+      activeAssetIds: [...input.activeAssetIds, ...assetIds],
+      ...(Object.keys(observations).length > 0 ? { replaySupplyObservationsById: observations } : {}),
+      dexLiqMap,
+      dexPayloadFingerprint: computeNativeDexLiquidityPayloadFingerprint(dexLiqMap, input.dexGenerationId),
+    },
+    replayScenario,
+  };
+}
+
 export function parseSafetyScoreV9PublishedAtSec(value: unknown): number {
   const raw = String(value ?? "").trim();
   assertCliUsage(raw.length > 0, "--published-at is required");
@@ -322,10 +395,11 @@ export function buildSafetyScoreV9ReplayArtifact(input: {
   registrySnapshot?: SafetyScoreV9RegistrySnapshot;
   transferMaterialityGeneration?: SafetyScoreV9TransferMaterialityGeneration | null;
   sourceAdmissionBaseline?: SafetyScoreV9AcceptedPublicationBaseline | null;
+  replayScenario?: AssetAdmissionScenario;
   /** Captured lane witnesses; absent means the capture could not record them. */
   laneScreening?: SafetyScoreV9ReplayLaneScreening | null;
 }): SafetyScoreV9ReplayArtifact {
-  const { sourceAdmissionBaseline, laneScreening, ...candidateInput } = input;
+  const { sourceAdmissionBaseline, laneScreening, replayScenario, ...candidateInput } = input;
   if (input.registrySnapshot && (!input.fixedInput || typeof input.fixedInput !== "object" ||
     !("registryFingerprint" in input.fixedInput) || input.fixedInput.registryFingerprint !== input.registrySnapshot.fingerprint)) {
     throw new Error("Capture registry fingerprint does not match supplied snapshot");
@@ -340,6 +414,7 @@ export function buildSafetyScoreV9ReplayArtifact(input: {
     },
     ...(sourceAdmissionBaseline === undefined ? {} : { sourceAdmissionBaseline }),
     ...(laneScreening === undefined ? {} : { laneScreening }),
+    ...(replayScenario === undefined ? {} : { replayScenario }),
     pipeline: buildSafetyScoreV9Candidate({
       ...candidateInput,
       // The lane witnesses the publication actually read: without them a
@@ -360,7 +435,7 @@ export function buildSafetyScoreV9ReplayArtifact(input: {
           reviewedTransferFacts: new Map(input.registrySnapshot.transferReviews.map((review) => [review.assetId, review])),
         },
       } : {}),
-    }),
+    }, replayScenario?.kind),
   };
 }
 
@@ -380,11 +455,17 @@ export async function runSafetyScoreV9ReplayCli(argv: readonly string[]): Promis
       "allow-registry-mismatch": { type: "boolean" },
       "allow-future-reviews": { type: "boolean" },
       "rederive-current-redemption": { type: "boolean" },
+      "admit-asset": { type: "string", multiple: true },
+      "supply-observations": { type: "string" },
     },
+    conflicts: [["admit-asset", "registry-ref"], ["admit-asset", "rederive-current-redemption"], ["admit-asset", "extension"]],
   });
   if (writeCliHelpIfRequested(values, USAGE)) return;
   assertCliUsage(typeof values.input === "string", "--input is required");
   assertCliUsage(typeof values.output === "string", "--output is required");
+  const admitAssetIds = (values["admit-asset"] ?? []) as string[];
+  const supplyObservationsPath = values["supply-observations"];
+  assertCliUsage(supplyObservationsPath === undefined || admitAssetIds.length > 0, "--supply-observations requires --admit-asset");
 
   const publishedAtSec = parseSafetyScoreV9PublishedAtSec(values["published-at"]);
   const releaseCandidateId = values["release-candidate-id"];
@@ -405,6 +486,8 @@ export async function runSafetyScoreV9ReplayCli(argv: readonly string[]): Promis
   const registrySnapshot = typeof values["registry-ref"] === "string"
     ? loadSafetyScoreV9RegistryRef(values["registry-ref"])
     : values["allow-registry-mismatch"] === true ? undefined : embedded;
+  assertCliUsage(admitAssetIds.length === 0 || (!acceptedCapture && registrySnapshot === undefined),
+    "--admit-asset requires base inputs and the local registry. Use a prepare-time export with --normalized-only");
   if (embedded) {
     verifyRegistrySnapshot(embedded);
     if (registrySnapshot && (registrySnapshot.fingerprint !== embedded.fingerprint ||
@@ -420,10 +503,15 @@ export async function runSafetyScoreV9ReplayCli(argv: readonly string[]): Promis
       (acceptedCapture || embedded !== undefined || values["registry-ref"] !== undefined)),
     "--rederive-current-redemption cannot be combined with accepted captures or capture-time registry modes",
   );
+  const admission = admitAssetIds.length > 0 ? buildAssetAdmissionScenario(
+    capturedInput,
+    admitAssetIds,
+    typeof supplyObservationsPath === "string" ? AdmissionSupplyObservationsSchema.parse(readJson(supplyObservationsPath)) : {},
+  ) : undefined;
   // Captured producer bytes are the default, even with current checkout curation.
   const fixedInput = values["rederive-current-redemption"] === true
     ? rederiveUndisclosedFeeObservations(capturedInput)
-    : capturedInput;
+    : admission?.fixedInput ?? capturedInput;
   if (values["allow-future-reviews"] !== true) {
     const futureDated = findFutureDatedCuratedReviews(fixedInput.clockSec, registrySnapshot
       ? new Map(registrySnapshot.activeStablecoins.map((coin) => [coin.id, coin]))
@@ -434,6 +522,7 @@ export async function runSafetyScoreV9ReplayCli(argv: readonly string[]): Promis
   const artifact = buildSafetyScoreV9ReplayArtifact({
     fixedInput,
     registrySnapshot,
+    replayScenario: admission?.replayScenario,
     ...(acceptedCapture ? { transferMaterialityGeneration: capture.transferMaterialityGeneration === null ? null : parseSafetyScoreV9TransferMaterialityGeneration(capture.transferMaterialityGeneration) } : {}),
     ...(acceptedCapture && capture.sourceAdmissionBaseline !== undefined
       ? { sourceAdmissionBaseline: parseSafetyScoreV9SourceAdmissionBaseline(capture.sourceAdmissionBaseline, capturedInput.clockSec)?.baseline ?? null } : {}),

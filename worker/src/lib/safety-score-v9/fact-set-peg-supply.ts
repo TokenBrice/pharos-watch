@@ -517,11 +517,18 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
  */
 function buildAggregateSupply(context: AssetBuildContext): V9AssetFactsV2["supply"] {
   const source = context.extension.sources.chainSupply;
-  const aggregate = context.fixedInput.aggregateCirculatingById[context.asset.assetId];
+  const capturedAggregate = context.fixedInput.aggregateCirculatingById[context.asset.assetId];
+  const capturedUsd = getCirculatingRawOrNull(capturedAggregate);
+  const replaySupply = capturedUsd === null ? context.fixedInput.replaySupplyObservationsById?.[context.asset.assetId] : undefined;
+  const aggregate = replaySupply ?? capturedAggregate;
   // DefiLlama list circulating values are already USD-denominated across all peg
   // types, so this is a plain sum — never a price multiplication.
-  const circulatingUsd = aggregate ? getCirculatingRawOrNull(aggregate) : null;
-  if (circulatingUsd === null) {
+  const circulatingUsd = replaySupply === undefined ? capturedUsd : getCirculatingRawOrNull(replaySupply);
+  const replayObservation = replaySupply && { url: replaySupply.url, field: replaySupply.field,
+    retrievedAtSec: replaySupply.retrievedAtSec, observedAtSec: replaySupply.observedAtSec, circulatingUsd };
+  const sourceGenerationId = replayObservation === undefined ? source.generationId : context.fixedInput.baseInputGenerationId;
+  const clockUnknown = replayObservation?.observedAtSec === null;
+  if (circulatingUsd === null || clockUnknown) {
     return {
       status: missingLocalFact(context, {
         componentKey: "chain-supply",
@@ -529,13 +536,15 @@ function buildAggregateSupply(context: AssetBuildContext): V9AssetFactsV2["suppl
         ownerDomain: "evidence",
         responsibility: "producer-failed",
         policyRuleId: "v9.supply.current",
-        message: "No USD-denominated chain circulating rows are present in the exact fixed input.",
+        message: clockUnknown ? "The replay supply observation has no upstream clock."
+          : "No USD-denominated chain circulating rows are present in the exact fixed input.",
       }).status,
-      sourceGenerationId: source.generationId,
-      sourceKind: "usd-denominated-circulating",
+      sourceGenerationId,
+      sourceKind: clockUnknown ? "aggregate-circulating" : "usd-denominated-circulating",
       circulatingUnits: null,
       referencePriceUsd: null,
       circulatingUsd: null,
+      ...(replayObservation === undefined ? {} : { replayObservation }),
       chainDistribution: null,
       selectedBridgeRoutes: [],
       selectedRouteSupplyShare: null,
@@ -557,10 +566,11 @@ function buildAggregateSupply(context: AssetBuildContext): V9AssetFactsV2["suppl
     createV9EvidenceReference(
       {
         evidenceId: `${context.asset.assetId}:aggregate-supply`,
-        sourceId: "report-cards-aggregate-circulating",
-        sourceGenerationId: source.generationId,
+        sourceId: replayObservation === undefined ? "report-cards-aggregate-circulating" : "asset-admission-supply-observation",
+        sourceGenerationId,
         disposition: "observed",
         observedAtSec,
+        url: replayObservation?.url ?? null,
         contentSha256: domainDigest("safety-score-v9.aggregate-supply.v1", aggregate),
         maxAgeSec: SUPPLEMENTAL_RESTORE_MAX_AGE_SEC,
       },
@@ -634,11 +644,12 @@ function buildAggregateSupply(context: AssetBuildContext): V9AssetFactsV2["suppl
         });
   return {
     status,
-    sourceGenerationId: source.generationId,
+    sourceGenerationId,
     sourceKind: "aggregate-circulating",
     circulatingUnits: null,
     referencePriceUsd: null,
     circulatingUsd,
+    ...(replayObservation === undefined ? {} : { replayObservation }),
     chainDistribution: null,
     selectedBridgeRoutes: review?.selectedBridgeRoutes ?? [],
     selectedRouteSupplyShare: review?.selectedRouteSupplyShare ?? null,
@@ -703,17 +714,15 @@ function assertSupplyReviewSharesReconcile(
   }
 }
 
-export function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"] {
-  const source = context.extension.sources.chainSupply;
-  const v9Attribution =
-    context.fixedInput.safetyScoreV9SupplyAttributionById[context.asset.assetId];
-  const chainRows = safetyScoreV9ChainRows(context.fixedInput, context.asset.assetId);
+export function resolveCapturedChainSupply(fixedInput: SafetyScoreV9CompilerInput, assetId: string) {
+  const v9Attribution = fixedInput.safetyScoreV9SupplyAttributionById[assetId];
+  const chainRows = safetyScoreV9ChainRows(fixedInput, assetId);
   const chains = Object.keys(chainRows).sort(compareText);
   const chainSubtotalUsd = chains.reduce((sum, chain) => sum + chainRows[chain]!.current, 0);
-  const hasEconomicSupplyPlan = REVIEWED_ECONOMIC_SUPPLY_PLANS.has(context.asset.assetId) ||
+  const hasEconomicSupplyPlan = REVIEWED_ECONOMIC_SUPPLY_PLANS.has(assetId) ||
     v9Attribution?.model === "reviewed-economic-deployment-partition-v1";
   const circulatingUsd = hasEconomicSupplyPlan
-    ? getCirculatingRawOrNull(context.fixedInput.aggregateCirculatingById[context.asset.assetId] ?? {})
+    ? getCirculatingRawOrNull(fixedInput.aggregateCirculatingById[assetId])
     : chainSubtotalUsd;
   const supplyPolicy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
   const toleranceUsd = Math.max(supplyPolicy.conservationAbsoluteToleranceUsd,
@@ -722,8 +731,16 @@ export function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"
   // keep their captured denominator until a reviewed economic plan exists.
   if (chains.length === 0 || circulatingUsd === null || circulatingUsd <= 0 ||
     (hasEconomicSupplyPlan && chainSubtotalUsd > circulatingUsd + toleranceUsd)) {
-    return buildAggregateSupply(context);
+    return null;
   }
+  return { v9Attribution, chainRows, chains, chainSubtotalUsd, circulatingUsd };
+}
+
+export function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"] {
+  const capturedChainSupply = resolveCapturedChainSupply(context.fixedInput, context.asset.assetId);
+  if (capturedChainSupply === null) return buildAggregateSupply(context);
+  const { v9Attribution, chainRows, chains, chainSubtotalUsd, circulatingUsd } = capturedChainSupply;
+  const source = context.extension.sources.chainSupply;
   const evidenceId = addEvidence(
     context,
     createV9EvidenceReference(
@@ -755,7 +772,7 @@ export function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"
         evidenceId: `${context.asset.assetId}:economic-supply-reference:${index}`,
         sourceId: reference.sourceId, sourceGenerationId: reference.sourceGeneration, disposition: "observed",
         observedAtSec: reference.observedAtSec, contentSha256: reference.responseSha256,
-        maxAgeSec: supplyPolicy.referencePriceMaxAgeSec,
+        maxAgeSec: V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.referencePriceMaxAgeSec,
       }, context.fixedInput.clockSec)));
     }
   }

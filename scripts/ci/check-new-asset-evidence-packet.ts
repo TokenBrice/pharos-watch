@@ -148,7 +148,7 @@ export const NewAssetAdmissionReceiptSchema = z
     schemaVersion: z.literal(1),
     kind: z.literal(NEW_ASSET_RECEIPT_KIND),
     assetId: z.string().min(1),
-    captureId: z.string().min(1).max(120),
+    captureId: z.string().min(1),
     captureClockSec: z.number().int().positive(),
     registryFingerprint: z.string().regex(/^[0-9a-f]{64}$/u),
     card: V9OpenEvidenceByCardSchema,
