@@ -577,7 +577,9 @@ export function runGitleaksConfigSelfTest(
     const falconLabel = ["ARIA", "B71VABWJ", "T8GB"].join("_");
     const credential = ["A1b2C3d4E5f6G7h8", "I9j0K1l2M3n4O5p6"].join("");
     const syntheticApiKey = ["ph_live_0123456789abcdef_", "abcdefghijklmnopqrstuvwxyzABCDEF"].join("");
-    const unreviewedApiKey = ["ph_live_0123456789abcdef_", "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef"].join("");
+    // Not an alphabet run: Gitleaks' default stopwords include "abcdefghijklmnopqrstuvwxyz",
+    // which would silently allowlist a token whose body spells the alphabet.
+    const unreviewedApiKey = ["ph_live_9f8e7d6c5b4a3210_", "Q7mK2xR9pL4vN8tB3wZ6yH1cJ5dF0gSe"].join("");
     const solanaMint = ["Cfuy5T6osdazUeLego5LF", "ycBQebm9PP3H7VNdCndXXEN"].join("");
     const gitbookUuid = ["54e9714e-c65f-4b0c", "-8bcf-c7869956dd20"].join("");
     const tronUsdt = ["TR7NHqjeKQxGTCi8q8", "ZY4pL8otSzgjLj6t"].join("");
