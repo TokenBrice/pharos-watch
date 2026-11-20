@@ -434,10 +434,11 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
   RESERVE_COMPOSITION: {
     title: "Reserve composition envelope", stream: "RESV",
     instructions: "Author the current structured reserve envelope with slice names and weights, asset classes, issuer/obligor identity, risk factors, liquidity horizon, maturity where applicable, dependency links, reserveReview, custodyProfile, and latest assurance scope.",
-    completionCriteria: "A fresh exact capture contains a reviewed reserve composition and removes the missing-reserve-composition gapId, or, for stale-audited-reserve-composition, refreshes reserves[] and compositionAsOf from the newest independent attestation; if the issuer has not published a newer composition, record the blocker and accept the audited-fallback adequate ceiling rather than restating expired evidence.", recommendedSkill: "reserve-research", likelyRepoAreas: ["shared/data/stablecoins/domains/reserves/", "shared/data/stablecoins/coins/"], cautions: ["Preserve documented unknown residuals instead of forcing an unsupported 100% allocation."],
+    completionCriteria: "A fresh exact capture contains a reviewed reserve composition and removes the missing-reserve-composition gapId, or, for expired-reviewed-reserve-composition, admits a whole-book composition dated inside the age budget, or, for stale-audited-reserve-composition, refreshes reserves[] and compositionAsOf from the newest independent attestation; if the issuer has not published a newer composition, record the blocker and accept the audited-fallback adequate ceiling rather than restating expired evidence.", recommendedSkill: "reserve-research", likelyRepoAreas: ["shared/data/stablecoins/domains/reserves/", "shared/data/stablecoins/coins/"], cautions: ["Preserve documented unknown residuals instead of forcing an unsupported 100% allocation."],
     ownerDomain: "backing",
     defaultResolutionMode: "agent-curation",
     ...workReasons({ RESV: [
+      "expired-reviewed-reserve-composition",
       "material-unknown-reserve-exposure",
       "missing-custody-profile",
       "missing-latest-assurance-report",

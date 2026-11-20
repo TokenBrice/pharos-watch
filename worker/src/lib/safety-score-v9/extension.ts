@@ -318,15 +318,22 @@ export function createSafetyScoreV9BaselineExtensionSource(
         // authority over independently dated, reviewed registry evidence.
         // Live rows still win; curated rows retain every source/scope/age gate.
         admissionPath = "reviewedStaticReserveRows";
+        // Capture the rejection unconditionally: the v10.48 fallback
+        // attribution reads the same admission result the optional diagnostic
+        // publishes, whether or not the diagnostic is requested.
         let reserveRejection: V9ReserveCompositionAdmission | undefined;
         const reviewedReserveAdmission = resolveReviewedReserveAdmission({
           meta,
           clockSec,
           fixedInput,
           liveReserveRows: liveReserves,
-          onRejected: options.onReserveCompositionRejected && ((diagnostic) => { reserveRejection = diagnostic; }),
+          onRejected: (diagnostic) => { reserveRejection = diagnostic; },
         });
         const reviewedStaticReserveRows = reviewedReserveAdmission.projected;
+        const expiredReviewedReserveComposition = reserveRejection?.age &&
+          reserveRejection.reasons.length === 1 && reserveRejection.reasons[0] === "beyond-age-budget"
+          ? reserveRejection.age
+          : undefined;
         const reserveRows = reviewedStaticReserveRows?.rows ?? liveReserves;
         admissionPath = "reserveBoundFacts";
         const reserveBoundFacts = buildSafetyScoreV9ReserveBoundFacts(assetId, reserveRows, { clockSec, liveProvenance: fixedInput.liveReserveProvenanceMap[assetId], liveMaxAgeSec: sources.liveReserves.maxAgeSec });
@@ -630,6 +637,7 @@ export function createSafetyScoreV9BaselineExtensionSource(
           reserveClassifications,
           ...(reserveBoundFacts.length > 0 ? { reserveBoundFacts } : {}),
           reviewedStaticReserveRows,
+          ...(expiredReviewedReserveComposition ? { expiredReviewedReserveComposition } : {}),
           ...(reserveScopeAdmissions.length > 0 ? { reserveScopeAdmissions } : {}),
           routeReviews,
           retainedRoutes,

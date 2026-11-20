@@ -336,7 +336,11 @@ export function addGap(context: AssetBuildContext, gap: V9FactGapV3): string {
   // Reviewed missing terms are bounded uncertainty, not absent route applicability.
   // Only a positive nondisclosure proof selects C; research backlog classifications
   // cannot exclude this established subject. Independent runtime failures still apply.
-  const classification = gap.policyRuleId === "v9.exit.reviewed-terms" && scoped[0]?.cause !== "C"
+  // v10.48: an age-only expired reviewed composition is published evidence that
+  // predates the budget, not issuer nondisclosure, so its scoped classification
+  // cannot re-assert C/B over the compiler-authenticated admission result.
+  const classification = (gap.policyRuleId === "v9.exit.reviewed-terms" && scoped[0]?.cause !== "C") ||
+    gap.reasonCode === "expired-reviewed-reserve-composition"
     ? undefined : scoped[0];
   const typedReview = v9TypedMechanismReview(context.asset, scope);
   const classificationEvidence = classification && Date.parse(classification.reviewedAt) / 1000 <= context.fixedInput.clockSec

@@ -164,6 +164,9 @@ export const V9_LEGACY_RESPONSIBILITY_BY_REASON = {
   "bounded-unknown-reserve-exposure": "integration-missing",
   "correlated-exit-routes": "measured-adverse",
   "critical-unresolved": "method-unsupported",
+  // v10.48: the reviewed whole-book composition exists and predates the age
+  // budget; expiry is not issuer nondisclosure.
+  "expired-reviewed-reserve-composition": "published-evidence-expired",
   "future-dated-input-fact": "producer-failed",
   "historical-critical-input": "integration-missing",
   "implementation-parent-cycle": "method-unsupported",

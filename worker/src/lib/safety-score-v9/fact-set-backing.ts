@@ -606,15 +606,21 @@ export function buildReserves(context: AssetBuildContext): {
     const expiredPublishedHistory = reserveHistoryEvidenceIds.some(
       (evidenceId) => context.evidence.get(evidenceId)?.freshness.state === "stale",
     );
+    // v10.48: when admission rejected a whole-book, verified, dated review for
+    // age alone, the fallback names the expired composition instead of claiming
+    // the issuer discloses nothing. The rows still earn no credit.
+    const expiredReviewedComposition = context.asset.expiredReviewedReserveComposition !== undefined;
     const reserveStatus = missingLocalFact(context, {
         componentKey: "reserve-composition",
-        reasonCode: "missing-reserve-composition",
+        reasonCode: expiredReviewedComposition ? "expired-reviewed-reserve-composition" : "missing-reserve-composition",
         ownerDomain: "backing",
         responsibility: "unresearched",
         policyRuleId: "v9.backing.reserve-composition",
-        message: expiredPublishedHistory
-          ? "The last published reserve composition is older than the v9 freshness bound."
-          : "No reserve composition is present in the exact fixed input.",
+        message: expiredReviewedComposition
+          ? "The reviewed whole-book reserve composition is older than the v9 age budget."
+          : expiredPublishedHistory
+            ? "The last published reserve composition is older than the v9 freshness bound."
+            : "No reserve composition is present in the exact fixed input.",
         ...(expiredPublishedHistory
           ? { observationState: "stale" as const, evidenceRefIds: reserveHistoryEvidenceIds }
           : {}),

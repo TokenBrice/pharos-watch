@@ -504,7 +504,8 @@ export function publicDependencyMetadata(
   for (const slice of slices) {
     if (!slice.coinId) continue;
     const outside = asset.dependencies.diagnostics.issueCodes.find((code) => code === `outside-active-set:${slice.coinId}`);
-    const envelope = asset.gaps.find((gap) => gap.reasonCode === "missing-reserve-composition" || gap.reasonCode === "partial-reserve-review");
+    const envelope = asset.gaps.find((gap) => gap.reasonCode === "missing-reserve-composition" ||
+      gap.reasonCode === "expired-reviewed-reserve-composition" || gap.reasonCode === "partial-reserve-review");
     if (outside || envelope) addCoverage(slice.name, slice.coinId, slice.pct / 100, outside ?? envelope!.reasonCode, slice.intermediary?.verified !== false, slice.sourceKey);
   }
   for (const code of asset.dependencies.diagnostics.issueCodes) {
@@ -579,7 +580,8 @@ function projectCandidatePublicationFacts(
         ...publicDependencyMetadata(asset, factSet, input.fixedInput,
           (input.registry?.metaById ?? ACTIVE_META_BY_ID).get(asset.assetId)),
         reserveCompositionAdmission: reserveRejections?.has(asset.assetId) && asset.gaps.some((gap) =>
-          gap.reasonCode === "missing-reserve-composition" && asset.reserveStatus.gapIds.includes(gap.gapId))
+          (gap.reasonCode === "missing-reserve-composition" || gap.reasonCode === "expired-reviewed-reserve-composition") &&
+          asset.reserveStatus.gapIds.includes(gap.gapId))
           ? reserveRejections.get(asset.assetId) : undefined,
       },
     ])),
