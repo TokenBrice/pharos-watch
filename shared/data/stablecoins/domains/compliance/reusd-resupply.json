@@ -1,0 +1,28 @@
+{
+  "id": "reusd-resupply",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Resupply docs: decentralized stablecoin protocol; reUSD borrowed against Curve Lend/Fraxlend positions (accessed 2026-11-20)",
+        "url": "https://docs.resupply.finance/"
+      },
+      {
+        "label": "Resupply stability mechanics: communal redemption maintains only a $1.00-minus-fee floor on lending collateral; no issuer par claim (accessed 2026-11-20)",
+        "url": "https://docs.resupply.finance/resupply-protocol/stability-mechanics.md"
+      },
+      {
+        "label": "Resupply contract addresses: reUSD 0x57aB1E0003F623289CD798B1824Be09a793e4Bec on Ethereum (accessed 2026-11-20)",
+        "url": "https://docs.resupply.finance/faq/contract-addresses.md"
+      },
+      {
+        "label": "Resupply governance: all contracts owned by Core under DAO governance; 3-of-4 pseudonymous Convex/Yearn multisig; no legal issuer entity named (accessed 2026-11-20)",
+        "url": "https://docs.resupply.finance/faq/multisig-and-admin-permissions.md"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      }
+    ]
+  }
+}

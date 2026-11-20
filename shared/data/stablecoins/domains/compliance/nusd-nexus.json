@@ -1,0 +1,16 @@
+{
+  "id": "nusd-nexus",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Synapse Bridge docs: nUSD is a protocol interchain token fully backed by the Ethereum pools (accessed 2026-11-20)",
+        "url": "https://github.com/synapsecns/sanguine/blob/master/docs/bridge/docs/03-Bridge/index.md"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      }
+    ]
+  }
+}

@@ -1,5 +1,22 @@
 {
   "id": "oned-gennius",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Coinbase Custom Stablecoins help page: ONED is a custom stablecoin on Base; custom stablecoins are not available to customers in New York, Canada and the European Economic Area on the Coinbase Platform (accessed 2026-11-20)",
+        "url": "https://help.coinbase.com/en/coinbase/getting-started/crypto-education/cb-custom-stablecoins"
+      },
+      {
+        "label": "ONED USD end-user terms: use of ONED is governed by the incorporated Coinbase US user agreement; availability subject to applicable law (accessed 2026-11-20)",
+        "url": "https://oned.global/end-user-terms-and-conditions"
+      },
+      {
+        "label": "ESMA interim MiCA register: EMT and ART issuer white-paper files (last update 18 November 2026); no Coinbase or Gennius issuer row (accessed 2026-11-20)",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {

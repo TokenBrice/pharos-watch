@@ -8,15 +8,19 @@
     "authorizedEntity": "Eurodollar ApS",
     "references": [
       {
-        "label": "ESMA EMT issuer register (Eurodollar ApS, LEI 8945001XWFMRUTCAK575; accessed 2026-11-15)",
+        "label": "ESMA EMT register, accessed 2026-11-20: Eurodollar ApS, Finanstilsynet, electronic money institution; no white paper notified (EMT_NO_WP row, notification field 2025-04-10)",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
-        "label": "USDY issuer white paper",
+        "label": "Finanstilsynet company register: Eurodollar ApS, e-money institution 40515, e-money issuance authorised 2025-02-11 (accessed 2026-11-20)",
+        "url": "https://virksomhedsregister.finanstilsynet.dk/virksomhed-under-tilsyn.html?v=E7B06694-75E8-EF11-A1F7-005056901D70"
+      },
+      {
+        "label": "USDY white paper: Eurodollar ApS e-money token, Ethereum, dated 2026-02-11 with section A.13 corrected 2026-10-09",
         "url": "https://www.stablecoin.dk/tokens/usdy/white-paper.md"
       },
       {
-        "label": "Issuer regulatory status",
+        "label": "Eurodollar ApS regulatory status: Finanstilsynet e-money institution, authorisation 2025-02-11, register no. 40515 (accessed 2026-11-20)",
         "url": "https://www.stablecoin.dk/company/regulatory-status.md"
       }
     ]

@@ -1,0 +1,24 @@
+{
+  "id": "iusd-indigo-protocol",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Indigo documentation: iAssets such as iUSD are minted by users through CDPs, PSM swaps and the OrderBook; DAO-governed with no central custodian or token issuer named (accessed 2026-11-20)",
+        "url": "https://docs.indigoprotocol.io/readme/iassets.md"
+      },
+      {
+        "label": "Indigo documentation: redemptions exchange iAssets for loan collateral (ADA or CNT) or via PSM stable-value swaps; no holder right to fiat redemption at par (accessed 2026-11-20)",
+        "url": "https://docs.indigoprotocol.io/readme/redemptions.md"
+      },
+      {
+        "label": "Indigo disclaimer: Indigo Laboratories, Inc. and Indigo Foundation, Ltd. do not provide, own or control the protocol and act as no financial intermediaries or custodians (updated 16 Dec 2022)",
+        "url": "https://indigoprotocol.io/disclaimer.html"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      }
+    ]
+  }
+}

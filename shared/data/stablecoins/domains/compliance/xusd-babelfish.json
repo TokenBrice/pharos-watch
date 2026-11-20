@@ -1,0 +1,32 @@
+{
+  "id": "xusd-babelfish",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "MiCA recital 22: crypto-assets without an identifiable issuer",
+        "url": "https://eur-lex.europa.eu/legal-content/en/TXT/?uri=CELEX%3A32023R1114"
+      },
+      {
+        "label": "ESMA European Commission answer on crypto-assets without an identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      },
+      {
+        "label": "BabelFish: DAO money protocol issues XUSD against an accepted stablecoin basket",
+        "url": "https://babelfish.money/"
+      },
+      {
+        "label": "BabelFish FAQ: DAO governance, no central authority, no whitepaper",
+        "url": "https://babelfish.gitbook.io/the-babelfish-gitbook/getting-started/faq"
+      },
+      {
+        "label": "BabelFish risk disclaimer: platform run by a DAO, no legal responsibility",
+        "url": "https://babelfish.gitbook.io/the-babelfish-gitbook/getting-started/risk"
+      },
+      {
+        "label": "BabelFish team page: contributor DAO governance, no legal issuer named",
+        "url": "https://babelfish.gitbook.io/the-babelfish-gitbook/getting-started/the-team"
+      }
+    ]
+  }
+}

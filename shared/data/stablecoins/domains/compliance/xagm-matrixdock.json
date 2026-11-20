@@ -4,20 +4,24 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA MiCA Interim Register and register guidance",
+        "label": "ESMA MiCA page: interim register index, last update 2026-11-18 (accessed 2026-11-20)",
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "Matrixdock XAGm product page",
+        "label": "ESMA interim MiCA EMT register (EMTWP.csv), 26 issuers, no Matrixdock/XAGm row (accessed 2026-11-20)",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "Matrixdock XAGm product page: FRS silver claim, LBMA Good Delivery silver in Asian vaults (accessed 2026-11-20)",
         "url": "https://www.matrixdock.com/xagm"
       },
       {
-        "label": "Matrixdock XAGm launch announcement",
+        "label": "Matrixdock XAGm launch announcement, 2026-03-17 (accessed 2026-11-20)",
         "url": "https://www.matrixdock.com/blog/announcements/matrixdock-launches-xagm-bringing-lbma-good-delivery-silver-on-chain"
       },
       {
-        "label": "Matrixdock prohibited countries: EU member states",
-        "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/legal/prohibited-countries-regions.md"
+        "label": "Matrixdock prohibited countries: EU member states listed (archived 2026-11-02)",
+        "url": "https://web.archive.org/web/20261102084136/https://matrixdock.gitbook.io/matrixdock-docs/english/legal/prohibited-countries-regions"
       }
     ]
   },

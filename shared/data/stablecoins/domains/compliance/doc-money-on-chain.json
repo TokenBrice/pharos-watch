@@ -1,0 +1,32 @@
+{
+  "id": "doc-money-on-chain",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Money On Chain DOC page: minted and redeemed permissionlessly via Rootstock smart contracts against rBTC, no centralized intermediary",
+        "url": "https://moneyonchain.com/doc-stablecoin/"
+      },
+      {
+        "label": "Money On Chain protocol FAQ: users interact directly with smart contracts, not centralized issuers or custodians",
+        "url": "https://moneyonchain.com/protocol-faq/"
+      },
+      {
+        "label": "Money On Chain MOC governance: protocol decisions taken by on-chain MOC holder voting",
+        "url": "https://moneyonchain.com/vote-in-moc-governance/"
+      },
+      {
+        "label": "Money On Chain disclaimer: site operated by MOC Investment Corp. (mimLABS); website material is not an offer to sell",
+        "url": "https://moneyonchain.com/privacy-policy/"
+      },
+      {
+        "label": "MiCA recital 22: crypto-assets with no identifiable issuer fall outside Titles II, III and IV",
+        "url": "https://eur-lex.europa.eu/legal-content/en/TXT/?uri=CELEX%3A32023R1114"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      }
+    ]
+  }
+}

@@ -8,7 +8,7 @@
     "authorizedEntity": "Banking Circle S.A.",
     "references": [
       {
-        "label": "ESMA MiCA interim register: EMT issuers (EMTWP.csv, Banking Circle S.A. entry, offer/start date 28/08/2024)",
+        "label": "ESMA MiCA interim register: EMT issuers (EMTWP.csv, Banking Circle S.A. entry, white paper notified 28/08/2024; accessed 2026-11-20)",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
@@ -22,6 +22,10 @@
       {
         "label": "Banking Circle regulatory information (credit institution, LEI 213800W1NGBLERUS6M39, LUB00000408)",
         "url": "https://www.bankingcircle.com/regulatory-information/"
+      },
+      {
+        "label": "Eurite: EURI issued by Banking Circle S.A., CSSF-supervised credit institution, ERC-20 on Ethereum and BEP-20 on BNB Smart Chain (accessed 2026-11-20)",
+        "url": "https://www.eurite.com/"
       },
       {
         "label": "Paperjam: Banking Circle first to hold banking, EMT and CASP licences in Luxembourg (CASP effective 15 April 2026)",

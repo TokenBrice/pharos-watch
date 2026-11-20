@@ -1,0 +1,24 @@
+{
+  "id": "eur-qivalis",
+  "mica": {
+    "status": "authorized",
+    "tokenType": "EMT",
+    "authorizationType": "emi",
+    "competentAuthority": "DNB",
+    "authorizedEntity": "Qivalis B.V.",
+    "references": [
+      {
+        "label": "ESMA interim MiCA EMT register: Qivalis B.V., DNB, EURqi white paper notified 2026-10-21 (accessed 2026-11-20)",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "DNB public register: Qivalis B.V., electronic money institution, LEI 724500LOOWQMIDXTS391 (accessed 2026-11-20)",
+        "url": "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R203793"
+      },
+      {
+        "label": "Qivalis: DNB grants EMI authorisation (14 Oct 2026)",
+        "url": "https://qivalis.eu/press/news/qivalis-receives-authorisation-as-an-electronic-money-institution-from-de-nederlandsche-bank"
+      }
+    ]
+  }
+}

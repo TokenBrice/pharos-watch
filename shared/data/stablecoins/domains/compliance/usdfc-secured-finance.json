@@ -1,0 +1,20 @@
+{
+  "id": "usdfc-secured-finance",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Secured Finance AG launch release: USDFC not available to EEA residents (2025-05-27)",
+        "url": "https://www.accessnewswire.com/newsroom/en/blockchain-and-cryptocurrency/usdfc-official-launch-on-the-filecoin-network-1029405"
+      },
+      {
+        "label": "USDFC docs FAQ: decentralized, no central authority controls USDFC",
+        "url": "https://docs.secured.finance/usdfc-stablecoin/faqs.md"
+      },
+      {
+        "label": "Secured Finance risk disclaimer: open-source self-custodial protocol, no jurisdiction targeting (Oct 2025)",
+        "url": "https://docs.secured.finance/resources/legal/risk-disclaimer.md"
+      }
+    ]
+  }
+}

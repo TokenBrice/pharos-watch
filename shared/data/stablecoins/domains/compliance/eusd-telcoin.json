@@ -1,5 +1,18 @@
 {
   "id": "eusd-telcoin",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Telcoin Digital Asset Bank terms of use (effective 2026-06-15): US-resident eligibility; non-resident aliens prohibited",
+        "url": "https://bank.telco.in/terms-of-use"
+      },
+      {
+        "label": "Telcoin Digital Cash page (accessed 2026-11-20): eUSD is US bank-issued; EEA eEUR forthcoming under an e-money institution",
+        "url": "https://www.telco.in/en/digital-cash"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {

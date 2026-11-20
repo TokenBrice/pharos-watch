@@ -1,0 +1,28 @@
+{
+  "id": "zarm-mento",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Mento Labs general counsel: Mento stablecoins have no issuing entity; MiCA issuer rules not applicable",
+        "url": "https://www.mento.org/blog/highlights-from-the-micar-workshop"
+      },
+      {
+        "label": "MGP-19: stable-asset issuance governance moves to Celo Governance; entities keep stewardship and operations roles (2026-08-21)",
+        "url": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
+      },
+      {
+        "label": "MGP-18: ZARm listed among the ten V2 FX stables kept with a USDm Broker exit (2026-08-17)",
+        "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137"
+      },
+      {
+        "label": "Mento deployments: StableTokenZAR at Celo 0x4c35853A3B4e647fD266f4de678dCc8fEC410BF6",
+        "url": "https://docs.mento.org/mento-v3/build/deployments/addresses.md"
+      },
+      {
+        "label": "ESMA European Commission answer on crypto-assets without an identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      }
+    ]
+  }
+}

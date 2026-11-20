@@ -1,5 +1,26 @@
 {
   "id": "copm-mento",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Mento General Counsel: Mento stables have no central issuing entity (18 Nov 2024)",
+        "url": "https://www.mento.org/blog/highlights-from-the-micar-workshop"
+      },
+      {
+        "label": "cCOP launch: Celo Colombia DAO governance, no single entity controlling supply (Oct 2024)",
+        "url": "https://www.mento.org/blog/announcing-the-launch-of-ccop---celo-colombia-peso-decentralized-stablecoin-on-the-mento-platform"
+      },
+      {
+        "label": "Mento deployments: StableTokenCOP 0x8a567e2ae79ca692bd748ab832081c45de4041ea on Celo mainnet",
+        "url": "https://docs.mento.org/mento-v3/build/deployments/addresses.md"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      }
+    ]
+  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {

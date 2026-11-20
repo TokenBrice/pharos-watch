@@ -1,5 +1,30 @@
 {
   "id": "stusd-stoneyield",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "StoneYield STUSD page: wrapper mirrors locked sUSDC one-to-one, outbound-only conversions, swaps on PancakeSwap",
+        "url": "https://stoneyield.io/stusd"
+      },
+      {
+        "label": "StoneYield overview: sUSDC is a soul-bound claim on hedged USDC deposits and STUSD its transferable 1:1 twin; no legal issuer entity named",
+        "url": "https://docs.stoneyield.io/docs/about/what-is-stoneyield"
+      },
+      {
+        "label": "StoneYield transfer restrictions: STUSD non-transferable by default, manual unlock required, transfers only via whitelisted DEX or system pools",
+        "url": "https://docs.stoneyield.io/docs/protocol/transfer-restrictions"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      },
+      {
+        "label": "ESMA MiCA Q&A: EMT offering or admission to trading requires an authorized issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2404"
+      }
+    ]
+  },
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {

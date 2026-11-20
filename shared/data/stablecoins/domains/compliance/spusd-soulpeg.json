@@ -1,5 +1,30 @@
 {
   "id": "spusd-soulpeg",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "SoulPeg SPUSD overview: tradeable ERC-20 wrapper for soul-bound sUSDC, 1:1 wrap and unwrap through the StUSDCWrapper",
+        "url": "https://docs.soulpeg.io/docs/spusd/overview"
+      },
+      {
+        "label": "SoulPeg token lifecycle: mints and USDC redemptions are executed by the protocol owner; earlyRedeem is owner-controlled and requires sufficient reserves",
+        "url": "https://docs.soulpeg.io/docs/protocol/token-lifecycle"
+      },
+      {
+        "label": "SoulPeg terms of service: operator named only as the SoulPeg Labs brand, with no legal entity, domicile or issuer redemption obligation",
+        "url": "https://soulpeg.io/terms"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      },
+      {
+        "label": "ESMA MiCA Q&A: EMT offering or admission to trading requires an authorized issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2404"
+      }
+    ]
+  },
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {

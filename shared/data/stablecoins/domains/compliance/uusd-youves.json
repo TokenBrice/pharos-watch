@@ -1,0 +1,36 @@
+{
+  "id": "uusd-youves",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "youves docs: minters fund their own vaults and mint uUSD; burning repays the loan and releases the locked collateral (accessed 2026-11-20)",
+        "url": "https://docs.youves.com/syntheticAssets/stableTokens/lifecycle/Minting-and-Burning"
+      },
+      {
+        "label": "youves docs: uUSD is tracker token ID 0 at KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW, 12 decimals, tracking the US dollar (accessed 2026-11-20)",
+        "url": "https://docs.youves.com/syntheticAssets/stableTokens/Instances-of-Stable-Tokens"
+      },
+      {
+        "label": "youves docs: decentralised, self-governing, non-custodial platform on Tezos (accessed 2026-11-20)",
+        "url": "https://docs.youves.com"
+      },
+      {
+        "label": "youves DAO docs: the DAO contract administers all youves contracts; the 4-of-7 keyholder multisig includes ubinetic AG and has no access to user assets (accessed 2026-11-20)",
+        "url": "https://docs.youves.com/governance/Governance-Mechanism"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      },
+      {
+        "label": "ESMA Q&A 2404: offering an ART or EMT to the public or seeking admission to trading in the Union requires an authorised issuer (accessed 2026-11-20)",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2404"
+      },
+      {
+        "label": "ESMA interim MiCA register (last update 18 November 2026): EMT and ART issuer files checked 2026-11-20, no youves or ubinetic issuer row",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      }
+    ]
+  }
+}

@@ -8,7 +8,7 @@
     "authorizedEntity": "Société Générale - Forge",
     "references": [
       {
-        "label": "ESMA Interim MiCA Register: EURCV EMT row naming Societe Generale - Forge and ACPR (retrieved 2026-10-01)",
+        "label": "ESMA Interim MiCA Register, issuers of EMTs (EMTWP.csv): Société Générale - Forge (ACPR, France), EURCV white paper notified 01/07/2024; accessed 2026-11-20",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {

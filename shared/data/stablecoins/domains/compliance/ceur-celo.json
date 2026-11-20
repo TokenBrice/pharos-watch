@@ -1,5 +1,26 @@
 {
   "id": "ceur-celo",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Mento General Counsel: community-governed minting with no central issuing entity (18 Nov 2024)",
+        "url": "https://www.mento.org/blog/highlights-from-the-micar-workshop"
+      },
+      {
+        "label": "MGP-19 follow-up: issuance authority sits with Celo Governance; Mento Labs does not issue the Mento stable assets (18 Nov 2026)",
+        "url": "https://forum.celo.org/t/state-of-stablecoins-on-celo-mgp-19-follow-up/14293"
+      },
+      {
+        "label": "Mento V3 StableToken docs: EURm minted and burned by the ReserveLiquidityStrategy, no issuer redemption",
+        "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken.md"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      }
+    ]
+  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {

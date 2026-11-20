@@ -1,5 +1,26 @@
 {
   "id": "meusd-mezo",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Mezo terms of use (16 March 2026): parties are not the issuer, operator or controller of the MUSD protocol",
+        "url": "https://mezo.org/legal/terms"
+      },
+      {
+        "label": "Mezo MUSD overview: BTC-only CDP, minted against BTC and redeemed for BTC at a 0.75% fee",
+        "url": "https://mezo.org/docs/users/borrow/"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      },
+      {
+        "label": "ESMA MiCA Q&A: EMT offering or admission to trading requires an authorized issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2404"
+      }
+    ]
+  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {

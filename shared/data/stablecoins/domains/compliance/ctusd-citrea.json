@@ -10,6 +10,10 @@
       {
         "label": "MoonPay ctUSD announcement: EEA excluded",
         "url": "https://www.moonpay.com/newsroom/citrea"
+      },
+      {
+        "label": "Citrea docs: ctUSD MoonPay buy availability checked 18 Aug 2026 - every EU/EEA state unsupported",
+        "url": "https://docs.citrea.xyz/developer-documentation/citrea-usd-ctusd/moonpay-ctusd-country-availability"
       }
     ]
   },

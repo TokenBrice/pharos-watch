@@ -8,19 +8,19 @@
     "authorizedEntity": "Circle Internet Financial Europe SAS",
     "references": [
       {
-        "label": "ESMA Interim MiCA Register: Issuers of EMTs (EMTWP.csv, reviewed 7 Oct 2026)",
+        "label": "ESMA EMT register: Circle Internet Financial Europe SAS (ACPR, France), EURC white paper notified 01/07/2024, last update 24/12/2025; accessed 2026-11-20",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
-        "label": "Circle press release: first global stablecoin issuer to comply with MiCA (1 Jul 2024)",
+        "label": "Circle press release: first global stablecoin issuer to comply with MiCA; ACPR EMI license covering USDC and EURC (1 Jul 2024)",
         "url": "https://www.circle.com/pressroom/circle-is-first-global-stablecoin-issuer-to-comply-with-mica-eus-landmark-crypto-law"
       },
       {
-        "label": "Circle EURC MiCA white paper (ACPR-filed)",
+        "label": "Circle EURC MiCA white paper (notified to ACPR, amended 24 Dec 2025); states EURC is not a significant EMT (Art. 56)",
         "url": "https://www.circle.com/fr/legal/mica-eurc-whitepaper"
       },
       {
-        "label": "De Gaulle Fleurance: Circle obtains ACPR EMI license (2 Jul 2024)",
+        "label": "De Gaulle Fleurance: Circle France ACPR EMI approval; EURC issuance from 1 Jul 2024",
         "url": "https://www.degaullefleurance.com/en/actualites/conseille-par-de-gaulle-fleurance-circle-obtient-un-agrement-detablissement-de-monnaie-electronique-eme-aupres-de-lacpr/"
       }
     ]

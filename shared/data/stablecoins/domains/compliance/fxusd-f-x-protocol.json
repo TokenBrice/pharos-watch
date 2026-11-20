@@ -1,0 +1,28 @@
+{
+  "id": "fxusd-f-x-protocol",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "f(x) Protocol terms of use (5 Mar 2026): DAO with no legal entity",
+        "url": "https://fx.aladdin.club/terms-of-use"
+      },
+      {
+        "label": "f(x) docs: fxUSD backed by stETH/frxETH, no external fiat or off-chain entity",
+        "url": "https://fxprotocol.gitbook.io/fx-docs/overview/f-x-protocol-stable-unit.md"
+      },
+      {
+        "label": "f(x) docs: fxUSD minted against ETH/WBTC collateral via fxMINT",
+        "url": "https://fxprotocol.gitbook.io/fx-docs/f-x-protocol-mechanisms/fxmint-borrowing-fxusd-against-your-btc-and-eth.md"
+      },
+      {
+        "label": "f(x) docs: fxUSD redemption pays collateral value, not fiat par",
+        "url": "https://fxprotocol.gitbook.io/fx-docs/risk-management/advanced-peg-protection-mechanisms/understanding-the-redemption-mechanism.md"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      }
+    ]
+  }
+}

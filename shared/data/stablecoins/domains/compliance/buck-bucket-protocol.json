@@ -1,0 +1,32 @@
+{
+  "id": "buck-bucket-protocol",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Bucket docs: CDP stablecoin protocol on Sui; users borrow a USD-pegged stablecoin against deposited collateral (accessed 2026-11-20)",
+        "url": "https://docs.bucketprotocol.io/introduction/what-is-bucket-protocol.md"
+      },
+      {
+        "label": "Bucket docs: CDP position actions, mint caps and protocol-run liquidation; no issuer redemption right stated (accessed 2026-11-20)",
+        "url": "https://docs.bucketprotocol.io/mechanism/how-cdp-work.md"
+      },
+      {
+        "label": "Bucket docs: BUCK is legacy; phase 2 is exit-only with BUCK minting disabled, migration converts BUCK to USDB 1:1 (accessed 2026-11-20)",
+        "url": "https://docs.bucketprotocol.io/user-guides/bucket-upgrade-and-migration.md"
+      },
+      {
+        "label": "Bucket Protocol terms of service: interface provider named only as Bucket Protocol Team and deemed based solely in the Seychelles; protocol described as open-source software; no issuing legal entity named (accessed 2026-11-20)",
+        "url": "https://docs.bucketprotocol.io/resources/terms-of-service"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      },
+      {
+        "label": "ESMA MiCA Q&A 2404: offering an EMT to the public or admitting it to trading in the Union requires an authorised EU issuer (accessed 2026-11-20)",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2404"
+      }
+    ]
+  }
+}

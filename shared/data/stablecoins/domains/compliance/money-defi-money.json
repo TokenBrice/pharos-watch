@@ -1,5 +1,34 @@
 {
   "id": "money-defi-money",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "defi.money docs: MONEY is a permissionless CDP stablecoin; no issuing entity named",
+        "url": "https://docs.defi.money/welcome/money/money-a-stablecoin.md"
+      },
+      {
+        "label": "defi.money docs: MONEY is minted only by users depositing collateral and opening loans",
+        "url": "https://docs.defi.money/welcome/how-does-it-work/how-is-usdmoney-made.md"
+      },
+      {
+        "label": "defi.money docs: USD peg maintained by permissionless Peg Keeper arbitrage, no issuer redemption",
+        "url": "https://docs.defi.money/welcome/protocol-components/peg-keepers.md"
+      },
+      {
+        "label": "defi.money sunset notice (2025-05-07): UI offline 2025-06-01, contracts only, no further support",
+        "url": "https://blog.defi.money/sunsetting-defimoney"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      },
+      {
+        "label": "ESMA MiCA Q&A: EMT offering or admission to trading requires an authorized issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2404"
+      }
+    ]
+  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {

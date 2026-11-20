@@ -1,5 +1,26 @@
 {
   "id": "alusd-alchemix",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Alchemix terms (updated 2026-09-14): unincorporated DAO; the Swiss Alchemix Association does not operate or control the protocol; no custody or counterparty role",
+        "url": "https://alchemix.fi/terms"
+      },
+      {
+        "label": "Alchemix docs: alUSD is a synthetic debt token minted when opening a loan; the Transmuter redeems 1 alUSD for USDC after a fixed term",
+        "url": "https://docs.alchemix.fi/user/concepts/alAssets"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      },
+      {
+        "label": "ESMA Q&A 2404: offering or admitting an EMT to trading in the EU requires an authorised issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2404"
+      }
+    ]
+  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {
