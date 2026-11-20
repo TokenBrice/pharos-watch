@@ -20,6 +20,7 @@ import * as v2Enrichment from "../dex-liquidity/constant-product-v2";
 import * as quoterEnrichment from "../dex-liquidity/enrich-quoter-v2-targets";
 import * as v4Enrichment from "../dex-liquidity/uniswap-v4-identity";
 import * as priceRefresh from "../dex-liquidity/price-refresh";
+import { CURVE_CHAINS } from "../dex-liquidity/constants";
 import { buildStagedPoolWriteback } from "../dex-liquidity/staged-pool-writeback";
 
 afterEach(() => {
@@ -904,7 +905,14 @@ describe("dex liquidity scoring stage cycle", () => {
       volumeUsd7d: 300_000,
       underlyingTokens: [trackedAddress, "unknown-quote"],
     });
-    vi.mocked(fetchDataSources).mockResolvedValueOnce(phaseFixtures.primary({ pools: [trackedPool], rawPoolCount, dexProjects: new Set(["scale-dex"]) }));
+    const nowSec = Math.floor(Date.now() / 1000);
+    vi.mocked(fetchDataSources).mockResolvedValueOnce(phaseFixtures.primary({
+      pools: [trackedPool], rawPoolCount, dexProjects: new Set(["scale-dex"]),
+      curvePayloads: [
+        { readStartedAtSec: nowSec - 1, generatedTimeMs: (nowSec - 10) * 1000 },
+        { readStartedAtSec: nowSec - 1, generatedTimeMs: (nowSec + 3600) * 1000 },
+      ],
+    }));
     const progressUpdates: CronProgressUpdate[] = [];
 
     const result = await runScoringCycle(db, "graph-key", undefined, undefined, undefined, async (update) => {
@@ -917,7 +925,13 @@ describe("dex liquidity scoring stage cycle", () => {
     expect(processPoolCalls[processPoolCalls.length - 1]?.[0]?.pools).toEqual([trackedPool]);
     expect(readMetadata(result)).toMatchObject({ rowsRead: rawPoolCount });
     expect(progressUpdates.find((update) => update.stage === "primary-sources-loaded")).toMatchObject({
-      metadata: { countTotals: { defillamaPools: rawPoolCount } },
+      metadata: {
+        countTotals: { defillamaPools: rawPoolCount },
+        curveBulkReads: [
+          { chain: CURVE_CHAINS[0], readStartedAtSec: nowSec - 1, cacheGeneratedAtSec: nowSec - 10 },
+          { chain: CURVE_CHAINS[1], readStartedAtSec: nowSec - 1, cacheGeneratedAtSec: null },
+        ],
+      },
     });
     expect(progressUpdates.find((update) => update.stage === "pool-processing")).toMatchObject({
       itemsTotal: rawPoolCount,

@@ -1,10 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   buildHistoricalDewsMap,
   computeHistoricalDewsStressBreadth,
   replayHistoricalPsiForDay,
 } from "../psi-replay";
 import { buildSupplySnapshotMap } from "../psi-recompute";
+import * as stabilityIndex from "../stability-index";
 import { psiDepegRow, psiSupplyPair, replayPsiDay, DAY } from "./psi.test-support";
 
 describe("psi-replay", () => {
@@ -36,6 +37,24 @@ describe("psi-replay", () => {
     expect(replay.result).toBeNull();
     expect(replay.unavailableReason).toBe("trend-inputs-unavailable");
     expect(replay.input.mcap7dChangePct).toBeNull();
+  });
+
+  it("withholds the day and its partial samples if scoring refuses a slice", () => {
+    const day = 1_746_384_000;
+    const supply = psiSupplyPair({ stablecoinId: "usdt-tether", day, currentMcap: 100e9, priorMcap: 100e9 });
+    const score = stabilityIndex.computeStabilityIndex;
+    const scorer = vi.spyOn(stabilityIndex, "computeStabilityIndex").mockImplementationOnce(score).mockReturnValueOnce(null);
+    try {
+      const replay = replayHistoricalPsiForDay({
+        day, now: day + DAY, methodologyVersion: "2.1", supplyByCoin: buildSupplySnapshotMap(supply),
+        depegEvents: [], sampleSlots: [day + 1, day + 2],
+      });
+      expect(scorer).toHaveBeenCalledTimes(2);
+      expect(replay).toMatchObject({ result: null, unavailableReason: "insufficient-market-cap" });
+      expect(replay.sampleScores).toBeUndefined();
+    } finally {
+      scorer.mockRestore();
+    }
   });
 
   it("computes historical DEWS stress breadth from daily stress history", () => {

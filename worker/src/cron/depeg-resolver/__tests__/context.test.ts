@@ -8,7 +8,7 @@ import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { computeDuration, groupIncidents, structuralClass, type DdrStratumKey } from "@shared/lib/depeg-resolver";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { DDR_INELIGIBLE_AUDIT_VERDICTS } from "@shared/types/depeg-audit";
-import { buildCurrentDeviationMap, loadDdrContext, loadDdrHistoricalEvents } from "../context";
+import { buildCurrentDeviationMap, loadActiveConfirmedEvents, loadDdrContext, loadDdrHistoricalEvents, loadPolicyUniverseEvents } from "../context";
 import {
   CURRENT_PRICE_MAX_AGE_SEC,
   DDR_SNAPSHOT_TTL_SEC,
@@ -167,6 +167,8 @@ describe("DDR historical context", () => {
     sqlite.prepare("UPDATE depeg_events SET ended_at = NULL, recovery_price = NULL, close_reason = NULL WHERE id = 7").run();
     const meta = WORKER_TRACKED_META_BY_ID.get("usr-resolv");
     if (meta?.frozenAt !== "2026-04-27") throw new Error("USR frozen fixture metadata changed");
+    expect((await loadPolicyUniverseEvents(db)).map(({ id }) => id)).toEqual([7]);
+    expect(await loadActiveConfirmedEvents(db)).toEqual([]);
 
     const loaded = await loadDdrContext(db, [activeRow()], NOW_SEC);
     expect(loaded.kind).toBe("ok");
@@ -280,6 +282,8 @@ describe("DDR historical context", () => {
     write({ ...onset, basis: "benchmark" }, latest);
     expect(await read()).toMatchObject({ onsetDeviationBps: null,
       severityObservations: [{ observedAt: at + 300, deviationBps: -600 }] });
+    write({ ...onset, basis: "peer-relative" }, latest);
+    expect((await read()).onsetDeviationBps).toBeNull();
     sqlite.exec("UPDATE depeg_events SET peer_basis_json = NULL, peg_type = 'peggedUSD'; UPDATE depeg_pending_outcomes SET peg_type = 'peggedUSD'");
     expect(await read()).toMatchObject({ onsetDeviationBps: null, severityObservations: [] });
   });
