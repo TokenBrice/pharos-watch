@@ -879,7 +879,8 @@ export async function hydrateYieldWarnings(ctx: HydrationContext): Promise<Yield
       .prepare(
         // Scope to the validated served generation: with cleanup deferred, an
         // older generation's winner can still carry is_best = 1, and its
-        // warning would outlive the selection that produced it.
+        // warning would outlive the selection that produced it. Legacy rows
+        // without a publication state predate generations and stay readable.
         // SAFETY: the joined expression is the static served-generation selector.
         `SELECT /* pharos:dews:yield-warning-signals */
            stablecoin_id, warning_signals
@@ -887,8 +888,8 @@ export async function hydrateYieldWarnings(ctx: HydrationContext): Promise<Yield
          WHERE is_best = 1
            AND warning_signals IS NOT NULL
            AND warning_signals != '[]'
-           AND publication_state = 'published'
-           AND publication_generation_id = ${YIELD_SERVED_GENERATION_SQL}`,
+           AND (publication_state IS NULL OR publication_state = 'published')
+           AND (publication_state IS NULL OR publication_generation_id = ${YIELD_SERVED_GENERATION_SQL})`,
       )
       .all<{ stablecoin_id: string; warning_signals: string }>();
     yieldWarningRowsRead = yieldRows.results.length;
