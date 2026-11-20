@@ -13,35 +13,10 @@ import {
 import { ASSURANCE_RECONCILIATION_TOLERANCES } from "@shared/lib/independent-assurance-tolerances";
 import { MANIFEST_SOURCES } from "../../shared/data/live-reserves/independent-assurance";
 import { COMPILER_PROFILES } from "../lib/independent-assurance-profiles/registry";
-import { prepareAssuranceExtractionText, type CompilerProfile } from "../lib/independent-assurance-profiles/shared";
+import { amountFromMatch, assertProfileText, prepareAssuranceExtractionText, type CompilerProfile } from "../lib/independent-assurance-profiles/shared";
 
 const MANIFEST_DIR = resolve("shared/data/live-reserves/independent-assurance");
 const PRODUCTS = Object.keys(COMPILER_PROFILES) as IndependentAssuranceProduct[];
-
-function amountFromMatch(
-  match: RegExpMatchArray | null,
-  label: string,
-  normalizeAmount?: (raw: string) => string,
-): string {
-  const raw = match?.[1];
-  if (!raw) throw new Error(`offline assurance compiler: could not extract ${label}`);
-  return normalizeAmount ? normalizeAmount(raw) : raw === "-" ? "0" : raw.replace(/[$,]/g, "");
-}
-
-function assertProfileText(text: string, config: CompilerProfile): void {
-  for (const check of config.requiredText) {
-    if (!check.pattern.test(text)) throw new Error(`offline assurance compiler: missing ${check.label}`);
-  }
-  for (const check of config.rejectedText) {
-    if (check.pattern.test(text)) throw new Error(`offline assurance compiler: rejected ${check.label}`);
-  }
-  for (const total of config.reportedTotals) {
-    const actual = amountFromMatch(text.match(total.pattern), total.label, config.normalizeAmount);
-    if (actual !== total.expected) {
-      throw new Error(`offline assurance compiler: ${total.label} ${actual} does not match reviewed ${total.expected}`);
-    }
-  }
-}
 
 function extractText(pdfPath: string): { text: string; parserVersion: string; pageCount: number } {
   const text = execFileSync("pdftotext", ["-layout", pdfPath, "-"], { encoding: "utf8" });

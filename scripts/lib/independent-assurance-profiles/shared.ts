@@ -42,6 +42,31 @@ export interface CompilerProfile {
   normalizeAmount?: (raw: string) => string;
 }
 
+export function amountFromMatch(
+  match: RegExpMatchArray | null,
+  label: string,
+  normalizeAmount?: (raw: string) => string,
+): string {
+  const raw = match?.[1];
+  if (!raw) throw new Error(`offline assurance compiler: could not extract ${label}`);
+  return normalizeAmount ? normalizeAmount(raw) : raw === "-" ? "0" : raw.replace(/[$,]/g, "");
+}
+
+export function assertProfileText(text: string, config: CompilerProfile): void {
+  for (const check of config.requiredText) {
+    if (!check.pattern.test(text)) throw new Error(`offline assurance compiler: missing ${check.label}`);
+  }
+  for (const check of config.rejectedText) {
+    if (check.pattern.test(text)) throw new Error(`offline assurance compiler: rejected ${check.label}`);
+  }
+  for (const total of config.reportedTotals) {
+    const actual = amountFromMatch(text.match(total.pattern), total.label, config.normalizeAmount);
+    if (actual !== total.expected) {
+      throw new Error(`offline assurance compiler: ${total.label} ${actual} does not match reviewed ${total.expected}`);
+    }
+  }
+}
+
 export function linePattern(label: string): RegExp {
   // eslint-disable-next-line security/detect-non-literal-regexp -- labels are fixed literals from the reviewed extraction tables below.
   return new RegExp(`^\\s*${label}\\d*\\s+\\$?${AMOUNT}\\s*$`, "im");

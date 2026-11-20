@@ -3,13 +3,13 @@
   "product": "FDUSD",
   "profile": "fdusd-v1",
   "officialIndexUrl": "https://firstdigitallabs.webflow.io/transparency",
-  "reportUrl": "https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/6ad828758ca468da1c9db6e6_Attestation%20Report%20on%20Reserves%20Account%20Sept.pdf",
-  "reportSha256": "0e567da84471080fd2c1ca8e44f212d0f5e4800d92bf24470908648098221e28",
-  "reportByteLength": 308295,
-  "reportDate": "2026-09-30",
-  "reportAsOf": "2026-09-30T21:00:00-04:00",
-  "reportTimeZone": "Eastern Time (daylight saving, UTC-4; the report also prints 1 October 2026 at 9:00am HKT)",
-  "reportIssuedAt": "2026-10-16T23:59:00+08:00",
+  "reportUrl": "https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/6afe5884d7ce79e868f284e7_ISAE3000%20-%20Attestation%20Report%20on%20Reserves%20Account%20Oct%202026)%20-%20Final.pdf",
+  "reportSha256": "bcf22ebcda11378e42a1b172ea31f1fb261004f8a8b591f2c8e8198f35f64eed",
+  "reportByteLength": 304837,
+  "reportDate": "2026-10-31",
+  "reportAsOf": "2026-10-31T21:00:00-04:00",
+  "reportTimeZone": "Eastern Time (daylight saving, UTC-4; the report also prints 1 November 2026 at 9:00am HKT)",
+  "reportIssuedAt": "2026-11-16T23:59:00+08:00",
   "attestor": "AOGB CPA Limited",
   "engagement": "Independent limited assurance engagement under ISAE 3000 (Revised) issued by the IAASB",
   "conclusion": "nothing-came-to-attention",
@@ -17,30 +17,25 @@
   "assets": [
     {
       "code": "treasury-bills",
-      "label": "United States Treasury Bills (nine maturities, 13-Oct-26 through 17-Nov-26)",
-      "amount": "290942334.06"
-    },
-    {
-      "code": "fixed-deposits",
-      "label": "U.S. government guaranteed fixed deposits held pursuant to reserve repurchase agreements",
-      "amount": "1900000.00"
+      "label": "United States Treasury Bills (eight maturities, 03-Nov-26 through 22-Dec-26)",
+      "amount": "267345802.82"
     },
     {
       "code": "custody-cash",
       "label": "US$ held in custody accounts",
-      "amount": "33469409.98"
+      "amount": "34366523.64"
     }
   ],
   "liabilities": [
     {
       "code": "ethereum",
       "label": "Ethereum FDUSD supply",
-      "amount": "214866267.10"
+      "amount": "190691522.21"
     },
     {
       "code": "bsc",
       "label": "BSC FDUSD supply",
-      "amount": "58019741.17"
+      "amount": "57552946.18"
     },
     {
       "code": "sui",
@@ -50,7 +45,7 @@
     {
       "code": "solana",
       "label": "Solana FDUSD supply",
-      "amount": "8528076.25"
+      "amount": "8528076.21"
     },
     {
       "code": "arbitrum",
@@ -63,13 +58,13 @@
       "amount": "1087.65"
     }
   ],
-  "reportedAssetTotal": "326311744.04",
-  "computedAssetTotal": "326311744.04",
-  "reportedLiabilityTotal": "325042596.91",
+  "reportedAssetTotal": "301712326.46",
+  "computedAssetTotal": "301712326.46",
+  "reportedLiabilityTotal": "300401056.99",
   "extraction": {
     "tool": "Poppler pdftotext -layout",
-    "parserVersion": "26.08.0",
-    "normalizedTextSha256": "278deda9a18f8790e521e4c75eee19b04334bc77e6c3e9441582e2a96b09b21a",
+    "parserVersion": "26.10.0",
+    "normalizedTextSha256": "9d33453c9bddf4121e265cc277a79639d52584b460c9b7ae14e073ffaf176695",
     "pageCount": 5
   },
   "assuranceTier": "independent-assurance"

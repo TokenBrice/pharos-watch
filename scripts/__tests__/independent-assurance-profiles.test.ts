@@ -5,10 +5,12 @@ import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it } from "vitest";
 import { getIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
 import { PROFILE as audd } from "../lib/independent-assurance-profiles/audd";
+import { PROFILE as brla } from "../lib/independent-assurance-profiles/brla";
+import { PROFILE as fdusd } from "../lib/independent-assurance-profiles/fdusd";
 import { PROFILE as gusd } from "../lib/independent-assurance-profiles/gusd";
 import { PROFILE as myrc } from "../lib/independent-assurance-profiles/myrc";
 import { PROFILE as rlusd } from "../lib/independent-assurance-profiles/rlusd";
-import { prepareAssuranceExtractionText } from "../lib/independent-assurance-profiles/shared";
+import { assertProfileText, prepareAssuranceExtractionText } from "../lib/independent-assurance-profiles/shared";
 
 // Extracted layout of the September 2026 examination: two examined columns,
 // with footnote markers printed inline beside the row labels.
@@ -70,6 +72,51 @@ const text = readFileSync(new URL("../../worker/src/cron/reserve-adapters/__test
 function amount(pattern: RegExp, source = text) {
   return source.match(pattern)?.[1]?.replaceAll(",", "");
 }
+
+it.each([
+  { profile: fdusd, heading: "Fixed Deposit", text: `
+AOGB CPA Limited
+International Standard on Assurance Engagements 3000 (Revised)
+independent limited assurance conclusion
+31 October 2026 at 9:00pm Eastern Time (1 November 2026 at 9:00am Hong Kong Time)
+nothing has come to our attention that the report is not prepared, in all material respects
+Hong Kong, 16 November 2026
+issued and in circulation 300,401,056.99 FDUSD
+(190,691,522.21 in Ethereum), 57,552,946.18 in BSC, 43,582,686.71 FDUSD in SUI,
+8,528,076.21 FDUSD in SOL, 44,738.03 FDUSD in Arbitrum, 1,087.65 FDUSD in TON
+(A) Sub-total: 267,345,802.82
+(B) US$ held in custody accounts: 34,366,523.64
+(A) + (B) Total assets held in Reserve Accounts: US$301,712,326.46
+` },
+  { profile: brla, heading: "Repurchase Agreements", text: `
+UHY Bendoraytes REASONABLE ASSURANCE REPORT NBC TO 3000 ISAE 3000
+October 31, 2026 at 11:59:59 PM +UTC adequately presented, in all material respects
+November 16, 2026 CAROLINE MEDEIROS VASQUES
+Cash or Equivalent 181,324,465.25
+Stark Bank S.A. (20018183) 951,268.75
+Woovi Instituição de Pagamento Ltda 46,262,566.18
+Banco BTG Pactual S.A. (208) 323,403.89
+Banco Itaú Unibanco S.A. (341) 128,358,011.34
+XP Investimentos (102) 5,429,215.09
+Grand Total 181,324,465.25
+Polygon PoS Chain 18,412,308.29
+Moonbeam Chain 4,294.09
+Celo Chain 152,831,655.82
+Gnosis Chain 2,874,685.81
+Grand Total 174,122,944.01
+` },
+])("rejects an unreadable October sleeve for $profile.product", ({ profile, heading, text }) => {
+  const manifest = getIndependentAssuranceManifest(profile.product);
+  expect(() => assertProfileText(text, profile)).not.toThrow();
+  expect(profile.assetRows.map((row) => amount(row.pattern, text))).toEqual(manifest.assets.map((row) => row.amount));
+  expect(profile.liabilityRows.map((row) => amount(row.pattern, text))).toEqual(manifest.liabilities.map((row) => row.amount));
+  const unreadableRows = [`${heading}    unreadable`, heading.replace(" ", "\n   ") + "    unreadable"];
+  if (profile === fdusd) unreadableRows.push("(B)\n  Sub-total: unreadable");
+  for (const row of unreadableRows) {
+    expect(() => assertProfileText(`${text}  ${row}`, profile)).toThrow(/rejected unexpected .* sleeve/);
+  }
+  expect(() => assertProfileText(`${text}\f  ${heading}    unreadable`, profile)).toThrow(/rejected unexpected .* sleeve/);
+});
 
 describe("MYRC examined schedule extraction", () => {
   it("extracts actual cash/fund and net-circulation amounts without deducting authorized tokens twice", () => {
