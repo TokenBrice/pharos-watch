@@ -213,20 +213,31 @@ describe("handleBackfillDEWS", () => {
     }>(response, 200);
     expect(body.summary).toMatchObject({ evaluableEvents: 0, excludedEvents: 1, tpRate: null });
   });
-  it.each([["usdt-tether", 1710000000, true, true, true], ["usdt-tether", 1710000000, true, true, false], ["gho-aave", 1794614400, false, false, true], ["gho-aave", 1794528000, false, false, true], ["gho-aave", 1795132800, true, false, true]] as const)("reconstructs %s supply and liquidity history", async (id, startedAt, dayOk, weekOk, native) => {
+  it.each([
+    ["usdt-tether", 1710000000, true, true, true], ["usdt-tether", 1710000000, true, true, false],
+    ["gho-aave", 1794614400, false, false, true], ["gho-aave", 1794528000, false, false, true],
+    ["gho-aave", 1795132800, true, false, true],
+    ["eurc-circle", 1710158400, false, false, false], ["eurc-circle", 1710158400, true, true, true],
+    ["eurc-circle", 1710158400, false, false, false, 0], ["eurc-circle", 1710158400, false, false, false, 43_201],
+    ["eurc-circle", 1710158400, true, false, true, "usd-week"],
+  ] as const)("reconstructs %s supply and liquidity history", async (id, startedAt, dayOk, weekOk, native, fixture?: number | "usd-week") => {
     vi.mocked(computeHistoricalDEWS).mockClear();
     const day = Math.floor(startedAt / 86400) * 86400;
     const unitsPerUsd = native ? 0.5 : 1;
+    const fxOnly = id === "eurc-circle" && !native;
     const db = mockD1([
       {
         match: "FROM depeg_events",
-        rows: [{ stablecoin_id: id, peg_type: "peggedUSD", started_at: startedAt, ended_at: startedAt + 7200, peak_deviation_bps: -150 }],
+        rows: [{ stablecoin_id: id, peg_type: id === "eurc-circle" ? "peggedEUR" : "peggedUSD",
+          started_at: startedAt, ended_at: startedAt + 7200, peak_deviation_bps: -150 }],
       },
       {
         match: "FROM supply_history",
         rows: [[0, 100_000_000], [1, 99_500_000], [7, 98_000_000]].map(([days, circulating_usd]) => ({
-          stablecoin_id: id, snapshot_date: day - days * 86400, circulating_usd,
-          ...(native ? { circulating_native: circulating_usd / 2, supply_provenance: supplyProvenance(day - days * 86400) } : {}),
+          stablecoin_id: id, snapshot_date: day - days * 86400, circulating_usd: fxOnly && days > 0 ? 110_000_000 : circulating_usd,
+          ...(native && (fixture !== "usd-week" || days !== 7)
+            ? { circulating_native: circulating_usd / 2, supply_provenance: supplyProvenance(day - days * 86400) }
+            : typeof fixture === "number" ? { supply_provenance: supplyProvenance(day - days * 86400 + fixture) } : {}),
         })),
       },
       {

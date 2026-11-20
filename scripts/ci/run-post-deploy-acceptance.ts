@@ -7,6 +7,8 @@ import {
   POST_DEPLOY_ROUTE_SWEEP_DEADLINE_MS,
   POST_DEPLOY_ROUTE_SWEEP_PATHS,
   POST_DEPLOY_ROUTE_SWEEP_TIMEOUT_MS,
+  POST_DEPLOY_ROUTE_WARMUP_PATHS,
+  POST_DEPLOY_ROUTE_WARMUP_TIMEOUT_MS,
   type PostDeployAcceptanceOutcome,
   type PostDeployProbe,
   type PostDeployRouteProbe,
@@ -39,10 +41,9 @@ export interface PostDeployAcceptanceDependencies {
 }
 
 /**
- * Bounded GET sweep: at most four in flight, ten seconds each, and no new
- * request after the 105-second deadline. A single 5xx is retried once inside
- * the deadline; a persistent 5xx fails. Routes that never ran are reported as
- * `sweep-not-run`, never as healthy.
+ * Warm-up shares the 105-second start deadline. The timed sweep runs at most
+ * four GETs in flight, ten seconds per attempt, with one retry for a 5xx or
+ * transport error. Routes that miss the deadline are reported as `sweep-not-run`.
  */
 async function collectRouteSweepProbes(
   fetchJson: typeof fetchJsonProbe,
@@ -53,9 +54,18 @@ async function collectRouteSweepProbes(
   const probeArgs = {
     apiUrl: WORKER_API_URL,
     apiKey,
-    timeoutMs: POST_DEPLOY_ROUTE_SWEEP_TIMEOUT_MS,
     noCache: true,
   };
+  async function probe(path: string, timeoutMs = POST_DEPLOY_ROUTE_SWEEP_TIMEOUT_MS): Promise<PostDeployRouteProbe> {
+    try {
+      const { status, error } = await fetchJson({ ...probeArgs, timeoutMs }, path);
+      return { path, status, ...(error ? { error } : {}) };
+    } catch (error) {
+      return { path, status: 0, error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
+  await Promise.all(POST_DEPLOY_ROUTE_WARMUP_PATHS.map((path) => probe(path, POST_DEPLOY_ROUTE_WARMUP_TIMEOUT_MS)));
   let nextIndex = 0;
 
   const worker = async (): Promise<void> => {
@@ -67,27 +77,11 @@ async function collectRouteSweepProbes(
         results[index] = { path, status: 0, error: "sweep-deadline-exceeded" };
         continue;
       }
-      let retriedAfter5xx = false;
-      try {
-        let response = await fetchJson(probeArgs, path);
-        if (response.status >= 500 && response.status <= 599 && Date.now() < deadlineAt) {
-          retriedAfter5xx = true;
-          response = await fetchJson(probeArgs, path);
-        }
-        results[index] = {
-          path,
-          status: response.status,
-          ...(response.error ? { error: response.error } : {}),
-          ...(retriedAfter5xx ? { retriedAfter5xx: true } : {}),
-        };
-      } catch (error) {
-        results[index] = {
-          path,
-          status: 0,
-          error: error instanceof Error ? error.message : String(error),
-          ...(retriedAfter5xx ? { retriedAfter5xx: true } : {}),
-        };
-      }
+      const first = await probe(path);
+      const retryable = first.status === 0 || (first.status >= 500 && first.status <= 599);
+      results[index] = retryable && Date.now() < deadlineAt
+        ? { ...await probe(path), retried: true }
+        : first;
     }
   };
 

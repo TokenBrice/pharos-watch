@@ -1,7 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getReferenceSessionState } from "@shared/lib/reference-market-hours";
+import { mockD1 } from "@shared/test-utils/mock-d1";
+import { makeChainBaseline, makeChainLeg } from "@shared/test-utils/stablecoin";
 import { batchExecute } from "../../lib/db";
+import { computeSupplySignal } from "../../lib/dews/signal-families";
+import { guardChainDropouts } from "../sync-stablecoins/chain-dropout-guard";
+import { fillMissingSupplyHistory } from "../sync-stablecoins/phase-helpers";
+import { normalizeStablecoinsPayload } from "../sync-stablecoins/shared";
+import type { PeggedAsset } from "../sync-stablecoins/enrich-prices-shared";
 import { dewsCache, dewsCoin, makeDb, publishShapedRankingsPayload } from "./compute-dews.test-support";
 import * as publishedMintBurn from "../../lib/mint-burn-published-gauge";
 
@@ -18,6 +25,7 @@ vi.mock("@shared/lib/psi-eligible", () => {
     { id: "pyusd-paypal", symbol: "PYUSD", flags: { navToken: false, pegCurrency: "USD" } },
     { id: "usd1-world-liberty-financial", symbol: "USD1", flags: { navToken: false, pegCurrency: "USD" } },
     { id: "eurc-euro-coin", symbol: "EURC", flags: { navToken: false, pegCurrency: "EUR" } },
+    { id: "eurc-circle", symbol: "EURC", flags: { navToken: false, pegCurrency: "EUR" } },
   ];
   // Mirror the real module: the DEWS cohort is the PSI universe less NAV tokens.
   const dewsCoins = coins.filter((coin) => coin.flags?.navToken !== true);
@@ -415,6 +423,36 @@ describe("computeAndStoreDEWS", () => {
     expect(computeDEWS).toHaveBeenCalledWith(expect.objectContaining({
       stablecoinId: id, circulatingCurrent: 100_000_000, circulatingPrevDay: day, circulatingPrevWeek: week,
     }));
+  });
+
+  it("withholds EURC carry velocity while publishing the dated USD comparison", async () => {
+    const id = "eurc-circle";
+    const now = Math.floor(Date.now() / 1000);
+    const day = 86_400;
+    const baseline = makeChainBaseline("base", 100_000_000, now - day);
+    // The same 1B EURC was worth $1.1B at the weekly close.
+    const week = { observedAt: now - 8 * day, circulatingUsd: 1_100_000_000, circulatingNative: null };
+    const asset: PeggedAsset = {
+      id, name: "EURC", symbol: "EURC", pegType: "peggedEUR", supplySource: "defillama",
+      circulating: { peggedEUR: 900_000_000 }, supplyChangeBaselines: { week },
+      chainCirculating: { Ethereum: makeChainLeg(900_000_000),
+        Base: { ...makeChainLeg(0, baseline.baselineUsd), circulatingPrevWeek: baseline.baselineUsd } },
+    };
+    await guardChainDropouts({ assets: [asset], now, state: { version: 1, pairs: {
+      [JSON.stringify([id, "base"])]: { ...baseline, assetId: id, baselineSource: "state", chartAttemptedAt: now },
+    } } });
+    await fillMissingSupplyHistory(mockD1([{ match: "FROM supply_history", rows: [{
+      stablecoin_id: id, snapshot_date: Math.floor(week.observedAt / day) * day, circulating_usd: week.circulatingUsd,
+      supply_provenance: JSON.stringify({ supplySource: "defillama", supplyObservedAt: week.observedAt, supplyChainGuard: null }),
+    }] }]), [asset]);
+    const [wire] = normalizeStablecoinsPayload({ peggedAssets: [asset] }, now).peggedAssets;
+    expect(wire).toMatchObject({ circulating: { peggedEUR: 1_000_000_000 },
+      circulatingPrevWeek: { peggedEUR: week.circulatingUsd }, supplyChainGuard: { status: "quarantined" } });
+    vi.mocked(getCache).mockImplementation(async (_db, key) => key === "stablecoins" ? dewsCache([dewsCoin({ ...wire })]) : null);
+
+    await computeAndStoreDEWS(makeDb([]));
+
+    expect(computeSupplySignal(vi.mocked(computeDEWS).mock.calls[0][0])).toMatchObject({ available: false, delta7d: null });
   });
 
   it("keeps a mature mint/burn baseline when a fresh 24h row is quiet", async () => {

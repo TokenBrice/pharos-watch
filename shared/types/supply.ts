@@ -43,6 +43,8 @@ export const StablecoinDetailResponseSchema = z.object({
   currentCirculatingNative: NonNegativeFiniteSchema.nullish(),
   commodityHistoryObservedAt: UnixSecondsSchema.positive().optional(),
   currentCirculatingPrevDayUSD: PegBucketsSchema.optional(),
+  currentCirculatingPrevWeekUSD: PegBucketsSchema.optional(),
+  currentCirculatingPrevMonthUSD: PegBucketsSchema.optional(),
   supplyChangeBaselines: SupplyChangeBaselinesSchema.optional(),
   currentSupplyObservedAt: z.number().finite().positive().optional(),
   /** Canonical carry-forward provenance for the admitted current supply overlay. */
