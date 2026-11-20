@@ -6,6 +6,14 @@ These records preserve review dates, scope limits and operator observations form
 
 The existing wrapper allocation/local-review schemas carry scoped rationale and observations, not a free-standing historical-ruling field. Per-asset measurement summaries are capture manifests, not review-note sidecars. These records therefore stay here rather than adding fields or unrelated history to score-bearing JSON.
 
+## YLDS September 30, 2026 Form 10-Q Observation — 2026-11-20
+
+[#1685](https://github.com/TokenBrice/pharos-watch/issues/1685): Figure Certificate Company's Form 10-Q for the quarter ended September 30, 2026 is retained here as a supplemental historical observation, outside `ylds-figure`'s audited reserve-review source list. The v9 named-report admission merges every `reserveReview.sources` entry into Backing evidence stamped with the audited period end (2025-12-31) and publication date (2026-03-20), and a source-label caveat never reaches that compiled evidence, so an unaudited interim filing must not sit in that list. This observation renews neither the KPMG-audited December 31, 2025 composition nor its clock.
+
+EDGAR's record resolves the certification/filing date discrepancy: the Section 906 certifications are dated November 13, 2026 ("as filed with the Securities and Exchange Commission on November 13, 2026"), EDGAR accepted the submission at `2026-11-13T22:57:11Z` — after the 17:30 ET cutoff on a Friday — and the official filing date of accession [0001628280-26-073949](https://www.sec.gov/Archives/edgar/data/1974395/000162828026073949/) is November 16, 2026.
+
+The unaudited schedules report: Schedule I (Rule 12-21) nine U.S. Treasury bills maturing 10/22/2026 through 12/24/2026 totalling $452.170 million plus UMB Bank N.A. repurchase agreements of $59.315 million maturing 10/1/2026 (collateralized by U.S. Treasury securities), for $511.485 million of investments; Schedule V (Rule 12-27) $512.745 million of qualified assets with UMB $511.491 million, Flagstar Bank $0.700 million and Lead Bank $0.554 million; certificate reserve liability of $505.013 million. ([September 10-Q](https://www.sec.gov/Archives/edgar/data/1974395/000162828026073949/fcc-20260930.htm), observed 2026-11-20.) These historical values are not current holdings, current token supply, independent financial assurance, or issuer redemption capacity.
+
 ## LayerZero Lane Unlock: thBILL — 2026-11-15
 
 [#1778](https://github.com/TokenBrice/pharos-watch/issues/1778) Q4, owner rulings of November 15: the KelpDAO LayerZero Labs DVN exposure runs 2026-03-06 to 2026-05-20, and each lane needs three pinned in-window reads showing it never relied on that verifier alone. v10.45 adds review `provider-layerzero-dvn-set-20261115`, the authority for full hashes, DVN addresses and sources. It also adds `issuer-surface-thbill-theo-20261115`, `providerKeys`, and inventory lanes for OFT `0xfdd22ce6…5a5a`. Reads were taken on 03-06, 04-12 and 05-19:

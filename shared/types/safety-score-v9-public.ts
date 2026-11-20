@@ -442,7 +442,7 @@ function refineCurrentCard(card: CardRefinementInput, ctx: z.RefinementCtx, reso
       return;
     }
     refineCardBase(card, ctx);
-    refineCard(card, ctx);
+    refineCard(card, ctx, historical === "report8");
     if (card.provisional !== undefined || card.unknownPricedWeightShare !== undefined) {
       const share = computeV9UnknownPricedWeightShare(card.breakdowns, card.scoreTrace.aggregation);
       if (card.ratingStatus !== "rated" || card.provisional !== true ||

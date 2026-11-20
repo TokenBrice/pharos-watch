@@ -519,7 +519,8 @@ function assertPreviousReaderSource() {
     reasonCodes: policy.reasonRegistry.filter(reason => reason.defaultTreatment !== "diagnostic").map(reason => reason.code),
   }));
   // redemption.ts adds a separate snapshot-entry schema for dated Mento status. The reused reader schemas are unchanged.
-  if (hash.digest("hex") !== "2b6467afc3d6205036f4a0c7d2b78cf1a3e719cb0833f265a7e404271a429b1b") throw new Error("Pre-dust reader source/refinement inputs changed");
+  // The report8 pipeline-gap refinement is reachable only through the historical typed schema.
+  if (hash.digest("hex") !== "fc1f88c72097941a1666c905fa3919d5ab0758ee0b7cf72d9991c816c669d97c") throw new Error("Pre-dust reader source/refinement inputs changed");
 }
 
 export async function previousReader() {
