@@ -105,6 +105,17 @@ const ReserveClassificationSchema = z
     failureDomains: CanonicalFailureDomainsSchema,
     trackedAssetId: CanonicalTextSchema.nullable().optional(),
     trackedAssetDisposition: z.enum(["source", "reviewed-non-link", "own-liability"]).optional(),
+    /**
+     * The affirmative reviewed decision behind an own-liability disposition:
+     * the review digest plus the reviewed row identity that decision named.
+     * An own-liability classification without it is an overlay edit, not a
+     * decision, and fails closed at compile time.
+     */
+    ownLiabilityDecision: z.strictObject({
+      reviewKey: CanonicalTextSchema,
+      reserveName: CanonicalTextSchema,
+      pct: z.number().finite().nonnegative(),
+    }).optional(),
     /** Exact reviewed source identity whose amount remains unclassified. */
     unclassifiedResidual: z.literal(true).optional(),
     publishedResidualCategory: z.literal(true).optional(),

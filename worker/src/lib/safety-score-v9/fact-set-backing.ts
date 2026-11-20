@@ -694,8 +694,18 @@ export function buildReserves(context: AssetBuildContext): {
         evidence.sourceId === "stablecoin-meta.reserve-review" &&
         (!producerOwnLiability || evidence.freshness.state !== "stale"))
       : [];
-    if (reviewedOwnLiability && !producerOwnLiability && reviewEvidenceIds.length === 0) {
-      throw new Error(`Own-liability reserve classification ${exposureKey} has no bound evidence for ${context.asset.assetId}`);
+    if (reviewedOwnLiability && !producerOwnLiability) {
+      // The affirmative decision must be bound to this row: its review digest
+      // carries the classification key and names the reviewed identity. A
+      // disposition alone, however genuine the bound review, is an overlay
+      // edit that quarantines the asset rather than zeroing its score.
+      const decision = classification?.ownLiabilityDecision;
+      if (!decision || reviewEvidenceIds.length === 0 ||
+        classification!.classificationKey !== `registry-reviewed:${exposureKey}:${decision.reviewKey}`) {
+        throw new Error(
+          `Own-liability reserve classification ${exposureKey} has no affirmative reviewed decision for ${context.asset.assetId}`,
+        );
+      }
     }
     const selfReferential = producerOwnLiability || reviewedOwnLiability;
     if (selfReferential && (classification?.unclassifiedResidual || raw.unclassifiedResidual)) {

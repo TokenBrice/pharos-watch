@@ -407,6 +407,13 @@ function formatPercent(value: number): string {
   return value < 0.1 ? "under 0.1%" : `${Number(value.toFixed(1))}%`;
 }
 
+/** What a scoped report's shares are measured against, per reviewed composition basis. */
+const SCOPED_RESERVE_DENOMINATORS: Record<string, string> = {
+  "nusd-nexus": "nominal pool balances",
+  "satusd-river": "gross product deposits",
+  "xo-exodus": "measured holdings in scope",
+};
+
 function buildBackingAnswer(coin: StablecoinMeta): string {
   const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
   const review = coin.reserveReview;
@@ -433,9 +440,10 @@ function buildBackingAnswer(coin: StablecoinMeta): string {
     const subject = issuancePaths ? `these shares of ${coin.symbol}'s reviewed nominal issuance paths`
       : hasEvidenceGap ? `${coin.symbol}'s reserve review findings`
       : holdingsOnly ? `${coin.symbol}'s identified holdings`
-      : review?.scope === "selected-slices" ? coin.id === "xo-exodus"
-        ? `these shares of measured holdings in scope for ${coin.symbol}`
-        : `these shares of ${coin.symbol}'s scoped reserve report`
+      : review?.scope === "selected-slices"
+        ? SCOPED_RESERVE_DENOMINATORS[coin.id]
+          ? `these shares of ${SCOPED_RESERVE_DENOMINATORS[coin.id]} for ${coin.symbol}`
+          : `these shares of ${coin.symbol}'s scoped reserve report`
         : `${coin.symbol}'s reserves`;
     lead = `${recorder} ${subject}${dated} as ${composition}${composition.endsWith(".") ? "" : "."}`;
   } else if (coin.collateral) {

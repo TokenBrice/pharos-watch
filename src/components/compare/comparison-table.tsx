@@ -101,6 +101,13 @@ interface ComparisonSection {
 
 const NULL_VALUE = <span className="text-muted-foreground" title="No comparable data available">—</span>;
 
+/** What a scoped report's shares are measured against, per reviewed composition basis. */
+const SCOPED_REPORT_DENOMINATORS: Record<string, string> = {
+  "nusd-nexus": "nominal pool balances",
+  "satusd-river": "gross product deposits",
+  "xo-exodus": "measured holdings in scope",
+};
+
 function present(value: string | number | null | undefined, fallback: ReactNode = NULL_VALUE): ReactNode {
   return value == null || value === "" ? fallback : value;
 }
@@ -189,7 +196,7 @@ function reserveSummary(coin: ComparisonCoinEntry): ReactNode {
   const sorted = [...reserves].sort((a, b) => b.pct - a.pct);
   const lead = sorted[0];
   const scope = coin.meta.reserveCompositionScope === "scoped-report"
-    ? coin.id === "xo-exodus" ? " of measured holdings in scope" : " of scoped reserve report"
+    ? ` of ${SCOPED_REPORT_DENOMINATORS[coin.id] ?? "scoped reserve report"}`
     : coin.meta.reserveCompositionScope === "nominal-issuance-paths" ? " of reviewed nominal issuance paths" : "";
   return `${lead.name} ${formatPercent(lead.pct, 0)}${scope}${reserves.length > 1 ? ` · ${reserves.length} slices` : ""}`;
 }

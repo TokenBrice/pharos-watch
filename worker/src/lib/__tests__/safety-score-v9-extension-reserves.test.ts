@@ -450,6 +450,23 @@ describe("reviewed live unknown residuals", () => {
     expect(assets.find(asset => asset.assetId === "alpha")!.reserveExposures).toEqual([]);
   });
 
+  it("quarantines only the asset whose reviewed external disposition alone flips to own-liability", () => {
+    const cash: ReserveSlice = { ...LINKED_RESERVES[1]!, sourceKey: "fixture:cash", pct: 100 };
+    const meta = reviewedMeta([cash], { nonLinkDispositions: [{
+      reserveIndex: 0, reserveName: cash.name, pct: 100,
+      disposition: "untracked-exogenous-asset", rationale: "External bank cash.",
+    }] });
+    const { fixed, extension: original, result } = compile([cash], meta);
+    expect(result.score).toBeGreaterThan(0);
+    const extension = structuredClone(original);
+    extension.assets.find(row => row.assetId === "alpha")!.reserveClassifications
+      .find(row => row.trackedAssetDisposition === "reviewed-non-link")!.trackedAssetDisposition = "own-liability";
+    const { assets } = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
+    expect(assets.filter(asset => asset.gaps.some(gap => gap.gapId.endsWith(":gap:asset-compilation")))
+      .map(asset => asset.assetId)).toEqual(["alpha"]);
+    expect(assets.find(asset => asset.assetId === "alpha")!.reserveExposures).toEqual([]);
+  });
+
   it("keeps a fresh producer-confirmed own liability at zero after its review expires", () => {
     const vault: ReserveSlice = { ...known, name: "Own vault", assetClass: "protocol-position", pct: 100 };
     const meta = reviewedMeta([vault], { nonLinkDispositions: [{

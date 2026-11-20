@@ -148,24 +148,40 @@ describe("adaptFraxBalanceSheet", () => {
     expect(result.slices.map(({ sourceKey, pct, selfReferential }) => [sourceKey, pct, selfReferential])).toEqual([
       [`frax-balance-sheet:ethereum:${legacy}`, 60, true],
       ["frax-balance-sheet:frxusd", 30, undefined],
-      ["frax-balance-sheet:frax", 10, undefined],
+      // The unverified remainder cannot publish as FRAX; it stays withheld.
+      ["frax-balance-sheet:source-total-gap", 10, undefined],
     ]);
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "asset-coverage-incomplete", effect: "fatal",
+      message: expect.stringContaining("matches no verified FRAX deployment"),
+    }));
   });
 
   it.each([true, false])("preserves Solana mint case when matching a registry deployment (%s)", (exact) => {
     const deployments = TRACKED_META_BY_ID.get("frax-frax")!.contracts!;
     const mint = deployments.find(row => row.chain === "solana")!.address;
-    const result = adaptFraxBalanceSheet({ totalAssets: 100, assets: [{
-      chain: "solana", tokenAddress: exact ? mint : `f${mint.slice(1)}`,
-      totalValueUsd: 100, tokenSymbol: "FRAX", category: "asset:owned:frax",
-    }] }, "frax-frax", deployments);
-    expect(result.slices[0]?.selfReferential).toBe(exact ? true : undefined);
+    const result = adaptFraxBalanceSheet({ totalAssets: 100, assets: [
+      { chain: "solana", tokenAddress: exact ? mint : `f${mint.slice(1)}`,
+        totalValueUsd: 100, tokenSymbol: "FRAX", category: "asset:owned:frax" },
+      { tokenSymbol: "USDC", totalValueUsd: 1, category: "asset:owned:usd" },
+    ] }, "frax-frax", deployments);
+    if (exact) {
+      expect(result.slices[0]?.selfReferential).toBe(true);
+    } else {
+      // A near-miss mint is not a verified FRAX identity: withheld, not published.
+      expect(result.slices.some(row => row.sourceKey === "frax-balance-sheet:frax")).toBe(false);
+      expect(result.warnings).toContainEqual(expect.objectContaining({
+        code: "asset-coverage-incomplete", effect: "fatal",
+        message: expect.stringContaining("matches no verified FRAX deployment"),
+      }));
+    }
   });
 
   it.each([
     ["missing address", { tokenAddress: undefined }],
     ["missing chain", { chain: undefined }],
     ["invalid address", { tokenAddress: "invalid" }],
+    ["unrelated address", { tokenAddress: "0x9d39a5de30e57443bff2a8307a4256c8797a3497" }],
   ] as const)(
     "withholds the retained Convex FRAX/USDe leg with %s", (_name, fault) => {
       const result = adaptFraxBalanceSheet({ totalAssets: 261_892_727.7221, tokenPriceUsd: { FRAX: 0.98977746 }, assets: [

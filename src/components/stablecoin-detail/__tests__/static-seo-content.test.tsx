@@ -111,6 +111,8 @@ describe("StablecoinDetailSeoContent", () => {
   it.each([
     ["alusd-alchemix", /scoped reserve report.*37\.3% InfiniFi siUSD position/],
     ["lisusd-lista", /scoped reserve report.*98% slisBNB/],
+    ["nusd-nexus", /nominal pool balances for NUSD.*56\.7% USDT in the Ethereum Synapse nexus pool/],
+    ["satusd-river", /gross product deposits for satUSD.*62\.5% Prime Vault custodial BTC collateral/],
     ["xo-exodus", /measured holdings in scope.*100% M0 M held in the XO extension vault/],
     ["avusd-avant", /avUSD's reserve review findings.*Unresolved whole-token reserve composition/],
     ["dusd-alto", /DUSD's reviewed nominal issuance paths.*83\.5% frxUSD.*16\.3% WETH.*0\.2% Syrup USDC.*under 0\.1% sUSDe/],

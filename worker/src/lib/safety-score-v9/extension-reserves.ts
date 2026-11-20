@@ -110,6 +110,11 @@ function overlayReviewedReserveClassification(
         ? { trackedAssetId }
         : {}),
     ...(nonLinkDisposition ? { trackedAssetDisposition: nonLinkDisposition } : {}),
+    // Only the verified own-liability branch carries its affirmative decision:
+    // the review digest and the reviewed row identity that decision named.
+    ...(nonLinkDisposition === "own-liability"
+      ? { ownLiabilityDecision: { reviewKey, reserveName: reviewed.name, pct: reviewed.pct } }
+      : {}),
     failureDomains: issuerOrObligorKey
       ? [{ kind: "reserve-issuer", key: issuerOrObligorKey }]
       : classification.failureDomains,

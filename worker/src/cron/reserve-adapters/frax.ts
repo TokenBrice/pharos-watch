@@ -197,6 +197,12 @@ const REVIEWED_FRAX_FERRY_POSITIONS = [
   ["zksync", "0x31cda619b96c96bd7ed8463418e0f65c1ffc8d0a", "0xb4c1544cb4163f4c2eca1ae9ce999f63892d912a"],
 ] as const;
 
+// Pinned Ferry token contracts are verified FRAX identities even where the
+// registry carries no deployment for that chain.
+const REVIEWED_FRAX_FERRY_TOKENS = new Set(
+  REVIEWED_FRAX_FERRY_POSITIONS.map(([chain, , token]) => `${chain}:${token}`),
+);
+
 function hasReconciledFraxQuantity(row: BalanceSheetAsset, reportedPrice: number | undefined): boolean {
   const sign = row.category === "asset:contra" ? -1 : 1;
   const quantity = typeof row.tokenQuantity === "number" ? nonnegativeFinite(sign * row.tokenQuantity) : undefined;
@@ -293,6 +299,13 @@ export function adaptFraxBalanceSheet(
         // The slice key must be lowercase, even when the contract identity is case-sensitive.
         contractKey = `contract:${chain}:${isEvm ? token : sha256Hex(token)}`;
         ownLiabilityKeys.set(contractKey, ownClaim);
+      } else if (symbol === "FRAX" && token && !REVIEWED_FRAX_FERRY_TOKENS.has(`${chain}:${token}`)) {
+        // A FRAX-denominated row whose contract matches no pinned FRAX
+        // identity is not ordinary low-risk FRAX collateral; publishing it
+        // would turn an unverified identity into a positive claim. Withhold.
+        warnings.push(reserveFatalWarning("asset-coverage-incomplete",
+          `Frax balance-sheet FRAX asset token ${token} on ${chain} matches no verified FRAX deployment`));
+        continue;
       }
     }
     if (!contractKey && subjectId === "frax-frax" && (symbol === "sFRAX" || symbol === "LFRAX")) {
