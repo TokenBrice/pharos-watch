@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { MORPHO_NET_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 import { buildHardcodedUsdBenchmark } from "../yield-sync/benchmarks";
 import { deriveYieldSourceRole } from "../yield-sync/publication-decisions";
-import { evaluateYieldSourcesCooperative } from "../yield-sync/evaluation";
+import { evaluateYieldSourcesCooperative, type EvaluateYieldSourcesInput, type EvaluatedYieldSource } from "../yield-sync/evaluation";
+import { buildHistoryKey } from "../yield-sync/history-evidence";
 import { appendLinkedVariantParentYieldSources } from "../yield-sync/resolve-linked-variants";
+import { appendPoolFamilyYieldSources } from "../yield-sync/resolve-pools";
 import { buildYieldSourceRisk } from "../yield-sync/source-risk";
 import type { ResolvedYield, ResolvedYieldEntry } from "../yield-sync/types";
 import { resolveYieldSourceUrl } from "../../lib/yield-source-links";
@@ -25,21 +28,78 @@ function source(overrides: Partial<ResolvedYield> = {}): ResolvedYield {
   };
 }
 
-async function evaluate(resolved: ResolvedYieldEntry[]) {
+async function evaluate(resolved: ResolvedYieldEntry[], sourceHistory?: EvaluateYieldSourcesInput["sourceHistory"]) {
   const input = baseEvaluationInput({
     resolved,
+    sourceHistory: sourceHistory ?? new Map(),
     startSec: START_SEC,
     safetyScores: new Map(resolved.map((entry) => [entry.id, { score: 80, grade: "B+" }])),
     riskFreeRates: {
       ...baseEvaluationInput().riskFreeRates,
       USD: buildHardcodedUsdBenchmark("linked-variant-test"),
     },
-    stablecoinSupplyById: new Map(resolved.map((entry) => [entry.id, 10_000_000])),
+    stablecoinSupplyById: new Map([["usdc-circle", 10_000_000], ...resolved.map(({ id }) => [id, 10_000_000] as const)]),
   });
   return await evaluateYieldSourcesCooperative(input, { yieldToEventLoop: () => Promise.resolve() });
 }
 
 describe("appendLinkedVariantParentYieldSources", () => {
+  it.each(Object.values(MORPHO_NET_YIELD_SOURCES))("projects only the selected $stablecoinId quote across source and history states", async ({ stablecoinId, sourceKey, corroboratingPoolId, vaultAddress }) => {
+    const parentId = "usdc-circle";
+    const prefix = `linked-variant:${stablecoinId}:`;
+    const onchainKey = `onchain:${stablecoinId}`;
+    const vault = { sourcePool: corroboratingPoolId, yieldType: "lending-vault" } as const;
+    const row = (overrides: Partial<ResolvedYield>) => ({ id: stablecoinId, symbol: "VAULT", yield: source({ ...vault, ...overrides }) });
+    const cases = ["ok", "zero", "missing", "stale"].flatMap((net) => ["ok", "flat", "missing"].flatMap((chain) =>
+      [true, false].flatMap((price) => [true, false].flatMap((comparison) =>
+        [true, false].map((linkedHistory) => ({ net, chain, price, comparison, linkedHistory }))))));
+    const terms = (quote: EvaluatedYieldSource) => [
+      quote.currentApy, quote.apy7d, quote.apy30d, quote.apy30dAnchorObservedAt, quote.comparisonAnchorObservedAt,
+      quote.sourceObservedAt, quote.sourceFetchedAt, quote.sourceObservationVerified, quote.rejected, quote.venueProtocol,
+    ];
+    for (const states of cases) {
+      const { net, chain, price, comparison, linkedHistory } = states;
+      const resolved = [{ id: parentId, symbol: "USDC", yield: source({ sourceKey: "other-pool" }) }];
+      if (chain !== "missing") resolved.push(row({ dataSource: "onchain", sourceKey: onchainKey,
+        currentApy: chain === "flat" ? 0 : 5, exchangeRate: chain === "flat" ? 1 : 1.002 }));
+      if (comparison) resolved.push(row({ sourceKey: corroboratingPoolId, currentApy: 0 }));
+      if (price) resolved.push(row({ sourceKey: "price-derived", dataSource: "price-derived", currentApy: 5 }));
+      if (net !== "missing") resolved.push(row({ sourceKey, dataSource: "protocol-api",
+        currentApy: net === "zero" ? 0 : 3, sourceObservedAt: START_SEC - (net === "stale" ? 86400 : 60),
+        sourceFetchedAt: START_SEC }));
+      appendPoolFamilyYieldSources({
+        resolved, dlPools: [], safetyScores: new Map(), safetySnapshotAvailable: true,
+        stablecoinSupplyById: new Map([[parentId, 10_000_000]]), stablecoinSupplyMapState: "ok",
+        supplementalCandidates: [{ stablecoinId: parentId, symbol: "USDC", chain: "ethereum", yield: source({
+          sourcePool: vaultAddress, sourceKey: `protocol-api:morpho-vault:ethereum:${vaultAddress}`,
+          yieldType: "lending-opportunity", dataSource: "protocol-api", currentApy: 6,
+        }) }],
+      });
+      appendLinkedVariantParentYieldSources(resolved);
+
+      const history: EvaluateYieldSourcesInput["sourceHistory"] = new Map();
+      const at = START_SEC - 20 * 86400;
+      for (const [key, dataSource, apy] of [[onchainKey, "onchain", 5], [sourceKey, "protocol-api", comparison ? 0 : 3]] as const) {
+        for (const [id, historyKey] of [[stablecoinId, key], ...(linkedHistory ? [[parentId, prefix + key]] : [])]) {
+          history.set(buildHistoryKey(id, historyKey), [{
+            stablecoin_id: id, source_key: historyKey, apy: id === parentId ? 7 : apy, data_source: dataSource,
+            is_best: 1, recorded_at: at, source_observed_at: at, source_observation_verified: 1,
+            source_tvl_usd: 1_000_000, yield_source: null, yield_type: vault.yieldType,
+            exchange_rate: dataSource === "onchain" ? 1 : null,
+          }]);
+        }
+      }
+      const { evaluatedSources, bestSourceKeyByCoin } = await evaluate(resolved, history);
+      const winner = evaluatedSources.find(({ id, sourceKey }) => id === stablecoinId && sourceKey === bestSourceKeyByCoin.get(id));
+      if (net === "zero" && comparison && (chain === "ok" || price)) {
+        expect.soft(winner?.sourceKey, JSON.stringify(states)).toBe(sourceKey);
+      }
+      const projections = evaluatedSources.filter(({ id, sourceKey }) => id === parentId && sourceKey !== "other-pool");
+      expect.soft(projections.map((quote) => [quote.sourceKey, ...terms(quote)]), JSON.stringify(states))
+        .toEqual(winner ? [[prefix + winner.sourceKey, ...terms({ ...winner, venueProtocol: "morpho-blue" })]] : []);
+    }
+  });
+
   it("projects tracked variant yield onto the active parent as an external wrapper opportunity", async () => {
     const resolved: ResolvedYieldEntry[] = [
       {
@@ -114,7 +174,7 @@ describe("appendLinkedVariantParentYieldSources", () => {
       deploymentPlace: "strategy-vault",
     },
     {
-      ownerId: "gtusdc-gauntlet",
+      ownerId: "bbqusdc-steakhouse-v2",
       parentId: "usdc-circle",
       venueProtocol: "morpho-blue",
       deploymentPlace: "strategy-vault",

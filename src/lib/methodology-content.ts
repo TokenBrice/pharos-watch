@@ -333,6 +333,9 @@ export const MINT_BURN_FLOW_SECTION_CONTENT = defineMethodologySectionContent({
 
 export const YIELD_POOL_DELIVERY_PARAGRAPH = "DeFiLlama pool quotes can qualify for PYS for up to six hours after the batch was fetched. DeFiLlama does not provide a per-pool observation time, so these scores show ‘Delivery only’ and leave the observation age unknown. All other score requirements still apply.";
 
+export const MORPHO_NET_YIELD_DESCRIPTION =
+  "For Gauntlet USDC Prime V1 and Smokehouse USDC V1, Pharos prefers Morpho’s timestamped APY after the vault fee. DeFiLlama supplies a comparison rate. An eligible on-chain share-price return or price-derived APY can cover a missing or stale Morpho quote. Each USDC deposit opportunity uses the source, APYs and clocks selected for its vault shares.";
+
 export const YIELD_SECTION_CONTENT = defineMethodologySectionContent({
   id: "yield-intelligence-methodology",
   title: "Yield Intelligence",
@@ -340,6 +343,7 @@ export const YIELD_SECTION_CONTENT = defineMethodologySectionContent({
     "Yield Intelligence resolves stablecoin yield from direct on-chain reads, curated pools, protocol APIs, price-derived NAV movement, and rate-derived sources. The pipeline prefers precise sources and only uses fallback tiers when identity and exposure remain unambiguous.",
     "Selected sources age on their own cadence, and benchmark comparisons use comparable annual-rate conventions and product-specific inputs. Gold-denominated returns remain visible without USD excess or PYS.",
     YIELD_POOL_DELIVERY_PARAGRAPH,
+    MORPHO_NET_YIELD_DESCRIPTION,
     "Pharos computes effective yield by comparing APY against the relevant cash or peg benchmark, then combines source-risk-adjusted yield efficiency with sustainability to produce a Pharos Yield Score (PYS). High APY is not automatically good: unstable rates, weak safety scores, low TVL, source-risk penalties, or ambiguous exposure reduce the recommendation quality.",
     "External opportunities — lending markets, fixed-yield products, and structured tranches — are scored at the market level. The underlying stablecoin's Safety Score is one input to an opportunity-level safety score that also weighs reviewed venue risk, market size, observed utilization, and access or withdrawal constraints. Missing critical market evidence produces NR rather than a precise-looking score, and the underlying coin's own Report Card is never altered.",
     "Warnings explain why a venue is risky, missing, stale, modeled, or benchmark-adjusted so yield pages do not promote fragile opportunities as clean income. Calculation mode is separate from evidence class: deterministic proxy math is still estimated evidence. Expired or critically incomplete evidence remains visible as NR context but cannot carry an exact current PYS, and new history points retain the versioned formula inputs needed for exact recomputation.",

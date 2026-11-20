@@ -6,12 +6,14 @@ export const ZEPHYR_YIELD_HISTORY_POLICY = {
   recordedAtClock: "source-observation",
 } as const;
 
-const HISTORY_POLICIES = new Map<string, { recordedAtClock: "source-observation" }>([
-  [ZEPHYR_YIELD_HISTORY_POLICY.sourceKey, ZEPHYR_YIELD_HISTORY_POLICY],
-]);
+export const MORPHO_NET_YIELD_SOURCE_PREFIX = "protocol-api:morpho-net:";
+
+export function isMorphoNetYieldSourceKey(sourceKey: string | null | undefined): boolean {
+  return sourceKey?.replace(/^linked-variant:[^:]+:/, "").startsWith(MORPHO_NET_YIELD_SOURCE_PREFIX) === true;
+}
 
 export function usesYieldObservationHistoryClock(sourceKey: string): boolean {
-  return HISTORY_POLICIES.get(sourceKey)?.recordedAtClock === "source-observation";
+  return sourceKey === ZEPHYR_YIELD_HISTORY_POLICY.sourceKey;
 }
 
 export function getYieldHistorySampleAt(

@@ -1,4 +1,4 @@
-import { getYieldHistorySampleAt, usesYieldObservationHistoryClock } from "@shared/lib/yield-source-history";
+import { getYieldHistorySampleAt, isMorphoNetYieldSourceKey, usesYieldObservationHistoryClock } from "@shared/lib/yield-source-history";
 import { yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
 import { SLOW_NAV_SOURCE_KEYS, USYC_NAV_FUTURE_SKEW_SEC } from "@shared/lib/yield-source-cadence";
 import type { ResolvedYield } from "./types";
@@ -53,10 +53,11 @@ export function computeYieldCandidateStatistics(
   sourceFreshness: YieldSourceFreshness,
 ) {
   const sourceKey = y.sourceKey;
-  const usesReportClock = SLOW_NAV_SOURCE_KEYS.has(sourceKey);
+  const isMorphoNet = isMorphoNetYieldSourceKey(sourceKey);
+  const usesReportClock = isMorphoNet || SLOW_NAV_SOURCE_KEYS.has(sourceKey);
   const requiresProviderClock = requiresYieldProviderObservationClock(y);
   const earliestReportAt = startSec - THIRTY_DAYS_SECONDS;
-  const latestReportAt = startSec + USYC_NAV_FUTURE_SKEW_SEC;
+  const latestReportAt = isMorphoNet ? startSec : startSec + USYC_NAV_FUTURE_SKEW_SEC;
   const hasWindowClock = (at: number | null | undefined): at is number =>
     hasReportClock(at) && at >= earliestReportAt && at <= latestReportAt;
   const providerObservationAt = requiresProviderClock && sourceFreshness === "fresh" && hasWindowClock(y.sourceObservedAt)

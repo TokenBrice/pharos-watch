@@ -1,8 +1,10 @@
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
+import { getComparisonAnchorStaleThresholdMs } from "../../lib/yield-ranking-helpers";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { DlPool, ResolvedYieldEntry, SafetyScoreSnapshot, YieldResolutionResult } from "./types";
 import { resolveYieldTypeLabel } from "./source-risk";
 import { YIELD_VARIANT_CHILD_VENUE_PROTOCOLS } from "@shared/lib/yield-source-risk-registry";
+import { MORPHO_NET_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 import { isBlockedYieldOpportunitySource, matchAllDlPools } from "../yield-helpers";
 import { getPriceDerivedApy } from "./state";
 import { LAYER3_EXCLUDED_VENUE_PROJECTS } from "../../lib/yield-config/yield-config-lending-protocols";
@@ -116,6 +118,7 @@ export async function resolveTrackedYieldSources(params: {
   const reservedExplicitPoolIds = buildReservedYieldPoolIds();
   const onChainRateConfigById = buildConfigByStablecoinId(ON_CHAIN_RATE_CONFIGS);
   const rateDerivedConfigById = buildConfigByStablecoinId(RATE_DERIVED_CONFIGS);
+  const morphoNetConfigById = buildConfigByStablecoinId(Object.values(MORPHO_NET_YIELD_SOURCES));
   const dlPoolByPoolId = new Map<string, DlPool>();
   for (const pool of params.dlPools) {
     if (!dlPoolByPoolId.has(pool.pool)) {
@@ -139,8 +142,11 @@ export async function resolveTrackedYieldSources(params: {
 
     const id = meta.id;
     const symbol = meta.symbol;
+    const morphoNetConfig = morphoNetConfigById.get(id);
+    const comparisonPoolId = morphoNetConfig?.corroboratingPoolId;
     let hasAnySource = false;
     const rateConfig = onChainRateConfigById.get(id);
+    const morphoFallbackChain = morphoNetConfig ? rateConfig?.chain : undefined;
     const onChainRate = rateConfig ? params.onChainRates.get(id) : undefined;
     // B26 — a zero or non-finite read is a failed read, not a 0% observation.
     // Publishing it would write `exchange_rate: 0` (the next run's anchor) plus an
@@ -167,8 +173,12 @@ export async function resolveTrackedYieldSources(params: {
         returnDenomination: rateConfig.returnDenomination,
       });
       if (observation.source) {
-        resolved.push({ id, symbol, yield: observation.source });
-        if (observation.source.observationKind !== "anchor-only") hasAnySource = true;
+        const source = observation.source;
+        resolved.push({ id, symbol, yield: morphoFallbackChain ? { ...source, chain: morphoFallbackChain } : source });
+        const anchor = source.comparisonAnchorObservedAt;
+        const staleMorphoAnchor = morphoNetConfig && anchor != null
+          && Math.trunc(params.startSec - anchor) * 1000 > getComparisonAnchorStaleThresholdMs(source.dataSource, source.sourceKey);
+        if (source.observationKind !== "anchor-only" && !staleMorphoAnchor) hasAnySource = true;
       }
       if (observation.rejection) envelopeRejections.push(observation.rejection);
     }
@@ -251,12 +261,14 @@ export async function resolveTrackedYieldSources(params: {
         },
       });
       alreadyResolvedKeys.add(dlPool.pool);
-      hasAnySource = true;
+      if (dlPool.pool !== comparisonPoolId) hasAnySource = true;
     }
 
     const allDlSourcesZero = hasAnySource
       && resolved
-        .filter((entry): entry is typeof entry & { yield: NonNullable<typeof entry.yield> } => entry.id === id && entry.yield != null)
+        .filter((entry): entry is typeof entry & { yield: NonNullable<typeof entry.yield> } =>
+          entry.id === id && entry.yield != null && entry.yield.sourceKey !== comparisonPoolId,
+        )
         .every((entry) => entry.yield.currentApy === 0);
 
     const shouldTryPriceDerived =
@@ -282,6 +294,7 @@ export async function resolveTrackedYieldSources(params: {
             dataSource: "price-derived",
             exchangeRate: null,
             sourceKey: "price-derived",
+            chain: morphoFallbackChain,
             sourceObservedAt: priceDerived.sourceObservedAt,
             comparisonAnchorObservedAt: priceDerived.comparisonAnchorObservedAt,
           },

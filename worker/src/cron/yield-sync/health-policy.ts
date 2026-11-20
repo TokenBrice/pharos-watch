@@ -1,6 +1,7 @@
 import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types/yield";
 import { classifyYieldBenchmarkFreshness } from "@shared/lib/yield-benchmark-freshness";
 import { STATUS_YIELD_HEALTH_THRESHOLDS } from "@shared/lib/status-thresholds";
+import { MORPHO_NET_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 import type { EvaluatedYieldSource } from "./evaluation";
 import {
   buildNextDeterministicOnChainHealthState,
@@ -385,9 +386,12 @@ export function logYieldApyDivergences(evaluatedSources: EvaluatedYieldSource[])
 export function getPublishableNonOnchainCoverageIds(
   evaluatedSources: readonly EvaluatedYieldSource[],
 ): Set<string> {
+  const morphoSources = Object.values(MORPHO_NET_YIELD_SOURCES);
   return new Set(
     evaluatedSources
-      .filter((source) => source.dataSource !== "onchain" && !source.rejected)
+      .filter((source) => source.dataSource !== "onchain" && !source.rejected
+        && !morphoSources.some(({ stablecoinId, corroboratingPoolId }) =>
+          source.id === stablecoinId && source.sourceKey === corroboratingPoolId))
       .map((source) => source.id),
   );
 }

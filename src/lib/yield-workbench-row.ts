@@ -1,6 +1,7 @@
 import { getYieldBenchmarkReferenceText } from "@/lib/yield-benchmark";
 import { formatYieldDecisionReasonLine } from "@/lib/yield-decision-ledger";
 import {
+  MORPHO_NET_YIELD_REASON_LABEL,
   PYS_NULL_REASON_TEXT,
   YIELD_DECISION_REASON_LABELS,
   buildRankChangeChipDisplay,
@@ -17,6 +18,7 @@ import {
   type YieldSourceClockInput,
   type YieldSourceDisplayClock,
 } from "@/lib/yield-source-presentation";
+import { isMorphoNetYieldSourceKey } from "@shared/lib/yield-source-history";
 import type {
   YieldBenchmarkSelectionMode,
   YieldRankChangeAttribution,
@@ -67,6 +69,10 @@ function getYieldRankChangeAttribution(
 
 export function getYieldDecisionReasonLine(row: YieldWorkbenchRanking): string | null {
   if (!isYieldRankingSummary(row)) return formatYieldDecisionReasonLine(row.decisionLedger);
+  if (row.decisionReasonCode && row.decisionReasonCode !== "no-alternatives"
+    && row.yieldType === "lending-vault" && isMorphoNetYieldSourceKey(row.provenance?.sourceKey)) {
+    return MORPHO_NET_YIELD_REASON_LABEL;
+  }
   return row.decisionReasonCode ? YIELD_DECISION_REASON_LABELS[row.decisionReasonCode] : null;
 }
 

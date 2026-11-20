@@ -273,6 +273,8 @@ export interface YieldRankChangeChipDisplay {
   pysDeltaLabel: string | null;
 }
 
+export const MORPHO_NET_YIELD_REASON_LABEL = "Morpho net APY preferred";
+
 export const YIELD_DECISION_REASON_LABELS: Record<YieldDecisionReasonCode, string> = {
   "best-by-confidence-and-apy": "Best confidence-adjusted yield",
   "deterministic-preferred": "Deterministic source preferred",

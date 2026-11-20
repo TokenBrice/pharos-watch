@@ -29,6 +29,7 @@ const DEFAULT_YIELD_PUBLICATION_D1_TABLES: MockTableConfig[] = [
   { match: "ranked_generations", rows: [] },
   { match: "INSERT INTO cache", rows: [], runMeta: { changes: 1 } },
   { match: "INSERT INTO yield_data", rows: [] },
+  { match: "UPDATE yield_data SET is_best = 0", rows: [], runMeta: { changes: 0 } },
   { match: "INSERT INTO yield_history", rows: [] },
   { match: "INSERT OR REPLACE INTO yield_source_decisions", rows: [] },
   { match: "INSERT OR REPLACE INTO yield_source_decision_alternatives", rows: [] },

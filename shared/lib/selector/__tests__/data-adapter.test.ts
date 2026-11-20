@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, it, vi } from "vitest";
+import { MORPHO_NET_YIELD_SOURCES } from "../../yield-source-cadence";
 import { makeYieldProvenance, makeYieldRanking } from "../../../test-utils/yield-ranking-fixtures";
 import { buildSelectorRows, type BuildSelectorRowsArgs } from "../data-adapter";
 import { applyInputDrivenExclusions, evaluateExclusions, hasRequiredSignals } from "../exclusions";
@@ -36,7 +37,8 @@ vi.mock("../../stablecoins/client-registry", async (importOriginal) => {
     { type: "warning" as const, title: "Redemptions paused", kind: "paused" as const },
     { type: "danger" as const, title: "Chain halted" },
   ] };
-  const coins = [reviewed, unreviewed, structural, halted, actual.CLIENT_ACTIVE_META_BY_ID.get("paxg-paxos")!];
+  const morpho = Object.values(MORPHO_NET_YIELD_SOURCES).map(({ stablecoinId }) => actual.CLIENT_ACTIVE_META_BY_ID.get(stablecoinId)!);
+  const coins = [reviewed, unreviewed, structural, halted, actual.CLIENT_ACTIVE_META_BY_ID.get("paxg-paxos")!, ...morpho];
   return {
     ...actual,
     CLIENT_TRACKED_STABLECOINS: coins,
@@ -68,18 +70,19 @@ const EMPTY_ARGS: BuildSelectorRowsArgs = {
 };
 
 function adaptYield(
-  ranking: Record<string, unknown>,
+  ranking: Record<string, unknown> & { id?: string },
   response: Record<string, unknown> = {},
   now = NOW,
   yieldAgeAssessedAt: number | null = NOW,
 ) {
+  const { id = "usdc-circle" } = ranking;
   return buildSelectorRows({
     ...EMPTY_ARGS,
     now,
     yieldAgeAssessedAt,
-    yieldData: { rankings: [{ id: "usdc-circle", yieldType: "lending", yieldSource: "Aave",
+    yieldData: { rankings: [{ id, yieldType: "lending", yieldSource: "Aave",
       apy30d: 5, pharosYieldScore: 80, ...ranking }], ...response } as unknown as BuildSelectorRowsArgs["yieldData"],
-  }).rows.get("usdc-circle")!;
+  }).rows.get(id)!;
 }
 
 const NOW = 1_700_000_000_000;
@@ -90,9 +93,10 @@ describe("buildSelectorRows", () => {
     const eligibleIds = (custodyOk: "any" | "onchain-only" | "regulated-only") => rows
       .filter((row) => applyInputDrivenExclusions(row, makeInput({ custodyOk })) === null)
       .map((row) => row.id);
-    expect(eligibleIds("onchain-only")).toEqual(["structural"]);
+    const morphoIds = Object.values(MORPHO_NET_YIELD_SOURCES).map(({ stablecoinId }) => stablecoinId);
+    expect(eligibleIds("onchain-only")).toEqual(["structural", ...morphoIds]);
     expect(eligibleIds("regulated-only")).toEqual([]);
-    expect(eligibleIds("any")).toEqual(["usdc-circle", "unreviewed", "structural", "halted"]);
+    expect(eligibleIds("any")).toEqual(["usdc-circle", "unreviewed", "structural", "halted", ...morphoIds]);
   });
 
   it.each([
@@ -273,6 +277,43 @@ describe("buildSelectorRows", () => {
 
 
 describe("yield ingestion", () => {
+  it("stamps the Morpho quote exclusion policy as selector-v2.15", () => {
+    expect(buildSelectorRows(EMPTY_ARGS).methodologyVersions.exclusionFilters).toBe("selector-v2.15");
+  });
+
+  it.each(Object.values(MORPHO_NET_YIELD_SOURCES).flatMap(({ stablecoinId, sourceKey, corroboratingPoolId }) => [
+    { sourceKey, comparisonKey: corroboratingPoolId },
+    { sourceKey, comparisonKey: `linked-variant:${stablecoinId}:${corroboratingPoolId}` },
+  ]))("excludes the comparison quote $comparisonKey", ({ sourceKey, comparisonKey }) => {
+    const input = makeInput({ profile: "yield", minApy: 3.5 });
+    const sourceRisk = { venueProtocol: "morpho-blue", venueChain: "ethereum" };
+    const row = adaptYield({ apy30d: 3, provenance: { sourceKey }, sourceRisk, altSources: [
+      { sourceKey: comparisonKey, yieldType: "lending-vault", apy30d: 4, sourceRisk },
+    ] });
+    expect.soft(selectYieldSource(row, input)).toBeNull();
+    expect.soft(selectYieldSource(row, { ...input, minApy: 3 })).toMatchObject({ sourceKey });
+    const legacy = adaptYield({ apy30d: 4, provenance: { sourceKey: comparisonKey }, sourceRisk });
+    expect(selectYieldSource(legacy, input)).toBeNull();
+  });
+
+  it.each(Object.values(MORPHO_NET_YIELD_SOURCES))("only recommends $stablecoinId's share-price rates as fallbacks", ({ stablecoinId, sourceKey, vaultAddress }) => {
+    const sourceRisk = { venueProtocol: "morpho-blue", venueChain: "ethereum" };
+    const input = makeInput({ profile: "yield", minApy: 3.5 });
+    for (const prefix of ["", `linked-variant:${stablecoinId}:`]) {
+      const id = prefix ? "usdc-circle" : stablecoinId;
+      const onchain = { sourceKey: `${prefix}onchain:${stablecoinId}`, yieldType: "lending-vault", apy30d: 5, sourceRisk };
+      const supplemental = { ...onchain, sourceKey: `protocol-api:morpho-vault:ethereum:${vaultAddress}`, apy30d: 6 };
+      const price = { ...onchain, sourceKey: `${prefix}price-derived`, apy30d: 4 };
+      for (const fallbackQuote of [onchain, price]) {
+        const net = adaptYield({ id, provenance: { sourceKey: prefix + sourceKey }, apy30d: 3, sourceRisk, altSources: [fallbackQuote, supplemental] });
+        expect.soft(selectYieldSource(net, input)).toBeNull();
+        expect.soft(selectYieldSource(net, { ...input, minApy: 3 })).toMatchObject({ sourceKey: prefix + sourceKey });
+        const fallback = adaptYield({ id, provenance: { sourceKey: fallbackQuote.sourceKey }, sourceRisk, altSources: [supplemental] });
+        expect.soft(fallback.yieldSources?.map((quote) => quote.sourceKey)).toEqual([fallbackQuote.sourceKey]);
+      }
+    }
+  });
+
   it("marks structured-tranche model substitution ineligible for V9 coverage", () => {
     const row = adaptYield({ yieldType: "structured-tranche", safetyScore: 99, safetyGrade: "A+" });
     expect(row).toMatchObject({ safetyScore: 99, safetyGrade: "A+", safetyProvenance: "yield-opportunity" });

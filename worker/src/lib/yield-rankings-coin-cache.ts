@@ -14,7 +14,9 @@ const COHORT_LEASE_KEY = `${COHORT_CACHE_KEY}:lease`;
 type YieldCoinCache = { value: string; updatedAt: number };
 
 export const YIELD_SERVED_GENERATION_SQL = `(
-              SELECT CASE WHEN json_valid(value) THEN json_extract(value, '$.publication.generationId') END
+              SELECT CASE WHEN NOT json_valid(value) THEN NULL
+                          WHEN json_type(value, '$.publication.generationId') = 'text'
+                          THEN json_extract(value, '$.publication.generationId') END
               FROM cache WHERE key = 'yield-rankings')`;
 
 export async function readYieldFreshnessAge(db: D1Database, now: number): Promise<number | null> {

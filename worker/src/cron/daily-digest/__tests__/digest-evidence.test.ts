@@ -24,6 +24,25 @@ const trigger: DigestNextTrigger = { id: "trigger:depeg:usdt-tether", stablecoin
 describe("canonical comparable digest evidence", () => {
   const fixtures = createLatestSchemaFixtureTracker();
   afterEach(fixtures.closeAll);
+  it.each([
+    ['{"publication":{"generationId":"current"}}', [3]],
+    ['{"publication":{"generationId":"empty"}}', []],
+    ["{", undefined], ["{}", undefined], ['{"publication":{"generationId":[]}}', undefined], [null, undefined],
+  ])("scopes USDC evidence to the served generation (%s)", async (cache, apys) => {
+    const { db, sqlite } = fixtures.open();
+    const ctx = makeCollectorCtx(db);
+    ctx.evidence = {};
+    if (cache !== null) sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('yield-rankings', ?, ?)")
+      .run(cache, ctx.nowSec);
+    const row = sqlite.prepare(`INSERT INTO yield_data (stablecoin_id, source_key, symbol, current_apy, apy_7d, apy_30d,
+      yield_source, yield_type, data_source, is_best, updated_at, publication_generation_id, publication_state)
+      VALUES ('usdc-circle', ?, 'USDC', ?, 3, 3, 'USDC vault', 'lending-opportunity', 'protocol-api', 1, ?, ?, 'published')`);
+    row.run("older-vault", 5, ctx.nowSec - 3600, "older");
+    row.run("linked-variant:gtusdc-gauntlet:protocol-api:morpho-net:test", 3, ctx.nowSec, "current");
+    const result = await collectYieldAnomalies(ctx);
+    expect.soft(result.degradedReasons).toEqual(apys === undefined ? ["yield-published-generation"] : []);
+    expect.soft(ctx.evidence.yields).toEqual(apys?.map((currentApy) => ({ stablecoinId: "usdc-circle", symbol: "USDC", currentApy })));
+  });
   it.each([[true, false], [false, true], [false, false], [true, true]])("compares current=%s to current=%s without borrowing the peak", (before, after) => {
     const previous = { ...input(113600, before), nextTriggers: [trigger] };
     const current = input(200000, after);

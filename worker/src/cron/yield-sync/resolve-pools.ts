@@ -1,4 +1,5 @@
 import { EXTERNAL_OPPORTUNITY_YIELD_TYPES } from "@shared/lib/yield-opportunity-risk";
+import { MORPHO_NET_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { CHAIN_META, normalizeChainId } from "@shared/types/chain-identity";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
@@ -447,8 +448,11 @@ function appendResolvedYieldCandidates(
   let ambiguousDrops = 0;
   let unresolvedDrops = 0;
   let sizeGateDrops = 0;
+  const trackedMorphoVaultKeys = new Set<string>(Object.values(MORPHO_NET_YIELD_SOURCES).map(({ supplementalSourceKey }) => supplementalSourceKey));
 
   for (const entry of entries) {
+    // Tracked Morpho vaults reach the deposit asset through linked projection.
+    if (trackedMorphoVaultKeys.has(entry.yield.sourceKey)) continue;
     if (
       isExternalYieldOpportunityType(entry.yield.yieldType) &&
       isBlockedYieldOpportunitySource({

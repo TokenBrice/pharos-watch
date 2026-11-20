@@ -13,6 +13,7 @@ import {
   isSupplementalOnchainSource,
 } from "@shared/lib/yield-source-cadence";
 import type { YieldRowSafetyResolution } from "@shared/lib/yield-opportunity-risk";
+import { isMorphoNetYieldSourceKey } from "@shared/lib/yield-source-history";
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
@@ -186,7 +187,8 @@ export function getRankingStaleThresholdMs(dataSource: string, sourceKey?: strin
   if (dataSource === "protocol-api" && sourceKey?.startsWith("protocol-api:pendle:") === true) {
     return PENDLE_SUPPLEMENTAL_STALE_THRESHOLD_MS;
   }
-  if (dataSource === "protocol-api" || (dataSource === "onchain" && isSupplementalOnchainSource(sourceKey))) {
+  if ((dataSource === "protocol-api" && !isMorphoNetYieldSourceKey(sourceKey))
+    || (dataSource === "onchain" && isSupplementalOnchainSource(sourceKey))) {
     return SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS;
   }
   return STALE_THRESHOLD_MS;
