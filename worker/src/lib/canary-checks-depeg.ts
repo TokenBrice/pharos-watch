@@ -28,14 +28,13 @@ import {
 import {
   freshDepegDeadBandNotices,
   DEPEG_CENSUS_PRODUCER_JOB,
-  latestDepegLedgerRun,
   loadDepegCensusRuns,
 } from "./depeg-ledger-clock";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { getDexPriceSourceEntries } from "./depeg-trust-policy";
 import type { DepegObservationCensus } from "../cron/depeg-detection/types";
 import { resolveStablecoinMarketHours, resolveStablecoinPriceGapReviews } from "./stablecoin-publication-coverage";
-import { PSI_HISTORICAL_PRICE_GAP_REVIEWS, STABLECOIN_PRICE_GAP_REVIEWS } from "./stablecoin-publication-reviews";
+import { PSI_HISTORICAL_PRICE_GAP_REVIEWS, STABLECOIN_PRICE_GAP_REVIEWS, type StablecoinPriceGapReview } from "./stablecoin-publication-reviews";
 
 type DepegCanaryFinding = {
   status: "ok" | "degraded" | "error";
@@ -93,12 +92,25 @@ function unavailableShare(census: { eligibleCount: number; unavailableCount: num
   return census.eligibleCount > 0 ? census.unavailableCount / census.eligibleCount : null;
 }
 
+const NO_PARITY_QUOTE_REVIEW_MAX_AGE_SEC = 7 * 86_400;
+export const DEPEG_NO_PARITY_QUOTE_REVIEWS: readonly StablecoinPriceGapReview[] = [
+  {
+    stablecoinId: "susd-solayer",
+    owner: "ops",
+    reason: "Solayer sUSD publishes an upstream-clocked protocol-redeem valuation of accrued USD per raw token (about $1.1814 at review). The selected mark supplies no accrued-token market parity quote.",
+    sources: ["https://api.pharos.watch/api/stablecoins"],
+    reviewedAt: Date.UTC(2026, 10, 19, 23, 31) / 1000,
+    expiresAt: Date.UTC(2026, 10, 26, 23, 31) / 1000,
+  },
+];
+
 /** Operator completeness only: source facts never acknowledge detection or event blindness. */
 export function assessDepegObservationGaps(census: DepegObservationCensus, observedAt: number) {
   const acknowledgedUnavailableIds = {
     reviewedNominalReference: [] as string[],
     scheduledMarketClosure: [] as string[],
     reviewedPriceGap: [] as string[],
+    noParityQuoteByDesign: [] as string[],
   };
   // A reference-market closure holds FX and metal pegs by schedule (metal hours contain FX hours):
   // acknowledged by count, and only
@@ -112,8 +124,9 @@ export function assessDepegObservationGaps(census: DepegObservationCensus, obser
   const primaryUnusableCount = census.reasonCounts["primary-unusable"] ?? 0;
   const assets = census.unavailableAssets ?? (primaryUnusableCount === 0 ? [] : undefined);
   const unavailableIdsComplete = census.unavailableIdsTruncated !== true && !census.unavailableIdsDropped
-    && assets != null && new Set(assets.map((asset) => asset.id)).size === assets.length
-    && assets.filter((asset) => asset.reason === "primary-unusable").length === primaryUnusableCount;
+    && assets != null && assets.length === primaryUnusableCount
+    && assets.every((asset) => asset.reason === "primary-unusable")
+    && new Set(assets.map((asset) => asset.id)).size === assets.length;
   if (!unavailableIdsComplete) {
     return { unavailableIdsComplete: false, acknowledgedUnavailableCount: marketClosedCount,
       actionableUnavailableCount: census.unavailableCount - marketClosedCount, acknowledgedUnavailableIds,
@@ -125,6 +138,9 @@ export function assessDepegObservationGaps(census: DepegObservationCensus, obser
     ...STABLECOIN_PRICE_GAP_REVIEWS.filter((review) => ACTIVE_IDS.has(review.stablecoinId)),
     ...PSI_HISTORICAL_PRICE_GAP_REVIEWS.filter((review) => PSI_HISTORICAL_IDS.has(review.stablecoinId)),
   ]);
+  const noParityQuoteReviews = resolveStablecoinPriceGapReviews(ids, observedAt, DEPEG_NO_PARITY_QUOTE_REVIEWS.filter(
+    (review) => review.expiresAt - review.reviewedAt <= NO_PARITY_QUOTE_REVIEW_MAX_AGE_SEC,
+  ));
   const actionableUnavailableIds: string[] = [];
   for (const asset of assets) {
     if (asset.reason === "primary-unusable") {
@@ -138,6 +154,10 @@ export function assessDepegObservationGaps(census: DepegObservationCensus, obser
       }
       if (reviews.activeById.has(asset.id)) {
         acknowledgedUnavailableIds.reviewedPriceGap.push(asset.id);
+        continue;
+      }
+      if (asset.observedNonParityProtocolRedeem === true && noParityQuoteReviews.activeById.has(asset.id)) {
+        acknowledgedUnavailableIds.noParityQuoteByDesign.push(asset.id);
         continue;
       }
     }
@@ -168,20 +188,20 @@ export async function checkDepegDetectionCensus(db: D1Database, observedAt: numb
     if (runs.length === 0) {
       return failedFinding("depeg-census-source-missing", { producerJob: DEPEG_CENSUS_PRODUCER_JOB, maxAgeSec });
     }
-    const latest = latestDepegLedgerRun(runs);
+    const latest = runs.find((run) => run.pipelineSucceeded);
     if (latest?.census == null) {
-      return degradedFinding("depeg-census-missing", {
+      const run = latest ?? runs[0];
+      const metadata = {
         producerJob: DEPEG_CENSUS_PRODUCER_JOB,
-        latestRunAt: runs[0].runStartedAt,
-        unavailableReason: runs[0].unavailableReason,
+        latestRunAt: run.runStartedAt,
+        unavailableReason: run.unavailableReason,
         maxAgeSec,
-      });
+      };
+      return latest ? failedFinding("depeg-census-invalid", metadata) : degradedFinding("depeg-census-missing", metadata);
     }
+    const prior = runs.find((run) => run.pipelineSucceeded && run.runStartedAt < latest.runStartedAt);
     const census = latest.census;
     const ageSec = Math.max(0, observedAt - latest.runStartedAt);
-    const prior = runs.find(
-      (run) => run.runStartedAt < latest.runStartedAt && run.pipelineSucceeded && run.census != null,
-    ) ?? null;
     const share = unavailableShare(census);
     const priorShare = prior?.census == null ? null : unavailableShare(prior.census);
     const gaps = assessDepegObservationGaps(census, observedAt);
