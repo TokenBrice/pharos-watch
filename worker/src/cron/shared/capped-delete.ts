@@ -164,7 +164,10 @@ export async function runRetentionPolicies<Key extends string>(
   policies: Record<Key, WindowedRetentionPolicy>,
   nowSec: number,
   signal?: AbortSignal,
-  options: { deadlineMs?: number } = {},
+  options: {
+    deadlineMs?: number;
+    preparePolicy?: Partial<Record<Key, (policy: WindowedRetentionPolicy) => Promise<WindowedRetentionPolicy>>>;
+  } = {},
 ): Promise<Record<Key, CappedDeleteResult>> {
   const results = {} as Record<Key, CappedDeleteResult>;
   const used = new Map<string, number>();
@@ -184,23 +187,26 @@ export async function runRetentionPolicies<Key extends string>(
       failures.push(new RetentionGroupError([{ key }], new Error("Shared retention budget has an unconfirmed outcome")));
       continue;
     }
-    const statement = retentionDeleteStatement(policy, nowSec);
-    if (budget) statement.runLimit = Math.max(0, policy.runLimit - (used.get(budget) ?? 0));
     try {
+      const prepare = options.preparePolicy?.[key];
+      const prepared = prepare ? await prepare(policy) : policy;
+      const statement = retentionDeleteStatement(prepared, nowSec);
+      if (budget) statement.runLimit = Math.max(0, prepared.runLimit - (used.get(budget) ?? 0));
       const [pass] = await deleteCappedGroup(db, [{
         ...statement, key,
-        windows: policy.windows?.map((window) => ({
-          ...retentionDeleteStatement(policy, nowSec, window), window: window.predicate,
+        windows: prepared.windows?.map((window) => ({
+          ...retentionDeleteStatement(prepared, nowSec, window), window: window.predicate,
         })),
       }], signal);
       results[key] = pass;
       if (budget) used.set(budget, (used.get(budget) ?? 0) + pass.pruned);
     } catch (caught) {
-      if (signal?.aborted || !(caught instanceof RetentionGroupError)) throw caught;
-      failures.push(caught);
+      if (signal?.aborted || (typeof caught === "object" && caught !== null && "name" in caught && caught.name === "AbortError")) throw caught;
+      const failure = caught instanceof RetentionGroupError ? caught : new RetentionGroupError([{ key }], caught);
+      failures.push(failure);
       if (budget) failedBudgets.add(budget);
       // An exhausted window must expire before admitting an independent policy.
-      if (isD1ResourceWindowError(caught.cause)) {
+      if (isD1ResourceWindowError(failure.cause)) {
         await sleepWithSignal(D1_RESOURCE_WINDOW_MS, signal);
       }
     }

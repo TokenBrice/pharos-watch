@@ -16,7 +16,12 @@ import { validateCompositePricingSourceFreshness } from "../../../lib/pricing-so
 import { classifyPrimaryDepegTrust, getDexAggregateObservedAt } from "../../../lib/depeg-trust-policy";
 import { decodeCurrentReserveNavPrice } from "../../../lib/reserve-nav-price";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
+import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
+import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { decideDepegAsset } from "../../depeg-detection/decision-engine";
+import { attachDetectionReferenceContext } from "../../depeg-detection/reference-policy";
+import { referenceState } from "../../depeg-detection/__tests__/reference-fixtures";
 import {
   createEmptyPrimaryConsensusQuoteMaps,
   type PrimaryConsensusQuoteMaps,
@@ -279,10 +284,79 @@ describe("buildPrimaryConsensusResults", () => {
     expect(undated).toMatchObject({ price: 0.991, agreeSources: ["bitstamp"], confidence: "single-source",
       observedAt: nowSec - 12, allPrices: { bitstamp: 0.991 }, diagnosticPrices: { kraken: 0.987 } });
     expect(undated?.allPrices).not.toHaveProperty("kraken");
-    quoteMaps.krakenObservedAtBySymbol.set("USDT", nowSec - 20);
+    quoteMaps.krakenBookSnapshots.set("USDT", { price: 0.987, observedAt: nowSec - 20 });
     const dated = consensusFor(asset, quoteMaps);
     expect(dated).toMatchObject({ price: 0.989, confidence: "high", observedAt: nowSec - 20 });
     expect(new Set(dated?.agreeSources)).toEqual(new Set(["bitstamp", "kraken"]));
+  });
+
+  it("preserves the oldest clock and weakest clock mode in Kraken composites", () => {
+    const now = 1_800_000_000;
+    const asset = { id: "paxg-paxos", name: "PAX Gold", symbol: "PAXG", geckoId: "pax-gold", pegType: "peggedGOLD" };
+    const quotes = createEmptyPrimaryConsensusQuoteMaps();
+    quotes.krakenPrices.set("PAXG", 3_000);
+    quotes.krakenBookSnapshots.set("PAXG", { price: 3_000, observedAt: now - 100 });
+    quotes.krakenQuoteBasisBySymbol.set("PAXG", "bid-ask-midpoint");
+    quotes.cgQuotes.set("pax-gold", { price: 3_001, observedAt: now - 20, observedAtMode: "upstream" });
+    expect(consensusFor(asset, quotes)).toMatchObject({
+      source: "coingecko+kraken", confidence: "high", observedAt: now - 100, observedAtMode: "upstream",
+    });
+    quotes.krakenBookSnapshots.clear();
+    quotes.krakenObservedAt = now - 5;
+    expect(consensusFor(asset, quotes)).toMatchObject({
+      source: "coingecko+kraken", confidence: "high", observedAt: now - 20, observedAtMode: "local_fetch",
+    });
+    expect(getPricingSourceRegistryEntry("kraken")).toMatchObject({
+      defaultObservedAtMode: "local_fetch", supportsUpstreamObservedAt: false, depegSourceFamily: "market:kraken",
+    });
+  });
+
+  // Pharos publication captured at 00:38:40 UTC and Kraken books at 00:41:14 UTC on 2026-11-20.
+  // The public median and oldest clock stand in for unpublished legs, with a controlled dated reference.
+  it.each([
+    ["eurc-circle", 1.0967139057919377, 1795134643, 1.097285, 1795135274, 1.0967582021062146, 501.5e6, "cg"],
+    ["zchf-frankencoin", 1.1841783666300865, 1795134643, 1.18456, 1795135204, 1.1844481951970627, 38.2e6, "cg"],
+    ["xaut-tether", 3607.1463280560174, 1795134623, 3594.9, 1795135274, 3616.2728131424715, 2702e6, "cg"],
+    ["paxg-paxos", 3602.8, 1795134643, 3590.555, 1795135274, 3616.2728131424715, 1613e6, "cg+cb"],
+    ["europ-schuman", 1.0959010027968699, 1795134643, 1.0965, 1795135182, 1.0967582021062146, 14.8e6, "cg"],
+    ["audx-aussie-dollar-token", 0.665475, 1795134649, 0.66519, 1795135207, 0.6655512028506889, 2.28e6, ""],
+    ["tgbp-tokenised", 1.30921901164242, 1795134643, 1.308765, 1795135268, 1.308556256796314, 26e6, "cg"],
+    ["qcad-stablecorp", 0.69725, 1795134649, 0.69735, 1795135155, 0.6971186691168064, 1.44e6, ""],
+    ["mxnb-juno", 0.052458002522130134, 1795134623, 0.052365, 1795135167, 0.052371087912464864, 4.48e6, "cg"],
+    ["brl1-brl1", 0.16755573336961216, 1795134643, 0.167275, 1795135262, 0.16849199663016007, 3.2e6, "cg"],
+  ] as const)("replays the captured quote clocks through depeg detection for %s", (id, baselinePrice, baselineAt, price, observedAt, reference, supply, coLegs) => {
+    const bookCaptureAt = 1795135274;
+    const meta = TRACKED_META_BY_ID.get(id)!;
+    const pegType = pegTypeFromCurrency(meta.flags.pegCurrency)!;
+    const asset = { id, name: meta.name, symbol: meta.symbol, geckoId: meta.geckoId, pegType, circulating: { [pegType]: supply } };
+    const symbol = asset.symbol.toUpperCase();
+    const quotes = createEmptyPrimaryConsensusQuoteMaps();
+    quotes.krakenPrices.set(symbol, baselinePrice);
+    quotes.krakenObservedAt = baselineAt;
+    quotes.krakenQuoteBasisBySymbol.set(symbol, "bid-ask-midpoint");
+    if (coLegs) quotes.cgQuotes.set(meta.geckoId!, { price: baselinePrice, observedAt: baselineAt, observedAtMode: "upstream" });
+    if (coLegs === "cg+cb") {
+      quotes.coinbasePrices.set(symbol, baselinePrice);
+      quotes.coinbaseObservedAtBySymbol.set(symbol, baselineAt);
+    }
+    const pegRates = { [pegType]: reference };
+    const fx = referenceState(pegRates, baselineAt);
+    const referenceContext = attachDetectionReferenceContext(pegRates, [], new Map(), new Set(), fx, fx.repricingByPeg);
+    const detectorVerdict = (now: number, expectedKrakenPrice: number) => {
+      const primary = consensusFor(asset, quotes, { nowSec: now })!;
+      expect(primary.allPrices?.kraken).toBe(expectedKrakenPrice);
+      return decideDepegAsset({ now, meta, pegRates, pegRateSources: { [pegType]: "fx" }, pegRateCounts: {}, referenceContext,
+        asset: { ...asset, price: primary.price, priceSource: primary.source, priceConfidence: primary.confidence,
+          priceObservedAt: primary.observedAt, priceObservedAtMode: primary.observedAtMode, priceQuoteBasis: primary.priceQuoteBasis,
+          agreeSources: primary.agreeSources } }).observation;
+    };
+    expect(detectorVerdict(1795135120, baselinePrice)).toEqual({ kind: "unavailable", reason: "invalid-reference" });
+    quotes.krakenBookSnapshots.set(symbol, { price, observedAt });
+    expect(detectorVerdict(bookCaptureAt, price)).toEqual({ kind: "observed" });
+    if (symbol === "ZCHF") {
+      quotes.krakenObservedAt = observedAt + 601;
+      expect(detectorVerdict(quotes.krakenObservedAt, baselinePrice)).toEqual({ kind: "unavailable", reason: "invalid-reference" });
+    }
   });
 
   it.each([["audx-aussie-dollar-token", "AUDX"], ["qcad-stablecorp", "QCAD"]])(
@@ -293,10 +367,21 @@ describe("buildPrimaryConsensusResults", () => {
       quoteMaps.krakenObservedAt = nowSec - 5;
       quoteMaps.krakenQuoteBasisBySymbol.set(symbol, "bid-ask-midpoint");
       quoteMaps.cgQuotes.set(id, { price: 1.021, observedAt: nowSec, observedAtMode: "upstream" });
-      expect(consensusFor({ id, name: symbol, symbol, geckoId: id, pegType: "peggedUSD" }, quoteMaps)).toMatchObject({
+      const asset = { id, name: symbol, symbol, geckoId: id, pegType: "peggedUSD" };
+      expect(consensusFor(asset, quoteMaps)).toMatchObject({
         source: "kraken", observedAt: nowSec - 5, observedAtMode: "local_fetch", priceQuoteBasis: "bid-ask-midpoint",
         price: 1.02, confidence: "single-source", agreeSources: ["kraken"],
         candidateSources: ["kraken", "coingecko"], diagnosticPrices: { coingecko: 1.021 }, allPrices: { kraken: 1.02 },
+      });
+      quoteMaps.krakenBookSnapshots.set(symbol, { price: 1.019, observedAt: nowSec - 599 });
+      expect(consensusFor(asset, quoteMaps)).toMatchObject({
+        price: 1.019, source: "kraken", confidence: "single-source", agreeSources: ["kraken"],
+        observedAt: nowSec - 599, observedAtMode: "upstream", priceQuoteBasis: "bid-ask-midpoint",
+      });
+      quoteMaps.krakenObservedAt = nowSec + 3;
+      expect(consensusFor(asset, quoteMaps, { nowSec: nowSec + 3 })).toMatchObject({
+        price: 1.02, source: "kraken", confidence: "single-source", agreeSources: ["kraken"],
+        observedAt: nowSec + 3, observedAtMode: "local_fetch", priceQuoteBasis: "bid-ask-midpoint",
       });
     },
   );

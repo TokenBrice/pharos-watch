@@ -11,6 +11,7 @@ import { computePriceConsensus, type SourcePrice } from "../../lib/price-consens
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
 import { isHardPricingTrustTier, isListAggregatorOnlyPair } from "@shared/lib/pricing-source-policy";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
+import { validatePricingSourceFreshness } from "../../lib/pricing-source-freshness";
 import {
   buildPrimarySourceCandidates,
   isDexLegWithinCoLegBudget,
@@ -68,6 +69,13 @@ export function buildPrimaryConsensusResults(params: {
     const geckoId = isUsableGeckoId(asset.geckoId) ? asset.geckoId : null;
     const cgQuote = geckoId ? (params.quoteMaps.cgQuotes.get(geckoId) ?? null) : null;
     const cgPrice = cgQuote?.price ?? null;
+    const symbol = asset.symbol.toUpperCase();
+    const krakenSnapshot = params.quoteMaps.krakenBookSnapshots.get(symbol);
+    // The book may age out while the remaining providers are collected.
+    const freshKrakenSnapshot = krakenSnapshot && validatePricingSourceFreshness({
+      source: "kraken", observedAt: krakenSnapshot.observedAt, nowSec: params.nowSec,
+      requireObservedAt: true, maxFutureSkewSec: 0,
+    }).accepted ? krakenSnapshot : undefined;
     const collectedQuotes: PrimaryCollectedQuotes = {
       cgPrice: cgQuote?.observedAtMode === "upstream" ? cgPrice : null,
       cgObservedAt: cgQuote?.observedAt ?? null,
@@ -75,10 +83,10 @@ export function buildPrimaryConsensusResults(params: {
       dlListQuote,
       binancePrice: params.quoteMaps.binancePrices.get(asset.symbol.toUpperCase()) ?? null,
       binanceObservedAt: params.quoteMaps.binanceObservedAt,
-      krakenPrice: params.quoteMaps.krakenPrices.get(asset.symbol.toUpperCase()) ?? null,
+      krakenPrice: freshKrakenSnapshot?.price ?? params.quoteMaps.krakenPrices.get(symbol) ?? null,
       krakenObservedAt: params.quoteMaps.krakenObservedAt,
-      krakenMarketObservedAt: params.quoteMaps.krakenObservedAtBySymbol.get(asset.symbol.toUpperCase()),
-      krakenQuoteBasis: params.quoteMaps.krakenQuoteBasisBySymbol.get(asset.symbol.toUpperCase()),
+      krakenMarketObservedAt: freshKrakenSnapshot?.observedAt,
+      krakenQuoteBasis: freshKrakenSnapshot ? "bid-ask-midpoint" : params.quoteMaps.krakenQuoteBasisBySymbol.get(symbol),
       bitstampPrice: params.quoteMaps.bitstampPrices.get(asset.symbol.toUpperCase()) ?? null,
       bitstampObservedAt: params.quoteMaps.bitstampObservedAtBySymbol.get(asset.symbol.toUpperCase()) ?? null,
       coinbasePrice: params.quoteMaps.coinbasePrices.get(asset.symbol.toUpperCase()) ?? null,

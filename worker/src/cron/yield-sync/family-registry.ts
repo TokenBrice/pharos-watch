@@ -1,4 +1,5 @@
 import { OPTIONAL_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
+import { isMorphoNetYieldSourceKey } from "@shared/lib/yield-source-history";
 import {
   PENDLE_SUPPLEMENTAL_FETCH_CADENCE_SEC,
   PENDLE_SUPPLEMENTAL_STALE_THRESHOLD_MS,
@@ -141,7 +142,7 @@ const YIELD_SOURCE_KEY_ROUTES: readonly YieldSourceKeyRoute[] = [
       routeOrder: source.routeOrder,
       prefix: source.sourceKey,
       venueProtocol: source.venueProtocol,
-      chainSegmentIndex: null,
+      chainSegmentIndex: isMorphoNetYieldSourceKey(source.sourceKey) ? 2 : null,
       family: null,
     })),
     { routeOrder: 1, prefix: "protocol-api:vaults-fyi:", venueProtocol: "vaults-fyi", chainSegmentIndex: 2, family: null },
@@ -170,5 +171,6 @@ export function isSupplementalVaultYieldSource(sourceKey: string): boolean {
 export function requiresYieldProviderObservationClock(source: { dataSource: string; sourceKey: string }): boolean {
   const sourceKey = source.sourceKey.replace(/^linked-variant:[^:]+:/, "");
   return source.dataSource === "defillama" || source.dataSource === "defillama-auto"
-    || sourceKey === OPTIONAL_YIELD_SOURCES.ybold.sourceKey || isSupplementalVaultYieldSource(sourceKey);
+    || sourceKey === OPTIONAL_YIELD_SOURCES.ybold.sourceKey
+    || isMorphoNetYieldSourceKey(sourceKey) || isSupplementalVaultYieldSource(sourceKey);
 }

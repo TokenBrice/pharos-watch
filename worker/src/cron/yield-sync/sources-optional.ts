@@ -19,7 +19,7 @@ import {
   fetchLiquityV2StabilityPoolSource,
   LIQUITY_V2_SP_CONFIG,
 } from "./sources-optional-onchain";
-import { fetchYearnYboldSource } from "./sources-optional-vaults";
+import { fetchMorphoNetVaultSource, fetchYearnYboldSource } from "./sources-optional-vaults";
 export interface TrackedOptionalSourceContext {
   db: D1Database;
   startSec: number;
@@ -48,6 +48,8 @@ const OPTIONAL_SOURCE_READERS = {
   baseDollar: (signal, context) => fetchLiquityV2StabilityPoolSource(context.startSec, BASEDOLLAR_SP_CONFIG, signal, context.chainRpcs),
   bold: (signal, context) => fetchLiquityV2StabilityPoolSource(context.startSec, LIQUITY_V2_SP_CONFIG, signal, context.chainRpcs),
   ybold: (signal) => fetchYearnYboldSource(signal),
+  gtusdcMorpho: (signal, context) => fetchMorphoNetVaultSource(OPTIONAL_YIELD_SOURCES.gtusdcMorpho, context.startSec, signal),
+  bbqusdcMorpho: (signal, context) => fetchMorphoNetVaultSource(OPTIONAL_YIELD_SOURCES.bbqusdcMorpho, context.startSec, signal),
   hashnote: (signal) => fetchHashnoteUsycSource(signal),
   midas: async (signal, context) => {
     const candidate = await fetchMidasMmevNavOracleSource({

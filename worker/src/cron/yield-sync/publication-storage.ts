@@ -1,6 +1,6 @@
 import { hasYieldBenchmarkUnitMismatch } from "@shared/lib/yield-benchmark-freshness";
 import { isRecord } from "@shared/lib/type-guards";
-import { OPTIONAL_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
+import { MORPHO_NET_YIELD_SOURCES, OPTIONAL_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 import { YIELD_RANKINGS_VERSION_KEY } from "../../lib/yield-rankings-coin-cache";
 import { getComparisonAnchorStaleThresholdMs, getRankingStaleThresholdMs } from "../../lib/yield-ranking-helpers";
 import {
@@ -231,6 +231,13 @@ export async function publishYieldRowsAtomically(
     db
       .prepare(YIELD_DATA_INSERT_SQL)
       .bind(yieldDataRowsJson, input.generationId),
+    ...Object.values(MORPHO_NET_YIELD_SOURCES).map(({ stablecoinId, corroboratingPoolId, supplementalSourceKey }) => db
+      .prepare(`UPDATE yield_data SET is_best = 0
+                WHERE is_best = 1 AND ${cacheFreshGuard}
+                  AND (source_key IN (?, ?, ?) OR
+                       (publication_generation_id IS NOT ? AND (stablecoin_id = ? OR source_key GLOB ?)))`)
+      .bind(input.generationId, corroboratingPoolId, `linked-variant:${stablecoinId}:${corroboratingPoolId}`,
+        supplementalSourceKey, input.generationId, stablecoinId, `linked-variant:${stablecoinId}:*`)),
     db
       .prepare(YIELD_HISTORY_INSERT_SQL)
       .bind(historyRowsJson, input.generationId),

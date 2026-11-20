@@ -20,6 +20,7 @@ import {
   fetchCoinbasePrices,
   fetchKrakenPrices,
   type BinanceFetchSession,
+  type KrakenBookSnapshot,
 } from "../../lib/cex-tickers";
 import { isSuccessfulOutcome } from "../../lib/fetcher-result";
 import { validatePricingSourceFreshness } from "../../lib/pricing-source-freshness";
@@ -83,7 +84,7 @@ export interface PrimaryConsensusQuoteMaps {
   binanceObservedAt: number | null;
   krakenPrices: Map<string, number>;
   krakenObservedAt: number | null;
-  krakenObservedAtBySymbol: Map<string, number>;
+  krakenBookSnapshots: Map<string, KrakenBookSnapshot>;
   krakenQuoteBasisBySymbol: Map<string, NonNullable<PeggedAsset["priceQuoteBasis"]>>;
   bitstampPrices: Map<string, number>;
   bitstampObservedAtBySymbol: Map<string, number>;
@@ -105,7 +106,7 @@ export function createEmptyPrimaryConsensusQuoteMaps(): PrimaryConsensusQuoteMap
     binanceObservedAt: null,
     krakenPrices: new Map(),
     krakenObservedAt: null,
-    krakenObservedAtBySymbol: new Map(),
+    krakenBookSnapshots: new Map(),
     krakenQuoteBasisBySymbol: new Map(),
     bitstampPrices: new Map(),
     bitstampObservedAtBySymbol: new Map(),
@@ -447,7 +448,7 @@ export async function collectPrimaryProviderQuotes(params: {
           for (const [symbol, price] of outcome.value.prices) {
             quoteMaps.krakenPrices.set(symbol, price);
           }
-          quoteMaps.krakenObservedAtBySymbol = outcome.value.observedAtBySymbol;
+          if (outcome.value.bookSnapshotsBySymbol) quoteMaps.krakenBookSnapshots = outcome.value.bookSnapshotsBySymbol;
           if (outcome.value.quoteBasisBySymbol) quoteMaps.krakenQuoteBasisBySymbol = outcome.value.quoteBasisBySymbol;
           if (outcome.value.prices.size > 0) {
             quoteMaps.krakenObservedAt = Math.floor(Date.now() / 1000);

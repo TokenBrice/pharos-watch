@@ -1,4 +1,5 @@
 import { isLegacyDeterministicOnChainSourceKey, YIELD_HISTORY_IDENTITY_TRANSITIONS } from "../../lib/yield-config/yield-history-identity-transitions";
+import { isMorphoNetYieldSourceKey } from "@shared/lib/yield-source-history";
 import {
   throwIfAborted,
   yieldToEventLoop as defaultYieldToEventLoop,
@@ -268,6 +269,7 @@ export function pickHistoryRowsForSource(
   if (directRows.length > 0) {
     return { rows: directRows, usedLegacyHistory: false };
   }
+  if (isMorphoNetYieldSourceKey(sourceKey)) return { rows: [], usedLegacyHistory: false };
 
   if (dataSource === "onchain" && sourceKey === buildOnChainSourceKey(stablecoinId)) {
     const compatibilityRows = onChainCompatibilityHistoryById.get(stablecoinId) ?? [];

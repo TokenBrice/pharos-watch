@@ -13,8 +13,22 @@ const COHORT_LEASE_KEY = `${COHORT_CACHE_KEY}:lease`;
 
 type YieldCoinCache = { value: string; updatedAt: number };
 
+// The served generation is the one the rankings endpoint would serve: the
+// publication contract (published status, schema version, finite clocks) plus
+// the endpoint's payload-vs-row clock identity. A staged, failed, incomplete
+// or clock-mismatched envelope resolves to NULL, never to its generation ID.
 export const YIELD_SERVED_GENERATION_SQL = `(
-              SELECT CASE WHEN json_valid(value) THEN json_extract(value, '$.publication.generationId') END
+              SELECT CASE WHEN NOT json_valid(value) THEN NULL
+                          WHEN json_type(value, '$.publication.generationId') = 'text'
+                           AND json_extract(value, '$.publication.generationId') != ''
+                           AND json_extract(value, '$.publication.status') = 'published'
+                           AND json_extract(value, '$.publication.schemaVersion') = 1
+                           AND json_type(value, '$.publication.updatedAt') IN ('integer', 'real')
+                           AND json_type(value, '$.publication.cutoffAt') IN ('integer', 'real')
+                           AND json_type(value, '$.updatedAt') = 'integer'
+                           AND json_extract(value, '$.updatedAt') = updated_at
+                           AND json_extract(value, '$.publication.updatedAt') = updated_at
+                          THEN json_extract(value, '$.publication.generationId') END
               FROM cache WHERE key = 'yield-rankings')`;
 
 export async function readYieldFreshnessAge(db: D1Database, now: number): Promise<number | null> {

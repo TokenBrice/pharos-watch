@@ -631,6 +631,29 @@ describe("DEWS hydration timestamp admission", () => {
     }));
   });
 
+  it("scopes yield warnings to the validated served generation", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('yield-rankings', ?, ?)").run(
+        JSON.stringify({ updatedAt: RUN_AT, publication: { generationId: "gen-live", updatedAt: RUN_AT, cutoffAt: RUN_AT, schemaVersion: 1, status: "published" } }),
+        RUN_AT,
+      );
+      const insert = sqlite.prepare(`INSERT INTO yield_data (stablecoin_id, source_key, symbol, current_apy, apy_7d, apy_30d,
+        yield_source, yield_type, data_source, is_best, updated_at, publication_generation_id, publication_state, warning_signals)
+        VALUES (?, ?, ?, 3, 3, 3, 'vault', 'lending-vault', 'onchain', 1, ?, ?, 'published', ?)`);
+      insert.run("usdc-circle", "morpho-winner", "USDC", RUN_AT, "gen-live", "[]");
+      // Cleanup deferred: the superseded winner still carries is_best = 1.
+      insert.run("usdc-circle", "aave-previous", "USDC", RUN_AT - 3600, "gen-old", '["yield-spike"]');
+      insert.run("usdt-tether", "tracked-winner", "USDT", RUN_AT, "gen-live", '["yield-spike"]');
+      const hydrated = await hydrateYieldWarnings({
+        db, nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn(),
+      });
+      expect([...hydrated.yieldWarnings]).toEqual([["usdt-tether", ["yield-spike"]]]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("records a readable but malformed yield-rankings generation as non-degrading", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(RUN_AT * 1000);

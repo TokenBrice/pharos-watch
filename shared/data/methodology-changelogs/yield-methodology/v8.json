@@ -1,5 +1,21 @@
 [
   {
+    "version": "8.59",
+    "title": "Morpho Vault Net APY",
+    "date": "2026-11-21",
+    "effectiveAt": 1795167000,
+    "summary": "Gauntlet USDC Prime V1 (gtUSDC) and Smokehouse USDC V1 (bbqUSDC) select Morpho's net APY from the exact vault. Their DeFiLlama pools remain comparison rows.",
+    "impact": [
+      "Morpho V1 supplies the vault address, chain, fee, net APY, measured USD TVL, and state timestamp. An eligible on-chain exchange-rate or price-derived return can cover a missing or expired quote. An expired exchange-rate anchor leaves the price-derived fallback available alongside the DeFiLlama comparison.",
+      "Each vault's USDC deposit opportunity inherits its selected source, APYs and clocks after vault eligibility checks, subject to the USDC opportunity size floor.",
+      "Selection history records each publication. Trailing API APY averages one sample per provider timestamp under the API source key. The on-chain alternative retains its share-price calculation.",
+      "The tracked steakUSDT is the fee-free V2 vault, distinct from the 5%-fee V1 vault with the same ticker.",
+      "Activation is provisional."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "8.58",
     "title": "DeFiLlama Pool Scores Use the Delivery Clock",
     "date": "2026-11-20",

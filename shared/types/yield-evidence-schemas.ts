@@ -187,6 +187,7 @@ export const YieldPublicDecisionAlternativeSchema = z.object({
 
 export const YieldPublicDecisionLedgerSchema = z.object({
   selectedReasonCode: z.enum(YIELD_DECISION_REASON_CODES),
+  selectedReasonDetail: z.literal("morpho-net-preferred").optional(),
   previousBestSourceKey: z.string().nullable().optional(),
   sourceSwitch: z.boolean(),
   apy30dDeltaFromPrevious: z.number().nullable().optional(),

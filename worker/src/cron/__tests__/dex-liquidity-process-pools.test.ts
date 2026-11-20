@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capacity";
 import { DEX_ROUTE_CAPABILITY_MATRIX_VERSION } from "@shared/lib/p4-exit-route-capability-policy";
-import type { CurvePoolEntry, LlamaPool, PoolEntry } from "../dex-liquidity/types";
+import type { CurvePool, CurvePoolEntry, LlamaPool, PoolEntry } from "../dex-liquidity/types";
 import { mergeStagedPools } from "../dex-liquidity/staging-merge";
 import { createKnownPoolIdentityIndex } from "../dex-liquidity/pool-identity";
 import { makeStagedPoolRow } from "../dex-liquidity/__tests__/staging-merge.test-support";
+import { makeApiPool } from "../dex-liquidity/__tests__/fetch-primary.test-support";
+import { buildCurveLookups } from "../dex-liquidity/fetch-primary";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { assessPoolRejectionCoverage, processPoolMetrics, scopePoolRejections } from "../dex-liquidity/process-pools";
 import { dexLiquidityDegradedReason } from "../dex-liquidity/orchestrator-metadata";
@@ -219,6 +221,44 @@ describe("processPoolMetrics", () => {
         reason: "conflicting-pool-observations", count: 2, tvlUsd: 200_000,
       })]);
     }
+  });
+
+  it.each([true, false])("keeps reviewed sUSDat twins distinct (NG observed: %s)", async (ngObserved) => {
+    const large = "0x04710a7b238386da58efad8b65e150e5e17aa522";
+    const small = "0x6206ca315c2fcdd2a857b47efb285aa12c529a7a";
+    const coins = [
+      { symbol: "USDC", address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" },
+      { symbol: "SUSDAT", address: "0xd166337499e176bbc38a1fbd113ab144e5bd2df7" },
+    ];
+    const poolData = [{ ...makeApiPool(large, coins, 2_190_317), registryId: "factory-twocrypto" }];
+    if (ngObserved) poolData.push(makeApiPool(small, coins, 4_549));
+    const lookups = await buildCurveLookups([{ data: { poolData: poolData as CurvePool[] } }], new Map(), new Map(), new Map());
+    const row = { project: "curve-dex", symbol: "USDC-SUSDAT", underlyingTokens: coins.map((coin) => coin.address) };
+    const smallId = "a5ed9aac-3cec-4c88-b996-94b6cc76c2fe";
+    const { metrics, rejections } = processPoolMetrics({
+      pools: [
+        makePool({ ...row, pool: "21d224c9-fe8d-571f-89e4-b234858a0aae", tvlUsd: 2_190_317 }),
+        makePool({ ...row, pool: smallId, tvlUsd: 13_401 }),
+      ],
+      dexProjects: new Set([row.project]), symbolToChainScopedIds: new Map(),
+      chainAddressToId: new Map([[`ethereum:${coins[0].address}`, "usdc-circle"], [`ethereum:${coins[1].address}`, "susdat-saturn"]]),
+      ...lookups, ...noV3(),
+    });
+    expect(rejections).toEqual([]);
+    if (!ngObserved) {
+      const staged = makeStagedPoolRow({
+        pool_id: `ethereum:${small}`, stablecoin_id: "susdat-saturn", chain: "ethereum",
+        protocol: "curve", dex_id: "curve", tvl_usd: 13_401, refreshed_at: Math.floor(Date.now() / 1000),
+        base_token: coins[1].address, quote_token: coins[0].address,
+      });
+      const db = makeNoopD1({ prepare: () => ({ bind: () => ({ all: async () => ({ results: [staged] }) }) }) });
+      const merged = await mergeStagedPools(db, metrics, createKnownPoolIdentityIndex(), staged.refreshed_at, new Map());
+      expect(merged.skippedByExactIdentityCount).toBe(1);
+    }
+    expect(metrics.get("susdat-saturn")?.pools).toMatchObject([
+      { poolId: `ethereum:${large}`, tvlUsd: 2_190_317 },
+      { poolId: `ethereum:${small}`, tvlUsd: ngObserved ? 4_549 : 13_401 },
+    ]);
   });
 
   it("keeps exact native Curve identity and excludes inflated two-token discovery duplicates", async () => {

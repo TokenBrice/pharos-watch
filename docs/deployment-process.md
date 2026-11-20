@@ -140,6 +140,12 @@ The release graph is `plan → (deploy-worker ∥ pages-prepare) → pages-relea
 
 The daily/main-only [`rebuild-pages.yml`](../.github/workflows/rebuild-pages.yml) uses the same `pages-prepare → pages-release` path without Worker mutation, under the shared production lock.
 
+### Kraken snapshot rollout
+
+The Kraken BBO snapshot switch, a boolean constant in `worker/src/lib/cex-tickers.ts`, ships `false`. Before setting it to `true` and deploying the public Worker, have the Worker operations owner review [ADR-46](./architecture.md#adr-46), compare slot latency with the disabled baseline and measure Kraken rate-limit responses at the expected polling cadence. Each opted-in run adds one upgrade with a two-second total deadline, serial with the REST ticker. The existing eight-minute job deadline still applies.
+
+After enabling, inspect the first completed `sync-stablecoins` and subsequent depeg canary generation. Compare the WebSocket diagnostic's candidate and resolved counts, rejection reasons, per-asset published clocks, actionable gaps and slot latency with the disabled baseline. Restore `false` and redeploy if the enabled runs regress rate limits or slot health.
+
 ### Reference and supply rollout
 
 Apply all pending D1 migrations through [0318_supply_history_guard_legacy_snapshot.sql](../worker/migrations/0318_supply_history_guard_legacy_snapshot.sql). Before activating either Worker, verify the ledger also includes [0315_mint_burn_rollback_protection.sql](../worker/migrations/0315_mint_burn_rollback_protection.sql), [0316_supply_history_guard_native_unavailable.sql](../worker/migrations/0316_supply_history_guard_native_unavailable.sql), and [0317_depeg_pending_closure_rollback_guard.sql](../worker/migrations/0317_depeg_pending_closure_rollback_guard.sql). Activate and verify the heavy Worker, activate and verify the public Worker, then release Pages. Keep the additive D1 schema in place.

@@ -7,7 +7,6 @@ import {
   computePoolStress,
   initSourcePoolGraph,
 } from "./pool-helpers";
-import { buildPrimaryPoolKey } from "./pool-identity";
 import type { CurvePoolEntry, LiquidityFallbackCounters, SourcePoolGraph } from "./types";
 import type { CurveBasePoolOverlapEvidence } from "./process-pool-protocol-enrichment";
 import type {
@@ -18,6 +17,7 @@ import type {
 
 export function accumulatePoolMetrics(
   metrics: Map<string, SourcePoolGraph>,
+  poolId: string,
   identity: ResolvedPoolIdentity,
   enrichment: PoolProtocolEnrichment,
   capability: PoolExecutionCapability,
@@ -85,7 +85,7 @@ export function accumulatePoolMetrics(
   const reviewedLock = exactReviewedCurveJoin ? curveData?.permanentLiquidity : undefined;
   const curveBasePoolOverlap = exactReviewedCurveJoin ? curveData?.curveBasePoolOverlap : undefined;
   metric.pools.push({
-    poolId: buildPrimaryPoolKey(chainNorm, pool.pool, pool.project, exactCurveAddress),
+    poolId,
     candidateFingerprint: buildPoolFingerprint(chainNorm, pool.project, pool.underlyingTokens ?? []) ?? undefined,
     project: protocol,
     chain: chainNorm,

@@ -1,3 +1,5 @@
+import { MORPHO_NET_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
+
 /**
  * Pinned DL pools whose `apyReward` is an eligibility-gated campaign that a
  * general depositor cannot claim. DeFiLlama folds the campaign into `apy`, so
@@ -18,8 +20,9 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   "usd3-3jane": "f8cd444e-d99f-4132-b234-fd3482bf8806",
   // VBILL - VanEck Treasury Fund, BSC; distributed holder yield, not NAV appreciation.
   "vbill-vaneck": "2f7d9d91-af21-4424-92e4-1c8aef7e8f76",
-  "steakusdt-steakhouse": "ef5d3acb-b974-4db1-8076-e8db9f142493",
   // Both Prime receipts have same-symbol siblings; the UUID owns the vault identity.
+  // steakUSDT's fee-bearing V1 sibling is ded5a855-23c1-459d-8390-ba2707fac7c5.
+  "steakusdt-steakhouse": "ef5d3acb-b974-4db1-8076-e8db9f142493",
   "steakusdc-steakhouse": "931ea9be-5f4d-428e-beaf-205fc5b4e2b5",
   // Robinhood has no generic Worker rate-RPC route. Live DL native row binds the
   // unique STEAKUSDG symbol and exact USDG underlying to this tracked deployment.
@@ -108,10 +111,9 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   // holder rewards are 93% of Venus APY, not the gross pool quote. Read-only BSC
   // convertToAssets / exchangeRateStored / totalAssets calls revert on sUSD;
   // no measurable holder exchange-rate history proves equivalence.
-  // gtUSDC - morpho-blue Gauntlet USDC vault, Ethereum, $147M TVL, ~3.58% APY
-  "gtusdc-gauntlet": "a306885c-001e-4479-9ae8-459a56527bc1",
-  // bbqUSDC - morpho-blue Smokehouse USDC vault, Ethereum, $18M TVL, ~4.3% APY
-  "bbqusdc-steakhouse": "36977448-9ad9-43ea-85f2-60ee1b92ecd0",
+  // Corroborating quotes for the selected Morpho V1 API rows.
+  "gtusdc-gauntlet": MORPHO_NET_YIELD_SOURCES.gtusdcMorpho.corroboratingPoolId,
+  "bbqusdc-steakhouse": MORPHO_NET_YIELD_SOURCES.bbqusdcMorpho.corroboratingPoolId,
   // spUSDC - spark-savings USDC vault, Ethereum, $946M TVL, ~3.65% APY
   "susdc-spark": "c5c74dd1-995c-4445-9d84-3e710bad7d52",
   // spUSDT - spark-savings USDT vault, Ethereum, $1.18B TVL, ~2.50% APY
