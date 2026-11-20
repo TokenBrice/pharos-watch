@@ -860,6 +860,12 @@ describe("CI workflow scope", () => {
     expect(red.env?.WORKER_SHARED_STABILITY_RESULT).toBe("${{ needs.worker-shared-stability.result }}");
   });
 
+  it("loads the weekly dependency gate from the audit library", () => {
+    const weekly = parseYaml(readRepoFile(".github/workflows/weekly-validation.yml")) as Workflow;
+    const evaluate = weekly.jobs["dependency-coverage"].steps?.find((step) => step.name === "Evaluate published dependency structure");
+    expect(evaluate?.run).toContain('from "./scripts/lib/dependency-coverage-audit.ts"');
+  });
+
   it("publishes the weekly CI report from a main-only workflow-fed job", () => {
     const weekly = parseYaml(readRepoFile(".github/workflows/weekly-validation.yml")) as Workflow;
     const job = weekly.jobs["ci-report"];
@@ -939,6 +945,7 @@ describe("CI workflow scope", () => {
       bash(collect, "2026-11-10T00:00:00Z");
       expect(readFileSync(log, "utf8")).toMatch(/\nadded\.test\.ts\n$/);
       for (const since of ["2026-11-07T00:00:00Z", "2026-11-09T00:00:00Z"]) {
+        writeFileSync(log, "stale census");
         expect(bash(collect, since)).toContain("Shallow boundary inside the window");
         expect(existsSync(log)).toBe(false);
       }

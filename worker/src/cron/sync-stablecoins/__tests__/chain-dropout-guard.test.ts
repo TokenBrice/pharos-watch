@@ -1127,6 +1127,14 @@ describe("chain dropout guard", () => {
     }
   });
 
+  it("drops a stale pair when the current chain row is unobserved", async () => {
+    const asset = { ...usdg(), id: "sofid-sofi", chainCirculating: { Ethereum: { current: null } } };
+    const state = savedState(asset.id, baseline("ethereum", 9e8, NOW - 8 * DAY), baseline("ink", 1, NOW));
+    const result = await runGuard(asset, { state });
+    expect(result.state.pairs).not.toHaveProperty([JSON.stringify([asset.id, "ethereum"])]);
+    expect(result.flagged).toBe(0);
+  });
+
   it("withholds provider anchors that predate GHO's reviewed perimeter change", async () => {
     const reviewedAt = Date.parse("2026-11-13T10:30:00Z") / 1000;
     for (const [age, kept] of [[-1, 0], [0, 0], [2 * DAY, 1], [8 * DAY, 2], [31 * DAY, 3]] as const) {

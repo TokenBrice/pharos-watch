@@ -157,7 +157,7 @@ jobs:
         run: |
           node --import tsx --input-type=module <<'JS'
           import { readFileSync, writeFileSync } from "node:fs";
-          import { evaluateDependencyCoverageStructure, renderDependencyCoverageAuditMarkdown } from "./scripts/maintenance/generate-dependency-coverage-audit.ts";
+          import { evaluateDependencyCoverageStructure, renderDependencyCoverageAuditMarkdown } from "./scripts/lib/dependency-coverage-audit.ts";
           const audit = JSON.parse(readFileSync(".tmp/dependency-coverage/audit.json", "utf8"));
           writeFileSync(".tmp/dependency-coverage/audit.md", renderDependencyCoverageAuditMarkdown(audit));
           if (audit.summary.publicationComparisonStatus === "checkout-production-skew") {

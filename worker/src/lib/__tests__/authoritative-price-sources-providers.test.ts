@@ -90,6 +90,19 @@ describe("MOVEUSD reviewed Orca mark", () => {
     await price(); bank.observedBlock.timestamp = Math.floor(Date.now() / 1000) + age;
     expect(await price()).toBeNull();
   });
+  it("rejects a vault identity change between the two Orca reads", async () => {
+    await price();
+    read.mockResolvedValueOnce(bank).mockImplementationOnce(async ([pool]) => {
+      const account = bank.accounts.get(pool)!;
+      const data = account.data.slice();
+      data[213] ^= 1;
+      return { ...bank, accounts: new Map([[pool, { ...account, data }]]) };
+    });
+    const ctx = context();
+    expect(await price(ctx)).toBeNull();
+    expect(ctx).toHaveProperty("lastRejectionReason", "orca-exact:pool-identity");
+  });
+
   it("withholds on an unreadable quote, RPC failure and missing parent", async () => {
     await price();
     read.mockRejectedValue(new Error("unavailable")).mockResolvedValueOnce(bank);
