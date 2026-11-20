@@ -101,10 +101,10 @@ export function Header() {
   const navRef = useRef<HTMLElement>(null);
   const drawerOpenerRef = useRef<HTMLElement | null>(null);
   // One taxonomy at every width: the drawer's categories are the desktop
-  // menus, and a columned menu (Resources) keeps its columns as subheads.
+  // menus, and a sectioned menu (Learn) keeps its labelled sections as subheads.
   const mobileCategories = NAV_GROUPS.map((group) => {
-    const sections: Array<{ key: string; label: string | null; items: readonly NavItem[] }> = group.columns
-      ? group.columns.map((column) => ({ key: `${group.key}:${column.key}`, label: column.label, items: column.items }))
+    const sections: Array<{ key: string; label: string | null; items: readonly NavItem[] }> = group.sections
+      ? group.sections.map((section) => ({ key: `${group.key}:${section.key}`, label: section.label, items: section.items }))
       : [{ key: group.key, label: null, items: group.items }];
     return { key: group.key, label: group.label, sections, items: sections.flatMap((section) => section.items) };
   });
