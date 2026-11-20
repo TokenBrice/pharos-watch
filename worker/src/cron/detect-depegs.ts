@@ -10,6 +10,7 @@ import { throwIfAborted } from "../lib/abort";
 import type { NativePegQuoteSession } from "../lib/native-peg-quotes";
 import { decideDepegAsset, emitDepegDiagnostics } from "./depeg-detection/decision-engine";
 import { hydrateDepegDetection } from "./depeg-detection/hydration";
+import { hasIncompatibleParityPrice, sourceObservationClock } from "./depeg-detection/reference-policy";
 import { MAX_OPEN_DEPEG_EVENTS } from "../lib/depeg-threshold-policy";
 import { persistDepegCommands } from "./depeg-detection/persistence";
 import { logOpenDepegEventLimitReached } from "../lib/depeg-helpers";
@@ -40,6 +41,7 @@ const CENSUS_ELIGIBLE_IDS: readonly string[] = [...PSI_ELIGIBLE_META_BY_ID]
 function buildObservationCensus(
   outcomes: ReadonlyMap<string, DepegObservationOutcome>,
   nominalReferenceIds: ReadonlySet<string>,
+  nonParityProtocolRedeemIds: ReadonlySet<string>,
   evaluatedAt: number,
 ): DepegObservationCensus {
   const unavailableAssets: NonNullable<DepegObservationCensus["unavailableAssets"]> = [];
@@ -66,7 +68,10 @@ function buildObservationCensus(
       census.reasonCounts[outcome.reason] = (census.reasonCounts[outcome.reason] ?? 0) + 1;
       // Only primary-unusable gaps can be acknowledged, so only they carry identities.
       if (outcome.reason !== "primary-unusable") continue;
-      unavailableAssets.push({ id, reason: outcome.reason, reviewedNominalReference: nominalReferenceIds.has(id) });
+      unavailableAssets.push({
+        id, reason: outcome.reason, reviewedNominalReference: nominalReferenceIds.has(id),
+        ...(nonParityProtocolRedeemIds.has(id) && { observedNonParityProtocolRedeem: true }),
+      });
     }
   }
   if (unavailableAssets.length > 0) {
@@ -127,6 +132,7 @@ export async function detectDepegEvents(
   const commands: DepegPersistenceCommand[] = [];
   const observations = new Map<string, DepegObservationOutcome>();
   const nominalReferenceIds = new Set<string>();
+  const nonParityProtocolRedeemIds = new Set<string>();
   const deadBandNotices: NonNullable<DepegObservationCensus["deadBandNotices"]> = [];
 
   for (const asset of assets) {
@@ -155,6 +161,14 @@ export async function detectDepegEvents(
       if (!isObservedPrice(asset) && NominalPriceReferenceSchema.safeParse(asset.nominalPriceReference).success) {
         nominalReferenceIds.add(asset.id);
       }
+      if (decision.observation.kind === "unavailable" && decision.observation.reason === "primary-unusable"
+        && asset.id === "susd-solayer" && asset.priceSource === "protocol-redeem") {
+        const observedAt = sourceObservationClock(asset);
+        if (observedAt != null && observedAt <= hydrated.now && asset.price != null
+          && Number.isFinite(asset.price) && asset.price > 0 && hasIncompatibleParityPrice(asset)) {
+          nonParityProtocolRedeemIds.add(asset.id);
+        }
+      }
     }
     for (const eventId of decision.seenEventIds) {
       seen.add(eventId);
@@ -168,7 +182,7 @@ export async function detectDepegEvents(
     commands.push(...decision.commands);
   }
 
-  const census = buildObservationCensus(observations, nominalReferenceIds, hydrated.now);
+  const census = buildObservationCensus(observations, nominalReferenceIds, nonParityProtocolRedeemIds, hydrated.now);
   if (deadBandNotices.length > 0) Object.assign(census, sampleDepegDeadBandNotices(deadBandNotices));
 
   // Entirely omitted assets are coverage gaps too; keeping the lifecycle open

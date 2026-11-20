@@ -58,6 +58,10 @@ function isCount(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 }
 
+export function depegCensusCountsAddUp(census: DepegObservationCensus): boolean {
+  return census.observedCount + census.unavailableCount + census.belowFloorCount === census.eligibleCount;
+}
+
 function parseReasonCounts(value: unknown): Partial<Record<DepegObservationGapReason, number>> | null {
   if (value == null) return {};
   if (typeof value !== "object" || Array.isArray(value)) return null;
@@ -85,6 +89,7 @@ export function parseDepegObservationCensus(parsed: unknown): DepegObservationCe
     || !isCount(record.unavailableCount)
     || !isCount(record.belowFloorCount)
     || reasonCounts == null
+    || Object.values(reasonCounts).reduce((sum, count) => sum + count, 0) > record.unavailableCount
   ) {
     return null;
   }
@@ -95,7 +100,8 @@ export function parseDepegObservationCensus(parsed: unknown): DepegObservationCe
       const asset = entry as Record<string, unknown>;
       return typeof asset.id === "string" && asset.id.trim().length > 0
         && (CENSUS_GAP_REASONS as readonly unknown[]).includes(asset.reason)
-        && typeof asset.reviewedNominalReference === "boolean";
+        && typeof asset.reviewedNominalReference === "boolean"
+        && (asset.observedNonParityProtocolRedeem === undefined || asset.observedNonParityProtocolRedeem === true);
     })
     ? assets as NonNullable<DepegObservationCensus["unavailableAssets"]> : undefined;
   return {
@@ -110,7 +116,7 @@ export function parseDepegObservationCensus(parsed: unknown): DepegObservationCe
     belowFloorCount: record.belowFloorCount,
     reasonCounts,
     unavailableAssets,
-    unavailableIdsTruncated: typeof record.unavailableIdsTruncated === "boolean" ? record.unavailableIdsTruncated : undefined,
+    unavailableIdsTruncated: record.unavailableIdsTruncated === undefined ? undefined : record.unavailableIdsTruncated !== false,
     unavailableIdsDropped: record.unavailableIdsDropped === undefined ? undefined : record.unavailableIdsDropped !== false,
   };
 }
@@ -136,12 +142,15 @@ export async function loadDepegCensusRuns(
       .bind(DEPEG_CENSUS_PRODUCER_JOB, limit)
       .all<DepegCensusRow>(),
   );
-  return (rows.results ?? []).map((row) => ({
-    runStartedAt: row.started_at,
-    pipelineSucceeded: row.pipeline_succeeded === 1,
-    census: parseDepegObservationCensus(parseObjectMetadata(row.census_json)),
-    unavailableReason: typeof row.unavailable_reason === "string" ? row.unavailable_reason : null,
-  }));
+  return (rows.results ?? []).map((row) => {
+    const census = parseDepegObservationCensus(parseObjectMetadata(row.census_json));
+    return {
+      runStartedAt: row.started_at,
+      pipelineSucceeded: row.pipeline_succeeded === 1,
+      census: census && depegCensusCountsAddUp(census) ? census : null,
+      unavailableReason: typeof row.unavailable_reason === "string" ? row.unavailable_reason : null,
+    };
+  });
 }
 
 /** Newest run that published a completed census; the depeg ledger's output clock. */
