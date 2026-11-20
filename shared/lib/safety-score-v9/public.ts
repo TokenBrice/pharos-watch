@@ -65,6 +65,7 @@ export interface V9PublicCardProjectionInput {
   trace: V9ProductionScoreTrace;
   /** Exact fact-set provenance; absent only in compatibility/test callers. */
   backingFromLiveReserves?: boolean;
+  reserveCompositionAdmission?: SafetyScoreV9CurrentCard["reserveCompositionAdmission"];
   supply?: SafetyScoreV9CurrentCard["supply"];
   providerRowExclusions?: SafetyScoreV9CurrentCard["scoreTrace"]["providerRowExclusions"];
   sharedBookId?: string | null;
@@ -1269,6 +1270,7 @@ function projectSafetyScoreV9CardUnchecked(input: V9PublicCardProjectionInput): 
     ...(input.backingFromLiveReserves === undefined
       ? {}
       : { backingFromLiveReserves: input.backingFromLiveReserves }),
+    ...(input.reserveCompositionAdmission === undefined ? {} : { reserveCompositionAdmission: input.reserveCompositionAdmission }),
     score: input.trace.finalScore,
     grade: input.trace.finalGrade,
     ...(unknownPricedWeightShare > V9_PROVISIONAL_UNKNOWN_WEIGHT_THRESHOLD ? { provisional: true as const, unknownPricedWeightShare } : {}),

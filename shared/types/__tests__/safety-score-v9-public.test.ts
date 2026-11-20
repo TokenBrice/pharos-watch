@@ -36,6 +36,13 @@ describe("Compact public cause contracts", () => {
     const payload = boundedResponse();
     expect(reader.response.safeParse(payload).success).toBe(true);
     const card = payload.cards[0]!;
+    const diagnosticCard = { ...card, reserveCompositionAdmission: { reasons: ["no-review"] } };
+    const diagnosticResponse = { ...payload, cards: [diagnosticCard] };
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(diagnosticResponse).success).toBe(true);
+    expect({
+      card: reader.card.safeParse(diagnosticCard).success,
+      response: reader.response.safeParse(diagnosticResponse).success,
+    }).toEqual({ card: false, response: false });
     expect(reader.card.safeParse({ ...card, negligibleDexRoute: true }).success).toBe(false);
     card.pillars.backing.reasons[0] = { ...card.pillars.backing.reasons[0]!, negligibleDexRoute: true } as typeof card.pillars.backing.reasons[0];
     expect(reader.card.safeParse(card).success).toBe(false);
