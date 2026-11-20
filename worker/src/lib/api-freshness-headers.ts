@@ -8,7 +8,7 @@ export function addFreshnessHeaders(
   headers: Record<string, string>,
   updatedAt: number,
   maxAgeSec: number,
-  options: { assessedAt?: number; freshBudgetSec?: number } = {},
+  options: { assessedAt?: number; freshBudgetSec?: number; cacheValidUntil?: number } = {},
 ): Record<string, string> {
   const assessedAt = options.assessedAt ?? Date.now() / 1000;
   const freshBudgetSec = options.freshBudgetSec ?? FRESHNESS_RATIOS.FRESH * maxAgeSec;
@@ -37,7 +37,7 @@ export function addFreshnessHeaders(
   }
   // Round down the unrounded source-clock runway: a fractional assessment
   // must not grant another full second across the verdict boundary.
-  const runway = Math.floor(updatedAt + freshBudgetSec - assessedAt);
+  const runway = Math.floor(Math.min(updatedAt + freshBudgetSec, options.cacheValidUntil ?? Infinity) - assessedAt);
   if (!Number.isFinite(runway) || runway <= 0) {
     result["Cache-Control"] = "no-store";
     return result;

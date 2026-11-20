@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { computePriceConsensus, type SourcePrice } from "../price-consensus";
 
 describe("computePriceConsensus", () => {
-  it.each([[2.25, 0.98662, "hive-native-cg"], [0.98663, 0.98662, "coingecko"], [1, 0.9, "coingecko"]])("reduces direct CG %s and derived native %s to one conservative family", (cg, native, source) => {
+  it.each([[2.25, 0.98662, "hive-native-cg"], [0.98663, 0.98662, "coingecko"], [1, 0.9, "coingecko"], [1, 1, "coingecko"]])("reduces direct CG %s and derived native %s to one conservative family", (cg, native, source) => {
     const result = computePriceConsensus([
       { source: "coingecko", price: Number(cg), weight: 2 },
       { source: "hive-native-cg", price: Number(native), weight: 2 },
@@ -319,12 +319,22 @@ describe("computePriceConsensus", () => {
 
   it("preserves mixed observation modes when repeated provider quotes collapse", () => {
     const result = computePriceConsensus([
-      { source: "alchemy-address", price: 1, weight: 1, observedAt: 100, observedAtMode: "upstream" },
-      { source: "alchemy-address", price: 1.002, weight: 1, observedAt: 200, observedAtMode: "local_fetch" },
+      { source: "alchemy-address", price: 1, weight: 1, observedAt: 100, observedAtMode: "upstream", upstreamKeys: ["venue:kraken"] },
+      { source: "alchemy-address", price: 1.002, weight: 1, observedAt: 200, observedAtMode: "local_fetch", upstreamKeys: ["venue:coinbase"] },
     ], 1, 50);
     expect(result).toMatchObject({
       confidence: "single-source", observedAt: 100, observedAtMode: "unknown",
       observedAtModeBySource: { "alchemy-address": "unknown" },
+      upstreamKeysBySource: { "alchemy-address": ["venue:kraken", "venue:coinbase"] },
+    });
+  });
+
+  it("uses a sole undated trade as a display mark with no invented clock", () => {
+    expect(computePriceConsensus([
+      { source: "coingecko", price: 0.98, weight: 1, nonVotingReason: "undated-trade" },
+      { source: "uniswap-v4-dex", price: 1, weight: 1, nonVotingReason: "unproven-pool-independence" },
+    ], 1, 50)).toMatchObject({
+      price: 0.98, selectedSource: "coingecko", observedAt: null, diagnosticPrices: { "uniswap-v4-dex": 1 },
     });
   });
 

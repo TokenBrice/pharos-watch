@@ -13,7 +13,7 @@ import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getCirculatingRawOrNull, getUsdMarketCapBaselineOrNull } from "@shared/lib/supply";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { StablecoinDataSchema } from "@shared/types/supply";
-import { fillMissingSupplyHistory } from "../phase-helpers";
+import { dedupeCanonicalAssets, fillMissingSupplyHistory } from "../phase-helpers";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { fetchFiatCoinGeckoTokens, FIAT_CG_METAS } from "../supplemental-assets/fiat-cg";
 import * as supplementalPrices from "../supplemental-assets/shared";
@@ -313,6 +313,14 @@ describe("stablecoin intake admission", () => {
     expect(published.supplyObservedAt).toBe(ageSec === 60 ? now - 60 : undefined);
     expect(published.supplyChangeBaselines).toEqual(ageSec === 60
       ? { day: { observedAt, circulatingUsd: 110, circulatingNative: 90 } } : { day: null });
+  });
+
+  it("keeps the earlier canonical row on equal quality and prefers observed zero to missing history", () => {
+    const first = makePeggedAsset({ circulatingPrevDay: null });
+    const tied = { ...first, name: "Duplicate" };
+    const observed = { ...tied, circulatingPrevDay: { peggedUSD: 0 } };
+    expect(dedupeCanonicalAssets([first, tied]).dedupedAssets[0]).toBe(first);
+    expect(dedupeCanonicalAssets([first, observed]).dedupedAssets[0]).toBe(observed);
   });
 
   it("fills empty ordinary USD buckets from plausible unassessed closes on the exact UTC dates", async () => {

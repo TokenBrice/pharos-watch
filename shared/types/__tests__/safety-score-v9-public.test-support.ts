@@ -518,8 +518,9 @@ function assertPreviousReaderSource() {
     semantic: policy.semantic,
     reasonCodes: policy.reasonRegistry.filter(reason => reason.defaultTreatment !== "diagnostic").map(reason => reason.code),
   }));
-  // redemption.ts adds a separate snapshot-entry schema for dated Mento status. The reused reader schemas are unchanged.
-  if (hash.digest("hex") !== "2b6467afc3d6205036f4a0c7d2b78cf1a3e719cb0833f265a7e404271a429b1b") throw new Error("Pre-dust reader source/refinement inputs changed");
+  // Dated Mento status has its own snapshot schema. Replay supply provenance is input/fact-set only.
+  // Only typed report8 gets the pipeline-gap exception. The previous card rejects admission diagnostics.
+  if (hash.digest("hex") !== "6a37a4cdcddeccd6d35a66a4f02e0415f4a93173d2b3bea8e0bab106277d431c") throw new Error("Pre-dust reader source/refinement inputs changed");
 }
 
 export async function previousReader() {
@@ -531,9 +532,10 @@ export async function previousReader() {
     V9ReasonCodeSchema: z.enum(PRE_DUST_REASON_CODES),
   }));
   try {
-    const { SafetyScoreV9CurrentCardSchema: card } = await import("../safety-score-v9-public");
+    const { SafetyScoreV9PreviousCardSchema: card } = await import("../safety-score-v9-public");
     const { ReportCardsV9TableCardSchema: table } = await import("../report-cards-v9-projections");
-    const { SafetyScoreV9CurrentResponseSchema: response } = await import("../safety-score-v9-publication-response");
+    const { SafetyScoreV9CurrentResponseSchema } = await import("../safety-score-v9-publication-response");
+    const response = SafetyScoreV9CurrentResponseSchema.safeExtend({ cards: z.array(card) });
     return { card, table, response };
   } finally {
     vi.doUnmock("../safety-score-v9");

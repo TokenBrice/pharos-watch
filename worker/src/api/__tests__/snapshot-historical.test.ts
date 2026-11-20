@@ -2,11 +2,13 @@ import { createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import { countV9EvidenceObligations } from "@shared/types/safety-score-v9-public-evidence-facts";
 import { HistoricalResolvedReportCardsV9ResponseSchema, HistoricalTypedReportCardsV9ResponseSchema } from "@shared/types/report-cards-v9";
 import { ReportCardsV9ResponseSchema } from "@shared/types/report-cards-v9-current";
 import { ReportCardsV9AcceptedResponseSchema } from "@shared/types/report-cards-v9-accepted";
-import { makeWorkerReportCardsV9Response } from "../../test-helpers/report-cards-v9";
+import { SafetyScoreV9ResolvedCurrentCardSchema } from "@shared/types/safety-score-v9-public";
+import { makeWorkerReportCardsV9Response, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 import { handleSnapshotCoin, handleSnapshotDay, handleSnapshotsIndex } from "../snapshot";
 import historicalSnapshot from "./fixtures/snapshot-2026-10-07-v10.09.json";
 
@@ -160,6 +162,48 @@ describe("historical snapshot recorded safety contracts", () => {
       safetyScoreIdentity: envelope.safetyScoreIdentity,
       scores: { reportCard: envelope.reportCards.cards[0] },
     });
+  });
+
+  it.each(["10.11", "10.12"])("serves bounded pillar diagnostics in report8 %s pipeline gaps", async version => {
+    const envelope = structuredClone(historicalSnapshot);
+    const card = makeReportCardsV9PipelineGapCard("control", "A", { id: "xgld-unitas" });
+    const witness = { code: "unresolved-oracle-branch-applicability" as const, cause: "U" as const,
+      message: "The oracle review is unresolved.", path: "control:oracle:cause:2", causeGapRefs: [2] };
+    card.localCauseGaps = [...card.localCauseGaps, "oracle"];
+    Object.assign(card.pillars.control, { score: 45, reasons: [witness] });
+    const control = card.breakdowns!.control;
+    control.evaluatedScore = control.publishedScore = control.components[0]!.score = 45;
+    card.scoreTrace.boundedUncertaintyAttribution.items = [{ ...witness, source: "reason", responsibility: "unresearched" }];
+    const evidence = card.scoreTrace.evidenceResponsibility;
+    evidence.totalFactCount = 1;
+    evidence.facts = [[witness.code, witness.path, 2, "unresearched", false, "U", [2]]];
+    Object.assign(evidence.summaries.find(summary => summary.responsibility === "unresearched")!, {
+      factCount: 1, reasonCodes: [witness.code],
+    });
+    const usdc = makeWorkerV9Card();
+    Object.assign(usdc.breakdowns!.exit.primaryRoute!, { eligibilityMultiplier: 1 });
+    const { openEvidence: _block, openEvidenceUnavailableReason: _reason, ...report9 } =
+      makeWorkerReportCardsV9Response({ cards: [usdc, card] });
+    const report = { ...report9, schemaVersion: 8 };
+    envelope.reportCards = report as unknown as typeof envelope.reportCards;
+    envelope.safetyScoreIdentity = report.safetyScoreIdentity;
+    setMethodology(envelope, version);
+    const historical = HistoricalTypedReportCardsV9ResponseSchema.safeParse(report);
+    expect(historical.success, JSON.stringify(historical.error?.issues)).toBe(true);
+    expect(SafetyScoreV9ResolvedCurrentCardSchema.safeParse(card).error?.issues).toContainEqual(
+      expect.objectContaining({ path: ["scoreTrace", "boundedUncertaintyAttribution", "items"] }),
+    );
+    const { row, payload } = snapshotRow(envelope);
+    const day = await handleSnapshotDay(database(row), envelope.snapshotDate);
+    expect(day.status).toBe(200);
+    expect(day.headers.get("ETag")).toBe(`"${row.content_hash}"`);
+    expect(await day.text()).toBe(payload);
+    const coin = await handleSnapshotCoin(database(row), envelope.snapshotDate, "usdc-circle");
+    expect(coin.status).toBe(200);
+    const body = await coin.json() as { scores: { reportCard: unknown } };
+    expect(body.scores.reportCard).toEqual(report.cards[0]);
+    report.cards[1]!.scoreTrace.boundedUncertaintyAttribution.items[0]!.message = "Unmatched witness";
+    expect((await handleSnapshotDay(database(snapshotRow(envelope).row), envelope.snapshotDate)).status).toBe(500);
   });
 
   it("does not admit legacy inline-control report8 under the current 10.29 contract", async () => {

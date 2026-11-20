@@ -45,7 +45,7 @@ import {
   type SupplementalSourceFamilyKey,
   SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
 } from "./family-registry";
-import { getRankingStaleThresholdMs } from "../../lib/yield-ranking-helpers";
+import { getRankingStaleThresholdMs, readDefiLlamaBatchTimestamp } from "../../lib/yield-ranking-helpers";
 
 export function isYieldRelevantDlPool(
   pool: Pick<DlPool, "pool" | "symbol" | "stablecoin" | "exposure">,
@@ -572,7 +572,6 @@ export function buildDlStablecoinPoolsCache(
 
 export function parseDlStablecoinPoolsCache(
   raw: string,
-  cacheUpdatedAt: number,
   nowSec = Math.floor(Date.now() / 1000),
 ): {
   pools: DlPool[];
@@ -583,15 +582,15 @@ export function parseDlStablecoinPoolsCache(
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (isRecord(parsed) && Array.isArray(parsed.data)) {
+      const updatedAt = readDefiLlamaBatchTimestamp(parsed.updatedAt, nowSec);
+      if (updatedAt == null) {
+        logWorkerEventArgs("handler", "warn", "[yield-sync] Rejected DL pools cache with missing or invalid batch timestamp");
+        return null;
+      }
       const { pools, envelopeRejectedCount, envelopeRejectedPoolIds } = filterValidDlPools(
         parsed.data,
         "structured dl-stablecoin-pools cache",
       );
-      const updatedAt = parseCachePayloadUpdatedAt(parsed.updatedAt, cacheUpdatedAt, nowSec);
-      if (updatedAt == null) {
-        logWorkerEventArgs("handler", "warn", "[yield-sync] Rejected DL pools cache with future updatedAt");
-        return null;
-      }
       return {
         pools,
         envelopeRejectedCount,
@@ -599,7 +598,7 @@ export function parseDlStablecoinPoolsCache(
         meta: {
           mode: "dex-cache",
           updatedAt,
-          ageSeconds: Math.max(0, nowSec - updatedAt),
+          ageSeconds: nowSec - updatedAt,
           poolCount: pools.length,
           fallbackMode: null,
         },

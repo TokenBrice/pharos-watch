@@ -6,7 +6,7 @@ import type { CanaryCheckResult } from "./canary-checks";
 import type { CanaryCheckContext, CanaryCheckDefinition } from "./canary-checks";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { boundedJson, parseObjectMetadata } from "./json-metadata";
-import { parseDepegObservationCensus as parseCensus } from "./depeg-ledger-clock";
+import { depegCensusCountsAddUp, parseDepegObservationCensus as parseCensus } from "./depeg-ledger-clock";
 import { assessDepegObservationGaps } from "./canary-checks-depeg";
 import type { DepegObservationCensus } from "../cron/depeg-detection/types";
 
@@ -316,7 +316,7 @@ async function checkDepegObservationCoverage(
       return failedResult("depeg-observation-unreported", finding);
     }
     const census = parseCensus(censusValue);
-    if (!census) return failedResult("depeg-observation-census-invalid", finding);
+    if (!census || !depegCensusCountsAddUp(census)) return failedResult("depeg-observation-census-invalid", finding);
     if (census.eligibleCount <= 0) return failedResult("depeg-observation-cohort-unknown", finding);
     const gaps = assessDepegObservationGaps(census, observedAt);
     Object.assign(finding, {
@@ -328,18 +328,11 @@ async function checkDepegObservationCoverage(
       unavailableShare: census.unavailableCount / census.eligibleCount,
       ...gaps,
     });
-    if (census.observedCount + census.unavailableCount + census.belowFloorCount !== census.eligibleCount) {
-      return degradedResult(
-        `depeg observation census counts do not add up: observed ${census.observedCount} + unavailable ` +
-        `${census.unavailableCount} + below-floor ${census.belowFloorCount} != eligible ${census.eligibleCount}`,
-        finding,
-      );
-    }
     if (census.observedCount === 0 && gaps.actionableUnavailableCount > 0) {
       return errorResult(`depeg observation observed 0 of ${census.eligibleCount} eligible assets`, finding);
     }
     const previous = rows[1] ? parseCensus(asRecord(parseObjectMetadata(rows[1].metadata)?.quality)?.depegObservation) : null;
-    if (!previous) return okResult(finding);
+    if (!previous || !depegCensusCountsAddUp(previous)) return okResult(finding);
     finding.baselineAvailable = true;
     const priorGaps = assessDepegObservationGaps(previous, observedAt);
     if (gaps.actionableUnavailableCount > priorGaps.actionableUnavailableCount) {

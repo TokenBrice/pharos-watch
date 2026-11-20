@@ -16,19 +16,22 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const ISO_INTERVAL = /^\d{4}-\d{2}[-\d]{0,3}\/\d{4}-\d{2}[-\d]{0,3}$/;
 
 describe("flagship Dataset JSON-LD", () => {
-  it("dates the depeg history window from its earliest row start to the export snapshot", () => {
+  it("dates the depeg history window from its earliest row start to the ledger capture", () => {
     const jsonLd = buildPublicDatasetMirrorJsonLd("depeg-history");
     const rows = PUBLIC_DATASET_CURRENT_EXPORTS["depeg-history"].rows as { startedAtISO: string }[];
     const earliest = rows.map((row) => row.startedAtISO).sort()[0].slice(0, 10);
+    const capture = PUBLIC_DATASET_CURRENT_EXPORTS["depeg-history"]._meta.asOfISO?.slice(0, 10);
 
-    expect(jsonLd.temporalCoverage).toBe(`${earliest}/${jsonLd.dateModified}`);
+    expect(jsonLd.temporalCoverage).toBe(`${earliest}/${capture}`);
     expect(jsonLd.temporalCoverage).toMatch(ISO_INTERVAL);
   });
 
-  it("dates point-in-time score snapshots to the export date", () => {
+  it("dates point-in-time score snapshots to the observation date", () => {
     const jsonLd = buildPublicDatasetMirrorJsonLd("scores-latest");
     expect(jsonLd.temporalCoverage).toMatch(ISO_DATE);
-    expect(jsonLd.temporalCoverage).toBe(jsonLd.dateModified);
+    expect(jsonLd.temporalCoverage).toBe(
+      PUBLIC_DATASET_CURRENT_EXPORTS["scores-latest"]._meta.asOfISO?.slice(0, 10),
+    );
   });
 
   it.each(["depeg-history", "scores-latest"] as const)("keeps %s downloads, license and creator @id", (topic) => {
@@ -147,7 +150,10 @@ describe("public dataset citations", () => {
     const jsonLd = buildPublicDatasetMirrorJsonLd(descriptor.slug);
     const meta = descriptor.export._meta;
     expect(jsonLd.license).toBe(PHAROS_DATA_LICENSE_URL);
-    expect(jsonLd.dateModified).toBe(meta.asOfISO?.slice(0, 10));
+    // dateModified is the published dated edition, never the observation clock;
+    // no first-publication receipt exists, so datePublished stays omitted.
+    expect(jsonLd.dateModified).toBe(PUBLIC_DATASET_CURRENT_DATE);
+    expect(jsonLd).not.toHaveProperty("datePublished");
     expect(jsonLd.additionalProperty).toContainEqual({
       "@type": "PropertyValue",
       name: "methodologyLabel",

@@ -5,6 +5,7 @@ import { HOUR_SECONDS } from "@shared/lib/time-constants";
 import { OPTIONAL_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 import { baseEvaluationInput, resolvedYield } from "../../__tests__/yield-evaluation.test-support";
 import { evaluateYieldSourcesCooperative } from "../evaluation";
+import { buildHistoryKey } from "../history-evidence";
 
 const base = {
   apy30d: 5,
@@ -120,12 +121,28 @@ describe("yield source age and divergence evidence", () => {
       .toEqual(["usds-sky"]);
   });
 
-  it.each([[0, "unknown", false], [8, "stale", true]] as const)("uses a %sh pool batch age only for delivery", async (ageHours, freshness, rejected) => {
+  it.each([
+    [6, 6, "unknown", null],
+    [8, 8, "stale", "source-stale"],
+    [8, 0, "stale", "source-stale"],
+    [null, 0, "unknown", "source-freshness-unknown"],
+    [null, null, "unknown", "source-freshness-unknown"],
+    [-1, 0, "unknown", "source-freshness-unknown"],
+  ] as const)("uses the original %sh pool batch clock with stored age %sh", async (ageHours, storedAge, freshness, pysNullReason) => {
+    const source = resolvedYield({ sourceObservedAt: null });
+    const { startSec } = baseEvaluationInput();
     const input = baseEvaluationInput({
-      dlPoolsMeta: { mode: "dex-cache", updatedAt: null, ageSeconds: ageHours * HOUR_SECONDS, poolCount: 1, fallbackMode: null },
-      resolved: [{ id: "coin-a", symbol: "A", yield: resolvedYield({ sourceObservedAt: null }) }],
+      dlPoolsMeta: { mode: "dex-cache", updatedAt: ageHours == null ? null : startSec - ageHours * HOUR_SECONDS,
+        ageSeconds: storedAge == null ? null : storedAge * HOUR_SECONDS, poolCount: 1, fallbackMode: null },
+      resolved: [{ id: "coin-a", symbol: "A", yield: source }],
+      sourceHistory: new Map([[buildHistoryKey("coin-a", source.sourceKey), [{
+        stablecoin_id: "coin-a", source_key: source.sourceKey, recorded_at: 1776726000, is_best: 1,
+        apy: 5, source_tvl_usd: null, data_source: "defillama", yield_source: null, yield_type: null,
+      }]]]),
     });
     const { evaluatedSources: [row] } = await evaluateYieldSourcesCooperative(input);
-    expect(row).toMatchObject({ sourceObservedAt: null, sourceFreshness: freshness, rejected, pharosYieldScore: null });
+    expect(row).toMatchObject({ sourceObservedAt: null, sourceFreshness: freshness, rejected: pysNullReason != null, pysNullReason });
+    expect(row.pharosYieldScore).toEqual(pysNullReason == null ? expect.any(Number) : null);
+    expect(row.warnings).toContain(freshness === "stale" ? "data-stale" : "data-freshness-unknown");
   });
 });

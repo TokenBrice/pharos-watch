@@ -177,6 +177,32 @@ describe("materialized V9 response", () => {
     expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.publication)!.value).toBe(stored);
   });
 
+  it("requires a separate wire opt-in for reserve admission on full and detail cards", async () => {
+    const { db } = database();
+    const publication = makeWorkerSafetyScoreV9Publication();
+    const card = publication.cards[0]!;
+    card.reserveCompositionAdmission = { reasons: ["no-review"] };
+    await persistAndMaterialize(db, currentInput(publication));
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(publication.publishedAtSec * 1000);
+    const active = await loadActiveSafetyScoreSource(db);
+    expect(active.snapshot?.cards[0]).toBeDefined();
+    expect(active.snapshot?.cards[0]).not.toHaveProperty("reserveCompositionAdmission");
+    for (const [path, handle] of [
+      ["v9?freshness=operands", handleReportCardsV9],
+      [`v9-detail?stablecoin=${card.id}&freshness=operands`, handleReportCardsV9Detail],
+    ] as const) {
+      const url = new URL(`https://example.com/api/report-cards/${path}`);
+      const plain = await handle(db, url);
+      url.searchParams.set("reserveAdmission", "diagnostics");
+      const optedIn = await handle(db, url);
+      const readCard = async (response: Response) => (await response.json() as { cards: object[] }).cards[0];
+      expect(await readCard(plain)).not.toHaveProperty("reserveCompositionAdmission");
+      expect(await readCard(optedIn)).toHaveProperty("reserveCompositionAdmission", card.reserveCompositionAdmission);
+      expect(optedIn.headers.get("ETag")).not.toBe(plain.headers.get("ETag"));
+    }
+  });
+
   it("bounds 397-card fragment round trips under D1 latency without changing bytes, identity or ETag", async () => {
     const { sqlite, db, publication } = await seedCohort();
     vi.useFakeTimers({ toFake: ["Date"] });

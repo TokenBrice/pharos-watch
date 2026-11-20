@@ -455,7 +455,6 @@ export async function loadReportCardsSnapshotInputs(
   }
 
   let dexLiquiditySnapshot = EMPTY_DEX_LIQUIDITY_SNAPSHOT;
-  let liquidityStale = false;
   const nowSec = Math.floor(Date.now() / 1000);
   if (dexLiquiditySnapshotResult.status === "fulfilled") {
     dexLiquiditySnapshot =
@@ -477,10 +476,8 @@ export async function loadReportCardsSnapshotInputs(
       const ageSec = nowSec - dexLiquiditySnapshot.latestUpdatedAt;
       if (ageSec < 0) {
         logWorkerEventArgs("lib", "warn", `[report-cards] Liquidity data is future-dated (ahead: ${-ageSec}s)`);
-        liquidityStale = true;
       } else if (ageSec > REPORT_CARD_DEX_LIQUIDITY_FRESHNESS_SEC) {
         logWorkerEventArgs("lib", "warn", `[report-cards] Liquidity data is stale (age: ${ageSec}s)`);
-        liquidityStale = true;
       }
     }
   } else {
@@ -488,7 +485,6 @@ export async function loadReportCardsSnapshotInputs(
       "[report-cards] DEX liquidity snapshot unavailable; suppressing liquidity inputs:",
       dexLiquiditySnapshotResult.reason,
     );
-    liquidityStale = true;
   }
 
   const liveReserveMap =
@@ -539,6 +535,9 @@ export async function loadReportCardsSnapshotInputs(
     REPORT_CARD_DEX_LIQUIDITY_FRESHNESS_SEC,
     dexLiquiditySnapshotResult.status === "rejected",
   );
+  // Derived from the lane freshness so a fulfilled snapshot without a clock
+  // cannot carry a healthy capture flag the freshness entry classifies as stale.
+  const liquidityStale = dexFreshness.stale;
   const dexState: V9PublicationInputHealth["dex"]["state"] =
     dexLiquiditySnapshotResult.status === "rejected"
       ? "unavailable"

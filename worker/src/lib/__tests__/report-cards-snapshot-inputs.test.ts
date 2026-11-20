@@ -545,6 +545,21 @@ describe("report-card V9 publication input health", () => {
     });
   });
 
+  it("keeps liquidityStale consistent with lane freshness for a fulfilled null-clock DEX snapshot", async () => {
+    mocks.loadDexLiquiditySnapshot.mockResolvedValue({
+      map: {},
+      latestUpdatedAt: null,
+    });
+
+    const inputs = await loadReportCardsSnapshotInputs(db(), {
+      preloadedStablecoinsCache: stablecoinsCache(),
+    });
+
+    expect(inputs.liquidityStale).toBe(true);
+    expect(inputs.inputFreshness.dexLiquidity.stale).toBe(true);
+    expect(inputs.v9PublicationInputHealth.dex.state).toBe("stale");
+  });
+
   it("records a rejected DEX scoring load as unavailable", async () => {
     mocks.loadDexLiquiditySnapshot.mockRejectedValue(
       new Error("DEX worker unavailable"),

@@ -133,6 +133,7 @@ function RecoveryPanel({ event, includeTime }: { event: DepegEventEntry; include
   const { firstAdmissible, qualified } = getDepegEventOnset(event);
   const showAdmissibleObservation = qualified || firstAdmissible != null;
   const startPrice = formatEventPrice(event.startPrice, event, "start");
+  const referenceTiming = event.onsetQuoteFromLaterFragment ? "Later" : "Opening";
   const peakPrice = formatEventPrice(event.peakPrice, event, "peak");
   const { closure, label: closureLabel, isRecovery, end } = getDepegEventClosurePresentation(event);
   const recoveryPrice = isRecovery
@@ -189,14 +190,14 @@ function RecoveryPanel({ event, includeTime }: { event: DepegEventEntry; include
         </div>
       )}
       <div>
-        <dt className="text-xs uppercase tracking-wide text-muted-foreground">{event.onsetBasis ? "Opening peer median" : "Opening peg reference"}</dt>
+        <dt className="text-xs uppercase tracking-wide text-muted-foreground">{referenceTiming} {event.onsetBasis ? "peer median" : "peg reference"}</dt>
         <dd className="pharos-numeric font-medium text-foreground">
           {formatEventPrice(event.pegReference, event, "reference") ?? "—"}
         </dd>
       </div>
       {startPrice ? (
         <div>
-          <dt className="text-xs uppercase tracking-wide text-muted-foreground">Start price</dt>
+          <dt className="text-xs uppercase tracking-wide text-muted-foreground">{event.onsetQuoteFromLaterFragment ? "Later price" : "Start price"}</dt>
           <dd className="pharos-numeric font-medium text-foreground">{startPrice}</dd>
         </div>
       ) : null}
@@ -227,12 +228,13 @@ function buildDepegRecordContext({
   const pegReference = formatEventPrice(event.pegReference, event, "reference");
   const sourceLabel = event.source === "live" ? "live monitoring" : "a historical backfill";
   const referenceLabel = event.onsetBasis ? "peer median (lower confidence)" : "peg reference";
+  const priceLead = event.onsetQuoteFromLaterFragment ? "A later observation shows a price of" : "The checked-in price path starts at";
   const pricePath = startPrice && pegReference
-    ? `The checked-in price path starts at ${startPrice} against a recorded ${referenceLabel} of ${pegReference}.`
+    ? `${priceLead} ${startPrice} against a recorded ${referenceLabel} of ${pegReference}.`
     : startPrice
-      ? `The checked-in price path starts at ${startPrice}.`
+      ? `${priceLead} ${startPrice}.`
       : pegReference
-        ? `The checked-in record uses a ${referenceLabel} of ${pegReference}.`
+        ? `${event.onsetQuoteFromLaterFragment ? "A later observation uses" : "The checked-in record uses"} a ${referenceLabel} of ${pegReference}.`
         : "The checked-in record preserves the measured direction and peak deviation.";
   const confirmation = event.confirmationSources
     ? ` Confirmation evidence is recorded as “${event.confirmationSources}”.`

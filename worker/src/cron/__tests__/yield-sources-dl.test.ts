@@ -119,7 +119,6 @@ describe("loadDlStablecoinPools", () => {
         makeDlYieldPool({ pool: "plausible", apy: 8, apyBase: 8 }),
         makeDlYieldPool({ pool: "absurd", apy: 1000, apyBase: 1000 }),
       ], nowSec - 60),
-      nowSec - 60,
       nowSec,
     );
     expect(parsed?.pools.map((pool) => pool.pool)).toEqual(["plausible"]);
@@ -164,8 +163,11 @@ describe("loadDlStablecoinPools", () => {
   });
 
   it("distinguishes HTTP failure from transport rejection", async () => {
+    vi.mocked(getCache).mockResolvedValue({ value: JSON.stringify({ data: [makeDlYieldPool()] }), updatedAt: nowSec });
     vi.mocked(fetchJsonWithRetry).mockResolvedValueOnce({ response: new Response(null, { status: 503 }), body: {} });
-    expect((await loadDlStablecoinPools({} as D1Database)).meta.fallbackMode).toBe("direct-fetch-failed");
+    expect((await loadDlStablecoinPools({} as D1Database)).meta).toMatchObject({
+      fallbackMode: "direct-fetch-failed", updatedAt: null, ageSeconds: null,
+    });
     vi.mocked(fetchJsonWithRetry).mockRejectedValueOnce(new Error("offline"));
     expect((await loadDlStablecoinPools({} as D1Database)).meta.fallbackMode).toBe("direct-fetch-exception");
     expect(vi.mocked(recordOutcome).mock.calls.map((call) => call[2])).toEqual([false, false]);

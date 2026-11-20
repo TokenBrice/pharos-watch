@@ -4,6 +4,7 @@ import {
   SafetyScoreV9CompletenessSchema,
   SafetyScoreV9CommonModeGroupsSchema,
   SafetyScoreV9CurrentCardSchema,
+  SafetyScoreV9PreviousCardSchema,
   findSafetyScoreV9ParentAttributionIssues,
   type SafetyScoreV9CurrentCard,
 } from "./safety-score-v9-public";
@@ -141,7 +142,7 @@ export const SafetyScoreV9PreviousResponseSchema = z
   .object({
     ...SafetyScoreV9ResponseShape,
     schemaVersion: z.literal(7),
-    cards: z.array(SafetyScoreV9CurrentCardSchema),
+    cards: z.array(SafetyScoreV9PreviousCardSchema),
   })
   .strict()
   .superRefine((response, ctx) => refineResponse(response, ctx));

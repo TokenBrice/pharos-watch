@@ -23,9 +23,8 @@ import { YieldWatchlistStar } from "@/components/yield/yield-watchlist-star";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { getLogoSrc } from "@/lib/logos";
 import { useYieldRankings } from "@/hooks/api-hooks";
-import { useYieldSourceClock } from "@/hooks/use-yield-source-clock";
-import { getYieldRankingSourceClockInputs } from "@/lib/yield-source-explorer-model";
-import { resolveYieldSourceAssessedAt, type YieldSourceDisplayClock } from "@/lib/yield-source-presentation";
+import { useLiveYieldRankings, useYieldCoinRankings } from "@/hooks/use-yield-source-clock";
+import type { YieldSourceDisplayClock } from "@/lib/yield-source-presentation";
 import { useYieldLeaderboardController } from "@/hooks/use-yield-leaderboard-controller";
 import type { YieldTableSortKey } from "@/components/yield/yield-table-logic";
 import { buildStablecoinUrl } from "@shared/lib/urls";
@@ -246,22 +245,12 @@ export function YieldLeaderboard({
   const initialCompareDeepLink = useRef(compare.ids.length >= 2);
   const initialCompareProcessed = useRef(false);
   const rowsById = useMemo(() => new Map(comparisonRows.map((row) => [row.id, row] as const)), [comparisonRows]);
-  const detailedRankings = useYieldRankings({ enabled: sheetRankingId !== null });
+  const detailedRankings = useLiveYieldRankings(useYieldRankings({ enabled: sheetRankingId !== null }));
   const effectiveUpdatedAt = updatedAt ?? Math.floor(detailedRankings.dataUpdatedAt / 1000);
-  const sheetRanking = useMemo(
-    () => (sheetRankingId ? (detailedRankings.data?.rankings.find((row) => row.id === sheetRankingId) ?? null) : null),
-    [detailedRankings.data?.rankings, sheetRankingId],
+  const { data: sheetRankings, sourceClock: sheetSourceClock } = useYieldCoinRankings(
+    detailedRankings.data, sheetRankingId, detailedRankings.meta, detailedRankings.dataUpdatedAt,
   );
-  // The sheet's sources come from a separate detailed fetch, so they get their
-  // own clock: that response's assessment, never the summary publication.
-  const sheetSourceClockInputs = useMemo(
-    () => (sheetRanking ? getYieldRankingSourceClockInputs(sheetRanking) : []),
-    [sheetRanking],
-  );
-  const sheetSourceClock = useYieldSourceClock(
-    sheetSourceClockInputs,
-    resolveYieldSourceAssessedAt(detailedRankings.meta, detailedRankings.dataUpdatedAt),
-  );
+  const sheetRanking = sheetRankings?.rankings.find((row) => row.id === sheetRankingId) ?? null;
 
   const {
     sortKey,

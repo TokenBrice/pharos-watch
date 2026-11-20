@@ -3,7 +3,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import YieldAnalysisClient from "@/components/stablecoin-detail/yield-analysis-client";
-import { makeYieldDetailRanking, makeYieldDetailResponse } from "@/components/__tests__/yield-detail.test-support";
+import { makeDeliveryOnlyYieldResponse, makeYieldDetailRanking, makeYieldDetailResponse } from "@/components/__tests__/yield-detail.test-support";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import { formatChartDate } from "@shared/lib/format";
 import type { YieldHistoryPoint } from "@shared/types/yield-evidence-schemas";
@@ -47,6 +47,7 @@ vi.mock("@/hooks/api-hooks", () => ({
   useYieldRankings: useYieldRankingsMock,
   useYieldHistory: useYieldHistoryMock,
 }));
+vi.mock("@/hooks/use-hydrated", () => ({ useHydrated: () => true }));
 
 vi.mock("@shared/lib/stablecoins/client-detail", () => ({
   loadClientStablecoinDetail: loadClientStablecoinDetailMock,
@@ -60,8 +61,8 @@ vi.mock("@/hooks/use-url-filters", () => ({
 }));
 
 vi.mock("@/components/yield/pys-breakdown", () => ({
-  PysBreakdown: ({ scalingFactor }: { scalingFactor: number }) => (
-    <div data-testid="pys-breakdown" data-scaling-factor={scalingFactor} />
+  PysBreakdown: ({ scalingFactor, score, pysNullReason }: { scalingFactor: number; score: number | null; pysNullReason?: string }) => (
+    <div data-testid="pys-breakdown" data-scaling-factor={scalingFactor} data-score={score} data-null-reason={pysNullReason} />
   ),
 }));
 
@@ -194,6 +195,38 @@ describe("YieldAnalysisClient", () => {
     expect(chart.getAttribute("data-benchmark-rate")).toBe("0.031");
     expect(chart.getAttribute("data-median-apy")).toBe("0.04");
     expect(screen.getByRole("button", { name: "Reset to all sources" })).toBeTruthy();
+  });
+
+  it("withholds expired cached PYS on mount before timers run", () => {
+    const receivedAt = 1_776_000_000_000;
+    vi.useFakeTimers({ now: receivedAt });
+    const data = makeDeliveryOnlyYieldResponse();
+    data.rankings[0].id = "usdn-smardex";
+    setRankingsQuery({ data, dataUpdatedAt: receivedAt });
+    vi.setSystemTime(receivedAt + 2000);
+    renderWorkbench();
+    const score = screen.getByTestId("pys-breakdown");
+    expect(score.hasAttribute("data-score")).toBe(false);
+    expect(score.getAttribute("data-null-reason")).toBe("source-stale");
+  });
+
+  it("withdraws PYS and reranks the peer rail at the delivery deadline", () => {
+    vi.useFakeTimers({ now: 1_776_000_000_000 });
+    const data = makeDeliveryOnlyYieldResponse([makeRanking({ id: "usdt-tether", symbol: "USDT", liveRank: 2 })]);
+    data.rankings[0].id = "usdn-smardex";
+    setRankingsQuery({ data, dataUpdatedAt: Date.now() });
+    renderWorkbench();
+    const peer = () => within(screen.getByRole("link", { name: /Compare USDT with/ }));
+    const score = () => screen.getByTestId("pys-breakdown");
+    act(() => vi.advanceTimersByTime(1999));
+    expect(score().getAttribute("data-score")).toBe("64");
+    expect(peer().getByText("#2")).toBeTruthy();
+    expect(peer().getByText("Below")).toBeTruthy();
+    act(() => vi.advanceTimersByTime(1));
+    expect(score().hasAttribute("data-score")).toBe(false);
+    expect(score().getAttribute("data-null-reason")).toBe("source-stale");
+    expect(peer().getByText("#1")).toBeTruthy();
+    expect(peer().getByText("Above")).toBeTruthy();
   });
 
   it("leads with decision-critical notices above the yield figures, never history", async () => {

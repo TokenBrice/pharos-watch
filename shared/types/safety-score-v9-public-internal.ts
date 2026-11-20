@@ -84,6 +84,7 @@ export function attributedScoredParent(
 export function refineCard(
   card: SafetyScoreV9CardRefinementInput,
   ctx: Pick<z.RefinementCtx, "addIssue">,
+  historicalTyped: boolean,
 ): void {
   const scoreTrace = card.scoreTrace;
   // Causal D/F proofs belong to the computed band; a 10.26 grade hold may
@@ -326,20 +327,24 @@ export function refineCard(
     // name a real ceiling — it just cannot be required to name a binding one.
     const reconcilableCaps =
       card.score === null ? card.caps : card.bindingCap === null ? [] : [card.bindingCap];
+    // Pre-10.29 report8 pipeline gaps preserved diagnostic reasons from low pillars.
+    const historicalPipelineGap = historicalTyped && card.ratingStatus === "pipeline-gap";
     for (const item of scoreTrace.boundedUncertaintyAttribution.items) {
       if (item.source === "reason") {
         const matchesPillarReason = !/:bounded-component:cause:\d+$/u.test(item.path) &&
           Object.entries(card.pillars).some(([key, pillar]) =>
-          pillar.score !== null &&
-          (pillar.aggregationDisposition ?? "included") === "included" &&
-          (scoreTrace.aggregation?.effectiveScoringWeights[key as keyof typeof card.pillars] ?? 0) > 0 &&
-          pillar.reasons.some(
-            (reason) =>
-              reason.code === item.code &&
-              reason.path === item.path &&
-              reason.message === item.message,
-          ),
-        );
+            pillar.score !== null &&
+            (historicalPipelineGap
+              ? pillar.score < C_MINUS_MIN_SCORE
+              : (pillar.aggregationDisposition ?? "included") === "included" &&
+                (scoreTrace.aggregation?.effectiveScoringWeights[key as keyof typeof card.pillars] ?? 0) > 0) &&
+            pillar.reasons.some(
+              (reason) =>
+                reason.code === item.code &&
+                reason.path === item.path &&
+                reason.message === item.message,
+            ),
+          );
         let matchesOwnedFact = false;
         for (const fact of iterateEvidenceResponsibilityFacts(scoreTrace.evidenceResponsibility)) {
           if (fact[0] === item.code && fact[1] === item.path && fact[3] === item.responsibility &&

@@ -3,6 +3,7 @@ import { computePYSFromComponents, computePysComponents, PYS_APY_SANITY_MAX, typ
 import type { YieldEvidenceClass, YieldPysNullReason } from "@shared/types/yield";
 import type { YieldBenchmarkFreshness } from "@shared/lib/yield-benchmark-freshness";
 import { assessYieldEvidence } from "@shared/lib/yield-evidence";
+import { isFiniteNumber } from "@shared/lib/type-guards";
 import {
   PENDLE_SUPPLEMENTAL_FETCH_CADENCE_MS,
   OPTIONAL_YIELD_SOURCES,
@@ -70,12 +71,13 @@ export const LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS = 45 * DAY_MS;
 
 export function resolveEvidenceNullReason(params: {
   sourceFreshness: YieldSourceFreshness;
+  deliveryFresh?: boolean;
   benchmarkFreshness: YieldBenchmarkFreshness;
   referenceBenchmarkFreshness: YieldBenchmarkFreshness;
   opportunityEvidenceComplete?: boolean;
 }): YieldPysNullReason | null {
   if (params.sourceFreshness === "stale") return "source-stale";
-  if (params.sourceFreshness === "unknown") return "source-freshness-unknown";
+  if (params.sourceFreshness === "unknown" && !params.deliveryFresh) return "source-freshness-unknown";
   if (params.benchmarkFreshness === "stale") return "benchmark-stale";
   if (params.referenceBenchmarkFreshness === "stale") return "benchmark-stale";
   if (params.opportunityEvidenceComplete === false) return "opportunity-evidence-missing";
@@ -123,6 +125,7 @@ export function qualifyYieldEvidence(input: {
   safety: Pick<YieldRowSafetyResolution, "safetyEvidenceObserved" | "opportunityEvidenceComplete" | "venueRiskTier">;
   evidenceClass: YieldEvidenceClass;
   sourceFreshness: YieldSourceFreshness;
+  deliveryFresh?: boolean;
   benchmarkFreshness: YieldBenchmarkFreshness;
   referenceBenchmarkFreshness: YieldBenchmarkFreshness;
   sourceDepthRatio: number | null;
@@ -164,6 +167,14 @@ export function scoreYieldPys(input: PysNullReasonInput & { nullReason: YieldPys
     pharosYieldScore: pysNullReason == null && Number.isFinite(computedScore) ? computedScore : null,
     pysNullReason,
   };
+}
+
+export function isDefiLlamaDataSource(dataSource: string): boolean {
+  return dataSource === "defillama" || dataSource === "defillama-auto";
+}
+
+export function readDefiLlamaBatchTimestamp(value: unknown, nowSec = Infinity): number | null {
+  return isFiniteNumber(value) && value > 0 && value <= nowSec ? value : null;
 }
 
 export function getRankingStaleThresholdMs(dataSource: string, sourceKey?: string | null): number {

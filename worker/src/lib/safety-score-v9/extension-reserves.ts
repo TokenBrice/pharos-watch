@@ -4,8 +4,10 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { hasIndependentLiveCompositionDates, hasIndependentReserveObservationDates } from "@shared/lib/report-card-policy";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapter-descriptors";
+import { projectReserveCompositionReviewFacts, REVIEWED_RESERVE_COMPOSITION_ADMISSION_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/reserve-admission";
 import { admitV10ReserveReportScope, admitV10ReserveObservation, shouldApplyV10ReserveReportScope, resolveV10ReserveObservationDeploymentRefs } from "@shared/lib/safety-score-v9/reserve-scope";
 import { normalizeDeploymentId } from "@shared/types/deployment-id";
+import type { V9ReserveCompositionAdmission } from "@shared/types/safety-score-v9-public";
 import type { ReserveObservationEnvelope, ReserveScopedAdmission } from "@shared/types/safety-score-v9-reserve-scope";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
 import {
@@ -308,6 +310,7 @@ export function buildReviewedReserveClassifications(
 }
 
 type ReviewedStaticReserveRows = NonNullable<ExtensionAsset["reviewedStaticReserveRows"]>;
+type OnReserveCompositionRejected = (diagnostic: V9ReserveCompositionAdmission) => void;
 
 const CORROBORATING_ASSURANCE_METHODS = new Set([
   "audit",
@@ -319,14 +322,6 @@ const CORROBORATING_ASSURANCE_METHODS = new Set([
 const DIRECT_RESERVE_ASSURANCE_METHODS = new Set(["audit", "examination"]);
 const NAMED_FIRM_RESERVE_REPORT_MAX_AGE_SEC =
   V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.namedFirmReserveReportMaxAgeSec;
-const REVIEWED_RESERVE_COMPOSITION_MAX_AGE_SEC =
-  V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedReserveCompositionMaxAgeSec;
-const REVIEWED_RESERVE_COMPOSITION_GRACE_SEC =
-  V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedReserveCompositionGraceSec;
-// Monthly reports commonly land in the first week after month-end. The grace
-// covers that publication lag without extending composition into a second cycle.
-const REVIEWED_RESERVE_COMPOSITION_ADMISSION_MAX_AGE_SEC =
-  REVIEWED_RESERVE_COMPOSITION_MAX_AGE_SEC + REVIEWED_RESERVE_COMPOSITION_GRACE_SEC;
 const UNRESOLVED_CURATED_RESERVE_DISPOSITIONS = new Set(["basket-needs-split", "insufficient-evidence"]);
 
 function normalizeReviewedStaticReserveRows(rows: readonly ReserveSlice[]): ReserveSlice[] {
@@ -421,6 +416,7 @@ interface IndependentlyAttestedCompositionAdmission {
   review: NonNullable<V9ExtensionRegistryMeta["reserveReview"]>;
   proof: NonNullable<V9ExtensionRegistryMeta["proofOfReserves"]>;
   report: NonNullable<NonNullable<V9ExtensionRegistryMeta["proofOfReserves"]>["latestReport"]>;
+  compositionAsOfSec: number;
   freshness: "fresh" | "expired";
 }
 
@@ -473,14 +469,16 @@ function independentlyAttestedComposition(
   ) {
     return null;
   }
+  const compositionAsOfSec = Date.parse(`${report.periodEnd}T00:00:00Z`) / 1_000;
   return {
     normalizedRows: normalizeReviewedStaticReserveRows(compositionRows),
     sourceRows: rows,
     review,
     proof,
     report,
+    compositionAsOfSec,
     freshness:
-      clockSec - Date.parse(`${report.periodEnd}T00:00:00Z`) / 1_000 > NAMED_FIRM_RESERVE_REPORT_MAX_AGE_SEC
+      clockSec - compositionAsOfSec > NAMED_FIRM_RESERVE_REPORT_MAX_AGE_SEC
         ? "expired"
         : "fresh",
   };
@@ -592,22 +590,57 @@ function buildSafetyScoreV9ReviewedCuratedReserveRows(
   provenance: "curated" | "curated-fallback",
   fixedInput?: Readonly<SafetyScoreV9CompilerInput>,
   namedAdmission = independentlyAttestedComposition(meta, clockSec, fixedInput),
+  onRejected?: OnReserveCompositionRejected,
 ): ReviewedStaticReserveRows | null {
+  const reject = (...reasons: V9ReserveCompositionAdmission["reasons"]) => {
+    onRejected?.({ reasons });
+    return null;
+  };
   const rows = meta.reserves ?? [];
   const review = meta.reserveReview;
+  const rejectReview = (review: NonNullable<V9ExtensionRegistryMeta["reserveReview"]>) => {
+    if (!onRejected) return null;
+    const { blockers, compositionAtSec } = projectReserveCompositionReviewFacts(review);
+    if (compositionAtSec !== null && compositionAtSec > clockSec) return reject(...blockers, "future-dated");
+    return blockers.length ? reject(...blockers) : reject("invalid-review-chronology");
+  };
   const curatedRows = compositionRowsWithUnknownResidual(meta);
   if (review?.observations?.some(row => (row.kind === "standing-structure" || row.kind === "portfolio-observation") &&
-    row.obligations.some(obligation => obligation.disposition !== "included"))) return null;
-  if (namedAdmission?.freshness === "expired") return null;
+    row.obligations.some(obligation => obligation.disposition !== "included"))) {
+    return reject("observation-obligations-unresolved");
+  }
+  if (namedAdmission?.freshness === "expired") {
+    onRejected?.({ reasons: ["beyond-age-budget"],
+      age: { compositionAsOfSec: namedAdmission.compositionAsOfSec, maxAgeSec: NAMED_FIRM_RESERVE_REPORT_MAX_AGE_SEC } });
+    return null;
+  }
   const compositionMaxAgeSec = namedAdmission !== null
     ? NAMED_FIRM_RESERVE_REPORT_MAX_AGE_SEC : REVIEWED_RESERVE_COMPOSITION_ADMISSION_MAX_AGE_SEC;
   // A named report's age cannot be bypassed through the generic curated lane.
-  if (hasNamedReportFirm(meta) && meta.proofOfReserves?.latestReport?.periodEnd === review?.compositionAsOf &&
-    namedAdmission === null) return null;
-  if ((review?.knownUnknownExposurePct ?? 0) > 0) {
-    const reviewAtSec = conservativeDateEndSec(review?.reviewedAt, clockSec);
-    const compositionAtSec = conservativeDateEndSec(review?.compositionAsOf, clockSec);
-    if (reviewAtSec === null || compositionAtSec === null || reviewAtSec < compositionAtSec) return null;
+  const report = meta.proofOfReserves?.latestReport;
+  if (hasNamedReportFirm(meta) && report?.periodEnd === review?.compositionAsOf &&
+    namedAdmission === null) {
+    if (!onRejected) return null;
+    if (reportScopeApplies(meta, clockSec, fixedInput)) return reject("report-scope-not-whole-book");
+    if (!review) return reject("no-review");
+    if (review.scope == null) return reject("scope-missing");
+    if (review.scope !== "full-composition") return reject(review.scope);
+    if (review.confidence === "unknown") return reject("unverified");
+    if (report?.confidence === "unknown") return reject("report-confidence-unverified");
+    if (review.compositionAsOf == null) return reject("undated");
+    if (report?.publishedAt == null) return reject("report-publication-date-missing");
+    const publishedAtSec = conservativeDateEndSec(report.publishedAt, Number.POSITIVE_INFINITY);
+    if (publishedAtSec !== null && publishedAtSec > clockSec) return reject("report-publication-future-dated");
+    if (!CORROBORATING_ASSURANCE_METHODS.has(report.assuranceMethod)) return reject("report-assurance-method-unsupported");
+    const reviewAtSec = conservativeDateEndSec(review.reviewedAt, clockSec);
+    const compositionAtSec = conservativeDateEndSec(review.compositionAsOf, clockSec);
+    if (reviewAtSec === null || (compositionAtSec !== null && reviewAtSec < compositionAtSec)) return reject("invalid-review-chronology");
+    return reject("named-report-ineligible");
+  }
+  if (review && (review.knownUnknownExposurePct ?? 0) > 0) {
+    const reviewAtSec = conservativeDateEndSec(review.reviewedAt, clockSec);
+    const compositionAtSec = conservativeDateEndSec(review.compositionAsOf, clockSec);
+    if (reviewAtSec === null || compositionAtSec === null || reviewAtSec < compositionAtSec) return rejectReview(review);
   }
   const observationRefs = review?.observations?.length ? resolveV10ReserveObservationDeploymentRefs(meta) : [];
   const separate = review?.observations?.find(row =>
@@ -631,31 +664,30 @@ function buildSafetyScoreV9ReviewedCuratedReserveRows(
     curatedRows !== null && rows.length > 0 && validateReserveCompositionTotal(rows, "full")) {
     return { rows: [...curatedRows], evidenceClass: "static-validated", provenance, sourceKind: "portfolio-observation", scopeId: portfolio.scopeId };
   }
-  if (reportScopeApplies(meta, clockSec, fixedInput)) return null;
+  if (reportScopeApplies(meta, clockSec, fixedInput)) return reject("report-scope-not-whole-book");
   const reviewedAtSec = conservativeDateEndSec(review?.reviewedAt, clockSec);
   const compositionAtSec = conservativeDateEndSec(review?.compositionAsOf, clockSec);
   const reportPeriodEnd = meta.proofOfReserves?.latestReport?.periodEnd;
   const hasDateMismatch = reportPeriodEnd != null && review?.compositionAsOf != null &&
     reportPeriodEnd !== review.compositionAsOf;
-  if (
-    rows.length === 0 ||
-    review?.scope !== "full-composition" ||
-    review.confidence !== "verified" ||
-    curatedRows === null ||
-    review.sources.length === 0 ||
-    reviewedAtSec === null ||
-    compositionAtSec === null ||
-    reviewedAtSec < compositionAtSec ||
-    (hasDateMismatch && (
-      !(hasIndependentLiveCompositionDates(meta) || hasIndependentReserveObservationDates(meta)) ||
-      conservativeDateEndSec(reportPeriodEnd, clockSec) === null ||
-      conservativeDateEndSec(meta.proofOfReserves?.latestReport?.publishedAt, clockSec) === null
-    )) ||
-    clockSec - compositionAtSec > compositionMaxAgeSec ||
-    !validateReserveCompositionTotal(rows, "full")
-  ) {
+  if (!review) return reject("no-review");
+  if (rows.length === 0) return reject("no-composition");
+  if (review.scope !== "full-composition" || review.confidence !== "verified" || compositionAtSec === null) {
+    return rejectReview(review);
+  }
+  if (review.sources.length === 0) return reject("review-sources-missing");
+  if (curatedRows === null) return reject("invalid-composition");
+  if (reviewedAtSec === null || reviewedAtSec < compositionAtSec) return reject("invalid-review-chronology");
+  if (hasDateMismatch && (
+    !(hasIndependentLiveCompositionDates(meta) || hasIndependentReserveObservationDates(meta)) ||
+    conservativeDateEndSec(reportPeriodEnd, clockSec) === null ||
+    conservativeDateEndSec(meta.proofOfReserves?.latestReport?.publishedAt, clockSec) === null
+  )) return reject("report-date-mismatch");
+  if (clockSec - compositionAtSec > compositionMaxAgeSec) {
+    onRejected?.({ reasons: ["beyond-age-budget"], age: { compositionAsOfSec: compositionAtSec, maxAgeSec: compositionMaxAgeSec } });
     return null;
   }
+  if (!validateReserveCompositionTotal(rows, "full")) return reject("invalid-composition");
   return {
     rows: normalizeReviewedStaticReserveRows(curatedRows),
     evidenceClass: "static-validated",
@@ -668,12 +700,13 @@ export function buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(
   clockSec: number,
   fixedInput?: Readonly<SafetyScoreV9CompilerInput>,
   namedAdmission?: IndependentlyAttestedCompositionAdmission | null,
+  onRejected?: OnReserveCompositionRejected,
 ): ReviewedStaticReserveRows | null {
   if (meta.liveReservesConfig == null) return null;
   // A display-only probe cannot turn a separately reviewed observation into fallback evidence.
   const provenance = LIVE_RESERVE_ADAPTER_DEFINITIONS[meta.liveReservesConfig.adapter].evidenceClass === "weak-live-probe" &&
     hasIndependentReserveObservationDates(meta) ? "curated" : "curated-fallback";
-  return buildSafetyScoreV9ReviewedCuratedReserveRows(meta, clockSec, provenance, fixedInput, namedAdmission);
+  return buildSafetyScoreV9ReviewedCuratedReserveRows(meta, clockSec, provenance, fixedInput, namedAdmission, onRejected);
 }
 
 /**
@@ -686,9 +719,14 @@ export function buildSafetyScoreV9ReviewedStandaloneReserveRows(
   clockSec: number,
   fixedInput?: Readonly<SafetyScoreV9CompilerInput>,
   namedAdmission?: IndependentlyAttestedCompositionAdmission | null,
+  onRejected?: OnReserveCompositionRejected,
 ): ReviewedStaticReserveRows | null {
-  if (meta.liveReservesConfig != null || meta.variantOf != null) return null;
-  return buildSafetyScoreV9ReviewedCuratedReserveRows(meta, clockSec, "curated", fixedInput, namedAdmission);
+  if (meta.liveReservesConfig != null) return null;
+  if (meta.variantOf != null) {
+    onRejected?.({ reasons: ["variant-standalone-ineligible"] });
+    return null;
+  }
+  return buildSafetyScoreV9ReviewedCuratedReserveRows(meta, clockSec, "curated", fixedInput, namedAdmission, onRejected);
 }
 
 export type ReviewedReserveAdmission =
@@ -704,6 +742,7 @@ export function resolveReviewedReserveAdmission(input: {
   clockSec: number;
   liveReserveRows: readonly ReserveSlice[];
   fixedInput?: Readonly<SafetyScoreV9CompilerInput>;
+  onRejected?: OnReserveCompositionRejected;
 }): ReviewedReserveAdmission {
   const { meta, clockSec, fixedInput } = input;
   // Evidence historically uses the report-only scope context, while row
@@ -715,8 +754,8 @@ export function resolveReviewedReserveAdmission(input: {
     buildSafetyScoreV9ReviewedStaticReserveRows(meta, clockSec, fixedInput, namedAdmission) ??
     (meta.liveReservesConfig != null
       ? buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, clockSec, fixedInput, namedAdmission) ??
-        buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(meta, clockSec, fixedInput, namedAdmission)
-      : buildSafetyScoreV9ReviewedStandaloneReserveRows(meta, clockSec, fixedInput, namedAdmission));
+        buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(meta, clockSec, fixedInput, namedAdmission, input.onRejected)
+      : buildSafetyScoreV9ReviewedStandaloneReserveRows(meta, clockSec, fixedInput, namedAdmission, input.onRejected));
   if (!projected) return source?.freshness === "expired"
     ? { kind: "history", projected: null, source } : { kind: "none", projected: null };
   if (projected.sourceKind === "standing-structure" || projected.sourceKind === "portfolio-observation") {

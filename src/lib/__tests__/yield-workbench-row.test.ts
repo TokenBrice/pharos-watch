@@ -26,6 +26,13 @@ describe("deriveYieldRowPresentation", () => {
     }
   });
 
+  it("labels a score using a delivery clock without inventing an observation age", () => {
+    const row = makeYieldRanking({ dataSource: "defillama", warningSignals: ["data-freshness-unknown"], provenance: makeYieldProvenance({
+      sourceObservedAt: null, sourceAgeSeconds: null, sourceFreshness: "unknown",
+    }) });
+    expect(deriveYieldRowPresentation(row).freshness).toMatchObject({ displayText: "Delivery only", ageContext: null });
+  });
+
   it("displays the served observation age in detailed and compact rows", () => {
     // The observation was 900 seconds old at publication; serving it 14,401
     // seconds later advances its age to 15,301 seconds in either payload.

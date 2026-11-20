@@ -416,7 +416,8 @@ describe("projectTape", () => {
     `);
     const oldPayload = JSON.stringify({ effectiveAt: oldTs / 1000, impact: ["Pending deployment"] });
     const read = () => queryTapeEvents(db, {
-      filters: { typeExact: ["methodology.bumped:yield"] }, limit: 3, cursor: null, includeTotal: false,
+      filters: { typeExact: ["methodology.bumped:yield"], since: 1_795_013_063_000, until: 1_795_053_600_000 },
+      limit: 3, cursor: null, includeTotal: false,
     });
     sqlite.exec("DELETE FROM tape_events WHERE source_table = 'methodology:yield' AND source_row_id = '8.56'");
     provisional.run(oldId, oldTs, oldPayload, null, null, fresh.id!);
@@ -425,9 +426,9 @@ describe("projectTape", () => {
     expect(source.get()).toMatchObject({ ts: oldTs, payload_json: oldPayload });
     expect(await projectMethodologyBumps(db)).toEqual({ projected: 1, advanced: null });
     const { rows } = await read();
-    expect(rows.slice(1).map((row) => [row.methodology_version, row.ts]))
+    expect(rows.map((row) => [row.methodology_version, row.ts]))
       .toEqual([["8.56", 1_795_053_600_000], ["8.55", 1_795_013_063_000]]);
-    expect(JSON.parse(rows[1]!.payload_json)).toMatchObject({ effectiveAt: 1_795_053_600 });
+    expect(JSON.parse(rows[0]!.payload_json)).toMatchObject({ effectiveAt: 1_795_053_600 });
     expect(source.get()).toEqual({ ...fresh, event_id: oldId });
 
     provisional.run(oldId, oldTs, oldPayload, SEC, "editorial-suppression", fresh.id!);

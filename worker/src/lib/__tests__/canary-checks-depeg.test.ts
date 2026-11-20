@@ -15,6 +15,7 @@ import {
   checkDepegOpenCoverage,
   checkDepegPendingConfirmation,
   DEPEG_BLIND_EVENT_REVIEWS,
+  DEPEG_NO_PARITY_QUOTE_REVIEWS,
   DepegBlindEventReviewSchema,
   resolveDepegBlindEventReviews,
 } from "../canary-checks-depeg";
@@ -25,11 +26,14 @@ const gaps = STABLECOIN_PRICE_GAP_REVIEWS as StablecoinPriceGapReview[];
 const gapCount = gaps.length;
 const authored = psi.slice();
 const [review] = DEPEG_BLIND_EVENT_REVIEWS; // USD: no reference-market hold
+const susdReview = DEPEG_NO_PARITY_QUOTE_REVIEWS.find(({ stablecoinId }) => stablecoinId === "susd-solayer")!;
+const susdReviewExpiry = susdReview.expiresAt;
 
 afterEach(() => {
   fixtures.closeAll();
   psi.splice(0, psi.length, ...authored);
   gaps.length = gapCount;
+  susdReview.expiresAt = susdReviewExpiry;
 });
 
 const NOW = 1_775_900_000;
@@ -103,6 +107,23 @@ describe("depeg canary checks", () => {
     });
   });
 
+  it("leaves the baseline unavailable when the preceding completed census is invalid", async () => {
+    const census_json = censusJson({ unavailableCount: 8, observedCount: 92 });
+    const prior = censusRow({ started_at: NOW - 960, census_json: censusJson({ unavailableCount: -1 }) });
+    const db = censusDb(censusRow({ census_json }), prior, censusRow({ started_at: NOW - 1860, census_json }));
+    expect(await checkDepegDetectionCensus(db, NOW)).toMatchObject({ status: "ok", metadata: {
+      priorRunStartedAt: prior.started_at, priorUnavailableShare: null, priorActionableUnavailableShare: null,
+    } });
+  });
+
+  it("skips same-second completed census rows when comparing losses", async () => {
+    const lossy = censusRow({ census_json: censusJson({ unavailableCount: 8, observedCount: 92 }) });
+    const healthy = censusRow({ started_at: NOW - 960 });
+    expect(await checkDepegDetectionCensus(censusDb(lossy, lossy, healthy), NOW)).toMatchObject({
+      status: "ok", metadata: { priorRunStartedAt: healthy.started_at, priorActionableUnavailableShare: 0.02 },
+    });
+  });
+
   it("reports its own read failure as a failed measurement, not a producer finding", async () => {
     const db = mockD1([{ match: "pharos:depeg-census-runs", throwError: new Error("D1_ERROR: overloaded"), rows: [] }]);
 
@@ -152,15 +173,84 @@ describe("depeg canary checks", () => {
       observedCount: 9, unavailableCount: 1, reasonCounts: { [reason]: 1 }, unavailableIdsTruncated: false,
       unavailableAssets: [{ id, reason, reviewedNominalReference: nominal }], ...overrides }) });
     if (kind === "psi empty") expect(JSON.stringify(assessDepegObservationGaps(JSON.parse(row.census_json), now)))
-      .toBe('{"unavailableIdsComplete":true,"acknowledgedUnavailableIds":{"reviewedNominalReference":[],"scheduledMarketClosure":[],"reviewedPriceGap":[]},"actionableUnavailableIds":["ust-terra"],"actionableReasonCounts":{"primary-unusable":1},"acknowledgedUnavailableCount":0,"actionableUnavailableCount":1}');
+      .toBe('{"unavailableIdsComplete":true,"acknowledgedUnavailableIds":{"reviewedNominalReference":[],"scheduledMarketClosure":[],"reviewedPriceGap":[],"noParityQuoteByDesign":[]},"actionableUnavailableIds":["ust-terra"],"actionableReasonCounts":{"primary-unusable":1},"acknowledgedUnavailableCount":0,"actionableUnavailableCount":1}');
     const result = await checkDepegDetectionCensus(mockD1([{ match: "pharos:depeg-census-runs",
       rows: [row, { ...row, started_at: now - 960 }] }]), now);
     expect(result).toMatchObject({ status: actionable ? "degraded" : "ok", metadata: {
       ...(kind === "psi" && { acknowledgedUnavailableIds: { reviewedPriceGap: [id] } }),
       unavailableCount: 1, unavailableShare: 0.1, acknowledgedUnavailableCount: 1 - actionable,
       actionableUnavailableCount: actionable, actionableUnavailableIds: "unavailableAssets" in overrides
-        || "unavailableIdsTruncated" in overrides || "unavailableIdsDropped" in overrides ? null : actionable ? [id] : [],
+        || "unavailableIdsTruncated" in overrides || "unavailableIdsDropped" in overrides || reason !== gap ? null : actionable ? [id] : [],
     } });
+  });
+
+  it.each([
+    ["observed valuation", true, {}, true],
+    ["legacy asset", undefined, {}, false],
+    ["malformed evidence", "true", {}, false],
+    ["truncated", true, { unavailableIdsTruncated: true }, false],
+    ["malformed truncation", true, { unavailableIdsTruncated: "false" }, false],
+    ["incomplete census", true, { unavailableAssets: [] }, false],
+    ["missing assets", true, { unavailableAssets: undefined }, false],
+    ["wrong asset", true, {}, false],
+    ["wrong gate", true, { reasonCounts: { "supply-unavailable": 1 } }, false],
+    ["future review", true, {}, false],
+    ["expired review", true, {}, false],
+    ["eight-day review", true, {}, false],
+  ] as const)("grades the sUSD review for %s", async (kind, evidence, overrides, acknowledged) => {
+    const { reviewedAt, expiresAt } = susdReview;
+    if (kind === "eight-day review") susdReview.expiresAt = reviewedAt + 8 * 86_400;
+    const now = kind === "expired review" ? expiresAt : kind === "future review" ? reviewedAt - 1 : reviewedAt;
+    const id = kind === "wrong asset" ? "usdc-circle" : "susd-solayer";
+    const reason = kind === "wrong gate" ? "supply-unavailable" : gap;
+    const row = censusRow({ started_at: now - 60, census_json: censusJson({ evaluatedAt: now, unavailableCount: 1,
+      observedCount: 99, reasonCounts: { [gap]: 1 }, unavailableAssets: [
+        { id, reason, reviewedNominalReference: false, observedNonParityProtocolRedeem: evidence },
+      ], ...overrides }) });
+    expect(await checkDepegDetectionCensus(censusDb(row), now)).toMatchObject({ status: "ok", metadata: {
+      unavailableCount: 1, actionableUnavailableCount: acknowledged ? 0 : 1,
+      acknowledgedUnavailableIds: { noParityQuoteByDesign: acknowledged ? [id] : [] },
+    } });
+  });
+
+  it("limits the authored sUSD review to seven days", () => {
+    expect(susdReview.expiresAt - susdReview.reviewedAt).toBeLessThanOrEqual(7 * 86_400);
+  });
+
+  it("keeps census losses actionable when the ID list includes a non-primary reason", async () => {
+    const now = susdReview.reviewedAt;
+    const row = censusRow({ started_at: now - 60, census_json: censusJson({ evaluatedAt: now, observedCount: 94,
+      unavailableCount: 6, reasonCounts: { [gap]: 1, "asset-absent": 5 }, unavailableAssets: [
+        { id: "susd-solayer", reason: gap, reviewedNominalReference: false, observedNonParityProtocolRedeem: true },
+        { id: "extra", reason: "supply-unavailable", reviewedNominalReference: false },
+      ] }) });
+    expect(await checkDepegDetectionCensus(censusDb(row, { ...row, started_at: now - 960 }), now)).toMatchObject({
+      status: "degraded", metadata: { unavailableIdsComplete: false, actionableUnavailableShare: 0.06 },
+    });
+  });
+
+  it.each([
+    [100, 0, { [gap]: 1 }],
+    [99, 1, { [gap]: 1, "asset-absent": 1 }],
+    [100, 1, { [gap]: 1 }],
+  ] as const)("rejects malformed census counts (observed=%s, unavailable=%s, reasons=%j)", async (observedCount, unavailableCount, reasonCounts) => {
+    const now = susdReview.reviewedAt;
+    const row = censusRow({ started_at: now - 60, census_json: censusJson({ evaluatedAt: now,
+      observedCount, unavailableCount, reasonCounts, unavailableAssets: [
+        { id: "susd-solayer", reason: gap, reviewedNominalReference: false, observedNonParityProtocolRedeem: true },
+      ] }) });
+    const prior = censusRow({ started_at: now - 960, census_json: censusJson({ evaluatedAt: now - 960 }) });
+    expect(await checkDepegDetectionCensus(censusDb(row, prior), now)).toMatchObject({
+      status: "error", executionStatus: "failed", executionFailureReason: "depeg-census-invalid",
+      error: "depeg-census-invalid", metadata: { latestRunAt: row.started_at },
+    });
+  });
+
+  it("fails the measurement when a completed run omits the census", async () => {
+    const db = censusDb(censusRow({ census_json: null }));
+    expect(await checkDepegDetectionCensus(db, NOW)).toMatchObject({
+      executionStatus: "failed", executionFailureReason: "depeg-census-invalid",
+    });
   });
 
   it.each([[22, 0], [23, 2]])("acknowledges metal-market holds only inside a closure (Sunday %s:00 UTC)", (hour, actionable) => {
@@ -180,7 +270,7 @@ describe("depeg canary checks", () => {
     const metadata = (census: string) =>
       JSON.stringify({ capabilities: { stablecoinsCache: true, depegPipeline: true }, quality: { depegObservation: JSON.parse(census) } });
     insert.run(NOW - 60, metadata(censusJson()));
-    insert.run(NOW - 960, metadata(censusJson({ unavailableCount: 0 })));
+    insert.run(NOW - 960, metadata(censusJson({ observedCount: 100, unavailableCount: 0, reasonCounts: {} })));
 
     expect(await checkDepegDetectionCensus(db, NOW)).toMatchObject({ status: "ok", metadata: {
       runStartedAt: NOW - 60, eligibleCount: 100, observedCount: 98, unavailableCount: 2, reasonCounts: { "asset-absent": 2 },

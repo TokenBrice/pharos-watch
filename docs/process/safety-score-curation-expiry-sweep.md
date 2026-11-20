@@ -436,17 +436,44 @@ separate `admission` axis (`verified`/`failed`/`not-applicable`/`unverifiable`),
 machine-checkable sentinel absent, no adverse or successor match and no decisive block; a
 narrative-only decision, an absent or unrated/quarantined asset, an unavailable registry
 binding, or a capture that predates the decision is `unverifiable`, never closed.
+Successor matching compares the stable asset, route and field with route-generation ids
+(UUID components) ignored — the `:`-boundary parent/child prefix runs on both raw and
+generation-normalized ids, so a parent that became a more specific child under a rotated
+generation id is a successor too — a successor gap match names every live successor scope
+it occupies, never only the first — and score-reason sentinels are checked against the
+registry's full `scoreProjectionGaps` list — a reason that only lost its supplemental
+task row but stays score-visible is present, never absent, and a reason that survives at
+another path is a successor, never closed.
 `--replay` is the evidence gate: the artifact records `closureEvidence:
 replay-verified`, the registry identity fingerprint and the registry bytes' `sha256`, and
 the run fails when the binding does not match. Exit 0 means "report produced"; verdicts
 are findings, not bookings, and the workflow appends nothing to the ledger. A `closed`
 group with residual open items is legitimate (the decision is scope-limited); its row
-carries `taskIds.closed` and the registry-derived `factsClosed`.
+carries `taskIds.closed` — "Recorded task IDs absent", the count of the decision's
+recorded task ids this registry no longer lists — which the applier may still refuse
+(for example on an ambiguous task mapping), so it is never a booked fact count.
 
 Booking is an operator PR with the sentinel-closure applier (`apply-sentinel-closures`). It
 verifies the artifact's `registrySha256`, `closureEvidence: replay-verified`, identity
 fingerprint, per-row `ledgerDecisionIndex` and the live ledger decision count, then
-re-derives every sentinel and `factsClosed` from the registry itself. It previews by
+re-derives every sentinel and `factsClosed` from the registry itself (gap absence is
+re-verified with the checker's scope matcher and reason absence against the registry's
+full `scoreProjectionGaps` list, like the checker):
+`factsClosed` counts
+checker-confirmed absent sentinels over the decision's task rows and requires a one-to-one
+task/sentinel mapping over distinct sentinel identities — each surviving recorded task row
+must be held open by a carried sentinel, and each carried sentinel keeps exactly one
+distinct task row (successor scopes match per sentinel across every named successor; a
+reason sentinel whose schema-3 projection lost its supplemental task row — or moved
+paths and is checker-matched as a successor — carries the projection's single
+`coveredByTaskIds` task, including one already recorded on the decision; a path-agnostic
+reason sentinel matches task rows of its reason code at any path, like the checker).
+Task rows that rotate with the
+registry — including checker-matched successors that now own a carried obligation — carry
+their current ids forward; a projection's `coveredByTaskIds` task and the carried ids a
+booked split records resolve against the claim group's assets across work types (a
+covering task can live in another work type's group), and every booking requires a rated
+asset. It previews by
 default and appends only with `--write`:
 
 ```bash
@@ -459,14 +486,18 @@ npx tsx scripts/maintenance/apply-sentinel-closures.ts \
 | --- | --- |
 | `closed` + `admission: verified` (structured-pending-production) | promote; every sentinel absent |
 | `closed` + `admission: not-applicable` | promote; every sentinel absent |
-| `still-open` + reason `sentinels-partially-absent` + `not-applicable` | partial promote; carries the open sentinels |
+| `still-open` + reason `sentinels-partially-absent` + `not-applicable` | partial promote only with ≥1 checker-confirmed `absent` match; carries every non-absent (present/adverse/successor) sentinel |
 | `still-open` + `admission: failed` | skip `spp-admission-failed` (wait state; **no reject**) |
 | `still-open` (other reasons), `replaced-adversely`, `unverifiable` | skip `verdict-not-bookable` |
+| task rows cannot be mapped one-to-one to the decision's sentinels (a surviving recorded task no carried sentinel holds, or carried sentinels that cannot each hold one distinct task row, successor-matched and projection-backed included) | skip `ambiguous-task-mapping` |
+| an asset is not rated (the checker's `asset-not-rated` block) | skip `asset-not-rated` |
 | admission axis inconsistent with the ledger's `deferState` | skip `spp-state-mismatch` |
 
 The applier refuses an artifact without replay evidence
 (`closure-evidence-insufficient`), a stale decision index or count (`stale-ledger-basis`),
-and any sentinel it can still find. Its reason rule is deliberately stricter than the
+one stamped with an older checker version (`checker-version-mismatch`: verdict semantics
+are versioned, and archived verdicts must be regenerated with the current checker before
+booking), and any sentinel it can still find. Its reason rule is deliberately stricter than the
 checker's successor rule, so a `closed` row may still skip as `sentinel-still-open`:
 fail-closed, never a wrong booking, and the preview books fewer groups than the `closed`
 headline. Approve the PR only after the preview names every skipped row. Never copy the

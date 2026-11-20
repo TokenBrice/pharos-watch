@@ -1,9 +1,6 @@
 import { base64ToBytes, bytesToBase64 } from "@shared/lib/base64";
 import { stableJsonStringifyChunksV1, stableJsonStringifyV1 } from "@shared/lib/stable-json";
-import {
-  SafetyScoreV9CurrentCardSchema,
-  type SafetyScoreV9CurrentCard,
-} from "@shared/types/safety-score-v9-public";
+import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import {
   SafetyScoreV9CurrentResponseSchema,
   type SafetyScoreV9CurrentResponse,
@@ -238,6 +235,7 @@ function admitPublicationPayload(value: unknown, reuseUnchangedCards = false): S
     return responseSchema.parse(value);
   }
   const cards: unknown[] = value.cards;
+  const cardSchema = responseSchema.shape.cards.element;
   // JSON.parse transferred these rows to this decoder. Admit and replace each
   // owned row before moving on, rather than retaining two complete card graphs.
   // The envelope still runs every response refinement, including parent and
@@ -247,7 +245,7 @@ function admitPublicationPayload(value: unknown, reuseUnchangedCards = false): S
   for (let index = 0; index < cards.length; index++) {
     try {
       const original = cards[index];
-      const parsed = SafetyScoreV9CurrentCardSchema.parse(original);
+      const parsed = cardSchema.parse(original);
       const admitted = reuseUnchangedCards && original !== null && typeof original === "object" && sameJsonValue(original, parsed)
         ? original : parsed;
       cards[index] = admitted;

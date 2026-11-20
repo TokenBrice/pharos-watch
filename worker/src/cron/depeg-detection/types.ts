@@ -56,7 +56,12 @@ export interface DepegObservationCensus {
   belowFloorCount: number;
   reasonCounts: Partial<Record<DepegObservationGapReason, number>>;
   /** Source facts only; acknowledgements are resolved by operator canaries. */
-  unavailableAssets?: { id: string; reason: DepegObservationGapReason; reviewedNominalReference: boolean }[];
+  unavailableAssets?: {
+    id: string;
+    reason: DepegObservationGapReason;
+    reviewedNominalReference: boolean;
+    observedNonParityProtocolRedeem?: true;
+  }[];
   unavailableIdsTruncated?: boolean;
   unavailableIdsDropped?: boolean;
 }

@@ -1,6 +1,6 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   CURATION_LEDGER_DECISION_FIELDS,
@@ -368,5 +368,130 @@ describe("curation ledger append", () => {
     const latest = indexLatestCurationDecisions(ledger.decisions);
     expect(latest.get(FIXTURE_GROUP)).toMatchObject({ index: 0 });
     expect(latest.get(otherGroup)).toMatchObject({ index: 3 });
+  });
+
+  it("keeps the #945 syrupusdt X Layer defer free of closed task ids, dead citations and unconfirmed owners", () => {
+    const artifact = resolve(
+      import.meta.dirname,
+      "../../../.github/artifacts/safety-score-missing-data-reviewed-ledger.json",
+    );
+    const decisions = parseCurationLedger(JSON.parse(readFileSync(artifact, "utf8"))).decisions;
+    // Select the 2026-11-20 defer itself, not the group's latest decision: a valid
+    // later promotion must leave this historical entry's assertions untouched.
+    const defer = decisions.find(
+      (decision) =>
+        decision.claimGroupId === "DEPLOYMENT_CONTROLS:syrupusdt-maple" &&
+        decision.reviewedAt === "2026-11-20" &&
+        decision.decision === "defer",
+    );
+    expect(defer).toMatchObject({ taskIds: [] });
+    expect(defer?.nextReviewTrigger).toContain("Manual completion");
+    expect(defer?.nextReviewTrigger).toContain("2026-11-26T16:54:13Z");
+    // The ledger designates the owner but never self-certifies it ("confirmed
+    // 2026-11-20" passed with all four live #945 comments acknowledging no owner):
+    // the acknowledgment is the lead's comment, which every existing comment
+    // (latest 2026-10-28, re-checked 2026-11-20) still lacks.
+    expect(defer?.nextReviewTrigger).toContain(
+      "Owner: the 2026-11-24 weekly curation-expiry sweep operator lane",
+    );
+    expect(defer?.nextReviewTrigger).toContain("designated 2026-11-20");
+    expect(defer?.nextReviewTrigger).not.toContain("confirmed 2026-11-20");
+    expect(defer?.nextReviewTrigger).not.toContain("assignment pending");
+    expect(defer?.nextReviewTrigger).toContain("acknowledges this owner");
+    expect(defer?.nextReviewTrigger).toContain("none of the four existing comments");
+    // The posted #945 comment carries the assignment and the dated sDOLA/srUSD
+    // waits; the trigger stays their durable carrier until the comment lands.
+    expect(defer?.nextReviewTrigger).toContain("dated sDOLA and srUSD issuer waits");
+    // Each of the three checks ends its own clause with a dated recheck: the
+    // lapse operator must not depend on one entry-level trailing date.
+    expect(defer?.nextReviewTrigger).toMatch(
+      /emitted sentinel \(recheck 2026-11-26T16:54:13Z lapse, then each weekly sweep until closed\)/,
+    );
+    expect(defer?.nextReviewTrigger).toMatch(
+      /not an event of TokenPool\); recheck 2026-11-26T16:54:13Z lapse, then each weekly sweep until closed/,
+    );
+    expect(defer?.nextReviewTrigger).toMatch(
+      /0x3b59f232 filter was void\); recheck 2026-11-26T16:54:13Z lapse, then each weekly sweep until closed/,
+    );
+    // The waits' checks ride this entry too (the sDOLA group is churn-parked and
+    // scratch is not durable): the lapse operator must find them here until posted.
+    expect(defer?.nextReviewTrigger).toContain("ChainAdded/ChainRemoved/RemotePoolAdded/RemotePoolRemoved");
+    expect(defer?.nextReviewTrigger).toContain("mill 396");
+    expect(defer?.nextReviewTrigger).toContain("0xee94a30e topic filter was void");
+    // Full topic hash: a corrupted suffix passes a prefix assertion while the
+    // filtered scan silently comes back empty and misses real history.
+    expect(defer?.nextReviewTrigger).toContain(
+      "PeerSet(uint32,bytes32) topic0 0x238399d427b947898edb290f5ff0f9109849b1c3ba196a42e35f00c50a54b98b",
+    );
+    expect(defer?.nextReviewTrigger).toContain("0x316cd39632cac4f4cdfc21757c4500fe12f64514");
+    expect(defer?.nextReviewTrigger).toContain("0x5475611dffb8ef4d697ae39df9395513b6e947d7");
+    // Each scan's own clause starts at the 2026-10-27 prior-review clock: a global
+    // occurrence count passes when the sDOLA clause carries both dates and the
+    // srUSD scan starts after the review window.
+    expect(defer?.nextReviewTrigger).toMatch(
+      /ChainAdded\/ChainRemoved\/RemotePoolAdded\/RemotePoolRemoved since 2026-10-27T16:54:13Z/,
+    );
+    expect(defer?.nextReviewTrigger).toMatch(
+      /0x5475611dffb8ef4d697ae39df9395513b6e947d7 since 2026-10-27T16:54:13Z/,
+    );
+    // sDOLA reconciles pinned token/pool identity before scanning, and the scan
+    // covers every reconciled pair: listing both Arbitrum pools as evidence is not
+    // scanning them — a census-pools-only trigger skips the directory pool's events.
+    expect(defer?.nextReviewTrigger).toContain("pinned token/pool identity reconciliation");
+    expect(defer?.nextReviewTrigger).toContain(
+      "on every further pair the reconciliation surfaces, never census pools alone",
+    );
+    expect(defer?.nextReviewTrigger).toContain("scan both pools where they disagree");
+    expect(defer?.nextReviewTrigger).toContain("0xe24c58d2e4dfd043766c0fcb6895f0dc46e114ff");
+    expect(defer?.nextReviewTrigger).toContain("0xbbc28db61df26b76d5f7d5eed17ed4d6c278460e");
+    // The directory delta stays observation-only: a cached five-network response
+    // then a fresh three-network one looks identical to real churn, so the trigger
+    // keeps the dated three-network read without asserting an intraday change.
+    expect(defer?.nextReviewTrigger).toContain("read 2026-11-20, three networks");
+    expect(defer?.nextReviewTrigger).toContain("an earlier same-day read showed five");
+    expect(defer?.nextReviewTrigger).toContain("cached-then-fresh response sequence looks the same");
+    expect(defer?.nextReviewTrigger).not.toContain("intraday");
+    const evidence = (defer?.evidence ?? []).map(String);
+    expect(evidence.some((line) => line.includes("syrupusd-crosschain.md"))).toBe(true);
+    expect(evidence.some((line) => line.includes("syrupusdt-crosschain.md"))).toBe(false);
+    expect(evidence.some((line) => line.includes("six networks including X Layer"))).toBe(true);
+    expect(evidence.some((line) => line.includes("still lists five networks without X Layer"))).toBe(false);
+    expect(evidence.some((line) => line.includes("churns intraday"))).toBe(false);
+    // Same pinned-evidence provenance for the X Layer reads: a reviewer replaying
+    // the deployment-timing eth_getCode reads must hit the exact blocks that dated
+    // the deployment, so both pins carry the keyless URL and full block hashes.
+    const xlayerState = evidence.find((line) => line.includes("76367070"));
+    expect(xlayerState).toContain("https://rpc.xlayer.tech");
+    expect(xlayerState).toContain("0x7eca75d94d48354e1bb0be914385d8ee630cc873e8e1ddfd2fb780580fbbccb3");
+    expect(xlayerState).toContain("eth_call typeAndVersion()/getSupportedChains()/getToken()");
+    // The observation window opens at the first successful call (03:53:53Z): the
+    // 03:53:45Z batch reverted with no results. The state block's own timestamp
+    // is pinned, and totalSupply() is bound to the token — the pool call reverts.
+    expect(xlayerState).toContain("observedAt 2026-11-20T03:53:53Z–03:54:06Z");
+    expect(xlayerState).toContain("block timestamp 2026-11-20T00:55:06Z");
+    expect(xlayerState).toContain(
+      "eth_call totalSupply() on token 0xd7f1eb70a6a471548a2fab5e0af5eb8cb289d547",
+    );
+    const xlayerTiming = evidence.find((line) => line.includes("Deployment timing"));
+    expect(xlayerTiming).toContain("https://rpc.xlayer.tech");
+    expect(xlayerTiming).toContain("eth_getCode");
+    expect(xlayerTiming).toContain("0x0a04a99b49b820e63280f4430a34cce7f74667c8b7dfd1b63d02b9cb136f7f09");
+    expect(xlayerTiming).toContain("0xce30442b40b9881e3842d2a252af1028ecfc066185abcf34faf371594db33332");
+    // Each pin binds its block to its own block timestamp and observation time:
+    // a shared "observedAt 03:53" prefix passes when the second time disappears
+    // or the state timestamp drifts to an observation time.
+    expect(xlayerTiming).toMatch(
+      /block 74351017[^;]*timestamp 2026-10-27T16:54:13Z[^;]*observedAt 2026-11-20T03:53:23Z/,
+    );
+    expect(xlayerTiming).toMatch(
+      /block 74525375[^;]*timestamp 2026-10-29T17:20:11Z[^;]*observedAt 2026-11-20T03:53:25Z/,
+    );
+    // Pinned-evidence provenance (docs/process/agent-artifacts.md): the Arbitrum
+    // reads cite the keyless endpoint, the pinned block hash and the exact methods,
+    // so the next reviewer can reproduce the same pinned state.
+    const arbReads = evidence.find((line) => line.includes("Arbitrum pinned reads"));
+    expect(arbReads).toContain("https://api-arbitrum-mainnet-archive.n.dwellir.com");
+    expect(arbReads).toContain("0x01bb113328dbf74ee9c81621f859b8d722f15669c9f08456cf195b98ea98d097");
+    expect(arbReads).toContain("eth_call symbol()/totalSupply() + eth_getCode");
   });
 });

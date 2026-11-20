@@ -10,6 +10,7 @@ import syrupUsdcMetadata from "../../data/stablecoins/coins/syrupusdc-maple.json
 import usd1Metadata from "../../data/stablecoins/coins/usd1-world-liberty-financial.json";
 import usdtMetadata from "../../data/stablecoins/coins/usdt-tether.json";
 import usdtReserves from "../../data/stablecoins/domains/reserves/usdt-tether.json";
+import yldsReserves from "../../data/stablecoins/domains/reserves/ylds-figure.json";
 import mechanismOverlays from "../../data/safety-score-v9/mechanism-review-overlays-v1.json";
 
 describe("stablecoin source-data regressions", () => {
@@ -111,5 +112,13 @@ describe("stablecoin source-data regressions", () => {
       (row) => row.reserveName === "Bitcoin",
     );
     expect(disposition?.pct).toBe(bitcoin?.pct);
+  });
+
+  it("keeps YLDS's unaudited September 2026 10-Q out of the audited reserve source list", () => {
+    // Compiled Backing evidence is stamped with the audited period/publication dates,
+    // so an unaudited supplemental filing must live in the evidence log, not here.
+    const urls = yldsReserves.reserveReview.sources.map((source) => source.url);
+    expect(urls).not.toContain("https://www.sec.gov/Archives/edgar/data/1974395/000162828026073949/fcc-20260930.htm");
+    expect(yldsReserves.reserveReview.compositionAsOf).toBe("2025-12-31");
   });
 });

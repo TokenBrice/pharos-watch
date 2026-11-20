@@ -80,7 +80,8 @@ describe("MethodologyPage", () => {
   it("explains current admission in the rendered and Markdown methodology sections", () => {
     for (const [content, claims] of [
       [PEGSCORE_DEWS_SECTION_CONTENT, ["Friday at 5 p.m. and reopens Sunday at 5 p.m.", "Sunday 6 p.m. reopen",
-        "three other independently sourced same-peg tokens", "traded native pair or independent 24/7 pool"]],
+        "three other independently sourced same-peg tokens", "traded native pair or independent 24/7 pool",
+        "keeps the deepest discount or largest premium", "PegScore and dedicated incident page eligibility use the grouped peak"]],
       [STABILITY_INDEX_SECTION_CONTENT, ["scores confirmed peer-relative events on their own lower-confidence basis",
         "carry the last admitted contribution for that event", "FX evidence switch ships off", "Methodology v3.69", "Methodology v3.68"]],
       [MINT_BURN_FLOW_SECTION_CONTENT, ["Counted Tron Issue and Redeem events", "USDT holder pressure stays unavailable",

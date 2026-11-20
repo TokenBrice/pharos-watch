@@ -49,6 +49,12 @@ Edit `STABLECOIN_PRICE_GAP_REVIEWS` in `worker/src/lib/stablecoin-publication-re
 
 Unlike the active registry, historical reviews have no invalid/expired ID diagnostics surfaced from the canary, no 48-hour renewal reminder and no authored-registry validation sweep. Invalid entries acknowledge nothing when evaluated rather than failing at module load. Inspect `acknowledgedUnavailableIds.reviewedPriceGap` and `actionableUnavailableIds` in the canary metadata and schedule editorial renewal explicitly. Expiry re-arms the gap on the next evaluation; persisted canary metadata is not revalidated by status reads.
 
+### Depeg census reviews for unavailable parity quotes
+
+For Solayer sUSD, re-read [the stablecoin publication](https://api.pharos.watch/api/stablecoins) and inspect the latest completed depeg census. Renew `DEPEG_NO_PARITY_QUOTE_REVIEWS` in `worker/src/lib/canary-checks-depeg.ts` only while the selected `protocol-redeem` mark is an upstream-clocked accrued USD valuation per raw token and the census records `observedNonParityProtocolRedeem: true` for the exact `susd-solayer` ID. Record the owner, reason, HTTPS evidence, nonfuture review time, and an expiry at most seven days later.
+
+Inspect `acknowledgedUnavailableIds.noParityQuoteByDesign` and the raw and actionable counts in the two depeg completeness canaries. Schedule the review explicitly before expiry. If a comparable market quote is admitted, retire the review. If the valuation or census evidence is missing, the gap stays actionable. At expiry, any continuing gap becomes actionable on the next evaluation.
+
 ### Market-hours calendars
 
 For an exempt Mento gap, verify the recorded first-missing clock against the matching half-open closure. Pre-close and unknown-onset gaps retain ordinary alert eligibility through reopening. For compact metadata, inspect the optional evaluation clock and gap onset separately from the public breadth count.

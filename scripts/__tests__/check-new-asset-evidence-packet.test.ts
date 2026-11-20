@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { REPORT_CARDS_BASE_INPUT_GENERATION_ID_PREFIX } from "@shared/lib/report-cards-base-input-identity";
 import {
   NEW_ASSET_GATE_OVERRIDE_LABEL,
   NEW_ASSET_OPEN_QUESTION_LIMIT,
@@ -97,6 +98,13 @@ function failKinds(report: NewAssetGateReport): string[] {
 }
 
 describe("new-asset evidence packet gate", () => {
+  it("accepts a base generation and the full canonical admission suffix", () => {
+    const assetId = "isc-international-stable-currency";
+    const captureId = `${REPORT_CARDS_BASE_INPUT_GENERATION_ID_PREFIX}${"a".repeat(64)}+admit:${assetId}`;
+    const receipt = { ...JSON.parse(receiptJson({ assetId, questions: [] })), captureId };
+    expect(evaluate(JSON.stringify(receipt), { assetId }).passed[0]?.captureId).toBe(captureId);
+  });
+
   it("fails a synthetic listing that would publish more than six open questions", () => {
     const report = evaluate(receiptJson({ questions: openQuestions(NEW_ASSET_OPEN_QUESTION_LIMIT + 1) }));
 

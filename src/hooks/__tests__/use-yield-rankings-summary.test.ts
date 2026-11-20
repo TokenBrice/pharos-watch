@@ -8,7 +8,10 @@ import { projectYieldRankingsSummary } from "@shared/lib/yield-rankings-summary"
 import { makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
-import { useYieldRankingsSummary } from "../api-hooks";
+import { makeDeliveryOnlyYieldResponse } from "@/components/__tests__/yield-detail.test-support";
+import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
+import { useYieldRankings, useYieldRankingsSummary } from "../api-hooks";
+import { useLiveYieldRankings } from "../use-yield-source-clock";
 
 function summaryPayload(topId: string): YieldRankingsSummaryResponse {
   return projectYieldRankingsSummary({
@@ -30,6 +33,43 @@ function summaryPayload(topId: string): YieldRankingsSummaryResponse {
 describe("useYieldRankingsSummary", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it("withdraws delivery-only scores from both cached live queries at the batch deadline", () => {
+    vi.useFakeTimers({ now: 1_776_000_000_000 });
+    const peer = makeYieldRanking({ id: "usdt-tether", liveRank: 2, rankChangeAttribution: {
+      previousRank: 3, rankDelta: 1, previousPys: 48, pysDelta: 2, primaryDriver: "apy", driverContributions: {},
+    } });
+    const data = makeDeliveryOnlyYieldResponse([peer]);
+    const queryClient = new QueryClient();
+    const { yieldRankings, yieldRankingsSummary } = FRONTEND_API_QUERY_DESCRIPTORS;
+    queryClient.setQueryData(yieldRankings.queryKey, { data, meta: null });
+    queryClient.setQueryData(yieldRankingsSummary.queryKey, { data: projectYieldRankingsSummary(data), meta: null });
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client: queryClient }, children);
+    const { result } = renderHook(() => [
+      useLiveYieldRankings(useYieldRankings()), useLiveYieldRankings(useYieldRankingsSummary()),
+    ] as const, { wrapper });
+
+    act(() => vi.advanceTimersByTime(50));
+    act(() => vi.advanceTimersByTime(1949));
+    for (const query of result.current) expect(query.data?.rankings[0]?.pharosYieldScore).toBe(64);
+    expect(result.current[0].data?.rankings[1]?.rankChangeAttribution?.rankDelta).toBe(1);
+    expect(result.current[1].data?.rankings[1]?.rankDelta).toBe(1);
+    act(() => vi.advanceTimersByTime(1));
+    for (const query of result.current) {
+      expect(query.data?.rankings).toMatchObject([
+        { id: peer.id, pharosYieldScore: 50 },
+        { id: "usdc-circle", pharosYieldScore: null, pysNullReason: "source-stale" },
+      ]);
+    }
+    expect(result.current[0].data?.rankings[0]).toMatchObject({ liveRank: 1, rankChangeAttribution: undefined });
+    expect(result.current[0].data?.rankings[1]?.provenance).toMatchObject({
+      sourceAgeSeconds: null, scoreQualification: "NR", scoreQualified: false,
+    });
+    expect(result.current[1].data?.rankings[0]?.rankDelta).toBeUndefined();
+    expect(queryClient.getQueryData(yieldRankings.queryKey)).toMatchObject({ data });
   });
 
   it("keeps the previous rankings visible until a pending refetch replaces them", async () => {
@@ -51,7 +91,7 @@ describe("useYieldRankingsSummary", () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const wrapper = ({ children }: { children: ReactNode }) =>
       createElement(QueryClientProvider, { client: queryClient }, children);
-    const { result } = renderHook(() => useYieldRankingsSummary(), { wrapper });
+    const { result } = renderHook(() => useLiveYieldRankings(useYieldRankingsSummary()), { wrapper });
 
     await waitFor(() => expect(result.current.data?.rankings[0]?.id).toBe("usdc-circle"));
 

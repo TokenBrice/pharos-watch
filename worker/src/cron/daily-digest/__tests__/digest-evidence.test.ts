@@ -9,6 +9,8 @@ import { collectDewsStress, collectYieldAnomalies } from "../collectors-risk";
 import { buildChangeSummary } from "../digest-change-summary";
 import { buildForwardLookOutcomes, buildNextTriggers } from "../digest-next-triggers";
 import { comparableDepegs, type DigestEvidence } from "../digest-evidence";
+import { buildEditorialCandidates } from "../editorial-candidates";
+import { buildUserPrompt } from "../prompt";
 import { makeCollectorCtx, makePublishedDewsTables } from "../../__tests__/daily-digest.test-support";
 
 function input(at: number, current = true): DigestInputData {
@@ -111,7 +113,7 @@ describe("canonical comparable digest evidence", () => {
     expect(activeCtx.evidence.activeDepegs).toHaveLength(4);
   });
 
-  it("admits only public recoveries into the count, signal keys and evidence", async () => {
+  it("admits only public recoveries and keeps disputed peaks out of active severity", async () => {
     const { db, sqlite } = fixtures.open();
     const now = 1_795_017_600, start = now - 4 * HOUR_SECONDS, end = now - 600, restart = now - 300;
     const insert = sqlite.prepare(`INSERT INTO depeg_events
@@ -120,8 +122,8 @@ describe("canonical comparable digest evidence", () => {
       VALUES (?, ?, ?, ?, 'below', -310, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
     const coverage = JSON.stringify({ intervals: [[start, end]], atParIntervals: [[end - 300, end]] });
     insert.run(101, "eurc-circle", "EURC", "peggedEUR", start, end, 1.0659, 1.1, 1.1, 1.1, "recovered-dex", end, coverage);
-    insert.run(102, "usdt-tether", "USDT", "peggedUSD", start, end, 0.969, 1, 1, 1, "recovered-primary", null, null);
-    insert.run(103, "usdt-tether", "USDT", "peggedUSD", restart, null, 0.969, 1, null, null, null, null, null);
+    insert.run(102, "audd-novatti", "AUDD", "peggedAUD", start, end, 0.65, 0.67, 0.67, 0.67, "recovered-primary", null, null);
+    insert.run(103, "audd-novatti", "AUDD", "peggedAUD", restart, null, 0.65, 0.67, null, null, null, null, null);
     for (const [id, verdict] of [[104, "disputed"], [105, "false_positive"]] as const) {
       insert.run(id, "usdc-circle", "USDC", "peggedUSD", start + id, end, 0.969, 1, 1, 1, "recovered-primary", null, null);
       sqlite.prepare(`INSERT INTO depeg_event_provenance (event_id, source_kind, audit_verdict, created_at, updated_at)
@@ -133,8 +135,8 @@ describe("canonical comparable digest evidence", () => {
       VALUES (?, 102, 'observed', ?), (?, 103, 'observed', ?)`).run(key, start, key, restart);
     sqlite.prepare(`INSERT INTO depeg_resolver_incidents (incident_key, stablecoin_id, peg_currency, direction, first_event_id,
       current_event_id, first_started_at, current_started_at, first_observed_peak_bucket_bps, source_fingerprint, created_at, updated_at)
-      VALUES (?, 'usdt-tether', 'USD', 'below', 102, 103, ?, ?, 300, ?, ?, ?)`).run(key, start, restart, "b".repeat(64), start, restart);
-    const ids = ["eurc-circle", "usdt-tether", "usdc-circle"];
+      VALUES (?, 'audd-novatti', 'AUD', 'below', 102, 103, ?, ?, 300, ?, ?, ?)`).run(key, start, restart, "b".repeat(64), start, restart);
+    const ids = ["eurc-circle", "audd-novatti", "usdc-circle"];
     const ctx = makeCollectorCtx(db);
     Object.assign(ctx, { nowSec: now, trackedStablecoinIds: new Set(ids), mcapById: new Map(ids.map(id => [id, 1e8])), evidence: {} });
     expect((await collectResolvedDepegs(ctx)).value).toEqual({
@@ -147,6 +149,40 @@ describe("canonical comparable digest evidence", () => {
     expect(value.resolvedDepegCount).toBe(1);
     expect(value.resolvedDepegSignalKeys).toEqual([`eurc-circle:${start}:resolved`]);
     expect(value.resolvedDepegs).toMatchObject([{ symbol: "EURC", durationHours: 4 }]);
+
+    sqlite.exec("UPDATE depeg_events SET peak_deviation_bps = CASE id WHEN 102 THEN -960 ELSE -437 END WHERE id IN (102, 103)");
+    expect((await collectActiveDepegs(ctx)).value.topDepegs[0]).toMatchObject({ bps: -960, severityBasis: "peak-fallback" });
+    sqlite.exec("UPDATE depeg_events SET peak_price = 0, peg_reference = 1 WHERE id = 102");
+    const [projected] = (await collectActiveDepegs(ctx)).value.topDepegs;
+    expect(projected).toMatchObject({ bps: -960, peakBps: -960, quoteMode: "usd", severityBasis: "peak-fallback" });
+    expect(projected).not.toHaveProperty("peakPriceNative");
+    sqlite.exec(`UPDATE depeg_events SET peak_deviation_bps = -963, peak_price = 0.67 * 0.9037,
+      peak_peg_reference = 0.67, peak_quote_domain = 'usd', pending_reason = 'peer-relative' WHERE id = 102`);
+    const { topDepegs } = (await collectActiveDepegs(ctx)).value;
+    const peak = "963 bps below the peer median";
+    const data = { ...input(now), topDepegs, editorialCandidates: [] };
+    const candidate = buildEditorialCandidates(data)[0];
+    expect(buildUserPrompt(data)).toContain(`AUDD | peak ${peak} (stored peak; live price unavailable)`);
+    expect(candidate.title).toContain(peak);
+    expect(candidate.headlineFacts).toContain(`${peak} (stored peak; live price unavailable)`);
+    expect(ctx.evidence?.activeDepegs?.[0]?.peakBasis).toBe("peer-relative");
+
+    const live = { ...data, topDepegs: [{ ...topDepegs[0], currentBps: -963, severityBasis: "current" as const }] };
+    expect(buildUserPrompt(live)).toContain(`AUDD | now 963 bps below peg | peak ${peak}`);
+    expect(buildEditorialCandidates(live)[0].headlineFacts).toContain(`peak was ${peak}`);
+
+    const tiedPeak = { basis: "peer-relative", observedAt: now, price: 0.68 * 0.9037, pegReference: 0.68, bps: -963 };
+    sqlite.prepare(`UPDATE depeg_events SET peak_deviation_bps = -963, peak_price = ?,
+      peak_peg_reference = 0.68, peak_quote_domain = 'usd', peer_basis_json = ? WHERE id = 103`)
+      .run(tiedPeak.price, JSON.stringify({ peak: tiedPeak }));
+    const tied = (await collectActiveDepegs(ctx)).value.topDepegs;
+    expect(tied[0]).toMatchObject({ peakPriceUsd: tiedPeak.price, peakBasis: "peer-relative" });
+    expect(buildUserPrompt({ ...data, topDepegs: tied })).toContain(`AUDD | peak ${peak}`);
+    sqlite.exec(`UPDATE depeg_events SET peak_deviation_bps = -437, peak_price = NULL,
+      peak_peg_reference = NULL, peak_quote_domain = NULL, peer_basis_json = NULL WHERE id = 103`);
+    sqlite.prepare(`INSERT INTO depeg_event_provenance (event_id, source_kind, audit_verdict, created_at, updated_at)
+      VALUES (102, 'live', 'false_positive', ?, ?)`).run(end, end);
+    expect((await collectActiveDepegs(ctx)).value.topDepegs[0]).toMatchObject({ bps: -437, severityBasis: "peak-fallback" });
   });
 
   it("uses admitted recovery time for daily counts, signal keys and duration", async () => {
@@ -195,6 +231,12 @@ describe("canonical comparable digest evidence", () => {
           stablecoin_id: "eurc-circle", symbol: "EURC", peg_type: "peggedEUR", source: "live",
           direction: "below", peak_deviation_bps: -800, started_at: now - 3 * DAY_SECONDS,
           start_price: 0.985, peak_price: 0.92, peg_reference: 1, quote_mode: "native-peg",
+          incident_peak_json: JSON.stringify({
+            id: 1, stablecoin_id: "eurc-circle", peg_type: "peggedEUR", source: "live", quote_mode: "usd",
+            peg_reference: 1.2, peak_deviation_bps: -1000, peak_price: 1.08, peak_peg_reference: 1.2,
+            peak_quote_domain: "usd", started_at: now - 4 * DAY_SECONDS, ended_at: now - 3 * DAY_SECONDS,
+            pending_reason: null, peer_basis_json: null,
+          }),
           current_native_quote: JSON.stringify({
             value: quote, observedAt: at - NATIVE_QUOTE_AGE_SEC, source: "coingecko",
             derivation: { kind, lineage: { venue: "bitstamp", pair: "EURC/EUR" } },
@@ -215,10 +257,10 @@ describe("canonical comparable digest evidence", () => {
     const current = await collect(now, 0.92);
     expect(current[0]).toMatchObject({
       stablecoinId: "eurc-circle", quoteMode: "native-peg", severityBasis: "current",
-      currentBps: -800, priceObservedAt: now - NATIVE_QUOTE_AGE_SEC,
+      currentBps: -800, priceObservedAt: now - NATIVE_QUOTE_AGE_SEC, peakBps: -1000, peakPriceUsd: 1.08,
     });
     const converted = await collect(now, 0.92, "conversion");
-    expect(converted[0]).toMatchObject({ severityBasis: "peak-fallback" });
+    expect(converted[0]).toMatchObject({ severityBasis: "peak-fallback", bps: -1000 });
     expect(converted[0].priceObservedAt).toBeUndefined();
     const armed = buildNextTriggers({ ...input(now), topDepegs: current })
       .find((row) => row.metric === "depeg-bps");

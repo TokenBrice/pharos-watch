@@ -104,6 +104,20 @@ describe("buildDewsScoringResult peg reference admission", () => {
       referenceAdmission: { primary: { status: "admitted" }, dex: { status: "unavailable" } } });
   });
 
+  it.each([0, 30])("requires the independent DEX quote's own entitlement for market evidence (%s seconds)", (age) => {
+    const now = Date.parse("2026-11-17T16:00:00Z") / 1000;
+    const asset = { ...silverAsset(now), priceSource: "mento-broker", price: 27 };
+    const state = createSourceState();
+    state.references = new Map([["peggedSILVER", { kind: "fallback", usdPerUnit: 30, preCloseUsdPerUnit: 29,
+      observation: { pegKey: "peggedSILVER", usdPerUnit: 30, source: "gold-api.com", cadence: "intraday", observedAtSec: now - 60 } }]]);
+    state.dexPrices.dexPriceMap.set(asset.id, { dexPriceUsd: 27, updatedAt: now, sourceTotalTvl: 10e6,
+      independentQuotes: [{ price: 27, observedAtSec: now - age }] });
+    const [row] = buildDewsScoringResult({ assetById: new Map([[asset.id, asset]]), nowSec: now, pegRates: {},
+      sourceState: state, registerMalformedPersistedInput: () => {} }).results;
+    expect(row.signals.diverg).toMatchObject({ available: true, referenceAdmission: { dex: { status: "admitted" } } });
+    expect(row.evidenceKinds.includes("market-price")).toBe(age === 0);
+  });
+
   it("checks both XAGm quote clocks with FX evidence off before scoring or releasing a closure hold", () => {
     const open = Date.parse("2026-11-17T16:00:00Z") / 1000;
     const closed = Date.parse("2026-11-21T00:01:00Z") / 1000;

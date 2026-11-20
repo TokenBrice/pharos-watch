@@ -404,7 +404,8 @@ describe("loadDdrContext", () => {
     ["2026-11-20T20:59:30Z", "admitted", 1, null],
     ["2026-11-20T22:00:00Z", "held-closed-session", 0, null],
     ["2026-11-20T22:00:00Z", "admitted", 0, null],
-  ] as const)("uses the paired verdict at %s (%s, quote clock offset %d)", async (asOf, status, offset, expected) => {
+    ["2026-11-20T20:59:30Z", "admitted", 0, null, 21_600],
+  ] as const)("uses the paired verdict at %s (%s, quote clock offset %d)", async (asOf, status, offset, expected, referenceAge: number = 0) => {
     const now = Date.parse(asOf) / 1000;
     const quoteAt = Date.parse("2026-11-20T20:59:00Z") / 1000;
     const db = mockResolverD1([{
@@ -418,7 +419,7 @@ describe("loadDdrContext", () => {
           referenceAdmission: {
             status, reason: status === "admitted" ? "live-reference" : "reference-market-closed",
             kind: "fallback", source: "gold-api.com", cadence: "intraday",
-            referenceObservedAtSec: quoteAt, quoteObservedAtSec: quoteAt, decisionAtSec: quoteAt + 1,
+            referenceObservedAtSec: quoteAt - referenceAge, quoteObservedAtSec: quoteAt, decisionAtSec: quoteAt + 1,
             budgetSec: 21_600, sessionOpenedAtSec: getReferenceSessionState("metal", quoteAt).sessionOpenedAtSec,
             generation: null, policyVersion: 1,
           },
@@ -890,7 +891,7 @@ describe("loadDdrContext", () => {
 
 describe("resolveDdrIncidents", () => {
   it("grades a 12% gold-token contraction as a weak R3 anchor despite a 3.2% market-cap decline", () => {
-    const active = activeInput({ stablecoinId: "xaut-tether", symbol: "XAUT", pegType: "peggedGOLD" });
+    const active = { ...activeInput({ stablecoinId: "xaut-tether", symbol: "XAUT", pegType: "peggedGOLD" }), currentDeviationObservedAtSec: NOW_SEC - 60 };
     const context = loadedContext({
       active: [active],
       mintBurnCoveredEventIds: new Set([active.id]),
@@ -900,6 +901,7 @@ describe("resolveDdrIncidents", () => {
       ]]]),
     });
     const [row] = resolveDdrIncidents(context, NOW_SEC);
+    expect(row.currentDeviationObservedAtSec).toBe(NOW_SEC - 60);
     expect(row.relatedContext).toMatchObject({ supplyChange7dPct: -12, mintSurge: false });
     expect(row.inputs?.circulatingUsd).toBe(968_000);
     expect(row.resolution.factors).toContainEqual(expect.objectContaining({ code: "R3_no_supply_anomaly", severity: "weak" }));

@@ -16,6 +16,7 @@ import {
 import { buildDewsStablecoinIdsDigest } from "../dews-publication-pointer";
 import { checkTapeClassLiveness } from "../canary-checks-tape";
 import { PRICING_CANARY_CHECKS } from "../canary-checks-pricing";
+import { DEPEG_NO_PARITY_QUOTE_REVIEWS } from "../canary-checks-depeg";
 import { tapeProjectorCursorKey } from "../tape-event-store";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { startOfUtcDaySec } from "@shared/lib/time-buckets";
@@ -98,7 +99,7 @@ function depegCensusRuns() {
     },
     {
       started_at: NOW - 960,
-      census_json: JSON.stringify({ ...HEALTHY_CENSUS, unavailableCount: 0, reasonCounts: {} }),
+      census_json: JSON.stringify({ ...HEALTHY_CENSUS, observedCount: 100, unavailableCount: 0, reasonCounts: {} }),
       pipeline_succeeded: 1,
       unavailable_reason: null,
     },
@@ -1744,6 +1745,23 @@ describe("pricing canaries", () => {
   it("keeps a stable depeg census ok without inventing a baseline", async () => {
     const single = await runPricingCheck("depeg-observation-coverage", stablecoinsRunRows({ unavailableCount: 2 }));
     expect(single).toMatchObject({ status: "ok", metadata: { baselineAvailable: false, unavailableCount: 2 } });
+  });
+
+  it.each([true, false])("rejects inconsistent pricing census totals (current=%s)", async (current) => {
+    const { reviewedAt: now } = DEPEG_NO_PARITY_QUOTE_REVIEWS.find(({ stablecoinId }) => stablecoinId === "susd-solayer")!;
+    const row = (offset: number, valid: boolean) => ({ started_at: now - offset, status: "ok", metadata: JSON.stringify({
+      cacheWriteMode: "published", quality: { depegObservation: { ...HEALTHY_CENSUS, evaluatedAt: now - offset,
+        observedCount: valid ? 99 : 100, unavailableCount: 1, reasonCounts: { "primary-unusable": 1 }, unavailableAssets: [
+          { id: "susd-solayer", reason: "primary-unusable", reviewedNominalReference: false,
+            observedNonParityProtocolRedeem: valid ? undefined : true },
+        ] } },
+    }) });
+    const check = PRICING_CANARY_CHECKS.find(({ checkId }) => checkId === "depeg-observation-coverage")!;
+    const result = await check.run(pricingDb([row(60, !current), row(960, current)]), now, {});
+    expect(result).toMatchObject(current
+      ? { executionStatus: "failed", executionFailureReason: "depeg-observation-census-invalid" }
+      : { status: "ok", metadata: { baselineAvailable: false, actionableUnavailableCount: 1 } });
+    if (current) expect(result.metadata).not.toHaveProperty("acknowledgedUnavailableIds");
   });
 
   it.each([true, false])("grades cohort growth by actionability (nominal=%s)", async (nominal) => {
