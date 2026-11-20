@@ -1,7 +1,7 @@
 import { errorResponse, jsonResponse } from "../../lib/api-response";
 import { parseRequestJsonWithSchema } from "../../lib/api-json-body";
 import { reserveFeedbackRateLimit } from "../../lib/rate-limit";
-import { safeErrorMessage } from "../../lib/safe-error-message";
+import { containsPharosApiKeyToken, safeErrorMessage } from "../../lib/safe-error-message";
 import { READABLE_REGISTRY_BY_ID, resolveStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import {
   FEEDBACK_RATE_LIMIT_MAX_SUBMISSIONS,
@@ -27,6 +27,25 @@ export async function parseFeedbackRequest(request: Request): Promise<FeedbackBo
 
 export function validateFeedbackSubmission(feedback: FeedbackBody): ValidatedFeedbackSubmission | Response {
   if (feedback.website) return jsonResponse({ ok: true });
+
+  // Feedback becomes a public GitHub issue, so a pasted token would be
+  // disclosed the moment the issue is created. Refuse before any D1 or GitHub
+  // side effect and route the reporter to private disclosure.
+  const freeText = [
+    feedback.title,
+    feedback.description,
+    feedback.expectedValue,
+    feedback.stablecoinName,
+    feedback.pegValue,
+    feedback.contactHandle,
+    feedback.pageUrl,
+  ];
+  if (freeText.some((value) => typeof value === "string" && containsPharosApiKeyToken(value))) {
+    return errorResponse(
+      400,
+      "Do not include Pharos API keys in feedback. Remove the key and resubmit, and contact the maintainer privately if a key was exposed.",
+    );
+  }
 
   if (feedback.type === "bug" || feedback.type === "feature-request") {
     const title = feedback.title?.trim() ?? "";

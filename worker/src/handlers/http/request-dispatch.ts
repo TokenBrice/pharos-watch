@@ -3,6 +3,7 @@ import { API_PATHS } from "@shared/lib/api-endpoints";
 import { API_HOSTNAME, SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { resolveRoute, route } from "../../router";
 import type { Env } from "../../lib/env";
+import type { AuthenticatedApiKey } from "../../lib/api-key-core";
 import {
   createRequestSourceRecorder,
   isApiKeyRequestAttributionDisabled,
@@ -11,7 +12,7 @@ import {
 import { addCorsHeaders, handleCorsPreflight, resolveCorsOrigin } from "./cors";
 import { buildRouteContext } from "./context";
 import { EDGE_CACHE_NAMESPACE, createEdgeCacheContext, readEdgeCache, writeEdgeCache } from "./edge-cache";
-import { conditionalGetResponse, jsonResponse, scopeResponseEtag } from "../../lib/api-response";
+import { conditionalGetResponse, jsonResponse, scopeResponseEtag, withResponseHeaders } from "../../lib/api-response";
 import {
   evaluateTelegramIngressAbuseGate,
   recordTelegramIngressHandlerResponse,
@@ -33,6 +34,17 @@ function apiHostRootRedirect(request: Request, url: URL): Response | null {
 }
 
 const RETIRED_REPORT_CARDS_PATH = "/api/report-cards";
+
+/**
+ * The key's own per-minute limit on every authenticated response, including
+ * its 429s. No Remaining/Reset: the fast path counts per isolate, so a
+ * Remaining value would be wrong.
+ */
+function withApiKeyRateLimitHeader(response: Response, apiKey: AuthenticatedApiKey | null): Response {
+  return apiKey
+    ? withResponseHeaders(response, { "X-RateLimit-Limit": String(apiKey.rateLimitPerMinute) })
+    : response;
+}
 
 /** Authenticated clients of the retired pre-v9 report-cards path get a migration disposition, not a generic 404. */
 function retiredReportCardsResponse(request: Request, url: URL): Response | null {
@@ -87,6 +99,7 @@ export async function handleHttpRequestImpl(
     apiKeyId: number | null;
     apiKeyTrafficClass: Parameters<typeof createRequestSourceRecorder>[0]["apiKeyTrafficClass"];
     requestLane: Parameters<typeof createRequestSourceRecorder>[0]["requestLane"];
+    apiKeyThrottled?: boolean;
   }) {
     return createRequestSourceRecorder({ ...commonSourceConfig, ...gate });
   }
@@ -104,8 +117,15 @@ export async function handleHttpRequestImpl(
         apiKeyId: fastGate.apiKey?.id ?? null,
         apiKeyTrafficClass: fastGate.apiKey?.trafficClass ?? null,
         requestLane: fastGate.requestLane,
+        apiKeyThrottled: fastRateLimitResponse != null,
       })();
-      return addCorsHeaders(fastRateLimitResponse ?? conditionalGetResponse(routedRequest, cached, safetyScoreResponsePolicy(cached)), origin);
+      return addCorsHeaders(
+        withApiKeyRateLimitHeader(
+          fastRateLimitResponse ?? conditionalGetResponse(routedRequest, cached, safetyScoreResponsePolicy(cached)),
+          fastGate.apiKey,
+        ),
+        origin,
+      );
     }
   }
 
@@ -122,10 +142,13 @@ export async function handleHttpRequestImpl(
     apiKeyId: apiKey?.id ?? null,
     apiKeyTrafficClass: apiKey?.trafficClass ?? null,
     requestLane,
+    // Per-key limiter 429s (per-minute or monthly) keep route-level attribution
+    // but must not add to the key's own usage counter.
+    apiKeyThrottled: apiKey != null && gateResponse?.status === 429,
   });
   if (gateResponse) {
     recordRequestSource();
-    return addCorsHeaders(gateResponse, origin);
+    return addCorsHeaders(withApiKeyRateLimitHeader(gateResponse, apiKey), origin);
   }
 
   if (!cached && !edgeCacheProbed) {
@@ -133,7 +156,10 @@ export async function handleHttpRequestImpl(
   }
   if (cached) {
     recordRequestSource();
-    return addCorsHeaders(conditionalGetResponse(routedRequest, cached, safetyScoreResponsePolicy(cached)), origin);
+    return addCorsHeaders(
+      withApiKeyRateLimitHeader(conditionalGetResponse(routedRequest, cached, safetyScoreResponsePolicy(cached)), apiKey),
+      origin,
+    );
   }
 
   const resolvedRoute = resolveRoute(url, routedRequest.method);
@@ -161,5 +187,8 @@ export async function handleHttpRequestImpl(
   recordRequestSource();
   const cacheResponse = scopeResponseEtag(response, edgeCache.cacheKey.url, !edgeCache.skipCache, safetyScoreResponsePolicy(response));
   writeEdgeCache(edgeCache, cacheResponse, ctx);
-  return addCorsHeaders(conditionalGetResponse(routedRequest, cacheResponse, safetyScoreResponsePolicy(cacheResponse)), origin);
+  return addCorsHeaders(
+    withApiKeyRateLimitHeader(conditionalGetResponse(routedRequest, cacheResponse, safetyScoreResponsePolicy(cacheResponse)), apiKey),
+    origin,
+  );
 }

@@ -32,7 +32,7 @@ The homepage retains a bounded IndexedDB envelope of public market/PSI/incident 
 
 ### Feedback and API access
 
-Feedback contact handles may be published in GitHub issues; disclose that before submission. Partner/lost-key/removal requests use private Telegram/X constants from `shared/lib/public-api-contract.ts`, with request messages deleted after issuance/rotation. No new self-serve email requests or Resend verification are accepted. Existing self-serve credentials expire on their established schedule; legacy email/request metadata remains private until coordinated cleanup. Rate identifiers are hashed, never raw IP.
+Feedback contact handles may be published in GitHub issues; disclose that before submission. Partner/lost-key/removal requests use private Telegram/X constants from `shared/lib/public-api-contract.ts`, with request messages deleted after issuance/rotation. For partner and commercial keys, the key name, an optional contact email (`owner_email`) used only to reach the key holder about their key, and for commercial keys the payment transaction reference are retained while the key is active and for as long as accounting records require after it ends; deletion on request goes through the private channel once no longer needed. No new self-serve email requests or Resend verification are accepted. Existing self-serve credentials expire on their established schedule; legacy email/request metadata remains private until coordinated cleanup. Rate identifiers are hashed, never raw IP.
 
 Supporter claims store signing wallet, token prefix and claim time in `api_key_donor_claims`, the credited public-ledger donations (chain, transaction hash, credit time) in `api_key_donor_credits`, plus key row/name and usage metadata. Issuance audit records tier, not address. Wallet-linked credentials are personal data processed for the requested perk. Signature/plaintext token never persist or enter logs. Unsaved token is temporary browser memory across internal navigation, cleared on copy/acknowledgment/unload, never local/session storage. Wallets stay outside request telemetry/structured logs; log outcome codes only.
 
@@ -42,7 +42,7 @@ These records have no automatic expiry. Deactivation alone leaves wallet-bearing
 
 Share artifacts are server-recomputed from allowlisted answers/canonical data. They include normalized input/output, methodology/version binding, dataset hash/provenance, no account/wallet/raw IP/fingerprint. Anyone with URL can read them.
 
-Unread artifacts expire after 90 days. Successful read attempts five-year retention extension; failure does not fail read and later reads can retry. Stored extension metadata prevents sliding expiry. Keyed IP-derived quotas exist in short-lived limiter/D1, not artifact body. [Snapshot sharing](./screener-page.md#snapshot-sharing), shared schema and Pages Function own payload/verification/quota details; do not copy a second matrix here.
+Unread artifacts expire after 90 days. Successful read attempts five-year retention extension; failure does not fail read and later reads can retry. Stored extension metadata prevents sliding expiry. Keyed IP-derived quotas (per IPv4 address or IPv6 /64) and one non-IP global UTC-day counter row exist in short-lived limiter/D1, not artifact body. [Snapshot sharing](./screener-page.md#snapshot-sharing), shared schema and Pages Function own payload/verification/quota details; do not copy a second matrix here.
 
 ### Public dated scorecards
 

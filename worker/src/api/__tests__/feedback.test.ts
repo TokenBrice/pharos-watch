@@ -197,6 +197,23 @@ describe("handleFeedback", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it("rejects a submission containing a Pharos API token before any issue is created", async () => {
+    const db = mockD1([]);
+    const token = ["ph_live_0123456789abcdef_", "abcdefghijklmnopqrstuvwxyzABCDEF"].join("");
+    const res = await handleFeedback(
+      db,
+      makeRequest(makeFeedbackBody({ description: `My key ${token} stopped working.` })),
+      makeEnv(),
+    );
+
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({
+      error: "Do not include Pharos API keys in feedback. Remove the key and resubmit, and contact the maintainer privately if a key was exposed.",
+    });
+    expect(db.getHistory()).toHaveLength(0);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("requires a well-formed idempotency key only after payload validation", async () => {
     const db = mockD1([]);
     const missingKeyRequest = makeJsonRequest("https://x/api/feedback", makeFeedbackBody(), {

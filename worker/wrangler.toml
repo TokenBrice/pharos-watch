@@ -163,7 +163,7 @@ name = "SAFETY_GRADES_RATE_LIMIT"
 namespace_id = "2026091201"
 
   [ratelimits.simple]
-  limit = 120
+  limit = 60
   period = 60
 
 [[ratelimits]]
@@ -187,7 +187,7 @@ name = "SITE_SESSION_RATE_LIMIT"
 namespace_id = "2026111502"
 
   [ratelimits.simple]
-  limit = 300
+  limit = 90
   period = 60
 
 [[ratelimits]]
@@ -195,7 +195,15 @@ name = "SITE_SOURCE_RATE_LIMIT"
 namespace_id = "2026111503"
 
   [ratelimits.simple]
-  limit = 1200
+  limit = 600
+  period = 60
+
+[[ratelimits]]
+name = "OG_IMAGE_RATE_LIMIT"
+namespace_id = "2026112001"
+
+  [ratelimits.simple]
+  limit = 120
   period = 60
 
 [vars]

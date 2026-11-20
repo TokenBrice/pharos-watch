@@ -1,7 +1,13 @@
 "use client";
 
-import { API_KEY_MAX_RATE_LIMIT_PER_MINUTE, API_KEY_MIN_RATE_LIMIT_PER_MINUTE } from "@shared/lib/ops-limits";
-import { API_KEY_TIER_VALUES } from "@pharos/contracts/api-keys";
+import {
+  API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA,
+  API_KEY_COMMERCIAL_RATE_LIMIT_PER_MINUTE,
+  API_KEY_FREE_PARTNER_RATE_LIMIT_PER_MINUTE,
+  API_KEY_MAX_RATE_LIMIT_PER_MINUTE,
+  API_KEY_MIN_RATE_LIMIT_PER_MINUTE,
+} from "@shared/lib/ops-limits";
+import { API_KEY_MAX_MONTHLY_REQUEST_QUOTA, API_KEY_TIER_VALUES } from "@pharos/contracts/api-keys";
 import type { ApiKeyAuditEntry, ApiKeySummary, ApiKeyTier } from "@pharos/contracts/api-keys";
 import { RefreshCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -37,76 +43,124 @@ function ApiKeyEditableFields<TState extends CreateKeyState | EditableKeyState>(
   expiryOptions: Array<{ value: TState["expiryMode"]; label: string }>;
 }) {
   return (
-    <div className={gridClassName}>
-      <label className="space-y-1">
-        <span className="text-xs font-medium text-muted-foreground">Name</span>
-        <input
-          className={FIELD_CLASS_NAME}
-          value={state.name}
-          onChange={(event) => onChange({ name: event.target.value } as Partial<TState>)}
-        />
-      </label>
-      <label className="space-y-1">
-        <span className="text-xs font-medium text-muted-foreground">Owner email</span>
-        <input
-          className={FIELD_CLASS_NAME}
-          value={state.ownerEmail}
-          onChange={(event) => onChange({ ownerEmail: event.target.value } as Partial<TState>)}
-        />
-      </label>
-      <label className="space-y-1">
-        <span className="text-xs font-medium text-muted-foreground">Tier</span>
-        <select
-          className={FIELD_CLASS_NAME}
-          value={state.tier}
-          onChange={(event) => onChange({ tier: event.target.value as ApiKeyTier } as Partial<TState>)}
-        >
-          {API_KEY_TIER_VALUES.map((tier) => (
-            <option key={tier} value={tier}>
-              {tier}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="space-y-1">
-        <span className="text-xs font-medium text-muted-foreground">Rate Limit / Minute</span>
-        <input
-          type="number"
-          min={API_KEY_MIN_RATE_LIMIT_PER_MINUTE}
-          max={API_KEY_MAX_RATE_LIMIT_PER_MINUTE}
-          step={1}
-          className={FIELD_CLASS_NAME}
-          value={state.rateLimitPerMinute}
-          onChange={(event) => onChange({ rateLimitPerMinute: event.target.value } as Partial<TState>)}
-        />
-      </label>
-      <label className="space-y-1">
-        <span className="text-xs font-medium text-muted-foreground">{expiryLabel}</span>
-        <select
-          className={FIELD_CLASS_NAME}
-          value={state.expiryMode}
-          onChange={(event) => onChange({ expiryMode: event.target.value as TState["expiryMode"] } as Partial<TState>)}
-        >
-          {expiryOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </label>
-      {state.expiryMode === "custom" ? (
+    <>
+      <div className={gridClassName}>
         <label className="space-y-1">
-          <span className="text-xs font-medium text-muted-foreground">Expires at</span>
+          <span className="text-xs font-medium text-muted-foreground">Name</span>
           <input
-            type="datetime-local"
-            step={60}
             className={FIELD_CLASS_NAME}
-            value={state.expiresAtInput}
-            onChange={(event) => onChange({ expiresAtInput: event.target.value } as Partial<TState>)}
+            value={state.name}
+            onChange={(event) => onChange({ name: event.target.value } as Partial<TState>)}
           />
         </label>
-      ) : null}
-    </div>
+        <label className="space-y-1">
+          <span className="text-xs font-medium text-muted-foreground">Owner email</span>
+          <input
+            className={FIELD_CLASS_NAME}
+            value={state.ownerEmail}
+            onChange={(event) => onChange({ ownerEmail: event.target.value } as Partial<TState>)}
+          />
+        </label>
+        <label className="space-y-1">
+          <span className="text-xs font-medium text-muted-foreground">Tier</span>
+          <select
+            className={FIELD_CLASS_NAME}
+            value={state.tier}
+            onChange={(event) => onChange({ tier: event.target.value as ApiKeyTier } as Partial<TState>)}
+          >
+            {API_KEY_TIER_VALUES.map((tier) => (
+              <option key={tier} value={tier}>
+                {tier}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="space-y-1">
+          <span className="text-xs font-medium text-muted-foreground">Rate Limit / Minute</span>
+          <input
+            type="number"
+            min={API_KEY_MIN_RATE_LIMIT_PER_MINUTE}
+            max={API_KEY_MAX_RATE_LIMIT_PER_MINUTE}
+            step={1}
+            className={FIELD_CLASS_NAME}
+            value={state.rateLimitPerMinute}
+            onChange={(event) => onChange({ rateLimitPerMinute: event.target.value } as Partial<TState>)}
+          />
+        </label>
+        <label className="space-y-1">
+          <span className="text-xs font-medium text-muted-foreground">Monthly Request Quota</span>
+          <input
+            type="number"
+            min={1}
+            max={API_KEY_MAX_MONTHLY_REQUEST_QUOTA}
+            step={1}
+            className={FIELD_CLASS_NAME}
+            value={state.monthlyRequestQuota}
+            title="Empty keeps the tier default monthly quota."
+            onChange={(event) => onChange({ monthlyRequestQuota: event.target.value } as Partial<TState>)}
+          />
+        </label>
+        <label className="space-y-1">
+          <span className="text-xs font-medium text-muted-foreground">{expiryLabel}</span>
+          <select
+            className={FIELD_CLASS_NAME}
+            value={state.expiryMode}
+            onChange={(event) => onChange({ expiryMode: event.target.value as TState["expiryMode"] } as Partial<TState>)}
+          >
+            {expiryOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        {state.expiryMode === "custom" ? (
+          <label className="space-y-1">
+            <span className="text-xs font-medium text-muted-foreground">Expires at</span>
+            <input
+              type="datetime-local"
+              step={60}
+              className={FIELD_CLASS_NAME}
+              value={state.expiresAtInput}
+              onChange={(event) => onChange({ expiresAtInput: event.target.value } as Partial<TState>)}
+            />
+          </label>
+        ) : null}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium text-muted-foreground">Presets</span>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="min-h-11"
+          title={`${API_KEY_FREE_PARTNER_RATE_LIMIT_PER_MINUTE} requests/minute, tier-default monthly quota`}
+          onClick={() =>
+            onChange({
+              rateLimitPerMinute: String(API_KEY_FREE_PARTNER_RATE_LIMIT_PER_MINUTE),
+              monthlyRequestQuota: "",
+            } as Partial<TState>)
+          }
+        >
+          Free partner
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="min-h-11"
+          title={`${API_KEY_COMMERCIAL_RATE_LIMIT_PER_MINUTE} requests/minute, ${API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA.toLocaleString("en-US")} requests/month`}
+          onClick={() =>
+            onChange({
+              rateLimitPerMinute: String(API_KEY_COMMERCIAL_RATE_LIMIT_PER_MINUTE),
+              monthlyRequestQuota: String(API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA),
+            } as Partial<TState>)
+          }
+        >
+          Commercial
+        </Button>
+      </div>
+    </>
   );
 }
 

@@ -8,6 +8,15 @@ import {
 } from "@shared/lib/classification";
 import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
+import {
+  API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA,
+  API_KEY_COMMERCIAL_RATE_LIMIT_PER_MINUTE,
+  API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA,
+  API_KEY_FREE_PARTNER_RATE_LIMIT_PER_MINUTE,
+  DONOR_API_KEY_MONTHLY_REQUEST_QUOTA,
+  DONOR_API_KEY_RATE_LIMIT_PER_MINUTE,
+} from "@shared/lib/ops-limits";
+import { COMMERCIAL_API_KEY_USD_PER_MONTH } from "@shared/lib/public-api-contract";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { PUBLIC_DOCS } from "@shared/lib/public-docs";
 import { METHODOLOGY_CHANGELOG_REGISTRY } from "@shared/lib/methodology-versions/registry";
@@ -160,8 +169,14 @@ const learnLinks = [
   ] as const),
 ] as const;
 
+const formatQuota = (value: number): string => value.toLocaleString("en-US");
+
+const apiAccessDescription = `Keyed REST API authenticated with the X-API-Key header. Free without a key: Safety Score grades, dependency graph and published datasets. Supporter keys for donors: ${DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests/min, ${formatQuota(DONOR_API_KEY_MONTHLY_REQUEST_QUOTA)}/month. Free partner keys: ${API_KEY_FREE_PARTNER_RATE_LIMIT_PER_MINUTE}/min, ${formatQuota(API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA)}/month. Commercial keys: $${COMMERCIAL_API_KEY_USD_PER_MONTH}/month, ${API_KEY_COMMERCIAL_RATE_LIMIT_PER_MINUTE}/min, ${formatQuota(API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA)}/month.`;
+
 const apiLinks = [
-  ["API Access", absolute("/api/"), "Supporter keys for donors, partner keys on request (free for free services, paid for commercial products); free Safety Score grades without a key."],
+  ["API Access", absolute("/api/"), apiAccessDescription],
+  ["API Terms", absolute("/api/terms/"), "Terms of use for Pharos API keys: scope, attribution, key handling, limits, change notice and payment."],
+  ["Status", absolute("/status/"), "Live Pharos service health and data-freshness status."],
   ["API Reference", absolute("/api/reference/"), "Public and ops lanes, auth model, response contracts, and every public endpoint."],
   ["OpenAPI spec", absolute("/openapi.json"), "Machine-readable OpenAPI 3.1 endpoint catalogue for the Pharos API."],
   [

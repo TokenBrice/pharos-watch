@@ -20,6 +20,7 @@ import {
   type ApiRequestConsumerClass,
   type ApiRequestWorkerLane,
 } from "@pharos/contracts/request-source";
+import { utcMonthStartSec } from "./api-key-core";
 
 export { isRequestSourceAttributionDisabled } from "@shared/lib/request-attribution";
 
@@ -108,9 +109,41 @@ const apiKeyRequestRecorder = createBufferedAttributionRecorder<BufferedApiKeyRe
   },
 });
 
+const API_KEY_MONTHLY_USAGE_RETENTION_SEC = 400 * 24 * 60 * 60;
+
+// Month-to-date rollup for the per-key monthly request quota: one upsert per
+// flushed (key, UTC month), written by the same attribution call as
+// api_key_request_stats so throttled 429s stay excluded from the quota count.
+const apiKeyMonthlyUsageRecorder = createBufferedAttributionRecorder<BufferedApiKeyRequestAttribution, D1Database>({
+  batchSize: REQUEST_ATTRIBUTION_BATCH_SIZE,
+  flushDelayMs: REQUEST_ATTRIBUTION_FLUSH_DELAY_MS,
+  pruneIntervalSec: REQUEST_ATTRIBUTION_PRUNE_INTERVAL_SEC,
+  retentionSec: API_KEY_MONTHLY_USAGE_RETENTION_SEC,
+  insertSql: `INSERT INTO api_key_monthly_usage (
+       api_key_id,
+       month_start,
+       request_count
+     )
+     VALUES (?, ?, ?)
+     ON CONFLICT(api_key_id, month_start)
+     DO UPDATE SET request_count = request_count + excluded.request_count`,
+  pruneSql: [],
+  logLabel: "api-key-monthly",
+  buildKey: (entry) => `${entry.bucketStart}\t${entry.apiKeyId}`,
+  bindInsertParams: (entry) => [
+    entry.apiKeyId,
+    entry.bucketStart,
+    entry.requestCount,
+  ],
+  mergeBuffered: (existing, incoming) => {
+    existing.requestCount += incoming.requestCount;
+  },
+});
+
 export function resetRequestAttributionStateForTests(): void {
   workerRequestRecorder.reset();
   apiKeyRequestRecorder.reset();
+  apiKeyMonthlyUsageRecorder.reset();
 }
 
 export function isApiKeyRequestAttributionDisabled(env: unknown): boolean {
@@ -149,16 +182,29 @@ export async function recordApiKeyRequestAttribution(
   nowSec = Math.floor(Date.now() / 1000),
 ): Promise<void> {
   const bucketStart = nowSec - (nowSec % REQUEST_ATTRIBUTION_BUCKET_SEC);
-  await apiKeyRequestRecorder.record(
-    db,
-    {
-      apiKeyId,
-      bucketStart,
-      route: { routeKey: "api-key", routePath: "/api/*" },
-      requestCount: 1,
-    },
-    nowSec,
-  );
+  await Promise.all([
+    apiKeyRequestRecorder.record(
+      db,
+      {
+        apiKeyId,
+        bucketStart,
+        route: { routeKey: "api-key", routePath: "/api/*" },
+        requestCount: 1,
+      },
+      nowSec,
+    ),
+    apiKeyMonthlyUsageRecorder.record(
+      db,
+      {
+        apiKeyId,
+        // The month bucket is the quota check's read key.
+        bucketStart: utcMonthStartSec(nowSec),
+        route: { routeKey: "api-key", routePath: "/api/*" },
+        requestCount: 1,
+      },
+      nowSec,
+    ),
+  ]);
 }
 
 

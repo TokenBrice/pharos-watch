@@ -6,7 +6,7 @@ import { getPegTaxonomyByType } from "@shared/lib/peg-taxonomy";
 import { isRetiredFromCatalog } from "@shared/lib/stablecoin-lifecycle";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { BRZ_UNVERIFIED_PEAK_EVENT_IDS } from "@shared/data/depegs/backfill-replay-suppressions";
-import { reviewedDepegDisputeSql } from "@shared/data/depegs/reviewed-depeg-disposition-sql";
+import { reviewedDepegDisputeEvidenceSql, reviewedDepegDisputeSql } from "@shared/data/depegs/reviewed-depeg-disposition-sql";
 import { mergeDepegIntervals } from "@shared/lib/peg-utils";
 import { admittedDepegRecoveryAt } from "./tape-projectors/depeg";
 import { readPendingObservationReceipt, type DepegObservationReceipt } from "./depeg-pending";
@@ -73,7 +73,11 @@ function hasKnownAuditVerdictSql(provenance: "provenance" | "first_provenance"):
     ) ELSE 1 END`;
 }
 
-/** Correlated to e. Keep tied current peaks and distinguish malformed quote evidence from absent legacy fields. */
+/**
+ * Correlated to e. Keep tied current peaks and distinguish malformed quote evidence from absent
+ * legacy fields. A member that is itself under a reviewed dispute (same member-level evidence as
+ * the family predicate) never sets the incident peak (v6.54).
+ */
 export const PROJECTED_DEPEG_PEAK_SQL = `(
   SELECT json_object(
     'id', member.id, 'stablecoin_id', member.stablecoin_id,
@@ -109,6 +113,7 @@ export const PROJECTED_DEPEG_PEAK_SQL = `(
     AND owner.incident_key = COALESCE(${effectiveAliasIncidentKeySql("root")}, root.incident_key)
     AND member.stablecoin_id = e.stablecoin_id AND member.direction = e.direction
     AND ${hasKnownAuditVerdictSql("provenance")}
+    AND COALESCE(${reviewedDepegDisputeEvidenceSql("member", "provenance")}, 0) = 0
     AND CASE WHEN typeof(member.peak_deviation_bps) IN ('integer', 'real')
       AND member.peak_deviation_bps BETWEEN -${Number.MAX_SAFE_INTEGER} AND ${Number.MAX_SAFE_INTEGER}
       AND typeof(e.peak_deviation_bps) IN ('integer', 'real')
@@ -135,6 +140,7 @@ interface ActiveIncidentProjectionRow {
   references_valid: number;
   covered_members_json?: string;
   reviewed_dispute?: number;
+  current_row_disputed?: number;
   incident_peak_json: string | null;
 }
 
@@ -149,6 +155,8 @@ interface ActiveIncidentProjection {
   constituentEventCount: number;
   admittedCoverage?: DepegEvent["admittedCoverage"];
   reviewedDispute: boolean;
+  /** The effective fragment itself meets a member-level dispute condition. */
+  currentRowDisputed: boolean;
   peerOpening: boolean;
   peak: ReturnType<typeof readProjectedDepegPeak>;
 }
@@ -202,6 +210,7 @@ function normalizeActiveIncidentProjection(row: ActiveIncidentProjectionRow): [n
     !(row.first_pending_reason == null || typeof row.first_pending_reason === "string") ||
     !(row.first_peer_basis_json == null || typeof row.first_peer_basis_json === "string") ||
     !(row.reviewed_dispute === undefined || row.reviewed_dispute === 0 || row.reviewed_dispute === 1) ||
+    !(row.current_row_disputed === undefined || row.current_row_disputed === 0 || row.current_row_disputed === 1) ||
     typeof row.constituent_event_count !== "number" ||
     !Number.isSafeInteger(row.constituent_event_count) ||
     row.constituent_event_count <= 0
@@ -262,6 +271,7 @@ function normalizeActiveIncidentProjection(row: ActiveIncidentProjectionRow): [n
       constituentEventCount: row.constituent_event_count,
       ...(admittedCoverage !== undefined ? { admittedCoverage } : {}),
       reviewedDispute,
+      currentRowDisputed: row.current_row_disputed === 1,
       peerOpening,
       peak,
     },
@@ -288,6 +298,7 @@ function activeIncidentProjectionSql(stablecoinId: string | null): string {
           COUNT(DISTINCT linked_event.id) AS constituent_event_count,
           ${PROJECTED_DEPEG_PEAK_SQL} AS incident_peak_json,
           ${reviewedDepegDisputeSql("e")} AS reviewed_dispute,
+          COALESCE(${reviewedDepegDisputeEvidenceSql("e", "current_provenance")}, 0) AS current_row_disputed,
           json_group_array(json_object('id', linked_event.id, 'started_at', ${timestampJsonSql("linked_event.started_at")},
             'ended_at', ${timestampJsonSql("linked_event.ended_at")}, 'admitted_coverage_json', linked_event.admitted_coverage_json,
             'disposition', linked_event.disposition))
@@ -541,7 +552,11 @@ export function rowToPublicDepegEvent(
   const publishedPeerOpening = projection && sameQuoteDomain ? projection.peerOpening : peerOpening;
   const reviewedDispute = projection?.reviewedDispute || row.reviewed_dispute === 1
     || (event.disposition === "repaired" && event.admittedCoverage?.length === 0);
-  const peak = !reviewedDispute && projection?.peak && Math.abs(projection.peak.peakDeviationBps) > Math.abs(row.peak_deviation_bps)
+  // A reviewed dispute silences only its own constituents (v6.54): the family keeps the worst
+  // clean peak, while a disputed effective fragment keeps its stored row peak.
+  const currentRowDisputed = projection?.currentRowDisputed === true
+    || (event.disposition === "repaired" && event.admittedCoverage?.length === 0);
+  const peak = !currentRowDisputed && projection?.peak && Math.abs(projection.peak.peakDeviationBps) > Math.abs(row.peak_deviation_bps)
     ? projection.peak : null;
   const peakBasis = peak ?? readPublicDepegPeakBasis(row, receipt?.peak ?? null, event);
   if (peak || peakBasis.peakBasis === "peer-relative") delete event.peakPegReference;

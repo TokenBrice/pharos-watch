@@ -1,4 +1,5 @@
 import { formatElapsedSeconds } from "@shared/lib/format";
+import { API_KEY_MAX_MONTHLY_REQUEST_QUOTA } from "@pharos/contracts/api-keys";
 import {
   API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE,
   API_KEY_MAX_RATE_LIMIT_PER_MINUTE,
@@ -12,6 +13,8 @@ export interface EditableKeyState {
   ownerEmail: string;
   tier: ApiKeyTier;
   rateLimitPerMinute: string;
+  /** Empty string keeps the tier default; otherwise an explicit monthly quota. */
+  monthlyRequestQuota: string;
   expiryMode: "custom" | "non-expiring";
   expiresAtInput: string;
 }
@@ -23,6 +26,8 @@ export interface CreateKeyState {
   ownerEmail: string;
   tier: ApiKeyTier;
   rateLimitPerMinute: string;
+  /** Empty string keeps the tier default; otherwise an explicit monthly quota. */
+  monthlyRequestQuota: string;
   expiryMode: CreateExpiryMode;
   expiresAtInput: string;
 }
@@ -132,6 +137,7 @@ export const DEFAULT_CREATE_KEY_STATE: CreateKeyState = {
   ownerEmail: "",
   tier: "standard",
   rateLimitPerMinute: API_KEY_DEFAULT_RATE_LIMIT_INPUT,
+  monthlyRequestQuota: "",
   expiryMode: "default",
   expiresAtInput: "",
 };
@@ -143,6 +149,7 @@ export function buildEditableKeyState(key: ApiKeySummary): EditableKeyState {
     // Legacy rows can carry a free-form tier written before the union narrowed.
     tier: API_KEY_TIER_VALUES.find((tier) => tier === key.tier) ?? "standard",
     rateLimitPerMinute: String(key.rateLimitPerMinute),
+    monthlyRequestQuota: key.monthlyRequestQuota == null ? "" : String(key.monthlyRequestQuota),
     expiryMode: key.expiresAt == null ? "non-expiring" : "custom",
     expiresAtInput: key.expiresAt == null ? "" : formatDateTimeLocalValue(key.expiresAt),
   };
@@ -435,6 +442,22 @@ function parseRateLimitInput(value: string): number {
   return parsed;
 }
 
+/** Empty input keeps the tier default (null); otherwise a positive integer up to the contract cap. */
+function parseMonthlyQuotaInput(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  if (!/^\d+$/.test(trimmed)) {
+    throw new Error("Monthly request quota must be a whole number");
+  }
+  const parsed = Number.parseInt(trimmed, 10);
+  if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > API_KEY_MAX_MONTHLY_REQUEST_QUOTA) {
+    throw new Error(`Monthly request quota must be between 1 and ${API_KEY_MAX_MONTHLY_REQUEST_QUOTA}`);
+  }
+  return parsed;
+}
+
 export function isApiKeyExpiringSoon(key: ApiKeySummary, nowSeconds: number): boolean {
   return key.isActive
     && key.expiresAt != null
@@ -459,6 +482,7 @@ export function buildCreateApiKeyPayload(state: CreateKeyState): Record<string, 
     ownerEmail: state.ownerEmail || null,
     tier: state.tier,
     rateLimitPerMinute: parseRateLimitInput(state.rateLimitPerMinute),
+    monthlyRequestQuota: parseMonthlyQuotaInput(state.monthlyRequestQuota),
   };
 
   if (state.expiryMode === "custom") {
@@ -487,6 +511,7 @@ export function buildUpdateApiKeyPayload(draft: EditableKeyState): Record<string
     ownerEmail: draft.ownerEmail || null,
     tier: draft.tier,
     rateLimitPerMinute: parseRateLimitInput(draft.rateLimitPerMinute),
+    monthlyRequestQuota: parseMonthlyQuotaInput(draft.monthlyRequestQuota),
     expiresAt,
   };
 }

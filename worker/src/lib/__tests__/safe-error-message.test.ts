@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { redactProviderUrls, safeErrorMessage, stripSensitive } from "../safe-error-message";
+import { containsPharosApiKeyToken, redactProviderUrls, safeErrorMessage, stripSensitive } from "../safe-error-message";
 
 describe("safeErrorMessage", () => {
   it("sanitizes nested error messages without reading lazy stacks", () => {
@@ -60,6 +60,16 @@ describe("safeErrorMessage", () => {
     const safe = safeErrorMessage(new Error("fetch failed for https://api.example.com/v1/secret?token=abc"));
     expect(safe).not.toContain("example.com");
     expect(safe).toContain("[url]");
+  });
+
+  it("redacts Pharos API tokens, including copies glued to a word character", () => {
+    const token = ["ph_live_0123456789abcdef_", "abcdefghijklmnopqrstuvwxyzABCDEF"].join("");
+    expect(stripSensitive(`authorization failed for ${token} today`))
+      .toBe("authorization failed for ph_live_[redacted] today");
+    expect(safeErrorMessage(new Error(`request used ${token}`))).toBe("Error: request used ph_live_[redacted]");
+    expect(stripSensitive(`KEY_${token}\\n${token}`)).toBe("KEY_ph_live_[redacted]\\nph_live_[redacted]");
+    expect(containsPharosApiKeyToken(`KEY_${token}`)).toBe(true);
+    expect(stripSensitive("ph_live_not-a-real-token")).toBe("ph_live_not-a-real-token");
   });
 
   it("redacts API-key-bearing provider URLs while preserving host context", () => {

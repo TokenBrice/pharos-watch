@@ -1,5 +1,18 @@
 [
   {
+    "version": "6.54",
+    "title": "A reviewed dispute excludes only its own constituents from the incident peak",
+    "date": "2026-11-20",
+    "effectiveAt": 1795180646,
+    "summary": "A grouped incident under a reviewed dispute publishes its worst same-direction peak among the constituents that are not themselves disputed, instead of dropping the rule for the whole family. The published severity of an ongoing incident no longer falls because one fragment of it was disputed while nothing recovered. An effective fragment that is itself disputed keeps its stored row peak.",
+    "impact": [
+      "The candidate set for the worst peak excludes a constituent meeting any member-level dispute condition the family predicate uses: repaired with empty admitted coverage, a disputed audit verdict in the provenance column or public JSON, or an input-corruption prediction erratum. Both rules derive from one shared SQL evidence fragment.",
+      "Everything else about a reviewed dispute is unchanged: PegScore eligibility stays false, admitted coverage stays empty, analytic recovery stays withheld, and the digest and social briefing still exclude the disputed family. A disputed incident family whose clean peak reaches 500 bps is eligible for a dedicated incident page again."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.53",
     "title": "Projected depeg incidents retain their worst constituent peak",
     "date": "2026-11-20",

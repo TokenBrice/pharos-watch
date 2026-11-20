@@ -36,7 +36,7 @@ This restriction applies to the integration API, not to viewing the public websi
 
 ## Why this shape
 
-Pharos is independent and [donation-funded](/funding/). Grades are a small, cacheable response with a wide audience, so they are free with no key requirement. Supporters get a key for having paid part of the bill. Heavier integrations go through a hand review so their usage can be matched to available capacity. A paid tier for high-volume or commercial use may come later; no pricing or date is promised.
+Pharos is independent and [donation-funded](/funding/). Grades are a small, cacheable response with a wide audience, so they are free with no key requirement. Supporters get a key for having paid part of the bill. Heavier integrations go through a hand review so their usage can be matched to available capacity. A paid tier for high-volume or commercial use now exists: see the partner-key offer on the [API page](/api/).
 
 For a manually reviewed key, request a [partner key](/api/#partner-access). Eligible stablecoin donors can use [/api/](/api/) to claim a supporter key. See you at the lighthouse. 🗼
 

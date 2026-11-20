@@ -62,7 +62,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/shock-coverage-measurements-v1.json",
-      "sha256": "585ca67eeca012b2f61cde21afdd290ff4b7814337022e4ae419c15051907545"
+      "sha256": "e69a369f3753f7e866c24c356d715dceef727ff2cc94406fb94f3cbcf4bfbad1"
     },
     {
       "path": "shared/data/safety-score-v9/supply-attribution-reviews-v1.json",
@@ -1162,7 +1162,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safe-error-message.ts",
-      "sha256": "f149b423273f68f4b3a3585dfbfc0d515dd0e39f3982d319f83b05d525b4a3a8"
+      "sha256": "a9826c375345da519ee36a376a2562df3fa05bc40d4fd1f260b55b88bae370b4"
     },
     {
       "path": "worker/src/lib/safety-score-v9/candidate-identity.ts",
@@ -1351,19 +1351,19 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
   ],
   "captures": [
     {
-      "sha256": "1e2de5a3dd8a976856cf50c53c501e484dcc711e8bff4dbebe1a9b786a377fa3",
-      "r2Key": "captures/bd-basedollar/2026-11-19-block-59492214-shock-coverage.json.gz"
+      "sha256": "b0be76dee0dbf22a04ec91fce227888ae6bf230b3ec25e9a70c4d1e021a6c5a0",
+      "r2Key": "captures/bd-basedollar/2026-11-20-block-59926177-shock-coverage.json.gz"
     },
     {
-      "sha256": "0e92b8b68ebbbc88138dc394a0d3cd68f50a98aa3c210208cfde298318cfd636",
-      "r2Key": "captures/bold-liquity/2026-11-19-block-26448923-shock-coverage.json.gz"
+      "sha256": "7e7bbcea9a9d6fdc2b8db79c30ec30a1997d7b497f15d7c032291632278f9acc",
+      "r2Key": "captures/bold-liquity/2026-11-20-block-26456136-shock-coverage.json.gz"
     },
     {
-      "sha256": "87923b178839816e8838a94e214d6712499937f9da19f5cb5042d691b75e6b32",
-      "r2Key": "captures/lusd-liquity/2026-11-19-block-26448923-shock-coverage.json.gz"
+      "sha256": "6e04e292d55207f39f5ea92d7b2d96c2102c67292a3cfafc5271e9644f2f38df",
+      "r2Key": "captures/lusd-liquity/2026-11-20-block-26456136-shock-coverage.json.gz"
     }
   ],
-  "digest": "629ed1b550f65280b6521ebabc76079541dc26390e00c5de3716d06a3eba8de9"
+  "digest": "e5fe42c898194070e5374d34522543325644e53b51ab98ac9d46071a72366368"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

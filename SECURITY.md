@@ -34,6 +34,6 @@ For implementation guardrails around token-in-URL handling, inline scripts, CSP,
 
 ## Handling
 
-The maintainer will triage credible reports privately, prioritize fixes by severity, and publish public details only after a mitigation is available. Security fixes may be shipped without a public issue until disclosure is safe.
+We aim to acknowledge credible reports within 2 business days. The maintainer will triage credible reports privately, prioritize fixes by severity, and publish public details only after a mitigation is available. Security fixes may be shipped without a public issue until disclosure is safe.
 
 Supported version: the live production deployment from `main`.

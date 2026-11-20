@@ -276,6 +276,39 @@ describe("POST /api/donor-key-claims", () => {
     await expect(authenticateApiKey(db, issued.token, PEPPER, undefined, later)).resolves.toMatchObject({ kind: "valid" });
   });
 
+  it("does not burn donations when a concurrent extension wins the expiry CAS", async () => {
+    const DAY = 86_400;
+    const at0 = TERM_DONATION_SEC + 3 * 3600;
+    const sign = (nonce: string, at: number) => claim(claimMessage(termAccount, { nonce, issuedAtSec: at }), { signer: termAccount, nowSec: at });
+    await issuedKey(await sign("raceburn00000001", at0));
+    // Leave the $10 transfer donation uncredited on an expiring key.
+    sqlite.exec(
+      `DELETE FROM api_key_donor_transfer_credits WHERE transfer_discriminator = 'log:2'; UPDATE api_keys SET expires_at = ${at0 + 45 * DAY}`,
+    );
+    // A concurrent writer commits its own expiry move between this claim's
+    // reads and its compare-and-set, so this claim's CAS loses.
+    db = createSqliteD1(sqlite, {
+      onRun(sql) {
+        if (sql.startsWith("UPDATE api_keys SET expires_at")) {
+          sqlite.exec(`UPDATE api_keys SET expires_at = ${at0 + 46 * DAY}, updated_at = ${at0 + 130}`);
+        }
+      },
+    });
+    expect((await sign("raceburn00000002", at0 + 120)).status).toBe(409);
+    db = createSqliteD1(sqlite);
+
+    // The loser recorded no credits, so a later re-sign still buys 30 days.
+    expect(
+      (sqlite.prepare("SELECT COUNT(*) AS n FROM api_key_donor_transfer_credits WHERE transfer_discriminator = 'log:2'").get() as { n: number }).n,
+    ).toBe(0);
+    const later = at0 + 180;
+    const extended = DonorKeyClaimResponseSchema.parse(await (await sign("raceburn00000003", later)).json());
+    expect(extended.key.expiresAt).toBe(at0 + 76 * DAY);
+    expect(
+      (sqlite.prepare("SELECT COUNT(*) AS n FROM api_key_donor_transfer_credits WHERE transfer_discriminator = 'log:2'").get() as { n: number }).n,
+    ).toBe(1);
+  });
+
   it("enforces the issued donor key's ten-request minute quota through the access gate", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(NOW_SEC * 1000);

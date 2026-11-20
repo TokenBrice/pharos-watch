@@ -12,6 +12,7 @@ export function makeApiKeySummary(index: number, overrides: Partial<ApiKeySummar
     tier: index % 5 === 0 ? "internal" : "standard",
     trafficClass: index % 4 === 0 ? "site" : "external",
     rateLimitPerMinute: 60 + (index % 5) * 30,
+    monthlyRequestQuota: index % 3 === 0 ? 500_000 : null,
     isActive: index % 9 !== 0,
     expiresAt: index % 7 === 0 ? null : STATUS_FIXTURE_NOW_SECONDS + (index + 1) * 86_400,
     createdAt: STATUS_FIXTURE_NOW_SECONDS - (index + 30) * 86_400,

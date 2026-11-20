@@ -1,8 +1,13 @@
 // @vitest-environment jsdom
 
-import { render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { DonorKeyQualifyingCoin } from "@/lib/donor-key-qualifying-coins";
+import {
+  API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA,
+  API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA,
+  DONOR_API_KEY_MONTHLY_REQUEST_QUOTA,
+} from "@shared/lib/ops-limits";
 import { ApiOfferCards } from "./api-offer-cards";
 import { SupporterClaimSteps } from "./supporter-claim-steps";
 
@@ -53,5 +58,27 @@ describe("Supporter offer empty universe", () => {
 
     expect(summary.textContent).not.toMatch(/grades are unavailable/i);
     expect(summary.textContent).not.toMatch(/Counts toward the key:/i);
+  });
+});
+
+describe("Published tier quotas", () => {
+  it("states monthly volumes on both surfaces and links the API terms", () => {
+    render(<ApiOfferCards coins={[counting]} gradesAsOf="2026-10-09" supporterCount={0} />);
+    const offer = document.body.textContent ?? "";
+    for (const quota of [
+      DONOR_API_KEY_MONTHLY_REQUEST_QUOTA,
+      API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA,
+      API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA,
+    ]) {
+      expect(offer).toContain(`${quota.toLocaleString("en-US")} requests/month`);
+    }
+
+    cleanup();
+    render(
+      <SupporterClaimSteps coins={[counting]} gradesAsOf="2026-10-09" donations={[]} chainNames={{}} ledgerReconciledDate="2026-10-09" />,
+    );
+    const claim = document.body.textContent ?? "";
+    expect(claim).toContain(`${DONOR_API_KEY_MONTHLY_REQUEST_QUOTA.toLocaleString("en-US")} requests per month`);
+    expect(screen.getByRole("link", { name: "API terms" }).getAttribute("href")).toMatch(/^\/api\/terms\/?$/);
   });
 });
