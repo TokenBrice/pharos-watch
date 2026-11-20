@@ -729,6 +729,14 @@ describe("hero verdict, fourth figure and holder alerts", () => {
     expect(markup).not.toContain("30d Excess");
   });
 
+  it("gives a non-dollar peg its 1Y vs USD ahead of the mechanism figure", () => {
+    const model = buildStablecoinDetailHeroViewModel(makeHeroProps({ coin: { flags: { pegCurrency: "CHF" } }, performanceVsUsd1y: -6.2 }));
+    const markup = renderToStaticMarkup(<HeroCard model={model} keyMetric={{ ...ratioMetric, railTwin: true }} />);
+    expect(markup).toContain("1Y vs USD");
+    expect(markup).not.toContain("209.5%");
+    expect(markup).not.toMatch(/xl:hidden/);
+  });
+
   it("keeps the native yield-vs-T-bill figure for a yield-bearing coin", () => {
     const model = buildStablecoinDetailHeroViewModel(makeHeroProps({ coin: { flags: { yieldBearing: true } } }));
     const markup = renderToStaticMarkup(<HeroCard model={model} keyMetric={ratioMetric} />);
