@@ -12,6 +12,8 @@ import {
   createV9FactGapV3,
 } from "@shared/lib/safety-score-v9/reasons";
 import { v9FullyBoundReserveFactorEvidence, v9MaturityNotApplicableBoundFact, v9OpenEndedMaturityBoundFact } from "@shared/lib/safety-score-v9/reserve-bound-facts";
+import { evaluateV9ReserveExposures } from "@shared/lib/safety-score-v9/backing";
+import { createV9GapIndex } from "@shared/lib/safety-score-v9/gap-index";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
@@ -41,6 +43,7 @@ import {
   collateralExposureMappingIssues,
   assertKnownComponentEvidenceCurrent,
   componentResearchEvidence,
+  createAssetBuildContext,
   evidenceHistoryFor,
   missingLocalFact,
   researchEvidence,
@@ -560,6 +563,69 @@ function assertCompatibleReserveClassification(
  */
 const RESERVE_DENOMINATOR_FLOAT_TOLERANCE = 1e-9;
 
+/**
+ * v10.48 ceiling: compile the marker's as-if-admitted inputs (exactly what
+ * admission would compile were the composition inside its age budget) in a
+ * throwaway context, then price them with the ordinary reserve scoring.
+ * Nothing compiled here reaches the published asset: no exposure, gap,
+ * evidence or dependency edge, only the score.
+ *
+ * Undefined means that admitted price is not exactly computable (any
+ * exception, no admitted envelope, a tracked holding whose price needs an
+ * upstream projection, or evidence still stale), and the caller keeps the
+ * asset's pre-v10.48 treatment.
+ */
+function compileExpiredReviewedAdmittedReserveScore(
+  context: AssetBuildContext,
+  ceiling: NonNullable<AssetBuildContext["asset"]["expiredReviewedReserveComposition"]>,
+): number | undefined {
+  try {
+    const { expiredReviewedReserveComposition: _marker, ...asset } = context.asset;
+    const evidenceKeys = new Set(ceiling.researchEvidence.map((evidence) => evidence.evidenceKey));
+    const componentKeys = new Set(ceiling.componentEvidence.map((binding) => binding.componentKey));
+    const throwaway = createAssetBuildContext(context.fixedInput, context.extension, {
+      ...asset,
+      reviewedStaticReserveRows: ceiling.admittedReserveRows,
+      reserveClassifications: ceiling.reserveClassifications,
+      reserveBoundFacts: ceiling.reserveBoundFacts,
+      researchEvidence: [
+        ...asset.researchEvidence.filter((evidence) => !evidenceKeys.has(evidence.evidenceKey)),
+        ...ceiling.researchEvidence,
+      ],
+      componentEvidence: [
+        ...asset.componentEvidence.filter((binding) => !componentKeys.has(binding.componentKey)),
+        ...ceiling.componentEvidence,
+      ],
+    }, context.researchPayloadSha256);
+    const admitted = buildReserves(throwaway);
+    const statuses = [
+      admitted.reserveStatus,
+      ...admitted.reserveResiduals.map((residual) => residual.status),
+      ...admitted.reserveExposures.flatMap((exposure) => [exposure.status, ...Object.values(exposure.factorStatuses ?? {})]),
+    ];
+    if (admitted.reserveCompositionProvenance === undefined ||
+      admitted.reserveExposures.some((exposure) => exposure.trackedAssetId !== null) ||
+      statuses.some((status) => status.observationState === "stale")) return undefined;
+    const gaps = [...throwaway.gaps.values()];
+    const { score } = evaluateV9ReserveExposures({
+      assetId: asset.assetId,
+      reserveStatus: admitted.reserveStatus,
+      reserveExposures: admitted.reserveExposures,
+      reserveResiduals: admitted.reserveResiduals,
+      reserveCompositionProvenance: admitted.reserveCompositionProvenance,
+      reserveCompositionEvidenceClass: admitted.reserveCompositionEvidenceClass,
+      reserveBoundFacts: admitted.reserveBoundFacts,
+      gaps,
+      gapIndex: createV9GapIndex(gaps),
+      resolvedUpstreamExposures: [],
+      asOfSec: context.fixedInput.clockSec,
+    }, V9_CANDIDATE_POLICY_V1);
+    return score !== null && Number.isFinite(score) ? score : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function buildReserves(context: AssetBuildContext): {
   reserveStatus: V9FactStatusV2;
   reserveExposures: V9ReserveExposureFactV2[];
@@ -567,6 +633,7 @@ export function buildReserves(context: AssetBuildContext): {
   reserveCompositionEvidenceClass?: V9AssetFactsV3["reserveCompositionEvidenceClass"];
   reserveCompositionProvenance?: V9AssetFactsV3["reserveCompositionProvenance"];
   reserveBoundFacts?: V9AssetFactsV2["reserveBoundFacts"];
+  expiredReviewedAdmittedReserveScore?: number;
 } {
   if (context.asset.reserveApplicability.state === "not-applicable") {
     if (
@@ -606,15 +673,27 @@ export function buildReserves(context: AssetBuildContext): {
     const expiredPublishedHistory = reserveHistoryEvidenceIds.some(
       (evidenceId) => context.evidence.get(evidenceId)?.freshness.state === "stale",
     );
+    // v10.48: when admission rejected a whole-book, verified, dated review for
+    // age alone, the fallback names the expired composition instead of claiming
+    // the issuer discloses nothing. The rows still earn no credit; they only
+    // price the ceiling that keeps the expired reserve component at or below
+    // its admitted score. When that admitted price cannot be computed, v10.48
+    // does not apply and the asset keeps its pre-v10.48 treatment.
+    const expiredCeiling = context.asset.expiredReviewedReserveComposition === undefined
+      ? undefined
+      : compileExpiredReviewedAdmittedReserveScore(context, context.asset.expiredReviewedReserveComposition);
+    const expiredReviewedComposition = expiredCeiling !== undefined;
     const reserveStatus = missingLocalFact(context, {
         componentKey: "reserve-composition",
-        reasonCode: "missing-reserve-composition",
+        reasonCode: expiredReviewedComposition ? "expired-reviewed-reserve-composition" : "missing-reserve-composition",
         ownerDomain: "backing",
         responsibility: "unresearched",
         policyRuleId: "v9.backing.reserve-composition",
-        message: expiredPublishedHistory
-          ? "The last published reserve composition is older than the v9 freshness bound."
-          : "No reserve composition is present in the exact fixed input.",
+        message: expiredReviewedComposition
+          ? "The reviewed whole-book reserve composition is older than the v9 age budget."
+          : expiredPublishedHistory
+            ? "The last published reserve composition is older than the v9 freshness bound."
+            : "No reserve composition is present in the exact fixed input.",
         ...(expiredPublishedHistory
           ? { observationState: "stale" as const, evidenceRefIds: reserveHistoryEvidenceIds }
           : {}),
@@ -624,6 +703,7 @@ export function buildReserves(context: AssetBuildContext): {
       reserveExposures: [],
       reserveResiduals: [{ residualId: "unidentified", weight: 1, status: reserveStatus }],
       reserveBoundFacts: compileSafetyScoreV9ReserveBoundFacts(context),
+      ...(expiredCeiling === undefined ? {} : { expiredReviewedAdmittedReserveScore: expiredCeiling }),
     };
   }
 

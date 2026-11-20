@@ -245,6 +245,9 @@ function projectBackingBreakdown(
         })) }),
         weightedContribution: contribution.score === null ? 0 : contribution.score * weight,
         observationState: contribution.observationState,
+        ...(contribution.admittedScoreCeiling === undefined
+          ? {}
+          : { admittedScoreCeiling: contribution.admittedScoreCeiling }),
       };
     });
   const waterfallScore = components.reduce(

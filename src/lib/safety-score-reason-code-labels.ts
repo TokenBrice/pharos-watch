@@ -35,6 +35,9 @@ const REASON_CODE_LABELS = {
   // registered discovery provider (v9.04 reclassification).
   "incomplete-dex-route-coverage": "DEX exit routes not fully covered",
   "incomplete-oracle-liquidation-branch": "Oracle liquidation path only partly reviewed",
+  // v10.48: the issuer published a whole-book composition; it predates the
+  // evidence budget. Not a nondisclosure claim.
+  "expired-reviewed-reserve-composition": "Reserve composition published but out of date",
   "inherited-access-exposure": "Freeze exposure inherited from a reviewed upstream asset",
   "reviewed-possible-access": "Freeze reach reviewed as possible, not proven",
   "insufficient-evidence": "Not enough evidence to rate this input",

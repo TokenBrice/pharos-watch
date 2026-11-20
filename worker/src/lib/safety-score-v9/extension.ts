@@ -55,6 +55,56 @@ export {
 };
 
 
+/**
+ * v10.48 ceiling inputs for an age-only rejection: exactly what admission would
+ * compile were the reviewed composition inside its age budget at this clock —
+ * the same projected rows, evidence class and provenance, reviewed
+ * classifications, bound facts and evidence bindings. Only age is cured: each
+ * evidence budget is stretched to that evidence's current age. Undefined (so
+ * the asset keeps its pre-v10.48 treatment) when admission would still decline
+ * or would admit through a scoped observation, when the review carries reserve
+ * observations (their own dating is not separable from the composition's), when
+ * a registry reserve row names a tracked asset (its admitted price needs a
+ * dependency edge the expired path never creates), or on any error.
+ */
+function expiredReviewedReserveCeilingMarker(
+  meta: V9ExtensionRegistryMeta,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  liveReserveRows: Parameters<typeof resolveReviewedReserveAdmission>[0]["liveReserveRows"],
+  age: NonNullable<V9ReserveCompositionAdmission["age"]>,
+  reserveBoundContext: Parameters<typeof buildSafetyScoreV9ReserveBoundFacts>[2],
+): ExtensionAsset["expiredReviewedReserveComposition"] {
+  const { clockSec } = fixedInput;
+  try {
+    const admission = resolveReviewedReserveAdmission({ meta, clockSec, fixedInput, liveReserveRows, ignoreCompositionAge: true });
+    if ((admission.kind !== "named-report" && admission.kind !== "reviewed-composition") ||
+      (meta.reserveReview?.observations?.length ?? 0) > 0 ||
+      (meta.reserves ?? []).some((row) => row.coinId != null)) return undefined;
+    const reserveClassifications = buildReviewedReserveClassifications(
+      admission.projected.rows,
+      meta,
+      clockSec,
+      V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedReserveClassificationMaxAgeSec,
+      true,
+    );
+    const evidence = new ReviewEvidenceBuilder(meta.id, clockSec, sha256HexFromUtf8Chunks);
+    addReserveClassificationEvidence(meta, reserveClassifications, evidence);
+    addReviewedStaticReserveEvidence(admission, evidence);
+    const { researchEvidence, componentEvidence } = evidence.finish();
+    return {
+      ...age,
+      admittedReserveRows: admission.projected,
+      reserveClassifications,
+      reserveBoundFacts: buildSafetyScoreV9ReserveBoundFacts(meta.id, admission.projected.rows, reserveBoundContext),
+      researchEvidence: researchEvidence.map((row) => row.maxAgeSec === null ? row
+        : { ...row, maxAgeSec: Math.max(row.maxAgeSec, clockSec - row.observedAtSec) }),
+      componentEvidence,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
 export interface BuildSafetyScoreV9BaselineExtensionOptions {
   metaById?: ReadonlyMap<string, V9ExtensionRegistryMeta>;
   registryFingerprint?: string;
@@ -318,18 +368,26 @@ export function createSafetyScoreV9BaselineExtensionSource(
         // authority over independently dated, reviewed registry evidence.
         // Live rows still win; curated rows retain every source/scope/age gate.
         admissionPath = "reviewedStaticReserveRows";
+        // Capture the rejection unconditionally: the v10.48 fallback
+        // attribution reads the same admission result the optional diagnostic
+        // publishes, whether or not the diagnostic is requested.
         let reserveRejection: V9ReserveCompositionAdmission | undefined;
         const reviewedReserveAdmission = resolveReviewedReserveAdmission({
           meta,
           clockSec,
           fixedInput,
           liveReserveRows: liveReserves,
-          onRejected: options.onReserveCompositionRejected && ((diagnostic) => { reserveRejection = diagnostic; }),
+          onRejected: (diagnostic) => { reserveRejection = diagnostic; },
         });
         const reviewedStaticReserveRows = reviewedReserveAdmission.projected;
         const reserveRows = reviewedStaticReserveRows?.rows ?? liveReserves;
         admissionPath = "reserveBoundFacts";
-        const reserveBoundFacts = buildSafetyScoreV9ReserveBoundFacts(assetId, reserveRows, { clockSec, liveProvenance: fixedInput.liveReserveProvenanceMap[assetId], liveMaxAgeSec: sources.liveReserves.maxAgeSec });
+        const reserveBoundContext = { clockSec, liveProvenance: fixedInput.liveReserveProvenanceMap[assetId], liveMaxAgeSec: sources.liveReserves.maxAgeSec };
+        const reserveBoundFacts = buildSafetyScoreV9ReserveBoundFacts(assetId, reserveRows, reserveBoundContext);
+        const expiredReviewedReserveComposition = reserveRejection?.age &&
+          reserveRejection.reasons.length === 1 && reserveRejection.reasons[0] === "beyond-age-budget"
+          ? expiredReviewedReserveCeilingMarker(meta, fixedInput, liveReserves, reserveRejection.age, reserveBoundContext)
+          : undefined;
         const reviewEvidence = new ReviewEvidenceBuilder(assetId, clockSec, sha256HexFromUtf8Chunks);
         admissionPath = "reserveScopeAdmissions";
         const scopedReserveAdmission = buildSafetyScoreV10ScopedReserveAdmissions(meta, fixedInput);
@@ -630,6 +688,7 @@ export function createSafetyScoreV9BaselineExtensionSource(
           reserveClassifications,
           ...(reserveBoundFacts.length > 0 ? { reserveBoundFacts } : {}),
           reviewedStaticReserveRows,
+          ...(expiredReviewedReserveComposition ? { expiredReviewedReserveComposition } : {}),
           ...(reserveScopeAdmissions.length > 0 ? { reserveScopeAdmissions } : {}),
           routeReviews,
           retainedRoutes,

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "10.47",
+  "releaseVersion": "10.48",
   "semantic": {
     "unknownQuality": {
       "backing": { "C": 35, "U": 50 },
@@ -2031,6 +2031,25 @@
       "defaultTreatment": "NR",
       "releaseSeverity": "release-blocker",
       "publicLabel": "Required parent chain contains a cycle",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "expired-reviewed-reserve-composition",
+      "ownerDomain": "backing",
+      "archetypes": [
+        "*"
+      ],
+      "pathKinds": [
+        "local-component"
+      ],
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
+      "permittedTreatments": [
+        "pillar"
+      ],
+      "defaultTreatment": "pillar",
+      "releaseSeverity": "review-required",
+      "publicLabel": "Reviewed reserve composition is out of date",
       "auditClassification": "missing-data"
     },
     {

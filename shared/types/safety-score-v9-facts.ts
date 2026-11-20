@@ -1846,6 +1846,11 @@ const V9AssetFactsV3ObjectSchema = z
     reserveResiduals: canonicalArrayBy(V9ReserveResidualFactSchema, (residual) => residual.residualId),
     reserveCompositionEvidenceClass: V9ReserveCompositionEvidenceClassSchema.optional(),
     reserveCompositionProvenance: V9ReserveCompositionProvenanceSchema.optional(),
+    // v10.48: the ordinary reserve score the age-expired review's rows earn when
+    // compiled exactly as admission would compile them were the composition
+    // inside its age budget. Present only on that fallback; it caps the
+    // fallback's reserve component and is never a source of exposures or edges.
+    expiredReviewedAdmittedReserveScore: z.number().finite().min(0).max(100).optional(),
     exitRoutes: canonicalArrayBy(V9ExitRouteFactV2Schema.safeExtend({
       capacityEvidenceTier: ExitRouteCapacityEvidenceTierSchema,
       factorStatuses: V9ExitFactorStatusesSchema,

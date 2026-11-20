@@ -514,30 +514,58 @@ function assertPreviousReaderSource() {
     semantic: unknown; reasonRegistry: { code: string; defaultTreatment: string }[];
   };
   // Version/identity metadata is not a validator input; semantic policy and charged reason vocabulary are.
+  // Hash the same frozen-vocabulary projection the reconstructed reader loads (see previousReader):
+  // a post-freeze charged code the pre-dust enum cannot parse is not a reader-input change.
   hash.update("policy-reader-values\0").update(JSON.stringify({
     semantic: policy.semantic,
-    reasonCodes: policy.reasonRegistry.filter(reason => reason.defaultTreatment !== "diagnostic").map(reason => reason.code),
+    reasonCodes: policy.reasonRegistry.filter(reason => reason.defaultTreatment !== "diagnostic" && PRE_DUST_REASON_CODES.includes(reason.code)).map(reason => reason.code),
   }));
   // Dated Mento status has its own snapshot schema. Replay supply provenance is input/fact-set only.
   // Only typed report8 gets the pipeline-gap exception. The previous card rejects admission diagnostics.
   // v10.47 own-liability refresh: optional selfReferential/ownLiability/scopedWeights producer fields
   // only; strict objects and refinements for inputs without them are byte-identical (verified by
   // substituting origin/main's three changed files, which restores the prior digest).
-  if (hash.digest("hex") !== "b972afa8d61651324927d9904437b29477bb52f071df6e902e48b2a01ab5a10b") throw new Error("Pre-dust reader source/refinement inputs changed");
+  // v10.48 refresh: vocabulary-additive only — one V9_REASON_CODES member plus one charged policy
+  // reason (expired-reviewed-reserve-composition); the policy hash keeps the frozen-vocabulary
+  // projection, so the only digest delta is the added enum line itself.
+  // v10.48 ceiling refresh: exactly two closure files changed (safety-score-v9-facts.ts,
+  // safety-score-v9-public-breakdowns.ts), each adding one optional field
+  // (expiredReviewedAdmittedReserveScore fact; admittedScoreCeiling backing component) — strict
+  // objects and refinements for inputs without them are byte-identical (verified by substituting
+  // the v10.48 commit's two files, which restores the prior 708cb50b… digest). previousReader()
+  // rejects admittedScoreCeiling, as the frozen strict breakdown did.
+  if (hash.digest("hex") !== "a7bc5357db02ba3f548d348b7f539b185ca35b8bbdebb4c8c5702fd97c1556d7") throw new Error("Pre-dust reader source/refinement inputs changed");
 }
 
 export async function previousReader() {
   assertPreviousReaderSource();
   vi.resetModules();
+  // The pre-dust reader predates post-freeze charged vocabulary: reclassify
+  // registry codes the frozen enum cannot parse as diagnostic in the loaded
+  // policy. The coverage refine still sees every code, while the bounded
+  // attribution set (charged codes only) stays exactly the pre-dust one.
+  vi.doMock("../../data/safety-score-v9/methodology-policy-candidate-v1.json", async (original) => {
+    const policy = await original<{ default: { reasonRegistry: { code: string; defaultTreatment: string }[] } }>();
+    return { default: { ...policy.default,
+      reasonRegistry: policy.default.reasonRegistry.map((reason) => PRE_DUST_REASON_CODES.includes(reason.code)
+        ? reason
+        : { ...reason, permittedTreatments: ["diagnostic"], defaultTreatment: "diagnostic" }) } };
+  });
   vi.doMock("../safety-score-v9", async (original) => ({
     ...await original<typeof import("../safety-score-v9")>(),
     V9_REASON_CODES: PRE_DUST_REASON_CODES,
     V9ReasonCodeSchema: z.enum(PRE_DUST_REASON_CODES),
   }));
   try {
-    const { SafetyScoreV9PreviousCardSchema: card } = await import("../safety-score-v9-public");
+    const { SafetyScoreV9PreviousCardSchema: current } = await import("../safety-score-v9-public");
     const { ReportCardsV9TableCardSchema: table } = await import("../report-cards-v9-projections");
     const { SafetyScoreV9CurrentResponseSchema } = await import("../safety-score-v9-publication-response");
+    // The frozen strict breakdown had no v10.48 admittedScoreCeiling field.
+    const card = current.superRefine((value, ctx) => {
+      if (value.breakdowns?.backing.components.some((component) => component.admittedScoreCeiling !== undefined)) {
+        ctx.addIssue({ code: "custom", message: "Pre-dust breakdown components have no admittedScoreCeiling" });
+      }
+    });
     const response = SafetyScoreV9CurrentResponseSchema.safeExtend({ cards: z.array(card) });
     return { card, table, response };
   } finally {

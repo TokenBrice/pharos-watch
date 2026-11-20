@@ -1,5 +1,20 @@
 [
   {
+    "version": "10.48",
+    "title": "Expired reviewed compositions are not issuer nondisclosure",
+    "date": "2026-11-20",
+    "effectiveAt": 1795198620,
+    "summary": "A whole-book, verified, dated reviewed reserve composition that admission rejects for age alone no longer publishes as issuer nondisclosure. The whole-reserve fallback gap carries reason expired-reviewed-reserve-composition, owned by the published-evidence-expired responsibility, and prices its reserve component at the lower of the U-bound fallback and what the same rows would score if admitted (the expiry ceiling).",
+    "impact": [
+      "The composition is still not used: no reserve exposure, gap or dependency edge is compiled from expired rows and the residual still covers the whole asset, so the card stays fail-closed. Only the attribution and the price the existing policy attaches to it change: the gap keeps cause U, so the Backing unknown moves from the C bound (35) toward the U bound (50) exactly as an expired independently attested composition already does via stale-audited-reserve-composition, but capped: the expired rows are also compiled exactly as admission would compile them were the composition inside its age budget (same rows, evidence class, provenance, reviewed classifications including own-liability, bound facts and reserve scoring), and that admitted score caps the fallback's reserve component. It is published as admittedScoreCeiling on the unclassified-residual Backing breakdown row whether or not it binds, and on every reserve row it rewrote when it binds. The ceiling is on the reserve component, not the card: admission can also add dependency edges and parent caps, so a card can still score higher expired than admitted, as it could before v10.48. When the admitted score cannot be computed exactly (for example a row naming a tracked asset, a composition dated by a reserve observation, report coverage that would narrow a fresh review below the whole book, or any compile failure), v10.48 does not apply to that asset: it keeps exactly its previous missing-reserve-composition gap, cause and bound (C/35 for most, U/50 where the previous cause was U).",
+      "The decision reads the same admission result the optional reserveCompositionAdmission diagnostic publishes (reasons exactly [\"beyond-age-budget\"]) and applies whether or not the diagnostic is requested; when no exact admitted score exists, the diagnostic still names beyond-age-budget beside the unchanged missing-reserve-composition gap.",
+      "Every other admission failure keeps today's reason, cause and message: unverified, undated, selected-slices, classification-only, no review, named-report gates, variant-standalone-ineligible, observation-obligations-unresolved, and any combination with age. A composition that is both old and unverified stays cause-assigned as today.",
+      "A scoped research classification can no longer assert researched nondisclosure over this datum when the only failure is age: the research history stays filed, but the published owner is published-evidence-expired (\"This was published, but our copy is out of date\")."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "10.47",
     "title": "Zero Backing credit for self-referential reserve claims",
     "date": "2026-11-20",

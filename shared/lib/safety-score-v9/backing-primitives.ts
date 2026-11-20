@@ -103,6 +103,13 @@ export interface V9BackingAssetInput {
   readonly reserveCompositionEvidenceClass?: V9ReserveExposureFactV2["evidenceClass"];
   readonly reserveCompositionProvenance?: V9ReserveExposureFactV2["provenance"];
   readonly reserveBoundFacts?: readonly V9ReserveBoundedFact[];
+  /**
+   * v10.48: the ordinary reserve score the age-expired review's rows earn when
+   * compiled as admission would compile them inside the age budget (never set
+   * when a row names a tracked asset). Present only on the expired fallback;
+   * the published reserve component prices at min(fallback, this).
+   */
+  readonly admittedScoreCeiling?: number;
   readonly gaps: readonly (V9FactGapV2 | V9FactGapV3)[];
   readonly gapIndex?: V9GapIndex;
   readonly resolvedUpstreamExposures: readonly V9ResolvedUpstreamExposure[];
@@ -180,6 +187,12 @@ export interface V9BackingContribution {
   readonly wholeAssetWeight?: number | null;
   readonly effectiveScoringWeight?: number;
   readonly factors?: readonly V9BackingFactorContribution[];
+  /**
+   * v10.48: the admitted-price ceiling the expired-review fallback priced
+   * against: always on its unclassified-residual rows, and on every reserve
+   * row the ceiling rewrote when it binds.
+   */
+  readonly admittedScoreCeiling?: number;
   /**
    * Components this contribution excluded from its own computation under an
    * A/B cause while the contribution itself stayed priced. The pillar's
