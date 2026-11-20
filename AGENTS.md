@@ -51,7 +51,7 @@ Static Next.js 16 export on Cloudflare Pages; API on a Cloudflare Worker + D1. L
 
 Agents here run with memory off: the next session knows only the repo, GitHub and local `agents/` scratch. A follow-up left in your final message or in scratch is lost.
 
-- File a GitHub issue for every loop still open: work deferred or left partial, a dated or event-gated check (first production run not yet observed, soak, readout, review expiry), a decision only the owner can make. Do it unasked (standing authorization), as soon as you know it will outlive the session. Optional ideas stay in the report; delegated workers pass their loops to the lead agent.
+- When the session ends, file a GitHub issue for each loop the next session must pick up: work deferred or left partial, a dated or event-gated check (first production run not yet observed, soak, readout, review expiry), or an owner decision still unanswered at the end. Issues record follow-ups, never plans: ask decisions while the owner is in the session, keep plans, audits and proposals in `agents/`, and open a tracking issue only when the owner asks for one. Filing at session end is a standing authorization. Optional ideas stay in the report; delegated workers pass their loops to the lead agent.
 - Use the labels and body contract in `docs/process/agent-artifacts.md#follow-up-issues`. The daily reminder reads only `ops:followup` issues with a `Due: YYYY-MM-DD` line, so an event-gated loop gets the date of its next re-check.
 - The repo is public: no credentials, row-level D1 data, chat IDs, partner or commercial detail, or unpatched security gaps (private advisory) in issues, PRs, commits or comments.
 - End the final report with `Follow-ups:` and the issue numbers, or `none`.
