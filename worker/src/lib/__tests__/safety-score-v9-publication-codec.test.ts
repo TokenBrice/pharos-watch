@@ -423,6 +423,16 @@ describe("Safety Score V9 publication codec", () => {
     expect(() => requireCurrentSafetyScoreV9Publication(admitted)).toThrow(/schema 7/);
   });
 
+  it("rejects reserve admission diagnostics in retained schema-7 cards", async () => {
+    const stored = await authenticatedPayload(makeWorkerSafetyScoreV9Publication(), ({ openEvidence: _currentBlock, ...previous }) => {
+      previous.cards[0]!.reserveCompositionAdmission = { reasons: ["no-review"] };
+      return { ...previous, schemaVersion: 7 };
+    });
+    await expect(parseSafetyScoreV9Publication(stored)).rejects.toMatchObject({
+      issues: [{ code: "unrecognized_keys", keys: ["reserveCompositionAdmission"], path: ["cards", 0] }],
+    });
+  });
+
   it.each([4, 9])("refuses unknown authenticated publication schema %s", async (schemaVersion) => {
     const publication = makeWorkerSafetyScoreV9Publication();
     const stored = await authenticatedPayload(publication, (payload) => ({ ...payload, schemaVersion }));

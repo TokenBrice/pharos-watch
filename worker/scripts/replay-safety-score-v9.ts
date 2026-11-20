@@ -417,6 +417,7 @@ export function buildSafetyScoreV9ReplayArtifact(input: {
     ...(replayScenario === undefined ? {} : { replayScenario }),
     pipeline: buildSafetyScoreV9Candidate({
       ...candidateInput,
+      rederiveRetainedReserveCompositionAdmission: true,
       // The lane witnesses the publication actually read: without them a
       // replayed publication cannot reproduce a closure it applied.
       ...(laneScreening === undefined || laneScreening === null ? {} : {

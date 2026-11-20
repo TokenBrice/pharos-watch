@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   HistoricalResolvedReportCardsV9ResponseSchema,
+  ReportCardsV9BrowserResponseSchema,
   REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
 } from "../report-cards-v9";
 import {
@@ -67,6 +68,13 @@ describe("report-cards v9 open-evidence envelope", () => {
 
   it("accepts a live payload without openEvidence so a retained pre-cutover cache renders unavailable", () => {
     expect(ReportCardsV9CurrentResponseSchema.safeParse(base).success).toBe(true);
+  });
+
+  it("admits reserve diagnostics only on report9 cards", () => {
+    const cards = [{ ...base.cards[0]!, reserveCompositionAdmission: { reasons: ["no-review"] } }];
+    const { openEvidence: _block, openEvidenceUnavailableReason: _reason, ...archive } = base;
+    expect(HistoricalResolvedReportCardsV9ResponseSchema.safeParse({ ...archive, schemaVersion: 8, cards }).success).toBe(false);
+    expect(ReportCardsV9BrowserResponseSchema.safeParse({ ...base, cards }).data?.cards).toEqual(cards);
   });
 
   it("validates the open-evidence block against the published cards", () => {

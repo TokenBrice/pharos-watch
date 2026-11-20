@@ -1,6 +1,7 @@
 import { SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v9/evaluation-build-manifest-v1";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
+import { computeReportCardsRegistryFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
+import type { SafetyScoreV9CurrentCard, V9ReserveCompositionAdmission } from "@shared/types/safety-score-v9-public";
 import type { V9ExtensionRegistryMeta } from "./extension";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import {
@@ -80,17 +81,23 @@ import {
   type SafetyScoreV9ExpiredMeasuredExitRoutes,
 } from "./publication-assessment";
 
+// Set to the rollout's UTC epoch seconds after compatible storage readers deploy.
+const RESERVE_COMPOSITION_ADMISSION_ACTIVATION_SEC: number | null = null;
+
 export interface BuildSafetyScoreV9CandidateInput {
   fixedInput: unknown;
   publishedAtSec: number;
   extension?: unknown;
   policy?: V9ValidatedPolicyEnvelope;
   releaseCandidateId?: string;
+  /** Explicit override for replay and regression tests. */
+  includeReserveCompositionAdmission?: boolean;
+  /** Exact replay only: reconstruct diagnostics omitted from the retained extension. */
+  rederiveRetainedReserveCompositionAdmission?: boolean;
   transferMaterialityGeneration?: SafetyScoreV9TransferMaterialityGeneration | null;
   /**
    * Replay-only: accept a capture whose registry fingerprint does not match the
-   * local registry. Only reaches the baseline extension builder, so it is inert
-   * when an explicit `extension` is supplied. See
+   * local registry. Only applies when deriving the baseline extension. See
    * `BuildSafetyScoreV9BaselineExtensionOptions.allowRegistryMismatch`.
    */
   allowRegistryMismatch?: boolean;
@@ -554,21 +561,11 @@ export function buildSafetyScoreV9Candidate(
   });
 }
 
-function materializeCandidateExtension(input: BuildSafetyScoreV9CandidateFromNormalizedInput): SafetyScoreV9FactSetExtensionV2 {
-  return materializeSafetyScoreV9FactSetExtension(input.fixedInput, input.extension ??
-    buildSafetyScoreV9BaselineExtensionFromNormalizedInput(input.fixedInput, {
-      ...input.registry,
-      ...(input.allowRegistryMismatch === true ? { allowRegistryMismatch: true } : {}),
-      transferMaterialityGeneration: input.transferMaterialityGeneration ?? null,
-      ...(input.laneIncidentCertificates === undefined ? {} : { laneIncidentCertificates: input.laneIncidentCertificates }),
-      ...(input.laneEmitterDescriptors === undefined ? {} : { laneEmitterDescriptors: input.laneEmitterDescriptors }),
-    }));
-}
-
 function projectCandidatePublicationFacts(
   factSet: CompiledV9FactSetV3,
   quarantines: readonly V9AssetQuarantine[],
   input: BuildSafetyScoreV9CandidateFromNormalizedInput,
+  reserveRejections: ReadonlyMap<string, V9ReserveCompositionAdmission> | undefined,
 ) {
   return {
     affectedAssetIds: quarantineAffectedAssetIds(factSet, quarantines),
@@ -578,8 +575,13 @@ function projectCandidatePublicationFacts(
       .map((asset) => asset.assetId)),
     dependencyMetadataByAssetId: new Map(factSet.assets.map((asset) => [
       asset.assetId,
-      publicDependencyMetadata(asset, factSet, input.fixedInput,
-        (input.registry?.metaById ?? ACTIVE_META_BY_ID).get(asset.assetId)),
+      {
+        ...publicDependencyMetadata(asset, factSet, input.fixedInput,
+          (input.registry?.metaById ?? ACTIVE_META_BY_ID).get(asset.assetId)),
+        reserveCompositionAdmission: reserveRejections?.has(asset.assetId) && asset.gaps.some((gap) =>
+          gap.reasonCode === "missing-reserve-composition" && asset.reserveStatus.gapIds.includes(gap.gapId))
+          ? reserveRejections.get(asset.assetId) : undefined,
+      },
     ])),
   };
 }
@@ -709,16 +711,32 @@ function buildSafetyScoreV9CandidatePipeline(
   const policyVersion = v9PolicyVersion(policy);
   const clockSec = fixedInput.clockSec;
   const dexObservedAtSec = new Map(Object.entries(fixedInput.dexLiqMap).map(([id, row]) => [id, row.updatedAt]));
-  const extensionOptions = {
+  const includeReserveCompositionAdmission = input.includeReserveCompositionAdmission ??
+    (RESERVE_COMPOSITION_ADMISSION_ACTIVATION_SEC !== null && clockSec >= RESERVE_COMPOSITION_ADMISSION_ACTIVATION_SEC);
+  const reserveRejections = includeReserveCompositionAdmission
+    ? new Map<string, V9ReserveCompositionAdmission>() : undefined;
+  const extensionOptions: BuildSafetyScoreV9BaselineExtensionOptions = {
     ...input.registry,
     ...(input.allowRegistryMismatch === true ? { allowRegistryMismatch: true } : {}),
     transferMaterialityGeneration: input.transferMaterialityGeneration ?? null,
     ...(input.laneIncidentCertificates === undefined ? {} : { laneIncidentCertificates: input.laneIncidentCertificates }),
     ...(input.laneEmitterDescriptors === undefined ? {} : { laneEmitterDescriptors: input.laneEmitterDescriptors }),
+    onReserveCompositionRejected: reserveRejections && ((id, diagnostic) => { reserveRejections.set(id, diagnostic); }),
   };
+  const materializeCandidateExtension = (fixedInput: Readonly<SafetyScoreV9CompilerInput>) =>
+    materializeSafetyScoreV9FactSetExtension(fixedInput, input.extension ??
+      buildSafetyScoreV9BaselineExtensionFromNormalizedInput(fixedInput, extensionOptions));
   const streamExtension = !retainIntermediates && input.extension === undefined && input.liveWithheldCompilation === undefined;
   let extensionSource = streamExtension ? createSafetyScoreV9BaselineExtensionSource(fixedInput, extensionOptions) : null;
-  let extension: SafetyScoreV9FactSetExtensionV2 | null = extensionSource?.extension ?? materializeCandidateExtension({ ...input, fixedInput });
+  let extension: SafetyScoreV9FactSetExtensionV2 | null = extensionSource?.extension ?? materializeCandidateExtension(fixedInput);
+  if (input.extension !== undefined && reserveRejections && input.rederiveRetainedReserveCompositionAdmission &&
+    !input.allowRegistryMismatch &&
+    (input.registry?.registryFingerprint ?? computeReportCardsRegistryFingerprint()) === fixedInput.registryFingerprint &&
+    fixedInput.activeAssetIds.every((id) => (extensionOptions.metaById ?? ACTIVE_META_BY_ID).has(id))) {
+    // Retained extensions omit diagnostics. Rerun admission without retaining the derived assets.
+    const assets = createSafetyScoreV9BaselineExtensionSource(fixedInput, extensionOptions).assets();
+    while (!assets.next().done) { /* Collect the rejection callbacks. */ }
+  }
   // Read the DEX lane bound off the materialized extension so the card can
   // never drift from the bound the exit evidence itself was judged against;
   // the extension graph is released below.
@@ -757,7 +775,7 @@ function buildSafetyScoreV9CandidatePipeline(
   if (!retainIntermediates) extension = null;
   const evaluationFailures = new Map<string, string>();
   let quarantines = compilation.quarantines;
-  let publicationFacts = projectCandidatePublicationFacts(compiledFacts, quarantines, { ...input, fixedInput });
+  let publicationFacts = projectCandidatePublicationFacts(compiledFacts, quarantines, { ...input, fixedInput }, reserveRejections);
   compilation = null;
   if (!retainIntermediates) {
     extensionSource = null;
@@ -774,13 +792,13 @@ function buildSafetyScoreV9CandidatePipeline(
     fixedInput = input.fixedInputOwner.value ?? input.fixedInputOwner.reload();
     input.fixedInputOwner.value = fixedInput;
     extensionSource = streamExtension ? createSafetyScoreV9BaselineExtensionSource(fixedInput, extensionOptions) : null;
-    const retryExtension = extension ?? extensionSource?.extension ?? materializeCandidateExtension({ ...input, fixedInput });
+    const retryExtension = extension ?? extensionSource?.extension ?? materializeCandidateExtension(fixedInput);
     compilation =
       compileFacts(retryExtension, evaluationFailures);
     compiledFacts = compilation.factSet;
     documentation = createDocumentationState(compiledFacts.assets);
     quarantines = compilation.quarantines;
-    publicationFacts = projectCandidatePublicationFacts(compiledFacts, quarantines, { ...input, fixedInput });
+    publicationFacts = projectCandidatePublicationFacts(compiledFacts, quarantines, { ...input, fixedInput }, reserveRejections);
     compilation = null;
     if (!retainIntermediates) {
       extensionSource = null;

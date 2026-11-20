@@ -3,6 +3,7 @@ import { SafetyScoreV9PublicationIdentitySchema } from "./safety-score-publicati
 import {
   SafetyScoreV9CompletenessSchema,
   SafetyScoreV9ResolvedCurrentCardSchema,
+  SafetyScoreV9HistoricalResolvedCardSchema,
   SafetyScoreV9HistoricalCardSchema,
   SafetyScoreV9HistoricalTypedCardSchema,
   SafetyScoreV9WitnessHistoricalCardSchema,
@@ -470,12 +471,23 @@ const HistoricalReport8EnvelopeShape = {
   schemaVersion: z.literal(REPORT_CARDS_V9_REPORT8_SCHEMA_VERSION),
 } as const;
 
+const ResolvedReportCardsV9CoreSchema = z.object({
+  ...ReportCardsV9EnvelopeBaseShape,
+  cards: z.array(SafetyScoreV9ResolvedCurrentCardSchema),
+}).strict().superRefine((value, ctx) => {
+  refineReportCardsV9Response(value, ctx);
+  refineSafetyScoreV9PillarFreshness({ ...value, sourceGenerations: value.source.sourceGenerations }, ctx);
+});
+const BrowserReport9CoreSchema = ResolvedReportCardsV9CoreSchema.safeExtend({
+  schemaVersion: z.literal(REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION),
+});
+
 /**
  * Browser admission for `ReportCardsV9BrowserResponseSchema` (the module browser
  * readers import). Report8 validates as-is; report9 keeps its required-nullable
- * pair with the block passed through. Both are admitted by the strict report8
- * envelope — cards, graph, gaps and clocks included — so this module never pulls
- * the report9/OpenEvidence validators into the client bundle. The coverage
+ * pair with the block passed through. Both validate the strict shared envelope
+ * and their version's cards without pulling the OpenEvidence validators into
+ * the client bundle. The coverage
  * reader validates the block it renders with `V9OpenEvidenceSchema`
  * (`src/lib/safety-score-data-coverage.ts`), so an unusable block renders as
  * unavailable, never zero.
@@ -520,12 +532,9 @@ function parseReportCardsV9BrowserResponse(input: unknown): z.ZodSafeParseResult
     openEvidence: _block,
     openEvidenceUnavailableReason: _reason,
     documentationCauseGaps: _gaps,
-    ...report8
+    ...core
   } = record;
-  const parsed = HistoricalResolvedReportCardsV9ResponseSchema.safeParse({
-    ...report8,
-    schemaVersion: REPORT_CARDS_V9_REPORT8_SCHEMA_VERSION,
-  });
+  const parsed = BrowserReport9CoreSchema.safeParse(core);
   if (!parsed.success) {
     return rejectBrowserReport(parsed.error.issues[0]?.message ?? "Invalid report9 report-cards payload");
   }
@@ -533,7 +542,6 @@ function parseReportCardsV9BrowserResponse(input: unknown): z.ZodSafeParseResult
     success: true,
     data: {
       ...parsed.data,
-      schemaVersion: REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
       openEvidence: openEvidence as V9OpenEvidence | null,
       openEvidenceUnavailableReason: unavailableReason as V9OpenEvidenceUnavailableReason | null,
       ...(documentationCauseGaps === undefined
@@ -576,12 +584,9 @@ export const HistoricalTypedReportCardsV9ResponseSchema = z.object({
 });
 
 /** Archive-only report8 from v10.29 to the report9 cutover: resolved cards, no open-evidence block. */
-export const HistoricalResolvedReportCardsV9ResponseSchema = z.object({
-  ...HistoricalReport8EnvelopeShape,
-  cards: z.array(SafetyScoreV9ResolvedCurrentCardSchema),
-}).strict().superRefine((value, ctx) => {
-  refineReportCardsV9Response(value, ctx);
-  refineSafetyScoreV9PillarFreshness({ ...value, sourceGenerations: value.source.sourceGenerations }, ctx);
+export const HistoricalResolvedReportCardsV9ResponseSchema = ResolvedReportCardsV9CoreSchema.safeExtend({
+  schemaVersion: HistoricalReport8EnvelopeShape.schemaVersion,
+  cards: z.array(SafetyScoreV9HistoricalResolvedCardSchema),
 });
 
 /**

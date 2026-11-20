@@ -42,6 +42,7 @@ import {
   v9TestClockSec,
 } from "../../test-helpers/v9-fixed-input";
 import { localControl } from "./safety-score-v9-fact-set.test-support";
+import { eligibleReserveMeta } from "./safety-score-v9-reserve-admission.test-support";
 import { normalizeSafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 import {
   buildSafetyScoreV9AcceptedPublicationBaseline,
@@ -426,6 +427,84 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
       reason: "no-match", sourceAsOf: null, identityVerified: false,
     }]);
     expect(asset.dependencies.edges).toEqual([]);
+  });
+
+  it("publishes reserve admission reasons without changing the compiled or scored card", () => {
+    const fixedInput = makeV9FixedInput({ clockSec: AS_OF_SEC, reserves: [] });
+    const { reserveReview, reserves, proofOfReserves } = eligibleReserveMeta();
+    const day = 86_400;
+    const maxAgeSec = 38 * day;
+    const namedDate = new Date((AS_OF_SEC - 121 * day) * 1000).toISOString().slice(0, 10);
+    const previousDate = new Date((AS_OF_SEC - day) * 1000).toISOString().slice(0, 10);
+    const currentDate = new Date(AS_OF_SEC * 1000).toISOString().slice(0, 10);
+    const futureDate = new Date((AS_OF_SEC + day) * 1000).toISOString().slice(0, 10);
+    const namedReport = { ...proofOfReserves!, latestReport: {
+      ...proofOfReserves!.latestReport!, periodEnd: namedDate, publishedAt: namedDate, reviewer: "Independent LLP",
+    } };
+    const publicationOnly = { ...namedReport, latestReport: { ...namedReport.latestReport, periodEnd: undefined } };
+    const previousDayReport = { ...namedReport, latestReport: { ...namedReport.latestReport, periodEnd: previousDate, publishedAt: previousDate } };
+    for (const [review, diagnostic, proof] of [
+      [undefined, { reasons: ["no-review"] }],
+      [undefined, { reasons: ["no-review"] }, publicationOnly],
+      [{ ...reserveReview!, compositionAsOf: undefined }, { reasons: ["undated"] }, publicationOnly],
+      [{ ...reserveReview!, scope: "selected-slices", confidence: "probable", compositionAsOf: undefined },
+        { reasons: ["selected-slices", "unverified", "undated"] }],
+      [{ ...reserveReview!, compositionAsOf: "1969-12-31" },
+        { reasons: ["beyond-age-budget"], age: { compositionAsOfSec: -day, maxAgeSec } }],
+      [{ ...reserveReview!, confidence: "probable", compositionAsOf: namedDate, reviewedAt: namedDate },
+        { reasons: ["beyond-age-budget"], age: { compositionAsOfSec: Date.parse(namedDate) / 1000, maxAgeSec: 120 * day } }, namedReport],
+      [{ ...reserveReview!, compositionAsOf: namedDate, reviewedAt: namedDate },
+        { reasons: ["report-publication-date-missing"] }, { ...namedReport, latestReport: { ...namedReport.latestReport, publishedAt: undefined } }],
+      [{ ...reserveReview!, compositionAsOf: currentDate, reviewedAt: currentDate },
+        { reasons: ["report-publication-future-dated"] },
+        { ...namedReport, latestReport: { ...namedReport.latestReport, periodEnd: currentDate, publishedAt: futureDate } }],
+      [{ ...reserveReview!, compositionAsOf: previousDate, reviewedAt: futureDate },
+        { reasons: ["invalid-review-chronology"] }, previousDayReport],
+      [{ ...reserveReview!, compositionAsOf: previousDate, reviewedAt: currentDate }, undefined, previousDayReport],
+    ] as const) {
+      const registry = { metaById: new Map([["alpha", { id: "alpha", reserves, reserveReview: review, proofOfReserves: proof }]]) };
+      const input = { fixedInput, registry, publishedAtSec: PUBLISHED_AT_SEC };
+      const baseline = buildSafetyScoreV9Candidate({ ...input, includeReserveCompositionAdmission: false });
+      const result = buildSafetyScoreV9Candidate({ ...input, includeReserveCompositionAdmission: true });
+      const { reserveCompositionAdmission, ...card } = result.candidate.cards[0]!;
+      expect(reserveCompositionAdmission).toEqual(diagnostic);
+      expect(card).toEqual(baseline.candidate.cards[0]);
+      expect(result.compiledFacts.v9FactSetDigest).toBe(baseline.compiledFacts.v9FactSetDigest);
+      expect(result.evaluatedSet.scoreResultDigest).toBe(baseline.evaluatedSet.scoreResultDigest);
+      const streamed = buildSafetyScoreV9PublicationFromNormalizedInput({
+        ...input, fixedInput: result.fixedInput, policy: V9_CANDIDATE_POLICY, includeReserveCompositionAdmission: true,
+      });
+      expect(streamed.candidate.cards[0]).toEqual(result.candidate.cards[0]);
+    }
+  });
+
+  it.each([
+    ["iusd-initia", "variant-standalone-ineligible"],
+    ["susdat-saturn", "variant-standalone-ineligible"],
+    ["stbt-matrixdock", "observation-obligations-unresolved"],
+    ["zaru-blocktower", "selected-slices"],
+    ["axcnh-anchorx", "unverified"],
+    ["mxne-real-mxn", "report-confidence-unverified", Date.parse("2026-11-19T12:00:00Z") / 1000],
+    ["mxnb-juno", "report-assurance-method-unsupported", Date.parse("2026-11-19T12:00:00Z") / 1000],
+    ["gbpa-agant", "report-publication-date-missing"],
+    ["cngn-compliant-naira", "report-publication-date-missing"],
+  ])("publishes the concrete reserve admission gate for %s", (assetId, reason, clockSec = AS_OF_SEC) => {
+    const fixedInput = makeV9FixedInput({ assetId, clockSec, reserves: [] });
+    const { candidate } = buildSafetyScoreV9Candidate({ fixedInput, publishedAtSec: clockSec + 10, includeReserveCompositionAdmission: true });
+    expect(candidate.cards[0]?.reserveCompositionAdmission).toEqual({ reasons: [reason] });
+  });
+
+  it.each([false, true])("diagnoses a rejected fallback only without live reserves (live=%s)", (live) => {
+    const fixedInput = makeV9FixedInput({ clockSec: AS_OF_SEC, reserves: live ? FIXTURE_RESERVES : [] });
+    const { reserves, reserveReview } = eligibleReserveMeta();
+    const meta = { id: "alpha", reserves, reserveReview: { ...reserveReview!, scope: "selected-slices" as const, compositionAsOf: undefined } };
+    const { candidate } = buildSafetyScoreV9Candidate({
+      fixedInput, registry: { metaById: new Map([[meta.id, meta]]) },
+      publishedAtSec: PUBLISHED_AT_SEC, includeReserveCompositionAdmission: true,
+    });
+    const card = candidate.cards[0]!;
+    expect(card.backingFromLiveReserves).toBe(live);
+    expect(card.reserveCompositionAdmission).toEqual(live ? undefined : { reasons: ["selected-slices", "undated"] });
   });
 
   it("is deterministic for the same exact generation and explicit publication inputs", () => {
@@ -1126,7 +1205,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     expect(realizedInput.peg).toEqual(boundedInput.peg);
   });
 
-  it("publishes a strict rated candidate from a supplied reviewed extension", () => {
+  it.each([false, true])("publishes a strict rated candidate from a supplied reviewed extension (diagnostics=%s)", (includeReserveCompositionAdmission) => {
     const fixedInput = exactFixedInput("alpha");
     const policy = loadV9CandidateMethodologyPolicy(fixedInput.clockSec);
     const result = buildSafetyScoreV9Candidate({
@@ -1134,6 +1213,8 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
       extension: reviewedExtension(fixedInput),
       policy,
       publishedAtSec: PUBLISHED_AT_SEC,
+      includeReserveCompositionAdmission,
+      rederiveRetainedReserveCompositionAdmission: true,
     });
 
     expect(result.candidate).toMatchObject({

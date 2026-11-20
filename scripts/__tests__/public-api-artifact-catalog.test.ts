@@ -14,6 +14,11 @@ const FORBIDDEN_ARTIFACT_PATHS = [
 ];
 
 describe("public API artifact catalog", () => {
+  it("advertises the current report cards schema versions", () => {
+    const reportCards = PUBLIC_API_ARTIFACT_ENDPOINTS.find(({ path }) => path === "/api/report-cards/v9");
+    expect(reportCards?.description).toContain("API schema-9 Safety Score report cards from the accepted internal schema-8 publication.");
+  });
+
   it("excludes key-issuance, write-only and admin routes from public artifacts", () => {
     const catalogPaths = PUBLIC_API_ARTIFACT_ENDPOINTS.map((endpoint) => endpoint.path);
     const openApi = JSON.parse(readFileSync(join(process.cwd(), "public/openapi.json"), "utf8")) as {

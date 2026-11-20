@@ -27,7 +27,7 @@ import { SafetyScoreV9ScoreTraceSchema, SafetyScoreV9HistoricalScoreTraceSchema,
 import { SafetyScoreV9HistoricalCapSchema } from "./safety-score-v9-public-historical";
 import { V9WrapperFormSchema } from "./safety-score-v9-wrapper";
 import { V9EffectiveDependenciesV3Schema } from "./safety-score-v9-facts";
-import { ReserveSliceSchema } from "./reserves";
+import { RESERVE_REVIEW_SCOPE_VALUES, ReserveSliceSchema } from "./reserves";
 import { causeGapRefs, V9RatingStatusSchema, V9PartialEvidenceSchema, V9DependencyCauseShape, refineV9RatingStatusFields, refineV9PublicGapReferences } from "./safety-score-v9-public-causes";
 import {
   resolveV9PublicWitnessTexts,
@@ -265,6 +265,30 @@ const V9LocalAuthorityExposureSchema = z.object({
 }).strict();
 export type V9LocalAuthorityExposure = z.infer<typeof V9LocalAuthorityExposureSchema>;
 
+const ReserveCompositionReviewBlockerSchema = z.enum([
+  ...RESERVE_REVIEW_SCOPE_VALUES.filter((scope) => scope !== "full-composition"),
+  "scope-missing", "unverified", "undated",
+]);
+export type ReserveCompositionReviewBlocker = z.infer<typeof ReserveCompositionReviewBlockerSchema>;
+
+const V9ReserveCompositionAdmissionSchema = z.object({
+  reasons: z.array(z.enum([
+    ...ReserveCompositionReviewBlockerSchema.options,
+    "no-review", "no-composition", "future-dated", "beyond-age-budget",
+    "variant-standalone-ineligible", "observation-obligations-unresolved", "report-scope-not-whole-book",
+    "named-report-ineligible", "invalid-composition", "review-sources-missing", "invalid-review-chronology",
+    "report-date-mismatch", "report-confidence-unverified", "report-publication-date-missing",
+    "report-publication-future-dated", "report-assurance-method-unsupported",
+  ])).min(1),
+  age: z.object({
+    compositionAsOfSec: z.number().int(),
+    maxAgeSec: z.number().int().positive(),
+  }).strict().optional(),
+}).strict().refine(({ reasons, age }) => reasons.includes("beyond-age-budget") === (age !== undefined), {
+  path: ["age"], message: "An age-budget rejection must carry its composition clock and budget",
+});
+export type V9ReserveCompositionAdmission = z.infer<typeof V9ReserveCompositionAdmissionSchema>;
+
 const SafetyScoreV9CardShape = {
   id: z.string().min(1),
   localCauseGaps: V9WitnessTextIdentityArraySchema,
@@ -276,6 +300,8 @@ const SafetyScoreV9CardShape = {
    * Worker can continue reading the last pre-field publication during rollout.
    */
   backingFromLiveReserves: z.boolean().optional(),
+  /** Publication-only explanation of an exact local reserve-composition gap. */
+  reserveCompositionAdmission: V9ReserveCompositionAdmissionSchema.optional(),
   supply: z.object({
     circulatingUsdAtEvaluation: z.number().finite().nonnegative().nullable(),
     asOfSec: z.number().int().nonnegative().nullable(),
@@ -407,7 +433,7 @@ export const SafetyScoreV9CurrentCardBaseSchema = z
   .strict();
 
 /** Report7/breakdown6 preserve the strict recorded, pre-simplification contract. */
-const SafetyScoreV9HistoricalCardBaseSchema = SafetyScoreV9CurrentCardBaseSchema.extend({
+const SafetyScoreV9HistoricalCardBaseSchema = SafetyScoreV9CurrentCardBaseSchema.omit({ reserveCompositionAdmission: true }).extend({
   caps: z.array(SafetyScoreV9HistoricalCapSchema),
   bindingCap: SafetyScoreV9HistoricalCapSchema.nullable(),
   scoreTrace: SafetyScoreV9HistoricalScoreTraceSchema,
@@ -477,13 +503,21 @@ function refineCurrentCard(card: CardRefinementInput, ctx: z.RefinementCtx, reso
 }
 
 export const SafetyScoreV9CurrentCardSchema = SafetyScoreV9CurrentCardBaseSchema.superRefine(refineCurrentCard);
+export const SafetyScoreV9PreviousCardSchema = SafetyScoreV9CurrentCardBaseSchema
+  .omit({ reserveCompositionAdmission: true })
+  .superRefine(refineCurrentCard);
 
 /** Wire cards contain literal evidence, never canonical card-local references. */
-export const SafetyScoreV9ResolvedCurrentCardSchema = SafetyScoreV9CurrentCardBaseSchema
+const SafetyScoreV9ResolvedCardBaseSchema = SafetyScoreV9CurrentCardBaseSchema
   .omit({ witnessTexts: true })
-  .extend({ witnessTexts: z.undefined().optional() })
+  .extend({ witnessTexts: z.undefined().optional() });
+export const SafetyScoreV9ResolvedCurrentCardSchema = SafetyScoreV9ResolvedCardBaseSchema
   .superRefine((card, ctx) => refineCurrentCard(card, ctx, true));
 export type SafetyScoreV9ResolvedCurrentCard = z.infer<typeof SafetyScoreV9ResolvedCurrentCardSchema>;
+
+export const SafetyScoreV9HistoricalResolvedCardSchema = SafetyScoreV9ResolvedCardBaseSchema
+  .omit({ reserveCompositionAdmission: true })
+  .superRefine((card, ctx) => refineCurrentCard(card, ctx, true));
 
 export const SafetyScoreV9HistoricalCardSchema = SafetyScoreV9HistoricalCardBaseSchema
   .superRefine((card, ctx) => refineCurrentCard(card, ctx, false, "report7"));

@@ -448,7 +448,7 @@ jq '.fixedInput | {sourceGeneration, baseInputGenerationId, clockSec}' \
     --output "$release_dir/baseline.replay.json" )
 jq '{pipeline:{candidate:{cards:.cards}}}' "$release_dir/publication.json" \
   > "$release_dir/accepted-cards.json"
-# Restore publication-time grade hysteresis with the exact baseline helper.
+# Restore publication-time grade hysteresis and match the default-wire export.
 ( cd "$baseline_tree"
   node --import tsx --input-type=module - \
     "$release_dir/baseline.replay.json" "$release_dir/baseline-cards.json" <<'NODE'
@@ -459,7 +459,8 @@ const [inputPath, outputPath] = process.argv.slice(2);
 const replay = JSON.parse(readFileSync(inputPath, "utf8"));
 if (replay.sourceAdmissionBaseline === undefined) throw new Error("accepted-publication-replay-baseline-unavailable");
 const candidate = applySafetyScoreV9GradeHysteresis(replay.pipeline.candidate, replay.sourceAdmissionBaseline);
-writeFileSync(outputPath, JSON.stringify({ pipeline: { candidate: { cards: candidate.cards.map(resolveV9PublicWitnessTexts) } } }));
+const cards = candidate.cards.map(({ reserveCompositionAdmission: _diagnostic, ...card }) => resolveV9PublicWitnessTexts(card));
+writeFileSync(outputPath, JSON.stringify({ pipeline: { candidate: { cards } } }));
 NODE
 )
 npm run safety-score-v9:diff -- \
@@ -523,7 +524,7 @@ A single empty diff is not authorization to activate. Two empty diffs across two
 
 A green deploy proves Worker activation, not that the newly-live code republishes the same numbers. Close that gap on the **first** post-cutover publication.
 
-Choose the branch by the reviewed release contract. A neutral release retains the pre-cutover comparison below; a release with intentional movers must instead prove **same-code accepted-publication equivalence** and evaluate pre-cutover movers separately.
+Choose the checks by the reviewed release contract. A neutral release uses the pre-cutover comparison below. When a neutral release activates reserve admission diagnostics, also run exact-code steps 1–4 for the same first accepted generation. A release with intentional movers uses exact-code equivalence and the separate mover attribution in step 5.
 
 ### Neutral release: pre-cutover comparison
 
@@ -541,7 +542,7 @@ Choose the branch by the reviewed release contract. A neutral release retains th
    Confirm the matching generation: the publication's `safetyScoreIdentity.baseInputGenerationId` must equal the accepted capture's `fixedInput.baseInputGenerationId`, and its publication generation must match the capture's `publicationGenerationId`. If production advances, take a fresh pair rather than diffing across generations.
 
 3. Replay the post-cutover capture at the **pre-cutover** commit (step b).
-4. Project the served publication to the card array the diff CLI keys on. For the replay, restore publication-time grade hysteresis from its retained accepted baseline, then resolve witness texts to match the API. Run both helpers from the **pre-cutover** checkout:
+4. Project the served publication to the card array the diff CLI keys on. For the replay, restore publication-time grade hysteresis from its retained accepted baseline, omit `reserveCompositionAdmission`, and resolve witness texts to match the default API response. Run both helpers from the **pre-cutover** checkout.
 
    ```sh
    jq '{pipeline:{candidate:{cards:.cards}}}' \
@@ -556,7 +557,8 @@ Choose the branch by the reviewed release contract. A neutral release retains th
    const replay = JSON.parse(readFileSync(inputPath, "utf8"));
    if (replay.sourceAdmissionBaseline === undefined) throw new Error("accepted-publication-replay-baseline-unavailable");
    const candidate = applySafetyScoreV9GradeHysteresis(replay.pipeline.candidate, replay.sourceAdmissionBaseline);
-   writeFileSync(outputPath, JSON.stringify({ pipeline: { candidate: { cards: candidate.cards.map(resolveV9PublicWitnessTexts) } } }));
+   const cards = candidate.cards.map(({ reserveCompositionAdmission: _diagnostic, ...card }) => resolveV9PublicWitnessTexts(card));
+   writeFileSync(outputPath, JSON.stringify({ pipeline: { candidate: { cards } } }));
    NODE
 
    npm run safety-score-v9:diff -- \
@@ -567,9 +569,9 @@ Choose the branch by the reviewed release contract. A neutral release retains th
 
 Expect bit-identical numbers. An empty diff means the code now live republished exactly what the pre-cutover code would have produced from the same input. A non-empty diff is a production regression, not a harness artifact: treat it as a rollback decision, not a triage backlog item.
 
-### Intentional movers: accepted-publication equivalence, then attribution
+### Exact deployed code: accepted-publication equivalence
 
-Do not compare the live publication with pre-cutover code using `--assert-empty`: reviewed methodology changes are expected to move numbers. That does not relax the empty-diff requirement between the **exact deployed code** and its accepted live publication.
+Require an empty diff between replay at the **exact deployed code** and its accepted live publication. For releases with intentional movers, step 5 evaluates the pre-cutover comparison against the reviewed mover declarations.
 
 1. Retain the first complete producer pair starting after actual Worker activation: `prepare-safety-score-v9-input` (hourly `:16`), then `compute-safety-score-v9` (`:22`). Record their Worker version, execution outcomes, and generation/publication metadata. Require the first accepted publication from that pair; a held, skipped, deferred, or failed cycle is not acceptance, and a later success does not erase it.
 2. At the exact deployed tree, export the accepted publication and its retained **base plus compute-time enrichment delta**, not the mutable prepare-time capture from step (a):
@@ -583,6 +585,26 @@ Do not compare the live publication with pre-cutover code using `--assert-empty`
    ```
 
    This saves `publication.json`, `capture.json` and the exact rows as `accepted.raw.json` from `report-cards:v9:accepted-replay-base:v1` and `report-cards:v9:accepted-replay:v1`; see the [accepted-capture contract](../runbooks/dependency-network.md#offline-scenario-workflow). Plan requires both rows, a retained `sourceAdmissionBaseline` (v3 or v4), matching base/delta/live-publication generations, and retained clocks that agree with the live publication; a mismatch fails as `accepted-publication-replay-retention-clock-mismatch`. Export promptly: only one accepted generation is retained. Match the capture's publication and fixed-input base generations to the live identity and recorded first pair. If production advances, obtain a fresh pair but preserve first-cycle evidence and report that cycle's equivalence as unproven; never label later output the first publication. Do not run scenario compute/publish merely to obtain this check.
+
+   `publication.json` uses the default-wire card projection. Fetch the default and opted-in API responses while that generation is still live. Verify both identities against the export and check default-wire compatibility separately from replay equivalence.
+
+   ```sh
+   ( set -e; set -a; . ./.env.local; set +a
+     curl -fsS 'https://api.pharos.watch/api/report-cards/v9' \
+       -H "X-API-Key: ${PHAROS_API_KEY}" \
+       -o agents/v9-captures/post-deploy-<stamp>/default-wire.json
+     curl -fsS 'https://api.pharos.watch/api/report-cards/v9?reserveAdmission=diagnostics' \
+       -H "X-API-Key: ${PHAROS_API_KEY}" \
+       -o agents/v9-captures/post-deploy-<stamp>/opted-in-wire.json )
+
+   jq -es '
+     (.[0].safetyScoreIdentity == .[1].safetyScoreIdentity) and
+     (.[0].safetyScoreIdentity == .[2].safetyScoreIdentity) and
+     (.[1].cards | all(has("reserveCompositionAdmission") | not)) and
+     (.[0].cards == .[1].cards) and
+     (.[1].cards == (.[2].cards | map(del(.reserveCompositionAdmission))))
+   ' agents/v9-captures/post-deploy-<stamp>/{publication,default-wire,opted-in-wire}.json
+   ```
 3. Verify exact deployed-code/live identity **outside the normalized-card diff**, which deliberately removes activation and digest fields. Require public `methodology.version` and `safetyScoreIdentity.methodologyVersion` to equal the deployed release version, and require `safetyScoreIdentity.evaluationBuildDigest`, `methodology.policy.id`, and `methodology.policy.semanticDigest` (mirrored by `safetyScoreIdentity.policyId` / `policyDigest`) to equal the exact deployed tree's reviewed build and policy identities. Record the registry fingerprint, complete `sourceGenerations`, `publicationGenerationId`, `baseInputGenerationId`, `factSetDigest`, `resultDigest`, `asOfSec`, `publishedAtSec`, `source.candidateId`, and top-level `updatedAt`; correlate them with the accepted capture and the first pair. Use refreshed identities if review fixes changed the final deployed tree, not obsolete review-head digests.
 4. Replay that accepted capture at the **exact deployed commit**, preserving enrichment and transfer materiality and using `capture.json.fixedInput.clockSec` verbatim:
 
@@ -593,11 +615,11 @@ Do not compare the live publication with pre-cutover code using `--assert-empty`
      --published-at <captured-clockSec>
    ```
 
-   Require replay candidate `publicationGenerationId`, `baseInputGenerationId`, `evaluationBuildDigest`, `candidateId`, `factSetDigest`, `resultDigest`, and `publishedAtSec` to equal the accepted live counterparts (the candidate/fact/result digests are also exposed under `source`, and the publication clock under `updatedAt`). Then project both sides to cards, restoring publication-time grade hysteresis and resolving replay witness texts with the **exact deployed** checkout's helpers, and require an empty normalized diff:
+   Require replay candidate `publicationGenerationId`, `baseInputGenerationId`, `evaluationBuildDigest`, `candidateId`, `factSetDigest`, `resultDigest`, and `publishedAtSec` to equal the accepted live counterparts (the candidate/fact/result digests are also exposed under `source`, and the publication clock under `updatedAt`). Project the opted-in response and replay to cards. Restore publication-time grade hysteresis and resolve replay witness texts with the **exact deployed** checkout's helpers, then require an empty normalized diff.
 
    ```sh
    jq '{pipeline:{candidate:{cards:.cards}}}' \
-     agents/v9-captures/post-deploy-<stamp>/publication.json \
+     agents/v9-captures/post-deploy-<stamp>/opted-in-wire.json \
      > agents/v9-captures/post-deploy-<stamp>/live-cards.json
    node --import tsx --input-type=module - \
      agents/v9-captures/post-deploy-<stamp>/replay-deployed.json \
@@ -618,7 +640,7 @@ Do not compare the live publication with pre-cutover code using `--assert-empty`
    ```
 
    Any same-code identity or normalized-card mismatch is a production regression and a rollback decision, not an expected methodology mover.
-5. Separately replay the accepted capture at the pre-cutover and deployed code/curation attribution boundaries, using the same captured clock and explicit registry handling for each tree (step b). Apply the reviewed [expected-movers gate](#expected-movers-gate-for-an-intentional-multi-grade-release), not a pre-cutover empty-diff assertion:
+5. For intentional movers, replay the accepted capture at the pre-cutover and deployed code/curation attribution boundaries, using the same captured clock and explicit registry handling for each tree (step b). Apply the reviewed [expected-movers gate](#expected-movers-gate-for-an-intentional-multi-grade-release).
 
    ```sh
    npm run safety-score-v9:movers -- \

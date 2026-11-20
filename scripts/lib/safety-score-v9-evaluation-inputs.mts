@@ -146,6 +146,7 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/lib/safety-score-v9/public-witness-texts.ts",
   "shared/lib/safety-score-v9/public.ts",
   "shared/lib/safety-score-v9/reasons.ts",
+  "shared/lib/safety-score-v9/reserve-admission.ts",
   "shared/lib/safety-score-v9/reserve-bound-facts.ts",
   "shared/lib/safety-score-v9/reserve-bound-policy.ts",
   "shared/lib/safety-score-v9/reserve-provenance.ts",
