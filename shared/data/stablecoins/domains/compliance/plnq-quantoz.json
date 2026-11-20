@@ -8,7 +8,7 @@
     "authorizedEntity": "Quantoz Payments B.V.",
     "references": [
       {
-        "label": "ESMA EMT register names exact issuer and token, checked 2026-10-02",
+        "label": "ESMA EMT register, accessed 2026-11-20: PLNQ white paper, Quantoz Payments B.V., DNB, electronic money institution, notified 07/04/2026. Listing is issuer authorization evidence, not white-paper approval or issuance evidence.",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {

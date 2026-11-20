@@ -5,20 +5,20 @@
     "tokenType": "EMT",
     "references": [
       {
-        "label": "Kraken current EEA restrictions: QCAD deposits and trading prohibited",
+        "label": "Kraken: QCAD among assets EEA clients cannot deposit or trade; page last updated 19 Nov 2026",
         "url": "https://support.kraken.com/articles/where-is-kraken-licensed-or-regulated"
       },
       {
-        "label": "Kraken QCAD asset page: Stablecorp Canadian dollar stablecoin identity",
-        "url": "https://www.kraken.com/prices/qcad"
+        "label": "QCAD Digital Trust: QCAD listed on the Kraken trading platform, 20 Apr 2026",
+        "url": "https://www.newsfilecorp.com/release/293401"
       },
       {
-        "label": "ESMA EMT issuer register: no QCAD Digital Trust, Stablecorp or QCAD entry",
-        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
-      },
-      {
-        "label": "Stablecorp QCAD page: QCAD Digital Trust as prospectus issuer",
+        "label": "Stablecorp: QCAD issued by QCAD Digital Trust under an OSC-receipted prospectus",
         "url": "https://stablecorp.ca/"
+      },
+      {
+        "label": "ESMA EMT register snapshot 20 Nov 2026: no QCAD, Stablecorp or QCAD Digital Trust entry",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       }
     ]
   },

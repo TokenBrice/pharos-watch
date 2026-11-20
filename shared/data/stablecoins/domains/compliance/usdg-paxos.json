@@ -16,12 +16,20 @@
         "url": "https://www.paxos.com/terms-and-conditions/usdg-eu-whitepaper"
       },
       {
-        "label": "ESMA interim EMT register CSV: Paxos Issuance Europe Oy and USDG",
+        "label": "ESMA interim EMT register (EMTWP.csv): Paxos Issuance Europe Oy, FIN-FSA, USDG white papers notified 2025-06-09 and 2025-12-19; accessed 2026-11-20",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
+        "label": "Paxos USDG EU white paper, machine-readable version (register row notified 2025-06-09): issued by Paxos EU under FIN-FSA supervision",
+        "url": "https://www.paxos.com/white-paper"
+      },
+      {
         "label": "Paxos licenses: FIN-FSA EMI authorization for Paxos Issuance Europe Oy",
-        "url": "https://www.paxos.com/terms-and-conditions/licenses"
+        "url": "https://www.paxos.com/terms-and-conditions/licenses/"
+      },
+      {
+        "label": "Paxos MiCA compliance page: Paxos Issuance Europe Oy (PIE) named as USDG issuer",
+        "url": "https://www.paxos.com/eu"
       }
     ]
   },

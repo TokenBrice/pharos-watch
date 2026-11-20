@@ -1,5 +1,26 @@
 {
   "id": "crvusd-curve",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Curve crvUSD docs: minted against crypto collateral, decentralized design governed by the Curve DAO",
+        "url": "https://docs.curve.finance/developer/crvusd/overview.md"
+      },
+      {
+        "label": "Curve crvUSD token docs: mintable only by the ControllerFactory; no issuer entity named",
+        "url": "https://docs.curve.finance/developer/crvusd/index.md"
+      },
+      {
+        "label": "Curve crvUSD factory docs: markets and debt ceilings change only via the CurveOwnershipAgent after a DAO vote",
+        "url": "https://docs.curve.finance/developer/crvusd/factory.md"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      }
+    ]
+  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {

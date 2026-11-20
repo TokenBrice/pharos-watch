@@ -1,5 +1,18 @@
 {
   "id": "usdat-saturn",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Saturn docs Restricted Jurisdictions: not available in the EEA, applies to all products including USDat; EEA users geofenced (updated 2026-10-29)",
+        "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/restricted-jurisdictions"
+      },
+      {
+        "label": "PYUSDx Terms (MoonPay Digital Assets Limited, updated 2026-06-22): EEA member states are Restricted Jurisdictions",
+        "url": "https://www.moonpay.com/legal/pyusdx_terms"
+      }
+    ]
+  },
   "genius": {
     "applicability": "unclear",
     "authorizationStatus": "no-public-authorization-found",

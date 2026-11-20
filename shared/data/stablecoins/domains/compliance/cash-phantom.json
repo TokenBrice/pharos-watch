@@ -5,20 +5,20 @@
     "tokenType": "EMT",
     "references": [
       {
-        "label": "Kraken current EEA restrictions: CASH deposits and trading prohibited",
+        "label": "Kraken EEA restrictions: CASH cannot be deposited or traded by EEA clients (accessed 2026-11-20)",
         "url": "https://support.kraken.com/articles/where-is-kraken-licensed-or-regulated"
       },
       {
-        "label": "Kraken CASH asset page: Bridge and Phantom stablecoin identity",
+        "label": "Kraken CASH asset page (accessed 2026-11-20): CASH is the Bridge and Phantom stablecoin trading near $1.00",
         "url": "https://www.kraken.com/prices/cash"
       },
       {
-        "label": "ESMA EMT issuer register: no Bridge Building Inc. or CASH entry",
+        "label": "ESMA interim MiCA EMT issuer register (EMTWP.csv): no CASH or Bridge Building Inc. white paper; the only Bridge row is Bridge Building S.A. (LU, CSSF) for EURR (accessed 2026-11-20)",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
-        "label": "CASH issuer page: Bridge Building Inc. as issuer with EEA flows via Bridge EU subsidiaries",
-        "url": "https://www.usecash.xyz/"
+        "label": "Bridge CASH reserve dashboard: CASH is a fully backed US dollar stablecoin issued by Bridge, settling on Solana (accessed 2026-11-20)",
+        "url": "https://reserves.bridge.xyz/cash"
       }
     ]
   },

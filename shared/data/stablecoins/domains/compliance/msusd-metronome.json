@@ -1,5 +1,22 @@
 {
   "id": "msusd-metronome",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Metronome Synth docs: users mint synthetic assets against crypto collateral in a MET DAO-governed protocol",
+        "url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol"
+      },
+      {
+        "label": "Metronome interface terms (2023-01-10): Autonomous Software states it is not licensed by any financial regulator and does not own the protocol",
+        "url": "https://raw.githubusercontent.com/autonomoussoftware/metronome-synth-legal/master/terms-and-conditions.md"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      }
+    ]
+  },
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {

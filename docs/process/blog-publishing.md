@@ -47,7 +47,7 @@ Cover images are authored, reviewed assets; the optional cover contract is speci
 ## Changelog
 
 `/changelog/` is the other half of the boundary above: weekly release notes,
-linked from the nav `Resources` menu's `Updates` column (`src/lib/nav-config.ts`).
+linked from the nav `Learn` menu's `About Pharos` tier (`src/lib/nav-config.ts`).
 It shares nothing with the blog contract — separate registry, no post bodies,
 no RSS feed.
 

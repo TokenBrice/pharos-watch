@@ -1,5 +1,26 @@
 {
   "id": "usg-tangent",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Tangent USG docs: USG is issued solely through smart contracts without any intermediary, cannot be redeemed for its collateral, and parameters change only by DAO-approved decisions (accessed 2026-11-20)",
+        "url": "https://docs.tangent.finance/docs/usg/overview_usg"
+      },
+      {
+        "label": "Tangent docs overview: the protocol functions as a DAO governed by TAN holders; no legal issuer entity named (accessed 2026-11-20)",
+        "url": "https://docs.tangent.finance/docs/overview.md"
+      },
+      {
+        "label": "Tangent contracts list: USG at 0xb1c2db5d6ca03fce73dbd304d320bf76c55ae1b1 with Admin, Control Tower and Pauser contracts; no issuing entity named (accessed 2026-11-20)",
+        "url": "https://docs.tangent.finance/docs/faq/contracts.md"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      }
+    ]
+  },
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {

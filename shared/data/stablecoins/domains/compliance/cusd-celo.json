@@ -1,5 +1,30 @@
 {
   "id": "cusd-celo",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Mento Labs general counsel, MiCAR workshop (18 Nov 2024): Mento stablecoins have no central issuing entity; recital 22 exclusion",
+        "url": "https://www.mento.org/blog/highlights-from-the-micar-workshop"
+      },
+      {
+        "label": "Celo forum, State of Stablecoins on Celo (18 Nov 2026): issuance authority sits with Celo Governance; Mento Labs does not issue the stable assets",
+        "url": "https://forum.celo.org/t/state-of-stablecoins-on-celo-mgp-19-follow-up/14293"
+      },
+      {
+        "label": "Mento stablecoins page: stablecoins created and governed by community proposals and votes",
+        "url": "https://www.mento.org/stablecoins"
+      },
+      {
+        "label": "Mento StableToken docs: USDm minted and burned by the ReserveLiquidityStrategy on pool rebalancing",
+        "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken.md"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      }
+    ]
+  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {

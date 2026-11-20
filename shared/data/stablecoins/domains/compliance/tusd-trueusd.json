@@ -5,15 +5,19 @@
     "tokenType": "EMT",
     "references": [
       {
-        "label": "Binance EEA MiCA restrictions: TUSD among non-MiCA-compliant stablecoins delisted for EEA users",
+        "label": "Binance EEA notice, 3 March 2025: TUSD is one of eight non-MiCA-compliant stablecoins whose EEA spot pairs were delisted from 31 March 2025; accessed 2026-11-20",
         "url": "https://www.binance.com/en/support/announcement/detail/bcaa1f68d6a6450099056ff694ad6c46"
       },
       {
-        "label": "Kraken EEA stablecoin restrictions: TUSD delisted for EEA clients",
-        "url": "https://support.kraken.com/articles/stablecoin-offerings-for-eea-clients"
+        "label": "Telcoin Europe MiCAR notice: TUSD trading stopped for Telcoin Europe customers from 31 March 2025; accessed 2026-11-20",
+        "url": "https://www.telco.in/support-center/digital-assets/micar-stablecoins-compliance"
       },
       {
-        "label": "ESMA interim MiCA EMT issuer register: TrueUSD/TUSD not listed",
+        "label": "YouHodler MiCA update, 30 June 2024: TUSD (TrueUSD) no longer available for EU services including yield accounts; accessed 2026-11-20",
+        "url": "https://help.youhodler.com/en/articles/9540317-important-mica-update"
+      },
+      {
+        "label": "ESMA interim MiCA EMT register (Title IV file, 18 November 2026 publication): no Techteryx or TrueUSD row; accessed 2026-11-20",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       }
     ]

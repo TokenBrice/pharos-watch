@@ -1,0 +1,24 @@
+{
+  "id": "usdq-quill",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Quill homepage FAQ: collateral is held and managed algorithmically without the interference of any person or legal entity (accessed 2026-11-20)",
+        "url": "https://quill.finance/"
+      },
+      {
+        "label": "Quill documentation: $USDQ is a decentralized, algorithmic stablecoin minted through user-deposited collateral and redeemable for that collateral (accessed 2026-11-20)",
+        "url": "https://docs.quill.finance/llms-full.txt"
+      },
+      {
+        "label": "Quill contract addresses: active USDQ 0xdb9e8f82d6d45fff803161f2a5f75543972b229a on Scroll mainnet (accessed 2026-11-20)",
+        "url": "https://docs.quill.finance/documentation/contract-addresses.md"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      }
+    ]
+  }
+}

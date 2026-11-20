@@ -1,0 +1,32 @@
+{
+  "id": "usdu-usdu-finance",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "MiCA Regulation (EU) 2023/1114 recital 22: crypto-assets with no identifiable issuer should not fall within the scope of Title II, III or IV",
+        "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32023R1114"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      },
+      {
+        "label": "USDU Finance: USDU is protocol-issued and only DAO-approved modules can mint or burn it (accessed 2026-11-20)",
+        "url": "https://usdu.finance/"
+      },
+      {
+        "label": "USDU Finance docs: Curator function performed by the USDU Core DAO (accessed 2026-11-20)",
+        "url": "https://usdu.gitbook.io/docs/governance/curators"
+      },
+      {
+        "label": "USDU Finance docs: governance by USDU Core DAO vote with Core Member and Guardian vetoes (accessed 2026-11-20)",
+        "url": "https://usdu.gitbook.io/docs/governance/change-process"
+      },
+      {
+        "label": "USDU Finance docs: only the protocol mints USDU, holders redeem through vault liquidity (accessed 2026-11-20)",
+        "url": "https://usdu.gitbook.io/docs/how-usdusdu-works/minting-and-redemption"
+      }
+    ]
+  }
+}

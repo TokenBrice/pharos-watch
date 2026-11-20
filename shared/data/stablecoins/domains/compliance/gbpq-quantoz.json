@@ -1,0 +1,24 @@
+{
+  "id": "gbpq-quantoz",
+  "mica": {
+    "status": "authorized",
+    "tokenType": "EMT",
+    "authorizationType": "emi",
+    "competentAuthority": "DNB",
+    "authorizedEntity": "Quantoz Payments B.V.",
+    "references": [
+      {
+        "label": "ESMA EMT register: Quantoz Payments B.V. (DNB) with GBPQ white paper notified 07/04/2026, checked 2026-11-20",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "DNB public register: Quantoz Payments B.V., electronic money institution (authorised 13/10/2023)",
+        "url": "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418"
+      },
+      {
+        "label": "Quantoz tokens page: GBPQ issued by Quantoz Payments as a MiCA e-money token, supervised by DNB",
+        "url": "https://www.quantoz.com/tokens/"
+      }
+    ]
+  }
+}

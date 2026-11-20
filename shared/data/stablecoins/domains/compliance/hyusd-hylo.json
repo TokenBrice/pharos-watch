@@ -1,0 +1,24 @@
+{
+  "id": "hyusd-hylo",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Hylo docs: hyUSD is backed by every collateral pool rather than any single asset or issuer; autonomous onchain protocol with no fund manager (accessed 2026-11-20)",
+        "url": "https://docs.hylo.so/introduction.md"
+      },
+      {
+        "label": "Hylo core mechanism: decentralized stablecoin protocol that depends on no single issuer; hyUSD is the user-held token, vUSD internal accounting only (accessed 2026-11-20)",
+        "url": "https://docs.hylo.so/protocol-overview/core-mechanism.md"
+      },
+      {
+        "label": "Hylo onchain addresses: hyUSD mint 5YMkXAYccHSGnHn9nob9xEvv6Pvka9DZWH7nTbotTu9E (accessed 2026-11-20)",
+        "url": "https://docs.hylo.so/security/onchain-addresses.md"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      }
+    ]
+  }
+}

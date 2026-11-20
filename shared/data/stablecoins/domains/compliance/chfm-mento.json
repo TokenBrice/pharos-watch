@@ -1,5 +1,34 @@
 {
   "id": "chfm-mento",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Mento General Counsel: Mento stablecoins have no issuing entity, so MiCA issuer rules are inapplicable (18 Nov 2024)",
+        "url": "https://www.mento.org/blog/highlights-from-the-micar-workshop"
+      },
+      {
+        "label": "MGP-19 proposal: CHFm CDP branch issuance authority transfers to Celo Governance (21 Aug 2026)",
+        "url": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
+      },
+      {
+        "label": "MGP-19 follow-up: Mento Labs does not issue, own, govern or back the Mento stable assets (18 Nov 2026)",
+        "url": "https://forum.celo.org/t/state-of-stablecoins-on-celo-mgp-19-follow-up/14293"
+      },
+      {
+        "label": "Mento CDP docs: FX stables minted by borrowing against USDm collateral, no issuer redemption",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/cdp.md"
+      },
+      {
+        "label": "Mento governance docs: fully decentralized protocol, no single entity controls it",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/governance-and-mento/understanding-mento-governance.md"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      }
+    ]
+  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {

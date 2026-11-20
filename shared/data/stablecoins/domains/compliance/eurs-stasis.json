@@ -5,23 +5,23 @@
     "tokenType": "EMT",
     "references": [
       {
-        "label": "Telcoin Europe MiCAR notice: EURS trading restricted from March 31, 2025",
+        "label": "Telcoin Europe MiCAR stablecoin notice (accessed 2026-11-20): EURS listed among the stablecoins no longer tradable for Telcoin Europe customers from 31 March 2025, with send and receive still allowed",
         "url": "https://www.telcoin.co.jp/en/support-center/digital-assets/micar-stablecoins-compliance"
       },
       {
-        "label": "YouHodler MiCA notice: EURS restricted for some EU services",
+        "label": "YouHodler MiCA update, changes from 30 June 2024 (accessed 2026-11-20): EURS (Stasis EUR) named among stablecoins no longer available for some EU services, including yield accounts",
         "url": "https://help.youhodler.com/en/articles/9540317-important-mica-update"
       },
       {
-        "label": "ESMA EMT issuer register: no STSS or EURS entry in the fetched register",
+        "label": "ESMA interim MiCA EMT issuer register (EMTWP.csv, accessed 2026-11-20): no STSS (Malta) Limited row and no EURS white paper; the only Maltese EMT rows are StablR Ltd and Stable mint Ltd",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
-        "label": "MFSA issuer search: STSS (MALTA) LIMITED legacy whitepaper deregistered",
+        "label": "MFSA Financial Services Register search for STSS (accessed 2026-11-20): STSS (MALTA) LIMITED, company C 86272, holds a single licence of type Whitepaper recorded as Deregistered, and no electronic-money or credit-institution authorisation",
         "url": "https://fsr.mfsa.mt/Licences/searchLicencesByLicenceHolder?filter=STSS"
       },
       {
-        "label": "STASIS terms: STSS (Malta) Limited and EURS euro redemption",
+        "label": "STASIS Terms of Business (accessed 2026-11-20): contracting party STSS (Malta) Limited, Malta; EURS is a euro-referenced claim redeemed at par through the STSS treasury wallet",
         "url": "https://stasis.net/terms"
       }
     ]

@@ -5,16 +5,20 @@
     "tokenType": "EMT",
     "references": [
       {
-        "label": "Coinbase MiCA non-compliant stablecoins: TGBP EEA restrictions",
-        "url": "https://help.coinbase.com/en/coinbase/other-topics/other/mica-restricted-stablecoins"
+        "label": "Coinbase EEA notice: TGBP among 14 MiCA-non-compliant stablecoins, trading restricted and remaining balances converted to USDC on 30 October 2026 (accessed 2026-11-20)",
+        "url": "https://help.coinbase.com/en-gb/coinbase/other-topics/other/mica-restricted-stablecoins"
       },
       {
-        "label": "Coinbase Tokenised GBP identity and contract address",
+        "label": "Coinbase asset page: Tokenised GBP as TGBP, contract 0x27F6C8289550Fce67f6B50bedF1519966AFe5287 on Ethereum, Base, BNB Smart Chain and Polygon (accessed 2026-11-20)",
         "url": "https://www.coinbase.com/price/tokenised-gbp"
       },
       {
-        "label": "Tokenised GBP terms: BCP Technologies Ltd issuer and GBP 1 redemption",
+        "label": "Tokenised GBP terms, effective 6 January 2026: issuer BCP Technologies Ltd, UK FCA AML registration FRN 928840, 1 tGBP redeemable for GBP 1 (accessed 2026-11-20)",
         "url": "https://www.tokenisedgbp.com/terms"
+      },
+      {
+        "label": "ESMA interim MiCA register page; EMT issuer CSV, last update 18 November 2026, has no BCP Technologies or tGBP row (accessed 2026-11-20)",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       }
     ]
   },

@@ -1,5 +1,30 @@
 {
   "id": "xdai-gnosis",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Gnosis Chain docs: xDai generated when DAI (now USDS) is sent to the xDai bridge and minted by bridge validators; no issuer named",
+        "url": "https://docs.gnosischain.com/about/tokens/xdai"
+      },
+      {
+        "label": "Gnosis xDai bridge docs: bridge contracts mint xDai on USDS deposits and burn it on return",
+        "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
+      },
+      {
+        "label": "GnosisDAO ecosystem docs (April 2026): stablecoin table lists xDAI's issuer as 'Native (USDS-backed)'",
+        "url": "https://docs.gnosis.io/docs/knowledge/ecosystem"
+      },
+      {
+        "label": "Gnosis Chain terms of use (April 2023): Gnosis Ltd does not control the protocols underlying Gnosis Chain and holds no custody of assets on it",
+        "url": "https://docs.gnosischain.com/terms-conditions/"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      }
+    ]
+  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {

@@ -8,11 +8,11 @@
     "authorizedEntity": "Stable mint Ltd",
     "references": [
       {
-        "label": "ESMA EMT issuer register, exact Stable mint Ltd LEI and USD whitepaper row",
+        "label": "ESMA EMT register, accessed 2026-11-20: Stable mint Ltd, Malta Financial Services Authority, electronic money institution; USDSM white paper notification 27/11/2024, last update 24/03/2025",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
-        "label": "USDSM MiCA whitepaper",
+        "label": "USDSM MiCA whitepaper (B.1 Stable Mint United States Dollar, B.2 USDSM; accessed 2026-11-20)",
         "url": "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_USD.html"
       },
       {

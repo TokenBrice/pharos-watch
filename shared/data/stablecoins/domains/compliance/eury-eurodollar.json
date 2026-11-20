@@ -8,20 +8,24 @@
     "authorizedEntity": "Eurodollar ApS",
     "references": [
       {
-        "label": "ESMA EMT issuer register",
+        "label": "ESMA interim MiCA register: Eurodollar ApS (DK, Finanstilsynet), EMI, no white paper notified (EMT_NO_WP); accessed 2026-11-20",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
-        "label": "EURY issuer, currency and public circulation status",
-        "url": "https://www.stablecoin.dk/tokens/eury"
+        "label": "EURY MiCA white paper: EMT issued by Eurodollar ApS, LEI 8945001XWFMRUTCAK575, notified to Finanstilsynet 11 Feb 2026, section A.13 corrected 9 Oct 2026; accessed 2026-11-20",
+        "url": "https://www.stablecoin.dk/tokens/eury/white-paper"
       },
       {
-        "label": "Eurodollar ApS authorization and regulatory status",
+        "label": "Issuer regulatory status: Finanstilsynet e-money authorisation granted 11 Feb 2025; Eurodollar ApS issues EURY, USDY and PLNY as e-money tokens; accessed 2026-11-20",
         "url": "https://www.stablecoin.dk/company/regulatory-status"
       },
       {
-        "label": "EURY MiCA whitepaper",
-        "url": "https://www.stablecoin.dk/tokens/eury/white-paper"
+        "label": "EURY token page: issuer Eurodollar ApS, EUR reference currency, Ethereum, tokens in circulation; accessed 2026-11-20",
+        "url": "https://www.stablecoin.dk/tokens/eury"
+      },
+      {
+        "label": "Issuer verification page: EURY contract listed as in issue, LEI 8945001XWFMRUTCAK575 match, issuer states rename to Olbra ApS in July 2026; accessed 2026-11-20",
+        "url": "https://olbra.org/verify"
       }
     ]
   }

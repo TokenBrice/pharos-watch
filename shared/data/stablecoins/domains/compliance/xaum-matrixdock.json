@@ -4,20 +4,24 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA MiCA register and scope page",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        "label": "Matrixdock prohibited countries/regions: EU member states listed (accessed 2026-11-20)",
+        "url": "https://docs.matrixdock.com/english/legal/prohibited-countries-regions.md"
       },
       {
-        "label": "Matrixdock XAUm: tokenized physical gold with Singapore/Hong Kong redemption",
+        "label": "Matrixdock XAUm docs: primary mint/redeem directly with Matrixdock requires KYC (accessed 2026-11-20)",
+        "url": "https://docs.matrixdock.com/english/gold-token-xaum/what-is-xaum.md"
+      },
+      {
+        "label": "Matrixdock XAUm mint/redeem via app.matrixdock.com after Matrixdock account KYC (accessed 2026-11-20)",
+        "url": "https://docs.matrixdock.com/english/gold-token-xaum/minting-and-redeeming.md"
+      },
+      {
+        "label": "Matrixdock Gold (XAUm) product page: LBMA gold-backed token, Asian vault custody (accessed 2026-11-20)",
         "url": "https://www.matrixdock.com/xaum"
       },
       {
-        "label": "Matrixdock XAUm token features: gold claim and KYC primary mint/redemption",
-        "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/token-features"
-      },
-      {
-        "label": "Matrixdock prohibited countries: EU member states",
-        "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/legal/prohibited-countries-regions.md"
+        "label": "ESMA MiCA page: interim MiCA register index, last update 2026-11-18 (accessed 2026-11-20)",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       }
     ]
   },

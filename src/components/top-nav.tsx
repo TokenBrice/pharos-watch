@@ -29,29 +29,30 @@ const TOP_MENUS: readonly NavGroup[] = NAV_GROUPS;
 const APPEARANCE_MENU_KEY = "appearance";
 
 /**
- * Single menu row. Section menus render the authored `description` on a second
- * line: the copy is what turns DDR, DEWS, and FreezeWatch from jargon into a
- * decision. Every description is written to fit that line at this panel width
- * (see the budget test in `nav-config.test.ts`), so a row is a fixed two-line
- * block and the panel scans as an even column. The sectioned columns drop the
- * description entirely so three columns of tail routes fit one panel.
+ * Single menu row. `row` renders the authored `description` on a second line
+ * beside an icon tile: the copy is what turns DDR, DEWS, and FreezeWatch from
+ * jargon into a decision, and every description is written to fit that line
+ * at this panel width, so a row is a fixed two-line block and the panel scans
+ * as an even column. `compact` is the plain-link tier for destinations people
+ * already know by name; its description moves to the tooltip.
  */
 function NavMenuItem({
   item,
   group,
   isActive,
-  withDescription,
+  variant,
   onNavigate,
 }: {
   item: NavItem;
   group: string;
   isActive: boolean;
-  withDescription?: boolean;
+  variant: "row" | "compact";
   onNavigate: () => void;
 }) {
   const Icon = item.icon;
   const descriptionId = useId();
-  const hasDescription = Boolean(withDescription && item.description);
+  const isRow = variant === "row";
+  const hasDescription = Boolean(isRow && item.description);
 
   return (
     <li>
@@ -60,19 +61,39 @@ function NavMenuItem({
         prefetch={false}
         aria-current={isActive ? "page" : undefined}
         aria-describedby={hasDescription ? descriptionId : undefined}
+        title={isRow ? undefined : item.description}
         onClick={() => {
           trackEvent("nav_click", { surface: "menu", group, href: item.href });
           onNavigate();
         }}
         className={cn(
-          "relative flex cursor-default gap-2.5 rounded-lg px-2.5 text-sm outline-hidden select-none transition-colors hover:bg-muted/60 focus:bg-muted/60 focus:text-accent-foreground",
-          withDescription ? "items-start py-2" : "items-center py-2",
+          "group/nav-item relative flex cursor-default items-center rounded-lg text-sm outline-hidden select-none transition-colors hover:bg-muted/60 focus:bg-muted/60 focus:text-accent-foreground",
+          isRow ? "gap-3 px-2 py-1.5" : "h-8 gap-2 px-2",
+          isActive && "bg-muted/60",
         )}
         {...(item.external ? { target: "_blank", rel: "noreferrer" } : {})}
       >
-        <Icon className={cn("size-4 shrink-0 text-muted-foreground", withDescription && "mt-0.5")} aria-hidden />
+        {isRow ? (
+          <span
+            className={cn(
+              "grid size-8 shrink-0 place-items-center rounded-md border transition-colors group-hover/nav-item:border-border group-hover/nav-item:text-foreground",
+              isActive
+                ? "border-border bg-background text-foreground"
+                : "border-border/50 bg-muted/40 text-muted-foreground",
+            )}
+          >
+            <Icon className="size-4" aria-hidden />
+          </span>
+        ) : (
+          <Icon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+        )}
         <span className="min-w-0 flex-1">
-          <span className="flex items-center gap-1 text-sm font-medium text-foreground">
+          <span
+            className={cn(
+              "flex items-center gap-1 text-sm text-foreground",
+              isRow ? "font-medium" : "text-foreground/85 group-hover/nav-item:text-foreground",
+            )}
+          >
             {item.label}
             {item.external ? <ArrowUpRight className="size-3 text-muted-foreground/70" aria-hidden /> : null}
           </span>
@@ -92,11 +113,10 @@ function NavMenuItem({
 }
 
 /**
- * Desktop masthead nav (≥lg). A quick rail carries the four highest-traffic
- * routes as direct links, three section menus own market/risk/tool surfaces,
- * and one sectioned Resources panel holds the long tail that previously sat in
- * two top-level menus plus an unlabeled lighthouse button. Mobile keeps
- * <Header />.
+ * Desktop masthead nav (≥lg). A quick rail carries the six highest-traffic
+ * routes as direct links; four section menus (Markets, Risk, Tools, Learn)
+ * share one panel grammar of described rows, and Learn closes on a compact
+ * About Pharos tier. Mobile keeps <Header />.
  */
 export function TopNav() {
   const pathname = usePathname();
@@ -310,7 +330,6 @@ export function TopNav() {
         <nav ref={sectionNavRef} aria-label="Sections" className="flex shrink-0 items-center gap-0.5">
           {TOP_MENUS.map((menu) => {
             const isActive = menu.items.some((item) => isNavItemActive(pathname, item));
-            const isSectioned = Boolean(menu.columns);
             const isOpen = openMenu === menu.key;
             const panelId = `top-nav-${menu.key}-panel`;
             return (
@@ -394,44 +413,47 @@ export function TopNav() {
                     HTML (crawl links); closed panels are hidden + inert, so
                     they are neither visible nor focusable. */}
                 <div id={panelId} hidden={!isOpen} inert={!isOpen} className="absolute right-0 top-full z-modal pt-2">
-                    <div
-                      className={cn(
-                        "bg-popover text-popover-foreground animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 min-w-[8rem] origin-top-right overflow-x-hidden overflow-y-auto rounded-md border shadow-md",
-                        isSectioned ? "w-auto p-3" : "w-[19rem] p-1.5",
-                      )}
-                    >
-                      {menu.columns ? (
-                        <div className="flex gap-3">
-                          {menu.columns.map((column) => (
-                            <div key={column.key} className="min-w-[172px]">
-                              <p className="pharos-label mb-1 px-2.5 text-muted-foreground/70">{column.label}</p>
-                              <ul>
-                                {column.items.map((item) => (
-                                  <NavMenuItem
-                                    key={item.href}
-                                    item={item}
-                                    group={menu.key}
-                                    isActive={isNavItemActive(pathname, item)}
-                                    onNavigate={closeMenu}
-                                  />
-                                ))}
-                              </ul>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <ul>
-                          {menu.items.map((item) => (
-                            <NavMenuItem
-                              key={item.href}
-                              item={item}
-                              group={menu.key}
-                              isActive={isNavItemActive(pathname, item)}
-                              withDescription
-                              onNavigate={closeMenu}
-                            />
-                          ))}
-                        </ul>
+                    <div className="bg-popover text-popover-foreground animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 w-[20rem] origin-top-right overflow-x-hidden overflow-y-auto rounded-md border p-1.5 shadow-md">
+                      {(menu.sections ?? [{ key: menu.key, label: null, items: menu.items }]).map((section) =>
+                        section.compact ? (
+                          // The compact tier closes the panel: a muted strip
+                          // under a hairline, bled to the panel edges.
+                          <div
+                            key={section.key}
+                            className="-mx-1.5 -mb-1.5 mt-1.5 border-t border-border/60 bg-muted/30 px-1.5 pt-2.5 pb-1.5"
+                          >
+                            {section.label ? (
+                              <p className="pharos-label mb-1 px-2 text-muted-foreground">{section.label}</p>
+                            ) : null}
+                            {/* Column-first in rows of four; nav-config orders the
+                                tier so each column reads as one group. */}
+                            <ul className="grid grid-flow-col grid-rows-4 gap-x-1">
+                              {section.items.map((item) => (
+                                <NavMenuItem
+                                  key={item.href}
+                                  item={item}
+                                  group={menu.key}
+                                  isActive={isNavItemActive(pathname, item)}
+                                  variant="compact"
+                                  onNavigate={closeMenu}
+                                />
+                              ))}
+                            </ul>
+                          </div>
+                        ) : (
+                          <ul key={section.key}>
+                            {section.items.map((item) => (
+                              <NavMenuItem
+                                key={item.href}
+                                item={item}
+                                group={menu.key}
+                                isActive={isNavItemActive(pathname, item)}
+                                variant="row"
+                                onNavigate={closeMenu}
+                              />
+                            ))}
+                          </ul>
+                        ),
                       )}
                     </div>
                 </div>

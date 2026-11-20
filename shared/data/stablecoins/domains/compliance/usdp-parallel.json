@@ -1,5 +1,34 @@
 {
   "id": "usdp-parallel",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "USDp factsheet: issuer given as 'Parallel V3, a DAO-governed protocol built by Cooper Labs'; canonical Ethereum contract 0x9B3a8f7CEC208e247d97dEE13313690977e24459",
+        "url": "https://docs.parallel.best/resources/factsheets/usdp"
+      },
+      {
+        "label": "USDp & sUSDp docs: issuance and redemption of USDp managed by Parallel modules, no issuer entity named (accessed 2026-11-20)",
+        "url": "https://docs.parallel.best/products/parallel-v3/stablecoins-and-savings/usdp-and-susdp"
+      },
+      {
+        "label": "Parallel docs overview: decentralized, non-custodial protocol, anyone can mint or burn stablecoins (accessed 2026-11-20)",
+        "url": "https://docs.parallel.best/"
+      },
+      {
+        "label": "Parallel V3 governance: deploying a stablecoin and all module parameters require sPRL holder DAO votes (accessed 2026-11-20)",
+        "url": "https://docs.parallel.best/products/parallel-v3/governance"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      },
+      {
+        "label": "ESMA interim MiCA register index, last update 18 November 2026: no Parallel or Cooper Labs row among the EMT/ART issuer files",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      }
+    ]
+  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {

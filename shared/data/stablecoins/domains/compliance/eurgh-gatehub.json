@@ -1,0 +1,28 @@
+{
+  "id": "eurgh-gatehub",
+  "mica": {
+    "status": "authorized",
+    "tokenType": "EMT",
+    "authorizationType": "emi",
+    "competentAuthority": "Bank of Slovenia",
+    "authorizedEntity": "DINARO company for electronic money issuing and payment services Ltd.",
+    "references": [
+      {
+        "label": "ESMA interim EMT register (EMTWP.csv): DINARO, Bank of Slovenia, EURGH white paper notified 01/09/2026, DTI M5ZR1C4B3 (accessed 2026-11-20)",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "Dinaro EURGH white paper: issuer DINARO d.o.o., offer and publication from 01-09-2026",
+        "url": "https://dinaro.si/eurgh-whitepaper.html"
+      },
+      {
+        "label": "GateHub announcement: EURGH EMT issued by Dinaro, 05-11-2026",
+        "url": "https://gatehub.net/blog/gatehub-partners-with-dinaro-to-launch-gatehub-euro-eurgh/"
+      },
+      {
+        "label": "Bank of Slovenia register: Dinaro e-money authorisation 02-11-2021",
+        "url": "https://www.bsi.si/en/banking-supervision/register-of-supervised-entities/dinaro-company-for-electronic-money-issuing-and-payment-services-ltd"
+      }
+    ]
+  }
+}

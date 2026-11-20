@@ -1,0 +1,24 @@
+{
+  "id": "feusd-felix",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Felix terms: feUSD issued through CDP smart contracts; operator has no control over token creation or destruction",
+        "url": "https://usefelix.gitbook.io/docs/terms/terms-and-conditions.md"
+      },
+      {
+        "label": "Felix CDP Market docs: borrowers deposit collateral and mint feUSD (Liquity v2 architecture)",
+        "url": "https://usefelix.gitbook.io/docs/lending-products/quickstart.md"
+      },
+      {
+        "label": "ESMA interpretation of crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      },
+      {
+        "label": "ESMA Q&A: offering an EMT to the public requires an authorised issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2404"
+      }
+    ]
+  }
+}

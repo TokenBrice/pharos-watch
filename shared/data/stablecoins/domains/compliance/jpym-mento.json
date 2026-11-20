@@ -1,5 +1,38 @@
 {
   "id": "jpym-mento",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Mento Labs general counsel: Mento stablecoins are EMT-shaped but have no issuing entity, so MiCA does not apply (2024-11-18)",
+        "url": "https://www.mento.org/blog/highlights-from-the-micar-workshop"
+      },
+      {
+        "label": "MGP-19 proposal: transfer issuance governance of the JPYm CDP branch and all 15 Mento stable assets to Celo Governance (2026-08-21)",
+        "url": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
+      },
+      {
+        "label": "CGP-253 proxy vote for MGP-19: JPYm among the 15 Mento stable assets whose upgrade authority moves to Celo Governance (2026-08-24)",
+        "url": "https://raw.githubusercontent.com/celo-org/governance/main/CGPs/cgp-0253.md"
+      },
+      {
+        "label": "MGP-19 follow-up: passed 8 Sep 2026; Mento Labs does not issue, own, govern or back the Mento stable assets; onchain authority sits with Celo Governance (2026-11-18)",
+        "url": "https://forum.celo.org/t/state-of-stablecoins-on-celo-mgp-19-follow-up/14293"
+      },
+      {
+        "label": "Mento governance documentation: protocol governed by MENTO token holders via on-chain proposals (accessed 2026-11-20)",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/governance-and-mento/understanding-mento-governance.md"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      },
+      {
+        "label": "ESMA interim MiCA EMT issuer register: no Mento or JPYm issuer entry (accessed 2026-11-20)",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      }
+    ]
+  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {

@@ -5,27 +5,31 @@
     "tokenType": "ART",
     "references": [
       {
-        "label": "Coinbase EEA MiCA restrictions expressly naming PAXG",
-        "url": "https://help.coinbase.com/en/coinbase/other-topics/other/mica-restricted-stablecoins"
+        "label": "Coinbase EEA notice: PAXG among 14 MiCA-non-compliant assets; buying, selling and converting restricted, residual balances auto-converted to USDC on 2026-10-30 (accessed 2026-11-20)",
+        "url": "https://help.coinbase.com/en-gb/coinbase/other-topics/other/mica-restricted-stablecoins"
       },
       {
-        "label": "Bit2Me MiCA purchase and service restrictions naming PAXG",
+        "label": "Gemini notice: PAXG no longer available for trading or deposits for EU/EEA customers after 2025-02-28 (accessed 2026-11-20)",
+        "url": "https://support.gemini.com/hc/en-us/articles/33437494572443-Non-MiCA-Compliant-Stablecoins"
+      },
+      {
+        "label": "Bit2Me notice, February 2025: PAXG purchases stopped from 2025-02-25, sell/withdraw until 2025-03-21, then auto-conversion (accessed 2026-11-20)",
         "url": "https://blog.bit2me.com/es/actualizacion-sobre-stablecoins-y-mica/"
       },
       {
-        "label": "Paxos PAX Gold terms: exact issuer and one-ounce allocated-gold claim",
+        "label": "Pax Gold terms, last modified 2025-12-12: Paxos Trust Company, NA issues PAXG, one fine troy ounce of allocated London Good Delivery gold per token, OCC-approved",
         "url": "https://www.paxos.com/terms-and-conditions/pax-gold-terms-conditions"
       },
       {
-        "label": "ESMA MiCA Article 3: ART and EMT definitions",
+        "label": "ESMA MiCA Article 3(1)(6): asset-referenced token is a non-EMT crypto-asset maintaining stable value by referencing another value or right (accessed 2026-11-20)",
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
       },
       {
-        "label": "ESMA authorized ART issuer register reviewed 28 October 2026",
-        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/ARTZZ.csv"
+        "label": "ESMA interim MiCA register page, last update 18 November 2026; the Title III ART issuer file contains a header row only, so no ART issuer is authorised (accessed 2026-11-20)",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "ESMA EMT register: distinct Paxos Issuance Europe Oy entries",
+        "label": "ESMA interim EMT register, 2026-11-20 snapshot: Paxos Issuance Europe Oy (FIN-FSA) notified white papers are EUROe, eUSD and USDG only, none for PAXG",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       }
     ]

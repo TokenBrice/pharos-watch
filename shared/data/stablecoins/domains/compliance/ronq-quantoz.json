@@ -4,12 +4,16 @@
     "status": "authorized",
     "tokenType": "EMT",
     "authorizationType": "emi",
-    "competentAuthority": "De Nederlandsche Bank (DNB)",
+    "competentAuthority": "DNB",
     "authorizedEntity": "Quantoz Payments B.V.",
     "references": [
       {
-        "label": "ESMA EMT register, accessed 2026-11-16: RONQ white paper, Quantoz Payments B.V., DNB, electronic money institution; notification and update 2026-04-15. This is issuer authorization evidence, not white paper approval or issuance evidence.",
+        "label": "ESMA EMT register, accessed 2026-11-20: RONQ white paper, Quantoz Payments B.V., DNB, electronic money institution; notification and update 2026-04-15. This is issuer authorization evidence, not white paper approval or issuance evidence.",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "DNB public register, accessed 2026-11-20: Quantoz Payments B.V. (LEI 7245008P1HPUPVM7XL94, relation R186418), electronic money institution with EEA e-money passporting",
+        "url": "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418"
       }
     ]
   }

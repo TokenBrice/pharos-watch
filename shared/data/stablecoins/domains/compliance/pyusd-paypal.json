@@ -5,20 +5,20 @@
     "tokenType": "EMT",
     "references": [
       {
-        "label": "Kraken EEA stablecoin restrictions: PYUSD explicitly listed",
-        "url": "https://support.kraken.com/articles/stablecoin-offerings-for-eea-clients"
+        "label": "Coinbase Luxembourg S.A. (CSSF-authorised MiCA CASP) EEA notice: PYUSD named among 14 MiCA-non-compliant stablecoins, buying/selling/converting restricted and residual balances auto-converted to USDC on 30 October 2026 (accessed 2026-11-20)",
+        "url": "https://help.coinbase.com/en-gb/coinbase/other-topics/other/mica-restricted-stablecoins"
       },
       {
-        "label": "Coinbase MiCA non-compliant stablecoin restrictions",
-        "url": "https://help.coinbase.com/en/coinbase/other-topics/other/mica-restricted-stablecoins"
+        "label": "Bitstamp Europe S.A. notice of 31 March 2025: PYUSD trading disabled for EU/EEA in January 2025, deposits/withdrawals halted 5 May 2025 and balances converted to USDC 6-8 May 2025 (accessed 2026-11-20)",
+        "url": "https://blog.bitstamp.net/post/mica-regulation-update-on-select-assets-in-the-eueea"
       },
       {
-        "label": "ESMA interim MiCA register (issuers of EMTs): no PYUSD row found",
+        "label": "YouHodler MiCA update: PYUSD listed among stablecoins removed from EU services including yield accounts from 30 June 2024 (accessed 2026-11-20)",
+        "url": "https://help.youhodler.com/en/articles/9540317-important-mica-update"
+      },
+      {
+        "label": "ESMA MiCA page: interim MiCA register (five CSVs, last update 18 November 2026); the EMT-issuer file carries no PayPal/PYUSD white-paper row and Paxos Issuance Europe Oy rows only for EUROe, eUSD and USDG (accessed 2026-11-20)",
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "ESMA interim MiCA EMT issuer register: PYUSD not listed",
-        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       }
     ]
   },
