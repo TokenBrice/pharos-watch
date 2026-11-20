@@ -65,6 +65,17 @@ export const SUPPLY_PERIMETER_CHANGES = [
     evidenceUrl: "https://github.com/DefiLlama/peggedassets-server/pull/1001",
     marketWide: false,
   },
+  // XAUT, 2026-11-19: PR #2157 let the scoped read reach Tether's disclosure, so XAUT moved from DefiLlama's
+  // protocol cap to canonical Ethereum supply minus the Tether treasury balance, reconciled to that disclosure
+  // (749,423.564532 XAUT; about $2.71B against $2.97B). The 21:45 UTC sync first published it; its finalized
+  // block (21:29:59 UTC) is earlier evidence, not adoption.
+  {
+    stablecoinId: "xaut-tether",
+    changedAt: Date.parse("2026-11-19T21:45:15Z") / 1000,
+    chainIds: ["ethereum"],
+    evidenceUrl: "https://github.com/TokenBrice/pharos-watch/pull/2157",
+    marketWide: false,
+  },
 ] as const;
 
 /** A reviewed perimeter record enables the Kinesis wrapper publication and snapshot together. */

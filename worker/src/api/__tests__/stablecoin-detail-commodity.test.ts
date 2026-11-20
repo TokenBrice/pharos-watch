@@ -304,8 +304,8 @@ const supplyHistoryInsert = (sqlite: ReturnType<typeof fixtures.open>["sqlite"])
 
 it.each([true, false])("keeps XAUT USD history and admits only completed scoped checkpoints (%s)", async (completed) => {
   const { db, sqlite } = fixtures.open();
-  const now = Math.floor(Date.now() / 1000);
-  const day = 86_400;
+  const day = 86_400, now = 1_798_200_000; // post-perimeter
+  vi.spyOn(Date, "now").mockReturnValue(now * 1000);
   const dates = [now, now - 7 * day, now - 30 * day];
   fetchJsonWithRetryMock.mockImplementation(async (url) => ({ response: new Response(), body: url.includes("/chart/")
     ? { coins: { "coingecko:tether-gold": { prices: dates.map((timestamp) => ({ timestamp, price: 4 })) } } }
