@@ -39,6 +39,7 @@ function query(data: unknown) {
 }
 
 const PREVIEW_PUBLISHED_AT_SEC = Date.parse("2026-10-27T08:00:00Z") / 1000;
+const MAP_PRELOAD = '<link rel="preload" as="image" href="/safety-scores/map.webp" fetchPriority="high"';
 
 function makePreview(overrides: Partial<SafetyScoresPreview> = {}): SafetyScoresPreview {
   const identity = overrides.identity ?? {
@@ -152,7 +153,7 @@ describe("ReportCardsV9Client", () => {
       error: state === "failed" ? new Error("Ratings unavailable") : null,
     });
     const html = renderToStaticMarkup(<ReportCardsV9Client />);
-    expect(html).toContain('<link rel="preload" as="image" href="/safety-scores/map.webp" fetchPriority="high"');
+    expect(html).toContain(MAP_PRELOAD);
     expect(html.match(/<img\b[^>]*src="\/safety-scores\/map\.webp"/g)).toHaveLength(1);
     const { container } = await render(<ReportCardsV9Client />);
     const hero = screen.getByRole("group", { name: "Ecosystem safety overview" });
@@ -290,7 +291,7 @@ describe("ReportCardsV9Client", () => {
 
   it.each(["loading", "failed"])("keeps ratings visible when the independent supply query is %s", async (state) => {
     mocks.useStablecoins.mockReturnValue({
-      ...query(undefined), isLoading: state === "loading",
+      ...query(undefined), isLoading: state === "loading", isPending: state === "loading",
       error: state === "failed" ? new Error("Supply unavailable") : null,
     });
     await render(<ReportCardsV9Client />);
@@ -327,46 +328,65 @@ describe("ReportCardsV9Client", () => {
     expect(screen.getAllByTestId("v9-card")).toHaveLength(2);
   });
 
-  it("hands the prerendered preview to the pending live client unchanged", async () => {
+  it("preserves focus and map fallback through live handoff", async () => {
     holdPreviewClock();
     mocks.useReportCardsV9.mockReturnValue({ ...query(undefined), isLoading: true });
     mocks.useStablecoins.mockReturnValue(query(undefined));
     const preview = makePreview();
-    const page = <Island initialPreview={preview}><Loading preview={preview} /></Island>;
+    const page = () => <Island initialPreview={preview}><Loading preview={preview} /></Island>;
 
-    const html = renderToStaticMarkup(page);
+    const html = renderToStaticMarkup(page());
+    expect(html).toContain(MAP_PRELOAD);
     expect(html).toContain("Grades as of 2026-10-27");
     expect(html).toContain('href="/stablecoin/asset-a/"');
     mocks.useReportCardsV9.mockClear();
-    const { container } = renderSync(page), flush = container.innerHTML;
+    const { container, rerender } = renderSync(page());
+    const link = screen.getByText("Asset A").closest("a")!;
+    const image = container.querySelector("img")!;
+    fireEvent.error(image);
+    link.focus();
+    const flush = container.innerHTML;
     await act(() => import("./v9-client"));
     expect(mocks.useReportCardsV9).toHaveBeenCalled();
     expect(container.innerHTML).toBe(flush);
+    expect(document.activeElement).toBe(link);
+    expect(container.querySelector("img")).toBe(image);
     expectPreviewFacts();
-    // Hero and controls stay neutral: no preview-derived aggregate.
     expect(screen.getByRole("group", { name: "Ecosystem safety overview" }).textContent).not.toMatch(/[0-9]/);
+
+    image.closest("a")!.focus();
+    mocks.useReportCardsV9.mockReturnValue(query(makeReportCardsV9Response({
+      updatedAt: PREVIEW_PUBLISHED_AT_SEC, cards: [makeV9Card({ id: "asset-a", grade: "C", score: 55 })],
+    })));
+    rerender(page());
+    expect(document.activeElement).toBe(screen.getByRole("link", { name: "Open the Safety Score Map" }));
+    expect(container.querySelector("img")?.getAttribute("src")).toBe("/safety-scores/map.png");
+    expect(screen.queryByText("Grades as of 2026-10-27")).toBeNull();
+    expect(await screen.findAllByTestId("v9-card")).toHaveLength(1);
+  });
+
+  it("keeps focus on the preview coin link when a paused ratings request resumes", async () => {
+    holdPreviewClock();
+    const preview = makePreview();
+    const pending = { ...query(undefined), isPending: true };
+    mocks.useReportCardsV9.mockReturnValue({ ...pending, fetchStatus: "paused" });
+    const { rerender } = await render(<ReportCardsV9Client initialPreview={preview} />);
+    const link = screen.getByText("Asset A").closest("a")!;
+    link.focus();
+    mocks.useReportCardsV9.mockReturnValue({ ...pending, isLoading: true, fetchStatus: "fetching" });
+    rerender(<ReportCardsV9Client initialPreview={preview} />);
+    expect(document.activeElement).toBe(link);
   });
 
   it("retains the preview and its links through an initial API failure", async () => {
     holdPreviewClock();
     mocks.useReportCardsV9.mockReturnValue({
       ...query(undefined),
-      isLoading: false,
       error: new Error("Ratings unavailable"),
     });
     await renderPreview();
     expectPreviewFacts();
     expect(screen.queryByRole("alert")).toBeNull();
-  });
-
-  it("replaces the preview once an equal or newer admitted publication arrives", async () => {
-    mocks.useReportCardsV9.mockReturnValue(query(makeReportCardsV9Response({
-      updatedAt: PREVIEW_PUBLISHED_AT_SEC,
-      cards: [makeV9Card({ id: "asset-a", grade: "C", score: 55 })],
-    })));
-    await renderPreview();
-    expect(screen.queryByText("Grades as of 2026-10-27")).toBeNull();
-    expect(screen.getAllByTestId("v9-card")).toHaveLength(1);
   });
 
   it("follows a successful empty publication instead of retaining the preview", async () => {
@@ -404,38 +424,33 @@ describe("ReportCardsV9Client", () => {
 
   it("keeps the dated preview when the live publication is older, and lets a changed methodology win", async () => {
     holdPreviewClock();
-    mocks.useReportCardsV9.mockReturnValue(query(makeReportCardsV9Response({
+    const older = makeReportCardsV9Response({
       updatedAt: PREVIEW_PUBLISHED_AT_SEC - 600,
       cards: [makeV9Card({ id: "asset-a", grade: "C", score: 55 })],
-    })));
+    });
+    mocks.useReportCardsV9.mockReturnValue(query(older));
     const { unmount } = await renderPreview();
     expectPreviewFacts();
     unmount();
 
-    const changed = makeReportCardsV9Response({
-      updatedAt: PREVIEW_PUBLISHED_AT_SEC - 600,
-      cards: [makeV9Card({ id: "asset-a", grade: "C", score: 55 })],
-    });
-    changed.safetyScoreIdentity = {
-      ...changed.safetyScoreIdentity,
-      methodologyVersion: "9.1",
-    };
-    changed.methodology = { ...changed.methodology, version: "9.1" };
-    mocks.useReportCardsV9.mockReturnValue(query(changed));
+    mocks.useReportCardsV9.mockReturnValue(query({ ...older,
+      safetyScoreIdentity: { ...older.safetyScoreIdentity, methodologyVersion: "9.1" },
+      methodology: { ...older.methodology, version: "9.1" },
+    }));
     await renderPreview();
     expect(screen.queryByText(/Grades as of 2026-10-27/)).toBeNull();
     expect(screen.getAllByTestId("v9-card")).toHaveLength(1);
   });
 
   it.each([
-    ["loading", 1000], ["failed", 1000], ["failed", 2_147_484_647],
+    ["loading", 1000], ["paused", 1000], ["failed", 1000], ["failed", 2_147_484_647],
   ] as const)("expires a mounted preview while ratings remain %s (%i ms before expiry)", async (state, delay) => {
     vi.useFakeTimers();
     const timeout = vi.spyOn(globalThis, "setTimeout");
     const preview = makePreview();
     vi.setSystemTime(new Date(preview.expiresAtSec * 1000 - delay));
     mocks.useReportCardsV9.mockReturnValue({
-      ...query(undefined), isLoading: state === "loading",
+      ...query(undefined), isLoading: state === "loading", isPending: state !== "failed",
       error: state === "failed" ? new Error("Ratings unavailable") : null,
     });
     mocks.useStablecoins.mockReturnValue(query(undefined));
@@ -446,7 +461,7 @@ describe("ReportCardsV9Client", () => {
     expectPreviewFacts();
     act(() => vi.advanceTimersByTime(1));
     expect(screen.queryByText(/Grades as of 2026-10-27/)).toBeNull();
-    if (state === "failed") {
+    if (state !== "loading") {
       expect(screen.getByRole("alert").textContent).toContain("V8 ratings are not used as a fallback");
     }
     vi.useRealTimers();
@@ -455,7 +470,7 @@ describe("ReportCardsV9Client", () => {
   it("drops an expired preview after hydration and falls back to the neutral unavailable state", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-10-31T00:00:00Z"));
-    mocks.useReportCardsV9.mockReturnValue({ ...query(undefined), isLoading: false });
+    mocks.useReportCardsV9.mockReturnValue(query(undefined));
     mocks.useStablecoins.mockReturnValue(query(undefined));
     await renderPreview();
     act(() => {
