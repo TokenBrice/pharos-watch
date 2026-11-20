@@ -300755,6 +300755,37 @@
       ],
       "nextReviewTrigger": "Recheck 2026-11-14, or earlier upon accessible issuer app/detailed inventory and complete issuer-bound QLP/PDA holdings reconciled with liabilities at one supported exact Solana slot, resolving USDC versus cUSDO wording.",
       "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:stac-securitize",
+      "taskIds": [
+        "V9G-e8305544338afda8"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-11-20T00:24:00Z",
+      "reviewer": "Pharos stac-1707 renewal 2026-11-20 (PoR lockstep)",
+      "evidence": [
+        "https://chroniclelabs.org/api/ipfs/QmPQnDVp37aJZzTt6UCaK9UAdQv2EUseEiaxjYmfmULvBf | Portfolio/dashboard document date 2026-11-18 | payload.output.dashboard | 51 positions (all 49 September ISINs retained with unchanged units and maturities plus the two October additions); aggregate_portfolio_market_value=280999622.24 USD; cash=3215085.19; other_anl=1595815.62; NAV=285810523.1; supply_breakdown ethereum 102225.381708 + solana 172413.444566 = outstanding 274638.826274; longest listed maturity 2041-07-17 (US12570LAJ70). Round-2 verification 2026-11-20: CID re-fetched from chroniclelabs.org/api/ipfs and gateway.pinata.cloud/ipfs returned byte-identical payloads (sha256 96121a4b71008bccf05c24e79be4fbc700335fd36555b5456997fa7c204e2bd4) matching every entered ISIN, maturity, mark and headline figure. The census still reconciles the securities portfolio only and excludes cash plus other_anl from its denominator, so it is not the gross-reconciled complete fund asset/maturity schedule.",
+        "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund | re-read 2026-11-20 | Rendered Overview and Redemptions footnotes disclose the CLO mandate, daily redemption and discretionary liquidity pool, and no fund-share term or maturity covenant."
+      ],
+      "rationale": "Lockstep renewal from the current Chronicle proof (portfolio date 2026-11-18) refreshed the curated composition, reserve-bound maturity census, same-scope gap classification and mint-authority proof citation. The maturity gap itself is unchanged: the public sources reviewed (issuer offering page and SEC Form D, re-read 2026-11-20) disclose no NAV-share contractual term, the controlling private placement memorandum was not available for review, and the Chronicle roster remains a dated securities census whose market_coverage_ratio reconciles the portfolio, not whole-NAV gross coverage. maturityDaysMax stays unset; 2041-07-17 is not adopted as a fund-share maximum.",
+      "changeRefs": [
+        "shared/data/stablecoins/coins/stac-securitize.json",
+        "shared/data/stablecoins/domains/reserves/stac-securitize.json",
+        "shared/data/stablecoins/domains/mint-authority/stac-securitize.json",
+        "shared/data/safety-score-v9/reserve-bound-facts-v1.json",
+        "shared/data/safety-score-v9/evidence-gap-classifications-v1.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "stac-securitize:gap:reserve:reserve:266991e8408d5ccd5cf478f9:maturity",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Reopen on publication/provision of the controlling PPM or a dated, gross-reconciled complete fund asset/maturity schedule including cash and other_anl classification; otherwise next review 2026-12-20.",
+      "factsClosed": 0
     }
   ]
 }

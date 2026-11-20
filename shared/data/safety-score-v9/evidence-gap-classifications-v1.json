@@ -19074,7 +19074,7 @@
       "rationale": "The exact primary-market STAC fund redemption route has no public guaranteed end-to-end maximum settlement interval. Issuer terms explicitly disclaim the expected T+2/T+3 liquidation timing and make liquidity-pool redemption discretionary. Daily request frequency and one-day holder transfer restriction are not final USD settlement."
     },
     {
-      "id": "uw-stac-securitize-dfa329b1d04c516a",
+      "id": "ir1707-stac-fund-maturity-20261120",
       "assetId": "stac-securitize",
       "scope": {
         "componentKey": "reserve-exposure",
@@ -19086,20 +19086,20 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:51:12Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R57)",
+      "reviewedAt": "2026-11-20T00:24:00Z",
+      "reviewer": "Pharos stac-1707 renewal 2026-11-20",
       "sourcesRefs": [
-        "source:57deed40d616233845c1c842",
-        "source:28888ee693af12c828116e7a"
+        "source:e73a0cac0893b1ad8f672efc",
+        "source:e5ff9c1a5c9aa5d5a918e641"
       ],
       "searchedSurfacesRefs": [
         "surface:4045bab3a85c44ee39f37ccc",
         "surface:608de021755fbaabcc3c0ddf",
         "surface:02e768c50563963ca283bcfd",
-        "surface:6495cbecd566f369a529ffdf",
+        "surface:af53fd1b770b8849732c7097",
         "surface:ff7391b70f5c79a5b19d2033"
       ],
-      "rationale": "No maximum term is publicly specified for the admitted STAC fund-NAV exposure. Full dated portfolio maturities concern constituent CLOs, not the redeemable fund share; public issuer offering/launch and SEC filing disclose no all-in-scope fund maturity covenant. Neither latest underlying maturity nor WAM is substituted for the fund claim. The failed portal is not the basis for C."
+      "rationale": "No maximum term is publicly specified for the admitted STAC fund-NAV exposure. The November 18, 2026 Chronicle census again publishes 51 dated CLO positions whose maturities concern constituent CLOs, not the redeemable fund share; the re-read issuer offering page and SEC Form D (2026-11-20) disclose no all-in-scope fund maturity covenant. Neither the unchanged latest underlying maturity (2041-07-17) nor WAM is substituted for the fund claim. The failed portal is not the basis for C."
     },
     {
       "id": "uw-xgld-unitas-2a23121b3ee490f8",
@@ -99006,6 +99006,28 @@
         "excerpt": "totalAssets() 8033132944177 (Ethereum), 643037209808 (Optimism), 36038760830 (Arbitrum); asset() returns USDC on all three chains",
         "assertion": "Fresh pinned reads confirm the three MYT vaults are live and USDC-denominated (8,712,208.91 USDC combined), but on-chain reads reconcile nothing: no issuer surface nets these assets against outstanding alUSD, AMO or Transmuter balances, bridge custody or legacy supply outside V3 issuance."
       }
+    },
+    {
+      "id": "source:e73a0cac0893b1ad8f672efc",
+      "value": {
+        "url": "https://chroniclelabs.org/api/ipfs/QmPQnDVp37aJZzTt6UCaK9UAdQv2EUseEiaxjYmfmULvBf",
+        "observedAt": "2026-11-20T00:24:00Z",
+        "datumAsOf": "2026-11-18",
+        "location": "payload.output.dashboard.portfolio.positions",
+        "excerpt": "\"description\":\"CIFC FUNDING LTD 2022-1AR CLO 5.33624% 07/17/2041\"",
+        "assertion": "Underlying CLO positions have dated maturities; the proof does not establish a maximum contractual maturity of the single admitted STAC fund-NAV claim."
+      }
+    },
+    {
+      "id": "source:e5ff9c1a5c9aa5d5a918e641",
+      "value": {
+        "url": "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund",
+        "observedAt": "2026-11-20T00:24:00Z",
+        "datumAsOf": null,
+        "location": "Rendered Overview",
+        "excerpt": "This Fund provides digital, tokenized exposure to a diversified portfolio of U.S. dollar-denominated Collateralized Loan Obligations (CLOs), with a focus on tranches rated AAA.",
+        "assertion": "Fund exposure is disclosed, without a fund-share maximum term or governing all-in-scope maturity covenant."
+      }
     }
   ],
   "searchedSurfaceObservations": [
@@ -113700,6 +113722,10 @@
     {
       "id": "surface:9f1181505a10b7cffc8d7b30",
       "value": "https://alchemix.fi/"
+    },
+    {
+      "id": "surface:af53fd1b770b8849732c7097",
+      "value": "https://chroniclelabs.org/api/ipfs/QmPQnDVp37aJZzTt6UCaK9UAdQv2EUseEiaxjYmfmULvBf"
     }
   ]
 }

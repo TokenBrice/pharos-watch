@@ -22,7 +22,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/evidence-gap-classifications-v1.json",
-      "sha256": "b78962912444a17cda66500ec533036f88754a3776470564c195680b0b714280"
+      "sha256": "0bfb9fae6b3e8bfb5b8d48d3472866490a2c2cd3a144f4f0c2567b760f5266f1"
     },
     {
       "path": "shared/data/safety-score-v9/exit-execution-model-reviews-v1.json",
@@ -50,7 +50,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/mechanism-review-overlays-v1.json",
-      "sha256": "25b99e806cc19d3b9eb0854c1a7f6d864a067623a27bdbfc574a19900dcdce42"
+      "sha256": "0770d00007f01a2a42e8259799b1034b0f35a02025f9b5eacef438d2a0a24875"
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
@@ -58,7 +58,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/reserve-bound-facts-v1.json",
-      "sha256": "eddcb4da039ccc6a05518ef41c2554cf02ce4b07059ba6c25b37bcfe621a5c90"
+      "sha256": "a009c3cbea7048f52b77cfaafa41eb28f49bc11e96a0b984b0693fc44e380653"
     },
     {
       "path": "shared/data/safety-score-v9/shock-coverage-measurements-v1.json",
@@ -82,15 +82,15 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/stablecoins/coins.generated.json",
-      "sha256": "a0d44c7aee1b198106aab09c3cb3f91dd4b0a5a91f756ba4f4bfdbdfc9544750"
+      "sha256": "ae01ce826130fdacab8c41736de52fd93c4d7676810a8124cbae1ff22fe32148"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-full.generated.json",
-      "sha256": "edfca97b5684c93442966216bab6156f0b06303a29690ee82546151097b32257"
+      "sha256": "ac3e481ae5a6c7391dfa7dc7b4818e01d9edfd734b943bc3fda21dbd8852979d"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-runtime.generated.json",
-      "sha256": "80772f5484338e00bee692a32e798bf1a4c120fcb6809941694c47093d84c2f1"
+      "sha256": "c692ff500413ef4723473b289b6367b0ce5046ebdf7f8c96f565fc48f299ddd9"
     },
     {
       "path": "shared/lib/base64.ts",
@@ -346,7 +346,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/psm-and-basket.ts",
-      "sha256": "a532f56bceb1b9adb84d0a023ac57ab1ed4e981a2c5213e436178868c4017c16"
+      "sha256": "f571158bc136dc41962d6852f820cdeb2452c3a30b3e4856524ac64b85dd5fe3"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/queue-redeem-nest-nav.ts",
@@ -374,7 +374,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/stablecoin-redeem/configs.ts",
-      "sha256": "f7d9f17605a1549d5c918feae7112f73e2d61072c5dc2cae2ecff7651e44a5a3"
+      "sha256": "52b4a61619b090d0676c8f4c0a1d0321aea78dd739040aed52f4238830b85dbd"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/stablecoin-redeem/discovery-wave.ts",
@@ -638,11 +638,15 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/public.ts",
-      "sha256": "3211a27e81cbacfff184ccc0c8f96ea77c106148887da00f6c7094cb3c271476"
+      "sha256": "f46265a4bebb5582341dbace69f0baaa03c8209e03531827dd0d836b5d9b49fd"
     },
     {
       "path": "shared/lib/safety-score-v9/reasons.ts",
       "sha256": "f67b7485b9c8187e91bcde32aa6c93e545c98f7d57b39aec4f04285b8e283951"
+    },
+    {
+      "path": "shared/lib/safety-score-v9/reserve-admission.ts",
+      "sha256": "04a7a9967c16771095dfcb7b284222a8f03ebdbfc5e5bcf2f97be8f88c71a3a2"
     },
     {
       "path": "shared/lib/safety-score-v9/reserve-bound-facts.ts",
@@ -898,7 +902,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/report-cards-v9.ts",
-      "sha256": "ad9ee9cf1b380d89ae67cd3163846e7e316ad48a415a05b7d40a1bf763d1444d"
+      "sha256": "39c3285215b90545153f130ffcd6f4c30bf24c72b993a873901780b5ce5de3e0"
     },
     {
       "path": "shared/types/reserve-assurance.ts",
@@ -962,7 +966,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9-facts.ts",
-      "sha256": "d5d5401a43c436b117d34b3b4f72d4e81fe22b4b1a9a79f3da9bc9e4d661eeac"
+      "sha256": "fb6e10211955510ccd481df333f6cb0ecc986261d4360b886c32c8a52a1f765e"
     },
     {
       "path": "shared/types/safety-score-v9-grade.ts",
@@ -1030,7 +1034,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9-public-internal.ts",
-      "sha256": "770a0dae9a4d80da541ba0a62f141a28765d1fcf8bca32fd7f36e06e6be018c3"
+      "sha256": "6be891a291d5b7ec450966c8e0494ad9d0900008c73d6c091d3dc7d7700bd845"
     },
     {
       "path": "shared/types/safety-score-v9-public-trace.ts",
@@ -1042,11 +1046,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9-public.ts",
-      "sha256": "77d37b915531583119b6787ce420dadd719ab5871219afbb84e525208e1ff259"
+      "sha256": "42d094fe0357aabc3a821c239665f6806cfb923b2adf90614fc10e904470f7ea"
     },
     {
       "path": "shared/types/safety-score-v9-publication-response.ts",
-      "sha256": "6216332f5393038667cc4d858f46d596338aa371a6e8beca0522294fd2cddc7e"
+      "sha256": "edd797d36df90327d1d4dc578f14a99222874551227214a758eb93536acdf820"
     },
     {
       "path": "shared/types/safety-score-v9-quality-pillars.ts",
@@ -1166,7 +1170,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/candidate.ts",
-      "sha256": "a1c23ba0c7819f1deb61f888cc5619c1a827915dfa1bb19728b5cf19c945bb4d"
+      "sha256": "ca470130f306bbda3f47c893434b2f661566f65599d2b3c31544dd4aa1568bd3"
     },
     {
       "path": "worker/src/lib/safety-score-v9/consumer-freshness.ts",
@@ -1214,7 +1218,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-reserves.ts",
-      "sha256": "fb0013bba30b4377e947d5c5d17c93248b8864d85fcbcd8fb5c008019b9811c5"
+      "sha256": "e324e0dcd41b225f654e73a18e4ab6af41be95a4b7c392ac3812ee504c9a63db"
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-routes.ts",
@@ -1242,7 +1246,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension.ts",
-      "sha256": "17bc6dc76da12f4ce9a910be29aafbb85b3ba91a35add99f068c3d8d4cb55f2b"
+      "sha256": "064fdedf04b49e7794ebbea8f0404f309d6adb3592e9ee2114f407d2d1385026"
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-backing.ts",
@@ -1270,7 +1274,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-peg-supply.ts",
-      "sha256": "e1b5b223107bfc57dee7ea5c52a7f66392ad6912ab221b72df11eb7b0410b2d4"
+      "sha256": "8e1947a58c0fdecb12384ee2eff0694080d9945acb57750f80e273ecfbed5b36"
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-schema.ts",
@@ -1290,7 +1294,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/native-input.ts",
-      "sha256": "c4dc2497214132dd21073b9afb85a7ac1674d677281b3e95a289677a4bc2b247"
+      "sha256": "7c288813dc09e6325b5d6d5bb03181ab954a8d39864da7973b86f29c4e999d27"
     },
     {
       "path": "worker/src/lib/safety-score-v9/peg-provenance.ts",
@@ -1359,7 +1363,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-19-block-26448923-shock-coverage.json.gz"
     }
   ],
-  "digest": "b338f8da0ff0a9bcdbe66b8d6a6d4def9b0cfa9dee3d4b41490c8ccd9a887908"
+  "digest": "d8df573f86a472b882b1071dbe884019540e60c94f8c05fd2f0c215d53c90153"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

@@ -1,5 +1,9 @@
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import felixMintAuthority from "../../data/stablecoins/domains/mint-authority/feusd-felix.json";
+import stacReserves from "../../data/stablecoins/domains/reserves/stac-securitize.json";
 import usdkgReserves from "../../data/stablecoins/domains/reserves/usdkg-gold-dollar.json";
 import usdkgMetadata from "../../data/stablecoins/coins/usdkg-gold-dollar.json";
 import ejpyMetadata from "../../data/stablecoins/coins/ejpy-jbfd.json";
@@ -120,5 +124,69 @@ describe("stablecoin source-data regressions", () => {
     const urls = yldsReserves.reserveReview.sources.map((source) => source.url);
     expect(urls).not.toContain("https://www.sec.gov/Archives/edgar/data/1974395/000162828026073949/fcc-20260930.htm");
     expect(yldsReserves.reserveReview.compositionAsOf).toBe("2025-12-31");
+  });
+
+  it("pins every dated comparison in STAC's reserve rationale to the same Chronicle source entry", () => {
+    const review = stacReserves.reserveReview;
+    const CID = /Qm[1-9A-HJ-NP-Za-km-z]{44}/;
+    const CID_GLOBAL = /Qm[1-9A-HJ-NP-Za-km-z]{44}/g;
+    const MONTHS = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
+    const sourceCids = review.sources
+      .map((source) => CID.exec(source.url)?.[0])
+      .filter((cid): cid is string => Boolean(cid));
+    const inlineCids = [...review.rationale.matchAll(CID_GLOBAL)].map((m) => m[0]);
+    expect(inlineCids.length).toBeGreaterThan(0);
+    for (const cid of inlineCids) {
+      expect(sourceCids, `inline CID ${cid} must be a pinned source`).toContain(cid);
+    }
+    const sourcePairs = review.sources.flatMap((source) => {
+      const cid = CID.exec(source.url)?.[0];
+      const date = /portfolio date (\d{4})-(\d{2})-(\d{2})/.exec(source.label);
+      return cid && date
+        ? [{ monthDay: `${MONTHS[Number(date[2]) - 1]} ${Number(date[3])}`, cid }]
+        : [];
+    });
+    const MONTH_DAY = /\b(January|February|March|April|May|June|July|August|September|October|November|December) \d{1,2}\b/g;
+    for (const mention of review.rationale.matchAll(MONTH_DAY)) {
+      const start = mention.index ?? 0;
+      const cid = CID.exec(review.rationale.slice(start, start + 120))?.[0];
+      expect(cid, `dated comparison "${mention[0]}" must cite a CID`).toBeTruthy();
+      expect(
+        sourcePairs.some((pair) => pair.monthDay === mention[0] && pair.cid === cid),
+        `dated comparison "${mention[0]}" must match the source entry for CID ${cid}`,
+      ).toBe(true);
+    }
+    expect(review.rationale).not.toMatch(/only market values/);
+  });
+
+  it("scopes STAC's ledger maturity rationale to the public sources actually reviewed", () => {
+    const ledgerPath = resolve(
+      dirname(fileURLToPath(import.meta.url)),
+      "../../../.github/artifacts/safety-score-missing-data-reviewed-ledger.json",
+    );
+    const row = JSON.parse(readFileSync(ledgerPath, "utf8")).decisions.find(
+      (decision: { claimGroupId: string; evidence?: string[] }) =>
+        decision.claimGroupId === "RESERVE_SLICE:stac-securitize" &&
+        (decision.evidence ?? []).some((entry) =>
+          entry.includes("QmPQnDVp37aJZzTt6UCaK9UAdQv2EUseEiaxjYmfmULvBf"),
+        ),
+    );
+    expect(row).toBeDefined();
+    expect(row.rationale).not.toMatch(/no controlling (PPM|private placement memorandum)/i);
+    expect(row.rationale).toMatch(/public sources reviewed/);
+    expect(row.rationale).toMatch(/private placement memorandum was not available for review/);
   });
 });
