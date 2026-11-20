@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { URL } from "node:url";
 import { describe, expect, it } from "vitest";
 import { FROZEN_IDS, PRE_LAUNCH_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { isActiveStablecoinMeta, isPreLaunchStablecoinMeta } from "@shared/lib/stablecoins/status";
@@ -10,7 +12,7 @@ import {
   LENDING_PROTOCOL_ALLOWLIST,
   LENDING_PROTOCOL_LABELS,
 } from "../../lib/yield-config/yield-config-lending-protocols";
-import { YIELD_OPPORTUNITY_EXCLUSIONS } from "../../lib/yield-config/yield-opportunity-exclusions";
+import { isReviewedYieldSourceExcluded, YIELD_OPPORTUNITY_EXCLUSIONS } from "../../lib/yield-config/yield-opportunity-exclusions";
 import {
   ON_CHAIN_RATE_CONFIGS,
   PRICE_DERIVED_FALLBACK_IDS,
@@ -52,6 +54,11 @@ function hasRuntimeYieldStrategy(stablecoinId: string, navToken: boolean) {
 }
 
 describe("yield config registry", () => {
+  it("points operators from the retired sBOLD pool to the reviewed hold", () => {
+    const source = readFileSync(new URL("../../lib/yield-config/yield-config-explicit-pools.ts", import.meta.url), "utf8");
+    expect(source).toMatch(/\/\/ See yield-opportunity-exclusions\.ts for the reviewed sBOLD hold/);
+  });
+
   it("bounds opportunity exclusion re-reviews to fourteen days with owner and evidence", () => {
     for (const entry of YIELD_OPPORTUNITY_EXCLUSIONS) {
       const span = Date.parse(entry.nextReviewAt) - Date.parse(entry.reviewedAt);
@@ -171,8 +178,11 @@ describe("yield config registry", () => {
       assertStrategy(id, "protocol-api", config.sourceKey, config.label);
     }
     for (const entry of YIELD_ADAPTER_MANIFEST) {
-      const reason = INTENTIONAL_GAP_REASONS[entry.stablecoinId];
-      expect(entry.status, entry.stablecoinId).toBe(reason ? "intentional-gap" : "covered");
+      const { stablecoinId, strategies } = entry;
+      const reason = INTENTIONAL_GAP_REASONS[stablecoinId];
+      const held = strategies.length > 0 && strategies.every(({ sourceKey }) =>
+        isReviewedYieldSourceExcluded({ stablecoinId, sourceKey }));
+      expect(entry.status, stablecoinId).toBe(reason || held ? "intentional-gap" : "covered");
       if (reason) {
         assertStrategy(entry.stablecoinId, "intentional-gap", null);
         expect(entry.strategies.find((strategy) => strategy.kind === "intentional-gap")?.rationale).toBe(reason);

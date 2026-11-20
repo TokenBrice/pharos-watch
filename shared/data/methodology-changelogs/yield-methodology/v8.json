@@ -1,5 +1,19 @@
 [
   {
+    "version": "8.60",
+    "title": "Reviewed Holds Withhold Current Yield",
+    "date": "2026-11-20",
+    "effectiveAt": 1795219200,
+    "summary": "Reviewed asset and source holds exclude affected opportunities from current yield rankings and withhold the current history point while retaining dated observations.",
+    "impact": [
+      "The K3 sBOLD vault hold covers its selected and alternate rates, linked BOLD opportunities and reviewed legacy BOLD source identities. BOLD's native Liquity V2 Stability Pools source stays eligible.",
+      "A hold that removes a selected row clears the cached market median and rank-change attribution from the original cohort. History serves a held latest observation in the dated series with `current: null`.",
+      "The adapter manifest marks held strategies as quarantined. The coverage audit records an intentional gap when all listed strategies for an asset are held. The sBOLD hold ends only after verified vault reopening, reconciled backing and a current exact-vault holder rate."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "8.58",
     "title": "DeFiLlama Pool Scores Use the Delivery Clock",
     "date": "2026-11-20",

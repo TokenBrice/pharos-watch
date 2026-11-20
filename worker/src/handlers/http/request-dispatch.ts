@@ -10,7 +10,7 @@ import {
 } from "./request-source";
 import { addCorsHeaders, handleCorsPreflight, resolveCorsOrigin } from "./cors";
 import { buildRouteContext } from "./context";
-import { createEdgeCacheContext, readEdgeCache, writeEdgeCache } from "./edge-cache";
+import { EDGE_CACHE_NAMESPACE, createEdgeCacheContext, readEdgeCache, writeEdgeCache } from "./edge-cache";
 import { conditionalGetResponse, jsonResponse, scopeResponseEtag } from "../../lib/api-response";
 import {
   evaluateTelegramIngressAbuseGate,
@@ -54,13 +54,17 @@ export async function handleHttpRequestImpl(
 ): Promise<Response> {
   warnWorkerEnvIssuesOnce(env);
   const origin = resolveCorsOrigin(request, env.CORS_ORIGIN);
+  const url = new URL(request.url);
+  if (url.pathname === EDGE_CACHE_NAMESPACE || url.pathname.startsWith(`${EDGE_CACHE_NAMESPACE}/`)) {
+    return addCorsHeaders(notFoundResponse(), origin);
+  }
+
   const preflightResponse = handleCorsPreflight(request, origin);
   if (preflightResponse) return preflightResponse;
 
   const maintenanceResponse = handleMaintenanceMode(request, env);
   if (maintenanceResponse) return addCorsHeaders(maintenanceResponse, origin);
 
-  const url = new URL(request.url);
   const telegramIngressGate = await evaluateTelegramIngressAbuseGate(request, url, env);
   if (telegramIngressGate.response) {
     return addCorsHeaders(telegramIngressGate.response, origin);

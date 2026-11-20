@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
-import { makeYieldRanking, makeYieldProvenance } from "@shared/test-utils/yield-ranking-fixtures";
+import { makeAltYieldSource, makeYieldRanking, makeYieldProvenance } from "@shared/test-utils/yield-ranking-fixtures";
 import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import { YieldRankingsResponseSchema, YieldRankingsCoinResponseSchema, YieldCoinCohortSchema, type YieldRankingsResponse } from "@shared/types/yield";
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
@@ -21,7 +21,8 @@ import { projectYieldRankingsSummary } from "@shared/lib/yield-rankings-summary"
 import * as abort from "../../lib/abort";
 import * as dbCache from "../../lib/db-cache";
 import * as cohortCache from "../../lib/yield-rankings-coin-cache";
-import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { YIELD_METHODOLOGY_VERSION, YIELD_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
+import { OPTIONAL_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 import { buildYieldMethodology } from "../../cron/yield-sync/publication-generation";
 
 const NOW = Date.parse("2026-04-23T12:00:00Z") / 1000;
@@ -98,6 +99,109 @@ async function fixture(held = false, pipelineGap = false, safetyPublishedAt = NO
 }
 
 describe("rankings score-index hydration", () => {
+  const sourceKey = "protocol-api:k3:ethereum:0x23346b04a7f55b8760e5860aa5a77383d63491cd";
+  const linkedKey = `linked-variant:sbold-k3-capital:${sourceKey}`;
+
+  it.each(["detailed", "summary", "coin", "label", "previous", "previous-hold-changed", "previous-hold-missing"] as const)("applies the sBOLD hold to %s cached rankings", async (mode) => {
+    const { db, sqlite, payload } = await fixture();
+    const heldAlt = { ...makeAltYieldSource({ sourceKey: linkedKey, currentApy: 8.3 }), apy30dDelta: 3.3 };
+    const { stablecoinId, yieldSource, yieldType, sourceKey: nativeKey } = OPTIONAL_YIELD_SOURCES.bold;
+    const bold = makeYieldRanking({ id: stablecoinId, yieldSource, yieldType, dataSource: "onchain",
+      altSources: [makeAltYieldSource()], provenance: mode === "label" ? null : makeYieldProvenance({ sourceKey: nativeKey }) });
+    const sbold = makeYieldRanking({ id: "sbold-k3-capital", yieldSource: "K3: sBOLD", currentApy: 8.3, apy30d: 8.3,
+      provenance: mode === "label" ? null : makeYieldProvenance({ sourceKey }) });
+    const cachedBold = {
+      ...bold, altSources: [heldAlt, ...bold.altSources],
+      publishedRank: 2,
+      rankChangeAttribution: { previousRank: 3, rankDelta: 1, primaryDriver: "apy" as const },
+      alternateSummary: { count: 2, bestAlternateByApy: heldAlt, bestRiskAdjustedAlternate: heldAlt, alternateApySpread: 3.3 },
+      decisionLedger: { selectedReasonCode: "curated-over-discovered" as const, sourceSwitch: false, rejectedCount: 1,
+        alternatives: [{ ...heldAlt, rejectionReasonCode: "lower-confidence" as const }] },
+    };
+    const writeCache = (rankings: YieldRankingsResponse["rankings"], medianApy = 8.3) =>
+      sqlite.prepare("UPDATE cache SET value = ? WHERE key = 'yield-rankings'").run(JSON.stringify({ ...payload, rankings, medianApy }));
+
+    writeCache([cachedBold, sbold]);
+    const request = (id = bold.id) => handleYieldRankingsCoin(db, coinUrl(id));
+    if (mode.startsWith("previous")) {
+      const active = await scoreIndex.loadActiveSafetyScoreIndex(db);
+      if (active.kind !== "v9") throw new Error("Expected active safety index");
+      vi.spyOn(scoreIndex, "loadActiveSafetyScoreIndex").mockResolvedValue({
+        ...active, snapshot: { ...active.snapshot, cards: [...active.snapshot.cards, { ...active.snapshot.cards[0], id: bold.id }] },
+      });
+      writeCache([bold], 5);
+      expect((await request()).status).toBe(200);
+      sqlite.prepare(`UPDATE cache SET value = json_set(value, '$.signature', 'previous-signature',
+        '$.rankings[0].altSources', json(?), '$.rankings[0].alternateSummary', json(?),
+        '$.rankings[0].decisionLedger', json(?)) WHERE key = ?`).run(
+        JSON.stringify(cachedBold.altSources), JSON.stringify(cachedBold.alternateSummary),
+        JSON.stringify(cachedBold.decisionLedger), COHORT_CACHE_KEY);
+      if (mode !== "previous") {
+        sqlite.prepare(`UPDATE cache SET value = json_patch(json_set(value, '$.totalCount', 2, '$.rankings[0].liveRank', 2), ?)
+          WHERE key = ?`).run(JSON.stringify({ yieldHoldSignature: mode === "previous-hold-missing" ? null : "old-hold" }), COHORT_CACHE_KEY);
+      }
+      writeCache([cachedBold, sbold]);
+      vi.spyOn(cohortCache, "claimYieldCoinCohort").mockResolvedValue(null);
+    }
+    const response = mode === "coin" || mode.startsWith("previous") ? await settleWithFakeTimers(request()) : await handleYieldRankings(
+      db, new URL(`https://x/api/yield-rankings${mode === "summary" ? "?projection=summary" : ""}`));
+    if (mode === "previous-hold-changed" || mode === "previous-hold-missing") {
+      expect(response.status).toBe(503);
+      expect(await response.json()).toMatchObject({ reason: "yield-cohort-preparing" });
+      return;
+    }
+    expect(response.status).toBe(200);
+    if (mode === "previous") expect(response.headers.get("Warning")).toContain("signature=previous-signature");
+    const body = await response.json() as YieldRankingsResponse;
+    expect(body.rankings.map(({ id }) => id)).toEqual([bold.id]);
+    expect(body.medianApy).toBe(mode === "previous" ? 5 : null);
+    expect(body.rankings[0].altSources.map(({ sourceKey: key }) => key)).toEqual(["alt-source"]);
+    expect(JSON.stringify(body.rankings)).not.toContain(linkedKey);
+    if (mode === "summary") expect(body.rankings[0]).not.toHaveProperty("rankDelta");
+    else {
+      expect(body.rankings[0].liveRank).toBe(1);
+      expect(body.rankings[0].rankChangeAttribution).toBeUndefined();
+    }
+    if (mode === "coin") {
+      const held = YieldRankingsCoinResponseSchema.parse(await (await request(sbold.id)).json());
+      expect(held.rankings).toEqual([]);
+      expect(held.medianApy).toBeNull();
+      expect(held.projection).toMatchObject({ totalCount: 1, unavailableReason: "row-not-published" });
+    }
+  });
+
+  it.each([
+    ["bold-liquity", "K3: sBOLD"],
+    ["bold-liquity", "Liquity Stability Pool (via K3 sBOLD)"],
+    ["bold-liquity", "K3 sBOLD Stability Pool vault"],
+    ["sbold-k3-capital", "K3 sBOLD Stability Pool vault"],
+  ])("holds cached %s labeled %s without provenance", async (id, yieldSource) => {
+    const { db, sqlite, payload } = await fixture();
+    const row = makeYieldRanking({ id, yieldSource, dataSource: "price-derived", provenance: null, currentApy: 8.3, apy30d: 8.3 });
+    sqlite.prepare("UPDATE cache SET value = ? WHERE key = 'yield-rankings'")
+      .run(JSON.stringify({ ...payload, rankings: [row], medianApy: 8.3 }));
+    const response = await handleYieldRankings(db);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ rankings: [], medianApy: null });
+  });
+
+  it.each(["detailed", "summary", "coin"])("reports the live methodology over the previous producer version in %s rankings", async (mode) => {
+    const { db, sqlite, payload } = await fixture();
+    const methodology = {
+      version: "8.57", versionLabel: "v8.57", currentVersion: "8.57", currentVersionLabel: "v8.57",
+      isCurrent: true, asOf: NOW, changelogPath: "/methodology/yield-changelog/",
+    };
+    sqlite.prepare("UPDATE cache SET value = ? WHERE key = 'yield-rankings'")
+      .run(JSON.stringify({ ...payload, methodology }));
+    const response = mode === "coin" ? await handleYieldRankingsCoin(db, coinUrl()) : await handleYieldRankings(db,
+      new URL(`https://x/api/yield-rankings${mode === "summary" ? "?projection=summary" : ""}`));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ updatedAt: NOW, methodology: {
+      ...methodology, currentVersion: YIELD_METHODOLOGY_VERSION, currentVersionLabel: YIELD_METHODOLOGY_VERSION_LABEL,
+      isCurrent: false,
+    } });
+  });
+
   it.each(["USYC", "USYC-age-only", "product-fetch", "product-fixing"] as const)("expires a cohort on the %s deadline", async (source) => {
     const { db, sqlite, payload } = await fixture();
     const isUsyc = source === "USYC" || source === "USYC-age-only";

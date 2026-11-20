@@ -333,6 +333,9 @@ export const MINT_BURN_FLOW_SECTION_CONTENT = defineMethodologySectionContent({
 
 export const YIELD_POOL_DELIVERY_PARAGRAPH = "DeFiLlama pool quotes can qualify for PYS for up to six hours after the batch was fetched. DeFiLlama does not provide a per-pool observation time, so these scores show ‘Delivery only’ and leave the observation age unknown. All other score requirements still apply.";
 
+export const YIELD_REVIEWED_HOLD_DESCRIPTION =
+  "Reviewed source holds remove affected opportunities from current rankings. If the latest yield observation is held, history leaves the current APY unavailable and keeps the dated observation.";
+
 export const YIELD_SECTION_CONTENT = defineMethodologySectionContent({
   id: "yield-intelligence-methodology",
   title: "Yield Intelligence",
@@ -340,6 +343,7 @@ export const YIELD_SECTION_CONTENT = defineMethodologySectionContent({
     "Yield Intelligence resolves stablecoin yield from direct on-chain reads, curated pools, protocol APIs, price-derived NAV movement, and rate-derived sources. The pipeline prefers precise sources and only uses fallback tiers when identity and exposure remain unambiguous.",
     "Selected sources age on their own cadence, and benchmark comparisons use comparable annual-rate conventions and product-specific inputs. Gold-denominated returns remain visible without USD excess or PYS.",
     YIELD_POOL_DELIVERY_PARAGRAPH,
+    YIELD_REVIEWED_HOLD_DESCRIPTION,
     "Pharos computes effective yield by comparing APY against the relevant cash or peg benchmark, then combines source-risk-adjusted yield efficiency with sustainability to produce a Pharos Yield Score (PYS). High APY is not automatically good: unstable rates, weak safety scores, low TVL, source-risk penalties, or ambiguous exposure reduce the recommendation quality.",
     "External opportunities — lending markets, fixed-yield products, and structured tranches — are scored at the market level. The underlying stablecoin's Safety Score is one input to an opportunity-level safety score that also weighs reviewed venue risk, market size, observed utilization, and access or withdrawal constraints. Missing critical market evidence produces NR rather than a precise-looking score, and the underlying coin's own Report Card is never altered.",
     "Warnings explain why a venue is risky, missing, stale, modeled, or benchmark-adjusted so yield pages do not promote fragile opportunities as clean income. Calculation mode is separate from evidence class: deterministic proxy math is still estimated evidence. Expired or critically incomplete evidence remains visible as NR context but cannot carry an exact current PYS, and new history points retain the versioned formula inputs needed for exact recomputation.",

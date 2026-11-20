@@ -8,11 +8,13 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-yield-methodology -->`v8.58`<!-- GENERATED-END: methodology-version-yield-methodology -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-yield-methodology -->`v8.60`<!-- GENERATED-END: methodology-version-yield-methodology -->
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/methodology-versions/registry.ts`
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
+
+Reviewed asset and source holds exclude affected opportunities from current rankings. Yield history returns `current: null` when the latest observation is held and retains that observation in the dated series. The [sBOLD incident hold](./yield-intelligence-operations.md#dated-opportunity-exclusions) withholds the Kong/Yearn vault rate and the price-derived fallback until the vault has reopened, backing is reconciled and a current exact-vault holder rate is verified.
 
 **Open release gates:** Activation dates, version deltas and provisional-date re-dating requirements live in the [structured public changelog](https://pharos.watch/methodology/yield-changelog/). v8.49 still requires fresh admitted observations and a valid comparison anchor. For v8.48, fixed-clock input/output comparison and owner review of changed outcomes remain release gates, separate from fresh producer observations and production resource evidence. Replay cannot reconstruct pruned mint evidence or unknown legacy Midas observation clocks. These are obligations, not claims of completed replay, deployment or production health.
 
@@ -200,7 +202,7 @@ For coins whose native savings path is published by the protocol itself but is n
 
 Protocol-specific lending-market readers that query protocol state directly also live in this tier. Even when the transport is an on-chain call, these rows are treated as curated protocol-native venues rather than Tier 1 deterministic native-wrapper sources, so arbitration still prefers a stronger native wrapper or savings source when one exists.
 
-This tier can carry wrapper-over-wrapper native sources when the upstream venue measures the managed wrapper's own return. Yearn `yBOLD` and K3 `sBOLD` retain their first-party holder paths, including sBOLD's K3-specific Yearn/Kong supplemental source. Base BOLD publishes its own deterministic Liquity V2 Stability Pool aggregate, with wrapper projections retained only as external opportunities. The excluded raw sBOLD pool pin does not remove the dedicated source or eligible price-derived fallback; any new mapping still requires independent holder-ownership proof.
+This tier can carry wrapper-over-wrapper native sources when the upstream venue measures the managed wrapper's own return. Yearn `yBOLD` has a first-party holder path. Base BOLD publishes its own deterministic Liquity V2 Stability Pool aggregate, with eligible wrapper projections retained as external opportunities. The [reviewed sBOLD incident hold](./yield-intelligence-operations.md#dated-opportunity-exclusions) suppresses the K3-tagged Yearn/Kong row and its known vault-rate alternatives before linked projection. Any new mapping requires independent holder-ownership proof.
 
 Royco Dawn markets also live in this tier. The supplemental source lane reads the Dawn market explorer API and emits separate `structured-tranche` rows for the senior and junior vaults in each verified market above the local Royco TVL floor. Rows use the stable source keys `royco-dawn:<chainId>:<marketId>:senior` and `royco-dawn:<chainId>:<marketId>:junior`; the tranche share tokens are not added to the stablecoin registry. Identity resolution maps the Royco deposit token back to a tracked underlying stablecoin by chain/address first, with configured wrapper-variant addresses such as Neutrl `sNUSD` attached to their tracked parent when the wrapper is not a first-class stablecoin row.
 
@@ -310,7 +312,7 @@ Discovery evaluates the candidate venue's chain, not the stablecoin's first depl
 
 **Explicit venue exclusion:** Even when a pool clears the generic quality gates above, published lending-opportunity suggestions exclude venues whose DeFiLlama `poolMeta` or supplemental source label identifies them as Resolv / `USR`, `stUSR`, or `wstUSR` linked.
 
-Owner-reviewed operational holds also exclude the exact venues or pools recorded in `YIELD_OPPORTUNITY_EXCLUSIONS`, across discovery, curated pins and supplemental candidates. Their dates and recovery triggers are maintained in the [operations guide](https://github.com/TokenBrice/pharos-watch/blob/main/docs/yield-intelligence-operations.md#dated-opportunity-exclusions). A missed review keeps the hold closed and surfaces operator-only quality findings; it does not resume publication.
+Owner-reviewed operational holds in `YIELD_OPPORTUNITY_EXCLUSIONS` exclude exact venues, pools or asset/source pairs across discovery, curated pins and supplemental candidates. A missed review keeps the hold closed and surfaces operator-only quality findings. The operations guide records review dates and recovery triggers. [Dated opportunity exclusions](https://github.com/TokenBrice/pharos-watch/blob/main/docs/yield-intelligence-operations.md#dated-opportunity-exclusions).
 
 **Yield type:** `lending-opportunity` — distinguishes these from native yield coins on the frontend. The direct Aave v3 on-chain supply-rate path uses the same classification so rankings/cache schema validation stays aligned across deterministic and auto-discovered lending rows.
 

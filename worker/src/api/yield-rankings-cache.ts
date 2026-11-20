@@ -48,20 +48,25 @@ import {
   buildYieldRankChangeAttribution,
   compareYieldRankRows,
 } from "../lib/yield-rank-attribution";
-import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { YIELD_METHODOLOGY_VERSION, YIELD_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { addFreshnessHeaders, buildFreshnessMeta } from "../lib/api-freshness";
 import { createCacheHandler } from "../lib/api-cache-read";
+import { buildMethodologyEnvelope } from "../lib/api-methodology";
 import { errorResponse, jsonResponse, jsonResponseWithHeaders } from "../lib/api-response";
 import { sleep } from "../lib/abort";
 
 import { loadActiveSafetyScoreIndex, type ActiveSafetyScoreIndex, type SafetyScoreGradeSnapshot } from "../lib/safety-score-index";
 import { resolveYieldBenchmarkDependencies } from "../lib/yield-config/yield-benchmark-dependencies";
+import { isReviewedPublishedYieldSourceExcluded, YIELD_OPPORTUNITY_EXCLUSIONS } from "../lib/yield-config/yield-opportunity-exclusions";
 import { readCoinProjectionId } from "../lib/api-coin-projection";
 import { readYieldRankingsCache, readYieldRankingsCoinCache, readYieldCoinCohort, readYieldCoinCohortLease, claimYieldCoinCohort, publishYieldCoinCohort, releaseYieldCoinCohort } from "../lib/yield-rankings-coin-cache";
 import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "@shared/lib/status-thresholds";
 import { YieldCoinCohortSchema, type YieldRankingsCoinResponse } from "@shared/types/yield";
 
 const YIELD_RANKINGS_MAX_AGE_SEC = CRON_INTERVALS["sync-yield-data"];
+const YIELD_HOLD_SIGNATURE = createHash("sha256").update(JSON.stringify(
+  YIELD_OPPORTUNITY_EXCLUSIONS.flatMap(({ assetSources }) => assetSources ? [assetSources] : []),
+)).digest("hex");
 
 
 function hasYieldPublicationContract(payload: YieldRankingsResponse): boolean {
@@ -797,6 +802,11 @@ function buildYieldRankingsResponse(
   return jsonResponseWithHeaders(
     {
       ...payload,
+      ...(payload.methodology ? { methodology: buildMethodologyEnvelope({
+        ...payload.methodology,
+        currentVersion: YIELD_METHODOLOGY_VERSION,
+        currentVersionLabel: YIELD_METHODOLOGY_VERSION_LABEL,
+      }) } : {}),
       _meta: {
         ...freshness,
         reason: freshness.status !== "fresh" ? "yield-publication-age"
@@ -853,6 +863,35 @@ function hydrateYieldPayload(
   return hydrateYieldRankingsWithLiveSafety(payload, new Map(snapshot.cards.map((card) => [card.id, card])), source, now);
 }
 
+function applyReviewedYieldHolds<T extends YieldRankingsResponse>(payload: T): T {
+  const rankings = payload.rankings.flatMap((row) => {
+    if (isReviewedPublishedYieldSourceExcluded(row.id, row.provenance?.sourceKey, row.yieldSource)) return [];
+
+    const held = (key: string | null | undefined) => isReviewedPublishedYieldSourceExcluded(row.id, key);
+    const altSources = row.altSources.filter((source) => !held(source.sourceKey));
+    const { alternateSummary, decisionLedger } = row;
+    const hideSummary = altSources.length !== row.altSources.length
+      || held(alternateSummary?.bestAlternateByApy?.sourceKey)
+      || held(alternateSummary?.bestRiskAdjustedAlternate?.sourceKey);
+    return [{
+      ...row,
+      altSources,
+      ...(hideSummary ? { alternateSummary: null } : {}),
+      ...(decisionLedger ? { decisionLedger: {
+        ...decisionLedger,
+        alternatives: decisionLedger.alternatives.filter((source) => !held(source.sourceKey)),
+      } } : {}),
+    }];
+  });
+  if (rankings.length === payload.rankings.length) return { ...payload, rankings };
+  // Cached movement compares ranks in the original cohort.
+  return {
+    ...payload,
+    rankings: rankings.map(({ rankChangeAttribution: _cachedAttribution, ...row }) => row),
+    medianApy: null,
+  };
+}
+
 /**
  * GET /api/yield-rankings
  * Returns cached yield rankings with values hydrated only from the exact,
@@ -869,7 +908,7 @@ function createYieldRankingsCacheHandler(
     schema: YieldRankingsResponseSchema,
     malformedMessage: "Cached yield-rankings payload is malformed",
     transform: async (payload, { db, cached }) => {
-      const published = payload as YieldRankingsResponse;
+      const published = applyReviewedYieldHolds(payload as YieldRankingsResponse);
       if (!hasYieldPublicationContract(published)) {
         return errorResponse(503, "Cached yield-rankings payload is malformed");
       }
@@ -992,13 +1031,14 @@ export async function handleYieldRankingsCoin(db: D1Database, url: URL): Promise
     // population. Other coin URLs validate, age and hydrate their row only.
     const [cached, active] = await Promise.all([readYieldRankingsCoinCache(db, id), loadActiveSafetyScoreIndex(db)]);
     if (!cached) return yieldCoinUnavailable("yield-rankings-unavailable");
-    const selected = YieldRankingsResponseSchema.parse(JSON.parse(cached.value));
+    const selected = applyReviewedYieldHolds(YieldRankingsResponseSchema.parse(JSON.parse(cached.value)));
     if (!hasYieldPublicationContract(selected) || selected.updatedAt !== cached.updatedAt
       || selected.publication?.updatedAt !== cached.updatedAt) {
       return yieldCoinUnavailable("yield-rankings-malformed");
     }
     const signature = createHash("sha256").update(JSON.stringify([
       "yield-coin-cohort-v2", selected.publication, cached.updatedAt, YIELD_METHODOLOGY_VERSION,
+      YIELD_HOLD_SIGNATURE,
       active.kind, active.kind === "error" ? active.reason : [active.snapshot.safetyScoreIdentity, active.snapshot.updatedAt, active.snapshot.publicationHealth],
       active.kind === "held" ? active.reason : null,
     ])).digest("hex");
@@ -1011,12 +1051,14 @@ export async function handleYieldRankingsCoin(db: D1Database, url: URL): Promise
         cohort = await readYieldCoinCohort(db, id, signature, Math.floor(Date.now() / 1000));
         if (cohort === null) {
           const fallbackNow = Math.floor(Date.now() / 1000);
-          const previous = await readYieldCoinCohort(db, id, null, fallbackNow);
+          const previousCached = await readYieldCoinCohort(db, id, null, fallbackNow);
+          const previous = previousCached && applyReviewedYieldHolds(previousCached);
           const previousSafetyIdentity = previous?.provenance?.liveSafetyHydration?.safetyScoreIdentity;
           if (active.kind === "v9"
             && selected.rankings.some(row => row.id === id)
             && previous?.rankings.some(row => row.id === id)
             && previous?.yieldMethodologyVersion === YIELD_METHODOLOGY_VERSION
+            && previous.yieldHoldSignature === YIELD_HOLD_SIGNATURE
             && isYieldSafetyFallbackWithinWindow(fallbackNow, active.snapshot.updatedAt, fallbackNow)
             && previousSafetyIdentity != null
             && safetyScorePublicationIdentitiesAreComparable(previousSafetyIdentity, active.snapshot.safetyScoreIdentity)
@@ -1082,7 +1124,7 @@ export async function handleYieldRankingsCoin(db: D1Database, url: URL): Promise
           if (!fullCache || fullCache.updatedAt !== cached.updatedAt) {
             return yieldCoinUnavailable("yield-cohort-publication-changed", true);
           }
-          const full = YieldRankingsResponseSchema.parse(JSON.parse(fullCache.value));
+          const full = applyReviewedYieldHolds(YieldRankingsResponseSchema.parse(JSON.parse(fullCache.value)));
           if (!hasYieldPublicationContract(full) || JSON.stringify(full.publication) !== JSON.stringify(selected.publication)
             || full.updatedAt !== cached.updatedAt) {
             return yieldCoinUnavailable("yield-rankings-malformed");
@@ -1092,6 +1134,7 @@ export async function handleYieldRankingsCoin(db: D1Database, url: URL): Promise
           const aggregate = YieldCoinCohortSchema.parse({
             ...hydrated.payload,
             yieldMethodologyVersion: YIELD_METHODOLOGY_VERSION,
+            yieldHoldSignature: YIELD_HOLD_SIGNATURE,
             signature, assessedAt: now, ...resolveYieldCohortExpiry(full, cached.updatedAt, now, active),
             totalCount: full.rankings.length, degradationReasons: hydrated.degradationReasons,
           });
@@ -1144,7 +1187,7 @@ export async function handleYieldRankingsCoin(db: D1Database, url: URL): Promise
         ...(comparator.rankChangeAttribution !== undefined ? { rankChangeAttribution: comparator.rankChangeAttribution } : {}) };
     });
     const projected: YieldRankingsCoinResponse = {
-      ...payload, rankings, warnings: cohort.warnings,
+      ...payload, rankings, warnings: cohort.warnings, medianApy: cohort.medianApy,
       cohortValidUntil: cohort.validUntil,
       provenance: payload.provenance ? {
         ...payload.provenance, liveSafetyHydration: cohort.provenance?.liveSafetyHydration,
