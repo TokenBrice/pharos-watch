@@ -9,6 +9,8 @@ import type { Donation } from "@shared/lib/funding/schema";
 import {
   DONOR_API_KEY_DAYS_PER_MIN_USD,
   DONOR_API_KEY_MIN_USD,
+  DONOR_API_KEY_MONTHLY_REQUEST_QUOTA,
+  DONOR_API_KEY_RATE_LIMIT_PER_MINUTE,
   DONOR_API_KEY_TERMS_START_SEC,
 } from "@shared/lib/ops-limits";
 import {
@@ -188,6 +190,15 @@ export function SupporterClaimSteps({
         <ApiDisclosure summary="Lost key, privacy and terms">
           <ul className={TERMS_LIST_CLASS_NAME}>
             <li>For personal, non-commercial use. Commercial products need a partner key.</li>
+            <li>
+              A key carries {DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute and{" "}
+              {DONOR_API_KEY_MONTHLY_REQUEST_QUOTA.toLocaleString("en-US")} requests per month, counted per UTC calendar
+              month. See the{" "}
+              <Link href="/api/terms/" className="pharos-prose-link">
+                API terms
+              </Link>
+              .
+            </li>
             <li>One key per wallet. Signing again extends it after a newly listed donation and never rotates it.</li>
             <li>
               Lost or leaked key: message{" "}

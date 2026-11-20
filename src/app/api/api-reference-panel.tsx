@@ -31,12 +31,19 @@ import {
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import {
+  API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA,
+  API_KEY_COMMERCIAL_RATE_LIMIT_PER_MINUTE,
+  API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA,
+  API_KEY_FREE_PARTNER_RATE_LIMIT_PER_MINUTE,
+  API_KEY_MONTHLY_QUOTA_EFFECTIVE_SEC,
   DONOR_API_KEY_DAYS_PER_MIN_USD,
   DONOR_API_KEY_MIN_USD,
+  DONOR_API_KEY_MONTHLY_REQUEST_QUOTA,
   DONOR_API_KEY_RATE_LIMIT_PER_MINUTE,
 } from "@shared/lib/ops-limits";
 import {
   API_ACCESS_TELEGRAM_HANDLE,
+  API_BREAKING_CHANGE_NOTICE_DAYS,
   API_PAGE_ANCHORS,
   API_PARTNER_ACCESS_URL,
   buildPublicApiCurlCommand,
@@ -45,6 +52,7 @@ import {
   PUBLIC_API_HOST,
   PUBLIC_API_KEY_HEADER,
 } from "@shared/lib/public-api-contract";
+import { formatLongDate } from "@shared/lib/format";
 import {
   getPublicApiEndpointSummaries,
   loadApiReferenceDocument,
@@ -81,7 +89,7 @@ const HERO_LANES = [
 const ABOUT_API_FAQ: FaqItem[] = [
   {
     question: "How do I get a Pharos API key?",
-    answer: `Safety Score grades are free without a key at ${PUBLIC_API_HOST}${API_PATHS.safetyGrades()}. Donors of $${DONOR_API_KEY_MIN_USD} or more in qualifying stablecoins can claim a supporter key for personal, non-commercial use (${DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute, ${DONOR_API_KEY_DAYS_PER_MIN_USD} days of access per $${DONOR_API_KEY_MIN_USD} donated) at ${SITE_URL}/api/#${API_PAGE_ANCHORS.supporterKey}. Teams that need higher limits, integration help and support can request a partner key at ${API_PARTNER_ACCESS_URL} by messaging @${API_ACCESS_TELEGRAM_HANDLE} on Telegram; it is free for services that are free to their users and $${COMMERCIAL_API_KEY_USD_PER_MONTH} per month for commercial products.`,
+    answer: `Safety Score grades are free without a key at ${PUBLIC_API_HOST}${API_PATHS.safetyGrades()}. Donors of $${DONOR_API_KEY_MIN_USD} or more in qualifying stablecoins can claim a supporter key for personal, non-commercial use (${DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute, ${DONOR_API_KEY_MONTHLY_REQUEST_QUOTA.toLocaleString("en-US")} requests per month, ${DONOR_API_KEY_DAYS_PER_MIN_USD} days of access per $${DONOR_API_KEY_MIN_USD} donated) at ${SITE_URL}/api/#${API_PAGE_ANCHORS.supporterKey}. Teams that need higher limits, integration help and support can request a partner key at ${API_PARTNER_ACCESS_URL} by messaging @${API_ACCESS_TELEGRAM_HANDLE} on Telegram; it is free for services that are free to their users (${API_KEY_FREE_PARTNER_RATE_LIMIT_PER_MINUTE} requests per minute, ${API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA.toLocaleString("en-US")} requests per month) and $${COMMERCIAL_API_KEY_USD_PER_MONTH} per month for commercial products (${API_KEY_COMMERCIAL_RATE_LIMIT_PER_MINUTE} requests per minute, ${API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA.toLocaleString("en-US")} requests per month, higher limits on request). Monthly volumes are counted per UTC calendar month from ${formatLongDate(new Date(API_KEY_MONTHLY_QUOTA_EFFECTIVE_SEC * 1000), { utc: true })}; breaking changes to keyed routes get ${API_BREAKING_CHANGE_NOTICE_DAYS} days' notice (terms at ${SITE_URL}/api/terms/).`,
   },
   {
     question: "Do I need an API key for every endpoint?",

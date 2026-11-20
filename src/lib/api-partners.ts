@@ -10,6 +10,7 @@ export interface ApiPartner {
 // by /api/ and the homepage API strip; both render native images, so this
 // module stays free of client code.
 export const API_PARTNERS: readonly ApiPartner[] = [
+  { name: "Brava", logoSrc: "/partners/brava.webp", href: "https://brava.finance/" },
   { name: "CurveDEX", logoSrc: "/partners/curvedex.webp", href: "https://llama.box/curvedex/" },
   { name: "Frankencoin", logoSrc: "/partners/frankencoin.webp", href: "https://www.frankencoin.com/" },
   { name: "KPK", logoSrc: "/partners/kpk.webp", href: "https://kpk.io/" },
