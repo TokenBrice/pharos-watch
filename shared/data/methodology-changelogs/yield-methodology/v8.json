@@ -3,7 +3,7 @@
     "version": "8.60",
     "title": "Reviewed Holds Withhold Current Yield",
     "date": "2026-11-20",
-    "effectiveAt": 1795172400,
+    "effectiveAt": 1795172154,
     "summary": "Reviewed asset and source holds exclude affected opportunities from current yield rankings and withhold the current history point while retaining dated observations.",
     "impact": [
       "The K3 sBOLD vault hold covers its selected and alternate rates, linked BOLD opportunities and reviewed legacy BOLD source identities. BOLD's native Liquity V2 Stability Pools source stays eligible.",
