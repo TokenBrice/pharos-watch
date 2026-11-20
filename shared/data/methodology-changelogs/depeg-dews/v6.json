@@ -1,5 +1,17 @@
 [
   {
+    "version": "6.52",
+    "title": "Binance confirmation requires a verified onset source",
+    "date": "2026-11-20",
+    "effectiveAt": 1795140000,
+    "summary": "A Binance quote can corroborate a pending depeg only when a matching receipt identifies the onset source and Binance is independent of both the pending episode and the current primary.",
+    "impact": [
+      "A pending episode with missing or mismatched onset source keys needs other qualifying evidence to promote. A Binance quote alone cannot confirm it or deepen its peak after the primary changes."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.51",
     "title": "Solayer sUSD Peg Comparison Needs A Unit-Qualified Quote",
     "date": "2026-11-19",

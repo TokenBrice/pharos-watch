@@ -1,9 +1,11 @@
 import { readDexPriceLineage } from "./price-lineage";
 import { decodeJsonString } from "../../lib/cache-json";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
+import { getDexAggregateObservedAt } from "../../lib/depeg-trust-policy";
 import { logMalformedJsonPath } from "../../lib/json-decode-observability";
 import type { DexPriceChallengerLoadRow } from "./challenger-types";
 import { getDexPriceSourceEntries } from "@shared/lib/dex-price-sources";
+import { isRecord } from "@shared/lib/type-guards";
 
 interface LegacyDexPoolSource {
   protocol: string;
@@ -34,13 +36,14 @@ function decodeLegacyJsonArray<T>(
     context: "dex_liquidity.top_pools_json" | "dex_liquidity.challenger_pools_json" | "dex_prices.price_sources_json";
     updatedAt: number;
   },
+  selectEntries: (parsed: unknown) => unknown = (parsed) => parsed,
 ): T[] | null {
   const decoded = decodeJsonString<T[], LegacyJsonDecodeReason>(value, {
     updatedAt: options.updatedAt,
     missingReason: "missing",
     parseErrorReason: "json-parse-failed",
     normalize: (parsed) => {
-      const sources = options.source === "dex_prices" ? getDexPriceSourceEntries(parsed, "legacy-challenger") : parsed;
+      const sources = selectEntries(parsed);
       return Array.isArray(sources)
         ? { ok: true, payload: sources as T[] }
         : { ok: false, reason: "invalid-shape" };
@@ -178,11 +181,20 @@ export async function loadLegacyDexPoolChallengers(
 
   for (const row of priceRows.results ?? []) {
     if (challengersByStablecoin.has(row.stablecoin_id)) continue;
+    let aggregateObservedAt: number | null | undefined;
     const sources = decodeLegacyJsonArray<LegacyDexPoolSource>(row.price_sources_json, {
-        stablecoinId: row.stablecoin_id,
-        source: "dex_prices",
-        context: "dex_prices.price_sources_json",
-        updatedAt: row.updated_at,
+      stablecoinId: row.stablecoin_id,
+      source: "dex_prices",
+      context: "dex_prices.price_sources_json",
+      updatedAt: row.updated_at,
+    }, (parsed) => {
+      const entries = getDexPriceSourceEntries(parsed, "legacy-challenger")?.filter(isRecord);
+      if (!entries) return null;
+      const clockCarriers = [parsed, ...entries].filter((entry) => isRecord(entry) && "aggregateObservedAt" in entry);
+      if (clockCarriers.length > 0) {
+        aggregateObservedAt = getDexAggregateObservedAt(Array.isArray(parsed) ? parsed : clockCarriers, nowSec).aggregateObservedAt;
+      }
+      return entries;
     });
     if (sources == null) {
       continue;
@@ -203,6 +215,7 @@ export async function loadLegacyDexPoolChallengers(
           !Number.isFinite(tvl) ||
           tvl < minPoolTvlUsd
         ) continue;
+        const legacyAggregateObservedAt = source.observedAt == null ? aggregateObservedAt : null;
         qualifying.push({
           stablecoinId: row.stablecoin_id,
           poolId: `${row.stablecoin_id}:${source.protocol}:${source.chain}`,
@@ -213,7 +226,9 @@ export async function loadLegacyDexPoolChallengers(
           tvlUsd: tvl,
           snapshotAt: row.updated_at,
           publishedAt: row.updated_at,
-          ...(typeof source.observedAt === "number" && { priceObservedAt: source.observedAt }),
+          ...(typeof source.observedAt === "number"
+            ? { priceObservedAt: source.observedAt }
+            : legacyAggregateObservedAt !== undefined && { legacyAggregateObservedAt }),
         });
     }
     if (qualifying.length > 0) {

@@ -157,6 +157,7 @@ export interface ConfirmationPlanReady {
   independentConfirmation?: { source: string; peerReceipt?: string; nativeReceipt?: DepegObservationReceipt };
   independentBasis?: boolean;
   eventStartedAt?: number;
+  hasPendingOnsetSourceKeys: boolean;
   pendingSourceKeys?: ReadonlySet<string>;
   allowsUsdObservation?: (price: number, observedAt: number | null | undefined, maxAgeSec?: number) => boolean;
   nativeSignal: DepegSignal | null;
@@ -740,8 +741,9 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
   const legacyOnsetKeys = onsetSourceMatch && latest != null && latest.seenAt === onset.seenAt &&
     latest.observedAt === onset.observedAt && latest.price === onset.price && latest.bps === onset.bps
     ? pendingReceipt?.sourceFamilies : undefined;
+  const onsetSourceKeys = onsetSourceMatch ? onset.sourceKeys ?? legacyOnsetKeys ?? [] : [];
   const pendingSourceKeys = new Set([
-    ...(onsetSourceMatch ? onset.sourceKeys ?? legacyOnsetKeys ?? [] : []),
+    ...onsetSourceKeys,
     ...(latestSourceMatch ? latest.sourceKeys ?? [] : []),
     ...(latestSourceMatch && (onset == null || onsetSourceMatch)
       ? pendingReceipt?.sourceKeys ?? pendingReceipt?.sourceFamilies ?? [] : []),
@@ -760,6 +762,7 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
     independentConfirmation,
     independentBasis,
     eventStartedAt,
+    hasPendingOnsetSourceKeys: onsetSourceKeys.length > 0,
     pendingSourceKeys: pendingSourceKeys.size > 0 ? pendingSourceKeys : undefined,
     allowsUsdObservation: (reference && meta) || silverEntitlementRequired ? (price, observedAt, quoteMaxAgeSec) => {
       if (peerMove || !hasSecondaryQuoteUnit(observedAt)) return false;

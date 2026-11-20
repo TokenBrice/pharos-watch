@@ -5,7 +5,11 @@ import {
   MethodologyPreconditions,
   WorkedExample,
 } from "../../methodology-shared";
-import { DEPEG_PEER_DIVERGENCE_DESCRIPTION, DEPEG_REFERENCE_SESSION_DESCRIPTION } from "@/lib/methodology-content";
+import {
+  DEPEG_BINANCE_CONFIRMATION_DESCRIPTION,
+  DEPEG_PEER_DIVERGENCE_DESCRIPTION,
+  DEPEG_REFERENCE_SESSION_DESCRIPTION,
+} from "@/lib/methodology-content";
 
 export function PegScoreDewsOverview() {
   return (
@@ -49,6 +53,7 @@ export function PegScoreDewsOverview() {
           <p>
             Every onset waits beyond the full trigger threshold for at least 15 minutes, even when multiple sources already agree. Pending confirmation chooses off-chain confirmers by source family from the primary <code className="mx-1 text-xs">agreeSources</code> set. CoinGecko-family primary evidence cannot be confirmed by CoinGecko again, and Pharos does not treat DefiLlama&apos;s <code className="mx-1 text-xs">coingecko:&#123;id&#125;</code> mirror as independent. A native CoinGecko quote may initiate a pending non-USD candidate, but it cannot confirm itself: promotion also requires a fresh canonical USD price from a non-CoinGecko family to agree after normalization through the authoritative FX reference. Promoted rows store canonical keys such as <code className="mx-1 text-xs">temporal:15m</code>, <code className="mx-1 text-xs">primary:defillama</code>, and <code className="mx-1 text-xs">dex:curve</code> for auditability.
           </p>
+          <p>{DEPEG_BINANCE_CONFIRMATION_DESCRIPTION}</p>
           <p>
             Extreme moves of 50% or more, small-cap assets, and fresh multi-source clusters all use the same minimum 15-minute onset window. Independent source agreement can satisfy the source rule after that window, but it never bypasses temporal confirmation.
           </p>

@@ -246,7 +246,7 @@ describe("buildConfirmationPlan", () => {
       .toEqual([{ peak_deviation_bps: -200, peg_reference: ref }]);
   });
 
-  it("keeps a matched onset source after a legacy writer advances only the latest observation", async () => {
+  it("blocks the onset venue from confirming after the primary changes and a legacy writer advances the latest observation", async () => {
     const { sqlite, db } = fixture();
     const first = NOW_SEC - 960;
     const args = { stablecoinId: "usdt-tether", symbol: "USDT", pegType: "peggedUSD", pegReference: 1,
@@ -254,16 +254,46 @@ describe("buildConfirmationPlan", () => {
     await buildUpsertPendingDepegStmt(db, { ...args, seenAt: first, sourceKeys: ["binance"] }).run();
     await buildUpsertPendingDepegStmt(db, { ...args, seenAt: first + 60, sourceKeys: ["kraken"] }).run();
     sqlite.prepare("UPDATE depeg_pending SET last_seen_at = ?, updated_at = ?").run(first + 900, first + 900);
-    const read = async () => {
+    const read = async (poolChallengers = new Map()) => {
       const row = readSelectedPending(sqlite);
-      const plan = buildConfirmationPlan(makeInput(db, { kind: "ready", row }));
+      const plan = buildConfirmationPlan(makeInput(db, { kind: "ready", row, asset: {
+        ...usdPyth, price: 0.98, priceSource: "kraken", consensusSources: ["kraken"], agreeSources: ["kraken"],
+      } }));
       if (plan.kind !== "ready") throw new Error("Expected a confirmable pending episode");
-      const evidence = await collectPlanEvidence(db, plan, NOW_SEC, { cexAllowed: true, cexPrices: new Map([["USDT", 0.98]]) });
-      return { keys: [...(plan.pendingSourceKeys ?? [])], confirming: evidence.confirmingSources };
+      const evidence = await collectPlanEvidence(db, plan, NOW_SEC, {
+        poolChallengers, cexAllowed: true, cexPrices: new Map([["USDT", 0.98]]),
+      });
+      const promotes = evaluatePromotionDecision({ db, plan, evidence, now: NOW_SEC }).length === 3;
+      return { keys: [...(plan.pendingSourceKeys ?? [])], confirming: evidence.confirmingSources, promotes };
     };
-    expect(await read()).toEqual({ keys: ["binance"], confirming: [] });
+    expect.soft(await read()).toEqual({ keys: ["binance"], confirming: [], promotes: false });
     sqlite.prepare("UPDATE depeg_pending SET first_price = 0.979, first_seen_bps = -210").run();
-    expect(await read()).toEqual({ keys: [], confirming: ["cex:binance"] });
+    expect.soft(await read()).toEqual({ keys: [], confirming: [], promotes: false });
+    sqlite.exec("UPDATE depeg_pending SET peer_basis_json = NULL");
+    expect.soft(await read()).toEqual({ keys: [], confirming: [], promotes: false });
+    await buildUpsertPendingDepegStmt(db, { ...args, seenAt: NOW_SEC - 30, sourceKeys: ["kraken"] }).run();
+    expect.soft(await read()).toEqual({ keys: ["kraken"], confirming: [], promotes: false });
+    expect(await read(curvePool(args.stablecoinId, 0.98, NOW_SEC - 30)))
+      .toEqual({ keys: ["kraken"], confirming: ["pool:curve:curve"], promotes: true });
+  });
+
+  it("promotes a persisted Kraken onset on independent Binance evidence", async () => {
+    const { sqlite, db } = fixture();
+    const first = NOW_SEC - 960;
+    for (const seenAt of [first, NOW_SEC - 60]) {
+      await buildUpsertPendingDepegStmt(db, {
+        stablecoinId: "usdt-tether", symbol: "USDT", pegType: "peggedUSD", pegReference: 1,
+        price: 0.98, bps: -200, direction: "below", reason: "low-confidence", seenAt, sourceKeys: ["kraken"],
+      }).run();
+    }
+    const plan = buildConfirmationPlan(makeInput(db, { kind: "ready", row: readSelectedPending(sqlite), asset: {
+      ...usdPyth, price: 0.98, priceSource: "kraken", consensusSources: ["kraken"], agreeSources: ["kraken"],
+    } }));
+    if (plan.kind !== "ready") throw new Error("Expected a confirmable pending episode");
+    const evidence = await collectPlanEvidence(db, plan, NOW_SEC, { cexAllowed: true, cexPrices: new Map([["USDT", 0.98]]) });
+    await db.batch(evaluatePromotionDecision({ db, plan, evidence, now: NOW_SEC }));
+    expect(sqlite.prepare("SELECT started_at, confirmation_sources FROM depeg_events").get())
+      .toEqual({ started_at: first, confirmation_sources: expect.stringContaining("cex:binance") });
   });
 
   const reopening = Date.UTC(2026, 10, 22, 23, 0, 15) / 1_000;
