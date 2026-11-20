@@ -524,7 +524,7 @@ export function publicDependencyMetadata(
   return {
     supply: {
       circulatingUsdAtEvaluation: supplyKnown ? asset.supply.circulatingUsd : null,
-      asOfSec: supplyKnown ? supplySource?.observedAtSec ?? null : null,
+      asOfSec: supplyKnown ? asset.supply.replayObservation?.observedAtSec ?? supplySource?.observedAtSec ?? null : null,
       generationId: supplyKnown ? asset.supply.sourceGenerationId : null,
     },
     sharedBookId: provenance?.balanceSheetScope && provenance.sharedBookAssetIds?.includes(asset.assetId)
@@ -544,12 +544,13 @@ export function publicDependencyMetadata(
  */
 export function buildSafetyScoreV9Candidate(
   input: BuildSafetyScoreV9CandidateInput,
+  replayScenario?: "asset-admission",
 ): Readonly<SafetyScoreV9CandidatePipelineResult> {
   return buildSafetyScoreV9CandidateFromNormalizedInput({
     ...input,
     fixedInput: normalizeSafetyScoreV9CompilerInput(input.fixedInput, input.registry?.metaById
       ? new Set([...input.registry.metaById].filter(([, meta]) => meta.flags?.navToken === true).map(([id]) => id))
-      : undefined),
+      : undefined, replayScenario),
   });
 }
 

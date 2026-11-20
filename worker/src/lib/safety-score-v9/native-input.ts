@@ -19,6 +19,7 @@ import {
   type SafetyScoreV9InputIdentity,
 } from "@shared/types/safety-score-publication";
 import { BaseInputGenerationIdSchema, Sha256Schema, UnixSecondsSchema } from "@shared/types/safety-schema-primitives";
+import { V9ReplaySupplyProvenanceSchema } from "@shared/types/safety-score-v9-facts";
 import { LenderCollateralBackingSchema } from "@shared/types/safety-score-v9-lender-book";
 import { CurrentPegSchema } from "@shared/types/current-peg";
 import { AdmittedDeviationBpsSchema, ReferenceAdmissionSchema } from "@shared/types/reference-admission";
@@ -123,6 +124,11 @@ export const NativeSafetyScoreV9InputSchema = z
     schemaVersion: z.literal(4),
     captureKind: z.literal("native-v9-inputs"),
     ...NativeSafetyScoreV9InputPayloadFields,
+    // Replay-only observations must stay out of captured producer supply joins.
+    replaySupplyObservationsById: z.record(z.string(),
+      NativeSafetyScoreV9InputPayloadFields.aggregateCirculatingById.unwrap().valueType
+        .extend(V9ReplaySupplyProvenanceSchema.shape).strict(),
+    ).optional(),
     activeAssetIds: z.array(z.string().min(1)),
     dexGenerationId: z.string().min(1),
     redemptionGenerationId: z.string().min(1),
@@ -317,10 +323,16 @@ function assertNativeV9InputConsistency(
 const NativeSafetyScoreV9InputIntakeSchema = NativeSafetyScoreV9InputSchema.omit({
   baseInputGenerationId: true,
 }).extend({ baseInputGenerationId: z.string().optional() });
+const NativeV9CaptureIntakeSchema = NativeSafetyScoreV9InputIntakeSchema.omit({ replaySupplyObservationsById: true });
 
 /** Canonicalizes record ordering, derives the base generation id, and validates. */
-export function normalizeNativeV9Input(value: unknown, navAssetIds?: ReadonlySet<string>): NativeSafetyScoreV9Input {
-  const parsed = NativeSafetyScoreV9InputIntakeSchema.safeParse(value);
+export function normalizeNativeV9Input(
+  value: unknown,
+  navAssetIds?: ReadonlySet<string>,
+  replayScenario?: "asset-admission",
+): NativeSafetyScoreV9Input {
+  const schema = replayScenario === "asset-admission" ? NativeSafetyScoreV9InputIntakeSchema : NativeV9CaptureIntakeSchema;
+  const parsed = schema.safeParse(value);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     throw new Error(`Malformed native V9 input at ${issue?.path.join(".") || "root"}: ${issue?.message}`);
@@ -410,8 +422,12 @@ function isNativeV9InputShape(value: unknown): boolean {
  * The v3 branch is the frozen-capture replay lane and delegates to the legacy
  * normalizer unchanged, so historical captures keep replaying byte-for-byte.
  */
-export function normalizeSafetyScoreV9CompilerInput(value: unknown, navAssetIds?: ReadonlySet<string>): SafetyScoreV9CompilerInput {
-  if (isNativeV9InputShape(value)) return normalizeNativeV9Input(value, navAssetIds);
+export function normalizeSafetyScoreV9CompilerInput(
+  value: unknown,
+  navAssetIds?: ReadonlySet<string>,
+  replayScenario?: "asset-admission",
+): SafetyScoreV9CompilerInput {
+  if (isNativeV9InputShape(value)) return normalizeNativeV9Input(value, navAssetIds, replayScenario);
   return normalizeFixedInput(value, navAssetIds);
 }
 

@@ -520,7 +520,8 @@ function assertPreviousReaderSource() {
   }));
   // redemption.ts adds a separate snapshot-entry schema for dated Mento status. The reused reader schemas are unchanged.
   // The report8 pipeline-gap refinement is reachable only through the historical typed schema.
-  if (hash.digest("hex") !== "fc1f88c72097941a1666c905fa3919d5ab0758ee0b7cf72d9991c816c669d97c") throw new Error("Pre-dust reader source/refinement inputs changed");
+  // Replay supply provenance is validated in native inputs and compiled fact sets.
+  if (hash.digest("hex") !== "4be68e5770eefc0c2429364f60a7637f5ddfbc6913a16d741e08fbd6a0dff5ea") throw new Error("Pre-dust reader source/refinement inputs changed");
 }
 
 export async function previousReader() {
