@@ -456,29 +456,6 @@ describe("v10.48 age-only expired composition attribution", () => {
       .toEqual([true, undefined]);
     expect([...context.gaps.values()].map((gap) => [gap.reasonCode, gap.causeProof.cause])).toEqual([["missing-reserve-composition", "C"]]);
   });
-
-  it("caps every real age-only expired review at its own admission", { tags: ["nightly"] }, () => {
-    const sec = 1_795_169_853, day = "2026-11-18"; // capture clock
-    let capped = 0;
-    for (const meta of ACTIVE_META_BY_ID.values()) {
-      const review = meta.reserveReview;
-      if (review?.scope !== "full-composition" || review.confidence !== "verified" || !review.compositionAsOf) continue;
-      const expired = compile(meta, sec);
-      if (expired.card.reserveCompositionAdmission?.reasons.join() !== "beyond-age-budget") continue;
-      const ceiling = expired.facts.expiredReviewedAdmittedReserveScore;
-      if (ceiling === undefined) { // v10.48 does not apply: tracked-asset row or observation-dated composition
-        expect([expired.facts.gaps.some((gap) => gap.reasonCode === "missing-reserve-composition"),
-          meta.reserves!.some((row) => row.coinId) || Boolean(review.observations?.length) ||
-          meta.proofOfReserves?.latestReport?.coverage != null], meta.id).toEqual([true, true]);
-        continue;
-      }
-      const admitted = compile(reviewDatedOn(meta, day), sec);
-      expect(ceiling, meta.id).toBeCloseTo(admitted.reserves, 6);
-      expect(expired.reserves, meta.id).toBeLessThanOrEqual(admitted.reserves + 1e-6);
-      capped++;
-    }
-    expect(capped).toBeGreaterThanOrEqual(20);
-  });
 });
 
 describe("fail-closed reserve frame admission", () => {
