@@ -71,7 +71,7 @@ export function enrichPoolProtocol(
         (identity.fpCurveKey != null
           ? context.curvePoolMap.get(identity.fpCurveKey)
           : undefined) ??
-        context.curvePoolMap.get(identity.symCurveKey))
+        (identity.symCurveKey != null ? context.curvePoolMap.get(identity.symCurveKey) : undefined))
       : undefined;
   const curveAddressMatch =
     context.curvePoolMap.has(identity.addrCurveKey) ||

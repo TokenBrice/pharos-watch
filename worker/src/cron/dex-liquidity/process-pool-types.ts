@@ -77,9 +77,10 @@ export interface ResolvedPoolIdentity {
   poolType: string;
   protocol: string;
   chainNorm: string;
+  reviewedCurveAddress?: string;
   addrCurveKey: string;
   fpCurveKey: string | null;
-  symCurveKey: string;
+  symCurveKey: string | null;
 }
 
 export interface PoolProtocolEnrichment {

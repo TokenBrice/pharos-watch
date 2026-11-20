@@ -795,7 +795,7 @@ describe("DEX liquidity scoring stage", () => {
     });
   });
 
-  it.each([7, 8])("round-trips v9 closure valuation provenance and rejects an otherwise-ready v%s producer", async (legacy) => {
+  it.each([7, 8, 9])("round-trips closure valuation provenance and rejects an otherwise-ready v%s producer", async (legacy) => {
     const harness = openDatabase();
     const sourceSlotStartedAt = 20_000;
     const stored = await persistAt(harness.db, sourceSlotStartedAt);
@@ -803,16 +803,21 @@ describe("DEX liquidity scoring stage", () => {
       ...poolState(0), closureValuationRejectedAssetIds: ["cadc-cad-coin"],
       closureValuationMarketMarks: [["eurc-circle", { priceUsd: 1.13, observedAtSec: 19_980, source: "kraken" }]] as NonNullable<PoolState["closureValuationMarketMarks"]>,
     };
-    expect(decode(encode(sourceState(), pool)).poolState).toMatchObject({
+    const chunks = encode(sourceState(), pool);
+    expect(decode(chunks).poolState).toMatchObject({
       closureValuationRejectedAssetIds: pool.closureValuationRejectedAssetIds,
       closureValuationMarketMarks: pool.closureValuationMarketMarks,
     });
     await expect(loadAt(harness.db, sourceSlotStartedAt, 20_360)).resolves.toMatchObject({ generationId: stored.generationId });
+    const current = JSON.parse(chunks[0]!.payload.split("\n")[0]!).schemaVersion;
+    const bytesRemoved = String(current).length - String(legacy).length;
     expect(harness.sqlite.prepare(
       `UPDATE dex_liquidity_scoring_stage_chunks
-          SET payload_json = replace(payload_json, '"schemaVersion":9', ?)
-        WHERE generation_id = ? AND chunk_index = 0 AND instr(payload_json, '"schemaVersion":9') > 0`,
-    ).run(`"schemaVersion":${legacy}`, stored.generationId).changes).toBe(1);
+          SET payload_json = replace(payload_json, ?, ?), payload_bytes = payload_bytes - ?
+        WHERE generation_id = ? AND chunk_index = 0`,
+    ).run(`"schemaVersion":${current}`, `"schemaVersion":${legacy}`, bytesRemoved, stored.generationId).changes).toBe(1);
+    harness.sqlite.prepare("UPDATE dex_liquidity_scoring_stages SET payload_bytes = payload_bytes - ? WHERE generation_id = ?")
+      .run(bytesRemoved, stored.generationId);
     await expect(loadAt(harness.db, sourceSlotStartedAt, 20_360)).rejects
       .toThrow(`Unsupported DEX liquidity scoring stage payload version ${legacy}`);
   });

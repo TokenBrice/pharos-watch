@@ -9,6 +9,8 @@ import {
 } from "../lib/bounded-prune";
 import { SAFETY_SCORE_PUBLICATION_JOURNAL_RETENTION_SEC } from "../lib/safety-score-v9/publication-journal";
 import { RetentionGroupError, runRetentionPolicies, type CappedDeleteResult } from "./shared/capped-delete";
+import { isProductiveCronRow, readDexLiquidityCronHistory } from "../lib/dex-liquidity-cron-history";
+import { matchesReviewedAnchor } from "./dex-liquidity/reviewed-anchor-correction";
 
 /**
  * Stop starting new policies well inside the default five-minute task timeout
@@ -32,6 +34,15 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
   try {
     results = await runRetentionPolicies(db, policies, now, signal, {
       deadlineMs: Date.now() + PRUNE_CRON_HISTORY_SOFT_DEADLINE_MS,
+      preparePolicy: {
+        cronRuns: async (policy) => {
+          const latestDexRun = (await readDexLiquidityCronHistory(db)).find(isProductiveCronRow);
+          // Preserve the carried state while scoring is held on an unreadable decision.
+          if (!latestDexRun || !matchesReviewedAnchor(latestDexRun.metadata.sourceCoverage.poolRejectionCoverage)) return policy;
+          if (!Number.isSafeInteger(latestDexRun.id)) throw new Error("Invalid carried DEX liquidity cron row ID");
+          return { ...policy, predicate: `id != ${latestDexRun.id}` };
+        },
+      },
     });
   } catch (error) {
     // Aborts and unattributed failures propagate verbatim, as before the group envelope.

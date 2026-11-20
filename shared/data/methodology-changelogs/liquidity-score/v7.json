@@ -1,5 +1,18 @@
 [
   {
+    "version": "7.51",
+    "title": "Exact identities for two Curve USDC/sUSDat pools",
+    "date": "2026-11-20",
+    "effectiveAt": 1795164300,
+    "summary": "Two reviewed Ethereum Curve addresses identify the corresponding DeFiLlama Yields rows even when Curve omits their valuation. Each physical pool contributes once.",
+    "impact": [
+      "The review covers only the TwoCrypto and StableSwap NG pools. An available exact Curve observation values its own pool. In the incident fixture, the NG observation contributes $4,549 with Curve valuation and $13,401 with the admitted Yields valuation when Curve omits it. The Yields row still deduplicates against registry observations by its reviewed address.",
+      "This starts a retained-TVL measurement epoch because pool identity changes the population and valuation. TVL trends do not compare pre-cutover and post-cutover observations. Scoring-stage payload v10 requires the new identity policy before publication. The episode-specific health review is separate from pool measurement."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "7.5",
     "title": "Clocked liquidity inputs and measured overlap",
     "date": "2026-11-19",

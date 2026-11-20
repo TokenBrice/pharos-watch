@@ -339,6 +339,7 @@ import { processPoolMetrics } from "../dex-liquidity/process-pools";
 import { mergeStagedPools } from "../dex-liquidity/staging-merge";
 import * as registryPersistence from "../dex-discovery/persistence";
 import { readDexSourcePaginationState } from "../dex-liquidity/source-pagination-state";
+import { runPruneCronHistory } from "../prune-cron-history";
 
 /** Cache reads must miss: a fabricated row is a corrupt circuit record and fails closed. */
 function firstRowFor(sql: string) {
@@ -348,11 +349,11 @@ function firstRowFor(sql: string) {
 function emptyStatement(sql: string) {
   return {
     bind: () => ({
-      all: async () => ({ results: [] }),
+      all: async () => ({ results: [], success: true }),
       first: firstRowFor(sql),
       run: async () => ({ success: true, meta: {} }),
     }),
-    all: async () => ({ results: [] }),
+    all: async () => ({ results: [], success: true }),
     first: firstRowFor(sql),
     run: async () => ({ success: true, meta: {} }),
   };
@@ -667,8 +668,17 @@ describe("dex liquidity scoring stage cycle", () => {
     ["SELECT total_tvl_usd, updated_at", "global-tvl-read-failed"],
     ["ORDER BY total_tvl_usd DESC", "top-ten-read-failed"],
     ["FROM cron_runs", "cron-history-read-failed"],
+    ["SELECT value, updated_at FROM cache WHERE key = ?", "anchor-review-decision-read-failed"],
+    ["FROM dex_liquidity_run_rows r", "coin-tvl-read-failed"],
+    // The walk-back read past an unobserved prior publication is its own failure path.
+    ["ORDER BY g.started_at DESC, g.generation_id DESC", "coin-tvl-read-failed"],
   ])("retains accepted rows and generation when %s is unreadable", async (match, reason) => {
     const fixture = createLatestSchemaSqlite();
+    const pendingReview = reason === "coin-tvl-read-failed";
+    const unobservedPrior = match.startsWith("ORDER BY g.started_at");
+    const reviewClock = pendingReview
+      ? vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-11-20T11:16:00Z"))
+      : undefined;
     try {
       fixture.sqlite.prepare(`INSERT INTO dex_liquidity_publication_generations
         (generation_id, started_at, state, expected_row_count, created_at)
@@ -676,15 +686,56 @@ describe("dex liquidity scoring stage cycle", () => {
       const insert = fixture.sqlite.prepare(`INSERT INTO dex_liquidity
         (stablecoin_id, symbol, total_tvl_usd, liquidity_score, coverage_class, updated_at,
          publication_generation_id, publication_state)
-        VALUES (?, 'USD', 100, 80, 'primary', 1700000000, 'accepted', 'published')`);
-      insert.run("usdt-tether");
-      insert.run("__global__");
+        VALUES (?, 'USD', ?, 80, 'primary', 1700000000, 'accepted', 'published')`);
+      insert.run("usdt-tether", 100);
+      insert.run("__global__", 100);
+      if (pendingReview) {
+        insert.run("susdat-saturn", 3_000_000);
+        fixture.sqlite.exec(`INSERT INTO dex_liquidity_run_rows
+          (generation_id, stablecoin_id, symbol, total_tvl_usd, updated_at, coverage_class)
+          VALUES ('accepted', 'susdat-saturn', 'sUSDat', ${unobservedPrior ? 0 : 3000000},
+            1700000000, '${unobservedPrior ? "unobserved" : "primary"}')`);
+        phaseFixtures.current.scores.scores.set("susdat-saturn", { coverageClass: "primary", tvl: 2_579_000 });
+      }
+      if (pendingReview || reason === "anchor-review-decision-read-failed") {
+        const insertProductive = fixture.sqlite.prepare(`INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata)
+          VALUES ('sync-dex-liquidity', ?, 1000, 'degraded', ?)`);
+        const carriedAnchor = JSON.stringify({
+          sourceCoverage: { poolRejectionCoverage: {
+            reason: "material-pool-rejections", material: true, baselineBeforeSec: 1_794_741_390,
+            baselineTvlUsdByCoin: { "susdat-saturn": 4_811_562.319125249 }, coins: [], coinsOmitted: 0,
+          } },
+        });
+        insertProductive.run(1699999999, carriedAnchor);
+        insertProductive.run(1700000000, carriedAnchor);
+        const insertSkipped = fixture.sqlite.prepare(`INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata)
+          VALUES ('sync-dex-liquidity', ?, 1000, 'degraded', '{"persistence":{"skipped":true}}')`);
+        for (let i = 1; i <= 12; i++) {
+          insertProductive.run(1700000001, '{"sourceCoverage":{"dlYieldsAvailable":"unavailable"}}');
+          insertSkipped.run(1700000000 + i * 3600);
+        }
+      }
       const failedReadDb = mockD1([{ match, rows: [], throwError: new Error("baseline read failed") }]);
       const database = {
         ...fixture.db,
-        prepare: (sql: string) => sql.includes(match) ? failedReadDb.prepare(sql) : fixture.db.prepare(sql),
+        prepare: (sql: string) => {
+          if (!sql.includes(match)) return fixture.db.prepare(sql);
+          if (reason !== "anchor-review-decision-read-failed") return failedReadDb.prepare(sql);
+          const statement = fixture.db.prepare(sql);
+          return { ...statement, bind: (...bindings: unknown[]) =>
+            (bindings[0] === "dex-liquidity:anchor-review:2142" ? failedReadDb.prepare(sql) : statement).bind(...bindings) };
+        },
       };
-      const result = await runScoringCycle(database, "graph-key");
+      let result = await runScoringCycle(database, "graph-key");
+      if (reason === "anchor-review-decision-read-failed") {
+        expect(readMetadata(result).sourceCoverage.baselineReadFailures).toEqual([reason]);
+        const clock = vi.spyOn(Date, "now").mockReturnValue((1700000001 + 7 * 86_400) * 1000);
+        const prune = await runPruneCronHistory(fixture.db);
+        clock.mockRestore();
+        expect(prune.status).toBe("ok");
+        expect(readMetadata(prune).cronRunsDeleted).toBe(1);
+        result = await runScoringCycle(database, "graph-key");
+      }
       expect(result.status).toBe("degraded");
       const metadata = readMetadata(result);
       expect(metadata).toMatchObject({
@@ -697,6 +748,7 @@ describe("dex liquidity scoring stage cycle", () => {
       expect(fixture.sqlite.prepare(`SELECT stablecoin_id, total_tvl_usd, updated_at,
         publication_generation_id FROM dex_liquidity ORDER BY stablecoin_id`).all()).toEqual([
         { stablecoin_id: "__global__", total_tvl_usd: 100, updated_at: 1700000000, publication_generation_id: "accepted" },
+        ...(pendingReview ? [{ stablecoin_id: "susdat-saturn", total_tvl_usd: 3_000_000, updated_at: 1700000000, publication_generation_id: "accepted" }] : []),
         { stablecoin_id: "usdt-tether", total_tvl_usd: 100, updated_at: 1700000000, publication_generation_id: "accepted" },
       ]);
       expect(persistScores).not.toHaveBeenCalled();
@@ -705,6 +757,7 @@ describe("dex liquidity scoring stage cycle", () => {
       expect(writeHistoricalSnapshots).not.toHaveBeenCalled();
       expect(markDexLiquidityScoringStageConsumed).not.toHaveBeenCalled();
     } finally {
+      reviewClock?.mockRestore();
       fixture.sqlite.close();
     }
   });
@@ -818,6 +871,7 @@ describe("dex liquidity scoring stage cycle", () => {
       undefined,
       phaseFixtures.current.scores.diagnostics.routeRemovalEvidence,
       phaseFixtures.current.scores.retainedPoolsByStablecoin,
+      undefined,
     );
     expect(metadata.sourceCoverage?.qualityDriftSeverity).toBe("none");
     expect(metadata.sourceCoverage?.qualityDriftFlags).toEqual([]);
@@ -1462,6 +1516,23 @@ describe("dex liquidity stage same-hour recovery", () => {
     const result = await consumeStage(harness, undefined, halfHourSlot);
     expect(result.status).toBe("skipped_neutral");
     expect(persistScores).toHaveBeenCalledOnce();
+  });
+
+  it("skips an incompatible v9 stage before publication", async () => {
+    await stageHourGeneration(harness);
+    harness.sqlite.exec(`UPDATE dex_liquidity_scoring_stage_chunks
+      SET payload_json = replace(payload_json, '"schemaVersion":10', '"schemaVersion":9'), payload_bytes = payload_bytes - 1
+      WHERE chunk_index = 0;
+      UPDATE dex_liquidity_scoring_stages SET payload_bytes = payload_bytes - 1;`);
+    const result = await consumeStage(harness);
+    expect(result.status).toBe("skipped_neutral");
+    expect(readMetadata(result)).toMatchObject({
+      reason: "scoring-stage-payload-version-mismatch",
+      payloadVersion: 9,
+      persistence: { generationId: null, skipped: true, publicationStarted: false },
+    });
+    expect(persistScores).not.toHaveBeenCalled();
+    expect(markDexLiquidityScoringStageConsumed).not.toHaveBeenCalled();
   });
 
   it("leaves a source ready when a candidate is rejected by source guards", async () => {

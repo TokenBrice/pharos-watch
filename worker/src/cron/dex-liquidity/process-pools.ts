@@ -100,6 +100,11 @@ export function hasMaterialPoolRejections(
 export const POOL_REJECTION_MATERIAL_SHARE = 0.1;
 type RejectionCoverage = NonNullable<DexLiquidityCronMetadata["sourceCoverage"]["poolRejectionCoverage"]>;
 
+export function isMaterialPoolRejectionLoss(baselineTvlUsd: number, currentTvlUsd: number): boolean {
+  const lossUsd = baselineTvlUsd - currentTvlUsd;
+  return lossUsd >= POOL_REJECTION_MATERIAL_TVL_USD && lossUsd / baselineTvlUsd >= POOL_REJECTION_MATERIAL_SHARE;
+}
+
 export function assessPoolRejectionCoverage(
   rejections: readonly PoolProcessingRejection[],
   previous: ReadonlyMap<string, number> | null,
@@ -121,7 +126,7 @@ export function assessPoolRejectionCoverage(
     const currentTvlUsd = current.get(id) ?? 0;
     const lossUsd = Math.max(0, baselineTvlUsd - currentTvlUsd);
     const lossRatio = baselineTvlUsd > 0 ? lossUsd / baselineTvlUsd : 0;
-    const material = lossUsd >= POOL_REJECTION_MATERIAL_TVL_USD && lossRatio >= POOL_REJECTION_MATERIAL_SHARE;
+    const material = isMaterialPoolRejectionLoss(baselineTvlUsd, currentTvlUsd);
     // Keep the original loss anchor even after a degraded publication overwrites the table.
     if (affected.has(id) || lossUsd > 0) {
       nextAnchors[id] = Math.max(baselineTvlUsd, currentTvlUsd);
@@ -277,7 +282,7 @@ export function processPoolMetrics(
 
     const enrichment = enrichPoolProtocol(context, identity);
     const key = buildPrimaryPoolKey(identity.chainNorm, pool.pool, pool.project,
-      enrichment.curveAddressMatch ? enrichment.curveData?.poolAddress : undefined);
+      identity.reviewedCurveAddress ?? (enrichment.curveAddressMatch ? enrichment.curveData?.poolAddress : undefined));
     const providerKey = `${identity.chainNorm}:defillama:${pool.pool.trim()}`;
     for (const observationKey of [key, providerKey]) {
       const previous = firstByKey.get(observationKey);
@@ -306,6 +311,7 @@ export function processPoolMetrics(
       );
       accumulatePoolMetrics(
         metrics,
+        key,
         identity,
         enrichment,
         capability,

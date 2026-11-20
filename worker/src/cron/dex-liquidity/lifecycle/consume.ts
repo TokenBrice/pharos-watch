@@ -5,7 +5,12 @@ import type { SlotDeadline } from "../../../lib/cron-timeouts";
 import { createD1CostTracker } from "../../../lib/d1-cost";
 import { rethrowIfAborted } from "../../../lib/abort";
 import { loadCurrentDexScoringGenerationId } from "../scoring";
-import { loadDexLiquidityScoringStage, probeDexLiquidityScoringStageSlot, type LoadedDexLiquidityScoringStage } from "../scoring-stage";
+import {
+  IncompatibleDexLiquidityScoringStagePayloadError,
+  loadDexLiquidityScoringStage,
+  probeDexLiquidityScoringStageSlot,
+  type LoadedDexLiquidityScoringStage,
+} from "../scoring-stage";
 import { DEX_D1_COST_EXCLUSIONS, withDexD1CostMetadata } from "./d1-cost";
 import {
   decideDexLiquiditySourceSlot,
@@ -78,8 +83,8 @@ export async function consumeDexLiquidityStage(
   }
   let staged: LoadedDexLiquidityScoringStage;
   let recovery: DexLiquidityStageRecoveryOutcome | null = null;
-  if (expectedSourceSlotStartedAt != null) {
-    try {
+  try {
+    if (expectedSourceSlotStartedAt != null) {
       ({ staged, recovery } = await loadDexLiquidityScoringStageForConsumer(
         lifecycle.stage,
         db,
@@ -92,35 +97,26 @@ export async function consumeDexLiquidityStage(
         reportProgress,
         signal,
       ));
-    } catch (error) {
-      rethrowIfAborted(error, signal);
-      if (!(error instanceof DexScoringStageProducerRunningError)
-        || error.sourceSlotStartedAt !== expectedSourceSlotStartedAt) throw error;
-      return withDexD1CostMetadata(createCronResult({
-        status: "skipped_neutral",
-        itemCount: 0,
-        metadata: {
-          reason: DEX_SCORING_STAGE_PRODUCER_RUNNING_REASON,
-          sourceSlotStartedAt: expectedSourceSlotStartedAt,
-          readinessDeadlineMs: options.stageReadyDeadlineMs ?? null,
-          persistence: {
-            generationId: null,
-            skipped: true,
-            skippedReason: DEX_SCORING_STAGE_PRODUCER_RUNNING_REASON,
-          },
-        },
-        productivity: { productive: false, reason: DEX_SCORING_STAGE_PRODUCER_RUNNING_REASON },
-      }), d1Cost);
+    } else {
+      staged = await loadDexLiquidityScoringStage(db, { nowSec: Math.floor(Date.now() / 1000) }, signal);
     }
-  } else {
-    staged = await loadDexLiquidityScoringStage(
-      db,
-      {
-        nowSec: Math.floor(Date.now() / 1000),
-        expectedSourceSlotStartedAt,
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    const incompatible = error instanceof IncompatibleDexLiquidityScoringStagePayloadError;
+    if (!incompatible && (!(error instanceof DexScoringStageProducerRunningError)
+      || error.sourceSlotStartedAt !== expectedSourceSlotStartedAt)) throw error;
+    const reason = incompatible ? "scoring-stage-payload-version-mismatch" : DEX_SCORING_STAGE_PRODUCER_RUNNING_REASON;
+    return withDexD1CostMetadata(createCronResult({
+      status: "skipped_neutral",
+      itemCount: 0,
+      metadata: {
+        reason,
+        sourceSlotStartedAt: expectedSourceSlotStartedAt ?? null,
+        ...(incompatible ? { payloadVersion: error.payloadVersion } : { readinessDeadlineMs: options.stageReadyDeadlineMs ?? null }),
+        persistence: { generationId: null, skipped: true, skippedReason: reason, publicationStarted: false },
       },
-      signal,
-    );
+      productivity: { productive: false, reason },
+    }), d1Cost);
   }
   if (recovery == null && consumerSlotStartedAt != null && !isHourlyDexPriceSlot(consumerSlotStartedAt)) {
     recovery = { reason: "stage-unconsumed", sourceSlotStartedAt: staged.sourceSlotStartedAt, generationId: staged.generationId };

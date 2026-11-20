@@ -13,6 +13,7 @@ export const DexLiquidityBaselineReadFailureSchema = z.enum([
   "cron-history-read-failed",
   "watchlist-read-failed",
   "coin-tvl-read-failed",
+  "anchor-review-decision-read-failed",
 ]);
 export type DexLiquidityBaselineReadFailure = z.output<typeof DexLiquidityBaselineReadFailureSchema>;
 
