@@ -21,6 +21,8 @@ vi.mock("../../lib/safety-score-index", () => ({
 }));
 
 import { handleYieldRankings } from "../cache-handlers";
+import { buildYieldMethodology } from "../../cron/yield-sync/publication-generation";
+import { readEdgeCache } from "../../handlers/http/edge-cache";
 
 const V748_RANKINGS_UPDATED_AT = Date.parse("2026-03-13T15:59:30Z") / 1000;
 const V9_METHODOLOGY_VERSION = "9.0";
@@ -274,6 +276,7 @@ describe("handleYieldRankings", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllGlobals();
   });
 
   it("hydrates live safety scores from the report-card snapshot and falls back to NR defaults for missing cards", async () => {
@@ -1643,6 +1646,48 @@ describe("handleYieldRankings", () => {
       warningSignals: expect.arrayContaining(["data-stale"]),
       provenance: expect.objectContaining({ sourceFreshness: "stale", sourceMaxAgeSeconds: 6 * 3600 }),
     });
+  });
+
+  it("expires a clockless DeFiLlama score on the original batch clock", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000);
+    const db = makeCacheDb({
+      ...v748RankingsPayload,
+      methodology: buildYieldMethodology(updatedAt),
+      provenance: { ...v748RankingsPayload.provenance, dlPools: {
+        ...v748RankingsPayload.provenance.dlPools, updatedAt: updatedAt - 6 * 3600 + 30,
+      } },
+      rankings: [makeYieldRanking({
+        id: "rated-coin", dataSource: "defillama", yieldType: "lending-vault",
+        warningSignals: ["data-freshness-unknown"], sourceRisk: { sourceAgeSeconds: null },
+        provenance: makeYieldProvenance({ sourceObservedAt: null, sourceAgeSeconds: null, sourceFreshness: "unknown" }),
+      })],
+    }, updatedAt);
+    const url = "https://api.pharos.watch/api/yield-rankings";
+    const urls = [new URL(url), new URL(url + "?projection=summary")];
+    const stored = await Promise.all(urls.map(url => handleYieldRankings(db, url)));
+    const match = vi.fn(async (key: Request) => stored[urls.findIndex(url => url.href === key.url)]);
+    vi.stubGlobal("caches", { default: { match } });
+    for (const response of stored) {
+      expect(response.headers.get("Cache-Control")).toBe("public, s-maxage=30, max-age=30");
+      expect((await response.clone().json() as YieldRankingsResponse).rankings[0].pharosYieldScore).toEqual(expect.any(Number));
+    }
+    for (const seconds of [29, 30]) {
+      vi.setSystemTime((updatedAt + seconds) * 1000);
+      for (const [index, url] of urls.entries()) {
+        expect(await readEdgeCache({ cacheKey: new Request(url), skipCache: false })).toBe(seconds === 29 ? stored[index] : null);
+      }
+    }
+    const boundary = await handleYieldRankings(db);
+    expect(boundary.headers.get("Cache-Control")).toBe("no-store");
+    expect((await readJsonResponse(boundary, 200) as YieldRankingsResponse).rankings[0]).toMatchObject({
+      pharosYieldScore: expect.any(Number), pysNullReason: null,
+      warningSignals: expect.arrayContaining(["data-freshness-unknown"]),
+      provenance: { sourceObservedAt: null, sourceAgeSeconds: null, sourceFreshness: "unknown", scoreQualification: "partial" },
+      sourceRisk: { sourceAgeSeconds: null },
+    });
+    vi.setSystemTime((updatedAt + 31) * 1000);
+    const expired = await readJsonResponse(await handleYieldRankings(db), 200) as YieldRankingsResponse;
+    expect(expired.rankings[0]).toMatchObject({ pharosYieldScore: null, pysNullReason: "source-stale" });
   });
 
   it("advances legacy source ages without an observation timestamp", async () => {

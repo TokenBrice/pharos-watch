@@ -105,6 +105,7 @@ describe("runPostDeployAcceptance", () => {
 
   it("probes Worker health and sweeps public routes with the CI key for a Worker-only release", async () => {
     const deps = dependencies();
+    deps.fetchJson.mockRejectedValueOnce(new Error("cold Worker"));
     const run = await runPostDeployAcceptance({
       ...deps,
       workerDeployed: true,
@@ -119,7 +120,12 @@ describe("runPostDeployAcceptance", () => {
       "/api/stablecoins",
     );
     expect(run.probes.map((probe) => probe.id)).toEqual(["worker-health", "worker-route-sweep"]);
-    expect(deps.fetchJson.mock.calls.map(([, path]) => path).sort()).toEqual(`
+    const warmup = deps.fetchJson.mock.calls.slice(0, 3);
+    expect(warmup).toEqual(["stablecoin-charts", "report-cards/v9", "redemption-backstops"].map((route) => [
+      { apiUrl: WORKER_API_URL, apiKey: "ci-key", timeoutMs: 20_000, noCache: true }, `/api/${route}`,
+    ]));
+    expect(run.acceptance.outcome).toBe("passed");
+    expect(deps.fetchJson.mock.calls.slice(3).map(([, path]) => path).sort()).toEqual(`
       stablecoins stablecoin/pyusd-paypal stablecoin-summary/usdt-tether stablecoin-reserves/iusd-infinifi
       stablecoin-charts peg-summary health public-status-history blacklist blacklist-summary
       depeg-events events usds-status bluechip-ratings dex-liquidity
@@ -275,13 +281,13 @@ describe("runPostDeployAcceptance", () => {
     expect(run.probes.map((probe) => probe.id)).toEqual(["worker-health", "worker-route-sweep"]);
   });
 
-  it("retries a single 5xx once before passing the route sweep", async () => {
+  it.each([503, 0])("retries status %s once before passing the route sweep", async (status) => {
     const deps = dependencies();
     let attempts = 0;
     deps.fetchJson.mockImplementation(async (_args: unknown, path: string) => {
       if (path !== "/api/depeg-events") return routeResponse(path);
       attempts += 1;
-      return routeResponse(path, attempts === 1 ? 503 : 200);
+      return routeResponse(path, attempts === 1 ? status : 200);
     });
     const run = await runPostDeployAcceptance({
       ...deps,
@@ -299,6 +305,7 @@ describe("runPostDeployAcceptance", () => {
 
   it.each([
     [503, 2, "failed", 1, "http-5xx"],
+    [0, 2, "failed", 1, "transport-error"],
     [429, 1, "pending", 0, "rate-limited"],
     [404, 1, "failed", 1, "unexpected-status"],
   ] as const)("reports a required route's HTTP %s", async (status, attempts, outcome, exit, reason) => {
@@ -325,6 +332,28 @@ describe("runPostDeployAcceptance", () => {
       expect(run.acceptance.reason).toContain(reason);
       expect(run.acceptance.reason).toContain(`HTTP ${status}`);
     }
+  });
+
+  it("charges warm-up time to the sweep deadline and starts no late requests or retries", async () => {
+    const deps = dependencies();
+    let now = 0;
+    vi.spyOn(Date, "now").mockImplementation(() => now);
+    deps.fetchJson.mockImplementation(async (_args, path) => {
+      if (path === "/api/redemption-backstops") {
+        await Promise.resolve();
+        now += 20_000;
+      }
+      if (path === "/api/stablecoins") now += 85_000;
+      return routeResponse(path, 503);
+    });
+    const run = await runPostDeployAcceptance({
+      ...deps, workerDeployed: true, apiKey: "ci-key",
+      expectedWorkerVersion: WORKER_VERSION, observedWorkerVersion: WORKER_VERSION,
+    });
+    expect(deps.fetchJson).toHaveBeenCalledTimes(4);
+    expect(run.acceptance.reason).toContain("/api/stablecoins (http-5xx, HTTP 503)");
+    expect(run.acceptance.reason).toContain("sweep-not-run");
+    expect(run.exitCode).toBe(1);
   });
 
   it("fails the route sweep when the CI API key is missing instead of treating anonymous 401s as healthy", async () => {

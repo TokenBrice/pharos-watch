@@ -150,6 +150,8 @@ export interface EvaluateYieldSourcesInput {
   bestRowsByCoin?: Map<string, YieldHistorySnapshotRow[]>;
   stablecoinSupplyById?: Map<string, number>;
   dlPoolsMeta?: YieldSourceInputMeta;
+  /** Pool delivery can occur after the run starts. */
+  dlPoolsAssessedAt?: number;
 }
 
 export interface EvaluateYieldSourcesResult {

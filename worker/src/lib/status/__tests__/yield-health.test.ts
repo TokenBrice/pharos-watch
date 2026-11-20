@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { makeAltYieldSource } from "@shared/test-utils/yield-ranking-fixtures";
 import { loadYieldHealthSummary } from "../yield-health";
 import type { CronRunStatus, CronStatusDetail } from "@shared/types/status";
 import { YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC } from "@shared/lib/yield-safety-fallback";
@@ -867,7 +868,7 @@ describe("loadYieldHealthSummary", () => {
           updatedAt: NOW - 300,
           rankings: [
             { id: "one-family", dataSource: "defillama", sourceRisk: { sourceRiskPenalty: 1.2, sourceAgeSeconds: 90 } },
-            { id: "empty-risk", dataSource: "defillama", sourceRisk: {} },
+            { id: "empty-risk", dataSource: "protocol-api", sourceRisk: {}, altSources: [makeAltYieldSource()] },
           ],
           provenance: healthyYieldProvenance(NOW, 2),
         }),
@@ -879,6 +880,9 @@ describe("loadYieldHealthSummary", () => {
     );
 
     expect(summary.sourceRiskCoverage.fields.sourceRiskPenalty.populatedCount).toBe(0);
+    expect(summary.sourceRiskCoverage.fields.sourceAgeSeconds).toMatchObject({
+      eligibleCount: 1, ineligibleCount: 2, nullCount: 1, coverageRatio: 0, altEligibleCount: 0,
+    });
     expect(summary.sourceRiskCoverage.rowsWithSourceRisk).toBe(1);
   });
 

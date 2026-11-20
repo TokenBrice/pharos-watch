@@ -82,7 +82,11 @@ export function projectSafetyScoreV9PublicationToPublicSnapshot(
   publication: SafetyScoreV9AdmittedPublication,
   publicationHealth: V9PublicationHealth,
 ): ReportCardsV9CurrentResponse {
-  const cards = publication.cards.map((card) => resolveV9PublicWitnessTexts(card));
+  const cards = publication.cards.map((card: SafetyScoreV9CurrentCard) => {
+    if (card.reserveCompositionAdmission === undefined) return resolveV9PublicWitnessTexts(card);
+    const { reserveCompositionAdmission: _diagnostic, ...compatibleCard } = card;
+    return resolveV9PublicWitnessTexts(compatibleCard);
+  });
   return ReportCardsV9CurrentResponseSchema.parse(buildPublicProjection(publication, publicationHealth, cards));
 }
 

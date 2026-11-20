@@ -220,39 +220,29 @@ describe("site-only stablecoin live summary", () => {
       .toMatchObject({ circulatingPrevWeek: {}, circulatingPrevMonth: {} });
   });
 
-  it("preserves settled failed-refresh warnings even for a recently produced generation", async () => {
+  it.each([
+    [60, "stale", "stale", "detail-refresh-failed"],
+    [60, "stale", "stale", "unspecified-stale", false],
+    [5_400, "degraded", "degraded", "outside-freshness-budget"],
+    [7_201, "fresh", "stale", "outside-freshness-budget"],
+    [-61, "fresh", "degraded", "future-timestamp"],
+  ] as const)("at age %is resolves %s as %s with %s", async (
+    age, upstream, status, reason, hasUpstreamReason: boolean = true,
+  ) => {
+    const warning = upstream !== "fresh" && '110 - "Detail refresh failed"';
+    const updatedAt = NOW - age;
     vi.mocked(handleStablecoinDetail).mockResolvedValue(detailResponse({}, {
-      "Cache-Control": "no-store", "X-Data-Freshness": "stale", Warning: '110 - "Detail refresh failed"',
+      "X-Data-Updated-At": String(updatedAt), "X-Data-Age": String(Math.max(0, age)),
+      "X-Data-Freshness": upstream,
+      ...(hasUpstreamReason && { "X-Data-Freshness-Reason": warning ? "detail-refresh-failed" : "detail-cache-current" }),
+      ...(warning && { "Cache-Control": "no-store", Warning: warning }),
     }));
     const response = await handleStablecoinLiveSummary(db, "usdt-tether", ctx);
-    expect(response.headers.get("Cache-Control")).toBe("no-store");
-    expect(await response.json()).toMatchObject({ _meta: { updatedAt: NOW - 60, status: "stale",
-      warning: '110 - "Detail refresh failed"' } });
-  });
-
-  it("keeps a failed 90-minute detail refresh inside the degraded band", async () => {
-    const warning = '110 - "Stablecoin detail cache is stale; refresh failed"';
-    vi.mocked(handleStablecoinDetail).mockResolvedValue(detailResponse({}, {
-      "Cache-Control": "no-store", "X-Data-Updated-At": String(NOW - 5_400), "X-Data-Age": "5400",
-      "X-Data-Freshness": "degraded", Warning: warning,
-    }));
-    const response = await handleStablecoinLiveSummary(db, "usdt-tether", ctx);
-    expect(response.headers.get("Cache-Control")).toBe("no-store");
-    expect(await response.json()).toMatchObject({ _meta: { updatedAt: NOW - 5_400, status: "degraded",
-      freshBudgetSec: 4_800, degradedBudgetSec: 7_200, warning } });
-  });
-
-  it("publishes the recomputed freshness verdict in the generic header too", async () => {
-    // Enrichment lowered the served clock from the 10-minute detail cache to the
-    // stalled canonical publication, but the detail's pre-enrichment header still
-    // says fresh. The response must name one verdict (R3/ADR-30).
-    vi.mocked(handleStablecoinDetail).mockResolvedValue(detailResponse({}, {
-      "X-Data-Updated-At": String(NOW - 7_201), "X-Data-Age": "7201", "X-Data-Freshness": "fresh",
-    }));
-    const response = await handleStablecoinLiveSummary(db, "usdt-tether", ctx);
-    const payload = await response.json() as { _meta: { status: string } };
-    expect(payload._meta.status).toBe("stale");
-    expect(response.headers.get("X-Data-Freshness")).toBe(payload._meta.status);
+    expect(response.headers.get("X-Data-Freshness")).toBe(status);
+    expect(response.headers.get("X-Data-Freshness-Reason")).toBe(reason);
+    if (warning) expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(await response.json()).toMatchObject({ _meta: { updatedAt, status,
+      freshBudgetSec: 4_800, degradedBudgetSec: 7_200, ...(warning && { warning }) } });
   });
 
   it.each([null, "bad-clock", "0"])("does not manufacture a producer timestamp from %s", async (clock) => {

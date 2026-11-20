@@ -56,6 +56,7 @@ function makePlan(overrides: Partial<ConfirmationPlanReady> = {}): ConfirmationP
     meta: undefined,
     pegReference: 1,
     threshold: 100,
+    hasPendingOnsetSourceKeys: false,
     nativeSignal: null,
     nativePegQuote: undefined,
     nativeQuoteImplausibility: null,

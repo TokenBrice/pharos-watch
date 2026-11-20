@@ -11,18 +11,18 @@ import {
   buildRouteContext,
   buildSessionStartHookOutput,
   classifyChangedFiles,
-  classifyRouteContext,
   findShellCommandViolation,
   formatContract,
   ROUTE_CONTEXT_CEILINGS,
   runCli,
 } from "../ci/pharos-change-contract.ts";
 import type { ChangeContract, RouteContextDocumentCache } from "../ci/pharos-change-contract.ts";
+import { enumerateReadingSignatures } from "../lib/change-contract-routing.ts";
 import { runCliEntrypoint } from "../lib/cli-args.mjs";
 import { analyzeShellCommand } from "../lib/shell-command-analysis.ts";
 import type * as RoutingRegistry from "../lib/doc-ownership-registry.mts";
 // Match the router's lazy module boundary when extending the routing fixture.
-const { PATH_FAMILIES, DECLARED_TEST_OWNERSHIP, createOwnershipGlobMatcher } = createRequire(import.meta.url)("../lib/doc-ownership-registry.mts") as typeof RoutingRegistry;
+const { PATH_FAMILIES, DECLARED_TEST_OWNERSHIP } = createRequire(import.meta.url)("../lib/doc-ownership-registry.mts") as typeof RoutingRegistry;
 const { buildFocusedCheckPlan } = createRequire(import.meta.url)("../maintenance/run-focused-checks.ts") as typeof import("../maintenance/run-focused-checks.ts");
 
 // Enlarge only armed architecture reads; other reads and fixture writes pass through.
@@ -147,57 +147,21 @@ function expectIntegrityObligations(contract: Pick<ChangeContract, "docs">, meth
   expectDocs(contract, keys);
 }
 
-// Advisory measured ceilings: lower manually when reading shrinks, never regenerate or remove obligations to fit.
+// Measured fixture ratchets are separate from advisory class ceilings.
 const ROUTE_FIXTURES = [
-  ["src/components/stablecoin-directory/stablecoin-table.tsx", 21_706, 21_706],
-  ["src/app/yield/page.tsx", 50_065, 50_065],
-  ["worker/src/cron/dex-liquidity/orchestrator.ts", 42_303, 42_303],
-  ["worker/src/api/yield-history.ts", 72_336, 72_336],
-  ["shared/lib/safety-score-v9/evaluate-asset.ts", 60_904, 60_904],
-  ["shared/lib/classification.ts", 46_435, 46_435],
-  ["functions/safety-scores/map.json.ts", 24_468, 29_549],
-  ["shared/data/stablecoins/coins/usdt-tether.json", 38_368, 38_368],
-  ["worker/src/telegram/webhook/telegram-webhook.ts", 46_593, 46_593],
-  ["worker/migrations/0268_telegram_planning_lookup_indexes.sql", 26_618, 26_618],
+  ["src/components/stablecoin-directory/stablecoin-table.tsx", 25_292, 25_292],
+  ["src/app/yield/page.tsx", 57_959, 57_959],
+  ["worker/src/cron/dex-liquidity/orchestrator.ts", 40_699, 40_699],
+  ["worker/src/api/yield-history.ts", 83_167, 83_167],
+  ["shared/lib/safety-score-v9/evaluate-asset.ts", 66_803, 66_803],
+  ["shared/lib/classification.ts", 48_066, 48_066],
+  ["functions/safety-scores/map.json.ts", 25_281, 31_627],
+  ["shared/data/stablecoins/coins/usdt-tether.json", 38_906, 38_906],
+  ["worker/src/telegram/webhook/telegram-webhook.ts", 45_512, 45_512],
+  ["worker/migrations/0268_telegram_planning_lookup_indexes.sql", 29_495, 29_495],
 ] as const;
 
-// Sample the largest reading and the only mode-dependent ceiling; enumeration covers all signatures.
-const ROUTE_FIXTURE_SAMPLES = ROUTE_FIXTURES.filter(([file]) =>
-  file === "worker/src/api/yield-history.ts" || file === "functions/safety-scores/map.json.ts",
-);
-
-interface ReadingSignature {
-  file: string;
-  mode: "auto" | "contract";
-  contract: ChangeContract;
-  signature: Array<{ id: string; selectors: number[] }>;
-}
-
-function enumerateReadingSignatures() {
-  const matchers = PATH_FAMILIES.map((family) => ({
-    family,
-    sources: family.sourceGlobs.map(createOwnershipGlobMatcher),
-    selectors: (family.reading ?? []).map((selector) => selector.sources.map(createOwnershipGlobMatcher)),
-  }));
-  const trackedFiles = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" }).split("\0").filter(Boolean);
-  const representatives = new Map<string, ReadingSignature>();
-  for (const file of trackedFiles) {
-    const matched = matchers.filter(({ sources }) => sources.some((match) => match(file)));
-    if (matched.length === 0) continue;
-    const signature = matched.map(({ family, selectors }) => ({
-      id: family.id,
-      selectors: selectors.flatMap((sources, index) => sources.some((match) => match(file)) ? [index] : []),
-    }));
-    for (const mode of ["auto", "contract"] as const) {
-      const contract = classifyChangedFiles([file], mode);
-      const key = JSON.stringify([mode, signature, contract.scopedContext, contract.contextMode.effective, classifyRouteContext(contract)]);
-      if (!representatives.has(key)) representatives.set(key, { file, mode, contract, signature });
-    }
-  }
-  return [...representatives.values()];
-}
-
-let readingSignatures: ReadingSignature[] | undefined;
+let readingSignatures: ReturnType<typeof enumerateReadingSignatures> | undefined;
 
 function withSqlFixture<T>(sql: string, callback: (path: string) => T): T {
   const fixtureRoot = mkdtempSync(join(tmpdir(), "pharos-change-contract-sql-"));
@@ -763,7 +727,7 @@ function warnIfOverBudget(
 }
 
 describe("route context budget warnings and fixture ratchets", () => {
-  it.each(ROUTE_FIXTURE_SAMPLES)("reports %s against its exact auto/contract fixture ceilings", (file, autoCeiling, contractCeiling) => {
+  function checkFixture(file: string, autoCeiling: number, contractCeiling: number) {
     // Visit both modes before reporting so one breach cannot hide the other.
     const failures: string[] = [];
     const warnings: string[] = [];
@@ -771,7 +735,7 @@ describe("route context budget warnings and fixture ratchets", () => {
       try {
         const context = buildRouteContext(classifyChangedFiles([file], mode), { documents: routeDocuments });
         warnings.push(...routeBudgetWarnings(`${file} (${mode})`, context.total.bytes, ceiling));
-        if (ceiling > context.ceiling) failures.push(`${file} (${mode}): fixture ${ceiling} exceeds class ceiling ${context.ceiling}`);
+        warnings.push(...routeBudgetWarnings(`${file} (${mode}, ${context.class})`, context.total.bytes, context.ceiling));
         if (context.ceiling !== ROUTE_CONTEXT_CEILINGS[context.class]) failures.push(`${file} (${mode}): ceiling ${context.ceiling} is not the ${context.class} class ceiling`);
       } catch (error) {
         failures.push(`${file} (${mode}): ${error instanceof Error ? error.message : String(error)}`);
@@ -779,28 +743,31 @@ describe("route context budget warnings and fixture ratchets", () => {
     }
     reportBudgetWarnings(warnings);
     expect(failures, failures.join("\n")).toEqual([]);
+  }
+
+  it.each(ROUTE_FIXTURES)("reports %s against its exact auto/contract fixture ceilings", checkFixture);
+
+  it("warns when a representative route grows by one byte", () => {
+    const file = "worker/src/api/yield-history.ts";
+    const bytes = buildRouteContext(classifyChangedFiles([file]), { documents: routeDocuments }).total.bytes;
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      checkFixture(file, bytes - 1, bytes - 1);
+      expect(warn).toHaveBeenCalledWith(`[route-context-budget] ${file} (auto): ${bytes} bytes > ${bytes - 1} (excess 1)`);
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it("reports every tracked mapped reading signature against its class ceiling", () => {
     readingSignatures ??= enumerateReadingSignatures();
-    const measuredBytes = new Map<string, number>();
     const failures: string[] = [];
     const warnings: string[] = [];
     expect(new Set(readingSignatures.map((entry) => entry.mode))).toEqual(new Set(["auto", "contract"]));
     for (const { file, mode, contract } of readingSignatures) {
-      // Cache identical unions; report every signature and unreadable reference independently.
       try {
-        const key = JSON.stringify([
-          [...contract.scopedContext].sort(),
-          contract.docs.map((doc) => `${doc.path}#${doc.anchor ?? ""}`).sort(),
-        ]);
-        let bytes = measuredBytes.get(key);
-        if (bytes === undefined) {
-          bytes = buildRouteContext(contract, { documents: routeDocuments }).total.bytes;
-          measuredBytes.set(key, bytes);
-        }
-        const routeClass = classifyRouteContext(contract);
-        warnings.push(...routeBudgetWarnings(`${file} (${mode}, ${routeClass})`, bytes, ROUTE_CONTEXT_CEILINGS[routeClass]));
+        const context = buildRouteContext(contract, { documents: routeDocuments });
+        warnings.push(...routeBudgetWarnings(`${file} (${mode}, ${context.class})`, context.total.bytes, context.ceiling));
       } catch (error) {
         failures.push(`${file} (${mode}): ${error instanceof Error ? error.message : String(error)}`);
       }

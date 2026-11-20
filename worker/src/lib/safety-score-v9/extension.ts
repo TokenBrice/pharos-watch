@@ -13,6 +13,7 @@ import type { V9LaneEmitterDescriptor } from "@shared/types/safety-score-v9-inci
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { V9LaneIncidentClosureFailure } from "@shared/types/safety-score-v9-facts";
+import type { V9ReserveCompositionAdmission } from "@shared/types/safety-score-v9-public";
 import { createV9ControlExecutionScopeRootReuse } from "@shared/types/safety-score-v9-control-scope";
 import { type SafetyScoreV9FactSetExtensionV2 } from "./fact-set";
 import { admitSafetyScoreV9ExtensionAsset, quarantinedSafetyScoreV9ExtensionAsset } from "./fact-set-schema";
@@ -76,6 +77,8 @@ export interface BuildSafetyScoreV9BaselineExtensionOptions {
    * Omit for the complete production extension.
    */
   assetIds?: ReadonlySet<string>;
+  /** Optional publication projection of a rejected whole-book composition. */
+  onReserveCompositionRejected?: (assetId: string, diagnostic: V9ReserveCompositionAdmission) => void;
   /**
    * Replay-only operator override. The registry fingerprint check exists so a
    * production publication can never score a capture against a registry it was
@@ -315,11 +318,13 @@ export function createSafetyScoreV9BaselineExtensionSource(
         // authority over independently dated, reviewed registry evidence.
         // Live rows still win; curated rows retain every source/scope/age gate.
         admissionPath = "reviewedStaticReserveRows";
+        let reserveRejection: V9ReserveCompositionAdmission | undefined;
         const reviewedReserveAdmission = resolveReviewedReserveAdmission({
           meta,
           clockSec,
           fixedInput,
           liveReserveRows: liveReserves,
+          onRejected: options.onReserveCompositionRejected && ((diagnostic) => { reserveRejection = diagnostic; }),
         });
         const reviewedStaticReserveRows = reviewedReserveAdmission.projected;
         const reserveRows = reviewedStaticReserveRows?.rows ?? liveReserves;
@@ -606,7 +611,7 @@ export function createSafetyScoreV9BaselineExtensionSource(
         const routeReviews = buildSafetyScoreV9RouteReviews(fixedInput, assetId);
         admissionPath = "retainedRoutes";
         const retainedRoutes = buildSafetyScoreV9RetainedRoutes(fixedInput, assetId);
-        yield admitSafetyScoreV9ExtensionAsset({
+        const extensionAsset = admitSafetyScoreV9ExtensionAsset({
           assetId,
           assetIssuerKey,
           archetype,
@@ -678,6 +683,8 @@ export function createSafetyScoreV9BaselineExtensionSource(
             : null,
           ...reviewedEvidence,
         }, clockSec, reuseScopeRoot, (asset) => hydrateSafetyScoreV9ShockCoverageAsset(asset, clockSec));
+        if (reserveRejection) options.onReserveCompositionRejected?.(assetId, reserveRejection);
+        yield extensionAsset;
       } catch (error) {
         yield quarantinedSafetyScoreV9ExtensionAsset(admitted, assetId, {
           code: "fact-build-failed",

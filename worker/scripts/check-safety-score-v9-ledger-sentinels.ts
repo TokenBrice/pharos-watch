@@ -46,9 +46,10 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { z } from "zod";
-import type {
-  SentinelVerdict, SentinelAdmission, SentinelVerdictReason,
-  RegistryBinding, SentinelMatch, SentinelResolutionRow, SentinelResolutionReport,
+import {
+  SENTINEL_CHECKER_VERSION,
+  type SentinelVerdict, type SentinelAdmission, type SentinelVerdictReason,
+  type RegistryBinding, type SentinelMatch, type SentinelResolutionRow, type SentinelResolutionReport,
 } from "../../scripts/lib/sentinel-resolution-contract";
 import { compareCodeUnits } from "@shared/lib/compare";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
@@ -87,6 +88,10 @@ const RegistrySchema = z
           assetId: z.string().min(1),
           currentScore: z.unknown().optional(),
           missingItems: z.array(z.unknown()),
+          // Schema 3 lists every score-visible reason here, including reasons
+          // whose obligations are covered by compiled tasks and therefore emit
+          // no supplemental task row in missingItems.
+          scoreProjectionGaps: z.array(z.unknown()).optional(),
         })
         .loose(),
     ),
@@ -175,6 +180,8 @@ interface RegistryIndex {
   itemsByGapId: ReadonlyMap<string, readonly RegistryItem[]>;
   scoreProjectionByKey: ReadonlyMap<string, RegistryItem>;
   scoreProjectionByGroupReason: ReadonlyMap<string, readonly RegistryItem[]>;
+  /** Full scoreProjectionGaps identities (schema 3), keyed by claim group plus `${reasonCode}|${path}`. */
+  projectionGapIdentitiesByGroup: ReadonlyMap<string, ReadonlySet<string>>;
   taskIds: ReadonlySet<string>;
 }
 
@@ -228,6 +235,23 @@ function readScoreProjectionKey(item: Record<string, unknown>, location: string)
   }
   if (typeof scorePath !== "string") throw new Error(`${location}.path.scorePath must be a string or null`);
   return `${requiredStringField(item, "reasonCode", location)}|${scorePath}`;
+}
+
+/**
+ * Read one `scoreProjectionGaps` entry's identity. The full list is the
+ * authority for reason absence: a reason whose obligations gained compiled
+ * tasks loses its supplemental task row but stays listed here, so judging
+ * absence from task rows alone would manufacture a closure.
+ */
+function readProjectionGapIdentity(value: unknown, assetId: string, location: string): { claimGroupId: string; identity: string } {
+  const record = requirePlainObject(value, location);
+  const reasonCode = requiredStringField(record, "reasonCode", location);
+  const workType = requiredStringField(record, "workType", location);
+  const path = record.path;
+  if (path !== undefined && path !== null && typeof path !== "string") {
+    throw new Error(`${location}.path must be a string or null when present`);
+  }
+  return { claimGroupId: `${workType}:${assetId}`, identity: `${reasonCode}|${path ?? ""}` };
 }
 
 function readRegistryItem(value: unknown, location: string): RegistryItem {
@@ -341,12 +365,31 @@ export function buildRegistryIndex(registryValue: unknown, registryPath: string)
   const itemsByGapId = new Map<string, RegistryItem[]>();
   const scoreProjectionByKey = new Map<string, RegistryItem>();
   const scoreProjectionByGroupReason = new Map<string, RegistryItem[]>();
+  const projectionGapIdentitiesByGroup = new Map<string, Set<string>>();
   const taskIds = new Set<string>();
   let openItemCount = 0;
   for (const [assetIndex, asset] of registry.stablecoins.entries()) {
     const assetLocation = `${registryPath}:stablecoins[${assetIndex}]`;
     if (assetRatingStatus.has(asset.assetId)) throw new Error(`${assetLocation} duplicates asset id ${asset.assetId}`);
     assetRatingStatus.set(asset.assetId, optionalRatingStatus(asset.currentScore, `${assetLocation}.currentScore`));
+    // Schema 3 makes scoreProjectionGaps the authority for reason absence; a
+    // schema-3 asset without it cannot prove any reason absent, so fail closed
+    // instead of judging absence from task rows alone.
+    if (registry.schemaVersion >= 3 && asset.scoreProjectionGaps === undefined) {
+      throw new Error(
+        `${assetLocation}.scoreProjectionGaps is required on schema-${registry.schemaVersion} registries; regenerate the registry`,
+      );
+    }
+    for (const [gapIndex, gapValue] of (asset.scoreProjectionGaps ?? []).entries()) {
+      const { claimGroupId, identity } = readProjectionGapIdentity(
+        gapValue,
+        asset.assetId,
+        `${assetLocation}.scoreProjectionGaps[${gapIndex}]`,
+      );
+      const identities = projectionGapIdentitiesByGroup.get(claimGroupId);
+      if (identities) identities.add(identity);
+      else projectionGapIdentitiesByGroup.set(claimGroupId, new Set([identity]));
+    }
     for (const [itemIndex, itemValue] of asset.missingItems.entries()) {
       const location = `${assetLocation}.missingItems[${itemIndex}]`;
       const item = readRegistryItem(itemValue, location);
@@ -390,6 +433,7 @@ export function buildRegistryIndex(registryValue: unknown, registryPath: string)
     itemsByGapId,
     scoreProjectionByKey,
     scoreProjectionByGroupReason,
+    projectionGapIdentitiesByGroup,
     taskIds,
   };
 }
@@ -458,18 +502,55 @@ export function normalizeLedgerSentinels(value: unknown, location: string): Norm
   return sentinels;
 }
 
-function gapSuccessorExists(
+/** A route-generation component inside a gap id: a dashed UUID that rotates on re-ingestion. */
+const GENERATION_COMPONENT = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Gap scope with route-generation components removed, so the comparison keeps
+ * the stable asset, route and field: a redemption route re-ingested under a new
+ * generation id re-opens the same logical gap under a new full gap id.
+ */
+function gapScopeKey(gapId: string): string {
+  return gapId
+    .split(":")
+    .filter((component) => !GENERATION_COMPONENT.test(component))
+    .join(":");
+}
+
+/**
+ * Every live successor occupying this gap's scope. The match's `causes` must
+ * name them all: a retired parent with several live children keeps every
+ * child's task row open, and supplying only the first would let a later
+ * row's order decide what the applier can book.
+ */
+function gapSuccessors(
   index: RegistryIndex,
   claimGroupId: string,
   gapId: string,
-): RegistryItem | null {
+): RegistryItem[] {
+  const scopeKey = gapScopeKey(gapId);
+  const successors: RegistryItem[] = [];
   for (const item of index.itemsByGroup.get(claimGroupId) ?? []) {
     if (!item.gapId) continue;
     // Gap ids are hierarchical (`asset:gap:<component chain>`); a strict `:`-boundary
-    // prefix in either direction is sibling succession at the same scope.
-    if (item.gapId.startsWith(`${gapId}:`) || gapId.startsWith(`${item.gapId}:`)) return item;
+    // prefix in either direction is sibling succession at the same scope. The prefix
+    // check also runs on generation-normalized scopes, so a route re-ingested under a
+    // new generation id that refined the gap into a child still holds the scope.
+    const itemScopeKey = gapScopeKey(item.gapId);
+    if (
+      item.gapId.startsWith(`${gapId}:`) ||
+      gapId.startsWith(`${item.gapId}:`) ||
+      itemScopeKey.startsWith(`${scopeKey}:`) ||
+      scopeKey.startsWith(`${itemScopeKey}:`)
+    ) {
+      successors.push(item);
+    } else if (item.gapId !== gapId && itemScopeKey === scopeKey) {
+      // The same stable asset, route and field under a rotated generation id is
+      // the same obligation, not a closure.
+      successors.push(item);
+    }
   }
-  return null;
+  return successors;
 }
 
 function itemCauses(items: readonly RegistryItem[]): string[] {
@@ -523,31 +604,35 @@ function evaluateSentinels(
         });
         continue;
       }
-      const successor = gapSuccessorExists(index, claimGroupId, gapId);
+      const successors = gapSuccessors(index, claimGroupId, gapId);
       matches.push(
-        successor
+        successors.length > 0
           ? {
               kind: "gap",
               identity: gapId,
               status: "successor",
               openItems: (index.itemsByGroup.get(claimGroupId) ?? []).length,
-              causes: [successor.gapId ?? ""],
+              causes: sortedUnique(successors.map((item) => item.gapId ?? "")),
             }
           : { kind: "gap", identity: gapId, status: "absent", openItems: 0, causes: [] },
       );
       continue;
     }
     const reasonCode = sentinel.reasonCode!;
+    const projectionIdentities = index.projectionGapIdentitiesByGroup.get(claimGroupId);
     if (sentinel.anyPath) {
       const openItems =
         index.scoreProjectionByGroupReason.get(`${claimGroupId}\u0000${reasonCode}`) ?? [];
+      const projectionCount = projectionIdentities === undefined
+        ? 0
+        : [...projectionIdentities].filter((identity) => identity.startsWith(`${reasonCode}|`)).length;
       matches.push(
-        openItems.length > 0
+        openItems.length > 0 || projectionCount > 0
           ? {
               kind: "reason",
               identity: `${reasonCode}|*`,
               status: "present",
-              openItems: openItems.length,
+              openItems: openItems.length > 0 ? openItems.length : projectionCount,
               causes: itemCauses(openItems),
             }
           : { kind: "reason", identity: `${reasonCode}|*`, status: "absent", openItems: 0, causes: [] },
@@ -567,15 +652,26 @@ function evaluateSentinels(
       });
       continue;
     }
+    if (projectionIdentities?.has(identity)) {
+      // The reason still projects into the score even though no supplemental
+      // task row carries it (schema 3 lists it under scoreProjectionGaps).
+      matches.push({ kind: "reason", identity, status: "present", openItems: 1, causes: [] });
+      continue;
+    }
     const successorItems = (index.scoreProjectionByGroupReason.get(`${claimGroupId}\u0000${reasonCode}`) ?? [])
       .filter((item) => item.scoreProjectionKey !== identity);
+    const successorProjection = projectionIdentities === undefined
+      ? false
+      : [...projectionIdentities].some(
+          (entry) => entry !== identity && entry.startsWith(`${reasonCode}|`),
+        );
     matches.push(
-      successorItems.length > 0
+      successorItems.length > 0 || successorProjection
         ? {
             kind: "reason",
             identity,
             status: "successor",
-            openItems: successorItems.length,
+            openItems: successorItems.length + (successorProjection ? 1 : 0),
             causes: itemCauses(successorItems),
           }
         : { kind: "reason", identity, status: "absent", openItems: 0, causes: [] },
@@ -879,13 +975,14 @@ export function buildSentinelResolutionReport(
     contract: {
       evaluatedDecision: "latest-appended-decision-per-claim-group",
       closureRequires:
-        "Every machine-checkable sentinel absent on the bound registry, no measured-adverse identity and no sibling successor at the same scope, a rated asset, a live work type, and no uncheckable sentinel.",
+        "Every machine-checkable sentinel absent on the bound registry, no measured-adverse identity and no sibling successor at the same scope (gap scopes compare the stable asset, route and field with route-generation ids ignored; score reasons are checked against the registry's full scoreProjectionGaps list), a rated asset, a live work type, and no uncheckable sentinel.",
       admissionAxis:
         "structured-pending-production decisions report admission-verified only on a clean closure; unverifiable never becomes failed and failed never becomes verified.",
     },
     inputs: {
       registryPath: input.registryPath,
       ledgerPath: input.ledgerPath,
+      checkerVersion: SENTINEL_CHECKER_VERSION,
       registry: {
         schemaVersion: index.schemaVersion,
         stablecoinCount: index.stablecoinCount,
@@ -972,7 +1069,7 @@ export function renderSentinelResolutionMarkdown(report: SentinelResolutionRepor
     lines.push("No claim group is closure-bookable on this registry.", "");
   } else {
     lines.push(
-      "| Claim group | Decision | Reviewed | Open items | Derived facts closed | Reason |",
+      "| Claim group | Decision | Reviewed | Open items | Recorded task IDs absent | Reason |",
       "|---|---|---|---:|---:|---|",
       ...closedRows.slice(0, MAX_TABLE_ROWS).map((row) =>
         `| ${escapeMarkdownCell(row.claimGroupId)} | ${row.decision} | ${row.reviewedAt} | ${row.openItemCount} | ${row.taskIds.closed} | ${row.reason} |`),

@@ -1,6 +1,8 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { URL } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 import {
@@ -178,6 +180,36 @@ describe("runSafetyScoreV9DiffCli", () => {
     const card = { id: "usdc-circle", grade: "A", score: 90 };
     const [baseline, candidate] = writeArtifacts([card], [card]);
     expect(await runCli(["--baseline", baseline!, "--candidate", candidate!, "--assert-empty"])).toBe(0);
+  });
+
+  it("matches the wire projection used by each runbook comparison", async () => {
+    const root = new URL("../../../", import.meta.url);
+    const runbook = readFileSync(new URL("docs/process/safety-score-equivalence-harness.md", root), "utf8");
+    const card = { id: "mxne-real-mxn", grade: "C", score: 55 };
+    const optedIn = { ...card, reserveCompositionAdmission: { reasons: ["report-confidence-unverified"] } };
+    const [replay, wire] = writeArtifacts([optedIn], [card]);
+    writeFileSync(replay!, JSON.stringify({ ...artifact([optedIn]), sourceAdmissionBaseline: null }));
+    for (const [section, expected] of [
+      ["Full local-registry mover comparison", card],
+      ["Neutral release: pre-cutover comparison", card],
+      ["Exact deployed code: accepted-publication equivalence", optedIn],
+    ] as const) {
+      const procedure = runbook.split(`### ${section}\n`)[1]?.split(/^#{2,3} /m)[0];
+      if (expected === optedIn) {
+        expect(procedure).toMatch(/^ +jq '[^'\n]+' \\\n +\S+\/opted-in-wire\.json \\\n +> \S+\/live-cards\.json$/m);
+      }
+      const input = procedure?.match(/<<'NODE'\n([\s\S]*?)\n *NODE$/m)?.[1];
+      expect(input, section).toBeDefined();
+      const projected = `${wire}.projected`;
+      execFileSync(process.execPath, ["--import", "tsx", "--input-type=module", "-", replay!, projected], { cwd: root, input });
+      const args = ["--baseline", projected, "--candidate", wire!, "--assert-empty"];
+      writeFileSync(wire!, JSON.stringify(artifact([expected])));
+      expect(await runCli(args), section).toBe(0);
+      if (expected === optedIn) {
+        writeFileSync(wire!, JSON.stringify(artifact([card])));
+        expect(await runCli(args), section).toBe(1);
+      }
+    }
   });
 
   it("exits 1 under --assert-empty when a score moves", async () => {

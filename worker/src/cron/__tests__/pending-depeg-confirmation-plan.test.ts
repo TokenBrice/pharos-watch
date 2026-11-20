@@ -1,6 +1,6 @@
 import { DEPEG_PENDING_EXPIRY_SEC, DEPEG_PENDING_MIN_AGE_SEC } from "@shared/lib/depeg-config";
 import { DatabaseSync } from "node:sqlite";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { StablecoinData } from "@shared/types/supply";
 import {
@@ -19,6 +19,7 @@ import {
 import { collectConfirmationEvidence } from "../pending-depeg-confirmation-evidence";
 
 import { attachDetectionReferenceContext, deriveDetectionPegRates } from "../depeg-detection/reference-policy";
+import * as referencePolicy from "../depeg-detection/reference-policy";
 import { referenceState, tradedPair } from "../depeg-detection/__tests__/reference-fixtures";
 
 const NOW_SEC = 1_700_000_000;
@@ -83,6 +84,8 @@ const PLAN_CASES: Spec[] = [
     asset: { ...usdPyth, priceObservedAtMode: undefined, priceObservedAt: undefined, priceUpdatedAt: NOW_SEC - 121 }, kind: "ready", peg: 1 },
   { label: "withholds an explicitly local-fetch USD recovery even with a fresh update", asset: { ...usdPyth, priceSource: "pyth+binance", priceConfidence: "high", agreeSources: ["pyth", "binance"], priceObservedAtMode: "local_fetch", priceObservedAt: null }, kind: "ready", peg: 1 },
   { label: "supersedes a pending row when an open event already exists", row: { id: 7 }, open: true, kind: "mutate", outcome: "superseded", reason: "open-event-already-exists" },
+  { label: "supersedes pending discovery when a newer live event has already ended",
+    row: { last_live_event_end_at: NOW_SEC - 60 }, kind: "mutate", outcome: "superseded", reason: "live-event-ended-after-pending-discovery" },
   { label: "does not promote before threshold observations span the full window", row: { id: 8, first_seen_at: NOW_SEC - DEPEG_PENDING_MIN_AGE_SEC + 60 }, kind: "wait", reason: "too-young" },
   { label: "waits on native-origin state when benchmark and native evidence are unavailable", row: { id: 9, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", first_seen_bps: -242, first_price: 0.18, peg_reference: 1, reason: "large-cap+native-origin" }, asset: { ...brz, price: 0.18, priceSource: "pyth", priceConfidence: "single-source", priceObservedAt: NOW_SEC - 30, priceUpdatedAt: NOW_SEC - 30, priceSyncedAt: NOW_SEC - 30, consensusSources: ["pyth"], agreeSources: ["pyth"] }, meta: brlMeta, rates: { peggedREAL: 0.18765951 }, rateSources: { peggedREAL: "median" }, rateCounts: { peggedREAL: 2 }, kind: "wait", reason: "peg-reference-unavailable" },
   { label: "credits a fresh independent primary source when a native-origin move persists", row: { id: 11, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", first_seen_bps: -940, first_price: 0.17, last_seen_bps: -940, last_price: 0.17, peak_seen_bps: -940, peak_price: 0.17, peg_reference: 1, reason: "large-cap+native-origin" }, asset: nativeBrz(0.0319021167), meta: brlMeta, rates: { peggedREAL: 0.18765951 }, rateSources: { peggedREAL: "fx" }, rateCounts: { peggedREAL: 1 }, nativeOnsetVenue: "bitso", kind: "ready", peg: 1, primarySources: ["primary:oracle:pyth"] },
@@ -182,6 +185,32 @@ describe("buildConfirmationPlan", () => {
     })).poolStatus;
     expect(await status(now - 240)).toBe("insufficient");
     expect(await status(now - 30)).toBe("confirm");
+
+    const asset = { ...input.asset!, priceSource: "coingecko", agreeSources: ["coingecko"] };
+    const peers = ["coinbase", "binance", "kraken"].map((venue) => makeAsset({
+      id: venue, pegType: "peggedSILVER", price: 30, priceSource: venue, agreeSources: [venue],
+      priceObservedAt: now - 30, priceObservedAtMode: "upstream", circulating: { peggedSILVER: 5e6 },
+    }));
+    const peerContext = attachDetectionReferenceContext(input.pegRates, peers,
+      new Map(peers.map((peer) => [peer.id, { ...meta, id: peer.id }])), new Set(), referenceState(input.pegRates, now - 60));
+    peerContext.rollbackSupportsPeerEvents = true;
+    const peerRow = { ...input.row, reason: "low-confidence+peer-relative" };
+    const peerPlan = (observedAt: number) => buildConfirmationPlan({
+      ...input, asset, row: peerRow, pendingState: normalizePendingDepegRow(peerRow), pegRateSources: {},
+      challengerPools: curvePool(id, unit * 0.97, observedAt).get(id),
+    });
+    expect(peerPlan(now - 240)).toEqual({ kind: "wait", reason: "peg-reference-unavailable" });
+    expect(peerPlan(now - 30)).toMatchObject({ kind: "ready", independentConfirmation: { source: "pool:curve:curve" } });
+  });
+
+  it("keeps a candidate when neither the refreshed nor stored peg reference is authoritative", () => {
+    const { db } = fixture();
+    const admission = vi.spyOn(referencePolicy, "assessDetectionReference").mockReturnValueOnce(null);
+    try {
+      expect(buildConfirmationPlan(makeInput(db, PLAN_CASES[2]))).toEqual({ kind: "wait", reason: "peg-reference-unavailable" });
+    } finally {
+      admission.mockRestore();
+    }
   });
 
   it("falls back to a legacy same-session stored reference only when independent FX evidence is absent", async () => {
@@ -246,7 +275,7 @@ describe("buildConfirmationPlan", () => {
       .toEqual([{ peak_deviation_bps: -200, peg_reference: ref }]);
   });
 
-  it("keeps a matched onset source after a legacy writer advances only the latest observation", async () => {
+  it("blocks the onset venue from confirming after the primary changes and a legacy writer advances the latest observation", async () => {
     const { sqlite, db } = fixture();
     const first = NOW_SEC - 960;
     const args = { stablecoinId: "usdt-tether", symbol: "USDT", pegType: "peggedUSD", pegReference: 1,
@@ -254,16 +283,46 @@ describe("buildConfirmationPlan", () => {
     await buildUpsertPendingDepegStmt(db, { ...args, seenAt: first, sourceKeys: ["binance"] }).run();
     await buildUpsertPendingDepegStmt(db, { ...args, seenAt: first + 60, sourceKeys: ["kraken"] }).run();
     sqlite.prepare("UPDATE depeg_pending SET last_seen_at = ?, updated_at = ?").run(first + 900, first + 900);
-    const read = async () => {
+    const read = async (poolChallengers = new Map()) => {
       const row = readSelectedPending(sqlite);
-      const plan = buildConfirmationPlan(makeInput(db, { kind: "ready", row }));
+      const plan = buildConfirmationPlan(makeInput(db, { kind: "ready", row, asset: {
+        ...usdPyth, price: 0.98, priceSource: "kraken", consensusSources: ["kraken"], agreeSources: ["kraken"],
+      } }));
       if (plan.kind !== "ready") throw new Error("Expected a confirmable pending episode");
-      const evidence = await collectPlanEvidence(db, plan, NOW_SEC, { cexAllowed: true, cexPrices: new Map([["USDT", 0.98]]) });
-      return { keys: [...(plan.pendingSourceKeys ?? [])], confirming: evidence.confirmingSources };
+      const evidence = await collectPlanEvidence(db, plan, NOW_SEC, {
+        poolChallengers, cexAllowed: true, cexPrices: new Map([["USDT", 0.98]]),
+      });
+      const promotes = evaluatePromotionDecision({ db, plan, evidence, now: NOW_SEC }).length === 3;
+      return { keys: [...(plan.pendingSourceKeys ?? [])], confirming: evidence.confirmingSources, promotes };
     };
-    expect(await read()).toEqual({ keys: ["binance"], confirming: [] });
+    expect.soft(await read()).toEqual({ keys: ["binance"], confirming: [], promotes: false });
     sqlite.prepare("UPDATE depeg_pending SET first_price = 0.979, first_seen_bps = -210").run();
-    expect(await read()).toEqual({ keys: [], confirming: ["cex:binance"] });
+    expect.soft(await read()).toEqual({ keys: [], confirming: [], promotes: false });
+    sqlite.exec("UPDATE depeg_pending SET peer_basis_json = NULL");
+    expect.soft(await read()).toEqual({ keys: [], confirming: [], promotes: false });
+    await buildUpsertPendingDepegStmt(db, { ...args, seenAt: NOW_SEC - 30, sourceKeys: ["kraken"] }).run();
+    expect.soft(await read()).toEqual({ keys: ["kraken"], confirming: [], promotes: false });
+    expect(await read(curvePool(args.stablecoinId, 0.98, NOW_SEC - 30)))
+      .toEqual({ keys: ["kraken"], confirming: ["pool:curve:curve"], promotes: true });
+  });
+
+  it("promotes a persisted Kraken onset on independent Binance evidence", async () => {
+    const { sqlite, db } = fixture();
+    const first = NOW_SEC - 960;
+    for (const seenAt of [first, NOW_SEC - 60]) {
+      await buildUpsertPendingDepegStmt(db, {
+        stablecoinId: "usdt-tether", symbol: "USDT", pegType: "peggedUSD", pegReference: 1,
+        price: 0.98, bps: -200, direction: "below", reason: "low-confidence", seenAt, sourceKeys: ["kraken"],
+      }).run();
+    }
+    const plan = buildConfirmationPlan(makeInput(db, { kind: "ready", row: readSelectedPending(sqlite), asset: {
+      ...usdPyth, price: 0.98, priceSource: "kraken", consensusSources: ["kraken"], agreeSources: ["kraken"],
+    } }));
+    if (plan.kind !== "ready") throw new Error("Expected a confirmable pending episode");
+    const evidence = await collectPlanEvidence(db, plan, NOW_SEC, { cexAllowed: true, cexPrices: new Map([["USDT", 0.98]]) });
+    await db.batch(evaluatePromotionDecision({ db, plan, evidence, now: NOW_SEC }));
+    expect(sqlite.prepare("SELECT started_at, confirmation_sources FROM depeg_events").get())
+      .toEqual({ started_at: first, confirmation_sources: expect.stringContaining("cex:binance") });
   });
 
   const reopening = Date.UTC(2026, 10, 22, 23, 0, 15) / 1_000;

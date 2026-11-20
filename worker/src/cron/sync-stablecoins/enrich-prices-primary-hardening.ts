@@ -82,6 +82,12 @@ export async function applyPrimaryPostConsensusHardening(params: {
     DEX_FRESHNESS_SEC,
     params.nowSec,
   );
+  // Recovery can still use publication-fresh legacy pools as a veto.
+  for (const [assetId, pools] of poolChallengers) {
+    poolChallengers.set(assetId, pools.filter(({ legacyAggregateObservedAt }) =>
+      legacyAggregateObservedAt === undefined ||
+      (legacyAggregateObservedAt !== null && params.nowSec - legacyAggregateObservedAt < DEX_FRESHNESS_SEC)));
+  }
   const assetPegTypes = new Map(params.candidates.map((asset) => [asset.id, asset.pegType]));
   const navTokenAssetIds = new Set(
     params.candidates.filter((asset) => asset.navToken).map((asset) => asset.id),

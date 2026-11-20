@@ -182,6 +182,7 @@ export interface DepegEventSearchEntry {
   direction: DepegDirection;
   peakDeviationBps: DepegEvent["peakDeviationBps"];
   startedAt: DepegEvent["startedAt"];
+  peakBasis?: DepegEvent["peakBasis"];
   peakReview?: DepegEvent["peakReview"];
   /** Reviewed audit verdict; absent when the ledger records none. */
   auditVerdict?: DepegAuditVerdict;
@@ -217,9 +218,17 @@ const DepegEventObjectSchema = DepegEventProjectionEvidenceSchema.extend({
   pegType: z.string(),
   direction: DepegDirectionSchema,
   peakDeviationBps: z.number(),
+  /** Confidence of the constituent supplying a borrowed peak. Null means unavailable. */
+  peakConfidenceTier: z.string().nullable().optional(),
+  /** Null withholds legacy onset admission when the opening fragment's peak is unreadable. */
+  onsetFragmentPeakBps: z.number().nullable().optional(),
+  currentFragmentPeakBps: z.number().optional(),
   startedAt: DepegTimestampSchema,
   endedAt: DepegTimestampSchema.nullable(),
   startPrice: z.number(),
+  onsetQuoteDomain: DepegEventQuoteDomainSchema.optional(),
+  /** The opening quote uses the effective fragment's evidence from after startedAt. */
+  onsetQuoteFromLaterFragment: z.literal(true).optional(),
   peakPrice: z.number().nullable(),
   recoveryPrice: z.number().nullable(),
   pegReference: z.number(),

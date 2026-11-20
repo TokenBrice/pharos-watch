@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { createMockD1Preset } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { seedOpenEvent, seedDexEvidence } from "./detect-depegs.test-support";
@@ -18,6 +19,7 @@ vi.mock("@shared/lib/psi-eligible", () => ({
   PSI_ELIGIBLE_STABLECOINS: [
     { id: "usdt-tether", symbol: "USDT", pegType: "peggedUSD", geckoId: "tether", flags: { navToken: false }, commodityOunces: undefined },
     { id: "usdc-circle", symbol: "USDC", pegType: "peggedUSD", geckoId: "usd-coin", flags: { navToken: false }, commodityOunces: undefined },
+    { id: "susd-solayer", symbol: "sUSD", pegType: "peggedUSD", flags: { navToken: false, pegCurrency: "USD" } },
     { id: "eurc-circle", symbol: "EUROC", pegType: "peggedEUR", geckoId: "euro-coin", flags: { navToken: false }, commodityOunces: undefined },
     { id: "brz-transfero", symbol: "BRZ", pegType: "peggedREAL", geckoId: "brz", flags: { navToken: false, pegCurrency: "BRL" }, commodityOunces: undefined },
     { id: "a7a5-old-vector", symbol: "A7A5", pegType: "peggedRUB", geckoId: "a7a5", flags: { navToken: false, pegCurrency: "RUB" }, commodityOunces: undefined },
@@ -27,6 +29,7 @@ vi.mock("@shared/lib/psi-eligible", () => ({
   PSI_ELIGIBLE_META_BY_ID: new Map([
     ["usdt-tether", { id: "usdt-tether", symbol: "USDT", pegType: "peggedUSD", geckoId: "tether", flags: { navToken: false, pegCurrency: "USD" }, commodityOunces: undefined }],
     ["usdc-circle", { id: "usdc-circle", symbol: "USDC", pegType: "peggedUSD", geckoId: "usd-coin", flags: { navToken: false, pegCurrency: "USD" }, commodityOunces: undefined }],
+    ["susd-solayer", { id: "susd-solayer", symbol: "sUSD", pegType: "peggedUSD", flags: { navToken: false, pegCurrency: "USD" } }],
     ["eurc-circle", { id: "eurc-circle", symbol: "EUROC", pegType: "peggedEUR", geckoId: "euro-coin", flags: { navToken: false, pegCurrency: "EUR" }, commodityOunces: undefined }],
     ["brz-transfero", { id: "brz-transfero", symbol: "BRZ", pegType: "peggedREAL", geckoId: "brz", flags: { navToken: false, pegCurrency: "BRL" }, commodityOunces: undefined }],
     ["a7a5-old-vector", { id: "a7a5-old-vector", symbol: "A7A5", pegType: "peggedRUB", geckoId: "a7a5", flags: { navToken: false, pegCurrency: "RUB" }, commodityOunces: undefined }],
@@ -291,6 +294,8 @@ describe("detectDepegEvents", () => {
       makeAsset({ id: "usdt-tether", symbol: "USDT", price: 1.001 }),
       makeAsset({ id: "usdt-tether", symbol: "USDT", price: null }),
       makeAsset({ id: "usdc-circle", symbol: "USDC", price: null }),
+      makeAsset({ id: "susd-solayer", symbol: "sUSD", price: 1.1814, priceSource: "protocol-redeem",
+        priceObservedAtMode: "upstream", circulating: { solana: 730_000 } }),
       makeAsset({ id: "eurc-circle", symbol: "EUROC", pegType: "peggedEUR", price: 1.08, circulating: {} }),
       makeAsset({ id: "brz-transfero", symbol: "BRZ", pegType: "peggedREAL", price: 0.1876, circulating: { ethereum: 0 } }),
       makeAsset({ id: "nav-token-test", symbol: "NAVT", price: 0.5 }),
@@ -301,18 +306,33 @@ describe("detectDepegEvents", () => {
       census: {
         scope: "psi-non-nav-before-supply-floor",
         evaluatedAt: now,
-        eligibleCount: 5,
+        eligibleCount: 6,
         observedCount: 1,
-        unavailableCount: 3,
+        unavailableCount: 4,
         belowFloorCount: 1,
-        reasonCounts: { "primary-unusable": 1, "supply-unavailable": 1, "asset-absent": 1 },
+        reasonCounts: { "primary-unusable": 2, "supply-unavailable": 1, "asset-absent": 1 },
         unavailableIdsTruncated: false,
-        unavailableAssets: [{ id: "usdc-circle", reason: "primary-unusable", reviewedNominalReference: false }],
+        unavailableAssets: [
+          { id: "usdc-circle", reason: "primary-unusable", reviewedNominalReference: false },
+          { id: "susd-solayer", reason: "primary-unusable", reviewedNominalReference: false, observedNonParityProtocolRedeem: true },
+        ],
       },
     });
     // Unavailable supply keeps the open event's lifecycle untouched; nothing new opens.
     expect(sqlite.prepare(lifecycle).all()).toEqual(before);
     expect(sqlite.prepare("SELECT * FROM depeg_pending").all()).toEqual([]);
+  });
+
+  it.each([
+    ["clockless", { priceObservedAt: undefined }],
+    ["valueless", { price: null }],
+  ] as const)("omits census evidence for a %s sUSD protocol redemption mark", async (_label, invalid) => {
+    const mark = makeAsset({ id: "susd-solayer", symbol: "sUSD", price: 1.1814, priceSource: "protocol-redeem",
+      priceObservedAtMode: "upstream" });
+    const result = await detectDepegEvents(sqliteFixtures.open().db, [{ ...mark, ...invalid }, mark]);
+    expect(result.status === "completed" ? result.census.unavailableAssets : null).toEqual([
+      { id: "susd-solayer", reason: "primary-unusable", reviewedNominalReference: false },
+    ]);
   });
 
   it("names reference and native-quote gaps and returns an all-absent census for empty input", async () => {
@@ -323,12 +343,12 @@ describe("detectDepegEvents", () => {
       makeAsset({ id: "a7a5-old-vector", symbol: "A7A5", pegType: "peggedRUB", price: 0.02 }),
     ], { peggedREAL: 0.18765951 });
     expect(gaps.status === "completed" ? gaps.census.reasonCounts : null).toEqual({
-      "native-quote-unavailable": 1, "non-authoritative-reference": 1, "asset-absent": 3,
+      "native-quote-unavailable": 1, "non-authoritative-reference": 1, "asset-absent": 4,
     });
     const empty = await detectDepegEvents(sqliteFixtures.open().db, []);
     expect(empty).toMatchObject({
       status: "completed",
-      census: { eligibleCount: 5, observedCount: 0, belowFloorCount: 0, unavailableCount: 5, reasonCounts: { "asset-absent": 5 } },
+      census: { eligibleCount: 6, observedCount: 0, belowFloorCount: 0, unavailableCount: 6, reasonCounts: { "asset-absent": 6 } },
     });
   });
 
@@ -345,6 +365,7 @@ describe("detectDepegEvents", () => {
     const active = () => [
       makeAsset({ id: "usdt-tether", symbol: "USDT", price: 1 }),
       makeAsset({ id: "usdc-circle", symbol: "USDC", price: 1 }),
+      { ...makeAsset({ id: "susd-solayer", symbol: "sUSD", price: 1 }), parityQuoteUnit: "accrued-token" as const },
       makeAsset({ id: "eurc-circle", symbol: "EUROC", pegType: "peggedEUR", price: 1.08 }),
       makeAsset({ id: "brz-transfero", symbol: "BRZ", pegType: "peggedREAL", price: 0.18765951 }),
       makeAsset({ id: "a7a5-old-vector", symbol: "A7A5", pegType: "peggedRUB", price: 0.02 }),
@@ -356,15 +377,15 @@ describe("detectDepegEvents", () => {
     };
     // Historical IRON has no row: it is outside the denominator and never asset-absent.
     const complete = await censusOf(active());
-    expect(complete.eligibleCount).toBe(5);
+    expect(complete.eligibleCount).toBe(6);
     expect(complete.reasonCounts["asset-absent"]).toBeUndefined();
     // A supplied historical row is still counted, and observed.
     const withHistorical = await censusOf([...active(), makeAsset({ id: "iron-historical", symbol: "IRON", price: 1 })]);
-    expect(withHistorical.eligibleCount).toBe(6);
+    expect(withHistorical.eligibleCount).toBe(7);
     expect(withHistorical.observedCount).toBe(complete.observedCount + 1);
     // A missing active member still flags as asset-absent.
     const missingActive = await censusOf(active().slice(1));
-    expect(missingActive.eligibleCount).toBe(5);
+    expect(missingActive.eligibleCount).toBe(6);
     expect(missingActive.reasonCounts["asset-absent"]).toBe(1);
     expect(missingActive.unavailableCount).toBe(complete.unavailableCount + 1);
   });
@@ -404,6 +425,20 @@ describe("detectDepegEvents", () => {
     expect(sqlite.prepare("SELECT id, ended_at, recovery_price, recovery_first_seen_at FROM depeg_events").all()).toEqual([
       { id: 1, ended_at: now, recovery_price: 1.001, recovery_first_seen_at: null },
     ]);
+  });
+
+  it("keeps the recovery veto at the legacy aggregate's pricing deadline", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const now = Math.floor(Date.now() / 1000);
+    seedOpenEvent(sqlite, { recovery_first_seen_at: now - 900, recovery_last_seen_at: now - 900 });
+    const sources = ["curve", "balancer"].map((protocol) => ({ protocol, chain: "ethereum", price: 0.92, tvl: 2e6 }));
+    seedDexEvidence(sqlite, 1, sources);
+    sqlite.prepare("UPDATE dex_prices SET price_sources_json = ?").run(JSON.stringify({
+      aggregateObservedAt: now - DEX_FRESHNESS_SEC, sources,
+    }));
+    await detectDepegEvents(db, [makeAsset({ id: "usdt-tether", symbol: "USDT", price: 1 })]);
+    expect(sqlite.prepare("SELECT ended_at, recovery_first_seen_at FROM depeg_events").get())
+      .toEqual({ ended_at: null, recovery_first_seen_at: null });
   });
 
   it("closes a stale live event when fresh multi-source primary agreement is back inside threshold", async () => {

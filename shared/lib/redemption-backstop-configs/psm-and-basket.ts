@@ -71,7 +71,7 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
       sourceRef("HypurrFi USDXL live Burn interface", "https://app.hypurrfi.com/usdxl", ["route"]),
       sourceRef("Exact HyperEVM USDXL GSM proxy", "https://hyperevmscan.io/address/0xcb17105f6a7a75d1f1c91317a4621d9aaafe96fd#code", ["route"]),
       sourceRef("Exact verified GsmWithHyFiPool implementation and inherited Gsm", "https://sourcify.dev/server/v2/contract/999/0xdc6ed7834f8693fc2691e1b70ea0ccec557c8f26?fields=sources,abi,compilation", ["route", "access", "capacity", "settlement", "fees"]),
-      sourceRef("Pinned HyperEVM identity observation at block 48242188", "https://rpc.hyperliquid.xyz/evm", ["route"]),
+      sourceRef("HyperEVM identity observation at capture-time head block 48242188; the RPC serves latest state and ignores block selectors", "https://rpc.hyperliquid.xyz/evm", ["route"]),
       sourceRef("HypurrFi agent reference retains contradictory not-enabled text", "https://docs.hypurrfi.com/agents/usdxl", ["route"]),
     ],
     notes: [

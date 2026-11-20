@@ -91,18 +91,18 @@
     "cadence": "monthly",
     "attestorJurisdiction": "Australia",
     "latestReport": {
-      "periodEnd": "2026-09-30",
-      "publishedAt": "2026-10-22",
+      "periodEnd": "2026-10-31",
+      "publishedAt": "2026-11-12",
       "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "review",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "D03 evidence renewal 2026-10-27 (d03-l7)",
+      "reviewer": "GLM evidence renewal 2026-11-19 (audx October admission, #2143)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Aura Partners AUDX Independent Limited Assurance Report - September 2026 (dated October 22)",
-          "url": "https://www.audxtoken.com/_files/ugd/539754_db5ac3cd8ef94f5f923513d5708af3b3.pdf"
+          "label": "Aura Partners AUDX Independent Limited Assurance Report - October 2026 (dated November 12)",
+          "url": "https://www.audxtoken.com/_files/ugd/539754_a37924845b55425fa08a4f96fdc23f20.pdf"
         }
       ]
     }

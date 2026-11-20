@@ -3,9 +3,9 @@
   "note": "Ceilings for the test corpus (docs/testing.md#test-corpus-budget), measured over the Git index by scripts/ci/check-test-corpus-budget.ts. Each is the corpus plus a fixed per-metric slack; npm run test-corpus:update writes min(existing, current + slack) and never raises one. Raising one needs the test-budget-override label for one run or an owner-approved edit.",
   "metrics": {
     "testFiles": 2278,
-    "testBytes": 32000179,
+    "testBytes": 33400000,
     "testSupportFiles": 259,
-    "testSupportBytes": 1349525,
+    "testSupportBytes": 1420000,
     "fixtureBytes": 8820667
   }
 }

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { YieldClient } from "@/components/yield/yield-client";
@@ -8,6 +8,8 @@ import { makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-
 import { projectYieldRankingsSummary } from "@shared/lib/yield-rankings-summary";
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
 import { YIELD_OPPORTUNITY_SAFETY_DESCRIPTION } from "@shared/lib/yield-opportunity-provenance";
+
+vi.mock("@/hooks/use-hydrated", () => ({ useHydrated: () => true }));
 
 const {
   useYieldAdapterManifestMock,
@@ -156,6 +158,7 @@ describe("YieldClient", () => {
 
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
     vi.clearAllMocks();
     coinStatesByIdMock.current = new Map();
   });
@@ -174,6 +177,42 @@ describe("YieldClient", () => {
     const tile = within(hero).getByText("Highest APY").closest("button")!;
     expect(tile.querySelector('[data-coin-state="paused"]')).not.toBeNull();
     expect(tile.textContent).toContain("1 warning");
+  });
+
+  it("withdraws a delivery-only score during a refresh and keeps it withheld on failure", () => {
+    vi.useFakeTimers();
+    const now = 1_776_000_000;
+    const budget = 6 * 3600;
+    vi.setSystemTime(now * 1000);
+    searchParamsMock.set("risk", "any");
+    const ready = { ...useYieldRankingsSummaryMock(), dataUpdatedAt: now * 1000, isFetching: true,
+      data: projectYieldRankingsSummary({ ...makeResponse(), rankings: [
+        { ...rows[0], dataSource: "defillama", pharosYieldScore: 91, warningSignals: ["data-freshness-unknown"],
+          provenance: makeYieldProvenance({ sourceObservedAt: null, sourceAgeSeconds: null, sourceFreshness: "unknown", sourceMaxAgeSeconds: budget }) },
+        rows[1],
+      ], provenance: {
+        selectionMethod: "confidence-weighted",
+        benchmark: { rate: 4.25, recordDate: null, fetchedAt: now, ageSeconds: 0, source: "test", isFallback: false, fallbackMode: null },
+        dlPools: { mode: "dex-cache", updatedAt: now - budget + 2, ageSeconds: budget - 2, poolCount: 1, fallbackMode: null },
+        safetySnapshot: { kind: "ok", coverageRatio: 1, coveredCount: 2, trackedCount: 2, reason: null },
+      } }),
+    };
+    useYieldRankingsSummaryMock.mockReturnValue(ready);
+    const { rerender } = render(<YieldClient />);
+    const hero = within(screen.getByRole("group", { name: "Yield landscape overview" }));
+    const bestPaid = (symbol: string) => hero.getByText((_, node) => node?.textContent === `Best-paid risk in view · ${symbol}`);
+    act(() => vi.advanceTimersByTime(1999));
+    expect(bestPaid("USDC")).toBeTruthy();
+    act(() => vi.advanceTimersByTime(1));
+    expect(bestPaid("USDT")).toBeTruthy();
+    useYieldRankingsSummaryMock.mockReturnValue({ ...ready, isFetching: false, error: new Error("Refresh failed") });
+    rerender(<YieldClient />);
+    expect(bestPaid("USDT")).toBeTruthy();
+    const comparison = leaderboardPropsMock.mock.lastCall?.[0].comparisonRows;
+    expect(comparison.find((row: { id: string }) => row.id === "usdc-circle")).toMatchObject({
+      pharosYieldScore: null, pysNullReason: "source-stale", currentApy: rows[0].currentApy,
+    });
+    expect(ready.refetch).not.toHaveBeenCalled();
   });
 
   it.each([

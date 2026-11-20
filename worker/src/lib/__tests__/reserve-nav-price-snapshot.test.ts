@@ -92,6 +92,21 @@ async function assertBothConsumers(h: NavConsumerInputs, admitted: boolean) {
   }
 }
 
+it("withholds a bound Chainlink NAV when its adapter parameters are invalid", async () => {
+  const h = harness("usyc-hashnote");
+  const config = { ...h.config, params: { ...h.config.params, oracleAddress: "invalid" } };
+  const fingerprint = computeLiveReserveConfigFingerprint(config);
+  h.sqlite.prepare("UPDATE reserve_composition SET config_fingerprint = ?").run(fingerprint);
+  h.sqlite.prepare("UPDATE reserve_sync_state SET config_fingerprint = ?").run(fingerprint);
+  await assertBothConsumers({ ...h, meta: { ...h.meta, liveReservesConfig: config } }, false);
+});
+
+it("withholds supply NAV if the bound snapshot read fails", async () => {
+  const { db, meta } = harness("usyc-hashnote");
+  vi.spyOn(db, "prepare").mockImplementation(() => { throw new Error("snapshot unavailable"); });
+  await expect(loadReserveNavSupplyPrice(meta, db, CLOCK)).resolves.toBeNull();
+});
+
 describe.each(["usyc-hashnote", "ustb-superstate"])("current reserve NAV snapshot binding for %s", (id) => {
   it("admits a matching binding for primary prices and supplemental native supply", async () => {
     await assertBothConsumers(harness(id), true);

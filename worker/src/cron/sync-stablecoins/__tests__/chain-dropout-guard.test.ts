@@ -10,6 +10,7 @@ import {
   getPrevDayRawOrNull,
   getPrevMonthRawOrNull,
   getPrevWeekRawOrNull,
+  getUsdMarketCapBaselineOrNull,
   SUPPLEMENTAL_RESTORE_MAX_AGE_SEC,
 } from "@shared/lib/supply";
 import { makeChainBaseline as baseline, makeChainLeg as leg, makeChartPoint as chartPoint, makeDropoutUsdg, makeGapFill as gapFill } from "@shared/test-utils/stablecoin";
@@ -42,6 +43,8 @@ import {
   type ChainDropoutState,
 } from "../chain-dropout-guard";
 import { REVIEWED_CHAIN_SUPPLY_COLLAPSES } from "../chain-dropout-seed";
+import { mockD1 } from "@shared/test-utils/mock-d1";
+import { fillMissingSupplyHistory } from "../phase-helpers";
 
 const NOW = Date.parse("2026-10-09T06:00:00Z") / 1000;
 const DAY = 86400;
@@ -411,25 +414,30 @@ describe("chain dropout guard", () => {
     }
   });
 
-  it.each([false, true])("keeps carried history only while its chain bucket equals the baseline (aged day: %s)", async (aged) => {
+  it.each([
+    [false, "usdg-paxos", "peggedUSD"], [true, "usdg-paxos", "peggedUSD"], [false, "eurc-circle", "peggedEUR"],
+    [false, "eurc-circle", "peggedEUR", "matching"], [false, "eurc-circle", "peggedEUR", "chain-mismatch"],
+  ] as const)("checks carried history (aged day: %s, %s, %s, close: %s)", async (aged, id, peg, close?: string) => {
     const now = LATE_NOW;
+    const week = { observedAt: now - 8 * DAY, circulatingUsd: 980_000_000, circulatingNative: null };
     const state: ChainDropoutState = { version: 1, pairs: {} };
     if (aged) state.pairs[JSON.stringify(["usdg-paxos", "xlayer"])] = {
       assetId: "usdg-paxos", ...baseline("xlayer", 100_000_000, now - DAY, now - DAY), baselineSource: "state",
     };
     const asset: PeggedAsset = {
-      ...usdg(),
-      circulating: { peggedUSD: 900_000_000 },
-      circulatingPrevDay: { peggedUSD: aged ? 900_000_000 : 1_000_000_000 },
-      circulatingPrevWeek: { peggedUSD: 1_000_000_000 },
-      circulatingPrevMonth: { peggedUSD: 1_000_000_000 },
+      ...usdg(), id, pegType: peg,
+      circulating: { [peg]: 900_000_000 },
+      circulatingPrevDay: { [peg]: aged ? 900_000_000 : 1_000_000_000 },
+      circulatingPrevWeek: { [peg]: 1_000_000_000 },
+      circulatingPrevMonth: { [peg]: 1_000_000_000 },
+      ...(peg === "peggedEUR" ? { supplyChangeBaselines: { week } } : {}),
       chains: ["Ethereum", "X Layer"],
       chainCirculating: {
         Ethereum: leg(900_000_000),
         "X Layer": {
           current: 0,
           circulatingPrevDay: aged ? 0 : 100_000_000,
-          circulatingPrevWeek: 100_000_000,
+          circulatingPrevWeek: close === "chain-mismatch" ? 90_000_000 : 100_000_000,
           circulatingPrevMonth: 100_000_000,
         },
       },
@@ -437,12 +445,23 @@ describe("chain dropout guard", () => {
 
     const result = await runGuard(asset, { now, state });
 
-    expect(result.quarantinedAssetIds).toEqual(["usdg-paxos"]);
+    expect(result.quarantinedAssetIds).toEqual([id]);
     expect(asset).toMatchObject({ supplyRestored: true, supplyChainGuard: { status: "quarantined" } });
     expect(getCirculatingRawOrNull(asset)).toBe(1_000_000_000);
-    expect(getPrevDayRawOrNull(asset)).toBe(aged ? null : 1_000_000_000);
-    expect(getPrevWeekRawOrNull(asset)).toBe(1_000_000_000);
-    expect(getPrevMonthRawOrNull(asset)).toBe(1_000_000_000);
+    expect(getPrevDayRawOrNull(asset)).toBe(aged || peg !== "peggedUSD" ? null : 1_000_000_000);
+    expect(getPrevWeekRawOrNull(asset)).toBe(peg === "peggedUSD" ? 1_000_000_000 : null);
+    expect(getPrevMonthRawOrNull(asset)).toBe(peg === "peggedUSD" ? 1_000_000_000 : null);
+    expect(asset.supplyChangeBaselines).toBeUndefined();
+    if (peg === "peggedUSD") return;
+    vi.mocked(Date.now).mockReturnValue(now * 1000);
+    await fillMissingSupplyHistory(mockD1([{ match: "FROM supply_history", rows: close ? [{
+      stablecoin_id: id, snapshot_date: week.observedAt, circulating_usd: week.circulatingUsd,
+      supply_provenance: JSON.stringify({ supplySource: asset.supplySource, supplyObservedAt: week.observedAt, supplyChainGuard: null }),
+    }] : [] }]), [asset]);
+    const [wire] = normalizeStablecoinsPayload({ peggedAssets: [asset] }, now).peggedAssets;
+    expect(wire.supplyChangeBaselines?.week ?? null).toEqual(close === "matching" ? week : null);
+    expect(getPrevWeekRawOrNull(wire)).toBe(close === "matching" ? week.circulatingUsd : null);
+    expect(getUsdMarketCapBaselineOrNull(wire, "day")).toBeNull();
   });
 
   it.each([false, true])("keeps omitted quarantined chains sticky across generations (empty map: %s)", async (emptyMap) => {
@@ -1108,6 +1127,14 @@ describe("chain dropout guard", () => {
     }
   });
 
+  it("drops a stale pair when the current chain row is unobserved", async () => {
+    const asset = { ...usdg(), id: "sofid-sofi", chainCirculating: { Ethereum: { current: null } } };
+    const state = savedState(asset.id, baseline("ethereum", 9e8, NOW - 8 * DAY), baseline("ink", 1, NOW));
+    const result = await runGuard(asset, { state });
+    expect(result.state.pairs).not.toHaveProperty([JSON.stringify([asset.id, "ethereum"])]);
+    expect(result.flagged).toBe(0);
+  });
+
   it("withholds provider anchors that predate GHO's reviewed perimeter change", async () => {
     const reviewedAt = Date.parse("2026-11-13T10:30:00Z") / 1000;
     for (const [age, kept] of [[-1, 0], [0, 0], [2 * DAY, 1], [8 * DAY, 2], [31 * DAY, 3]] as const) {
@@ -1132,7 +1159,7 @@ describe("chain dropout guard", () => {
   });
 
   it.each([0, 14 * DAY])("expires frxUSD's reviewed omitted HyperEVM identity after 14 days (%s)", async (offset) => {
-    const reviewedAt = Date.parse("2026-11-07T19:45:46Z") / 1000;
+    const reviewedAt = Date.parse("2026-11-19T22:47:00Z") / 1000;
     const asset: PeggedAsset = { ...usdg(), id: "frxusd-frax", circulating: { peggedUSD: 91_508_143.55 },
       chainCirculating: { Ethereum: { current: 91_465_070.06 }, "Hyperliquid L1": { current: 43_073.49 } } };
     const state = savedState(asset.id, { chainId: "hyperevm", chainLabel: "HyperEVM", baselineUsd: 3_749_116.70,
@@ -1145,6 +1172,19 @@ describe("chain dropout guard", () => {
     const review = asset.supplyChainGuard?.chains[0].reviewedExclusion;
     if (offset) expect(review).toBeUndefined();
     else expect(review?.expiresAt).toBe(reviewedAt + 14 * DAY);
+  });
+
+  it("holds Legacy FRAX's reviewed Fraxtal exclusion permanently (far-future sentinel)", async () => {
+    const entry = REVIEWED_CHAIN_SUPPLY_COLLAPSES.find((candidate) => candidate.assetId === "frax-frax" && candidate.chainId === "fraxtal")!;
+    const asset: PeggedAsset = { ...usdg(), id: "frax-frax", circulating: { peggedUSD: 75_952_535 },
+      chainCirculating: { Ethereum: { current: 70_831_863 } } };
+    // Long past the retired 2026-12-03 expiry; a dated renewal would re-quarantine here.
+    const result = await runGuard(asset, { now: entry.reviewedAt + 400 * DAY, state: savedState(asset.id,
+      { chainId: "fraxtal", chainLabel: "Fraxtal", baselineUsd: 10_926_256, baselineObservedAt: entry.reviewedAt - 3 * DAY, quarantinedSince: entry.reviewedAt - 3 * DAY }) });
+    expect(getCirculatingRawOrNull(asset)).toBe(75_952_535);
+    expect(result.quarantinedAssetIds).toEqual([]);
+    expect(asset.supplyRestored).toBeUndefined();
+    expect(asset.supplyChainGuard?.chains[0].reviewedExclusion).toMatchObject({ reason: "reviewed-excluded", expiresAt: entry.excludeOmittedUntil });
   });
 
   it("keeps low same-provider chart evidence quarantined and caches attempts hourly", async () => {

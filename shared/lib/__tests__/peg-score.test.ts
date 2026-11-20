@@ -103,18 +103,21 @@ describe("scheduled reference coverage", () => {
     const lastTrustedAtSec = start + 60;
     const declaredAtSec = start + 120;
     const event: PegScoreEvent = {
-      ...makeEvent({ pegType: "peggedGOLD", startedAt: start, endedAt: null, peakDeviationBps: -500 }),
+      ...makeEvent({ pegType: "peggedGOLD", startedAt: start, endedAt: null, peakDeviationBps: -960 }),
+      currentFragmentPeakBps: -437,
       admittedCoverage: [{ fromSec: start, toSec: lastTrustedAtSec + 1 }],
       priceCoverage: { intervals: [[start, lastTrustedAtSec + 1]], lastTrustedObservationAt: lastTrustedAtSec,
         gapStartedAt: declaredAtSec, lastObservationKind: "blind" },
-      referenceHold: { reason: "reference-market-closed", declaredAtSec, refreshedAtSec: sec(time) - 1200, lastTrustedAtSec, lastTrustedPeakBps: -500 },
+      referenceHold: { reason: "reference-market-closed", declaredAtSec, refreshedAtSec: sec(time) - 1200, lastTrustedAtSec, lastTrustedPeakBps: -437 },
     };
     const from = start - 90 * DAY;
     const held = computePegScore([event], from, sec(time), "GOLD");
     const generic = computePegScore([{ ...event, referenceHold: undefined } as PegScoreEvent], from, sec(time), "GOLD");
     const exactEnd: PegScoreEvent = { ...event, admittedCoverage: [{ fromSec: start, toSec: lastTrustedAtSec }] };
     const boundary = computePegScore([exactEnd], from, sec(time), "GOLD");
-    expect(generic.pegScore! - held.pegScore!).toBe(10);
+    expect(generic.pegScore! - held.pegScore!).toBe(19);
+    const mismatchedHold: PegScoreEvent = { ...event, referenceHold: { ...event.referenceHold!, lastTrustedPeakBps: -960 } };
+    expect(computePegScore([mismatchedHold], from, sec(time), "GOLD").pegScore).toBe(generic.pegScore);
     expect(boundary.pegScore).toBe(generic.pegScore);
     const expiredHold: PegScoreEvent = { ...event, referenceHold: { ...event.referenceHold!, refreshedAtSec: sec(time) - 1201 } };
     expect(computePegScore([expiredHold], from, sec(time), "GOLD").pegScore).toBe(generic.pegScore);
@@ -418,6 +421,18 @@ describe("computePegScore", () => {
       // evidence weight; halving the magnitude would fabricate a 200 bps gap.
       expect(computePegScore(events as never, start, NOW).spreadPenalty).toBe(0);
     });
+
+    it.each([["low", "high"], [null, "low"]] as const)(
+      "uses the projected peak's %s confidence for severity and spread", (peakConfidenceTier, confidenceTier) => {
+        const peak = eventAtOffset(30, -960);
+        const other = eventAtOffset(60, -200);
+        expect(computePegScore([
+          { ...peak, currentFragmentPeakBps: -437, peakConfidenceTier, provenance: { confidenceTier } }, other,
+        ], start, NOW)).toEqual(computePegScore([
+          { ...peak, provenance: { confidenceTier: peakConfidenceTier } }, other,
+        ], start, NOW));
+      },
+    );
 
     it("caps spreadPenalty at 15 for extreme variance", () => {
       const result = computePegScore([eventAtOffset(80, -1), eventAtOffset(40, -100_000)] as never, start, NOW);

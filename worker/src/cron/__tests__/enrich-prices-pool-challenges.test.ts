@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { DEX_FRESHNESS_SEC, DEX_PROTOCOL_SOURCE_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import {
   cleanupEnrichMissingPricesTest,
   installPrimaryPriceRoutes,
@@ -13,6 +14,7 @@ import { fetchPrimaryPrices } from "../sync-stablecoins/enrich-prices";
 import {
   applyListAggregatorDowngrade,
   applyPoolChallenge,
+  applyPrimaryPostConsensusHardening,
 } from "../sync-stablecoins/enrich-prices-primary-hardening";
 import type { PriceValidationContext, PriceValidationReferences } from "../../lib/price-validation";
 import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
@@ -103,6 +105,33 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
     // Pool challenge doesn't fire (<500bps), but CG+DL-only downgrade applies
     expect(results.get("dusd-dtrinity")!.confidence).toBe("single-source");
     expect(results.get("dusd-dtrinity")!.source).not.toBe("pool-tvl-weighted");
+  });
+
+  it.each([
+    ["envelope", -1, 0.92], ["envelope", 0, 1], ["array", -1, 1], ["array", 0, 1], ["invalid", 0, 1],
+    ["dated", 0, 0.92], ["dated", 1, 1],
+  ])("requires eligible observation clocks for the legacy DOLA pool challenge (%s, %ss)", async (shape, offset, expected) => {
+    const aggregateObservedAt = 1_700_000_000;
+    const id = "dola-inverse-finance";
+    const nowSec = aggregateObservedAt + DEX_FRESHNESS_SEC + offset;
+    const sources = ["curve", "balancer"].map((protocol, index) => ({
+      protocol, chain: "ethereum", price: 0.92, tvl: 1e6,
+      ...(shape === "array" && index === 0 && { aggregateObservedAt }),
+      ...(shape === "dated" && { observedAt: aggregateObservedAt + DEX_FRESHNESS_SEC - DEX_PROTOCOL_SOURCE_FRESHNESS_SEC }),
+    }));
+    const db = makePoolChallengeDb([{
+      stablecoin_id: id, updated_at: nowSec - 60,
+      price_sources_json: JSON.stringify(shape === "array" ? sources : {
+        aggregateObservedAt: shape === "invalid" ? null : aggregateObservedAt, sources,
+      }),
+    }]);
+    const { results, stats } = makePoolChallengeInputs({
+      assetId: id, result: makePriceConsensusResult({ observedAt: nowSec - 30 }),
+    });
+    await applyPrimaryPostConsensusHardening({ db, candidates: [makePeggedAsset({ id })], results, stats, nowSec });
+    expect(results.get(id)).toMatchObject(expected === 1
+      ? { price: 1, confidence: "single-source", observedAt: nowSec - 30 }
+      : { price: expected, source: "pool-tvl-weighted" });
   });
 });
 
@@ -651,7 +680,7 @@ describe("applyPoolChallenge", () => {
     expect(stats.low).toBe(0);
   });
 
-  it("preserves corroborated severe downside even when multiple DEX protocols diverge upward", () => {
+  it.each([undefined, { pyth: ["oracle:pyth"], coingecko: ["venue:kraken"] }])("preserves corroborated severe downside with lineage %j", (upstreamKeysBySource) => {
     const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
       assetId: "usr-resolv",
       result: makePriceConsensusResult({
@@ -660,6 +689,7 @@ describe("applyPoolChallenge", () => {
         dlPrice: 0.1524,
         cgPrice: 0.1525,
         candidateSources: ["coingecko", "defillama-list", "pyth", "dex-promoted"],
+        upstreamKeysBySource,
         allPrices: {
           coingecko: 0.1525,
           "defillama-list": 0.1524,
@@ -786,13 +816,18 @@ describe("applyPoolChallenge", () => {
   });
 
   it("propagates result.observedAt = min(poolObservedAts) after replacement", () => {
+    const first = "ethereum:0x0000000000000000000000000000000000000001";
+    const second = "ethereum:0x0000000000000000000000000000000000000002";
+    const observations = [
+      { price: 0.8, tvlUsd: 500_000, protocol: "curve", chain: "ethereum", observedAt: 1_200,
+        pricePoolKeys: [first], upstreamKeys: [first, "venue:bitstamp"] },
+      { price: 0.82, tvlUsd: 300_000, protocol: "uniswap", chain: "ethereum", observedAt: 800,
+        pricePoolKeys: [second], upstreamKeys: [second, "venue:kraken"] },
+    ];
     const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
       assetId: "dusd-test",
       result: makePriceConsensusResult({ observedAt: 5_000, observedAtMode: "upstream" }),
-      pools: [
-          { price: 0.8, tvlUsd: 500_000, protocol: "curve", chain: "ethereum", observedAt: 1_200 },
-          { price: 0.82, tvlUsd: 300_000, protocol: "uniswap", chain: "ethereum", observedAt: 800 },
-      ],
+      pools: observations,
     });
 
     applyPoolChallenge(results, pools, pegTypes, stats);
@@ -804,6 +839,8 @@ describe("applyPoolChallenge", () => {
     expect(updated.observedAtMode).toBe("local_fetch");
     expect(updated.observedAtBySource).toEqual({ "pool-tvl-weighted": 800 });
     expect(updated.observedAtModeBySource).toEqual({ "pool-tvl-weighted": "local_fetch" });
+    expect(updated.upstreamKeys).toEqual([first, second, "venue:bitstamp", "venue:kraken"]);
+    expect(updated.pricePoolKeys).toEqual([first, second]);
   });
 
   it("does not list a co-leg-held lane as disagreeing after replacement", () => {

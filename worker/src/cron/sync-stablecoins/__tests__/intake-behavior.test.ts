@@ -13,7 +13,7 @@ import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getCirculatingRawOrNull, getUsdMarketCapBaselineOrNull } from "@shared/lib/supply";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { StablecoinDataSchema } from "@shared/types/supply";
-import { fillMissingSupplyHistory } from "../phase-helpers";
+import { dedupeCanonicalAssets, fillMissingSupplyHistory } from "../phase-helpers";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { fetchFiatCoinGeckoTokens, FIAT_CG_METAS } from "../supplemental-assets/fiat-cg";
 import * as supplementalPrices from "../supplemental-assets/shared";
@@ -315,6 +315,14 @@ describe("stablecoin intake admission", () => {
       ? { day: { observedAt, circulatingUsd: 110, circulatingNative: 90 } } : { day: null });
   });
 
+  it("keeps the earlier canonical row on equal quality and prefers observed zero to missing history", () => {
+    const first = makePeggedAsset({ circulatingPrevDay: null });
+    const tied = { ...first, name: "Duplicate" };
+    const observed = { ...tied, circulatingPrevDay: { peggedUSD: 0 } };
+    expect(dedupeCanonicalAssets([first, tied]).dedupedAssets[0]).toBe(first);
+    expect(dedupeCanonicalAssets([first, observed]).dedupedAssets[0]).toBe(observed);
+  });
+
   it("fills empty ordinary USD buckets from plausible unassessed closes on the exact UTC dates", async () => {
     const { now, db, sqlite } = datedHistoryFixture();
     const asset = makePeggedAsset({ supplySource: "defillama", circulating: { peggedUSD: 100 } });
@@ -384,22 +392,29 @@ describe("stablecoin intake admission", () => {
     });
   });
 
-  it("compares dated DefiLlama caps with undated optional token valuations", async () => {
+  it.each([
+    ["peggedUSD", "defillama", true],
+    ["peggedEUR", "defillama", true],
+    ["peggedEUR", "coingecko-fallback", false],
+  ] as const)("compares dated %s DefiLlama caps against %s closes", async (peg, source, comparable) => {
     const { now, db, sqlite } = datedHistoryFixture();
     const stockAt = now - 60;
     const weekAt = stockAt - 7 * DAY_SECONDS;
-    const asset = makePeggedAsset({ id: "usdt-tether", pegType: "peggedUSD", supplySource: "defillama",
-      supplyObservedAt: stockAt, circulating: { peggedUSD: 100_000_000 }, circulatingPrevWeek: { peggedUSD: 98_000_000 },
+    const asset = makePeggedAsset({ id: peg === "peggedUSD" ? "usdt-tether" : "eurc-circle", pegType: peg, supplySource: "defillama",
+      supplyObservedAt: stockAt, circulating: { [peg]: 100_000_000 }, circulatingPrevWeek: { [peg]: 98_000_000 },
       circulatingNative: 100_000_000 / 0.999, valuationPriceUsd: 0.999, valuationObservedAtSec: null });
     sqlite.prepare(`INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, circulating_native,
-      valuation_price_usd, supply_provenance) VALUES (?, ?, ?, ?, ?, ?)`)
-      .run(asset.id, bucketUnixSecondsToUtcDay(weekAt), 98_000_000, 98_000_000 / 0.999, 0.999, historyProvenance(asset.supplySource, weekAt));
+      valuation_price_usd, valuation_observed_at_sec, supply_provenance) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+      .run(asset.id, bucketUnixSecondsToUtcDay(weekAt), 98_000_000, 98_000_000 / 0.999, 0.999,
+        source === "defillama" ? null : weekAt, historyProvenance(source, weekAt));
 
     await fillMissingSupplyHistory(db, [asset]);
     const [wire] = shared.normalizeStablecoinsPayload({ peggedAssets: [asset] }, now).peggedAssets;
-    expect(wire.supplyChangeBaselines?.week).toEqual({ observedAt: weekAt, circulatingUsd: 98_000_000, circulatingNative: null });
-    expect(getCirculatingRawOrNull(wire)! - getUsdMarketCapBaselineOrNull(wire, "week")!).toBe(2_000_000);
-    expect(wire.circulatingPrevWeek).toEqual({ peggedUSD: 98_000_000 });
+    expect(wire.supplyChangeBaselines?.week).toEqual(comparable
+      ? { observedAt: weekAt, circulatingUsd: 98_000_000, circulatingNative: null } : null);
+    if (comparable) expect(getCirculatingRawOrNull(wire)! - getUsdMarketCapBaselineOrNull(wire, "week")!).toBe(2_000_000);
+    else expect(getUsdMarketCapBaselineOrNull(wire, "week")).toBeNull();
+    expect(wire.circulatingPrevWeek).toEqual(comparable ? { [peg]: 98_000_000 } : {});
   });
 
   it("withholds a weekly ZSD dollar comparison when the current valuation is undated", async () => {
@@ -441,6 +456,22 @@ describe("stablecoin intake admission", () => {
     expect(await fillMissingSupplyHistory(db, [complete])).toBe(3);
     expect(complete.supplyChangeBaselines).toBeUndefined();
     expect(windows.map((window) => getUsdMarketCapBaselineOrNull(complete, window))).toEqual([514, 519, 480]);
+    expect(await fillMissingSupplyHistory(db, [complete])).toBe(0);
+  });
+
+  it("keeps an explicit EUR week refusal despite a matching dated close", async () => {
+    const { now, db, sqlite } = datedHistoryFixture();
+    const asset = makePeggedAsset({ pegType: "peggedEUR", supplySource: "defillama", supplyObservedAt: now,
+      circulating: { peggedEUR: 100 }, supplyChangeBaselines: { week: null } });
+    const week = now - 7 * DAY_SECONDS;
+    sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, supply_provenance) VALUES (?, ?, ?, ?)")
+      .run(asset.id, bucketUnixSecondsToUtcDay(week), 95, historyProvenance("defillama", week));
+    const withheld = { ...asset, supplyChangeBaselines: {} };
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await fillMissingSupplyHistory(db, [asset, withheld]);
+      expect(asset.supplyChangeBaselines?.week).toBeNull();
+      expect(withheld.supplyChangeBaselines).toEqual({});
+    }
   });
   it("withholds at the original pre-fetch abort boundary after the FX await", async () => {
     const controller = new AbortController();

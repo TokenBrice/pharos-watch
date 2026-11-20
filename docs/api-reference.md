@@ -32,6 +32,8 @@ The `depeg-history` topic is **retrospective windowed history**, not a historica
 
 The static `depeg-history` dataset publishes each event's `id` as a string in JSON and NDJSON (and as text in CSV), preserving the established export contract. This differs from the numeric event IDs in the runtime depeg-events API and internal archive rows. Rows append the ledger's `auditVerdict` (`null` when none); a reviewed dispute is never exported unmarked. Rows also append `retired` (`true` when the coin left the tracked catalog).
 
+Newly generated `depeg-history` exports carry two appended fields. `onsetQuoteFromLaterFragment` is `true` when `startPrice` and `pegReference` come from a fragment observed after `startedAtISO`. `onsetQuoteDomain` gives the unit of both values (`usd` or `native-peg`). Fields absent from the captured ledger appear as `null` in JSON and NDJSON and as empty cells in CSV.
+
 Pharos code, data and data exports are [MIT-licensed](https://github.com/TokenBrice/pharos-watch/blob/main/LICENSE). Editorial content, including profile prose, methodology and case studies, is licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Third-party material retains its original terms. Editorial prose retains its license when included in a Markdown export. Dataset cards state the MIT license, the export's `_meta.asOfISO` and methodology label, and copy a citation that names the canonical Reference card and the dated JSON edition. The filename reflects publication; `asOfISO` preserves the observation clock; neither promises perpetual byte preservation.
 
 Public onboarding artifacts are served at `https://pharos.watch/openapi.json`, `https://pharos.watch/postman/pharos-api.postman_collection.json`, and `https://pharos.watch/postman/pharos-api.postman_environment.json`. Import both files and replace the `apiKey` placeholder with a real `X-API-Key`. OpenAPI includes named Yield Intelligence ranking/history schemas; Postman includes best-source and source-key history examples. Both Postman variable lists declare `snapshotDate`: call `/api/snapshots/index` (API key required), then set `snapshotDate` to a returned `snapshots[].snapshotDate` before running either snapshot request. The integration/read catalogue is owned by `scripts/lib/public-api-artifact-catalog.ts`, not an inventory of every no-key route: it excludes admin routes, supporter-key claims, feedback, Telegram webhook/Mini App endpoints, and dynamic OG images. Request keys through `https://pharos.watch/api/`.
@@ -198,6 +200,8 @@ Yield routes override the generic 8x/12x runway: `GET /api/yield-rankings` (full
 - Detailed ranking provenance retains nullable `sourceObservedAt` and `sourceAgeSeconds` without dropping the remaining evidence. Unavailable rankings `medianApy` is null. `sourceRisk.rewardShare` is nonnegative with no upper bound, preserving raw ratios above 1 in rankings, alternatives, and history.
 
 Yield source freshness is separate from publication freshness. Unknown observation evidence must not be replaced with publication time or treated as refreshed merely because the snapshot was newly served. Source and comparison-anchor ages advance at read time; selected `sourceRisk.sourceAgeSeconds` follows authoritative provenance, while alternate ages advance from the publication clock and preserve unavailable ages.
+
+Since yield v8.58, DeFiLlama `/pools` rows can carry PYS through the six-hour batch delivery budget while preserving null observation clocks and the `data-freshness-unknown` warning. Rankings recheck the original batch clock at serve time. Browser and edge cache lifetimes for delivery-based scores end by the batch deadline. Coin responses also expire by the full cohort's next evidence deadline.
 
 Full, summary, and coin rankings also recompute `provenance.dlPools.ageSeconds` from the pool input's original `updatedAt` at serve time, independently of yield publication age. A null pool clock remains a null age, even if the stored age was numeric. The reference-rates strip warns only past the pool input's public stale band (twelve times the hourly producer cadence, currently 43,200 seconds); its tooltip names the pool input mode. Neither serving nor republishing yield data renews that input clock.
 
@@ -373,6 +377,10 @@ Primary and alternative Exit breakdown rows require `routeId` and `lane` (`dex` 
 
 `completeness` adds `pipelineGapCount` and sorted unique `pipelineGapIds`. `expectedCount = ratedCount + notRatedCount + pipelineGapCount`; not-rated and pipeline-gap membership is disjoint and matches the cards. Do not derive NR count from every null score. Reserve breakdowns preserve `wholeAssetWeight` independently of `effectiveScoringWeight`; A/B tail exclusion never rescales dependency or materiality exposure.
 
+On `/api/report-cards/v9` and the site-only `/api/report-cards/v9-detail`, query `reserveAdmission=diagnostics` to receive optional `reserveCompositionAdmission: { reasons, age? }` on cards with a local missing-reserve-composition gap. This opt-in is independent of `freshness=operands`. Publications whose fixed scoring clock is at or after 2026-11-20T08:00:00Z (1795161600) carry it; earlier cards omit the field.
+
+Review reasons include `no-review`, `no-composition`, `scope-missing`, `selected-slices`, `classification-only`, `dependency-relationships`, `unverified`, `undated`, `future-dated`, `review-sources-missing`, `invalid-review-chronology`, and `report-date-mismatch`. `no-review` means Pharos has no reserve review on file. `report-confidence-unverified` identifies unknown confidence in the named report itself. `report-publication-date-missing` identifies a named report with no `publishedAt` date on file. `report-publication-future-dated` identifies a report whose `publishedAt` falls after `asOfSec`. `report-assurance-method-unsupported` identifies a method outside the corroborating assurance methods. Other gate reasons include `invalid-composition`, `named-report-ineligible`, `variant-standalone-ineligible`, `observation-obligations-unresolved`, and `report-scope-not-whole-book`. `beyond-age-budget` carries `age: { compositionAsOfSec, maxAgeSec }` from the rejecting path, measured at the response's `asOfSec`. The composition timestamp can precede the Unix epoch. The original gap cause and score remain intact.
+
 Retained old schema publications require explicit historical dispatch or refusal, never invented A/B defaults. Current consumers preserve status and partial metadata rather than treating a null score as a downgrade. Existing publication health/held headers remain a separate availability contract.
 
 `openEvidence` is `{ semantics: "open-question-v1", totals, owners, reasons, documentation, issuer, byCard }`, part of the digest-covered publication payload projected into the report9 envelope; the field is required but nullable, and `openEvidenceUnavailableReason` names `"publication-predates-open-evidence"` when a schema-7 source leaves it null. `totals` carries `questions` (the headline), its disjoint partition `open` / `issuer` / `documentation` (summing to `questions` under documentation > issuer > open precedence), and `obligations`, the per-card evidence-obligation total with measured-adverse (cause D) facts excluded. `owners[]` partitions the open bucket only (`Σ questions = totals.open`; `responsibility: "mixed"` is the multi-owner remainder) and carries `{ responsibility, questions, obligations }`. `reasons[]` carries `{ code, bucket, questions, obligations }`; `documentation` carries `{ questions, datums, facts, reasons[] }`; `issuer` carries `questions`, `assets`, and the paired review window `oldestReviewedAtSec` / `newestReviewedAtSec` (both null when no review is dated). `byCard[]` carries `{ id, openBucketQuestionsCarried, inheritedOpenBucketQuestionsCarried, openBucketObligationsCarried, documentationObligationsCarried }`, optional `issuerNondisclosureReviewedAtSec`, and optional `documentationOnlyLimited`: the sorted unique pillars (`backing`, `control`, `exit`) limited only by documentation gaps, omitted (never `[]`) when no pillar qualifies. The `openBucket*` counters cover the headline open bucket only, with `inheritedOpenBucketQuestionsCarried` its other-root subset; `documentationObligationsCarried` counts documentation-classed obligations from any bucket, and issuer obligations are not published per card. A card absent from `byCard` while `openEvidence` is present carried zero obligations; a present card is measured. The site detail projection mirrors `documentationOnlyLimited` as an optional top-level field. Counting changes no `evidenceLevel`, cause, cap or score input. Consumers must render a null block as unavailable, never zero, and public copy maps cause A to "data pipeline unavailable", keeping the technical `pipeline-gap` status distinct.
@@ -441,7 +449,7 @@ Mint/Burn v6.42 adds reviewed conditional range supply proof and retained range 
 | `supplyChainGuard.chains[].reviewedExclusion` | object | Optional dated omitted-chain release: `reason: "reviewed-excluded"`, Unix-second `reviewedAt`, `expiresAt` and original per-chain `quarantinedSince`, plus `evidenceUrl`. The chain retains `resolution: "unavailable"` and null current; its baseline contributes neither carry nor the partial-coverage missing share. The observed provider remainder publishes until review expiry or provider restoration. See [Chain Dropout Guard](./supply-snapshot.md#chain-dropout-guard). |
 | `supplyChainGuard.chains[].observedAtKind` | `"upstream" \| "local-read"` | Optional clock kind for chain repair evidence. Native issuer `onchain-total-supply` repairs use `"local-read"` with the sync-start run clock; DefiLlama chart repairs use `"upstream"` with the point date. Without quarantine, aggregate `supplyObservedAt` uses the oldest admitted repair clock — native local reads included — and, when the provider row names one, the incoming list clock; a repair without a usable clock leaves the aggregate clock missing, never borrowing another component's clock. Withheld repairs discard the repair clock/kind before any carried-baseline or unavailable outcome. An absent kind on older provenance is unknown, not proof of an upstream clock. |
 
-The website-only `GET /api/stablecoin-live-summary/{stablecoinId}` projection and internal detail-snapshot inputs retain unavailable USD checkpoints as `{}` across `circulating`, `circulatingPrevDay`, `circulatingPrevWeek`, and `circulatingPrevMonth`. Numeric buckets are finite and nonnegative; explicit zero stays observed. Native `current`/`prevWeek`/`prevMonth` checkpoints are likewise finite and nonnegative or `null`. Its generic freshness headers name one verdict and keep the upstream `X-Data-Freshness-Reason`, including `detail-history-fallback`, so a known-clock verdict still reaches the website with its machine reason. See [checkpoint admission](./supply-snapshot.md#supply-admission-and-nullable-helpers) for selection and malformed-history handling.
+The website-only `GET /api/stablecoin-live-summary/{stablecoinId}` projection and internal detail-snapshot inputs retain unavailable USD checkpoints as `{}` across `circulating`, `circulatingPrevDay`, `circulatingPrevWeek`, and `circulatingPrevMonth`. Numeric buckets are finite and nonnegative; explicit zero stays observed. Native `current`/`prevWeek`/`prevMonth` checkpoints are likewise finite and nonnegative or `null`. Its generic freshness headers name one verdict. An inherited verdict keeps its upstream reason, including `detail-history-fallback`. When the summary computes a non-fresh verdict, it reports `outside-freshness-budget`, `future-timestamp`, or `producer-timestamp-unavailable`. An inherited non-fresh verdict uses `unspecified-<status>` when no other reason applies. See [checkpoint admission](./supply-snapshot.md#supply-admission-and-nullable-helpers) for selection and malformed-history handling.
 
 ## Literal Event Search
 
@@ -526,7 +534,7 @@ Generated from `public/openapi.json` (`Pharos API` v1.0.0). Total OpenAPI operat
 | GET | `/api/public-status-history` | Public status history | Status | `X-API-Key` required | `limit` (query, optional, integer); `window` (query, optional, string) | 200, 400, 401, 429, 503 |
 | GET | `/api/telegram-pulse` | Telegram pulse | Status | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
 | GET | `/api/stability-index` | Pharos Stability Index | Risk | `X-API-Key` required | `detail` (query, optional, boolean); `days` (query, optional, integer) | 200, 400, 401, 429, 503 |
-| GET | `/api/report-cards/v9` | Safety Score V9 report cards | Risk | `X-API-Key` required | `freshness` (query, optional, string) | 200, 400, 401, 429, 503 |
+| GET | `/api/report-cards/v9` | Safety Score V9 report cards | Risk | `X-API-Key` required | `freshness` (query, optional, string); `reserveAdmission` (query, optional, string) | 200, 400, 401, 429, 503 |
 | GET | `/api/safety-grades` | Safety Score grades (no key) | Risk | exempt | — | 200, 400, 429, 503 |
 | GET | `/api/dependency-graph/v1` | Dependency graph (no key) | Risk | exempt | — | 200, 400, 429, 503 |
 | GET | `/api/dependency-scenarios/v1` | Modeled dependency scenarios (no key) | Risk | exempt | — | 200, 400, 429, 503 |
@@ -679,7 +687,7 @@ Historical and active depeg incidents with constituent threshold-crossing counts
 
 ```json
 {
-  "currentVersion": "6.51"
+  "currentVersion": "6.53"
 }
 ```
 
@@ -717,7 +725,7 @@ Per-coin peg scores, reference evidence, coverage-aware recent metrics, and aggr
 
 ```json
 {
-  "currentVersion": "6.51"
+  "currentVersion": "6.53"
 }
 ```
 
@@ -950,11 +958,11 @@ The retired numerical families (`stablecoin/:id`, `chain/:id`, `page/:slug`, `de
 
 ### `GET /api/report-cards/v9`
 
-Canonical API schema-8 Safety Score report cards from the accepted internal schema-7 publication. [Full endpoint contract](https://pharos.watch/openapi.json#/paths/~1api~1report-cards~1v9/get).
+Canonical API schema-9 Safety Score report cards from the accepted internal schema-8 publication. [Full endpoint contract](https://pharos.watch/openapi.json#/paths/~1api~1report-cards~1v9/get).
 
 - **Operation ID:** `reportCardsV9`
 - **Path:** `/api/report-cards/v9`
-- **Parameters:** `freshness` (query, optional, string)
+- **Parameters:** `freshness` (query, optional, string); `reserveAdmission` (query, optional, string)
 - **Success response schema:** [`ReportCardsV9Response`](https://pharos.watch/openapi.json#/components/schemas/ReportCardsV9Response)
 - **Policy:** authentication `X-API-Key` required; bypass shared endpoint caching (`cacheBypass: true`).
 
@@ -1065,7 +1073,7 @@ Yield-bearing stablecoin rankings with safety, benchmark-aware context, and opti
 
 ```json
 {
-  "currentVersion": "8.57",
+  "currentVersion": "8.58",
   "methodologyVersion": "10.47"
 }
 ```
@@ -1084,7 +1092,7 @@ Machine-readable source-list manifest for every yield-bearing asset, including a
 
 ```json
 {
-  "methodologyVersion": "8.57"
+  "methodologyVersion": "8.58"
 }
 ```
 
@@ -1102,8 +1110,8 @@ Historical yield observations for a stablecoin, with optional publication/source
 
 ```json
 {
-  "currentVersion": "8.57",
-  "methodologyVersion": "8.57"
+  "currentVersion": "8.58",
+  "methodologyVersion": "8.58"
 }
 ```
 
@@ -1143,8 +1151,8 @@ Freshness threshold: 1800 s.
 
 ```json
 {
-  "currentVersion": "6.51",
-  "methodologyVersion": "6.51"
+  "currentVersion": "6.53",
+  "methodologyVersion": "6.53"
 }
 ```
 
@@ -1220,13 +1228,20 @@ Commodity detail history overlays canonical native quantities on compatible comp
 
 ### Depeg events
 
+For a grouped incident, `peakDeviationBps` reports the largest same-direction deviation across its eligible constituents, including after the effective fragment closes. An unrecognized audit verdict or duplicate `auditVerdict` keys in stored provenance disqualify a constituent peak. A borrowed peak includes `peakPrice` when it is positive and its quote domain is known. Otherwise the deviation remains available and the price is null. The effective fragment supplies its own peak fields when it ties or belongs to a family with a reviewed dispute.
+
 The incident contract includes these optional fields when the ledger and its projections carry the corresponding evidence.
 
 | Optional incident field | Semantics |
 | --- | --- |
+| `onsetQuoteDomain` | Resolved display unit for a projected `startPrice` and `pegReference`, either `usd` or `native-peg`. `provenance.quoteMode` retains the effective fragment's stored evidence. |
+| `onsetQuoteFromLaterFragment` | Present as `true` when opening quote fields use effective-fragment evidence from after the incident's `startedAt`. |
+| `onsetFragmentPeakBps` | Stored peak of the opening fragment when it differs from the effective fragment's peak. Explicit null withholds legacy onset admission when the opening fails the peak ranking audit check or its severity is unreadable or outside JavaScript's safe integer range. |
+| `currentFragmentPeakBps` | Stored peak of the effective fragment when it differs from `peakDeviationBps`. Used for legacy observation admission. |
+| `peakConfidenceTier` | Confidence tier of the constituent that set a borrowed peak, or null if unavailable. PegScore uses it for severity and spread. Event `provenance` still describes the effective fragment. |
 | `peakPegReference` | Contemporaneous reference in the units of the recorded peak price. |
-| `peakQuoteDomain` | `usd` or `native-peg` for the peak. |
-| `onsetBasis` | `peer-relative` identifies a lower-confidence comparison against same-peg tokens. The opening `startPrice` and `pegReference` are USD prices for this comparison. |
+| `peakQuoteDomain` | `usd` or `native-peg` for the peak. If the unit of a borrowed peak is uncertain, the API omits the domain and sets `peakPrice` to null. |
+| `onsetBasis` | `peer-relative` identifies a lower-confidence comparison against same-peg tokens. The opening `startPrice` and `pegReference` are USD prices for this comparison. The opening price, reference and basis come from the first fragment when its quote domain is known and matches the effective fragment's opening domain. Otherwise they come from the effective fragment. |
 | `peakBasis`, `peakPeerMedianUsd` | A `peer-relative` peak compares the USD peak price against the recorded peer median when available. Use `peakPeerMedianUsd` for that median. |
 | `peakReview` | `unverified` qualifies a reviewed peak that remains in the archive. |
 | `recoveryPegReference` | Contemporaneous reference for the recovery price. |

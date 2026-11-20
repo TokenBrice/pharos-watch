@@ -228,6 +228,7 @@ export async function runYieldCoordinatorNormalizeStage(params: YieldCoordinator
       ...historyInputs,
       stablecoinSupplyById: fetched.stablecoinSupplyById,
       dlPoolsMeta: fetched.dlPoolsMeta,
+      dlPoolsAssessedAt: Math.floor(Date.now() / 1000),
     },
     {
       signal: params.signal,

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
-import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull, getPrevMonthRawOrNull } from "@shared/lib/supply";
+import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull, getPrevMonthRawOrNull, getUsdMarketCapBaselineOrNull } from "@shared/lib/supply";
 import type { PeggedAsset } from "../enrich-prices";
 import * as fetchRetry from "../../../lib/fetch-retry";
 import * as onchain from "../supplemental-assets/onchain-supply";
@@ -10,6 +10,7 @@ import * as pairs from "../supply-gap-reviewed-pairs";
 import { reconcileTrackedSupplyGaps } from "../supply-gap-reconciliation";
 import { makePeggedAsset } from "./_fixtures";
 import * as phase from "../phase-helpers";
+import { mergeFrozenSnapshots } from "../intake";
 import * as runtime from "../runtime";
 import * as post from "../post-enrichment";
 import * as notices from "../telegram-tracked-additions";
@@ -210,6 +211,17 @@ async function publishSupplyPacket(asset: PeggedAsset, path: "main" | "fallback"
 }
 
 describe("source-owned supply history publication", () => {
+  it("withholds a qualifying close for an injected frozen registry row", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const row = makePeggedAsset({ id: "eurr-stablr", pegType: "peggedEUR", supplySource: "coingecko-fallback",
+      supplyObservedAt: now, circulating: { peggedEUR: 100 }, pegMechanism: "fiat-backed", chainCirculating: {}, chains: [] });
+    const [injected] = mergeFrozenSnapshots([], [{ id: row.id, capturedAt: new Date().toISOString(),
+      peggedAssetRow: { ...row } }], now);
+    const published = await publishSupplyPacket(injected, "main");
+    expect(published.frozen).toBe(true);
+    expect(getUsdMarketCapBaselineOrNull(published, "week")).toBeNull();
+  });
+
   it.each([
     ["day", "circulatingPrevDay", getPrevDayRawOrNull],
     ["week", "circulatingPrevWeek", getPrevWeekRawOrNull],

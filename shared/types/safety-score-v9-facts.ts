@@ -1508,6 +1508,12 @@ export function isUsdDenominatedSupplyKind(sourceKind: string): boolean {
   return sourceKind === "usd-denominated-circulating" || sourceKind === "aggregate-circulating";
 }
 
+export const V9ReplaySupplyProvenanceSchema = z.strictObject({
+  url: z.url({ protocol: /^https?$/u }),
+  field: CanonicalTextSchema,
+  retrievedAtSec: UnixSecondsSchema,
+});
+
 const V9SupplyFactV2Schema = z
   .object({
     status: V9FactStatusV2Schema,
@@ -1526,6 +1532,10 @@ const V9SupplyFactV2Schema = z
     circulatingUnits: z.number().finite().nonnegative().nullable(),
     referencePriceUsd: z.number().finite().nonnegative().nullable(),
     circulatingUsd: NonNegativeUsdSchema.nullable(),
+    replayObservation: V9ReplaySupplyProvenanceSchema.extend({
+      observedAtSec: UnixSecondsSchema.nullable(),
+      circulatingUsd: NonNegativeUsdSchema.nullable(),
+    }).optional(),
     // Retained V2 artifacts predate this additive field. Keep it optional
     // without a default so parsing them preserves their exact digest payload;
     // the current compiler always emits either a distribution or explicit null.
@@ -2526,7 +2536,9 @@ function validateFactSetCore(value: V9FactSetCoreV2 | V9FactSetCoreV3, ctx: z.Re
     if (asset.peg.sourceGenerationId !== value.sourceFingerprints.peg.generationId) {
       issue(ctx, ["assets", assetIndex, "peg", "sourceGenerationId"], "Peg provenance generation is inconsistent");
     }
-    if (asset.supply.sourceGenerationId !== value.sourceFingerprints.chainSupply.generationId) {
+    const supplyGenerationId = asset.supply.replayObservation === undefined
+      ? value.sourceFingerprints.chainSupply.generationId : value.baseInputGenerationId;
+    if (asset.supply.sourceGenerationId !== supplyGenerationId) {
       issue(
               ctx,
               ["assets", assetIndex, "supply", "sourceGenerationId"],

@@ -411,6 +411,14 @@ describe("CoinGecko on-chain share partitions", () => {
     }
   });
 
+  it("carries the prior partition when a valid read arrives at the stage deadline", async () => {
+    const previous = await readFt();
+    mocks.partitionRead.mockImplementationOnce(() => vi.setSystemTime(NOW_SEC * 1_000 + ONCHAIN_PARTITION_STAGE_BUDGET_MS));
+    const asset = await readFt(101, previous);
+    expect(asset.chainPartition).toEqual({ ...previous.chainPartition, admission: "carried" });
+    expect(sumRows(asset)).toBeCloseTo(101);
+  });
+
   it("carries shares after a per-leg timeout before the stage deadline", async () => {
     const previous = await readFt();
     mocks.read.mockImplementation(() => new Promise((_resolve, reject) => {

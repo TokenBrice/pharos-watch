@@ -20,7 +20,19 @@ import { projectYieldRankingsSummary } from "@shared/lib/yield-rankings-summary"
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
 import { numberValue as finiteNumber } from "@shared/lib/type-guards";
 import { resolveYieldRowSafety, stripSafetyDerivedSourceRisk } from "@shared/lib/yield-opportunity-risk";
-import { classifyYieldSourceAgeTier, qualifyYieldEvidence, scoreYieldPys, getRankingStaleThresholdMs, getRankingAgingThresholdMs, getComparisonAnchorStaleThresholdMs, resolveEvidenceNullReason, type YieldSourceAgeTier } from "../lib/yield-ranking-helpers";
+import {
+  classifyYieldSourceAgeTier,
+  qualifyYieldEvidence,
+  scoreYieldPys,
+  getRankingStaleThresholdMs,
+  getRankingAgingThresholdMs,
+  getComparisonAnchorStaleThresholdMs,
+  isDefiLlamaDataSource,
+  readDefiLlamaBatchTimestamp,
+  resolveEvidenceNullReason,
+  STALE_THRESHOLD_MS,
+  type YieldSourceAgeTier,
+} from "../lib/yield-ranking-helpers";
 import {
   benchmarkRecordObservedAtSeconds,
   classifyYieldBenchmarkFreshness,
@@ -98,13 +110,20 @@ function resolveHydratedCalculationMode(row: YieldRanking): YieldCalculationMode
   return "market-api";
 }
 
-function resolveHydratedSourceFreshness(row: YieldRanking, ageTier: YieldSourceAgeTier): "fresh" | "stale" | "unknown" {
+function resolveHydratedSourceFreshness(row: YieldRanking, ageTier: YieldSourceAgeTier, deliveryStale: boolean): "fresh" | "stale" | "unknown" {
   const anchorAge = finiteNumber(row.provenance?.comparisonAnchorAgeSeconds);
   const staleAnchor = anchorAge != null && anchorAge * 1000 > getComparisonAnchorStaleThresholdMs(row.dataSource, row.provenance?.sourceKey);
   // Retain independently degraded product-input evidence; elapsed time can
   // make a source worse, never rehabilitate a rejected observation.
-  if (staleAnchor || ageTier === "stale" || row.provenance?.sourceFreshness === "stale" || row.warningSignals.includes("data-stale")) return "stale";
+  if (deliveryStale || staleAnchor || ageTier === "stale" || row.provenance?.sourceFreshness === "stale" || row.warningSignals.includes("data-stale")) return "stale";
   return ageTier === "unknown" || row.provenance?.sourceFreshness === "unknown" ? "unknown" : "fresh";
+}
+
+function getDefiLlamaDeliveryAt(payload: Pick<YieldRankingsResponse, "methodology" | "provenance">, now?: number): number | null {
+  const pools = payload.provenance?.dlPools;
+  // A retained pre-v8.58 publication still follows its original score eligibility.
+  return Number(payload.methodology?.version) >= 8.58 && pools?.mode !== "unavailable"
+    ? readDefiLlamaBatchTimestamp(pools?.updatedAt, now) : null;
 }
 
 function resolvePublishedBenchmarks(payload: YieldRankingsResponse) {
@@ -301,6 +320,7 @@ function hydrateYieldRankingsWithLiveSafety(
   // Reference (USD) risk-free rate the re-based effective yield anchors on (yield v8.43).
   const { usdBenchmarkRate } = resolvePublishedReferenceBenchmark(payload, now);
   const benchmarks = resolvePublishedBenchmarks(payload);
+  const poolDeliveryAt = getDefiLlamaDeliveryAt(payload, now);
   const hydratedRows = payload.rankings
     .map((publishedRow) => {
       const benchmarkUnitMismatch = hasYieldBenchmarkUnitMismatch(publishedRow);
@@ -344,7 +364,13 @@ function hydrateYieldRankingsWithLiveSafety(
         sourceAgeSeconds: finiteNumber(row.provenance?.sourceAgeSeconds),
         productFreshness: productKey == null ? undefined : productFreshness,
       });
-      const sourceFreshness = resolveHydratedSourceFreshness(row, sourceAgeTier);
+      const deliveryAgeSeconds = sourceObservedAt === null && sourceAgeTier === "unknown"
+        && isDefiLlamaDataSource(row.dataSource) && poolDeliveryAt != null
+        ? now - poolDeliveryAt : null;
+      const deliveryStale = deliveryAgeSeconds != null
+        && deliveryAgeSeconds * 1000 > getRankingStaleThresholdMs(row.dataSource, sourceKey);
+      const deliveryFresh = deliveryAgeSeconds != null && !deliveryStale;
+      const sourceFreshness = resolveHydratedSourceFreshness(row, sourceAgeTier, deliveryStale);
       const usycWindow = isUsycNav ? getUsycNavReportWindow(sourceObservedAt) : null;
       const sourceMaxAgeSeconds = isUsycNav
         ? usycWindow && sourceObservedAt != null ? usycWindow.staleAfterSec - sourceObservedAt : null
@@ -389,7 +415,7 @@ function hydrateYieldRankingsWithLiveSafety(
             safetyReason: reason,
             pharosYieldScore: null,
             pysNullReason: benchmarkUnitMismatch ? "missing-inputs" as const : resolveEvidenceNullReason({
-              sourceFreshness, benchmarkFreshness, referenceBenchmarkFreshness: rowReferenceBenchmarkFreshness,
+              sourceFreshness, deliveryFresh, benchmarkFreshness, referenceBenchmarkFreshness: rowReferenceBenchmarkFreshness,
               opportunityEvidenceComplete: true,
             }) ?? row.pysNullReason ?? "safety-unrated" as const,
             yieldToRisk: null,
@@ -445,6 +471,7 @@ function hydrateYieldRankingsWithLiveSafety(
         safety: hydratedSafety,
         evidenceClass,
         sourceFreshness,
+        deliveryFresh,
         benchmarkFreshness,
         referenceBenchmarkFreshness: rowReferenceBenchmarkFreshness,
         sourceDepthRatio: finiteNumber(hydratedSafety.sourceRisk?.sourceDepthRatio),
@@ -740,8 +767,14 @@ function buildYieldRankingsResponse(
   payload: YieldRankingsResponse | YieldRankingsSummaryResponse,
   cached: { updatedAt: number },
   warningReasons: string[],
+  cacheValidUntil = Infinity,
 ): Response {
   const freshness = buildFreshnessMeta(cached.updatedAt, YIELD_RANKINGS_MAX_AGE_SEC, "yield-data");
+  const poolDeliveryAt = getDefiLlamaDeliveryAt(payload, freshness.assessedAt);
+  if (poolDeliveryAt != null && payload.rankings.some(row => row.pharosYieldScore != null
+    && row.provenance?.sourceFreshness === "unknown" && row.dataSource != null && isDefiLlamaDataSource(row.dataSource))) {
+    cacheValidUntil = Math.min(cacheValidUntil, poolDeliveryAt + STALE_THRESHOLD_MS / 1000);
+  }
   const warning =
     warningReasons.length > 0 ? `199 - "Yield safety hydration degraded: ${warningReasons.join(",")}"` : null;
   const headers = addFreshnessHeaders(
@@ -752,7 +785,7 @@ function buildYieldRankingsResponse(
     },
     cached.updatedAt,
     YIELD_RANKINGS_MAX_AGE_SEC,
-    freshness,
+    { ...freshness, cacheValidUntil },
   );
   if (freshness.status !== "fresh") {
     headers.Warning = `110 - "Yield publication ${freshness.status} (${freshness.ageSeconds}s old, fresh budget ${freshness.freshBudgetSec}s)"`;
@@ -874,27 +907,32 @@ export async function handleYieldRankings(db: D1Database, url?: URL): Promise<Re
 
 /** Comparator/coverage values are piecewise constant between evidence deadlines.
  * Ages themselves are still advanced from the original publication per coin. */
-function yieldCohortValidUntil(payload: YieldRankingsResponse, publishedAt: number, now: number, active: ActiveSafetyScoreIndex): number {
+function resolveYieldCohortExpiry(payload: YieldRankingsResponse, publishedAt: number, now: number, active: ActiveSafetyScoreIndex) {
   let validUntil = Number.MAX_SAFE_INTEGER;
-  const transitionAt = (at: number) => {
-    if (at > now) validUntil = Math.min(validUntil, at);
+  let validUntilBoundary: string | undefined;
+  const transitionAt = (name: string, at: number) => {
+    if (at > now && at < validUntil) {
+      validUntil = at;
+      validUntilBoundary = name;
+    }
   };
-  const boundary = (origin: number | null | undefined, budget: number | null | undefined) => {
+  const boundary = (name: string, origin: number | null | undefined, budget: number | null | undefined) => {
     if (origin == null || budget == null || !Number.isFinite(origin)) return;
-    transitionAt(Math.floor(origin + budget) + 1);
+    transitionAt(name, Math.floor(origin + budget) + 1);
   };
   const origin = (observedAt: number | null | undefined, age: number | null | undefined) =>
     finiteNumber(observedAt) ?? (finiteNumber(age) != null ? publishedAt - Math.max(0, age!) : null);
   const benchmarks = resolvePublishedBenchmarks(payload);
+  const poolDeliveryAt = getDefiLlamaDeliveryAt(payload);
   for (const row of payload.rankings) {
     const sourceKey = row.provenance?.sourceKey;
     if (sourceKey === OPTIONAL_YIELD_SOURCES.hashnote.sourceKey) {
       const observedAt = usycObservationAt(row.provenance, publishedAt);
       const window = getUsycNavReportWindow(observedAt);
       if (window && observedAt != null) {
-        transitionAt(observedAt - USYC_NAV_FUTURE_SKEW_SEC);
-        transitionAt(window.expectedAtSec);
-        transitionAt(window.staleAfterSec + 1);
+        transitionAt("usyc-nav-admission", observedAt - USYC_NAV_FUTURE_SKEW_SEC);
+        transitionAt("usyc-nav-expected", window.expectedAtSec);
+        transitionAt("usyc-nav-stale", window.staleAfterSec + 1);
       }
     } else {
       const productKey = row.dataSource === "rate-derived" ? resolveYieldBenchmarkDependencies({
@@ -903,34 +941,41 @@ function yieldCohortValidUntil(payload: YieldRankingsResponse, publishedAt: numb
       // The exact product's fixing and fetch deadlines are handled with the registry below.
       if (productKey == null) {
         const source = origin(row.provenance?.sourceObservedAt, row.provenance?.sourceAgeSeconds ?? row.sourceRisk?.sourceAgeSeconds);
-        boundary(source, getRankingAgingThresholdMs(row.dataSource, sourceKey) / 1000);
-        boundary(source, getRankingStaleThresholdMs(row.dataSource, sourceKey) / 1000);
+        boundary(`source-aging:${row.id}`, source, getRankingAgingThresholdMs(row.dataSource, sourceKey) / 1000);
+        const staleBudget = getRankingStaleThresholdMs(row.dataSource, sourceKey) / 1000;
+        boundary(`source-stale:${row.id}`, source, staleBudget);
+        if (source == null && isDefiLlamaDataSource(row.dataSource)) {
+          boundary(`delivery-stale:${row.id}`, poolDeliveryAt, staleBudget);
+          if (poolDeliveryAt != null) transitionAt(`delivery-admission:${row.id}`, Math.ceil(poolDeliveryAt));
+        }
       }
     }
-    boundary(origin(row.provenance?.comparisonAnchorObservedAt, row.provenance?.comparisonAnchorAgeSeconds),
+    boundary(`comparison-anchor-stale:${row.id}`, origin(row.provenance?.comparisonAnchorObservedAt, row.provenance?.comparisonAnchorAgeSeconds),
       getComparisonAnchorStaleThresholdMs(row.dataSource, sourceKey) / 1000);
   }
   for (const key of YIELD_BENCHMARK_KEY_VALUES) {
     const meta = benchmarks[key];
     if (!meta) continue;
-    boundary(origin(meta.fetchedAt, meta.ageSeconds), YIELD_BENCHMARK_SCORE_TTL_SEC);
-    if (meta.fetchedAt != null) transitionAt(Math.ceil(meta.fetchedAt));
+    boundary(`benchmark-fetch-stale:${key}`, origin(meta.fetchedAt, meta.ageSeconds), YIELD_BENCHMARK_SCORE_TTL_SEC);
+    if (meta.fetchedAt != null) transitionAt(`benchmark-fetch-admission:${key}`, Math.ceil(meta.fetchedAt));
     const recordAt = benchmarkRecordObservedAtSeconds(meta.recordDate);
-    boundary(recordAt, getYieldBenchmarkRecordMaxAgeSeconds(key, meta.recordDate, meta.maxRecordAgeSec));
+    boundary(`benchmark-record-stale:${key}`, recordAt, getYieldBenchmarkRecordMaxAgeSeconds(key, meta.recordDate, meta.maxRecordAgeSec));
     // Invalid future-dated benchmark records can become admissible as time
     // advances. Do not retain their negative-age assessment across seconds.
     if (recordAt != null && (recordAt > now || (key === "MXN" && !isYieldBenchmarkFixingEffective(key, meta.recordDate, now)))) {
-      transitionAt(now + 1);
+      transitionAt(`benchmark-record-recheck:${key}`, now + 1);
     }
   }
-  boundary(publishedAt, YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC);
-  boundary(payload.provenance?.safetySnapshot.publishedAt, YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC);
   const liveSafetyPublishedAt = active.kind === "error" ? null : active.snapshot.updatedAt;
-  boundary(liveSafetyPublishedAt, YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC);
-  for (const timestamp of [publishedAt, payload.provenance?.safetySnapshot.publishedAt, liveSafetyPublishedAt]) {
-    if (timestamp != null && Number.isFinite(timestamp)) transitionAt(Math.ceil(timestamp));
+  for (const [name, timestamp] of [
+    ["yield-publication", publishedAt],
+    ["published-safety-snapshot", payload.provenance?.safetySnapshot.publishedAt],
+    ["live-safety-snapshot", liveSafetyPublishedAt],
+  ] as const) {
+    boundary(`${name}-stale`, timestamp, YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC);
+    if (timestamp != null && Number.isFinite(timestamp)) transitionAt(`${name}-admission`, Math.ceil(timestamp));
   }
-  return validUntil;
+  return { validUntil, validUntilBoundary };
 }
 
 function yieldCoinUnavailable(reason: string, retry = false): Response {
@@ -1047,7 +1092,7 @@ export async function handleYieldRankingsCoin(db: D1Database, url: URL): Promise
           const aggregate = YieldCoinCohortSchema.parse({
             ...hydrated.payload,
             yieldMethodologyVersion: YIELD_METHODOLOGY_VERSION,
-            signature, assessedAt: now, validUntil: yieldCohortValidUntil(full, cached.updatedAt, now, active),
+            signature, assessedAt: now, ...resolveYieldCohortExpiry(full, cached.updatedAt, now, active),
             totalCount: full.rankings.length, degradationReasons: hydrated.degradationReasons,
           });
           await publishYieldCoinCohort(db, owner, aggregate);
@@ -1066,7 +1111,23 @@ export async function handleYieldRankingsCoin(db: D1Database, url: URL): Promise
     if (!hasYieldPublicationContract(cohort) || cohort.publication.updatedAt !== cohort.updatedAt) {
       return yieldCoinUnavailable("yield-rankings-malformed");
     }
-    if (cohort.validUntil <= Math.floor(Date.now() / 1000)) {
+    const serveNow = Math.floor(Date.now() / 1000);
+    if (cohort.validUntil <= serveNow) {
+      logWorkerEvent({
+        scope: "api",
+        level: "warn",
+        event: "yield-cohort-assessment-expired",
+        route: "yield-rankings-coin",
+        status: 503,
+        message: "Yield coin cohort assessment expired before serving",
+        metadata: {
+          stablecoinId: id,
+          boundary: cohort.validUntilBoundary ?? null,
+          validUntil: cohort.validUntil,
+          assessedAt: cohort.assessedAt,
+          serveNow,
+        },
+      });
       return yieldCoinUnavailable("yield-cohort-assessment-expired", true);
     }
     const previousAssessment = cohort.signature !== signature;
@@ -1084,6 +1145,7 @@ export async function handleYieldRankingsCoin(db: D1Database, url: URL): Promise
     });
     const projected: YieldRankingsCoinResponse = {
       ...payload, rankings, warnings: cohort.warnings,
+      cohortValidUntil: cohort.validUntil,
       provenance: payload.provenance ? {
         ...payload.provenance, liveSafetyHydration: cohort.provenance?.liveSafetyHydration,
       } : payload.provenance,
@@ -1092,7 +1154,7 @@ export async function handleYieldRankingsCoin(db: D1Database, url: URL): Promise
         totalCount: cohort.totalCount, unavailableReason: rankings.length > 0 ? null : "row-not-published",
       },
     };
-    const response = buildYieldRankingsResponse(projected, { updatedAt: payload.updatedAt }, cohort.degradationReasons);
+    const response = buildYieldRankingsResponse(projected, { updatedAt: payload.updatedAt }, cohort.degradationReasons, cohort.validUntil);
     if (previousAssessment) {
       response.headers.set("Cache-Control", "no-store");
       response.headers.append("Warning", `199 - "Yield cohort rebuilding; signature=${cohort.signature}; assessedAt=${cohort.assessedAt}; validUntil=${cohort.validUntil}"`);

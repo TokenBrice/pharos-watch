@@ -1,19 +1,28 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { YieldLeaderboard } from "@/components/yield/yield-leaderboard";
 import { YieldSourceSheet } from "@/components/yield/yield-source-sheet";
 
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 import type { YieldRanking } from "@shared/types/yield";
+import { makeDeliveryOnlyYieldResponse } from "./yield-detail.test-support";
 import { renderYieldSourceSheet } from "./yield-source-sheet-test-support";
-import { REGISTRY_WITH_EUR } from "./yield-test-support";
+import { makeYieldViewModelRow, REGISTRY_WITH_EUR } from "./yield-test-support";
 
 
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
+const useYieldRankingsMock = vi.hoisted(() => vi.fn());
+vi.mock("@/hooks/api-hooks", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/hooks/api-hooks")>(),
+  useYieldRankings: useYieldRankingsMock,
+}));
 
 vi.mock("@/components/ui/sheet", () => ({
   Sheet: ({ open, children }: { open: boolean; children: React.ReactNode }) => (open ? <div>{children}</div> : null),
+  SheetTrigger: ({ children }: { children: React.ReactNode }) => children,
   SheetContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SheetHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SheetTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
@@ -84,6 +93,26 @@ describe("YieldSourceSheet", () => {
       delete (HTMLElement.prototype as { scrollIntoView?: unknown }).scrollIntoView;
     }
     vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  it("withdraws delivery-only qualification in the open source sheet at the batch deadline", () => {
+    vi.useFakeTimers({ now: 1_776_000_000_000 });
+    const data = makeDeliveryOnlyYieldResponse();
+    useYieldRankingsMock.mockReturnValue({ data, dataUpdatedAt: Date.now() });
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <YieldLeaderboard rows={[makeYieldViewModelRow(data.rankings[0])]} logos={{}}
+          riskFreeRate={4.25} medianApy={4} scalingFactor={8} />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "2 sources" }));
+    act(() => vi.advanceTimersByTime(50));
+    act(() => vi.advanceTimersByTime(1949));
+    expect(screen.getByText("Partial evidence")).toBeTruthy();
+    act(() => vi.advanceTimersByTime(1));
+    expect(screen.queryByText("Partial evidence")).toBeNull();
+    expect(screen.getByText("Not rated")).toBeTruthy();
   });
 
   it("shows the advanced observation age rather than the publication-time age", () => {

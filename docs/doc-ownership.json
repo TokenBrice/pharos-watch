@@ -1286,7 +1286,8 @@
         {"path": "docs/process/safety-score-curation-expiry-sweep.md", "anchor": "1-capture-the-current-production-input"},
         "docs/process/safety-score-v9-readiness.md",
         "docs/process/shock-coverage-refresh.md",
-        "docs/process/report-cards-evidence-log.md"
+        {"path": "docs/process/report-cards-evidence-log.md", "anchor": "safety-score-review-evidence-log"},
+        {"path": "docs/process/report-cards-evidence-log.md", "anchor": "dependency-rulings"}
       ],
       "checks": ["npm run audit:mint-authority-review", "npx vitest run shared/lib/safety-score-v9 worker/src/lib"],
       "testOwnership": [

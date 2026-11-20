@@ -1,5 +1,18 @@
 [
   {
+    "version": "8.58",
+    "title": "DeFiLlama Pool Scores Use the Delivery Clock",
+    "date": "2026-11-20",
+    "effectiveAt": 1795143600,
+    "summary": "Yield v8.56 withheld PYS on DeFiLlama pool rows because the provider publishes no per-pool observation timestamp. An otherwise eligible row can now score when its delivered pool batch is within the six-hour freshness budget.",
+    "impact": [
+      "The observation time and age stay null, and the `data-freshness-unknown` warning remains. Scored rows show ‘Delivery only’. Rankings stop serving a score once the original batch exceeds its budget. Missing or stale delivery cannot qualify a row.",
+      "Yield Health excludes DeFiLlama pool rows from its source observation age coverage denominator. Benchmark, safety, consistency and opportunity evidence requirements still apply."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "8.57",
     "title": "On-Chain Rate Sources Measure 30-Day APY From The Share Price",
     "date": "2026-11-19",

@@ -15,6 +15,7 @@ import { useQuerySlice } from "@/hooks/use-query-slice";
 import { useCoinStates } from "@/hooks/use-coin-states";
 import { supplyHistoryQueryOptions, useStablecoins } from "@/hooks/use-stablecoins";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
+import { useLiveYieldRankings } from "@/hooks/use-yield-source-clock";
 import { mintBurnFlowsCoinQueryOptions, useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { COMPARE_COLORS } from "@/lib/compare-config";
 import { STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS } from "@/lib/api-query-descriptors";
@@ -111,7 +112,7 @@ export function useCompareDataModel({
   const dexQuery = useDexLiquidity({ enabled: metricsEnabled });
   const reportCardsQuery = useReportCardsV9({ enabled: metricsEnabled });
   const redemptionQuery = useRedemptionBackstops({ enabled: metricsEnabled });
-  const yieldQuery = useYieldRankings({ enabled: metricsEnabled });
+  const yieldQuery = useLiveYieldRankings(useYieldRankings({ enabled: metricsEnabled }));
   const stressQuery = useStressSignals({ enabled: metricsEnabled });
   const flowQuery = useMintBurnFlows(24, { enabled: metricsEnabled });
   // Shares the peg-summary and stress entries above; adds the published DDR verdicts.

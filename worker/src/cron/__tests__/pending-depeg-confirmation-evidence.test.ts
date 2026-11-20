@@ -15,6 +15,7 @@ import { tradedPair } from "../depeg-detection/__tests__/reference-fixtures";
 import { loadDexPrices } from "../../lib/depeg-helpers";
 import { buildStoredChallengerPoolsJson } from "../dex-liquidity/challenger-publish";
 import type { PoolEntry } from "../dex-liquidity/types";
+import * as trustPolicy from "../../lib/depeg-trust-policy";
 
 vi.mock("../../lib/circuit-breaker", () => ({ recordOutcomeSafe: vi.fn(async () => undefined) }));
 
@@ -39,6 +40,7 @@ function input(overrides: Partial<ConfirmationEvidenceInput> = {}): Confirmation
     meta: usdMeta,
     pegReference: 1,
     threshold: 100,
+    hasPendingOnsetSourceKeys: false,
     nativeSignal: null,
     nativePegQuote: undefined,
     nativeQuoteImplausibility: null,
@@ -105,6 +107,14 @@ describe("collectConfirmationEvidence source-family independence", () => {
     expect(evidence.confirmingSources).not.toContain("coingecko-confirm");
   });
 
+  it("honors a confirmer policy veto after venue admission", async () => {
+    vi.spyOn(trustPolicy, "chooseIndependentOffchainDepegConfirmer").mockReturnValueOnce(null);
+    const fetchSpy = mockFetch([], { requireMatch: true });
+    const evidence = await collect(input());
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(evidence.offchainStatus).toBe("insufficient");
+  });
+
   it("skips off-chain confirmation when the CoinGecko circuit breaker is open", async () => {
     const fetchSpy = mockFetch([], { requireMatch: true });
     const evidence = await collect(input({ coingeckoAllowed: false }), fetchSpy);
@@ -119,10 +129,11 @@ describe("collectConfirmationEvidence source-family independence", () => {
     { label: "treats invalid CoinGecko confirmation timestamps as insufficient evidence", body: { tether: { usd: 0.95, last_updated_at: -1 } }, expected: "coingecko-confirm:invalid-timestamp" },
     { label: "treats future CoinGecko confirmation timestamps as insufficient evidence", body: { tether: { usd: 0.95, last_updated_at: NOW_SEC + 600 } }, expected: "coingecko-confirm:future-timestamp" },
     { label: "treats stale CoinGecko confirmation timestamps as insufficient evidence", body: { tether: { usd: 0.95, last_updated_at: NOW_SEC - 1_901 } }, expected: "coingecko-confirm:stale-timestamp" },
+    { label: "withholds a fresh quote that fails reference admission", body: { tether: { usd: 0.95, last_updated_at: NOW_SEC - 30 } }, expected: "coingecko-confirm:reference-observation-unadmitted", allowsUsdObservation: () => false },
   ];
-  it.each(timestampCases)("$label", async ({ status, body, expected }) => {
+  it.each(timestampCases)("$label", async ({ status, body, expected, allowsUsdObservation }) => {
     const fetchSpy = mockFetch([{ match: "api.coingecko.com/api/v3/simple/price", body, ...(status == null ? {} : { status }) }], { requireMatch: true });
-    const evidence = await collect(input(), fetchSpy);
+    const evidence = await collect(input({ allowsUsdObservation }), fetchSpy);
     expect(evidence.unavailableSources).toContain(expected);
     expect(evidence.offchainStatus).toBe("insufficient");
     expect(evidence.confirmingSources).not.toContain("coingecko-confirm");
@@ -427,7 +438,8 @@ describe("collectConfirmationEvidence recover and opposing classification", () =
   });
 
   it("confirms from a fresh Binance quote beyond the secondary bar", async () => {
-    const evidence = await collect(noOffchain({ cexAllowed: true, cexPrices: new Map([["USDT", 0.95]]) }));
+    const evidence = await collect(noOffchain({ hasPendingOnsetSourceKeys: true, pendingSourceKeys: new Set(["kraken"]),
+      cexAllowed: true, cexPrices: new Map([["USDT", 0.95]]) }));
     expect(evidence.cexStatus).toBe("confirm");
     expect(evidence.cexPeakCandidate).toEqual({ bps: expect.closeTo(-500, 9), price: 0.95, quoteDomain: "usd", pegReference: 1 });
     expect(evidence.confirmingSources).toContain("cex:binance");

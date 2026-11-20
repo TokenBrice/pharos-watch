@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -221,6 +222,11 @@ describe("weekly CI report", () => {
       addedTestLog: addedLog,
       addedTestSizes: { "scripts/__tests__/new.test.ts": 2_048 },
       codeBytes: summarizeCodeBytes([{ path: "src/a.ts", bytes: 1_000 }, { path: "src/a.test.ts", bytes: 910 }]),
+      routeBudgets: [
+        { file: "worker/src/api/a.ts", mode: "auto", class: "worker-api", status: "over-budget", bytes: 76_001 },
+        { file: "src/components/a.tsx", mode: "contract", class: "local-frontend", status: "over-budget", bytes: 24_200 },
+        { file: "worker/src/api/b.ts", mode: "contract", class: "worker-api", status: "within-budget", bytes: 76_000 },
+      ],
       unavailable: [],
       notes: [],
     });
@@ -233,6 +239,9 @@ describe("weekly CI report", () => {
     // The census caveat travels with the count: it is commit-dated, not merge-dated.
     expect(markdown).toContain("Census is commit-dated:");
     expect(markdown).toContain("ratio 0.91");
+    expect(markdown).toContain("2 of 3 tracked single-file route signatures");
+    expect(markdown).toContain("| worker-api | 76000 | 1 | 2 |");
+    expect(markdown).toMatch(/src\/components\/a.tsx[^\n]+200 B over ceiling\.[\s\S]+worker\/src\/api\/a.ts[^\n]+1 B over ceiling\./);
   });
 
   it("states the census provenance with an empty window and omits it when no log was supplied", () => {
@@ -287,8 +296,45 @@ describe("weekly CI report", () => {
       expect(markdown).toContain("`test-timings:not-supplied`");
       expect(markdown).toContain("`added-test-files:not-supplied`");
       expect(markdown).toContain("`tracked-files:unavailable:");
+      expect(markdown).toContain("`route-context:unavailable:checkout-mismatch`");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  it("measures the reporting checkout and publishes through parser failures", () => {
+    const root = mkdtempSync(join(tmpdir(), "pharos-ci-weekly-"));
+    const input = join(root, "empty.json");
+    const args = ["--experimental-strip-types", "scripts/maintenance/report-ci-weekly.ts",
+      "--runs", input, "--jobs", input, "--since", "2026-10-26T00:00:00Z"];
+    const run = (extra: Record<string, string> = {}) => execFileSync(process.execPath, args, {
+      encoding: "utf8", env: { ...process.env, ROUTE_PARSER_INSTALL_OUTCOME: "", ...extra },
+    });
+    try {
+      writeFileSync(input, "[]");
+      const without = (name: string) => `--import=data:text/javascript,${encodeURIComponent(`import { registerHooks } from 'node:module';
+        registerHooks({ resolve(specifier, context, next) {
+          if (specifier === '${name}') throw Object.assign(new Error('Missing ${name}'), { code: 'ERR_MODULE_NOT_FOUND' });
+          return next(specifier, context);
+        } });`)}`;
+      const withoutYaml = { NODE_OPTIONS: without("yaml") };
+      expect(run(withoutYaml)).toMatch(/\d+ of [1-9]\d* tracked single-file route signatures[\s\S]+\| worker-api \| 76000 \| \d+ \| [1-9]\d* \|/);
+      expect(run({ ...withoutYaml, ROUTE_PARSER_INSTALL_OUTCOME: "failure" })).toContain("`route-context:unavailable:parser-install-failed`");
+      expect(run({ NODE_OPTIONS: without("remark-gfm") }))
+        .toContain("`route-context:unavailable:measurement-failed`");
+      const stalledMeasurement = `import childProcess from 'node:child_process';
+        import { syncBuiltinESMExports } from 'node:module';
+        if (process.argv.includes('--measure-route-budgets')) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10_000);
+        const { spawnSync } = childProcess;
+        childProcess.spawnSync = (command, args, options) => {
+          if (options.timeout !== 60_000 || options.killSignal !== 'SIGKILL') throw new Error('Missing measurement deadline');
+          return spawnSync(command, args, { ...options, timeout: 500 });
+        };
+        syncBuiltinESMExports();`;
+      expect(run({ NODE_OPTIONS: `--import=data:text/javascript,${encodeURIComponent(stalledMeasurement)}` }))
+        .toContain("`route-context:unavailable:measurement-timeout`");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 70_000);
 });

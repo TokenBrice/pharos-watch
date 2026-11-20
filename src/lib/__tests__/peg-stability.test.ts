@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DAY_SECONDS } from "@/lib/constants";
 import { computePegStability } from "../peg-stability";
-import type { DepegEvent } from "@shared/types/peg";
+import { DepegEventsResponseSchema, type DepegEvent } from "@shared/types/peg";
 
 const NOW = 1_700_000_000;
 
@@ -33,6 +33,15 @@ function makeEvent(
 }
 
 describe("computePegStability", () => {
+  it("uses the API fragment peak to exclude closed-session coverage", () => {
+    const now = Date.parse("2026-11-14T13:00:00Z") / 1000;
+    const event = makeEvent({ pegType: "peggedAUD", startedAt: now - DAY_SECONDS, peakDeviationBps: -2600,
+      currentFragmentPeakBps: -437,
+      priceCoverage: { intervals: [[now - 600, now]], lastTrustedObservationAt: now, gapStartedAt: null } });
+    const { events } = DepegEventsResponseSchema.parse({ events: [event], total: 1 });
+    expect(computeStability(events, now - 10 * DAY_SECONDS, now)).toMatchObject({ pegPct: 100, worstDeviationBps: -2600 });
+  });
+
   it("includes all historical incidents even when producer coverage starts after the oldest incident", () => {
     const events = [
       makeEvent({ startedAt: NOW - 300 * DAY_SECONDS, endedAt: NOW - 290 * DAY_SECONDS, peakDeviationBps: -1200 }),

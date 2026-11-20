@@ -28,14 +28,13 @@ import {
 import {
   freshDepegDeadBandNotices,
   DEPEG_CENSUS_PRODUCER_JOB,
-  latestDepegLedgerRun,
   loadDepegCensusRuns,
 } from "./depeg-ledger-clock";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { getDexPriceSourceEntries } from "./depeg-trust-policy";
 import type { DepegObservationCensus } from "../cron/depeg-detection/types";
 import { resolveStablecoinMarketHours, resolveStablecoinPriceGapReviews } from "./stablecoin-publication-coverage";
-import { PSI_HISTORICAL_PRICE_GAP_REVIEWS, STABLECOIN_PRICE_GAP_REVIEWS } from "./stablecoin-publication-reviews";
+import { PSI_HISTORICAL_PRICE_GAP_REVIEWS, STABLECOIN_PRICE_GAP_REVIEWS, type StablecoinPriceGapReview } from "./stablecoin-publication-reviews";
 
 type DepegCanaryFinding = {
   status: "ok" | "degraded" | "error";
@@ -93,12 +92,25 @@ function unavailableShare(census: { eligibleCount: number; unavailableCount: num
   return census.eligibleCount > 0 ? census.unavailableCount / census.eligibleCount : null;
 }
 
+const NO_PARITY_QUOTE_REVIEW_MAX_AGE_SEC = 7 * 86_400;
+export const DEPEG_NO_PARITY_QUOTE_REVIEWS: readonly StablecoinPriceGapReview[] = [
+  {
+    stablecoinId: "susd-solayer",
+    owner: "ops",
+    reason: "Solayer sUSD publishes an upstream-clocked protocol-redeem valuation of accrued USD per raw token (about $1.1814 at review). The selected mark supplies no accrued-token market parity quote.",
+    sources: ["https://api.pharos.watch/api/stablecoins"],
+    reviewedAt: Date.UTC(2026, 10, 19, 23, 31) / 1000,
+    expiresAt: Date.UTC(2026, 10, 26, 23, 31) / 1000,
+  },
+];
+
 /** Operator completeness only: source facts never acknowledge detection or event blindness. */
 export function assessDepegObservationGaps(census: DepegObservationCensus, observedAt: number) {
   const acknowledgedUnavailableIds = {
     reviewedNominalReference: [] as string[],
     scheduledMarketClosure: [] as string[],
     reviewedPriceGap: [] as string[],
+    noParityQuoteByDesign: [] as string[],
   };
   // A reference-market closure holds FX and metal pegs by schedule (metal hours contain FX hours):
   // acknowledged by count, and only
@@ -112,8 +124,9 @@ export function assessDepegObservationGaps(census: DepegObservationCensus, obser
   const primaryUnusableCount = census.reasonCounts["primary-unusable"] ?? 0;
   const assets = census.unavailableAssets ?? (primaryUnusableCount === 0 ? [] : undefined);
   const unavailableIdsComplete = census.unavailableIdsTruncated !== true && !census.unavailableIdsDropped
-    && assets != null && new Set(assets.map((asset) => asset.id)).size === assets.length
-    && assets.filter((asset) => asset.reason === "primary-unusable").length === primaryUnusableCount;
+    && assets != null && assets.length === primaryUnusableCount
+    && assets.every((asset) => asset.reason === "primary-unusable")
+    && new Set(assets.map((asset) => asset.id)).size === assets.length;
   if (!unavailableIdsComplete) {
     return { unavailableIdsComplete: false, acknowledgedUnavailableCount: marketClosedCount,
       actionableUnavailableCount: census.unavailableCount - marketClosedCount, acknowledgedUnavailableIds,
@@ -125,6 +138,9 @@ export function assessDepegObservationGaps(census: DepegObservationCensus, obser
     ...STABLECOIN_PRICE_GAP_REVIEWS.filter((review) => ACTIVE_IDS.has(review.stablecoinId)),
     ...PSI_HISTORICAL_PRICE_GAP_REVIEWS.filter((review) => PSI_HISTORICAL_IDS.has(review.stablecoinId)),
   ]);
+  const noParityQuoteReviews = resolveStablecoinPriceGapReviews(ids, observedAt, DEPEG_NO_PARITY_QUOTE_REVIEWS.filter(
+    (review) => review.expiresAt - review.reviewedAt <= NO_PARITY_QUOTE_REVIEW_MAX_AGE_SEC,
+  ));
   const actionableUnavailableIds: string[] = [];
   for (const asset of assets) {
     if (asset.reason === "primary-unusable") {
@@ -138,6 +154,10 @@ export function assessDepegObservationGaps(census: DepegObservationCensus, obser
       }
       if (reviews.activeById.has(asset.id)) {
         acknowledgedUnavailableIds.reviewedPriceGap.push(asset.id);
+        continue;
+      }
+      if (asset.observedNonParityProtocolRedeem === true && noParityQuoteReviews.activeById.has(asset.id)) {
+        acknowledgedUnavailableIds.noParityQuoteByDesign.push(asset.id);
         continue;
       }
     }
@@ -168,20 +188,20 @@ export async function checkDepegDetectionCensus(db: D1Database, observedAt: numb
     if (runs.length === 0) {
       return failedFinding("depeg-census-source-missing", { producerJob: DEPEG_CENSUS_PRODUCER_JOB, maxAgeSec });
     }
-    const latest = latestDepegLedgerRun(runs);
+    const latest = runs.find((run) => run.pipelineSucceeded);
     if (latest?.census == null) {
-      return degradedFinding("depeg-census-missing", {
+      const run = latest ?? runs[0];
+      const metadata = {
         producerJob: DEPEG_CENSUS_PRODUCER_JOB,
-        latestRunAt: runs[0].runStartedAt,
-        unavailableReason: runs[0].unavailableReason,
+        latestRunAt: run.runStartedAt,
+        unavailableReason: run.unavailableReason,
         maxAgeSec,
-      });
+      };
+      return latest ? failedFinding("depeg-census-invalid", metadata) : degradedFinding("depeg-census-missing", metadata);
     }
+    const prior = runs.find((run) => run.pipelineSucceeded && run.runStartedAt < latest.runStartedAt);
     const census = latest.census;
     const ageSec = Math.max(0, observedAt - latest.runStartedAt);
-    const prior = runs.find(
-      (run) => run.runStartedAt < latest.runStartedAt && run.pipelineSucceeded && run.census != null,
-    ) ?? null;
     const share = unavailableShare(census);
     const priorShare = prior?.census == null ? null : unavailableShare(prior.census);
     const gaps = assessDepegObservationGaps(census, observedAt);
@@ -413,12 +433,6 @@ export const DepegBlindEventReviewSchema = z.object({
 /** O2: acknowledge only operator blind-coverage findings, never depeg evidence or lifecycle. */
 export const DEPEG_BLIND_EVENT_REVIEWS: readonly z.infer<typeof DepegBlindEventReviewSchema>[] = [
   {
-    eventId: 91044, stablecoinId: "brz-transfero", owner: "ops",
-    reason: "Reviewed 2026-11-14 22:20 UTC from the 22:15-22:20 UTC public API captures: event 91044 (opened 17:46 UTC, trusted clock last 19:32 UTC) remains open and blind; CoinGecko-only single-source primary displays -236 bps against the six-contributor FX reference and remains confirm_required. DEX priced TVL is $515,232 across three contributor pools and two families: dl $339,784 (Curve, Polygon) and cg_onchain $175,448 (Curve), quoting $0.17264 and $0.17307, below the unchanged $1M floor, so no aggregate is admitted. Independent reads agree with a real weekend discount rather than a bad reference: CoinGecko prices BRZ at 0.9785 BRL and USDT at 5.66 BRL, and open.er-api.com's 2026-11-14 00:02 UTC USD/BRL of 5.6483 matches the reference. No authoritative alternative is admitted. Review only blind coverage; no recovery, price-trust or admission-rule change. This acknowledgement becomes false if a $1M two-family aggregate or a trusted primary is admitted, or the event closes; reassess then.",
-    sources: ["https://api.pharos.watch/api/stablecoins", "https://api.pharos.watch/api/dex-liquidity", "https://api.pharos.watch/api/depeg-events?active=true", "https://api.coingecko.com/api/v3/simple/price?ids=brz,tether&vs_currencies=brl,usd", "https://open.er-api.com/v6/latest/USD"],
-    reviewedAt: Date.UTC(2026, 10, 14, 22, 20) / 1000, expiresAt: Date.UTC(2026, 10, 21, 22, 20) / 1000,
-  },
-  {
     eventId: 91042, stablecoinId: "pathusd-bridge", owner: "ops",
     reason: "Re-reviewed 2026-11-19 17:41 UTC from the 17:40:40 UTC public API capture (stablecoin generation 17:30:20 UTC): event 91042 remains open and blind since 2026-11-18 09:32 UTC; CoinGecko-only single-source primary displays +127 bps and remains confirm_required. DEX priced contributors are $50,000 from one pool in one direct_api family (Tempo), observed 2,384 seconds before the capture and outside the unchanged 2,100-second family freshness budget; the other $52,317,125 of retained TVL is not priced depth. The DEX mark is $0.99982. No authoritative primary or admitted $1M/two-family aggregate appears in the capture. Review only structural blind coverage, never recovery or price trust.",
     sources: ["https://api.pharos.watch/api/stablecoins", "https://api.pharos.watch/api/dex-liquidity", "https://api.pharos.watch/api/depeg-events?active=true"],
@@ -483,6 +497,12 @@ export const DEPEG_BLIND_EVENT_REVIEWS: readonly z.infer<typeof DepegBlindEventR
     reason: "Re-reviewed 2026-11-19 17:41 UTC from the 17:40:40 UTC public API capture (stablecoin generation 17:30:20 UTC): event 91052 remains open and blind since 2026-11-19 15:17 UTC; CoinGecko-only single-source primary displays -380 bps and remains confirm_required. DEX priced contributors are $288,121 from one pool in one cg_onchain family (Curve), observed 41,626 seconds before the capture and outside the unchanged 2,100-second family freshness budget; all $568,104 of retained TVL is below the $1M floor. No direct Coinbase quote is admitted in the published primary. No authoritative primary or admitted $1M/two-family aggregate appears in the capture. Review only structural blind coverage, never recovery or price trust.",
     sources: ["https://api.pharos.watch/api/stablecoins", "https://api.pharos.watch/api/dex-liquidity", "https://api.pharos.watch/api/depeg-events?active=true", "https://api.exchange.coinbase.com/products/AUDD-USDC/ticker"],
     reviewedAt: Date.UTC(2026, 10, 19, 17, 41) / 1000, expiresAt: Date.UTC(2026, 10, 26, 17, 41) / 1000,
+  },
+  {
+    eventId: 90605, stablecoinId: "usdx-kava", owner: "ops",
+    reason: "Reviewed 2026-11-19 23:29 UTC: event 90605 remains open and blind, last trusted at 17:46:26 UTC. The Kava pricefeed RPC header and markets API return HTTP 502. Pharos publishes no primary or DEX price, so current deviation and DEX priced-contributor TVL and family count are unavailable. Reassess when Kava recovers or another trusted quote is admitted.",
+    sources: ["https://api.pharos.watch/api/depeg-events?active=true&stablecoin=usdx-kava", "https://api.pharos.watch/api/stablecoins", "https://api.pharos.watch/api/dex-liquidity", "https://rpc.kava.io/header", "https://api.kava.io/kava/pricefeed/v1beta1/markets"],
+    reviewedAt: Date.UTC(2026, 10, 19, 23, 29) / 1000, expiresAt: Date.UTC(2026, 10, 22, 23, 29) / 1000,
   },
 ];
 

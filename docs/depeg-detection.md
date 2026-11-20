@@ -6,7 +6,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 runs every 15 minute
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.51`<!-- GENERATED-END: methodology-version-depeg-detection -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.53`<!-- GENERATED-END: methodology-version-depeg-detection -->
 - **Runtime/version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-dews/`
@@ -251,7 +251,11 @@ Validation gates (skip if any fail):
 
 Every completed run records a `depegObservation` census over the non-NAV PSI-eligible universe (eligible, observed, unavailable and below-floor counts with per-reason counts). The `depeg-observation-coverage` canary compares the latest census with the previous generation and degrades when unacknowledged unavailable assets increase (naming their reason deltas), so a peg-reference source losing authority, which skips each affected asset as `non-authoritative-reference`, reaches a machine-readable status cause instead of only a log line. A held stage (`depegObservation: null` plus `depegObservationUnavailableReason`) is named; a missing census is a failed read, not healthy coverage.
 
-The two operator observation-completeness canaries grade only unacknowledged gaps: raw census counts remain unchanged, while up to 64 `primary-unusable` IDs (the only gate an acknowledgement can cover) retain their reviewed nominal-reference source fact and can be acknowledged by that fact, a valid source calendar at the census clock (including its post-closure wait), or a valid price-gap review at the canary clock, with missing, truncated or size-guard-dropped IDs failing closed to the full unavailable cohort and detection, events, DEWS and alerts unchanged. `reference-market-closed` gaps carry no IDs; they are acknowledged by count only when the census clock is inside a metal-market closure, so an off-schedule hold stays actionable.
+The two operator observation-completeness canaries grade unacknowledged gaps and retain the raw census counts. Up to 64 `primary-unusable` IDs can be acknowledged through reviewed nominal-reference evidence, a valid source calendar at the census clock (including its post-closure wait), or a valid price-gap review at the canary clock. Every ID must be distinct and have reason `primary-unusable`, and the list length must match the census count for that reason. Missing, truncated, malformed or size-guard-dropped IDs leave the full `primary-unusable` cohort actionable. `reference-market-closed` gaps carry no IDs and are acknowledged by count only when the census clock is inside a metal-market closure.
+
+Both canaries validate totals before grading gaps. Observed, unavailable and below-floor counts must sum to the eligible count, and known reason counts may not exceed the raw unavailable count. An invalid current census fails the measurement with `depeg-observation-census-invalid` in the pricing canary or `depeg-census-invalid` in the detection canary. An invalid previous census leaves the baseline unavailable. For consecutive losses, the detection canary selects the newest completed run with a strictly earlier start timestamp and requires its census to be valid.
+
+A dated `no-parity-quote-by-design` review acknowledges Solayer sUSD's `primary-unusable` gap only when that census records a positive, upstream-clocked `protocol-redeem` valuation that fails `isParityPrice`. Legacy censuses and gaps without this source fact remain actionable. The acknowledgement grades operator completeness only. The valuation remains published, and peg detection, events, and DEWS continue to use their existing admission rules.
 
 Primary-price trust gates:
 
@@ -370,7 +374,7 @@ Age checks:
 
 - Fetches the active configured Binance market batch (currently `USDTUSD` and `USDCUSD`) as an additional secondary confirmation source, then looks up the pending coin by symbol
 - Only attempted for symbols present in the configured Binance market set
-- Binance and CoinGecko confirmation exclude source families used by the current primary or retained in the pending episode. Receipts bind source identity to each observation, so a legacy refresh that advances the latest quote still leaves a matching onset usable for this check. Rows without matching receipts use the legacy confirmation rules.
+- Binance and CoinGecko confirmation exclude source families used by the current primary or retained in the pending episode. A receipt can still identify the onset venue after a legacy writer refreshes the latest quote. Binance needs source keys that match the onset to confirm or deepen the peak. Pending episodes without those keys need other qualifying evidence for promotion.
 - If an admitted observation ties the stored peak at the exact same price and in the same quote domain, its paired reference can complete a legacy peak. A different price cannot backfill that pair.
 - Counts as confirmation only when deviation reaches the full trigger threshold and points in the same direction as the pending incident
 - Non-fatal: if the Binance fetch fails, the CEX agreement remains `null`
@@ -549,7 +553,13 @@ Exact totals reuse one D1 summary (`cache['depeg-events:counts:v1']`) grouped by
 
 Each `pending` row's `expiresAt` is `firstSeenAt` plus the shared `getPendingExpiryLimitSec` limit for the published confirmation-family availability: base expiry when every category is available, extended expiry when any category is unavailable, and the severe limit for `extreme-move` candidates (see the timing table). This projection does not read the live primary quote; a same-direction primary may separately extend the confirmation cron's decision. The shared contract requires only `lastSeenAt >= firstSeenAt` and `expiresAt > firstSeenAt`; `lastSeenAt` may legitimately exceed the projected expiry.
 
-When DDR has linked multiple raw rows into one logical incident, the endpoint returns one public row per incident: the effective current fragment, later by `current_started_at` then `current_event_id` across the canonical and its superseded aliases, projected to the canonical's `startedAt` and total linked `constituentEventCount`. Every other linked row is absorbed into that incident. The first row's `startPrice`/`pegReference` are projected only when its quote domain (hydrated from `depeg_event_provenance.quote_mode`) matches the published row's; a cross-domain first row contributes the onset clock only, so the published price pair stays reproducible against the row's own peak. Unprojected rows use `constituentEventCount = 1`.
+When DDR links multiple rows into one incident, the public row uses the effective current fragment, selected by latest `current_started_at` then highest `current_event_id` across the canonical incident and its superseded aliases. It reports the canonical onset and total linked `constituentEventCount`. The first row supplies `startPrice`, `pegReference` and `onsetBasis` when its opening quote domain is known and matches the effective fragment's opening domain. Otherwise the three fields come from the effective fragment. Unprojected rows use `constituentEventCount = 1`.
+
+For both fragments, a peer-relative opening uses USD. Otherwise the projection checks the provenance column, public JSON and legacy inference in that order. Inferring the first fragment's quote domain from a live opening with a unit reference requires a recognized peg type. The projected `onsetQuoteDomain` gives the display unit for the opening price and reference. The effective fragment retains its stored quote provenance. An unrecognized audit verdict in either provenance field or duplicate `auditVerdict` keys in public JSON disqualify a constituent from peak ranking and its severity from legacy onset admission.
+
+A grouped incident reports the deepest discount or largest premium among its same-direction constituents with numeric stored deviations in the JavaScript safe integer range. It retains that peak when the effective fragment closes. The effective fragment supplies its own peak fields when it ties or belongs to a family with a reviewed dispute. Otherwise the strongest constituent supplies the peak, its confidence tier and any validated reference or peer-relative evidence. Public provenance JSON takes precedence over the confidence column, as it does for individual events. Invalid constituent timestamps withhold that constituent’s peak receipt and admitted coverage evidence. A borrowed price requires a positive stored price and a validated peak quote domain or legacy quote provenance. For legacy peaks, the quote mode column and public provenance JSON take precedence over inference from the opening reference and a recognized peg type. An unreadable peg type leaves independently validated peak evidence available. The API publishes the deviation with a null price when the quote is malformed or its unit is uncertain. PegScore reads the event rows and resolver projection in one D1 batch. Legacy closure admission uses the onset fragment’s own peak to admit the opening and the effective fragment’s peak to admit its observations. The API carries both when they differ from their fallbacks, so the detail page applies the same rules to occupancy. Unreadable onset severity or a stored onset deviation outside the safe integer range withholds legacy onset admission and leaves admitted observations available. Severity and spread use the grouped peak and its confidence after admission.
+
+Incident page synopses and search descriptions use `onsetBasis` for the opening comparison and `peakBasis` for the historical extreme. When `onsetQuoteFromLaterFragment` is present, they date the detector start and describe the peak separately. The page's record and summary label the price and its reference as later observations.
 
 Public incident pages sort by effective `startedAt` descending, then numeric event `id` descending; offset selection, cursor comparisons/tokens, and the page's latest-event methodology `asOf` use that same projected onset rather than the current fragment's raw clock. Cursors use version 2; pre-cutover version-1 raw-onset tokens return `400` and callers must restart pagination. Canonical projection admission and event selection share one transactional D1 batch, together with count-summary population/read when requested. This also applies with `includeTotal=false`, so a pointer advance cannot mix an older projection with newer page membership or silently publish an unprojected fragment.
 
@@ -597,7 +607,7 @@ producer contracts are unchanged.
 
 ## Peg Score (`peg-score.ts`)
 
-PegScore uses recorded admitted intervals for incident duration and excludes scheduled blind time from the observed denominator. Legacy fallback can accept a confirmed in-session onset with unknown duration. Recent statistics require evidence in their own window. A point at the scoring boundary can establish an incident with zero elapsed duration. During a declared hold, the active penalty can retain the last trusted observation inside admitted coverage. The recorded detector onset remains visible alongside the first admissible observation.
+PegScore uses recorded admitted intervals for incident duration and excludes scheduled blind time from the observed denominator. Legacy fallback can accept a confirmed in-session onset with unknown duration. Recent statistics require evidence in their own window. A point at the scoring boundary can establish an incident with zero elapsed duration. A valid declared hold matches the effective fragment’s last trusted observation and peak. The active penalty continues to use the incident’s grouped peak. The recorded detector onset remains visible alongside the first admissible observation.
 
 The [public PegScore methodology](https://pharos.watch/methodology/#pegscore-dews-methodology)
 owns the formula and components; `shared/lib/peg-score.ts` owns execution.
@@ -614,7 +624,8 @@ Detection contributes eligible episodes, observed price intervals and audit prov
   mean and variance of below-peg peak deviations divided by the weight sum, so a
   half-weighted row keeps its observed peak instead of shrinking into artificial
   dispersion while premiums never dilute downside spread. Quality counters expose
-  this.
+  this. Safety Score’s exact replay retains the peak confidence and counts
+  low-confidence scored peaks within each effective-fragment provenance class.
 - `coinTrackingStart()` honors reviewed replay/continuous-live coverage first,
   otherwise launch date, then the earliest supply or durable valid-price anchor.
   Without these, the earliest event is the fallback; no anchor or events means NR.

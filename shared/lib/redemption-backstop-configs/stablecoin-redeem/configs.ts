@@ -890,7 +890,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       reviewer: "Bottom-up refinement 2026-10-21",
       reason: "Avalon announced USDa discontinuation across all supported chains and replaced normal service with a claim-and-withdrawal process due by October 10. That ordinary-channel cessation does not establish exhaustion or closure of a separate recovery claim.",
       sources: [{
-        url: "https://medium.com/feed/@avalonlabs",
+        url: "https://medium.com/@avalonlabs/important-notice-regarding-recent-asset-adjustments-1c2831aae329",
         quote: "After exhausting all available remediation options, we have concluded that discontinuing USDa across all supported chains is the most effective measure to protect remaining USDa holders from further harm.",
       }],
     },
@@ -913,7 +913,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       ],
     },
     docs: [
-      sourceRef("Avalon October 3 USDa discontinuation notice, full primary RSS item (retrieved 2026-10-20)", "https://medium.com/feed/@avalonlabs", ["route", "access", "fees", "settlement"]),
+      sourceRef("Avalon October 3 USDa discontinuation notice, primary article (retrieved 2026-10-20)", "https://medium.com/@avalonlabs/important-notice-regarding-recent-asset-adjustments-1c2831aae329", ["route", "access", "fees", "settlement"]),
       sourceRef(
         "How to Use USDa",
         "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda/how-to-use-usda",

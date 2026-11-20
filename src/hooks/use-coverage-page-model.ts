@@ -11,6 +11,7 @@ import {
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { useQuerySlice } from "@/hooks/use-query-slice";
 import { useStablecoins } from "@/hooks/use-stablecoins";
+import { useLiveYieldRankings } from "@/hooks/use-yield-source-clock";
 import { buildCoverageMatrixModel } from "@/lib/coverage-matrix-model";
 import { logosById } from "@/lib/logos";
 import { buildDataCoverageModel } from "@/lib/safety-score-data-coverage";
@@ -21,7 +22,7 @@ export function useCoveragePageModel() {
   const pegSummary = useQuerySlice(usePegSummary());
   const dexLiquidity = useQuerySlice(useDexLiquidity());
   const redemptionBackstops = useQuerySlice(useRedemptionBackstops());
-  const yieldRankings = useQuerySlice(useYieldRankings());
+  const yieldRankings = useQuerySlice(useLiveYieldRankings(useYieldRankings()));
   const mintBurnFlows = useQuerySlice(useMintBurnFlows());
   const reportCards = useQuerySlice(useReportCardsV9());
   const resources = useMemo(

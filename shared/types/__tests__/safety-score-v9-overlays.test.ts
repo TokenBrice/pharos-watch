@@ -87,6 +87,24 @@ describe("shared Safety Score V9 overlay boundaries", () => {
     expect(SafetyScoreV9MechanismReviewOverlayFileSchema.safeParse({ ...malformed, overlays: [{ ...mechanismOverlays.overlays[0], reviewedAt: "2026-02-31" }] }).success).toBe(false);
   });
 
+  describe("swanUSD mechanism evidence", () => {
+    const overlay = mechanismOverlays.overlays.find(({ assetId }) => assetId === "swanusd-swan")!;
+
+    it("keeps CDP collateralization scoped to the CDP book", () => {
+      expect(overlay).not.toHaveProperty("collateralizationMeasurement");
+      expect(overlay.metrics?.collateralizationRatio).toBeGreaterThan(0);
+    });
+
+    it("dates the deployment-specific bounty scope", () => {
+      expect(overlay.sources.find(({ url }) => url.endsWith("bug-bounties/287"))?.label).toContain("2026-10-29");
+      expect(overlay.notes).toMatch(/Sherlock's 2026-10-29 scope list excluded/);
+    });
+
+    it("records the raw oracle price floor", () => {
+      expect(overlay.notes).toContain("a floor of 1 raw unit");
+    });
+  });
+
   it.each(["2026-10-18", "2026-10-18T12:30:01Z", "2026-10-18T12:30:01.125Z", "2024-02-29T00:00:00.1Z"])(
     "accepts strict review pin %s for overlays and independent components", (reviewedAt) => {
       const row = structuredClone(mechanismFixture.overlays[0]!);

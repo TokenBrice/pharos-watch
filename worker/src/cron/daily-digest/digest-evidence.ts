@@ -13,6 +13,23 @@ export interface DigestEvidence {
   liquidity?: Array<{ stablecoinId: string; symbol: string; currentScore: number }>;
 }
 
+export function describeDigestDepeg(depeg: Depeg) {
+  const bps = depeg.currentBps ?? depeg.bps;
+  const fallback = depeg.severityBasis === "peak-fallback";
+  const peerPeak = depeg.peakBasis === "peer-relative";
+  const direction = bps >= 0 ? "above" : "below";
+  const reference = fallback && peerPeak ? "the peer median" : "peg";
+  const qualifier = fallback ? " (stored peak; live price unavailable)" : "";
+  const severity = `${Math.abs(bps)} bps ${direction} ${reference}${qualifier}`;
+  const { peakBps } = depeg;
+  let historicalPeak: string | null = null;
+  if (!fallback && peakBps != null && (peerPeak || Math.abs(peakBps) !== Math.abs(bps))) {
+    historicalPeak = `${Math.abs(peakBps)} bps`;
+    if (peerPeak) historicalPeak += ` ${peakBps >= 0 ? "above" : "below"} the peer median`;
+  }
+  return { severity, historicalPeak, fallback };
+}
+
 export function currentDepegBps(depeg: Depeg, generatedAt?: number): number | null {
   const observedAt = depeg.priceObservedAt;
   // The collector admitted a native-peg quote under the event-native policy

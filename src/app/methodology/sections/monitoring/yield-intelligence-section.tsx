@@ -12,7 +12,7 @@ import {
   type ResponsiveMethodologyPipelineProps,
   WorkedExample,
 } from "../../methodology-shared";
-import { YIELD_SECTION_CONTENT } from "@/lib/methodology-content";
+import { YIELD_POOL_DELIVERY_PARAGRAPH, YIELD_SECTION_CONTENT } from "@/lib/methodology-content";
 import { YieldMethodologyRelatedLinks, YieldNavTokenMechanismLinks } from "./yield-mechanism-links";
 import { METHODOLOGY_SECTION_ACCENT_CLASSES } from "@shared/lib/classification";
 import {
@@ -84,6 +84,7 @@ export function YieldIntelligenceMethodologySection() {
                 used by a published row is evaluated independently so a healthy USD lane cannot mask a stale local-currency
                 benchmark.
               </p>
+              <p>{YIELD_POOL_DELIVERY_PARAGRAPH}</p>
               <p>
                 A deposit-address match alone does not establish wrapper receipt ownership: the receipt symbol must
                 match too, PT/LP markets cannot borrow the wrapper label, and contradictory underlying addresses
@@ -121,7 +122,7 @@ export function YieldIntelligenceMethodologySection() {
                     {
                       label: "Failure behavior",
                       value:
-                        "No resolved source means no published yield row. Non-positive APY or effective yield, unavailable consistency, invalid score inputs, stale or unknown source evidence, stale benchmarks, and missing critical opportunity evidence publish PYS NR with a reason, not an unexplained zero. Fresh rows using the conservative 40 / NR safety fallback may retain an estimated PYS; missing source-risk penalty resolves to neutral 1",
+                        "No resolved source means no published yield row. Non-positive APY or effective yield, unavailable consistency, invalid score inputs, stale source evidence, unknown freshness with no eligible delivery clock, stale benchmarks, and missing critical opportunity evidence publish PYS NR with a reason. Fresh rows using the conservative 40 / NR safety fallback may retain an estimated PYS. Missing source-risk penalty resolves to neutral 1.",
                     },
                 ]}
               />

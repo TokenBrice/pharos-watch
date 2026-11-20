@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ArrowUpRight, Map as MapIcon } from "lucide-react";
 import { useImageUnavailable } from "@/hooks/use-image-unavailable";
@@ -9,8 +9,7 @@ const SAFETY_MAP_PATH = "/safety-scores/map/";
 const SAFETY_MAP_IMAGE_PATH = "/safety-scores/map.webp";
 const SAFETY_MAP_FALLBACK_IMAGE_PATH = "/safety-scores/map.png";
 
-/** The hero's LCP teaser; its own small module so the server-rendered hero keeps eager JS light. */
-export function SafetyMapPreview() {
+function useSafetyMapImage() {
   const [imagePath, setImagePath] = useState(SAFETY_MAP_IMAGE_PATH);
   const { unavailable, onError } = useImageUnavailable();
   const handleImageError = useCallback(() => {
@@ -24,7 +23,20 @@ export function SafetyMapPreview() {
     // A failed request can settle before hydration attaches the error handler.
     if (image && image.complete && image.naturalWidth === 0) handleImageError();
   }, [handleImageError]);
+  return { imagePath, unavailable, handleImageError, checkAlreadyFailed };
+}
 
+const SafetyMapImageContext = createContext<ReturnType<typeof useSafetyMapImage> | null>(null);
+
+export function SafetyMapImageProvider({ children }: { children: ReactNode }) {
+  return <SafetyMapImageContext.Provider value={useSafetyMapImage()}>{children}</SafetyMapImageContext.Provider>;
+}
+
+/** The hero's LCP teaser; its own small module so the server-rendered hero keeps eager JS light. */
+export function SafetyMapPreview() {
+  const shared = useContext(SafetyMapImageContext);
+  const local = useSafetyMapImage();
+  const { imagePath, unavailable, handleImageError, checkAlreadyFailed } = shared ?? local;
   return (
     <Link
       href={SAFETY_MAP_PATH}

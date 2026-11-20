@@ -13,11 +13,10 @@ import { getYieldDataSourceMeta } from "@/lib/yield-data-source";
 import { buildYieldPresentationContext, buildYieldPysBreakdown } from "@/lib/yield-presentation-context";
 import {
   buildYieldSourceExplorerModel,
-  getYieldRankingSourceClockInputs,
   type YieldSourceExplorerModel,
 } from "@/lib/yield-source-explorer-model";
-import { resolveYieldSourceAssessedAt, type YieldSourceDisplayClock } from "@/lib/yield-source-presentation";
-import { useYieldSourceClock } from "@/hooks/use-yield-source-clock";
+import type { YieldSourceDisplayClock } from "@/lib/yield-source-presentation";
+import { useYieldCoinRankings } from "@/hooks/use-yield-source-clock";
 import type { YieldSourceDepthLens, YieldSourceRiskDriver } from "@/lib/yield-source-risk";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES, getPysColor } from "@shared/lib/classification";
 import { formatPercentFromRatio } from "@shared/lib/format";
@@ -25,18 +24,6 @@ import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/sta
 import type { StablecoinStatus } from "@shared/types/stablecoin-taxonomy";
 import type { YieldRanking, YieldRankingsResponse } from "@shared/types/yield";
 import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
-
-/** Parent-owned clock for one coin's selected and alternate sources. */
-export function useYieldCoinSourceClock(
-  rankingResponse: YieldRankingsResponse | null | undefined,
-  stablecoinId: string,
-  responseMeta: object | null | undefined,
-  dataUpdatedAt: number,
-): YieldSourceDisplayClock {
-  const ranking = rankingResponse?.rankings.find((row) => row.id === stablecoinId);
-  const sources = useMemo(() => (ranking ? getYieldRankingSourceClockInputs(ranking) : []), [ranking]);
-  return useYieldSourceClock(sources, resolveYieldSourceAssessedAt(rankingResponse?._meta ?? responseMeta, dataUpdatedAt));
-}
 
 /** The dossier previews the top three alternate pools; the rest sit behind "Show N more". */
 export const ALT_SOURCE_INITIAL_COUNT = 3;
@@ -197,7 +184,7 @@ export function useYieldDetailSectionModel(stablecoinId: string): YieldDetailSec
   const meta = TRACKED_META_BY_ID.get(stablecoinId);
   const frozen = meta?.status === "frozen";
   const { data, meta: apiMeta, error, isLoading, dataUpdatedAt } = useYieldRankingsCoin(stablecoinId, { enabled: !frozen });
-  const sourceClock = useYieldCoinSourceClock(data, stablecoinId, apiMeta, dataUpdatedAt);
+  const { data: agedData, sourceClock } = useYieldCoinRankings(data, stablecoinId, apiMeta, dataUpdatedAt);
   const sourcesParam = getParam("sources");
   const requestedSourceKeys = useMemo(() => sourcesParam.split(",").filter(Boolean), [sourcesParam]);
   const [showAllSources, setShowAllSources] = useState(false);
@@ -205,7 +192,7 @@ export function useYieldDetailSectionModel(stablecoinId: string): YieldDetailSec
   const model = useMemo(
     () =>
       buildYieldDetailModel(
-        data,
+        agedData,
         {
           stablecoinId,
           lifecycle: meta?.status ?? "active",
@@ -215,7 +202,7 @@ export function useYieldDetailSectionModel(stablecoinId: string): YieldDetailSec
         requestedSourceKeys,
         sourceClock,
       ),
-    [data, meta?.status, requestedSourceKeys, shouldHaveYieldData, sourceClock, stablecoinId],
+    [agedData, meta?.status, requestedSourceKeys, shouldHaveYieldData, sourceClock, stablecoinId],
   );
 
   if (model.status === "hidden") {

@@ -320,6 +320,7 @@ export const YieldRankingsResponseSchema = z.object({
 export type YieldRankingsResponse = z.infer<typeof YieldRankingsResponseSchema>;
 export const YieldRankingsCoinResponseSchema = YieldRankingsResponseSchema.extend({
   projection: CoinProjectionMetadataSchema,
+  cohortValidUntil: z.number().nonnegative().optional(),
 });
 export type YieldRankingsCoinResponse = z.infer<typeof YieldRankingsCoinResponseSchema>;
 
@@ -331,6 +332,7 @@ export const YieldCoinCohortSchema = YieldRankingsResponseSchema.extend({
   yieldMethodologyVersion: z.string().min(1).optional(),
   assessedAt: z.number().nonnegative(),
   validUntil: z.number().nonnegative(),
+  validUntilBoundary: z.string().optional(),
   totalCount: z.number().int().nonnegative(),
   degradationReasons: z.array(z.string()),
 });
