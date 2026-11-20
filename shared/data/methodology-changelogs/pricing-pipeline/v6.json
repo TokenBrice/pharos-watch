@@ -3,7 +3,7 @@
     "version": "6.87",
     "title": "Upstream quote clocks for reviewed Kraken USD books",
     "date": "2026-11-20",
-    "effectiveAt": 1795176000,
+    "effectiveAt": 1795167000,
     "summary": "An opt-in Kraken Spot WebSocket v2 read supplies timestamped bid/ask midpoints for ten reviewed USD markets. The batched REST ticker provides fallback quotes with their existing clock modes.",
     "impact": [
       "An exact symbol, valid uncrossed book, spread within 100 bps and same-snapshot ticker timestamp within the Kraken age budget are required before a price and upstream clock can replace a REST quote.",
