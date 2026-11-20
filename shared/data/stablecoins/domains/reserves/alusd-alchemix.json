@@ -179,6 +179,7 @@
     "compositionBasis": "USDC-denominated realAssets() of every registered strategy adapter across the three V3 alUSD MYT vaults, as a share of their combined totalAssets() (8,819,966.392128 USDC), read at Ethereum block 26443250, Optimism block 159710914 and Arbitrum block 525377731 on 2026-11-18",
     "compositionAsOf": "2026-11-18",
     "scope": "selected-slices",
+    "scopedWeights": true,
     "knownUnknownExposure": "Scope is selected-slices: the weights are shares of gross V3 MYT vault assets, not of whole-token backing. The composition covers all assets of the three MYT vaults, not only the shares backing alUSD: at the pinned blocks the Alchemist and Transmuter together held 97.4% of Ethereum vault shares, 99.8% on Optimism and 99.6% on Arbitrum, and the remainder belongs to other MYT holders pro rata. Borrower collateral above debt is borrower equity, so vault assets exceed the alUSD they secure (totalSyntheticsIssued 5,403,581 alUSD across the three Alchemists). alUSD supply outside V3 issuance (legacy and DAO-minted supply, largely held by DAO market-operations Safes or locked in the Multichain wrapper) is not backed by these vaults and is described in issue #2113. Allocations are mutable by the DAO allocator and will drift from this snapshot. The internal composition of each venue (yvUSD strategies, Fluid Lite, infiniFi) is not decomposed here.",
     "knownUnknownExposurePct": 55.006364,
     "nonLinkDispositions": [

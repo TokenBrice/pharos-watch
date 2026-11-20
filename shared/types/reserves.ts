@@ -60,7 +60,7 @@ export const ReserveIntermediarySchema = z.object({
 }).strict();
 export type ReserveIntermediary = z.output<typeof ReserveIntermediarySchema>;
 
-export const ReserveSliceSchema = z.object({
+export const PublicReserveSliceSchema = z.object({
   sourceKey: z.string()
     .trim()
     .min(3)
@@ -127,11 +127,29 @@ export const ReserveSliceSchema = z.object({
     });
   }
 });
+
+export const ReserveSliceSchema = PublicReserveSliceSchema.safeExtend({
+  /** Internal producer classification of a claim on the subject stablecoin's own liability. */
+  selfReferential: z.literal(true).optional(),
+}).superRefine((slice, ctx) => {
+  if (slice.selfReferential && (slice.coinId || slice.depType || slice.unclassifiedResidual)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "own-liability claims cannot be linked or unclassified residuals",
+      path: ["selfReferential"],
+    });
+  }
+});
 export type ReserveSlice = z.infer<typeof ReserveSliceSchema>;
+
+export const StaticReserveSliceSchema = ReserveSliceSchema.refine((slice) => !slice.selfReferential, {
+  message: "selfReferential is reserved for live reserve producers",
+  path: ["selfReferential"],
+});
 
 // Authored evidence must classify every linked identity. Runtime snapshots
 // remain readable so derivation can quarantine an untyped link row by row.
-const AuthoredReserveSliceSchema = ReserveSliceSchema.superRefine((slice, ctx) => {
+const AuthoredReserveSliceSchema = StaticReserveSliceSchema.superRefine((slice, ctx) => {
   if (slice.coinId && !slice.depType) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -144,6 +162,7 @@ const AuthoredReserveSliceSchema = ReserveSliceSchema.superRefine((slice, ctx) =
 export type ReserveCompositionValidationMode = "full" | "partial-known-exposure";
 
 export const RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT = 0.5;
+export const RESERVE_REVIEW_PCT_TOLERANCE = 1e-6;
 
 function getReserveCompositionTotalPct(reserves: readonly Pick<ReserveSlice, "pct">[]): number {
   return reserves.reduce((total, reserve) => total + reserve.pct, 0);

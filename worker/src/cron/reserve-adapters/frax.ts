@@ -1,9 +1,11 @@
 import type { ReserveSlice } from "@shared/types/reserves";
 import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
+import { CHAIN_META, resolveChainId } from "@shared/types/chain-identity";
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { getLiveReserveAdapterMaxUnknownExposurePct, parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
+import { sha256Hex } from "@shared/lib/sha256";
 import { rethrowIfAborted } from "../../lib/abort";
 import { DECIMALS_SELECTOR, encodeBalanceOfCallData } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
@@ -29,11 +31,18 @@ import {
 interface BalanceSheetAsset {
   tokenSymbol: string;
   totalValueUsd: number;
+  tokenQuantity?: number;
+  tokenQuantityE18?: string;
+  description?: string;
   category?: string;
+  chain?: string;
+  address?: string;
+  tokenAddress?: string;
 }
 
 export interface FraxBalanceSheetResponse {
   asOfTimestamp?: string;
+  tokenPriceUsd?: Partial<Record<"FRAX" | "sFRAX" | "LFRAX", number>>;
   totalAssets?: number;
   assets?: BalanceSheetAsset[];
 }
@@ -163,31 +172,155 @@ const FPI_COLLATERAL_NAME_ONLY_DISPLAY: Record<string, TokenDisplayConfig> = {
   },
 };
 
-export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subjectId?: string): AdapterResult {
+const ETHEREUM_FRAX = "0x853d955acef822db058eb8505911ed77f175b99e";
+
+// Positions reconciled against the issuer balance sheet and pinned on-chain balances.
+const REVIEWED_FRAX_FERRY_POSITIONS = [
+  ["arbitrum", "0x5a9bef8cea603aac78a523fb245c1a9264d50706", "0x17fc002b466eec40dae837fc4be5c67993ddbd6f"],
+  ["avalanche", "0x5dff474cea8a1fa929ac9a3ce2550376af11d2a8", "0xd24c2ad096400b6fbcd2ad8b24e7acbc21a1da64"],
+  ["boba", "0x5cba95f0c97cf281c37ca7a24d68578ea60d0dd0", "0x7562f525106f5d54e891e005867bf489b5988cd9"],
+  ["bsc", "0x10ef54f944639764d2d5efa272262f06cfaf09ae", "0x90c97f71e18723b0cf0dfa30ee176ab653e89f40"],
+  ["ethereum", "0x06fa869caa1160754c6a0b744da6454c5ea325d4", ETHEREUM_FRAX],
+  ["ethereum", "0x32ddf80508cfd8fed8abe375582fc7cfd20372c4", ETHEREUM_FRAX],
+  ["ethereum", "0x3ef1d856ea62a2292b8690855042095a7ac48b4b", ETHEREUM_FRAX],
+  ["ethereum", "0x43959a388603dcb6b02ca084a55d4c7f3b442c57", ETHEREUM_FRAX],
+  ["ethereum", "0x6ac96f65156281a9383455d704b58a74ea9c9ec4", ETHEREUM_FRAX],
+  ["ethereum", "0x85c5f05ae4cb68190c695a22b292c3ba90696128", ETHEREUM_FRAX],
+  ["ethereum", "0x86e71075e55f0aad27d700017e0783458310c98a", ETHEREUM_FRAX],
+  ["ethereum", "0xa381d58e96ec3818c825e1fb264099448945cf8b", ETHEREUM_FRAX],
+  ["ethereum", "0xdae210bfb0cf8c81edb4b459e2e0ba14d553e2d9", ETHEREUM_FRAX],
+  ["ethereum", "0xfb788f9e20ef426a32a67986654750172a6c1788", ETHEREUM_FRAX],
+  ["fantom", "0x088be716eca24b143fcc9ed06c6ae9977a469cce", "0xdc301622e621166bd8e82f2ca0a26c13ad0be355"],
+  ["optimism", "0xb781fcac4b8ef06891f9bad7db9c178b1ce67967", "0x2e3d870790dc77a83dd1d18184acc7439a53f475"],
+  ["polygon", "0x6f7f18c15b97dc9fac48ae7f986989f97d25dbc7", "0x45c32fa6df82ead1e2ef74d17b76547eddfaff89"],
+  ["polygon-zkevm", "0xeabd7625056bbd2c260f90d0b08759c69d971a5b", "0xff8544fed5379d9ffa8d47a74ce6b91e632ac44d"],
+  ["zksync", "0x31cda619b96c96bd7ed8463418e0f65c1ffc8d0a", "0xb4c1544cb4163f4c2eca1ae9ce999f63892d912a"],
+] as const;
+
+// Pinned Ferry token contracts are verified FRAX identities even where the
+// registry carries no deployment for that chain.
+const REVIEWED_FRAX_FERRY_TOKENS = new Set(
+  REVIEWED_FRAX_FERRY_POSITIONS.map(([chain, , token]) => `${chain}:${token}`),
+);
+
+function hasReconciledFraxQuantity(row: BalanceSheetAsset, reportedPrice: number | undefined): boolean {
+  const sign = row.category === "asset:contra" ? -1 : 1;
+  const quantity = typeof row.tokenQuantity === "number" ? nonnegativeFinite(sign * row.tokenQuantity) : undefined;
+  const exactQuantity = typeof row.tokenQuantityE18 === "string" && /^-?\d{1,78}$/.test(row.tokenQuantityE18)
+    ? nonnegativeFinite(sign * Number(`${row.tokenQuantityE18}e-18`)) : undefined;
+  const usd = typeof row.totalValueUsd === "number" ? nonnegativeFinite(sign * row.totalValueUsd) : undefined;
+  const price = nonnegativeFinite(reportedPrice);
+  // The displayed float may differ from the raw amount by a rounding step.
+  // The issuer rounds the published Legacy FRAX price to eight decimals.
+  return quantity != null && exactQuantity != null && usd != null &&
+    Math.abs(quantity - exactQuantity) <= Number.EPSILON * exactQuantity &&
+    (exactQuantity === 0 ? usd === 0 : usd > 0 && price != null && price > 0 &&
+      Math.abs(usd / exactQuantity - price) <= 5e-9 + Number.EPSILON * price);
+}
+
+export function adaptFraxBalanceSheet(
+  payload: FraxBalanceSheetResponse,
+  subjectId?: string,
+  deployments?: ReserveAdapterCoin["contracts"],
+): AdapterResult {
   const assets = payload.assets;
   if (!assets?.length || !payload.totalAssets || payload.totalAssets <= 0) {
     throw new Error("Frax balance-sheet response missing or empty assets array");
   }
 
   const warnings: LiveReserveWarning[] = [];
+  const ferryRows = new Set<BalanceSheetAsset>();
+  if (subjectId === "frax-frax") {
+    for (const row of assets) {
+      if (row.category?.startsWith("asset:") &&
+          typeof row.description === "string" && /^\s*FraxFerry\s*-\s*FRAX\s/i.test(row.description)) ferryRows.add(row);
+    }
+    for (const [chain, holder, token] of REVIEWED_FRAX_FERRY_POSITIONS) {
+      const rows = assets.filter(asset => asset.category?.startsWith("asset:") &&
+        asset.chain?.replaceAll("_", "-") === chain &&
+        canonicalEvmAddress(asset.address) === holder && canonicalEvmAddress(asset.tokenAddress) === token);
+      if (rows.length === 1) {
+        ferryRows.add(rows[0]);
+      } else {
+        warnings.push(reserveFatalWarning("asset-coverage-incomplete",
+          `Frax balance-sheet expected one reviewed Ferry asset row on ${chain.replaceAll("-", "_")} (${holder}, ${token}), found ${rows.length}`));
+      }
+    }
+    for (const row of ferryRows) {
+      if (!hasReconciledFraxQuantity(row, payload.tokenPriceUsd?.FRAX)) {
+        warnings.push(reserveFatalWarning("asset-coverage-incomplete",
+          `Frax balance-sheet Ferry quantity and USD value are unavailable or inconsistent on ${row.chain ?? "unknown chain"}`));
+      }
+    }
+  }
 
-  // Aggregate USD value by tokenSymbol
-  const bySymbol = new Map<string, number>();
+  const ownLiabilityKeys = new Map<string, string>();
+  const byAsset = new Map<string, number>();
   for (const asset of assets) {
     if (!asset.category?.startsWith("asset:")) continue;
     const usd = asset.totalValueUsd;
+    if ((typeof asset.description === "string" && /^ERROR:/i.test(asset.description.trimStart())) ||
+      (asset.tokenQuantity === -0.0001 && usd === 0)) {
+      warnings.push(reserveFatalWarning("asset-coverage-incomplete",
+        `Frax balance-sheet asset read failed on ${asset.chain ?? "unknown chain"}`));
+      continue;
+    }
     if (typeof usd !== "number" || !Number.isFinite(usd) || !asset.tokenSymbol?.trim()) {
       throw new Error("Frax balance-sheet asset amount or identity is unavailable");
     }
-    bySymbol.set(asset.tokenSymbol, (bySymbol.get(asset.tokenSymbol) ?? 0) + usd);
+    let symbol = asset.tokenSymbol;
+    let contractKey: string | undefined;
+    if (subjectId === "frax-frax") {
+      const chain = typeof asset.chain === "string" ? resolveChainId(asset.chain.replaceAll("_", "-")) : null;
+      const isEvm = chain !== null && CHAIN_META[chain]?.type === "evm";
+      const token = isEvm ? canonicalEvmAddress(asset.tokenAddress, { allowZero: false })
+        : typeof asset.tokenAddress === "string" ? asset.tokenAddress : null;
+      const registered = !!token && deployments?.some(row => row.chain === chain &&
+        (isEvm ? canonicalEvmAddress(row.address) : row.address) === token);
+      const usableToken = token && (isEvm || registered ||
+        (chain === "solana" && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(token)));
+      if ((!chain || !usableToken) && /^(?:[sL]?FRAX|s?frxUSD|FPI)$/.test(symbol)) {
+        warnings.push(reserveFatalWarning("asset-coverage-incomplete",
+          `Frax balance-sheet ${symbol} asset chain or token address is unavailable on ${chain ?? "unknown chain"}`));
+        continue;
+      }
+      const ownClaim = chain === "ethereum" && token === "0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32" ? "sFRAX"
+        : chain === "fraxtal" && token === "0xff000000000000000000000000000000000001fd" ? "LFRAX"
+        : registered ? `Legacy FRAX (${chain})`
+        : null;
+      if (chain === "fraxtal" && token === "0xfc00000000000000000000000000000000000001") {
+        symbol = "frxUSD";
+      } else if (token && ownClaim) {
+        const priceSymbol = ownClaim === "sFRAX" || ownClaim === "LFRAX" ? ownClaim : "FRAX";
+        if (!ferryRows.has(asset) && !hasReconciledFraxQuantity(asset, payload.tokenPriceUsd?.[priceSymbol])) {
+          warnings.push(reserveFatalWarning("asset-coverage-incomplete",
+            `Frax balance-sheet own-liability quantity and USD value are unavailable or inconsistent on ${asset.chain} (${token})`));
+        }
+        // The slice key must be lowercase, even when the contract identity is case-sensitive.
+        contractKey = `contract:${chain}:${isEvm ? token : sha256Hex(token)}`;
+        ownLiabilityKeys.set(contractKey, ownClaim);
+      } else if (symbol === "FRAX" && token && !REVIEWED_FRAX_FERRY_TOKENS.has(`${chain}:${token}`)) {
+        // A FRAX-denominated row whose contract matches no pinned FRAX
+        // identity is not ordinary low-risk FRAX collateral; publishing it
+        // would turn an unverified identity into a positive claim. Withhold.
+        warnings.push(reserveFatalWarning("asset-coverage-incomplete",
+          `Frax balance-sheet FRAX asset token ${token} on ${chain} matches no verified FRAX deployment`));
+        continue;
+      }
+    }
+    if (!contractKey && subjectId === "frax-frax" && (symbol === "sFRAX" || symbol === "LFRAX")) {
+      symbol += ":unverified";
+    }
+    const key = contractKey ?? `ticker:${symbol}`;
+    byAsset.set(key, (byAsset.get(key) ?? 0) + usd);
   }
   // Contra entries offset their own asset, never an unrelated reserve bucket.
-  for (const [symbol, usd] of bySymbol) {
-    if (usd < 0) throw new Error(`Frax balance-sheet net asset is negative: ${symbol}`);
-    if (usd === 0) bySymbol.delete(symbol);
+  for (const [key, usd] of byAsset) {
+    if (usd < 0) throw new Error(`Frax balance-sheet net asset is negative: ${key}`);
+    if (usd === 0) byAsset.delete(key);
   }
 
-  const categorizedAssetTotal = [...bySymbol.values()].reduce((a, b) => a + b, 0);
+  const categorizedAssetTotal = [...byAsset.values()].reduce((a, b) => a + b, 0);
   if (categorizedAssetTotal <= 0) throw new Error("Frax balance-sheet total asset value is zero");
   const sourceTotal = Number(payload.totalAssets);
   if (!Number.isFinite(sourceTotal) || sourceTotal <= 0) {
@@ -209,7 +342,7 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subject
   // is circular. The subject row stays visible in the composition.
   const stableRedeemableUsd = ["USDC", "USDS", "PYUSD", "DAI", "FRAX"]
     .filter((symbol) => TOKEN_DISPLAY[symbol]?.coinId !== subjectId)
-    .reduce((sum, symbol) => sum + (bySymbol.get(symbol) ?? 0), 0);
+    .reduce((sum, symbol) => sum + (byAsset.get(`ticker:${symbol}`) ?? 0), 0);
   if (stableRedeemableUsd > total) {
     warnings.push(reserveDegradedWarning("redeemable-capacity-exceeds-total",
       "Frax redeemable asset rows exceed totalAssets; capacity is unavailable"));
@@ -219,8 +352,10 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subject
   const slices: ReserveSlice[] = [];
   const unknownSymbols: string[] = [];
   let unknownUsd = 0;
-  for (const [symbol, usd] of bySymbol) {
-    const config = TOKEN_DISPLAY[symbol];
+  for (const [key, usd] of byAsset) {
+    const symbol = key.slice(key.indexOf(":") + 1);
+    const ownLiability = ownLiabilityKeys.get(key);
+    const config = ownLiability ? { label: `Self-referential claim (${ownLiability})`, risk: "very-high" as const } : TOKEN_DISPLAY[symbol];
     if (!config) {
       unknownSymbols.push(symbol);
       unknownUsd += usd;
@@ -231,6 +366,7 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subject
         name: config.label,
         pct: (usd / shareBasisUsd) * 100,
         risk: config.risk,
+        ...(ownLiability ? { selfReferential: true as const } : {}),
         ...(config.coinId && config.coinId !== subjectId ? { coinId: config.coinId, depType: "collateral" as const } : {}),
       });
     }
@@ -278,7 +414,7 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subject
       categorizedAssetTotalUsd: categorizedAssetTotal,
       sourceTotalAssetsUsd: sourceTotal,
       ...(reconciliation.gapPct > 0 ? { sourceTotalGapPct: reconciliation.gapPct } : {}),
-      assetCount: bySymbol.size,
+      assetCount: byAsset.size,
       ...freshnessMetadataFromTimestamp(
         sourceTimestamp,
         "frax-balance-sheet-api",
@@ -619,7 +755,7 @@ export async function fetchFraxBalanceSheetReserves(
   if (!isBalanceSheetResponse(payload)) {
     throw new Error("frax-balance-sheet adapter requires a v2 balance-sheet API response");
   }
-  return adaptFraxBalanceSheet(payload, coin.id);
+  return adaptFraxBalanceSheet(payload, coin.id, coin.contracts);
 }
 
 /**

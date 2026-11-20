@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { MAX_MINT_AUTHORITY_DETAIL_CONTROLS } from "../stablecoin-detail-mint-authority-client";
 import { buildStablecoinDetailClientCoin } from "../stablecoin-detail-client-coin";
@@ -62,6 +63,17 @@ function coinWith(overrides: Record<string, unknown>): StablecoinMeta {
 }
 
 describe("buildStablecoinDetailClientCoin display gating", () => {
+  it("preserves USDU's three reviewed self-referential claim labels across the server boundary", () => {
+    const coin = buildStablecoinDetailClientCoin(TRACKED_META_BY_ID.get("usdu-usdu-finance")!);
+    expect(coin.reserves?.map(row => row.name)).toEqual([
+      "Self-referential claim (Morpho USDU Core vault shares)",
+      "Self-referential claim (USDU constituent of Curve USDU/USDC LP backing)",
+      "USDC constituent of Curve USDU/USDC LP backing",
+      "Self-referential claim (TermMax USDU vault shares (Core and RWA))",
+    ]);
+    expect(coin).not.toHaveProperty("reserveReview");
+  });
+
   it("attaches the reserve quality summary while stripping the server-only reserve review", () => {
     const clientCoin = buildStablecoinDetailClientCoin(
       coinWith({ reserves: RESERVES_WITH_QUALITY, reserveReview: RESERVE_REVIEW }),

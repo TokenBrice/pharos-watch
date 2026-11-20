@@ -130,7 +130,7 @@
   "custodyModel": "mixed",
   "liveReservesConfig": {
     "adapter": "frax-balance-sheet",
-    "version": 3,
+    "version": 4,
     "semantics": "attestation-mix",
     "breakerScope": "frax-frax",
     "display": {

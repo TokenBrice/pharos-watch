@@ -95,6 +95,7 @@
     "compositionBasis": "Historical September 29, 2026 gross product-deposit observations, normalized only for contextual display; no reconciled whole-token backing denominator",
     "compositionAsOf": "2026-09-29",
     "scope": "selected-slices",
+    "scopedWeights": true,
     "knownUnknownExposure": "Current full liability-weighted composition is unverified. The retained 10.27% is the fingerprinted unresolved Smart Vault share within historical observed deposits, not a measured whole-token unknown-exposure percentage. Vault-level completeness, deployed strategy assets and liabilities, internally minted satUSD, Prime Vault assignments and safeguarding terms remain unresolved. No missing remainder is inferred.",
     "knownUnknownExposurePct": 10.27,
     "nonLinkDispositions": [

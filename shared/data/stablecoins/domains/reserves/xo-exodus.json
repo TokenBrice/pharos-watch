@@ -51,6 +51,7 @@
     "compositionBasis": "M0 extension and Solana documentation, Exodus launch disclosure, and fixed-slot XO m_vault $M balance and XO total-supply reads",
     "compositionAsOf": "2026-09-01",
     "scope": "selected-slices",
+    "scopedWeights": true,
     "knownUnknownExposure": "The observed vault's reserve asset is identified as M. Complete local allocation, alternate mint paths and whole-liability conservation remain unverified for the exact deployed XO program; zero unknown exposure refers only to the selected historical vault mix, not the whole token. XO-specific custody terms and provider allocation remain undisclosed.",
     "knownUnknownExposurePct": 0
   },

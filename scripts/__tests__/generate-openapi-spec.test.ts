@@ -299,6 +299,7 @@ describe("OpenAPI runtime response contracts", () => {
   it("preserves bounded-fact discriminants and evidence fields in generated JSON Schema", () => {
     const schemas = document.components.schemas as Record<string, unknown>;
     const reserves = resolveSchemaTree(schemas.StablecoinReservesResponse, schemas);
+    expect(collectPropertySchemas(reserves, "selfReferential")).toEqual([]);
     const boundedFacts = collectPropertySchemas(reserves, "boundedFacts");
     expect(boundedFacts.length).toBeGreaterThan(0);
     for (const array of boundedFacts) {

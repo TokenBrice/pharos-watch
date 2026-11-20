@@ -21,6 +21,12 @@ describe("reserve composition validation", () => {
     expect(schema.safeParse([{ name: "USDC", pct: 100, risk: "low", coinId: "usdc-circle", depType: "collateral" }]).success).toBe(true);
   });
 
+  it("reserves producer own-liability flags for live compositions", () => {
+    const rows = [{ name: "Cash", pct: 100, risk: "very-low", selfReferential: true }];
+    expect(FullReserveCompositionSchema.safeParse(rows).success).toBe(true);
+    expect(FullAuthoredReserveCompositionSchema.safeParse(rows).success).toBe(false);
+  });
+
   it("uses the shared full-composition tolerance at the boundary", () => {
     expect(validateReserveCompositionTotal([
       { pct: 100 - RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT },

@@ -105,6 +105,13 @@ describe("MethodologyPage", () => {
     }
   });
 
+  it.each([
+    ["methodology", () => methodologyDocument().querySelector(`#${SAFETY_SCORES_SECTION_CONTENT.id}`)?.textContent],
+    ["changelog", () => SAFETY_SCORE_METHODOLOGY_CHANGELOG.find(entry => entry.version === "10.47")?.summary],
+  ] as const)("qualifies the own-liability denominator in the %s", (_source, copy) => {
+    expect(copy()).toContain("scoped issuer report");
+  });
+
   it("leads with the grade bands before reading meta", () => {
     const html = methodologyHtml();
     const glanceAt = html.indexOf('id="methodology-at-a-glance"');

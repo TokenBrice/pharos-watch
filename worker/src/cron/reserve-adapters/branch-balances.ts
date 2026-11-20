@@ -339,7 +339,7 @@ export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): Adap
   const observations: Array<Record<string, unknown>> = [];
   const values: Array<{
     sourceKey: string; value: number; name: string; risk: BranchConfig["risk"];
-    coinId?: string; depType?: BranchConfig["depType"];
+    coinId?: string; depType?: BranchConfig["depType"]; selfReferential?: true;
   }> = [];
 
   for (const { branch, balanceRaw, observedDecimals, balanceDecimals } of balances) {
@@ -401,6 +401,7 @@ export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): Adap
         value,
         name: `Self-referential claim (${branch.name})`,
         risk: "very-high",
+        selfReferential: true,
       });
       continue;
     }

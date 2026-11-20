@@ -21,6 +21,7 @@ import {
   ReserveRiskFactorSchema,
   ReserveRiskSchema,
   ReserveSliceSchema,
+  StaticReserveSliceSchema,
 } from "./reserves";
 import {
   ANY_FRESHNESS,
@@ -399,7 +400,7 @@ const accountableParamsSchema = z
 
 const attestationPdfIndexParamsSchema = z
   .object({
-    slices: z.array(ReserveSliceSchema).min(1),
+    slices: z.array(StaticReserveSliceSchema).min(1),
     /** Bind a reviewed balance observation to its exact report, independently of
      *  the publication date in the filename. New reports require a new review. */
     reviewedReport: z.object({
@@ -1890,7 +1891,7 @@ const tetherTransparencyParamsSchema = z.discriminatedUnion("currencyIso", [
   }).strict(),
   z.object({
     currencyIso: z.enum(["xaut", "mxnt"]),
-    slices: z.array(ReserveSliceSchema).min(1),
+    slices: z.array(StaticReserveSliceSchema).min(1),
     compositionAsOf: StrictIsoDateSchema.optional(),
   }).strict(),
 ]);
@@ -1898,7 +1899,7 @@ const tetherTransparencyParamsSchema = z.discriminatedUnion("currencyIso", [
 const tetherMxntTransparencyParamsSchema = z
   .object({
     currencyIso: z.literal("mxnt"),
-    slices: z.array(ReserveSliceSchema).min(1),
+    slices: z.array(StaticReserveSliceSchema).min(1),
     compositionAsOf: StrictIsoDateSchema.optional(),
   })
   .strict();
@@ -2750,7 +2751,7 @@ const ADAPTER_DECLARATIONS = {
     sourceOriginClass: "issuer-attested",
     displayBadgeKind: "proof",
     sharedSourceMode: "none",
-    configValidation: configPolicy(["attestation-mix"], [3]),
+    configValidation: configPolicy(["attestation-mix"], [4]),
     redemptionTelemetry: PROXY_CAPACITY_TELEMETRY,
     validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
   },

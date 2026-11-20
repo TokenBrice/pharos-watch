@@ -14,7 +14,7 @@ import {
   RESERVE_DISPLAY_BADGE_KIND_VALUES,
   NativeReserveQuantityBasisSchema,
 } from "./live-reserve-core";
-import { ReserveSliceSchema } from "./reserves";
+import { PublicReserveSliceSchema } from "./reserves";
 import { HttpUrlSchema } from "./validators";
 import { isValidIsoDateOnly } from "./date-primitives";
 import {
@@ -509,7 +509,7 @@ export const StablecoinReservesResponseSchema = /* @__PURE__ */ (() => z
   .object({
     stablecoinId: z.string(),
     mode: z.enum(["live", "live-stale", "curated-fallback", "template-fallback", "unavailable"]),
-    reserves: z.array(ReserveSliceSchema),
+    reserves: z.array(PublicReserveSliceSchema),
     estimated: z.boolean(),
     liveAt: z.number().finite().optional(),
     source: z.string().optional(),

@@ -23,7 +23,7 @@ import {
 import type { V9AssetFactsV2, V9AssetFactsV3 } from "./safety-score-v9-facts.fixture-support";
 import { bridgeControl, bridgeSupplyRow, commonDomainFixture, staleBridgeStatus, unresolvedArchetype } from "./safety-score-v9-facts.test-support";
 import { resolveV9EvidenceCause } from "../safety-score-v9/evidence";
-import { CompiledV9FactSetV3Schema } from "../../types/safety-score-v9-facts";
+import { CompiledV9FactSetV3Schema, V9AssetFactsV3Schema } from "../../types/safety-score-v9-facts";
 import { buildV9EvidenceGapQueue } from "../safety-score-v9/evidence-gap-queue";
 import { unknownQuality } from "../safety-score-v9/policy";
 import { projectSafetyScoreV9Card } from "../safety-score-v9/public";
@@ -34,6 +34,20 @@ function mutableNativeFactSet() {
   // Schema parsing creates an authoring DTO; structuredClone preserves compiled aliasing.
   return CompiledV9FactSetV3Schema.parse(compileNativeV3FactSet(coreFixture()));
 }
+
+it("rejects a known ordinary reserve with a missing asset class marked not applicable", () => {
+  const asset = mutableNativeFactSet().assets.find(row => row.assetId === "alpha")!;
+  const exposure = asset.reserveExposures.find(row => row.exposureKey === "exposure:cash")!;
+  exposure.assetClass = null;
+  exposure.factorStatuses = { ...exposure.factorStatuses, assetClass: {
+    ...exposure.status,
+    applicability: { state: "not-applicable", policyRuleId: "fixture.reserve-class", rationale: "Fixture", gapId: null },
+  } };
+  const parsed = V9AssetFactsV3Schema.safeParse(asset);
+  expect(parsed.error?.issues ?? []).toContainEqual(expect.objectContaining({
+    path: ["reserveExposures", expect.any(Number), "assetClass"],
+  }));
+});
 
 function certifyGap(asset: V9AssetFactsV3, gap: V9AssetFactsV3["gaps"][number], cause: "A" | "C") {
   if (gap.path.kind !== "local-component") throw new Error("Fixture proof requires an exact local component");

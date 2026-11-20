@@ -279,6 +279,7 @@ Populate `reserves[]` with real slices, not generic prose.
 - Use `shared/lib/reserve-asset-risk.ts` for legacy `risk`; current Backing uses structured slice fields, not that tier alone.
 - Even with `liveReservesConfig`, keep `reserves[]` up to date because fallback views and dependency logic still use it.
 - For a reviewed stablecoin-looking aggregate or exogenous slice that cannot be linked, add a `reserveReview.nonLinkDispositions` row with one of `untracked-exogenous-asset`, `self-reserve`, `basket-needs-split`, `insufficient-evidence`, or `not-applicable`. Candidate IDs document research leads only and never substitute for evidenced constituent weights.
+- Set `ownLiability: true` on the `self-reserve` disposition when the review verifies that the slice holds or redeems into the subject stablecoin itself. The flag keeps the measured weight in the Backing denominators at zero credit. Use an exact source key when applying that review to live rows. Other `self-reserve` non-links, such as HBD's HIVE conversion, leave Backing treatment unchanged.
 
 ### Hero verdict, mechanism archetype, and attestor-tier surfacing
 

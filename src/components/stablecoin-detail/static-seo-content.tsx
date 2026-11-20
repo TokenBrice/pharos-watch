@@ -11,6 +11,7 @@ import {
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { getReserves } from "@shared/lib/reserve-templates";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { formatProseList, formatUtcDayLabel } from "@shared/lib/format";
 import {
@@ -200,6 +201,16 @@ function describeReserveEvidence(coin: StablecoinMeta): string {
   }
   if (coin.liveReservesConfig) {
     return "a live reserve feed";
+  }
+  if (coin.id === "msusd-metronome" && coin.reserveReview?.knownUnknownExposurePct === 100) {
+    return "reviewed collateral eligibility with no verified msUSD allocation";
+  }
+  if (coin.id === "dusd-alto" && coin.reserveReview?.scope === "selected-slices") {
+    return "a nominal issuance estimate based on mint-market debt and the USM's frxUSD balance";
+  }
+  if (coin.reserveReview?.scope === "selected-slices") {
+    if (coin.reserveReview.knownUnknownExposurePct === 100) return "a reserve review with unresolved allocation";
+    return coin.reserveReview.scopedWeights ? "a scoped reserve report" : "a review of selected holdings";
   }
   if (coin.reserves?.length) {
     return "a reviewed reserve composition";
@@ -396,24 +407,45 @@ function formatPercent(value: number): string {
   return value < 0.1 ? "under 0.1%" : `${Number(value.toFixed(1))}%`;
 }
 
+/** What a scoped report's shares are measured against, per reviewed composition basis. */
+const SCOPED_RESERVE_DENOMINATORS: Record<string, string> = {
+  "nusd-nexus": "nominal pool balances",
+  "satusd-river": "gross product deposits",
+  "xo-exodus": "measured holdings in scope",
+};
+
 function buildBackingAnswer(coin: StablecoinMeta): string {
   const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
-  const slices = (coin.reserves ?? []).filter((slice) => slice.pct > 0).sort((left, right) => right.pct - left.pct);
   const review = coin.reserveReview;
+  const issuancePaths = coin.id === "dusd-alto" && review?.scope === "selected-slices";
+  const holdingsOnly = review?.scope === "selected-slices" && !review.scopedWeights && !issuancePaths;
+  const hasEvidenceGap = holdingsOnly && (review.knownUnknownExposurePct === 100
+    || review.nonLinkDispositions?.some((row) => row.disposition === "insufficient-evidence"));
+  const slices = (coin.reserves?.length ? getReserves(coin)!.reserves : []).filter((slice) => slice.pct > 0);
+  if (!holdingsOnly) slices.sort((left, right) => right.pct - left.pct);
   let lead: string;
   if (slices.length > 0) {
-    const listed = slices.slice(0, 3).map((slice) => `${formatPercent(slice.pct)} ${slice.name}`);
+    const listed = (issuancePaths ? slices : slices.slice(0, 3))
+      .map((slice) => holdingsOnly ? slice.name : `${formatPercent(slice.pct)} ${slice.name}`);
     const rest = slices.length - listed.length;
     const dated = review?.compositionAsOf
       ? ` as of ${formatIsoDayLabel(review.compositionAsOf)}`
       : review?.reviewedAt
         ? ` in its review of ${formatIsoDayLabel(review.reviewedAt)}`
         : "";
-    const composition = formatProseList(
-      rest > 0 ? [...listed, `${rest} smaller ${rest === 1 ? "holding" : "holdings"}`] : listed,
-    );
+    const remainder = hasEvidenceGap ? (rest === 1 ? "other entry" : "other entries")
+      : `${holdingsOnly ? "other" : "smaller"} ${rest === 1 ? "holding" : "holdings"}`;
+    const composition = formatProseList(rest > 0 ? [...listed, `${rest} ${remainder}`] : listed);
     const recorder = coin.status === "frozen" ? "The archived Pharos profile records" : "Pharos records";
-    lead = `${recorder} ${coin.symbol}'s reserves${dated} as ${composition}${composition.endsWith(".") ? "" : "."}`;
+    const subject = issuancePaths ? `these shares of ${coin.symbol}'s reviewed nominal issuance paths`
+      : hasEvidenceGap ? `${coin.symbol}'s reserve review findings`
+      : holdingsOnly ? `${coin.symbol}'s identified holdings`
+      : review?.scope === "selected-slices"
+        ? SCOPED_RESERVE_DENOMINATORS[coin.id]
+          ? `these shares of ${SCOPED_RESERVE_DENOMINATORS[coin.id]} for ${coin.symbol}`
+          : `these shares of ${coin.symbol}'s scoped reserve report`
+        : `${coin.symbol}'s reserves`;
+    lead = `${recorder} ${subject}${dated} as ${composition}${composition.endsWith(".") ? "" : "."}`;
   } else if (coin.collateral) {
     lead = `${coin.symbol}'s collateral, per its Pharos profile: ${summarizeText(coin.collateral, 240)}`;
   } else {
@@ -511,7 +543,7 @@ function ProofOfReservesValue({ coin, linkReserves }: { coin: StablecoinMeta; li
     if (!coin.liveReservesConfig && !coin.reserves?.length) return <span>No proof-of-reserves report listed.</span>;
     return (
       <span>
-        {`No attestation report listed; Pharos tracks ${coin.liveReservesConfig ? "a live reserve feed" : "a reviewed reserve composition"}`}
+        {`No attestation report listed; Pharos tracks ${describeReserveEvidence(coin)}`}
         {linkReserves ? (
           <>
             {" "}in{" "}

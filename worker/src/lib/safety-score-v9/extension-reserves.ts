@@ -12,6 +12,7 @@ import type { ReserveObservationEnvelope, ReserveScopedAdmission } from "@shared
 import type { SafetyScoreV9CompilerInput } from "./native-input";
 import {
   RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT,
+  RESERVE_REVIEW_PCT_TOLERANCE,
   validateReserveCompositionTotal,
   type ReserveSlice,
 } from "@shared/types/reserves";
@@ -76,7 +77,7 @@ function overlayReviewedReserveClassification(
   live: ReserveSlice,
   reviewed: ReserveSlice,
   reviewKey: string,
-  reviewedNonLink: boolean,
+  nonLinkDisposition: ReserveClassification["trackedAssetDisposition"],
   reviewedLinkAllowed: boolean,
 ): ReserveClassification {
   const assetClass = live.assetClass ?? reviewed.assetClass ?? null;
@@ -94,7 +95,7 @@ function overlayReviewedReserveClassification(
     (live.liquidityHorizon == null && reviewed.liquidityHorizon != null) ||
     (live.maturityDaysMax == null && reviewed.maturityDaysMax != null);
 
-  if (!usesReviewedMetadata && !reviewedNonLink) return classification;
+  if (!usesReviewedMetadata && !nonLinkDisposition) return classification;
   return {
     ...classification,
     classificationKey: `registry-reviewed:${classification.exposureKey}:${reviewKey}`,
@@ -103,12 +104,17 @@ function overlayReviewedReserveClassification(
     riskFactors: [...new Set(riskFactors)].sort(compareText),
     liquidityHorizon,
     maturityDaysMax,
-    ...(reviewedNonLink
+    ...(nonLinkDisposition
       ? { trackedAssetId: null }
       : trackedAssetId
         ? { trackedAssetId }
         : {}),
-    ...(reviewedNonLink ? { trackedAssetDisposition: "reviewed-non-link" as const } : {}),
+    ...(nonLinkDisposition ? { trackedAssetDisposition: nonLinkDisposition } : {}),
+    // Only the verified own-liability branch carries its affirmative decision:
+    // the review digest and the reviewed row identity that decision named.
+    ...(nonLinkDisposition === "own-liability"
+      ? { ownLiabilityDecision: { reviewKey, reserveName: reviewed.name, pct: reviewed.pct } }
+      : {}),
     failureDomains: issuerOrObligorKey
       ? [{ kind: "reserve-issuer", key: issuerOrObligorKey }]
       : classification.failureDomains,
@@ -145,20 +151,24 @@ function reviewedReserveMatches(
   ) {
     return [];
   }
-  // Classification-only evidence identifies keyed source categories; it does
-  // not certify a book or enable the historical whole-composition name join.
+  const ownLiabilityIndexes = new Set(
+    review.nonLinkDispositions?.filter((row) => row.ownLiability).map((row) => row.reserveIndex),
+  );
+  const matches = (live: ReserveSlice, reviewed: ReserveSlice, reviewedIndex: number) =>
+    (Boolean(live.sourceKey) || (review.scope === "full-composition" && !ownLiabilityIndexes.has(reviewedIndex))) &&
+    reserveSlicesMatch(live, reviewed);
   const reviewedCandidatesByLive = liveReserves.map((live) =>
     reviewedReserves
       .map((reviewed, reviewedIndex) => ({ reviewed, reviewedIndex }))
-      .filter(({ reviewed }) =>
-        (review.scope !== "classification-only" || Boolean(live.sourceKey)) && reserveSlicesMatch(live, reviewed),
-      ),
+      .filter(({ reviewed, reviewedIndex }) => matches(live, reviewed, reviewedIndex)),
   );
-  const liveCandidateCountByReviewed = reviewedReserves.map((reviewed) =>
-    liveReserves.filter((live) =>
-      (review.scope !== "classification-only" || Boolean(live.sourceKey)) && reserveSlicesMatch(live, reviewed),
-    ).length,
-  );
+  const liveCandidateCountByReviewed = reviewedReserves.map((reviewed, reviewedIndex) => {
+    const candidates = liveReserves.filter(live => matches(live, reviewed, reviewedIndex));
+    // The compiler combines identical keyed own-liability rows at their full weight.
+    return ownLiabilityIndexes.has(reviewedIndex) && candidates.length > 1
+      ? new Set(candidates.map(live => stableJsonStringifyV1({ ...live, pct: undefined }))).size
+      : candidates.length;
+  });
   return reviewedCandidatesByLive.flatMap((candidates, liveIndex) => {
     if (candidates.length !== 1) return [];
     const candidate = candidates[0]!;
@@ -194,7 +204,7 @@ export function dependencyReserveSlices(
   const expired = Number.isFinite(reviewedAtSec)
     && clockSec - reviewedAtSec > REVIEWED_RESERVE_CLASSIFICATION_MAX_AGE_SEC;
   const slices = liveReserves.map((slice, liveIndex) => {
-    if (nonLinkLiveIndexes.has(liveIndex)) {
+    if (slice.selfReferential || nonLinkLiveIndexes.has(liveIndex)) {
       rejectionReasons.push({ sliceIndex: liveIndex, reason: "non-link" });
       const { coinId: _coinId, depType: _depType, intermediary: _intermediary, ...unlinked } = slice;
       return unlinked;
@@ -240,40 +250,53 @@ function hasUnclassifiedResidualShape(row: ReserveSlice): boolean {
 }
 
 /**
- * Bridges reviewed registry classifications onto live reserve identities.
+ * Binds admitted static rows to their authored review and overlays live identities.
  * Explicit source keys match exactly and fail closed; only full-composition
- * reviews admit historical unkeyed rows by unique normalized name. Weights are never identity.
+ * reviews admit historical unkeyed rows by unique normalized name, with exact
+ * keys required for own-liability reviews. Weights are never identity.
  */
 export function buildReviewedReserveClassifications(
   liveReserves: readonly ReserveSlice[],
   meta: V9ExtensionRegistryMeta,
   clockSec: number,
   classificationMaxAgeSec = REVIEWED_RESERVE_CLASSIFICATION_MAX_AGE_SEC,
+  reviewedStatic = false,
 ): ReserveClassification[] {
   const classifications: ReserveClassification[] = buildSafetyScoreV9ReserveClassifications(liveReserves).map(
     ({ unclassifiedResidual: _unclassifiedResidual, ...classification }) => classification,
   );
   const review = meta.reserveReview;
   if (!review) return classifications;
-  const nonLinkReviewedIndexes = new Set(
-    review.nonLinkDispositions?.map((disposition) => disposition.reserveIndex) ?? [],
-  );
-  const reviewedByExposureKey = new Map<string, { reviewed: ReserveSlice; reviewedNonLink: boolean }>();
+  const reviewedByExposureKey = new Map<string, {
+    reviewed: ReserveSlice;
+    nonLinkDisposition: ReserveClassification["trackedAssetDisposition"];
+  }>();
   const liveByExposureKey = new Map(liveReserves.map((live) => [computeSafetyScoreV9ReserveExposureKey(live), live]));
   const unclassifiedExposureKeys = new Set<string>();
 
-  for (const match of reviewedReserveMatches(liveReserves, meta, clockSec, classificationMaxAgeSec)) {
+  // Admission validates authored indexes before sorting or reconciling static rows.
+  const matches = reviewedStatic
+    ? (meta.reserves ?? []).flatMap((reviewed, reviewedIndex) => {
+        const key = computeSafetyScoreV9ReserveExposureKey(reviewed);
+        const liveIndex = liveReserves.findIndex(row => computeSafetyScoreV9ReserveExposureKey(row) === key);
+        return liveIndex === -1 ? [] : [{ liveIndex, reviewedIndex, reviewed }];
+      })
+    : reviewedReserveMatches(liveReserves, meta, clockSec, classificationMaxAgeSec);
+  for (const match of matches) {
     const exposureKey = computeSafetyScoreV9ReserveExposureKey(liveReserves[match.liveIndex]!);
-    reviewedByExposureKey.set(exposureKey, {
-      reviewed: match.reviewed,
-      reviewedNonLink: nonLinkReviewedIndexes.has(match.reviewedIndex),
-    });
-    // Only a producer-declared unknown can change live exposure treatment.
-    // Classification-only non-link reviews without that marker stay unchanged.
     const live = liveReserves[match.liveIndex]!;
     const dispositions = review.nonLinkDispositions?.filter(
       (row) => row.reserveIndex === match.reviewedIndex,
     ) ?? [];
+    const [disposition] = dispositions;
+    const ownLiability = dispositions.length === 1 && disposition?.ownLiability === true &&
+      disposition.disposition === "self-reserve" && disposition.reserveName === match.reviewed.name &&
+      Math.abs(disposition.pct - match.reviewed.pct) <= RESERVE_REVIEW_PCT_TOLERANCE;
+    reviewedByExposureKey.set(exposureKey, {
+      reviewed: match.reviewed,
+      nonLinkDisposition: ownLiability ? "own-liability" : dispositions.length > 0 ? "reviewed-non-link" : undefined,
+    });
+    // Only a producer-declared unknown can become a live residual.
     if (live.unclassifiedResidual && live.residualReason === "insufficient-evidence" &&
       live.sourceKey && live.sourceKey === match.reviewed.sourceKey &&
       hasUnclassifiedResidualShape(live) && hasUnclassifiedResidualShape(match.reviewed) &&
@@ -293,7 +316,7 @@ export function buildReviewedReserveClassifications(
           live,
           match.reviewed,
           reviewKey,
-          match.reviewedNonLink,
+          match.nonLinkDisposition,
           review.scope === "full-composition",
         )
       : classification;
@@ -556,7 +579,7 @@ function compositionRowsWithUnknownResidual(meta: V9ExtensionRegistryMeta): Rese
   for (const disposition of review.nonLinkDispositions ?? []) {
     const row = rows[disposition.reserveIndex];
     if (!row || dispositionIndexes.has(disposition.reserveIndex) ||
-      row.name !== disposition.reserveName || row.pct !== disposition.pct) return null;
+      row.name !== disposition.reserveName || Math.abs(row.pct - disposition.pct) > RESERVE_REVIEW_PCT_TOLERANCE) return null;
     dispositionIndexes.add(disposition.reserveIndex);
     if (!UNRESOLVED_CURATED_RESERVE_DISPOSITIONS.has(disposition.disposition)) continue;
     recordedUnresolvedPct += row.pct;

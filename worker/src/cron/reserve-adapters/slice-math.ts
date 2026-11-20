@@ -195,6 +195,7 @@ export function normalizeSlices(slices: ReserveSlice[], decimals: number | null 
       slice.liquidityHorizon,
       slice.maturityDaysMax,
       slice.boundedFacts,
+      slice.selfReferential,
     ]);
     const existing = grouped.get(key);
     if (existing) {
@@ -340,6 +341,7 @@ export function slicesFromValues(
     assetClass?: ReserveSlice["assetClass"];
     issuerOrObligor?: string;
     blacklistable?: boolean;
+    selfReferential?: true;
   }>,
   decimals: number | null = null,
 ): ReserveSlice[] {
@@ -361,6 +363,7 @@ export function slicesFromValues(
     ...(value.assetClass ? { assetClass: value.assetClass } : {}),
     ...(value.issuerOrObligor ? { issuerOrObligor: value.issuerOrObligor } : {}),
     ...(value.blacklistable != null ? { blacklistable: value.blacklistable } : {}),
+    ...(value.selfReferential ? { selfReferential: value.selfReferential } : {}),
   })), decimals);
 }
 
