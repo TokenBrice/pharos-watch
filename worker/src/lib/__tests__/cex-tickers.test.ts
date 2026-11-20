@@ -595,7 +595,7 @@ describe("fetchKrakenPrices", () => {
       },
     }]);
 
-    const outcome = await fetchKrakenPrices(["USDT", "USDC", "DAI", "TGBP", "MXNB"]);
+    const outcome = await fetchKrakenPrices(["USDT", "USDC", "DAI", "TGBP", "MXNB"], undefined, false);
     expect(fetch).toHaveBeenCalledOnce();
     expect(fetch.mock.calls[0]?.[0]).toContain("https://api.kraken.com/0/public/Ticker");
     expect(outcome.kind).toBe("ok");
@@ -727,7 +727,7 @@ describe("fetchKrakenPrices", () => {
     }]);
 
     const symbols = ["ZCHF", "USDSM", "USDSUI", "USDPT", "EUROP", "QCAD", "AUDX", "BRL1"];
-    const outcome = await fetchKrakenPrices(symbols);
+    const outcome = await fetchKrakenPrices(symbols, undefined, false);
 
     for (const symbol of symbols) expect(KRAKEN_KNOWN_SYMBOLS).toContain(symbol);
     expect(requestedUrls).toEqual([

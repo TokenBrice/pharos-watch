@@ -1,5 +1,19 @@
 [
   {
+    "version": "6.88",
+    "title": "Kraken upstream quote clocks enabled",
+    "date": "2026-11-20",
+    "effectiveAt": 1795176900,
+    "summary": "The Kraken Spot WebSocket v2 snapshot read that shipped off in v6.87 is enabled for the ten reviewed USD markets (EURC, ZCHF, XAUT, PAXG, EUROP, AUDX, tGBP, QCAD, MXNB, BRL1). The batched REST ticker keeps supplying fallback quotes with their existing clock modes.",
+    "impact": [
+      "The owner review recorded in the Kraken snapshot rollout compared the disabled baseline (sync-stablecoins 49 to 164 s per slot over the last eight slots, mean about 105 s) with a six-probe rate-limit check that returned all ten snapshots per connection in about 0.2 s with no rate-limit or error response.",
+      "Snapshot admission, consensus clock rules and depeg admission are unchanged from v6.87; only the switch state differs.",
+      "Restoring the off switch and redeploying remains the documented rollback if enabled runs regress rate limits or slot health."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.87",
     "title": "Upstream quote clocks for reviewed Kraken USD books",
     "date": "2026-11-20",
