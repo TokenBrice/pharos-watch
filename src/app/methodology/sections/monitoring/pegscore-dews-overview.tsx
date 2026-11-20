@@ -7,6 +7,7 @@ import {
 } from "../../methodology-shared";
 import {
   DEPEG_BINANCE_CONFIRMATION_DESCRIPTION,
+  DEPEG_INCIDENT_PEAK_DESCRIPTION,
   DEPEG_PEER_DIVERGENCE_DESCRIPTION,
   DEPEG_REFERENCE_SESSION_DESCRIPTION,
 } from "@/lib/methodology-content";
@@ -99,6 +100,7 @@ export function PegScoreDewsOverview() {
           <p>
             PegScore begins at a reviewed replay-coverage anchor when one is curated for the asset; otherwise it uses the documented age and first-observation fallbacks. Detail and tracker surfaces distinguish projected incidents from their constituent threshold crossings and publish a recent 90-day peg view whose denominator contains only observed coverage.
           </p>
+          <p>{DEPEG_INCIDENT_PEAK_DESCRIPTION}</p>
           <p>
             Since peg methodology 6.31, off-peg time stops at the last recorded trusted observation.
             Missing price/reference coverage or a missed producer run cannot extend a depeg interval;

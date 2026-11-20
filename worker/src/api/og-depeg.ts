@@ -9,7 +9,8 @@ import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { renderPng, socialCardMeasurer } from "../lib/og-render";
 import { admittedDepegRecoveryAt } from "../lib/tape-projectors/depeg";
 import {
-  effectiveStartedAtSql, EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL, readPublicDepegPeakBasis, type DepegPeakBasisRow,
+  effectiveStartedAtSql, EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL, PROJECTED_DEPEG_PEAK_SQL,
+  readProjectedDepegPeak, readPublicDepegPeakBasis, type DepegPeakBasisRow,
 } from "../lib/depeg-event-projection";
 import { reviewedDepegDisputeSql } from "@shared/data/depegs/reviewed-depeg-disposition-sql";
 import { deriveCurrentPegObservationMap, type CurrentPegObservation } from "../lib/current-peg-observations";
@@ -41,7 +42,7 @@ async function renderDepegBriefing(db: D1Database): Promise<Response> {
     db.prepare(`SELECT e.stablecoin_id, e.symbol, e.direction, e.peak_deviation_bps, e.peg_reference,
                        e.peg_type, e.source, e.started_at, e.ended_at, e.start_price, p.quote_mode,
                        e.peak_price, e.peak_peg_reference, e.peak_quote_domain, e.peer_basis_json, e.pending_reason,
-                       nq.value AS current_native_quote
+                       nq.value AS current_native_quote, ${PROJECTED_DEPEG_PEAK_SQL} AS incident_peak_json
                 FROM depeg_events e LEFT JOIN depeg_event_provenance p ON p.event_id = e.id
                 LEFT JOIN cache nq ON nq.key = '${NATIVE_EVENT_QUOTE_CACHE_PREFIX}' || e.id
                 WHERE e.ended_at IS NULL AND ${EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL}
@@ -49,6 +50,7 @@ async function renderDepegBriefing(db: D1Database): Promise<Response> {
       .all<NativeEventPriceEvidence & DepegPeakBasisRow & {
         stablecoin_id: string; symbol: string; direction: "above" | "below";
         current_native_quote: string | null;
+        incident_peak_json: string | null;
       }>(),
     db.prepare(`SELECT e.*
                 FROM depeg_events e
@@ -71,12 +73,14 @@ async function renderDepegBriefing(db: D1Database): Promise<Response> {
   const assetById = new Map(assets.map((asset) => [asset.id, asset]));
   let legacyObservations: Map<string, CurrentPegObservation> | undefined;
   let expiresAt = Math.min(now + SECONDS_PER_MINUTE, marketFreshUntil ?? Infinity);
-  const eligibleEvents = openEvents.results.filter((row) =>
-    ACTIVE_IDS.has(row.stablecoin_id) && !FROZEN_IDS.has(row.stablecoin_id));
+  const eligibleEvents = openEvents.results
+    .filter((row) => ACTIVE_IDS.has(row.stablecoin_id) && !FROZEN_IDS.has(row.stablecoin_id))
+    .map((row) => ({ ...row, incidentPeak: readProjectedDepegPeak(row.incident_peak_json) }));
   const openEventById = new Map<string, (typeof eligibleEvents)[number]>();
   for (const row of eligibleEvents) {
     const existing = openEventById.get(row.stablecoin_id);
-    if (!existing || Math.abs(row.peak_deviation_bps) > Math.abs(existing.peak_deviation_bps)) {
+    if (!existing || Math.abs(row.incidentPeak?.peakDeviationBps ?? row.peak_deviation_bps) >
+      Math.abs(existing.incidentPeak?.peakDeviationBps ?? existing.peak_deviation_bps)) {
       openEventById.set(row.stablecoin_id, row);
     }
   }
@@ -132,6 +136,7 @@ async function renderDepegBriefing(db: D1Database): Promise<Response> {
     if (admittedBps != null && admission?.referenceObservedAtSec != null && admission.budgetSec != null) {
       expiresAt = Math.min(expiresAt, admission.referenceObservedAtSec + admission.budgetSec);
     }
+    const peakBps = row.incidentPeak?.peakDeviationBps ?? row.peak_deviation_bps;
     return {
       symbol: nativeEvent ? `${row.symbol} (native peg)` : row.symbol,
       deviationBps: usesPublishedDeviation
@@ -139,8 +144,10 @@ async function renderDepegBriefing(db: D1Database): Promise<Response> {
         : legacyHeld ? null : legacySignal?.bps ?? null,
       ...(deviationHeld ? { deviationHeld } : {}),
       deviationStale: admission?.status === "stale-reference" || expiredAdmission === "reference-over-budget" || expiredAdmission === "quote-before-reopen",
-      peakBps: row.direction === "below" ? -Math.abs(row.peak_deviation_bps) : Math.abs(row.peak_deviation_bps),
-      ...readPublicDepegPeakBasis(row),
+      peakBps: row.direction === "below" ? -Math.abs(peakBps) : Math.abs(peakBps),
+      ...(row.incidentPeak
+        ? { peakBasis: row.incidentPeak.peakBasis, peakPeerMedianUsd: row.incidentPeak.peakPeerMedianUsd }
+        : readPublicDepegPeakBasis(row)),
     };
   }).sort((a, b) => {
     if (a.deviationBps == null) return b.deviationBps == null ? Math.abs(b.peakBps) - Math.abs(a.peakBps) : 1;

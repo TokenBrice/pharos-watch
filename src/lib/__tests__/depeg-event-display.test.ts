@@ -84,6 +84,13 @@ describe("depeg event search title and description", () => {
     expect(buildDepegEventSynopsis(peer)).toContain("moved below the peer median at 12:00 UTC");
   });
 
+  it("dates the native opening separately from the later peer-relative peak", () => {
+    const event = { ...usdc, symbol: "EURC", pegType: "peggedEUR", endedAt: null, pegReference: 1,
+      onsetQuoteDomain: "native-peg", peakBasis: "peer-relative", peakDeviationBps: -963 } as const;
+    expect(buildDepegEventSynopsis(event)).toMatch(/moved below peg at 03:00 UTC.*peak deviation of 9\.63% below the peer median/);
+    expect(buildDepegEventDescription(event, true)).toMatch(/fell below its peg at 03:00 UTC.*peak.*9\.63% below the peer median/i);
+  });
+
   it.each([
     [null, /Detector close recorded.*12:30 UTC.*Recovery is unverified/],
     [900, /Recovered.*12:15 UTC.*€1.00/],
@@ -160,6 +167,12 @@ describe("depeg event search title and description", () => {
     const event = DEPEG_EVENT_ENTRIES.find((entry) => entry.slug === slug)!;
     expect(formatEventPrice(event.pegReference, event, "reference")).toBe(reference);
     if (peak) expect(formatEventPrice(event.peakPrice, event, "peak")).toBe(peak);
+  });
+
+  it("uses the projected opening quote domain for display", () => {
+    expect(formatEventPrice(1, {
+      ...usdc, source: "live", pegType: "peggedAUD", pegReference: 1, onsetQuoteDomain: "usd",
+    }, "reference")).toBe("$1.00 per 1 AUD");
   });
 
   it.each(["legacy", "empty", "annotated"] as const)("distinguishes recorded onset from %s admitted coverage", (coverage) => {
