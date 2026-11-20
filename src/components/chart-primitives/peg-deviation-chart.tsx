@@ -8,9 +8,9 @@ import { ChartRangeToggle } from "@/components/chart-primitives/scale-toggle";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { CHART_BLUE } from "@/lib/chart-colors";
 import { computePegYAxis, ewma } from "@/lib/peg-chart-math";
-import { formatChartDate } from "@shared/lib/format";
+import { formatChartDate, formatUsdPriceAdaptive } from "@shared/lib/format";
 import { PEG_BAND_BPS, PEG_BAND_HEX, PEG_BAND_LABELS } from "@shared/lib/classification";
-import { DateTooltip, MonoYAxis } from "@/components/chart-primitives/axes";
+import { DateTooltip, MonoYAxis, useNiceValueAxis } from "@/components/chart-primitives/axes";
 import type { ChartDataTableColumn } from "@/components/chart-primitives/data-table";
 import { MarketDataChartFigure } from "@/components/chart-primitives/market-data-chart-frame";
 import { useMarketDataChartFrame } from "@/components/chart-primitives/use-market-data-chart-window";
@@ -76,6 +76,25 @@ function makePriceTickFormatter(step: number): (value: number) => string {
   return (value) => `$${value.toFixed(decimals)}`;
 }
 
+/** A non-USD peg's USD price: two decimals from $100 (gold), adaptive below. */
+function formatUsdPrice(value: number): string {
+  return Math.abs(value) >= 100
+    ? `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    : `$${formatUsdPriceAdaptive(value)}`;
+}
+
+/** Just enough decimals to print every tick of a fitted step exactly. */
+function makeUsdTickFormatter(step: number): (value: number) => string {
+  let decimals = Math.max(0, Math.ceil(-Math.log10(step) - 1e-9));
+  while (decimals < 8 && Math.abs(step * 10 ** decimals - Math.round(step * 10 ** decimals)) > 1e-6) decimals += 1;
+  return (value) => `$${value.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
+}
+
+const USD_PRICE_TABLE_COLUMNS: ChartDataTableColumn<{ ts: number; price: number }>[] = [
+  PEG_TABLE_COLUMNS[0],
+  { id: "price", label: "Price (USD)", format: (row) => formatUsdPrice(row.price) },
+];
+
 interface PegDeviationChartProps {
   data: SupplyHistoryPoint[];
   pegCurrency?: string | null;
@@ -117,6 +136,10 @@ export function PegDeviationChart({
     visibleData,
     filteredData,
   } = frame;
+  // A USD peg's reference is $1 on every day. Other pegs have no dated FX or
+  // commodity reference series, so their line is the plain USD price: no par
+  // line or peg bands, and an axis fitted to the data.
+  const parCharted = pegCurrency === "USD";
 
   // Apply EWMA smoothing at long ranges where daily ticks compress into static.
   // `priceSmoothed` is plotted on top of the raw `price` line (which is dimmed).
@@ -135,7 +158,14 @@ export function PegDeviationChart({
   const showSmoothed = range === "all" || range === "1y";
 
   const yAxis = useMemo(() => computePegYAxis(visibleData.map((d) => d.price)), [visibleData]);
-  const formatPriceTick = useMemo(() => makePriceTickFormatter(yAxis.step), [yAxis.step]);
+  const usdPrices = useMemo(() => (parCharted ? [] : visibleData.map((d) => d.price)), [parCharted, visibleData]);
+  const usdAxis = useNiceValueAxis(usdPrices, { includeZero: false });
+  const usdStep = usdAxis.ticks && usdAxis.ticks.length > 1 ? usdAxis.ticks[1] - usdAxis.ticks[0] : null;
+  const formatPriceTick = useMemo(
+    () => (parCharted ? makePriceTickFormatter(yAxis.step) : makeUsdTickFormatter(usdStep ?? 0.01)),
+    [parCharted, yAxis.step, usdStep],
+  );
+  const headlinePrice = current ? current.price : filteredData[filteredData.length - 1]?.price ?? null;
 
   // Header readout: current price + signed bps + named band. The header describes
   // the controlled range's latest observation, not the brushed window, so a brush
@@ -162,10 +192,10 @@ export function PegDeviationChart({
     if (visibleData.length === 0) return null;
     const last = visibleData[visibleData.length - 1];
     const bps = Math.round((last.price - 1) * 10_000);
-    return { ts: last.ts, price: last.price, svgColor: classifyDeviation(bps).svgColor };
-  }, [visibleData]);
+    return { ts: last.ts, price: last.price, svgColor: parCharted ? classifyDeviation(bps).svgColor : CHART_BLUE };
+  }, [parCharted, visibleData]);
 
-  if (pegCurrency !== "USD") {
+  if (!pegCurrency) {
     return null;
   }
 
@@ -219,18 +249,22 @@ export function PegDeviationChart({
     <MarketDataChartFigure
       cardClassName={cardClassName}
       chartData={smoothedData}
-      columns={PEG_TABLE_COLUMNS}
+      columns={parCharted ? PEG_TABLE_COLUMNS : USD_PRICE_TABLE_COLUMNS}
       embedded={embedded}
       emptyMessage="No price history available"
       frame={frame}
       header={header}
-      label="Peg deviation"
+      label={parCharted ? "Peg deviation" : "Price (USD)"}
       variant="line"
     >
-          <MonoYAxis tickFormatter={formatPriceTick} domain={yAxis.domain} ticks={yAxis.ticks} />
+          <MonoYAxis
+            tickFormatter={formatPriceTick}
+            domain={parCharted ? yAxis.domain : usdAxis.domain}
+            ticks={parCharted ? yAxis.ticks : usdAxis.ticks}
+          />
 
           {/* Peg severity bands clip at the visible domain so they do not push the axis. */}
-          {pegSeverityBands.map((band) => (
+          {parCharted ? pegSeverityBands.map((band) => (
             <ReferenceArea
               key={band.id}
               y1={band.y1}
@@ -240,16 +274,20 @@ export function PegDeviationChart({
               ifOverflow="hidden"
               strokeOpacity={0}
             />
-          ))}
+          )) : null}
 
-          <ReferenceLine
-            y={1}
-            stroke="var(--color-foreground)"
-            strokeOpacity={0.45}
-            strokeWidth={1}
+          {parCharted ? (
+            <ReferenceLine
+              y={1}
+              stroke="var(--color-foreground)"
+              strokeOpacity={0.45}
+              strokeWidth={1}
+            />
+          ) : null}
+
+          <DateTooltip
+            formatter={(value) => (parCharted ? formatTooltip(Number(value)) : [formatUsdPrice(Number(value)), "Price"])}
           />
-
-          <DateTooltip formatter={(value) => formatTooltip(Number(value))} />
 
           <Line
             type="monotone"
@@ -290,8 +328,17 @@ export function PegDeviationChart({
   const header = (
     <div className="flex flex-row items-center justify-between gap-3">
       <div className="flex flex-col gap-0.5">
-        <DetailSectionTitle as={embedded ? "h3" : "h2"} className={DETAIL_MODULE_TITLE_CLASS}>Peg deviation</DetailSectionTitle>
-        {readout ? (
+        <DetailSectionTitle as={embedded ? "h3" : "h2"} className={DETAIL_MODULE_TITLE_CLASS}>
+          {parCharted ? "Peg deviation" : "Price (USD)"}
+        </DetailSectionTitle>
+        {!parCharted ? (
+          headlinePrice != null ? (
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+              <span className="pharos-numeric text-lg font-semibold text-foreground">{formatUsdPrice(headlinePrice)}</span>
+              <span className="text-2xs text-muted-foreground">Line: daily UTC snapshots</span>
+            </div>
+          ) : null
+        ) : readout ? (
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <span className="pharos-numeric text-lg font-semibold text-foreground">${readout.price.toFixed(4)}</span>
             <span className="pharos-numeric text-xs" style={{ color: readout.bandCssColor }}>

@@ -394,12 +394,12 @@ describe("MarketDataSection peg panel", () => {
     expect(screen.queryByText(/^Peg vs/)).toBeNull();
   });
 
-  it("states a non-USD peg's live deviation instead of charting USD prices against an undated reference", () => {
+  it("charts a non-USD peg's USD price and states its live deviation, which has no dated reference", () => {
     renderWithPeg("CHF");
-    expect(screen.queryByTestId("peg-chart")).toBeNull();
+    expect(screen.getByTestId("peg-chart")).toBeTruthy();
     expect(screen.getByText("Peg vs Swiss Franc:")).toBeTruthy();
     expect(screen.getByText("-29 bps")).toBeTruthy();
-    expect(screen.getByText(/Daily history is not charted/)).toBeTruthy();
+    expect(screen.getByText(/Price is charted in USD; daily deviation is not/)).toBeTruthy();
   });
 
   it("keeps the drag brush off touch pointers, which keep the range presets", () => {

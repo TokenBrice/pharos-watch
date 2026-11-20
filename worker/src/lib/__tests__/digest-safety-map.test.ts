@@ -149,7 +149,7 @@ describe("digest Safety Score map resolution", () => {
       tweetHook: "See the map.",
       telegramAppendixHtml: [
         "<b>Today’s map</b>",
-        "Mapped supply: $100B across 318 coins",
+        "Graded supply: $100B across 318 coins (incl. variants and stable-value investments)",
         "A tier: 13 coins · 81.8%",
         "C/D/F tiers: 264 coins · 11.2%",
       ].join("\n"),
@@ -164,7 +164,7 @@ describe("digest Safety Score map resolution", () => {
       tweetHook: "See the 24 Apr map.",
       telegramAppendixHtml: [
         "<b>24 Apr map</b>",
-        "Mapped supply: $100B across 318 coins",
+        "Graded supply: $100B across 318 coins (incl. variants and stable-value investments)",
         "A tier: 13 coins · 81.8%",
         "C/D/F tiers: 264 coins · 11.2%",
       ].join("\n"),
