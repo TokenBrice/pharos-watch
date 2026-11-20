@@ -71,6 +71,7 @@ async function validKeyDbTables(
     { match: "UPDATE api_keys SET last_used_at", rows: [], runMeta: { changes: 1 } },
     { match: "DELETE FROM api_key_rate_limit", rows: [], runMeta: { changes: 0 } },
     ...makeRequestAttributionTables({ includeApiKey: true }),
+    { match: "INSERT INTO api_key_monthly_usage", rows: [], runMeta: { changes: 1 }, allowUnused: true },
     ...extra,
   ];
 }
@@ -223,7 +224,7 @@ describe("worker.fetch", () => {
         ),
       expected: {
         status: 401,
-        headers: { "access-control-allow-origin": "https://pharos.watch", "content-type": "application/json" },
+        headers: { "access-control-allow-origin": "https://pharos.watch", "cache-control": "no-store", "content-type": "application/json" },
         bodyKind: "json",
         canonicalBody: {
           error: "Unauthorized: valid X-API-Key required. Safety grades are free at /api/safety-grades; see https://pharos.watch/api/ for supporter and partner keys.",
@@ -242,7 +243,7 @@ describe("worker.fetch", () => {
         ),
       expected: {
         status: 401,
-        headers: { "access-control-allow-origin": "https://pharos.watch", "content-type": "application/json" },
+        headers: { "access-control-allow-origin": "https://pharos.watch", "cache-control": "no-store", "content-type": "application/json" },
         bodyKind: "json",
         canonicalBody: {
           error: "Unauthorized: valid X-API-Key required. Safety grades are free at /api/safety-grades; see https://pharos.watch/api/ for supporter and partner keys.",
@@ -282,6 +283,7 @@ describe("worker.fetch", () => {
         status: 503,
         headers: {
           "access-control-allow-origin": "https://pharos.watch",
+          "cache-control": "no-store",
           "content-type": "application/json",
           "retry-after": "60",
         },
@@ -370,6 +372,7 @@ describe("worker.fetch", () => {
     const { response, env } = await performStablecoinsFetch();
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ cached: true });
+    expect(response.headers.get("X-RateLimit-Limit")).toBe("120");
     expect(cacheMatch).toHaveBeenCalledTimes(1);
     expect(cachePut).not.toHaveBeenCalled();
     const history = env.DB.getHistory();
@@ -825,6 +828,7 @@ describe("worker.fetch", () => {
     }
 
     tables.push(...makeRequestAttributionTables({ includeApiKey: testCase.dependency === "rate-limit" }));
+    tables.push({ match: "INSERT INTO api_key_monthly_usage", rows: [], runMeta: { changes: 1 }, allowUnused: true });
     return mockD1(tables);
   }
 
@@ -937,6 +941,7 @@ describe("worker.fetch", () => {
           runMeta: { changes: 1 },
         },
         ...makeRequestAttributionTables({ includeApiKey: true }),
+        { match: "INSERT INTO api_key_monthly_usage", rows: [], runMeta: { changes: 1 }, allowUnused: true },
       ]),
     });
     const { ctx: firstCtx, waits: firstWaits } = makeExecutionContext();
@@ -963,7 +968,13 @@ describe("worker.fetch", () => {
     await Promise.all(secondWaits);
 
     expect(secondRes.status).toBe(429);
+    expect(secondRes.headers.get("X-RateLimit-Limit")).toBe("1");
+    expect(secondRes.headers.get("Cache-Control")).toBe("no-store");
     await expect(secondRes.json()).resolves.toEqual({ error: "Rate limit exceeded" });
+    // Only the admitted first request burns monthly quota; the throttled retry does not.
+    expect(env.DB.getHistory().filter((entry) =>
+      entry.sql.includes("INSERT INTO api_key_request_stats") || entry.sql.includes("INSERT INTO api_key_monthly_usage")))
+      .toHaveLength(2);
   });
 
   it("does not require a key on exempt public routes (health)", async () => {

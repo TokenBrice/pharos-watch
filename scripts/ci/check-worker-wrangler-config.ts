@@ -78,7 +78,7 @@ export function evaluateWorkerWranglerConfig(
   if (role === "public") {
     const rateLimits = toml.split(/^\s*\[\[ratelimits\]\].*$/m).slice(1).map((block) => parseAssignments(block));
     const namespaces = rateLimits.map((entries) => unquote(entries.find(({ key }) => key === "namespace_id")?.value));
-    for (const [name, limit] of [["SITE_SESSION_RATE_LIMIT", 300], ["SITE_SOURCE_RATE_LIMIT", 1200]] as const) {
+    for (const [name, limit] of [["SITE_SESSION_RATE_LIMIT", 90], ["SITE_SOURCE_RATE_LIMIT", 600]] as const) {
       const matches = rateLimits.filter((entries) => unquote(entries.find(({ key }) => key === "name")?.value) === name);
       const entries = matches[0] ?? [];
       const namespace = unquote(entries.find(({ key }) => key === "namespace_id")?.value);

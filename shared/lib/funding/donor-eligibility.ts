@@ -473,6 +473,8 @@ export type DonorKeyDonationStatus =
   | "counted"
   /** Payout-contract row (for example Giveth): the sender can never sign a claim. */
   | "pool"
+  /** Partner-key payment recorded as revenue, never a donation: never counts. */
+  | "revenue"
   /** Asset outside the reviewed stablecoin list (ETH, other tokens). */
   | "not-qualifying"
   /** Qualifying stablecoin graded outside the A/B band (including NR). */
@@ -492,6 +494,7 @@ export function classifyDonorKeyDonation(
 ): DonorKeyDonationClassification {
   const stablecoin = resolveDonorKeyQualifyingStablecoin(row.chain, row.token_address);
   if (row.kind === "pool") return { status: "pool", stablecoin, grade: null };
+  if (row.kind === "revenue") return { status: "revenue", stablecoin, grade: null };
   if (!stablecoin) return { status: "not-qualifying", stablecoin: null, grade: null };
   const grade = gradesById.get(stablecoin.stablecoinId) ?? null;
   const gradeStatus = donorKeyGradeStatus(grade);
@@ -505,8 +508,9 @@ export function classifyDonorKeyDonation(
 
 /**
  * Sums receipt-date USD for stablecoins graded in the A/B bands at claim time, excluding
- * `pool` rows: pool senders are payout contracts (for example Giveth) and can
- * never sign a claim. Founder rows count so the owner can test the live flow.
+ * `pool` and `revenue` rows: pool senders are payout contracts (for example Giveth)
+ * and can never sign a claim, and revenue is not a donation. Founder rows count so
+ * the owner can test the live flow.
  */
 export function sumEligibleDonationsByAddress(
   donations: readonly Donation[],

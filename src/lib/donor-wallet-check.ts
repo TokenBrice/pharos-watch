@@ -83,6 +83,8 @@ function describeRow(status: DonorKeyDonationStatus, grade: ReportCardGrade | nu
       return "not a listed coin on this network";
     case "pool":
       return "Giveth stream";
+    case "revenue":
+      return "partner-key payment";
     case "grade-unavailable":
       return "grade unavailable";
   }

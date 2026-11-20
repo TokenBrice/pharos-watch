@@ -301,15 +301,15 @@ describe("handleHttpRequestImpl", () => {
     );
   });
 
-  it("records request source and returns the access-gate response on rejection", async () => {
-    const gateResponse = new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" },
-    });
+  it.each([
+    ["an unauthenticated 401", 401, null, false],
+    ["a throttled key 429", 429, { id: 7, trafficClass: "external", rateLimitPerMinute: 60 }, true],
+  ])("records route attribution and returns the access-gate response on %s", async (_name, status, apiKey, throttled) => {
+    const gateResponse = new Response(JSON.stringify({ error: "denied" }), { status });
     mocks.evaluateAccessGate.mockResolvedValue({
       isAdmin: false,
       isSiteProxy: false,
-      apiKey: null,
+      apiKey,
       requestLane: "public-api",
       response: gateResponse,
     });
@@ -320,8 +320,16 @@ describe("handleHttpRequestImpl", () => {
       makeCtx(),
     );
 
-    expect(response).toBe(gateResponse);
+    if (throttled) {
+      // The dispatcher attaches the key's own limit to its throttled 429.
+      expect(response.status).toBe(429);
+      expect(response.headers.get("X-RateLimit-Limit")).toBe("60");
+    } else {
+      expect(response).toBe(gateResponse);
+    }
     expect(mocks.recordRequestSource).toHaveBeenCalledOnce();
+    // Throttled key retries keep route-level attribution but not the per-key usage counter.
+    expect(mocks.createRequestSourceRecorder).toHaveBeenCalledWith(expect.objectContaining({ apiKeyThrottled: throttled }));
     expect(mocks.readEdgeCache).not.toHaveBeenCalled();
     expect(mocks.route).not.toHaveBeenCalled();
   });
@@ -376,8 +384,13 @@ describe("handleHttpRequestImpl", () => {
     expect(response.status).toBe(blocked ? 429 : 200);
     await expect(response.text()).resolves.toBe(blocked ? "limited" : "cached");
     expect(response.headers.get("Access-Control-Allow-Origin")).toBe("https://pharos.watch");
+    expect(response.headers.get("X-RateLimit-Limit")).toBe("120");
     expect(mocks.checkCachedPublicApiReadFastRateLimit).toHaveBeenCalledOnce();
     expect(mocks.recordRequestSource).toHaveBeenCalledOnce();
+    expect(mocks.createRequestSourceRecorder).toHaveBeenCalledWith(expect.objectContaining({
+      apiKeyId: 123,
+      apiKeyThrottled: blocked,
+    }));
     expect(mocks.addCorsHeaders).toHaveBeenCalledOnce();
     expect(mocks.evaluateAccessGate).not.toHaveBeenCalled();
     expect(mocks.route).not.toHaveBeenCalled();

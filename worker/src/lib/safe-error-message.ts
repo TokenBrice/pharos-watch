@@ -31,6 +31,20 @@ export function safeErrorMessage(error: unknown, maxLength: number = 200): strin
 const EMAIL_RUN_START_PATTERN = /(?<![\w.+-])[\w.+-]+@[\w-]+\.[\w.-]+/g;
 const EMAIL_GLUE_CONTINUATION_PATTERN = /[\w.+-]+@[\w-]+\.[\w.-]+/y;
 
+// Mirrors API_KEY_TOKEN_PATTERN in api-key-core.ts (the token parser authority)
+// as an unanchored scan: copied keys arrive inside prose, headers and log
+// fields, not as the whole string. There is no leading lookbehind: a
+// JSON-escaped (`\nph_live_...`) or label-glued (`KEY_ph_live_...`) copy puts a
+// word character right before the distinctive prefix, and redacting there is
+// the safe side. The trailing lookahead keeps an over-long run from being
+// redacted only in part.
+const PHAROS_API_KEY_TOKEN_PATTERN = /ph_live_[0-9a-f]{16}_[A-Za-z0-9_-]{32}(?![A-Za-z0-9_-])/g;
+
+/** True when `value` carries a complete Pharos API token, even glued to text. */
+export function containsPharosApiKeyToken(value: string): boolean {
+  return value.search(PHAROS_API_KEY_TOKEN_PATTERN) !== -1;
+}
+
 function redactEmails(message: string): string {
   let redacted = "";
   let cursor = 0;
@@ -74,6 +88,8 @@ export function stripSensitive(message: string): string {
       /\b((?:api[_-]?key|apikey|app[_-]?id|access[_-]?token|auth(?:orization)?|token|secret|password|cookie)\s*[=:]\s*)(?:"[^"]*"|'[^']*'|[^\s,;]+)/gi,
       "$1[redacted]",
     )
+    // A bare copied token has no label for the rule above to anchor on.
+    .replace(PHAROS_API_KEY_TOKEN_PATTERN, "ph_live_[redacted]")
     // Strip common SQL DML keywords + trailing fragment up to the next sentence boundary.
     .replace(/\b(SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM)\b[^.\n]*/gi, "[sql]");
   // Strip email-like patterns (linear-time; see redactEmails), then URLs after

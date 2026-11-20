@@ -30,7 +30,7 @@ export default function PrivacyPage() {
       title="Privacy Policy"
       variant="longform"
       containerClassName="max-w-2xl"
-      leadParagraphs={["Last updated: November 17, 2026"]}
+      leadParagraphs={["Last updated: November 20, 2026"]}
     >
       <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
         <div className="pharos-card-shell px-5 py-4">
@@ -57,8 +57,11 @@ export default function PrivacyPage() {
             snooze state,
             and short-lived pending-command or pending-alert metadata; subscriber rows with no follows or pending state
             and no Telegram activity for 180 days are automatically purged by a weekly cleanup job. If you request API
-            access, Pharos receives your Telegram or X direct message and deletes it once the key is issued or rotated;
-            request throttling stores salted hashes of IP address and user-agent data. Homepage saved shortcuts store
+            access, Pharos receives your Telegram or X direct message and deletes it once the key is issued or rotated.
+            For partner and commercial keys, Pharos keeps the key name, an optional contact email (owner_email) used
+            only to reach the key holder about their key, and for commercial keys the payment transaction reference;
+            see Data retention below. Request throttling stores salted hashes of IP address and user-agent data.
+            Homepage saved shortcuts store
             only an ordered list of route hrefs in
             browser-local storage and are not sent to the API. The Stablecoin Picker stores local browser state for
             callout dismissal and tab-scoped result recovery, and share links can store a content-addressed snapshot of
@@ -262,7 +265,12 @@ export default function PrivacyPage() {
             request records remain in private operator storage until a planned cleanup deletes them, and no new
             requests are accepted. Issued self-serve API keys expire after 60 days. Partner-key, lost-key, and
             key-removal requests arrive by
-            Telegram or X direct message and are deleted once the key is issued or rotated. Homepage shortcut
+            Telegram or X direct message and are deleted once the key is issued or rotated. For partner and commercial
+            keys, Pharos keeps the key name, an optional contact email (owner_email) used only to reach the key holder
+            about their key (issuance, expiry, renewal, incidents), and for commercial keys the payment transaction
+            reference. These records are kept while the key is active and for as long as accounting records require
+            after it ends, and are deleted on request through the private channel once no longer needed. Homepage
+            shortcut
             preferences remain until reset or browser site data is cleared. Picker localStorage remains until browser
             site data is cleared. Unread Picker KV snapshots expire after 90 days; the first successful read extends
             retention to five years because they are content-addressed analytical records rather than user-account records.

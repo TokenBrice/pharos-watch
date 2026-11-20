@@ -21,6 +21,15 @@ interface ApiKeyByIdRouteContext extends ApiKeysRouteContext {
   apiKeyId: number;
 }
 
+/**
+ * Cloudflare Access-verified operator email, trusted only because these
+ * handlers run behind the admin gate that verified the Access JWT upstream
+ * (same trust model as the `actor` column in `logAdminAction`).
+ */
+function adminOperatorEmail(request: Request): string {
+  return request.headers.get("Cf-Access-Authenticated-User-Email")?.trim() || "internal";
+}
+
 function redactOneTimeTokenForReplay(responseBody: string, responseStatus: number): string {
   if (responseStatus < 200 || responseStatus >= 300) {
     return JSON.stringify({
@@ -48,6 +57,7 @@ function redactOneTimeTokenForReplay(responseBody: string, responseStatus: numbe
         "tier",
         "trafficClass",
         "rateLimitPerMinute",
+        "monthlyRequestQuota",
         "isActive",
         "expiresAt",
         "createdAt",
@@ -129,7 +139,7 @@ export const handleApiKeysRoute = makeAdminRoute<ApiKeysRouteContext>(
         if (body instanceof Response) {
           return body;
         }
-        const created = await createApiKey(db, apiKeyHashPepper, body);
+        const created = await createApiKey(db, apiKeyHashPepper, body, undefined, adminOperatorEmail(request));
         if (created instanceof Response) {
           return created;
         }
@@ -150,7 +160,7 @@ export const handleApiKeyUpdateRoute = makeAdminRoute<ApiKeyByIdRouteContext>(
       if (body instanceof Response) {
         return body;
       }
-      const updated = await updateApiKey(db, apiKeyId, body);
+      const updated = await updateApiKey(db, apiKeyId, body, undefined, adminOperatorEmail(request));
       if (updated instanceof Response) {
         return updated;
       }
@@ -163,7 +173,7 @@ export const handleApiKeyDeactivateRoute = makeAdminRoute<ApiKeyByIdRouteContext
   "api-key-deactivate",
   async ({ db, request, apiKeyId }) =>
     runIdempotentAction(db, "api-key-deactivate", request, async () => {
-      const result = await deactivateApiKey(db, apiKeyId);
+      const result = await deactivateApiKey(db, apiKeyId, undefined, adminOperatorEmail(request));
       if (result instanceof Response) {
         return result;
       }
@@ -175,7 +185,7 @@ export const handleApiKeyRotateRoute = makeAdminRoute<ApiKeyByIdRouteContext>(
   "api-key-rotate",
   async ({ db, request, apiKeyId, apiKeyHashPepper }) =>
     runIdempotentAction(db, "api-key-rotate", request, async () => {
-      const result = await rotateApiKey(db, apiKeyHashPepper, apiKeyId);
+      const result = await rotateApiKey(db, apiKeyHashPepper, apiKeyId, undefined, adminOperatorEmail(request));
       if (result instanceof Response) {
         return result;
       }

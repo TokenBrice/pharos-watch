@@ -80,6 +80,7 @@ Complete coverage of `docs/runbooks/` and `docs/incident-response/`. Labels and 
 | procedure | [Dependency coverage audit commands](./runbooks/dependency-network.md#scope-and-commands) |
 | procedure | [Lease and circuit-breaker recovery](./runbooks/lease-and-breaker-recovery.md) |
 | procedure | [One-shot historical backfill contract](./runbooks/one-shot-backfills.md#operator-contract) |
+| procedure | [Partner API key issuance](./runbooks/partner-key-issuance.md) |
 | procedure | [Scoped review renewal](./runbooks/review-renewal.md) |
 | procedure | [Yield history cleanup and writer pause](./runbooks/yield-history-cleanup-writer-pause.md) |
 | reference | [Yield health and deterministic all-fail cooldown diagnostics](./runbooks/yield-health.md) |

@@ -216,6 +216,22 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "Current signed token, Env mode and native rate-limit binding results are authoritative; counters bound detail logs and retain unsampled decision totals for the current isolate minute only.",
   },
   {
+    sourcePath: "worker/src/handlers/http/gates.ts",
+    stateNames: ["ogImageRateLimitOutageLogged"],
+    owner: "OG image anonymous rate limiter",
+    kind: "coordination",
+    resetOrTtl: "One warn log per isolate for a missing or failing OG_IMAGE_RATE_LIMIT binding; resets on isolate recycle.",
+    durableTruth: "The OG lane never fails closed: crawlers are served regardless, and the flag only bounds logging, never admission.",
+  },
+  {
+    sourcePath: "worker/src/lib/api-key-rate-limit.ts",
+    stateNames: ["lastMonthlyQuotaWarnMinute", "monthlyUsageReadsInFlight"],
+    owner: "API-key monthly quota fail-open logging and read coalescing",
+    kind: "coordination",
+    resetOrTtl: "One warn log per UTC minute per isolate for unavailable monthly usage evidence; one shared in-flight usage read per key, cleared when it settles; resets on isolate recycle.",
+    durableTruth: "D1 api_key_monthly_usage and the per-key quota are authoritative; the flags only bound logging and deduplicate concurrent reads, never admission.",
+  },
+  {
     sourcePath: "functions/_site-data/session.ts",
     stateNames: ["sessionRequestTimestampsByNetworkHash"],
     owner: "Pages site-session issuance limiter",
@@ -236,8 +252,8 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     stateNames: ["_ak"],
     owner: "API-key authentication and fallback limiting",
     kind: "cache",
-    resetOrTtl: "Key lookups are fresh for 5 seconds (2,048 entries); usage, fallback limiter, lookup-block and D1 over-quota memo maps cap at 4,096 entries. Lookup blocks expire at the minute boundary; over-quota memos apply only to the same minute and a limit below the observed count; all reset with the isolate.",
-    durableTruth: "D1 API-key, rate-limit, and last-used rows are authoritative; lookup blocks reuse native limiter rejection, over-quota memos reuse only D1-confirmed rejection, and local fallback limiting is emergency-only.",
+    resetOrTtl: "Key lookups are fresh for 5 seconds (2,048 entries); usage, fallback limiter, lookup-block, D1 over-quota, monthly usage and monthly usage read-failure memo maps cap at 4,096 entries. Lookup blocks expire at the minute boundary; over-quota memos apply only to the same minute and a limit below the observed count; monthly usage memos are fresh for 300 seconds within the same UTC month and failed reads block re-reads for 60 seconds; all reset with the isolate.",
+    durableTruth: "D1 API-key, rate-limit, last-used and api_key_monthly_usage rows are authoritative; lookup blocks reuse native limiter rejection, over-quota memos reuse only D1-confirmed rejection, monthly usage memos only reuse the memoized rollup row, and local fallback limiting is emergency-only.",
   },
   {
     sourcePath: "worker/src/lib/auth.ts",
@@ -265,11 +281,11 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
   },
   {
     sourcePath: "worker/src/lib/request-source-attribution.ts",
-    stateNames: ["workerRequestRecorder", "apiKeyRequestRecorder"],
+    stateNames: ["workerRequestRecorder", "apiKeyRequestRecorder", "apiKeyMonthlyUsageRecorder"],
     owner: "Worker request attribution",
     kind: "coordination",
-    resetOrTtl: "Each recorder batches up to 50 entries after a request-owned 10ms delay; all state resets with the isolate. Daily bounded retention owns source and per-key pruning.",
-    durableTruth: "D1 api_request_source_samples and unsampled api_key_request_stats rows are authoritative.",
+    resetOrTtl: "Each recorder batches up to 50 entries after a request-owned 10ms delay; all state resets with the isolate. Daily bounded retention owns source and per-key pruning; the monthly rollup keeps 400 days.",
+    durableTruth: "D1 api_request_source_samples, api_key_request_stats and api_key_monthly_usage rows are authoritative.",
   },
   {
     sourcePath: "worker/src/lib/safety-score-v9/fact-set.ts",

@@ -45,6 +45,7 @@ describe("summarizeDonations", () => {
       D(apr, "community", 100, "a"),
       D(apr, "community", 50, "b"),
       D(apr, "founder", 1000, "f"),
+      D(apr, "revenue", 250, "r"),
       D(mar, "community", 200, "a"),
       D(feb, "pool", 25, "d"),
     ];
@@ -53,6 +54,7 @@ describe("summarizeDonations", () => {
     expect(s.currentMonthFounderUsd).toBe(1000);
     expect(s.lifetimeCommunityUsd).toBe(375); // 100 + 50 + 200 + 25
     expect(s.lifetimeFounderUsd).toBe(1000);
+    expect(s.lifetimeRevenueUsd).toBe(250);
     // Distinct community senders across lifetime: a, b, d.
     expect(s.lifetimeCommunityDonorCount).toBe(3);
   });
@@ -83,6 +85,6 @@ describe("buildMonthlyFunding", () => {
       ["2026-05", 5, computeCostsTotal(COSTS), true],
     ]);
     expect(view([D(feb, "community", 25)], 2).map(([key]) => key)).toEqual(["2026-04", "2026-05"]);
-    expect(view([D(apr, "founder", 999, "f")])).toEqual([]);
+    expect(view([D(apr, "founder", 999, "f"), D(apr, "revenue", 250, "r")])).toEqual([]);
   });
 });
