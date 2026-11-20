@@ -142,9 +142,9 @@ The daily/main-only [`rebuild-pages.yml`](../.github/workflows/rebuild-pages.yml
 
 ### Kraken snapshot rollout
 
-The Kraken BBO snapshot switch, a boolean constant in `worker/src/lib/cex-tickers.ts`, ships `false`. Before setting it to `true` and deploying the public Worker, have the Worker operations owner review [ADR-46](./architecture.md#adr-46), compare slot latency with the disabled baseline and measure Kraken rate-limit responses at the expected polling cadence. Each opted-in run adds one upgrade with a two-second total deadline, serial with the REST ticker. The existing eight-minute job deadline still applies.
+The Kraken BBO snapshot switch, a boolean constant in `worker/src/lib/cex-tickers.ts`, was enabled on 2026-11-20 after the Worker operations owner review of [ADR-46](./architecture.md#adr-46). The recorded disabled baseline: over the last eight slots before enabling, `sync-stablecoins` took 49 to 164 s (mean about 105 s), and six probe connections 15 s apart each returned 10 of 10 ticker snapshots in about 0.2 s (21 messages, about 5.8 KB) with no rate-limit or error response. Each opted-in run adds one upgrade with a two-second total deadline, serial with the REST ticker. The existing eight-minute job deadline still applies.
 
-After enabling, inspect the first completed `sync-stablecoins` and subsequent depeg canary generation. Compare the WebSocket diagnostic's candidate and resolved counts, rejection reasons, per-asset published clocks, actionable gaps and slot latency with the disabled baseline. Restore `false` and redeploy if the enabled runs regress rate limits or slot health.
+After the enabling deploy, inspect the first completed `sync-stablecoins` and subsequent depeg canary generation. Compare the WebSocket diagnostic's candidate and resolved counts, rejection reasons, per-asset published clocks, actionable gaps and slot latency with the disabled baseline. Restore `false` and redeploy if the enabled runs regress rate limits or slot health.
 
 ### Reference and supply rollout
 
