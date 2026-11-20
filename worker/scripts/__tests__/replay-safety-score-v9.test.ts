@@ -24,6 +24,7 @@ import {
   type SafetyScoreV9ReplayArtifact,
 } from "../replay-safety-score-v9";
 import { createR2MeasurementsClient } from "../../../scripts/lib/r2-measurements-client";
+import { generateV9MissingDataRegistry } from "../../../scripts/maintenance/generate-safety-score-v9-missing-data-registry";
 import { v9TestClockSec } from "../../src/test-helpers/v9-fixed-input";
 import { localRegistrySnapshot, registrySnapshotFingerprint } from "../lib/safety-score-v9-registry";
 import { createReplayFixedInput } from "./safety-score-v9-replay.test-support";
@@ -137,7 +138,8 @@ describe("Safety Score v9 deterministic replay CLI", () => {
       args.push("--supply-observations", supply);
       await runSafetyScoreV9ReplayCli([...args, ...usdt, ...dai]);
       const bytes = readFileSync(output, "utf8");
-      const { pipeline, replayScenario } = JSON.parse(bytes) as SafetyScoreV9ReplayArtifact;
+      const replay = JSON.parse(bytes) as SafetyScoreV9ReplayArtifact;
+      const { pipeline, replayScenario } = replay;
       expect(pipeline.fixedInput).toMatchObject({
         activeAssetIds: ["dai-makerdao", "usdc-circle", "usdt-tether"],
         chainCirculatingById: input.chainCirculatingById,
@@ -149,15 +151,13 @@ describe("Safety Score v9 deterministic replay CLI", () => {
       expect(pipeline.quarantines.find(({ assetId }) => assetId === "dai-makerdao")).toBeUndefined();
       const daiFacts = pipeline.compiledFacts.assets.find(({ assetId }) => assetId === "dai-makerdao")!;
       const { circulating: _circulating, ...provenance } = observation;
-      const registryPath = resolve(dir, "registry.json");
-      const generated = spawnSync(process.execPath, [
-        "--import", "tsx", "scripts/maintenance/generate-safety-score-v9-missing-data-registry.ts",
-        "--replay", output, "--policy", "shared/data/safety-score-v9/methodology-policy-candidate-v1.json", "--output", registryPath,
-      ], { cwd: resolve(import.meta.dirname, "../../.."), encoding: "utf8", timeout: 30_000 });
-      expect(generated.status, generated.stderr).toBe(0);
-      const registry = JSON.parse(readFileSync(registryPath, "utf8")) as {
-        stablecoins: Array<{ assetId: string; canonicalSupplyUsd: number | null }>;
-      };
+      const registry = generateV9MissingDataRegistry({
+        replay,
+        policy: JSON.parse(readFileSync(resolve(import.meta.dirname, "../../../shared/data/safety-score-v9/methodology-policy-candidate-v1.json"), "utf8")),
+        catalogEntries: pipeline.fixedInput.activeAssetIds.map((id) => ({
+          id, coin: ACTIVE_META_BY_ID.get(id)!, file: `shared/data/stablecoins/coins/${id}.json`,
+        })),
+      });
       expect(registry.stablecoins.find(({ assetId }) => assetId === "dai-makerdao")?.canonicalSupplyUsd).toBeNull();
       expect(daiFacts.supply).toMatchObject({ circulatingUsd: null, replayObservation: { ...provenance, circulatingUsd: 1_000_000 },
         status: { observationState: "missing", evidenceRefIds: [] } });
@@ -173,14 +173,23 @@ describe("Safety Score v9 deterministic replay CLI", () => {
       expect(readFileSync(output, "utf8")).toBe(bytes);
 
       const observedAtSec = input.clockSec - 123;
+      const aggregateCirculatingById = { "dai-makerdao": { circulating: {}, observedAtSec },
+        "usdt-tether": { circulating: { peggedUSD: 0 }, observedAtSec } };
+      const { "usdt-tether": _usdtChain, ...chainCirculatingById } = input.chainCirculatingById;
+      writeFileSync(capture, JSON.stringify(normalizeSafetyScoreV9CompilerInput({ ...input,
+        baseInputGenerationId: undefined, aggregateCirculatingById, chainCirculatingById })));
       writeFileSync(supply, JSON.stringify({ "dai-makerdao": { ...observation, observedAtSec } }));
       await runSafetyScoreV9ReplayCli([...args, ...dai, ...usdt]);
       const clocked = (JSON.parse(readFileSync(output, "utf8")) as SafetyScoreV9ReplayArtifact).pipeline;
+      expect(clocked.fixedInput.aggregateCirculatingById).toEqual(aggregateCirculatingById);
+      expect(clocked.compiledFacts.assets.find(({ assetId }) => assetId === "dai-makerdao")?.supply.circulatingUsd).toBe(1_000_000);
       expect(clocked.compiledFacts.assets.find(({ assetId }) => assetId === "dai-makerdao")!.evidence)
         .toContainEqual(expect.objectContaining({ evidenceId: "dai-makerdao:aggregate-supply",
           sourceGenerationId: clocked.fixedInput.baseInputGenerationId, url: observation.url, observedAtSec,
           freshness: expect.objectContaining({ state: "current", ageSec: 123 }) }));
       expect(clocked.candidate.cards.find(({ id }) => id === "dai-makerdao")?.supply?.asOfSec).toBe(observedAtSec);
+      writeFileSync(supply, JSON.stringify({ "usdt-tether": observation }));
+      await expect(runSafetyScoreV9ReplayCli([...args, ...usdt])).rejects.toThrow("usdt-tether already has usable captured supply");
 
       const scenarioInput = clocked.fixedInput;
       const identity = buildSafetyScoreV9InputIdentity({ methodologyVersion: scenarioInput.methodologyVersion,
@@ -191,18 +200,6 @@ describe("Safety Score v9 deterministic replay CLI", () => {
       const envelope = await buildFixedInputCacheEntry({ schemaVersion: 2, sourceGeneration: scenarioInput.sourceGeneration,
         safetyScoreIdentity: identity, payload: scenarioInput, label: "admission input" });
       await expect(parseSafetyScoreV9ReplayFixedInput(envelope.value)).rejects.toThrow(/replaySupplyObservationsById/);
-
-      const aggregateCirculatingById = { "dai-makerdao": { circulating: {}, observedAtSec },
-        "usdt-tether": { circulating: { peggedUSD: 0 }, observedAtSec } };
-      const { "usdt-tether": _usdtChain, ...chainCirculatingById } = input.chainCirculatingById;
-      writeFileSync(capture, JSON.stringify(normalizeSafetyScoreV9CompilerInput({ ...input,
-        baseInputGenerationId: undefined, aggregateCirculatingById, chainCirculatingById })));
-      await runSafetyScoreV9ReplayCli([...args, ...dai, ...usdt]);
-      const fallback = (JSON.parse(readFileSync(output, "utf8")) as SafetyScoreV9ReplayArtifact).pipeline;
-      expect(fallback.fixedInput.aggregateCirculatingById).toEqual(aggregateCirculatingById);
-      expect(fallback.compiledFacts.assets.find(({ assetId }) => assetId === "dai-makerdao")?.supply.circulatingUsd).toBe(1_000_000);
-      writeFileSync(supply, JSON.stringify({ "usdt-tether": observation }));
-      await expect(runSafetyScoreV9ReplayCli([...args, ...usdt])).rejects.toThrow("usdt-tether already has usable captured supply");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
