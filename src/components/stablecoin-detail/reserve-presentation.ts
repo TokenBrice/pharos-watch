@@ -49,6 +49,7 @@ export interface ReserveSourceChipModel {
 /** One tile/segment of the reserve visual, whichever snapshot it came from. */
 export interface ReserveCompositionSlice {
   key: string;
+  sourceKey?: string;
   label: string;
   pct: number;
   risk: ReserveRisk;
@@ -455,6 +456,7 @@ export function reviewedCompositionSlices(summary: ReserveQualityClientSummary):
   return summary.slices
     .map((slice) => ({
       key: slice.key,
+      sourceKey: slice.sourceKey,
       label: reserveSliceLabel(slice.name, slice.obligor),
       pct: slice.pct,
       risk: slice.risk,
@@ -484,6 +486,7 @@ export function compositionSlices(slices: readonly ReserveSlice[]): ReserveCompo
     .filter((slice) => Number.isFinite(slice.pct) && slice.pct > 0)
     .map((slice, index) => ({
       key: `${slice.name}:${index}`,
+      sourceKey: slice.sourceKey,
       label: reserveSliceLabel(slice.name, slice.issuerOrObligor),
       pct: slice.pct,
       risk: slice.risk,
@@ -495,15 +498,17 @@ export function compositionSlices(slices: readonly ReserveSlice[]): ReserveCompo
 /** Largest per-rank share gap, in points, below which two snapshots read as the same composition. */
 const SAME_COMPOSITION_TOLERANCE_PCT = 0.5;
 
-/** Identity key for a slice: lowercase alphanumerics of the name, ignoring any parenthetical expansion. */
+/** Parenthetical expansions are optional except when they name the claim itself. */
 function sliceIdentity(label: string): string {
-  return label.replace(/\(.*?\)/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+  const name = label.toLowerCase();
+  return (name.startsWith("self-referential claim (") ? name : name.replace(/\(.*?\)/g, ""))
+    .replace(/[^a-z0-9]+/g, "");
 }
 
 /**
  * Whether the live attestation/proof composition differs from the reviewed
  * slices. It reads as the same only when, rank by rank, both the share (within
- * half a point) and the slice identity (normalized name) match: 100% ETH against
+ * half a point) and the slice identity (source key or normalized name) match: 100% ETH against
  * 100% USDC has identical shares and is still a different composition. Reviewed
  * and live feeds often name the same asset differently, so a "differs" result
  * means "not provably the same", which is the conservative wording.
@@ -515,8 +520,11 @@ export function liveCompositionDiffers(
   if (live.length !== reviewed.length) return true;
   return live.some((slice, index) => {
     const counterpart = reviewed[index]!;
+    const sameIdentity = slice.sourceKey && counterpart.sourceKey
+      ? slice.sourceKey === counterpart.sourceKey
+      : sliceIdentity(slice.label) === sliceIdentity(counterpart.label);
     return Math.abs(slice.pct - counterpart.pct) > SAME_COMPOSITION_TOLERANCE_PCT
-      || sliceIdentity(slice.label) !== sliceIdentity(counterpart.label);
+      || !sameIdentity;
   });
 }
 

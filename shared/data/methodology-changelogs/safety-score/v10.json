@@ -1,5 +1,18 @@
 [
   {
+    "version": "10.47",
+    "title": "Zero Backing credit for self-referential reserve claims",
+    "date": "2026-11-20",
+    "effectiveAt": 1795132800,
+    "summary": "Reserve claims that hold or redeem into the subject stablecoin stay visible at their measured share of the full reserve book or scoped issuer report. In an admitted composition, they earn zero reserve quality and concentration credit.",
+    "impact": [
+      "Keep each admitted own-liability claim in the scoring denominator so a 15% independent reserve share still accounts for 15% of the measured book. HBD's HIVE conversion capacity retains its existing scoring treatment.",
+      "Legacy FRAX and its sFRAX and bridged LFRAX positions use separate contract identities. USDU Finance's verified own claims appear in a dated, scoped issuer report. Its incomplete denominator leaves its reserve component on the missing-composition fallback."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "10.46",
     "title": "Clocked peg evidence and independent discount caps",
     "date": "2026-11-19",

@@ -399,28 +399,35 @@ describe("handleStablecoinReserves", () => {
     });
   });
 
-  it("returns a curated fallback payload when no live data exists in D1 yet", async () => {
+  it.each(["iusd-infinifi", "usd0-usual"])("returns a curated fallback for %s without live data", async (id) => {
     const db = mockD1([
       { match: "FROM reserve_composition", rows: [] },
       { match: "FROM reserve_sync_state", rows: [] },
     ]);
-    const res = await handleStablecoinReserves(db, "iusd-infinifi");
+    const res = await handleStablecoinReserves(db, id);
     expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=300, max-age=60");
     const body = StablecoinReservesResponseSchema.parse(await readJsonResponse(res, 200));
     expect(body.mode).toBe("curated-fallback");
     expect(body.estimated).toBe(false);
     expect(body.displayBadge).toBeUndefined();
     expect(body.sync?.bootstrap).toBe(true);
+    if (id === "usd0-usual") {
+      expect(body.reserves.filter(row => row.name.startsWith("Self-referential claim (")).map(row => row.name)).toEqual([
+        "Self-referential claim (U0R bUSD0 Zero Rate Vault)",
+        "Self-referential claim (EVK Vault eUSD0-4 (Euler))",
+      ]);
+    }
   });
 
   it("serves stored positive fractional shares exactly with distinct identity and estimated:false", async () => {
     const now = Math.floor(Date.now() / 1000);
     const slices = [
       { sourceKey: "src:parent", name: "Parent", pct: 99.96, risk: "low" as const, coinId: "usdc-circle", depType: "collateral" as const },
-      { sourceKey: "src:credit", name: "Credit", pct: 0.04, risk: "high" as const },
+      { sourceKey: "src:credit", name: "Self-referential claim (U0R)", pct: 0.04, risk: "very-high" as const },
     ];
+    const storedSlices = [slices[0], { ...slices[1], selfReferential: true }];
     const db = mockD1([
-      { match: "reserve_composition", rows: [], first: reserveCompositionRow(now, { slices: JSON.stringify(slices) }) },
+      { match: "reserve_composition", rows: [], first: reserveCompositionRow(now, { slices: JSON.stringify(storedSlices) }) },
       { match: "reserve_sync_state", rows: [], first: reserveSyncRow(now) },
     ]);
     const body = StablecoinReservesResponseSchema.parse(await readJsonResponse(await handleStablecoinReserves(db, "iusd-infinifi"), 200));

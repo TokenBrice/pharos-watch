@@ -76,6 +76,7 @@
     "compositionBasis": "Issuer-reported nominal USD-stablecoin holdings for the exact replacement Chancery mint at API asOf 2026-10-20T22:17:09.498Z; normalized selected-account scope only",
     "compositionAsOf": "2026-10-20",
     "scope": "selected-slices",
+    "scopedWeights": true,
     "knownUnknownExposure": "All positive assets in the issuer-reported selected reserve-authority account scope are identified. Complete reserve destinations, assets, liabilities, encumbrances and any off-account Treasury exposure are not independently reconciled. The displayed supply is not a same-slot independent liability measurement, and the nominal assets/supply difference is not treated as a surplus or shortfall. Zero unknown exposure refers only to this selected reported account mix, not whole-system completeness.",
     "knownUnknownExposurePct": 0
   },

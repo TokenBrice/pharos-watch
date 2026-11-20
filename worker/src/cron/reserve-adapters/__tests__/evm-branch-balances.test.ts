@@ -1617,7 +1617,7 @@ describe("branch reserve census and unavailable residual", () => {
     expect(result.metadata?.censusComplete).toBe(true);
     expect(result.metadata?.unknownExposurePct).toBe(0);
     expect(result.slices.some((slice) => slice.name === "U0R" || slice.name === "EVK Vault eUSD0-4")).toBe(false);
-    expect(result.slices.filter((slice) => slice.name.startsWith("Self-referential claim")).map((slice) => slice.name).sort())
+    expect(result.slices.filter((slice) => slice.selfReferential).map((slice) => slice.name).sort())
       .toEqual(["Self-referential claim (EVK Vault eUSD0-4)", "Self-referential claim (U0R)"]);
     const details = result.metadata?.details as {
       branchObservations: Array<{ name: string; balanceRaw: string | null }>;

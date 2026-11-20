@@ -429,36 +429,36 @@ export function fallbackResearchEvidence(context: AssetBuildContext): string {
   );
 }
 
-export function componentResearchEvidence(context: AssetBuildContext, componentKey: ReviewEvidenceComponentKey): string[] {
+export function componentResearchEvidence(
+  context: AssetBuildContext,
+  componentKey: ReviewEvidenceComponentKey,
+  include?: (reference: V9EvidenceReferenceV2) => boolean,
+): string[] {
   const binding = context.asset.componentEvidence.find((candidate) => candidate.componentKey === componentKey);
-  if (!binding) return [fallbackResearchEvidence(context)];
+  if (!binding) return include ? [] : [fallbackResearchEvidence(context)];
   const evidenceByKey = new Map(context.asset.researchEvidence.map((evidence) => [evidence.evidenceKey, evidence]));
-  return binding.evidenceKeys.map((evidenceKey) => {
+  return binding.evidenceKeys.flatMap((evidenceKey) => {
     const evidence = evidenceByKey.get(evidenceKey);
     if (!evidence) {
       throw new Error(
         `Safety Score v9 component ${context.asset.assetId}:${componentKey} has unknown evidence ${evidenceKey}`,
       );
     }
-    const evidenceId = addEvidence(
-      context,
-      createV9EvidenceReference(
-        {
-          evidenceId: `${context.asset.assetId}:research:${evidence.evidenceKey}`,
-          sourceId: evidence.sourceId,
-          sourceGenerationId: context.extension.sources.researchOverlays.generationId,
-          disposition: evidence.publishedAtSec === null ? "observed" : "published",
-          observedAtSec: evidence.observedAtSec,
-          publishedAtSec: evidence.publishedAtSec,
-          url: evidence.url,
-          contentSha256: evidence.contentSha256,
-          maxAgeSec: evidence.maxAgeSec,
-        },
-        context.fixedInput.clockSec,
-      ),
-    );
+    const reference = createV9EvidenceReference({
+      evidenceId: `${context.asset.assetId}:research:${evidence.evidenceKey}`,
+      sourceId: evidence.sourceId,
+      sourceGenerationId: context.extension.sources.researchOverlays.generationId,
+      disposition: evidence.publishedAtSec === null ? "observed" : "published",
+      observedAtSec: evidence.observedAtSec,
+      publishedAtSec: evidence.publishedAtSec,
+      url: evidence.url,
+      contentSha256: evidence.contentSha256,
+      maxAgeSec: evidence.maxAgeSec,
+    }, context.fixedInput.clockSec);
+    if (include && !include(reference)) return [];
+    const evidenceId = addEvidence(context, reference);
     context.evidencePublisherById.set(evidenceId, evidence.publishedBy ?? "unknown");
-    return evidenceId;
+    return [evidenceId];
   });
 }
 

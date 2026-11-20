@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Morpho USDU Core vault shares",
-      "pct": 60.6311,
+      "pct": 60.631121482729164,
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "USDU Finance Morpho USDU Core vault and underlying borrowers",
@@ -17,7 +17,7 @@
     },
     {
       "name": "USDU constituent of Curve USDU/USDC LP backing",
-      "pct": 31.5674,
+      "pct": 31.567378611731222,
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Curve USDU/USDC pool",
@@ -31,7 +31,7 @@
     },
     {
       "name": "USDC constituent of Curve USDU/USDC LP backing",
-      "pct": 7.8015,
+      "pct": 7.801499905538726,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -44,54 +44,79 @@
         "smart-contract"
       ],
       "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "TermMax USDU vault shares (Core and RWA)",
+      "pct": 8.903320967043069e-13,
+      "risk": "medium",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "TermMax Core and RWA vaults and underlying borrowers",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-27",
-    "reviewer": "Claude evidence renewal 2026-10-27 (D01 d01-l2)",
+    "reviewedAt": "2026-11-20",
+    "reviewer": "OpenAI Codex #2150 pinned reserve review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "USDU live backing snapshot API",
+        "label": "Historical USDU backing API captured 2026-10-27T08:46:51Z (retired endpoint)",
         "url": "https://usdu.finance/wp-json/usdu-transparency/v1/backing-snapshot"
       },
       {
-        "label": "USDU transparency dashboard",
-        "url": "https://usdu.finance/transparency/"
+        "label": "USDU issuer contract registry, including the historical Morpho, Curve and TermMax adapters",
+        "url": "https://github.com/usdu-finance/usdu-core/blob/923fc9990c268c96a61469942e4bb963a30176ed/exports/address.config.ts"
+      },
+      {
+        "label": "USDU issuer CurveSeed and swap module registry",
+        "url": "https://github.com/usdu-finance/usdu-core/blob/1bdbd46e743deab00ca06c3fc4bb589fa828ca28/exports/address.config.ts"
+      },
+      {
+        "label": "Ethereum block 26282914 (2026-10-27T08:41:47Z)",
+        "url": "https://etherscan.io/block/26282914"
       },
       {
         "label": "Curve USDC/USDU pool",
         "url": "https://etherscan.io/address/0x6c5ff8dce52be77b4ece6b51996018f0c1713ba9"
-      },
-      {
-        "label": "Ethereum mainnet RPC: Curve coins and balances at block 26024768",
-        "url": "https://ethereum-rpc.publicnode.com"
-      },
-      {
-        "label": "Ethereum PublicNode RPC: pinned reads at block 26282914 (2026-10-27T08:41:47Z)",
-        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "rationale": "The issuer live backing API read on 2026-10-27 (HTTP Date 08:46:51 GMT) reports 34,939.62211545444 USDU-equivalent in Morpho and 22,686.925540211709 in Curve, with 5.1206765e-10 in TermMax, totaling 57,626.54765566666. Ethereum block 26282914 (hash 0x748ac3086a5b99e61d6a72dffd1d57911554c9f144826ad8fc08c72a774cafe0, timestamp 2026-10-27T08:41:47Z) identifies Curve coins(0) as USDC and coins(1) as USDU; balances(0) and balances(1) return 9,929.076831 USDC and 40,176.239362205237 USDU. Splitting the API-valued Curve position by those constituent balances and normalizing total backing yields 60.6311% Morpho self-exposure, 31.5674% Curve USDU self-exposure, and 7.8015% external USDC collateral after rounding the residual. The Curve pool is now USDU-heavy relative to 2026-09-21, which shifts the self-exposure share. The issuer API does not expose its own block number and was read about five minutes after the pinned block; these are same-day observations rather than a claimed atomic reconciliation. No circulating-supply value is overridden.",
-    "compositionBasis": "Issuer live backing API observed 2026-10-27T08:46:51Z, with Curve LP constituents read on Ethereum at block 26282914",
+    "rationale": "Pinned re-verification on 2026-11-20 reproduced the original 2026-10-27 issuer-reported denominator. The Morpho Core adapter held 34,797.7236130591 shares convertible to 34,939.6221153417 USDU. The Curve adapter held 22,651.3315938697 shares out of 50,012.3898532764. Multiplying by the pool virtual price 1.001571384277983263 reproduces the issuer's 22,686.9255402117 USDU-equivalent LP amount. Allocate that carrying value by the pool balances of 40,176.2393622052 USDU and 9,929.076831 USDC. That yields 18,191.1904792984 USDU-equivalent of own exposure. TermMax Core and RWA convert to 0.000000000512067650 and 0.000000000001 USDU. Yield held zero vault shares. The derived total of 57,626.5476555539 agrees with the issuer's 57,626.54765566666 within 0.000001 USDU. The October 27 observation sets the date of the scoped book. The November 20 review establishes the revised scope and TermMax classification.",
+    "compositionBasis": "Historical issuer Morpho, Curve and TermMax backing denominator, reproduced by Ethereum block 26282914 (2026-10-27T08:41:47Z).",
     "compositionAsOf": "2026-10-27",
-    "scope": "full-composition",
-    "knownUnknownExposure": "The dated 2026-10-27 composition covers the disclosed Morpho USDU, Curve LP and TermMax positions. At Ethereum block 26098837 on 2026-10-01, two additional valid SwapBridgeMorphoV1 modules reported 2.470331 USDU-equivalent in a USDC vault and 1.003272 in a USDT vault. The re-fetched issuer backing API exposes total, morpho, curve and termmax aggregates without a module roster or accounting timestamp, so it does not directly establish whether these modules are included. A complete current denominator requires all active-module positions and historical-module residuals with consistently valued LP and vault exposures; the 2026-10-27 re-fetch of the issuer API still exposes only total, morpho, curve and termmax aggregates, so inclusion of those modules in the API total remains unestablished.",
+    "scope": "selected-slices",
+    "scopedWeights": true,
+    "knownUnknownExposure": "The denominator covers the issuer's dated Morpho Core, USDC/USDU Curve and TermMax report only. The token supply at the same block was 257,635.9173632263 USDU. The separate CurveSeed module had 200,000 USDU of combined debt in USDU/EURU and USDU/CHFU LPs. The two swap bridges held 12.497327 USDC and 1.005377 USDT in Morpho vaults. Their values do not reconcile into the reported denominator, so no composition share or own-liability mark is assigned to them. This is a dated reserve report and does not establish current or full-supply backing.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Morpho USDU Core vault shares",
-        "pct": 60.6311,
+        "pct": 60.631121482729164,
         "disposition": "self-reserve",
-        "rationale": "The Morpho vault represents lending positions denominated in the subject USDU asset and cannot create a dependency edge to itself."
+        "rationale": "The Morpho vault represents lending positions denominated in the subject USDU asset and cannot create a dependency edge to itself.",
+        "ownLiability": true
       },
       {
         "reserveIndex": 1,
         "reserveName": "USDU constituent of Curve USDU/USDC LP backing",
-        "pct": 31.5674,
+        "pct": 31.567378611731222,
         "disposition": "self-reserve",
-        "rationale": "The subject-token leg of the Curve LP is self exposure rather than an upstream stablecoin dependency."
+        "rationale": "The subject-token leg of the Curve LP is self exposure rather than an upstream stablecoin dependency.",
+        "ownLiability": true
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "TermMax USDU vault shares (Core and RWA)",
+        "pct": 8.903320967043069e-13,
+        "disposition": "self-reserve",
+        "ownLiability": true,
+        "rationale": "Both vaults return the subject USDU contract from asset(). The combined converted holdings are positive dust."
       }
     ]
   },

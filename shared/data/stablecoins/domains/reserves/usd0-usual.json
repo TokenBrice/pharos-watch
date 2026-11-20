@@ -136,7 +136,7 @@
     "compositionBasis": "Pinned Ethereum reads at block 26451129 (hash 0x1bb117bb14d52ccd3d0b15f274dc220817ae74a4345afbf5359445db65d8ea46, 2026-11-19T19:09:23Z): treasury balanceOf for every token in Usual's collateral registry, each valued at Usual's oracle getPrice at the same block, as a share of the registry book",
     "compositionAsOf": "2026-11-19",
     "scope": "full-composition",
-    "knownUnknownExposure": "The treasury enumeration covers the whole book, but its economic reading is bounded. U0R (82.28%) and EVK Vault eUSD0-4 (2.75%) are claims denominated in USD0 itself, USD0 lent against bUSD0, so only 14.98% of the book (M by M0 6.73%, Spiko USTBL 6.23%, Hashnote USYC 1.98%, USDC 0.04%) is backing independent of USD0, and issuer UZR documentation supplies no circular-claim netting or independent-backing denominator. eUSD0-4 is valued at par because its ERC-4626 share price is not readable through a public GET surface; the assumption moves weights by under 0.03 percentage points. USYC and USTBL are converted at live market rates (1.14, 1.10) rather than official fund NAVs; a 2% rate error moves each of those weights by under 0.15 percentage points. Usual publishes no periodic attestation and on-chain balances stop at the token boundary: the treasury's USYC and USTBL shares evidence fund claims, not the underlying funds' holdings.",
+    "knownUnknownExposure": "The treasury enumeration includes USD0-denominated claims in U0R and eUSD0-4, both backed by bUSD0 loans. Usual's UZR documentation supplies no circular-claim netting or independent-backing denominator. The pinned oracle values the treasury's USYC and USTBL shares. Their underlying fund holdings are outside the on-chain review, and Usual publishes no periodic attestation.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
@@ -144,6 +144,7 @@
         "reserveName": "U0R bUSD0 Zero Rate Vault",
         "pct": 82.4198,
         "disposition": "self-reserve",
+        "ownLiability": true,
         "rationale": "U0R's underlying asset is USD0 itself (bUSD0 Zero Rate Vault, UIP-16): the treasury's U0R is a USD0-denominated lending claim, so linking it to a tracked coin would double-count USD0 rather than identify independent backing."
       },
       {
@@ -151,6 +152,7 @@
         "reserveName": "EVK Vault eUSD0-4 (Euler)",
         "pct": 2.8791,
         "disposition": "self-reserve",
+        "ownLiability": true,
         "rationale": "The Euler eUSD0-4 vault's underlying asset is USD0: the position is a USD0-denominated lending claim against bUSD0 borrowers and cannot be linked to an independent tracked reserve asset."
       }
     ]

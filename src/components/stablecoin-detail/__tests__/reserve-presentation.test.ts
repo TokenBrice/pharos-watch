@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { ApiFetchError } from "@/lib/api";
+import { buildStablecoinDetailClientCoin } from "@/lib/stablecoin-detail-client-coin";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
 import type {
   ReservePresentationMode,
@@ -14,9 +17,11 @@ import {
   buildReserveProvenanceNotice,
   buildReserveFeedStatus,
   buildReserveSourceChip,
+  compositionSlices,
   liveCompositionDiffers,
   lookThroughCompositionSlices,
   reserveSliceLabel,
+  reviewedCompositionSlices,
   splitReserveCompositionRows,
   type ReserveCompositionSlice,
   formatReserveSnapshotLabel,
@@ -422,6 +427,22 @@ describe("reserve composition slices", () => {
     expect(liveCompositionDiffers([slice("ETH", 100)], [slice("T-bills", 60), slice("Cash", 40)])).toBe(true);
     // A parenthetical expansion does not change identity.
     expect(liveCompositionDiffers([slice("cbBTC (Coinbase Wrapped BTC)", 100)], [slice("cbBTC", 100)])).toBe(false);
+  });
+
+  it("detects swapped shares on the configured USD0 self-referential branches", () => {
+    const coin = TRACKED_META_BY_ID.get("usd0-usual")!;
+    const reviewed = reviewedCompositionSlices(buildStablecoinDetailClientCoin(coin).reserveQualitySummary!);
+    const { branches } = parseLiveReserveAdapterParams("evm-branch-balances", coin.liveReservesConfig!.params);
+    const live = coin.reserves!.map(row => ({ ...row }));
+    const [first, second] = branches.filter(row => row.unclassifiedSelfReferential).map(branch => {
+      const key = `evm-branch-balances:${branch.token.chain}:${branch.token.address.toLowerCase()}`;
+      const row = live.find(row => row.sourceKey === key)!;
+      row.name = `Self-referential claim (${branch.name})`;
+      return row;
+    });
+    expect(liveCompositionDiffers(compositionSlices(live), reviewed)).toBe(false);
+    [first.pct, second.pct] = [second.pct, first.pct];
+    expect(liveCompositionDiffers(compositionSlices(live), reviewed)).toBe(true);
   });
 
   it("draws a look-through from the parent's positive slices by share, carrying each slice's asset class as its role", () => {

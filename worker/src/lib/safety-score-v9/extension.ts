@@ -451,6 +451,7 @@ export function createSafetyScoreV9BaselineExtensionSource(
           meta,
           clockSec,
           V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedReserveClassificationMaxAgeSec,
+          reviewedStaticReserveRows !== null,
         );
         addReserveClassificationEvidence(meta, reserveClassifications, reviewEvidence);
         admissionPath = "componentEvidence.reviewed-static-reserve-rows";

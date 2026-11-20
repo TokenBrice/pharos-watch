@@ -530,6 +530,18 @@ describe("Safety Score v9 deterministic replay CLI", () => {
 });
 
 describe("future-dated curated review guard", () => {
+  it("flags USDU's scope and TermMax review at the November 19 capture clock", () => {
+    const assetId = "usdu-usdu-finance";
+    const meta = ACTIVE_META_BY_ID.get(assetId)!;
+    const clock = Date.parse("2026-11-19T20:18:12Z") / 1_000;
+    expect(findFutureDatedCuratedReviews(clock, new Map([[assetId, meta]]), [])).toEqual([
+      { assetId, field: "reviewedAt", date: "2026-11-20" },
+    ]);
+    expect(meta.reserveReview).toMatchObject({
+      compositionAsOf: "2026-10-27", reviewer: "OpenAI Codex #2150 pinned reserve review",
+    });
+  });
+
   function anyReviewedAtSec(): { assetId: string; sec: number } {
     for (const [assetId, meta] of ACTIVE_META_BY_ID) {
       const at = (meta as { reserveReview?: { reviewedAt?: string } }).reserveReview?.reviewedAt;

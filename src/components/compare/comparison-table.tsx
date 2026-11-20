@@ -184,9 +184,14 @@ function formatDays(value: number | null | undefined): ReactNode {
 function reserveSummary(coin: ComparisonCoinEntry): ReactNode {
   const reserves = coin.meta.reserves ?? [];
   if (reserves.length === 0) return NULL_VALUE;
+  if (coin.meta.reserveCompositionScope === "allocation-unavailable") return "Allocation unavailable";
+  if (coin.meta.reserveCompositionScope === "selected-holdings") return "Selected holdings only";
   const sorted = [...reserves].sort((a, b) => b.pct - a.pct);
   const lead = sorted[0];
-  return `${lead.name} ${formatPercent(lead.pct, 0)}${reserves.length > 1 ? ` · ${reserves.length} slices` : ""}`;
+  const scope = coin.meta.reserveCompositionScope === "scoped-report"
+    ? coin.id === "xo-exodus" ? " of measured holdings in scope" : " of scoped reserve report"
+    : coin.meta.reserveCompositionScope === "nominal-issuance-paths" ? " of reviewed nominal issuance paths" : "";
+  return `${lead.name} ${formatPercent(lead.pct, 0)}${scope}${reserves.length > 1 ? ` · ${reserves.length} slices` : ""}`;
 }
 
 function dependencySummary(coin: ComparisonCoinEntry): ReactNode {

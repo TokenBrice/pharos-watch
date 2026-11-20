@@ -311,6 +311,8 @@ export const ReserveReviewSchema = /* @__PURE__ */ (() => z
     /** Explicit adapter ownership; omission retains the curated/report date contract. */
     compositionSource: z.literal("live-adapter").optional(),
     scope: z.enum(RESERVE_REVIEW_SCOPE_VALUES),
+    /** Selected slices have measured shares of a documented, narrower denominator. */
+    scopedWeights: z.literal(true).optional(),
     observations: z.array(ReserveObservationEnvelopeSchema).optional(),
     reportScopeId: z.string().min(1).optional(),
     knownUnknownExposure: z.string().min(1),
@@ -323,14 +325,22 @@ export const ReserveReviewSchema = /* @__PURE__ */ (() => z
             reserveName: z.string().min(1),
             pct: z.number().finite().positive().max(100),
             disposition: z.enum(RESERVE_NON_LINK_DISPOSITION_VALUES),
+            /** The claim holds or redeems into the subject stablecoin itself. */
+            ownLiability: z.literal(true).optional(),
             rationale: z.string().min(1),
             candidateCoinIds: z.array(z.string().min(1)).min(1).optional(),
           })
-          .strict(),
+          .strict()
+          .refine((row) => !row.ownLiability || row.disposition === "self-reserve", {
+            path: ["ownLiability"], message: "own-liability classification requires a self-reserve disposition",
+          }),
       )
       .optional(),
   })
-  .strict())();
+  .strict()
+  .refine((review) => !review.scopedWeights || review.scope === "selected-slices", {
+    path: ["scopedWeights"], message: "scopedWeights requires selected-slices scope",
+  }))();
 
 export const CustodyProfileSchema = /* @__PURE__ */ (() => z
   .object({

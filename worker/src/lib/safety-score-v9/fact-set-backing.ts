@@ -685,9 +685,28 @@ export function buildReserves(context: AssetBuildContext): {
     // it is not an economic exposure and cannot satisfy the positive-weight
     // compiled exposure contract.
     if (weight === 0) continue;
-    const evidenceIds = reviewedStatic
+    const disposition = classification?.trackedAssetDisposition;
+    const producerOwnLiability = reviewedStatic === null && raw.selfReferential === true;
+    const reviewedOwnLiability = disposition === "own-liability";
+    const classificationKey = `reserve-classification:${exposureKey}` as const;
+    const reviewEvidenceIds = reviewedOwnLiability
+      ? componentResearchEvidence(context, classificationKey, evidence =>
+        evidence.sourceId === "stablecoin-meta.reserve-review" &&
+        (!producerOwnLiability || evidence.freshness.state !== "stale"))
+      : [];
+    if (reviewedOwnLiability && !producerOwnLiability && reviewEvidenceIds.length === 0) {
+      throw new Error(`Own-liability reserve classification ${exposureKey} has no bound evidence for ${context.asset.assetId}`);
+    }
+    const selfReferential = producerOwnLiability || reviewedOwnLiability;
+    if (selfReferential && (classification?.unclassifiedResidual || raw.unclassifiedResidual)) {
+      throw new Error(`Own-liability reserve classification ${exposureKey} conflicts with an unclassified residual for ${context.asset.assetId}`);
+    }
+    const sourceEvidenceIds = reviewedStatic
       ? reviewedStaticEvidenceIds
       : [reserveSourceEvidence(context, exposureKey, groupedSlices)];
+    const evidenceIds = reviewEvidenceIds.length > 0
+      ? [...new Set([...sourceEvidenceIds, ...reviewEvidenceIds])]
+      : sourceEvidenceIds;
     if (classification?.unclassifiedResidual || (reviewedStatic !== null && raw.unclassifiedResidual)) {
       const tail = missingLocalFact(context, {
         componentKey: `reserve-residual:${exposureKey}`,
@@ -702,11 +721,10 @@ export function buildReserves(context: AssetBuildContext): {
       });
       residuals.push({ residualId: exposureKey, weight, status: tail.status });
       envelopeGapIds.push(tail.gapId);
-      envelopeEvidenceIds.push(...evidenceIds);
+      envelopeEvidenceIds.push(...sourceEvidenceIds);
       continue;
     }
-    const reviewedNonLink = classification?.trackedAssetDisposition === "reviewed-non-link";
-    const trackedAssetId = reviewedNonLink
+    const trackedAssetId = selfReferential || disposition === "reviewed-non-link"
       ? null
       : (raw.coinId ?? classification?.trackedAssetId ?? null);
     const issuerOrObligorKey = classification?.issuerOrObligorKey ?? raw.issuerOrObligor ?? null;
@@ -721,7 +739,7 @@ export function buildReserves(context: AssetBuildContext): {
     // the admitted asset class or the holding's known liquidity and maturity.
     const classificationKnown = assetClass !== null;
     let status: V9FactStatusV2;
-    if (!classificationKnown) {
+    if (!selfReferential && !classificationKnown) {
       const gapId = addGap(
         context,
         createV9FactGapV3({
@@ -779,7 +797,7 @@ export function buildReserves(context: AssetBuildContext): {
         evidenceRefIds: evidenceIds,
       });
     }
-    envelopeEvidenceIds.push(...evidenceIds);
+    envelopeEvidenceIds.push(...sourceEvidenceIds);
     const liquidityHorizon = classification?.liquidityHorizon ?? raw.liquidityHorizon ?? null;
     const maturityDaysMax = classification?.maturityDaysMax ?? raw.maturityDaysMax ?? null;
     // Maturity is scoring-not-applicable for policy-listed classes (the evaluator
@@ -794,6 +812,7 @@ export function buildReserves(context: AssetBuildContext): {
     const openEndedMaturityBound = !maturityNotApplicableClass
       ? v9OpenEndedMaturityBoundFact(exposureKey, reserveBoundFacts, context.fixedInput.clockSec) : undefined;
     const factorStatuses: NonNullable<V9ReserveExposureFactV2["factorStatuses"]> = {};
+    const name = raw.name.trim();
     const exposure: V9ReserveExposureFactV2 = {
       exposureKey,
       classificationKey: classification?.classificationKey ?? `base:${exposureKey}`,
@@ -809,9 +828,10 @@ export function buildReserves(context: AssetBuildContext): {
         : {}),
       status,
       factorStatuses,
-      name: raw.name.trim(),
+      name: selfReferential && !name.startsWith("Self-referential claim (") ? `Self-referential claim (${name})` : name,
       weight,
       trackedAssetId,
+      ...(selfReferential ? { selfReferential: true as const } : {}),
       assetClass,
       issuerOrObligorKey,
       riskFactors: classification?.riskFactors ?? raw.riskFactors ?? [],
@@ -828,6 +848,14 @@ export function buildReserves(context: AssetBuildContext): {
       ["maturity", "maturityDaysMax", maturityDaysMax === null],
       ["obligorConcentration", "issuerOrObligorKey", issuerOrObligorKey === null],
     ] as const) {
+      if (selfReferential) {
+        factorStatuses[factorKey] = status.observationState === "known" ? createV9FactStatus({
+          applicability: notApplicableV9Fact("v9.backing.reserve-classification", "Own-liability claims earn zero reserve credit."),
+          observationState: "known",
+          evidenceRefIds: evidenceIds,
+        }) : status;
+        continue;
+      }
       if (factorKey === "maturity" && status.observationState !== "stale" && openEndedMaturityBound !== undefined) {
         factorStatuses.maturity = createV9FactStatus({
           applicability: requiredV9Applicability("v9.backing.reserve-classification"),

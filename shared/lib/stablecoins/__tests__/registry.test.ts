@@ -9,6 +9,7 @@ import {
   QUARANTINED_STABLECOINS,
   READABLE_IDS,
   READABLE_STABLECOINS,
+  TRACKED_META_BY_ID,
   TRACKED_STABLECOINS,
 } from "../registry";
 import {
@@ -21,6 +22,12 @@ import { FROZEN_SNAPSHOTS_BY_ID } from "../frozen-snapshots";
 import { getListingClass } from "../listing-governance";
 
 describe("registry universes", () => {
+  it("describes USD0's pinned reserve valuation without the superseded estimates", () => {
+    const note = TRACKED_META_BY_ID.get("usd0-usual")?.reserveReview?.knownUnknownExposure;
+    expect(note).toContain("pinned oracle");
+    expect(note).not.toMatch(/82\.28%|valued at par/);
+  });
+
   it("QUARANTINED and DELISTED retain readable records without entering active", () => {
     expect(QUARANTINED_STABLECOINS.every(isQuarantinedStablecoinMeta)).toBe(true);
     expect(DELISTED_STABLECOINS.every(isDelistedStablecoinMeta)).toBe(true);

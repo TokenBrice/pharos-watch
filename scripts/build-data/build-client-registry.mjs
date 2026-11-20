@@ -30,6 +30,7 @@ import {
 import { resolveMintAuthorityStatusKind } from "../../shared/lib/classification/mint-authority.ts";
 import { resolveMechanismArchetype } from "../../shared/lib/classification/resolve-mechanism-archetype.ts";
 import { getHeroPegLabel } from "../../shared/lib/classification.ts";
+import { getReserves } from "../../shared/lib/reserve-templates.ts";
 import { isRecord as isPlainObject } from "../../shared/lib/type-guards.ts";
 import { atomicWriteFileSync } from "../lib/atomic-artifact-write.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
@@ -180,10 +181,19 @@ export function projectListCoin(coin, listFields, listingClass, sourceById) {
 
 /** @param {readonly string[]} [geniusComplianceFields] */
 export function projectDetailCoin(coin, detailFields, geniusComplianceFields = GENIUS_COMPLIANCE_PROFILE_FIELDS) {
-  return {
+  const detail = {
     id: coin.id,
     ...projectCoin(coin, detailFields, geniusComplianceFields),
   };
+  if (detail.reserves?.length) {
+    detail.reserves = getReserves(coin).reserves;
+    if (coin.reserveReview?.scope === "selected-slices") {
+      detail.reserveCompositionScope = coin.id === "dusd-alto" ? "nominal-issuance-paths"
+        : coin.reserveReview.scopedWeights ? "scoped-report"
+        : coin.reserveReview.knownUnknownExposurePct === 100 ? "allocation-unavailable" : "selected-holdings";
+    }
+  }
+  return detail;
 }
 
 export function projectLiveReserveAdapter(coin) {

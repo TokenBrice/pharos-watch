@@ -37,7 +37,7 @@ import {
   ExitRouteObservationSchema,
   RedemptionExitRouteObservationSchema,
 } from "@shared/types/exit-route";
-import { ReserveSliceSchema } from "@shared/types/reserves";
+import { StaticReserveSliceSchema } from "@shared/types/reserves";
 import type { ReserveSlice } from "@shared/types/reserves";
 import { CustodyModelSchema } from "@shared/types/custody";
 import { WRAPPER_OPERATOR_VALUES } from "@shared/types/stablecoin-taxonomy";
@@ -104,7 +104,7 @@ const ReserveClassificationSchema = z
     maturityDaysMax: z.number().int().nonnegative().nullable(),
     failureDomains: CanonicalFailureDomainsSchema,
     trackedAssetId: CanonicalTextSchema.nullable().optional(),
-    trackedAssetDisposition: z.enum(["source", "reviewed-non-link"]).optional(),
+    trackedAssetDisposition: z.enum(["source", "reviewed-non-link", "own-liability"]).optional(),
     /** Exact reviewed source identity whose amount remains unclassified. */
     unclassifiedResidual: z.literal(true).optional(),
     publishedResidualCategory: z.literal(true).optional(),
@@ -281,7 +281,7 @@ const SupplyReviewSchema = z
 const ReviewedStaticReserveRowsSchema = z
   .object({
     rows: canonicalArrayBy(
-      ReserveSliceSchema,
+      StaticReserveSliceSchema,
       (row) => `${computeSafetyScoreV9ReserveExposureKey(row)}:${stableJsonStringifyV1(row)}`,
     ).refine((rows) => rows.length > 0, { message: "Reviewed static reserve admission requires rows" }),
     evidenceClass: z.enum(["independent", "issuer-attested", "static-validated"]),

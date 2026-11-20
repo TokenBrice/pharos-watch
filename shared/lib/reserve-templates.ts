@@ -5,8 +5,9 @@ import type {
   ReservePresentationMode,
   ReserveSyncStateView,
 } from "../types/live-reserves";
-import type {
-  ReserveSlice,
+import {
+  RESERVE_REVIEW_PCT_TOLERANCE,
+  type ReserveSlice,
 } from "../types/reserves";
 import type {
   StablecoinMeta,
@@ -105,7 +106,7 @@ function templateKey(coin: ReserveTemplateCoinMeta): string | null {
 
 /** Minimal coin shape needed for reserve resolution; satisfied by both the fat and client registries. */
 export type ReserveTemplateCoinMeta = Pick<StablecoinMeta, "reserves" | "flags" | "collateralQuality">
-  & Partial<Pick<StablecoinMeta, "id">>;
+  & Partial<Pick<StablecoinMeta, "id" | "reserveReview">>;
 
 const TEMPLATE_SUPPRESSED_IDS = new Set([
   // Pareto discloses a FalconX private-credit facility, not a percentage reserve composition.
@@ -119,7 +120,15 @@ const TEMPLATE_SUPPRESSED_IDS = new Set([
  */
 export function getReserves(coin: ReserveTemplateCoinMeta): ReserveResult | null {
   if (coin.reserves && coin.reserves.length > 0) {
-    return { reserves: coin.reserves, estimated: false, mode: "curated-fallback" };
+    const dispositions = coin.reserveReview?.nonLinkDispositions;
+    const reserves = dispositions?.some(row => row.ownLiability)
+      ? coin.reserves.map((slice, index) => dispositions.some(row =>
+          row.ownLiability && row.reserveIndex === index && row.reserveName === slice.name &&
+          Math.abs(row.pct - slice.pct) <= RESERVE_REVIEW_PCT_TOLERANCE)
+        ? { ...slice, name: `Self-referential claim (${slice.name})` }
+        : slice)
+      : coin.reserves;
+    return { reserves, estimated: false, mode: "curated-fallback" };
   }
 
   if (coin.id && TEMPLATE_SUPPRESSED_IDS.has(coin.id)) return null;

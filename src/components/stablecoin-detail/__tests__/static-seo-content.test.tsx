@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinAiSummary } from "@shared/types/editorial";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import * as blacklistStatus from "@shared/lib/blacklist-status";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { projectBlacklistabilityClientSummary } from "@/lib/stablecoin-detail-blacklistability-client";
 import { STABLECOIN_HISTORICAL_CONTEXT } from "@/lib/stablecoin-detail-historical-context";
 
@@ -76,6 +77,49 @@ const summary: StablecoinAiSummary = {
 };
 
 describe("StablecoinDetailSeoContent", () => {
+  it.each([
+    ["stusd-stoneyield", /USDC strategy positions/, "identified holdings"],
+    ["msusd-metronome", /Metronome Synth eligible CDP collateral basket/, "msUSD's reserve review findings"],
+  ])("describes %s without an allocation in the FAQ and JSON-LD", (id, pattern, subject) => {
+    const items = buildStablecoinFaqItems(TRACKED_META_BY_ID.get(id)!);
+    const { container } = render(<FaqSection items={items} includeJsonLd collapsed />);
+    const answer = screen.getByText(pattern).textContent;
+    expect(answer).toContain(subject);
+    expect(answer).not.toContain("%");
+    if (id === "msusd-metronome") expect(answer).toContain("Reserve evidence: reviewed collateral eligibility with no verified msUSD allocation.");
+    const jsonLd = JSON.parse(container.querySelector('script[type="application/ld+json"]')!.textContent!);
+    expect(jsonLd.mainEntity[2].acceptedAnswer.text).toBe(answer);
+  });
+
+  it("qualifies the USDU denominator in the rendered FAQ and its structured data", () => {
+    const items = buildStablecoinFaqItems(TRACKED_META_BY_ID.get("usdu-usdu-finance")!);
+    const { container } = render(<FaqSection items={items} includeJsonLd collapsed />);
+    const answer = screen.getByText(/60\.6% Self-referential claim \(Morpho USDU Core vault shares\)/).textContent;
+    expect(answer).toContain("shares of USDU's scoped reserve report as of Oct 27, 2026");
+    expect(answer).toMatch(/31\.6% Self-referential claim \(USDU constituent.*7\.8% USDC constituent/);
+    const jsonLd = JSON.parse(container.querySelector('script[type="application/ld+json"]')!.textContent!);
+    expect(jsonLd.mainEntity[2].acceptedAnswer.text).toBe(answer);
+  });
+
+  it.each(["pht-pht", "mai-qidao"])("describes the unresolved %s allocation in FAQ JSON-LD", (id) => {
+    const items = buildStablecoinFaqItems(TRACKED_META_BY_ID.get(id)!);
+    const { container } = render(<FaqSection items={items} includeJsonLd collapsed />);
+    const jsonLd = JSON.parse(container.querySelector('script[type="application/ld+json"]')!.textContent!);
+    expect(jsonLd.mainEntity[2].acceptedAnswer.text).toContain("Reserve evidence: a reserve review with unresolved allocation.");
+  });
+
+  it.each([
+    ["alusd-alchemix", /scoped reserve report.*37\.3% InfiniFi siUSD position/],
+    ["lisusd-lista", /scoped reserve report.*98% slisBNB/],
+    ["xo-exodus", /measured holdings in scope.*100% M0 M held in the XO extension vault/],
+    ["avusd-avant", /avUSD's reserve review findings.*Unresolved whole-token reserve composition/],
+    ["dusd-alto", /DUSD's reviewed nominal issuance paths.*83\.5% frxUSD.*16\.3% WETH.*0\.2% Syrup USDC.*under 0\.1% sUSDe/],
+    ["usd0-usual", /82\.4% Self-referential claim \(U0R bUSD0 Zero Rate Vault\)/],
+  ])("describes the reviewed backing evidence for %s", (id, expected) => {
+    render(<FaqSection items={buildStablecoinFaqItems(TRACKED_META_BY_ID.get(id)!)} collapsed />);
+    expect(screen.getByText(expected)).toBeTruthy();
+  });
+
   it("keeps historical editorial answers and references in the profile and FAQ JSON-LD", () => {
     const usdc = { ...coin, id: "usdc-circle", name: "USD Coin", symbol: "USDC" };
     const context = STABLECOIN_HISTORICAL_CONTEXT[usdc.id]!;

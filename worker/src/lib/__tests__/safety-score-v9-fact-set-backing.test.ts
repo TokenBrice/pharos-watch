@@ -882,10 +882,11 @@ describe("v10.01 cause compilation reserve proof boundaries", () => {
     expect(gap.causeProof.cause).toBe("U");
   });
 
-  it("preserves stale captured holdings without granting current envelope strength or quarantining them", () => {
+  it.each([undefined, true] as const)("preserves stale captured holdings without credit (selfReferential=%s)", (selfReferential) => {
     const original = makeV9FixedInput({ reserves: [{
       sourceKey: "fixture:cash", name: "Cash", pct: 100, risk: "very-low", assetClass: "cash",
       liquidityHorizon: "immediate", issuerOrObligor: "custodian:alpha", maturityDaysMax: 0,
+      ...(selfReferential ? { selfReferential } : {}),
     }] });
     const fixed = normalizeFixedInput({ ...original, baseInputGenerationId: undefined,
       liveReserveProvenanceMap: { alpha: { source: "fixture-reserve-api", fetchedAt: 1 } } });
@@ -893,12 +894,18 @@ describe("v10.01 cause compilation reserve proof boundaries", () => {
     extension.sources.liveReserves.maxAgeSec = 1;
     const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!;
     expect(asset.reserveExposures[0]).toMatchObject({ weight: 1, status: { observationState: "stale" } });
+    expect(asset.reserveExposures[0]?.selfReferential).toBe(selfReferential);
     expect(asset.reserveCompositionEvidenceClass).toBeUndefined();
     expect(asset.reserveCompositionProvenance).toBeUndefined();
     expect(asset.gaps.some((gap) => gap.causeScope?.componentKey === "asset-compilation")).toBe(false);
+    const backing = evaluateV9ReserveExposures({ ...asset, resolvedUpstreamExposures: [] }, V9_CANDIDATE_POLICY_V1);
+    expect.soft(backing.score).toBeNull();
+    expect.soft(backing.contributions.map(row => [row.source, row.score, row.scoringDisposition])).toEqual([
+      ["reserve-exposure", null, "excluded-pipeline"], ["reserve-concentration", null, "excluded-pipeline"],
+    ]);
     const staleGaps = asset.gaps.filter(gap => gap.observationState === "stale" &&
       gap.causeScope?.componentKey === "reserve-exposure");
-    expect(staleGaps).toHaveLength(5);
+    expect(staleGaps).toHaveLength(selfReferential ? 1 : 5);
     for (const gap of staleGaps) {
       expect(gap).toMatchObject({
         responsibility: "producer-failed",
@@ -1038,6 +1045,28 @@ describe("direct backing reserve builder", () => {
       reasonCode: "partial-reserve-review", observationState: "stale",
     }));
     expect(result.reserveCompositionProvenance).toBeUndefined();
+
+    const row = { ...fixed.liveReserveMap.alpha![0]!, sourceKey: "fixture:own-vault", pct: 85 };
+    const partial = makeV9FixedInput({ reserves: [row] });
+    const date = new Date(partial.clockSec * 1_000).toISOString().slice(0, 10);
+    const meta = { id: "alpha", reserves: [{ ...row, pct: 100 }], reserveReview: eligibleReserveMeta().reserveReview! };
+    const compile = (ownLiability: boolean) => {
+      const reviewed = { ...meta, reserveReview: { ...meta.reserveReview!, reviewedAt: date, compositionAsOf: date, nonLinkDispositions: [{
+        reserveIndex: 0, reserveName: row.name, pct: 100, disposition: "self-reserve" as const,
+        ...(ownLiability ? { ownLiability: true as const } : {}), rationale: "Vault redeems into the subject liability.",
+      }] } };
+      const baseline = buildSafetyScoreV9BaselineExtension(partial, { metaById: new Map([["alpha", reviewed]]) });
+      baseline.sources.liveReserves.maxAgeSec = 99;
+      const { assets: [asset] } = compileSafetyScoreV9FactSetFromFixedInput(partial, baseline);
+      const score = evaluateV9ReserveExposures({ ...asset!, resolvedUpstreamExposures: [] }, V9_CANDIDATE_POLICY_V1);
+      return { asset: asset!, score };
+    };
+    const ordinary = compile(false);
+    const own = compile(true);
+    expect(own.asset.reserveExposures[0]).toMatchObject({ selfReferential: true, status: { observationState: "stale" } });
+    expect(own.asset.reserveCompositionProvenance).toBeUndefined();
+    expect(own.score.score).toBe(ordinary.score.score);
+    expect(own.score.contributions.find(row => row.componentKey === "reserve:unclassified-residual:unidentified")?.score).toBe(40);
   });
 
   it("rejects reserve weights exceeding the whole-asset denominator", () => {

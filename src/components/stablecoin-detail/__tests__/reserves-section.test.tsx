@@ -8,6 +8,7 @@ import type { ReserveQualityClientSummary } from "@/lib/stablecoin-detail-reserv
 import type { ReserveLookThroughClientSummary } from "@/lib/stablecoin-detail-reserve-look-through-client";
 import { ReservesSection, type ReservesSectionProps } from "../reserves-section";
 import { projectReserveQualityClientSummary } from "@/lib/stablecoin-detail-reserve-quality-client";
+import { buildStablecoinDetailClientCoin } from "@/lib/stablecoin-detail-client-coin";
 import { projectReserveLookThroughClientSummary } from "@/lib/stablecoin-detail-reserve-look-through-client";
 
 // Without this mock `next/link` strips the canonical trailing slash: it only
@@ -118,6 +119,16 @@ afterEach(() => {
 });
 
 describe("ReservesSection", () => {
+  it("labels the three verified USDU claims in the ranked reserve rows", () => {
+    const coin = buildStablecoinDetailClientCoin(TRACKED_META_BY_ID.get("usdu-usdu-finance")!);
+    renderSection({ coin, qualitySummary: coin.reserveQualitySummary });
+    const labels = within(screen.getByRole("list", { name: "Reserve composition, largest first" }))
+      .getAllByText(/^Self-referential claim \(/);
+    expect(labels.map(label => label.textContent)).toEqual(coin.reserves!.filter(row =>
+      row.name.startsWith("Self-referential claim (")).map(row => row.name));
+    expect(labels).toHaveLength(3);
+  });
+
   it.each(["zaru-blocktower", "stusd-stoneyield"])(
     "keeps selected historical slices contextual rather than whole-basket quality or look-through (%s)",
     (id) => {
@@ -326,6 +337,15 @@ describe("ReservesSection", () => {
   });
 
   describe("wrapper look-through", () => {
+    it("keeps the parent's reviewed own-liability labels in sFRAX's ranked list", () => {
+      const coin = buildStablecoinDetailClientCoin(TRACKED_META_BY_ID.get("sfrax-frax")!, { parentById: TRACKED_META_BY_ID });
+      renderSection({ coin, qualitySummary: coin.reserveQualitySummary, lookThrough: coin.reserveLookThrough });
+      const rows = within(screen.getByRole("list", { name: "Reserve composition, largest first" }));
+      for (const name of ["sFRAX", "Legacy FRAX (ethereum)"]) {
+        expect(rows.getByText(`Self-referential claim (${name})`)).toBeDefined();
+      }
+    });
+
     const WRAPPER_SUMMARY: ReserveQualityClientSummary = {
       ...SUMMARY,
       sliceCount: 1,

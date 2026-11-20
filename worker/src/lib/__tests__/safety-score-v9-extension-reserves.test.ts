@@ -13,6 +13,7 @@ import {
   type V9ExtensionRegistryMeta,
 } from "../safety-score-v9/extension";
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
+import { computeSafetyScoreV9ReserveExposureKey } from "../safety-score-v9/fact-set-schema";
 import {
   buildSafetyScoreV9ReserveClassifications,
   dependencyReserveSlices,
@@ -30,6 +31,7 @@ import { reserveCompositionInput } from "./live-reserves-store.test-support";
 import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { makeV9TwoAssetFixedInput } from "../../test-helpers/v9-fixed-input";
+import { adaptFraxBalanceSheet } from "../../cron/reserve-adapters/frax";
 import zarscCoin from "@shared/data/stablecoins/coins/zarsc-supercoin.json";
 import zarscReserves from "@shared/data/stablecoins/domains/reserves/zarsc-supercoin.json";
 import usdtCoin from "@shared/data/stablecoins/coins/usdt-tether.json";
@@ -45,6 +47,20 @@ import usdoReserveEnvelope from "@shared/data/stablecoins/domains/reserves/usdo-
 
 const CLOCK_SEC = Date.UTC(2026, 6, 14) / 1_000;
 const DEPENDENCY_CLOCK_SEC = Date.UTC(2026, 7, 20) / 1_000;
+
+it.each([
+  ["frax-frax", 13, 30.2616, /^(Legacy FRAX \(|sFRAX$|LFRAX$)/],
+  ["usdu-usdu-finance", 3, 92.1985, /^(Morpho USDU Core|USDU constituent|TermMax)/],
+] as const)("marks only the reconciled own-liability rows for %s", (id, count, share, ownName) => {
+  const meta = TRACKED_META_BY_ID.get(id)!;
+  const rows = meta.reserves!;
+  const classifications = buildReviewedReserveClassifications(rows, meta, Date.UTC(2026, 10, 20) / 1_000, undefined, true);
+  const marked = new Set(classifications.filter(row => row.trackedAssetDisposition === "own-liability").map(row => row.exposureKey));
+  const own = rows.filter(row => marked.has(computeSafetyScoreV9ReserveExposureKey(row)));
+  expect(own).toHaveLength(count);
+  expect(own).toEqual(rows.filter(row => ownName.test(row.name)));
+  expect(own.reduce((sum, row) => sum + row.pct, 0)).toBeCloseTo(share, 2);
+});
 
 const LIVE_RESERVES_CONFIG: NonNullable<V9ExtensionRegistryMeta["liveReservesConfig"]> = {
   adapter: "curated-validated",
@@ -367,8 +383,8 @@ describe("reviewed live unknown residuals", () => {
     });
   }
 
-  function compile(rows: ReserveSlice[], meta: V9ExtensionRegistryMeta) {
-    const base = makeV9TwoAssetFixedInput({ clockSec: CLOCK_SEC });
+  function compile(rows: ReserveSlice[], meta: V9ExtensionRegistryMeta, clockSec = CLOCK_SEC) {
+    const base = makeV9TwoAssetFixedInput({ clockSec, omitAlphaReserve: rows.length === 0 });
     const {
       schemaVersion: _schemaVersion, dexPayloadFingerprint: _dexPayloadFingerprint,
       redemptionPayloadFingerprint: _redemptionPayloadFingerprint, registryFingerprint: _registryFingerprint,
@@ -383,8 +399,173 @@ describe("reviewed live unknown residuals", () => {
         ["beta", { id: "beta", mechanismArchetype: "fiat-cash", launchDate: "2020-01-01" }]]),
     });
     const alpha = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets.find(row => row.assetId === "alpha")!;
-    return { alpha, result: evaluateV9ReserveExposures({ ...alpha, resolvedUpstreamExposures: [] }, V9_CANDIDATE_POLICY_V1) };
+    return { alpha, fixed, extension, result: evaluateV9ReserveExposures({ ...alpha, resolvedUpstreamExposures: [] }, V9_CANDIDATE_POLICY_V1) };
   }
+
+  it("withholds USDU's selected issuer report from whole-book Backing", () => {
+    const meta = TRACKED_META_BY_ID.get("usdu-usdu-finance")!;
+    const { alpha, result } = compile([], { ...meta, id: "alpha" }, Date.UTC(2026, 10, 20) / 1_000);
+    expect(alpha.reserveStatus.observationState).toBe("missing");
+    expect(alpha.reserveExposures).toEqual([]);
+    expect(result.contributions).toContainEqual(expect.objectContaining({
+      componentKey: "reserve:unclassified-residual", normalizedWeight: 1,
+    }));
+  });
+
+  it("gives split and unsplit copies of a reviewed own-liability vault the same zero score", () => {
+    const vault: ReserveSlice = { ...known, name: "Own vault", assetClass: "protocol-position", pct: 100 };
+    const meta = reviewedMeta([vault], { nonLinkDispositions: [{
+      reserveIndex: 0, reserveName: vault.name, pct: 100, disposition: "self-reserve", ownLiability: true,
+      rationale: "Vault holds the same issuer liability.",
+    }] });
+    const whole = compile([vault], meta).result.score;
+    expect(whole).toBe(0);
+    expect(compile([{ ...vault, pct: 40 }, { ...vault, pct: 60 }], meta).result.score).toBe(whole);
+  });
+
+  it.each([
+    ["live", "unrelated evidence"], ["live", "conflicting residual"], ["static", "unrelated evidence"],
+  ])("quarantines only the %s own-liability asset with %s", (source, fault) => {
+    const vault: ReserveSlice = { ...known, name: "Own vault", assetClass: "protocol-position", pct: 100 };
+    const meta = reviewedMeta([vault], { nonLinkDispositions: [{
+      reserveIndex: 0, reserveName: vault.name, pct: 100, disposition: "self-reserve", ownLiability: true,
+      rationale: "Vault holds the same issuer liability.",
+    }] });
+    const { fixed, extension: original, result } = compile(source === "live" ? [vault] : [], meta);
+    expect(result.score).toBe(0);
+    const extension = structuredClone(original);
+    const overlay = extension.assets.find(row => row.assetId === "alpha")!;
+    const classification = overlay.reserveClassifications[0]!;
+    const binding = overlay.componentEvidence.find(row => row.componentKey === `reserve-classification:${classification.exposureKey}`)!;
+    if (fault === "unrelated evidence") {
+      const evidence = overlay.researchEvidence.find(row => row.evidenceKey === binding.evidenceKeys[0])!;
+      overlay.researchEvidence.push({ ...evidence, evidenceKey: "fixture-launch-date", sourceId: "stablecoin-meta.launch-date" });
+      binding.evidenceKeys = ["fixture-launch-date"];
+    } else {
+      classification.unclassifiedResidual = true;
+    }
+    const { assets } = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
+    expect(assets.filter(asset => asset.gaps.some(gap => gap.gapId.endsWith(":gap:asset-compilation")))
+      .map(asset => asset.assetId)).toEqual(["alpha"]);
+    expect(assets.find(asset => asset.assetId === "alpha")!.reserveExposures).toEqual([]);
+  });
+
+  it("keeps a fresh producer-confirmed own liability at zero after its review expires", () => {
+    const vault: ReserveSlice = { ...known, name: "Own vault", assetClass: "protocol-position", pct: 100 };
+    const meta = reviewedMeta([vault], { nonLinkDispositions: [{
+      reserveIndex: 0, reserveName: vault.name, pct: 100, disposition: "self-reserve", ownLiability: true,
+      rationale: "Vault holds the same issuer liability.",
+    }] });
+    const { fixed, extension: original } = compile([{ ...vault, selfReferential: true }], meta);
+    const extension = structuredClone(original);
+    const review = extension.assets.find(row => row.assetId === "alpha")!.researchEvidence
+      .find(row => row.sourceId === "stablecoin-meta.reserve-review")!;
+    review.maxAgeSec = 1;
+    const alpha = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets.find(row => row.assetId === "alpha")!;
+    expect(alpha.reserveExposures[0]).toMatchObject({ selfReferential: true, status: { observationState: "known" } });
+    expect(evaluateV9ReserveExposures({ ...alpha, resolvedUpstreamExposures: [] }, V9_CANDIDATE_POLICY_V1).score).toBe(0);
+  });
+
+  it.each([
+    ["sFRAX", "ethereum", "0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32"],
+    ["LFRAX", "fraxtal", "0xff000000000000000000000000000000000001fd"],
+    ["frxUSD", "ethereum", "0x853d955acef822db058eb8505911ed77f175b99e"],
+  ])("scores only the contract-identified %s producer row as own liability", (tokenSymbol, chain, tokenAddress) => {
+    const meta = TRACKED_META_BY_ID.get("frax-frax")!;
+    const historical = { name: tokenSymbol, pct: 60, risk: "medium", sourceKey: `frax-balance-sheet:${tokenSymbol.toLowerCase()}` } as const;
+    const { slices } = adaptFraxBalanceSheet({ totalAssets: 40, assets: [
+      { tokenSymbol, chain, tokenAddress, totalValueUsd: 40, category: "asset:owned:frax" },
+    ] }, meta.id, meta.contracts);
+    expect(slices[0]?.sourceKey).toBe(`frax-balance-sheet:${chain}:${tokenAddress}`);
+    const clockSec = Date.UTC(2026, 10, 20) / 1_000;
+    const reviewed = { ...meta, id: "alpha" };
+    expect(buildReviewedReserveClassifications([historical], meta, clockSec)[0]?.trackedAssetDisposition).toBeUndefined();
+    const { alpha, result } = compile([{ ...slices[0]!, pct: 40 }, historical], reviewed, clockSec);
+    const own = alpha.reserveExposures.filter(row => row.selfReferential);
+    expect(own.map(row => row.weight)).toEqual([0.4]);
+    expect(result.contributions).toContainEqual(expect.objectContaining({
+      componentKey: `reserve:${own[0]?.exposureKey}`, score: 0, wholeAssetWeight: 0.4,
+    }));
+  });
+
+  it.each([
+    ["static", 85, 12.2316], ["live", 85, 14.73825], ["producer", 85, 14.73825],
+    ["both", 85, 14.73825], ["static", 100, 0],
+  ] as const)("keeps the %s own-liability claim at zero credit (%s%%)", (source, pct, score) => {
+    const own: ReserveSlice = {
+      ...known, sourceKey: pct === 100 ? undefined : known.sourceKey, assetClass: "protocol-position", name: "Own vault", pct,
+    };
+    const rows = [own, { ...LINKED_RESERVES[1]!, sourceKey: "fixture:cash", pct: 100 - pct }];
+    const meta = reviewedMeta(rows, { nonLinkDispositions: [{ reserveIndex: 0, reserveName: own.name,
+      pct: pct - 0.0000005, disposition: "self-reserve", ownLiability: true,
+      rationale: "Vault holds the same issuer liability." }] });
+    const live = source === "producer" || source === "both"
+      ? [{ sourceKey: own.sourceKey, name: own.name, pct, risk: "very-high" as const, selfReferential: true as const }, rows[1]!]
+      : [{ ...own, coinId: "beta", depType: "collateral" as const }, rows[1]!];
+    const { alpha, fixed, extension, result } = compile(source === "static" ? [] : live, source === "producer" ? { id: "alpha" } : meta);
+    const exposure = alpha.reserveExposures.find(row => row.selfReferential)!;
+    expect(exposure).toMatchObject({ name: "Self-referential claim (Own vault)", weight: pct / 100, trackedAssetId: null });
+    expect(alpha.dependencies.edges).toEqual([]);
+    expect(alpha.reserveStatus.observationState).toBe("known");
+    expect(alpha.reserveResiduals).toEqual([]);
+    expect(result.contributions.find(row => row.componentKey === `reserve:${exposure.exposureKey}`)).toMatchObject({
+      score: 0, wholeAssetWeight: pct / 100, effectiveScoringWeight: pct / 100,
+    });
+    if (pct < 100) {
+      const external = alpha.reserveExposures.find(row => row.name === "Custodied cash")!;
+      const contribution = result.contributions.find(row => row.componentKey === `reserve:${external.exposureKey}`)!;
+      expect(contribution).toMatchObject({ wholeAssetWeight: (100 - pct) / 100, effectiveScoringWeight: (100 - pct) / 100 });
+      expect(contribution.score).toBeGreaterThan(0);
+    }
+    const concentration = result.contributions.find(row => row.source === "reserve-concentration")!;
+    expect(concentration.score).toBeCloseTo(98 * (1 - pct / 100));
+    expect(result.score).toBe(score);
+    if (source === "live" || source === "both") {
+      const reviewIds = alpha.evidence.filter(row => row.sourceId === "stablecoin-meta.reserve-review").map(row => row.evidenceId);
+      expect(reviewIds.length).toBeGreaterThan(0);
+      expect.soft(concentration.evidenceRefIds).toEqual(expect.arrayContaining(reviewIds));
+      const unboundExtension = structuredClone(extension);
+      const overlay = unboundExtension.assets.find(row => row.assetId === "alpha")!;
+      const binding = overlay.componentEvidence.find(row => row.componentKey === `reserve-classification:${exposure.exposureKey}`)!;
+      overlay.componentEvidence = overlay.componentEvidence.filter(row => row.evidenceKeys.every(key => !binding.evidenceKeys.includes(key)));
+      overlay.researchEvidence = overlay.researchEvidence.filter(row => !binding.evidenceKeys.includes(row.evidenceKey));
+      const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, unboundExtension);
+      expect(compiled.assets.find(row => row.assetId === "beta")!.gaps.some(row => row.gapId === "beta:gap:asset-compilation")).toBe(false);
+      const unbound = compiled.assets.find(row => row.assetId === "alpha")!;
+      if (source === "live") {
+        expect(unbound.gaps).toContainEqual(expect.objectContaining({ gapId: "alpha:gap:asset-compilation" }));
+        expect(unbound.reserveExposures).toEqual([]);
+      } else expect(unbound.reserveExposures.find(row => row.exposureKey === exposure.exposureKey)?.selfReferential).toBe(true);
+    }
+  });
+
+  it("keeps endogenous collateral scored when the review only records a dependency non-link", () => {
+    const hive: ReserveSlice = { ...known, assetClass: "cryptoasset", name: "HIVE conversion capacity", pct: 100 };
+    const meta = reviewedMeta([hive], { nonLinkDispositions: [{ reserveIndex: 0, reserveName: hive.name, pct: 100,
+      disposition: "self-reserve", rationale: "Capacity is denominated in the native HIVE token." }] });
+    const { alpha, result } = compile([hive], meta);
+    expect(alpha.reserveExposures[0]).toMatchObject({ name: hive.name, trackedAssetId: null });
+    expect(result.contributions.find(row => row.source === "reserve-exposure")?.score).toBeGreaterThan(0);
+  });
+
+  it("preserves an external live identity despite a matching own-liability display name", () => {
+    const own = { ...known, name: "U0R bUSD0 Zero Rate Vault", pct: 100 };
+    const meta = reviewedMeta([own], { nonLinkDispositions: [{ reserveIndex: 0, reserveName: own.name, pct: 100,
+      disposition: "self-reserve", ownLiability: true, rationale: "Reviewed vault redeems into the subject liability." }] });
+    const live = [{ name: own.name, pct: 100, risk: "low", coinId: "usdc-circle", depType: "collateral" }] satisfies ReserveSlice[];
+    expect.soft(buildReviewedReserveClassifications(live, meta, CLOCK_SEC)[0]).toMatchObject({
+      trackedAssetId: "usdc-circle", assetClass: "stablecoin",
+    });
+    expect.soft(dependencyReserveSlices(live, meta, CLOCK_SEC).slices).toEqual(live);
+  });
+
+  it("quarantines a producer flag supplied on a reviewed static row", () => {
+    const cash: ReserveSlice = { ...LINKED_RESERVES[1]!, pct: 100, selfReferential: true };
+    const { alpha } = compile([], reviewedMeta([cash]));
+    expect(alpha.gaps).toContainEqual(expect.objectContaining({
+      gapId: "alpha:gap:asset-compilation", responsibility: "producer-failed",
+    }));
+  });
 
   it("charges the live tail once, with live weights, while retaining measured adverse credit", () => {
     const { alpha, result } = compile([{ ...known, pct: 63 }, { ...unknown, pct: 37 }], metaFor());
