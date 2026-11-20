@@ -1,0 +1,28 @@
+{
+  "id": "iusd-infinifi",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      },
+      {
+        "label": "ESMA MiCA Q&A 2404: an EMT offered to the public or admitted to trading in the EU requires an authorised issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2404"
+      },
+      {
+        "label": "infiniFi docs: iUSD is the protocol deposit receipt token, minted and burned only by authorised protocol contracts (accessed 2026-11-20)",
+        "url": "https://docs.infinifi.xyz/dev-docs/tokens/receipt-token"
+      },
+      {
+        "label": "infiniFi Terms: the Protocol is open-source and not infiniFi's proprietary property; no fiduciary duties are assumed (sections 3 and 7, accessed 2026-11-20)",
+        "url": "https://app.infinifi.xyz/terms"
+      },
+      {
+        "label": "infiniFi risk disclosures: losses beyond the locked-iUSD tranche are applied to iUSD by rebasing balances down (accessed 2026-11-20)",
+        "url": "https://docs.infinifi.xyz/risk-disclosures"
+      }
+    ]
+  }
+}

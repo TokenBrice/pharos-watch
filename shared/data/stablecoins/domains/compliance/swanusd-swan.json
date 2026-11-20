@@ -1,5 +1,30 @@
 {
   "id": "swanusd-swan",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "swanUSD site: DAO-owned stablecoin minted against wstETH on Monolith; no legal issuer entity, terms or contact published",
+        "url": "https://swanusd.com"
+      },
+      {
+        "label": "Monolith risks: anyone can deploy an instance through the Factory and not all instances are created or endorsed by the Monolith core team",
+        "url": "https://docs.monolith.market/security/risks.md"
+      },
+      {
+        "label": "Monolith redemptions: any holder redeems Coin for collateral from a named free-debt borrower and the protocol burns the Coin",
+        "url": "https://docs.monolith.market/protocol/redemptions.md"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      },
+      {
+        "label": "ESMA MiCA Q&A: EMT offering or admission to trading requires an authorized issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2404"
+      }
+    ]
+  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {

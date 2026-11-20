@@ -4,12 +4,16 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "Dialectic Meccanico Machine Terms: EU/EEA acquisition exclusion",
+        "label": "Dialectic Meccanico Machine Terms v1.2, s.4.e: no EU/EEA marketing or Acquisition orders (revised 31 Jul 2026)",
         "url": "https://makina.finance/MeccanicoToS.pdf"
       },
       {
-        "label": "Makina documentation: variable Machine share price and AUM",
+        "label": "Makina docs: share price = AUM / share supply, so DUSD value varies (page updated 10 Sep 2026)",
         "url": "https://docs.makina.finance/concepts/architecture/machine/share-price"
+      },
+      {
+        "label": "MiCA Article 3(7): EMT purports to maintain a stable value by reference to one official currency",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
       }
     ]
   },

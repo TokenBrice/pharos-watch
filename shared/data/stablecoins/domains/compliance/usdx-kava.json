@@ -1,0 +1,36 @@
+{
+  "id": "usdx-kava",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Kava docs: USDX is a native asset minted when a Kava CDP is opened; value determined by market forces (accessed 2026-11-20)",
+        "url": "https://docs.kava.io/docs/faq/basics/"
+      },
+      {
+        "label": "Kava CDP module concepts: users mint the stable asset; module behaviour changes only through governance parameters (accessed 2026-11-20)",
+        "url": "https://docs.kava.io/docs/cosmos/modules/cdp/concepts/"
+      },
+      {
+        "label": "Kava CDP module parameters: pegged debt denom usdx with governance-set global and per-collateral debt limits (accessed 2026-11-20)",
+        "url": "https://docs.kava.io/docs/cosmos/modules/cdp/params/"
+      },
+      {
+        "label": "Kava Mint help: USDX redeemed at $1.00 only when repaying Mint debt; market price can fluctuate (accessed 2026-11-20)",
+        "url": "https://help.app.kava.io/article/15-what-is-kava-mint"
+      },
+      {
+        "label": "kava.io Terms of Use: Kava Labs Inc website terms only; no USDX issuance or redemption undertaking (accessed 2026-11-20)",
+        "url": "https://www.kava.io/terms-of-use"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      },
+      {
+        "label": "ESMA interim MiCA register (last update 18 November 2026): EMT and ART issuer files checked 2026-11-20, no USDX or Kava issuer row",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      }
+    ]
+  }
+}

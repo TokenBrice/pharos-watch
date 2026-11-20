@@ -1,0 +1,28 @@
+{
+  "id": "brlm-mento",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Celo forum MGP-19 follow-up (18 Nov 2026): issuance authority over all 15 Mento stable assets sits with Celo Governance; Mento Labs does not issue, own, govern or back them",
+        "url": "https://forum.celo.org/t/state-of-stablecoins-on-celo-mgp-19-follow-up/14293"
+      },
+      {
+        "label": "Mento Labs General Counsel, MiCAR workshop (Nov 2024): Mento stables are community-created with no issuing entity, so the MiCA issuer/offeror qualification is not given",
+        "url": "https://www.mento.org/blog/highlights-from-the-micar-workshop"
+      },
+      {
+        "label": "MGP-18 (17 Aug 2026): BRLm stays a V2 FX stable with holder exit through the USDm/BRLm Broker pool",
+        "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      },
+      {
+        "label": "Mento deployments (accessed 2026-11-20): StableTokenBRL 0xe8537a3d056Da446677B9E9d6c5dB704EaAb4787 on Celo mainnet",
+        "url": "https://docs.mento.org/mento-v3/build/deployments/addresses.md"
+      }
+    ]
+  }
+}

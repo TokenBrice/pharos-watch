@@ -4,19 +4,19 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "JPYC EX eligibility: applicants living outside Japan cannot apply",
-        "url": "https://faq.jpyc.co.jp/s/article/jpycex-getting-started"
+        "label": "JPYC Inc. release: funds-transfer JPYC issued from 27 Oct 2025 via JPYC EX; identity verification consolidated on My Number card (JPKI); issuance/redemption by Japanese bank transfer",
+        "url": "https://prtimes.jp/main/html/rd/p/000000283.000054018.html"
       },
       {
-        "label": "JPYC current issuance and redemption service and distinction from JPYC Prepaid",
-        "url": "https://jpyc.co.jp/"
+        "label": "JPYC official repository: funds-transfer JPYC contract 0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29 on Ethereum, Avalanche, Polygon and Kaia; prepaid JPYC is a separate token",
+        "url": "https://github.com/jpycoin"
       },
       {
-        "label": "JPYC funds-transfer pre-contract disclosure",
-        "url": "https://jpyc.co.jp/legal/pre-contract-disclosure.pdf"
+        "label": "JPYC Prepaid site: separate prepaid payment-instrument token (predecessor product)",
+        "url": "https://jpyc.jp/"
       },
       {
-        "label": "ESMA interim MiCA EMT issuer register",
+        "label": "ESMA interim MiCA EMT issuer register (EMTWP.csv): no JPYC Inc. entry, 2026-11-20 snapshot",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       }
     ]

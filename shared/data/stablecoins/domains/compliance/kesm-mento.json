@@ -1,5 +1,42 @@
 {
   "id": "kesm-mento",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Mento Labs general counsel: Mento stables treated as EMTs but MiCA not applicable for want of an issuing entity (2024-11-18)",
+        "url": "https://www.mento.org/blog/highlights-from-the-micar-workshop"
+      },
+      {
+        "label": "MGP-19 proposal: transfer issuance governance of all 15 Mento stable assets to Celo Governance; AP Reserve Foundation stewards the Reserve; Mento Labs GmbH is the contracted operator (2026-08-21)",
+        "url": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
+      },
+      {
+        "label": "MGP-19 follow-up: passed 8 Sep 2026; Mento Labs does not issue, own, govern or back the Mento stable assets; onchain authority sits with Celo Governance (2026-11-18)",
+        "url": "https://forum.celo.org/t/state-of-stablecoins-on-celo-mgp-19-follow-up/14293"
+      },
+      {
+        "label": "Mento governance docs: fully decentralized protocol, no single entity controls it (accessed 2026-11-20)",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/governance-and-mento/understanding-mento-governance.md"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      },
+      {
+        "label": "ESMA interim MiCA EMT register: no Mento issuer or KESm white paper listed (accessed 2026-11-20)",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "Mento deployments: StableTokenKES 0x456a3D042C0DbD3db53D5489e98dFb038553B0d0 on Celo",
+        "url": "https://docs.mento.org/mento-v3/build/deployments/addresses.md"
+      },
+      {
+        "label": "MGP-18: KESm kept as a V2 FX stable with a live USDm/KESm Broker pool (2026-08-17)",
+        "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137"
+      }
+    ]
+  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {

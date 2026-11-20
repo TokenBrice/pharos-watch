@@ -5,20 +5,20 @@
     "tokenType": "EMT",
     "references": [
       {
-        "label": "Ramp Network EU/EEA MiCA restriction explicitly naming AUSD",
+        "label": "Ramp Network support: EU/EEA MiCA restriction names AUSD as not available to buy or sell (accessed 2026-11-20)",
         "url": "https://support.rampnetwork.com/en/articles/432-what-cryptoassets-does-ramp-network-support"
       },
       {
-        "label": "Ramp Network Agora AUSD integration and EU exclusion",
+        "label": "Ramp Network AUSD integration post: AUSD by Agora, available worldwide except the European Union (accessed 2026-11-20)",
         "url": "https://rampnetwork.com/blog/ramp-network-integrates-ausd"
       },
       {
-        "label": "Ramp Network asset API: AUSD contracts match Agora deployments",
-        "url": "https://api.rampnetwork.com/api/host-api/v3/assets"
+        "label": "ESMA interim MiCA EMT issuer register (EMTWP.csv): no Agora or AUSD issuer or white-paper row (accessed 2026-11-20)",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
-        "label": "Agora Terms of Use: AUSD issuer and USD denomination",
-        "url": "https://static.agora.finance/termsofuse.pdf"
+        "label": "Agora AUSD product page: digital dollar minted 1:1 with USD fiat, backed 100% by Agora's Reserves (accessed 2026-11-20)",
+        "url": "https://www.agora.finance/product/ausd"
       }
     ]
   },

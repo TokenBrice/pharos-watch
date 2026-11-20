@@ -13,11 +13,15 @@
         "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=65af5039eae04563b47e424b9cae77ed"
       },
       {
-        "label": "ESMA Interim MiCA Register: EMT issuer file reviewed 7 October 2026",
+        "label": "Telcoin Europe MiCA notice: XUSD no longer tradable for Telcoin Europe customers from 2025-03-31",
+        "url": "https://www.telco.in/support-center/digital-assets/micar-stablecoins-compliance"
+      },
+      {
+        "label": "ESMA Interim MiCA Register: EMT issuer file re-verified 2026-11-20, no StraitsX entry",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
-        "label": "StraitsX token terms",
+        "label": "StraitsX token terms, effective 18 July 2026: XUSD issued by StraitsX USD Issuance Pte Ltd",
         "url": "https://www.straitsx.com/legal/token"
       }
     ]

@@ -1,5 +1,27 @@
 {
   "id": "copm-minteo",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "Kraken: COPM among assets EEA clients cannot deposit or trade; page last updated 19 Nov 2026",
+        "url": "https://support.kraken.com/articles/where-is-kraken-licensed-or-regulated"
+      },
+      {
+        "label": "Kraken: Minteo (COPM) available for trading, live 23 Dec 2025",
+        "url": "https://blog.kraken.com/product/asset-listings/copm-is-available-for-trading"
+      },
+      {
+        "label": "Minteo contract directory: COPM at the tracked Polygon, Celo and Solana addresses",
+        "url": "https://transparency.minteo.com/contract-directory"
+      },
+      {
+        "label": "ESMA interim MiCA EMT issuer register (EMTWP.csv): no Minteo, WAGMI S.A.S. or COPM entry, 20 Nov 2026 snapshot",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {

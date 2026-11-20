@@ -1,0 +1,24 @@
+{
+  "id": "eurxt-caceis",
+  "mica": {
+    "status": "authorized",
+    "tokenType": "EMT",
+    "authorizationType": "credit-institution",
+    "competentAuthority": "ACPR",
+    "authorizedEntity": "CACEIS BANK SA",
+    "references": [
+      {
+        "label": "ESMA Interim MiCA register: CACEIS BANK SA (ACPR, credit institution), EURXT white paper notified 30/06/2026, accessed 2026-11-20",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "Crédit Agricole launch release: EURXT, MiCA e-money token issued by CACEIS on Ethereum, July 1 2026",
+        "url": "https://presse.credit-agricole.com/credit-agricole-launches-eurxt-its-euro-denominated-stablecoin/?lang=eng"
+      },
+      {
+        "label": "CACEIS EURXT note: MiCA-compliant euro stablecoin available to CACEIS clients, October 29 2026",
+        "url": "https://www.caceis.com/news/eurxt-a-secure-euro-settlement-asset-issued-by-caceis-for-on-chain-trades"
+      }
+    ]
+  }
+}

@@ -2,6 +2,7 @@
   "id": "xaut-tether",
   "mica": {
     "status": "non-compliant",
+    "tokenType": "ART",
     "references": [
       {
         "label": "Bit2Me MiCA restriction notice naming XAUT",

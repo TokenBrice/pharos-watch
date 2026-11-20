@@ -16,6 +16,10 @@
       {
         "label": "Finanstilsynet NBX register: institutional EMI and CASP licences, not completed USDM registration",
         "url": "https://www.finanstilsynet.no/en/finanstilsynets-registry/details/?id=201280"
+      },
+      {
+        "label": "ESMA interim MiCA EMT issuer register (EMTWP.csv): no Norwegian Block Exchange entry; register last updated 11 November 2026 (accessed 2026-11-20)",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       }
     ]
   },

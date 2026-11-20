@@ -1,5 +1,26 @@
 {
   "id": "mai-qidao",
+  "mica": {
+    "status": "non-compliant",
+    "references": [
+      {
+        "label": "Telcoin Europe MiCAR notice: MIMATIC (Mai) trading ended 31 March 2025",
+        "url": "https://www.telco.in/support-center/digital-assets/micar-stablecoins-compliance"
+      },
+      {
+        "label": "ESMA current EMT issuer and white-paper register",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "CoinGecko MAI (MIMATIC) page: QiDao MAI quoted as MIMATIC",
+        "url": "https://www.coingecko.com/en/coins/mai"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      }
+    ]
+  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {

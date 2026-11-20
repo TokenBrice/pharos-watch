@@ -8,16 +8,20 @@
     "authorizedEntity": "Eurodollar ApS",
     "references": [
       {
-        "label": "ESMA EMT issuer register (Eurodollar ApS, LEI 8945001XWFMRUTCAK575; accessed 2026-11-15)",
+        "label": "ESMA interim MiCA register: Eurodollar ApS (DK, Finanstilsynet), EMI, no white paper notified (EMT_NO_WP); accessed 2026-11-20",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
-        "label": "PLNY issuer white paper",
+        "label": "PLNY white paper: Eurodollar ApS, PLN e-money token, notified 11 February 2026, A.13 corrected 9 October 2026",
         "url": "https://www.stablecoin.dk/tokens/plny/white-paper.md"
       },
       {
-        "label": "Issuer regulatory status",
+        "label": "Issuer regulatory status: Finanstilsynet EMI authorisation 11 February 2025, register no. 40515, EURY/USDY/PLNY issued on that basis; accessed 2026-11-20",
         "url": "https://www.stablecoin.dk/company/regulatory-status.md"
+      },
+      {
+        "label": "Olbra verify page: PLNY deployed with none in issue, issuer renamed from Eurodollar ApS (July 2026); accessed 2026-11-20",
+        "url": "https://olbra.org/verify"
       }
     ]
   }

@@ -8,8 +8,8 @@
     "authorizedEntity": "Quantoz Payments B.V.",
     "references": [
       {
-        "label": "ESMA MiCA register (issuers of EMTs)",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        "label": "ESMA interim MiCA register: EMTWP.csv, Quantoz Payments B.V. (LEI 7245008P1HPUPVM7XL94), DNB, USDQ white paper notified 24/03/2025 (accessed 2026-11-20)",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
         "label": "Quantoz USDQ whitepaper",

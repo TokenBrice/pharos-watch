@@ -1,5 +1,30 @@
 {
   "id": "gbpm-mento",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Mento general counsel MiCAR workshop: Mento stables have no issuing entity, so MiCA does not apply (recitals 20/22), 18 Nov 2024",
+        "url": "https://www.mento.org/blog/highlights-from-the-micar-workshop"
+      },
+      {
+        "label": "Mento V3 CDP docs: GBPm is borrowed into existence by users against USDm collateral, not minted by an issuer",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/cdp"
+      },
+      {
+        "label": "Mento docs: the Reserve holds no collateral for CDP-backed stables like GBPm",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      },
+      {
+        "label": "MGP-19: governance of the GBPm CDP branch moves to Celo Governance, authority split across entities, 21 Aug 2026",
+        "url": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
+      }
+    ]
+  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {

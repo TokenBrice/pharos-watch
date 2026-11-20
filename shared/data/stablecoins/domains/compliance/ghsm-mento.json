@@ -1,5 +1,26 @@
 {
   "id": "ghsm-mento",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "MiCA Regulation (EU) 2023/1114, recital 22: crypto-assets with no identifiable issuer fall outside Titles II-IV",
+        "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32023R1114"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      },
+      {
+        "label": "Mento Labs general counsel, 18 Nov 2024: stablecoins minted by community vote via smart contract, no issuing entity",
+        "url": "https://www.mento.org/blog/highlights-from-the-micar-workshop"
+      },
+      {
+        "label": "MGP-19 follow-up, 18 Nov 2026: Mento Labs does not issue, own, govern or back the stable assets; issuance authority sits with Celo Governance",
+        "url": "https://forum.celo.org/t/state-of-stablecoins-on-celo-mgp-19-follow-up/14293"
+      }
+    ]
+  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {

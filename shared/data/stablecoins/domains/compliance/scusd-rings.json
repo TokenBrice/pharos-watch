@@ -1,0 +1,24 @@
+{
+  "id": "scusd-rings",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Trevee docs: scAssets minted as Veda BoringVault vault receipt tokens from whitelisted collateral (accessed 2026-11-20)",
+        "url": "https://docs.trevee.xyz/trevee-earn/sonic-scassets/veda-vaults"
+      },
+      {
+        "label": "Trevee docs: scUSD minted 1:1 against stablecoins into a curator-managed Veda vault; redemption after a cooldown; no issuer entity named (accessed 2026-11-20)",
+        "url": "https://docs.trevee.xyz/trevee-earn/sonic-scassets/veda-vaults/collateral-vault-ethereum"
+      },
+      {
+        "label": "Trevee smart contracts: scUSD 0xd3DCe716f3eF535C5Ff8d041c1A41C3bd89b97aE with teller and on-chain withdraw queue on Ethereum and Sonic (accessed 2026-11-20)",
+        "url": "https://docs.trevee.xyz/trevee-earn/sonic-scassets/developers/smart-contracts"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      }
+    ]
+  }
+}

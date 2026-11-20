@@ -1,5 +1,30 @@
 {
   "id": "ybold-yearn",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Yearn yBOLD docs: tokenized Liquity V2 Stability Pool position, redeemable 1:1 for BOLD, no issuer named",
+        "url": "https://docs.yearn.fi/getting-started/products/yvaults/yBold"
+      },
+      {
+        "label": "Yearn vault snapshot: 0x9F43…8A3d8 is an ERC-4626 vault holding BOLD via Liquity V2 Stability Pool strategies",
+        "url": "https://kong.yearn.fi/api/rest/snapshot/1/0x9f4330700a36b29952869fac9b33f45eedd8a3d8"
+      },
+      {
+        "label": "Yearn docs: contracts and products offered as-is, no guarantee or compensation",
+        "url": "https://docs.yearn.fi/developers/security/risks"
+      },
+      {
+        "label": "Yearn governance manifesto: no legal entity, no foundation, no central authority (2020-10-20)",
+        "url": "https://gov.yearn.fi/t/how-we-think-about-yearn/7137"
+      },
+      {
+        "label": "ESMA European Commission answer on crypto-assets without an identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      }
+    ]
+  },
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {

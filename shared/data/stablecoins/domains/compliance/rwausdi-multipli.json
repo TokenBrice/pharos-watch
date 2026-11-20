@@ -1,5 +1,22 @@
 {
   "id": "rwausdi-multipli",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Multipli rwaUSDi: KYB-gated institutional permissioned credit layer; pricing periodic, not continuous; redemptions scheduled, not instant (accessed 2026-11-20)",
+        "url": "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design/rwausdi-the-institutional-credit-layer-for-tokenized-private-markets"
+      },
+      {
+        "label": "Multipli liquidity-class design: rwaUSDi is the isolated class for structurally illiquid private credit, with gated or scheduled redemptions and discrete pricing (accessed 2026-11-20)",
+        "url": "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design"
+      },
+      {
+        "label": "Multipli platform terms applying to every rwaUSDi vault (page marked prototype text for review by counsel): rwaUSDi transfer-restricted to verified entities, not a stablecoin, no peg; Multipli is not the issuer (accessed 2026-11-20)",
+        "url": "https://docs.multipli.fi/legal/platform-terms-and-disclosures"
+      }
+    ]
+  },
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {

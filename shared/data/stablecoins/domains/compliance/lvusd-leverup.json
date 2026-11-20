@@ -1,5 +1,34 @@
 {
   "id": "lvusd-leverup",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "LeverUp docs: LVUSD is minted 1:1 against USDC collateral and redeemed at the prevailing vault ratio",
+        "url": "https://leverup.gitbook.io/docs/liquidity-layer/lvusd-stablecoin"
+      },
+      {
+        "label": "LeverUp blog: LVUSD is a protocol settlement unit, not a general-purpose circulating stablecoin",
+        "url": "https://blog.leverup.xyz/lvusd-stablecoin-design/"
+      },
+      {
+        "label": "LeverUp Terms of Use: not registered with or regulated by any financial authority; no legal entity named",
+        "url": "https://leverup.gitbook.io/docs/misc/terms-of-use.md"
+      },
+      {
+        "label": "LeverUp Disclaimer: protocol released as open-source smart contracts, no service or exchange operated",
+        "url": "https://leverup.gitbook.io/docs/misc/disclaimer.md"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      },
+      {
+        "label": "ESMA MiCA Q&A: EMT offering or admission to trading requires an authorised issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2404"
+      }
+    ]
+  },
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {

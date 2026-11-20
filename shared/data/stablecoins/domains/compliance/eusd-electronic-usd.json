@@ -1,5 +1,34 @@
 {
   "id": "eusd-electronic-usd",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      },
+      {
+        "label": "Reserve terms: ABC Labs neither controls nor operates the protocol; DTFs created permissionlessly by third parties",
+        "url": "https://reserve.org/terms-and-conditions"
+      },
+      {
+        "label": "Reserve FAQ: anyone can launch, mint, redeem and govern a DTF permissionlessly",
+        "url": "https://docs.reserve.org/faq"
+      },
+      {
+        "label": "Reserve docs: permissionless Yield DTF mint and redemption, no custodians",
+        "url": "https://docs.reserve.org/core-components/yield-dtfs/minting-and-redeeming.md"
+      },
+      {
+        "label": "Reserve discovery data: Electronic Dollar eUSD at 0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f, yield DTF, active",
+        "url": "https://api.reserve.org/discover/dtfs"
+      },
+      {
+        "label": "ESMA interim MiCA register (updated 11-11-2026): EMT issuer CSVs reviewed, no Reserve Protocol issuer entry",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      }
+    ]
+  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {

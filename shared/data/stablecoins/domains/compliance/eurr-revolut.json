@@ -1,0 +1,32 @@
+{
+  "id": "eurr-revolut",
+  "mica": {
+    "status": "authorized",
+    "tokenType": "EMT",
+    "authorizationType": "emi",
+    "competentAuthority": "CSSF",
+    "authorizedEntity": "Bridge Building S.A.",
+    "references": [
+      {
+        "label": "ESMA interim EMT register (EMTWP.csv): Bridge Building S.A., CSSF, EURR white paper notified 23/07/2026, DTI TD3BGWM5Z (Ethereum) (accessed 2026-11-20)",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "ESMA interim MiCA register landing page, EMT issuer CSV, last update 11 November 2026",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Bridge EURR reserve page: Revolut Euro (EURR) issued by Bridge Building S.A. (accessed 2026-11-20)",
+        "url": "https://reserves.bridge.xyz/eurr"
+      },
+      {
+        "label": "Bridge non-US licences: Bridge Building S.A., CSSF EMI licence W00000024 granted 29 June 2026",
+        "url": "https://www.bridge.xyz/legal/licenses/non-us-licenses"
+      },
+      {
+        "label": "Estonian FSA cross-border e-money register: Bridge Building S.A. issuing e-money from 14/08/2026",
+        "url": "https://subjektid.fi.ee/view/49097/PROVIDERS_OF_CROSS_BORDER_E_MONEY_SERVICES?lang=en"
+      }
+    ]
+  }
+}

@@ -5,15 +5,19 @@
     "tokenType": "ART",
     "references": [
       {
-        "label": "ESMA MiCA interim register: ART white papers",
+        "label": "ESMA interim MiCA register, ART issuers file (ARTZZ.csv): empty, no USDe white paper (accessed 2026-11-20)",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/ARTZZ.csv"
       },
       {
-        "label": "BaFin: Ethena GmbH USDe ART authorisation procedure terminated and business winding-up ordered",
+        "label": "BaFin (15 Apr 2025): Ethena GmbH withdrew its USDe ART application; wind-up ordered and USDe secondary-market trading no longer permissible in the EU",
         "url": "https://www.bafin.de/SharedDocs/Veroeffentlichungen/EN/Verbrauchermitteilung/weitere/2025/meldung_2025_04_15_Ethena_GmbH_en.html"
       },
       {
-        "label": "ESMA MiCA Article 3 definitions",
+        "label": "BaFin (25 Jun 2025): USDe redemption process ordered; Ethena GmbH wound up in the EU/EEA from 7 Aug 2025, claims only against Ethena (BVI) Limited",
+        "url": "https://www.bafin.de/SharedDocs/Veroeffentlichungen/EN/Verbrauchermitteilung/weitere/2025/meldung_2025_06_25_Ethena_GmbH_en.html"
+      },
+      {
+        "label": "MiCA Article 3 definitions: ART references other values or rights, EMT references one official currency (accessed 2026-11-20)",
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
       }
     ]

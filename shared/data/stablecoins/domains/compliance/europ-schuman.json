@@ -8,12 +8,16 @@
     "authorizedEntity": "SALVUS",
     "references": [
       {
-        "label": "ESMA Interim MiCA Register: EMT issuers (EMTWP.csv), SALVUS entry dated 22/11/2024",
+        "label": "ESMA Interim MiCA Register: EMT issuers (EMTWP.csv), SALVUS entry dated 22/11/2024, accessed 2026-11-20",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
         "label": "Schuman EUROP whitepaper",
         "url": "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf"
+      },
+      {
+        "label": "Schuman EURØP page: EURØP issued by ACPR-regulated Schuman Financial, white paper notified 7 August 2024, amended 23 March 2026 (accessed 2026-11-20)",
+        "url": "https://schuman.io/europ/"
       }
     ]
   },
