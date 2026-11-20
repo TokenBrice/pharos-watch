@@ -28,6 +28,7 @@ import { PYS_BENCHMARK_SPREAD_WEIGHT, PYS_RISK_PENALTY_EXPONENT, PYS_RISK_PENALT
 import { DEFINITIONS } from "@/lib/definitions";
 import {
   DEPEG_RESOLVER_SECTION_CONTENT,
+  LIQUIDITY_SECTION_CONTENT,
   MINT_BURN_FLOW_SECTION_CONTENT,
   PEGSCORE_DEWS_SECTION_CONTENT,
   PRICING_PIPELINE_SECTION_CONTENT,
@@ -330,6 +331,14 @@ describe("MethodologyPage", () => {
     const text = methodologyDocument().querySelector("#liquidity-methodology")!.textContent!.replace(/\s+/g, " ");
     expect(text).toContain("~43%+->100");
     expect(text).not.toContain("~32%+->100");
+  });
+
+  it.each(["HTML", "Markdown"])("describes the frozen registry clock without a payload version in %s", (format) => {
+    const copy = format === "HTML"
+      ? methodologyDocument().querySelector("#liquidity-methodology")!.textContent
+      : LIQUIDITY_SECTION_CONTENT.markdown;
+    expect(copy).toContain("frozen basis");
+    expect(copy).not.toMatch(/stage payload v\d+/i);
   });
 
   it("states the PegScore tracking gate without a retired early-score label", () => {

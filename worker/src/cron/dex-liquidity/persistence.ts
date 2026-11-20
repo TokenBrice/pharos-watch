@@ -33,6 +33,8 @@ import { DEX_MEASURED_CLOSURE_VALUATION_UNAVAILABLE } from "../measured-executio
 import { buildStoredChallengerPoolsJson, projectPoolChallenger } from "./challenger-publish";
 import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
 import { toErrorMessage } from "@shared/lib/error-utils";
+import type { DexLiquidityAnchorReviewDecision } from "../../lib/schemas";
+import { REVIEWED_POOL_REJECTION_ANCHOR_CORRECTION } from "./reviewed-anchor-correction";
 import {
   buildDexDeploymentCensusDetail,
   buildDexPlaceholderScoreDetailsJson,
@@ -715,13 +717,28 @@ async function publishDexLiquidityGeneration(
     nowSec: number;
     expectedRowCount: number;
     signal?: AbortSignal;
+    anchorReviewDecision?: DexLiquidityAnchorReviewDecision;
   },
 ): Promise<number> {
   await ensureNoNewerCurrentDexRows(db, params.generationId, params.nowSec, params.signal);
   throwIfAborted(params.signal);
+  const decision = params.anchorReviewDecision;
   await batchExecute(
     db,
     [
+      // A stale comparison or duplicate decision rolls back the publication batch.
+      ...(decision ? [db.prepare(
+        `INSERT INTO cache (key, value, updated_at) VALUES (?, CASE WHEN ? = (
+           SELECT generation_id FROM dex_liquidity_publication_generations
+           WHERE state = 'published' ORDER BY started_at DESC, generation_id DESC LIMIT 1
+         ) AND ? = ? AND EXISTS (
+           SELECT 1 FROM dex_liquidity_run_rows
+           WHERE generation_id = ? AND stablecoin_id = ? AND total_tvl_usd = ?
+         ) THEN ? END, ?)`,
+      ).bind(REVIEWED_POOL_REJECTION_ANCHOR_CORRECTION.decisionKey, decision.comparedGenerationId,
+        decision.publicationGenerationId, params.generationId,
+        params.generationId, decision.stablecoinId, decision.acceptedTvlUsd,
+        JSON.stringify(decision), Math.floor(Date.now() / 1000))] : []),
       db.prepare(DEX_LIQUIDITY_PUBLISH_CURRENT_SQL).bind(params.generationId),
       db
         .prepare(
@@ -807,6 +824,7 @@ export async function persistScores(
   signal?: AbortSignal,
   routeRemovalEvidence?: Map<string, DexRouteRemovalEvidence>,
   retainedPoolsByStablecoin?: ReadonlyMap<string, LiquidityMetrics["topPools"]>,
+  anchorReviewDecision?: DexLiquidityAnchorReviewDecision,
 ): Promise<PersistScoresResult> {
   let placeholderCount = 0;
   let orphanRowsDeleted = 0;
@@ -1215,6 +1233,7 @@ export async function persistScores(
       nowSec,
       expectedRowCount,
       signal,
+      anchorReviewDecision,
     });
     throwIfAborted(signal);
     await writeFreshnessSentinel(db, "dex-liquidity", nowSec, generationId, signal);

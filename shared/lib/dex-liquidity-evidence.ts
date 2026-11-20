@@ -41,7 +41,7 @@ export function hasSameLiquidityMethodologyBasis(
  * measured must be appended here in the same change that bumps
  * LIQUIDITY_METHODOLOGY_VERSION, or the 30-day stability series will mix bases.
  */
-const LIQUIDITY_TVL_BASIS_BREAK_VERSIONS: readonly string[] = ["6.91", "6.92", "6.93", "6.96", "6.97", "6.98", "7.1"];
+const LIQUIDITY_TVL_BASIS_BREAK_VERSIONS: readonly string[] = ["6.91", "6.92", "6.93", "6.96", "6.97", "6.98", "7.1", "7.51"];
 
 /**
  * TVL-measurement epoch of a persisted liquidity methodology version: the number

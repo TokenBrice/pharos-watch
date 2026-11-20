@@ -183,7 +183,7 @@ export function LiquidityPoolMatchingDetails() {
           clock is rejected whole as <code>future_observation</code>, before identity, value, metadata, price or volume
           can contribute. Trust/freshness, TVL confidence, maturity, trade-index evidence, dead-pool predicates and
           coin/global volume summaries share this frozen basis. This fixes a one-generation dead-pool bypass for valid
-          post-source-start refreshes. Stage payload v4 carries the clock through hourly publication and any half-hour
+          post-source-start refreshes. The scoring stage carries the clock through hourly publication and any half-hour
           publication of an unconsumed stage; normal half-hour reuse keeps the prior accepted generation. Source-fetch,
           source-slot and measured-quote clocks, the 24-hour price/TVL budget and 72-hour volume budget are unchanged.
         </p>

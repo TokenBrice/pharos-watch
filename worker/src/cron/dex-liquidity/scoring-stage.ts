@@ -29,7 +29,8 @@ const DEX_LIQUIDITY_SCORING_STAGE_SCHEMA_VERSION = 1;
 // named quarantine rather than retained clamped values.
 // v7: source entries contain only identity and pools; aggregates are computed
 // by scoring, never staged as dormant placeholders. Older payloads fail closed.
-const DEX_LIQUIDITY_SCORING_STAGE_PAYLOAD_VERSION = 9;
+// v10 (7.51): require the reviewed Curve alias identity and valuation basis.
+const DEX_LIQUIDITY_SCORING_STAGE_PAYLOAD_VERSION = 10;
 export const DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES = 192 * 1024;
 export const DEX_LIQUIDITY_SCORING_STAGE_PROGRESS_CHUNK_INTERVAL = 24;
 const DEX_LIQUIDITY_SCORING_STAGE_READ_PAGE_SIZE = 4;
@@ -481,7 +482,10 @@ function decodeScoringStageRecord(decoder: ScoringStageDecoder, record: ScoringS
         throw new Error("DEX liquidity scoring stage contains duplicate header records");
       }
       if (record.schemaVersion !== DEX_LIQUIDITY_SCORING_STAGE_PAYLOAD_VERSION) {
-        throw new Error(`Unsupported DEX liquidity scoring stage payload version ${record.schemaVersion}`);
+        if (!Number.isSafeInteger(record.schemaVersion) || record.schemaVersion <= 0) {
+          throw new Error("DEX liquidity scoring stage contains an invalid payload version");
+        }
+        throw new IncompatibleDexLiquidityScoringStagePayloadError(record.schemaVersion);
       }
       if (!isRecord(record.source) || !isRecord(record.pool)) {
         throw new Error("DEX liquidity scoring stage contains an invalid header");
@@ -1119,6 +1123,13 @@ export class MissingDexLiquidityScoringStageError extends Error {
       expectedSourceSlotStartedAt == null ? "" : ` for source slot ${expectedSourceSlotStartedAt}`
     }`);
     this.name = "MissingDexLiquidityScoringStageError";
+  }
+}
+
+export class IncompatibleDexLiquidityScoringStagePayloadError extends Error {
+  constructor(readonly payloadVersion: number) {
+    super(`Unsupported DEX liquidity scoring stage payload version ${payloadVersion}`);
+    this.name = "IncompatibleDexLiquidityScoringStagePayloadError";
   }
 }
 
