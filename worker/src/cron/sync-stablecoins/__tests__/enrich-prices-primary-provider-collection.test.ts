@@ -7,7 +7,7 @@ import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-ad
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import * as circuit from "../../../lib/circuit-breaker";
 import { fetchCoingeckoSimplePrices } from "../../../lib/coingecko-simple-price";
-import { fetchBitstampPrices, fetchCoinbasePrices } from "../../../lib/cex-tickers";
+import { fetchBitstampPrices, fetchCoinbasePrices, fetchKrakenPrices } from "../../../lib/cex-tickers";
 import { fetchCurveOnchainPrices, fetchCurveOracleEma } from "../../../lib/curve-onchain";
 import { shouldAttemptFetch } from "../../../lib/circuit-breaker";
 import { buildPrimaryPricePlan, collectPrimaryProviderQuotes } from "../enrich-prices-primary-provider-collection";
@@ -30,6 +30,7 @@ vi.mock("../../../lib/cex-tickers", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../lib/cex-tickers")>()),
   fetchBitstampPrices: vi.fn(),
   fetchCoinbasePrices: vi.fn(),
+  fetchKrakenPrices: vi.fn(),
 }));
 vi.mock("../../../lib/curve-onchain", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../lib/curve-onchain")>()),
@@ -108,6 +109,7 @@ describe("critical publication provider collection", () => {
     vi.mocked(fetchCoingeckoSimplePrices).mockReset();
     vi.mocked(fetchBitstampPrices).mockReset();
     vi.mocked(fetchCoinbasePrices).mockReset();
+    vi.mocked(fetchKrakenPrices).mockReset();
     vi.mocked(fetchCurveOnchainPrices).mockReset();
     vi.mocked(fetchCurveOracleEma).mockReset();
   });
@@ -191,6 +193,26 @@ describe("critical publication provider collection", () => {
     expect(result.quoteMaps.cgQuotes.size).toBe(0);
     expect(outcomes.mock.calls.map(([, source, success]) => [source, success])).toEqual([[CIRCUIT_SOURCE.CG_PRICES, false]]);
     expect(warnings.mock.calls.flat().join(" ")).not.toContain("[primary-prices] CG price API failed:");
+  });
+
+  it("carries the Kraken book clock and reports the REST availability outcome", async () => {
+    const db = mockD1([]);
+    vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, key) => key === CIRCUIT_SOURCE.KRAKEN_PRICES);
+    const plan = await buildPrimaryPricePlan([{ ...TEST_ASSET, id: "eurc-circle", symbol: "EURC" }], db);
+    const observedAt = plan.nowSec - 12;
+    vi.mocked(fetchKrakenPrices).mockResolvedValue({
+      kind: "upstream-error", reason: "REST unavailable",
+      value: {
+        prices: new Map(), observedAtBySymbol: new Map(), diagnostics: [],
+        bookSnapshotsBySymbol: new Map([["EURC", { price: 1.1, observedAt }]]),
+      },
+    });
+    const outcomes = vi.spyOn(circuit, "recordOutcomeSafe");
+    const { quoteMaps } = await collectPrimaryProviderQuotes({ db, plan });
+    expect(quoteMaps.krakenPrices.size).toBe(0);
+    expect(quoteMaps.krakenObservedAt).toBeNull();
+    expect(quoteMaps.krakenBookSnapshots.get("EURC")).toEqual({ price: 1.1, observedAt });
+    expect(outcomes.mock.calls.map(([, key, ok]) => [key, ok])).toEqual([[CIRCUIT_SOURCE.KRAKEN_PRICES, false]]);
   });
 
   it("keeps a collected quote when no-candidate breaker recovery cannot persist its circuit record", async () => {
