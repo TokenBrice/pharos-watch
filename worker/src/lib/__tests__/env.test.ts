@@ -27,6 +27,7 @@ it("preserves manifest-derived HTTP, scheduled and heavy ingress types", () => {
   expectTypeOf<Env["CF_VERSION_METADATA"]>().toEqualTypeOf<WorkerVersionMetadata>();
   expectTypeOf<Env["TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT"]>().toEqualTypeOf<RateLimit>();
   expectTypeOf<Env["API_KEY_LOOKUP_RATE_LIMIT"]>().toEqualTypeOf<RateLimit | undefined>();
+  expectTypeOf<Env["OG_IMAGE_RATE_LIMIT"]>().toEqualTypeOf<RateLimit | undefined>();
   expectTypeOf<Env["SITE_SESSION_RATE_LIMIT"]>().toEqualTypeOf<RateLimit | undefined>();
   expectTypeOf<Env["SITE_SOURCE_RATE_LIMIT"]>().toEqualTypeOf<RateLimit | undefined>();
   expectTypeOf<Env["SITE_SESSION_SIGNING_KEY"]>().toEqualTypeOf<string | undefined>();
@@ -34,7 +35,7 @@ it("preserves manifest-derived HTTP, scheduled and heavy ingress types", () => {
   expectTypeOf<Env["HEAVY_EXECUTOR"]>().toEqualTypeOf<Fetcher | undefined>();
   expectTypeOf<Env["RESERVE_CONTINUATION_QUEUE"]>().toEqualTypeOf<Queue<ReserveContinuationMessage | SlotCatchUpMessage> | undefined>();
   expectTypeOf<RequiredKeys<ScheduledEnv>>().toEqualTypeOf<"DB" | "CF_VERSION_METADATA">();
-  expectTypeOf<Extract<keyof ScheduledEnv, "CORS_ORIGIN" | "SAFETY_GRADES_RATE_LIMIT" | "FEEDBACK_PREAUTH_RATE_LIMIT" | "API_KEY_LOOKUP_RATE_LIMIT" | "SITE_SESSION_RATE_LIMIT" | "SITE_SOURCE_RATE_LIMIT">>().toEqualTypeOf<never>();
+  expectTypeOf<Extract<keyof ScheduledEnv, "CORS_ORIGIN" | "SAFETY_GRADES_RATE_LIMIT" | "OG_IMAGE_RATE_LIMIT" | "FEEDBACK_PREAUTH_RATE_LIMIT" | "API_KEY_LOOKUP_RATE_LIMIT" | "SITE_SESSION_RATE_LIMIT" | "SITE_SOURCE_RATE_LIMIT">>().toEqualTypeOf<never>();
   expectTypeOf<RequiredKeys<HeavyEnv>>().toEqualTypeOf<"DB" | "CF_VERSION_METADATA" | "SAFETY_CAPTURE_ARCHIVE">();
   expectTypeOf<HeavyEnv["SAFETY_CAPTURE_ARCHIVE"]>().toEqualTypeOf<R2Bucket>();
   expectTypeOf<Extract<keyof HeavyEnv, "M0_API_KEY">>().toEqualTypeOf<never>();

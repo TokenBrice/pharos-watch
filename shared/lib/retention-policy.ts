@@ -93,6 +93,7 @@ export function cronHistoryRetentionPolicies(
     apiRequestConsumerStats: policy("api_request_consumer_stats", "bucket_start", REQUEST_ATTRIBUTION_RETENTION_DAYS * DAY, { batchLimit: limits.smallBatchLimit }),
     siteDataRequestStats: policy("site_data_request_stats", "bucket_start", REQUEST_ATTRIBUTION_RETENTION_DAYS * DAY, { batchLimit: limits.smallBatchLimit }),
     apiKeyRequestStats: policy("api_key_request_stats", "bucket_start", REQUEST_ATTRIBUTION_RETENTION_DAYS * DAY, { batchLimit: limits.smallBatchLimit }),
+    apiKeyMonthlyUsage: policy("api_key_monthly_usage", "month_start", 400 * DAY, { batchLimit: limits.smallBatchLimit }),
     safetyScoreJournal: policy("safety_score_publication_journal", "published_at", evidence.safetyScoreJournalSec),
     safetyScoreAttempts: policy("safety_score_publication_attempts", "attempted_at", evidence.safetyScoreJournalSec),
     safetyScoreCaptureArchive: policy("safety_score_capture_archive", "published_at", SAFETY_SCORE_CAPTURE_ARCHIVE_RETENTION_SEC, {

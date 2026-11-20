@@ -373,6 +373,7 @@ table	api_key_audit_log
 table	api_key_donor_claims
 table	api_key_donor_credits
 table	api_key_donor_transfer_credits
+table	api_key_monthly_usage
 table	api_key_rate_limit
 table	api_key_request_rate_limit_v2
 table	api_key_request_stats

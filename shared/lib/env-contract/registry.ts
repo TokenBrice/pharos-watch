@@ -210,6 +210,12 @@ const ENV_BINDING_DEFINITIONS = [
     runtimes: { worker: { status: "required" } },
   },
   {
+    key: "OG_IMAGE_RATE_LIMIT",
+    valueType: "RateLimit",
+    description: "Cloudflare per-client-network rate limiter for anonymous GET /api/og/* renders on the public API host (120 per 60 seconds); a missing or failing binding serves OG images normally and logs once per isolate.",
+    runtimes: { worker: { status: "required", optionalAtIngress: true } },
+  },
+  {
     key: "API_KEY_LOOKUP_RATE_LIMIT",
     valueType: "RateLimit",
     description: "Cloudflare client-network limiter charged after invalid well-formed API credentials (300 per 60 seconds); local rejection memos block uncached prefixes before D1 until the minute ends. Valid credentials are uncharged; missing or failing binding warns and proceeds.",
@@ -218,13 +224,13 @@ const ENV_BINDING_DEFINITIONS = [
   {
     key: "SITE_SESSION_RATE_LIMIT",
     valueType: "RateLimit",
-    description: "Browser site-session budget (300 per 60 seconds per verified sid); observe logs, enforce rejects over-budget or unavailable bindings. Automation tokens are exempt.",
+    description: "Browser site-session budget (90 per 60 seconds per verified sid); observe logs, enforce rejects over-budget or unavailable bindings. Automation tokens are exempt.",
     runtimes: { worker: { status: "required", optionalAtIngress: true } },
   },
   {
     key: "SITE_SOURCE_RATE_LIMIT",
     valueType: "RateLimit",
-    description: "Browser site-session client-network budget (1200 per 60 seconds, Pages-forwarded IPv4 or IPv6 /64); observe logs, enforce rejects over-budget or unavailable bindings.",
+    description: "Browser site-session client-network budget (600 per 60 seconds, Pages-forwarded IPv4 or IPv6 /64); observe logs, enforce rejects over-budget or unavailable bindings.",
     runtimes: { worker: { status: "required", optionalAtIngress: true } },
   },
   {

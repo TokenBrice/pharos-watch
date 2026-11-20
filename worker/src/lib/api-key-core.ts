@@ -5,10 +5,17 @@ import type {
   ApiKeyTrafficClass,
   ApiKeyUpdateRequest,
 } from "@pharos/contracts/api-keys";
-import { API_KEY_TIER_VALUES } from "@pharos/contracts/api-keys";
 import {
+  API_KEY_MAX_MONTHLY_REQUEST_QUOTA,
+  API_KEY_TIER_VALUES,
+} from "@pharos/contracts/api-keys";
+import {
+  API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA,
+  API_KEY_COMMERCIAL_RATE_LIMIT_PER_MINUTE,
   API_KEY_DEPENDENCY_RETRY_AFTER_SEC,
+  API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA,
   CIRCUIT_OPEN_THRESHOLD,
+  DONOR_API_KEY_MONTHLY_REQUEST_QUOTA,
   API_KEY_DEFAULT_EXPIRY_SEC,
   API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE,
   API_KEY_MAX_RATE_LIMIT_PER_MINUTE,
@@ -41,6 +48,16 @@ const API_KEY_AUTH_CACHE_POLICY = {
 export const API_KEY_USAGE_UPDATE_WINDOW_SEC = 120;
 export const API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES = 4_096;
 export const API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES = 4_096;
+/** Refresh interval for the isolate-local month-to-date usage memo. */
+export const API_KEY_MONTHLY_USAGE_MEMO_TTL_SEC = 300;
+/** A failed usage read is memoized so the fail-open window does not re-query D1. */
+export const API_KEY_MONTHLY_USAGE_READ_FAILURE_TTL_SEC = 60;
+
+/** UTC calendar month start (epoch seconds) containing nowSec. */
+export function utcMonthStartSec(nowSec: number): number {
+  const date = new Date(nowSec * 1000);
+  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1) / 1000;
+}
 export const API_KEY_RATE_LIMIT_PRUNE_WINDOW_MULTIPLIER = 10;
 export {
   API_KEY_DEFAULT_EXPIRY_SEC,
@@ -58,6 +75,7 @@ export interface ApiKeyRow {
   tier: string;
   traffic_class: ApiKeyTrafficClass;
   rate_limit_per_minute: number;
+  monthly_request_quota: number | null;
   is_active: number;
   expires_at: number | null;
   created_at: number;
@@ -79,6 +97,12 @@ interface IsolateLocalApiKeyRateLimitEntry {
   count: number;
 }
 
+interface ApiKeyMonthlyUsageMemoEntry {
+  monthStartSec: number;
+  usage: number;
+  refreshedAtSec: number;
+}
+
 interface ApiKeyRateLimitDependencyCircuitState {
   consecutiveFailures: number;
   openUntilMs: number;
@@ -98,6 +122,7 @@ export interface AuthenticatedApiKey {
   tier: string;
   trafficClass: ApiKeyTrafficClass;
   rateLimitPerMinute: number;
+  monthlyRequestQuota: number | null;
   isActive: boolean;
   expiresAt: number | null;
 }
@@ -119,6 +144,7 @@ const API_KEY_PUBLIC_PROJECTION = `
        tier,
        traffic_class,
        rate_limit_per_minute,
+       monthly_request_quota,
        is_active,
        expires_at,
        created_at,
@@ -135,6 +161,7 @@ const API_KEY_PRIVATE_PROJECTION = `
        tier,
        traffic_class,
        rate_limit_per_minute,
+       monthly_request_quota,
        is_active,
        expires_at,
        created_at,
@@ -173,6 +200,8 @@ const _ak = new IsolateLocalState(() => ({
   apiKeyLastUsageUpdateById: new Map<number, number>(),
   apiKeyFallbackRateLimitById: new Map<number, IsolateLocalApiKeyRateLimitEntry>(),
   apiKeyOverQuotaById: new Map<number, IsolateLocalApiKeyRateLimitEntry>(),
+  apiKeyMonthlyUsageById: new Map<number, ApiKeyMonthlyUsageMemoEntry>(),
+  apiKeyMonthlyUsageReadFailureById: new Map<number, number>(),
   apiKeyLookupBlockedBySubject: new Map<string, number>(),
   apiKeyRateLimitDependencyCircuit: {
     consecutiveFailures: 0,
@@ -190,6 +219,8 @@ export function getApiKeyRuntimeSnapshotForTests() {
     apiKeyLastUsageUpdateById: new Map(state.apiKeyLastUsageUpdateById),
     apiKeyFallbackRateLimitById: new Map([...state.apiKeyFallbackRateLimitById].map(([key, value]) => [key, { ...value }])),
     apiKeyOverQuotaById: new Map([...state.apiKeyOverQuotaById].map(([key, value]) => [key, { ...value }])),
+    apiKeyMonthlyUsageById: new Map([...state.apiKeyMonthlyUsageById].map(([key, value]) => [key, { ...value }])),
+    apiKeyMonthlyUsageReadFailureById: new Map(state.apiKeyMonthlyUsageReadFailureById),
     apiKeyLookupBlockedBySubject: new Map(state.apiKeyLookupBlockedBySubject),
     apiKeyRateLimitDependencyCircuit: { ...state.apiKeyRateLimitDependencyCircuit },
   };
@@ -252,6 +283,51 @@ export function memoizeApiKeyOverQuota(apiKeyId: number, bucketStart: number, co
   pruneOldestMapEntries(memo, API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES);
 }
 
+/**
+ * Month-to-date usage memo behind the monthly request quota. Fresh only for
+ * the same UTC month and within the TTL; the slow path refreshes it, the
+ * cache-hit fast path only reads it.
+ */
+export function getCachedApiKeyMonthlyUsage(
+  apiKeyId: number,
+  monthStartSec: number,
+  nowSec: number,
+): number | null {
+  const memo = _ak.state.apiKeyMonthlyUsageById.get(apiKeyId);
+  if (!memo || memo.monthStartSec !== monthStartSec || nowSec - memo.refreshedAtSec >= API_KEY_MONTHLY_USAGE_MEMO_TTL_SEC) {
+    return null;
+  }
+  return memo.usage;
+}
+
+export function memoizeApiKeyMonthlyUsage(
+  apiKeyId: number,
+  monthStartSec: number,
+  usage: number,
+  nowSec: number,
+): void {
+  const memo = _ak.state.apiKeyMonthlyUsageById;
+  memo.delete(apiKeyId);
+  memo.set(apiKeyId, { monthStartSec, usage, refreshedAtSec: nowSec });
+  pruneOldestMapEntries(memo, API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES);
+}
+
+/** True while a failed usage read is memoized: fail open without re-querying. */
+export function isApiKeyMonthlyUsageReadBlocked(apiKeyId: number, nowSec: number): boolean {
+  const blockedUntilSec = _ak.state.apiKeyMonthlyUsageReadFailureById.get(apiKeyId);
+  if (blockedUntilSec === undefined) return false;
+  if (nowSec < blockedUntilSec) return true;
+  _ak.state.apiKeyMonthlyUsageReadFailureById.delete(apiKeyId);
+  return false;
+}
+
+export function memoizeApiKeyMonthlyUsageReadFailure(apiKeyId: number, blockedUntilSec: number): void {
+  const memo = _ak.state.apiKeyMonthlyUsageReadFailureById;
+  memo.delete(apiKeyId);
+  memo.set(apiKeyId, blockedUntilSec);
+  pruneOldestMapEntries(memo, API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES);
+}
+
 export function getNowSec(nowSec?: number): number {
   return nowSec ?? Math.floor(Date.now() / 1000);
 }
@@ -310,6 +386,44 @@ function normalizeRateLimit(value: unknown): number | Response {
     return errorResponse(
       400,
       `rateLimitPerMinute must be an integer between ${API_KEY_MIN_RATE_LIMIT_PER_MINUTE} and ${API_KEY_MAX_RATE_LIMIT_PER_MINUTE}`,
+    );
+  }
+  return parsed;
+}
+
+function normalizeMonthlyRequestQuota(
+  value: unknown,
+  fieldName: "monthlyRequestQuota",
+): number | null | undefined | Response {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null) {
+    return null;
+  }
+  let parsed: number;
+  if (typeof value === "number") {
+    parsed = value;
+  } else if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!/^\d+$/.test(trimmed)) {
+      return errorResponse(
+        400,
+        `${fieldName} must be a positive integer up to ${API_KEY_MAX_MONTHLY_REQUEST_QUOTA} or null`,
+      );
+    }
+    parsed = Number.parseInt(trimmed, 10);
+  } else {
+    return errorResponse(
+      400,
+      `${fieldName} must be a positive integer up to ${API_KEY_MAX_MONTHLY_REQUEST_QUOTA} or null`,
+    );
+  }
+
+  if (!Number.isInteger(parsed) || !Number.isFinite(parsed) || parsed < 1 || parsed > API_KEY_MAX_MONTHLY_REQUEST_QUOTA) {
+    return errorResponse(
+      400,
+      `${fieldName} must be a positive integer up to ${API_KEY_MAX_MONTHLY_REQUEST_QUOTA} or null`,
     );
   }
   return parsed;
@@ -400,6 +514,7 @@ export function mapRowToSummary(row: ApiKeyPublicRow): ApiKeySummary {
     tier: row.tier,
     trafficClass: row.traffic_class,
     rateLimitPerMinute: row.rate_limit_per_minute,
+    monthlyRequestQuota: row.monthly_request_quota,
     isActive: row.is_active === 1,
     expiresAt: row.expires_at,
     createdAt: row.created_at,
@@ -418,9 +533,38 @@ export function mapRowToAuthenticatedKey(row: ApiKeyRow): AuthenticatedApiKey {
     tier: row.tier,
     trafficClass: row.traffic_class,
     rateLimitPerMinute: row.rate_limit_per_minute,
+    monthlyRequestQuota: row.monthly_request_quota,
     isActive: row.is_active === 1,
     expiresAt: row.expires_at,
   };
+}
+
+/**
+ * Effective monthly request quota for one key: the explicit per-key override,
+ * else the tier default (donor, commercial by rate limit, free-partner for
+ * everything else including self-serve). Enforcement lives elsewhere; this is
+ * the single resolution authority. First-party (`trafficClass: "site"`) keys
+ * resolve to null, which enforcement treats as unlimited.
+ */
+export function resolveApiKeyMonthlyRequestQuota(key: {
+  trafficClass: ApiKeyTrafficClass;
+  tier: string;
+  monthlyRequestQuota: number | null;
+  rateLimitPerMinute: number;
+}): number | null {
+  if (key.trafficClass === "site") {
+    return null;
+  }
+  if (key.monthlyRequestQuota != null) {
+    return key.monthlyRequestQuota;
+  }
+  if (key.tier === "donor") {
+    return DONOR_API_KEY_MONTHLY_REQUEST_QUOTA;
+  }
+  if (key.rateLimitPerMinute >= API_KEY_COMMERCIAL_RATE_LIMIT_PER_MINUTE) {
+    return API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA;
+  }
+  return API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA;
 }
 
 export function clearApiKeyCache(keyPrefix: string): void {
@@ -502,6 +646,11 @@ export function normalizeCreateInput(body: Record<string, unknown>): ApiKeyCreat
     return tier;
   }
 
+  const monthlyRequestQuota = normalizeMonthlyRequestQuota(body.monthlyRequestQuota, "monthlyRequestQuota");
+  if (monthlyRequestQuota instanceof Response) {
+    return monthlyRequestQuota;
+  }
+
   const expiresAt = normalizeOptionalExpiresAt(body.expiresAt, "expiresAt");
   if (expiresAt instanceof Response) {
     return expiresAt;
@@ -512,6 +661,7 @@ export function normalizeCreateInput(body: Record<string, unknown>): ApiKeyCreat
     ownerEmail: normalizeOwnerEmail(body.ownerEmail),
     tier,
     rateLimitPerMinute,
+    monthlyRequestQuota,
     expiresAt,
   };
 }
@@ -545,6 +695,14 @@ export function normalizeUpdateInput(body: Record<string, unknown>): ApiKeyUpdat
       return normalized;
     }
     next.rateLimitPerMinute = normalized;
+  }
+
+  if ("monthlyRequestQuota" in body) {
+    const normalized = normalizeMonthlyRequestQuota(body.monthlyRequestQuota, "monthlyRequestQuota");
+    if (normalized instanceof Response) {
+      return normalized;
+    }
+    next.monthlyRequestQuota = normalized ?? null;
   }
 
   if ("isActive" in body) {

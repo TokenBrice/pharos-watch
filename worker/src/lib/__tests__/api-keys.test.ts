@@ -10,11 +10,18 @@ import {
   makePreviousPepperTables,
 } from "../../test-helpers/api-key-test-support";
 import { createApiKey, updateApiKey } from "../api-key-admin";
+import {
+  API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA,
+  API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA,
+  API_KEY_MONTHLY_QUOTA_EFFECTIVE_SEC,
+  DONOR_API_KEY_MONTHLY_REQUEST_QUOTA,
+} from "@shared/lib/ops-limits";
 import { authenticateApiKey, authenticateApiKeyFromFreshCache, parseApiKeyToken } from "../api-key-auth";
 import {
   API_KEY_AUTH_CACHE_MAX_ENTRIES,
   API_KEY_AUTH_CACHE_TTL_MS,
   API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES,
+  API_KEY_MONTHLY_USAGE_MEMO_TTL_SEC,
   API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES,
   getApiKeyRuntimeSnapshotForTests,
   seedApiKeyRuntimeStateForTests,
@@ -24,10 +31,13 @@ import {
   getCachedApiKeyByPrefix,
   lookupApiKeyByPrefix,
   normalizeCreateInput,
+  resolveApiKeyMonthlyRequestQuota,
   resetApiKeyStateForTests,
 } from "../api-key-core";
 import {
+  checkApiKeyMonthlyRequestQuota,
   checkApiKeyRateLimit,
+  checkCachedApiKeyMonthlyRequestQuota,
   checkIsolateLocalApiKeyRateLimit,
   recordApiKeyUsage,
   resolveIsolateFallbackApiKeyRateLimit,
@@ -89,6 +99,7 @@ describe("api key helpers", () => {
         tier: "ci",
         trafficClass: "site",
         rateLimitPerMinute: 180,
+        monthlyRequestQuota: null,
         isActive: true,
         expiresAt: 1_800,
       },
@@ -156,7 +167,8 @@ describe("api key helpers", () => {
         expiresAt: 111 + 90 * 24 * 60 * 60,
       },
     });
-    expect(db.getHistory()[0]?.binds[8]).toBe(111 + 90 * 24 * 60 * 60);
+    expect(db.getHistory()[0]?.binds[9]).toBe(111 + 90 * 24 * 60 * 60);
+    expect(db.getHistory()[0]?.binds[7]).toBeNull();
     expect(parseApiKeyToken((created as Exclude<typeof created, Response>).token)).not.toBeNull();
   });
 
@@ -168,6 +180,7 @@ describe("api key helpers", () => {
         ownerEmail: " Ops@Pharos.Watch ",
         tier: "  Self-Serve  ",
         rateLimitPerMinute: "120",
+        monthlyRequestQuota: "500000",
         expiresAt: "1800",
       }),
     ).toEqual({
@@ -175,6 +188,7 @@ describe("api key helpers", () => {
       ownerEmail: "ops@pharos.watch",
       tier: "self-serve",
       rateLimitPerMinute: 120,
+      monthlyRequestQuota: 500_000,
       expiresAt: 1800,
     });
 
@@ -239,7 +253,7 @@ describe("api key helpers", () => {
 
     expect(created).not.toBeInstanceOf(Response);
     expect((created as Exclude<typeof created, Response>).key.expiresAt).toBeNull();
-    expect(db.getHistory()[0]?.binds[8]).toBeNull();
+    expect(db.getHistory()[0]?.binds[9]).toBeNull();
   });
 
   it("updates only the requested columns and preserves explicit null on update", async () => {
@@ -402,6 +416,7 @@ describe("api key helpers", () => {
       tier: "standard",
       trafficClass: "external" as const,
       rateLimitPerMinute: 120,
+      monthlyRequestQuota: null,
       isActive: true,
       expiresAt: null,
     };
@@ -421,6 +436,7 @@ describe("api key helpers", () => {
       tier: "standard",
       trafficClass: "external" as const,
       rateLimitPerMinute: 120,
+      monthlyRequestQuota: null,
       isActive: true,
       expiresAt: null,
     };
@@ -735,9 +751,82 @@ describe("api key helpers", () => {
     });
   });
 
-  it("caps the dependency fallback limiter to the self-serve quota without raising stricter keys", () => {
-    expect(resolveIsolateFallbackApiKeyRateLimit(120)).toBe(30);
-    expect(resolveIsolateFallbackApiKeyRateLimit(10)).toBe(10);
+  it("keeps the dependency fallback limiter at the key's own quota with the minimum floor", () => {
+    expect(resolveIsolateFallbackApiKeyRateLimit(120)).toBe(120);
+    expect(resolveIsolateFallbackApiKeyRateLimit(0)).toBe(1);
+  });
+
+  describe("monthly request quota", () => {
+    const quotaKey = { id: 7, trafficClass: "external" as const, tier: "standard", rateLimitPerMinute: 60, monthlyRequestQuota: null };
+    const siteKey = { ...quotaKey, trafficClass: "site" as const };
+    const nowSec = API_KEY_MONTHLY_QUOTA_EFFECTIVE_SEC + 3_600;
+    const usageTable = (usage: number) => [{ match: "api_key_monthly_usage", rows: [], first: { request_count: usage } }];
+    const usageReads = (db: ReturnType<typeof mockD1>) =>
+      db.getHistory().filter((entry) => entry.sql.includes("api_key_monthly_usage"));
+
+    it("performs no usage read before the effective date and treats site keys as unlimited", async () => {
+      const db = mockD1(usageTable(10_000_000));
+      expect(await checkApiKeyMonthlyRequestQuota(db, quotaKey, API_KEY_MONTHLY_QUOTA_EFFECTIVE_SEC - 1)).toBeNull();
+      expect(await checkApiKeyMonthlyRequestQuota(db, siteKey, nowSec + 10_000_000)).toBeNull();
+      expect(checkCachedApiKeyMonthlyRequestQuota(siteKey, nowSec + 10_000_000)).toBeNull();
+      expect(db.getHistory()).toEqual([]);
+    });
+
+    it.each([
+      ["under the tier quota admits and memoizes the single-row usage read", quotaKey, 499_999, false],
+      ["at the tier quota returns the monthly 429", quotaKey, 500_000, true],
+    ])("%s", async (_name, key, usage, rejected) => {
+      const db = mockD1(usageTable(usage));
+      const response = await checkApiKeyMonthlyRequestQuota(db, key, nowSec);
+      expect(response?.status ?? 200).toBe(rejected ? 429 : 200);
+      if (rejected) {
+        await expect(response!.json()).resolves.toEqual({
+          error: "Monthly request quota exceeded",
+          reason: "monthly_quota_exceeded",
+        });
+        expect(response!.headers.get("Cache-Control")).toBe("no-store");
+        expect(response!.headers.get("Retry-After")).toBe(String(Date.UTC(2027, 1, 1) / 1000 - nowSec));
+      } else {
+        expect(await checkApiKeyMonthlyRequestQuota(db, key, nowSec + 60)).toBeNull();
+        expect(usageReads(db)).toHaveLength(1);
+      }
+    });
+
+    it.each([
+      ["a failed usage read", nowSec, false, [{ match: "api_key_monthly_usage", rows: [], throwError: new Error("d1 down") }]],
+      ["disabled per-key attribution", nowSec + 120, true, usageTable(10_000_000)],
+    ])("fails open with one warn per minute on %s", async (_name, baseSec, disabled, tables) => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const db = mockD1(tables);
+      try {
+        expect(await checkApiKeyMonthlyRequestQuota(db, quotaKey, baseSec, disabled)).toBeNull();
+        expect(await checkApiKeyMonthlyRequestQuota(db, quotaKey, baseSec + 30, disabled)).toBeNull();
+        expect(warn).toHaveBeenCalledTimes(1);
+        if (!disabled) expect(usageReads(db)).toHaveLength(1);
+      } finally {
+        warn.mockRestore();
+      }
+    });
+
+    it("skips the usage read while the rate-limit dependency circuit is open", async () => {
+      const db = mockD1(usageTable(10_000_000));
+      try {
+        recordApiKeyRateLimitDependencyFailure(nowSec * 1000);
+        recordApiKeyRateLimitDependencyFailure(nowSec * 1000 + 1);
+        recordApiKeyRateLimitDependencyFailure(nowSec * 1000 + 2);
+        expect(await checkApiKeyMonthlyRequestQuota(db, quotaKey, nowSec)).toBeNull();
+        expect(db.getHistory()).toEqual([]);
+      } finally {
+        recordApiKeyRateLimitDependencySuccess();
+      }
+    });
+
+    it("fast path honours a fresh over-quota memo only", async () => {
+      expect(checkCachedApiKeyMonthlyRequestQuota(quotaKey, nowSec)).toBeNull();
+      await checkApiKeyMonthlyRequestQuota(mockD1(usageTable(500_000)), quotaKey, nowSec);
+      expect(checkCachedApiKeyMonthlyRequestQuota(quotaKey, nowSec + 60)?.status).toBe(429);
+      expect(checkCachedApiKeyMonthlyRequestQuota(quotaKey, nowSec + API_KEY_MONTHLY_USAGE_MEMO_TTL_SEC)).toBeNull();
+    });
   });
 
   it("caps the isolate-local API key auth cache", async () => {
@@ -823,6 +912,7 @@ describe("api key helpers", () => {
           tier: "standard",
           trafficClass: "external",
           rateLimitPerMinute: 120,
+          monthlyRequestQuota: null,
           isActive: true,
           expiresAt: null,
         },
@@ -859,12 +949,61 @@ describe("api key helpers", () => {
       ],
     );
 
-    const created = await createApiKey(db, "pepper", { name: "Audited" }, 333);
+    const created = await createApiKey(db, "pepper", { name: "Audited" }, 333, "operator@pharos.watch");
     expect(created).not.toBeInstanceOf(Response);
 
     const auditInsert = db.getHistory().find((entry) => entry.sql.includes("api_key_audit_log"));
     expect(auditInsert).toBeDefined();
     expect(auditInsert?.binds[0]).toBe(5);
     expect(auditInsert?.binds[1]).toBe("created");
+    expect(JSON.parse(auditInsert?.binds[3] as string)).toMatchObject({ operator: "operator@pharos.watch" });
+  });
+
+  it.each([0, -5, 1.5, "abc", 100_000_001])("rejects an invalid monthly request quota %s before database access", async (monthlyRequestQuota) => {
+    const normalized = normalizeCreateInput({ name: "Ops token", monthlyRequestQuota });
+    expect(normalized).toBeInstanceOf(Response);
+    expect((normalized as Response).status).toBe(400);
+    const db = mockD1([]);
+    const created = await createApiKey(db, "pepper", { name: "Ops token", monthlyRequestQuota }, 222);
+    expect(created).toBeInstanceOf(Response);
+    expect((created as Response).status).toBe(400);
+    expect(db.getHistory()).toEqual([]);
+  });
+
+  it.each([111, 110, -1])("rejects creating a key whose expiresAt %s is not in the future", async (expiresAt) => {
+    const db = mockD1([]);
+    const created = await createApiKey(db, "pepper", { name: "Past", expiresAt }, 111);
+    expect(created).toBeInstanceOf(Response);
+    expect((created as Response).status).toBe(400);
+    expect(db.getHistory()).toEqual([]);
+  });
+
+  it.each([
+    [{ trafficClass: "external" as const, tier: "standard", monthlyRequestQuota: 250_000, rateLimitPerMinute: 60 }, 250_000],
+    [{ trafficClass: "external" as const, tier: "donor", monthlyRequestQuota: null, rateLimitPerMinute: 10 }, DONOR_API_KEY_MONTHLY_REQUEST_QUOTA],
+    [{ trafficClass: "external" as const, tier: "standard", monthlyRequestQuota: null, rateLimitPerMinute: 120 }, API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA],
+    [{ trafficClass: "external" as const, tier: "self-serve", monthlyRequestQuota: null, rateLimitPerMinute: 30 }, API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA],
+    [{ trafficClass: "site" as const, tier: "standard", monthlyRequestQuota: null, rateLimitPerMinute: 60 }, null],
+  ])("resolves the monthly quota for %s", (key, expected) => {
+    expect(resolveApiKeyMonthlyRequestQuota(key)).toBe(expected);
+  });
+
+  it("records a deactivation through the update path as deactivated with the operator", async () => {
+    const { db, sqlite } = createLatestSchemaSqlite();
+    sqlite.exec(
+      `INSERT INTO api_keys (id, key_prefix, secret_hash, name, created_at, updated_at)
+       VALUES (7, '0123456789abcdef', 'hash', 'Ops', 1000, 1000)`,
+    );
+    try {
+      const updated = await updateApiKey(db, 7, { isActive: false }, 2_000, "operator@pharos.watch");
+      expect(updated).not.toBeInstanceOf(Response);
+      expect(sqlite.prepare("SELECT action, actor, detail_json FROM api_key_audit_log").get()).toEqual({
+        action: "deactivated",
+        actor: "admin",
+        detail_json: JSON.stringify({ isActive: false, operator: "operator@pharos.watch" }),
+      });
+    } finally {
+      sqlite.close();
+    }
   });
 });

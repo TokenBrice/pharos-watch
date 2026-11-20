@@ -45,6 +45,13 @@ export const API_ACCESS_X_URL = `https://x.com/${API_ACCESS_X_HANDLE}`;
  */
 export const COMMERCIAL_API_KEY_USD_PER_MONTH = 250;
 
+/**
+ * Minimum notice before a keyed public route changes incompatibly or is
+ * retired: announced in the API reference and changelog, then answered with
+ * `410` and a `replacement` once retired.
+ */
+export const API_BREAKING_CHANGE_NOTICE_DAYS = 30;
+
 /** Human reply window promised on the partner key offer; not a contractual SLA. */
 export const PARTNER_KEY_REPLY_BUSINESS_DAYS = 2;
 

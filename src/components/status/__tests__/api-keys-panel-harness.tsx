@@ -30,6 +30,7 @@ export function makeKey(overrides: Partial<ApiKeySummary> = {}): ApiKeySummary {
     tier: overrides.tier ?? "standard",
     trafficClass: overrides.trafficClass ?? "external",
     rateLimitPerMinute: overrides.rateLimitPerMinute ?? 120,
+    monthlyRequestQuota: overrides.monthlyRequestQuota ?? null,
     isActive: overrides.isActive ?? true,
     expiresAt: overrides.expiresAt === undefined ? GENERATED_AT + 2 * 24 * 60 * 60 : overrides.expiresAt,
     createdAt: overrides.createdAt ?? GENERATED_AT - 100,

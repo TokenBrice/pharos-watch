@@ -91,6 +91,7 @@ describe("API key editor tier projection", () => {
       ownerEmail: key.ownerEmail,
       tier,
       rateLimitPerMinute: key.rateLimitPerMinute,
+      monthlyRequestQuota: key.monthlyRequestQuota,
       expiresAt: null,
     });
   });
@@ -105,6 +106,16 @@ describe("API key editor tier projection", () => {
       ...buildEditableKeyState({ ...key, tier: "donor" }),
       tier: "standard",
     }).tier).toBe("standard");
+  });
+
+  it("round-trips the monthly quota and treats an empty input as the tier default", () => {
+    const key = { ...makeReviewInventory()[0]!, monthlyRequestQuota: 500_000, expiresAt: null };
+    const draft = buildEditableKeyState(key);
+    expect(draft.monthlyRequestQuota).toBe("500000");
+    expect(buildUpdateApiKeyPayload(draft).monthlyRequestQuota).toBe(500_000);
+    expect(buildUpdateApiKeyPayload({ ...draft, monthlyRequestQuota: " " }).monthlyRequestQuota).toBeNull();
+    expect(() => buildUpdateApiKeyPayload({ ...draft, monthlyRequestQuota: "0" })).toThrow(/Monthly request quota/);
+    expect(() => buildUpdateApiKeyPayload({ ...draft, monthlyRequestQuota: "100000001" })).toThrow(/Monthly request quota/);
   });
 });
 
