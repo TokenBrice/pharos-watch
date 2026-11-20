@@ -91,6 +91,7 @@ export interface YieldSourceClockInput {
   sourceObservedAt?: number | null;
   /** API-aged source age (seconds) at `clock.assessedAt`. */
   sourceAgeSeconds?: number | null;
+  deliveryOnly?: boolean;
 }
 
 function validSeconds(value: number | null | undefined): number | null {
@@ -170,21 +171,25 @@ export function getYieldSourceFreshnessDisplay(
   const { status, ageSeconds } = assessYieldSourceDisplayAge(input, input.clock);
   const ageContext = status === "unknown" ? null : classifyYieldSourceAgeContext(ageSeconds);
   const display = YIELD_SOURCE_AGE_DISPLAY[ageContext ? status : "unknown"];
+  const deliveryOnly = !ageContext && input.deliveryOnly;
+  const statusLabel = deliveryOnly ? "Delivery only" : display.label;
   const displayText = !ageContext
-    ? display.label
+    ? statusLabel
     : status === "stale"
       ? `${display.label} · ${ageContext.relativeText}`
       : `${display.label} ${ageContext.relativeText}`;
 
   return {
     status: ageContext ? status : "unknown",
-    statusLabel: display.label,
+    statusLabel,
     displayText,
     ageContext,
     textClassName: display.text,
     tooltipText: ageContext
       ? `Source observed ${ageContext.relativeText}; age context: ${ageContext.description}.`
-      : "Source observation age is unavailable.",
+      : deliveryOnly
+        ? "PYS uses the pool batch delivery time. Source observation age is unavailable."
+        : "Source observation age is unavailable.",
   };
 }
 

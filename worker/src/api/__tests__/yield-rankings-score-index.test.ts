@@ -22,6 +22,7 @@ import * as abort from "../../lib/abort";
 import * as dbCache from "../../lib/db-cache";
 import * as cohortCache from "../../lib/yield-rankings-coin-cache";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { buildYieldMethodology } from "../../cron/yield-sync/publication-generation";
 
 const NOW = Date.parse("2026-04-23T12:00:00Z") / 1000;
 const COHORT_CACHE_KEY = "yield-rankings:coin-cohort:v3";
@@ -122,7 +123,9 @@ describe("rankings score-index hydration", () => {
     sqlite.prepare("UPDATE cache SET value = ? WHERE key = 'yield-rankings'").run(JSON.stringify(payload));
 
     vi.setSystemTime(deadline * 1000);
-    const fresh = YieldRankingsCoinResponseSchema.parse(await (await handleYieldRankingsCoin(db, coinUrl(id))).json());
+    const response = await handleYieldRankingsCoin(db, coinUrl(id));
+    expect(response.headers.get("Cache-Control")).toBe("public, s-maxage=1, max-age=1");
+    const fresh = YieldRankingsCoinResponseSchema.parse(await response.json());
     expect(fresh.rankings[0].provenance?.sourceFreshness).toBe("fresh");
     expect(readPublishedCohort(sqlite)?.validUntil).toBe(deadline + 1);
 
@@ -145,6 +148,34 @@ describe("rankings score-index hydration", () => {
 
     const stale = YieldRankingsCoinResponseSchema.parse(await (await handleYieldRankingsCoin(db, coinUrl(id))).json());
     expect(stale.rankings[0].pysNullReason).toBe("source-stale");
+    expect(readPublishedCohort(sqlite)?.validUntil).toBeGreaterThan(deadline + 1);
+  });
+
+  it("caps another coin's cache and rebuilds its rank when DeFiLlama delivery expires", async () => {
+    const { db, sqlite, payload } = await fixture();
+    const deadline = NOW + 30;
+    payload.methodology = buildYieldMethodology(NOW);
+    payload.provenance!.dlPools.updatedAt = deadline - 6 * 3600;
+    payload.rankings[0] = { ...payload.rankings[0], dataSource: "defillama", yieldType: "lending-vault",
+      provenance: makeYieldProvenance({ sourceObservedAt: null, sourceAgeSeconds: null, sourceFreshness: "unknown" }) };
+    payload.rankings[1].currentApy = 9;
+    sqlite.prepare("UPDATE cache SET value = ? WHERE key = 'yield-rankings'").run(JSON.stringify(payload));
+
+    const deliveryCoin = await handleYieldRankingsCoin(db, coinUrl());
+    expect(YieldRankingsCoinResponseSchema.parse(await deliveryCoin.json()).rankings[0]).toMatchObject({
+      pharosYieldScore: expect.any(Number), liveRank: 1,
+    });
+    const otherUrl = coinUrl("usdt-tether");
+    const before = await handleYieldRankingsCoin(db, otherUrl);
+    expect(before.headers.get("Cache-Control")).toBe("public, s-maxage=31, max-age=31");
+    expect(YieldRankingsCoinResponseSchema.parse(await before.json())).toMatchObject({
+      cohortValidUntil: deadline + 1, rankings: [{ liveRank: 2 }],
+    });
+    expect(readPublishedCohort(sqlite)?.validUntil).toBe(deadline + 1);
+
+    vi.setSystemTime((deadline + 1) * 1000);
+    const after = await handleYieldRankingsCoin(db, otherUrl);
+    expect(YieldRankingsCoinResponseSchema.parse(await after.json()).rankings[0].liveRank).toBe(1);
     expect(readPublishedCohort(sqlite)?.validUntil).toBeGreaterThan(deadline + 1);
   });
 

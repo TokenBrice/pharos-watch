@@ -116,15 +116,15 @@ describe("parseDlStablecoinPoolsCache", () => {
   it("parses structured payload with data array", () => {
     const pools = [makeDlYieldPool({ pool: "abc", project: "sdai", tvlUsd: 1e8 })];
     const raw = buildDlStablecoinPoolsCache(pools, nowSec - 1800);
-    const result = parseDlStablecoinPoolsCache(raw, nowSec - 1800, nowSec);
+    const result = parseDlStablecoinPoolsCache(raw, nowSec);
     expect(result?.pools).toHaveLength(1);
     expect(result?.meta.ageSeconds).toBe(1800);
   });
 
   it("returns null for legacy arrays and malformed or non-object JSON", () => {
-    expect(parseDlStablecoinPoolsCache(JSON.stringify([makeDlYieldPool({ pool: "abc", project: "sdai", tvlUsd: 1e8 })]), nowSec - 3600, nowSec)).toBeNull();
-    expect(parseDlStablecoinPoolsCache("{bad", nowSec, nowSec)).toBeNull();
-    expect(parseDlStablecoinPoolsCache('"just a string"', nowSec, nowSec)).toBeNull();
+    expect(parseDlStablecoinPoolsCache(JSON.stringify([makeDlYieldPool({ pool: "abc", project: "sdai", tvlUsd: 1e8 })]), nowSec)).toBeNull();
+    expect(parseDlStablecoinPoolsCache("{bad", nowSec)).toBeNull();
+    expect(parseDlStablecoinPoolsCache('"just a string"', nowSec)).toBeNull();
   });
 
   it("drops malformed cached DL rows while keeping valid rows", () => {
@@ -141,14 +141,15 @@ describe("parseDlStablecoinPoolsCache", () => {
       ],
     });
 
-    const result = parseDlStablecoinPoolsCache(raw, nowSec - 3600, nowSec);
+    const result = parseDlStablecoinPoolsCache(raw, nowSec);
 
     expect(result?.pools.map(({ pool, apy, apyBase, apyReward }) => [pool, apy, apyBase, apyReward])).toEqual([["valid", 5, 4, 1], [steak, 3.8, 3.8, null]]);
     expect(result?.meta.poolCount).toBe(2);
   });
 
-  it("rejects structured DL cache payloads with future updatedAt", () => {
-    expect(parseDlStablecoinPoolsCache(buildDlStablecoinPoolsCache([makeDlYieldPool()], nowSec + 1), nowSec, nowSec)).toBeNull();
+  it.each([nowSec + 1, null, undefined, "bad"])("rejects structured DL cache payloads with batch clock %s", (updatedAt) => {
+    const raw = JSON.stringify({ updatedAt, data: [makeDlYieldPool()] });
+    expect(parseDlStablecoinPoolsCache(raw, nowSec)).toBeNull();
   });
 });
 

@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CopyButton } from "@/components/copy-button";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { useYieldRankings } from "@/hooks/api-hooks";
+import { useLiveYieldRankings } from "@/hooks/use-yield-source-clock";
 import { SelectorResultSummary } from "@/components/selector/selector-result-summary";
 import { SelectorShortlistCard } from "@/components/selector/selector-shortlist-card";
 import { SelectorLowerRankedRow } from "@/components/selector/selector-lower-ranked-row";
@@ -72,7 +73,7 @@ export function ResultPane({
   shareFallbackUrl,
   sessionRecovered,
 }: ResultPaneProps) {
-  const yieldRankings = useYieldRankings();
+  const yieldRankings = useLiveYieldRankings(useYieldRankings());
   const yieldSourceUrls = useMemo(() => {
     const map = new Map<string, string>();
     for (const ranking of yieldRankings.data?.rankings ?? []) {

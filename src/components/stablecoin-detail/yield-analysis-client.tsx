@@ -26,9 +26,9 @@ import {
 } from "@/lib/yield-constants";
 import {
   buildYieldDetailModel,
-  useYieldCoinSourceClock,
   type YieldDetailReadyModel,
 } from "@/components/yield/yield-detail-section-model";
+import { useLiveYieldRankings, useYieldCoinRankings } from "@/hooks/use-yield-source-clock";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import { toTimestampMs } from "@/lib/time";
@@ -412,7 +412,7 @@ function deriveSourceSwitchEvents(history: YieldHistoryPoint[]): SourceSwitchEve
 }
 
 export default function YieldAnalysisClient({ id, staticCoin, logoSrc, notices }: YieldAnalysisClientProps) {
-  const rankingsQuery = useYieldRankings();
+  const rankingsQuery = useLiveYieldRankings(useYieldRankings());
   const historyQuery = useYieldHistory(id, { days: 90, mode: "best" });
   const { getParam, replaceParams } = useUrlFilters();
   const [enrichment, setEnrichment] = useState<{
@@ -445,11 +445,13 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc, notices }
         .filter(Boolean),
     [sourcesParam],
   );
-  const sourceClock = useYieldCoinSourceClock(rankingsQuery.data, id, rankingsQuery.meta, rankingsQuery.dataUpdatedAt);
+  const { data: agedRankings, sourceClock } = useYieldCoinRankings(
+    rankingsQuery.data, id, rankingsQuery.meta, rankingsQuery.dataUpdatedAt,
+  );
   const detailModel = useMemo(
     () =>
       buildYieldDetailModel(
-        rankingsQuery.data,
+        agedRankings,
         {
           stablecoinId: id,
           lifecycle: coin?.status ?? "active",
@@ -460,7 +462,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc, notices }
         requestedSourceKeys,
         sourceClock,
       ),
-    [coin?.status, coinDetail?.listingStatusReview?.reason, id, rankingsQuery.data, requestedSourceKeys, shouldHaveYieldData, sourceClock],
+    [coin?.status, coinDetail?.listingStatusReview?.reason, id, agedRankings, requestedSourceKeys, shouldHaveYieldData, sourceClock],
   );
   const readyModel = detailModel.status === "ready" ? detailModel : null;
   const ranking = readyModel?.ranking ?? null;
@@ -469,12 +471,12 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc, notices }
     () =>
       ranking
         ? buildYieldPeerRailModel({
-            rankings: rankingsQuery.data?.rankings ?? [],
+            rankings: agedRankings?.rankings ?? [],
             currentId: id,
             currentRow: ranking,
           })
         : null,
-    [id, ranking, rankingsQuery.data?.rankings],
+    [id, ranking, agedRankings?.rankings],
   );
 
   const warningEvents = useMemo(() => deriveWarningEvents(historyQuery.data?.history ?? []), [historyQuery.data]);

@@ -14,6 +14,7 @@ import {
   useYieldRankings,
 } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
+import { useLiveYieldRankings } from "@/hooks/use-yield-source-clock";
 import { isValidSelectorSnapshotId } from "@/lib/selector-state";
 import { buildSelectorRows } from "@shared/lib/selector/data-adapter";
 import { RequestFailure, RequestSequence, isRequestCancellation, requestJson } from "@/lib/request";
@@ -89,7 +90,7 @@ export function useSelector(
   const reportCards = useReportCardsV9Table({ enabled });
   const stressSignals = useStressSignals({ enabled });
   const dexLiquidity = useDexLiquidity({ enabled });
-  const yieldRankings = useYieldRankings({ enabled });
+  const yieldRankings = useLiveYieldRankings(useYieldRankings({ enabled }));
   const bluechipRatings = useBluechipRatings({ enabled });
   const snapshotRequests = useRef(new RequestSequence());
 

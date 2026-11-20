@@ -21,7 +21,7 @@ import { YieldSourceBoard } from "@/components/yield/yield-source-board";
 import { buildYieldSourceBoardModel } from "@/lib/yield-source-board-model";
 import { resolveYieldSourceAssessedAt } from "@/lib/yield-source-presentation";
 import { getYieldRowSourceClockInput } from "@/lib/yield-workbench-row";
-import { useYieldSourceClock } from "@/hooks/use-yield-source-clock";
+import { useLiveYieldRankings, useYieldDeliveryScores } from "@/hooks/use-yield-source-clock";
 import { ReferenceRatesStrip } from "@/components/yield/reference-rates-strip";
 import { YieldCoinIndex } from "@/components/yield/coin-index";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
@@ -276,14 +276,19 @@ function YieldEmptyStateNotice({
 }
 
 export function YieldClient() {
-  const { data, meta, isLoading, error, dataUpdatedAt, refetch } = useYieldRankingsSummary();
+  const { data, meta, isLoading, error, dataUpdatedAt, refetch } = useLiveYieldRankings(useYieldRankingsSummary());
   const adapterManifestQuery = useYieldAdapterManifest();
   const logos = logosById;
   const { searchParams, setParam, replaceParams } = useUrlFilters();
   const arrivedFromSelector = searchParams.get("from") === "selector";
   const workbenchFallbackId = parseYieldWorkbenchFallbackId(searchParams.get(YIELD_WORKBENCH_FALLBACK_PARAM));
 
-  const rankings = useMemo(() => dedupeYieldRankings(data?.rankings ?? []), [data?.rankings]);
+  const assessedAt = resolveYieldSourceAssessedAt(meta, dataUpdatedAt);
+  const sourceClockInputs = useMemo(() => data?.rankings.map(getYieldRowSourceClockInput) ?? [], [data?.rankings]);
+  const { rankings: agedRankings, sourceClock } = useYieldDeliveryScores(
+    data?.rankings, data?.provenance?.dlPools, sourceClockInputs, assessedAt, dataUpdatedAt,
+  );
+  const rankings = useMemo(() => dedupeYieldRankings(agedRankings), [agedRankings]);
   const watchlist = useWatchlist();
   const coinStates = useCoinStates();
   // Query state only (useCoinStates owns the fetch): it qualifies the hero pick until depegs are known.
@@ -350,10 +355,6 @@ export function YieldClient() {
     [urlParams, yieldUniverse],
   );
 
-  // One parent clock covers the board and the visible rows: each selected
-  // source crosses the public source-age gate at its own instant.
-  const sourceClockInputs = useMemo(() => rankings.map(getYieldRowSourceClockInput), [rankings]);
-  const sourceClock = useYieldSourceClock(sourceClockInputs, resolveYieldSourceAssessedAt(meta, dataUpdatedAt));
   const sourceBoardModel = useMemo(
     () => buildYieldSourceBoardModel(sourceBoardRows, sourceClock),
     [sourceBoardRows, sourceClock],

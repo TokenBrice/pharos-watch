@@ -53,6 +53,7 @@ import {
   hasYieldBenchmarkUnitMismatch,
 } from "@shared/lib/yield-benchmark-freshness";
 import { assessFreshnessTimestamp } from "../api-freshness-age";
+import { isDefiLlamaDataSource } from "../yield-ranking-helpers";
 
 const YIELD_RUNBOOK_URL = "https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks/yield-health.md";
 const YIELD_RANKINGS_CACHE_KEY = "yield-rankings";
@@ -309,6 +310,8 @@ interface SourceRiskCoverageRow {
   assetIsVenue: boolean;
   /** The source publishes (or proves) an incentive split. */
   rewardSplitPossible: boolean;
+  /** The provider publishes per-row observation clocks. */
+  expectsObservationClock: boolean;
 }
 
 function readSourceRiskCoverageRow(
@@ -327,6 +330,7 @@ function readSourceRiskCoverageRow(
       || ISSUER_RAIL_DEPLOYMENT_PLACES[deploymentPlace] === true,
     rewardSplitPossible:
       REWARD_SPLIT_CAPABLE_DATA_SOURCES[dataSource] === true || getNumber(row.apyReward) != null,
+    expectsObservationClock: !isDefiLlamaDataSource(dataSource),
   };
 }
 
@@ -334,6 +338,7 @@ function sourceRiskRowEligible(field: YieldSourceRiskCoverageField, row: SourceR
   if (field === "sourceSwitchCount30d") return row.isBest;
   if (field === "sourceDepthRatio" || field === "venueRiskTier") return !row.assetIsVenue;
   if (field === "rewardShare") return row.rewardSplitPossible;
+  if (field === "sourceAgeSeconds") return row.expectsObservationClock;
   return true;
 }
 

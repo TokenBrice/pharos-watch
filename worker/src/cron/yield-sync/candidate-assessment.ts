@@ -3,7 +3,6 @@ import type {
   YieldEvidenceClass,
   YieldSafetyProvenance,
   YieldSafetyReason,
-  YieldSourceInputMeta,
 } from "@shared/types/yield";
 import {
   derivePysSourceRiskPenalty,
@@ -24,6 +23,8 @@ import {
   classifyYieldSourceAgeTier,
   getComparisonAnchorStaleThresholdMs,
   getRankingStaleThresholdMs,
+  isDefiLlamaDataSource,
+  readDefiLlamaBatchTimestamp,
 } from "../../lib/yield-ranking-helpers";
 import type { ResolvedYield } from "./types";
 import { buildHistoryKey, pickHistoryRowsForSource } from "./history-evidence";
@@ -119,13 +120,11 @@ function computeSourceAgeSeconds(startSec: number, sourceObservedAt: number | nu
   return Math.max(0, Math.trunc(startSec - sourceObservedAt));
 }
 
-function isDefiLlamaDataSource(dataSource: string): boolean {
-  return dataSource === "defillama" || dataSource === "defillama-auto";
-}
-
-function resolveTransportAgeSeconds(startSec: number, source: ResolvedYield, dlPoolsMeta: YieldSourceInputMeta | undefined) {
-  if (!isDefiLlamaDataSource(source.dataSource)) return computeSourceAgeSeconds(startSec, source.sourceFetchedAt);
-  return dlPoolsMeta?.ageSeconds ?? computeSourceAgeSeconds(startSec, dlPoolsMeta?.updatedAt);
+function resolveTransportAgeSeconds(input: EvaluateYieldSourcesInput, source: ResolvedYield) {
+  if (!isDefiLlamaDataSource(source.dataSource)) return computeSourceAgeSeconds(input.startSec, source.sourceFetchedAt);
+  const { dlPoolsMeta, dlPoolsAssessedAt = input.startSec } = input;
+  const batchAt = dlPoolsMeta?.mode === "unavailable" ? null : readDefiLlamaBatchTimestamp(dlPoolsMeta?.updatedAt, dlPoolsAssessedAt);
+  return batchAt == null ? null : dlPoolsAssessedAt - batchAt;
 }
 
 export function assessYieldSourceGroup(
@@ -239,7 +238,7 @@ export function assessYieldSourceGroup(
     });
     const sourceObservedAt = y.sourceObservedAt ?? null;
     const sourceAgeSeconds = computeSourceAgeSeconds(input.startSec, sourceObservedAt);
-    const transportAgeSeconds = resolveTransportAgeSeconds(input.startSec, y, input.dlPoolsMeta);
+    const transportAgeSeconds = resolveTransportAgeSeconds(input, y);
     const transportKnown = transportAgeSeconds != null && Number.isFinite(transportAgeSeconds) && transportAgeSeconds >= 0;
     const transportOverdue = y.dataSource !== "rate-derived" && transportKnown
       && transportAgeSeconds * 1000 > getRankingStaleThresholdMs(y.dataSource, sourceKey);
@@ -291,6 +290,7 @@ export function assessYieldSourceGroup(
       safety: safetyResolution,
       evidenceClass,
       sourceFreshness,
+      deliveryFresh: sourceObservedAt == null && isDefiLlamaDataSource(y.dataSource) && transportKnown && !transportOverdue,
       // A missing hurdle fails the same completeness check as a stale hurdle.
       benchmarkFreshness: benchmarkFreshness ?? "stale",
       referenceBenchmarkFreshness: rowReferenceBenchmarkFreshness,

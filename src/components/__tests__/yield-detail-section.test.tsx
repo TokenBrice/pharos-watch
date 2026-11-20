@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import YieldDetailSection from "@/components/yield/yield-detail-section";
 import {
@@ -31,6 +31,8 @@ vi.mock("@/hooks/use-url-filters", () => ({
 vi.mock("@/hooks/use-is-mobile", () => ({
   useIsMobile: () => false,
 }));
+
+vi.mock("@/hooks/use-hydrated", () => ({ useHydrated: () => true }));
 
 vi.mock("@/components/yield/yield-history-chart", () => ({
   YieldHistoryChart: ({
@@ -428,6 +430,36 @@ describe("YieldDetailSection", () => {
     expect(screen.queryByRole("group", { name: "PYS breakdown" })).toBeNull();
   });
 
+  it("withdraws delivery-only PYS at the batch deadline without a refetch", () => {
+    const now = 1_776_000_000;
+    const budget = 21_600;
+    vi.useFakeTimers({ now: now * 1000 });
+    try {
+      const ranking = makeRanking({
+        pharosYieldScore: 64,
+        warningSignals: ["data-freshness-unknown"],
+        provenance: makeYieldProvenance({ sourceObservedAt: null, sourceAgeSeconds: null, sourceFreshness: "unknown",
+          sourceMaxAgeSeconds: budget, scoreQualification: "partial" }),
+      });
+      mockRankingsQuery({ data: makeYieldDetailResponse([ranking], { provenance: {
+        selectionMethod: "confidence-weighted",
+        benchmark: { rate: 0.03, recordDate: null, fetchedAt: now, ageSeconds: 0, source: "test", isFallback: false, fallbackMode: null },
+        dlPools: { mode: "dex-cache", updatedAt: now - budget + 2, ageSeconds: budget - 2, poolCount: 1, fallbackMode: null },
+        safetySnapshot: { kind: "ok", coverageRatio: 1, coveredCount: 1, trackedCount: 1, reason: null },
+      } }) });
+      render(<YieldDetailSection stablecoinId="usdn-smardex" />);
+      act(() => vi.advanceTimersByTime(1999));
+      expect(screen.getByLabelText(/Pharos Yield Score 64 out of 100/)).toBeTruthy();
+      expect(screen.getByText("Partial evidence")).toBeTruthy();
+      act(() => vi.advanceTimersByTime(1));
+      expect(screen.getByLabelText(/Pharos Yield Score unavailable:.*scoring freshness window/i)).toBeTruthy();
+      expect(screen.getByText("Not rated")).toBeTruthy();
+      expect(screen.queryByLabelText(/Pharos Yield Score 64 out of 100/)).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("normalizes sub-precision benchmark spreads without claiming a negative gap", () => {
     mockRankings([makeRanking({ excessYield: -0.0000596 })]);
     render(<YieldDetailSection stablecoinId="usdn-smardex" />);
@@ -491,7 +523,7 @@ describe("YieldDetailSection", () => {
     render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
     expect(screen.getByText("Movement vs last publication")).toBeTruthy();
-    expect(screen.getByText(/No comparison baseline — movement vs the previous publication was not measured/)).toBeTruthy();
+    expect(screen.getByText("Current movement unavailable")).toBeTruthy();
     expect(screen.queryByText("Stable — no movement since last publication.")).toBeNull();
   });
 
@@ -507,6 +539,27 @@ describe("YieldDetailSection", () => {
     expect(screen.getByText("Stable — no movement since last publication.")).toBeTruthy();
   });
 
+  it("withdraws cached movement when an unreturned peer's evidence expires", () => {
+    const now = 1_776_000_000;
+    vi.useFakeTimers({ now: now * 1000 });
+    try {
+      const data = {
+        ...makeYieldDetailResponse([makeRanking({ pharosYieldScore: 72, liveRank: 2, rankChangeAttribution: null })]),
+        projection: { stablecoinId: "usdn-smardex", generationId: null, updatedAt: now, totalCount: 2, unavailableReason: null },
+        cohortValidUntil: now + 2,
+      };
+      mockRankingsQuery({ data });
+      render(<YieldDetailSection stablecoinId="usdn-smardex" />);
+      act(() => vi.advanceTimersByTime(1999));
+      expect(screen.getByText("Stable — no movement since last publication.")).toBeTruthy();
+      act(() => vi.advanceTimersByTime(1));
+      expect(screen.queryByText("Stable — no movement since last publication.")).toBeNull();
+      expect(screen.getByText("Current movement unavailable")).toBeTruthy();
+      expect(screen.getByLabelText(/Pharos Yield Score 72 out of 100/)).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 
   it("renders rank delta and PYS delta when rankChangeAttribution carries movement", () => {
     mockRankings([

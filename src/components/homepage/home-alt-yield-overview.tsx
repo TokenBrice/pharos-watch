@@ -12,6 +12,7 @@ import { UniverseChip } from "@/components/universe-chip";
 import { RailHeroFigureTransition } from "@/components/view-transitions";
 import { isOpportunityDerivedSafety } from "@shared/lib/yield-opportunity-provenance";
 import { usePegSummary, useYieldRankingsSummary } from "@/hooks/api-hooks";
+import { useLiveYieldRankings } from "@/hooks/use-yield-source-clock";
 import { useCoinStates } from "@/hooks/use-coin-states";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
@@ -254,7 +255,7 @@ function LeaderRow({
 }
 
 export function HomeAltYieldOverview(): React.JSX.Element | null {
-  const { data, isLoading } = useYieldRankingsSummary();
+  const { data, isLoading } = useLiveYieldRankings(useYieldRankingsSummary());
   // The same state ladder as the /yield/ hero, so both pick the same row, read
   // passively: the cards above already load the peg summary and resolver, and a
   // DEWS band never blocks a yield row, so this card fetches none of them.
