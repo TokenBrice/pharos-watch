@@ -576,6 +576,8 @@ export function runGitleaksConfigSelfTest(
   try {
     const falconLabel = ["ARIA", "B71VABWJ", "T8GB"].join("_");
     const credential = ["A1b2C3d4E5f6G7h8", "I9j0K1l2M3n4O5p6"].join("");
+    const syntheticApiKey = ["ph_live_0123456789abcdef_", "abcdefghijklmnopqrstuvwxyzABCDEF"].join("");
+    const unreviewedApiKey = ["ph_live_0123456789abcdef_", "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef"].join("");
     const solanaMint = ["Cfuy5T6osdazUeLego5LF", "ycBQebm9PP3H7VNdCndXXEN"].join("");
     const gitbookUuid = ["54e9714e-c65f-4b0c", "-8bcf-c7869956dd20"].join("");
     const tronUsdt = ["TR7NHqjeKQxGTCi8q8", "ZY4pL8otSzgjLj6t"].join("");
@@ -780,12 +782,16 @@ export function runGitleaksConfigSelfTest(
         path: "worker/src/cron/dex-discovery/__tests__/crawl-soroban-pools.test.ts",
         value: { CHFSAFO_TOKEN: chfsafoContract },
       },
+      {
+        path: "worker/src/api/__tests__/api-keys.test.ts",
+        value: { token: syntheticApiKey },
+      },
     ];
     const awsKey = ["AKIA", "Q7M2V3N4P6R2S3T5"].join("");
     // Multiple controls share a path. Keep each on its own line so report
     // assertions address every original fixture, not merely the file as a whole.
     const falconControl = { path: FALCON_SELF_TEST_PATH, value: { key: falconLabel } };
-    for (const group of ["public", "aws", "generic"] as const) {
+    for (const group of ["public", "aws", "generic", "pharos"] as const) {
       const controls = group === "aws" ? publicControls : [falconControl, ...publicControls];
       const scanRoot = resolve(root, group);
       const linesByPath = new Map<string, string[]>();
@@ -796,7 +802,9 @@ export function runGitleaksConfigSelfTest(
           ? { ...control.value, aws_access_key_id: awsKey }
           : group === "generic"
             ? control.path === FALCON_SELF_TEST_PATH ? { api_key: credential } : { ...control.value, api_key: credential }
-            : control.value;
+            : group === "pharos"
+              ? { ...control.value, pharos_api_key: unreviewedApiKey }
+              : control.value;
         lines.push(JSON.stringify(value));
         linesByPath.set(control.path, lines);
         assertions.push({ path: control.path, line: lines.length });
@@ -824,7 +832,9 @@ export function runGitleaksConfigSelfTest(
       for (const { path, line } of assertions) {
         const matches = findings.filter((finding) =>
           resolve(scanRoot, finding.File) === resolve(scanRoot, path) && finding.StartLine === line);
-        const expectedRule = group === "aws" ? "aws-access-token" : "generic-api-key";
+        const expectedRule = group === "aws"
+          ? "aws-access-token"
+          : group === "pharos" ? "pharos-api-key" : "generic-api-key";
         if (group === "public" ? matches.length !== 0 : !matches.some((finding) => finding.RuleID === expectedRule)) {
           throw new Error(`Gitleaks ${group} control failed: ${path}:${line} (${expectedRule})`);
         }

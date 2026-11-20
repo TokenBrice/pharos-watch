@@ -34,7 +34,7 @@ function selfTestScanStatus(args: string[], transform = (findings: SelfTestFindi
     const lines = readFileSync(file, "utf8").trimEnd().split("\n");
     for (const [index, line] of lines.entries()) {
       const value = JSON.parse(line);
-      for (const [key, rule] of [["api_key", "generic-api-key"], ["aws_access_key_id", "aws-access-token"]]) {
+      for (const [key, rule] of [["api_key", "generic-api-key"], ["aws_access_key_id", "aws-access-token"], ["pharos_api_key", "pharos-api-key"]]) {
         if (key in value) findings.push({ File: relative(root, file), StartLine: index + 1, RuleID: rule });
       }
     }
@@ -131,8 +131,8 @@ describe("run-gitleaks", () => {
         ensureBinary: async () => "/fake/gitleaks", platformKey: "linux-x64",
         runBinary, buildMergeResolutionInput,
       })).resolves.toEqual({ status });
-      expect(runBinary.mock.calls.map(([, args]) => args[0])).toEqual(["dir", "dir", "dir", "git", "stdin"]);
-      const scans = runBinary.mock.calls.slice(3);
+      expect(runBinary.mock.calls.map(([, args]) => args[0])).toEqual(["dir", "dir", "dir", "dir", "git", "stdin"]);
+      const scans = runBinary.mock.calls.slice(4);
       for (const [, args] of scans) {
         expect(args).toContain("--config=/trusted/.gitleaks.toml");
         expect(args).toContain("--gitleaks-ignore-path=/trusted/.gitleaksignore");
@@ -328,7 +328,7 @@ describe("run-gitleaks", () => {
       rmSync(cacheRoot, { recursive: true, force: true });
     }
   });
-  it("batches self-tests into three scans while retaining per-line rule assertions", () => {
+  it("batches self-tests into four scans while retaining per-line rule assertions", () => {
     const reports: SelfTestFinding[][] = [];
     const fixtures: Array<Array<{ File: string; StartLine: number }>> = [];
     const runBinary = vi.fn((_binary: string, args: string[]) => {
@@ -346,12 +346,13 @@ describe("run-gitleaks", () => {
       }) };
     });
     runGitleaksConfigSelfTest("/fake/gitleaks", { runBinary });
-    expect(runBinary).toHaveBeenCalledTimes(3);
+    expect(runBinary).toHaveBeenCalledTimes(4);
     expect(fixtures[0].length).toBeGreaterThan(0);
     expect(fixtures[2]).toEqual(fixtures[0]);
+    expect(fixtures[3]).toEqual(fixtures[0]);
     expect(fixtures[0]).toEqual(expect.arrayContaining(fixtures[1]));
     expect(reports[0]).toEqual([]);
-    for (const [index, RuleID] of [[1, "aws-access-token"], [2, "generic-api-key"]] as const) {
+    for (const [index, RuleID] of [[1, "aws-access-token"], [2, "generic-api-key"], [3, "pharos-api-key"]] as const) {
       expect(reports[index]).toHaveLength(fixtures[index].length);
       expect(reports[index]).toEqual(expect.arrayContaining(
         fixtures[index].map((fixture) => ({ ...fixture, RuleID })),
@@ -375,7 +376,7 @@ describe("run-gitleaks", () => {
     }
   });
 
-  it.each(["aws", "generic"])("rejects a single missing %s finding even when the scan exits 1", (group) => {
+  it.each(["aws", "generic", "pharos"])("rejects a single missing %s finding even when the scan exits 1", (group) => {
     const runBinary = vi.fn((_binary: string, args: string[]) => ({
       status: selfTestScanStatus(args, (findings) => args.at(-1)!.endsWith(group) ? findings.slice(1) : findings),
     }));
@@ -511,7 +512,7 @@ describe("run-gitleaks", () => {
         expect(runBinary).not.toHaveBeenCalled();
       } else {
         expect(result).toEqual({ status: 1 });
-        expect(runBinary).toHaveBeenCalledTimes(4);
+        expect(runBinary).toHaveBeenCalledTimes(5);
         expect(runBinary.mock.calls[0][1]).toContain(`--config=${resolve(root, ".gitleaks.toml")}`);
         expect(runBinary.mock.calls.at(-1)![1]).toContain("--log-opts=--no-merges base..head");
         expect(log).not.toHaveBeenCalled();
