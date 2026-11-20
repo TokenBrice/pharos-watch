@@ -525,9 +525,13 @@ describe("stablecoin detail snapshot generator", () => {
     const perCoinIds: string[] = [];
     const batches: string[][] = [];
     const unavailableId = USDT;
+    const unavailableIds = [unavailableId, ...LIVE_IDS.filter((id) => id !== USDT && id !== USDC).slice(0, 3)];
     let pendingBulkBodies = 0;
     let peakBulkBodies = 0;
     let completedBatches = 0;
+    const pendingCoins = new Set<string>();
+    let peakCoins = 0;
+    let retryPending = originClock;
     const expectedBatches = Math.ceil(LIVE_IDS.length / BATCH_SIZE);
     silence();
     vi.stubGlobal("fetch", vi.fn(async (raw: string) => {
@@ -541,8 +545,8 @@ describe("stablecoin detail snapshot generator", () => {
         expect(pendingBulkBodies).toBeLessThanOrEqual(6);
         const response = Response.json({ version: 1, entries: ids.map((id) => {
           const sources = { detailCacheUpdatedAt: sourceClock, publicationUpdatedAt: sourceClock, supplySnapshotUpdatedAt: sourceClock, supplySnapshotDate: sourceClock };
-          return id === unavailableId
-            ? { id, status: "unavailable", reason: "detail-cache-missing", sources }
+          return unavailableIds.includes(id)
+            ? { id, status: "unavailable", reason: id === unavailableId ? "detail-cache-missing" : "publication-unavailable", sources }
             : bulkEntry(id, sourceClock * 1000, {
               liveSummary: projectStablecoinLiveSummary(StablecoinDetailResponseSchema.parse(detail), id), supplyHistory: history,
               freshness: { liveSummary: { status: "fresh", maxAgeSec: 300 }, supplyHistory: { status: "fresh", maxAgeSec: 86_400 } },
@@ -558,17 +562,32 @@ describe("stablecoin detail snapshot generator", () => {
         });
         return response;
       }
-      if (batches.length) expect(completedBatches).toBe(expectedBatches);
       perCoinIds.push(id);
-      return Response.json(isHistory ? history : detail, { headers });
+      const response = Response.json(isHistory ? history : detail, { headers });
+      if (!batches.length) return response;
+      expect(completedBatches).toBe(expectedBatches);
+      pendingCoins.add(id);
+      peakCoins = Math.max(peakCoins, pendingCoins.size);
+      if (retryPending && id === unavailableId) {
+        retryPending = false;
+        return new Response(null, { status: 503 });
+      }
+      const consumeBody = response.json.bind(response);
+      vi.spyOn(response, "json").mockImplementation(async () => {
+        const body = await consumeBody();
+        if (isHistory) pendingCoins.delete(id);
+        return body;
+      });
+      return response;
     }));
     const baseline = await generateSnapshots(false, { generatedAt: now });
     perCoinIds.length = 0;
     vi.stubEnv("PHAROS_DETAIL_SNAPSHOT_SOURCE", "bulk");
-    const bulk = await generateSnapshots(false, { generatedAt: now });
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const [bulk] = await Promise.all([generateSnapshots(false, { generatedAt: now }), vi.runAllTimersAsync()]);
     expect(bulk.map((snapshot) => `${JSON.stringify(snapshot)}\n`))
       .toEqual(baseline.map((snapshot) => `${JSON.stringify(snapshot)}\n`));
-    const acquisition = JSON.parse(log.mock.calls[1][0] as string).detailSnapshotAcquisition;
+    const acquisition = JSON.parse(log.mock.calls.at(-1)![0] as string).detailSnapshotAcquisition;
     expect(entryFor(acquisition.entries, unavailableId)).toMatchObject({
       source: "bulk-unavailable-fallback", reason: "detail-cache-missing",
       updatedAt: { liveSummary: sourceClock * 1000 }, bulkSources: { detailCacheUpdatedAt: sourceClock },
@@ -582,7 +601,11 @@ describe("stablecoin detail snapshot generator", () => {
         nativeSupply: { current: 200, prevWeek: 140, prevMonth: 80 },
       });
     }
-    expect(perCoinIds).toEqual([unavailableId, unavailableId]);
+    expect(perCoinIds.sort()).toEqual([
+      ...unavailableIds.flatMap((id) => [id, id]), ...(originClock ? [unavailableId] : []),
+    ].sort());
+    expect(peakCoins).toBe(3);
+    expect(pendingCoins.size).toBe(0);
     expect(peakBulkBodies).toBe(6);
     expect(pendingBulkBodies).toBe(0);
     expect(batches.every((ids) => ids.length <= BATCH_SIZE)).toBe(true);

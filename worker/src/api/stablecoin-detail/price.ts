@@ -3,7 +3,7 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { isKinesisWrapperSupplyCutoverActive } from "@shared/lib/supply-perimeter-changes";
 import { isKinesisWrapperSupplyId, prefersOnChainSupplyMcap } from "@shared/lib/onchain-supply-probe";
-import { admitSupplyBuckets, getUsdMarketCapBaselineOrNull, projectUsdMarketCapBaselineBuckets } from "@shared/lib/supply";
+import { admitSupplyBuckets, getUsdMarketCapBaselineOrNull, projectUsdMarketCapBaselineBuckets, type SupplyChangeBaselines } from "@shared/lib/supply";
 import { parseDetailSnapshotSourceClock } from "@shared/lib/detail-snapshot-inputs";
 import { addFreshnessHeaders } from "../../lib/api-freshness-headers";
 import { loadStablecoinsCache, type StablecoinsCacheLoadResult } from "../../lib/stablecoins-cache";
@@ -44,8 +44,9 @@ export async function overlayCanonicalDetail(
         response = new Response(JSON.stringify(detail), { status: response.status, statusText: response.statusText, headers });
       }
     }
-    // Only the admitted canonical publication can set restoration, unavailability or price-reference provenance.
+    // Only the admitted publication can set canonical checkpoints and provenance.
     if ("currentSupplyRestored" in detail || "currentSupplyUnavailableReason" in detail || "currentSupplyExcludedChains" in detail
+      || "currentCirculatingPrevWeekUSD" in detail || "currentCirculatingPrevMonthUSD" in detail
       || "currentCirculatingNative" in detail || "supplyChangeBaselines" in detail || "priceDerivation" in detail || "nominalPriceReference" in detail || "currentPeg" in detail) {
       delete detail.currentPeg;
       delete detail.priceDerivation;
@@ -54,6 +55,8 @@ export async function overlayCanonicalDetail(
       delete detail.currentSupplyUnavailableReason;
       delete detail.currentSupplyExcludedChains;
       delete detail.currentCirculatingNative;
+      delete detail.currentCirculatingPrevWeekUSD;
+      delete detail.currentCirculatingPrevMonthUSD;
       delete detail.supplyChangeBaselines;
       const headers = new Headers(response.headers);
       headers.delete("Content-Length");
@@ -102,10 +105,15 @@ export async function overlayCanonicalDetail(
         detail.currentSupplyExcludedChains = coin.supplyChainGuard.chains
           .filter((chain) => chain.resolution === "unavailable").map((chain) => chain.chainLabel);
       }
-      const previousDay = getUsdMarketCapBaselineOrNull(coin, "day");
+      const historicalBuckets = (window: keyof SupplyChangeBaselines, previous: Record<string, number>) =>
+        getUsdMarketCapBaselineOrNull(coin, window) == null ? {} : projectUsdMarketCapBaselineBuckets(coin, window, previous);
       if (coin.supplyChangeBaselines !== undefined) detail.supplyChangeBaselines = coin.supplyChangeBaselines;
-      detail.currentCirculatingPrevDayUSD = previousDay == null ? {}
-        : projectUsdMarketCapBaselineBuckets(coin, "day", coin.circulatingPrevDay);
+      detail.currentCirculatingPrevDayUSD = historicalBuckets("day", coin.circulatingPrevDay);
+      // Provider history can carry a different valuation from the admitted non-USD close.
+      if (coin.pegType !== "peggedUSD") {
+        detail.currentCirculatingPrevWeekUSD = historicalBuckets("week", coin.circulatingPrevWeek);
+        detail.currentCirculatingPrevMonthUSD = historicalBuckets("month", coin.circulatingPrevMonth);
+      }
       const supplyObservedAt = coin.supplyObservedAt;
       detail.currentSupplyObservedAt = typeof supplyObservedAt === "number" && Number.isFinite(supplyObservedAt) &&
         supplyObservedAt > 0 && supplyObservedAt <= now ? supplyObservedAt : canonical.updatedAt;

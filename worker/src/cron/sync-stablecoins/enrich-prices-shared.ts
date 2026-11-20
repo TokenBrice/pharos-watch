@@ -38,6 +38,9 @@ export interface PrimaryPriceResult extends Pick<StablecoinData, "priceQuoteBasi
   priceSourceConfidenceProfile?: PriceSourceConfidenceProfile | null;
 }
 
+export const pendingCarriedSupplyBaselines = Symbol("pending-carried-supply-baselines");
+export const producerSupplyBaselines = Symbol("producer-supply-baselines");
+
 export interface PeggedAsset extends Pick<StablecoinData, "circulatingNative" | "valuationPriceUsd" | "valuationObservedAtSec" |
   "priceQuoteBasis" | "upstreamKeys" | "pricePoolKeys" | "commodityEntitlement" | "parityQuoteUnit"> {
   id: string;
@@ -67,6 +70,8 @@ export interface PeggedAsset extends Pick<StablecoinData, "circulatingNative" | 
   supplySource?: string;
   supplyObservedAt?: number | null;
   supplyChangeBaselines?: SupplyChangeBaselines;
+  [pendingCarriedSupplyBaselines]?: SupplyChangeBaselines;
+  [producerSupplyBaselines]?: SupplyChangeBaselines | null;
   supplyRestored?: boolean;
   /** Set only by the DefiLlama-outage fallback; routine main-path carries stay unmarked. */
   supplyRestoreMode?: SupplyRestoreMode;

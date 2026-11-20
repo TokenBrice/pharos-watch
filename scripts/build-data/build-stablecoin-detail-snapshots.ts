@@ -44,6 +44,8 @@ export const DETAIL_SNAPSHOT_TARGET_BYTES = 12 * 1024;
 const MAX_PARALLEL_COIN_REQUESTS = 6;
 // Match the six-connection budget; bulk bodies finish before fallback reads begin.
 const MAX_PARALLEL_BULK_REQUESTS = 6;
+// A just-invalidated detail cache makes fallback reads more expensive.
+const MAX_PARALLEL_FALLBACK_REQUESTS = 3;
 // This is the UI stale band, not the endpoint's much stricter advisory budget.
 export const DETAIL_SNAPSHOT_UI_STALE_AFTER_MS =
   API_FRESHNESS_MAX_AGE_SEC.stablecoins * FRESHNESS_RATIOS.DEGRADED * 1000;
@@ -433,9 +435,8 @@ export async function generateSnapshots(
       assessedAt,
       options.staleRefreshLimit,
     ));
-    // Separate phases keep stale refreshes and unavailable fallbacks within the
-    // same global cap. Each coin consumes detail then history sequentially.
-    const acquired = await mapWithConcurrency(entries, MAX_PARALLEL_COIN_REQUESTS, async (entry) => {
+    // Stale refreshes and unavailable fallbacks share slots through body reads and retries.
+    const acquired = await mapWithConcurrency(entries, MAX_PARALLEL_FALLBACK_REQUESTS, async (entry) => {
       const refresh = refreshIds.has(entry.id);
       // An inactive record with no cached detail row can only be answered by the
       // route's inactive 404, so the reviewed fallback reads the history lane alone.

@@ -55,12 +55,18 @@ export const POST_DEPLOY_ROUTE_SWEEP_PATHS = Object.freeze([
 export const POST_DEPLOY_ROUTE_SWEEP_CONCURRENCY = 4;
 export const POST_DEPLOY_ROUTE_SWEEP_TIMEOUT_MS = 10_000;
 export const POST_DEPLOY_ROUTE_SWEEP_DEADLINE_MS = 105_000;
+export const POST_DEPLOY_ROUTE_WARMUP_TIMEOUT_MS = 20_000;
+export const POST_DEPLOY_ROUTE_WARMUP_PATHS = [
+  "/api/stablecoin-charts",
+  "/api/report-cards/v9",
+  "/api/redemption-backstops",
+] as const satisfies readonly (typeof POST_DEPLOY_ROUTE_SWEEP_PATHS)[number][];
 
 export interface PostDeployRouteProbe {
   path: string;
   status: number;
   error?: string;
-  retriedAfter5xx?: boolean;
+  retried?: boolean;
 }
 
 /**
@@ -123,8 +129,8 @@ export function summarizePostDeployRouteSweep(probes: readonly PostDeployRoutePr
     }
   }
   const hardFailures = failures.filter((failure) => failure.reason !== "rate-limited");
-  const retried = probes.filter((probe) => probe.retriedAfter5xx).length;
-  const retryNote = retried > 0 ? ` (${retried} route${retried === 1 ? "" : "s"} retried once after a 5xx)` : "";
+  const retried = probes.filter((probe) => probe.retried).length;
+  const retryNote = retried > 0 ? ` (${retried} route${retried === 1 ? "" : "s"} retried once after a transport error or 5xx)` : "";
   const listed = failures.slice(0, 8)
     .map((failure) => `${failure.path} (${failure.reason}, HTTP ${failure.status})`).join("; ")
     + (failures.length > 8 ? `; +${failures.length - 8} more` : "");
@@ -184,7 +190,7 @@ export function selectPostDeployProbes({
       id: "worker-route-sweep",
       kind: "smoke",
       surface: "worker",
-      description: "GET every public status-probe route once (one 5xx retry); require HTTP 200–299; a 429 is unknown.",
+      description: "Warm heavy routes, then GET every public status-probe route (one retry on transport error or 5xx). Require HTTP 200–299. A 429 is unknown.",
     });
   }
 
