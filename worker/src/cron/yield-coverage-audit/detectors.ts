@@ -796,7 +796,8 @@ export function identifyCoverageGaps(
     if (pool.tvlUsd < HIGH_TVL_THRESHOLD_USD) continue;
     if (!Number.isFinite(pool.apy) || pool.apy <= 0) continue;
     const resolvedIds = yieldBearingIdsBySymbol.get(normalizeRecommendationSymbol(pool.symbol)) ?? [];
-    const stablecoinIds = resolvedIds.filter((id) => !publishedStablecoinIds.has(id));
+    const stablecoinIds = resolvedIds.filter((id) =>
+      !publishedStablecoinIds.has(id) && !isBlockedYieldOpportunitySource({ stablecoinId: id, sourceKey: pool.pool }));
     if (stablecoinIds.length === 0) continue;
     const groupKey = stablecoinIds.join("|");
     const group = nativeGroups.get(groupKey) ?? { stablecoinIds, pools: [] };

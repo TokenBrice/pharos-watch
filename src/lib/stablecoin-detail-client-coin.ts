@@ -1,6 +1,7 @@
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { MintAuthorityClientSummary } from "@shared/types/stablecoin-client-meta";
 import { resolveMechanismArchetype } from "@shared/lib/classification";
+import { getReserves } from "@shared/lib/reserve-templates";
 import { projectMintAuthorityClientSummary } from "@/lib/stablecoin-detail-mint-authority-client";
 import {
   projectBlacklistabilityClientSummary,
@@ -83,12 +84,16 @@ export function buildStablecoinDetailClientCoin(
     ? projectCustodyClientSummary(coin)
     : null;
   const oracleRiskSummary = projectOracleRiskClientSummary(coin);
-  const reserveQualitySummary = projectReserveQualityClientSummary(coin);
+  const curatedReserves = coin.reserves?.length ? getReserves(coin) : null;
+  const reserveQualitySummary = projectReserveQualityClientSummary(
+    curatedReserves ? { ...coin, reserves: curatedReserves.reserves } : coin,
+  );
   const reserveLookThrough = projectReserveLookThroughClientSummary(coin, options.parentById);
   const reserveAdmissionSummary = projectReserveAdmissionClientSummary(coin);
   const blacklistabilitySummary = projectBlacklistabilityClientSummary(coin, options.parentById);
   return {
     ...clientCoin,
+    ...(curatedReserves ? { reserves: curatedReserves.reserves } : {}),
     ...(blacklistabilitySummary ? { blacklistabilitySummary } : {}),
     ...(bridgeRouteRiskSummary ? { bridgeRouteRiskSummary } : {}),
     ...(custodyProfileSummary ? { custodyProfileSummary } : {}),

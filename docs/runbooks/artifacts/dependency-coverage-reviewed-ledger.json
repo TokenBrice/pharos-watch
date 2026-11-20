@@ -1373,6 +1373,32 @@
       "sentinels": ["No exact held-claim identity or reconciled contemporaneous denominator."],
       "nextReviewTrigger": "Dated exact held PT/SY redemption identity, loop debt and contemporaneous backing denominator.",
       "factsClosed": 0
+    },
+    {
+      "claimGroupId": "WS1D:alusd-alchemix",
+      "taskIds": ["WS1.D", "NC-083", "NET02-3"],
+      "dependentId": "alusd-alchemix",
+      "upstreamId": null,
+      "workType": "material-unlinked-reserve",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "status": "deferred",
+      "decision": "withheld",
+      "deferState": "still blocked",
+      "firstSeenAt": "2026-09-29",
+      "reviewedAt": "2026-11-19",
+      "reviewer": "Pharos issue #2132 recheck after the V3 MYT composition",
+      "evidence": [
+        {"url": "https://docs.alchemix.fi/Alchemix_Q2_2026_Financial_Report.pdf", "accessedAt": "2026-11-19", "sourceAsOf": "2026-07-01"},
+        {"url": "https://docs.alchemix.fi/user/concepts/myt-and-yield", "accessedAt": "2026-11-19", "sourceAsOf": null}
+      ],
+      "rationale": "A pinned V3 portfolio now exists: PR #2129 landed the issuer-submitted, on-chain-reproduced composition of the three alUSD MYT vaults as selected-slices rows (2026-11-18 blocks). The asset-wide liability and bridge reconciliation the trigger also asks for does not: no issuer surface nets MYT vault assets against outstanding alUSD, AMO (Elixir) and Transmuter balances, bridge custody or the legacy and DAO-minted supply outside V3 issuance; the Q2 2026 quarterly report carries aggregates only. Deferral stands.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/alusd-alchemix.json",
+        "shared/data/safety-score-v9/evidence-gap-classifications-v1.json"
+      ],
+      "sentinels": ["Selected-slices MYT portfolio is not an asset-wide liability or bridge reconciliation."],
+      "nextReviewTrigger": "Asset-wide alUSD reconciliation: MYT vaults plus AMO/Elixir and Transmuter balances, bridge custody and legacy supply against outstanding supply.",
+      "factsClosed": 0
     }
   ]
 }

@@ -206,6 +206,7 @@ export type StablecoinClientListMeta = Pick<StablecoinMeta, (typeof STABLECOIN_C
 export type StablecoinClientDetailMeta = StablecoinClientListMeta &
   Pick<StablecoinMeta, StablecoinClientSourceField> & {
     genius?: GeniusComplianceProfile;
+    reserveCompositionScope?: "scoped-report" | "selected-holdings" | "allocation-unavailable" | "nominal-issuance-paths";
   };
 
 /**

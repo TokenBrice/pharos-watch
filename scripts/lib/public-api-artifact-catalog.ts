@@ -763,7 +763,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = {
     referenceOrder: 37,
     summary: "Yield adapter manifest",
     description:
-      "Machine-readable source-list manifest for every yield-bearing asset, including adapter family, exact runtime source key when known, source-key pattern for runtime-resolved or disabled strategies, label, chain/project hints, lifecycle state, and methodology version.",
+      "Machine-readable source-list manifest for every yield-bearing asset, including adapter family, exact runtime source key when known, source-key pattern for runtime-resolved or disabled strategies, label, chain/project hints, lifecycle state (with the quarantine reason for reviewed source holds), and methodology version.",
     tags: ["Yield"],
     responseSchema: "YieldAdapterManifestResponse",
   },

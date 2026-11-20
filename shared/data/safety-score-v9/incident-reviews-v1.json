@@ -1883,6 +1883,55 @@
       }
     },
     {
+      "incidentId": "sbold-k3-capital-2026-11-18-vault-drain",
+      "assetId": "sbold-k3-capital",
+      "domain": "wrapper-local",
+      "kind": "share-accounting-integration-failure",
+      "occurredAt": "2026-11-18",
+      "status": "active",
+      "scope": {
+        "kind": "integration-only",
+        "integrationKey": "k3-sbold-ethereum-vault-swap-adapter"
+      },
+      "posture": {
+        "shareAccountingNavOracle": "high",
+        "measuredUnwind": "high"
+      },
+      "realizedHolderLossPct": 99.9,
+      "reviewedAt": "2026-11-20",
+      "reviewer": "Safety Score incident review #2106 (re-review on K3's next recovery update or by 2026-11-26)",
+      "primarySources": [
+        {
+          "label": "Ethereum block 26443076 (2026-11-18T16:14:47Z, hash 0xd4fe302b911cb5b52e88a852faacfc3f9ebb9697c6853e3e7323cbc683812fab). Alchemy archive read on 2026-11-20 at 00:22:40 UTC: the sBOLD vault returned paused() = true and convertToAssets(10^18) = 0",
+          "url": "https://etherscan.io/block/26443076",
+          "publishedAt": "2026-11-18"
+        },
+        {
+          "label": "K3 Capital sBOLD vault exploit post-mortem and recovery plan",
+          "url": "https://x.com/i/article/2123376353923764224",
+          "publishedAt": "2026-11-19"
+        },
+        {
+          "label": "Liquity confirms the recovery announcement and that Liquity V2 and BOLD are unaffected",
+          "url": "https://x.com/LiquityProtocol/status/2123408020579496280",
+          "publishedAt": "2026-11-19"
+        }
+      ],
+      "finding": "A residual token approval in K3 Capital's Ethereum sBOLD vault swap integration enabled extraction of approximately 3.43 million BOLD on 2026-11-18. K3 reports loss of 99.9% of vault assets. The pinned post-drain conversion quote rounds to zero BOLD per sBOLD against K3's pre-drain value of 1.0961 BOLD, supporting at least 99.9% impairment of an existing sBOLD share before recovery. The loss belongs to K3's wrapper claim. Liquity confirms its V2 protocol and BOLD are unaffected.",
+      "remediation": {
+        "state": "in-progress",
+        "lastVerifiedAt": "2026-11-19",
+        "summary": "K3 paused the vault at 13:05 UTC on November 18 and is coordinating partial recovery. K3 plans to convert returned ETH into BOLD and redeem affected holders case by case. Re-review on new recovery evidence or by 2026-11-26. Verified holder redemptions, reconciled backing and an independently reviewed fix are needed to assess resolution.",
+        "sources": [
+          {
+            "label": "K3 Capital sBOLD vault exploit post-mortem and recovery plan",
+            "url": "https://x.com/i/article/2123376353923764224",
+            "publishedAt": "2026-11-19"
+          }
+        ]
+      }
+    },
+    {
       "incidentId": "sdola-2026-llamalend-donation-oracle",
       "assetId": "sdola-inverse-finance",
       "domain": "wrapper-local",

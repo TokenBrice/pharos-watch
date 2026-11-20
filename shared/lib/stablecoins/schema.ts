@@ -7,7 +7,7 @@ import { LiveReservesConfigSchema } from "../live-reserve-adapters";
 import { isActiveStablecoinMeta, isReadableStablecoinMeta } from "./status";
 import { isCanonicalStablecoinId } from "../stablecoin-id";
 import { fuzzyDateRange } from "../classification/resolve-implementation-launch-date";
-import { FullAuthoredReserveCompositionSchema } from "../../types/reserves";
+import { FullAuthoredReserveCompositionSchema, RESERVE_REVIEW_PCT_TOLERANCE } from "../../types/reserves";
 import { defaultV9DependencyEconomicRole } from "../../types/dependency-types";
 import { validateMintBridgeOwnership } from "./mint-bridge-ownership";
 import { hasIndependentLiveCompositionDates, hasIndependentReserveObservationDates } from "../report-card-policy";
@@ -426,7 +426,7 @@ export const StablecoinMetaAssetSchema = StablecoinMetaAssetRawSchema.superRefin
         issue(ctx, ["reserveReview", "nonLinkDispositions", index, "reserveName"], "reserve review disposition must match the current reserve index and name");
       } else if (reserve.coinId != null) {
         issue(ctx, ["reserveReview", "nonLinkDispositions", index], "non-link dispositions cannot target an already linked reserve slice");
-      } else if (Math.abs(reserve.pct - disposition.pct) > REVIEW_QUANTITATIVE_TOLERANCE) {
+      } else if (Math.abs(reserve.pct - disposition.pct) > RESERVE_REVIEW_PCT_TOLERANCE) {
         issue(ctx, ["reserveReview", "nonLinkDispositions", index, "pct"], "reserve review disposition pct must match the current reserve slice");
       }
       if (UNRESOLVED_RESERVE_DISPOSITIONS.has(disposition.disposition)) {
@@ -439,7 +439,7 @@ export const StablecoinMetaAssetSchema = StablecoinMetaAssetRawSchema.superRefin
     }
     if (
       meta.reserveReview != null &&
-      Math.abs(meta.reserveReview.knownUnknownExposurePct - unresolvedDispositionPct) > REVIEW_QUANTITATIVE_TOLERANCE
+      Math.abs(meta.reserveReview.knownUnknownExposurePct - unresolvedDispositionPct) > RESERVE_REVIEW_PCT_TOLERANCE
     ) {
       issue(ctx, ["reserveReview", "knownUnknownExposurePct"], "reserveReview knownUnknownExposurePct must equal the total pct of unresolved dispositions");
     }

@@ -4,7 +4,7 @@
     {
       "sourceKey": "frax-balance-sheet:wtgxx",
       "name": "WTGXX (WisdomTree Government Money Market)",
-      "pct": 22.5,
+      "pct": 25.868155781925577,
       "risk": "low",
       "assetClass": "money-market-fund",
       "issuerOrObligor": "WisdomTree Government Money Market Fund",
@@ -17,9 +17,163 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "frax-balance-sheet:ethereum:0x853d955acef822db058eb8505911ed77f175b99e",
+      "name": "Legacy FRAX (ethereum)",
+      "pct": 14.144578860169666,
+      "risk": "very-high",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Frax Protocol",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "sourceKey": "frax-balance-sheet:bsc:0x90c97f71e18723b0cf0dfa30ee176ab653e89f40",
+      "name": "Legacy FRAX (bsc)",
+      "pct": 0.25736133682873197,
+      "risk": "very-high",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Frax Protocol",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "sourceKey": "frax-balance-sheet:arbitrum:0x17fc002b466eec40dae837fc4be5c67993ddbd6f",
+      "name": "Legacy FRAX (arbitrum)",
+      "pct": 0.2559361904389906,
+      "risk": "very-high",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Frax Protocol",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "sourceKey": "frax-balance-sheet:avalanche:0xd24c2ad096400b6fbcd2ad8b24e7acbc21a1da64",
+      "name": "Legacy FRAX (avalanche)",
+      "pct": 0.20341984464395096,
+      "risk": "very-high",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Frax Protocol",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "sourceKey": "frax-balance-sheet:optimism:0x2e3d870790dc77a83dd1d18184acc7439a53f475",
+      "name": "Legacy FRAX (optimism)",
+      "pct": 0.13644628448835158,
+      "risk": "very-high",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Frax Protocol",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "sourceKey": "frax-balance-sheet:fantom:0xdc301622e621166bd8e82f2ca0a26c13ad0be355",
+      "name": "Legacy FRAX (fantom)",
+      "pct": 0.11580498450165057,
+      "risk": "very-high",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Frax Protocol",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "sourceKey": "frax-balance-sheet:polygon:0x45c32fa6df82ead1e2ef74d17b76547eddfaff89",
+      "name": "Legacy FRAX (polygon)",
+      "pct": 0.11245395052434384,
+      "risk": "very-high",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Frax Protocol",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "sourceKey": "frax-balance-sheet:boba:0x7562f525106f5d54e891e005867bf489b5988cd9",
+      "name": "Legacy FRAX (boba)",
+      "pct": 0.0038390486250716553,
+      "risk": "very-high",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Frax Protocol",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "sourceKey": "frax-balance-sheet:zksync:0xb4c1544cb4163f4c2eca1ae9ce999f63892d912a",
+      "name": "Legacy FRAX (zksync)",
+      "pct": 0.0033149608512093006,
+      "risk": "very-high",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Frax Protocol",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "sourceKey": "frax-balance-sheet:polygon-zkevm:0xff8544fed5379d9ffa8d47a74ce6b91e632ac44d",
+      "name": "Legacy FRAX (polygon-zkevm)",
+      "pct": 0.0021170927570108447,
+      "risk": "very-high",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Frax Protocol",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "sourceKey": "frax-balance-sheet:aurora:0xe4b9e004389d91e4134a28f19bd833cba1d994b6",
+      "name": "Legacy FRAX (aurora)",
+      "pct": 0.0016246337689744287,
+      "risk": "very-high",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Frax Protocol",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
       "sourceKey": "frax-balance-sheet:frax",
       "name": "FRAX",
-      "pct": 16.1,
+      "pct": 0,
       "risk": "low",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Frax Protocol",
@@ -33,7 +187,7 @@
     {
       "sourceKey": "frax-balance-sheet:frxusd",
       "name": "frxUSD",
-      "pct": 13.6,
+      "pct": 15.562445677032862,
       "risk": "low",
       "coinId": "frxusd-frax",
       "depType": "collateral",
@@ -48,10 +202,10 @@
       "liquidityHorizon": "one-day"
     },
     {
-      "sourceKey": "frax-balance-sheet:sfrax",
+      "sourceKey": "frax-balance-sheet:ethereum:0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32",
       "name": "sFRAX",
-      "pct": 13.3,
-      "risk": "medium",
+      "pct": 14.285641521402184,
+      "risk": "very-high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Frax Protocol",
       "riskFactors": [
@@ -64,7 +218,7 @@
     {
       "sourceKey": "frax-balance-sheet:ustb",
       "name": "USTB (Superstate tokenized T-bills)",
-      "pct": 11.9,
+      "pct": 3.14602446919149,
       "risk": "low",
       "coinId": "ustb-superstate",
       "depType": "collateral",
@@ -82,7 +236,7 @@
     {
       "sourceKey": "frax-balance-sheet:sfrxusd",
       "name": "sfrxUSD",
-      "pct": 8.3,
+      "pct": 11.234641633404708,
       "risk": "low",
       "coinId": "sfrxusd-frax",
       "depType": "collateral",
@@ -99,7 +253,7 @@
     {
       "sourceKey": "frax-balance-sheet:buidl",
       "name": "BUIDL (BlackRock tokenized T-bills)",
-      "pct": 5.6,
+      "pct": 6.0743005870234414,
       "risk": "low",
       "coinId": "buidl-blackrock",
       "depType": "collateral",
@@ -117,7 +271,7 @@
     {
       "sourceKey": "frax-balance-sheet:usde",
       "name": "USDe",
-      "pct": 2.7,
+      "pct": 2.8309043873962563,
       "risk": "high",
       "coinId": "usde-ethena",
       "depType": "collateral",
@@ -135,7 +289,7 @@
     {
       "sourceKey": "frax-balance-sheet:frxeth",
       "name": "frxETH",
-      "pct": 0.7,
+      "pct": 0.7311114976566154,
       "risk": "low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Frax Protocol",
@@ -150,7 +304,7 @@
     {
       "sourceKey": "frax-balance-sheet:erebor_usd",
       "name": "EREBOR_USD (Erebor Bank frxUSD reserve account)",
-      "pct": 0.7,
+      "pct": 0.7654493349947964,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Erebor Bank (FBO frxUSD Stablecoin Reserve Account)",
@@ -164,7 +318,7 @@
     {
       "sourceKey": "frax-balance-sheet:usdb",
       "name": "USDB (Bridge)",
-      "pct": 0.7,
+      "pct": 0.0000014121763831536143,
       "risk": "low",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Bridge and underlying reserve counterparties",
@@ -176,10 +330,10 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "sourceKey": "frax-balance-sheet:lfrax",
+      "sourceKey": "frax-balance-sheet:fraxtal:0xff000000000000000000000000000000000001fd",
       "name": "LFRAX",
-      "pct": 0.7,
-      "risk": "medium",
+      "pct": 0.7390891220230162,
+      "risk": "very-high",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Frax Protocol",
       "riskFactors": [
@@ -192,7 +346,7 @@
     {
       "sourceKey": "frax-balance-sheet:sfrxeth",
       "name": "sfrxETH",
-      "pct": 0.6,
+      "pct": 0.5971431769253304,
       "risk": "low",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Frax Protocol",
@@ -207,7 +361,7 @@
     {
       "sourceKey": "frax-balance-sheet:cvx",
       "name": "CVX",
-      "pct": 0.6,
+      "pct": 0.43107945846737233,
       "risk": "very-high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Convex Finance",
@@ -221,7 +375,7 @@
     {
       "sourceKey": "frax-balance-sheet:eth",
       "name": "ETH",
-      "pct": 0.4,
+      "pct": 0.39612397428250307,
       "risk": "very-low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Ethereum protocol",
@@ -235,7 +389,7 @@
     {
       "sourceKey": "frax-balance-sheet:lzfrxeth",
       "name": "lzfrxETH",
-      "pct": 0.2,
+      "pct": 0.2206857680836412,
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Frax Protocol and LayerZero messaging",
@@ -251,7 +405,7 @@
     {
       "sourceKey": "frax-balance-sheet:reusd",
       "name": "reUSD",
-      "pct": 0.2,
+      "pct": 0.19725927464143422,
       "risk": "medium",
       "coinId": "reusd-resupply",
       "depType": "collateral",
@@ -269,7 +423,7 @@
     {
       "sourceKey": "frax-balance-sheet:wfrxeth",
       "name": "wfrxETH",
-      "pct": 0.2,
+      "pct": 0.17724983770173716,
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Frax Protocol",
@@ -284,7 +438,7 @@
     {
       "sourceKey": "frax-balance-sheet:crv",
       "name": "CRV",
-      "pct": 0.2,
+      "pct": 0.15396843957619757,
       "risk": "very-high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Curve DAO",
@@ -298,7 +452,7 @@
     {
       "sourceKey": "frax-balance-sheet:lzsfrxeth",
       "name": "lzsfrxETH",
-      "pct": 0.2,
+      "pct": 0.15722702387623144,
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Frax Protocol and LayerZero messaging",
@@ -314,7 +468,7 @@
     {
       "sourceKey": "frax-balance-sheet:usdc",
       "name": "USDC (Circle)",
-      "pct": 0.1,
+      "pct": 0.159110935486679,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -330,7 +484,7 @@
     {
       "sourceKey": "frax-balance-sheet:usds",
       "name": "USDS",
-      "pct": 0.1,
+      "pct": 0.1358414627197186,
       "risk": "low",
       "coinId": "usds-sky",
       "depType": "collateral",
@@ -347,7 +501,7 @@
     {
       "sourceKey": "frax-balance-sheet:weth",
       "name": "WETH",
-      "pct": 0.1,
+      "pct": 0.1271808628208971,
       "risk": "very-low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Wrapped Ether contract",
@@ -362,7 +516,7 @@
     {
       "sourceKey": "frax-balance-sheet:cvxcrv",
       "name": "cvxCRV",
-      "pct": 0.1,
+      "pct": 0.050146064886117205,
       "risk": "very-high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Convex Finance and Curve DAO",
@@ -376,7 +530,7 @@
     {
       "sourceKey": "frax-balance-sheet:fpi",
       "name": "FPI",
-      "pct": 0.1,
+      "pct": 0.07945291613887781,
       "risk": "medium",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Frax Protocol",
@@ -391,7 +545,7 @@
     {
       "sourceKey": "frax-balance-sheet:wbnb",
       "name": "WBNB",
-      "pct": 0.1,
+      "pct": 0.05240602360095397,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "BNB Chain WBNB contract",
@@ -406,7 +560,7 @@
     {
       "sourceKey": "frax-balance-sheet:velo",
       "name": "VELO (locked veNFT #4976)",
-      "pct": 0.1,
+      "pct": 0,
       "risk": "very-high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Velodrome Finance",
@@ -415,7 +569,7 @@
     {
       "sourceKey": "frax-balance-sheet:wavax",
       "name": "WAVAX",
-      "pct": 0,
+      "pct": 0.03619917670269751,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Avalanche wrapped AVAX contract"
@@ -423,7 +577,7 @@
     {
       "sourceKey": "frax-balance-sheet:op",
       "name": "OP",
-      "pct": 0,
+      "pct": 0.024395720052231035,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Optimism"
@@ -431,7 +585,7 @@
     {
       "sourceKey": "frax-balance-sheet:ausd",
       "name": "AUSD (Agora Dollar)",
-      "pct": 0,
+      "pct": 0.03916566680146171,
       "risk": "low",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Agora"
@@ -439,7 +593,7 @@
     {
       "sourceKey": "frax-balance-sheet:crvusd",
       "name": "sfrxUSD/scrvUSD Curve LP",
-      "pct": 0,
+      "pct": 0.056395572321360596,
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Curve Finance"
@@ -447,7 +601,7 @@
     {
       "sourceKey": "frax-balance-sheet:axlfrxeth",
       "name": "axlfrxETH",
-      "pct": 0,
+      "pct": 0.021403716820843417,
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Axelar Gateway frxETH representation and Frax Protocol"
@@ -455,7 +609,7 @@
     {
       "sourceKey": "frax-balance-sheet:wpol",
       "name": "WPOL",
-      "pct": 0,
+      "pct": 0.02129508670771511,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Polygon wrapped POL contract"
@@ -463,7 +617,7 @@
     {
       "sourceKey": "frax-balance-sheet:the",
       "name": "THE",
-      "pct": 0,
+      "pct": 0.008206547664431438,
       "risk": "very-high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Thena vote escrow",
@@ -472,7 +626,7 @@
     {
       "sourceKey": "frax-balance-sheet:sdt",
       "name": "SDT",
-      "pct": 0,
+      "pct": 0.00547424516514575,
       "risk": "very-high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Stake DAO vote escrow"
@@ -480,7 +634,7 @@
     {
       "sourceKey": "frax-balance-sheet:ram",
       "name": "RAM",
-      "pct": 0,
+      "pct": 0.00043566267655280756,
       "risk": "very-high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Ramses vote escrow",
@@ -489,7 +643,7 @@
     {
       "sourceKey": "frax-balance-sheet:bnb",
       "name": "BNB",
-      "pct": 0,
+      "pct": 0.0006633271333570404,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "BNB Chain"
@@ -497,7 +651,7 @@
     {
       "sourceKey": "frax-balance-sheet:stkaave",
       "name": "stkAAVE",
-      "pct": 0,
+      "pct": 0.0013576132224775363,
       "risk": "very-high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Aave Safety Module"
@@ -505,7 +659,7 @@
     {
       "sourceKey": "frax-balance-sheet:avax",
       "name": "AVAX",
-      "pct": 0,
+      "pct": 0.00013224064565244955,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Avalanche"
@@ -513,7 +667,7 @@
     {
       "sourceKey": "frax-balance-sheet:matic",
       "name": "MATIC",
-      "pct": 0,
+      "pct": 0.00009859052116201754,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Polygon"
@@ -521,7 +675,7 @@
     {
       "sourceKey": "frax-balance-sheet:zz",
       "name": "ZZ",
-      "pct": 0,
+      "pct": 0.00010567395459526572,
       "risk": "very-high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "ZigZagToken (Ethereum 0xc91a71a1ffa3d8b22ba615ba1b9c01b2bbbf55ad)"
@@ -529,7 +683,7 @@
     {
       "sourceKey": "frax-balance-sheet:multi",
       "name": "MULTI",
-      "pct": 0,
+      "pct": 0.0000286126099835134,
       "risk": "very-high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Multichain vote escrow"
@@ -537,7 +691,7 @@
     {
       "sourceKey": "frax-balance-sheet:uscc",
       "name": "USCC (Superstate crypto arbitrage)",
-      "pct": 0,
+      "pct": 0.000042502361372010814,
       "risk": "medium",
       "assetClass": "fund-share",
       "issuerOrObligor": "Bitwise Crypto Carry Fund"
@@ -545,7 +699,7 @@
     {
       "sourceKey": "frax-balance-sheet:chr",
       "name": "CHR",
-      "pct": 0,
+      "pct": 0.000010711547760629748,
       "risk": "very-high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Chronos vote escrow"
@@ -553,20 +707,48 @@
     {
       "sourceKey": "frax-balance-sheet:zk",
       "name": "ZK",
-      "pct": 0,
+      "pct": 0.000003904382069571133,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "ZKsync"
+    },
+    {
+      "sourceKey": "frax-balance-sheet:unreviewed",
+      "name": "Other reported Frax assets",
+      "pct": 0.3750475976590151,
+      "risk": "high",
+      "unclassifiedResidual": true,
+      "residualReason": "insufficient-evidence"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-04",
-    "reviewer": "Unknown-wave W1R53 classification; W2R28 issuer identities; W3R04 pinned VELO, THE and RAM lock liquidity",
+    "reviewedAt": "2026-11-20",
+    "reviewer": "Unknown-wave W1R53 classification; W2R28 issuer identities; W3R04 pinned VELO, THE and RAM lock liquidity; #2150 contract identity and denominator reconciliation",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Frax balance-sheet API; observed 2026-10-03, source as-of 2026-10-03T22:23:47Z",
+        "label": "Frax balance-sheet API, source as of 2026-11-20T00:43:47Z, observed 2026-11-20",
         "url": "https://api.frax.finance/v2/frax/balance-sheet/latest"
+      },
+      {
+        "label": "Frax issuer deployment roster for Legacy FRAX",
+        "url": "https://docs.frax.finance/frax-v1-original/frax"
+      },
+      {
+        "label": "Frax issuer Fraxtal deployment roster for frxUSD, LFRAX and FPI",
+        "url": "https://docs.frax.com/fraxtal/addresses/frax-tokens"
+      },
+      {
+        "label": "Ethereum block 26452796 (2026-11-20T00:43:47Z), corrected Ferry balance",
+        "url": "https://etherscan.io/block/26452796"
+      },
+      {
+        "label": "Polygon zkEVM block 33391890 (2026-07-03T15:55:44Z), corrected Ferry balance",
+        "url": "https://zkevm.polygonscan.com/block/33391890"
+      },
+      {
+        "label": "Fraxtal block 44162358 (2026-11-20T00:43:47Z)",
+        "url": "https://fraxscan.com/block/44162358"
       },
       {
         "label": "Frax v3 balance-sheet design",
@@ -621,31 +803,17 @@
         "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xdd4eDE1d1bE835887f1C4CAF22F091f49EB5a0De"
       }
     ],
-    "rationale": "Historical 2026-08-12 weights and compositionAsOf are preserved, not refreshed holdings. W1R53's 2026-10-03 API classifications and W2R28's exact axlfrxETH/ZZ technical issuer identities remain unchanged. W3R04 fetched the 2026-10-04T23:23:47Z API position census and pinned exact escrow state: Velodrome V2 NFT 4976 at Optimism 157779268 is normal, non-permanent, voted and locked until 2028-11-16; Thena NFT 20521 at BSC 125766088 is voted, unattached and locked until 2027-01-28; at Arbitrum 511756169, Ramses NFT 14 is voted with two attachments and expires 2027-03-11, while NFT 1906 is not voted with zero attachments and expires 2027-04-15. Ramses EIP-1967 implementation matches the verified implementation source. The exact withdrawal code requires expiry and clearing vote/attachment restrictions. Every inventoried position in each of these three source-keyed slices is locked beyond seven days, so only the adverse over-seven-days liquidity tier is authored; it is not a promise of realization at expiry or proof of an NFT secondary-market buyer. Other whole-position liquidation routes remain unresolved; no scalar maturity or immediate liquidity is inferred.",
-    "compositionBasis": "Official Frax balance-sheet asset rows aggregated by symbol at the response's pinned multi-chain observation blocks",
-    "compositionAsOf": "2026-08-12",
+    "rationale": "The corrected issuer asset rows sum to totalAssets within source rounding. The mixed FRAX ticker includes $4,179,456.67 of frxUSD on Fraxtal (0xfc00000000000000000000000000000000000001). That amount joins the frxUSD row. Legacy FRAX uses one source key per verified chain and token contract. Legacy FRAX is 15.2369%, sFRAX is 14.2856%, and bridged LFRAX is 0.7391%. FPI is a distinct token. Its dependency-cycle disposition remains independent of own-liability treatment. The prior report returned errors for the Ethereum and Polygon zkEVM Ferries. The corrected rows agree with balanceOf reads of 7,085.77478002 FRAX at Ethereum block 26452796 and 5,603.41599996 FRAX at Polygon zkEVM block 33391890. Exact-key metadata for older live observations remains available. The earlier locked-position research stays scoped to its original pins. W3R04 fetched the 2026-10-04T23:23:47Z API position census and pinned exact escrow state: Velodrome V2 NFT 4976 at Optimism 157779268 is normal, non-permanent, voted and locked until 2028-11-16; Thena NFT 20521 at BSC 125766088 is voted, unattached and locked until 2027-01-28; at Arbitrum 511756169, Ramses NFT 14 is voted with two attachments and expires 2027-03-11, while NFT 1906 is not voted with zero attachments and expires 2027-04-15. Ramses EIP-1967 implementation matches the verified implementation source. The exact withdrawal code requires expiry and clearing vote/attachment restrictions. Every inventoried position in each of these three source-keyed slices is locked beyond seven days, so only the adverse over-seven-days liquidity tier is authored; it is not a promise of realization at expiry or proof of an NFT secondary-market buyer. Other whole-position liquidation routes remain unresolved; no scalar maturity or immediate liquidity is inferred.",
+    "compositionBasis": "Frax issuer balance sheet as of 2026-11-20T00:43:47Z. Net issuer USD row values by chain and token contract divided by totalAssets of $262,006,930.872.",
+    "compositionAsOf": "2026-11-20",
     "scope": "full-composition",
-    "knownUnknownExposure": "Historical weights remain dated 2026-08-12. Additional keyed classifications describe current source categories, but the source-total remainder and whole-position liquidity horizons are unresolved; the zero-percent metadata rows do not quantify these unknowns.",
-    "knownUnknownExposurePct": 0,
+    "knownUnknownExposure": "Unreviewed positive source categories: axlusdc, dai, pyusd, sdai, usdt. The remainder is kept at its denominator share. Older ticker-only FRAX snapshots cannot identify the legacy and frxUSD split.",
+    "knownUnknownExposurePct": 0.3750475976590151,
     "nonLinkDispositions": [
-      {
-        "reserveIndex": 1,
-        "reserveName": "FRAX",
-        "pct": 16.1,
-        "disposition": "self-reserve",
-        "rationale": "The subject asset cannot create a dependency edge to itself."
-      },
-      {
-        "reserveIndex": 3,
-        "reserveName": "sFRAX",
-        "pct": 13.3,
-        "disposition": "self-reserve",
-        "rationale": "sFRAX is a staked claim on FRAX and therefore remains self exposure rather than an upstream stablecoin edge."
-      },
       {
         "reserveIndex": 0,
         "reserveName": "WTGXX (WisdomTree Government Money Market)",
-        "pct": 22.5,
+        "pct": 25.868155781925577,
         "disposition": "untracked-exogenous-asset",
         "rationale": "WTGXX is a disclosed WisdomTree government money-market-fund exposure outside the active tracked stablecoin set.",
         "candidateCoinIds": [
@@ -653,9 +821,112 @@
         ]
       },
       {
+        "disposition": "self-reserve",
+        "ownLiability": true,
+        "rationale": "The issuer reports this portion against the verified Legacy FRAX deployment ethereum:0x853d955acef822db058eb8505911ed77f175b99e.",
+        "reserveIndex": 1,
+        "reserveName": "Legacy FRAX (ethereum)",
+        "pct": 14.144578860169666
+      },
+      {
+        "disposition": "self-reserve",
+        "ownLiability": true,
+        "rationale": "The issuer reports this portion against the verified Legacy FRAX deployment bsc:0x90c97f71e18723b0cf0dfa30ee176ab653e89f40.",
+        "reserveIndex": 2,
+        "reserveName": "Legacy FRAX (bsc)",
+        "pct": 0.25736133682873197
+      },
+      {
+        "disposition": "self-reserve",
+        "ownLiability": true,
+        "rationale": "The issuer reports this portion against the verified Legacy FRAX deployment arbitrum:0x17fc002b466eec40dae837fc4be5c67993ddbd6f.",
+        "reserveIndex": 3,
+        "reserveName": "Legacy FRAX (arbitrum)",
+        "pct": 0.2559361904389906
+      },
+      {
+        "disposition": "self-reserve",
+        "ownLiability": true,
+        "rationale": "The issuer reports this portion against the verified Legacy FRAX deployment avalanche:0xd24c2ad096400b6fbcd2ad8b24e7acbc21a1da64.",
+        "reserveIndex": 4,
+        "reserveName": "Legacy FRAX (avalanche)",
+        "pct": 0.20341984464395096
+      },
+      {
+        "disposition": "self-reserve",
+        "ownLiability": true,
+        "rationale": "The issuer reports this portion against the verified Legacy FRAX deployment optimism:0x2e3d870790dc77a83dd1d18184acc7439a53f475.",
+        "reserveIndex": 5,
+        "reserveName": "Legacy FRAX (optimism)",
+        "pct": 0.13644628448835158
+      },
+      {
+        "disposition": "self-reserve",
+        "ownLiability": true,
+        "rationale": "The issuer reports this portion against the verified Legacy FRAX deployment fantom:0xdc301622e621166bd8e82f2ca0a26c13ad0be355.",
+        "reserveIndex": 6,
+        "reserveName": "Legacy FRAX (fantom)",
+        "pct": 0.11580498450165057
+      },
+      {
+        "disposition": "self-reserve",
+        "ownLiability": true,
+        "rationale": "The issuer reports this portion against the verified Legacy FRAX deployment polygon:0x45c32fa6df82ead1e2ef74d17b76547eddfaff89.",
+        "reserveIndex": 7,
+        "reserveName": "Legacy FRAX (polygon)",
+        "pct": 0.11245395052434384
+      },
+      {
+        "disposition": "self-reserve",
+        "ownLiability": true,
+        "rationale": "The issuer reports this portion against the verified Legacy FRAX deployment boba:0x7562f525106f5d54e891e005867bf489b5988cd9.",
+        "reserveIndex": 8,
+        "reserveName": "Legacy FRAX (boba)",
+        "pct": 0.0038390486250716553
+      },
+      {
+        "disposition": "self-reserve",
+        "ownLiability": true,
+        "rationale": "The issuer reports this portion against the verified Legacy FRAX deployment zksync:0xb4c1544cb4163f4c2eca1ae9ce999f63892d912a.",
+        "reserveIndex": 9,
+        "reserveName": "Legacy FRAX (zksync)",
+        "pct": 0.0033149608512093006
+      },
+      {
+        "disposition": "self-reserve",
+        "ownLiability": true,
+        "rationale": "The Polygon zkEVM Ferry holds the bridged Legacy FRAX contract at 0xff8544fed5379d9ffa8d47a74ce6b91e632ac44d. Its 5,603.41599996 FRAX balance at block 33391890 matches the corrected issuer row.",
         "reserveIndex": 10,
+        "reserveName": "Legacy FRAX (polygon-zkevm)",
+        "pct": 0.0021170927570108447
+      },
+      {
+        "disposition": "self-reserve",
+        "ownLiability": true,
+        "rationale": "The issuer reports this portion against the verified Legacy FRAX deployment aurora:0xe4b9e004389d91e4134a28f19bd833cba1d994b6.",
+        "reserveIndex": 11,
+        "reserveName": "Legacy FRAX (aurora)",
+        "pct": 0.0016246337689744287
+      },
+      {
+        "disposition": "self-reserve",
+        "ownLiability": true,
+        "rationale": "At Ethereum block 26452796, sFRAX asset() returned Legacy FRAX 0x853d955acef822db058eb8505911ed77f175b99e. The issuer's Compound collateral and direct share balances match pinned reads.",
+        "reserveIndex": 14,
+        "reserveName": "sFRAX",
+        "pct": 14.285641521402184
+      },
+      {
+        "reserveIndex": 20,
+        "reserveName": "EREBOR_USD (Erebor Bank frxUSD reserve account)",
+        "pct": 0.7654493349947964,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Erebor Bank deposit account holding frxUSD reserve cash; a banking relationship, not a holding of the frxUSD token itself."
+      },
+      {
+        "reserveIndex": 21,
         "reserveName": "USDB (Bridge)",
-        "pct": 0.7,
+        "pct": 0.0000014121763831536143,
         "disposition": "untracked-exogenous-asset",
         "rationale": "USDB is identified by the source but is outside the active scoring set.",
         "candidateCoinIds": [
@@ -663,25 +934,33 @@
         ]
       },
       {
-        "reserveIndex": 24,
+        "disposition": "self-reserve",
+        "ownLiability": true,
+        "rationale": "The issuer's Fraxtal bridge roster maps 0xff000000000000000000000000000000000001fd to Ethereum Legacy FRAX. The Fraxtal balance and LFRAX token identity were verified at block 44162358.",
+        "reserveIndex": 22,
+        "reserveName": "LFRAX",
+        "pct": 0.7390891220230162
+      },
+      {
+        "reserveIndex": 35,
         "reserveName": "FPI",
-        "pct": 0.1,
+        "pct": 0.07945291613887781,
         "disposition": "self-reserve",
         "rationale": "FPI is a Frax-ecosystem stablecoin genesis-collateralized by FRAX itself; promoting FRAX's FPI balance-sheet holding to a dependency edge would close a circular FRAX<->FPI path."
       },
       {
-        "reserveIndex": 25,
+        "reserveIndex": 36,
         "reserveName": "WBNB",
-        "pct": 0.1,
+        "pct": 0.05240602360095397,
         "disposition": "untracked-exogenous-asset",
         "rationale": "WBNB is an identified wrapped BNB cryptoasset held on the Frax balance sheet, not a tracked stablecoin dependency."
       },
       {
-        "reserveIndex": 9,
-        "reserveName": "EREBOR_USD (Erebor Bank frxUSD reserve account)",
-        "pct": 0.7,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "Erebor Bank deposit account holding frxUSD reserve cash; a banking relationship, not a holding of the frxUSD token itself."
+        "disposition": "insufficient-evidence",
+        "rationale": "These issuer-reported rows have no reviewed instrument classification in this sidecar.",
+        "reserveIndex": 56,
+        "reserveName": "Other reported Frax assets",
+        "pct": 0.3750475976590151
       }
     ]
   },

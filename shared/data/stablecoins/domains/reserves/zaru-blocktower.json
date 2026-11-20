@@ -47,6 +47,7 @@
     "compositionBasis": "Moore AUP report signed October 1, 2026; selected historical Solana-book asset categories, not current whole-token composition",
     "compositionAsOf": "2026-08-31",
     "scope": "selected-slices",
+    "scopedWeights": true,
     "knownUnknownExposure": "Current whole-token allocations and reserve-to-liability scope across Solana, Ethereum, Base and Arc remain unestablished. The historical report does not disclose Sanlam fund constituents, hard maturity maxima or independently verified bankruptcy remoteness.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [

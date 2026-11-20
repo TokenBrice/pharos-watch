@@ -140,6 +140,14 @@ describe("buildProtocolCategoryLookupFromCachePayload", () => {
 });
 
 describe("coverage detector pre-cap cohorts", () => {
+  it("omits former sBOLD pools from native recommendations despite positive APY", () => {
+    const held = lendingPool({
+      pool: "dac71f4f-7b97-463a-b19f-9796c56c21f1", project: "liquity-v2", symbol: "sBOLD", tvlUsd: 6_000_000,
+    });
+    const gaps = identifyCoverageGaps([held, { ...held, pool: "other-sbold-pool" }], new Set());
+    expect(gaps.nativeExactPoolRecommendations.flatMap(({ poolIds }) => poolIds)).toEqual(["other-sbold-pool"]);
+  });
+
   it("keeps all 25 lending and venue candidates until durable review and publication", async () => {
     const projects = Array.from({ length: 25 }, (_, i) => `uncurated-lender-${i}`);
     const pools = projects.map((project, i) => lendingPool({ pool: `uncurated-pool-${i}`,
@@ -301,6 +309,7 @@ describe("runYieldCoverageAudit", () => {
   });
 
   it("treats a validated empty rankings array as available coverage", async () => {
+    lifecycleFixture.coins = [{ id: "sbold-k3-capital", symbol: "sBOLD" }, { id: "susde-ethena", symbol: "sUSDe" }];
     mockLoadDlStablecoinPools.mockResolvedValue({
       pools: [lendingPool({ pool: "new-usdc", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000 })],
       meta: { mode: "dex-cache", updatedAt: 1_774_526_300, ageSeconds: 100, poolCount: 1, fallbackMode: null },
@@ -317,6 +326,10 @@ describe("runYieldCoverageAudit", () => {
     const result = await runYieldCoverageAudit(mockD1([{ match: "yield_coverage_review_dispositions", rows: [] }]));
     expect(result.status).toBe("ok");
     expect(mockSetCache).toHaveBeenCalledWith(expect.anything(), "yield-coverage-audit", expect.any(String));
+    const report = JSON.parse(String(mockSetCache.mock.calls[0]?.[2]));
+    expect(report.intentionalGapIds).toContain("sbold-k3-capital");
+    expect(report.yieldBearingMissingFromRankings).toEqual(["susde-ethena"]);
+    expect(report.queueTotals.byKind["ranking-missing"]).toBe(1);
   });
 
   it("does not report an envelope-rejected curated pin as a missing pool", async () => {

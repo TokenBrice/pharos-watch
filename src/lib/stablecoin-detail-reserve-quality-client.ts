@@ -35,6 +35,7 @@ export interface ReserveQualityLadderClientRow {
 
 export interface ReserveQualitySliceClientRow {
   key: string;
+  sourceKey?: string;
   name: string;
   pct: number;
   assetClassLabel: string | null;
@@ -353,6 +354,7 @@ export function projectReserveQualityClientSummary(coin: StablecoinMeta): Reserv
     knownUnknownExposureNote: review?.knownUnknownExposure ?? null,
     slices: slices.map((slice, index) => ({
       key: `${slice.name}:${index}`,
+      ...(slice.sourceKey ? { sourceKey: slice.sourceKey } : {}),
       name: slice.name,
       pct: slice.pct,
       risk: slice.risk,

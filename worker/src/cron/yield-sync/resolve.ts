@@ -38,8 +38,10 @@ export async function resolveYieldSources(params: ResolveYieldSourcesParams): Pr
   });
 
   // Exact pins and supplemental sources obey the same reviewed holds as discovery.
-  trackedResolution.resolved = trackedResolution.resolved.filter(({ yield: source }) =>
+  trackedResolution.resolved = trackedResolution.resolved.filter(({ id, yield: source }) =>
     !source || !isBlockedYieldOpportunitySource({
+      stablecoinId: id,
+      sourceKey: source.sourceKey,
       project: source.project ?? source.venueProtocol,
       pool: source.sourcePool,
     })

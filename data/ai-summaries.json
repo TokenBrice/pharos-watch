@@ -3283,11 +3283,10 @@
   },
   "brla-brla-digital": {
     "title": "Avenia's audited real",
-    "text": "BRLA is Avenia's centralized Brazilian real stablecoin, minted and redeemed 1:1 for BRL after KYC and deployed natively on Polygon, Gnosis, Celo, and Moonbeam without wrapping or bridge dependencies. Most stablecoins help users leave a local currency for dollars; BRLA tokenizes the real for on-chain settlement instead. The reserve disclosure is detailed: UHY Bendoraytes issues monthly reasonable-assurance reports that itemize BRL cash across named Brazilian banks and payment institutions plus overnight repurchase agreements collateralized by corporate debentures, and reconcile the total against BRLA in circulation. That supports a backing pillar in the upper half of the card. The weak line is exit: on the {{grade}} card the exit pillar is the weakest of the three because no comparable secondary route is established for the supply, so the practical way out is Avenia's own redemption window. Issuance is issuer-direct on every chain, gated by an operator role held by Avenia keys and contracts, with blacklist and upgrade authority in the same hands. The native BRL peg record shows a handful of episodes since Pharos began native-quote monitoring in mid-2026. Exit, issuance, and upgrade authority all run through Avenia on every chain the token uses.",
-    "updatedAt": "2026-10-19",
+    "text": "BRLA is Avenia's centralized Brazilian real stablecoin, minted and redeemed 1:1 for BRL after KYC and deployed natively on Polygon, Gnosis, Celo, and Moonbeam without wrapping or bridge dependencies. Most stablecoins help users leave a local currency for dollars; BRLA tokenizes the real for on-chain settlement instead. UHY Bendoraytes issues monthly reasonable-assurance reports. Its October 2026 report itemizes BRL cash and cash equivalents across five named institutions. The reported reserve total covered BRLA in circulation. That supports a backing pillar in the upper half of the card. The weak line is exit: on the {{grade}} card the exit pillar is the weakest of the three because no comparable secondary route is established for the supply, so the practical way out is Avenia's own redemption window. Issuance is issuer-direct on every chain, gated by an operator role held by Avenia keys and contracts, with blacklist and upgrade authority in the same hands. The native BRL peg record shows a handful of episodes since Pharos began native-quote monitoring in mid-2026. Exit, issuance, and upgrade authority all run through Avenia on every chain the token uses.",
+    "updatedAt": "2026-11-20",
     "authoredBy": "ai",
     "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19",
     "claimTokens": [
       {
         "token": "grade",

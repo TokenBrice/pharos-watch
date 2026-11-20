@@ -4,7 +4,7 @@
     {
       "sourceKey": "fdusd-independent-assurance:fdusd:treasury-bills",
       "name": "U.S. Treasury Bills",
-      "pct": 89.16,
+      "pct": 88.61,
       "risk": "very-low",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
@@ -14,12 +14,12 @@
         "custody"
       ],
       "liquidityHorizon": "one-day",
-      "maturityDaysMax": 48
+      "maturityDaysMax": 52
     },
     {
       "sourceKey": "fdusd-independent-assurance:fdusd:custody-cash",
       "name": "Cash",
-      "pct": 10.26,
+      "pct": 11.39,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Financial institutions holding FDUSD reserve accounts",
@@ -29,28 +29,11 @@
         "concentration"
       ],
       "liquidityHorizon": "immediate"
-    },
-    {
-      "sourceKey": "fdusd-independent-assurance:fdusd:fixed-deposits",
-      "name": "Fixed Deposit",
-      "pct": 0.58,
-      "risk": "very-low",
-      "assetClass": "bank-deposit",
-      "issuerOrObligor": "Financial institutions holding FDUSD fixed deposits",
-      "riskFactors": [
-        "counterparty",
-        "duration",
-        "liquidity",
-        "custody",
-        "concentration"
-      ],
-      "liquidityHorizon": "seven-days",
-      "maturityDaysMax": 2
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-21",
-    "reviewer": "Pharos reserve-feed source review 2026-10-21",
+    "reviewedAt": "2026-11-20",
+    "reviewer": "Pharos reserve-feed source review 2026-11-20",
     "confidence": "verified",
     "sources": [
       {
@@ -58,37 +41,30 @@
         "url": "https://www.firstdigitallabs.com/transparency"
       },
       {
-        "label": "AOGB FDUSD reserves limited-assurance report: September 2026, signed October 16",
-        "url": "https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/6ad828758ca468da1c9db6e6_Attestation%20Report%20on%20Reserves%20Account%20Sept.pdf"
+        "label": "AOGB FDUSD reserves limited-assurance report, October 2026",
+        "url": "https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/6afe5884d7ce79e868f284e7_ISAE3000%20-%20Attestation%20Report%20on%20Reserves%20Account%20Oct%202026)%20-%20Final.pdf"
       }
     ],
-    "rationale": "AOGB's independent limited-assurance report signed October 16 reconciles September 30 FDUSD supply of $325,042,596.91 with $326,311,744.04 held in reserve accounts. The complete reserve schedule reports $290,942,334.06 of U.S. Treasury bills, $33,469,409.98 of cash in custody accounts, and a $1,900,000 fixed deposit. These balances are 89.16%, 10.26%, and 0.58% of reserve assets after rounding. The schedule identifies nine Treasury bills maturing October 13 through November 17, 2026; the fixed deposit matures October 2. The six named native-chain liabilities sum exactly to reported supply. The engagement supplies limited assurance at the examined instant, not a current audit or assurance over extraordinary liquidation conditions.",
-    "compositionBasis": "AOGB limited-assurance report and management reserve schedule as of 2026-09-30 at 9:00 PM Eastern Time",
-    "compositionAsOf": "2026-09-30",
+    "rationale": "AOGB's independent limited-assurance report dated November 16 covers $301,712,326.46 held in reserve accounts against 300,401,056.99 FDUSD outstanding on October 31. The reserve schedule reconciles exactly to $267,345,802.82 in eight U.S. Treasury bills (88.61%) and $34,366,523.64 in custody cash (11.39%). The bills mature from November 3 through December 22, 2026. The schedule omits a separate fixed-deposit balance. The six native-chain liabilities sum exactly to reported supply. The engagement provides limited assurance at the examined instant and excludes extraordinary liquidation conditions.",
+    "compositionBasis": "AOGB limited-assurance report and management reserve schedule as of 2026-10-31 at 9:00 PM Eastern Time",
+    "compositionAsOf": "2026-10-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The report fully classifies reserve assets and lists each Treasury bill by CUSIP and maturity. It does not identify the underlying financial institutions or their shares within cash and fixed deposits. The accounts are managed by a related-party Hong Kong public trust company; the report's use and extraordinary-liquidity limitations remain. The signed report schedule, not rounded dashboard percentages, is the composition authority.",
+    "knownUnknownExposure": "The report classifies all scheduled reserve assets and lists each Treasury bill by CUSIP and maturity. The underlying cash institutions and their shares are undisclosed. A related-party Hong Kong public trust company manages the accounts. Composition follows the signed report schedule.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "U.S. Treasury Bills",
-        "pct": 89.16,
+        "pct": 88.61,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The identified U.S. Treasury bills are external government securities rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 1,
         "reserveName": "Cash",
-        "pct": 10.26,
+        "pct": 11.39,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Cash held in FDUSD reserve accounts is external fiat backing rather than a tracked stablecoin dependency."
-      },
-      {
-        "reserveIndex": 2,
-        "reserveName": "Fixed Deposit",
-        "pct": 0.58,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "The fixed deposit is an external bank asset rather than a tracked stablecoin dependency."
       }
     ]
   },

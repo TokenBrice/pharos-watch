@@ -15,6 +15,7 @@ vi.mock("@shared/lib/tracked-stablecoin-utils", async (importOriginal) => {
       "eursafo-spiko",
       "susd-solayer",
       "apyusd-apyx",
+      "sbold-k3-capital",
       "susde-ethena",
       "usdo-openeden",
       "gtusdcp-gauntlet",
@@ -42,6 +43,7 @@ vi.mock("../state", async (importOriginal) => {
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { YIELD_POOL_MAP } from "../../../lib/yield-config/yield-config-pools";
 import { appendLinkedVariantParentYieldSources } from "../resolve-linked-variants";
+import { resolveYieldSources } from "../resolve";
 import { resolveTrackedYieldSources } from "../resolve-observations";
 import { evaluateYieldSourcesCooperative } from "../evaluation";
 import { getPriceDerivedApy } from "../state";
@@ -106,6 +108,28 @@ function hasSource(entries: ResolvedYieldEntry[], stablecoinId: string, sourcePo
 
 beforeEach(() => {
   vi.mocked(getPriceDerivedApy).mockResolvedValue(null);
+});
+
+it.each([
+  "0x23346b04a7f55b8760e5860aa5a77383d63491cd",
+  "0x0000000000000000000000000000000000000001",
+])("withholds K3 sBOLD vault %s before projecting it onto BOLD", async (sourcePool) => {
+  const startSec = Date.parse("2026-11-26T01:00:00Z") / 1000;
+  vi.mocked(getPriceDerivedApy).mockResolvedValue({ apy: 8, sourceObservedAt: startSec, comparisonAnchorObservedAt: startSec - 14 * DAY_SECONDS });
+  const { resolved } = await resolveYieldSources({
+    db: mockD1(), startSec, sevenDaysAgoSec: startSec - 7 * DAY_SECONDS,
+    dlPools: [], onChainRates: new Map(), safetyScores: new Map(), safetySnapshotAvailable: true,
+    riskFreeRates: baseEvaluationInput().riskFreeRates,
+    stablecoinSupplyById: new Map([["bold-liquity", 10_000_000]]), stablecoinSupplyMapState: "ok",
+    supplementalCandidates: [{ stablecoinId: "sbold-k3-capital", symbol: "sBOLD", yield: {
+      sourceKey: `protocol-api:k3:ethereum:${sourcePool}`, currentApy: 8, apyBase: 8, apyReward: null, sourcePool,
+      exchangeRate: null, sourceTvlUsd: 2_000_000, dataSource: "protocol-api", yieldType: "lending-vault",
+    } }],
+  });
+  expect(getPriceDerivedApy).toHaveBeenCalledWith(expect.anything(), "sbold-k3-capital", undefined);
+  expect(resolved.some(({ id, yield: source }) =>
+    source && (id === "sbold-k3-capital" || source.sourceKey.includes("linked-variant:sbold-k3-capital:"))
+  )).toBe(false);
 });
 
 describe("Layer 3 never adopts a lending-venue pool", () => {

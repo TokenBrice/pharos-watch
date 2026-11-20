@@ -406,6 +406,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
       "shared/lib/classification/resolve-mechanism-archetype.ts",
       "shared/lib/classification/pegs.ts",
       "shared/lib/peg-taxonomy.ts",
+      "shared/lib/reserve-templates.ts",
       "shared/types/stablecoin-client-meta.ts",
       "scripts/lib/ts-ast.mts",
       "scripts/lib/atomic-artifact-write.mts",

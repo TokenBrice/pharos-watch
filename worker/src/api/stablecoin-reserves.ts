@@ -43,7 +43,7 @@ export const handleStablecoinReserves = async (
   const body: StablecoinReservesResponse = {
     stablecoinId,
     mode: resolved.mode,
-    reserves: resolved.reserves,
+    reserves: resolved.reserves.map(({ selfReferential: _selfReferential, ...slice }) => slice),
     estimated: resolved.estimated,
     ...(resolved.liveAt != null ? { liveAt: resolved.liveAt } : {}),
     ...(resolved.source ? { source: resolved.source } : {}),

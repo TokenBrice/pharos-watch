@@ -12,7 +12,7 @@ import {
   type ResponsiveMethodologyPipelineProps,
   WorkedExample,
 } from "../../methodology-shared";
-import { MORPHO_NET_YIELD_DESCRIPTION, YIELD_POOL_DELIVERY_PARAGRAPH, YIELD_SECTION_CONTENT } from "@/lib/methodology-content";
+import { MORPHO_NET_YIELD_DESCRIPTION, YIELD_POOL_DELIVERY_PARAGRAPH, YIELD_REVIEWED_HOLD_DESCRIPTION, YIELD_SECTION_CONTENT } from "@/lib/methodology-content";
 import { YieldMethodologyRelatedLinks, YieldNavTokenMechanismLinks } from "./yield-mechanism-links";
 import { METHODOLOGY_SECTION_ACCENT_CLASSES } from "@shared/lib/classification";
 import {
@@ -275,6 +275,7 @@ export function YieldIntelligenceMethodologySection() {
                     that share price over the window, not an average of samples. It is the return a holder earned, and
                     it is negative when the share price fell.
                   </p>
+                  <p>{YIELD_REVIEWED_HOLD_DESCRIPTION}</p>
                   <p>
                     Read-time <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">data-stale</code> warnings are also
                     cadence-aware: core families attach only after three missed <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">sync-yield-data</code>{" "}

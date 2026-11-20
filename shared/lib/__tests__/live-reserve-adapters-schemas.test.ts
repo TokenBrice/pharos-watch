@@ -243,6 +243,17 @@ describe("LiveReservesConfigSchema URL validation", () => {
 });
 
 describe("LiveReservesConfigSchema adapter policy validation", () => {
+  it.each([
+    ["attestation-pdf-index", {}],
+    ["tether-transparency", { currencyIso: "xaut" }],
+    ["tether-transparency-mxnt", { currencyIso: "mxnt" }],
+  ] as const)("rejects own-liability flags in authored %s slices", (adapter, params) => {
+    const slice = { name: "Physical backing", pct: 100, risk: "low" };
+    const schema = LIVE_RESERVE_ADAPTER_DEFINITIONS[adapter].paramsSchema;
+    expect(schema.safeParse({ ...params, slices: [slice] }).success).toBe(true);
+    expect(schema.safeParse({ ...params, slices: [{ ...slice, selfReferential: true }] }).success).toBe(false);
+  });
+
   it("classifies MXNT Tether telemetry as detail-only", () => {
     expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["tether-transparency-mxnt"]).toMatchObject({
       sourceModel: "validated-static",

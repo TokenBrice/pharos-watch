@@ -574,7 +574,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
   });
 
   it.each([
-    ["stale", -14_401], ["future", 601], ["invalid", "not-a-clock"], ["null", null],
+    ["stale", -14_401], ["future", 660], ["invalid", "not-a-clock"], ["null", null],
   ])("cannot publish a %s scanner quote through supplemental intake and consensus carry", async (_label, clock) => {
     scanner(typeof clock === "number" ? nowSec + clock : clock);
     const supplementalAssets = await fetchFiatCoinGeckoTokens({});

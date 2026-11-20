@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { computeCollateralQualityFromReserves } from "@shared/lib/report-card-policy";
 import { describe, it, expect } from "vitest";
 
 import {
@@ -12,7 +13,7 @@ import {
   type FraxFpiCollateralResponse,
 } from "../frax";
 import { installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
-import { BALANCE_SHEET_ENDPOINT, BALANCE_SHEET_SAMPLE } from "./frax.test-support";
+import { BALANCE_SHEET_ENDPOINT, BALANCE_SHEET_SAMPLE, FERRY_ROWS } from "./frax.test-support";
 
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
@@ -21,11 +22,187 @@ const FRAX_BALANCE_SHEET_FIXTURE = JSON.parse(
 ) as FraxBalanceSheetResponse;
 const FPI_COLLATERAL_ENDPOINT = "https://api.frax.finance/v2/fpifpis/fpi-collateral";
 
-
 describe("adaptFraxBalanceSheet", () => {
+  it.each([
+    ["ethereum", "missing"], ["polygon_zkevm", "missing"],
+    ["ethereum", "address"], ["polygon_zkevm", "tokenAddress"], ["ethereum", "duplicate"],
+    ["ethereum", "unvalued"], ["polygon_zkevm", "unvalued"],
+    ["ethereum", "unmeasured"], ["polygon_zkevm", "zero-quantity"],
+    ["polygon_zkevm", "misvalued"], ["polygon_zkevm", "missing-price"], [null, "zero"], [null, "priced"],
+  ])("checks the Ferry census on %s (%s)", (failedChain, fault) => {
+    const usd = 5546.479073608646;
+    const priced = fault === "misvalued" || fault === "missing-price" || fault === "priced";
+    const ferryRows = FERRY_ROWS.flatMap<NonNullable<FraxBalanceSheetResponse["assets"]>[number]>(row => {
+      if (row.chain === "polygon_zkevm" && priced) {
+        return [{ ...row, tokenQuantity: 5603.41599996, tokenQuantityE18: "5603415999960000000000", totalValueUsd: fault === "misvalued" ? 1 : usd }];
+      }
+      if (row.chain !== failedChain) return [row];
+      if (fault === "missing") return [];
+      if (fault === "duplicate") return [row, row];
+      if (fault === "unvalued") return [{ ...row, tokenQuantity: 5603.41599996 }];
+      if (fault === "unmeasured") return [{ ...row, tokenQuantity: undefined }];
+      if (fault === "zero-quantity") return [{ ...row, totalValueUsd: 1 }];
+      return [{ ...row, [fault]: "0x0000000000000000000000000000000000000001" }];
+    });
+    const tokenPriceUsd = priced && fault !== "missing-price" ? { FRAX: 0.98983889 } : undefined;
+    const result = adaptFraxBalanceSheet({
+      tokenPriceUsd, totalAssets: priced ? 100 + usd : 100, assets: [
+        { tokenSymbol: "USDC", totalValueUsd: 100, category: "asset:owned:usd" }, ...ferryRows,
+      ],
+    }, "frax-frax");
+    if (failedChain) {
+      expect(result.warnings ?? []).toContainEqual(expect.objectContaining({
+        code: "asset-coverage-incomplete", effect: "fatal", message: expect.stringContaining(failedChain),
+      }));
+    } else {
+      expect(result.warnings).toBeUndefined();
+      if (fault === "zero") expect(result.slices.map(row => row.pct)).toEqual([100]);
+    }
+  });
+
+  it.each(["intact", "misvalued", "missing", "duplicate", "false-zero", "true-zero"])("checks the Arbitrum Ferry row (%s)", (fault) => {
+    const zero = fault === "false-zero" || fault === "true-zero";
+    const row = {
+      chain: "arbitrum", address: "0x5a9bef8cea603aac78a523fb245c1a9264d50706",
+      tokenAddress: "0x17fc002b466eec40dae837fc4be5c67993ddbd6f", tokenSymbol: "FRAX",
+      description: "FraxFerry - FRAX arbitrum->ethereum", category: "asset:owned:frax",
+      tokenQuantity: zero ? 0 : 405293.77540004,
+      tokenQuantityE18: fault === "true-zero" ? "0" : "405293775400040000000000",
+      totalValueUsd: zero ? 0 : fault === "misvalued" ? 1 : 401208.1385442403,
+    };
+    const result = adaptFraxBalanceSheet({
+      totalAssets: 262_006_930.872, tokenPriceUsd: { FRAX: 0.98991932 }, assets: [
+        { tokenSymbol: "USDC", category: "asset:owned:usd", totalValueUsd: 262_006_930.872 - (zero ? 0 : 401208.1385442403) },
+        ...FERRY_ROWS.filter(asset => asset.chain !== "arbitrum"),
+        ...Array.from({ length: fault === "missing" ? 0 : fault === "duplicate" ? 2 : 1 }, () => row),
+      ],
+    }, "frax-frax", TRACKED_META_BY_ID.get("frax-frax")!.contracts);
+    if (fault !== "intact" && fault !== "true-zero") {
+      expect(result.warnings ?? []).toContainEqual(expect.objectContaining({
+        code: "asset-coverage-incomplete", effect: "fatal", message: expect.stringContaining("arbitrum"),
+      }));
+    } else expect(result.warnings?.some(warning => warning.effect === "fatal")).toBeFalsy();
+  });
+
+  it.each([
+    { description: "ERROR: reserve read failed", tokenQuantity: 1, totalValueUsd: 1 },
+    { tokenQuantity: -0.0001, totalValueUsd: 0 },
+  ])("rejects an issuer error on a non-Ferry frxUSD row (%j)", (fault) => {
+    const result = adaptFraxBalanceSheet({ totalAssets: 100, assets: [
+      { tokenSymbol: "USDC", totalValueUsd: 100, category: "asset:owned:usd" },
+      { tokenSymbol: "frxUSD", chain: "ethereum", category: "asset:owned:usd", ...fault },
+    ] }, "frxusd-frax");
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "asset-coverage-incomplete", effect: "fatal", message: "Frax balance-sheet asset read failed on ethereum",
+    }));
+  });
+
+  it.each([false, true])("reconciles the Legacy FRAX leg of LP #548162 (false zero: %s)", (falseZero) => {
+    const result = adaptFraxBalanceSheet({
+      totalAssets: 1_000_000, tokenPriceUsd: { FRAX: 0.98991932 }, assets: [
+        ...FERRY_ROWS,
+        { tokenSymbol: "USDC", totalValueUsd: 10_080.68, category: "asset:owned:usd" },
+        { chain: "ethereum", address: "0xb1748c79709f4ba2dd82834b8c82d4a505003f27",
+          tokenAddress: "0x853d955acef822db058eb8505911ed77f175b99e", tokenSymbol: "FRAX",
+          description: "Quantity of FRAX in UniV3 LP #548162 frxETH/FRAX", category: "asset:owned:frax_volatile",
+          tokenQuantity: falseZero ? 0 : 1_000_000, tokenQuantityE18: "999999999999999999999964",
+          totalValueUsd: falseZero ? 0 : 989_919.32 },
+      ],
+    }, "frax-frax", TRACKED_META_BY_ID.get("frax-frax")!.contracts);
+    expect(result.warnings?.some(warning => warning.code === "asset-coverage-incomplete" && warning.effect === "fatal") ?? false)
+      .toBe(falseZero);
+  });
+
+  it("gives the same FRAX reserve book equal live and curated collateral-drift scores", () => {
+    const meta = TRACKED_META_BY_ID.get("frax-frax")!;
+    const ownIndexes = new Set(meta.reserveReview!.nonLinkDispositions!.filter(row => row.ownLiability).map(row => row.reserveIndex));
+    const own = meta.reserves!.filter((_, index) => ownIndexes.has(index));
+    const { slices } = adaptFraxBalanceSheet({
+      totalAssets: 100, tokenPriceUsd: { FRAX: 1, sFRAX: 1, LFRAX: 1 }, assets: [
+        ...FERRY_ROWS,
+        ...own.map(row => {
+          const [, chain, tokenAddress] = row.sourceKey!.split(":");
+          return { chain, tokenAddress, tokenSymbol: "FRAX", category: "asset:owned:frax",
+            tokenQuantity: row.pct, tokenQuantityE18: row.pct.toFixed(18).replace(".", ""), totalValueUsd: row.pct };
+        }),
+      ],
+    }, meta.id, meta.contracts);
+    const liveByKey = new Map(slices.filter(row => row.selfReferential).map(row => [row.sourceKey, row]));
+    expect(liveByKey.size).toBe(13);
+    const liveBook = meta.reserves!.map((row, index) => ownIndexes.has(index) ? liveByKey.get(row.sourceKey)! : row);
+    expect(own.map(row => row.risk)).toEqual(own.map(row => liveByKey.get(row.sourceKey)!.risk));
+    expect(computeCollateralQualityFromReserves(liveBook)).toBe(computeCollateralQualityFromReserves(meta.reserves!));
+  });
+
+  it("splits the issuer's mixed FRAX ticker by verified chain and token", () => {
+    const legacy = "0x853d955acef822db058eb8505911ed77f175b99e";
+    const frxusd = "0xfc00000000000000000000000000000000000001";
+    const rows = [
+      ["ethereum", legacy.toUpperCase().replace("0X", "0x"), 60, "frxUSD"],
+      ["fraxtal", frxusd, 30, "FRAX"],
+      ["ethereum", frxusd, 10, "FRAX"],
+    ] as const;
+    const result = adaptFraxBalanceSheet({ totalAssets: 100, assets: rows.map(([chain, tokenAddress, totalValueUsd, tokenSymbol]) =>
+      ({ chain, tokenAddress, totalValueUsd, tokenSymbol, category: "asset:owned:frax" })) },
+    "frax-frax", TRACKED_META_BY_ID.get("frax-frax")!.contracts);
+    expect(result.slices.map(({ sourceKey, pct, selfReferential }) => [sourceKey, pct, selfReferential])).toEqual([
+      [`frax-balance-sheet:ethereum:${legacy}`, 60, true],
+      ["frax-balance-sheet:frxusd", 30, undefined],
+      // The unverified remainder cannot publish as FRAX; it stays withheld.
+      ["frax-balance-sheet:source-total-gap", 10, undefined],
+    ]);
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "asset-coverage-incomplete", effect: "fatal",
+      message: expect.stringContaining("matches no verified FRAX deployment"),
+    }));
+  });
+
+  it.each([true, false])("preserves Solana mint case when matching a registry deployment (%s)", (exact) => {
+    const deployments = TRACKED_META_BY_ID.get("frax-frax")!.contracts!;
+    const mint = deployments.find(row => row.chain === "solana")!.address;
+    const result = adaptFraxBalanceSheet({ totalAssets: 100, assets: [
+      { chain: "solana", tokenAddress: exact ? mint : `f${mint.slice(1)}`,
+        totalValueUsd: 100, tokenSymbol: "FRAX", category: "asset:owned:frax" },
+      { tokenSymbol: "USDC", totalValueUsd: 1, category: "asset:owned:usd" },
+    ] }, "frax-frax", deployments);
+    if (exact) {
+      expect(result.slices[0]?.selfReferential).toBe(true);
+    } else {
+      // A near-miss mint is not a verified FRAX identity: withheld, not published.
+      expect(result.slices.some(row => row.sourceKey === "frax-balance-sheet:frax")).toBe(false);
+      expect(result.warnings).toContainEqual(expect.objectContaining({
+        code: "asset-coverage-incomplete", effect: "fatal",
+        message: expect.stringContaining("matches no verified FRAX deployment"),
+      }));
+    }
+  });
+
+  it.each([
+    ["missing address", { tokenAddress: undefined }],
+    ["missing chain", { chain: undefined }],
+    ["invalid address", { tokenAddress: "invalid" }],
+    ["unrelated address", { tokenAddress: "0x9d39a5de30e57443bff2a8307a4256c8797a3497" }],
+  ] as const)(
+    "withholds the retained Convex FRAX/USDe leg with %s", (_name, fault) => {
+      const result = adaptFraxBalanceSheet({ totalAssets: 261_892_727.7221, tokenPriceUsd: { FRAX: 0.98977746 }, assets: [
+        ...FERRY_ROWS,
+        { tokenSymbol: "USDC", totalValueUsd: 235_439_287.51179385, category: "asset:owned:usd" },
+        { chain: "ethereum", address: "0xb1748c79709f4ba2dd82834b8c82d4a505003f27",
+          tokenAddress: "0x853d955acef822db058eb8505911ed77f175b99e", tokenSymbol: "FRAX",
+          description: "FRAX staked in Convex FRAX/USDe", category: "asset:owned:frax_usd",
+          tokenQuantity: 26_726_654.50505021, tokenQuantityE18: "26726654505050208452707927",
+          totalValueUsd: 26_453_440.210306153, ...fault },
+      ] }, "frax-frax", TRACKED_META_BY_ID.get("frax-frax")!.contracts);
+      expect(result.warnings ?? []).toContainEqual(expect.objectContaining({
+        code: "asset-coverage-incomplete", effect: "fatal",
+      }));
+      expect(result.slices.some(row => row.sourceKey === "frax-balance-sheet:frax")).toBe(false);
+    },
+  );
+
   it("retains saved positive dust and the source USDS ratio without display rounding", () => {
     const payload = JSON.parse(readFileSync(join(FIXTURES_DIR, "frax-precision-2026-09-29.json"), "utf8")) as FraxBalanceSheetResponse;
-    const result = adaptFraxBalanceSheet(payload, "frax-frax");
+    const result = adaptFraxBalanceSheet(payload);
     for (const symbol of ["USDS", "USDC", "FPI", "AUSD"]) {
       const usd = payload.assets!.filter((asset) => asset.tokenSymbol === symbol && asset.category?.startsWith("asset:"))
         .reduce((sum, asset) => sum + asset.totalValueUsd, 0);
@@ -73,17 +250,22 @@ describe("adaptFraxBalanceSheet", () => {
   it("keeps subject reserves visible without emitting a self dependency", () => {
     const result = adaptFraxBalanceSheet(
       {
-        totalAssets: 100,
+        totalAssets: 100, tokenPriceUsd: { FRAX: 1 },
         assets: [
-          { tokenSymbol: "FRAX", totalValueUsd: 40, category: "asset:owned:usd" },
+          ...FERRY_ROWS,
+          { chain: "ethereum", tokenAddress: "0x853d955acef822db058eb8505911ed77f175b99e",
+            tokenSymbol: "FRAX", tokenQuantity: 40, tokenQuantityE18: "40000000000000000000",
+            totalValueUsd: 40, category: "asset:owned:usd" },
           { tokenSymbol: "USDC", totalValueUsd: 60, category: "asset:owned:usd" },
         ],
       },
       "frax-frax",
+      TRACKED_META_BY_ID.get("frax-frax")!.contracts,
     );
 
-    expect(result.slices.find((slice) => slice.name === "FRAX")).toMatchObject({ pct: 40 });
-    expect(result.slices.find((slice) => slice.name === "FRAX")?.coinId).toBeUndefined();
+    const own = result.slices.find(slice => slice.selfReferential);
+    expect(own).toMatchObject({ name: "Self-referential claim (Legacy FRAX (ethereum))", pct: 40 });
+    expect(own?.coinId).toBeUndefined();
     expect(result.slices.find((slice) => slice.name.startsWith("USDC"))?.coinId).toBe("usdc-circle");
     // The subject coin's own 40% is not exit capacity; only the 60% USDC is.
     expect(result.metadata?.redemption?.capacityUsd).toBe(60);
@@ -462,22 +644,30 @@ describe("frax balance-sheet fetch boundary", () => {
     })).rejects.toThrow(error);
   });
 
-  it("nets signed contra entries and accepts genuine zero without inflating capacity", async () => {
+  it.each([false, true])("nets signed contra entries without inflating capacity (inconsistent sign: %s)", async (mismatch) => {
+    const legacy = { chain: "ethereum", tokenAddress: "0x853d955acef822db058eb8505911ed77f175b99e", tokenSymbol: "FRAX" };
     const { result } = await runAdapter("frax-balance-sheet", "frax-frax", {
       network: { json: { [BALANCE_SHEET_ENDPOINT]: {
         asOfTimestamp: BALANCE_SHEET_SAMPLE.asOfTimestamp,
-        totalAssets: 100,
+        totalAssets: 110, tokenPriceUsd: { FRAX: 1 },
         assets: [
           { tokenSymbol: "USDC", totalValueUsd: 120, category: "asset:owned:usd" },
           { tokenSymbol: "USDC", totalValueUsd: -20, category: "asset:contra" },
+          { ...legacy, tokenQuantity: 30, tokenQuantityE18: "30000000000000000000", totalValueUsd: 30, category: "asset:owned:frax" },
+          { ...legacy, tokenQuantity: -20, tokenQuantityE18: mismatch ? "20000000000000000000" : "-20000000000000000000",
+            totalValueUsd: -20, category: "asset:contra" },
           { tokenSymbol: "SDL", totalValueUsd: 0, category: "asset:owned:usd" },
+          ...FERRY_ROWS,
         ],
       } } },
       nowSec: 1_775_307_827,
     });
-    expect(result.metadata).toMatchObject({ totalCollateralUsd: 100, redemption: { capacityUsd: 100 } });
-    expect(result.slices).toEqual([expect.objectContaining({ coinId: "usdc-circle", pct: 100 })]);
-    expect(result.warnings).toBeUndefined();
+    expect(result.metadata).toMatchObject({ totalCollateralUsd: 110, redemption: { capacityUsd: 100 } });
+    expect(result.slices).toEqual([
+      expect.objectContaining({ coinId: "usdc-circle", pct: 100 / 110 * 100 }),
+      expect.objectContaining({ selfReferential: true, pct: 10 / 110 * 100 }),
+    ]);
+    expect(result.warnings?.some(warning => warning.effect === "fatal") ?? false).toBe(mismatch);
   });
 
   it("admits rounding tolerance without publishing capacity above the headline", () => {

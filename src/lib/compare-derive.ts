@@ -68,6 +68,7 @@ export type ComparisonMeta = Pick<
   | "mica"
   | "mintAuthoritySummary"
   | "name"
+  | "reserveCompositionScope"
   | "reserves"
   | "status"
   | "symbol"

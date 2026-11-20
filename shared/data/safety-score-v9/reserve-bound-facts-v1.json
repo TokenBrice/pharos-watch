@@ -640,203 +640,209 @@
     ],
     "stac-securitize": [
       {
-        "factKey": "stac-securitize:chronicle:2026-10-19:observed-clo-maturities",
+        "factKey": "stac-securitize:chronicle:2026-11-18:observed-clo-maturities",
         "kind": "observed-portfolio-maturity",
         "scope": {
           "kind": "exposure",
           "exposureKey": "chronicle-nav:token:0x51c2d74017390cbbd30550179a16a1c28f7210fc"
         },
-        "asOfSec": 1792368000,
+        "asOfSec": 1794960000,
         "publisher": "Chronicle / Securitize AAA CLO Tokenized Fund",
         "sourceUrls": [
-          "https://chroniclelabs.org/api/ipfs/QmWrPqxJEXQf9EtFhzAU22VUDwbzszffx9KAZhgvwYx6Eq"
+          "https://chroniclelabs.org/api/ipfs/QmPQnDVp37aJZzTt6UCaK9UAdQv2EUseEiaxjYmfmULvBf"
         ],
-        "assertion": "Chronicle proof payload stamped 2026-10-20T15:03:18Z (epoch 1792508598) carries portfolio date 2026-10-19 and 50 named CLO positions with aggregate portfolio market value USD 278601185.26; latest observed maturity is 17 July 2041. Fund NAV 283150234.1 and other net assets/liabilities 1922808.41 are net-fund figures, not a gross assets-to-liabilities denominator, so gross coverage stays null. This supersedes the 2026-09-29 census. No contractual maximum, WAM/WAL or realization bound is asserted.",
-        "contentDigest": "449e5382976a265c8e557157ef2ad3b3baa2b16318679aab5b50faac75a93e16",
+        "assertion": "Chronicle proof payload stamped 2026-11-19T09:06:55Z (epoch 1795079215) carries portfolio date 2026-11-18 and 51 named CLO positions with aggregate portfolio market value USD 280999622.24; latest observed maturity is 17 July 2041. Fund NAV 285810523.1 and other net assets/liabilities 1595815.62 are net-fund figures, not a gross assets-to-liabilities denominator, so gross coverage stays null. This supersedes the 2026-10-19 census. No contractual maximum, WAM/WAL or realization bound is asserted.",
+        "contentDigest": "96121a4b71008bccf05c24e79be4fbc700335fd36555b5456997fa7c204e2bd4",
         "provenance": {
           "kind": "reviewed-research",
-          "reviewedAt": "2026-10-29",
-          "reviewer": "Pharos W0 renewal 2026-10-29 (R-RESB-1)",
+          "reviewedAt": "2026-11-20",
+          "reviewer": "Pharos stac-1707 renewal 2026-11-20 (PoR lockstep)",
           "confidence": "high"
         },
         "coveredGrossValue": null,
         "totalGrossValue": null,
-        "coverageAsOfSec": 1792368000,
+        "coverageAsOfSec": 1794960000,
         "denomination": "USD",
-        "observedMaximumDays": 5385,
+        "observedMaximumDays": 5355,
         "instruments": [
+          {
+            "instrumentId": "US001200AQ71",
+            "maturityAtSec": 2194732800,
+            "grossMarkedValue": 2502506.75,
+            "denomination": "USD"
+          },
           {
             "instrumentId": "US00704CAA09",
             "maturityAtSec": 2162764800,
-            "grossMarkedValue": 10013481.0,
+            "grossMarkedValue": 10007660.0,
             "denomination": "USD"
           },
           {
             "instrumentId": "US00791YAA64",
             "maturityAtSec": 2163369600,
-            "grossMarkedValue": 3005152.8,
+            "grossMarkedValue": 3005781.6,
             "denomination": "USD"
           },
           {
             "instrumentId": "US00889BAE11",
             "maturityAtSec": 2155075200,
-            "grossMarkedValue": 3998832.0,
+            "grossMarkedValue": 4002437.2,
             "denomination": "USD"
           },
           {
             "instrumentId": "US03665YAY14",
             "maturityAtSec": 2163456000,
-            "grossMarkedValue": 4998781.0,
+            "grossMarkedValue": 4993750.0,
             "denomination": "USD"
           },
           {
             "instrumentId": "US03665YBA29",
             "maturityAtSec": 2163456000,
-            "grossMarkedValue": 5010459.5,
+            "grossMarkedValue": 4982305.0,
             "denomination": "USD"
           },
           {
             "instrumentId": "US03770RAN26",
             "maturityAtSec": 2171491200,
-            "grossMarkedValue": 4502250.0,
+            "grossMarkedValue": 4502241.0,
             "denomination": "USD"
           },
           {
             "instrumentId": "US03790TAA25",
             "maturityAtSec": 2194732800,
-            "grossMarkedValue": 10005408.0,
+            "grossMarkedValue": 10007583.0,
             "denomination": "USD"
           },
           {
             "instrumentId": "US04015GBB41",
             "maturityAtSec": 2162937600,
-            "grossMarkedValue": 3504759.65,
+            "grossMarkedValue": 3506618.5,
             "denomination": "USD"
           },
           {
             "instrumentId": "US04020UAA97",
             "maturityAtSec": 2155334400,
-            "grossMarkedValue": 11336263.81,
+            "grossMarkedValue": 11296959.67,
             "denomination": "USD"
           },
           {
             "instrumentId": "US04039VAA61",
             "maturityAtSec": 2194300800,
-            "grossMarkedValue": 1001084.6,
+            "grossMarkedValue": 1000994.7,
             "denomination": "USD"
           },
           {
             "instrumentId": "US04040CAA53",
             "maturityAtSec": 2186438400,
-            "grossMarkedValue": 1000677.0,
+            "grossMarkedValue": 1000723.1,
             "denomination": "USD"
           },
           {
             "instrumentId": "US04040JAA07",
             "maturityAtSec": 2170713600,
-            "grossMarkedValue": 10012170.0,
+            "grossMarkedValue": 10000000.0,
             "denomination": "USD"
           },
           {
             "instrumentId": "US05686GAA22",
             "maturityAtSec": 2178835200,
-            "grossMarkedValue": 1501358.1,
+            "grossMarkedValue": 1501307.4,
             "denomination": "USD"
           },
           {
             "instrumentId": "US06764PAA57",
             "maturityAtSec": 2153606400,
-            "grossMarkedValue": 2755203.28,
+            "grossMarkedValue": 2755926.8,
             "denomination": "USD"
           },
           {
             "instrumentId": "US06765BAA52",
             "maturityAtSec": 2170713600,
-            "grossMarkedValue": 3203248.32,
+            "grossMarkedValue": 3203783.04,
             "denomination": "USD"
           },
           {
             "instrumentId": "US08187NAA54",
             "maturityAtSec": 2178662400,
-            "grossMarkedValue": 3002195.7,
+            "grossMarkedValue": 3001515.3,
             "denomination": "USD"
           },
           {
             "instrumentId": "US09090MAA18",
             "maturityAtSec": 2155507200,
-            "grossMarkedValue": 2997776.4,
+            "grossMarkedValue": 2999346.0,
             "denomination": "USD"
           },
           {
             "instrumentId": "US12570LAJ70",
             "maturityAtSec": 2257632000,
-            "grossMarkedValue": 10010000.0,
+            "grossMarkedValue": 10008794.0,
             "denomination": "USD"
           },
           {
             "instrumentId": "US12576CAA09",
             "maturityAtSec": 2179440000,
-            "grossMarkedValue": 3001297.8,
+            "grossMarkedValue": 3002328.3,
             "denomination": "USD"
           },
           {
             "instrumentId": "US17151JAQ22",
             "maturityAtSec": 2155334400,
-            "grossMarkedValue": 4975048.5,
+            "grossMarkedValue": 4987315.0,
             "denomination": "USD"
           },
           {
             "instrumentId": "US17152KAA34",
             "maturityAtSec": 2194905600,
-            "grossMarkedValue": 5006866.5,
+            "grossMarkedValue": 4985750.5,
             "denomination": "USD"
           },
           {
             "instrumentId": "US25255RAL33",
             "maturityAtSec": 2178662400,
-            "grossMarkedValue": 5004546.0,
+            "grossMarkedValue": 5001874.0,
             "denomination": "USD"
           },
           {
             "instrumentId": "US26248XAL82",
             "maturityAtSec": 2171145600,
-            "grossMarkedValue": 3003059.7,
+            "grossMarkedValue": 3003602.4,
             "denomination": "USD"
           },
           {
             "instrumentId": "US289910AA97",
             "maturityAtSec": 2155075200,
-            "grossMarkedValue": 9996313.0,
+            "grossMarkedValue": 10002943.0,
             "denomination": "USD"
           },
           {
             "instrumentId": "US29003YAU55",
             "maturityAtSec": 2194387200,
-            "grossMarkedValue": 7003486.0,
+            "grossMarkedValue": 7003537.8,
             "denomination": "USD"
           },
           {
             "instrumentId": "US29004FAA93",
             "maturityAtSec": 2152828800,
-            "grossMarkedValue": 3002728.2,
+            "grossMarkedValue": 3002310.9,
             "denomination": "USD"
           },
           {
             "instrumentId": "US38139AAU51",
             "maturityAtSec": 2202681600,
-            "grossMarkedValue": 3000165.3,
+            "grossMarkedValue": 2999654.1,
             "denomination": "USD"
           },
           {
             "instrumentId": "US38181HAC79",
             "maturityAtSec": 2194732800,
-            "grossMarkedValue": 10018361.0,
+            "grossMarkedValue": 9995000.0,
             "denomination": "USD"
           },
           {
             "instrumentId": "US38190MAA99",
             "maturityAtSec": 2155075200,
-            "grossMarkedValue": 10006405.0,
+            "grossMarkedValue": 10005178.0,
             "denomination": "USD"
           },
           {
@@ -848,121 +854,121 @@
           {
             "instrumentId": "US46603PAN87",
             "maturityAtSec": 2116195200,
-            "grossMarkedValue": 5011745.5,
+            "grossMarkedValue": 5006295.0,
             "denomination": "USD"
           },
           {
             "instrumentId": "US55281GBA58",
             "maturityAtSec": 2163024000,
-            "grossMarkedValue": 10007540.0,
+            "grossMarkedValue": 10007500.0,
             "denomination": "USD"
           },
           {
             "instrumentId": "US55952AAL35",
             "maturityAtSec": 2171577600,
-            "grossMarkedValue": 7253622.1,
+            "grossMarkedValue": 7253617.75,
             "denomination": "USD"
           },
           {
             "instrumentId": "US55952EAL56",
             "maturityAtSec": 2194300800,
-            "grossMarkedValue": 10003087.0,
+            "grossMarkedValue": 10001230.0,
             "denomination": "USD"
           },
           {
             "instrumentId": "US55956RAA68",
             "maturityAtSec": 2186438400,
-            "grossMarkedValue": 3000397.8,
+            "grossMarkedValue": 3000348.9,
             "denomination": "USD"
           },
           {
             "instrumentId": "US64090EAA47",
             "maturityAtSec": 2194732800,
-            "grossMarkedValue": 2752756.05,
+            "grossMarkedValue": 2753262.88,
             "denomination": "USD"
           },
           {
             "instrumentId": "US67102QBK31",
             "maturityAtSec": 2150236800,
-            "grossMarkedValue": 2998794.0,
+            "grossMarkedValue": 3000906.3,
             "denomination": "USD"
           },
           {
             "instrumentId": "US67707CBC10",
             "maturityAtSec": 2155334400,
-            "grossMarkedValue": 4497847.65,
+            "grossMarkedValue": 4501167.3,
             "denomination": "USD"
           },
           {
             "instrumentId": "US69704GAA67",
             "maturityAtSec": 2163196800,
-            "grossMarkedValue": 4507895.7,
+            "grossMarkedValue": 4508735.4,
             "denomination": "USD"
           },
           {
             "instrumentId": "US749764AA48",
             "maturityAtSec": 2233872000,
-            "grossMarkedValue": 4004766.0,
+            "grossMarkedValue": 4004084.0,
             "denomination": "USD"
           },
           {
             "instrumentId": "US74979VAZ67",
             "maturityAtSec": 2194300800,
-            "grossMarkedValue": 10004990.0,
+            "grossMarkedValue": 10005097.0,
             "denomination": "USD"
           },
           {
             "instrumentId": "US75884YAK47",
             "maturityAtSec": 2147126400,
-            "grossMarkedValue": 4998721.0,
+            "grossMarkedValue": 5001060.5,
             "denomination": "USD"
           },
           {
             "instrumentId": "US758968AY78",
             "maturityAtSec": 2178662400,
-            "grossMarkedValue": 3003883.2,
+            "grossMarkedValue": 3003657.3,
             "denomination": "USD"
           },
           {
             "instrumentId": "US76676CAS52",
             "maturityAtSec": 2147126400,
-            "grossMarkedValue": 10004744.0,
+            "grossMarkedValue": 10004382.0,
             "denomination": "USD"
           },
           {
             "instrumentId": "US817940AC30",
             "maturityAtSec": 2171491200,
-            "grossMarkedValue": 4004985.6,
+            "grossMarkedValue": 4007176.8,
             "denomination": "USD"
           },
           {
             "instrumentId": "US881936AA67",
             "maturityAtSec": 2155680000,
-            "grossMarkedValue": 4997971.5,
+            "grossMarkedValue": 5001449.5,
             "denomination": "USD"
           },
           {
             "instrumentId": "US89532UAY91",
             "maturityAtSec": 2194732800,
-            "grossMarkedValue": 10010113.0,
+            "grossMarkedValue": 10009199.0,
             "denomination": "USD"
           },
           {
             "instrumentId": "US92919DAL29",
             "maturityAtSec": 2154902400,
-            "grossMarkedValue": 5004750.0,
+            "grossMarkedValue": 5005170.0,
             "denomination": "USD"
           },
           {
             "instrumentId": "US92920FAL40",
             "maturityAtSec": 2179094400,
-            "grossMarkedValue": 3501722.35,
+            "grossMarkedValue": 3503574.9,
             "denomination": "USD"
           },
           {
             "instrumentId": "US92920HAL06",
             "maturityAtSec": 2194732800,
-            "grossMarkedValue": 10011585.0,
+            "grossMarkedValue": 10010091.0,
             "denomination": "USD"
           }
         ]

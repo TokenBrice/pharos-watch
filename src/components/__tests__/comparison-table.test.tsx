@@ -11,6 +11,7 @@ import type { ComparisonCoinEntry } from "@/lib/compare-derive";
 import { BLUECHIP_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/bluechip-freshness";
 import { computeRecentPegStats } from "@shared/lib/peg-score";
 import { makeReportCardsV9Card, makeReportCardsV9Pillars, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
+import { loadClientStablecoinDetail } from "@shared/lib/stablecoins/client-detail";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -120,6 +121,23 @@ function metricRow(html: string, label: string): string | undefined {
 }
 
 describe("ComparisonTable", () => {
+  it.each([
+    ["usdu-usdu-finance", "Self-referential claim (Morpho USDU Core vault shares) 61% of scoped reserve report"],
+    ["alusd-alchemix", "InfiniFi siUSD position (Ethereum MYT) 37% of scoped reserve report"],
+    ["lisusd-lista", "slisBNB (Lista BNB LST) GemJoin 98% of scoped reserve report"],
+    ["nusd-nexus", "USDT in the Ethereum Synapse nexus pool 57% of nominal pool balances"],
+    ["satusd-river", "Prime Vault custodial BTC collateral (bfBTC on BNB Chain, uniBTC on Base and BOB) 63% of gross product deposits"],
+    ["xo-exodus", "M0 M held in the XO extension vault 100% of measured holdings in scope"],
+    ["stusd-stoneyield", "Selected holdings only"],
+    ["dusd-alto", "frxUSD held by the DUSD USM and mint-market collateral 84% of reviewed nominal issuance paths"],
+    ["avusd-avant", "Allocation unavailable"],
+  ])("uses the reviewed reserve scope in the %s cell", async (id, label) => {
+    const meta = (await loadClientStablecoinDetail(id))!;
+    const coin = { ...makeCoin(meta.id, meta.symbol), meta };
+    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} logos={{}} />);
+    expect(metricRow(html, "Largest reserve exposure")).toContain(label);
+  });
+
   it("does not frame unequal directional activity as a universal best value", () => {
     const minting = makeCoin("usdt", "USDT");
     const burning = makeCoin("usdc", "USDC");

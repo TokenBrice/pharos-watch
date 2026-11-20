@@ -8,7 +8,7 @@
     "impact": [
       "An exact symbol, valid uncrossed book, spread within 100 bps and same-snapshot ticker timestamp within the Kraken age budget are required before a price and upstream clock can replace a REST quote.",
       "The Kraken availability breaker still measures the REST ticker. Consensus retains its existing clock, source-family and independence rules, and depeg admission remains as before.",
-      "The switch ships off pending the Worker operations owner's review. The effective time is provisional and should be set at release."
+      "The switch ships off pending the Worker operations owner's review."
     ],
     "commits": [],
     "reconstructed": false

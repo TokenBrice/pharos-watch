@@ -1,4 +1,5 @@
 import { isLegacyDeterministicOnChainSourceKey } from "../lib/yield-config/yield-history-identity-transitions";
+import { isReviewedPublishedYieldSourceExcluded } from "../lib/yield-config/yield-opportunity-exclusions";
 import { YieldTypeSchema } from "@shared/types/yield-vocabulary";
 import { buildMethodologyEnvelope } from "../lib/api-methodology";
 import { parseStablecoinHistoryQuery } from "../lib/api-history";
@@ -409,7 +410,10 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
         ? Math.max(...history.map((row) => (typeof row.date === "number" ? row.date : 0)))
         : publishedCutoff;
 
-    const current = history.length > 0 ? (history[history.length - 1] ?? null) : null;
+    const latest = history[history.length - 1] ?? null;
+    const current = isReviewedPublishedYieldSourceExcluded(parsed.stablecoinId, latest?.sourceKey)
+      ? null
+      : latest;
     const interval = CRON_INTERVALS["sync-yield-data"];
     const clockUnavailable = publishedCutoff <= 0;
     const assessedAtSec = Math.floor(Date.now() / 1000);

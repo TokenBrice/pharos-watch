@@ -1,7 +1,16 @@
+import { resolveLinkedVariantSourceOwnerId } from "../yield-source-links";
+
 interface YieldOpportunityExclusion {
   projects: readonly string[];
   /** Exact DeFiLlama UUIDs keep replacement deployments outside the hold. */
   poolIds?: readonly string[];
+  assetSources?: {
+    stablecoinId: string;
+    sourceKeys: readonly string[];
+    sourceKeyPrefixes?: readonly string[];
+    sourceLabels?: readonly string[];
+    legacyParent?: { stablecoinId: string; poolId: string };
+  };
   since: string;
   reviewedAt: string;
   nextReviewAt: string;
@@ -49,4 +58,59 @@ export const YIELD_OPPORTUNITY_EXCLUSIONS: readonly YieldOpportunityExclusion[] 
     since: "2026-11-07", reviewedAt: "2026-11-07", nextReviewAt: "2026-11-21", owner: "ops",
     reason: "Genesis-funded repayments and vault withdrawals remain restricted after the November attacks: https://x.com/Loopscale/status/2118502123705159769",
   },
+  {
+    projects: ["k3"],
+    assetSources: {
+      stablecoinId: "sbold-k3-capital",
+      sourceLabels: ["K3: sBOLD", "Liquity Stability Pool (via K3 sBOLD)", "K3 sBOLD Stability Pool vault"],
+      sourceKeyPrefixes: ["protocol-api:k3:"],
+      legacyParent: { stablecoinId: "bold-liquity", poolId: "dac71f4f-7b97-463a-b19f-9796c56c21f1" },
+      sourceKeys: [
+        "price-derived",
+        "2ce146c4-4443-50eb-851b-fc7d37a3cd0a",
+      ],
+    },
+    since: "2026-11-18", reviewedAt: "2026-11-20", nextReviewAt: "2026-11-26", owner: "ops",
+    reason: "K3 paused sBOLD after the vault drain. Remove only after verified vault reopening, reconciled backing and a current exact-vault holder rate: https://x.com/i/article/2123376353923764224",
+  },
 ];
+
+export function findReviewedYieldSourceExclusion(params: {
+  stablecoinId?: string;
+  sourceKey?: string | null;
+  project?: string | null;
+  pool?: string | null;
+}): YieldOpportunityExclusion | undefined {
+  return YIELD_OPPORTUNITY_EXCLUSIONS.find(({ assetSources, poolIds, projects }) => {
+    if (assetSources) {
+      const { sourceKey } = params;
+      return assetSources.stablecoinId === params.stablecoinId && sourceKey != null &&
+        (assetSources.sourceKeys.includes(sourceKey) || assetSources.legacyParent?.poolId === sourceKey
+          || assetSources.sourceKeyPrefixes?.some((prefix) => sourceKey.startsWith(prefix)) === true);
+    }
+    return poolIds
+      ? poolIds.includes(params.pool ?? "")
+      : projects.includes(params.project?.trim().toLowerCase() ?? "");
+  });
+}
+
+export function isReviewedYieldSourceExcluded(params: Parameters<typeof findReviewedYieldSourceExclusion>[0]): boolean {
+  return findReviewedYieldSourceExclusion(params) !== undefined;
+}
+
+export function isReviewedPublishedYieldSourceExcluded(
+  stablecoinId: string, sourceKey: string | null | undefined, yieldSource?: string,
+): boolean {
+  if (!sourceKey) {
+    return yieldSource != null && YIELD_OPPORTUNITY_EXCLUSIONS.some(({ assetSources }) =>
+      (assetSources?.stablecoinId === stablecoinId || assetSources?.legacyParent?.stablecoinId === stablecoinId)
+      && assetSources.sourceLabels?.includes(yieldSource) === true);
+  }
+  const ownerId = resolveLinkedVariantSourceOwnerId(stablecoinId, sourceKey);
+  return isReviewedYieldSourceExcluded({
+    stablecoinId: ownerId ?? stablecoinId,
+    sourceKey: ownerId ? sourceKey.slice(`linked-variant:${ownerId}:`.length) : sourceKey,
+  }) || (!ownerId && YIELD_OPPORTUNITY_EXCLUSIONS.some(({ assetSources }) =>
+    assetSources?.legacyParent?.stablecoinId === stablecoinId &&
+    (assetSources.legacyParent.poolId === sourceKey || assetSources.sourceKeyPrefixes?.some((prefix) => sourceKey.startsWith(prefix)))));
+}

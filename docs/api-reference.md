@@ -226,6 +226,8 @@ The frontend `apiFetchWithMeta()` helper (`src/lib/api.ts`) reads generic `_meta
 
 ---
 
+[Yield rankings](#get-apiyield-rankings) apply reviewed asset/source holds to selected and alternate rates in cached responses, including summary and coin projections. Removing a selected row clears the cached `medianApy` and cached rank-change attribution before hydration. [Yield history](#get-apiyield-history) returns `current: null` when the latest observation is held, including linked variants and their reviewed legacy parent keys. The dated observation remains in `history`. [Dated opportunity exclusions](./yield-intelligence-operations.md#dated-opportunity-exclusions).
+
 ## Cache-Control Profiles
 
 Active `GET /api/stablecoin/{stablecoinId}` reads refresh expired detail caches in the background only while `buildFreshnessMeta` classifies the generation as fresh using `API_FRESHNESS_MAX_AGE_SEC.stablecoins`. Older generations refresh synchronously so the first visitor receives the refreshed detail; provider failures may retain the original stale generation below the 24-hour cache ceiling, with its original clock and warning.
@@ -1073,14 +1075,14 @@ Yield-bearing stablecoin rankings with safety, benchmark-aware context, and opti
 
 ```json
 {
-  "currentVersion": "8.59",
-  "methodologyVersion": "10.46"
+  "currentVersion": "8.60",
+  "methodologyVersion": "10.47"
 }
 ```
 
 ### `GET /api/yield-adapter-manifest`
 
-Machine-readable source-list manifest for every yield-bearing asset, including adapter family, exact runtime source key when known, source-key pattern for runtime-resolved or disabled strategies, label, chain/project hints, lifecycle state, and methodology version. [Full endpoint contract](https://pharos.watch/openapi.json#/paths/~1api~1yield-adapter-manifest/get).
+Machine-readable source-list manifest for every yield-bearing asset, including adapter family, exact runtime source key when known, source-key pattern for runtime-resolved or disabled strategies, label, chain/project hints, lifecycle state (with the quarantine reason for reviewed source holds), and methodology version. [Full endpoint contract](https://pharos.watch/openapi.json#/paths/~1api~1yield-adapter-manifest/get).
 
 - **Operation ID:** `yieldAdapterManifest`
 - **Path:** `/api/yield-adapter-manifest`
@@ -1092,7 +1094,7 @@ Machine-readable source-list manifest for every yield-bearing asset, including a
 
 ```json
 {
-  "methodologyVersion": "8.59"
+  "methodologyVersion": "8.60"
 }
 ```
 
@@ -1110,8 +1112,8 @@ Historical yield observations for a stablecoin, with optional publication/source
 
 ```json
 {
-  "currentVersion": "8.59",
-  "methodologyVersion": "8.59"
+  "currentVersion": "8.60",
+  "methodologyVersion": "8.60"
 }
 ```
 

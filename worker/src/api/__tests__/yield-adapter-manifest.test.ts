@@ -30,6 +30,9 @@ describe("handleYieldAdapterManifest", () => {
     expect(typeof body.updatedAt).toBe("number");
     expect(Array.isArray(body.entries)).toBe(true);
     expect(body.entries.length).toBeGreaterThan(0);
+    expect(body.entries.find((entry) =>
+      entry.stablecoinId === "sbold-k3-capital" && entry.sourceKey === "price-derived",
+    )).toMatchObject({ lifecycle: "quarantined", quarantineReason: expect.stringContaining("verified vault reopening") });
 
     // C18: the stamp is registry evidence, never the epoch, and it is at least the
     // newest adapter lifecycle review the registry carries.

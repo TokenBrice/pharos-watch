@@ -6,6 +6,7 @@ import type {
 } from "@shared/types/yield";
 import { buildOnChainSourceKey } from "../yield-utils";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { findReviewedYieldSourceExclusion } from "./yield-opportunity-exclusions";
 
 // Reviewed variable-NAV products whose holder return is intentionally USD-based.
 const USD_RETURN_VARIABLE_NAV_IDS: Readonly<Record<string, true>> = {
@@ -218,9 +219,19 @@ export function buildYieldAdapterManifest(args: {
         });
       }
 
+      for (const strategy of strategies) {
+        const hold = findReviewedYieldSourceExclusion({ stablecoinId, sourceKey: strategy.sourceKey });
+        if (!hold) continue;
+        strategy.lifecycle = "quarantined";
+        strategy.lifecycleReason = {
+          code: "reviewed-source-hold", since: hold.since, nextReviewAt: hold.nextReviewAt, note: hold.reason,
+        };
+      }
+      const allStrategiesHeld = strategies.length > 0 && strategies.every(({ lifecycle }) => lifecycle === "quarantined");
+
       return {
         stablecoinId,
-        status: intentionalGapReason ? "intentional-gap" as const : "covered" as const,
+        status: intentionalGapReason || allStrategiesHeld ? "intentional-gap" as const : "covered" as const,
         strategies: strategies.sort((a, b) => a.priority - b.priority),
         variant,
         nativePoolId,

@@ -506,7 +506,7 @@ function collectPrivateCreditObligorStructuralReasons(
   for (const exposure of exposures) {
     const classStatus = exposure.factorStatuses?.assetClass ?? exposure.status;
     const obligorStatus = exposure.factorStatuses?.obligorConcentration ?? exposure.status;
-    if (exposure.assetClass !== "private-credit" || exposure.issuerOrObligorKey === null ||
+    if (exposure.selfReferential || exposure.assetClass !== "private-credit" || exposure.issuerOrObligorKey === null ||
       classStatus.observationState !== "known" || classStatus.evidenceRefIds.length === 0 ||
       obligorStatus.observationState !== "known" || obligorStatus.evidenceRefIds.length === 0) continue;
     const key = exposure.issuerOrObligorKey;
@@ -575,6 +575,16 @@ function appendReserveExposureEvaluation(params: {
   } = params;
   const pathKey = `reserve:${exposure.exposureKey}`;
   const state = exposure.status.observationState;
+  if (exposure.selfReferential && state === "known") {
+    // Keep the reported share in the denominator at zero quality.
+    contributions.push({
+      componentKey: pathKey, source: "reserve-exposure", score: 0,
+      normalizedWeight: exposure.weight, weightedScore: 0, observationState: state,
+      provenance: exposure.provenance, evidenceRefIds: exposure.status.evidenceRefIds,
+      failureDomains: [], upstreamAssetId: null, cause: null,
+    });
+    return;
+  }
   const requiredUnknown = exposure.status.applicability.state === "unresolved";
   const confidenceMultiplier =
     exposure.provenance === "live" || exposure.evidenceClass === "independent"
@@ -821,12 +831,20 @@ function appendReserveConcentrationContribution(params: {
   const maximumDomainShare = domainGroups.reduce((maximum, group) => Math.max(maximum, group.share), 0);
   const measuredConcentration = concentrationScore(maximumDomainShare, backing);
   let includedShare = 0, boundedShare = 0, unidentifiedShare = 0;
+  let selfReferentialShare = 0;
   let boundedQuality = 0, unidentifiedQuality = 0;
   const causeGapIds: string[] = [];
+  const evidenceRefIds = [...asset.reserveStatus.evidenceRefIds];
   const excludedComponentKeys: string[] = [];
   const causes: NonNullable<V9BackingContribution["cause"]>[] = [];
   for (const row of contributions.filter(entry => entry.source === "reserve-exposure")) {
     const exposure = asset.reserveExposures.find(entry => `reserve:${entry.exposureKey}` === row.componentKey);
+    if (exposure?.selfReferential && row.observationState === "known") {
+      selfReferentialShare += row.normalizedWeight;
+      includedShare += row.normalizedWeight;
+      evidenceRefIds.push(...row.evidenceRefIds);
+      continue;
+    }
     const classStatus = exposure?.factorStatuses?.assetClass ?? exposure?.status;
     const exempt = classStatus?.observationState === "known" && exposure?.assetClass != null &&
       (backing.reserve.sovereignConcentrationExemptClasses.some(value => value === exposure.assetClass) ||
@@ -864,7 +882,7 @@ function appendReserveConcentrationContribution(params: {
   // use the bounded rung rather than concentrationScore(0)'s best credit.
   const unknownDomainShare = domainGroups.length === 0 ? boundedShare : unidentifiedShare;
   const concentration = includedShare > 0
-    ? (measuredConcentration * (includedShare - unknownDomainShare) +
+    ? (measuredConcentration * (includedShare - unknownDomainShare - selfReferentialShare) +
       (domainGroups.length === 0 ? boundedQuality : unidentifiedQuality)) / includedShare : null;
   // A/B rows are excluded from the concentration share, so they control it only when nothing is included.
   const cause = (concentration === null ? (["A", "B"] as const) : (["D", "C", "U"] as const))
@@ -874,7 +892,7 @@ function appendReserveConcentrationContribution(params: {
     normalizedWeight: backing.reserve.concentrationWeight,
     weightedScore: (concentration ?? 0) * backing.reserve.concentrationWeight,
     observationState: boundedShare > 0 ? "bounded-unknown" : asset.reserveStatus.observationState,
-    provenance: null, evidenceRefIds: uniqueSorted(asset.reserveStatus.evidenceRefIds),
+    provenance: null, evidenceRefIds: uniqueSorted(evidenceRefIds),
     failureDomains: canonicalDomains(domainGroups.map((group) => group.domain)), upstreamAssetId: null,
     cause, causeGapIds: uniqueSorted(causeGapIds), wholeAssetWeight: null,
     ...(excludedComponentKeys.length === 0 ? {} : { excludedComponentKeys: uniqueSorted(excludedComponentKeys) }),

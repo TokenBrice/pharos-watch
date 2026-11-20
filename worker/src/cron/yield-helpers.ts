@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
-import { YIELD_OPPORTUNITY_EXCLUSIONS } from "../lib/yield-config/yield-opportunity-exclusions";
+import { isReviewedYieldSourceExcluded } from "../lib/yield-config/yield-opportunity-exclusions";
 import { INTENTIONAL_GAP_REASONS } from "../lib/yield-config/yield-config-rate-sources";
 
 /**
@@ -127,17 +127,15 @@ export function detectWarningSignals(input: WarningInput): YieldWarningSignalKey
 }
 
 export function isBlockedYieldOpportunitySource(params: {
+  stablecoinId?: string;
+  sourceKey?: string | null;
   project?: string | null;
   pool?: string | null;
   yieldSource?: string | null;
   poolMeta?: string | null;
   symbol?: string | null;
 }): boolean {
-  if (YIELD_OPPORTUNITY_EXCLUSIONS.some((entry) =>
-    entry.poolIds
-      ? entry.poolIds.includes(params.pool ?? "")
-      : entry.projects.includes(params.project?.trim().toLowerCase() ?? "")
-  )) return true;
+  if (isReviewedYieldSourceExcluded(params)) return true;
 
   const searchText = [params.yieldSource, params.poolMeta, params.symbol]
     .filter((value): value is string => typeof value === "string" && value.trim().length > 0)

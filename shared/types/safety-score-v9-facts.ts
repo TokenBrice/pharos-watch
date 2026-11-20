@@ -420,6 +420,7 @@ const V9ReserveExposureFactV2Schema = z
     name: CanonicalTextSchema,
     weight: PositiveFractionSchema,
     trackedAssetId: CanonicalTextSchema.nullable(),
+    selfReferential: z.literal(true).optional(),
     assetClass: V9ReserveAssetClassSchema.nullable(),
     issuerOrObligorKey: CanonicalTextSchema.nullable(),
     riskFactors: CanonicalStringArraySchema,
@@ -429,6 +430,9 @@ const V9ReserveExposureFactV2Schema = z
   })
   .strict()
   .superRefine((exposure, ctx) => {
+    if (exposure.selfReferential && exposure.trackedAssetId !== null) {
+      issue(ctx, ["trackedAssetId"], "Self-referential reserve exposure cannot link to backing");
+    }
     if (exposure.provenance === "live" && exposure.evidenceClass !== undefined) {
       issue(ctx, ["evidenceClass"], "Live reserve exposure must not carry a static evidence class");
     }
@@ -436,7 +440,9 @@ const V9ReserveExposureFactV2Schema = z
       issue(ctx, ["evidenceClass"], "Curated reserve exposure requires an evidence class");
     }
     if (exposure.status.observationState === "known" && exposure.status.applicability.state === "required") {
-      if (exposure.assetClass === null && exposure.factorStatuses?.assetClass?.observationState === "known") {
+      const assetClassStatus = exposure.factorStatuses?.assetClass;
+      if (exposure.assetClass === null && assetClassStatus?.observationState === "known" &&
+        !(exposure.selfReferential && assetClassStatus.applicability.state === "not-applicable")) {
         ctx.addIssue({ code: "custom", path: ["assetClass"], message: "Known asset-class factor requires asset class" });
       }
       const obligorStatus = exposure.factorStatuses?.obligorConcentration;
@@ -445,7 +451,7 @@ const V9ReserveExposureFactV2Schema = z
         exposure.issuerOrObligorKey === null && obligorStatus !== undefined &&
         obligorStatus.applicability.state === "required" &&
         obligorStatus.observationState !== "known" && obligorStatus.gapIds.length > 0;
-      if (exposure.failureDomains.length === 0 && !scopedUnknownObligor) {
+      if (exposure.failureDomains.length === 0 && !scopedUnknownObligor && !exposure.selfReferential) {
         issue(ctx, ["failureDomains"], "Known reserve exposure requires failure domains");
       }
     }

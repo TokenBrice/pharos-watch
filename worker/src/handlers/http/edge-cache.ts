@@ -1,8 +1,10 @@
 import {
+  API_PATHS,
   findDynamicEndpointDescriptor,
   getEndpointCacheKeyQueryParams,
   isCacheKeyQueryFreePath,
 } from "@shared/lib/api-endpoints";
+import { YIELD_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { isCacheableGetRequest } from "./cache-eligibility";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { isResponseWithinFreshLifetime } from "../../lib/api-response";
@@ -11,16 +13,26 @@ interface EdgeCacheContext {
   skipCache: boolean;
 }
 
+export const EDGE_CACHE_NAMESPACE = "/__edge-cache";
+
+const YIELD_CACHE_PATHS = new Set([
+  API_PATHS.yieldRankings(), API_PATHS.yieldRankingsCoin(), API_PATHS.yieldHistoryBase(),
+]);
+
 function isQueryFreeCacheKeyPath(pathname: string): boolean {
   return isCacheKeyQueryFreePath(pathname)
     || findDynamicEndpointDescriptor(pathname)?.cacheKeyIgnoresQuery === true;
 }
 
 function createCacheKeyRequest(request: Request, url: URL): Request {
+  const canonicalUrl = new URL(request.url);
+  // A separate path keeps older keys with arbitrary query strings out of the new namespace.
+  if (YIELD_CACHE_PATHS.has(url.pathname)) {
+    canonicalUrl.pathname = `${EDGE_CACHE_NAMESPACE}/${YIELD_METHODOLOGY_VERSION_LABEL}${url.pathname}`;
+  }
   // A bare GET strips Range and all conditionals. Cache API must return the
   // complete stored 200 so our own lifetime admission precedes any 304 decision.
   if (url.pathname.startsWith("/api/og/") || isQueryFreeCacheKeyPath(url.pathname)) {
-    const canonicalUrl = new URL(request.url);
     canonicalUrl.search = "";
     canonicalUrl.hash = "";
     return new Request(canonicalUrl.toString(), { method: "GET" });
@@ -30,7 +42,6 @@ function createCacheKeyRequest(request: Request, url: URL): Request {
   if (allowedQueryParams) {
     // Mirror the handler's first-value reads: duplicates and unknown names are
     // ignored, so they cannot mint fresh cache keys.
-    const canonicalUrl = new URL(request.url);
     canonicalUrl.search = "";
     canonicalUrl.hash = "";
     for (const name of [...allowedQueryParams].sort()) {
@@ -40,7 +51,7 @@ function createCacheKeyRequest(request: Request, url: URL): Request {
     return new Request(canonicalUrl.toString(), { method: "GET" });
   }
 
-  return new Request(request.url, { method: "GET" });
+  return new Request(canonicalUrl.toString(), { method: "GET" });
 }
 
 export function createEdgeCacheContext(request: Request, url: URL): EdgeCacheContext {

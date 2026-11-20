@@ -107,6 +107,44 @@ describe("handleYieldHistory", () => {
 
   const row = makeYieldHistoryRow();
 
+  it("keeps a held sBOLD point in history without presenting it as current", async () => {
+    const db = mockD1([{ match: "pharos:yield-history:best-window-tiered", rows: [{ ...row, source_key: "price-derived" }] }]);
+    const response = await handleYieldHistory(db, new URL("https://example.com/api/yield-history?stablecoin=sbold-k3-capital"));
+    const body = await readJsonResponse<YieldHistoryResponse>(response, 200);
+    expect(body.current).toBeNull();
+    expect(body.history).toMatchObject([{ sourceKey: "price-derived", apy: row.apy }]);
+    expect(Number(body.methodology.currentVersion)).toBeGreaterThan(8.57);
+  });
+
+  it("keeps a held linked sBOLD point in BOLD source history without presenting it as current", async () => {
+    const sourceKey = "linked-variant:sbold-k3-capital:protocol-api:k3:ethereum:0x23346b04a7f55b8760e5860aa5a77383d63491cd";
+    const db = mockD1([{ match: "pharos:yield-history:source-window-tiered", rows: [{ ...row, source_key: sourceKey, apy: 8.3 }] }]);
+    const url = new URL(`https://example.com/api/yield-history?stablecoin=bold-liquity&sourceKey=${encodeURIComponent(sourceKey)}`);
+    const body = await readJsonResponse<YieldHistoryResponse>(await handleYieldHistory(db, url), 200);
+    expect(body.current).toBeNull();
+    expect(body.history).toMatchObject([{ sourceKey, apy: 8.3 }]);
+  });
+
+  it.each([
+    ["protocol-api:k3:ethereum:0x23346b04a7f55b8760e5860aa5a77383d63491cd", true],
+    ["dac71f4f-7b97-463a-b19f-9796c56c21f1", true],
+    ["price-derived", false],
+  ])("retains legacy BOLD source history for %s and applies the exact hold", async (sourceKey, held) => {
+    vi.useFakeTimers();
+    const now = Date.UTC(2026, 10, 20) / 1000;
+    vi.setSystemTime(now * 1000);
+    const { db, sqlite } = fixtures.open();
+    const date = now - 31 * 86400;
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('yield-rankings', ?, ?)").run(publishedYieldCache(now).value, now);
+    sqlite.prepare(`INSERT INTO yield_history_daily
+      (stablecoin_id, source_key, recorded_at, snapshot_date, is_best, apy, data_source)
+      VALUES ('bold-liquity', ?, ?, ?, 0, 8.3, 'defillama')`).run(sourceKey, date, date);
+    const url = new URL(`https://x/api/yield-history?stablecoin=bold-liquity&days=365&sourceKey=${encodeURIComponent(sourceKey)}`);
+    const body = await readJsonResponse<YieldHistoryResponse>(await handleYieldHistory(db, url), 200);
+    expect(body.history).toMatchObject([{ date, sourceKey, apy: 8.3 }]);
+    expect(body.current).toEqual(held ? null : body.history[0]);
+  });
+
   it.each(["best", "source"])("executes %s selection across raw/daily overlap and publication boundaries", async (mode) => {
     vi.useFakeTimers();
     const publishedAt = Date.UTC(2026, 5, 1) / 1000;
