@@ -3,6 +3,29 @@ import { DISPUTED_AUDIT_VERDICTS } from "../../types/depeg-audit";
 const DISPUTED_VERDICTS_SQL = DISPUTED_AUDIT_VERDICTS.map((verdict) => `'${verdict}'`).join(", ");
 
 /**
+ * The reviewed-dispute evidence for one depeg_events row (`reviewed`) and its provenance row
+ * (`evidence`, all-NULL columns when none exists). NULL means no affirmative evidence: the family
+ * predicate ignores such rows and the projected-peak candidate set keeps the member. One authority
+ * for every member-level dispute test. Keep SQL comments out of the string: some callers flatten
+ * it onto one line.
+ */
+export function reviewedDepegDisputeEvidenceSql(
+  reviewed: string,
+  evidence: string,
+  includeAutomatedFalsePositive = true,
+): string {
+  const excludedVerdicts = includeAutomatedFalsePositive ? DISPUTED_VERDICTS_SQL : "'disputed'";
+  return `(
+    (${reviewed}.disposition = 'repaired' AND ${reviewed}.admitted_coverage_json = '[]')
+    OR ${evidence}.audit_verdict IN (${excludedVerdicts})
+    OR CASE WHEN json_valid(${evidence}.public_json)
+      THEN json_extract(${evidence}.public_json, '$.auditVerdict') IN (${excludedVerdicts}) END
+    OR EXISTS (SELECT 1 FROM depeg_resolver_prediction_errata erratum
+      WHERE erratum.event_id = ${reviewed}.id AND erratum.reason = 'input_corruption')
+  )`;
+}
+
+/**
  * The alias is a static depeg_events table name or alias chosen by the reader.
  *
  * An incident family is its root plus the incidents the root superseded. The lookup names both by
@@ -13,7 +36,6 @@ export function reviewedDepegDisputeSql(
   event: "e" | "events" | "depeg_events",
   includeAutomatedFalsePositive = true,
 ): string {
-  const excludedVerdicts = includeAutomatedFalsePositive ? DISPUTED_VERDICTS_SQL : "'disputed'";
   return `EXISTS (
     SELECT 1 FROM depeg_events reviewed
     LEFT JOIN depeg_event_provenance evidence ON evidence.event_id = reviewed.id
@@ -32,13 +54,6 @@ export function reviewedDepegDisputeSql(
            WHERE alias.superseded_by_incident_key = COALESCE(owner.superseded_by_incident_key, owner.incident_key)
         )
        WHERE source_link.event_id = ${event}.id
-    ) AND (
-      (reviewed.disposition = 'repaired' AND reviewed.admitted_coverage_json = '[]')
-      OR evidence.audit_verdict IN (${excludedVerdicts})
-      OR CASE WHEN json_valid(evidence.public_json)
-        THEN json_extract(evidence.public_json, '$.auditVerdict') IN (${excludedVerdicts}) END
-      OR EXISTS (SELECT 1 FROM depeg_resolver_prediction_errata erratum
-        WHERE erratum.event_id = reviewed.id AND erratum.reason = 'input_corruption')
-    )
+    ) AND ${reviewedDepegDisputeEvidenceSql("reviewed", "evidence", includeAutomatedFalsePositive)}
   )`;
 }

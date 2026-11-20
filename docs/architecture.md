@@ -404,7 +404,7 @@ Domain applications: [R8 redemption admission](process/architecture-appendix.md#
 
 #### ADR-46
 
-**Status:** Accepted; enabled 2026-11-20 on the owner's instruction · **Relations:** [ADR-10](#adr-10), [ADR-30](#adr-30), [ADR-33](#adr-33)
+**Status:** Accepted; enabled and switched off again on 2026-11-20 because the upgrade is rejected from Worker egress · **Relations:** [ADR-10](#adr-10), [ADR-30](#adr-30), [ADR-33](#adr-33)
 
 - **ADR-46 — Share the existing Kraken provider stage for dated snapshots.** Consolidate the opt-in Kraken upgrade into the serial CEX stage of the public quarter-hourly slot. It uses one connection, closes before the existing batched ticker starts and retains the primary collector's two-way concurrency inside the slot's declared `4/6` peak. Scheduled job identities, trigger expressions and CPU placement stay fixed.
 - The upgrade adds up to two seconds of wall time inside the eight-minute `sync-stablecoins` deadline. One subscription covers the reviewed pairs and uses bounded intake. Enablement requires the measured rate-limit and slot-latency review in [Kraken snapshot rollout](./deployment-process.md#kraken-snapshot-rollout).

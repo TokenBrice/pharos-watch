@@ -723,7 +723,7 @@ Historical and active depeg incidents with constituent threshold-crossing counts
 
 ```json
 {
-  "currentVersion": "6.53"
+  "currentVersion": "6.54"
 }
 ```
 
@@ -761,7 +761,7 @@ Per-coin peg scores, reference evidence, coverage-aware recent metrics, and aggr
 
 ```json
 {
-  "currentVersion": "6.53"
+  "currentVersion": "6.54"
 }
 ```
 
@@ -1187,8 +1187,8 @@ Freshness threshold: 1800 s.
 
 ```json
 {
-  "currentVersion": "6.53",
-  "methodologyVersion": "6.53"
+  "currentVersion": "6.54",
+  "methodologyVersion": "6.54"
 }
 ```
 
@@ -1264,7 +1264,7 @@ Commodity detail history overlays canonical native quantities on compatible comp
 
 ### Depeg events
 
-For a grouped incident, `peakDeviationBps` reports the largest same-direction deviation across its eligible constituents, including after the effective fragment closes. An unrecognized audit verdict or duplicate `auditVerdict` keys in stored provenance disqualify a constituent peak. A borrowed peak includes `peakPrice` when it is positive and its quote domain is known. Otherwise the deviation remains available and the price is null. The effective fragment supplies its own peak fields when it ties or belongs to a family with a reviewed dispute.
+For a grouped incident, `peakDeviationBps` reports the largest same-direction deviation across its eligible constituents, including after the effective fragment closes. An unrecognized audit verdict or duplicate `auditVerdict` keys in stored provenance disqualify a constituent peak, as does any constituent-level reviewed-dispute condition (repaired with empty admitted coverage, a disputed audit verdict, or an input-corruption erratum). A borrowed peak includes `peakPrice` when it is positive and its quote domain is known. Otherwise the deviation remains available and the price is null. The effective fragment supplies its own peak fields when it ties or is itself under a reviewed dispute; a disputed family's other reviewed-dispute treatment is unchanged.
 
 The incident contract includes these optional fields when the ledger and its projections carry the corresponding evidence.
 
