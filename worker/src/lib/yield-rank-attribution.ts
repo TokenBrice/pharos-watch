@@ -1,6 +1,6 @@
-import { compareCodeUnits } from "@shared/lib/compare";
 import { YIELD_SOURCE_DEPTH_BANDS } from "@shared/lib/selector/yield-source";
 import { numberValue as finiteNumber } from "@shared/lib/type-guards";
+import { compareYieldRankRows } from "@shared/lib/yield-rank-order";
 import { YIELD_BENCHMARK_KEY_CURRENCY } from "@shared/types/yield";
 import type {
   YieldRankChangeAttribution,
@@ -21,19 +21,7 @@ import type {
  * are attributed — a row that merely moved inside its tie group is not movement.
  */
 
-/** Served ranking order: PYS desc (null last), current APY desc, then name. */
-export function compareYieldRankRows(a: YieldRanking, b: YieldRanking): number {
-  const aScore = finiteNumber(a.pharosYieldScore);
-  const bScore = finiteNumber(b.pharosYieldScore);
-  if (aScore != null || bScore != null) {
-    if (aScore == null) return 1;
-    if (bScore == null) return -1;
-    if (aScore !== bScore) return bScore - aScore;
-  }
-  const apyDiff = b.currentApy - a.currentApy;
-  if (apyDiff !== 0) return apyDiff;
-  return compareCodeUnits(a.name, b.name);
-}
+export { compareYieldRankRows };
 
 /**
  * Baseline rank per row id over a pre-change row set, using the served

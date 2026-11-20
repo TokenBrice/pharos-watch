@@ -49,6 +49,8 @@ Coverage-budget basis, truncation and display-only handling are owned by [Covera
 | Source-risk coverage | `sync-yield-data` published `sourceRisk.*` rows and retained alternates | Any core field below 75% coverage **of eligible rows**: `sourceRiskPenalty`, `rewardShare`, `sourceAgeSeconds`, `sourceDepthRatio`, `venueRiskTier`, `sourceRiskScore`. Eligibility excludes rows whose venue is the asset itself (`price-derived`/`rate-derived` derivation methods, plus the issuer rails `native-wrapper`/`issuer-savings`) from depth and tier, and rows publishing one undivided rate (no provider split and no `apyReward`) from `rewardShare`. Genuine third-party venues (`strategy-vault`, `lending-market`) stay in the denominator and queue as `venue-risk-config-missing`. A penalty counts as evidenced only with two independent evidence families | No separate stale tier; an empty denominator reports `null`, never 100% | No | Missing neutral-fallback evidence degrades Yield Health; best-row and alt-row ratios are reported separately | This runbook |
 | Comparison-anchor freshness | `sync-yield-data` metadata `sourceCoverage.comparisonAnchorFreshness` | Any `staleAnchorCount > 0` | No separate stale tier | No | Field-level watch signal only; excluded from the aggregate `yieldHealth.status` rollup | This runbook |
 
+`sourceAgeSeconds` coverage excludes selected and alternate DeFiLlama `/pools` rows because the provider publishes no per-pool observation clock. Their batch delivery can qualify PYS within the scoring budget.
+
 Read-only JSON checks:
 
 ```bash

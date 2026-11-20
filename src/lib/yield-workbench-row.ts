@@ -82,6 +82,8 @@ export function getYieldRowSourceClockInput(row: YieldWorkbenchRanking): YieldSo
     sourceObservedAt: isYieldRankingSummary(row) ? null : (row.provenance?.sourceObservedAt ?? null),
     sourceAgeSeconds: row.sourceRisk?.sourceAgeSeconds
       ?? (isYieldRankingSummary(row) ? null : (row.provenance?.sourceAgeSeconds ?? null)),
+    deliveryOnly: row.pharosYieldScore != null && row.provenance?.sourceFreshness === "unknown"
+      && row.warningSignals.includes("data-freshness-unknown"),
   };
 }
 

@@ -4,6 +4,7 @@ export interface YieldEvidenceAssessmentInput {
   evidenceClass: YieldEvidenceClass;
   safetyObserved: boolean;
   sourceFreshness: "fresh" | "stale" | "unknown";
+  deliveryFresh?: boolean;
   benchmarkFreshness: "healthy" | "degraded" | "stale";
   hasSourceDepth: boolean;
   hasVenueRisk: boolean;
@@ -48,7 +49,7 @@ export function assessYieldEvidence(input: YieldEvidenceAssessmentInput): YieldE
   const evidenceCompleteness = Number((measuredFieldCount / EVIDENCE_FIELD_COUNT).toFixed(4));
 
   if (
-    input.sourceFreshness !== "fresh" ||
+    (input.sourceFreshness !== "fresh" && !(input.sourceFreshness === "unknown" && input.deliveryFresh)) ||
     input.benchmarkFreshness === "stale" ||
     input.referenceBenchmarkFreshness === "stale" ||
     input.opportunityEvidenceComplete === false

@@ -500,10 +500,7 @@ export function YieldRankMovementCard({ attribution }: { attribution: YieldRankC
   const primaryDriver = attribution?.primaryDriver ?? null;
   const driverContributions = attribution?.driverContributions ?? null;
 
-  // Stable state: render explicit "no movement" card so users see continuity —
-  // but only when a baseline was actually measured. The worker omits the
-  // attribution object entirely when previousRank/liveRank is missing, and
-  // claiming stability then would assert something never measured (E21).
+  // Undefined attribution covers both missing comparisons and expired assessments.
   const allZero = (rankDelta === null || rankDelta === 0) && (pysDelta === null || Math.abs(pysDelta) < 0.005);
   if (attribution === undefined) {
     return (
@@ -512,7 +509,7 @@ export function YieldRankMovementCard({ attribution }: { attribution: YieldRankC
           Movement vs last publication
         </p>
         <p className="mt-1.5 text-sm text-muted-foreground">
-          No comparison baseline — movement vs the previous publication was not measured.
+          Current movement unavailable
         </p>
       </div>
     );

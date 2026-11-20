@@ -199,6 +199,8 @@ Yield routes override the generic 8x/12x runway: `GET /api/yield-rankings` (full
 
 Yield source freshness is separate from publication freshness. Unknown observation evidence must not be replaced with publication time or treated as refreshed merely because the snapshot was newly served. Source and comparison-anchor ages advance at read time; selected `sourceRisk.sourceAgeSeconds` follows authoritative provenance, while alternate ages advance from the publication clock and preserve unavailable ages.
 
+Since yield v8.58, DeFiLlama `/pools` rows can carry PYS through the six-hour batch delivery budget while preserving null observation clocks and the `data-freshness-unknown` warning. Rankings recheck the original batch clock at serve time. Browser and edge cache lifetimes for delivery-based scores end by the batch deadline. Coin responses also expire by the full cohort's next evidence deadline.
+
 Full, summary, and coin rankings also recompute `provenance.dlPools.ageSeconds` from the pool input's original `updatedAt` at serve time, independently of yield publication age. A null pool clock remains a null age, even if the stored age was numeric. The reference-rates strip warns only past the pool input's public stale band (twelve times the hourly producer cadence, currently 43,200 seconds); its tooltip names the pool input mode. Neither serving nor republishing yield data renews that input clock.
 
 Yield history may include a top-level `warning` explaining publication-cutoff fallback. A point with unreadable stored warnings returns `warningSignals: []` with `warningSignalsStatus: "unreadable"`; that marker is not a clean warning assessment. Each point's `pysReproducibility` is `exact`, `not-scored`, `legacy-partial`, or `invalid`: only `exact` affirms reproduction from the publish-time input snapshot, while legacy/absent evidence and invalid snapshots remain explicit.
@@ -1065,7 +1067,7 @@ Yield-bearing stablecoin rankings with safety, benchmark-aware context, and opti
 
 ```json
 {
-  "currentVersion": "8.57",
+  "currentVersion": "8.58",
   "methodologyVersion": "10.46"
 }
 ```
@@ -1084,7 +1086,7 @@ Machine-readable source-list manifest for every yield-bearing asset, including a
 
 ```json
 {
-  "methodologyVersion": "8.57"
+  "methodologyVersion": "8.58"
 }
 ```
 
@@ -1102,8 +1104,8 @@ Historical yield observations for a stablecoin, with optional publication/source
 
 ```json
 {
-  "currentVersion": "8.57",
-  "methodologyVersion": "8.57"
+  "currentVersion": "8.58",
+  "methodologyVersion": "8.58"
 }
 ```
 
