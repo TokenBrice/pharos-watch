@@ -520,7 +520,10 @@ function assertPreviousReaderSource() {
   }));
   // Dated Mento status has its own snapshot schema. Replay supply provenance is input/fact-set only.
   // Only typed report8 gets the pipeline-gap exception. The previous card rejects admission diagnostics.
-  if (hash.digest("hex") !== "6a37a4cdcddeccd6d35a66a4f02e0415f4a93173d2b3bea8e0bab106277d431c") throw new Error("Pre-dust reader source/refinement inputs changed");
+  // v10.47 own-liability refresh: optional selfReferential/ownLiability/scopedWeights producer fields
+  // only; strict objects and refinements for inputs without them are byte-identical (verified by
+  // substituting origin/main's three changed files, which restores the prior digest).
+  if (hash.digest("hex") !== "b972afa8d61651324927d9904437b29477bb52f071df6e902e48b2a01ab5a10b") throw new Error("Pre-dust reader source/refinement inputs changed");
 }
 
 export async function previousReader() {

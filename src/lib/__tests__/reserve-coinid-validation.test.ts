@@ -105,6 +105,54 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "LFRAX is a Frax-ecosystem legacy/locked FRAX claim and remains subject self exposure rather than an upstream dependency edge.",
   ],
   [
+    "frax-frax::Legacy FRAX (ethereum)::FRAX",
+    "Legacy v1 FRAX held on the Frax balance sheet against its verified issuer deployment is subject self exposure, not an upstream dependency edge.",
+  ],
+  [
+    "frax-frax::Legacy FRAX (bsc)::FRAX",
+    "Legacy v1 FRAX held on the Frax balance sheet against its verified issuer deployment is subject self exposure, not an upstream dependency edge.",
+  ],
+  [
+    "frax-frax::Legacy FRAX (arbitrum)::FRAX",
+    "Legacy v1 FRAX held on the Frax balance sheet against its verified issuer deployment is subject self exposure, not an upstream dependency edge.",
+  ],
+  [
+    "frax-frax::Legacy FRAX (avalanche)::FRAX",
+    "Legacy v1 FRAX held on the Frax balance sheet against its verified issuer deployment is subject self exposure, not an upstream dependency edge.",
+  ],
+  [
+    "frax-frax::Legacy FRAX (optimism)::FRAX",
+    "Legacy v1 FRAX held on the Frax balance sheet against its verified issuer deployment is subject self exposure, not an upstream dependency edge.",
+  ],
+  [
+    "frax-frax::Legacy FRAX (fantom)::FRAX",
+    "Legacy v1 FRAX held on the Frax balance sheet against its verified issuer deployment is subject self exposure, not an upstream dependency edge.",
+  ],
+  [
+    "frax-frax::Legacy FRAX (polygon)::FRAX",
+    "Legacy v1 FRAX held on the Frax balance sheet against its verified issuer deployment is subject self exposure, not an upstream dependency edge.",
+  ],
+  [
+    "frax-frax::Legacy FRAX (boba)::FRAX",
+    "Legacy v1 FRAX held on the Frax balance sheet against its verified issuer deployment is subject self exposure, not an upstream dependency edge.",
+  ],
+  [
+    "frax-frax::Legacy FRAX (zksync)::FRAX",
+    "Legacy v1 FRAX held on the Frax balance sheet against its verified issuer deployment is subject self exposure, not an upstream dependency edge.",
+  ],
+  [
+    "frax-frax::Legacy FRAX (polygon-zkevm)::FRAX",
+    "Legacy v1 FRAX held on the Frax balance sheet against its verified issuer deployment is subject self exposure, not an upstream dependency edge.",
+  ],
+  [
+    "frax-frax::Legacy FRAX (aurora)::FRAX",
+    "Legacy v1 FRAX held on the Frax balance sheet against its verified issuer deployment is subject self exposure, not an upstream dependency edge.",
+  ],
+  [
+    "frax-frax::Other reported Frax assets::FRAX",
+    "The sidecar keeps this residual insufficient-evidence with no reviewed instrument classification; its unreviewed source categories (including dai and usdt) stay unlinked at their denominator share, so no tracked coinId is asserted.",
+  ],
+  [
     "fpi-frax::stkcvxFPIFRAX (staked Convex FPI/FRAX LP)::FRAX",
     "The staked Convex FPI/FRAX LP is an identified protocol position, not an isolable upstream FRAX reserve slice, so no single coinId is representative.",
   ],
