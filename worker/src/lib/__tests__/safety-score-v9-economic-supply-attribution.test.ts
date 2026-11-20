@@ -952,6 +952,18 @@ describe("reviewed CCIP vault-share plans", () => {
     },
   );
 
+  it("keeps the sUSDat plan on its peer-proven D02 timestamps until a renewal re-proves every lane peer binding", () => {
+    const plan = REVIEWED_ECONOMIC_SUPPLY_PLANS.get("susdat-saturn")!;
+    const source = plan.escrows[0]!.inFlightSource;
+    if (!source || !("kind" in source) || source.kind !== "evm-ccip-pending") return;
+    // The 2026-11-20 renewal found every current getRemotePools read empty, and
+    // the observer rejects a mere peerBindingPin whose pinned read is empty
+    // (pool-peer-mismatch), so these D02 dates move only in a change that
+    // re-proves the reciprocal peer bindings on every lane side.
+    expect(plan.reviewer).toContain("D02 evidence lane");
+    expect([plan.reviewedAtSec, plan.expiresAtSec]).toEqual([1793120053, 1795712053]);
+  });
+
   it.each(["missing", "digest", "review-clock", "initial-sequence"] as const)(
     "rejects a %s origin certificate even with a self-consistent response digest",
     mismatch => {
