@@ -510,7 +510,7 @@ describe("independent-assurance manifest framework", () => {
     const reviewed = getIndependentAssuranceManifest("EUROP");
     const media = JSON.stringify([{ source_url: reviewed.reportUrl }]);
     await expect(
-      verifyFixtureIndex("EUROP", EUROP_INDEPENDENT_ASSURANCE_PROFILE, "europ-independent-assurance.html", media),
+      verifyFixtureIndex("EUROP", EUROP_INDEPENDENT_ASSURANCE_PROFILE, "", media),
     ).rejects.toThrow("PDF byte length");
   });
 
@@ -524,7 +524,7 @@ describe("independent-assurance manifest framework", () => {
       },
     ]);
     await expect(
-      verifyFixtureIndex("EUROP", EUROP_INDEPENDENT_ASSURANCE_PROFILE, "europ-independent-assurance.html", media, true),
+      verifyFixtureIndex("EUROP", EUROP_INDEPENDENT_ASSURANCE_PROFILE, "", media, true),
     ).resolves.toMatchObject({ newerUnreviewedReport: { reportDate: "2026-09-30" } });
   });
 
@@ -536,7 +536,7 @@ describe("independent-assurance manifest framework", () => {
     expect(EUROP_INDEPENDENT_ASSURANCE_PROFILE.isReportCandidate(auditorReport, "")).toBe(false);
     const media = JSON.stringify([{ source_url: reviewed.reportUrl }, { source_url: letter }, { source_url: auditorReport }]);
     await expect(
-      verifyFixtureIndex("EUROP", EUROP_INDEPENDENT_ASSURANCE_PROFILE, "europ-independent-assurance.html", media, true),
+      verifyFixtureIndex("EUROP", EUROP_INDEPENDENT_ASSURANCE_PROFILE, "", media, true),
     ).resolves.toMatchObject({ newerUnreviewedReport: { reportDate: "2026-09-30", reportUrl: letter } });
   });
 

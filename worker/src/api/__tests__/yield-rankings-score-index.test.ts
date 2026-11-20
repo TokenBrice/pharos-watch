@@ -126,7 +126,23 @@ describe("rankings score-index hydration", () => {
     expect(fresh.rankings[0].provenance?.sourceFreshness).toBe("fresh");
     expect(readPublishedCohort(sqlite)?.validUntil).toBe(deadline + 1);
 
-    vi.setSystemTime((deadline + 1) * 1000);
+    const log = vi.spyOn(structuredLog, "logWorkerEvent").mockImplementation(() => {});
+    const read = cohortCache.readYieldCoinCohort;
+    vi.spyOn(cohortCache, "readYieldCoinCohort").mockImplementationOnce(async (...args) => {
+      const cohort = await read(...args);
+      vi.setSystemTime((deadline + 1) * 1000);
+      return cohort;
+    });
+    const expired = await handleYieldRankingsCoin(db, coinUrl(id));
+    expect(expired.status).toBe(503);
+    expect(expired.headers.get("Retry-After")).toBe("1");
+    expect(await expired.json()).toMatchObject({ reason: "yield-cohort-assessment-expired" });
+    expect(log).toHaveBeenCalledWith(expect.objectContaining({
+      event: "yield-cohort-assessment-expired",
+      metadata: { stablecoinId: id, assessedAt: deadline, validUntil: deadline + 1, serveNow: deadline + 1,
+        boundary: isUsyc ? "usyc-nav-stale" : source === "product-fetch" ? "benchmark-fetch-stale:USD" : "benchmark-record-stale:USD" },
+    }));
+
     const stale = YieldRankingsCoinResponseSchema.parse(await (await handleYieldRankingsCoin(db, coinUrl(id))).json());
     expect(stale.rankings[0].pysNullReason).toBe("source-stale");
     expect(readPublishedCohort(sqlite)?.validUntil).toBeGreaterThan(deadline + 1);

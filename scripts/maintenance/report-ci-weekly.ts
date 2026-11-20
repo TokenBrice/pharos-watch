@@ -2,7 +2,8 @@
 /**
  * Render the weekly CI report: lane p50/p90 against the report-only lane
  * budgets, the PR failure rate by failing lane, the slowest test files, the
- * test files added in the window and the test/production byte ratio.
+ * test files added in the window, the test/production byte ratio and
+ * advisory route-context budget breaches.
  *
  * Every remote read stays in `.github/workflows/weekly-validation.yml`
  * (`gh api`, nightly artifact download, `git log`), so this module only parses
@@ -15,10 +16,11 @@
  * a lane and never hard-codes a second copy of a budget. Cadence and the issue
  * identity belong to `docs/testing.md#scheduled-validation`.
  */
-import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { extname, resolve } from "node:path";
-import { argv as processArgv } from "node:process";
+import { argv as processArgv, env, execPath } from "node:process";
+import { fileURLToPath } from "node:url";
 import {
   parseStrictCliArgs,
   requireCliString,
@@ -26,6 +28,15 @@ import {
   writeCliHelpIfRequested,
   writeFileResolved,
 } from "../lib/cli-args.mjs";
+import { REPO_ROOT } from "../lib/change-contract-common.ts";
+import {
+  buildRouteContext,
+  enumerateReadingSignatures,
+  ROUTE_CONTEXT_CEILINGS,
+  type RouteClass,
+  type RouteContext,
+  type RouteContextDocumentCache,
+} from "../lib/change-contract-routing.ts";
 import { PR_LANES, PR_PREPARE_BUDGET_SECONDS } from "../lib/pr-lanes.mts";
 
 const USAGE = `Usage: node --experimental-strip-types scripts/maintenance/report-ci-weekly.ts --runs <runs.json> --jobs <jobs.json> --since <ISO> [--timings <test-timings.json>] [--added-test-log <git-log.txt>] [--until <ISO>] [--run-url <url>] [--repo-root <dir>] [--output <report.md>]
@@ -100,6 +111,12 @@ export interface UnavailableInput {
   reason: string;
 }
 
+interface RouteBudgetMeasurement extends Pick<RouteContext, "class" | "status"> {
+  file: string;
+  mode: "auto" | "contract";
+  bytes: number;
+}
+
 export interface WeeklyReportInput {
   since: string;
   until: string;
@@ -110,6 +127,7 @@ export interface WeeklyReportInput {
   addedTestLog: string | null;
   addedTestSizes: Record<string, number>;
   codeBytes: CodeByteSummary | null;
+  routeBudgets?: RouteBudgetMeasurement[] | null;
   unavailable: UnavailableInput[];
   notes: string[];
 }
@@ -127,6 +145,7 @@ export interface WeeklyReport extends FailureCensus {
   addedTotal: number;
   addedUnmeasured: number;
   codeBytes: CodeByteSummary | null;
+  routeBudgets: RouteBudgetMeasurement[] | null;
   unavailable: UnavailableInput[];
   notes: string[];
 }
@@ -378,6 +397,7 @@ export function buildWeeklyReport(input: WeeklyReportInput): WeeklyReport {
     addedTotal: added.total,
     addedUnmeasured: added.unmeasured,
     codeBytes: input.codeBytes,
+    routeBudgets: input.routeBudgets ?? null,
     unavailable: input.unavailable,
     notes: input.notes,
   };
@@ -475,6 +495,29 @@ export function renderWeeklyReport(report: WeeklyReport): string {
       "Test corpus counts `__tests__/` and `__fixtures__/` paths plus `*.test.*`, `*.spec.*` and `*.test-support.*` files; both sides are tracked code extensions only.",
     );
   }
+  lines.push("", "## Route-context budgets", "");
+  if (report.routeBudgets === null) {
+    lines.push("Unavailable — the route signatures could not be measured from this checkout.");
+  } else {
+    const over = report.routeBudgets.filter((row) => row.status === "over-budget");
+    lines.push(
+      `${over.length} of ${report.routeBudgets.length} tracked single-file route signatures exceed their advisory ceilings (auto and contract modes).`,
+      "",
+      "| Route class | Ceiling (B) | Over ceiling | Measured |",
+      "|---|---:|---:|---:|",
+    );
+    for (const routeClass of Object.keys(ROUTE_CONTEXT_CEILINGS) as RouteClass[]) {
+      if (routeClass === "multi-domain-batch") continue;
+      lines.push(`| ${routeClass} | ${ROUTE_CONTEXT_CEILINGS[routeClass]} | ${over.filter((row) => row.class === routeClass).length} | ${report.routeBudgets.filter((row) => row.class === routeClass).length} |`);
+    }
+    if (over.length > 0) {
+      const excess = (row: RouteBudgetMeasurement) => row.bytes - ROUTE_CONTEXT_CEILINGS[row.class];
+      lines.push("", `Largest ${Math.min(over.length, 5)} breaches by excess bytes:`, "");
+      for (const row of over.sort((a, b) => excess(b) - excess(a)).slice(0, 5)) {
+        lines.push(`- \`${row.file}\` (${row.mode}, ${row.class}) — ${row.bytes} B, ${excess(row)} B over ceiling.`);
+      }
+    }
+  }
   if (report.unavailable.length > 0) {
     lines.push("", "## Unavailable inputs", "");
     for (const entry of report.unavailable) lines.push(`- ${entry.section}: \`${entry.reason}\``);
@@ -535,11 +578,22 @@ export function measureAddedTestSizes(files: readonly string[], root: string): R
   return sizes;
 }
 
+function measureRouteBudgets(): RouteBudgetMeasurement[] {
+  const signatures = enumerateReadingSignatures();
+  if (signatures.length === 0) throw new Error("no-mapped-signatures");
+  const documents: RouteContextDocumentCache = new Map();
+  return signatures.map(({ file, mode, contract }) => {
+    const context = buildRouteContext(contract, { documents });
+    return { file, mode, class: context.class, status: context.status, bytes: context.total.bytes };
+  });
+}
+
 export function main(argv: readonly string[] = processArgv.slice(2)): number {
   const { values } = parseStrictCliArgs(argv, {
     options: {
       "added-test-log": { type: "string" },
       jobs: { type: "string" },
+      "measure-route-budgets": { type: "boolean" },
       output: { type: "string" },
       "repo-root": { type: "string" },
       "run-url": { type: "string" },
@@ -550,6 +604,10 @@ export function main(argv: readonly string[] = processArgv.slice(2)): number {
     },
   });
   if (writeCliHelpIfRequested(values, USAGE)) return 0;
+  if (values["measure-route-budgets"]) {
+    process.stdout.write(JSON.stringify(measureRouteBudgets()));
+    return 0;
+  }
   const since = requireCliString(values.since, "--since");
   const until = typeof values.until === "string" && values.until ? values.until : new Date().toISOString();
   const root = typeof values["repo-root"] === "string" && values["repo-root"] ? resolve(values["repo-root"]) : process.cwd();
@@ -590,6 +648,28 @@ export function main(argv: readonly string[] = processArgv.slice(2)): number {
     unavailable.push({ section: "test-production-bytes", reason: `tracked-files:unavailable:${error instanceof Error ? error.message : "unknown"}` });
   }
 
+  let routeBudgets: RouteBudgetMeasurement[] | null = null;
+  try {
+    // The router loads its ownership registry and scoped guides from its own checkout.
+    if (realpathSync(root) !== realpathSync(REPO_ROOT)) throw new Error("checkout-mismatch");
+    if (env.ROUTE_PARSER_INSTALL_OUTCOME && env.ROUTE_PARSER_INSTALL_OUTCOME !== "success") {
+      throw new Error("parser-install-failed");
+    }
+    const measured = spawnSync(execPath, [
+      "--experimental-strip-types", "--disable-warning=MODULE_TYPELESS_PACKAGE_JSON",
+      fileURLToPath(import.meta.url), "--measure-route-budgets",
+    ], {
+      encoding: "utf8", timeout: 60_000, killSignal: "SIGKILL", stdio: ["ignore", "pipe", "inherit"],
+    });
+    if (measured.error && "code" in measured.error && measured.error.code === "ETIMEDOUT") {
+      throw new Error("measurement-timeout");
+    }
+    if (measured.error || measured.status !== 0) throw new Error("measurement-failed");
+    routeBudgets = JSON.parse(measured.stdout) as RouteBudgetMeasurement[];
+  } catch (error) {
+    unavailable.push({ section: "route-context-budgets", reason: `route-context:unavailable:${error instanceof Error ? error.message : "unknown"}` });
+  }
+
   const report = buildWeeklyReport({
     since,
     until,
@@ -602,6 +682,7 @@ export function main(argv: readonly string[] = processArgv.slice(2)): number {
       ? {}
       : measureAddedTestSizes(parseAddedTestFiles(addedTestLog).map((entry) => entry.file), root),
     codeBytes,
+    routeBudgets,
     unavailable,
     notes,
   });

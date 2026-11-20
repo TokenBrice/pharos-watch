@@ -3,7 +3,7 @@ import {
   decodeWhirlpool, decodeWhirlpoolTickArray, ORCA_WHIRLPOOL_PROGRAM_ID, quoteWhirlpoolExactIn,
   tickArrayStarts, whirlpoolTickArrayAddress, type WhirlpoolTickArray,
 } from "../../cron/dex-liquidity/solana/whirlpool-quote";
-import { fetchSolanaAccounts, solanaPublicKey, SOLANA_TOKEN_PROGRAM } from "../chain-observation";
+import { fetchSolanaAccountBatch, fetchSolanaAccounts, solanaPublicKey, SOLANA_TOKEN_PROGRAM } from "../chain-observation";
 import { rethrowIfAborted, throwIfAborted } from "../abort";
 import { DEXSCREENER_MIN_LIQUIDITY_USD } from "../dex-cron-constants";
 import { hasPublishableCurrentPrice } from "../price-publication-state";
@@ -57,11 +57,11 @@ async function fetchMoveusdOrcaPrice(context: LivePriceContext, signal?: AbortSi
       // The pool is re-read with its sell-side arrays in one later atomic bank so
       // the mark and the quote describe the same state; missing arrays only
       // narrow the quoted window and a failed fill withholds the price.
-      const quoteBank = await fetchSolanaAccounts([POOL, ...tickAddresses], deadline, context, observedBlock.number);
+      const quoteBank = await fetchSolanaAccountBatch([POOL, ...tickAddresses], deadline, context, observedBlock.number);
       throwIfAborted(signal);
       const quoteAccount = quoteBank.accounts.get(POOL);
       if (!quoteAccount || quoteAccount.executable || quoteAccount.owner !== ORCA_WHIRLPOOL_PROGRAM_ID) return reject("quote-unavailable");
-      const quotePool = decodeWhirlpool(quoteAccount.data, quoteBank.observedBlock.number);
+      const quotePool = decodeWhirlpool(quoteAccount.data, quoteBank.slot);
       if (quotePool.tokenMintA !== MOVEUSD || quotePool.tokenMintB !== USDC || quotePool.liquidity <= 0n
         || solanaPublicKey(quoteAccount.data.subarray(133, 165)) !== VAULT_A
         || solanaPublicKey(quoteAccount.data.subarray(213, 245)) !== VAULT_B) return reject("pool-identity");
@@ -70,9 +70,9 @@ async function fetchMoveusdOrcaPrice(context: LivePriceContext, signal?: AbortSi
         const account = quoteBank.accounts.get(tickAddresses[index]);
         if (!account) continue;
         if (account.owner !== ORCA_WHIRLPOOL_PROGRAM_ID) throw new Error("Unexpected Whirlpool tick-array owner");
-        tickArrays.push(decodeWhirlpoolTickArray(account.data, tickAddresses[index], POOL, quotePool.tickSpacing, quoteBank.observedBlock.number));
+        tickArrays.push(decodeWhirlpoolTickArray(account.data, tickAddresses[index], POOL, quotePool.tickSpacing, quoteBank.slot));
       }
-      const snapshot = { slot: quoteBank.observedBlock.number, poolAddress: POOL, pool: quotePool, tickArrays };
+      const snapshot = { slot: quoteBank.slot, poolAddress: POOL, pool: quotePool, tickArrays };
       const { amountOut } = quoteWhirlpoolExactIn(snapshot, MOVEUSD, QUOTE_AMOUNT);
       const executed = Number(amountOut) / Number(QUOTE_AMOUNT);
       ratio = (Number(quotePool.sqrtPrice) / 2 ** 64) ** 2;

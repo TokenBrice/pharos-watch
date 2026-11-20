@@ -173,6 +173,40 @@ function getRoutingRegistry() {
   return routingRegistry ??= require("./doc-ownership-registry.mts") as typeof RoutingRegistry;
 }
 
+interface ReadingSignature {
+  file: string;
+  mode: "auto" | "contract";
+  contract: ChangeContract;
+  signature: Array<{ id: string; selectors: number[] }>;
+}
+
+export function enumerateReadingSignatures(): ReadingSignature[] {
+  const { PATH_FAMILIES, createOwnershipGlobMatcher } = getRoutingRegistry();
+  const matchers = PATH_FAMILIES.map((family) => ({
+    family,
+    sources: family.sourceGlobs.map(createOwnershipGlobMatcher),
+    selectors: (family.reading ?? []).map((selector) => selector.sources.map(createOwnershipGlobMatcher)),
+  }));
+  const trackedFiles = execFileSync("git", ["ls-files", "-z"], {
+    cwd: REPO_ROOT, encoding: "utf8", maxBuffer: 64 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"],
+  }).split("\0").filter(Boolean);
+  const representatives = new Map<string, ReadingSignature>();
+  for (const file of trackedFiles) {
+    const matched = matchers.filter(({ sources }) => sources.some((match) => match(file)));
+    if (matched.length === 0) continue;
+    const signature = matched.map(({ family, selectors }) => ({
+      id: family.id,
+      selectors: selectors.flatMap((sources, index) => sources.some((match) => match(file)) ? [index] : []),
+    }));
+    for (const mode of ["auto", "contract"] as const) {
+      const contract = classifyChangedFiles([file], mode);
+      const key = JSON.stringify([mode, signature, contract.scopedContext, contract.contextMode.effective, classifyRouteContext(contract)]);
+      if (!representatives.has(key)) representatives.set(key, { file, mode, contract, signature });
+    }
+  }
+  return [...representatives.values()];
+}
+
 export class ExplicitPathError extends Error {}
 
 function uniqueDocs(values: readonly DocReference[]): DocReference[] {

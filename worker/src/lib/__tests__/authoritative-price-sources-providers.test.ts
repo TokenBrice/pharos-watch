@@ -31,16 +31,17 @@ import { createProtocolRedeemProvider } from "../authoritative-price-sources/pro
 import { encodeUint256 } from "../evm-selectors";
 import * as extraction from "../historical-depeg-extraction";
 import { moveusdOrcaProvider } from "../authoritative-price-sources/moveusd-orca";
-import { fetchSolanaAccounts, SOLANA_TOKEN_PROGRAM } from "../chain-observation";
+import { fetchSolanaAccountBatch, fetchSolanaAccounts, SOLANA_TOKEN_PROGRAM } from "../chain-observation";
 import { publicKeyBytes } from "../../cron/dex-liquidity/solana/program-address";
 import { ORCA_WHIRLPOOL_PROGRAM_ID } from "../../cron/dex-liquidity/solana/whirlpool-quote";
 
 vi.mock("../chain-observation", async (original) => ({
-  ...await original<typeof import("../chain-observation")>(), fetchSolanaAccounts: vi.fn(),
+  ...await original<typeof import("../chain-observation")>(), fetchSolanaAccountBatch: vi.fn(), fetchSolanaAccounts: vi.fn(),
 }));
 
 describe("MOVEUSD reviewed Orca mark", () => {
   const read = vi.mocked(fetchSolanaAccounts);
+  const quote = vi.mocked(fetchSolanaAccountBatch);
   const id = "moveusd-cfx";
   let bank: Awaited<ReturnType<typeof fetchSolanaAccounts>>;
   const ticks = (p: string, s: number) => {
@@ -51,8 +52,10 @@ describe("MOVEUSD reviewed Orca mark", () => {
     return { owner: ORCA_WHIRLPOOL_PROGRAM_ID, data: d };
   };
   beforeEach(() => {
+    quote.mockReset().mockImplementation(async (addresses) => ({
+      slot: 2, accounts: new Map(addresses.map((k, i) => [k, i ? ticks(addresses[0], 880 * (1 - i)) : bank.accounts.get(k)!])),
+    }));
     read.mockReset().mockImplementation(async (addresses) => {
-      if (addresses.length === 4) return { ...bank, accounts: new Map(addresses.map((k, i) => [k, i ? ticks(addresses[0], 880 * (1 - i)) : bank.accounts.get(k)!])) };
       const [pool, a, b, va, vb] = addresses;
       const data = [653, 82, 82, 165, 165].map((size) => new Uint8Array(size));
       data[0].set([63, 149, 209, 12, 225, 128, 99, 9]);
@@ -78,7 +81,9 @@ describe("MOVEUSD reviewed Orca mark", () => {
     ctx.assetsById.get("usdc-circle")!.priceObservedAtMode = "local_fetch";
     expect(await price(ctx)).toMatchObject({ price: 1.02, observedAtMode: "local_fetch" });
     expect(await moveusdOrcaProvider.fetchLivePrice!(freshParent(id, 1, "coingecko"), ctx)).toBeNull();
-    expect(read).toHaveBeenCalledTimes(4);
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(quote).toHaveBeenCalledTimes(2);
+    expect(quote).toHaveBeenLastCalledWith(expect.any(Array), expect.any(AbortSignal), ctx, bank.observedBlock.number);
   });
   it.each([[0, 0, 0], [0, 101, 0], [0, 133, 0], [0, 53, 27], [1, 44, 9], [2, 45, 0], [3, 108, 2], [4, 32, 0], [4, 66, 0]])(
     "rejects invalid identity, inventory or quote (%s/%s)", async (index, offset, value) => {
@@ -90,12 +95,26 @@ describe("MOVEUSD reviewed Orca mark", () => {
     await price(); bank.observedBlock.timestamp = Math.floor(Date.now() / 1000) + age;
     expect(await price()).toBeNull();
   });
+  it("rejects a vault identity change between the two Orca reads", async () => {
+    await price();
+    quote.mockImplementationOnce(async ([pool]) => {
+      const account = bank.accounts.get(pool)!;
+      const data = account.data.slice();
+      data[213] ^= 1;
+      return { slot: 2, accounts: new Map([[pool, { ...account, data }]]) };
+    });
+    const ctx = context();
+    expect(await price(ctx)).toBeNull();
+    expect(ctx).toHaveProperty("lastRejectionReason", "orca-exact:pool-identity");
+  });
+
   it("withholds on an unreadable quote, RPC failure and missing parent", async () => {
     await price();
-    read.mockRejectedValue(new Error("unavailable")).mockResolvedValueOnce(bank);
+    quote.mockRejectedValueOnce(new Error("unavailable"));
     const ctx = context();
     expect(await price(ctx)).toBeNull();
     expect(ctx).toHaveProperty("lastRejectionReason", "orca-exact:quote-unavailable");
+    read.mockRejectedValueOnce(new Error("unavailable"));
     expect(await price()).toBeNull();
     expect(await price({ assetsById: new Map() })).toBeNull();
   });

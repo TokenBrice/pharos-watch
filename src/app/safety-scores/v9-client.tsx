@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -250,7 +250,13 @@ function samePreviewMethodology(
     && identity.policyDigest === preview.identity.policyDigest;
 }
 
-export function ReportCardsV9Client({ initialPreview = null }: { initialPreview?: SafetyScoresPreview | null }) {
+export function ReportCardsV9Client({
+  initialPreview = null,
+  onHandoff,
+}: {
+  initialPreview?: SafetyScoresPreview | null;
+  onHandoff?: () => void;
+}) {
   const reportCardsQuery = useReportCardsV9Table();
   const stablecoinsQuery = useStablecoins();
   const logos = logosById;
@@ -317,36 +323,40 @@ export function ReportCardsV9Client({ initialPreview = null }: { initialPreview?
     && samePreviewMethodology(liveData.safetyScoreIdentity, initialPreview)
     && liveData.updatedAt < initialPreview.publishedAtSec;
   const usePreview = previewActive && (liveData === undefined || previewOutranksLive);
+  const matchesFirstFlush = reportCardsQuery.isLoading && usePreview === (initialPreview !== null);
+  useLayoutEffect(() => {
+    if (!matchesFirstFlush) onHandoff?.();
+  }, [matchesFirstFlush, onHandoff]);
 
-  if (reportCardsQuery.isLoading) {
-    return <SafetyScoresContentLoadingState preview={usePreview ? initialPreview : null} />;
-  }
+  if (onHandoff) return null;
 
-  if (usePreview && initialPreview) {
+  if (reportCardsQuery.isLoading || usePreview) {
     return (
       <div className="space-y-6">
-        <QueryFreshnessNotices
-          error={reportCardsQuery.error ?? stablecoinsQuery.error}
-          hasData={false}
-          onRetry={handleRetry}
-          queries={[
-            {
-              preset: "reportCards",
-              dataUpdatedAt: reportCardsQuery.dataUpdatedAt,
-              error: reportCardsQuery.error,
-              hasData: false,
-              meta: reportCardsQuery.meta,
-            },
-            {
-              preset: "stablecoins",
-              dataUpdatedAt: stablecoinsQuery.dataUpdatedAt,
-              error: stablecoinsQuery.error,
-              hasData: !!stablecoinsQuery.data?.peggedAssets?.length,
-              meta: stablecoinsQuery.meta,
-            },
-          ]}
-        />
-        <SafetyScoresContentLoadingState preview={initialPreview} />
+        {!reportCardsQuery.isLoading && (
+          <QueryFreshnessNotices
+            error={reportCardsQuery.error ?? stablecoinsQuery.error}
+            hasData={false}
+            onRetry={handleRetry}
+            queries={[
+              {
+                preset: "reportCards",
+                dataUpdatedAt: reportCardsQuery.dataUpdatedAt,
+                error: reportCardsQuery.error,
+                hasData: false,
+                meta: reportCardsQuery.meta,
+              },
+              {
+                preset: "stablecoins",
+                dataUpdatedAt: stablecoinsQuery.dataUpdatedAt,
+                error: stablecoinsQuery.error,
+                hasData: !!stablecoinsQuery.data?.peggedAssets?.length,
+                meta: stablecoinsQuery.meta,
+              },
+            ]}
+          />
+        )}
+        <SafetyScoresContentLoadingState preview={usePreview ? initialPreview : null} />
       </div>
     );
   }

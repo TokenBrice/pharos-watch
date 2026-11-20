@@ -1,6 +1,7 @@
 import { COVERAGE_REPAIR_MAX_BLOCKS } from "../mint-burn/repair-policy";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config";
 import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
 import { upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
@@ -77,7 +78,15 @@ afterEach(() => { vi.restoreAllMocks(); fixtures.closeAll(); vi.useRealTimers();
 
 describe("bounded scanner coverage repair", () => {
   it.each(["deadline", "overload", "context"])("certifies the full range after %s without oscillation", async (failure) => {
-    const { db, sqlite } = fixtures.open();
+    const { sqlite } = fixtures.open();
+    let exhausted = false;
+    const db = createSqliteD1(sqlite, { onRun(sql) {
+      if (exhausted && sql.startsWith("INSERT OR IGNORE INTO mint_burn_events")) {
+        exhausted = false;
+        vi.setSystemTime(now * 1000 + 121_000);
+        throw overload;
+      }
+    } });
     const size = failure === "context" ? 300 : 100;
     const first = supplyConfig.startBlock, last = first + size * 100 - 1;
     const template = reviewedBurnFixture("dai-makerdao").log;
@@ -105,10 +114,8 @@ describe("bounded scanner coverage repair", () => {
         fromSupplyRaw: String(1000 - logs.filter((log) => Number(log.blockNumber) < range.fromBlock).length),
         toSupplyRaw: String(1000 - logs.filter((log) => Number(log.blockNumber) <= range.toBlock).length) }])));
     const batch = db.batch.bind(db);
-    let exhausted = false;
     const rows = () => Number(sqlite.prepare("SELECT COUNT(*) AS n FROM mint_burn_events").get()!.n);
     vi.spyOn(db, "batch").mockImplementation(async (statements) => {
-      if (exhausted) { exhausted = false; vi.setSystemTime(now * 1000 + 121_000); throw overload; }
       const before = rows(), result = await batch(statements);
       // Four-row statements keep each row's enqueue+insert cost.
       vi.setSystemTime(Date.now() + (statements.length + (rows() - before) * 2) * 400);
@@ -123,6 +130,7 @@ describe("bounded scanner coverage repair", () => {
       const gaps = await loadSupplyRepairs(db, [supplyConfig], new Map([[supplyKey, last]]), now);
       if (!gaps.length) break;
       const [summary] = await repairMintBurnCoverage(request, gaps, pending, new Map(), { supplyProofRepair: true });
+      expect(exhausted).toBe(false);
       ranges.push([summary!.scanFrom!, summary!.scanTo!]);
       accepted.push(pending.length);
       if (pending.length) {
