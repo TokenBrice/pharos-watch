@@ -324,7 +324,7 @@ describe("DigestSnapshot safety map", () => {
     expect(image.getAttribute("src")).toContain("date=2026-08-30");
     expect(image.getAttribute("src")).not.toContain("latest");
     const mapRegion = screen.getByRole("region", { name: "The dated market census behind this edition" });
-    expect(mapRegion.textContent).toContain("Mapped supply: $100.0B across 10 coins");
+    expect(mapRegion.textContent).toContain("Graded supply: $100.0B across 10 coins (incl. variants and stable-value investments)");
     expect(mapRegion.textContent).toContain("A tier: 2 coins · 70.0%");
     expect(mapRegion.textContent).toContain("C/D/F tiers: 6 coins · 15.0%");
   });
@@ -342,7 +342,7 @@ describe("DigestSnapshot safety map", () => {
     render(<DigestSnapshot date="2026-08-30" />);
 
     expect(screen.queryByText("The dated market census behind this edition")).toBeNull();
-    expect(screen.queryByText(/Mapped supply:/)).toBeNull();
+    expect(screen.queryByText(/Graded supply:/)).toBeNull();
   });
 
   it("uses the unavailable panel when the dated poster returns an image error", () => {
@@ -353,7 +353,7 @@ describe("DigestSnapshot safety map", () => {
     fireEvent.error(screen.getByAltText(/Safety Score Map for August 30, 2026/i));
 
     expect(screen.getByText("The map is not available right now")).toBeTruthy();
-    expect(screen.queryByText(/Mapped supply:/)).toBeNull();
+    expect(screen.queryByText(/Graded supply:/)).toBeNull();
   });
 });
 

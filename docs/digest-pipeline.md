@@ -62,7 +62,7 @@ See [Organic grade-transition accounting](#organic-grade-transition-accounting) 
 | Blacklist activity | Public `blacklist_events` (`suppression_reason IS NULL`, rolling last 24h) | Complete observed freeze/destroy counts, known USD subtotal and unpriced count are always retained (including observed zero). Only editorial promotion uses ≥2 events OR >$10M single; unknown amounts remain promotion-eligible. Unsuppressed zero-value bursts are artifact-risk candidates; suppressed mirror-zero rows cannot create candidates |
 | Supply velocity | top 10 coins by mcap | 1d vs 7d changes; signals: "reversed", "accelerating", "decelerating" with material daily/weekly thresholds |
 | Safety scores | canonical V9 publication | Native V9 grades, three pillars, reviewed reasons, caps, and publication health |
-| Safety Map census | dated map manifest + validated `mapSummary` | Mapped supply, per-tier coin counts and supply shares, tier leaders, not-rated count, and explicit poster freshness/date |
+| Safety Map census | dated map manifest + validated `mapSummary` | Graded supply (every graded coin, including variants and stable-value investments, so it exceeds the core market cap), per-tier coin counts and supply shares, tier leaders, not-rated count, and explicit poster freshness/date |
 | Resolved depegs | `depeg_events` (last 24h) | The admitted recovery clock determines 24h membership, including signal keys, and ends the reported duration. Legacy recovery closures can use their recorded end time. Editorial filters require a peak >100 bps and observed mcap >$20M, with the top 5 by impact score. |
 | Mint-burn flows | published `GET /api/mint-burn-flows` aggregate payload (versioned cache key owned by `mint-burn-flow-cache-keys.ts`, 24 closed UTC hours) | Bank Run Gauge (mcap-weighted, **re-binned, never recomputed**), Flight-to-Quality (canonical V9 classification), top pressure coins (\|FIS\| > 20), top 3 chains by absolute 24h net; incomplete scan-window nets remain unavailable, never inactive/zero |
 | Total mcap ATH | derived from core-marked `daily_digest` rows (`json_extract` on stored `totalMcapUsd`) | Anchors current core total mcap against its post-cutover Digest-window ATH value and date |
@@ -296,7 +296,7 @@ If any of the four are absent or blank, Twitter posting returns `skipped: no-cre
 - Format (the `Pharos Daily Digest #N` kicker is prepended whenever an edition number is present, which is the normal case):
   ```
   <b>Today’s map</b>
-  Mapped supply: ${total} across {gradedCount} coins
+  Graded supply: ${total} across {gradedCount} coins (incl. variants and stable-value investments)
   A tier: {count} coins · {share}%
   C/D/F tiers: {count} coins · {share}%
 
