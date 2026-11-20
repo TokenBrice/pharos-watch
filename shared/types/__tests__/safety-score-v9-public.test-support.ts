@@ -528,7 +528,13 @@ function assertPreviousReaderSource() {
   // v10.48 refresh: vocabulary-additive only — one V9_REASON_CODES member plus one charged policy
   // reason (expired-reviewed-reserve-composition); the policy hash keeps the frozen-vocabulary
   // projection, so the only digest delta is the added enum line itself.
-  if (hash.digest("hex") !== "708cb50b71bf899aa67ba2f27d059d29589b44c950e45cfa283f93eec1efecca") throw new Error("Pre-dust reader source/refinement inputs changed");
+  // v10.48 ceiling refresh: exactly two closure files changed (safety-score-v9-facts.ts,
+  // safety-score-v9-public-breakdowns.ts), each adding one optional field
+  // (expiredReviewedAdmittedReserveScore fact; admittedScoreCeiling backing component) — strict
+  // objects and refinements for inputs without them are byte-identical (verified by substituting
+  // the v10.48 commit's two files, which restores the prior 708cb50b… digest). previousReader()
+  // rejects admittedScoreCeiling, as the frozen strict breakdown did.
+  if (hash.digest("hex") !== "a7bc5357db02ba3f548d348b7f539b185ca35b8bbdebb4c8c5702fd97c1556d7") throw new Error("Pre-dust reader source/refinement inputs changed");
 }
 
 export async function previousReader() {
@@ -551,9 +557,15 @@ export async function previousReader() {
     V9ReasonCodeSchema: z.enum(PRE_DUST_REASON_CODES),
   }));
   try {
-    const { SafetyScoreV9PreviousCardSchema: card } = await import("../safety-score-v9-public");
+    const { SafetyScoreV9PreviousCardSchema: current } = await import("../safety-score-v9-public");
     const { ReportCardsV9TableCardSchema: table } = await import("../report-cards-v9-projections");
     const { SafetyScoreV9CurrentResponseSchema } = await import("../safety-score-v9-publication-response");
+    // The frozen strict breakdown had no v10.48 admittedScoreCeiling field.
+    const card = current.superRefine((value, ctx) => {
+      if (value.breakdowns?.backing.components.some((component) => component.admittedScoreCeiling !== undefined)) {
+        ctx.addIssue({ code: "custom", message: "Pre-dust breakdown components have no admittedScoreCeiling" });
+      }
+    });
     const response = SafetyScoreV9CurrentResponseSchema.safeExtend({ cards: z.array(card) });
     return { card, table, response };
   } finally {

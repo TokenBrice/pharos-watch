@@ -1101,10 +1101,10 @@ describe("curated reserve dependency admission", () => {
     const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
     const compiledAlpha = compiled.assets.find((asset) => asset.assetId === "alpha")!;
     expect(compiledAlpha.reserveStatus.observationState).toBe("missing");
-    // v10.48: the review is whole-book, verified and dated, so an age-only
-    // expiry carries the expired-evidence gap, not nondisclosure.
+    // v10.48 does not apply: the expired book names a tracked asset, so no
+    // exact admitted price exists and the origin gap stands.
     expect(compiledAlpha.gaps).toContainEqual(
-      expect.objectContaining({ reasonCode: "expired-reviewed-reserve-composition" }),
+      expect.objectContaining({ reasonCode: "missing-reserve-composition" }),
     );
     expect(
       evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1)

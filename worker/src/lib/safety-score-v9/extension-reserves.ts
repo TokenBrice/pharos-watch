@@ -370,13 +370,17 @@ function reportScopeApplies(
   meta: V9ExtensionRegistryMeta,
   clockSec: number,
   fixedInput?: Readonly<SafetyScoreV9CompilerInput>,
+  ignoreReportAge = false,
 ): boolean {
   const report = meta.proofOfReserves?.latestReport;
   if (!report?.coverage) return false;
   const partition = fixedInput?.safetyScoreV9SupplyAttributionById[meta.id];
+  const policy = V9_CANDIDATE_POLICY_V1.policy;
+  const expiry = policy.semantic.evidence.evidenceExpiry;
   return shouldApplyV10ReserveReportScope(report, admitV10ReserveReportScope({
     report, deploymentRefs: (meta.contracts ?? []).map(row => normalizeDeploymentId(`${row.chain}:${row.address}`)),
-    clockSec, policy: V9_CANDIDATE_POLICY_V1.policy,
+    clockSec, policy: ignoreReportAge ? { ...policy, semantic: { ...policy.semantic, evidence: { ...policy.semantic.evidence,
+      evidenceExpiry: { ...expiry, assuranceReportMaxAgeSec: Number.POSITIVE_INFINITY } } } } : policy,
     currentPartition: partition?.model === "reviewed-economic-deployment-partition-v1" ? partition : null,
     baseInputGenerationId: fixedInput?.baseInputGenerationId,
   }));
@@ -614,6 +618,7 @@ function buildSafetyScoreV9ReviewedCuratedReserveRows(
   fixedInput?: Readonly<SafetyScoreV9CompilerInput>,
   namedAdmission = independentlyAttestedComposition(meta, clockSec, fixedInput),
   onRejected?: OnReserveCompositionRejected,
+  ignoreCompositionAge = false,
 ): ReviewedStaticReserveRows | null {
   const reject = (...reasons: V9ReserveCompositionAdmission["reasons"]) => {
     onRejected?.({ reasons });
@@ -706,7 +711,7 @@ function buildSafetyScoreV9ReviewedCuratedReserveRows(
     conservativeDateEndSec(reportPeriodEnd, clockSec) === null ||
     conservativeDateEndSec(meta.proofOfReserves?.latestReport?.publishedAt, clockSec) === null
   )) return reject("report-date-mismatch");
-  if (clockSec - compositionAtSec > compositionMaxAgeSec) {
+  if (!ignoreCompositionAge && clockSec - compositionAtSec > compositionMaxAgeSec) {
     onRejected?.({ reasons: ["beyond-age-budget"], age: { compositionAsOfSec: compositionAtSec, maxAgeSec: compositionMaxAgeSec } });
     return null;
   }
@@ -724,12 +729,13 @@ export function buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(
   fixedInput?: Readonly<SafetyScoreV9CompilerInput>,
   namedAdmission?: IndependentlyAttestedCompositionAdmission | null,
   onRejected?: OnReserveCompositionRejected,
+  ignoreCompositionAge = false,
 ): ReviewedStaticReserveRows | null {
   if (meta.liveReservesConfig == null) return null;
   // A display-only probe cannot turn a separately reviewed observation into fallback evidence.
   const provenance = LIVE_RESERVE_ADAPTER_DEFINITIONS[meta.liveReservesConfig.adapter].evidenceClass === "weak-live-probe" &&
     hasIndependentReserveObservationDates(meta) ? "curated" : "curated-fallback";
-  return buildSafetyScoreV9ReviewedCuratedReserveRows(meta, clockSec, provenance, fixedInput, namedAdmission, onRejected);
+  return buildSafetyScoreV9ReviewedCuratedReserveRows(meta, clockSec, provenance, fixedInput, namedAdmission, onRejected, ignoreCompositionAge);
 }
 
 /**
@@ -743,13 +749,14 @@ export function buildSafetyScoreV9ReviewedStandaloneReserveRows(
   fixedInput?: Readonly<SafetyScoreV9CompilerInput>,
   namedAdmission?: IndependentlyAttestedCompositionAdmission | null,
   onRejected?: OnReserveCompositionRejected,
+  ignoreCompositionAge = false,
 ): ReviewedStaticReserveRows | null {
   if (meta.liveReservesConfig != null) return null;
   if (meta.variantOf != null) {
     onRejected?.({ reasons: ["variant-standalone-ineligible"] });
     return null;
   }
-  return buildSafetyScoreV9ReviewedCuratedReserveRows(meta, clockSec, "curated", fixedInput, namedAdmission, onRejected);
+  return buildSafetyScoreV9ReviewedCuratedReserveRows(meta, clockSec, "curated", fixedInput, namedAdmission, onRejected, ignoreCompositionAge);
 }
 
 export type ReviewedReserveAdmission =
@@ -766,19 +773,30 @@ export function resolveReviewedReserveAdmission(input: {
   liveReserveRows: readonly ReserveSlice[];
   fixedInput?: Readonly<SafetyScoreV9CompilerInput>;
   onRejected?: OnReserveCompositionRejected;
+  /**
+   * v10.48 ceiling only: cure the composition-age gates and nothing else, so the
+   * caller sees exactly what admission would project were the reviewed
+   * composition inside its age budget at this clock.
+   */
+  ignoreCompositionAge?: boolean;
 }): ReviewedReserveAdmission {
-  const { meta, clockSec, fixedInput } = input;
+  const { meta, clockSec, fixedInput, ignoreCompositionAge = false } = input;
+  // A review inside its age budget also sees its report period fresh: if the
+  // report's coverage would then apply, admission rejects the whole book
+  // (report-scope-not-whole-book), so the cured path admits nothing either.
+  if (ignoreCompositionAge && reportScopeApplies(meta, clockSec, fixedInput, true)) return { kind: "none", projected: null };
   // Evidence historically uses the report-only scope context, while row
   // admission also sees the current partition. Preserve both without
   // repeating the named-report selector or renewing historical provenance.
-  const source = independentlyAttestedComposition(meta, clockSec);
+  const attested = independentlyAttestedComposition(meta, clockSec);
+  const source = ignoreCompositionAge && attested ? { ...attested, freshness: "fresh" as const } : attested;
   const namedAdmission = fixedInput && reportScopeApplies(meta, clockSec, fixedInput) ? null : source;
   const projected = input.liveReserveRows.length > 0 ? null :
     buildSafetyScoreV9ReviewedStaticReserveRows(meta, clockSec, fixedInput, namedAdmission) ??
     (meta.liveReservesConfig != null
       ? buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, clockSec, fixedInput, namedAdmission) ??
-        buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(meta, clockSec, fixedInput, namedAdmission, input.onRejected)
-      : buildSafetyScoreV9ReviewedStandaloneReserveRows(meta, clockSec, fixedInput, namedAdmission, input.onRejected));
+        buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(meta, clockSec, fixedInput, namedAdmission, input.onRejected, ignoreCompositionAge)
+      : buildSafetyScoreV9ReviewedStandaloneReserveRows(meta, clockSec, fixedInput, namedAdmission, input.onRejected, ignoreCompositionAge));
   if (!projected) return source?.freshness === "expired"
     ? { kind: "history", projected: null, source } : { kind: "none", projected: null };
   if (projected.sourceKind === "standing-structure" || projected.sourceKind === "portfolio-observation") {

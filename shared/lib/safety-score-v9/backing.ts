@@ -903,6 +903,39 @@ function appendReserveConcentrationContribution(params: {
   return concentration;
 }
 
+/**
+ * v10.48: an age-expired reviewed composition's reserve component never prices
+ * above the same rows' admitted score. The fallback's reserve component prices
+ * at the lower of its own price and that admitted score. The unclassified-
+ * residual rows carry the ceiling value whether or not it binds; when it binds,
+ * every reserve-domain row publishes that price so the breakdown reconciles,
+ * and each rewritten row carries the ceiling too, so no capped value reads as
+ * an uncapped one.
+ */
+function capExpiredReviewedReserveEvaluation(
+  evaluation: ReserveEvaluation,
+  ceiling: number,
+): ReserveEvaluation {
+  if (evaluation.score === null || !Number.isFinite(ceiling)) return evaluation;
+  if (ceiling >= evaluation.score - SCORE_EPSILON) {
+    return { ...evaluation, contributions: evaluation.contributions.map((row) =>
+      row.source !== "mechanism" && row.componentKey.startsWith("reserve:unclassified-residual")
+        ? { ...row, admittedScoreCeiling: ceiling }
+        : row) };
+  }
+  const capped = clampScore(decimalSnap(Math.max(0, Math.min(100, ceiling))));
+  return {
+    ...evaluation,
+    score: capped,
+    contributions: evaluation.contributions.map((row) => row.source === "mechanism" ? row : {
+      ...row,
+      score: row.score === null ? null : capped,
+      weightedScore: row.score === null ? 0 : capped * row.normalizedWeight,
+      admittedScoreCeiling: ceiling,
+    }),
+  };
+}
+
 export function evaluateV9ReserveExposures(
   asset: V9BackingAssetInput,
   policy: V9BackingEvaluationPolicy,
@@ -925,7 +958,10 @@ export function evaluateV9ReserveExposures(
   if (inherited !== undefined && exposures !== undefined) {
     return inheritedStablecoinReserveEvaluation(asset, inherited, policy, gapIndex, exposures);
   }
-  return evaluateGenericV9ReserveExposures(asset, policy, gapIndex);
+  const generic = evaluateGenericV9ReserveExposures(asset, policy, gapIndex);
+  return asset.admittedScoreCeiling === undefined
+    ? generic
+    : capExpiredReviewedReserveEvaluation(generic, asset.admittedScoreCeiling);
 }
 
 function evaluateGenericV9ReserveExposures(

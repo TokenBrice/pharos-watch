@@ -44,6 +44,10 @@ describe("Compact public cause contracts", () => {
       response: reader.response.safeParse(diagnosticResponse).success,
     }).toEqual({ card: false, response: false });
     expect(reader.card.safeParse({ ...card, negligibleDexRoute: true }).success).toBe(false);
+    const ceiling = structuredClone(card);
+    ceiling.breakdowns!.backing.components[0]!.admittedScoreCeiling = 40;
+    expect([SafetyScoreV9CurrentResponseSchema.safeParse({ ...payload, cards: [ceiling] }).success, reader.card.safeParse(ceiling).success])
+      .toEqual([true, false]);
     card.pillars.backing.reasons[0] = { ...card.pillars.backing.reasons[0]!, negligibleDexRoute: true } as typeof card.pillars.backing.reasons[0];
     expect(reader.card.safeParse(card).success).toBe(false);
     // v10.48 consciously extends the charged vocabulary past the pre-dust freeze;

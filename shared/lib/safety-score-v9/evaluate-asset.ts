@@ -1757,6 +1757,11 @@ export function evaluateV9Asset({
       : { cdpLiquidationCapacitySelection: liquidationCapacitySelection }),
     ...(inheritedStablecoinBacking === undefined ? {} : { inheritedStablecoinBacking }),
     ...(asset.lenderBook === undefined ? {} : { lenderBook: asset.lenderBook }),
+    // v10.48: an age-expired reviewed composition's reserve component never
+    // prices above the same rows' compiled admitted score.
+    ...(asset.expiredReviewedAdmittedReserveScore === undefined
+      ? {}
+      : { admittedScoreCeiling: asset.expiredReviewedAdmittedReserveScore }),
     trackRecordMonths,
     asOfSec: identity.asOfSec,
   };

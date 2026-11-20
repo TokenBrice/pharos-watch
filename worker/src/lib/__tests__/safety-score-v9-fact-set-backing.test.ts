@@ -12,10 +12,10 @@ import {
   type SafetyScoreV9FactSetExtensionV2,
 } from "../safety-score-v9/fact-set";
 import { makeV9Extension, makeV9FixedInput, v9Status } from "../../test-helpers/v9-fixed-input";
-import { eligibleReserveMeta, mintMeta } from "./safety-score-v9-reserve-admission.test-support";
+import { CEILING_BOOKS, compileCeilingCard, eligibleReserveMeta, mintMeta, reviewDatedOn } from "./safety-score-v9-reserve-admission.test-support";
 import { buildSafetyScoreV9Candidate } from "../safety-score-v9/candidate";
 
-import { createRuntimeGapVerdict } from "../safety-score-v9/fact-set-context";
+import { createAssetBuildContext, createRuntimeGapVerdict } from "../safety-score-v9/fact-set-context";
 import { normalizeFixedInput } from "../report-cards-fixed-input";
 import { normalizeSafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 import { buildReserves, reconcileCollateralDependencyMappings } from "../safety-score-v9/fact-set-backing";
@@ -353,11 +353,7 @@ describe("v10.48 age-only expired composition attribution", () => {
   /** 2026-08-15: 46 days past the fixture's 2026-06-30 composition. */
   const AGE_ONLY_CLOCK_SEC = Date.UTC(2026, 7, 15) / 1_000;
 
-  function bravoMeta(mutate: (meta: V9ExtensionRegistryMeta) => V9ExtensionRegistryMeta = meta => meta) {
-    return mutate(eligibleReserveMeta({
-      id: "bravo", mechanismArchetype: "fiat-cash", launchDate: "2020-01-01",
-    }));
-  }
+  const bravoMeta = (mutate = (meta: V9ExtensionRegistryMeta) => meta) => mutate(CEILING_BOOKS.strong());
 
   function compileBravo(meta: V9ExtensionRegistryMeta, clockSec: number) {
     const fixed = makeV9FixedInput({ assetId: "bravo", clockSec, reserves: [] });
@@ -404,16 +400,84 @@ describe("v10.48 age-only expired composition attribution", () => {
     expect(card.pillars.backing.reasons).toContainEqual(expect.objectContaining({
       code: "expired-reviewed-reserve-composition", cause: "U",
     }));
-    // Published responsibility summaries stay cause-derived (U -> unresearched),
-    // exactly as an expired stale-audited composition publishes today; the
-    // expired-evidence ownership lives in the reason's legacy responsibility.
+    // Summaries stay cause-derived (U -> unresearched); expired-evidence ownership is the reason's legacy responsibility.
     const summary = card.scoreTrace.evidenceResponsibility.summaries.find(
       (row) => row.responsibility === "unresearched",
     );
     expect(summary?.reasonCodes).toContain("expired-reviewed-reserve-composition");
-    expect(card.breakdowns!.backing.components.find(
-      (component) => component.key === "reserve:unclassified-residual",
-    )).toMatchObject({ score: 50 });
+  });
+
+  // min(U bound, own admitted score); ownLiability's (~14.5) is below C. A binding ceiling marks every row it rewrote.
+  const FRESH_SEC = Date.UTC(2026, 6, 21) / 1_000;
+  const compile = compileCeilingCard;
+  it.each([
+    ["strong", 0, "static-validated", false], ["weak", 0, "static-validated", true],
+    ["ownLiability", 1, "static-validated", true], ["named", 0, "independent", false],
+  ] as const)("caps a %s expired book", (book, own, evidenceClass, binds) => {
+    const fresh = compile(CEILING_BOOKS[book](), FRESH_SEC);
+    expect([fresh.reserves < 50, fresh.facts.reserveExposures.filter((row) => row.selfReferential).length,
+      fresh.facts.reserveCompositionEvidenceClass]).toEqual([binds, own, evidenceClass]);
+    const expired = compile(CEILING_BOOKS[book](), AGE_ONLY_CLOCK_SEC);
+    expect(expired.residual).toMatchObject({
+      score: expect.closeTo(Math.min(50, fresh.reserves), 6), admittedScoreCeiling: expect.closeTo(fresh.reserves, 6) });
+    expect(expired.components.filter((row) => row.source !== "mechanism").every((row) => row.admittedScoreCeiling !== undefined))
+      .toBe(binds);
+  });
+
+  it("keeps origin treatment when report coverage would narrow a fresh review", () => {
+    const sec = Date.UTC(2026, 9, 15) / 1_000; // the report period is past its own budget too
+    const fresh = compile(reviewDatedOn(CEILING_BOOKS.owedExclusion(), "2026-10-13"), sec);
+    const expired = compile(CEILING_BOOKS.owedExclusion(), sec);
+    expect([fresh.card.reserveCompositionAdmission?.reasons, expired.card.reserveCompositionAdmission?.reasons,
+      expired.facts.expiredReviewedAdmittedReserveScore]).toEqual([["report-scope-not-whole-book"], ["beyond-age-budget"], undefined]);
+  });
+
+  it("keeps origin treatment, rows and edges for a tracked-asset book", () => {
+    const [fresh, expired, bare] = ([[FRESH_SEC, {}], [AGE_ONLY_CLOCK_SEC, {}], [AGE_ONLY_CLOCK_SEC, { reserveReview: undefined }]] as const)
+      .map(([sec, patch]) => compile({ ...CEILING_BOOKS.tracked(), ...patch }, sec).facts);
+    expect(fresh!.dependencies.diagnostics.issueCodes).toContain("outside-active-set:usdc-circle");
+    expect(expired).toMatchObject({ reserveExposures: [], dependencies: { edges: bare!.dependencies.edges,
+      diagnostics: bare!.dependencies.diagnostics }, gaps: expect.arrayContaining([expect.objectContaining({ reasonCode: "missing-reserve-composition" })]) });
+    // basket-needs-split strips the coinId before projection; the registry row still names the tracked asset.
+    const split = compile({ ...CEILING_BOOKS.tracked(), reserveReview: { ...CEILING_BOOKS.tracked().reserveReview!, nonLinkDispositions: [{
+      reserveIndex: 0, reserveName: "USDC held in reserve", pct: 50, disposition: "basket-needs-split", rationale: "Split pending." }] } },
+    AGE_ONLY_CLOCK_SEC).facts;
+    expect([split.expiredReviewedAdmittedReserveScore, split.gaps.some((gap) => gap.reasonCode === "missing-reserve-composition")])
+      .toEqual([undefined, true]);
+  });
+
+  it("keeps origin treatment when the admitted rows cannot compile", () => {
+    const { context: base, asset } = compileBravo(bravoMeta(), AGE_ONLY_CLOCK_SEC);
+    const marker = base.asset.expiredReviewedReserveComposition!;
+    const rows = [{ ...marker.admittedReserveRows.rows[0]!, name: " " }];
+    const context = createAssetBuildContext(base.fixedInput, base.extension, { ...base.asset, expiredReviewedReserveComposition:
+      { ...marker, admittedReserveRows: { ...marker.admittedReserveRows, rows } } }, base.researchPayloadSha256);
+    expect([asset.expiredReviewedAdmittedReserveScore! > 50, buildReserves(context).expiredReviewedAdmittedReserveScore])
+      .toEqual([true, undefined]);
+    expect([...context.gaps.values()].map((gap) => [gap.reasonCode, gap.causeProof.cause])).toEqual([["missing-reserve-composition", "C"]]);
+  });
+
+  it("caps every real age-only expired review at its own admission", { tags: ["nightly"] }, () => {
+    const sec = 1_795_169_853, day = "2026-11-18"; // capture clock
+    let capped = 0;
+    for (const meta of ACTIVE_META_BY_ID.values()) {
+      const review = meta.reserveReview;
+      if (review?.scope !== "full-composition" || review.confidence !== "verified" || !review.compositionAsOf) continue;
+      const expired = compile(meta, sec);
+      if (expired.card.reserveCompositionAdmission?.reasons.join() !== "beyond-age-budget") continue;
+      const ceiling = expired.facts.expiredReviewedAdmittedReserveScore;
+      if (ceiling === undefined) { // v10.48 does not apply: tracked-asset row or observation-dated composition
+        expect([expired.facts.gaps.some((gap) => gap.reasonCode === "missing-reserve-composition"),
+          meta.reserves!.some((row) => row.coinId) || Boolean(review.observations?.length) ||
+          meta.proofOfReserves?.latestReport?.coverage != null], meta.id).toEqual([true, true]);
+        continue;
+      }
+      const admitted = compile(reviewDatedOn(meta, day), sec);
+      expect(ceiling, meta.id).toBeCloseTo(admitted.reserves, 6);
+      expect(expired.reserves, meta.id).toBeLessThanOrEqual(admitted.reserves + 1e-6);
+      capped++;
+    }
+    expect(capped).toBeGreaterThanOrEqual(20);
   });
 });
 

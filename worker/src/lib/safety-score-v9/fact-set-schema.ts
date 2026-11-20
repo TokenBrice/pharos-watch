@@ -399,13 +399,22 @@ const AssetExtensionSchema = z
     reserveBoundFacts: canonicalArrayBy(ReserveBoundedFactSchema, (row) => row.factKey).optional(),
     reviewedStaticReserveRows: ReviewedStaticReserveRowsSchema.nullable().optional(),
     // v10.48: a whole-book, verified, dated reviewed composition that admission
-    // rejected for age alone. The rows stay unused; the marker only re-attributes
-    // the whole-reserve fallback gap from issuer nondisclosure to expired
-    // published evidence. It mirrors the admission diagnostic's rejection
-    // result, so the two can never disagree.
+    // rejected for age alone. The rows stay unused as exposures; the marker
+    // re-attributes the whole-reserve fallback gap from issuer nondisclosure to
+    // expired published evidence. It also carries exactly what admission would
+    // compile were the composition inside its age budget (projected rows,
+    // reviewed classifications, bound facts, and their evidence with only the
+    // age budgets stretched), solely to price the ceiling on the fallback's
+    // reserve component. It is set only when that admitted price is computable;
+    // otherwise the asset keeps its pre-v10.48 treatment.
     expiredReviewedReserveComposition: z.object({
       compositionAsOfSec: z.number().int(),
       maxAgeSec: z.number().int().positive(),
+      admittedReserveRows: ReviewedStaticReserveRowsSchema,
+      reserveClassifications: canonicalArrayBy(ReserveClassificationSchema, (row) => row.exposureKey),
+      reserveBoundFacts: canonicalArrayBy(ReserveBoundedFactSchema, (row) => row.factKey),
+      researchEvidence: canonicalArrayBy(ResearchEvidenceSchema, (evidence) => evidence.evidenceKey),
+      componentEvidence: canonicalArrayBy(ComponentEvidenceBindingSchema, (binding) => binding.componentKey),
     }).strict().optional(),
     reserveScopeAdmissions: z.array(ReserveScopedAdmissionSchema).optional(),
     routeReviews: canonicalArrayBy(RouteReviewSchema, (row) => `${row.lane}:${row.routeId}`),

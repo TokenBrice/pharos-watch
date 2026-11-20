@@ -121,6 +121,10 @@ const SafetyScoreV9BackingBreakdownSchema = z
           wholeAssetWeight: z.number().finite().min(0).max(1).nullable().optional().describe("Defaults to the effective scoring weight; null remains unavailable"),
           weightedContribution: ScoreSchema,
           observationState: z.enum(["known", "missing", "stale", "unsupported", "bounded-unknown"]),
+          // v10.48: the admitted-price ceiling an expired reviewed composition priced
+          // against: always on its unclassified-residual row, and on every reserve
+          // row the ceiling rewrote when it binds.
+          admittedScoreCeiling: ScoreSchema.optional(),
           factors: z.array(z.object({
             componentKey: z.string().min(1),
             score: ScoreSchema.nullable(),
