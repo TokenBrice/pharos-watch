@@ -17,7 +17,7 @@ function makeExecutionContext() {
 
 describe("createEdgeCacheContext", () => {
   it("strips conditional and range headers before asking Cache API for a full representation", () => {
-    const request = new Request("https://api.pharos.watch/api/yield-rankings?projection=summary", {
+    const request = new Request("https://api.pharos.watch/api/depeg-events?stablecoin=usdt-tether", {
       headers: { "If-None-Match": '"generation"', "If-Modified-Since": new Date().toUTCString(),
         Range: "bytes=0-100", "If-Range": '"generation"' },
     });
@@ -143,6 +143,21 @@ describe("writeEdgeCache", () => {
     } });
     match.mockImplementationOnce(async (key: Request) => key.url === context.cacheKey.url ? cached : undefined);
     await expect(readEdgeCache(context)).resolves.toBe(cached);
+  });
+
+  it.each([
+    "/api/yield-rankings", "/api/yield-rankings?projection=summary",
+    "/api/yield-rankings-coin?stablecoin=bold-liquity", "/api/yield-history?stablecoin=sbold-k3-capital&days=30",
+  ])("misses a fresh pre-hold edge response for %s", async (path) => {
+    const url = new URL(path, "https://site-api.pharos.watch");
+    const cached = new Response("pre-hold", { headers: {
+      "Cache-Control": "public, max-age=60", Date: new Date().toUTCString(),
+    } });
+    match.mockImplementation(async (key: Request) => key.url === url.href ? cached : undefined);
+    const context = createEdgeCacheContext(new Request(url), url);
+    await expect(readEdgeCache(context)).resolves.toBeNull();
+    expect(new URL(context.cacheKey.url).search).toBe(url.search);
+    expect(match).toHaveBeenCalledOnce();
   });
 
   it("misses across the bounded freshness transition while preserving hit Age and Date", async () => {

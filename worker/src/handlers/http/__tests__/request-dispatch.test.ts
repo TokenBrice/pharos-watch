@@ -53,7 +53,8 @@ vi.mock("../context", () => ({
   buildRouteContext: mocks.buildRouteContext,
 }));
 
-vi.mock("../edge-cache", () => ({
+vi.mock("../edge-cache", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../edge-cache")>(),
   createEdgeCacheContext: mocks.createEdgeCacheContext,
   readEdgeCache: mocks.readEdgeCache,
   writeEdgeCache: mocks.writeEdgeCache,
@@ -342,6 +343,14 @@ describe("handleHttpRequestImpl", () => {
     expect(mocks.recordRequestSource).toHaveBeenCalledOnce();
     expect(mocks.resolveRoute).not.toHaveBeenCalled();
     expect(mocks.route).not.toHaveBeenCalled();
+  });
+
+  it.each(["/__edge-cache", "/__edge-cache/reserved"])("rejects %s before edge-cache lookup", async (path) => {
+    mocks.resolveRoute.mockReturnValue(null);
+    const response = await handleHttpRequestImpl(new Request(`https://api.pharos.watch${path}`), makeEnv(), makeCtx());
+
+    expect(response.status).toBe(404);
+    expect(mocks.readEdgeCache).not.toHaveBeenCalled();
   });
 
   it.each([false, true])("enforces the fast limiter before serving authenticated cache hits (blocked=%s)", async (blocked) => {

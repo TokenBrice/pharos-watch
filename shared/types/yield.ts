@@ -328,8 +328,9 @@ export type YieldRankingsCoinResponse = z.infer<typeof YieldRankingsCoinResponse
 export const YieldCoinCohortSchema = YieldRankingsResponseSchema.extend({
   publication: YieldPublicationMetadataSchema,
   signature: z.string().min(1),
-  // Legacy assessments lack the build version and cannot serve cross-signature fallback.
+  // Legacy assessments without these fields cannot serve cross-signature fallback.
   yieldMethodologyVersion: z.string().min(1).optional(),
+  yieldHoldSignature: z.string().min(1).optional(),
   assessedAt: z.number().nonnegative(),
   validUntil: z.number().nonnegative(),
   validUntilBoundary: z.string().optional(),

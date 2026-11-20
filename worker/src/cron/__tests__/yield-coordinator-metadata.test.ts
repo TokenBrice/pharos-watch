@@ -287,7 +287,12 @@ describe("buildYieldDegradationReasons", () => {
 });
 
 describe("buildYieldSyncMetadata", () => {
-  it.each(["pendle", "aaveV3", "exclusion-due"] as const)("preserves %s quality diagnostics separately from publication health and bounded telemetry", (family) => {
+  it.each([
+    ["pendle", "2026-11-20T23:59:59Z"],
+    ["aaveV3", "2026-11-20T23:59:59Z"],
+    ["exclusion-due", "2026-11-21T00:00:00Z"],
+    ["exclusion-due", "2026-11-26T00:00:00Z"],
+  ] as const)("preserves %s quality diagnostics at %s separately from publication health and bounded telemetry", (family, startedAt) => {
     const comparisonAnchorFreshness = buildComparisonAnchorFreshnessMeta({
       startSec: START_SEC,
       evaluatedSources: [
@@ -303,7 +308,7 @@ describe("buildYieldSyncMetadata", () => {
 
     const metadata = JSON.parse(
       buildYieldSyncMetadata({
-        startSec: Date.parse(family === "exclusion-due" ? "2026-11-21T00:00:00Z" : "2026-11-20T23:59:59Z") / 1000,
+        startSec: Date.parse(startedAt) / 1000,
         rowsRead: 1,
         safetySnapshotHeld: true,
         rowsWritten: 1,
@@ -416,7 +421,8 @@ describe("buildYieldSyncMetadata", () => {
     expect(metadata.quality).toEqual({
       degraded: family !== "pendle",
       reasons: family === "exclusion-due"
-        ? YIELD_OPPORTUNITY_EXCLUSIONS.map((entry) => `yield-opportunity-exclusion-review-due:${entry.projects[0]}`)
+        ? YIELD_OPPORTUNITY_EXCLUSIONS.filter(({ projects }) => startedAt === "2026-11-26T00:00:00Z" || !projects.includes("k3"))
+          .map((entry) => `yield-opportunity-exclusion-review-due:${entry.projects[0]}`)
         : family === "pendle" ? [] : [reason],
       advisoryReasons: family === "pendle" ? ["safety-snapshot-held", reason] : ["safety-snapshot-held"],
     });
