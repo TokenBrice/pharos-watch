@@ -170,16 +170,18 @@ describe("adaptCollateralPositions", () => {
     });
   });
 
-  it("identifies Swissgrams gold without assigning an unrelated tracked gold dependency", () => {
-    const address = "0x2bd214946806dbee88dd3b44b26a21759723d8a2";
+  // SGG: issuer-linked contract; wXAUH holds its whole supply in XAUH; SPCXx is Backed's verified xStocks proxy.
+  it.each([
+    ["SGG", "SWISSGRAMS GOLD", 6, "1000000"],
+    ["wXAUH", "Wrapped Herculis Gold Coin", 18, "100000000000000000000"],
+    ["SPCXx", "SpaceX xStock", 18, "100000000000000000000"],
+  ] as const)("identifies %s (%s) at the high tier without a tracked dependency", (symbol, name, decimals, collateralBalance) => {
+    const address = `0x${symbol.toLowerCase()}`;
     const result = adaptCollateralPositions({
-      [address]: {
-        address, name: "SWISSGRAMS GOLD", symbol: "SGG", decimals: 6,
-        positions: [{ collateralBalance: "1000000", minted: "0", zchfDecimals: 18 }],
-      },
-    }, { [address]: { price: { usd: 4_000 } } }, 0);
+      [address]: { address, name, symbol, decimals, positions: [{ collateralBalance, minted: "0", zchfDecimals: 18 }] },
+    }, { [address]: { price: { usd: 100 } } }, 0);
     expect(result.slices).toContainEqual({
-      sourceKey: "collateral-positions-api:sgg", name: "SGG (SWISSGRAMS GOLD)", pct: 100, risk: "high",
+      sourceKey: `collateral-positions-api:${symbol.toLowerCase()}`, name: `${symbol} (${name})`, pct: 100, risk: "high",
     });
     expect(result.warnings?.some((warning) => warning.code === "unknown-asset")).not.toBe(true);
   });

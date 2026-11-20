@@ -127,12 +127,14 @@ const PROTOCOL_ASSET_CONFIG: Record<string, ProtocolAssetConfig> = {
   GOOGLX: { risk: "high" },
   NVDAX: { risk: "high" },
   TSLAX: { risk: "high" },
+  SPCXX: { risk: "high" },
   LENDS: { risk: "high" },
   REALU: { risk: "high" },
   DQTS: { risk: "high" },
   ESC: { risk: "high" },
   SGG: { risk: "high" },
   XAUH: { risk: "high" },
+  WXAUH: { risk: "high" },
 };
 
 function getProtocolAssetConfig(symbol: string): ProtocolAssetConfig | null {
