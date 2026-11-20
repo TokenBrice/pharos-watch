@@ -560,20 +560,22 @@ export function readDepegReferenceHold(row: DepegRow): StoredReferenceHold | und
   return undefined;
 }
 
+export function readDepegProvenanceJson(encoded: DepegRow["provenance_json"]): DepegEvent["provenance"] {
+  if (!encoded) return null;
+  try {
+    const parsed = JSON.parse(encoded) as DepegEvent["provenance"];
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Convert a snake_case D1 row to a camelCase DepegEvent */
 export function rowToDepegEvent(row: DepegRow): PegScoreEvent {
   const direction = parseDepegDirection(row);
   const source = parseDepegSource(row);
   const closeReason = parseDepegCloseReason(row);
-  let provenance: DepegEvent["provenance"] = null;
-  if (row.provenance_json) {
-    try {
-      const parsed = JSON.parse(row.provenance_json) as DepegEvent["provenance"];
-      provenance = parsed && typeof parsed === "object" ? parsed : null;
-    } catch {
-      provenance = null;
-    }
-  }
+  let provenance = readDepegProvenanceJson(row.provenance_json);
   // Validate outside the JSON-syntax catch: unknown archived evidence must not
   // become a null verdict and silently regain score eligibility.
   if (provenance?.auditVerdict != null) {

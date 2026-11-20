@@ -5,6 +5,7 @@ import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { DEPEG_AUDIT_DISPUTED_BADGE, MECHANISM_ARCHETYPE_SHORT_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 import depegEventRelatedData from "@/generated/depeg-event-related-data.json";
+import { depegDirectionLabel } from "@/lib/depeg-event-display";
 import type { MechanismArchetype } from "@shared/types/stablecoin-taxonomy";
 import type { PegCurrency } from "@shared/types/core";
 import type { DepegEventSearchEntry } from "@shared/types/peg";
@@ -34,6 +35,7 @@ interface RelatedItem {
   symbol: string;
   startedAt: number;
   peakDeviationBps: number;
+  peakBasis?: DepegEventSearchEntry["peakBasis"];
   peakReview?: DepegEventSearchEntry["peakReview"];
   auditVerdict?: DepegEventSearchEntry["auditVerdict"];
   direction: "above" | "below";
@@ -52,6 +54,7 @@ function toRelatedItem(event: DepegEventSearchEntry): RelatedItem {
     symbol: event.symbol,
     startedAt: event.startedAt,
     peakDeviationBps: event.peakDeviationBps,
+    peakBasis: event.peakBasis,
     peakReview: event.peakReview,
     auditVerdict: event.auditVerdict,
     direction: event.direction,
@@ -177,7 +180,7 @@ export function RelatedIncidentsRail({
                     <span className="text-xs text-muted-foreground">
                       {item.peakReview === "unverified"
                         ? "Peak unverified"
-                        : `peak ${formatDeviationBps(item.peakDeviationBps)} ${item.direction === "below" ? "below" : "above"} peg`}
+                        : `peak ${formatDeviationBps(item.peakDeviationBps)} ${depegDirectionLabel(item.direction, item.peakBasis)}`}
                       {isDisputedAuditVerdict(item.auditVerdict) ? ` (${DEPEG_AUDIT_DISPUTED_BADGE.label})` : ""}
                     </span>
                   </Link>

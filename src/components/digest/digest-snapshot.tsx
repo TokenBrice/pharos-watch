@@ -10,6 +10,7 @@ import { formatCurrency, formatAddress, formatPercentChange, formatScore } from 
 import { getNetColor } from "@shared/lib/classification/flows";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/classification";
 import type { DigestSnapshotInputData, DigestSnapshotResponse } from "@shared/types/digest";
+import type { DepegEvent } from "@shared/types/peg";
 import { Activity, ArrowDownUp, BarChart3, CheckCircle, ImageOff, Shield, ShieldBan, TrendingUp, TriangleAlert } from "lucide-react";
 import { formatDigestDateLabel } from "@/lib/digest";
 import { formatV9ReasonCodeLabel } from "@/lib/safety-score-reason-code-labels";
@@ -157,6 +158,7 @@ interface VisibleDepeg {
   direction: string | null;
   mcapUsd: number | null;
   peakBps: number;
+  peakBasis?: DepegEvent["peakBasis"];
   currentAvailable: boolean;
 }
 
@@ -176,6 +178,7 @@ function getCapturedDepegs(inputData: DigestSnapshotInputData): { count: number 
         ? (depeg.currentBps >= 0 ? "above" : "below")
         : depeg.direction ?? (depeg.bps >= 0 ? "above" : "below"),
       peakBps: depeg.bps,
+      peakBasis: depeg.peakBasis,
       currentAvailable: depeg.severityBasis === "current" && depeg.currentBps != null,
       mcapUsd: depeg.mcapUsd,
     })),
@@ -188,9 +191,11 @@ function DepegRowList({ rows }: { rows: VisibleDepeg[] }) {
       {rows.map((d) => (
         <li key={d.key} className="text-xs text-muted-foreground">
           {d.symbol}: {d.bps > 0 ? "+" : ""}
-          {d.bps} bps {d.direction ? `${d.direction} peg` : "off peg"}
+          {d.bps} bps {d.direction ? `${d.direction} ${!d.currentAvailable && d.peakBasis ? "the peer median" : "peg"}` : "off peg"}
           {d.mcapUsd != null ? ` (${formatCurrency(d.mcapUsd)})` : ""}
-          {d.currentAvailable ? ` (historical peak ${d.peakBps} bps)` : " (historical peak; current unavailable)"}
+          {d.currentAvailable
+            ? ` (historical peak ${d.peakBps} bps${d.peakBasis ? ` ${d.peakBps < 0 ? "below" : "above"} the peer median` : ""})`
+            : " (historical peak; current unavailable)"}
         </li>
       ))}
     </ul>

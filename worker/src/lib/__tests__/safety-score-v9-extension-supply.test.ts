@@ -1,9 +1,18 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import type { BridgeRouteRiskProfile } from "@shared/types/stablecoin-meta-control-schemas";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import syzusdRiskReview from "@shared/data/stablecoins/domains/risk-review/syzusd-yuzu.json";
 import xautRiskReview from "@shared/data/stablecoins/domains/risk-review/xaut-tether.json";
 import xdaiRiskReview from "@shared/data/stablecoins/domains/risk-review/xdai-gnosis.json";
+import {
+  CURATED_AGGREGATE_ESCROW_RESIDUALS,
+  selectCuratedAggregateOnchainSupplyProbeContracts,
+} from "@shared/lib/onchain-supply-probe";
+import {
+  SafetyScoreV9DeploymentSupplyCensusBindingSchema,
+  SafetyScoreV9DeploymentSupplyCensusSchema,
+} from "@shared/types/safety-score-v9-deployment-supply-census";
 import { REVIEWED_DEPLOYMENT_CATALOG } from "../../test-helpers/reviewed-deployment-catalog.test-support";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import { adaptBridgeReview } from "../safety-score-v9/extension-bridge";
@@ -12,14 +21,18 @@ import {
 } from "../safety-score-v9/extension-shared";
 import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import {
+  buildSafetyScoreV9SupplyAdmission,
   buildSafetyScoreV9SupplyReview,
   diagnoseSafetyScoreV9NullSupplyReviewOutcome,
   safetyScoreV9RouteSupplyShare,
+  V9_DEPLOYMENT_SUPPLY_SHARE_REQUIRES_REVIEWED_ESCROW,
 } from "../safety-score-v9/extension-supply";
+import { deploymentSupplyCensusTargets } from "../safety-score-v9/deployment-supply-census";
 import { safetyScoreV9ChainRows } from "../safety-score-v9/supply-attribution";
 import { deriveXautRepresentationGroupSupplyAttribution } from "../safety-score-v9/xaut-supply-attribution-contract";
-import { makeXautObservation, v9TestClockSec } from "../../test-helpers/v9-fixed-input";
+import { makeV9FixedInput, makeXautObservation, v9TestClockSec } from "../../test-helpers/v9-fixed-input";
 import { CURATED_NATIVE_SINGLE_ROUTE_SUPPLY_ATTRIBUTION } from "../safety-score-v9/curated-single-route-supply";
+import { ISSUE_1683_COMPACT_GRADES_ROWS } from "../../../../scripts/lib/doc-sync/report-cards-evidence-log";
 
 function fixedInputStub(chainCirculating: Record<string, { current: number }>): ReportCardsFixedInput {
   return { chainCirculatingById: { alpha: chainCirculating } } as unknown as ReportCardsFixedInput;
@@ -441,6 +454,29 @@ describe("buildSafetyScoreV9SupplyReview", () => {
     expect(safetyScoreV9RouteSupplyShare(review, "ethereum:native")).toBeCloseTo(0.6, 6);
     expect(safetyScoreV9RouteSupplyShare(review, "unknown:route")).toBeNull();
     expect(safetyScoreV9RouteSupplyShare(null, "ethereum:native")).toBeNull();
+  });
+
+  it("collapses a two-route chain aggregate into one chain-level unmatched row", () => {
+    // Evidence log (#1683 reUSD Tempo): a chain whose supply is one summed
+    // aggregate over two token contracts, with no chain-partition review and
+    // no reviewed-native split, is ONE `unmatched` row — never one per token.
+    const review = buildSafetyScoreV9SupplyReview(
+      fixedInputStub({ tempo: { current: 100 } }),
+      "alpha",
+      profile([
+        { id: "tempo:0x20c000000000000000000000e09a4cfec804f102", reviewDisposition: "unresolved" },
+        { id: "tempo:0x20c000000000000000000000383a23bacb546ab9", reviewDisposition: "unresolved" },
+      ] as unknown as BridgeRoutes),
+    );
+    expect(review!.selectedBridgeRoutes).toEqual([
+      {
+        deploymentRouteKey: "ambiguous-chain:alpha:tempo",
+        supplyUsd: 100,
+        supplyShare: 1,
+        reviewState: "unmatched",
+      },
+    ]);
+    expect(review!.unknownRouteSupplyShare).toBe(1);
   });
 
   it("normalizes captured display names to route chain ids", () => {
@@ -986,5 +1022,216 @@ describe("curated native single-route supply attribution", () => {
       },
     } as unknown as ReportCardsFixedInput;
     expect(buildSafetyScoreV9SupplyReview(fixedInput, "alpha", XDAI_PROFILE)).toBeNull();
+  });
+});
+
+describe("escrow and unmatched-supply evidence log citations (#1683)", () => {
+  // Pins the section's factual corrections to the artifacts it cites: the
+  // archived compact-grades rows for historical reason-code treatment, the
+  // live probe plan for the probed sUSN legs, and the log's own caveats.
+  // The four rows come from the shared fixture (transcribed from git blob
+  // 43ad3e6ba05463ba63c3cc3de37d0c6857f835c0; the public generator prunes
+  // snapshots after 90 days); check:doc-sync compares the log's historical
+  // claim against the same fixture.
+  const rows = ISSUE_1683_COMPACT_GRADES_ROWS;
+  const row = (id: string) => rows.find((entry) => entry.stablecoinId === id)!;
+
+  it("carries nonmaterial-bridge-supply-unmatched on exactly reUSD, sUSN and nOPAL", () => {
+    for (const id of ["reusd-re-protocol", "susn-noon", "nopal-nest", "susde-ethena"]) {
+      expect(row(id).ratingStatus, id).toBe("rated");
+      expect(row(id).partialEvidence, id).toBeNull();
+    }
+    for (const id of ["reusd-re-protocol", "susn-noon", "nopal-nest"]) {
+      expect(row(id).reasonCodes, id).toContain("nonmaterial-bridge-supply-unmatched");
+    }
+    expect(row("susde-ethena").reasonCodes.filter((code) => code.includes("bridge-supply"))).toEqual([]);
+  });
+
+  it("keeps sUSN's probe at ethereum plus eight probed representation legs", () => {
+    // The probe roster is the reviewed plan matched against the catalog, not
+    // the catalog's contracts list alone; pin what the probe actually reads.
+    const probe = selectCuratedAggregateOnchainSupplyProbeContracts(ACTIVE_META_BY_ID.get("susn-noon")!)!;
+    expect(probe.map(({ contract }) => contract.chain)).toEqual([
+      "ethereum", "zksync", "sophon", "starknet", "hyperevm", "base", "citrea", "berachain", "tac",
+    ]);
+    expect(CURATED_AGGREGATE_ESCROW_RESIDUALS["susn-noon"]).toEqual({
+      escrowAddress: "0xe24a3dc889621612422a64e6388927901608b91d",
+      unattributedChainLabel: "sUSN unattributed bridge escrow",
+    });
+  });
+
+  it("keeps the log's fail-closed caveats: TON liability, cross-read skew, rail custody", () => {
+    const section = readFileSync("docs/process/report-cards-evidence-log.md", "utf8")
+      .split("## Escrow and Unmatched-Supply Rows — 2026-11-20")[1]!
+      .split("\n## ")[0];
+    // TON: the jetton total is not a proven escrow liability; subtracting it
+    // whole would understate the Ethereum escrow residual.
+    expect(section).toContain("not proven to be a liability of the Ethereum sUSDe adapter escrow");
+    expect(section).toContain("subtracting the whole jetton supply would understate the Ethereum escrow residual");
+    // Aptos: identity and supply pins alone do not prove the escrow binding.
+    expect(section).toContain("no pinned peer or transfer proves the Aptos FA draws on the Ethereum adapter escrow");
+    // sUSN: legs are separate reads, so the residual stays unexplained.
+    expect(section).toContain("not atomic companions of the Ethereum pin");
+    expect(section).toContain("unexplained rather than a proven stock");
+    // sUSN: neither rail's lock address is established.
+    expect(section).toContain("custody split between the two rails is unverified");
+    // Retention honesty: no verbatim raw-response record exists, so the record
+    // is method-level reproduction, never a byte-for-byte audit.
+    expect(section).toContain("no separate verbatim request/response record was retained");
+    expect(section).toContain("not a byte-for-byte audit from this record");
+    // nOPAL: every contributing row is the target; diagnostics alone cannot
+    // name them.
+    expect(section).toContain("the target is every contributing row, not one");
+    expect(section).toContain("is not the complete contributor list");
+  });
+
+  it("omits a single-route selected-unresolved chain from unmatchedRowIdentities", () => {
+    // nOPAL (#1683): a canonical chain with exactly one route — unresolved —
+    // never enters unmatchedRowIdentities, yet its whole share contributes to
+    // the reason through unreviewedRouteSupplyShare: diagnostics are an
+    // explanation aid, not the contributor list the log's blocker relies on.
+    const clockSec = v9TestClockSec();
+    const rows = { Base: { current: 100 } };
+    const bridgeRouteRisk = {
+      ...profile([{ id: "base:0x1", reviewDisposition: "unresolved" } as unknown as BridgeRoutes[number]]),
+      reviewedAt: new Date(clockSec * 1000).toISOString().slice(0, 10),
+      confidence: "verified",
+      sources: [],
+    } as unknown as BridgeRouteRiskProfile;
+    const meta = { id: "alpha", bridgeRouteRisk } as unknown as V9ExtensionRegistryMeta;
+    const review = buildSafetyScoreV9SupplyReview(fixedInputStub(rows), "alpha", bridgeRouteRisk)!;
+    const adapted = adaptBridgeReview(
+      meta, review, 1, new ReviewEvidenceBuilder("alpha", clockSec), clockSec, rows,
+    );
+    expect(review.selectedBridgeRoutes).toEqual([
+      { deploymentRouteKey: "base:0x1", supplyUsd: 100, supplyShare: 1, reviewState: "selected-unresolved" },
+    ]);
+    expect(review.unreviewedRouteSupplyShare).toBe(1);
+    // Both diagnostic lists: the chain label never enters
+    // unmatchedRowIdentities, and the failing join itself is named only by
+    // unprovenRouteJoins.
+    expect(adapted.review.diagnostics?.unmatchedRowIdentities).toEqual([]);
+    expect(adapted.review.diagnostics?.unprovenRouteJoins).toEqual([{
+      deploymentRouteKey: "base:0x1",
+      reviewState: "selected-unresolved",
+      reviewedRouteKind: null,
+      supplyShare: 1,
+      joinedControlKeys: [expect.any(String)],
+      joinedControlSemanticsResolved: false,
+      joinedControlSupplyShare: 1,
+    }]);
+  });
+
+  it("keeps a subthreshold census residual out of both diagnostic lists beside a named failed join", () => {
+    // nOPAL (#1683): on a chain whose single route is reviewed, a subthreshold
+    // census residual feeds unknownRouteSupplyShare — the reason — yet the
+    // subthreshold relaxation forgives its accepted-bounded row, so NEITHER
+    // diagnostic list names it while unprovenRouteJoins still names the join
+    // that actually failed: the census bound, whose control can never carry an
+    // upper-bound share.
+    const clockSec = v9TestClockSec();
+    const pinAt = clockSec - 60;
+    const rows = { Ethereum: { current: 91 }, Base: { current: 5 }, Arbitrum: { current: 4 } };
+    // Producer-eligible roster: every route reviewed, each id the full
+    // `chain:tokenAddress` the census reads, each token an authored fixed
+    // decimal contract — anything less rejects the whole asset in the
+    // producer's roster build, so no complete packet could exist for it.
+    const eth = "0x0000000000000000000000000000000000000001";
+    const base = "0x0000000000000000000000000000000000000002";
+    const arb = "0x0000000000000000000000000000000000000003";
+    const bridgeRouteRisk = {
+      ...profile([
+        { ...ETH_ROUTE, id: `ethereum:${eth}`, destinationChain: "ethereum", contractAddress: eth },
+        { id: `base:${base}`, destinationChain: "base", contractAddress: base, reviewDisposition: "reviewed", issuanceModel: "bridge-representation" } as unknown as BridgeRoutes[number],
+        { id: `arbitrum:${arb}`, destinationChain: "arbitrum", contractAddress: arb, reviewDisposition: "reviewed", issuanceModel: "bridge-representation" } as unknown as BridgeRoutes[number],
+      ]),
+      reviewedAt: new Date(clockSec * 1000).toISOString().slice(0, 10),
+      confidence: "verified",
+      sources: [],
+    } as unknown as BridgeRouteRiskProfile;
+    const meta = { id: "alpha", bridgeRouteRisk, contracts: [
+      { chain: "ethereum", address: eth, decimals: 18 },
+      { chain: "base", address: base, decimals: 18 },
+      { chain: "arbitrum", address: arb, decimals: 18 },
+    ] } as unknown as V9ExtensionRegistryMeta;
+    // Producer eligibility first: the cohort selector skips an asset whose
+    // roster build rejects anything, so one complete target (every authored
+    // route reviewed and measurable) proves the packet below is emittable.
+    expect(deploymentSupplyCensusTargets({
+      assetIds: ["alpha"],
+      metaById: new Map([["alpha", meta]]),
+      chainCirculatingById: { alpha: rows },
+    })).toEqual([{
+      assetId: "alpha", gapRoutes: 0, reviewedRoutes: 3, rosterRoutes: 3,
+      evmRoutes: 3, evmChains: ["arbitrum", "base", "ethereum"],
+    }]);
+    // The packet the producer emits for that roster: every reviewed deployment
+    // measured (rosterComplete needs one row per route), ids matching the full
+    // token addresses, pins and price inside the observation window of the
+    // scoring clock. Raw units at 18 decimals x $1 give the USD upper bounds.
+    const censusRow = (routeId: string, chainId: string, tokenAddress: string, raw: string, usd: number, share: number) => ({
+      routeId, chainId, tokenAddress, readKind: "evm-total-supply" as const,
+      pin: { kind: "evm-header" as const, blockNumber: 1, blockHash: `0x${"d".repeat(64)}`, blockTimeSec: pinAt, runtimeCodeSha256: "e".repeat(64) },
+      decimals: 18, totalSupplyRaw: raw, referencePriceUsd: 1, referencePriceObservedAtSec: pinAt,
+      supplyUsdUpper: usd, shareUpper: share, evidenceKind: "upper-bound" as const,
+    });
+    const census = SafetyScoreV9DeploymentSupplyCensusSchema.parse({
+      model: "deployment-supply-census-v1",
+      observedAtSec: clockSec,
+      deployments: [
+        censusRow(`arbitrum:${arb}`, "arbitrum", arb, "4000000000000000000", 4, 0.04),
+        censusRow(`base:${base}`, "base", base, "500000000000000000", 0.5, 0.005),
+        censusRow(`ethereum:${eth}`, "ethereum", eth, "91000000000000000000", 91, 0.91),
+      ],
+      conservation: { aggregateSupplyUsd: 100, measuredSupplyUsd: 95.5, measuredShareSum: 0.955, relativeTolerance: 1e-12, absoluteToleranceUsd: 1e-6, rosterComplete: true, conserved: true },
+      rejected: [],
+    });
+    // Explicit scoring clock: the fixed input carries clockSec so the packet's
+    // future-dated and staleness gates actually run (and pass at zero age).
+    const capture = makeV9FixedInput({
+      assetId: "alpha",
+      clockSec,
+      chainSupplyByChain: {
+        Ethereum: { current: 91, circulatingPrevDay: 91, circulatingPrevWeek: 91, circulatingPrevMonth: 91 },
+        Base: { current: 5, circulatingPrevDay: 5, circulatingPrevWeek: 5, circulatingPrevMonth: 5 },
+        Arbitrum: { current: 4, circulatingPrevDay: 4, circulatingPrevWeek: 4, circulatingPrevMonth: 4 },
+      },
+      aggregateCirculating: { peggedUSD: 100 },
+      supplyObservedAtSec: pinAt,
+    });
+    const fixedInput = {
+      ...capture,
+      safetyScoreV9DeploymentSupplyCensusById: { alpha: census },
+      safetyScoreV9DeploymentSupplyCensusBinding: SafetyScoreV9DeploymentSupplyCensusBindingSchema.parse({
+        generationId: "g", registryFingerprint: capture.registryFingerprint, sourceBaseInputGenerationId: capture.baseInputGenerationId,
+      }),
+    } as unknown as ReportCardsFixedInput;
+    const admission = buildSafetyScoreV9SupplyAdmission(fixedInput, "alpha", bridgeRouteRisk);
+    const review = admission.review!;
+    const adapted = adaptBridgeReview(
+      meta, review, 3, new ReviewEvidenceBuilder("alpha", clockSec), clockSec, rows, admission.censusDiagnostics,
+    );
+    // The 4.5% Base census residual is an unmatched row feeding the reason…
+    const byKey = new Map(review.selectedBridgeRoutes.map((r) => [r.deploymentRouteKey, r]));
+    expect(byKey.get("ambiguous-chain:alpha:base")).toMatchObject({ reviewState: "unmatched", supplyUsd: 4.5 });
+    expect(review.unknownRouteSupplyShare).toBeCloseTo(0.045, 9);
+    expect(review.unreviewedRouteSupplyShare).toBe(0);
+    // …yet appears in neither diagnostic list, while the at-bar Arbitrum and
+    // Ethereum bounds stay required under typed causes and the only unproven
+    // join is the sub-bar Base bound, whose control cannot carry its share.
+    expect(adapted.review.diagnostics?.unmatchedRowIdentities).toEqual([]);
+    expect(adapted.review.diagnostics?.unprovenRouteJoins).toEqual([{
+      deploymentRouteKey: `base:${base}`,
+      reviewState: "selected-reviewed",
+      reviewedRouteKind: "controlled",
+      supplyShare: 0.005,
+      joinedControlKeys: [expect.any(String)],
+      joinedControlSemanticsResolved: false,
+      joinedControlSupplyShare: null,
+    }]);
+    expect(adapted.review.diagnostics?.deploymentSupplyCensus).toEqual([
+      { deploymentRouteKey: `arbitrum:${arb}`, code: V9_DEPLOYMENT_SUPPLY_SHARE_REQUIRES_REVIEWED_ESCROW },
+      { deploymentRouteKey: `ethereum:${eth}`, code: V9_DEPLOYMENT_SUPPLY_SHARE_REQUIRES_REVIEWED_ESCROW },
+    ]);
   });
 });

@@ -19,7 +19,10 @@ import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtim
 import { hasUsableCurrentPrice } from "../../lib/current-peg-observations";
 import { classifyDepegLifecycle } from "../../lib/depeg-lifecycle";
 import { admittedDepegRecoveryAt } from "../../lib/tape-projectors/depeg";
-import { EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL } from "../../lib/depeg-event-projection";
+import {
+  EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL, PROJECTED_DEPEG_PEAK_SQL,
+  readProjectedDepegPeak, readPublicDepegPeakBasis, type DepegPeakBasisRow,
+} from "../../lib/depeg-event-projection";
 import { getCirculatingRawOrNull, getPrevWeekRawOrNull, isOutageFallbackCarry } from "@shared/lib/supply";
 import { hasComparableSupplyPerimeter, hasNativeSupplyEvidence, isMissingNativeSupplyColumn, readNativeSupplyCheckpoint, SUPPLY_SNAPSHOT_MAX_AGE_SEC, type NativeSupplyHistoryRow } from "../../lib/dews/native-quantity";
 import { compareFiniteDesc } from "@shared/lib/sort";
@@ -110,13 +113,16 @@ export async function collectActiveDepegs(
     const activeDepegs = await ctx.db
       .prepare(
         `SELECT e.id AS event_id, e.stablecoin_id, e.symbol, e.peg_type, e.source, e.direction, e.peak_deviation_bps,
-                e.started_at, e.start_price, e.peak_price, e.peg_reference, p.quote_mode,
-                p.audit_verdict, nq.value AS current_native_quote
+                e.started_at, e.ended_at, e.start_price, e.peak_price, e.peg_reference, p.quote_mode,
+                e.peak_peg_reference, e.peak_quote_domain, e.peer_basis_json,
+                CASE WHEN typeof(e.pending_reason) = 'text' THEN e.pending_reason END AS pending_reason,
+                p.audit_verdict, nq.value AS current_native_quote,
+                CASE WHEN NOT ${reviewedDepegDisputeSql("e")} THEN ${PROJECTED_DEPEG_PEAK_SQL} END AS incident_peak_json
          FROM depeg_events e LEFT JOIN depeg_event_provenance p ON p.event_id = e.id
          LEFT JOIN cache nq ON nq.key = '${NATIVE_EVENT_QUOTE_CACHE_PREFIX}' || e.id
          WHERE e.ended_at IS NULL`,
       )
-      .all<{
+      .all<DepegPeakBasisRow & {
         event_id: number;
         stablecoin_id: string;
         symbol: string;
@@ -127,10 +133,8 @@ export async function collectActiveDepegs(
         start_price: number | null;
         current_native_quote: string | null;
         direction: "above" | "below";
-        peak_deviation_bps: number;
-        started_at: number;
-        peak_price: number | null;
         peg_reference: number | null;
+        incident_peak_json: string | null;
       }>();
     if (!activeDepegs.success || !Array.isArray(activeDepegs.results)) throw new Error("active depeg census unavailable");
     const rows = activeDepegs.results;
@@ -188,7 +192,12 @@ export async function collectActiveDepegs(
           : null;
       const priceObservedAt = nativeEvent ? nativeObservation?.observedAt : usdObservedAt;
       const direction = row.direction;
-      const bps = direction === "below" ? -Math.abs(row.peak_deviation_bps) : Math.abs(row.peak_deviation_bps);
+      const incidentPeak = readProjectedDepegPeak(row.incident_peak_json);
+      const peakBps = incidentPeak?.peakDeviationBps ?? row.peak_deviation_bps;
+      const peakPrice = incidentPeak ? incidentPeak.peakPrice : row.peak_price;
+      const peakBasis = incidentPeak ? incidentPeak.peakBasis : readPublicDepegPeakBasis(row).peakBasis;
+      const nativePeak = incidentPeak ? incidentPeak.peakQuoteDomain === "native-peg" : !peakBasis && nativeEvent;
+      const bps = direction === "below" ? -Math.abs(peakBps) : Math.abs(peakBps);
       const latchedReference =
         typeof row.peg_reference === "number" && Number.isFinite(row.peg_reference) && row.peg_reference > 0
           ? row.peg_reference
@@ -231,18 +240,19 @@ export async function collectActiveDepegs(
         mcapUsd,
         ageHours,
         impactScore,
-        peakBps: row.peak_deviation_bps,
+        peakBps,
+        peakBasis,
         severityBps,
         severityBasis,
         quoteMode: nativeEvent ? "native-peg" as const : "usd" as const,
-        ...(nativeEvent && row.peak_price != null ? { peakPriceNative: row.peak_price } : {}),
+        ...(nativePeak && peakPrice != null ? { peakPriceNative: peakPrice } : {}),
         ...(nativeEvent && publishesCurrentObservation && livePrice != null ? { currentPriceNative: livePrice } : {}),
         ...(pegReference != null ? { pegReference } : {}),
         // Marks a reference re-read each run, so editions stay comparable while it drifts.
         ...(!nativeEvent && pegReference != null ? { pegReferenceBasis: "current" as const } : {}),
         ...(publishesCurrentObservation && priceObservedAt != null ? { priceObservedAt } : {}),
         ...(currentBps != null ? { currentBps } : {}),
-        ...(!nativeEvent && row.peak_price != null ? { peakPriceUsd: row.peak_price } : {}),
+        ...(!nativePeak && peakPrice != null ? { peakPriceUsd: peakPrice } : {}),
         ...(!nativeEvent && publishesCurrentObservation && livePrice != null ? { currentPriceUsd: livePrice } : {}),
         suppressReason: getActiveDepegSuppressReason({ mcapUsd, ageHours, bps: severityBps }),
       };
@@ -264,6 +274,7 @@ export async function collectActiveDepegs(
           ageHours,
           impactScore,
           peakBps,
+          peakBasis,
           severityBasis,
           currentBps,
           quoteMode,
@@ -285,6 +296,7 @@ export async function collectActiveDepegs(
           ageHours,
           impactScore,
           peakBps,
+          ...(peakBasis ? { peakBasis } : {}),
           severityBasis,
           quoteMode,
           ...(peakPriceNative != null ? { peakPriceNative } : {}),

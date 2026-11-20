@@ -19,14 +19,17 @@ import { isValidIsoDateOnly, parseIsoDateOrUtcInstantSec } from "@shared/types/d
 import { getReferenceMarket } from "@shared/lib/reference-market-hours";
 import { PegReferenceHoldSchema, type PegScoreEvent } from "@shared/lib/peg-utils";
 import { AdmittedDeviationBpsSchema, ReferenceAdmissionSchema, type ReferenceAdmission } from "@shared/types/reference-admission";
+import { toErrorMessage } from "@shared/lib/error-utils";
 
 import { matchesDepegReferenceHoldRow, type DepegRow } from "./depeg-helpers";
 import {
   EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL,
   IncidentProjectionUnavailableError,
-  loadActiveIncidentProjections,
+  decodeActiveIncidentProjections,
+  prepareActiveIncidentProjections,
   rowToPublicDepegEvent,
 } from "./depeg-event-projection";
+import { logWorkerEventArgs } from "./structured-log";
 import { getFirstSeenDates } from "./supply-history-db";
 import { deriveCurrentPegObservationMap, hasUsableCurrentPrice } from "./current-peg-observations";
 import { parseJson } from "./json-parse";
@@ -133,32 +136,44 @@ export async function derivePegAnalyticsSnapshot(
   const nowSec = Math.floor(Date.now() / 1000);
   const fourYearsAgoSec = nowSec - PEG_SCORE_LOOKBACK_SEC;
 
-  const activeIncidentProjectionLoad = await loadActiveIncidentProjections(db, null);
+  const activeIncidentCondition = ` AND ${EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL}`;
+  let snapshot: D1Result<DepegRow>[];
+  try {
+    snapshot = await db.batch<DepegRow>([
+      prepareActiveIncidentProjections(db, null),
+      db.prepare(
+        `SELECT /* pharos:peg-analytics:recent-depeg-events */
+           * FROM depeg_events_with_provenance WHERE (ended_at IS NULL OR ended_at > ?)${activeIncidentCondition} ORDER BY started_at DESC`,
+      ).bind(fourYearsAgoSec),
+    ]);
+  } catch (error) {
+    logWorkerEventArgs("lib", "error", "[peg-analytics] Canonical incident snapshot read failed:", toErrorMessage(error));
+    throw new IncidentProjectionUnavailableError();
+  }
+  const [projectionResult, eventsResult] = snapshot;
+  if (!projectionResult || !eventsResult?.success || !Array.isArray(eventsResult.results)) {
+    throw new IncidentProjectionUnavailableError();
+  }
+  const activeIncidentProjectionLoad = decodeActiveIncidentProjections(projectionResult);
   if (!activeIncidentProjectionLoad.available) throw new IncidentProjectionUnavailableError(activeIncidentProjectionLoad.reason);
   const firstSeenMap = await getFirstSeenDates(
     db,
     buildPriceFirstSeenObservations(options.peggedAssets, options.methodologyAsOf),
   );
-  const activeIncidentCondition = ` AND ${EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL}`;
-  const eventsResult = await db.prepare(
-    `SELECT /* pharos:peg-analytics:recent-depeg-events */
-       * FROM depeg_events_with_provenance WHERE (ended_at IS NULL OR ended_at > ?)${activeIncidentCondition} ORDER BY started_at DESC`,
-  )
-    .bind(fourYearsAgoSec)
-    .all<DepegRow>();
-
-  const allEvents = (eventsResult.results ?? []).map((row): PegScoreEvent => {
-    const projection = activeIncidentProjectionLoad.projections;
+  const allEvents = eventsResult.results.map((row): PegScoreEvent => {
+    let eventRow = row;
+    let admittedHold: PegScoreEvent["referenceHold"];
     if (row.ended_at === null && row.price_coverage_json?.includes('"referenceHold"')) {
       const decoded = parseJson(row.price_coverage_json);
       if (decoded.ok && decoded.value && typeof decoded.value === "object" && "referenceHold" in decoded.value) {
         const { referenceHold, ...coverage } = decoded.value;
         const hold = PegReferenceHoldSchema.safeParse(referenceHold);
-        const event = rowToPublicDepegEvent({ ...row, price_coverage_json: JSON.stringify(coverage) }, projection);
-        return hold.success && matchesDepegReferenceHoldRow(row, hold.data) ? { ...event, referenceHold: hold.data } : event;
+        eventRow = { ...row, price_coverage_json: JSON.stringify(coverage) };
+        if (hold.success && matchesDepegReferenceHoldRow(row, hold.data)) admittedHold = hold.data;
       }
     }
-    return rowToPublicDepegEvent(row, projection);
+    const event = rowToPublicDepegEvent(eventRow, activeIncidentProjectionLoad.projections);
+    return admittedHold ? { ...event, referenceHold: admittedHold } : event;
   });
   const eventsByCoin = new Map<string, DepegEvent[]>();
   for (const event of allEvents) {
