@@ -4,10 +4,24 @@ import {
   YieldRankingSummarySchema,
   YieldRankingSummaryProvenanceSchema,
 } from "@shared/types/yield-summary";
-import { deriveYieldRowPresentation } from "@/lib/yield-workbench-row";
+import { deriveYieldRowPresentation, getYieldDecisionReasonLine } from "@/lib/yield-workbench-row";
 import { formatYieldSourceRiskSummary } from "@/lib/yield-source-risk";
 
 describe("deriveYieldRowPresentation", () => {
+  it("explains Morpho selection in both projections", () => {
+    const full = makeYieldRanking({
+      yieldType: "lending-vault",
+      provenance: makeYieldProvenance({ sourceKey: "protocol-api:morpho-net:ethereum:0x1" }),
+      decisionLedger: { selectedReasonCode: "tier-preference", selectedReasonDetail: "morpho-net-preferred",
+        rejectedCount: 0, sourceSwitch: false, alternatives: [] },
+    });
+    const summary = YieldRankingSummarySchema.strip().parse({
+      ...full, alternateSourceCount: 0, altSources: [], decisionReasonCode: "tier-preference",
+      provenance: YieldRankingSummaryProvenanceSchema.strip().parse(full.provenance),
+    });
+    for (const row of [full, summary]) expect(getYieldDecisionReasonLine(row)).toBe("Morpho net APY preferred");
+  });
+
   it.each([
     { sourceRisk: { sourceRiskScore: 42, sourceRiskPenalty: null }, material: true },
     { sourceRisk: { sourceRiskScore: 10 }, material: true },

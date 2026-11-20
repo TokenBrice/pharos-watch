@@ -29,6 +29,8 @@ import { throwIfAborted, yieldToEventLoop as defaultYieldToEventLoop } from "../
 import { assessYieldSourceGroup } from "./candidate-assessment";
 import { selectYieldSourceGroup } from "./candidate-selection";
 import { computeTvlWeightedMedianApy } from "./candidate-statistics";
+import { buildLinkedVariantParentYieldSource, getMorphoVaultParentId } from "./resolve-linked-variants";
+import { enforceExternalOpportunityTvlEligibility } from "./resolve-pools";
 
 export type ConfidenceTier = YieldSourceConfidenceTier;
 
@@ -182,10 +184,12 @@ export interface EvaluateYieldSourcesCooperativeOptions {
   onProgress?: (progress: EvaluateYieldSourcesProgress) => void | Promise<void>;
 }
 
-export type ResolvedYieldEntryWithYield = ResolvedYieldEntry & { yield: ResolvedYield };
+export type ResolvedYieldEntryWithYield = ResolvedYieldEntry & {
+  yield: ResolvedYield;
+  vaultQuote?: EvaluatedYieldSource;
+};
 
 export interface PreparedYieldEvaluation {
-  resolvedWithYield: ResolvedYieldEntryWithYield[];
   resolvedCountByCoin: Map<string, number>;
   resolvedByCoin: Map<string, ResolvedYieldEntryWithYield[]>;
   /** Reference rate handed to the v8.43 re-base; null when that entry is not healthy. */
@@ -236,7 +240,6 @@ function prepareYieldEvaluation(input: EvaluateYieldSourcesInput): PreparedYield
       : null;
 
   return {
-    resolvedWithYield,
     resolvedCountByCoin,
     resolvedByCoin,
     usdBenchmarkRate,
@@ -260,12 +263,13 @@ function evaluateYieldSourceGroup(
   entries: ResolvedYieldEntryWithYield[],
   prepared: PreparedYieldEvaluation,
   accumulator: YieldEvaluationAccumulator,
-): void {
+) {
   const assessment = assessYieldSourceGroup(input, stablecoinId, entries, prepared);
   for (const id of assessment.defaultSafetyIds) accumulator.defaultSafetyIds.add(id);
   const selection = selectYieldSourceGroup({
     stablecoinId,
     provisional: assessment.provisional,
+    finalizedProjections: assessment.finalizedProjections,
     previousBestSourceKey: assessment.previousBestSourceKey,
     priorSwitches30d: assessment.priorSwitches30d,
     derivedPenaltyInputByKey: assessment.derivedPenaltyInputByKey,
@@ -273,13 +277,14 @@ function evaluateYieldSourceGroup(
     safetySnapshotUnavailable: input.safetySnapshotAvailable === false,
     usdBenchmarkRate: prepared.usdBenchmarkRate,
   });
-  if (!selection) return;
-
-  accumulator.bestSourceKeyByCoin.set(stablecoinId, selection.bestSourceKey);
+  if (selection.bestSourceKey != null) {
+    accumulator.bestSourceKeyByCoin.set(stablecoinId, selection.bestSourceKey);
+  }
   accumulator.rowsRejected += selection.rowsRejected;
   accumulator.divergenceFlags += selection.divergenceFlags;
   accumulator.sourceSwitches += selection.sourceSwitches;
   accumulator.evaluatedSources.push(...selection.evaluatedSources);
+  return selection;
 }
 
 const MIN_STRESS_COHORT_SIZE = 3;
@@ -330,7 +335,17 @@ export async function evaluateYieldSourcesCooperative(
 ): Promise<EvaluateYieldSourcesResult> {
   const prepared = prepareYieldEvaluation(input);
   const accumulator = createEvaluationAccumulator();
-  const groups = [...prepared.resolvedByCoin.entries()];
+  const parentByVault = new Map<string, string>();
+  for (const id of prepared.resolvedByCoin.keys()) {
+    const parentId = getMorphoVaultParentId(id);
+    if (!parentId) continue;
+    parentByVault.set(id, parentId);
+    if (!prepared.resolvedByCoin.has(parentId)) prepared.resolvedByCoin.set(parentId, []);
+  }
+  // Finalize each configured vault before evaluating its parent group.
+  const groups = [...prepared.resolvedByCoin.entries()].sort(([a], [b]) =>
+    Number(parentByVault.has(b)) - Number(parentByVault.has(a)),
+  );
 
   const yieldEveryCoins = Math.max(1, options.yieldEveryCoins ?? 10);
   const yieldToEventLoop = options.yieldToEventLoop ?? defaultYieldToEventLoop;
@@ -352,7 +367,26 @@ export async function evaluateYieldSourcesCooperative(
 
   for (const [index, [stablecoinId, entries]] of groups.entries()) {
     throwIfAborted(options.signal);
-    evaluateYieldSourceGroup(input, stablecoinId, entries, prepared, accumulator);
+    const selection = evaluateYieldSourceGroup(input, stablecoinId, entries, prepared, accumulator);
+    const parentId = parentByVault.get(stablecoinId);
+    if (parentId && selection.bestSourceKey != null && input.stablecoinSupplyById) {
+      const vaultQuote = selection.evaluatedSources.find((source) => source.sourceKey === selection.bestSourceKey && !source.rejected);
+      const origin = entries.find(({ yield: source }) => source.sourceKey === selection.bestSourceKey);
+      const projection = vaultQuote && origin && buildLinkedVariantParentYieldSource(origin);
+      if (projection && vaultQuote) {
+        const parentEntries = prepared.resolvedByCoin.get(parentId)!;
+        const { sourcePool, sourceKey } = projection.yield;
+        const collision = parentEntries.some(({ yield: source }) =>
+          source.sourceKey === sourceKey || (sourcePool != null && source.sourcePool === sourcePool),
+        );
+        const admitted = [projection];
+        enforceExternalOpportunityTvlEligibility(admitted, input.stablecoinSupplyById);
+        if (!collision && admitted.length > 0) {
+          parentEntries.push({ ...projection, vaultQuote });
+          prepared.resolvedCountByCoin.set(parentId, parentEntries.length);
+        }
+      }
+    }
     const coinsDone = index + 1;
     if (coinsDone === groups.length || coinsDone % yieldEveryCoins === 0) {
       await reportProgress("coin-evaluation", coinsDone);

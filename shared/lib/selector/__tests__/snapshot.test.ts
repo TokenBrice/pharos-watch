@@ -951,10 +951,10 @@ describe("verified selected-rail snapshot projection", () => {
     expect(rec.chainHints).toEqual(output.recommended[0]!.chainHints);
     expect(rec.whyKeys).toEqual(output.recommended[0]!.whyKeys);
     expect(rec.score).toBe(output.recommended[0]!.score);
-    expect(roundTrip.snapshot.engineVersion).toBe(SELECTOR_VERSION);
+    expect(roundTrip.snapshot.engineVersion).toBe("selector-v2.15");
   });
 
-  it("keeps selector-v2.7 snapshots on the current component replay path", () => {
+  it.each(["selector-v2.7", "selector-v2.14"])("keeps %s snapshots on the current component replay path", (engineVersion) => {
     const row = makeYieldRailRow();
     const output = runSelector(makeInput({ profile: "yield", venuePreferences: ["wrap"] }), {
       rows: new Map([[row.id, row]]),
@@ -965,8 +965,8 @@ describe("verified selected-rail snapshot projection", () => {
       recommended: [{ ...rec, components: rec.components.map((component) =>
         component.key === "sourceRiskInverted" ? { ...component, normalizedValue: 0 } : component,
       ) }],
-      engineVersion: "selector-v2.7",
-      methodologyVersions: { ...output.methodologyVersions, exclusionFilters: "selector-v2.7" },
+      engineVersion,
+      methodologyVersions: { ...output.methodologyVersions, exclusionFilters: engineVersion },
     });
     expect(validateVerifiedSelectorSnapshot(snapshot).ok).toBe(true);
     expect(snapshot.recommended[0]!.components.find((component) => component.key === "sourceRiskInverted"))

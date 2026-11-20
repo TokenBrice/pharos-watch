@@ -16,6 +16,7 @@ import {
   getYieldBenchmarkComparisonApy,
   getYieldBenchmarkRecordMaxAgeSeconds,
   YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
+  type YieldBenchmarkFreshness,
 } from "@shared/lib/yield-benchmark-freshness";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
@@ -31,6 +32,7 @@ import { buildHistoryKey, pickHistoryRowsForSource } from "./history-evidence";
 import { resolveDependencyConcentration } from "@shared/lib/yield-source-risk-registry";
 import { resolveYieldRowSafety } from "@shared/lib/yield-opportunity-risk";
 import { resolveYieldBenchmarkDependencies } from "../../lib/yield-config/yield-benchmark-dependencies";
+import { buildOnChainSourceKey } from "../../lib/yield-utils";
 import type {
   ConfidenceTier,
   EvaluatedYieldSource,
@@ -127,6 +129,70 @@ function resolveTransportAgeSeconds(input: EvaluateYieldSourcesInput, source: Re
   return batchAt == null ? null : dlPoolsAssessedAt - batchAt;
 }
 
+function assessYieldQuote(
+  input: EvaluateYieldSourcesInput,
+  stablecoinId: string,
+  y: ResolvedYield,
+  prepared: PreparedYieldEvaluation,
+  productFreshness: YieldBenchmarkFreshness | undefined,
+) {
+  const { sourceKey } = y;
+  const historySelection = pickHistoryRowsForSource(
+    stablecoinId,
+    sourceKey,
+    y.dataSource,
+    input.sourceHistory,
+    input.onChainCompatibilityHistoryById,
+    input.legacyDeterministicOnChainHistoryById,
+    input.legacyHistoryById,
+    prepared.resolvedCountByCoin,
+  );
+  const historyRows = historySelection.rows;
+  const sourceObservedAt = y.sourceObservedAt ?? null;
+  const sourceAgeSeconds = computeSourceAgeSeconds(input.startSec, sourceObservedAt);
+  const transportAgeSeconds = resolveTransportAgeSeconds(input, y);
+  const transportKnown = transportAgeSeconds != null && Number.isFinite(transportAgeSeconds) && transportAgeSeconds >= 0;
+  const transportOverdue = y.dataSource !== "rate-derived" && transportKnown
+    && transportAgeSeconds * 1000 > getRankingStaleThresholdMs(y.dataSource, sourceKey);
+  const comparisonAnchorAgeSeconds = computeSourceAgeSeconds(input.startSec, y.comparisonAnchorObservedAt);
+  const staleComparisonAnchor = comparisonAnchorAgeSeconds != null && comparisonAnchorAgeSeconds * 1000 >
+    getComparisonAnchorStaleThresholdMs(y.dataSource, sourceKey);
+  const ageTier = classifyYieldSourceAgeTier({
+    dataSource: y.dataSource, sourceKey, sourceAgeSeconds, sourceObservedAt, nowSec: input.startSec,
+    productFreshness,
+  });
+  const sourceOverdue = ageTier === "aging" || ageTier === "stale";
+  const sourceFreshness: EvaluatedYieldSource["sourceFreshness"] = staleComparisonAnchor || transportOverdue || ageTier === "stale"
+    ? "stale" : ageTier === "unknown" ? "unknown" : "fresh";
+  const { distinctObservationDays30d: observationCount30d, ...statistics } = computeYieldCandidateStatistics(
+    y, historyRows, historySelection.usedLegacyHistory, input.startSec, input.sevenDaysAgoSec, sourceFreshness,
+  );
+  const { apy30dSampleMean } = statistics;
+  const anomalies: string[] = [];
+  if (historySelection.usedLegacyHistory) anomalies.push("legacy-history-fallback");
+  if (y.sourceTvlUsd != null && y.sourceTvlUsd < LOW_SOURCE_TVL_USD) anomalies.push("low-source-tvl");
+  if (historyRows.length > 0 && apy30dSampleMean > 0 && y.currentApy / apy30dSampleMean > 2) anomalies.push("source-yield-spike");
+  if (historyRows.length > 0 && apy30dSampleMean > 0.5 && y.currentApy === 0) anomalies.push("source-zero-vs-history");
+  if (staleComparisonAnchor) anomalies.push("anchor-stale");
+  if (sourceFreshness === "stale") anomalies.push("source-stale");
+  if (sourceFreshness === "unknown") anomalies.push("source-freshness-unknown");
+  return {
+    ...statistics,
+    observationCount30d,
+    currentApy: y.currentApy,
+    sourceObservedAt,
+    sourceFetchedAt: y.sourceFetchedAt,
+    comparisonAnchorObservedAt: y.comparisonAnchorObservedAt ?? null,
+    sourceFreshness,
+    sourceOverdue,
+    deliveryFresh: sourceObservedAt == null && isDefiLlamaDataSource(y.dataSource) && transportKnown && !transportOverdue,
+    anomalies,
+    usedLegacyHistory: historySelection.usedLegacyHistory,
+    rejected: input.safetySnapshotAvailable === false || sourceFreshness === "stale"
+      || (sourceFreshness === "unknown" && (!transportKnown || y.dataSource === "rate-derived")),
+  };
+}
+
 export function assessYieldSourceGroup(
   input: EvaluateYieldSourcesInput,
   stablecoinId: string,
@@ -140,8 +206,10 @@ export function assessYieldSourceGroup(
   // with its true 30d count after the arbitration role is known.
   const derivedPenaltyInputByKey = new Map<string, PysSourceRiskPenaltyInput>();
 
-  const provisional = entries.map((entry) => {
-    const y = entry.yield;
+  const provisional: EvaluatedYieldSource[] = [];
+  const finalizedProjections: EvaluatedYieldSource[] = [];
+  for (const entry of entries) {
+    const { yield: y, vaultQuote } = entry;
     const sourceKey = y.sourceKey;
     const sourceLabel = resolveYieldSourceLabel({
       id: stablecoinId,
@@ -155,18 +223,6 @@ export function assessYieldSourceGroup(
       dataSource: y.dataSource,
       explicitType: y.yieldType,
     });
-    const historySelection = pickHistoryRowsForSource(
-      stablecoinId,
-      sourceKey,
-      y.dataSource,
-      input.sourceHistory,
-      input.onChainCompatibilityHistoryById,
-      input.legacyDeterministicOnChainHistoryById,
-      input.legacyHistoryById,
-      prepared.resolvedCountByCoin,
-    );
-    const historyRows = historySelection.rows;
-
     const safetySnapshotUnavailable = input.safetySnapshotAvailable === false;
     const safety = safetySnapshotUnavailable ? undefined : input.safetyScores.get(stablecoinId);
     if (safety == null) defaultSafetyIds.add(stablecoinId);
@@ -220,31 +276,13 @@ export function assessYieldSourceGroup(
     const benchmarkRate = benchmarkUnitMismatch ? null : getYieldBenchmarkComparisonApy({
       key: benchmarkSelection.key, source: benchmarkMeta.source, rate: benchmarkMeta.rate,
     });
-    const returnDenomination = y.returnDenomination ?? (y.dataSource === "price-derived"
-      ? "USD" : TRACKED_META_BY_ID.get(stablecoinId)?.flags.pegCurrency ?? null);
-    const prevExchangeRate = input.tier1PrevRates.get(stablecoinId) ?? null;
-    const prevTvlUsd = historySelection.usedLegacyHistory
-      ? (input.legacyPrevTvlById.get(stablecoinId) ?? null)
-      : (input.prevTvlBySource.get(buildHistoryKey(stablecoinId, sourceKey)) ?? null);
+    const returnDenomination = vaultQuote ? vaultQuote.returnDenomination
+      : y.returnDenomination ?? (y.dataSource === "price-derived"
+        ? "USD" : TRACKED_META_BY_ID.get(stablecoinId)?.flags.pegCurrency ?? null);
+    const prevExchangeRate = vaultQuote ? vaultQuote.prevExchangeRate
+      : sourceKey === buildOnChainSourceKey(stablecoinId) ? input.tier1PrevRates.get(stablecoinId) ?? null : null;
     const sourceDepthRatio = computeSourceDepthRatio(y.sourceTvlUsd, input.stablecoinSupplyById?.get(stablecoinId));
 
-    // A9: the penalty input and the published field resolve the reward share
-    // through the same helper, so a base-only payload (apyReward null while
-    // apyBase already equals the current APY) scores the same zero it publishes.
-    const rewardShare = resolveYieldRewardShare({
-      apyReward: y.apyReward,
-      apyBase: y.apyBase,
-      currentApy: y.currentApy,
-    });
-    const sourceObservedAt = y.sourceObservedAt ?? null;
-    const sourceAgeSeconds = computeSourceAgeSeconds(input.startSec, sourceObservedAt);
-    const transportAgeSeconds = resolveTransportAgeSeconds(input, y);
-    const transportKnown = transportAgeSeconds != null && Number.isFinite(transportAgeSeconds) && transportAgeSeconds >= 0;
-    const transportOverdue = y.dataSource !== "rate-derived" && transportKnown
-      && transportAgeSeconds * 1000 > getRankingStaleThresholdMs(y.dataSource, sourceKey);
-    const comparisonAnchorAgeSeconds = computeSourceAgeSeconds(input.startSec, y.comparisonAnchorObservedAt);
-    const staleComparisonAnchor = comparisonAnchorAgeSeconds != null && comparisonAnchorAgeSeconds * 1000 >
-      getComparisonAnchorStaleThresholdMs(y.dataSource, sourceKey);
     // Use the same assessment clock as the hurdle and prepared USD re-base;
     // the run's source-observation clock must not give references a second verdict.
     const benchmarkDependencies = resolveYieldBenchmarkDependencies({
@@ -258,19 +296,26 @@ export function assessYieldSourceGroup(
     const sourceMaxAgeSeconds = productKey == null ? undefined : getYieldBenchmarkRecordMaxAgeSeconds(
       productKey, benchmarkDependencies.productMeta?.recordDate,
     );
-    const ageTier = classifyYieldSourceAgeTier({
-      dataSource: y.dataSource, sourceKey, sourceAgeSeconds, sourceObservedAt, nowSec: input.startSec,
-      productFreshness: productKey == null ? undefined : benchmarkDependencies.productFreshness,
-    });
-    const sourceOverdue = ageTier === "aging" || ageTier === "stale";
-    const sourceFreshness = staleComparisonAnchor || transportOverdue || ageTier === "stale"
-      ? "stale" : ageTier === "unknown" ? "unknown" : "fresh";
-    const {
-      apy7d, apy30d, apy30dSampleMean, apy30dAnchorObservedAt, yieldStability, apyVarianceScore, stdDev30d,
-      apyMin30d, apyMax30d, distinctObservationDays30d, sourceObservationVerified,
-    } = computeYieldCandidateStatistics(
-      y, historyRows, historySelection.usedLegacyHistory, input.startSec, input.sevenDaysAgoSec, sourceFreshness,
+    const quote = vaultQuote ?? assessYieldQuote(
+      input, stablecoinId, y, prepared, productKey == null ? undefined : benchmarkDependencies.productFreshness,
     );
+    const {
+      currentApy, sourceObservedAt, sourceFetchedAt, sourceFreshness, sourceObservationVerified,
+      comparisonAnchorObservedAt, apy7d, apy30d, apy30dSampleMean, apy30dAnchorObservedAt, yieldStability,
+      apyVarianceScore, stdDev30d, apyMin30d, apyMax30d, observationCount30d, usedLegacyHistory,
+    } = quote;
+    // A9: the penalty input and the published field resolve the reward share
+    // through the same helper, so a base-only payload (apyReward null while
+    // apyBase already equals the current APY) scores the same zero it publishes.
+    const rewardShare = resolveYieldRewardShare({
+      apyReward: y.apyReward,
+      apyBase: y.apyBase,
+      currentApy,
+    });
+    const sourceOverdue = "sourceOverdue" in quote ? quote.sourceOverdue : quote.warnings.includes("aging");
+    const prevTvlUsd = vaultQuote ? vaultQuote.prevTvlUsd : usedLegacyHistory
+      ? (input.legacyPrevTvlById.get(stablecoinId) ?? null)
+      : (input.prevTvlBySource.get(buildHistoryKey(stablecoinId, sourceKey)) ?? null);
     const excessYield = benchmarkRate == null ? null : apy30d - benchmarkRate;
     // A1: classify the benchmark entry from the feed's own health only. A
     // `fallback-usd` selection is a documented per-row methodology decision
@@ -290,12 +335,12 @@ export function assessYieldSourceGroup(
       safety: safetyResolution,
       evidenceClass,
       sourceFreshness,
-      deliveryFresh: sourceObservedAt == null && isDefiLlamaDataSource(y.dataSource) && transportKnown && !transportOverdue,
+      deliveryFresh: "deliveryFresh" in quote && quote.deliveryFresh,
       // A missing hurdle fails the same completeness check as a stale hurdle.
       benchmarkFreshness: benchmarkFreshness ?? "stale",
       referenceBenchmarkFreshness: rowReferenceBenchmarkFreshness,
       sourceDepthRatio,
-      observationCount30d: distinctObservationDays30d,
+      observationCount30d,
       apyBase: y.apyBase,
       apyReward: y.apyReward,
       warnings: sourceFreshness === "stale" ? ["data-stale"]
@@ -316,7 +361,7 @@ export function assessYieldSourceGroup(
       sourceDepthRatio,
       sourceOverdue,
       sourceSwitchCount30d: priorSwitches30d,
-      observationCount30d: distinctObservationDays30d,
+      observationCount30d,
       venueRiskTier: resolvedVenueRiskTier,
       venueRiskWeighted: resolvedVenueRiskWeighted,
       dependencyConcentrationSeverity: dependencyConcentration?.severity ?? null,
@@ -350,34 +395,29 @@ export function assessYieldSourceGroup(
     });
     const yieldToRisk = !safetySnapshotUnavailable && 101 - safetyScore > 0 ? apy30d / (101 - safetyScore) : null;
 
-    const anomalies: string[] = [];
-    if (historySelection.usedLegacyHistory) anomalies.push("legacy-history-fallback");
-    if (y.sourceTvlUsd != null && y.sourceTvlUsd < LOW_SOURCE_TVL_USD) anomalies.push("low-source-tvl");
-    if (historyRows.length > 0 && apy30dSampleMean > 0 && y.currentApy / apy30dSampleMean > 2) anomalies.push("source-yield-spike");
-    if (historyRows.length > 0 && apy30dSampleMean > 0.5 && y.currentApy === 0) anomalies.push("source-zero-vs-history");
-    if (staleComparisonAnchor) anomalies.push("anchor-stale");
-    if (sourceFreshness === "stale") anomalies.push("source-stale");
-    if (sourceFreshness === "unknown") anomalies.push("source-freshness-unknown");
+    const anomalies = quote.anomalies.filter((reason) =>
+      !reason.startsWith("safety-") && !reason.startsWith("benchmark-") && reason !== "previous-source-transiently-missing",
+    );
     if (!usedDefaultSafety && underlyingSafetyGrade === "NR") anomalies.push("safety-unrated");
     if (usedDefaultSafety) anomalies.push("safety-missing");
     if (benchmarkFreshness === "degraded") anomalies.push("benchmark-degraded");
     if (benchmarkFreshness === "stale") anomalies.push("benchmark-stale");
 
     const freshnessWarnings = evidenceAssessment.warnings;
-    if (ageTier === "aging" && sourceFreshness === "fresh") freshnessWarnings.push("aging");
+    if (sourceOverdue && sourceFreshness === "fresh") freshnessWarnings.push("aging");
     if (benchmarkUnitMismatch) freshnessWarnings.push("benchmark-unit-mismatch");
     if (benchmarkFreshness === "degraded") freshnessWarnings.push("benchmark-degraded");
     if (benchmarkFreshness === "stale") freshnessWarnings.push("benchmark-stale");
     // A3: the row's score is no longer re-based on the USD reference, so say so.
     if (referenceBenchmarkDegraded) freshnessWarnings.push("reference-benchmark-degraded");
 
-    return {
+    const candidate: EvaluatedYieldSource = {
       id: stablecoinId,
       symbol: entry.symbol,
       sourceKey,
       yieldSource,
       yieldType,
-      currentApy: y.currentApy,
+      currentApy,
       apyBase: y.apyBase,
       apyReward: y.apyReward,
       sourcePool: y.sourcePool,
@@ -389,11 +429,11 @@ export function assessYieldSourceGroup(
       dataSource: y.dataSource,
       exchangeRate: y.exchangeRate,
       sourceObservedAt,
-      sourceFetchedAt: y.sourceFetchedAt,
+      sourceFetchedAt,
       sourceObservationVerified,
       sourceMaxAgeSeconds,
       returnDenomination,
-      comparisonAnchorObservedAt: y.comparisonAnchorObservedAt ?? null,
+      comparisonAnchorObservedAt,
       apy7d,
       apy30d,
       apy30dSampleMean,
@@ -431,7 +471,7 @@ export function assessYieldSourceGroup(
       prevExchangeRate,
       prevTvlUsd,
       sourceDepthRatio,
-      observationCount30d: distinctObservationDays30d,
+      observationCount30d,
       sourceSwitchCount30d: null,
       anomalies,
       warnings: freshnessWarnings,
@@ -439,13 +479,13 @@ export function assessYieldSourceGroup(
       // Missing opportunity evidence withholds PYS but still leaves the observed APY publishable.
       // A stale benchmark belongs to the PYS-null-reason ladder: it withholds
       // the score, not the fresh observed row.
-      rejected: safetySnapshotUnavailable || sourceFreshness === "stale"
-        || (sourceFreshness === "unknown" && (!transportKnown || y.dataSource === "rate-derived")),
-      usedLegacyHistory: historySelection.usedLegacyHistory,
+      rejected: quote.rejected,
+      usedLegacyHistory,
       usedDefaultSafety,
       previousBestSourceKey,
-    } satisfies EvaluatedYieldSource;
-  });
+    };
+    (vaultQuote ? finalizedProjections : provisional).push(candidate);
+  }
 
-  return { provisional, derivedPenaltyInputByKey, defaultSafetyIds, previousBestSourceKey, priorSwitches30d };
+  return { provisional, finalizedProjections, derivedPenaltyInputByKey, defaultSafetyIds, previousBestSourceKey, priorSwitches30d };
 }

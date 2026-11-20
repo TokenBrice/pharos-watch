@@ -11,6 +11,7 @@ import { resolveCustodyModel } from "../report-card-policy";
 import { isOpportunityDerivedSafety } from "../yield-opportunity-provenance";
 import { isObservedPrice } from "../pricing-source-policy";
 import { isBluechipRatingCurrent } from "../bluechip-freshness";
+import { MORPHO_NET_YIELD_SOURCES } from "../yield-source-cadence";
 import type {
   AltYieldSource,
   YieldRanking,
@@ -44,6 +45,15 @@ import type {
   YieldSourceRisk,
 } from "../../types/yield-evidence-schemas";
 import type { ReportCardsV9TableResponse } from "../../types/report-cards-v9-projections";
+
+const MORPHO_COMPARISON_KEYS = new Set(
+  Object.values(MORPHO_NET_YIELD_SOURCES).flatMap(({ corroboratingPoolId, supplementalSourceKey }) =>
+    [corroboratingPoolId, supplementalSourceKey]),
+);
+
+function isMorphoComparisonSource(sourceKey: string | null | undefined): boolean {
+  return MORPHO_COMPARISON_KEYS.has(sourceKey?.replace(/^linked-variant:[^:]+:/, "") ?? "");
+}
 
 type SelectorPegRow = PegSummaryResponse["coins"][number] & {
   referenceAdmission?: ReferenceAdmission | null;
@@ -97,7 +107,8 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
     const safety = reportById.get(id);
     const stress = args.stressData?.signals?.[id];
     const dex = args.dexData?.[id];
-    const yieldEntry = yieldById.get(id);
+    const ranking = yieldById.get(id);
+    const yieldEntry = isMorphoComparisonSource(ranking?.provenance?.sourceKey) ? undefined : ranking;
     const yieldRisk = yieldEntry?.sourceRisk ?? null;
     // Structured-tranche rows carry a grade the yield model minted, not the
     // stablecoin's V9 card. The substitution stays, but it is recorded rather
@@ -199,7 +210,7 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
       yieldObservationDays30d: yieldRisk?.observationCount30d ?? null,
       yieldFreshness: yieldFreshnessFrom(yieldEntry, args.now, args.yieldAgeAssessedAt),
       yieldSourceTvlUsd: yieldEntry?.sourceTvlUsd ?? null,
-      yieldSources: buildYieldSourceCandidates(yieldEntry, args.now, args.yieldAgeAssessedAt),
+      yieldSources: buildYieldSourceCandidates(id, yieldEntry, ranking?.altSources, args.now, args.yieldAgeAssessedAt),
 
       trackingSpanDays: peg?.trackingSpanDays ?? 0,
       isRecentListing: (peg?.trackingSpanDays ?? 0) > 0 && (peg?.trackingSpanDays ?? 0) < 90,
@@ -332,11 +343,30 @@ function normalizeDeploymentPlace(place: YieldDeploymentPlace | null | undefined
 }
 
 function buildYieldSourceCandidates(
+  id: string,
   ranking: YieldRanking | undefined,
+  altSources: readonly AltYieldSource[] | undefined,
   now: number,
   yieldAgeAssessedAt: number | null | undefined,
 ): NonNullable<MergedRow["yieldSources"]> {
-  if (!ranking) return [];
+  const sourceKeys = new Set([ranking?.provenance?.sourceKey, ...(altSources ?? []).map(({ sourceKey }) => sourceKey)]);
+  const supersededFallbackKeys = new Set<string>();
+  for (const { stablecoinId, sourceKey } of Object.values(MORPHO_NET_YIELD_SOURCES)) {
+    const linkedPrefix = `linked-variant:${stablecoinId}:`;
+    if (sourceKeys.has(sourceKey)) {
+      supersededFallbackKeys.add(`onchain:${stablecoinId}`);
+      if (id === stablecoinId) supersededFallbackKeys.add("price-derived");
+    }
+    if (sourceKeys.has(linkedPrefix + sourceKey)) {
+      supersededFallbackKeys.add(`${linkedPrefix}onchain:${stablecoinId}`);
+      supersededFallbackKeys.add(`${linkedPrefix}price-derived`);
+    }
+  }
+  const alternates = (altSources ?? [])
+    .filter(({ sourceKey }) => !isMorphoComparisonSource(sourceKey) && !supersededFallbackKeys.has(sourceKey))
+    .map((source) => altYieldSourceCandidate(source, now, yieldAgeAssessedAt));
+  if (!ranking) return alternates;
+  if (ranking.provenance?.sourceKey && supersededFallbackKeys.has(ranking.provenance.sourceKey)) return alternates;
   const selectedRisk = ranking.sourceRisk ?? null;
   const selected: NonNullable<MergedRow["yieldSources"]>[number] = {
     sourceKey: ranking.provenance?.sourceKey ?? sourceKeyFor(ranking.yieldSource, ranking.yieldType, selectedRisk),
@@ -356,10 +386,6 @@ function buildYieldSourceCandidates(
     freshness: yieldFreshnessFrom(ranking, now, yieldAgeAssessedAt),
     isPrimary: true,
   };
-
-  const alternates = (ranking.altSources ?? []).map((source) =>
-    altYieldSourceCandidate(source, now, yieldAgeAssessedAt),
-  );
 
   return [selected, ...alternates];
 }

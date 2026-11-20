@@ -72,15 +72,15 @@ describe("buildYieldSourceExplorerModel", () => {
           yieldSource: "Compound",
           yieldSourceUrl: "https://example.com/compound",
           yieldType: "lending-vault",
-          currentApy: 0.04,
-          apy30d: 0.039,
+          currentApy: 0.07,
+          apy30d: 0.069,
           sourceTvlUsd: 20_000_000,
           dataSource: "defillama",
         },
       ],
     }));
 
-    expect(model.selectedSource.sourceKey).toBe("aave-usdc");
+    expect(model.selectedSource).toMatchObject({ sourceKey: "aave-usdc", apy30d: 0.05 });
     expect(model.retainedAlternates.map((source) => source.sourceKey)).toEqual(["compound-usdc"]);
     expect(model.sourceRiskDrivers.map((driver) => driver.label)).toEqual(SOURCE_RISK_GOLDEN_UI_DRIVER_LABELS);
     expect(model.sourceSwitch).toMatchObject({

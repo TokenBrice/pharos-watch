@@ -27,6 +27,7 @@ import type {
 } from "../../lib/chain-registry";
 import { buildYieldHistoryEvaluationInputsCooperative } from "./history-evidence";
 import { loadYieldHistorySnapshots } from "./history-repository";
+import { getMorphoVaultParentId } from "./resolve-linked-variants";
 import {
   resolveYieldSources,
 } from "./resolve";
@@ -145,9 +146,15 @@ export async function runYieldCoordinatorNormalizeStage(params: YieldCoordinator
     resolvedSourceKeysByCoin.set(entry.id, sourceKeySet);
   }
 
+  // A parent may enter evaluation through a vault winner even with no direct quote.
+  const historyIds = new Set(resolvedIds);
+  for (const id of resolvedIds) {
+    const parentId = getMorphoVaultParentId(id);
+    if (parentId) historyIds.add(parentId);
+  }
   const historySnapshots =
-    resolvedIds.length > 0
-      ? await loadYieldHistorySnapshots(params.db, resolvedIds, fetched.startSec, fetched.sevenDaysAgoSec, {
+    historyIds.size > 0
+      ? await loadYieldHistorySnapshots(params.db, [...historyIds], fetched.startSec, fetched.sevenDaysAgoSec, {
           signal: params.signal,
           sourceKeysByStablecoin: resolvedSourceKeysByCoin,
           onProgress: async (progress) => {
@@ -176,8 +183,8 @@ export async function runYieldCoordinatorNormalizeStage(params: YieldCoordinator
         })
       : { historyRows: [], prevTvlRows: [], prevBestRows: [], previousTvlRowsTruncated: false };
   await fetched.reportYieldProgress("history-loaded", "Loaded yield history snapshots", "yield-history", {
-    itemsDone: resolvedIds.length,
-    itemsTotal: resolvedIds.length,
+    itemsDone: historyIds.size,
+    itemsTotal: historyIds.size,
     metadata: {
       countTotals: {
         historyRows: historySnapshots.historyRows.length,

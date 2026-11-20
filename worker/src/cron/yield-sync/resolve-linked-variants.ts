@@ -1,6 +1,7 @@
 import type { YieldType } from "@shared/types/yield-vocabulary";
 import type { ResolvedYield, ResolvedYieldEntry } from "./types";
 import { YIELD_VARIANT_CHILD_VENUE_PROTOCOLS } from "@shared/lib/yield-source-risk-registry";
+import { MORPHO_NET_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 import type { YieldDeploymentPlace, YieldSourceRisk } from "@shared/types/yield";
 import { ON_CHAIN_RATE_CONFIGS } from "../../lib/yield-config/yield-config-rate-sources";
 import { getActiveStablecoinMeta, normalizeYieldPoolChain, isThirdPartyYieldOpportunityType } from "./resolve-pools";
@@ -61,9 +62,43 @@ function buildLinkedVariantSourceRisk(params: {
   };
 }
 
-function hasParentSourcePool(resolved: ResolvedYieldEntry[], parentId: string, sourcePool: string | null): boolean {
-  if (!sourcePool) return false;
-  return resolved.some((entry) => entry.id === parentId && entry.yield?.sourcePool === sourcePool);
+const MORPHO_VAULT_IDS = new Set<string>(Object.values(MORPHO_NET_YIELD_SOURCES).map(({ stablecoinId }) => stablecoinId));
+
+export function getMorphoVaultParentId(id: string): string | undefined {
+  return MORPHO_VAULT_IDS.has(id) ? getActiveStablecoinMeta(id)?.variantOf : undefined;
+}
+
+export function buildLinkedVariantParentYieldSource(
+  { id, yield: source }: ResolvedYieldEntry,
+): (ResolvedYieldEntry & { yield: ResolvedYield }) | null {
+  if (!source || source.observationKind === "anchor-only" || source.dataSource === "defillama-auto") return null;
+  const childMeta = getActiveStablecoinMeta(id);
+  const parentMeta = childMeta?.variantOf ? getActiveStablecoinMeta(childMeta.variantOf) : undefined;
+  if (!childMeta || !parentMeta) return null;
+
+  const effectiveYieldType = source.yieldType ?? childMeta.yieldConfig?.yieldType;
+  if (isThirdPartyYieldOpportunityType(effectiveYieldType)) return null;
+
+  return {
+    id: parentMeta.id,
+    symbol: parentMeta.symbol,
+    yield: {
+      ...source,
+      sourceKey: `linked-variant:${id}:${source.sourceKey}`,
+      yieldSource: source.yieldSource ?? childMeta.yieldConfig?.yieldSource,
+      // Acquiring the receipt token is an external opportunity for the parent.
+      yieldType: "lending-opportunity",
+      project: source.sourceRisk?.venueProtocol ?? source.project ?? YIELD_VARIANT_CHILD_VENUE_PROTOCOLS[id],
+      chain: resolveLinkedVariantChain(id, source, childMeta.contracts),
+      sourceRisk: buildLinkedVariantSourceRisk({
+        childId: id,
+        childYieldType: effectiveYieldType,
+        variantKind: childMeta.variantKind,
+        contracts: childMeta.contracts,
+        source,
+      }),
+    },
+  };
 }
 
 export function appendLinkedVariantParentYieldSources(resolved: ResolvedYieldEntry[]): number {
@@ -79,59 +114,19 @@ export function appendLinkedVariantParentYieldSources(resolved: ResolvedYieldEnt
   const additions: ResolvedYieldEntry[] = [];
 
   for (const entry of resolved) {
-    if (!entry.yield || entry.yield.observationKind === "anchor-only") continue;
-    if (entry.yield.dataSource === "defillama-auto") continue;
+    // Configured Morpho vaults project after their own arbitration.
+    if (MORPHO_VAULT_IDS.has(entry.id)) continue;
+    const projection = buildLinkedVariantParentYieldSource(entry);
+    if (!projection) continue;
 
-    const childMeta = getActiveStablecoinMeta(entry.id);
-    if (!childMeta?.variantOf) continue;
+    const { id, yield: { sourceKey, sourcePool } } = projection;
+    const poolKey = sourcePool ? `${id}:${sourcePool}` : null;
+    const entryKey = `${id}:${sourceKey}`;
+    if (existingKeys.has(entryKey) || (poolKey && existingSourcePools.has(poolKey))) continue;
 
-    const parentMeta = getActiveStablecoinMeta(childMeta.variantOf);
-    if (!parentMeta) continue;
-
-    const effectiveYieldType = entry.yield.yieldType ?? childMeta.yieldConfig?.yieldType;
-    if (isThirdPartyYieldOpportunityType(effectiveYieldType)) continue;
-
-    const sourcePoolKey = entry.yield.sourcePool ? `${parentMeta.id}:${entry.yield.sourcePool}` : null;
-    if (
-      sourcePoolKey
-      && (existingSourcePools.has(sourcePoolKey) || hasParentSourcePool(additions, parentMeta.id, entry.yield.sourcePool))
-    ) {
-      continue;
-    }
-
-    const sourceKey = `linked-variant:${childMeta.id}:${entry.yield.sourceKey}`;
-    const entryKey = `${parentMeta.id}:${sourceKey}`;
-    if (existingKeys.has(entryKey)) continue;
-
-    additions.push({
-      id: parentMeta.id,
-      symbol: parentMeta.symbol,
-      yield: {
-        ...entry.yield,
-        sourceKey,
-        yieldSource: entry.yield.yieldSource ?? childMeta.yieldConfig?.yieldSource,
-        // Holding the deposit asset does not earn a wrapper's NAV yield. The
-        // parent projection therefore represents the action of acquiring the
-        // child receipt token, while the original child row remains intrinsic.
-        yieldType: "lending-opportunity",
-        project:
-          entry.yield.sourceRisk?.venueProtocol ??
-          entry.yield.project ??
-          YIELD_VARIANT_CHILD_VENUE_PROTOCOLS[childMeta.id],
-        chain: resolveLinkedVariantChain(childMeta.id, entry.yield, childMeta.contracts),
-        sourceRisk: buildLinkedVariantSourceRisk({
-          childId: childMeta.id,
-          childYieldType: effectiveYieldType,
-          variantKind: childMeta.variantKind,
-          contracts: childMeta.contracts,
-          source: entry.yield,
-        }),
-      },
-    });
+    additions.push(projection);
     existingKeys.add(entryKey);
-    if (sourcePoolKey) {
-      existingSourcePools.add(sourcePoolKey);
-    }
+    if (poolKey) existingSourcePools.add(poolKey);
   }
 
   resolved.push(...additions);
