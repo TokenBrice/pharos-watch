@@ -547,10 +547,38 @@ export async function analyzeDexLiquidityPostScoring(params: {
         // Publishing after a failed read could replace the only comparator for a new loss.
         requiredBaselineUnavailable = coinTvlStepBaselineUnavailable;
         const current = params.scoreResults.get(stablecoinId);
-        const latest = previousCoinTvlRows.find((row) => row.stablecoin_id === stablecoinId);
+        let latest = previousCoinTvlRows.find((row) => row.stablecoin_id === stablecoinId);
+        const usableComparator = (row: PreviousCoinTvlRow | undefined): row is PreviousCoinTvlRow =>
+          !!row?.coverage_class && row.coverage_class !== "unobserved" && isFinitePositive(row.total_tvl_usd);
         if (coinTvlRead.status === "fulfilled" && coinTvlRead.value.success
-          && latest?.coverage_class && latest.coverage_class !== "unobserved"
-          && isFinitePositive(latest.total_tvl_usd) && current && current.coverageClass !== "unobserved"
+          && current && current.coverageClass !== "unobserved" && isFinitePositive(current.tvl)
+          && !usableComparator(latest)) {
+          // An unobserved or zero placeholder publication must not displace the
+          // last accepted observation: keep walking back through published
+          // generations to the newest row that is still a usable comparator.
+          try {
+            latest = (await runWithOverloadRetry(() => params.db.prepare(
+              `SELECT r.stablecoin_id, r.total_tvl_usd, r.protocol_tvl_json, r.source_mix_json, r.generation_id, r.coverage_class
+               FROM dex_liquidity_run_rows r
+               JOIN dex_liquidity_publication_generations g ON g.generation_id = r.generation_id
+               WHERE g.state = 'published' AND r.stablecoin_id = ?
+                 AND (? IS NULL OR r.generation_id != ?)
+                 AND r.coverage_class IS NOT NULL AND r.coverage_class != 'unobserved'
+                 AND r.total_tvl_usd > 0
+               ORDER BY g.started_at DESC, g.generation_id DESC
+               LIMIT 1`,
+            ).bind(stablecoinId, params.currentGenerationId ?? null, params.currentGenerationId ?? null)
+              .first<PreviousCoinTvlRow>())) ?? undefined;
+          } catch (error) {
+            // Publishing while blind to the displaced comparator could clear a new loss.
+            requiredBaselineUnavailable = true;
+            baselineReadFailures.push("coin-tvl-read-failed");
+            logWorkerEventArgs("handler", "warn", "[dex-liquidity] anchor review comparator read failed:", toErrorMessage(error));
+            latest = undefined;
+          }
+        }
+        if (coinTvlRead.status === "fulfilled" && coinTvlRead.value.success && usableComparator(latest)
+          && current && current.coverageClass !== "unobserved"
           && isFinitePositive(current.tvl)) {
           const materialLoss = isMaterialPoolRejectionLoss(latest.total_tvl_usd, current.tvl);
           const canApply = rejectionBaseline != null && carriedRejectionCoverage.reason === "material-pool-rejections"

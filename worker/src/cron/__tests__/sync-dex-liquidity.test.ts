@@ -670,9 +670,12 @@ describe("dex liquidity scoring stage cycle", () => {
     ["FROM cron_runs", "cron-history-read-failed"],
     ["SELECT value, updated_at FROM cache WHERE key = ?", "anchor-review-decision-read-failed"],
     ["FROM dex_liquidity_run_rows r", "coin-tvl-read-failed"],
+    // The walk-back read past an unobserved prior publication is its own failure path.
+    ["ORDER BY g.started_at DESC, g.generation_id DESC", "coin-tvl-read-failed"],
   ])("retains accepted rows and generation when %s is unreadable", async (match, reason) => {
     const fixture = createLatestSchemaSqlite();
     const pendingReview = reason === "coin-tvl-read-failed";
+    const unobservedPrior = match.startsWith("ORDER BY g.started_at");
     const reviewClock = pendingReview
       ? vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-11-20T11:16:00Z"))
       : undefined;
@@ -690,7 +693,8 @@ describe("dex liquidity scoring stage cycle", () => {
         insert.run("susdat-saturn", 3_000_000);
         fixture.sqlite.exec(`INSERT INTO dex_liquidity_run_rows
           (generation_id, stablecoin_id, symbol, total_tvl_usd, updated_at, coverage_class)
-          VALUES ('accepted', 'susdat-saturn', 'sUSDat', 3000000, 1700000000, 'primary')`);
+          VALUES ('accepted', 'susdat-saturn', 'sUSDat', ${unobservedPrior ? 0 : 3000000},
+            1700000000, '${unobservedPrior ? "unobserved" : "primary"}')`);
         phaseFixtures.current.scores.scores.set("susdat-saturn", { coverageClass: "primary", tvl: 2_579_000 });
       }
       if (pendingReview || reason === "anchor-review-decision-read-failed") {

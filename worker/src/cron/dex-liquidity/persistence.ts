@@ -727,15 +727,23 @@ async function publishDexLiquidityGeneration(
     db,
     [
       // A stale comparison or duplicate decision rolls back the publication batch.
+      // The comparison stays current while the reviewed coin's newest published
+      // accepted observation is still the compared generation; unobserved or
+      // zero placeholder publications never displace it.
       ...(decision ? [db.prepare(
         `INSERT INTO cache (key, value, updated_at) VALUES (?, CASE WHEN ? = (
-           SELECT generation_id FROM dex_liquidity_publication_generations
-           WHERE state = 'published' ORDER BY started_at DESC, generation_id DESC LIMIT 1
+           SELECT r.generation_id FROM dex_liquidity_run_rows r
+           JOIN dex_liquidity_publication_generations g ON g.generation_id = r.generation_id
+           WHERE g.state = 'published' AND r.stablecoin_id = ?
+             AND r.coverage_class IS NOT NULL AND r.coverage_class != 'unobserved'
+             AND r.total_tvl_usd > 0
+           ORDER BY g.started_at DESC, g.generation_id DESC LIMIT 1
          ) AND ? = ? AND EXISTS (
            SELECT 1 FROM dex_liquidity_run_rows
            WHERE generation_id = ? AND stablecoin_id = ? AND total_tvl_usd = ?
          ) THEN ? END, ?)`,
       ).bind(REVIEWED_POOL_REJECTION_ANCHOR_CORRECTION.decisionKey, decision.comparedGenerationId,
+        decision.stablecoinId,
         decision.publicationGenerationId, params.generationId,
         params.generationId, decision.stablecoinId, decision.acceptedTvlUsd,
         JSON.stringify(decision), Math.floor(Date.now() / 1000))] : []),

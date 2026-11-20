@@ -835,17 +835,19 @@ describe("analyzeDexLiquidityPostScoring", () => {
 
   function reviewedEpisodeFixture({
     coverage = initialEpisode, latest = 2_600_000, priorCoverage = "mixed",
-  }: { coverage?: ReturnType<typeof assessPoolRejectionCoverage>; latest?: number; priorCoverage?: string } = {}) {
+    unobservedPlaceholder = false,
+  }: { coverage?: ReturnType<typeof assessPoolRejectionCoverage>; latest?: number; priorCoverage?: string;
+    unobservedPlaceholder?: boolean } = {}) {
     const fixtures = createLatestSchemaFixtureTracker();
     const { sqlite, db } = fixtures.open();
-    function publishFixture(at: number) {
+    function publishFixture(at: number, tvlUsd = latest, coverageClass = priorCoverage) {
       const generationId = buildDexLiquidityPublicationGenerationId(at);
       sqlite.prepare(`INSERT INTO dex_liquidity_publication_generations
         (generation_id, started_at, state, expected_row_count, created_at, published_at)
         VALUES (?, ?, 'published', 1, ?, ?)`).run(generationId, at, at, at);
       sqlite.prepare(`INSERT INTO dex_liquidity_run_rows
         (generation_id, stablecoin_id, symbol, total_tvl_usd, updated_at, coverage_class)
-        VALUES (?, ?, 'sUSDat', ?, ?, ?)`).run(generationId, coin, latest, at, priorCoverage);
+        VALUES (?, ?, 'sUSDat', ?, ?, ?)`).run(generationId, coin, tvlUsd, at, coverageClass);
       sqlite.prepare(`INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata)
         VALUES ('sync-dex-liquidity', ?, 1000, 'degraded', ?)`).run(at, JSON.stringify({
           sourceCoverage: { poolRejectionCoverage: { ...coverage, coinsOmitted: 1, coins: [] } },
@@ -853,6 +855,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
         }));
     }
     publishFixture(reviewTime / 1000 - 3600);
+    if (unobservedPlaceholder) publishFixture(reviewTime / 1000 - 1800, 0, "unobserved");
     const pools = (tvl: number, decayed = false, tvlMeasured: true | null = true) => new Map([[coin, [makePool({
       tvlUsd: tvl, extra: { measurement: { decayed, tvlMeasured: tvlMeasured ?? undefined } },
     })]]]);
@@ -966,6 +969,36 @@ describe("analyzeDexLiquidityPostScoring", () => {
       const flat = await assess(current);
       expect(flat).toMatchObject({
         reason: "material-pool-rejections", baselineTvlUsdByCoin: { [coin]: anchor },
+      });
+      expect(flat.anchorReviewDecision).toBeUndefined();
+    } finally {
+      close();
+      vi.restoreAllMocks();
+    }
+  });
+
+  it("keeps the pre-placeholder comparator so an unobserved publication cannot hide a new loss", async () => {
+    const clock = vi.spyOn(Date, "now").mockReturnValue(reviewTime);
+    const { assess, publish, close, sqlite } = reviewedEpisodeFixture({
+      latest: 3_000_000, unobservedPlaceholder: true,
+    });
+    try {
+      const tvl = 2_579_000;
+      const deferred = await assess(tvl);
+      expect(deferred).toMatchObject({
+        reason: "material-pool-rejections",
+        baselineTvlUsdByCoin: { [coin]: initialEpisode.baselineTvlUsdByCoin[coin] },
+        anchorReviewDecision: { outcome: "deferred-material-loss", comparedTvlUsd: 3_000_000, acceptedTvlUsd: tvl },
+      });
+      await publish(tvl, deferred.anchorReviewDecision);
+      expect(JSON.parse(String(sqlite.prepare(
+        "SELECT value FROM cache WHERE key = 'dex-liquidity:anchor-review:2142'").get()?.value)))
+        .toMatchObject({ outcome: "deferred-material-loss", comparedTvlUsd: 3_000_000 });
+      clock.mockReturnValue(reviewTime + 3_600_000);
+      const flat = await assess(tvl);
+      expect(flat).toMatchObject({
+        reason: "material-pool-rejections",
+        baselineTvlUsdByCoin: { [coin]: initialEpisode.baselineTvlUsdByCoin[coin] },
       });
       expect(flat.anchorReviewDecision).toBeUndefined();
     } finally {
