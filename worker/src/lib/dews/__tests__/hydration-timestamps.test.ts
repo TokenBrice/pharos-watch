@@ -313,6 +313,15 @@ describe("DEWS hydration timestamp admission", () => {
     expect(anchors.get(asset.id)).toEqual(admitted ? { day: 809_363, week: 809_381 } : offset == null ? undefined : { day: null, week: null });
   });
 
+  it("allows a legacy native-history schema and surfaces unrelated read failures", async () => {
+    const asset = { id: "usdt-tether", circulatingNative: 100, supplyObservedAt: RUN_AT } as StablecoinData;
+    const read = (message: string) => loadDewsNativeHistory(mockD1([
+      { match: "pharos:dews:native-supply-history", rows: [], throwError: new Error(message) },
+    ]), [asset], RUN_AT);
+    await expect(read("no such column: circulating_native")).resolves.toEqual(new Map());
+    await expect(read("D1 read failed")).rejects.toThrow("D1 read failed");
+  });
+
   it("keeps equal rates attached to the clock and source of each accepted selection", async () => {
     const pegKey = "peggedEUR";
     const { sqlite, db } = fixtures.open();

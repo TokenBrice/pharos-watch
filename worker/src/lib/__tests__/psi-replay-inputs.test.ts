@@ -3,17 +3,20 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { getReferenceSessionState } from "@shared/lib/reference-market-hours";
 import type { DepegAuditVerdict } from "@shared/types/depeg-audit";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeDepegRow as makeFixtureDepegRow } from "../../test-helpers/__shared/fixtures";
 import type { DepegRow } from "../depeg-helpers";
 import { seedPsiDews, seedPsiEvent, seedPsiPairedHistory, seedPsiSupply } from "../../api/__tests__/psi-replay.test-support";
 import {
   loadHistoricalPsiArchives,
+  loadHistoricalPsiReferences,
+  loadHistoricalPsiSampleSlots,
   loadPsiEligibleDepegEvents,
   loadSupplyHistoryRowsForWindow,
 } from "../psi-replay-inputs";
 import { buildStabilityInputForDay } from "../psi-recompute";
 import { replayHistoricalPsiForDay } from "../psi-replay";
-import { buildHistoricalReferenceLookup } from "../backfill-fx";
+import * as backfillFx from "../backfill-fx";
 
 const DAY = 1_772_668_800;
 const fixtures = createLatestSchemaFixtureTracker();
@@ -85,6 +88,44 @@ describe("PSI replay input loaders", () => {
     const archives = await loadHistoricalPsiArchives(db, DAY, DAY);
     expect(archives.supplyByCoin.size).toBe(0);
     expect(archives.dewsByDay.size).toBe(0);
+  });
+
+  it("replays usable rows from a clone without native supply or event coverage columns", async () => {
+    const supply = { stablecoin_id: "usdt-tether", snapshot_date: DAY, circulating_usd: 100e9 };
+    const event = { ...makeDepegRow({ id: 1, started_at: DAY }), audit_verdict: null };
+    const db = mockD1([
+      { match: "circulating_native", rows: [], throwError: new Error("no such column: circulating_native") },
+      { match: "supply_provenance", rows: [], throwError: new Error("no such column: supply_provenance") },
+      { match: "FROM supply_history", rows: [supply] },
+      { match: "e.admitted_coverage_json", rows: [], throwError: new Error("no such column: e.admitted_coverage_json") },
+      { match: "FROM depeg_events", rows: [event] },
+    ]);
+    expect(await loadSupplyHistoryRowsForWindow(db, DAY, DAY, true)).toEqual([supply]);
+    expect(await loadPsiEligibleDepegEvents(db, { replayClosureRule: false })).toEqual([event]);
+  });
+
+  it("groups retained sample clocks by UTC day inside the requested window", async () => {
+    const { sqlite, db } = fixtures.open();
+    const insert = sqlite.prepare("INSERT INTO stability_index_samples VALUES (?, 100, 'BEDROCK', '{}', '{}', '3.0')");
+    for (const at of [DAY - 1, DAY + 90, DAY + 30, DAY + DAY_SECONDS, DAY + 2 * DAY_SECONDS]) insert.run(at);
+    expect(await loadHistoricalPsiSampleSlots(db, DAY, DAY + DAY_SECONDS)).toEqual(new Map([
+      [DAY, [DAY + 30, DAY + 90]], [DAY + DAY_SECONDS, [DAY + DAY_SECONDS]],
+    ]));
+  });
+
+  it("loads a dated gold lookup only for commodity events", async () => {
+    const { db } = fixtures.open();
+    const fetchPeers = vi.spyOn(backfillFx, "fetchHistoricalCommodityPeers").mockResolvedValue({
+      GOLD: ["a", "b", "c"].map((assetId) => ({
+        assetId, sourceId: assetId, commodityOunces: 1, prices: [{ timestamp: DAY, price: 4_000 }],
+      })),
+    });
+    const event = makeDepegRow({ peg_type: "peggedUSD" });
+    expect(await loadHistoricalPsiReferences(db, [event], DAY, DAY, null)).toBeUndefined();
+    expect(fetchPeers).not.toHaveBeenCalled();
+    const lookup = await loadHistoricalPsiReferences(db, [{ ...event, peg_type: "peggedGOLD" }], DAY, DAY, null);
+    expect(fetchPeers).toHaveBeenCalledWith(expect.objectContaining({ endSec: DAY + DAY_SECONDS }), null, ["GOLD"], db);
+    expect(lookup?.referenceAt("GOLD", DAY, "paxg-paxos")?.usdPerUnit).toBe(4_000);
   });
 
   it.each([null, 1.01])("replays a dated market quote with legacy conversion price %s and unavailable native quantity", async (legacyPrice) => {
@@ -283,7 +324,7 @@ describe("PSI replay input loaders", () => {
     const bullion = pegType === "peggedGOLD";
     if (bullion) sqlite.prepare(`INSERT INTO depeg_event_provenance (event_id, source_kind, quote_mode, created_at, updated_at)
       VALUES (1, 'historical-replay', 'usd', ?, ?)`).run(start, start);
-    const references = bullion ? buildHistoricalReferenceLookup({
+    const references = bullion ? backfillFx.buildHistoricalReferenceLookup({
       commodityPeers: { GOLD: ["xaut-tether", "kau-kinesis", "xaum-matrixdock", "gldt-gold-dao"].map((assetId) => ({
         assetId, sourceId: `coingecko:${assetId}`, commodityOunces: 1,
         prices: [{ timestamp: start - 60, price: reference }],
@@ -401,8 +442,7 @@ describe("PSI replay input loaders", () => {
   });
 
   it("propagates archive and event read failures instead of returning empty successful inputs", async () => {
-    const { db } = fixtures.open();
-    vi.spyOn(db, "prepare").mockImplementation(() => { throw new Error("archive read failed"); });
+    const db = mockD1([], { failOn: { match: "FROM ", error: new Error("archive read failed") } });
     await expect(loadHistoricalPsiArchives(db, DAY, DAY)).rejects.toThrow("archive read failed");
     await expect(loadPsiEligibleDepegEvents(db)).rejects.toThrow("archive read failed");
   });

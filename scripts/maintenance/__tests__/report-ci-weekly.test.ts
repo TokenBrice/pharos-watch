@@ -312,14 +312,15 @@ describe("weekly CI report", () => {
     });
     try {
       writeFileSync(input, "[]");
-      expect(run()).toMatch(/\d+ of [1-9]\d* tracked single-file route signatures[\s\S]+\| worker-api \| 76000 \| \d+ \| [1-9]\d* \|/);
-      expect(run({ ROUTE_PARSER_INSTALL_OUTCOME: "failure" })).toContain("`route-context:unavailable:parser-install-failed`");
-      const missingParser = `import { registerHooks } from 'node:module';
+      const without = (name: string) => `--import=data:text/javascript,${encodeURIComponent(`import { registerHooks } from 'node:module';
         registerHooks({ resolve(specifier, context, next) {
-          if (specifier === 'remark-gfm') throw Object.assign(new Error('Missing remark-gfm'), { code: 'ERR_MODULE_NOT_FOUND' });
+          if (specifier === '${name}') throw Object.assign(new Error('Missing ${name}'), { code: 'ERR_MODULE_NOT_FOUND' });
           return next(specifier, context);
-        } });`;
-      expect(run({ NODE_OPTIONS: `--import=data:text/javascript,${encodeURIComponent(missingParser)}` }))
+        } });`)}`;
+      const withoutYaml = { NODE_OPTIONS: without("yaml") };
+      expect(run(withoutYaml)).toMatch(/\d+ of [1-9]\d* tracked single-file route signatures[\s\S]+\| worker-api \| 76000 \| \d+ \| [1-9]\d* \|/);
+      expect(run({ ...withoutYaml, ROUTE_PARSER_INSTALL_OUTCOME: "failure" })).toContain("`route-context:unavailable:parser-install-failed`");
+      expect(run({ NODE_OPTIONS: without("remark-gfm") }))
         .toContain("`route-context:unavailable:measurement-failed`");
       const stalledMeasurement = `import childProcess from 'node:child_process';
         import { syncBuiltinESMExports } from 'node:module';
