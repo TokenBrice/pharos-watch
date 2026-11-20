@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { DEX_FRESHNESS_SEC, DEX_PROTOCOL_SOURCE_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import {
   cleanupEnrichMissingPricesTest,
   installPrimaryPriceRoutes,
@@ -13,6 +14,7 @@ import { fetchPrimaryPrices } from "../sync-stablecoins/enrich-prices";
 import {
   applyListAggregatorDowngrade,
   applyPoolChallenge,
+  applyPrimaryPostConsensusHardening,
 } from "../sync-stablecoins/enrich-prices-primary-hardening";
 import type { PriceValidationContext, PriceValidationReferences } from "../../lib/price-validation";
 import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
@@ -103,6 +105,33 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
     // Pool challenge doesn't fire (<500bps), but CG+DL-only downgrade applies
     expect(results.get("dusd-dtrinity")!.confidence).toBe("single-source");
     expect(results.get("dusd-dtrinity")!.source).not.toBe("pool-tvl-weighted");
+  });
+
+  it.each([
+    ["envelope", -1, 0.92], ["envelope", 0, 1], ["array", -1, 1], ["array", 0, 1], ["invalid", 0, 1],
+    ["dated", 0, 0.92], ["dated", 1, 1],
+  ])("requires eligible observation clocks for the legacy DOLA pool challenge (%s, %ss)", async (shape, offset, expected) => {
+    const aggregateObservedAt = 1_700_000_000;
+    const id = "dola-inverse-finance";
+    const nowSec = aggregateObservedAt + DEX_FRESHNESS_SEC + offset;
+    const sources = ["curve", "balancer"].map((protocol, index) => ({
+      protocol, chain: "ethereum", price: 0.92, tvl: 1e6,
+      ...(shape === "array" && index === 0 && { aggregateObservedAt }),
+      ...(shape === "dated" && { observedAt: aggregateObservedAt + DEX_FRESHNESS_SEC - DEX_PROTOCOL_SOURCE_FRESHNESS_SEC }),
+    }));
+    const db = makePoolChallengeDb([{
+      stablecoin_id: id, updated_at: nowSec - 60,
+      price_sources_json: JSON.stringify(shape === "array" ? sources : {
+        aggregateObservedAt: shape === "invalid" ? null : aggregateObservedAt, sources,
+      }),
+    }]);
+    const { results, stats } = makePoolChallengeInputs({
+      assetId: id, result: makePriceConsensusResult({ observedAt: nowSec - 30 }),
+    });
+    await applyPrimaryPostConsensusHardening({ db, candidates: [makePeggedAsset({ id })], results, stats, nowSec });
+    expect(results.get(id)).toMatchObject(expected === 1
+      ? { price: 1, confidence: "single-source", observedAt: nowSec - 30 }
+      : { price: expected, source: "pool-tvl-weighted" });
   });
 });
 

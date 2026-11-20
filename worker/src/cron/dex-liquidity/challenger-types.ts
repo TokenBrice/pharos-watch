@@ -30,6 +30,8 @@ export interface DexPriceChallengerLoadRow extends DexPriceLineage {
   publishedAt: number;
   /** Present for v2 payloads; null is unknown, never the publication clock. */
   priceObservedAt?: number | null;
+  /** Fallback clock for undated legacy price sources only. Null marks invalid clock evidence. */
+  legacyAggregateObservedAt?: number | null;
 }
 
 export interface DexPriceChallengerLoadDiagnostics {

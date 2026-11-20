@@ -231,6 +231,7 @@ export async function collectConfirmationEvidence(
     threshold,
     recoveryThreshold,
     allowsUsdObservation,
+    hasPendingOnsetSourceKeys,
     pendingSourceKeys,
     nativeSignal,
     nativePegQuote: suppliedNativePegQuote,
@@ -464,6 +465,10 @@ export async function collectConfirmationEvidence(
     if (cexPrice && cexPrice > 0 && !allowsUsdObservation && isIndependentConfirmer("binance")) {
       const cexSignal = deriveDepegSignal(cexPrice, pegReference);
       evidence.cexStatus = classifyDirectionalSignal(cexSignal, threshold, pendingState.direction, recoveryThreshold);
+      if (evidence.cexStatus === "confirm" && !hasPendingOnsetSourceKeys) {
+        evidence.cexStatus = "insufficient";
+        addSource(evidence.unavailableSources, "cex:binance:onset-source-unverified");
+      }
       if (evidence.cexStatus === "confirm") {
         evidence.cexPeakCandidate = { bps: cexSignal?.rawBps, price: cexPrice, quoteDomain: "usd", pegReference };
         addSource(evidence.confirmingSources, "cex:binance");

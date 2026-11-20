@@ -180,7 +180,10 @@ export async function loadDexPoolChallengers(
   minPoolTvlUsd: number,
   maxAgeSec: number,
   nowSec: number,
-): Promise<Map<string, Array<DexPriceLineage & { price: number; tvlUsd: number; protocol: string; chain: string; observedAt?: number; sourceFamily?: string }>>> {
+): Promise<Map<string, Array<DexPriceLineage & {
+  price: number; tvlUsd: number; protocol: string; chain: string; observedAt?: number; sourceFamily?: string;
+  legacyAggregateObservedAt?: number | null;
+}>>> {
   let loaded;
   try {
     loaded = await loadPublishedDexPoolChallengers(db, minPoolTvlUsd, maxAgeSec, nowSec);
@@ -224,6 +227,7 @@ export async function loadDexPoolChallengers(
         chain: row.chain,
         observedAt: row.priceObservedAt ?? undefined,
         sourceFamily: row.sourceFamily,
+        ...(row.legacyAggregateObservedAt !== undefined && { legacyAggregateObservedAt: row.legacyAggregateObservedAt }),
         ...readDexPriceLineage(row),
       })),
     ]),

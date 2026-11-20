@@ -6,7 +6,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 runs every 15 minute
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.51`<!-- GENERATED-END: methodology-version-depeg-detection -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.52`<!-- GENERATED-END: methodology-version-depeg-detection -->
 - **Runtime/version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-dews/`
@@ -370,7 +370,7 @@ Age checks:
 
 - Fetches the active configured Binance market batch (currently `USDTUSD` and `USDCUSD`) as an additional secondary confirmation source, then looks up the pending coin by symbol
 - Only attempted for symbols present in the configured Binance market set
-- Binance and CoinGecko confirmation exclude source families used by the current primary or retained in the pending episode. Receipts bind source identity to each observation, so a legacy refresh that advances the latest quote still leaves a matching onset usable for this check. Rows without matching receipts use the legacy confirmation rules.
+- Binance and CoinGecko confirmation exclude source families used by the current primary or retained in the pending episode. A receipt can still identify the onset venue after a legacy writer refreshes the latest quote. Binance needs source keys that match the onset to confirm or deepen the peak. Pending episodes without those keys need other qualifying evidence for promotion.
 - If an admitted observation ties the stored peak at the exact same price and in the same quote domain, its paired reference can complete a legacy peak. A different price cannot backfill that pair.
 - Counts as confirmation only when deviation reaches the full trigger threshold and points in the same direction as the pending incident
 - Non-fatal: if the Binance fetch fails, the CEX agreement remains `null`

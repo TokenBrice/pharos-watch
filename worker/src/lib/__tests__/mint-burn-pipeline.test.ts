@@ -2,6 +2,8 @@ import { readFileSync, readdirSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { URL } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { syncMintBurnConfig } from "../../cron/mint-burn/sync-config";
 import { mintBurnAlchemyEndpoint } from "../mint-burn-pipeline/rpc";
 
 const alchemyMockHelpers = vi.hoisted(() => ({
@@ -19,7 +21,8 @@ const alchemyMockHelpers = vi.hoisted(() => ({
   }),
 }));
 
-vi.mock("../alchemy-logs", () => ({
+vi.mock("../alchemy-logs", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../alchemy-logs")>(),
   getAlchemyTransactionContextBatchMany: vi.fn(async (_url: string, txHashes: string[]) =>
     new Map(txHashes.map((txHash) => [txHash, alchemyMockHelpers.makeAlchemyContext(txHash)])),
   ),
@@ -74,7 +77,7 @@ import { drainMintBurnMaterializationDebt } from "../mint-burn-pipeline/material
 import { toEventSelector } from "viem/utils";
 
 const fixtures = createLatestSchemaFixtureTracker();
-afterEach(() => fixtures.closeAll());
+afterEach(() => { fixtures.closeAll(); vi.unstubAllGlobals(); });
 
 function makeRow(overrides: Partial<MintBurnRow> = {}): MintBurnRow {
   return makeMintBurnRow({
@@ -239,7 +242,7 @@ describe("mint-burn shared pipeline modules", () => {
     expect(vi.mocked(classifyBridgeAwareBurnRows)).toHaveBeenCalledTimes(1);
   });
 
-  it.each(["fee-before", "fee-after", "missing-checkpoint", "wrong-vault", "rollback-replay"] as const)("classifies a trustee fee separately from an ordinary OUSD mint (%s)", async (variant) => {
+  it.each(["fee-before", "fee-after", "first-seen-before", "first-seen-after", "missing-checkpoint", "wrong-vault", "rollback-replay"] as const)("classifies a trustee fee separately from an ordinary OUSD mint (%s)", async (variant) => {
     const config = MINT_BURN_CONFIGS.find((entry) => entry.stablecoinId === "ousd-origin-protocol")!;
     const token = config.contractAddress, vault = config.originDollarRebaseVault!;
     const trustee = "0x1111111111111111111111111111111111111111";
@@ -247,20 +250,63 @@ describe("mint-burn shared pipeline modules", () => {
     const trusteeWord = trustee.slice(2).padStart(64, "0");
     const tx = `0x${"1".repeat(64)}`, blockNumber = 26_028_859;
     const replay = variant === "rollback-replay";
-    const feeRaw = replay ? 7_000n * 10n ** 18n : 7n;
-    const ordinaryRaw = replay ? 200_000n * 10n ** 18n : 7n;
-    const yieldRaw = replay ? 20_000n * 10n ** 18n : 11n;
+    const firstSeen = variant.startsWith("first-seen");
+    const feeRaw = firstSeen ? 20_000n * 10n ** 18n : replay ? 7_000n * 10n ** 18n : 7n;
+    const ordinaryRaw = replay ? 200_000n * 10n ** 18n : feeRaw;
+    const yieldRaw = firstSeen ? 60_000n * 10n ** 18n : replay ? 20_000n * 10n ** 18n : 11n;
     const mint = (amount: bigint) => ({
       address: token, topics: [toEventSelector("Transfer(address,address,uint256)"), `0x${word(0n)}`, `0x${trusteeWord}`], data: `0x${word(amount)}`,
     });
     const distribution = { address: variant === "wrong-vault" ? trustee : vault, topics: [toEventSelector("YieldDistribution(address,uint256,uint256)")], data: `0x${trusteeWord}${word(yieldRaw)}${word(feeRaw)}` };
     const checkpoint = { address: token, topics: [toEventSelector("TotalSupplyUpdatedHighres(uint256,uint256,uint256)")], data: `0x${word(100n)}${word(100n)}${word(1n)}` };
-    const feeIndex = variant === "fee-after" ? 3 : 2;
-    const ordered = variant === "fee-after"
-      ? [mint(ordinaryRaw), distribution, mint(feeRaw)]
-      : [mint(ordinaryRaw), mint(feeRaw), distribution];
+    const optOut = { address: token, topics: [toEventSelector("AccountRebasingDisabled(address)")], data: `0x${trusteeWord}` };
+    const feeTransfer = mint(feeRaw), feeLogs = firstSeen ? [optOut, feeTransfer] : [feeTransfer];
+    const ordered = variant.endsWith("after") ? [distribution, ...feeLogs] : [...feeLogs, distribution];
+    if (!firstSeen) ordered.unshift(mint(ordinaryRaw));
+    const feeIndex = ordered.indexOf(feeTransfer) + 1;
     if (variant !== "missing-checkpoint") ordered.push(checkpoint);
-    const receiptLogs = ordered.map((log, index) => ({ ...log, logIndex: `0x${(index + 1).toString(16)}` }));
+    if (firstSeen) ordered.push(mint(ordinaryRaw));
+    const block = { blockNumber: `0x${blockNumber.toString(16)}`, blockHash: `0x${word(2n)}` };
+    const receiptLogs = ordered.map((log, index) => ({ ...log, ...block, logIndex: `0x${(index + 1).toString(16)}`,
+      transactionHash: tx, transactionIndex: "0x0", removed: false }));
+    if (firstSeen) {
+      const { db, sqlite } = fixtures.open();
+      const observedAt = 1_790_000_000;
+      vi.mocked(getAlchemyTransactionContextBatchMany).mockImplementationOnce(
+        (await vi.importActual<typeof import("../alchemy-logs")>("../alchemy-logs")).getAlchemyTransactionContextBatchMany,
+      );
+      const fetchMock = mockFetch([{ match: rpc[0].url, respond: async (request) => {
+        const payload = await request.json() as { id: number; method: string }[]
+          | { id: number; params: [{ address: string; topics: (string | null)[] }] };
+        const reply = (id: number, result: unknown) => ({ jsonrpc: "2.0", id, result });
+        if (Array.isArray(payload)) {
+          const responses = {
+            eth_getBlockByNumber: { number: block.blockNumber, hash: block.blockHash, timestamp: `0x${observedAt.toString(16)}` },
+            eth_getTransactionByHash: { ...block, hash: tx, from: trustee, to: vault, input: "0x" },
+            eth_getTransactionReceipt: { ...block, transactionHash: tx, to: vault, status: "0x1", logs: receiptLogs },
+          };
+          return Response.json(payload.map(({ id, method }) => reply(id, responses[method as keyof typeof responses])));
+        }
+        const { address, topics } = payload.params[0];
+        return Response.json(reply(payload.id, receiptLogs.filter((log) => log.address === address
+          && topics.every((topic, index) => topic == null || log.topics[index] === topic))));
+      } }], { requireMatch: true });
+      const affectedHours = new Map<string, MintBurnAffectedHour>();
+      const result = await syncMintBurnConfig({ db, config, key: mintBurnConfigKey(config), tier: "extended",
+        fromBlock: blockNumber, scanTo: blockNumber, chainHead: blockNumber, rpcEndpoints: rpc, configBudgetLimit: 25,
+        runTimestamp: observedAt, priceContext: { priceObservations: new Map([[config.stablecoinId,
+          { price: 1, observedAt, source: "binance", observedAtMode: "local_fetch" }]]), priceHistory: new Map() },
+        chainTimestampCache: new Map(), txContextCache: new Map(), affectedHours });
+      expect(fetchMock.getHistory().some(({ body }) => body?.includes("eth_getTransactionReceipt"))).toBe(true);
+      expect(result.summary).toMatchObject({ rowsParsed: 2, rowsInserted: 2, txContextShortfalls: 0 });
+      await recalcAffectedHours(db, affectedHours);
+      expect(sqlite.prepare("SELECT mint_count, mint_volume_usd FROM mint_burn_hourly").get())
+        .toEqual({ mint_count: 1, mint_volume_usd: 20_000 });
+      expect(sqlite.prepare("SELECT flow_type, burn_type FROM mint_burn_events ORDER BY id").all()).toEqual([
+        { flow_type: "protocol_internal", burn_type: null }, { flow_type: "standard", burn_type: null },
+      ]);
+      return;
+    }
     const rows = [feeIndex, 1].map((index) => makeRow({ id: `ethereum-${tx}-${index}`, chain_id: "ethereum", stablecoin_id: config.stablecoinId,
       tx_hash: tx, block_number: blockNumber, amount_raw: String(index === feeIndex ? feeRaw : ordinaryRaw),
       ...(replay ? { amount_usd: index === feeIndex ? 7_000 : 200_000 } : {}),

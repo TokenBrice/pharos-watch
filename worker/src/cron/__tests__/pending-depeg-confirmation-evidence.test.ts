@@ -39,6 +39,7 @@ function input(overrides: Partial<ConfirmationEvidenceInput> = {}): Confirmation
     meta: usdMeta,
     pegReference: 1,
     threshold: 100,
+    hasPendingOnsetSourceKeys: false,
     nativeSignal: null,
     nativePegQuote: undefined,
     nativeQuoteImplausibility: null,
@@ -427,7 +428,8 @@ describe("collectConfirmationEvidence recover and opposing classification", () =
   });
 
   it("confirms from a fresh Binance quote beyond the secondary bar", async () => {
-    const evidence = await collect(noOffchain({ cexAllowed: true, cexPrices: new Map([["USDT", 0.95]]) }));
+    const evidence = await collect(noOffchain({ hasPendingOnsetSourceKeys: true, pendingSourceKeys: new Set(["kraken"]),
+      cexAllowed: true, cexPrices: new Map([["USDT", 0.95]]) }));
     expect(evidence.cexStatus).toBe("confirm");
     expect(evidence.cexPeakCandidate).toEqual({ bps: expect.closeTo(-500, 9), price: 0.95, quoteDomain: "usd", pegReference: 1 });
     expect(evidence.confirmingSources).toContain("cex:binance");

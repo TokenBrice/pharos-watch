@@ -1,5 +1,18 @@
 [
   {
+    "version": "6.86",
+    "title": "Legacy DEX pool quotes expire before they can replace a fresh price",
+    "date": "2026-11-20",
+    "effectiveAt": 1795140000,
+    "summary": "When legacy DEX pool quotes have no individual timestamp, pricing checks any recorded aggregate observation clock. If a legacy array records a clock, every entry needs a valid one and the oldest must be younger than 75 minutes.",
+    "impact": [
+      "In the DOLA regression case, $0.92 quotes from Curve and Balancer could replace a fresh $1 quote. The $1 quote now survives when the pool observations reach the 75-minute limit or the legacy array supplies only partial clock coverage.",
+      "Pool quotes with their own timestamps still use their 35-minute budget. Publication-fresh legacy pools can still keep an open depeg from closing when they contradict recovery."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.85",
     "title": "Clocked references and independent market prices",
     "date": "2026-11-19",

@@ -168,6 +168,14 @@ describe("Safety Score methodology head entry", () => {
 });
 
 describe("methodology registry", () => {
+  it("versions the Binance onset provenance gate as Depeg/DEWS v6.52", () => {
+    const release = METHODOLOGY_CHANGELOG_REGISTRY.find(({ key }) => key === "depeg-dews")!
+      .entries.find(({ version }) => version === "6.52");
+    expect(release).toBeDefined();
+    expect(getMethodologyVersionAt("depeg-dews", release!.effectiveAt - 1)).toBe("6.51");
+    expect(getMethodologyVersionAt("depeg-dews", release!.effectiveAt)).toBe("6.52");
+  });
+
   it("resolves shared production activations without publishing an intermediate version", () => {
     for (const [key, cut, before, after] of [
       ["mint-burn-flow", 1794298200, "6.37", "6.43"],

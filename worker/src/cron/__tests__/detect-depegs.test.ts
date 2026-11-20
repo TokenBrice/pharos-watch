@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { createMockD1Preset } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { seedOpenEvent, seedDexEvidence } from "./detect-depegs.test-support";
@@ -404,6 +405,20 @@ describe("detectDepegEvents", () => {
     expect(sqlite.prepare("SELECT id, ended_at, recovery_price, recovery_first_seen_at FROM depeg_events").all()).toEqual([
       { id: 1, ended_at: now, recovery_price: 1.001, recovery_first_seen_at: null },
     ]);
+  });
+
+  it("keeps the recovery veto at the legacy aggregate's pricing deadline", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const now = Math.floor(Date.now() / 1000);
+    seedOpenEvent(sqlite, { recovery_first_seen_at: now - 900, recovery_last_seen_at: now - 900 });
+    const sources = ["curve", "balancer"].map((protocol) => ({ protocol, chain: "ethereum", price: 0.92, tvl: 2e6 }));
+    seedDexEvidence(sqlite, 1, sources);
+    sqlite.prepare("UPDATE dex_prices SET price_sources_json = ?").run(JSON.stringify({
+      aggregateObservedAt: now - DEX_FRESHNESS_SEC, sources,
+    }));
+    await detectDepegEvents(db, [makeAsset({ id: "usdt-tether", symbol: "USDT", price: 1 })]);
+    expect(sqlite.prepare("SELECT ended_at, recovery_first_seen_at FROM depeg_events").get())
+      .toEqual({ ended_at: null, recovery_first_seen_at: null });
   });
 
   it("closes a stale live event when fresh multi-source primary agreement is back inside threshold", async () => {
