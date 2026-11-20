@@ -61,7 +61,7 @@ describe("detail shared modules regulatory slot", () => {
   });
 
   it("keeps the not-reviewed placeholder when the coin has no curated regime profile", () => {
-    const modules = sharedModulesFor("xusd-babelfish");
+    const modules = sharedModulesFor("btcusd-btcfi");
     expect(modules.regulatoryStanding).toBeNull();
     expect(modules.regulatoryNotReviewed).toBe(true);
   });
