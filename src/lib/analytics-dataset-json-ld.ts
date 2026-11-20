@@ -165,8 +165,18 @@ function datasetDate(dataset: PublicDatasetExport): string | undefined {
 }
 
 /**
- * ISO 8601 coverage read from the export itself: the snapshot date, or for a
- * history window the earliest row start through the snapshot date.
+ * Publication clock for dataset nodes: `dateModified` is the dated edition
+ * Pharos published (the receipt `latest.*` and the citation resolve to), never
+ * the export's observation clock — for depeg-history, `_meta.asOfISO` is the
+ * ledger capture and can predate or outlive the edition. The dated-edition
+ * series is the cumulative publication ledger; no first-publication receipt
+ * exists, so `datePublished` stays omitted rather than inferred from Git or
+ * rebuild time.
+ */
+
+/**
+ * ISO 8601 coverage read from the export itself: its `asOfISO` observation
+ * date, or for a history window the earliest row start through that date.
  */
 function datasetTemporalCoverage(descriptor: PublicDatasetDescriptor): string | undefined {
   const date = datasetDate(descriptor.export);
@@ -212,7 +222,6 @@ export function buildPublicDatasetMirrorJsonLd(topic: PublicDatasetTopic) {
 
   const organization = buildPharosOrganizationNode();
   const rowFields = Object.keys(descriptor.export.rows[0] ?? {});
-  const date = datasetDate(descriptor.export);
   const temporalCoverage = datasetTemporalCoverage(descriptor);
   const additionalProperty = [
     { "@type": "PropertyValue", name: "endpoint", value: descriptor.export._meta.endpoint },
@@ -234,7 +243,7 @@ export function buildPublicDatasetMirrorJsonLd(topic: PublicDatasetTopic) {
     includedInDataCatalog: buildPharosDataCatalogReference(),
     identifier: [buildPharosUrnJsonLdIdentifier("dataset", descriptor.slug)],
     sameAs: `${API_REFERENCE_URL}#dataset-${descriptor.slug}`,
-    ...(date ? { dateModified: date } : {}),
+    dateModified: PUBLIC_DATASET_CURRENT_DATE,
     ...(temporalCoverage ? { temporalCoverage } : {}),
     keywords: descriptor.keywords,
     variableMeasured: rowFields.map((name) => ({

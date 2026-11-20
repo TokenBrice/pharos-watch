@@ -6,6 +6,7 @@ import { UNCORROBORATED_TVL_DROP_RATIO } from "@shared/lib/digest-liquidity-admi
 import { digestGaugeWeightFact } from "@shared/lib/digest-mint-burn-admission";
 import { round1 } from "@shared/lib/math";
 import { activeDepegEditorialCandidateId } from "./editorial-candidates";
+import { describeDigestDepeg } from "./digest-evidence";
 import { classifyRegime, DIGEST_WRITING_REGISTER } from "./prompt/regime";
 import {
   formatDigestUsdPrice,
@@ -96,7 +97,7 @@ export function buildUserPrompt(
   }
 
   if (data.topDepegs.length > 0) {
-    lines.push("Active depegs by market impact (live deviation × mcap):");
+    lines.push("Active depegs by market impact (deviation × mcap):");
     lines.push(
       "  IMPORTANT: 'now' is the live deviation; quote THAT as the current state. 'peak' is the event's historical extreme; never present peak as today's deviation.",
     );
@@ -104,14 +105,10 @@ export function buildUserPrompt(
       const age = depeg.ageHours != null ? ` | age ${depeg.ageHours}h` : "";
       const suppression = depeg.suppressReason ? ` | suppress: ${depeg.suppressReason}` : "";
       const currentPrice = formatDigestUsdPrice(depeg.currentPriceUsd);
-      const severityBps = depeg.currentBps ?? depeg.bps;
-      const basisNote = depeg.severityBasis === "peak-fallback" ? " (stored peak; live price unavailable)" : "";
-      const peak =
-        depeg.peakBps != null && Math.abs(depeg.peakBps) !== Math.abs(severityBps)
-          ? ` | peak ${Math.abs(depeg.peakBps)} bps`
-          : "";
+      const { severity, historicalPeak, fallback } = describeDigestDepeg(depeg);
+      const peak = historicalPeak ? ` | peak ${historicalPeak}` : "";
       lines.push(
-        `  ${depeg.symbol} | now ${Math.abs(severityBps)} bps ${severityBps >= 0 ? "above" : "below"}-peg${basisNote}${currentPrice ? ` | current ${currentPrice}` : ""}${peak} | ${formatCurrency(depeg.mcapUsd)} mcap | impact ${depeg.impactScore ?? "n/a"}${age}${suppression}`,
+        `  ${depeg.symbol} | ${fallback ? "peak" : "now"} ${severity}${currentPrice ? ` | current ${currentPrice}` : ""}${peak} | ${formatCurrency(depeg.mcapUsd)} mcap | impact ${depeg.impactScore ?? "n/a"}${age}${suppression}`,
       );
     }
   }

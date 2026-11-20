@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makeFxCurrentPeg } from "@shared/test-utils/boundary-contract-vectors.test-support";
 import { loadPegAnalyticsCache, publishPegAnalyticsCache } from "../peg-analytics-cache";
@@ -165,7 +166,7 @@ describe("derivePegAnalyticsSnapshot", () => {
       expect(retained.pegDataById.get("usdt-tether")?.observationStartedAt).toBe(firstObservation);
     }
   });
-  it.each(["failed-read", "malformed-row"] as const)("withholds canonical analytics on %s projection and retains the accepted incident chronology", async (failure) => {
+  it.each(["failed-read", "malformed-row", "pointer-advance"] as const)("keeps canonical analytics coherent on %s", async (scenario) => {
     const { sqlite, db: sqliteDb } = sqliteFixtures.open();
     const now = Math.floor(Date.now() / 1000);
     const first = now - 86_400;
@@ -177,6 +178,7 @@ describe("derivePegAnalyticsSnapshot", () => {
       VALUES (?, 'usdt-tether', 'USDT', 'peggedUSD', 'below', -300, ?, ?, 0.97, 0.97, 1, 'live')`);
     insertEvent.run(1, first, current - 300);
     insertEvent.run(2, current, null);
+    sqlite.prepare("UPDATE depeg_events SET peak_deviation_bps = -960, peak_price = 0.904 WHERE id = 1").run();
     const link = sqlite.prepare(`INSERT INTO depeg_resolver_incident_event_links
       (incident_key, event_id, relation, linked_at) VALUES (?, ?, 'observed', ?)`);
     link.run(incidentKey, 1, first);
@@ -189,11 +191,49 @@ describe("derivePegAnalyticsSnapshot", () => {
     const options = { peggedAssets: [makeStablecoin({ id: "usdt-tether", price: 0.97 })], methodologyAsOf: now };
     const accepted = await derivePegAnalyticsSnapshot(sqliteDb, options);
     expect(accepted.allEvents).toHaveLength(1);
-    expect(accepted.allEvents[0]).toMatchObject({ id: 2, startedAt: first, constituentEventCount: 2 });
+    expect(accepted.allEvents[0]).toMatchObject({ id: 2, startedAt: first, constituentEventCount: 2, peakDeviationBps: -960 });
+    expect(computePegScore).toHaveBeenCalledWith(accepted.allEvents, expect.any(Number), expect.any(Number), "USD");
+    if (scenario === "pointer-advance") {
+      insertEvent.run(3, now - 1800, null);
+      sqlite.exec("UPDATE depeg_events SET peak_deviation_bps = -437 WHERE id = 3");
+      sqlite.exec(`INSERT INTO depeg_event_provenance (event_id, source_kind, confidence_tier, audit_verdict, created_at, updated_at)
+        VALUES (1, 'live', 'low', 'confirmed', ${first}, ${first}), (3, 'live', 'high', 'confirmed', ${now}, ${now})`);
+      const advance = () => {
+        link.run(incidentKey, 3, now - 1800);
+        sqlite.prepare("UPDATE depeg_resolver_incidents SET current_event_id = 3, current_started_at = ?")
+          .run(now - 1800);
+      };
+      const racingDb = createSqliteD1(sqlite, { onAll: (sql) => {
+        if (sql.includes("pharos:depeg-event-projection:active-incidents")) advance();
+      } });
+      const batch = racingDb.batch.bind(racingDb);
+      vi.spyOn(racingDb, "batch").mockImplementation((statements) => {
+        advance();
+        return batch(statements);
+      });
+      const raced = await derivePegAnalyticsSnapshot(racingDb, options);
+      expect(raced.allEvents).toMatchObject([{
+        id: 3, constituentEventCount: 3, peakDeviationBps: -960, currentFragmentPeakBps: -437,
+        peakConfidenceTier: "low", provenance: { confidenceTier: "high", auditVerdict: "confirmed" },
+      }]);
+      const scoring = await vi.importActual<typeof PegScoreModule>("@shared/lib/peg-score");
+      expect(scoring.computePegScore(raced.allEvents, first, now, "USD")).toMatchObject({
+        worstDeviationBps: -960, eventCount: 1, lowConfidenceEventCount: 1, spreadPenalty: 0,
+      });
+      const setConfidence = sqlite.prepare(`UPDATE depeg_event_provenance SET confidence_tier = ?,
+        public_json = '{"confidenceTier":"low"}' WHERE event_id = 1`);
+      for (const column of [null, "high"]) {
+        setConfidence.run(column);
+        const { allEvents } = await derivePegAnalyticsSnapshot(sqliteDb, options);
+        expect(allEvents).toMatchObject([{ id: 3, peakDeviationBps: -960, peakConfidenceTier: "low" }]);
+        expect(scoring.computePegScore(allEvents, first, now, "USD").lowConfidenceEventCount).toBe(1);
+      }
+      return;
+    }
     expect(await publishPegAnalyticsCache(sqliteDb, accepted)).toBe(true);
     const acceptedCache = await loadPegAnalyticsCache(sqliteDb);
     const prepare = sqliteDb.prepare.bind(sqliteDb);
-    if (failure === "malformed-row") {
+    if (scenario === "malformed-row") {
       sqlite.prepare("UPDATE depeg_events SET start_price = -1 WHERE id = 1").run();
     } else {
       vi.spyOn(sqliteDb, "prepare").mockImplementation((sql) => {
@@ -202,9 +242,42 @@ describe("derivePegAnalyticsSnapshot", () => {
       });
     }
     await expect(derivePegAnalyticsSnapshot(sqliteDb, options)).rejects.toMatchObject({
-      reason: failure === "failed-read" ? "incident-projection-read-failed" : "incident-projection-invalid",
+      reason: scenario === "failed-read" ? "incident-projection-read-failed" : "incident-projection-invalid",
     });
     expect(await loadPegAnalyticsCache(sqliteDb)).toEqual(acceptedCache);
+  });
+
+  it("requires a valid AUDD opening verdict for closed-session legacy admission", async () => {
+    const { db, sqlite } = sqliteFixtures.open();
+    const first = Date.UTC(2026, 10, 15, 12) / 1000;
+    const current = first + 1800;
+    const now = current + 600;
+    const key = `ddr2:${"a".repeat(32)}`;
+    sqlite.exec(`INSERT INTO depeg_events (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps,
+      started_at, ended_at, start_price, peak_price, peg_reference, source) VALUES
+      (1, 'audd-novatti', 'AUDD', 'peggedAUD', 'below', -2600, ${first}, ${current}, 0.5, 0.5, 0.67, 'live'),
+      (2, 'audd-novatti', 'AUDD', 'peggedAUD', 'below', -437, ${current}, NULL, 0.64, 0.64, 0.67, 'live');
+      INSERT INTO depeg_resolver_incident_event_links (incident_key, event_id, relation, linked_at)
+        VALUES ('${key}', 1, 'observed', ${first}), ('${key}', 2, 'observed', ${current});
+      INSERT INTO depeg_resolver_incidents (incident_key, stablecoin_id, peg_currency, direction, first_event_id,
+        current_event_id, first_started_at, current_started_at, first_observed_peak_bucket_bps, source_fingerprint, created_at, updated_at)
+        VALUES ('${key}', 'audd-novatti', 'AUD', 'below', 1, 2, ${first}, ${current}, 2600, '${"a".repeat(64)}', ${first}, ${current});
+      INSERT INTO depeg_event_provenance (event_id, source_kind, audit_verdict, created_at, updated_at)
+        VALUES (1, 'live', 'confirmed', ${first}, ${first});
+      DROP TRIGGER trg_depeg_provenance_audit_verdict_update_guard;`);
+    const update = sqlite.prepare("UPDATE depeg_event_provenance SET audit_verdict = ?, public_json = ? WHERE event_id = 1");
+    const scoring = await vi.importActual<typeof PegScoreModule>("@shared/lib/peg-score");
+    for (const [verdict, json, count] of [
+      ["confirmed", null, 1],
+      ["unknown", null, 0],
+      ["confirmed", '{"auditVerdict":"unknown"}', 0],
+      ["confirmed", '{"auditVerdict":"confirmed","auditVerdict":"confirmed"}', 0],
+    ] as const) {
+      update.run(verdict, json);
+      const { allEvents } = await derivePegAnalyticsSnapshot(db, { peggedAssets: [], methodologyAsOf: now });
+      expect(scoring.computePegScore(allEvents, first, now, "AUD").scoredEventCount, `${verdict} ${json}`).toBe(count);
+      expect(allEvents).toMatchObject([{ onsetFragmentPeakBps: count ? -2600 : null, peakDeviationBps: count ? -2600 : -437 }]);
+    }
   });
 
   let db: D1Database;

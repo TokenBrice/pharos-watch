@@ -81,8 +81,8 @@ import {
   type SafetyScoreV9ExpiredMeasuredExitRoutes,
 } from "./publication-assessment";
 
-// Set to the rollout's UTC epoch seconds after compatible storage readers deploy.
-const RESERVE_COMPOSITION_ADMISSION_ACTIVATION_SEC: number | null = null;
+// Rollout UTC epoch seconds (2026-11-20T08:00:00Z); earlier fixed scoring clocks omit the diagnostic.
+const RESERVE_COMPOSITION_ADMISSION_ACTIVATION_SEC: number | null = 1795161600;
 
 export interface BuildSafetyScoreV9CandidateInput {
   fixedInput: unknown;

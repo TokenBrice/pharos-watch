@@ -2890,12 +2890,12 @@
   "slvon-ondo": {
     "title": "Silver ETF rails",
     "text": "SLVon is Ondo Global Markets' tokenized exposure to the iShares Silver Trust, tracked as a {{term:rwa}}RWA{{/term}} NAV asset rather than a $1 stablecoin. The token gives eligible non-U.S. investors economic exposure to SLV on Ethereum, BSC, Solana, and HyperEVM, with Ondo handling the issuer, subscription, and redemption infrastructure. The useful feature is composability for a listed ETF; the tradeoff is that holders own an Ondo GM token, not direct ETF shares or physical silver. Risk therefore lives in the Ondo GM legal structure, collateral attestations, access controls, and secondary-market liquidity.",
-    "updatedAt": "2026-05-24",
+    "updatedAt": "2026-11-20",
     "authoredBy": "ai",
     "model": "codex-stablecoin-review",
     "reviewedBy": "Codex data review",
     "reviewedAt": "2026-05-24",
-    "factsAsOf": "2026-05-24"
+    "factsAsOf": "2026-11-20"
   },
   "iauon-ondo": {
     "title": "Gold ETF rails",

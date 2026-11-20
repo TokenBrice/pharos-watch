@@ -117,7 +117,7 @@ For collateral quality `q`/LLTV fraction `l`, lender quality=`100 − l² × (10
 
 Body 9 wraps publication 8 (`model: "v9"`); see the [report9 wire contract](api-reference.md#full-cards).
 
-The optional card diagnostic `reserveCompositionAdmission` names the gate that rejected a whole-book composition when the compiled input carries a local missing-composition gap. Request it with `reserveAdmission=diagnostics`. Named-report reasons distinguish a missing publication date, a publication date after the scoring clock, and an assurance method that cannot corroborate the composition. Age rejections use the fixed scoring clock and the rejecting path's budget. Scores, gap IDs, and scoring causes retain their existing treatment.
+The optional card diagnostic `reserveCompositionAdmission` names the gate that rejected a whole-book composition when the compiled input carries a local missing-composition gap. Request it with `reserveAdmission=diagnostics`. Named-report reasons distinguish a missing publication date, a publication date after the scoring clock, and an assurance method that cannot corroborate the composition. Age rejections use the fixed scoring clock and the rejecting path's budget. Publications whose fixed scoring clock is at or after 2026-11-20T08:00:00Z carry the diagnostic; earlier cards omit it. Scores, gap IDs, and scoring causes retain their existing treatment.
 
 ### Report schema v8
 
