@@ -512,10 +512,14 @@
         "docs/api-reference-admin.md",
         "worker/scripts/one-shot-backfill.ts",
         "worker/scripts/backfills/**",
-        "docs/runbooks/one-shot-backfills.md"
+        "docs/runbooks/one-shot-backfills.md",
+        "docs/runbooks/partner-key-issuance.md"
       ],
       "docs": [{ "path": "docs/api-reference-admin.md", "anchor": "admin-auth-and-idempotency" }],
-      "background": [{ "path": "docs/runbooks/one-shot-backfills.md", "anchor": "operator-contract", "runbook": { "label": "One-shot historical backfill contract", "kind": "procedure" } }],
+      "background": [
+        { "path": "docs/runbooks/one-shot-backfills.md", "anchor": "operator-contract", "runbook": { "label": "One-shot historical backfill contract", "kind": "procedure" } },
+        { "path": "docs/runbooks/partner-key-issuance.md", "runbook": { "label": "Partner API key issuance", "kind": "procedure" } }
+      ],
       "rules": ["Admin endpoints retain Access authentication, no-store responses, and mutation idempotency; locate the endpoint-specific contract in the admin reference."]
     },
     {

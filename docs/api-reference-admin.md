@@ -243,7 +243,7 @@ Key summaries use recorded `api_key_request_stats.request_count`. Each new write
 
 ### `GET /api/api-keys`
 
-Admin-only API key inventory. Returns masked tokens plus metadata, but never returns stored secret material. Expired keys remain listed for operator review; callers should use `isActive` plus `expiresAt` to distinguish `active`, `expired`, and deliberate non-expiring exceptions.
+Admin-only API key inventory. Returns masked tokens plus metadata, but never returns stored secret material. Key summaries carry `rateLimitPerMinute` and `monthlyRequestQuota` (`number | null`; `null` keeps the tier default resolved at request time). Expired keys remain listed for operator review; callers should use `isActive` plus `expiresAt` to distinguish `active`, `expired`, and deliberate non-expiring exceptions.
 
 **Response shape:** `ApiKeyListResponse` (defined in `shared/contracts/api-keys.ts`)
 
@@ -269,7 +269,7 @@ Admin-only counts projection for the Triage workspace. Returns aggregate credent
 
 ### `GET /api/api-keys/audit-log`
 
-Admin-only API key lifecycle audit log. Returns recent create/update/deactivate/rotate audit entries from `api_key_audit_log`. The credential write is the commit point: a failed audit insert is logged as `api_key_audit_write_failed` and never turns a committed mutation into an unknown outcome.
+Admin-only API key lifecycle audit log. Returns recent create/update/deactivate/rotate audit entries from `api_key_audit_log`. An update whose body sets `isActive: false` is audited with the `deactivated` action, the same vocabulary as the dedicated deactivate route; every create/update/deactivate/rotate entry also records `detail.operator` with the Access-verified operator email (`Cf-Access-Authenticated-User-Email`, falling back to `internal`). The credential write is the commit point: a failed audit insert is logged as `api_key_audit_write_failed` and never turns a committed mutation into an unknown outcome.
 
 **Query params:**
 
@@ -306,8 +306,9 @@ Admin-only API key creation route.
 | `name`               | `string`               | Yes      | Display name for the key                                                                                                                    |
 | `ownerEmail`         | `string \| null`       | No       | Optional owner contact; null clears it. |
 | `tier`               | `ApiKeyTier \| null`   | No       | Vocabulary in `shared/contracts/api-keys.ts`; omission/null defaults to `"standard"`. |
-| `rateLimitPerMinute` | `integer \| null`      | No       | Per-key threshold (`1`–`10000`); omission/null defaults to `120`. |
-| `expiresAt`          | `integer \| null`      | No       | Unix timestamp when the key should expire. Omit to use the default 90-day expiry. Send `null` only for a deliberate non-expiring exception. |
+| `rateLimitPerMinute` | `integer \| null`      | No       | Per-key threshold (`1`–`10000`); omission/null defaults to `60` (free-partner). |
+| `monthlyRequestQuota` | `integer \| null`     | No       | Per-key monthly volume override: positive integer up to `100000000` (`API_KEY_MAX_MONTHLY_REQUEST_QUOTA`), or `null` for the tier default (donor `200000`; free partner `500000`; commercial `1000000`, applied when `rateLimitPerMinute >= 120`). Enforced from `API_KEY_MONTHLY_QUOTA_EFFECTIVE_SEC` (2027-01-01). |
+| `expiresAt`          | `integer \| null`      | No       | Unix timestamp when the key should expire. A value at or before now returns `400 expiresAt must be in the future when creating an API key`. Omit to use the default 90-day expiry. Send `null` only for a deliberate non-expiring exception. |
 
 **Response shape:** `ApiKeyCreateResponse`
 
@@ -327,12 +328,13 @@ Accepted fields:
 - `ownerEmail`
 - `tier`
 - `rateLimitPerMinute`
+- `monthlyRequestQuota`
 - `isActive`
 - `expiresAt`
 
 `trafficClass` is ignored, not writable; a body with no recognized update fields returns `400`. The request lane is derived in `worker/src/handlers/http/gates.ts`, so issuance writes `"external"` and existing rows retain their attribution label.
 
-`tier` uses the canonical `API_KEY_TIER_VALUES` vocabulary from `@pharos/contracts/api-keys`. The API Management editor preserves a key's canonical tier during unrelated metadata edits, including donor keys; intentional operator tier changes remain available. Only an unknown historical free-form tier defaults to standard in the editor.
+`tier` uses the canonical `API_KEY_TIER_VALUES` vocabulary from `@pharos/contracts/api-keys`. The API Management editor preserves a key's canonical tier during unrelated metadata edits, including donor keys; intentional operator tier changes remain available. Only an unknown historical free-form tier defaults to standard in the editor. The editor's create and edit forms offer partner presets ("Free partner" sets 60/min and the default monthly quota; "Commercial" sets 120/min and 1,000,000/month) alongside the free-text monthly-quota input, where empty means the tier default. An update whose body sets `isActive: false` is audited as `deactivated`, like the dedicated route.
 
 **Response shape:** `ApiKeyMutationResponse`
 
