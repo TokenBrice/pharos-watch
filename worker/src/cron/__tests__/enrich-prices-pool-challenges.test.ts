@@ -680,7 +680,7 @@ describe("applyPoolChallenge", () => {
     expect(stats.low).toBe(0);
   });
 
-  it("preserves corroborated severe downside even when multiple DEX protocols diverge upward", () => {
+  it.each([undefined, { pyth: ["oracle:pyth"], coingecko: ["venue:kraken"] }])("preserves corroborated severe downside with lineage %j", (upstreamKeysBySource) => {
     const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
       assetId: "usr-resolv",
       result: makePriceConsensusResult({
@@ -689,6 +689,7 @@ describe("applyPoolChallenge", () => {
         dlPrice: 0.1524,
         cgPrice: 0.1525,
         candidateSources: ["coingecko", "defillama-list", "pyth", "dex-promoted"],
+        upstreamKeysBySource,
         allPrices: {
           coingecko: 0.1525,
           "defillama-list": 0.1524,
@@ -815,13 +816,18 @@ describe("applyPoolChallenge", () => {
   });
 
   it("propagates result.observedAt = min(poolObservedAts) after replacement", () => {
+    const first = "ethereum:0x0000000000000000000000000000000000000001";
+    const second = "ethereum:0x0000000000000000000000000000000000000002";
+    const observations = [
+      { price: 0.8, tvlUsd: 500_000, protocol: "curve", chain: "ethereum", observedAt: 1_200,
+        pricePoolKeys: [first], upstreamKeys: [first, "venue:bitstamp"] },
+      { price: 0.82, tvlUsd: 300_000, protocol: "uniswap", chain: "ethereum", observedAt: 800,
+        pricePoolKeys: [second], upstreamKeys: [second, "venue:kraken"] },
+    ];
     const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
       assetId: "dusd-test",
       result: makePriceConsensusResult({ observedAt: 5_000, observedAtMode: "upstream" }),
-      pools: [
-          { price: 0.8, tvlUsd: 500_000, protocol: "curve", chain: "ethereum", observedAt: 1_200 },
-          { price: 0.82, tvlUsd: 300_000, protocol: "uniswap", chain: "ethereum", observedAt: 800 },
-      ],
+      pools: observations,
     });
 
     applyPoolChallenge(results, pools, pegTypes, stats);
@@ -833,6 +839,8 @@ describe("applyPoolChallenge", () => {
     expect(updated.observedAtMode).toBe("local_fetch");
     expect(updated.observedAtBySource).toEqual({ "pool-tvl-weighted": 800 });
     expect(updated.observedAtModeBySource).toEqual({ "pool-tvl-weighted": "local_fetch" });
+    expect(updated.upstreamKeys).toEqual([first, second, "venue:bitstamp", "venue:kraken"]);
+    expect(updated.pricePoolKeys).toEqual([first, second]);
   });
 
   it("does not list a co-leg-held lane as disagreeing after replacement", () => {

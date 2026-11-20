@@ -8,7 +8,11 @@ import {
   sentinelReviewedAtSec,
   type RegistryItem,
 } from "../check-safety-score-v9-ledger-sentinels";
-import type { RegistryBinding, SentinelResolutionReport } from "../../../scripts/lib/sentinel-resolution-contract";
+import {
+  SENTINEL_CHECKER_VERSION,
+  type RegistryBinding,
+  type SentinelResolutionReport,
+} from "../../../scripts/lib/sentinel-resolution-contract";
 
 // The 20261029T1814Z capture clock.
 const AS_OF_SEC = Date.UTC(2026, 9, 29, 17, 17, 24) / 1000;
@@ -64,21 +68,26 @@ function registry({
   workTypes = WORK_TYPES,
   snapshot = snapshotBinding() as unknown,
   assets = [{ assetId: "alpha", ratingStatus, items }],
+  scoreProjectionGaps,
 }: {
   items?: unknown[];
   ratingStatus?: string | null;
   workTypes?: string[];
   snapshot?: unknown;
   assets?: Array<{ assetId: string; ratingStatus?: string | null; items: unknown[] }>;
+  scoreProjectionGaps?: unknown[];
 } = {}) {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     snapshot: snapshot ?? undefined,
     workTypeDefinitions: Object.fromEntries(workTypes.map((workType) => [workType, { title: workType }])),
     stablecoins: assets.map((asset) => ({
       assetId: asset.assetId,
       currentScore: asset.ratingStatus === null ? null : { ratingStatus: asset.ratingStatus ?? "rated" },
       missingItems: asset.items,
+      scoreProjectionGaps: assets.length === 1 && asset.assetId === "alpha" && scoreProjectionGaps
+        ? scoreProjectionGaps
+        : [],
     })),
   };
 }
@@ -225,23 +234,100 @@ describe("ledger sentinel verdicts", () => {
   });
 
   it("never closes a sentinel replaced by a sibling gap at the same scope", () => {
+    const children = [
+      item({ taskId: "V9G-successor", gapId: "alpha:gap:exit-routes:redemption-route", cause: "U" }),
+      item({ taskId: "V9G-second", gapId: "alpha:gap:exit-routes:settlement-route", cause: "U" }),
+    ];
+    for (const items of [children, [...children].reverse()]) {
+      const row = onlyRow(reportFor(registry({ items }), ledger([decision()])));
+      expect(row).toMatchObject({ verdict: "replaced-adversely", reason: "sibling-sentinel-successor" });
+      // Every live child occupies the retired parent's scope, whatever the
+      // registry row order: the applier's successor scopes need them all.
+      expect(row.matches[0]).toMatchObject({
+        status: "successor",
+        causes: ["alpha:gap:exit-routes:redemption-route", "alpha:gap:exit-routes:settlement-route"],
+      });
+    }
+  });
+
+  it("never closes a sentinel whose gap re-opened under a rotated route-generation id", () => {
+    const generation = (id: string) =>
+      `alpha:gap:route:redemption:redemption:${id}:physical-to-usd:alpha:output`;
     const report = reportFor(
       registry({
         items: [
           item({
-            taskId: "V9G-successor",
-            gapId: "alpha:gap:exit-routes:redemption-route",
-            cause: "U",
+            taskId: "V9G-regen",
+            gapId: generation("975a0051-d448-4e2e-99e2-4775005f7182"),
+            reasonCode: "unresolved-exit-output",
           }),
         ],
       }),
-      ledger([decision()]),
+      ledger([
+        decision({
+          sentinels: [
+            { doneWhenGapIdAbsent: generation("ebdf5ef5-e7ab-4b14-87dd-f0807db29fa0") },
+          ],
+        }),
+      ]),
     );
     const row = onlyRow(report);
     expect(row).toMatchObject({ verdict: "replaced-adversely", reason: "sibling-sentinel-successor" });
-    expect(row.matches[0]).toMatchObject({
-      status: "successor",
-      causes: ["alpha:gap:exit-routes:redemption-route"],
+    expect(row.matches[0]).toMatchObject({ status: "successor" });
+
+    // Rotation plus refinement: the parent became a more specific child under the
+    // new generation id. Raw ids share no `:`-boundary prefix and the normalized
+    // scopes are not equal, but the normalized prefix still holds the scope open.
+    const refined = `${generation("975a0051-d448-4e2e-99e2-4775005f7182")}:refined`;
+    const refinedReport = reportFor(
+      registry({
+        items: [item({ taskId: "V9G-regen-child", gapId: refined, reasonCode: "unresolved-exit-output" })],
+      }),
+      ledger([
+        decision({
+          sentinels: [{ doneWhenGapIdAbsent: generation("ebdf5ef5-e7ab-4b14-87dd-f0807db29fa0") }],
+        }),
+      ]),
+    );
+    expect(onlyRow(refinedReport)).toMatchObject({ verdict: "replaced-adversely", reason: "sibling-sentinel-successor" });
+    expect(refinedReport.groups[0]!.matches[0]).toMatchObject({ status: "successor", causes: [refined] });
+  });
+
+  it("never closes a score reason that only lost its supplemental task but stays score-visible", () => {
+    const sentinel = {
+      doneWhenScoreReasonAbsent: { reasonCode: "missing-runtime-route-evidence", path: "exit:missing-runtime-route-evidence:cause:8" },
+    };
+    // Schema 3 keeps the reason in scoreProjectionGaps after its obligations
+    // gained compiled task coverage, so no missingItems row carries it.
+    const stillListed = registry({
+      items: [],
+      scoreProjectionGaps: [
+        {
+          workType: "EXIT_RUNTIME_ROUTE",
+          reasonCode: "missing-runtime-route-evidence",
+          path: "exit:missing-runtime-route-evidence:cause:8",
+        },
+      ],
+    });
+    expect(onlyRow(reportFor(stillListed, ledger([decision({ sentinels: [sentinel] })])))).toMatchObject({
+      verdict: "still-open",
+      reason: "sentinels-still-present",
+    });
+
+    // The same reason surviving at a different path is a successor, not a closure.
+    const movedPath = registry({
+      items: [],
+      scoreProjectionGaps: [
+        {
+          workType: "EXIT_RUNTIME_ROUTE",
+          reasonCode: "missing-runtime-route-evidence",
+          path: "exit:missing-runtime-route-evidence:cause:9",
+        },
+      ],
+    });
+    expect(onlyRow(reportFor(movedPath, ledger([decision({ sentinels: [sentinel] })])))).toMatchObject({
+      verdict: "replaced-adversely",
+      reason: "sibling-sentinel-successor",
     });
   });
 
@@ -327,6 +413,21 @@ describe("ledger sentinel verdicts", () => {
     expect(onlyRow(missing)).toMatchObject({ verdict: "unverifiable", reason: "no-sentinels" });
   });
 
+  it("fails closed on a schema-3 registry that omits scoreProjectionGaps", () => {
+    // Without the list, a score reason that only lost its supplemental task
+    // would read absent and yield a replay-verified closure verdict.
+    const truncated = {
+      ...registry({ items: [] }),
+      stablecoins: registry({ items: [] }).stablecoins.map((asset) => {
+        const { scoreProjectionGaps: _omitted, ...rest } = asset as Record<string, unknown>;
+        return rest;
+      }),
+    };
+    expect(() => reportFor(truncated, ledger([decision()]))).toThrow(
+      /stablecoins\[0\]\.scoreProjectionGaps is required on schema-3 registries/,
+    );
+  });
+
   it("blocks closure when a machine-checkable sentinel is accompanied by an uncheckable one", () => {
     const report = reportFor(
       registry({ items: [] }),
@@ -404,6 +505,7 @@ describe("ledger sentinel verdicts", () => {
       path: "accepted.replay.json",
     });
     expect(verified.inputs.closureEvidence).toBe("replay-verified");
+    expect(verified.inputs.checkerVersion).toBe(SENTINEL_CHECKER_VERSION);
     expect(verified.inputs.replay).toMatchObject({
       path: "accepted.replay.json",
       candidateId: "candidate-20261029T1814Z",
@@ -543,6 +645,7 @@ describe("ledger sentinel verdicts", () => {
     expect(markdown).toContain(report.inputs.registry.missingDataRegistryFingerprint);
     expect(markdown).toContain("candidate-20261029T1814Z");
     expect(markdown).toContain("closed 1 · still-open 0");
+    expect(markdown).toContain("| Claim group | Decision | Reviewed | Open items | Recorded task IDs absent | Reason |");
     expect(markdown).toContain("| narrative-only-sentinels | 1 |");
     expect(markdown).toContain("Nothing in this report appends a ledger decision");
   });

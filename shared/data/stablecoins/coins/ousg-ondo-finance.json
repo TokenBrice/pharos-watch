@@ -35,6 +35,7 @@
     "type": "independent-audit",
     "url": "https://app.ondo.finance/legal-documentation/us",
     "provider": "BPM LLP (Ondo I LP auditor named in Ondo Capital Management LLC's May 13, 2026 Form ADV, Schedule D 7.B.(1); NAV Consulting is the separate fund administrator)",
+    "attestorTier": "regional",
     "cadence": "annual",
     "attestorJurisdiction": "United States"
   },

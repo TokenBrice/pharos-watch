@@ -1,4 +1,4 @@
-import { computePegScore, getPegIncidentCoverage, type PegScoreResult } from "@shared/lib/peg-score";
+import { computePegScore, getPegIncidentCoverage, isLowConfidencePegPeak, type PegScoreResult } from "@shared/lib/peg-score";
 import { isScoredPegEvent, PegReferenceHoldSchema } from "@shared/lib/peg-utils";
 import { DepegAuditVerdictSchema } from "@shared/types/depeg-audit";
 import { isPegScoreExcludedAuditVerdict } from "@shared/lib/depeg-audit";
@@ -100,6 +100,9 @@ const PegProvenanceEventSchema = z
     pegType: CanonicalTextSchema,
     direction: z.enum(["above", "below"]),
     peakDeviationBps: FiniteNumberSchema,
+    peakConfidenceTier: DepegEventSchema.shape.peakConfidenceTier,
+    onsetFragmentPeakBps: DepegEventSchema.shape.onsetFragmentPeakBps,
+    currentFragmentPeakBps: DepegEventSchema.shape.currentFragmentPeakBps,
     startedAt: SafeTimestampSchema,
     endedAt: SafeTimestampSchema.nullable(),
     startPrice: PositiveFiniteNumberSchema,
@@ -152,6 +155,8 @@ export type SafetyScoreV9PegEvidenceClassStats = z.infer<typeof PegEvidenceClass
 const PegEvidenceClassStatsSchema = z
   .object({
     eventCount: z.number().int().nonnegative(),
+    /** Present when borrowed peaks change the low-confidence count for the class. */
+    lowConfidenceEventCount: z.number().int().nonnegative().optional(),
     worstDeviationBps: FiniteNumberSchema.nullable(),
     latestEventAtSec: SafeTimestampSchema.nullable(),
   })
@@ -179,6 +184,10 @@ const PegEvidenceClassesSchema = z
     "audit-excluded": PegEvidenceClassStatsSchema,
   })
   .strict();
+
+function classLowConfidenceCount(evidenceClass: string, stats: SafetyScoreV9PegEvidenceClassStats): number {
+  return stats.lowConfidenceEventCount ?? (evidenceClass === "provenance-low" ? stats.eventCount : 0);
+}
 
 const PegScoreResultSchema: z.ZodType<PegScoreResult> = z
   .object({
@@ -245,7 +254,10 @@ export const SafetyScoreV9PegProvenanceSummarySchema = z
     const legacyBackfillCount =
       summary.classes["legacy-backfill-unprovenanced"].eventCount;
     const auditExcludedCount = summary.classes["audit-excluded"].eventCount;
-    const lowConfidenceCount = summary.classes["provenance-low"].eventCount;
+    const lowConfidenceCount = Object.entries(summary.classes).reduce(
+      (sum, [evidenceClass, stats]) => sum + classLowConfidenceCount(evidenceClass, stats),
+      0,
+    );
     if (
       summary.hasUnprovenancedLegacyBackfill !==
       (legacyBackfillCount > 0)
@@ -262,6 +274,7 @@ export const SafetyScoreV9PegProvenanceSummarySchema = z
         result: summary.legacyInclusive.result,
         eventCount: summary.eventCount,
         scoredEventCount: summary.eventCount - auditExcludedCount,
+        lowConfidenceCount,
       },
       {
         path: ["verifiedOnlyDiagnostic"] as const,
@@ -269,6 +282,7 @@ export const SafetyScoreV9PegProvenanceSummarySchema = z
         eventCount: summary.eventCount - legacyBackfillCount,
         scoredEventCount:
           summary.eventCount - legacyBackfillCount - auditExcludedCount,
+        lowConfidenceCount: lowConfidenceCount - (summary.classes["legacy-backfill-unprovenanced"].lowConfidenceEventCount ?? 0),
       },
     ];
     for (const expected of resultCountExpectations) {
@@ -276,9 +290,9 @@ export const SafetyScoreV9PegProvenanceSummarySchema = z
         expected.result.eventCount !== expected.eventCount ||
         expected.result.scoredEventCount !== expected.scoredEventCount ||
         expected.result.excludedEventCount !== auditExcludedCount ||
-        expected.result.lowConfidenceEventCount !== lowConfidenceCount ||
+        expected.result.lowConfidenceEventCount !== expected.lowConfidenceCount ||
         expected.result.qualityAdjusted !==
-          (auditExcludedCount > 0 || lowConfidenceCount > 0)
+          (auditExcludedCount > 0 || expected.lowConfidenceCount > 0)
       ) {
         ctx.addIssue({
           code: "custom",
@@ -318,6 +332,13 @@ export const SafetyScoreV9PegProvenanceSummarySchema = z
       });
     }
     for (const [evidenceClass, stats] of Object.entries(summary.classes)) {
+      if (classLowConfidenceCount(evidenceClass, stats) > (evidenceClass === "audit-excluded" ? 0 : stats.eventCount)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["classes", evidenceClass, "lowConfidenceEventCount"],
+          message: "Low-confidence count exceeds the class's scored events",
+        });
+      }
       if (stats.latestEventAtSec != null && stats.latestEventAtSec > summary.clockSec) {
         ctx.addIssue({
           code: "custom",
@@ -596,8 +617,13 @@ function emptyClassStats(): Record<
 function updateClassStats(
   stats: SafetyScoreV9PegEvidenceClassStats,
   event: CanonicalPegEvent,
+  evidenceClass: SafetyScoreV9PegEvidenceClass,
 ): void {
+  const lowConfidenceCount = classLowConfidenceCount(evidenceClass, stats) +
+    Number(evidenceClass !== "audit-excluded" && isLowConfidencePegPeak(event));
   stats.eventCount += 1;
+  if (lowConfidenceCount === (evidenceClass === "provenance-low" ? stats.eventCount : 0)) delete stats.lowConfidenceEventCount;
+  else stats.lowConfidenceEventCount = lowConfidenceCount;
   const currentWorst = stats.worstDeviationBps;
   if (
     currentWorst == null ||
@@ -617,8 +643,9 @@ function updateClassStats(
 
 function parseEvent(value: DepegEvent, index: number): CanonicalPegEvent {
   const {
-    analyticRecoveryAt: _analyticRecoveryAt, onsetBasis: _onsetBasis, peakBasis: _peakBasis,
-    peakPeerMedianUsd: _peakPeerMedianUsd, peakReview: _peakReview, retired: _retired, ...scoreEvent
+    analyticRecoveryAt: _analyticRecoveryAt, onsetBasis: _onsetBasis, onsetQuoteDomain: _onsetQuoteDomain,
+    onsetQuoteFromLaterFragment: _onsetQuoteFromLaterFragment,
+    peakBasis: _peakBasis, peakPeerMedianUsd: _peakPeerMedianUsd, peakReview: _peakReview, retired: _retired, ...scoreEvent
   } = value;
   const parsed = PegProvenanceEventSchema.safeParse(scoreEvent);
   if (!parsed.success) {
@@ -734,8 +761,8 @@ export function buildSafetyScoreV9PegProvenanceSummary(
   }));
 
   const classes = emptyClassStats();
-  for (const classified of classifiedEvents) {
-    if (eligibleIds.has(classified.event.id)) updateClassStats(classes[classified.evidenceClass], classified.event);
+  for (const { event, evidenceClass } of classifiedEvents) {
+    if (eligibleIds.has(event.id)) updateClassStats(classes[evidenceClass], event, evidenceClass);
   }
 
   const legacyInclusiveResult = computePegScore(

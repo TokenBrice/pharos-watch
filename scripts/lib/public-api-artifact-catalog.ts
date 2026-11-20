@@ -487,12 +487,15 @@ const PUBLIC_API_ARTIFACT_INPUTS = {
   "report-cards-v9": {
     referenceOrder: 29,
     summary: "Safety Score V9 report cards",
-    description: "Canonical API schema-8 Safety Score report cards from the accepted internal schema-7 publication. Public cards carry resolved witness text without card-local witness tables. Rated partial cards retain excluded-pillar diagnostics; pipeline-gap is a null score and null grade, distinct from NR. See [Safety Score availability](https://pharos.watch/api/reference/#safety-score-availability).",
+    description: "Canonical API schema-9 Safety Score report cards from the accepted internal schema-8 publication. Public cards carry resolved witness text without card-local witness tables. Rated partial cards retain excluded-pillar diagnostics; pipeline-gap is a null score and null grade, distinct from NR. See [Safety Score availability](https://pharos.watch/api/reference/#safety-score-availability).",
     tags: ["Risk"],
     responseSchema: "ReportCardsV9Response",
     parameters: [{
       name: "freshness", in: "query", schema: { type: "string", enum: ["operands"] },
       description: "Opt into compact pillarFreshness operands: dexMaxAgeSec and a dexObservedAtSec array aligned with cards. Assessment time is asOfSec and generation is source.sourceGenerations.dex. Omitted or unrecognized values preserve the historical categorical-only wire. Older accepted publications omit operands.",
+    }, {
+      name: "reserveAdmission", in: "query", schema: { type: "string", enum: ["diagnostics"] },
+      description: "Opt into reserveCompositionAdmission on cards whose accepted publication records a local missing-composition diagnostic.",
     }],
   },
   "safety-grades": {

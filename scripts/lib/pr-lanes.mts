@@ -1,7 +1,11 @@
 import { readFileSync } from "node:fs";
-import { parseDocument } from "yaml";
+import { createRequire } from "node:module";
 
+const require = createRequire(import.meta.url);
+
+// The weekly renderer reads budgets on a production-only install.
 function hostedTimeoutMinutes(job: string): number {
+  const { parseDocument } = require("yaml") as typeof import("yaml");
   const workflow = parseDocument(readFileSync(new URL("../../.github/workflows/pull-request-checks.yml", import.meta.url), "utf8"));
   if (workflow.errors.length) throw workflow.errors[0];
   const value = workflow.getIn(["jobs", job, "timeout-minutes"]);
@@ -90,7 +94,7 @@ export const PR_LANES: readonly PrLaneDefinition[] = [
   {
     id: "preflight",
     selector: "always",
-    timeoutMinutes: hostedTimeoutMinutes("secrets"),
+    get timeoutMinutes() { return hostedTimeoutMinutes("secrets"); },
     commands: [
       { id: "classifier-smoke", program: "node", args: ["--disable-warning=MODULE_TYPELESS_PACKAGE_JSON", "scripts/ci/classify-deploy-changes.ts"] },
       { id: "gitleaks", program: "node", args: ["--disable-warning=MODULE_TYPELESS_PACKAGE_JSON", "scripts/ci/run-gitleaks.ts", "--range"] },
@@ -136,10 +140,10 @@ export const PR_LANES: readonly PrLaneDefinition[] = [
     id: "pages-artifact",
     selector: "pages-artifact",
     budgetSeconds: 250,
-    timeoutMinutes: hostedTimeoutMinutes("pages-artifact"),
+    get timeoutMinutes() { return hostedTimeoutMinutes("pages-artifact"); },
     commands: [{ id: "pages-artifact", program: "npm", args: ["run", "check:pages-artifact"] }],
   },
-  { id: "gate", selector: "always", timeoutMinutes: hostedTimeoutMinutes("pr-gate"), commands: [] },
+  { id: "gate", selector: "always", get timeoutMinutes() { return hostedTimeoutMinutes("pr-gate"); }, commands: [] },
 ] as const;
 
 export function getPrLane(id: PrLaneId): PrLaneDefinition {

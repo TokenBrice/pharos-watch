@@ -1,5 +1,18 @@
 [
   {
+    "version": "6.53",
+    "title": "Projected depeg incidents retain their worst constituent peak",
+    "date": "2026-11-20",
+    "effectiveAt": 1795153500,
+    "summary": "A grouped depeg incident publishes its largest same-direction deviation across eligible linked threshold crossings. Opening a milder constituent or closing the effective fragment preserves the incident peak. The effective fragment supplies its own peak when it ties or its incident family has a reviewed dispute.",
+    "impact": [
+      "The constituent that set the peak supplies any valid price, quote domain and reference evidence. Legacy closure admission uses the onset fragment for the opening and the effective fragment for observations. Unreadable onset severity or a failed audit verdict check withholds legacy onset admission. A valid hold preserves the grouped active penalty.",
+      "PegScore weights severity and downside spread by the confidence of the fragment that set the peak. Dedicated incident page eligibility, the active digest's historical peak and the social briefing use the projected magnitude. The digest names the peer median for a peer-relative projected peak and uses an admitted current deviation for severity when available."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.52",
     "title": "Binance confirmation requires a verified onset source",
     "date": "2026-11-20",

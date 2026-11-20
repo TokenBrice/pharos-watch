@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { SafetyScoreV9ReplayArtifact } from "../../replay-safety-score-v9";
 type Mutable<T> = { -readonly [Key in keyof T]: Mutable<T[Key]> };
 import { execFileSync } from "node:child_process";
@@ -8,7 +8,8 @@ import {
   createNativeSafetyScoreV9CohortInput,
 } from "../../../src/lib/__tests__/fixtures/safety-score-v9-full-registry-input";
 import { createReplayFixedInput } from "../../__tests__/safety-score-v9-replay.test-support";
-import { v9TestClockSec } from "../../../src/test-helpers/v9-fixed-input";
+import { makeV9FixedInput, v9TestClockSec } from "../../../src/test-helpers/v9-fixed-input";
+import * as candidate from "../../../src/lib/safety-score-v9/candidate";
 import { localRegistrySnapshot } from "../safety-score-v9-registry";
 import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { computeV9ResultDigest } from "@shared/lib/safety-score-v9/trace";
@@ -112,7 +113,7 @@ describe("permanent replay integrity", () => {
     expect(() => validateSafetyScoreV9ReplayIntegrity(artifact)).toThrow();
   });
 
-  // Reproduction recompiles the registry too, so both reproduction tests share
+  // Reproduction recompiles the registry too, so the reproduction tests share
   // that budget; under V8 coverage they exceed the 20 s default.
   it("retains, validates and reproduces the exact lane-screening provenance", () => {
     const fixedInput = createReplayFixedInput(v9TestClockSec());
@@ -150,6 +151,27 @@ describe("permanent replay integrity", () => {
     expect(() => reproduceSafetyScoreV9Replay(artifact, { ...context, policyDigest: "a".repeat(64) })).toThrow("intended policy/build/clock");
     expect(() => reproduceSafetyScoreV9Replay(artifact, { ...context, transferMaterialityGeneration: undefined } as unknown as typeof context)).toThrow();
     expect(() => reproduceSafetyScoreV9Replay(artifact, { ...context, publishedAtSec: context.publishedAtSec + 1 })).toThrow("intended policy/build/clock");
+  }, 120_000);
+
+  it("reproduces the activated reserve admission diagnostic from a retained extension", () => {
+    const fixedInput = makeV9FixedInput({ assetId: "gbpa-agant", clockSec: v9TestClockSec(), reserves: [] });
+    const registrySnapshot = localSnapshot();
+    const buildCandidate = candidate.buildSafetyScoreV9Candidate;
+    const activated = vi.spyOn(candidate, "buildSafetyScoreV9Candidate").mockImplementation((input) =>
+      buildCandidate({ ...input, includeReserveCompositionAdmission: true }));
+    try {
+      const artifact = buildSafetyScoreV9ReplayArtifact({ fixedInput, publishedAtSec: fixedInput.clockSec, registrySnapshot });
+      expect(artifact.pipeline.candidate.cards[0]?.reserveCompositionAdmission).toEqual({
+        reasons: ["report-publication-date-missing"],
+      });
+      reproduceSafetyScoreV9Replay(artifact, {
+        ...artifact.pipeline.candidateIdentity, registrySnapshot, publishedAtSec: fixedInput.clockSec,
+        sourceRevision: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
+        transferMaterialityGeneration: null,
+      });
+    } finally {
+      activated.mockRestore();
+    }
   }, 120_000);
 
 });

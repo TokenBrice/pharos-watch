@@ -14,7 +14,9 @@ export const PegReferenceHoldSchema = z.strictObject({
   lastTrustedAtSec: z.number().int().positive(),
   lastTrustedPeakBps: z.number().finite(),
 });
-export type PegScoreEvent = DepegEvent & { referenceHold?: z.output<typeof PegReferenceHoldSchema> };
+export type PegScoreEvent = DepegEvent & {
+  referenceHold?: z.output<typeof PegReferenceHoldSchema>;
+};
 
 /** Reviewed artifact repairs document zero eligible coverage. Other empty coverage is blind time. */
 export function isScoredPegEvent(event: DepegEvent): boolean {
@@ -27,13 +29,13 @@ export function isScoredPegEvent(event: DepegEvent): boolean {
  * Explicitly admitted coverage takes precedence over the legacy closure
  * projection. An uninstrumented open row has no defensible duration.
  */
-export function depegObservedIntervals(event: DepegEvent, closures: Array<[number, number]> = []): Array<[number, number]> {
+export function depegObservedIntervals(event: PegScoreEvent, closures: Array<[number, number]> = []): Array<[number, number]> {
   if (event.admittedCoverage !== undefined) {
     return event.admittedCoverage.map(({ fromSec, toSec }) => [fromSec, toSec]);
   }
   if (event.priceCoverage != null) {
     // The legacy detector recorded trusted off-peg observations through a severe closure move.
-    const peak = Math.abs(event.peakDeviationBps);
+    const peak = Math.abs(event.currentFragmentPeakBps ?? event.peakDeviationBps);
     return Number.isFinite(peak) && peak >= DEPEG_SEVERITY_BPS.severe
       ? event.priceCoverage.intervals
       : subtractIntervals(event.priceCoverage.intervals, closures);
@@ -43,9 +45,15 @@ export function depegObservedIntervals(event: DepegEvent, closures: Array<[numbe
   return start === null ? [] : subtractIntervals([[start, event.endedAt]], closures);
 }
 
+export function legacyPegOnsetPeakBps(event: DepegEvent): number | null {
+  return event.onsetFragmentPeakBps !== undefined ? event.onsetFragmentPeakBps : event.currentFragmentPeakBps ?? event.peakDeviationBps;
+}
+
 export function legacyPegEventStart(event: DepegEvent): number | null {
+  const peak = legacyPegOnsetPeakBps(event);
+  if (peak === null) return null;
   return replayReferenceMarketEventStart(
-    getPegTaxonomyByType(event.pegType)?.currency, event.startedAt, event.endedAt, event.peakDeviationBps,
+    getPegTaxonomyByType(event.pegType)?.currency, event.startedAt, event.endedAt, peak,
   );
 }
 
@@ -79,17 +87,19 @@ export function activePegPeakBps(event: PegScoreEvent, now: number, market: Refe
   const lastTrusted = coverage?.lastTrustedObservationAt;
   if (lastTrusted == null || !coverage || lastTrusted > now || coverage.lastObservationKind === "trusted-at-par") return null;
   const currentTrusted = hasCurrentTrustedDepegObservation(event, now);
+  const fragmentPeak = event.currentFragmentPeakBps ?? event.peakDeviationBps;
   const admitted = event.admittedCoverage === undefined
     ? !isReferenceMarketClosed(market, lastTrusted) || (currentTrusted && coverage.lastObservationKind !== "blind" &&
-      Number.isFinite(event.peakDeviationBps) && Math.abs(event.peakDeviationBps) >= DEPEG_SEVERITY_BPS.severe)
+      Number.isFinite(fragmentPeak) && Math.abs(fragmentPeak) >= DEPEG_SEVERITY_BPS.severe)
     : event.admittedCoverage.some(({ fromSec, toSec }) => fromSec <= lastTrusted && lastTrusted < toSec);
   if (!admitted) return null;
   if (currentTrusted) return event.peakDeviationBps;
   const hold = event.referenceHold;
   if (!hold || !isCurrentPegReferenceHold(hold, now) || coverage.gapStartedAt == null || hold.lastTrustedAtSec !== lastTrusted ||
+      hold.lastTrustedPeakBps !== fragmentPeak ||
       hold.declaredAtSec < coverage.gapStartedAt || hold.declaredAtSec > now ||
       hold.declaredAtSec < lastTrusted || !isReferenceMarketClosed(market, hold.declaredAtSec)) return null;
-  return hold.lastTrustedPeakBps;
+  return event.peakDeviationBps;
 }
 
 function subtractIntervals(intervals: Array<[number, number]>, exclusions: Array<[number, number]>): Array<[number, number]> {

@@ -551,7 +551,25 @@ The `new-asset-gate-override` owner label (the check's `--override`) bypasses th
 
 The gate trusts a committed, reviewed receipt: it does not re-run the replay. The counting authority publishes aggregates and `byCard`, not per-question rows (`V9OpenEvidenceCounter` exposes `add`/`finish` only), and the gate does not re-implement `obligationsForCard`. Until a per-question projection exists, produce `questions[]` from the replay that generated the capture and review it against the replay's `openEvidence` block; never hand-estimate the rows. Replay the newest production capture with `npm run safety-score-v9:replay` (see [Capture-Time Replay](../scripts.md#safety-score-capture-time-replay)).
 
-A replay scores exactly the capture's `fixedInput.activeAssetIds`, which the producer froze from the registry deployed at capture time; `--allow-registry-mismatch` swaps registry rows, not that cohort. A capture taken before the listing or promotion deploys therefore never carries the new asset's card, so author the receipt from an admission scenario of the restored capture. The scenario adds the asset to `activeAssetIds`, keeps the supply rows (`aggregateCirculatingById`, `chainCirculatingById`) the production capture already holds for it and fails without them, and adds the evidence-free row the producer writes when DEX evidence is unavailable (`{ updatedAt: <captured DEX generation> }`, read as unavailable, never zero) with a recomputed `dexPayloadFingerprint`. It adds no peg, redemption or reserve row, and drops `baseInputGenerationId` so normalization re-derives it, as `--rederive-current-redemption` does. Replay it as a plain normalized input with `--allow-registry-mismatch`; the unchanged captured input replayed at the capture's `--registry-ref` is the baseline, and only the new card and its aggregate effects may move. Record the scenario as `captureId: "<publicationGenerationId>+admit:<assetId>"`. Missing producer rows can add questions the first production cycle will not carry, such as `missing-peg-input`.
+Use the newest production [prepare-time base export](./safety-score-equivalence-harness.md#prepare-time-base-only) with `--normalized-only`. Run the scenario against the regenerated local registry and pin `--published-at` to the capture's `clockSec`.
+
+```bash
+npm run safety-score-v9:replay -- \
+  --input "$capture" --output "$replay" --published-at "$clock_sec" \
+  --allow-registry-mismatch --admit-asset "$asset_id"
+```
+
+Repeat `--admit-asset` for a batch. Each ID must be active locally and absent from the captured active set. The scenario preserves captured aggregate and chain supply rows, adds the producer's evidence-free DEX row when needed, and re-derives the DEX payload fingerprint and base input generation. It uses the captured peg, redemption, and reserve inputs. Missing producer rows can add questions such as `missing-peg-input` that resolve on the first production cycle. Compare the scenario with the unchanged input replayed at the capture's `--registry-ref` and account for any changes to existing cards.
+
+If an admitted asset has neither a captured aggregate observation nor chain supply eligible under the compiler’s rules, pass `--supply-observations <path>`. An observed aggregate zero satisfies the captured-supply requirement. Supply a JSON object keyed by the assets that need a fallback. Each entry needs `circulating` (the observed USD peg buckets), `url` (the public source), `field` (the exact source field), `retrievedAtSec`, and `observedAtSec` in Unix seconds. Use `null` for `observedAtSec` when the source supplies no observation clock. For example, for a DefiLlama list row, record its `circulating` field in USD as returned. Keep the retrieval clock even if it follows the capture. A clockless fallback retains its amount in `replayObservation` and leaves canonical supply null in the compiled fact, card, and missing-data registry. To rerun the scenario, pass the original capture and the same admission arguments. Production cache reads and writes reject scenario supply observations.
+
+For each receipt, build `captureId` from the prepare-time input generation and the asset's admission suffix. Use `replayScenario.registryFingerprint` for the receipt's registry fingerprint.
+
+```bash
+jq -er --arg id "$asset_id" '.replayScenario |
+  (.sourceBaseInputGenerationId | strings) +
+  (.assets[] | select(.assetId == $id) | .captureIdSuffix | strings)' "$replay"
+```
 
 #### Run it locally
 

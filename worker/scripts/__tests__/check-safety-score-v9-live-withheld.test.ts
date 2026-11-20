@@ -8,7 +8,7 @@ import { REPORT_CARD_GRADE_RANK } from "@shared/lib/report-card-core";
 import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import { buildSafetyScoreV9BaselineExtension, type V9ExtensionRegistryMeta } from "../../src/lib/safety-score-v9/extension";
 import * as extensionBuilder from "../../src/lib/safety-score-v9/extension";
-import { buildSafetyScoreV9Candidate } from "../../src/lib/safety-score-v9/candidate";
+import * as candidate from "../../src/lib/safety-score-v9/candidate";
 import { createSafetyScoreV9LiveWithheldCompilation } from "../../src/lib/safety-score-v9/fact-set";
 import * as evaluator from "@shared/lib/safety-score-v9/evaluate-set";
 import { eligibleReserveMeta } from "../../src/lib/__tests__/safety-score-v9-reserve-admission.test-support";
@@ -30,9 +30,10 @@ function fixtureMeta(id: string, overrides: Partial<V9ExtensionRegistryMeta> = {
   });
 }
 
-function healthyReplay(alreadyFallback: string[] = [], withGraphs = false, native = false) {
+function healthyReplay(alreadyFallback: string[] = [], withGraphs = false, native = false, registryFingerprint?: string) {
   const base = makeV9TwoAssetFixedInput({ clockSec: Date.parse("2026-10-08T06:00:00Z") / 1_000 });
   const fixed = structuredClone(base);
+  fixed.registryFingerprint = registryFingerprint ?? fixed.registryFingerprint;
   fixed.liveToFallbackCoins = alreadyFallback;
   fixed.liveReserveMap.beta = structuredClone(fixed.liveReserveMap.alpha);
   fixed.liveReserveProvenanceMap.beta = {
@@ -76,7 +77,7 @@ function healthyReplay(alreadyFallback: string[] = [], withGraphs = false, nativ
       return [id, review];
     })) } : {}),
   });
-  const pipeline = buildSafetyScoreV9Candidate({
+  const pipeline = candidate.buildSafetyScoreV9Candidate({
     fixedInput: nativeInput,
     extension,
     publishedAtSec: fixed.clockSec,
@@ -94,6 +95,20 @@ function healthyReplay(alreadyFallback: string[] = [], withGraphs = false, nativ
 }
 
 describe("buildLiveWithheldCounterfactualReport", () => {
+  it("preserves the live-withheld report after diagnostic activation with registry drift", () => {
+    const { replay, metaById } = healthyReplay([], true, true, "0".repeat(64));
+    const baseline = buildLiveWithheldCounterfactualReport(replay, metaById);
+    expect(baseline.assessedCount).toBe(2);
+    const build = candidate.buildSafetyScoreV9Candidate;
+    const activated = vi.spyOn(candidate, "buildSafetyScoreV9Candidate").mockImplementation((input) =>
+      build({ ...input, includeReserveCompositionAdmission: true }));
+    try {
+      expect(buildLiveWithheldCounterfactualReport(replay, metaById)).toEqual(baseline);
+    } finally {
+      activated.mockRestore();
+    }
+  });
+
   it("publishes explicit partial coverage after an unrecoverable per-asset evaluation error", () => {
     const { replay, metaById } = healthyReplay([], true, true);
     const evaluate = evaluator.evaluateValidatedV9FactSet;
@@ -195,7 +210,7 @@ describe("buildLiveWithheldCounterfactualReport", () => {
       },
     }));
     const extension = buildSafetyScoreV9BaselineExtension(fixedInput, { allowRegistryMismatch: true, metaById });
-    const pipeline = buildSafetyScoreV9Candidate({ fixedInput, extension, publishedAtSec: fixedInput.clockSec });
+    const pipeline = candidate.buildSafetyScoreV9Candidate({ fixedInput, extension, publishedAtSec: fixedInput.clockSec });
     const replay = JSON.parse(JSON.stringify({ pipeline }));
     const source = createSafetyScoreV9LiveWithheldCompilation(fixedInput, extension);
     const draft = structuredClone(fixedInput);

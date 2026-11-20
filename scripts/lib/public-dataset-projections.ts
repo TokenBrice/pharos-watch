@@ -270,6 +270,8 @@ interface DepegHistoryRow {
   auditVerdict: string | null;
   /** True when the coin is absent from the tracked catalog; the event stays as history. */
   retired: boolean;
+  onsetQuoteFromLaterFragment: NonNullable<DepegEvent["onsetQuoteFromLaterFragment"]> | null;
+  onsetQuoteDomain: NonNullable<DepegEvent["onsetQuoteDomain"]> | null;
 }
 
 const DEPEG_HISTORY_COLUMNS: DatasetColumn<DepegHistoryRow>[] = [
@@ -304,6 +306,8 @@ const DEPEG_HISTORY_COLUMNS: DatasetColumn<DepegHistoryRow>[] = [
   { header: "peakQuoteDomain", accessor: (r) => r.peakQuoteDomain },
   { header: "recoveryPegReference", accessor: (r) => r.recoveryPegReference },
   { header: "disposition", accessor: (r) => r.disposition },
+  { header: "onsetQuoteFromLaterFragment", accessor: (r) => r.onsetQuoteFromLaterFragment },
+  { header: "onsetQuoteDomain", accessor: (r) => r.onsetQuoteDomain },
 ];
 
 export function projectDepegHistory(events: DepegEvent[], snapshotDate: string): DepegHistoryRow[] {
@@ -341,6 +345,8 @@ export function projectDepegHistory(events: DepegEvent[], snapshotDate: string):
       source: event.source,
       auditVerdict: event.provenance?.auditVerdict ?? null,
       retired: event.retired === true,
+      onsetQuoteFromLaterFragment: event.onsetQuoteFromLaterFragment ?? null,
+      onsetQuoteDomain: event.onsetQuoteDomain ?? null,
     }))
     .sort((a, b) => b.startedAtISO.localeCompare(a.startedAtISO) || a.id - b.id);
 }

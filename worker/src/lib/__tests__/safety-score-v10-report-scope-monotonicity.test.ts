@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { evaluateV9Backing } from "@shared/lib/safety-score-v9/archetypes";
 import { asset, exposure } from "@shared/lib/__tests__/safety-score-v9-backing.test-support";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
@@ -7,8 +7,10 @@ import type { ProofOfReservesLatestReport } from "@shared/types/stablecoin-meta-
 import type { ReviewedEconomicDeploymentPartition } from "@shared/types/safety-score-v9-supply-attribution";
 import { buildSafetyScoreV9MechanismReview } from "../safety-score-v9/extension-mechanism";
 import type { V9ExtensionRegistryMeta } from "../safety-score-v9/extension";
+import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension";
 import { resolveReviewedReserveAdmission, addScopedReserveEvidence, buildSafetyScoreV9ReviewedAuditedFallbackReserveRows, buildSafetyScoreV9ReviewedStaticReserveRows, buildSafetyScoreV10ScopedReserveAdmissions } from "../safety-score-v9/extension-reserves";
-import type { SafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
+import { normalizeSafetyScoreV9CompilerInput, type SafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
+import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 import type { ReserveObservationEnvelope } from "@shared/types/safety-score-v9-reserve-scope";
 import xdaiMetaSource from "@shared/data/stablecoins/coins/xdai-gnosis.json";
 import xdaiReserveSource from "@shared/data/stablecoins/domains/reserves/xdai-gnosis.json";
@@ -122,6 +124,22 @@ describe("diagnostic report scope monotonicity", () => {
     expect(known.normalizedWeight / residual.normalizedWeight).toBeCloseTo(1 / 3);
     expect(after.result.score!).toBeLessThan(backing(report).result.score!);
     expect(resolveReviewedReserveAdmission({ meta: meta(withBookJoin()), clockSec, liveReserveRows: [], fixedInput: input(partition) }).projected).toBeNull();
+  });
+  it("reports the joined whole-book scope blocker through the extension after 60 days", () => {
+    const assetId = "scope-fixture";
+    const clockSec = asOfSec + 60 * 86_400;
+    const fixedInput = normalizeSafetyScoreV9CompilerInput(makeV9FixedInput({ assetId, clockSec, reserves: [] }));
+    const report = withBookJoin();
+    const baseInputGenerationId = fixedInput.baseInputGenerationId;
+    report.coverage!.currentBookPartition!.baseInputGenerationId = baseInputGenerationId;
+    fixedInput.safetyScoreV9SupplyAttributionById[assetId] = { ...partition, baseInputGenerationId, scoringClockSec: clockSec };
+    const onReserveCompositionRejected = vi.fn();
+    const extension = buildSafetyScoreV9BaselineExtensionFromNormalizedInput(fixedInput, {
+      metaById: new Map([[assetId, meta(report)]]), onReserveCompositionRejected,
+    });
+    expect(extension.assets[0]?.reserveScopeAdmissions).toMatchObject([{ admitted: true, currentLiabilityShare: 0.25 }]);
+    expect(extension.assets[0]?.reviewedStaticReserveRows).toBeNull();
+    expect(onReserveCompositionRejected).toHaveBeenCalledWith(assetId, { reasons: ["report-scope-not-whole-book"] });
   });
   it("lowers overbroad legacy credit only for an explicit verified still-owed exclusion, not a zero or extinguished liability", () => {
     const value = scopedReport();

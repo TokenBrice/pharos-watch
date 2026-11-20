@@ -36,6 +36,9 @@ const { EVENTS, EVENTS_BY_SLUG, RECOVERED_EVENT } = vi.hoisted(() => {
     ] },
     { ...base, id: 3, slug: "ongoing-event", endedAt: null, recoveryPrice: null, provenance: null },
     recovered,
+    { ...base, id: 6, slug: "later-quote-event", stablecoinId: "eurc-circle", symbol: "EURC", pegType: "peggedEUR",
+      startedAt: 1_700_000_000, endedAt: 1_700_003_600, startPrice: 1.03, pegReference: 1.08,
+      onsetBasis: "peer-relative", onsetQuoteDomain: "usd", onsetQuoteFromLaterFragment: true },
   ];
   return { EVENTS: events, EVENTS_BY_SLUG: new Map(events.map((event) => [event.slug, event])), RECOVERED_EVENT: recovered };
 });
@@ -68,7 +71,7 @@ vi.mock("@/lib/page-metadata", async (importOriginal) => {
   return {
     ...actual,
     getPageSocialPreview: (canonical: string) =>
-      actual.getPageSocialPreview(/\/depeg\/(?:disputed|confirmed|ongoing|recovered)-event\/$/.test(canonical) ? "/depeg/" : canonical),
+      actual.getPageSocialPreview(/\/depeg\/(?:disputed|confirmed|ongoing|recovered|later-quote)-event\/$/.test(canonical) ? "/depeg/" : canonical),
   };
 });
 
@@ -149,6 +152,15 @@ describe("depeg event page metadata and briefing", () => {
     expect(html).toContain("Recorded detector start");
     expect(html).toContain("First admissible observation");
     expect(html).toContain("Recorded duration");
+  });
+
+  it("labels later EURC observations in the record and summary", async () => {
+    await renderPage("later-quote-event");
+    expect(screen.getByText(/^A later observation/).textContent).toContain(
+      "$1.0300 USD against a recorded peer median (lower confidence) of $1.0800 USD.",
+    );
+    expect(screen.getByText("Later price").nextElementSibling?.textContent).toBe("$1.0300 USD");
+    expect(screen.getByText("Later peer median").nextElementSibling?.textContent).toBe("$1.0800 USD");
   });
 
   it("uses the admitted recovery time for the permanent record and recent feed", async () => {

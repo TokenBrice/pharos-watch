@@ -36,7 +36,8 @@ export type DepegEventDisplayInput = Pick<
   DepegEvent,
   "stablecoinId" | "symbol" | "pegType" | "direction" | "peakDeviationBps" | "startedAt" | "endedAt"
   | "peakPrice" | "recoveryPrice" | "pegReference" | "closeReason" | "peakPegReference" | "peakQuoteDomain"
-  | "recoveryPegReference" | "admittedCoverage" | "analyticRecoveryAt" | "onsetBasis" | "peakBasis" | "peakReview"
+  | "recoveryPegReference" | "admittedCoverage" | "analyticRecoveryAt" | "onsetBasis" | "onsetQuoteDomain" | "peakBasis" | "peakReview"
+  | "onsetQuoteFromLaterFragment"
 > & {
   id?: number;
   slug: string;
@@ -47,7 +48,7 @@ export type DepegEventDisplayInput = Pick<
 
 type EventPriceInput = Pick<DepegEventDisplayInput,
   "source" | "pegType" | "pegReference" | "provenance" | "closeReason" | "peakQuoteDomain"
-  | "peakPegReference" | "recoveryPegReference" | "onsetBasis" | "peakBasis"
+  | "peakPegReference" | "recoveryPegReference" | "onsetBasis" | "onsetQuoteDomain" | "peakBasis"
 >;
 type EventClosureInput = Pick<DepegEvent,
   "admittedCoverage" | "endedAt" | "closeReason" | "pegType" | "analyticRecoveryAt" | "recoveryPrice"
@@ -58,7 +59,7 @@ function hasNativeOpening(event: EventPriceInput): boolean {
     source: event.source,
     peg_type: event.pegType,
     peg_reference: event.pegReference,
-    quote_mode: event.provenance?.quoteMode,
+    quote_mode: event.onsetQuoteDomain ?? event.provenance?.quoteMode,
   });
 }
 
@@ -170,9 +171,10 @@ export function getDepegEventOnset(event: DepegEventDisplayInput) {
   return { firstAdmissible: null, qualified: !session.open || reopeningUnverified };
 }
 
-function describeQualifiedOnset(event: DepegEventDisplayInput, includeTime: boolean): string {
-  const { firstAdmissible } = getDepegEventOnset(event);
+function describeDetectorStart(event: DepegEventDisplayInput, includeTime: boolean): string {
+  const { firstAdmissible, qualified } = getDepegEventOnset(event);
   const recorded = `Detector start recorded on ${formatEventTimestamp(event.startedAt, includeTime)}`;
+  if (!qualified) return `${recorded}.`;
   return firstAdmissible == null
     ? `${recorded}; no admissible onset is documented.`
     : `${recorded}; first admissible observation ${formatEventTimestamp(firstAdmissible, true)}.`;
@@ -251,34 +253,48 @@ export function buildDepegEventDescription(
     : event.symbol;
   const verb = event.direction === "below" ? "fell" : "rose";
   const deviation = formatEventDeviation(event);
-  const move = `${subject} ${verb}${deviation ? ` ${deviation}` : ""} ${event.direction} ${event.peakBasis ? "the peer median" : "its peg"}${disputedQualifier(event)}`;
   const outcome = buildDepegEventOutcome(event, false);
+  const context = includeTime ? ["Timeline and methodology."] : ["Event timeline and Pharos methodology context.", "Timeline and methodology."];
   // Whole sentences only, within the search-snippet budget: a part that does not fit is dropped.
   if (getDepegEventOnset(event).qualified) {
     return composeWithin([
       `${subject} depeg ${depegDirectionLabel(event.direction, event.peakBasis)}${deviation ? `, peak ${deviation}` : ""}${disputedQualifier(event)}.`,
-      describeQualifiedOnset(event, includeTime),
+      describeDetectorStart(event, includeTime),
       outcome,
     ], META_DESCRIPTION_MAX_CHARS);
   }
   const when = includeTime
     ? `at ${formatEventUtcTime(event.startedAt)} on ${formatEventLongDate(event.startedAt)}`
     : `on ${formatEventLongDate(event.startedAt)}`;
+  const openingReference = event.onsetBasis ? "the peer median" : "its peg";
+  if (event.onsetQuoteFromLaterFragment || event.onsetBasis !== event.peakBasis) {
+    const opening = event.onsetQuoteFromLaterFragment
+      ? `detector start recorded ${when}.`
+      : `${verb} ${event.direction} ${openingReference} ${when}.`;
+    const peak = `The peak was${deviation ? ` ${deviation}` : ""} ${depegDirectionLabel(event.direction, event.peakBasis)}${disputedQualifier(event)}.`;
+    return composeWithin([
+      [`${subject} ${opening} ${peak}`, `${event.symbol} ${opening} ${peak}`], outcome, context,
+    ], META_DESCRIPTION_MAX_CHARS);
+  }
+  const move = `${subject} ${verb}${deviation ? ` ${deviation}` : ""} ${event.direction} ${openingReference}${disputedQualifier(event)}`;
   return composeWithin([
     `${move} ${when}.`,
     outcome,
-    includeTime ? ["Timeline and methodology."] : ["Event timeline and Pharos methodology context.", "Timeline and methodology."],
+    context,
   ], META_DESCRIPTION_MAX_CHARS);
 }
 
 export function buildDepegEventSynopsis(event: DepegEventDisplayInput): string {
   const deviation = formatDeviationBps(event.peakDeviationBps);
   const peakPrice = formatEventPrice(event.peakPrice, event, "peak");
+  const peakDirection = event.peakBasis || event.onsetBasis || event.onsetQuoteFromLaterFragment
+    ? ` ${depegDirectionLabel(event.direction, event.peakBasis)}` : "";
+  const peak = `${deviation}${peakDirection}${disputedQualifier(event)}${peakPrice ? ` at ${peakPrice}` : ""}`;
   const outcome = buildDepegEventOutcome(event, true);
-  if (getDepegEventOnset(event).qualified) {
-    return `${event.symbol} depeg: ${describeQualifiedOnset(event, true)} Recorded peak deviation was ${deviation}${disputedQualifier(event)}${peakPrice ? ` at ${peakPrice}` : ""}. ${outcome}`;
+  if (event.onsetQuoteFromLaterFragment || getDepegEventOnset(event).qualified) {
+    return `${event.symbol} depeg: ${describeDetectorStart(event, true)} Recorded peak deviation was ${peak}. ${outcome}`;
   }
-  return `${event.symbol} moved ${depegDirectionLabel(event.direction, event.peakBasis)} at ${formatEventUtcTime(event.startedAt)} on ${formatEventLongDate(event.startedAt)}, with a peak deviation of ${deviation}${disputedQualifier(event)}${peakPrice ? ` at ${peakPrice}` : ""}. ${outcome}`;
+  return `${event.symbol} moved ${depegDirectionLabel(event.direction, event.onsetBasis)} at ${formatEventUtcTime(event.startedAt)} on ${formatEventLongDate(event.startedAt)}, with a peak deviation of ${peak}. ${outcome}`;
 }
 
 export function formatEventNavigationLabel(event: DepegEventDisplayInput, includeTime: boolean): string {

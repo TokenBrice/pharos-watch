@@ -1,5 +1,9 @@
-import methodologyPolicy from "@shared/data/safety-score-v9/methodology-policy-candidate-v1.json";
 import { RESEARCH_REVIEW_CONFIDENCE_LABELS } from "@shared/lib/classification";
+import {
+  projectReserveCompositionReviewFacts,
+  REVIEWED_RESERVE_COMPOSITION_ADMISSION_MAX_AGE_SEC,
+} from "@shared/lib/safety-score-v9/reserve-admission";
+import type { ReserveCompositionReviewBlocker } from "@shared/types/safety-score-v9-public";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 
 /**
@@ -12,13 +16,7 @@ import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
  * only names the clock-free requirements the review misses (full-composition
  * scope, verified confidence, a composition date) and the policy's age budget.
  */
-export type ReserveAdmissionBlocker =
-  | "scope-missing"
-  | "selected-slices"
-  | "classification-only"
-  | "dependency-relationships"
-  | "unverified"
-  | "undated";
+export type ReserveAdmissionBlocker = ReserveCompositionReviewBlocker;
 
 export interface ReserveAdmissionClientSummary {
   blockers: ReserveAdmissionBlocker[];
@@ -31,26 +29,13 @@ export interface ReserveAdmissionClientSummary {
   maxAgeSec: number;
 }
 
-const EVIDENCE_EXPIRY = methodologyPolicy.semantic.evidence.evidenceExpiry;
-const COMPOSITION_MAX_AGE_SEC =
-  EVIDENCE_EXPIRY.reviewedReserveCompositionMaxAgeSec + EVIDENCE_EXPIRY.reviewedReserveCompositionGraceSec;
-
 export function projectReserveAdmissionClientSummary(coin: StablecoinMeta): ReserveAdmissionClientSummary | null {
   const review = coin.reserveReview;
   if (!review || (coin.reserves?.length ?? 0) === 0) return null;
-  const blockers: ReserveAdmissionBlocker[] = [];
-  if (review.scope == null) blockers.push("scope-missing");
-  else if (review.scope !== "full-composition") blockers.push(review.scope);
-  const unverified = review.confidence !== "verified";
-  if (unverified) blockers.push("unverified");
-  // The evaluator reads a dated composition at its UTC start of day.
-  const compositionAtMs = review.compositionAsOf ? Date.parse(review.compositionAsOf) : Number.NaN;
-  if (!Number.isFinite(compositionAtMs)) blockers.push("undated");
   return {
-    blockers,
-    confidenceLabel: unverified ? RESEARCH_REVIEW_CONFIDENCE_LABELS[review.confidence] : null,
+    ...projectReserveCompositionReviewFacts(review),
+    confidenceLabel: review.confidence !== "verified" ? RESEARCH_REVIEW_CONFIDENCE_LABELS[review.confidence] : null,
     compositionAsOf: review.compositionAsOf ?? null,
-    compositionAtSec: Number.isFinite(compositionAtMs) ? Math.floor(compositionAtMs / 1_000) : null,
-    maxAgeSec: COMPOSITION_MAX_AGE_SEC,
+    maxAgeSec: REVIEWED_RESERVE_COMPOSITION_ADMISSION_MAX_AGE_SEC,
   };
 }

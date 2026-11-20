@@ -10,6 +10,7 @@ import {
   renderIsolateLocalStateDocumentation,
 } from "@shared/lib/isolate-local-state-registry";
 import { findDocContractDrift } from "./contract-blocks";
+import { checkReportCardsEvidenceLog } from "./report-cards-evidence-log";
 import { END_MARKER, renderLaneFreshnessMatrix, START_MARKER } from "../../maintenance/generate-lane-freshness-matrix";
 
 function checkGeneratedDocContractBlocks(failures: Failure[], readDocument: typeof read): void {
@@ -109,6 +110,7 @@ export function runDocSyncChecks(readDocument: typeof read = read): Failure[] {
   checkWorkerInfrastructureIsolateStateDoc(failures, readDocument);
   checkLaneFreshnessSignOff(failures, readDocument);
   checkRedemptionBackstopsDoc(failures, readDocument);
+  checkReportCardsEvidenceLog(failures, readDocument);
   const obsoleteFloorReuse = "the same floor described under Availability status above";
   if (readDocument("docs/status-dashboard.md").includes(obsoleteFloorReuse)) {
     failures.push({ file: "docs/status-dashboard.md", label: "mint/burn floor reuse", expected: `no ${obsoleteFloorReuse}`, found: obsoleteFloorReuse });

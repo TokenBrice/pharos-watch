@@ -4,7 +4,7 @@ import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { REFERENCE_CLOSURE_HOLD_BANDS_BPS } from "@shared/lib/depeg-config";
 import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "@shared/lib/depeg-closure";
 import { makeDepegRow } from "../../../test-helpers/__shared/fixtures";
-import { decideDepegAsset } from "../decision-engine";
+import { decideDepegAsset, emitDepegDiagnostics } from "../decision-engine";
 import type { DepegDetectionRow } from "../types";
 import { attachDetectionReferenceContext } from "../reference-policy";
 import { referenceState, tradedPair } from "./reference-fixtures";
@@ -140,12 +140,14 @@ describe("decideDepegAsset", () => {
   it("retains a dated reference hold only while the same market closure explains the coverage gap", () => {
     const close = Date.UTC(2026, 10, 13, 22) / 1000;
     const existing = makeExistingEvent({ started_at: close - 2000, direction: "below", peak_deviation_bps: -360,
+      recovery_first_seen_at: close - 120, recovery_last_seen_at: close - 60,
       last_trusted_price_at: close - 60, price_coverage_gap_started_at: null,
       price_coverage_json: JSON.stringify({ intervals: [[close - 900, close - 60]], lastObservationKind: "trusted-off-peg" }) });
     const now = close + 120;
     const input = { now, existing, meta: brlMeta, ...clockedBenchmark("peggedREAL", 0.19, close - 60),
       asset: brzAsset(0.19, { priceSource: "coinbase", priceObservedAt: now - 10 }) };
     const decision = decideDepegAsset(input);
+    expect(decision.commands).toEqual([{ type: "clear-recovery", id: existing.id }]);
     expect(decision.referenceHold?.hold).toEqual({ reason: "reference-market-closed", declaredAtSec: now,
       lastTrustedAtSec: close - 60, lastTrustedPeakBps: -360 });
     const held = { ...existing, reference_hold_json: JSON.stringify(decision.referenceHold),
@@ -602,17 +604,21 @@ describe("decideDepegAsset", () => {
   });
 
   it("routes an authoritative small-cap depeg through pending confirmation", () => {
-    const decision = decideDepegAsset({ ...usdInput, asset: makeAsset() });
+    const poolKey = "ethereum:0x0000000000000000000000000000000000000001";
+    const decision = decideDepegAsset({ ...usdInput, asset: { ...makeAsset(), upstreamKeys: [poolKey, "venue:coinbase"] } });
 
     expect(decision.trackedCoinId).toBe("usdt-tether");
     expect(decision.commands).toHaveLength(1);
     expect(decision.commands[0]).toMatchObject({ type: "upsert-pending", payload: {
       stablecoinId: "usdt-tether", direction: "below", bps: -200, price: 0.98, pegReference: 1, reason: "confirmation-window",
+      sourceKeys: ["coinbase", poolKey, "pyth"],
     } });
     expect(decision.diagnostics).toEqual([{ level: "log", message: "[depeg] Pending confirmation for USDT: -200bps (confirmation-window)" }]);
 
-    const directionFlip = decideDepegAsset({ ...usdInput, asset: makeAsset({ price: 1.02 }), existing: makeUsdEvent({}, false) });
+    const existing = makeUsdEvent({ admitted_coverage_json: JSON.stringify([{ fromSec: usdInput.now - 60, toSec: usdInput.now + 1 }]) }, false);
+    const directionFlip = decideDepegAsset({ ...usdInput, asset: makeAsset({ price: 1.02 }), existing });
     expect(directionFlip.commands[0]).toMatchObject({ type: "close-event", recoveryPrice: null, closeReason: "superseded-direction" });
+    expect(directionFlip.admittedCoverage).toEqual([{ fromSec: usdInput.now - 60, toSec: usdInput.now }]);
   });
 
   it("uses run ordering for an unclocked USD primary and rejects a repeated upstream quote", () => {
@@ -628,8 +634,9 @@ describe("decideDepegAsset", () => {
     }
   });
 
-  it("returns pending command diagnostics without logging as a side effect", () => {
+  it("logs pending diagnostics only when explicitly emitted", () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => undefined);
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
     try {
@@ -641,12 +648,30 @@ describe("decideDepegAsset", () => {
       });
       expect(decision.diagnostics).toEqual([{ level: "log", message: "[depeg] Pending confirmation for USDT: -200bps (confirmation-window+large-cap)" }]);
       expect(logSpy).not.toHaveBeenCalled();
+      expect(infoSpy).not.toHaveBeenCalled();
       expect(warnSpy).not.toHaveBeenCalled();
+      emitDepegDiagnostics([...decision.diagnostics, { level: "warn", message: "Withheld quote" }]);
+      expect(infoSpy).toHaveBeenCalledWith(expect.stringContaining(decision.diagnostics[0].message));
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Withheld quote"));
     } finally {
       logSpy.mockRestore();
+      infoSpy.mockRestore();
       warnSpy.mockRestore();
     }
   });
+
+  it.each([["pyth", 90], ["coingecko", 90], ["coingecko", 30]] as const)(
+    "holds recovery from a stale or repeated %s quote aged %d seconds", (priceSource, age) => {
+      const now = usdInput.now;
+      const decision = decideDepegAsset({ ...usdInput,
+        asset: makeAsset({ price: 1, priceSource, priceObservedAt: now - age, priceObservedAtMode: "upstream" }),
+        existing: makeUsdEvent({ last_trusted_price_at: now - 60,
+          recovery_first_seen_at: now - 60, recovery_last_seen_at: now - 30 }),
+      });
+      expect(decision.commands).toEqual([]);
+      expect(decision.seenEventIds).toEqual([7]);
+    },
+  );
 
   it.each<[string, Partial<PegAssetBase>, number, string]>([
     ["routes near-threshold market-cap weak-source severe moves to pending",

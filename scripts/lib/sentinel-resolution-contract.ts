@@ -1,5 +1,13 @@
 import { z } from "zod";
 
+/**
+ * Semantic version of the checker's verdict rules, stamped into every artifact
+ * as `inputs.checkerVersion`. Bump it whenever closure semantics change: the
+ * applier books only artifacts carrying the current version, so archived
+ * verdicts must be regenerated before they can book.
+ */
+export const SENTINEL_CHECKER_VERSION = 4;
+
 /** One verdict per claim group, evaluated on that group's latest appended decision. */
 export const SENTINEL_VERDICTS = ["closed", "still-open", "replaced-adversely", "unverifiable"] as const;
 export type SentinelVerdict = (typeof SENTINEL_VERDICTS)[number];
@@ -58,6 +66,7 @@ export const SentinelResolutionsArtifactSchema = z
     schemaVersion: z.literal(1),
     inputs: z
       .object({
+        checkerVersion: z.number().int().optional(),
         registry: z
           .object({
             missingDataRegistryFingerprint: sha256Text,
@@ -143,6 +152,8 @@ export interface SentinelResolutionReport {
   inputs: {
     registryPath: string;
     ledgerPath: string;
+    /** Verdict-rule version that produced this report; see `SENTINEL_CHECKER_VERSION`. */
+    checkerVersion: number;
     registry: {
       schemaVersion: number;
       stablecoinCount: number;

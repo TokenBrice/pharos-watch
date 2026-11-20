@@ -491,7 +491,7 @@ function normalizeComponentKey(value: string): string {
 
 function mechanismContext(asset: V9AssetFactsV3, componentKey: string): unknown {
   if (componentKey === "mechanism-risk-review") return asset.mechanismRiskReview;
-  const requested = componentKey.split(":").at(-1) ?? componentKey;
+  const requested = componentKey.split(":").pop() ?? componentKey;
   const review = asset.mechanismRiskReview.review as unknown as Record<string, unknown> | null;
   const match = review ? Object.entries(review).find(([key]) => normalizeComponentKey(key) === normalizeComponentKey(requested)) : null;
   return { reviewStatus: asset.mechanismRiskReview.status, componentKey: match?.[0] ?? requested, component: match?.[1] ?? null };

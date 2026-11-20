@@ -1,5 +1,5 @@
 import type { DepegEvent } from "../types/peg";
-import { activePegPeakBps, depegObservedIntervals, isScoredPegEvent, legacyPegEventStart, mergeDepegSeconds, mergeUnknownDepegSeconds, scheduledPegClosures, worstDeviation } from "./peg-utils";
+import { activePegPeakBps, depegObservedIntervals, isScoredPegEvent, legacyPegEventStart, legacyPegOnsetPeakBps, mergeDepegSeconds, mergeUnknownDepegSeconds, scheduledPegClosures, worstDeviation } from "./peg-utils";
 import { getReferenceMarket, isReferenceDeviationHeld, isReferenceMarketClosed } from "./reference-market-hours";
 import { getPegTaxonomyByType } from "./peg-taxonomy";
 import { DAY_SECONDS } from "./time-constants";
@@ -109,10 +109,12 @@ export const NULL_PEG_SCORE_RESULT: PegScoreResult = {
 };
 
 
+export function isLowConfidencePegPeak({ provenance, peakConfidenceTier = provenance?.confidenceTier }: DepegEvent): boolean {
+  return peakConfidenceTier === "low";
+}
+
 function eventSeverityWeight(event: DepegEvent): number {
-  const confidenceTier = event.provenance?.confidenceTier;
-  if (confidenceTier === "low") return LOW_CONFIDENCE_WEIGHT;
-  return 1;
+  return isLowConfidencePegPeak(event) ? LOW_CONFIDENCE_WEIGHT : 1;
 }
 
 /**
@@ -153,11 +155,12 @@ function countsPegIncident(
 ): boolean {
   const market = getReferenceMarket(currency);
   const startBound = scope === "history" && event.endedAt === null ? event.startedAt : from;
-  if (event.admittedCoverage === undefined) {
+  const onsetPeak = legacyPegOnsetPeakBps(event);
+  if (event.admittedCoverage === undefined && onsetPeak !== null) {
     // A recorded opening in an eligible session establishes the incident
     // independently of whether duration tracking later went blind.
     if (scope === "history" && market === null) return true;
-    if (event.startedAt >= startBound && !isReferenceDeviationHeld(currency, event.startedAt, event.peakDeviationBps)) return true;
+    if (event.startedAt >= startBound && !isReferenceDeviationHeld(currency, event.startedAt, onsetPeak)) return true;
   }
   return depegObservedIntervals(event, closures).some(([start, end]) => {
     if (start === end) {
@@ -233,7 +236,7 @@ function computePegScoreCore(
   const auditEvents = coverageEvents.filter(isScoredPegEvent);
   const scoringEvents = eligibleEvents.filter(isScoredPegEvent);
   const excludedEventCount = eligibleEvents.length - scoringEvents.length;
-  const lowConfidenceEventCount = scoringEvents.filter((event) => eventSeverityWeight(event) < 1).length;
+  const lowConfidenceEventCount = scoringEvents.filter(isLowConfidencePegPeak).length;
   const qualityAdjusted = excludedEventCount > 0 || lowConfidenceEventCount > 0;
 
   const unknownCoverageSeconds = mergeUnknownDepegSeconds(auditEvents, startSec, now, closures);

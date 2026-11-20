@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { derivePoolVolume24hUsd, getTokenReferenceUsdPrice } from "../dex-api-token-pricing";
+import { derivePoolVolume24hUsd, deriveTokenUsdObservation, getTokenReferenceUsdPrice } from "../dex-api-token-pricing";
 import type { DexApiPool, DexApiPoolToken } from "../dex-api-types";
 
 // Empty address + USD reference symbol resolves to a $1 reference price via the
@@ -47,6 +47,15 @@ describe("derivePoolVolume24hUsd", () => {
     // Averaging 3 independent estimates of the same economic flow is wrong;
     // the raw source value is kept instead.
     expect(result).toBe(120000);
+  });
+
+  it("values native volume from a direct USD quote and preserves its observation clock", () => {
+    const quoted = pool(["OTHER", "USDC"], [100, 0], 999);
+    quoted.tokens[0] = { ...quoted.tokens[0], priceUsd: 1.25 };
+    quoted.readStartedAtSec = 1_790_000_000;
+    expect(derivePoolVolume24hUsd(quoted, NO_REFS, NO_SYMBOL_REFS)).toBe(125);
+    expect(deriveTokenUsdObservation(quoted, 0, "other", NO_REFS, NO_SYMBOL_REFS, undefined, 1_790_000_010))
+      .toEqual({ price: 1.25, observedAt: 1_790_000_000 });
   });
 });
 

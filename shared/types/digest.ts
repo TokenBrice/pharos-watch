@@ -1,7 +1,8 @@
 import { V9RatingStatusSchema, V9CompactPartialEvidenceSchema, V9EvidencePillarSchema } from "./safety-score-v9-causes";
 import { z } from "zod";
 import { DigestSafetyMapUtcDateSchema, type DigestSafetyMapCapture } from "./digest-safety-map-contract";
-import type { DepegDirection } from "./peg";
+import type { DepegDirection, DepegEvent } from "./peg";
+import { DepegEventProjectionEvidenceSchema } from "./depeg-event-projection";
 import type { MintBurnFlowsResponse } from "./mint-burn";
 import {
   SafetyScorePublicationIdentitySchema,
@@ -376,6 +377,7 @@ export interface DigestInputData {
     ageHours?: number;
     impactScore?: number;
     peakBps?: number;
+    peakBasis?: DepegEvent["peakBasis"];
     peakPriceUsd?: number;
     currentPriceUsd?: number;
     /** Prices and deviations share the event's quote domain, never an inferred USD peg. */
@@ -863,6 +865,7 @@ const DigestSnapshotInputDataSchema = z
             direction: z.string().optional(),
             mcapUsd: z.number(),
             startedAt: z.number().optional(),
+            peakBasis: DepegEventProjectionEvidenceSchema.shape.peakBasis,
             currentBps: z.number().optional(),
             pegReference: z.number().positive().optional(),
             pegReferenceBasis: z.literal("current").optional(),
