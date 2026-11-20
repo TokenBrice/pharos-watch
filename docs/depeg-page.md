@@ -268,7 +268,7 @@ Retained bodies without the additive field show “maturing unavailable,” not 
 
 Event pages distinguish the recorded detector timestamp from first admitted evidence and use each observation's own quote domain and reference. Peer-relative starts and peaks retain their USD prices and identify the lower-confidence comparison against the peer median. Explicitly unknown recovery appears as an unverified detector close. A legacy USD peak or recovery stays in USD when conversion evidence is unavailable. Reviewed restorations preserve the original IDs and durable links.
 
-Related incident links show “Peak unverified” in place of the magnitude for events with an unverified peak. They carry the archive's “Disputed” label when the target has a disputed or false-positive audit verdict.
+Related incident links name the peer median for a peer-relative peak. They show “Peak unverified” in place of the magnitude for events with an unverified peak and carry the archive's “Disputed” label when the target has a disputed or false-positive audit verdict.
 
 The permanent record and recent feed use the admitted recovery time for a verified duration and the detector close for legacy durations. Where the evidence calls for showing the detector interval separately, it is labelled “Recorded duration”.
 

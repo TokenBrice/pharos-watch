@@ -348,8 +348,8 @@ describe("Safety Score V9 peg provenance", () => {
   it("captures projected recovery rows and retains verified empty repairs in the event digest", () => {
     const closed = event({ id: 55, startedAt: CLOCK_SEC - DAY_SEC, peakDeviationBps: -300, source: "live" });
     const projected: DepegEvent = {
-      ...closed, analyticRecoveryAt: null, onsetBasis: "peer-relative", peakBasis: "peer-relative",
-      peakPeerMedianUsd: 1, peakReview: "unverified", retired: true,
+      ...closed, analyticRecoveryAt: null, onsetBasis: "peer-relative", onsetQuoteDomain: "usd", peakBasis: "peer-relative",
+      onsetQuoteFromLaterFragment: true, peakPeerMedianUsd: 1, peakReview: "unverified", retired: true,
     };
     const repaired: DepegEvent = {
       ...projected, id: 56, disposition: "repaired", admittedCoverage: [], provenance: { pegScoreEligible: false },
@@ -365,6 +365,15 @@ describe("Safety Score V9 peg provenance", () => {
     expect(withRepair.legacyInclusive.result).toEqual(ordinary.legacyInclusive.result);
     expect(withRepair.eventSetSha256).not.toBe(ordinary.eventSetSha256);
     expect(() => capture([projected, { ...repaired, admittedCoverage: undefined }])).toThrow(/partial provenance/);
+  });
+
+  it.each(["live", "backfill"] as const)("binds borrowed peak confidence for a %s fragment", (source) => {
+    const open = event({ id: 57, startedAt: CLOCK_SEC - DAY_SEC, endedAt: null, recoveryPrice: null, source,
+      peakDeviationBps: -960, currentFragmentPeakBps: -437 });
+    const low = build([{ ...open, peakConfidenceTier: "low" }]);
+    expect(low.legacyInclusive.result.lowConfidenceEventCount).toBe(1);
+    expect(low.verifiedOnlyDiagnostic.result.lowConfidenceEventCount).toBe(source === "live" ? 1 : 0);
+    expect(low.eventSetSha256).not.toBe(build([open]).eventSetSha256);
   });
 
   it("rejects summary tampering and raw-event attachment", () => {

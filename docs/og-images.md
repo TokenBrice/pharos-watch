@@ -112,6 +112,8 @@ When the dossier scorecard is unavailable, the Worker sends a bodyless `302` wit
 
 The tracker’s Share menu opens `/api/og/v2/depeg/briefing`, a dated 1200×630 reading of the open incident ledger. USD deviations use the published admission verdict and admitted basis points. A stale reference reads “Reference not yet updated”. An explicit null quote clock or published price or reference refusal withholds the current reading. An explicit null legacy deviation also withholds the current reading when the block has no newer admission. A native event uses its native observation. While its reference market is closed, only a traded pair matching the selected observation supplies a current deviation. The briefing labels peer-relative peaks as lower-confidence comparisons against the peer median and shows its USD value when validated. Historical record cards preserve sub-cent USD prices with adaptive precision and use the quote domain of the recorded peak. The 24-hour counts use canonical incident starts and admitted terminal recoveries. The PNG caches for up to 60 seconds within the remaining observation budgets.
 
+For open grouped incidents, the briefing uses the [projected peak and its comparison basis](./depeg-detection.md#get-apidepeg-events).
+
 The retired numerical families answer `301` to an absolute evergreen image on `https://pharos.watch/og/v2/`, with `Cache-Control: public, max-age=31536000, immutable`. No page selects them, but old shares and lazy re-fetchers still request them. A redirect performs no D1 read and no render.
 
 | Path under `/api/og/` or `/api/og/v2/` | `Location` |

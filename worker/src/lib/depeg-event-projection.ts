@@ -1,6 +1,8 @@
-import { logWorkerEventArgs } from "./structured-log";
-import type { DepegEvent } from "@shared/types/peg";
+import { DepegEventQuoteDomainSchema, type DepegEvent } from "@shared/types/peg";
+import { DEPEG_AUDIT_VERDICT_VALUES } from "@shared/types/depeg-audit";
+import { z } from "zod";
 import { isNativePegEvent } from "@shared/lib/depeg-quote-domain";
+import { getPegTaxonomyByType } from "@shared/lib/peg-taxonomy";
 import { isRetiredFromCatalog } from "@shared/lib/stablecoin-lifecycle";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { BRZ_UNVERIFIED_PEAK_EVENT_IDS } from "@shared/data/depegs/backfill-replay-suppressions";
@@ -8,9 +10,7 @@ import { reviewedDepegDisputeSql } from "@shared/data/depegs/reviewed-depeg-disp
 import { mergeDepegIntervals } from "@shared/lib/peg-utils";
 import { admittedDepegRecoveryAt } from "./tape-projectors/depeg";
 import { readPendingObservationReceipt, type DepegObservationReceipt } from "./depeg-pending";
-import { isNativeOriginPending, isPairedDepegPeak, readDepegAdmittedCoverage, readDepegPeakQuote, type DepegRow, rowToDepegEvent } from "./depeg-helpers";
-import { isMissingTableError } from "./db";
-import { toErrorMessage } from "@shared/lib/error-utils";
+import { isNativeOriginPending, isPairedDepegPeak, readDepegAdmittedCoverage, readDepegPeakQuote, readDepegProvenanceJson, type DepegRow, rowToDepegEvent } from "./depeg-helpers";
 
 /**
  * Later of a canonical incident's own current fragment and its superseded
@@ -54,32 +54,103 @@ export const EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL = `
   )
 `;
 
+function timestampJsonSql(column: string): string {
+  return `CASE WHEN typeof(${column}) = 'blob' THEN '' ELSE ${column} END`;
+}
+
+function hasValidEventWindow({ started_at, ended_at }: Pick<DepegRow, "started_at" | "ended_at">): boolean {
+  return Number.isSafeInteger(started_at) && started_at > 0 &&
+    (ended_at === null || (Number.isSafeInteger(ended_at) && ended_at >= started_at));
+}
+
+const KNOWN_AUDIT_VERDICTS_SQL = DEPEG_AUDIT_VERDICT_VALUES.map((verdict) => `'${verdict}'`).join(", ");
+
+function hasKnownAuditVerdictSql(provenance: "provenance" | "first_provenance"): string {
+  return `(${provenance}.audit_verdict IS NULL OR ${provenance}.audit_verdict IN (${KNOWN_AUDIT_VERDICTS_SQL}))
+    AND CASE WHEN json_valid(${provenance}.public_json) THEN (
+      SELECT COUNT(*) <= 1 AND COALESCE(MIN(value IN (${KNOWN_AUDIT_VERDICTS_SQL})), 1)
+      FROM json_each(${provenance}.public_json) WHERE key = 'auditVerdict'
+    ) ELSE 1 END`;
+}
+
+/** Correlated to e. Keep tied current peaks and distinguish malformed quote evidence from absent legacy fields. */
+export const PROJECTED_DEPEG_PEAK_SQL = `(
+  SELECT json_object(
+    'id', member.id, 'stablecoin_id', member.stablecoin_id,
+    'peg_type', CASE WHEN typeof(member.peg_type) = 'text' THEN member.peg_type END,
+    'source', member.source,
+    'quote_mode', CASE WHEN typeof(provenance.quote_mode) IN ('text', 'null') THEN provenance.quote_mode ELSE '' END,
+    'confidence_tier', CASE WHEN typeof(provenance.confidence_tier) = 'text' THEN provenance.confidence_tier END,
+    'provenance_json', CASE WHEN typeof(provenance.public_json) = 'text' THEN provenance.public_json END,
+    'peg_reference', CASE WHEN typeof(member.peg_reference) IN ('integer', 'real') THEN member.peg_reference END,
+    'peak_deviation_bps', CASE WHEN e.direction = 'below' THEN -ABS(member.peak_deviation_bps)
+                               ELSE ABS(member.peak_deviation_bps) END,
+    'peak_price', CASE WHEN typeof(member.peak_price) IN ('integer', 'real') THEN member.peak_price END,
+    'peak_peg_reference', CASE WHEN typeof(member.peak_peg_reference) IN ('integer', 'real', 'null')
+                               THEN member.peak_peg_reference ELSE '' END,
+    'peak_quote_domain', CASE WHEN typeof(member.peak_quote_domain) IN ('text', 'null')
+                              THEN member.peak_quote_domain ELSE '' END,
+    'started_at', ${timestampJsonSql("member.started_at")}, 'ended_at', ${timestampJsonSql("member.ended_at")},
+    'pending_reason', CASE WHEN typeof(member.pending_reason) = 'text' THEN member.pending_reason END,
+    'peer_basis_json', CASE WHEN typeof(member.peer_basis_json) = 'text' THEN member.peer_basis_json END
+  )
+  FROM depeg_resolver_incident_event_links source_link
+  JOIN depeg_resolver_incidents owner ON owner.incident_key = source_link.incident_key
+  JOIN depeg_resolver_incidents root ON root.incident_key = COALESCE(owner.superseded_by_incident_key, owner.incident_key)
+  JOIN depeg_resolver_incident_event_links member_link ON member_link.incident_key IN (
+    SELECT root.incident_key
+    UNION ALL
+    SELECT alias.incident_key FROM depeg_resolver_incidents alias
+     WHERE alias.superseded_by_incident_key = root.incident_key AND alias.incident_state = 'superseded'
+  )
+  JOIN depeg_events member ON member.id = member_link.event_id
+  LEFT JOIN depeg_event_provenance provenance ON provenance.event_id = member.id
+  WHERE source_link.event_id = e.id AND root.incident_state = 'active' AND owner.current_event_id = e.id
+    AND owner.incident_key = COALESCE(${effectiveAliasIncidentKeySql("root")}, root.incident_key)
+    AND member.stablecoin_id = e.stablecoin_id AND member.direction = e.direction
+    AND ${hasKnownAuditVerdictSql("provenance")}
+    AND CASE WHEN typeof(member.peak_deviation_bps) IN ('integer', 'real')
+      AND member.peak_deviation_bps BETWEEN -${Number.MAX_SAFE_INTEGER} AND ${Number.MAX_SAFE_INTEGER}
+      AND typeof(e.peak_deviation_bps) IN ('integer', 'real')
+      AND e.peak_deviation_bps BETWEEN -${Number.MAX_SAFE_INTEGER} AND ${Number.MAX_SAFE_INTEGER}
+      THEN ABS(member.peak_deviation_bps) > ABS(e.peak_deviation_bps) END
+  ORDER BY ABS(member.peak_deviation_bps) DESC, member.id
+  LIMIT 1
+)`;
+
 interface ActiveIncidentProjectionRow {
   current_event_id: number | null;
   first_started_at: number | null;
+  first_peak_deviation_bps?: unknown;
   first_start_price: number | null;
   first_peg_reference: number | null;
   first_source?: string | null;
   first_peg_type?: string | null;
   first_quote_mode?: string | null;
+  first_provenance_json?: string | null;
   first_pending_reason?: string | null;
   first_peer_basis_json?: string | null;
+  current_quote_mode?: string | null;
   constituent_event_count: number | null;
   references_valid: number;
   covered_members_json?: string;
   reviewed_dispute?: number;
+  incident_peak_json: string | null;
 }
 
 interface ActiveIncidentProjection {
   startedAt: number;
+  onsetFragmentPeakBps?: number | null;
   startPrice: number | null;
   pegReference: number | null;
   /** First constituent's quote domain; null when its reference cannot classify one. */
   nativePeg: boolean | null;
+  currentQuoteMode?: string | null;
   constituentEventCount: number;
   admittedCoverage?: DepegEvent["admittedCoverage"];
   reviewedDispute: boolean;
   peerOpening: boolean;
+  peak: ReturnType<typeof readProjectedDepegPeak>;
 }
 
 export type IncidentProjectionUnavailableReason =
@@ -104,6 +175,11 @@ function isPeerOpening(
 ): boolean {
   if (onset && onset.price === price && onset.pegReference === reference) return onset.basis === "peer-relative";
   return !isNativeOriginPending(pendingReason) && pendingReason?.split("+").includes("peer-relative") === true;
+}
+
+function readOpeningQuoteMode(column: unknown, provenanceJson: DepegRow["provenance_json"]) {
+  return DepegEventQuoteDomainSchema.safeParse(column).data
+    ?? DepegEventQuoteDomainSchema.safeParse(readDepegProvenanceJson(provenanceJson)?.quoteMode).data;
 }
 
 function normalizeActiveIncidentProjection(row: ActiveIncidentProjectionRow): [number, ActiveIncidentProjection] | null {
@@ -134,18 +210,25 @@ function normalizeActiveIncidentProjection(row: ActiveIncidentProjectionRow): [n
   }
 
   let admittedCoverage: DepegEvent["admittedCoverage"];
+  let peak: ActiveIncidentProjection["peak"];
+  try {
+    if (row.incident_peak_json !== null && typeof row.incident_peak_json !== "string") return null;
+    peak = readProjectedDepegPeak(row.incident_peak_json);
+  } catch {
+    return null;
+  }
   let reviewedDispute = row.reviewed_dispute === 1;
   if (row.covered_members_json !== undefined) {
     let members: Pick<DepegRow, "id" | "started_at" | "ended_at" | "admitted_coverage_json" | "disposition">[];
     try {
       members = JSON.parse(row.covered_members_json) as typeof members;
-      if (!Array.isArray(members) || members.some((member) => member == null || typeof member !== "object"
-        || !Number.isSafeInteger(member.started_at) || (member.ended_at != null && !Number.isSafeInteger(member.ended_at)))) return null;
+      if (!Array.isArray(members) || members.some((member) => member == null || typeof member !== "object")) return null;
     } catch {
       return null;
     }
     if (members.length > 0) {
       const intervals = members.flatMap((member) => {
+        if (!hasValidEventWindow(member)) return [];
         const admitted = readDepegAdmittedCoverage(member) ?? [];
         if (member.disposition === "repaired" && admitted.length === 0) reviewedDispute = true;
         return admitted.map(({ fromSec, toSec }): [number, number] => [fromSec, toSec]);
@@ -155,24 +238,32 @@ function normalizeActiveIncidentProjection(row: ActiveIncidentProjectionRow): [n
   }
   const peerOpening = isPeerOpening(readPendingObservationReceipt(row.first_peer_basis_json)?.onset,
     row.first_pending_reason, row.first_start_price, row.first_peg_reference);
+  const quoteMode = readOpeningQuoteMode(row.first_quote_mode, row.first_provenance_json);
+  const openingQuoteUnknown = !peerOpening && quoteMode == null && row.first_source === "live"
+    && row.first_peg_reference === 1 && !getPegTaxonomyByType(row.first_peg_type ?? undefined);
+  const onsetPeak = row.first_peak_deviation_bps;
   return [
     row.current_event_id,
     {
       startedAt: row.first_started_at,
-      startPrice: row.first_start_price,
-      pegReference: row.first_peg_reference,
-      nativePeg: row.first_peg_reference == null
+      onsetFragmentPeakBps: onsetPeak === undefined || (typeof onsetPeak === "number" && Math.abs(onsetPeak) <= Number.MAX_SAFE_INTEGER)
+        ? onsetPeak : null,
+      startPrice: openingQuoteUnknown ? null : row.first_start_price,
+      pegReference: openingQuoteUnknown ? null : row.first_peg_reference,
+      nativePeg: openingQuoteUnknown || row.first_peg_reference == null
         ? null
         : !peerOpening && isNativePegEvent({
           source: row.first_source ?? undefined,
           peg_type: row.first_peg_type ?? undefined,
           peg_reference: row.first_peg_reference,
-          quote_mode: row.first_quote_mode ?? null,
+          quote_mode: quoteMode,
         }),
+      currentQuoteMode: row.current_quote_mode,
       constituentEventCount: row.constituent_event_count,
       ...(admittedCoverage !== undefined ? { admittedCoverage } : {}),
       reviewedDispute,
       peerOpening,
+      peak,
     },
   ];
 }
@@ -183,17 +274,22 @@ function activeIncidentProjectionSql(stablecoinId: string | null): string {
     return `SELECT
           ${effectiveCurrentEvent} AS current_event_id,
           incidents.first_started_at,
+          CASE WHEN ${hasKnownAuditVerdictSql("first_provenance")}
+            THEN first_event.peak_deviation_bps END AS first_peak_deviation_bps,
           first_event.start_price AS first_start_price,
           first_event.peg_reference AS first_peg_reference,
           first_event.source AS first_source,
-          first_event.peg_type AS first_peg_type,
-          first_provenance.quote_mode AS first_quote_mode,
-          first_event.pending_reason AS first_pending_reason,
-          first_event.peer_basis_json AS first_peer_basis_json,
+          CASE WHEN typeof(first_event.peg_type) = 'text' THEN first_event.peg_type END AS first_peg_type,
+          CASE WHEN typeof(first_provenance.quote_mode) = 'text' THEN first_provenance.quote_mode END AS first_quote_mode,
+          CASE WHEN typeof(first_provenance.public_json) = 'text' THEN first_provenance.public_json END AS first_provenance_json,
+          CASE WHEN typeof(first_event.pending_reason) = 'text' THEN first_event.pending_reason END AS first_pending_reason,
+          CASE WHEN typeof(first_event.peer_basis_json) = 'text' THEN first_event.peer_basis_json END AS first_peer_basis_json,
+          CASE WHEN typeof(current_provenance.quote_mode) = 'text' THEN current_provenance.quote_mode END AS current_quote_mode,
           COUNT(DISTINCT linked_event.id) AS constituent_event_count,
+          ${PROJECTED_DEPEG_PEAK_SQL} AS incident_peak_json,
           ${reviewedDepegDisputeSql("e")} AS reviewed_dispute,
-          json_group_array(json_object('id', linked_event.id, 'started_at', linked_event.started_at,
-            'ended_at', linked_event.ended_at, 'admitted_coverage_json', linked_event.admitted_coverage_json,
+          json_group_array(json_object('id', linked_event.id, 'started_at', ${timestampJsonSql("linked_event.started_at")},
+            'ended_at', ${timestampJsonSql("linked_event.ended_at")}, 'admitted_coverage_json', linked_event.admitted_coverage_json,
             'disposition', linked_event.disposition))
             FILTER (WHERE linked_event.admitted_coverage_json IS NOT NULL)
             AS covered_members_json,
@@ -213,6 +309,8 @@ function activeIncidentProjectionSql(stablecoinId: string | null): string {
          ${effectiveAliasJoinSql("incidents")}
          LEFT JOIN depeg_events e
            ON e.id = ${effectiveCurrentEvent}
+         LEFT JOIN depeg_event_provenance current_provenance
+           ON current_provenance.event_id = e.id
          LEFT JOIN depeg_events canonical_current_event
            ON canonical_current_event.id = incidents.current_event_id
          LEFT JOIN depeg_resolver_incident_event_links links
@@ -334,36 +432,6 @@ export function decodeActiveIncidentProjections(
     return { projections, available: true };
 }
 
-export async function loadActiveIncidentProjections(
-  db: D1Database,
-  stablecoinId: string | null,
-): Promise<ActiveIncidentProjectionLoad> {
-  try {
-    return decodeActiveIncidentProjections(
-      await prepareActiveIncidentProjections(db, stablecoinId).all<ActiveIncidentProjectionRow>(),
-    );
-  } catch (err) {
-    const msg = toErrorMessage(err);
-    if (!isMissingTableError(err)) {
-      logWorkerEventArgs("lib", "error", "[depeg-event-projection] Unexpected error loading active incident projections:", msg);
-    }
-    return { available: false, reason: "incident-projection-read-failed" };
-  }
-}
-
-/** Backfilled rows carry their structured quote domain in the public provenance JSON. */
-function rowQuoteMode(row: DepegRow): string | null {
-  if (row.provenance_json == null) return null;
-  try {
-    const parsed = JSON.parse(row.provenance_json) as { quoteMode?: unknown } | null;
-    return parsed != null && typeof parsed === "object" && typeof parsed.quoteMode === "string"
-      ? parsed.quoteMode
-      : null;
-  } catch {
-    return null;
-  }
-}
-
 export type DepegPeakBasisRow = Parameters<typeof readDepegPeakQuote>[0] &
   Pick<DepegRow, "started_at" | "ended_at" | "peer_basis_json" | "pending_reason">;
 
@@ -382,6 +450,63 @@ export function readPublicDepegPeakBasis(
   return {};
 }
 
+const projectedPeakRowSchema = z.object({
+  id: z.number().int().positive(),
+  stablecoin_id: z.string(),
+  peg_type: z.string().nullable(),
+  source: z.string(),
+  quote_mode: z.string().nullable(),
+  confidence_tier: z.string().nullable().default(null),
+  provenance_json: z.string().nullish(),
+  // The opening reference only helps infer the quote unit for legacy peaks.
+  peg_reference: z.number().positive().catch(NaN),
+  peak_deviation_bps: z.number(),
+  peak_price: z.number().positive().nullable().catch(null),
+  peak_peg_reference: z.number().positive().nullish().catch(undefined),
+  peak_quote_domain: DepegEventQuoteDomainSchema.nullish().catch(undefined),
+  started_at: z.number().catch(NaN),
+  ended_at: z.number().nullable().catch(NaN),
+  pending_reason: z.string().nullable(),
+  peer_basis_json: z.string().nullable(),
+});
+
+export function readProjectedDepegPeak(encoded: string | null | undefined): Pick<DepegEvent,
+  "peakDeviationBps" | "peakPrice" | "peakPegReference" | "peakQuoteDomain" | "peakBasis" | "peakPeerMedianUsd" | "peakReview" | "peakConfidenceTier"
+> | null {
+  if (encoded == null) return null;
+  const row = projectedPeakRowSchema.parse(JSON.parse(encoded));
+  const provenance = readDepegProvenanceJson(row.provenance_json);
+  const confidenceTier = provenance == null ? row.confidence_tier : provenance.confidenceTier;
+  const quote = readDepegPeakQuote(row);
+  // An unreadable close must not be treated as an open receipt window.
+  const basis = hasValidEventWindow(row) ? readPublicDepegPeakBasis(row, undefined, quote) : {};
+  let peakQuoteDomain = quote.peakQuoteDomain;
+  // Only legacy rows without a stored peak pair can use the event's quote provenance.
+  if (peakQuoteDomain == null && row.peak_peg_reference === null && row.peak_quote_domain === null) {
+    const quoteMode = row.quote_mode ?? provenance?.quoteMode;
+    if (basis.peakBasis === "peer-relative") peakQuoteDomain = "usd";
+    else if (quoteMode != null) peakQuoteDomain = DepegEventQuoteDomainSchema.safeParse(quoteMode).data;
+    else if (row.peg_type != null && getPegTaxonomyByType(row.peg_type) && Number.isFinite(row.peg_reference)) {
+      peakQuoteDomain = isNativePegEvent({ ...row, peg_type: row.peg_type }) ? "native-peg" : "usd";
+    }
+  }
+  return {
+    peakDeviationBps: row.peak_deviation_bps,
+    peakConfidenceTier: typeof confidenceTier === "string" ? confidenceTier : null,
+    peakPrice: peakQuoteDomain == null ? null : row.peak_price,
+    ...(peakQuoteDomain != null ? { peakQuoteDomain } : {}),
+    ...(basis.peakBasis !== "peer-relative" && quote.peakPegReference != null
+      ? { peakPegReference: quote.peakPegReference } : {}),
+    ...basis,
+    ...readPeakReview(row),
+  };
+}
+
+function readPeakReview(row: Pick<DepegRow, "id" | "stablecoin_id">): Pick<DepegEvent, "peakReview"> {
+  return row.stablecoin_id === "brz-transfero" && (BRZ_UNVERIFIED_PEAK_EVENT_IDS as readonly number[]).includes(row.id)
+    ? { peakReview: "unverified" } : {};
+}
+
 export function rowToPublicDepegEvent(
   row: DepegRow & { reviewed_dispute?: number },
   projections: Map<number, ActiveIncidentProjection>,
@@ -391,19 +516,20 @@ export function rowToPublicDepegEvent(
     : {};
   const projection = projections.get(row.id);
 
-  // The onset clock is domain-free, but a first constituent's start price and
-  // reference are not: publishing a native-domain onset against a USD-domain
-  // peak (or the reverse) yields a pair whose implied deviation cannot be the
-  // stored one. Keep the row's own price pair when the domains differ.
+  // Borrow the incident onset only within the effective fragment's opening quote domain.
   const receipt = readPendingObservationReceipt(row.peer_basis_json);
   const peerOpening = isPeerOpening(receipt?.onset, row.pending_reason, row.start_price, row.peg_reference);
-  const currentNativePeg = !peerOpening && isNativePegEvent({
+  const quoteMode = projection ? readOpeningQuoteMode(projection.currentQuoteMode, row.provenance_json) : undefined;
+  const openingQuote = {
     source: row.source,
     peg_type: row.peg_type,
     peg_reference: row.peg_reference,
-    quote_mode: rowQuoteMode(row),
-  });
-  const sameQuoteDomain = projection?.nativePeg == null || projection.nativePeg === currentNativePeg;
+    quote_mode: quoteMode,
+  };
+  const currentNativePeg = !peerOpening && isNativePegEvent(openingQuote);
+  const sameQuoteDomain = projection?.nativePeg === currentNativePeg;
+  const onsetQuoteFromLaterFragment = projection && projection.startedAt < row.started_at
+    && (!sameQuoteDomain || projection.startPrice == null || projection.pegReference == null);
   const event = rowToDepegEvent(projection ? {
     ...row,
     started_at: projection.startedAt,
@@ -412,22 +538,29 @@ export function rowToPublicDepegEvent(
       peg_reference: projection.pegReference ?? row.peg_reference,
     } : {}),
   } : row);
+  const publishedPeerOpening = projection && sameQuoteDomain ? projection.peerOpening : peerOpening;
   const reviewedDispute = projection?.reviewedDispute || row.reviewed_dispute === 1
     || (event.disposition === "repaired" && event.admittedCoverage?.length === 0);
-  const peakBasis = readPublicDepegPeakBasis(row, receipt?.peak ?? null, event);
-  // A peer median cannot convert an observed USD price to fiat.
-  if (peakBasis.peakBasis === "peer-relative") delete event.peakPegReference;
+  const peak = !reviewedDispute && projection?.peak && Math.abs(projection.peak.peakDeviationBps) > Math.abs(row.peak_deviation_bps)
+    ? projection.peak : null;
+  const peakBasis = peak ?? readPublicDepegPeakBasis(row, receipt?.peak ?? null, event);
+  if (peak || peakBasis.peakBasis === "peer-relative") delete event.peakPegReference;
+  if (peak) delete event.peakQuoteDomain;
   return {
     ...event,
-    ...((projection && sameQuoteDomain ? projection.peerOpening : peerOpening) ? { onsetBasis: "peer-relative" } : {}),
+    ...(projection ? { onsetQuoteDomain: currentNativePeg ? "native-peg" : "usd" } : {}),
+    ...(onsetQuoteFromLaterFragment ? { onsetQuoteFromLaterFragment: true as const } : {}),
+    ...(publishedPeerOpening ? { onsetBasis: "peer-relative" } : {}),
     ...(row.ended_at != null && (row.price_coverage_json != null || row.admitted_coverage_json != null
       || row.disposition != null || projection?.admittedCoverage !== undefined || reviewedDispute)
       ? { analyticRecoveryAt: reviewedDispute ? null : admittedDepegRecoveryAt(row) } : {}),
     ...(projection?.admittedCoverage !== undefined ? { admittedCoverage: projection.admittedCoverage } : {}),
     ...(reviewedDispute ? { provenance: { ...event.provenance, pegScoreEligible: false }, admittedCoverage: [] } : {}),
     ...peakBasis,
-    ...(row.stablecoin_id === "brz-transfero" && (BRZ_UNVERIFIED_PEAK_EVENT_IDS as readonly number[]).includes(row.id)
-      ? { peakReview: "unverified" } : {}),
+    ...(peak ? { currentFragmentPeakBps: row.peak_deviation_bps } : {}),
+    ...(projection?.onsetFragmentPeakBps !== undefined && projection.onsetFragmentPeakBps !== row.peak_deviation_bps
+      ? { onsetFragmentPeakBps: projection.onsetFragmentPeakBps } : {}),
+    ...(peak ? {} : readPeakReview(row)),
     constituentEventCount: projection?.constituentEventCount ?? 1,
     ...retiredMarker,
   };

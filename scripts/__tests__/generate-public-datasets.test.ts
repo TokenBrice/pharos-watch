@@ -395,7 +395,7 @@ describe("generate-public-datasets", () => {
   it.each([
     {
       topic: "depeg-history",
-      header: "id,stablecoinId,symbol,direction,peakDeviationBps,startedAtISO,endedAtISO,durationSec,startPrice,peakPrice,recoveryPrice,pegReference,source,auditVerdict,retired,peakStatus,admittedCoverage,firstAdmissibleObservationAtISO,admittedDurationSec,analyticRecoveryStatus,onsetBasis,peakBasis,peakPeerMedianUsd,analyticRecoveryAt,peakPegReference,peakQuoteDomain,recoveryPegReference,disposition",
+      header: "id,stablecoinId,symbol,direction,peakDeviationBps,startedAtISO,endedAtISO,durationSec,startPrice,peakPrice,recoveryPrice,pegReference,source,auditVerdict,retired,peakStatus,admittedCoverage,firstAdmissibleObservationAtISO,admittedDurationSec,analyticRecoveryStatus,onsetBasis,peakBasis,peakPeerMedianUsd,analyticRecoveryAt,peakPegReference,peakQuoteDomain,recoveryPegReference,disposition,onsetQuoteFromLaterFragment,onsetQuoteDomain",
     },
     {
       topic: "scores-latest",
@@ -950,6 +950,19 @@ describe("generate-public-datasets", () => {
 
     expect(rows).toHaveLength(1);
     expect(rows[0]?.id).toBe(42);
+  });
+
+  it("exports the timing and unit of a later EURC opening quote", () => {
+    const event = { ...makeEvent(null), stablecoinId: "eurc-circle", symbol: "EURC", pegType: "EUR",
+      startedAt: 1_700_000_000, endedAt: null, recoveryPrice: null, startPrice: 1.03, pegReference: 1.08,
+      onsetBasis: "peer-relative", onsetQuoteFromLaterFragment: true, onsetQuoteDomain: "usd" } as const;
+    const { artifacts, json } = render(specFor("depeg-history", makeEnvelope("2023-11-14"), [event],
+      { historical: true, depegCapture: makeCapture(1) }));
+    const onset = { startedAtISO: "2023-11-14T22:13:20.000Z", startPrice: 1.03, pegReference: 1.08,
+      onsetQuoteFromLaterFragment: true, onsetQuoteDomain: "usd" };
+    expect(json.rows).toEqual([expect.objectContaining(onset)]);
+    expect(parseLines(artifacts.ndjson)[1]).toMatchObject(onset);
+    expect(csvLines(artifacts.csv)[1]).toMatch(/,true,usd$/);
   });
 
   it.each([

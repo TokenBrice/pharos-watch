@@ -156,6 +156,17 @@ describe("DigestSnapshot", () => {
     expect(screen.getByText(/USDT:/).textContent).toContain("historical peak; current unavailable");
   });
 
+  it("labels peer-relative peaks with and without a current peg deviation", () => {
+    const peak = { bps: -963, peakBasis: "peer-relative", mcapUsd: 1e8 };
+    mockSnapshot({ activeDepegCount: 2, topDepegs: [
+      { ...peak, symbol: "EURC", severityBasis: "peak-fallback" },
+      { ...peak, symbol: "AUDD", severityBasis: "current", currentBps: 120 },
+    ] });
+    render(<DigestSnapshot date="2026-09-01" />);
+    expect(screen.getByText(/EURC:/).textContent).toContain("-963 bps below the peer median");
+    expect(screen.getByText(/AUDD:/).textContent).toMatch(/\+120 bps above peg.*historical peak -963 bps below the peer median/);
+  });
+
   it("lists only investment warnings in archived yield anomalies", () => {
     mockSnapshot({
       totalMcapUsd: 1e9,

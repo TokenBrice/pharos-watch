@@ -35,6 +35,7 @@ function toClientEntry(event: DepegEventEntry): DepegEventSearchEntry {
 const staticPageEvents = readDepegEventPageEntries();
 const relatedEntries = staticPageEvents.map((event): DepegEventSearchEntry => ({
   ...toClientEntry(event),
+  ...(event.peakBasis ? { peakBasis: event.peakBasis } : {}),
   ...(hasUnverifiedDepegPeak(event) ? { peakReview: "unverified" } : {}),
 }));
 const searchEntries = staticPageEvents.slice(0, SEARCH_EVENT_LIMIT).map(toClientEntry);
