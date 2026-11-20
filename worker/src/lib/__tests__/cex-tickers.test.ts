@@ -450,8 +450,136 @@ describe("fetchCoinbasePrices", () => {
 });
 
 describe("fetchKrakenPrices", () => {
+  function mockKrakenSocket(rest: unknown, onSubscribe: (socket: EventTarget) => void) {
+    const socket = Object.assign(new EventTarget(), {
+      accept: vi.fn(),
+      close: vi.fn(),
+      send: vi.fn((_subscription: string) => onSubscribe(socket)),
+    });
+    const fetch = vi.fn(async (url: string) => {
+      if (url === "https://ws.kraken.com/v2") return { status: 101, webSocket: socket };
+      expect(socket.close).toHaveBeenCalledOnce();
+      return Response.json(rest);
+    });
+    vi.stubGlobal("fetch", fetch);
+    return { socket, fetch };
+  }
+
+  function snapshot(socket: EventTarget, rows: object[], type = "snapshot") {
+    socket.dispatchEvent(new MessageEvent("message", { data: JSON.stringify({ channel: "ticker", type, data: rows }) }));
+  }
+
+  it("retains the QCAD REST book when the snapshot ages out during collection", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1_000);
+    try {
+      mockKrakenSocket({ result: { QCADUSD: { b: ["0.7"], a: ["0.7"] } } }, (ws) => {
+        snapshot(ws, [{ symbol: "QCAD/USD", bid: 0.69, ask: 0.69, timestamp: new Date((now - 599) * 1_000).toISOString() }]);
+        clock.mockReturnValue((now + 3) * 1_000);
+      });
+      const { value } = await fetchKrakenPrices(["QCAD"], undefined, true);
+      expect(value.prices.get("QCAD")).toBe(0.7);
+      expect(value.quoteBasisBySymbol?.get("QCAD")).toBe("bid-ask-midpoint");
+      expect(value.bookSnapshotsBySymbol?.get("QCAD")).toEqual({ price: 0.69, observedAt: now - 599 });
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  it("collects only exact, fresh, two-sided BBO snapshots and keeps REST quotes", async () => {
+    const now = Date.now();
+    const row = { bid: 1.10, ask: 1.102, timestamp: new Date(now - 10_000).toISOString().replace(/Z$/, "123Z") };
+    const pairs = ["AUDX", "BRL1", "EURC", "EUROP", "MXNB", "PAXG", "QCAD", "TGBP", "XAUT", "ZCHF"];
+    const result = Object.fromEntries([...pairs, "USDC"].map((symbol) => [symbol + "USD", { c: ["1.05"] }]));
+    const { socket, fetch } = mockKrakenSocket({ result }, (ws) => {
+      snapshot(ws, [{ ...row, symbol: "EURC/USD", bid: 9, ask: 9 }], "update");
+      snapshot(ws, [
+        { ...row, symbol: "EURC/EUR" },
+        { ...row, symbol: "USDC/USD" },
+        { ...row, symbol: "EURC/USD" },
+        { ...row, symbol: "AUDX/USD", bid: 0 },
+        { ...row, symbol: "BRL1/USD", timestamp: "2026-11-20" },
+        { ...row, symbol: "EUROP/USD", timestamp: new Date(now + 60_000).toISOString() },
+        { ...row, symbol: "ZCHF/USD", timestamp: new Date(now - 601_000).toISOString() },
+        { ...row, symbol: "MXNB/USD", bid: 1.12 },
+        { ...row, symbol: "TGBP/USD", ask: 1.2 },
+        ...["PAXG", "QCAD", "XAUT"].map((symbol) => ({ ...row, symbol: symbol + "/USD" })),
+      ]);
+    });
+    const { kind, value } = await fetchKrakenPrices([...pairs, "USDC"], undefined, true);
+    expect(kind).toBe("ok");
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(socket.send).toHaveBeenCalledOnce();
+    expect(JSON.parse(socket.send.mock.calls[0][0])).toEqual({
+      method: "subscribe", params: { channel: "ticker", symbol: pairs.map((s) => s + "/USD"), event_trigger: "bbo", snapshot: true },
+    });
+    expect([...value.bookSnapshotsBySymbol!.keys()]).toEqual(["EURC", "PAXG", "QCAD", "XAUT"]);
+    expect(value.bookSnapshotsBySymbol?.get("EURC")).toEqual({
+      price: expect.closeTo(1.101, 9), observedAt: Math.floor((now - 10_000) / 1000),
+    });
+    for (const symbol of [...pairs, "USDC"]) {
+      expect(value.prices.get(symbol)).toBe(1.05);
+      expect(value.quoteBasisBySymbol?.get(symbol)).toBe("last-trade");
+    }
+    expect(value.diagnostics).toEqual([expect.objectContaining({
+      endpoint: "ws.kraken.com/v2", candidateCount: 10, resolvedCount: 4,
+      rejectionReasonCounts: { "invalid-shape": 3, stale: 1, "wide-spread": 2 },
+    })]);
+  });
+
+  it.each(["timeout", "abort", "message-cap", "byte-cap"] as const)("cleans up a partial subscription on %s", async (stop) => {
+    vi.useFakeTimers();
+    try {
+      const controller = new AbortController();
+      const { socket, fetch } = mockKrakenSocket({ result: { QCADUSD: { c: ["0.7"] } } }, (ws) => {
+        snapshot(ws, [{ symbol: "AUDX/USD", bid: 0.6, ask: 0.6, timestamp: new Date().toISOString() }]);
+        if (stop === "abort") controller.abort();
+        const heartbeat = (data: string) => ws.dispatchEvent(new MessageEvent("message", { data }));
+        if (stop === "message-cap") for (let i = 0; i < 64; i++) heartbeat("{}");
+        if (stop === "byte-cap") heartbeat("€".repeat(12_000));
+      });
+      const outcome = fetchKrakenPrices(["AUDX", "QCAD"], controller.signal, true);
+      if (stop === "abort") {
+        await expect(outcome).rejects.toThrow();
+        expect(fetch).toHaveBeenCalledOnce();
+      } else {
+        if (stop === "timeout") await vi.advanceTimersByTimeAsync(2_000);
+        const { value } = await outcome;
+        expect([...value.prices]).toEqual([["QCAD", 0.7]]);
+        expect(value.bookSnapshotsBySymbol).toEqual(new Map([["AUDX", { price: 0.6, observedAt: expect.any(Number) }]]));
+        expect(value.diagnostics[0]).toMatchObject({ errorClass: stop, rejectionReasonCounts: { "missing-quote": 1 } });
+      }
+      expect(socket.close).toHaveBeenCalledOnce();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("applies the same deadline to a stalled upgrade before using REST", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetch = vi.fn(async (_url: string, options: RequestInit) => {
+        if (new Headers(options.headers).has("Upgrade")) {
+          return new Promise<Response>((_, reject) => options.signal?.addEventListener("abort", () => reject(options.signal?.reason)));
+        }
+        return Response.json({ result: { AUDXUSD: { c: ["0.66"] } } });
+      });
+      vi.stubGlobal("fetch", fetch);
+      const outcome = fetchKrakenPrices(["AUDX"], undefined, true);
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect((await outcome).value).toMatchObject({
+        prices: new Map([["AUDX", 0.66]]), observedAtBySymbol: new Map(),
+        diagnostics: [expect.objectContaining({ status: null, errorClass: "timeout" })],
+      });
+      expect(fetch).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("returns ok outcome mapping pair keys to tracked symbols", async () => {
-    mockFetch([{
+    const fetch = mockFetch([{
       match: () => true,
       body: {
             error: [],
@@ -468,6 +596,8 @@ describe("fetchKrakenPrices", () => {
     }]);
 
     const outcome = await fetchKrakenPrices(["USDT", "USDC", "DAI", "TGBP", "MXNB"]);
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(fetch.mock.calls[0]?.[0]).toContain("https://api.kraken.com/0/public/Ticker");
     expect(outcome.kind).toBe("ok");
     expect(outcome.value.prices.get("USDT")).toBeCloseTo(1.0002, 4);
     expect(outcome.value.prices.get("USDC")).toBeCloseTo(0.9998, 4);
