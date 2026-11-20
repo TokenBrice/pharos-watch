@@ -20,7 +20,7 @@ import { reserveDegradedWarning } from "./warnings";
 const ADAPTER_KEY = "brla-independent-assurance";
 
 /**
- * Reviewed 2026-10-19: pinned Notion block identity for the September 30, 2026 UHY
+ * Reviewed 2026-11-20: pinned Notion block identity for the October 31, 2026 UHY
  * reasonable-assurance report on the official BRLA transparency page. The
  * runtime re-resolves the signed download URL through loadPageChunk /
  * getSignedFileUrls and fails closed on any page-block drift; the bytes are
@@ -44,11 +44,11 @@ export const BRLA_NOTION_PIN = {
   ],
   yearBlockId: "3047f28f-0ae4-80b4-90cd-dd40ecf60481",
   yearTitle: "2026",
-  reportBlockId: "3fb7f28f-0ae4-8083-9016-e7b53db36574",
-  attachmentTitle: "Avenia - Transparency Report - 20260930 (Audit Attestation).pdf",
+  reportBlockId: "41a7f28f-0ae4-80a0-a0ae-ecf0f8b6ab4b",
+  attachmentTitle: "Avenia - Transparency Report - 20261031 (Audit Attestation).pdf",
   attachmentSource:
-    "attachment:6674dccd-e58f-4da9-a3d1-c4ae0d676fea:Avenia_-_Transparency_Report_-_20260930_(Audit_Attestation).pdf",
-  attachmentId: "6674dccd-e58f-4da9-a3d1-c4ae0d676fea",
+    "attachment:3fb1ac9a-e7fc-4996-82f3-ccdb66bd93c6:Avenia_-_Transparency_Report_-_20261031_(Audit_Attestation).pdf",
+  attachmentId: "3fb1ac9a-e7fc-4996-82f3-ccdb66bd93c6",
 } as const;
 
 const BRLA_REPORT_FILE_PATTERN = /^Avenia - Transparency Report - (\d{8}) \(Audit Attestation\)\.pdf$/;
@@ -117,7 +117,7 @@ async function loadNotionChunk(
 
 /**
  * Verifies the official Notion transparency page still resolves the reviewed
- * September 30, 2026 attachment and returns a fresh signed download URL. Every
+ * report attachment and returns a fresh signed download URL. Every
  * pinned identity (root page, root child tree, 2026 header, report block,
  * attachment) must match exactly; any drift fails closed.
  */
@@ -280,7 +280,9 @@ const BRLA_CLASSIFICATIONS: Record<string, BrlaAssetClassification> = {
   },
 };
 
-const BRLA_REQUIRED_ASSET_CODES = ["cash-and-cash-equivalents", "repurchase-agreements"] as const;
+const BRLA_CASH_INSTITUTION_CODES: readonly string[] = [
+  "stark-bank-cash", "woovi-cash", "btg-pactual-cash", "itau-unibanco-cash", "xp-investimentos-cash",
+];
 
 interface BrlaClassifiedAsset {
   unclassified?: true;
@@ -312,7 +314,8 @@ export function buildBrlaReserveSlices(manifest: IndependentAssuranceManifest): 
     if (!Number.isFinite(amount)) {
       throw new Error(`${ADAPTER_KEY}: unparsable asset amount for row ${asset.code}`);
     }
-    const classification = BRLA_CLASSIFICATIONS[asset.code];
+    const institutionCash = BRLA_CASH_INSTITUTION_CODES.includes(asset.code);
+    const classification = BRLA_CLASSIFICATIONS[institutionCash ? "cash-and-cash-equivalents" : asset.code];
     if (!classification) {
       unclassifiedCodes.push(asset.code);
       return {
@@ -327,10 +330,10 @@ export function buildBrlaReserveSlices(manifest: IndependentAssuranceManifest): 
     return {
       sourceKey: `brla-independent-assurance:brla:${asset.code}`,
       amount,
-      name: classification.name,
+      name: institutionCash ? asset.label : classification.name,
       risk: classification.risk,
       ...(classification.assetClass ? { assetClass: classification.assetClass } : {}),
-      ...(classification.issuerOrObligor ? { issuerOrObligor: classification.issuerOrObligor } : {}),
+      issuerOrObligor: institutionCash ? asset.label : classification.issuerOrObligor,
       ...(classification.riskFactors ? { riskFactors: classification.riskFactors } : {}),
       ...(classification.liquidityHorizon ? { liquidityHorizon: classification.liquidityHorizon } : {}),
     };
@@ -398,7 +401,9 @@ export async function fetchBrlaIndependentAssuranceReserves(
   });
   return buildVerifiedIndependentAssuranceResult({
     manifest,
-    requiredAssetCodes: BRLA_REQUIRED_ASSET_CODES,
+    requiredAssetCodes: manifest.assets.some(({ code }) => code === "cash-and-cash-equivalents")
+      ? ["cash-and-cash-equivalents"]
+      : BRLA_CASH_INSTITUTION_CODES,
     errorPrefix: ADAPTER_KEY,
     classify: buildBrlaReserveSlices,
     verifiedResponseUrl: artifact.responseUrl,

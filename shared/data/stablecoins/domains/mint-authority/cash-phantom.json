@@ -129,25 +129,25 @@
         "address": "76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q",
         "executionScope": {
           "controllerDeployment": "solana:76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q",
-          "reviewedAt": "2026-10-27",
-          "observedAt": "2026-10-27",
-          "expiresAt": "2026-11-26",
-          "reviewer": "D01 evidence renewal 2026-10-27",
+          "reviewedAt": "2026-11-20",
+          "observedAt": "2026-11-20",
+          "expiresAt": "2026-12-20",
+          "reviewer": "g-renew-b evidence renewal 2026-11-20",
           "confidence": "partial",
           "sources": [
             {
-              "label": "Independently verified finalized atomic mint/program/ProgramData/controller read",
-              "url": "https://api.mainnet-beta.solana.com"
+              "label": "Alchemy Solana Account Archive getAccountInfo (jsonParsed) exact-slot reads at finalized slot 471541609: mint, bridge program, ProgramData upgrade authority, controller account",
+              "url": "https://solana-mainnet.g.alchemy.com/v2/"
             }
           ],
           "pin": {
-            "position": "462007756",
+            "position": "471541609",
             "hash": null,
             "runtimeIdentity": "11111111111111111111111111111111:system-account:space=0:executable=false",
             "signerIdentity": "76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q"
           },
           "observedState": {
-            "position": "462007756",
+            "position": "471541609",
             "hash": null,
             "runtimeIdentity": "11111111111111111111111111111111:system-account:space=0:executable=false",
             "signerIdentity": "76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q"
@@ -207,14 +207,18 @@
         "canRaiseCap": true,
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-27",
-        "observedBlock": 462007756,
+        "observedAt": "2026-11-20",
+        "observedBlock": 471541609,
         "failureDomainKeys": [
           "solana:76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q"
         ],
         "sources": [
           {
-            "label": "Solana RPC",
+            "label": "Alchemy Solana Account Archive exact-slot reads at finalized slot 471541609",
+            "url": "https://solana-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Historical public Solana RPC reads (slot 462007756 and earlier)",
             "url": "https://api.mainnet-beta.solana.com"
           },
           {
@@ -222,7 +226,7 @@
             "url": "https://explorer.solana.com/tx/23biLsrUSuYhnDDvRhQUu7u7bnHNVB5nhE5nVDEJHLFvzztHKb5h4DXBmA5gWosN9v1FcmLqTMaJQCkihwWnpSHa"
           }
         ],
-        "evidence": "At finalized Solana context slot 462007756 on 2026-10-27, getMultipleAccounts(jsonParsed) confirmed CASH mintAuthority HJT2TXrhbWta2ax7V86vcnmX7ZmAVzua4v2yrGwchXB7. The reviewed Bridge ProgramData H79WsaPgtctdpmhykRQZ91r8HNr5uqxUWEBe6DZXuhMu is owned by the upgradeable loader and its parsed authority remains 76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q. In the same response, that authority account is System Program-owned, non-executable and zero-data. No on-chain multisig or execution delay protects this loader authority; off-chain key custody is not established by the account type. Historical confirmation retained: finalized getTransaction(23biLsr...) previously returned successful slot 401157588 with loader log New authority Some(76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q), confirming the transfer from transaction signer BozdeWNZHmpVWcKSYZo9W8rYbvtK8U8jMnYMQggsGkQH."
+        "evidence": "At finalized Solana context slot 462007756 on 2026-10-27, getMultipleAccounts(jsonParsed) confirmed CASH mintAuthority HJT2TXrhbWta2ax7V86vcnmX7ZmAVzua4v2yrGwchXB7. The reviewed Bridge ProgramData H79WsaPgtctdpmhykRQZ91r8HNr5uqxUWEBe6DZXuhMu is owned by the upgradeable loader and its parsed authority remains 76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q. In the same response, that authority account is System Program-owned, non-executable and zero-data. No on-chain multisig or execution delay protects this loader authority; off-chain key custody is not established by the account type. Historical confirmation retained: finalized getTransaction(23biLsr...) previously returned successful slot 401157588 with loader log New authority Some(76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q), confirming the transfer from transaction signer BozdeWNZHmpVWcKSYZo9W8rYbvtK8U8jMnYMQggsGkQH. Re-read 2026-11-20 at finalized Solana slot 471541609 (Alchemy Solana Account Archive getAccountInfo, jsonParsed, exact slot pin, block hash 7kHPn9RxkJYa4LvWTVmANydZ87b9K4BcMWFY9ugySGuj, block time 2026-11-20T00:47:07Z; per-account reads, each response context.slot 471541609): the CASH Token-2022 mint still shows mintAuthority HJT2TXrhbWta2ax7V86vcnmX7ZmAVzua4v2yrGwchXB7; Bridge program BkP8vo1p69Wj1ZfduswNvyQvKEaMpRtXFY1bYdSmaQVm remains BPFLoaderUpgradeable-owned and executable with ProgramData H79WsaPgtctdpmhykRQZ91r8HNr5uqxUWEBe6DZXuhMu; that ProgramData's parsed upgrade authority remains 76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q; the authority account is still System Program-owned, non-executable and zero-data. No multisig or execution delay protects this loader authority."
       },
       {
         "chain": "solana",

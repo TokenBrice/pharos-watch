@@ -38,16 +38,16 @@
     "attestorTier": "niche",
     "cadence": "daily",
     "latestReport": {
-      "periodEnd": "2026-09-29",
+      "periodEnd": "2026-11-18",
       "assuranceMethod": "unknown",
       "scope": "assets-only",
       "liabilityReconciliation": "unknown",
-      "reviewer": "Sol curation pass 2026-10-01 (CurA32rwaUSDi)",
+      "reviewer": "Pharos stac-1707 renewal 2026-11-20 (PoR lockstep)",
       "confidence": "manual-review",
       "sources": [
         {
-          "label": "Chronicle STAC proof payload (document date 2026-09-29; retrieved 2026-10-01)",
-          "url": "https://chroniclelabs.org/dashboard/proof-of-asset/securitize-stac"
+          "label": "Chronicle STAC content-addressed proof payload (document and portfolio date 2026-11-18; payload stamp 2026-11-19T09:06:55Z; retrieved 2026-11-20)",
+          "url": "https://chroniclelabs.org/api/ipfs/QmPQnDVp37aJZzTt6UCaK9UAdQv2EUseEiaxjYmfmULvBf"
         }
       ]
     }

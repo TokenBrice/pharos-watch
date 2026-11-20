@@ -15,6 +15,7 @@ const FEB_2026_HREF =
   "https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/69b8bb692133e7d22020f80a_FD121_(BVI)_-_ISAE3000_Attestation_Report_on_Reserves_Account_(Feb_2026)_(FINAL).pdf";
 const SEP_2025_HREF =
   "https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/68f09f623c0571b23acecbcc_ISAE3000_-_Attestion_Report_on_Reserves_Account_(Sept_2025)_Final.pdf";
+const YEARLESS_HREF = "https://cdn.prod.website-files.com/Attestation%20Report%20on%20Reserves%20Account%20Sept.pdf";
 
 
 // Webflow CDN cohort: the June signed-image report (no ISAE 3000 marker) and a
@@ -28,7 +29,7 @@ const OFF_COHORT_LINKS = `
 function indexHtml(extra = ""): string {
   return `
     ${OFF_COHORT_LINKS}
-    <div role="listitem" class="transparency-report_item w-dyn-item"><div>Sep 2026</div><a href="${reviewed.reportUrl}">Download</a></div>
+    <div role="listitem" class="transparency-report_item w-dyn-item"><div>Oct 2026</div><a href="${reviewed.reportUrl}">Download</a></div>
     ${extra}
   `;
 }
@@ -40,19 +41,19 @@ describe("fdusd-independent-assurance (AOGB ISAE 3000 limited assurance)", () =>
     vi.restoreAllMocks();
   });
 
-  it("reconciles the September 2026 report across every native FDUSD chain", () => {
+  it("reconciles the October 2026 report across every native FDUSD chain", () => {
     expect(reviewed.assuranceTier).toBe("independent-assurance");
     expect(reviewed.attestor).toBe("AOGB CPA Limited");
-    expect(reviewed.reportAsOf).toBe("2026-09-30T21:00:00-04:00");
-    expect(reviewed.reportDate).toBe("2026-09-30");
+    expect(reviewed.reportAsOf).toBe("2026-10-31T21:00:00-04:00");
+    expect(reviewed.reportDate).toBe("2026-10-31");
     const reconciliation = reconcileIndependentAssuranceManifest(reviewed);
     expect(reconciliation).toMatchObject({
-      computedAssetTotal: "326311744.04",
-      liabilityTotal: "325042596.91",
+      computedAssetTotal: "301712326.46",
+      liabilityTotal: "300401056.99",
       reportedAssetDifference: "0",
       reportedLiabilityDifference: "0",
     });
-    expect(reconciliation.collateralizationRatio).toBeCloseTo(326311744.04 / 325042596.91, 12);
+    expect(reconciliation.collateralizationRatio).toBeCloseTo(301712326.46 / 300401056.99, 12);
     for (const chain of ["ethereum", "bsc", "sui", "solana", "arbitrum", "ton"]) {
       expect(
         reviewed.liabilities.some((row) => row.code === chain && Number(row.amount) > 0),
@@ -61,19 +62,19 @@ describe("fdusd-independent-assurance (AOGB ISAE 3000 limited assurance)", () =>
     }
     // The liability chain set sums to the reported total exactly; dropping any
     // chain (here TON) must fail the reconciliation.
-    expect(reconciliation.liabilityTotal).toBe("325042596.91");
+    expect(reconciliation.liabilityTotal).toBe("300401056.99");
     expect(() =>
       reconcileIndependentAssuranceManifest({
         ...reviewed,
         liabilities: reviewed.liabilities.filter((row) => row.code !== "ton"),
       }),
-    ).toThrow("liability total 325041509.26 does not match manifest 325042596.91");
+    ).toThrow("liability total 300399969.34 does not match manifest 300401056.99");
   });
 
   it("measures freshness from the examined instant, 25h past the 00:00Z misdate", () => {
     const timestamp = independentAssuranceSourceTimestamp(reviewed);
-    expect(timestamp).toBe(Date.parse("2026-10-01T01:00:00Z") / 1000);
-    expect(timestamp - Date.parse("2026-09-30T00:00:00Z") / 1000).toBe(25 * 3_600);
+    expect(timestamp).toBe(Date.parse("2026-11-01T01:00:00Z") / 1000);
+    expect(timestamp - Date.parse("2026-10-31T00:00:00Z") / 1000).toBe(25 * 3_600);
   });
 
 
@@ -105,8 +106,8 @@ describe("fdusd-independent-assurance (AOGB ISAE 3000 limited assurance)", () =>
   });
 
   it.each([
-    `<h2>Sep 2026</h2><a href="${reviewed.reportUrl}">Download</a>`,
-    `<div class="transparency-report_item"><div>Aug 2026</div><a href="${reviewed.reportUrl}">Download</a></div>`,
+    `<h2>Sep 2026</h2><a href="${YEARLESS_HREF}">Download</a>`,
+    `<div class="transparency-report_item"><div>Aug 2026</div><a href="${YEARLESS_HREF}">Download</a></div>`,
     '<div class="transparency-report_item"><div>Sep 2026</div><a href="https://cdn.prod.website-files.com/ISAE3000-attestation-report.pdf">Download</a></div>',
   ])("rejects a yearless filename without a matching same-row period", async (html) => {
     await expect(verifyFixtureIndex(
@@ -124,25 +125,30 @@ describe("fdusd-independent-assurance (AOGB ISAE 3000 limited assurance)", () =>
     )).rejects.toThrow("ambiguous report date");
   });
 
-  it("validates the bound coin through real index, PDF and reconciliation checks", async () => {
+  it.each([false, true])("validates the bound coin through index, PDF and reconciliation with fixed deposits=%s", async (withDeposit) => {
     const coin = ACTIVE_STABLECOINS.find((candidate) => candidate.id === "fdusd-first-digital");
     if (!coin?.liveReservesConfig) throw new Error("missing FDUSD config");
     vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue({
       ...reviewed,
+      assets: withDeposit ? [
+        reviewed.assets[0],
+        { ...reviewed.assets[1], amount: "32466523.64" },
+        { code: "fixed-deposits", label: "Fixed deposit", amount: "1900000.00" },
+      ] : reviewed.assets,
       reportByteLength: PDF_BYTES.length,
       reportSha256: createHash("sha256").update(PDF_BYTES).digest("hex"),
     });
     installFetch("FDUSD", indexHtml());
     const adapter = getReserveAdapter("fdusd-independent-assurance")!;
     const result = await adapter.fetch(coin, coin.liveReservesConfig, new AbortController().signal);
-    expect(result.slices).toHaveLength(3);
+    expect(result.slices).toHaveLength(withDeposit ? 3 : 2);
     expect(result.slices.map((slice) => slice.sourceKey)).toEqual(expect.arrayContaining([
       "fdusd-independent-assurance:fdusd:treasury-bills",
-      "fdusd-independent-assurance:fdusd:fixed-deposits",
       "fdusd-independent-assurance:fdusd:custody-cash",
+      ...(withDeposit ? ["fdusd-independent-assurance:fdusd:fixed-deposits"] : []),
     ]));
     expect(result.slices.reduce((total, slice) => total + slice.pct, 0)).toBeCloseTo(100, 6);
-    expect(result.metadata?.collateralizationRatio).toBeCloseTo(326311744.04 / 325042596.91, 12);
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(301712326.46 / 300401056.99, 12);
     expect(result.metadata?.sourceTimestamp).toBe(independentAssuranceSourceTimestamp(reviewed));
     expect(result.metadata?.freshnessMode).toBe("verified");
     expect(validateAdapterOutput(

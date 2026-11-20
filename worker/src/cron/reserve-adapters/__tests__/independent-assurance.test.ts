@@ -233,7 +233,7 @@ function assuranceFenceCases() {
       product: "FDUSD",
       html: indexFixture("fdusd-independent-assurance.html"),
       newerHtml: indexFixture("fdusd-independent-assurance.html") +
-        '<div role="listitem" class="transparency-report_item w-dyn-item"><div>Oct 2026</div><a href="https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/cafe_Attestation%20Report%20on%20Reserves%20Account%20Oct.pdf">Download</a></div>',
+        '<div role="listitem" class="transparency-report_item w-dyn-item"><div>Nov 2026</div><a href="https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/cafe_Attestation%20Report%20on%20Reserves%20Account%20Nov.pdf">Download</a></div>',
     },
     {
       adapter: "rlusd-independent-assurance",
@@ -1185,7 +1185,8 @@ const YEAR_RECORD = {
   },
 };
 
-const SIGNED_URL = `https://file.notion.com/f/f/space/${BRLA_NOTION_PIN.attachmentId}/Avenia_-_Transparency_Report_-_20260930_(Audit_Attestation).pdf?table=block&id=${BRLA_NOTION_PIN.reportBlockId}&spaceId=space&expirationTimestamp=1792454400000&signature=signature`;
+const SIGNED_URL = `https://file.notion.com/f/f/space/${BRLA_NOTION_PIN.attachmentId}/Avenia_-_Transparency_Report_-_20261031_(Audit_Attestation).pdf?table=block&id=${BRLA_NOTION_PIN.reportBlockId}&spaceId=space&expirationTimestamp=1792454400000&signature=signature`;
+const BRLA_PDF_STUB = "%PDF-";
 
 function installBrlaFetch(options: { rootRecord?: unknown; yearRecord?: unknown; signedUrl?: string; indexUrl?: string } = {}) {
   const {
@@ -1209,7 +1210,7 @@ function installBrlaFetch(options: { rootRecord?: unknown; yearRecord?: unknown;
         return { json: record, url: request.url };
       },
       [signedFileUrlsUrl]: { json: { signedUrls: [signedUrl] }, url: signedFileUrlsUrl },
-      [signedUrl]: new Response(new Uint8Array([0x25, 0x50, 0x44, 0x46]), {
+      [signedUrl]: new Response(BRLA_PDF_STUB, {
         headers: { "content-type": "application/pdf" },
       }),
     },
@@ -1226,38 +1227,88 @@ const discoveryArgs = (overrides: Record<string, unknown> = {}) => ({
 });
 
 describe("BRLA Notion reviewed discovery", () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
 
-  it("resolves the reviewed September report through pinned block identity", async () => {
+  it("resolves the reviewed October report through pinned block identity", async () => {
     installBrlaFetch();
     const result = await verifyBrlaNotionDiscovery(discoveryArgs());
     expect(result.signedUrl).toBe(SIGNED_URL);
-    expect(result.sourceTimestamp).toBe(Math.floor(Date.parse("2026-09-30T23:59:59+00:00") / 1000));
+    expect(result.sourceTimestamp).toBe(Math.floor(Date.parse("2026-10-31T23:59:59+00:00") / 1000));
   });
 
-  it("retains the original examined instant, conclusion and exact September artifact", () => {
+  it("retains the original examined instant, conclusion and exact October artifact", () => {
     const manifest = getIndependentAssuranceManifest("BRLA");
     expect(manifest).toMatchObject({
-      reportDate: "2026-09-30",
-      reportAsOf: "2026-09-30T23:59:59+00:00",
-      reportIssuedAt: "2026-10-16T13:50:19-03:00",
+      reportDate: "2026-10-31",
+      reportAsOf: "2026-10-31T23:59:59+00:00",
+      reportIssuedAt: "2026-11-16T23:59:00-03:00",
       conclusion: "unmodified",
       assuranceTier: "independent-assurance",
-      reportSha256: "fae95580de235d577bbfd92b384d33b9bde0c8105b16180aeb18edf6ed6602f4",
-      reportByteLength: 887263,
+      reportSha256: "fa113caab24047c8269177dd6ce67dfad46ee482808121fcee55152a0aab0b7f",
+      reportByteLength: 900064,
       extraction: { pageCount: 5 },
     });
-    expect(manifest.reportUrl).toContain("/6674dccd-e58f-4da9-a3d1-c4ae0d676fea/");
-    expect(BRLA_NOTION_PIN.reportBlockId).toBe("3fb7f28f-0ae4-8083-9016-e7b53db36574");
-    expect(BRLA_NOTION_PIN.attachmentId).toBe("6674dccd-e58f-4da9-a3d1-c4ae0d676fea");
-    expect(manifest.assets.map(({ amount }) => amount)).toEqual(["72064692.29", "60103684.97"]);
-    const { slices, warnings } = buildBrlaReserveSlices(manifest);
+    expect(manifest.reportUrl).toContain("/3fb1ac9a-e7fc-4996-82f3-ccdb66bd93c6/");
+    expect(BRLA_NOTION_PIN.reportBlockId).toBe("41a7f28f-0ae4-80a0-a0ae-ecf0f8b6ab4b");
+    expect(BRLA_NOTION_PIN.attachmentId).toBe("3fb1ac9a-e7fc-4996-82f3-ccdb66bd93c6");
+    expect(manifest.assets.map(({ amount }) => amount)).toEqual([
+      "951268.75", "46262566.18", "323403.89", "128358011.34", "5429215.09",
+    ]);
+  });
+
+  it("admits the reconciled cash-only report through the bound adapter", async () => {
+    const coin = ACTIVE_STABLECOINS.find(({ id }) => id === "brla-brla-digital")!;
+    vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue({
+      ...getIndependentAssuranceManifest("BRLA"),
+      reportSha256: createHash("sha256").update(BRLA_PDF_STUB).digest("hex"),
+      reportByteLength: BRLA_PDF_STUB.length,
+    });
+    installBrlaFetch();
+    const result = await getReserveAdapter("brla-independent-assurance")!.fetch(coin, coin.liveReservesConfig!, AbortSignal.timeout(1000));
+    expect(coin.reserves).toHaveLength(5);
+    expect(new Set(coin.reserves!.map(({ issuerOrObligor }) => issuerOrObligor)).size).toBe(5);
+    expect(result.slices).toMatchObject(coin.reserves!.map(({ pct, ...slice }) => ({
+      ...slice, pct: expect.closeTo(pct, 7),
+    })));
+    expect(Math.max(...result.slices.map(({ pct }) => pct))).toBeCloseTo(70.78912995, 7);
+    expect(result.warnings).toBeUndefined();
+  });
+
+  it("admits September's repo sleeve only when it reconciles", async () => {
+    const coin = ACTIVE_STABLECOINS.find(({ id }) => id === "brla-brla-digital")!;
+    const manifest = getIndependentAssuranceManifest("BRLA");
+    const repo = { code: "repurchase-agreements", label: "Overnight repurchase agreements", amount: "60103684.97" };
+    vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue({
+      ...manifest,
+      reportSha256: createHash("sha256").update(BRLA_PDF_STUB).digest("hex"),
+      reportByteLength: BRLA_PDF_STUB.length,
+      assets: [
+        { code: "cash-and-cash-equivalents", label: "Cash or Equivalent", amount: "72064692.29" },
+        repo,
+      ],
+      liabilities: manifest.liabilities.map((row, index) => ({
+        ...row, amount: ["18468833.82", "4294.09", "108418360.97", "2586671.80"][index],
+      })),
+      reportedAssetTotal: "132168377.26",
+      computedAssetTotal: "132168377.26",
+      reportedLiabilityTotal: "129478160.68",
+    });
+    const fetchBook = () => {
+      installBrlaFetch();
+      return getReserveAdapter("brla-independent-assurance")!.fetch(coin, coin.liveReservesConfig!, AbortSignal.timeout(1000));
+    };
+    const { slices, warnings } = await fetchBook();
     expect(slices[0]).toMatchObject({ pct: expect.closeTo(54.524913, 6), assetClass: "cash" });
     expect(slices[1]).toMatchObject({
       pct: expect.closeTo(45.475087, 6), assetClass: "repo",
       issuerOrObligor: "BTG Pactual and XP Investimentos; Brazilian corporate debentures as collateral",
     });
-    expect(warnings).toEqual([]);
+    expect(warnings).toBeUndefined();
+    repo.amount = "60103684.98";
+    await expect(fetchBook()).rejects.toThrow("computed asset total 132168377.27 does not match manifest 132168377.26");
   });
 
   it.each([
@@ -1284,7 +1335,7 @@ describe("BRLA Notion reviewed discovery", () => {
                   type: "file",
                   properties: {
                     title: [[BRLA_NOTION_PIN.attachmentTitle]],
-                    source: [["attachment:drifted:Avenia_-_Transparency_Report_-_20260930_(Audit_Attestation).pdf"]],
+                    source: [["attachment:drifted:Avenia_-_Transparency_Report_-_20261031_(Audit_Attestation).pdf"]],
                   },
                 },
               },
@@ -1297,19 +1348,19 @@ describe("BRLA Notion reviewed discovery", () => {
   });
 
   it("keeps the reviewed report and names a newer unreviewed report in the 2026 tree", async () => {
-    const octoberBlockId = "4d77f28f-0ae4-80fb-bd17-f3ca9b5d3490";
+    const novemberBlockId = "4d77f28f-0ae4-80fb-bd17-f3ca9b5d3490";
     installBrlaFetch({
       yearRecord: {
         recordMap: {
           block: {
             ...YEAR_RECORD.recordMap.block,
-            [octoberBlockId]: {
+            [novemberBlockId]: {
               spaceId: "space",
               value: {
                 value: {
-                  id: octoberBlockId,
+                  id: novemberBlockId,
                   type: "file",
-                  properties: { title: [["Avenia - Transparency Report - 20261031 (Audit Attestation).pdf"]] },
+                  properties: { title: [["Avenia - Transparency Report - 20261130 (Audit Attestation).pdf"]] },
                 },
               },
             },
@@ -1318,7 +1369,7 @@ describe("BRLA Notion reviewed discovery", () => {
       },
     });
     await expect(verifyBrlaNotionDiscovery(discoveryArgs())).resolves.toMatchObject({
-      newerUnreviewedReport: { reportDate: "2026-10-31" },
+      newerUnreviewedReport: { reportDate: "2026-11-30" },
     });
   });
 
@@ -1335,14 +1386,16 @@ describe("BRLA Notion reviewed discovery", () => {
   it("reconciles all four chain liabilities to BRL and rejects an omitted chain", () => {
     const manifest = getIndependentAssuranceManifest("BRLA");
     expect(reconcileIndependentAssuranceManifest(manifest)).toMatchObject({
-      computedAssetTotal: "132168377.26",
-      liabilityTotal: "129478160.68",
+      computedAssetTotal: "181324465.25",
+      liabilityTotal: "174122944.01",
+      reportedAssetDifference: "0",
+      reportedLiabilityDifference: "0",
     });
     expect(manifest.liabilities).toContainEqual({ code: "moonbeam", label: "Moonbeam Chain BRLA redeemable tokens", amount: "4294.09" });
     expect(() => reconcileIndependentAssuranceManifest({
       ...manifest,
       liabilities: manifest.liabilities.filter((row) => row.code !== "moonbeam"),
-    })).toThrow("liability total 129473866.59 does not match manifest 129478160.68");
+    })).toThrow("liability total 174118649.92 does not match manifest 174122944.01");
   });
 });
 

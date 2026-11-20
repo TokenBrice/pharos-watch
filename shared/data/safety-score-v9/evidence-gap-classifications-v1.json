@@ -19074,7 +19074,7 @@
       "rationale": "The exact primary-market STAC fund redemption route has no public guaranteed end-to-end maximum settlement interval. Issuer terms explicitly disclaim the expected T+2/T+3 liquidation timing and make liquidity-pool redemption discretionary. Daily request frequency and one-day holder transfer restriction are not final USD settlement."
     },
     {
-      "id": "uw-stac-securitize-dfa329b1d04c516a",
+      "id": "ir1707-stac-fund-maturity-20261120",
       "assetId": "stac-securitize",
       "scope": {
         "componentKey": "reserve-exposure",
@@ -19086,20 +19086,20 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:51:12Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R57)",
+      "reviewedAt": "2026-11-20T00:24:00Z",
+      "reviewer": "Pharos stac-1707 renewal 2026-11-20",
       "sourcesRefs": [
-        "source:57deed40d616233845c1c842",
-        "source:28888ee693af12c828116e7a"
+        "source:e73a0cac0893b1ad8f672efc",
+        "source:e5ff9c1a5c9aa5d5a918e641"
       ],
       "searchedSurfacesRefs": [
         "surface:4045bab3a85c44ee39f37ccc",
         "surface:608de021755fbaabcc3c0ddf",
         "surface:02e768c50563963ca283bcfd",
-        "surface:6495cbecd566f369a529ffdf",
+        "surface:af53fd1b770b8849732c7097",
         "surface:ff7391b70f5c79a5b19d2033"
       ],
-      "rationale": "No maximum term is publicly specified for the admitted STAC fund-NAV exposure. Full dated portfolio maturities concern constituent CLOs, not the redeemable fund share; public issuer offering/launch and SEC filing disclose no all-in-scope fund maturity covenant. Neither latest underlying maturity nor WAM is substituted for the fund claim. The failed portal is not the basis for C."
+      "rationale": "No maximum term is publicly specified for the admitted STAC fund-NAV exposure. The November 18, 2026 Chronicle census again publishes 51 dated CLO positions whose maturities concern constituent CLOs, not the redeemable fund share; the re-read issuer offering page and SEC Form D (2026-11-20) disclose no all-in-scope fund maturity covenant. Neither the unchanged latest underlying maturity (2041-07-17) nor WAM is substituted for the fund claim. The failed portal is not the basis for C."
     },
     {
       "id": "uw-xgld-unitas-2a23121b3ee490f8",
@@ -44122,7 +44122,7 @@
       "rationale": "The complete current oracle profile for V3 alUSD is not published. The issuer documents that collateral is valued at the MYT share price with a fixed 95% liquidation threshold and that individual strategies are priced either by a fundamental oracle measuring backing against outstanding shares or by an externally priced oracle, but it publishes no per-deployment feed or aggregator identity, heartbeat/deviation bounds, fallback sequence, or manipulability review for the strategy stack, and it states that MYT strategy weights are a mutable point-in-time configuration read from the live app. The tier and branch applicability required for this datum therefore cannot be established from issuer disclosure; asserting a known topology from the published categories would be inference. This classification binds only to the whole-asset oracle profile, not to any single strategy adapter."
     },
     {
-      "id": "v3-reserve-composition-alusd-alchemix-2026-10-29",
+      "id": "v3-reserve-composition-alusd-alchemix-2026-11-19",
       "assetId": "alusd-alchemix",
       "scope": {
         "pillar": "backing",
@@ -44134,21 +44134,28 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-29T18:46:00Z",
-      "reviewer": "RS-003 research sprint 2026-10-29",
+      "reviewedAt": "2026-11-19T22:58:00Z",
+      "reviewer": "Issue #2132 same-scope re-review 2026-11-19",
       "sourcesRefs": [
-        "source:87eac78b4e6349c119b56cd7",
-        "source:7b0438eb785cd22fa280adaf",
-        "source:9c0c0c0897ac19c8aac0f425"
+        "source:ba09be8b8f996f1ac599291e",
+        "source:36c022e1859c39fd53a2f3f6",
+        "source:3f932219483188e50166dbc1",
+        "source:8375b8952fc17e69ab056253",
+        "source:29b6ec3365d8934f23233c25"
       ],
       "searchedSurfacesRefs": [
-        "surface:0c1780fa5a8fa1f046baa5cc:2",
-        "surface:5b5405b2036c964263d32ee8:2",
-        "surface:440cda7c2ed5f722443e6e3c:2",
-        "surface:c94199d37a771fd43affb43b:2",
-        "surface:320042bf2b7c8f39cc38f463:2"
+        "surface:5b5405b2036c964263d32ee8",
+        "surface:440cda7c2ed5f722443e6e3c",
+        "surface:c94199d37a771fd43affb43b",
+        "surface:320042bf2b7c8f39cc38f463",
+        "surface:30da05dc49b8f479c2178962",
+        "surface:e25649463c6906968ebf82e2",
+        "surface:f4b4b062a8cb6f218d8f174b",
+        "surface:57837cdb54e52910eb11e2a1",
+        "surface:8e39dee7e30c5542ffeda7fc",
+        "surface:9f1181505a10b7cffc8d7b30"
       ],
-      "rationale": "The exact current alUSD reserve composition is not published. The issuer's docs describe V3 alUSD as backed by USDC-denominated MYT (Morpho Vaults V2 ERC-4626) and state that the exact strategies, weights and allocations inside each MYT are a point-in-time configuration readable only from live app state; the Transmuter docs describe vesting payouts scaled by bad-debt haircuts without any balance reconciliation. No reviewed surface publishes a composition document, per-strategy balance table, legacy V2 residual statement, Transmuter/AMO balance or bridge-custody reconciliation, so a full-composition review cannot be authored from issuer disclosure. The retained rows in the reserve sidecar are a 2026-07-27 V2-aligned selected-slices snapshot that the existing review itself says must not be revived as current edges. This is non-disclosure of a complete published composition, not a producer failure."
+      "rationale": "A whole-token alUSD composition is still not published. The reserve sidecar now holds an issuer-submitted pinned composition of the three V3 alUSD MYT vaults (PR #2129, 2026-11-18 blocks, selected-slices scope), reproduced from adapter reads rather than issuer disclosure and mutable by the DAO allocator. Today's re-read confirms the rest is undisclosed: MYT docs publish per-chain strategy rosters and risk caps but defer current weights to the live app; Transmuter docs describe vesting payouts and pro-rata bad-debt haircuts without balances; the migration page records the completed April 2026 cutover with no legacy V2 residual statement; the Q2 2026 quarterly financial report publishes aggregate Elixir (AMO) pool values, Transmuter deposit/claim flows and treasury aggregates, no alUSD asset-liability table; and the bridge documentation names architecture, not custody balances. No issuer surface nets MYT vault assets, AMO, Transmuter, bridge custody or legacy supply outside V3 issuance against outstanding alUSD. This is issuer non-disclosure, not a producer failure."
     },
     {
       "id": "rs-002-cngn-custody-continuity-20261029",
@@ -98944,6 +98951,83 @@
         "excerpt": "\"yield\":\"0.037961806323494521814653615\"",
         "assertion": "The complete response contains symbol, four token deployments and one issuer yield rate. It contains no reserve amounts, source valuation time, independent NAV administrator or liability reconciliation."
       }
+    },
+    {
+      "id": "source:ba09be8b8f996f1ac599291e",
+      "value": {
+        "url": "https://docs.alchemix.fi/user/concepts/myt-and-yield",
+        "observedAt": "2026-11-19T22:50:00Z",
+        "datumAsOf": null,
+        "location": "Mix-Yield Token - per-chain strategy rosters and risk caps",
+        "excerpt": "These strategies can change with DAO-issued votes. You can view the current strategy breakdowns directly in the UI",
+        "assertion": "The issuer publishes per-chain MYT strategy rosters and global risk caps and defers current strategy weights to live app state; the page carries no per-strategy balance table and no whole-token composition document."
+      }
+    },
+    {
+      "id": "source:36c022e1859c39fd53a2f3f6",
+      "value": {
+        "url": "https://docs.alchemix.fi/Alchemix_Q2_2026_Financial_Report.pdf",
+        "observedAt": "2026-11-19T22:55:00Z",
+        "datumAsOf": "2026-07-01",
+        "location": "Q2 2026 Financial Report - Elixir Contents; Transmuter Deposits and Claims",
+        "excerpt": "This quarter the Elixirs contracted by $0.85M (-7.00%) primarily due to the decrease in the price of Ethereum.",
+        "assertion": "The newest quarterly report publishes aggregate Elixir (AMO) pool values, Transmuter deposit and claim flows, and treasury and deposit aggregates; it carries no alUSD-scoped asset-liability table, no MYT strategy balances, no legacy V2 residual statement and no bridge-custody reconciliation."
+      }
+    },
+    {
+      "id": "source:3f932219483188e50166dbc1",
+      "value": {
+        "url": "https://docs.alchemix.fi/user/v3-migration",
+        "observedAt": "2026-11-19T22:50:00Z",
+        "datumAsOf": null,
+        "location": "V3 Migration - completed migration record",
+        "excerpt": "The V2 to V3 migration completed in April 2026.",
+        "assertion": "The migration page records the completed April 2026 V2-to-V3 cutover and moved-position totals as history; it publishes no post-migration legacy V2 residual statement and no whole-token liability reconciliation."
+      }
+    },
+    {
+      "id": "source:8375b8952fc17e69ab056253",
+      "value": {
+        "url": "https://docs.alchemix.fi/user/safety/risk-considerations",
+        "observedAt": "2026-11-19T22:50:00Z",
+        "datumAsOf": null,
+        "location": "Risk Considerations - The Alchemix Bridge",
+        "excerpt": "A lockbox is used on Mainnet Ethereum. The circulating supply on Ethereum is capped at what was minted there.",
+        "assertion": "The issuer documents LayerZero OFT bridge architecture, DVN coverage, the Mainnet lockbox and xERC20 rate limits and states alUSD is minted or burned by the Alchemist or Transmuter on each chain, but publishes no bridge-custody balance or cross-chain supply reconciliation."
+      }
+    },
+    {
+      "id": "source:29b6ec3365d8934f23233c25",
+      "value": {
+        "url": "https://ethereum-rpc.publicnode.com",
+        "observedAt": "2026-11-19T22:55:00Z",
+        "datumAsOf": "2026-11-19",
+        "location": "eth_call totalAssets()/asset() on the three V3 alUSD MYT vaults at blocks Ethereum 26452265, Optimism 159765128, Arbitrum 525751200",
+        "excerpt": "totalAssets() 8033132944177 (Ethereum), 643037209808 (Optimism), 36038760830 (Arbitrum); asset() returns USDC on all three chains",
+        "assertion": "Fresh pinned reads confirm the three MYT vaults are live and USDC-denominated (8,712,208.91 USDC combined), but on-chain reads reconcile nothing: no issuer surface nets these assets against outstanding alUSD, AMO or Transmuter balances, bridge custody or legacy supply outside V3 issuance."
+      }
+    },
+    {
+      "id": "source:e73a0cac0893b1ad8f672efc",
+      "value": {
+        "url": "https://chroniclelabs.org/api/ipfs/QmPQnDVp37aJZzTt6UCaK9UAdQv2EUseEiaxjYmfmULvBf",
+        "observedAt": "2026-11-20T00:24:00Z",
+        "datumAsOf": "2026-11-18",
+        "location": "payload.output.dashboard.portfolio.positions",
+        "excerpt": "\"description\":\"CIFC FUNDING LTD 2022-1AR CLO 5.33624% 07/17/2041\"",
+        "assertion": "Underlying CLO positions have dated maturities; the proof does not establish a maximum contractual maturity of the single admitted STAC fund-NAV claim."
+      }
+    },
+    {
+      "id": "source:e5ff9c1a5c9aa5d5a918e641",
+      "value": {
+        "url": "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund",
+        "observedAt": "2026-11-20T00:24:00Z",
+        "datumAsOf": null,
+        "location": "Rendered Overview",
+        "excerpt": "This Fund provides digital, tokenized exposure to a diversified portfolio of U.S. dollar-denominated Collateralized Loan Obligations (CLOs), with a focus on tranches rated AAA.",
+        "assertion": "Fund exposure is disclosed, without a fund-share maximum term or governing all-in-scope maturity covenant."
+      }
     }
   ],
   "searchedSurfaceObservations": [
@@ -113614,6 +113698,34 @@
     {
       "id": "surface:1c6a7c7098ccdfd3ea35c8cb",
       "value": "https://app-api.usd.dinari.com/api/v1/treasury/chain/98866/tokens"
+    },
+    {
+      "id": "surface:30da05dc49b8f479c2178962",
+      "value": "https://docs.alchemix.fi/Alchemix_Q2_2026_Financial_Report.pdf"
+    },
+    {
+      "id": "surface:e25649463c6906968ebf82e2",
+      "value": "https://alchemixfi.medium.com/alchemix-q1-2026-report-summary-061011a15bda"
+    },
+    {
+      "id": "surface:f4b4b062a8cb6f218d8f174b",
+      "value": "https://docs.alchemix.fi/user/safety/risk-considerations"
+    },
+    {
+      "id": "surface:57837cdb54e52910eb11e2a1",
+      "value": "https://blockworks.com/token-transparency/filing/alchemix"
+    },
+    {
+      "id": "surface:8e39dee7e30c5542ffeda7fc",
+      "value": "https://forum.alchemix.fi/"
+    },
+    {
+      "id": "surface:9f1181505a10b7cffc8d7b30",
+      "value": "https://alchemix.fi/"
+    },
+    {
+      "id": "surface:af53fd1b770b8849732c7097",
+      "value": "https://chroniclelabs.org/api/ipfs/QmPQnDVp37aJZzTt6UCaK9UAdQv2EUseEiaxjYmfmULvBf"
     }
   ]
 }

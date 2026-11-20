@@ -10,7 +10,7 @@ export const FDUSD_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = 
   adapterName: ADAPTER_KEY,
   product: "FDUSD",
   profile: "fdusd-v1",
-  requiredAssetCodes: ["treasury-bills", "fixed-deposits", "custody-cash"],
+  requiredAssetCodes: ["treasury-bills", "custody-cash"],
   classifications: {
     "treasury-bills": {
       name: "U.S. Treasury Bills",

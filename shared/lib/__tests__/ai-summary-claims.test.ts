@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import fdusd from "../../data/stablecoins/coins/fdusd-first-digital.json";
 import { hasAvailableAiSummaryClaims, resolveAiSummaryClaims, validateAiSummaryClaimTokens } from "../ai-summary-claims";
 import type { AiSummaryClaimToken } from "../../types/editorial";
 import { ReportCardGradeSchema } from "../../types/report-card-grade";
@@ -173,5 +174,14 @@ describe("AI summary editorial corrections", () => {
     const redcoin = summaries["hkd-hsbc"].text;
     expect(redcoin).not.toMatch(/names no blockchain|no reserve report/);
     expect(redcoin).toContain("not independent verification of public-chain supply");
+  });
+
+  it("dates BRLA's cash and cash equivalents mix to October", () => {
+    expect(summaries["brla-brla-digital"].text).toMatch(/October 2026 report .*cash and cash equivalents/);
+    expect(summaries["brla-brla-digital"]).not.toHaveProperty("factsAsOf");
+  });
+
+  it("describes FDUSD's cash as held in custody accounts in the headline", () => {
+    expect(fdusd.oneLiner).toContain("backed by U.S. Treasury bills and U.S. dollars held in custody accounts");
   });
 });
