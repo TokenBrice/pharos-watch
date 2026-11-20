@@ -7,6 +7,22 @@
 [extend]
 useDefault = true
 
+# Pharos API keys are bearer credentials even when copied bare (a header value,
+# a log line or a support message) with no `api_key=` label for the generic
+# rule to anchor on. There is deliberately no leading `\b`: a JSON-escaped
+# (`\nph_live_...`) or label-glued (`KEY_ph_live_...`) copy puts a word
+# character immediately before the distinctive prefix, so a leading boundary
+# missed exactly the copies this rule exists for, and matching inside that
+# longer run is the safe side. The 32-character body fixes the span length; a
+# trailing `\b` then fails only when that last character is `-` (not a word
+# character, so no boundary can follow it), which the second alternative covers
+# by pinning the same body with `\B` for that non-boundary tail.
+[[rules]]
+id = "pharos-api-key"
+description = "Pharos API key"
+regex = '''ph_live_[0-9a-f]{16}_[A-Za-z0-9_-]{32}\b|ph_live_[0-9a-f]{16}_[A-Za-z0-9_-]{31}-\B'''
+keywords = ["ph_live_"]
+
 # The trailing-punctuation class matters: reviewed `evidence` prose ends sentences
 # with an address ("... FXD token impl = 0xe4cd2c8f....") and the matched secret span
 # then carries the period, so a strictly anchored address regex misses it and the
@@ -405,10 +421,12 @@ paths = ['''(?:^|/)shared/data/safety-score-v9/transfer-review-overlays-v1\.json
 
 # API-key tests use one deliberately synthetic token/secret pair across parser,
 # authentication, and request-gate fixtures. Pin both representations to those
-# test files; a different token or secret in the same files still fails.
+# test files (the dedicated pharos-api-key rule included, so the same reviewed
+# placeholder stays quiet there); a different token or secret in the same files
+# still fails.
 [[allowlists]]
 description = "Canonical synthetic Pharos API-key fixture values"
-targetRules = ["generic-api-key"]
+targetRules = ["generic-api-key", "pharos-api-key"]
 condition = "AND"
 regexTarget = "secret"
 regexes = [
@@ -420,6 +438,19 @@ paths = [
   '''(?:^|/)worker/src/lib/__tests__/api-keys\.test\.ts$''',
   '''(?:^|/)worker/src/__tests__/index\.fetch\.test\.ts$''',
   '''(?:^|/)worker/src/test-helpers/__shared/fixtures\.ts$''',
+]
+
+# The documented example shape and the UI/admin-test placeholders reuse the
+# reviewed synthetic values above at other paths (docs and component fixtures),
+# and they recur in history. Pin the exact four complete tokens rather than the
+# format, so any other ph_live_ value still fails everywhere.
+[[allowlists]]
+description = "Documented and component-fixture placeholder Pharos API keys are not credentials"
+targetRules = ["pharos-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = [
+  '''^(?:ph_live_0123456789abcdef_abcdefghijklmnopqrstuvwxyzABCDEF|ph_live_ffffffffffffffff_abcdefghijklmnopqrstuvwxyzABCDEF|ph_live_aaaaaaaaaaaaaaaa_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb|ph_live_cccccccccccccccc_dddddddddddddddddddddddddddddddd)$''',
 ]
 
 # API-key prefixes are public routing identifiers, not bearer secrets. Match the

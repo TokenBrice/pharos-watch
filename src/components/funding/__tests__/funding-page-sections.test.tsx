@@ -8,7 +8,7 @@ import type { DonationSummary, MonthlyFunding } from "@shared/lib/funding/helper
 
 const NOW = Math.floor(Date.UTC(2026, 4, 10) / 1000);
 const summary = (patch: Partial<DonationSummary> = {}): DonationSummary => ({
-  currentMonthCommunityUsd: 300, currentMonthFounderUsd: 0, lifetimeCommunityUsd: 300, lifetimeFounderUsd: 0, lifetimeCommunityDonorCount: 2, ...patch,
+  currentMonthCommunityUsd: 300, currentMonthFounderUsd: 0, lifetimeCommunityUsd: 300, lifetimeFounderUsd: 0, lifetimeCommunityDonorCount: 2, lifetimeRevenueUsd: 0, ...patch,
 });
 const month = (monthKey: string, communityUsd: number, costUsd: number | null, isCurrent = false): MonthlyFunding => ({
   monthKey, label: new Date(`${monthKey}-01T00:00:00Z`).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" }), communityUsd, costUsd, isCurrent,
@@ -39,6 +39,15 @@ describe("FundingHero", () => {
     render(<FundingHero summary={summary({ currentMonthCommunityUsd: 0, lifetimeCommunityUsd: 0, lifetimeCommunityDonorCount: 0 })} months={[]} monthlyCostUsd={1540} founderUsd={0} ledgerUpdatedAt={NOW} />);
     for (const text of ["Tracking begins", "Be the first", /starts with the first community donation/]) expect(screen.getByText(text)).toBeTruthy();
   });
+
+  it("shows partner-key revenue as its own line, nothing when there is none", () => {
+    const { unmount } = render(<FundingHero summary={summary({ lifetimeRevenueUsd: 250 })} months={MONTHS} monthlyCostUsd={1540} founderUsd={0} ledgerUpdatedAt={NOW} />);
+    expect(heroRows().getByText("API revenue since launch")).toBeTruthy();
+    expect(heroRows().getByText("$250")).toBeTruthy();
+    unmount();
+    render(<FundingHero summary={summary()} months={MONTHS} monthlyCostUsd={1540} founderUsd={0} ledgerUpdatedAt={NOW} />);
+    expect(screen.queryByText("API revenue since launch")).toBeNull();
+  });
 });
 
 describe("CostBreakdown", () => {
@@ -63,9 +72,10 @@ describe("CostBreakdown", () => {
 
 describe("DonorList", () => {
   it("hides founder rows and shows an empty state without a table", () => {
-    const { unmount } = render(<DonorList donations={[donation("alice.eth"), donation("founder", { kind: "founder" })]} lastUpdatedAt={NOW} />);
+    const { unmount } = render(<DonorList donations={[donation("alice.eth"), donation("founder", { kind: "founder" }), donation("revenue", { kind: "revenue" })]} lastUpdatedAt={NOW} />);
     expect(screen.getByText("alice.eth")).toBeTruthy();
     expect(screen.queryByText("founder")).toBeNull();
+    expect(screen.queryByText("revenue")).toBeNull();
     unmount();
     render(<DonorList donations={[]} lastUpdatedAt={NOW} />);
     expect(screen.getByText(/No community donations yet/)).toBeTruthy();

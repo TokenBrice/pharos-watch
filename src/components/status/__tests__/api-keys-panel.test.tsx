@@ -176,6 +176,28 @@ describe("ApiKeysPanel create and token recovery", () => {
 
     expect(body.expiresAt).toBeNull();
   });
+
+  it("applies the commercial preset to the create payload", async () => {
+    const fetchMock = vi
+      .mocked(fetch)
+      .mockResolvedValue(
+        keyResponse({ key: makeKey({ id: 4, name: "Commercial Key" }), token: ONE_TIME_TOKEN }),
+      );
+
+    renderPanel([]);
+
+    fireEvent.click(screen.getByRole("button", { name: /create read key/i }));
+    fireEvent.change(screen.getAllByLabelText("Name")[0], { target: { value: "Commercial Key" } });
+    fireEvent.click(screen.getByRole("button", { name: "Commercial" }));
+    fireEvent.click(screen.getByRole("button", { name: /create key/i }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    const [, createInit] = fetchMock.mock.calls[0] ?? [];
+    const body = JSON.parse(String((createInit as RequestInit).body));
+
+    expect(body.rateLimitPerMinute).toBe(120);
+    expect(body.monthlyRequestQuota).toBe(1_000_000);
+  });
 });
 
 describe("ApiKeysPanel lifecycle mutations", () => {
@@ -360,6 +382,7 @@ describe("ApiKeysPanel editor and audit history", () => {
       ownerEmail: donor.ownerEmail,
       tier: "donor",
       rateLimitPerMinute: donor.rateLimitPerMinute,
+      monthlyRequestQuota: null,
       expiresAt: null,
     });
   });

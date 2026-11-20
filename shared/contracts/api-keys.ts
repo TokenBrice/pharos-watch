@@ -11,6 +11,9 @@ export type ApiKeyTrafficClass = z.infer<typeof ApiKeyTrafficClassSchema>;
 export const API_KEY_TIER_VALUES = ["standard", "self-serve", "donor"] as const;
 export type ApiKeyTier = (typeof API_KEY_TIER_VALUES)[number];
 
+/** Upper bound accepted for an explicit per-key `monthlyRequestQuota`. */
+export const API_KEY_MAX_MONTHLY_REQUEST_QUOTA = 100_000_000;
+
 /** `POST /api/donor-key-claims` request body. */
 export const DonorKeyClaimRequestSchema = z
   .object({
@@ -72,6 +75,8 @@ const ApiKeySummarySchema = z.object({
   tier: z.string(),
   trafficClass: ApiKeyTrafficClassSchema,
   rateLimitPerMinute: z.number(),
+  /** Explicit per-key monthly request quota; null keeps the tier default. Tolerates older Workers that omit the field. */
+  monthlyRequestQuota: z.number().int().nullable().optional().default(null),
   isActive: z.boolean(),
   expiresAt: z.number().nullable(),
   createdAt: z.number(),
@@ -118,6 +123,8 @@ export interface ApiKeyCreateRequest {
   ownerEmail?: string | null;
   tier?: ApiKeyTier | null;
   rateLimitPerMinute?: number | null;
+  /** Explicit monthly request quota (positive integer up to `API_KEY_MAX_MONTHLY_REQUEST_QUOTA`); null keeps the tier default. */
+  monthlyRequestQuota?: number | null;
   expiresAt?: number | null;
 }
 
@@ -126,6 +133,8 @@ export interface ApiKeyUpdateRequest {
   ownerEmail?: string | null;
   tier?: ApiKeyTier | null;
   rateLimitPerMinute?: number | null;
+  /** Explicit monthly request quota (positive integer up to `API_KEY_MAX_MONTHLY_REQUEST_QUOTA`); null keeps the tier default. */
+  monthlyRequestQuota?: number | null;
   isActive?: boolean | null;
   expiresAt?: number | null;
 }

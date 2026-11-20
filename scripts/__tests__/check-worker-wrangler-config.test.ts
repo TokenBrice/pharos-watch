@@ -67,14 +67,14 @@ WORKER_SLOT_CATCH_UP_MODE = "on"
 name = "SITE_SESSION_RATE_LIMIT"
 namespace_id = "2026111502"
 [ratelimits.simple]
-limit = 300
+limit = 90
 period = 60
 
 [[ratelimits]]
 name = "SITE_SOURCE_RATE_LIMIT"
 namespace_id = "2026111503"
 [ratelimits.simple]
-limit = 1200
+limit = 600
 period = 60
 
 [[rules]]

@@ -13,7 +13,7 @@ import {
 } from "@shared/lib/selector/snapshot";
 import { SELECTOR_SNAPSHOT_VERIFICATION_KIND } from "@shared/lib/selector/types";
 import { readBoundedRequestBody } from "../lib/bounded-request-body";
-import { hashClientIp } from "@shared/lib/client-ip-hash";
+import { clientAddressLimiterSubject, hashClientIp } from "@shared/lib/client-ip-hash";
 import { NOINDEX_HEADER_VALUE } from "../lib/noindex";
 import { jsonError } from "../lib/proxy-utils";
 import { recomputeVerifiedSelectorSnapshot } from "../lib/selector-canonical-snapshot";
@@ -63,6 +63,13 @@ const POST_RATE_LIMIT_WINDOW_MS = 60_000;
 const POST_RATE_LIMIT_MAX_PER_WINDOW = 10;
 const POST_RATE_LIMIT_MAX_TRACKED_IPS = 5_000;
 const POST_DAILY_QUOTA_MAX_PER_IP = 100;
+// All-callers ceiling on the same D1 table. It bounds the total canonical
+// recomputation (seven upstream reads) an attacker can force per UTC day.
+// Real use is 1-2 creations per session; 2,000/day matches the dated-scorecard
+// global cap and leaves generous headroom.
+const POST_DAILY_QUOTA_MAX_GLOBAL = 2_000;
+/** D1 row key for the all-callers bucket; HMAC hex identities can never equal it. */
+const POST_DAILY_QUOTA_GLOBAL_KEY = "global";
 const postTimestampsByIpHash = new Map<string, number[]>();
 
 async function getClientIpHash(request: Request, env: SelectorSnapshotEnv): Promise<string | null> {
@@ -70,7 +77,11 @@ async function getClientIpHash(request: Request, env: SelectorSnapshotEnv): Prom
   if (!ip) return null;
   const secret = env.SELECTOR_SNAPSHOT_IP_HASH_SECRET?.trim();
   if (!secret) return null;
-  return hashClientIp(ip, secret);
+  // Hash the same limiter subject the Worker gates use (IPv6 grouped by /64):
+  // hashing the full address would let one holder of a /64 mint a fresh per-IP
+  // daily bucket per address and drain the global cap alone. This key feeds
+  // both the per-IP daily bucket and the per-isolate burst limiter.
+  return hashClientIp(clientAddressLimiterSubject(ip) ?? ip.trim(), secret);
 }
 
 function dailyQuotaDate(now = new Date()): string {
@@ -85,54 +96,68 @@ function isPostRateLimited(key: string | null): boolean {
   );
 }
 
+function dailyQuotaKeys(ipHash: string | null): string[] {
+  return ipHash ? [POST_DAILY_QUOTA_GLOBAL_KEY, ipHash] : [POST_DAILY_QUOTA_GLOBAL_KEY];
+}
+
 async function consumeDailyPostQuota(
   env: SelectorSnapshotEnv,
   ipHash: string | null,
   bucketDate: string,
 ): Promise<Response | null> {
-  if (!ipHash) return null;
-  if (!env.DB) return jsonError(503, "Snapshot quota store is not configured");
+  // Preserve the pre-existing missing-store behavior per caller: identified
+  // clients fail closed, unidentified clients stay unmetered.
+  if (!env.DB) return ipHash ? jsonError(503, "Snapshot quota store is not configured") : null;
 
   const nowSec = Math.floor(Date.now() / 1000);
+  const quotaKeys = dailyQuotaKeys(ipHash);
+  const quotaLimits = ipHash
+    ? [POST_DAILY_QUOTA_MAX_GLOBAL, POST_DAILY_QUOTA_MAX_PER_IP]
+    : [POST_DAILY_QUOTA_MAX_GLOBAL];
 
   try {
-    const result = await env.DB.prepare(
-      SELECTOR_SNAPSHOT_DAILY_QUOTA.consumeSql,
-    )
-      .bind(bucketDate, ipHash, nowSec, nowSec, POST_DAILY_QUOTA_MAX_PER_IP)
-      .run();
-
-    if ((result.meta?.changes ?? 0) === 0) {
-      return jsonError(429, "Daily snapshot write quota exceeded", { "Retry-After": "86400" });
+    // D1 batches are transactional. The all-callers bucket and the per-IP
+    // bucket reserve before any canonical recomputation, so concurrent
+    // isolates cannot exceed either durable daily ceiling.
+    const results = await env.DB.batch(
+      quotaKeys.map((key, index) => env.DB!.prepare(
+        SELECTOR_SNAPSHOT_DAILY_QUOTA.consumeSql,
+      ).bind(bucketDate, key, nowSec, nowSec, quotaLimits[index])),
+    );
+    if (results.length !== quotaKeys.length || results.some((result) => !result.success)) {
+      throw new Error("Unknown snapshot quota reservation");
     }
+
+    const reservedKeys = quotaKeys.filter((_, index) => (results[index]!.meta.changes ?? 0) === 1);
+    if (reservedKeys.length === quotaKeys.length) return null;
+
+    // A rejected request pays nothing: release the half that did reserve.
+    await refundDailyPostQuota(env, reservedKeys, bucketDate);
+    return jsonError(429, "Daily snapshot write quota exceeded", { "Retry-After": "86400" });
   } catch (error) {
     console.warn("[selector-snapshot] quota write failure", error);
     return jsonError(503, "Snapshot quota store temporarily unavailable");
   }
-
-  return null;
 }
 
 /**
  * Best-effort refund of a reservation whose canonical recomputation failed.
- * Refunds the bucket the reservation charged — recomputation can outlive a
+ * Refunds the buckets the reservation charged — recomputation can outlive a
  * UTC midnight rollover, and re-deriving the date at refund time would
- * decrement the wrong (new) day's row. The decrement is guarded so concurrent
- * refunds cannot underflow the counter, and a failed refund costs the client
+ * decrement the wrong (new) day's rows. The decrement is guarded so concurrent
+ * refunds cannot underflow the counters, and a failed refund costs the client
  * one quota unit at most — never quota it did not spend.
  */
 async function refundDailyPostQuota(
   env: SelectorSnapshotEnv,
-  ipHash: string | null,
+  quotaKeys: readonly string[],
   bucketDate: string,
 ): Promise<void> {
-  if (!ipHash || !env.DB) return;
+  if (quotaKeys.length === 0 || !env.DB) return;
   try {
-    await env.DB.prepare(
+    await env.DB.batch(quotaKeys.map((key) => env.DB!.prepare(
       SELECTOR_SNAPSHOT_DAILY_QUOTA.refundSql,
-    )
-      .bind(bucketDate, ipHash)
-      .run();
+    ).bind(bucketDate, key)));
   } catch (error) {
     console.warn("[selector-snapshot] quota refund failure", error);
   }
@@ -252,7 +277,7 @@ async function handlePost(context: SelectorSnapshotContext): Promise<Response> {
     // Refund the reservation so a canonical outage does not spend a client's
     // daily POSTs on the retries the outage itself provoked, locking them out
     // for the UTC day.
-    await refundDailyPostQuota(env, ipHash, quotaBucketDate);
+    await refundDailyPostQuota(env, dailyQuotaKeys(ipHash), quotaBucketDate);
     return jsonError(503, "Canonical selector data temporarily unavailable");
   }
 

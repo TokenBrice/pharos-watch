@@ -439,78 +439,7 @@ Public API `/api/*` POST requests are not production Pages proxy routes. On `pha
 
 ## Self-Serve Key Incident Rollback
 
-The self-serve request/verification and `/api/api-key-requests-admin/` routes are unregistered: unknown public paths return `401` without a valid `X-API-Key`, `404` with one. No new self-serve issuance occurs. Existing `tier="self-serve"` keys authenticate through their 60-day expiry; the [immutable removal/drain record](https://github.com/TokenBrice/pharos-watch/blob/e4e09b34e3b43baadd656471b973c686b34c1c27/docs/deployment-process.md#self-serve-key-incident-rollback) estimates final drain around November 6. An incident during that drain means compromised/leaked existing keys:
-
-1. Pause the supporter-key claim if the incident reaches it: set the supporter-claim switch to false in `shared/lib/public-api-contract.ts` and release. The Worker then answers `POST /api/donor-key-claims` with `403` before reading the body, and `/api/` shows the paused notice. The retired self-serve lane has no form page and no live route to hide.
-2. No edge blocking rule is needed for the retired lane: its former POST paths are unknown routes and answer `401` without a valid key before any routing. Leave the deliberately disabled `api-rate-limit-ip` placeholder untouched; the free plan has one slot, and reallocating it for a removed lane buys nothing.
-3. Roll back Worker or Pages through the normal deployment rollback path as needed.
-4. Query self-serve keys around the incident window, deactivate compromised keys through `POST /api/api-keys/:id/deactivate` (or the SQL below), and verify matching audit rows. The retired release-claim admin route is gone; email-claim rows are handled only through the SQL below.
-5. Check Worker logs and Cloudflare Security Events for plaintext API keys or raw IP addresses. The lane no longer uses an email provider, so there are no verification-token or provider-echoed requester surfaces to audit.
-
-Use these SQL templates from a trusted operator shell. Set `cutoff_epoch` to the first suspect issuance timestamp; issuance ended when the lane was closed, so this window is historical. The lane's D1 tables remain in place until a separate follow-up rollout drops them.
-
-```bash
-cutoff_epoch=1778500000
-db_name=stablecoin-db
-
-# Dry-run: list self-serve keys issued after cutoff.
-npx wrangler d1 execute "$db_name" --remote --command "
-SELECT k.id, k.key_prefix, k.owner_email, k.is_active, k.expires_at, k.created_at, r.request_id, r.status
-FROM api_keys k
-LEFT JOIN api_key_requests r ON r.api_key_id = k.id
-WHERE k.tier = 'self-serve' AND k.created_at >= $cutoff_epoch
-ORDER BY k.created_at DESC;
-"
-
-# Deactivate post-cutoff self-serve keys.
-npx wrangler d1 execute "$db_name" --remote --command "
-UPDATE api_keys
-SET is_active = 0, updated_at = strftime('%s','now')
-WHERE tier = 'self-serve' AND created_at >= $cutoff_epoch;
-"
-
-# Release claims only after their linked key is inactive or absent.
-npx wrangler d1 execute "$db_name" --remote --command "
-UPDATE api_key_self_serve_email_claims
-SET status = 'released', released_at = strftime('%s','now'), updated_at = strftime('%s','now')
-WHERE status IN ('pending_verification', 'issued')
-  AND request_id IN (
-    SELECT r.request_id
-    FROM api_key_requests r
-    LEFT JOIN api_keys k ON k.id = r.api_key_id
-    WHERE r.created_at >= $cutoff_epoch
-      AND (k.id IS NULL OR k.is_active = 0)
-  );
-"
-
-# Mark affected request rows blocked for operator visibility.
-npx wrangler d1 execute "$db_name" --remote --command "
-UPDATE api_key_requests
-SET status = 'blocked', verification_token_hash = NULL, issuance_locked_at = NULL, updated_at = strftime('%s','now')
-WHERE created_at >= $cutoff_epoch
-  AND status IN ('pending_verification', 'issued');
-"
-
-# Consistency check: active key linked to blocked/rejected/expired request.
-npx wrangler d1 execute "$db_name" --remote --command "
-SELECT r.request_id, r.status, k.id, k.key_prefix, k.is_active
-FROM api_key_requests r
-JOIN api_keys k ON k.id = r.api_key_id
-WHERE k.tier = 'self-serve'
-  AND k.is_active = 1
-  AND r.status IN ('blocked', 'rejected', 'expired');
-"
-
-# Consistency check: pending claims without request rows.
-npx wrangler d1 execute "$db_name" --remote --command "
-SELECT c.email_hash, c.request_id, c.status, c.claimed_at
-FROM api_key_self_serve_email_claims c
-LEFT JOIN api_key_requests r ON r.request_id = c.request_id
-WHERE c.status = 'pending_verification' AND r.request_id IS NULL;
-"
-```
-
-Production smoke for this surface should confirm the retired request and verification paths respond like unknown API paths (`401` without a valid key, `404` with one), confirm an existing self-serve key still authenticates at its `30` requests per minute limit, then deactivate the smoke key through the admin key route and confirm the audit row.
+The self-serve lane is retired: its request/verification and admin-decision routes are unregistered, and the last `tier="self-serve"` keys expired around 2026-11-06, so no self-serve key still authenticates. Leaked or compromised keys — including partner and commercial keys — are handled by the [Partner API key issuance runbook](./runbooks/partner-key-issuance.md) (re-issue, rotation, revocation). The [immutable removal/drain record](https://github.com/TokenBrice/pharos-watch/blob/e4e09b34e3b43baadd656471b973c686b34c1c27/docs/deployment-process.md#self-serve-key-incident-rollback) preserves the original incident and the drain SQL.
 
 ## Failure Policy
 

@@ -47,6 +47,7 @@ describe("donor eligibility", () => {
       row({ asset_symbol: "ETH", token_address: null, usd_at_receipt: 100 }),
       row({ asset_symbol: "GIV", token_address: "0x00000000000000000000000000000000000000ee", usd_at_receipt: 100 }),
       row({ asset_symbol: "UNKNOWN", token_address: "0x00000000000000000000000000000000000000ef", usd_at_receipt: 100 }),
+      row({ kind: "revenue", tx_hash: "0x05", usd_at_receipt: 500 }),
     ], GRADES);
     expect(totals.get(A)).toBe(10);
     expect(totals.get(B)).toBe(10);
@@ -162,6 +163,7 @@ describe("donor key donation classification", () => {
   it("separates pool, non-qualifying, out-of-band, and unavailable grades", () => {
     const grades = new Map<string, ReportCardGrade>([["usdc-circle", "A-"], ["dai-makerdao", "NR"], ["usdt-tether", "C"]]);
     expect(classifyDonorKeyDonation(row({ kind: "pool" }), grades).status).toBe("pool");
+    expect(classifyDonorKeyDonation(row({ kind: "revenue" }), grades).status).toBe("revenue");
     expect(classifyDonorKeyDonation(row({ asset_symbol: "ETH", token_address: null }), grades).status).toBe("not-qualifying");
     expect(classifyDonorKeyDonation(
       row({ asset_symbol: "constructor", token_address: "0x00000000000000000000000000000000000000ee" }),

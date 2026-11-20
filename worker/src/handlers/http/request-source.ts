@@ -19,6 +19,8 @@ export function createRequestSourceRecorder(config: {
   pathname: string;
   attributionDisabled?: boolean;
   apiKeyAttributionDisabled?: boolean;
+  /** True when a per-key limiter (per-minute or monthly) rejected the request: throttled retries must not burn monthly quota. Route-level stats still count. */
+  apiKeyThrottled?: boolean;
 }): () => void {
   if (config.isAdmin || !config.requestLane) {
     return () => {};
@@ -50,7 +52,7 @@ export function createRequestSourceRecorder(config: {
         config.db, route, "public-api", consumerClass, config.apiKeyId != null ? "keyed" : "unkeyed",
       ));
     }
-    if (config.apiKeyId != null && !config.apiKeyAttributionDisabled) {
+    if (config.apiKeyId != null && !config.apiKeyAttributionDisabled && !config.apiKeyThrottled) {
       attributionWrites.push(recordApiKeyRequestAttribution(config.db, config.apiKeyId));
     }
     if (attributionWrites.length === 0) {

@@ -6,6 +6,8 @@ const { verifyAccessJwt, apiKeyMocks } = vi.hoisted(() => ({
     authenticateApiKey: vi.fn(),
     authenticateApiKeyFromFreshCache: vi.fn(),
     checkApiKeyRateLimit: vi.fn(),
+    checkApiKeyMonthlyRequestQuota: vi.fn(),
+    checkCachedApiKeyMonthlyRequestQuota: vi.fn(),
     checkIsolateLocalApiKeyRateLimit: vi.fn(),
     isApiKeyRateLimitDependencyCircuitOpen: vi.fn(),
     recordApiKeyRateLimitDependencyFailure: vi.fn(),
@@ -37,6 +39,8 @@ vi.mock("../../../lib/api-key-core", async (importOriginal) => ({
 
 vi.mock("../../../lib/api-key-rate-limit", () => ({
   checkApiKeyRateLimit: apiKeyMocks.checkApiKeyRateLimit,
+  checkApiKeyMonthlyRequestQuota: apiKeyMocks.checkApiKeyMonthlyRequestQuota,
+  checkCachedApiKeyMonthlyRequestQuota: apiKeyMocks.checkCachedApiKeyMonthlyRequestQuota,
   checkIsolateLocalApiKeyRateLimit: apiKeyMocks.checkIsolateLocalApiKeyRateLimit,
   recordApiKeyUsage: apiKeyMocks.recordApiKeyUsage,
   resolveIsolateFallbackApiKeyRateLimit: apiKeyMocks.resolveIsolateFallbackApiKeyRateLimit,
@@ -49,6 +53,7 @@ import {
   handleMaintenanceMode,
 } from "../gates";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { jsonResponse } from "../../../lib/api-response";
 import { makeApiKeyPrefixLookup, makeAuthenticatedApiKeyRow } from "../../../test-helpers/api-key-test-support";
 import { clearApiKeyCache, lookupApiKeyByPrefix, resetApiKeyStateForTests } from "../../../lib/api-key-core";
 import { createWorkerEnv } from "../../../test-helpers/__shared/worker-env";
@@ -95,7 +100,9 @@ describe("evaluateAccessGate", () => {
       openUntilMs: 0,
       opened: false,
     });
-    apiKeyMocks.resolveIsolateFallbackApiKeyRateLimit.mockImplementation((limit: number) => Math.min(limit, 30));
+    apiKeyMocks.resolveIsolateFallbackApiKeyRateLimit.mockImplementation((limit: number) => Math.max(limit, 1));
+    apiKeyMocks.checkApiKeyMonthlyRequestQuota.mockResolvedValue(null);
+    apiKeyMocks.checkCachedApiKeyMonthlyRequestQuota.mockReturnValue(null);
   });
 
   afterEach(() => {
@@ -325,7 +332,9 @@ describe("evaluateAccessGate", () => {
     expect(limit).toHaveBeenCalledWith({ key: "192.0.2.1" });
     expect(apiKeyMocks.authenticateApiKey).not.toHaveBeenCalled();
     limit.mockResolvedValueOnce({ success: false });
-    expect((await evaluateAccessGate(request, new URL(request.url), env)).response?.status).toBe(429);
+    const throttled = (await evaluateAccessGate(request, new URL(request.url), env)).response;
+    expect(throttled?.status).toBe(429);
+    expect(throttled?.headers.get("Cache-Control")).toBe("no-store");
     limit.mockRejectedValueOnce(new Error("unavailable"));
     expect((await evaluateAccessGate(request, new URL(request.url), env)).response?.status).toBe(503);
     env.SAFETY_GRADES_RATE_LIMIT = undefined as never;
@@ -618,6 +627,31 @@ describe("evaluateAccessGate", () => {
     expect(apiKeyMocks.recordApiKeyUsage).toHaveBeenCalledWith(db, validKey, "/api/stablecoins");
   });
 
+  it("returns the monthly quota 429 with the authenticated key before the per-minute limiter", async () => {
+    apiKeyMocks.authenticateApiKey.mockResolvedValueOnce({ kind: "valid", key: validKey });
+    const db = {} as D1Database;
+    const quotaResponse = jsonResponse(
+      { error: "Monthly request quota exceeded", reason: "monthly_quota_exceeded" },
+      { status: 429, retryAfterSec: 900, noStore: true },
+    );
+    apiKeyMocks.checkApiKeyMonthlyRequestQuota.mockResolvedValueOnce(quotaResponse);
+    const request = new Request("https://api.pharos.watch/api/stablecoins", {
+      headers: { "X-API-Key": "ph_live_0123456789abcdef_abcdefghijklmnopqrstuvwxyzABCDEF" },
+    });
+
+    const result = await evaluateAccessGate(request, new URL(request.url), {
+      ...makeEnv(),
+      DB: db,
+      API_KEY_HASH_PEPPER: "pepper",
+    } as never);
+
+    expect(result.response).toBe(quotaResponse);
+    expect(result.apiKey).toBe(validKey);
+    expect(apiKeyMocks.checkApiKeyMonthlyRequestQuota).toHaveBeenCalledWith(db, validKey, undefined, false);
+    expect(apiKeyMocks.checkApiKeyRateLimit).not.toHaveBeenCalled();
+    expect(apiKeyMocks.recordApiKeyUsage).not.toHaveBeenCalled();
+  });
+
   it("uses the isolate-local limiter when public GET rate-limit storage fails", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     apiKeyMocks.authenticateApiKey.mockResolvedValueOnce({ kind: "valid", key: validKey });
@@ -636,7 +670,7 @@ describe("evaluateAccessGate", () => {
 
     expect(result.response).toBeNull();
     expect(apiKeyMocks.recordApiKeyRateLimitDependencyFailure).toHaveBeenCalled();
-    expect(apiKeyMocks.checkIsolateLocalApiKeyRateLimit).toHaveBeenCalledWith(7, 30);
+    expect(apiKeyMocks.checkIsolateLocalApiKeyRateLimit).toHaveBeenCalledWith(7, 60);
     expect(parseWarnEvents(warn)).toContainEqual(expect.objectContaining({
       event: "api_key_rate_limit_dependency_unavailable_fallback",
       message: "API key rate-limit dependency unavailable; using isolate-local fallback limiter",
@@ -668,7 +702,7 @@ describe("evaluateAccessGate", () => {
 
     expect(result.response).toBeNull();
     expect(apiKeyMocks.checkApiKeyRateLimit).not.toHaveBeenCalled();
-    expect(apiKeyMocks.checkIsolateLocalApiKeyRateLimit).toHaveBeenCalledWith(7, 30);
+    expect(apiKeyMocks.checkIsolateLocalApiKeyRateLimit).toHaveBeenCalledWith(7, 60);
     expect(parseWarnEvents(warn)).toContainEqual(expect.objectContaining({
       event: "api_key_rate_limit_circuit_open_fallback",
       message: "API key rate-limit dependency circuit open; using isolate-local fallback limiter",
@@ -814,13 +848,59 @@ describe("evaluateAccessGate", () => {
     expect(apiKeyMocks.checkIsolateLocalApiKeyRateLimit).toHaveBeenCalledWith(7, 60);
   });
 
-  it("caps cached public reads while the API-key rate-limit circuit is open", () => {
+  it("honours a fresh over-quota monthly memo before the isolate-local limiter on cached public reads", () => {
+    const quotaResponse = new Response("quota exceeded", { status: 429 });
+    apiKeyMocks.checkCachedApiKeyMonthlyRequestQuota.mockReturnValueOnce(quotaResponse);
+
+    expect(checkCachedPublicApiReadFastRateLimit(validKey as never)).toBe(quotaResponse);
+    expect(apiKeyMocks.checkIsolateLocalApiKeyRateLimit).not.toHaveBeenCalled();
+  });
+
+  it("keeps the key's own quota for cached public reads while the API-key rate-limit circuit is open", () => {
     apiKeyMocks.isApiKeyRateLimitDependencyCircuitOpen.mockReturnValueOnce(true);
-    apiKeyMocks.resolveIsolateFallbackApiKeyRateLimit.mockReturnValueOnce(30);
     apiKeyMocks.checkIsolateLocalApiKeyRateLimit.mockReturnValueOnce(null);
 
     expect(checkCachedPublicApiReadFastRateLimit({ ...validKey, rateLimitPerMinute: 180 } as never)).toBeNull();
     expect(apiKeyMocks.resolveIsolateFallbackApiKeyRateLimit).toHaveBeenCalledWith(180);
-    expect(apiKeyMocks.checkIsolateLocalApiKeyRateLimit).toHaveBeenCalledWith(7, 30);
+    expect(apiKeyMocks.checkIsolateLocalApiKeyRateLimit).toHaveBeenCalledWith(7, 180);
+  });
+
+  it.each(["exceeded", "throws", "missing"])("limits anonymous OG image reads per client network and never fails closed on %s", async (mode) => {
+    const env = makeEnv();
+    const limit = vi.fn().mockResolvedValue({ success: true });
+    if (mode === "exceeded") limit.mockResolvedValueOnce({ success: false });
+    if (mode === "throws") limit.mockRejectedValueOnce(new Error("unavailable"));
+    if (mode !== "missing") env.OG_IMAGE_RATE_LIMIT = { limit };
+    const request = new Request("https://api.pharos.watch/api/og/stablecoin/usdc-usd-coin", {
+      headers: { "CF-Connecting-IP": "192.0.2.7" },
+    });
+
+    const result = await evaluateAccessGate(request, new URL(request.url), env);
+
+    if (mode === "exceeded") {
+      expect(result.response?.status).toBe(429);
+      expect(result.response?.headers.get("Cache-Control")).toBe("no-store");
+    } else {
+      expect(result.response).toBeNull();
+    }
+    if (mode !== "missing") expect(limit).toHaveBeenCalledWith({ key: "192.0.2.7" });
+    expect(apiKeyMocks.authenticateApiKey).not.toHaveBeenCalled();
+  });
+
+  it("does not apply the OG image limiter to other hosts or methods", async () => {
+    const env = makeEnv();
+    const limit = vi.fn().mockResolvedValue({ success: true });
+    env.OG_IMAGE_RATE_LIMIT = { limit };
+    for (const request of [
+      new Request("https://api.pharos.watch/api/og/stablecoin/usdc-usd-coin", {
+        method: "POST", headers: { "CF-Connecting-IP": "192.0.2.7" },
+      }),
+      new Request("https://site-api.pharos.watch/api/og/stablecoin/usdc-usd-coin", {
+        headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
+      }),
+    ]) {
+      await evaluateAccessGate(request, new URL(request.url), env);
+    }
+    expect(limit).not.toHaveBeenCalled();
   });
 });

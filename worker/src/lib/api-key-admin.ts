@@ -70,6 +70,7 @@ export async function createApiKey(
   pepper: string | undefined,
   body: Record<string, unknown>,
   nowSec = getNowSec(),
+  operator?: string,
 ): Promise<ApiKeyCreateResponse | Response> {
   const effectivePepper = requireApiKeyPepper(pepper);
   if (effectivePepper instanceof Response) {
@@ -82,6 +83,9 @@ export async function createApiKey(
   }
 
   const expiresAt = parsed.expiresAt === undefined ? nowSec + API_KEY_DEFAULT_EXPIRY_SEC : parsed.expiresAt;
+  if (expiresAt != null && expiresAt <= nowSec) {
+    return errorResponse(400, "expiresAt must be in the future when creating an API key");
+  }
   const created = await createTrustedApiKey(
     db,
     effectivePepper,
@@ -90,13 +94,18 @@ export async function createApiKey(
       ownerEmail: parsed.ownerEmail ?? null,
       tier: parsed.tier ?? "standard",
       rateLimitPerMinute: parsed.rateLimitPerMinute ?? API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE,
+      monthlyRequestQuota: parsed.monthlyRequestQuota ?? null,
       expiresAt: expiresAt ?? null,
     },
     nowSec,
     {
       actor: "admin",
       action: "created",
-      detail: { name: parsed.name, tier: parsed.tier ?? "standard" },
+      detail: {
+        name: parsed.name,
+        tier: parsed.tier ?? "standard",
+        ...(operator ? { operator } : {}),
+      },
     },
   );
   return created;
@@ -107,6 +116,7 @@ export interface TrustedApiKeyCreateInput {
   ownerEmail: string | null;
   tier: ApiKeyTier;
   rateLimitPerMinute: number;
+  monthlyRequestQuota: number | null;
   expiresAt: number | null;
   isActive?: boolean;
 }
@@ -164,12 +174,13 @@ export function buildTrustedApiKeyInsertStatement<TStatement extends MinimalD1St
        tier,
        traffic_class,
        rate_limit_per_minute,
+       monthly_request_quota,
        is_active,
        expires_at,
        created_at,
        updated_at
      )
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ${buildPublicApiKeyReturningClause()}`,
     )
     .bind(
@@ -182,6 +193,7 @@ export function buildTrustedApiKeyInsertStatement<TStatement extends MinimalD1St
       // handlers/http/gates.ts, so issuance always writes the external default.
       API_KEY_TRAFFIC_CLASS_DEFAULT,
       input.rateLimitPerMinute,
+      input.monthlyRequestQuota,
       input.isActive === false ? 0 : 1,
       input.expiresAt,
       nowSec,
@@ -220,6 +232,7 @@ export async function updateApiKey(
   id: number,
   body: Record<string, unknown>,
   nowSec = getNowSec(),
+  operator?: string,
 ): Promise<ApiKeyMutationResponse | Response> {
   const existing = await selectApiKeyById(db, id);
   if (!existing) {
@@ -249,6 +262,10 @@ export async function updateApiKey(
     assignments.push("rate_limit_per_minute = ?");
     bindings.push(parsed.rateLimitPerMinute);
   }
+  if (Object.prototype.hasOwnProperty.call(parsed, "monthlyRequestQuota")) {
+    assignments.push("monthly_request_quota = ?");
+    bindings.push(parsed.monthlyRequestQuota ?? null);
+  }
   if (parsed.isActive !== undefined) {
     assignments.push("is_active = ?");
     bindings.push(parsed.isActive ? 1 : 0);
@@ -273,10 +290,14 @@ export async function updateApiKey(
 
   clearApiKeyCache(existing.key_prefix);
   clearApiKeyUsage(id);
-  await recordApiKeyAuditOrLog(db, id, "updated", parsed as Record<string, unknown>, nowSec);
+  // A deactivation through the update path is the same lifecycle event as the
+  // dedicated deactivate route, so it gets the "deactivated" action, not
+  // "updated"; updates may still shorten the expiry.
+  const action = parsed.isActive === false ? "deactivated" : "updated";
+  await recordApiKeyAuditOrLog(db, id, action, { ...parsed, ...(operator ? { operator } : {}) }, nowSec);
   const updated = await selectPublicApiKeyById(db, id);
   if (!updated) {
-    return apiKeyPostWriteReadbackFailure("update");
+    return apiKeyPostWriteReadbackFailure(action === "deactivated" ? "deactivate" : "update");
   }
 
   return { key: mapRowToSummary(updated) };
@@ -286,6 +307,7 @@ export async function deactivateApiKey(
   db: ApiKeyDb,
   id: number,
   nowSec = getNowSec(),
+  operator?: string,
 ): Promise<ApiKeyMutationResponse | Response> {
   const existing = await selectApiKeyById(db, id);
   if (!existing) {
@@ -296,7 +318,7 @@ export async function deactivateApiKey(
 
   clearApiKeyCache(existing.key_prefix);
   clearApiKeyUsage(id);
-  await recordApiKeyAuditOrLog(db, id, "deactivated", undefined, nowSec);
+  await recordApiKeyAuditOrLog(db, id, "deactivated", operator ? { operator } : undefined, nowSec);
   const updated = await selectPublicApiKeyById(db, id);
   if (!updated) {
     return apiKeyPostWriteReadbackFailure("deactivate");
@@ -310,6 +332,7 @@ export async function rotateApiKey(
   pepper: string | undefined,
   id: number,
   nowSec = getNowSec(),
+  operator?: string,
 ): Promise<ApiKeyRotateResponse | Response> {
   const effectivePepper = requireApiKeyPepper(pepper);
   if (effectivePepper instanceof Response) {
@@ -348,7 +371,7 @@ export async function rotateApiKey(
   clearApiKeyCache(existing.key_prefix);
   clearApiKeyCache(material.keyPrefix);
   clearApiKeyUsage(id);
-  await recordApiKeyAuditOrLog(db, id, "rotated", undefined, nowSec);
+  await recordApiKeyAuditOrLog(db, id, "rotated", operator ? { operator } : undefined, nowSec);
   const updated = await selectPublicApiKeyById(db, id);
   if (!updated) {
     return apiKeyPostWriteReadbackFailure("rotate");

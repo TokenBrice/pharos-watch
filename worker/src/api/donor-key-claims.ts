@@ -149,7 +149,13 @@ function isValidClaimMessage(message: string, parsed: ReturnType<typeof parseSiw
   });
 }
 
-/** Credits each newly counted donation once; OR IGNORE lets a reissued wallet's retained credits stand. */
+/**
+ * Credits each newly counted donation once; OR IGNORE lets a reissued wallet's
+ * retained credits stand. The fence requires the key row to currently hold
+ * `guard.expiresAt`: on issuance that is the just-inserted key; on extension
+ * it is the expiry the batch's compare-and-set has just set, so credits land
+ * only when this request's extension actually won.
+ */
 function creditInserts(
   db: D1Database,
   address: string,
@@ -214,16 +220,19 @@ async function extendDonorClaim(
 
   let updated: D1Result[];
   try {
+    // The compare-and-set runs first and the credit inserts are fenced on the
+    // expiry it sets, so a losing extension records no credits: donations stay
+    // available to the claim that actually extends the key.
     updated = await db.batch([
-      ...creditInserts(db, address, credit.newlyCounted, nowSec, { keyPrefix: existing.key_prefix, expiresAt: existing.expires_at }),
       db
         .prepare("UPDATE api_keys SET expires_at = ?, updated_at = ? WHERE key_prefix = ? AND is_active = 1 AND expires_at = ?")
         .bind(credit.expiresAt, nowSec, existing.key_prefix, existing.expires_at),
+      ...creditInserts(db, address, credit.newlyCounted, nowSec, { keyPrefix: existing.key_prefix, expiresAt: credit.expiresAt }),
     ]);
   } catch {
     return claimError(503, UNAVAILABLE_MESSAGE, "issue_failed");
   }
-  if ((updated[updated.length - 1]?.meta?.changes ?? 0) === 0) {
+  if ((updated[0]?.meta?.changes ?? 0) === 0) {
     return claimError(409, ALREADY_CLAIMED_MESSAGE, "claim_exists");
   }
   clearApiKeyCache(existing.key_prefix);
@@ -380,6 +389,8 @@ export async function handleDonorKeyClaim(
       ownerEmail: null,
       tier: "donor",
       rateLimitPerMinute: DONOR_API_KEY_RATE_LIMIT_PER_MINUTE,
+      // Donor-tier default quota; no per-key override on issuance.
+      monthlyRequestQuota: null,
       expiresAt,
     },
     nowSec,

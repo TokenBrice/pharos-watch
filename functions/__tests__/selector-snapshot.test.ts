@@ -499,9 +499,9 @@ describe("selector-snapshot Pages Function", () => {
       expect(response.status).toBe(503);
       await expect(response.json()).resolves.toEqual({ error: "Canonical selector data temporarily unavailable" });
       expect((env.SELECTOR_SNAPSHOTS as TestKVNamespace).__getStore().size).toBe(0);
-      // The reservation is refunded to zero rather than left spent: a
-      // canonical outage must not consume the client's daily POSTs.
-      expect([...db.__getQuotaRows().values()]).toEqual([0]);
+      // The reservation is refunded to zero (global + per-IP) rather than left
+      // spent: a canonical outage must not consume the client's daily POSTs.
+      expect([...db.__getQuotaRows().values()]).toEqual([0, 0]);
     });
 
     it("refunds the reserved bucket when canonical recomputation crosses UTC midnight", async () => {
@@ -524,9 +524,12 @@ describe("selector-snapshot Pages Function", () => {
       );
 
       expect(response.status).toBe(503);
-      // The refund must target the bucket the reservation charged, not a
-      // fresh new-day row.
-      expect(db.__getQuotaRows()).toEqual(new Map([[`2026-06-23:${hash}`, 0]]));
+      // The refund must target the buckets the reservation charged, not fresh
+      // new-day rows.
+      expect(db.__getQuotaRows()).toEqual(new Map([
+        [`2026-06-23:global`, 0],
+        [`2026-06-23:${hash}`, 0],
+      ]));
     });
 
     it("returns 503 when the KV write fails", async () => {
@@ -768,7 +771,9 @@ describe("selector-snapshot Pages Function", () => {
     // The quota lookup has no ORDER BY, so compare key/value pairs independent of row order.
     expect(db.__getQuotaRows()).toEqual(new Map([
       [`2026-06-19:${hash}`, 100],
+      [`2026-06-19:global`, 2],
       [`2026-06-20:${hash}`, 1],
+      [`2026-06-20:global`, 1],
     ]));
   });
 
@@ -794,6 +799,24 @@ describe("selector-snapshot Pages Function", () => {
     expect(db.__getQuotaRows().get(`2026-06-22:${hash}`)).toBe(100);
   });
 
+  it("returns 429 before recomputation when the global daily cap is spent", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-24T12:00:00Z"));
+    const db = makeD1();
+    db.__seedQuota("2026-06-24", "global", 2_000);
+
+    const response = await onRequest(
+      snapshotContext(postRequest(buildSelectorSnapshotOutput(), {
+        ...POST_HEADERS, "CF-Connecting-IP": "203.0.113.98",
+      }), makeEnv({ DB: db })),
+    );
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("Retry-After")).toBe("86400");
+    expect(recomputeVerifiedSelectorSnapshotMock).not.toHaveBeenCalled();
+    expect(db.__getQuotaRows().get("2026-06-24:global")).toBe(2_000);
+  });
+
   it("uses deterministic, IP-separated and configured-pepper HMAC quota identities", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-21T00:00:00Z"));
@@ -812,16 +835,35 @@ describe("selector-snapshot Pages Function", () => {
     const key = (ip: string, pepper: string) =>
       `2026-06-21:${createHmac("sha256", pepper).update(ip).digest("hex").slice(0, 32)}`;
     expect(db.__getQuotaRows()).toEqual(new Map([
+      ["2026-06-21:global", 4],
       [key(firstIp, firstPepper), 2],
       [key(secondIp, firstPepper), 1],
       [key(firstIp, secondPepper), 1],
     ]));
     for (const storedKey of db.__getQuotaRows().keys()) {
+      if (storedKey.endsWith(":global")) continue;
       expect(storedKey).not.toContain(firstIp);
       expect(storedKey).not.toContain(secondIp);
       expect(storedKey).not.toContain(createHash("sha256").update(firstIp).digest("hex").slice(0, 32));
       expect(storedKey).toMatch(/^\d{4}-\d{2}-\d{2}:[0-9a-f]{32}$/);
     }
+  });
+
+  it("groups IPv6 callers by /64 for the per-IP daily bucket", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-25T12:00:00Z"));
+    const db = makeD1();
+    const env = makeEnv({ DB: db });
+    const hash = createHmac("sha256", env.SELECTOR_SNAPSHOT_IP_HASH_SECRET!)
+      .update("2001:db8:1:2::/64").digest("hex").slice(0, 32);
+    db.__seedQuota("2026-06-25", hash, 100);
+    const send = (ip: string) => onRequest(snapshotContext(postRequest(
+      buildSelectorSnapshotOutput(), { ...POST_HEADERS, "CF-Connecting-IP": ip },
+    ), env));
+
+    // A fresh address in the same /64 cannot mint a new per-IP bucket.
+    expect((await send("2001:db8:1:2:aaaa::1")).status).toBe(429);
+    expect((await send("2001:db8:1:3::1")).status).toBe(200);
   });
 
   describe("GET failure modes", () => {
