@@ -176,22 +176,24 @@ describe("tracked holder source contracts", () => {
     const onchainKey = `onchain:${id}`;
     const linkedKey = `linked-variant:${id}:${onchainKey}`;
     const { startSec } = baseEvaluationInput();
-    const anchorDays = 14;
+    const anchorDays = 15;
     const anchorAt = startSec - anchorDays * 86400;
+    const recoveryAt = startSec + 7 * 86400;
     const riskFreeRateMeta = makeBenchmarkMeta();
     const { db, sqlite } = createLatestSchemaSqlite();
     try {
-      for (const observedAt of [anchorAt, startSec - 3600, startSec]) {
+      for (const observedAt of [anchorAt, startSec - 3600, startSec, recoveryAt]) {
         const healthy = observedAt === anchorAt;
         const flat = !healthy && observedAt < startSec;
+        const outage = observedAt === startSec;
         const vault = { sourcePool: corroboratingPoolId, sourceObservedAt: observedAt };
         const input = baseEvaluationInput({
           startSec: observedAt, stablecoinSupplyById: new Map([[parentId, 10_000_000]]),
           tier1PrevRates: new Map([[id, 1.25]]),
         });
-        if (observedAt === startSec) {
+        if (observedAt >= startSec) {
           const { resolved, tier1PrevRates } = await resolveTrackedYieldSources({
-            ...input, db, onChainRates: new Map([[id, { rate: 1.2525 }]]),
+            ...input, db, onChainRates: new Map([[id, { rate: outage ? 1.2525 : 1.255 }]]),
             dlPools: [makeDlYieldPool({ pool: corroboratingPoolId, project: "morpho-blue", tvlUsd: 1_000_000 })],
           });
           input.resolved = resolved;
@@ -205,15 +207,19 @@ describe("tracked holder source contracts", () => {
         const history = await loadYieldHistorySnapshots(db, [id, parentId], observedAt, input.sevenDaysAgoSec, {
           sourceKeysByStablecoin: new Map([[id, new Set([onchainKey])], [parentId, new Set([linkedKey])]]),
         });
-        if (!healthy) expect(history.historyRows.filter((row) => row.data_source === "onchain"))
-          .toMatchObject([{ stablecoin_id: id, source_key: onchainKey, exchange_rate: 1.25 }]);
+        if (!healthy) expect(history.historyRows.filter((row) => row.data_source === "onchain")
+          .map((row) => row.exchange_rate).sort((a, b) => (a ?? 0) - (b ?? 0)))
+          .toEqual(observedAt === recoveryAt ? [1.25, 1.2525] : [1.25]);
         const evaluation = await evaluateYieldSourcesCooperative({ ...input, ...await buildYieldHistoryEvaluationInputsCooperative(history) });
         const { previewRankingsPayload, publicationViews, acceptedSources } = buildPreviewYieldRankingsArtifacts({
           ...evaluation, startSec: observedAt, riskFreeRateMeta, riskFreeRate: riskFreeRateMeta.rate,
           riskFreeRates: makeBenchmarkRegistry(riskFreeRateMeta), dlPoolsMeta: makeYieldSourceMeta(), safetySnapshot: makeSafetySnapshotMeta(),
         });
         const generation = { startSec: observedAt, generationId: `test-${observedAt}` };
-        const rows = buildYieldStorageRows({ ...generation, evaluatedSources: acceptedSources, publicationViews });
+        const rows = buildYieldStorageRows({
+          ...generation, evaluatedSources: acceptedSources, publicationViews,
+          anchorOnlySources: input.resolved.filter((entry) => entry.yield?.observationKind === "anchor-only"),
+        });
         await publishYieldRowsAtomically(db, { ...generation, ...rows, rankingsPayload: { ...previewRankingsPayload, publication: generation } });
         const [published] = JSON.parse((await readYieldRankingsCoinCache(db, parentId))!.value).rankings;
         if (flat) {
@@ -221,24 +227,36 @@ describe("tracked holder source contracts", () => {
           expect(published).toBeUndefined();
           continue;
         }
-        const expectedApy = computeApyFromRate(1.2525, 1.25, anchorDays);
+        if (outage) {
+          // The expired anchor derives no return; the fresh share price must
+          // persist as the next comparison anchor instead of being discarded.
+          expect(previewRankingsPayload.rankings).toEqual([]);
+          expect(published).toBeUndefined();
+          expect(sqlite.prepare("SELECT exchange_rate, apy, apy_base FROM yield_history WHERE source_key = ? AND recorded_at = ?")
+            .get(onchainKey, startSec)).toEqual({ exchange_rate: 1.2525, apy: 0, apy_base: null });
+          continue;
+        }
+        // Recovery: the next seven-day comparison derives its return from the
+        // outage run's persisted anchor; apy30d keeps the oldest window anchor.
+        const expectedApy = computeApyFromRate(1.255, 1.2525, 7);
+        const expectedApy30d = computeApyFromRate(1.255, 1.25, anchorDays + 7);
         expect(published).toMatchObject(healthy
           ? { currentApy: 3, provenance: { sourceKey: `linked-variant:${id}:${sourceKey}` } }
-          : { currentApy: expectedApy, apy30d: expectedApy, sourceTvlUsd: 1_000_000,
+          : { currentApy: expectedApy, apy30d: expectedApy30d, sourceTvlUsd: 1_000_000,
             provenance: { sourceKey: linkedKey, apy30dAnchorObservedAt: anchorAt } });
         const priorRate = sqlite.prepare("SELECT exchange_rate_prev FROM yield_data WHERE stablecoin_id = ? AND source_key = ?");
         if (healthy) {
           expect.soft(priorRate.get(id, sourceKey)).toEqual({ exchange_rate_prev: null });
           expect.soft(priorRate.get(parentId, `linked-variant:${id}:${sourceKey}`)).toEqual({ exchange_rate_prev: null });
         } else {
-          expect(priorRate.get(parentId, linkedKey)).toEqual({ exchange_rate_prev: 1.25 });
+          expect(priorRate.get(parentId, linkedKey)).toEqual({ exchange_rate_prev: 1.2525 });
           const { rows: selectorRows } = buildSelectorRows({
             yieldData: previewRankingsPayload, now: observedAt, stablecoinsData: null, pegData: null,
             reportData: null, stressData: null, dexData: null, bluechipData: null,
           });
           for (const [coinId, fallbackKey] of [[id, onchainKey], [parentId, linkedKey]]) {
             expect.soft(selectYieldSource(selectorRows.get(coinId)!, makeInput({ profile: "yield", minApy: 3 })))
-              .toMatchObject({ sourceKey: fallbackKey, chain: "ethereum", apy30d: expectedApy });
+              .toMatchObject({ sourceKey: fallbackKey, chain: "ethereum", apy30d: expectedApy30d });
           }
         }
       }

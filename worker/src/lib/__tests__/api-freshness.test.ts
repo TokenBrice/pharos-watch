@@ -111,6 +111,13 @@ function cacheRow(key: string, updatedAt: number, value: unknown = {}): { key: s
   };
 }
 
+function yieldRankingsEnvelope(generationId: string, updatedAt: number): string {
+  return JSON.stringify({
+    updatedAt,
+    publication: { generationId, updatedAt, cutoffAt: updatedAt, schemaVersion: 1, status: "published" },
+  });
+}
+
 function sentinelRow(
   key: "dex-liquidity" | "yield-data" | "dews",
   updatedAt: number,
@@ -333,7 +340,7 @@ describe("buildCacheStatuses sentinel validation", () => {
         sentinel.key, sentinel.value, sentinel.updated_at,
       );
       sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('yield-rankings', ?, ?)").run(
-        JSON.stringify({ publication: { generationId: "yield-imperfect" } }), now - 60,
+        yieldRankingsEnvelope("yield-imperfect", now - 60), now - 60,
       );
       const insert = sqlite.prepare(
         "INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata, degraded_reason) VALUES ('sync-yield-data', ?, 1, ?, ?, ?)",
@@ -365,7 +372,7 @@ describe("buildCacheStatuses sentinel validation", () => {
       const clean = sentinelRow("yield-data", now - 10, { generationId: "yield-clean" });
       sqlite.prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = ?").run(clean.value, clean.updated_at, clean.key);
       sqlite.prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = 'yield-rankings'").run(
-        JSON.stringify({ publication: { generationId: "yield-clean" } }), now - 10,
+        yieldRankingsEnvelope("yield-clean", now - 10), now - 10,
       );
       const recovered = await buildCacheStatuses(db, now);
       expect(recovered.caches["yield-data"]).toMatchObject({
@@ -403,7 +410,7 @@ describe("buildCacheStatuses sentinel validation", () => {
           sentinel.key, sentinel.value, sentinel.updated_at,
         );
         sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('yield-rankings', ?, ?)").run(
-          JSON.stringify({ publication: { generationId: "retained-clean" } }), now - 600,
+          yieldRankingsEnvelope("retained-clean", now - 600), now - 600,
         );
         const insert = sqlite.prepare(
           "INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata, degraded_reason) VALUES ('sync-yield-data', ?, 20000, ?, ?, ?)",
@@ -423,7 +430,7 @@ describe("buildCacheStatuses sentinel validation", () => {
         const advanced = sentinelRow("yield-data", now - 60, { generationId: "new-unconfirmed" });
         sqlite.prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = ?").run(advanced.value, advanced.updated_at, advanced.key);
         sqlite.prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = 'yield-rankings'").run(
-          JSON.stringify({ publication: { generationId: "new-unconfirmed" } }), now - 60,
+          yieldRankingsEnvelope("new-unconfirmed", now - 60), now - 60,
         );
         const unconfirmed = await buildCacheStatuses(db, now);
         expect(unconfirmed.caches["yield-data"]).toMatchObject({
@@ -444,7 +451,7 @@ describe("buildCacheStatuses sentinel validation", () => {
         sentinel.key, sentinel.value, sentinel.updated_at,
       );
       sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('yield-rankings', ?, ?)").run(
-        JSON.stringify({ publication: { generationId: "latest-output" } }), now - 60,
+        yieldRankingsEnvelope("latest-output", now - 60), now - 60,
       );
       const insert = sqlite.prepare(
         "INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata) VALUES ('sync-yield-data', ?, 120000, 'ok', ?)",
@@ -974,7 +981,7 @@ describe("buildCacheStatuses", () => {
       }
       insertCache.run("freshness:dex-liquidity", sentinelValue(freshRowUpdatedAt, "sync-dex-liquidity", "dex:global"), freshRowUpdatedAt);
       insertCache.run("freshness:yield-data", sentinelValue(freshRowUpdatedAt, "sync-yield-data", "yield:current"), freshRowUpdatedAt);
-      insertCache.run("yield-rankings", JSON.stringify({ publication: { generationId: "yield:current" } }), freshRowUpdatedAt);
+      insertCache.run("yield-rankings", yieldRankingsEnvelope("yield:current", freshRowUpdatedAt), freshRowUpdatedAt);
       // The retained sentinel still names the previous published generation.
       insertCache.run(
         "freshness:dews",

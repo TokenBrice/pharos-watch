@@ -6,6 +6,7 @@ import { resolveYieldTypeLabel } from "./source-risk";
 import { YIELD_VARIANT_CHILD_VENUE_PROTOCOLS } from "@shared/lib/yield-source-risk-registry";
 import { MORPHO_NET_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 import { isBlockedYieldOpportunitySource, matchAllDlPools } from "../yield-helpers";
+import { buildOnChainSourceKey } from "../../lib/yield-utils";
 import { getPriceDerivedApy } from "./state";
 import { LAYER3_EXCLUDED_VENUE_PROJECTS } from "../../lib/yield-config/yield-config-lending-protocols";
 import { ON_CHAIN_RATE_CONFIGS, PRICE_DERIVED_FALLBACK_IDS, RATE_DERIVED_CONFIGS } from "../../lib/yield-config/yield-config-rate-sources";
@@ -154,6 +155,15 @@ export async function resolveTrackedYieldSources(params: {
     if (rateConfig && onChainRate && Number.isFinite(onChainRate.rate) && onChainRate.rate > 0) {
       const { rate } = onChainRate;
       const prevRow = tier1PrevRateRows.get(id);
+      // A prior rate past the comparison-anchor budget can only derive a return
+      // that evaluation rejects as anchor-stale, discarding this run's fresh
+      // rate with it and freezing the expired anchor. Treat it as absent so the
+      // anchor-only observation seeds the fresh rate as the next anchor.
+      const usablePrevRow = prevRow != null
+        && Math.trunc(params.startSec - prevRow.recordedAt) * 1000
+          <= getComparisonAnchorStaleThresholdMs("onchain", buildOnChainSourceKey(id))
+        ? prevRow
+        : undefined;
       tier1PrevRates.set(id, prevRow?.exchangeRate ?? null);
       const nativePoolId = YIELD_POOL_MAP[id] ?? null;
       const sourceTvlUsd = resolveMeasuredSourceTvlUsd({
@@ -166,7 +176,7 @@ export async function resolveTrackedYieldSources(params: {
         id,
         symbol,
         rate,
-        previousRate: prevRow,
+        previousRate: usablePrevRow,
         startSec: params.startSec,
         nativePoolId,
         sourceTvlUsd,

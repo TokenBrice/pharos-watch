@@ -1,5 +1,5 @@
 import { MATCHING_CACHE_VERSION_KEY_SQL } from "../../db-cache";
-import { YIELD_RANKINGS_READ_KEYS } from "../../yield-rankings-coin-cache";
+import { YIELD_RANKINGS_READ_KEYS, YIELD_SERVED_GENERATION_SQL } from "../../yield-rankings-coin-cache";
 /**
  * DEWS source-state hydration loaders.
  *
@@ -877,13 +877,18 @@ export async function hydrateYieldWarnings(ctx: HydrationContext): Promise<Yield
   try {
     const yieldRows = await ctx.db
       .prepare(
+        // Scope to the validated served generation: with cleanup deferred, an
+        // older generation's winner can still carry is_best = 1, and its
+        // warning would outlive the selection that produced it.
+        // SAFETY: the joined expression is the static served-generation selector.
         `SELECT /* pharos:dews:yield-warning-signals */
            stablecoin_id, warning_signals
          FROM yield_data
          WHERE is_best = 1
            AND warning_signals IS NOT NULL
            AND warning_signals != '[]'
-           AND (publication_state IS NULL OR publication_state = 'published')`,
+           AND publication_state = 'published'
+           AND publication_generation_id = ${YIELD_SERVED_GENERATION_SQL}`,
       )
       .all<{ stablecoin_id: string; warning_signals: string }>();
     yieldWarningRowsRead = yieldRows.results.length;
