@@ -1,5 +1,32 @@
 import { describe, it, expect } from "vitest";
-import { medianOfRounded, mergeDepegSeconds, worstDeviation } from "../peg-utils";
+import { activePegPeakBps, depegObservedIntervals, legacyPegEventStart, medianOfRounded, mergeDepegSeconds, worstDeviation, type PegScoreEvent } from "../peg-utils";
+import { getReferenceMarket } from "../reference-market-hours";
+import { computePegScore } from "../peg-score";
+import { makePegEvent } from "../../test-utils/peg-fixtures";
+
+it("admits a closed-session observation using its own fragment's peak", () => {
+  const now = Date.parse("2026-11-14T13:00:00Z") / 1000;
+  const event: PegScoreEvent = {
+    ...makePegEvent({ pegType: "peggedAUD", startedAt: now - 600, peakDeviationBps: -2600, endedAt: null }),
+    currentFragmentPeakBps: -437,
+    priceCoverage: { intervals: [[now - 600, now]], lastTrustedObservationAt: now, gapStartedAt: null },
+  };
+  const market = getReferenceMarket("AUD");
+  expect(activePegPeakBps(event, now, market)).toBeNull();
+  expect(depegObservedIntervals(event, [[now - 600, now + 1]])).toEqual([]);
+  expect(computePegScore([event], now - 864000, now)).toMatchObject({ scoredEventCount: 0, worstDeviationBps: null });
+  expect(computePegScore([{ ...event, onsetFragmentPeakBps: -2600 }], now - 864000, now))
+    .toMatchObject({ scoredEventCount: 1, worstDeviationBps: -2600, pegPct: 100 });
+  expect(activePegPeakBps({ ...event, admittedCoverage: [{ fromSec: now - 600, toSec: now + 1 }] }, now, market))
+    .toBe(-2600);
+});
+
+it("withholds legacy onset admission when the opening fragment peak is unavailable", () => {
+  const event = makePegEvent({ pegType: "peggedAUD", startedAt: Date.parse("2026-11-13T13:00:00Z") / 1000,
+    endedAt: null, peakDeviationBps: -960, onsetFragmentPeakBps: null });
+  expect(legacyPegEventStart(event)).toBeNull();
+  expect(computePegScore([event], event.startedAt - 86400, event.startedAt + 600).scoredEventCount).toBe(0);
+});
 
 describe("mergeDepegSeconds", () => {
   const cases = [

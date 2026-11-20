@@ -1,6 +1,8 @@
+import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { URL as NodeURL } from "node:url";
 import { prepareDepegLedgerManifest } from "../../../scripts/prepare-depeg-ledger-manifest";
 import { DEPEG_LEDGER_MANIFEST_KEY } from "@shared/types/depeg-event-projection";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
@@ -59,9 +61,10 @@ describe("handleDepegEvents", () => {
     { first_peg_reference: -1 },
     { constituent_event_count: 0 },
     { constituent_event_count: 1.5 },
+    { incident_peak_json: "{}" },
   ].map((invalid) => ({
     current_event_id: 2, first_started_at: 1_700_000_000, first_start_price: 0.97,
-    first_peg_reference: 1, constituent_event_count: 2, ...invalid,
+    first_peg_reference: 1, constituent_event_count: 2, incident_peak_json: null, ...invalid,
   })))("withholds raw history when an incident projection row is malformed: %j", async (projection) => {
     const db = mockD1([
       { match: "pharos:depeg-event-projection:active-incidents", rows: [{ references_valid: 1, ...projection }] },
@@ -95,14 +98,15 @@ describe("handleDepegEvents", () => {
     expect(byId.get(2)).not.toHaveProperty("retired");
   });
 
-  function seedIncident(firstId: number, currentId: number, eventIds: number[], linkIds = [firstId, currentId]) {
+  function seedIncident(firstId: number, currentId: number, eventIds: number[], linkIds = [firstId, currentId],
+    [stablecoinId, symbol, pegCurrency] = ["usdt-tether", "USDT", "USD"], start = 1_700_000_000) {
     const { sqlite, db } = fixtures.open();
     const key = `ddr2:${"a".repeat(32)}`;
     for (const id of eventIds) {
       sqlite.prepare(`INSERT INTO depeg_events
         (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peg_reference)
-        VALUES (?, 'usdt-tether', 'USDT', 'peggedUSD', 'below', 300, ?, ?, 1)`)
-        .run(id, 1_700_000_000 + (id - firstId) * 1_000, id === firstId ? 0.97 : 0.96);
+        VALUES (?, ?, ?, ?, 'below', 300, ?, ?, 1)`)
+        .run(id, stablecoinId, symbol, `pegged${pegCurrency}`, start + (id - firstId) * 1_000, id === firstId ? 0.97 : 0.96);
     }
     for (const id of new Set(linkIds)) {
       sqlite.prepare(`INSERT INTO depeg_resolver_incident_event_links (incident_key, event_id, relation, linked_at)
@@ -112,8 +116,8 @@ describe("handleDepegEvents", () => {
     sqlite.prepare(`INSERT INTO depeg_resolver_incidents
       (incident_key, stablecoin_id, peg_currency, direction, first_event_id, current_event_id,
        first_started_at, current_started_at, first_observed_peak_bucket_bps, source_fingerprint, created_at, updated_at)
-      VALUES (?, 'usdt-tether', 'USD', 'below', ?, ?, 1700000000, 1700001000, 300, ?, 1700000000, 1700001000)`)
-      .run(key, firstId, currentId, "b".repeat(64));
+      VALUES (?, ?, ?, 'below', ?, ?, ?, ?, 300, ?, 1700000000, 1700001000)`)
+      .run(key, stablecoinId, pegCurrency, firstId, currentId, start, start + 1_000, "b".repeat(64));
     return { sqlite, db, key };
   }
 
@@ -125,17 +129,18 @@ describe("handleDepegEvents", () => {
     const last = { fromSec: start + 1000, toSec: start + 1050 };
     update.run(JSON.stringify([first]), 101);
     update.run(JSON.stringify([last]), 102);
+    sqlite.exec("UPDATE depeg_events SET peak_deviation_bps = CASE id WHEN 101 THEN -960 ELSE -437 END");
     sqlite.prepare("UPDATE depeg_events SET ended_at = ?, recovery_price = 1 WHERE id = 102").run(start + 1200);
     const readEvent = async () => {
       const response = await handleDepegEvents(db, new URL("https://x/api/depeg-events"));
       return (await readJsonResponse(response, 200) as { events: Record<string, unknown>[] }).events[0];
     };
     expect(await readEvent()).toMatchObject({
-      id: 102, startedAt: start, endedAt: start + 1200, analyticRecoveryAt: null, admittedCoverage: [first, last],
+      id: 102, startedAt: start, endedAt: start + 1200, peakDeviationBps: -960, analyticRecoveryAt: null, admittedCoverage: [first, last],
     });
     sqlite.prepare("UPDATE depeg_events SET admitted_coverage_json = '[]', disposition = 'repaired' WHERE id = 101").run();
     expect(await readEvent()).toMatchObject({
-      id: 102, endedAt: start + 1200, admittedCoverage: [], provenance: { pegScoreEligible: false },
+      id: 102, endedAt: start + 1200, peakDeviationBps: -437, admittedCoverage: [], provenance: { pegScoreEligible: false },
     });
   });
 
@@ -228,7 +233,7 @@ describe("handleDepegEvents", () => {
   it.each([
     { label: "live native heuristic", source: "live", quoteMode: null },
     { label: "backfilled native provenance", source: "backfill", quoteMode: "native-peg" },
-  ])("keeps the current row's price pair when the first constituent uses another quote domain ($label)", async ({ source, quoteMode }) => {
+  ])("keeps each observation in its own quote domain ($label)", async ({ source, quoteMode }) => {
     const { sqlite, db } = fixtures.open();
     const key = `ddr2:${"c".repeat(32)}`;
     const insertEvent = sqlite.prepare(`INSERT INTO depeg_events
@@ -236,7 +241,8 @@ describe("handleDepegEvents", () => {
        start_price, peak_price, peg_reference, source)
       VALUES (?, 'pht-pht', 'PHT', 'peggedPHP', 'below', ?, ?, ?, ?, ?, ?)`);
     // First constituent: USD-domain quote (USD/PHP reference).
-    insertEvent.run(101, -400, 1_700_000_000, 0.0162, 0.0162, 0.016472576, "live");
+    insertEvent.run(101, -400, 1_700_000_000, 0.0162, 0.01584, 0.016472576, "live");
+    sqlite.prepare("UPDATE depeg_events SET peak_peg_reference = 0.0165, peak_quote_domain = 'usd' WHERE id = 101").run();
     // Current constituent: native PHP-domain quote with reference 1.
     insertEvent.run(102, -159, 1_700_001_000, 0.9844, 0.9841, 1, source);
     if (quoteMode != null) {
@@ -263,6 +269,10 @@ describe("handleDepegEvents", () => {
       startedAt: 1_700_000_000,
       startPrice: 0.9844,
       pegReference: 1,
+      peakDeviationBps: -400,
+      peakPrice: 0.01584,
+      peakPegReference: 0.0165,
+      peakQuoteDomain: "usd",
       constituentEventCount: 2,
     })]);
   });
@@ -556,17 +566,21 @@ describe("handleDepegEvents", () => {
     }).toEqual({ total: 1, events: [{ id: 301, startedAt: 1_780_671_044, constituentEventCount: 4 }] });
   });
 
-  it("publishes a canonical incident's newer current event over an older superseded alias tail", async () => {
+  it.each([960, -960])("keeps the newer effective row and publishes an older alias's %s bps peak", async (peak) => {
     const { sqlite, db } = fixtures.open();
+    const direction = peak < 0 ? "below" : "above";
+    const currentPeak = Math.sign(peak) * 437;
+    const peakPrice = peak < 0 ? 0.60568 : 0.73432;
+    const onsetPeak = Math.sign(peak) * 400;
     const canonicalKey = `ddr2:${"a".repeat(32)}`;
     const aliasKey = `ddr2:${"b".repeat(32)}`;
     const insertEvent = sqlite.prepare(`INSERT INTO depeg_events
       (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at,
        start_price, peg_reference, source)
-      VALUES (?, 'apxusd-apyx', 'apxUSD', 'peggedUSD', 'below', 635, ?, ?, ?, 1, 'live')`);
-    insertEvent.run(101, 1_780_671_044, 1_781_000_000, 0.9365);
-    insertEvent.run(103, 1_782_000_000, 1_782_500_000, 0.9458);
-    insertEvent.run(104, 1_783_000_000, null, 0.9412);
+      VALUES (?, 'audd-novatti', 'AUDD', 'peggedAUD', ?, ?, ?, ?, ?, 0.67, 'live')`);
+    insertEvent.run(101, direction, onsetPeak, 1_780_671_044, 1_781_000_000, 0.65);
+    insertEvent.run(103, direction, Math.abs(peak), 1_782_000_000, 1_782_500_000, 0.65);
+    insertEvent.run(104, direction, currentPeak, 1_783_000_000, null, 0.65);
     const insertLink = sqlite.prepare(`INSERT INTO depeg_resolver_incident_event_links
       (incident_key, event_id, relation, linked_at) VALUES (?, ?, 'observed', 1783000000)`);
     for (const eventId of [101, 104]) insertLink.run(canonicalKey, eventId);
@@ -575,21 +589,217 @@ describe("handleDepegEvents", () => {
       (incident_key, stablecoin_id, peg_currency, direction, first_event_id, current_event_id,
        first_started_at, current_started_at, first_observed_peak_bucket_bps, incident_state,
        superseded_by_incident_key, source_fingerprint, created_at, updated_at)
-      VALUES (?, 'apxusd-apyx', 'USD', 'below', ?, ?, ?, ?, 635, ?, ?, ?, 1783000000, 1783000000)`);
-    insertIncident.run(canonicalKey, 101, 104, 1_780_671_044, 1_783_000_000, "active", null, "a".repeat(64));
-    insertIncident.run(aliasKey, 103, 103, 1_782_000_000, 1_782_000_000, "superseded", canonicalKey, "b".repeat(64));
+      VALUES (?, 'audd-novatti', 'AUD', ?, ?, ?, ?, ?, 400, ?, ?, ?, 1783000000, 1783000000)`);
+    insertIncident.run(canonicalKey, direction, 101, 104, 1_780_671_044, 1_783_000_000, "active", null, "a".repeat(64));
+    insertIncident.run(aliasKey, direction, 103, 103, 1_782_000_000, 1_782_000_000, "superseded", canonicalKey, "b".repeat(64));
+    sqlite.prepare(`UPDATE depeg_events SET peak_price = ?, peg_reference = 0,
+      peak_peg_reference = 0.67, peak_quote_domain = 'usd' WHERE id = 103`).run(peakPrice);
 
-    const body = await readJsonResponse(
-      await handleDepegEvents(db, new URL("https://x/api/depeg-events?stablecoin=apxusd-apyx&active=true")),
+    const body = DepegEventsResponseSchema.parse(await readJsonResponse(
+      await handleDepegEvents(db, new URL("https://x/api/depeg-events?stablecoin=audd-novatti&active=true")),
       200,
-    ) as { total: number; events: Array<{ id: number; startedAt: number; endedAt: number | null; constituentEventCount: number }> };
+    ));
 
     // The effective current fragment is the later one, so the open canonical
     // tail stays published and the superseded alias tail is absorbed into it.
     expect({
       total: body.total,
-      events: body.events.map(({ id, startedAt, endedAt, constituentEventCount }) => ({ id, startedAt, endedAt, constituentEventCount })),
-    }).toEqual({ total: 1, events: [{ id: 104, startedAt: 1_780_671_044, endedAt: null, constituentEventCount: 3 }] });
+      events: body.events,
+    }).toEqual({ total: 1, events: [expect.objectContaining({
+      id: 104, startedAt: 1_780_671_044, endedAt: null, constituentEventCount: 3,
+      peakDeviationBps: peak, peakPrice, peakPegReference: 0.67, peakQuoteDomain: "usd",
+      onsetFragmentPeakBps: onsetPeak, currentFragmentPeakBps: currentPeak,
+    })] });
+    sqlite.exec(`UPDATE depeg_events SET peak_price = -1, peak_peg_reference = 1, peak_quote_domain = 'usd' WHERE id = 103;
+      INSERT INTO depeg_events (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peg_reference)
+      VALUES (105, 'usdt-tether', 'USDT', 'peggedUSD', 'below', -300, 1783000000, 0.97, 1)`);
+    const readLedger = async () => DepegEventsResponseSchema.parse(await readJsonResponse(
+      await handleDepegEvents(db, new URL("https://x/api/depeg-events")), 200,
+    ));
+    const invalidQuote = await readLedger();
+    expect(invalidQuote.events.map(({ id }) => id)).toEqual([105, 104]);
+    expect(invalidQuote.events[1]).toMatchObject({ peakDeviationBps: peak, peakPrice: null });
+    expect(invalidQuote.events[1]).not.toHaveProperty("peakPegReference");
+
+    const sample = { basis: "peer-relative", observedAt: 1_782_100_000, price: peakPrice, pegReference: 0.67, bps: peak };
+    sqlite.prepare(`UPDATE depeg_events SET peak_price = ?, peak_peg_reference = 0.67, peer_basis_json = ?,
+      admitted_coverage_json = '[{"fromSec":1782000000,"toSec":1782100000}]' WHERE id = 103`)
+      .run(peakPrice, JSON.stringify({ onset: sample, peak: sample }));
+    expect((await readLedger()).events[1]).toMatchObject({
+      peakPeerMedianUsd: 0.67, admittedCoverage: [{ fromSec: 1_782_000_000, toSec: 1_782_100_000 }],
+    });
+    for (const endedAt of ["x'61'", "'invalid close'"]) {
+      sqlite.exec(`UPDATE depeg_events SET ended_at = ${endedAt} WHERE id = 103`);
+      const events = (await readLedger()).events;
+      expect(events).toMatchObject([{ id: 105 }, { id: 104, peakDeviationBps: peak, peakPrice, admittedCoverage: [] }]);
+      expect(events[1]).not.toHaveProperty("peakBasis");
+    }
+    sqlite.exec(`UPDATE depeg_events SET ended_at = 1782500000, peer_basis_json = NULL,
+      admitted_coverage_json = NULL WHERE id = 103`);
+
+    for (const assignment of ["peak_price = x'61'", "peak_peg_reference = x'61', peak_quote_domain = NULL",
+      "peak_quote_domain = x'61', peak_peg_reference = NULL", "peg_reference = x'61', peak_peg_reference = NULL, peak_quote_domain = NULL"]) {
+      sqlite.prepare(`UPDATE depeg_events SET peak_price = ?, peg_reference = 0.67,
+        peak_peg_reference = 0.67, peak_quote_domain = 'usd' WHERE id = 103`).run(peakPrice);
+      sqlite.exec(`UPDATE depeg_events SET ${assignment} WHERE id = 103`);
+      const malformedQuote = (await readLedger()).events[1];
+      expect(malformedQuote).toMatchObject({ peakDeviationBps: peak, peakPrice: null });
+      expect(malformedQuote).not.toHaveProperty("peakQuoteDomain");
+    }
+    sqlite.exec("UPDATE depeg_events SET peg_reference = 0, peak_peg_reference = 0.67, peak_quote_domain = 'usd' WHERE id = 103");
+    sqlite.exec("UPDATE depeg_events SET peer_basis_json = x'61' WHERE id IN (101, 103)");
+    expect((await readLedger()).events[1]).toMatchObject({ peakDeviationBps: peak, peakPrice, peakQuoteDomain: "usd" });
+
+    sqlite.exec("UPDATE depeg_events SET pending_reason = x'61' WHERE id IN (101, 103)");
+    expect((await readLedger()).events).toMatchObject([{ id: 105 }, { id: 104, peakDeviationBps: peak, peakPrice }]);
+
+    sqlite.exec(`UPDATE depeg_events SET peg_type = x'61' WHERE id IN (101, 103);
+      UPDATE depeg_events SET peg_reference = 1 WHERE id = 101`);
+    expect((await readLedger()).events).toMatchObject([
+      { id: 105 }, { id: 104, pegReference: 0.67, peakDeviationBps: peak, peakPrice, peakPegReference: 0.67, peakQuoteDomain: "usd" },
+    ]);
+    sqlite.exec("UPDATE depeg_events SET start_price = 0.64, pending_reason = 'peer-relative' WHERE id = 104");
+    expect((await readLedger()).events[1]).toMatchObject({
+      startPrice: 0.64, pegReference: 0.67, onsetBasis: "peer-relative",
+    });
+    sqlite.exec("UPDATE depeg_events SET start_price = 0.65, pending_reason = NULL WHERE id = 104");
+
+    sqlite.exec(`UPDATE depeg_events SET peg_type = 'peggedAUD', peg_reference = 0.67 WHERE id = 101;
+      UPDATE depeg_events SET peg_type = 'peggedAUD', peak_peg_reference = NULL,
+      peak_quote_domain = NULL, peg_reference = 0.67 WHERE id = 103`);
+    expect((await readLedger()).events[1]).toMatchObject({ peakDeviationBps: peak, peakPrice, peakQuoteDomain: "usd" });
+
+    sqlite.exec("UPDATE depeg_events SET peak_peg_reference = 1, peak_quote_domain = 'native-peg' WHERE id = 103");
+    const uncertainQuote = (await readLedger()).events[1];
+    expect(uncertainQuote).toMatchObject({ peakDeviationBps: peak, peakPrice: null });
+    expect(uncertainQuote).not.toHaveProperty("peakQuoteDomain");
+
+    for (const value of ["'invalid bps'", "1e999", "-1e999", "-9223372036854775808", `${Number.MAX_VALUE}`]) {
+      sqlite.exec(`UPDATE depeg_events SET peak_deviation_bps = ${value} WHERE id = 103`);
+      expect((await readLedger()).events).toMatchObject([{ id: 105 }, { id: 104, peakDeviationBps: currentPeak }]);
+    }
+
+    sqlite.prepare("UPDATE depeg_events SET peak_deviation_bps = ? WHERE id = 103").run(peak);
+    for (const value of ["'400 bps'", "1e100", "-1e100"]) {
+      sqlite.exec(`UPDATE depeg_events SET peak_deviation_bps = ${value} WHERE id = 101`);
+      const malformedOnset = await readLedger();
+      expect(malformedOnset.events.map(({ id }) => id)).toEqual([105, 104]);
+      expect(malformedOnset.events[1]).toMatchObject({ peakDeviationBps: peak, onsetFragmentPeakBps: null });
+    }
+
+    sqlite.exec(`INSERT INTO depeg_event_provenance (event_id, source_kind, audit_verdict, created_at, updated_at)
+      VALUES (103, 'live', 'false_positive', 1783000000, 1783000000)`);
+    expect((await readLedger()).events[1]).toMatchObject({ id: 104, peakDeviationBps: currentPeak });
+
+    // Simulate an unknown verdict preserved from before the vocabulary migration.
+    sqlite.exec(`DROP TRIGGER trg_depeg_provenance_audit_verdict_update_guard;
+      UPDATE depeg_events SET peak_deviation_bps = ${Math.sign(peak) * 600} WHERE id = 101`);
+    const updateVerdict = sqlite.prepare("UPDATE depeg_event_provenance SET audit_verdict = ?, public_json = ? WHERE event_id = 103");
+    for (const verdict of [
+      ["unknown", null],
+      ["confirmed", '{"auditVerdict":"unknown"}'],
+      ["confirmed", '{"auditVerdict":"confirmed","auditVerdict":"unknown"}'],
+    ] as const) {
+      updateVerdict.run(...verdict);
+      expect((await readLedger()).events[1]).toMatchObject({ peakDeviationBps: Math.sign(peak) * 600 });
+    }
+
+    sqlite.exec(`UPDATE depeg_event_provenance SET audit_verdict = NULL, public_json = NULL, quote_mode = x'61' WHERE event_id = 103;
+      UPDATE depeg_events SET peak_peg_reference = NULL, peak_quote_domain = NULL WHERE id = 103`);
+    expect((await readLedger()).events[1]).toMatchObject({ peakDeviationBps: peak, peakPrice: null });
+
+    const legacyPeakPrice = 1 + peak / 10_000;
+    sqlite.prepare("UPDATE depeg_events SET peg_reference = 1, peak_price = ? WHERE id = 103").run(legacyPeakPrice);
+    sqlite.exec(`UPDATE depeg_event_provenance SET quote_mode = NULL, public_json = '{"quoteMode":"usd"}' WHERE event_id = 103`);
+    expect((await readLedger()).events[1]).toMatchObject({ peakDeviationBps: peak, peakPrice: legacyPeakPrice, peakQuoteDomain: "usd" });
+
+    sqlite.exec(`UPDATE depeg_events SET peg_type = 'unknown' WHERE id = 103;
+      UPDATE depeg_event_provenance SET public_json = NULL WHERE event_id = 103`);
+    const unknownQuote = (await readLedger()).events[1];
+    expect(unknownQuote).toMatchObject({ peakDeviationBps: peak, peakPrice: null });
+    expect(unknownQuote).not.toHaveProperty("peakQuoteDomain");
+  });
+
+  it("uses the same validated opening quote provenance for both fragments", async () => {
+    const start = 1_794_647_828;
+    const { sqlite, db } = seedIncident(101, 102, [101, 102], undefined, ["audd-novatti", "AUDD", "AUD"], start);
+    sqlite.exec(`UPDATE depeg_events SET source = 'live', start_price = CASE id WHEN 101 THEN 0.65 ELSE 0.9563 END;
+      UPDATE depeg_events SET peak_deviation_bps = CASE id WHEN 101 THEN -960 ELSE -437 END;
+      UPDATE depeg_events SET peak_price = 0.60568, peak_peg_reference = 0.67, peak_quote_domain = 'usd' WHERE id = 101;
+      INSERT INTO depeg_event_provenance (event_id, source_kind, quote_mode, public_json, created_at, updated_at)
+        VALUES (101, 'live', NULL, '{"quoteMode":"usd"}', 1700000000, 1700000000),
+               (102, 'live', NULL, NULL, 1700001000, 1700001000)`);
+    const readOpening = async () => DepegEventsResponseSchema.parse(await readJsonResponse(
+      await handleDepegEvents(db, new URL("https://x/api/depeg-events?stablecoin=audd-novatti")), 200,
+    )).events[0];
+    const open = await readOpening();
+    expect(open).toMatchObject({ startPrice: 0.9563, pegReference: 1, onsetQuoteFromLaterFragment: true });
+    sqlite.exec(`UPDATE depeg_event_provenance SET quote_mode = 'native-peg', public_json = '{"quoteMode":"usd"}' WHERE event_id = 102`);
+    expect(await readOpening()).toMatchObject({
+      startPrice: 0.9563, pegReference: 1, onsetQuoteDomain: "native-peg", provenance: { quoteMode: "usd" },
+    });
+    sqlite.exec("UPDATE depeg_event_provenance SET quote_mode = CASE event_id WHEN 101 THEN x'61' ELSE 'unknown' END");
+    expect(await readOpening()).toMatchObject({ startPrice: 0.65, pegReference: 1, onsetQuoteDomain: "usd", provenance: { quoteMode: "usd" } });
+    sqlite.exec(`UPDATE depeg_event_provenance SET quote_mode = NULL, public_json = NULL WHERE event_id = 102;
+      UPDATE depeg_events SET peg_reference = 0.67 WHERE id = 102`);
+    const firstOpening = await readOpening();
+    expect(firstOpening).toMatchObject({ startPrice: 0.65, pegReference: 1, onsetQuoteDomain: "usd", provenance: null });
+    expect(firstOpening).not.toHaveProperty("onsetQuoteFromLaterFragment");
+
+    sqlite.exec(`UPDATE depeg_events SET peg_type = 'unknown' WHERE id = 101;
+      UPDATE depeg_events SET peg_reference = 1 WHERE id = 102;
+      UPDATE depeg_event_provenance SET quote_mode = NULL, public_json = NULL WHERE event_id = 101;
+      UPDATE depeg_event_provenance SET quote_mode = 'native-peg' WHERE event_id = 102`);
+    expect.soft(await readOpening()).toMatchObject({
+      startPrice: 0.9563, pegReference: 1, onsetQuoteDomain: "native-peg", onsetQuoteFromLaterFragment: true,
+    });
+
+    sqlite.prepare("UPDATE depeg_events SET ended_at = ?, recovery_price = 1 WHERE id = 102").run(start + 1200);
+    const closed = await readOpening();
+    expect.soft(closed).toMatchObject({ startedAt: start, endedAt: start + 1200, peakDeviationBps: -960,
+      peakPrice: 0.60568, peakPegReference: 0.67, peakQuoteDomain: "usd" });
+    const pages = execFileSync(process.execPath, ["--import", "tsx", "--input-type=module", "-e", `
+      import { readFileSync } from "node:fs";
+      import { buildNoindexDepegEventSlugs, selectStaticDepegEventPages } from "./src/lib/depeg-event-config.ts";
+      import { buildDepegEventDescription } from "./src/lib/depeg-event-display.ts";
+      const events = JSON.parse(readFileSync(0, "utf8"));
+      console.log(JSON.stringify(events.map(event => [
+        selectStaticDepegEventPages([event]).length === 1 && !buildNoindexDepegEventSlugs([event]).has(event.slug),
+        buildDepegEventDescription(event, false, "AUDD").length,
+      ])));
+    `], { cwd: new NodeURL("../../../../", import.meta.url), input: JSON.stringify([open, closed].map(event => ({
+      ...event, slug: "audd-2026-11-14-down",
+    }))), encoding: "utf8" });
+    const [[openIndexable, openDescriptionLength], [closedIndexable]] = JSON.parse(pages);
+    expect.soft(openIndexable).toBe(true);
+    expect.soft(openDescriptionLength).toBeGreaterThanOrEqual(110);
+    expect.soft(openDescriptionLength).toBeLessThanOrEqual(180);
+    expect(closedIndexable).toBe(true);
+  });
+
+  it("dates the detector start separately from a later peer-relative EURC quote", async () => {
+    const { sqlite, db } = seedIncident(101, 102, [101, 102], undefined, ["eurc-circle", "EURC", "EUR"]);
+    const peak = { basis: "peer-relative", observedAt: 1_700_001_500, price: 0.975996, pegReference: 1.08, bps: -963 };
+    sqlite.exec("UPDATE depeg_events SET source = 'live' WHERE id = 101");
+    sqlite.prepare(`UPDATE depeg_events SET start_price = 1.03, peg_reference = 1.08, pending_reason = 'peer-relative',
+      peak_deviation_bps = -963, peak_price = ?, peak_peg_reference = 1.08, peak_quote_domain = 'usd', peer_basis_json = ?
+      WHERE id = 102`).run(peak.price, JSON.stringify({ peak }));
+    const { events: [event] } = DepegEventsResponseSchema.parse(await readJsonResponse(
+      await handleDepegEvents(db, new URL("https://x/api/depeg-events?stablecoin=eurc-circle")), 200,
+    ));
+    expect(event).toMatchObject({ startedAt: 1_700_000_000, onsetBasis: "peer-relative", onsetQuoteFromLaterFragment: true,
+      peakBasis: "peer-relative", peakDeviationBps: -963 });
+    // Pass the API row to a Pages-side process across the JSON boundary.
+    const copy = execFileSync(process.execPath, ["--import", "tsx", "--input-type=module", "-e", `
+      import { readFileSync } from "node:fs";
+      import { buildDepegEventSynopsis, buildDepegEventDescription } from "./src/lib/depeg-event-display.ts";
+      const event = JSON.parse(readFileSync(0, "utf8"));
+      console.log(JSON.stringify([buildDepegEventSynopsis(event), buildDepegEventDescription(event, true)]));
+    `], { cwd: new NodeURL("../../../../", import.meta.url), input: JSON.stringify({ ...event, slug: "eurc-test" }), encoding: "utf8" });
+    expect(JSON.parse(copy)).toEqual([
+      expect.stringMatching(/Detector start recorded on November 14, 2023 at 22:13 UTC\. Recorded peak deviation was 9\.63% below the peer median/),
+      expect.stringMatching(/EURC detector start recorded at 22:13 UTC on November 14, 2023\. The peak was 9\.63% below the peer median/),
+    ]);
   });
 
   it.each([0, 0.9893])("projects observed first-event price %s without replacing zero", async (startPrice) => {
@@ -611,6 +821,7 @@ describe("handleDepegEvents", () => {
             first_peg_reference: 1,
             constituent_event_count: 4,
             references_valid: 1,
+            incident_peak_json: null,
           },
         ],
       },

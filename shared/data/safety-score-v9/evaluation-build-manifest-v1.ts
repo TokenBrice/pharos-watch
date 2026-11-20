@@ -242,7 +242,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/peg-score.ts",
-      "sha256": "708b9c06d1ec9b0122cc5ae40ba7f024da1964903a7c74dbcfd77e05eb2ca91e"
+      "sha256": "9d81a312da8b013ce38fd4a83dc21955fb73155e675185b8a3960476246418cd"
     },
     {
       "path": "shared/lib/peg-taxonomy.ts",
@@ -250,7 +250,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/peg-utils.ts",
-      "sha256": "a291c7669fdc53a1ef42f5fdc697199ff89613eeab837d689da4e9c729708c42"
+      "sha256": "83bd70713cd03eba5830ee36553bde4258b00361b18962652ebb99ee8e8ec84a"
     },
     {
       "path": "shared/lib/physical-commodity-delivery.ts",
@@ -866,7 +866,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/peg.ts",
-      "sha256": "5b13a8d9702b5bdc30d02995cf071cad2125119b790a08f52064a1aa8fc185a8"
+      "sha256": "a892fa42419e8409ca025d737a446388a90bebef7acb5fa46335e938df6095b0"
     },
     {
       "path": "shared/types/price.ts",
@@ -1298,7 +1298,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/peg-provenance.ts",
-      "sha256": "d133e1305d5b599b0dc5356230652ec9dbdfd84aad621725b3458b62db7b7c2e"
+      "sha256": "40c79453341a12c965d2e55d53b12382de9ec929bb1c7a378c1a33b1fc245fc6"
     },
     {
       "path": "worker/src/lib/safety-score-v9/publication-assessment.ts",
@@ -1363,7 +1363,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-19-block-26448923-shock-coverage.json.gz"
     }
   ],
-  "digest": "66e5f95f391333c20f4bbc47b5878628be39050958508f046b8148a3af42b355"
+  "digest": "05fd80f0d4b2a74479bf8b3c5d1fa0a98355c6bcee2fcd03498d959eb12c103b"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

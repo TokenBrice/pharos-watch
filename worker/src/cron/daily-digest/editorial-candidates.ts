@@ -1,4 +1,4 @@
-import { comparableDepegs } from "./digest-evidence";
+import { comparableDepegs, describeDigestDepeg } from "./digest-evidence";
 import type {
   DigestEditorialCandidate,
   DigestEditorialCandidateArtifactRisk,
@@ -115,25 +115,20 @@ function addActiveDepegCandidates(
     const impactScore = getDepegEditorialImpactScore(severityBps, depeg.mcapUsd);
     const isCritical = isCriticalDepegRisk({ bps: severityBps, mcapUsd: depeg.mcapUsd });
     const age = depeg.ageHours != null ? `${depeg.ageHours}h old` : "age unknown";
-    const severityDirection = severityBps >= 0 ? "above" : "below";
-    // A peak-fallback row has no live observation; its figure is historical
-    // context and the title feeds reader-facing change labels verbatim.
-    const basisNote = depeg.severityBasis === "peak-fallback" ? " (stored peak; live price unavailable)" : "";
+    const { severity, historicalPeak } = describeDigestDepeg(depeg);
     addCandidate(candidates, {
       id: activeDepegEditorialCandidateId(depeg),
       kind: "depeg",
-      title: `${depeg.symbol} active ${Math.abs(severityBps)} bps ${severityDirection} peg${basisNote}`,
+      title: `${depeg.symbol} active ${severity}`,
       symbols: [depeg.symbol],
       impactScore,
       novelty: activeDepegNovelty(depeg, data, previousData),
       confidence: "high",
       artifactRisk: artifactRiskForSuppression(depeg.suppressReason, depeg.mcapUsd < 50_000_000 ? "medium" : "low"),
       headlineFacts: [
-        `${Math.abs(severityBps)} bps ${severityDirection} peg${depeg.severityBasis === "peak-fallback" ? " (stored peak; live price unavailable)" : ""}`,
+        severity,
         depeg.currentPriceUsd != null ? `current price $${depeg.currentPriceUsd.toFixed(3)}` : "",
-        depeg.peakBps != null && Math.abs(depeg.peakBps) !== Math.abs(severityBps)
-          ? `peak was ${Math.abs(depeg.peakBps)} bps`
-          : "",
+        historicalPeak ? `peak was ${historicalPeak}` : "",
         `${formatCurrency(depeg.mcapUsd)} market cap`,
         `${age}`,
         `market impact score ${marketImpactScore}`,
