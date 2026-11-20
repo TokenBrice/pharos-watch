@@ -157,7 +157,7 @@ jobs:
         run: |
           node --import tsx --input-type=module <<'JS'
           import { readFileSync, writeFileSync } from "node:fs";
-          import { evaluateDependencyCoverageStructure, renderDependencyCoverageAuditMarkdown } from "./scripts/maintenance/generate-dependency-coverage-audit.ts";
+          import { evaluateDependencyCoverageStructure, renderDependencyCoverageAuditMarkdown } from "./scripts/lib/dependency-coverage-audit.ts";
           const audit = JSON.parse(readFileSync(".tmp/dependency-coverage/audit.json", "utf8"));
           writeFileSync(".tmp/dependency-coverage/audit.md", renderDependencyCoverageAuditMarkdown(audit));
           if (audit.summary.publicationComparisonStatus === "checkout-production-skew") {
@@ -204,16 +204,13 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 1
-          # Trees only: the added-file census reads paths, never blob contents.
+          # Keep the history fetch light. The renderer measures the checked-out head.
           filter: blob:none
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "24.16.0"
 
-      # The report installs nothing: the renderer imports only Node builtins,
-      # `scripts/lib/cli-args.mjs` and the `scripts/lib/pr-lanes.mts` budgets.
-      # Every remote read happens here, and the token never reaches the step
-      # that parses repository or API content.
+      # Keep the GitHub token out of the renderer and dependency installation.
       - name: Fetch the reporting window
         id: window
         env:
@@ -258,11 +255,9 @@ jobs:
       - name: Collect the test files added in the window
         env:
           SINCE: ${{ steps.window.outputs.since }}
-        # The walk reads `origin/main`, the ref this fetch deepens, never the
-        # checkout's own shallow root. `--shallow-since` carries one day of
-        # margin so the shallow boundary sits before the window and its parent
-        # is never needed; `--not <boundary>` keeps a boundary commit whose date
-        # still falls inside the window from reporting its whole tree as added.
+        # Walk the fetched `origin/main` history. Fetch one extra day of history,
+        # and withhold the census if a reachable shallow root is still inside
+        # the window: Git would count its entire tree as added.
         # `--no-renames` walks trees only, as the checkout carries no blobs.
         # `--diff-merges=first-parent` is what makes a merge report the files the
         # branch actually added; without it a merge commit diffs nothing and a
@@ -277,15 +272,20 @@ jobs:
           fetch_since="$(date -u -d "${since} -1 day" +%Y-%m-%dT%H:%M:%SZ)"
           git fetch --no-tags --filter=blob:none --shallow-since="${fetch_since}" \
             origin +refs/heads/main:refs/remotes/origin/main
-          boundary="$(git rev-list --max-parents=0 origin/main | head -1)"
-          boundary_epoch="$(git show -s --format=%ct "${boundary}")"
-          since_epoch="$(date -u -d "${since}" +%s)"
-          if (( boundary_epoch > since_epoch )); then
-            echo "::warning title=Shallow boundary inside the window::Oldest available commit is newer than ${since}; added-file evidence starts at that boundary."
+          rm -f .tmp/ci-weekly/added-tests.log
+          shallow="$(git rev-parse --git-path shallow)"
+          if [[ -f "${shallow}" ]]; then
+            roots="$(git rev-list --max-parents=0 --since-as-filter="${since}" origin/main)"
+            while IFS= read -r boundary; do
+              if grep -Fxq -- "${boundary}" <<< "${roots}"; then
+                echo "::warning title=Shallow boundary inside the window::Added-file census unavailable since ${since} (boundary ${boundary})."
+                exit 0
+              fi
+            done < "${shallow}"
           fi
           work="$(mktemp "${RUNNER_TEMP}/ci-weekly-added.XXXXXX")"
           trap 'rm -f "${work}"' EXIT
-          git log origin/main --not "${boundary}" --since="${since}" --diff-filter=A --no-renames \
+          git log origin/main --since="${since}" --diff-filter=A --no-renames \
             --diff-merges=first-parent --name-only --pretty=format:'COMMIT %H' > "${work}"
           mv "${work}" .tmp/ci-weekly/added-tests.log
 
@@ -325,10 +325,16 @@ jobs:
             echo "::warning title=Nightly test timings unavailable::No test-timings artifact in the last two weeks; the slow-file section reports unavailable."
           fi
 
+      - name: Install route Markdown parser dependencies
+        id: route-parser
+        continue-on-error: true
+        run: timeout --kill-after=5s 90s npm ci --omit=dev --ignore-scripts --no-audit --no-fund
+
       - name: Render the weekly report
         env:
           SINCE: ${{ steps.window.outputs.since }}
           UNTIL: ${{ steps.window.outputs.until }}
+          ROUTE_PARSER_INSTALL_OUTCOME: ${{ steps.route-parser.outcome }}
         run: |
           set -euo pipefail
           out=".tmp/ci-weekly/report.md"

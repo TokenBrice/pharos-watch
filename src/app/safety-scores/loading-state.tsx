@@ -37,9 +37,8 @@ function SafetyScoresHeroSkeleton() {
 }
 
 /**
- * Server-renderable (no client directive, no live module): the page prerenders
- * it into the first flush and the live client's pending branch renders the
- * same tree, so the handoff changes no markup.
+ * The page prerenders this into the first flush. The live island keeps those
+ * nodes mounted while the query is pending and the preview remains eligible.
  */
 export function SafetyScoresContentLoadingState({ preview = null }: { preview?: SafetyScoresPreview | null }) {
   return (

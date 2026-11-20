@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -860,6 +860,12 @@ describe("CI workflow scope", () => {
     expect(red.env?.WORKER_SHARED_STABILITY_RESULT).toBe("${{ needs.worker-shared-stability.result }}");
   });
 
+  it("loads the weekly dependency gate from the audit library", () => {
+    const weekly = parseYaml(readRepoFile(".github/workflows/weekly-validation.yml")) as Workflow;
+    const evaluate = weekly.jobs["dependency-coverage"].steps?.find((step) => step.name === "Evaluate published dependency structure");
+    expect(evaluate?.run).toContain('from "./scripts/lib/dependency-coverage-audit.ts"');
+  });
+
   it("publishes the weekly CI report from a main-only workflow-fed job", () => {
     const weekly = parseYaml(readRepoFile(".github/workflows/weekly-validation.yml")) as Workflow;
     const job = weekly.jobs["ci-report"];
@@ -885,7 +891,10 @@ describe("CI workflow scope", () => {
     // Advisory evidence only: a missing nightly timing artifact must not red the
     // job before the report names the section unavailable.
     expect(steps.find((step) => step.id === "timings")?.["continue-on-error"]).toBe(true);
-    // The report installs nothing, so it restores no dependency cache.
+    const install = steps.find((step) => step.name === "Install route Markdown parser dependencies");
+    expect(install?.run).toContain("timeout --kill-after=5s 90s npm ci --omit=dev --ignore-scripts");
+    expect(install?.["continue-on-error"]).toBe(true);
+    expect(render?.env?.ROUTE_PARSER_INSTALL_OUTCOME).toBe(`\${{ steps.${install?.id}.outcome }}`);
     expect(steps.some((step) => step.uses === "$/.github/actions/setup-workspace")).toBe(false);
     // One stable issue identity: the locator, the edit and the create all name
     // the same title, and the label is created with the issue.
@@ -895,6 +904,54 @@ describe("CI workflow scope", () => {
     expect(new Set(titles)).toEqual(new Set(["Weekly CI report"]));
     expect(publish).toContain("ci:weekly-report");
     expect(publish).not.toContain("gh issue comment");
+  });
+
+  it("withholds the added-test census when either of two reachable shallow roots is in the window", () => {
+    const weekly = parseYaml(readRepoFile(".github/workflows/weekly-validation.yml")) as Workflow;
+    const census = weekly.jobs["ci-report"].steps?.find((step) => step.name === "Collect the test files added in the window")?.run;
+    expect(census).toBeDefined();
+    const root = mkdtempSync(join(tmpdir(), "pharos-weekly-census-"));
+    const log = join(root, ".tmp/ci-weekly/added-tests.log");
+    const env = { ...process.env, RUNNER_TEMP: root };
+    const bash = (script: string, since?: string) => {
+      const result = spawnSync("bash", ["-e", "-c", script], { cwd: root, env: { ...env, SINCE: since }, encoding: "utf8" });
+      expect(result.status, result.stderr).toBe(0);
+      return result.stdout;
+    };
+    try {
+      bash(`
+        git init -q
+        git config user.name Test
+        git config user.email test@example.invalid
+        mkdir -p .tmp/ci-weekly
+        touch existing.test.ts
+        git add existing.test.ts
+        tree=$(git write-tree)
+        commit() {
+          local day="$1"
+          shift
+          GIT_AUTHOR_DATE="2026-11-$day 00:00:00 +0000" GIT_COMMITTER_DATE="2026-11-$day 00:00:00 +0000" git commit-tree "$@" -m fixture
+        }
+        base=$(commit 06 "$tree")
+        old=$(commit 07 "$tree" -p "$base")
+        recent=$(commit 09 "$tree" -p "$base")
+        touch added.test.ts
+        git add added.test.ts
+        git update-ref refs/remotes/origin/main "$(commit 10 "$(git write-tree)" -p "$old" -p "$recent")"
+        printf '%s\\n' "$old" "$recent" > .git/shallow
+      `);
+      // The fixture already represents the fetch result. Everything after fetching uses real Git.
+      const collect = `git() { if [[ "$1" != fetch ]]; then command git "$@"; fi; }\n${census}`;
+      bash(collect, "2026-11-10T00:00:00Z");
+      expect(readFileSync(log, "utf8")).toMatch(/\nadded\.test\.ts\n$/);
+      for (const since of ["2026-11-07T00:00:00Z", "2026-11-09T00:00:00Z"]) {
+        writeFileSync(log, "stale census");
+        expect(bash(collect, since)).toContain("Shallow boundary inside the window");
+        expect(existsSync(log)).toBe(false);
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it("opens the nightly-red issue on the first red run and never closes it on cancellation", () => {

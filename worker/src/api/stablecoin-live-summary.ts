@@ -5,6 +5,7 @@ import { parseDetailSnapshotSourceClock } from "@shared/lib/detail-snapshot-inpu
 import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
 import { StablecoinDetailResponseSchema } from "@shared/types/supply";
 import { buildFreshnessMeta } from "../lib/api-freshness";
+import { assessFreshnessTimestamp } from "../lib/api-freshness-age";
 import { errorResponse, jsonResponse } from "../lib/api-response";
 import { handleStablecoinDetail } from "./stablecoin-detail";
 
@@ -34,7 +35,10 @@ export async function handleStablecoinLiveSummary(
   const sourceClock = headers.get("X-Data-Updated-At");
   const updatedAt = sourceClock === null ? null : parseDetailSnapshotSourceClock(sourceClock);
   const warning = headers.get("Warning");
+  const inheritedStatus = headers.get("X-Data-Freshness");
   const bodyMeta = ApiMetaEnvelopeSchema.safeParse(parsed.data._meta);
+  let inheritedVerdict = bodyMeta.success;
+  let computedReason: string | undefined;
   let meta: ApiMetaEnvelope;
   if (bodyMeta.success) {
     // Match the existing meta-aware reader: valid body provenance wins over HTTP clocks.
@@ -44,21 +48,25 @@ export async function handleStablecoinLiveSummary(
     headers.set("Cache-Control", "no-store");
     meta = { updatedAt: null, ageSeconds: null, status: "unknown", reason: "producer-timestamp-unavailable" };
   } else {
-    meta = buildFreshnessMeta(updatedAt, API_FRESHNESS_MAX_AGE_SEC.stablecoins, "stablecoin-detail");
+    const freshness = buildFreshnessMeta(updatedAt, API_FRESHNESS_MAX_AGE_SEC.stablecoins, "stablecoin-detail");
+    meta = freshness;
     // A server-stale floor (genuinely stale enriched inputs) or degraded verdict must survive projection even inside the age budget.
-    const inheritedStatus = headers.get("X-Data-Freshness");
-    if (inheritedStatus === "stale" || (inheritedStatus === "degraded" && meta.status === "fresh")) {
-      meta.status = inheritedStatus;
+    if (inheritedStatus === "stale" || (inheritedStatus === "degraded" && freshness.status === "fresh")) {
+      meta = { ...freshness, status: inheritedStatus };
+      inheritedVerdict = true;
+    }
+    if (meta.status === freshness.status && freshness.status !== "fresh") {
+      computedReason = assessFreshnessTimestamp(freshness.assessedAt, updatedAt).reason ?? "outside-freshness-budget";
     }
   }
   if (warning) meta.warning = warning;
-  // One verdict per response (R3): the generic freshness header names the same
-  // status and reason the body publishes, never the pre-enrichment detail clock.
+  // One verdict per response (R3): the generic freshness header names the body status.
   headers.set("X-Data-Freshness", meta.status);
-  // A known-clock verdict carries no reason in the envelope; the upstream header
-  // is its only machine reason and must survive so a designed history fallback
-  // stays distinguishable from a genuinely stale read (R4).
-  const reason = ("reason" in meta && meta.reason) || (meta.status === "fresh" ? null : headers.get("X-Data-Freshness-Reason"));
+  // An upstream header reason applies only to the verdict it accompanied.
+  const reason = ("reason" in meta && meta.reason) || (
+    inheritedVerdict && meta.status === inheritedStatus && meta.status !== "fresh"
+      ? headers.get("X-Data-Freshness-Reason") : null
+  ) || computedReason || (inheritedVerdict && meta.status !== "fresh" ? `unspecified-${meta.status}` : null);
   if (reason) headers.set("X-Data-Freshness-Reason", reason);
   else headers.delete("X-Data-Freshness-Reason");
   return jsonResponse({ ...summary, _meta: meta }, {
