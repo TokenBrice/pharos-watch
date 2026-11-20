@@ -1,19 +1,21 @@
 import { parseRetryAfterSeconds } from "@shared/lib/retry-after";
 import { isRecord } from "@shared/lib/type-guards";
-import { OPTIONAL_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
+import { MORPHO_NET_YIELD_SOURCES, OPTIONAL_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 import { CHAIN_META, normalizeChainId } from "@shared/types/chain-identity";
 import { throwIfAborted } from "../../lib/abort";
 import { USER_AGENT } from "../../lib/constants";
 import { DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES, fetchJsonWithRetry, fetchWithRetry } from "../../lib/fetch-retry";
 import { cancelResponseBodyQuietly, readResponseJsonWithinLimitWithSignal } from "../../lib/response-body";
 import { logWorkerEvent } from "../../lib/structured-log";
-import { PENDLE_SUPPLEMENTAL_FETCH_CADENCE_SEC } from "../../lib/yield-ranking-helpers";
+import { PENDLE_SUPPLEMENTAL_FETCH_CADENCE_SEC, STALE_THRESHOLD_MS } from "../../lib/yield-ranking-helpers";
+import { isDeterministicApyWithinSanityBounds } from "../yield-helpers";
 import {
   createOptionalSourceBudget,
   getFiniteNumber,
   OPTIONAL_PROTOCOL_API_BUDGET_MS,
   OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS,
 } from "./sources-rpc";
+import { buildMorphoFilters, resolveMorphoTrackedAsset } from "./optional-source-identity";
 import type { ResolvedYield, ResolvedYieldCandidate } from "./types";
 
 interface YdaemonVault {
@@ -89,14 +91,81 @@ export async function fetchYearnYboldSource(signal?: AbortSignal): Promise<Resol
   };
 }
 
-import { buildMorphoFilters, resolveMorphoTrackedAsset } from "./optional-source-identity";
-
 interface MorphoVaultItem {
   address: string;
   name: string;
   asset: { symbol: string; address?: string | null };
   chain: { id: number };
   state: { netApy: number; totalAssetsUsd: number | null; fee: number } | null;
+}
+
+const MORPHO_GRAPHQL_URL = "https://api.morpho.org/graphql";
+
+export async function fetchMorphoNetVaultSource(
+  config: typeof MORPHO_NET_YIELD_SOURCES[keyof typeof MORPHO_NET_YIELD_SOURCES],
+  startSec: number,
+  signal: AbortSignal,
+): Promise<ResolvedYield | null> {
+  const result = await fetchJsonWithRetry<unknown>(MORPHO_GRAPHQL_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
+    body: JSON.stringify({
+      query: `query($address: String!) {
+        vaultByAddress(address: $address, chainId: 1) {
+          address chain { id }
+          state { netApy fee timestamp totalAssetsUsd }
+        }
+      }`,
+      variables: { address: config.vaultAddress },
+    }),
+    signal,
+  }, 0, { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS, maxResponseBytes: 8 * 1024 });
+  if (!result?.response.ok || !isRecord(result.body) || result.body.errors != null) {
+    throw new Error("Morpho V1 vault query failed");
+  }
+  const { data } = result.body;
+  const vault = isRecord(data) ? data.vaultByAddress : null;
+  if (!isRecord(vault) || typeof vault.address !== "string" || vault.address.toLowerCase() !== config.vaultAddress
+    || !isRecord(vault.chain) || vault.chain.id !== 1) {
+    throw new Error("Morpho V1 vault identity mismatch");
+  }
+  if (vault.state === null) return null;
+  if (!isRecord(vault.state)) throw new Error("Malformed Morpho V1 vault state");
+  const { timestamp, fee: rawFee, totalAssetsUsd, netApy: rawNetApy } = vault.state;
+  if (timestamp === undefined || rawFee === undefined || totalAssetsUsd === undefined || rawNetApy === undefined) {
+    throw new Error("Incomplete Morpho V1 vault state");
+  }
+  const sourceObservedAt = getFiniteNumber(timestamp);
+  const sourceFetchedAt = Math.floor(Date.now() / 1000);
+  if (sourceObservedAt == null || !Number.isSafeInteger(sourceObservedAt) || sourceObservedAt <= 0
+    || sourceObservedAt > Math.min(startSec, sourceFetchedAt) || (startSec - sourceObservedAt) * 1000 > STALE_THRESHOLD_MS) {
+    return null;
+  }
+
+  const fee = getFiniteNumber(rawFee);
+  const sourceTvlUsd = getFiniteNumber(totalAssetsUsd);
+  const netApy = getFiniteNumber(rawNetApy);
+  if (fee == null || fee <= 0 || fee > 1 || sourceTvlUsd == null || sourceTvlUsd <= 0 || netApy == null) return null;
+  const currentApy = netApy * 100;
+  if (currentApy < -100 || !isDeterministicApyWithinSanityBounds(currentApy)) return null;
+
+  return {
+    currentApy,
+    apyBase: null,
+    apyReward: null,
+    sourcePool: config.corroboratingPoolId,
+    sourceTvlUsd,
+    dataSource: "protocol-api",
+    exchangeRate: null,
+    sourceKey: config.sourceKey,
+    yieldSource: config.yieldSource,
+    yieldType: config.yieldType,
+    project: config.venueProtocol,
+    chain: "ethereum",
+    sourceObservedAt,
+    sourceFetchedAt,
+    comparisonAnchorObservedAt: null,
+  };
 }
 
 interface PendleMarket {
@@ -273,7 +342,7 @@ export async function fetchMorphoVaultSources(signal?: AbortSignal): Promise<Sup
       while (!budget.budgetController.signal.aborted) {
         throwIfAborted(budget.budgetController.signal);
         const result = await fetchJsonWithRetry<{ data?: { vaults?: { items?: MorphoVaultItem[] } } }>(
-          "https://api.morpho.org/graphql",
+          MORPHO_GRAPHQL_URL,
           {
             method: "POST",
             headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },

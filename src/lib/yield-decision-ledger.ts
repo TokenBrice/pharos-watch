@@ -1,5 +1,5 @@
 import type { YieldPublicDecisionLedger } from "@shared/types/yield-evidence-schemas";
-import { formatYieldApyDelta, YIELD_DECISION_REASON_LABELS, YIELD_DECISION_REJECTION_REASON_LABELS } from "@/lib/yield-presentation";
+import { formatYieldApyDelta, MORPHO_NET_YIELD_REASON_LABEL, YIELD_DECISION_REASON_LABELS, YIELD_DECISION_REJECTION_REASON_LABELS } from "@/lib/yield-presentation";
 
 export interface YieldDecisionAlternativeDisplay {
   sourceKey: string;
@@ -37,7 +37,9 @@ export function buildYieldDecisionLedgerDisplay(
 ): YieldDecisionLedgerDisplay | null {
   if (!ledger) return null;
 
-  const reasonLabel = YIELD_DECISION_REASON_LABELS[ledger.selectedReasonCode];
+  const reasonLabel = ledger.selectedReasonDetail === "morpho-net-preferred"
+    ? MORPHO_NET_YIELD_REASON_LABEL
+    : YIELD_DECISION_REASON_LABELS[ledger.selectedReasonCode];
   if (!reasonLabel) return null;
 
   const rejectedCount = Number.isFinite(ledger.rejectedCount) ? ledger.rejectedCount : 0;

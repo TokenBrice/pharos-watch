@@ -2,6 +2,7 @@ import {
   EXTERNAL_OPPORTUNITY_YIELD_TYPES,
 } from "@shared/lib/yield-opportunity-risk";
 import { getUsycNavReportWindow, OPTIONAL_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
+import { isMorphoNetYieldSourceKey } from "@shared/lib/yield-source-history";
 import {
   type YieldDecisionReasonCode,
   type YieldDecisionRejectionReasonCode,
@@ -219,6 +220,10 @@ export function buildPublicDecisionLedger(params: {
       candidates: params.candidates,
       rejectedCount: params.rejectedCount,
     }),
+    selectedReasonDetail: competitors.length > 0 && params.selected.yieldType === "lending-vault"
+      && isMorphoNetYieldSourceKey(params.selected.sourceKey)
+      ? "morpho-net-preferred"
+      : undefined,
     previousBestSourceKey: params.previousBestSourceKey,
     sourceSwitch: params.sourceSwitch,
     apy30dDeltaFromPrevious: params.apy30dDeltaFromPrevious,
@@ -312,7 +317,7 @@ export function buildYieldSourceProvenance(params: {
 
 export interface YieldCoinPublicationView {
   selected: EvaluatedYieldSource;
-  /** Coin candidates ordered by confidence-weighted arbitration. */
+  /** Published winner first, then alternatives in arbitration order. */
   candidates: EvaluatedYieldSource[];
   rejectedCount: number;
   selectedReason: string;
@@ -381,9 +386,9 @@ export function buildYieldPublicationViews(input: {
     if (source.rejected) {
       continue;
     }
-    const candidates = input.evaluatedSources
-      .filter((candidate) => candidate.id === source.id)
-      .sort(compareCandidates);
+    const candidates = [source, ...input.evaluatedSources
+      .filter((candidate) => candidate.id === source.id && candidate !== source)
+      .sort(compareCandidates)];
     const rejectedCount = candidates.filter((candidate) => candidate.rejected).length;
     const provenance = provenanceByKey.get(buildHistoryKey(source.id, source.sourceKey)) ?? {};
     const previousBestSourceKey =

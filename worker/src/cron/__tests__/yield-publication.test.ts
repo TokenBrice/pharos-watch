@@ -12,7 +12,7 @@ import {
   type YieldPysInputsAtPublish,
 } from "@shared/types/yield";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { OPTIONAL_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
+import { MORPHO_NET_YIELD_SOURCES, OPTIONAL_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "@shared/lib/status-thresholds";
 import { createLatestSchemaFixtureTracker, createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
@@ -72,6 +72,57 @@ function publishRankings(db: D1Database, startSec: number, rankings: unknown[], 
 }
 
 describe("yield current-row conflict updates", () => {
+  it("keeps only the generation's Morpho vault winners while cleanup is deferred", async () => {
+    const { db, sqlite } = rankingsFixture();
+    await publishRankings(db, 100, []);
+    const seed = sqlite.prepare(`INSERT INTO yield_data
+      (stablecoin_id, source_key, symbol, current_apy, apy_7d, apy_30d, yield_source, yield_type,
+       data_source, is_best, updated_at, publication_generation_id, publication_state)
+      VALUES (?, ?, 'USDC', 4, 4, 4, ?, 'lending-vault', ?, 1, 100, ?, 'published')`);
+    const pins = Object.values(MORPHO_NET_YIELD_SOURCES);
+    for (const { stablecoinId, corroboratingPoolId, vaultAddress } of pins) {
+      seed.run(stablecoinId, corroboratingPoolId, "DeFiLlama", "defillama", null);
+      seed.run("usdc-circle", `linked-variant:${stablecoinId}:${corroboratingPoolId}`, "DeFiLlama", "defillama", "100");
+      seed.run("usdc-circle", `protocol-api:morpho-vault:ethereum:${vaultAddress}`, "Morpho", "protocol-api", "100");
+    }
+    seed.run("usdc-circle", "unrelated", "Aave", "defillama", "100");
+    const rows = sqlite.prepare("SELECT stablecoin_id, source_key, current_apy, is_best FROM yield_data ORDER BY rowid");
+    const before = rows.all();
+    expect((await publishRankings(db, 99, [])).skippedBecauseNewer).toBe(true);
+    expect(rows.all()).toEqual(before);
+    const selected = sqlite.prepare(`SELECT stablecoin_id, source_key, publication_generation_id FROM yield_data
+      WHERE is_best = 1 ORDER BY stablecoin_id, source_key`);
+    let startSec = 100;
+    for (const { stablecoinId, sourceKey } of pins) {
+      for (const linked of [false, true]) {
+        for (const dataSource of ["protocol-api", "onchain", null, "onchain", "protocol-api", null] as const) {
+          const generationId = String(++startSec);
+          const key = dataSource === "onchain" ? `onchain:${stablecoinId}` : sourceKey;
+          const winners = dataSource == null ? [] : [
+            { stablecoin_id: stablecoinId, source_key: key, publication_generation_id: generationId },
+            ...(linked ? [{ stablecoin_id: "usdc-circle", source_key: `linked-variant:${stablecoinId}:${key}`,
+              publication_generation_id: generationId }] : []),
+          ];
+          expect((await publishYieldRowsAtomically(db, {
+            rankingsPayload: { publication: { generationId } }, startSec, generationId,
+            yieldDataRows: winners.map((row) => ({
+              ...row, symbol: "USDC", current_apy: 3, apy_7d: 3, apy_30d: 3,
+              yield_source: "Morpho", yield_type: "lending-vault", data_source: dataSource,
+              is_best: 1, updated_at: startSec, publication_state: "published",
+            })),
+            historyRows: [], decisionRows: [], decisionAlternativeRows: [],
+          })).written).toBe(true);
+          expect(selected.all(), `${stablecoinId}, linked=${linked}, winner=${dataSource}`).toEqual([
+            ...winners, { stablecoin_id: "usdc-circle", source_key: "unrelated", publication_generation_id: "100" },
+          ]);
+        }
+      }
+    }
+    expect(rows.all().slice(0, before.length)).toEqual(before.map((row) => ({
+      ...row, is_best: row.source_key === "unrelated" ? 1 : 0,
+    })));
+  });
+
   it("publishes xGLD native yield only to compatible readers and follows newer legacy generations on redeploy", async () => {
     const { sqlite, db, readLegacy, readCurrent } = rankingsFixture();
     const usdt = { id: "usdt-tether", warningSignals: [], currentApy: 5 };

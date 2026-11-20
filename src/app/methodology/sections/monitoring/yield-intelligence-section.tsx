@@ -12,7 +12,7 @@ import {
   type ResponsiveMethodologyPipelineProps,
   WorkedExample,
 } from "../../methodology-shared";
-import { YIELD_POOL_DELIVERY_PARAGRAPH, YIELD_REVIEWED_HOLD_DESCRIPTION, YIELD_SECTION_CONTENT } from "@/lib/methodology-content";
+import { MORPHO_NET_YIELD_DESCRIPTION, YIELD_POOL_DELIVERY_PARAGRAPH, YIELD_REVIEWED_HOLD_DESCRIPTION, YIELD_SECTION_CONTENT } from "@/lib/methodology-content";
 import { YieldMethodologyRelatedLinks, YieldNavTokenMechanismLinks } from "./yield-mechanism-links";
 import { METHODOLOGY_SECTION_ACCENT_CLASSES } from "@shared/lib/classification";
 import {
@@ -78,6 +78,7 @@ export function YieldIntelligenceMethodologySection() {
             changelogClassName={METHODOLOGY_SECTION_ACCENT_CLASSES.yieldIntelligence.changelogHover}
           >
               <p>{YIELD_OVERVIEW_PARAGRAPH}</p>
+              <p>{MORPHO_NET_YIELD_DESCRIPTION}</p>
               <p>
                 Source-family and benchmark freshness are eligibility rules applied before confidence arbitration.
                 Expired evidence remains visible as NR context, but it cannot carry an exact current PYS. Every benchmark

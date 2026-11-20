@@ -1,8 +1,35 @@
 import { REVIEWED_BUSINESS_CALENDARS } from "../data/business-calendars/reviewed";
 import { localDateInIanaTimezone, nextIanaLocalHourDueAt } from "./iana-local-time";
-import { ZEPHYR_YIELD_HISTORY_POLICY } from "./yield-source-history";
+import { isMorphoNetYieldSourceKey, MORPHO_NET_YIELD_SOURCE_PREFIX, ZEPHYR_YIELD_HISTORY_POLICY } from "./yield-source-history";
 import { CRON_INTERVALS } from "./cron-jobs";
 import { DAY_MS, HOUR_SECONDS, SECONDS_PER_MINUTE } from "./time-constants";
+
+function defineMorphoNetSource(stablecoinId: string, vaultAddress: string, corroboratingPoolId: string, yieldSource: string, order: number) {
+  const label = `${yieldSource} net APY`;
+  return {
+    stablecoinId,
+    vaultAddress,
+    corroboratingPoolId,
+    sourceKey: `${MORPHO_NET_YIELD_SOURCE_PREFIX}ethereum:${vaultAddress}`,
+    supplementalSourceKey: `protocol-api:morpho-vault:ethereum:${vaultAddress}`,
+    manifestLabel: label,
+    yieldSource,
+    yieldType: "lending-vault",
+    venueProtocol: "morpho-blue",
+    standalone: false,
+    dispatchOrder: order,
+    routeOrder: order,
+    timeoutLabel: label,
+    slowNav: false,
+  } as const;
+}
+
+export const MORPHO_NET_YIELD_SOURCES = {
+  gtusdcMorpho: defineMorphoNetSource("gtusdc-gauntlet", "0xdd0f28e19c1780eb6396170735d45153d261490d",
+    "a306885c-001e-4479-9ae8-459a56527bc1", "Gauntlet USDC Prime V1 MetaMorpho vault", 13),
+  bbqusdcMorpho: defineMorphoNetSource("bbqusdc-steakhouse", "0xbeefff209270748ddd194831b3fa287a5386f5bc",
+    "36977448-9ad9-43ea-85f2-60ee1b92ecd0", "Smokehouse USDC MetaMorpho vault", 14),
+};
 
 /** First-party optional source declarations, in manifest order. Worker readers attach separately. */
 export const OPTIONAL_YIELD_SOURCES = {
@@ -135,6 +162,7 @@ export const OPTIONAL_YIELD_SOURCES = {
     timeoutLabel: "Zephyr ZYS source",
     slowNav: false,
   },
+  ...MORPHO_NET_YIELD_SOURCES,
 } as const;
 
 /**
@@ -218,7 +246,8 @@ export function getYieldSourceProducerCadenceMs(dataSource: string, sourceKey?: 
   if (dataSource === "protocol-api" && sourceKey?.startsWith("protocol-api:pendle:") === true) {
     return PENDLE_SUPPLEMENTAL_FETCH_CADENCE_MS;
   }
-  if (dataSource === "protocol-api" || (dataSource === "onchain" && isSupplementalOnchainSource(sourceKey))) {
+  if ((dataSource === "protocol-api" && !isMorphoNetYieldSourceKey(sourceKey))
+    || (dataSource === "onchain" && isSupplementalOnchainSource(sourceKey))) {
     return CRON_INTERVALS["sync-yield-supplemental"] * 1000;
   }
   return CRON_INTERVALS["sync-yield-data"] * 1000;

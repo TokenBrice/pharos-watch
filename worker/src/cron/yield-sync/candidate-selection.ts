@@ -1,4 +1,6 @@
 import type { YieldEvidenceClass } from "@shared/types/yield";
+import { MORPHO_NET_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
+import { isMorphoNetYieldSourceKey } from "@shared/lib/yield-source-history";
 import {
   derivePysSourceRiskPenalty,
   PYS_MAX_SOURCE_RISK_PENALTY,
@@ -84,6 +86,9 @@ export function buildSelectionReason(source: EvaluatedYieldSource, rejectedPeers
   if (source.rejected) {
     return "Selected as the least-bad remaining source after arbitration penalties";
   }
+  if (source.yieldType === "lending-vault" && isMorphoNetYieldSourceKey(source.sourceKey)) {
+    return "Selected Morpho's observed net vault APY";
+  }
 
   const confidenceLabel =
     source.evidenceClass === "modeled-proxy"
@@ -113,7 +118,7 @@ const PYS_SWITCH_ARBITRATION_MARGIN = 0.1;
 
 export interface YieldSourceGroupSelectionResult {
   evaluatedSources: EvaluatedYieldSource[];
-  bestSourceKey: string;
+  bestSourceKey: string | null;
   rowsRejected: number;
   divergenceFlags: number;
   sourceSwitches: number;
@@ -122,16 +127,18 @@ export interface YieldSourceGroupSelectionResult {
 export function selectYieldSourceGroup(params: {
   stablecoinId: string;
   provisional: EvaluatedYieldSource[];
+  finalizedProjections: EvaluatedYieldSource[];
   previousBestSourceKey: string | null;
   priorSwitches30d: number;
   derivedPenaltyInputByKey: Map<string, PysSourceRiskPenaltyInput>;
   bestRowsByCoin?: Map<string, YieldHistorySnapshotRow[]>;
   safetySnapshotUnavailable: boolean;
   usdBenchmarkRate: number | null;
-}): YieldSourceGroupSelectionResult | null {
+}): YieldSourceGroupSelectionResult {
+  const morphoSource = Object.values(MORPHO_NET_YIELD_SOURCES).find((source) => source.stablecoinId === params.stablecoinId);
   let canonicalReference: EvaluatedYieldSource | undefined;
   for (const candidate of params.provisional) {
-    if (candidate.rejected || candidate.confidenceTier === "discovered") continue;
+    if (candidate.rejected || candidate.confidenceTier === "discovered" || candidate.sourceKey === morphoSource?.corroboratingPoolId) continue;
     if (!canonicalReference || compareCandidates(candidate, canonicalReference) < 0) {
       canonicalReference = candidate;
     }
@@ -176,6 +183,9 @@ export function selectYieldSourceGroup(params: {
     return { ...candidate, anomalies, rejected };
   });
 
+  // Projected quotes enter with their vault's final eligibility.
+  candidates.push(...params.finalizedProjections);
+
   const previousWinnerStillCandidate =
     params.previousBestSourceKey != null &&
     candidates.some(
@@ -219,23 +229,25 @@ export function selectYieldSourceGroup(params: {
       config.poolId === candidate.sourceKey && config.yieldType === candidate.yieldType,
     ))
     .map((candidate) => candidate.yieldType));
-  const winner = sortedCandidates.find((candidate) =>
+  const preferred = morphoSource && sortedCandidates.find((candidate) =>
+    !candidate.rejected && candidate.sourceKey === morphoSource.sourceKey,
+  );
+  const winner = preferred ?? sortedCandidates.find((candidate) =>
     !candidate.rejected
+    && candidate.sourceKey !== morphoSource?.corroboratingPoolId
     && !(candidate.dataSource === "defillama-auto" && curatedTypes.has(candidate.yieldType)
       && !explicitPools.some((config) => config.poolId === candidate.sourceKey)),
-  ) ?? sortedCandidates[0];
-  if (!winner) return null;
+  ) ?? (morphoSource ? undefined : sortedCandidates[0]);
+  const bestSourceKey = winner?.sourceKey ?? null;
 
-  const winnerWouldChangeSource = isRealSourceSwitch(params.previousBestSourceKey, winner.sourceKey);
-  const sourceSwitchCount30d = params.bestRowsByCoin != null
-    ? countSourceSwitchesWithTail(params.bestRowsByCoin.get(params.stablecoinId) ?? [], winner.sourceKey)
-    : winnerWouldChangeSource && previousWinnerStillCandidate
-      ? params.priorSwitches30d + 1
-      : params.priorSwitches30d;
+  const winnerWouldChangeSource = bestSourceKey != null && isRealSourceSwitch(params.previousBestSourceKey, bestSourceKey);
+  const sourceSwitchCount30d = bestSourceKey != null && params.bestRowsByCoin != null
+    ? countSourceSwitchesWithTail(params.bestRowsByCoin.get(params.stablecoinId) ?? [], bestSourceKey)
+    : params.priorSwitches30d + (winnerWouldChangeSource && previousWinnerStillCandidate ? 1 : 0);
   const sourceSwitches = sourceSwitchCount30d > params.priorSwitches30d ? 1 : 0;
 
   const evaluatedSources = candidates.map((candidate) => {
-    const isBest = candidate.sourceKey === winner.sourceKey;
+    const isBest = candidate.sourceKey === bestSourceKey;
     const publishedSwitchCount = isBest ? sourceSwitchCount30d : null;
     const derivedPenaltyInput = params.derivedPenaltyInputByKey.get(candidate.sourceKey);
     return {
@@ -266,7 +278,7 @@ export function selectYieldSourceGroup(params: {
 
   return {
     evaluatedSources,
-    bestSourceKey: winner.sourceKey,
+    bestSourceKey,
     rowsRejected: sortedCandidates.filter((candidate) => candidate.rejected).length,
     divergenceFlags,
     sourceSwitches,

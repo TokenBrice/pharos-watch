@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { computePYS, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
+import { MORPHO_NET_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 import {
   SOURCE_RISK_GOLDEN_ROWS,
   type YieldSourceRiskGoldenCaseId,
@@ -1880,6 +1881,15 @@ function pickLegacyHistory(params: {
 }
 
 describe("pickHistoryRowsForSource legacy carry-forward", () => {
+  it("requires keyed history even for a sole linked Morpho net quote", () => {
+    const { stablecoinId, sourceKey } = MORPHO_NET_YIELD_SOURCES.gtusdcMorpho;
+    const id = "usdc-circle";
+    const legacy = historyLegacyRow(HISTORY_START_SEC - DAY_SECONDS, { stablecoin_id: id, data_source: "protocol-api" });
+    expect(pickHistoryRowsForSource(id, `linked-variant:${stablecoinId}:${sourceKey}`, "protocol-api",
+      new Map(), new Map(), new Map(), new Map([[id, [legacy]]]), new Map([[id, 1]])))
+      .toEqual({ rows: [], usedLegacyHistory: false });
+  });
+
   it("carries same-family legacy history into a switched row", () => {
     const fresh = historyLegacyRow(HISTORY_START_SEC - 2 * DAY_SECONDS);
 

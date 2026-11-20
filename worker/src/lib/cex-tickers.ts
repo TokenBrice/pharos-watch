@@ -12,6 +12,9 @@ import {
 } from "@shared/lib/pricing-provider-config";
 import { isUnsignedDecimalLiteral } from "@shared/lib/decimal-literal";
 import { CEX_MAX_BID_ASK_SPREAD_BPS } from "@shared/lib/pricing-source-policy";
+import { isRecord } from "@shared/lib/type-guards";
+import { parseIsoDateOrUtcInstantSec } from "@shared/types/date-primitives";
+import { throwIfAborted } from "./abort";
 import { USER_AGENT } from "./constants";
 import { fetchJsonWithRetry, fetchTextWithRetry } from "./fetch-retry";
 import { mapWithConcurrency } from "./concurrency";
@@ -36,6 +39,11 @@ const CEX_REQUEST_TIMEOUT_MS = 10_000;
 const CEX_REQUEST_RETRIES = 1;
 const COINBASE_PRODUCT_FETCH_CONCURRENCY = 1;
 const KRAKEN_TICKER_ENDPOINT = "api.kraken.com/0/public/Ticker";
+const KRAKEN_BBO_ENDPOINT = "ws.kraken.com/v2";
+const KRAKEN_BBO_SNAPSHOTS_ENABLED = false;
+const KRAKEN_BBO_DEADLINE_MS = 2_000;
+const KRAKEN_BBO_MAX_MESSAGES = 64;
+const KRAKEN_BBO_MAX_BYTES = 32 * 1024;
 const BITSTAMP_TICKER_ENDPOINT = "www.bitstamp.net/api/v2/ticker/";
 const COINBASE_TICKER_ENDPOINT = "api.exchange.coinbase.com/products/{product}/ticker";
 const COINBASE_BOOK_ENDPOINT = "api.exchange.coinbase.com/products/{product}/book";
@@ -391,10 +399,16 @@ export function fetchBinancePricesForRun(
   return session.outcome;
 }
 
+export interface KrakenBookSnapshot {
+  price: number;
+  observedAt: number;
+}
+
 export interface CexTickerBatch {
   prices: Map<string, number>;
   quoteBasisBySymbol?: Map<string, "bid-ask-midpoint" | "last-trade">;
   observedAtBySymbol: Map<string, number>;
+  bookSnapshotsBySymbol?: Map<string, KrakenBookSnapshot>;
   diagnostics: PricingProviderAttemptDiagnostic[];
 }
 
@@ -403,7 +417,7 @@ export interface CoinbaseQuoteBatch extends CexTickerBatch {
   clockBySymbol: Map<string, "book" | "trade">;
 }
 
-export async function fetchKrakenPrices(
+async function fetchKrakenRestPrices(
   symbols: string[],
   signal?: AbortSignal,
 ): Promise<FetcherOutcome<CexTickerBatch>> {
@@ -455,6 +469,151 @@ export async function fetchKrakenPrices(
   }
 
   return prices.size > 0 ? { kind: "ok", value } : { kind: "no-data", value };
+}
+
+function validateKrakenBook(row: Record<string, unknown>): KrakenBookSnapshot | PricingProviderRejectionReason {
+  const quote = typeof row.bid === "number" && typeof row.ask === "number"
+    ? midpointFromBidAsk(row.bid, row.ask) : null;
+  if (!quote || !Number.isFinite(quote.midpoint)) return "invalid-shape";
+  if (quote.wideSpread) return "wide-spread";
+
+  const timestamp = typeof row.timestamp === "string"
+    ? /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:Z|(\.\d+)Z)$/.exec(row.timestamp) : null;
+  if (!timestamp) return "invalid-shape";
+  // Check the fractional timestamp before normalizing it to publication seconds.
+  const observedAt = parseIsoDateOrUtcInstantSec(`${timestamp[1]}Z`) + Number(timestamp[2] ?? 0);
+  const now = Date.now() / 1000;
+  if (observedAt > now) return "invalid-shape";
+  const freshness = validatePricingSourceFreshness({
+    source: "kraken", observedAt, nowSec: Math.floor(now), requireObservedAt: true, maxFutureSkewSec: 0,
+  });
+  if (!freshness.accepted) return freshness.reason === "stale_observed_at" ? "stale" : "invalid-shape";
+  return freshness.observedAt == null ? "invalid-shape" : { price: quote.midpoint, observedAt: freshness.observedAt };
+}
+
+async function readKrakenBookSnapshots(pending: Map<string, string>, parent?: AbortSignal) {
+  throwIfAborted(parent);
+  const quotes = new Map<string, KrakenBookSnapshot>();
+  const rejectionReasonCounts: Partial<Record<PricingProviderRejectionReason, number>> = {};
+  const candidateCount = pending.size;
+  const deadline = new AbortController();
+  const signal = parent ? AbortSignal.any([parent, deadline.signal]) : deadline.signal;
+  const timer = setTimeout(() => deadline.abort(), KRAKEN_BBO_DEADLINE_MS);
+  let socket: WebSocket | null = null;
+  let status: number | null = null;
+  let errorClass: string | undefined;
+  try {
+    const response = await fetch(`https://${KRAKEN_BBO_ENDPOINT}`, {
+      headers: { Upgrade: "websocket" },
+      redirect: "manual",
+      signal,
+    });
+    status = response.status;
+    const ws = response.webSocket;
+    if (!ws) {
+      await response.body?.cancel();
+      errorClass = "upgrade-rejected";
+    } else {
+      ws.accept();
+      socket = ws;
+      errorClass = await new Promise<string | undefined>((resolve) => {
+        const encoder = new TextEncoder();
+        let bytes = 0;
+        let messages = 0;
+        const finish = (reason?: string) => {
+          ws.removeEventListener("message", onMessage);
+          ws.removeEventListener("close", onClose);
+          ws.removeEventListener("error", onError);
+          signal.removeEventListener("abort", onAbort);
+          resolve(reason);
+        };
+        const onAbort = () => finish("timeout");
+        const onClose = () => finish("socket-closed");
+        const onError = () => finish("socket-error");
+        function onMessage({ data }: MessageEvent) {
+          if (++messages > KRAKEN_BBO_MAX_MESSAGES) return finish("message-cap");
+          if (typeof data !== "string") return finish("invalid-shape");
+          if (data.length > KRAKEN_BBO_MAX_BYTES - bytes) return finish("byte-cap");
+          bytes += encoder.encode(data).byteLength;
+          if (bytes > KRAKEN_BBO_MAX_BYTES) return finish("byte-cap");
+          let message: unknown;
+          try {
+            message = JSON.parse(data);
+          } catch {
+            incrementRejectionReason(rejectionReasonCounts, "malformed-json");
+            return;
+          }
+          if (!isRecord(message)) return;
+          if (message.method === "subscribe" && message.success === false && isRecord(message.result)
+            && typeof message.result.symbol === "string" && pending.delete(message.result.symbol)) {
+            incrementRejectionReason(rejectionReasonCounts, "upstream-error");
+          }
+          if (message.channel === "ticker" && message.type === "snapshot" && Array.isArray(message.data)) {
+            for (const row of message.data) {
+              if (!isRecord(row) || typeof row.symbol !== "string") continue;
+              const symbol = pending.get(row.symbol);
+              if (!symbol) continue;
+              pending.delete(row.symbol);
+
+              const quote = validateKrakenBook(row);
+              if (typeof quote === "string") incrementRejectionReason(rejectionReasonCounts, quote);
+              else quotes.set(symbol, quote);
+            }
+          }
+          if (pending.size === 0) finish();
+        }
+
+        if (signal.aborted) return onAbort();
+        ws.addEventListener("message", onMessage);
+        ws.addEventListener("close", onClose);
+        ws.addEventListener("error", onError);
+        signal.addEventListener("abort", onAbort, { once: true });
+        try {
+          ws.send(JSON.stringify({
+            method: "subscribe",
+            params: { channel: "ticker", symbol: [...pending.keys()], event_trigger: "bbo", snapshot: true },
+          }));
+        } catch {
+          finish("socket-error");
+        }
+      });
+    }
+  } catch {
+    errorClass = signal.aborted ? "timeout" : "socket-error";
+  } finally {
+    clearTimeout(timer);
+    socket?.close(1000);
+  }
+  throwIfAborted(parent);
+  if (pending.size > 0) rejectionReasonCounts["missing-quote"] = pending.size;
+  const diagnostic: PricingProviderAttemptDiagnostic = {
+    source: "kraken", stage: "primary", endpoint: KRAKEN_BBO_ENDPOINT, status,
+    ok: errorClass === undefined, success: quotes.size > 0,
+    candidateCount, resolvedCount: quotes.size, rejectionReasonCounts, errorClass,
+  };
+  return { quotes, diagnostic };
+}
+
+export async function fetchKrakenPrices(
+  symbols: string[],
+  signal?: AbortSignal,
+  enableBookSnapshots = KRAKEN_BBO_SNAPSHOTS_ENABLED,
+): Promise<FetcherOutcome<CexTickerBatch>> {
+  if (!enableBookSnapshots) return fetchKrakenRestPrices(symbols, signal);
+  const requested = new Map<string, string>();
+  for (const market of KRAKEN_MARKETS) {
+    if ("snapshotPair" in market && symbols.includes(market.symbol)) requested.set(market.snapshotPair, market.symbol);
+  }
+  if (requested.size === 0) return fetchKrakenRestPrices(symbols, signal);
+
+  const { quotes, diagnostic } = await readKrakenBookSnapshots(requested, signal);
+  throwIfAborted(signal);
+  // REST still owns the availability breaker even when a clocked snapshot was admitted.
+  const outcome = await fetchKrakenRestPrices(symbols, signal);
+  throwIfAborted(signal);
+  outcome.value.bookSnapshotsBySymbol = quotes;
+  outcome.value.diagnostics.push(diagnostic);
+  return outcome;
 }
 
 export async function fetchBitstampPrices(signal?: AbortSignal): Promise<FetcherOutcome<CexTickerBatch>> {

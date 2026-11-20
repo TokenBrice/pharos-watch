@@ -174,7 +174,7 @@ Requires complete 24h/30d coverage at one published common closed-hour watermark
 
 Selected-row freshness follows the source's cadence verdict. Raw age remains diagnostic. Yield divergence requires a sufficiently populated cohort sharing the return denomination. The reward-share evidence contributes once.
 
-Available for yield-bearing coins with warning signals in `yield_data` or populated structured yield stress in the published `yield-rankings` cache. Maps active warning signals to stress points:
+Available for yield-bearing coins with warning signals in `yield_data` rows of the validated served yield generation (a staged, failed, incomplete or clock-mismatched rankings envelope serves no warnings) or populated structured yield stress in the published `yield-rankings` cache. Maps active warning signals to stress points:
 
 | Warning Signal     | Points |
 | ------------------ | ------ |

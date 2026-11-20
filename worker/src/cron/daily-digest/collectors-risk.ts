@@ -27,6 +27,7 @@ import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope
 import { DEWS_GENERATION_CONSUMER_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { loadPublishedStressSignalGeneration } from "../../lib/stress-signals-current-rows";
 import { logWorkerEvent } from "../../lib/structured-log";
+import { YIELD_SERVED_GENERATION_SQL } from "../../lib/yield-rankings-coin-cache";
 
 function parseStressSignalsMap(signalsJson: string): Record<string, { value: number; available: boolean }> {
   const parsed = JSON.parse(signalsJson) as unknown;
@@ -494,13 +495,17 @@ export async function collectYieldAnomalies(
   try {
     const rows = await ctx.db
       .prepare(
+        // Keep the served generation visible even when it has no eligible rows.
         // Rows older than 24h describe a market that may no longer exist;
         // stale anomaly prints repeated across editions were a corpus defect.
-        `SELECT stablecoin_id, symbol, current_apy, apy_7d, apy_30d, warning_signals
-         FROM yield_data
-         WHERE is_best = 1
-           AND (publication_generation_id IS NULL OR publication_state = 'published')
-           AND updated_at > ?
+        `SELECT stablecoin_id, symbol, current_apy, apy_7d, apy_30d, warning_signals,
+                (served.generation_id IS NULL OR trim(served.generation_id) = '') AS generation_unavailable
+         FROM (SELECT ${YIELD_SERVED_GENERATION_SQL} AS generation_id) AS served
+         LEFT JOIN (
+           SELECT stablecoin_id, symbol, current_apy, apy_7d, apy_30d, warning_signals, publication_generation_id
+           FROM yield_data
+           WHERE is_best = 1 AND publication_state = 'published' AND updated_at > ?
+         ) AS selected ON selected.publication_generation_id = served.generation_id
          ORDER BY current_apy DESC`,
       )
       .bind(ctx.nowSec - DAY_SECONDS)
@@ -511,10 +516,16 @@ export async function collectYieldAnomalies(
         apy_7d: number;
         apy_30d: number;
         warning_signals: string | null;
-      }>();
+        generation_unavailable: 0 | 1;
+      } | { stablecoin_id: null; generation_unavailable: 0 | 1 }>();
+
+    if (rows.results?.[0]?.generation_unavailable === 1) {
+      return collectorResult(undefined, ["yield-published-generation"]);
+    }
+    const observations = (rows.results ?? []).filter((row) => row.stablecoin_id !== null);
 
     if (ctx.evidence) {
-      ctx.evidence.yields = (rows.results ?? [])
+      ctx.evidence.yields = observations
         .filter((row) => {
           const mcapUsd = ctx.mcapById.get(row.stablecoin_id);
           return ctx.trackedStablecoinIds.has(row.stablecoin_id)
@@ -523,7 +534,7 @@ export async function collectYieldAnomalies(
         })
         .map((row) => ({ stablecoinId: row.stablecoin_id, symbol: row.symbol, currentApy: row.current_apy }));
     }
-    const candidates = (rows.results ?? [])
+    const candidates = observations
       .map((row) => {
         let warnings: string[] = [];
         try {

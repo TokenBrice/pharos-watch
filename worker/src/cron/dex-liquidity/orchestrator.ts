@@ -1273,6 +1273,7 @@ async function persistDexLiquidityScoreState(
           ctx.signal,
           scoreState.diagnostics.routeRemovalEvidence,
           scoreState.retainedPoolsByStablecoin,
+          scoreState.analysis.sourceCoverage.poolRejectionCoverage.anchorReviewDecision,
         ),
       3,
       ctx.signal,
