@@ -10,7 +10,7 @@ The public grade-distribution total is labeled **assets**, since its A/B/C/D/F/N
 ## Methodology Identity
 
 - Active model: <!-- GENERATED-START: report-cards-active-model -->`v10`<!-- GENERATED-END: report-cards-active-model -->
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.47`<!-- GENERATED-END: methodology-version-safety-score -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.48`<!-- GENERATED-END: methodology-version-safety-score -->
 - Public breakdown/publication schema v8, API wrapper v9 and score trace v4; retained older publications require explicit historical dispatch or refusal, never fabricated causes or route identity
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, parsed and digested by `shared/lib/safety-score-v9/policy.ts`
 - **Evaluation build:** `SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST` in `shared/data/safety-score-v9/evaluation-build-manifest-v1.ts` binds the offline candidate runtime import graph: captured fixed-input normalization, extension construction, fact-set compilation, evaluation and projection, including executable admission schemas, reviewed score-input data and full-catalog bytes/decoder. Edits anywhere in that evaluation-time closure rotate replay/publication identity; domain `safety-score-v9.evaluation-build.v2` hashes reviewed JSON data by its stable parsed value, so formatting/key-order-only edits do not, while executable sources stay byte-hashed. Capture-only network observers/producers and build-time generators are outside it; exact-input/fact digests bind their admitted output. Capture binding and runtime identity consumers are unchanged.
@@ -59,7 +59,7 @@ Mechanism reviews admit next UTC midnight (date-only) or at their exact UTC pin,
 
 C/U provenance preserves upstream constraints: same-slice known/unknown loss=`max(K,U)`, not sum. Supported constraints survive unknown siblings; inherited Backing alone proves no wrapper.
 
-`unknownQuality(pillar,cause)` prices unknown factors/unavailable pillars: Backing/Exit/Control C non-disclosure=35/50/50; U research/infrastructure or unclassified=50/50/60. Exit C/U labels are presentation-only (both50). Preserve measurements/causes/provenance; unknown reconciliation/supervision earns no credit.
+`unknownQuality(pillar,cause)` prices unknown factors/unavailable pillars: Backing/Exit/Control C non-disclosure=35/50/50; U research/infrastructure or unclassified=50/50/60. Exit C/U labels are presentation-only (both50). Preserve measurements/causes/provenance; unknown reconciliation/supervision earns no credit. Since v10.48, a whole-book, verified, dated reviewed composition rejected for age alone keeps cause U on the whole-reserve fallback (`expired-reviewed-reserve-composition`, owned by the `published-evidence-expired` responsibility; published responsibility summaries stay cause-derived): expiry is not nondisclosure, so the unknown prices at the U bound while the expired rows still earn no credit and the residual still covers the whole asset.
 
 Verified worse facts score lower than unresolved ones: an opaque controller proven single-key drops base60→50. Unknown is priced as uncertainty, not as safety; research can lower scores.
 
@@ -119,7 +119,7 @@ For collateral quality `q`/LLTV fraction `l`, lender quality=`100 − l² × (10
 
 Body 9 wraps publication 8 (`model: "v9"`); see the [report9 wire contract](api-reference.md#full-cards).
 
-The optional card diagnostic `reserveCompositionAdmission` names the gate that rejected a whole-book composition when the compiled input carries a local missing-composition gap. Request it with `reserveAdmission=diagnostics`. Named-report reasons distinguish a missing publication date, a publication date after the scoring clock, and an assurance method that cannot corroborate the composition. Age rejections use the fixed scoring clock and the rejecting path's budget. Publications whose fixed scoring clock is at or after 2026-11-20T08:00:00Z carry the diagnostic; earlier cards omit it. Scores, gap IDs, and scoring causes retain their existing treatment.
+The optional card diagnostic `reserveCompositionAdmission` names the gate that rejected a whole-book composition when the compiled input carries a local missing-composition gap. Request it with `reserveAdmission=diagnostics`. Named-report reasons distinguish a missing publication date, a publication date after the scoring clock, and an assurance method that cannot corroborate the composition. Age rejections use the fixed scoring clock and the rejecting path's budget. Publications whose fixed scoring clock is at or after 2026-11-20T08:00:00Z carry the diagnostic; earlier cards omit it. Since v10.48, a rejection whose only reason is `beyond-age-budget` publishes the fallback gap as `expired-reviewed-reserve-composition`, owned by the `published-evidence-expired` responsibility with cause U, so the whole-reserve unknown prices at the U bound instead of the C bound; every other gate keeps the missing-composition reason, cause and message.
 
 ### Report schema v8
 

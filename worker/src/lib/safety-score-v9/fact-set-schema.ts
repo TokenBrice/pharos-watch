@@ -398,6 +398,15 @@ const AssetExtensionSchema = z
     reserveClassifications: canonicalArrayBy(ReserveClassificationSchema, (row) => row.exposureKey),
     reserveBoundFacts: canonicalArrayBy(ReserveBoundedFactSchema, (row) => row.factKey).optional(),
     reviewedStaticReserveRows: ReviewedStaticReserveRowsSchema.nullable().optional(),
+    // v10.48: a whole-book, verified, dated reviewed composition that admission
+    // rejected for age alone. The rows stay unused; the marker only re-attributes
+    // the whole-reserve fallback gap from issuer nondisclosure to expired
+    // published evidence. It mirrors the admission diagnostic's rejection
+    // result, so the two can never disagree.
+    expiredReviewedReserveComposition: z.object({
+      compositionAsOfSec: z.number().int(),
+      maxAgeSec: z.number().int().positive(),
+    }).strict().optional(),
     reserveScopeAdmissions: z.array(ReserveScopedAdmissionSchema).optional(),
     routeReviews: canonicalArrayBy(RouteReviewSchema, (row) => `${row.lane}:${row.routeId}`),
     retainedRoutes: canonicalArrayBy(

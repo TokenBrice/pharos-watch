@@ -62,6 +62,14 @@ vi.mock("@shared/data/safety-score-v9/evidence-gap-classifications-v1.json", () 
       sourcesRefs: ["usdt-report"],
       searchedSurfacesRefs: ["usdt-report"], rationale: "The current report does not itemize the required holdings.",
     },
+    {
+      id: "fixture-researched-composition-bravo", assetId: "bravo", cause: "C", assertion: "researched-nondisclosure",
+      scope: { pillar: "backing", componentKey: "reserve-composition", factorKey: null,
+        routeKey: null, exposureId: null, requiredDatum: "reserve-composition" },
+      reviewedAt: "2026-07-01T00:00:00Z", reviewer: "fixture-curator",
+      sourcesRefs: ["usdt-report"],
+      searchedSurfacesRefs: ["usdt-report"], rationale: "The current report does not itemize the required holdings.",
+    },
     ...[["reserve:d9ea3402f80c2eba4fa0b228", "fixture-uncurated-maturity"], ["reserve:f56e5d5418b2b742f60e9dd0", "fixture-uncurated-mixed-maturity"]]
       .map(([exposureId, id]) => ({
         id, assetId: "alpha", cause: "B", assertion: "required-data-public",
@@ -304,9 +312,9 @@ describe("Safety Score v9 backing fact-set reserve history", () => {
     );
     expect(fixed.liveReserveMap[ASSET_ID]).toEqual([]);
 
-    const reserveGap = asset.gaps.find((gap) => gap.reasonCode === "missing-reserve-composition");
+    const reserveGap = asset.gaps.find((gap) => gap.reasonCode === "expired-reviewed-reserve-composition");
     expect(reserveGap).toMatchObject({
-      reasonCode: "missing-reserve-composition",
+      reasonCode: "expired-reviewed-reserve-composition",
       observationState: "stale",
       causeProof: { cause: "U" },
     });
@@ -339,6 +347,74 @@ describe("Safety Score v9 backing fact-set reserve history", () => {
     });
   });
 
+});
+
+describe("v10.48 age-only expired composition attribution", () => {
+  /** 2026-08-15: 46 days past the fixture's 2026-06-30 composition. */
+  const AGE_ONLY_CLOCK_SEC = Date.UTC(2026, 7, 15) / 1_000;
+
+  function bravoMeta(mutate: (meta: V9ExtensionRegistryMeta) => V9ExtensionRegistryMeta = meta => meta) {
+    return mutate(eligibleReserveMeta({
+      id: "bravo", mechanismArchetype: "fiat-cash", launchDate: "2020-01-01",
+    }));
+  }
+
+  function compileBravo(meta: V9ExtensionRegistryMeta, clockSec: number) {
+    const fixed = makeV9FixedInput({ assetId: "bravo", clockSec, reserves: [] });
+    const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById: new Map([["bravo", meta]]) });
+    const context = factBuilderContext(fixed, extension);
+    return { fixed, context, asset: { ...buildReserves(context), gaps: [...context.gaps.values()] } };
+  }
+
+  it("attributes an age-only rejection to expired published evidence, not nondisclosure", () => {
+    const { asset } = compileBravo(bravoMeta(), AGE_ONLY_CLOCK_SEC);
+    expect(asset.gaps.map((gap) => gap.reasonCode)).toEqual(["expired-reviewed-reserve-composition"]);
+    expect(asset.gaps[0]).toMatchObject({
+      observationState: "missing",
+      causeProof: { cause: "U", evidenceRefIds: [] },
+      message: "The reviewed whole-book reserve composition is older than the v9 age budget.",
+    });
+  });
+
+  it.each([
+    ["old and unverified", (meta: V9ExtensionRegistryMeta) => ({
+      ...meta, reserveReview: { ...meta.reserveReview!, confidence: "probable" as const } })],
+    ["selected-slices and undated", (meta: V9ExtensionRegistryMeta) => ({
+      ...meta, reserveReview: { ...meta.reserveReview!, scope: "selected-slices" as const, compositionAsOf: undefined } })],
+    ["no review", (meta: V9ExtensionRegistryMeta) => ({ ...meta, reserveReview: undefined })],
+  ] as const)("keeps today's missing-composition gap for %s", (_label, mutateMeta) => {
+    const { asset } = compileBravo(bravoMeta(mutateMeta), AGE_ONLY_CLOCK_SEC);
+    expect(asset.gaps.map((gap) => gap.reasonCode)).toEqual(["missing-reserve-composition"]);
+    // A scoped nondisclosure classification still binds without the age-only
+    // marker; only the expiry attribution suppresses it.
+    expect(asset.gaps[0]!.causeProof.cause).toBe("C");
+  });
+
+  it("prices the whole-reserve fallback at the U bound with published-evidence-expired ownership", () => {
+    const fixed = makeV9FixedInput({ assetId: "bravo", clockSec: AGE_ONLY_CLOCK_SEC, reserves: [] });
+    const registry = { metaById: new Map([["bravo", bravoMeta()]]) };
+    const diagnosticOff = buildSafetyScoreV9Candidate({ fixedInput: fixed, registry, publishedAtSec: AGE_ONLY_CLOCK_SEC + 10 });
+    const diagnosticOn = buildSafetyScoreV9Candidate({
+      fixedInput: fixed, registry, publishedAtSec: AGE_ONLY_CLOCK_SEC + 10, includeReserveCompositionAdmission: true,
+    });
+    const { reserveCompositionAdmission: diagnostic, ...cardOn } = diagnosticOn.candidate.cards[0]!;
+    expect(diagnosticOff.candidate.cards[0]).toEqual(cardOn);
+    expect(diagnostic).toMatchObject({ reasons: ["beyond-age-budget"] });
+    const card = diagnosticOn.candidate.cards[0]!;
+    expect(card.pillars.backing.reasons).toContainEqual(expect.objectContaining({
+      code: "expired-reviewed-reserve-composition", cause: "U",
+    }));
+    // Published responsibility summaries stay cause-derived (U -> unresearched),
+    // exactly as an expired stale-audited composition publishes today; the
+    // expired-evidence ownership lives in the reason's legacy responsibility.
+    const summary = card.scoreTrace.evidenceResponsibility.summaries.find(
+      (row) => row.responsibility === "unresearched",
+    );
+    expect(summary?.reasonCodes).toContain("expired-reviewed-reserve-composition");
+    expect(card.breakdowns!.backing.components.find(
+      (component) => component.key === "reserve:unclassified-residual",
+    )).toMatchObject({ score: 50 });
+  });
 });
 
 describe("fail-closed reserve frame admission", () => {

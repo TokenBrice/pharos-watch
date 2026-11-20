@@ -106,6 +106,7 @@ export const V9_REASON_CODES = [
   "single-pillar-pipeline-gap",
   "all-pillars-pipeline-gap",
   "f-without-measured-adverse",
+  "expired-reviewed-reserve-composition",
 ] as const;
 export const V9ReasonCodeSchema = z.enum(V9_REASON_CODES);
 export type V9ReasonCode = z.infer<typeof V9ReasonCodeSchema>;
