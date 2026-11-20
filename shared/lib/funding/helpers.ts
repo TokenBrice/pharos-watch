@@ -19,6 +19,14 @@ export function computeCostsTotal(items: readonly CostLineItem[]): number {
   return items.reduce((sum, item) => sum + requireFinite(item.usd_per_month, "cost"), 0);
 }
 
+/**
+ * Whether a ledger row counts as a donation. Founder transfers and
+ * partner-key revenue are ledger receipts, never community support.
+ */
+export function isCommunityDonation(donation: Pick<Donation, "kind">): boolean {
+  return donation.kind !== "founder" && donation.kind !== "revenue";
+}
+
 /** YYYY-MM in UTC. */
 function monthKey(timestampSec: number): string {
   requireFinite(timestampSec, "timestamp");
@@ -57,8 +65,8 @@ function monthLabel(key: string): string {
 /**
  * Community donations per UTC month, oldest first, from the first community
  * donation (or at most `maxMonths` back) through `nowSec`'s month. A month
- * with no donations shows as $0 rather than disappearing; founder rows never
- * count as community.
+ * with no donations shows as $0 rather than disappearing; founder and revenue
+ * rows never count as community.
  */
 export function buildMonthlyFunding(
   donations: readonly Donation[],
@@ -71,7 +79,7 @@ export function buildMonthlyFunding(
   let earliest: string | null = null;
   for (const d of donations) {
     requireFinite(d.usd_at_receipt, "donation amount");
-    if (d.kind === "founder") continue;
+    if (!isCommunityDonation(d)) continue;
     const key = monthKey(d.block_timestamp);
     if (key > currentMonth) continue;
     if (earliest === null || key < earliest) earliest = key;
@@ -109,12 +117,15 @@ export interface DonationSummary {
   lifetimeCommunityUsd: number;
   lifetimeFounderUsd: number;
   lifetimeCommunityDonorCount: number;
+  /** Partner-key revenue, kept apart from every donation figure above. */
+  lifetimeRevenueUsd: number;
 }
 
 /**
- * Split donations into community (kind !== "founder") and founder, computing
- * current-month and lifetime totals. `nowSec` defines "this month" so tests
- * and the page-render path agree.
+ * Split ledger rows into community (kind !== "founder" and !== "revenue"),
+ * founder and partner-key revenue, computing current-month and lifetime
+ * totals. `nowSec` defines "this month" so tests and the page-render path
+ * agree.
  */
 export function summarizeDonations(
   donations: readonly Donation[],
@@ -125,21 +136,25 @@ export function summarizeDonations(
   let currentMonthFounderUsd = 0;
   let lifetimeCommunityUsd = 0;
   let lifetimeFounderUsd = 0;
+  let lifetimeRevenueUsd = 0;
   const communitySenders = new Set<string>();
 
   for (const d of donations) {
     requireFinite(d.block_timestamp, "timestamp");
     requireFinite(d.usd_at_receipt, "donation amount");
     const isFounder = d.kind === "founder";
+    const isRevenue = d.kind === "revenue";
     if (isFounder) {
       lifetimeFounderUsd += d.usd_at_receipt;
+    } else if (isRevenue) {
+      lifetimeRevenueUsd += d.usd_at_receipt;
     } else {
       lifetimeCommunityUsd += d.usd_at_receipt;
       communitySenders.add(d.from_address);
     }
     if (monthKey(d.block_timestamp) === currentMonth) {
       if (isFounder) currentMonthFounderUsd += d.usd_at_receipt;
-      else currentMonthCommunityUsd += d.usd_at_receipt;
+      else if (!isRevenue) currentMonthCommunityUsd += d.usd_at_receipt;
     }
   }
 
@@ -149,5 +164,6 @@ export function summarizeDonations(
     lifetimeCommunityUsd,
     lifetimeFounderUsd,
     lifetimeCommunityDonorCount: communitySenders.size,
+    lifetimeRevenueUsd,
   };
 }

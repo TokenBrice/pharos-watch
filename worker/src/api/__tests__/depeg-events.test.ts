@@ -144,6 +144,61 @@ describe("handleDepegEvents", () => {
     });
   });
 
+  it("excludes only disputed constituents from a reviewed dispute's worst peak", async () => {
+    const { sqlite, db } = fixtures.open();
+    const start = 1_780_000_000;
+    const key = `ddr2:${"e".repeat(32)}`;
+    const insertEvent = sqlite.prepare(`INSERT INTO depeg_events
+      (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peg_reference, source)
+      VALUES (?, 'audd-novatti', 'AUDD', 'peggedAUD', 'below', ?, ?, ?, 0.65, 1, 'live')`);
+    for (const [id, peak, endedAt] of [[101, -293, start + 500], [102, -396, start + 900], [103, -960, start + 1400], [104, -437, null]] as const) {
+      insertEvent.run(id, peak, start + (id - 101) * 100, endedAt);
+      sqlite.prepare(`INSERT INTO depeg_resolver_incident_event_links
+        (incident_key, event_id, relation, linked_at) VALUES (?, ?, 'observed', 1780000000)`).run(key, id);
+    }
+    sqlite.prepare(`INSERT INTO depeg_resolver_incidents
+      (incident_key, stablecoin_id, peg_currency, direction, first_event_id, current_event_id,
+       first_started_at, current_started_at, first_observed_peak_bucket_bps, source_fingerprint, created_at, updated_at)
+      VALUES (?, 'audd-novatti', 'AUD', 'below', 101, 104, ?, ?, 293, ?, 1780000000, 1780000100)`)
+      .run(key, start, start + 300, "f".repeat(64));
+    sqlite.exec("UPDATE depeg_events SET peak_price = 0.60568, peak_peg_reference = 0.67, peak_quote_domain = 'usd' WHERE id = 103");
+    const readEvent = async () => DepegEventsResponseSchema.parse(await readJsonResponse(
+      await handleDepegEvents(db, new URL("https://x/api/depeg-events?stablecoin=audd-novatti&active=true")), 200)).events[0]!;
+    const markDisputed = sqlite.prepare(`INSERT INTO depeg_event_provenance
+      (event_id, source_kind, audit_verdict, created_at, updated_at) VALUES (?, 'live', 'disputed', 1780000200, 1780000200)`);
+
+    // AUDD shape: only the onset fragment is disputed; the clean 960 constituent sets the peak.
+    markDisputed.run(101);
+    expect(await readEvent()).toMatchObject({
+      id: 104, startedAt: start, constituentEventCount: 4,
+      peakDeviationBps: -960, peakPrice: 0.60568, peakPegReference: 0.67, peakQuoteDomain: "usd",
+      onsetFragmentPeakBps: -293, currentFragmentPeakBps: -437,
+      admittedCoverage: [], provenance: { pegScoreEligible: false },
+    });
+
+    // The disputed constituent is the worst one: the next clean constituent is selected instead.
+    sqlite.exec("DELETE FROM depeg_event_provenance; UPDATE depeg_events SET peak_deviation_bps = -500 WHERE id = 102");
+    markDisputed.run(103);
+    expect(await readEvent()).toMatchObject({
+      id: 104, peakDeviationBps: -500, currentFragmentPeakBps: -437, admittedCoverage: [],
+    });
+
+    // The current row itself is disputed: today's behaviour is kept exactly.
+    sqlite.exec("DELETE FROM depeg_event_provenance");
+    markDisputed.run(104);
+    const currentDisputed = await readEvent();
+    expect(currentDisputed).toMatchObject({
+      id: 104, peakDeviationBps: -437, admittedCoverage: [], provenance: { pegScoreEligible: false },
+    });
+    expect(currentDisputed).not.toHaveProperty("currentFragmentPeakBps");
+
+    // An undisputed incident keeps the v6.53 worst-constituent peak.
+    sqlite.exec("DELETE FROM depeg_event_provenance");
+    expect(await readEvent()).toMatchObject({
+      id: 104, peakDeviationBps: -960, peakPrice: 0.60568, currentFragmentPeakBps: -437,
+    });
+  });
+
   it("keeps the peer median outside the fiat conversion field and retains a reviewed BRZ peak", async () => {
     const reference = 0.2;
     const price = 0.24;

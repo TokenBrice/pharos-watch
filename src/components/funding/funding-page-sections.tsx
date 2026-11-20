@@ -25,7 +25,7 @@ import {
   DONOR_KEY_CLAIMS_OPEN,
 } from "@shared/lib/public-api-contract";
 import { DONOR_KEY_QUALIFYING_STABLECOINS } from "@shared/lib/funding/donor-eligibility";
-import { formatCoveragePct, isUnpricedDonation } from "@shared/lib/funding/helpers";
+import { formatCoveragePct, isCommunityDonation, isUnpricedDonation } from "@shared/lib/funding/helpers";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 import { CostAllocation, CostMark, MonthlyFundingChart, formatUsdWhole } from "./funding-visuals";
 
@@ -135,6 +135,13 @@ export function FundingHero({ summary, months, monthlyCostUsd, founderUsd, ledge
               detail={noCommunity ? undefined : `${summary.lifetimeCommunityDonorCount} supporters`}
             />
             <HeroMetricRow label="TokenBrice since launch" value={formatUsdWhole(founderUsd)} detail="plus unpaid maintenance" />
+            {summary.lifetimeRevenueUsd > 0 ? (
+              <HeroMetricRow
+                label="API revenue since launch"
+                value={formatUsdWhole(summary.lifetimeRevenueUsd)}
+                detail="paid partner-key revenue, counted separately from donations"
+              />
+            ) : null}
           </div>
           <Button asChild size="lg" className="w-full gap-2 sm:w-auto">
             <a href="#how-to-support">
@@ -358,7 +365,7 @@ function DonationTable({ rows, label }: { rows: readonly Donation[]; label: stri
 }
 
 export function DonorList({ donations, lastUpdatedAt, limit = 10 }: DonorListProps) {
-  const community = donations.filter((d) => d.kind !== "founder").sort((a, b) => b.block_timestamp - a.block_timestamp);
+  const community = donations.filter(isCommunityDonation).sort((a, b) => b.block_timestamp - a.block_timestamp);
   const visible = community.slice(0, limit);
   const earlier = community.slice(limit);
 

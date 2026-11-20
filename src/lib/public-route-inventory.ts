@@ -70,6 +70,7 @@ export const PUBLIC_REFERENCE_ROUTES = [
   ["/depeg/archive/", "monthly", 0.5],
   [API_ACCESS_PAGE_PATH, "monthly", 0.5],
   ["/api/reference/", "monthly", 0.5],
+  ["/api/terms/", "yearly", 0.3],
   ["/stablecoins/", "weekly", 0.7],
   ["/stablecoins/backing/", "weekly", 0.6],
   ["/stablecoins/governance/", "weekly", 0.6],

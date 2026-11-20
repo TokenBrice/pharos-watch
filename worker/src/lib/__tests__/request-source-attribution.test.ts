@@ -5,6 +5,7 @@ import {
   recordWorkerRequestAttribution,
   resetRequestAttributionStateForTests,
 } from "../request-source-attribution";
+import { utcMonthStartSec } from "../api-key-core";
 import { handleRequestSourceStats } from "../../api/request-source-stats";
 import { ApiRequestAttributionResponseSchema } from "@pharos/contracts/request-source";
 
@@ -44,6 +45,8 @@ describe("sampled Worker attribution writers", () => {
       await pending;
       expect(sqlite.prepare("SELECT request_count, source_v2_request_count FROM api_key_request_stats").get())
         .toEqual({ request_count: count, source_v2_request_count: count });
+      expect(sqlite.prepare("SELECT month_start, request_count FROM api_key_monthly_usage").get())
+        .toEqual({ month_start: utcMonthStartSec(minute), request_count: count });
     }
     expect(draw).not.toHaveBeenCalled();
     for (const t of ["api_request_source_samples", "api_request_consumer_stats"])

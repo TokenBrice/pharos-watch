@@ -1,7 +1,7 @@
 import { API_PATHS, getPublicApiAccess, isAdminLikePath } from "@shared/lib/api-endpoints";
 import { isAnonymousThrottlePath } from "@shared/lib/api-endpoints/definitions";
 import { API_KEY_DEPENDENCY_RETRY_AFTER_SEC } from "@shared/lib/ops-limits";
-import { OPS_API_HOSTNAME, SITE_API_HOSTNAME } from "@shared/lib/runtime-origins";
+import { API_HOSTNAME, OPS_API_HOSTNAME, SITE_API_HOSTNAME } from "@shared/lib/runtime-origins";
 import { clientAddressLimiterSubject, hashClientIp } from "@shared/lib/client-ip-hash";
 import { resolveApiRequestRouteMetric } from "@shared/lib/request-attribution";
 import { hasSiteSessionSigningKey, SITE_SESSION_HEADER, SITE_SESSION_HINT_HEADER, verifySiteSessionToken } from "@shared/lib/site-session-token";
@@ -28,10 +28,13 @@ import {
 } from "../../lib/api-key-core";
 import {
   checkApiKeyRateLimit,
+  checkApiKeyMonthlyRequestQuota,
+  checkCachedApiKeyMonthlyRequestQuota,
   checkIsolateLocalApiKeyRateLimit,
   recordApiKeyUsage,
   resolveIsolateFallbackApiKeyRateLimit,
 } from "../../lib/api-key-rate-limit";
+import { isApiKeyRequestAttributionDisabled } from "../../lib/request-source-attribution";
 import {
   hasValidAdminCredential,
   hasValidSiteProxyCredential,
@@ -80,7 +83,7 @@ async function evaluateSiteSessionGate(request: Request, url: URL, env: Env): Pr
       ]);
       if (budgets.some((budget) => !budget.success)) {
         outcome = "budget-exceeded";
-        if (mode === "enforce") response = errorResponse(429, "Too many requests", { retryAfterSec: 60 });
+        if (mode === "enforce") response = errorResponse(429, "Too many requests", { retryAfterSec: 60, noStore: true });
       }
     } catch {
       outcome = "budget-unavailable";
@@ -172,6 +175,7 @@ function degradeRateLimit(options: {
 function publicApiUnavailableResponse(): Response {
   return errorResponse(503, "Public API temporarily unavailable", {
     retryAfterSec: API_KEY_DEPENDENCY_RETRY_AFTER_SEC,
+    noStore: true,
   });
 }
 
@@ -179,6 +183,7 @@ function unauthorizedResponse(): Response {
   return errorResponse(
     401,
     "Unauthorized: valid X-API-Key required. Safety grades are free at /api/safety-grades; see https://pharos.watch/api/ for supporter and partner keys.",
+    { noStore: true },
   );
 }
 
@@ -225,9 +230,42 @@ async function limitAnonymousPublicationRead(
   const key = clientAddressLimiterSubject(address) ?? "unknown";
   try {
     const result = await env.SAFETY_GRADES_RATE_LIMIT.limit({ key });
-    return result.success ? null : errorResponse(429, "Too many requests", { retryAfterSec: 60 });
+    return result.success ? null : errorResponse(429, "Too many requests", { retryAfterSec: 60, noStore: true });
   } catch {
     return publicApiUnavailableResponse();
+  }
+}
+
+let ogImageRateLimitOutageLogged = false;
+
+/**
+ * OG images are fetched by social crawlers with no retry budget, so this lane
+ * never fails closed: a missing binding or a limiter error serves normally and
+ * logs once per isolate.
+ */
+async function limitAnonymousOgImageRead(request: Request, env: Env): Promise<Response | null> {
+  // Same client-network keying as limitAnonymousPublicationRead's public lane.
+  const key = clientAddressLimiterSubject(request.headers.get("CF-Connecting-IP")) ?? "unknown";
+  try {
+    if (!env.OG_IMAGE_RATE_LIMIT) throw new Error("OG image rate-limit binding missing");
+    const result = await env.OG_IMAGE_RATE_LIMIT.limit({ key });
+    return result.success
+      ? null
+      : errorResponse(429, "Too many requests", { retryAfterSec: 60, noStore: true });
+  } catch (error) {
+    if (!ogImageRateLimitOutageLogged) {
+      ogImageRateLimitOutageLogged = true;
+      logWorkerEvent({
+        scope: "http",
+        level: "warn",
+        event: "og_image_rate_limit_unavailable",
+        route: "public-api-og",
+        requestLane: "public-api",
+        message: "OG image rate limiter unavailable; serving OG images without it",
+        error,
+      });
+    }
+    return null;
   }
 }
 
@@ -299,6 +337,11 @@ export async function evaluateAccessGate(
     if (limited) return gateResult("public-api", limited);
   }
 
+  if (request.method === "GET" && url.hostname === API_HOSTNAME && url.pathname.startsWith("/api/og/")) {
+    const limited = await limitAnonymousOgImageRead(request, env);
+    if (limited) return gateResult("public-api", limited);
+  }
+
   if (getPublicApiAccess(url.pathname) === "exempt") {
     return gateResult("public-api");
   }
@@ -306,7 +349,7 @@ export async function evaluateAccessGate(
   const parsedKey = parseApiKeyToken(request.headers.get("X-API-Key"));
   const lookupSubject = clientAddressLimiterSubject(request.headers.get("CF-Connecting-IP")) ?? "unknown";
   if (parsedKey && !getCachedApiKeyByPrefix(parsedKey.prefix) && isApiKeyLookupBlocked(lookupSubject)) {
-    return gateResult("public-api", errorResponse(429, "Too many requests", { retryAfterSec: 60 }));
+    return gateResult("public-api", errorResponse(429, "Too many requests", { retryAfterSec: 60, noStore: true }));
   }
   const apiKeyAuth = await authenticateApiKey(
     env.DB,
@@ -322,7 +365,7 @@ export async function evaluateAccessGate(
       });
       if (!result.success) {
         blockApiKeyLookup(lookupSubject);
-        return gateResult("public-api", errorResponse(429, "Too many requests", { retryAfterSec: 60 }));
+        return gateResult("public-api", errorResponse(429, "Too many requests", { retryAfterSec: 60, noStore: true }));
       }
     } catch (error) {
       logWorkerEvent({
@@ -342,6 +385,19 @@ export async function evaluateAccessGate(
       "public-api",
       apiKeyAuth.kind === "unavailable" ? publicApiUnavailableResponse() : unauthorizedResponse(),
     );
+  }
+
+  // Monthly volume quota: month-to-date usage from api_key_request_stats via a
+  // per-isolate memo; fails open and performs no usage read before the
+  // effective date.
+  const monthlyQuotaResponse = await checkApiKeyMonthlyRequestQuota(
+    env.DB,
+    apiKeyAuth.key,
+    undefined,
+    isApiKeyRequestAttributionDisabled(env),
+  );
+  if (monthlyQuotaResponse) {
+    return gateResult("public-api", monthlyQuotaResponse, apiKeyAuth.key);
   }
 
   // Donor quotas are global and self-serve revocation requires D1, so neither
@@ -444,14 +500,21 @@ export async function evaluateCachedPublicApiReadFastGate(
 // Intentional divergence from the slow path (evaluateAccessGate above): the
 // cache-hit fast path enforces only the isolate-local rate limiter and skips
 // both the D1 rate-limit write and recordApiKeyUsage. This is deliberate — the
-// fast path exists to serve a cached body with in-memory key auth and zero D1
-// I/O, so per-key limits are counted per isolate rather than globally across the
-// fleet. A heavy cache-hit consumer can therefore receive up to ~N × its quota
-// where N is the number of active isolates; this is an accepted trade-off for
-// cache-hit latency, not an oversight. If global accounting on cache hits is
-// ever required, queue a recordApiKeyUsage-equivalent D1 write via waitUntil
-// here (matching the slow path), which would require threading env/ctx in.
+// fast path exists to serve a cached body with in-memory key auth. It still
+// records request-attribution stats via waitUntil in the dispatcher, so it is
+// not a zero-D1-I/O path; per-key limits are nonetheless counted per isolate
+// rather than globally across the fleet. A heavy cache-hit consumer can
+// therefore receive up to ~N × its quota where N is the number of active
+// isolates; this is an accepted trade-off for cache-hit latency, not an
+// oversight. If global accounting on cache hits is ever required, queue a
+// recordApiKeyUsage-equivalent D1 write via waitUntil in the dispatcher's fast
+// lane (matching the slow path); env is already threaded through
+// evaluateCachedPublicApiReadFastGate above.
 export function checkCachedPublicApiReadFastRateLimit(apiKey: AuthenticatedApiKey): Response | null {
+  // Memo-only monthly quota consult: no fresh memo admits, so the slow path
+  // (running at least every auth-cache TTL) remains the enforcement authority.
+  const monthlyQuotaResponse = checkCachedApiKeyMonthlyRequestQuota(apiKey);
+  if (monthlyQuotaResponse) return monthlyQuotaResponse;
   const limit = isApiKeyRateLimitDependencyCircuitOpen()
     ? resolveIsolateFallbackApiKeyRateLimit(apiKey.rateLimitPerMinute)
     : apiKey.rateLimitPerMinute;

@@ -9,6 +9,12 @@ import {
   PUBLIC_DATASET_JSON_LD_DESCRIPTORS,
 } from "@/lib/analytics-dataset-json-ld";
 import { PUBLIC_DATASET_CURRENT_DATE } from "@/lib/datasets/public-dataset-current";
+import {
+  API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA,
+  API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA,
+  DONOR_API_KEY_MONTHLY_REQUEST_QUOTA,
+} from "@shared/lib/ops-limits";
+import { API_BREAKING_CHANGE_NOTICE_DAYS } from "@shared/lib/public-api-contract";
 import { ApiReferencePanel } from "./api-reference-panel";
 
 // Scrollspy behavior is independent of the server-rendered auth guidance.
@@ -37,6 +43,21 @@ describe("API reference authentication guidance", () => {
     };
     const structuredAnswer = faq.mainEntity.find((item) => item.name === question.querySelector("summary")?.textContent);
     expect(structuredAnswer?.acceptedAnswer.text).toBe(question.querySelector("p")?.textContent);
+  });
+
+  it("publishes the tier quotas, notice window and terms link in the key FAQ", async () => {
+    render(await ApiReferencePanel());
+    const answer = screen.getByText("How do I get a Pharos API key?").closest("details")!.querySelector("p")!.textContent ?? "";
+
+    for (const quota of [
+      DONOR_API_KEY_MONTHLY_REQUEST_QUOTA,
+      API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA,
+      API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA,
+    ]) {
+      expect(answer).toContain(`${quota.toLocaleString("en-US")} requests per month`);
+    }
+    expect(answer).toContain(`${API_BREAKING_CHANGE_NOTICE_DAYS} days' notice`);
+    expect(answer).toContain("/api/terms/");
   });
 });
 

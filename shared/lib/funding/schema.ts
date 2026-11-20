@@ -86,7 +86,7 @@ export const DonationSchema = z.object({
   // Lowercase is the ledger invariant; donor-key eligibility compares on it.
   from_address: z.string().regex(/^0x[0-9a-f]{40}$/, "from_address must be a lowercase 0x address"),
   display: z.string().min(1),
-  kind: z.enum(["founder", "pool", "community"]),
+  kind: z.enum(["founder", "pool", "community", "revenue"]),
   asset_symbol: z.string().min(1),
   // Transferred ERC-20 contract, lowercase; null for native assets (ETH, POL/MATIC, xDAI).
   token_address: z.string().regex(/^0x[0-9a-f]{40}$/, "token_address must be a lowercase 0x address").nullable(),
@@ -198,6 +198,10 @@ export type DonationsFile = z.infer<typeof DonationsFileSchema>;
  * - `kind: "pool"` (e.g. Giveth payout contract) counts as community;
  *   `display` should read "via Giveth" rather than the raw contract address.
  * - `kind: "community"` is everything else (default).
+ * - `kind: "revenue"` is a commercial partner-API-key payment: revenue, not a
+ *   donation. It never counts in community totals, donor counts, the supporter
+ *   table or supporter-key eligibility; the page shows its lifetime total as a
+ *   separate API revenue line.
  *
  * `asset_symbol` is display-only. `token_address` is the transferred ERC-20
  * contract (lowercase) or null for a native asset; donor-key eligibility

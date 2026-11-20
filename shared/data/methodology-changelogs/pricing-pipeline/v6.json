@@ -1,5 +1,19 @@
 [
   {
+    "version": "6.89",
+    "title": "Kraken upstream quote clocks switched off: the upgrade is rejected from the Worker",
+    "date": "2026-11-20",
+    "effectiveAt": 1795180646,
+    "summary": "The Kraken Spot WebSocket v2 snapshot read enabled in v6.88 is switched off again. From the Worker's egress the WebSocket upgrade to Kraken is rejected, so no reviewed USD book gains an upstream quote clock and the batched REST ticker keeps supplying every quote with its existing clock modes.",
+    "impact": [
+      "After the v6.88 deploy (11:56 UTC), the first enabled sync-stablecoins run (12:00 UTC) recorded HTTP 429 and the second (12:15 UTC) HTTP 526 on the upgrade, both with error class upgrade-rejected, 10 candidates and 0 resolved. The REST ticker kept answering 200 and every quote fell back to it as designed, so nothing regressed, but the detection census still counts 13 invalid-reference inputs.",
+      "A probe from outside Cloudflare (six connections, 15 s apart) had returned 10 of 10 snapshots each time, so the rejection is specific to the Worker's egress. Enabled slot latency (57 s and 128 s) stayed inside the disabled baseline of 49 to 164 s.",
+      "Snapshot admission, consensus clock rules and depeg admission are unchanged from v6.88; only the switch state differs. Re-enabling requires a connection path Kraken accepts from Worker egress, verified from a deployed Worker, as recorded in the Kraken snapshot rollout notes."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.88",
     "title": "Kraken upstream quote clocks enabled",
     "date": "2026-11-20",

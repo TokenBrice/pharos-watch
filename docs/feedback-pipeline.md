@@ -16,6 +16,8 @@ Submit a collision-resistant Idempotency-Key. Retry the same serialized payload 
 
 [POST /api/feedback](./api-reference.md#post-apifeedback) records only the route's one-line description, registry key, path, unpublished-schema note, cache policy and OpenAPI exclusion; this page owns its request schema, Idempotency-Key and execution-certainty semantics. Valid requests require an idempotency key. Conflicting/in-flight reuse can return 409. Unknown GitHub execution returns 503 with `X-Execution-Certainty: unknown`; replaying the same key replays uncertainty without invoking GitHub again. Reconcile that outcome before submitting a new key: never turn timeout ambiguity into duplicate issues.
 
+Feedback becomes a public GitHub issue, so free-text fields (`title`, `description`, `expectedValue`, `stablecoinName`, `pegValue`, `contactHandle`, `pageUrl`) are scanned for Pharos API-key tokens (`ph_live_…`) after the honeypot check and before any idempotency, D1 or GitHub side effect. A match returns `400` with `Do not include Pharos API keys in feedback. Remove the key and resubmit, and contact the maintainer privately if a key was exposed.` — the same token is also redacted by `stripSensitive` if it ever reaches an error message.
+
 ### Rate limiting And Privacy
 
 [Worker/API limits](./worker-and-api-limits.md) generated feedback block and `shared/lib/ops-limits.ts` own numeric window/budget/retention. `worker/migrations/0000_baseline.sql` owns D1 schema; do not mirror SQL here.

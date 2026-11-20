@@ -495,6 +495,11 @@ const RECORDS: Readonly<Record<string, RecordEntry>> = {
     dek: "Endpoints, response contracts and access rules for the Pharos API.",
     description: "Reference documentation for the Pharos API: endpoints, authentication, response contracts and access rules.",
   },
+  "/api/terms/": {
+    label: "API terms", accent: "ink", title: "The terms for Pharos API keys",
+    dek: "Keys, rate and volume limits, change notice, payment and suspension.",
+    description: "Terms for Pharos API keys: scope, attribution, rate and volume limits, change notice, payment and suspension.",
+  },
   "/blog/": {
     label: "Pharos blog", accent: "ink", title: "The Pharos blog",
     dek: "Research, design notes and the decisions behind Pharos.",

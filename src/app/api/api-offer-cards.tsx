@@ -4,9 +4,14 @@ import { CopyButton } from "@/components/copy-button";
 import { Button } from "@/components/ui/button";
 import { summarizeCountingCoinNames, type DonorKeyQualifyingCoin } from "@/lib/donor-key-qualifying-coins";
 import {
-  API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE,
+  API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA,
+  API_KEY_COMMERCIAL_RATE_LIMIT_PER_MINUTE,
+  API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA,
+  API_KEY_FREE_PARTNER_RATE_LIMIT_PER_MINUTE,
+  API_KEY_MONTHLY_QUOTA_EFFECTIVE_SEC,
   DONOR_API_KEY_DAYS_PER_MIN_USD,
   DONOR_API_KEY_MIN_USD,
+  DONOR_API_KEY_MONTHLY_REQUEST_QUOTA,
   DONOR_API_KEY_RATE_LIMIT_PER_MINUTE,
 } from "@shared/lib/ops-limits";
 import {
@@ -14,17 +19,22 @@ import {
   API_ACCESS_TELEGRAM_URL,
   API_ACCESS_X_HANDLE,
   API_ACCESS_X_URL,
+  API_BREAKING_CHANGE_NOTICE_DAYS,
   API_PAGE_ANCHORS,
   COMMERCIAL_API_KEY_USD_PER_MONTH,
   PARTNER_KEY_REPLY_BUSINESS_DAYS,
   PARTNER_KEY_REQUEST_TEMPLATE,
 } from "@shared/lib/public-api-contract";
+import { formatLongDate } from "@shared/lib/format";
 import { ApiDisclosure } from "./api-disclosure";
 
 const CARD_CLASS_NAME = "pharos-card-shell flex scroll-mt-20 flex-col gap-4 px-5 py-6 sm:px-6";
 const CARD_TITLE_CLASS_NAME = "text-2xl font-semibold tracking-tight text-foreground";
 const CARD_PITCH_CLASS_NAME = "text-sm leading-relaxed text-muted-foreground";
 const CTA_ROW_CLASS_NAME = "flex flex-col gap-3 sm:flex-row sm:flex-wrap";
+
+const formatRequestQuota = (value: number): string => value.toLocaleString("en-US");
+const QUOTA_EFFECTIVE_DATE = formatLongDate(new Date(API_KEY_MONTHLY_QUOTA_EFFECTIVE_SEC * 1000), { utc: true });
 
 interface SupporterOfferProps {
   coins: readonly DonorKeyQualifyingCoin[];
@@ -60,6 +70,7 @@ function SupporterKeyCard({ coins, gradesAsOf, supporterCount }: SupporterOfferP
       </div>
       <ul className="flex flex-wrap gap-x-5 gap-y-1 text-sm font-semibold text-foreground">
         <li className="pharos-numeric">{DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests/min</li>
+        <li className="pharos-numeric">{formatRequestQuota(DONOR_API_KEY_MONTHLY_REQUEST_QUOTA)} requests/month</li>
         <li className="pharos-numeric">
           {DONOR_API_KEY_DAYS_PER_MIN_USD} days per ${DONOR_API_KEY_MIN_USD}
         </li>
@@ -109,8 +120,13 @@ function PartnerKeyCard() {
       </div>
       <ul className="list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-muted-foreground">
         <li>
-          Rate limits from <span className="pharos-numeric text-foreground">{API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE}</span>{" "}
-          requests/min, raised per key.
+          Free partner services: <span className="pharos-numeric text-foreground">{API_KEY_FREE_PARTNER_RATE_LIMIT_PER_MINUTE}</span>{" "}
+          requests/min and{" "}
+          <span className="pharos-numeric text-foreground">{formatRequestQuota(API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA)}</span>{" "}
+          requests/month; commercial keys:{" "}
+          <span className="pharos-numeric text-foreground">{API_KEY_COMMERCIAL_RATE_LIMIT_PER_MINUTE}</span> requests/min and{" "}
+          <span className="pharos-numeric text-foreground">{formatRequestQuota(API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA)}</span>{" "}
+          requests/month. Higher limits on request.
         </li>
         <li>Expiry and rotation on request.</li>
         <li>Integration help with IDs, endpoints and polling.</li>
@@ -167,9 +183,19 @@ function PartnerKeyCard() {
 /** The two offers, supporter first so it also leads the mobile stack. */
 export function ApiOfferCards(props: SupporterOfferProps) {
   return (
-    <div className="grid gap-4 md:grid-cols-2 md:items-start">
-      <SupporterKeyCard {...props} />
-      <PartnerKeyCard />
+    <div className="space-y-4">
+      <div className="grid gap-4 md:grid-cols-2 md:items-start">
+        <SupporterKeyCard {...props} />
+        <PartnerKeyCard />
+      </div>
+      <p className="pharos-meta">
+        Monthly request volumes are counted per UTC calendar month and apply from {QUOTA_EFFECTIVE_DATE}. Breaking changes
+        to keyed routes get {API_BREAKING_CHANGE_NOTICE_DAYS} days&apos; notice. See the{" "}
+        <Link href="/api/terms/" className="pharos-prose-link">
+          API terms
+        </Link>
+        .
+      </p>
     </div>
   );
 }
