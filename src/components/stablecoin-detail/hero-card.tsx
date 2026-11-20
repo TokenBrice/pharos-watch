@@ -40,9 +40,9 @@ interface HeroCardProps {
 
 /**
  * The fourth hero figure is chosen by what the coin is, never a fixed slot:
- * native yield vs T-bill for yield-bearing and NAV tokens; otherwise the
- * mechanism's headline (collateral ratio); otherwise 1Y vs USD for non-dollar
- * pegs; otherwise the live depeg warning. "30d Excess" on a coin that pays no
+ * 1Y vs USD for non-dollar pegs; otherwise native yield vs T-bill for
+ * yield-bearing and NAV tokens; otherwise the mechanism's headline (collateral
+ * ratio); otherwise the live depeg warning. "30d Excess" on a coin that pays no
  * yield (it measured a third-party venue) is never shown in the hero.
  */
 function resolveFourthMetric(
@@ -50,13 +50,15 @@ function resolveFourthMetric(
   metrics: HeroTertiaryMetricConfig[],
   keyMetric: HeroTertiaryMetricConfig | null,
 ): HeroTertiaryMetricConfig | null {
+  // A non-dollar peg's year against USD outranks its mechanism figure, which the
+  // xl rail's Backing KPI still states.
+  const performanceVsUsd = metrics.find((metric) => metric.key === "performance-vs-usd");
+  if (performanceVsUsd) return performanceVsUsd;
   const nativeYield = model.coin.flags.yieldBearing === true || model.coin.flags.navToken === true;
   const excess = metrics.find((metric) => metric.key === "excess-yield");
   if (nativeYield && excess) return excess;
   if (keyMetric) return keyMetric;
-  return metrics.find((metric) => metric.key === "performance-vs-usd")
-    ?? metrics.find((metric) => metric.key === "dews")
-    ?? null;
+  return metrics.find((metric) => metric.key === "dews") ?? null;
 }
 
 function renderMetricValue(metric: HeroTertiaryMetricViewModel): React.ReactNode {

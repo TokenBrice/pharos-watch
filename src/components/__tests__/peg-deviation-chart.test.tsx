@@ -49,6 +49,15 @@ it("headlines the live quote and its deviation when the caller supplies them", (
   expect(screen.queryByText("$0.9999")).toBeNull();
 });
 
+it("charts a non-USD peg as its plain USD price, without par bands or a deviation band", () => {
+  const goldHistory = history.map((point, index) => ({ ...point, price: 3_500 + index * 50 }));
+  const { container } = render(<PegDeviationChart data={goldHistory} pegCurrency="GOLD" controlledRange="all" current={{ price: 3_578.31, deviationBps: -1 }} />);
+  expect(screen.getByRole("heading", { name: "Price (USD)" })).toBeTruthy();
+  expect(screen.getByText("$3,578.31")).toBeTruthy();
+  expect(screen.queryByText("-1 bps")).toBeNull();
+  expect(container.querySelector(".recharts-reference-area")).toBeNull();
+});
+
 it("labels only the observed price series 'Price' in the tooltip", async () => {
   const { container } = render(<PegDeviationChart data={history} pegCurrency="USD" controlledRange="all" />);
   const wrapper = container.querySelector(".recharts-wrapper")!;

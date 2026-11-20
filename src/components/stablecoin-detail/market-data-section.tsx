@@ -147,8 +147,9 @@ function MarketDataSectionBody({
   const sync = useMarketDataChartSync();
   // Daily history carries USD prices only. A USD peg's reference is $1 on every
   // day; other pegs need a dated FX/commodity reference series Pharos does not
-  // publish, so their deviation is stated for the live quote instead of charted.
-  const pegCharted = pegCurrency === "USD";
+  // publish, so their USD price is charted and their deviation is stated for the
+  // live quote.
+  const deviationCharted = pegCurrency === "USD";
   const pegName = getPegTaxonomyByCurrency(pegCurrency ?? undefined)?.presentation.shortLabel ?? pegCurrency;
 
   // Brush domain matches the active controlled range, not the entire supply
@@ -200,7 +201,7 @@ function MarketDataSectionBody({
         {frozenNote}
         {historyNotice}
         <div className="overflow-hidden rounded-lg border border-border/50 bg-card/40 animate-in fade-in duration-[220ms] motion-reduce:animate-none">
-          <div className={cn("grid grid-cols-1 divide-y divide-border/50", pegCharted && "lg:grid-cols-2 lg:divide-x lg:divide-y-0")}>
+          <div className="grid grid-cols-1 divide-y divide-border/50 lg:grid-cols-2 lg:divide-x lg:divide-y-0">
             <LazySection className="min-h-[340px] sm:min-h-[420px]">
               <McapChart
                 data={supplyHistory}
@@ -210,19 +211,17 @@ function MarketDataSectionBody({
                 current={current}
               />
             </LazySection>
-            {pegCharted ? (
-              <LazySection className="min-h-[340px] sm:min-h-[420px]">
-                <PegDeviationChart
-                  data={supplyHistory}
-                  pegCurrency={pegCurrency}
-                  controlledRange={range}
-                  embedded
-                  current={current}
-                />
-              </LazySection>
-            ) : null}
+            <LazySection className="min-h-[340px] sm:min-h-[420px]">
+              <PegDeviationChart
+                data={supplyHistory}
+                pegCurrency={pegCurrency}
+                controlledRange={range}
+                embedded
+                current={current}
+              />
+            </LazySection>
           </div>
-          {!pegCharted && pegName ? (
+          {!deviationCharted && pegName ? (
             <p className="border-t border-border/50 px-4 py-3 text-xs text-muted-foreground sm:px-6">
               <span className="font-medium text-foreground">Peg vs {pegName}:</span>{" "}
               {current?.deviationBps != null ? (
@@ -235,7 +234,7 @@ function MarketDataSectionBody({
               ) : (
                 "unavailable now."
               )}{" "}
-              Daily history is not charted: Pharos keeps no dated {pegName} reference series.
+              Price is charted in USD; daily deviation is not, as Pharos keeps no dated {pegName} reference series.
             </p>
           ) : null}
           {brushDomain && sync ? (
