@@ -28,6 +28,7 @@ import {
   MonitorCheck,
   BookMarked,
   Heart,
+  Sigma,
   TableProperties,
   createLucideIcon,
 } from "lucide-react";
@@ -73,10 +74,18 @@ export interface NavItem {
   external?: boolean;
 }
 
-/** Labeled column inside a multi-section menu panel (currently only `more`). */
-export interface NavColumn {
+/** Stacked subsection of a menu panel (currently only `learn`). */
+export interface NavSection {
   key: string;
-  label: string;
+  /** Subhead in the panel and the drawer; `null` for a panel's lead rows. */
+  label: string | null;
+  /**
+   * Desktop renders the section as a subordinate tier of plain links under the
+   * described rows: destinations people already know by name (About, Status)
+   * stay one click away without competing with the rows that need a line of
+   * explanation. The drawer keeps full rows for every section.
+   */
+  compact?: boolean;
   items: readonly NavItem[];
 }
 
@@ -85,8 +94,8 @@ export interface NavGroup {
   label: string;
   /** Flat membership: mobile drawer and command palette. */
   items: readonly NavItem[];
-  /** Desktop panel layout. When present, `items` is exactly its flattening. */
-  columns?: readonly NavColumn[];
+  /** Panel layout. When present, `items` is exactly its flattening. */
+  sections?: readonly NavSection[];
 }
 
 const DASHBOARD_NAV_ITEM: NavItem = {
@@ -162,40 +171,31 @@ export const QUICK_NAV_ITEMS: readonly NavItem[] = [
   { ...FREEZEWATCH_NAV_ITEM, shortLabel: "FreezeWatch", compactLabel: "Freeze" },
 ];
 
-const MORE_COLUMNS: readonly NavColumn[] = [
+// Learn holds the reference corpus; the compact tier below it holds the pages
+// about Pharos itself, which readers find by name rather than by description.
+// The tier fills column-first in fours: the project and its news on the left,
+// what it tracks and how it is running on the right.
+const LEARN_SECTIONS: readonly NavSection[] = [
   {
-    key: "research",
-    label: "Research",
+    key: "learn",
+    label: null,
     items: [
-      { href: "/blog/", label: "Blog", icon: BookOpen, description: "Product updates and the Pharos story", keywords: "blog posts articles announcements" },
       { href: "/learn/mechanisms/", label: "Mechanisms", icon: Lightbulb, description: "How each design holds its peg", keywords: "mechanism archetype design how it works collateral algorithmic" },
       { href: "/learn/case-studies/", label: "Case Studies", icon: BookMarked, description: "Retrospectives of major depegs", keywords: "case study retrospective post-mortem history terra ust svb" },
-    ],
-  },
-  {
-    key: "watch",
-    label: "Updates",
-    items: [
-      { href: "/digest/", label: "Daily Digest", icon: Newspaper, description: "Daily recap of the stablecoin market", keywords: "digest daily news recap newsletter today" },
-      { href: "/timeline/", label: "Timeline", icon: ScrollText, description: "Every depeg, freeze, and grade change", keywords: "timeline tape events history feed" },
-      { href: "/changelog/", label: "Changelog", icon: PenLine, description: "Weekly release notes and updates", keywords: "changelog release notes what's new updates" },
-    ],
-  },
-  {
-    key: "methods",
-    label: "Transparency",
-    items: [
-      { href: "/methodology/", label: "Methodology", icon: BookOpen, description: "Formulas, thresholds, and versions", keywords: "methodology formula threshold how computed calculated version glossary definitions terms" },
-      { href: "/coverage/", label: "Coverage", icon: TableProperties, description: "What Pharos tracks, coin by coin", keywords: "coverage tracked supported data availability" },
-      { href: "/status/", label: "Status", icon: MonitorCheck, description: "Live health of every data pipeline", keywords: "status health uptime pipeline outage" },
+      { href: "/methodology/", label: "Methodology", icon: Sigma, description: "Formulas, thresholds, and versions", keywords: "methodology formula threshold how computed calculated version glossary definitions terms" },
     ],
   },
   {
     key: "pharos",
     label: "About Pharos",
+    compact: true,
     items: [
       { href: "/about/", label: "About", icon: Info, description: "Scope, sources, and why Pharos exists", keywords: "about team independent sources mission" },
       { href: "/funding/", label: "Funding", icon: Heart, description: "Costs, donations, and sustainability", keywords: "funding donate support costs sponsor" },
+      { href: "/blog/", label: "Blog", icon: BookOpen, description: "Product updates and the Pharos story", keywords: "blog posts articles announcements" },
+      { href: "/changelog/", label: "Changelog", icon: PenLine, description: "Weekly release notes and updates", keywords: "changelog release notes what's new updates" },
+      { href: "/coverage/", label: "Coverage", icon: TableProperties, description: "What Pharos tracks, coin by coin", keywords: "coverage tracked supported data availability" },
+      { href: "/status/", label: "Status", icon: MonitorCheck, description: "Live health of every data pipeline", keywords: "status health uptime pipeline outage" },
       {
         href: "https://pharosville.pharos.watch/",
         label: "PharosVille",
@@ -208,6 +208,12 @@ const MORE_COLUMNS: readonly NavColumn[] = [
   },
 ];
 
+/**
+ * Section menus group the long tail by what the reader is doing: Markets is
+ * where supply lives and moves, Risk is what can break and what already did,
+ * Tools act on the data, and Learn explains it. Every row carries a one-line
+ * description; the rail owns the six highest-traffic routes.
+ */
 export const NAV_GROUPS: readonly NavGroup[] = [
   {
     key: "markets",
@@ -218,6 +224,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       { href: "/chains/", label: "Chains", icon: Layers, description: "Stablecoin share and health by chain", keywords: "chains network ethereum solana tron l2 by chain" },
       { href: "/alt-pegs/", label: "Non-USD Pegs", icon: Globe, description: "Market structure beyond the dollar", keywords: "non-usd euro eur gbp chf jpy brl gold alt pegs currency" },
       { href: "/upcoming/", label: "Upcoming", icon: Rocket, description: "Pre-launch stablecoins and launch dates", keywords: "upcoming launch pre-launch calendar new coins pipeline" },
+      { href: "/digest/", label: "Daily Digest", icon: Newspaper, description: "Daily recap of the stablecoin market", keywords: "digest daily news recap newsletter today" },
     ],
   },
   {
@@ -227,6 +234,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       { href: "/compliance/", label: "Compliance", icon: Landmark, description: "MiCA and GENIUS status, coin by coin", keywords: "compliance mica genius regulation regulated license authorized" },
       { href: "/dependency-map/", label: "Dependency Map", icon: Network, description: "Collateral and wrapper dependency graph", keywords: "dependency map contagion collateral wrapper graph exposure" },
       { href: "/cemetery/", label: "Cemetery", icon: Skull, description: "Failed stablecoins and their lessons", keywords: "cemetery dead failed collapsed defunct graveyard" },
+      { href: "/timeline/", label: "Timeline", icon: ScrollText, description: "Every depeg, freeze, and grade change", keywords: "timeline tape events history feed" },
     ],
   },
   {
@@ -237,14 +245,14 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       { href: "/compare/", label: "Compare", icon: ArrowLeftRight, description: "Peer sets and substitutes side by side", keywords: "compare vs versus side by side alternative" },
       { href: "/portfolio/", label: "Portfolio", icon: Wallet, description: "Your holdings as one stablecoin book", keywords: "portfolio holdings my coins wallet exposure" },
       { href: "/pharoswatchbot/", label: "Alert Bot", icon: Send, description: "Telegram alerts for depegs and launches", keywords: "alert bot telegram notifications subscribe watch" },
-      { href: "/api/", label: "API", icon: KeyRound, description: "Access keys, free grades, and the API reference", keywords: "api key developer access endpoint docs reference integration" },
+      { href: "/api/", label: "API", icon: KeyRound, description: "Free grades, access keys, and docs", keywords: "api key developer access endpoint docs reference integration" },
     ],
   },
   {
-    key: "more",
-    label: "Resources",
-    columns: MORE_COLUMNS,
-    items: MORE_COLUMNS.flatMap((column) => column.items),
+    key: "learn",
+    label: "Learn",
+    sections: LEARN_SECTIONS,
+    items: LEARN_SECTIONS.flatMap((section) => section.items),
   },
 ];
 

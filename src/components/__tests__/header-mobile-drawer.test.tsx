@@ -72,11 +72,10 @@ vi.mock("@/lib/analytics", () => ({
   trackEvent: vi.fn(),
 }));
 
-// The drawer mirrors the desktop menus one-to-one; columns become subheads.
+// The drawer mirrors the desktop menus one-to-one; sections become subheads.
 const categories = NAV_GROUPS.map((group) => ({
   label: group.label,
-  columns: group.columns ?? [],
-  items: group.columns ? group.columns.flatMap((column) => column.items) : group.items,
+  items: group.sections ? group.sections.flatMap((section) => section.items) : group.items,
 }));
 
 function categoryButton(label: string, itemCount: number) {

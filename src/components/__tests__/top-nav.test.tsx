@@ -103,13 +103,13 @@ describe("TopNav", () => {
     expect(header.className).toContain("z-chrome-header");
   });
 
-  it("opens Resources only after hover intent and renders its configured columns", () => {
+  it("opens Learn only after hover intent and closes its panel on the compact tier", () => {
     vi.useFakeTimers();
     const matchMedia = installMatchMediaMock(true);
 
     render(<TopNav />);
     expect(matchMedia).toHaveBeenCalledWith("(hover: hover) and (pointer: fine)");
-    const trigger = screen.getByRole("button", { name: "Resources" });
+    const trigger = screen.getByRole("button", { name: "Learn" });
 
     fireEvent.mouseEnter(trigger);
 
@@ -118,12 +118,16 @@ describe("TopNav", () => {
     act(() => vi.advanceTimersByTime(1));
     expect(trigger.getAttribute("aria-expanded")).toBe("true");
 
-    const resources = NAV_GROUPS.find((menu) => menu.key === "more");
-    const columnHeadings = [...document.querySelectorAll("p.pharos-label")].map((node) => node.textContent);
-    expect(columnHeadings).toEqual(resources?.columns?.map((column) => column.label));
+    const learn = NAV_GROUPS.find((menu) => menu.key === "learn")!;
+    const subheads = [...document.querySelectorAll('[data-section-menu="learn"] p.pharos-label')].map((node) => node.textContent);
+    expect(subheads).toEqual(learn.sections!.filter((section) => section.label).map((section) => section.label));
+    // Compact rows keep their description as a tooltip, not a second line.
+    const compact = learn.sections!.find((section) => section.compact)!.items.find((item) => !item.external)!;
+    const compactLink = screen.getByRole("link", { name: compact.label });
+    expect([compactLink.getAttribute("title"), compactLink.getAttribute("aria-describedby")]).toEqual([compact.description, null]);
     expect(useHealthMock).not.toHaveBeenCalled();
 
-    const hoverBridge = document.querySelector('[data-section-menu="more"] > div.absolute');
+    const hoverBridge = document.querySelector('[data-section-menu="learn"] > div.absolute');
     expect(hoverBridge?.className).toContain("pt-2");
   });
 
@@ -197,7 +201,7 @@ describe("TopNav", () => {
 
     render(<TopNav />);
 
-    const menu = NAV_GROUPS.find((group) => !group.columns)!;
+    const menu = NAV_GROUPS.find((group) => !group.sections)!;
     const item = menu.items.find((candidate) => candidate.description)!;
     const trigger = screen.getByRole("button", { name: menu.label });
 
@@ -244,7 +248,7 @@ describe("TopNav", () => {
     installMatchMediaMock(true);
 
     render(<TopNav />);
-    fireEvent.click(screen.getByRole("button", { name: "Resources" }));
+    fireEvent.click(screen.getByRole("button", { name: "Learn" }));
 
     const statusLink = screen.getByText("Status", { selector: "span" }).closest("a");
     expect(statusLink?.textContent).toBe("Status");
