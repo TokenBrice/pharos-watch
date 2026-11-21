@@ -112,11 +112,11 @@ describe("loadTrackedStablecoinMaps", () => {
     });
     const { stablecoinPriceById } = await loadTrackedStablecoinMaps({} as D1Database, NOW_SEC);
     expect(stablecoinPriceById.marketMarks?.get("eurc-circle")).toEqual(admitted
-      ? { priceUsd: 1.13, observedAtSec: priceObservedAt, source, observedAtMode: "upstream" }
+      ? { priceUsd: 1.13, observedAtSec: priceObservedAt, source, observedAtMode: "upstream", corroboration: "multi-source" }
       : undefined);
   });
 
-  it("withholds a closed-session leg when its consensus uses a local fetch clock", async () => {
+  it("values a closed-session leg by a local-fetch consensus only when it is multi-source", async () => {
     const at = Date.parse("2026-11-14T01:00:00Z") / 1000;
     const quote = computePriceConsensus([
       { source: "kraken", weight: 2, price: 1.05, observedAt: at - 60, observedAtMode: "local_fetch" },
@@ -129,7 +129,11 @@ describe("loadTrackedStablecoinMaps", () => {
     })] } });
     const { stablecoinPriceById } = await loadTrackedStablecoinMaps({} as D1Database, at);
     expect(stablecoinPriceById.get("eurc-circle")).toBeCloseTo(1.0505);
-    expect(getClosedReferenceDexValuation(stablecoinPriceById, "eurc-circle", at)?.mark).toBeNull();
+    expect(getClosedReferenceDexValuation(stablecoinPriceById, "eurc-circle", at)?.mark)
+      .toMatchObject({ observedAtSec: at - 60, corroboration: "multi-source" });
+    const { corroboration: _, ...singleSource } = stablecoinPriceById.marketMarks!.get("eurc-circle")!;
+    const singleSourcePrices = Object.assign(new Map(stablecoinPriceById), { marketMarks: new Map([["eurc-circle", singleSource]]) });
+    expect(getClosedReferenceDexValuation(singleSourcePrices, "eurc-circle", at)?.mark).toBeNull();
   });
 
   it("admits fresh observed soft primaries only as comparison anchors", async () => {

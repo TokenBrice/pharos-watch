@@ -101,6 +101,7 @@ export async function loadTrackedStablecoinMaps(
           if (observedAt === asset.priceObservedAt && isMarketMarkSource(asset)) {
             marketMarks.set(asset.id, { priceUsd: asset.price, observedAtSec: observedAt!, source: asset.priceSource,
               ...(asset.priceObservedAtMode === "upstream" ? { observedAtMode: asset.priceObservedAtMode } : {}),
+              ...(hasFreshMultiSourcePrimaryAgreement(asset, syncStartSec) ? { corroboration: "multi-source" as const } : {}),
               ...readDexPriceLineage(asset) });
           }
         }

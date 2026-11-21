@@ -1,7 +1,7 @@
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { DexMeasuredExecutionTarget, DexMeasuredExecutionObservationHistory } from "@shared/types/measured-execution";
-import { getClosedReferenceDexValuation, type DexMarketMark } from "../../lib/dex-api-token-pricing";
+import { getClosedReferenceDexValuation, isClosureValuationMark, type DexMarketMark } from "../../lib/dex-api-token-pricing";
 import { buildChainAddressKey } from "../dex-liquidity/token-resolution";
 
 export const DEX_MEASURED_CLOSURE_VALUATION_UNAVAILABLE = "reference-market-closed-valuation-unavailable";
@@ -55,8 +55,8 @@ export function createDexMeasuredValuationAdmission(
   ): boolean {
     const closure = closedAssets.get(id);
     if (!closure) return false;
-    return !closure.mark || stored?.observedAtMode !== "upstream" || stored.stablecoinId !== id ||
-      stored.source !== closure.mark.source || stored.observedAtSec < closure.closureStart ||
+    return !closure.mark || !isClosureValuationMark(stored, closure.closureStart) || stored.stablecoinId !== id ||
+      stored.source !== closure.mark.source ||
       stored.observedAtSec > valuedAt || valuedAt - stored.observedAtSec > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC ||
       valuedAt > quotedAt || quotedAt > nowSec;
   }

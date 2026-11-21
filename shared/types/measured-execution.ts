@@ -87,6 +87,7 @@ const DexMeasuredExecutionMarketMarkSchema = /* @__PURE__ */ (() => z.object({
   source: z.string().trim().min(1).max(128),
   observedAtSec: z.number().int().positive(),
   observedAtMode: z.literal("upstream").optional(),
+  corroboration: z.literal("multi-source").optional(),
 }))();
 
 export const DexMeasuredExecutionObservationHistorySchema = /* @__PURE__ */ (() => ExitRouteObservationHistorySchema

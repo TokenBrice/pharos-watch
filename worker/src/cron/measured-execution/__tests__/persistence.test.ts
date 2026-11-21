@@ -159,11 +159,16 @@ describe("measured execution durable publication", () => {
     expect(revised.rejectsQuotedTarget(entry!.quotedTarget, entry!.observationHistory)).toBe(false);
     const prior = { ...history.valuationObservations![0]!, quoteGenerationId: "prior", quotedAt: at - 900, targetCapturedAt: at - 3000,
       tokenOut: { stablecoinId: "eurc-circle", ...mark, observedAtSec: at - 3060, priceUsd: 1.002 } };
-    const historyWith = (tokenOut: typeof prior.tokenOut) => ({
+    type StoredMark = Omit<typeof prior.tokenOut, "observedAtMode"> & { observedAtMode?: "upstream"; corroboration?: "multi-source" };
+    const historyWith = (tokenOut: StoredMark) => ({
       ...history, completeProducerCycleCount: 2, successfulObservationCount: 2, consecutiveSuccessCount: 2,
       valuationObservations: [...history.valuationObservations!, { ...prior, tokenOut }],
     });
     expect(revised.rejectsQuotedTarget(entry!.quotedTarget, historyWith(prior.tokenOut))).toBe(false);
+    const { observedAtMode: _mode, ...fetchedClock } = prior.tokenOut;
+    const fetched: StoredMark = { ...fetchedClock, corroboration: "multi-source" };
+    expect(revised.rejectsQuotedTarget(entry!.quotedTarget, historyWith(fetched))).toBe(false);
+    expect(revised.rejectsQuotedTarget(entry!.quotedTarget, historyWith(fetchedClock))).toBe(true);
     const quoteBeforeTarget = historyWith(prior.tokenOut);
     quoteBeforeTarget.valuationObservations[1]!.quotedAt = prior.targetCapturedAt - 1;
     expect(revised.rejectsQuotedTarget(entry!.quotedTarget, quoteBeforeTarget)).toBe(true);

@@ -1,5 +1,18 @@
 [
   {
+    "version": "7.52",
+    "title": "Closed-market legs keep measured exit capacity",
+    "date": "2026-11-21",
+    "effectiveAt": 1795255200,
+    "summary": "While an FX or metal reference market is closed, a measured DEX route can value a leg on that market with a fresh mark observed after the close: an upstream-clocked quote, or a consensus of at least two independent market source families collected after the close. Such a mark keeps its local collection clock, is labelled multi-source and serves capacity valuation only.",
+    "impact": [
+      "Before v7.52 only an upstream-clocked mark qualified. Most non-USD prices carry a local collection clock, so every measured route touching a closed-market asset was withheld until the reopen and the Safety Exit pillar of EUR, gold and other non-USD coins fell to its unknown bound each weekend. On 2026-11-21, 72 measured routes on 30 coins were withheld.",
+      "Single-source local-fetch prices, marks observed before the close, marks older than 30 minutes and marks from a different source than the current one stay rejected, and every stored valuation observation in a route's history must pass the same test. Depeg detection and reference admission keep their upstream-clock requirements. Retained-TVL measurement is unchanged, so this is not a TVL-basis break."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "7.51",
     "title": "Exact identities for two Curve USDC/sUSDat pools",
     "date": "2026-11-20",

@@ -122,7 +122,7 @@ export function buildMeasuredExecutionTargetValue(
     const id = token.trackedAssetId;
     if (!id) return token;
     const mark = getAdmittedDexMarketMark(valuation?.[leg], id, input.capturedAt);
-    return mark?.observedAtMode === "upstream" && mark.priceUsd === token.referencePriceUsd
+    return (mark?.observedAtMode === "upstream" || mark?.corroboration === "multi-source") && mark.priceUsd === token.referencePriceUsd
       ? { ...token, marketMark: { stablecoinId: id, ...mark } }
       : token;
   }
