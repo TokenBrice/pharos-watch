@@ -2,6 +2,7 @@ import type {
   ApiKeyCreateResponse,
   ApiKeyListResponse,
   ApiKeyMutationResponse,
+  ApiKeyPlan,
   ApiKeyRotateResponse,
   ApiKeyTier,
 } from "@pharos/contracts/api-keys";
@@ -86,13 +87,18 @@ export async function createApiKey(
   if (expiresAt != null && expiresAt <= nowSec) {
     return errorResponse(400, "expiresAt must be in the future when creating an API key");
   }
+  const tier = parsed.tier ?? "standard";
+  const plan: ApiKeyPlan | null = tier === "standard"
+    ? (parsed.plan === undefined ? "free_partner" : parsed.plan)
+    : null;
   const created = await createTrustedApiKey(
     db,
     effectivePepper,
     {
       name: parsed.name,
       ownerEmail: parsed.ownerEmail ?? null,
-      tier: parsed.tier ?? "standard",
+      tier,
+      plan,
       rateLimitPerMinute: parsed.rateLimitPerMinute ?? API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE,
       monthlyRequestQuota: parsed.monthlyRequestQuota ?? null,
       expiresAt: expiresAt ?? null,
@@ -103,7 +109,8 @@ export async function createApiKey(
       action: "created",
       detail: {
         name: parsed.name,
-        tier: parsed.tier ?? "standard",
+        tier,
+        plan,
         ...(operator ? { operator } : {}),
       },
     },
@@ -115,6 +122,7 @@ export interface TrustedApiKeyCreateInput {
   name: string;
   ownerEmail: string | null;
   tier: ApiKeyTier;
+  plan: ApiKeyPlan | null;
   rateLimitPerMinute: number;
   monthlyRequestQuota: number | null;
   expiresAt: number | null;
@@ -172,6 +180,7 @@ export function buildTrustedApiKeyInsertStatement<TStatement extends MinimalD1St
        name,
        owner_email,
        tier,
+       plan,
        traffic_class,
        rate_limit_per_minute,
        monthly_request_quota,
@@ -180,7 +189,7 @@ export function buildTrustedApiKeyInsertStatement<TStatement extends MinimalD1St
        created_at,
        updated_at
      )
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ${buildPublicApiKeyReturningClause()}`,
     )
     .bind(
@@ -189,6 +198,7 @@ export function buildTrustedApiKeyInsertStatement<TStatement extends MinimalD1St
       input.name,
       input.ownerEmail,
       input.tier,
+      input.plan,
       // Attribution label only; the real request lane is derived per request in
       // handlers/http/gates.ts, so issuance always writes the external default.
       API_KEY_TRAFFIC_CLASS_DEFAULT,
@@ -244,6 +254,11 @@ export async function updateApiKey(
     return parsed;
   }
 
+  const effectiveTier = parsed.tier ?? existing.tier;
+  if (parsed.plan != null && effectiveTier !== "standard") {
+    return errorResponse(400, "plan can only be set for standard tier API keys");
+  }
+
   const assignments: string[] = [];
   const bindings: unknown[] = [];
   if (parsed.name !== undefined) {
@@ -257,6 +272,11 @@ export async function updateApiKey(
   if (parsed.tier !== undefined) {
     assignments.push("tier = ?");
     bindings.push(parsed.tier);
+  }
+  const shouldClearPlanForTier = parsed.tier !== undefined && parsed.tier !== "standard";
+  if (Object.prototype.hasOwnProperty.call(parsed, "plan") || shouldClearPlanForTier) {
+    assignments.push("plan = ?");
+    bindings.push(shouldClearPlanForTier ? null : (parsed.plan ?? null));
   }
   if (parsed.rateLimitPerMinute !== undefined) {
     assignments.push("rate_limit_per_minute = ?");
@@ -294,7 +314,14 @@ export async function updateApiKey(
   // dedicated deactivate route, so it gets the "deactivated" action, not
   // "updated"; updates may still shorten the expiry.
   const action = parsed.isActive === false ? "deactivated" : "updated";
-  await recordApiKeyAuditOrLog(db, id, action, { ...parsed, ...(operator ? { operator } : {}) }, nowSec);
+  const auditDetail: Record<string, unknown> = {
+    ...parsed,
+    ...(shouldClearPlanForTier && existing.plan != null && !Object.prototype.hasOwnProperty.call(parsed, "plan")
+      ? { plan: null }
+      : {}),
+    ...(operator ? { operator } : {}),
+  };
+  await recordApiKeyAuditOrLog(db, id, action, auditDetail, nowSec);
   const updated = await selectPublicApiKeyById(db, id);
   if (!updated) {
     return apiKeyPostWriteReadbackFailure(action === "deactivated" ? "deactivate" : "update");

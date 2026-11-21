@@ -1,6 +1,8 @@
-import { API_PATHS, getPublicApiAccess, isAdminLikePath } from "@shared/lib/api-endpoints";
+import { API_KEY_PLAN_UPGRADE_REQUIRED_REASON, type ApiKeyPlan } from "@pharos/contracts/api-keys";
+import { API_PATHS, getEndpointRequiredKeyPlans, getPublicApiAccess, isAdminLikePath } from "@shared/lib/api-endpoints";
 import { isAnonymousThrottlePath } from "@shared/lib/api-endpoints/definitions";
 import { API_KEY_DEPENDENCY_RETRY_AFTER_SEC } from "@shared/lib/ops-limits";
+import { API_PARTNER_ACCESS_URL } from "@shared/lib/public-api-contract";
 import { API_HOSTNAME, OPS_API_HOSTNAME, SITE_API_HOSTNAME } from "@shared/lib/runtime-origins";
 import { clientAddressLimiterSubject, hashClientIp } from "@shared/lib/client-ip-hash";
 import { resolveApiRequestRouteMetric } from "@shared/lib/request-attribution";
@@ -11,7 +13,7 @@ import {
   isSiteDataAllowedApiPath,
   isSiteDataAllowedMethod,
 } from "@shared/lib/site-data-lane";
-import { errorResponse, methodNotAllowedResponse } from "../../lib/api-response";
+import { errorResponse, jsonResponse, methodNotAllowedResponse } from "../../lib/api-response";
 import {
   authenticateApiKeyFromFreshCache,
   authenticateApiKey,
@@ -24,6 +26,7 @@ import {
   blockApiKeyLookup,
   recordApiKeyRateLimitDependencyFailure,
   recordApiKeyRateLimitDependencySuccess,
+  resolveApiKeyPlan,
   type AuthenticatedApiKey,
 } from "../../lib/api-key-core";
 import {
@@ -456,6 +459,10 @@ export async function evaluateAccessGate(
   if (rateLimitResponse) {
     return gateResult("public-api", rateLimitResponse, apiKeyAuth.key);
   }
+  const entitlementResponse = checkApiKeyEndpointEntitlement(apiKeyAuth.key, url.pathname);
+  if (entitlementResponse) {
+    return gateResult("public-api", entitlementResponse, apiKeyAuth.key);
+  }
   try {
     await recordApiKeyUsage(env.DB, apiKeyAuth.key, url.pathname);
   } catch (err) {
@@ -470,6 +477,41 @@ export async function evaluateAccessGate(
     });
   }
   return gateResult("public-api", null, apiKeyAuth.key);
+}
+
+function formatRequiredKeyPlansLabel(plans: readonly ApiKeyPlan[]): string {
+  const labels = plans.map((plan) => plan.replaceAll("_", " "));
+  if (labels.length === 1) return labels[0]!;
+  if (labels.length === 2) return `${labels[0]} or ${labels[1]}`;
+  return `${labels.slice(0, -1).join(", ")}, or ${labels[labels.length - 1]}`;
+}
+
+function checkApiKeyEndpointEntitlement(
+  key: AuthenticatedApiKey,
+  pathname: string,
+): Response | null {
+  if (key.trafficClass === "site") {
+    return null;
+  }
+  const requiredPlans = getEndpointRequiredKeyPlans(pathname);
+  if (!requiredPlans || requiredPlans.length === 0) {
+    return null;
+  }
+  const effectivePlan = resolveApiKeyPlan(key);
+  if (effectivePlan != null && requiredPlans.includes(effectivePlan)) {
+    return null;
+  }
+  const planLabel = formatRequiredKeyPlansLabel(requiredPlans);
+  const article = /^[aeiou]/i.test(planLabel) ? "an" : "a";
+  return jsonResponse(
+    {
+      error: `This endpoint requires ${article} ${planLabel} API key`,
+      reason: API_KEY_PLAN_UPGRADE_REQUIRED_REASON,
+      requiredPlans: [...requiredPlans],
+      upgradeUrl: API_PARTNER_ACCESS_URL,
+    },
+    { status: 403, noStore: true },
+  );
 }
 
 export function notFoundResponse(): Response {
@@ -491,6 +533,11 @@ export async function evaluateCachedPublicApiReadFastGate(
     env.API_KEY_HASH_PEPPER_PREVIOUS,
   );
   if (apiKeyAuth.kind !== "valid") {
+    return null;
+  }
+  // Non-entitled keys fall through to the slow path (per-minute limiter, then 403)
+  // before readEdgeCache(), preventing an edge-cache bypass without a second rejection path.
+  if (checkApiKeyEndpointEntitlement(apiKeyAuth.key, url.pathname) != null) {
     return null;
   }
 

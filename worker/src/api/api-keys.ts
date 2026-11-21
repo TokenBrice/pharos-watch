@@ -55,6 +55,7 @@ function redactOneTimeTokenForReplay(responseBody: string, responseStatus: numbe
         "name",
         "ownerEmail",
         "tier",
+        "plan",
         "trafficClass",
         "rateLimitPerMinute",
         "monthlyRequestQuota",

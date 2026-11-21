@@ -190,8 +190,8 @@ describe("POST /api/donor-key-claims", () => {
     expect(payload.key.expiresAt).toBeNull();
 
     const address = donorAccount.address.toLowerCase();
-    expect(sqlite.prepare("SELECT tier, rate_limit_per_minute, expires_at, owner_email, name FROM api_keys").get()).toEqual({
-      tier: "donor", rate_limit_per_minute: 10, expires_at: null, owner_email: null, name: `donor ${address}`,
+    expect(sqlite.prepare("SELECT tier, plan, rate_limit_per_minute, expires_at, owner_email, name FROM api_keys").get()).toEqual({
+      tier: "donor", plan: null, rate_limit_per_minute: 10, expires_at: null, owner_email: null, name: `donor ${address}`,
     });
     expect(sqlite.prepare("SELECT * FROM api_key_donor_claims").get()).toEqual({ address, key_prefix: payload.key.keyPrefix, claimed_at: NOW_SEC });
     // The threshold is inclusive: exactly $10 also earns a key.

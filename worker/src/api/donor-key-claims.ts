@@ -388,6 +388,7 @@ export async function handleDonorKeyClaim(
       name: `donor ${address}`,
       ownerEmail: null,
       tier: "donor",
+      plan: null,
       rateLimitPerMinute: DONOR_API_KEY_RATE_LIMIT_PER_MINUTE,
       // Donor-tier default quota; no per-key override on issuance.
       monthlyRequestQuota: null,

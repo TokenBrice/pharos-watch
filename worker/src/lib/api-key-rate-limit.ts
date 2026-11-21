@@ -64,7 +64,7 @@ function warnMonthlyQuotaUnavailableOncePerMinute(nowSec: number, message: strin
   logWorkerEventArgs("lib", "warn", "[api-keys] monthly quota check unavailable: " + message, error);
 }
 
-type MonthlyQuotaSubject = Pick<AuthenticatedApiKey, "id" | "tier" | "trafficClass" | "rateLimitPerMinute" | "monthlyRequestQuota">;
+type MonthlyQuotaSubject = Pick<AuthenticatedApiKey, "id" | "tier" | "plan" | "trafficClass" | "rateLimitPerMinute" | "monthlyRequestQuota">;
 
 function monthlyQuotaVerdict(key: MonthlyQuotaSubject, usage: number, nowSec: number): Response | null {
   const quota = resolveApiKeyMonthlyRequestQuota(key);

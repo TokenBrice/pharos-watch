@@ -1,5 +1,6 @@
 import type {
   ApiKeyCreateRequest,
+  ApiKeyPlan,
   ApiKeySummary,
   ApiKeyTier,
   ApiKeyTrafficClass,
@@ -7,6 +8,7 @@ import type {
 } from "@pharos/contracts/api-keys";
 import {
   API_KEY_MAX_MONTHLY_REQUEST_QUOTA,
+  API_KEY_PLAN_VALUES,
   API_KEY_TIER_VALUES,
 } from "@pharos/contracts/api-keys";
 import {
@@ -14,6 +16,7 @@ import {
   API_KEY_COMMERCIAL_RATE_LIMIT_PER_MINUTE,
   API_KEY_DEPENDENCY_RETRY_AFTER_SEC,
   API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA,
+  API_KEY_INSTITUTIONAL_MONTHLY_REQUEST_QUOTA,
   CIRCUIT_OPEN_THRESHOLD,
   DONOR_API_KEY_MONTHLY_REQUEST_QUOTA,
   API_KEY_DEFAULT_EXPIRY_SEC,
@@ -73,6 +76,7 @@ export interface ApiKeyRow {
   name: string;
   owner_email: string | null;
   tier: string;
+  plan: string | null;
   traffic_class: ApiKeyTrafficClass;
   rate_limit_per_minute: number;
   monthly_request_quota: number | null;
@@ -120,6 +124,7 @@ export interface AuthenticatedApiKey {
   name: string;
   ownerEmail: string | null;
   tier: string;
+  plan: ApiKeyPlan | null;
   trafficClass: ApiKeyTrafficClass;
   rateLimitPerMinute: number;
   monthlyRequestQuota: number | null;
@@ -142,6 +147,7 @@ const API_KEY_PUBLIC_PROJECTION = `
        name,
        owner_email,
        tier,
+       plan,
        traffic_class,
        rate_limit_per_minute,
        monthly_request_quota,
@@ -159,6 +165,7 @@ const API_KEY_PRIVATE_PROJECTION = `
        name,
        owner_email,
        tier,
+       plan,
        traffic_class,
        rate_limit_per_minute,
        monthly_request_quota,
@@ -359,6 +366,30 @@ function normalizeTier(value: unknown): ApiKeyTier | Response {
   return errorResponse(400, `tier must be one of: ${API_KEY_TIER_VALUES.join(", ")}`);
 }
 
+function normalizeStoredApiKeyPlan(value: string | null | undefined): ApiKeyPlan | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  return (API_KEY_PLAN_VALUES as readonly string[]).includes(value) ? (value as ApiKeyPlan) : null;
+}
+
+function normalizePlanInput(value: unknown): ApiKeyPlan | null | undefined | Response {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null) {
+    return null;
+  }
+  if (typeof value !== "string") {
+    return errorResponse(400, `plan must be one of: ${API_KEY_PLAN_VALUES.join(", ")}, or null`);
+  }
+  const trimmed = value.trim().toLowerCase();
+  if ((API_KEY_PLAN_VALUES as readonly string[]).includes(trimmed)) {
+    return trimmed as ApiKeyPlan;
+  }
+  return errorResponse(400, `plan must be one of: ${API_KEY_PLAN_VALUES.join(", ")}, or null`);
+}
+
 function normalizeRateLimit(value: unknown): number | Response {
   if (value == null || value === "") {
     return API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE;
@@ -512,6 +543,7 @@ export function mapRowToSummary(row: ApiKeyPublicRow): ApiKeySummary {
     name: row.name,
     ownerEmail: row.owner_email,
     tier: row.tier,
+    plan: normalizeStoredApiKeyPlan(row.plan),
     trafficClass: row.traffic_class,
     rateLimitPerMinute: row.rate_limit_per_minute,
     monthlyRequestQuota: row.monthly_request_quota,
@@ -531,6 +563,7 @@ export function mapRowToAuthenticatedKey(row: ApiKeyRow): AuthenticatedApiKey {
     name: row.name,
     ownerEmail: row.owner_email,
     tier: row.tier,
+    plan: normalizeStoredApiKeyPlan(row.plan),
     trafficClass: row.traffic_class,
     rateLimitPerMinute: row.rate_limit_per_minute,
     monthlyRequestQuota: row.monthly_request_quota,
@@ -539,16 +572,38 @@ export function mapRowToAuthenticatedKey(row: ApiKeyRow): AuthenticatedApiKey {
   };
 }
 
+const API_KEY_PLAN_MONTHLY_REQUEST_QUOTA: Record<ApiKeyPlan, number> = {
+  free_partner: API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA,
+  commercial: API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA,
+  institutional: API_KEY_INSTITUTIONAL_MONTHLY_REQUEST_QUOTA,
+};
+
 /**
- * Effective monthly request quota for one key: the explicit per-key override,
- * else the tier default (donor, commercial by rate limit, free-partner for
- * everything else including self-serve). Enforcement lives elsewhere; this is
- * the single resolution authority. First-party (`trafficClass: "site"`) keys
- * resolve to null, which enforcement treats as unlimited.
+ * Explicit plan entitlement authority for one key. Only `tier === "standard"`
+ * keys with a valid stored `plan` resolve to a plan; `plan === null`, unknown
+ * stored values, and non-standard tiers always return `null` (fail closed, no
+ * rate-limit inference for entitlements).
+ */
+export function resolveApiKeyPlan(key: {
+  tier: string;
+  plan?: string | null;
+}): ApiKeyPlan | null {
+  if (key.tier !== "standard") {
+    return null;
+  }
+  return normalizeStoredApiKeyPlan(key.plan);
+}
+
+/**
+ * Effective monthly request quota for one key: first-party (`trafficClass:
+ * "site"`) keys are unlimited; else explicit per-key override; else donor
+ * quota; else explicit plan default; else legacy rate-based default when
+ * `plan` is NULL so pre-0320 standard keys keep unchanged monthly quotas.
  */
 export function resolveApiKeyMonthlyRequestQuota(key: {
   trafficClass: ApiKeyTrafficClass;
   tier: string;
+  plan?: ApiKeyPlan | string | null;
   monthlyRequestQuota: number | null;
   rateLimitPerMinute: number;
 }): number | null {
@@ -560,6 +615,10 @@ export function resolveApiKeyMonthlyRequestQuota(key: {
   }
   if (key.tier === "donor") {
     return DONOR_API_KEY_MONTHLY_REQUEST_QUOTA;
+  }
+  const explicitPlan = resolveApiKeyPlan(key);
+  if (explicitPlan != null) {
+    return API_KEY_PLAN_MONTHLY_REQUEST_QUOTA[explicitPlan];
   }
   if (key.rateLimitPerMinute >= API_KEY_COMMERCIAL_RATE_LIMIT_PER_MINUTE) {
     return API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA;
@@ -646,6 +705,14 @@ export function normalizeCreateInput(body: Record<string, unknown>): ApiKeyCreat
     return tier;
   }
 
+  const plan = normalizePlanInput(body.plan);
+  if (plan instanceof Response) {
+    return plan;
+  }
+  if (plan != null && tier !== "standard") {
+    return errorResponse(400, "plan can only be set for standard tier API keys");
+  }
+
   const monthlyRequestQuota = normalizeMonthlyRequestQuota(body.monthlyRequestQuota, "monthlyRequestQuota");
   if (monthlyRequestQuota instanceof Response) {
     return monthlyRequestQuota;
@@ -660,6 +727,7 @@ export function normalizeCreateInput(body: Record<string, unknown>): ApiKeyCreat
     name,
     ownerEmail: normalizeOwnerEmail(body.ownerEmail),
     tier,
+    ...(plan !== undefined ? { plan } : {}),
     rateLimitPerMinute,
     monthlyRequestQuota,
     expiresAt,
@@ -687,6 +755,18 @@ export function normalizeUpdateInput(body: Record<string, unknown>): ApiKeyUpdat
       return normalized;
     }
     next.tier = normalized;
+  }
+
+  if ("plan" in body) {
+    const normalized = normalizePlanInput(body.plan);
+    if (normalized instanceof Response) {
+      return normalized;
+    }
+    next.plan = normalized ?? null;
+  }
+
+  if (next.tier !== undefined && next.tier !== "standard" && next.plan != null) {
+    return errorResponse(400, "plan can only be set for standard tier API keys");
   }
 
   if ("rateLimitPerMinute" in body) {

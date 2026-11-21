@@ -19,7 +19,7 @@ export function createRequestSourceRecorder(config: {
   pathname: string;
   attributionDisabled?: boolean;
   apiKeyAttributionDisabled?: boolean;
-  /** True when a per-key limiter (per-minute or monthly) rejected the request: throttled retries must not burn monthly quota. Route-level stats still count. */
+  /** True when a per-key limiter (429) or plan entitlement gate (403) rejected the request: denied calls must not burn monthly quota. Route-level stats still count. */
   apiKeyThrottled?: boolean;
 }): () => void {
   if (config.isAdmin || !config.requestLane) {
