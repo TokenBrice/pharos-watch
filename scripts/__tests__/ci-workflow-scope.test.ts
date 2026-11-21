@@ -42,7 +42,9 @@ describe("CI workflow scope", () => {
     };
     const steps = workflow.jobs.prepare.steps;
     const gate = steps.findIndex((step) => step.name === "Check incident review keys");
-    expect(gate).toBeGreaterThan(steps.findIndex((step) => step.uses === "$/.github/actions/setup-workspace"));
+    const setup = steps.findIndex((step) => step.uses === "./.github/actions/setup-workspace");
+    expect(setup).toBeGreaterThanOrEqual(0);
+    expect(gate).toBeGreaterThan(setup);
     // One invocation per PR: restored validation shards never re-run the gate.
     expect(steps.filter((step) => step.run?.includes("check:incident-review-keys"))).toHaveLength(1);
     expect(steps[gate].run).toBe("npm run check:incident-review-keys");
@@ -56,7 +58,9 @@ describe("CI workflow scope", () => {
     const gate = steps.findIndex((step) => step.name === "Check new-asset evidence packet");
     // The receipt is bound to the post-addition registry fingerprint, so the
     // gate must run after npm ci + bootstrap:generated inside setup-workspace.
-    expect(gate).toBeGreaterThan(steps.findIndex((step) => step.uses === "$/.github/actions/setup-workspace"));
+    const setup = steps.findIndex((step) => step.uses === "./.github/actions/setup-workspace");
+    expect(setup).toBeGreaterThanOrEqual(0);
+    expect(gate).toBeGreaterThan(setup);
     // One invocation per PR: restored validation shards never re-run the gate.
     expect(steps.filter((step) => step.run?.includes("check:new-asset-evidence-packet"))).toHaveLength(1);
     expect(steps[gate].env).toEqual({
@@ -80,7 +84,9 @@ describe("CI workflow scope", () => {
     };
     const steps = workflow.jobs.prepare.steps;
     const gate = steps.findIndex((step) => step.name === "Check test corpus budget");
-    expect(gate).toBeGreaterThan(steps.findIndex((step) => step.uses === "$/.github/actions/setup-workspace"));
+    const setup = steps.findIndex((step) => step.uses === "./.github/actions/setup-workspace");
+    expect(setup).toBeGreaterThanOrEqual(0);
+    expect(gate).toBeGreaterThan(setup);
     expect(steps.filter((step) => step.run?.includes("check:test-corpus-budget"))).toHaveLength(1);
     // Unconditional: check:structural's selection skips test-only PRs, so the
     // gate must not inherit a condition from the classify step.
@@ -265,6 +271,9 @@ describe("CI workflow scope", () => {
       step.run?.includes("npm test -- --shard=${{ matrix.shard }}/4"));
     expect(shardRun?.run).toContain("--reporter=default --reporter=github-actions --reporter=json");
     expect(shardRun?.run).toContain("--outputFile=.tmp/vitest-shard-${{ matrix.shard }}.json");
+    // Per-file wall cost feeds PR shard balancing (build-test-timings wallFiles).
+    expect(shardRun?.run).toContain("--reporter=./scripts/test/vitest-file-timings-reporter.mts");
+    expect(shardRun?.env).toEqual({ PHAROS_VITEST_FILE_TIMINGS: ".tmp/vitest-file-timings-${{ matrix.shard }}.json" });
   });
 
   it("runs CodeQL weekly on Monday and manual dispatch, not pushes", () => {
