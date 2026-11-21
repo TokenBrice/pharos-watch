@@ -10,7 +10,7 @@ Structured-data documentation and catalog URLs use `API_REFERENCE_URL` from `sha
 
 ## `/api/` Shell Contract
 
-Access presents supporter and partner offers, the free Safety grades feed and claim workflow. Reference presents integration guidance, artifacts and every public non-admin API section. The route uses `FeaturePageShell`; visible FAQ and FAQPage schema agree on Reference, not a duplicate Access FAQ.
+Access presents, in order: the supporter and team-plan offers; a "Free, no key" band (grades curl, citable MIT datasets, live badges); integration previews; a "What you can rely on" strip (published methodology, provenance on every response, MIT code and data, change notice with public status); the claim workflow; and developer resources. The header carries no navigation pills: its row pairs build-time coverage facts (active stablecoins, tracked contract deployments and chains, compliance dossiers, Safety Score methodology version) with the "Used by" roster, all counted from release data and never hardcoded. Integration-preview examples are built from release data so the page never contradicts itself: the Safety grade and score come from the same `scores-latest` snapshot as the claim list, compliance fields from the reviewed dossier and the GENIUS regime constant, and the remaining market fields are labelled illustrative. Reference presents integration guidance, artifacts and every public non-admin API section. The route uses `FeaturePageShell`; visible FAQ and FAQPage schema agree on Reference, not a duplicate Access FAQ.
 
 ### Anchors
 
@@ -36,7 +36,7 @@ Use ops-limit constants for published default rates and monthly volumes, never t
 
 ### Social proof
 
-Use `summarizeDonations().lifetimeCommunityDonorCount`, the same full population as Funding, never a displayed/capped donor count. The header "Used by" row and the homepage API strip read `API_PARTNERS` (`src/lib/api-partners.ts`): teams that agreed to be named, alphabetical, with local marks under `public/partners/`. Logos state usage, never endorsement or rating input; on desktop the row shares the pill line, so it adds no height above the offers.
+Use `summarizeDonations().lifetimeCommunityDonorCount`, the same full population as Funding, never a displayed/capped donor count. The header "Used by" row and the homepage API strip read `API_PARTNERS` (`src/lib/api-partners.ts`): teams that agreed to be named, alphabetical, with local marks under `public/partners/`. Logos state usage, never endorsement or rating input; on desktop the row shares the coverage-facts line, so it adds no height above the offers.
 
 ### One Beam exception
 

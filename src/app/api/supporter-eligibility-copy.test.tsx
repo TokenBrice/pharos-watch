@@ -78,7 +78,8 @@ describe("Published tier quotas", () => {
     }
     expect(offer).toContain("$675/qtr");
     expect(offer).toContain("$2,500/yr");
-    expect(offer).toContain("14-day evaluation key");
+    expect(screen.getByRole("link", { name: /Request a 14-day evaluation key/ })).toBeTruthy();
+    expect(offer).toContain("It never buys a grade, a listing or a softer score.");
 
     cleanup();
     render(
@@ -98,8 +99,20 @@ describe("Published tier quotas", () => {
     expect(terms).toContain("plan_upgrade_required");
 
     cleanup();
-    render(<ApiPreviewTabs />);
+    render(
+      <ApiPreviewTabs
+        examples={{
+          asOfDate: "2026-10-09",
+          riskGateResponse: '{"safety":{"grade":"A+"}}',
+          complianceResponse: "{}",
+          badge: { symbol: "USDC", name: "USD Coin", grade: "A+", score: 91 },
+        }}
+      />,
+    );
     expect(screen.getByRole("tab", { name: "Risk-Gate" }).getAttribute("aria-selected")).toBe("true");
+    // Examples carry release data, never a hardcoded grade that can contradict the claim list.
+    expect(document.body.textContent).toContain('"grade":"A+"');
+    expect(document.body.textContent).toContain("from the 2026-10-09 release");
     expect(screen.getByRole("tab", { name: "MCP" })).toBeTruthy();
     expect(screen.getByRole("tab", { name: "Safety Badge" })).toBeTruthy();
   });

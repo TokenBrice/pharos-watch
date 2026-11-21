@@ -1,17 +1,17 @@
 import Link from "next/link";
-import { ArrowUpRight, Handshake, KeyRound } from "lucide-react";
-import { CopyButton } from "@/components/copy-button";
+import { ArrowUpRight } from "lucide-react";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { getCurrentDonorKeyQualifyingCoins } from "@/lib/donor-key-qualifying-coins";
 import { buildPageMetadata } from "@/lib/page-metadata";
-import { API_PATHS } from "@shared/lib/api-endpoints";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import donationsData from "@shared/data/funding/donations.json";
 import { formatIsoDate } from "@shared/lib/format";
 import { summarizeDonations } from "@shared/lib/funding/helpers";
 import { TransferDonationsFileSchema } from "@shared/lib/funding/schema";
 import { DONOR_API_KEY_MIN_USD } from "@shared/lib/ops-limits";
-import { API_PAGE_ANCHORS, PUBLIC_API_ARTIFACTS, PUBLIC_API_HOST } from "@shared/lib/public-api-contract";
+import { API_PAGE_ANCHORS, PUBLIC_API_ARTIFACTS } from "@shared/lib/public-api-contract";
+import { buildApiPreviewExamples, getApiCoverageFacts } from "./api-landing-data";
+import { ApiCoverageFactsRow, ApiFreeAccess, ApiTrustPoints } from "./api-landing-sections";
 import { ApiOfferCards } from "./api-offer-cards";
 import { ApiPartnerLogos } from "./api-partner-logos";
 import { ApiPreviewTabs } from "./api-preview-tabs";
@@ -24,8 +24,6 @@ export const metadata = buildPageMetadata({
     `Free Safety Score grades with no key, a supporter key for $${DONOR_API_KEY_MIN_USD}+ donors, partner keys, and the full API reference: auth, endpoints, response contracts and datasets.`,
   canonical: "/api/",
 });
-
-const FREE_GRADES_CURL = `curl ${PUBLIC_API_HOST}${API_PATHS.safetyGrades()}`;
 
 // Eligibility follows the committed donation ledger, so the reconciliation date
 // is the honest "as of" for the perk: a donation sent after it counts only once
@@ -48,6 +46,8 @@ export default async function ApiPage() {
   // Same count as the /funding/ "supporters since launch" figure.
   const supporterCount = summarizeDonations(ledger.donations, ledger.last_updated_at).lifetimeCommunityDonorCount;
   const { asOfDate, coins } = getCurrentDonorKeyQualifyingCoins();
+  const coverage = getApiCoverageFacts();
+  const previewExamples = buildApiPreviewExamples(asOfDate);
   // Chain display names resolve here so the wallet check ships no chain registry.
   const chainNames = Object.fromEntries(
     ledger.donations.map((donation) => [donation.chain, CHAIN_META[donation.chain]?.name ?? donation.chain]),
@@ -59,20 +59,11 @@ export default async function ApiPage() {
       path="/api/"
       title="Pharos API"
       leadParagraphs={[
-        "Safety Score grades and live SVG badges need no key. Peg, supply, liquidity, reserve and depeg data need a supporter or partner key; Compliance, Risk-Gate and MCP require a commercial or institutional plan.",
+        "Stablecoin risk data you can query, download and cite, from an independent open-source tracker. Safety grades, badges and MIT datasets are free with no key. Peg, supply, liquidity and depeg data need a key: a supporter key for personal use, or a team plan for products.",
       ]}
       headerSupplement={
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-          <div className="flex flex-wrap gap-2">
-            <a href={`#${API_PAGE_ANCHORS.supporterKey}`} className={PILL_CLASS_NAME}>
-              <KeyRound className="h-4 w-4" aria-hidden="true" />
-              Supporter key
-            </a>
-            <a href={`#${API_PAGE_ANCHORS.partnerAccess}`} className={PILL_CLASS_NAME}>
-              <Handshake className="h-4 w-4" aria-hidden="true" />
-              Partner key
-            </a>
-          </div>
+          <ApiCoverageFactsRow facts={coverage} />
           <ApiPartnerLogos />
         </div>
       }
@@ -80,21 +71,13 @@ export default async function ApiPage() {
       <ApiTabs active="access">
           <div className="space-y-12">
             <div className="space-y-4">
-              <ApiOfferCards coins={coins} gradesAsOf={asOfDate} supporterCount={supporterCount} />
-              <div className="pharos-subtle-band flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-                <p className="text-sm font-medium text-foreground">
-                  No key needed: Safety Score grades for every tracked stablecoin.
-                </p>
-                <div className="flex min-w-0 items-center gap-1">
-                  <code className="min-w-0 font-mono text-xs text-foreground [overflow-wrap:anywhere]">
-                    {FREE_GRADES_CURL}
-                  </code>
-                  <CopyButton text={FREE_GRADES_CURL} className="size-11 shrink-0 sm:size-8" />
-                </div>
-              </div>
+              <ApiOfferCards coins={coins} gradesAsOf={asOfDate} supporterCount={supporterCount} coverage={coverage} />
+              <ApiFreeAccess />
             </div>
 
-            <ApiPreviewTabs />
+            <ApiPreviewTabs examples={previewExamples} />
+
+            <ApiTrustPoints methodologyLabel={coverage.methodologyLabel} />
 
             <SupporterClaimSteps
               coins={coins}
