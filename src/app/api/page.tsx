@@ -11,7 +11,7 @@ import { TransferDonationsFileSchema } from "@shared/lib/funding/schema";
 import { DONOR_API_KEY_MIN_USD } from "@shared/lib/ops-limits";
 import { API_PAGE_ANCHORS, PUBLIC_API_ARTIFACTS } from "@shared/lib/public-api-contract";
 import { buildApiPreviewExamples, getApiCoverageFacts } from "./api-landing-data";
-import { ApiCoverageFactsRow, ApiFreeAccess, ApiTrustPoints } from "./api-landing-sections";
+import { ApiBadgeSection, ApiCoverageFactsRow, ApiFreeAccess, ApiTrustPoints } from "./api-landing-sections";
 import { ApiOfferCards } from "./api-offer-cards";
 import { ApiPartnerLogos } from "./api-partner-logos";
 import { ApiPreviewTabs } from "./api-preview-tabs";
@@ -78,6 +78,8 @@ export default async function ApiPage() {
             <ApiPreviewTabs examples={previewExamples} />
 
             <ApiTrustPoints methodologyLabel={coverage.methodologyLabel} />
+
+            <ApiBadgeSection badge={previewExamples.badge} asOfDate={previewExamples.asOfDate} />
 
             <SupporterClaimSteps
               coins={coins}

@@ -85,9 +85,12 @@ export function SupporterClaimSteps({
   const hasUnavailableGrades = coins.length === 0 || coins.some((coin) => coin.status === "unavailable");
   return (
     <section id={API_PAGE_ANCHORS.claim} aria-labelledby="claim-title" className="scroll-mt-20 space-y-6">
-      <h2 id="claim-title" className="text-2xl font-semibold tracking-tight text-foreground">
-        Claim your supporter key
-      </h2>
+      <div className="space-y-1.5 border-t border-border/55 pt-8">
+        <p className="pharos-label">Supporter key</p>
+        <h2 id="claim-title" className="text-2xl font-semibold tracking-tight text-foreground">
+          Claim your supporter key
+        </h2>
+      </div>
       <ol className="grid gap-6 sm:grid-cols-3 sm:gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
         <li className={STEP_CLASS_NAME}>
           <p className={STEP_NUMBER_CLASS_NAME}>01</p>
@@ -189,7 +192,7 @@ export function SupporterClaimSteps({
         </ApiDisclosure>
         <ApiDisclosure summary="Lost key, privacy and terms">
           <ul className={TERMS_LIST_CLASS_NAME}>
-            <li>For personal, non-commercial use. Commercial products need a partner key.</li>
+            <li>Personal use only: not for reselling the data or powering a paid service. Those need a team plan.</li>
             <li>
               A key carries {DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute and{" "}
               {DONOR_API_KEY_MONTHLY_REQUEST_QUOTA.toLocaleString("en-US")} requests per month, counted per UTC calendar

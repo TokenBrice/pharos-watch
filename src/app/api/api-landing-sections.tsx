@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { Activity, ArrowUpRight, BookOpenCheck, Code2, Fingerprint } from "lucide-react";
 import { CopyButton } from "@/components/copy-button";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import { API_BREAKING_CHANGE_NOTICE_DAYS, API_PAGE_ANCHORS, PUBLIC_API_HOST } from "@shared/lib/public-api-contract";
-import type { ApiCoverageFacts } from "./api-landing-data";
+import { renderSafetyBadgeSvg } from "@shared/lib/safety-badge-svg";
+import type { ApiCoverageFacts, ApiPreviewExamples } from "./api-landing-data";
 
 const formatCount = (value: number): string => value.toLocaleString("en-US");
 const SECTION_TITLE_CLASS_NAME = "text-2xl font-semibold tracking-tight text-foreground";
@@ -70,8 +71,8 @@ export function ApiFreeAccess() {
           <p className={ITEM_BODY_CLASS_NAME}>
             Embed a stablecoin&apos;s current grade in a README, docs page or app. It shows Unavailable, never a stale grade.
           </p>
-          <a href={`#${API_PAGE_ANCHORS.integrationPreview}`} className="pharos-prose-link mt-2 inline-block text-sm text-foreground">
-            See the badge
+          <a href={`#${API_PAGE_ANCHORS.badges}`} className="pharos-prose-link mt-2 inline-block text-sm text-foreground">
+            Get a badge
           </a>
         </li>
       </ul>
@@ -79,15 +80,22 @@ export function ApiFreeAccess() {
   );
 }
 
+const EYEBROW_CLASS_NAME = "pharos-label";
+const ICON_CLASS_NAME = "mb-2 h-5 w-5 text-muted-foreground";
+
 /** Proof points for teams that have to justify the dependency. */
 export function ApiTrustPoints({ methodologyLabel }: { methodologyLabel: string }) {
   return (
     <section aria-labelledby="api-trust-title" className="space-y-5 border-t border-border/55 pt-8">
-      <h2 id="api-trust-title" className={SECTION_TITLE_CLASS_NAME}>
-        What you can rely on
-      </h2>
+      <div className="space-y-1.5">
+        <p className={EYEBROW_CLASS_NAME}>Why teams build on it</p>
+        <h2 id="api-trust-title" className={SECTION_TITLE_CLASS_NAME}>
+          What you can rely on
+        </h2>
+      </div>
       <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <li>
+          <BookOpenCheck className={ICON_CLASS_NAME} aria-hidden="true" />
           <h3 className={ITEM_TITLE_CLASS_NAME}>Published methodology</h3>
           <p className={ITEM_BODY_CLASS_NAME}>
             Every grade follows a versioned public methodology, currently Safety Score {methodologyLabel}, and changes
@@ -103,6 +111,7 @@ export function ApiTrustPoints({ methodologyLabel }: { methodologyLabel: string 
           </div>
         </li>
         <li>
+          <Fingerprint className={ICON_CLASS_NAME} aria-hidden="true" />
           <h3 className={ITEM_TITLE_CLASS_NAME}>Provenance on every response</h3>
           <p className={ITEM_BODY_CLASS_NAME}>
             Each response states when every source was read and the freshness budget it was judged against. A missing
@@ -110,6 +119,7 @@ export function ApiTrustPoints({ methodologyLabel }: { methodologyLabel: string 
           </p>
         </li>
         <li>
+          <Code2 className={ICON_CLASS_NAME} aria-hidden="true" />
           <h3 className={ITEM_TITLE_CLASS_NAME}>Open source, MIT</h3>
           <p className={ITEM_BODY_CLASS_NAME}>
             The code and the datasets are public and MIT licensed, so your integration never depends on a closed vendor.
@@ -125,14 +135,15 @@ export function ApiTrustPoints({ methodologyLabel }: { methodologyLabel: string 
           </a>
         </li>
         <li>
-          <h3 className={ITEM_TITLE_CLASS_NAME}>Predictable changes</h3>
+          <Activity className={ICON_CLASS_NAME} aria-hidden="true" />
+          <h3 className={ITEM_TITLE_CLASS_NAME}>Public uptime, predictable changes</h3>
           <p className={ITEM_BODY_CLASS_NAME}>
-            Breaking changes to keyed routes get {API_BREAKING_CHANGE_NOTICE_DAYS} days&apos; notice. Service status and
-            its history are public.
+            Uptime and incident history are public on the status page. Breaking changes to keyed routes get{" "}
+            {API_BREAKING_CHANGE_NOTICE_DAYS} days&apos; notice.
           </p>
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
             <Link href="/status/" className="pharos-prose-link text-foreground">
-              Status
+              Status and uptime
             </Link>
             <Link href="/api/terms/" className="pharos-prose-link text-foreground">
               API terms
@@ -140,6 +151,65 @@ export function ApiTrustPoints({ methodologyLabel }: { methodologyLabel: string 
           </div>
         </li>
       </ul>
+    </section>
+  );
+}
+
+function badgeDataUri(badge: NonNullable<ApiPreviewExamples["badge"]>, style: "flat" | "card", theme: "dark" | "light"): string {
+  return `data:image/svg+xml;utf8,${encodeURIComponent(renderSafetyBadgeSvg({ kind: "rated", ...badge }, { style, theme }))}`;
+}
+
+function Snippet({ label, code }: { label: string; code: string }) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-border/60 bg-[var(--code-surface-bg)] text-[var(--code-surface-fg)]">
+      <div className="flex items-center justify-between border-b border-[var(--code-surface-border)] px-3 py-2">
+        <span className="text-2xs font-semibold text-[var(--code-surface-muted)]">{label}</span>
+        <CopyButton text={code} className="size-8 shrink-0" />
+      </div>
+      <pre className="whitespace-pre-wrap px-3 py-3 font-mono text-xs leading-relaxed [overflow-wrap:anywhere]">
+        <code>{code}</code>
+      </pre>
+    </div>
+  );
+}
+
+const BADGE_COIN_ID = "usdc-circle";
+const BADGE_URL = `${PUBLIC_API_HOST}${API_PATHS.safetyBadge(BADGE_COIN_ID)}`;
+const BADGE_MARKDOWN = `[![Pharos Safety Score](${BADGE_URL})](https://pharos.watch/stablecoin/${BADGE_COIN_ID}/)`;
+const BADGE_HTML = `<a href="https://pharos.watch/stablecoin/${BADGE_COIN_ID}/"><img src="${BADGE_URL}?style=card&theme=dark" alt="Pharos Safety Score" /></a>`;
+
+/** Free embeddable grade badges: their own section, so they never read as part of a paid plan. */
+export function ApiBadgeSection({ badge, asOfDate }: { badge: ApiPreviewExamples["badge"]; asOfDate: string }) {
+  return (
+    <section id={API_PAGE_ANCHORS.badges} aria-labelledby="api-badges-title" className="scroll-mt-20 space-y-5 border-t border-border/55 pt-8">
+      <div className="space-y-1.5">
+        <p className={EYEBROW_CLASS_NAME}>Free, no key</p>
+        <h2 id="api-badges-title" className={SECTION_TITLE_CLASS_NAME}>
+          Safety Score badges
+        </h2>
+        <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
+          Show a stablecoin&apos;s current grade in a README, docs page or app. Replace the ID with any tracked stablecoin;
+          add <code className="rounded-sm bg-muted px-1 py-0.5 font-mono text-xs text-foreground">style=card</code> or{" "}
+          <code className="rounded-sm bg-muted px-1 py-0.5 font-mono text-xs text-foreground">theme=light</code> to change
+          the look. When a grade is held or stale, the badge shows Unavailable instead of an old grade.
+        </p>
+      </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:items-start">
+        {badge ? (
+          <div className="pharos-inset flex flex-col items-start gap-4 p-5">
+            <div className="flex flex-wrap items-center gap-3">
+              <img src={badgeDataUri(badge, "flat", "dark")} alt={`Flat dark Safety Score badge for ${badge.symbol}`} height={26} />
+              <img src={badgeDataUri(badge, "flat", "light")} alt={`Flat light Safety Score badge for ${badge.symbol}`} height={26} />
+            </div>
+            <img src={badgeDataUri(badge, "card", "dark")} alt={`Card Safety Score badge for ${badge.symbol}`} height={64} />
+            <p className="pharos-meta">Shown with the {asOfDate} grade; the live badge always serves the current one.</p>
+          </div>
+        ) : null}
+        <div className="min-w-0 space-y-3">
+          <Snippet label="Markdown" code={BADGE_MARKDOWN} />
+          <Snippet label="HTML (card style)" code={BADGE_HTML} />
+        </div>
+      </div>
     </section>
   );
 }
