@@ -82,7 +82,9 @@ export default function ApiTermsPage() {
           <h2 className="pharos-section-title">Keys</h2>
           <p>
             A key is issued to one holder. Keep it secret and use it from servers and scripts only, never in browser
-            code or public repositories. Do not share or resell access. Pharos may rotate or revoke a leaked key; report
+            code or public repositories. Do not share or resell access. Supporter keys are for personal use: not for
+            reselling the data or powering a paid service. Commercial and institutional keys carry no restriction on how
+            you use, republish or redistribute the data, beyond the credit above. Pharos may rotate or revoke a leaked key; report
             leaks privately via{" "}
             <a href={API_ACCESS_TELEGRAM_URL} target="_blank" rel="noopener noreferrer" className="pharos-prose-link">
               @{API_ACCESS_TELEGRAM_HANDLE} on Telegram

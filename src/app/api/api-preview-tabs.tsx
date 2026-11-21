@@ -5,17 +5,15 @@ import { CopyButton } from "@/components/copy-button";
 import { cn } from "@/lib/utils";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import { API_PAGE_ANCHORS, PUBLIC_API_HOST, PUBLIC_API_KEY_HEADER } from "@shared/lib/public-api-contract";
-import { renderSafetyBadgeSvg } from "@shared/lib/safety-badge-svg";
 import type { ApiPreviewExamples } from "./api-landing-data";
 
-type PreviewTabId = "risk-gate" | "compliance" | "mcp" | "badge";
+type PreviewTabId = "risk-gate" | "compliance" | "mcp";
 type McpClientId = "cursor" | "vscode" | "claude-code" | "claude-desktop";
 
 const PREVIEW_TABS: readonly { id: PreviewTabId; label: string }[] = [
   { id: "risk-gate", label: "Risk-Gate" },
   { id: "compliance", label: "Compliance" },
   { id: "mcp", label: "MCP" },
-  { id: "badge", label: "Safety Badge" },
 ] as const;
 
 const MCP_CLIENTS: readonly { id: McpClientId; label: string; fileHint: string; snippet: string }[] = [
@@ -105,12 +103,38 @@ const RISK_GATE_CURL = `curl "${PUBLIC_API_HOST}${API_PATHS.riskCheck()}?ids=usd
 
 const COMPLIANCE_CURL = `curl "${PUBLIC_API_HOST}${API_PATHS.complianceCoin("usdc-circle")}" \\\n  -H "${PUBLIC_API_KEY_HEADER}: $PHAROS_API_KEY"`;
 
-const BADGE_URL = `${PUBLIC_API_HOST}${API_PATHS.safetyBadge("usdc-circle")}`;
-const BADGE_MARKDOWN = `[![Pharos Safety Score](${BADGE_URL})](https://pharos.watch/stablecoin/usdc-circle/)`;
-const BADGE_HTML = `<a href="https://pharos.watch/stablecoin/usdc-circle/"><img src="${BADGE_URL}?style=card&theme=dark" alt="Pharos Safety Score for USDC" /></a>`;
+/** What each example response carries, listed beside the request so the panel reads at a glance. */
+const RISK_GATE_FIELDS: readonly [string, string][] = [
+  ["safety", "Grade, score, pillars, publication status"],
+  ["dews", "Stress score and band"],
+  ["peg", "Price, source, deviation, active depeg"],
+  ["ddr", "Recovery outlook during a depeg"],
+  ["liquidity", "DEX liquidity score, TVL, volume"],
+  ["redemption", "Route, access model, capacity, fees"],
+  ["controls", "Freeze and blacklist exposure"],
+  ["compliance", "MiCA and GENIUS status"],
+  ["_meta", "Per-source read time, budget, reason"],
+];
 
-function badgeDataUri(badge: NonNullable<ApiPreviewExamples["badge"]>, style: "flat" | "card", theme: "dark" | "light"): string {
-  return `data:image/svg+xml;utf8,${encodeURIComponent(renderSafetyBadgeSvg({ kind: "rated", ...badge }, { style, theme }))}`;
+const COMPLIANCE_FIELDS: readonly [string, string][] = [
+  ["regimes.genius", "Statutory dates and rulemaking phase"],
+  ["coin.mica", "Status, token type, authority, entity"],
+  ["coin.genius", "Applicability, status, pathway, disclosures"],
+  ["*UnavailableReason", "not-reviewed, never a silent pass"],
+  ["_meta", "Review freshness"],
+];
+
+function FieldList({ fields }: { fields: readonly [string, string][] }) {
+  return (
+    <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 px-1 text-xs">
+      {fields.map(([field, description]) => (
+        <div key={field} className="contents">
+          <dt className="font-mono text-foreground">{field}</dt>
+          <dd className="text-muted-foreground">{description}</dd>
+        </div>
+      ))}
+    </dl>
+  );
 }
 
 function CodePanel({ label, code, scroll = false }: { label: string; code: string; scroll?: boolean }) {
@@ -127,7 +151,7 @@ function CodePanel({ label, code, scroll = false }: { label: string; code: strin
   );
 }
 
-const EXAMPLE_GRID_CLASS_NAME = "grid gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:items-start";
+const EXAMPLE_GRID_CLASS_NAME = "grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:items-start";
 
 export function ApiPreviewTabs({ examples }: { examples: ApiPreviewExamples }) {
   const exampleNote = `Exact response shape. The Safety grade and compliance fields come from the ${examples.asOfDate} release; market fields are illustrative.`;
@@ -180,7 +204,10 @@ export function ApiPreviewTabs({ examples }: { examples: ApiPreviewExamples }) {
             missing input returns a reason instead of a default. Commercial or Institutional key required.
           </p>
           <div className={EXAMPLE_GRID_CLASS_NAME}>
-            <CodePanel label="Request (curl)" code={RISK_GATE_CURL} />
+            <div className="min-w-0 space-y-4">
+              <CodePanel label="Request (curl)" code={RISK_GATE_CURL} />
+              <FieldList fields={RISK_GATE_FIELDS} />
+            </div>
             <CodePanel label="Example response (200 OK)" code={examples.riskGateResponse} scroll />
           </div>
           <p className="pharos-meta">{exampleNote}</p>
@@ -196,7 +223,10 @@ export function ApiPreviewTabs({ examples }: { examples: ApiPreviewExamples }) {
             Institutional key required.
           </p>
           <div className={EXAMPLE_GRID_CLASS_NAME}>
-            <CodePanel label="Request (curl)" code={COMPLIANCE_CURL} />
+            <div className="min-w-0 space-y-4">
+              <CodePanel label="Request (curl)" code={COMPLIANCE_CURL} />
+              <FieldList fields={COMPLIANCE_FIELDS} />
+            </div>
             <CodePanel label="Example response (200 OK)" code={examples.complianceResponse} scroll />
           </div>
           <p className="pharos-meta">Dossier fields as reviewed in the {examples.asOfDate} release.</p>
@@ -235,30 +265,6 @@ export function ApiPreviewTabs({ examples }: { examples: ApiPreviewExamples }) {
             })}
           </div>
           <CodePanel label={`${mcpConfig.label} (${mcpConfig.fileHint})`} code={mcpConfig.snippet} />
-        </div>
-      ) : null}
-
-      {activeTab === "badge" ? (
-        <div className="space-y-4">
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            Live no-key SVG Safety Score badges for GitHub READMEs, docs, and protocol frontends. Supports{" "}
-            <code className="rounded-sm bg-muted px-1 py-0.5 font-mono text-xs text-foreground">style=flat|card</code>{" "}
-            and{" "}
-            <code className="rounded-sm bg-muted px-1 py-0.5 font-mono text-xs text-foreground">theme=dark|light</code>.
-            Held or stale publications render an explicit uncached Unavailable state.
-          </p>
-          {examples.badge ? (
-            <div className="pharos-inset flex flex-wrap items-center gap-4 p-4">
-              <img src={badgeDataUri(examples.badge, "flat", "dark")} alt={`Pharos flat dark safety badge for ${examples.badge.symbol}`} height={26} />
-              <img src={badgeDataUri(examples.badge, "flat", "light")} alt={`Pharos flat light safety badge for ${examples.badge.symbol}`} height={26} />
-              <img src={badgeDataUri(examples.badge, "card", "dark")} alt={`Pharos card dark safety badge for ${examples.badge.symbol}`} height={60} />
-              <p className="pharos-meta w-full">Rendered with the grade from the {examples.asOfDate} release; the live badge always shows the current grade.</p>
-            </div>
-          ) : null}
-          <div className="grid gap-3 lg:grid-cols-2">
-            <CodePanel label="Markdown embed" code={BADGE_MARKDOWN} />
-            <CodePanel label="HTML embed (card)" code={BADGE_HTML} />
-          </div>
         </div>
       ) : null}
     </section>
