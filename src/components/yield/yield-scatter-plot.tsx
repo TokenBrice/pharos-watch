@@ -682,11 +682,6 @@ export function YieldScatterPlot({
                   y={benchmarkRate}
                   stroke={CHART_SLATE}
                   strokeDasharray={CHART_REFERENCE_DASH}
-                  label={
-                    hideAxisLabels || !referenceLineLabelText
-                      ? undefined
-                      : <ReferenceBenchmarkLabel text={referenceLineLabelText} />
-                  }
                 />
               ) : null}
 
@@ -752,6 +747,14 @@ export function YieldScatterPlot({
                 onMouseLeave={onHoverRow ? handleScatterMouseLeave : undefined}
                 cursor={onSelectRow ? "pointer" : undefined}
               />
+
+              {showBenchmarkReference && benchmarkRate != null && !hideAxisLabels && referenceLineLabelText ? (
+                <ReferenceLine
+                  y={benchmarkRate}
+                  stroke="none"
+                  label={<ReferenceBenchmarkLabel text={referenceLineLabelText} />}
+                />
+              ) : null}
             </ScatterChart>
           ) : (
             <ChartSkeleton className="h-full rounded-xl" />

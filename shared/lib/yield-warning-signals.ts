@@ -17,9 +17,16 @@ export function isOperationalYieldAdvisory(signal: string): boolean {
   return OPERATIONAL_YIELD_ADVISORY_SIGNALS.has(signal);
 }
 
-/** Investment warnings only; order and unknown keys are preserved. */
+/** Investment warnings only; order, deduplication, and unknown keys are preserved. */
 export function selectInvestmentWarningSignals<T extends string>(
   signals: readonly T[] | null | undefined,
 ): T[] {
-  return (signals ?? []).filter((signal) => !OPERATIONAL_YIELD_ADVISORY_SIGNALS.has(signal));
+  const seen = new Set<string>();
+  const unique: T[] = [];
+  for (const signal of signals ?? []) {
+    if (OPERATIONAL_YIELD_ADVISORY_SIGNALS.has(signal) || seen.has(signal)) continue;
+    seen.add(signal);
+    unique.push(signal);
+  }
+  return unique;
 }

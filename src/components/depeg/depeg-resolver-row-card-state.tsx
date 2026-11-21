@@ -17,7 +17,7 @@ import { DDR_REVIEW_TONE_CLASSES, DEPEG_PENDING_STATE_LABELS } from "@shared/lib
 
 const STATE_COPY: Record<
   Exclude<DdrPublicPredictionState, "frozen">,
-  { badge: string; title: string; body: string; tone: string }
+  { badge: string; compactBadge?: string; title: string; body: string; tone: string }
 > = {
   pending_lock: {
     badge: "Not locked yet",
@@ -39,6 +39,7 @@ const STATE_COPY: Record<
   },
   no_call: {
     badge: "Insufficient signal (sealed)",
+    compactBadge: "Insufficient signal",
     title: "No-call at lock",
     body: "At the official lock run, required row-level inputs were missing. This is an accountable no-call, not a recovery or terminal verdict.",
     tone: "border-border bg-muted/70 text-foreground",
@@ -58,7 +59,7 @@ const STATE_COPY: Record<
 export function describeDdrVerdict(row: DdrV2ResponseRow, compact = false): { label: string; accent: string } {
   if (!isCurrentForecast(row)) {
     const copy = STATE_COPY[row.prediction.state];
-    return { label: compact ? copy.badge : copy.title, accent: "text-muted-foreground" };
+    return { label: compact ? (copy.compactBadge ?? copy.badge) : copy.title, accent: "text-muted-foreground" };
   }
   const meta = getTierMeta(getResolution(row).tier, getTierVocabulary(row));
   return { label: compact ? meta.short : meta.label, accent: meta.accent };

@@ -131,7 +131,7 @@ describe("DepegOutlookHero open incidents", () => {
     const html = markup({ openIncidents: rows, stats: { ...observedZero, activeDepegCount: 7 } });
     expect(html).toContain("Top 5 of 7 by holder exposure");
     expect(html).toContain('href="/stablecoin/coin-0#depeg-resolver"');
-    for (const text of ["−4510 bps", "Terminal", "Insufficient signal (sealed)", "$49.0M", "Reference market closed", "Reference not yet updated"]) {
+    for (const text of ["−4510 bps", "Terminal", "Insufficient signal", "$49.0M", "Reference market closed", "Reference not yet updated"]) {
       expect(html).toContain(text);
     }
     expect(html).not.toContain("No-call locked");
