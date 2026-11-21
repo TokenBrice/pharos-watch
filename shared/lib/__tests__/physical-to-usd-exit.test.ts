@@ -136,6 +136,12 @@ describe("physical-to-USD exit", () => {
     expect(expired).toMatchObject({ grossUsd: null, rejectionReason: "physical-review-expired-or-invalid" });
     expect(score(expired).routes[0]?.score).toBeNull();
     expect(evaluatePhysicalToUsdExit(terms(), { ...reference, observedAtSec: clock - 86401 }, 1_000_000, clock).rejectionReason).toBe("physical-metal-price-unavailable-or-stale");
+    // A close benchmark keeps its closing age through the weekend; an earlier one does not.
+    const close = Date.UTC(2026, 10, 20, 22) / 1000, sunday = close + 40 * 3600;
+    expect(evaluatePhysicalToUsdExit(terms(), { ...reference, observedAtSec: close - 3600 }, 1_000_000, sunday))
+      .toMatchObject({ rejectionReason: null, metalPriceMaxAgeSec: 86400 + 40 * 3600 });
+    expect(evaluatePhysicalToUsdExit(terms(), { ...reference, observedAtSec: close - 7 * 3600 }, 1_000_000, sunday))
+      .toMatchObject({ rejectionReason: "physical-metal-price-unavailable-or-stale", metalPriceMaxAgeSec: 86400 });
   });
   it("uses explicit maxima ahead of typical estimates and lowers confidence for assumptions", () => {
     const config = terms();

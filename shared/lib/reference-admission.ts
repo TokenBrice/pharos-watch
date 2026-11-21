@@ -3,13 +3,27 @@ import type { AdmittedDeviationBps, RawDeviationBps, ReferenceAdmission, Referen
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC, DEPEG_SEVERITY_BPS, PAR_ROUNDOFF_BPS, REFERENCE_CLOSURE_HOLD_BANDS_BPS } from "./depeg-config";
 import { MIN_PEER_MEDIAN_CONTRIBUTORS } from "./peg-reference-trust";
 import { getPegTaxonomyByType, PEG_TAXONOMY } from "./peg-taxonomy";
-import { getReferenceMarket, getReferenceSessionState, isTargetFixingDay } from "./reference-market-hours";
+import { getReferenceMarket, getReferenceSessionState, isTargetFixingDay, type ReferenceMarket } from "./reference-market-hours";
 import { DAY_SECONDS, HOUR_SECONDS } from "./time-constants";
 
 export const REFERENCE_ADMISSION_POLICY_VERSION = 1;
 export const REFERENCE_INTRADAY_BUDGET_SEC = 6 * HOUR_SECONDS;
 export const OXR_POLL_INTERVAL_SEC = HOUR_SECONDS;
 export const OXR_MAX_SNAPSHOT_AGE_SEC = 2 * OXR_POLL_INTERVAL_SEC;
+
+/**
+ * Capacity sizing only: a benchmark observed within the intraday budget before its market closed is held at
+ * that close until the reopen. Returns the seconds elapsed since the close, by which a sizing budget widens,
+ * or null when the market is open or the benchmark is not a close mark. Never renews the observation clock
+ * and never admits a deviation.
+ */
+export function heldCloseBenchmarkExtensionSec(market: ReferenceMarket, observedAtSec: number, nowSec: number): number | null {
+  if (!Number.isSafeInteger(observedAtSec) || observedAtSec <= 0 || !Number.isSafeInteger(nowSec) || observedAtSec > nowSec) return null;
+  const session = getReferenceSessionState(market, nowSec);
+  if (session.open || observedAtSec > session.closureStartSec ||
+    session.closureStartSec - observedAtSec > REFERENCE_INTRADAY_BUDGET_SEC) return null;
+  return nowSec - session.closureStartSec;
+}
 
 // Reviewed L18 calibration (receipt: scripts/maintenance/calibrate-reference-bands.ts): nearest-rank 99.5th
 // percentile of 1-, 2- and >=3-business-day fixing moves over the ten years before 2024-04-01, rounded up

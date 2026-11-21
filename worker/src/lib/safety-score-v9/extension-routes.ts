@@ -359,7 +359,7 @@ function buildOutputReview(
     const benchmark = terms && admitDirectMetalBenchmark(fixedInput.directMetalReferences, terms.metal, fixedInput.clockSec);
     if (trace.rejectionReason !== null || (fixedInput.directMetalReferences !== undefined &&
         (!benchmark || benchmark.observedAtSec !== trace.metalPriceObservedAtSec ||
-          fixedInput.clockSec - benchmark.observedAtSec > PHYSICAL_TO_USD_EXIT_POLICY.metalPriceMaxAgeSec))) return null;
+          fixedInput.clockSec - benchmark.observedAtSec > trace.metalPriceMaxAgeSec))) return null;
     // All fees and spread belong to execution cost, not USD output retention.
     return {
       kind: "fiat", assetKeys: ["fiat:USD"], basketWeights: [],

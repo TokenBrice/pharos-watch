@@ -463,11 +463,11 @@ describe("buildSafetyScoreV9RouteReviews physical-commodity outputs", () => {
   });
   it.each([
     ["2026-10-01T12:00:00Z", "2026-10-01T11:55:00Z", true, false],
-    ["2026-10-04T12:00:00Z", "2026-10-02T20:59:00Z", false, false],
+    ["2026-10-04T12:00:00Z", "2026-10-02T20:59:00Z", true, false],
     ["2026-10-04T12:00:00Z", "2026-10-04T11:55:00Z", false, false],
     ["2026-10-01T12:00:00Z", null, false, false],
     ["2026-10-04T22:10:00Z", "2026-10-04T22:05:00Z", false, true],
-  ] as const)("uses the open-market metal observation %s / %s for physical capacity", (clock, observed, admitted, heartbeat) => {
+  ] as const)("uses the open-market or held-close metal observation %s / %s for physical capacity", (clock, observed, admitted, heartbeat) => {
     const id = "paxg-paxos";
     const clockSec = Date.parse(clock) / 1000;
     const observedAtSec = observed === null ? null : Date.parse(observed) / 1000;

@@ -14,6 +14,8 @@ export interface DexMarketMark {
   priceUsd: number;
   observedAtSec: number;
   observedAtMode?: "upstream";
+  /** Fresh agreement of at least two independent market source families; its clock is local collection time. */
+  corroboration?: "multi-source";
   source: string;
 }
 
@@ -38,6 +40,15 @@ export function getAdmittedDexMarketMark(
   return mark;
 }
 
+/** A closed-session leg needs a mark observed after the close: an upstream clock or a fresh multi-source consensus. */
+export function isClosureValuationMark<T extends Pick<DexMarketMark, "observedAtSec" | "observedAtMode" | "corroboration">>(
+  mark: T | null | undefined,
+  closureStart: number,
+): mark is T {
+  return mark != null && mark.observedAtSec >= closureStart &&
+    (mark.observedAtMode === "upstream" || mark.corroboration === "multi-source");
+}
+
 export function getClosedReferenceDexValuation(
   prices: DexValuationPrices | undefined,
   stablecoinId: string,
@@ -48,7 +59,7 @@ export function getClosedReferenceDexValuation(
   const closureStart = getReferenceMarketClosureStart(market, assessedAtSec);
   if (closureStart == null) return null;
   const mark = getAdmittedDexMarketMark(prices, stablecoinId, assessedAtSec);
-  return { market, closureStart, mark: mark?.observedAtMode === "upstream" && mark.observedAtSec >= closureStart ? mark : null };
+  return { market, closureStart, mark: isClosureValuationMark(mark, closureStart) ? mark : null };
 }
 
 export function resolveStablecoinIdForDexApiToken(
@@ -253,10 +264,12 @@ export function deriveTokenUsdObservation(
   if (!mark) return null;
   const price = multiplier * mark.priceUsd;
   if (!Number.isFinite(price) || price <= 0) return null;
+  // The multi-source label admits closed-market capacity valuation only, never price evidence.
+  const { corroboration: _corroboration, ...priceMark } = mark;
   return {
     price,
     observedAt: Math.min(ratioObservedAt, mark.observedAtSec),
-    counterpartyPrice: { ...mark, stablecoinId: otherId },
+    counterpartyPrice: { ...priceMark, stablecoinId: otherId },
   };
 }
 
