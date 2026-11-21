@@ -41,7 +41,7 @@ export default function ApiTermsPage() {
       title="API terms"
       variant="longform"
       containerClassName="max-w-2xl"
-      leadParagraphs={["Last updated: November 20, 2026"]}
+      leadParagraphs={["Last updated: November 21, 2026"]}
     >
       <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
         <section className="space-y-2">
@@ -104,7 +104,10 @@ export default function ApiTermsPage() {
           <p>
             Rate limits use fixed 60-second windows; exceeding them returns <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">429</code>{" "}
             with a <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">Retry-After</code> header. Monthly volume
-            is counted per UTC calendar month, resets on the 1st (UTC), and applies from {QUOTA_EFFECTIVE_DATE}.
+            is counted per UTC calendar month, resets on the 1st (UTC), and applies from {QUOTA_EFFECTIVE_DATE}. The
+            supporter monthly volume changes from the 200,000 requests per month published on November 20, 2026 to{" "}
+            {formatRequestQuota(DONOR_API_KEY_MONTHLY_REQUEST_QUOTA)} requests per month for every supporter key before
+            monthly enforcement begins on {QUOTA_EFFECTIVE_DATE}.
           </p>
         </section>
 

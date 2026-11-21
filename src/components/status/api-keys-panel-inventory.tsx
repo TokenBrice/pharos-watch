@@ -1,18 +1,19 @@
 "use client";
 
-import type { ApiKeySummary, ApiKeyTrafficClass } from "@pharos/contracts/api-keys";
+import { API_KEY_PLAN_VALUES, type ApiKeySummary, type ApiKeyTrafficClass } from "@pharos/contracts/api-keys";
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, RotateCcw, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import type {
   ApiKeyInventoryExpiryPreset,
+  ApiKeyInventoryPlanFilter,
   ApiKeyInventoryQuery,
   ApiKeyInventorySortDirection,
   ApiKeyInventorySortField,
   ApiKeyInventoryStatusFilter,
   ApiKeySummaryItem,
 } from "@/lib/api-key-admin-view-model";
-import { formatExpirySummary, isApiKeyExpiringSoon } from "@/lib/api-key-admin-view-model";
+import { formatExpirySummary, isApiKeyExpiringSoon, isApiKeyPlanUnset } from "@/lib/api-key-admin-view-model";
 import { apiKeyStatusBadgeClassName, getApiKeyStatus } from "./api-key-status";
 import { FilterSelect, STATUS_FILTER_FIELD_CLASS, STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
 import { StatusPill } from "./severity-pill";
@@ -76,7 +77,7 @@ export function ApiKeyInventoryControls({
               type="search"
               className="h-11 w-full rounded-md border border-input bg-background px-2.5 pl-9 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
               value={query.search ?? ""}
-              placeholder="Name, owner, prefix, tier, or route"
+              placeholder="Name, owner, prefix, tier, plan, or route"
               onChange={(event) => onQueryChange({ search: event.target.value })}
             />
           </span>
@@ -129,6 +130,20 @@ export function ApiKeyInventoryControls({
           {options.tiers.map((tier) => (
             <option key={tier} value={tier}>
               {tier}
+            </option>
+          ))}
+        </FilterSelect>
+
+        <FilterSelect
+          label="Plan filter"
+          value={query.plan ?? ""}
+          onChange={(value) => onQueryChange({ plan: (value || undefined) as ApiKeyInventoryPlanFilter | undefined })}
+        >
+          <option value="">All plans</option>
+          <option value="__unset__">Plan unset</option>
+          {API_KEY_PLAN_VALUES.map((plan) => (
+            <option key={plan} value={plan}>
+              {plan}
             </option>
           ))}
         </FilterSelect>
@@ -313,7 +328,7 @@ export function ApiKeyTable({
           <TableHead className="px-3 py-2 font-medium">Status</TableHead>
           <TableHead className="px-3 py-2 font-medium">Key</TableHead>
           <TableHead className="px-3 py-2 font-medium">Owner</TableHead>
-          <TableHead className="px-3 py-2 font-medium">Tier</TableHead>
+          <TableHead className="px-3 py-2 font-medium">Tier / Plan</TableHead>
           <TableHead className="px-3 py-2 font-medium">Traffic</TableHead>
           <TableHead className="px-3 py-2 font-medium">Limit</TableHead>
           <TableHead className="px-3 py-2 font-medium">Expiry</TableHead>
@@ -360,7 +375,20 @@ export function ApiKeyTable({
               <TableCell className="max-w-[15rem] px-3 py-2 align-top text-muted-foreground">
                 <div className="truncate">{key.ownerEmail ?? "Unassigned"}</div>
               </TableCell>
-              <TableCell className="px-3 py-2 align-top font-mono text-muted-foreground">{key.tier}</TableCell>
+              <TableCell className="px-3 py-2 align-top">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="font-mono text-muted-foreground">{key.tier}</span>
+                  {key.plan ? (
+                    <span className="rounded-full bg-muted/70 px-2 py-0.5 font-mono text-2xs font-medium text-foreground">
+                      {key.plan}
+                    </span>
+                  ) : isApiKeyPlanUnset(key) ? (
+                    <span className="rounded-full bg-state-warn-solid/15 px-2 py-0.5 text-2xs font-medium text-state-warn">
+                      Plan unset
+                    </span>
+                  ) : null}
+                </div>
+              </TableCell>
               <TableCell className="px-3 py-2 align-top font-mono text-muted-foreground">{key.trafficClass}</TableCell>
               <TableCell className="px-3 py-2 align-top font-mono tabular-nums text-foreground">
                 {key.rateLimitPerMinute}/min

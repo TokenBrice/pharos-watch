@@ -1,17 +1,26 @@
 import { formatElapsedSeconds } from "@shared/lib/format";
-import { API_KEY_MAX_MONTHLY_REQUEST_QUOTA } from "@pharos/contracts/api-keys";
+import {
+  API_KEY_MAX_MONTHLY_REQUEST_QUOTA,
+  API_KEY_PLAN_VALUES,
+  API_KEY_TIER_VALUES,
+  type ApiKeyPlan,
+  type ApiKeySummary,
+  type ApiKeyTier,
+  type ApiKeyTrafficClass,
+} from "@pharos/contracts/api-keys";
 import {
   API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE,
   API_KEY_MAX_RATE_LIMIT_PER_MINUTE,
   API_KEY_MIN_RATE_LIMIT_PER_MINUTE,
 } from "@shared/lib/ops-limits";
 import { THIRTY_DAYS_SECONDS, WEEK_SECONDS } from "@shared/lib/time-constants";
-import { API_KEY_TIER_VALUES, type ApiKeySummary, type ApiKeyTier, type ApiKeyTrafficClass } from "@pharos/contracts/api-keys";
 
 export interface EditableKeyState {
   name: string;
   ownerEmail: string;
   tier: ApiKeyTier;
+  /** Explicit plan for standard keys; empty string means unset (NULL). */
+  plan: ApiKeyPlan | "";
   rateLimitPerMinute: string;
   /** Empty string keeps the tier default; otherwise an explicit monthly quota. */
   monthlyRequestQuota: string;
@@ -25,6 +34,8 @@ export interface CreateKeyState {
   name: string;
   ownerEmail: string;
   tier: ApiKeyTier;
+  /** Explicit plan for standard keys; empty string means unset (NULL). */
+  plan: ApiKeyPlan | "";
   rateLimitPerMinute: string;
   /** Empty string keeps the tier default; otherwise an explicit monthly quota. */
   monthlyRequestQuota: string;
@@ -50,12 +61,15 @@ export interface ApiKeyExpiryWindowFilter {
   includeNonExpiring?: boolean;
 }
 
+export type ApiKeyInventoryPlanFilter = ApiKeyPlan | "__unset__";
+
 export interface ApiKeyInventoryFilters {
   search?: string;
   status?: ApiKeyInventoryStatusFilter;
   expiryWindow?: ApiKeyExpiryWindowFilter | null;
   owner?: string | null;
   tier?: string;
+  plan?: ApiKeyInventoryPlanFilter;
   trafficClass?: ApiKeyTrafficClass;
 }
 
@@ -136,18 +150,28 @@ export const DEFAULT_CREATE_KEY_STATE: CreateKeyState = {
   name: "",
   ownerEmail: "",
   tier: "standard",
+  plan: "free_partner",
   rateLimitPerMinute: API_KEY_DEFAULT_RATE_LIMIT_INPUT,
   monthlyRequestQuota: "",
   expiryMode: "default",
   expiresAtInput: "",
 };
 
+export function isApiKeyPlanUnset(key: Pick<ApiKeySummary, "tier" | "plan">): boolean {
+  return key.tier === "standard" && key.plan == null;
+}
+
 export function buildEditableKeyState(key: ApiKeySummary): EditableKeyState {
+  // Legacy rows can carry a free-form tier written before the union narrowed.
+  const tier = API_KEY_TIER_VALUES.find((candidate) => candidate === key.tier) ?? "standard";
+  const plan = tier === "standard"
+    ? (API_KEY_PLAN_VALUES.find((candidate) => candidate === key.plan) ?? "")
+    : "";
   return {
     name: key.name,
     ownerEmail: key.ownerEmail ?? "",
-    // Legacy rows can carry a free-form tier written before the union narrowed.
-    tier: API_KEY_TIER_VALUES.find((tier) => tier === key.tier) ?? "standard",
+    tier,
+    plan,
     rateLimitPerMinute: String(key.rateLimitPerMinute),
     monthlyRequestQuota: key.monthlyRequestQuota == null ? "" : String(key.monthlyRequestQuota),
     expiryMode: key.expiresAt == null ? "non-expiring" : "custom",
@@ -208,7 +232,15 @@ function searchApiKeys(keys: readonly ApiKeySummary[], search: string): ApiKeySu
 
   return keys.filter((key) => {
     const searchableText = normalizeInventoryText(
-      [key.name, key.ownerEmail ?? "", key.keyPrefix, key.maskedToken, key.tier, key.lastUsedRoute ?? ""].join(" "),
+      [
+        key.name,
+        key.ownerEmail ?? "",
+        key.keyPrefix,
+        key.maskedToken,
+        key.tier,
+        key.plan ?? (isApiKeyPlanUnset(key) ? "plan unset" : ""),
+        key.lastUsedRoute ?? "",
+      ].join(" "),
     );
     return terms.every((term) => searchableText.includes(term));
   });
@@ -260,6 +292,15 @@ function filterApiKeys(
     }
     if (filters.tier !== undefined && !matchesNormalizedValue(key.tier, filters.tier)) {
       return false;
+    }
+    if (filters.plan !== undefined) {
+      if (filters.plan === "__unset__") {
+        if (!isApiKeyPlanUnset(key)) {
+          return false;
+        }
+      } else if (key.plan !== filters.plan) {
+        return false;
+      }
     }
     if (filters.trafficClass !== undefined && key.trafficClass !== filters.trafficClass) {
       return false;
@@ -481,6 +522,7 @@ export function buildCreateApiKeyPayload(state: CreateKeyState): Record<string, 
     name: state.name,
     ownerEmail: state.ownerEmail || null,
     tier: state.tier,
+    plan: state.tier === "standard" ? (state.plan || null) : null,
     rateLimitPerMinute: parseRateLimitInput(state.rateLimitPerMinute),
     monthlyRequestQuota: parseMonthlyQuotaInput(state.monthlyRequestQuota),
   };
@@ -510,6 +552,7 @@ export function buildUpdateApiKeyPayload(draft: EditableKeyState): Record<string
     name: draft.name,
     ownerEmail: draft.ownerEmail || null,
     tier: draft.tier,
+    plan: draft.tier === "standard" ? (draft.plan || null) : null,
     rateLimitPerMinute: parseRateLimitInput(draft.rateLimitPerMinute),
     monthlyRequestQuota: parseMonthlyQuotaInput(draft.monthlyRequestQuota),
     expiresAt,

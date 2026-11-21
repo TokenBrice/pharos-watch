@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {
   GENERATED_AT,
@@ -177,11 +177,11 @@ describe("ApiKeysPanel create and token recovery", () => {
     expect(body.expiresAt).toBeNull();
   });
 
-  it("applies the commercial preset to the create payload", async () => {
+  it("applies the commercial and institutional presets to the create payload", async () => {
     const fetchMock = vi
       .mocked(fetch)
       .mockResolvedValue(
-        keyResponse({ key: makeKey({ id: 4, name: "Commercial Key" }), token: ONE_TIME_TOKEN }),
+        keyResponse({ key: makeKey({ id: 4, name: "Commercial Key", plan: "commercial" }), token: ONE_TIME_TOKEN }),
       );
 
     renderPanel([]);
@@ -189,14 +189,38 @@ describe("ApiKeysPanel create and token recovery", () => {
     fireEvent.click(screen.getByRole("button", { name: /create read key/i }));
     fireEvent.change(screen.getAllByLabelText("Name")[0], { target: { value: "Commercial Key" } });
     fireEvent.click(screen.getByRole("button", { name: "Commercial" }));
+    expect((screen.getByLabelText("Plan") as HTMLSelectElement).value).toBe("commercial");
+    fireEvent.click(screen.getByRole("button", { name: "Institutional" }));
+    expect((screen.getByLabelText("Plan") as HTMLSelectElement).value).toBe("institutional");
+    expect((screen.getByLabelText("Rate Limit / Minute") as HTMLInputElement).value).toBe("600");
+    fireEvent.click(screen.getByRole("button", { name: "Commercial" }));
     fireEvent.click(screen.getByRole("button", { name: /create key/i }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
     const [, createInit] = fetchMock.mock.calls[0] ?? [];
     const body = JSON.parse(String((createInit as RequestInit).body));
 
+    expect(body.tier).toBe("standard");
+    expect(body.plan).toBe("commercial");
     expect(body.rateLimitPerMinute).toBe(120);
-    expect(body.monthlyRequestQuota).toBe(1_000_000);
+    expect(body.monthlyRequestQuota).toBeNull();
+  });
+
+  it("shows and filters the Plan unset badge for standard keys without a plan", () => {
+    renderPanel([
+      makeKey({ id: 1, name: "Legacy Partner", tier: "standard", plan: null }),
+      makeKey({ id: 2, name: "Commercial Desk", tier: "standard", plan: "commercial" }),
+      makeKey({ id: 3, name: "Supporter Wallet", tier: "donor", plan: null, expiresAt: null }),
+    ]);
+
+    const table = screen.getByRole("table");
+    expect(within(table).getAllByText("Plan unset")).toHaveLength(1);
+    expect(within(table).getByText("commercial")).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText("Plan filter"), { target: { value: "__unset__" } });
+    expect(screen.getByText("Legacy Partner")).toBeTruthy();
+    expect(screen.queryByText("Commercial Desk")).toBeNull();
+    expect(screen.queryByText("Supporter Wallet")).toBeNull();
   });
 });
 
@@ -381,6 +405,7 @@ describe("ApiKeysPanel editor and audit history", () => {
       name: renamed.name,
       ownerEmail: donor.ownerEmail,
       tier: "donor",
+      plan: null,
       rateLimitPerMinute: donor.rateLimitPerMinute,
       monthlyRequestQuota: null,
       expiresAt: null,

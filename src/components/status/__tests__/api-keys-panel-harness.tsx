@@ -28,6 +28,7 @@ export function makeKey(overrides: Partial<ApiKeySummary> = {}): ApiKeySummary {
     name: overrides.name ?? "Ops Key",
     ownerEmail: overrides.ownerEmail ?? "ops@pharos.watch",
     tier: overrides.tier ?? "standard",
+    plan: overrides.plan ?? null,
     trafficClass: overrides.trafficClass ?? "external",
     rateLimitPerMinute: overrides.rateLimitPerMinute ?? 120,
     monthlyRequestQuota: overrides.monthlyRequestQuota ?? null,

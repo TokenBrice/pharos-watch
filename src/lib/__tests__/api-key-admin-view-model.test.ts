@@ -3,8 +3,10 @@ import { API_KEY_TIER_VALUES, type ApiKeySummary } from "@pharos/contracts/api-k
 import {
   buildApiKeyInventorySummary,
   buildApiKeyInventoryView,
+  buildCreateApiKeyPayload,
   buildEditableKeyState,
   buildUpdateApiKeyPayload,
+  DEFAULT_CREATE_KEY_STATE,
   type ApiKeyInventoryQuery,
 } from "../api-key-admin-view-model";
 import { makeLargeApiKeyInventory } from "@/test-utils/api-key-fixtures";
@@ -90,6 +92,7 @@ describe("API key editor tier projection", () => {
       name: "Renamed key",
       ownerEmail: key.ownerEmail,
       tier,
+      plan: null,
       rateLimitPerMinute: key.rateLimitPerMinute,
       monthlyRequestQuota: key.monthlyRequestQuota,
       expiresAt: null,
@@ -116,6 +119,23 @@ describe("API key editor tier projection", () => {
     expect(buildUpdateApiKeyPayload({ ...draft, monthlyRequestQuota: " " }).monthlyRequestQuota).toBeNull();
     expect(() => buildUpdateApiKeyPayload({ ...draft, monthlyRequestQuota: "0" })).toThrow(/Monthly request quota/);
     expect(() => buildUpdateApiKeyPayload({ ...draft, monthlyRequestQuota: "100000001" })).toThrow(/Monthly request quota/);
+  });
+
+  it("round-trips standard plans, clears plan on non-standard tiers, and filters unset standard keys", () => {
+    expect(buildCreateApiKeyPayload({ ...DEFAULT_CREATE_KEY_STATE, name: "New partner" }).plan).toBe("free_partner");
+    expect(buildCreateApiKeyPayload({ ...DEFAULT_CREATE_KEY_STATE, name: "Donor", tier: "donor", plan: "commercial" }).plan).toBeNull();
+
+    const commercial = { ...makeReviewInventory()[1]!, tier: "standard", plan: "commercial" as const, expiresAt: null };
+    const unsetStandard = { ...makeReviewInventory()[2]!, tier: "standard", plan: null, expiresAt: null };
+    const donor = { ...makeReviewInventory()[3]!, tier: "donor", plan: null, expiresAt: null };
+    expect(buildEditableKeyState(commercial).plan).toBe("commercial");
+    expect(buildUpdateApiKeyPayload(buildEditableKeyState(commercial)).plan).toBe("commercial");
+    expect(buildUpdateApiKeyPayload({ ...buildEditableKeyState(commercial), tier: "donor" }).plan).toBeNull();
+
+    const sample = [commercial, unsetStandard, donor];
+    expect(inventoryIds(sample, { status: "all", plan: "__unset__" })).toEqual([unsetStandard.id]);
+    expect(inventoryIds(sample, { status: "all", plan: "commercial" })).toEqual([commercial.id]);
+    expect(inventoryIds(sample, { status: "all", search: "plan unset" })).toEqual([unsetStandard.id]);
   });
 });
 

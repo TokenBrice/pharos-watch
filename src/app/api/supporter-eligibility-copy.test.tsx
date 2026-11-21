@@ -10,6 +10,7 @@ import {
 } from "@shared/lib/ops-limits";
 import { ApiOfferCards } from "./api-offer-cards";
 import { SupporterClaimSteps } from "./supporter-claim-steps";
+import ApiTermsPage from "./terms/page";
 
 // The claim transaction and wallet lookup are independent of this static grade copy.
 vi.mock("@/components/api-access/donor-key-claim", () => ({ DonorKeyClaim: () => null }));
@@ -80,5 +81,12 @@ describe("Published tier quotas", () => {
     const claim = document.body.textContent ?? "";
     expect(claim).toContain(`${DONOR_API_KEY_MONTHLY_REQUEST_QUOTA.toLocaleString("en-US")} requests per month`);
     expect(screen.getByRole("link", { name: "API terms" }).getAttribute("href")).toMatch(/^\/api\/terms\/?$/);
+
+    cleanup();
+    render(<ApiTermsPage />);
+    const terms = document.body.textContent ?? "";
+    expect(DONOR_API_KEY_MONTHLY_REQUEST_QUOTA).toBe(100_000);
+    expect(terms).toContain("Last updated: November 21, 2026");
+    expect(terms).toContain("200,000 requests per month published on November 20, 2026 to 100,000 requests per month");
   });
 });
