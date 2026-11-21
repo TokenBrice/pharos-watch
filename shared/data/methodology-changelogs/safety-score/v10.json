@@ -3,7 +3,7 @@
     "version": "10.49",
     "title": "Physical metal exits keep the session-close benchmark through a market closure",
     "date": "2026-11-21",
-    "effectiveAt": 1795255200,
+    "effectiveAt": 1795252628,
     "summary": "While the gold or silver reference market is closed, the physical-to-USD exit sizes capacity with the closed session's last live bullion benchmark when it was taken within six hours of the close. Its 24-hour metal-price budget widens by the time elapsed since the close until the reopen; the observation clock is kept and the trace names the widened budget.",
     "impact": [
       "Before v10.49 the FX producer published no direct bullion benchmark during a closure, so the PAXG and XAUT physical-to-USD routes left Exit every weekend and returned after the reopen.",

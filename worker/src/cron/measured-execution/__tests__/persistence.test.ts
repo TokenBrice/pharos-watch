@@ -5,6 +5,7 @@ import { SolanaDexBankCaptureSchema, type SolanaDexNativeGeneration } from "@sha
 import nativeFixture from "../../dex-liquidity/__tests__/fixtures/whirlpool-slot-449058549.json";
 import { decodeWhirlpool } from "../../dex-liquidity/solana/whirlpool-quote";
 import { createDexMeasuredValuationAdmission } from "../valuation-admission";
+import { buildFxReferenceClosureMarks } from "../../../lib/dex-api-token-pricing";
 import { buildMeasuredExecutionTargetValue, buildNativeDexExecutionTarget } from "../inventory";
 import { captureNativeDexPublisherFence, loadCurrentNativeDexGeneration, publishNativeDexGeneration, pruneNativeDexGenerations } from "../native-generation-store";
 import { loadNativeDexExecutionDiagnostic } from "../join";
@@ -169,6 +170,16 @@ describe("measured execution durable publication", () => {
     const fetched: StoredMark = { ...fetchedClock, corroboration: "multi-source" };
     expect(revised.rejectsQuotedTarget(entry!.quotedTarget, historyWith(fetched))).toBe(false);
     expect(revised.rejectsQuotedTarget(entry!.quotedTarget, historyWith(fetchedClock))).toBe(true);
+    // An untracked-price leg keeps its open-session FX basis through the closure (v7.53).
+    const fixing = Date.parse("2026-11-13T13:10:00Z") / 1000;
+    const fxMarks = buildFxReferenceClosureMarks(new Map(), { rates: { peggedEUR: 1.09 }, type: "fresh", updatedAt: fixing,
+      updatedAtByPeg: { peggedEUR: fixing }, typeByPeg: { peggedEUR: "fresh" }, sourceModeByPeg: { peggedEUR: "live" },
+      sourceCadenceByPeg: { peggedEUR: "business-daily" }, sourceDateByPeg: { peggedEUR: "2026-11-13" } }, at, ["eurcv-societe-generale-forge"]);
+    const fxTarget = buildMeasuredExecutionTargetValue({ ...base, capturedAt: at, tokenOut: { ...base.tokenOut,
+      trackedAssetId: "eurcv-societe-generale-forge", symbol: "EURCV", referencePriceUsd: 1.09 } },
+    { tokenOut: Object.assign(new Map<string, number>(), { marketMarks: fxMarks }) });
+    expect(fxTarget.tokenOut.marketMark).toMatchObject({ source: "fx-reference:peggedEUR" });
+    expect(createDexMeasuredValuationAdmission(at + 90, new Set(), fxMarks).rejectsStagedTarget(fxTarget)).toBe(false);
     const quoteBeforeTarget = historyWith(prior.tokenOut);
     quoteBeforeTarget.valuationObservations[1]!.quotedAt = prior.targetCapturedAt - 1;
     expect(revised.rejectsQuotedTarget(entry!.quotedTarget, quoteBeforeTarget)).toBe(true);

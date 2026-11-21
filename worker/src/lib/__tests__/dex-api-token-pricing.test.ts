@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { derivePoolVolume24hUsd, deriveTokenUsdObservation, getTokenReferenceUsdPrice } from "../dex-api-token-pricing";
+import {
+  buildFxReferenceClosureMarks, derivePoolVolume24hUsd, deriveTokenUsdObservation, getAdmittedDexMarketMark,
+  getClosedReferenceDexValuation, getTokenReferenceUsdPrice, isClosureValuationMark,
+} from "../dex-api-token-pricing";
 import type { DexApiPool, DexApiPoolToken } from "../dex-api-types";
 
 // Empty address + USD reference symbol resolves to a $1 reference price via the
@@ -82,5 +85,24 @@ describe("getTokenReferenceUsdPrice", () => {
         new Map([["asusdf-astherus", 1.061756]]),
       ),
     ).toBe(1.061756);
+  });
+});
+
+describe("buildFxReferenceClosureMarks", () => {
+  it("keeps an untracked-price leg's open-session FX basis only during a closure and while the reference is fresh", () => {
+    const at = Date.parse("2026-11-21T09:00:00Z") / 1000;
+    const fixing = Date.parse("2026-11-20T13:10:00Z") / 1000;
+    const refs = { rates: { peggedEUR: 1.09 }, type: "fresh" as const, updatedAt: fixing, updatedAtByPeg: { peggedEUR: fixing },
+      typeByPeg: { peggedEUR: "fresh" as const }, sourceModeByPeg: { peggedEUR: "live" as const },
+      sourceCadenceByPeg: { peggedEUR: "business-daily" as const }, sourceDateByPeg: { peggedEUR: "2026-11-20" } };
+    const id = "eurcv-societe-generale-forge";
+    const marks = buildFxReferenceClosureMarks(new Map(), refs, at, [id, "usdc-circle"]);
+    expect([...marks.keys()]).toEqual([id]);
+    const prices = Object.assign(new Map<string, number>(), { marketMarks: marks });
+    expect(getClosedReferenceDexValuation(prices, id, at)?.mark).toMatchObject({ priceUsd: 1.09, source: "fx-reference:peggedEUR" });
+    expect(getAdmittedDexMarketMark(prices, id, at)).toBeNull();
+    expect(buildFxReferenceClosureMarks(new Map([[id, 1.09]]), refs, at, [id]).size).toBe(0);
+    expect(buildFxReferenceClosureMarks(new Map(), refs, Date.parse("2026-11-20T15:00:00Z") / 1000, [id]).size).toBe(0);
+    expect(isClosureValuationMark(marks.get(id), at, fixing + 7 * 86_400)).toBe(false);
   });
 });

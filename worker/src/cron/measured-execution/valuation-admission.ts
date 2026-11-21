@@ -55,9 +55,9 @@ export function createDexMeasuredValuationAdmission(
   ): boolean {
     const closure = closedAssets.get(id);
     if (!closure) return false;
-    return !closure.mark || !isClosureValuationMark(stored, closure.closureStart) || stored.stablecoinId !== id ||
+    return !closure.mark || !isClosureValuationMark(stored, closure.closureStart, valuedAt) || stored.stablecoinId !== id ||
       stored.source !== closure.mark.source ||
-      stored.observedAtSec > valuedAt || valuedAt - stored.observedAtSec > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC ||
+      stored.observedAtSec > valuedAt || (!stored.fxReference && valuedAt - stored.observedAtSec > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC) ||
       valuedAt > quotedAt || quotedAt > nowSec;
   }
 

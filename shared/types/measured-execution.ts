@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { ExitRouteCapacityPointSchema, ExitRouteObservationHistorySchema } from "./exit-route";
 import { canonicalExitRouteScopedId } from "./exit-route-identity";
+import { FxSourceCadenceSchema } from "./fx-reference";
 import type { SolanaDexNativePoint } from "./solana-dex-bank";
 
 // Pure scopes let bundlers omit unused schema graphs, including nested Zod
@@ -88,6 +89,12 @@ const DexMeasuredExecutionMarketMarkSchema = /* @__PURE__ */ (() => z.object({
   observedAtSec: z.number().int().positive(),
   observedAtMode: z.literal("upstream").optional(),
   corroboration: z.literal("multi-source").optional(),
+  fxReference: z.object({
+    pegKey: z.string().trim().min(1).max(64),
+    cadence: FxSourceCadenceSchema,
+    mode: z.enum(["live", "cached"]).optional(),
+    sourceDate: z.string().max(32).nullish(),
+  }).optional(),
 }))();
 
 export const DexMeasuredExecutionObservationHistorySchema = /* @__PURE__ */ (() => ExitRouteObservationHistorySchema
