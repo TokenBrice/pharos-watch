@@ -20,8 +20,9 @@ const YIELD_CACHE_PATHS = new Set([
 ]);
 
 const SORTED_CSV_CACHE_QUERY_PARAMS: Readonly<Record<string, ReadonlySet<string>>> = {
+  // Only routes whose handler dedupes and sorts these lists itself, so every
+  // reordering of one request yields the same body. /api/resolve keeps input order.
   [API_PATHS.riskCheck()]: new Set(["ids", "contracts"]),
-  [API_PATHS.resolve()]: new Set(["contracts"]),
 };
 
 function canonicalizeCsvQueryValue(raw: string): string {

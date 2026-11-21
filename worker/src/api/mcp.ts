@@ -4,7 +4,8 @@ import { PUBLIC_API_CONTRACT_VERSION } from "@shared/lib/public-api-contract";
 import { API_ORIGIN } from "@shared/lib/runtime-origins";
 import { createEdgeCacheContext, readEdgeCache, writeEdgeCache } from "../handlers/http/edge-cache";
 import { readRequestTextBounded } from "../lib/api-json-body";
-import { jsonResponse } from "../lib/api-response";
+import { jsonResponse, scopeResponseEtag } from "../lib/api-response";
+import { safetyScoreResponsePolicy } from "../lib/safety-score-v9/http-response";
 
 const MCP_MAX_BODY_BYTES = 16 * 1024;
 const SUPPORTED_MCP_PROTOCOL_VERSIONS = [
@@ -255,16 +256,20 @@ async function runCachedRestTool(
   }
 
   const response = await invokeHandler(syntheticUrl);
+  if (!edgeCache) return response;
 
-  if (edgeCache && execCtx && response.status === 200) {
+  // Same representation scoping as the REST dispatcher, so REST hits on an
+  // MCP-written entry carry the identical scoped ETag.
+  const cacheResponse = scopeResponseEtag(response, edgeCache.cacheKey.url, !edgeCache.skipCache, safetyScoreResponsePolicy(response));
+  if (execCtx && cacheResponse.status === 200) {
     try {
-      writeEdgeCache(edgeCache, response, execCtx);
+      writeEdgeCache(edgeCache, cacheResponse, execCtx);
     } catch {
       // Best-effort cache write.
     }
   }
 
-  return response;
+  return cacheResponse;
 }
 
 async function formatToolResponse(id: string | number | null, restResponse: Response): Promise<Response> {

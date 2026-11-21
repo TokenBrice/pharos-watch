@@ -1078,7 +1078,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = {
   "compliance": {
     referenceOrder: 44,
     summary: "Compliance registry (MiCA & GENIUS)",
-    description: "Structured EU MiCA and U.S. GENIUS Act compliance assessments across tracked stablecoins, with statutory regime-state context and explicit not-reviewed provenance. Requires a commercial or institutional API key.",
+    description: "Structured EU MiCA and US GENIUS Act compliance assessments across tracked stablecoins, with statutory regime-state context and explicit not-reviewed provenance. Requires a commercial or institutional API key.",
     tags: ["Compliance"],
     responseSchema: "ComplianceListResponse",
     parameters: [
@@ -1126,7 +1126,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = {
   "compliance-coin": {
     referenceOrder: 45,
     summary: "Compliance profile for one stablecoin",
-    description: "EU MiCA and U.S. GENIUS Act assessment for one canonical stablecoin ID, preserving unreviewed nulls and tri-state disclosure flags. Requires a commercial or institutional API key.",
+    description: "EU MiCA and US GENIUS Act assessment for one canonical stablecoin ID, preserving unreviewed nulls and tri-state disclosure flags. Requires a commercial or institutional API key.",
     tags: ["Compliance"],
     responseSchema: "ComplianceCoinResponse",
     parameters: [STABLECOIN_ID_PARAM],

@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { z } from "zod";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { CHAIN_META } from "@shared/types/chain-identity";
+import { normalizeDeploymentAddress } from "@shared/lib/deployment-resolver";
 import { COMMODITY_PEG_CURRENCIES, isCommodityPeg } from "@shared/lib/filter-tags";
 import { DEDICATED_SINGLE_TOKEN_GOLD_PROTOCOL_SLUGS, isDedicatedSingleTokenGoldProtocolSlug } from "@shared/lib/commodity-protocols";
 import { CanonicalOrderAssetSchema } from "@shared/lib/stablecoins/schema";
@@ -530,6 +531,24 @@ function getContractDeploymentIssues(coin: StablecoinMeta): string[] {
   return issues;
 }
 
+/** Two distinct coins must never share one chain deployment: /api/resolve maps chain+address to exactly one coin. */
+function getCrossCoinDeploymentCollisionIssues(coins: readonly StablecoinMeta[]): string[] {
+  const owners = new Map<string, string>();
+  const issues: string[] = [];
+  for (const coin of coins) {
+    for (const contract of [...(coin.contracts ?? []), ...(coin.tradedContracts ?? [])]) {
+      const key = `${contract.chain}:${normalizeDeploymentAddress(contract.chain, contract.address)}`;
+      const owner = owners.get(key);
+      if (owner && owner !== coin.id) {
+        issues.push(`${coin.id} and ${owner} share the deployment ${key}`);
+      } else if (!owner) {
+        owners.set(key, coin.id);
+      }
+    }
+  }
+  return issues;
+}
+
 function isTrackedRuntimeCoin(coin: StablecoinMeta): boolean {
   return isReadableStablecoinMeta(coin);
 }
@@ -742,6 +761,7 @@ function getIndependentAssuranceManifestWiringIssues(): string[] {
 
 export {
   getContractDeploymentIssues,
+  getCrossCoinDeploymentCollisionIssues,
   getIndependentAssuranceManifestWiringIssues,
   getReferenceIssues,
 };
@@ -975,6 +995,10 @@ function runStablecoinDataCheck(): void {
 
     for (const error of validateVariantRelationships(allEntries.map((entry) => entry.coin))) {
       reportError(`${STABLECOIN_DATA_DIR}: ${error}`);
+    }
+
+    for (const issue of getCrossCoinDeploymentCollisionIssues(allEntries.map((entry) => entry.coin))) {
+      reportError(`${STABLECOIN_DATA_DIR}: ${issue}`);
     }
 
     // Active coins disambiguate a shared symbol by deployment address.

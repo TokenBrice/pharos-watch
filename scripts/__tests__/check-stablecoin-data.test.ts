@@ -9,6 +9,7 @@ import {
   getCollidingSymbolContractIssues,
   getCommodityProtocolSlugIssue,
   getContractDeploymentIssues,
+  getCrossCoinDeploymentCollisionIssues,
   getCommodityAllocatedPegMatchIssues,
   getDependencyReserveOverlapIssues,
   getRemovedStablecoinRedirectIssues,
@@ -44,6 +45,14 @@ describe("per-coin deployment identity gate", () => {
       contracts: [{ chain: "solana", address: "A".repeat(32), decimals: 6 }],
       tradedContracts: [{ chain: "solana", address: "a".repeat(32), decimals: 6 }],
     } as StablecoinMeta)).toEqual([]);
+  });
+
+  it("rejects one chain deployment shared by two coins after resolver normalization", () => {
+    const coin = (id: string, address: string) => ({ id, contracts: [{ chain: "xrpl", address, decimals: 6 }] }) as StablecoinMeta;
+    expect(getCrossCoinDeploymentCollisionIssues([
+      coin("a", "USDQ.rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs"),
+      coin("b", "5553445100000000000000000000000000000000-rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs"),
+    ])).toEqual([expect.stringContaining("b and a share the deployment xrpl:")]);
   });
 });
 

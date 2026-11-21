@@ -1232,7 +1232,7 @@ Resolve on-chain contract addresses, chain:address batches (up to 50), canonical
 
 ### `GET /api/compliance`
 
-Structured EU MiCA and U.S. [Full endpoint contract](https://pharos.watch/openapi.json#/paths/~1api~1compliance/get).
+Structured EU MiCA and US GENIUS Act compliance assessments across tracked stablecoins, with statutory regime-state context and explicit not-reviewed provenance. [Full endpoint contract](https://pharos.watch/openapi.json#/paths/~1api~1compliance/get).
 
 - **Operation ID:** `compliance`
 - **Path:** `/api/compliance`
@@ -1242,7 +1242,7 @@ Structured EU MiCA and U.S. [Full endpoint contract](https://pharos.watch/openap
 
 ### `GET /api/compliance/:id`
 
-EU MiCA and U.S. [Full endpoint contract](https://pharos.watch/openapi.json#/paths/~1api~1compliance~1{stablecoinId}/get).
+EU MiCA and US GENIUS Act assessment for one canonical stablecoin ID, preserving unreviewed nulls and tri-state disclosure flags. [Full endpoint contract](https://pharos.watch/openapi.json#/paths/~1api~1compliance~1{stablecoinId}/get).
 
 - **Operation ID:** `complianceStablecoinId`
 - **Path:** `/api/compliance/{stablecoinId}`
