@@ -752,6 +752,7 @@ export function YieldScatterPlot({
                 <ReferenceLine
                   y={benchmarkRate}
                   stroke="none"
+                  zIndex={1000}
                   label={<ReferenceBenchmarkLabel text={referenceLineLabelText} />}
                 />
               ) : null}
