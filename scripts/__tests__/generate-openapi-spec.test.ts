@@ -348,7 +348,8 @@ describe("OpenAPI runtime response contracts", () => {
     const schemas = document.components.schemas as Record<string, unknown>;
     let validatedExamples = 0;
 
-    for (const endpoint of PUBLIC_API_ARTIFACT_ENDPOINTS) {
+    const endpoints: readonly PublicApiArtifactEndpoint[] = PUBLIC_API_ARTIFACT_ENDPOINTS;
+    for (const endpoint of endpoints) {
       const operation = document.paths[endpoint.path].get;
       const requiredPlans = getEndpointDefinitionByKey(endpoint.key)?.requiredKeyPlans;
       if (requiredPlans && requiredPlans.length > 0) {

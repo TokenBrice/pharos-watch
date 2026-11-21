@@ -23,6 +23,7 @@ import {
   API_PAGE_ANCHORS,
   COMMERCIAL_API_KEY_USD_PER_MONTH,
   DONOR_KEY_CLAIMS_OPEN,
+  INSTITUTIONAL_API_KEY_USD_PER_MONTH,
 } from "@shared/lib/public-api-contract";
 import { DONOR_KEY_QUALIFYING_STABLECOINS } from "@shared/lib/funding/donor-eligibility";
 import { formatCoveragePct, isCommunityDonation, isUnpricedDonation } from "@shared/lib/funding/helpers";
@@ -420,8 +421,9 @@ export function SupportCtas() {
               href={PARTNER_ACCESS_HREF}
               linkLabel="See partner keys"
             >
-              Partner keys are free for services that are free to their users, and ${COMMERCIAL_API_KEY_USD_PER_MONTH} per
-              month for commercial products.
+              Partner keys are free for non-commercial open-source public goods and academic research, $
+              {COMMERCIAL_API_KEY_USD_PER_MONTH} per month for commercial products, and from $
+              {INSTITUTIONAL_API_KEY_USD_PER_MONTH.toLocaleString("en-US")} per month for institutional teams.
             </FundingPathTile>
             <FundingPathTile
               icon={Server}

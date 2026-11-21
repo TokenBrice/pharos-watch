@@ -8,6 +8,8 @@ import {
   API_KEY_COMMERCIAL_RATE_LIMIT_PER_MINUTE,
   API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA,
   API_KEY_FREE_PARTNER_RATE_LIMIT_PER_MINUTE,
+  API_KEY_INSTITUTIONAL_MONTHLY_REQUEST_QUOTA,
+  API_KEY_INSTITUTIONAL_RATE_LIMIT_PER_MINUTE,
   API_KEY_MONTHLY_QUOTA_EFFECTIVE_SEC,
   DONOR_API_KEY_DAYS_PER_MIN_USD,
   DONOR_API_KEY_MIN_USD,
@@ -21,7 +23,12 @@ import {
   API_ACCESS_X_URL,
   API_BREAKING_CHANGE_NOTICE_DAYS,
   API_PAGE_ANCHORS,
+  COMMERCIAL_API_KEY_EVAL_DAYS,
   COMMERCIAL_API_KEY_USD_PER_MONTH,
+  COMMERCIAL_API_KEY_USD_PER_QUARTER,
+  COMMERCIAL_API_KEY_USD_PER_YEAR,
+  INSTITUTIONAL_API_KEY_USD_PER_MONTH,
+  INSTITUTIONAL_API_KEY_USD_PER_YEAR,
   PARTNER_KEY_REPLY_BUSINESS_DAYS,
   PARTNER_KEY_REQUEST_TEMPLATE,
 } from "@shared/lib/public-api-contract";
@@ -74,10 +81,13 @@ function SupporterKeyCard({ coins, gradesAsOf, supporterCount }: SupporterOfferP
         <li className="pharos-numeric">
           {DONOR_API_KEY_DAYS_PER_MIN_USD} days per ${DONOR_API_KEY_MIN_USD}
         </li>
-        <li className="pharos-numeric">Every read endpoint</li>
+        <li className="pharos-numeric">Core read endpoints + contract resolver</li>
       </ul>
       <div className="space-y-1.5">
         <p className={CARD_PITCH_CLASS_NAME}>{describeCountingCoins(coins, gradesAsOf)}</p>
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          Compliance API, Risk-Gate, and MCP require a Commercial or Institutional key.
+        </p>
         {supporterCount > 0 ? (
           <p className="text-sm text-foreground">
             Backed by <span className="pharos-numeric">{supporterCount}</span>{" "}
@@ -115,31 +125,63 @@ function PartnerKeyCard() {
           Partner key
         </h2>
         <p className={CARD_PITCH_CLASS_NAME}>
-          Issued by hand to exchanges, wallets, risk desks and data products.
+          Issued by hand to exchanges, wallets, vault managers, risk desks and data products. Paid in stablecoins only.
         </p>
       </div>
-      <ul className="list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-muted-foreground">
-        <li>
-          Free partner services: <span className="pharos-numeric text-foreground">{API_KEY_FREE_PARTNER_RATE_LIMIT_PER_MINUTE}</span>{" "}
-          requests/min and{" "}
-          <span className="pharos-numeric text-foreground">{formatRequestQuota(API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA)}</span>{" "}
-          requests/month; commercial keys:{" "}
-          <span className="pharos-numeric text-foreground">{API_KEY_COMMERCIAL_RATE_LIMIT_PER_MINUTE}</span> requests/min and{" "}
-          <span className="pharos-numeric text-foreground">{formatRequestQuota(API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA)}</span>{" "}
-          requests/month. Higher limits on request.
-        </li>
-        <li>Expiry and rotation on request.</li>
-        <li>Integration help with IDs, endpoints and polling.</li>
-        <li>
-          Service commitments, not a contractual SLA: freshness stamped on every response and a human reply within{" "}
-          {PARTNER_KEY_REPLY_BUSINESS_DAYS} business days.
-        </li>
-        <li>Cached endpoints keep serving through brief database outages.</li>
-      </ul>
-      <p className="text-sm leading-relaxed text-foreground">
-        Free when your service is free to its users. Commercial products pay{" "}
-        <span className="pharos-numeric font-semibold">${COMMERCIAL_API_KEY_USD_PER_MONTH}</span> per month in
-        stablecoins.
+      <div className="space-y-2.5">
+        <div className="pharos-inset space-y-1 p-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <span className="text-sm font-semibold text-foreground">Free partner</span>
+            <span className="pharos-numeric text-sm font-semibold text-foreground">$0</span>
+          </div>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Non-commercial open-source public goods and academic research (attribution required).{" "}
+            <span className="pharos-numeric text-foreground">{API_KEY_FREE_PARTNER_RATE_LIMIT_PER_MINUTE}/min</span>,{" "}
+            <span className="pharos-numeric text-foreground">
+              {formatRequestQuota(API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA)} requests/month
+            </span>
+            . Core read endpoints + contract resolver.
+          </p>
+        </div>
+
+        <div className="pharos-inset space-y-1 p-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <span className="text-sm font-semibold text-foreground">Commercial</span>
+            <span className="pharos-numeric text-sm font-semibold text-foreground">
+              ${COMMERCIAL_API_KEY_USD_PER_MONTH}/mo · ${COMMERCIAL_API_KEY_USD_PER_QUARTER}/qtr · $
+              {COMMERCIAL_API_KEY_USD_PER_YEAR.toLocaleString("en-US")}/yr
+            </span>
+          </div>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            <span className="pharos-numeric text-foreground">{API_KEY_COMMERCIAL_RATE_LIMIT_PER_MINUTE}/min</span>,{" "}
+            <span className="pharos-numeric text-foreground">
+              {formatRequestQuota(API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA)} requests/month
+            </span>
+            . All REST endpoints + Compliance API + Risk-Gate + MCP. {COMMERCIAL_API_KEY_EVAL_DAYS}-day evaluation key
+            on request.
+          </p>
+        </div>
+
+        <div className="pharos-inset space-y-1 p-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <span className="text-sm font-semibold text-foreground">Institutional</span>
+            <span className="pharos-numeric text-sm font-semibold text-foreground">
+              From ${INSTITUTIONAL_API_KEY_USD_PER_MONTH.toLocaleString("en-US")}/mo · $
+              {INSTITUTIONAL_API_KEY_USD_PER_YEAR.toLocaleString("en-US")}/yr
+            </span>
+          </div>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            <span className="pharos-numeric text-foreground">{API_KEY_INSTITUTIONAL_RATE_LIMIT_PER_MINUTE}/min</span>,{" "}
+            <span className="pharos-numeric text-foreground">
+              {formatRequestQuota(API_KEY_INSTITUTIONAL_MONTHLY_REQUEST_QUOTA)} requests/month
+            </span>{" "}
+            (higher on request). Everything in Commercial plus priority integration and custom coverage onboarding.
+          </p>
+        </div>
+      </div>
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        Freshness stamped on every response, cached endpoints keep serving through brief database outages, and human
+        reply within {PARTNER_KEY_REPLY_BUSINESS_DAYS} business days (service commitment, not a contractual SLA).
       </p>
       <div className={CTA_ROW_CLASS_NAME}>
         <Button asChild size="lg" className="h-auto min-h-10 w-full gap-2 whitespace-normal sm:w-auto">

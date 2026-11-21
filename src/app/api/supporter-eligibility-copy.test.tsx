@@ -6,9 +6,11 @@ import type { DonorKeyQualifyingCoin } from "@/lib/donor-key-qualifying-coins";
 import {
   API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA,
   API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA,
+  API_KEY_INSTITUTIONAL_MONTHLY_REQUEST_QUOTA,
   DONOR_API_KEY_MONTHLY_REQUEST_QUOTA,
 } from "@shared/lib/ops-limits";
 import { ApiOfferCards } from "./api-offer-cards";
+import { ApiPreviewTabs } from "./api-preview-tabs";
 import { SupporterClaimSteps } from "./supporter-claim-steps";
 import ApiTermsPage from "./terms/page";
 
@@ -70,9 +72,13 @@ describe("Published tier quotas", () => {
       DONOR_API_KEY_MONTHLY_REQUEST_QUOTA,
       API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA,
       API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA,
+      API_KEY_INSTITUTIONAL_MONTHLY_REQUEST_QUOTA,
     ]) {
       expect(offer).toContain(`${quota.toLocaleString("en-US")} requests/month`);
     }
+    expect(offer).toContain("$675/qtr");
+    expect(offer).toContain("$2,500/yr");
+    expect(offer).toContain("14-day evaluation key");
 
     cleanup();
     render(
@@ -88,5 +94,13 @@ describe("Published tier quotas", () => {
     expect(DONOR_API_KEY_MONTHLY_REQUEST_QUOTA).toBe(100_000);
     expect(terms).toContain("Last updated: November 21, 2026");
     expect(terms).toContain("200,000 requests per month published on November 20, 2026 to 100,000 requests per month");
+    expect(terms).toContain("5,000,000 requests per month");
+    expect(terms).toContain("plan_upgrade_required");
+
+    cleanup();
+    render(<ApiPreviewTabs />);
+    expect(screen.getByRole("tab", { name: "Risk-Gate" }).getAttribute("aria-selected")).toBe("true");
+    expect(screen.getByRole("tab", { name: "MCP" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "Safety Badge" })).toBeTruthy();
   });
 });

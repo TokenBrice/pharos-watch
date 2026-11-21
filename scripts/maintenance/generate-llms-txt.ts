@@ -13,10 +13,19 @@ import {
   API_KEY_COMMERCIAL_RATE_LIMIT_PER_MINUTE,
   API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA,
   API_KEY_FREE_PARTNER_RATE_LIMIT_PER_MINUTE,
+  API_KEY_INSTITUTIONAL_MONTHLY_REQUEST_QUOTA,
+  API_KEY_INSTITUTIONAL_RATE_LIMIT_PER_MINUTE,
   DONOR_API_KEY_MONTHLY_REQUEST_QUOTA,
   DONOR_API_KEY_RATE_LIMIT_PER_MINUTE,
 } from "@shared/lib/ops-limits";
-import { COMMERCIAL_API_KEY_USD_PER_MONTH } from "@shared/lib/public-api-contract";
+import {
+  COMMERCIAL_API_KEY_EVAL_DAYS,
+  COMMERCIAL_API_KEY_USD_PER_MONTH,
+  COMMERCIAL_API_KEY_USD_PER_QUARTER,
+  COMMERCIAL_API_KEY_USD_PER_YEAR,
+  INSTITUTIONAL_API_KEY_USD_PER_MONTH,
+  INSTITUTIONAL_API_KEY_USD_PER_YEAR,
+} from "@shared/lib/public-api-contract";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { PUBLIC_DOCS } from "@shared/lib/public-docs";
 import { METHODOLOGY_CHANGELOG_REGISTRY } from "@shared/lib/methodology-versions/registry";
@@ -171,7 +180,7 @@ const learnLinks = [
 
 const formatQuota = (value: number): string => value.toLocaleString("en-US");
 
-const apiAccessDescription = `Keyed REST API authenticated with the X-API-Key header. Free without a key: Safety Score grades, dependency graph and published datasets. Supporter keys for donors: ${DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests/min, ${formatQuota(DONOR_API_KEY_MONTHLY_REQUEST_QUOTA)}/month. Free partner keys: ${API_KEY_FREE_PARTNER_RATE_LIMIT_PER_MINUTE}/min, ${formatQuota(API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA)}/month. Commercial keys: $${COMMERCIAL_API_KEY_USD_PER_MONTH}/month, ${API_KEY_COMMERCIAL_RATE_LIMIT_PER_MINUTE}/min, ${formatQuota(API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA)}/month.`;
+const apiAccessDescription = `Keyed REST API and stateless Streamable HTTP MCP server (/api/mcp) authenticated with the X-API-Key header. Free without a key: Safety Score grades, embeddable SVG safety badges (/api/badge/:id.svg), dependency graph, and published datasets. Supporter keys for donors: ${DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests/min, ${formatQuota(DONOR_API_KEY_MONTHLY_REQUEST_QUOTA)}/month (core reads + /api/resolve). Free partner keys (non-commercial open-source public goods and academic research): ${API_KEY_FREE_PARTNER_RATE_LIMIT_PER_MINUTE}/min, ${formatQuota(API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA)}/month. Commercial keys: $${COMMERCIAL_API_KEY_USD_PER_MONTH}/month ($${COMMERCIAL_API_KEY_USD_PER_QUARTER}/quarter, $${COMMERCIAL_API_KEY_USD_PER_YEAR.toLocaleString("en-US")}/year; ${COMMERCIAL_API_KEY_EVAL_DAYS}-day evaluation on request), ${API_KEY_COMMERCIAL_RATE_LIMIT_PER_MINUTE}/min, ${formatQuota(API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA)}/month, adding Compliance API (/api/compliance), Risk-Gate (/api/risk-check), and MCP (/api/mcp). Institutional keys: from $${INSTITUTIONAL_API_KEY_USD_PER_MONTH.toLocaleString("en-US")}/month ($${INSTITUTIONAL_API_KEY_USD_PER_YEAR.toLocaleString("en-US")}/year), ${API_KEY_INSTITUTIONAL_RATE_LIMIT_PER_MINUTE}/min, ${formatQuota(API_KEY_INSTITUTIONAL_MONTHLY_REQUEST_QUOTA)}/month.`;
 
 const apiLinks = [
   ["API Access", absolute("/api/"), apiAccessDescription],

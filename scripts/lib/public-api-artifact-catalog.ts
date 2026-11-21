@@ -24,7 +24,7 @@ export interface PublicApiArtifactParameter {
 export interface PublicApiArtifactEndpoint {
   operationId: string;
   referenceOrder: number;
-  key: string;
+  key: PublicApiEndpointKey;
   path: string;
   summary: string;
   description: string;

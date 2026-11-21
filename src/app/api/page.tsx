@@ -12,8 +12,10 @@ import { summarizeDonations } from "@shared/lib/funding/helpers";
 import { TransferDonationsFileSchema } from "@shared/lib/funding/schema";
 import { DONOR_API_KEY_MIN_USD } from "@shared/lib/ops-limits";
 import { API_PAGE_ANCHORS, PUBLIC_API_ARTIFACTS, PUBLIC_API_HOST } from "@shared/lib/public-api-contract";
+import { API_PARTNERS } from "@/lib/api-partners";
 import { ApiOfferCards } from "./api-offer-cards";
 import { ApiPartnerLogos } from "./api-partner-logos";
+import { ApiPreviewTabs } from "./api-preview-tabs";
 import { ApiTabs } from "./api-tabs";
 import { SupporterClaimSteps } from "./supporter-claim-steps";
 
@@ -33,6 +35,7 @@ const LEDGER_RECONCILED_DATE = formatIsoDate(donationsData.last_updated_at);
 
 const DEVELOPER_RESOURCES = [
   { label: "API reference", href: "/api/reference/", artifact: false },
+  { label: "API terms", href: "/api/terms/", artifact: false },
   { label: "OpenAPI", href: PUBLIC_API_ARTIFACTS.openApi, artifact: true },
   { label: "Postman collection", href: PUBLIC_API_ARTIFACTS.postmanCollection, artifact: true },
   { label: "Postman environment", href: PUBLIC_API_ARTIFACTS.postmanEnvironment, artifact: true },
@@ -57,7 +60,7 @@ export default async function ApiPage() {
       path="/api/"
       title="Pharos API"
       leadParagraphs={[
-        "Safety Score grades need no key. Peg, supply, liquidity, reserve and depeg data need a supporter or partner key. The Reference tab documents every endpoint.",
+        "Safety Score grades and live SVG badges need no key. Peg, supply, liquidity, reserve and depeg data need a supporter or partner key; Compliance, Risk-Gate and MCP require a commercial or institutional plan.",
       ]}
       headerSupplement={
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
@@ -91,6 +94,41 @@ export default async function ApiPage() {
                 </div>
               </div>
             </div>
+
+            <ApiPreviewTabs />
+
+            <section
+              id={API_PAGE_ANCHORS.useCases}
+              aria-labelledby="api-partners-section-title"
+              className="scroll-mt-20 space-y-4"
+            >
+              <div className="space-y-1">
+                <p className="pharos-label">Teams building on Pharos</p>
+                <h2 id="api-partners-section-title" className="text-xl font-semibold tracking-tight text-foreground">
+                  Production integrations
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Listed alphabetically with each team&apos;s consent. Usage, never endorsement or rating input.
+                </p>
+              </div>
+              <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                {API_PARTNERS.map((partner) => (
+                  <li key={partner.name}>
+                    <a
+                      href={partner.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="pharos-card-shell pharos-focus-ring flex items-center gap-3 px-4 py-3.5 text-sm font-semibold text-foreground transition-colors hover:border-foreground/30"
+                    >
+                      <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/80 dark:bg-foreground/90">
+                        <img src={partner.logoSrc} alt="" width={22} height={22} className="size-5.5 rounded-full" />
+                      </span>
+                      <span className="truncate">{partner.name}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </section>
 
             <SupporterClaimSteps
               coins={coins}

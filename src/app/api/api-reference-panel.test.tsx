@@ -12,6 +12,7 @@ import { PUBLIC_DATASET_CURRENT_DATE } from "@/lib/datasets/public-dataset-curre
 import {
   API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA,
   API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA,
+  API_KEY_INSTITUTIONAL_MONTHLY_REQUEST_QUOTA,
   DONOR_API_KEY_MONTHLY_REQUEST_QUOTA,
 } from "@shared/lib/ops-limits";
 import { API_BREAKING_CHANGE_NOTICE_DAYS } from "@shared/lib/public-api-contract";
@@ -53,6 +54,7 @@ describe("API reference authentication guidance", () => {
       DONOR_API_KEY_MONTHLY_REQUEST_QUOTA,
       API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA,
       API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA,
+      API_KEY_INSTITUTIONAL_MONTHLY_REQUEST_QUOTA,
     ]) {
       expect(answer).toContain(`${quota.toLocaleString("en-US")} requests per month`);
     }
