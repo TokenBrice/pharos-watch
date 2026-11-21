@@ -813,6 +813,11 @@ export const CONTRACT_CONFIGS: ContractEventConfig[] = CONTRACT_CONFIG_SPECS.map
 
 const CONTRACT_CONFIG_BY_KEY = new Map(CONTRACT_CONFIGS.map((config) => [config.configKey, config]));
 
+/** Stablecoin IDs the live freeze/blacklist tracker indexes. */
+export const BLACKLIST_TRACKED_STABLECOIN_IDS: ReadonlySet<string> = new Set(
+  CONTRACT_CONFIGS.map((config) => config.stablecoinId),
+);
+
 function buildBlacklistConfigKey(chainId: string, contractAddress: string): string {
   return `${chainId}-${contractAddress.toLowerCase()}`;
 }

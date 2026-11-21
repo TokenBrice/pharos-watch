@@ -8,6 +8,7 @@ import {
   parseContractTuple,
   resolveDeploymentChainId,
 } from "@shared/lib/deployment-resolver";
+import { computeDdrManifestBasePayloadHash } from "@shared/lib/depeg-resolver/public-contract";
 import { DDR_METHODOLOGY_VERSION, DDR_SNAPSHOT_CACHE_GENERATION } from "@shared/lib/methodology-versions/depeg-resolver";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { WORKER_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
@@ -15,6 +16,7 @@ import {
   ComplianceCoinResponseSchema,
   ComplianceListResponseSchema,
 } from "@shared/types/compliance-api";
+import { DdrResponseSchema } from "@shared/types/depeg-resolver";
 import { ResolveResponseSchema } from "@shared/types/resolve";
 import { RiskCheckResponseSchema } from "@shared/types/risk-check";
 import { mockD1 } from "@shared/test-utils/mock-d1";
@@ -163,9 +165,17 @@ function buildRiskCheckMockDb(nowSec: number, options?: {
   malformedRedemptionCoinId?: string;
   activeDdrCoinId?: string;
   ddrErratum?: boolean;
+  stablecoinsAgeSec?: number;
+  redemptionAgeSec?: number;
+  malformedStablecoinEntry?: boolean;
+  nullStablecoinPriceFor?: string;
+  activeDepegRows?: Record<string, unknown>[];
+  dexRowOverrides?: Record<string, Record<string, unknown>>;
 }) {
   const safetyRow = makeSafetyScoreCacheRows(nowSec, { held: options?.heldSafety });
   const freshAt = nowSec - 60;
+  const stablecoinsAt = nowSec - (options?.stablecoinsAgeSec ?? 60);
+  const redemptionAt = nowSec - (options?.redemptionAgeSec ?? 60);
   const stablecoinsPayload = {
     peggedAssets: [
       {
@@ -212,7 +222,9 @@ function buildRiskCheckMockDb(nowSec: number, options?: {
         circulating: { peggedUSD: 120_000_000_000 },
         chains: ["Ethereum"],
       },
-    ],
+      // Fails critical-field validation: the lenient decode drops it and degrades.
+      ...(options?.malformedStablecoinEntry ? [{ id: "", symbol: "" }] : []),
+    ].map((asset) => asset.id === options?.nullStablecoinPriceFor ? { ...asset, price: null } : asset),
   };
   const pegAnalyticsPayload = {
     computedAtSec: freshAt,
@@ -227,6 +239,9 @@ function buildRiskCheckMockDb(nowSec: number, options?: {
         pegCurrency: "USD",
         governance: "centralized",
         currentDeviationBps: -1,
+        price: 0.9998,
+        priceSource: "peg-analytics-quote",
+        priceObservedAt: freshAt - 600,
         pegScore: 98,
         pegPct: 99.9,
         severityScore: 99,
@@ -429,6 +444,9 @@ function buildRiskCheckMockDb(nowSec: number, options?: {
     },
   };
 
+  // The public cache contract recomputes the manifest base hash; the fixture must carry the real one.
+  ddrPayload._meta.basePayloadHash = computeDdrManifestBasePayloadHash(DdrResponseSchema.parse(ddrPayload));
+
   const ddrEnvelope = {
     generation: DDR_SNAPSHOT_CACHE_GENERATION,
     methodologyVersion: DDR_METHODOLOGY_VERSION,
@@ -445,7 +463,7 @@ function buildRiskCheckMockDb(nowSec: number, options?: {
   };
 
   const cacheRows = [
-    { key: "stablecoins", value: JSON.stringify(stablecoinsPayload), updated_at: freshAt },
+    { key: "stablecoins", value: JSON.stringify(stablecoinsPayload), updated_at: stablecoinsAt },
     ...(options?.missingPegAnalytics
       ? []
       : [{ key: "peg-analytics", value: JSON.stringify(pegAnalyticsPayload), updated_at: freshAt }]),
@@ -454,14 +472,96 @@ function buildRiskCheckMockDb(nowSec: number, options?: {
   ];
 
   const redemptionRows = [
-    makeValidRedemptionRow("usdc-circle", freshAt),
+    makeValidRedemptionRow("usdc-circle", redemptionAt),
     options?.malformedRedemptionCoinId === "usdt-tether"
       ? {
-          ...makeValidRedemptionRow("usdt-tether", freshAt),
+          ...makeValidRedemptionRow("usdt-tether", redemptionAt),
           details_json: "{not-json",
         }
-      : makeValidRedemptionRow("usdt-tether", freshAt),
+      : makeValidRedemptionRow("usdt-tether", redemptionAt),
   ];
+  // The previous complete generation: the store falls back to it when the latest
+  // run's row census does not match.
+  const previousRunAt = nowSec - 3 * 3600;
+  const previousRedemptionRows = ["usdc-circle", "usdt-tether"].map((id) => ({
+    ...makeValidRedemptionRow(id, previousRunAt),
+    snapshot_run_id: "run-0",
+  }));
+  const makeRedemptionRun = (runId: string, at: number) => ({
+    run_id: runId,
+    completed_at: at,
+    status: "completed",
+    expected_count: 2,
+    written_count: 2,
+    min_updated_at: at,
+    max_updated_at: at,
+    methodology_version: "4.0",
+    metadata_json: null,
+  });
+  const redemptionRuns = [
+    makeRedemptionRun("run-1", redemptionAt),
+    ...(options?.malformedRedemptionCoinId ? [makeRedemptionRun("run-0", previousRunAt)] : []),
+  ];
+  const dexPriceSourcesJson = JSON.stringify({ aggregateObservedAt: freshAt, sources: [] });
+  const dexRows = [
+    {
+      stablecoin_id: "usdc-circle",
+      total_tvl_usd: 4_500_000_000,
+      total_volume_24h_usd: 1_200_000_000,
+      volume_availability_json: null,
+      pool_count: 140,
+      liquidity_score: 96,
+      updated_at: freshAt,
+      coverage_class: "primary",
+      coverage_confidence: 0.95,
+      effective_tvl_usd: 4_100_000_000,
+      balance_measured_tvl_usd: 4_000_000_000,
+      organic_measured_tvl_usd: 3_800_000_000,
+      publication_generation_id: "dex:coin-row",
+      dex_price_stablecoin_id: "usdc-circle",
+      dex_price_usd: 0.9999,
+      dex_price_updated_at: freshAt,
+      dex_price_sources_json: dexPriceSourcesJson,
+    },
+    {
+      stablecoin_id: "usdt-tether",
+      total_tvl_usd: 5_200_000_000,
+      total_volume_24h_usd: 2_100_000_000,
+      volume_availability_json: null,
+      pool_count: 180,
+      liquidity_score: 97,
+      updated_at: freshAt,
+      coverage_class: "primary",
+      coverage_confidence: 0.96,
+      effective_tvl_usd: 4_900_000_000,
+      balance_measured_tvl_usd: 4_700_000_000,
+      organic_measured_tvl_usd: 4_500_000_000,
+      publication_generation_id: "dex:coin-row",
+      dex_price_stablecoin_id: "usdt-tether",
+      dex_price_usd: 1.0,
+      dex_price_updated_at: freshAt,
+      dex_price_sources_json: dexPriceSourcesJson,
+    },
+    {
+      stablecoin_id: "__global__",
+      total_tvl_usd: 0,
+      total_volume_24h_usd: 0,
+      volume_availability_json: null,
+      pool_count: 0,
+      liquidity_score: null,
+      updated_at: freshAt,
+      coverage_class: null,
+      coverage_confidence: null,
+      effective_tvl_usd: null,
+      balance_measured_tvl_usd: null,
+      organic_measured_tvl_usd: null,
+      publication_generation_id: "dex:gen-1",
+      dex_price_stablecoin_id: null,
+      dex_price_usd: null,
+      dex_price_updated_at: null,
+      dex_price_sources_json: null,
+    },
+  ].map((row) => ({ ...row, ...options?.dexRowOverrides?.[row.stablecoin_id] }));
 
   const executedSqls: string[] = [];
   const db = mockD1([
@@ -476,7 +576,13 @@ function buildRiskCheckMockDb(nowSec: number, options?: {
     },
     {
       match: "FROM depeg_events_with_provenance",
-      rows: [],
+      rows: options?.activeDepegRows ?? [],
+    },
+    {
+      // Confirmed-output clock of the active-depeg producer (sync-stablecoins).
+      match: "FROM cron_runs WHERE job = ?1",
+      first: { started_at: freshAt },
+      rows: [{ started_at: freshAt }],
     },
     {
       match: "pharos:depeg-event-projection:active-incidents",
@@ -484,52 +590,11 @@ function buildRiskCheckMockDb(nowSec: number, options?: {
     },
     {
       match: "FROM dex_liquidity d",
-      rows: [
-        {
-          stablecoin_id: "usdc-circle",
-          total_tvl_usd: 4_500_000_000,
-          total_volume_24h_usd: 1_200_000_000,
-          pool_count: 140,
-          liquidity_score: 96,
-          updated_at: freshAt,
-          coverage_class: "primary",
-          coverage_confidence: 0.95,
-          effective_tvl_usd: 4_100_000_000,
-          balance_measured_tvl_usd: 4_000_000_000,
-          organic_measured_tvl_usd: 3_800_000_000,
-          publication_generation_id: "dex:gen-1",
-          dex_price_usd: 0.9999,
-          dex_price_updated_at: freshAt,
-        },
-        {
-          stablecoin_id: "usdt-tether",
-          total_tvl_usd: 5_200_000_000,
-          total_volume_24h_usd: 2_100_000_000,
-          pool_count: 180,
-          liquidity_score: 97,
-          updated_at: freshAt,
-          coverage_class: "primary",
-          coverage_confidence: 0.96,
-          effective_tvl_usd: 4_900_000_000,
-          balance_measured_tvl_usd: 4_700_000_000,
-          organic_measured_tvl_usd: 4_500_000_000,
-          publication_generation_id: "dex:gen-1",
-          dex_price_usd: 1.0,
-          dex_price_updated_at: freshAt,
-        },
-      ],
+      rows: dexRows,
     },
     {
       match: "FROM redemption_backstop_runs",
-      first: {
-        run_id: "run-1",
-        completed_at: freshAt,
-        expected_count: 2,
-        written_count: 2,
-        max_updated_at: freshAt,
-        methodology_version: "4.0",
-      },
-      rows: [],
+      rows: redemptionRuns,
     },
     {
       match: "FROM stress_signal_publication_rows",
@@ -540,7 +605,16 @@ function buildRiskCheckMockDb(nowSec: number, options?: {
     },
     {
       match: "FROM redemption_backstop_run_rows",
+      matchBinds: ["run-0", 50, 0],
+      rows: previousRedemptionRows,
+    },
+    {
+      match: "FROM redemption_backstop_run_rows",
       rows: redemptionRows,
+    },
+    {
+      match: "FROM depeg_resolver_prediction_lock_state ls",
+      rows: [],
     },
     {
       match: "FROM depeg_resolver_publication_snapshots",
@@ -592,6 +666,7 @@ describe("deployment-resolver", () => {
     expect(resolveDeploymentChainId("sol")).toBe("solana");
     expect(resolveDeploymentChainId("trx")).toBe("tron");
     expect(resolveDeploymentChainId("not-a-real-chain")).toBeNull();
+    expect(resolveDeploymentChainId("01")).toBeNull();
   });
 
   it("normalizes addresses per chain family while keeping case-sensitive chains exact", () => {
@@ -601,8 +676,17 @@ describe("deployment-resolver", () => {
       .toBe("0x033068f6539f8e6e6b131e6b2b814e6c34a5224bc66947c47dab9dfee93b35fb");
     expect(normalizeDeploymentAddress("sui", "0x2::usdc::USDC"))
       .toBe(`0x${"0".repeat(63)}2::usdc::USDC`);
+    // A Hedera long-zero EVM alias resolves to its native entity ID.
     expect(normalizeDeploymentAddress("hedera", "0x00000000000000000000000000000000009Ce723"))
-      .toBe("0x00000000000000000000000000000000009ce723");
+      .toBe("0.0.10282787");
+    // XRPL ticker, hex and standard-form codes, with any separator, share one key.
+    const usdq = "5553445100000000000000000000000000000000.rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs";
+    expect(normalizeDeploymentAddress("xrpl", "USDQ.rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs")).toBe(usdq);
+    expect(normalizeDeploymentAddress("xrpl", "USDQ-rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs")).toBe(usdq);
+    expect(normalizeDeploymentAddress("xrpl", "00000000000000000000000054424C0000000000.rJNE2NNz83GJYtWVLwMvchDWEon3huWnFn"))
+      .toBe("TBL.rJNE2NNz83GJYtWVLwMvchDWEon3huWnFn");
+    expect(normalizeDeploymentAddress("stellar", "USDC:GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN"))
+      .toBe("USDC-GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN");
     expect(normalizeDeploymentAddress("hedera", "0.0.456858")).toBe("0.0.456858");
     expect(normalizeDeploymentAddress("injective", "peggy0xdAC17F958D2ee523a2206206994597C13D831ec7"))
       .toBe(`peggy${USDT_ETH}`);
@@ -647,8 +731,7 @@ describe("Wave 2 endpoints: compliance, resolve, risk-check", () => {
     expect(listRes.headers.get("Cache-Control")).toContain("s-maxage=");
     const listBody = ComplianceListResponseSchema.parse(await listRes.json());
     expect(listBody.regimes.genius.isEffective).toBe(false);
-    expect(listBody.regimes.genius.effectiveDate).toBe("2027-01-18");
-    expect(listBody.summary.totalCoins).toBe(listBody.coins.length);
+    expect(listBody.regimes.genius.effectiveDate).toBe("2027-01-18");    expect(listBody.summary.totalCoins).toBe(listBody.coins.length);
     expect(listBody.summary.unassessedCoins).toBeGreaterThan(0);
 
     const unreviewed = listBody.coins.find((coin) => coin.mica === null && coin.genius === null);
@@ -792,10 +875,44 @@ describe("Wave 2 endpoints: compliance, resolve, risk-check", () => {
     });
     expect(body.assets["usdc-circle"].ddr).toMatchObject({
       outlook: null,
-      unavailableReason: "no-active-depeg",
+      unavailableReason: "no-ddr-row",
     });
     expect(body.assets["usdc-circle"].controls.liveFreezeTrackerCovered).toBe(true);
+    expect(body.assets["usdc-circle"].peg).toMatchObject({
+      price: 0.9999,
+      priceSource: "coingecko",
+      priceObservedAt: nowSec - 60,
+      pegScore: 98,
+      unavailableReason: null,
+    });
+    expect(body.assets["usdc-circle"].liquidity).toMatchObject({
+      volume24hUsd: 1_200_000_000,
+      dexPriceUsd: 0.9999,
+      unavailableReason: null,
+    });
+    expect(body._meta.dependencies?.dexLiquidity?.generationId).toBe("dex:gen-1");
+    expect(body._meta.dependencies?.activeDepegs).toMatchObject({ status: "fresh", updatedAt: nowSec - 60 });
     expect(body._meta.status).toBe("fresh");
+
+    // Canonicalized like the edge-cache key: reordering and duplication give one body.
+    const reordered = await handleRiskCheck(
+      db,
+      new URL(`https://api.pharos.watch/api/risk-check?contracts=ethereum:${USDT_ETH},ethereum:${USDT_ETH}&ids=zz-unknown,unknown-coin,usdc-circle,unknown-coin`),
+    );
+    const reorderedBody = RiskCheckResponseSchema.parse(await reordered.json());
+    expect(reorderedBody.requestedCount).toBe(4);
+    expect(reorderedBody.unresolved.map((entry) => entry.input)).toEqual(["unknown-coin", "zz-unknown"]);
+    const canonical = await handleRiskCheck(
+      db,
+      new URL(`https://api.pharos.watch/api/risk-check?ids=unknown-coin,usdc-circle,zz-unknown&contracts=ethereum:${USDT_ETH}`),
+    );
+    expect(JSON.stringify(RiskCheckResponseSchema.parse(await canonical.json()))).toBe(JSON.stringify(reorderedBody));
+    const duplicatesOnly = await handleRiskCheck(
+      db,
+      new URL(`https://api.pharos.watch/api/risk-check?ids=${Array.from({ length: 30 }, () => "usdc-circle").join(",")}`),
+    );
+    expect(duplicatesOnly.status).toBe(200);
+    expect(RiskCheckResponseSchema.parse(await duplicatesOnly.json()).requestedCount).toBe(1);
 
     // Zero DDR manifest/errata D1 reads when no requested coin has an active DDR row
     expect(executedSqls.some((sql) => sql.includes("depeg_resolver_publication_snapshots"))).toBe(false);
@@ -803,7 +920,7 @@ describe("Wave 2 endpoints: compliance, resolve, risk-check", () => {
     expect(executedSqls.some((sql) => sql.includes(SAFETY_SCORE_V9_CACHE_KEYS.publication))).toBe(false);
   });
 
-  it("enforces R1-R8 on /api/risk-check: held safety, missing peg-analytics cache, redemption row quarantine, and DDR errata", async () => {
+  it("enforces R1-R8 on /api/risk-check: held safety, missing peg-analytics cache, redemption run fallback, and DDR errata", async () => {
     const nowSec = 1_795_300_000;
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(nowSec * 1000);
@@ -825,14 +942,18 @@ describe("Wave 2 endpoints: compliance, resolve, risk-check", () => {
     expect(body.assets["usdc-circle"].safety.publicationStatus).toBe("held");
     expect(body.assets["usdc-circle"].safety.unavailableReason).toBe("v9-publication-held");
     expect(body.assets["usdc-circle"].peg.pegScore).toBeNull();
-    expect(body.assets["usdc-circle"].peg.unavailableReason).toBe("peg-analytics-cache-missing");
-    // R8 quarantine: usdt-tether redemption quarantined while usdc-circle remains populated
+    expect(body.assets["usdc-circle"].peg.unavailableReason).toBe("peg-analytics-missing-cache");
+    // The store's run admission: a row-census mismatch rejects run-1 and falls back to run-0.
     expect(body.assets["usdc-circle"].redemption.score).toBe(92);
-    expect(body.assets["usdt-tether"].redemption.score).toBeNull();
-    expect(body.assets["usdt-tether"].redemption.unavailableReason).toBe("redemption-row-malformed");
+    expect(body.assets["usdt-tether"].redemption.score).toBe(92);
+    expect(body._meta.dependencies?.redemptionBackstops).toMatchObject({
+      status: "fresh",
+      generationId: "run-0",
+      updatedAt: nowSec - 3 * 3600,
+    });
     expect(body._meta.dependencies?.pegAnalytics).toMatchObject({
       status: "unavailable",
-      reason: "cache-missing",
+      reason: "missing-cache",
     });
 
     // Active DDR row triggers conditional manifest+errata lookup; erratum invalidates prediction
@@ -864,16 +985,119 @@ describe("Wave 2 endpoints: compliance, resolve, risk-check", () => {
     expect(tooMany.status).toBe(400);
   });
 
+  it("grades each /api/risk-check dependency against its own budget and clamps the cache to the earliest runway", async () => {
+    const nowSec = 1_795_300_000;
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(nowSec * 1000);
+
+    // Redemption 3 h old is inside its own budget; stablecoins is 5 min old.
+    const { db } = buildRiskCheckMockDb(nowSec, { redemptionAgeSec: 3 * 3600, stablecoinsAgeSec: 300 });
+    const res = await handleRiskCheck(db, new URL("https://api.pharos.watch/api/risk-check?ids=usdc-circle"));
+    const body = RiskCheckResponseSchema.parse(await res.json());
+    const dependencies = body._meta.dependencies ?? {};
+    expect(dependencies.redemptionBackstops).toMatchObject({ status: "fresh", ageSeconds: 3 * 3600 });
+    expect(dependencies.stablecoins).toMatchObject({ status: "fresh", ageSeconds: 300 });
+    expect(body._meta.status).toBe("fresh");
+
+    const runways = Object.entries(dependencies)
+      .filter(([name, dep]) => name !== "compliance" && dep.updatedAt != null && dep.freshBudgetSec != null)
+      .map(([, dep]) => ({ updatedAt: dep.updatedAt as number, budget: dep.freshBudgetSec as number }))
+      .sort((left, right) => (left.updatedAt + left.budget) - (right.updatedAt + right.budget));
+    const binding = runways[0];
+    expect(body._meta).toMatchObject({ updatedAt: binding.updatedAt, freshBudgetSec: binding.budget });
+    expect(binding.updatedAt).not.toBe(nowSec - 3 * 3600);
+    expect(res.headers.get("X-Data-Updated-At")).toBe(String(binding.updatedAt));
+    const cacheControl = res.headers.get("Cache-Control") ?? "";
+    expect(cacheControl).toContain("s-maxage=");
+    const sMaxAge = Number(/s-maxage=(\d+)/.exec(cacheControl)?.[1]);
+    expect(sMaxAge).toBeGreaterThan(0);
+    expect(sMaxAge).toBeLessThanOrEqual(binding.updatedAt + binding.budget - nowSec);
+
+    // Near the end of the binding runway the TTL is clamped to what remains.
+    vi.setSystemTime((binding.updatedAt + binding.budget - 30) * 1000);
+    const late = await handleRiskCheck(db, new URL("https://api.pharos.watch/api/risk-check?ids=usdc-circle"));
+    const lateCacheControl = late.headers.get("Cache-Control") ?? "";
+    expect(lateCacheControl).toContain("s-maxage=");
+    const lateSMaxAge = Number(/s-maxage=(\d+)/.exec(lateCacheControl)?.[1]);
+    expect(lateSMaxAge).toBeGreaterThan(0);
+    expect(lateSMaxAge).toBeLessThanOrEqual(30);
+  });
+
+  it("quarantines per asset on /api/risk-check: degraded stablecoins, one price producer, unreadable depeg rows, DEX admission", async () => {
+    const nowSec = 1_795_300_000;
+    const freshAt = nowSec - 60;
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(nowSec * 1000);
+
+    const depegRow = {
+      id: 801,
+      stablecoin_id: "usdc-circle",
+      symbol: "USDC",
+      peg_type: "peggedUSD",
+      direction: "below",
+      peak_deviation_bps: -250,
+      started_at: freshAt - 7200,
+      ended_at: null,
+      start_price: 0.985,
+      peak_price: 0.975,
+      recovery_price: null,
+      peg_reference: 1,
+      source: "live",
+      confirmation_sources: null,
+      pending_reason: null,
+    };
+    const { db, executedSqls } = buildRiskCheckMockDb(nowSec, {
+      malformedStablecoinEntry: true,
+      nullStablecoinPriceFor: "usdc-circle",
+      activeDepegRows: [depegRow, { ...depegRow, id: 802, stablecoin_id: "usdt-tether", symbol: "USDT", direction: "sideways" }],
+      dexRowOverrides: { "usdt-tether": { volume_availability_json: "{}", dex_price_updated_at: freshAt - 120 } },
+    });
+    const res = await handleRiskCheck(db, new URL("https://api.pharos.watch/api/risk-check?ids=usdc-circle,usdt-tether"));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+    const body = RiskCheckResponseSchema.parse(await res.json());
+
+    // A malformed entry degrades the dependency; it does not blank every asset.
+    expect(body._meta.dependencies?.stablecoins).toMatchObject({ status: "degraded", reason: "filtered-malformed-entries" });
+    expect(body.assets["usdt-tether"].peg.price).toBe(1);
+    // The stablecoins producer published an explicit null price: never backfilled from peg analytics.
+    expect(body.assets["usdc-circle"].peg).toMatchObject({
+      price: null,
+      priceSource: "coingecko",
+      priceObservedAt: freshAt,
+      unavailableReason: "price-unavailable",
+    });
+    // A readable active depeg without a DDR row reads "no-ddr-row", never "no active depeg".
+    expect(body.assets["usdc-circle"].peg.activeDepeg).toMatchObject({ eventId: 801, direction: "below" });
+    expect(body.assets["usdc-circle"].ddr.unavailableReason).toBe("no-ddr-row");
+    expect(executedSqls.some((sql) => sql.includes("FROM depeg_resolver_prediction_lock_state ls"))).toBe(true);
+    // One unreadable row quarantines its own coin only.
+    expect(body.assets["usdt-tether"].peg).toMatchObject({ activeDepeg: null, unavailableReason: "active-depeg-row-unreadable" });
+    // DEX: an unreadable volume record and a price from another publication are withheld.
+    expect(body.assets["usdt-tether"].liquidity).toMatchObject({
+      totalTvlUsd: 5_200_000_000,
+      volume24hUsd: null,
+      dexPriceUsd: null,
+      unavailableReason: "volume-24h-availability-record-unreadable",
+    });
+    expect(body.assets["usdc-circle"].liquidity.dexPriceUsd).toBe(0.9999);
+  });
+
   it("canonicalizes sorted comma-separated cache keys for /api/risk-check and /api/resolve", () => {
     const rcA = new URL("https://api.pharos.watch/api/risk-check?ids=usdt-tether,usdc-circle&utm=foo");
     const rcB = new URL("https://api.pharos.watch/api/risk-check?ids=usdc-circle,usdt-tether");
     expect(createEdgeCacheContext(new Request(rcA), rcA).cacheKey.url)
       .toBe(createEdgeCacheContext(new Request(rcB), rcB).cacheKey.url);
 
+    const rcDup = new URL("https://api.pharos.watch/api/risk-check?ids=usdc-circle,usdt-tether,usdc-circle");
+    expect(createEdgeCacheContext(new Request(rcDup), rcDup).cacheKey.url)
+      .toBe(createEdgeCacheContext(new Request(rcB), rcB).cacheKey.url);
+
+    // /api/resolve answers in input order, so a reordering keeps its own key.
     const resA = new URL("https://api.pharos.watch/api/resolve?contracts=b:0x2,a:0x1");
     const resB = new URL("https://api.pharos.watch/api/resolve?contracts=a:0x1,b:0x2&ignored=1");
     expect(createEdgeCacheContext(new Request(resA), resA).cacheKey.url)
-      .toBe(createEdgeCacheContext(new Request(resB), resB).cacheKey.url);
+      .not.toBe(createEdgeCacheContext(new Request(resB), resB).cacheKey.url);
   });
 });
 

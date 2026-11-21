@@ -106,7 +106,7 @@ function sameStringMap(left: Record<string, string>, right: Record<string, strin
   return JSON.stringify(normalize(left)) === JSON.stringify(normalize(right));
 }
 
-function cacheMatchesLatestManifest(snapshot: DdrResponse, manifest: DdrPublicationManifest | null): { ok: true } | { ok: false; reason: string } {
+export function cacheMatchesLatestManifest(snapshot: DdrResponse, manifest: DdrPublicationManifest | null): { ok: true } | { ok: false; reason: string } {
   if (!manifest) return { ok: true };
   if (snapshot._meta.snapshotToken !== manifest.snapshotToken) return { ok: false, reason: "cache-manifest-token-behind" };
   if (snapshot._meta.snapshotGeneration !== manifest.snapshotGeneration) {
@@ -430,11 +430,11 @@ async function applyLockDeferralOverlay(db: D1Database, response: DdrResponse): 
   });
 }
 
-async function decorateDdrResponse(db: D1Database, response: DdrResponse): Promise<DdrResponse> {
+export async function decorateDdrResponse(db: D1Database, response: DdrResponse): Promise<DdrResponse> {
   return applyLockDeferralOverlay(db, await applyErrataOverlay(db, response));
 }
 
-async function staleSnapshotResponse(db: D1Database, snapshot: DdrResponse): Promise<DdrResponse> {
+export async function staleSnapshotResponse(db: D1Database, snapshot: DdrResponse): Promise<DdrResponse> {
   const eventState = await loadApiEventState(
     db,
     snapshot.rows.map((row) => row.live.currentEventId ?? row.eventId),

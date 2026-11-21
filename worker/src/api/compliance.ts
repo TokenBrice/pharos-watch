@@ -30,7 +30,7 @@ export interface RawComplianceRecord {
   genius?: GeniusProfile;
 }
 
-const COMPLIANCE_REVIEW_BUDGET_SEC = 90 * DAY_SECONDS;
+export const COMPLIANCE_REVIEW_BUDGET_SEC = 90 * DAY_SECONDS;
 const VALID_REGIMES = new Set(["mica", "genius", "all"]);
 const VALID_MICA_STATUSES = new Set<string>([...MICA_STATUS_VALUES, "unreviewed"]);
 const VALID_GENIUS_STATUSES = new Set<string>([...GENIUS_AUTHORIZATION_STATUS_VALUES, "unreviewed"]);
@@ -64,6 +64,10 @@ export async function loadComplianceIndex(): Promise<{
         if (reviewedAtSec != null) reviewTimestampsSec.push(reviewedAtSec);
       }
       return { byId, reviewTimestampsSec };
+    }).catch((error: unknown) => {
+      // A failed import must not pin the rejection for the isolate's lifetime.
+      complianceIndexPromise = null;
+      throw error;
     });
   }
   return complianceIndexPromise;
@@ -78,6 +82,11 @@ export function resolveComplianceUpdatedAtSec(reviewTimestampsSec: readonly numb
   return parseIsoDateSec(GENIUS_REGIME_STATE.reviewedAt) ?? nowSec;
 }
 
+/** GENIUS effectiveness is the curated release phase (one authority with the compliance page), never wall-clock. */
+export function resolveGeniusRegimeEffective(): boolean {
+  return isGeniusRegimeEffective(GENIUS_REGIME_STATE);
+}
+
 function buildRegimesEnvelope() {
   return {
     genius: {
@@ -86,7 +95,7 @@ function buildRegimesEnvelope() {
       statutoryFallbackEffectiveDate: GENIUS_REGIME_STATE.statutoryFallbackEffectiveDate,
       effectiveDate: GENIUS_REGIME_STATE.effectiveDate,
       rulemakingPhase: GENIUS_REGIME_STATE.rulemakingPhase,
-      isEffective: isGeniusRegimeEffective(GENIUS_REGIME_STATE),
+      isEffective: resolveGeniusRegimeEffective(),
       sourceLabel: GENIUS_REGIME_STATE.sourceLabel,
       sourceUrl: GENIUS_REGIME_STATE.sourceUrl,
       reviewedAt: GENIUS_REGIME_STATE.reviewedAt,

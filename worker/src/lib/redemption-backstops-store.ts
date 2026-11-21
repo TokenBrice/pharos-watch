@@ -513,7 +513,7 @@ export async function loadRedemptionBackstopLiveSignalRows(
   }));
 }
 
-async function selectAdmittedRedemptionBackstopRun(
+export async function selectAdmittedRedemptionBackstopRun(
   db: D1Database,
   retainMap: boolean | ReadonlySet<string>,
 ): Promise<{ run: RedemptionBackstopRunRow; map: RedemptionBackstopMap }> {
@@ -615,7 +615,7 @@ async function loadRedemptionBackstopCoinSnapshot(
   };
 }
 
-function redemptionBackstopPhaseValidUntil(coins: RedemptionBackstopMap, now: number): number {
+export function redemptionBackstopPhaseValidUntil(coins: RedemptionBackstopMap, now: number): number {
   const rows = Object.values(coins).filter((entry) => mentoFpmmIds.has(entry.stablecoinId));
   if (rows.length === 0) return Infinity;
   const nextHour = nextMentoHour(now);

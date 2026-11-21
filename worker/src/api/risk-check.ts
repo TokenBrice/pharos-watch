@@ -1,27 +1,33 @@
-import type { ApiDependencyMeta, ApiMetaEnvelope } from "@pharos/contracts/api-meta";
+import {
+  SAFETY_SCORE_PUBLICATION_AGE_REASON,
+  type ApiDependencyMeta,
+  type ApiMetaEnvelope,
+} from "@pharos/contracts/api-meta";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { RISK_CHECK_MAX_ASSETS } from "@shared/lib/api-endpoints/queries";
 import { API_FRESHNESS_MAX_AGE_SEC, STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { isBlacklistStablecoin } from "@shared/lib/blacklist";
-import { GENIUS_REGIME_STATE, isGeniusRegimeEffective } from "@shared/lib/compliance-regime-state";
 import { parseContractTuple } from "@shared/lib/deployment-resolver";
-import { applyDurationStaleness } from "@shared/lib/depeg-resolver/public-contract";
+import { applyDurationStaleness, validateDdrPublicCacheContract } from "@shared/lib/depeg-resolver/public-contract";
+import { parseDexVolumeAvailabilityRecord, readStoredDexVolumeWindow } from "@shared/lib/dex-volume-availability";
 import {
   WORKER_TRACKED_META_BY_ID,
   type WorkerRuntimeStablecoinMeta,
 } from "@shared/lib/stablecoins/worker-runtime-registry";
-import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { DdrResponse, DdrV2ResponseRow } from "@shared/types/depeg-resolver";
-import { PegSummaryCoinSchema, type PegSummaryCoin } from "@shared/types/peg";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type {
   RiskCheckAsset,
   RiskCheckResponse,
   RiskCheckUnresolvedInput,
 } from "@shared/types/risk-check";
-import { addFreshnessHeaders, buildFreshnessMeta } from "../lib/api-freshness";
-import { assessFreshnessTimestamp } from "../lib/api-freshness-age";
+import {
+  addFreshnessHeaders,
+  buildCronFreshnessMeta,
+  buildFreshnessMeta,
+  getLatestSuccessfulCronTimestampResult,
+} from "../lib/api-freshness";
 import { jsonResponse } from "../lib/api-response";
+import { BLACKLIST_TRACKED_STABLECOIN_IDS } from "../lib/blacklist-contracts";
 import { buildInClause } from "../lib/db";
 import {
   decodeActiveIncidentProjections,
@@ -30,16 +36,16 @@ import {
   rowToPublicDepegEvent,
 } from "../lib/depeg-event-projection";
 import type { DepegRow } from "../lib/depeg-helpers";
-import { loadPredictionErrata } from "../lib/depeg-resolver-errata-store";
-import { loadLatestPublicationManifest, type DdrPublicationManifest } from "../lib/depeg-resolver-publication-store";
+import { loadLatestPublicationManifest } from "../lib/depeg-resolver-publication-store";
 import { parseDepegResolverSnapshotRow } from "../lib/depeg-resolver-snapshot-cache";
 import { DEWS_PUBLICATION_POINTER_CACHE_KEY, parseDewsPublishedGeneration } from "../lib/dews-publication-pointer";
 import { dexLiquidityPublishedRowFilter, normalizeDexLiquidityEvidence } from "../lib/dex-liquidity";
+import { admitDexPriceRow } from "../lib/dex-liquidity-response";
+import { decodePegAnalyticsCacheRow, PEG_ANALYTICS_CACHE_KEY } from "../lib/peg-analytics-cache-decode";
 import { mentoFpmmIds, nextMentoHour, projectMentoMarketPhase } from "../lib/redemption-backstop-capacity/mento-phase";
 import {
-  decodeRedemptionBackstopRow,
-  REDEMPTION_BACKSTOP_ROW_COLUMNS,
-  type RedemptionBackstopRow,
+  redemptionBackstopPhaseValidUntil,
+  selectAdmittedRedemptionBackstopRun,
 } from "../lib/redemption-backstops-store";
 import { loadActiveSafetyScoreIndex } from "../lib/safety-score-index";
 import {
@@ -47,17 +53,66 @@ import {
   SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
 } from "../lib/safety-score-v9/consumer-freshness";
 import { resolveMentoFxMarketReopen } from "../lib/stablecoin-publication-coverage";
-import { loadStablecoinsCache } from "../lib/stablecoins-cache";
-import { loadComplianceIndex, resolveComplianceUpdatedAtSec } from "./compliance";
+import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
+import {
+  COMPLIANCE_REVIEW_BUDGET_SEC,
+  loadComplianceIndex,
+  resolveComplianceUpdatedAtSec,
+  resolveGeniusRegimeEffective,
+} from "./compliance";
+import { cacheMatchesLatestManifest, decorateDdrResponse, staleSnapshotResponse } from "./depeg-resolver";
 import { resolveContractDeployment } from "./resolve";
 
-const COMPLIANCE_REVIEW_BUDGET_SEC = 90 * DAY_SECONDS;
+const DDR_SNAPSHOT_CACHE_KEY = "depeg-resolver:snapshot";
 const CACHE_KEYS_FOR_RISK_CHECK = [
   "stablecoins",
-  "peg-analytics",
-  "depeg-resolver:snapshot",
+  PEG_ANALYTICS_CACHE_KEY,
+  DDR_SNAPSHOT_CACHE_KEY,
   DEWS_PUBLICATION_POINTER_CACHE_KEY,
 ] as const;
+
+/**
+ * Each dependency is graded by its owning route's freshness policy: the same
+ * endpoint budget and policy identity that route hands to the shared helpers.
+ */
+interface DependencyPolicy {
+  maxAgeSec: number;
+  cacheKey: string;
+  freshBudgetSec?: number;
+  degradedBudgetSec?: number;
+}
+
+const STABLECOINS_POLICY: DependencyPolicy = { maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stablecoins, cacheKey: "stablecoins" };
+const PEG_SUMMARY_POLICY: DependencyPolicy = { maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.pegSummary, cacheKey: "peg-summary" };
+const DEPEG_RESOLVER_POLICY: DependencyPolicy = {
+  maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolver,
+  cacheKey: "depeg-resolver",
+};
+const DEX_LIQUIDITY_POLICY: DependencyPolicy = { maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.dexLiquidity, cacheKey: "dex-liquidity" };
+const REDEMPTION_BACKSTOPS_POLICY: DependencyPolicy = {
+  maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.redemptionBackstops,
+  cacheKey: "redemption-backstops",
+};
+const STRESS_SIGNALS_POLICY: DependencyPolicy = {
+  maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stressSignals,
+  cacheKey: "dews",
+  freshBudgetSec: API_FRESHNESS_MAX_AGE_SEC.stressSignals,
+  degradedBudgetSec: STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC,
+};
+const SAFETY_SCORE_POLICY: DependencyPolicy = {
+  maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.reportCards,
+  cacheKey: "report-cards",
+  freshBudgetSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
+  degradedBudgetSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC * 2,
+};
+const COMPLIANCE_POLICY: DependencyPolicy = {
+  maxAgeSec: COMPLIANCE_REVIEW_BUDGET_SEC,
+  cacheKey: "compliance",
+  freshBudgetSec: COMPLIANCE_REVIEW_BUDGET_SEC,
+  degradedBudgetSec: COMPLIANCE_REVIEW_BUDGET_SEC * 2,
+};
+/** `/api/depeg-events` dates active incidents by this producer's confirmed output. */
+const DEPEG_EVENTS_PRODUCER_JOB = "sync-stablecoins";
 
 interface RawCacheRow {
   key: string;
@@ -69,6 +124,7 @@ interface SlimDexLiquidityRow {
   stablecoin_id: string;
   total_tvl_usd: number;
   total_volume_24h_usd: number;
+  volume_availability_json: string | null;
   pool_count: number;
   liquidity_score: number | null;
   updated_at: number;
@@ -78,17 +134,10 @@ interface SlimDexLiquidityRow {
   balance_measured_tvl_usd: number | null;
   organic_measured_tvl_usd: number | null;
   publication_generation_id: string | null;
+  dex_price_stablecoin_id: string | null;
   dex_price_usd: number | null;
   dex_price_updated_at: number | null;
-}
-
-interface LatestRedemptionRunRow {
-  run_id: string;
-  completed_at: number | null;
-  expected_count: number;
-  written_count: number;
-  max_updated_at: number | null;
-  methodology_version: string;
+  dex_price_sources_json: string | null;
 }
 
 interface DewsRow {
@@ -98,56 +147,29 @@ interface DewsRow {
   computed_at: number;
 }
 
-interface PegAnalyticsParsed {
-  ok: true;
-  computedAtSec: number;
-  byId: Map<string, PegSummaryCoin>;
+interface ActiveDepegSummary {
+  eventId: number;
+  startedAt: number;
+  direction: "above" | "below";
+  peakDeviationBps: number;
 }
 
-type PegAnalyticsLoad =
-  | PegAnalyticsParsed
-  | { ok: false; reason: string };
+interface GradedDependency {
+  meta: ApiDependencyMeta;
+  /** Kept beside the public verdict: dependency metadata carries only the fresh budget. */
+  degradedBudgetSec: number | null;
+}
 
-function splitCsvParam(raw: string | null): string[] {
+/** Mirrors the edge-cache key for this route: trimmed, deduplicated, sorted. */
+function canonicalCsvParam(raw: string | null): string[] {
   if (!raw) return [];
-  return raw
-    .split(",")
-    .map((item) => item.trim())
-    .filter((item) => item.length > 0);
+  return [...new Set(raw.split(",").map((item) => item.trim()).filter((item) => item.length > 0))].sort();
 }
 
-function parsePegAnalyticsCacheRow(
-  row: { value: string; updatedAt: number } | null,
-  targetIds: ReadonlySet<string>,
-  nowSec: number,
-): PegAnalyticsLoad {
-  if (!row) return { ok: false, reason: "cache-missing" };
-  const clock = assessFreshnessTimestamp(nowSec, row.updatedAt);
-  if (clock.reason != null) return { ok: false, reason: clock.reason };
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(row.value);
-  } catch {
-    return { ok: false, reason: "json-parse-failed" };
-  }
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    return { ok: false, reason: "invalid-payload" };
-  }
-  const obj = parsed as Record<string, unknown>;
-  if (typeof obj.computedAtSec !== "number" || !Number.isFinite(obj.computedAtSec) || !Array.isArray(obj.pegData)) {
-    return { ok: false, reason: "invalid-payload" };
-  }
-  const byId = new Map<string, PegSummaryCoin>();
-  for (const item of obj.pegData) {
-    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
-    const rawId = (item as { id?: unknown }).id;
-    if (typeof rawId !== "string" || !targetIds.has(rawId)) continue;
-    const validated = PegSummaryCoinSchema.safeParse(item);
-    if (validated.success) {
-      byId.set(rawId, validated.data);
-    }
-  }
-  return { ok: true, computedAtSec: obj.computedAtSec, byId };
+function compareUnresolved(left: RiskCheckUnresolvedInput, right: RiskCheckUnresolvedInput): number {
+  if (left.input !== right.input) return left.input < right.input ? -1 : 1;
+  if (left.kind !== right.kind) return left.kind < right.kind ? -1 : 1;
+  return 0;
 }
 
 function classifyDewsAge(
@@ -164,61 +186,82 @@ function classifyDewsAge(
   return "stale";
 }
 
-function ddrCacheMatchesManifest(snapshot: DdrResponse, manifest: DdrPublicationManifest | null): boolean {
-  if (!manifest) return true;
-  if (snapshot._meta.snapshotToken !== manifest.snapshotToken) return false;
-  if (snapshot._meta.snapshotGeneration !== manifest.snapshotGeneration) return false;
-  if (snapshot._meta.basePayloadHash !== manifest.basePayloadHash) return false;
-  return true;
-}
-
-function buildDependencyMeta(
-  updatedAt: number | null,
-  maxAgeSec: number,
-  cacheKey: string,
+function gradeDependency(
+  policy: DependencyPolicy,
+  updatedAt: number,
   nowSec: number,
   options: {
-    freshBudgetSec?: number;
-    degradedBudgetSec?: number;
     generationId?: string | null;
-    unavailableReason?: string | null;
-    forceStatus?: ApiDependencyMeta["status"];
-    reason?: string | null;
+    /** A producer-declared degradation that age alone would grade fresh. */
+    degradedReason?: string | null;
+    forced?: { status: ApiDependencyMeta["status"]; reason: string | null };
   } = {},
-): ApiDependencyMeta {
-  const freshBudgetSec = options.freshBudgetSec ?? maxAgeSec;
-  if (options.unavailableReason || updatedAt == null) {
-    return {
-      updatedAt: updatedAt ?? null,
-      ageSeconds: updatedAt != null ? Math.max(0, nowSec - updatedAt) : null,
-      freshBudgetSec,
-      generationId: options.generationId ?? null,
-      status: "unavailable",
-      reason: options.unavailableReason ?? "unavailable",
-    };
-  }
-  const freshness = buildFreshnessMeta(updatedAt, maxAgeSec, cacheKey, {
+): GradedDependency {
+  const freshness = buildFreshnessMeta(updatedAt, policy.maxAgeSec, policy.cacheKey, {
     assessedAt: nowSec,
-    freshBudgetSec,
-    degradedBudgetSec: options.degradedBudgetSec ?? freshBudgetSec * 2,
+    freshBudgetSec: policy.freshBudgetSec,
+    degradedBudgetSec: policy.degradedBudgetSec,
   });
+  const producerDegraded = freshness.status === "fresh" && options.degradedReason != null;
+  const status = options.forced?.status ?? (producerDegraded ? "degraded" : freshness.status);
+  const reason = options.forced
+    ? options.forced.reason
+    : producerDegraded
+      ? options.degradedReason ?? null
+      : freshness.status === "fresh" ? null : `${policy.cacheKey}-${freshness.status}`;
   return {
-    updatedAt: freshness.updatedAt,
-    ageSeconds: freshness.ageSeconds,
-    freshBudgetSec: freshness.freshBudgetSec,
-    generationId: options.generationId ?? null,
-    status: options.forceStatus ?? freshness.status,
-    reason: options.reason ?? (freshness.status === "fresh" ? null : `${cacheKey}-${freshness.status}`),
+    meta: {
+      updatedAt: freshness.updatedAt,
+      ageSeconds: freshness.ageSeconds,
+      freshBudgetSec: freshness.freshBudgetSec,
+      generationId: options.generationId ?? null,
+      status,
+      reason,
+    },
+    degradedBudgetSec: freshness.degradedBudgetSec,
   };
 }
 
-function selectActiveDepegForCoin(
+function unavailableDependency(
+  policy: DependencyPolicy,
+  reason: string,
+  nowSec: number,
+  generationId: string | null = null,
+): GradedDependency {
+  // The budget is the owning policy's, independent of any producer clock.
+  const budget = buildFreshnessMeta(nowSec, policy.maxAgeSec, policy.cacheKey, {
+    assessedAt: nowSec,
+    freshBudgetSec: policy.freshBudgetSec,
+    degradedBudgetSec: policy.degradedBudgetSec,
+  });
+  return {
+    meta: {
+      updatedAt: null,
+      ageSeconds: null,
+      freshBudgetSec: budget.freshBudgetSec,
+      generationId,
+      status: "unavailable",
+      reason,
+    },
+    degradedBudgetSec: budget.degradedBudgetSec,
+  };
+}
+
+/** Per-row quarantine: an unreadable row withholds its coin's verdict, never the request. */
+function selectActiveDepegs(
   rows: readonly DepegRow[],
   projections: Parameters<typeof rowToPublicDepegEvent>[1],
-): Map<string, { eventId: number; startedAt: number; direction: "above" | "below"; peakDeviationBps: number }> {
-  const map = new Map<string, { eventId: number; startedAt: number; direction: "above" | "below"; peakDeviationBps: number }>();
+): { byId: Map<string, ActiveDepegSummary>; unreadableIds: Set<string> } {
+  const byId = new Map<string, ActiveDepegSummary>();
+  const unreadableIds = new Set<string>();
   for (const row of rows) {
-    const projected = rowToPublicDepegEvent(row, projections);
+    let projected: ReturnType<typeof rowToPublicDepegEvent>;
+    try {
+      projected = rowToPublicDepegEvent(row, projections);
+    } catch {
+      unreadableIds.add(row.stablecoin_id);
+      continue;
+    }
     if (projected.provenance?.pegScoreEligible === false) continue;
     const candidate = {
       eventId: projected.id,
@@ -226,17 +269,44 @@ function selectActiveDepegForCoin(
       direction: projected.direction,
       peakDeviationBps: projected.peakDeviationBps,
     };
-    const existing = map.get(projected.stablecoinId);
+    const existing = byId.get(projected.stablecoinId);
     if (!existing || Math.abs(candidate.peakDeviationBps) > Math.abs(existing.peakDeviationBps)) {
-      map.set(projected.stablecoinId, candidate);
+      byId.set(projected.stablecoinId, candidate);
     }
   }
-  return map;
+  for (const id of unreadableIds) byId.delete(id);
+  return { byId, unreadableIds };
+}
+
+function unavailableDdrBlock(reason: string, stale: boolean | null = null): RiskCheckAsset["ddr"] {
+  return {
+    outlook: null,
+    recoveryProbability24h: null,
+    recoveryProbability7d: null,
+    medianHours: null,
+    stale,
+    unavailableReason: reason,
+  };
+}
+
+function unavailableLiquidityBlock(reason: string, updatedAt: number | null = null): RiskCheckAsset["liquidity"] {
+  return {
+    liquidityScore: null,
+    totalTvlUsd: null,
+    volume24hUsd: null,
+    poolCount: null,
+    dexPriceUsd: null,
+    updatedAt,
+    warning: null,
+    unavailableReason: reason,
+  };
 }
 
 export async function handleRiskCheck(db: D1Database, url: URL): Promise<Response> {
-  const idInputs = splitCsvParam(url.searchParams.get("ids"));
-  const contractInputs = splitCsvParam(url.searchParams.get("contracts"));
+  // Canonicalized exactly like the edge-cache key, so every reordering or
+  // duplication of one request yields the same body.
+  const idInputs = canonicalCsvParam(url.searchParams.get("ids"));
+  const contractInputs = canonicalCsvParam(url.searchParams.get("contracts"));
   const requestedCount = idInputs.length + contractInputs.length;
 
   if (requestedCount === 0) {
@@ -256,7 +326,6 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
     );
   }
 
-  const resolvedIds: string[] = [];
   const resolvedIdSet = new Set<string>();
   const unresolved: RiskCheckUnresolvedInput[] = [];
 
@@ -266,10 +335,7 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
       unresolved.push({ input: rawId, kind: "id", reason: "unknown-stablecoin" });
       continue;
     }
-    if (!resolvedIdSet.has(meta.id)) {
-      resolvedIdSet.add(meta.id);
-      resolvedIds.push(meta.id);
-    }
+    resolvedIdSet.add(meta.id);
   }
 
   for (const rawContract of contractInputs) {
@@ -283,12 +349,10 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
       unresolved.push({ input: rawContract, kind: "contract", reason: resolved.reason });
       continue;
     }
-    const canonicalId = resolved.entry.coin.id;
-    if (!resolvedIdSet.has(canonicalId)) {
-      resolvedIdSet.add(canonicalId);
-      resolvedIds.push(canonicalId);
-    }
+    resolvedIdSet.add(resolved.entry.coin.id);
   }
+  unresolved.sort(compareUnresolved);
+  const resolvedIds = [...resolvedIdSet].sort();
 
   if (resolvedIds.length === 0) {
     return jsonResponse(
@@ -301,7 +365,8 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
     );
   }
 
-  const nowSec = Math.floor(Date.now() / 1000);
+  const nowMs = Date.now();
+  const nowSec = Math.floor(nowMs / 1000);
   const idInClause = buildInClause(resolvedIds);
   const cacheInClause = buildInClause([...CACHE_KEYS_FOR_RISK_CHECK]);
 
@@ -310,9 +375,10 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
     cacheQueryResult,
     safetyIndex,
     activeDepegsRead,
-    activeProjectionRead,
+    activeProjectionRaw,
+    activeDepegsClock,
     dexRead,
-    latestRedemptionRunRead,
+    redemptionAdmission,
     complianceIndex,
   ] = await Promise.all([
     db.prepare(`SELECT key, value, updated_at FROM cache WHERE key IN (${cacheInClause.sql})`)
@@ -333,13 +399,15 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
       .catch(() => ({ ok: false as const, rows: [] as DepegRow[] })),
     prepareActiveIncidentProjections(db, resolvedIds.length === 1 ? resolvedIds[0] : null)
       .all()
-      .then((res) => decodeActiveIncidentProjections(res))
-      .catch(() => ({ available: false as const, reason: "incident-projection-read-failed" as const })),
+      .then((res) => ({ ok: true as const, res }))
+      .catch(() => ({ ok: false as const })),
+    getLatestSuccessfulCronTimestampResult(db, DEPEG_EVENTS_PRODUCER_JOB),
     db.prepare(
-      `SELECT d.stablecoin_id, d.total_tvl_usd, d.total_volume_24h_usd, d.pool_count,
+      `SELECT d.stablecoin_id, d.total_tvl_usd, d.total_volume_24h_usd, d.volume_availability_json, d.pool_count,
               d.liquidity_score, d.updated_at, d.coverage_class, d.coverage_confidence,
               d.effective_tvl_usd, d.balance_measured_tvl_usd, d.organic_measured_tvl_usd,
-              d.publication_generation_id, p.dex_price_usd, p.updated_at AS dex_price_updated_at
+              d.publication_generation_id, p.stablecoin_id AS dex_price_stablecoin_id, p.dex_price_usd,
+              p.updated_at AS dex_price_updated_at, p.price_sources_json AS dex_price_sources_json
          FROM dex_liquidity d
          LEFT JOIN dex_prices p ON p.stablecoin_id = d.stablecoin_id
         WHERE ${dexLiquidityPublishedRowFilter("d")}
@@ -349,16 +417,11 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
       .all<SlimDexLiquidityRow>()
       .then((res) => ({ ok: true as const, rows: res.results ?? [] }))
       .catch(() => ({ ok: false as const, rows: [] as SlimDexLiquidityRow[] })),
-    db.prepare(
-      `SELECT run_id, completed_at, expected_count, written_count, max_updated_at, methodology_version
-         FROM redemption_backstop_runs
-        WHERE status = 'completed' AND written_count = expected_count
-        ORDER BY completed_at DESC
-        LIMIT 1`,
-    )
-      .first<LatestRedemptionRunRow>()
-      .then((row) => ({ ok: true as const, row }))
-      .catch(() => ({ ok: false as const, row: null })),
+    // The store's admission authority: latest complete run whose row census
+    // matches, else the previous run. Only requested entries are retained.
+    selectAdmittedRedemptionBackstopRun(db, resolvedIdSet)
+      .then((admitted) => ({ ok: true as const, ...admitted }))
+      .catch(() => ({ ok: false as const })),
     loadComplianceIndex(),
   ]);
 
@@ -374,32 +437,56 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
         mode: "lenient",
         preloadedCache: cacheByKey.get("stablecoins") ?? null,
       })
-    : { kind: "error" as const, reason: "cache-read-failed", updatedAt: null };
+    : { kind: "error" as const, reason: "cache-read-failed" as const, updatedAt: null };
+  const stablecoinsUsable = hasUsableStablecoinsPayload(stablecoinsCache);
 
   const pegAnalytics = cacheQueryResult.ok
-    ? parsePegAnalyticsCacheRow(cacheByKey.get("peg-analytics") ?? null, resolvedIdSet, nowSec)
-    : { ok: false as const, reason: "cache-read-failed" };
+    ? decodePegAnalyticsCacheRow(cacheByKey.get(PEG_ANALYTICS_CACHE_KEY) ?? null, nowMs)
+    : { kind: "miss" as const, reason: "cache-read-failed" as const };
 
   const ddrCacheLoad = cacheQueryResult.ok
-    ? parseDepegResolverSnapshotRow(cacheByKey.get("depeg-resolver:snapshot") ?? null)
+    ? parseDepegResolverSnapshotRow(cacheByKey.get(DDR_SNAPSHOT_CACHE_KEY) ?? null)
     : { kind: "error" as const, reason: "cache-read-failed", updatedAt: null };
 
   const dewsPointer = cacheQueryResult.ok
     ? parseDewsPublishedGeneration(cacheByKey.get(DEWS_PUBLICATION_POINTER_CACHE_KEY) ?? null, nowSec)
     : { status: "read-failed" as const, error: "cache-read-failed" };
 
-  const ddrSnapshot = ddrCacheLoad.kind === "ok"
-    ? applyDurationStaleness(ddrCacheLoad.payload, nowSec)
-    : null;
-  const matchingDdrRows = ddrSnapshot
-    ? ddrSnapshot.rows.filter((row) => resolvedIdSet.has(row.stablecoinId))
-    : [];
-  const ddrPredictionIds = matchingDdrRows
-    .map((row) => row.prediction.publicPredictionId)
-    .filter((id): id is number => id != null);
+  // Decode only the projections of the requested coins' open events, so one
+  // malformed projection for an unrelated coin cannot hide every peg section (R8).
+  const requestedEventIds = new Set<unknown>(activeDepegsRead.rows.map((row) => row.id));
+  const activeProjectionRead = activeProjectionRaw.ok
+    ? decodeActiveIncidentProjections({
+        ...activeProjectionRaw.res,
+        results: (activeProjectionRaw.res.results ?? []).filter((row) =>
+          requestedEventIds.has((row as { current_event_id?: unknown }).current_event_id)),
+      })
+    : { available: false as const, reason: "incident-projection-read-failed" as const };
+  const activeDepegsAvailable = activeDepegsRead.ok && activeProjectionRead.available;
+  const activeDepegsUnavailableReason = activeDepegsAvailable
+    ? null
+    : activeProjectionRead.available ? "active-depegs-read-failed" : activeProjectionRead.reason;
+  const activeDepegs = activeDepegsAvailable
+    ? selectActiveDepegs(activeDepegsRead.rows, activeProjectionRead.projections)
+    : { byId: new Map<string, ActiveDepegSummary>(), unreadableIds: new Set<string>() };
+  const coinsInIncident = new Set(activeDepegsRead.rows.map((row) => row.stablecoin_id));
 
-  // Round 2: parallel conditioned reads (DEWS rows, Redemption rows, conditional DDR overlay)
-  const [dewsRowsRead, redemptionRowsRead, ddrOverlayRead] = await Promise.all([
+  // DDR admission, as /api/depeg-resolver applies it: public cache contract,
+  // then (only when a requested coin is in an incident) the manifest match,
+  // expired-snapshot marking and the errata / lock-deferral overlays.
+  const ddrContract = ddrCacheLoad.kind === "ok" ? validateDdrPublicCacheContract(ddrCacheLoad.payload) : null;
+  const ddrSnapshot = ddrCacheLoad.kind === "ok" && ddrContract?.ok ? ddrCacheLoad.payload : null;
+  const ddrContractReason = ddrContract && !ddrContract.ok ? ddrContract.reason : null;
+  const ddrExpired = ddrSnapshot != null && nowSec > ddrSnapshot._meta.expiresAt;
+  const requestedDdrSnapshot: DdrResponse | null = ddrSnapshot
+    ? { ...ddrSnapshot, rows: ddrSnapshot.rows.filter((row) => resolvedIdSet.has(row.stablecoinId)) }
+    : null;
+  // Zero DDR overlay D1 reads in calm markets: no requested coin has a DDR row or an open incident.
+  const ddrOverlayNeeded = requestedDdrSnapshot != null
+    && (requestedDdrSnapshot.rows.length > 0 || coinsInIncident.size > 0);
+
+  // Round 2: parallel conditioned reads (DEWS rows, conditional DDR overlay)
+  const [dewsRowsRead, ddrOverlay] = await Promise.all([
     dewsPointer.status === "ok"
       ? (dewsPointer.expectedRowCount != null && dewsPointer.stablecoinIdsDigest != null
           ? db.prepare(
@@ -421,44 +508,31 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
           .catch(() => ({ ok: false as const, rows: [] as DewsRow[] }))
       : Promise.resolve({ ok: true as const, rows: [] as DewsRow[] }),
 
-    latestRedemptionRunRead.ok && latestRedemptionRunRead.row
-      ? db.prepare(
-          `SELECT ${REDEMPTION_BACKSTOP_ROW_COLUMNS}
-             FROM redemption_backstop_run_rows
-            WHERE snapshot_run_id = ? AND stablecoin_id IN (${idInClause.sql})`,
-        )
-          .bind(latestRedemptionRunRead.row.run_id, ...idInClause.binds)
-          .all<RedemptionBackstopRow>()
-          .then((res) => ({ ok: true as const, rows: res.results ?? [] }))
-          .catch(() => ({ ok: false as const, rows: [] as RedemptionBackstopRow[] }))
-      : Promise.resolve({ ok: true as const, rows: [] as RedemptionBackstopRow[] }),
-
-    // Zero DDR overlay D1 reads in calm markets when no requested coin has an active DDR row.
-    matchingDdrRows.length > 0 && ddrSnapshot
+    ddrOverlayNeeded && ddrSnapshot && requestedDdrSnapshot
       ? Promise.all([
           loadLatestPublicationManifest(db),
-          ddrPredictionIds.length > 0 ? loadPredictionErrata(db, { publicPredictionIds: ddrPredictionIds }) : Promise.resolve([]),
+          (ddrExpired
+            ? staleSnapshotResponse(db, requestedDdrSnapshot)
+            : Promise.resolve(applyDurationStaleness(requestedDdrSnapshot, nowSec)))
+            .then((base) => decorateDdrResponse(db, base)),
         ])
-          .then(([manifest, errata]) => ({
-            ok: true as const,
-            manifestMatches: ddrCacheMatchesManifest(ddrSnapshot, manifest),
-            invalidatedPredictionIds: new Set(errata.map((entry) => entry.publicPredictionId)),
-          }))
-          .catch(() => ({
-            ok: false as const,
-            manifestMatches: false,
-            invalidatedPredictionIds: new Set<number>(),
-          }))
+          .then(([manifest, decorated]) => {
+            const manifestContract = cacheMatchesLatestManifest(ddrSnapshot, manifest);
+            return manifestContract.ok
+              ? { ok: true as const, payload: decorated }
+              : { ok: false as const, reason: manifestContract.reason };
+          })
+          .catch(() => ({ ok: false as const, reason: "ddr-overlay-read-failed" }))
       : Promise.resolve(null),
   ]);
 
   // Index decoded Round 1 + Round 2 maps
-  type CachedStablecoinAsset = Extract<
-    Awaited<ReturnType<typeof loadStablecoinsCache>>,
-    { kind: "ok" }
-  >["payload"]["peggedAssets"][number];
+  type CachedStablecoinAsset = NonNullable<Extract<
+    typeof stablecoinsCache,
+    { kind: "ok" | "degraded" }
+  >["payload"]>["peggedAssets"][number];
   const stablecoinById = new Map<string, CachedStablecoinAsset>();
-  if (stablecoinsCache.kind === "ok") {
+  if (stablecoinsUsable) {
     for (const asset of stablecoinsCache.payload.peggedAssets) {
       if (resolvedIdSet.has(asset.id)) {
         stablecoinById.set(asset.id, asset);
@@ -483,11 +557,6 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
         ? "current"
         : "stale";
 
-  const activeDepegsAvailable = activeDepegsRead.ok && activeProjectionRead.available;
-  const activeDepegById = activeDepegsAvailable
-    ? selectActiveDepegForCoin(activeDepegsRead.rows, activeProjectionRead.projections)
-    : new Map<string, { eventId: number; startedAt: number; direction: "above" | "below"; peakDeviationBps: number }>();
-
   const dexRowById = new Map<string, SlimDexLiquidityRow>();
   let dexCohortUpdatedAt: number | null = null;
   let dexGenerationId: string | null = null;
@@ -496,10 +565,9 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
       if (row.updated_at > (dexCohortUpdatedAt ?? 0)) {
         dexCohortUpdatedAt = row.updated_at;
       }
-      if (row.publication_generation_id && !dexGenerationId) {
+      if (row.stablecoin_id === "__global__") {
         dexGenerationId = row.publication_generation_id;
-      }
-      if (row.stablecoin_id !== "__global__") {
+      } else {
         dexRowById.set(row.stablecoin_id, row);
       }
     }
@@ -512,37 +580,33 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
     }
   }
 
-  const redemptionEntryById = new Map<string, RedemptionBackstopEntry>();
-  const quarantinedRedemptionIds = new Set<string>();
-  const latestRun = latestRedemptionRunRead.ok ? latestRedemptionRunRead.row : null;
-  if (latestRun && redemptionRowsRead.ok) {
-    for (const row of redemptionRowsRead.rows) {
-      const reasons: string[] = [];
-      const decoded = decodeRedemptionBackstopRow(row, latestRun.run_id, reasons);
-      if (!decoded) {
-        quarantinedRedemptionIds.add(row.stablecoin_id);
-        continue;
-      }
-      redemptionEntryById.set(row.stablecoin_id, projectMentoMarketPhase(decoded, nowSec));
+  const redemptionEntryById: Record<string, RedemptionBackstopEntry> = {};
+  if (redemptionAdmission.ok) {
+    for (const [id, entry] of Object.entries(redemptionAdmission.map)) {
+      redemptionEntryById[id] = projectMentoMarketPhase(entry, nowSec);
     }
   }
 
+  const ddrView = ddrOverlay?.ok ? ddrOverlay.payload : requestedDdrSnapshot;
+  const ddrUnavailableReason = ddrCacheLoad.kind !== "ok"
+    ? `ddr-${ddrCacheLoad.reason}`
+    : ddrContractReason
+      ? `ddr-${ddrContractReason}`
+      : ddrOverlay && !ddrOverlay.ok ? ddrOverlay.reason : null;
+  const ddrOverlayFailures = new Set(
+    ddrView?._meta.degradedReason === "secondary-overlay-unavailable"
+      ? (ddrView._meta.degradedReasonDetail ?? "").split(",")
+      : [],
+  );
   const ddrRowById = new Map<string, DdrV2ResponseRow>();
-  for (const row of matchingDdrRows) {
-    if (!ddrRowById.has(row.stablecoinId)) {
+  for (const row of ddrView?.rows ?? []) {
+    if (resolvedIdSet.has(row.stablecoinId) && !ddrRowById.has(row.stablecoinId)) {
       ddrRowById.set(row.stablecoinId, row);
     }
   }
-  const ddrOverlayUnavailableReason = ddrOverlayRead
-    ? !ddrOverlayRead.ok
-      ? "ddr-overlay-read-failed"
-      : !ddrOverlayRead.manifestMatches
-        ? "cache-manifest-mismatch"
-        : null
-    : null;
 
   const complianceUpdatedAt = resolveComplianceUpdatedAtSec(complianceIndex.reviewTimestampsSec, nowSec);
-  const geniusEffective = isGeniusRegimeEffective(GENIUS_REGIME_STATE);
+  const geniusEffective = resolveGeniusRegimeEffective();
 
   // Assemble per-asset blocks
   const assets: Record<string, RiskCheckAsset> = {};
@@ -551,17 +615,24 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
   for (const id of resolvedIds) {
     const meta = WORKER_TRACKED_META_BY_ID.get(id) as WorkerRuntimeStablecoinMeta;
     const scAsset = stablecoinById.get(id);
-    const pegCoin = pegAnalytics.ok ? pegAnalytics.byId.get(id) : undefined;
+    const pegCoin = pegAnalytics.kind === "ok" ? pegAnalytics.pegDataById.get(id) : undefined;
     const safetyCard = safetyCardById.get(id);
     const rawPillars = safetySnapshot?.scorecardPillarsById?.[id];
     const dewsRow = dewsRowById.get(id);
-    const activeDepeg = activeDepegById.get(id) ?? null;
+    const activeDepeg = activeDepegs.byId.get(id) ?? null;
     const dexRow = dexRowById.get(id);
-    const redemptionEntry = redemptionEntryById.get(id);
+    const redemptionEntry = redemptionEntryById[id];
     const ddrRow = ddrRowById.get(id);
     const compRecord = complianceIndex.byId.get(id);
 
     // Safety slice
+    const safetyPillars = safetyCard?.ratingStatus === "rated" && rawPillars
+      ? {
+          backing: rawPillars.backing?.score ?? null,
+          exit: rawPillars.exit?.score ?? null,
+          control: rawPillars.control?.score ?? null,
+        }
+      : null;
     let safetyUnavailableReason: string | null = null;
     if (safetyIndex.kind === "error") {
       safetyUnavailableReason = safetyIndex.reason;
@@ -570,20 +641,19 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
     } else if (safetyPublicationStatus === "held") {
       safetyUnavailableReason = "v9-publication-held";
     } else if (safetyPublicationStatus === "stale") {
-      safetyUnavailableReason = "safety-score-publication-age";
+      safetyUnavailableReason = SAFETY_SCORE_PUBLICATION_AGE_REASON;
     } else if (safetyCard.ratingStatus === "pipeline-gap") {
       safetyUnavailableReason = "pipeline-gap";
     } else if (safetyCard.ratingStatus === "not-rated") {
       safetyUnavailableReason = "not-rated";
+    } else if (
+      !safetyPillars
+      || safetyPillars.backing == null
+      || safetyPillars.exit == null
+      || safetyPillars.control == null
+    ) {
+      safetyUnavailableReason = "scorecard-pillars-unavailable";
     }
-
-    const safetyPillars = safetyCard?.ratingStatus === "rated" && rawPillars
-      ? {
-          backing: rawPillars.backing?.score ?? null,
-          exit: rawPillars.exit?.score ?? null,
-          control: rawPillars.control?.score ?? null,
-        }
-      : null;
 
     // DEWS slice
     let dewsUnavailableReason: string | null = null;
@@ -597,160 +667,139 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
       dewsUnavailableReason = "no-dews-row";
     }
 
-    // Peg slice
-    const price = scAsset?.price ?? pegCoin?.price ?? null;
-    const priceSource = scAsset?.priceSource ?? pegCoin?.priceSource ?? null;
-    const priceConfidence = scAsset?.priceConfidence ?? pegCoin?.priceConfidence ?? null;
-    const priceObservedAt = scAsset?.priceObservedAt ?? pegCoin?.priceObservedAt ?? null;
-    const currentDeviationBps = scAsset?.currentPeg?.currentDeviationBps ?? pegCoin?.currentDeviationBps ?? null;
+    // Peg slice: every price field comes from one producer per asset (the live
+    // stablecoins publication, else the peg-analytics row), never a field mix.
+    const priceFields = scAsset
+      ? {
+          price: scAsset.price ?? null,
+          priceSource: scAsset.priceSource ?? null,
+          priceConfidence: scAsset.priceConfidence ?? null,
+          priceObservedAt: scAsset.priceObservedAt ?? null,
+          currentDeviationBps: scAsset.currentPeg?.currentDeviationBps ?? null,
+          pegReferenceUnavailable: scAsset.currentPeg?.pegReferenceUnavailable === true,
+        }
+      : pegCoin
+        ? {
+            price: pegCoin.price ?? null,
+            priceSource: pegCoin.priceSource ?? null,
+            priceConfidence: pegCoin.priceConfidence ?? null,
+            priceObservedAt: pegCoin.priceObservedAt ?? null,
+            currentDeviationBps: pegCoin.currentDeviationBps,
+            pegReferenceUnavailable: pegCoin.pegReferenceUnavailable === true,
+          }
+        : null;
     const pegScore = pegCoin?.pegScore ?? null;
     const pegPct = pegCoin?.pegPct ?? null;
     let pegUnavailableReason: string | null = null;
-    if (stablecoinsCache.kind !== "ok" && !pegAnalytics.ok) {
-      pegUnavailableReason = "peg-and-price-caches-unavailable";
-    } else if (!pegAnalytics.ok) {
-      pegUnavailableReason = `peg-analytics-${pegAnalytics.reason}`;
-    } else if (!activeDepegsAvailable) {
-      pegUnavailableReason = activeProjectionRead.available ? "active-depegs-read-failed" : activeProjectionRead.reason;
-    } else if (price == null) {
+    if (activeDepegsUnavailableReason) {
+      pegUnavailableReason = activeDepegsUnavailableReason;
+    } else if (activeDepegs.unreadableIds.has(id)) {
+      pegUnavailableReason = "active-depeg-row-unreadable";
+    } else if (!priceFields) {
+      pegUnavailableReason = stablecoinsUsable ? "price-row-not-published" : `stablecoins-${stablecoinsCache.reason}`;
+    } else if (priceFields.price == null) {
       pegUnavailableReason = "price-unavailable";
+    } else if (priceFields.currentDeviationBps == null) {
+      pegUnavailableReason = priceFields.pegReferenceUnavailable ? "peg-reference-unavailable" : "deviation-unavailable";
+    } else if (pegAnalytics.kind !== "ok") {
+      pegUnavailableReason = `peg-analytics-${pegAnalytics.reason}`;
+    } else if (!pegCoin) {
+      pegUnavailableReason = "peg-analytics-row-not-published";
+    } else if (pegScore == null || pegPct == null) {
+      pegUnavailableReason = "peg-score-unavailable";
     }
 
     // DDR slice
     let ddrBlock: RiskCheckAsset["ddr"];
-    if (ddrCacheLoad.kind !== "ok") {
-      ddrBlock = {
-        outlook: null,
-        recoveryProbability24h: null,
-        recoveryProbability7d: null,
-        medianHours: null,
-        stale: null,
-        unavailableReason: `ddr-${ddrCacheLoad.reason}`,
-      };
-    } else if (ddrOverlayUnavailableReason) {
-      ddrBlock = {
-        outlook: null,
-        recoveryProbability24h: null,
-        recoveryProbability7d: null,
-        medianHours: null,
-        stale: null,
-        unavailableReason: ddrOverlayUnavailableReason,
-      };
+    if (ddrUnavailableReason) {
+      ddrBlock = unavailableDdrBlock(ddrUnavailableReason);
     } else if (!ddrRow) {
-      ddrBlock = {
-        outlook: null,
-        recoveryProbability24h: null,
-        recoveryProbability7d: null,
-        medianHours: null,
-        stale: null,
-        unavailableReason: "no-active-depeg",
-      };
+      ddrBlock = unavailableDdrBlock(
+        ddrOverlayFailures.has("lock-deferral-overlay-read-failed") ? "lock-deferral-overlay-read-failed" : "no-ddr-row",
+      );
+    } else if (
+      ddrOverlayFailures.has("errata-overlay-read-failed")
+      && (ddrRow.kind === "prediction" || ddrRow.kind === "no_call")
+    ) {
+      ddrBlock = unavailableDdrBlock("errata-overlay-read-failed", ddrRow.live.stale);
+    } else if (ddrRow.kind === "invalidated_prediction") {
+      ddrBlock = unavailableDdrBlock("prediction-invalidated", ddrRow.live.stale);
+    } else if (ddrRow.kind === "pending") {
+      ddrBlock = unavailableDdrBlock("prediction-pending", ddrRow.live.stale);
+    } else if (ddrRow.kind === "no_call") {
+      ddrBlock = unavailableDdrBlock("no-call", ddrRow.live.stale);
     } else {
-      const invalidatedByErratum = ddrRow.prediction.publicPredictionId != null
-        && ddrOverlayRead?.invalidatedPredictionIds.has(ddrRow.prediction.publicPredictionId) === true;
-      if (invalidatedByErratum || ddrRow.kind === "invalidated_prediction") {
-        ddrBlock = {
-          outlook: null,
-          recoveryProbability24h: null,
-          recoveryProbability7d: null,
-          medianHours: null,
-          stale: ddrRow.live.stale,
-          unavailableReason: "prediction-invalidated",
-        };
-      } else if (ddrRow.kind === "pending") {
-        ddrBlock = {
-          outlook: null,
-          recoveryProbability24h: null,
-          recoveryProbability7d: null,
-          medianHours: null,
-          stale: ddrRow.live.stale,
-          unavailableReason: "prediction-pending",
-        };
-      } else if (ddrRow.kind === "no_call") {
-        ddrBlock = {
-          outlook: null,
-          recoveryProbability24h: null,
-          recoveryProbability7d: null,
-          medianHours: null,
-          stale: ddrRow.live.stale,
-          unavailableReason: "no-call",
-        };
-      } else {
-        const horizon24h = ddrRow.frozen?.duration.horizons.find((h) => h.horizon === "24h")?.probability ?? null;
-        const horizon7d = ddrRow.frozen?.duration.horizons.find((h) => h.horizon === "7d")?.probability ?? null;
-        const medianSec = ddrRow.frozen?.duration.suppressed ? null : (ddrRow.frozen?.duration.medianSec ?? null);
-        ddrBlock = {
-          outlook: ddrRow.frozen?.resolution.tier ?? null,
-          recoveryProbability24h: horizon24h,
-          recoveryProbability7d: horizon7d,
-          medianHours: medianSec != null ? Math.round((medianSec / 3600) * 10) / 10 : null,
-          stale: ddrRow.live.stale,
-          unavailableReason: ddrRow.live.stale ? (ddrRow.live.degradedReason ?? "duration-exceeded") : null,
-        };
-      }
+      const horizon24h = ddrRow.frozen?.duration.horizons.find((h) => h.horizon === "24h")?.probability ?? null;
+      const horizon7d = ddrRow.frozen?.duration.horizons.find((h) => h.horizon === "7d")?.probability ?? null;
+      const medianSec = ddrRow.frozen?.duration.suppressed ? null : (ddrRow.frozen?.duration.medianSec ?? null);
+      ddrBlock = {
+        outlook: ddrRow.frozen?.resolution.tier ?? null,
+        recoveryProbability24h: horizon24h,
+        recoveryProbability7d: horizon7d,
+        medianHours: medianSec != null ? Math.round((medianSec / 3600) * 10) / 10 : null,
+        stale: ddrRow.live.stale,
+        unavailableReason: ddrRow.live.stale ? (ddrRow.live.degradedReason ?? "duration-exceeded") : null,
+      };
     }
 
-    // DEX liquidity slice (with per-row evidence validation / R8 quarantine)
+    // DEX liquidity slice: the dex-liquidity route's evidence quarantine,
+    // price admission and stored-volume read contract (R1/R7/R8).
     let liquidityBlock: RiskCheckAsset["liquidity"];
     if (!dexRead.ok) {
-      liquidityBlock = {
-        liquidityScore: null,
-        totalTvlUsd: null,
-        volume24hUsd: null,
-        poolCount: null,
-        dexPriceUsd: null,
-        updatedAt: null,
-        warning: null,
-        unavailableReason: "dex-liquidity-read-failed",
-      };
+      liquidityBlock = unavailableLiquidityBlock("dex-liquidity-read-failed");
     } else if (!dexRow) {
-      liquidityBlock = {
-        liquidityScore: null,
-        totalTvlUsd: null,
-        volume24hUsd: null,
-        poolCount: null,
-        dexPriceUsd: null,
-        updatedAt: null,
-        warning: null,
-        unavailableReason: "no-dex-liquidity-row",
-      };
+      liquidityBlock = unavailableLiquidityBlock("row-not-published");
     } else {
       let evidenceWarning: string | null = null;
-      let quarantineReason: string | null = null;
+      let evidenceValid = true;
       try {
         const evidence = normalizeDexLiquidityEvidence(dexRow);
         if (!evidence.hasMeasuredLiquidityEvidence) {
           evidenceWarning = "unmeasured-liquidity-evidence";
         }
       } catch {
-        quarantineReason = "invalid-coverage-evidence";
+        evidenceValid = false;
       }
-      if (quarantineReason) {
-        liquidityBlock = {
-          liquidityScore: null,
-          totalTvlUsd: null,
-          volume24hUsd: null,
-          poolCount: null,
-          dexPriceUsd: null,
-          updatedAt: dexRow.updated_at,
-          warning: null,
-          unavailableReason: quarantineReason,
-        };
+      if (!evidenceValid) {
+        liquidityBlock = unavailableLiquidityBlock("invalid-coverage-evidence", dexRow.updated_at);
       } else {
+        const priceAdmission = admitDexPriceRow(
+          dexRow.dex_price_stablecoin_id == null
+            ? undefined
+            : {
+                updated_at: dexRow.dex_price_updated_at as number,
+                price_sources_json: dexRow.dex_price_sources_json,
+              },
+          dexRow.updated_at,
+          nowSec,
+          `risk-check:${id}:price_sources_json`,
+        );
+        const volume24h = readStoredDexVolumeWindow(
+          dexRow.total_volume_24h_usd,
+          parseDexVolumeAvailabilityRecord(dexRow.volume_availability_json),
+          "24h",
+        );
+        const dexPriceUsd = priceAdmission.unavailableReason == null ? dexRow.dex_price_usd : null;
         liquidityBlock = {
           liquidityScore: dexRow.liquidity_score,
           totalTvlUsd: dexRow.total_tvl_usd,
-          volume24hUsd: dexRow.total_volume_24h_usd,
+          volume24hUsd: volume24h.measuredUsd,
           poolCount: dexRow.pool_count,
-          dexPriceUsd: dexRow.dex_price_usd ?? null,
+          dexPriceUsd,
           updatedAt: dexRow.updated_at,
           warning: evidenceWarning,
-          unavailableReason: null,
+          unavailableReason: dexRow.liquidity_score == null
+            ? "liquidity-score-unavailable"
+            : volume24h.measuredUsd == null
+              ? `volume-24h-${volume24h.availability?.reason ?? "unavailable"}`
+              : priceAdmission.unavailableReason != null
+                ? `dex-price-${priceAdmission.unavailableReason}`
+                : dexPriceUsd == null ? "dex-price-unavailable" : null,
         };
       }
     }
 
-    // Redemption slice (per-row quarantine + Mento market phase)
+    // Redemption slice (store admission + Mento market phase)
     const isMentoFpmm = mentoFpmmIds.has(id);
     const mentoReopenSec = isMentoFpmm ? resolveMentoFxMarketReopen(nowSec) : null;
     if (isMentoFpmm) {
@@ -762,7 +811,7 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
     const marketPhase = isMentoFpmm ? (mentoReopenSec != null ? "closed" : "open") : null;
 
     let redemptionBlock: RiskCheckAsset["redemption"];
-    if (!latestRedemptionRunRead.ok || !redemptionRowsRead.ok) {
+    if (!redemptionAdmission.ok || !redemptionEntry) {
       redemptionBlock = {
         score: null,
         routeFamily: null,
@@ -770,37 +819,7 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
         immediateCapacityUsd: null,
         feeBps: null,
         marketPhase,
-        unavailableReason: "redemption-read-failed",
-      };
-    } else if (!latestRun) {
-      redemptionBlock = {
-        score: null,
-        routeFamily: null,
-        accessModel: null,
-        immediateCapacityUsd: null,
-        feeBps: null,
-        marketPhase,
-        unavailableReason: "no-completed-redemption-run",
-      };
-    } else if (quarantinedRedemptionIds.has(id)) {
-      redemptionBlock = {
-        score: null,
-        routeFamily: null,
-        accessModel: null,
-        immediateCapacityUsd: null,
-        feeBps: null,
-        marketPhase,
-        unavailableReason: "redemption-row-malformed",
-      };
-    } else if (!redemptionEntry) {
-      redemptionBlock = {
-        score: null,
-        routeFamily: null,
-        accessModel: null,
-        immediateCapacityUsd: null,
-        feeBps: null,
-        marketPhase,
-        unavailableReason: "no-redemption-route",
+        unavailableReason: !redemptionAdmission.ok ? "redemption-snapshot-unavailable" : "row-not-published",
       };
     } else {
       redemptionBlock = {
@@ -819,7 +838,7 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
     const controlsBlock: RiskCheckAsset["controls"] = {
       freezeable,
       blacklistabilityStatus: freezeable == null ? "unreviewed" : String(freezeable),
-      liveFreezeTrackerCovered: isBlacklistStablecoin(meta.symbol.toUpperCase()),
+      liveFreezeTrackerCovered: BLACKLIST_TRACKED_STABLECOIN_IDS.has(id),
     };
 
     // Compliance slice (in-memory)
@@ -865,11 +884,11 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
         unavailableReason: dewsUnavailableReason,
       },
       peg: {
-        price,
-        priceSource,
-        priceConfidence,
-        priceObservedAt,
-        currentDeviationBps,
+        price: priceFields?.price ?? null,
+        priceSource: priceFields?.priceSource ?? null,
+        priceConfidence: priceFields?.priceConfidence ?? null,
+        priceObservedAt: priceFields?.priceObservedAt ?? null,
+        currentDeviationBps: priceFields?.currentDeviationBps ?? null,
         pegScore,
         pegPct,
         activeDepeg,
@@ -883,116 +902,112 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
     };
   }
 
-  // Per-producer dependency metadata (R3 / R4)
+  // Per-producer dependency metadata (R3 / R4): each graded against its own budget.
   const safetyDep = safetySnapshot
-    ? buildDependencyMeta(safetySnapshot.updatedAt, API_FRESHNESS_MAX_AGE_SEC.reportCards, "report-cards", nowSec, {
-        freshBudgetSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
-        degradedBudgetSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC * 2,
+    ? gradeDependency(SAFETY_SCORE_POLICY, safetySnapshot.updatedAt, nowSec, {
         generationId: safetySnapshot.safetyScoreIdentity.publicationGenerationId,
-        forceStatus: safetyPublicationStatus === "current"
-          ? "fresh"
+        forced: safetyPublicationStatus === "current"
+          ? { status: "fresh", reason: null }
           : safetyPublicationStatus === "held"
-            ? "degraded"
-            : "stale",
-        reason: safetyPublicationStatus === "current"
-          ? null
-          : safetyPublicationStatus === "held"
-            ? "v9-publication-held"
-            : "safety-score-publication-age",
+            ? { status: "degraded", reason: "v9-publication-held" }
+            : { status: "stale", reason: SAFETY_SCORE_PUBLICATION_AGE_REASON },
       })
-    : buildDependencyMeta(null, API_FRESHNESS_MAX_AGE_SEC.reportCards, "report-cards", nowSec, {
-        freshBudgetSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
-        unavailableReason: safetyIndex.kind === "error" ? safetyIndex.reason : "safety-score-unavailable",
-      });
+    : unavailableDependency(
+        SAFETY_SCORE_POLICY,
+        safetyIndex.kind === "error" ? safetyIndex.reason : "safety-score-unavailable",
+        nowSec,
+      );
 
   const dewsDep = dewsPointer.status === "ok" && dewsRowsRead.ok
-    ? buildDependencyMeta(dewsPointer.computedAt, API_FRESHNESS_MAX_AGE_SEC.stressSignals, "dews", nowSec, {
-        freshBudgetSec: API_FRESHNESS_MAX_AGE_SEC.stressSignals,
-        degradedBudgetSec: STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC,
+    ? gradeDependency(STRESS_SIGNALS_POLICY, dewsPointer.computedAt, nowSec, {
         generationId: `dews:${dewsPointer.computedAt}`,
       })
-    : buildDependencyMeta(null, API_FRESHNESS_MAX_AGE_SEC.stressSignals, "dews", nowSec, {
-        freshBudgetSec: API_FRESHNESS_MAX_AGE_SEC.stressSignals,
-        unavailableReason: !dewsRowsRead.ok
+    : unavailableDependency(
+        STRESS_SIGNALS_POLICY,
+        !dewsRowsRead.ok
           ? "dews-read-failed"
           : dewsPointer.status === "no-pointer"
             ? "dews-pointer-missing"
             : "dews-pointer-unavailable",
-      });
+        nowSec,
+      );
 
-  const stablecoinsDep = stablecoinsCache.kind === "ok"
-    ? buildDependencyMeta(stablecoinsCache.updatedAt, API_FRESHNESS_MAX_AGE_SEC.stablecoins, "stablecoins", nowSec, {
-        freshBudgetSec: API_FRESHNESS_MAX_AGE_SEC.stablecoins,
+  const stablecoinsDep = stablecoinsUsable && stablecoinsCache.updatedAt != null
+    ? gradeDependency(STABLECOINS_POLICY, stablecoinsCache.updatedAt, nowSec, {
+        degradedReason: stablecoinsCache.kind === "degraded" ? stablecoinsCache.reason : null,
       })
-    : buildDependencyMeta(null, API_FRESHNESS_MAX_AGE_SEC.stablecoins, "stablecoins", nowSec, {
-        freshBudgetSec: API_FRESHNESS_MAX_AGE_SEC.stablecoins,
-        unavailableReason: stablecoinsCache.reason,
-      });
+    : unavailableDependency(
+        STABLECOINS_POLICY,
+        stablecoinsUsable ? "missing-timestamp" : stablecoinsCache.reason,
+        nowSec,
+      );
 
-  const pegAnalyticsDep = pegAnalytics.ok
-    ? buildDependencyMeta(pegAnalytics.computedAtSec, API_FRESHNESS_MAX_AGE_SEC.pegSummary, "peg-summary", nowSec, {
-        freshBudgetSec: API_FRESHNESS_MAX_AGE_SEC.pegSummary,
-      })
-    : buildDependencyMeta(null, API_FRESHNESS_MAX_AGE_SEC.pegSummary, "peg-summary", nowSec, {
-        freshBudgetSec: API_FRESHNESS_MAX_AGE_SEC.pegSummary,
-        unavailableReason: pegAnalytics.reason,
-      });
+  const pegAnalyticsDep = pegAnalytics.kind === "ok"
+    ? gradeDependency(PEG_SUMMARY_POLICY, pegAnalytics.payload.computedAtSec, nowSec)
+    : unavailableDependency(PEG_SUMMARY_POLICY, pegAnalytics.reason, nowSec);
 
-  const activeDepegsClock = stablecoinsCache.kind === "ok"
-    ? stablecoinsCache.updatedAt
-    : pegAnalytics.ok
-      ? pegAnalytics.computedAtSec
-      : nowSec;
-  const activeDepegsDep = activeDepegsAvailable
-    ? buildDependencyMeta(activeDepegsClock, API_FRESHNESS_MAX_AGE_SEC.depegEvents, "depeg-events", nowSec, {
-        freshBudgetSec: API_FRESHNESS_MAX_AGE_SEC.depegEvents,
-      })
-    : buildDependencyMeta(null, API_FRESHNESS_MAX_AGE_SEC.depegEvents, "depeg-events", nowSec, {
-        freshBudgetSec: API_FRESHNESS_MAX_AGE_SEC.depegEvents,
-        unavailableReason: activeProjectionRead.available ? "active-depegs-read-failed" : activeProjectionRead.reason,
-      });
+  // Dated by the producer's confirmed output, as /api/depeg-events is; never the request clock.
+  const activeDepegsFreshness = buildCronFreshnessMeta(activeDepegsClock, API_FRESHNESS_MAX_AGE_SEC.depegEvents);
+  const activeDepegsDep: GradedDependency = !activeDepegsAvailable
+    ? {
+        meta: {
+          updatedAt: activeDepegsFreshness.updatedAt,
+          ageSeconds: activeDepegsFreshness.ageSeconds,
+          freshBudgetSec: activeDepegsFreshness.freshBudgetSec,
+          generationId: null,
+          status: "unavailable",
+          reason: activeDepegsUnavailableReason,
+        },
+        degradedBudgetSec: activeDepegsFreshness.degradedBudgetSec,
+      }
+    : {
+        meta: {
+          updatedAt: activeDepegsFreshness.updatedAt,
+          ageSeconds: activeDepegsFreshness.ageSeconds,
+          freshBudgetSec: activeDepegsFreshness.freshBudgetSec,
+          generationId: null,
+          status: activeDepegsFreshness.status === "unknown" ? "unavailable" : activeDepegsFreshness.status,
+          reason: "reason" in activeDepegsFreshness && activeDepegsFreshness.reason != null
+            ? activeDepegsFreshness.reason
+            : activeDepegsFreshness.status === "fresh" ? null : `depeg-events-${activeDepegsFreshness.status}`,
+        },
+        degradedBudgetSec: activeDepegsFreshness.degradedBudgetSec,
+      };
 
-  const ddrDep = ddrCacheLoad.kind === "ok" && !ddrOverlayUnavailableReason
-    ? buildDependencyMeta(ddrCacheLoad.payload._meta.computedAt, API_FRESHNESS_MAX_AGE_SEC.depegResolver, "depeg-resolver", nowSec, {
-        freshBudgetSec: API_FRESHNESS_MAX_AGE_SEC.depegResolver,
-        generationId: ddrCacheLoad.payload._meta.snapshotGeneration != null
-          ? String(ddrCacheLoad.payload._meta.snapshotGeneration)
-          : null,
+  const ddrDependencyReason = ddrCacheLoad.kind !== "ok"
+    ? ddrCacheLoad.reason
+    : ddrContractReason ?? (ddrOverlay && !ddrOverlay.ok ? ddrOverlay.reason : null);
+  const ddrDep = ddrSnapshot && ddrView && ddrDependencyReason == null
+    ? gradeDependency(DEPEG_RESOLVER_POLICY, ddrSnapshot._meta.computedAt, nowSec, {
+        generationId: ddrSnapshot._meta.snapshotGeneration != null ? String(ddrSnapshot._meta.snapshotGeneration) : null,
+        degradedReason: ddrExpired
+          ? "stale-cache"
+          : ddrView._meta.degraded ? (ddrView._meta.degradedReason ?? "ddr-degraded") : null,
       })
-    : buildDependencyMeta(null, API_FRESHNESS_MAX_AGE_SEC.depegResolver, "depeg-resolver", nowSec, {
-        freshBudgetSec: API_FRESHNESS_MAX_AGE_SEC.depegResolver,
-        unavailableReason: ddrOverlayUnavailableReason ?? (ddrCacheLoad.kind === "error" ? ddrCacheLoad.reason : "ddr-unavailable"),
-      });
+    : unavailableDependency(DEPEG_RESOLVER_POLICY, ddrDependencyReason ?? "ddr-unavailable", nowSec);
 
   const dexDep = dexRead.ok && dexCohortUpdatedAt != null
-    ? buildDependencyMeta(dexCohortUpdatedAt, API_FRESHNESS_MAX_AGE_SEC.dexLiquidity, "dex-liquidity", nowSec, {
-        freshBudgetSec: API_FRESHNESS_MAX_AGE_SEC.dexLiquidity,
-        generationId: dexGenerationId,
+    ? gradeDependency(DEX_LIQUIDITY_POLICY, dexCohortUpdatedAt, nowSec, { generationId: dexGenerationId })
+    : unavailableDependency(
+        DEX_LIQUIDITY_POLICY,
+        !dexRead.ok ? "dex-liquidity-read-failed" : "dex-liquidity-empty",
+        nowSec,
+      );
+
+  const redemptionDep = redemptionAdmission.ok && redemptionAdmission.run.max_updated_at != null
+    ? gradeDependency(REDEMPTION_BACKSTOPS_POLICY, redemptionAdmission.run.max_updated_at, nowSec, {
+        generationId: redemptionAdmission.run.run_id,
       })
-    : buildDependencyMeta(null, API_FRESHNESS_MAX_AGE_SEC.dexLiquidity, "dex-liquidity", nowSec, {
-        freshBudgetSec: API_FRESHNESS_MAX_AGE_SEC.dexLiquidity,
-        unavailableReason: !dexRead.ok ? "dex-liquidity-read-failed" : "dex-liquidity-empty",
-      });
+    : unavailableDependency(
+        REDEMPTION_BACKSTOPS_POLICY,
+        redemptionAdmission.ok ? "missing-timestamp" : "redemption-snapshot-unavailable",
+        nowSec,
+        redemptionAdmission.ok ? redemptionAdmission.run.run_id : null,
+      );
 
-  const redemptionClock = latestRun ? (latestRun.max_updated_at ?? latestRun.completed_at) : null;
-  const redemptionDep = latestRedemptionRunRead.ok && redemptionRowsRead.ok && latestRun && redemptionClock != null
-    ? buildDependencyMeta(redemptionClock, API_FRESHNESS_MAX_AGE_SEC.redemptionBackstops, "redemption-backstops", nowSec, {
-        freshBudgetSec: API_FRESHNESS_MAX_AGE_SEC.redemptionBackstops,
-        generationId: latestRun.run_id,
-      })
-    : buildDependencyMeta(null, API_FRESHNESS_MAX_AGE_SEC.redemptionBackstops, "redemption-backstops", nowSec, {
-        freshBudgetSec: API_FRESHNESS_MAX_AGE_SEC.redemptionBackstops,
-        unavailableReason: !latestRedemptionRunRead.ok || !redemptionRowsRead.ok
-          ? "redemption-read-failed"
-          : "no-completed-redemption-run",
-      });
+  const complianceDep = gradeDependency(COMPLIANCE_POLICY, complianceUpdatedAt, nowSec);
 
-  const complianceDep = buildDependencyMeta(complianceUpdatedAt, COMPLIANCE_REVIEW_BUDGET_SEC, "compliance", nowSec, {
-    freshBudgetSec: COMPLIANCE_REVIEW_BUDGET_SEC,
-    degradedBudgetSec: COMPLIANCE_REVIEW_BUDGET_SEC * 2,
-  });
-
-  const dependencies: Record<string, ApiDependencyMeta> = {
+  const graded: Record<string, GradedDependency> = {
     safetyScore: safetyDep,
     dews: dewsDep,
     stablecoins: stablecoinsDep,
@@ -1003,6 +1018,9 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
     redemptionBackstops: redemptionDep,
     compliance: complianceDep,
   };
+  const dependencies: Record<string, ApiDependencyMeta> = Object.fromEntries(
+    Object.entries(graded).map(([name, dep]) => [name, dep.meta]),
+  );
 
   const d1Dependencies = [
     safetyDep,
@@ -1014,36 +1032,38 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
     dexDep,
     redemptionDep,
   ];
-  const allD1Fresh = d1Dependencies.every((dep) => dep.status === "fresh")
-    && safetyPublicationStatus === "current"
-    && quarantinedRedemptionIds.size === 0;
+  const allD1Fresh = d1Dependencies.every((dep) => dep.meta.status === "fresh")
+    && safetyPublicationStatus === "current";
   const nonFreshReasons = Object.entries(dependencies)
     .filter(([, dep]) => dep.status !== "fresh")
     .map(([name, dep]) => `${name}:${dep.reason ?? dep.status}`);
-  if (quarantinedRedemptionIds.size > 0) {
-    nonFreshReasons.push("redemption:row-quarantined");
-  }
 
-  const anyStaleOrUnavailable = d1Dependencies.some((dep) => dep.status === "stale" || dep.status === "unavailable");
+  const anyStaleOrUnavailable = d1Dependencies.some((dep) => dep.meta.status === "stale" || dep.meta.status === "unavailable");
   const overallStatus = allD1Fresh ? "fresh" : anyStaleOrUnavailable ? "stale" : "degraded";
 
-  const availableD1UpdatedAts = d1Dependencies
-    .map((dep) => dep.updatedAt)
-    .filter((ts): ts is number => ts != null && Number.isFinite(ts));
-  const oldestUpdatedAt = availableD1UpdatedAts.length > 0 ? Math.min(...availableD1UpdatedAts) : null;
-  const tightestFreshBudget = Math.min(
-    ...d1Dependencies
-      .map((dep) => dep.freshBudgetSec)
-      .filter((sec): sec is number => typeof sec === "number" && Number.isFinite(sec)),
-  );
+  // The dependency whose fresh runway (updatedAt + its own budget) ends first
+  // sets the response clock and budget; the oldest clock alone says nothing.
+  let binding: GradedDependency | null = null;
+  let bindingValidUntilSec = Infinity;
+  for (const dep of d1Dependencies) {
+    const { updatedAt, freshBudgetSec } = dep.meta;
+    if (updatedAt == null || freshBudgetSec == null) continue;
+    const validUntilSec = updatedAt + freshBudgetSec;
+    if (validUntilSec < bindingValidUntilSec) {
+      binding = dep;
+      bindingValidUntilSec = validUntilSec;
+    }
+  }
+  const bindingUpdatedAt = binding?.meta.updatedAt ?? null;
+  const bindingFreshBudgetSec = binding?.meta.freshBudgetSec ?? null;
 
-  const metaEnvelope: ApiMetaEnvelope = oldestUpdatedAt != null
+  const metaEnvelope: ApiMetaEnvelope = binding && bindingUpdatedAt != null && bindingFreshBudgetSec != null
     ? {
-        updatedAt: oldestUpdatedAt,
-        ageSeconds: Math.max(0, nowSec - oldestUpdatedAt),
+        updatedAt: bindingUpdatedAt,
+        ageSeconds: binding.meta.ageSeconds ?? Math.max(0, nowSec - bindingUpdatedAt),
         assessedAt: nowSec,
-        freshBudgetSec: tightestFreshBudget,
-        degradedBudgetSec: tightestFreshBudget * 2,
+        freshBudgetSec: bindingFreshBudgetSec,
+        degradedBudgetSec: binding.degradedBudgetSec ?? bindingFreshBudgetSec,
         status: overallStatus,
         ...(nonFreshReasons.length > 0 ? { warning: `Degraded or stale dependencies: ${nonFreshReasons.join(", ")}` } : {}),
         dependencies,
@@ -1052,8 +1072,6 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
         updatedAt: null,
         ageSeconds: null,
         assessedAt: nowSec,
-        freshBudgetSec: tightestFreshBudget,
-        degradedBudgetSec: tightestFreshBudget * 2,
         status: "unknown",
         reason: nonFreshReasons.join(",") || "all-dependencies-unavailable",
         warning: `All dependencies unavailable: ${nonFreshReasons.join(", ")}`,
@@ -1068,30 +1086,28 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
       : {}),
   };
 
-  if (allD1Fresh && oldestUpdatedAt != null) {
-    let minValidUntilSec = minMentoPhaseValidUntilSec;
-    for (const dep of d1Dependencies) {
-      if (dep.updatedAt != null && dep.freshBudgetSec != null) {
-        const validUntil = dep.updatedAt + dep.freshBudgetSec;
-        if (validUntil < minValidUntilSec) minValidUntilSec = validUntil;
-      }
-    }
+  if (allD1Fresh && bindingUpdatedAt != null && bindingFreshBudgetSec != null) {
+    const cacheValidUntil = Math.min(
+      bindingValidUntilSec,
+      minMentoPhaseValidUntilSec,
+      redemptionBackstopPhaseValidUntil(redemptionEntryById, nowSec),
+    );
     headers = addFreshnessHeaders(
       { ...headers, "Cache-Control": CACHE_PROFILES.producerBacked },
-      oldestUpdatedAt,
-      tightestFreshBudget,
+      bindingUpdatedAt,
+      bindingFreshBudgetSec,
       {
         assessedAt: nowSec,
-        freshBudgetSec: tightestFreshBudget,
-        cacheValidUntil: minValidUntilSec,
+        freshBudgetSec: bindingFreshBudgetSec,
+        cacheValidUntil,
       },
     );
   } else {
     headers["Cache-Control"] = CACHE_PROFILES.noStore;
     headers["X-Data-Freshness"] = overallStatus;
-    if (oldestUpdatedAt != null) {
-      headers["X-Data-Updated-At"] = String(oldestUpdatedAt);
-      headers["X-Data-Age"] = String(Math.max(0, nowSec - oldestUpdatedAt));
+    if (bindingUpdatedAt != null) {
+      headers["X-Data-Updated-At"] = String(bindingUpdatedAt);
+      headers["X-Data-Age"] = String(Math.max(0, nowSec - bindingUpdatedAt));
     }
     if (nonFreshReasons.length > 0) {
       headers.Warning = `199 - "Risk-check dependencies degraded: ${nonFreshReasons.join(", ")}"`;

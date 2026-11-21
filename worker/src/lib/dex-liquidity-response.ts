@@ -1,5 +1,8 @@
 import { logWorkerEventArgs } from "./structured-log";
 import { safeJsonParse } from "./api-cache-read";
+import { assessFreshnessTimestamp } from "./api-freshness-age";
+import { STAGED_POOL_PRICE_MAX_AGE_HOURS } from "./dex-cron-constants";
+import { getDexAggregateObservedAt } from "./depeg-trust-policy";
 import { CURRENT_DEPLOYMENT_KEYS, deploymentKey, normalizeDexLiquidityEvidence } from "./dex-liquidity";
 import { DexLiquidityCronMetadataSchema } from "./schemas";
 import {
@@ -52,6 +55,40 @@ export interface DexPriceRow {
   source_total_tvl: number;
   price_sources_json: string | null;
   updated_at: number;
+}
+
+export interface DexPriceAdmission {
+  pricePayload: unknown;
+  priceAgeSeconds: number | null;
+  priceMaxAgeSec: number;
+  unavailableReason: string | null;
+}
+
+/**
+ * Prices are a separate publication; the liquidity row's clock cannot admit
+ * them. Both writers stamp the orchestrator's syncStartSec, so any drift
+ * between the two clocks is a publication mismatch.
+ */
+export function admitDexPriceRow(
+  priceRow: Pick<DexPriceRow, "updated_at" | "price_sources_json"> | undefined,
+  liquidityUpdatedAt: number,
+  nowSec: number,
+  logContext: string,
+): DexPriceAdmission {
+  const priceMaxAgeSec = STAGED_POOL_PRICE_MAX_AGE_HOURS * 3600;
+  const pricePayload = safeJsonParse<unknown>(priceRow?.price_sources_json, null, logContext);
+  const { aggregateObservedAt, aggregateClockReason } = getDexAggregateObservedAt(pricePayload, nowSec, "display");
+  const publicationAge = assessFreshnessTimestamp(nowSec, priceRow?.updated_at);
+  const priceAge = assessFreshnessTimestamp(nowSec, aggregateObservedAt);
+  const unavailableReason = !priceRow ? "missing-price"
+    : publicationAge.reason != null ? publicationAge.reason
+    : publicationAge.ageSeconds > priceMaxAgeSec ? "stale-price"
+    : priceRow.updated_at !== liquidityUpdatedAt ? "publication-mismatch"
+    : aggregateClockReason === "aggregate-clock-invalid" ? "invalid-timestamp"
+    : aggregateClockReason === "aggregate-clock-future" ? "future-timestamp"
+    : priceAge.reason != null ? priceAge.reason
+    : priceAge.ageSeconds > priceMaxAgeSec ? "stale-price" : null;
+  return { pricePayload, priceAgeSeconds: priceAge.ageSeconds, priceMaxAgeSec, unavailableReason };
 }
 
 export interface DexLiquidityCronRow {
