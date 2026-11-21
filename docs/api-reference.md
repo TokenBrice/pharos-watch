@@ -295,6 +295,7 @@ curl -sS "https://api.pharos.watch/api/stablecoins" -H "X-API-Key: ph_live_<your
 
 - `200` returns the JSON payload, with the `_meta` freshness block on object responses ([Response Body Freshness](#response-body-freshness-_meta)).
 - `401` means the key was missing, malformed or rejected; the key travels only in the `X-API-Key` header, never `Authorization` or the query string.
+- `403` with `reason: "plan_upgrade_required"` means the key is valid, but its plan does not cover a paid-plan endpoint (`requiredPlans`, `upgradeUrl`).
 - `429` means a per-minute rate or monthly volume limit was hit; honor `Retry-After` (and add jitter) before retrying.
 - `503` means an auth/limiter dependency or the service is temporarily unavailable; back off and retry later.
 
@@ -305,15 +306,18 @@ curl -sS "https://api.pharos.watch/api/stablecoins" -H "X-API-Key: ph_live_<your
 | Per API key | Varies (tier default) | 60 seconds |
 | Per API key | Tier monthly volume | UTC calendar month |
 
-Per-minute overrides are stored in `api_keys.rate_limit_per_minute`; monthly overrides in `api_keys.monthly_request_quota` (`NULL` keeps the tier default). Tier defaults live in `shared/lib/ops-limits.ts`:
+Per-minute overrides are stored in `api_keys.rate_limit_per_minute`; monthly overrides in `api_keys.monthly_request_quota` (`NULL` keeps the tier/plan default); standard-key plans in `api_keys.plan` (`free_partner`, `commercial`, `institutional`; `NULL` fails closed on paid-endpoint entitlements while keeping legacy rate-based monthly quota defaults). Tier defaults live in `shared/lib/ops-limits.ts`:
 
-| Tier | Per minute | Monthly volume |
+| Tier / Plan | Per minute | Monthly volume |
 | --- | --- | --- |
-| Supporter (donor) | `10` | `200,000` |
-| Free partner (free to its users) | `60` | `500,000` |
-| Commercial | `120` (higher on request) | `1,000,000` |
+| Supporter (donor) | `10` | `100,000` |
+| Free partner (`plan: "free_partner"`) | `60` | `500,000` |
+| Commercial (`plan: "commercial"`) | `120` (higher on request) | `1,000,000` |
+| Institutional (`plan: "institutional"`) | `600` (higher on request) | `5,000,000` |
 
-Monthly volume is the month-to-date count of admitted requests, kept as a single rollup row per key per month in `api_key_monthly_usage` (migration `0319`; maintained by the attribution flush that writes `api_key_request_stats`, with throttled `429` responses excluded). It resets on the 1st (UTC) and is enforced from January 1, 2027 (`API_KEY_MONTHLY_QUOTA_EFFECTIVE_SEC`). The count is read through a per-isolate memo refreshed at most every five minutes, so enforcement can overshoot by a few minutes of traffic; if usage cannot be measured (attribution disabled, a failed read, or the limiter-dependency circuit open), the monthly check fails open and the key keeps serving. First-party site-lane keys (`trafficClass: "site"`) carry no monthly cap.
+Monthly volume is the month-to-date count of admitted requests, kept as a single rollup row per key per month in `api_key_monthly_usage` (migration `0319`; maintained by the attribution flush that writes `api_key_request_stats`, with throttled `429` and plan-entitlement `403` responses excluded). It resets on the 1st (UTC) and is enforced from January 1, 2027 (`API_KEY_MONTHLY_QUOTA_EFFECTIVE_SEC`). The count is read through a per-isolate memo refreshed at most every five minutes, so enforcement can overshoot by a few minutes of traffic; if usage cannot be measured (attribution disabled, a failed read, or the limiter-dependency circuit open), the monthly check fails open and the key keeps serving. First-party site-lane keys (`trafficClass: "site"`) carry no monthly cap and bypass plan entitlement checks.
+
+For endpoints that declare `requiredKeyPlans`, the access gate checks plan entitlement after the per-minute limiter so refused calls remain rate-limited without burning monthly quota; on the cache-hit fast path, non-entitled keys fall through to the slow path before reading edge cache. Refused keys receive `403 Forbidden` with `Cache-Control: no-store`, `reason: "plan_upgrade_required"`, `requiredPlans`, and `upgradeUrl`.
 
 The per-minute window is a fixed 60 seconds aligned to the clock, not a rolling window: a request at `:59` and its retry at `:01` fall in different windows. `304` responses count toward the per-minute limit like any other admitted request.
 
@@ -360,7 +364,7 @@ JSON API handlers use `{ "error": "message" }` JSON format; some errors add `rea
 | ------ | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 400    | Bad Request           | Missing required parameters, invalid enum values, malformed numeric input, or out-of-range numeric/filter values on handlers that opt into rejection (`rangePolicy: "reject"`). Some endpoints intentionally clamp or default selected numeric params; endpoint sections call this out where it is part of the contract.                       |
 | 401    | Unauthorized          | Public `/api/*` endpoint called without a valid `X-API-Key`, or admin endpoint called without a valid `ops-api` Access JWT (typically obtained through Cloudflare Access user login or service-token auth)                                                                                                                                     |
-| 403    | Forbidden             | Disallowed CORS preflight from a foreign `Origin`, Pages ops proxy request with a non-same-origin `Sec-Fetch-Site`, Pages ops proxy mutating request without a matching same-origin `Origin`, or mutating admin request missing `X-Pharos-Admin: 1`                                                                                              |
+| 403    | Forbidden             | Authenticated API key whose `plan` is not entitled to a paid-plan endpoint (`reason: "plan_upgrade_required"`, `requiredPlans`, `upgradeUrl`, `Cache-Control: no-store`), disallowed CORS preflight from a foreign `Origin`, Pages ops proxy request with a non-same-origin `Sec-Fetch-Site`, Pages ops proxy mutating request without a matching same-origin `Origin`, or mutating admin request missing `X-Pharos-Admin: 1` |
 | 404    | Not Found             | Unknown stablecoin ID or missing resource                                                                                                                                                                                                                                                                                                      |
 | 410    | Gone                  | Authenticated `GET https://api.pharos.watch/api/report-cards`, the retired unversioned Safety Score route (see [Full cards](#full-cards)) |
 | 413    | Payload Too Large     | Public JSON `POST` body exceeds that endpoint's defensive byte cap before parsing or side effects                                                                                                                                                                                                                                              |
