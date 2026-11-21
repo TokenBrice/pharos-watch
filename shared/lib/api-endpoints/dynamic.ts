@@ -14,6 +14,7 @@ export type DynamicEndpointDescriptorKey =
   | "stablecoin-detail"
   | "stablecoin-live-summary"
   | "compliance-coin"
+  | "safety-badge"
   | "og-image"
   | "snapshot-day"
   | "snapshot-coin"
@@ -104,6 +105,20 @@ export const DYNAMIC_ENDPOINT_DESCRIPTORS = [
   publicDynamic({ key: "stablecoin-detail", pattern: DYNAMIC_API_PATHS.stablecoinDetail.pattern }),
   publicDynamic({ key: "stablecoin-live-summary", pattern: DYNAMIC_API_PATHS.stablecoinLiveSummary.pattern }),
   publicDynamic({ key: "compliance-coin", pattern: DYNAMIC_API_PATHS.complianceCoin.pattern }),
+  {
+    key: "safety-badge",
+    pattern: DYNAMIC_API_PATHS.safetyBadge.pattern,
+    methods: ["GET", "HEAD"],
+    publicApiAccess: "exempt",
+    siteDataAccess: "denied",
+    adminRequired: false,
+    cacheKeyQueryParams: ["style", "theme"],
+    routeDependencies: [],
+    requestAttribution: {
+      routeKey: "safety-badge",
+      routePath: DYNAMIC_API_PATHS.safetyBadge.template,
+    },
+  },
   {
     key: "og-image",
     pattern: /^\/api\/og\//,

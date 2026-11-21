@@ -1000,5 +1000,27 @@ describe("evaluateAccessGate", () => {
       expect(fastResult?.apiKey).toBe(entitled);
       expect(fastResult?.response).toBeNull();
     });
+
+    it("limits anonymous /api/badge/ misses fail-open and returns an Unavailable SVG on refusal", async () => {
+      const env = makeEnv();
+      const limit = vi.fn().mockResolvedValue({ success: false });
+      env.OG_IMAGE_RATE_LIMIT = { limit };
+      const req = new Request("https://api.pharos.watch/api/badge/usdc-circle.svg?style=flat", {
+        headers: { "CF-Connecting-IP": "192.0.2.9" },
+      });
+      const refused = await evaluateAccessGate(req, new URL(req.url), env);
+      expect(refused.response?.status).toBe(200);
+      expect(refused.response?.headers.get("Content-Type")).toBe("image/svg+xml; charset=utf-8");
+      expect(refused.response?.headers.get("Cache-Control")).toBe("no-store");
+      expect(refused.response?.headers.get("Retry-After")).toBe("60");
+      expect(refused.response?.headers.get("X-Badge-Reason")).toBe("rate-limited");
+      const svg = await refused.response?.text();
+      expect(svg).toContain("Unavailable");
+      expect(svg).toContain("USDC");
+
+      limit.mockRejectedValueOnce(new Error("binding offline"));
+      const failOpen = await evaluateAccessGate(req, new URL(req.url), env);
+      expect(failOpen.response).toBeNull();
+    });
   });
 });

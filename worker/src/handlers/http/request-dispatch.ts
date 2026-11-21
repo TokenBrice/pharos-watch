@@ -103,6 +103,33 @@ export async function handleHttpRequestImpl(
   }) {
     return createRequestSourceRecorder({ ...commonSourceConfig, ...gate });
   }
+  const isBadgePath = url.pathname.startsWith("/api/badge/");
+  const applyCors = (res: Response) => (isBadgePath ? addCorsHeaders(res, origin, url.pathname) : addCorsHeaders(res, origin));
+
+  if ((routedRequest.method === "GET" || routedRequest.method === "HEAD")
+    && url.hostname === API_HOSTNAME
+    && isBadgePath
+  ) {
+    const badgeCacheContext = routedRequest.method === "HEAD"
+      ? createEdgeCacheContext(new Request(routedRequest.url, { method: "GET" }), url)
+      : edgeCache;
+    edgeCacheProbed = true;
+    cached = await readEdgeCache(badgeCacheContext);
+    if (cached) {
+      buildRecorder({
+        isAdmin: false,
+        isSiteProxy: false,
+        apiKeyId: null,
+        apiKeyTrafficClass: null,
+        requestLane: "public-api",
+      })();
+      const hitResponse = routedRequest.method === "HEAD"
+        ? new Response(null, { status: cached.status, headers: cached.headers })
+        : conditionalGetResponse(routedRequest, cached, safetyScoreResponsePolicy(cached));
+      return applyCors(hitResponse);
+    }
+  }
+
   const fastGate = await evaluateCachedPublicApiReadFastGate(routedRequest, url, env);
   if (fastGate) {
     edgeCacheProbed = true;
@@ -148,7 +175,7 @@ export async function handleHttpRequestImpl(
   });
   if (gateResponse) {
     recordRequestSource();
-    return addCorsHeaders(withApiKeyRateLimitHeader(gateResponse, apiKey), origin);
+    return applyCors(withApiKeyRateLimitHeader(gateResponse, apiKey));
   }
 
   if (!cached && !edgeCacheProbed) {
@@ -156,18 +183,16 @@ export async function handleHttpRequestImpl(
   }
   if (cached) {
     recordRequestSource();
-    return addCorsHeaders(
+    return applyCors(
       withApiKeyRateLimitHeader(conditionalGetResponse(routedRequest, cached, safetyScoreResponsePolicy(cached)), apiKey),
-      origin,
     );
   }
 
   const resolvedRoute = resolveRoute(url, routedRequest.method);
   if (resolvedRoute == null) {
     recordRequestSource();
-    return addCorsHeaders(
+    return applyCors(
       apiHostRootRedirect(routedRequest, url) ?? retiredReportCardsResponse(routedRequest, url) ?? notFoundResponse(),
-      origin,
     );
   }
 
@@ -187,8 +212,7 @@ export async function handleHttpRequestImpl(
   recordRequestSource();
   const cacheResponse = scopeResponseEtag(response, edgeCache.cacheKey.url, !edgeCache.skipCache, safetyScoreResponsePolicy(response));
   writeEdgeCache(edgeCache, cacheResponse, ctx);
-  return addCorsHeaders(
+  return applyCors(
     withApiKeyRateLimitHeader(conditionalGetResponse(routedRequest, cacheResponse, safetyScoreResponsePolicy(cacheResponse)), apiKey),
-    origin,
   );
 }

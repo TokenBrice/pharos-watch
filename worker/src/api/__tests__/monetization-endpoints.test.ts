@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getEndpointRequiredKeyPlans } from "@shared/lib/api-endpoints";
+import { PUBLIC_API_CONTRACT_VERSION } from "@shared/lib/public-api-contract";
+import { renderSafetyBadgeSvg } from "@shared/lib/safety-badge-svg";
 import {
   normalizeAddressForChainlessLookup,
   normalizeDeploymentAddress,
@@ -20,8 +22,11 @@ import { createEdgeCacheContext } from "../../handlers/http/edge-cache";
 import { SAFETY_SCORE_V9_CACHE_KEYS } from "../../lib/safety-score-v9/publication-health";
 import { makeReportCardsV9Response } from "../../test-helpers/report-cards-v9";
 import { handleCompliance, handleComplianceCoin } from "../compliance";
+import { handleSafetyBadge } from "../badge";
+import { handleMcp } from "../mcp";
 import { handleResolve, resolveContractDeployment } from "../resolve";
 import { handleRiskCheck } from "../risk-check";
+import { resolveRoute } from "../../router";
 
 const USDC_ETH = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const USDC_ETH_CHECKSUM = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
@@ -869,5 +874,205 @@ describe("Wave 2 endpoints: compliance, resolve, risk-check", () => {
     const resB = new URL("https://api.pharos.watch/api/resolve?contracts=a:0x1,b:0x2&ignored=1");
     expect(createEdgeCacheContext(new Request(resA), resA).cacheKey.url)
       .toBe(createEdgeCacheContext(new Request(resB), resB).cacheKey.url);
+  });
+});
+
+describe("Wave 3 endpoints: MCP server & SVG safety badge", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("enforces MCP entitlement, 405 on GET, protocol version header, no-batch, 413 cap, and full JSON-RPC lifecycle", async () => {
+    expect(getEndpointRequiredKeyPlans("/api/mcp")).toEqual(["commercial", "institutional"]);
+
+    // GET /api/mcp is rejected with 405 Allow: POST by endpoint method validation
+    const getResolved = resolveRoute(new URL("https://api.pharos.watch/api/mcp"), "GET");
+    expect(getResolved?.methodValidation?.allowedMethods).toEqual(["POST"]);
+
+    const nowSec = 1_795_300_000;
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(nowSec * 1000);
+    const { db } = buildRiskCheckMockDb(nowSec);
+
+    const postMcp = (body: unknown, headers: Record<string, string> = {}) =>
+      handleMcp(
+        db,
+        new Request("https://api.pharos.watch/api/mcp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...headers },
+          body: typeof body === "string" ? body : JSON.stringify(body),
+        }),
+      );
+
+    // Initialize negotiates 2026-07-28 and 2025-11-25
+    const initLatest = await postMcp({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: { protocolVersion: "2026-07-28" },
+    });
+    expect(initLatest.status).toBe(200);
+    expect(initLatest.headers.get("Cache-Control")).toBe("no-store");
+    await expect(initLatest.json()).resolves.toMatchObject({
+      jsonrpc: "2.0",
+      id: 1,
+      result: {
+        protocolVersion: "2026-07-28",
+        serverInfo: { name: "pharos", version: PUBLIC_API_CONTRACT_VERSION },
+      },
+    });
+
+    // Notification returns 202 Accepted with empty body
+    const notif = await postMcp({ jsonrpc: "2.0", method: "notifications/initialized" });
+    expect(notif.status).toBe(202);
+    expect(await notif.text()).toBe("");
+
+    // Unsupported MCP-Protocol-Version header returns 400
+    const badProto = await postMcp(
+      { jsonrpc: "2.0", id: 2, method: "tools/list" },
+      { "MCP-Protocol-Version": "1999-01-01" },
+    );
+    expect(badProto.status).toBe(400);
+
+    // Batch array rejected with -32600
+    const batch = await postMcp([{ jsonrpc: "2.0", id: 1, method: "ping" }]);
+    expect(batch.status).toBe(400);
+    await expect(batch.json()).resolves.toMatchObject({ error: { code: -32600 } });
+
+    // Oversized body (> 16 KiB) rejected with 413
+    const huge = await postMcp("x".repeat(17 * 1024));
+    expect(huge.status).toBe(413);
+
+    // tools/list returns all 7 read-only tools
+    const listRes = await postMcp(
+      { jsonrpc: "2.0", id: 3, method: "tools/list" },
+      { "MCP-Protocol-Version": "2025-11-25" },
+    );
+    expect(listRes.status).toBe(200);
+    const listBody = (await listRes.json()) as { result: { tools: Array<{ name: string; annotations: { readOnlyHint: boolean } }> } };
+    expect(listBody.result.tools.map((t) => t.name)).toEqual([
+      "resolve_stablecoin",
+      "get_risk_check",
+      "get_compliance",
+      "get_safety_report_card",
+      "get_depeg_events",
+      "get_stress_signals",
+      "get_stablecoin_reserves",
+    ]);
+    expect(listBody.result.tools.every((t) => t.annotations.readOnlyHint)).toBe(true);
+
+    // tools/call resolve_stablecoin + get_risk_check + get_compliance with edge-cache reuse
+    const match = vi.fn().mockResolvedValue(undefined);
+    const put = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("caches", { default: { match, put } });
+    const execCtx = { waitUntil: vi.fn((p: Promise<unknown>) => void p) } as unknown as ExecutionContext;
+
+    const callRes = await handleMcp(
+      db,
+      new Request("https://api.pharos.watch/api/mcp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "MCP-Protocol-Version": "2025-11-25" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 4,
+          method: "tools/call",
+          params: { name: "get_risk_check", arguments: { ids: ["usdc-circle"] } },
+        }),
+      }),
+      execCtx,
+    );
+    expect(callRes.status).toBe(200);
+    const callBody = (await callRes.json()) as {
+      result: { isError: boolean; _meta: { safetyScoreStatus: string }; structuredContent: { assets: Record<string, unknown> } };
+    };
+    expect(callBody.result.isError).toBe(false);
+    expect(callBody.result._meta.safetyScoreStatus).toBe("current");
+    expect(callBody.result.structuredContent.assets["usdc-circle"]).toBeDefined();
+    expect(match).toHaveBeenCalledOnce();
+    expect(put).toHaveBeenCalledOnce();
+
+    const compCall = await postMcp({
+      jsonrpc: "2.0",
+      id: 5,
+      method: "tools/call",
+      params: { name: "get_compliance", arguments: { id: "usdc-circle" } },
+    });
+    const compBody = (await compCall.json()) as { result: { isError: boolean; structuredContent: { coin: { id: string } } } };
+    expect(compBody.result.isError).toBe(false);
+    expect(compBody.result.structuredContent.coin.id).toBe("usdc-circle");
+
+    const unknownTool = await postMcp({
+      jsonrpc: "2.0",
+      id: 6,
+      method: "tools/call",
+      params: { name: "drop_tables", arguments: {} },
+    });
+    await expect(unknownTool.json()).resolves.toMatchObject({ error: { code: -32602 } });
+  });
+
+  it("renders GET /api/badge/:id.svg across styles, themes, NR, held, stale, pipeline-gap, and 404 states without <style> blocks", async () => {
+    const nowSec = 1_795_300_000;
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(nowSec * 1000);
+
+    // Pure renderer invariants (no <style>, XML escaping, flat/card/light/dark)
+    const escaped = renderSafetyBadgeSvg({ kind: "rated", symbol: "A<B>&", name: 'Test "Coin"', grade: "A-", score: 88 }, { style: "card", theme: "light" });
+    expect(escaped).not.toContain("<style");
+    expect(escaped).not.toContain('style="');
+    expect(escaped).toContain("A&lt;B&gt;&amp;");
+    expect(escaped).toContain("88/100");
+
+    // Current rated coin (USDC -> A- · 88)
+    const { db } = buildRiskCheckMockDb(nowSec);
+    const flatRes = await handleSafetyBadge(db, "usdc-circle", new URL("https://api.pharos.watch/api/badge/usdc-circle.svg"));
+    expect(flatRes.status).toBe(200);
+    expect(flatRes.headers.get("Content-Type")).toBe("image/svg+xml; charset=utf-8");
+    expect(flatRes.headers.get("X-Safety-Score-Status")).toBe("current");
+    expect(flatRes.headers.get("X-Safety-Score-Generation")).toBe("v9:test-gen-1");
+    expect(flatRes.headers.get("Cache-Control")).toContain("s-maxage=");
+    const flatSvg = await flatRes.text();
+    expect(flatSvg).toContain("USDC");
+    expect(flatSvg).toContain("A-");
+    expect(flatSvg).not.toContain("<style");
+
+    // Card + light theme + NR coin (dai-makerdao)
+    const nrRes = await handleSafetyBadge(db, "dai-makerdao", new URL("https://api.pharos.watch/api/badge/dai-makerdao.svg?style=card&theme=light"));
+    expect(nrRes.status).toBe(200);
+    expect(nrRes.headers.get("Cache-Control")).toContain("s-maxage=");
+    const nrSvg = await nrRes.text();
+    expect(nrSvg).toContain("NR");
+    expect(nrSvg).toContain("Not rated");
+
+    // Pipeline-gap coin (usdt-tether in mock) -> 200 Unavailable SVG + no-store
+    const gapRes = await handleSafetyBadge(db, "usdt-tether", new URL("https://api.pharos.watch/api/badge/usdt-tether.svg"));
+    expect(gapRes.status).toBe(200);
+    expect(gapRes.headers.get("Cache-Control")).toBe("no-store");
+    expect(gapRes.headers.get("X-Badge-Reason")).toBe("pipeline-gap");
+    expect(await gapRes.text()).toContain("Unavailable");
+
+    // Held publication -> 200 Unavailable SVG + no-store + X-Safety-Score-Status: held
+    const heldCase = buildRiskCheckMockDb(nowSec, { heldSafety: true });
+    const heldRes = await handleSafetyBadge(heldCase.db, "usdc-circle", new URL("https://api.pharos.watch/api/badge/usdc-circle.svg"));
+    expect(heldRes.status).toBe(200);
+    expect(heldRes.headers.get("Cache-Control")).toBe("no-store");
+    expect(heldRes.headers.get("X-Safety-Score-Status")).toBe("held");
+    expect(heldRes.headers.get("X-Badge-Reason")).toBe("v9-publication-held");
+    const heldSvg = await heldRes.text();
+    expect(heldSvg).toContain("Unavailable");
+    expect(heldSvg).not.toContain("88/100");
+    expect(heldSvg).not.toContain("A-");
+
+    // Stale publication -> 200 Unavailable SVG + no-store + X-Safety-Score-Status: stale
+    vi.setSystemTime((nowSec + 100_000) * 1000);
+    const staleRes = await handleSafetyBadge(db, "usdc-circle", new URL("https://api.pharos.watch/api/badge/usdc-circle.svg"));
+    expect(staleRes.status).toBe(200);
+    expect(staleRes.headers.get("Cache-Control")).toBe("no-store");
+    expect(staleRes.headers.get("X-Safety-Score-Status")).toBe("stale");
+    expect(await staleRes.text()).toContain("Unavailable");
+
+    // Unknown coin -> 404
+    const missing = await handleSafetyBadge(db, "nonexistent-coin", new URL("https://api.pharos.watch/api/badge/nonexistent-coin.svg"));
+    expect(missing.status).toBe(404);
   });
 });

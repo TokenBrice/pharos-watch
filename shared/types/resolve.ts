@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const ResolveCoinIdentitySchema = z.object({
+const ResolveCoinIdentitySchema = z.object({
   id: z.string(),
   symbol: z.string(),
   name: z.string(),
@@ -12,7 +12,7 @@ export const ResolveCoinIdentitySchema = z.object({
 });
 export type ResolveCoinIdentity = z.infer<typeof ResolveCoinIdentitySchema>;
 
-export const ResolveDeploymentSchema = z.object({
+const ResolveDeploymentSchema = z.object({
   chain: z.string(),
   chainName: z.string(),
   evmChainId: z.number().int().nullable(),
@@ -23,7 +23,7 @@ export const ResolveDeploymentSchema = z.object({
 });
 export type ResolveDeployment = z.infer<typeof ResolveDeploymentSchema>;
 
-export const ResolveLinksSchema = z.object({
+const ResolveLinksSchema = z.object({
   compliance: z.string(),
   riskCheck: z.string(),
   detail: z.string(),
@@ -31,7 +31,7 @@ export const ResolveLinksSchema = z.object({
 });
 export type ResolveLinks = z.infer<typeof ResolveLinksSchema>;
 
-export const ResolveSingleDeploymentResponseSchema = z.object({
+const ResolveSingleDeploymentResponseSchema = z.object({
   mode: z.literal("deployment"),
   matched: z.literal(true),
   query: z.object({
@@ -45,13 +45,13 @@ export const ResolveSingleDeploymentResponseSchema = z.object({
 });
 export type ResolveSingleDeploymentResponse = z.infer<typeof ResolveSingleDeploymentResponseSchema>;
 
-export const ResolveAddressMatchSchema = z.object({
+const ResolveAddressMatchSchema = z.object({
   coin: ResolveCoinIdentitySchema,
   deployment: ResolveDeploymentSchema,
   links: ResolveLinksSchema,
 });
 
-export const ResolveAddressResponseSchema = z.object({
+const ResolveAddressResponseSchema = z.object({
   mode: z.literal("address"),
   query: z.object({
     address: z.string(),
@@ -62,7 +62,7 @@ export const ResolveAddressResponseSchema = z.object({
 });
 export type ResolveAddressResponse = z.infer<typeof ResolveAddressResponseSchema>;
 
-export const ResolveCoinResponseSchema = z.object({
+const ResolveCoinResponseSchema = z.object({
   mode: z.literal("coin"),
   query: z.object({
     id: z.string().optional(),
@@ -74,7 +74,7 @@ export const ResolveCoinResponseSchema = z.object({
 });
 export type ResolveCoinResponse = z.infer<typeof ResolveCoinResponseSchema>;
 
-export const ResolveBatchResultItemSchema = z.object({
+const ResolveBatchResultItemSchema = z.object({
   input: z.string(),
   chain: z.string().nullable(),
   address: z.string().nullable(),
@@ -87,7 +87,7 @@ export const ResolveBatchResultItemSchema = z.object({
 });
 export type ResolveBatchResultItem = z.infer<typeof ResolveBatchResultItemSchema>;
 
-export const ResolveBatchResponseSchema = z.object({
+const ResolveBatchResponseSchema = z.object({
   mode: z.literal("batch"),
   matchedCount: z.number().int().nonnegative(),
   unresolvedCount: z.number().int().nonnegative(),
@@ -101,4 +101,3 @@ export const ResolveResponseSchema = z.union([
   ResolveCoinResponseSchema,
   ResolveBatchResponseSchema,
 ]);
-export type ResolveResponse = z.infer<typeof ResolveResponseSchema>;

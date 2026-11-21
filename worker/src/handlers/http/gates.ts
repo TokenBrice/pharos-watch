@@ -1,5 +1,8 @@
 import { API_KEY_PLAN_UPGRADE_REQUIRED_REASON, type ApiKeyPlan } from "@pharos/contracts/api-keys";
 import { API_PATHS, getEndpointRequiredKeyPlans, getPublicApiAccess, isAdminLikePath } from "@shared/lib/api-endpoints";
+import { DYNAMIC_API_PATHS } from "@shared/lib/api-endpoints/paths";
+import { renderSafetyBadgeSvg } from "@shared/lib/safety-badge-svg";
+import { WORKER_ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { isAnonymousThrottlePath } from "@shared/lib/api-endpoints/definitions";
 import { API_KEY_DEPENDENCY_RETRY_AFTER_SEC } from "@shared/lib/ops-limits";
 import { API_PARTNER_ACCESS_URL } from "@shared/lib/public-api-contract";
@@ -272,6 +275,60 @@ async function limitAnonymousOgImageRead(request: Request, env: Env): Promise<Re
   }
 }
 
+async function limitAnonymousBadgeRead(request: Request, url: URL, env: Env): Promise<Response | null> {
+  const key = clientAddressLimiterSubject(request.headers.get("CF-Connecting-IP")) ?? "unknown";
+  try {
+    if (!env.OG_IMAGE_RATE_LIMIT) throw new Error("OG image rate-limit binding missing");
+    const result = await env.OG_IMAGE_RATE_LIMIT.limit({ key });
+    if (result.success) return null;
+    const match = url.pathname.match(DYNAMIC_API_PATHS.safetyBadge.pattern);
+    let symbol: string | undefined;
+    let name: string | undefined;
+    if (match?.[1]) {
+      try {
+        const decodedId = decodeURIComponent(match[1]);
+        const meta = WORKER_ACTIVE_META_BY_ID.get(decodedId);
+        if (meta) {
+          symbol = meta.symbol;
+          name = meta.name;
+        }
+      } catch {
+        // Malformed URI falls through to neutral symbol-less badge.
+      }
+    }
+    const rawStyle = url.searchParams.get("style")?.trim().toLowerCase();
+    const rawTheme = url.searchParams.get("theme")?.trim().toLowerCase();
+    const svg = renderSafetyBadgeSvg(
+      { kind: "unavailable", symbol, name },
+      { style: rawStyle === "card" ? "card" : "flat", theme: rawTheme === "light" ? "light" : "dark" },
+    );
+    return new Response(request.method === "HEAD" ? null : svg, {
+      status: 200,
+      headers: {
+        "Content-Type": "image/svg+xml; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Retry-After": "60",
+        "X-Safety-Score-Status": "unavailable",
+        "X-Badge-Reason": "rate-limited",
+      },
+    });
+  } catch (error) {
+    if (!ogImageRateLimitOutageLogged) {
+      ogImageRateLimitOutageLogged = true;
+      logWorkerEvent({
+        scope: "http",
+        level: "warn",
+        event: "og_image_rate_limit_unavailable",
+        route: "public-api-badge",
+        requestLane: "public-api",
+        message: "OG/badge rate limiter unavailable; serving safety badges without it",
+        error,
+      });
+    }
+    return null;
+  }
+}
+
 export async function evaluateAccessGate(
   request: Request,
   url: URL,
@@ -342,6 +399,14 @@ export async function evaluateAccessGate(
 
   if (request.method === "GET" && url.hostname === API_HOSTNAME && url.pathname.startsWith("/api/og/")) {
     const limited = await limitAnonymousOgImageRead(request, env);
+    if (limited) return gateResult("public-api", limited);
+  }
+
+  if ((request.method === "GET" || request.method === "HEAD")
+    && url.hostname === API_HOSTNAME
+    && url.pathname.startsWith("/api/badge/")
+  ) {
+    const limited = await limitAnonymousBadgeRead(request, url, env);
     if (limited) return gateResult("public-api", limited);
   }
 

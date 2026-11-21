@@ -45,11 +45,35 @@ function corsHeaders(origin: string | null): Record<string, string> {
   return headers;
 }
 
-export function addCorsHeaders(response: Response, origin: string | null): Response {
+function isPublicBadgePath(pathname: string): boolean {
+  return pathname.startsWith("/api/badge/");
+}
+
+function badgeCorsHeaders(): Record<string, string> {
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+    "Access-Control-Expose-Headers": "ETag, Age, Date, Cache-Control, X-Data-Updated-At, X-Data-Freshness-Budget, X-Safety-Score-Status, X-Safety-Score-Generation, X-Badge-Reason, Retry-After",
+    "Access-Control-Max-Age": "86400",
+    "Cross-Origin-Resource-Policy": "cross-origin",
+    "X-Content-Type-Options": "nosniff",
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
+  };
+}
+
+export function addCorsHeaders(response: Response, origin: string | null, pathname?: string): Response {
+  const headerEntries = pathname && isPublicBadgePath(pathname)
+    ? badgeCorsHeaders()
+    : corsHeaders(origin);
   return cloneResponse(response, {
     mutateHeaders: (headers) => {
-      for (const [key, value] of Object.entries(corsHeaders(origin))) {
+      for (const [key, value] of Object.entries(headerEntries)) {
         headers.set(key, value);
+      }
+      if (pathname && isPublicBadgePath(pathname)) {
+        headers.delete("Vary");
       }
     },
   });
@@ -57,6 +81,9 @@ export function addCorsHeaders(response: Response, origin: string | null): Respo
 
 export function handleCorsPreflight(request: Request, origin: string | null): Response | null {
   if (request.method !== "OPTIONS") return null;
+  if (isPublicBadgePath(new URL(request.url).pathname)) {
+    return new Response(null, { status: 204, headers: badgeCorsHeaders() });
+  }
   if (request.headers.has("Origin") && !origin) {
     return new Response(null, { status: 403, headers: corsHeaders(null) });
   }

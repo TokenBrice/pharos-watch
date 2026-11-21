@@ -177,6 +177,15 @@ const PUBLIC_POST_EXEMPT_POLICY = {
   siteDataAccess: "denied",
 } as const satisfies EndpointDefinitionPolicy<readonly ["POST"], false, false, true>;
 
+const PUBLIC_POST_PROTECTED_POLICY = {
+  methods: ["POST"],
+  adminRequired: false,
+  mutatingAdmin: false,
+  cacheBypass: true,
+  publicApiAccess: "protected",
+  siteDataAccess: "denied",
+} as const satisfies EndpointDefinitionPolicy<readonly ["POST"], false, false, true>;
+
 const ADMIN_GET_POLICY = {
   methods: ["GET"],
   adminRequired: true,
@@ -219,6 +228,10 @@ function publicGet<const T extends EndpointDefinitionFactoryInput>(definition: T
 
 function publicPostExempt<const T extends EndpointDefinitionFactoryInput>(definition: T) {
   return defineEndpoint(definition, PUBLIC_POST_EXEMPT_POLICY);
+}
+
+function publicPostProtected<const T extends EndpointDefinitionFactoryInput>(definition: T) {
+  return defineEndpoint(definition, PUBLIC_POST_PROTECTED_POLICY);
 }
 
 function adminGet<const T extends EndpointDefinitionFactoryInput>(definition: T) {
@@ -669,6 +682,11 @@ const BASE_ENDPOINT_DEFINITIONS = [
     cacheKeyQueryParams: ["ids", "contracts"],
     probeGroup: "public",
     probePath: API_PATHS.riskCheck({ ids: ["usdc-circle", "usdt-tether"] }),
+  }),
+  publicPostProtected({
+    key: "mcp",
+    path: API_PATHS.mcp(),
+    requiredKeyPlans: ["commercial", "institutional"],
   }),
   publicGet({
     key: "depeg-resolver",

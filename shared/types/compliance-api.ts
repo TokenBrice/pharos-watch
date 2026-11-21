@@ -15,7 +15,7 @@ import {
 } from "./compliance-vocabulary";
 import { StablecoinLinkSchema } from "./stablecoin-meta-primitives";
 
-export const ComplianceApiRegimeGeniusSchema = z.object({
+const ComplianceApiRegimeGeniusSchema = z.object({
   publicLawDate: z.string(),
   finalRulesIssuedAt: z.string().nullable(),
   statutoryFallbackEffectiveDate: z.string(),
@@ -67,9 +67,9 @@ export const ComplianceApiGeniusSchema = z.object({
   reviewedAt: z.string(),
 });
 
-export const ComplianceUnavailableReasonSchema = z.enum(["not-reviewed"]);
+const ComplianceUnavailableReasonSchema = z.enum(["not-reviewed"]);
 
-export const ComplianceApiRowSchema = z.object({
+const ComplianceApiRowSchema = z.object({
   id: z.string(),
   symbol: z.string(),
   name: z.string(),
@@ -86,7 +86,7 @@ export const ComplianceApiRowSchema = z.object({
 });
 export type ComplianceApiRow = z.infer<typeof ComplianceApiRowSchema>;
 
-export const ComplianceRegimesEnvelopeSchema = z.object({
+const ComplianceRegimesEnvelopeSchema = z.object({
   genius: ComplianceApiRegimeGeniusSchema,
 });
 

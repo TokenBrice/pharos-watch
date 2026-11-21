@@ -1,27 +1,27 @@
 import { z } from "zod";
 import { ApiMetaEnvelopeSchema } from "@pharos/contracts/api-meta";
 
-export const RiskCheckUnresolvedInputSchema = z.object({
+const RiskCheckUnresolvedInputSchema = z.object({
   input: z.string(),
   kind: z.enum(["id", "contract"]),
   reason: z.string(),
 });
 export type RiskCheckUnresolvedInput = z.infer<typeof RiskCheckUnresolvedInputSchema>;
 
-export const RiskCheckSafetyPillarsSchema = z.object({
+const RiskCheckSafetyPillarsSchema = z.object({
   backing: z.number().nullable(),
   exit: z.number().nullable(),
   control: z.number().nullable(),
 });
 
-export const RiskCheckActiveDepegSchema = z.object({
+const RiskCheckActiveDepegSchema = z.object({
   eventId: z.number().int(),
   startedAt: z.number().int(),
   direction: z.enum(["above", "below"]),
   peakDeviationBps: z.number(),
 });
 
-export const RiskCheckAssetSchema = z.object({
+const RiskCheckAssetSchema = z.object({
   identity: z.object({
     id: z.string(),
     symbol: z.string(),

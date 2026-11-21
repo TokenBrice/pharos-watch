@@ -56,6 +56,10 @@ export const PUBLIC_STATIC_ROUTES = [
     return ({ url }) => handleResolve(url);
   }),
   defineLazyDbUrlRoute("risk-check", () => import("../api/risk-check").then(({ handleRiskCheck }) => handleRiskCheck)),
+  defineLazyStaticRoute("mcp", async () => {
+    const { handleMcp } = await import("../api/mcp");
+    return ({ db, request, execCtx }) => handleMcp(db, request, execCtx);
+  }),
   defineLazyDbRoute("depeg-resolver", () => import("../api/depeg-resolver").then(({ handleDepegResolver }) => handleDepegResolver)),
   defineLazyDbRoute("depeg-resolver-review", () => import("../api/depeg-resolver-review").then(({ handleDepegResolverReview }) => handleDepegResolverReview)),
   defineLazyDbRoute("redemption-backstops", () => import("../api/redemption-backstops").then(({ handleRedemptionBackstops }) => handleRedemptionBackstops)),
