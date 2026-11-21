@@ -98,9 +98,8 @@ describe("Published tier quotas", () => {
     expect(terms).toContain("plan_upgrade_required");
 
     cleanup();
-    render(<ApiPreviewTabs />);
-    expect(screen.getByRole("tab", { name: "Risk-Gate" }).getAttribute("aria-selected")).toBe("true");
-    expect(screen.getByRole("tab", { name: "MCP" })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: "Safety Badge" })).toBeTruthy();
+    render(<ApiPreviewTabs examples={{ asOfDate: "d", riskGateResponse: '"A+"', complianceResponse: "", badge: null }} />);
+    expect(screen.getByRole("tab", { name: "Risk-Gate", selected: true })).toBeTruthy();
+    expect(document.body.textContent).toContain('"A+"');
   });
 });

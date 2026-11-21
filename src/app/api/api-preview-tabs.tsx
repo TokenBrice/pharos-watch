@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import { API_PAGE_ANCHORS, PUBLIC_API_HOST, PUBLIC_API_KEY_HEADER } from "@shared/lib/public-api-contract";
 import { renderSafetyBadgeSvg } from "@shared/lib/safety-badge-svg";
+import type { ApiPreviewExamples } from "./api-landing-data";
 
 type PreviewTabId = "risk-gate" | "compliance" | "mcp" | "badge";
 type McpClientId = "cursor" | "vscode" | "claude-code" | "claude-desktop";
@@ -102,80 +103,34 @@ const MCP_CLIENTS: readonly { id: McpClientId; label: string; fileHint: string; 
 
 const RISK_GATE_CURL = `curl "${PUBLIC_API_HOST}${API_PATHS.riskCheck()}?ids=usdc-circle" \\\n  -H "${PUBLIC_API_KEY_HEADER}: $PHAROS_API_KEY"`;
 
-const RISK_GATE_RESPONSE = JSON.stringify(
-  {
-    schemaVersion: 1,
-    requestedCount: 1,
-    resolvedCount: 1,
-    assets: {
-      "usdc-circle": {
-        safety: { grade: "A-", score: 88, pillars: { backing: 91, exit: 92, control: 79 }, publicationStatus: "current" },
-        dews: { score: 8, band: "CALM", ageClassification: "fresh" },
-        peg: { price: 1.0, currentDeviationBps: -1, pegScore: 99.4, activeDepeg: null },
-        liquidity: { liquidityScore: 98, totalTvlUsd: 3450000000, poolCount: 412 },
-        redemption: { score: 86, routeFamily: "offchain-issuer", immediateCapacityUsd: 5000000000 },
-        controls: { freezeable: true, liveFreezeTrackerCovered: true },
-        compliance: { micaStatus: "authorized", micaTokenType: "EMT", geniusStatus: "official-application-pending" },
-      },
-    },
-  },
-  null,
-  2,
-);
-
 const COMPLIANCE_CURL = `curl "${PUBLIC_API_HOST}${API_PATHS.complianceCoin("usdc-circle")}" \\\n  -H "${PUBLIC_API_KEY_HEADER}: $PHAROS_API_KEY"`;
-
-const COMPLIANCE_RESPONSE = JSON.stringify(
-  {
-    schemaVersion: 1,
-    regimes: { genius: { effectiveDate: "2027-01-18", rulemakingPhase: "proposed-rules", isEffective: false } },
-    coin: {
-      id: "usdc-circle",
-      symbol: "USDC",
-      mica: {
-        status: "authorized",
-        tokenType: "EMT",
-        authorizationType: "emi",
-        competentAuthority: "ACPR (France)",
-        authorizedEntity: "Circle Internet Financial Europe SAS",
-      },
-      genius: {
-        applicability: "apparent-payment-stablecoin",
-        authorizationStatus: "official-application-pending",
-        issuerPathway: "federal-qualified-nonbank",
-        primaryFederalRegulator: "OCC",
-        monthlyAttestationPresent: true,
-      },
-    },
-  },
-  null,
-  2,
-);
 
 const BADGE_URL = `${PUBLIC_API_HOST}${API_PATHS.safetyBadge("usdc-circle")}`;
 const BADGE_MARKDOWN = `[![Pharos Safety Score](${BADGE_URL})](https://pharos.watch/stablecoin/usdc-circle/)`;
 const BADGE_HTML = `<a href="https://pharos.watch/stablecoin/usdc-circle/"><img src="${BADGE_URL}?style=card&theme=dark" alt="Pharos Safety Score for USDC" /></a>`;
 
-const SAMPLE_BADGE_STATE = { kind: "rated", symbol: "USDC", name: "USD Coin", grade: "A-", score: 88 } as const;
-const FLAT_DARK_DATA_URI = `data:image/svg+xml;utf8,${encodeURIComponent(renderSafetyBadgeSvg(SAMPLE_BADGE_STATE, { style: "flat", theme: "dark" }))}`;
-const FLAT_LIGHT_DATA_URI = `data:image/svg+xml;utf8,${encodeURIComponent(renderSafetyBadgeSvg(SAMPLE_BADGE_STATE, { style: "flat", theme: "light" }))}`;
-const CARD_DARK_DATA_URI = `data:image/svg+xml;utf8,${encodeURIComponent(renderSafetyBadgeSvg(SAMPLE_BADGE_STATE, { style: "card", theme: "dark" }))}`;
+function badgeDataUri(badge: NonNullable<ApiPreviewExamples["badge"]>, style: "flat" | "card", theme: "dark" | "light"): string {
+  return `data:image/svg+xml;utf8,${encodeURIComponent(renderSafetyBadgeSvg({ kind: "rated", ...badge }, { style, theme }))}`;
+}
 
-function CodePanel({ label, code }: { label: string; code: string }) {
+function CodePanel({ label, code, scroll = false }: { label: string; code: string; scroll?: boolean }) {
   return (
     <div className="overflow-hidden rounded-xl border border-border/60 bg-[var(--code-surface-bg)] text-[var(--code-surface-fg)]">
       <div className="flex items-center justify-between border-b border-[var(--code-surface-border)] px-3 py-2">
         <span className="text-2xs font-semibold text-[var(--code-surface-muted)]">{label}</span>
         <CopyButton text={code} className="size-8 shrink-0" />
       </div>
-      <pre className="overflow-x-auto px-3 py-3 font-mono text-xs leading-relaxed">
+      <pre className={cn("overflow-x-auto px-3 py-3 font-mono text-xs leading-relaxed", scroll && "max-h-96 overflow-y-auto")}>
         <code>{code}</code>
       </pre>
     </div>
   );
 }
 
-export function ApiPreviewTabs() {
+const EXAMPLE_GRID_CLASS_NAME = "grid gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:items-start";
+
+export function ApiPreviewTabs({ examples }: { examples: ApiPreviewExamples }) {
+  const exampleNote = `Exact response shape. The Safety grade and compliance fields come from the ${examples.asOfDate} release; market fields are illustrative.`;
   const [activeTab, setActiveTab] = useState<PreviewTabId>("risk-gate");
   const [activeMcpClient, setActiveMcpClient] = useState<McpClientId>("cursor");
   const mcpConfig = MCP_CLIENTS.find((client) => client.id === activeMcpClient) ?? MCP_CLIENTS[0];
@@ -190,7 +145,7 @@ export function ApiPreviewTabs() {
         <div className="space-y-1.5">
           <p className="pharos-label">Integration previews</p>
           <h2 id="api-preview-title" className="text-2xl font-semibold tracking-tight text-foreground">
-            Inspect the wire before you ask for a key
+            See the full response before you ask for a key
           </h2>
         </div>
         <div role="tablist" aria-label="Integration preview tabs" className="flex flex-wrap gap-2">
@@ -220,13 +175,15 @@ export function ApiPreviewTabs() {
           <p className="text-sm leading-relaxed text-muted-foreground">
             One call for vault allocators, DEX routers, and treasury risk desks. Pass up to 25 canonical IDs or{" "}
             <code className="rounded-sm bg-muted px-1 py-0.5 font-mono text-xs text-foreground">chain:address</code>{" "}
-            contracts to receive Safety Score, DEWS stress, peg deviation, DDR outlook, DEX liquidity, redemption capacity,
-            freeze controls, and MiCA/GENIUS status in one response. Commercial or Institutional key required.
+            contracts to receive Safety Score, DEWS stress, peg deviation, depeg outlook, DEX liquidity, redemption capacity,
+            freeze controls, and MiCA/GENIUS status in one response. Every block states when its source was read, and a
+            missing input returns a reason instead of a default. Commercial or Institutional key required.
           </p>
-          <div className="grid gap-3 lg:grid-cols-2">
+          <div className={EXAMPLE_GRID_CLASS_NAME}>
             <CodePanel label="Request (curl)" code={RISK_GATE_CURL} />
-            <CodePanel label="Response excerpt (200 OK)" code={RISK_GATE_RESPONSE} />
+            <CodePanel label="Example response (200 OK)" code={examples.riskGateResponse} scroll />
           </div>
+          <p className="pharos-meta">{exampleNote}</p>
         </div>
       ) : null}
 
@@ -238,10 +195,11 @@ export function ApiPreviewTabs() {
             nulls and statutory rulemaking dates. Query the full filtered registry or a single coin. Commercial or
             Institutional key required.
           </p>
-          <div className="grid gap-3 lg:grid-cols-2">
+          <div className={EXAMPLE_GRID_CLASS_NAME}>
             <CodePanel label="Request (curl)" code={COMPLIANCE_CURL} />
-            <CodePanel label="Response excerpt (200 OK)" code={COMPLIANCE_RESPONSE} />
+            <CodePanel label="Example response (200 OK)" code={examples.complianceResponse} scroll />
           </div>
+          <p className="pharos-meta">Dossier fields as reviewed in the {examples.asOfDate} release.</p>
         </div>
       ) : null}
 
@@ -289,11 +247,14 @@ export function ApiPreviewTabs() {
             <code className="rounded-sm bg-muted px-1 py-0.5 font-mono text-xs text-foreground">theme=dark|light</code>.
             Held or stale publications render an explicit uncached Unavailable state.
           </p>
-          <div className="pharos-inset flex flex-wrap items-center gap-4 p-4">
-            <img src={FLAT_DARK_DATA_URI} alt="Pharos flat dark safety badge preview for USDC" height={26} />
-            <img src={FLAT_LIGHT_DATA_URI} alt="Pharos flat light safety badge preview for USDC" height={26} />
-            <img src={CARD_DARK_DATA_URI} alt="Pharos card dark safety badge preview for USDC" height={60} />
-          </div>
+          {examples.badge ? (
+            <div className="pharos-inset flex flex-wrap items-center gap-4 p-4">
+              <img src={badgeDataUri(examples.badge, "flat", "dark")} alt={`Pharos flat dark safety badge for ${examples.badge.symbol}`} height={26} />
+              <img src={badgeDataUri(examples.badge, "flat", "light")} alt={`Pharos flat light safety badge for ${examples.badge.symbol}`} height={26} />
+              <img src={badgeDataUri(examples.badge, "card", "dark")} alt={`Pharos card dark safety badge for ${examples.badge.symbol}`} height={60} />
+              <p className="pharos-meta w-full">Rendered with the grade from the {examples.asOfDate} release; the live badge always shows the current grade.</p>
+            </div>
+          ) : null}
           <div className="grid gap-3 lg:grid-cols-2">
             <CodePanel label="Markdown embed" code={BADGE_MARKDOWN} />
             <CodePanel label="HTML embed (card)" code={BADGE_HTML} />
