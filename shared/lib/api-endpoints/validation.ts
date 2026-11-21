@@ -1,3 +1,4 @@
+import type { ApiKeyPlan } from "@pharos/contracts/api-keys";
 import type {
   DynamicAdminEndpointMatch,
   EndpointDefinition,
@@ -22,11 +23,11 @@ function isPathOrChild(path: string, root: string): boolean {
   return path === root || path.startsWith(`${root}/`);
 }
 
-function getResolvedEndpointProperty<Key extends "publicApiAccess" | "siteDataAccess">(
+function getResolvedEndpointProperty<Key extends "publicApiAccess" | "siteDataAccess" | "requiredKeyPlans">(
   path: string,
   key: Key,
 ): EndpointDefinition[Key] | null {
-  const descriptor: Pick<EndpointDefinition, "publicApiAccess" | "siteDataAccess"> | null =
+  const descriptor: Pick<EndpointDefinition, "publicApiAccess" | "siteDataAccess" | "requiredKeyPlans"> | null =
     getEndpointDefinition(path) ?? getResolvedDynamicEndpointDescriptor(path);
   return descriptor?.[key] ?? null;
 }
@@ -37,6 +38,11 @@ export function getPublicApiAccess(path: string): EndpointPublicApiAccess | null
 
 export function isProtectedPublicApiPath(path: string): boolean {
   return getPublicApiAccess(path) === "protected";
+}
+
+export function getEndpointRequiredKeyPlans(path: string): readonly ApiKeyPlan[] | null {
+  const plans = getResolvedEndpointProperty(path, "requiredKeyPlans");
+  return plans && plans.length > 0 ? plans : null;
 }
 
 export function getSiteDataAccess(path: string): EndpointSiteDataAccess | null {

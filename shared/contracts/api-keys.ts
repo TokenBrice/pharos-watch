@@ -11,6 +11,18 @@ export type ApiKeyTrafficClass = z.infer<typeof ApiKeyTrafficClassSchema>;
 export const API_KEY_TIER_VALUES = ["standard", "self-serve", "donor"] as const;
 export type ApiKeyTier = (typeof API_KEY_TIER_VALUES)[number];
 
+/**
+ * Operator-assigned plans for `standard`-tier keys. Non-standard keys (`donor`,
+ * `self-serve`) and unbackfilled legacy rows carry `plan: null`, which fails
+ * closed on paid-endpoint entitlements.
+ */
+export const API_KEY_PLAN_VALUES = ["free_partner", "commercial", "institutional"] as const;
+export const ApiKeyPlanSchema = z.enum(API_KEY_PLAN_VALUES);
+export type ApiKeyPlan = z.infer<typeof ApiKeyPlanSchema>;
+
+/** Machine-readable `reason` on `403` entitlement rejections. */
+export const API_KEY_PLAN_UPGRADE_REQUIRED_REASON = "plan_upgrade_required" as const;
+
 /** Upper bound accepted for an explicit per-key `monthlyRequestQuota`. */
 export const API_KEY_MAX_MONTHLY_REQUEST_QUOTA = 100_000_000;
 
@@ -73,6 +85,8 @@ const ApiKeySummarySchema = z.object({
   name: z.string(),
   ownerEmail: z.string().nullable(),
   tier: z.string(),
+  /** Explicit plan for standard-tier keys; null fails closed on paid entitlements. Tolerates older Workers that omit the field. */
+  plan: ApiKeyPlanSchema.nullable().optional().default(null),
   trafficClass: ApiKeyTrafficClassSchema,
   rateLimitPerMinute: z.number(),
   /** Explicit per-key monthly request quota; null keeps the tier default. Tolerates older Workers that omit the field. */
@@ -122,6 +136,8 @@ export interface ApiKeyCreateRequest {
   name: string;
   ownerEmail?: string | null;
   tier?: ApiKeyTier | null;
+  /** Explicit plan for `standard`-tier keys; omitted defaults to `free_partner`, non-standard tiers require null/omitted. */
+  plan?: ApiKeyPlan | null;
   rateLimitPerMinute?: number | null;
   /** Explicit monthly request quota (positive integer up to `API_KEY_MAX_MONTHLY_REQUEST_QUOTA`); null keeps the tier default. */
   monthlyRequestQuota?: number | null;
@@ -132,6 +148,8 @@ export interface ApiKeyUpdateRequest {
   name?: string | null;
   ownerEmail?: string | null;
   tier?: ApiKeyTier | null;
+  /** Explicit plan for `standard`-tier keys; null leaves plan unset (fail closed on paid endpoints). */
+  plan?: ApiKeyPlan | null;
   rateLimitPerMinute?: number | null;
   /** Explicit monthly request quota (positive integer up to `API_KEY_MAX_MONTHLY_REQUEST_QUOTA`); null keeps the tier default. */
   monthlyRequestQuota?: number | null;
