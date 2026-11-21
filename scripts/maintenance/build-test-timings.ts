@@ -4,9 +4,12 @@
  * consumed by `test:pr --timings` for duration-balanced shards.
  *
  * PR tests collect no timing telemetry; this table is built only from the
- * nightly `--reporter=json --outputFile=...` shards. Each value is the sum of
- * that file's assertion durations rounded to 100 ms, and duplicate observations
- * keep the slowest value so repeated inputs cannot double-count.
+ * nightly `--reporter=json --outputFile=...` shards. Each `files` value is the
+ * sum of that file's assertion durations rounded to 100 ms. When the nightly
+ * shards also ran `scripts/test/vitest-file-timings-reporter.mts`, `wallFiles`
+ * holds each file's wall cost (setup, import/collect and run), also rounded to
+ * 100 ms. Duplicate observations keep the slowest value so repeated inputs
+ * cannot double-count.
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
@@ -15,6 +18,8 @@ import { assertCliUsage, parseStrictCliArgs, requireCliString, runDirectCli, wri
 
 export const TEST_TIMINGS_VERSION = 1;
 const ROUNDING_MS = 100;
+/** Mirrors FILE_TIMINGS_REPORT_KIND; this script runs without dependencies, so it does not import the reporter. */
+const FILE_TIMINGS_REPORT_KIND = "pharos-vitest-file-timings";
 
 interface VitestAssertion {
   duration?: unknown;
@@ -27,12 +32,15 @@ interface VitestFileResult {
 
 interface VitestReport {
   testResults?: VitestFileResult[];
+  kind?: unknown;
+  files?: unknown;
 }
 
 export interface TestTimingsFile {
   version: number;
   generatedAt: string;
   files: Record<string, number>;
+  wallFiles?: Record<string, number>;
 }
 
 function collectReportPaths(directory: string): string[] {
@@ -70,7 +78,12 @@ export function mergeTestTimings(reportPaths: readonly string[], { cwd = process
   skipped: string[];
 } {
   const files: Record<string, number> = {};
+  const wallFiles: Record<string, number> = {};
   const skipped: string[] = [];
+  const keepSlowest = (into: Record<string, number>, name: string, duration: number): void => {
+    const file = normalizeReportPath(name, cwd);
+    into[file] = Math.max(into[file] ?? 0, Math.round(duration / ROUNDING_MS) * ROUNDING_MS);
+  };
   for (const path of reportPaths) {
     let report: VitestReport;
     try {
@@ -79,20 +92,30 @@ export function mergeTestTimings(reportPaths: readonly string[], { cwd = process
       skipped.push(path);
       continue;
     }
-    if (!Array.isArray(report.testResults)) {
+    if (report?.kind === FILE_TIMINGS_REPORT_KIND && report.files && typeof report.files === "object" && !Array.isArray(report.files)) {
+      for (const [name, duration] of Object.entries(report.files)) {
+        if (name && typeof duration === "number" && Number.isFinite(duration) && duration >= 0) keepSlowest(wallFiles, name, duration);
+      }
+      continue;
+    }
+    if (!Array.isArray(report?.testResults)) {
       skipped.push(path);
       continue;
     }
     for (const result of report.testResults) {
       if (typeof result.name !== "string" || !result.name) continue;
-      const file = normalizeReportPath(result.name, cwd);
-      const duration = Math.round(assertionDurations(result) / ROUNDING_MS) * ROUNDING_MS;
-      files[file] = Math.max(files[file] ?? 0, duration);
+      keepSlowest(files, result.name, assertionDurations(result));
     }
   }
-  const sorted = Object.fromEntries(Object.entries(files).sort(([left], [right]) => left.localeCompare(right)));
+  const sort = (record: Record<string, number>) =>
+    Object.fromEntries(Object.entries(record).sort(([left], [right]) => left.localeCompare(right)));
   return {
-    timings: { version: TEST_TIMINGS_VERSION, generatedAt: now.toISOString(), files: sorted },
+    timings: {
+      version: TEST_TIMINGS_VERSION,
+      generatedAt: now.toISOString(),
+      files: sort(files),
+      ...(Object.keys(wallFiles).length > 0 ? { wallFiles: sort(wallFiles) } : {}),
+    },
     skipped,
   };
 }
@@ -114,7 +137,9 @@ export function main(argv: readonly string[] = processArgv.slice(2)): number {
   mkdirSync(dirname(output), { recursive: true });
   writeFileSync(output, `${JSON.stringify(timings, null, 2)}\n`);
   const total = measured.reduce((sum, value) => sum + value, 0);
-  process.stdout.write(`[test-timings] ${measured.length} files, ${Math.round(total / 1000)}s summed assertions -> ${output}\n`);
+  const wall = Object.values(timings.wallFiles ?? {});
+  const wallTotal = wall.reduce((sum, value) => sum + value, 0);
+  process.stdout.write(`[test-timings] ${measured.length} files, ${Math.round(total / 1000)}s summed assertions, ${wall.length} files with ${Math.round(wallTotal / 1000)}s wall -> ${output}\n`);
   return 0;
 }
 

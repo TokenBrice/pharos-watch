@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { assertionDurations, mergeTestTimings } from "../maintenance/build-test-timings.ts";
+import FileTimingsReporter from "../test/vitest-file-timings-reporter.mts";
 
 const temporary: string[] = [];
 afterEach(() => { for (const directory of temporary.splice(0)) rmSync(directory, { recursive: true, force: true }); });
@@ -58,6 +59,39 @@ describe("nightly test timing extraction", () => {
     const { timings, skipped } = mergeTestTimings(["one.json", "two.json", "other.json", "broken.json"].map((name) => join(directory, name)));
     expect(timings.files).toEqual({ "src/a.test.ts": 900 });
     expect(skipped.sort()).toEqual([join(directory, "broken.json"), join(directory, "other.json")]);
+  });
+
+  it("merges wall-clock reports from the file-timings reporter into wallFiles", () => {
+    const directory = reports({});
+    const previous = process.env.PHAROS_VITEST_FILE_TIMINGS;
+    process.env.PHAROS_VITEST_FILE_TIMINGS = join(directory, "nested", "vitest-file-timings-1.json");
+    try {
+      const reporter = new FileTimingsReporter();
+      const fakeModule = (moduleId: string, durations: Record<string, number>) => ({
+        moduleId,
+        diagnostic: () => ({ prepareDuration: 0, environmentSetupDuration: 0, setupDuration: 0, collectDuration: 0, duration: 0, ...durations }),
+      }) as unknown as Parameters<FileTimingsReporter["onTestModuleEnd"]>[0];
+      // Worker prepare/environment, setup files, import and run all count.
+      reporter.onTestModuleEnd(fakeModule(join(process.cwd(), "src/a.test.ts"), { prepareDuration: 40, environmentSetupDuration: 10, setupDuration: 50, collectDuration: 2_400, duration: 330 }));
+      reporter.onTestModuleEnd(fakeModule(join(process.cwd(), "src/b.test.ts"), { collectDuration: 60 }));
+      reporter.onTestRunEnd();
+    } finally {
+      if (previous === undefined) delete process.env.PHAROS_VITEST_FILE_TIMINGS;
+      else process.env.PHAROS_VITEST_FILE_TIMINGS = previous;
+    }
+    writeFileSync(join(directory, "vitest-file-timings-2.json"), JSON.stringify({
+      kind: "pharos-vitest-file-timings",
+      files: { "src/a.test.ts": 900, "src/c.test.ts": 1_250, "src/bad.test.ts": -1, "src/nan.test.ts": "slow" },
+    }));
+    writeFileSync(join(directory, "shard-1.json"), JSON.stringify(vitestReport([["src/a.test.ts", [300]]])));
+    const { timings, skipped } = mergeTestTimings(
+      ["nested/vitest-file-timings-1.json", "vitest-file-timings-2.json", "shard-1.json"].map((name) => join(directory, name)),
+    );
+    expect(timings.files).toEqual({ "src/a.test.ts": 300 });
+    expect(timings.wallFiles).toEqual({ "src/a.test.ts": 2_800, "src/b.test.ts": 100, "src/c.test.ts": 1_300 });
+    expect(skipped).toEqual([]);
+    // Assertion-only inputs keep the historical shape.
+    expect(mergeTestTimings([join(directory, "shard-1.json")]).timings).not.toHaveProperty("wallFiles");
   });
 
   it("ignores missing, non-numeric and negative assertion durations", () => {

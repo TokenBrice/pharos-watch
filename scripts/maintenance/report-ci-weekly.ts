@@ -460,7 +460,7 @@ export function renderWeeklyReport(report: WeeklyReport): string {
     lines.push("Unavailable — no nightly test-timings artifact was supplied for this window.");
   } else {
     lines.push(
-      `Timings generated at ${report.timingsGeneratedAt}. Summed assertion durations per file; import duration is not collected by the nightly suite.`,
+      `Timings generated at ${report.timingsGeneratedAt}. Summed assertion durations per file; import and setup time are excluded.`,
       "",
       `${report.slowOverBudget} file(s) exceed the ${SLOW_TEST_FILE_SECONDS} s per-file budget.`,
     );
