@@ -14,7 +14,7 @@ Access presents supporter and partner offers, the free Safety grades feed and cl
 
 ### Anchors
 
-`API_PAGE_ANCHORS` in `shared/lib/public-api-contract.ts` owns supporter-key, partner-access, integration-preview, use-cases, claim and developer-resources IDs. Change constants/callers atomically; funding, Worker errors and `/feedback/` redirect depend on them. The retired feedback route lands at `/api/#partner-access`, not a public key-request form.
+`API_PAGE_ANCHORS` in `shared/lib/public-api-contract.ts` owns supporter-key, partner-access, integration-preview, claim and developer-resources IDs. Change constants/callers atomically; funding, Worker errors and `/feedback/` redirect depend on them. The retired feedback route lands at `/api/#partner-access`, not a public key-request form.
 
 ### Private channel
 

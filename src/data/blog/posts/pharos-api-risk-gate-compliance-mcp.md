@@ -40,7 +40,7 @@ Vault allocators, lending curators, and DEX routers previously had to join six o
 
 ### 4. Stateless MCP (`/api/mcp`) and Embeddable SVG Badges (`/api/badge/:id.svg`)
 
-Coding assistants and research agents can now talk to Pharos directly over the Model Context Protocol without running a local proxy server. `POST /api/mcp` speaks stateless Streamable HTTP JSON-RPC 2.0 using the same `X-API-Key` header as the REST API and exposes seven read-only tools: `resolve_stablecoin`, `risk_check`, `get_compliance`, `get_safety_grades`, `get_active_depegs`, `get_peg_summary`, and `get_dex_liquidity`. Copyable setup snippets for Cursor, VS Code, Claude Code, and Claude Desktop live in the [integration previews on `/api/`](/api/#integration-preview).
+Coding assistants and research agents can now talk to Pharos directly over the Model Context Protocol without running a local proxy server. `POST /api/mcp` speaks stateless Streamable HTTP JSON-RPC 2.0 using the same `X-API-Key` header as the REST API and exposes seven read-only tools: `resolve_stablecoin`, `get_risk_check`, `get_compliance`, `get_safety_report_card`, `get_depeg_events`, `get_stress_signals`, and `get_stablecoin_reserves`. Copyable setup snippets for Cursor, VS Code, Claude Code, and Claude Desktop live in the [integration previews on `/api/`](/api/#integration-preview).
 
 On the no-key side, `GET /api/badge/:id.svg` serves pure presentation-attribute SVG Safety Score badges (`style=flat|card`, `theme=dark|light`) with wildcard CORS and strict `default-src 'none'` CSP, ready to embed in GitHub READMEs, documentation, and protocol UIs. If a Safety Score publication is held, stale, or unavailable, the badge returns an uncached neutral `Unavailable` SVG rather than showing stale numbers or breaking third-party `<img>` tags.
 
@@ -50,7 +50,7 @@ We also upgraded the machine-readable tooling around the API. `openapi.json` now
 
 The core independence rule stays untouched. Paying for a Commercial or Institutional API key buys data access, throughput, and integration support. It never buys a rating, a listing, a review queue jump, or a softer risk score. Every stablecoin on Pharos continues to be evaluated under the same public methodologies documented on [About](/about/) and in the [API Reference](/api/reference/).
 
-The public dashboard, free keyless Safety Score grades, dependency graph, modeled scenarios, and MIT-licensed dataset snapshots remain open without a key. Existing supporter keys continue working through their current terms and the same wallet-signed claim flow.
+The public dashboard, free keyless Safety Score grades, dependency graph, modeled scenarios, and MIT-licensed dataset snapshots remain open without a key. Existing supporter keys keep working through their paid term, under the 100,000 requests per month volume above and the same wallet-signed claim flow.
 
 If your team wants a 14-day Commercial evaluation key or wants to map out an Institutional integration, inspect the sample responses on [/api/](/api/) and message [@TokenBrice on Telegram](https://t.me/TokenBrice) or [@PharosWatch on X](https://x.com/PharosWatch).
 
