@@ -8,3 +8,6 @@ export const NON_USD_SHARE_MAX_DAYS = 5000;
 
 // Parameterless reads return the full index until it outgrows the page bound.
 export const SNAPSHOT_INDEX_LIMIT_QUERY = { min: 1, max: 500, default: 500 } as const;
+
+export const RESOLVE_MAX_CONTRACTS = 50;
+export const RISK_CHECK_MAX_ASSETS = 25;

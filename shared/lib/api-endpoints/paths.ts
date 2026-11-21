@@ -36,6 +36,7 @@ export const DYNAMIC_API_PATHS = {
   stablecoinLiveSummary: defineDynamicPath("/api/stablecoin-live-summary/:id", { id: STABLECOIN_PATH_ID }),
   stablecoinSummary: defineDynamicPath("/api/stablecoin-summary/:id", { id: STABLECOIN_PATH_ID }),
   stablecoinReserves: defineDynamicPath("/api/stablecoin-reserves/:id", { id: STABLECOIN_PATH_ID }),
+  complianceCoin: defineDynamicPath("/api/compliance/:id", { id: STABLECOIN_PATH_ID }),
   snapshotDay: defineDynamicPath("/api/snapshots/:date.json", { date: SNAPSHOT_PATH_DATE }),
   snapshotCoin: defineDynamicPath("/api/snapshot/:date/stablecoin/:id", { date: SNAPSHOT_PATH_DATE, id: STABLECOIN_PATH_ID }),
   apiKeyUpdate: defineDynamicPath("/api/api-keys/:id/update", { id: API_KEY_PATH_ID }),
@@ -146,6 +147,14 @@ export const API_PATHS = {
   safetyGrades: () => "/api/safety-grades",
   dependencyGraph: () => "/api/dependency-graph/v1",
   dependencyScenarios: () => "/api/dependency-scenarios/v1",
+  compliance: (params?: Record<string, QueryParamValue>) => buildQueryPath("/api/compliance", params),
+  complianceCoin: (stablecoinId: string) => DYNAMIC_API_PATHS.complianceCoin.build({ id: stablecoinId }),
+  resolve: (params?: Record<string, QueryParamValue>) => buildQueryPath("/api/resolve", params),
+  riskCheck: (params?: { ids?: readonly string[]; contracts?: readonly string[] }) =>
+    buildQueryPath("/api/risk-check", {
+      ids: params?.ids?.length ? params.ids.join(",") : undefined,
+      contracts: params?.contracts?.length ? params.contracts.join(",") : undefined,
+    }),
   donorKeyClaims: () => "/api/donor-key-claims",
   depegResolver: () => "/api/depeg-resolver",
   depegResolverReview: () => "/api/depeg-resolver-review",

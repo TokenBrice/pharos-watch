@@ -13,6 +13,7 @@ export type DynamicEndpointDescriptorKey =
   | "stablecoin-reserves"
   | "stablecoin-detail"
   | "stablecoin-live-summary"
+  | "compliance-coin"
   | "og-image"
   | "snapshot-day"
   | "snapshot-coin"
@@ -102,6 +103,7 @@ export const DYNAMIC_ENDPOINT_DESCRIPTORS = [
   publicDynamic({ key: "stablecoin-reserves", pattern: DYNAMIC_API_PATHS.stablecoinReserves.pattern }),
   publicDynamic({ key: "stablecoin-detail", pattern: DYNAMIC_API_PATHS.stablecoinDetail.pattern }),
   publicDynamic({ key: "stablecoin-live-summary", pattern: DYNAMIC_API_PATHS.stablecoinLiveSummary.pattern }),
+  publicDynamic({ key: "compliance-coin", pattern: DYNAMIC_API_PATHS.complianceCoin.pattern }),
   {
     key: "og-image",
     pattern: /^\/api\/og\//,
