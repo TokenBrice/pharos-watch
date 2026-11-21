@@ -551,7 +551,7 @@ DEX [price publication](./dex-liquidity.md#dex-price-cross-validation). Malforme
 
 ### Public Endpoints Quick Reference
 
-Generated from `public/openapi.json` (`Pharos API` v1.0.0). Total OpenAPI operations: **46**.
+Generated from `public/openapi.json` (`Pharos API` v2026-11). Total OpenAPI operations: **46**.
 
 | Method | Path | Summary | Tags | Auth | Parameters | Status codes |
 | ------ | ---- | ------- | ---- | ---- | ---------- | ------------ |
@@ -597,10 +597,10 @@ Generated from `public/openapi.json` (`Pharos API` v1.0.0). Total OpenAPI operat
 | GET | `/api/mint-burn-flows` | Mint and burn flows | Flows | `X-API-Key` required | `stablecoin` (query, optional, string); `hours` (query, optional, integer) | 200, 400, 401, 429, 503 |
 | GET | `/api/mint-burn-events` | Mint and burn events | Flows | `X-API-Key` required | `stablecoin` (query, required, string); `direction` (query, optional, string); `chain` (query, optional, string); `burnType` (query, optional, string); `scope` (query, optional, string); `minAmount` (query, optional, number); `limit` (query, optional, integer); `offset` (query, optional, integer); `cursor` (query, optional, string); `includeTotal` (query, optional, boolean) | 200, 400, 401, 429, 503 |
 | GET | `/api/stress-signals` | Stress signals | Risk, Peg Monitoring | `X-API-Key` required | `stablecoin` (query, optional, string); `days` (query, optional, integer) | 200, 400, 401, 429, 503 |
-| GET | `/api/risk-check` | Unified risk check | Risk | `X-API-Key` required | `ids` (query, optional, string); `contracts` (query, optional, string) | 200, 400, 401, 429, 503 |
+| GET | `/api/risk-check` | Unified risk check | Risk | `X-API-Key` required | `ids` (query, optional, string); `contracts` (query, optional, string) | 200, 400, 401, 403, 429, 503 |
 | GET | `/api/resolve` | Resolve contract address or ID | Stablecoins | `X-API-Key` required | `chain` (query, optional, string); `address` (query, optional, string); `id` (query, optional, string); `geckoId` (query, optional, string); `contracts` (query, optional, string) | 200, 400, 401, 429, 503 |
-| GET | `/api/compliance` | Compliance registry (MiCA & GENIUS) | Compliance | `X-API-Key` required | `regime` (query, optional, string); `micaStatus` (query, optional, string); `geniusStatus` (query, optional, string); `tokenType` (query, optional, string); `peg` (query, optional, string); `includePreLaunch` (query, optional, boolean) | 200, 400, 401, 429, 503 |
-| GET | `/api/compliance/{stablecoinId}` | Compliance profile for one stablecoin | Compliance | `X-API-Key` required | `stablecoinId` (path, required, string) | 200, 400, 401, 429, 503 |
+| GET | `/api/compliance` | Compliance registry (MiCA & GENIUS) | Compliance | `X-API-Key` required | `regime` (query, optional, string); `micaStatus` (query, optional, string); `geniusStatus` (query, optional, string); `tokenType` (query, optional, string); `peg` (query, optional, string); `includePreLaunch` (query, optional, boolean) | 200, 400, 401, 403, 429, 503 |
+| GET | `/api/compliance/{stablecoinId}` | Compliance profile for one stablecoin | Compliance | `X-API-Key` required | `stablecoinId` (path, required, string) | 200, 400, 401, 403, 429, 503 |
 
 ### `GET /api/events`
 

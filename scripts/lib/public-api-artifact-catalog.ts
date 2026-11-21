@@ -18,6 +18,7 @@ export interface PublicApiArtifactParameter {
   required?: boolean;
   schema: { type: QueryParamType; enum?: string[]; minimum?: number; maximum?: number; minLength?: number; maxLength?: number };
   description: string;
+  example?: string | number | boolean;
 }
 
 export interface PublicApiArtifactEndpoint {
@@ -119,6 +120,7 @@ export const STABLECOIN_ID_PARAM = {
   required: true,
   schema: { type: "string" },
   description: "Canonical Pharos stablecoin ID, for example `usdt-tether` or `usdc-circle`.",
+  example: "usdc-circle",
 } as const satisfies PublicApiArtifactParameter;
 
 export const STABLECOIN_QUERY_PARAM = {
@@ -126,12 +128,14 @@ export const STABLECOIN_QUERY_PARAM = {
   in: "query",
   schema: { type: "string" },
   description: "Optional canonical Pharos stablecoin ID filter.",
+  example: "usdc-circle",
 } as const satisfies PublicApiArtifactParameter;
 export const CHAIN_QUERY_PARAM = {
   name: "chain",
   in: "query",
   schema: { type: "string" },
   description: "Optional canonical Pharos chain ID for full per-chain coin detail rows.",
+  example: "ethereum",
 } as const satisfies PublicApiArtifactParameter;
 
 
@@ -141,6 +145,7 @@ export const REQUIRED_STABLECOIN_QUERY_PARAM = {
   required: true,
   schema: { type: "string" },
   description: "Required canonical Pharos stablecoin ID.",
+  example: "usdc-circle",
 } as const satisfies PublicApiArtifactParameter;
 
 export const BLACKLIST_STABLECOIN_SYMBOL_QUERY_PARAM = {
@@ -148,6 +153,7 @@ export const BLACKLIST_STABLECOIN_SYMBOL_QUERY_PARAM = {
   in: "query",
   schema: { type: "string", enum: [...BLACKLIST_STABLECOINS] },
   description: "Optional uppercase blacklist-tracker stablecoin symbol filter, for example `USDT` or `USDC`.",
+  example: "USDC",
 } as const satisfies PublicApiArtifactParameter;
 
 export const DAYS_PARAM = {
@@ -1021,12 +1027,14 @@ const PUBLIC_API_ARTIFACT_INPUTS = {
         in: "query",
         schema: { type: "string" },
         description: `Comma-separated canonical Pharos stablecoin IDs (up to ${RISK_CHECK_MAX_ASSETS} total assets across ids and contracts).`,
+        example: "usdc-circle,usdt-tether",
       },
       {
         name: "contracts",
         in: "query",
         schema: { type: "string" },
         description: "Comma-separated chain:address tuples (for example `ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48`).",
+        example: "ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       },
     ],
     postman: {
@@ -1045,30 +1053,35 @@ const PUBLIC_API_ARTIFACT_INPUTS = {
         in: "query",
         schema: { type: "string" },
         description: "Canonical chain ID, alias, numeric EVM chain ID, or CAIP-2 `eip155:<id>` (pair with `address`).",
+        example: "ethereum",
       },
       {
         name: "address",
         in: "query",
         schema: { type: "string" },
         description: "Token contract address (with `chain` for an exact lookup, or alone to check cross-chain matches).",
+        example: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       },
       {
         name: "id",
         in: "query",
         schema: { type: "string" },
         description: "Canonical Pharos stablecoin ID for reverse deployment lookup.",
+        example: "usdc-circle",
       },
       {
         name: "geckoId",
         in: "query",
         schema: { type: "string" },
         description: "CoinGecko coin ID for reverse deployment lookup.",
+        example: "usd-coin",
       },
       {
         name: "contracts",
         in: "query",
         schema: { type: "string" },
         description: `Comma-separated chain:address batch (up to ${RESOLVE_MAX_CONTRACTS} entries).`,
+        example: "ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48,base:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
       },
     ],
     postman: {
@@ -1087,36 +1100,42 @@ const PUBLIC_API_ARTIFACT_INPUTS = {
         in: "query",
         schema: { type: "string", enum: ["mica", "genius", "all"] },
         description: "Restrict results to assets reviewed under a specific regime.",
+        example: "mica",
       },
       {
         name: "micaStatus",
         in: "query",
         schema: { type: "string", enum: [...MICA_STATUS_VALUES, "unreviewed"] },
         description: "Filter by EU MiCA status or `unreviewed`.",
+        example: "authorized",
       },
       {
         name: "geniusStatus",
         in: "query",
         schema: { type: "string", enum: [...GENIUS_AUTHORIZATION_STATUS_VALUES, "unreviewed"] },
         description: "Filter by U.S. GENIUS Act authorization status or `unreviewed`.",
+        example: "official-application-pending",
       },
       {
         name: "tokenType",
         in: "query",
         schema: { type: "string", enum: [...MICA_TOKEN_TYPE_VALUES] },
         description: "Filter by EU MiCA token classification (`EMT` or `ART`).",
+        example: "EMT",
       },
       {
         name: "peg",
         in: "query",
         schema: { type: "string" },
         description: "Filter by peg currency code (for example `USD` or `EUR`).",
+        example: "USD",
       },
       {
         name: "includePreLaunch",
         in: "query",
         schema: { type: "boolean" },
         description: "Include tracked pre-launch stablecoins alongside active assets.",
+        example: false,
       },
     ],
     postman: {

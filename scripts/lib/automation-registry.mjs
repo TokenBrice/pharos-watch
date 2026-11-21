@@ -253,9 +253,11 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     sourcePaths: [
       "scripts/lib/public-api-artifact-catalog-builders.ts",
       "scripts/lib/public-api-artifact-catalog.ts",
+      "scripts/lib/public-api-response-examples.ts",
       "shared/lib/api-endpoints/**",
       "shared/lib/api-query-history.ts",
       "shared/lib/chains/health.ts",
+      "shared/lib/public-api-contract.ts",
     ],
   }),
   generatedArtifact({
@@ -271,11 +273,13 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     sourcePaths: [
       "scripts/lib/public-api-artifact-catalog-builders.ts",
       "scripts/lib/public-api-artifact-catalog.ts",
+      "scripts/lib/public-api-response-examples.ts",
       "scripts/lib/public-api-response-schemas.ts",
       "shared/contracts/api-meta.ts",
       "shared/lib/api-endpoints/**",
       "shared/lib/api-query-history.ts",
       "shared/lib/chains/health.ts",
+      "shared/lib/public-api-contract.ts",
     ],
   }),
   generatedArtifact({
@@ -618,6 +622,8 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     script: "scripts/maintenance/generate-llms-txt.ts",
     sourcePaths: [
       "data/digests.json",
+      "shared/lib/ops-limits.ts",
+      "shared/lib/public-api-contract.ts",
       "shared/lib/public-doc-manifest.json",
       "shared/lib/public-docs.ts",
       "src/lib/case-studies/**",

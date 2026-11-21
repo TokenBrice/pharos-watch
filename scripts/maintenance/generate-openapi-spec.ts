@@ -1,7 +1,8 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
-import { API_PARTNER_ACCESS_URL } from "@shared/lib/public-api-contract";
+import { API_PARTNER_ACCESS_URL, PUBLIC_API_CONTRACT_VERSION } from "@shared/lib/public-api-contract";
+import { getEndpointDefinitionByKey } from "@shared/lib/api-endpoints/definitions";
 import { StablecoinDataOutputSchema, StablecoinDataSchema } from "@shared/types/supply";
 import { ReserveBoundedFactOutputSchema, ReserveBoundedFactSchema } from "@shared/types/reserve-bounded-facts";
 
@@ -12,8 +13,14 @@ import {
   type PublicApiArtifactEndpoint,
 } from "../lib/public-api-artifact-catalog";
 import {
+  PUBLIC_API_ERROR_EXAMPLES,
+  PUBLIC_API_RESPONSE_EXAMPLES,
+  type PublicApiResponseExample,
+} from "../lib/public-api-response-examples";
+import {
   PUBLIC_API_RESPONSE_COMPONENT_SCHEMAS,
   PUBLIC_API_RESPONSE_SCHEMAS,
+  type PublicApiResponseSchemaName,
 } from "../lib/public-api-response-schemas";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 import { runDirectCli } from "../lib/cli-args.mjs";
@@ -60,12 +67,22 @@ function buildParameters(endpoint: PublicApiArtifactEndpoint) {
     required: parameter.required ?? parameter.in === "path",
     description: parameter.description,
     schema: parameter.schema,
+    ...(parameter.example !== undefined ? { example: parameter.example } : {}),
   })) ?? [];
 }
 
 const ERROR_RESPONSE_CONTENT = {
   "application/json": { schema: { $ref: "#/components/schemas/ApiError" } },
 } as const;
+
+function errorResponseContent(examples?: Record<string, PublicApiResponseExample>) {
+  return {
+    "application/json": {
+      schema: { $ref: "#/components/schemas/ApiError" },
+      ...(examples ? { examples } : {}),
+    },
+  };
+}
 
 const RETRY_AFTER_HEADER_DESCRIPTION = "Seconds to wait before retrying, sent with 429 and sometimes with 503.";
 
@@ -81,17 +98,32 @@ function retryAfterHeader(required: boolean) {
 
 function buildErrorResponses(endpoint: PublicApiArtifactEndpoint) {
   const protectedRoute = endpoint.security !== "none";
+  const requiredPlans = getEndpointDefinitionByKey(endpoint.key)?.requiredKeyPlans;
+  const planGated = Boolean(requiredPlans && requiredPlans.length > 0);
   return {
     "400": { description: "Bad request", content: ERROR_RESPONSE_CONTENT },
     ...(protectedRoute
-      ? { "401": { description: "Missing or invalid API key", content: ERROR_RESPONSE_CONTENT } }
+      ? {
+        "401": {
+          description: "Missing or invalid API key",
+          content: errorResponseContent(PUBLIC_API_ERROR_EXAMPLES["401"]),
+        },
+      }
+      : {}),
+    ...(planGated
+      ? {
+        "403": {
+          description: `API key plan not entitled (requires ${requiredPlans!.join(" or ")})`,
+          content: errorResponseContent(PUBLIC_API_ERROR_EXAMPLES["403"]),
+        },
+      }
       : {}),
     ...(protectedRoute || endpoint.anonymousThrottle
       ? {
         "429": {
-          description: "Rate limit exceeded",
+          description: "Rate limit or monthly request quota exceeded",
           headers: retryAfterHeader(true),
-          content: ERROR_RESPONSE_CONTENT,
+          content: errorResponseContent(PUBLIC_API_ERROR_EXAMPLES["429"]),
         },
       }
       : {}),
@@ -103,12 +135,30 @@ function buildErrorResponses(endpoint: PublicApiArtifactEndpoint) {
   };
 }
 
+function validateAndCollectExamples(
+  schemaNames: readonly PublicApiResponseSchemaRefName[],
+): Record<string, PublicApiResponseExample> | undefined {
+  const merged: Record<string, PublicApiResponseExample> = {};
+  for (const name of schemaNames) {
+    if (name === "JsonValue") continue;
+    const schema = PUBLIC_API_RESPONSE_SCHEMAS[name as PublicApiResponseSchemaName];
+    const entries = PUBLIC_API_RESPONSE_EXAMPLES[name as PublicApiResponseSchemaName];
+    for (const [exampleKey, entry] of Object.entries(entries)) {
+      const parsed = schema.parse(entry.value);
+      const uniqueKey = schemaNames.length > 1 ? `${name}_${exampleKey}` : exampleKey;
+      merged[uniqueKey] = { summary: entry.summary, value: parsed };
+    }
+  }
+  return Object.keys(merged).length > 0 ? merged : undefined;
+}
+
 function buildOperation(endpoint: PublicApiArtifactEndpoint) {
   // Without the annotation the spread widens the element type to `string`.
   const responseSchemas: PublicApiResponseSchemaRefName[] = [
     endpoint.responseSchema ?? "JsonValue",
     ...(endpoint.additionalResponseSchemas ?? []),
   ];
+  const examples = validateAndCollectExamples(responseSchemas);
   return {
     tags: endpoint.tags,
     summary: endpoint.summary,
@@ -124,6 +174,7 @@ function buildOperation(endpoint: PublicApiArtifactEndpoint) {
             schema: responseSchemas.length === 1
               ? schemaRef(responseSchemas[0])
               : { oneOf: responseSchemas.map((name) => schemaRef(name)) },
+            ...(examples ? { examples } : {}),
           },
         },
       },
@@ -301,7 +352,7 @@ export function buildOpenApiDocument() {
     openapi: "3.1.0",
     info: {
       title: "Pharos API",
-      version: "1.0.0",
+      version: PUBLIC_API_CONTRACT_VERSION,
       description:
         "Stablecoin analytics API for peg monitoring, liquidity, risk, blacklist events, mint/burn flows, yield, chains, and market-structure data. Protected public routes require X-API-Key. Get a supporter key or request a partner key at https://pharos.watch/api/.",
       contact: {

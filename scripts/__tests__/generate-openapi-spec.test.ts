@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { PUBLIC_API_CONTRACT_VERSION } from "@shared/lib/public-api-contract";
+import { getEndpointDefinitionByKey } from "@shared/lib/api-endpoints/definitions";
 import { StablecoinDataSchema, StablecoinDataOutputSchema } from "@shared/types/supply";
 import { ReserveBoundedFactKindSchema, ReserveBoundedFactSchema } from "@shared/types/reserve-bounded-facts";
 import {
@@ -163,7 +165,7 @@ describe("OpenAPI runtime response contracts", () => {
     for (const [path, item] of Object.entries(document.paths)) {
       for (const [status, response] of Object.entries(item.get.responses)) {
         if (status === "200") continue;
-        expect((response as { content: unknown }).content, `${path} ${status}`).toEqual({
+        expect((response as { content: unknown }).content, `${path} ${status}`).toMatchObject({
           "application/json": { schema: { $ref: "#/components/schemas/ApiError" } },
         });
       }
@@ -337,5 +339,42 @@ describe("OpenAPI runtime response contracts", () => {
       expect(schemas[name].properties).toBeDefined();
       expect(Object.keys(schemas[name].properties ?? {})).not.toHaveLength(0);
     }
+  });
+
+  it("publishes contract version, 403 plan-gated responses, and schema-valid examples on every response", () => {
+    expect(document.info.version).toBe(PUBLIC_API_CONTRACT_VERSION);
+    expect(document.info.version).not.toBe("1.0.0");
+
+    const schemas = document.components.schemas as Record<string, unknown>;
+    let validatedExamples = 0;
+
+    for (const endpoint of PUBLIC_API_ARTIFACT_ENDPOINTS) {
+      const operation = document.paths[endpoint.path].get;
+      const requiredPlans = getEndpointDefinitionByKey(endpoint.key)?.requiredKeyPlans;
+      if (requiredPlans && requiredPlans.length > 0) {
+        expect(operation.responses, endpoint.path).toHaveProperty("403");
+      } else {
+        expect(operation.responses, endpoint.path).not.toHaveProperty("403");
+      }
+
+      if (!endpoint.responseSchema) continue;
+      const media = operation.responses["200"].content["application/json"] as {
+        schema: Record<string, unknown>;
+        examples?: Record<string, { summary: string; value: unknown }>;
+      };
+      expect(media.examples, endpoint.path).toBeDefined();
+      const entries = Object.entries(media.examples ?? {});
+      expect(entries.length, endpoint.path).toBeGreaterThan(0);
+
+      const resolvedSchema = resolveSchemaTree(media.schema, schemas);
+      const validator = z.fromJSONSchema(resolvedSchema as Parameters<typeof z.fromJSONSchema>[0]);
+      for (const [exampleName, example] of entries) {
+        const parsed = validator.safeParse(example.value);
+        expect(parsed.success, `${endpoint.path} example "${exampleName}": ${parsed.success ? "" : parsed.error.message}`).toBe(true);
+        validatedExamples += 1;
+      }
+    }
+
+    expect(validatedExamples).toBeGreaterThanOrEqual(Object.keys(PUBLIC_API_RESPONSE_SCHEMAS).length);
   });
 });

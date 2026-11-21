@@ -8,6 +8,8 @@ import {
   type PostmanFolderName,
   type PublicApiArtifactEndpoint,
 } from "../lib/public-api-artifact-catalog";
+import { PUBLIC_API_RESPONSE_EXAMPLES } from "../lib/public-api-response-examples";
+import type { PublicApiResponseSchemaName } from "../lib/public-api-response-schemas";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
@@ -25,6 +27,7 @@ interface PostmanRequest {
   query?: Record<string, string>;
   noAuth?: boolean;
   base?: "api" | "site";
+  responseSchema?: PublicApiResponseSchemaName;
 }
 
 interface PostmanRequestEntry {
@@ -61,6 +64,7 @@ const requests: PostmanRequestEntry[] = [
         description: postman.description ?? endpoint.description,
         query: postman.query,
         noAuth: postman.noAuth,
+        responseSchema: endpoint.responseSchema,
       },
     }));
   }),
@@ -95,27 +99,42 @@ function buildItem(request: PostmanRequest) {
   const baseVariable = request.base === "site" ? "siteBaseUrl" : "apiBaseUrl";
   const rawPath = withQuery(request.path, request.query);
 
+  const requestSpec = {
+    ...(request.noAuth ? { auth: { type: "noauth" } } : {}),
+    method,
+    header: method === "POST"
+      ? [{ key: "Content-Type", value: "application/json", type: "text" }]
+      : [],
+    url: {
+      raw: `{{${baseVariable}}}${rawPath}`,
+      host: [`{{${baseVariable}}}`],
+      path: request.path.split("/").filter(Boolean),
+      ...(request.query
+        ? {
+          query: Object.entries(request.query).map(([key, value]) => ({ key, value })),
+        }
+        : {}),
+    },
+    description: request.description,
+  };
+
+  const exampleEntries = request.responseSchema
+    ? Object.values(PUBLIC_API_RESPONSE_EXAMPLES[request.responseSchema] ?? {})
+    : [];
+
   return {
     name: request.name,
-    request: {
-      ...(request.noAuth ? { auth: { type: "noauth" } } : {}),
-      method,
-      header: method === "POST"
-        ? [{ key: "Content-Type", value: "application/json", type: "text" }]
-        : [],
-      url: {
-        raw: `{{${baseVariable}}}${rawPath}`,
-        host: [`{{${baseVariable}}}`],
-        path: request.path.split("/").filter(Boolean),
-        ...(request.query
-          ? {
-            query: Object.entries(request.query).map(([key, value]) => ({ key, value })),
-          }
-          : {}),
-      },
-      description: request.description,
-    },
-    response: [],
+    request: requestSpec,
+    response: exampleEntries.map((entry) => ({
+      name: `200 OK - ${entry.summary}`,
+      originalRequest: requestSpec,
+      status: "OK",
+      code: 200,
+      _postman_previewlanguage: "json",
+      header: [{ key: "Content-Type", value: "application/json" }],
+      cookie: [],
+      body: JSON.stringify(entry.value, null, 2),
+    })),
   };
 }
 
