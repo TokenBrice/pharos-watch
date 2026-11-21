@@ -1,3 +1,9 @@
+import {
+  ComplianceCoinResponseSchema,
+  ComplianceListResponseSchema,
+} from "@shared/types/compliance-api";
+import { ResolveResponseSchema } from "@shared/types/resolve";
+import { RiskCheckResponseSchema } from "@shared/types/risk-check";
 import { DependencyScenariosResponseSchema } from "@shared/types/dependency-scenarios";
 import { z } from "zod";
 import { ApiMetaEnvelopeSchema } from "@pharos/contracts/api-meta";
@@ -295,6 +301,10 @@ export const PUBLIC_API_RESPONSE_SCHEMAS = {
   DigestSnapshotResponse: DigestSnapshotResponseSchema,
   PublicStatusHistoryResponse: PublicStatusHistoryResponseSchema,
   TelegramPulseResponse: TelegramPulseOutputSchema,
+  ComplianceListResponse: ComplianceListResponseSchema,
+  ComplianceCoinResponse: ComplianceCoinResponseSchema,
+  ResolveResponse: ResolveResponseSchema,
+  RiskCheckResponse: RiskCheckResponseSchema,
 } as const satisfies Record<string, z.ZodType>;
 
 export type PublicApiResponseSchemaName = keyof typeof PUBLIC_API_RESPONSE_SCHEMAS;

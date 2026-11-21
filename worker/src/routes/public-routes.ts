@@ -47,6 +47,15 @@ export const PUBLIC_STATIC_ROUTES = [
     const { handleDependencyScenarios } = await import("../api/dependency-scenarios");
     return ({ db, workerVersionId }) => handleDependencyScenarios(db, workerVersionId);
   }),
+  defineLazyStaticRoute("compliance", async () => {
+    const { handleCompliance } = await import("../api/compliance");
+    return ({ url }) => handleCompliance(url);
+  }),
+  defineLazyStaticRoute("resolve", async () => {
+    const { handleResolve } = await import("../api/resolve");
+    return ({ url }) => handleResolve(url);
+  }),
+  defineLazyDbUrlRoute("risk-check", () => import("../api/risk-check").then(({ handleRiskCheck }) => handleRiskCheck)),
   defineLazyDbRoute("depeg-resolver", () => import("../api/depeg-resolver").then(({ handleDepegResolver }) => handleDepegResolver)),
   defineLazyDbRoute("depeg-resolver-review", () => import("../api/depeg-resolver-review").then(({ handleDepegResolverReview }) => handleDepegResolverReview)),
   defineLazyDbRoute("redemption-backstops", () => import("../api/redemption-backstops").then(({ handleRedemptionBackstops }) => handleRedemptionBackstops)),

@@ -129,7 +129,7 @@ function prepareDewsPublicationLedgerUpsert(
   );
 }
 
-function parseDewsPublishedGeneration(
+export function parseDewsPublishedGeneration(
   cached: { value: string; updatedAt: number } | null,
   nowSec: number,
 ): DewsPublishedGenerationResult {

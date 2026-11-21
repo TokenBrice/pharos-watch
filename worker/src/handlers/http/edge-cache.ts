@@ -19,6 +19,17 @@ const YIELD_CACHE_PATHS = new Set([
   API_PATHS.yieldRankings(), API_PATHS.yieldRankingsCoin(), API_PATHS.yieldHistoryBase(),
 ]);
 
+const SORTED_CSV_CACHE_QUERY_PARAMS: Readonly<Record<string, ReadonlySet<string>>> = {
+  [API_PATHS.riskCheck()]: new Set(["ids", "contracts"]),
+  [API_PATHS.resolve()]: new Set(["contracts"]),
+};
+
+function canonicalizeCsvQueryValue(raw: string): string {
+  return [...new Set(raw.split(",").map((part) => part.trim()).filter((part) => part.length > 0))]
+    .sort()
+    .join(",");
+}
+
 function isQueryFreeCacheKeyPath(pathname: string): boolean {
   return isCacheKeyQueryFreePath(pathname)
     || findDynamicEndpointDescriptor(pathname)?.cacheKeyIgnoresQuery === true;
@@ -38,15 +49,24 @@ function createCacheKeyRequest(request: Request, url: URL): Request {
     return new Request(canonicalUrl.toString(), { method: "GET" });
   }
 
-  const allowedQueryParams = getEndpointCacheKeyQueryParams(url.pathname);
+  const allowedQueryParams =
+    getEndpointCacheKeyQueryParams(url.pathname)
+    ?? findDynamicEndpointDescriptor(url.pathname)?.cacheKeyQueryParams
+    ?? null;
   if (allowedQueryParams) {
     // Mirror the handler's first-value reads: duplicates and unknown names are
     // ignored, so they cannot mint fresh cache keys.
     canonicalUrl.search = "";
     canonicalUrl.hash = "";
+    const sortedCsvParams = SORTED_CSV_CACHE_QUERY_PARAMS[url.pathname];
     for (const name of [...allowedQueryParams].sort()) {
       const value = url.searchParams.get(name);
-      if (value !== null) canonicalUrl.searchParams.set(name, value);
+      if (value !== null) {
+        canonicalUrl.searchParams.set(
+          name,
+          sortedCsvParams?.has(name) ? canonicalizeCsvQueryValue(value) : value,
+        );
+      }
     }
     return new Request(canonicalUrl.toString(), { method: "GET" });
   }

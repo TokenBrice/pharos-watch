@@ -1,7 +1,8 @@
 import { type PublicApiEndpointKey } from "@shared/lib/api-endpoints/definitions";
 import { DYNAMIC_API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "@shared/lib/api-query-history";
-import { MINT_BURN_FLOWS_HOURS_QUERY, NON_USD_SHARE_MIN_DAYS, NON_USD_SHARE_MAX_DAYS, SNAPSHOT_INDEX_LIMIT_QUERY } from "@shared/lib/api-endpoints/queries";
+import { MINT_BURN_FLOWS_HOURS_QUERY, NON_USD_SHARE_MIN_DAYS, NON_USD_SHARE_MAX_DAYS, RESOLVE_MAX_CONTRACTS, RISK_CHECK_MAX_ASSETS, SNAPSHOT_INDEX_LIMIT_QUERY } from "@shared/lib/api-endpoints/queries";
+import { GENIUS_AUTHORIZATION_STATUS_VALUES, MICA_STATUS_VALUES, MICA_TOKEN_TYPE_VALUES } from "@shared/types/compliance-vocabulary";
 import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
 import { PEG_COVERAGE_COMPOSITE_MIN } from "@shared/lib/chains/health";
 import { definePublicArtifact, type PublicArtifactInput } from "./public-api-artifact-catalog-builders";
@@ -73,6 +74,7 @@ export const PUBLIC_API_ARTIFACT_TAGS = [
   "Peg Monitoring",
   "Liquidity",
   "Risk",
+  "Compliance",
   "Blacklist",
   "Flows",
   "Yield",
@@ -1005,6 +1007,131 @@ const PUBLIC_API_ARTIFACT_INPUTS = {
     responseSchema: "TelegramPulseResponse",
     postman: {
       folder: "Flows, blacklist, yield, and chains",
+    },
+  },
+  "risk-check": {
+    referenceOrder: 42,
+    summary: "Unified risk check",
+    description: `Single-call risk-gate snapshot for up to ${RISK_CHECK_MAX_ASSETS} stablecoins by canonical ID or chain:address contract. Combines Safety Score, DEWS, peg/depeg state, DDR outlook, DEX liquidity, redemption backstop, freeze controls, and MiCA/GENIUS compliance with per-producer freshness metadata. Requires a commercial or institutional API key.`,
+    tags: ["Risk"],
+    responseSchema: "RiskCheckResponse",
+    parameters: [
+      {
+        name: "ids",
+        in: "query",
+        schema: { type: "string" },
+        description: `Comma-separated canonical Pharos stablecoin IDs (up to ${RISK_CHECK_MAX_ASSETS} total assets across ids and contracts).`,
+      },
+      {
+        name: "contracts",
+        in: "query",
+        schema: { type: "string" },
+        description: "Comma-separated chain:address tuples (for example `ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48`).",
+      },
+    ],
+    postman: {
+      query: { ids: "usdc-circle,usdt-tether" },
+    },
+  },
+  "resolve": {
+    referenceOrder: 43,
+    summary: "Resolve contract address or ID",
+    description: `Resolve on-chain contract addresses, chain:address batches (up to ${RESOLVE_MAX_CONTRACTS}), canonical IDs, or CoinGecko IDs to Pharos stablecoin identities and deployments. Available to all authenticated API keys.`,
+    tags: ["Stablecoins"],
+    responseSchema: "ResolveResponse",
+    parameters: [
+      {
+        name: "chain",
+        in: "query",
+        schema: { type: "string" },
+        description: "Canonical chain ID, alias, numeric EVM chain ID, or CAIP-2 `eip155:<id>` (pair with `address`).",
+      },
+      {
+        name: "address",
+        in: "query",
+        schema: { type: "string" },
+        description: "Token contract address (with `chain` for an exact lookup, or alone to check cross-chain matches).",
+      },
+      {
+        name: "id",
+        in: "query",
+        schema: { type: "string" },
+        description: "Canonical Pharos stablecoin ID for reverse deployment lookup.",
+      },
+      {
+        name: "geckoId",
+        in: "query",
+        schema: { type: "string" },
+        description: "CoinGecko coin ID for reverse deployment lookup.",
+      },
+      {
+        name: "contracts",
+        in: "query",
+        schema: { type: "string" },
+        description: `Comma-separated chain:address batch (up to ${RESOLVE_MAX_CONTRACTS} entries).`,
+      },
+    ],
+    postman: {
+      query: { chain: "ethereum", address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" },
+    },
+  },
+  "compliance": {
+    referenceOrder: 44,
+    summary: "Compliance registry (MiCA & GENIUS)",
+    description: "Structured EU MiCA and U.S. GENIUS Act compliance assessments across tracked stablecoins, with statutory regime-state context and explicit not-reviewed provenance. Requires a commercial or institutional API key.",
+    tags: ["Compliance"],
+    responseSchema: "ComplianceListResponse",
+    parameters: [
+      {
+        name: "regime",
+        in: "query",
+        schema: { type: "string", enum: ["mica", "genius", "all"] },
+        description: "Restrict results to assets reviewed under a specific regime.",
+      },
+      {
+        name: "micaStatus",
+        in: "query",
+        schema: { type: "string", enum: [...MICA_STATUS_VALUES, "unreviewed"] },
+        description: "Filter by EU MiCA status or `unreviewed`.",
+      },
+      {
+        name: "geniusStatus",
+        in: "query",
+        schema: { type: "string", enum: [...GENIUS_AUTHORIZATION_STATUS_VALUES, "unreviewed"] },
+        description: "Filter by U.S. GENIUS Act authorization status or `unreviewed`.",
+      },
+      {
+        name: "tokenType",
+        in: "query",
+        schema: { type: "string", enum: [...MICA_TOKEN_TYPE_VALUES] },
+        description: "Filter by EU MiCA token classification (`EMT` or `ART`).",
+      },
+      {
+        name: "peg",
+        in: "query",
+        schema: { type: "string" },
+        description: "Filter by peg currency code (for example `USD` or `EUR`).",
+      },
+      {
+        name: "includePreLaunch",
+        in: "query",
+        schema: { type: "boolean" },
+        description: "Include tracked pre-launch stablecoins alongside active assets.",
+      },
+    ],
+    postman: {
+      query: { regime: "mica", micaStatus: "authorized" },
+    },
+  },
+  "compliance-coin": {
+    referenceOrder: 45,
+    summary: "Compliance profile for one stablecoin",
+    description: "EU MiCA and U.S. GENIUS Act assessment for one canonical stablecoin ID, preserving unreviewed nulls and tri-state disclosure flags. Requires a commercial or institutional API key.",
+    tags: ["Compliance"],
+    responseSchema: "ComplianceCoinResponse",
+    parameters: [STABLECOIN_ID_PARAM],
+    postman: {
+      path: DYNAMIC_API_PATHS.complianceCoin.template.replace(":id", "{{stablecoinId}}"),
     },
   },
 } as const satisfies Record<PublicApiEndpointKey, Omit<PublicArtifactInput<PublicApiEndpointKey>, "key">>;

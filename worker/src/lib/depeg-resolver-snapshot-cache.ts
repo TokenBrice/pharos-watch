@@ -5,6 +5,7 @@ import {
 } from "@shared/lib/methodology-versions/depeg-resolver";
 import {
   loadVersionedSnapshotCache,
+  parseVersionedSnapshotCache,
   writeVersionedSnapshotCache,
   type VersionedSnapshotCacheLoadResult,
   type VersionedSnapshotCacheOptions,
@@ -57,6 +58,12 @@ const DDR_SNAPSHOT_CACHE_OPTIONS: VersionedSnapshotCacheOptions<DdrResponse, Ddr
         }
   ),
 };
+
+export function parseDepegResolverSnapshotRow(
+  cached: { value: string; updatedAt: number } | null,
+): DdrSnapshotCacheLoadResult {
+  return parseVersionedSnapshotCache(cached, DDR_SNAPSHOT_CACHE_OPTIONS);
+}
 
 export async function loadDepegResolverSnapshot(db: D1Database): Promise<DdrSnapshotCacheLoadResult> {
   return loadVersionedSnapshotCache(db, DDR_SNAPSHOT_CACHE_OPTIONS);

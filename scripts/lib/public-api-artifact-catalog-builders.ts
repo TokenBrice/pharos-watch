@@ -40,6 +40,7 @@ export const POSTMAN_FOLDER_BY_PRIMARY_TAG = {
   "Peg Monitoring": "Risk and market structure",
   Liquidity: "Risk and market structure",
   Risk: "Risk and market structure",
+  Compliance: "Risk and market structure",
   Blacklist: "Flows, blacklist, yield, and chains",
   Flows: "Flows, blacklist, yield, and chains",
   Yield: "Flows, blacklist, yield, and chains",
