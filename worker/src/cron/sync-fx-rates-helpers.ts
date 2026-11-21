@@ -1,5 +1,5 @@
 import { formatIsoDate } from "@shared/lib/format";
-import { evaluateReferenceAdmission, OXR_POLL_INTERVAL_SEC, REFERENCE_INTRADAY_BUDGET_SEC } from "@shared/lib/reference-admission";
+import { evaluateReferenceAdmission, heldCloseBenchmarkExtensionSec, OXR_POLL_INTERVAL_SEC, REFERENCE_INTRADAY_BUDGET_SEC } from "@shared/lib/reference-admission";
 import { getReferenceSessionState } from "@shared/lib/reference-market-hours";
 import { FxReferenceObservationSchema, type FxReferenceObservation, type FxReferenceObservationMap } from "@shared/types/fx-reference";
 import { CIRCUIT_SOURCE } from "../lib/constants";
@@ -1151,10 +1151,16 @@ export class FxSyncRunState {
         const sample = this.referenceSourceSamples[`${pegKey}:${source}`];
         if (!sample || sample.observation.observedAtSec <= (directMetalReferences[pegKey]?.observation.observedAtSec ?? 0)) continue;
         const { observation, evidence } = sample;
-        const verdict = evaluateReferenceAdmission({
-          kind: "fallback", observation, ...evidence, decisionAtSec: this.syncStartSec,
+        const admitAt = (decisionAtSec: number) => evaluateReferenceAdmission({
+          kind: "fallback", observation, ...evidence, decisionAtSec,
           quoteObservedAtSec: observation.observedAtSec, rawDeviationBps: null,
         });
+        let verdict = admitAt(this.syncStartSec);
+        // While the metal market is closed, keep the session's last live benchmark for Safety capacity sizing.
+        if (verdict.status === "held-closed-session" &&
+          heldCloseBenchmarkExtensionSec("metal", observation.observedAtSec, this.syncStartSec) !== null) {
+          verdict = admitAt(observation.observedAtSec);
+        }
         if (verdict.reason === "live-reference" && evidence.sessionOpenedAtSec === verdict.sessionOpenedAtSec) {
           directMetalReferences[pegKey] = {
             observation, generation: `fx:${this.syncStartSec}`,

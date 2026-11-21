@@ -75,6 +75,21 @@ describe("resolveMetalReferenceRates", () => {
     expect(verdict.reason).toBe("live-reference");
   });
 
+  it.each([
+    ["2026-11-21T08:00:00Z", 3600, true],
+    ["2026-11-21T08:00:00Z", 7 * 3600, false],
+    ["2026-11-23T01:00:00Z", 3600, false],
+  ] as const)("at %s keeps the closed session's live gold benchmark taken %is before the close: %s", (now, beforeClose, kept) => {
+    const close = Date.parse("2026-11-20T22:00:00Z") / 1000;
+    const run = new FxSyncRunState({ syncStartSec: Date.parse(now) / 1000, expectedPegKeys: ["peggedGOLD"], prevState: null,
+      validateRate: () => true, initialSources: {} });
+    run.usableRates.peggedGOLD = 2900;
+    run.markLive("peggedGOLD", close - beforeClose - 2 * 3600, "intraday", null, "gold-api.com");
+    run.markLive("peggedGOLD", close - beforeClose, "intraday", null, "gold-api.com");
+    expect(run.buildPersistedMeta().directMetalReferences?.peggedGOLD?.observation.observedAtSec)
+      .toBe(kept ? close - beforeClose : undefined);
+  });
+
   it("does not carry forward cached metal rates outside current bounds", async () => {
     vi.mocked(fetchJsonWithRetry).mockResolvedValue(null);
 

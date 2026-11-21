@@ -3,6 +3,7 @@ import { PHYSICAL_TO_USD_EXIT_POLICY } from "./exit-route-scoring";
 import type { PhysicalToUsdTrace } from "../types/exit-route";
 import { PHYSICAL_SETTLEMENT_CALENDARS } from "../data/business-calendars/physical";
 import { advanceReviewedBusinessDays } from "./business-calendars";
+import { heldCloseBenchmarkExtensionSec } from "./reference-admission";
 
 type Policy = typeof PHYSICAL_TO_USD_EXIT_POLICY;
 type Branch = "modelled-metal-sale" | "best-effort-issuer-cash-out";
@@ -35,9 +36,12 @@ export function evaluatePhysicalToUsdExit(
   policy: Policy = PHYSICAL_TO_USD_EXIT_POLICY,
 ): PhysicalToUsdTrace {
   const assumptions: PhysicalToUsdTrace["assumptions"] = [];
+  // A close benchmark keeps its closing age through a metal-market closure; the budget names the widening.
+  const metalPriceMaxAgeSec = policy.metalPriceMaxAgeSec +
+    (heldCloseBenchmarkExtensionSec("metal", reference.observedAtSec, clockSec) ?? 0);
   const base = { endpoint: "USD" as const, holderScope: terms.eligibility, branch,
     requestedNotionalUsd, reviewedAt: terms.reviewedAt, reviewExpiresAt: terms.reviewExpiresAt,
-    termsMaxAgeSec: policy.termsMaxAgeSec, metalPriceMaxAgeSec: policy.metalPriceMaxAgeSec,
+    termsMaxAgeSec: policy.termsMaxAgeSec, metalPriceMaxAgeSec,
     metalPriceObservedAtSec: reference.observedAtSec };
   const rejected = (rejectionReason: string): PhysicalToUsdTrace => ({ ...base,
     lots: null, tokens: null, grossUsd: null, netUsd: null, costBps: null,
@@ -49,7 +53,7 @@ export function evaluatePhysicalToUsdExit(
   if (!terms.evidence.length) return rejected("physical-evidence-missing");
   if (!Number.isFinite(reference.usdPerTroyOunce) || reference.usdPerTroyOunce <= 0 ||
       !Number.isFinite(reference.observedAtSec) || reference.observedAtSec > clockSec ||
-      clockSec - reference.observedAtSec > policy.metalPriceMaxAgeSec) return rejected("physical-metal-price-unavailable-or-stale");
+      clockSec - reference.observedAtSec > metalPriceMaxAgeSec) return rejected("physical-metal-price-unavailable-or-stale");
   if (!Number.isFinite(requestedNotionalUsd) || requestedNotionalUsd <= 0) return rejected("physical-request-unavailable");
   const selected = branch === "best-effort-issuer-cash-out" ? terms.bestEffortIssuerCashOut : terms;
   if (!selected) return rejected("physical-cash-process-missing");
