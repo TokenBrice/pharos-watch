@@ -13,7 +13,7 @@ vi.mock("@/lib/depeg-event-snapshot", () => ({
 }));
 vi.mock("../../../scripts/lib/generated-artifacts", () => ({ syncGeneratedArtifacts: vi.fn() }));
 vi.mock("@/generated/depeg-event-related-data.json", async (importOriginal) => {
-  const { default: entries } = await importOriginal<typeof import("@/generated/depeg-event-related-data.json")>();
+  const { default: entries } = await importOriginal<{ default: typeof import("@/generated/depeg-event-related-data.json") }>();
   const { syncGeneratedArtifacts } = await import("../../../scripts/lib/generated-artifacts");
   await import("../../../scripts/maintenance/generate-depeg-event-search-data");
   const artifact = vi.mocked(syncGeneratedArtifacts).mock.calls[0][0].artifacts

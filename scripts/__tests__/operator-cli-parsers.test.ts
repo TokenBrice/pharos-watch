@@ -2,7 +2,7 @@ import {join} from "node:path"
 import fs from "node:fs"
 import cp from "node:child_process"
 import {syncBuiltinESMExports as sync} from "node:module"
-import {afterEach,expect as e,it,vi} from "vitest"
+import {afterEach,expect as e,it,vi,type MockInstance} from "vitest"
 import {withTempRepo} from "./helpers/test-state"
 import pkg from "../../package.json"
 
@@ -26,7 +26,7 @@ const out=vi.fn(),spies=[vi.spyOn(cp,"spawnSync"),...([
 "exists","lstat","readdir","readFile","readlink","realpath",
 "close","mkdir","mkdtemp","open","write",
 ] as const).map(name=>vi.spyOn(fs,`${name}Sync`))]
-for(const spy of spies) spy.mockImplementation(()=>{throw Error("Unexpected I/O");})
+for(const spy of spies as MockInstance[]) spy.mockImplementation(()=>{throw Error("Unexpected I/O");})
 sync();e(run([flag],{log:out,output:out})).toBeUndefined()
 e(out).toHaveBeenCalledWith(e.stringMatching(/^(Usage: )?agent:(land|worktree) /))
 for(const spy of spies) e(spy).not.toHaveBeenCalled()

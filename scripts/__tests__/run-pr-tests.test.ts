@@ -66,7 +66,7 @@ describe("PR test runner prepared plans", () => {
   it("uses the same deterministic partitions for local shards and prepared plans", () => {
     const path = planPath();
     const prepare = selectingSpawn();
-    const shards = ["a", "b"].map((suffix) => Array.from({ length: 61 }, (_, index) =>
+    const shards = ["a", "b"].map((suffix) => Array.from({ length: 31 }, (_, index) =>
       `scripts/__tests__/${index + 100}${suffix}.test.ts`));
     const select = vi.spyOn(prTestSelection, "selectPrTestFiles").mockReturnValue(shards.flat());
     onTestFinished(() => { select.mockRestore(); });

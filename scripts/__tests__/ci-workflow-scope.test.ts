@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -42,7 +42,9 @@ describe("CI workflow scope", () => {
     };
     const steps = workflow.jobs.prepare.steps;
     const gate = steps.findIndex((step) => step.name === "Check incident review keys");
-    expect(gate).toBeGreaterThan(steps.findIndex((step) => step.uses === "$/.github/actions/setup-workspace"));
+    const setup = steps.findIndex((step) => step.uses === "./.github/actions/setup-workspace");
+    expect(setup).toBeGreaterThanOrEqual(0);
+    expect(gate).toBeGreaterThan(setup);
     // One invocation per PR: restored validation shards never re-run the gate.
     expect(steps.filter((step) => step.run?.includes("check:incident-review-keys"))).toHaveLength(1);
     expect(steps[gate].run).toBe("npm run check:incident-review-keys");
@@ -56,7 +58,9 @@ describe("CI workflow scope", () => {
     const gate = steps.findIndex((step) => step.name === "Check new-asset evidence packet");
     // The receipt is bound to the post-addition registry fingerprint, so the
     // gate must run after npm ci + bootstrap:generated inside setup-workspace.
-    expect(gate).toBeGreaterThan(steps.findIndex((step) => step.uses === "$/.github/actions/setup-workspace"));
+    const setup = steps.findIndex((step) => step.uses === "./.github/actions/setup-workspace");
+    expect(setup).toBeGreaterThanOrEqual(0);
+    expect(gate).toBeGreaterThan(setup);
     // One invocation per PR: restored validation shards never re-run the gate.
     expect(steps.filter((step) => step.run?.includes("check:new-asset-evidence-packet"))).toHaveLength(1);
     expect(steps[gate].env).toEqual({
@@ -80,7 +84,9 @@ describe("CI workflow scope", () => {
     };
     const steps = workflow.jobs.prepare.steps;
     const gate = steps.findIndex((step) => step.name === "Check test corpus budget");
-    expect(gate).toBeGreaterThan(steps.findIndex((step) => step.uses === "$/.github/actions/setup-workspace"));
+    const setup = steps.findIndex((step) => step.uses === "./.github/actions/setup-workspace");
+    expect(setup).toBeGreaterThanOrEqual(0);
+    expect(gate).toBeGreaterThan(setup);
     expect(steps.filter((step) => step.run?.includes("check:test-corpus-budget"))).toHaveLength(1);
     // Unconditional: check:structural's selection skips test-only PRs, so the
     // gate must not inherit a condition from the classify step.
@@ -265,6 +271,9 @@ describe("CI workflow scope", () => {
       step.run?.includes("npm test -- --shard=${{ matrix.shard }}/4"));
     expect(shardRun?.run).toContain("--reporter=default --reporter=github-actions --reporter=json");
     expect(shardRun?.run).toContain("--outputFile=.tmp/vitest-shard-${{ matrix.shard }}.json");
+    // Per-file wall cost feeds PR shard balancing (build-test-timings wallFiles).
+    expect(shardRun?.run).toContain("--reporter=./scripts/test/vitest-file-timings-reporter.mts");
+    expect(shardRun?.env).toEqual({ PHAROS_VITEST_FILE_TIMINGS: ".tmp/vitest-file-timings-${{ matrix.shard }}.json" });
   });
 
   it("runs CodeQL weekly on Monday and manual dispatch, not pushes", () => {
@@ -756,13 +765,37 @@ describe("CI workflow scope", () => {
   };
   type Workflow = { jobs: Record<string, WorkflowJob> };
 
+  it("resolves local action references only where the checkout is the workflow commit", () => {
+    const names = readdirSync(resolve(process.cwd(), ".github/workflows")).filter((file) => file.endsWith(".yml"));
+    let localJobs = 0;
+    for (const name of names) {
+      const workflow = parseYaml(readRepoFile(`.github/workflows/${name}`)) as Workflow & { on: Record<string, unknown> };
+      for (const [id, job] of Object.entries(workflow.jobs)) {
+        const steps = job.steps ?? [];
+        const local = steps.findIndex((step) => step.uses?.startsWith("./"));
+        if (local < 0) continue;
+        localJobs++;
+        // Privileged workflows keep `$/`; only the pull_request workflow may
+        // resolve a local reference, after a default-ref (merge commit) checkout.
+        expect(`${name}:${id}`).toMatch(/^pull-request-checks\.yml:/);
+        expect(Object.keys(workflow.on)).toEqual(["pull_request"]);
+        const checkout = steps.findIndex((step) => step.uses?.startsWith("actions/checkout@"));
+        expect(checkout, id).toBeGreaterThanOrEqual(0);
+        expect(checkout, id).toBeLessThan(local);
+        expect(steps[checkout].with?.ref, id).toBeUndefined();
+      }
+    }
+    expect(localJobs).toBe(3);
+  });
+
   it("caches installed dependencies only in secret-free jobs", () => {
     const pr = parseYaml(readRepoFile(".github/workflows/pull-request-checks.yml")) as Workflow;
     const nightly = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as Workflow;
     const weekly = parseYaml(readRepoFile(".github/workflows/weekly-validation.yml")) as Workflow;
     const deploy = parseYaml(readRepoFile(".github/workflows/deploy-cloudflare.yml")) as Workflow;
     const preparePages = parseYaml(readRepoFile(".github/workflows/pages-prepare.yml")) as Workflow;
-    const setupOf = (job: WorkflowJob) => job.steps?.find((step) => step.uses === "$/.github/actions/setup-workspace");
+    const setupRefs = new Set(["$/.github/actions/setup-workspace", "./.github/actions/setup-workspace"]);
+    const setupOf = (job: WorkflowJob) => job.steps?.find((step) => setupRefs.has(step.uses ?? ""));
     expect(setupOf(pr.jobs.prepare)?.with).toMatchObject({ "node-modules-cache": "true" });
     for (const job of ["full-static", "full-tests", "v9-resource", "lighthouse", "web-vitals", "test-plan-parity"]) {
       expect(setupOf(nightly.jobs[job])?.with, job).toMatchObject({ "node-modules-cache": "true" });
@@ -811,7 +844,7 @@ describe("CI workflow scope", () => {
     const prepareSteps = prepare.steps ?? [];
     const checkout = prepareSteps.findIndex((step) => step.uses?.startsWith("actions/checkout@"));
     const acquire = prepareSteps.findIndex((step) => step.id === "test-timings");
-    const setup = prepareSteps.findIndex((step) => step.uses === "$/.github/actions/setup-workspace");
+    const setup = prepareSteps.findIndex((step) => step.uses === "./.github/actions/setup-workspace");
     expect(acquire).toBe(checkout + 1);
     expect(acquire).toBeLessThan(setup);
     expect(prepareSteps[acquire]["timeout-minutes"]).toBe(2);

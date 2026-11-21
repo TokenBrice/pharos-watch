@@ -118,7 +118,7 @@ describe("LongformScrollspyNav", () => {
       writable: true,
     });
     setScrollY(0);
-    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: Element) {
       if (this.id in SECTION_DOCUMENT_TOPS) {
         return rect({
           top: SECTION_DOCUMENT_TOPS[this.id] - window.scrollY,

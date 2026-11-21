@@ -121,15 +121,20 @@ jobs:
           bootstrap-history: "true"
           node-modules-cache: "true"
       - name: Run the full suite shard with JSON timings
+        env:
+          # Per-file wall cost (import, setup and run) for PR shard balancing.
+          PHAROS_VITEST_FILE_TIMINGS: .tmp/vitest-file-timings-${{ matrix.shard }}.json
         run: |
           mkdir -p .tmp
-          npm test -- --shard=${{ matrix.shard }}/4 --reporter=default --reporter=github-actions --reporter=json --outputFile=.tmp/vitest-shard-${{ matrix.shard }}.json
+          npm test -- --shard=${{ matrix.shard }}/4 --reporter=default --reporter=github-actions --reporter=json --reporter=./scripts/test/vitest-file-timings-reporter.mts --outputFile=.tmp/vitest-shard-${{ matrix.shard }}.json
       - name: Retain the shard timing report
         if: ${{ always() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: vitest-shard-${{ matrix.shard }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: .tmp/vitest-shard-${{ matrix.shard }}.json
+          path: |
+            .tmp/vitest-shard-${{ matrix.shard }}.json
+            .tmp/vitest-file-timings-${{ matrix.shard }}.json
           include-hidden-files: true
           if-no-files-found: warn
           retention-days: 7

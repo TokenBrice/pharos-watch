@@ -2,21 +2,34 @@ import { readFileSync } from "node:fs";
 import { z } from "zod";
 
 export const PR_TEST_PLAN_PATH = ".tmp/pr-test-plan.json";
-/** Continuous shard policy: one shard per 120 selected files, floored at 2 and capped at 10. */
-export const PR_TEST_PLAN_FILES_PER_SHARD = 120;
+/**
+ * Continuous shard policy: one shard per 60 selected files, floored at 2 and
+ * capped at 10. Import and setup dominate a shard's run time, so halving the
+ * files per shard roughly halves the run; a shard still pays ~35 s of job
+ * setup, checkout and workspace restore, which is why it is not smaller.
+ */
+export const PR_TEST_PLAN_FILES_PER_SHARD = 60;
 export const PR_TEST_PLAN_MIN_SHARDS = 2;
 export const PR_TEST_PLAN_MAX_SHARDS = 10;
-/** Fixed setup/import/teardown cost attributed to every selected file by the duration scheduler. */
+/**
+ * Fixed setup/import/teardown cost attributed to every selected file when only
+ * assertion durations are known; wall-clock measurements already include it.
+ */
 export const PR_TEST_FILE_OVERHEAD_MS = 1_500;
 /** Nightly timing evidence older than this is ignored in favour of round-robin. */
 export const TEST_TIMINGS_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 export type PrTestPartitionMode = "round-robin" | "duration";
 
-/** Merged nightly per-file durations (`test-timings:build`). */
+/**
+ * Merged nightly per-file durations (`test-timings:build`): `files` sums
+ * assertion durations; optional `wallFiles` is each file's measured wall cost
+ * (setup, import/collect and run), which the scheduler prefers.
+ */
 export interface PrTestTimings {
   generatedAt: string;
   files: Record<string, number>;
+  wallFiles?: Record<string, number>;
 }
 
 export interface PrTestPlan {
@@ -50,9 +63,10 @@ const TimingsSchema = z.object({
   version: z.literal(1),
   generatedAt: z.string().refine((value) => Number.isFinite(Date.parse(value)), "generatedAt must be an ISO timestamp"),
   files: z.record(z.string().min(1), z.number().finite().nonnegative()),
+  wallFiles: z.record(z.string().min(1), z.number().finite().nonnegative()).optional(),
 });
 
-/** One shard per 120 files; a selection that fits one shard stays unsharded. */
+/** One shard per 60 files; a selection that fits one shard stays unsharded. */
 export function shardCountForFileCount(fileCount: number): number {
   if (!Number.isSafeInteger(fileCount) || fileCount < 0) throw new Error("Invalid selected file count");
   if (fileCount <= PR_TEST_PLAN_FILES_PER_SHARD) return 1;
@@ -83,6 +97,7 @@ export function partitionTestFilesByDuration(
   files: readonly string[],
   shardCount: number,
   durations: ReadonlyMap<string, number>,
+  overheadMs: number = PR_TEST_FILE_OVERHEAD_MS,
 ): string[][] {
   if (!Number.isSafeInteger(shardCount) || shardCount < 1) throw new Error("Invalid test shard count");
   const ordered = [...new Set(files)].sort();
@@ -91,7 +106,7 @@ export function partitionTestFilesByDuration(
     .filter((value): value is number => value !== undefined && Number.isFinite(value))
     .sort((left, right) => left - right);
   const median = measured.length > 0 ? measured[Math.floor((measured.length - 1) / 2)] : 0;
-  const weight = (file: string): number => (durations.get(file) ?? median) + PR_TEST_FILE_OVERHEAD_MS;
+  const weight = (file: string): number => (durations.get(file) ?? median) + overheadMs;
   const scheduled = [...ordered].sort((left, right) => weight(right) - weight(left) || left.localeCompare(right));
   const shards = Array.from({ length: shardCount }, () => ({ files: [] as string[], load: 0 }));
   for (const file of scheduled) {
@@ -112,7 +127,9 @@ export function createPrTestPlan(
 ): PrTestPlan {
   const ordered = [...new Set(files)].sort();
   const shardCount = shardCountForFileCount(ordered.length);
-  const durations = timings ? new Map(Object.entries(timings.files)) : undefined;
+  // Wall-clock measurements include import and setup, so they carry no extra overhead.
+  const wall = timings?.wallFiles && Object.keys(timings.wallFiles).length > 0 ? timings.wallFiles : undefined;
+  const durations = timings ? new Map(Object.entries(wall ?? timings.files)) : undefined;
   return {
     version: 1,
     base,
@@ -120,7 +137,9 @@ export function createPrTestPlan(
     shardCount,
     partitionMode: durations ? "duration" : "round-robin",
     ...(timings ? { timingsGeneratedAt: timings.generatedAt } : {}),
-    shards: durations ? partitionTestFilesByDuration(ordered, shardCount, durations) : partitionTestFiles(ordered, shardCount),
+    shards: durations
+      ? partitionTestFilesByDuration(ordered, shardCount, durations, wall ? 0 : PR_TEST_FILE_OVERHEAD_MS)
+      : partitionTestFiles(ordered, shardCount),
   };
 }
 
@@ -151,7 +170,8 @@ export function readTestTimings(path: string, { now = Date.now() }: { now?: numb
   const age = now - generatedAt;
   if (age < -5 * 60_000) return { ok: false, reason: `generatedAt ${result.data.generatedAt} is in the future` };
   if (age > TEST_TIMINGS_MAX_AGE_MS) return { ok: false, reason: `generatedAt ${result.data.generatedAt} is older than 7 days` };
-  return { ok: true, timings: { generatedAt: result.data.generatedAt, files: result.data.files } };
+  const { generatedAt: at, files, wallFiles } = result.data;
+  return { ok: true, timings: { generatedAt: at, files, ...(wallFiles ? { wallFiles } : {}) } };
 }
 
 /** Remove Vitest's own hash partition: the explicit file list is already partitioned. */

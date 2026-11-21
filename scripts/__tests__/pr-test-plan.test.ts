@@ -57,16 +57,16 @@ describe("PR test plans", () => {
     expect(partitionTestFiles(["src/a.test.ts"], 4)).toEqual([["src/a.test.ts"], [], [], []]);
   });
 
-  it("scales one shard per 120 files from one up to the ten-shard cap", () => {
+  it("scales one shard per 60 files from one up to the ten-shard cap", () => {
     const files = Array.from({ length: 1300 }, (_, index) => `src/file-${index}.test.ts`);
     expect(shardCountForFileCount(0)).toBe(1);
     for (const [count, expected] of [
-      [1, 1], [120, 1], [121, 2], [240, 2], [241, 3], [600, 5], [780, 7], [1200, PR_TEST_PLAN_MAX_SHARDS], [1300, PR_TEST_PLAN_MAX_SHARDS],
+      [1, 1], [60, 1], [61, 2], [120, 2], [121, 3], [300, 5], [390, 7], [600, PR_TEST_PLAN_MAX_SHARDS], [1300, PR_TEST_PLAN_MAX_SHARDS],
     ] as const) {
       expect(shardCountForFileCount(count)).toBe(expected);
       expect(createPrTestPlan("base", files.slice(0, count)).shardCount).toBe(expected);
     }
-    const plan = createPrTestPlan("base", files.slice(0, 801));
+    const plan = createPrTestPlan("base", files.slice(0, 401));
     expect(plan.shardCount).toBe(7);
     expect(plan.partitionMode).toBe("round-robin");
     expect(readPrTestPlan(savePlan(plan))).toEqual(plan);
@@ -100,12 +100,30 @@ describe("PR test plans", () => {
     const files = Array.from({ length: 130 }, (_, index) => `src/file-${index}.test.ts`);
     const timings = { generatedAt: "2026-11-01T00:00:00.000Z", files: Object.fromEntries(files.map((file) => [file, 2_000])) };
     const plan = createPrTestPlan("base", files, { timings });
-    expect(plan.shardCount).toBe(2);
+    expect(plan.shardCount).toBe(3);
     expect(plan.partitionMode).toBe("duration");
     expect(plan.timingsGeneratedAt).toBe(timings.generatedAt);
     expect(readPrTestPlan(savePlan(plan))).toEqual(plan);
     const sizes = plan.shards.map((shard) => shard.length);
     expect(Math.max(...sizes) - Math.min(...sizes)).toBeLessThanOrEqual(1);
+  });
+
+  it("prefers measured wall cost over assertion time and adds no overhead to it", () => {
+    const files = Array.from({ length: 61 }, (_, index) => `src/file-${String(index).padStart(2, "0")}.test.ts`);
+    // Assertion time says file-00 is the outlier; wall time (import included) says file-60.
+    const timings = {
+      generatedAt: "2026-11-01T00:00:00.000Z",
+      files: Object.fromEntries(files.map((file, index) => [file, index === 0 ? 200_000 : 100])),
+      wallFiles: Object.fromEntries(files.map((file, index) => [file, index === 60 ? 200_000 : 1_000])),
+    };
+    const plan = createPrTestPlan("base", files, { timings });
+    expect(plan).toMatchObject({ shardCount: 2, partitionMode: "duration" });
+    expect(plan.shards).toContainEqual(["src/file-60.test.ts"]);
+    expect(partitionTestFilesByDuration(files, 2, new Map(Object.entries(timings.wallFiles)), 0))
+      .toEqual(plan.shards);
+    // An empty wall table falls back to assertion durations.
+    expect(createPrTestPlan("base", files, { timings: { ...timings, wallFiles: {} } }).shards)
+      .toContainEqual(["src/file-00.test.ts"]);
   });
 
   it("fails closed on missing, malformed, duplicate, count-mismatched and unsafe plans", () => {
@@ -129,6 +147,9 @@ describe("PR test plans", () => {
     const now = Date.parse("2026-11-02T12:00:00.000Z");
     const timings = { version: 1, generatedAt: "2026-11-01T12:00:00.000Z", files: { "src/a.test.ts": 1_500 } };
     expect(readTestTimings(saveTimings(timings), { now })).toEqual({ ok: true, timings: { generatedAt: timings.generatedAt, files: timings.files } });
+    const wallFiles = { "src/a.test.ts": 4_000 };
+    expect(readTestTimings(saveTimings({ ...timings, wallFiles }), { now }))
+      .toEqual({ ok: true, timings: { generatedAt: timings.generatedAt, files: timings.files, wallFiles } });
     expect(readTestTimings(saveTimings({ ...timings, generatedAt: new Date(now - 7 * DAY_MS).toISOString() }), { now }).ok).toBe(true);
     expect(readTestTimings(saveTimings({ ...timings, generatedAt: new Date(now - 7 * DAY_MS - 1).toISOString() }), { now }))
       .toMatchObject({ ok: false, reason: expect.stringContaining("older than 7 days") });
@@ -139,6 +160,7 @@ describe("PR test plans", () => {
       { ...timings, version: 2 },
       { ...timings, files: {} },
       { ...timings, files: { "src/a.test.ts": -1 } },
+      { ...timings, wallFiles: { "src/a.test.ts": -1 } },
       { ...timings, generatedAt: "yesterday" },
     ]) expect(readTestTimings(saveTimings(invalid), { now }).ok).toBe(false);
     expect(readTestTimings("/not-a-real-timings.json", { now }).ok).toBe(false);
