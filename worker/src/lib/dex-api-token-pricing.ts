@@ -1,4 +1,7 @@
 import type { PriceValidationReferences } from "./price-validation";
+import type { FxSourceCadence } from "@shared/types/fx-reference";
+import type { FxRateSourceMode } from "./fx-rate-state";
+import { inferFxSourceCadence } from "./fx-cadence";
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC, DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { getReferenceMarket, getReferenceMarketClosureStart } from "@shared/lib/reference-market-hours";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
@@ -16,6 +19,8 @@ export interface DexMarketMark {
   observedAtMode?: "upstream";
   /** Fresh agreement of at least two independent market source families; its clock is local collection time. */
   corroboration?: "multi-source";
+  /** The FX reference that values an untracked-price asset in open sessions, kept as its closed-session basis. */
+  fxReference?: { pegKey: string; cadence: FxSourceCadence; mode?: FxRateSourceMode; sourceDate?: string | null };
   source: string;
 }
 
@@ -31,7 +36,7 @@ export function getAdmittedDexMarketMark(
 ): DexMarketMark | null {
   const mark = prices?.marketMarks?.get(stablecoinId);
   if (
-    !mark || mark.priceUsd !== prices?.get(stablecoinId) ||
+    !mark || mark.fxReference || mark.priceUsd !== prices?.get(stablecoinId) ||
     !Number.isFinite(mark.priceUsd) || mark.priceUsd <= 0 || !mark.source.trim() ||
     !Number.isSafeInteger(assessedAtSec) ||
     !Number.isSafeInteger(mark.observedAtSec) || mark.observedAtSec <= 0 ||
@@ -40,13 +45,60 @@ export function getAdmittedDexMarketMark(
   return mark;
 }
 
-/** A closed-session leg needs a mark observed after the close: an upstream clock or a fresh multi-source consensus. */
-export function isClosureValuationMark<T extends Pick<DexMarketMark, "observedAtSec" | "observedAtMode" | "corroboration">>(
+type ClosureMarkFields = Pick<DexMarketMark, "observedAtSec" | "observedAtMode" | "corroboration" | "fxReference">;
+
+/** The open-session FX freshness rule, re-applied to a carried FX reference mark at the given clock. */
+function isFreshFxReferenceMark(mark: ClosureMarkFields, assessedAtSec: number): boolean {
+  const { pegKey, cadence, mode, sourceDate } = mark.fxReference!;
+  const observedAt = mark.observedAtSec;
+  return getFreshReferencePriceForContext(buildPriceValidationContext({ pegType: pegKey }), {
+    rates: { [pegKey]: 1 }, type: "fresh", updatedAt: observedAt,
+    updatedAtByPeg: { [pegKey]: observedAt }, typeByPeg: { [pegKey]: "fresh" },
+    ...(mode ? { sourceModeByPeg: { [pegKey]: mode } } : {}),
+    sourceCadenceByPeg: { [pegKey]: cadence }, sourceDateByPeg: { [pegKey]: sourceDate ?? null },
+  }, assessedAtSec) != null;
+}
+
+/**
+ * A closed-session leg needs a mark observed after the close (an upstream clock or a fresh multi-source
+ * consensus), or, for an asset valued by its FX reference in open sessions, that reference while still fresh.
+ */
+export function isClosureValuationMark<T extends ClosureMarkFields>(
   mark: T | null | undefined,
   closureStart: number,
+  assessedAtSec: number,
 ): mark is T {
-  return mark != null && mark.observedAtSec >= closureStart &&
-    (mark.observedAtMode === "upstream" || mark.corroboration === "multi-source");
+  if (mark == null) return false;
+  if (mark.fxReference) return isFreshFxReferenceMark(mark, assessedAtSec);
+  return mark.observedAtSec >= closureStart && (mark.observedAtMode === "upstream" || mark.corroboration === "multi-source");
+}
+
+/**
+ * Closed-session FX reference marks for assets without a tracked price, the ones open-session measured
+ * valuation prices by their FX reference. Built only while the asset's reference market is closed.
+ */
+export function buildFxReferenceClosureMarks(
+  prices: DexValuationPrices,
+  references: PriceValidationReferences | undefined,
+  assessedAtSec: number,
+  stablecoinIds: Iterable<string>,
+): Map<string, DexMarketMark> {
+  const marks = new Map<string, DexMarketMark>();
+  for (const id of stablecoinIds) {
+    if (prices.has(id) || prices.marketMarks?.has(id)) continue;
+    const context = buildPriceValidationContext({ stablecoinId: id });
+    const pegKey = context.pegType;
+    if (context.navToken || !pegKey || getReferenceMarketClosureStart(getReferenceMarket(context.pegCurrency), assessedAtSec) == null) continue;
+    const priceUsd = getFreshReferencePriceForContext(context, references, assessedAtSec);
+    const observedAtSec = references?.updatedAtByPeg?.[pegKey];
+    if (priceUsd == null || observedAtSec == null) continue;
+    const mode = references?.sourceModeByPeg?.[pegKey];
+    marks.set(id, { priceUsd, observedAtSec, source: `fx-reference:${pegKey}`, fxReference: {
+      pegKey, cadence: inferFxSourceCadence(pegKey, references?.sourceCadenceByPeg?.[pegKey]),
+      ...(mode ? { mode } : {}), sourceDate: references?.sourceDateByPeg?.[pegKey] ?? null,
+    } });
+  }
+  return marks;
 }
 
 export function getClosedReferenceDexValuation(
@@ -58,8 +110,9 @@ export function getClosedReferenceDexValuation(
   const market = getReferenceMarket(buildPriceValidationContext({ stablecoinId }).pegCurrency);
   const closureStart = getReferenceMarketClosureStart(market, assessedAtSec);
   if (closureStart == null) return null;
-  const mark = getAdmittedDexMarketMark(prices, stablecoinId, assessedAtSec);
-  return { market, closureStart, mark: isClosureValuationMark(mark, closureStart) ? mark : null };
+  const stored = prices.marketMarks.get(stablecoinId);
+  const mark = stored?.fxReference ? stored : getAdmittedDexMarketMark(prices, stablecoinId, assessedAtSec);
+  return { market, closureStart, mark: isClosureValuationMark(mark, closureStart, assessedAtSec) ? mark : null };
 }
 
 export function resolveStablecoinIdForDexApiToken(

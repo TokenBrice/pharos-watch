@@ -40,7 +40,7 @@ import { buildDexLiquidityPublicationGenerationId, persistScores, writeHistorica
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { isPreferredDirectApiPool, type DexApiPool } from "../../lib/dex-api-common";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
-import { getClosedReferenceDexValuation } from "../../lib/dex-api-token-pricing";
+import { buildFxReferenceClosureMarks, getClosedReferenceDexValuation } from "../../lib/dex-api-token-pricing";
 import { CURVE_CHAINS } from "./constants";
 import { POOL_CHALLENGE_MIN_TVL } from "../../lib/price-depeg-voting-policy";
 import { buildDirectApiPoolIdentity } from "./direct-source-helpers";
@@ -541,7 +541,14 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     loadTrackedStablecoinMaps(ctx.db, ctx.syncStartSec),
   ]);
   const { stablecoinPriceById, primaryPriceById, stablecoinMcapById, stablecoinPriceProvenanceById } = trackedMaps;
-  Object.assign(stablecoinPriceById, { closureValuationRejectedAssetIds: new Set<string>() });
+  // Closed-session basis for assets measured against their FX reference in open sessions (Liquidity v7.53).
+  const fxClosureMarks = buildFxReferenceClosureMarks(
+    stablecoinPriceById, validationReferences, ctx.syncStartSec, ACTIVE_STABLECOINS.map(({ id }) => id),
+  );
+  Object.assign(stablecoinPriceById, {
+    closureValuationRejectedAssetIds: new Set<string>(),
+    ...(fxClosureMarks.size > 0 ? { marketMarks: new Map([...(stablecoinPriceById.marketMarks ?? []), ...fxClosureMarks]) } : {}),
+  });
   const lookups = buildSymbolLookups();
 
   const directApiFetchers = buildDexDirectApiFetchers({

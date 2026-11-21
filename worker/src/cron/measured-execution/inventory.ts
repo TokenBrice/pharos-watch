@@ -8,7 +8,7 @@ import {
 import { SolanaDexNativeTargetSchema, type SolanaDexNativeTarget, type SolanaDexShadowTarget } from "@shared/types/solana-dex-bank";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { DexApiPool } from "../../lib/dex-api-types";
-import { getAdmittedDexMarketMark, getMeasuredTokenReferenceUsdPrice, type DexValuationPrices } from "../../lib/dex-api-token-pricing";
+import { getAdmittedDexMarketMark, getClosedReferenceDexValuation, getMeasuredTokenReferenceUsdPrice, type DexValuationPrices } from "../../lib/dex-api-token-pricing";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { getDexMeasuredExecutionDeployment, isTickSpacingQuoterV2Profile, type DexMeasuredExecutionDeployment } from "./registry";
 import { normalizeEvmAddress } from "../../lib/evm-selectors";
@@ -121,8 +121,10 @@ export function buildMeasuredExecutionTargetValue(
     const token = input[leg];
     const id = token.trackedAssetId;
     if (!id) return token;
-    const mark = getAdmittedDexMarketMark(valuation?.[leg], id, input.capturedAt);
-    return (mark?.observedAtMode === "upstream" || mark?.corroboration === "multi-source") && mark.priceUsd === token.referencePriceUsd
+    const mark = getClosedReferenceDexValuation(valuation?.[leg], id, input.capturedAt)?.mark ??
+      getAdmittedDexMarketMark(valuation?.[leg], id, input.capturedAt);
+    return (mark?.observedAtMode === "upstream" || mark?.corroboration === "multi-source" || mark?.fxReference) &&
+      mark.priceUsd === token.referencePriceUsd
       ? { ...token, marketMark: { stablecoinId: id, ...mark } }
       : token;
   }
