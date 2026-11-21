@@ -63,4 +63,29 @@ describe("cors helpers", () => {
     expect(response.headers.get("Access-Control-Allow-Origin")).toBe("https://pharos.watch");
     expect(response.headers.get("Vary")).toBe("Origin");
   });
+
+  it("applies wildcard cross-origin resource headers without Vary: Origin on /api/badge/ embeds", () => {
+    const preflight = handleCorsPreflight(
+      new Request("https://api.pharos.watch/api/badge/usdc-circle.svg", {
+        method: "OPTIONS",
+        headers: { Origin: "https://external.example" },
+      }),
+      null,
+    );
+    expect(preflight?.status).toBe(204);
+    expect(preflight?.headers.get("Access-Control-Allow-Origin")).toBe("*");
+    expect(preflight?.headers.get("Cross-Origin-Resource-Policy")).toBe("cross-origin");
+    expect(preflight?.headers.get("Vary")).toBeNull();
+    expect(preflight?.headers.get("Content-Security-Policy")).toBe("default-src 'none'; frame-ancestors 'none'");
+
+    const response = addCorsHeaders(
+      new Response("<svg/>", { headers: { Vary: "Origin" } }),
+      null,
+      "/api/badge/usdc-circle.svg",
+    );
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBe("*");
+    expect(response.headers.get("Cross-Origin-Resource-Policy")).toBe("cross-origin");
+    expect(response.headers.get("Vary")).toBeNull();
+    expect(response.headers.get("Content-Security-Policy")).toBe("default-src 'none'; frame-ancestors 'none'");
+  });
 });

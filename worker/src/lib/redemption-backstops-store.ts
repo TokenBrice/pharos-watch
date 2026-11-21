@@ -50,7 +50,7 @@ import { decodeJsonString, type JsonDecodeResult } from "./cache-json";
 import { SNAPSHOT_ROW_COLUMNS } from "./redemption-backstops-store-write";
 export { upsertRedemptionBackstopSnapshots } from "./redemption-backstops-store-write";
 
-interface RedemptionBackstopRow {
+export interface RedemptionBackstopRow {
   stablecoin_id: string;
   score: number | null;
   dex_liquidity_score: number | null;
@@ -118,7 +118,7 @@ export interface RedemptionBackstopRunMetadata {
   [key: string]: unknown;
 }
 
-const REDEMPTION_BACKSTOP_ROW_COLUMNS = [...SNAPSHOT_ROW_COLUMNS, "snapshot_run_id"].join(", ");
+export const REDEMPTION_BACKSTOP_ROW_COLUMNS = [...SNAPSHOT_ROW_COLUMNS, "snapshot_run_id"].join(", ");
 
 export class RedemptionBackstopSnapshotUnavailableError extends Error {
   cause?: unknown;
@@ -371,6 +371,14 @@ function toEntry(row: RedemptionBackstopRow, runId: string, rejectionReasons: st
   return parsed.data;
 }
 
+export function decodeRedemptionBackstopRow(
+  row: RedemptionBackstopRow,
+  runId: string,
+  rejectionReasons: string[],
+): RedemptionBackstopEntry | null {
+  return toEntry(row, runId, rejectionReasons);
+}
+
 function decodeBackstopRows(
   rows: readonly RedemptionBackstopRow[],
   errorMessage: string,
@@ -505,7 +513,7 @@ export async function loadRedemptionBackstopLiveSignalRows(
   }));
 }
 
-async function selectAdmittedRedemptionBackstopRun(
+export async function selectAdmittedRedemptionBackstopRun(
   db: D1Database,
   retainMap: boolean | ReadonlySet<string>,
 ): Promise<{ run: RedemptionBackstopRunRow; map: RedemptionBackstopMap }> {
@@ -607,7 +615,7 @@ async function loadRedemptionBackstopCoinSnapshot(
   };
 }
 
-function redemptionBackstopPhaseValidUntil(coins: RedemptionBackstopMap, now: number): number {
+export function redemptionBackstopPhaseValidUntil(coins: RedemptionBackstopMap, now: number): number {
   const rows = Object.values(coins).filter((entry) => mentoFpmmIds.has(entry.stablecoinId));
   if (rows.length === 0) return Infinity;
   const nextHour = nextMentoHour(now);

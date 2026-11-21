@@ -4,7 +4,7 @@ The Pharos API is a REST API served by a Cloudflare Worker backed by a D1 databa
 
 **Base URL:** `https://api.pharos.watch`
 
-Unless noted otherwise, responses are `Content-Type: application/json`. Exceptions: CORS preflights are bodyless without `Content-Type`; `GET /api/og/*` returns a bodyless `301` for retired image families, a bodyless `302` for dossier fallbacks and `image/png` for dated scorecards and depeg briefings, and can return `text/plain` on errors; and `POST /api/telegram-webhook` returns a plain-text `ok` body. CORS headers are added to every response, but `Access-Control-Allow-Origin` is restricted by the Worker `CORS_ORIGIN` allowlist (production repo config: `https://pharos.watch,https://ops.pharos.watch`). When the request `Origin` matches an allowlisted entry, the Worker echoes that origin and sets `Vary: Origin`; when a request includes a foreign `Origin`, the worker omits `Access-Control-Allow-Origin`, and `OPTIONS` preflights from foreign origins receive `403`. Requests without an `Origin` header keep the existing first-allowlisted-origin fallback. Non-exempt `/api/*` requests on `api.pharos.watch` require a valid `X-API-Key`; missing or invalid keys return `401 Unauthorized`. Per-key rate-limit overages return `429`, and cold auth/limiter dependency failures can still return `503`.
+Unless noted otherwise, responses are `Content-Type: application/json`. Exceptions: CORS preflights are bodyless without `Content-Type`; `GET /api/og/*` returns a bodyless `301` for retired image families, a bodyless `302` for dossier fallbacks and `image/png` for dated scorecards and depeg briefings, and can return `text/plain` on errors; `GET /api/badge/:id.svg` returns `image/svg+xml; charset=utf-8` with `Cross-Origin-Resource-Policy: cross-origin`, `Access-Control-Allow-Origin: *`, no `Vary: Origin`, and strict `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'` (pure presentation attributes, no `<style>`); and `POST /api/telegram-webhook` returns a plain-text `ok` body. CORS headers are added to every response, but outside the `/api/badge/` embed carveout `Access-Control-Allow-Origin` is restricted by the Worker `CORS_ORIGIN` allowlist (production repo config: `https://pharos.watch,https://ops.pharos.watch`). When the request `Origin` matches an allowlisted entry, the Worker echoes that origin and sets `Vary: Origin`; when a request includes a foreign `Origin`, the worker omits `Access-Control-Allow-Origin`, and `OPTIONS` preflights from foreign origins receive `403` (except `/api/badge/`, which answers `204`). Requests without an `Origin` header keep the existing first-allowlisted-origin fallback. Non-exempt `/api/*` requests on `api.pharos.watch` require a valid `X-API-Key`; missing or invalid keys return `401 Unauthorized`. Per-key rate-limit overages return `429`, and cold auth/limiter dependency failures can still return `503`.
 
 > **Agent navigation** — Grep the heading you need: Surface Split · Public API Auth · Stablecoin IDs · Response Headers · Response Body Freshness (`_meta`) · Cache-Control Profiles · Polling Guidance · Rate Limits · First Call · Conditional Requests · Versioning And Deprecation · Error Response Conventions · Method Gating Policy · Safety Score Availability · Reserve Availability · Public Endpoints (generated from OpenAPI and the endpoint registry) · Reference, Valuation And Coverage Fields · Pages Function endpoints. For one route, grep its path (for example, `/api/stablecoins`). Operator routes live in the internal [admin reference](./api-reference-admin.md).
 
@@ -60,6 +60,7 @@ Public, non-admin routes on `https://api.pharos.watch` that do not require `X-AP
 - `GET /api/dependency-graph/v1`
 - `GET /api/dependency-scenarios/v1`
 - `GET /api/health`
+- `GET /api/badge/:id.svg` (embeddable SVG Safety Score badge; warm edge-cache hits bypass the rate limiter, misses use fail-open `OG_IMAGE_RATE_LIMIT` and return a neutral Unavailable SVG on refusal)
 - `GET /api/og/*`
 - `POST /api/feedback`
 - `POST /api/donor-key-claims` (the supporter-key claim: a Sign-In-With-Ethereum signature from an eligible donor wallet, rate-limited per IP before the body is read)
@@ -239,11 +240,11 @@ Profile strings below come from `API_CACHE_PROFILES` (`shared/lib/api-cache-prof
 | Profile            | `Cache-Control`                                                | Used by                                                                                                                                                                                                                                                                                                                                                                                             |
 | ------------------ | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | realtime           | `public, s-maxage=60, max-age=10`                              | health, events                                                                                                                                                                                                                                                                                                                                                                                      |
-| producer-backed    | `public, s-maxage=300, max-age=60, stale-while-revalidate=300` | stablecoins, stablecoin-summary, blacklist, blacklist-summary, depeg-events, peg-summary, mint-burn-events, chains (cron-published payloads with 15-30 min producers)                                                                                                                                                                                                                               |
+| producer-backed    | `public, s-maxage=300, max-age=60, stale-while-revalidate=300` | stablecoins, stablecoin-summary, blacklist, blacklist-summary, depeg-events, peg-summary, mint-burn-events, chains, risk-check (when all D1 dependencies are fresh and Safety Score is current; otherwise `no-store`) |
 | standard           | `public, s-maxage=300, max-age=60`                             | stablecoin-charts, depeg-resolver, depeg-resolver-review, redemption-backstops, usds-status, daily-digest, digest-archive, stability-index, yield-rankings, yield-adapter-manifest, mint-burn-flows, stress-signals. `/api/report-cards/v9` uses this profile only for a current handler response, uses `no-store` while held, and always bypasses the edge cache. |
 | custom             | `public, s-maxage=300, max-age=300`                            | dex-liquidity (browser-side max-age extended to match CDN TTL); telegram-pulse uses route-local `public, max-age=300, s-maxage=300`                                                                                                                                                                                                                                                                 |
 | per-coin           | `public, s-maxage=300, max-age=10`                             | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1)                                                                                                                                                                                                                                                                                                                                          |
-| slow               | `public, s-maxage=3600, max-age=300`                           | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history, non-usd-share, safety-score-history-v2                                                                                                                                                                                                                                                                |
+| slow               | `public, s-maxage=3600, max-age=300`                           | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history, non-usd-share, safety-score-history-v2, compliance, compliance-coin, resolve |
 | archive            | `public, s-maxage=86400, max-age=3600`                         | digest-snapshot (elapsed UTC days), snapshots-index                                                                                                                                                                                                                                                                                                                                                                    |
 | immutable-snapshot | `public, s-maxage=31536000, max-age=31536000, immutable`       | snapshots/:date.json, snapshot/:date/stablecoin/:id                                                                                                                                                                                                                                                                                                                                                 |
 | public-status      | `public, max-age=60`                                           | public-status-history                                                                                                                                                                                                                                                                                                                                                                               |
@@ -252,7 +253,7 @@ Profile strings below come from `API_CACHE_PROFILES` (`shared/lib/api-cache-prof
 | reserve-fallback | `public, s-maxage=300, max-age=60` | stablecoin-reserves curated/template/unavailable modes and live mode with non-`ok` or uncertain sync |
 | no-store           | `no-store`                                                     | admin GET routes via the router override or admin route wrapper (`status`, `status-history`, `request-source-stats`, API key inventory/audit routes, `admin-action-log`, `debug-sync-state`, `rpc-provider-trial`, `backfill-dews`, `backfill-dews?repair=...&dry-run=true`) |
 
-`POST /api/feedback`, `POST /api/donor-key-claims`, `POST /api/telegram-webhook`, `POST /api/telegram-mini-app/session`, `POST /api/telegram-mini-app/mutate`, and admin POST endpoints bypass edge caching because they are non-GET request paths. The donor key claim and Telegram Mini App endpoints explicitly return no-store responses so plaintext API keys and per-chat alert state are never cacheable.
+`POST /api/feedback`, `POST /api/donor-key-claims`, `POST /api/mcp`, `POST /api/telegram-webhook`, `POST /api/telegram-mini-app/session`, `POST /api/telegram-mini-app/mutate`, and admin POST endpoints bypass edge caching because they are non-GET request paths. The donor key claim, MCP, and Telegram Mini App endpoints explicitly return `no-store` responses so plaintext API keys, tool envelopes, and per-chat alert state are never cacheable.
 
 `/api/og/v2/scorecard/:id` has an at-most-60-second ceiling bounded by observation/publication runway and re-admits the accepted identity and health after rendering. The dated depeg briefing also bounds its PNG lifetime by the remaining observation budget and checks expiry after rendering. These origin bounds do not prove an account-wide browser-cache floor respects them; production acceptance must inspect uncached and cached scorecard headers. Retired `/api/og/*` image families answer `301` with `public, max-age=31536000, immutable`. These Worker policies are distinct from canonical immutable `/og/v2/` assets and retained Pages scorecard reads: retained PNGs are immutable, while retained HTML revalidates using a body-derived ETag ([OG Images](./og-images.md#dated-scorecards)).
 
@@ -283,7 +284,7 @@ Client best practices:
 
 ## Rate Limits
 
-Protected public API traffic is limited per key, both per minute and per calendar month; exemptions are listed in [Public API Auth](#public-api-auth) and owned by `publicApiAccess` in `shared/lib/api-endpoints/`. The free Safety Score grades, dependency graph, and dependency scenarios routes also use `SAFETY_GRADES_RATE_LIMIT`: `60` requests per `60` seconds per client network (IPv4 address or IPv6 /64), with `429` / `Retry-After: 60` on exhaustion and `503` if the limiter is unavailable. Anonymous `GET /api/og/*` renders on the public API host use `OG_IMAGE_RATE_LIMIT` (`120` per `60` seconds per client network); that lane never fails closed, so a missing or failing binding serves OG images normally. Telegram ingress and supporter claims use separate limiters and authentication.
+Protected public API traffic is limited per key, both per minute and per calendar month; exemptions are listed in [Public API Auth](#public-api-auth) and owned by `publicApiAccess` in `shared/lib/api-endpoints/`. The free Safety Score grades, dependency graph, and dependency scenarios routes also use `SAFETY_GRADES_RATE_LIMIT`: `60` requests per `60` seconds per client network (IPv4 address or IPv6 /64), with `429` / `Retry-After: 60` on exhaustion and `503` if the limiter is unavailable. Anonymous `GET /api/og/*` renders on the public API host use `OG_IMAGE_RATE_LIMIT` (`120` per `60` seconds per client network); that lane never fails closed, so a missing or failing binding serves OG images normally. Anonymous `GET`/`HEAD` `/api/badge/:id.svg` reads serve warm edge-cache hits before the limiter so image proxies are not throttled on cached embeds; cache misses share fail-open `OG_IMAGE_RATE_LIMIT` and return a neutral `Unavailable` SVG (`200`, `Cache-Control: no-store`, `Retry-After: 60`, `X-Badge-Reason: rate-limited`) instead of a JSON `429`. Telegram ingress and supporter claims use separate limiters and authentication.
 
 Missing or invalid keys receive `401` with `Unauthorized: valid X-API-Key required. Safety grades are free at /api/safety-grades; see https://pharos.watch/api/ for supporter and partner keys.` Supporter claim throttling is separate from the issued key's quota; see [Public API Auth](#public-api-auth).
 
@@ -505,6 +506,15 @@ Tape `type=freeze.*` and `class=freeze` select the literal dot-delimited prefix 
 
 Source-retracted freeze and large mint/burn claims are absent from lists, search and counts. Exact lookup returns `404`, `Cache-Control: no-store` and `{ "error": "Event not found", "reason": "freeze-claim-retracted" }` (or `"flow-claim-retracted"` for a large mint/burn claim), without an event body. There is no public tombstone representation.
 
+## Hosted MCP Server (`POST /api/mcp`)
+
+`POST https://api.pharos.watch/api/mcp` exposes a stateless Streamable HTTP Model Context Protocol (JSON-RPC 2.0) server authenticated with `X-API-Key` only (`requiredKeyPlans: ["commercial", "institutional"]`; `GET /api/mcp` answers `405` with `Allow: POST`). Bodies are bounded to `16 KiB` (`413` on overflow), JSON-RPC batch arrays are rejected with `-32600`, and all responses use `Cache-Control: no-store`. Supported `MCP-Protocol-Version` revisions are `2026-07-28`, `2025-11-25`, `2025-06-18`, and `2025-03-26` (missing header defaults to `2025-03-26`; unsupported values return HTTP `400`).
+
+Supported methods: `initialize`, `notifications/initialized` (`202`), `ping`, `tools/list`, and `tools/call`. Seven read-only tools are exposed (`resolve_stablecoin`, `get_risk_check`, `get_compliance`, `get_safety_report_card`, `get_depeg_events`, `get_stress_signals`, `get_stablecoin_reserves`). Each tool call checks the Worker edge cache under its equivalent REST GET URL before lazily invoking the internal handler, preserving `_meta` and transport freshness headers (`X-Safety-Score-Status`, `X-Data-Updated-At`, `Warning`).
+
+## Embeddable Safety Score Badge (`GET /api/badge/:id.svg`)
+
+`GET https://api.pharos.watch/api/badge/{stablecoinId}.svg` (also `HEAD`) serves an anonymous embeddable SVG Safety Score badge for active tracked stablecoins (`404` for unknown or inactive IDs). Query parameters: `style=flat|card` (default `flat`) and `theme=dark|light` (default `dark`). Current fresh publications return `200 image/svg+xml; charset=utf-8` with `Cache-Control` bounded to the remaining Safety Score freshness runway (capped at `s-maxage=300, max-age=60`), `X-Safety-Score-Status: current`, and `X-Safety-Score-Generation`. Unrated coins render explicit `NR`; `held`, `stale`, `pipeline-gap`, read-error, or rate-limited responses return `200 image/svg+xml; charset=utf-8` with `Cache-Control: no-store`, `X-Badge-Reason`, and a neutral `Unavailable` badge instead of stale grades or broken images.
 
 ## Public Endpoints
 
@@ -541,7 +551,7 @@ DEX [price publication](./dex-liquidity.md#dex-price-cross-validation). Malforme
 
 ### Public Endpoints Quick Reference
 
-Generated from `public/openapi.json` (`Pharos API` v1.0.0). Total OpenAPI operations: **42**.
+Generated from `public/openapi.json` (`Pharos API` v1.0.0). Total OpenAPI operations: **46**.
 
 | Method | Path | Summary | Tags | Auth | Parameters | Status codes |
 | ------ | ---- | ------- | ---- | ---- | ---------- | ------------ |
@@ -587,6 +597,10 @@ Generated from `public/openapi.json` (`Pharos API` v1.0.0). Total OpenAPI operat
 | GET | `/api/mint-burn-flows` | Mint and burn flows | Flows | `X-API-Key` required | `stablecoin` (query, optional, string); `hours` (query, optional, integer) | 200, 400, 401, 429, 503 |
 | GET | `/api/mint-burn-events` | Mint and burn events | Flows | `X-API-Key` required | `stablecoin` (query, required, string); `direction` (query, optional, string); `chain` (query, optional, string); `burnType` (query, optional, string); `scope` (query, optional, string); `minAmount` (query, optional, number); `limit` (query, optional, integer); `offset` (query, optional, integer); `cursor` (query, optional, string); `includeTotal` (query, optional, boolean) | 200, 400, 401, 429, 503 |
 | GET | `/api/stress-signals` | Stress signals | Risk, Peg Monitoring | `X-API-Key` required | `stablecoin` (query, optional, string); `days` (query, optional, integer) | 200, 400, 401, 429, 503 |
+| GET | `/api/risk-check` | Unified risk check | Risk | `X-API-Key` required | `ids` (query, optional, string); `contracts` (query, optional, string) | 200, 400, 401, 429, 503 |
+| GET | `/api/resolve` | Resolve contract address or ID | Stablecoins | `X-API-Key` required | `chain` (query, optional, string); `address` (query, optional, string); `id` (query, optional, string); `geckoId` (query, optional, string); `contracts` (query, optional, string) | 200, 400, 401, 429, 503 |
+| GET | `/api/compliance` | Compliance registry (MiCA & GENIUS) | Compliance | `X-API-Key` required | `regime` (query, optional, string); `micaStatus` (query, optional, string); `geniusStatus` (query, optional, string); `tokenType` (query, optional, string); `peg` (query, optional, string); `includePreLaunch` (query, optional, boolean) | 200, 400, 401, 429, 503 |
+| GET | `/api/compliance/{stablecoinId}` | Compliance profile for one stablecoin | Compliance | `X-API-Key` required | `stablecoinId` (path, required, string) | 200, 400, 401, 429, 503 |
 
 ### `GET /api/events`
 
@@ -1195,6 +1209,46 @@ Freshness threshold: 1800 s.
   "methodologyVersion": "6.54"
 }
 ```
+
+### `GET /api/risk-check`
+
+Single-call risk-gate snapshot for up to 25 stablecoins by canonical ID or chain:address contract. [Full endpoint contract](https://pharos.watch/openapi.json#/paths/~1api~1risk-check/get).
+
+- **Operation ID:** `riskCheck`
+- **Path:** `/api/risk-check`
+- **Parameters:** `ids` (query, optional, string); `contracts` (query, optional, string)
+- **Success response schema:** [`RiskCheckResponse`](https://pharos.watch/openapi.json#/components/schemas/RiskCheckResponse)
+- **Policy:** authentication `X-API-Key` required; shared endpoint caching allowed (`cacheBypass: false`).
+
+### `GET /api/resolve`
+
+Resolve on-chain contract addresses, chain:address batches (up to 50), canonical IDs, or CoinGecko IDs to Pharos stablecoin identities and deployments. [Full endpoint contract](https://pharos.watch/openapi.json#/paths/~1api~1resolve/get).
+
+- **Operation ID:** `resolve`
+- **Path:** `/api/resolve`
+- **Parameters:** `chain` (query, optional, string); `address` (query, optional, string); `id` (query, optional, string); `geckoId` (query, optional, string); `contracts` (query, optional, string)
+- **Success response schema:** [`ResolveResponse`](https://pharos.watch/openapi.json#/components/schemas/ResolveResponse)
+- **Policy:** authentication `X-API-Key` required; shared endpoint caching allowed (`cacheBypass: false`).
+
+### `GET /api/compliance`
+
+Structured EU MiCA and US GENIUS Act compliance assessments across tracked stablecoins, with statutory regime-state context and explicit not-reviewed provenance. [Full endpoint contract](https://pharos.watch/openapi.json#/paths/~1api~1compliance/get).
+
+- **Operation ID:** `compliance`
+- **Path:** `/api/compliance`
+- **Parameters:** `regime` (query, optional, string); `micaStatus` (query, optional, string); `geniusStatus` (query, optional, string); `tokenType` (query, optional, string); `peg` (query, optional, string); `includePreLaunch` (query, optional, boolean)
+- **Success response schema:** [`ComplianceListResponse`](https://pharos.watch/openapi.json#/components/schemas/ComplianceListResponse)
+- **Policy:** authentication `X-API-Key` required; shared endpoint caching allowed (`cacheBypass: false`).
+
+### `GET /api/compliance/:id`
+
+EU MiCA and US GENIUS Act assessment for one canonical stablecoin ID, preserving unreviewed nulls and tri-state disclosure flags. [Full endpoint contract](https://pharos.watch/openapi.json#/paths/~1api~1compliance~1{stablecoinId}/get).
+
+- **Operation ID:** `complianceStablecoinId`
+- **Path:** `/api/compliance/{stablecoinId}`
+- **Parameters:** `stablecoinId` (path, required, string)
+- **Success response schema:** [`ComplianceCoinResponse`](https://pharos.watch/openapi.json#/components/schemas/ComplianceCoinResponse)
+- **Policy:** authentication `X-API-Key` required; shared endpoint caching allowed (`cacheBypass: false`).
 
 ### `POST /api/donor-key-claims`
 

@@ -133,7 +133,9 @@ describe("runPostDeployAcceptance", () => {
       daily-digest digest-archive snapshots/index yield-rankings yield-adapter-manifest
       yield-history?stablecoin=usdt-tether safety-score-history?stablecoin=usdt-tether
       safety-score-history-v2?stablecoin=usdt-tether&days=3650 stability-index report-cards/v9
-      safety-grades dependency-graph/v1 dependency-scenarios/v1 depeg-resolver depeg-resolver-review
+      safety-grades dependency-graph/v1 dependency-scenarios/v1 compliance compliance/usdc-circle
+      resolve?chain=ethereum&address=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48
+      risk-check?ids=usdc-circle%2Cusdt-tether depeg-resolver depeg-resolver-review
       redemption-backstops mint-burn-flows mint-burn-events?stablecoin=usdt-tether stress-signals
       chains non-usd-share?days=90 telegram-pulse
     `.trim().split(/\s+/).map((path) => `/api/${path}`).sort());

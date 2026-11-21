@@ -107,6 +107,20 @@ const DYNAMIC_ROUTE_DEFINITIONS = [
       return handleStablecoinLiveSummary(routeCtx.db, canonicalId, routeCtx.execCtx, routeCtx.coingeckoApiKey);
     }),
   ),
+  defineDynamicRouteFromDescriptor("compliance-coin", async (_routeCtx, match) => {
+    const { decodeWorkerCoinPathId } = await import("../lib/worker-coin-id");
+    const resolved = decodeWorkerCoinPathId(match[1], { malformedMessage: "Malformed URI" });
+    if (resolved instanceof Response) return resolved;
+    const { handleComplianceCoin } = await import("../api/compliance");
+    return handleComplianceCoin(resolved.canonicalId);
+  }),
+  defineDynamicRouteFromDescriptor("safety-badge", async (routeCtx, match) => {
+    const { decodeWorkerCoinPathId } = await import("../lib/worker-coin-id");
+    const resolved = decodeWorkerCoinPathId(match[1], { activeOnly: true, malformedMessage: "Malformed URI" });
+    if (resolved instanceof Response) return resolved;
+    const { handleSafetyBadge } = await import("../api/badge");
+    return handleSafetyBadge(routeCtx.db, resolved.canonicalId, routeCtx.url, routeCtx.request.method);
+  }),
   defineDynamicRouteFromDescriptor("og-image", async (routeCtx) => {
     // The handler owns capture decoding for the dated routes and legacy redirects.
     const { handleOg } = await import("../api/og");

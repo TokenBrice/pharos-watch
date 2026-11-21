@@ -177,6 +177,15 @@ const PUBLIC_POST_EXEMPT_POLICY = {
   siteDataAccess: "denied",
 } as const satisfies EndpointDefinitionPolicy<readonly ["POST"], false, false, true>;
 
+const PUBLIC_POST_PROTECTED_POLICY = {
+  methods: ["POST"],
+  adminRequired: false,
+  mutatingAdmin: false,
+  cacheBypass: true,
+  publicApiAccess: "protected",
+  siteDataAccess: "denied",
+} as const satisfies EndpointDefinitionPolicy<readonly ["POST"], false, false, true>;
+
 const ADMIN_GET_POLICY = {
   methods: ["GET"],
   adminRequired: true,
@@ -219,6 +228,10 @@ function publicGet<const T extends EndpointDefinitionFactoryInput>(definition: T
 
 function publicPostExempt<const T extends EndpointDefinitionFactoryInput>(definition: T) {
   return defineEndpoint(definition, PUBLIC_POST_EXEMPT_POLICY);
+}
+
+function publicPostProtected<const T extends EndpointDefinitionFactoryInput>(definition: T) {
+  return defineEndpoint(definition, PUBLIC_POST_PROTECTED_POLICY);
 }
 
 function adminGet<const T extends EndpointDefinitionFactoryInput>(definition: T) {
@@ -631,6 +644,49 @@ const BASE_ENDPOINT_DEFINITIONS = [
     strictContract: true,
     probeGroup: "public",
     routeDependencies: ["workerVersion"],
+  }),
+  publicGet({
+    key: "compliance",
+    path: API_PATHS.compliance(),
+    requiredKeyPlans: ["commercial", "institutional"],
+    siteDataAccess: "denied",
+    cacheKeyQueryParams: ["regime", "micaStatus", "geniusStatus", "tokenType", "peg", "includePreLaunch"],
+    probeGroup: "public",
+  }),
+  publicGet({
+    // Dynamic shape; runtime routing is registered via DYNAMIC_ENDPOINT_DESCRIPTORS.
+    key: "compliance-coin",
+    path: DYNAMIC_API_PATHS.complianceCoin.template,
+    requiredKeyPlans: ["commercial", "institutional"],
+    siteDataAccess: "denied",
+    cacheKeyIgnoresQuery: true,
+    probeGroup: "public",
+    probePath: API_PATHS.complianceCoin("usdc-circle"),
+  }),
+  publicGet({
+    key: "resolve",
+    path: API_PATHS.resolve(),
+    siteDataAccess: "denied",
+    cacheKeyQueryParams: ["chain", "address", "id", "geckoId", "contracts"],
+    probeGroup: "public",
+    probePath: API_PATHS.resolve({
+      chain: "ethereum",
+      address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    }),
+  }),
+  publicGet({
+    key: "risk-check",
+    path: API_PATHS.riskCheck(),
+    requiredKeyPlans: ["commercial", "institutional"],
+    siteDataAccess: "denied",
+    cacheKeyQueryParams: ["ids", "contracts"],
+    probeGroup: "public",
+    probePath: API_PATHS.riskCheck({ ids: ["usdc-circle", "usdt-tether"] }),
+  }),
+  publicPostProtected({
+    key: "mcp",
+    path: API_PATHS.mcp(),
+    requiredKeyPlans: ["commercial", "institutional"],
   }),
   publicGet({
     key: "depeg-resolver",

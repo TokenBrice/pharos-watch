@@ -18,6 +18,7 @@ export interface SafetyScoreGradeSnapshot {
   completeness: { expectedCount: number };
   cards: SafetyGradesResponse["grades"];
   scorecardPillars?: { id: string; ratings: ScorecardPillarRatings };
+  scorecardPillarsById?: Record<string, ScorecardPillarRatings>;
 }
 
 export type ActiveSafetyScoreIndex =
@@ -25,15 +26,30 @@ export type ActiveSafetyScoreIndex =
   | { kind: "held"; reason: "v9-publication-held"; detail: string; snapshot: SafetyScoreGradeSnapshot }
   | { kind: "error"; reason: string; detail: string; snapshot: null };
 
+export interface SafetyScoreIndexPillarOptions {
+  includePillarsForIds: readonly string[];
+}
+
 /** One D1 read binds the small projection to the accepted envelope and health.
  * Never inflate the publication as a request-time fallback, including rollout.
  */
 export async function loadActiveSafetyScoreIndex(
-  db: D1Database, signal?: AbortSignal, pillarSubjectId?: string,
+  db: D1Database,
+  signal?: AbortSignal,
+  pillarSubject?: string | SafetyScoreIndexPillarOptions,
 ): Promise<ActiveSafetyScoreIndex> {
   const unavailable = (reason: string): ActiveSafetyScoreIndex => ({
     kind: "error", reason, detail: `Canonical Safety Score index unavailable: ${reason}`, snapshot: null,
   });
+  const singlePillarSubjectId = typeof pillarSubject === "string" ? pillarSubject : undefined;
+  const batchPillarIds = typeof pillarSubject === "object" && pillarSubject !== null && pillarSubject.includePillarsForIds.length > 0
+    ? pillarSubject.includePillarsForIds
+    : undefined;
+  const pillarExtractPath = singlePillarSubjectId !== undefined
+    ? `$.ratings.${JSON.stringify(singlePillarSubjectId)}`
+    : batchPillarIds !== undefined
+      ? "$.ratings"
+      : null;
   try {
     throwIfAborted(signal);
     const row = await db.prepare(`SELECT
@@ -52,10 +68,10 @@ export async function loadActiveSafetyScoreIndex(
       LEFT JOIN cache h ON h.key = ?
       LEFT JOIN cache og ON og.key = ? AND og.updated_at = p.updated_at
       WHERE p.key = ?`).bind(
-      pillarSubjectId === undefined ? null : `$.ratings.${JSON.stringify(pillarSubjectId)}`,
+      pillarExtractPath,
       SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex,
       SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth,
-      pillarSubjectId === undefined ? null : SAFETY_SCORE_V9_CACHE_KEYS.scorecardPillars,
+      pillarExtractPath === null ? null : SAFETY_SCORE_V9_CACHE_KEYS.scorecardPillars,
       SAFETY_SCORE_V9_CACHE_KEYS.publication,
     ).first<{
       score_index: string | null; index_updated_at: number | null;
@@ -97,15 +113,38 @@ export async function loadActiveSafetyScoreIndex(
       publicationGenerationId: index.safetyScoreIdentity.publicationGenerationId,
       publishedAtSec: index.publishedAtSec,
     }, health);
-    const pillars = pillarSubjectId !== undefined && index.scores[pillarSubjectId]?.ratingStatus === "rated"
+    const singlePillars = singlePillarSubjectId !== undefined && index.scores[singlePillarSubjectId]?.ratingStatus === "rated"
       && row.pillar_ratings != null ? ScorecardPillarRatingsSchema.safeParse(JSON.parse(row.pillar_ratings)) : null;
+    let scorecardPillarsById: Record<string, ScorecardPillarRatings> | undefined;
+    if (batchPillarIds !== undefined && row.pillar_ratings != null) {
+      try {
+        const rawRatings: unknown = JSON.parse(row.pillar_ratings);
+        if (rawRatings && typeof rawRatings === "object" && !Array.isArray(rawRatings)) {
+          const map: Record<string, ScorecardPillarRatings> = {};
+          const ratingsRecord = rawRatings as Record<string, unknown>;
+          for (const id of batchPillarIds) {
+            if (index.scores[id]?.ratingStatus !== "rated" || ratingsRecord[id] === undefined) continue;
+            const parsed = ScorecardPillarRatingsSchema.safeParse(ratingsRecord[id]);
+            if (parsed.success) {
+              map[id] = parsed.data;
+            }
+          }
+          scorecardPillarsById = map;
+        }
+      } catch {
+        scorecardPillarsById = undefined;
+      }
+    }
     const snapshot: SafetyScoreGradeSnapshot = {
       lifecycle: "active", safetyScoreIdentity: index.safetyScoreIdentity,
       methodology: { version: index.safetyScoreIdentity.methodologyVersion },
       asOfSec: index.asOfSec, updatedAt: index.publishedAtSec, publicationHealth: effectiveHealth,
       completeness: { expectedCount: index.expectedCount },
       cards: Object.entries(index.scores).map(([id, entry]) => ({ id, ...entry })),
-      ...(pillars?.success && pillarSubjectId !== undefined ? { scorecardPillars: { id: pillarSubjectId, ratings: pillars.data } } : {}),
+      ...(singlePillars?.success && singlePillarSubjectId !== undefined
+        ? { scorecardPillars: { id: singlePillarSubjectId, ratings: singlePillars.data } }
+        : {}),
+      ...(scorecardPillarsById !== undefined ? { scorecardPillarsById } : {}),
     };
     return effectiveHealth.status === "held"
       ? { kind: "held", reason: "v9-publication-held", detail: "Canonical Safety Score V9 ratings are held at the last verified snapshot", snapshot }

@@ -3,6 +3,7 @@ import { API_ORIGIN, SITE_ORIGIN } from "./runtime-origins";
 export const PUBLIC_API_HOST = API_ORIGIN;
 export const API_REFERENCE_URL = `${SITE_ORIGIN}/api/reference/`;
 export const PUBLIC_API_KEY_HEADER = "X-API-Key";
+export const PUBLIC_API_CONTRACT_VERSION = "2026-11";
 
 /**
  * Donor (supporter) key claim switch. `false` makes `POST /api/donor-key-claims`

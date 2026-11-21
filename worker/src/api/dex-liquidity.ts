@@ -13,6 +13,7 @@ import {
 } from "../lib/dex-liquidity";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {
+  admitDexPriceRow,
   buildDexLiquidityWarning,
   getDexTvlObservedAt,
   getDexLiquidityTrendTolerances,
@@ -27,11 +28,9 @@ import {
 } from "../lib/dex-liquidity-response";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { parseDexVolumeAvailabilityRecord, readStoredDexVolumeWindow } from "@shared/lib/dex-volume-availability";
-import { assessFreshnessTimestamp } from "../lib/api-freshness-age";
-import { STAGED_POOL_PRICE_MAX_AGE_HOURS } from "../lib/dex-cron-constants";
 import { readCoinProjectionId } from "../lib/api-coin-projection";
 import type { DexLiquidityData, DexLiquidityTableMap } from "@shared/types/dex-liquidity";
-import { getDexAggregateObservedAt, getDexPriceSourceEntries } from "../lib/depeg-trust-policy";
+import { getDexPriceSourceEntries } from "../lib/depeg-trust-policy";
 
 export const handleDexLiquidity = async (
   db: D1Database,
@@ -195,20 +194,8 @@ export const handleDexLiquidity = async (
 
     // Prices are a separate publication; liquidity's clock cannot admit them.
     const priceRow = dexPriceById.get(id);
-    const priceMaxAgeSec = STAGED_POOL_PRICE_MAX_AGE_HOURS * 3600;
-    const pricePayload = safeJsonParse<unknown>(priceRow?.price_sources_json, null, `dex-liquidity:${id}:price_sources_json`);
-    const { aggregateObservedAt, aggregateClockReason } = getDexAggregateObservedAt(pricePayload, nowSec, "display");
-    const publicationAge = assessFreshnessTimestamp(nowSec, priceRow?.updated_at);
-    const priceAge = assessFreshnessTimestamp(nowSec, aggregateObservedAt);
-    // Both writers stamp the orchestrator's syncStartSec; any drift is publication-mismatch.
-    const priceUnavailableReason = !priceRow ? "missing-price"
-      : publicationAge.reason != null ? publicationAge.reason
-      : publicationAge.ageSeconds > priceMaxAgeSec ? "stale-price"
-      : priceRow.updated_at !== row.updated_at ? "publication-mismatch"
-      : aggregateClockReason === "aggregate-clock-invalid" ? "invalid-timestamp"
-      : aggregateClockReason === "aggregate-clock-future" ? "future-timestamp"
-      : priceAge.reason != null ? priceAge.reason
-      : priceAge.ageSeconds > priceMaxAgeSec ? "stale-price" : null;
+    const { pricePayload, priceAgeSeconds, priceMaxAgeSec, unavailableReason: priceUnavailableReason } =
+      admitDexPriceRow(priceRow, row.updated_at, nowSec, `dex-liquidity:${id}:price_sources_json`);
     const dexPrice = priceUnavailableReason == null ? priceRow : undefined;
     let evidence: NormalizedDexLiquidityEvidence | null = null;
     try {
@@ -277,7 +264,7 @@ export const handleDexLiquidity = async (
       updatedAt: row.updated_at,
       dexPriceUpdatedAt: priceRow && Number.isFinite(priceRow.updated_at) && priceRow.updated_at >= 0
         ? priceRow.updated_at : null,
-      dexPriceAgeSeconds: priceAge.ageSeconds,
+      dexPriceAgeSeconds: priceAgeSeconds,
       dexPriceMaxAgeSec: priceMaxAgeSec,
       dexPriceUnavailableReason: priceUnavailableReason,
       dexPriceUsd: dexPrice?.dex_price_usd ?? null,

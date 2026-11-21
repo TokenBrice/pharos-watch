@@ -100,7 +100,7 @@ function rawSnapshotPolicy<TPayload, TReason extends string>(
   };
 }
 
-function parseVersionedSnapshotCache<TPayload, TReason extends string>(
+export function parseVersionedSnapshotCache<TPayload, TReason extends string>(
   cached: { value: string; updatedAt: number } | null,
   options: VersionedSnapshotCacheOptions<TPayload, TReason>,
 ): VersionedSnapshotCacheLoadResult<TPayload, TReason> {

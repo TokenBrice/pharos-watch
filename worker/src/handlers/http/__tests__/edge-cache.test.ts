@@ -106,6 +106,23 @@ describe("createEdgeCacheContext", () => {
 
     expect(new Set(keys).size).toBe(3);
   });
+
+  it("honors dynamic cacheKeyQueryParams on /api/badge/:id.svg", () => {
+    const base = createEdgeCacheContext(
+      new Request("https://api.pharos.watch/api/badge/usdc-circle.svg?style=flat&theme=dark"),
+      new URL("https://api.pharos.watch/api/badge/usdc-circle.svg?style=flat&theme=dark"),
+    );
+    const tracked = createEdgeCacheContext(
+      new Request("https://api.pharos.watch/api/badge/usdc-circle.svg?theme=dark&style=flat&utm=foo"),
+      new URL("https://api.pharos.watch/api/badge/usdc-circle.svg?theme=dark&style=flat&utm=foo"),
+    );
+    const card = createEdgeCacheContext(
+      new Request("https://api.pharos.watch/api/badge/usdc-circle.svg?style=card&theme=dark"),
+      new URL("https://api.pharos.watch/api/badge/usdc-circle.svg?style=card&theme=dark"),
+    );
+    expect(tracked.cacheKey.url).toBe(base.cacheKey.url);
+    expect(card.cacheKey.url).not.toBe(base.cacheKey.url);
+  });
 });
 
 describe("writeEdgeCache", () => {

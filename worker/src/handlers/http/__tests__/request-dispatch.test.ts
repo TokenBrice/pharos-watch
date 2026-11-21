@@ -569,4 +569,31 @@ describe("handleHttpRequestImpl", () => {
     expect(mocks.writeEdgeCache).toHaveBeenCalledWith(edgeCacheContext, routedResponse, ctx);
     expect(mocks.addCorsHeaders).toHaveBeenCalledWith(routedResponse, "https://pharos.watch");
   });
+
+  it("serves warm /api/badge/ edge-cache hits before evaluateAccessGate so image proxies bypass the limiter", async () => {
+    const cachedBadge = new Response("<svg/>", {
+      status: 200,
+      headers: {
+        "Content-Type": "image/svg+xml; charset=utf-8",
+        "Cache-Control": "public, s-maxage=300, max-age=60",
+        Date: new Date().toUTCString(),
+      },
+    });
+    mocks.readEdgeCache.mockResolvedValueOnce(cachedBadge);
+
+    const response = await handleHttpRequestImpl(
+      new Request("https://api.pharos.watch/api/badge/usdc-circle.svg"),
+      makeEnv(),
+      makeCtx(),
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.evaluateAccessGate).not.toHaveBeenCalled();
+    expect(mocks.recordRequestSource).toHaveBeenCalledOnce();
+    expect(mocks.addCorsHeaders).toHaveBeenCalledWith(
+      cachedBadge,
+      "https://pharos.watch",
+      "/api/badge/usdc-circle.svg",
+    );
+  });
 });
