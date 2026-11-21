@@ -12,6 +12,11 @@ concurrency:
 permissions:
   contents: read
 
+# Shared setup uses a local `./` reference here, unlike the privileged
+# workflows' `$/` binding: every job of this pull_request workflow checks out
+# the merge commit the workflow itself runs from before the action resolves,
+# so both forms read identical bytes, and `$/` costs each job a ~10 s download
+# of the whole repository archive during "Set up job".
 jobs:
   secrets:
     runs-on: ubuntu-latest
@@ -113,7 +118,7 @@ jobs:
             rm -f "${timings}"
             echo "No nightly test timings from the last 7 days; planning with round-robin shards."
           fi
-      - uses: $/.github/actions/setup-workspace
+      - uses: ./.github/actions/setup-workspace # zizmor: ignore[self-repository] see the note above `jobs:`
         with:
           bootstrap-history: "true"
           node-modules-cache: "true"
@@ -207,7 +212,7 @@ jobs:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --run
-      - uses: $/.github/actions/setup-workspace
+      - uses: ./.github/actions/setup-workspace # zizmor: ignore[self-repository] see the note above `jobs:`
         id: publish-workspace
         with:
           install-deps: "false"
@@ -230,7 +235,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
           filter: blob:none
-      - uses: $/.github/actions/setup-workspace
+      - uses: ./.github/actions/setup-workspace # zizmor: ignore[self-repository] see the note above `jobs:`
         with:
           browser-cache: ${{ matrix.lane == 'static-guards' && needs.prepare.outputs.playwright_firefox_required || 'false' }}
           cache-npm: "false"
@@ -327,7 +332,7 @@ jobs:
             console.log(JSON.stringify(result));
           }
           NODE
-      - uses: $/.github/actions/setup-workspace
+      - uses: ./.github/actions/setup-workspace # zizmor: ignore[self-repository] see the note above `jobs:`
         with:
           cache-npm: "false"
           install-deps: "false"
