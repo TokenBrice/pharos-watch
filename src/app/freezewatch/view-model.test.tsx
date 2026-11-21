@@ -204,7 +204,7 @@ describe("useFreezeWatchPageController", () => {
     },
   );
 
-  it("keeps all four freshness clocks, budgets and errors bound to their own source", () => {
+  it("keeps the three critical freshness clocks bound to their own source and excludes optional reportCards", () => {
     const supplyMeta = { updatedAt: 1_700_000_000, status: "fresh", freshBudgetSec: 900, degradedBudgetSec: 1800 };
     const scoreMeta = { updatedAt: 1_699_900_000, status: "stale", freshBudgetSec: 86400 };
     const supplyError = new Error("supply refresh failed");
@@ -219,22 +219,19 @@ describe("useFreezeWatchPageController", () => {
     });
     const { result, rerender } = renderHook(() => useFreezeWatchPageController());
     const lanes = result.current.freshnessQueries;
+    expect(lanes).toHaveLength(3);
     expect(lanes).toMatchObject([
       { preset: "blacklist", dataUpdatedAt: 123, error: null, hasData: true },
       { preset: "blacklist", dataUpdatedAt: 456, error: null, hasData: true },
       { preset: "stablecoins", dataUpdatedAt: 901, error: supplyError, hasData: true, isLoading: false },
-      { preset: "reportCards", dataUpdatedAt: 902, error: scoreError, hasData: true, isLoading: false },
     ]);
     expect(lanes[2].meta).toBe(supplyMeta);
-    expect(lanes[3].meta).toBe(scoreMeta);
     expect(lanes[2].catchUp).toBeUndefined();
-    expect(lanes[3].catchUp).toBeUndefined();
     useStablecoinsMock.mockReturnValue({
       ...useStablecoinsMock.mock.results.at(-1)?.value, dataUpdatedAt: 999,
     });
     rerender();
     expect(result.current.freshnessQueries[2]).toMatchObject({ dataUpdatedAt: 999, meta: supplyMeta });
-    expect(result.current.freshnessQueries[3]).toMatchObject({ dataUpdatedAt: 902, meta: scoreMeta });
   });
 
   it("debounces search updates and scrolls the drilldown when the status bucket changes", () => {
@@ -408,7 +405,7 @@ describe("useFreezeWatchPageController", () => {
     expect(refetchReportCards).toHaveBeenCalledOnce();
   });
 
-  it("surfaces a report-card support failure even when the stablecoin list resolves", () => {
+  it("does not raise a page-top error when optional reportCards fails while core reads resolve", () => {
     const reportCardsError = new Error("report cards unavailable");
     useReportCardsV9Mock.mockReturnValue({
       data: undefined,
@@ -419,8 +416,36 @@ describe("useFreezeWatchPageController", () => {
 
     const { result } = renderHook(() => useFreezeWatchPageController());
 
-    expect(result.current.error).toBe(reportCardsError);
+    expect(result.current.error).toBeNull();
     expect(result.current.stablecoinsError).toBeNull();
+  });
+
+  it("auto-clears conflicting ledger filters when running a complete address check and supports resetting all filters", () => {
+    currentSearch = "?stablecoin=usdt&chain=tron&event=destroy&sortBy=event&sortDirection=asc";
+    const fullAddress = "0x" + "cd".repeat(20);
+    const { result, rerender } = renderHook(() => useFreezeWatchPageController());
+
+    act(() => {
+      result.current.handleHeroAddressChange(fullAddress);
+    });
+    rerender();
+
+    const params = new URLSearchParams(currentSearch);
+    expect(params.get("q")).toBe(fullAddress);
+    expect(params.get("stablecoin")).toBeNull();
+    expect(params.get("chain")).toBeNull();
+    expect(params.get("event")).toBeNull();
+    expect(params.get("sortBy")).toBeNull();
+    expect(params.get("sortDirection")).toBeNull();
+    expect(result.current.filtersClearedForAddressCheck).toBe(true);
+
+    act(() => {
+      result.current.handleResetFilters();
+    });
+    rerender();
+    expect(currentSearch).toBe("");
+    expect(result.current.searchInput).toBe("");
+    expect(result.current.filtersClearedForAddressCheck).toBe(false);
   });
 
   it("forwards the chain id when the summary (and its chain-name lookup) is unavailable", () => {

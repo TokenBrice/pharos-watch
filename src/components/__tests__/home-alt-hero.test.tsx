@@ -132,4 +132,41 @@ describe("HomeAltHero producer freshness", () => {
     expect(screen.queryByText(/^Stale ·/)).toBeNull();
     expect(screen.queryByRole("status")).toBeNull();
   });
+
+  it("renders domain-explicit subtitle, clickable cohort links, and 7d/30d supply deltas", () => {
+    const historyMeta = {
+      source: "stablecoin-charts",
+      updatedAt: NOW / 1000,
+      ageSeconds: 0,
+      assessedAt: NOW / 1000,
+      freshBudgetSec: 3600,
+      degradedBudgetSec: 7200,
+      status: "fresh" as const,
+      reason: null,
+      warning: null,
+    };
+    const snapshotWithHistory = {
+      ...fallback,
+      history: {
+        sources: { total: historyMeta, usdt: historyMeta, usdc: historyMeta, usds: historyMeta, dai: historyMeta },
+        rows: [
+          { ts: NOW - 30 * 86_400_000, total: 100, usdt: 60, usdc: 20, sky: 10, others: 10, nonUsd: 2 },
+          { ts: NOW - 7 * 86_400_000, total: 105, usdt: 62, usdc: 22, sky: 10, others: 11, nonUsd: 2 },
+          { ts: NOW, total: 110, usdt: 65, usdc: 24, sky: 10, others: 11, nonUsd: 2 },
+        ],
+      },
+    };
+    useStablecoinsMock.mockReturnValue({
+      data, dataUpdatedAt: NOW, error: null, refetch: vi.fn(),
+      meta: { updatedAt: NOW / 1000, ageSeconds: 0, status: "fresh" },
+    });
+    const view = render(<HomeAltHero snapshot={snapshotWithHistory} fallbackSelectedAtMs={NOW} />);
+    expect(view.container.textContent).toMatch(/Independent safety grades, peg stress, freeze risk, and liquidity across \d+ active stablecoins\./);
+    expect(screen.getByText("+4.8%")).toBeTruthy();
+    expect(screen.getByText("+10.0%")).toBeTruthy();
+    expect(screen.getByRole("link", { name: /USDT/ }).getAttribute("href")).toMatch(/^\/stablecoin\/usdt-tether\/?$/);
+    expect(screen.getByRole("link", { name: /USDC/ }).getAttribute("href")).toMatch(/^\/stablecoin\/usdc-circle\/?$/);
+    expect(screen.getByRole("link", { name: /USDS \+ DAI/ }).getAttribute("href")).toMatch(/^\/compare\/usds-sky-vs-dai-makerdao\/?$/);
+    expect(screen.getByRole("link", { name: /Non-USD share/ }).getAttribute("href")).toMatch(/^\/alt-pegs\/?$/);
+  });
 });

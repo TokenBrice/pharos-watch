@@ -1,7 +1,9 @@
 "use client";
 
-import { useId, useMemo } from "react";
+import { useId, useMemo, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ChartSkeleton } from "@/components/chart-skeleton";
+import { ChartTooltipSurface, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
 import { QueryStateNotice } from "@/components/query-state-notice";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import { EVENT_CHART_COLORS, EVENT_LABELS } from "@shared/lib/classification";
@@ -45,12 +47,49 @@ const NOTABLE_QUAKES: ReadonlyArray<{ quarter: string; label: string }> = [
 ];
 
 const VIEWBOX_WIDTH = 1000;
-const VIEWBOX_HEIGHT = 220;
-const PADDING_TOP = 28;
+const VIEWBOX_HEIGHT = 248;
+const PADDING_LEFT = 46;
+const PADDING_RIGHT = 12;
+const PADDING_TOP = 54;
 const PADDING_BOTTOM = 28;
+const PLOT_WIDTH = VIEWBOX_WIDTH - PADDING_LEFT - PADDING_RIGHT;
 const PLOT_HEIGHT = VIEWBOX_HEIGHT - PADDING_TOP - PADDING_BOTTOM;
 const ANNOTATION_LIFT = 16;
 const BASELINE_Y = VIEWBOX_HEIGHT - PADDING_BOTTOM;
+
+function computeNiceAxis(peakTotal: number): { ceiling: number; ticks: number[] } {
+  const safePeak = Number.isFinite(peakTotal) && peakTotal > 0 ? peakTotal : 1;
+  if (safePeak <= 3) {
+    const ceiling = Math.max(1, Math.ceil(safePeak));
+    return { ceiling, ticks: [0, ceiling] };
+  }
+  // Reserve headroom above the tallest spike so bars and milestone callouts never clip.
+  const padded = safePeak > Number.MAX_VALUE / 1.12 ? safePeak : safePeak * 1.12;
+  const rawStep = padded / 3;
+  const magnitude = 10 ** Math.floor(Math.log10(rawStep));
+  const normalized = rawStep / magnitude;
+  const niceStep = Math.max(
+    1,
+    normalized <= 1
+      ? 1 * magnitude
+      : normalized <= 2
+        ? 2 * magnitude
+        : normalized <= 2.5
+          ? 2.5 * magnitude
+          : normalized <= 5
+            ? 5 * magnitude
+            : 10 * magnitude,
+  );
+  const rawCeiling = Math.ceil(padded / niceStep) * niceStep;
+  const ceiling = Number.isFinite(rawCeiling) && rawCeiling > 0 ? Math.max(niceStep, rawCeiling) : safePeak;
+  const tickSet = new Set<number>([0]);
+  for (let step = 1; step <= 4; step += 1) {
+    const value = Math.round(step * niceStep);
+    if (value <= ceiling && Number.isFinite(value)) tickSet.add(value);
+  }
+  tickSet.add(Math.round(ceiling));
+  return { ceiling, ticks: [...tickSet].sort((a, b) => a - b) };
+}
 
 function quarterLabelSortKey(label: string): number | null {
   const match = /^Q([1-4]) '(\d{2})$/.exec(label);
@@ -90,7 +129,14 @@ export function buildQuarterPoints(stats: BlacklistSummaryResponse["stats"] | un
     }));
 }
 
-export function InterventionSeismograph({ stats, chart, totalEvents: authoritativeTotalEvents, isLoading, error, onRetry }: InterventionSeismographProps) {
+export function InterventionSeismograph({
+  stats,
+  chart,
+  totalEvents: authoritativeTotalEvents,
+  isLoading,
+  error,
+  onRetry,
+}: InterventionSeismographProps) {
   const titleId = useId();
   const points = useMemo(() => buildQuarterPoints(stats), [stats]);
   const hasData = stats != null && chart != null;
@@ -106,7 +152,7 @@ export function InterventionSeismograph({ stats, chart, totalEvents: authoritati
           </div>
           <Skeleton className="h-10 w-44" />
         </div>
-        <Skeleton className="mt-5 h-44 w-full rounded-xl" />
+        <ChartSkeleton variant="bars" className="mt-5 h-44 w-full sm:h-56" />
       </section>
     );
   }
@@ -140,7 +186,7 @@ export function InterventionSeismograph({ stats, chart, totalEvents: authoritati
             Quarterly freeze, release, and wipe events
           </h2>
           <p className="text-sm text-muted-foreground">
-            Event counts by quarter across every supported contract family.
+            Event counts by quarter across every supported contract family. Use the ledger above for address-level rows.
           </p>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:flex lg:gap-3">
@@ -185,18 +231,26 @@ export function InterventionSeismograph({ stats, chart, totalEvents: authoritati
 }
 
 function SeismographSvg({ points, peakTotal }: { points: QuarterPoint[]; peakTotal: number }) {
+  const gradientId = useId();
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const n = points.length;
-  const slotWidth = VIEWBOX_WIDTH / Math.max(n, 1);
-  const barWidth = Math.max(2, slotWidth * 0.78);
+  const { ceiling, ticks } = useMemo(() => computeNiceAxis(peakTotal), [peakTotal]);
+  const slotWidth = PLOT_WIDTH / Math.max(n, 1);
+  const barWidth = Math.max(2, slotWidth * 0.76);
   const slotPad = (slotWidth - barWidth) / 2;
-  const yForCount = (count: number) => BASELINE_Y - (count / peakTotal) * PLOT_HEIGHT;
+  const yForCount = (count: number) => {
+    const ratio = Number.isFinite(count) && Number.isFinite(ceiling) && ceiling > 0
+      ? Math.min(1, Math.max(0, count / ceiling))
+      : 0;
+    return BASELINE_Y - ratio * PLOT_HEIGHT;
+  };
   const labelInterval = Math.max(1, Math.ceil(n / 6));
 
   const placed = NOTABLE_QUAKES.map((quake) => {
     const index = points.findIndex((p) => p.quarter === quake.quarter);
     if (index === -1) return null;
     const point = points[index];
-    const x = index * slotWidth + slotWidth / 2;
+    const x = PADDING_LEFT + index * slotWidth + slotWidth / 2;
     const topY = yForCount(point.total);
     return { ...quake, point, x, topY };
   }).filter(
@@ -206,8 +260,9 @@ function SeismographSvg({ points, peakTotal }: { points: QuarterPoint[]; peakTot
   // A label whose neighbour sits within ~12% of the width is lifted one step so the two never overprint.
   const annotations = placed.map((annotation, index) => {
     const previous = index > 0 ? placed[index - 1] : null;
-    const lift = previous && annotation.x - previous.x < VIEWBOX_WIDTH * 0.12 ? ANNOTATION_LIFT : 0;
-    return { ...annotation, lift };
+    const lift = previous && annotation.x - previous.x < PLOT_WIDTH * 0.12 ? ANNOTATION_LIFT : 0;
+    const labelY = Math.max(14, annotation.topY - 18 - lift);
+    return { ...annotation, lift, labelY };
   });
   // Drop a regular tick that would sit on top of the final (always-shown) tick.
   const showTick = (index: number) =>
@@ -215,70 +270,118 @@ function SeismographSvg({ points, peakTotal }: { points: QuarterPoint[]; peakTot
 
   const horizonPoints = points
     .map((point, index) => {
-      const x0 = index * slotWidth + slotPad;
+      const x0 = PADDING_LEFT + index * slotWidth + slotPad;
       const x1 = x0 + barWidth;
       const topY = yForCount(point.total);
       return `${x0},${topY} ${x1},${topY}`;
     })
     .join(" ");
   const horizonPath = `M ${horizonPoints}`;
+  const activePoint = activeIndex != null ? points[activeIndex] ?? null : null;
+  const activeCenterPct =
+    activeIndex != null
+      ? ((PADDING_LEFT + activeIndex * slotWidth + slotWidth / 2) / VIEWBOX_WIDTH) * 100
+      : 50;
 
   return (
-    <div className="relative mt-5 overflow-hidden rounded-xl border border-border/70 bg-muted/20 p-3">
+    <div
+      className="relative mt-5 overflow-visible rounded-xl border border-border/70 bg-muted/20 p-3"
+      onMouseLeave={() => setActiveIndex(null)}
+    >
       <svg
         role="img"
         aria-label="Quarterly intervention seismograph"
         viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}
         preserveAspectRatio="none"
-        className="block h-44 w-full sm:h-56"
+        className="block h-48 w-full sm:h-60"
       >
         <defs>
-          <linearGradient id="seismograph-frost" x1="0" x2="0" y1="0" y2="1">
+          <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
             <stop offset="0%" stopColor="oklch(0.78 0.16 240)" stopOpacity="0.07" />
             <stop offset="100%" stopColor="oklch(0.78 0.16 240)" stopOpacity="0" />
           </linearGradient>
         </defs>
-        <rect x={0} y={PADDING_TOP - 4} width={VIEWBOX_WIDTH} height={PLOT_HEIGHT + 4} fill="url(#seismograph-frost)" />
-
-        <line
-          x1={0}
-          x2={VIEWBOX_WIDTH}
-          y1={BASELINE_Y}
-          y2={BASELINE_Y}
-          stroke="var(--color-muted-foreground)"
-          strokeOpacity={0.6}
-          strokeWidth={0.5}
-          strokeDasharray="3 3"
+        <rect
+          x={PADDING_LEFT}
+          y={PADDING_TOP - 4}
+          width={PLOT_WIDTH}
+          height={PLOT_HEIGHT + 4}
+          fill={`url(#${gradientId})`}
         />
 
+        {ticks.map((tick) => {
+          const y = yForCount(tick);
+          return (
+            <line
+              key={`grid-${tick}`}
+              x1={PADDING_LEFT}
+              x2={VIEWBOX_WIDTH - PADDING_RIGHT}
+              y1={y}
+              y2={y}
+              stroke={tick === 0 ? "var(--color-muted-foreground)" : "var(--color-border)"}
+              strokeOpacity={tick === 0 ? 0.65 : 0.7}
+              strokeWidth={tick === 0 ? 0.65 : 0.5}
+              strokeDasharray={tick === 0 ? "3 3" : "2 5"}
+            />
+          );
+        })}
+
         {points.map((point, index) => {
-          const x = index * slotWidth + slotPad;
+          const x = PADDING_LEFT + index * slotWidth + slotPad;
+          const isActive = activeIndex === index;
           const layers: Array<{ key: keyof typeof EVENT_CHART_COLORS; count: number }> = [
             { key: "destroy", count: point.destroy },
             { key: "blacklist", count: point.blacklist },
             { key: "unblacklist", count: point.unblacklist },
           ];
           let running = 0;
-          return layers.map((layer) => {
-            if (layer.count <= 0) return null;
-            const yTop = yForCount(running + layer.count);
-            const yBottom = yForCount(running);
-            const height = Math.max(0, yBottom - yTop);
-            running += layer.count;
-            return (
+          return (
+            <g
+              key={point.quarter}
+              onMouseEnter={() => setActiveIndex(index)}
+              onFocus={() => setActiveIndex(index)}
+            >
+              {isActive ? (
+                <rect
+                  x={PADDING_LEFT + index * slotWidth}
+                  y={PADDING_TOP}
+                  width={slotWidth}
+                  height={PLOT_HEIGHT}
+                  fill="var(--color-foreground)"
+                  fillOpacity={0.05}
+                />
+              ) : null}
+              {layers.map((layer) => {
+                if (layer.count <= 0) return null;
+                const yTop = yForCount(running + layer.count);
+                const yBottom = yForCount(running);
+                const height = Math.max(0, yBottom - yTop);
+                running += layer.count;
+                return (
+                  <rect
+                    key={`${point.quarter}-${layer.key}`}
+                    x={x}
+                    y={yTop}
+                    width={barWidth}
+                    height={height}
+                    fill={EVENT_CHART_COLORS[layer.key]}
+                    opacity={isActive ? 1 : 0.88}
+                  >
+                    <title>{`${point.quarter} · ${EVENT_LABELS[layer.key]}: ${formatCompactCount(layer.count)}`}</title>
+                  </rect>
+                );
+              })}
+              {/* Full-height invisible hover column so short quarters are easy to inspect. */}
               <rect
-                key={`${point.quarter}-${layer.key}`}
-                x={x}
-                y={yTop}
-                width={barWidth}
-                height={height}
-                fill={EVENT_CHART_COLORS[layer.key]}
-                opacity={0.88}
-              >
-                <title>{`${point.quarter} · ${EVENT_LABELS[layer.key]}: ${formatCompactCount(layer.count)}`}</title>
-              </rect>
-            );
-          });
+                x={PADDING_LEFT + index * slotWidth}
+                y={PADDING_TOP}
+                width={slotWidth}
+                height={PLOT_HEIGHT}
+                fill="transparent"
+                className="cursor-crosshair"
+              />
+            </g>
+          );
         })}
 
         <path
@@ -297,7 +400,7 @@ function SeismographSvg({ points, peakTotal }: { points: QuarterPoint[]; peakTot
               x1={annotation.x}
               x2={annotation.x}
               y1={annotation.topY - 4}
-              y2={annotation.topY - 18 - annotation.lift}
+              y2={annotation.labelY + 2}
               stroke="var(--color-muted-foreground)"
               strokeWidth={0.75}
             />
@@ -305,8 +408,21 @@ function SeismographSvg({ points, peakTotal }: { points: QuarterPoint[]; peakTot
           </g>
         ))}
       </svg>
+
       {/* Labels are HTML over the stretched SVG so preserveAspectRatio="none" cannot distort the type. */}
       <div className="pointer-events-none absolute font-mono text-3xs" style={{ inset: "0.75rem" }} aria-hidden="true">
+        {ticks.map((tick) => (
+          <span
+            key={`ytick-${tick}`}
+            data-seismograph-ytick={tick}
+            className="absolute right-[calc(100%-38px)] -translate-y-1/2 whitespace-nowrap text-right leading-none text-muted-foreground"
+            style={{
+              top: `${(yForCount(tick) / VIEWBOX_HEIGHT) * 100}%`,
+            }}
+          >
+            {formatCompactCount(tick)}
+          </span>
+        ))}
         {annotations.map((annotation) => (
           <span
             key={`label-${annotation.quarter}`}
@@ -314,7 +430,7 @@ function SeismographSvg({ points, peakTotal }: { points: QuarterPoint[]; peakTot
             style={{
               transform: "translate(-50%, -100%)",
               left: `${(annotation.x / VIEWBOX_WIDTH) * 100}%`,
-              top: `${((annotation.topY - 20 - annotation.lift) / VIEWBOX_HEIGHT) * 100}%`,
+              top: `${(annotation.labelY / VIEWBOX_HEIGHT) * 100}%`,
             }}
           >
             {annotation.label}
@@ -327,7 +443,7 @@ function SeismographSvg({ points, peakTotal }: { points: QuarterPoint[]; peakTot
               className="absolute whitespace-nowrap leading-none text-muted-foreground"
               style={{
                 transform: index === 0 ? undefined : index === n - 1 ? "translateX(-100%)" : "translateX(-50%)",
-                left: `${(((index === n - 1 ? n : index === 0 ? 0 : index + 0.5) * slotWidth) / VIEWBOX_WIDTH) * 100}%`,
+                left: `${((PADDING_LEFT + (index === n - 1 ? n : index === 0 ? 0 : index + 0.5) * slotWidth) / VIEWBOX_WIDTH) * 100}%`,
                 top: `${((BASELINE_Y + 6) / VIEWBOX_HEIGHT) * 100}%`,
               }}
             >
@@ -336,6 +452,39 @@ function SeismographSvg({ points, peakTotal }: { points: QuarterPoint[]; peakTot
           ) : null,
         )}
       </div>
+
+      {activePoint ? (
+        <ChartTooltipSurface
+          data-testid="seismograph-tooltip"
+          className="pointer-events-none absolute top-2 z-10 min-w-[168px]"
+          style={{
+            left: `${Math.min(82, Math.max(18, activeCenterPct))}%`,
+            transform: "translateX(-50%)",
+          }}
+        >
+          <TooltipLabel>{activePoint.quarter}</TooltipLabel>
+          <div className="space-y-1">
+            <TooltipRow
+              color={EVENT_CHART_COLORS.blacklist}
+              label={EVENT_LABELS.blacklist}
+              value={formatCompactCount(activePoint.blacklist)}
+            />
+            <TooltipRow
+              color={EVENT_CHART_COLORS.destroy}
+              label={EVENT_LABELS.destroy}
+              value={formatCompactCount(activePoint.destroy)}
+            />
+            <TooltipRow
+              color={EVENT_CHART_COLORS.unblacklist}
+              label={EVENT_LABELS.unblacklist}
+              value={formatCompactCount(activePoint.unblacklist)}
+            />
+            <div className="mt-1 border-t border-border/50 pt-1">
+              <TooltipRow label="Total" value={formatCompactCount(activePoint.total)} bold />
+            </div>
+          </div>
+        </ChartTooltipSurface>
+      ) : null}
     </div>
   );
 }

@@ -2,50 +2,91 @@
 
 import type { ComponentProps } from "react";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
-import { BlacklistFilters } from "@/components/freezewatch/blacklist-filters";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { BlacklistFilters, TOP_COIN_PILL_LIMIT } from "@/components/freezewatch/blacklist-filters";
+import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
 
 const props = {
-  chains: [],
-  stablecoinFilter: "USDT",
+  chains: [
+    { id: "ethereum", name: "Ethereum" },
+    { id: "tron", name: "Tron" },
+  ],
+  stablecoinFilter: "all",
   chainFilter: "all",
   eventTypeFilter: "all",
   onStablecoinChange: vi.fn(),
   onChainChange: vi.fn(),
   onEventTypeChange: vi.fn(),
+  onResetFilters: vi.fn(),
 } satisfies ComponentProps<typeof BlacklistFilters>;
 
 describe("BlacklistFilters", () => {
-  it("keeps unknown counts selectable and groups only explicit zero counts", () => {
-    render(<BlacklistFilters {...props} perCoinTotalEvents={{ USDC: 0, PAXG: 2 }} />);
-
-    const primary = within(screen.getByRole("group", { name: "Filter by stablecoin" }));
-    expect(primary.getByRole("button", { name: "USDT", pressed: true })).toBeTruthy();
-    expect(primary.getByRole("button", { name: "PAXG" })).toBeTruthy();
-    expect(primary.queryByRole("button", { name: "USDC" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { expanded: false }));
-    const zeroCounts = within(screen.getByRole("group", { name: "Filter by stablecoin without recorded events" }));
-    expect(zeroCounts.getAllByRole("button")).toHaveLength(1);
-    expect(zeroCounts.getByRole("button", { name: "USDC" })).toBeTruthy();
-    fireEvent.click(primary.getByRole("button", { name: "USDT" }));
-    expect(props.onStablecoinChange).toHaveBeenCalledWith("USDT");
+  beforeEach(() => {
+    props.onStablecoinChange.mockReset();
+    props.onChainChange.mockReset();
+    props.onEventTypeChange.mockReset();
+    props.onResetFilters.mockReset();
   });
 
-  it("retains the selected coin as counts arrive and later become unknown", () => {
-    const view = render(<BlacklistFilters {...props} />);
-    expect(screen.getByRole("button", { name: "USDT", pressed: true })).toBeTruthy();
+  it("caps quick coin pills to All plus top-8 volume coins and exposes searchable All coins combobox", () => {
+    const perCoinTotalEvents: Partial<Record<(typeof BLACKLIST_STABLECOINS)[number], number>> = {
+      USDT: 9_692,
+      USDC: 2_325,
+      PAXG: 285,
+      USDG: 237,
+      USDO: 190,
+      PYUSD: 140,
+      EURC: 110,
+      XAUT: 95,
+      FDUSD: 40,
+      BUIDL: 12,
+    };
 
-    view.rerender(<BlacklistFilters {...props} perCoinTotalEvents={{ USDT: 0 }} />);
-    const disclosure = screen.getByRole("button", { expanded: true });
-    fireEvent.click(disclosure);
-    expect(disclosure.hasAttribute("disabled")).toBe(true);
-    const zeroCounts = within(screen.getByRole("group", { name: "Filter by stablecoin without recorded events" }));
-    expect(zeroCounts.getByRole("button", { name: "USDT", pressed: true })).toBeTruthy();
-    expect(screen.getByRole("button", { expanded: true }).textContent).toBe("Hide tracked without events yet (1)");
+    render(<BlacklistFilters {...props} perCoinTotalEvents={perCoinTotalEvents} />);
 
-    view.rerender(<BlacklistFilters {...props} perCoinTotalEvents={{ USDC: 0 }} />);
     const primary = within(screen.getByRole("group", { name: "Filter by stablecoin" }));
-    expect(primary.getByRole("button", { name: "USDT", pressed: true })).toBeTruthy();
-    expect(screen.queryByRole("group", { name: "Filter by stablecoin without recorded events" })).toBeNull();
+    const buttons = primary.getAllByRole("button");
+    // "All" + top 8 coins by event volume.
+    expect(buttons).toHaveLength(1 + TOP_COIN_PILL_LIMIT);
+    expect(buttons.map((btn) => btn.textContent)).toEqual([
+      "All",
+      "USDT",
+      "USDC",
+      "PAXG",
+      "USDG",
+      "USDO",
+      "PYUSD",
+      "EURC",
+      "XAUT",
+    ]);
+    expect(primary.queryByRole("button", { name: "FDUSD" })).toBeNull();
+
+    // Combobox trigger is present for selecting any tracked coin outside top-8.
+    const comboboxTrigger = screen.getByRole("button", { name: "All coins" });
+    expect(comboboxTrigger).toBeTruthy();
+
+    fireEvent.click(primary.getByRole("button", { name: "USDT" }));
+    expect(props.onStablecoinChange).toHaveBeenCalledWith("USDT");
+
+    // Reset button stays hidden when no filters are active.
+    expect(screen.queryByRole("button", { name: /reset filters/i })).toBeNull();
+  });
+
+  it("shows Reset filters when any filter is active and reflects non-top-8 selection in combobox", () => {
+    render(
+      <BlacklistFilters
+        {...props}
+        stablecoinFilter="BUIDL"
+        chainFilter="ethereum"
+        perCoinTotalEvents={{ USDT: 500, USDC: 200, BUIDL: 2 }}
+      />,
+    );
+
+    const comboboxTrigger = screen.getByRole("button", { name: "All coins" });
+    expect(comboboxTrigger.textContent).toContain("BUIDL (2)");
+
+    const resetButton = screen.getByRole("button", { name: /reset filters/i });
+    fireEvent.click(resetButton);
+    expect(props.onResetFilters).toHaveBeenCalledOnce();
   });
 });

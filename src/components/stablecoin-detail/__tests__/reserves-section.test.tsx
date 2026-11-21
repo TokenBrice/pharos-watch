@@ -609,4 +609,17 @@ describe("ReservesSection", () => {
     expect(disclosure.textContent).toContain("can differ from the reviewed slices");
     expect(within(disclosure).getByText("USDC")).toBeDefined();
   });
+
+  it("steps consecutive same-tier bar segments and couples hover state with ranked rows", () => {
+    const { container } = renderSection();
+    const segments = Array.from(container.querySelectorAll('[role="figure"] > span[data-tier-step]'));
+    expect(segments.map((segment) => segment.getAttribute("data-tier-step"))).toEqual(["0", "1"]);
+    const rows = Array.from(container.querySelectorAll('ol[aria-label="Reserve composition, largest first"] > li'));
+    expect(rows).toHaveLength(2);
+    fireEvent.mouseEnter(rows[1]!);
+    expect(segments[1]!.getAttribute("data-highlighted")).toBe("true");
+    expect(segments[0]!.getAttribute("data-highlighted")).toBeNull();
+    fireEvent.mouseLeave(rows[1]!);
+    expect(segments[1]!.getAttribute("data-highlighted")).toBeNull();
+  });
 });

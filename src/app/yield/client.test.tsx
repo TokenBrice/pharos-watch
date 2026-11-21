@@ -176,7 +176,7 @@ describe("YieldClient", () => {
     // The Highest APY tile still names USDC, led by its state, counted as a warning.
     const tile = within(hero).getByText("Highest APY").closest("button")!;
     expect(tile.querySelector('[data-coin-state="paused"]')).not.toBeNull();
-    expect(tile.textContent).toContain("1 warning");
+    expect(tile.textContent).toContain("1 warn");
   });
 
   it("withdraws a delivery-only score during a refresh and keeps it withheld on failure", () => {
@@ -216,9 +216,9 @@ describe("YieldClient", () => {
   });
 
   it.each([
-    { provenance: "opportunity-safety" as const, label: "B opportunity safety", explained: true },
-    { provenance: "live-report-card" as const, label: "B safety", explained: false },
-  ])("names the hero judgment from $provenance rather than the underlying holder score", ({ provenance, label, explained }) => {
+    { provenance: "opportunity-safety" as const, label: "B\u2020", explained: true },
+    { provenance: "live-report-card" as const, label: "· B ·", explained: false },
+  ])("marks hero opportunity safety provenance without replacing the underlying score ($provenance)", ({ provenance, label, explained }) => {
     const ready = useYieldRankingsSummaryMock();
     useYieldRankingsSummaryMock.mockReturnValue({
       ...ready,
@@ -239,6 +239,79 @@ describe("YieldClient", () => {
     const hero = screen.getByRole("group", { name: "Yield landscape overview" });
     expect(within(hero).getAllByText((text) => text.includes(label)).length).toBeGreaterThan(0);
     expect(within(hero).queryAllByTitle(YIELD_OPPORTUNITY_SAFETY_DESCRIPTION).length > 0).toBe(explained);
+  });
+
+  it("co-headlines PYS alongside APY and local currency spread pill for a non-USD leader like ZCHF", () => {
+    const zchf = makeYieldRanking({
+      id: "zchf-frankencoin",
+      symbol: "ZCHF",
+      name: "Frankencoin",
+      apy30d: 3.5,
+      currentApy: 3.5,
+      pharosYieldScore: 83,
+      safetyScore: 82,
+      safetyGrade: "A",
+      benchmarkKey: "CHF",
+      benchmarkLabel: "CHF 3M compounded SARON",
+      benchmarkRate: -0.05,
+      provenance: makeYieldProvenance({ safetyProvenance: "opportunity-safety" }),
+    });
+    const usdRow = makeYieldRanking({
+      id: "usdc-circle",
+      symbol: "USDC",
+      name: "USD Coin",
+      apy30d: 4.86,
+      pharosYieldScore: 71,
+      safetyScore: 86,
+      safetyGrade: "A",
+      benchmarkKey: "USD",
+      benchmarkLabel: "USD 3M T-Bill",
+      benchmarkRate: 4.39,
+    });
+    useYieldRankingsSummaryMock.mockReturnValue({
+      ...useYieldRankingsSummaryMock(),
+      data: projectYieldRankingsSummary({
+        rankings: [zchf, usdRow],
+        riskFreeRate: 4.39,
+        scalingFactor: 1,
+        medianApy: 4.1,
+        updatedAt: 1_776_000_000,
+        warnings: [],
+        benchmarks: {
+          USD: { key: "USD", label: "USD 3M T-Bill", currency: "USD", rate: 4.39, recordDate: "2026-11-20", fetchedAt: 1_776_000_000, ageSeconds: 0, source: "fred", isFallback: false, fallbackMode: null },
+          CHF: { key: "CHF", label: "CHF 3M compounded SARON", currency: "CHF", rate: -0.05, recordDate: "2026-11-20", fetchedAt: 1_776_000_000, ageSeconds: 0, source: "snb", isFallback: false, fallbackMode: null },
+        },
+      }),
+    });
+
+    render(<YieldClient />);
+    const hero = screen.getByRole("group", { name: "Yield landscape overview" });
+
+    expect(within(hero).getByText("83.0")).toBeTruthy();
+    expect(within(hero).getByText("3.50%")).toBeTruthy();
+    const spreadPill = within(hero).getByTestId("hero-local-spread-pill");
+    expect(spreadPill.textContent).toContain("+3.55 pp");
+    expect(spreadPill.textContent).toContain("vs CHF 3M");
+    expect(within(hero).getAllByText((text) => text.includes("Sweet Spot · A\u2020 · PYS 83.0 · 0 warns")).length).toBeGreaterThan(0);
+    expect(within(hero).getByText(/Venue-adjusted Safety Score/)).toBeTruthy();
+    expect(within(hero).getByText(/Non-USD coins are graded vs local currency rates/)).toBeTruthy();
+  });
+
+  it("wires scatter click-to-row to highlight the selected leaderboard row", () => {
+    render(<YieldClient />);
+    const scatterProps = scatterPropsMock.mock.calls.at(-1)?.[0] as {
+      onSelectRow?: (id: string) => void;
+    };
+    expect(typeof scatterProps.onSelectRow).toBe("function");
+
+    act(() => {
+      scatterProps.onSelectRow?.("usdt-tether");
+    });
+
+    const leaderboardProps = leaderboardPropsMock.mock.calls.at(-1)?.[0] as {
+      highlightedRowId?: string | null;
+    };
+    expect(leaderboardProps.highlightedRowId).toBe("usdt-tether");
   });
 
   it("preserves a valid incoming yield-type filter while ranking options load", () => {
@@ -497,9 +570,7 @@ describe("YieldClient", () => {
 
     render(<YieldClient />);
 
-    fireEvent.change(screen.getByRole("slider", { name: "Risk tolerance" }), {
-      target: { value: "0" },
-    });
+    fireEvent.click(screen.getByRole("button", { name: /Conservative/ }));
 
     expect(replaceParamsMock).toHaveBeenCalledTimes(1);
     const update = replaceParamsMock.mock.calls[0]?.[0] as (params: URLSearchParams) => void;
@@ -519,9 +590,8 @@ describe("YieldClient", () => {
   it("selecting the all risk-budget stop writes the neutral any param", () => {
     render(<YieldClient />);
 
-    fireEvent.change(screen.getByRole("slider", { name: "Risk tolerance" }), {
-      target: { value: "3" },
-    });
+    const riskBands = screen.getByRole("group", { name: "Risk tolerance bands" });
+    fireEvent.click(within(riskBands).getByRole("button", { name: /^All/ }));
 
     const update = replaceParamsMock.mock.calls[0]?.[0] as (params: URLSearchParams) => void;
     const params = new URLSearchParams(searchParamsMock);

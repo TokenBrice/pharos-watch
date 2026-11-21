@@ -8,7 +8,10 @@ import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import { cn } from "@/lib/utils";
 import type { ReportCardGrade } from "@shared/types/report-card-grade";
 import type { HeroSignalRailItem } from "./hero-card-metrics";
-import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
+import {
+  DETAIL_HEADER_ICON_BUTTON_CLASS,
+  DETAIL_MODULE_TITLE_CLASS,
+} from "@/components/stablecoin-detail/section-title-class";
 import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 import { buildSafetyVerdictLine } from "@/lib/stablecoin-detail-hero-metrics";
 import { scoreToGrade } from "@shared/lib/report-card-core";
@@ -52,6 +55,20 @@ function RailPillarBars({ card }: { card: V9ConsumerCard }) {
           </li>
         );
       })}
+    </ul>
+  );
+}
+
+function RailPillarBarsPending() {
+  return (
+    <ul className="mt-3 space-y-1.5" aria-label="Loading Safety Score pillars" data-pillar-bars-pending="">
+      {PILLAR_ROWS.map(({ key, label }) => (
+        <li key={key} className="grid grid-cols-[6.5rem_minmax(0,1fr)_2.75rem] items-center gap-2 text-xs">
+          <span className="text-muted-foreground">{label}</span>
+          <span className="h-1.5 animate-pulse rounded-full bg-muted motion-reduce:animate-none" aria-hidden="true" />
+          <span className="ml-auto block h-3.5 w-8 animate-pulse rounded-sm bg-muted motion-reduce:animate-none" aria-hidden="true" />
+        </li>
+      ))}
     </ul>
   );
 }
@@ -138,9 +155,9 @@ export function RailSafetySummary({
           href="#report-card"
           prefetch={false}
           aria-label="Jump to the full safety report card"
-          className="pharos-focus-ring flex h-6 w-6 items-center justify-center rounded-md border border-border/60 text-muted-foreground transition-colors hover:text-foreground"
+          className={DETAIL_HEADER_ICON_BUTTON_CLASS}
         >
-          <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
+          <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
         </Link>
       </div>
       {graded ? (
@@ -181,8 +198,16 @@ export function RailSafetySummary({
           {hero.note ?? liveAsOf ?? null}
         </p>
       ) : null}
-      {graded && card ? <RailVerdict card={card} /> : null}
-      {graded && card && card.ratingStatus === "rated" ? <RailPillarBars card={card} /> : null}
+      {graded && card ? (
+        <RailVerdict card={card} />
+      ) : graded && !card && gradeRead === "pending" ? (
+        <p aria-hidden="true" className="mt-2 h-4 w-3/4 animate-pulse rounded-sm bg-muted motion-reduce:animate-none" />
+      ) : null}
+      {graded && card && card.ratingStatus === "rated" ? (
+        <RailPillarBars card={card} />
+      ) : graded && !card && gradeRead === "pending" ? (
+        <RailPillarBarsPending />
+      ) : null}
       {rest.length > 0 ? (
         <div className="mt-3 divide-y divide-border/40 border-t border-border/40">
           {rest.map((item) => (

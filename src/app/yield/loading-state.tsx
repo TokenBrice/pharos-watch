@@ -1,24 +1,27 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import { PageLoadingRowList } from "@/components/page-loading-skeleton";
+import { PageLoadingRowList, PageLoadingSplitHero } from "@/components/page-loading-skeleton";
 
-// Analytics tier: filter strip + leaderboard table skeleton ~10 rows.
+// Analytics tier: risk bar + split hero with scatter chart skeleton + filter strip + leaderboard rows.
 const YIELD_SKELETON_ROW_COUNT = 10;
 
 export function YieldContentLoadingState() {
   return (
-    <>
-      <div className="pharos-card-shell space-y-3 p-4">
-        <Skeleton className="h-3.5 w-44 rounded-sm" />
-        <div className="grid gap-3 text-sm leading-relaxed lg:grid-cols-3">
-          <Skeleton className="h-12 w-full rounded-md" />
-          <Skeleton className="h-12 w-full rounded-md" />
-          <Skeleton className="h-12 w-full rounded-md" />
+    <div className="space-y-6">
+      <div className="pharos-card-shell flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+        <Skeleton className="h-3.5 w-28 rounded-sm" />
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Skeleton className="h-8 w-28 rounded-md" />
+          <Skeleton className="h-8 w-24 rounded-md" />
+          <Skeleton className="h-8 w-28 rounded-md" />
+          <Skeleton className="h-8 w-16 rounded-md" />
         </div>
       </div>
 
+      <PageLoadingSplitHero visualClassName="min-h-[380px] lg:min-h-[440px]" visualVariant="area" />
+
       <div className="pharos-card-shell space-y-3 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <Skeleton className="h-4 w-32 rounded-sm" />
+          <Skeleton className="h-9 w-full rounded-full sm:max-w-md" />
           <div className="flex items-center gap-2">
             <Skeleton className="h-8 w-24 rounded-full" />
             <Skeleton className="h-8 w-24 rounded-full" />
@@ -46,6 +49,6 @@ export function YieldContentLoadingState() {
         headerClassName="flex items-center justify-between border-b border-border/60 px-4 py-3"
         rowClassName="px-4 py-3"
       />
-    </>
+    </div>
   );
 }

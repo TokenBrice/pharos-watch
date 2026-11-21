@@ -16,7 +16,7 @@ const PILLARS: ReadonlyArray<{
     question: "Is there real value behind the token?",
     description: "Tests the quality, transparency, and structure of reserves or collateral.",
     signals: "Assets · Custody · Mechanism",
-    segmentColor: "#4bc4de",
+    segmentColor: "var(--chart-series-blue)",
   },
   {
     key: "exit",
@@ -25,7 +25,7 @@ const PILLARS: ReadonlyArray<{
     question: "Can I get my value out?",
     description: "Tests real redemption and market routes at meaningful size, not theoretical liquidity.",
     signals: "Redemption · Depth · Route diversity",
-    segmentColor: "#2388b8",
+    segmentColor: "var(--chart-series-cyan)",
   },
   {
     key: "control",
@@ -34,7 +34,7 @@ const PILLARS: ReadonlyArray<{
     question: "Who can change or break the system?",
     description: "Tests minting, oracle, bridge, and intervention powers that can harm holders.",
     signals: "Minting · Oracles · Bridges",
-    segmentColor: "#31536f",
+    segmentColor: "var(--chart-series-slate)",
   },
 ];
 
@@ -109,8 +109,8 @@ export function SafetyPillarExplainer() {
 export function SafetyPillarScoringNote() {
   return (
     <p className="text-xs text-muted-foreground">
-      Pipeline unavailable (A) and public data awaiting curation (B) do not score. Partial ratings exclude those components;
-      fewer than two available pillars means Pipeline gap, not Not Rated.
+      Unavailable data feeds and public data awaiting curation do not score. Partial ratings exclude those inputs and
+      score the remaining evidence; fewer than two available pillars shows Pipeline gap, not Not Rated.
     </p>
   );
 }

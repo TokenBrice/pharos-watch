@@ -38,7 +38,7 @@ const STATE_COPY: Record<
     tone: DDR_REVIEW_TONE_CLASSES.retry,
   },
   no_call: {
-    badge: "No-call locked",
+    badge: "Insufficient signal (sealed)",
     title: "No-call at lock",
     body: "At the official lock run, required row-level inputs were missing. This is an accountable no-call, not a recovery or terminal verdict.",
     tone: "border-border bg-muted/70 text-foreground",

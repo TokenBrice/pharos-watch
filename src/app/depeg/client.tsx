@@ -13,12 +13,16 @@ import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import type { StaleQuery } from "@/components/stale-data-banner";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { DepegOutlookHero } from "@/components/depeg/depeg-outlook-hero";
-import { DepegControlBoard } from "@/components/depeg/depeg-control-board";
+import {
+  DepegControlBoard,
+  isDepegStatusFilter,
+  type DepegStatusFilter,
+} from "@/components/depeg/depeg-control-board";
 import { DEWSAlertFeed } from "@/components/dews/dews-alert-feed";
 import { DepegFeed } from "@/components/depeg/depeg-feed";
 import { DepegResolverModule } from "@/components/depeg/depeg-resolver-module";
 import { DepegResolverReviewerModule } from "@/components/depeg/depeg-resolver-reviewer-module";
-import { isResolverBookAvailable, rankOpenIncidents, summarizeResolverBook } from "@/components/depeg/depeg-resolver-book-summary";
+import { isResolverBookAvailable, rankOpenIncidents } from "@/components/depeg/depeg-resolver-book-summary";
 import { trackEvent, trackSearch } from "@/lib/analytics";
 import { extractPendingDepegIncidents, mapPendingIncidentsByCoin } from "@/lib/depeg-incident-utils";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
@@ -133,6 +137,8 @@ export function DepegClient() {
   const pegFilter: PegCurrency | "all" = rawPeg === "all" || rawPeg in PEG_LABELS_SHORT ? rawPeg as PegCurrency | "all" : "all";
   const rawType = getParam("type", "all");
   const typeFilter: GovernanceType | "all" = rawType === "all" || rawType in GOVERNANCE_LABELS ? rawType as GovernanceType | "all" : "all";
+  const rawStatus = getParam("status", "all");
+  const statusFilter: DepegStatusFilter = isDepegStatusFilter(rawStatus) ? rawStatus : "all";
   const searchQuery = getParam("q");
 
   const setPegFilter = useCallback((v: PegCurrency | "all") => {
@@ -143,13 +149,17 @@ export function DepegClient() {
     trackEvent("filter_applied", { page: "depeg", filter_type: "type", filter_value: v });
     setParam("type", v);
   }, [setParam]);
+  const setStatusFilter = useCallback((v: DepegStatusFilter) => {
+    trackEvent("filter_applied", { page: "depeg", filter_type: "status", filter_value: v });
+    setParam("status", v);
+  }, [setParam]);
   const setSearchQuery = useCallback((v: string) => {
     trackSearch("depeg", v.length);
     setParam("q", v);
   }, [setParam]);
   const clearBoardFilters = useCallback(() => {
     trackEvent("filter_applied", { page: "depeg", filter_type: "all", filter_value: "clear" });
-    setParams({ peg: "all", type: "all", q: "" });
+    setParams({ peg: "all", type: "all", status: "all", q: "" });
   }, [setParams]);
 
   // Filter peg coins (shared between table + heatmap)
@@ -195,12 +205,6 @@ export function DepegClient() {
   const recentClosedEvents = useMemo(
     () => (eventsData?.events ?? []).filter((event) => event.endedAt !== null),
     [eventsData],
-  );
-  // One derivation of the resolver book, shared with the module's own header so
-  // the hero's posture and that header can never disagree.
-  const resolverBook = useMemo(
-    () => (isResolverBookAvailable(resolverData) ? summarizeResolverBook(resolverData.rows) : null),
-    [resolverData],
   );
   // The census the headline counts, ranked by holder exposure for the hero's named rows.
   const openIncidents = useMemo(
@@ -296,6 +300,14 @@ export function DepegClient() {
     return <DepegContentLoadingState />;
   }
 
+  const pipelineSteps = [
+    { href: "#dews-radar", label: "1. Early Stress (DEWS)" },
+    { href: "#data", label: "2. Live Incidents" },
+    ...(resolverEnabled ? [{ href: "#recovery-forecast", label: "3. Recovery Forecast (DDR)" }] : []),
+    { href: "#peg-history", label: resolverEnabled ? "4. Peg History" : "3. Peg History" },
+  ];
+  const pegAsOfSec = pegMeta?.updatedAt ?? (pegUpdatedAt > 0 ? Math.floor(pegUpdatedAt / 1000) : null);
+
   return (
     <div className="space-y-6">
       <QueryFreshnessNotices
@@ -305,22 +317,39 @@ export function DepegClient() {
         queries={freshnessQueries}
       />
 
-      {/* Signature hero: everything the route knows right now in one block —
-          confirmed incidents, early warning, recovery posture, forecast track
-          record — with the alert queue as the radar's detail layer. It is the
-          single owner of every one of those headline figures; no module below
-          restates them. */}
+      {/* 4-stage pipeline orientation strip anchored to route sections */}
+      <nav
+        aria-label="Depeg monitoring pipeline"
+        className="flex flex-wrap items-center gap-x-1.5 gap-y-1 rounded-lg border border-border/60 bg-muted/25 px-3 py-1.5 text-xs"
+      >
+        {pipelineSteps.map((step, index) => (
+          <span key={step.href} className="inline-flex items-center gap-1.5">
+            {index > 0 ? (
+              <span aria-hidden="true" className="text-muted-foreground/60">
+                →
+              </span>
+            ) : null}
+            <a
+              href={step.href}
+              className="pharos-focus-ring inline-flex min-h-11 items-center rounded-md px-2 py-1 font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground sm:min-h-7 sm:py-0.5"
+            >
+              {step.label}
+            </a>
+          </span>
+        ))}
+      </nav>
+
+      {/* Signature hero strictly scoped to Now: confirmed incidents, worst live
+          move, awaiting confirmations, DEWS radar and alert queue. Recovery
+          forecasts (DDR) and track record (DDRR) live in DepegResolverModule below. */}
       <DepegOutlookHero
-        pendingSources={{ peg: pegPending, pegCatalog: dewsAvailable && pegPending, dews: dewsPending && (pegData != null || pegError == null), radar: dewsPending, events: eventsPending, resolver: resolverPending, review: reviewPending }}
+        pendingSources={{ peg: pegPending, pegCatalog: dewsAvailable && pegPending, dews: dewsPending && (pegData != null || pegError == null), radar: dewsPending, events: eventsPending }}
         stats={pegData?.summary}
         activeDepegIds={activeDepegIds}
         catalogCount={pegData?.coins ? pegData.coins.length : null}
         pendingCount={eventsData ? pendingIncidents.length : null}
         openIncidents={openIncidents}
         dewsAlertCount={dewsAlertCount}
-        book={resolverEnabled ? resolverBook : null}
-        lineage={resolverEnabled ? resolverData?._meta.lineage ?? null : null}
-        review={resolverReviewerEnabled ? resolverReviewData?.summary ?? null : null}
         logos={logos}
         alertQueue={(reserveSpace) =>
           dewsAvailable || dewsPending ? (
@@ -331,10 +360,18 @@ export function DepegClient() {
         }
       />
 
-      {/* Recovery forecasts: the most urgent incidents, full book on demand. */}
+      {/* Recovery forecasts: the most urgent incidents, full book on demand,
+          with DDR outlook and DDRR track-record summaries in the header. */}
       {resolverEnabled ? (
         <SectionErrorBoundary name="depeg-resolver">
-          <DepegResolverModule data={resolverData} logos={logos} marketCaps={marketCapById} />
+          <DepegResolverModule
+            data={resolverData}
+            logos={logos}
+            marketCaps={marketCapById}
+            review={resolverReviewerEnabled ? resolverReviewData?.summary ?? null : null}
+            resolverPending={resolverPending}
+            reviewPending={reviewPending}
+          />
         </SectionErrorBoundary>
       ) : null}
 
@@ -348,19 +385,22 @@ export function DepegClient() {
             logos={logos}
             pegFilter={pegFilter}
             typeFilter={typeFilter}
+            statusFilter={statusFilter}
             searchQuery={searchQuery}
             onPegFilterChange={setPegFilter}
             onTypeFilterChange={setTypeFilter}
+            onStatusFilterChange={setStatusFilter}
             onSearchChange={setSearchQuery}
             onClearFilters={clearBoardFilters}
             onRowClick={handleRowClick}
             nowSeconds={nowSeconds}
+            asOfSec={pegAsOfSec}
           />
         </SectionErrorBoundary>
       ) : null}
 
-      {/* Model accountability: audit evidence, after the board the reader acts on;
-          the hero's track-record figure links here. */}
+      {/* Model accountability: audit evidence, collapsed behind a 1-row disclosure
+          by default; the resolver header's track-record block links here. */}
       {resolverReviewerEnabled ? (
         <SectionErrorBoundary name="depeg-resolver-reviewer">
           <section id="forecast-grading" aria-label="Forecast grading" className="scroll-mt-24">
@@ -376,24 +416,26 @@ export function DepegClient() {
       {/* History handoff. The permanent archive preview and FAQ follow as server
           content from page.tsx. An absent first page hides the card instead of
           claiming a settled empty history. */}
-      {eventsData != null ? (
-        <SectionErrorBoundary name="depeg-feed">
-          <DepegFeed
-            title="Recent resolved detections"
-            events={recentClosedEvents}
-            logos={logos}
-            emptyMessage="No confirmed depeg history in this view."
-          />
-          <div className="mt-2 flex justify-end">
-            <Link
-              href="/timeline/?type=depeg.*"
-              className="pharos-focus-ring text-xs text-muted-foreground hover:text-foreground"
-            >
-              Open the full Timeline stream →
-            </Link>
-          </div>
-        </SectionErrorBoundary>
-      ) : null}
+      <div id="peg-history" className="scroll-mt-24">
+        {eventsData != null ? (
+          <SectionErrorBoundary name="depeg-feed">
+            <DepegFeed
+              title="Recent resolved detections"
+              events={recentClosedEvents}
+              logos={logos}
+              emptyMessage="No confirmed depeg history in this view."
+            />
+            <div className="mt-2 flex justify-end">
+              <Link
+                href="/timeline/?type=depeg.*"
+                className="pharos-focus-ring text-xs text-muted-foreground hover:text-foreground"
+              >
+                Open the full Timeline stream →
+              </Link>
+            </div>
+          </SectionErrorBoundary>
+        ) : null}
+      </div>
 
     </div>
   );

@@ -117,8 +117,8 @@ export function SupplyMovesCard(): React.JSX.Element {
   return (
     <PulseCard
       className="pharos-card-shell flex h-full flex-col gap-3 overflow-hidden p-4"
-      href="/screener/"
-      expandLabel="Open Screener"
+      href="/flows/"
+      expandLabel="Open Mint/Burn Flows"
       label={
         <>
           Biggest supply moves{" "}

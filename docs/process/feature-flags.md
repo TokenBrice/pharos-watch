@@ -22,7 +22,6 @@ The flag source owns the active inventory; the table below describes its user-fa
 | -------------------------------------------- | ----------------------------------------------------------------------------------- |
 | `NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK`      | Turnstile browser-session widget, bounded live-data wait and single session retry; also requires `NEXT_PUBLIC_TURNSTILE_SITE_KEY` |
 | `NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS`        | Idea 19 (quiet calm deviations + magnitude-aware mcap delta)                        |
-| `NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY`   | Idea 20b (mobile sticky compact summary)                                            |
 | `NEXT_PUBLIC_PHAROS_HERO_VERDICT`            | Idea 1 (hero archetype verdict chip; the `oneLiner` and AI summary are not gated)   |
 | `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER`          | DDR module on `/depeg/` and its inputs to the depeg outlook hero; homepage DDR overview; detail DDR card and DDR track-record section; master-gates DDRR (rollback) |
 | `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER` | DDRR module below DDR on `/depeg/` and the detail DDR track-record section (emergency rollback) |
@@ -49,10 +48,9 @@ Enable the flag only after the first three gates pass; the observation gate gove
 - [x] WCAG AA contrast spot-check on calm/warn/severe tokens in light and dark themes: [immutable CLI review](https://github.com/TokenBrice/pharos-watch/blob/e4e09b34e3b43baadd656471b973c686b34c1c27/docs/process/feature-flags.md#2026-07-29-lifecycle-review). This does not close human visual acceptance.
 - [ ] Visual review on USDC + USDe + a coin with an active depeg.
 
-### `NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY`
+### Retired mobile sticky summary flag
 
-- [x] `MobileStickySummary` publishes its height to `--pharos-sticky-summary-h`; `LongformScrollspyNav` includes it in `scrollMarginTop` via `calc()`.
-- [ ] Real-device QA: iOS Safari + Android Chrome scrollspy behavior with sticky summary mounted.
+`MobileStickySummary` is permanently enabled below `lg` on `/stablecoin/[id]/`, anchored via `--sticky-header-bottom`, and the expired `NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY` flag/getter/build inputs have been removed.
 
 ## 2026-07-29 lifecycle review
 

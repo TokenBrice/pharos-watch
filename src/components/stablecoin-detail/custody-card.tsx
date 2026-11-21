@@ -222,17 +222,25 @@ function ProtectionRung({ rung }: { rung: CustodyProtectionRung }) {
       <span className="col-start-1 row-start-1 min-w-0 text-xs font-medium leading-tight text-muted-foreground @[25rem]/meter:self-end">
         {rung.label}
       </span>
-      <span
-        aria-hidden="true"
-        className={cn(
-          "relative col-span-2 row-start-2 h-1.5 overflow-hidden rounded-full @[25rem]/meter:col-span-1",
-          RUNG_TRACK_CLASS[rung.state],
-        )}
-      >
-        {rung.state === "partial" ? (
-          <span className={cn("absolute inset-y-0 left-0 w-1/2 rounded-full", SEVERITY_TONE_CLASS.caution.bar)} />
-        ) : null}
-      </span>
+      {rung.state === "partial" ? (
+        // Stepped 2-segment rung communicates partial/contractual posture without implying a continuous 50% gauge.
+        <span
+          aria-hidden="true"
+          data-rung-stepped="2"
+          className="col-span-2 row-start-2 grid h-1.5 grid-cols-2 gap-1 @[25rem]/meter:col-span-1"
+        >
+          <span className={cn("h-full rounded-full", SEVERITY_TONE_CLASS.caution.bar)} />
+          <span className="h-full rounded-full bg-muted" />
+        </span>
+      ) : (
+        <span
+          aria-hidden="true"
+          className={cn(
+            "relative col-span-2 row-start-2 h-1.5 overflow-hidden rounded-full @[25rem]/meter:col-span-1",
+            RUNG_TRACK_CLASS[rung.state],
+          )}
+        />
+      )}
       <span
         className={cn(
           "col-start-2 row-start-1 inline-flex min-w-0 items-start gap-1 justify-self-end text-xs font-medium leading-snug",

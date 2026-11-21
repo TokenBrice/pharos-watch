@@ -116,7 +116,17 @@ function Swatch({ fill, className, dashed = false }: { fill?: string; className?
   );
 }
 
-function Legend({ model, state, ids }: { model: PsiBeaconModel; state: PsiBeaconState; ids: ReturnType<typeof patternIds> }) {
+function Legend({
+  model,
+  state,
+  ids,
+  showComponents,
+}: {
+  model: PsiBeaconModel;
+  state: PsiBeaconState;
+  ids: ReturnType<typeof patternIds>;
+  showComponents: boolean;
+}) {
   if (state.kind === "loading") return null;
   if (state.kind === "unavailable") {
     return (
@@ -142,6 +152,7 @@ function Legend({ model, state, ids }: { model: PsiBeaconModel; state: PsiBeacon
     );
   };
   const trend = reading.components.trend;
+  const lowerBoundBanks = model.fog.filter((entry) => entry.lowerBound != null);
   return (
     <ul className={styles.legend} data-testid="psi-beacon-legend">
       <li>
@@ -154,7 +165,7 @@ function Legend({ model, state, ids }: { model: PsiBeaconModel; state: PsiBeacon
           <Swatch className={styles.unknown} dashed />
           <span>components do not reconcile with the score</span>
         </li>
-      ) : (
+      ) : showComponents ? (
         <>
           {(["severity", "breadth", "stressBreadth"] as const).map(penalty)}
           <li>
@@ -162,6 +173,24 @@ function Legend({ model, state, ids }: { model: PsiBeaconModel; state: PsiBeacon
             <span>trend</span>
             <span className={styles.legendValue}>{trend === null ? "n/a" : signed(trend, 1)}</span>
           </li>
+          {model.unknown ? (
+            <li>
+              <Swatch className={styles.unknown} dashed />
+              <span>unavailable, not zero</span>
+            </li>
+          ) : null}
+        </>
+      ) : (
+        <>
+          {lowerBoundBanks.map((bank) => (
+            <li key={bank.key}>
+              <Swatch className={styles.fog} fill={`url(#${ids[bank.key]})`} />
+              <span>{PSI_BEACON_COMPONENT_LABELS[bank.key]}</span>
+              <span className={styles.legendValue}>
+                {`≥ · ${bank.lowerBound?.unpricedCount ?? "some"} unpriced`}
+              </span>
+            </li>
+          ))}
           {model.unknown ? (
             <li>
               <Swatch className={styles.unknown} dashed />
@@ -189,7 +218,15 @@ function Legend({ model, state, ids }: { model: PsiBeaconModel; state: PsiBeacon
  * mark the band thresholds and a tick marks the 24h average. Retained data loses its
  * hue; unavailable data draws no beam at all (never a calm or zero-length one).
  */
-export function PsiBeacon({ state, className }: { state: PsiBeaconState; className?: string }) {
+export function PsiBeacon({
+  state,
+  className,
+  showComponents = true,
+}: {
+  state: PsiBeaconState;
+  className?: string;
+  showComponents?: boolean;
+}) {
   const uid = useId();
   const ids = useMemo(() => patternIds(uid), [uid]);
   const model = useMemo(() => buildPsiBeaconModel(state), [state]);
@@ -285,7 +322,7 @@ export function PsiBeacon({ state, className }: { state: PsiBeaconState; classNa
         <text className={styles.plateKicker} x={plateX} y={plateY}>{kicker}</text>
         {value ? <text className={styles.plateValue} x={plateX} y={plateY + 16}>{value}</text> : null}
       </svg>
-      <Legend model={model} state={state} ids={ids} />
+      <Legend model={model} state={state} ids={ids} showComponents={showComponents} />
     </figure>
   );
 }

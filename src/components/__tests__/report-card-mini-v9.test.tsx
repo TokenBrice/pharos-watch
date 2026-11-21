@@ -56,6 +56,21 @@ describe("ReportCardMiniV9 viewport radar", () => {
     expect(container.textContent).toContain("Backing 80/100; Exit 70/100; Economic Control 60/100.");
   });
 
+  it("surfaces visible B · E · C micro-bars and null-safe MCap footer", () => {
+    const { rerender } = render(
+      <ReportCardMiniV9 card={card} identity={identity} mcap={120_000_000_000} highlightedMetric="mcap" />,
+    );
+    const bars = screen.getByTestId("grid-pillar-microbars");
+    expect(bars.textContent).toContain("B80");
+    expect(bars.textContent).toContain("E70");
+    expect(bars.textContent).toContain("C60");
+    expect(screen.getByText("$120.00B")).toBeTruthy();
+
+    rerender(<ReportCardMiniV9 card={card} identity={identity} mcap={null} />);
+    expect(screen.getByText("—")).toBeTruthy();
+    expect(screen.queryByText("$0")).toBeNull();
+  });
+
   it("draws a rated card with a missing pillar and names the curation gap without pipeline wording", () => {
     installMatchMediaMock();
     const partial = projectV9TableCard(makeReportCardsV9PartialCard("exit", "B", { id: "usdt-tether" }));

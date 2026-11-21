@@ -1,13 +1,11 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { render, screen, within } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import type { BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/types/blacklist";
 import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
 import { BlacklistStats } from "@/components/freezewatch/blacklist-stats";
-import type { BlacklistStatusBucket } from "@shared/lib/blacklist-status-buckets";
 import { BlacklistDetailStats } from "@/components/stablecoin-detail/blacklist-detail-stats";
-
 
 function makePerCoinRecord<T>(createValue: (symbol: BlacklistStablecoin) => T): Record<BlacklistStablecoin, T> {
   return Object.fromEntries(BLACKLIST_STABLECOINS.map((symbol) => [symbol, createValue(symbol)])) as Record<
@@ -68,16 +66,6 @@ function makeStats(): BlacklistSummaryResponse["stats"] {
   };
 }
 
-function bucket(
-  key: BlacklistStatusBucket["key"],
-  count: number,
-  marketCap: number,
-  supplyUnavailableCount = 0,
-): BlacklistStatusBucket {
-  const status = { yes: "Yes", upstream: "Upstream", possible: "Possible", no: "No" }[key];
-  return { status, key, count, marketCap, supplyUnavailableCount };
-}
-
 describe("BlacklistStats", () => {
   it.each([
     { amount: null, known: 0, unavailable: 1, detail: "Unavailable", headline: "Unavailable" },
@@ -95,8 +83,7 @@ describe("BlacklistStats", () => {
     stats.perCoinDestroyedTotal.USDC = amount;
     stats.valuationCoverage.perCoinFrozen.USDC = coverage;
     stats.valuationCoverage.perCoinDestroyed.USDC = coverage;
-    const headlineView = render(<BlacklistStats summary={{ ...makeSummary(), stats }} isLoading={false}
-      blacklistStatusBuckets={[]} supportDataLoading={false} />);
+    const headlineView = render(<BlacklistStats summary={{ ...makeSummary(), stats }} isLoading={false} />);
     const detailView = render(<BlacklistDetailStats symbol="USDC" stats={stats} isLoading={false} />);
     expect(within(headlineView.container).getAllByText(headline)).toHaveLength(1);
     // The dossier strip hides a zero or unavailable figure ("$0.00 destroyed" is not a finding).
@@ -108,78 +95,22 @@ describe("BlacklistStats", () => {
     stats.trackedFrozenTotal = 1_000;
     stats.trackedAddressCount = 10;
     stats.trackedAmountGapCount = 4;
-    render(
-      <BlacklistStats
-        summary={{ ...makeSummary(), stats }}
-        isLoading={false}
-        blacklistStatusBuckets={[]}
-        supportDataLoading={false}
-      />,
-    );
+    render(<BlacklistStats summary={{ ...makeSummary(), stats }} isLoading={false} />);
     expect(screen.getByText("$1.00K")).toBeTruthy();
     expect(screen.queryByText(/partial/)).toBeNull();
   });
 
-  it("renders the unfreezable market-share stat from the blacklist-status no bucket", () => {
-    render(
-      <BlacklistStats
-        summary={{ ...makeSummary(), stats: makeStats() }}
-        isLoading={false}
-        blacklistStatusBuckets={[
-          bucket("yes", 10, 150_000_000_000),
-          bucket("possible", 5, 40_000_000_000),
-          bucket("upstream", 3, 20_000_000_000),
-          bucket("no", 2, 30_000_000_000),
-        ]}
-        supportDataLoading={false}
-      />,
-    );
+  it("renders only observed enforcement totals and omits the duplicate Unfreezable market share card", () => {
+    render(<BlacklistStats summary={{ ...makeSummary(), stats: makeStats() }} isLoading={false} />);
 
-    expect(screen.getByText("Unfreezable market share")).toBeTruthy();
-    expect(screen.getByText("12.5%")).toBeTruthy();
-    expect(screen.getByText("2 stablecoins · $30.00B of $240.00B total")).toBeTruthy();
     expect(screen.getByText("Tracked frozen total")).toBeTruthy();
     expect(screen.getByText("last-known freeze snapshots")).toBeTruthy();
     expect(screen.getByText("Total wiped value")).toBeTruthy();
+    expect(screen.queryByText(/Unfreezable market share/i)).toBeNull();
     expect(screen.queryByText("Snapshot Basis")).toBeNull();
     expect(screen.queryByText("Freeze Ledger")).toBeNull();
     expect(screen.queryByText("USDT Blacklisted")).toBeNull();
     expect(screen.queryByText("unique events")).toBeNull();
-  });
-
-  it("discloses a partial observed-supply denominator in the subtext only and withholds a share with no observed unfreezable supply", () => {
-    const { unmount } = render(
-      <BlacklistStats
-        summary={{ ...makeSummary(), stats: makeStats() }}
-        isLoading={false}
-        blacklistStatusBuckets={[
-          bucket("yes", 10, 150_000_000_000, 1),
-          bucket("possible", 5, 40_000_000_000),
-          bucket("upstream", 3, 20_000_000_000),
-          bucket("no", 2, 30_000_000_000),
-        ]}
-        supportDataLoading={false}
-      />,
-    );
-
-    expect(screen.getByText("12.5%")).toBeTruthy();
-    expect(screen.queryByText(/partial/i)).toBeNull();
-    expect(
-      screen.getByText("2 stablecoins · $30.00B of $240.00B observed · 1 without supply data excluded"),
-    ).toBeTruthy();
-    unmount();
-
-    render(
-      <BlacklistStats
-        summary={{ ...makeSummary(), stats: makeStats() }}
-        isLoading={false}
-        blacklistStatusBuckets={[bucket("yes", 10, 0, 10), bucket("no", 2, 0, 2)]}
-        supportDataLoading={false}
-      />,
-    );
-
-    expect(screen.queryByText("0%")).toBeNull();
-    expect(screen.getByText("2 stablecoins · supply data unavailable")).toBeTruthy();
   });
 
   it.each(["degraded", "stale"] as const)("shows the data-quality notice only for stale coverage (%s)", (status) => {
@@ -198,8 +129,6 @@ describe("BlacklistStats", () => {
           },
         }}
         isLoading={false}
-        blacklistStatusBuckets={null}
-        supportDataLoading={false}
       />,
     );
 
@@ -210,27 +139,6 @@ describe("BlacklistStats", () => {
     expect(screen.getByText("Freeze ledger coverage is stale")).toBeTruthy();
     expect(screen.getByText(/3 events have an ambiguous order/)).toBeTruthy();
     expect(screen.getByText(/Tron transfers in separate transactions/)).toBeTruthy();
-  });
-
-  it("renders the unfreezable drill-down as a native button", () => {
-    const onUnfreezableSelect = vi.fn();
-    render(
-      <BlacklistStats
-        summary={makeSummary()}
-        isLoading={false}
-        blacklistStatusBuckets={[
-          bucket("yes", 10, 150_000_000_000),
-          bucket("no", 2, 30_000_000_000),
-        ]}
-        supportDataLoading={false}
-        onUnfreezableSelect={onUnfreezableSelect}
-      />,
-    );
-
-    const drillDown = screen.getByRole("button", { name: "Show unfreezable stablecoins" });
-    expect(drillDown.tagName).toBe("BUTTON");
-    fireEvent.click(drillDown);
-    expect(onUnfreezableSelect).toHaveBeenCalledOnce();
   });
 
   it("surfaces freeze-ledger data-quality warnings", () => {
@@ -259,8 +167,6 @@ describe("BlacklistStats", () => {
           },
         }}
         isLoading={false}
-        blacklistStatusBuckets={null}
-        supportDataLoading={false}
       />,
     );
 
@@ -298,48 +204,10 @@ describe("BlacklistStats", () => {
           },
         }}
         isLoading={false}
-        blacklistStatusBuckets={null}
-        supportDataLoading={false}
       />,
     );
 
     expect(screen.queryByText("Data quality")).toBeNull();
-  });
-
-  it("keeps extra precision for sub-0.1% market-share values", () => {
-    render(
-      <BlacklistStats
-        summary={{ ...makeSummary(), stats: makeStats() }}
-        isLoading={false}
-        blacklistStatusBuckets={[
-          bucket("yes", 10, 150_000_000_000),
-          bucket("possible", 5, 40_000_000_000),
-          bucket("upstream", 3, 20_000_000_000),
-          bucket("no", 2, 184_790_000),
-        ]}
-        supportDataLoading={false}
-      />,
-    );
-
-    expect(screen.getByText("0.088%")).toBeTruthy();
-  });
-
-  it("shows an unresolved unfreezable share while support data is still loading", () => {
-    render(
-      <BlacklistStats
-        summary={{ ...makeSummary(), stats: makeStats() }}
-        isLoading={false}
-        blacklistStatusBuckets={[
-          bucket("yes", 10, 150_000_000_000),
-          bucket("possible", 5, 40_000_000_000),
-          bucket("upstream", 3, 20_000_000_000),
-          bucket("no", 2, 30_000_000_000),
-        ]}
-        supportDataLoading
-      />,
-    );
-
-    expect(screen.getByText("—")).toBeTruthy();
   });
 
   it("renders an unavailable notice instead of zeroed totals when the summary query fails", () => {
@@ -348,35 +216,13 @@ describe("BlacklistStats", () => {
         summary={undefined}
         isLoading={false}
         error={new Error("summary unavailable")}
-        blacklistStatusBuckets={null}
-        supportDataLoading={false}
-        supportError={new Error("stablecoin list unavailable")}
       />,
     );
 
     expect(screen.getByRole("alert").textContent).toContain(
       "Freeze ledger data is temporarily unavailable. No status claim is being made.",
     );
-    expect(screen.getAllByText("—")).toHaveLength(3);
+    expect(screen.getAllByText("—")).toHaveLength(2);
     expect(screen.queryByText("$0")).toBeNull();
-    expect(screen.queryByText("0%")).toBeNull();
-  });
-
-  it("marks the unfreezable share unavailable when the support read fails", () => {
-    render(
-      <BlacklistStats
-        summary={{ ...makeSummary(), stats: makeStats() }}
-        isLoading={false}
-        blacklistStatusBuckets={null}
-        supportDataLoading={false}
-        supportError={new Error("stablecoin list unavailable")}
-        onUnfreezableSelect={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByText("—")).toBeTruthy();
-    expect(screen.getByText("Freeze status data unavailable")).toBeTruthy();
-    expect(screen.queryByText("0%")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Show unfreezable stablecoins" })).toBeNull();
   });
 });

@@ -649,15 +649,52 @@ describe("HeroIdentityHeader", () => {
     return renderToStaticMarkup(<HeroIdentityHeader model={model} onOpenFeedback={() => {}} gradeRead={gradeRead} />);
   }
 
-  it("keeps the verdict separator off any line end and the actions on one row", () => {
+  it("keeps the verdict separator off any line end and renders the holder action bar", () => {
     const header = renderHeader();
     const verdictLine = header.match(/<p class="([^"]*)" data-safety-verdict-line="[^"]*">(.*?)<\/p>/)!;
     expect(verdictLine[1]).not.toContain("flex");
     expect(verdictLine[2]).toContain(">\u00a0·\u00a0<");
-    expect(header).not.toContain("flex-wrap items-center gap-2");
-    // Only the compare label gives way on a narrow row.
+    expect(header).toContain(">Watch<");
+    expect(header).toContain(">Portfolio<");
+    expect(header).toContain(">Alerts<");
     expect(header).toMatch(/<span class="truncate">(vs [^<]+|Compare)<\/span>/);
-    expect(header).toContain("[&amp;&gt;[aria-haspopup=menu]]:shadow-none");
+    expect(header).toContain('aria-label="More compare options for');
+    expect(header).toContain('aria-label="More actions"');
+    // SHARE_BUTTON_MATCH_CLASS hack is gone now that outline buttons are flat.
+    expect(header).not.toContain("[&amp;&gt;[aria-haspopup=menu]]:shadow-none");
+  });
+
+  it("surfaces the Yield workbench pill only for coins with a static yield workbench", () => {
+    const yieldCoin = CLIENT_TRACKED_META_BY_ID.get("susde-ethena")!;
+    const yieldHeader = renderHeader({ coin: yieldCoin });
+    expect(yieldHeader).toContain(">Yield workbench<");
+    expect(yieldHeader).toContain('href="/stablecoin/susde-ethena/yield/"');
+
+    const plainCoin = CLIENT_TRACKED_META_BY_ID.get("usdc-circle")!;
+    const plainHeader = renderHeader({ coin: plainCoin });
+    expect(plainHeader).not.toContain(">Yield workbench<");
+  });
+
+  it("treats DEWS as a railTwin at xl so desktop hero stays 3-column while hydrating initialRedeemability", () => {
+    const model = buildStablecoinDetailHeroViewModel(makeHeroProps({
+      pendingReads: { redemption: true },
+      redemptionBackstop: null,
+    }));
+    const html = renderToStaticMarkup(
+      <HeroCard
+        model={model}
+        initialRedeemability={{
+          key: "redeemability",
+          category: "Redeemability",
+          value: "Issuer API",
+          href: "#redemption",
+          ariaLabel: "Redeemability: Issuer API - jump to redemption route",
+        }}
+      />,
+    );
+    expect(html).toContain("xl:grid-cols-3");
+    expect(html).toContain("Issuer API");
+    expect(html).not.toContain('data-passport-reserve="redeemability"');
   });
 
   it("gives the variant chip its own row below sm", () => {

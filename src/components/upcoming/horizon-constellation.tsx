@@ -30,9 +30,9 @@ const DOT_LINK_CLASS =
   "pharos-focus-ring group block rounded-full transition-transform duration-200 hover:z-5 hover:scale-125 focus-visible:z-10 active:scale-110 motion-reduce:transition-none motion-reduce:hover:scale-100";
 
 const DOT_CLASS =
-  "flex items-center justify-center overflow-hidden rounded-full border border-border/50 bg-background/90 text-3xs font-bold text-muted-foreground shadow-[inset_0_1px_0_oklch(1_0_0_/0.05)] transition-colors group-hover:border-border group-hover:bg-background dark:bg-white/90 dark:text-black/75 dark:group-hover:bg-white";
+  "flex items-center justify-center overflow-hidden rounded-full border border-border/60 bg-background/90 text-3xs font-bold text-muted-foreground transition-colors group-hover:border-border group-hover:bg-background dark:border-transparent dark:bg-foreground/12 dark:text-foreground/80 dark:ring-1 dark:ring-border/60 dark:group-hover:bg-foreground/20";
 
-const UNPHASED_FIELD_CLASS = "border-dashed border-border bg-muted/20";
+const UNPHASED_FIELD_CLASS = "border-dashed border-muted-foreground/45 bg-muted/30 dark:border-border dark:bg-muted/20";
 const UNPHASED_DOT_CLASS = "border border-dashed border-muted-foreground/60 bg-transparent";
 
 type HorizonCellCoin = Pick<StablecoinClientMeta, "id" | "name" | "symbol">;
@@ -82,7 +82,7 @@ function HorizonLogoDot({ coin, drift }: { coin: HorizonCellCoin; drift?: DriftD
         <img
           src={logoSrc}
           alt=""
-          loading="lazy"
+          loading="eager"
           decoding="async"
           draggable={false}
           className="rounded-full object-contain"
@@ -218,7 +218,7 @@ export function HorizonConstellation({
                   </span>
                   <span
                     aria-hidden="true"
-                    className={`pointer-events-none absolute inset-0 rounded-full border ${cell.fieldClass}`}
+                    className={`pointer-events-none absolute inset-0 rounded-full border-2 ring-1 ring-inset ring-border/45 dark:border dark:ring-0 ${cell.fieldClass}`}
                   />
                   {count === 0 ? (
                     <span

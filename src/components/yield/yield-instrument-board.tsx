@@ -1,21 +1,20 @@
 "use client";
 
-import { QUALITY_TIER_3_CLASSES, REPORT_CARD_GRADE_RANGE_METADATA, getPysBarColor } from "@shared/lib/classification";
-import { gradeRange, scoreToGrade } from "@shared/lib/report-card-core";
-
 import Link from "next/link";
-import { memo, useMemo, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, ArrowUpRight, ChevronDown } from "lucide-react";
+import { Fragment, memo, useCallback, useMemo } from "react";
+import { ArrowUpRight, ChevronDown } from "lucide-react";
+import { DataTableEmptyRow, DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
+import { TableCell, TableRow } from "@/components/table";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { CoinStateChip } from "@/components/coin-state-chip";
-import { Badge } from "@/components/ui/badge";
 import { MethodologyHint } from "@/components/methodology-hint";
-import { TablePagination, type TablePaginationProps } from "@/components/table-pagination";
+import type { TablePaginationProps } from "@/components/table-pagination";
 import { YieldWatchlistStar } from "@/components/yield/yield-watchlist-star";
 import { YieldCohortChip } from "@/components/yield/yield-cohort-chip";
 import { YieldZoneChip } from "@/components/yield/yield-zone-chip";
 import {
   ApyRangeBar,
+  formatCompactBenchmarkLabel,
   YieldPysValue,
   YieldSafetyBadge,
   YieldSignalsIndicator,
@@ -32,152 +31,13 @@ import { buildYieldPresentationContext } from "@/lib/yield-presentation-context"
 import { resolveYieldRowBenchmark } from "@/lib/yield-benchmark";
 import type { YieldTableSortKey } from "@/components/yield/yield-table-logic";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
-import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
+import { YIELD_TYPE_LABELS } from "@shared/lib/classification";
 import { getLogoSrc } from "@/lib/logos";
-import { clampScore } from "@shared/lib/math";
 import { formatYieldApyDelta } from "@/lib/yield-presentation";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 
-// ---------------------------------------------------------------------------
-// Visual-indicator primitives. The board mirrors the depeg control board: each
-// decision metric reads as a prominent value + a thin severity-tinted bar. Only
-// the three ranking drivers (APY, Safety, PYS) are gauged; TVL / Stability /
-// 30d-Range stay as plain values. Tailwind classes are static strings.
-// ---------------------------------------------------------------------------
-
-// Gauge tone follows the V9 grade ladder via scoreToGrade, so a row's gauge
-// can never disagree with its adjacent grade badge; bar classes come from the
-// classification grade-range table (A emerald / B blue / C amber / D orange /
-// F red). The old hardcoded 80/60/40 cuts gave a C+ (60-64) a blue gauge
-// under an amber badge.
-function safetyBarTone(score: number | null): string {
-  if (score == null) return "bg-muted-foreground/40";
-  return REPORT_CARD_GRADE_RANGE_METADATA[gradeRange(scoreToGrade(score))].barClassName;
-}
-
-function MetricGauge({
-  value,
-  max = 100,
-  tone,
-  ariaLabel,
-}: {
-  value: number | null;
-  max?: number;
-  tone: string;
-  ariaLabel: string;
-}) {
-  const pct = value == null ? 0 : clampScore((value / max) * 100);
-  return (
-    <div role="img" aria-label={ariaLabel} className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-      <div
-        className={cn("h-full rounded-full", tone)}
-        style={{ width: value == null ? "0%" : `${Math.max(3, pct)}%` }}
-      />
-    </div>
-  );
-}
-
-// APYs cluster in the 3-15% band with occasional 30-60% outliers; saturate the
-// bar at 20% so the common band stays visually differentiated.
-function scaleApy(apy: number): number {
-  return clampScore((apy / 20) * 100);
-}
-
-function ApyBenchmarkBar({ apy30d, benchmarkRate }: { apy30d: number; benchmarkRate: number | null }) {
-  const fillWidth = Math.max(3, scaleApy(apy30d));
-  const benchPos = benchmarkRate != null ? clampScore(scaleApy(benchmarkRate)) : null;
-  const excess = benchmarkRate != null ? apy30d - benchmarkRate : null;
-  const tone =
-    excess == null
-      ? QUALITY_TIER_3_CLASSES.good.bar
-      : excess >= 0.5
-        ? QUALITY_TIER_3_CLASSES.good.bar
-        : excess >= -0.5
-          ? QUALITY_TIER_3_CLASSES.watch.bar
-          : QUALITY_TIER_3_CLASSES.bad.bar;
-  return (
-    <div
-      role="img"
-      aria-label={`30-day APY ${apy30d.toFixed(1)} percent${
-        benchmarkRate != null ? `, benchmark ${benchmarkRate.toFixed(1)} percent` : ""
-      }`}
-      className="relative h-2.5 w-full"
-    >
-      <div className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 overflow-hidden rounded-full bg-muted">
-        <div className={cn("h-full rounded-full", tone)} style={{ width: `${fillWidth}%` }} />
-      </div>
-      {benchPos != null ? (
-        <span
-          aria-hidden="true"
-          className="absolute top-1/2 h-2.5 w-px -translate-y-1/2 rounded-full bg-foreground/55"
-          style={{ left: `${benchPos}%` }}
-        />
-      ) : null}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Grid scaffolding. One parent grid owns the column template; the header and
-// every row are subgrids spanning all columns, so a column is the same width in
-// every row whatever its content (a content-sized track can no longer drift per
-// row), while a row can still expand into a full-width history panel.
-// Visible-child count must match the track count at each breakpoint: md shows
-// 7 columns, lg adds TVL + Stability (9), xl adds 30d-Range (10).
-// ---------------------------------------------------------------------------
-
-const BOARD_GRID_CLASS =
-  "grid w-full grid-cols-1 gap-x-3 " +
-  "md:grid-cols-[2.5rem_minmax(11rem,1.4fr)_minmax(8rem,1fr)_minmax(6rem,0.7fr)_minmax(8rem,1fr)_minmax(10rem,1.2fr)_minmax(4.5rem,auto)] " +
-  "lg:grid-cols-[2.5rem_minmax(11rem,1.4fr)_minmax(8rem,1fr)_minmax(6rem,0.7fr)_minmax(8rem,1fr)_minmax(11rem,1.6fr)_minmax(6rem,0.7fr)_minmax(5.5rem,0.6fr)_minmax(4.5rem,auto)] " +
-  "xl:grid-cols-[2.75rem_minmax(12rem,1.5fr)_minmax(8.5rem,1fr)_minmax(6.5rem,0.7fr)_minmax(8.5rem,1fr)_minmax(13rem,1.9fr)_minmax(6rem,0.7fr)_minmax(5.5rem,0.6fr)_5rem_minmax(5rem,auto)]";
-
-const BOARD_SUBGRID_CLASS = "col-span-full grid grid-cols-subgrid items-start";
-
-const SORT_PILLS: ReadonlyArray<{ key: YieldTableSortKey; label: string }> = [
-  { key: "pys", label: "PYS" },
-  { key: "apy30d", label: "APY" },
-  { key: "safetyScore", label: "Safety" },
-  { key: "tvl", label: "TVL" },
-  { key: "yieldStability", label: "Stability" },
-  { key: "yieldType", label: "Type" },
-];
-
-function HeaderCell({
-  label,
-  className,
-  adornment,
-  title,
-}: {
-  label: string;
-  className?: string;
-  adornment?: ReactNode;
-  title?: string;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex items-center gap-1 pharos-label",
-        className,
-      )}
-      title={title}
-    >
-      <span>{label}</span>
-      {adornment}
-    </div>
-  );
-}
-
-function MetricLabel({ children }: { children: ReactNode }) {
-  // The grid header carries column labels at lg+; the md tier hides that header,
-  // so each cell self-labels there and the per-row label is suppressed at lg+.
-  return (
-    <span className="block pharos-label lg:hidden">
-      {children}
-    </span>
-  );
-}
-
-function rowToneClass(warningCount: number, sourceRiskMaterial: boolean): string {
+function rowToneClass(warningCount: number, sourceRiskMaterial: boolean, highlighted: boolean): string {
+  if (highlighted) return "bg-accent/50 ring-2 ring-inset ring-brand-accent-text/60";
   if (warningCount >= 2) return "bg-state-warn-solid/[0.06]";
   if (warningCount === 1 || sourceRiskMaterial) return "bg-state-warn-solid/[0.035]";
   return "";
@@ -201,9 +61,12 @@ interface YieldInstrumentRowProps {
   /** Parent-sampled source clock; rows re-derive source-age display at its crossings. */
   sourceClock?: YieldSourceDisplayClock | null;
   expanded: boolean;
+  highlighted: boolean;
   isCompared: boolean;
   compareDisabled: boolean;
+  columnCount: number;
   onPrefetch: (stablecoinId: string) => void;
+  onHoverRow?: (stablecoinId: string | null) => void;
   onToggleExpanded: (stablecoinId: string) => void;
   onOpenSourceSheet: (stablecoinId: string) => void;
   onToggleCompare: (stablecoinId: string) => void;
@@ -220,9 +83,12 @@ function YieldInstrumentRowBase({
   methodologyVersion = null,
   sourceClock = null,
   expanded,
+  highlighted,
   isCompared,
   compareDisabled,
+  columnCount,
   onPrefetch,
+  onHoverRow,
   onToggleExpanded,
   onOpenSourceSheet,
   onToggleCompare,
@@ -260,19 +126,21 @@ function YieldInstrumentRowBase({
   const resolvedBenchmark = resolveYieldRowBenchmark(row, benchmarks, riskFreeRate);
   const benchmarkRate = resolvedBenchmark.rate;
   const excess = benchmarkRate != null ? row.apy30d - benchmarkRate : null;
+  const compactBenchmarkLabel = formatCompactBenchmarkLabel(resolvedBenchmark.label);
   // A default-safety score is a scoring input, not a measured Safety Score: the
-  // badge, gauge and zone verdict read it as unavailable.
+  // badge and zone verdict read it as unavailable.
   const usedDefaultSafety = row.provenance?.usedDefaultSafety === true;
   const displayedSafetyScore = usedDefaultSafety ? null : safetyScore;
 
   return (
-    <div className={cn(BOARD_SUBGRID_CLASS, "border-b border-border/55 last:border-b-0")}>
+    <Fragment>
       {/* Not a <button>/role="button": the row nests focusable controls (compare
-          checkbox, watchlist star, deep-dive link, expand toggle), so a row-level
-          button would be invalid (nested-interactive). Row click is a pointer
-          convenience; the keyboard-reachable expand control is the chevron. */}
-      <div
+          checkbox, dossier link, watchlist star, deep-dive link, expand toggle).
+          Row click is a pointer convenience; the keyboard-reachable expand control
+          is the chevron button. */}
+      <TableRow
         id={`yield-row-${row.id}`}
+        rowIntent="interactive"
         data-yield-row-display={row.id}
         data-yield-grade={grade ?? "NR"}
         data-yield-safety-score={safetyScore ?? ""}
@@ -281,20 +149,24 @@ function YieldInstrumentRowBase({
         data-yield-freshness={freshness?.displayText ?? ""}
         data-yield-warning-count={warningCount}
         data-yield-benchmark={benchmarkReferenceText}
+        data-highlighted={highlighted ? "true" : undefined}
         onClick={() => onToggleExpanded(row.id)}
-        onMouseEnter={() => onPrefetch(row.id)}
+        onMouseEnter={() => {
+          onPrefetch(row.id);
+          onHoverRow?.(row.id);
+        }}
+        onMouseLeave={() => onHoverRow?.(null)}
         className={cn(
-          BOARD_SUBGRID_CLASS,
-          "cursor-pointer px-3 py-2.5 transition-colors hover:bg-muted/30",
-          rowToneClass(warningCount, sourceRiskMaterial),
+          "cursor-pointer align-top transition-colors",
+          rowToneClass(warningCount, sourceRiskMaterial, highlighted),
         )}
       >
-        <div className="hidden pt-1 text-right font-mono text-xs tabular-nums text-muted-foreground md:block">
+        <TableCell className="w-10 pt-3 text-right font-mono text-xs tabular-nums text-muted-foreground">
           <span className="sr-only">{row.rankLabel}</span>
           <span aria-hidden="true">{rank}</span>
-        </div>
+        </TableCell>
 
-        <div className="min-w-0">
+        <TableCell className="min-w-[13rem] max-w-[17rem]">
           <div className="flex items-center gap-1.5">
             <input
               type="checkbox"
@@ -308,46 +180,59 @@ function YieldInstrumentRowBase({
               aria-label={`Add ${row.symbol} to compare`}
               className="pharos-focus-ring h-3.5 w-3.5 shrink-0 cursor-pointer rounded-sm border border-border/70 bg-background/60 disabled:cursor-not-allowed disabled:opacity-50"
             />
-            <StablecoinLogo src={logo} name={row.name} size={24} />
-            <span className="font-medium">{row.symbol}</span>
-            <YieldWatchlistStar stablecoinId={row.id} symbol={row.symbol} className="h-6 w-6" />
-            <span className="hidden max-w-[150px] truncate text-xs text-muted-foreground xl:inline">{row.name}</span>
+            <StablecoinLogo src={logo} name={row.name} size={22} />
+            <Link
+              href={buildStablecoinUrl(row.id)}
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") event.stopPropagation();
+              }}
+              className="pharos-focus-ring truncate font-semibold text-foreground underline-offset-2 hover:underline"
+            >
+              {row.symbol}
+            </Link>
+            <YieldWatchlistStar stablecoinId={row.id} symbol={row.symbol} className="h-6 w-6 shrink-0" />
           </div>
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          <p className="mt-0.5 truncate pl-5 text-xs text-muted-foreground" title={row.name}>
+            {row.name}
+          </p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5 pl-5">
             {row.coinStates?.[0] ? <CoinStateChip state={row.coinStates[0]} /> : null}
-            <Badge variant="outline" className={`text-3xs ${YIELD_TYPE_STYLES[row.yieldType]?.badge ?? ""}`}>
-              {YIELD_TYPE_LABELS[row.yieldType] ?? row.yieldType}
-            </Badge>
             <YieldZoneChip safetyScore={displayedSafetyScore} apy30d={row.apy30d} benchmarkRate={resolvedBenchmark.rate} />
+            <span className="text-3xs font-medium text-muted-foreground">
+              {YIELD_TYPE_LABELS[row.yieldType] ?? row.yieldType}
+            </span>
             <YieldSignalsIndicator
               row={row}
               sourceRiskSummary={labels.sourceRiskSummary}
             />
           </div>
-        </div>
+        </TableCell>
 
-        <div className="min-w-0">
-          <MetricLabel>APY 30d</MetricLabel>
-          <div className="font-mono text-lg font-semibold leading-none tabular-nums">
+        <TableCell className="min-w-[8.5rem]">
+          <div className="font-mono text-base font-semibold leading-none tabular-nums text-foreground">
             <span className="sr-only">{labels.apySrLabel}</span>
             <span aria-hidden="true">{labels.apyLabel}</span>
           </div>
-          <div className="mt-1.5">
-            <ApyBenchmarkBar apy30d={row.apy30d} benchmarkRate={benchmarkRate} />
-          </div>
-          <div className="mt-1 truncate font-mono text-3xs text-muted-foreground">
+          <div
+            className="mt-1.5 truncate font-mono text-3xs tabular-nums text-muted-foreground"
+            title={
+              excess != null
+                ? `${formatYieldApyDelta(excess)} vs ${resolvedBenchmark.label}`
+                : resolvedBenchmark.label
+            }
+          >
             {excess != null ? (
               <span>
-                {formatYieldApyDelta(excess)} vs {resolvedBenchmark.label}
+                {formatYieldApyDelta(excess)} vs {compactBenchmarkLabel}
               </span>
             ) : (
-              <span>{resolvedBenchmark.label}</span>
+              <span>{compactBenchmarkLabel}</span>
             )}
           </div>
-        </div>
+        </TableCell>
 
-        <div className="min-w-0">
-          <MetricLabel>Safety</MetricLabel>
+        <TableCell className="min-w-[5.5rem]">
           <div className="leading-none">
             <YieldSafetyBadge
               grade={grade}
@@ -357,20 +242,12 @@ function YieldInstrumentRowBase({
               usedDefaultSafety={usedDefaultSafety}
             />
           </div>
-          <div className="mt-1.5">
-            <MetricGauge
-              value={displayedSafetyScore}
-              tone={safetyBarTone(displayedSafetyScore)}
-              ariaLabel={`Safety score ${displayedSafetyScore !== null ? Math.round(displayedSafetyScore) : "unavailable"} of 100`}
-            />
-          </div>
-          <div className="mt-1 truncate font-mono text-3xs text-muted-foreground">
+          <div className="mt-1.5 font-mono text-3xs tabular-nums text-muted-foreground">
             {displayedSafetyScore !== null ? `${Math.round(displayedSafetyScore)}/100` : "unscored"}
           </div>
-        </div>
+        </TableCell>
 
-        <div className="min-w-0">
-          <MetricLabel>PYS</MetricLabel>
+        <TableCell className="min-w-[8rem]">
           <div>
             <span className="sr-only">{labels.pysSrLabel}</span>
             <YieldPysValue
@@ -385,14 +262,7 @@ function YieldInstrumentRowBase({
               rankChip={rankChip}
             />
           </div>
-          <div className="mt-1.5">
-            <MetricGauge
-              value={row.pharosYieldScore}
-              tone={getPysBarColor(row.pharosYieldScore)}
-              ariaLabel={`Pharos Yield Score ${row.pharosYieldScore ?? "unavailable"} of 100`}
-            />
-          </div>
-          <div className="mt-1 truncate text-3xs text-muted-foreground">
+          <div className="mt-1.5 truncate text-3xs text-muted-foreground">
             {pysDrags.length > 0 ? (
               <span className="tabular-nums text-state-warn-bright" title="PYS points lost to this factor">
                 {pysDrags.map((drag) => `−${Math.abs(drag.points)} ${drag.label}`).join(" · ")}
@@ -401,37 +271,33 @@ function YieldInstrumentRowBase({
               <YieldCohortChip cohort={row.cohortPercentile} />
             )}
           </div>
-        </div>
+        </TableCell>
 
-        <div className="min-w-0">
-          <MetricLabel>Source</MetricLabel>
-          <div className="mt-0.5">
-            <YieldSourceDetails
-              row={row}
-              confidenceStyle={confidenceStyle}
-              confidenceLabel={confidenceLabel}
-              freshness={freshness}
-            />
-          </div>
-        </div>
+        <TableCell className="min-w-[11rem] max-w-[18rem]">
+          <YieldSourceDetails
+            row={row}
+            confidenceStyle={confidenceStyle}
+            confidenceLabel={confidenceLabel}
+            freshness={freshness}
+            quietConfidence
+          />
+        </TableCell>
 
-        <div className="hidden min-w-0 lg:block">
-          <MetricLabel>TVL</MetricLabel>
+        <TableCell className="hidden whitespace-nowrap text-right lg:table-cell">
           <div
             className={
               labels.tvlIsNative
                 ? "font-mono text-sm text-muted-foreground"
-                : "font-mono text-sm font-medium tabular-nums"
+                : "font-mono text-sm font-medium tabular-nums text-foreground"
             }
           >
             <span className="sr-only">{labels.tvlSrLabel}</span>
             <span aria-hidden="true">{labels.tvlLabel}</span>
           </div>
-        </div>
+        </TableCell>
 
-        <div className="hidden min-w-0 lg:block">
-          <MetricLabel>Stability</MetricLabel>
-          <div className="font-mono text-sm font-medium tabular-nums">
+        <TableCell className="hidden whitespace-nowrap text-right lg:table-cell">
+          <div className="font-mono text-sm font-medium tabular-nums text-foreground">
             <span className="sr-only">{labels.stabilitySrLabel}</span>
             {labels.stabilityPct !== null ? (
               <span aria-hidden="true">{labels.stabilityPct}%</span>
@@ -439,81 +305,85 @@ function YieldInstrumentRowBase({
               <span className="text-muted-foreground">{"—"}</span>
             )}
           </div>
-        </div>
+        </TableCell>
 
-        {/* 30d Range (plain marker, xl+) */}
-        <div className="hidden min-w-0 xl:block">
-          <MetricLabel>30d Range</MetricLabel>
-          <div className="mt-1">
+        <TableCell className="hidden whitespace-nowrap xl:table-cell">
+          <div className="mt-0.5">
             {row.apyMin30d !== null && row.apyMax30d !== null ? (
               <ApyRangeBar currentApy={row.currentApy} min={row.apyMin30d} max={row.apyMax30d} />
             ) : (
               <span className="text-xs text-muted-foreground">{"—"}</span>
             )}
           </div>
-        </div>
+        </TableCell>
 
-        <div className="flex items-center justify-end gap-1 md:pt-0.5">
-          <Link
-            href={workbenchLink.href}
-            prefetch={false}
-            onClick={(event) => {
-              event.stopPropagation();
-              trackEvent("yield_row_action", {
-                action: "deep_dive_opened",
-                coin_id: row.id,
-                warning_count: warningCount,
-              });
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") event.stopPropagation();
-            }}
-            className="pharos-focus-ring hidden items-center gap-1 rounded-full px-2 py-1 text-2xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground xl:inline-flex"
-            aria-label={`${workbenchLink.label} for ${row.symbol}`}
-            title={workbenchLink.label}
-          >
-            <span className="truncate">{workbenchLink.isWorkbench ? "Deep dive" : "Opportunities"}</span>
-            <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
-          </Link>
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onToggleExpanded(row.id);
-            }}
-            className="pharos-focus-ring inline-flex items-center justify-center rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            aria-label={expanded ? `Hide ${row.symbol} yield history` : `Show ${row.symbol} yield history`}
-            aria-expanded={expanded}
-            aria-controls={`yield-row-${row.id}-details`}
-            title={expanded ? "Hide yield history" : "Show yield history"}
-          >
-            <ChevronDown
-              className={expanded ? "h-4 w-4 rotate-180 transition-transform" : "h-4 w-4 transition-transform"}
-            />
-          </button>
-        </div>
-      </div>
+        <TableCell className="whitespace-nowrap text-right">
+          <div className="flex items-center justify-end gap-1">
+            <Link
+              href={workbenchLink.href}
+              prefetch={false}
+              onClick={(event) => {
+                event.stopPropagation();
+                trackEvent("yield_row_action", {
+                  action: "deep_dive_opened",
+                  coin_id: row.id,
+                  warning_count: warningCount,
+                });
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") event.stopPropagation();
+              }}
+              className="pharos-focus-ring hidden items-center gap-1 rounded-full px-2 py-1 text-2xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground xl:inline-flex"
+              aria-label={`${workbenchLink.label} for ${row.symbol}`}
+              title={workbenchLink.label}
+            >
+              <span className="truncate">{workbenchLink.isWorkbench ? "Deep dive" : "Opportunities"}</span>
+              <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
+            </Link>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggleExpanded(row.id);
+              }}
+              className="pharos-focus-ring inline-flex items-center justify-center rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              aria-label={expanded ? `Hide ${row.symbol} yield history` : `Show ${row.symbol} yield history`}
+              aria-expanded={expanded}
+              aria-controls={`yield-row-${row.id}-details`}
+              title={expanded ? "Hide yield history" : "Show yield history"}
+            >
+              <ChevronDown
+                className={expanded ? "h-4 w-4 rotate-180 transition-transform" : "h-4 w-4 transition-transform"}
+              />
+            </button>
+          </div>
+        </TableCell>
+      </TableRow>
 
       {expanded ? (
-        <div id={`yield-row-${row.id}-details`} className="col-span-full">
-          <YieldExpandedDetails
-            row={row}
-            benchmark={resolvedBenchmark}
-            medianApy={medianApy}
-            availableSources={availableSources}
-            benchmarkReferenceText={benchmarkReferenceText}
-            stabilityPct={labels.stabilityPct}
-            breakdown={breakdown}
-            grade={grade}
-            safetyScore={safetyScore}
-            sourceRiskDrivers={sourceRiskDrivers}
-            altSourceCount={altSourceCount}
-            totalSourceCount={totalSourceCount}
-            onOpenSourceSheet={onOpenSourceSheet}
-          />
-        </div>
+        <TableRow rowIntent="static">
+          <TableCell colSpan={columnCount} className="p-0">
+            <div id={`yield-row-${row.id}-details`}>
+              <YieldExpandedDetails
+                row={row}
+                benchmark={resolvedBenchmark}
+                medianApy={medianApy}
+                availableSources={availableSources}
+                benchmarkReferenceText={benchmarkReferenceText}
+                stabilityPct={labels.stabilityPct}
+                breakdown={breakdown}
+                grade={grade}
+                safetyScore={safetyScore}
+                sourceRiskDrivers={sourceRiskDrivers}
+                altSourceCount={altSourceCount}
+                totalSourceCount={totalSourceCount}
+                onOpenSourceSheet={onOpenSourceSheet}
+              />
+            </div>
+          </TableCell>
+        </TableRow>
       ) : null}
-    </div>
+    </Fragment>
   );
 }
 
@@ -545,9 +415,11 @@ interface YieldInstrumentBoardProps {
   rangeEnd: number;
   total: number;
   expandedId: string | null;
+  highlightedRowId?: string | null;
   compareHas: (stablecoinId: string) => boolean;
   compareCanAdd: boolean;
   onPrefetch: (stablecoinId: string) => void;
+  onHoverRow?: (stablecoinId: string | null) => void;
   onToggleExpanded: (stablecoinId: string) => void;
   onOpenSourceSheet: (stablecoinId: string) => void;
   onToggleCompare: (stablecoinId: string) => void;
@@ -568,114 +440,120 @@ export function YieldInstrumentBoard({
   sortDirection,
   onToggleSort,
   pagination,
-  rangeStart,
-  rangeEnd,
-  total,
   expandedId,
+  highlightedRowId = null,
   compareHas,
   compareCanAdd,
   onPrefetch,
+  onHoverRow,
   onToggleExpanded,
   onOpenSourceSheet,
   onToggleCompare,
   emptyMessage,
 }: YieldInstrumentBoardProps) {
+  const getAriaSortValue = useCallback(
+    (key: YieldTableSortKey): "ascending" | "descending" | "none" => {
+      if (sortKey !== key) return "none";
+      return sortDirection === "asc" ? "ascending" : "descending";
+    },
+    [sortDirection, sortKey],
+  );
+
+  const columns = useMemo<readonly DataTableColumn<YieldTableSortKey>[]>(
+    () => [
+      { id: "rank", label: "#", className: "w-10 text-right" },
+      { id: "coin", label: "Coin", className: "min-w-[13rem]" },
+      {
+        id: "apy30d",
+        label: "APY 30d",
+        sortKey: "apy30d",
+        title: "30-day annual percentage yield",
+        className: "min-w-[8.5rem]",
+      },
+      {
+        id: "safetyScore",
+        label: "Safety",
+        sortKey: "safetyScore",
+        title: "Pharos Safety Grade and Score",
+        className: "min-w-[5.5rem]",
+      },
+      {
+        id: "pys",
+        label: "PYS",
+        sortKey: "pys",
+        headerAdornment: <MethodologyHint topic="pys" />,
+        title: "Pharos Yield Score: is this APY paying enough for the risk? Yield per unit of risk, not a recommendation",
+        className: "min-w-[8rem]",
+      },
+      { id: "source", label: "Source", className: "min-w-[11rem]" },
+      {
+        id: "tvl",
+        label: "TVL",
+        sortKey: "tvl",
+        title: "Total value locked in yield source",
+        className: "hidden text-right lg:table-cell",
+      },
+      {
+        id: "yieldStability",
+        label: "Stability",
+        sortKey: "yieldStability",
+        headerAdornment: <MethodologyHint topic="yieldStability" />,
+        title: "Yield stability over 30 days",
+        className: "hidden text-right lg:table-cell",
+      },
+      { id: "range30d", label: "30d Range", className: "hidden xl:table-cell" },
+      { id: "actions", label: "", className: "w-28 text-right" },
+    ],
+    [],
+  );
+
   return (
-    <div data-testid="yield-instrument-board" className="pharos-table-shell">
-      <div className="pharos-table-toolbar flex-row flex-wrap items-center justify-between">
-        <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Sort yield leaderboard">
-          {SORT_PILLS.map((pill) => {
-            const active = sortKey === pill.key;
-            return (
-              <button
-                type="button"
-                key={pill.key}
-                onClick={() => onToggleSort(pill.key)}
-                aria-pressed={active}
-                aria-label={`${pill.label} sort${active ? `, ${sortDirection}` : ""}`}
-                className={cn(
-                  "pharos-focus-ring rounded-full border px-2.5 py-1.5 text-xs font-medium transition-colors",
-                  active
-                    ? "border-foreground/20 bg-foreground text-background"
-                    : "border-border/70 bg-background/45 text-muted-foreground hover:text-foreground",
-                )}
-              >
-                <span>{pill.label}</span>
-                {active ? (
-                  sortDirection === "asc" ? (
-                    <ArrowUp className="ml-1 inline h-3 w-3" aria-label="ascending" />
-                  ) : (
-                    <ArrowDown className="ml-1 inline h-3 w-3" aria-label="descending" />
-                  )
-                ) : null}
-              </button>
-            );
-          })}
-        </div>
-        <div className="font-mono text-xs tabular-nums text-muted-foreground">
-          {rangeStart}-{rangeEnd} / {total}
-        </div>
-      </div>
-
-      {/* Grid header (lg+: the md tier relies on per-cell labels to stay legible) */}
-      <div className={BOARD_GRID_CLASS}>
-      <div className={cn(BOARD_SUBGRID_CLASS, "hidden border-b border-border/60 bg-background/45 px-3 py-2 lg:grid")}>
-        <HeaderCell label="#" className="justify-end" />
-        <HeaderCell label="Coin" />
-        <HeaderCell label="APY 30d" title="30-day annual percentage yield" />
-        <HeaderCell label="Safety" title="Pharos Safety Grade / Score" />
-        <HeaderCell
-          label="PYS"
-          adornment={<MethodologyHint topic="pys" />}
-          title="Pharos Yield Score: is this APY paying enough for the risk? Yield per unit of risk, not a recommendation"
-        />
-        <HeaderCell label="Source" />
-        <HeaderCell label="TVL" title="Total value locked in yield source" />
-        <HeaderCell
-          label="Stability"
-          adornment={<MethodologyHint topic="yieldStability" />}
-          title="Yield stability over 30 days"
-        />
-        <HeaderCell label="30d Range" className="hidden xl:flex" />
-        <HeaderCell label="" className="justify-end" />
-      </div>
-
+    <DataTableShell<YieldTableSortKey>
+      tableId="yield-instrument-board"
+      testId="yield-instrument-board"
+      columns={columns}
+      sort={{
+        sortKey,
+        sortDirection,
+        toggleSort: onToggleSort,
+        getAriaSortValue,
+      }}
+      stickyHeader
+      stickyMode="page"
+      pagination={pagination}
+      mobileScrollHint={false}
+      tableProps={{ "aria-label": "Yield leaderboard" }}
+    >
       {rows.length === 0 ? (
-        <div className="col-span-full px-3 py-12 text-center text-sm text-muted-foreground">
+        <DataTableEmptyRow colSpan={columns.length}>
           {emptyMessage ?? "No yield data available."}
-        </div>
+        </DataTableEmptyRow>
       ) : (
-        <>
-          {rows.map((row, index) => (
-            <YieldInstrumentRow
-              key={row.id}
-              row={row}
-              rank={pageStartIndex + index + 1}
-              logo={getLogoSrc(logos, row.id)}
-              riskFreeRate={riskFreeRate}
-              medianApy={medianApy}
-              scalingFactor={scalingFactor}
-              benchmarks={benchmarks}
-              methodologyVersion={methodologyVersion}
-              sourceClock={sourceClock}
-              expanded={expandedId === row.id}
-              isCompared={compareHas(row.id)}
-              compareDisabled={!compareHas(row.id) && !compareCanAdd}
-              onPrefetch={onPrefetch}
-              onToggleExpanded={onToggleExpanded}
-              onOpenSourceSheet={onOpenSourceSheet}
-              onToggleCompare={onToggleCompare}
-            />
-          ))}
-        </>
+        rows.map((row, index) => (
+          <YieldInstrumentRow
+            key={row.id}
+            row={row}
+            rank={pageStartIndex + index + 1}
+            logo={getLogoSrc(logos, row.id)}
+            riskFreeRate={riskFreeRate}
+            medianApy={medianApy}
+            scalingFactor={scalingFactor}
+            benchmarks={benchmarks}
+            methodologyVersion={methodologyVersion}
+            sourceClock={sourceClock}
+            expanded={expandedId === row.id}
+            highlighted={highlightedRowId === row.id}
+            isCompared={compareHas(row.id)}
+            compareDisabled={!compareHas(row.id) && !compareCanAdd}
+            columnCount={columns.length}
+            onPrefetch={onPrefetch}
+            onHoverRow={onHoverRow}
+            onToggleExpanded={onToggleExpanded}
+            onOpenSourceSheet={onOpenSourceSheet}
+            onToggleCompare={onToggleCompare}
+          />
+        ))
       )}
-      </div>
-
-      {pagination ? (
-        <div className="border-t border-border/70">
-          <TablePagination {...pagination} bordered={false} />
-        </div>
-      ) : null}
-    </div>
+    </DataTableShell>
   );
 }

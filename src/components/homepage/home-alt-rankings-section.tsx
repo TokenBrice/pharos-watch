@@ -1,43 +1,38 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import { RotateCcw, Star } from "lucide-react";
 
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { logosById } from "@/lib/logos";
 import { useDexLiquidityTable, usePegSummary, useReportCardsV9Table } from "@/hooks/api-hooks";
 import { usePinnedStablecoins } from "@/hooks/use-pinned-stablecoins";
 import { useCoinStates } from "@/hooks/use-coin-states";
-import { useHomeAltFilters } from "@/hooks/use-home-alt-filters";
+import { useHomeAltFilters, type HomeAltPegFilter, type HomeAltUniverse } from "@/hooks/use-home-alt-filters";
 import {
   buildHomepageCriticalViewModel,
   buildHomepageOptionalViewModel,
 } from "@/components/homepage/homepage-client-view-model";
 import { PegBrowseStrip } from "@/components/chart-primitives/peg-distribution-grid";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { StablecoinOverviewSkeleton } from "@/components/stablecoin-directory/stablecoin-overview-skeleton";
 import { ACTIVE_PEGS, pegCoinCount } from "@/lib/peg-landing";
 import { CLIENT_ACTIVE_IDS } from "@shared/lib/stablecoins/client-registry";
 import {
   CLIENT_ACTIVE_VARIANT_IDS,
   CLIENT_CORE_AGGREGATE_ACTIVE_IDS,
 } from "@shared/lib/stablecoins/aggregate-client-registry";
+import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
 import type { ColumnId } from "@/lib/column-visibility";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 
-const StablecoinTable = dynamic(() => import("@/components/stablecoin-directory/stablecoin-table").then((mod) => mod.StablecoinTable), {
-  loading: () => (
-    <div className="pharos-table-shell">
-      <Skeleton className="h-10 w-full" />
-      <div className="space-y-2 p-4">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <Skeleton key={i} className="h-9 w-full" />
-        ))}
-      </div>
-    </div>
-  ),
-});
+const StablecoinTable = dynamic(
+  () => import("@/components/stablecoin-directory/stablecoin-table").then((mod) => mod.StablecoinTable),
+  {
+    loading: () => <StablecoinOverviewSkeleton showToolbar />,
+  },
+);
 
 const HOME_ALT_DEFAULT_COLUMNS: readonly ColumnId[] = [
   "rank",
@@ -56,13 +51,37 @@ const HOME_ALT_DEFAULT_COLUMNS: readonly ColumnId[] = [
 ];
 const HOME_ALT_COLUMN_PREFERENCE_NAMESPACE = "pharos-home-alt-table-v3";
 
+const UNIVERSE_OPTIONS: readonly { value: HomeAltUniverse; label: string }[] = [
+  { value: "core", label: "Core" },
+  { value: "variants", label: "Variants" },
+  { value: "catalog", label: "All" },
+];
+
+const PEG_QUICK_FILTERS: readonly { value: HomeAltPegFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "usd-peg", label: "USD" },
+  { value: "fiat-non-usd-peg", label: "Non-USD" },
+  { value: "commodity-peg", label: "Commodity" },
+];
+
+// Authoritative unfreezable active coin IDs, precomputed once from the shared blacklist registry.
+const UNFREEZABLE_ACTIVE_IDS: ReadonlySet<string> = new Set(
+  [...CLIENT_ACTIVE_IDS].filter((id) => getResolvedBlacklistStatus(id) === false),
+);
+
 interface HomeAltRankingsSectionProps {
   titleId: string;
 }
 
 export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps) {
   const filters = useHomeAltFilters();
+  const activeUniverse: HomeAltUniverse = filters.activeUniverse ?? "core";
+  const activePeg: HomeAltPegFilter = filters.activePeg ?? "all";
   const [searchQuery, setSearchQuery] = useState("");
+  const [starredOnly, setStarredOnly] = useState(false);
+  const [alertsOnly, setAlertsOnly] = useState(false);
+  const [unfreezableOnly, setUnfreezableOnly] = useState(false);
+
   const stablecoinsQuery = useStablecoins();
   const pegSummaryQuery = usePegSummary();
   const dexLiquidityQuery = useDexLiquidityTable();
@@ -75,12 +94,50 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
   const pinned = usePinnedStablecoins();
   // Passive: chips read the peg/resolver/stress entries other homepage sections already load; this table fetches none.
   const coinStates = useCoinStates({ enabled: false }).byId;
-  const eligibleIds =
-    filters.activeUniverse === "core"
+
+  const universeEligibleIds =
+    activeUniverse === "core"
       ? CLIENT_CORE_AGGREGATE_ACTIVE_IDS
-      : filters.activeUniverse === "variants"
+      : activeUniverse === "variants"
         ? CLIENT_ACTIVE_VARIANT_IDS
         : CLIENT_ACTIVE_IDS;
+
+  const pinnedInUniverseCount = useMemo(
+    () => pinned.pinnedIds.filter((id) => universeEligibleIds.has(id)).length,
+    [pinned.pinnedIds, universeEligibleIds],
+  );
+
+  const alertEligibleIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const id of coinStates.keys()) ids.add(id);
+    for (const coin of pegSummaryData?.coins ?? []) {
+      if (coin.activeDepeg) ids.add(coin.id);
+    }
+    return ids;
+  }, [coinStates, pegSummaryData?.coins]);
+
+  const effectiveEligibleIds = useMemo(() => {
+    if (!starredOnly && !alertsOnly && !unfreezableOnly) return universeEligibleIds;
+    const pinnedSet = new Set(pinned.pinnedIds);
+    const filtered = new Set<string>();
+    for (const id of universeEligibleIds) {
+      if (starredOnly && !pinnedSet.has(id)) continue;
+      if (alertsOnly && !alertEligibleIds.has(id)) continue;
+      if (unfreezableOnly && !UNFREEZABLE_ACTIVE_IDS.has(id)) continue;
+      filtered.add(id);
+    }
+    return filtered;
+  }, [alertEligibleIds, alertsOnly, pinned.pinnedIds, starredOnly, unfreezableOnly, universeEligibleIds]);
+
+  const hasQuickFilters = activePeg !== "all" || starredOnly || alertsOnly || unfreezableOnly;
+
+  const handleClearFilters = useCallback(() => {
+    filters.setActivePeg?.("all");
+    setStarredOnly(false);
+    setAlertsOnly(false);
+    setUnfreezableOnly(false);
+    setSearchQuery("");
+  }, [filters]);
 
   const { reportCardMap } = useMemo(
     () => buildHomepageOptionalViewModel({ reportCardsData }),
@@ -92,10 +149,10 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
         stablecoinsData,
         pegSummaryData,
         reportCardMap,
-        eligibleIds,
+        eligibleIds: effectiveEligibleIds,
         filters: { activeFilters: filters.activeFilters, searchQuery },
       }),
-    [stablecoinsData, pegSummaryData, reportCardMap, eligibleIds, filters.activeFilters, searchQuery],
+    [stablecoinsData, pegSummaryData, reportCardMap, effectiveEligibleIds, filters.activeFilters, searchQuery],
   );
   const stablecoinsState = resolveQueryViewState({
     hasData: stablecoinsData !== undefined,
@@ -103,8 +160,9 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
     error: stablecoinsQuery.error,
     isEmpty: stablecoinsData?.peggedAssets.length === 0,
   });
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div className="space-y-1.5">
           <h2 id={titleId} className="pharos-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
@@ -112,15 +170,19 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
           </h2>
           {stablecoinsState === "unavailable" ? (
             <p className="text-sm text-muted-foreground">Stablecoin rankings are updating.</p>
+          ) : stablecoinsState === "loading" ? (
+            <p className="text-sm text-muted-foreground">
+              Compare market size, peg health, liquidity, and safety across the stablecoin market.
+            </p>
           ) : (
             <p className="text-sm text-muted-foreground">
               Showing <span className="pharos-numeric text-foreground">{filteredRowCount.toLocaleString("en-US")}</span>{" "}
-              {filters.activeUniverse === "core"
+              {activeUniverse === "core"
                 ? "core stablecoins and cash equivalents"
-                : filters.activeUniverse === "variants"
+                : activeUniverse === "variants"
                   ? "tracked variants, excluded from core market aggregates"
                   : "active catalog listings, with variants tracked separately"}{" "}
-              with market data — inactive lifecycle states excluded,{" "}
+              with market data. Inactive lifecycle states excluded,{" "}
               <Link
                 href="/screener/"
                 className="pharos-focus-ring rounded-sm underline decoration-dotted underline-offset-4 transition-colors hover:text-foreground"
@@ -131,29 +193,86 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
             </p>
           )}
         </div>
-        <ToggleGroup
-          type="single"
-          value={filters.activeUniverse}
-          onValueChange={(value) => {
-            if (value === "core" || value === "variants" || value === "catalog") {
-              filters.setActiveUniverse(value);
-            }
-          }}
-          variant="outline"
-          size="sm"
-          aria-label="Select stablecoin listing universe"
-        >
-          <ToggleGroupItem value="core">Core</ToggleGroupItem>
-          <ToggleGroupItem value="variants">Variants</ToggleGroupItem>
-          <ToggleGroupItem value="catalog">All</ToggleGroupItem>
-        </ToggleGroup>
+        <div role="group" aria-label="Select stablecoin listing universe" className="pharos-segmented">
+          {UNIVERSE_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              aria-pressed={activeUniverse === option.value}
+              onClick={() => filters.setActiveUniverse?.(option.value)}
+              className="pharos-focus-ring pharos-segmented-item min-h-11 sm:min-h-8"
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
       </header>
+
+      {/* In-place quick-filter row (Q7): peg cohort switch + triage toggle pills */}
+      <div className="flex flex-wrap items-center gap-2" aria-label="Quick table filters">
+        <div role="group" aria-label="Filter by peg currency" className="pharos-segmented">
+          {PEG_QUICK_FILTERS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              aria-pressed={activePeg === option.value}
+              onClick={() => filters.setActivePeg?.(option.value)}
+              className="pharos-focus-ring pharos-segmented-item min-h-11 px-2.5 sm:min-h-8 sm:px-3"
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            aria-pressed={starredOnly}
+            onClick={() => setStarredOnly((prev) => !prev)}
+            className="pharos-focus-ring pharos-control-pill min-h-11 gap-1.5 sm:min-h-8 sm:py-1.5"
+          >
+            <Star aria-hidden="true" className="h-3.5 w-3.5" />
+            <span>Starred</span>
+            <span className="pharos-numeric text-muted-foreground">({pinnedInUniverseCount})</span>
+          </button>
+
+          <button
+            type="button"
+            aria-pressed={alertsOnly}
+            onClick={() => setAlertsOnly((prev) => !prev)}
+            className="pharos-focus-ring pharos-control-pill min-h-11 sm:min-h-8 sm:py-1.5"
+          >
+            Active alerts
+          </button>
+
+          <button
+            type="button"
+            aria-pressed={unfreezableOnly}
+            onClick={() => setUnfreezableOnly((prev) => !prev)}
+            className="pharos-focus-ring pharos-control-pill min-h-11 sm:min-h-8 sm:py-1.5"
+          >
+            Unfreezable
+          </button>
+
+          {hasQuickFilters ? (
+            <button
+              type="button"
+              onClick={handleClearFilters}
+              className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground sm:min-h-8"
+            >
+              <RotateCcw aria-hidden="true" className="h-3.5 w-3.5" />
+              Clear filters
+            </button>
+          ) : null}
+        </div>
+      </div>
+
       {stablecoinsState !== "unavailable" ? (
         <StablecoinTable
           data={stablecoinsData?.peggedAssets}
           isLoading={isLoading}
           activeFilters={filters.activeFilters}
-          eligibleIds={eligibleIds}
+          eligibleIds={effectiveEligibleIds}
           logos={logos}
           pegScores={pegScores}
           coinStates={coinStates}
@@ -168,12 +287,12 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
           }}
           initialVisibleColumns={HOME_ALT_DEFAULT_COLUMNS}
           columnPreferenceNamespace={HOME_ALT_COLUMN_PREFERENCE_NAMESPACE}
-          showHeaderMethodologyHints={false}
           pinnedStablecoinIds={pinned.pinnedIds}
           onTogglePinnedStablecoin={pinned.togglePinned}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           onClearSearch={() => setSearchQuery("")}
+          onClearFilters={handleClearFilters}
           toolbarEyebrow=""
           toolbarDescription={null}
           toolbarVariant="figmaOverview"

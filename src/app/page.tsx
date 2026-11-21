@@ -69,8 +69,7 @@ export default async function HomePage() {
       <HomepageEvidenceProvider>
         <HomeAltHero snapshot={heroSnapshot} fallbackSelectedAtMs={HERO_FALLBACK_SELECTED_AT_MS} />
       </HomepageEvidenceProvider>
-      <HomeBlogBanner />
-      <HomeAltClient>
+      <HomeAltClient blogBanner={<HomeBlogBanner />}>
         <div className="mt-3 grid gap-3 sm:mt-4 lg:flex lg:gap-4">
           <HomeMediaStrip />
           <HomeApiStrip />

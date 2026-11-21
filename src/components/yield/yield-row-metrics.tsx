@@ -24,8 +24,25 @@ import type { PysBreakdownValues } from "@/lib/yield-row-display";
 
 // These presentational parts are chassis-agnostic: each returns inline content
 // (no `<TableCell>`/`<TableRow>` wrapper) so the yield instrument board can place
-// them inside its CSS-grid cells. The board owns the grid layout; these own the
+// them inside its table cells. The board owns the layout; these own the
 // per-metric rendering, tooltips, and accessible labels.
+
+/**
+ * Shorten verbose benchmark names for compact hero spread pills and leaderboard
+ * cells while preserving any trailing status suffix (`(fallback)`, `(13d old)`).
+ */
+export function formatCompactBenchmarkLabel(label: string): string {
+  const suffixMatch = label.match(/\s*(\([^)]+\))\s*$/);
+  const suffix = suffixMatch ? ` ${suffixMatch[1]}` : "";
+  const base = suffixMatch ? label.slice(0, suffixMatch.index).trim() : label.trim();
+
+  if (/^USD\s+3M\s+T-Bill$/i.test(base)) return `T-Bill${suffix}`;
+  const threeMonthMatch = base.match(/^([A-Z]{3})\s+3M\b/i);
+  if (threeMonthMatch) return `${threeMonthMatch[1].toUpperCase()} 3M${suffix}`;
+  const centralBankMatch = base.match(/^([A-Z]{3})\s+(?:cash-rate|Bank of Canada|policy|short rate|reference)/i);
+  if (centralBankMatch) return `${centralBankMatch[1].toUpperCase()} rate${suffix}`;
+  return `${base}${suffix}`;
+}
 
 export function ApyRangeBar({ currentApy, min, max }: { currentApy: number; min: number; max: number }) {
   const span = Math.max(0, max - min);
@@ -248,13 +265,14 @@ export function YieldSafetyBadge({
 }
 
 export function YieldSourceIdentity({
-  displayLabel, url, confidenceStyle, confidenceLabel, sourceChanged, onClick,
+  displayLabel, url, confidenceStyle, confidenceLabel, sourceChanged, quietConfidence = false, onClick,
 }: {
   displayLabel: string;
   url: string | null | undefined;
   confidenceStyle?: YieldSourceConfidenceStyle | null;
   confidenceLabel?: string | null;
   sourceChanged?: boolean;
+  quietConfidence?: boolean;
   onClick?: () => void;
 }) {
   return (
@@ -262,8 +280,17 @@ export function YieldSourceIdentity({
       <TableSourceLink href={url} className="min-w-0" iconClassName="h-3 w-3" stopPropagation onClick={onClick}>
         {displayLabel}
       </TableSourceLink>
-      {confidenceStyle && confidenceLabel ? (
-        <span className={confidenceStyle.pill} aria-label={`${confidenceLabel} confidence`}>{confidenceLabel}</span>
+      {confidenceLabel ? (
+        quietConfidence || !confidenceStyle ? (
+          <span
+            className="shrink-0 text-3xs font-medium text-muted-foreground"
+            aria-label={`${confidenceLabel} confidence`}
+          >
+            {confidenceLabel}
+          </span>
+        ) : (
+          <span className={confidenceStyle.pill} aria-label={`${confidenceLabel} confidence`}>{confidenceLabel}</span>
+        )
       ) : null}
       {sourceChanged ? (
         <span className={cn("shrink-0 rounded-full border px-1.5 py-0.5 text-3xs", SEVERITY_TONE_CLASS.sky.pill)}>
@@ -279,11 +306,13 @@ export function YieldSourceDetails({
   confidenceStyle,
   confidenceLabel,
   freshness,
+  quietConfidence = false,
 }: {
   row: YieldViewModelRow;
   confidenceStyle: YieldSourceConfidenceStyle | null;
   confidenceLabel: string | null;
   freshness: YieldSourceFreshnessDisplay | null;
+  quietConfidence?: boolean;
 }) {
   const depth = getYieldSourceDepthDisplay({
     depthLens: row.sourceDepthLens,
@@ -304,6 +333,7 @@ export function YieldSourceDetails({
           confidenceStyle={confidenceStyle}
           confidenceLabel={confidenceLabel}
           sourceChanged={row.provenance?.sourceSwitch}
+          quietConfidence={quietConfidence}
         />
       </div>
       {/* Line 2: freshness · source depth. Benchmark moved off-row (redundant per row):
@@ -376,27 +406,11 @@ export function YieldSignalsIndicator({
     );
   }
 
-  if (warningSignalCount === 0 && sourceRiskSummary) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            onClick={(event) => event.stopPropagation()}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") event.stopPropagation();
-            }}
-            className="inline-flex pharos-focus-ring"
-            aria-label={sourceRiskSummary}
-          >
-            <AlertTriangle className="h-4 w-4 text-state-warn-solid/70" />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent className="max-w-[260px] text-xs">
-          {sourceRiskSummary} (no warning signals)
-        </TooltipContent>
-      </Tooltip>
-    );
+  // On the desktop board, sourceRiskSummary is already rendered inline in the
+  // Source column, so suppress the Coin-column warning pill when there are no
+  // investment warning signals.
+  if (warningSignalCount === 0) {
+    return null;
   }
 
   return (
@@ -408,12 +422,18 @@ export function YieldSignalsIndicator({
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ") event.stopPropagation();
           }}
-          className="inline-flex pharos-focus-ring"
+          className={cn(
+            "pharos-focus-ring inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 font-mono text-3xs leading-none tabular-nums",
+            SEVERITY_TONE_CLASS.caution.pill,
+            warningSignalCount >= 2 ? "font-semibold" : "font-medium",
+          )}
           aria-label={`${warningSignalCount} warning signal${warningSignalCount > 1 ? "s" : ""}`}
         >
           <AlertTriangle
-            className={warningSignalCount >= 2 ? "h-4 w-4 fill-state-warn-solid/20 text-state-warn-solid" : "h-4 w-4 text-state-warn-solid"}
+            className={warningSignalCount >= 2 ? "h-3 w-3 shrink-0 fill-state-warn-solid/20" : "h-3 w-3 shrink-0"}
+            aria-hidden="true"
           />
+          <span>{warningSignalCount}</span>
         </button>
       </TooltipTrigger>
       <TooltipContent className="max-w-[300px]">

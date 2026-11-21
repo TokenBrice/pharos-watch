@@ -24,6 +24,8 @@ import {
   CALM_INNER_R,
   SPOKES,
   WAKE_PATH,
+  WATCH_DOT_RADIUS,
+  dewsLogoRadius,
   mcapDotRadius,
   resolveRadarClick,
   buildDewsSummaryViewModel,
@@ -31,6 +33,7 @@ import {
   type CalmDot,
   type ElevatedCoin,
 } from "@/components/dews/dews-summary-model";
+import { ChartTooltipSurface, TooltipRow } from "@/components/pharos-chart-tooltip";
 import { useSvgId } from "@/components/chart-primitives/axes";
 import { useMediaQuery } from "@/hooks/use-is-mobile";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
@@ -48,11 +51,6 @@ function DEWSCalmDot({ x, y }: CalmDot) {
   );
 }
 
-const DEWS_LOGO_SCALE_BY_BAND: Partial<Record<ElevatedCoin["band"], number>> = {
-  ALERT: 2.25,
-  WARNING: 2.7,
-  DANGER: 3.24,
-};
 const DEWS_DOT_KEY_ACTIONS: Record<string, 1 | -1 | "first" | "last"> = {
   ArrowRight: 1,
   ArrowDown: 1,
@@ -61,12 +59,6 @@ const DEWS_DOT_KEY_ACTIONS: Record<string, 1 | -1 | "first" | "last"> = {
   Home: "first",
   End: "last",
 };
-
-function dewsLogoRadius(coin: ElevatedCoin): number {
-  const scale = DEWS_LOGO_SCALE_BY_BAND[coin.band] ?? 1;
-  const baseR = mcapDotRadius(coin.mcap) ?? 8;
-  return baseR * scale;
-}
 
 function DEWSDot({
   coin,
@@ -94,13 +86,14 @@ function DEWSDot({
   const logoClipId = useSvgId("dews-logo");
   const prefersReducedMotion = usePrefersReducedMotion();
   const hex = THREAT_BAND_HEX[coin.band];
+  const isWatch = coin.band === "WATCH";
   const isHighTier = coin.band === "WARNING" || coin.band === "DANGER";
-  const showLogo = coin.band !== "WATCH" && Boolean(coin.logoUrl);
-  const dotR = mcapDotRadius(coin.mcap) ?? (isHighTier ? 9 : 6);
+  const showLogo = !isWatch && Boolean(coin.logoUrl);
+  const dotR = isWatch ? WATCH_DOT_RADIUS : (mcapDotRadius(coin.mcap) ?? (isHighTier ? 9 : 6));
   const logoR = showLogo ? dewsLogoRadius(coin) : dotR;
   const visualR = showLogo ? logoR : dotR;
   const logoInnerR = logoR * 0.75;
-  const glowR = visualR + 7;
+  const glowR = visualR + 6;
   const dur = pulseDuration(coin.band);
 
   return (
@@ -110,6 +103,7 @@ function DEWSDot({
       role="button"
       tabIndex={tabIndex}
       aria-label={ariaLabel}
+      data-dews-band={coin.band}
       style={{ cursor: "pointer" }}
       onMouseEnter={() => onHover(coin.id)}
       onMouseLeave={() => onHover(null)}
@@ -137,12 +131,12 @@ function DEWSDot({
       {isSelected && (
         <>
           <circle
-            r={visualR + 12}
+            r={visualR + 10}
             fill="none"
             stroke={hex}
             strokeWidth={2}
             strokeDasharray="4 2"
-            opacity={0.6}
+            opacity={0.65}
           >
             {!prefersReducedMotion && (
               <animateTransform
@@ -163,21 +157,24 @@ function DEWSDot({
           />
         </>
       )}
-      <circle
-        r={glowR}
-        fill={hex}
-        className="dews-glow-r"
-        style={{ animation: `dews-glow ${dur}s ease-in-out infinite` }}
-      />
-      {/* Confirmed-depeg halo: a double ring outside the glow. Binary state
-          from the peg summary, not a DEWS band — shape carries it so the
-          meaning does not rest on colour alone. */}
+      {!isWatch && (
+        <circle
+          r={glowR}
+          fill={hex}
+          className="dews-glow-r"
+          style={{ animation: `dews-glow ${dur}s ease-in-out infinite` }}
+        />
+      )}
+      {/* Confirmed-depeg halo: one crisp +4px ring around the mark so open
+          incidents stand out by shape without multi-ring visual smear. */}
       {isActiveDepeg && (
-        <>
-          <circle r={visualR + 9} fill="none" stroke="var(--color-background)" strokeWidth={3} />
-          <circle r={visualR + 9} fill="none" stroke={hex} strokeWidth={1.5} />
-          <circle r={visualR + 12.5} fill="none" stroke={hex} strokeWidth={1.5} strokeOpacity={0.55} />
-        </>
+        <circle
+          r={visualR + 4}
+          fill="none"
+          stroke={hex}
+          strokeWidth={1.75}
+          data-dews-depeg-ring=""
+        />
       )}
       {showLogo ? (
         <>
@@ -199,15 +196,19 @@ function DEWSDot({
           />
         </>
       ) : (
-        <circle r={dotR} fill={hex} fillOpacity={0.92} />
+        <circle r={dotR} fill={hex} fillOpacity={isWatch ? 0.9 : 0.92} data-dews-dot="" />
       )}
-      {/* Always-visible label: WARNING and DANGER only */}
+      {/* Always-visible label: WARNING and DANGER only, stroke-backed for legibility */}
       {isHighTier && (
         <text
-          y={-(logoR + 7)}
+          y={-(visualR + 7)}
           textAnchor="middle"
           dominantBaseline="auto"
           fill={hex}
+          stroke="var(--color-card)"
+          strokeWidth={3.5}
+          strokeLinejoin="round"
+          paintOrder="stroke"
           fontSize={10}
           fontWeight={700}
           fontFamily="var(--font-mono)"
@@ -221,52 +222,37 @@ function DEWSDot({
 
 function DEWSTooltip({ coin }: { coin: ElevatedCoin }) {
   const hex = THREAT_BAND_HEX[coin.band];
-  const W = 124;
-  const H = 60;
-  // Clamp so tooltip stays within viewBox; flip below the dot when near the top edge
-  const tx = Math.min(Math.max(coin.x + 14, 4), VB_W - W - 4);
-  const preferAbove = coin.y - H - 10 >= 4;
-  const ty = preferAbove ? coin.y - H - 10 : Math.min(coin.y + 14, VB_H - H - 4);
+  const leftPct = (coin.x / VB_W) * 100;
+  const topPct = (coin.y / VB_H) * 100;
+  const alignRight = coin.x > VB_W * 0.62;
+  const placeBelow = coin.y < VB_H * 0.28;
+  const tx = alignRight ? "calc(-100% - 12px)" : "12px";
+  const ty = placeBelow ? "10px" : "calc(-100% - 10px)";
 
   return (
-    <g pointerEvents="none">
-      <rect
-        x={tx}
-        y={ty}
-        width={W}
-        height={H}
-        rx={6}
-        fill="var(--color-popover)"
-        stroke="var(--color-border)"
-        strokeWidth={1}
-      />
-      <text
-        x={tx + 10}
-        y={ty + 16}
-        fill="var(--color-foreground)"
-        fontSize={11}
-        fontWeight={600}
-        fontFamily="var(--font-sans)"
-      >
-        {coin.symbol}
-      </text>
-      <text x={tx + 10} y={ty + 32} fill={hex} fontSize={10} fontWeight={600} fontFamily="var(--font-mono)">
-        {coin.band}
-      </text>
-      <text
-        x={tx + W - 10}
-        y={ty + 32}
-        fill="var(--color-muted-foreground)"
-        fontSize={10}
-        fontFamily="var(--font-mono)"
-        textAnchor="end"
-      >
-        {coin.score}/100
-      </text>
-      <text x={tx + 10} y={ty + 48} fill="var(--color-muted-foreground)" fontSize={9} fontFamily="var(--font-mono)">
-        {coin.mcap == null ? "Supply unavailable" : `${formatCompactUsd(coin.mcap)} cap`}
-      </text>
-    </g>
+    <ChartTooltipSurface
+      data-dews-tooltip=""
+      className="pointer-events-none absolute z-10 min-w-40 space-y-1.5"
+      style={{
+        left: `${leftPct.toFixed(2)}%`,
+        top: `${topPct.toFixed(2)}%`,
+        transform: `translate(${tx}, ${ty})`,
+      }}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs font-semibold text-foreground">{coin.symbol}</span>
+        <span className="font-mono text-2xs font-semibold" style={{ color: hex }}>
+          {coin.band}
+        </span>
+      </div>
+      <div className="space-y-0.5">
+        <TooltipRow label="DEWS" value={`${coin.score}/100`} color={hex} bold />
+        <TooltipRow
+          label="Market cap"
+          value={coin.mcap == null ? "Supply unavailable" : `${formatCompactUsd(coin.mcap)} cap`}
+        />
+      </div>
+    </ChartTooltipSurface>
   );
 }
 
@@ -443,7 +429,7 @@ function DEWSRadar({
       viewBox="0 0 560 500"
       width="100%"
       style={{ maxHeight }}
-      aria-label={`DEWS radar — ${elevated.length === 0 ? "all coins calm" : `${elevated.length} elevated, highest: ${highest}. Use arrow keys to navigate elevated coins.`}`}
+      aria-label={`DEWS radar: ${elevated.length === 0 ? "all coins calm" : `${elevated.length} elevated, highest: ${highest}. Use arrow keys to navigate elevated coins.`}`}
       aria-describedby={liveMessageId}
       // group, not img: the radar contains focusable role="button" blips, and
       // interactive descendants inside an img role are invalid (axe
@@ -544,13 +530,13 @@ function DEWSRadar({
           }}
         />
       ))}
+      <DEWSCenter highest={highest} totalCount={totalCount} sweepDur={dur} />
+      </svg>
       {hoveredId &&
         (() => {
           const hovered = elevated.find((c) => c.id === hoveredId);
           return hovered ? <DEWSTooltip coin={hovered} /> : null;
         })()}
-      <DEWSCenter highest={highest} totalCount={totalCount} sweepDur={dur} />
-      </svg>
     </div>
   );
 }
@@ -657,7 +643,10 @@ export function DEWSRadarPanel({ logos, className, activeDepegIds, maxHeight = 4
     return (
       <div className={cn("pharos-chart-stage flex flex-col", className)}>
         {reserveSpace ? (
-          <div className="relative mx-auto aspect-[560/500] w-full max-w-[582px]">
+          <div
+            className="relative mx-auto aspect-[560/500] w-full"
+            style={{ maxWidth: Math.round((maxHeight * VB_W) / VB_H) }}
+          >
             {isLoading ? (
               <div aria-busy="true" className="absolute inset-0 animate-pulse rounded-lg bg-muted" />
             ) : error && data == null ? (

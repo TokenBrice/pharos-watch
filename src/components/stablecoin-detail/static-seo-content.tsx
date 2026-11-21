@@ -56,7 +56,7 @@ import { stripTermMarkup } from "@/lib/term-markup";
 import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { getVariantAccessibleLabel, getVariantDisplay } from "@shared/lib/variant-display";
-import { ListingStateBanner } from "@/components/stablecoin-detail/listing-state-banner";
+import { ListingStateBanner, type ActivePeerOfframp } from "@/components/stablecoin-detail/listing-state-banner";
 import {
   getDisplayedVariantSiblings,
   SameTickerStablecoins,
@@ -68,6 +68,9 @@ interface StablecoinDetailSeoContentProps {
   /** Rendered after the dossier: skip the blocks the dossier and the FAQ below already carry. */
   afterDossier?: boolean;
   summary?: StablecoinAiSummary | null;
+  /** Active cohort peers surfaced as an off-ramp on quarantined profiles. */
+  activePeers?: readonly ActivePeerOfframp[];
+  logos?: Record<string, string>;
 }
 
 const LINK_PILL_CLASS =
@@ -581,6 +584,8 @@ export function StablecoinDetailSeoContent({
   includeHeading = true,
   afterDossier = false,
   summary = null,
+  activePeers,
+  logos,
 }: StablecoinDetailSeoContentProps) {
   const pegHref = buildPegLandingUrl(coin.flags.pegCurrency);
   const pegLabel = getProfilePegLabel(
@@ -758,7 +763,7 @@ export function StablecoinDetailSeoContent({
         </h1>
       ) : null}
 
-      <ListingStateBanner coin={coin} />
+      <ListingStateBanner coin={coin} activePeers={activePeers} logos={logos} />
 
       {afterDossier ? null : (
       <section aria-labelledby="stablecoin-identity-answer-title" className="pharos-card-shell px-4 py-4 sm:px-5">

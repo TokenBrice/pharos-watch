@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bell, Map as MapIcon } from "lucide-react";
+import { Bell, GitCompareArrows, Map as MapIcon, Network } from "lucide-react";
 import { AlertsHeaderLink } from "@/components/alerts-header-link";
 import { Button } from "@/components/ui/button";
 import { CalloutBanner } from "@/components/callout-banner";
@@ -30,10 +30,10 @@ const FAQ_ITEMS = [
   {
     question: "How are stablecoin safety grades calculated?",
     answer:
-      "Safety Score V10 combines three pillars: Backing, Exit, and Economic Control. Proven pipeline or public-curation gaps do not score: partial ratings use available evidence, while fewer than two available pillars shows Pipeline gap with no score or grade. Genuine rating withholds are shown as NR. Rated 0–100 scores map to A+ through F.",
+      "Safety Score combines three pillars: Backing, Exit, and Economic Control. Proven pipeline or public-curation gaps do not score: partial ratings use available evidence, while fewer than two available pillars shows Pipeline gap with no score or grade. Genuine rating withholds are shown as NR. Rated 0–100 scores map to A+ through F.",
   },
   {
-    question: "What do the three V10 pillars measure?",
+    question: "What do the three pillars measure?",
     answer:
       "Backing measures the quality and reliability of the assets supporting a stablecoin. Exit measures whether holders can leave at meaningful size through independent routes. Economic Control measures governance, issuance, transfer, and intervention powers that can affect holders.",
   },
@@ -50,7 +50,7 @@ const FAQ_ITEMS = [
   {
     question: "Why do most stablecoins receive a C grade?",
     answer:
-      "A C grade means the asset has meaningful weaknesses or evidence gaps in at least one V10 pillar. Strong backing alone cannot offset a weak exit route, concentrated economic control, or a binding structural cap.",
+      "A C grade means the asset has meaningful weaknesses or evidence gaps in at least one pillar. Strong backing alone cannot offset a weak exit route, concentrated economic control, or a binding structural cap.",
   },
 ] as const satisfies readonly FaqItem[];
 
@@ -71,15 +71,28 @@ export default function SafetyScoresPage() {
       methodology={{
         version: SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
         changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
+        docsPath: "/docs/report-cards/",
       }}
       header="instrument"
       headerActions={
         <>
-          {/* Server-rendered so the map stays crawlable from the homepage. */}
+          {/* Server-rendered so the map and sibling instruments stay crawlable. */}
           <Button asChild variant="outline" size="sm" className="min-h-11 rounded-full px-4 lg:min-h-9 lg:rounded-md">
             <Link href="/safety-scores/map/" aria-label="Map: every grade band as a single image">
               <MapIcon aria-hidden="true" />
               <span>Map</span>
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm" className="min-h-11 rounded-full px-4 lg:min-h-9 lg:rounded-md">
+            <Link href="/dependency-map/" aria-label="Dependency Map: inspect collateral and wrapper links">
+              <Network aria-hidden="true" />
+              <span>Dependencies</span>
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm" className="min-h-11 rounded-full px-4 lg:min-h-9 lg:rounded-md">
+            <Link href="/compare/" aria-label="Compare stablecoins side by side">
+              <GitCompareArrows aria-hidden="true" />
+              <span>Compare</span>
             </Link>
           </Button>
           <AlertsHeaderLink
@@ -109,7 +122,7 @@ export default function SafetyScoresPage() {
         Get notified when a safety grade changes.{" "}
         <Link
           href="/pharoswatchbot/#getting-started"
-          className="text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
+          className="text-foreground underline underline-offset-4 transition-colors hover:text-foreground/80"
         >
           Set up alerts&nbsp;&rarr;
         </Link>

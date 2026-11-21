@@ -257,7 +257,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
         <div className="flex shrink-0 items-center gap-2">
           {chartData.length > 1 ? (
             <div
-              className="inline-flex items-center rounded-md border border-border/50 bg-muted/35 p-0.5"
+              className="pharos-segmented"
               role="group"
               aria-label="DEWS chart mode"
             >
@@ -265,10 +265,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                 type="button"
                 aria-pressed={!showBreakdown}
                 onClick={() => setShowBreakdown(false)}
-                className={cn(
-                  "pharos-focus-ring min-h-11 rounded-sm px-3 py-2 text-2xs font-medium leading-none transition-colors md:h-6 md:min-h-0 md:px-2 md:py-1",
-                  !showBreakdown ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
-                )}
+                className="pharos-focus-ring pharos-segmented-item min-h-11 md:min-h-7 md:px-2.5"
               >
                 Composite
               </button>
@@ -276,10 +273,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                 type="button"
                 aria-pressed={showBreakdown}
                 onClick={() => setShowBreakdown(true)}
-                className={cn(
-                  "pharos-focus-ring min-h-11 rounded-sm px-3 py-2 text-2xs font-medium leading-none transition-colors md:h-6 md:min-h-0 md:px-2 md:py-1",
-                  showBreakdown ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
-                )}
+                className="pharos-focus-ring pharos-segmented-item min-h-11 md:min-h-7 md:px-2.5"
               >
                 Signal breakdown
               </button>

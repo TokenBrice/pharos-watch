@@ -35,6 +35,8 @@ function DistributionRow({
   legendLabel,
   segments,
   compact,
+  activeGrade,
+  onSelectGrade,
 }: {
   label: string | null;
   denominator: string | null;
@@ -42,7 +44,12 @@ function DistributionRow({
   legendLabel: string;
   segments: DistributionSegment[];
   compact: boolean;
+  activeGrade?: ReportCardGradeRange | null;
+  onSelectGrade?: (grade: ReportCardGradeRange) => void;
 }) {
+  const interactive = onSelectGrade !== undefined;
+  const hasSelection = activeGrade != null;
+
   return (
     <div className="space-y-2">
       {label ? (
@@ -53,40 +60,101 @@ function DistributionRow({
       ) : null}
       <div
         className={cn("flex w-full gap-0.5 overflow-hidden rounded-md bg-background/70", compact ? "h-8" : "h-10")}
-        role="img"
+        role={interactive ? "group" : "img"}
         aria-label={ariaLabel}
       >
-        {segments.map(({ grade, weight, title }, index) => (
-          <span
-            key={grade}
-            className={cn(
-              getSafetyGradeMetadata(grade).sectionSwatchClassName,
-              index === 0 && "rounded-l-md",
-              index === segments.length - 1 && "rounded-r-md",
-            )}
-            style={{ flexGrow: weight }}
-            title={title}
-            aria-hidden="true"
-          />
-        ))}
-      </div>
-      <ul className="flex flex-wrap items-center gap-x-4 gap-y-1.5" aria-label={legendLabel}>
-        {segments.map(({ grade, figure }) => (
-          <li key={grade} className="flex items-center gap-1.5">
-            <span
-              aria-hidden="true"
-              className={cn("h-2 w-2 rounded-sm", getSafetyGradeMetadata(grade).sectionSwatchClassName)}
+        {segments.map(({ grade, weight, figure, title }, index) => {
+          const isSelected = activeGrade === grade;
+          const swatchClass = getSafetyGradeMetadata(grade).sectionSwatchClassName;
+          const segmentClasses = cn(
+            swatchClass,
+            index === 0 && "rounded-l-md",
+            index === segments.length - 1 && "rounded-r-md",
+            interactive && "pharos-focus-ring cursor-pointer transition-opacity focus-visible:z-10",
+            interactive && hasSelection && !isSelected && "opacity-35 hover:opacity-75",
+            interactive && isSelected && "ring-2 ring-inset ring-foreground/80",
+          );
+
+          if (!interactive) {
+            return (
+              <span
+                key={grade}
+                className={segmentClasses}
+                style={{ flexGrow: weight }}
+                title={title}
+                aria-hidden="true"
+              />
+            );
+          }
+
+          return (
+            <button
+              key={grade}
+              type="button"
+              className={segmentClasses}
+              style={{ flexGrow: weight }}
+              title={`${title} (click to filter)`}
+              aria-label={`Filter by grade ${grade} (${figure})`}
+              aria-pressed={isSelected}
+              onClick={() => onSelectGrade(grade)}
             />
-            <span className="pharos-numeric text-sm font-bold text-foreground">{figure}</span>
-            <span className="text-3xs font-semibold uppercase text-muted-foreground">{grade}</span>
-          </li>
-        ))}
+          );
+        })}
+      </div>
+      <ul className="flex flex-wrap items-center gap-x-3 gap-y-1.5" aria-label={legendLabel}>
+        {segments.map(({ grade, figure, title }) => {
+          const isSelected = activeGrade === grade;
+          if (!interactive) {
+            return (
+              <li key={grade} className="flex items-center gap-1.5">
+                <span
+                  aria-hidden="true"
+                  className={cn("h-2 w-2 rounded-sm", getSafetyGradeMetadata(grade).sectionSwatchClassName)}
+                />
+                <span className="pharos-numeric text-sm font-bold text-foreground">{figure}</span>
+                <span className="text-3xs font-semibold uppercase text-muted-foreground">{grade}</span>
+              </li>
+            );
+          }
+
+          return (
+            <li key={grade}>
+              <button
+                type="button"
+                aria-pressed={isSelected}
+                aria-label={`Filter by grade ${grade}: ${figure}`}
+                title={`${title} (click to filter)`}
+                onClick={() => onSelectGrade(grade)}
+                className={cn(
+                  "pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-md px-1.5 py-1 transition-colors hover:bg-muted/60 sm:min-h-7 sm:py-0.5",
+                  isSelected && "bg-muted ring-1 ring-border",
+                  hasSelection && !isSelected && "opacity-60 hover:opacity-100",
+                )}
+              >
+                <span
+                  aria-hidden="true"
+                  className={cn("h-2 w-2 rounded-sm", getSafetyGradeMetadata(grade).sectionSwatchClassName)}
+                />
+                <span className="pharos-numeric text-sm font-bold text-foreground">{figure}</span>
+                <span className="text-3xs font-semibold uppercase text-muted-foreground">{grade}</span>
+              </button>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
 }
 
-function SupplyRow({ mix }: { mix: SafetyGradeSupplyMix }) {
+function SupplyRow({
+  mix,
+  activeGrade,
+  onSelectGrade,
+}: {
+  mix: SafetyGradeSupplyMix;
+  activeGrade?: ReportCardGradeRange | null;
+  onSelectGrade?: (grade: ReportCardGradeRange) => void;
+}) {
   const { supplyByGrade, totalSupply, observedCount, ratedCount } = mix;
   const unobservedCount = ratedCount - observedCount;
   const partial = observedCount > 0 && unobservedCount > 0;
@@ -126,6 +194,8 @@ function SupplyRow({ mix }: { mix: SafetyGradeSupplyMix }) {
         legendLabel="Grade distribution supply shares"
         segments={segments}
         compact
+        activeGrade={activeGrade}
+        onSelectGrade={onSelectGrade}
       />
       {partial ? (
         <p className="text-2xs text-muted-foreground">
@@ -147,11 +217,15 @@ export function SafetyGradeDistributionBar({
   totalCards,
   totalLabel = "assets",
   supplyMix,
+  activeGrade = null,
+  onSelectGrade,
 }: {
   gradeCounts: Partial<Record<ReportCardGradeRange, number>>;
   totalCards: number;
   totalLabel?: string;
   supplyMix?: SafetyGradeSupplyMix | null;
+  activeGrade?: ReportCardGradeRange | null;
+  onSelectGrade?: (grade: ReportCardGradeRange) => void;
 }) {
   const segments = GRADE_RANGES.flatMap((grade): DistributionSegment[] => {
     const count = gradeCounts[grade] ?? 0;
@@ -164,9 +238,13 @@ export function SafetyGradeDistributionBar({
   return (
     <div className="pharos-chart-stage">
       <div className={comparing ? "space-y-4" : "space-y-3"}>
-        <div className="flex items-baseline justify-between gap-3">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <p className="pharos-label">Grade distribution</p>
-          {comparing ? null : (
+          {onSelectGrade ? (
+            <p className="text-2xs text-muted-foreground">
+              {activeGrade ? `Filtered to Grade ${activeGrade}` : "Select a grade to filter"}
+            </p>
+          ) : comparing ? null : (
             <p className="pharos-numeric text-xs text-muted-foreground">
               {totalCards} {totalLabel}
             </p>
@@ -179,8 +257,16 @@ export function SafetyGradeDistributionBar({
           legendLabel="Grade distribution counts"
           segments={segments}
           compact={comparing}
+          activeGrade={activeGrade}
+          onSelectGrade={onSelectGrade}
         />
-        {supplyMix ? <SupplyRow mix={supplyMix} /> : null}
+        {supplyMix ? (
+          <SupplyRow
+            mix={supplyMix}
+            activeGrade={activeGrade}
+            onSelectGrade={onSelectGrade}
+          />
+        ) : null}
       </div>
     </div>
   );

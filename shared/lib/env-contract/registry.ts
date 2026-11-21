@@ -52,15 +52,6 @@ const ENV_BINDING_DEFINITIONS = [
     },
   },
   {
-    key: "NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY",
-    valueType: "string",
-    description: "Default-off mobile sticky compact summary; set to `true` to enable.",
-    example: { section: "frontend", value: "" },
-    runtimes: {
-      frontend: { status: "optional" },
-    },
-  },
-  {
     key: "NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER",
     valueType: "string",
     description: "Default-on Depeg Duration Resolver surfaces and inputs; set to `false` for the emergency rollback.",

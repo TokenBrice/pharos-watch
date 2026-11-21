@@ -6,6 +6,7 @@ import { ListFilter } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { HomeAltTrackerLink } from "@/components/homepage/home-alt-tracker-link";
+import { HomeSectionHeader } from "@/components/homepage/home-section-header";
 import { useDepegResolverSurfaces } from "@/hooks/use-depeg-resolver-surfaces";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
@@ -188,27 +189,23 @@ function ForecastRow({ item, logoSrc }: { item: ForecastItem; logoSrc: string | 
 
 function SectionHeader({ stat }: { stat: { value: number | null; label: string } }) {
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-start justify-between gap-3">
-        <p className="font-display text-2xl font-bold leading-tight text-foreground sm:text-3xl">
-          Depeg Duration Resolver
-        </p>
-        <div className="flex shrink-0 items-center gap-3 pt-1">
-          <span className="hidden text-sm text-muted-foreground sm:inline">
-            <span className="pharos-numeric font-semibold text-foreground">{stat.value ?? "—"}</span> {stat.label}
-          </span>
-          <span aria-hidden="true" className="hidden h-1 w-1 rounded-full bg-border sm:inline-block" />
-          <HomeAltTrackerLink
-            href="/depeg/"
-            prefetch={false}
-            ariaLabel="Open the depeg resolver tracker"
-          />
-        </div>
-      </div>
-      <p className="text-2xs leading-snug text-muted-foreground sm:text-sm">
-        Forecasts how long a depeg lasts &mdash; and whether it returns to peg.
-      </p>
-    </div>
+    <HomeSectionHeader
+      titleId="ddr-overview-title"
+      title="Depeg Duration Resolver"
+      subtitle="Forecasts how long a depeg lasts and whether it returns to peg."
+      stat={
+        <>
+          <span className="pharos-numeric font-semibold text-foreground">{stat.value ?? "—"}</span> {stat.label}
+        </>
+      }
+      action={
+        <HomeAltTrackerLink
+          href="/depeg/"
+          prefetch={false}
+          ariaLabel="Open the depeg resolver tracker"
+        />
+      }
+    />
   );
 }
 
@@ -414,10 +411,6 @@ export function HomeAltDdrOverview(): React.JSX.Element | null {
 
   return (
     <section aria-labelledby="ddr-overview-title" className="space-y-3 sm:space-y-4">
-      <h2 id="ddr-overview-title" className="sr-only">
-        Depeg Duration Resolver overview
-      </h2>
-
       <SectionHeader stat={stat} />
 
       <div className="pharos-card-shell overflow-hidden">

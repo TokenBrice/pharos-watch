@@ -3,6 +3,7 @@ import type * as PsiHistoryEvents from "@shared/lib/psi-events";
 import { getPsiEventScores } from "@shared/lib/psi-events";
 import { getConditionBand, PSI_COMPONENT_LIMITS, PSI_CONDITION_BANDS } from "@shared/lib/psi-policy";
 import {
+  buildFocusedPsiEventWindow,
   buildPsiComponentData,
   buildPsiBeamDimmers,
   buildPsiContributorRows,
@@ -221,5 +222,29 @@ describe("stability index view-model", () => {
       pressurePct: 0,
       role: "support",
     });
+  });
+
+  it("attaches internal case studies and slices focused event windows", () => {
+    const rows = buildPsiEventTimelineRows([]);
+    const svb = rows.find((row) => row.label === "SVB Weekend");
+    const ust = rows.find((row) => row.label === "UST Collapse");
+    expect(svb?.caseStudies.map((study) => study.href)).toEqual([
+      "/learn/case-studies/usdc-svb-2023/",
+      "/learn/case-studies/lusd-flight-to-safety-2023/",
+    ]);
+    expect(ust?.caseStudies.map((study) => study.href)).toEqual([
+      "/learn/case-studies/terra-ust-2022/",
+    ]);
+
+    const chartPoints = [
+      { ts: Date.UTC(2022, 0, 1), score: 90 },
+      { ts: Date.UTC(2023, 2, 1), score: 85 },
+      { ts: Date.UTC(2023, 2, 12), score: 35 },
+      { ts: Date.UTC(2023, 3, 1), score: 88 },
+      { ts: Date.UTC(2024, 0, 1), score: 94 },
+    ];
+    const focused = buildFocusedPsiEventWindow(chartPoints, svb ?? null);
+    expect(focused?.map((point) => point.score)).toEqual([85, 35, 88]);
+    expect(buildFocusedPsiEventWindow([{ ts: Date.UTC(2024, 0, 1), score: 94 }], svb ?? null)).toBeNull();
   });
 });

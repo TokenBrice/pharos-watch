@@ -261,7 +261,7 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
                 <ClampBadge
                   mode={mode}
                   label="USD fallback"
-                  tooltip="Benchmark resolved via USD fallback — score uses USD T-bill rate"
+                  tooltip="Benchmark resolved via USD fallback; score uses the USD 3M T-Bill benchmark"
                   toneClass={CLAMP_BADGE_AMBER_CLASS}
                   ariaLabel="Benchmark resolved via USD fallback"
                 />
@@ -273,7 +273,7 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
         {hurdleRebase !== 0 ? (
           <div
             className="flex items-baseline justify-between gap-3"
-            aria-label={`Plus USD hurdle re-base ${formatYieldApyDelta(hurdleRebase)} (USD risk-free rate minus ${benchmarkRefLabel}; equal excess over the local hurdle scores equally in every currency)`}
+            aria-label={`Plus USD hurdle re-base ${formatYieldApyDelta(hurdleRebase)} (USD 3M T-Bill benchmark minus ${benchmarkRefLabel}; equal excess over the local hurdle scores equally in every currency)`}
           >
             <span aria-hidden="true" className="flex items-center gap-1 text-muted-foreground">
               <span>+ USD hurdle re-base</span>
@@ -284,7 +284,7 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
                   </span>
                 </TooltipTrigger>
                 <TooltipContent className="max-w-[260px] text-2xs">
-                  {`USD risk-free rate minus ${benchmarkRefLabel}. Scores excess over the local hurdle on a USD footing instead of crediting the local policy rate as yield.`}
+                  {`USD 3M T-Bill benchmark minus ${benchmarkRefLabel}. Scores excess over the local hurdle on a USD footing instead of crediting the local policy rate as yield.`}
                 </TooltipContent>
               </Tooltip>
             </span>
@@ -302,7 +302,7 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
               <ClampBadge
                 mode={mode}
                 label="floor 0%"
-                tooltip="Addends sum to a negative yield — the methodology floors effective yield at 0%"
+                tooltip="Addends sum to a negative yield; the methodology floors effective yield at 0%"
                 toneClass={CLAMP_BADGE_AMBER_CLASS}
                 ariaLabel="Effective yield floored at 0%"
               />

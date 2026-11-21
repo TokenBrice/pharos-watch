@@ -61,13 +61,18 @@ vi.mock("@/hooks/api-hooks", () => ({
   },
 }));
 
+const useTimeRangeFilterSpy = vi.fn();
+
 vi.mock("@/hooks/use-time-range-filter", () => ({
-  useTimeRangeFilter: <T,>(data: T[]) => ({
-    range: "30d",
-    setRange: vi.fn(),
-    filteredData: data,
-    options: [{ value: "30d", label: "30d" }],
-  }),
+  useTimeRangeFilter: <T,>(data: T[], tsKey?: string, options?: unknown, config?: unknown) => {
+    useTimeRangeFilterSpy(tsKey, options, config);
+    return {
+      range: "30d",
+      setRange: vi.fn(),
+      filteredData: data,
+      options: [{ value: "30d", label: "30d" }],
+    };
+  },
 }));
 
 vi.mock("@/lib/logos", () => ({
@@ -234,7 +239,9 @@ describe("StabilityIndexClient", () => {
     reducedMotion = false;
     refetch.mockReset();
     fullHistoryQuery.mockReset();
+    useTimeRangeFilterSpy.mockReset();
     cachedFullHistoryData = undefined;
+    HTMLElement.prototype.scrollIntoView = vi.fn();
     stabilityState = {
       data: {
         current: {
@@ -349,5 +356,70 @@ describe("StabilityIndexClient", () => {
     render(<StabilityIndexClient />);
     expect(screen.getByRole("alert").textContent).toContain("psi down");
     expect(screen.queryByTestId("psi-beacon")).toBeNull();
+  });
+
+  it("renders KPI-left / Beacon-right split hero, 6-band Regime Scale, divergence note, Show inputs toggle, and 30D actionable dimmers", () => {
+    const { container } = render(<StabilityIndexClient />);
+
+    // FeatureHeroSplit renders KPI block before the Beacon in DOM order (KPI-left / Beacon-right).
+    const heroGroup = screen.getByRole("group", { name: "Pharos Stability Index overview" });
+    const kpiEl = heroGroup.querySelector(".pharos-hero-kpi");
+    const beaconEl = screen.getByTestId("psi-beacon");
+    expect(kpiEl).not.toBeNull();
+    expect(kpiEl!.compareDocumentPosition(beaconEl) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    // PsiBeacon hides duplicate component legend rows on /stability-index/.
+    const beaconLegend = screen.getByTestId("psi-beacon-legend").textContent ?? "";
+    expect(beaconLegend).toContain("instant");
+    expect(beaconLegend).toContain("24h avg");
+    expect(beaconLegend).not.toContain("stress breadth");
+
+    // 6-band Regime Scale and inline instant vs 24h avg band divergence explanation.
+    const scale = screen.getByTestId("psi-regime-scale");
+    for (const band of ["BEDROCK", "STEADY", "TREMOR", "FRACTURE", "CRISIS", "MELTDOWN"]) {
+      expect(scale.textContent).toContain(band);
+    }
+    expect(screen.getByTestId("psi-band-divergence-note").textContent).toContain("92.2 (BEDROCK)");
+    expect(screen.getByTestId("psi-band-divergence-note").textContent).toContain("89.4, STEADY");
+
+    // Beam dimmers default to 30D and expose live drill-down links.
+    expect(useTimeRangeFilterSpy).toHaveBeenCalledWith("ts", undefined, { initialRange: "30d" });
+    expect(screen.getByRole("link", { name: "Severity" }).getAttribute("href")).toMatch(/^\/depeg\/?$/);
+    expect(screen.getByRole("link", { name: "Breadth" }).getAttribute("href")).toMatch(/^\/depeg\/?$/);
+    expect(screen.getByRole("link", { name: "Stress breadth" }).getAttribute("href")).toMatch(/^\/depeg\/?#dews$/);
+    expect(screen.getByRole("link", { name: "Trend" }).getAttribute("href")).toMatch(/^\/flows\/?$/);
+
+    // ShowYourWorkToggle is present.
+    expect(screen.getByRole("button", { name: /show inputs/i })).toBeTruthy();
+
+    // Contributor row uses crisp driver badge (never verbatim "Open incident, counted by size").
+    expect(container.textContent).not.toContain("Open incident, counted by size");
+  });
+
+  it("focuses ScoreChart and links internal case studies when an event timeline row is clicked", () => {
+    render(<StabilityIndexClient />);
+
+    expect(
+      screen.getByRole("link", { name: /Case study: USDC and the Silicon Valley Bank weekend/i }).getAttribute("href"),
+    ).toMatch(/^\/learn\/case-studies\/usdc-svb-2023\/?$/);
+
+    const svbButton = screen.getByRole("button", { name: /SVB Weekend/i });
+    fireEvent.click(svbButton);
+    expect(svbButton.getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByTestId("psi-focused-event-banner").textContent).toContain("SVB Weekend");
+    expect(fullHistoryQuery).toHaveBeenLastCalledWith({ enabled: true });
+
+    fireEvent.click(screen.getByRole("button", { name: /clear focus/i }));
+    expect(screen.queryByTestId("psi-focused-event-banner")).toBeNull();
+  });
+
+  it("shows Breadth badge with Recovery pending cue for near-peg breadth-driven contributors", () => {
+    stabilityState.data!.current!.contributors = [
+      { id: "xaum-matrixdock", symbol: "XAUm", bps: 14, mcapUsd: 1_500_000_000, ageDays: 3, factor: 1 },
+    ];
+    stabilityState.data!.current!.totalMcapUsd = 300_000_000_000;
+    render(<StabilityIndexClient />);
+    expect(screen.getByText("Recovery pending")).toBeTruthy();
+    expect(screen.queryByText("Open incident, counted by size")).toBeNull();
   });
 });

@@ -39,7 +39,7 @@ export function FrozenStateBanner({ symbol, frozenAt, obituary }: FrozenStateBan
       </div>
       <h2
         id={epitaphId}
-        className="mt-4 text-2xl italic font-normal leading-snug text-foreground sm:text-[1.6rem]"
+        className="mt-4 border-l-2 border-border/70 pl-4 text-2xl font-normal italic leading-snug tracking-tight text-foreground sm:text-[1.6rem]"
       >
         &ldquo;{obituary.epitaph}&rdquo;
       </h2>
@@ -49,11 +49,11 @@ export function FrozenStateBanner({ symbol, frozenAt, obituary }: FrozenStateBan
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="pharos-label pharos-focus-ring mt-5 inline-flex items-center gap-1 hover:text-foreground"
+        className="pharos-label pharos-focus-ring mt-5 inline-flex min-h-11 items-center gap-1 hover:text-foreground sm:min-h-0"
         aria-expanded={expanded}
       >
         {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-        Read full obituary
+        {expanded ? "Hide full obituary" : "Read full obituary"}
       </button>
       {expanded ? (
         <div className="mt-4 space-y-4 border-t border-border/40 pt-4 text-[0.95rem] leading-relaxed text-foreground/85">

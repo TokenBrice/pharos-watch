@@ -124,4 +124,18 @@ describe("RailSafetySummary", () => {
     expect(pillars.querySelectorAll("li")).toHaveLength(3);
     expect(pillars.textContent).toContain("Economic Control");
   });
+
+  it("seeds three pillar-bar placeholders while the live card settles over a saved snapshot grade", () => {
+    const { container } = render(
+      <RailSafetySummary
+        items={signals({ grade: "B+", dews: "Calm" })}
+        gradeRead="pending"
+        card={null}
+      />,
+    );
+
+    const pendingBars = container.querySelector("[data-pillar-bars-pending]");
+    expect(pendingBars).not.toBeNull();
+    expect(pendingBars?.querySelectorAll("li")).toHaveLength(3);
+  });
 });

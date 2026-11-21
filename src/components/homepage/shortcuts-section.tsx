@@ -11,6 +11,17 @@ import { cn } from "@/lib/utils";
 
 const NAV_BY_HREF = new Map<string, NavItem>(NAV_ITEMS.map((item) => [item.href, item]));
 
+// Curated 6 primary tools shown in the default uncustomized view (Q6).
+// User-customized shortcut lists stay untouched in view & edit mode.
+const CURATED_PRIMARY_SHORTCUT_HREFS: readonly string[] = [
+  "/screener/",
+  "/compare/",
+  "/liquidity/",
+  "/chains/",
+  "/portfolio/",
+  "/dependency-map/",
+];
+
 function externalLinkProps(item: NavItem): { target?: string; rel?: string } {
   return item.external ? { target: "_blank", rel: "noopener noreferrer" } : {};
 }
@@ -104,22 +115,6 @@ export function ShortcutsSection(): JSX.Element {
     [hrefs],
   );
 
-  const desktopFillItems = useMemo(() => {
-    if (items.length >= DEFAULT_SHORTCUT_HREFS.length) return [];
-    const selected = new Set(items.map((item) => item.href));
-    return DEFAULT_SHORTCUT_HREFS.flatMap((href) => {
-      if (selected.has(href)) return [];
-      const item = NAV_BY_HREF.get(href);
-      return item ? [item] : [];
-    }).slice(0, DEFAULT_SHORTCUT_HREFS.length - items.length);
-  }, [items]);
-
-  // Destinations the user can still add (everything not already pinned).
-  const available = useMemo(() => {
-    const selected = new Set(hrefs);
-    return NAV_ITEMS.filter((item) => !selected.has(item.href));
-  }, [hrefs]);
-
   const isDefault = useMemo(
     () =>
       hrefs.length === DEFAULT_SHORTCUT_HREFS.length &&
@@ -127,16 +122,40 @@ export function ShortcutsSection(): JSX.Element {
     [hrefs],
   );
 
+  const visibleViewItems = useMemo(() => {
+    if (isDefault) {
+      return CURATED_PRIMARY_SHORTCUT_HREFS.flatMap((href) => NAV_BY_HREF.get(href) ?? []);
+    }
+    return items;
+  }, [isDefault, items]);
+
+  const desktopFillItems = useMemo(() => {
+    if (isDefault || visibleViewItems.length >= CURATED_PRIMARY_SHORTCUT_HREFS.length) return [];
+    const selected = new Set(visibleViewItems.map((item) => item.href));
+    return CURATED_PRIMARY_SHORTCUT_HREFS.flatMap((href) => {
+      if (selected.has(href)) return [];
+      const item = NAV_BY_HREF.get(href);
+      return item ? [item] : [];
+    }).slice(0, CURATED_PRIMARY_SHORTCUT_HREFS.length - visibleViewItems.length);
+  }, [isDefault, visibleViewItems]);
+
+  // Destinations the user can still add (everything not already pinned).
+  const available = useMemo(() => {
+    const selected = new Set(hrefs);
+    return NAV_ITEMS.filter((item) => !selected.has(item.href));
+  }, [hrefs]);
+
   return (
     <section aria-labelledby="shortcuts-title" className="space-y-2.5">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
         <h2 id="shortcuts-title" className="text-sm font-semibold text-foreground">
-          Explore <span className="font-normal text-muted-foreground">· your saved shortcuts</span>
+          Explore <span className="font-normal text-muted-foreground">· quick tools</span>
         </h2>
         <Button
           type="button"
           variant="ghost"
           size="sm"
+          className="min-h-11 sm:min-h-8"
           onClick={() => setEditing((value) => !value)}
           aria-pressed={editing}
         >
@@ -154,9 +173,9 @@ export function ShortcutsSection(): JSX.Element {
         </Button>
       </div>
 
-      {items.length === 0 && !editing ? (
+      {visibleViewItems.length === 0 && !editing ? (
         <p className="rounded-xl border border-dashed border-border/70 px-4 py-6 text-center text-sm text-muted-foreground">
-          No shortcuts yet — tap <span className="font-medium text-foreground">Edit</span> to add some.
+          No shortcuts yet. Tap <span className="font-medium text-foreground">Edit</span> to add some.
         </p>
       ) : editing ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -177,7 +196,7 @@ export function ShortcutsSection(): JSX.Element {
         // edge borders disappear and only the internal dividers read.
         <div className="overflow-hidden rounded-lg border border-border/60">
           <div className="-mb-px -mr-px grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
-            {items.map((item) => (
+            {visibleViewItems.map((item) => (
               <ShortcutLink key={item.href} item={item} />
             ))}
             {desktopFillItems.map((item) => (

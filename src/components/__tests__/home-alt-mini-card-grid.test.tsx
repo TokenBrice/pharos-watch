@@ -1,27 +1,35 @@
 // @vitest-environment jsdom
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
-import { renderToString } from "react-dom/server";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { HomeAltMiniCardGrid } from "@/components/homepage/home-alt-mini-card-grid";
+import { DailyDigestCard } from "@/components/home-alt-mini-cards/daily-digest-card";
 
 vi.mock("@/components/home-alt-mini-cards/active-depegs-card", () => ({ ActiveDepegsCard: () => <div data-testid="active-depegs-card" /> }));
-vi.mock("@/components/home-alt-mini-cards/mint-burn-card", () => ({ MintBurnCard: () => null }));
-vi.mock("@/components/home-alt-mini-cards/peg-health-card", () => ({ PegHealthCard: () => null }));
-vi.mock("@/components/home-alt-mini-cards/psi-band-card", () => ({ PsiBandCard: () => null }));
-vi.mock("@/components/home-alt-mini-cards/recent-freezes-card", () => ({ RecentFreezesCard: () => null }));
-vi.mock("@/components/home-alt-mini-cards/supply-moves-card", () => ({ SupplyMovesCard: () => null }));
+vi.mock("@/components/home-alt-mini-cards/mint-burn-card", () => ({ MintBurnCard: () => <div data-testid="mint-burn-card" /> }));
+vi.mock("@/components/home-alt-mini-cards/peg-health-card", () => ({ PegHealthCard: () => <div data-testid="peg-health-card" /> }));
+vi.mock("@/components/home-alt-mini-cards/psi-band-card", () => ({ PsiBandCard: () => <div data-testid="psi-band-card" /> }));
+vi.mock("@/components/home-alt-mini-cards/recent-freezes-card", () => ({ RecentFreezesCard: () => <div data-testid="recent-freezes-card" /> }));
+vi.mock("@/components/home-alt-mini-cards/supply-moves-card", () => ({ SupplyMovesCard: () => <div data-testid="supply-moves-card" /> }));
 vi.mock("@/lib/fonts/digest", () => ({ digestDisplay: { className: "digest-font" } }));
-// Open incidents set the grid order; the digest lane stays real.
-const market = vi.hoisted(() => ({ activeDepegCount: 0 }));
+
+const pegState = vi.hoisted(() => ({ data: undefined as unknown }));
 vi.mock("@/hooks/api-hooks", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/hooks/api-hooks")>()),
-  useHomepageSnapshot: () => ({ data: { incidents: { data: { activeDepegCount: market.activeDepegCount } } } }),
-  usePegSummary: () => ({ data: undefined }),
+  usePegSummary: () => ({ data: pegState.data, isLoading: false, error: null }),
+  useStabilityIndex: () => ({ data: undefined, isLoading: false, error: null, dataUpdatedAt: 0 }),
+}));
+vi.mock("@/hooks/use-mint-burn-flows", () => ({
+  useMintBurnFlows: () => ({ data: undefined, isLoading: false, error: null }),
+}));
+vi.mock("@/hooks/use-blacklist-events", () => ({
+  useBlacklistSummary: () => ({ data: undefined, isLoading: false, error: null }),
+}));
+vi.mock("@/hooks/use-stablecoins", () => ({
+  useStablecoins: () => ({ data: undefined, isLoading: false, error: null }),
 }));
 vi.mock("next/link", async () => {
-  // The helper must load inside the hoisted mock factory.
   const { createNextLinkMock } = await import("@/test-utils/frontend");
   return createNextLinkMock();
 });
@@ -36,93 +44,65 @@ const promo = {
   ],
 };
 
-function setupSlot(initialWidth: number) {
-  let width = initialWidth;
-  let publish: (() => void) | undefined;
-  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(() => width);
-  vi.stubGlobal("ResizeObserver", class {
-    constructor(callback: () => void) { publish = callback; }
-    observe() {}
-    disconnect() {}
-  });
-  const fetchMock = vi.fn(async (_input: string | URL | Request) => Response.json(promo));
-  vi.stubGlobal("fetch", fetchMock);
+function renderWithClient(ui: React.ReactElement) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   clients.push(client);
-  const tree = <QueryClientProvider client={client}><HomeAltMiniCardGrid /></QueryClientProvider>;
-  return {
-    tree, client, fetchMock,
-    resize(nextWidth: number) {
-      width = nextWidth;
-      act(() => publish?.());
-    },
-  };
+  return { client, ...render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>) };
 }
 
 afterEach(() => {
-  market.activeDepegCount = 0;
+  pegState.data = undefined;
   cleanup();
   for (const client of clients.splice(0)) client.clear();
   vi.restoreAllMocks();
-  vi.unstubAllGlobals();
 });
 
-describe("HomeAltMiniCardGrid digest visibility", () => {
-  it("keeps the desktop slot reserved on the server without mounting digest queries", () => {
-    const { tree, fetchMock } = setupSlot(400);
-    const html = renderToString(tree);
-    expect(html).toContain("@4xl:auto-rows-[322px]");
-    expect(html).toContain("hidden @4xl:col-span-1 @4xl:block");
-    expect(html).not.toContain("Daily Digest");
-    expect(fetchMock).not.toHaveBeenCalled();
+describe("HomeAltMiniCardGrid locked layout (Q6/Q7)", () => {
+  it("permanently places ActiveDepegsCard in Row 1 alongside PegHealth, PSI, and Mint/Burn without swapping", () => {
+    const view = renderWithClient(<HomeAltMiniCardGrid />);
+    const desktop = screen.getByTestId("desktop-pulse-bento");
+    const rows = desktop.querySelectorAll(":scope > div.grid");
+    expect(rows).toHaveLength(2);
+    expect(rows[0]!.firstElementChild?.getAttribute("data-testid")).toBe("active-depegs-card");
+    expect(rows[0]!.children[1]?.getAttribute("data-testid")).toBe("peg-health-card");
+    expect(rows[1]!.firstElementChild?.getAttribute("data-testid")).toBe("supply-moves-card");
+    expect(rows[1]!.lastElementChild?.getAttribute("data-testid")).toBe("recent-freezes-card");
+    expect(screen.getAllByTestId("active-depegs-card")).toHaveLength(1);
+    expect(screen.queryByText("Daily Digest")).toBeNull();
+    view.unmount();
   });
 
-  it("makes zero digest requests while CSS hides the slot and mounts only the bounded projection when shown", async () => {
-    const { tree, client, fetchMock, resize } = setupSlot(0);
-    const view = render(tree);
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(client.getQueryCache().getAll()).toHaveLength(0);
-    expect(screen.queryByText("Daily Digest")).toBeNull();
+  it("renders a dense mobile 2x2 KPI block with neutral unavailable placeholders", () => {
+    renderWithClient(<HomeAltMiniCardGrid />);
+    const mobile = screen.getByTestId("mobile-pulse-kpi-grid");
+    expect(mobile.textContent).toContain("Active depegs");
+    expect(mobile.textContent).toContain("Peg health");
+    expect(mobile.textContent).toContain("Stability Index");
+    expect(mobile.textContent).toContain("Mint / Burn");
+    expect(mobile.textContent).toContain("Updating");
+  });
+});
 
-    resize(400);
-    await waitFor(() => expect(client.getQueryState(["digest-promo"])?.status).toBe("success"));
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/api/digest-promo");
-    expect(client.getQueryState(["digest-archive"])).toBeUndefined();
-    expect(client.getQueryState(["daily-digest"])).toBeUndefined();
+describe("DailyDigestCard full-width editorial strip", () => {
+  it("renders the latest edition and dated prior archive leaves without clipping", () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    clients.push(client);
+    client.setQueryData(["digest-promo"], promo);
+    render(<QueryClientProvider client={client}><DailyDigestCard /></QueryClientProvider>);
+
+    expect(screen.getByRole("heading", { name: "Daily Digest" })).toBeTruthy();
     expect(screen.getByText(/Current headline/).textContent).toBe("#400 — Current headline");
-    // Prior leaves carry their edition date.
     expect(screen.getByText(/Previous headline/).textContent).toBe("Nov 14, 2023 · #399 — Previous headline");
     expect(screen.getByText(/Earlier headline/).textContent).toBe("Nov 14, 2023 · #398 — Earlier headline");
     expect(screen.getByText("Current excerpt.")).toBeTruthy();
-
-    resize(0);
-    expect(screen.queryByText("Daily Digest")).toBeNull();
-    expect(client.getQueryCache().find({ queryKey: ["digest-promo"] })?.getObserversCount()).toBe(0);
-    expect(Array.from(view.container.querySelectorAll("div")).some((node) => node.classList.contains("@4xl:auto-rows-[322px]"))).toBe(true);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("leads with Active depegs while incidents are open, never reordering", () => {
-    const { tree, client } = setupSlot(400);
-    const rows = (container: HTMLElement) => container.querySelectorAll("div.grid.gap-3");
-    const steady = render(tree);
-    market.activeDepegCount = 18;
-    // A later read never reorders a settled grid.
-    steady.rerender(<QueryClientProvider client={client}><HomeAltMiniCardGrid /></QueryClientProvider>);
-    expect(rows(steady.container)[1]!.lastElementChild?.getAttribute("data-testid")).toBe("active-depegs-card");
-    expect(rows(steady.container)[0]!.lastElementChild?.className).toContain("@4xl:col-span-1");
-    steady.unmount();
-    const [rowOne, rowTwo] = rows(render(tree).container);
-    expect(rowOne!.firstElementChild?.getAttribute("data-testid")).toBe("active-depegs-card");
-    expect(rowTwo!.lastElementChild?.className).toContain("@4xl:col-span-1");
-    expect(screen.getAllByTestId("active-depegs-card")).toHaveLength(1);
-  });
-
-  it("keeps unavailable current copy and blank prior leaves without fabricating archive titles", async () => {
-    const { tree, client } = setupSlot(400);
+  it("keeps unavailable current copy and blank prior leaves without fabricating archive titles", () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    clients.push(client);
     client.setQueryData(["digest-promo"], { latest: null, previousEditions: [] });
-    render(tree);
+    render(<QueryClientProvider client={client}><DailyDigestCard /></QueryClientProvider>);
+
     expect(screen.getByText("Read the latest edition on Telegram")).toBeTruthy();
     expect(screen.queryByText(/Previous headline/)).toBeNull();
     expect(screen.getByRole("link", { name: "Read on Telegram" })).toBeTruthy();

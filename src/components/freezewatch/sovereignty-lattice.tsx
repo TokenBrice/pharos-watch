@@ -104,12 +104,12 @@ export function SovereigntyLattice({ coverage, stats, chains, isLoading, error, 
         <div className="space-y-1">
           <p className="pharos-label">Sovereignty lattice</p>
           <h2 id="sovereignty-lattice-title" className="pharos-section-title">
-            Where issuers can freeze you — by stablecoin and chain
+            Where issuers can freeze balances, by stablecoin and chain
           </h2>
         </div>
         <p className="max-w-xl text-xs leading-relaxed text-muted-foreground">
           Each frosted cell is a contract Pharos actively watches for issuer freezes. Empty cells mean no coverage, not
-          no risk. Click a cell to filter the event ledger below.
+          no risk. Click a cell to filter the event ledger above.
         </p>
       </div>
 

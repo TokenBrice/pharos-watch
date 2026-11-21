@@ -126,9 +126,6 @@ export function useFreezeWatchPageController() {
   } = useStablecoins();
   const {
     data: reportCardsData,
-    isLoading: supportReportCardsLoading,
-    error: supportReportCardsError,
-    dataUpdatedAt: reportCardsUpdatedAt,
     refetch: refetchReportCards,
     meta: reportCardsMeta,
   } = useReportCardsV9Table();
@@ -153,6 +150,7 @@ export function useFreezeWatchPageController() {
   const previousStatusBucketRef = useRef<BlacklistStatusBucketKey | null>(statusBucket);
 
   const [searchInput, setSearchInput] = useState(() => searchQuery);
+  const [filtersClearedForAddressCheck, setFiltersClearedForAddressCheck] = useState(false);
   const searchSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [syncedSearchQuery, setSyncedSearchQuery] = useState(searchQuery);
@@ -198,7 +196,9 @@ export function useFreezeWatchPageController() {
     cursor: activeNavigation.cursors[activeNavigation.index],
     includeTotal: true,
   });
-  const error = summaryError ?? pageError ?? supportStablecoinsError ?? supportReportCardsError;
+  // Optional drilldown Safety Grades (`reportCards`) stay out of page-top error
+  // and freshness notices so an optional drilldown column cannot trigger a red alarm.
+  const error = summaryError ?? pageError ?? supportStablecoinsError;
   const freshnessQueries: StaleQuery[] = [
     {
       preset: "blacklist", label: "Blacklist summary", dataUpdatedAt: summaryUpdatedAt,
@@ -213,11 +213,6 @@ export function useFreezeWatchPageController() {
       preset: "stablecoins", label: "Supply", dataUpdatedAt: stablecoinsUpdatedAt,
       error: supportStablecoinsError, hasData: stablecoinData != null,
       isLoading: supportStablecoinsLoading, meta: stablecoinsMeta,
-    },
-    {
-      preset: "reportCards", dataUpdatedAt: reportCardsUpdatedAt,
-      error: supportReportCardsError, hasData: reportCardsData != null,
-      isLoading: supportReportCardsLoading, meta: reportCardsMeta,
     },
   ];
 
@@ -269,8 +264,26 @@ export function useFreezeWatchPageController() {
     previousStatusBucketRef.current = statusBucket;
   }, [statusBucket]);
 
+  const hasConflictingAddressFilters =
+    stablecoinFilter !== "all" ||
+    chainFilter !== "all" ||
+    eventTypeFilter !== "all" ||
+    sortKey !== "date" ||
+    sortDirection !== "desc" ||
+    page > 1;
+
+  const hasActiveLedgerFilters =
+    stablecoinFilter !== "all" ||
+    chainFilter !== "all" ||
+    eventTypeFilter !== "all" ||
+    sortKey !== "date" ||
+    sortDirection !== "desc" ||
+    searchInput.trim().length > 0 ||
+    searchQuery.trim().length > 0;
+
   const handleStablecoinChange = useCallback(
     (v: BlacklistStablecoin | "all") => {
+      setFiltersClearedForAddressCheck(false);
       trackEvent("filter_applied", { page: "freezewatch", filter_type: "stablecoin", filter_value: v });
       updateFilters({ stablecoinFilter: v });
     },
@@ -279,6 +292,7 @@ export function useFreezeWatchPageController() {
 
   const handleChainChange = useCallback(
     (v: string) => {
+      setFiltersClearedForAddressCheck(false);
       trackEvent("filter_applied", { page: "freezewatch", filter_type: "chain", filter_value: v });
       updateFilters({ chainFilter: v });
     },
@@ -287,6 +301,7 @@ export function useFreezeWatchPageController() {
 
   const handleLatticeSelection = useCallback(
     ({ stablecoin, chainId }: { stablecoin: BlacklistStablecoin; chainId: string }) => {
+      setFiltersClearedForAddressCheck(false);
       trackEvent("filter_applied", { page: "freezewatch", filter_type: "stablecoin", filter_value: stablecoin });
       trackEvent("filter_applied", { page: "freezewatch", filter_type: "chain", filter_value: chainId });
       updateFilters({ stablecoinFilter: stablecoin, chainFilter: chainId });
@@ -296,6 +311,7 @@ export function useFreezeWatchPageController() {
 
   const handleEventTypeChange = useCallback(
     (v: BlacklistEventType | "all") => {
+      setFiltersClearedForAddressCheck(false);
       trackEvent("filter_applied", { page: "freezewatch", filter_type: "event_type", filter_value: v });
       updateFilters({ eventTypeFilter: v });
     },
@@ -305,6 +321,7 @@ export function useFreezeWatchPageController() {
   const handleSearchChange = useCallback(
     (v: string) => {
       setSearchInput(v);
+      if (!v.trim()) setFiltersClearedForAddressCheck(false);
       if (searchSyncTimer.current) clearTimeout(searchSyncTimer.current);
       searchSyncTimer.current = setTimeout(() => {
         trackSearch("freezewatch", v.length);
@@ -314,8 +331,74 @@ export function useFreezeWatchPageController() {
     [],
   );
 
+  const runUnfilteredAddressCheck = useCallback(
+    (rawAddress: string) => {
+      const trimmed = rawAddress.trim();
+      if (searchSyncTimer.current) {
+        clearTimeout(searchSyncTimer.current);
+        searchSyncTimer.current = null;
+      }
+      setSearchInput(rawAddress);
+      const shouldClear = hasConflictingAddressFilters;
+      setFiltersClearedForAddressCheck(shouldClear && trimmed.length > 0);
+      if (page > 1) {
+        setNavigation({ key: ledgerKey, cursors: [undefined], index: 0 });
+      }
+      if (trimmed.length > 0) {
+        trackSearch("freezewatch", trimmed.length);
+      }
+      updateFilters({
+        searchQuery: trimmed,
+        ...(shouldClear
+          ? {
+              stablecoinFilter: "all",
+              chainFilter: "all",
+              eventTypeFilter: "all",
+              sortKey: "date",
+              sortDirection: "desc",
+            }
+          : {}),
+      });
+    },
+    [hasConflictingAddressFilters, ledgerKey, page, updateFilters],
+  );
+
+  const handleHeroAddressChange = useCallback(
+    (v: string) => {
+      if (isCompleteAddress(v) && hasConflictingAddressFilters) {
+        runUnfilteredAddressCheck(v);
+        return;
+      }
+      handleSearchChange(v);
+    },
+    [handleSearchChange, hasConflictingAddressFilters, runUnfilteredAddressCheck],
+  );
+
+  const handleHeroAddressSubmit = useCallback(() => {
+    runUnfilteredAddressCheck(searchInput);
+  }, [runUnfilteredAddressCheck, searchInput]);
+
+  const handleResetFilters = useCallback(() => {
+    if (searchSyncTimer.current) {
+      clearTimeout(searchSyncTimer.current);
+      searchSyncTimer.current = null;
+    }
+    setSearchInput("");
+    setFiltersClearedForAddressCheck(false);
+    setNavigation({ key: ledgerKey, cursors: [undefined], index: 0 });
+    updateFilters({
+      stablecoinFilter: "all",
+      chainFilter: "all",
+      eventTypeFilter: "all",
+      sortKey: "date",
+      sortDirection: "desc",
+      searchQuery: "",
+    });
+  }, [ledgerKey, updateFilters]);
+
   const handleSortChange = useCallback(
     (nextSortKey: BlacklistSortKey, nextSortDirection: BlacklistSortDirection) => {
+      setFiltersClearedForAddressCheck(false);
       trackEvent("sort_changed", {
         page: "freezewatch",
         sort_by: `${nextSortKey}:${nextSortDirection}`,
@@ -382,7 +465,7 @@ export function useFreezeWatchPageController() {
     reportCardMap,
     reportCardsMethodologyVersion: reportCardsData?.safetyScoreIdentity?.methodologyVersion ?? null,
     blacklistStatusBuckets,
-    supportDataLoading: supportStablecoinsLoading || supportReportCardsLoading,
+    supportDataLoading: supportStablecoinsLoading,
     refetchSummary,
     refetchPage,
     refetchSupport,
@@ -402,11 +485,17 @@ export function useFreezeWatchPageController() {
       && pageMeta != null && pageMeta.status !== "stale" && pageData.totalExact !== false,
     events,
     drilldownRef,
+    hasActiveLedgerFilters,
+    hasConflictingAddressFilters,
+    filtersClearedForAddressCheck,
     handleStablecoinChange,
     handleChainChange,
     handleLatticeSelection,
     handleEventTypeChange,
     handleSearchChange,
+    handleHeroAddressChange,
+    handleHeroAddressSubmit,
+    handleResetFilters,
     handleSortChange,
     handleStatusBucketChange,
     handleStatusBucketClear,

@@ -1,5 +1,8 @@
+// @vitest-environment jsdom
+
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
 import type { DepegEventEntry } from "@shared/types/peg";
 
 const { EVENTS } = vi.hoisted(() => {
@@ -28,7 +31,7 @@ const { EVENTS } = vi.hoisted(() => {
       { ...base, id: 6, slug: "legacy-event", symbol: "USDT", peakDeviationBps: 1_500, startedAt: 1_784_000_000, provenance: null },
       { ...base, id: 7, slug: "unattributed-event", symbol: "GYD", peakDeviationBps: 1_500, startedAt: 1_784_000_000 },
       { ...base, id: 8, slug: "retired-event", stablecoinId: "bean-beanstalk", symbol: "BEAN", peakDeviationBps: 2_400, startedAt: 1_784_000_000 },
-      { ...base, id: 9, slug: "catalog-event", symbol: "USDC", peakDeviationBps: 1_100, startedAt: 1_784_000_000 },
+      { ...base, id: 9, slug: "catalog-event", symbol: "USDC", direction: "above" as const, peakDeviationBps: 1_100, startedAt: 1_784_000_000 },
     ] satisfies readonly DepegEventEntry[],
   };
 });
@@ -95,5 +98,36 @@ describe("depeg event archive badges", () => {
       expect(row).toContain("text-3xs");
       expect(row).toContain('<span class="hidden sm:inline">View page </span>→');
     }
+  });
+});
+
+describe("depeg event archive filters", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("filters archive rows by coin search, direction and severity while keeping SSR list complete", () => {
+    render(<DepegEventArchive />);
+    expect(screen.getAllByRole("link")).toHaveLength(9);
+
+    const directionGroup = screen.getByRole("group", { name: "Filter archive by direction" });
+    fireEvent.click(within(directionGroup).getByRole("button", { name: "Above peg" }));
+    expect(screen.getAllByRole("link")).toHaveLength(1);
+    expect(screen.getByRole("link").getAttribute("href")).toBe("/depeg/catalog-event");
+
+    fireEvent.click(within(directionGroup).getByRole("button", { name: "Below peg" }));
+    expect(screen.getAllByRole("link")).toHaveLength(8);
+
+    const severityGroup = screen.getByRole("group", { name: "Filter archive by severity" });
+    fireEvent.click(within(severityGroup).getByRole("button", { name: "50%+" }));
+    expect(screen.getAllByRole("link")).toHaveLength(2);
+
+    const searchInput = screen.getByLabelText("Search archived depeg events by coin symbol");
+    fireEvent.change(searchInput, { target: { value: "EURm" } });
+    expect(screen.getAllByRole("link")).toHaveLength(1);
+    expect(screen.getByRole("link").getAttribute("href")).toBe("/depeg/false-positive-event");
+
+    fireEvent.click(screen.getByRole("button", { name: /Clear filters/i }));
+    expect(screen.getAllByRole("link")).toHaveLength(9);
   });
 });

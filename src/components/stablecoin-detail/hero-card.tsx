@@ -1,21 +1,50 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { IntentLink } from "@/components/intent-link";
-import { ArrowLeftRight, ArrowRight, Bell, BookOpen, Flag } from "lucide-react";
+import {
+  ArrowLeftRight,
+  ArrowRight,
+  ArrowUpRight,
+  Bell,
+  BookOpen,
+  Check,
+  ChevronDown,
+  Copy,
+  ExternalLink,
+  Flag,
+  MoreHorizontal,
+  Plus,
+  Star,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
 import { ShareButton } from "@/components/share-button";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { StablecoinIdentityTransition } from "@/components/view-transitions";
 import { STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE } from "@/components/stablecoin-detail/constants";
+import { copyText } from "@/lib/clipboard";
+import { buildComparePrefillUrl } from "@/lib/compare-links";
 import { formatDataHealthTimestamp } from "@/lib/data-health";
 import { useHydrated } from "@/hooks/use-hydrated";
+import { usePortfolio } from "@/hooks/use-portfolio";
+import { useWatchlist } from "@/hooks/use-watchlist";
 import { formatRelativeAgeSeconds } from "@shared/lib/relative-time";
-import { formatShortDate } from "@shared/lib/format";
+import { formatCurrency, formatShortDate } from "@shared/lib/format";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
+import { buildStablecoinUrl } from "@shared/lib/urls";
+import { hasStaticYieldWorkbench } from "@shared/lib/yield-auto-lending";
 import { buildSafetyVerdictLine } from "@/lib/stablecoin-detail-hero-metrics";
+import type { HeroPassportItemViewModel } from "@/lib/stablecoin-detail-passport";
 import { cn } from "@/lib/utils";
 import type { HeroCardViewModel, HeroTertiaryMetricViewModel } from "@/lib/stablecoin-detail-view-model";
 import {
@@ -36,14 +65,21 @@ interface HeroCardProps {
    * the Backing KPI. It takes the fourth hero cell for coins without native yield.
    */
   keyMetric?: HeroTertiaryMetricConfig | null;
+  /**
+   * Static reviewed redeemability access model computed server-side so the
+   * passport renders immediately while the live redemption lane settles.
+   */
+  initialRedeemability?: HeroPassportItemViewModel | null;
 }
 
 /**
  * The fourth hero figure is chosen by what the coin is, never a fixed slot:
  * 1Y vs USD for non-dollar pegs; otherwise native yield vs T-bill for
  * yield-bearing and NAV tokens; otherwise the mechanism's headline (collateral
- * ratio); otherwise the live depeg warning. "30d Excess" on a coin that pays no
- * yield (it measured a third-party venue) is never shown in the hero.
+ * ratio); otherwise the live depeg warning (hidden at `xl` where the right rail
+ * owns DEWS so the desktop hero stays a clean 3-column grid). "30d Excess" on a
+ * coin that pays no yield (it measured a third-party venue) is never shown in
+ * the hero.
  */
 function resolveFourthMetric(
   model: HeroCardViewModel,
@@ -101,26 +137,222 @@ function toMetricConfig(metric: HeroTertiaryMetricViewModel): HeroTertiaryMetric
     value: renderMetricValue(metric),
     subValue: metric.display.sub,
     colorClass: metric.display.color,
+    // At xl the right rail's RailSafetySummary already displays DEWS, so the
+    // desktop hero collapses cleanly to its 3-column market grid instead of
+    // repeating DEWS in the same fold.
+    ...(metric.key === "dews" ? { railTwin: true } : {}),
   };
 }
 
-/**
- * The ShareButton (the row's one menu trigger) is an outline Button with its
- * own drop shadow and surface; beside the hero's pill actions it takes their
- * border, surface, ink, padding and flat elevation, so the row reads as one set.
- */
-const SHARE_BUTTON_MATCH_CLASS =
-  "[&>[aria-haspopup=menu]]:border-border/70 [&>[aria-haspopup=menu]]:bg-card [&>[aria-haspopup=menu]]:px-3 [&>[aria-haspopup=menu]]:text-foreground/85 [&>[aria-haspopup=menu]]:shadow-none";
+const PORTFOLIO_PRESET_AMOUNTS = [1_000, 10_000, 50_000] as const;
 
-/**
- * The dossier's one identity header, at every width: logo, ticker and name
- * (plus the variant chip), the one-line description and, below `xl`, the
- * captioned grade with its one-line reason; then the labelled actions
- * (Alerts · Compare · Share) and the quiet Report-a-data-issue control. No
- * external rating sits beside the Pharos grade. At `xl` the summary rail
- * owns the grade. Rendered by the detail page above the content/rail grid
- * (not inside HeroCard) so the rail top-aligns with the card.
- */
+function HeroPortfolioAction({
+  coinId,
+  coinSymbol,
+  triggerClassName,
+}: {
+  coinId: string;
+  coinSymbol: string;
+  triggerClassName: string;
+}) {
+  const hydrated = useHydrated();
+  const portfolio = usePortfolio("");
+  const [open, setOpen] = useState(false);
+  const [amountInput, setAmountInput] = useState("10000");
+
+  const existing = hydrated ? portfolio.holdings.find((holding) => holding.coinId === coinId) ?? null : null;
+
+  function handleOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen);
+    if (nextOpen) {
+      setAmountInput(existing ? String(existing.amount) : "10000");
+    }
+  }
+
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const parsed = Number(amountInput.replaceAll(",", "").trim());
+    if (!Number.isFinite(parsed) || parsed <= 0) return;
+    if (existing) portfolio.setAmount(coinId, parsed);
+    else portfolio.addCoin(coinId, parsed);
+    setOpen(false);
+  }
+
+  return (
+    <Popover open={open} onOpenChange={handleOpenChange}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={triggerClassName}
+          aria-label={existing ? `Edit ${coinSymbol} in portfolio` : `Add ${coinSymbol} to portfolio`}
+        >
+          {existing ? (
+            <Check className="size-4 shrink-0 text-state-positive" aria-hidden="true" />
+          ) : (
+            <Plus className="size-4 shrink-0" aria-hidden="true" />
+          )}
+          <span>{existing ? "In portfolio" : "Portfolio"}</span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-72 space-y-3 p-3.5">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-semibold text-foreground">
+            {existing ? `${coinSymbol} in portfolio` : `Add ${coinSymbol} to portfolio`}
+          </p>
+          <IntentLink
+            href="/portfolio/"
+            className="pharos-focus-ring inline-flex items-center gap-0.5 rounded-sm text-xs font-medium text-brand-accent-text underline-offset-2 hover:underline"
+          >
+            Open
+            <ArrowUpRight className="size-3" aria-hidden="true" />
+          </IntentLink>
+        </div>
+        {existing ? (
+          <p className="text-xs text-muted-foreground">
+            Current position: <span className="font-mono font-medium tabular-nums text-foreground">{formatCurrency(existing.amount)}</span>
+          </p>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Track {coinSymbol} in your browser-local portfolio to see weighted safety and collateral exposure.
+          </p>
+        )}
+        <div className="flex flex-wrap gap-1.5">
+          {PORTFOLIO_PRESET_AMOUNTS.map((preset) => (
+            <button
+              key={preset}
+              type="button"
+              onClick={() => setAmountInput(String(preset))}
+              className={cn(
+                "pharos-focus-ring rounded-md border px-2 py-1 font-mono text-xs tabular-nums transition-colors",
+                Number(amountInput) === preset
+                  ? "border-border bg-muted text-foreground"
+                  : "border-border/60 bg-background text-muted-foreground hover:border-border hover:text-foreground",
+              )}
+            >
+              ${preset >= 1000 ? `${preset / 1000}k` : preset}
+            </button>
+          ))}
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-2.5">
+          <label className="block space-y-1">
+            <span className="pharos-label block">USD amount</span>
+            <input
+              type="number"
+              min="0"
+              step="any"
+              inputMode="decimal"
+              value={amountInput}
+              onChange={(event) => setAmountInput(event.target.value)}
+              aria-label={`${coinSymbol} position in USD`}
+              className="pharos-focus-ring h-9 w-full rounded-md border border-border/70 bg-background px-2.5 font-mono text-sm tabular-nums text-foreground"
+            />
+          </label>
+          <div className="flex items-center gap-2">
+            <Button type="submit" size="sm" className="flex-1">
+              {existing ? "Update holding" : "Add to portfolio"}
+            </Button>
+            {existing ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  portfolio.removeCoin(coinId);
+                  setOpen(false);
+                }}
+              >
+                Remove
+              </Button>
+            ) : null}
+          </div>
+        </form>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function HeroAlertsAction({
+  coinId,
+  coinSymbol,
+  triggerClassName,
+}: {
+  coinId: string;
+  coinSymbol: string;
+  triggerClassName: string;
+}) {
+  const [copied, setCopied] = useState(false);
+  const subscribeCommand = `/subscribe dews, depeg, safety ${coinId}`;
+  const deepLink = `https://t.me/PharosWatchBot?startapp=coin_${coinId}`;
+
+  useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => setCopied(false), 2000);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
+
+  async function handleCopy() {
+    const result = await copyText(subscribeCommand);
+    if (result.ok) setCopied(true);
+  }
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={triggerClassName}
+          aria-label={`Alerts: get Telegram alerts for ${coinSymbol} depegs and risk changes`}
+        >
+          <Bell className="size-4 shrink-0" aria-hidden="true" />
+          <span>Alerts</span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-80 space-y-3 p-3.5">
+        <div className="space-y-1">
+          <p className="text-sm font-semibold text-foreground">Telegram alerts for {coinSymbol}</p>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Get DEWS stress, depeg, and safety grade changes directly in @PharosWatchBot.
+          </p>
+        </div>
+        <div className="flex items-center gap-1.5 rounded-md border border-border/60 bg-muted/40 p-2">
+          <code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-xs text-foreground">
+            {subscribeCommand}
+          </code>
+          <button
+            type="button"
+            onClick={() => void handleCopy()}
+            aria-label={copied ? "Copied subscribe command" : "Copy subscribe command"}
+            className="pharos-focus-ring inline-flex size-7 shrink-0 items-center justify-center rounded-md border border-border/60 bg-card text-muted-foreground transition-colors hover:border-border hover:text-foreground"
+          >
+            {copied ? (
+              <Check className="size-3.5 text-state-positive" aria-hidden="true" />
+            ) : (
+              <Copy className="size-3.5" aria-hidden="true" />
+            )}
+          </button>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+          <a
+            href={deepLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="pharos-focus-ring inline-flex min-h-9 items-center gap-1.5 rounded-md border border-border/70 bg-card px-3 text-xs font-medium text-foreground transition-colors hover:border-border hover:bg-muted/60"
+          >
+            <span>Open in @PharosWatchBot</span>
+            <ExternalLink className="size-3.5" aria-hidden="true" />
+          </a>
+          <IntentLink
+            href="/pharoswatchbot/#getting-started"
+            className="pharos-focus-ring rounded-sm text-xs font-medium text-brand-accent-text underline-offset-2 hover:underline"
+          >
+            Setup guide
+          </IntentLink>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 /**
  * Neutral provenance for the dossier: when the detail snapshot was produced. Never
  * colored; material staleness is the page's public health banner, not this stamp.
@@ -150,6 +382,15 @@ function HeroUpdatedStamp({ updatedAtMs, dailySnapshot = false, className }: {
   );
 }
 
+/**
+ * The dossier's one identity header, at every width: logo, ticker and name
+ * (plus the variant chip), the one-line description and, below `xl`, the
+ * captioned grade with its one-line reason; then the holder action bar
+ * (Watch, Portfolio, Alerts, split Compare, optional Yield workbench, Share,
+ * overflow menu). No external rating sits beside the Pharos grade. At `xl` the
+ * summary rail owns the grade. Rendered by the detail page above the
+ * content/rail grid (not inside HeroCard) so the rail top-aligns with the card.
+ */
 export function HeroIdentityHeader({
   heading,
   model,
@@ -158,6 +399,7 @@ export function HeroIdentityHeader({
   updatedAtMs = 0,
   dailySnapshot = false,
   hasSummary = false,
+  opsStatusSlot = null,
 }: {
   /** The page's h1 text: `{name} ({SYMBOL})`, or the name alone when they match. */
   heading?: string;
@@ -174,15 +416,25 @@ export function HeroIdentityHeader({
    * on a phone the one-liner yields its two lines to the metrics.
    */
   hasSummary?: boolean;
+  /** Consolidated secondary refresh-status chip rendered beside the update stamp. */
+  opsStatusSlot?: ReactNode;
 }) {
   const { coin, logoSrc, header, reportCard, verdict, variantParent, variantChipClass } = model;
+  const hydrated = useHydrated();
+  const watchlist = useWatchlist();
+  const watched = hydrated && watchlist.has(coin.id);
+  const activeCoin = isActiveStablecoinMeta(coin);
+  const showYieldWorkbench = hasStaticYieldWorkbench(coin);
   const verdictId = model.state || isHeroVerdictShown(verdict) ? `hero-verdict-${coin.id}` : null;
   const verdictLine = buildSafetyVerdictLine(reportCard);
-  // Labelled actions: what a holder does next (alerts, compare, share), then
-  // the quiet report-issue control. Resource links live in Key links.
-  // One row at every width: only the compare label gives way (truncates).
+  const comparePrefillHref = buildComparePrefillUrl([coin.id]);
+  // Holder action pills share one border, surface and height across the bar.
   const labelledActionClass =
     "pharos-focus-ring inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border border-border/70 bg-card px-3 text-sm font-medium text-foreground/85 transition-colors hover:border-border hover:bg-muted/60 hover:text-foreground lg:min-h-9 lg:rounded-md";
+  const splitCompareLeadClass =
+    "pharos-focus-ring inline-flex min-h-11 min-w-0 shrink items-center gap-1.5 rounded-l-full border border-border/70 bg-card pl-3 pr-2.5 text-sm font-medium text-foreground/85 transition-colors hover:border-border hover:bg-muted/60 hover:text-foreground lg:min-h-9 lg:rounded-l-md";
+  const splitCompareCaretClass =
+    "pharos-focus-ring inline-flex min-h-11 w-10 shrink-0 items-center justify-center rounded-r-full border border-l-0 border-border/70 bg-card text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 hover:text-foreground lg:min-h-9 lg:w-8 lg:rounded-r-md";
   const iconActionClass =
     "pharos-focus-ring inline-flex size-11 shrink-0 items-center justify-center rounded-full border border-border/70 bg-card text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 hover:text-foreground lg:size-9 lg:rounded-md";
 
@@ -252,37 +504,97 @@ export function HeroIdentityHeader({
         ) : null}
       </div>
       <div className="flex shrink-0 flex-col gap-2 lg:items-end">
-        <div className={cn("flex items-center gap-2", SHARE_BUTTON_MATCH_CLASS)}>
-          {isActiveStablecoinMeta(coin) ? (
-            <IntentLink
-              href="/pharoswatchbot/#getting-started"
-              className={labelledActionClass}
-              aria-label={`Alerts: get Telegram alerts for ${coin.symbol} depegs and risk changes`}
-            >
-              <Bell className="size-4" aria-hidden="true" />
-              <span>Alerts</span>
-            </IntentLink>
-          ) : null}
-          <IntentLink
-            href={header.compareHref}
-            className={cn(labelledActionClass, "min-w-0 shrink")}
-            aria-label={header.benchmarkSymbol ? `Compare ${coin.symbol} vs ${header.benchmarkSymbol}` : `Compare ${coin.symbol}`}
-          >
-            <ArrowLeftRight className="size-4 shrink-0" aria-hidden="true" />
-            <span className="truncate">{header.benchmarkSymbol ? `vs ${header.benchmarkSymbol}` : "Compare"}</span>
-          </IntentLink>
-          <ShareButton stablecoinId={header.coinId} label="Share" datedScorecard={reportCard?.ratingStatus === "rated"} />
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 lg:justify-end">
           <button
             type="button"
-            onClick={onOpenFeedback}
-            className={iconActionClass}
-            aria-label="Report a data issue"
-            title="Report a data issue"
+            onClick={() => watchlist.toggle(coin.id)}
+            aria-pressed={watched}
+            aria-label={watched ? `Remove ${coin.symbol} from watchlist` : `Watch ${coin.symbol}`}
+            className={labelledActionClass}
           >
-            <Flag className="size-4" aria-hidden="true" />
+            <Star
+              className={cn("size-4 shrink-0", watched && "fill-state-warn-solid text-state-warn-solid")}
+              aria-hidden="true"
+            />
+            <span>{watched ? "Watching" : "Watch"}</span>
           </button>
+          {activeCoin ? (
+            <HeroPortfolioAction coinId={coin.id} coinSymbol={coin.symbol} triggerClassName={labelledActionClass} />
+          ) : null}
+          {activeCoin ? (
+            <HeroAlertsAction coinId={coin.id} coinSymbol={coin.symbol} triggerClassName={labelledActionClass} />
+          ) : null}
+          <div className="inline-flex min-w-0 shrink items-center">
+            <IntentLink
+              href={header.compareHref}
+              className={splitCompareLeadClass}
+              aria-label={header.benchmarkSymbol ? `Compare ${coin.symbol} vs ${header.benchmarkSymbol}` : `Compare ${coin.symbol}`}
+            >
+              <ArrowLeftRight className="size-4 shrink-0" aria-hidden="true" />
+              <span className="truncate">{header.benchmarkSymbol ? `vs ${header.benchmarkSymbol}` : "Compare"}</span>
+            </IntentLink>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className={splitCompareCaretClass}
+                  aria-label={`More compare options for ${coin.symbol}`}
+                >
+                  <ChevronDown className="size-4" aria-hidden="true" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {header.benchmarkSymbol ? (
+                  <DropdownMenuItem asChild>
+                    <IntentLink href={header.compareHref}>
+                      Compare {coin.symbol} vs {header.benchmarkSymbol}
+                    </IntentLink>
+                  </DropdownMenuItem>
+                ) : null}
+                <DropdownMenuItem asChild>
+                  <IntentLink href={comparePrefillHref}>
+                    Live compare with…
+                  </IntentLink>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          {showYieldWorkbench ? (
+            <IntentLink
+              href={buildStablecoinUrl(coin.id, "yield/")}
+              className={labelledActionClass}
+              aria-label={`Open ${coin.symbol} yield workbench`}
+            >
+              <span>Yield workbench</span>
+              <ArrowUpRight className="size-3.5 shrink-0" aria-hidden="true" />
+            </IntentLink>
+          ) : null}
+          <ShareButton stablecoinId={header.coinId} label="Share" datedScorecard={reportCard?.ratingStatus === "rated"} />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className={iconActionClass}
+                aria-label="More actions"
+                title="More actions"
+              >
+                <MoreHorizontal className="size-4" aria-hidden="true" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={onOpenFeedback}>
+                <Flag className="size-4" aria-hidden="true" />
+                <span>Report a data issue</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-        <HeroUpdatedStamp updatedAtMs={updatedAtMs} dailySnapshot={dailySnapshot} className="lg:text-right" />
+        {opsStatusSlot || updatedAtMs > 0 ? (
+          <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+            {opsStatusSlot}
+            <HeroUpdatedStamp updatedAtMs={updatedAtMs} dailySnapshot={dailySnapshot} className="lg:text-right" />
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -321,7 +633,7 @@ function HeroCaseStudyCallout({ callout }: { callout: NonNullable<HeroCardViewMo
   );
 }
 
-export function HeroCard({ model, keyMetric = null }: HeroCardProps) {
+export function HeroCard({ model, keyMetric = null, initialRedeemability = null }: HeroCardProps) {
   const {
     coin,
     coinData,
@@ -350,6 +662,17 @@ export function HeroCard({ model, keyMetric = null }: HeroCardProps) {
     market,
     peg,
   };
+  const hasLiveRedeemability = model.passportItems.some((item) => item.key === "redeemability");
+  const useInitialRedeemability =
+    !hasLiveRedeemability && initialRedeemability != null && model.passportPendingKeys.includes("redeemability");
+  const passportItems = useInitialRedeemability
+    ? model.passportItems.length > 0 && model.passportItems[0]!.key === "mechanism"
+      ? [model.passportItems[0]!, initialRedeemability, ...model.passportItems.slice(1)]
+      : [initialRedeemability, ...model.passportItems]
+    : model.passportItems;
+  const passportPendingKeys = useInitialRedeemability
+    ? model.passportPendingKeys.filter((key) => key !== "redeemability")
+    : model.passportPendingKeys;
 
   return (
     <Card className="pharos-card-shell gap-0 py-0">
@@ -359,7 +682,7 @@ export function HeroCard({ model, keyMetric = null }: HeroCardProps) {
         {...sectionBaseProps}
         fourthMetric={fourth}
       />
-      <HeroPassportStrip items={model.passportItems} pendingKeys={model.passportPendingKeys} compactDesktop />
+      <HeroPassportStrip items={passportItems} pendingKeys={passportPendingKeys} compactDesktop />
       {model.caseStudyCallout ? <HeroCaseStudyCallout callout={model.caseStudyCallout} /> : null}
     </Card>
   );

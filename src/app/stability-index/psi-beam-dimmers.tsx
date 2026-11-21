@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer, YAxis } from "recharts";
 import { DateTooltip, TimeXAxis } from "@/components/chart-primitives/axes";
 import { MethodologyLabel } from "@/components/methodology-hint";
@@ -21,6 +23,13 @@ const METHODOLOGY_TOPICS = {
   stressBreadth: "psiStressBreadth",
   trend: "psiTrend",
 } as const;
+
+const LANE_DRILLDOWN_HREF: Record<PsiBeamDimmerKey, string> = {
+  severity: "/depeg/",
+  breadth: "/depeg/",
+  stressBreadth: "/depeg/#dews",
+  trend: "/flows/",
+};
 
 // Beam-dimmer tone language, shared by the pressure-bar fallback and the
 // sparkline stroke: severity=red, breadth=orange, stressBreadth=amber,
@@ -75,7 +84,12 @@ export function PsiBeamDimmers({
   columns?: 2 | 4;
   density?: "default" | "compact";
 }) {
-  const { range, setRange, filteredData, options } = useTimeRangeFilter(series ?? [], "ts");
+  const { range, setRange, filteredData, options } = useTimeRangeFilter(
+    series ?? [],
+    "ts",
+    undefined,
+    { initialRange: "30d" },
+  );
   const reducedMotion = usePrefersReducedMotion({ ssrDefault: true });
   const [shouldAnimate, setShouldAnimate] = useState(true);
   const handleAnimationEnd = useCallback(() => setShouldAnimate(false), []);
@@ -90,20 +104,28 @@ export function PsiBeamDimmers({
 
   const gridClass =
     columns === 2
-      ? cn("grid sm:grid-cols-2", isCompact ? "gap-2.5" : "gap-3")
-      : cn("grid md:grid-cols-2 xl:grid-cols-4", isCompact ? "gap-2.5" : "gap-3");
+      ? "grid grid-cols-1 divide-y divide-border/50 sm:grid-cols-2 sm:divide-y-0"
+      : "grid grid-cols-1 divide-y divide-border/50 sm:grid-cols-2 sm:divide-y-0 xl:grid-cols-4";
 
   return (
-    <section aria-labelledby="psi-beam-dimmers-heading">
-      <div className={cn("flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5", isCompact ? "mb-2.5" : "mb-3")}>
+    <section
+      aria-labelledby="psi-beam-dimmers-heading"
+      className="pharos-card-shell overflow-hidden"
+    >
+      <div
+        className={cn(
+          "flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border/50",
+          isCompact ? "px-4 py-3" : "px-5 py-4 sm:px-6",
+        )}
+      >
         <div className="min-w-0">
-          <p id="psi-beam-dimmers-heading" className="pharos-label">
+          <h2 id="psi-beam-dimmers-heading" className="pharos-label">
             Beam dimmers · component pressure &amp; trend
-          </p>
-          <p className="mt-0.5 max-w-md text-2xs leading-snug text-muted-foreground">
+          </h2>
+          <p className="mt-0.5 max-w-xl text-2xs leading-snug text-muted-foreground">
             {hasTrend
-              ? "Each panel spans its component's full published range; height is pressure."
-              : "Values from the current PSI sample — not a causal timeline."}
+              ? "Each panel spans its component's full published range; height is pressure. Click a component to inspect its source monitor."
+              : "Values from the current PSI sample, not a causal timeline."}
           </p>
         </div>
         {hasTrend ? (
@@ -122,26 +144,53 @@ export function PsiBeamDimmers({
         {lanes.map((lane, index) => {
           const stroke = laneStrokeHex(lane);
           const gradientId = `psi-dimmer-grad-${lane.key}`;
+          const cellDividerClass =
+            columns === 2
+              ? cn(
+                  index % 2 === 1 && "sm:border-l sm:border-border/50",
+                  index >= 2 && "sm:border-t sm:border-border/50",
+                )
+              : cn(
+                  index % 2 === 1 && "sm:border-l sm:border-border/50",
+                  index >= 2 && "sm:border-t sm:border-border/50 xl:border-t-0",
+                  index > 0 && "xl:border-l xl:border-border/50",
+                );
+
           return (
-            <div key={lane.key} className={cn("rounded-lg border border-border/70 bg-muted/20", isCompact ? "p-2.5" : "p-3")}>
+            <div
+              key={lane.key}
+              className={cn(
+                "min-w-0",
+                isCompact ? "p-3.5" : "p-4 sm:p-5",
+                cellDividerClass,
+              )}
+            >
               <div className="flex items-start justify-between gap-3">
-                <div>
-                  <MethodologyLabel topic={METHODOLOGY_TOPICS[lane.key]}>
-                    {lane.label}
+                <div className="min-w-0">
+                  <MethodologyLabel topic={METHODOLOGY_TOPICS[lane.key]} compact>
+                    <Link
+                      href={LANE_DRILLDOWN_HREF[lane.key]}
+                      className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-sm font-medium text-foreground transition-colors hover:text-brand-accent-text hover:underline"
+                    >
+                      <span>{lane.label}</span>
+                      <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                    </Link>
                   </MethodologyLabel>
-                  <p className={cn("mt-1 text-muted-foreground", isCompact ? "text-2xs leading-snug" : "text-xs")}>{lane.detail}</p>
+                  <p className={cn("mt-1 text-muted-foreground", isCompact ? "text-2xs leading-snug" : "text-xs")}>
+                    {lane.detail}
+                  </p>
                 </div>
-                <div className="text-right">
-                  <p className={cn(
-                    "font-mono font-bold tabular-nums",
-                    isCompact ? "text-base" : "text-lg",
-                    lane.role === "support" ? PSI_LANE_TONE_CLASSES.support.text : "text-foreground",
-                  )}>
+                <div className="shrink-0 text-right">
+                  <p
+                    className={cn(
+                      "font-mono font-bold tabular-nums",
+                      isCompact ? "text-base" : "text-lg",
+                      lane.role === "support" ? PSI_LANE_TONE_CLASSES.support.text : "text-foreground",
+                    )}
+                  >
                     {valueLabel(lane)}
                   </p>
-                  <p className="pharos-label">
-                    {lane.role}
-                  </p>
+                  <p className="pharos-label">{lane.role}</p>
                 </div>
               </div>
 
@@ -162,7 +211,9 @@ export function PsiBeamDimmers({
                         </defs>
                         <TimeXAxis dataKey="ts" hide />
                         <YAxis hide domain={laneDomain(lane)} allowDataOverflow />
-                        <DateTooltip formatter={(value) => [value == null ? "Unavailable" : formatScore(Number(value)), lane.label]} />
+                        <DateTooltip
+                          formatter={(value) => [value == null ? "Unavailable" : formatScore(Number(value)), lane.label]}
+                        />
                         <Area
                           type="monotone"
                           dataKey={lane.key}
@@ -179,16 +230,23 @@ export function PsiBeamDimmers({
                     </ResponsiveContainer>
                   </div>
                 ) : lane.pressurePct !== null ? (
-                  <div className={cn("overflow-hidden rounded-full bg-background/80", isCompact ? "h-1.5" : "h-2")}>
+                  <div className={cn("overflow-hidden rounded-full bg-muted", isCompact ? "h-1.5" : "h-2")}>
                     <div
                       className={cn("h-full rounded-full", laneToneClass(lane))}
                       style={{ width: `${lane.pressurePct}%` }}
                     />
                   </div>
                 ) : null}
-                <div className={cn("mt-1 flex items-center justify-between gap-3 text-muted-foreground", isCompact ? "text-2xs" : "text-xs")}>
+                <div
+                  className={cn(
+                    "mt-1.5 flex items-center justify-between gap-3 text-muted-foreground",
+                    isCompact ? "text-2xs" : "text-xs",
+                  )}
+                >
                   <span>{lane.value === null ? "component not reported" : deltaLabel(lane.delta)}</span>
-                  <span className="font-mono tabular-nums">{lane.pressurePct === null ? "—" : `${lane.pressurePct.toFixed(0)}%`}</span>
+                  <span className="font-mono tabular-nums">
+                    {lane.pressurePct === null ? "—" : `${lane.pressurePct.toFixed(0)}%`}
+                  </span>
                 </div>
               </div>
             </div>

@@ -85,6 +85,26 @@ describe("PsiBeacon", () => {
     expect(svg.textContent).not.toContain("3 unpriced");
     expect(root.querySelector('[data-testid="psi-beacon-legend"]')?.textContent).toContain("≥ · 3 unpriced");
   });
+
+  it("hides per-component legend rows when showComponents is false while preserving instant, 24h avg, and unpriced caveats", () => {
+    const state = derivePsiBeaconState({
+      current: {
+        ...LIVE,
+        inputDegradation: { openDepegNoPrice: true, openDepegsWithoutPrice: 2 },
+      },
+      isFresh: true,
+      healthMessage: "Data is stale.",
+      asOfLabel: "Oct 12, 2:32 PM",
+    });
+    const { container } = render(<PsiBeacon state={state} showComponents={false} />);
+    const legendText = container.querySelector('[data-testid="psi-beacon-legend"]')?.textContent ?? "";
+    expect(legendText).toContain("instant");
+    expect(legendText).toContain("24h avg");
+    expect(legendText).toContain("≥ · 2 unpriced");
+    expect(legendText).not.toContain("breadth");
+    expect(legendText).not.toContain("stress breadth");
+    expect(legendText).not.toContain("trend");
+  });
 });
 
 describe("PsiBeaconMicro", () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { RefreshCw } from "lucide-react";
 import {
@@ -284,11 +284,50 @@ function formatListedSharePct(pct: number): string {
   return pct.toFixed(1) === "100.0" ? ">99.9%" : `${pct.toFixed(1)}%`;
 }
 
+/** Consecutive same-risk slices step subtly down in opacity so adjacent slices stay distinct. */
+const SAME_TIER_OPACITY_STEPS = [1, 0.78, 0.62, 0.5] as const;
+
+function buildSteppedReserveSegments<T extends { risk: ReserveCompositionSlice["risk"] }>(
+  segments: readonly T[],
+): Array<{ segment: T; baseOpacity: number; tierStep: number }> {
+  const stepped: Array<{ segment: T; baseOpacity: number; tierStep: number }> = [];
+  let consecutiveTierIndex = 0;
+  for (let index = 0; index < segments.length; index += 1) {
+    const segment = segments[index]!;
+    if (index > 0 && segments[index - 1]?.risk === segment.risk) {
+      consecutiveTierIndex += 1;
+    } else {
+      consecutiveTierIndex = 0;
+    }
+    const baseOpacity = SAME_TIER_OPACITY_STEPS[Math.min(consecutiveTierIndex, SAME_TIER_OPACITY_STEPS.length - 1)]!;
+    stepped.push({ segment, baseOpacity, tierStep: consecutiveTierIndex });
+  }
+  return stepped;
+}
+
 function CompositionRow({
-  swatch, name, context, pct, title, concentrated = false,
-}: { swatch: ReactNode; name: string; context: string; pct: number; title?: string; concentrated?: boolean }) {
+  swatch, name, context, pct, title, concentrated = false, highlighted = false, onHoverChange,
+}: {
+  swatch: ReactNode;
+  name: string;
+  context: string;
+  pct: number;
+  title?: string;
+  concentrated?: boolean;
+  highlighted?: boolean;
+  onHoverChange?: (hovering: boolean) => void;
+}) {
   return (
-    <li className="flex items-start gap-2.5 py-2" title={title}>
+    <li
+      className={cn(
+        "flex items-start gap-2.5 rounded-md py-2 transition-colors",
+        onHoverChange && "-mx-2 px-2",
+        highlighted && "bg-muted/50",
+      )}
+      title={title}
+      onMouseEnter={onHoverChange ? () => onHoverChange(true) : undefined}
+      onMouseLeave={onHoverChange ? () => onHoverChange(false) : undefined}
+    >
       <span className="flex h-5 shrink-0 items-center">{swatch}</span>
       <span className="min-w-0 flex-1">
         <span className="block text-sm leading-5 text-foreground">{name}</span>
@@ -307,7 +346,17 @@ function CompositionRow({
  * channel. Obligor prose stays a hover title, as on the old tiles; the slice
  * detail fold carries it in full.
  */
-function SliceRow({ slice, concentrated }: { slice: ReserveCompositionSlice; concentrated?: boolean }) {
+function SliceRow({
+  slice,
+  concentrated,
+  highlighted,
+  onHoverChange,
+}: {
+  slice: ReserveCompositionSlice;
+  concentrated?: boolean;
+  highlighted?: boolean;
+  onHoverChange?: (hovering: boolean) => void;
+}) {
   return (
     <CompositionRow
       swatch={<ReserveRiskSwatch risk={slice.risk} />}
@@ -316,6 +365,8 @@ function SliceRow({ slice, concentrated }: { slice: ReserveCompositionSlice; con
       pct={slice.pct}
       title={slice.detail ?? undefined}
       concentrated={concentrated}
+      highlighted={highlighted}
+      onHoverChange={onHoverChange}
     />
   );
 }
@@ -338,6 +389,7 @@ function ReserveComposition({
   subject: string;
   topConcentrated?: boolean;
 }) {
+  const [hoveredKey, setHoveredKey] = useState<string | null>(null);
   const { shown, rest, restPct, segments } = splitReserveCompositionRows(slices);
   if (shown.length === 0) return null;
   const totalPct = slices.reduce((sum, slice) => sum + slice.pct, 0);
@@ -345,16 +397,32 @@ function ReserveComposition({
   const ariaLabel = `${subject}: ${slices
     .map((slice) => `${slice.label} ${formatReserveSharePct(slice.pct)} (${formatReserveRiskTier(slice.risk).toLowerCase()})`)
     .join(", ")}${unreviewedPct > 0 ? `, Unreviewed remainder ${formatReserveSharePct(unreviewedPct)}` : ""}`;
+  const steppedSegments = buildSteppedReserveSegments(segments);
   return (
     <div className="min-w-0">
       <div role="figure" aria-label={ariaLabel} className="flex h-3 w-full gap-0.5 overflow-hidden rounded-full">
-        {segments.map((segment) => (
-          <span
-            key={segment.key}
-            className="h-full min-w-0.5"
-            style={{ flex: `${segment.pct} 1 0%`, backgroundColor: RESERVE_RISK_PRESENTATION[segment.risk].accentColor }}
-          />
-        ))}
+        {steppedSegments.map(({ segment, baseOpacity, tierStep }) => {
+          const isActive = hoveredKey === segment.key;
+          const opacity = hoveredKey === null ? baseOpacity : isActive ? 1 : Number((baseOpacity * 0.45).toFixed(2));
+          return (
+            <span
+              key={segment.key}
+              data-tier-step={tierStep}
+              data-highlighted={isActive ? "true" : undefined}
+              onMouseEnter={() => setHoveredKey(segment.key)}
+              onMouseLeave={() => setHoveredKey((current) => (current === segment.key ? null : current))}
+              className={cn(
+                "h-full min-w-0.5 transition-opacity motion-reduce:transition-none",
+                isActive && "ring-1 ring-inset ring-foreground/30",
+              )}
+              style={{
+                flex: `${segment.pct} 1 0%`,
+                backgroundColor: RESERVE_RISK_PRESENTATION[segment.risk].accentColor,
+                opacity,
+              }}
+            />
+          );
+        })}
         {unreviewedPct > 0 ? (
           <span
             className="h-full min-w-0.5 rounded-r-full border border-dashed border-muted-foreground/60"
@@ -364,7 +432,13 @@ function ReserveComposition({
       </div>
       <ol aria-label="Reserve composition, largest first" className="mt-2 divide-y divide-border/40">
         {shown.map((slice, index) => (
-          <SliceRow key={slice.key} slice={slice} concentrated={topConcentrated && index === 0} />
+          <SliceRow
+            key={slice.key}
+            slice={slice}
+            concentrated={topConcentrated && index === 0}
+            highlighted={hoveredKey === slice.key}
+            onHoverChange={(hovering) => setHoveredKey(hovering ? slice.key : (current) => (current === slice.key ? null : current))}
+          />
         ))}
         {unreviewedPct > 0 ? (
           <CompositionRow

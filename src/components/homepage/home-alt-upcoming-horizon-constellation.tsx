@@ -1,5 +1,6 @@
 import { HorizonConstellation } from "@/components/upcoming/horizon-constellation";
 import { HomeAltTrackerLink } from "@/components/homepage/home-alt-tracker-link";
+import { HomeSectionHeader } from "@/components/homepage/home-section-header";
 import { HORIZON_PRE_LAUNCH_STABLECOINS, HORIZON_UNPHASED_STABLECOINS } from "@/lib/horizon-constellation-layout";
 
 export function HomeAltUpcomingHorizonConstellation(): React.JSX.Element | null {
@@ -9,28 +10,17 @@ export function HomeAltUpcomingHorizonConstellation(): React.JSX.Element | null 
 
   return (
     <section aria-labelledby="upcoming-horizon-constellation-title" className="space-y-3 sm:space-y-4">
-      <h2 id="upcoming-horizon-constellation-title" className="sr-only">
-        Upcoming stablecoins on the horizon — constellation view
-      </h2>
-
-      <div className="space-y-1 sm:space-y-1.5">
-        <div className="flex items-center justify-between gap-3">
-          <p className="font-display text-2xl font-bold text-foreground sm:text-3xl">On the horizon</p>
-          <div className="flex shrink-0 items-center gap-3 sm:pt-0">
-            <span className="hidden text-sm text-muted-foreground sm:inline">
-              <span className="pharos-numeric font-semibold text-foreground">{total}</span> Tokens
-            </span>
-            <span aria-hidden="true" className="hidden h-1 w-1 rounded-full bg-border sm:inline-block" />
-            <HomeAltTrackerLink
-              href="/upcoming/"
-              ariaLabel="Open tracker"
-            />
-          </div>
-        </div>
-        <p className="max-w-[13rem] text-3xs leading-snug text-muted-foreground sm:max-w-none sm:text-sm">
-          Explore announced stablecoins and their varying levels of readiness.
-        </p>
-      </div>
+      <HomeSectionHeader
+        titleId="upcoming-horizon-constellation-title"
+        title="On the horizon"
+        subtitle="Explore announced stablecoins and their varying levels of readiness."
+        stat={
+          <>
+            <span className="pharos-numeric font-semibold text-foreground">{total}</span> Tokens
+          </>
+        }
+        action={<HomeAltTrackerLink href="/upcoming/" ariaLabel="Open tracker" />}
+      />
 
       <div className="pharos-card-shell overflow-hidden">
         <HorizonConstellation

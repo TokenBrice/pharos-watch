@@ -12,7 +12,7 @@ import { DEPEG_LEDGER_CAPTURE_RELATIVE_PATH, depegLedgerCaptureId } from "../lib
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 export const PAGES_PREVIOUS_SITEMAP_URL = "https://stablecoin-dashboard.pages.dev/sitemap.xml";
-const PUBLIC_FLAGS = ["HERO_VERDICT", "QUIET_DEVIATIONS", "MOBILE_STICKY_SUMMARY", "DEPEG_RESOLVER", "DEPEG_RESOLVER_REVIEWER"];
+const PUBLIC_FLAGS = ["HERO_VERDICT", "QUIET_DEVIATIONS", "DEPEG_RESOLVER", "DEPEG_RESOLVER_REVIEWER"];
 // prepare's history bootstrap owns these git-derived projections; the plain
 // bootstrap pass owns every bootstrap-safe artifact.
 const PREPARE_HISTORY_ARTIFACT_IDS = new Set(["sitemap-dates", "docs-metadata"]);

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { StablecoinObituary } from "@shared/types/stablecoin-meta-schemas";
 import { FrozenDataNote } from "../frozen-data-note";
 
@@ -30,6 +30,23 @@ describe("FrozenStateBanner", () => {
     expect(screen.getByText(/Abandoned/i)).toBeTruthy();
     expect(screen.getByRole("link", { name: /cemetery/i }).getAttribute("href")).toBe("/cemetery/");
     expect(screen.getByRole("link", { name: /Resolv announcement/i }).getAttribute("href")).toBe(obituary.sourceUrl);
+  });
+
+  it("uses non-inverted expand/collapse labels for the obituary toggle", () => {
+    render(<FrozenStateBanner symbol="USR" frozenAt="2026-04-27" obituary={obituary} />);
+
+    const hideButton = screen.getByRole("button", { name: "Hide full obituary" });
+    expect(hideButton.getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByText(obituary.obituary)).toBeTruthy();
+
+    fireEvent.click(hideButton);
+    const readButton = screen.getByRole("button", { name: "Read full obituary" });
+    expect(readButton.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByText(obituary.obituary)).toBeNull();
+
+    fireEvent.click(readButton);
+    expect(screen.getByRole("button", { name: "Hide full obituary" }).getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByText(obituary.obituary)).toBeTruthy();
   });
 });
 

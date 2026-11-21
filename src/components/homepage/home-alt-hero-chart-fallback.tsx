@@ -6,7 +6,7 @@ import { ChartSkeleton } from "@/components/chart-skeleton";
 export function HomeAltHeroChartFallback({ settled = false }: { settled?: boolean }) {
   return (
     <div
-      className="h-[260px] w-full p-5 sm:h-[320px] lg:h-full"
+      className="h-[268px] w-full p-4 sm:h-[296px] sm:p-5 lg:h-full"
       role="figure"
       aria-label="Stablecoin market cap history by major cohort"
     >

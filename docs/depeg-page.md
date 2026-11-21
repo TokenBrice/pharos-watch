@@ -83,16 +83,13 @@ is always rendered before the history handoff; the hero's track-record block lin
 KPI" shape required by `design-language.md#feature-page-heroes`.
 
 - **Left command rail**, top to bottom, hairline-separated: the headline count =
-  `PegSummaryStats.activeDepegCount` in neutral ink (`HERO_KPI_VALUE_CLASS`), with the worst live
+  `PegSummaryStats.activeDepegCount` in neutral ink (`.pharos-hero-kpi`), with the clickable signed worst live
   move beside it as the one semantic-coloured element and a `Peg catalog` `UniverseChip` under it (catalog size = rows in the live peg summary, omitted while unread);
   **Open incidents** — the census the headline counts (peg-summary `activeDepeg` rows) ranked by `rankOpenIncidents()` on holder exposure (circulating supply × |live deviation|, unavailable exposure last), naming the top five as `Top 5 of N` with live deviation in basis points (as the worst-move chip), compact DDR verdict and market cap, each linking to the dossier's `#depeg-resolver`;
-  a four-cell figure grid (awaiting confirmation, meaning the `pending[]` threshold crossings; DEWS ALERT-or-worse; holding peg; median deviation); **Recovery outlook · DDR** — the
-  whole-book verdict split and calibration lineage; **Forecast track record · DDRR** — headline
-  recovery-call accuracy and its call fraction, with only the policy-scope label and a
-  `see the grading` link beneath the figure (see [Forecast Grading](#forecast-grading)). Supporting
+  a four-cell figure grid (awaiting confirmation, meaning the `pending[]` threshold crossings; DEWS ALERT-or-worse; holding peg; median deviation). **Recovery outlook · DDR** and **Forecast track record · DDRR** summaries live in `DepegResolverModule` below the hero (with dense DDRR grading tables collapsed behind a 1-row `Track Record` disclosure linked to `#forecast-grading`). Supporting
   figures stay neutral. `DEPEG_PENDING_STATE_LABELS` (`shared/lib/classification/depeg.ts`) keeps the two pending states apart: crossings read “Awaiting confirmation” (board pill `awaiting`) and DDR `pending_lock` rows “Forecast not locked yet”, never a bare “pending”.
 - **Right field:** `DEWSRadarPanel` (`src/components/dews/dews-summary.tsx`), then the DEWS alert queue (`DEWSAlertFeed embedded`) under it as the radar's detail layer, so the precursor column balances the depeg rail. Radial ring encodes DEWS band, mark size encodes market cap, mark colour encodes
-  band, and a **double-ring halo marks an elevated coin that also has an open confirmed incident**
+  band, and a **single `+4px` ring marks an elevated coin that also has an open confirmed incident**
   (`PegSummaryCoin.activeDepeg` intersected with the radar's elevated set — see
   [Universe scope](#universe-scope)). Every shape carries a field.
   Unavailable supply retains a neutral, band-based size rather than the measured-small tier.

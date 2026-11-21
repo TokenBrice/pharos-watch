@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
 import { PulseCard } from "@/components/home-alt-mini-cards/pulse-card-header";
@@ -10,6 +11,8 @@ import { useBlacklistEventsPage, useBlacklistSummary } from "@/hooks/use-blackli
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { buildBlacklistStatusBuckets } from "@shared/lib/blacklist-status-buckets";
 import { computeFreezableSummary, formatShare } from "@shared/lib/freezewatch/freezable-summary";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { formatCurrency } from "@shared/lib/format";
 import { formatRelativeDurationSeconds } from "@shared/lib/relative-time";
@@ -20,7 +23,6 @@ import { formatBlacklistValuation } from "@/lib/blacklist-valuation";
 const MAX_RECENT = 3;
 
 type WindowKey = "24h" | "7d";
-
 
 interface RecentFreezeEvent {
   id: string;
@@ -48,9 +50,6 @@ function buildRecentRows(
   for (const ev of events) {
     if (ev.eventType !== "blacklist" && ev.eventType !== "destroy") continue;
     if (ev.timestamp < cutoff7d) continue;
-    // Only surface recent rows that carry a known USD amount — events with a
-    // null amountUsdAtEvent (older events where price/balance couldn't be
-    // reconstructed) look broken in a discovery list.
     if (
       ev.amountUsdAtEvent !== null &&
       Number.isFinite(ev.amountUsdAtEvent) &&
@@ -58,10 +57,6 @@ function buildRecentRows(
     ) {
       recent.push({
         id: ev.id,
-        // Prefer the event's canonical stablecoinId; the symbol heuristic is a
-        // fallback for older events that lack it (it returns the first
-        // insertion-order id sharing the symbol prefix, which is ambiguous for
-        // coins like usdt-tron / usdt-ethereum). [audit Q-260]
         stablecoinId: ev.stablecoinId ?? resolveId(ev.stablecoin),
         symbol: ev.stablecoin,
         amountUsdAtEvent: ev.amountUsdAtEvent,
@@ -74,10 +69,6 @@ function buildRecentRows(
   return recent;
 }
 
-// Heuristic: the events endpoint returns events keyed by symbol enum
-// (e.g. "USDC"). We map symbol → registry id by looking through logos which
-// are keyed by stablecoin id (e.g. "usdc-circle"). Fallback is the lowercase
-// symbol which usually still resolves the logo via filename convention.
 function symbolToId(symbol: string, logoMap: Record<string, string>): string {
   const lower = symbol.toLowerCase();
   for (const id of Object.keys(logoMap)) {
@@ -86,7 +77,6 @@ function symbolToId(symbol: string, logoMap: Record<string, string>): string {
   return lower;
 }
 
-// Rows only carry positive valuations; a sub-dollar freeze must not round to "$0".
 function formatFreezeRowUsd(value: number): string {
   return value < 1 ? "<$1" : formatCurrency(value, 0);
 }
@@ -100,8 +90,6 @@ export function RecentFreezesCard(): React.JSX.Element {
     offset: 0,
   });
   const summaryQuery = useBlacklistSummary();
-  // The FreezeWatch hero figure, from the same stablecoins list and summary
-  // helper the /freezewatch/ hero reads (shared cache, no extra request).
   const stablecoinsQuery = useStablecoins();
   const freezable = useMemo(
     () => computeFreezableSummary(stablecoinsQuery.data ? buildBlacklistStatusBuckets(stablecoinsQuery.data.peggedAssets) : null),
@@ -153,7 +141,7 @@ export function RecentFreezesCard(): React.JSX.Element {
             type="button"
             onClick={() => setWindowKey("24h")}
             aria-pressed={windowKey === "24h"}
-            className="pharos-focus-ring pharos-segmented-item px-2 font-mono text-2xs leading-none"
+            className="pharos-focus-ring pharos-segmented-item min-h-11 px-2 font-mono text-2xs leading-none md:min-h-7"
           >
             24h
           </button>
@@ -161,7 +149,7 @@ export function RecentFreezesCard(): React.JSX.Element {
             type="button"
             onClick={() => setWindowKey("7d")}
             aria-pressed={windowKey === "7d"}
-            className="pharos-focus-ring pharos-segmented-item px-2 font-mono text-2xs leading-none"
+            className="pharos-focus-ring pharos-segmented-item min-h-11 px-2 font-mono text-2xs leading-none md:min-h-7"
           >
             7d
           </button>
@@ -205,24 +193,30 @@ export function RecentFreezesCard(): React.JSX.Element {
         >
           {recent.map((ev) => {
             const logoSrc = getLogoSrc(logoMap, ev.stablecoinId);
+            const rowHref = CLIENT_TRACKED_META_BY_ID.has(ev.stablecoinId)
+              ? buildStablecoinUrl(ev.stablecoinId)
+              : "/freezewatch/";
             return (
-              <li
-                key={ev.id}
-                className="grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-2 py-1 pharos-numeric"
-              >
-                <CoinCell logoSrc={logoSrc} />
-                <span className="truncate tracking-tight text-foreground">{ev.symbol}</span>
-                <span className="flex items-baseline gap-1.5">
-                  <span className="font-semibold pharos-numeric text-state-danger">
-                    {ev.amountUsdAtEvent && ev.amountUsdAtEvent > 0 ? formatFreezeRowUsd(ev.amountUsdAtEvent) : "—"}
+              <li key={ev.id}>
+                <Link
+                  prefetch={false}
+                  href={rowHref}
+                  className="pharos-focus-ring -mx-1 grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-2 rounded-sm px-1 py-1 pharos-numeric transition-colors hover:bg-muted/50"
+                >
+                  <CoinCell logoSrc={logoSrc} />
+                  <span className="truncate tracking-tight text-foreground">{ev.symbol}</span>
+                  <span className="flex items-baseline gap-1.5">
+                    <span className="font-semibold pharos-numeric text-state-danger">
+                      {ev.amountUsdAtEvent && ev.amountUsdAtEvent > 0 ? formatFreezeRowUsd(ev.amountUsdAtEvent) : "—"}
+                    </span>
+                    <span aria-hidden="true" className="text-muted-foreground/40">
+                      ·
+                    </span>
+                    <span className="pharos-numeric text-muted-foreground/80">
+                      {formatRelativeDurationSeconds(ev.ageSec, { nowLabel: "now" })}
+                    </span>
                   </span>
-                  <span aria-hidden="true" className="text-muted-foreground/40">
-                    ·
-                  </span>
-                  <span className="pharos-numeric text-muted-foreground/80">
-                    {formatRelativeDurationSeconds(ev.ageSec, { nowLabel: "now" })}
-                  </span>
-                </span>
+                </Link>
               </li>
             );
           })}

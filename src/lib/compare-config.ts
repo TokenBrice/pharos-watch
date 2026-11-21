@@ -6,7 +6,7 @@ import type { CoinOption, ComparePreset } from "@/lib/compare-types";
 import { decodeStablecoinUrlToken } from "@/lib/stablecoin-url-codec";
 import { readWatchlistSnapshot } from "@/lib/watchlist-storage";
 
-export const MIN_COMPARE_COINS = 2;
+const MIN_COMPARE_COINS = 2;
 export const MAX_COMPARE_COINS = 5;
 export const COMPARE_COLORS = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6"] as const;
 
@@ -31,7 +31,7 @@ const ID_TO_COMPARE_COIN = new Map<string, CoinOption>(
  * snapshot, filtered against the known compare coin set so withheld/unknown
  * coins are dropped without surfacing broken entries.
  */
-export function resolveWatchlistPresetCoins(
+function resolveWatchlistPresetCoins(
   watchlistIds: readonly string[] = readWatchlistSnapshot(),
 ): readonly string[] {
   return watchlistIds

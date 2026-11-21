@@ -1,16 +1,21 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { Check, Copy, Download, ExternalLink, Info } from "lucide-react";
 import { TableCell, TableRow } from "@/components/table";
 import { DataTableEmptyRow, DataTableLoadingRows, DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
 import { MobileSortPanel, MobileSortPills } from "@/components/mobile-sort-pills";
+import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Download, ExternalLink } from "lucide-react";
+import { coinIdBySymbol } from "@/lib/coin-id-by-symbol";
+import { logosById } from "@/lib/logos";
 import { downloadCsv } from "@/lib/exports/csv";
 import { getNextSortState } from "@/hooks/use-sort";
 import { resolveQueryViewState } from "@/lib/query-view-state";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatAddress, formatEventDate } from "@shared/lib/format";
 import { EVENT_BADGE_STYLES, EVENT_LABELS } from "@shared/lib/classification";
 import type { BlacklistEvent, BlacklistSortDirection, BlacklistSortKey } from "@shared/types/blacklist";
@@ -20,7 +25,7 @@ import {
 } from "@/lib/blacklist-event-presentation";
 
 const AMOUNT_STATUS_TOOLTIPS: Record<string, string> = {
-  recoverable_pending: "Amount not yet recovered from historical balance — backfill pass pending.",
+  recoverable_pending: "Amount not yet recovered from historical balance; backfill pass pending.",
   provider_failed: "Amount recovery failed at the data provider; next backfill pass will retry.",
   ambiguous: "Multiple candidate amounts; manual review required.",
   permanently_unavailable: "Amount cannot be recovered (e.g., EURC mirror-zero or Tron legacy row).",
@@ -53,9 +58,9 @@ const BLACKLIST_COLUMNS: readonly DataTableColumn<BlacklistSortKey>[] = [
   { id: "stablecoin", label: "Stablecoin", sortKey: "stablecoin" },
   { id: "chain", label: "Chain", sortKey: "chain" },
   { id: "event", label: "Event", sortKey: "event" },
-  { id: "address", label: "Address", className: "hidden md:table-cell" },
-  { id: "amount", label: "Amount / Value", className: "hidden sm:table-cell text-right" },
-  { id: "tx", label: "Tx", className: "hidden sm:table-cell text-center" },
+  { id: "address", label: "Address" },
+  { id: "amount", label: "Amount / Value", className: "text-right" },
+  { id: "tx", label: "Tx", className: "text-center" },
 ] as const;
 
 const MOBILE_SORT_OPTIONS: Array<{ key: BlacklistSortKey; label: string }> = [
@@ -126,8 +131,9 @@ export function BlacklistTable({
         testId="freezewatch-events-table"
         columns={BLACKLIST_COLUMNS}
         striped
+        stickyHeader
+        stickyMode="page"
         containerClassName="rounded-xl border"
-        headerClassName="bg-muted"
         mobileScrollHint={false}
       >
         <DataTableLoadingRows columns={BLACKLIST_COLUMNS} rowCount={10} />
@@ -140,117 +146,189 @@ export function BlacklistTable({
   if (viewState === "unavailable") return null;
 
   return (
-    <TooltipProvider delayDuration={220}>
-      <div className="space-y-3 md:hidden">
-        <MobileSortPanel kicker="Event cards">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs text-muted-foreground">Sorted by {sortKey} {sortDirection === "asc" ? "ascending" : "descending"}.</p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="pharos-focus-ring min-h-11"
-              onClick={handleCsvExport}
-              disabled={events.length === 0}
-            >
-              <Download className="h-3.5 w-3.5" />
-              CSV
-            </Button>
-          </div>
-          <MobileSortPills
-            options={MOBILE_SORT_OPTIONS}
-            sortKey={sortKey}
-            sortDirection={sortDirection}
-            onSort={toggleSort}
-            ariaLabel="Sort freeze events"
-            className="mt-3 flex flex-wrap gap-2"
-          />
-        </MobileSortPanel>
-        {events.length === 0 ? (
-          <div className="pharos-empty-note py-8 text-center">
-            No freeze events match your filters.
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {events.map((evt, index) => (
-              <BlacklistEventCard key={evt.id} event={evt} rank={(page - 1) * pageSize + index + 1} />
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="hidden md:block">
-        <DataTableShell
-          tableId="freezewatch-events"
-          testId="freezewatch-events-table"
-          columns={BLACKLIST_COLUMNS}
-          sort={{
-            sortKey,
-            sortDirection,
-            toggleSort,
-            getAriaSortValue,
-          }}
-          striped
-          containerClassName="rounded-xl border"
-          headerClassName="bg-muted"
-          mobileScrollHint={false}
-          topSlot={
-            <div className="pharos-table-toolbar flex-row items-center justify-end">
+    <TooltipProvider delayDuration={200}>
+      <div className="@container">
+        <div className="space-y-3 @3xl:hidden">
+          <MobileSortPanel kicker="Event cards">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground">
+                Sorted by {sortKey} {sortDirection === "asc" ? "ascending" : "descending"}.
+              </p>
               <Button
                 variant="outline"
                 size="sm"
-                className="pharos-focus-ring min-h-11 sm:min-h-8"
+                className="pharos-focus-ring min-h-11"
                 onClick={handleCsvExport}
                 disabled={events.length === 0}
               >
                 <Download className="h-3.5 w-3.5" />
-                Export current page CSV
+                CSV
               </Button>
             </div>
-          }
-        >
-          {events.map((evt, index) => (
-            <BlacklistEventRow key={evt.id} event={evt} rank={(page - 1) * pageSize + index + 1} />
-          ))}
-          {events.length === 0 && (
-            <DataTableEmptyRow colSpan={BLACKLIST_COLUMNS.length}>
+            <MobileSortPills
+              options={MOBILE_SORT_OPTIONS}
+              sortKey={sortKey}
+              sortDirection={sortDirection}
+              onSort={toggleSort}
+              ariaLabel="Sort freeze events"
+              className="mt-3 flex flex-wrap gap-2"
+            />
+          </MobileSortPanel>
+          {events.length === 0 ? (
+            <div className="pharos-empty-note py-8 text-center">
               No freeze events match your filters.
-            </DataTableEmptyRow>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {events.map((evt, index) => (
+                <BlacklistEventCard key={evt.id} event={evt} rank={(page - 1) * pageSize + index + 1} />
+              ))}
+            </div>
           )}
-        </DataTableShell>
+        </div>
+
+        <div className="hidden @3xl:block">
+          <DataTableShell
+            tableId="freezewatch-events"
+            testId="freezewatch-events-table"
+            columns={BLACKLIST_COLUMNS}
+            sort={{
+              sortKey,
+              sortDirection,
+              toggleSort,
+              getAriaSortValue,
+            }}
+            striped
+            stickyHeader
+            stickyMode="page"
+            containerClassName="rounded-xl border"
+            mobileScrollHint={false}
+            topSlot={
+              <div className="pharos-table-toolbar flex-row items-center justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="pharos-focus-ring min-h-11 sm:min-h-8"
+                  onClick={handleCsvExport}
+                  disabled={events.length === 0}
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Export current page CSV
+                </Button>
+              </div>
+            }
+          >
+            {events.map((evt, index) => (
+              <BlacklistEventRow key={evt.id} event={evt} rank={(page - 1) * pageSize + index + 1} />
+            ))}
+            {events.length === 0 && (
+              <DataTableEmptyRow colSpan={BLACKLIST_COLUMNS.length}>
+                No freeze events match your filters.
+              </DataTableEmptyRow>
+            )}
+          </DataTableShell>
+        </div>
       </div>
     </TooltipProvider>
+  );
+}
+
+function StablecoinCellLink({ symbol }: { symbol: string }) {
+  const coinId = coinIdBySymbol(symbol);
+  const logoSrc = coinId ? logosById[coinId] : undefined;
+
+  if (!coinId) {
+    return (
+      <span className="inline-flex items-center gap-2 font-medium text-foreground">
+        <StablecoinLogo src={logoSrc} name={symbol} size={20} />
+        <span>{symbol}</span>
+      </span>
+    );
+  }
+
+  return (
+    <Link
+      href={buildStablecoinUrl(coinId)}
+      className="pharos-focus-ring inline-flex items-center gap-2 rounded-sm font-medium text-foreground transition-colors hover:text-brand-accent-text hover:underline"
+    >
+      <StablecoinLogo src={logoSrc} name={symbol} size={20} />
+      <span>{symbol}</span>
+    </Link>
+  );
+}
+
+function CopyAddressButton({ address }: { address: string }) {
+  const [copied, setCopied] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  const handleCopy = useCallback(() => {
+    void navigator.clipboard?.writeText(address).then(() => {
+      setCopied(true);
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setCopied(false), 1800);
+    });
+  }, [address]);
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      aria-label={copied ? `Copied address ${address}` : `Copy address ${address}`}
+      title={copied ? "Copied" : "Copy full address"}
+      className="pharos-focus-ring inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground sm:min-h-7 sm:min-w-7"
+    >
+      {copied ? (
+        <Check className="h-3.5 w-3.5 text-state-positive" aria-hidden="true" />
+      ) : (
+        <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+      )}
+      <span className="sr-only" aria-live="polite">
+        {copied ? "Copied" : ""}
+      </span>
+    </button>
   );
 }
 
 function BlacklistEventRow({ event: evt, rank }: { event: BlacklistEvent; rank: number }) {
   return (
     <TableRow>
-      <TableCell className="text-right text-muted-foreground text-xs pharos-numeric">
+      <TableCell className="text-right text-xs text-muted-foreground pharos-numeric">
         {rank}
       </TableCell>
       <TableCell className="whitespace-nowrap pharos-numeric text-xs">{formatEventDate(evt.timestamp)}</TableCell>
-      <TableCell className="font-medium">{evt.stablecoin}</TableCell>
+      <TableCell>
+        <StablecoinCellLink symbol={evt.stablecoin} />
+      </TableCell>
       <TableCell>{evt.chainName}</TableCell>
       <TableCell>
         <Badge variant="outline" className={EVENT_BADGE_STYLES[evt.eventType] ?? ""}>
           {EVENT_LABELS[evt.eventType] ?? evt.eventType}
         </Badge>
       </TableCell>
-      <TableCell className="hidden md:table-cell">
-        <a
-          href={evt.explorerAddressUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="pharos-focus-ring block max-w-[120px] sm:max-w-none truncate sm:overflow-visible font-mono text-xs hover:underline"
-          aria-label={`View address ${evt.address} on ${evt.chainName}`}
-        >
-          {formatAddress(evt.address)}
-        </a>
+      <TableCell>
+        <div className="inline-flex items-center gap-1">
+          <a
+            href={evt.explorerAddressUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="pharos-focus-ring block max-w-[132px] truncate rounded-sm font-mono text-xs hover:underline sm:max-w-none"
+            aria-label={`View address ${evt.address} on ${evt.chainName}`}
+          >
+            {formatAddress(evt.address)}
+          </a>
+          <CopyAddressButton address={evt.address} />
+        </div>
       </TableCell>
-      <TableCell className="hidden sm:table-cell text-right pharos-numeric">
+      <TableCell className="text-right pharos-numeric">
         <BlacklistAmount event={evt} />
       </TableCell>
-      <TableCell className="hidden sm:table-cell text-center">
+      <TableCell className="text-center">
         <BlacklistTxLink event={evt} />
       </TableCell>
     </TableRow>
@@ -259,47 +337,58 @@ function BlacklistEventRow({ event: evt, rank }: { event: BlacklistEvent; rank: 
 
 function BlacklistAmount({ event: evt }: { event: BlacklistEvent }) {
   return (
-    <>
-      {formatBlacklistAmountOrStatus(evt)}
-      <AmountBadges
-        event={evt}
-        badgeClassName="ml-1 inline-flex cursor-help items-center rounded-sm border border-border px-1 py-0.5 text-3xs uppercase text-muted-foreground"
-      />
-    </>
+    <span className="inline-flex items-center justify-end gap-1.5">
+      <span>{formatBlacklistAmountOrStatus(evt)}</span>
+      <AmountProvenanceInfo event={evt} />
+    </span>
   );
 }
 
-function AmountBadges({ event: evt, badgeClassName }: { event: BlacklistEvent; badgeClassName: string }) {
+function AmountProvenanceInfo({ event: evt }: { event: BlacklistEvent }) {
+  const showSource = evt.amountSource !== "unavailable" || evt.amountStatus === "resolved";
+  const showStatus = evt.amountStatus !== "resolved";
+  if (!showSource && !showStatus) return null;
+
+  const sourceLabel = getBlacklistAmountSourceLabel(evt).replace(/^./, (char) => char.toUpperCase());
   const sourceTooltip = AMOUNT_SOURCE_TOOLTIPS[evt.amountSource];
+  const statusLabel = evt.amountStatus.replace(/_/g, " ");
   const statusTooltip = AMOUNT_STATUS_TOOLTIPS[evt.amountStatus];
 
+  const summaryParts = [
+    showSource ? `Source: ${sourceLabel}` : null,
+    showStatus ? `Status: ${statusLabel}` : null,
+  ].filter(Boolean);
+
   return (
-    <>
-      {evt.amountSource !== "unavailable" || evt.amountStatus === "resolved" ? (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className={badgeClassName} aria-label={sourceTooltip ?? undefined}>
-              {getBlacklistAmountSourceLabel(evt).replace(/^./, (char) => char.toUpperCase())}
-            </span>
-          </TooltipTrigger>
-          {sourceTooltip ? (
-            <TooltipContent className="max-w-[260px] text-2xs">{sourceTooltip}</TooltipContent>
-          ) : null}
-        </Tooltip>
-      ) : null}
-      {evt.amountStatus !== "resolved" ? (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className={badgeClassName} aria-label={statusTooltip ?? undefined}>
-              {evt.amountStatus.replace(/_/g, " ")}
-            </span>
-          </TooltipTrigger>
-          {statusTooltip ? (
-            <TooltipContent className="max-w-[260px] text-2xs">{statusTooltip}</TooltipContent>
-          ) : null}
-        </Tooltip>
-      ) : null}
-    </>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          aria-label={`Amount provenance (${summaryParts.join(", ")})`}
+          className={
+            showStatus
+              ? "pharos-focus-ring inline-flex min-h-6 min-w-6 items-center justify-center rounded-full text-state-warn transition-colors hover:bg-muted/60"
+              : "pharos-focus-ring inline-flex min-h-6 min-w-6 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+          }
+        >
+          <Info className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-[260px] space-y-1 text-2xs">
+        {showSource ? (
+          <p>
+            <span className="font-semibold">Source: {sourceLabel}.</span>{" "}
+            {sourceTooltip}
+          </p>
+        ) : null}
+        {showStatus ? (
+          <p>
+            <span className="font-semibold">Status: {statusLabel}.</span>{" "}
+            {statusTooltip}
+          </p>
+        ) : null}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -324,7 +413,7 @@ function BlacklistEventCard({ event: evt, rank }: { event: BlacklistEvent; rank:
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-semibold text-foreground">{evt.stablecoin}</span>
+            <StablecoinCellLink symbol={evt.stablecoin} />
             <Badge variant="outline" className={EVENT_BADGE_STYLES[evt.eventType] ?? ""}>
               {EVENT_LABELS[evt.eventType] ?? evt.eventType}
             </Badge>
@@ -335,29 +424,29 @@ function BlacklistEventCard({ event: evt, rank }: { event: BlacklistEvent; rank:
         </div>
         <div className="shrink-0 text-right">
           <p className="pharos-label">Amount</p>
-        <p className="pharos-numeric text-sm font-semibold text-foreground">
-          {formatBlacklistAmountOrStatus(evt)}
-        </p>
+          <p className="pharos-numeric text-sm font-semibold text-foreground">
+            <BlacklistAmount event={evt} />
+          </p>
         </div>
       </div>
 
       <div className="mt-3 pharos-inset px-3 py-2">
         <p className="pharos-label">Address</p>
-        <a
-          href={evt.explorerAddressUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="pharos-focus-ring mt-1 inline-flex min-h-11 max-w-full items-center rounded-md font-mono text-xs text-foreground underline-offset-4 hover:underline"
-          aria-label={`View address ${evt.address} on ${evt.chainName}`}
-        >
-          {formatAddress(evt.address)}
-        </a>
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <a
+            href={evt.explorerAddressUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="pharos-focus-ring inline-flex min-h-11 max-w-full items-center rounded-md font-mono text-xs text-foreground underline-offset-4 hover:underline"
+            aria-label={`View address ${evt.address} on ${evt.chainName}`}
+          >
+            {formatAddress(evt.address)}
+          </a>
+          <CopyAddressButton address={evt.address} />
+        </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap gap-1 text-3xs uppercase text-muted-foreground">
-          <AmountBadges event={evt} badgeClassName="cursor-help rounded-sm border border-border px-1.5 py-1" />
-        </div>
+      <div className="mt-3 flex items-center justify-end">
         <BlacklistTxLink event={evt} />
       </div>
     </article>

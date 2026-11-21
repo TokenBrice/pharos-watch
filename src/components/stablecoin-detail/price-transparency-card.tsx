@@ -9,6 +9,7 @@ import { DetailModuleCard } from "@/components/stablecoin-detail/module-title";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { RailCard, RailStamp } from "@/components/stablecoin-detail/rail-card";
+import { DETAIL_HEADER_ICON_BUTTON_CLASS } from "@/components/stablecoin-detail/section-title-class";
 import { PROTOCOL_LOGOS } from "@/lib/dex-display-constants";
 import type { PegSummaryCoin } from "@shared/types/peg";
 import type { DetailQuote } from "@/lib/stablecoin-detail-view-model-types";
@@ -294,9 +295,9 @@ function SourcesModal({
         <button
           type="button"
           aria-label="Show all price sources"
-          className="pharos-focus-ring flex h-6 w-6 items-center justify-center rounded-md border border-border/60 text-muted-foreground transition-colors hover:text-foreground"
+          className={DETAIL_HEADER_ICON_BUTTON_CLASS}
         >
-          <Maximize2 className="h-3 w-3" aria-hidden="true" />
+          <Maximize2 className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
       </DialogTrigger>
       <DialogContent className="gap-0 p-0 sm:max-w-2xl" showCloseButton={false}>
@@ -313,7 +314,7 @@ function SourcesModal({
               <button
                 type="button"
                 aria-label="Close"
-                className="pharos-focus-ring flex h-6 w-6 items-center justify-center rounded-md border border-border/60 text-muted-foreground transition-colors hover:text-foreground"
+                className={DETAIL_HEADER_ICON_BUTTON_CLASS}
               >
                 <XIcon className="h-3.5 w-3.5" aria-hidden="true" />
               </button>

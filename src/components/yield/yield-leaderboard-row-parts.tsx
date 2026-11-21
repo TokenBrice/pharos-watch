@@ -145,7 +145,7 @@ export function YieldExpandedDetails({
                   onOpenSourceSheet(row.id);
                 }}
                 className="pharos-focus-ring mt-auto inline-flex items-center justify-center rounded-full bg-muted px-2 py-1 text-xs font-mono text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                aria-label={`${totalSourceCount} yield sources — open source explorer`}
+                aria-label={`${totalSourceCount} yield sources: open source explorer`}
               >
                 +{altSourceCount} alt sources
               </button>

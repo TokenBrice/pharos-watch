@@ -14,6 +14,10 @@ import {
   getPeakDeviationMagnitudeBps,
   hasUnverifiedDepegPeak,
 } from "@/lib/depeg-event-config";
+import {
+  DepegArchiveFilterList,
+  type ArchiveEventItem,
+} from "@/app/depeg/archive/archive-filter-list";
 
 const MIN_DEVIATION_PCT = (MIN_DEPEG_PAGE_DEVIATION_BPS / 100).toFixed(MIN_DEPEG_PAGE_DEVIATION_BPS % 100 === 0 ? 0 : 1);
 const AUDIT_BADGE_CLASS = "inline-flex shrink-0 items-center rounded-full border px-1.5 py-0.5 text-3xs font-medium leading-none";
@@ -96,16 +100,36 @@ function ArchiveMonthGroups({
   );
 }
 
+function toArchiveItem(event: DepegEventEntry): ArchiveEventItem {
+  const peakBps = getPeakDeviationMagnitudeBps(event);
+  return {
+    slug: event.slug,
+    stablecoinId: event.stablecoinId,
+    symbol: event.symbol,
+    direction: event.direction,
+    monthLabel: monthLabel(event.startedAt),
+    dateLabel: formatIsoDate(event.startedAt),
+    peakBps,
+    peakFormatted: formatDeviationBps(peakBps),
+    peerMedianPeak: Boolean(event.peakBasis),
+    unverifiedPeak: hasUnverifiedDepegPeak(event),
+    isRetired: event.retired === true || isRetiredFromCatalog(event.stablecoinId, TRACKED_IDS),
+    isDisputed: isDisputedAuditVerdict(event.provenance?.auditVerdict),
+  };
+}
+
 /**
  * Complete server-rendered index of the grow-only permanent event archive.
- * Every generated event page remains crawl-discoverable from `/depeg/archive/`.
+ * Every generated event page remains crawl-discoverable from `/depeg/archive/`
+ * while client hydration enables in-place coin, direction and severity filtering.
  */
 export function DepegEventArchive() {
   const events: readonly DepegEventEntry[] = DEPEG_EVENT_ENTRIES;
 
   if (events.length === 0) return null;
 
-  const groups = groupByMonth(events);
+  const items = events.map(toArchiveItem);
+  const latestMonth = items[0]!.monthLabel;
 
   return (
     <section aria-labelledby="depeg-event-archive-heading" className="space-y-3">
@@ -114,14 +138,14 @@ export function DepegEventArchive() {
           Permanent event index
         </h2>
         <p className="pharos-meta">
-          {events.length} permanent pages · latest {groups[0]!.label}
+          {events.length} permanent pages · latest {latestMonth}
         </p>
       </header>
       <p className="pharos-meta">
         Confirmed events at {MIN_DEVIATION_PCT}% deviation or worse.
       </p>
 
-      <ArchiveMonthGroups groups={groups} />
+      <DepegArchiveFilterList items={items} />
     </section>
   );
 }

@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { ExternalLink } from "lucide-react";
+import { BookOpen, ExternalLink } from "lucide-react";
 import { ChartSkeleton } from "@/components/chart-skeleton";
-import { HERO_KPI_VALUE_CLASS } from "@/components/feature-hero-split";
+import { FeatureHeroSplit } from "@/components/feature-hero-split";
+import { PageLoadingSplitHero } from "@/components/page-loading-skeleton";
 import { RailHeroFigureTransition } from "@/components/view-transitions";
 import { MethodologyLabel } from "@/components/methodology-hint";
+import { ShowYourWorkToggle } from "@/components/show-your-work-toggle";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { UniverseChip } from "@/components/universe-chip";
 import {
@@ -22,7 +24,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatCurrency, formatScore } from "@shared/lib/format";
-import { type ConditionBand, DEPEG_DIRECTION_CLASSES, DIRECTION_TONE_CLASSES, PSI_BAND_CLASSES } from "@shared/lib/classification";
+import { clampScore } from "@shared/lib/math";
+import { PSI_CONDITION_BANDS } from "@shared/lib/psi-policy";
+import {
+  type ConditionBand,
+  DEPEG_DIRECTION_CLASSES,
+  DIRECTION_TONE_CLASSES,
+  PSI_BAND_CLASSES,
+  PSI_HEX_COLORS,
+} from "@shared/lib/classification";
 import { PsiBeamDimmers } from "./psi-beam-dimmers";
 import { PsiBeacon } from "@/components/psi-beacon/psi-beacon";
 import type { PsiBeaconState } from "@shared/lib/psi-beacon";
@@ -34,68 +44,52 @@ import type {
   PsiEventTimelineRow,
 } from "./view-model";
 
-const CONTRIBUTOR_HEAD_CLASS =
-  "h-auto px-0 pb-2 pr-4 text-xs";
+const CONTRIBUTOR_HEAD_CLASS = "h-auto px-0 pb-2 pr-4 text-xs";
 const CONTRIBUTOR_CELL_CLASS = "px-0 py-2.5 pr-4";
 
-type PsiHistoryStatsLayout = "grid" | "row" | "compact";
+const REGIME_SCALE_BANDS = [...PSI_CONDITION_BANDS]
+  .reverse()
+  .map((entry, index, list) => {
+    const nextMin = index < list.length - 1 ? list[index + 1]!.min : 100;
+    const maxDisplay = index === list.length - 1 ? 100 : nextMin - 1;
+    const span = (index === list.length - 1 ? 100 : nextMin) - entry.min;
+    return {
+      band: entry.band as ConditionBand,
+      min: entry.min,
+      maxDisplay,
+      span,
+      rangeLabel: `${entry.min}–${maxDisplay}`,
+      color: PSI_HEX_COLORS[entry.band as ConditionBand],
+    };
+  });
 
 function PsiHistoryStatsGrid({
   items,
-  compact = false,
-  layout,
   className,
 }: {
   items: HistoryStatItem[];
-  compact?: boolean;
-  layout?: PsiHistoryStatsLayout;
   className?: string;
 }) {
   if (items.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground text-sm">
-        PSI hasn&apos;t computed yet — check back in 30 minutes.
+      <div className="py-4 text-center text-sm text-muted-foreground">
+        PSI has not computed yet. Check back in 30 minutes.
       </div>
     );
   }
 
-  const resolved: PsiHistoryStatsLayout = layout ?? (compact ? "compact" : "grid");
-  const isCompact = resolved === "compact";
   // The three 30d stats normally share one coverage caption ("29/30 observed
-  // days"); print it once under the row instead of three nowrap copies, which
-  // overflowed the hero card at 1440px.
+  // days"); print it once under the row instead of three nowrap copies.
   const sharedSub = items.every((item) => item.sub === items[0]?.sub) ? items[0]?.sub ?? null : undefined;
 
-  const wrapperClass =
-    resolved === "compact"
-      ? "grid w-full grid-cols-3 gap-x-3 gap-y-2 border-t border-border/60 pt-3 xl:hidden"
-      : resolved === "row"
-        ? "grid grid-cols-3 items-end gap-x-6 gap-y-1.5"
-        : "grid grid-cols-3 gap-3";
-
   return (
-    <div className={cn(wrapperClass, className)}>
+    <div className={cn("grid grid-cols-3 gap-x-4 gap-y-1.5", className)}>
       {items.map((item) => {
         const color = PSI_BAND_CLASSES[item.band as ConditionBand] ?? "text-foreground";
         return (
-          <div key={item.label} className="flex min-w-0 flex-col items-center gap-0.5 text-center">
-            <span
-              className={cn(
-                "whitespace-nowrap",
-                isCompact
-                  ? "text-xs text-muted-foreground"
-                  : "pharos-label",
-              )}
-            >
-              {item.label}
-            </span>
-            <span
-              className={cn(
-                "pharos-numeric leading-none",
-                isCompact ? "text-base font-bold" : "text-2xl font-extrabold",
-                color,
-              )}
-            >
+          <div key={item.label} className="flex min-w-0 flex-col gap-0.5">
+            <span className="pharos-label whitespace-nowrap">{item.label}</span>
+            <span className={cn("pharos-numeric text-xl font-bold leading-none sm:text-2xl", color)}>
               {item.value}
             </span>
             {sharedSub === undefined && item.sub ? (
@@ -105,7 +99,110 @@ function PsiHistoryStatsGrid({
         );
       })}
       {sharedSub ? (
-        <span className="col-span-full text-center text-xs leading-tight text-muted-foreground">{sharedSub}</span>
+        <span className="col-span-full text-xs leading-tight text-muted-foreground">{sharedSub}</span>
+      ) : null}
+    </div>
+  );
+}
+
+function PsiRegimeScaleBar({
+  score,
+  band,
+  scoreBasis,
+  instantScore,
+  instantBand,
+  isCurrent,
+}: {
+  score: number;
+  band: string;
+  scoreBasis: string;
+  instantScore?: number | null;
+  instantBand?: string | null;
+  isCurrent: boolean;
+}) {
+  const markerPct = clampScore(score);
+  const instantMarkerPct = instantScore != null ? clampScore(instantScore) : null;
+  const bandsDiffer = Boolean(instantBand && instantScore != null && instantBand !== band);
+
+  return (
+    <div className="space-y-3" data-testid="psi-regime-scale">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="pharos-label">Regime scale (0–100)</p>
+        <p className="text-xs text-muted-foreground">
+          {band} ({REGIME_SCALE_BANDS.find((entry) => entry.band === band)?.rangeLabel ?? "0–100"})
+        </p>
+      </div>
+
+      <div className="relative pt-2">
+        <div
+          className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted"
+          role="img"
+          aria-label={`Regime scale from Meltdown (0 to 19) to Bedrock (90 to 100). Current score ${formatScore(score)} (${band}).`}
+        >
+          {REGIME_SCALE_BANDS.map((segment) => {
+            const active = segment.band === band;
+            return (
+              <div
+                key={segment.band}
+                className="h-full border-r border-background/80 last:border-r-0"
+                style={{
+                  width: `${segment.span}%`,
+                  backgroundColor: segment.color,
+                  opacity: !isCurrent ? 0.35 : active ? 1 : 0.42,
+                }}
+              />
+            );
+          })}
+        </div>
+
+        {instantMarkerPct != null && Math.abs(instantMarkerPct - markerPct) >= 0.8 ? (
+          <span
+            aria-hidden="true"
+            title={`Instant sample: ${formatScore(instantScore!)}`}
+            className="pointer-events-none absolute top-1.5 h-3.5 w-0.5 -translate-x-1/2 rounded-full bg-muted-foreground/80"
+            style={{ left: `${instantMarkerPct}%` }}
+          />
+        ) : null}
+
+        <span
+          aria-hidden="true"
+          data-testid="psi-regime-scale-marker"
+          className="pointer-events-none absolute top-0.5 h-5 w-1 -translate-x-1/2 rounded-full bg-foreground ring-2 ring-background"
+          style={{ left: `${markerPct}%` }}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 sm:grid-cols-3 lg:grid-cols-6">
+        {REGIME_SCALE_BANDS.map((segment) => {
+          const active = segment.band === band;
+          return (
+            <div
+              key={segment.band}
+              className={cn(
+                "flex items-center gap-1.5 text-2xs",
+                active ? "font-semibold text-foreground" : "text-muted-foreground",
+              )}
+            >
+              <span
+                className="h-2 w-2 shrink-0 rounded-full"
+                style={{ backgroundColor: segment.color, opacity: !isCurrent ? 0.45 : active ? 1 : 0.65 }}
+                aria-hidden="true"
+              />
+              <span className="truncate">{segment.band}</span>
+              <span className="ml-auto pharos-numeric text-3xs text-muted-foreground">{segment.rangeLabel}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      {bandsDiffer && instantScore != null && instantBand ? (
+        <p className="text-xs text-muted-foreground" data-testid="psi-band-divergence-note">
+          Instant reading is{" "}
+          <span className="pharos-numeric font-medium text-foreground">
+            {formatScore(instantScore)} ({instantBand})
+          </span>
+          ; headline tracks the {scoreBasis} ({formatScore(score)}, {band}) to smooth single-sample noise.
+        </p>
       ) : null}
     </div>
   );
@@ -114,21 +211,13 @@ function PsiHistoryStatsGrid({
 export function StabilityIndexLoadingState() {
   return (
     <div className="space-y-6">
-      <Card className="rounded-xl">
-        <CardContent className="flex items-center gap-6 py-8">
-          <Skeleton className="h-20 w-20 rounded-full" />
-          <div className="space-y-3">
-            <Skeleton className="h-10 w-32" />
-            <Skeleton className="h-6 w-48" />
-          </div>
-        </CardContent>
-      </Card>
+      <PageLoadingSplitHero visualClassName="min-h-[260px]" visualVariant="area" />
       <Card className="rounded-xl">
         <CardHeader>
           <Skeleton className="h-6 w-40" />
         </CardHeader>
         <CardContent>
-          <ChartSkeleton className="h-[250px] sm:h-[350px] w-full" />
+          <ChartSkeleton variant="area" className="h-[250px] w-full sm:h-[350px]" />
         </CardContent>
       </Card>
       <Card className="rounded-xl">
@@ -136,7 +225,7 @@ export function StabilityIndexLoadingState() {
           <Skeleton className="h-6 w-48" />
         </CardHeader>
         <CardContent>
-          <ChartSkeleton className="h-[250px] sm:h-[350px] w-full" />
+          <ChartSkeleton variant="area" className="h-[250px] w-full sm:h-[350px]" />
         </CardContent>
       </Card>
     </div>
@@ -167,6 +256,8 @@ export function StabilityIndexPanel({
   band,
   score,
   scoreBasis,
+  instantScore,
+  instantBand,
   delta,
   daysInBand,
   historyStats,
@@ -177,6 +268,8 @@ export function StabilityIndexPanel({
   band: string;
   score: number;
   scoreBasis: string;
+  instantScore?: number | null;
+  instantBand?: string | null;
   delta: number | null;
   daysInBand: number;
   historyStats: HistoryStatItem[];
@@ -186,117 +279,182 @@ export function StabilityIndexPanel({
 }) {
   const conditionBand = band as ConditionBand;
   // Retained data keeps its number but loses its band hue, matching the beacon and regime bar (R3).
-  const colorClass = beaconState.kind === "current" ? (PSI_BAND_CLASSES[conditionBand] ?? "text-foreground") : "text-foreground";
+  const isCurrent = beaconState.kind === "current";
+  const colorClass = isCurrent ? (PSI_BAND_CLASSES[conditionBand] ?? "text-foreground") : "text-foreground";
   const deltaClass = delta != null && delta >= 0
     ? DIRECTION_TONE_CLASSES.up
     : DIRECTION_TONE_CLASSES.down;
 
   return (
-    <Card variant="shell" className="gap-5 py-6 sm:py-7">
-      <CardHeader
-        kicker="The Beacon"
-        heading="Market regime, drift, and 30-day range"
-        freshness="Updated every 30 min"
-      />
-      <CardContent aria-live="polite">
-        {/* Below xl the readout column dissolves (`contents`) so the KPI can sit
-            above the beacon: the instrument header keeps the answer above the
-            mobile fold. */}
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-stretch xl:gap-7">
-          <div className="order-2 mx-auto w-full max-w-xl rounded-lg xl:order-none xl:mx-0 xl:w-[min(37vw,31rem)] xl:max-w-none xl:shrink-0">
-            <PsiBeacon state={beaconState} />
+    <div className="space-y-4" aria-live="polite">
+      <FeatureHeroSplit
+        ariaLabel="Pharos Stability Index overview"
+        mobileSubBeforeVisual
+        beamLabel={
+          <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <MethodologyLabel topic="psi">PSI</MethodologyLabel>
+            <span className="pharos-label">{scoreBasis}</span>
+          </span>
+        }
+        beamValueClassName="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5"
+        beamValue={
+          <>
+            <RailHeroFigureTransition rail="psi">
+              <span className={cn("pharos-hero-kpi", colorClass)}>
+                {formatScore(score)}
+              </span>
+            </RailHeroFigureTransition>
+            <span className={cn("text-lg font-bold uppercase", colorClass)}>
+              {band}
+            </span>
+          </>
+        }
+        universe={
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm text-muted-foreground">
+              {delta !== null ? (
+                <span className={cn("font-medium pharos-numeric", deltaClass)}>
+                  {delta >= 0 ? "+" : ""}
+                  {delta.toFixed(1)} vs yesterday
+                </span>
+              ) : null}
+              <span>{daysInBand} day{daysInBand !== 1 ? "s" : ""} in {band}</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <UniverseChip universe="psi" />
+              <ShowYourWorkToggle />
+            </div>
           </div>
-
-          <div className="contents xl:flex xl:min-w-0 xl:flex-1 xl:flex-col xl:gap-4 xl:pt-1">
-            <div className="order-1 flex min-w-0 flex-col gap-4 xl:order-none xl:flex-row xl:items-center xl:justify-between xl:gap-5">
-              <div className="flex min-w-0 flex-col items-center gap-1 text-center xl:shrink-0 xl:items-start xl:text-left">
-                <div className="flex flex-wrap items-baseline justify-center gap-x-2 gap-y-0.5 xl:justify-start">
-                  <span className="text-xs text-muted-foreground">
-                    <MethodologyLabel topic="psi">PSI</MethodologyLabel>
-                  </span>
-                  <span className="pharos-label">
-                    {scoreBasis}
-                  </span>
-                  <RailHeroFigureTransition rail="psi">
-                    <span className={cn(HERO_KPI_VALUE_CLASS, colorClass)}>
-                      {formatScore(score)}
-                    </span>
-                  </RailHeroFigureTransition>
-                  <span className={`text-lg font-bold uppercase ${colorClass}`}>
-                    {band}
-                  </span>
-                </div>
-                <div className="flex flex-wrap items-baseline justify-center gap-x-3 gap-y-1 text-sm text-muted-foreground xl:justify-start">
-                  {delta !== null && (
-                    <span className={`font-medium pharos-numeric ${deltaClass}`}>
-                      {delta >= 0 ? "+" : ""}
-                      {delta.toFixed(1)} vs yesterday
-                    </span>
-                  )}
-                  <span>{daysInBand} day{daysInBand !== 1 ? "s" : ""} in {band}</span>
-                </div>
-                <UniverseChip universe="psi" />
-              </div>
-
-              <div className="hidden xl:flex xl:items-center xl:justify-end">
-                <PsiHistoryStatsGrid items={historyStats} layout="row" />
-              </div>
-            </div>
-
-            <PsiHistoryStatsGrid items={historyStats} layout="compact" className="order-3 xl:order-none" />
-
-            <div className="order-4 border-t border-border/60 pt-4 xl:order-none">
-              <PsiBeamDimmers lanes={lanes} series={componentData} columns={2} density="compact" />
-            </div>
+        }
+        subKicker="30-day range"
+        sub={<PsiHistoryStatsGrid items={historyStats} />}
+        footer={
+          <PsiRegimeScaleBar
+            score={score}
+            band={band}
+            scoreBasis={scoreBasis}
+            instantScore={instantScore}
+            instantBand={instantBand}
+            isCurrent={isCurrent}
+          />
+        }
+      >
+        <div className="flex h-full flex-col justify-between gap-3 p-5 sm:p-6 lg:p-7">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="pharos-label">The Beacon</p>
+            <span className="pharos-meta">Updated every 30 min</span>
+          </div>
+          <div className="mx-auto w-full max-w-2xl">
+            <PsiBeacon state={beaconState} showComponents={false} />
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </FeatureHeroSplit>
+
+      <PsiBeamDimmers lanes={lanes} series={componentData} columns={4} density="default" />
+    </div>
   );
 }
 
-export function PsiEventTimelineCard({ rows }: { rows: PsiEventTimelineRow[] }) {
+export function PsiEventTimelineCard({
+  rows,
+  selectedEventLabel = null,
+  onSelectEvent,
+}: {
+  rows: PsiEventTimelineRow[];
+  selectedEventLabel?: string | null;
+  onSelectEvent?: (event: PsiEventTimelineRow) => void;
+}) {
   return (
     <Card className="rounded-xl animate-in fade-in duration-300">
       <CardHeader className="pb-2">
-        <CardTitle as="h2" className="pharos-label">Notable events</CardTitle>
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <CardTitle as="h2" className="pharos-label">Notable events</CardTitle>
+          {onSelectEvent ? (
+            <span className="text-2xs text-muted-foreground">Select an event to focus its window on the chart</span>
+          ) : null}
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="relative ml-3 border-l border-border/50 pl-5 space-y-5">
-          {rows.map((event) => (
-            <div key={event.label} className="relative min-w-0">
-              <span
-                className="absolute -left-[calc(1.25rem+3.5px)] top-[5px] h-[7px] w-[7px] rounded-full ring-2 ring-background"
-                style={{ backgroundColor: event.dotHex }}
-                aria-hidden="true"
-              />
-              <div className="flex flex-col gap-0.5">
-                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-                  <span className="text-sm pharos-numeric text-muted-foreground shrink-0">{event.dateStr}</span>
-                  <span className="text-sm font-semibold shrink-0">{event.label}</span>
-                  {event.psi !== null && (
-                    <span className={`text-sm pharos-numeric font-medium shrink-0 ${event.psiColor}`}>
-                      PSI {formatScore(event.psi)}
-                    </span>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-x-4 min-w-0 overflow-hidden">
-                  {event.links.map((link) => (
-                    <a
-                      key={link.url}
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="pharos-focus-ring text-sm text-brand-accent-text hover:underline inline-flex items-center gap-1 min-w-0 shrink rounded-sm"
+        <div className="relative ml-3 space-y-4 border-l border-border/50 pl-5">
+          {rows.map((event) => {
+            const isSelected = selectedEventLabel === event.label;
+            return (
+              <div
+                key={event.label}
+                className={cn(
+                  "relative min-w-0 rounded-lg px-2.5 py-2 -mx-2.5 transition-colors",
+                  isSelected && "bg-muted/60",
+                )}
+              >
+                <span
+                  className="absolute -left-[calc(1.25rem-0.625rem+3.5px)] top-[13px] h-[7px] w-[7px] rounded-full ring-2 ring-background"
+                  style={{ backgroundColor: event.dotHex }}
+                  aria-hidden="true"
+                />
+                <div className="flex flex-col gap-1">
+                  {onSelectEvent ? (
+                    <button
+                      type="button"
+                      onClick={() => onSelectEvent(event)}
+                      aria-pressed={isSelected}
+                      className="pharos-focus-ring flex w-full flex-wrap items-baseline gap-x-3 gap-y-0.5 rounded-sm text-left hover:text-brand-accent-text"
                     >
-                      <span className="truncate" title={link.title}>{link.title}</span>
-                      <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
-                    </a>
-                  ))}
+                      <span className="shrink-0 pharos-numeric text-sm text-muted-foreground">{event.dateStr}</span>
+                      <span className="shrink-0 text-sm font-semibold">{event.label}</span>
+                      {event.psi !== null ? (
+                        <span className={cn("shrink-0 pharos-numeric text-sm font-medium", event.psiColor)}>
+                          PSI {formatScore(event.psi)}
+                        </span>
+                      ) : null}
+                      <span className="ml-auto text-2xs text-muted-foreground">
+                        {isSelected ? "Focused on chart" : "Focus on chart"}
+                      </span>
+                    </button>
+                  ) : (
+                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                      <span className="shrink-0 pharos-numeric text-sm text-muted-foreground">{event.dateStr}</span>
+                      <span className="shrink-0 text-sm font-semibold">{event.label}</span>
+                      {event.psi !== null ? (
+                        <span className={cn("shrink-0 pharos-numeric text-sm font-medium", event.psiColor)}>
+                          PSI {formatScore(event.psi)}
+                        </span>
+                      ) : null}
+                    </div>
+                  )}
+
+                  {event.caseStudies.length > 0 ? (
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 min-w-0">
+                      {event.caseStudies.map((study) => (
+                        <Link
+                          key={study.slug}
+                          href={study.href}
+                          className="pharos-focus-ring inline-flex min-w-0 items-center gap-1.5 rounded-sm text-xs font-medium text-brand-accent-text hover:underline"
+                        >
+                          <BookOpen className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                          <span className="truncate">Case study: {study.title}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  <div className="flex flex-wrap gap-x-4 min-w-0 overflow-hidden">
+                    {event.links.map((link) => (
+                      <a
+                        key={link.url}
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="pharos-focus-ring inline-flex min-w-0 shrink items-center gap-1 rounded-sm text-sm text-brand-accent-text hover:underline"
+                      >
+                        <span className="truncate" title={link.title}>{link.title}</span>
+                        <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
+                      </a>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </CardContent>
     </Card>
@@ -328,7 +486,7 @@ export function PsiMethodologyCard({
           )}
           <Link
             href={methodology.changelogPath}
-            className="pharos-focus-ring text-xs text-foreground underline underline-offset-4 hover:text-brand-accent-text transition-colors rounded-sm"
+            className="pharos-focus-ring rounded-sm text-xs text-foreground underline underline-offset-4 transition-colors hover:text-brand-accent-text"
           >
             Version history &rarr;
           </Link>
@@ -348,7 +506,7 @@ export function PsiMethodologyCard({
           Chronically depegged coins decay linearly from full impact at 30 days to a 25% floor at 150 days.{" "}
           <Link
             href="/methodology/#stability-index-methodology"
-            className="pharos-focus-ring text-foreground underline underline-offset-4 hover:text-brand-accent-text transition-colors rounded-sm"
+            className="pharos-focus-ring rounded-sm text-foreground underline underline-offset-4 transition-colors hover:text-brand-accent-text"
           >
             Full methodology &rarr;
           </Link>
@@ -383,10 +541,10 @@ export function PsiContributorsTableCard({
           </div>
         ) : (
           <>
-            <p className="text-sm text-muted-foreground mb-4">
-              Which stablecoins are currently pushing the score below 100, ranked by total impact.
-              Breadth counts each open incident by its coin&apos;s size, whatever its deviation now, so a large coin near peg can outrank a small one far off it; each row names the larger cost.
-              Long-lasting depegs (over 30 days) receive a scoring depreciation - the percentage in parentheses next to the age shows the remaining impact weight.
+            <p className="mb-4 text-sm text-muted-foreground">
+              Stablecoins currently pulling PSI below 100, ranked by total impact. Breadth weights each open incident
+              by coin size even when price sits near peg awaiting recovery confirmation; severity weights deviation
+              depth. Depegs older than 30 days decay linearly toward a 25% floor (shown in parentheses beside age).
             </p>
             <TableFrame
               tableId="stability-index-top-contributors"
@@ -403,7 +561,7 @@ export function PsiContributorsTableCard({
               }}
             >
               <TableHeader>
-                <TableRow className="text-left hover:bg-transparent">
+                <TableRow rowIntent="static" className="text-left">
                   <TableHead scope="col" className={CONTRIBUTOR_HEAD_CLASS}>
                     Coin
                   </TableHead>
@@ -437,92 +595,117 @@ export function PsiContributorsTableCard({
                 </TableRow>
               </TableHeader>
               <TableBody className="text-muted-foreground">
-                {rows.map((row, index) => (
-                  <TableRow
-                    key={row.id}
-                    className={cn("hover:bg-muted/30", index === 0 && "bg-state-warn-solid/5")}
-                  >
-                    <TableCell className={CONTRIBUTOR_CELL_CLASS}>
-                      <Link
-                        href={buildStablecoinUrl(row.id)}
-                        className="pharos-focus-ring flex items-center gap-2 font-medium text-foreground hover:text-brand-accent-text transition-colors rounded-sm"
-                      >
-                        <StablecoinLogo src={logos?.[row.id]} name={row.symbol} size={22} />
-                        <span className="min-w-0">
-                          <span className={cn("block", index === 0 && "font-semibold")}>{row.symbol}</span>
-                          <span className="block text-xs font-normal text-muted-foreground">
-                            {row.driver === "breadth" ? "Open incident, counted by size" : "Deviation depth"}
+                {rows.map((row, index) => {
+                  const recoveryPending = row.driver === "breadth" && Math.abs(row.bps) < 100;
+                  return (
+                    <TableRow
+                      key={row.id}
+                      className={cn("hover:bg-muted/30", index === 0 && "bg-state-warn-solid/5")}
+                    >
+                      <TableCell className={CONTRIBUTOR_CELL_CLASS}>
+                        <Link
+                          href={buildStablecoinUrl(row.id)}
+                          className="pharos-focus-ring flex items-center gap-2 rounded-sm font-medium text-foreground transition-colors hover:text-brand-accent-text"
+                        >
+                          <StablecoinLogo src={logos?.[row.id]} name={row.symbol} size={22} />
+                          <span className="min-w-0 space-y-0.5">
+                            <span className="flex flex-wrap items-center gap-1.5">
+                              <span className={cn(index === 0 && "font-semibold")}>{row.symbol}</span>
+                              {index === 0 ? (
+                                <span className="rounded-full bg-state-warn-solid/15 px-1.5 py-0.5 text-3xs font-semibold text-state-warn">
+                                  Top
+                                </span>
+                              ) : null}
+                            </span>
+                            <span className="flex flex-wrap items-center gap-1.5">
+                              <Badge
+                                variant="outline"
+                                title={
+                                  row.driver === "breadth"
+                                    ? "Breadth driver: open incident weighted by coin market cap"
+                                    : "Severity driver: weighted by current price deviation depth"
+                                }
+                                className={cn(
+                                  "px-1.5 py-0 text-3xs font-medium",
+                                  row.driver === "breadth"
+                                    ? "border-state-warn/40 bg-state-warn-subtle text-state-warn"
+                                    : "border-state-danger/40 bg-state-danger-subtle text-state-danger",
+                                )}
+                              >
+                                {row.driver === "breadth" ? "Breadth" : "Severity"}
+                              </Badge>
+                              {recoveryPending ? (
+                                <span className="text-3xs font-normal text-muted-foreground">
+                                  Recovery pending
+                                </span>
+                              ) : null}
+                            </span>
                           </span>
-                        </span>
-                        {index === 0 && (
-                          <span className="ml-1 rounded-full bg-state-warn-solid/15 px-1.5 py-0.5 text-xs font-semibold text-state-warn">
-                            Top
-                          </span>
+                        </Link>
+                      </TableCell>
+                      <TableCell
+                        className={cn(
+                          CONTRIBUTOR_CELL_CLASS,
+                          "text-right pharos-numeric",
+                          row.bps < 0
+                            ? DEPEG_DIRECTION_CLASSES.below.text
+                            : DEPEG_DIRECTION_CLASSES.above.text,
                         )}
-                      </Link>
-                    </TableCell>
-                    <TableCell
-                      className={cn(
-                        CONTRIBUTOR_CELL_CLASS,
-                        "text-right pharos-numeric",
-                        row.bps < 0
-                          ? DEPEG_DIRECTION_CLASSES.below.text
-                          : DEPEG_DIRECTION_CLASSES.above.text,
-                      )}
-                    >
-                      {row.bps > 0 ? "+" : ""}
-                      {(row.bps / 100).toFixed(2)}%
-                    </TableCell>
-                    <TableCell
-                      className={cn(
-                        CONTRIBUTOR_CELL_CLASS,
-                        "hidden text-right pharos-numeric text-xs sm:table-cell",
-                      )}
-                    >
-                      {formatCurrency(row.mcapUsd)}
-                    </TableCell>
-                    <TableCell
-                      className={cn(
-                        CONTRIBUTOR_CELL_CLASS,
-                        "hidden text-right pharos-numeric sm:table-cell",
-                      )}
-                    >
-                      {/* Small-coin severities run ~1e-6–1e-3; a bare 0.00 reads as "no severity". */}
-                      {row.severity > 0 && row.severity < 0.005 ? "<0.01" : row.severity.toFixed(2)}
-                    </TableCell>
-                    <TableCell
-                      className={cn(
-                        CONTRIBUTOR_CELL_CLASS,
-                        "hidden text-right pharos-numeric sm:table-cell",
-                      )}
-                    >
-                      {row.breadth.toFixed(2)}
-                    </TableCell>
-                    <TableCell className={cn(CONTRIBUTOR_CELL_CLASS, "text-right pharos-numeric")}>
-                      <div className="flex items-center justify-end gap-2">
-                        <div className="h-1.5 w-12 overflow-hidden rounded-full bg-muted" aria-hidden="true">
-                          <div
-                            className="h-full rounded-full bg-foreground/60"
-                            style={{ width: `${Math.min(100, (row.total / (rows[0]?.total ?? 1)) * 100)}%` }}
-                          />
+                      >
+                        {row.bps > 0 ? "+" : ""}
+                        {(row.bps / 100).toFixed(2)}%
+                      </TableCell>
+                      <TableCell
+                        className={cn(
+                          CONTRIBUTOR_CELL_CLASS,
+                          "hidden text-right pharos-numeric text-xs sm:table-cell",
+                        )}
+                      >
+                        {formatCurrency(row.mcapUsd)}
+                      </TableCell>
+                      <TableCell
+                        className={cn(
+                          CONTRIBUTOR_CELL_CLASS,
+                          "hidden text-right pharos-numeric sm:table-cell",
+                        )}
+                      >
+                        {/* Small-coin severities run ~1e-6–1e-3; a bare 0.00 reads as "no severity". */}
+                        {row.severity > 0 && row.severity < 0.005 ? "<0.01" : row.severity.toFixed(2)}
+                      </TableCell>
+                      <TableCell
+                        className={cn(
+                          CONTRIBUTOR_CELL_CLASS,
+                          "hidden text-right pharos-numeric sm:table-cell",
+                        )}
+                      >
+                        {row.breadth.toFixed(2)}
+                      </TableCell>
+                      <TableCell className={cn(CONTRIBUTOR_CELL_CLASS, "text-right pharos-numeric")}>
+                        <div className="flex items-center justify-end gap-2">
+                          <div className="h-1.5 w-12 overflow-hidden rounded-full bg-muted" aria-hidden="true">
+                            <div
+                              className="h-full rounded-full bg-foreground/60"
+                              style={{ width: `${Math.min(100, (row.total / (rows[0]?.total ?? 1)) * 100)}%` }}
+                            />
+                          </div>
+                          <span className={cn("font-mono font-medium", index === 0 ? "text-foreground" : "text-foreground/70")}>
+                            {row.total.toFixed(2)}
+                          </span>
                         </div>
-                        <span className={cn("font-mono font-medium", index === 0 ? "text-foreground" : "text-foreground/70")}>
-                          {row.total.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="px-0 py-2.5 text-right pharos-numeric">
+                        <span className="font-mono text-xs">
+                          {row.ageDays < 1 ? "<1d" : `${Math.round(row.ageDays)}d`}
                         </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-0 py-2.5 text-right pharos-numeric">
-                      <span className="font-mono text-xs">
-                        {row.ageDays < 1 ? "<1d" : `${Math.round(row.ageDays)}d`}
-                      </span>
-                      {row.factor < 1 && (
-                        <span className="ml-1 text-xs text-muted-foreground/70">
-                          ({Math.round(row.factor * 100)}%)
-                        </span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                        {row.factor < 1 ? (
+                          <span className="ml-1 text-xs text-muted-foreground/70">
+                            ({Math.round(row.factor * 100)}%)
+                          </span>
+                        ) : null}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </TableFrame>
           </>

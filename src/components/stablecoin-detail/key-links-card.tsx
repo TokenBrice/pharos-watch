@@ -1,11 +1,35 @@
 "use client";
 
 import { ExternalLink, Globe } from "lucide-react";
+import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { RailCard } from "@/components/stablecoin-detail/rail-card";
 import { SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
 import { cn } from "@/lib/utils";
 import { getProofOfReservesStyle, POR_NEUTRAL_REPORT_LABEL } from "@shared/lib/classification";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
+
+const SHORT_PROVIDER_MAX_CHARS = 80;
+
+/**
+ * Splits long multi-clause Proof-of-Reserves provider notes so the 22rem rail
+ * never expands to 6+ lines of prose. Short attestor names stay verbatim.
+ */
+function parseProviderSummary(provider: string | undefined): { lead: string | null; note: string | null } {
+  if (!provider) return { lead: null, note: null };
+  const trimmed = provider.trim();
+  if (!trimmed) return { lead: null, note: null };
+  if (trimmed.length <= SHORT_PROVIDER_MAX_CHARS && !/\.\s/.test(trimmed)) {
+    return { lead: trimmed, note: null };
+  }
+  const clauseBreak = trimmed.search(/(?:;\s|\.\s|\s\()/);
+  if (clauseBreak > 0 && clauseBreak <= SHORT_PROVIDER_MAX_CHARS) {
+    return {
+      lead: trimmed.slice(0, clauseBreak).trim(),
+      note: trimmed,
+    };
+  }
+  return { lead: null, note: trimmed };
+}
 
 const LINK_CLASS =
   "pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground sm:min-h-0";
@@ -62,22 +86,31 @@ export function KeyLinksCard({ meta, anchors = false }: { meta: StablecoinMeta; 
             ))}
           </div>
         ) : null}
-        {proofOfReserves ? (
-          <div
-            className={anchors ? cn("flex flex-wrap items-center gap-x-3 gap-y-1.5", SECTION_SCROLL_MT) : "space-y-1.5"}
-            {...(anchors ? { id: "attestation" } : {})}
-          >
-            <p className="pharos-label">Proof of Reserves</p>
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              {getProofOfReservesStyle(proofOfReserves)?.label ?? POR_NEUTRAL_REPORT_LABEL}
-              {proofOfReserves.provider ? ` by ${proofOfReserves.provider}` : ""}
-            </p>
-            <a href={proofOfReserves.url} target="_blank" rel="noopener noreferrer" className={LINK_CLASS}>
-              View reserves
-              <ExternalLink className="h-3.5 w-3.5" />
-            </a>
-          </div>
-        ) : null}
+        {proofOfReserves ? (() => {
+          const styleLabel = getProofOfReservesStyle(proofOfReserves)?.label ?? POR_NEUTRAL_REPORT_LABEL;
+          const providerSummary = parseProviderSummary(proofOfReserves.provider);
+          return (
+            <div
+              className={anchors ? cn("flex flex-wrap items-center gap-x-3 gap-y-1.5", SECTION_SCROLL_MT) : "space-y-1.5"}
+              {...(anchors ? { id: "attestation" } : {})}
+            >
+              <p className="pharos-label">Proof of Reserves</p>
+              <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground" title={providerSummary.note ?? undefined}>
+                {styleLabel}
+                {providerSummary.lead ? ` by ${providerSummary.lead}` : ""}
+              </p>
+              {providerSummary.note ? (
+                <ModuleDisclosure label="Attestation notes" summaryClassName="min-h-8 text-xs lg:min-h-7">
+                  <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{providerSummary.note}</p>
+                </ModuleDisclosure>
+              ) : null}
+              <a href={proofOfReserves.url} target="_blank" rel="noopener noreferrer" className={LINK_CLASS}>
+                View reserves
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            </div>
+          );
+        })() : null}
       </div>
     </RailCard>
   );

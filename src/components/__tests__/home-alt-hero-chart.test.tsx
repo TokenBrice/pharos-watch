@@ -84,7 +84,26 @@ describe("HomeAltHeroChart", () => {
     const totalPath = [...container.querySelectorAll("path title")]
       .find((title) => title.textContent === "Total market cap")!.parentElement!;
     expect(totalPath.getAttribute("d")!.split("M ").length - 1).toBe(2);
-    expect(container.querySelector('path[fill="url(#homeAltTotalGrad)"]')!.getAttribute("d")!.split("Z").length - 1).toBe(1);
+    expect(container.querySelector('path[data-series="total-area"]')!.getAttribute("d")!.split("Z").length - 1).toBe(1);
+  });
+
+  it("renders stacked cohort areas and switches range via the 90D | 1Y | ALL segmented toggle", () => {
+    const multiYearRows = [
+      { ...rows[0]!, ts: Date.UTC(2024, 0, 1), total: 120, usdt: 80, usdc: 25, sky: 5, others: 10 },
+      { ...rows[0]!, ts: Date.UTC(2025, 6, 1), total: 180, usdt: 110, usdc: 45, sky: 10, others: 15 },
+      { ...rows[1]!, ts: Date.UTC(2026, 4, 1), total: 240, usdt: 140, usdc: 60, sky: 15, others: 25 },
+      { ...rows[1]!, ts: Date.UTC(2026, 5, 1), total: 250, usdt: 145, usdc: 65, sky: 15, others: 25 },
+    ];
+    const { container } = render(<HomeAltHeroChart rows={multiYearRows} />);
+    for (const band of ["usdt-area", "usdc-area", "sky-area", "others-area"]) {
+      expect(container.querySelector(`path[data-series="${band}"]`)?.getAttribute("d")).toContain("Z");
+    }
+    const btn90d = screen.getByRole("button", { name: "90D" });
+    const btnAll = screen.getByRole("button", { name: "ALL" });
+    expect(btnAll.getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(btn90d);
+    expect(btn90d.getAttribute("aria-pressed")).toBe("true");
+    expect(btnAll.getAttribute("aria-pressed")).toBe("false");
   });
 
   it("shows unavailable total and non-USD history as gaps rather than zero geometry", () => {

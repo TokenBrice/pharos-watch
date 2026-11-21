@@ -645,4 +645,28 @@ describe("variant relationship labels", () => {
     expect(new Set(siblingHrefs).size).toBe(siblingHrefs.length);
     usds.unmount();
   });
+
+  it("renders active-peer off-ramp links on quarantined profiles", () => {
+    const quarantined: StablecoinMeta = {
+      ...coin,
+      status: "quarantined",
+      listingStatusReview: {
+        changedAt: "2026-11-15",
+        reason: "Price and supply feeds temporarily suspended pending review.",
+      },
+    };
+    const { container } = render(
+      <StablecoinDetailSeoContent
+        coin={quarantined}
+        activePeers={[
+          { id: "usdc-circle", symbol: "USDC", name: "USD Coin" },
+          { id: "usdt-tether", symbol: "USDT", name: "Tether" },
+        ]}
+      />,
+    );
+    expect(container.textContent).toContain("Active peers");
+    expect(screen.getByRole("link", { name: /USDC/i }).getAttribute("href")).toBe("/stablecoin/usdc-circle/");
+    expect(screen.getByRole("link", { name: /USDT/i }).getAttribute("href")).toBe("/stablecoin/usdt-tether/");
+    expect(screen.getByRole("link", { name: /Browse active peers/i }).getAttribute("href")).toBe("/stablecoins/usd/");
+  });
 });

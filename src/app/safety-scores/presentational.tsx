@@ -9,7 +9,7 @@ import {
 import { UniverseChip } from "@/components/universe-chip";
 import { cn } from "@/lib/utils";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/classification";
-import type { ReportCardGrade } from "@shared/types/report-card-grade";
+import type { ReportCardGrade, ReportCardGradeRange } from "@shared/types/report-card-grade";
 import { SafetyMapPreview } from "./map-preview";
 import type { GradeFilter, PegFilter, V9PillarAverage } from "./v9-view-model";
 
@@ -80,7 +80,15 @@ interface SafetyScoresHeroData {
 }
 
 /** Loaded ratings only: the pending frame is `SafetyScoresContentLoadingState`'s server-rendered skeleton. */
-export function SafetyScoresHero({ data }: { data: SafetyScoresHeroData | null }) {
+export function SafetyScoresHero({
+  data,
+  activeGrade = null,
+  onSelectGrade,
+}: {
+  data: SafetyScoresHeroData | null;
+  activeGrade?: ReportCardGradeRange | null;
+  onSelectGrade?: (grade: ReportCardGradeRange) => void;
+}) {
   const [avg, abSupply] = data?.stats ?? [];
   const pillarAverages = data?.pillarAverages ?? [];
   const gradeClass = avg ? REPORT_CARD_GRADE_COLORS[avg.detail as ReportCardGrade] : undefined;
@@ -129,7 +137,13 @@ export function SafetyScoresHero({ data }: { data: SafetyScoresHeroData | null }
     >
       <div className="grid h-full gap-4 p-5 sm:p-6 lg:grid-cols-3 lg:p-7">
         <div className="flex min-w-0 flex-col justify-center lg:col-span-2">
-          <SafetyGradeDistributionBar gradeCounts={data.gradeCounts} totalCards={data.totalCards} supplyMix={data.supplyMix} />
+          <SafetyGradeDistributionBar
+            gradeCounts={data.gradeCounts}
+            totalCards={data.totalCards}
+            supplyMix={data.supplyMix}
+            activeGrade={activeGrade}
+            onSelectGrade={onSelectGrade}
+          />
         </div>
         <SafetyMapPreview />
       </div>
@@ -139,19 +153,31 @@ export function SafetyScoresHero({ data }: { data: SafetyScoresHeroData | null }
 
 export function SafetyResultsSummary({
   count,
+  totalCount,
   gradeFilter,
   pegFilter,
+  searchQuery = "",
 }: {
   count: number;
+  totalCount?: number;
   gradeFilter: GradeFilter;
   pegFilter: PegFilter;
+  searchQuery?: string;
 }) {
   if (count === 0) return null;
+  const trimmedSearch = searchQuery.trim();
+  const isFiltered = totalCount != null && totalCount !== count;
 
   return (
     <p className="text-sm text-muted-foreground">
-      Showing <span className="font-medium text-foreground">{count}</span>{" "}
+      Showing <span className="font-medium text-foreground">{count}</span>
+      {isFiltered ? (
+        <>
+          {" "}of <span className="font-medium text-foreground">{totalCount}</span>
+        </>
+      ) : null}{" "}
       {count === 1 ? "coin" : "coins"}
+      {trimmedSearch ? ` matching "${trimmedSearch}"` : null}
       {gradeFilter === "pipeline-gap" ? " with Pipeline gap" : gradeFilter !== "all" && ` with grade ${gradeFilter}`}
       {pegFilter !== "all" && ` · ${pegFilter === "usd" ? "USD peg" : pegFilter === "fiat-non-usd" ? "other peg" : "commodity peg"}`}
     </p>
@@ -161,16 +187,19 @@ export function SafetyResultsSummary({
 export function SafetyEmptyState({
   gradeFilter,
   pegFilter,
+  searchQuery = "",
   onClearFilter,
 }: {
   gradeFilter: GradeFilter;
   pegFilter: PegFilter;
+  searchQuery?: string;
   onClearFilter: () => void;
 }) {
+  const hasFilters = gradeFilter !== "all" || pegFilter !== "all" || searchQuery.trim().length > 0;
   return (
-    <div className="text-center py-12 space-y-2">
+    <div className="py-12 text-center space-y-2">
       <p className="text-sm text-muted-foreground">No coins match this filter. Loosen one and look again.</p>
-      {(gradeFilter !== "all" || pegFilter !== "all") && (
+      {hasFilters && (
         <Button
           variant="outline"
           size="sm"

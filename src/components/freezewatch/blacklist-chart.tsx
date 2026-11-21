@@ -1,13 +1,14 @@
 "use client";
 
 import { useMemo } from "react";
-import { Line } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ChartSkeleton } from "@/components/chart-skeleton";
 import { QueryStateNotice } from "@/components/query-state-notice";
 import { formatCurrency } from "@shared/lib/format";
 import { formatCurrencyTick } from "@/lib/chart-ticks";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import { BLACKLIST_CHART_COLORS } from "@shared/lib/classification";
+import { CHART_SLATE } from "@/lib/chart-colors";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
 import { ChartLegendChip } from "@/components/chart-primitives/legend";
 import {
@@ -18,6 +19,8 @@ import type { BlacklistSummaryResponse, BlacklistStablecoin } from "@shared/type
 import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
 
 const CHART_HEIGHT = "h-[220px] sm:h-[280px]";
+const MAX_BLACKLIST_CHART_COINS = 5;
+const BLACKLIST_CHART_OTHER_KEY = "Other" as const;
 
 interface BlacklistChartProps {
   chart: BlacklistSummaryResponse["chart"] | undefined;
@@ -32,6 +35,11 @@ type BlacklistTooltipEntry = {
   color: string;
 };
 
+type BlacklistChartInputRow = BlacklistSummaryResponse["chart"][number] &
+  Partial<Record<BlacklistStablecoin, number>>;
+
+export type BlacklistChartSeriesKey = BlacklistStablecoin | typeof BLACKLIST_CHART_OTHER_KEY;
+
 export function getBlacklistTooltipSummary(payload?: ReadonlyArray<BlacklistTooltipEntry>) {
   const rows = (payload ?? []).filter((p) => p.dataKey !== "total" && p.value > 0);
   const total = payload?.find((p) => p.dataKey === "total")?.value ?? rows.reduce((sum, p) => sum + p.value, 0);
@@ -40,9 +48,67 @@ export function getBlacklistTooltipSummary(payload?: ReadonlyArray<BlacklistTool
 }
 
 export function getBlacklistChartCoins(
-  chartData: ReadonlyArray<BlacklistSummaryResponse["chart"][number] & Partial<Record<BlacklistStablecoin, number>>>,
+  chartData: ReadonlyArray<BlacklistChartInputRow>,
 ): BlacklistStablecoin[] {
   return BLACKLIST_STABLECOINS.filter((coin) => chartData.some((point) => (point[coin] ?? 0) > 0));
+}
+
+/**
+ * Ranks active chart coins by cumulative frozen value, keeps the top 5 as
+ * individual stacked series, and folds any remaining coins into a single
+ * "Other" bucket so the legend stays scannable.
+ */
+export function buildBlacklistChartModel(
+  chartData: ReadonlyArray<BlacklistChartInputRow>,
+): {
+  topCoins: BlacklistStablecoin[];
+  otherCoins: BlacklistStablecoin[];
+  seriesKeys: BlacklistChartSeriesKey[];
+  rows: Array<Record<string, string | number>>;
+} {
+  const activeCoins = getBlacklistChartCoins(chartData);
+  const orderIndex = new Map(BLACKLIST_STABLECOINS.map((coin, index) => [coin, index] as const));
+  const totalsByCoin = new Map<BlacklistStablecoin, number>();
+
+  for (const coin of activeCoins) {
+    let sum = 0;
+    for (const point of chartData) {
+      sum += point[coin] ?? 0;
+    }
+    totalsByCoin.set(coin, sum);
+  }
+
+  const ranked = [...activeCoins].sort((a, b) => {
+    const diff = (totalsByCoin.get(b) ?? 0) - (totalsByCoin.get(a) ?? 0);
+    if (diff !== 0) return diff;
+    return (orderIndex.get(a) ?? 0) - (orderIndex.get(b) ?? 0);
+  });
+
+  const topCoins = ranked.slice(0, MAX_BLACKLIST_CHART_COINS);
+  const otherCoins = ranked.slice(MAX_BLACKLIST_CHART_COINS);
+  const seriesKeys: BlacklistChartSeriesKey[] =
+    otherCoins.length > 0 ? [...topCoins, BLACKLIST_CHART_OTHER_KEY] : topCoins;
+
+  const rows = chartData.map((point) => {
+    const row: Record<string, string | number> = {
+      quarter: point.quarter,
+      total: point.total,
+    };
+    for (const coin of topCoins) {
+      row[coin] = point[coin] ?? 0;
+    }
+    if (otherCoins.length > 0) {
+      row[BLACKLIST_CHART_OTHER_KEY] = otherCoins.reduce((sum, coin) => sum + (point[coin] ?? 0), 0);
+    }
+    return row;
+  });
+
+  return { topCoins, otherCoins, seriesKeys, rows };
+}
+
+function seriesColor(key: BlacklistChartSeriesKey): string {
+  if (key === BLACKLIST_CHART_OTHER_KEY) return CHART_SLATE;
+  return BLACKLIST_CHART_COLORS[key];
 }
 
 export function BlacklistChart({ chart, isLoading, error, onRetry }: BlacklistChartProps) {
@@ -57,23 +123,32 @@ export function BlacklistChart({ chart, isLoading, error, onRetry }: BlacklistCh
       .sort((a, b) => b.total - a.total)
       .slice(0, 2);
   }, [chartData]);
-  const chartCoins = useMemo(() => getBlacklistChartCoins(chartData), [chartData]);
-  const chartSeries: QuarterlyStackedBarSeries[] = chartCoins.map((coin, i) => ({
-    dataKey: coin,
-    color: BLACKLIST_CHART_COLORS[coin],
-    fillOpacity: i === 0 ? 0.75 : 0.62,
-    radius: i === chartCoins.length - 1 ? [3, 3, 0, 0] : undefined,
-  }));
+
+  const { seriesKeys, otherCoins, rows } = useMemo(
+    () => buildBlacklistChartModel(chartData),
+    [chartData],
+  );
+
+  const chartSeries: QuarterlyStackedBarSeries[] = useMemo(
+    () =>
+      seriesKeys.map((key, index) => ({
+        dataKey: key,
+        color: seriesColor(key),
+        fillOpacity: index === 0 ? 0.78 : key === BLACKLIST_CHART_OTHER_KEY ? 0.55 : 0.66,
+        radius: index === seriesKeys.length - 1 ? [3, 3, 0, 0] : undefined,
+      })),
+    [seriesKeys],
+  );
 
   if (isLoading) {
     return (
       <section className="pharos-card-shell overflow-hidden rounded-xl">
         <div className="space-y-2 border-b border-border/50 p-5 sm:p-6">
           <Skeleton className="h-6 w-56" />
-          <Skeleton className="h-4 w-72 mt-1" />
+          <Skeleton className="mt-1 h-4 w-72" />
         </div>
         <div className="p-5 sm:p-6">
-          <Skeleton className={`${CHART_HEIGHT} w-full`} />
+          <ChartSkeleton variant="bars" className={`${CHART_HEIGHT} w-full`} />
         </div>
       </section>
     );
@@ -105,7 +180,7 @@ export function BlacklistChart({ chart, isLoading, error, onRetry }: BlacklistCh
           )}
         </div>
         <p className="text-xs text-muted-foreground">
-          Bars stack only tracked USD balances, so the quarterly totals roll up to the public freeze-ledger total.
+          Bars stack tracked USD balances by issuer so bar height reflects the quarterly rollup total.
         </p>
       </div>
       <div className="p-5 sm:p-6">
@@ -113,39 +188,26 @@ export function BlacklistChart({ chart, isLoading, error, onRetry }: BlacklistCh
           <QueryStateNotice state="unavailable" label="Freeze ledger chart" onRetry={onRetry} />
         ) : chartData.length > 0 ? (
           <>
-            <div className="mb-3 flex flex-wrap gap-2">
-              {chartCoins.map((coin) => (
+            <div className="mb-3 flex flex-wrap gap-x-4 gap-y-1.5" data-testid="blacklist-chart-legend">
+              {seriesKeys.map((key) => (
                 <ChartLegendChip
-                  key={coin}
+                  key={key}
                   markerClassName="inline-block h-2.5 w-2.5 rounded-sm"
-                  markerStyle={{ backgroundColor: BLACKLIST_CHART_COLORS[coin] }}
+                  markerStyle={{ backgroundColor: seriesColor(key) }}
                 >
-                  {coin}
+                  {key === BLACKLIST_CHART_OTHER_KEY ? `Other (${otherCoins.length})` : key}
                 </ChartLegendChip>
               ))}
-              <ChartLegendChip markerClassName="inline-block h-2.5 w-2.5 rounded-sm bg-foreground/45">
-                Total
-              </ChartLegendChip>
             </div>
             <div className="pharos-chart-stage">
               <QuarterlyStackedBarChart
-                data={chartData}
+                data={rows}
                 series={chartSeries}
                 yAxis={{ tickFormatter: formatCurrencyTick, width: 62 }}
                 tooltipContent={<BlacklistTooltip />}
                 ariaLabel={`Tracked frozen total stacked bar chart showing ${chartData.length} quarters of freeze-ledger balances by stablecoin issuer`}
                 height={CHART_HEIGHT}
-              >
-                <Line
-                  type="monotone"
-                  dataKey="total"
-                  stroke="var(--color-foreground)"
-                  strokeOpacity={0.45}
-                  strokeWidth={1.5}
-                  dot={false}
-                  activeDot={{ r: 3, strokeWidth: 0 }}
-                />
-              </QuarterlyStackedBarChart>
+              />
             </div>
           </>
         ) : (
@@ -180,7 +242,7 @@ function BlacklistTooltip({
         <TooltipRow key={p.dataKey} color={p.color} label={p.dataKey} value={formatCurrency(p.value)} />
       ))}
       {total > 0 && (
-        <div className="border-t border-border/50 mt-1.5 pt-1.5">
+        <div className="mt-1.5 border-t border-border/50 pt-1.5">
           <TooltipRow label="Total" value={formatCurrency(total)} bold />
         </div>
       )}

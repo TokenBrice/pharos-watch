@@ -2,7 +2,7 @@
 
 import { useMemo, type ReactNode } from "react";
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, Info } from "lucide-react";
+import { AlertTriangle, ArrowRight, ChevronDown, Info } from "lucide-react";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { MODULE_FOLD_RHYTHM_CLASS, ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
@@ -584,9 +584,13 @@ export function YieldRankMovementCard({ attribution }: { attribution: YieldRankC
         </p>
       ) : null}
       {topDrivers.length > 0 ? (
-        <details className="mt-2 text-xs text-muted-foreground">
-          <summary className="flex min-h-6 cursor-pointer select-none items-center rounded-sm pharos-focus-ring underline-offset-4 hover:text-foreground hover:underline">
-            {YIELD_SOURCE_FACT_LABELS.heuristicDrivers}
+        <details className="group/drivers mt-2 text-xs text-muted-foreground">
+          <summary className="pharos-focus-ring inline-flex min-h-6 cursor-pointer list-none select-none items-center gap-1.5 rounded-sm underline-offset-4 hover:text-foreground hover:underline [&::-webkit-details-marker]:hidden">
+            <span>{YIELD_SOURCE_FACT_LABELS.heuristicDrivers}</span>
+            <ChevronDown
+              aria-hidden="true"
+              className="h-3 w-3 shrink-0 transition-transform motion-reduce:transition-none group-open/drivers:rotate-180"
+            />
           </summary>
           <ul className="mt-1.5 space-y-0.5">
             {topDrivers.map(([key, value]) => {

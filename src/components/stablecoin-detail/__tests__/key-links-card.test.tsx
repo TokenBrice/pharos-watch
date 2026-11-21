@@ -96,4 +96,25 @@ describe("KeyLinksCard", () => {
 
     expect(container.firstChild).toBeNull();
   });
+
+  it("bounds verbose proof-of-reserves provider notes and folds the full prose", () => {
+    const verboseProvider =
+      "Deloitte LLP (independent CPA examination covering segregated Treasury accounts and cash balances held at regulated U.S. custodians as reported monthly across Circle reserve disclosures). Additional disclosures cover overnight reverse repo agreements.";
+    const { container } = render(
+      <KeyLinksCard
+        meta={{
+          ...meta,
+          proofOfReserves: {
+            type: "independent-audit",
+            url: "https://example.com/por",
+            provider: verboseProvider,
+          },
+        } as StablecoinMeta}
+      />,
+    );
+
+    expect(container.textContent).toContain("Attestation notes");
+    expect(container.textContent).toContain("Deloitte LLP");
+    expect(container.querySelector("details[data-module-fold]")?.textContent).toContain(verboseProvider);
+  });
 });

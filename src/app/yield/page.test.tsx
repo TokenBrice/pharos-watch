@@ -42,4 +42,15 @@ describe("yield landing lead", () => {
     expect(landingSpec.description).toContain(`safety ${landingFloor}+`);
     expect(landingSpec.description).not.toMatch(/C-\s*safety/u);
   });
+
+  it("enforces Q11 claim-safety copy, strips version prefixes, and includes Alerts header link", () => {
+    const html = renderToStaticMarkup(<YieldPage />);
+
+    expect(html).toContain("High grade, modest APY");
+    expect(html).toContain("USD 3M T-Bill benchmark");
+    expect(html).toContain("Alerts");
+    expect(html).not.toContain("Play It Safe");
+    expect(html).not.toMatch(/risk-free/i);
+    expect(html).not.toMatch(/Safety Score V\d+/u);
+  });
 });

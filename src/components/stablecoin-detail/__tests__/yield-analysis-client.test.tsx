@@ -186,7 +186,8 @@ describe("YieldAnalysisClient", () => {
       />,
     );
 
-    expect(screen.getByRole("link", { name: "Back to USDN detail" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Dossier" }).getAttribute("href")).toMatch(/^\/stablecoin\/usdn-smardex\/?$/);
+    expect(screen.getByText("Yield workbench").getAttribute("aria-current")).toBe("page");
     expect(screen.getByTestId("pys-breakdown").getAttribute("data-scaling-factor")).toBe("8");
     expect(screen.getByTestId("yield-source-risk-card")).toBeTruthy();
     const chart = screen.getByTestId("yield-history-chart");
@@ -292,7 +293,7 @@ describe("YieldAnalysisClient", () => {
     {
       id: "buck-buck-assets",
       coin: staticCoin("buck-buck-assets", "Buck", "BUCK", true),
-      expected: "This stablecoin is frozen — historical yield data is no longer being refreshed.",
+      expected: "This stablecoin is frozen; historical yield data is no longer being refreshed.",
     },
     {
       id: "brd-volpon",
@@ -310,7 +311,9 @@ describe("YieldAnalysisClient", () => {
 
     render(<YieldAnalysisClient id={id} staticCoin={coin} />);
 
-    expect(screen.getByRole("link", { name: `Back to ${coin.symbol} detail` })).toBeTruthy();
+    expect([`/stablecoin/${id}`, `/stablecoin/${id}/`]).toContain(
+      screen.getByRole("link", { name: "Dossier" }).getAttribute("href"),
+    );
     await waitFor(() => expect(screen.getByText(expected)).toBeTruthy());
   });
 
@@ -363,7 +366,7 @@ describe("YieldAnalysisClient", () => {
       />,
     );
 
-    expect(screen.getByRole("link", { name: "Back to USDN detail" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Dossier" }).getAttribute("href")).toMatch(/^\/stablecoin\/usdn-smardex\/?$/);
     expect(screen.getByRole("status")).toBeTruthy();
     expect(screen.getByText("yield rankings failed")).toBeTruthy();
   });
@@ -602,7 +605,7 @@ describe("YieldAnalysisClient", () => {
   it.each([
     ["explicit stale", { updatedAt: Date.now() / 1000 - 100_000, status: "stale", reason: "yield-publication-age" }],
     ["cutoff unavailable", { updatedAt: null, status: "stale", reason: "publication-cutoff-unavailable" }],
-  ] as const)("shows the shared notice with retry in both timeline cards for %s history", (_case, meta) => {
+  ] as const)("shows one deduplicated notice with retry above the timeline cards for %s history", (_case, meta) => {
     const refetch = vi.fn();
     setRankingsQuery({ data: makeResponse([makeRanking()]) });
     setHistoryQuery([
@@ -610,11 +613,14 @@ describe("YieldAnalysisClient", () => {
     ], { meta, refetch });
     renderWorkbench();
 
+    const banners = screen.getAllByRole("status");
+    expect(banners).toHaveLength(1);
+    expect(banners[0]!.getAttribute("data-health-state")).toBe("stale");
     for (const card of timelineCards()) {
-      expect(within(card).getByRole("status").getAttribute("data-health-state")).toBe("stale");
-      fireEvent.click(within(card).getByRole("button", { name: "Retry" }));
+      expect(within(card).queryByRole("status")).toBeNull();
     }
-    expect(refetch).toHaveBeenCalledTimes(2);
+    fireEvent.click(within(banners[0]!).getByRole("button", { name: "Retry" }));
+    expect(refetch).toHaveBeenCalledTimes(1);
     // Retained observations stay visible beside the notice, including observed-zero APY.
     expect(document.getElementById("warning-signals")!.querySelector("li")!.textContent).toContain("Primary Source at 0.00%");
   });
@@ -634,7 +640,7 @@ describe("YieldAnalysisClient", () => {
     expect(screen.queryByRole("status")).toBeNull();
 
     await act(async () => { await vi.advanceTimersByTimeAsync(1); });
-    expect(screen.getAllByRole("status")).toHaveLength(2);
+    expect(screen.getAllByRole("status")).toHaveLength(1);
     expect(useYieldHistoryMock.mock.results.every((result) => result.value.refetch.mock.calls.length === 0)).toBe(true);
   });
 

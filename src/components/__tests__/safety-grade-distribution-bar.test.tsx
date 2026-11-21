@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanupFrontendTest } from "@/test-utils/frontend";
 import { SafetyGradeDistributionBar, type SafetyGradeSupplyMix } from "../safety-scores/safety-grade-distribution-bar";
 
@@ -69,5 +69,28 @@ describe("SafetyGradeDistributionBar", () => {
     expect(screen.getByText(message)).toBeTruthy();
     expect(screen.queryByRole("img", { name: /by supply/ })).toBeNull();
     expect(screen.queryByText("0%")).toBeNull();
+  });
+
+  it("wires bar segments and legend items as interactive grade filter toggles", () => {
+    const onSelectGrade = vi.fn();
+    render(
+      <SafetyGradeDistributionBar
+        gradeCounts={COUNTS}
+        totalCards={4}
+        activeGrade="B"
+        onSelectGrade={onSelectGrade}
+      />,
+    );
+
+    expect(screen.getByText("Filtered to Grade B")).toBeTruthy();
+    const segmentB = screen.getByRole("button", { name: "Filter by grade B (2)" });
+    expect(segmentB.getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(segmentB);
+    expect(onSelectGrade).toHaveBeenCalledWith("B");
+
+    const legendA = screen.getByRole("button", { name: "Filter by grade A: 1" });
+    expect(legendA.getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(legendA);
+    expect(onSelectGrade).toHaveBeenCalledWith("A");
   });
 });

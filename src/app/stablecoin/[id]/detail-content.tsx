@@ -1,13 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import type { ReactNode, Ref, RefObject } from "react";
-import { ChartPie, Droplet, HeartPulse, Hourglass, Scale, Sparkles, Unlink } from "lucide-react";
+import { ChartPie, Droplet, Flag, HeartPulse, Hourglass, Scale, Sparkles, Unlink } from "lucide-react";
 import { AiSummary } from "@/components/ai-summary/ai-summary";
 import { BackToSource } from "@/components/back-to-source";
 import { NoticeStack, placeCoinNotices } from "@/components/coin-notice";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
+import { OpsStatusChip } from "@/components/ops-status-chip";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { ContractDeployments } from "@/components/stablecoin-detail/contract-deployments";
 import { KeyLinksCard } from "@/components/stablecoin-detail/key-links-card";
@@ -27,6 +29,16 @@ import { RailCard } from "@/components/stablecoin-detail/rail-card";
 import { RegulatoryStandingCard } from "@/components/stablecoin-detail/regulatory-standing-card";
 import { SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
 import { Badge } from "@/components/ui/badge";
+import {
+  deriveDataHealth,
+  formatDataHealthTimestamp,
+  isPublicWarning,
+  mergeHealthStates,
+  type DataHealthInfo,
+} from "@/lib/data-health";
+import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
+import type { StaleQuery } from "@/lib/stale-query";
+import type { HeroPassportItemViewModel } from "@/lib/stablecoin-detail-passport";
 import type { MechanismBackingView } from "@/lib/mechanism-backing";
 import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
 import type { MechanismReviewView } from "@/lib/mechanism-review";
@@ -34,11 +46,14 @@ import type { TransferReviewView } from "@/lib/transfer-review";
 import { RailSafetySummary } from "@/components/stablecoin-detail/rail-safety-summary";
 import { UnderlyingAssetCard } from "@/components/stablecoin-detail/underlying-asset-card";
 import { TapeForCoinTeaser } from "@/components/tape/tape-for-coin-teaser";
+import { useFreshnessBoundary } from "@/hooks/use-freshness-boundary";
+import { useHydrated } from "@/hooks/use-hydrated";
 import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
 import { useUtcDayNowMs } from "@/hooks/use-utc-day-clock";
 import { formatLiveCardAsOf } from "@/lib/stablecoin-detail-hero-metrics";
 import { alignAnchorAfterHydration, revealAnchorId, revealDeferredSectionsThroughAnchor } from "@/lib/anchor-reveal";
 import { cn } from "@/lib/utils";
+import { formatElapsedSeconds } from "@shared/lib/format";
 import { scoreToGrade } from "@shared/lib/report-card-core";
 import type { AiSummaryClaimValues } from "@shared/types/editorial";
 import {
@@ -81,6 +96,7 @@ interface DetailContentProps {
   heroRef: RefObject<HTMLDivElement | null>;
   historyActive: boolean;
   historyGateRef: Ref<HTMLDivElement>;
+  initialRedeemability?: HeroPassportItemViewModel | null;
   mechanismBacking: MechanismBackingView | null;
   mechanismCollateralization: MechanismCollateralizationView | null;
   mechanismReview: MechanismReviewView | null;
@@ -93,7 +109,7 @@ interface DetailContentProps {
   failureScenario: FailureScenarioSelection | null;
   onActiveBannerChange: (id: string) => void;
   onFeedbackOpenChange: (open: boolean) => void;
-  overviewGateRef: Ref<HTMLDivElement>;
+  overviewGateRef: Ref<HTMLElement>;
   viewModel: ReadyDetailViewModel;
 }
 
@@ -110,6 +126,149 @@ function detailSnapshotProvenance(queries: ReadyDetailViewModel["staleQueries"])
   };
 }
 
+/** Matches `StaleDataBanner`'s unsettled-query exclusion so the header ops chip evaluates the exact same lanes. */
+function isSecondaryQueryUnsettled(query: StaleQuery): boolean {
+  if (query.error) return false;
+  if (query.awaitingLiveRead) return true;
+  if (query.hasData ?? query.dataUpdatedAt > 0) return false;
+  return query.isLoading ?? query.dataUpdatedAt === 0;
+}
+
+function formatSecondaryAffectedLabels(labels: string[]): string {
+  if (labels.length === 0) return "datasets";
+  if (labels.length === 1) return labels[0]!;
+  if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
+  const more = labels.length - 2;
+  return `${labels[0]}, ${labels[1]}, and ${more} more ${more === 1 ? "dataset" : "datasets"}`;
+}
+
+/**
+ * Secondary refresh and staleness notices consolidate into a single header
+ * `OpsStatusChip` next to `Updated Xh ago`, so API pipeline warnings never
+ * visually collide with amber holder-deadline notices below the hero card.
+ */
+function DetailSecondaryOpsChip({
+  queries,
+  supplyError,
+  hasSupplyHistory,
+  onRetry,
+}: {
+  queries: readonly StaleQuery[];
+  supplyError: unknown | null | undefined;
+  hasSupplyHistory: boolean;
+  onRetry: () => void;
+}) {
+  const hydrated = useHydrated();
+  const inputs = queries
+    .filter((query) => !isSecondaryQueryUnsettled(query))
+    .map((query) => {
+      const preset = query.preset ? DATA_HEALTH_PRESETS[query.preset] : null;
+      return {
+        query,
+        label: query.label ?? preset?.label ?? "Data",
+        dataUpdatedAt: query.dataUpdatedAt,
+        staleTime: query.staleTime ?? preset?.staleTime ?? 15 * 60_000,
+        hasData: query.hasData ?? query.dataUpdatedAt > 0,
+        error: query.error,
+        meta: query.meta ?? null,
+        catchUp: query.catchUp,
+      };
+    });
+  const nowMs = useFreshnessBoundary(inputs);
+  const derived: DataHealthInfo[] = inputs.map(({ query, ...input }) =>
+    deriveDataHealth(input, nowMs ?? query.dataUpdatedAt),
+  );
+  const hasBlockingSupplyError = Boolean(supplyError) && !hasSupplyHistory;
+  const supplyAlreadyIncluded = queries.some((query) => query.error === supplyError);
+  if (hasBlockingSupplyError && !supplyAlreadyIncluded) {
+    derived.push(
+      deriveDataHealth(
+        {
+          label: "Supply history",
+          dataUpdatedAt: 0,
+          staleTime: 15 * 60_000,
+          hasData: false,
+          error: supplyError,
+          meta: null,
+        },
+        nowMs ?? 0,
+      ),
+    );
+  }
+
+  const publicEntries = derived.filter(isPublicWarning);
+  if (publicEntries.length === 0) return null;
+
+  const merged = mergeHealthStates(publicEntries);
+  if (merged.state === "fresh" || merged.state === "degraded") return null;
+
+  const errorEntries = publicEntries.filter((entry) => entry.state === "error");
+  const unavailableEntries = publicEntries.filter((entry) => entry.state === "unavailable");
+  const staleEntries = publicEntries.filter((entry) => entry.state === "stale");
+  const messages: string[] = [];
+  if (errorEntries.length > 0) {
+    messages.push(`Could not refresh ${formatSecondaryAffectedLabels(errorEntries.map((entry) => entry.label))}.`);
+  }
+  if (unavailableEntries.length > 0) {
+    const labels = unavailableEntries.map((entry) => entry.label);
+    messages.push(`${formatSecondaryAffectedLabels(labels)} ${labels.length === 1 ? "has" : "have"} not populated yet.`);
+  }
+  if (staleEntries.length > 0) {
+    const worstAge = staleEntries.reduce<number | null>((max, item) => {
+      if (item.ageMs == null) return max;
+      return max == null ? item.ageMs : Math.max(max, item.ageMs);
+    }, null);
+    messages.push(
+      `${formatSecondaryAffectedLabels(staleEntries.map((entry) => entry.label))} last refreshed over ${worstAge != null ? formatElapsedSeconds(worstAge / 1000) : "unknown"} ago.`,
+    );
+  }
+
+  const chipLabel =
+    merged.state === "error"
+      ? "Partial refresh"
+      : merged.state === "unavailable"
+        ? "Data pending"
+        : "Older snapshot";
+  const title =
+    merged.state === "error"
+      ? "Refresh failed"
+      : merged.state === "unavailable"
+        ? "Waiting for initial data"
+        : "Showing an older snapshot";
+  const reasonCodes = publicEntries.map(
+    (entry) => entry.meta?.reason ?? entry.degradationReason ?? entry.state,
+  );
+  const stateGroups = [errorEntries, unavailableEntries, staleEntries].filter((group) => group.length > 0);
+  const formatTimestamp = (timestamp: number) =>
+    formatDataHealthTimestamp(timestamp, hydrated ? undefined : "en-US", hydrated ? undefined : "UTC");
+  const lastSuccessfulText =
+    stateGroups.length === 1 && merged.latestUpdatedAt != null
+      ? `Last successful update: ${formatTimestamp(merged.latestUpdatedAt)}`
+      : null;
+
+  return (
+    <span data-secondary-ops-chip="" data-health-state={merged.state} className="inline-flex">
+      <OpsStatusChip label={chipLabel} reasonCodes={reasonCodes}>
+        <p className="font-medium text-foreground">{title}</p>
+        <p className="text-muted-foreground">{messages.join(" ")}</p>
+        {lastSuccessfulText ? <p className="text-2xs text-muted-foreground">{lastSuccessfulText}</p> : null}
+        <div className="flex items-center justify-between gap-2 pt-1">
+          <button
+            type="button"
+            onClick={onRetry}
+            className="pharos-focus-ring rounded-md border border-border/70 bg-card px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:border-border hover:bg-muted/60"
+          >
+            Retry
+          </button>
+          <Link href="/status/" className="text-xs text-brand-accent-text underline-offset-2 hover:underline">
+            Status page
+          </Link>
+        </div>
+      </OpsStatusChip>
+    </span>
+  );
+}
+
 function DetailIdentity({
   heading,
   heroModel,
@@ -124,12 +283,16 @@ function DetailIdentity({
   viewModel: ReadyDetailViewModel;
 }) {
   const snapshot = detailSnapshotProvenance(viewModel.staleQueries);
+  const secondaryQueries = useMemo(
+    () => viewModel.staleQueries.filter((query) => query.secondary),
+    [viewModel.staleQueries],
+  );
   return (
     <>
       {/* The identity header's visible title is the page's only h1. */}
       <BackToSource className="mb-2" />
-      {/* Only the page-defining lanes warn above the identity; a supplemental
-          lane's notice sits under the lead slot (see DetailContent). */}
+      {/* Only page-defining lanes warn above the identity; supplemental lanes
+          consolidate into the header OpsStatusChip beside Updated Xh ago. */}
       <QueryFreshnessNotices
         error={null}
         onRetry={viewModel.handleRetryAll}
@@ -143,6 +306,14 @@ function DetailIdentity({
         updatedAtMs={snapshot.updatedAtMs}
         dailySnapshot={snapshot.dailySnapshot}
         hasSummary={Boolean(viewModel.summary)}
+        opsStatusSlot={
+          <DetailSecondaryOpsChip
+            queries={secondaryQueries}
+            supplyError={viewModel.supplyError}
+            hasSupplyHistory={viewModel.supplyHistory.length > 0}
+            onRetry={viewModel.handleRetryAll}
+          />
+        }
       />
       <MobileStickySummary
         coin={viewModel.coin}
@@ -355,15 +526,17 @@ function DetailSummaryRail({
   // Hold the Backing KPI footprint only while live reserve evidence is still
   // pending; a settled read without a KPI hides the card, never "unavailable".
   const reservesPending = viewModel.featureStates.reserves.status === "loading" || viewModel.featureStates.reserves.status === "deferred";
-  // A compact companion that reads in normal flow from the top: pillar metrics
-  // first (Safety → Backing KPI → Access posture), then the reference cards,
-  // then the Evidence index. The rail is bottom-anchored sticky (it sits at
-  // the end of its grid cell and `bottom` pulls it up into view): it scrolls
-  // with the page until its last card reaches the viewport bottom, then rides
-  // there, so the Evidence index stays a jump list with verdicts for the whole
-  // dossier instead of leaving an empty column. Never `top`-sticky, never a
-  // nested scroll container. The metric cards are anchor twins of their
-  // in-flow `xl:hidden` copies; evidence modules live once, in their board.
+  // A compact companion that reads in normal flow from the top: Safety Score
+  // first, then high-intent holder reference cards (Contracts, Key links), then
+  // structural risk companions (Backing KPI, Access posture, Regulatory, Price
+  // Transparency, Recent activity), then the Evidence index. The rail is
+  // bottom-anchored sticky (it sits at the end of its grid cell and `bottom`
+  // pulls it up into view): it scrolls with the page until its last card
+  // reaches the viewport bottom, then rides there, so the Evidence index stays
+  // a jump list with verdicts for the whole dossier instead of leaving an empty
+  // column. Never `top`-sticky, never a nested scroll container. The metric
+  // cards are anchor twins of their in-flow `xl:hidden` copies; evidence
+  // modules live once, in their board.
   return (
     <aside aria-label="Coin summary rail" className="hidden min-w-0 xl:sticky xl:bottom-4 xl:block xl:self-end">
       <div className="space-y-4">
@@ -375,6 +548,10 @@ function DetailSummaryRail({
           liveAsOf={liveSafetyAsOf}
           card={viewModel.reportCard ?? null}
         />
+        {(viewModel.coin.contracts?.length ?? 0) > 0 ? (
+          <ContractDeployments coinId={viewModel.coin.id} contracts={viewModel.coin.contracts ?? []} compact />
+        ) : null}
+        <KeyLinksCard meta={viewModel.coin} />
         {/* The loading placeholders reserve their card's footprint; a loaded
             card takes its own height, so the rail never shows a blank gap. */}
         {sharedModules.backingMetrics || (viewModel.coin.liveReservesConfig && reservesPending) ? (
@@ -417,10 +594,6 @@ function DetailSummaryRail({
           />
         ) : null}
         <TapeForCoinTeaser coinId={viewModel.id} supplyUsd={viewModel.mcap} />
-        <KeyLinksCard meta={viewModel.coin} />
-        {(viewModel.coin.contracts?.length ?? 0) > 0 ? (
-          <ContractDeployments coinId={viewModel.coin.id} contracts={viewModel.coin.contracts ?? []} compact />
-        ) : null}
         <RailEvidenceIndex groups={sharedModules.evidenceIndex} />
       </div>
     </aside>
@@ -437,6 +610,7 @@ export function DetailContent({
   heroRef,
   historyActive,
   historyGateRef,
+  initialRedeemability = null,
   mechanismBacking,
   mechanismCollateralization,
   mechanismReview,
@@ -569,28 +743,14 @@ export function DetailContent({
               <ActiveDepegOutlook stablecoinId={viewModel.id} symbol={viewModel.coin.symbol} deviationBps={viewModel.deviationBps} />
             ) : null}
             {frozen ? null : <NoticeStack notices={notices.paused} />}
-            <HeroCard model={heroModel} keyMetric={heroKeyMetric} />
+            <HeroCard model={heroModel} keyMetric={heroKeyMetric} initialRedeemability={initialRedeemability} />
             {/* Deadlines, standing caveats and info, then resolved history. A
                 frozen archive keeps its non-danger notices in its Risk-zone record. */}
             {frozen ? null : <NoticeStack notices={notices.rest} />}
           </div>
-          {/* A supplemental lane's public warning never outranks the lead slot. */}
-          <div className="mt-4 space-y-4 empty:hidden">
-            <QueryFreshnessNotices
-              error={viewModel.supplyError}
-              hasData={viewModel.supplyHistory.length > 0}
-              onRetry={viewModel.handleRetryAll}
-              queries={viewModel.staleQueries.filter((query) => query.secondary)}
-              secondary
-            />
-          </div>
-          {viewModel.summary ? (
-            <div className="mt-4">
-              <AiSummary {...viewModel.summary} claimValues={claimValues} openNotice={openNotice} />
-            </div>
-          ) : null}
-          {/* A direct child of the main column, so `position: sticky` holds
-              for the whole dossier rather than ending with a wrapper. */}
+          {/* A direct child of the main column, hoisted above the editorial
+              summary so section tabs sit above the desktop fold and stay sticky
+              for the whole dossier. */}
           <DetailNavigation
             contextHasContent={contextHasContent}
             hasFailureScenario={failureScenario !== null}
@@ -598,6 +758,11 @@ export function DetailContent({
             onBeforeAlign={prepareAnchor}
             viewModel={viewModel}
           />
+          {viewModel.summary ? (
+            <div className="mt-4">
+              <AiSummary {...viewModel.summary} claimValues={claimValues} openNotice={openNotice} />
+            </div>
+          ) : null}
           <div className="mt-4 min-w-0 space-y-6">
             <DetailRiskContextSections
               activeBannerId={activeBannerId}
@@ -627,6 +792,17 @@ export function DetailContent({
               historyGateRef={historyGateRef}
               viewModel={viewModel}
             />
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/50 pt-4 text-xs text-muted-foreground">
+              <span>Spot stale metadata, a wrong contract, or a missing reserve disclosure?</span>
+              <button
+                type="button"
+                onClick={() => onFeedbackOpenChange(true)}
+                className="pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border/70 bg-card px-3 text-xs font-medium text-foreground/85 transition-colors hover:border-border hover:bg-muted/60 hover:text-foreground lg:min-h-8"
+              >
+                <Flag className="size-3.5" aria-hidden="true" />
+                Report issue
+              </button>
+            </div>
           </div>
         </div>
         <DetailSummaryRail

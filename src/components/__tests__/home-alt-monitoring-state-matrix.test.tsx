@@ -294,7 +294,13 @@ describe.each(SURFACES)(
   "$Component.name semantic query states",
   ({ Component, configure, emptyText, emptyExtraText, readyText, unavailableText, statesOwnedElsewhere = [] }) => {
     function renderState(state: MonitoringState) {
-      useHomeAltFiltersMock.mockReturnValue({ activeFilters: [] });
+      useHomeAltFiltersMock.mockReturnValue({
+        activeFilters: [],
+        activePeg: "all",
+        setActivePeg: vi.fn(),
+        activeUniverse: "core",
+        setActiveUniverse: vi.fn(),
+      });
       usePinnedStablecoinsMock.mockReturnValue({ pinnedIds: [], togglePinned: vi.fn() });
       configure(state);
       return render(<Component />);
@@ -363,8 +369,41 @@ describe("PegHealthCard median availability", () => {
     render(<PegHealthCard />);
 
     expect(screen.getByText("0 bps").closest("p")?.textContent).toContain("At peg (per-coin threshold) · 0 bps median");
+    expect(screen.getByText("priced non-NAV coins")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Open Depeg monitor" }).getAttribute("href")).toMatch(/^\/depeg\/?$/);
     expect(screen.getByRole("img", { name: "Peg deviation distribution by band" })).toBeTruthy();
     expect(screen.queryByText("No coin-level deviation rows")).toBeNull();
+  });
+});
+
+describe("HomeAltRankingsSection loading and quick filters", () => {
+  it("suppresses Showing 0 while loading and wires peg + triage quick filters", () => {
+    const setActivePeg = vi.fn();
+    useHomeAltFiltersMock.mockReturnValue({
+      activeFilters: [],
+      activePeg: "all",
+      setActivePeg,
+      activeUniverse: "core",
+      setActiveUniverse: vi.fn(),
+    });
+    usePinnedStablecoinsMock.mockReturnValue({ pinnedIds: ["usdc-circle"], togglePinned: vi.fn() });
+    useStablecoinsMock.mockReturnValue(queryFor("loading", stablecoinReady, { peggedAssets: [] }));
+    usePegSummaryMock.mockReturnValue(queryFor("ready", pegReady, pegEmpty));
+    useDexLiquidityMock.mockReturnValue(queryFor("ready", {}, {}));
+    useReportCardsV9Mock.mockReturnValue(queryFor("ready", { cards: [] }, { cards: [] }));
+    useStressSignalsMock.mockReturnValue(queryFor("ready", { signals: {} }, { signals: {} }));
+
+    const view = render(<HomeAltRankingsSection titleId="rankings-title" />);
+    expect(view.container.textContent).not.toMatch(/Showing 0/);
+    fireEvent.click(screen.getByRole("button", { name: "USD" }));
+    expect(setActivePeg).toHaveBeenCalledWith("usd-peg");
+    const starredBtn = screen.getByRole("button", { name: /Starred/ });
+    fireEvent.click(starredBtn);
+    expect(starredBtn.getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "Clear filters" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+    expect(starredBtn.getAttribute("aria-pressed")).toBe("false");
+    expect(setActivePeg).toHaveBeenCalledWith("all");
   });
 });
 

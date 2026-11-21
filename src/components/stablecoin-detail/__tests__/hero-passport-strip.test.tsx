@@ -182,18 +182,21 @@ describe("HeroPassportStrip", () => {
     ]);
   });
 
-  it("holds a pending fact's slot in both layouts without inventing a fact or a section link", () => {
+  it("renders a labeled shimmer in the desktop pending slot and omits invisible mobile spacers", () => {
     const initial = ITEMS.filter((item) => item.key !== "redeemability");
     const { container, rerender } = render(<HeroPassportStrip items={initial} pendingKeys={["redeemability"]} compactDesktop />);
-    // One reserve in the scrolling mobile row, one blank cell in the desktop
-    // grid; a fact that is not pending (no record for a NAV token) has no slot.
-    expect(container.querySelectorAll('[data-passport-reserve="redeemability"]')).toHaveLength(2);
+    // Only the desktop grid reserves the pending slot with a labeled shimmer;
+    // mobile omits invisible spacers and non-pending facts have no reserve.
+    const reserves = container.querySelectorAll('[data-passport-reserve="redeemability"]');
+    expect(reserves).toHaveLength(1);
+    expect(reserves[0]?.textContent).toContain("Redeemability");
+    expect(reserves[0]?.querySelector(".animate-pulse")).not.toBeNull();
     expect(container.querySelectorAll('[data-passport-reserve="record"]')).toHaveLength(0);
     expect(container.querySelector('a[href="#redemption"]')).toBeNull();
     const desktopCells = () => container.querySelectorAll(".\\@container > div > *");
     expect(desktopCells()).toHaveLength(6);
     const chains = container.querySelector('a[href="#contracts"]')!;
-    expect(chains.className).toContain("w-40");
+    expect(chains.className).not.toContain("w-40");
     rerender(<HeroPassportStrip items={ITEMS} compactDesktop />);
     expect(container.querySelectorAll("[data-passport-reserve]")).toHaveLength(0);
     // The landed fact takes the reserved slot: the desktop grid keeps its cell count.

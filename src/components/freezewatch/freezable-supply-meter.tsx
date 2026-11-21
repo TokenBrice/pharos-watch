@@ -6,8 +6,6 @@ import { QueryStateNotice } from "@/components/query-state-notice";
 import { cn } from "@/lib/utils";
 import {
   BLACKLIST_STATUS_BUCKET_COLORS,
-  BLACKLIST_STATUS_BUCKET_DESCRIPTIONS,
-  BLACKLIST_STATUS_BUCKET_LABELS,
   BLACKLIST_STATUS_BUCKET_ORDER,
   type BlacklistStatusBucket,
   type BlacklistStatusBucketKey,
@@ -19,6 +17,7 @@ import {
   describeFreezableSupplyCoverage,
   formatShare,
 } from "@shared/lib/freezewatch/freezable-summary";
+import { FREEZEWATCH_BUCKET_DESCRIPTIONS, FREEZEWATCH_BUCKET_LABELS } from "./bucket-display";
 
 interface FreezableSupplyMeterProps {
   buckets: BlacklistStatusBucket[] | null | undefined;
@@ -122,17 +121,20 @@ function BucketCard({ bucket, totalMarketCap, isSelected, onSelect, variant }: B
   const share = !valueUnavailable && totalMarketCap > 0 ? (bucket.marketCap / totalMarketCap) * 100 : null;
   const shareLabel = share === null ? "—" : formatShare(share);
   const unavailableNote =
-    bucket.supplyUnavailableCount > 0 ? ` · ${bucket.supplyUnavailableCount} without supply data` : "";
+    bucket.supplyUnavailableCount > 0 ? ` · ${bucket.supplyUnavailableCount} missing supply` : "";
   const color = BLACKLIST_STATUS_BUCKET_COLORS[bucket.key];
   const isInteractive = typeof onSelect === "function";
 
   // Every bucket shares one row grammar (label row, value, share · count,
-  // description) so the four columns align; "Yes" differs only by span.
+  // description) so the four columns align; "Direct freeze" differs only by span.
   const spanClass = variant === "hero" ? "lg:col-span-2" : "lg:col-span-1";
   const padClass = "p-4 sm:p-5";
-  const labelClass = "text-sm font-semibold text-foreground";
+  const labelClass = cn(
+    "text-sm font-semibold",
+    variant === "safe" ? "text-state-positive" : "text-foreground",
+  );
   const valueClass = "mt-2.5 pharos-numeric text-xl font-bold text-foreground";
-  const descClass = "mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground";
+  const descClass = "mt-1.5 text-xs leading-relaxed text-muted-foreground";
 
   const accentStripStyle: CSSProperties = {
     backgroundColor: color,
@@ -140,7 +142,7 @@ function BucketCard({ bucket, totalMarketCap, isSelected, onSelect, variant }: B
   };
 
   const baseClass = cn(
-    "group relative text-left transition-colors",
+    "group relative rounded-lg text-left transition-colors",
     isSelected && "bg-muted/50",
     padClass,
     spanClass,
@@ -151,24 +153,18 @@ function BucketCard({ bucket, totalMarketCap, isSelected, onSelect, variant }: B
     <>
       <div aria-hidden className="absolute inset-x-0 top-0 h-px" style={accentStripStyle} />
       <div className="relative">
-        <div className="flex min-h-5 items-center justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
-            <span className={labelClass}>{BLACKLIST_STATUS_BUCKET_LABELS[bucket.key]}</span>
-          </div>
-          {variant === "safe" ? (
-            <span className="pharos-label shrink-0 text-state-positive">
-              Safe haven
-            </span>
-          ) : null}
+        <div className="flex min-h-5 items-center gap-2">
+          <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+          <span className={labelClass}>{FREEZEWATCH_BUCKET_LABELS[bucket.key]}</span>
         </div>
         <p className={valueClass}>{valueUnavailable ? "—" : formatCurrency(bucket.marketCap, 2)}</p>
         <p className="mt-1 text-2xs text-muted-foreground">
           <span className="pharos-numeric text-foreground/85">{shareLabel}</span>
           <span aria-hidden="true" className="mx-1 text-muted-foreground/60">·</span>
-          {bucket.count} stablecoins{unavailableNote}
+          <span className="whitespace-nowrap">{bucket.count} stablecoins</span>
+          {unavailableNote ? <span className="whitespace-nowrap">{unavailableNote}</span> : null}
         </p>
-        <p className={descClass}>{BLACKLIST_STATUS_BUCKET_DESCRIPTIONS[bucket.key]}</p>
+        <p className={descClass}>{FREEZEWATCH_BUCKET_DESCRIPTIONS[bucket.key]}</p>
       </div>
     </>
   );
@@ -198,19 +194,18 @@ function FreezeLineBar({ buckets, totalMarketCap }: { buckets: BlacklistStatusBu
     );
   }
 
-  const segments = BLACKLIST_STATUS_BUCKET_ORDER.reduce<
-    Array<{ key: BlacklistStatusBucketKey; left: number; width: number }>
-  >((acc, key) => {
+  const segments = BLACKLIST_STATUS_BUCKET_ORDER.map((key) => {
     const bucket = buckets.find((entry) => entry.key === key);
     const ratio = (bucket?.marketCap ?? 0) / totalMarketCap;
-    const left = acc.reduce((sum, segment) => sum + segment.width, 0);
-    const width = ratio * 100;
-    acc.push({ key, left, width });
-    return acc;
-  }, []);
+    return { key, width: ratio * 100 };
+  });
   const freezableEnd = segments
     .filter((segment) => FREEZABLE_BUCKETS.has(segment.key))
     .reduce((sum, segment) => sum + segment.width, 0);
+  const hasVisibleUnfreezableSlice = segments.some((segment) => segment.key === "no" && segment.width > 0);
+  const freezeLineLeft = hasVisibleUnfreezableSlice
+    ? `min(${freezableEnd}%, calc(100% - 4px))`
+    : `${freezableEnd}%`;
   const labelTransform =
     freezableEnd <= 12 ? "translateX(0%)" : freezableEnd >= 88 ? "translateX(-100%)" : "translateX(-50%)";
 
@@ -221,26 +216,29 @@ function FreezeLineBar({ buckets, totalMarketCap }: { buckets: BlacklistStatusBu
         role="img"
         aria-label="Freeze exposure distribution across tracked stablecoin market cap"
       >
-        {segments.map(({ key, left, width }) =>
-          width > 0 ? (
-            <div
-              key={key}
-              className="absolute top-0 h-full"
-              style={{
-                left: `${left}%`,
-                width: `${width}%`,
-                backgroundColor: BLACKLIST_STATUS_BUCKET_COLORS[key],
-              }}
-            />
-          ) : null,
-        )}
+        <div className="flex h-full w-full">
+          {segments.map(({ key, width }) =>
+            width > 0 ? (
+              <div
+                key={key}
+                data-bucket-segment={key}
+                className="h-full min-w-[4px]"
+                style={{
+                  flexGrow: width,
+                  flexBasis: 0,
+                  backgroundColor: BLACKLIST_STATUS_BUCKET_COLORS[key],
+                }}
+              />
+            ) : null,
+          )}
+        </div>
         {freezableEnd > 0 ? (
           <div
             aria-hidden
             className="pointer-events-none absolute top-0 h-full"
             style={{
               left: 0,
-              width: `${freezableEnd}%`,
+              width: freezeLineLeft,
               backgroundImage:
                 "repeating-linear-gradient(135deg, oklch(1 0 0 / 0.24) 0 2px, transparent 2px 7px), linear-gradient(180deg, oklch(1 0 0 / 0.18) 0%, transparent 70%)",
             }}
@@ -250,7 +248,7 @@ function FreezeLineBar({ buckets, totalMarketCap }: { buckets: BlacklistStatusBu
           <div
             aria-hidden
             className="freezable-meter-scan pointer-events-none absolute top-0 h-full"
-            style={{ left: 0, width: `${freezableEnd}%` }}
+            style={{ left: 0, width: freezeLineLeft }}
           />
         ) : null}
         <div aria-hidden className="pointer-events-none absolute inset-x-0 inset-y-0">
@@ -275,7 +273,7 @@ function FreezeLineBar({ buckets, totalMarketCap }: { buckets: BlacklistStatusBu
         <div
           aria-hidden
           className="pointer-events-none absolute -top-4 h-[calc(3rem+1rem)]"
-          style={{ left: `${freezableEnd}%` }}
+          style={{ left: freezeLineLeft }}
         >
           <div className="absolute left-0 h-full w-[2px] -translate-x-1/2 bg-frost-blue" />
           <span

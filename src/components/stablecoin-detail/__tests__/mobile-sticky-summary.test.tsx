@@ -9,14 +9,6 @@ import type { StablecoinData } from "@shared/types/supply";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { cleanupFrontendTest, installMatchMediaMock } from "@/test-utils/frontend";
 
-const { isMobileStickySummaryEnabledMock } = vi.hoisted(() => ({
-  isMobileStickySummaryEnabledMock: vi.fn(),
-}));
-
-vi.mock("@/lib/feature-flags", () => ({
-  isMobileStickySummaryEnabled: isMobileStickySummaryEnabledMock,
-}));
-
 vi.mock("next/image", () => ({
   default: ({ alt, ...props }: ImgHTMLAttributes<HTMLImageElement>) => <img alt={alt} {...props} />,
 }));
@@ -165,7 +157,6 @@ function renderSummary() {
 
 describe("MobileStickySummary", () => {
   beforeEach(() => {
-    isMobileStickySummaryEnabledMock.mockReset();
     viewportWidth = 390;
     installMatchMediaMock((query) => query === "(max-width: 1023px)" && viewportWidth < 1024);
   });
@@ -176,8 +167,8 @@ describe("MobileStickySummary", () => {
     document.documentElement.style.removeProperty(HEIGHT_VAR);
   });
 
-  it("returns null when the feature flag is off", () => {
-    isMobileStickySummaryEnabledMock.mockReturnValue(false);
+  it("stays inactive on desktop viewports without attaching observers", () => {
+    viewportWidth = 1024;
     const io = makeObserverHook(57.6);
     const view = renderSummary();
 
@@ -186,7 +177,6 @@ describe("MobileStickySummary", () => {
   });
 
   it("clears both observers, visibility and height when leaving mobile and rechecks the hero on return", () => {
-    isMobileStickySummaryEnabledMock.mockReturnValue(true);
     const io = makeObserverHook(57.6);
     const view = renderSummary();
     io.fireIntersecting(false);
@@ -209,7 +199,6 @@ describe("MobileStickySummary", () => {
   });
 
   it("publishes its rounded measured height once the target leaves the viewport, and republishes it on resize", () => {
-    isMobileStickySummaryEnabledMock.mockReturnValue(true);
     const io = makeObserverHook(57.6);
     const view = renderSummary();
 
@@ -227,7 +216,6 @@ describe("MobileStickySummary", () => {
   });
 
   it("hides the summary and drops the published height when the target scrolls back into view", () => {
-    isMobileStickySummaryEnabledMock.mockReturnValue(true);
     const io = makeObserverHook(57.6);
     const view = renderSummary();
 
@@ -242,7 +230,6 @@ describe("MobileStickySummary", () => {
   });
 
   it("disconnects both observers and drops the published height on unmount while visible", () => {
-    isMobileStickySummaryEnabledMock.mockReturnValue(true);
     const io = makeObserverHook(57.6);
     const view = renderSummary();
 

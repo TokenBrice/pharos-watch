@@ -12,7 +12,6 @@ import { useYieldCompareSelection } from "@/hooks/use-yield-compare-selection";
 import { YieldInstrumentBoard } from "@/components/yield/yield-instrument-board";
 import { TablePagination } from "@/components/table-pagination";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Badge } from "@/components/ui/badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { CoinStateChip } from "@/components/coin-state-chip";
 import { YieldHistoryChart } from "@/components/yield/yield-history-chart";
@@ -30,7 +29,7 @@ import type { YieldTableSortKey } from "@/components/yield/yield-table-logic";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { getYieldWorkbenchLink } from "@/lib/yield-workbench-link";
 import { isOpportunityDerivedSafety } from "@shared/lib/yield-opportunity-provenance";
-import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
+import { YIELD_TYPE_LABELS } from "@shared/lib/classification";
 import { formatPercent, formatScore } from "@shared/lib/format";
 import { formatYieldWarningSignal } from "@/lib/yield-constants";
 import { YieldCohortChip } from "@/components/yield/yield-cohort-chip";
@@ -220,6 +219,8 @@ interface YieldLeaderboardProps {
   comparisonRows?: readonly YieldViewModelRow[];
   updatedAt?: number;
   methodologyLabel?: string;
+  highlightedRowId?: string | null;
+  onHoverRow?: (stablecoinId: string | null) => void;
 }
 
 export function YieldLeaderboard({
@@ -237,6 +238,8 @@ export function YieldLeaderboard({
   comparisonRows = rows,
   updatedAt,
   methodologyLabel = "Pharos Yield Score current",
+  highlightedRowId = null,
+  onHoverRow,
 }: YieldLeaderboardProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [sheetRankingId, setSheetRankingId] = useState<string | null>(null);
@@ -367,6 +370,7 @@ export function YieldLeaderboard({
                     methodologyVersion={methodologyVersion}
                     sourceClock={sourceClock}
                     expanded={visibleExpandedId === row.id}
+                    highlighted={highlightedRowId === row.id}
                     isCompared={isCompared}
                     compareDisabled={compareDisabled}
                     onToggleExpanded={handleToggleExpanded}
@@ -424,9 +428,11 @@ export function YieldLeaderboard({
               : undefined
           }
           expandedId={visibleExpandedId}
+          highlightedRowId={highlightedRowId}
           compareHas={compare.has}
           compareCanAdd={compare.canAdd}
           onPrefetch={prefetch}
+          onHoverRow={onHoverRow}
           onToggleExpanded={handleToggleExpanded}
           onOpenSourceSheet={handleOpenSourceSheet}
           onToggleCompare={compare.toggle}
@@ -472,6 +478,7 @@ export function YieldMobileCard({
   methodologyVersion = null,
   sourceClock = null,
   expanded,
+  highlighted = false,
   isCompared,
   compareDisabled,
   onToggleExpanded,
@@ -495,6 +502,7 @@ export function YieldMobileCard({
   /** Parent-sampled source clock; rows re-derive source-age display at its crossings. */
   sourceClock?: YieldSourceDisplayClock | null;
   expanded: boolean;
+  highlighted?: boolean;
   isCompared: boolean;
   compareDisabled: boolean;
   onToggleExpanded: (stablecoinId: string) => void;
@@ -512,7 +520,6 @@ export function YieldMobileCard({
     depthDisplay,
     warningCount,
     sourceRiskSummary,
-    confidenceStyle,
     confidenceLabel,
     freshness,
     sourceRiskScore,
@@ -546,7 +553,8 @@ export function YieldMobileCard({
       data-yield-freshness={freshness?.displayText ?? ""}
       data-yield-warning-count={warningCount}
       data-yield-benchmark={benchmarkReferenceText}
-      className={`pharos-card-shell rounded-xl p-4 ${warningCount >= 2 ? "border-l-2 border-l-state-warn-solid/60" : ""}`}
+      data-highlighted={highlighted ? "true" : undefined}
+      className={`pharos-card-shell rounded-xl p-4 ${warningCount >= 2 ? "border-l-2 border-l-state-warn-solid/60" : ""} ${highlighted ? "ring-2 ring-brand-accent-text/60 bg-accent/25" : ""}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
@@ -591,7 +599,6 @@ export function YieldMobileCard({
 
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         {row.coinStates?.[0] ? <CoinStateChip state={row.coinStates[0]} /> : null}
-        {confidenceStyle && confidenceLabel ? <span className={confidenceStyle.pill}>{confidenceLabel}</span> : null}
         <YieldSafetyBadge
           grade={grade}
           safetyScore={safetyScore}
@@ -600,14 +607,17 @@ export function YieldMobileCard({
           usedDefaultSafety={usedDefaultSafety}
           compact
         />
-        <Badge variant="outline" className={`text-3xs ${YIELD_TYPE_STYLES[row.yieldType]?.badge ?? ""}`}>
-          {YIELD_TYPE_LABELS[row.yieldType] ?? row.yieldType}
-        </Badge>
         <YieldZoneChip
           safetyScore={usedDefaultSafety ? null : safetyScore}
           apy30d={row.apy30d}
           benchmarkRate={resolvedBenchmark.rate}
         />
+        <span className="text-3xs font-medium text-muted-foreground">
+          {YIELD_TYPE_LABELS[row.yieldType] ?? row.yieldType}
+        </span>
+        {confidenceLabel ? (
+          <span className="text-3xs font-medium text-muted-foreground">{confidenceLabel}</span>
+        ) : null}
         <MobileMetricPill>
           TVL{" "}
           <span className={tvlIsNative ? "text-muted-foreground" : "font-mono tabular-nums text-foreground"}>

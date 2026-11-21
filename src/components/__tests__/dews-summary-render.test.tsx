@@ -92,11 +92,28 @@ describe("DEWSRadarPanel refresh errors", () => {
   });
 });
 
-describe("DEWSRadarPanel open-incident halos", () => {
-  it("describes a haloed coin as having an open confirmed incident, not a live depeg", () => {
-    const { getByRole, getByText } = render(<DEWSRadarPanel activeDepegIds={new Set(["usdc-circle"])} />);
-    expect(getByRole("button", { name: /USDC.*with an open confirmed incident/ })).toBeTruthy();
+describe("DEWSRadarPanel open-incident halos and visual declutter", () => {
+  it("describes a haloed coin as having an open confirmed incident with a single crisp +4px ring", () => {
+    const { getByRole, getByText, container } = render(<DEWSRadarPanel activeDepegIds={new Set(["usdc-circle"])} />);
+    const usdcDot = getByRole("button", { name: /USDC.*with an open confirmed incident/ });
+    expect(usdcDot).toBeTruthy();
     expect(getByText("Elevated, open confirmed incident (1)")).toBeTruthy();
     expect(getByRole("button", { name: /FRAX/ }).getAttribute("aria-label")).not.toContain("incident");
+    // Single +4px confirmed-depeg ring (replaces triple concentric rings).
+    const rings = usdcDot.querySelectorAll("[data-dews-depeg-ring]");
+    expect(rings).toHaveLength(1);
+    expect(rings[0]?.getAttribute("r")).toBe("13"); // default WARNING visualR=9 + 4px
+    // WARNING+ labels use paintOrder="stroke" backing.
+    const label = usdcDot.querySelector("text");
+    expect(label?.getAttribute("paint-order")).toBe("stroke");
+    // WATCH dot renders a crisp 3px solid dot with zero pulsing glow blur.
+    const watchDot = container.querySelector('[data-dews-band="WATCH"]')!;
+    expect(watchDot.querySelector(".dews-glow-r")).toBeNull();
+    expect(watchDot.querySelector("[data-dews-dot]")?.getAttribute("r")).toBe("3");
+    // Hovering/focusing renders the shared ChartTooltipSurface overlay outside SVG.
+    fireEvent.focus(usdcDot);
+    const tooltip = container.querySelector("[data-dews-tooltip]");
+    expect(tooltip).not.toBeNull();
+    expect(tooltip?.closest("svg")).toBeNull();
   });
 });

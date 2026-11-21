@@ -1,12 +1,22 @@
 import { formatCurrency } from "@shared/lib/format";
+import { PEG_METADATA } from "@shared/lib/classification";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { gradeRange, scoreToGrade } from "@shared/lib/report-card-core";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import type { SafetyGradeSupplyMix } from "@/components/safety-scores/safety-grade-distribution-bar";
+import type { SafetyScoreTopDriverProps } from "@/components/safety-scores/safety-score-top-driver";
+import {
+  describePartialEvidence,
+  formatPartialEvidenceHeadline,
+  humanizeSafetyScoreReason,
+} from "@/lib/safety-score-reason-labels";
+import { humanizeSafetyScoreV9Value } from "@/lib/stablecoin-safety-score-v9-presentation";
 import type { V9TableConsumerCard as V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 
-export type V9SortKey = "overall" | "backing" | "exit" | "control" | "mcap";
+export type V9SortKey = "overall" | "backing" | "exit" | "control" | "mcap" | "coin";
+export type V9SortDirection = "asc" | "desc";
+export type SafetyScoresViewMode = "table" | "grid";
 export type GradeFilter = "all" | "A" | "B" | "C" | "D" | "F" | "NR" | "pipeline-gap";
 export type PegFilter = "all" | "usd" | "fiat-non-usd" | "commodities";
 export const GRADE_RANGES: Exclude<GradeFilter, "all">[] = [
@@ -25,6 +35,70 @@ const PILLAR_LABELS = {
   exit: "Exit",
   control: "Economic Control",
 } as const;
+
+export interface SafetyCardMeta {
+  name: string;
+  symbol: string;
+  pegLabel: string;
+}
+
+export function resolveSafetyCardMeta(card: Pick<V9ConsumerCard, "id">): SafetyCardMeta {
+  const meta = CLIENT_TRACKED_META_BY_ID.get(card.id);
+  const pegCurrency = meta?.flags.pegCurrency;
+  const pegLabel = pegCurrency ? (PEG_METADATA[pegCurrency]?.filterLabel ?? pegCurrency) : "—";
+  return {
+    name: meta?.name ?? card.id,
+    symbol: meta?.symbol ?? card.id,
+    pegLabel,
+  };
+}
+
+/**
+ * The table projection names a binding cap or a withheld score, but not the
+ * peg multiplier, so an uncapped card shows no driver rather than a weakest
+ * pillar that may not have set its grade (docs/report-cards.md#consumers).
+ */
+export function resolveSafetyCardTopDriver(
+  card: V9ConsumerCard,
+): SafetyScoreTopDriverProps["driver"] {
+  if (card.ratingStatus === "not-rated") {
+    const rawReason = card.nrReasons[0]?.message;
+    return {
+      kind: "withheld",
+      label: null,
+      value: null,
+      reason: rawReason ? humanizeSafetyScoreReason(rawReason) : "Required evidence is withheld.",
+    };
+  }
+  if (card.bindingCap !== null) {
+    return {
+      kind: "cap-bound",
+      label: card.bindingCap.kind,
+      value: card.bindingCap.limit,
+      reason: humanizeSafetyScoreReason(card.bindingCap.reason),
+    };
+  }
+  return null;
+}
+
+export function formatSafetyCardTopDriverExport(card: V9ConsumerCard): string {
+  if (card.ratingStatus === "not-rated") {
+    const rawReason = card.nrReasons[0]?.message;
+    return rawReason ? `Score withheld: ${humanizeSafetyScoreReason(rawReason)}` : "Score withheld";
+  }
+  if (card.bindingCap !== null) {
+    const label = humanizeSafetyScoreV9Value(card.bindingCap.kind.replaceAll(":", " "));
+    return `Binding cap: ${label} <=${card.bindingCap.limit.toFixed(0)}`;
+  }
+  const partial = describePartialEvidence(card);
+  if (partial !== null) {
+    return formatPartialEvidenceHeadline(partial);
+  }
+  if (card.ratingStatus === "pipeline-gap") {
+    return "Pipeline gap";
+  }
+  return "";
+}
 
 function cardGroup(card: V9ConsumerCard): Exclude<GradeFilter, "all"> {
   if (card.ratingStatus === "pipeline-gap" || card.grade === null) return "pipeline-gap";
@@ -51,13 +125,24 @@ export function buildV9GradeCounts(
 
 function getSortScore(
   card: V9ConsumerCard,
-  key: V9SortKey,
+  key: Exclude<V9SortKey, "coin">,
   mcapMap: ReadonlyMap<string, number | null>,
 ): number | null {
   if (key === "overall") return card.score;
   if (key === "mcap") return mcapMap.get(card.id) ?? null;
   if (card.ratingStatus !== "rated") return null;
   return card.pillars[key].score;
+}
+
+function cardMatchesSearch(card: V9ConsumerCard, normalizedQuery: string): boolean {
+  if (!normalizedQuery) return true;
+  if (card.id.toLowerCase().includes(normalizedQuery)) return true;
+  const meta = CLIENT_TRACKED_META_BY_ID.get(card.id);
+  if (!meta) return false;
+  return (
+    meta.symbol.toLowerCase().includes(normalizedQuery)
+    || meta.name.toLowerCase().includes(normalizedQuery)
+  );
 }
 
 export function filterAndSortV9Cards(
@@ -67,28 +152,49 @@ export function filterAndSortV9Cards(
     pegFilter,
     pegTypeMap,
     sortKey,
+    sortDirection = "desc",
+    searchQuery = "",
     mcapMap,
   }: {
     gradeFilter: GradeFilter;
     pegFilter: PegFilter;
     pegTypeMap: ReadonlyMap<string, string>;
     sortKey: V9SortKey;
+    sortDirection?: V9SortDirection;
+    searchQuery?: string;
     mcapMap: ReadonlyMap<string, number | null>;
   },
 ): V9ConsumerCard[] {
+  const normalizedQuery = searchQuery.trim().toLowerCase();
   const gradeFiltered = gradeFilter === "all"
     ? cards
     : cards.filter((card) => cardGroup(card) === gradeFilter);
-  const filtered = pegFilter === "all"
+  const pegFiltered = pegFilter === "all"
     ? gradeFiltered
     : gradeFiltered.filter((card) => pegMatchesFilter(pegTypeMap.get(card.id), pegFilter));
+  const filtered = normalizedQuery
+    ? pegFiltered.filter((card) => cardMatchesSearch(card, normalizedQuery))
+    : pegFiltered;
+
+  if (sortKey === "coin") {
+    return [...filtered].sort((left, right) => {
+      const leftMeta = resolveSafetyCardMeta(left);
+      const rightMeta = resolveSafetyCardMeta(right);
+      const cmp = leftMeta.symbol.localeCompare(rightMeta.symbol, "en", { sensitivity: "base" })
+        || leftMeta.name.localeCompare(rightMeta.name, "en", { sensitivity: "base" })
+        || left.id.localeCompare(right.id);
+      return sortDirection === "asc" ? cmp : -cmp;
+    });
+  }
 
   return [...filtered].sort((left, right) => {
     const leftScore = getSortScore(left, sortKey, mcapMap);
     const rightScore = getSortScore(right, sortKey, mcapMap);
+    // Unavailable values always sort last, regardless of sort direction.
     if (leftScore === null) return rightScore === null ? left.id.localeCompare(right.id) : 1;
     if (rightScore === null) return -1;
-    return rightScore - leftScore || left.id.localeCompare(right.id);
+    const delta = sortDirection === "asc" ? leftScore - rightScore : rightScore - leftScore;
+    return delta || left.id.localeCompare(right.id);
   });
 }
 

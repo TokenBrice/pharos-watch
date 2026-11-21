@@ -1,9 +1,10 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
+import { ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { CoinLockup } from "@/components/depeg/depeg-resolver-row-card-shared";
-import { DdrInfoTooltip } from "@/components/depeg/depeg-resolver-info-tooltip";
+import { MethodologyHint } from "@/components/methodology-hint";
 import { isDepegResolverReviewerEnabled } from "@/lib/feature-flags";
 import { cn } from "@/lib/utils";
 import { formatElapsedSeconds } from "@shared/lib/format";
@@ -553,16 +554,7 @@ function ReviewerHeader({ calibrating, data }: { calibrating: boolean; data: Ddr
           >
             {calibrating ? "Calibrating" : "Review"}
           </Badge>
-          <DdrInfoTooltip
-            ariaLabel="About the Depeg Duration Resolver Reviewer"
-            maxWidth="wide"
-            content={
-              <>
-                Each stored DDR readout is graded against later confirmed event data. Open events stay pending unless
-                terminal lifecycle evidence, such as frozen or dead status, matures the call.
-              </>
-            }
-          />
+          <MethodologyHint topic="ddrr" />
         </div>
         {meta ? (
           <p className="pharos-meta pharos-numeric">
@@ -572,7 +564,7 @@ function ReviewerHeader({ calibrating, data }: { calibrating: boolean; data: Ddr
       </div>
       <p className="text-pretty text-sm text-muted-foreground">
         Grades frozen, first-published DDR predictions against what actually happened and keeps the coverage debt
-        visible - <span className="text-foreground">the wins, misses, no-calls, and gaps</span>, never cherry-picked.
+        visible: <span className="text-foreground">the wins, misses, no-calls, and gaps</span>, never cherry-picked.
       </p>
     </div>
   );
@@ -587,6 +579,24 @@ function ReviewerNote({ text }: { text: string }) {
 }
 
 export function DepegResolverReviewerModule({ data, error, logos }: DepegResolverReviewerModuleProps) {
+  const auditPanelId = useId();
+  const [expanded, setExpanded] = useState(false);
+
+  // Auto-open when the reader follows an explicit `#forecast-grading` jump.
+  useEffect(() => {
+    const syncFromHash = () => {
+      if (window.location.hash === "#forecast-grading") {
+        setExpanded(true);
+      }
+    };
+    const frameId = requestAnimationFrame(syncFromHash);
+    window.addEventListener("hashchange", syncFromHash);
+    return () => {
+      cancelAnimationFrame(frameId);
+      window.removeEventListener("hashchange", syncFromHash);
+    };
+  }, []);
+
   if (!isDepegResolverReviewerEnabled()) return null;
 
   if (error && !data) {
@@ -601,20 +611,37 @@ export function DepegResolverReviewerModule({ data, error, logos }: DepegResolve
 
   const summary = data?.summary;
   const rows = data?.rows ?? [];
-  const calibrating = (summary?.headline.recoveryLikelihoodScoredCount ?? 0) < CALIBRATION_THRESHOLD;
+  const scored = summary?.headline.recoveryLikelihoodScoredCount ?? 0;
+  const correct = summary?.headline.recoveryLikelihoodCorrectCount ?? 0;
+  const accuracyPct = summary?.headline.recoveryLikelihoodAccuracyPct ?? null;
+  const calibrating = scored < CALIBRATION_THRESHOLD;
+  const assessed = data?._meta.assessedEventCount ?? 0;
 
   // Scored rows carry the signal; surface them first, then a capped run of maturing rows.
   const { shownRows, hiddenCount, trackRecordRows } = buildDdrReviewerRows(rows, ROW_DISPLAY_LIMIT);
 
-  return (
-    <section aria-label="Depeg Duration Resolver Reviewer" className="space-y-4">
-      <ReviewerHeader calibrating={calibrating} data={data} />
-
-      {!data || !summary ? (
+  if (!data || !summary) {
+    return (
+      <section aria-label="Depeg Duration Resolver Reviewer" className="space-y-4">
+        <ReviewerHeader calibrating={calibrating} data={data} />
         <div className="pharos-empty-note text-center">Reviewer data is loading.</div>
-      ) : data._meta.degraded && rows.length === 0 ? (
+      </section>
+    );
+  }
+
+  if (data._meta.degraded && rows.length === 0) {
+    return (
+      <section aria-label="Depeg Duration Resolver Reviewer" className="space-y-4">
+        <ReviewerHeader calibrating={calibrating} data={data} />
         <div className="pharos-empty-note text-center">Reviewer data is temporarily unavailable.</div>
-      ) : rows.length === 0 ? (
+      </section>
+    );
+  }
+
+  if (rows.length === 0) {
+    return (
+      <section aria-label="Depeg Duration Resolver Reviewer" className="space-y-4">
+        <ReviewerHeader calibrating={calibrating} data={data} />
         <div className="pharos-empty-note">
           <p className="font-medium text-foreground">No readouts have matured yet.</p>
           <p className="mt-1">
@@ -622,13 +649,72 @@ export function DepegResolverReviewerModule({ data, error, logos }: DepegResolve
             outcome and its accuracy appears here.
           </p>
         </div>
-      ) : (
-        <>
+      </section>
+    );
+  }
+
+  const summaryBadgeText =
+    !calibrating && accuracyPct != null
+      ? `${formatReviewerPercent(accuracyPct)} (${correct}/${scored})`
+      : scored > 0
+        ? `${correct}/${scored} scored`
+        : "Calibrating";
+
+  return (
+    <section aria-label="Depeg Duration Resolver Reviewer" className="space-y-4">
+      <div className="pharos-card-shell flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-5">
+        <div className="flex min-w-0 flex-wrap items-center gap-2.5">
+          <span className="rounded-md bg-foreground px-1.5 py-0.5 font-mono text-2xs font-bold text-background">
+            DDRR
+          </span>
+          <h2 className="pharos-section-title">Track Record</h2>
+          <Badge
+            variant="outline"
+            className={cn(
+              "px-1.5 py-0 text-xs uppercase",
+              calibrating
+                ? "border-state-warn bg-state-warn-subtle text-state-warn"
+                : "border-border/60 bg-muted/40 text-muted-foreground",
+            )}
+          >
+            {calibrating ? "Calibrating" : "Review"}
+          </Badge>
+          <span className="pharos-numeric text-sm font-semibold text-foreground">
+            {summaryBadgeText}
+          </span>
+          {assessed > 0 ? (
+            <span className="pharos-meta pharos-numeric hidden sm:inline">
+              · {assessed} stored {assessed === 1 ? "readout" : "readouts"}
+            </span>
+          ) : null}
+          <MethodologyHint topic="ddrr" />
+        </div>
+        <button
+          type="button"
+          aria-expanded={expanded}
+          aria-controls={auditPanelId}
+          onClick={() => setExpanded((open) => !open)}
+          className="pharos-focus-ring pharos-control-pill min-h-11 gap-1.5 text-foreground sm:min-h-8"
+        >
+          <span>{expanded ? "Track Record · Hide grading audit" : "Track Record · View full grading audit"}</span>
+          <ChevronDown
+            className={cn("h-3.5 w-3.5 shrink-0 transition-transform", expanded && "rotate-180")}
+            aria-hidden="true"
+          />
+        </button>
+      </div>
+
+      {expanded ? (
+        <div id={auditPanelId} className="space-y-4">
+          <p className="text-pretty text-sm text-muted-foreground">
+            Grades frozen, first-published DDR predictions against what actually happened and keeps the coverage debt
+            visible: <span className="text-foreground">the wins, misses, no-calls, and gaps</span>, never cherry-picked.
+          </p>
           <CalibrationLedger summary={summary} />
           <CoverageAccountabilityLedger summary={summary} />
           <ReviewerNote text={data._meta.publicWarning ?? DDRR_PUBLIC_WARNING} />
 
-          {/* Track record — every graded call on one time axis, oldest to now */}
+          {/* Track record: every graded call on one time axis, oldest to now */}
           <div className="space-y-2.5">
             <div className="flex items-center justify-between gap-3">
               <Kicker>Track record</Kicker>
@@ -656,8 +742,8 @@ export function DepegResolverReviewerModule({ data, error, logos }: DepegResolve
               </p>
             ) : null}
           </div>
-        </>
-      )}
+        </div>
+      ) : null}
     </section>
   );
 }

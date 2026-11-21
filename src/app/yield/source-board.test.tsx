@@ -39,7 +39,7 @@ describe("YieldSourceBoard", () => {
     </>);
 
     expect(screen.getByRole("heading", { name: "Source mix in the current view" })).toBeTruthy();
-    const referenceRates = within(screen.getByRole("region", { name: "Risk-free benchmark per currency" }));
+    const referenceRates = within(screen.getByRole("region", { name: "Reference benchmark per currency" }));
     expect(referenceRates.getByText("Safety coverage unavailable")).toBeTruthy();
     expect(referenceRates.queryByText(/^(0|100)%$/)).toBeNull();
   });

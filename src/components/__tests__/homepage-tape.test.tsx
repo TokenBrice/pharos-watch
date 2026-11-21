@@ -21,6 +21,7 @@ vi.mock("@/hooks/use-events", () => ({
 
 vi.mock("@/hooks/api-hooks", () => ({
   useHomepageSnapshot: () => useHomepageSnapshotMock(),
+  usePegSummary: () => ({ data: undefined }),
 }));
 
 vi.mock("@/lib/logos", () => ({
@@ -122,20 +123,27 @@ describe("HomepageTape", () => {
 
     render(<HomepageTape />);
 
-    // Items are duplicated for the scrolling loop; expect 2 occurrences per event.
+    // Items are duplicated visually for the scrolling loop; clones are aria-hidden
+    // and out of tab order so assistive tech and keyboard hit each event once.
     expect(screen.getAllByText("USDC depeg opened (-1200 bps)")).toHaveLength(2);
     expect(screen.getAllByText(/USDT \$150\.0M destroyed/)).toHaveLength(2);
     expect(screen.queryByText("USDT grade A -> B+")).toBeNull();
-    expect(screen.getAllByLabelText("usdc-circle logo")).toHaveLength(2);
-    expect(screen.getAllByLabelText("usdt-tether logo")).toHaveLength(2);
-    // Severity beside every logo.
-    expect(screen.getAllByRole("img", { name: "Severe" })).toHaveLength(2);
-    expect(screen.getAllByRole("img", { name: "Critical" })).toHaveLength(2);
+    // Accessible severity indicators and links exist only on the primary half.
+    expect(screen.getAllByRole("img", { name: "Severe" })).toHaveLength(1);
+    expect(screen.getAllByRole("img", { name: "Critical" })).toHaveLength(1);
     const links = screen.getAllByRole("link");
     const hrefs = links.map((a) => a.getAttribute("href") ?? "");
     expect(hrefs.some((h) => h.startsWith("/stablecoin/usdc-circle"))).toBe(true);
     expect(hrefs.some((h) => h.startsWith("/freezewatch"))).toBe(true);
     expect(hrefs.some((h) => h.startsWith("/stablecoin/usdt-tether/#report-card"))).toBe(false);
+    // Single pinned "All events" link sits outside the scrolling marquee track.
+    const allEventsLink = screen.getByRole("link", { name: "View all events" });
+    expect(allEventsLink.getAttribute("href")).toMatch(/^\/timeline\/?$/);
+    expect(allEventsLink.closest(".pharos-tape-track")).toBeNull();
+    // Cloned links stay out of tab order.
+    const cloneLinks = document.querySelectorAll('.pharos-tape-track a[aria-hidden="true"]');
+    expect(cloneLinks.length).toBeGreaterThan(0);
+    for (const clone of cloneLinks) expect(clone.getAttribute("tabindex")).toBe("-1");
   });
 
 
@@ -172,9 +180,9 @@ describe("HomepageTape", () => {
     expect(screen.queryByText("USDXL depeg peak worsened (−109 bps)")).toBeNull();
     expect(screen.queryByText("USDXL depeg peak worsened (−104 bps)")).toBeNull();
     // ×N badge reflects the total event count in the collapsed group, doubled
-    // by the marquee loop.
+    // visually by the marquee loop while only the primary copy carries an aria-label.
     expect(screen.getAllByText("×3")).toHaveLength(2);
-    expect(screen.getAllByLabelText("3 similar events")).toHaveLength(2);
+    expect(screen.getAllByLabelText("3 similar events")).toHaveLength(1);
   });
 
   it("does not collapse different-class events for the same coin", () => {
@@ -212,7 +220,7 @@ describe("HomepageTape", () => {
     // Three symbols, then the remainder.
     expect(screen.getAllByText("FRAX, alUSD, STBT +1")).toHaveLength(2);
     expect(screen.queryByText(/×\d/)).toBeNull();
-    expect(screen.getAllByRole("img", { name: "Warning" })).toHaveLength(2);
+    expect(screen.getAllByRole("img", { name: "Warning" })).toHaveLength(1);
   });
 
   it("advances event ages on the viewer's minute clock between polls", () => {
