@@ -24,8 +24,11 @@ vi.mock("@/hooks/use-preferences", () => ({ usePreference: () => ["peg", vi.fn()
 vi.mock("next/dynamic", () => ({ default: () => () => null }));
 
 import { CompareClient } from "@/components/compare/compare-client";
+import { CompareEmptyState } from "@/components/compare/compare-empty-state";
 import { CoinSelector } from "@/components/coin-selector";
 import { FlowComparisonChart } from "@/components/compare/flow-comparison-chart";
+import { COMPARISON_PRESETS } from "@/lib/compare-config";
+import { WATCHLIST_STORAGE_KEY } from "@/lib/watchlist-storage";
 
 describe("CompareClient and coin selector", () => {
   it("discloses each hourly series scope", () => {
@@ -128,5 +131,22 @@ describe("CompareClient and coin selector", () => {
     expect(hero.textContent).toContain("Active + frozen");
     expect(hero.textContent).toContain("3");
     expect(container.textContent).not.toContain("Stablecoins ready to compare");
+  });
+
+  it("hides the My Watchlist preset until at least two comparable coins are starred", () => {
+    window.localStorage.removeItem(WATCHLIST_STORAGE_KEY);
+    const { unmount } = render(<CompareEmptyState presets={COMPARISON_PRESETS} onApplyPreset={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: "Apply My Watchlist preset" })).toBeNull();
+    expect(screen.getByText(`${COMPARISON_PRESETS.length - 1} packs`)).toBeTruthy();
+    unmount();
+
+    window.localStorage.setItem(WATCHLIST_STORAGE_KEY, JSON.stringify(["usdc-circle", "usdt-tether"]));
+    try {
+      render(<CompareEmptyState presets={COMPARISON_PRESETS} onApplyPreset={vi.fn()} />);
+      expect(screen.getByRole("button", { name: "Apply My Watchlist preset" })).toBeTruthy();
+      expect(screen.getByText(`${COMPARISON_PRESETS.length} packs`)).toBeTruthy();
+    } finally {
+      window.localStorage.removeItem(WATCHLIST_STORAGE_KEY);
+    }
   });
 });

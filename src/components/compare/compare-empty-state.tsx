@@ -3,8 +3,9 @@
 import { ArrowRight } from "lucide-react";
 import { buildPresetPreview, PresetCard } from "@/components/preset-card";
 import { EmptyStateSurface } from "@/components/empty-state-surface";
+import { useWatchlist } from "@/hooks/use-watchlist";
 import type { ComparePreset } from "@/lib/compare-types";
-import { getPresetCoins } from "@/lib/compare-config";
+import { getPresetCoins, isComparePresetAvailable } from "@/lib/compare-config";
 
 interface CompareEmptyStateProps {
   presets: readonly ComparePreset[];
@@ -39,16 +40,18 @@ function ComparePreview() {
 
 function ComparePresetCard({
   preset,
+  watchlistIds,
   logos,
   onApplyPreset,
   featured = false,
 }: {
   preset: ComparePreset;
+  watchlistIds: readonly string[];
   logos?: Record<string, string>;
   onApplyPreset: (preset: ComparePreset) => void;
   featured?: boolean;
 }) {
-  const coins = getPresetCoins(preset);
+  const coins = getPresetCoins(preset, watchlistIds);
   const { previewItems, chips } = buildPresetPreview(coins, logos, {
     previewCount: featured ? 4 : 3,
     getCoinId: (coinId) => coinId,
@@ -70,8 +73,10 @@ function ComparePresetCard({
 }
 
 export function CompareEmptyState({ presets, logos, onApplyPreset }: CompareEmptyStateProps) {
-  const featured = presets.slice(0, 3);
-  const secondary = presets.slice(3);
+  const { ids: watchlistIds } = useWatchlist();
+  const visiblePresets = presets.filter((preset) => isComparePresetAvailable(preset, watchlistIds));
+  const featured = visiblePresets.slice(0, 3);
+  const secondary = visiblePresets.slice(3);
 
   return (
     <div className="space-y-5">
@@ -120,7 +125,7 @@ export function CompareEmptyState({ presets, logos, onApplyPreset }: CompareEmpt
               Each pack loads directly into the comparison table without auto-populating on first visit.
             </p>
           </div>
-          <span className="text-xs text-muted-foreground">{presets.length} packs</span>
+          <span className="text-xs text-muted-foreground">{visiblePresets.length} packs</span>
         </div>
 
         <div className="grid gap-3 lg:grid-cols-3">
@@ -128,6 +133,7 @@ export function CompareEmptyState({ presets, logos, onApplyPreset }: CompareEmpt
             <ComparePresetCard
               key={preset.title}
               preset={preset}
+              watchlistIds={watchlistIds}
               logos={logos}
               featured
               onApplyPreset={onApplyPreset}
@@ -137,7 +143,13 @@ export function CompareEmptyState({ presets, logos, onApplyPreset }: CompareEmpt
 
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           {secondary.map((preset) => (
-            <ComparePresetCard key={preset.title} preset={preset} logos={logos} onApplyPreset={onApplyPreset} />
+            <ComparePresetCard
+              key={preset.title}
+              preset={preset}
+              watchlistIds={watchlistIds}
+              logos={logos}
+              onApplyPreset={onApplyPreset}
+            />
           ))}
         </div>
       </div>

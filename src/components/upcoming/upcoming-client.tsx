@@ -217,8 +217,8 @@ const FILTER_TOUCH = "min-h-11 sm:min-h-8";
 
 function filterPillClass(active: boolean): string {
   return active
-    ? `pharos-control-pill pharos-control-pill-active ${FILTER_TOUCH} gap-1.5`
-    : `pharos-toggle-pill ${FILTER_TOUCH} gap-1.5`;
+    ? `pharos-focus-ring pharos-control-pill pharos-control-pill-active ${FILTER_TOUCH} gap-1.5`
+    : `pharos-focus-ring pharos-control-pill ${FILTER_TOUCH} gap-1.5`;
 }
 
 const UPCOMING_COLUMNS: readonly DataTableColumn<SortKey>[] = [

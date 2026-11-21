@@ -74,6 +74,7 @@ export interface DataTableShellProps<K extends string> {
   headerClassName?: string;
   headerRowClassName?: string;
   stickyHeader?: DataTableFrameProps["stickyHeader"];
+  stickyMode?: DataTableFrameProps["stickyMode"];
   pagination?: TablePaginationProps;
   /** Enable striped rows for horizontal scanning */
   striped?: boolean;
@@ -156,6 +157,7 @@ export function DataTableShell<K extends string>({
   headerClassName,
   headerRowClassName,
   stickyHeader,
+  stickyMode,
   pagination,
   striped = false,
   density = "compact",
@@ -183,6 +185,7 @@ export function DataTableShell<K extends string>({
       density={density}
       striped={striped}
       stickyHeader={stickyHeader}
+      stickyMode={stickyMode}
       topSlot={
         <>
           <TableBackgroundRefreshingBar queryKeys={refreshingQueryKeys} isPending={isPending} />
@@ -192,7 +195,7 @@ export function DataTableShell<K extends string>({
       footerSlot={pagination ? <TablePagination {...pagination} /> : null}
     >
       {caption ? <TableCaption className={captionClassName}>{caption}</TableCaption> : null}
-      <TableHeader className={headerClassName === undefined ? "bg-muted" : headerClassName}>
+      <TableHeader className={headerClassName === undefined ? (stickyHeader ? "bg-card" : "bg-muted") : headerClassName}>
         <TableRow rowIntent="static" className={headerRowClassName}>
           {columns.map((column) =>
             column.sortKey && sort ? (

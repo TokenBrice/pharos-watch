@@ -64,4 +64,14 @@ describe("YieldCompareTray", () => {
     expect(onOpenDrawer).toHaveBeenCalledTimes(1);
   });
 
+  it("respects --mobile-utility-safe-offset on mobile and tablet widths before dropping to bottom-4 at lg", () => {
+    window.history.replaceState(null, "", "/yield/?compare=usdc-circle,usdt-tether");
+    render(<YieldCompareTray rows={rows} logos={{}} onOpenDrawer={vi.fn()} />);
+
+    const region = screen.getByRole("region", { name: "Compare selection" });
+    expect(region.className).toContain("bottom-[calc(var(--mobile-utility-safe-offset,4.5rem)+0.75rem)]");
+    expect(region.className).toContain("lg:bottom-4");
+    expect(region.className).not.toContain("sm:bottom-4");
+  });
+
 });

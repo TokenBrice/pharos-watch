@@ -143,7 +143,7 @@ export const DEFINITIONS = {
       "Three-pillar assessment of backing, exit quality, and economic control, with peg, deployment, dependency, and policy-limit effects applied explicitly.",
     detail:
       "The published score follows the bounded-headroom pillar aggregate through peg and deployment adjustments, then applies any binding caps. Insufficient required evidence produces NR.",
-    long: `Pharos's V10 risk grade for a stablecoin. It evaluates Backing (${pct(V9_PILLAR_WEIGHTS.backing)}), Exit (${pct(V9_PILLAR_WEIGHTS.exit)}), and Economic Control (${pct(V9_PILLAR_WEIGHTS.control)}) with bounded aggregation, so a strong pillar cannot average away a weak material path. Peg behavior, dependencies, wrappers, evidence quality, track record, and structural caps can then only constrain the result. Grades run from ${TOP_GRADE.grade} (${TOP_GRADE.min}+) to F (below ${LOWEST_PASSING_GRADE.min}); NR means required evidence is insufficient.`,
+    long: `Pharos's risk grade for a stablecoin. It evaluates Backing (${pct(V9_PILLAR_WEIGHTS.backing)}), Exit (${pct(V9_PILLAR_WEIGHTS.exit)}), and Economic Control (${pct(V9_PILLAR_WEIGHTS.control)}) with bounded aggregation, so a strong pillar cannot average away a weak material path. Peg behavior, dependencies, wrappers, evidence quality, track record, and structural caps can then only constrain the result. Grades run from ${TOP_GRADE.grade} (${TOP_GRADE.min}+) to F (below ${LOWEST_PASSING_GRADE.min}); NR means required evidence is insufficient.`,
     listed: true,
     seeAlso: ["pegScore", "dependencyRisk", "mintAuthorityScore"],
     // The active Safety Score methodology is identity-based: no inline version chip.
@@ -153,15 +153,15 @@ export const DEFINITIONS = {
   controlPosture: {
     label: "Control posture",
     short:
-      "A descriptive classification of where operational authority sits. It preserves a legacy metadata field for context and does not enter Safety Score V10.",
-    detail: "V10 Economic Control uses reviewed mint, oracle, and bridge evidence instead of this classification.",
+      "A descriptive classification of where operational authority sits. It preserves a legacy metadata field for context and does not enter the Safety Score.",
+    detail: "Economic Control uses reviewed mint, oracle, and bridge evidence instead of this classification.",
     methodologyPath: SAFETY_PATH,
   },
   resilience: {
     label: "Resilience",
-    short: "Historical V8 context for collateral quality, custody model, and blacklist capability.",
+    short: "Historical context for collateral quality, custody model, and blacklist capability.",
     detail:
-      "V9 replaced this dimension with Backing Quality, Exit Strength, and Economic Control; current scores do not consume the retired Resilience dimension.",
+      "The current three-pillar model replaced this dimension with Backing Quality, Exit Strength, and Economic Control; current scores do not consume the retired Resilience dimension.",
     ...SAFETY,
   },
   freezable: {
@@ -183,7 +183,7 @@ export const DEFINITIONS = {
   freezableNo: {
     label: "Freezable",
     short:
-      "No direct, upstream, or possible freeze exposure is resolved in the current model. This does not prove the asset is risk-free.",
+      "No direct, upstream, or possible freeze exposure is resolved in the current model. Absence of resolved freeze controls does not rule out collateral, peg, or smart-contract risks.",
     ...SAFETY,
   },
   freezablePossible: {
@@ -210,7 +210,7 @@ export const DEFINITIONS = {
     short:
       "Standalone issuer or protocol route scored across access, settlement, execution certainty, capacity, output quality, and cost.",
     detail:
-      "This route score is separate from Safety Score V10 Exit, which re-evaluates exact same-notional route evidence under the V10 policy.",
+      "This route score is separate from the Safety Score Exit pillar, which re-evaluates exact same-notional route evidence under its own policy.",
     long:
       "A standalone score for a stablecoin's issuer or protocol redemption route, rated on access, settlement, execution certainty, capacity, output quality, and cost. It is a diagnostic: the Safety Score Exit pillar separately re-evaluates exact same-notional route evidence under its own policy.",
     listed: true,
@@ -219,18 +219,18 @@ export const DEFINITIONS = {
   },
   effectiveExit: {
     label: "Historical Effective Exit",
-    short: "Retired pre-V9 blend that compared the best redemption and DEX exit paths.",
+    short: "Retired combined score that compared the best redemption and DEX exit paths.",
     detail:
-      "Redemption v4.3 removed this combined score. Current publication keeps standalone route diagnostics while Safety Score V10 evaluates exact same-notional evidence inside its Exit pillar.",
+      "Redemption v4.3 removed this combined score. Current publication keeps standalone route diagnostics while the Safety Score evaluates exact same-notional evidence inside its Exit pillar.",
     ...REDEMPTION,
   },
   mintAuthorityScore: {
     label: "Mint Authority Score",
-    short: "The Safety Score V10 mint component: how much durable, unbacked supply privileged mint paths can create.",
+    short: "The Safety Score mint component: how much durable, unbacked supply privileged mint paths can create.",
     detail:
-      "Higher is better. Since safety 9.1 mint risk is graded once, inside the V9 Economic Control pillar. The component starts from a derived posture (cap semantics, claim impairment, reconciliation, supervision), then applies resolved-incident age decay, a key-custody penalty that an admitted MPC or HSM attestation under a complete, current control review waives, a multisig quorum ladder, and a small Safe module modifier. Route family is deliberately not priced separately. Missing or unresolved review data stays NR and never implies safety.",
+      "Higher is better. Mint risk is graded once, inside the Safety Score Economic Control pillar. The component starts from a derived posture (cap semantics, claim impairment, reconciliation, supervision), then applies resolved-incident age decay, a key-custody penalty that an admitted MPC or HSM attestation under a complete, current control review waives, a multisig quorum ladder, and a small Safe module modifier. Route family is deliberately not priced separately. Missing or unresolved review data stays NR and never implies safety.",
     long:
-      "The 0-100 mint component inside the Safety Score's Economic Control pillar: how much durable, unbacked supply privileged mint paths can create. Higher is better. Since methodology v9.1 mint risk is graded once, inside Economic Control; the former standalone score is retired. Missing or unresolved review data stays NR and never implies safety.",
+      "The 0-100 mint component inside the Safety Score's Economic Control pillar: how much durable, unbacked supply privileged mint paths can create. Higher is better. Mint risk is graded once, inside Economic Control; the former standalone score is retired. Missing or unresolved review data stays NR and never implies safety.",
     listed: true,
     seeAlso: ["safetyScore"],
     methodologyPath: MINT_AUTHORITY_METHODOLOGY_PATH,
@@ -346,7 +346,7 @@ export const DEFINITIONS = {
   ddrPredictionFrozen: {
     label: "Prediction Frozen",
     short:
-      "DDR publishes one immutable verdict per depeg incident, sealed at its public lock. Frozen means this is that sealed call — it is never revised while the event plays out.",
+      "DDR publishes one immutable verdict per depeg incident, sealed at its public lock. Frozen means this is that sealed call. It is never revised while the event plays out.",
     detail:
       "Live facts (current price, elapsed time) keep updating below the forecast. Keeping the prediction itself fixed is what lets the Reviewer (DDRR) grade it honestly after resolution.",
     ...DDR,
@@ -357,7 +357,7 @@ export const DEFINITIONS = {
     short:
       "0-100 DEX liquidity composite built from effective TVL, volume activity, pool quality, durability, and pair diversity.",
     detail:
-      "This aggregate market score is not a single-route execution test. Safety Score V10 Exit separately evaluates exact same-notional routes and independent backup credit.",
+      "This aggregate market score is not a single-route execution test. The Safety Score Exit pillar separately evaluates exact same-notional routes and independent backup credit.",
     long: `A 0-100 score for how easily a stablecoin can be exited through DEX markets, combining ${LIQUIDITY_WEIGHT_TEXT}. Thin, stale, or identity-poor pools stay visible for diagnostics but receive no scoring weight. It is an aggregate market score, not a single-route execution test.`,
     listed: true,
     seeAlso: ["effectiveTvl", "redemptionBackstop"],
@@ -401,11 +401,11 @@ export const DEFINITIONS = {
     label: "PYS",
     term: "PYS (Pharos Yield Score)",
     short:
-      "Asks one question: is this APY paying enough for the risk you take? Yield per unit of risk, 0-100. Starts from APY, adds a weighted slice of benchmark spread, re-bases the local hurdle onto the USD risk-free rate, then discounts by source risk, stablecoin safety, and yield consistency.",
+      "Asks one question: is this APY paying enough for the risk you take? Yield per unit of risk, 0-100. Starts from APY, adds a weighted slice of benchmark spread, re-bases the local hurdle onto the USD Treasury benchmark rate, then discounts by source risk, stablecoin safety, and yield consistency.",
     detail:
       "Not a recommendation or a safety verdict: a D-grade coin can top PYS because it pays a lot for a lot of risk. Read it next to the Safety grade and the row's zone. Source-risk and safety penalties are deliberately steep, and excess over the local hurdle is scored on a USD footing, so a peg's policy-rate compensation is never credited as yield.",
     long:
-      "Yield per unit of risk, from 0 to 100. It starts from APY, adds a weighted slice of benchmark spread, re-bases the local hurdle onto the USD risk-free rate, then discounts by source risk, stablecoin safety, and yield consistency. It is not a recommendation or a safety verdict: a low-grade coin can rank high because it pays a lot for a lot of risk.",
+      "Yield per unit of risk, from 0 to 100. It starts from APY, adds a weighted slice of benchmark spread, re-bases the local hurdle onto the USD Treasury benchmark rate, then discounts by source risk, stablecoin safety, and yield consistency. It is not a recommendation or a safety verdict: a low-grade coin can rank high because it pays a lot for a lot of risk.",
     listed: true,
     seeAlso: ["yieldStability", "safetyScore"],
     ...YIELD,
@@ -534,7 +534,7 @@ export const DEFINITIONS = {
   proofOfReserves: {
     label: "Proof of Reserves",
     short:
-      "Issuer-published evidence — independent audit, real-time on-chain feed, or self-reported attestation — that circulating supply is matched by reserve assets.",
+      "Issuer-published evidence (independent audit, real-time on-chain feed, or self-reported attestation) that circulating supply is matched by reserve assets.",
     detail:
       "Tier reflects attestor quality (Big-4 / regional CPA / niche / self / none) and cadence (daily-NAV / real-time / daily / weekly / monthly / quarterly / semi-annual / annual / ad-hoc).",
     listed: true,
@@ -600,7 +600,7 @@ export const DEFINITIONS = {
   rwa: {
     label: "RWA (Real-World Asset)",
     short:
-      "Off-chain assets — typically U.S. Treasuries, repos, or bank deposits — held as backing for an on-chain stablecoin.",
+      "Off-chain assets (typically U.S. Treasuries, repos, or bank deposits) held as backing for an on-chain stablecoin.",
     listed: true,
   },
   perpetual: {
@@ -642,7 +642,7 @@ export const DEFINITIONS = {
   treasury: {
     label: "U.S. Treasury",
     short:
-      "Short-dated U.S. government debt — the lowest-credit-risk USD-denominated reserve asset, used as the dominant backing for fiat-pegged stablecoins.",
+      "Short-dated U.S. government debt. It is the lowest-credit-risk USD-denominated reserve asset and the dominant backing for fiat-pegged stablecoins.",
     listed: true,
   },
   algorithmic: {

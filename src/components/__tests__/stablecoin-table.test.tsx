@@ -437,8 +437,10 @@ describe("StablecoinTable", () => {
   it("preserves the overview page through a metric refresh and clamps it when rows shrink", () => {
     const props = { data: overviewRows, isLoading: false, activeFilters: [] as const, toolbarVariant: "figmaOverview" as const };
     const { rerender } = render(<StablecoinTable {...props} />);
-    fireEvent.click(screen.getByRole("button", { name: "Next" }));
-    expect(screen.getByText("21-40")).toBeTruthy();
+    expect(screen.getByText("Page 1 of 3")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Go to next page" }));
+    expect(screen.getByText(/Showing/).textContent).toBe("Showing 21–40 of 45 stablecoins");
+    expect(screen.getByText("Page 2 of 3")).toBeTruthy();
     const scrollToMock = vi.mocked(HTMLElement.prototype.scrollTo);
     scrollToMock.mockClear();
     rerender(
@@ -449,13 +451,15 @@ describe("StablecoinTable", () => {
         pegScores={new Map([[overviewRows[0].id, makePegSummaryCoin({ id: overviewRows[0].id, pegScore: 80 })]])}
       />,
     );
-    expect(screen.getByText("21-40")).toBeTruthy();
+    expect(screen.getByText(/Showing/).textContent).toBe("Showing 21–40 of 45 stablecoins");
     expect(scrollToMock).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Next" }));
-    expect(screen.getByText("41-45")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Go to next page" }));
+    expect(screen.getByText(/Showing/).textContent).toBe("Showing 41–45 of 45 stablecoins");
+    expect(screen.getByText("Page 3 of 3")).toBeTruthy();
     rerender(<StablecoinTable {...props} data={overviewRows.slice(0, 25)} />);
-    expect(screen.getByText("21-25")).toBeTruthy();
-    expect((screen.getByRole("button", { name: "Next" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText(/Showing/).textContent).toBe("Showing 21–25 of 25 stablecoins");
+    expect(screen.getByText("Page 2 of 2")).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Go to next page" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it.each(["search", "filter", "scope", "pin", "sort"] as const)(
@@ -466,18 +470,94 @@ describe("StablecoinTable", () => {
         toolbarVariant: "figmaOverview" as const, initialVisibleColumns: ["name", "mcap"] as const,
       };
       const { rerender } = render(<StablecoinTable {...props} />);
-      fireEvent.click(screen.getByRole("button", { name: "Next" }));
-      const scrollToMock = vi.mocked(HTMLElement.prototype.scrollTo);
-      scrollToMock.mockClear();
+      fireEvent.click(screen.getByRole("button", { name: "Go to next page" }));
+      expect(screen.getByText("Page 2 of 3")).toBeTruthy();
       if (control === "search") rerender(<StablecoinTable {...props} searchQuery={overviewRows[0].symbol} />);
       if (control === "filter") rerender(<StablecoinTable {...props} activeFilters={["usd-peg"]} />);
       if (control === "scope") rerender(<StablecoinTable {...props} eligibleIds={new Set(overviewRows.slice(0, 30).map((row) => row.id))} />);
       if (control === "pin") rerender(<StablecoinTable {...props} pinnedStablecoinIds={[overviewRows[1].id]} />);
       if (control === "sort") fireEvent.click(screen.getByRole("button", { name: "Sort by Name" }));
-      expect(scrollToMock).toHaveBeenCalledWith({ top: 0 });
-      expect((screen.getByRole("button", { name: "Previous" }) as HTMLButtonElement).disabled).toBe(true);
+      expect((screen.getByRole("button", { name: "Go to previous page" }) as HTMLButtonElement).disabled).toBe(true);
     },
   );
+
+  it("renders all 20 overview rows in page flow without the 712px scroll trap or virtualizer", () => {
+    const { container } = render(
+      <StablecoinTable
+        data={overviewRows}
+        isLoading={false}
+        activeFilters={[]}
+        toolbarVariant="figmaOverview"
+        initialVisibleColumns={["rank", "name", "price", "mcap"]}
+      />,
+    );
+
+    const shell = screen.getByTestId("stablecoin-overview-table");
+    const viewport = container.querySelector<HTMLElement>("[data-slot='table-viewport']")!;
+    const bodyRows = container.querySelectorAll("tbody tr");
+
+    expect(bodyRows).toHaveLength(20);
+    expect(shell.className).toContain("pharos-table-shell");
+    expect(shell.className).not.toContain("pharos-overview-table-shell");
+    expect(shell.getAttribute("data-sticky-mode")).toBe("page");
+    expect(viewport.className).not.toContain("pharos-overview-table-viewport");
+    expect(viewport.className).not.toContain("overflow-y-auto");
+  });
+
+  it("prioritizes mobile columns over initialVisibleColumns on Overview phones", async () => {
+    setMobileMedia(true);
+    render(
+      <StablecoinTable
+        data={[coin]}
+        isLoading={false}
+        activeFilters={[]}
+        reportCards={reportCards}
+        toolbarVariant="figmaOverview"
+        onTogglePinnedStablecoin={vi.fn()}
+        initialVisibleColumns={[
+          "rank",
+          "name",
+          "price",
+          "peg",
+          "mcap",
+          "change24h",
+          "change7d",
+          "grade",
+          "stability",
+          "liquidity",
+          "blacklistable",
+          "backing",
+          "type",
+        ]}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("MC")).toBeTruthy();
+      expect(screen.queryByText("Blacklist")).toBeNull();
+      expect(screen.queryByText("Peg Score")).toBeNull();
+      expect(screen.queryByText("Backing")).toBeNull();
+      expect(screen.getByLabelText("Mobile risk summary")).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Star USDT" }).className).toContain("size-11");
+    });
+  });
+
+  it("renders the unified StablecoinOverviewSkeleton when Overview is loading", () => {
+    const { container } = render(
+      <StablecoinTable
+        data={undefined}
+        isLoading
+        activeFilters={[]}
+        toolbarVariant="figmaOverview"
+      />,
+    );
+
+    expect(screen.getByTestId("stablecoin-overview-skeleton")).toBeTruthy();
+    const loadingShell = screen.getByTestId("stablecoin-overview-loading-table");
+    expect(loadingShell.className).toContain("pharos-table-shell");
+    expect(loadingShell.getAttribute("data-sticky-mode")).toBe("page");
+    expect(container.querySelectorAll("tbody tr")).toHaveLength(20);
+  });
 
 
   it("scrolls the virtual cursor only when keyboard intent targets an offscreen row", async () => {

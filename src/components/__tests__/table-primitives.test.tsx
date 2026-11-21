@@ -14,6 +14,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/table";
+import { DataTableShell } from "@/components/data-table-shell";
+import { SortableTableHead } from "@/components/sortable-table-head";
+import { TablePagination } from "@/components/table-pagination";
 import { TableSourceLink } from "@/components/table/client";
 
 describe("Pharos table primitives", () => {
@@ -320,5 +323,134 @@ describe("Pharos table primitives", () => {
     expect(screen.getByText("Updated toolbar")).toBeTruthy();
     expect(surfaceCalls).toEqual([shell]);
     expect(viewportCalls).toEqual([viewport]);
+  });
+
+  it("defaults TableRow to scan, switches to interactive on onClick, forces static inside TableHeader, and clips fixed cells", () => {
+    const onRowClick = vi.fn();
+    render(
+      <TableFrame tableId="intent-check" tableClassName="table-fixed">
+        <TableHeader>
+          <TableRow>
+            <TableHead>Coin</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          <TableRow>
+            <TableCell>Read-only row</TableCell>
+          </TableRow>
+          <TableRow onClick={onRowClick}>
+            <TableCell>Clickable row</TableCell>
+          </TableRow>
+        </TableBody>
+      </TableFrame>,
+    );
+
+    const headerRow = screen.getByText("Coin").closest("tr")!;
+    const scanRow = screen.getByText("Read-only row").closest("tr")!;
+    const interactiveRow = screen.getByText("Clickable row").closest("tr")!;
+    const cell = screen.getByText("Read-only row").closest("td")!;
+
+    expect(headerRow.getAttribute("data-row-intent")).toBe("static");
+    expect(scanRow.getAttribute("data-row-intent")).toBe("scan");
+    expect(interactiveRow.getAttribute("data-row-intent")).toBe("interactive");
+    expect(cell.className).toContain("overflow-hidden");
+    expect(cell.className).toContain("text-ellipsis");
+  });
+
+  it("supports page-level sticky headers by default and viewport sticky headers when requested", () => {
+    const { rerender } = render(
+      <DataTableShell
+        tableId="sticky-check"
+        columns={[{ id: "name", label: "Name" }]}
+        stickyHeader
+      >
+        <TableRow>
+          <TableCell>USDC</TableCell>
+        </TableRow>
+      </DataTableShell>,
+    );
+
+    const pageShell = screen.getByTestId("sticky-check-table");
+    const pageViewport = pageShell.querySelector("[data-slot='table-viewport']")!;
+    expect(pageShell.getAttribute("data-sticky-mode")).toBe("page");
+    expect(pageShell.className).toContain("overflow-clip");
+    expect(pageShell.className).toContain("top-[var(--sticky-header-bottom,3.75rem)]");
+    expect(pageViewport.getAttribute("data-sticky-mode")).toBe("page");
+
+    rerender(
+      <DataTableShell
+        tableId="sticky-check"
+        columns={[{ id: "name", label: "Name" }]}
+        stickyHeader
+        stickyMode="viewport"
+      >
+        <TableRow>
+          <TableCell>USDC</TableCell>
+        </TableRow>
+      </DataTableShell>,
+    );
+
+    const viewportShell = screen.getByTestId("sticky-check-table");
+    const viewportEl = viewportShell.querySelector("[data-slot='table-viewport']")!;
+    expect(viewportShell.getAttribute("data-sticky-mode")).toBe("viewport");
+    expect(viewportEl.className).toContain("overflow-y-auto");
+    expect(viewportEl.className).toContain("[--table-header-top:0px]");
+  });
+
+  it("highlights the active SortableTableHead without negative margins and dims inactive sort icons", () => {
+    const toggleSort = vi.fn();
+    render(
+      <table>
+        <thead>
+          <tr>
+            <SortableTableHead
+              sortKey="mcap"
+              currentSortKey="mcap"
+              sortDirection="desc"
+              label="Market cap"
+              toggleSort={toggleSort}
+              getAriaSortValue={() => "descending"}
+            />
+            <SortableTableHead
+              sortKey="price"
+              currentSortKey="mcap"
+              sortDirection="desc"
+              label="Price"
+              toggleSort={toggleSort}
+              getAriaSortValue={() => "none"}
+            />
+          </tr>
+        </thead>
+      </table>,
+    );
+
+    const activeTh = screen.getByRole("button", { name: "Sort by Market cap" }).closest("th")!;
+    const activeButton = screen.getByRole("button", { name: "Sort by Market cap" });
+    const inactiveTh = screen.getByRole("button", { name: "Sort by Price" }).closest("th")!;
+    const inactiveIcon = inactiveTh.querySelector("svg")!;
+
+    expect(activeTh.className).toContain("text-foreground");
+    expect(activeTh.className).toContain("shadow-[inset_0_-2px_0_0_var(--brand-accent)]");
+    expect(activeButton.className).not.toContain("-ml-2");
+    expect(activeButton.className).not.toContain("-mr-2");
+    expect(inactiveIcon.getAttribute("class")).toContain("opacity-35");
+  });
+
+  it("renders a Page X of Y indicator alongside pagination controls", () => {
+    render(
+      <TablePagination
+        page={1}
+        totalPages={5}
+        rangeStart={21}
+        rangeEnd={40}
+        total={95}
+        onPrevious={vi.fn()}
+        onNext={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Page 2 of 5")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Go to previous page" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Go to next page" })).toBeTruthy();
   });
 });

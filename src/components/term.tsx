@@ -41,7 +41,7 @@ export function Term({ slug, children }: TermProps) {
             href={entry.longHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-2 inline-block text-xs text-frost-blue hover:underline"
+            className="mt-2 inline-block text-xs text-brand-accent-text hover:underline"
           >
             Learn more →
           </a>

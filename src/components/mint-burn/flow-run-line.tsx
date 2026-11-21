@@ -72,11 +72,28 @@ interface PlacedLabel {
   anchor: "center" | "left" | "right";
 }
 
+function labelHorizontalSpan(pct: number, anchor: PlacedLabel["anchor"]): [number, number] {
+  if (anchor === "left") return [pct, pct + LABEL_MIN_GAP_PCT];
+  if (anchor === "right") return [pct - LABEL_MIN_GAP_PCT, pct];
+  return [pct - LABEL_MIN_GAP_PCT / 2, pct + LABEL_MIN_GAP_PCT / 2];
+}
+
+function labelsOverlap(
+  a: Pick<PlacedLabel, "pct" | "bottomPx" | "anchor">,
+  b: Pick<PlacedLabel, "pct" | "bottomPx" | "anchor">,
+): boolean {
+  if (Math.abs(a.bottomPx - b.bottomPx) >= LABEL_LINE_PX) return false;
+  const [a0, a1] = labelHorizontalSpan(a.pct, a.anchor);
+  const [b0, b1] = labelHorizontalSpan(b.pct, b.anchor);
+  return a0 < b1 && b0 < a1;
+}
+
 /**
- * Greedy stacking: a label near an already placed one moves up a line. Drivers
- * (named in the verdict) are placed first and never dropped: one that would
- * overflow the headroom hangs beside its own tick top instead. Other labels
- * (the extremes) drop when there is no room.
+ * Greedy 2D stacking: checks both horizontal span (`pct`, anchor) and vertical
+ * position (`bottomPx`) across varying tick heights so adjacent or coincident
+ * coins never collide. Drivers (named in the verdict) are placed first and
+ * never dropped: one that would overflow the headroom hangs beside its own tick
+ * top instead. Other labels (the extremes) drop when there is no room.
  */
 function placeLabels(
   ticks: readonly RunLineTick[],
@@ -85,24 +102,39 @@ function placeLabels(
   rulePct: number | null,
   plotHeightPx: number,
 ): PlacedLabel[] {
-  const placed: Array<PlacedLabel & { level: number }> = [];
+  const placed: PlacedLabel[] = [];
+  const maxTopPx = plotHeightPx + LABEL_HEADROOM_PX;
   const ordered = [...ticks].sort(
     (a, b) => Number(driverIds.has(b.id)) - Number(driverIds.has(a.id)) || a.score - b.score,
   );
   for (const tick of ordered) {
     const pct = toPct(tick.score);
     const tickTopPx = tickHeightPx(tick.weightUsd, maxWeightUsd, plotHeightPx);
-    let level = 0;
-    while (placed.some((label) => label.level === level && Math.abs(label.pct - pct) < LABEL_MIN_GAP_PCT)) level += 1;
     const nearRule = rulePct != null && Math.abs(pct - rulePct) < RULE_CLEARANCE_PCT;
-    if (tickTopPx + 4 + level * LABEL_LINE_PX + LABEL_LINE_PX > plotHeightPx + LABEL_HEADROOM_PX) {
+    const anchor: PlacedLabel["anchor"] =
+      pct < 4 ? "left" : pct > 96 ? "right" : !nearRule ? "center" : pct >= rulePct ? "left" : "right";
+    let bottomPx = tickTopPx + 4;
+    while (true) {
+      const blocker = placed.find((other) => labelsOverlap(other, { pct, bottomPx, anchor }));
+      if (!blocker) break;
+      bottomPx = blocker.bottomPx + LABEL_LINE_PX;
+    }
+    if (bottomPx + LABEL_LINE_PX > maxTopPx) {
       if (!driverIds.has(tick.id)) continue;
-      const side = rulePct != null && nearRule ? (pct >= rulePct ? "left" : "right") : pct > 50 ? "right" : "left";
-      placed.push({ id: tick.id, symbol: tick.symbol, pct, bottomPx: tickTopPx + 4, anchor: side, level: -1 });
+      const side: PlacedLabel["anchor"] =
+        rulePct != null && nearRule ? (pct >= rulePct ? "left" : "right") : pct > 50 ? "right" : "left";
+      let sideBottomPx = Math.max(2, tickTopPx + 4 - LABEL_LINE_PX);
+      while (sideBottomPx >= 2) {
+        const blocker = placed.find((other) => labelsOverlap(other, { pct, bottomPx: sideBottomPx, anchor: side }));
+        if (!blocker) break;
+        const nextBottom = blocker.bottomPx - LABEL_LINE_PX;
+        if (nextBottom < 2) break;
+        sideBottomPx = nextBottom;
+      }
+      placed.push({ id: tick.id, symbol: tick.symbol, pct, bottomPx: sideBottomPx, anchor: side });
       continue;
     }
-    const anchor = pct < 4 ? "left" : pct > 96 ? "right" : !nearRule ? "center" : pct >= rulePct ? "left" : "right";
-    placed.push({ id: tick.id, symbol: tick.symbol, pct, bottomPx: tickTopPx + 4 + level * LABEL_LINE_PX, anchor, level });
+    placed.push({ id: tick.id, symbol: tick.symbol, pct, bottomPx, anchor });
   }
   return placed;
 }
@@ -350,7 +382,7 @@ export function FlowRunLine({ model, className }: { model: RunLineModel; classNa
                   "pharos-numeric absolute whitespace-nowrap text-2xs text-foreground/85",
                   label.anchor === "center" ? "-translate-x-1/2" : label.anchor === "left" ? "pl-1" : "-translate-x-full pr-1",
                 )}
-                style={{ left: `${label.pct}%`, bottom: label.anchor === "center" ? label.bottomPx : label.bottomPx - LABEL_LINE_PX }}
+                style={{ left: `${label.pct}%`, bottom: label.bottomPx }}
                 aria-hidden="true"
               >
                 {label.symbol}

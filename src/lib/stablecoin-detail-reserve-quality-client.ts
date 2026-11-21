@@ -211,7 +211,7 @@ function buildLede(
   selfExposurePct: number | null,
 ): string {
   const sliceNoun = sliceCount === 1 ? "reviewed reserve slice" : "reviewed reserve slices";
-  let lede = `${sliceCount} ${sliceNoun} — ${buildConvertibilityClause(liquidWithinOneDayPct, unknownHorizonPct)}`;
+  let lede = `${sliceCount} ${sliceNoun}: ${buildConvertibilityClause(liquidWithinOneDayPct, unknownHorizonPct)}`;
   if (unidentifiedObligorsPct != null && unidentifiedObligorsPct > 0) {
     lede += ` ${formatReserveQualityPct(unidentifiedObligorsPct)} of the basket has unresolved reserve exposure.`;
   }

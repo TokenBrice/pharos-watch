@@ -25,11 +25,11 @@ interface TaxonomyLinkPage {
 }
 
 const AXES: ReadonlyArray<{
-  href: string;
+  href?: string;
   label: string;
   children: readonly TaxonomyLinkPage[];
 }> = [
-  { href: "/stablecoins/", label: "By peg currency", children: PEG_TAXONOMY_PAGES },
+  { label: "By peg currency", children: PEG_TAXONOMY_PAGES },
   { href: "/stablecoins/backing/", label: "By backing type", children: BACKING_TAXONOMY_PAGES },
   { href: "/stablecoins/governance/", label: "By governance model", children: GOVERNANCE_TAXONOMY_PAGES },
   { href: "/stablecoins/infrastructure/", label: "By shared infrastructure", children: INFRASTRUCTURE_TAXONOMY_PAGES },
@@ -134,11 +134,15 @@ export default function StablecoinsHubPage() {
         </section>
 
         {AXES.map((axis) => (
-          <section key={axis.href} aria-label={axis.label} className="space-y-3">
+          <section key={axis.label} aria-label={axis.label} className="space-y-3">
             <h2 className="text-lg font-semibold tracking-tight text-foreground">
-              <Link href={axis.href} className="pharos-focus-ring rounded-sm underline-offset-4 hover:underline">
-                {axis.label}
-              </Link>
+              {axis.href ? (
+                <Link href={axis.href} className="pharos-focus-ring rounded-sm underline-offset-4 hover:underline">
+                  {axis.label}
+                </Link>
+              ) : (
+                axis.label
+              )}
             </h2>
             <ul className="grid gap-x-10 sm:grid-cols-2 lg:grid-cols-3">
               {axis.children.map((page) => (

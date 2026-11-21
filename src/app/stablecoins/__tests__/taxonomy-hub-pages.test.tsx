@@ -40,6 +40,9 @@ describe("stablecoin taxonomy hub pages", () => {
     expect(html).toContain('id="stablecoin-profile-directory-heading"');
     expect(html).toContain("Stablecoin list");
     expect(html).not.toContain("All Tracked Stablecoin Profiles");
+    expect(html).toContain(">By peg currency</h2>");
+    expect(html).not.toMatch(/<a[^>]*href="\/stablecoins\/?"[^>]*>By peg currency<\/a>/);
+    expect(html).toMatch(/href="\/stablecoins\/backing\/?"/);
   });
 
   it("scopes the decentralized governance cohort to Pharos's DeFi classification", async () => {

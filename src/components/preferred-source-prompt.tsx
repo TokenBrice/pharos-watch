@@ -37,7 +37,7 @@ export function PreferredSourcePrompt({ className }: { className?: string }) {
         href={PREFERRED_SOURCE_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className="pharos-focus-ring text-frost-blue underline-offset-2 hover:underline"
+        className="pharos-focus-ring text-brand-accent-text underline-offset-2 hover:underline"
       >
         Add Pharos Watch in Google ↗
       </a>

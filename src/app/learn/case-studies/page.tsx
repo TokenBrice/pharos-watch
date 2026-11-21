@@ -116,7 +116,7 @@ export default function CaseStudiesHub() {
               <p className="pharos-label mb-2">
                 {study.eyebrow}
               </p>
-              <p className="text-sm font-semibold text-foreground transition-colors group-hover:text-frost-blue">
+              <p className="text-sm font-semibold text-foreground transition-colors group-hover:text-brand-accent-text">
                 {study.title}
               </p>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">

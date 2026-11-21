@@ -234,8 +234,8 @@ export function StablecoinTableHeader({
     return column;
   }), [rows]);
   return (
-    <TableHeader className={`${sticky ? "sticky top-0 z-10 bg-muted" : "bg-muted"} ${variant === "figmaOverview" ? "pharos-overview-table-header" : ""}`}>
-      <TableRow rowIntent={sort ? undefined : "static"}>
+    <TableHeader className={sticky ? "bg-card" : "bg-muted"}>
+      <TableRow rowIntent="static">
         {showPinnedControls ? (
           <TableHead scope="col" className={variant === "figmaOverview" ? "w-[48px] text-center" : "w-[44px] text-center lg:w-[36px]"}>
             <span className="sr-only">Starred</span>
@@ -282,7 +282,7 @@ export function ColumnFitToggle({
     <Button
       variant="outline"
       size="sm"
-      className={compact ? "h-8 min-h-8 rounded-md px-2 sm:px-3" : "rounded-md min-h-11 sm:min-h-8"}
+      className={compact ? "h-11 rounded-md px-2.5 sm:h-8 sm:px-3" : "min-h-11 rounded-md sm:min-h-8"}
       onClick={onToggle}
       title={fitToWidth
         ? `${hiddenCount} column${plural} hidden to fit the width — show all with horizontal scroll`

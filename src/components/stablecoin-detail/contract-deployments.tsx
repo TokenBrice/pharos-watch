@@ -506,7 +506,7 @@ function ContractExplorerAction({
         href={explorerUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="pharos-focus-ring mt-2 inline-flex min-h-10 items-center gap-1 rounded-md text-xs text-frost-blue hover:underline"
+        className="pharos-focus-ring mt-2 inline-flex min-h-10 items-center gap-1 rounded-md text-xs text-brand-accent-text hover:underline"
       >
         View on {chain?.name ? `${chain.name} explorer` : "explorer"}
         <ExternalLink className="h-3 w-3" />

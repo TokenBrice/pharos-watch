@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState, type KeyboardEvent } from "react";
+import { useSvgId } from "@/components/chart-primitives/axes";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { getHhiBand } from "@shared/lib/classification";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
@@ -134,6 +135,7 @@ function ExitRouteInstrumentScene({
   selected: LiquidityExitRouteSelection;
   onSelect: (selection: LiquidityExitRouteSelection) => void;
 }) {
+  const channelFillId = useSvgId("exit-route-channel-fill");
   const throat = throatGeometry(model);
   const crowding = getHhiBand(model.concentrationHhi);
   const routeSummary = [
@@ -155,13 +157,13 @@ function ExitRouteInstrumentScene({
       <div className="exit-route-instrument__viewport">
         <svg
           viewBox={`0 0 ${EXIT_ROUTE_SCENE.width} ${EXIT_ROUTE_SCENE.height}`}
-          role="img"
+          role="group"
           aria-label={`Exit route instrument: ${routeSummary}. Secondary-market DEX exits only.`}
           className="exit-route-instrument__scene"
           data-testid="exit-route-instrument"
         >
           <defs>
-            <linearGradient id="exit-route-channel-fill" x1="0" x2="1">
+            <linearGradient id={channelFillId} x1="0" x2="1">
               <stop offset="0%" stopColor="var(--route-channel-edge)" />
               <stop offset="50%" stopColor="var(--route-channel-throat)" />
               <stop offset="100%" stopColor="var(--route-channel-edge)" />
@@ -183,7 +185,7 @@ function ExitRouteInstrumentScene({
             Chain lanes
           </text>
 
-          <path className="exit-route-instrument__channel" d={throat.channelPath} fill="url(#exit-route-channel-fill)" opacity="0.78" aria-hidden="true" />
+          <path className="exit-route-instrument__channel" d={throat.channelPath} fill={`url(#${channelFillId})`} opacity="0.78" aria-hidden="true" />
           <path d={throat.upperRail} fill="none" stroke="var(--route-rail)" strokeWidth="2" strokeDasharray={throat.railDashArray} aria-hidden="true" />
           <path d={throat.lowerRail} fill="none" stroke="var(--route-rail)" strokeWidth="2" strokeDasharray={throat.railDashArray} aria-hidden="true" />
 

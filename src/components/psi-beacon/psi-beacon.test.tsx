@@ -68,6 +68,23 @@ describe("PsiBeacon", () => {
     expect(svg.textContent).toContain("No current reading");
   });
 
+  it("end-anchors high 24h average labels and moves unpriced prose into the legend", () => {
+    const { root, svg } = renderBeacon({
+      ...LIVE,
+      score: 89.0,
+      band: "STEADY",
+      avg24h: 89.0,
+      avg24hBand: "STEADY",
+      components: { severity: 0.02, breadth: 9.5, stressBreadth: 1.48, trend: 0 },
+      inputDegradation: { openDepegNoPrice: true, openDepegsWithoutPrice: 3 },
+    });
+    const avgText = root.querySelector('[data-testid="psi-beacon-avg-tick"] text');
+    expect(avgText?.textContent).toBe("24h avg 89.0");
+    expect(avgText?.getAttribute("text-anchor")).toBe("end");
+    expect(svg.textContent).toContain("≥");
+    expect(svg.textContent).not.toContain("3 unpriced");
+    expect(root.querySelector('[data-testid="psi-beacon-legend"]')?.textContent).toContain("≥ · 3 unpriced");
+  });
 });
 
 describe("PsiBeaconMicro", () => {

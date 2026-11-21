@@ -37,29 +37,29 @@ export function MethodologyModeToggle({ className }: { className?: string }) {
       role="group"
       aria-label="Methodology view mode"
       className={cn(
-        "inline-flex flex-wrap items-center gap-1.5 rounded-xl border border-border/60 bg-background/85 p-1.5 text-xs md:gap-2 md:rounded-full md:px-2 md:py-1",
+        "inline-flex flex-wrap items-center gap-2 text-xs",
         className,
       )}
     >
-      <span className="pharos-label px-1 text-xs">View</span>
-      <button
-        type="button"
-        aria-pressed={mode === "reader"}
-        data-state={mode === "reader" ? "on" : "off"}
-        onClick={() => modeStorage.write("reader")}
-        className="pharos-toggle-pill pharos-focus-ring min-h-11 justify-center md:min-h-9"
-      >
-        Reader
-      </button>
-      <button
-        type="button"
-        aria-pressed={mode === "analyst"}
-        data-state={mode === "analyst" ? "on" : "off"}
-        onClick={() => modeStorage.write("analyst")}
-        className="pharos-toggle-pill pharos-focus-ring min-h-11 justify-center md:min-h-9"
-      >
-        Analyst
-      </button>
+      <span className="pharos-label text-xs">View</span>
+      <div className="pharos-segmented">
+        <button
+          type="button"
+          aria-pressed={mode === "reader"}
+          onClick={() => modeStorage.write("reader")}
+          className="pharos-segmented-item pharos-focus-ring min-h-11 justify-center md:min-h-8"
+        >
+          Reader
+        </button>
+        <button
+          type="button"
+          aria-pressed={mode === "analyst"}
+          onClick={() => modeStorage.write("analyst")}
+          className="pharos-segmented-item pharos-focus-ring min-h-11 justify-center md:min-h-8"
+        >
+          Analyst
+        </button>
+      </div>
     </div>
   );
 }

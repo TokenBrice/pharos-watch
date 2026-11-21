@@ -114,7 +114,7 @@ function ComparePairDirectory() {
                 <p className="font-mono text-xs text-muted-foreground">
                   {page.left.symbol} / {page.right.symbol}
                 </p>
-                <p className="mt-1 text-sm font-semibold text-foreground transition-colors group-hover:text-frost-blue">
+                <p className="mt-1 text-sm font-semibold text-foreground transition-colors group-hover:text-brand-accent-text">
                   {page.shortTitle}
                 </p>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{page.description}</p>
@@ -132,7 +132,7 @@ function ComparePairDirectory() {
           >
             <Link
               href={page.href}
-              className="pharos-focus-ring min-w-0 truncate rounded-sm font-medium text-foreground hover:text-frost-blue"
+              className="pharos-focus-ring min-w-0 truncate rounded-sm font-medium text-foreground hover:text-brand-accent-text"
             >
               {page.shortTitle}
             </Link>

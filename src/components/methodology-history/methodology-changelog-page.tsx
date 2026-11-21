@@ -114,13 +114,13 @@ export function MethodologyChangelogPage({
             <div className="flex flex-col gap-2 text-sm">
               <Link
                 href="/methodology/"
-                className="pharos-focus-ring rounded-sm text-foreground underline underline-offset-4 hover:text-frost-blue"
+                className="pharos-focus-ring rounded-sm text-foreground underline underline-offset-4 hover:text-brand-accent-text"
               >
                 Read the current methodology
               </Link>
               <Link
                 href="/docs/"
-                className="pharos-focus-ring rounded-sm text-foreground underline underline-offset-4 hover:text-frost-blue"
+                className="pharos-focus-ring rounded-sm text-foreground underline underline-offset-4 hover:text-brand-accent-text"
               >
                 Browse the public docs archive
               </Link>

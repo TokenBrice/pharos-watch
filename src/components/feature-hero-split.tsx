@@ -15,12 +15,14 @@ import { CardExpandButton } from "@/components/home-alt-mini-cards/pulse-card-he
 
 /**
  * The rail-page hero KPI recipe, shared by heroes that do not use this split
- * shell (FreezeWatch, Depeg). Neutral ink: a hero figure takes color only from
- * a semantic scale in `shared/lib/classification.ts` (grade, severity, regime),
- * never from the frost brand accent.
+ * shell (FreezeWatch, Depeg, Stability Index). Neutral ink: a hero figure
+ * takes color only from a semantic scale in `shared/lib/classification.ts`
+ * (grade, severity, regime), never from the frost brand accent.
+ *
+ * Alias for `.pharos-hero-kpi` in `src/app/globals.css` — Stage 2 routes
+ * migrate directly onto the utility class.
  */
-export const HERO_KPI_VALUE_CLASS =
-  "pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-foreground sm:text-[2.45rem]";
+export const HERO_KPI_VALUE_CLASS = "pharos-hero-kpi";
 
 export interface FeatureHeroSplitProps {
   /** Small muted label above the beam figure (e.g. "Aggregate DEX Depth"). */

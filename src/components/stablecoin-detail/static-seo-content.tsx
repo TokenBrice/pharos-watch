@@ -80,7 +80,7 @@ const ACTION_LINK_CLASS =
 const FACT_LABEL_CLASS = "pharos-label";
 const FACT_VALUE_CLASS = "mt-1 text-sm leading-relaxed text-foreground";
 const ACTION_ICON_CLASS = "h-3.5 w-3.5 shrink-0 text-muted-foreground";
-const INLINE_LINK_CLASS = "pharos-focus-ring rounded-sm text-frost-blue underline-offset-2 hover:underline";
+const INLINE_LINK_CLASS = "pharos-focus-ring rounded-sm text-brand-accent-text underline-offset-2 hover:underline";
 
 function summarizeText(text: string, maxLength = 280): string {
   const normalized = normalizeWhitespace(stripTermMarkup(text));
@@ -568,7 +568,7 @@ function ProofOfReservesValue({ coin, linkReserves }: { coin: StablecoinMeta; li
         href={proof.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="pharos-focus-ring rounded-sm text-frost-blue underline-offset-2 hover:underline"
+        className="pharos-focus-ring rounded-sm text-brand-accent-text underline-offset-2 hover:underline"
       >
         Reserve source
       </a>

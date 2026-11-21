@@ -44,48 +44,37 @@ export function MobileUtilityDock() {
 
   return (
     <>
-      <div
-        className={cn(
-          "fixed inset-x-0 bottom-[calc(var(--mobile-bottom-nav-safe-height)+0.875rem)] z-chrome flex max-w-[100vw] justify-end overflow-x-clip px-4 sm:hidden",
-          showDock
-            ? "pointer-events-none visible translate-y-0 opacity-100"
-            : "pointer-events-none invisible translate-y-4 opacity-0",
-          !prefersReducedMotion && "transition-[opacity,transform] duration-300 ease-out",
-        )}
-        style={{
-          transitionTimingFunction: showDock ? "cubic-bezier(0.0, 0.0, 0.2, 1)" : "cubic-bezier(0.4, 0.0, 1, 1)",
-        }}
-      >
+      {showDock ? (
         <div
           className={cn(
-            "pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background p-1",
+            "pointer-events-none fixed inset-x-0 bottom-[calc(var(--mobile-bottom-nav-safe-height)+0.875rem)] z-chrome flex max-w-[100vw] justify-end overflow-x-clip px-4 sm:hidden",
+            !prefersReducedMotion && "animate-in fade-in slide-in-from-bottom-2 duration-200",
           )}
         >
-          {feedbackEnabled ? (
-            <button
-              type="button"
-              onClick={() => setFeedbackOpen(true)}
-              aria-label="Send feedback"
-              tabIndex={showFeedback ? undefined : -1}
-              className="pharos-focus-ring flex size-11 items-center justify-center rounded-full border border-border/70 bg-card text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <MessageSquarePlus className="h-4 w-4" />
-            </button>
-          ) : null}
-          <button
-            type="button"
-            onClick={() => window.scrollTo({ top: 0, behavior: prefersReducedMotion ? "auto" : "smooth" })}
-            aria-label="Scroll to top"
-            tabIndex={scrollTopVisible ? undefined : -1}
-            className={cn(
-              "pharos-focus-ring flex size-11 items-center justify-center rounded-full border border-border/70 bg-card text-muted-foreground transition-[opacity,transform,color,background-color,border-color] duration-200",
-              scrollTopVisible ? "opacity-100" : "invisible pointer-events-none -translate-y-1 opacity-0",
-            )}
-          >
-            <ChevronUp className="h-4 w-4" />
-          </button>
+          <div className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background p-1">
+            {feedbackEnabled && showFeedback ? (
+              <button
+                type="button"
+                onClick={() => setFeedbackOpen(true)}
+                aria-label="Send feedback"
+                className="pharos-focus-ring flex size-11 items-center justify-center rounded-full border border-border/70 bg-card text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <MessageSquarePlus className="h-4 w-4" />
+              </button>
+            ) : null}
+            {scrollTopVisible ? (
+              <button
+                type="button"
+                onClick={() => window.scrollTo({ top: 0, behavior: prefersReducedMotion ? "auto" : "smooth" })}
+                aria-label="Scroll to top"
+                className="pharos-focus-ring flex size-11 items-center justify-center rounded-full border border-border/70 bg-card text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <ChevronUp className="h-4 w-4" />
+              </button>
+            ) : null}
+          </div>
         </div>
-      </div>
+      ) : null}
       {feedbackEnabled && feedbackOpen && <FeedbackModal open={feedbackOpen} onOpenChange={setFeedbackOpen} />}
     </>
   );

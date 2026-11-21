@@ -36,4 +36,17 @@ describe("TapeFilters search input", () => {
     act(() => { vi.advanceTimersByTime(250); });
     expect(setParam).toHaveBeenCalledWith("q", "usdc");
   });
+
+  it("anchors sticky filters below the header and groups window and severity in segmented tracks", () => {
+    const setParam = vi.fn();
+    const { container } = render(<TapeFilters state={baseState} setParam={setParam} />);
+
+    expect(container.firstElementChild?.className).toContain("top-[var(--sticky-header-bottom,3.75rem)]");
+    const windowGroup = screen.getByRole("group", { name: "Filter by time window" });
+    const severityGroup = screen.getByRole("group", { name: "Filter by severity floor" });
+    expect(windowGroup.className).toContain("pharos-segmented");
+    expect(severityGroup.className).toContain("pharos-segmented");
+    expect(screen.getByRole("button", { name: "7d" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "Notice+" }).getAttribute("aria-pressed")).toBe("true");
+  });
 });

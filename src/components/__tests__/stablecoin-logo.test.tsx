@@ -25,8 +25,17 @@ describe("StablecoinLogo density selection", () => {
     expect((container.firstElementChild as HTMLElement).style.width).toBe("56px");
   });
 
-  it("sits image logos on a light plate in dark mode", () => {
+  it("softens the dark-mode backplate with a lifted neutral tint and hairline ring", () => {
     const { container } = render(<StablecoinLogo src="/logos/example.png" name="Dark mark" />);
-    expect((container.firstElementChild as HTMLElement).className).toContain("dark:bg-foreground/90");
+    const plate = container.firstElementChild as HTMLElement;
+    expect(plate.className).toContain("dark:bg-foreground/12");
+    expect(plate.className).toContain("dark:ring-1");
+    expect(plate.className).not.toContain("dark:bg-foreground/90");
+    expect(screen.getByRole("img", { name: "Dark mark logo" }).getAttribute("loading")).toBe("lazy");
+  });
+
+  it("supports eager image loading for above-fold table rows", () => {
+    render(<StablecoinLogo src="/logos/example.png" name="Top coin" loading="eager" />);
+    expect(screen.getByRole("img", { name: "Top coin logo" }).getAttribute("loading")).toBe("eager");
   });
 });

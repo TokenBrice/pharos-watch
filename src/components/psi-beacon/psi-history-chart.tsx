@@ -11,7 +11,7 @@ import { useChartShell } from "@/hooks/use-chart-shell";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { CHART_BLUE, CHART_SLATE, CHART_HEIGHT } from "@/lib/chart-colors";
-import { CHART_BAND_OPACITY } from "@/lib/chart-theme";
+import { CHART_BAND_OPACITY, CHART_TICK_FILL } from "@/lib/chart-theme";
 import { BAND_ZONES, buildVisiblePsiChartEvents } from "@/lib/psi-history-events";
 import { PSI_EVENTS } from "@shared/lib/psi-events";
 import { trackEvent } from "@/lib/analytics";
@@ -27,6 +27,10 @@ import type { TimeRangeOption } from "@/lib/chart-time-range";
 
 const PSI_EVENT_LABEL_CLASS =
   "[fill:var(--text-secondary)] [paint-order:stroke] [stroke:var(--surface-overlay)] [stroke-width:4px] font-medium";
+
+function formatPsiGutterBandLabel(label: string): string {
+  return label.charAt(0).toUpperCase() + label.slice(1).toLowerCase();
+}
 
 const PSI_TABLE_COLUMNS: ChartDataTableColumn<{ ts: number; score: number }>[] = [
   { id: "date", label: "Date", format: (row) => formatChartDate(row.ts, "short-year") },
@@ -80,9 +84,10 @@ export const ScoreChart = memo(function ScoreChart({
     [timestampLabels, range],
   );
   const chartMargin = useMemo(
-    () => ({ top: showHeader ? 30 : 26, right: 30, bottom: showHeader ? 20 : 8, left: 5 }),
-    [showHeader],
+    () => ({ top: showHeader ? 30 : 26, right: isMobile ? 56 : 68, bottom: showHeader ? 20 : 8, left: 5 }),
+    [isMobile, showHeader],
   );
+  const latestScore = filteredData.length > 0 ? filteredData[filteredData.length - 1]!.score : null;
 
   /* Hide overlapping event labels when zoomed into a tight range */
   const visibleEvents = useMemo(() => {
@@ -135,7 +140,7 @@ export const ScoreChart = memo(function ScoreChart({
           <div ref={chartRef}>
             <div className={showHeader ? "mb-4 flex flex-wrap gap-4" : "mb-3 flex flex-wrap gap-4"}>
               {BAND_ZONES.map((zone) => (
-                <div key={zone.label} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <div key={zone.label} className="pharos-chart-legend-chip">
                   <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: zone.color }} />
                   {zone.label}
                 </div>
@@ -167,16 +172,29 @@ export const ScoreChart = memo(function ScoreChart({
                   <defs>
                     <ChartAreaGradient id={psiScoreGradientId} color={CHART_BLUE} />
                   </defs>
-                  {BAND_ZONES.map((zone) => (
-                    <ReferenceArea
-                      key={zone.label}
-                      y1={zone.y1}
-                      y2={zone.y2}
-                      fill={zone.color}
-                      fillOpacity={CHART_BAND_OPACITY}
-                      ifOverflow="extendDomain"
-                    />
-                  ))}
+                  {BAND_ZONES.map((zone) => {
+                    const isCurrentBand =
+                      latestScore != null &&
+                      latestScore >= zone.y1 &&
+                      (zone.y2 === 100 ? latestScore <= zone.y2 : latestScore < zone.y2);
+                    return (
+                      <ReferenceArea
+                        key={zone.label}
+                        y1={zone.y1}
+                        y2={zone.y2}
+                        fill={zone.color}
+                        fillOpacity={isCurrentBand ? CHART_BAND_OPACITY + 0.04 : CHART_BAND_OPACITY}
+                        ifOverflow="extendDomain"
+                        label={{
+                          value: formatPsiGutterBandLabel(zone.label),
+                          position: "right",
+                          fontSize: 10,
+                          fill: isCurrentBand ? "var(--color-foreground)" : CHART_TICK_FILL,
+                          fontWeight: isCurrentBand ? 600 : 400,
+                        }}
+                      />
+                    );
+                  })}
                   {visibleEvents.map((evt) =>
                     evt.dateEnd ? (
                       <ReferenceArea

@@ -1,12 +1,19 @@
+import { ChartSkeleton, type ChartSkeletonVariant } from "@/components/chart-skeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 /**
  * Placeholder shaped like the rail-page split hero (`FeatureHeroSplit`,
  * `DepegOutlookHero`): answer KPI + universe chip and sub rows on the left,
- * the drawn visual on the right, so a cold load does not jump layouts.
+ * the framed chart/visual placeholder on the right, so a cold load does not jump layouts.
  */
-export function PageLoadingSplitHero({ visualClassName }: { visualClassName: string }) {
+export function PageLoadingSplitHero({
+  visualClassName,
+  visualVariant = "area",
+}: {
+  visualClassName: string;
+  visualVariant?: ChartSkeletonVariant;
+}) {
   return (
     <div className="pharos-card-shell grid grid-cols-1 overflow-hidden lg:grid-cols-3">
       <div className="space-y-5 border-b border-border/50 p-5 sm:p-6 lg:border-b-0 lg:border-r lg:p-7">
@@ -22,7 +29,7 @@ export function PageLoadingSplitHero({ visualClassName }: { visualClassName: str
         </div>
       </div>
       <div className={cn("p-5 sm:p-6 lg:col-span-2 lg:p-7", visualClassName)}>
-        <Skeleton className="h-full w-full rounded-md" variant="shimmer" />
+        <ChartSkeleton variant={visualVariant} className="h-full w-full" aria-hidden />
       </div>
     </div>
   );

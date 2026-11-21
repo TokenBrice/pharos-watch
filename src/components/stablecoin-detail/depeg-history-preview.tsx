@@ -19,7 +19,7 @@ function SourceCell({ event }: { event: DepegHistorySnapshotEvent }) {
     return (
       <a
         href={event.href}
-        className="pharos-focus-ring rounded-sm text-frost-blue underline-offset-2 hover:underline"
+        className="pharos-focus-ring rounded-sm text-brand-accent-text underline-offset-2 hover:underline"
       >
         Event record
       </a>

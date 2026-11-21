@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 import { BreadcrumbJsonLd, type BreadcrumbItem } from "@/components/breadcrumb-json-ld";
 import { cn } from "@/lib/utils";
 
@@ -92,9 +93,9 @@ export function FeaturePageShell({
               {methodology.label ?? "Methodology"} {methodology.version}.{" "}
               <Link
                 href={methodology.changelogPath}
-                className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+                className="pharos-focus-ring whitespace-nowrap rounded-sm underline underline-offset-4 hover:text-foreground"
               >
-                Version history &rarr;
+                Version history{"\u00a0\u2192"}
               </Link>
               {methodology.docsPath ? <MethodologyDocsLink href={methodology.docsPath} /> : null}
             </p>
@@ -121,8 +122,11 @@ function MethodologyDocsLink({ href }: { href: string }) {
     <>
       {" "}
       &middot;{" "}
-      <Link href={href} className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground">
-        How this is computed &rarr;
+      <Link
+        href={href}
+        className="pharos-focus-ring whitespace-nowrap rounded-sm underline underline-offset-4 hover:text-foreground"
+      >
+        How this is computed{"\u00a0\u2192"}
       </Link>
     </>
   );
@@ -140,33 +144,41 @@ function InstrumentHeader({
   leadDisclosureLabel: string;
 }) {
   const [deck, ...more] = leadParagraphs;
+  const inlineActionsWithTitle = !methodology && Boolean(headerActions);
   return (
     <header className="space-y-2">
-      <h1 className="pharos-page-title text-balance">{title}</h1>
+      {inlineActionsWithTitle ? (
+        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+          <h1 className="pharos-page-title text-balance">{title}</h1>
+          <div className="flex flex-wrap items-center gap-2">{headerActions}</div>
+        </div>
+      ) : (
+        <h1 className="pharos-page-title text-balance">{title}</h1>
+      )}
       {deck ? <p className="pharos-page-deck max-w-3xl">{deck}</p> : null}
-      {methodology || headerActions ? (
+      {methodology ? (
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          {methodology ? (
-            <p className="pharos-meta">
-              {methodology.label ?? "Methodology"} {methodology.version} &middot;{" "}
-              <Link
-                href={methodology.changelogPath}
-                className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
-              >
-                Version history &rarr;
-              </Link>
-              {methodology.docsPath ? <MethodologyDocsLink href={methodology.docsPath} /> : null}
-            </p>
-          ) : (
-            <span />
-          )}
+          <p className="pharos-meta">
+            {methodology.label ?? "Methodology"} {methodology.version} &middot;{" "}
+            <Link
+              href={methodology.changelogPath}
+              className="pharos-focus-ring whitespace-nowrap rounded-sm underline underline-offset-4 hover:text-foreground"
+            >
+              Version history{"\u00a0\u2192"}
+            </Link>
+            {methodology.docsPath ? <MethodologyDocsLink href={methodology.docsPath} /> : null}
+          </p>
           {headerActions ? <div className="flex flex-wrap items-center gap-2">{headerActions}</div> : null}
         </div>
       ) : null}
       {more.length > 0 ? (
         <details className="group max-w-4xl">
-          <summary className="pharos-focus-ring w-fit cursor-pointer rounded-sm text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
-            {leadDisclosureLabel}
+          <summary className="pharos-focus-ring inline-flex min-h-11 w-fit cursor-pointer list-none items-center gap-1.5 rounded-md text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline [&::-webkit-details-marker]:hidden sm:min-h-8">
+            <span>{leadDisclosureLabel}</span>
+            <ChevronDown
+              aria-hidden="true"
+              className="h-3.5 w-3.5 shrink-0 transition-transform motion-reduce:transition-none group-open:rotate-180"
+            />
           </summary>
           <div className="mt-2 space-y-2">
             {more.map((paragraph, index) => (

@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GENIUS_REGIME_STATE } from "@shared/lib/compliance-regime-state";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { buildCoinTrackerLink } from "@/lib/coin-tracker-links";
+import { buildAllCoinTrackerLinks, buildCoinTrackerLink } from "@/lib/coin-tracker-links";
+import { DEFINITIONS } from "@/lib/definitions";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { buildDetailHero } from "./stablecoin-detail-view-model.test-support";
@@ -698,5 +699,36 @@ describe("excess-yield tile help", () => {
       title: "Excess yield",
       summary: "30-day APY minus its benchmark rate.",
     });
+  });
+
+  it("keeps DEFINITIONS free of clause dashes, risk-free claims, and V9/V10 reader labels", () => {
+    for (const def of Object.values(DEFINITIONS)) {
+      for (const field of [def.label, "term" in def ? def.term : undefined, def.short, "detail" in def ? def.detail : undefined, "long" in def ? def.long : undefined]) {
+        if (!field) continue;
+        expect(field).not.toMatch(/[\u2012\u2013\u2014\u2015]/);
+        expect(field).not.toMatch(/\brisk[- ]free\b/i);
+        expect(field).not.toMatch(/\bV(?:9|10)\b/);
+      }
+    }
+  });
+});
+
+describe("coin tracker hatnote links", () => {
+  it("routes each tracker to a distinct coin section anchor or dedicated surface", () => {
+    const usdcLinks = Object.fromEntries(
+      buildAllCoinTrackerLinks("usdc-circle", undefined, "USDC").map((link) => [link.tracker, link.href]),
+    );
+    expect(usdcLinks).toEqual({
+      "stablecoin-profile": "/stablecoin/usdc-circle/",
+      "safety-score": "/stablecoin/usdc-circle/#overview",
+      liquidity: "/stablecoin/usdc-circle/#liquidity",
+      "depeg-history": "/stablecoin/usdc-circle/#history",
+      yield: "/yield/",
+      flows: "/flows/",
+      freezewatch: "/freezewatch/?stablecoin=USDC",
+      timeline: "/timeline/?coin=usdc-circle",
+    });
+    expect(new Set(Object.values(usdcLinks)).size).toBe(Object.keys(usdcLinks).length);
+    expect(buildCoinTrackerLink("susde-ethena", "yield", "sUSDe").href).toBe("/stablecoin/susde-ethena/yield/");
   });
 });

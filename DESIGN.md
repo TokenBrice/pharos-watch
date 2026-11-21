@@ -4,14 +4,14 @@ description: Stablecoin intelligence as a calm, dense instrument — a lighthous
 colors:
   frost-blue: "#4bc4de"
   control-active: "oklch(0.91 0.005 260)"
-  surface-base: "oklch(0.985 0 0)"
-  surface-raised: "oklch(0.97 0 0)"
+  surface-base: "oklch(0.968 0.002 260)"
+  surface-raised: "oklch(0.97 0.002 260)"
   surface-overlay: "oklch(1 0 0)"
   text-primary: "oklch(0.145 0 0)"
   text-secondary: "oklch(0.4 0.009 260)"
   text-tertiary: "oklch(0.52 0.007 260)"
-  border-default: "oklch(0.922 0 0)"
-  border-subtle: "oklch(0.97 0 0)"
+  border-default: "oklch(0.895 0.004 260)"
+  border-subtle: "oklch(0.935 0.003 260)"
   severity-healthy: "#22c55e"
   severity-mild: "#b45309"
   severity-moderate: "#f97316"
@@ -137,7 +137,7 @@ Severity, PSI, DEWS and grades use their own published scales from `shared/lib/c
 
 ### Neutral
 
-Surfaces layer base → raised → overlay; borders supply separator hierarchy without resting shadows. Use text-role tokens and retain the informational contrast floor (`text-muted-foreground/70`); decorative marks are not a precedent for lighter text. Selected controls use elevated-neutral `--control-pill-active-bg` with primary text, never solid ink. Exact values and theme pairs belong to [Design Tokens](docs/design-tokens.md).
+Surfaces layer base → raised → overlay: in light mode, cool-stone `--surface-base` (`oklch(0.968 0.002 260)`) frames flat `#fff` cards with `--border-default` (`oklch(0.895 0.004 260)`) and `--border-subtle` internal dividers without resting shadows; in dark mode, `--muted`/`--accent`/`--secondary` lift to `oklch(0.255 0.004 260)` so skeletons and hover states separate cleanly from `L=0.20` cards. Use text-role tokens and retain the informational contrast floor (`text-muted-foreground/70`); decorative marks are not a precedent for lighter text. Selected controls use elevated-neutral `--control-pill-active-bg` with primary text, never solid ink. Exact values and theme pairs belong to [Design Tokens](docs/design-tokens.md).
 
 ### Named Rules
 
@@ -185,9 +185,9 @@ Desktop has a global top bar, neutral selected menu, global search and full-widt
 
 Use the shared overlay fill, hairline border and `rounded-xl` shell. `.pharos-interactive-card` adds hover-only lift on hover-capable devices; pair focus treatment with `.pharos-focus-ring`. Accent stripes do not decorate card chrome; existing data-driven severity, hero-metric and notice indicators are explicit exceptions.
 
-### Controls — Pills (`.pharos-control-pill`, `.pharos-toggle-pill`)
+### Controls — Pills, Segmented Switches & Flat Buttons (`.pharos-control-pill`, `.pharos-segmented`, `Button`)
 
-Compact controls use shared pill shells with a stable hit area, muted default text, primary hover text and visible keyboard focus. On/selected state uses `--control-pill-active-bg`, `--control-pill-active-text` and a hairline `--control-pill-active-ring`, never ink fill or frost. [Control Pills](docs/design-language.md#control-pills) owns primitive selection and pressed/group semantics.
+Interactive controls standardize on three families: `.pharos-control-pill` for multi-select filter/action chips, `.pharos-segmented` (with `.pharos-segmented-item`) for mutually exclusive mode/range/tab switches, and flat `Button` (outline without resting shadow). `.pharos-toggle-pill` and solid-ink active sort pills are retired; non-interactive chart legends (`.pharos-chart-legend-chip`) render borderless swatch + label rows so they never look like clickable controls. On/selected state uses `--control-pill-active-bg`, `--control-pill-active-text` and a hairline `--control-pill-active-ring`, never solid ink or frost. [Control Pills](docs/design-language.md#control-pills) owns primitive selection and pressed/group semantics.
 
 ### Tables (the workbench)
 

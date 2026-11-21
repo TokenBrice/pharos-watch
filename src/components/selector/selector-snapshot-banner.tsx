@@ -39,7 +39,7 @@ export function SelectorSnapshotBanner({
       >
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-2">
-            <SnapshotIcon className="mt-0.5 h-4 w-4 shrink-0 text-frost-blue" aria-hidden="true" />
+            <SnapshotIcon className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent-text" aria-hidden="true" />
             <div className="min-w-0 text-foreground">
               <p className="font-semibold">{verified ? "Pharos-verified snapshot" : "Unverified client snapshot"}</p>
               <p className="mt-0.5 text-xs text-muted-foreground">

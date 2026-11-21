@@ -441,7 +441,7 @@ describe("YieldInstrumentBoard — zone chip benchmark resolution", () => {
 
   it("uses an explicitly USD display frame without attributing it to the published PYS", () => {
     renderBoard(eurRowWithoutRate(), true);
-    expect(screen.getByText("Play It Safe")).toBeTruthy();
+    expect(screen.getByText("High grade, modest APY")).toBeTruthy();
     const chart = screen.getByTestId("yield-history-chart");
     expect(chart.getAttribute("data-benchmark-rate")).toBe("3.5");
     expect(chart.getAttribute("data-benchmark-label")).toBe("USD benchmark (display fallback)");
@@ -544,7 +544,7 @@ describe("YieldMobileCard — zone chip benchmark resolution", () => {
 
   it("identifies the USD display frame without claiming it was the published PYS hurdle", () => {
     renderYieldMobileCard(eurRowWithoutRate, { expanded: true });
-    expect(screen.getByText("Play It Safe")).toBeTruthy();
+    expect(screen.getByText("High grade, modest APY")).toBeTruthy();
     const chart = screen.getByTestId("yield-history-chart");
     expect(chart.getAttribute("data-benchmark-rate")).toBe("3.5");
     expect(chart.getAttribute("data-benchmark-label")).toBe("USD benchmark (display fallback)");

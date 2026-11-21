@@ -13,3 +13,4 @@ export {
 export { TableFrame } from "./table-frame";
 export { TableSkeletonRows, type TableSkeletonColumn } from "./table-skeleton";
 export { TableToolbarFrame } from "./table-toolbar-frame";
+export type { TableStickyMode } from "./types";

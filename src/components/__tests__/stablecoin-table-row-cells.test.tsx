@@ -100,6 +100,65 @@ describe("StablecoinTableRowCells peg deviation", () => {
     expect(html).toContain("-50 bps");
     expect(html).not.toContain("+200 bps");
   });
+
+  it.each([
+    { note: "Reference market closed", compact: "Mkt closed" },
+    { note: "Reference not yet updated", compact: "Ref stale" },
+  ])("renders compact '$compact' in fixed Peg cell with title and sr-only '$note'", ({ note, compact }) => {
+    const row = buildRow();
+    const baseModel = buildStablecoinTableRowModel({
+      coin: row.coin,
+      pegScores: row.pegScores,
+      density: "compact",
+      variant: "figmaOverview",
+    });
+    const model = { ...baseModel, pegDeviationBps: null, absPegDeviationBps: null, referenceNote: note };
+    const html = renderToStaticMarkup(
+      <table><tbody><tr><StablecoinTableRowCells row={row} model={model} /></tr></tbody></table>,
+    );
+
+    expect(html).toContain(`title="${note}"`);
+    expect(html).toContain(`<span aria-hidden="true">${compact}</span>`);
+    expect(html).toContain(`<span class="sr-only">${note}</span>`);
+    expect(html).toContain("overflow-hidden text-ellipsis");
+  });
+
+  it("uses semantic sparkline tokens, eager logos when requested, and mobile risk/star targets on Overview", () => {
+    vi.mocked(RowSparkline).mockClear();
+    const row: StablecoinTableRowCellProps = {
+      ...buildRow(),
+      variant: "figmaOverview",
+      showPinnedControl: true,
+      onTogglePinned: () => undefined,
+      eagerLogo: true,
+      logos: { "usdc-circle": "/logos/usdc.png" },
+      isVisible: (column) => ["name", "change7d"].includes(column),
+    };
+    row.coin = makeStablecoin({
+      id: "usdc-circle",
+      symbol: "USDC",
+      circulating: { peggedUSD: 120 },
+      circulatingPrevWeek: { peggedUSD: 100 },
+      supplyChangeBaselines: {
+        day: { observedAt: 1_700_000_000, circulatingUsd: 110, circulatingNative: null },
+        week: { observedAt: 1_699_481_600, circulatingUsd: 100, circulatingNative: null },
+      },
+    });
+    const model = buildStablecoinTableRowModel({
+      coin: row.coin,
+      density: "compact",
+      variant: "figmaOverview",
+    });
+    const html = renderToStaticMarkup(
+      <table><tbody><tr><StablecoinTableRowCells row={row} model={model} /></tr></tbody></table>,
+    );
+
+    expect(vi.mocked(RowSparkline).mock.calls[0]?.[0]?.positiveColor).toBe("var(--state-positive-solid)");
+    expect(html).toContain('loading="eager"');
+    expect(html).toContain("size-11");
+    expect(html).toContain('aria-label="Mobile risk summary"');
+    expect(html).toContain("flex md:hidden");
+  });
 });
 
 describe("StablecoinTableRowCells exceptional state", () => {

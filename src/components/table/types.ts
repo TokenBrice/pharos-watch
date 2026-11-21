@@ -2,6 +2,7 @@ export type { TableDensity } from "@/hooks/use-table-density";
 
 export type TableChrome = "default" | "embedded" | "content" | "bare";
 export type TableStriping = boolean | "indexed";
+export type TableStickyMode = "page" | "viewport";
 export type TableId = string;
 export type TableRowIntent = "interactive" | "static" | "scan";
 

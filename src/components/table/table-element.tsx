@@ -17,16 +17,33 @@ export function TableElement({
   );
 }
 
+function forceStaticHeaderRows(children: React.ReactNode): React.ReactNode {
+  return React.Children.map(children, (child) => {
+    if (!React.isValidElement(child)) return child;
+    if (child.type === React.Fragment) {
+      const fragmentProps = child.props as { children?: React.ReactNode };
+      return React.cloneElement(child, undefined, forceStaticHeaderRows(fragmentProps.children));
+    }
+    if (child.type === TableRow) {
+      return React.cloneElement(child as React.ReactElement<TableRowProps>, { rowIntent: "static" });
+    }
+    return child;
+  });
+}
+
 export function TableHeader({
   className,
+  children,
   ...props
 }: React.ComponentProps<"thead">) {
   return (
     <thead
       {...props}
       data-slot="table-header"
-      className={cn("[&_tr]:border-b", className)}
-    />
+      className={cn("[&_tr]:border-b [&_tr:hover]:bg-transparent", className)}
+    >
+      {forceStaticHeaderRows(children)}
+    </thead>
   );
 }
 
@@ -51,17 +68,21 @@ export interface TableRowProps extends React.ComponentProps<"tr"> {
 
 export function TableRow({
   className,
-  rowIntent = "interactive",
+  rowIntent,
   lean = false,
+  onClick,
   ...props
 }: TableRowProps) {
+  const resolvedRowIntent: TableRowIntent = rowIntent ?? (onClick ? "interactive" : "scan");
   return (
     <tr
       {...props}
+      onClick={onClick}
       data-slot="table-row"
-      data-row-intent={rowIntent}
+      data-row-intent={resolvedRowIntent}
       className={lean ? className : cn(
-        "border-b transition-colors hover:bg-muted/40 data-[state=selected]:bg-muted",
+        "border-b transition-colors data-[state=selected]:bg-muted",
+        resolvedRowIntent !== "static" && "hover:bg-muted/40",
         className,
       )}
     />
@@ -105,7 +126,7 @@ export function TableCell({
       {...props}
       data-slot="table-cell"
       className={lean ? className : cn(
-        "whitespace-nowrap px-3 py-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+        "overflow-hidden text-ellipsis whitespace-nowrap px-3 py-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
         className,
       )}
     />

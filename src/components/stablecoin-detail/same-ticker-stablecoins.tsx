@@ -10,7 +10,7 @@ import { stripTermMarkup } from "@/lib/term-markup";
 /** How many active same-parent variants the static "Variant relationship" block shows. */
 export const VARIANT_SIBLING_DISPLAY_LIMIT = 4;
 
-const INLINE_LINK_CLASS = "pharos-focus-ring rounded-sm text-frost-blue underline-offset-2 hover:underline";
+const INLINE_LINK_CLASS = "pharos-focus-ring rounded-sm text-brand-accent-text underline-offset-2 hover:underline";
 
 const TRACKED_BY_SYMBOL: ReadonlyMap<string, readonly StablecoinMeta[]> = (() => {
   const groups = new Map<string, StablecoinMeta[]>();

@@ -101,17 +101,43 @@ describe("ChartBrush pointer interactions", () => {
     vi.stubGlobal("PointerEvent", MouseEvent);
   });
 
-  function brush() {
+  function brush(value: BrushedRange = [DOMAIN[0] + 2 * DAY, DOMAIN[0] + 5 * DAY]) {
     const onChange = vi.fn();
-    render(<ChartBrush domain={DOMAIN} value={[DOMAIN[0] + 2 * DAY, DOMAIN[0] + 5 * DAY]} onChange={onChange} />);
+    render(<ChartBrush domain={DOMAIN} value={value} onChange={onChange} />);
     const slider = screen.getByRole("slider");
     vi.spyOn(slider, "getBoundingClientRect").mockReturnValue({
       x: 0, y: 0, left: 0, top: 0, right: 1000, bottom: 28, width: 1000, height: 28, toJSON: () => ({}),
     });
     const rects = slider.querySelectorAll("rect");
     for (const rect of rects) Object.assign(rect, { setPointerCapture: vi.fn(), releasePointerCapture: vi.fn() });
-    return { onChange, slider, track: rects[1], body: rects[2], from: rects[3], to: rects[4] };
+    const part = (name: string) => slider.querySelector(`[data-brush-part="${name}"]`) as SVGRectElement;
+    return {
+      onChange,
+      slider,
+      track: part("track"),
+      body: part("body"),
+      from: part("from"),
+      to: part("to"),
+      scrimLeft: part("scrim-left"),
+      scrimRight: part("scrim-right"),
+      idleAffordance: slider.querySelector('[data-brush-part="idle-affordance"]'),
+    };
   }
+
+  it("renders an idle drag-to-zoom affordance when unbrushed and full-height scrims with 24px handles when active", () => {
+    const idle = brush(null);
+    expect(idle.idleAffordance?.textContent).toContain("Drag to zoom");
+    cleanup();
+
+    const active = brush();
+    expect(active.idleAffordance).toBeNull();
+    expect(active.scrimLeft.getAttribute("height")).toBe("28");
+    expect(active.scrimRight.getAttribute("height")).toBe("28");
+    expect(active.from.getAttribute("width")).toBe("24");
+    expect(active.to.getAttribute("width")).toBe("24");
+    expect(active.from.getAttribute("height")).toBe("28");
+    expect(active.to.getAttribute("height")).toBe("28");
+  });
 
   it("replaces an existing selection by dragging the empty track", () => {
     const { onChange, slider, track } = brush();

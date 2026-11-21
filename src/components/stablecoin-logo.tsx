@@ -7,9 +7,10 @@ interface StablecoinLogoProps {
   src: string | undefined;
   name: string;
   size?: number;
+  loading?: "lazy" | "eager";
 }
 
-export function StablecoinLogo({ src, name, size = 24 }: StablecoinLogoProps) {
+export function StablecoinLogo({ src, name, size = 24, loading = "lazy" }: StablecoinLogoProps) {
   const innerSize = Math.max(size - 6, 12);
   const effectiveSrc = resolveCompactLogoSrc(src, innerSize);
 
@@ -18,7 +19,7 @@ export function StablecoinLogo({ src, name, size = 24 }: StablecoinLogoProps) {
       <span
         role="img"
         aria-label={`${name} logo`}
-        className="inline-flex shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/80 dark:bg-muted text-xs font-bold text-muted-foreground shadow-[inset_0_1px_0_oklch(1_0_0_/0.05)]"
+        className="inline-flex shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/80 text-xs font-bold text-muted-foreground dark:border-transparent dark:bg-muted dark:ring-1 dark:ring-border/60"
         style={{ width: size, height: size }}
       >
         {name.charAt(0).toUpperCase()}
@@ -27,9 +28,10 @@ export function StablecoinLogo({ src, name, size = 24 }: StablecoinLogoProps) {
   }
 
   return (
-    // Dark mode sits the image on a light plate so dark or transparent marks stay visible.
+    // Dark mode uses a softly lifted neutral backplate + hairline ring so dark-ink
+    // transparent marks remain legible without glaring white discs.
     <span
-      className="inline-flex shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/80 dark:bg-foreground/90 shadow-[inset_0_1px_0_oklch(1_0_0_/0.05)]"
+      className="inline-flex shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/80 dark:border-transparent dark:bg-foreground/12 dark:ring-1 dark:ring-border/60"
       style={{ width: size, height: size }}
     >
       <picture>
@@ -42,7 +44,7 @@ export function StablecoinLogo({ src, name, size = 24 }: StablecoinLogoProps) {
           style={{ width: innerSize, height: innerSize }}
           className="rounded-full object-contain"
           unoptimized
-          loading="lazy"
+          loading={loading}
         />
       </picture>
     </span>

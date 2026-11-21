@@ -93,4 +93,25 @@ describe("FlowRunLine", () => {
     expect(model.stubs.map((stub) => stub.id)).toContain("coin-c");
     expect(screen.getByText("Weight unavailable")).toBeTruthy();
   });
+
+  it("stacks coincident -100 edge labels in 2D without dropping them below their tick tops", () => {
+    const edgeCoins = [
+      makeMintBurnFlowCoin({ stablecoinId: "usde-ethena", symbol: "USDe", pressureShiftScore: -100, gaugeWeightUsd: 40 }),
+      makeMintBurnFlowCoin({ stablecoinId: "reusd-resupply", symbol: "reUSD", pressureShiftScore: -100, gaugeWeightUsd: 18 }),
+      makeMintBurnFlowCoin({ stablecoinId: "usdc-circle", symbol: "USDC", pressureShiftScore: 10, gaugeWeightUsd: 200 }),
+    ];
+    const { container } = render(<FlowRunLine model={buildRunLineModel(gauge({ score: -18, band: "CAUTIOUS" }), edgeCoins)} />);
+    const labelNodes = [...container.querySelectorAll<HTMLElement>("span.pharos-numeric.absolute")];
+    const usde = labelNodes.find((el) => el.textContent === "USDe");
+    const reusd = labelNodes.find((el) => el.textContent === "reUSD");
+    expect(usde).toBeTruthy();
+    expect(reusd).toBeTruthy();
+
+    const usdeBottom = Number.parseFloat(usde!.style.bottom);
+    const reusdBottom = Number.parseFloat(reusd!.style.bottom);
+    // Both edge-anchored labels sit above their ticks (no negative LABEL_LINE_PX shift) and stay >= 13px apart.
+    expect(usdeBottom).toBeGreaterThanOrEqual(6 + (190 - 6) * Math.sqrt(40 / 200) + 4 - 0.1);
+    expect(reusdBottom).toBeGreaterThanOrEqual(6 + (190 - 6) * Math.sqrt(18 / 200) + 4 - 0.1);
+    expect(Math.abs(usdeBottom - reusdBottom)).toBeGreaterThanOrEqual(13);
+  });
 });

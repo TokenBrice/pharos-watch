@@ -17,18 +17,19 @@ export function ApiTabs({ active, children }: { active: ApiDocument; children: R
 
   return (
     <div className="space-y-8">
-      <nav aria-label="API page sections" className="flex flex-wrap gap-2 border-b border-border/55 pb-3">
-        {(["access", "reference"] as const).map((tab) => (
-          <a
-            key={tab}
-            href={tab === "access" ? "/api/#access" : "/api/reference/#reference"}
-            aria-current={active === tab ? "page" : undefined}
-            data-state={active === tab ? "on" : "off"}
-            className="pharos-toggle-pill pharos-focus-ring min-h-11 px-4 md:min-h-9"
-          >
-            {tab === "access" ? "Access" : "Reference"}
-          </a>
-        ))}
+      <nav aria-label="API page sections" className="border-b border-border/55 pb-3">
+        <div className="pharos-segmented">
+          {(["access", "reference"] as const).map((tab) => (
+            <a
+              key={tab}
+              href={tab === "access" ? "/api/#access" : "/api/reference/#reference"}
+              aria-current={active === tab ? "page" : undefined}
+              className="pharos-segmented-item pharos-focus-ring min-h-11 px-4 md:min-h-8"
+            >
+              {tab === "access" ? "Access" : "Reference"}
+            </a>
+          ))}
+        </div>
       </nav>
       <div id={active} className="scroll-mt-20">{children}</div>
     </div>

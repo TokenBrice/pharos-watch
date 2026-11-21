@@ -22,7 +22,7 @@ afterEach(() => {
 });
 
 describe("floating feedback entry routes", () => {
-  it.each(["/api/", "/api", "/api/reference/", "/api/reference"])("offers no feedback control on %s but keeps the dock's scroll control", (pathname) => {
+  it.each(["/api/", "/api", "/api/reference/", "/api/reference"])("offers no feedback control on %s and mounts scroll-to-top only while scrolling up past 400px", (pathname) => {
     pathnameMock.mockReturnValue(pathname);
     render(
       <>
@@ -31,15 +31,14 @@ describe("floating feedback entry routes", () => {
       </>,
     );
 
-    expect(screen.queryByRole("button", { name: /feedback/i, hidden: true })).toBeNull();
-    expect(screen.getByRole("button", { name: "Scroll to top", hidden: true })).toBeTruthy();
-    const scroll = screen.getByRole("button", { name: "Scroll to top", hidden: true });
-    // Back-to-top appears only while the reader scrolls back up past 400px,
-    // so it never parks over content on the way down.
+    expect(screen.queryByRole("button", { name: /feedback/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Scroll to top" })).toBeNull();
+    // Back-to-top mounts only while the reader scrolls back up past 400px,
+    // avoiding an empty or half-empty pill on the way down.
     for (const [scrollY, visible] of [[23, false], [401, false], [900, false], [700, true], [650, true], [800, false], [600, true], [300, false]] as const) {
       fireEvent.scroll(window, { target: { scrollY } });
-      expect(scroll.parentElement?.parentElement?.classList.contains("invisible")).toBe(!visible);
-      expect(scroll.tabIndex).toBe(visible ? 0 : -1);
+      const scroll = screen.queryByRole("button", { name: "Scroll to top" });
+      expect(scroll !== null).toBe(visible);
     }
   });
 
@@ -47,11 +46,15 @@ describe("floating feedback entry routes", () => {
     pathnameMock.mockReturnValue("/stablecoin/usdc-circle/");
     render(<MobileUtilityDock />);
 
-    expect(screen.queryByRole("button", { name: /feedback/i, hidden: true })).toBeNull();
-    expect(screen.getByRole("button", { name: "Scroll to top", hidden: true })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /feedback/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Scroll to top" })).toBeNull();
+    fireEvent.scroll(window, { target: { scrollY: 900 } });
+    fireEvent.scroll(window, { target: { scrollY: 700 } });
+    expect(screen.queryByRole("button", { name: /feedback/i })).toBeNull();
+    expect(screen.getByRole("button", { name: "Scroll to top" })).toBeTruthy();
   });
 
-  it("keeps both feedback controls on other product routes", () => {
+  it("keeps both feedback controls on other product routes without rendering a half-empty dock pill", () => {
     pathnameMock.mockReturnValue("/yield/");
     render(
       <>
@@ -60,12 +63,16 @@ describe("floating feedback entry routes", () => {
       </>,
     );
 
-    expect(screen.getAllByRole("button", { name: /feedback/i, hidden: true })).toHaveLength(2);
-    const feedback = screen.getAllByRole("button", { name: /feedback/i, hidden: true })[1];
+    // At scrollY=0 only desktop FeedbackButton mounts; mobile dock stays unmounted.
+    expect(screen.getAllByRole("button", { name: /feedback/i })).toHaveLength(1);
     for (const scrollY of [23, 24, 25, 399, 400, 401, 24]) {
       fireEvent.scroll(window, { target: { scrollY } });
-      expect(feedback.parentElement?.parentElement?.classList.contains("invisible")).toBe(scrollY <= 24);
-      expect(feedback.tabIndex).toBe(scrollY > 24 ? 0 : -1);
+      expect(screen.getAllByRole("button", { name: /feedback/i })).toHaveLength(scrollY > 24 ? 2 : 1);
+      // Scrolling down never leaves an invisible Scroll to top slot inside the pill.
+      expect(screen.queryByRole("button", { name: "Scroll to top" })).toBeNull();
     }
+    fireEvent.scroll(window, { target: { scrollY: 800 } });
+    fireEvent.scroll(window, { target: { scrollY: 600 } });
+    expect(screen.getByRole("button", { name: "Scroll to top" })).toBeTruthy();
   });
 });

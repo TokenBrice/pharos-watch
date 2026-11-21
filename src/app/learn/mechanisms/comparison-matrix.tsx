@@ -226,7 +226,7 @@ export function MechanismComparisonMatrix() {
                 >
                   <Link
                     href={getMechanismExplainerPath(archetype)}
-                    className="pharos-focus-ring rounded-sm underline-offset-4 hover:text-frost-blue hover:underline"
+                    className="pharos-focus-ring rounded-sm underline-offset-4 hover:text-brand-accent-text hover:underline"
                   >
                     {getMechanismArchetypeLabel(archetype)}
                   </Link>

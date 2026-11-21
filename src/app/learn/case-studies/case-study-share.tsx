@@ -16,7 +16,7 @@ export function CaseStudyShare() {
       type="button"
       onClick={() => void copy(window.location.href)}
       aria-label="Copy link"
-      className="pharos-focus-ring inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border/60 bg-background/60 px-3 py-1 text-2xs text-muted-foreground transition-colors hover:border-frost-blue/60 hover:text-frost-blue"
+      className="pharos-focus-ring inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border/60 bg-background/60 px-3 py-1 text-2xs text-muted-foreground transition-colors hover:border-frost-blue/60 hover:text-brand-accent-text"
     >
       {copied ? (
         <Check className="h-3.5 w-3.5" aria-hidden="true" />

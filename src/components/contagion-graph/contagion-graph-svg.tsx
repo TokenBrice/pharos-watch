@@ -170,7 +170,7 @@ function getEdgePresentation({
     : 0;
   const useHoverStroke = isEdgeDirectHovered || (isNodeHovered && isConnected && !isHop4);
   const strokeWidth = useHoverStroke ? GRAPH_EDGE_HOVER_STROKE_WIDTH : sw;
-  const strokeColor = useHoverStroke ? "var(--p-frost-blue)" : TYPE_COLORS[link.type];
+  const strokeColor = useHoverStroke ? "var(--brand-accent)" : TYPE_COLORS[link.type];
 
   return {
     edgeOpacity,
@@ -222,7 +222,7 @@ const ContagionGraphEdge = memo(function ContagionGraphEdge({
         markerEnd={`url(#${arrowId})`}
         data-upstream-id={link.tgtId}
         data-highlighted-path={highlighted || undefined}
-        stroke={highlighted ? "var(--p-frost-blue)" : strokeColor}
+        stroke={highlighted ? "var(--brand-accent)" : strokeColor}
         strokeWidth={highlighted ? Math.max(3, strokeWidth) : strokeWidth}
         opacity={highlighted ? 1 : edgeOpacity}
         strokeDasharray={TYPE_DASH[link.type]}
@@ -390,7 +390,7 @@ const ContagionGraphNode = memo(function ContagionGraphNode({
           cy={position.y}
           r={Math.max(visualR - RING_WIDTH - 2, 3)}
           fill="none"
-          stroke="var(--p-frost-blue)"
+          stroke="var(--brand-accent)"
           strokeWidth={0.9}
           strokeDasharray="2 2"
           opacity={0.75}
@@ -436,7 +436,7 @@ const ContagionGraphNode = memo(function ContagionGraphNode({
             focusedId === node.id
               ? "var(--color-ring)"
               : pinnedSelectionId === node.id && !isHovered
-                ? "var(--p-frost-blue)"
+                ? "var(--brand-accent)"
                 : "currentColor"
           }
           strokeWidth={focusedId === node.id ? 2 : 1.5}
@@ -610,7 +610,7 @@ export function ContagionGraphSvg({
               data-unknown-supply={graph.exposureOverlay?.rows.get(node.id)?.exposureUsd === null || undefined}
               cx={position.x} cy={position.y} r={node.r * nodeScale + 8}
               fill={graph.exposureOverlay?.rows.get(node.id)?.exposureUsd === null ? `url(#${hatchId})` : "none"}
-              stroke="var(--p-frost-blue)" strokeWidth={3}
+              stroke="var(--brand-accent)" strokeWidth={3}
               strokeDasharray={graph.exposureOverlay?.roots.includes(node.id) ? undefined : "4 2"}
               pointerEvents="none"
             />

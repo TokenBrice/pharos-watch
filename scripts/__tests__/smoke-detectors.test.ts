@@ -3,9 +3,13 @@ import { resolveMissingYieldWorkbenchRedirect } from "../../functions/stablecoin
 import { assertOgImageResult, assertOgRedirectResult, isRetryableStatus, OG_REDIRECT_SMOKE_PATH } from "../maintenance/smoke-api.mjs";
 import {
   assertRouteSummary,
+  DEFAULT_MOBILE_UI_ROUTES,
+  DEFAULT_TABLET_VIEWPORT,
   getMobileWorkerCount,
   getTableScanOutcome,
   getTouchScanOutcome,
+  parseArgs,
+  parseThemeList,
 } from "../maintenance/smoke-mobile-ui.mjs";
 import {
   assertNonceProtectedHtml,
@@ -140,6 +144,35 @@ describe("getTouchScanOutcome", () => {
         { strictTouchTargets: true },
       ).failCount,
     ).toBe(1);
+  });
+
+  it("also fails strict targets whose width is under 44px even when height meets 44px", () => {
+    expect(
+      getTouchScanOutcome(
+        {
+          violations: [
+            { selector: "button.narrow", severity: "target", strictRequired: true, width: 32, height: 44 },
+          ],
+        },
+        { strictTouchTargets: true },
+      ).failCount,
+    ).toBe(1);
+  });
+});
+describe("smoke-mobile-ui defaults and theme/tablet options", () => {
+  it("covers core rail instruments and representative USDC dossier in default routes", () => {
+    for (const route of ["/safety-scores/", "/depeg/", "/stability-index/", "/stablecoin/usdc-circle/"]) {
+      expect(DEFAULT_MOBILE_UI_ROUTES).toContain(route);
+    }
+  });
+
+  it("parses theme lists and tablet flags cleanly", () => {
+    expect(parseThemeList("light,dark,unknown,DARK")).toEqual(["light", "dark"]);
+    expect(parseThemeList("")).toEqual(["light"]);
+    expect(DEFAULT_TABLET_VIEWPORT).toMatchObject({ width: 768, height: 1024 });
+    const parsed = parseArgs(["--themes", "light,dark", "--include-tablet"]);
+    expect(parsed.themes).toBe("light,dark");
+    expect(parsed.includeTablet).toBe(true);
   });
 });
 describe("assertNonceProtectedHtml", () => {

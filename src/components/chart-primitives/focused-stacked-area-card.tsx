@@ -4,7 +4,7 @@ import { useMemo, type ReactElement, type ReactNode } from "react";
 import { Maximize2, Minimize2 } from "lucide-react";
 import { Area, AreaChart } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ChartSkeleton } from "@/components/chart-skeleton";
 import { cn } from "@/lib/utils";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useChartShell } from "@/hooks/use-chart-shell";
@@ -168,7 +168,7 @@ export function FocusedStackedAreaCard<T extends Record<K, number>, K extends ke
           <CardTitle as="h2" className={titleClassName}>{loadingTitle}</CardTitle>
         </CardHeader>
         <CardContent className={framed ? undefined : "px-0"}>
-          <Skeleton className={`${CHART_HEIGHT} w-full`} />
+          <ChartSkeleton variant="area" className={`${CHART_HEIGHT} w-full`} aria-hidden />
         </CardContent>
       </Card>
     );
@@ -257,7 +257,7 @@ export function FocusedStackedAreaCard<T extends Record<K, number>, K extends ke
                     ))}
                   </AreaChart>
                 ) : (
-                  <Skeleton className="h-full w-full" />
+                  <ChartSkeleton variant="area" className="h-full w-full" aria-hidden />
                 )}
               </div>
             </div>

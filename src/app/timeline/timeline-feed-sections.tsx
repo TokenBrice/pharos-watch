@@ -344,7 +344,7 @@ export function DayDigestSection({ day, nowMs, logos, highlightedId }: DayDigest
 
   return (
     <section aria-label={`${primary} ${secondary}`}>
-      <div className="sticky top-0 z-10 -mx-1 bg-background/90 px-1 py-1 backdrop-blur supports-[backdrop-filter]:bg-background/75">
+      <div className="sticky top-[var(--sticky-header-bottom,3.75rem)] z-10 -mx-1 bg-background/90 px-1 py-1 backdrop-blur supports-[backdrop-filter]:bg-background/75">
         <div className="flex min-w-0 flex-col items-start gap-1 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground sm:flex-row sm:items-center sm:gap-3">
           <span aria-hidden="true" className="hidden sm:inline">───</span>
           <h3 className="max-w-full break-words leading-snug text-foreground sm:shrink-0">

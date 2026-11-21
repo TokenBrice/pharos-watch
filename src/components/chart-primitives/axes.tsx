@@ -2,6 +2,7 @@
 
 import { useId, useMemo, type ComponentProps } from "react";
 import { CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
+import { useChartCrosshairMounted } from "@/components/chart-primitives/sync";
 import { logTicks, niceTicks, niceTicksForValues, type NiceTicksOptions, type TickKind } from "@/lib/chart-ticks";
 import { CHART_AXIS_TICK, CHART_GRID_DASH, CHART_GRID_STROKE, MONO_Y_AXIS_WIDTH, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-theme";
 import { formatChartDate } from "@shared/lib/format";
@@ -152,6 +153,14 @@ export function CategoricalXAxis({
   return <XAxis tick={tick} tickLine={tickLine} axisLine={axisLine} {...props} />;
 }
 
+/** Theme-aware tooltip crosshair stroke replacing Recharts' default `#ccc` cursor. */
+export const CHART_TOOLTIP_CURSOR = {
+  stroke: "var(--color-foreground)",
+  strokeOpacity: 0.35,
+  strokeWidth: 1,
+  strokeDasharray: "3 3",
+} as const;
+
 type DateTooltipProps = ComponentProps<typeof Tooltip> & {
   locale?: string;
   dateFormat?: Intl.DateTimeFormatOptions;
@@ -161,11 +170,21 @@ export function DateTooltip({
   locale = "en-US",
   dateFormat = { month: "short", day: "numeric", year: "numeric" },
   labelFormatter,
+  cursor,
   ...props
 }: DateTooltipProps) {
+  const hasCrosshairOverlay = useChartCrosshairMounted();
   const resolvedLabelFormatter = labelFormatter ?? ((value: unknown) => formatDateLabel(value, locale, dateFormat));
+  const resolvedCursor = cursor !== undefined ? cursor : hasCrosshairOverlay ? false : CHART_TOOLTIP_CURSOR;
 
-  return <Tooltip {...RECHARTS_TOOLTIP_STYLES} labelFormatter={resolvedLabelFormatter} {...props} />;
+  return (
+    <Tooltip
+      {...RECHARTS_TOOLTIP_STYLES}
+      cursor={resolvedCursor}
+      labelFormatter={resolvedLabelFormatter}
+      {...props}
+    />
+  );
 }
 
 type TimeGridProps = ComponentProps<typeof CartesianGrid>;

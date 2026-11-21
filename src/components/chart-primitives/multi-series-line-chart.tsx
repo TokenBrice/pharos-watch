@@ -1,7 +1,7 @@
 "use client";
 
 import { Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip } from "recharts";
-import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis, useNiceValueAxis } from "@/components/chart-primitives/axes";
+import { CHART_TOOLTIP_CURSOR, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis, useNiceValueAxis } from "@/components/chart-primitives/axes";
 import { ScreenReaderDataTable } from "@/components/chart-primitives/data-table";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
 import { mergeSeriesByTimestamp } from "@/lib/chart-utils";
@@ -88,6 +88,7 @@ export function MultiSeriesLineChart<D extends { ts: number }>({
             {showZeroLine ? <ReferenceLine y={0} stroke="var(--color-border)" strokeDasharray={CHART_REFERENCE_DASH} /> : null}
             {tooltipVariant === "pharos" ? (
               <Tooltip
+                cursor={CHART_TOOLTIP_CURSOR}
                 content={({ active, payload, label }) => {
                   if (!active || !payload?.length) return null;
                   return (

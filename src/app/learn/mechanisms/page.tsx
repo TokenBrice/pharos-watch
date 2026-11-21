@@ -196,7 +196,7 @@ export default function MechanismExplainersHub() {
               href={getMechanismExplainerPath(item.archetype)}
               className="pharos-focus-ring group block border-t border-border/60 pt-4 md:border-t-0 md:pt-0"
             >
-              <p className="text-sm font-semibold text-foreground transition-colors group-hover:text-frost-blue">
+              <p className="text-sm font-semibold text-foreground transition-colors group-hover:text-brand-accent-text">
                 {item.label}
               </p>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.description}</p>
@@ -230,7 +230,7 @@ export default function MechanismExplainersHub() {
                 className="pharos-focus-ring group grid gap-6 py-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-12 lg:py-10"
               >
                 <div className="flex flex-col gap-3">
-                  <h2 className="pharos-display text-2xl font-bold tracking-tight text-foreground transition-colors group-hover:text-frost-blue sm:text-3xl">
+                  <h2 className="pharos-display text-2xl font-bold tracking-tight text-foreground transition-colors group-hover:text-brand-accent-text sm:text-3xl">
                     <span className="pharos-numeric mr-3 text-[0.5em] font-semibold text-muted-foreground align-baseline">
                       {indexLabel}.
                     </span>

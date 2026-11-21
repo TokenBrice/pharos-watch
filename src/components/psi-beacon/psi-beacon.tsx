@@ -19,7 +19,13 @@ const VIEW_BOX = psiBeaconViewBox(BEACON_PROJECTION);
 
 function Label({ label, className }: { label: PsiBeaconLabel; className: string }): ReactElement {
   return (
-    <text className={className} x={label.x} y={label.y}>
+    <text
+      className={className}
+      x={label.x}
+      y={label.y}
+      textAnchor={label.anchor}
+      style={label.anchor ? { textAnchor: label.anchor } : undefined}
+    >
       {label.text}
     </text>
   );
@@ -130,7 +136,7 @@ function Legend({ model, state, ids }: { model: PsiBeaconModel; state: PsiBeacon
         <span>{PSI_BEACON_COMPONENT_LABELS[key]}</span>
         <span className={styles.legendValue}>
           {value === null || missing.has(key) ? "n/a" : value.toFixed(1)}
-          {bank?.lowerBound ? " (≥)" : ""}
+          {bank?.lowerBound ? ` (≥ · ${bank.lowerBound.unpricedCount ?? "some"} unpriced)` : ""}
         </span>
       </li>
     );

@@ -7,6 +7,7 @@ import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/sectio
 import { ChartRangeToggle } from "@/components/chart-primitives/scale-toggle";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { CHART_BLUE } from "@/lib/chart-colors";
+import { CHART_TICK_FILL } from "@/lib/chart-theme";
 import { computePegYAxis, ewma } from "@/lib/peg-chart-math";
 import { formatChartDate, formatUsdPriceAdaptive } from "@shared/lib/format";
 import { PEG_BAND_BPS, PEG_BAND_HEX, PEG_BAND_LABELS } from "@shared/lib/classification";
@@ -128,7 +129,12 @@ export function PegDeviationChart({
     return raw;
   }, [data]);
 
-  const frame = useMarketDataChartFrame({ chartData, controlledRange });
+  // A USD peg's reference is $1 on every day. Other pegs have no dated FX or
+  // commodity reference series, so their line is the plain USD price: no par
+  // line or peg bands, and an axis fitted to the data.
+  const parCharted = pegCurrency === "USD";
+
+  const frame = useMarketDataChartFrame({ chartData, controlledRange, marginRight: parCharted ? 44 : 12 });
   const {
     options,
     range,
@@ -136,10 +142,6 @@ export function PegDeviationChart({
     visibleData,
     filteredData,
   } = frame;
-  // A USD peg's reference is $1 on every day. Other pegs have no dated FX or
-  // commodity reference series, so their line is the plain USD price: no par
-  // line or peg bands, and an axis fitted to the data.
-  const parCharted = pegCurrency === "USD";
 
   // Apply EWMA smoothing at long ranges where daily ticks compress into static.
   // `priceSmoothed` is plotted on top of the raw `price` line (which is dimmed).
@@ -199,6 +201,8 @@ export function PegDeviationChart({
     return null;
   }
 
+  const [domMin, domMax] = yAxis.domain;
+  const domSpan = Math.max(1e-9, domMax - domMin);
   const pegSeverityBands = [
     {
       id: "drift-above",
@@ -206,6 +210,8 @@ export function PegDeviationChart({
       y2: bpsToPrice(PEG_BAND_BPS.drift),
       fill: PEG_BAND_HEX.drift,
       fillOpacity: 0.06,
+      bandKey: PEG_BAND_LABELS.drift,
+      gutterLabel: null as string | null,
     },
     {
       id: "drift-below",
@@ -213,6 +219,8 @@ export function PegDeviationChart({
       y2: bpsToPrice(-PEG_BAND_BPS.tight),
       fill: PEG_BAND_HEX.drift,
       fillOpacity: 0.06,
+      bandKey: PEG_BAND_LABELS.drift,
+      gutterLabel: "Drift",
     },
     {
       id: "stress-above",
@@ -220,6 +228,8 @@ export function PegDeviationChart({
       y2: bpsToPrice(PEG_BAND_BPS.stress),
       fill: PEG_BAND_HEX.stress,
       fillOpacity: 0.07,
+      bandKey: PEG_BAND_LABELS.stress,
+      gutterLabel: null as string | null,
     },
     {
       id: "stress-below",
@@ -227,20 +237,26 @@ export function PegDeviationChart({
       y2: bpsToPrice(-PEG_BAND_BPS.drift),
       fill: PEG_BAND_HEX.stress,
       fillOpacity: 0.07,
+      bandKey: PEG_BAND_LABELS.stress,
+      gutterLabel: "Stress",
     },
     {
       id: "depeg-above",
       y1: bpsToPrice(PEG_BAND_BPS.stress),
-      y2: yAxis.domain[1],
+      y2: domMax,
       fill: PEG_BAND_HEX.depeg,
       fillOpacity: 0.08,
+      bandKey: PEG_BAND_LABELS.depeg,
+      gutterLabel: null as string | null,
     },
     {
       id: "depeg-below",
-      y1: yAxis.domain[0],
+      y1: domMin,
       y2: bpsToPrice(-PEG_BAND_BPS.stress),
       fill: PEG_BAND_HEX.depeg,
       fillOpacity: 0.08,
+      bandKey: PEG_BAND_LABELS.depeg,
+      gutterLabel: "Depeg",
     },
   ] as const;
 
@@ -264,17 +280,35 @@ export function PegDeviationChart({
           />
 
           {/* Peg severity bands clip at the visible domain so they do not push the axis. */}
-          {parCharted ? pegSeverityBands.map((band) => (
-            <ReferenceArea
-              key={band.id}
-              y1={band.y1}
-              y2={band.y2}
-              fill={band.fill}
-              fillOpacity={band.fillOpacity}
-              ifOverflow="hidden"
-              strokeOpacity={0}
-            />
-          )) : null}
+          {parCharted ? pegSeverityBands.map((band) => {
+            const clampedLow = Math.max(domMin, band.y1);
+            const clampedHigh = Math.min(domMax, band.y2);
+            const visibleFraction = clampedHigh > clampedLow ? (clampedHigh - clampedLow) / domSpan : 0;
+            const isCurrentBand = readout?.bandLabel === band.bandKey;
+            const showGutterLabel = band.gutterLabel != null && visibleFraction >= 0.08;
+            return (
+              <ReferenceArea
+                key={band.id}
+                y1={band.y1}
+                y2={band.y2}
+                fill={band.fill}
+                fillOpacity={isCurrentBand ? band.fillOpacity + 0.04 : band.fillOpacity}
+                ifOverflow="hidden"
+                strokeOpacity={0}
+                label={
+                  showGutterLabel
+                    ? {
+                        value: band.gutterLabel,
+                        position: "right",
+                        fontSize: 10,
+                        fill: isCurrentBand ? "var(--color-foreground)" : CHART_TICK_FILL,
+                        fontWeight: isCurrentBand ? 600 : 400,
+                      }
+                    : undefined
+                }
+              />
+            );
+          }) : null}
 
           {parCharted ? (
             <ReferenceLine
@@ -282,6 +316,13 @@ export function PegDeviationChart({
               stroke="var(--color-foreground)"
               strokeOpacity={0.45}
               strokeWidth={1}
+              label={{
+                value: "Par",
+                position: "right",
+                fontSize: 10,
+                fill: readout?.isInBand ? "var(--color-foreground)" : CHART_TICK_FILL,
+                fontWeight: readout?.isInBand ? 600 : 400,
+              }}
             />
           ) : null}
 

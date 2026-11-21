@@ -319,10 +319,12 @@ function ChainsLeaderboardTable({
         sort={sort}
         // At lg+ the 760px table fits, so drop the scrollers (overflow-clip
         // on the shell, visible viewport) and let the sticky header pin to
-        // the page under the site chrome (--table-header-top).
+        // the page under the site chrome (--sticky-header-bottom). Omit
+        // `vertical: true` so TableViewport does not zero `--table-header-top`
+        // and collide with the sticky navbar.
         containerClassName="lg:overflow-clip"
-        viewportClassName="pb-[calc(var(--mobile-utility-safe-offset)-1rem)] sm:pb-0 lg:overflow-visible"
-        viewportProps={{ compactBottomPadding: false, vertical: true }}
+        viewportClassName="pb-[calc(var(--mobile-utility-safe-offset,4.5rem)-1rem)] sm:pb-0 lg:overflow-visible [--table-header-top:var(--sticky-header-bottom,3.75rem)]"
+        viewportProps={{ compactBottomPadding: false }}
         tableClassName="min-w-[760px] w-full"
         stickyHeader
         topSlot={

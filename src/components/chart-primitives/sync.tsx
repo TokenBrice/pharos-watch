@@ -13,6 +13,7 @@ import {
   type ReactNode,
 } from "react";
 import { CHART_BLUE } from "@/lib/chart-colors";
+import { CHART_TICK_FILL, CHART_TICK_FONT_FAMILY } from "@/lib/chart-theme";
 import { cn } from "@/lib/utils";
 import { formatChartDate } from "@shared/lib/format";
 
@@ -261,6 +262,11 @@ export function ChartBrush({ domain, value, onChange, height = 28, series, class
 
   const fromPx = value ? tsToPx(value[0]) : 0;
   const toPx = value ? tsToPx(value[1]) : 0;
+  const selLeft = Math.min(fromPx, toPx);
+  const selRight = Math.max(fromPx, toPx);
+  const selWidth = Math.max(0, selRight - selLeft);
+  const handleHeight = Math.max(10, Math.min(height - 4, 16));
+  const handleY = (height - handleHeight) / 2;
 
   const rangeDateFmt = (ms: number) =>
     formatChartDate(ms, "month-year");
@@ -269,10 +275,17 @@ export function ChartBrush({ domain, value, onChange, height = 28, series, class
     : `Full range: ${rangeDateFmt(domainFrom)} to ${rangeDateFmt(domainTo)}`;
 
   return (
-    <div ref={containerRef} className={cn("relative w-full select-none", className)}>
+    <div
+      ref={containerRef}
+      className={cn(
+        "relative w-full select-none overflow-hidden rounded-md border border-border/60 bg-muted/15",
+        className,
+      )}
+    >
       <svg
         width={width}
         height={height}
+        className="block"
         role="slider"
         tabIndex={0}
         aria-label="Brush time window"
@@ -289,13 +302,43 @@ export function ChartBrush({ domain, value, onChange, height = 28, series, class
       >
         {overview ? (
           <g aria-hidden="true" pointerEvents="none">
-            <path d={overview.area} fill={CHART_BLUE} fillOpacity={0.12} />
-            <path d={overview.line} fill="none" stroke={CHART_BLUE} strokeOpacity={0.6} strokeWidth={1} />
+            <path d={overview.area} fill={CHART_BLUE} fillOpacity={0.14} />
+            <path d={overview.line} fill="none" stroke={CHART_BLUE} strokeOpacity={0.65} strokeWidth={1} />
           </g>
         ) : (
-          <rect x={0} y={height / 2 - 2} width={width} height={4} rx={2} fill="var(--color-border)" fillOpacity={0.4} />
+          <rect
+            data-brush-part="baseline"
+            x={0}
+            y={height / 2 - 2}
+            width={width}
+            height={4}
+            rx={2}
+            fill="var(--color-border)"
+            fillOpacity={0.45}
+            pointerEvents="none"
+          />
         )}
+        {!value && width > 0 ? (
+          <g data-brush-part="idle-affordance" aria-hidden="true" pointerEvents="none">
+            <line x1={1.5} y1={4} x2={1.5} y2={height - 4} stroke="var(--color-muted-foreground)" strokeOpacity={0.45} strokeWidth={1.5} strokeLinecap="round" />
+            <line x1={Math.max(1.5, width - 1.5)} y1={4} x2={Math.max(1.5, width - 1.5)} y2={height - 4} stroke="var(--color-muted-foreground)" strokeOpacity={0.45} strokeWidth={1.5} strokeLinecap="round" />
+            {width >= 200 ? (
+              <text
+                x={width / 2}
+                y={height / 2 + 3.5}
+                textAnchor="middle"
+                fill={CHART_TICK_FILL}
+                fontFamily={CHART_TICK_FONT_FAMILY}
+                fontSize={10}
+                opacity={0.75}
+              >
+                Drag to zoom
+              </text>
+            ) : null}
+          </g>
+        ) : null}
         <rect
+          data-brush-part="track"
           x={0}
           y={0}
           width={width}
@@ -307,38 +350,96 @@ export function ChartBrush({ domain, value, onChange, height = 28, series, class
         {value ? (
           <>
             <rect
-              x={Math.min(fromPx, toPx)}
-              y={height / 2 - 6}
-              width={Math.abs(toPx - fromPx)}
-              height={12}
-              rx={3}
-              fill="var(--color-foreground)"
-              fillOpacity={0.18}
-              stroke="var(--color-foreground)"
-              strokeOpacity={0.55}
+              data-brush-part="scrim-left"
+              x={0}
+              y={0}
+              width={Math.max(0, selLeft)}
+              height={height}
+              fill="var(--color-background)"
+              fillOpacity={0.62}
+              pointerEvents="none"
+            />
+            <rect
+              data-brush-part="scrim-right"
+              x={selRight}
+              y={0}
+              width={Math.max(0, width - selRight)}
+              height={height}
+              fill="var(--color-background)"
+              fillOpacity={0.62}
+              pointerEvents="none"
+            />
+            <rect
+              data-brush-part="body"
+              x={selLeft}
+              y={1}
+              width={selWidth}
+              height={Math.max(2, height - 2)}
+              rx={2}
+              fill={CHART_BLUE}
+              fillOpacity={0.14}
+              stroke={CHART_BLUE}
+              strokeOpacity={0.75}
               strokeWidth={1}
               cursor="grab"
               onPointerDown={(e) => handlePointerDown(e, "move")}
             />
+            <g aria-hidden="true" pointerEvents="none">
+              <rect
+                x={fromPx - 3}
+                y={handleY}
+                width={6}
+                height={handleHeight}
+                rx={2}
+                fill="var(--color-card)"
+                stroke={CHART_BLUE}
+                strokeWidth={1.5}
+              />
+              <line
+                x1={fromPx}
+                y1={handleY + 3}
+                x2={fromPx}
+                y2={handleY + handleHeight - 3}
+                stroke={CHART_BLUE}
+                strokeWidth={1}
+              />
+              <rect
+                x={toPx - 3}
+                y={handleY}
+                width={6}
+                height={handleHeight}
+                rx={2}
+                fill="var(--color-card)"
+                stroke={CHART_BLUE}
+                strokeWidth={1.5}
+              />
+              <line
+                x1={toPx}
+                y1={handleY + 3}
+                x2={toPx}
+                y2={handleY + handleHeight - 3}
+                stroke={CHART_BLUE}
+                strokeWidth={1}
+              />
+            </g>
+            {/* 24px full-height touch/pointer hit targets for start & end handles */}
             <rect
-              x={fromPx - 4}
-              y={height / 2 - 8}
-              width={8}
-              height={16}
-              rx={2}
-              fill="var(--color-foreground)"
-              fillOpacity={0.75}
+              data-brush-part="from"
+              x={fromPx - 12}
+              y={0}
+              width={24}
+              height={height}
+              fill="transparent"
               cursor="ew-resize"
               onPointerDown={(e) => handlePointerDown(e, "from")}
             />
             <rect
-              x={toPx - 4}
-              y={height / 2 - 8}
-              width={8}
-              height={16}
-              rx={2}
-              fill="var(--color-foreground)"
-              fillOpacity={0.75}
+              data-brush-part="to"
+              x={toPx - 12}
+              y={0}
+              width={24}
+              height={height}
+              fill="transparent"
               cursor="ew-resize"
               onPointerDown={(e) => handlePointerDown(e, "to")}
             />
@@ -352,6 +453,16 @@ export function ChartBrush({ domain, value, onChange, height = 28, series, class
 // ---------------------------------------------------------------------------
 // D4 — Synchronized SVG crosshair (absolutely-positioned overlay)
 // ---------------------------------------------------------------------------
+
+/**
+ * Signals to child Recharts `<DateTooltip>` instances that a `ChartCrosshairOverlay`
+ * is mounted over the plot, so Recharts suppresses its own duplicate cursor line.
+ */
+export const ChartCrosshairMountedContext = createContext(false);
+
+export function useChartCrosshairMounted(): boolean {
+  return useContext(ChartCrosshairMountedContext);
+}
 
 interface ChartCrosshairOverlayProps {
   /** Hovered ms timestamp (or null to hide). */

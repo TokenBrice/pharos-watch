@@ -45,7 +45,7 @@ function MiniSparkline({ values }: { values: (number | null)[] }) {
     minPoints={2}
     fill={false}
     decorative
-    positiveColor={trending ? "var(--p-green-500, #22c55e)" : "var(--p-red-500, #ef4444)"}
+    positiveColor={trending ? "var(--state-positive-solid)" : "var(--state-danger-solid)"}
     ariaLabel="7-day USD market-cap trend"
     className="mr-1"
     emptyContent={null}
@@ -66,7 +66,7 @@ function PinnedCell({ row, model }: RowCellsProps) {
             row.isPinned
               ? "bg-state-warn-subtle text-state-warn-bright hover:bg-state-warn-solid/15"
               : "text-muted-foreground opacity-80 hover:text-foreground lg:pointer-fine:opacity-0 lg:group-hover:opacity-100 lg:focus-visible:opacity-100"
-          } ${model.isOverview ? "size-5 opacity-100 group-hover:opacity-100 focus-visible:opacity-100" : "size-11 lg:size-6"}`}
+          } ${model.isOverview ? "size-11 opacity-100 group-hover:opacity-100 focus-visible:opacity-100 md:size-6" : "size-11 lg:size-6"}`}
           onClick={(event) => {
             event.stopPropagation();
             row.onTogglePinned?.(row.coin.id);
@@ -74,7 +74,7 @@ function PinnedCell({ row, model }: RowCellsProps) {
           onKeyDown={(event) => event.stopPropagation()}
         >
           <Star
-            className={`${model.isOverview ? "h-3 w-3" : "h-3.5 w-3.5"} ${row.isPinned ? "fill-current" : ""}`}
+            className={`h-3.5 w-3.5 ${row.isPinned ? "fill-current" : ""}`}
             aria-hidden
           />
         </button>
@@ -87,7 +87,7 @@ function MobileRiskSummary({ model }: { model: StablecoinTableRowModel }) {
   const partial = model.reportCard ? describePartialEvidence(model.reportCard) : null;
   return (
     <span
-      className={`mt-1 min-w-0 items-center gap-1 ${model.isOverview ? "hidden" : "flex lg:hidden"}`}
+      className={`mt-1 min-w-0 items-center gap-1 ${model.isOverview ? "flex md:hidden" : "flex lg:hidden"}`}
       aria-label="Mobile risk summary"
     >
       {model.reportCard ? (
@@ -152,7 +152,12 @@ function IdentityCells({ row, model }: RowCellsProps) {
                 aria-label={`View ${row.coin.name} (${row.coin.symbol}) details${model.variantContext ? `, ${model.variantContext}` : ""}${state ? `, ${state.label}${state.detail ? `: ${state.detail}` : ""}` : ""}`}
                 data-stablecoin-detail-link="true"
               >
-                <StablecoinLogo src={row.logos?.[row.coin.id]} name={row.coin.name} size={row.densityConfig.iconSize} />
+                <StablecoinLogo
+                  src={row.logos?.[row.coin.id]}
+                  name={row.coin.name}
+                  size={row.densityConfig.iconSize}
+                  loading={row.eagerLogo ? "eager" : "lazy"}
+                />
                 <span className="min-w-0">
                   <span className="flex flex-wrap items-center gap-1.5 font-medium text-foreground">
                     <span>{row.coin.symbol}</span>
@@ -166,7 +171,7 @@ function IdentityCells({ row, model }: RowCellsProps) {
                     ) : null}
                     {row.coinState ? <CoinStateChip state={row.coinState} /> : null}
                   </span>
-                  <span className={`max-w-[140px] truncate text-xs text-muted-foreground ${model.isOverview ? "block" : "hidden lg:block"}`}>
+                  <span className={`max-w-[140px] truncate text-xs text-muted-foreground ${model.isOverview ? "hidden md:block" : "hidden lg:block"}`}>
                     {row.coin.name}
                   </span>
                   <MobileRiskSummary model={model} />
@@ -184,6 +189,13 @@ function IdentityCells({ row, model }: RowCellsProps) {
 function changeArrow(changePct: number): string {
   const rounded = roundForDisplay(changePct, 2);
   return rounded > 0 ? "↑ " : rounded < 0 ? "↓ " : "";
+}
+
+/** Compact label for narrow fixed-layout Peg cells; full prose stays in title + sr-only. */
+function formatCompactReferenceNote(note: string): string {
+  if (/closed/i.test(note)) return "Mkt closed";
+  if (/not yet updated|stale/i.test(note)) return "Ref stale";
+  return note;
 }
 
 function MarketCells({ row, model }: RowCellsProps) {
@@ -204,11 +216,14 @@ function MarketCells({ row, model }: RowCellsProps) {
               NAV
             </span>
           ) : (
-            <span className={`inline-flex items-center gap-0.5 ${model.pegDeviationColorClass}`}>
+            <span className={`inline-flex max-w-full items-center gap-0.5 ${model.pegDeviationColorClass}`}>
               {model.absPegDeviationBps !== null ? <DeviationIcon absBps={model.absPegDeviationBps} /> : null}
-              {model.referenceNote
-                ? <span>{model.referenceNote}</span>
-                : model.pegDeviationBps == null ? "N/A" : formatBps(model.pegDeviationBps)}
+              {model.referenceNote ? (
+                <span className="truncate" title={model.referenceNote}>
+                  <span aria-hidden="true">{formatCompactReferenceNote(model.referenceNote)}</span>
+                  <span className="sr-only">{model.referenceNote}</span>
+                </span>
+              ) : model.pegDeviationBps == null ? "N/A" : formatBps(model.pegDeviationBps)}
             </span>
           )}
         </TableCell>

@@ -71,7 +71,7 @@ function ArticleWayfinding({ study }: { study: CaseStudy }) {
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <Link
           href="/learn/case-studies/"
-          className="pharos-focus-ring inline-flex items-center gap-1.5 text-2xs text-muted-foreground transition-colors hover:text-frost-blue"
+          className="pharos-focus-ring inline-flex items-center gap-1.5 text-2xs text-muted-foreground transition-colors hover:text-brand-accent-text"
         >
           <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
           Back to case studies
@@ -83,7 +83,7 @@ function ArticleWayfinding({ study }: { study: CaseStudy }) {
           <li key={item.href}>
             <a
               href={item.href}
-              className="pharos-focus-ring inline-flex min-h-9 items-center rounded-full border border-border/60 px-2.5 py-1 transition-colors hover:border-frost-blue/60 hover:text-frost-blue"
+              className="pharos-focus-ring inline-flex min-h-9 items-center rounded-full border border-border/60 px-2.5 py-1 transition-colors hover:border-frost-blue/60 hover:text-brand-accent-text"
             >
               {item.label}
             </a>
@@ -110,7 +110,7 @@ function Takeaways({ study }: { study: CaseStudy }) {
             className="grid grid-cols-[1.25rem_minmax(0,1fr)] gap-3 text-base leading-relaxed text-foreground"
           >
             <ArrowRight
-              className="mt-1 h-4 w-4 shrink-0 text-frost-blue"
+              className="mt-1 h-4 w-4 shrink-0 text-brand-accent-text"
               aria-hidden="true"
             />
             <span>{point}</span>
@@ -171,7 +171,7 @@ function PrevNextPager({ study }: { study: CaseStudy }) {
           />
           Previous
         </span>
-        <span className="text-sm font-semibold leading-snug text-foreground transition-colors group-hover:text-frost-blue">
+        <span className="text-sm font-semibold leading-snug text-foreground transition-colors group-hover:text-brand-accent-text">
           {prev.title}
         </span>
       </Link>
@@ -186,7 +186,7 @@ function PrevNextPager({ study }: { study: CaseStudy }) {
             aria-hidden="true"
           />
         </span>
-        <span className="text-sm font-semibold leading-snug text-foreground transition-colors group-hover:text-frost-blue">
+        <span className="text-sm font-semibold leading-snug text-foreground transition-colors group-hover:text-brand-accent-text">
           {next.title}
         </span>
       </Link>
@@ -214,12 +214,12 @@ function RelatedStudies({ study }: { study: CaseStudy }) {
                 <span className="pharos-label">
                   {item.eyebrow}
                 </span>
-                <span className="text-sm font-semibold leading-snug text-foreground transition-colors group-hover:text-frost-blue">
+                <span className="text-sm font-semibold leading-snug text-foreground transition-colors group-hover:text-brand-accent-text">
                   {item.title}
                 </span>
               </div>
               <ArrowUpRight
-                className="hidden h-4 w-4 shrink-0 self-center text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-frost-blue sm:block"
+                className="hidden h-4 w-4 shrink-0 self-center text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-brand-accent-text sm:block"
                 aria-hidden="true"
               />
             </Link>
@@ -260,7 +260,7 @@ function FactStrip({ study }: { study: CaseStudy }) {
         <dd className="text-sm text-foreground">
           <Link
             href={getMechanismExplainerPath(study.archetype)}
-            className="pharos-focus-ring underline-offset-4 hover:text-frost-blue hover:underline"
+            className="pharos-focus-ring underline-offset-4 hover:text-brand-accent-text hover:underline"
           >
             {getMechanismArchetypeLabel(study.archetype)}
           </Link>
@@ -340,7 +340,7 @@ function EvidenceSnapshot({ study }: { study: CaseStudy }) {
             <Link
               key={`${link.href}-${link.label}`}
               href={link.href}
-              className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-full border border-border/60 px-3 py-1.5 text-2xs text-muted-foreground transition-colors hover:border-frost-blue/60 hover:text-frost-blue"
+              className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-full border border-border/60 px-3 py-1.5 text-2xs text-muted-foreground transition-colors hover:border-frost-blue/60 hover:text-brand-accent-text"
             >
               {link.label}
               <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
@@ -447,11 +447,11 @@ function Sources({ study }: { study: CaseStudy }) {
               href={source.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="pharos-focus-ring group flex items-start justify-between gap-3 py-2.5 text-sm leading-snug text-foreground transition-colors hover:text-frost-blue"
+              className="pharos-focus-ring group flex items-start justify-between gap-3 py-2.5 text-sm leading-snug text-foreground transition-colors hover:text-brand-accent-text"
             >
               <span>{source.label}</span>
               <ArrowUpRight
-                className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-frost-blue"
+                className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-brand-accent-text"
                 aria-hidden="true"
               />
             </a>

@@ -93,7 +93,7 @@ Do not announce decorative labels or duplicate the same data through several liv
 - Where a tap both previews and navigates, use an explicit touch interaction model that prevents accidental navigation.
 - Tooltips supplement the equivalent data surface; they are not the sole location for important information.
 - Auto-cycling or ambient selection yields as soon as the user interacts.
-- Chart brushes allow dragging any empty track area to replace a selection; the body moves it, edges resize it, and double-click clears it.
+- Chart brushes (`ChartBrush`) show a subtle idle drag-to-zoom affordance when unbrushed, full-height selection scrims dimming unselected spans, and 24 px full-height touch handles; dragging any empty track area replaces a selection, the body moves it, edges resize it, and double-click clears it.
 - Provide an inspection or reflow strategy when a dense scene cannot remain legible on narrow screens.
 
 ## Motion
@@ -112,7 +112,7 @@ All nonessential motion must honor the effective motion preference. JavaScript a
 
 ## Color And Tokens
 
-Data encodings use shared semantic or classification palettes. Follow [design-tokens.md](./design-tokens.md) for CSS tokens and JavaScript color maps. Unknown states need an explicit neutral fallback.
+Data encodings use shared semantic or classification palettes. Follow [design-tokens.md](./design-tokens.md) for CSS tokens and JavaScript color maps: primary series tokens (`--chart-series-{blue,green,amber,cyan,slate}` via `src/lib/chart-colors.ts`) are `light-dark()` theme-paired to hold at least 3:1 contrast on both light `#fff` and dark `L=0.20` cards. Non-interactive chart legends use borderless `.pharos-chart-legend-chip` (`swatch + label`) items rather than clickable pill chrome. Unknown states need an explicit neutral fallback.
 
 A visualization may own local atmospheric colors when those colors do not encode data. Known brand colors may come from a curated registry; unbounded categories may use a deterministic identifier-based palette.
 
@@ -129,9 +129,9 @@ Every numeric axis, Recharts or hand-rolled SVG, takes its ticks from `src/lib/c
 
 `src/lib/chart-theme.ts` owns axis typography, grid/reference strokes, series widths, band opacity and tooltip surfaces; import its constants rather than restating them. Value grids are horizontal only, never vertical on time series. For example, spread `CHART_AXIS_TICK` onto SVG tick text and `CHART_AXIS_LABEL` onto axis titles; keep figures mono and titles sans.
 
-Tooltips use one shell. Recharts `content` tooltips render `PharosChartTooltip` (with `TooltipLabel`/`TooltipRow`), hand-positioned SVG readouts render `ChartTooltipSurface` (both in `src/components/pharos-chart-tooltip.tsx`), and default Recharts tooltips spread `RECHARTS_TOOLTIP_STYLES`, which is built from the same surface. The Cemetery plot map and contagion graph keep scene-specific inspection cards. Time-series axes and tooltips label closed UTC buckets in UTC; a viewer's timezone never shifts a bucket to another calendar day.
+Tooltips use one shell. Recharts `content` tooltips render `PharosChartTooltip` (with `TooltipLabel`/`TooltipRow`), hand-positioned SVG readouts render `ChartTooltipSurface` (both in `src/components/pharos-chart-tooltip.tsx`), and default Recharts tooltips spread `RECHARTS_TOOLTIP_STYLES`, which is built from the same surface. `DateTooltip` sets the theme-aware `CHART_TOOLTIP_CURSOR` instead of Recharts' unthemed `#ccc` crosshair and automatically passes `cursor={false}` when `ChartCrosshairOverlay` is mounted inside `ChartFigure` (`ChartCrosshairMountedContext`), preventing duplicate hairlines. Time-series axes and tooltips label closed UTC buckets in UTC; a viewer's timezone never shifts a bucket to another calendar day.
 
-Background bands and quadrant fills must never out-shout the series: the series draws at full stroke, bands at `CHART_BAND_OPACITY`. A sparkline of a penalty component that is exerting no pressure now draws in neutral slate; its warning hue is reserved for live pressure. Sparklines of bounded components share the component's published range rather than auto-scaling, so a near-zero series reads as near zero.
+Background bands and quadrant fills must never out-shout the series: the series draws at full stroke, bands at `CHART_BAND_OPACITY`. Banded time-series charts (`DEWSDetail`, `PegDeviationChart`, and PSI `ScoreChart`) label active and reference bands in a right gutter rather than cluttering the plot interior, highlighting the current band in foreground ink. Loading chart states use `<ChartSkeleton variant="area" | "bars" | "radar" />` (and framed `PageLoadingSplitHero`) instead of raw grey slabs. A sparkline of a penalty component that is exerting no pressure now draws in neutral slate; its warning hue is reserved for live pressure. Sparklines of bounded components share the component's published range rather than auto-scaling, so a near-zero series reads as near zero.
 
 Dense scatter marks keep their true positions. The yield scatter assigns logo markers by market size (TVL descending, unavailable last, id tie-break) and draws any point whose logo would overlap a larger market's logo as a small safety-tier dot at its exact coordinates; hover shows its logo. Points are never nudged apart (`declutterScatterMarkers` in `src/lib/yield-scatter.ts`).
 

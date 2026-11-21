@@ -166,7 +166,7 @@ export function TapeFilters({ state, setParam, coin, onClearCoin }: TapeFiltersP
   );
 
   return (
-    <div className="sticky top-0 z-0 space-y-3 border-y border-border/60 bg-background/90 px-3 py-3 font-mono tabular-nums text-xs backdrop-blur supports-[backdrop-filter]:bg-background/75">
+    <div className="sticky top-[var(--sticky-header-bottom,3.75rem)] z-0 space-y-3 border-y border-border/60 bg-background/90 px-3 py-3 font-mono tabular-nums text-xs backdrop-blur supports-[backdrop-filter]:bg-background/75">
       {coin && onClearCoin ? (
         <div className="flex flex-wrap items-center gap-2 sm:gap-1" aria-label="Active coin filter">
           <button
@@ -200,17 +200,16 @@ export function TapeFilters({ state, setParam, coin, onClearCoin }: TapeFiltersP
       <div className="hidden sm:block">{classChips}</div>
 
       <div className="flex flex-wrap items-center gap-2 sm:gap-x-3 sm:gap-y-2">
-        <div role="radiogroup" aria-label="Filter by time window" className="inline-flex flex-wrap gap-2 sm:gap-1">
+        <div role="group" aria-label="Filter by time window" className="pharos-segmented max-w-full flex-wrap">
           {WINDOW_OPTIONS.map((opt) => {
             const active = state.window === opt.value;
             return (
               <button
                 key={opt.value}
                 type="button"
-                role="radio"
-                aria-checked={active}
+                aria-pressed={active}
                 onClick={() => setParam("window", WINDOW_URL_VALUE[opt.value])}
-                className={`${CHIP_BASE} ${active ? CHIP_ACTIVE : CHIP_INACTIVE}`}
+                className="pharos-focus-ring pharos-segmented-item min-h-11 px-2.5 font-sans sm:min-h-8 sm:px-3"
               >
                 {opt.label}
               </button>
@@ -218,20 +217,21 @@ export function TapeFilters({ state, setParam, coin, onClearCoin }: TapeFiltersP
           })}
         </div>
 
+        <span aria-hidden="true" className="hidden h-5 w-px bg-border/60 sm:inline-block" />
+
         <TooltipProvider delayDuration={200}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <div role="radiogroup" aria-label="Filter by severity floor" className="inline-flex flex-wrap gap-2 sm:gap-1">
+              <div role="group" aria-label="Filter by severity floor" className="pharos-segmented max-w-full flex-wrap">
                 {TAPE_FILTER_SEVERITY_VALUES.map((sev) => {
                   const active = state.severity === sev;
                   return (
                     <button
                       key={sev}
                       type="button"
-                      role="radio"
-                      aria-checked={active}
+                      aria-pressed={active}
                       onClick={() => setParam("severity", sev === DEFAULT_SEVERITY ? "" : sev)}
-                      className={`${CHIP_BASE} ${active ? CHIP_ACTIVE : CHIP_INACTIVE}`}
+                      className="pharos-focus-ring pharos-segmented-item min-h-11 px-2.5 font-sans sm:min-h-8 sm:px-3"
                     >
                       {SEVERITY_LABEL_INCLUSIVE[sev]}
                     </button>
@@ -244,6 +244,8 @@ export function TapeFilters({ state, setParam, coin, onClearCoin }: TapeFiltersP
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
+
+        <span aria-hidden="true" className="hidden h-5 w-px bg-border/60 sm:inline-block" />
 
         <FilterCombobox
           label="Peg"

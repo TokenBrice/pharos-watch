@@ -48,7 +48,7 @@ function TelegramLine(): React.JSX.Element {
   }
 
   return (
-    <Link href="/pharoswatchbot/" prefetch={false} className={cn(LINE_LINK_CLASS, "text-foreground hover:text-frost-blue")}>
+    <Link href="/pharoswatchbot/" prefetch={false} className={cn(LINE_LINK_CLASS, "text-foreground hover:text-brand-accent-text")}>
       <Send
         aria-hidden="true"
         className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground"

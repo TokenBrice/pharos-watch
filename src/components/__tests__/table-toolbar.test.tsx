@@ -43,4 +43,50 @@ describe("TableToolbar", () => {
     fireEvent.click(screen.getByRole("button", { name: "Export CSV" }));
     expect(onExport).toHaveBeenCalledTimes(1);
   });
+
+  it("surfaces hiddenByFit columns inside ColumnVisibilityDropdown and exposes Show all columns", async () => {
+    const onShowAllColumns = vi.fn();
+    render(
+      <TableToolbar
+        density="compact"
+        onDensityChange={vi.fn()}
+        visibleColumns={["rank", "name", "price", "mcap"]}
+        onVisibleColumnsChange={vi.fn()}
+        onResetColumns={vi.fn()}
+        defaultColumns={["rank", "name", "price", "mcap"]}
+        hiddenByFit={["price"]}
+        onShowAllColumns={onShowAllColumns}
+        onExport={vi.fn()}
+      />,
+    );
+
+    const trigger = screen.getByRole("button", { name: /Columns/ });
+    expect(trigger.textContent).toContain("1");
+    fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false });
+
+    expect(await screen.findByText("1 column hidden to fit width")).toBeTruthy();
+    expect(screen.getByText("Fit-hidden")).toBeTruthy();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Show all columns" }));
+    expect(onShowAllColumns).toHaveBeenCalledTimes(1);
+  });
+
+  it("works as a generic toolbar with TableExportMenu provenance props", () => {
+    render(
+      <TableToolbar
+        eyebrow="Matrix controls"
+        description={null}
+        exportMenu={{
+          data: [{ id: "usdc-circle" }],
+          columns: [{ header: "ID", accessor: (row) => row.id }],
+          filename: "safety-matrix",
+          asOfISO: "2026-11-21T00:00:00.000Z",
+          endpoint: "report-cards",
+          methodologyLabel: "safety-score v10.0",
+        }}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Export table as CSV, NDJSON, or Markdown" })).toBeTruthy();
+    expect(screen.queryByRole("radiogroup", { name: "Table density" })).toBeNull();
+  });
 });

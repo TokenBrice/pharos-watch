@@ -42,6 +42,10 @@ export function TablePagination({
   const formattedRangeStart = rangeStart.toLocaleString("en-US");
   const formattedRangeEnd = rangeEnd.toLocaleString("en-US");
   const formattedTotal = total.toLocaleString("en-US");
+  const safeTotalPages = Math.max(1, totalPages);
+  const currentPage = Math.min(safeTotalPages, Math.max(1, page + 1));
+  const formattedCurrentPage = currentPage.toLocaleString("en-US");
+  const formattedTotalPages = safeTotalPages.toLocaleString("en-US");
 
   return (
     <div
@@ -71,26 +75,32 @@ export function TablePagination({
           <Button
             variant="outline"
             size="sm"
-            className="pharos-focus-ring h-10 min-w-10 sm:h-8 sm:min-w-8"
+            className="pharos-focus-ring h-11 min-w-11 sm:h-8 sm:min-w-8"
             onClick={onPrevious}
             disabled={previousDisabled}
             aria-label="Go to previous page"
             aria-disabled={previousDisabled}
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
             <span>Previous</span>
           </Button>
+          <span
+            className="px-1.5 font-mono text-xs tabular-nums text-muted-foreground whitespace-nowrap"
+            aria-current="page"
+          >
+            Page {formattedCurrentPage} of {formattedTotalPages}
+          </span>
           <Button
             variant="outline"
             size="sm"
-            className="pharos-focus-ring h-10 min-w-10 sm:h-8 sm:min-w-8"
+            className="pharos-focus-ring h-11 min-w-11 sm:h-8 sm:min-w-8"
             onClick={onNext}
             disabled={nextDisabled}
             aria-label="Go to next page"
             aria-disabled={nextDisabled}
           >
             <span>Next</span>
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-4 w-4" aria-hidden="true" />
           </Button>
         </div>
       ) : null}

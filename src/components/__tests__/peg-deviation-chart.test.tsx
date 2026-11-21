@@ -58,12 +58,14 @@ it("charts a non-USD peg as its plain USD price, without par bands or a deviatio
   expect(container.querySelector(".recharts-reference-area")).toBeNull();
 });
 
-it("labels only the observed price series 'Price' in the tooltip", async () => {
+it("labels only the observed price series 'Price' in the tooltip and draws right-gutter band labels", async () => {
   const { container } = render(<PegDeviationChart data={history} pegCurrency="USD" controlledRange="all" />);
+  expect(container.textContent).toContain("Par");
+  expect(container.textContent).toContain("Depeg");
   const wrapper = container.querySelector(".recharts-wrapper")!;
   wrapper.getBoundingClientRect = () => ({ x: 0, y: 0, width: 640, height: 350, top: 0, left: 0, right: 640, bottom: 350, toJSON: () => ({}) });
-  fireEvent.mouseEnter(wrapper, { clientX: 600, clientY: 120 });
-  fireEvent.mouseMove(wrapper, { clientX: 600, clientY: 120 });
+  fireEvent.mouseEnter(wrapper, { clientX: 320, clientY: 120 });
+  fireEvent.mouseMove(wrapper, { clientX: 320, clientY: 120 });
   await waitFor(() => expect(screen.getByRole("status")).toBeTruthy());
   const tooltip = screen.getByRole("status");
   expect(tooltip.textContent?.match(/Price/g)?.length).toBe(1);

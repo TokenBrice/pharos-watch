@@ -278,7 +278,7 @@ export default function MethodologyPage() {
           // A hairline separates the mode controls from the scrolling pills so a
           // clipped last pill fades out instead of butting into "Show inputs".
           <div className="hidden items-center gap-3 border-l border-border/60 pl-3 md:flex">
-            <ShowYourWorkToggle className="pharos-toggle-pill pharos-focus-ring min-h-9" />
+            <ShowYourWorkToggle className="pharos-control-pill pharos-focus-ring min-h-9" />
             <MethodologyModeToggle />
           </div>
         }

@@ -387,7 +387,7 @@ export default async function DepegEventPage(
           <p className="pharos-kicker">Stablecoin</p>
           <Link
             href={buildStablecoinUrl(coin.id)}
-            className="pharos-focus-ring text-frost-blue underline-offset-2 hover:underline"
+            className="pharos-focus-ring text-brand-accent-text underline-offset-2 hover:underline"
           >
             {coin.name} ({coin.symbol}) →
           </Link>
@@ -402,7 +402,7 @@ export default async function DepegEventPage(
           <p className="pharos-kicker">Deep dive</p>
           <Link
             href={`/learn/case-studies/${CASE_STUDY_BY_DEPEG_SLUG[event.slug].slug}/`}
-            className="pharos-focus-ring text-frost-blue underline-offset-2 hover:underline"
+            className="pharos-focus-ring text-brand-accent-text underline-offset-2 hover:underline"
           >
             {CASE_STUDY_BY_DEPEG_SLUG[event.slug].title} — full case study →
           </Link>
@@ -416,7 +416,7 @@ export default async function DepegEventPage(
             href={curated.href}
             target="_blank"
             rel="noopener noreferrer"
-            className="pharos-focus-ring text-frost-blue underline-offset-2 hover:underline"
+            className="pharos-focus-ring text-brand-accent-text underline-offset-2 hover:underline"
           >
             {curated.label} ↗
           </a>

@@ -7,7 +7,9 @@
  * coin filtering fall back to the canonical stablecoin profile route, so the
  * lateral graph stays unbroken.
  */
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { buildStablecoinUrl } from "@shared/lib/urls";
+import { hasStaticYieldWorkbench } from "@shared/lib/yield-auto-lending";
 
 export type TrackerKind =
   | "stablecoin-profile"
@@ -41,11 +43,13 @@ const TRACKER_LABELS: Record<TrackerKind, string> = {
  *
  * URL patterns:
  * - `stablecoin-profile` → `/stablecoin/<id>/`
+ * - `safety-score` → `/stablecoin/<id>/#overview`
+ * - `liquidity` → `/stablecoin/<id>/#liquidity`
+ * - `depeg-history` → `/stablecoin/<id>/#history`
+ * - `yield` → `/stablecoin/<id>/yield/` when the coin exports a yield workbench, otherwise `/yield/`
+ * - `flows` → `/flows/`
  * - `freezewatch` → `/freezewatch/?stablecoin=<SYMBOL>` (uppercased symbol)
  * - `timeline` → `/timeline/?coin=<id>`
- * - `safety-score`, `liquidity`, `depeg-history`, `yield`, `flows` → fall back
- *   to the stablecoin profile route because those surfaces do not yet expose a
- *   URL-driven single-coin filter.
  */
 export function buildCoinTrackerLink(
   coinId: string,
@@ -65,14 +69,18 @@ export function buildCoinTrackerLink(
     case "timeline":
       return { tracker, label, href: `/timeline/?coin=${encodeURIComponent(coinId)}` };
     case "safety-score":
+      return { tracker, label, href: `${profileHref}#overview` };
     case "liquidity":
+      return { tracker, label, href: `${profileHref}#liquidity` };
     case "depeg-history":
-    case "yield":
+      return { tracker, label, href: `${profileHref}#history` };
+    case "yield": {
+      const coin = CLIENT_TRACKED_META_BY_ID.get(coinId);
+      const href = coin && hasStaticYieldWorkbench(coin) ? buildStablecoinUrl(coinId, "yield/") : "/yield/";
+      return { tracker, label, href };
+    }
     case "flows":
-      // These surfaces do not yet expose a URL-driven single-coin filter;
-      // point researchers at the stablecoin profile so the hatnote still
-      // delivers them to coin-scoped context.
-      return { tracker, label, href: profileHref };
+      return { tracker, label, href: "/flows/" };
   }
 }
 

@@ -295,7 +295,7 @@ export function TopNav() {
                 className={cn(
                   "pharos-focus-ring inline-flex h-8 items-center gap-1.5 rounded-md px-1.5 text-sm font-semibold whitespace-nowrap transition-colors xl:px-2 min-[1440px]:px-2.5",
                   isActive
-                    ? "bg-background text-foreground shadow-sm"
+                    ? "bg-background text-foreground shadow-sm dark:bg-card dark:ring-1 dark:ring-border/80"
                     : "text-muted-foreground hover:bg-background/70 hover:text-foreground",
                 )}
               >

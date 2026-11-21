@@ -88,7 +88,11 @@ describe("LiquidityHero", () => {
     expect(within(hero).getByText(formatCurrency(10_000))).toBeTruthy();
     expect(within(hero).getByText("4 of 6 observed on DEX")).toBeTruthy();
     expect(within(hero).getByText("3 rated · 1 NR")).toBeTruthy();
-    expect(screen.getByTestId("exit-route-instrument").getAttribute("role")).toBe("img");
+    const instrument = screen.getByTestId("exit-route-instrument");
+    expect(instrument.getAttribute("role")).toBe("group");
+    const gradientId = instrument.querySelector("linearGradient")?.getAttribute("id");
+    expect(gradientId).toMatch(/^exit-route-channel-fill-.+/);
+    expect(instrument.querySelector(".exit-route-instrument__channel")?.getAttribute("fill")).toBe(`url(#${gradientId})`);
     // The fallback lists keep the protocol crowding the hidden scene carries on phones.
     expect(screen.getByTestId("exit-route-fallback-crowding").textContent).toContain("0.31");
     expect(screen.getByTestId("exit-route-fallback-crowding").textContent).toContain("Protocol crowding");
@@ -157,7 +161,7 @@ describe("LiquidityHero", () => {
       liquidityMap: {},
     }));
     const hero = screen.getByRole("group", { name: "Secondary exit depth" });
-    expect(hero.querySelector('p[class*="text-[2.1rem]"]')?.textContent).toBe("—");
+    expect(hero.querySelector('p.pharos-hero-kpi, p[class*="text-[2.1rem]"]')?.textContent).toBe("—");
     expect(screen.queryByTestId("exit-route-instrument")).toBeNull();
     expect(screen.getByText(/Exit routes are unavailable/)).toBeTruthy();
     unmount();

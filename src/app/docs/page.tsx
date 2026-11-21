@@ -73,7 +73,7 @@ export default function DocsIndexPage() {
               className="pharos-focus-ring group block border-t border-border/60 pt-4 md:border-t-0 md:pt-0"
             >
               <p className="pharos-label text-muted-foreground/80">{FEATURED_API_REFERENCE.label}</p>
-              <h3 className="mt-1 text-sm font-semibold text-foreground transition-colors group-hover:text-frost-blue">
+              <h3 className="mt-1 text-sm font-semibold text-foreground transition-colors group-hover:text-brand-accent-text">
                 {FEATURED_API_REFERENCE.title}
               </h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{FEATURED_API_REFERENCE.description}</p>
@@ -88,7 +88,7 @@ export default function DocsIndexPage() {
                   className="pharos-focus-ring group block border-t border-border/60 pt-4 md:border-t-0 md:pt-0"
                 >
                   <p className="pharos-label text-muted-foreground/80">{featured.label}</p>
-                  <h3 className="mt-1 text-sm font-semibold text-foreground transition-colors group-hover:text-frost-blue">
+                  <h3 className="mt-1 text-sm font-semibold text-foreground transition-colors group-hover:text-brand-accent-text">
                     {doc.title}
                   </h3>
                   <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{featured.description}</p>

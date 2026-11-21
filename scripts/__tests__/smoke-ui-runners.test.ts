@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { JSDOM } from "jsdom";
 
 import { chunkOverflowRoutes, getOverflowWorkerCount, runSmokeRun, HOMEPAGE_RECENT_EVENTS_SMOKE_PATH } from "../maintenance/smoke-ui.mjs";
-import { ROUTE_CAPTURE_FN } from "../maintenance/smoke-mobile-ui.mjs";
+import { getTouchScanOutcome, ROUTE_CAPTURE_FN } from "../maintenance/smoke-mobile-ui.mjs";
 import { withEnv } from "./helpers/test-state";
 
 function makeFixture(html: string, { stubGeometry = false } = {}) {
@@ -36,14 +36,16 @@ function makeFixture(html: string, { stubGeometry = false } = {}) {
         height: bottom - top,
       } as DOMRect;
     };
-    win.getComputedStyle = () =>
+    win.getComputedStyle = (el?: Element) =>
       ({
-        display: "block",
+        display: el?.getAttribute("data-display") ?? "block",
         visibility: "visible",
         opacity: "1",
-        position: "static",
-        overflow: "visible",
-        overflowX: "visible",
+        position: el?.getAttribute("data-position") ?? "static",
+        overflow: el?.getAttribute("data-overflow") ?? "visible",
+        overflowX: el?.getAttribute("data-overflow-x") ?? "visible",
+        textOverflow: el?.getAttribute("data-text-overflow") ?? "clip",
+        tableLayout: el?.getAttribute("data-table-layout") ?? "auto",
         marginLeft: "0px",
         marginRight: "0px",
       }) as CSSStyleDeclaration;
@@ -224,6 +226,98 @@ describe("smoke-mobile-ui table scan", () => {
     expect(summary.tableScan.issues).toHaveLength(1);
     expect(summary.tableScan.issues[0].kind).toBe("header-overlap");
     expect(summary.tableScan.issues[0].selector).toContain("visible");
+    dom.window.close();
+  });
+
+  it("catches wide fixed-table cell overflow and hard clipping without ellipsis, while allowing ellipsis", async () => {
+    const html = `
+      <table id="fixed-visible" class="table-fixed" data-table-layout="fixed" data-rect="0,0,500,80">
+        <thead>
+          <tr><th data-rect="0,0,120,20">Coin</th><th data-rect="120,0,260,20">Peg</th><th data-rect="260,0,400,20">MCap</th></tr>
+        </thead>
+        <tbody>
+          <tr data-rect="0,20,500,40">
+            <td data-rect="0,20,120,40">XAUT</td>
+            <td id="wide-overflow" data-rect="120,20,260,40">Reference mark stale</td>
+            <td data-rect="260,20,400,40">$2.66B</td>
+          </tr>
+        </tbody>
+      </table>
+      <table id="fixed-clip" class="table-fixed" data-table-layout="fixed" data-rect="0,100,500,180">
+        <thead>
+          <tr><th data-rect="0,100,120,120">Coin</th><th data-rect="120,100,260,120">Peg</th><th data-rect="260,100,400,120">MCap</th></tr>
+        </thead>
+        <tbody>
+          <tr data-rect="0,120,500,140">
+            <td data-rect="0,120,120,140">XAUT</td>
+            <td id="clipped-no-ellipsis" data-overflow-x="hidden" data-text-overflow="clip" data-rect="120,120,260,140">Reference mark stale</td>
+            <td data-rect="260,120,400,140">$2.66B</td>
+          </tr>
+        </tbody>
+      </table>
+      <table id="fixed-ellipsis" class="table-fixed" data-table-layout="fixed" data-rect="0,200,500,280">
+        <thead>
+          <tr><th data-rect="0,200,120,220">Coin</th><th data-rect="120,200,260,220">Peg</th><th data-rect="260,200,400,220">MCap</th></tr>
+        </thead>
+        <tbody>
+          <tr data-rect="0,220,500,240">
+            <td data-rect="0,220,120,240">XAUT</td>
+            <td id="clipped-ellipsis" data-overflow-x="hidden" data-text-overflow="ellipsis" data-rect="120,220,260,240">Reference mark stale</td>
+            <td data-rect="260,220,400,240">$2.66B</td>
+          </tr>
+        </tbody>
+      </table>
+      <table id="child-spill" data-rect="0,300,500,380">
+        <thead>
+          <tr><th data-rect="0,300,120,320">Coin</th><th data-rect="120,300,260,320">Peg</th><th data-rect="260,300,400,320">MCap</th></tr>
+        </thead>
+        <tbody>
+          <tr data-rect="0,320,500,340">
+            <td data-rect="0,320,120,340">XAUT</td>
+            <td data-rect="120,320,260,340"><span data-rect="120,320,290,340">Reference mark stale</span></td>
+            <td data-rect="260,320,400,340">$2.66B</td>
+          </tr>
+        </tbody>
+      </table>`;
+    const { dom, win } = makeFixture(html, { stubGeometry: true });
+    win.innerWidth = 500;
+    for (const id of ["wide-overflow", "clipped-no-ellipsis", "clipped-ellipsis"]) {
+      const cell = win.document.getElementById(id)!;
+      Object.defineProperty(cell, "clientWidth", { configurable: true, value: 140 });
+      Object.defineProperty(cell, "scrollWidth", { configurable: true, value: 165 });
+    }
+
+    const summary = await runTableScan(win);
+    expect(summary.tableScan.checked).toBe(4);
+    expect(summary.tableScan.issues.map((issue: { kind: string; selector: string }) => [issue.kind, issue.selector])).toEqual([
+      ["body-cell-text-overflow", "table#fixed-visible"],
+      ["body-cell-text-overflow", "table#fixed-clip"],
+      ["body-cell-text-overflow", "table#child-spill"],
+    ]);
+    dom.window.close();
+  });
+
+  it("enforces strict touch targets on buttons missing h-11 while respecting explicit allowlists", async () => {
+    const html = `
+      <button id="small-btn" class="px-2 py-1" data-rect="0,0,64,32">Filter</button>
+      <div id="role-btn" role="button" tabindex="0" data-rect="0,40,64,72">Tab</div>
+      <button id="allowed-btn" data-mobile-smoke-allow-small-target data-rect="0,80,32,112">Info</button>
+    `;
+    const { dom, win } = makeFixture(html, { stubGeometry: true });
+    win.innerWidth = 390;
+
+    const summary = await ROUTE_CAPTURE_FN({
+      scanTableGeometry: false,
+      scanTouchTargets: true,
+      touchHardFloorPx: 24,
+      touchTargetPx: 44,
+      deps: { document: win.document, window: win, getComputedStyle: win.getComputedStyle },
+    });
+
+    expect(summary.touchScan.allowedSmallTargets).toBe(1);
+    expect(summary.touchScan.violations).toHaveLength(2);
+    expect(summary.touchScan.violations.every((entry: { strictRequired: boolean }) => entry.strictRequired === true)).toBe(true);
+    expect(getTouchScanOutcome(summary.touchScan, { strictTouchTargets: true }).failCount).toBe(2);
     dom.window.close();
   });
 });

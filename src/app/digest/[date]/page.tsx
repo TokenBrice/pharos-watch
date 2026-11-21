@@ -160,7 +160,7 @@ function renderDigestDetail(digest: DigestContentEntry) {
               href={link.href}
               className="pharos-focus-ring group block rounded-lg border border-border/60 bg-background/55 px-3 py-3 transition-colors hover:bg-accent"
             >
-              <p className="text-sm font-semibold text-foreground transition-colors group-hover:text-frost-blue">
+              <p className="text-sm font-semibold text-foreground transition-colors group-hover:text-brand-accent-text">
                 {link.label}
               </p>
               <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{link.description}</p>

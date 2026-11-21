@@ -48,9 +48,9 @@ import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
 const UPCOMING_STABLECOIN_COUNT = PRE_LAUNCH_STABLECOINS.filter((coin) => !isLaunchedAwaitingData(coin)).length;
 
 // Intentionally extends pharos-prose-link with inline-flex/gap-1 for icon-paired links (ExternalLink icon)
-// and frost-blue hover for visual differentiation. Cannot collapse to pharos-prose-link which has no flex layout.
+// and brand-accent hover for visual differentiation. Cannot collapse to pharos-prose-link which has no flex layout.
 const INLINE_EXTERNAL_LINK_CLASS =
-  "pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-foreground underline underline-offset-4 transition-colors hover:text-frost-blue";
+  "pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-foreground underline underline-offset-4 transition-colors hover:text-brand-accent-text";
 const CTA_BUTTON_CLASS =
   "min-h-11 w-full justify-between rounded-xl border-border/65 bg-background/50 px-4 py-2 whitespace-normal text-left sm:h-9 sm:min-h-0 sm:w-auto sm:justify-center sm:whitespace-nowrap sm:rounded-full";
 const TELEGRAM_CTA_BUTTON_CLASS = cn(
@@ -441,7 +441,7 @@ export function AboutPageContent() {
             The data needed to evaluate stablecoins is scattered, inconsistent, or buried behind paywalls. Worse,
             marketing claims rarely match reality: a &quot;decentralized&quot; stablecoin may rely entirely on
             centralized collateral, an issuer can freeze balances without warning, and a major stablecoin&apos;s failure
-            transmits stress to dozens of derivatives that looked safe in isolation.
+            transmits stress to dozens of derivatives that looked independent in isolation.
           </p>
           <p>
             Pharos tracks {CORE_AGGREGATE_STABLECOIN_COUNT} core stablecoins and cash equivalents, plus{" "}
@@ -619,7 +619,7 @@ export function AboutPageContent() {
         <AboutFeatureSection
           eyebrow="Signals"
           title="What Pharos computes"
-          intro="The analysis layer: models and forecasts Pharos computes from its own pipeline, including a VIX for stablecoins, dependency-capped safety grades, and forward-looking depeg pressure."
+          intro="The analysis layer: models and forecasts Pharos computes from its own pipeline, including a 0-100 market-regime gauge for stablecoins, dependency-capped safety grades, and forward-looking depeg pressure."
           items={COMPUTED_FEATURES}
           footer={
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -701,7 +701,7 @@ export function AboutPageContent() {
             </ul>
           </div>
           <p>
-            <span className="font-medium text-foreground">Roster suspended</span> while the V10 grade floor is under
+            <span className="font-medium text-foreground">Roster suspended</span> while the grade floor is under
             review. It resumes under the same rule: the live intersection of external Bluechip A-tier ratings and
             Pharos A-tier report cards, current-state rather than historical. Bluechip rides the Safety Score
             methodology ({SAFETY_SCORE_METHODOLOGY_VERSION_LABEL}) and is re-derived, never grandfathered, when a
@@ -764,7 +764,7 @@ export function AboutPageContent() {
           contentClassName="space-y-3 text-sm leading-relaxed text-muted-foreground"
         >
           <p>
-            Pharos Safety Score V10 grades stablecoins across Backing Quality, Exit Strength, and Economic Control,
+            Pharos Safety Score grades stablecoins across Backing Quality, Exit Strength, and Economic Control,
             then applies peg behavior, deployment adjustments, and binding caps. The methodology page covers the
             full grading formula, peg score computation, DEX liquidity scoring, and dependency propagation.
           </p>
