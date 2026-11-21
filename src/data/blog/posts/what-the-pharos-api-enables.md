@@ -47,6 +47,8 @@ OpenAPI and Postman files are linked from the [API page](/api/).
 
 *Updated November 16, 2026: supporter keys now run 30 days per $10 donated, and commercial partner keys have a published price.*
 
+*Updated November 21, 2026: see [The Pharos API: Risk Gate, Compliance, and MCP](/blog/pharos-api-risk-gate-compliance-mcp/) for the updated tier ladder and the new Compliance, Resolver, Risk-Gate, MCP, and SVG badge endpoints.*
+
 Access does not change how anything is scored. Any issuer can answer our evidence questions, with or without a key, and every rating follows the same published methodology.
 
 If you build on Pharos data, tell us what you are building. With your agreement, we will add your logo to the [API page](/api/).

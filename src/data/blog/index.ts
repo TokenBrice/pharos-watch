@@ -28,6 +28,16 @@ export interface BlogPost {
 
 export const BLOG_POSTS: readonly BlogPost[] = [
   {
+    slug: "pharos-api-risk-gate-compliance-mcp",
+    title: "The Pharos API: Risk Gate, Compliance, and MCP",
+    description:
+      "One-call Risk-Gate, 402 MiCA and GENIUS compliance dossiers, 2,017 resolved contracts, stateless MCP, live SVG badges, and updated API tiers.",
+    datePublished: "2026-11-21",
+    coverImage: "/blog/pharos-api-risk-gate-compliance-mcp-cover.png",
+    coverAlt:
+      "The circular Pharos mark above the headline “Risk Gate, Compliance, and MCP.” beside four endpoint tiles for Risk-Gate, Compliance, Resolver and stateless MCP on a dark navy background.",
+  },
+  {
     slug: "what-the-pharos-api-enables",
     title: "What the Pharos API Enables",
     description:
