@@ -3,7 +3,7 @@
     "version": "7.53",
     "title": "Closed-market legs without a market price keep their FX basis",
     "date": "2026-11-21",
-    "effectiveAt": 1795263000,
+    "effectiveAt": 1795259434,
     "summary": "While its reference market is closed, a measured DEX route can value a leg on an asset without an admitted market price at the asset's FX reference, the basis open-session measured valuation already uses for it, while that reference passes the existing FX freshness rule for its cadence. The rule is re-applied at scoring time.",
     "impact": [
       "v7.52 restored closed-market legs with a fresh multi-source market mark. Assets priced by a single source (EURCV, CADD, JPYC on 2026-11-21) have no admitted market mark, so every route touching them, including EURC's deepest pool against EURCV, stayed withheld until the reopen.",
