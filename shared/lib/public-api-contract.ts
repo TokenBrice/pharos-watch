@@ -24,6 +24,7 @@ export const PUBLIC_API_ARTIFACTS = {
 export const API_PAGE_ANCHORS = {
   supporterKey: "supporter-key",
   partnerAccess: "partner-access",
+  integrationPreview: "integration-preview",
   claim: "claim",
   developerResources: "developer-resources",
 } as const;
@@ -40,11 +41,16 @@ export const API_ACCESS_X_HANDLE = "PharosWatch";
 export const API_ACCESS_X_URL = `https://x.com/${API_ACCESS_X_HANDLE}`;
 
 /**
- * Published monthly price of a partner key for a commercial product. Services
- * that are free to their users pay nothing; payment goes only to the funding
- * addresses published on /funding/.
+ * Published pricing for partner keys in stablecoins. Non-commercial open-source
+ * public goods and academic research pay nothing; payment goes only to the
+ * funding addresses published on /funding/.
  */
 export const COMMERCIAL_API_KEY_USD_PER_MONTH = 250;
+export const COMMERCIAL_API_KEY_USD_PER_QUARTER = 675;
+export const COMMERCIAL_API_KEY_USD_PER_YEAR = 2_500;
+export const COMMERCIAL_API_KEY_EVAL_DAYS = 14;
+export const INSTITUTIONAL_API_KEY_USD_PER_MONTH = 1_000;
+export const INSTITUTIONAL_API_KEY_USD_PER_YEAR = 10_000;
 
 /**
  * Minimum notice before a keyed public route changes incompatibly or is
@@ -61,9 +67,10 @@ export const PARTNER_KEY_REQUEST_TEMPLATE = [
   "Pharos partner key request",
   "Contact (Telegram, X or email):",
   "Project / organization + URL:",
-  "What you're building and which endpoints:",
+  "Desired plan (Free partner / Commercial / Institutional):",
+  "Billing cadence or 14-day evaluation key (monthly / quarterly / annual / 14-day eval):",
+  "What you are building and which endpoints (e.g. Risk-Gate, Compliance, MCP, Core REST):",
   "Expected peak requests per minute (or polling cadence):",
-  "Free to end users? (yes/no):",
   "Needed by (optional):",
 ].join("\n");
 

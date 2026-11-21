@@ -44,4 +44,6 @@ For a manually reviewed key, request a [partner key](/api/#partner-access). Elig
 
 *Updated November 16, 2026.* Supporter keys no longer last indefinitely. Each $10 of qualifying donations now buys 30 days of access, pro rata, and signing again after a later donation extends the same key without rotating it. Supporter keys are now for personal, non-commercial use. Keys already claimed, and wallets whose qualifying donations before November 17, 2026 reached $10, keep the original terms with no expiry. The paid tier this post left open now exists: a partner key for a commercial product costs $250 per month, while services that are free to their users still pay nothing.
 
+*Updated November 21, 2026:* see [The Pharos API: Risk Gate, Compliance, and MCP](/blog/pharos-api-risk-gate-compliance-mcp/) for the updated tier ladder, 100,000/month supporter quota effective January 1, 2027, and new Compliance, Resolver, Risk-Gate, MCP, and SVG badge surfaces.
+
 	/- TokenBrice

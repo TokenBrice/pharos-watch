@@ -8,6 +8,8 @@ import {
   API_KEY_COMMERCIAL_RATE_LIMIT_PER_MINUTE,
   API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA,
   API_KEY_FREE_PARTNER_RATE_LIMIT_PER_MINUTE,
+  API_KEY_INSTITUTIONAL_MONTHLY_REQUEST_QUOTA,
+  API_KEY_INSTITUTIONAL_RATE_LIMIT_PER_MINUTE,
   API_KEY_MONTHLY_QUOTA_EFFECTIVE_SEC,
   DONOR_API_KEY_MONTHLY_REQUEST_QUOTA,
   DONOR_API_KEY_RATE_LIMIT_PER_MINUTE,
@@ -18,7 +20,12 @@ import {
   API_ACCESS_X_HANDLE,
   API_ACCESS_X_URL,
   API_BREAKING_CHANGE_NOTICE_DAYS,
+  COMMERCIAL_API_KEY_EVAL_DAYS,
   COMMERCIAL_API_KEY_USD_PER_MONTH,
+  COMMERCIAL_API_KEY_USD_PER_QUARTER,
+  COMMERCIAL_API_KEY_USD_PER_YEAR,
+  INSTITUTIONAL_API_KEY_USD_PER_MONTH,
+  INSTITUTIONAL_API_KEY_USD_PER_YEAR,
   PARTNER_KEY_REPLY_BUSINESS_DAYS,
   PUBLIC_API_HOST,
 } from "@shared/lib/public-api-contract";
@@ -47,9 +54,9 @@ export default function ApiTermsPage() {
         <section className="space-y-2">
           <h2 className="pharos-section-title">Scope</h2>
           <p>
-            These terms apply to Pharos API keys (supporter, partner and commercial) used on{" "}
+            These terms apply to Pharos API keys (supporter, free partner, commercial and institutional) used on{" "}
             <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">{PUBLIC_API_HOST}</code>. The free Safety grades
-            lane and the{" "}
+            lane, embeddable SVG safety badges, and the{" "}
             <Link href="/api/reference/#public-datasets" className="pharos-prose-link">
               published datasets
             </Link>{" "}
@@ -89,23 +96,36 @@ export default function ApiTermsPage() {
           <ul className="list-disc space-y-1 pl-5">
             <li>
               Supporter key: {DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute,{" "}
-              {formatRequestQuota(DONOR_API_KEY_MONTHLY_REQUEST_QUOTA)} requests per month.
+              {formatRequestQuota(DONOR_API_KEY_MONTHLY_REQUEST_QUOTA)} requests per month (core read endpoints and
+              contract resolver).
             </li>
             <li>
-              Partner key for a service that is free to its users: {API_KEY_FREE_PARTNER_RATE_LIMIT_PER_MINUTE} requests
-              per minute, {formatRequestQuota(API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA)} requests per month.
+              Free partner key for non-commercial open-source public goods and academic research (attribution required):{" "}
+              {API_KEY_FREE_PARTNER_RATE_LIMIT_PER_MINUTE} requests per minute,{" "}
+              {formatRequestQuota(API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA)} requests per month (core read endpoints
+              and contract resolver).
             </li>
             <li>
               Commercial key: {API_KEY_COMMERCIAL_RATE_LIMIT_PER_MINUTE} requests per minute,{" "}
               {formatRequestQuota(API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA)} requests per month, with higher limits on
-              request.
+              request. Includes Compliance API, Risk-Gate, and stateless MCP.
+            </li>
+            <li>
+              Institutional key: {API_KEY_INSTITUTIONAL_RATE_LIMIT_PER_MINUTE} requests per minute,{" "}
+              {formatRequestQuota(API_KEY_INSTITUTIONAL_MONTHLY_REQUEST_QUOTA)} requests per month, with higher limits
+              on request. Includes everything in Commercial plus priority integration and custom coverage onboarding.
             </li>
           </ul>
           <p>
-            Rate limits use fixed 60-second windows; exceeding them returns <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">429</code>{" "}
-            with a <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">Retry-After</code> header. Monthly volume
-            is counted per UTC calendar month, resets on the 1st (UTC), and applies from {QUOTA_EFFECTIVE_DATE}. The
-            supporter monthly volume changes from the 200,000 requests per month published on November 20, 2026 to{" "}
+            Rate limits use fixed 60-second windows; exceeding them returns{" "}
+            <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">429</code> with a{" "}
+            <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">Retry-After</code> header. Calling a paid-plan
+            endpoint (Compliance API, Risk-Gate, or MCP) with a key on a plan that does not include it returns{" "}
+            <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">403</code> with{" "}
+            <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">reason: &quot;plan_upgrade_required&quot;</code>{" "}
+            and counts against the per-minute limiter without consuming monthly quota. Monthly volume is counted per UTC
+            calendar month, resets on the 1st (UTC), and applies from {QUOTA_EFFECTIVE_DATE}. The supporter monthly
+            volume changes from the 200,000 requests per month published on November 20, 2026 to{" "}
             {formatRequestQuota(DONOR_API_KEY_MONTHLY_REQUEST_QUOTA)} requests per month for every supporter key before
             monthly enforcement begins on {QUOTA_EFFECTIVE_DATE}.
           </p>
@@ -130,13 +150,18 @@ export default function ApiTermsPage() {
         <section className="space-y-2">
           <h2 className="pharos-section-title">Payment and term</h2>
           <p>
-            Commercial keys are paid in stablecoins only, to the addresses published on the{" "}
+            Commercial and institutional keys are paid in stablecoins only, to the addresses published on the{" "}
             <Link href="/funding/" className="pharos-prose-link">
               funding page
             </Link>{" "}
-            and never to an address sent by direct message. Access lasts for the paid term and renews at the published
-            price of ${COMMERCIAL_API_KEY_USD_PER_MONTH} per month. Partial terms are not refunded, unless Pharos ends
-            access early without cause, in which case the unused portion is refunded.
+            and never to an address sent by direct message. Commercial access is priced at $
+            {COMMERCIAL_API_KEY_USD_PER_MONTH} per month, ${COMMERCIAL_API_KEY_USD_PER_QUARTER} per quarter, or $
+            {COMMERCIAL_API_KEY_USD_PER_YEAR.toLocaleString("en-US")} per year, with {COMMERCIAL_API_KEY_EVAL_DAYS}-day
+            evaluation keys available on request. Institutional access starts at $
+            {INSTITUTIONAL_API_KEY_USD_PER_MONTH.toLocaleString("en-US")} per month ($
+            {INSTITUTIONAL_API_KEY_USD_PER_YEAR.toLocaleString("en-US")} per year). Access lasts for the paid term and
+            renews at the published price. Partial terms are not refunded, unless Pharos ends access early without
+            cause, in which case the unused portion is refunded.
           </p>
         </section>
 

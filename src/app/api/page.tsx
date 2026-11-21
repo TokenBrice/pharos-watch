@@ -14,6 +14,7 @@ import { DONOR_API_KEY_MIN_USD } from "@shared/lib/ops-limits";
 import { API_PAGE_ANCHORS, PUBLIC_API_ARTIFACTS, PUBLIC_API_HOST } from "@shared/lib/public-api-contract";
 import { ApiOfferCards } from "./api-offer-cards";
 import { ApiPartnerLogos } from "./api-partner-logos";
+import { ApiPreviewTabs } from "./api-preview-tabs";
 import { ApiTabs } from "./api-tabs";
 import { SupporterClaimSteps } from "./supporter-claim-steps";
 
@@ -33,6 +34,7 @@ const LEDGER_RECONCILED_DATE = formatIsoDate(donationsData.last_updated_at);
 
 const DEVELOPER_RESOURCES = [
   { label: "API reference", href: "/api/reference/", artifact: false },
+  { label: "API terms", href: "/api/terms/", artifact: false },
   { label: "OpenAPI", href: PUBLIC_API_ARTIFACTS.openApi, artifact: true },
   { label: "Postman collection", href: PUBLIC_API_ARTIFACTS.postmanCollection, artifact: true },
   { label: "Postman environment", href: PUBLIC_API_ARTIFACTS.postmanEnvironment, artifact: true },
@@ -57,7 +59,7 @@ export default async function ApiPage() {
       path="/api/"
       title="Pharos API"
       leadParagraphs={[
-        "Safety Score grades need no key. Peg, supply, liquidity, reserve and depeg data need a supporter or partner key. The Reference tab documents every endpoint.",
+        "Safety Score grades and live SVG badges need no key. Peg, supply, liquidity, reserve and depeg data need a supporter or partner key; Compliance, Risk-Gate and MCP require a commercial or institutional plan.",
       ]}
       headerSupplement={
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
@@ -91,6 +93,8 @@ export default async function ApiPage() {
                 </div>
               </div>
             </div>
+
+            <ApiPreviewTabs />
 
             <SupporterClaimSteps
               coins={coins}

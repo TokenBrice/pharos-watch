@@ -35,6 +35,8 @@ import {
   API_KEY_COMMERCIAL_RATE_LIMIT_PER_MINUTE,
   API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA,
   API_KEY_FREE_PARTNER_RATE_LIMIT_PER_MINUTE,
+  API_KEY_INSTITUTIONAL_MONTHLY_REQUEST_QUOTA,
+  API_KEY_INSTITUTIONAL_RATE_LIMIT_PER_MINUTE,
   API_KEY_MONTHLY_QUOTA_EFFECTIVE_SEC,
   DONOR_API_KEY_DAYS_PER_MIN_USD,
   DONOR_API_KEY_MIN_USD,
@@ -47,7 +49,12 @@ import {
   API_PAGE_ANCHORS,
   API_PARTNER_ACCESS_URL,
   buildPublicApiCurlCommand,
+  COMMERCIAL_API_KEY_EVAL_DAYS,
   COMMERCIAL_API_KEY_USD_PER_MONTH,
+  COMMERCIAL_API_KEY_USD_PER_QUARTER,
+  COMMERCIAL_API_KEY_USD_PER_YEAR,
+  INSTITUTIONAL_API_KEY_USD_PER_MONTH,
+  INSTITUTIONAL_API_KEY_USD_PER_YEAR,
   PUBLIC_API_ARTIFACTS,
   PUBLIC_API_HOST,
   PUBLIC_API_KEY_HEADER,
@@ -89,7 +96,7 @@ const HERO_LANES = [
 const ABOUT_API_FAQ: FaqItem[] = [
   {
     question: "How do I get a Pharos API key?",
-    answer: `Safety Score grades are free without a key at ${PUBLIC_API_HOST}${API_PATHS.safetyGrades()}. Donors of $${DONOR_API_KEY_MIN_USD} or more in qualifying stablecoins can claim a supporter key for personal, non-commercial use (${DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute, ${DONOR_API_KEY_MONTHLY_REQUEST_QUOTA.toLocaleString("en-US")} requests per month, ${DONOR_API_KEY_DAYS_PER_MIN_USD} days of access per $${DONOR_API_KEY_MIN_USD} donated) at ${SITE_URL}/api/#${API_PAGE_ANCHORS.supporterKey}. Teams that need higher limits, integration help and support can request a partner key at ${API_PARTNER_ACCESS_URL} by messaging @${API_ACCESS_TELEGRAM_HANDLE} on Telegram; it is free for services that are free to their users (${API_KEY_FREE_PARTNER_RATE_LIMIT_PER_MINUTE} requests per minute, ${API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA.toLocaleString("en-US")} requests per month) and $${COMMERCIAL_API_KEY_USD_PER_MONTH} per month for commercial products (${API_KEY_COMMERCIAL_RATE_LIMIT_PER_MINUTE} requests per minute, ${API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA.toLocaleString("en-US")} requests per month, higher limits on request). Monthly volumes are counted per UTC calendar month from ${formatLongDate(new Date(API_KEY_MONTHLY_QUOTA_EFFECTIVE_SEC * 1000), { utc: true })}; breaking changes to keyed routes get ${API_BREAKING_CHANGE_NOTICE_DAYS} days' notice (terms at ${SITE_URL}/api/terms/).`,
+    answer: `Safety Score grades are free without a key at ${PUBLIC_API_HOST}${API_PATHS.safetyGrades()}. Donors of $${DONOR_API_KEY_MIN_USD} or more in qualifying stablecoins can claim a supporter key for personal, non-commercial use (${DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute, ${DONOR_API_KEY_MONTHLY_REQUEST_QUOTA.toLocaleString("en-US")} requests per month, ${DONOR_API_KEY_DAYS_PER_MIN_USD} days of access per $${DONOR_API_KEY_MIN_USD} donated, core read endpoints and contract resolver) at ${SITE_URL}/api/#${API_PAGE_ANCHORS.supporterKey}. Teams that need higher limits, Compliance API, Risk-Gate, MCP, or integration support can request a partner key at ${API_PARTNER_ACCESS_URL} by messaging @${API_ACCESS_TELEGRAM_HANDLE} on Telegram. Free partner keys cover non-commercial open-source public goods and academic research with attribution (${API_KEY_FREE_PARTNER_RATE_LIMIT_PER_MINUTE} requests per minute, ${API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA.toLocaleString("en-US")} requests per month). Commercial keys cost $${COMMERCIAL_API_KEY_USD_PER_MONTH} per month ($${COMMERCIAL_API_KEY_USD_PER_QUARTER} quarterly, $${COMMERCIAL_API_KEY_USD_PER_YEAR.toLocaleString("en-US")} yearly, ${COMMERCIAL_API_KEY_EVAL_DAYS}-day evaluation keys on request; ${API_KEY_COMMERCIAL_RATE_LIMIT_PER_MINUTE} requests per minute, ${API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA.toLocaleString("en-US")} requests per month). Institutional keys start at $${INSTITUTIONAL_API_KEY_USD_PER_MONTH.toLocaleString("en-US")} per month ($${INSTITUTIONAL_API_KEY_USD_PER_YEAR.toLocaleString("en-US")} yearly; ${API_KEY_INSTITUTIONAL_RATE_LIMIT_PER_MINUTE} requests per minute, ${API_KEY_INSTITUTIONAL_MONTHLY_REQUEST_QUOTA.toLocaleString("en-US")} requests per month, higher limits on request). Monthly volumes are counted per UTC calendar month from ${formatLongDate(new Date(API_KEY_MONTHLY_QUOTA_EFFECTIVE_SEC * 1000), { utc: true })}; breaking changes to keyed routes get ${API_BREAKING_CHANGE_NOTICE_DAYS} days' notice (terms at ${SITE_URL}/api/terms/).`,
   },
   {
     question: "Do I need an API key for every endpoint?",
