@@ -536,7 +536,7 @@ export function ApiKeysPanel() {
                     <dt className="font-medium text-foreground">Exact effect</dt>
                     <dd className="text-muted-foreground">
                       {pendingLifecycle.action === "rotate"
-                        ? "Replaces the secret and prefix immediately. The current token stops authenticating; name, owner, tier, limit, active state, and expiry are preserved."
+                        ? "Replaces the secret and prefix immediately. The current token stops authenticating; name, owner, tier, plan, limit, active state, and expiry are preserved."
                         : "Sets this key inactive immediately. Requests using its current token will be rejected; metadata and audit history remain."}
                     </dd>
                   </div>

@@ -160,6 +160,7 @@ export function makeApiKeyRow(overrides: Partial<ApiKeyRow> = {}): ApiKeyFixture
     name: "Ops",
     owner_email: null,
     tier: "standard",
+    plan: null,
     traffic_class: "external",
     rate_limit_per_minute: 120,
     monthly_request_quota: null,

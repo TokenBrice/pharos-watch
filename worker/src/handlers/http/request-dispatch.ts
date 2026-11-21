@@ -142,9 +142,9 @@ export async function handleHttpRequestImpl(
     apiKeyId: apiKey?.id ?? null,
     apiKeyTrafficClass: apiKey?.trafficClass ?? null,
     requestLane,
-    // Per-key limiter 429s (per-minute or monthly) keep route-level attribution
-    // but must not add to the key's own usage counter.
-    apiKeyThrottled: apiKey != null && gateResponse?.status === 429,
+    // Per-key limiter 429s (per-minute or monthly) and plan entitlement 403s
+    // keep route-level attribution but must not add to the key's own usage counter.
+    apiKeyThrottled: apiKey != null && (gateResponse?.status === 429 || gateResponse?.status === 403),
   });
   if (gateResponse) {
     recordRequestSource();

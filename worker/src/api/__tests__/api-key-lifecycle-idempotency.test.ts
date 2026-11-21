@@ -39,14 +39,17 @@ describe("API key lifecycle idempotency", () => {
       db,
       trustedAdmin: true,
       apiKeyHashPepper: "pepper",
-      request: mutationRequest("/api/api-keys", "create-intent", { name: "Ops Key" }),
+      request: mutationRequest("/api/api-keys", "create-intent", { name: "Ops Key", plan: "commercial" }),
     });
-    const firstCreateBody = (await readJsonResponse(firstCreate, 201)) as { key: { id: number; name: string }; token: string };
+    const firstCreateBody = (await readJsonResponse(firstCreate, 201)) as {
+      key: { id: number; name: string; plan: string | null };
+      token: string;
+    };
     const createReplay = await handleApiKeysRoute({
       db,
       trustedAdmin: true,
       apiKeyHashPepper: "pepper",
-      request: mutationRequest("/api/api-keys", "create-intent", { name: "Ops Key" }),
+      request: mutationRequest("/api/api-keys", "create-intent", { name: "Ops Key", plan: "commercial" }),
     });
     const createReplayBody = (await createReplay.json()) as Record<string, unknown>;
     const storedCreate = sqlite
@@ -55,9 +58,10 @@ describe("API key lifecycle idempotency", () => {
 
     expect(firstCreate.headers.get("X-Idempotent-Replay")).toBe("false");
     expect(firstCreateBody.token).toMatch(/^ph_live_/);
+    expect(firstCreateBody.key.plan).toBe("commercial");
     expect(createReplay.headers.get("X-Idempotent-Replay")).toBe("true");
     expect(createReplayBody).toMatchObject({
-      key: { id: firstCreateBody.key.id, name: "Ops Key" },
+      key: { id: firstCreateBody.key.id, name: "Ops Key", plan: "commercial" },
       tokenUnavailableOnReplay: true,
       recovery: expect.stringMatching(/Rotate the identified API key/i),
     });
@@ -123,7 +127,7 @@ describe("API key lifecycle idempotency", () => {
     expect(firstRotate.headers.get("X-Idempotent-Replay")).toBe("false");
     expect(replayRotate.headers.get("X-Idempotent-Replay")).toBe("true");
     expect(replayRotateBody).toMatchObject({
-      key: { id: keyId },
+      key: { id: keyId, plan: "commercial" },
       tokenUnavailableOnReplay: true,
       recovery: expect.stringMatching(/Rotate the identified API key/i),
     });

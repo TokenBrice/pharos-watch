@@ -1,3 +1,4 @@
+import type { ApiKeyPlan } from "@pharos/contracts/api-keys";
 import { API_PATHS, DYNAMIC_API_PATHS } from "./paths";
 
 export type EndpointMethod = "GET" | "HEAD" | "POST";
@@ -94,6 +95,8 @@ export interface EndpointDefinition {
   cacheBypass: boolean;
   publicApiAccess: EndpointPublicApiAccess;
   siteDataAccess: EndpointSiteDataAccess;
+  /** Standard-key plans entitled to call this protected route; omitted or empty admits all authenticated keys. */
+  requiredKeyPlans?: readonly ApiKeyPlan[];
   strictContract?: boolean;
   probeGroup?: EndpointProbeGroup;
   probePath?: string;

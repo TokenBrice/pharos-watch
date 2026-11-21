@@ -1,3 +1,4 @@
+import type { ApiKeyPlan } from "@pharos/contracts/api-keys";
 import {
   getEndpointDefinitionByKey,
   type EndpointDependency,
@@ -28,6 +29,10 @@ export interface DynamicEndpointDescriptor {
   adminRequired: boolean;
   /** Mirrors the owning definition: the handler consumes no query string. */
   cacheKeyIgnoresQuery?: boolean;
+  /** Query parameters that participate in the edge-cache identity. */
+  cacheKeyQueryParams?: readonly string[];
+  /** Standard-key plans entitled to call this protected dynamic route. */
+  requiredKeyPlans?: readonly ApiKeyPlan[];
   routeDependencies: readonly EndpointDependency[];
   requestAttribution: {
     routeKey: string;
@@ -85,6 +90,8 @@ function publicDynamic<Key extends DynamicEndpointDescriptorKey & EndpointKey>(
     siteDataAccess: definition.siteDataAccess,
     adminRequired: definition.adminRequired,
     cacheKeyIgnoresQuery: definition.cacheKeyIgnoresQuery,
+    cacheKeyQueryParams: definition.cacheKeyQueryParams,
+    requiredKeyPlans: definition.requiredKeyPlans,
     routeDependencies: definition.routeDependencies ?? [],
     requestAttribution: { routeKey: definition.key, routePath: definition.path },
   };

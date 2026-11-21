@@ -2,12 +2,12 @@ export const CIRCUIT_OPEN_THRESHOLD = 3;
 export const CIRCUIT_PROBE_INTERVAL_SEC = 1800; // 30 min
 
 /**
- * Operator-issued (`standard`) partner keys. A service that is free to its
- * users gets the free-partner rate; a commercial product gets the commercial
- * rate. The default applies when the ops form leaves the rate empty.
+ * Operator-issued (`standard`) partner keys by plan: free partner, commercial,
+ * and institutional. The default applies when the ops form leaves the rate empty.
  */
 export const API_KEY_FREE_PARTNER_RATE_LIMIT_PER_MINUTE = 60;
 export const API_KEY_COMMERCIAL_RATE_LIMIT_PER_MINUTE = 120;
+export const API_KEY_INSTITUTIONAL_RATE_LIMIT_PER_MINUTE = 600;
 export const API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE = API_KEY_FREE_PARTNER_RATE_LIMIT_PER_MINUTE;
 export const API_KEY_MIN_RATE_LIMIT_PER_MINUTE = 1;
 export const API_KEY_MAX_RATE_LIMIT_PER_MINUTE = 10_000;
@@ -44,8 +44,9 @@ export const DONOR_KEY_CLAIM_MAX_AGE_SEC = 5 * 60;
  * key holders get at least 30 days' notice
  * (`API_BREAKING_CHANGE_NOTICE_DAYS` in `public-api-contract.ts`).
  */
-export const DONOR_API_KEY_MONTHLY_REQUEST_QUOTA = 200_000;
+export const DONOR_API_KEY_MONTHLY_REQUEST_QUOTA = 100_000;
 export const API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA = 500_000;
 export const API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA = 1_000_000;
+export const API_KEY_INSTITUTIONAL_MONTHLY_REQUEST_QUOTA = 5_000_000;
 /** 2027-01-01T00:00:00Z. */
 export const API_KEY_MONTHLY_QUOTA_EFFECTIVE_SEC = 1_798_761_600;

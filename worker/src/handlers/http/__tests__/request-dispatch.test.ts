@@ -304,6 +304,7 @@ describe("handleHttpRequestImpl", () => {
   it.each([
     ["an unauthenticated 401", 401, null, false],
     ["a throttled key 429", 429, { id: 7, trafficClass: "external", rateLimitPerMinute: 60 }, true],
+    ["an unentitled key 403", 403, { id: 7, trafficClass: "external", rateLimitPerMinute: 60 }, true],
   ])("records route attribution and returns the access-gate response on %s", async (_name, status, apiKey, throttled) => {
     const gateResponse = new Response(JSON.stringify({ error: "denied" }), { status });
     mocks.evaluateAccessGate.mockResolvedValue({
@@ -321,8 +322,8 @@ describe("handleHttpRequestImpl", () => {
     );
 
     if (throttled) {
-      // The dispatcher attaches the key's own limit to its throttled 429.
-      expect(response.status).toBe(429);
+      // The dispatcher attaches the key's own limit to its rejected 429/403 responses.
+      expect(response.status).toBe(status);
       expect(response.headers.get("X-RateLimit-Limit")).toBe("60");
     } else {
       expect(response).toBe(gateResponse);

@@ -13,6 +13,7 @@ import { createApiKey, updateApiKey } from "../api-key-admin";
 import {
   API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA,
   API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA,
+  API_KEY_INSTITUTIONAL_MONTHLY_REQUEST_QUOTA,
   API_KEY_MONTHLY_QUOTA_EFFECTIVE_SEC,
   DONOR_API_KEY_MONTHLY_REQUEST_QUOTA,
 } from "@shared/lib/ops-limits";
@@ -31,7 +32,9 @@ import {
   getCachedApiKeyByPrefix,
   lookupApiKeyByPrefix,
   normalizeCreateInput,
+  normalizeUpdateInput,
   resolveApiKeyMonthlyRequestQuota,
+  resolveApiKeyPlan,
   resetApiKeyStateForTests,
 } from "../api-key-core";
 import {
@@ -97,6 +100,7 @@ describe("api key helpers", () => {
         name: "Smoke",
         ownerEmail: "ops@pharos.watch",
         tier: "ci",
+        plan: null,
         trafficClass: "site",
         rateLimitPerMinute: 180,
         monthlyRequestQuota: null,
@@ -167,8 +171,9 @@ describe("api key helpers", () => {
         expiresAt: 111 + 90 * 24 * 60 * 60,
       },
     });
-    expect(db.getHistory()[0]?.binds[9]).toBe(111 + 90 * 24 * 60 * 60);
-    expect(db.getHistory()[0]?.binds[7]).toBeNull();
+    expect(db.getHistory()[0]?.binds[5]).toBe("free_partner");
+    expect(db.getHistory()[0]?.binds[8]).toBeNull();
+    expect(db.getHistory()[0]?.binds[10]).toBe(111 + 90 * 24 * 60 * 60);
     expect(parseApiKeyToken((created as Exclude<typeof created, Response>).token)).not.toBeNull();
   });
 
@@ -253,7 +258,7 @@ describe("api key helpers", () => {
 
     expect(created).not.toBeInstanceOf(Response);
     expect((created as Exclude<typeof created, Response>).key.expiresAt).toBeNull();
-    expect(db.getHistory()[0]?.binds[9]).toBeNull();
+    expect(db.getHistory()[0]?.binds[10]).toBeNull();
   });
 
   it("updates only the requested columns and preserves explicit null on update", async () => {
@@ -414,6 +419,7 @@ describe("api key helpers", () => {
       name: "Ops",
       ownerEmail: null,
       tier: "standard",
+      plan: null,
       trafficClass: "external" as const,
       rateLimitPerMinute: 120,
       monthlyRequestQuota: null,
@@ -434,6 +440,7 @@ describe("api key helpers", () => {
       name: "Ops",
       ownerEmail: null,
       tier: "standard",
+      plan: null,
       trafficClass: "external" as const,
       rateLimitPerMinute: 120,
       monthlyRequestQuota: null,
@@ -757,7 +764,7 @@ describe("api key helpers", () => {
   });
 
   describe("monthly request quota", () => {
-    const quotaKey = { id: 7, trafficClass: "external" as const, tier: "standard", rateLimitPerMinute: 60, monthlyRequestQuota: null };
+    const quotaKey = { id: 7, trafficClass: "external" as const, tier: "standard", plan: null, rateLimitPerMinute: 60, monthlyRequestQuota: null };
     const siteKey = { ...quotaKey, trafficClass: "site" as const };
     const nowSec = API_KEY_MONTHLY_QUOTA_EFFECTIVE_SEC + 3_600;
     const usageTable = (usage: number) => [{ match: "api_key_monthly_usage", rows: [], first: { request_count: usage } }];
@@ -910,6 +917,7 @@ describe("api key helpers", () => {
           name: "Key",
           ownerEmail: null,
           tier: "standard",
+          plan: null,
           trafficClass: "external",
           rateLimitPerMinute: 120,
           monthlyRequestQuota: null,
@@ -979,13 +987,56 @@ describe("api key helpers", () => {
   });
 
   it.each([
-    [{ trafficClass: "external" as const, tier: "standard", monthlyRequestQuota: 250_000, rateLimitPerMinute: 60 }, 250_000],
-    [{ trafficClass: "external" as const, tier: "donor", monthlyRequestQuota: null, rateLimitPerMinute: 10 }, DONOR_API_KEY_MONTHLY_REQUEST_QUOTA],
-    [{ trafficClass: "external" as const, tier: "standard", monthlyRequestQuota: null, rateLimitPerMinute: 120 }, API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA],
-    [{ trafficClass: "external" as const, tier: "self-serve", monthlyRequestQuota: null, rateLimitPerMinute: 30 }, API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA],
-    [{ trafficClass: "site" as const, tier: "standard", monthlyRequestQuota: null, rateLimitPerMinute: 60 }, null],
+    [{ trafficClass: "external" as const, tier: "standard", plan: null, monthlyRequestQuota: 250_000, rateLimitPerMinute: 60 }, 250_000],
+    [{ trafficClass: "external" as const, tier: "donor", plan: null, monthlyRequestQuota: null, rateLimitPerMinute: 10 }, 100_000],
+    [{ trafficClass: "external" as const, tier: "standard", plan: "free_partner" as const, monthlyRequestQuota: null, rateLimitPerMinute: 120 }, API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA],
+    [{ trafficClass: "external" as const, tier: "standard", plan: "commercial" as const, monthlyRequestQuota: null, rateLimitPerMinute: 60 }, API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA],
+    [{ trafficClass: "external" as const, tier: "standard", plan: "institutional" as const, monthlyRequestQuota: null, rateLimitPerMinute: 600 }, API_KEY_INSTITUTIONAL_MONTHLY_REQUEST_QUOTA],
+    [{ trafficClass: "external" as const, tier: "standard", plan: null, monthlyRequestQuota: null, rateLimitPerMinute: 120 }, API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA],
+    [{ trafficClass: "external" as const, tier: "standard", plan: null, monthlyRequestQuota: null, rateLimitPerMinute: 60 }, API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA],
+    [{ trafficClass: "external" as const, tier: "self-serve", plan: null, monthlyRequestQuota: null, rateLimitPerMinute: 30 }, API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA],
+    [{ trafficClass: "site" as const, tier: "standard", plan: null, monthlyRequestQuota: null, rateLimitPerMinute: 60 }, null],
   ])("resolves the monthly quota for %s", (key, expected) => {
+    expect(DONOR_API_KEY_MONTHLY_REQUEST_QUOTA).toBe(100_000);
     expect(resolveApiKeyMonthlyRequestQuota(key)).toBe(expected);
+  });
+
+  it.each([
+    [{ tier: "standard", plan: "free_partner" }, "free_partner"],
+    [{ tier: "standard", plan: "commercial" }, "commercial"],
+    [{ tier: "standard", plan: "institutional" }, "institutional"],
+    [{ tier: "standard", plan: null }, null],
+    [{ tier: "standard", plan: "unknown_plan" }, null],
+    [{ tier: "donor", plan: "commercial" }, null],
+    [{ tier: "self-serve", plan: "institutional" }, null],
+  ])("fails closed in resolveApiKeyPlan for %s", (key, expected) => {
+    expect(resolveApiKeyPlan(key)).toBe(expected);
+  });
+
+  it("validates plan inputs and auto-clears plan when moving a key off standard tier", async () => {
+    expect((normalizeCreateInput({ name: "Bad plan", plan: "enterprise" }) as Response).status).toBe(400);
+    expect((normalizeCreateInput({ name: "Donor plan", tier: "donor", plan: "commercial" }) as Response).status).toBe(400);
+    expect((normalizeUpdateInput({ plan: "enterprise" }) as Response).status).toBe(400);
+    expect((normalizeUpdateInput({ tier: "donor", plan: "commercial" }) as Response).status).toBe(400);
+
+    const { db, sqlite } = createLatestSchemaSqlite();
+    sqlite.exec(
+      `INSERT INTO api_keys (id, key_prefix, secret_hash, name, tier, plan, created_at, updated_at)
+       VALUES (7, '0123456789abcdef', 'hash', 'Ops', 'standard', 'commercial', 1000, 1000),
+              (8, 'fedcba9876543210', 'hash', 'Donor', 'donor', NULL, 1000, 1000)`,
+    );
+    try {
+      const rejectedDonor = await updateApiKey(db, 8, { plan: "commercial" }, 2_000);
+      expect(rejectedDonor).toBeInstanceOf(Response);
+      expect((rejectedDonor as Response).status).toBe(400);
+
+      const movedToDonor = await updateApiKey(db, 7, { tier: "donor" }, 2_000, "operator@pharos.watch");
+      expect(movedToDonor).not.toBeInstanceOf(Response);
+      expect((movedToDonor as { key: { tier: string; plan: string | null } }).key).toMatchObject({ tier: "donor", plan: null });
+      expect(sqlite.prepare("SELECT tier, plan FROM api_keys WHERE id = 7").get()).toEqual({ tier: "donor", plan: null });
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("records a deactivation through the update path as deactivated with the operator", async () => {

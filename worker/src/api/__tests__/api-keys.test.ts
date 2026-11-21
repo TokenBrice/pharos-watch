@@ -149,11 +149,13 @@ describe("api key handlers", () => {
       }),
       "pepper",
     );
-    const body = (await readJsonResponse(response, 201)) as { key: { expiresAt: number | null } };
+    const body = (await readJsonResponse(response, 201)) as { key: { expiresAt: number | null; plan: string | null } };
 
     expect(body.key.expiresAt).toBe(nowSec + 90 * 24 * 60 * 60);
-    expect(sqlite.prepare("SELECT expires_at FROM api_keys").get()).toEqual({
+    expect(body.key.plan).toBe("free_partner");
+    expect(sqlite.prepare("SELECT expires_at, plan FROM api_keys").get()).toEqual({
       expires_at: nowSec + 90 * 24 * 60 * 60,
+      plan: "free_partner",
     });
     vi.useRealTimers();
   });
@@ -213,11 +215,11 @@ describe("api key handlers", () => {
     });
   });
 
-  it("preserves the current expiry when rotating a key", async () => {
+  it("preserves the current expiry and plan when rotating a key", async () => {
     const { sqlite, db } = fixtures.open();
     sqlite.exec(`INSERT INTO api_keys
-      (id, key_prefix, secret_hash, name, created_at, updated_at, expires_at)
-      VALUES (7, '0011223344556677', 'hash', 'Ops', 1000, 1000, 5000)`);
+      (id, key_prefix, secret_hash, name, tier, plan, created_at, updated_at, expires_at)
+      VALUES (7, '0011223344556677', 'hash', 'Ops', 'standard', 'commercial', 1000, 1000, 5000)`);
 
     const response = await handleApiKeyRotate(
       db,
@@ -231,10 +233,14 @@ describe("api key handlers", () => {
       }),
       "pepper",
     );
-    const body = (await readJsonResponse(response, 200)) as { key: { expiresAt: number | null } };
+    const body = (await readJsonResponse(response, 200)) as { key: { expiresAt: number | null; plan: string | null } };
 
     expect(body.key.expiresAt).toBe(5_000);
-    expect(sqlite.prepare("SELECT expires_at FROM api_keys WHERE id = 7").get()).toEqual({ expires_at: 5_000 });
+    expect(body.key.plan).toBe("commercial");
+    expect(sqlite.prepare("SELECT expires_at, plan FROM api_keys WHERE id = 7").get()).toEqual({
+      expires_at: 5_000,
+      plan: "commercial",
+    });
   });
 
   it("reports rotation readback failure as unknown without exposing a replacement token", async () => {

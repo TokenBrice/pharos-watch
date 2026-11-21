@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { verifyAccessJwt, apiKeyMocks } = vi.hoisted(() => ({
+const { verifyAccessJwt, apiKeyMocks, endpointRequiredPlansMock } = vi.hoisted(() => ({
   verifyAccessJwt: vi.fn(),
+  endpointRequiredPlansMock: vi.fn(),
   apiKeyMocks: {
     authenticateApiKey: vi.fn(),
     authenticateApiKeyFromFreshCache: vi.fn(),
@@ -17,6 +18,12 @@ const { verifyAccessJwt, apiKeyMocks } = vi.hoisted(() => ({
     getCachedApiKeyByPrefix: vi.fn(),
   },
 }));
+
+vi.mock("@shared/lib/api-endpoints", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@shared/lib/api-endpoints")>();
+  endpointRequiredPlansMock.mockImplementation(actual.getEndpointRequiredKeyPlans);
+  return { ...actual, getEndpointRequiredKeyPlans: endpointRequiredPlansMock };
+});
 
 vi.mock("@shared/lib/cloudflare-access-jwt", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@shared/lib/cloudflare-access-jwt")>();
@@ -74,6 +81,7 @@ const validKey = {
   keyPrefix: "pharos_test",
   name: "Test key",
   tier: "standard",
+  plan: null,
   trafficClass: "external",
   rateLimitPerMinute: 60,
 };
@@ -94,6 +102,7 @@ function makeEnv() {
 describe("evaluateAccessGate", () => {
   beforeEach(() => {
     resetApiKeyStateForTests();
+    endpointRequiredPlansMock.mockReturnValue(null);
     apiKeyMocks.isApiKeyRateLimitDependencyCircuitOpen.mockReturnValue(false);
     apiKeyMocks.recordApiKeyRateLimitDependencyFailure.mockReturnValue({
       consecutiveFailures: 1,
@@ -902,5 +911,94 @@ describe("evaluateAccessGate", () => {
       await evaluateAccessGate(request, new URL(request.url), env);
     }
     expect(limit).not.toHaveBeenCalled();
+  });
+
+  describe("plan entitlement gating", () => {
+    const PAID_PLANS = ["commercial", "institutional"] as const;
+
+    it.each([
+      ["NULL-plan standard key at 120/min", { tier: "standard", plan: null, rateLimitPerMinute: 120, trafficClass: "external" }, 403],
+      ["NULL-plan standard key at 600/min", { tier: "standard", plan: null, rateLimitPerMinute: 600, trafficClass: "external" }, 403],
+      ["free_partner key", { tier: "standard", plan: "free_partner", rateLimitPerMinute: 60, trafficClass: "external" }, 403],
+      ["donor key", { tier: "donor", plan: null, rateLimitPerMinute: 10, trafficClass: "external" }, 403],
+      ["self-serve key", { tier: "self-serve", plan: null, rateLimitPerMinute: 30, trafficClass: "external" }, 403],
+      ["commercial key", { tier: "standard", plan: "commercial", rateLimitPerMinute: 120, trafficClass: "external" }, 200],
+      ["institutional key", { tier: "standard", plan: "institutional", rateLimitPerMinute: 600, trafficClass: "external" }, 200],
+      ["first-party site key with NULL plan", { tier: "standard", plan: null, rateLimitPerMinute: 60, trafficClass: "site" }, 200],
+    ] as const)("evaluates paid endpoint entitlement for %s", async (_label, keyPatch, expectedStatus) => {
+      endpointRequiredPlansMock.mockReturnValue(PAID_PLANS);
+      const key = { ...validKey, ...keyPatch };
+      apiKeyMocks.authenticateApiKey.mockResolvedValueOnce({ kind: "valid", key });
+      apiKeyMocks.checkApiKeyRateLimit.mockResolvedValueOnce(null);
+      apiKeyMocks.recordApiKeyUsage.mockResolvedValueOnce(undefined);
+      const request = new Request("https://api.pharos.watch/api/stablecoins", {
+        headers: { "X-API-Key": "pharos_test_valid" },
+      });
+
+      const result = await evaluateAccessGate(request, new URL(request.url), {
+        ...makeEnv(),
+        DB: {} as D1Database,
+        API_KEY_HASH_PEPPER: "pepper",
+      } as never);
+
+      expect(apiKeyMocks.checkApiKeyRateLimit).toHaveBeenCalledOnce();
+      expect(result.apiKey).toBe(key);
+      if (expectedStatus === 403) {
+        expect(result.response?.status).toBe(403);
+        expect(result.response?.headers.get("Cache-Control")).toBe("no-store");
+        await expect(result.response?.json()).resolves.toEqual({
+          error: "This endpoint requires a commercial or institutional API key",
+          reason: "plan_upgrade_required",
+          requiredPlans: ["commercial", "institutional"],
+          upgradeUrl: "https://pharos.watch/api/#partner-access",
+        });
+        expect(apiKeyMocks.recordApiKeyUsage).not.toHaveBeenCalled();
+      } else {
+        expect(result.response).toBeNull();
+        expect(apiKeyMocks.recordApiKeyUsage).toHaveBeenCalledOnce();
+      }
+    });
+
+    it("enforces the per-minute rate limiter before entitlement 403", async () => {
+      endpointRequiredPlansMock.mockReturnValue(PAID_PLANS);
+      const key = { ...validKey, plan: "free_partner" };
+      const rateLimit429 = new Response(JSON.stringify({ error: "Rate limit exceeded" }), { status: 429 });
+      apiKeyMocks.authenticateApiKey.mockResolvedValueOnce({ kind: "valid", key });
+      apiKeyMocks.checkApiKeyRateLimit.mockResolvedValueOnce(rateLimit429);
+      const request = new Request("https://api.pharos.watch/api/stablecoins", {
+        headers: { "X-API-Key": "pharos_test_valid" },
+      });
+
+      const result = await evaluateAccessGate(request, new URL(request.url), {
+        ...makeEnv(),
+        DB: {} as D1Database,
+        API_KEY_HASH_PEPPER: "pepper",
+      } as never);
+
+      expect(result.response).toBe(rateLimit429);
+      expect(apiKeyMocks.recordApiKeyUsage).not.toHaveBeenCalled();
+    });
+
+    it("falls through to the slow path from the cache-hit fast gate when a key is not entitled", async () => {
+      endpointRequiredPlansMock.mockReturnValue(PAID_PLANS);
+      const request = new Request("https://api.pharos.watch/api/stablecoins", {
+        headers: { "X-API-Key": "pharos_test_valid" },
+      });
+      const env = { ...makeEnv(), API_KEY_HASH_PEPPER: "pepper" } as never;
+
+      for (const plan of [null, "free_partner"] as const) {
+        apiKeyMocks.authenticateApiKeyFromFreshCache.mockResolvedValueOnce({
+          kind: "valid",
+          key: { ...validKey, plan, rateLimitPerMinute: 120 },
+        });
+        expect(await evaluateCachedPublicApiReadFastGate(request, new URL(request.url), env)).toBeNull();
+      }
+
+      const entitled = { ...validKey, plan: "commercial", rateLimitPerMinute: 120 };
+      apiKeyMocks.authenticateApiKeyFromFreshCache.mockResolvedValueOnce({ kind: "valid", key: entitled });
+      const fastResult = await evaluateCachedPublicApiReadFastGate(request, new URL(request.url), env);
+      expect(fastResult?.apiKey).toBe(entitled);
+      expect(fastResult?.response).toBeNull();
+    });
   });
 });

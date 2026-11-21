@@ -29,6 +29,7 @@ export {
   type StatusPageActionScope,
 } from "./definitions";
 export {
+  getEndpointRequiredKeyPlans,
   getPublicApiAccess,
   getSiteDataAccess,
   isAdminLikePath,

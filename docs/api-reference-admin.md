@@ -243,7 +243,7 @@ Key summaries use recorded `api_key_request_stats.request_count`. Each new write
 
 ### `GET /api/api-keys`
 
-Admin-only API key inventory. Returns masked tokens plus metadata, but never returns stored secret material. Key summaries carry `rateLimitPerMinute` and `monthlyRequestQuota` (`number | null`; `null` keeps the tier default resolved at request time). Expired keys remain listed for operator review; callers should use `isActive` plus `expiresAt` to distinguish `active`, `expired`, and deliberate non-expiring exceptions.
+Admin-only API key inventory. Returns masked tokens plus metadata, but never returns stored secret material. Key summaries carry `plan` (`"free_partner" | "commercial" | "institutional" | null`; `null` fails closed on paid-endpoint entitlements and preserves legacy rate-based monthly quota defaults on pre-`0320` standard keys), `rateLimitPerMinute`, and `monthlyRequestQuota` (`number | null`; `null` keeps the tier/plan default resolved at request time). Expired keys remain listed for operator review; callers should use `isActive` plus `expiresAt` to distinguish `active`, `expired`, and deliberate non-expiring exceptions.
 
 **Response shape:** `ApiKeyListResponse` (defined in `shared/contracts/api-keys.ts`)
 
@@ -306,8 +306,9 @@ Admin-only API key creation route.
 | `name`               | `string`               | Yes      | Display name for the key                                                                                                                    |
 | `ownerEmail`         | `string \| null`       | No       | Optional owner contact; null clears it. |
 | `tier`               | `ApiKeyTier \| null`   | No       | Vocabulary in `shared/contracts/api-keys.ts`; omission/null defaults to `"standard"`. |
+| `plan`               | `ApiKeyPlan \| null`   | No       | Explicit plan for `"standard"` keys (`"free_partner"`, `"commercial"`, `"institutional"`); omission defaults to `"free_partner"` for `"standard"` keys and `null` otherwise. Non-null values are rejected with `400` when `tier !== "standard"`. |
 | `rateLimitPerMinute` | `integer \| null`      | No       | Per-key threshold (`1`–`10000`); omission/null defaults to `60` (free-partner). |
-| `monthlyRequestQuota` | `integer \| null`     | No       | Per-key monthly volume override: positive integer up to `100000000` (`API_KEY_MAX_MONTHLY_REQUEST_QUOTA`), or `null` for the tier default (donor `200000`; free partner `500000`; commercial `1000000`, applied when `rateLimitPerMinute >= 120`). Enforced from `API_KEY_MONTHLY_QUOTA_EFFECTIVE_SEC` (2027-01-01). |
+| `monthlyRequestQuota` | `integer \| null`     | No       | Per-key monthly volume override: positive integer up to `100000000` (`API_KEY_MAX_MONTHLY_REQUEST_QUOTA`), or `null` for the tier/plan default (donor `100000`; `free_partner` `500000`; `commercial` `1000000`; `institutional` `5000000`; legacy `plan = null` standard keys keep the rate-based default `>= 120` → `1000000`, else `500000`). Enforced from `API_KEY_MONTHLY_QUOTA_EFFECTIVE_SEC` (2027-01-01). |
 | `expiresAt`          | `integer \| null`      | No       | Unix timestamp when the key should expire. A value at or before now returns `400 expiresAt must be in the future when creating an API key`. Omit to use the default 90-day expiry. Send `null` only for a deliberate non-expiring exception. |
 
 **Response shape:** `ApiKeyCreateResponse`
@@ -327,6 +328,7 @@ Accepted fields:
 - `name`
 - `ownerEmail`
 - `tier`
+- `plan`
 - `rateLimitPerMinute`
 - `monthlyRequestQuota`
 - `isActive`
@@ -334,7 +336,7 @@ Accepted fields:
 
 `trafficClass` is ignored, not writable; a body with no recognized update fields returns `400`. The request lane is derived in `worker/src/handlers/http/gates.ts`, so issuance writes `"external"` and existing rows retain their attribution label.
 
-`tier` uses the canonical `API_KEY_TIER_VALUES` vocabulary from `@pharos/contracts/api-keys`. The API Management editor preserves a key's canonical tier during unrelated metadata edits, including donor keys; intentional operator tier changes remain available. Only an unknown historical free-form tier defaults to standard in the editor. The editor's create and edit forms offer partner presets ("Free partner" sets 60/min and the default monthly quota; "Commercial" sets 120/min and 1,000,000/month) alongside the free-text monthly-quota input, where empty means the tier default. An update whose body sets `isActive: false` is audited as `deactivated`, like the dedicated route.
+`tier` uses the canonical `API_KEY_TIER_VALUES` vocabulary and `plan` uses `API_KEY_PLAN_VALUES` (`free_partner`, `commercial`, `institutional`) from `@pharos/contracts/api-keys`. Assigning a non-null `plan` when the effective `tier` is not `"standard"` returns `400`; changing `tier` away from `"standard"` automatically clears `plan = null`. The API Management editor preserves a key's canonical tier and plan during unrelated metadata edits, including donor keys; intentional operator tier/plan changes remain available. Only an unknown historical free-form tier defaults to standard in the editor. The editor's create and edit forms offer three partner presets (**Free partner**: `plan = "free_partner"`, 60/min; **Commercial**: `plan = "commercial"`, 120/min; **Institutional**: `plan = "institutional"`, 600/min — each leaving `monthlyRequestQuota` empty to keep the plan default) alongside the free-text monthly-quota input. The inventory table displays a filterable **Plan unset** badge on every `standard` key with `plan = null`. An update whose body sets `isActive: false` is audited as `deactivated`, like the dedicated route.
 
 **Response shape:** `ApiKeyMutationResponse`
 
@@ -354,7 +356,7 @@ Keyed create/rotate replay records in `admin_idempotency_keys.response_body` can
 
 ### `POST /api/api-keys/:id/rotate`
 
-Admin-only rotation replaces the D1 secret and clears local auth cache; the standard-key cross-isolate TTL caveat above still applies. Plaintext is returned once; keyed replays return `tokenUnavailableOnReplay` and `recovery`, not `token`. No expiry input is accepted; `expiresAt` is preserved.
+Admin-only rotation replaces the D1 secret and clears local auth cache; the standard-key cross-isolate TTL caveat above still applies. Plaintext is returned once; keyed replays return `tokenUnavailableOnReplay` and `recovery` (retaining sanitized key metadata including `plan`), not `token`. No expiry input is accepted; `expiresAt` and `plan` are preserved.
 
 For donor keys, rotation updates the claim prefix and key material in one atomic D1 batch: both writes commit or neither does. Concurrent rotations keep the claim mapped to the surviving key prefix.
 

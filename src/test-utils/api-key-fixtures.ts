@@ -10,6 +10,7 @@ export function makeApiKeySummary(index: number, overrides: Partial<ApiKeySummar
     name: `Fixture integration ${sequence}`,
     ownerEmail: `operator-${sequence}@example.invalid`,
     tier: index % 5 === 0 ? "internal" : "standard",
+    plan: null,
     trafficClass: index % 4 === 0 ? "site" : "external",
     rateLimitPerMinute: 60 + (index % 5) * 30,
     monthlyRequestQuota: index % 3 === 0 ? 500_000 : null,

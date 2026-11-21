@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ApiMetaEnvelopeSchema } from "@pharos/contracts/api-meta";
-import { ApiKeyListResponseSchema, DonorKeyClaimResponseSchema } from "@pharos/contracts/api-keys";
+import { ApiKeyListResponseSchema, ApiKeyPlanSchema, DonorKeyClaimResponseSchema } from "@pharos/contracts/api-keys";
 import { ApiRequestAttributionResponseSchema } from "@pharos/contracts/request-source";
 import { makeLargeApiKeyInventory } from "../../../src/test-utils/api-key-fixtures";
 import { makeApiRequestAttributionResponse, makeAttributionMeasurement } from "../../../src/test-utils/status-fixtures";
@@ -15,6 +15,14 @@ describe("contracts workspace public wire schemas", () => {
   it("round-trips the operator key inventory and rejects unknown traffic classes", () => {
     const inventory = makeLargeApiKeyInventory(3);
     expect(ApiKeyListResponseSchema.parse(inventory)).toEqual(inventory);
+    const { plan: _omitted, ...legacyKey } = inventory.keys[0]!;
+    expect(ApiKeyListResponseSchema.parse({ ...inventory, keys: [legacyKey] }).keys[0]?.plan).toBeNull();
+    expect(ApiKeyPlanSchema.parse("commercial")).toBe("commercial");
+    expect(ApiKeyPlanSchema.safeParse("enterprise").success).toBe(false);
+    expect(ApiKeyListResponseSchema.safeParse({
+      ...inventory,
+      keys: [{ ...inventory.keys[0], plan: "enterprise" }],
+    }).success).toBe(false);
     expect(ApiKeyListResponseSchema.safeParse({
       ...inventory,
       keys: [{ ...inventory.keys[0], trafficClass: "internal" }],

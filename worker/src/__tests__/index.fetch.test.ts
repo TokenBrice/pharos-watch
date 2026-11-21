@@ -23,6 +23,15 @@ import type * as StatusModule from "../api/status";
 import { handleStablecoins } from "../api/cache-handlers";
 import type * as CacheHandlersModule from "../api/cache-handlers";
 
+const { endpointRequiredPlansMock } = vi.hoisted(() => ({
+  endpointRequiredPlansMock: vi.fn(),
+}));
+
+vi.mock("@shared/lib/api-endpoints", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@shared/lib/api-endpoints")>();
+  endpointRequiredPlansMock.mockImplementation(actual.getEndpointRequiredKeyPlans);
+  return { ...actual, getEndpointRequiredKeyPlans: endpointRequiredPlansMock };
+});
 vi.mock("@shared/lib/cloudflare-access-jwt", () => ({ verifyAccessJwt: vi.fn(async () => false) }));
 vi.mock("../api/status", async (importOriginal) => {
   const original = await importOriginal<typeof StatusModule>();
@@ -109,6 +118,7 @@ describe("worker.fetch", () => {
     resetApiKeyStateForTests();
     resetRequestAttributionStateForTests();
     vi.restoreAllMocks();
+    endpointRequiredPlansMock.mockReturnValue(null);
     vi.spyOn(Math, "random").mockReturnValue(0);
     cacheMatch.mockReset();
     cachePut.mockReset();
@@ -1024,6 +1034,48 @@ describe("worker.fetch", () => {
 
     expect(res.status).toBe(400);
     await expect(res.json()).resolves.toEqual({ error: "Invalid JSON body" });
+  });
+
+  it("falls through from warm fast-path auth on a paid endpoint without serving cached bodies or burning monthly usage", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-05-11T10:00:00.000Z"));
+    // Warm a standard key with plan=NULL and commercial rate limit (120/min) in isolate cache.
+    cacheMatch.mockResolvedValueOnce(cacheableJson({ warm: true }));
+    const warm = await performStablecoinsFetch("GET");
+    expect(warm.response.status).toBe(200);
+    vi.advanceTimersByTime(API_KEY_AUTH_CACHE_TTL_MS - 1);
+
+    cacheMatch.mockReset();
+    cacheMatch.mockResolvedValue(cacheableJson({ secretPaidData: true }));
+    endpointRequiredPlansMock.mockReturnValue(["commercial", "institutional"]);
+
+    const deniedDb = mockD1(await validKeyDbTables());
+    const { response: denied } = await performStablecoinsFetch("GET", deniedDb);
+    expect(denied.status).toBe(403);
+    expect(denied.headers.get("Cache-Control")).toBe("no-store");
+    expect(denied.headers.get("X-RateLimit-Limit")).toBe("120");
+    await expect(denied.json()).resolves.toEqual({
+      error: "This endpoint requires a commercial or institutional API key",
+      reason: "plan_upgrade_required",
+      requiredPlans: ["commercial", "institutional"],
+      upgradeUrl: "https://pharos.watch/api/#partner-access",
+    });
+    // Fast path fell through before readEdgeCache(), so the cached body was never touched.
+    expect(cacheMatch).not.toHaveBeenCalled();
+    const deniedSql = deniedDb.getHistory().map((entry) => entry.sql);
+    expect(deniedSql.some((sql) => sql.includes("INSERT INTO api_key_rate_limit"))).toBe(true);
+    expect(deniedSql.some((sql) => sql.includes("INSERT INTO api_key_request_stats"))).toBe(false);
+    expect(deniedSql.some((sql) => sql.includes("INSERT INTO api_key_monthly_usage"))).toBe(false);
+
+    // Spamming a rejected paid endpoint still trips the per-minute limiter (429 before 403).
+    const throttledDb = mockD1(
+      (await validKeyDbTables()).map((table) =>
+        table.match === "INSERT INTO api_key_rate_limit" ? { ...table, first: { count: 121 } } : table,
+      ),
+    );
+    const { response: throttled } = await performStablecoinsFetch("GET", throttledDb);
+    expect(throttled.status).toBe(429);
+    expect(cacheMatch).not.toHaveBeenCalled();
   });
 
   it("does not require a key on supporter key claims", async () => {

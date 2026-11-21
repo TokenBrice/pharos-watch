@@ -3,16 +3,19 @@
 import {
   API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA,
   API_KEY_COMMERCIAL_RATE_LIMIT_PER_MINUTE,
+  API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA,
   API_KEY_FREE_PARTNER_RATE_LIMIT_PER_MINUTE,
+  API_KEY_INSTITUTIONAL_MONTHLY_REQUEST_QUOTA,
+  API_KEY_INSTITUTIONAL_RATE_LIMIT_PER_MINUTE,
   API_KEY_MAX_RATE_LIMIT_PER_MINUTE,
   API_KEY_MIN_RATE_LIMIT_PER_MINUTE,
 } from "@shared/lib/ops-limits";
-import { API_KEY_MAX_MONTHLY_REQUEST_QUOTA, API_KEY_TIER_VALUES } from "@pharos/contracts/api-keys";
-import type { ApiKeyAuditEntry, ApiKeySummary, ApiKeyTier } from "@pharos/contracts/api-keys";
+import { API_KEY_MAX_MONTHLY_REQUEST_QUOTA, API_KEY_PLAN_VALUES, API_KEY_TIER_VALUES } from "@pharos/contracts/api-keys";
+import type { ApiKeyAuditEntry, ApiKeyPlan, ApiKeySummary, ApiKeyTier } from "@pharos/contracts/api-keys";
 import { RefreshCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { CreateKeyState, EditableKeyState } from "@/lib/api-key-admin-view-model";
-import { formatExpirySummary, isApiKeyExpiringSoon } from "@/lib/api-key-admin-view-model";
+import { formatExpirySummary, isApiKeyExpiringSoon, isApiKeyPlanUnset } from "@/lib/api-key-admin-view-model";
 import { apiKeyStatusBadgeClassName, getApiKeyStatus } from "./api-key-status";
 import { STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
 import { StatusPill } from "./severity-pill";
@@ -66,11 +69,38 @@ function ApiKeyEditableFields<TState extends CreateKeyState | EditableKeyState>(
           <select
             className={FIELD_CLASS_NAME}
             value={state.tier}
-            onChange={(event) => onChange({ tier: event.target.value as ApiKeyTier } as Partial<TState>)}
+            onChange={(event) => {
+              const nextTier = event.target.value as ApiKeyTier;
+              onChange({
+                tier: nextTier,
+                ...(nextTier !== "standard" ? { plan: "" } : {}),
+              } as Partial<TState>);
+            }}
           >
             {API_KEY_TIER_VALUES.map((tier) => (
               <option key={tier} value={tier}>
                 {tier}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="space-y-1">
+          <span className="text-xs font-medium text-muted-foreground">Plan</span>
+          <select
+            className={FIELD_CLASS_NAME}
+            value={state.tier === "standard" ? state.plan : ""}
+            disabled={state.tier !== "standard"}
+            title={
+              state.tier === "standard"
+                ? "Explicit plan for paid-endpoint entitlements and default monthly quota."
+                : "Plans apply to standard-tier keys only."
+            }
+            onChange={(event) => onChange({ plan: event.target.value as ApiKeyPlan | "" } as Partial<TState>)}
+          >
+            <option value="">{state.tier === "standard" ? "Unset (fail closed)" : "N/A"}</option>
+            {API_KEY_PLAN_VALUES.map((plan) => (
+              <option key={plan} value={plan}>
+                {plan}
               </option>
             ))}
           </select>
@@ -134,9 +164,11 @@ function ApiKeyEditableFields<TState extends CreateKeyState | EditableKeyState>(
           size="sm"
           variant="outline"
           className="min-h-11"
-          title={`${API_KEY_FREE_PARTNER_RATE_LIMIT_PER_MINUTE} requests/minute, tier-default monthly quota`}
+          title={`${API_KEY_FREE_PARTNER_RATE_LIMIT_PER_MINUTE} requests/minute, ${API_KEY_FREE_PARTNER_MONTHLY_REQUEST_QUOTA.toLocaleString("en-US")} requests/month plan default`}
           onClick={() =>
             onChange({
+              tier: "standard",
+              plan: "free_partner",
               rateLimitPerMinute: String(API_KEY_FREE_PARTNER_RATE_LIMIT_PER_MINUTE),
               monthlyRequestQuota: "",
             } as Partial<TState>)
@@ -149,15 +181,34 @@ function ApiKeyEditableFields<TState extends CreateKeyState | EditableKeyState>(
           size="sm"
           variant="outline"
           className="min-h-11"
-          title={`${API_KEY_COMMERCIAL_RATE_LIMIT_PER_MINUTE} requests/minute, ${API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA.toLocaleString("en-US")} requests/month`}
+          title={`${API_KEY_COMMERCIAL_RATE_LIMIT_PER_MINUTE} requests/minute, ${API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA.toLocaleString("en-US")} requests/month plan default`}
           onClick={() =>
             onChange({
+              tier: "standard",
+              plan: "commercial",
               rateLimitPerMinute: String(API_KEY_COMMERCIAL_RATE_LIMIT_PER_MINUTE),
-              monthlyRequestQuota: String(API_KEY_COMMERCIAL_MONTHLY_REQUEST_QUOTA),
+              monthlyRequestQuota: "",
             } as Partial<TState>)
           }
         >
           Commercial
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="min-h-11"
+          title={`${API_KEY_INSTITUTIONAL_RATE_LIMIT_PER_MINUTE} requests/minute, ${API_KEY_INSTITUTIONAL_MONTHLY_REQUEST_QUOTA.toLocaleString("en-US")} requests/month plan default`}
+          onClick={() =>
+            onChange({
+              tier: "standard",
+              plan: "institutional",
+              rateLimitPerMinute: String(API_KEY_INSTITUTIONAL_RATE_LIMIT_PER_MINUTE),
+              monthlyRequestQuota: "",
+            } as Partial<TState>)
+          }
+        >
+          Institutional
         </Button>
       </div>
     </>
@@ -371,6 +422,11 @@ export function ApiKeyDetailEditor({
             {expiringSoon ? (
               <span className="rounded-full bg-state-warn-solid/15 px-2 py-0.5 text-2xs font-medium text-state-warn">
                 expiring soon
+              </span>
+            ) : null}
+            {isApiKeyPlanUnset(apiKey) ? (
+              <span className="rounded-full bg-state-warn-solid/15 px-2 py-0.5 text-2xs font-medium text-state-warn">
+                Plan unset
               </span>
             ) : null}
             {apiKey.expiresAt == null ? (

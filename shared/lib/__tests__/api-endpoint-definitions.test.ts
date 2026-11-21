@@ -5,7 +5,7 @@ import {
   type EndpointDefinitionByKey,
 } from "@shared/lib/api-endpoints/definitions";
 import { getStaticEndpointDependenciesByKey } from "@shared/lib/api-endpoints/selectors";
-import { validateAllowedEndpointMethods } from "@shared/lib/api-endpoints/validation";
+import { getEndpointRequiredKeyPlans, validateAllowedEndpointMethods } from "@shared/lib/api-endpoints/validation";
 
 expectTypeOf<EndpointDefinitionByKey<"stablecoins">["key"]>().toEqualTypeOf<"stablecoins">();
 expectTypeOf<EndpointDefinitionByKey<"stablecoins">["methods"]>().toEqualTypeOf<readonly ["GET"]>();
@@ -15,7 +15,7 @@ expectTypeOf<EndpointDefinitionByKey<"backfill-dews">["methods"]>()
 
 const ENDPOINT_DEFINITION_KEYS = [
   "key", "path", "methods", "adminRequired", "mutatingAdmin", "cacheBypass",
-  "publicApiAccess", "siteDataAccess", "strictContract", "probeGroup", "probePath",
+  "publicApiAccess", "siteDataAccess", "requiredKeyPlans", "strictContract", "probeGroup", "probePath",
   "cacheKeyIgnoresQuery", "cacheKeyQueryParams", "opsProxyTimeoutMs", "probeSemanticKind", "statusPageAction",
   "routeDependencies",
 ] as const satisfies readonly (keyof EndpointDefinition)[];
@@ -78,5 +78,6 @@ describe("endpoint definition factory parity", () => {
       adminRequired: true, mutatingAdmin: true, cacheBypass: true,
       publicApiAccess: "exempt", siteDataAccess: "denied",
     });
+    expect(getEndpointRequiredKeyPlans("/api/stablecoins")).toBeNull();
   });
 });
