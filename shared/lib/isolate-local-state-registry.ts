@@ -16,6 +16,22 @@ export interface IsolateLocalStateRegistryEntry {
  */
 export const ISOLATE_LOCAL_STATE_REGISTRY = [
   {
+    sourcePath: "worker/src/api/compliance.ts",
+    stateNames: ["complianceIndexPromise"],
+    owner: "Compliance API index",
+    kind: "cache",
+    resetOrTtl: "Built once per isolate from the bundled compliance JSON; a failed import clears it so the next request retries. Resets on isolate recycle or deploy.",
+    durableTruth: "shared/data/stablecoins/coins.compliance.generated.json in the deployed bundle is authoritative.",
+  },
+  {
+    sourcePath: "worker/src/api/resolve.ts",
+    stateNames: ["cachedIndex"],
+    owner: "Contract-address resolver index",
+    kind: "cache",
+    resetOrTtl: "Built once per isolate from the bundled worker runtime registry; resets on isolate recycle or deploy.",
+    durableTruth: "The deployed stablecoin registry (contracts and tradedContracts) is authoritative.",
+  },
+  {
     sourcePath: "shared/lib/client-ip-hash.ts",
     stateNames: ["cachedSecret", "cachedKey"],
     owner: "Pages and Worker client-IP hashing",

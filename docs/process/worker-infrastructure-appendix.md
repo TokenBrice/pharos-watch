@@ -346,6 +346,8 @@ This generated inventory covers mutable module state that can survive more than 
 
 | Source | State | Owner | TTL / reset semantics | Durable truth |
 | --- | --- | --- | --- | --- |
+| `worker/src/api/compliance.ts` | `complianceIndexPromise` | Compliance API index | Built once per isolate from the bundled compliance JSON; a failed import clears it so the next request retries. Resets on isolate recycle or deploy. | shared/data/stablecoins/coins.compliance.generated.json in the deployed bundle is authoritative. |
+| `worker/src/api/resolve.ts` | `cachedIndex` | Contract-address resolver index | Built once per isolate from the bundled worker runtime registry; resets on isolate recycle or deploy. | The deployed stablecoin registry (contracts and tradedContracts) is authoritative. |
 | `shared/lib/client-ip-hash.ts` | `cachedSecret`<br>`cachedKey` | Pages and Worker client-IP hashing | Replaced when the supplied secret changes; otherwise resets on isolate recycle or deploy. | The runtime secret is authoritative; the non-extractable imported key is only a derived cache. |
 | `functions/lib/request-attribution.ts` | `siteDataRequestRecorder` | Pages site-data attribution | Selected events batch up to 50 entries after a request-owned 10ms delay; all state resets with the isolate. Daily bounded retention owns pruning. | D1 site_data_request_samples rows are authoritative; unselected events are not buffered. |
 | `functions/selector-snapshot/[[path]].ts` | `postTimestampsByIpHash` | Selector snapshot POST limiter | 60-second sliding window, 10 requests per IP hash, capped at 5,000 tracked hashes; resets with the isolate. | The D1 daily quota reservation is authoritative; this is a best-effort local throttle. |
