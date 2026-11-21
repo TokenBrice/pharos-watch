@@ -264,10 +264,12 @@ export function deriveTokenUsdObservation(
   if (!mark) return null;
   const price = multiplier * mark.priceUsd;
   if (!Number.isFinite(price) || price <= 0) return null;
+  // The multi-source label admits closed-market capacity valuation only, never price evidence.
+  const { corroboration: _corroboration, ...priceMark } = mark;
   return {
     price,
     observedAt: Math.min(ratioObservedAt, mark.observedAtSec),
-    counterpartyPrice: { ...mark, stablecoinId: otherId },
+    counterpartyPrice: { ...priceMark, stablecoinId: otherId },
   };
 }
 
