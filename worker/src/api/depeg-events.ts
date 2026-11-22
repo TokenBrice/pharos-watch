@@ -9,7 +9,8 @@ import { logWorkerEventArgs } from "../lib/structured-log";
 import { resolveOrReject, parseBooleanParam } from "../lib/api-params";
 import { buildMethodologyEnvelope } from "../lib/api-methodology";
 import { buildPaginatedEventResponse, parsePaginatedEventParams } from "../lib/api-pagination";
-import { jsonResponse } from "../lib/api-response";
+import { errorResponse, jsonResponse } from "../lib/api-response";
+import { SITE_DATA_CLIENT_IP_HEADER } from "@shared/lib/site-data-lane";
 
 import {
   normalizePendingDepegRow,
@@ -238,7 +239,17 @@ function ledgerRefusal(status: number, reason: string): Response {
   });
 }
 
-async function verifyLedgerPage(db: D1Database, response: Response, generation: string, cursor: string | null) {
+interface PreflightLedgerManifest {
+  manifest: ReturnType<typeof DepegLedgerManifestSchema.parse>;
+  digest: string;
+  pageIndex: number;
+}
+
+async function preflightLedgerManifest(
+  db: D1Database,
+  generation: string,
+  cursor: string | null,
+): Promise<PreflightLedgerManifest | Response> {
   let cached: Awaited<ReturnType<typeof getCache>>;
   try {
     cached = await getCache(db, DEPEG_LEDGER_MANIFEST_KEY);
@@ -260,13 +271,18 @@ async function verifyLedgerPage(db: D1Database, response: Response, generation: 
   const manifest = parsed.data;
   const digest = await sha256Hex(stableJsonStringifyV1(manifest));
   if (generation !== "latest" && generation !== digest) return ledgerRefusal(409, "ledger-generation-changed");
-  const index = manifest.pages.findIndex((page) => cursor === page.cursor);
-  if (index < 0) return ledgerRefusal(409, "ledger-cursor-unattested");
+  const pageIndex = manifest.pages.findIndex((page) => cursor === page.cursor);
+  if (pageIndex < 0) return ledgerRefusal(409, "ledger-cursor-unattested");
+  return { manifest, digest, pageIndex };
+}
+
+async function verifyLedgerPageBody(response: Response, preflight: PreflightLedgerManifest): Promise<Response> {
+  const { manifest, digest, pageIndex } = preflight;
   const body = await response.json() as { events: DepegEvent[]; total: number; totalExact?: boolean; nextCursor: string | null };
-  const nextCursor = manifest.pages[index + 1]?.cursor ?? null;
-  const expectedCount = Math.min(DEPEG_LEDGER_PAGE_SIZE, manifest.total - index * DEPEG_LEDGER_PAGE_SIZE);
+  const nextCursor = manifest.pages[pageIndex + 1]?.cursor ?? null;
+  const expectedCount = Math.min(DEPEG_LEDGER_PAGE_SIZE, manifest.total - pageIndex * DEPEG_LEDGER_PAGE_SIZE);
   if (body.totalExact !== true || body.total !== manifest.total || body.events.length !== expectedCount
-    || body.nextCursor !== nextCursor || manifest.pages[index].sha256 !== await sha256Hex(stableJsonStringifyV1({
+    || body.nextCursor !== nextCursor || manifest.pages[pageIndex].sha256 !== await sha256Hex(stableJsonStringifyV1({
       events: body.events, total: body.total, nextCursor,
     }))) return ledgerRefusal(409, "ledger-page-changed");
   const headers = new Headers(response.headers);
@@ -280,6 +296,7 @@ export const handleDepegEvents = async (
   db: D1Database,
   url: URL,
   requestLane: "public-api" | "site-api" | null = null,
+  request?: Request,
 ): Promise<Response> => {
     const params = url.searchParams;
     const stablecoin = params.get("stablecoin");
@@ -291,10 +308,14 @@ export const handleDepegEvents = async (
     if (includePending instanceof Response) {
       return includePending;
     }
+    // Larger pages (up to 5,000 rows) are restricted to direct authenticated site-api
+    // callers (CI/release sync) with offset=0; browser-proxied /_site-data traffic
+    // always carries SITE_DATA_CLIENT_IP_HEADER and remains bounded to 1,000 rows.
+    const isDirectSiteApi = requestLane === "site-api" && !request?.headers.has(SITE_DATA_CLIENT_IP_HEADER);
     const pagination = {
       defaultLimit: 100,
       minLimit: 1,
-      maxLimit: requestLane === "site-api" ? 5000 : 1000,
+      maxLimit: isDirectSiteApi ? 5000 : 1000,
       maxOffset: 50_000,
     };
     const cursor = {
@@ -308,12 +329,21 @@ export const handleDepegEvents = async (
     if (parsedPagination instanceof Response) {
       return parsedPagination;
     }
+    if (parsedPagination.limit > 1000 && parsedPagination.offset !== 0) {
+      return errorResponse(400, "Parameter 'offset' cannot be combined with 'limit' > 1000; use cursor pagination");
+    }
 
     const ledgerGeneration = params.get("ledgerGeneration");
     if (ledgerGeneration !== null && (stablecoin !== null || active || includePending || !parsedPagination.includeTotal
       || parsedPagination.limit !== DEPEG_LEDGER_PAGE_SIZE || parsedPagination.offset !== 0
       || (ledgerGeneration === "latest" ? params.has("cursor") : !Sha256Schema.safeParse(ledgerGeneration).success))) {
       return ledgerRefusal(400, "invalid-ledger-page-request");
+    }
+    let ledgerPreflight: PreflightLedgerManifest | null = null;
+    if (ledgerGeneration !== null) {
+      const preflight = await preflightLedgerManifest(db, ledgerGeneration, params.get("cursor"));
+      if (preflight instanceof Response) return preflight;
+      ledgerPreflight = preflight;
     }
 
     const conditions: string[] = [];
@@ -391,8 +421,8 @@ export const handleDepegEvents = async (
         };
       },
     });
-    return ledgerGeneration !== null && response.ok
-      ? await verifyLedgerPage(db, response, ledgerGeneration, params.get("cursor"))
+    return ledgerPreflight !== null && response.ok
+      ? await verifyLedgerPageBody(response, ledgerPreflight)
       : response;
     } catch (error) {
       if (error instanceof DepegEventRowUnreadableError) {

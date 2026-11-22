@@ -74,7 +74,6 @@ describe("Pages release data refresh", () => {
 
   it("prefetches immutable snapshots concurrently and falls back cleanly when prefetch fails", async () => {
     vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-10-19T12:00:00Z"));
-    vi.stubEnv("SITE_API_SHARED_SECRET", "site-secret");
     const p = fixture(), barrier = concurrencyBarrier(3), snap = join(p.refreshDir, "prefetched-snapshot.json");
     vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
       expect(url).toBe("https://site-api.pharos.watch/api/snapshots/2026-10-18.json");
@@ -89,7 +88,7 @@ describe("Pages release data refresh", () => {
     const res = await run(p, {
       digests: async () => { await barrier(); return ok(); },
       depegEvents: async ({ outputPath }) => { await barrier(); writeJson(outputPath!, [{ id: "new" }]); return ok(); },
-    }, { env: { NODE_ENV: "test", PUBLIC_DATASETS_API_URL: "https://site-api.pharos.watch" } });
+    }, { env: { NODE_ENV: "test", PUBLIC_DATASETS_API_URL: "https://site-api.pharos.watch", SITE_API_SHARED_SECRET: "site-secret" } });
     expect(res.publicDatasets).toMatchObject({ ok: true, rolledBack: false, durationMs: expect.any(Number) });
     expect(existsSync(snap)).toBe(true);
     expect(spawn).toHaveBeenCalledWith(

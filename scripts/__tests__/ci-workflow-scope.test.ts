@@ -376,8 +376,10 @@ describe("CI workflow scope", () => {
     });
     expect(steps[build].run).toContain('if [ -z "${SITE_API_SHARED_SECRET//[[:space:]]/}" ]; then');
     expect(steps[build].run?.indexOf("exit 1")).toBeLessThan(steps[build].run!.indexOf("npm run generated:post-refresh"));
+    expect(steps[build].run).toContain("env -u SITE_API_SHARED_SECRET npx --no-install next build --webpack");
+    expect(steps[build].run).toContain("env -u SITE_API_SHARED_SECRET -u SITE_SESSION_SIGNING_KEY npm run postbuild");
     expect(steps.filter((s) => s.env?.SITE_API_SHARED_SECRET != null).map((s) => s.name)).toEqual([
-      "Refresh API-backed release data", "Build clean production export",
+      "Refresh API-backed release data", "Build clean production export", "Reject signing key in exported site",
     ]);
   });
 

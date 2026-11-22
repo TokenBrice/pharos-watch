@@ -452,6 +452,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   publicGet({
     key: "depeg-events",
     path: API_PATHS.depegEvents(),
+    cacheKeyQueryParams: ["stablecoin", "limit", "offset", "cursor", "active", "includeTotal", "ledgerGeneration", "includePending"],
     strictContract: true,
     probeGroup: "public",
   }),

@@ -96,10 +96,11 @@ async function prefetchPublicSnapshot(
   apiBase: string,
   snapshotDate: string,
   destinationPath: string,
+  env: NodeJS.ProcessEnv,
 ): Promise<{ snapshotFile?: string; log: string }> {
   const url = resolveApiPathUrl(apiBase, `/api/snapshots/${snapshotDate}.json`);
   try {
-    const headers = await generatorFetchHeaders(url);
+    const headers = await generatorFetchHeaders(url, env);
     const response = await fetchWithRetry(url, { headers }, { logLabel: "refresh-pages-release-data" });
     if (!response.ok) {
       await response.body?.cancel();
@@ -236,7 +237,7 @@ export async function refreshPagesReleaseData({
     settledProducer(dependencies.digests, { outputPath: refreshedDigestPath }),
     settledProducer(dependencies.depegEvents, { outputPath: refreshedDepegPath }),
     prefetchApiBase
-      ? prefetchPublicSnapshot(prefetchApiBase, targetDatasetDate, join(resolvedRefreshDir, "prefetched-snapshot.json"))
+      ? prefetchPublicSnapshot(prefetchApiBase, targetDatasetDate, join(resolvedRefreshDir, "prefetched-snapshot.json"), env)
       : Promise.resolve<{ snapshotFile?: string; log: string }>({ log: "" }),
   ]);
 

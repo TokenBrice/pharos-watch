@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { appendFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -173,6 +173,18 @@ export async function runPagesArtifactLane({ repoRoot = REPO_ROOT, acquireReleas
   };
   const originals = RESTORED_PATHS.filter((path) => existsSync(join(repoRoot, path)));
   let inputsBackedUp = false;
+  const localPublicOgDir = join(repoRoot, "public/og/v2");
+  const stashedPublicOgDir = join(temporary, "original-public-og-v2");
+  let stashedLocalPublicOg = false;
+  const moveDir = (from: string, to: string) => {
+    try {
+      renameSync(from, to);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException)?.code !== "EXDEV") throw error;
+      cpSync(from, to, { recursive: true });
+      rmSync(from, { recursive: true, force: true });
+    }
+  };
   try {
     for (const path of originals) {
       mkdirSync(dirname(join(temporary, "original", path)), { recursive: true });
@@ -217,12 +229,16 @@ export async function runPagesArtifactLane({ repoRoot = REPO_ROOT, acquireReleas
     const skipExistingDepsEnv: Partial<NodeJS.ProcessEnv> = reusePreparedWorkspace
       ? { PHAROS_GENERATED_SKIP_EXISTING_DEPS: "1" }
       : {};
-    const reducedCompileInput = reusePreparedWorkspace ? compileInputStageArtifacts(repoRoot) : [];
-    if (reducedCompileInput.length > 0) {
-      report(`- Compile input: reused prepared workspace; reran ${reducedCompileInput.join(", ")}`);
-      command("compile-input", process.execPath, [
-        "--import", "tsx", "scripts/maintenance/run-generated-artifacts.ts", `--only=${reducedCompileInput.join(",")}`,
-      ], skipExistingDepsEnv);
+    if (reusePreparedWorkspace) {
+      const reducedCompileInput = compileInputStageArtifacts(repoRoot);
+      if (reducedCompileInput.length > 0) {
+        report(`- Compile input: reused prepared workspace; reran ${reducedCompileInput.join(", ")}`);
+        command("compile-input", process.execPath, [
+          "--import", "tsx", "scripts/maintenance/run-generated-artifacts.ts", `--only=${reducedCompileInput.join(",")}`,
+        ], skipExistingDepsEnv);
+      } else {
+        report("- Compile input: reused prepared workspace; all outputs already current");
+      }
     } else {
       command("compile-input", "npm", ["run", "generated:compile-input"], skipExistingDepsEnv);
     }
@@ -232,8 +248,12 @@ export async function runPagesArtifactLane({ repoRoot = REPO_ROOT, acquireReleas
       PHAROS_DETAIL_SNAPSHOT_BOOTSTRAP: "1", PHAROS_DETAIL_SNAPSHOT_CHECK: "",
     });
     if (retained) replayPagesDetailSnapshots(repoRoot, join(temporary, "overlay"));
-    // Always keep out/ free of public/og/v2 so PR exports match production's
+    // Always keep out/ free of public/og/v2 so PR and local exports match production's
     // R2-first file count 1:1; OG render changes render into temporary below.
+    if (existsSync(localPublicOgDir)) {
+      moveDir(localPublicOgDir, stashedPublicOgDir);
+      stashedLocalPublicOg = true;
+    }
     command("post-refresh-replay", "npm", ["run", "generated:post-refresh"], {
       ...skipExistingDepsEnv,
       PHAROS_OG_EVERGREEN_MAP_ONLY: "1",
@@ -290,6 +310,10 @@ export async function runPagesArtifactLane({ repoRoot = REPO_ROOT, acquireReleas
         rmSync(join(repoRoot, path), { recursive: true, force: true });
         if (originals.includes(path)) cpSync(join(temporary, "original", path), join(repoRoot, path), { recursive: true });
       }
+    }
+    if (stashedLocalPublicOg) {
+      rmSync(localPublicOgDir, { recursive: true, force: true });
+      moveDir(stashedPublicOgDir, localPublicOgDir);
     }
     rmSync(temporary, { recursive: true, force: true });
   }

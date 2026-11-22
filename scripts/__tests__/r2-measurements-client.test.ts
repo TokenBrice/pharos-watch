@@ -251,7 +251,7 @@ describe("permanent social preview publication", () => {
       ifNoneMatch: "*", contentType: "image/png", cacheControl: "public, max-age=31536000, immutable",
       customMetadata: { "png-sha256": createHash("sha256").update(bytes).digest("hex") },
     } });
-    for (const [request, init] of fetchImpl.mock.calls.slice(2)) {
+    for (const [request, init] of fetchImpl.mock.calls) {
       expect([new URL(String(request)).origin, init?.method, new Headers(init?.headers).get("Authorization")])
         .toEqual(["https://api.cloudflare.com", "GET", `Bearer ${env.CLOUDFLARE_API_TOKEN}`]);
     }

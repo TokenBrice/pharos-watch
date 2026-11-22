@@ -187,21 +187,23 @@ describe("Pages artifact input profile", () => {
   });
 
   it.each([{ pre: true, fail: false }, { pre: true, fail: true }, { pre: false, fail: false }, { pre: false, fail: true }])(
-    "restores the preview map without copying rendered previews ($pre, $fail)",
+    "stashes pre-existing local public/og/v2 for R2-first parity and restores map + previews ($pre, $fail)",
     async ({ pre, fail }) => {
       const r = fixtureRoot(), map = "src/generated/social-preview-images.json";
       if (pre) { write(r, "public/og/v2/original.png", "original bytes"); write(r, map, "original map"); }
       expect(GENERATED_ARTIFACT_REGISTRY.find((a) => a.id === "social-preview-images")?.outputPaths).toEqual([map]);
+      let ogExistsAtBuild: boolean | undefined;
       spawn.mockImplementation((_p: string, a: string[]) => {
-        // Input-addressed: a replay only adds files; an existing name is never rewritten.
-        if (a.includes(POST)) { write(r, "public/og/v2/replayed.png", "replay-only image"); write(r, map, "replayed map"); }
+        if (a.includes(POST)) write(r, map, "replayed map");
+        if (a.includes("next")) ogExistsAtBuild = existsSync(join(r, "public/og/v2"));
         return { status: fail && a.includes("check:pages-release") ? 1 : 0, signal: null };
       });
       const res = runDeg(r);
       if (fail) await expect(res).rejects.toThrow(/pages-release-artifact-gates/);
       else await expect(res).resolves.toMatchObject({ dataStatus: "degraded-data" });
-      expect(readdirSync(join(r, "public/og/v2")).sort()).toEqual(pre ? ["original.png", "replayed.png"] : ["replayed.png"]);
-      if (pre) expect(read(r, map)).toBe("original map"); else expect(existsSync(join(r, map))).toBe(false);
+      expect(ogExistsAtBuild).toBe(false);
+      if (pre) { expect(readdirSync(join(r, "public/og/v2"))).toEqual(["original.png"]); expect(read(r, map)).toBe("original map"); }
+      else { expect(existsSync(join(r, "public/og/v2"))).toBe(false); expect(existsSync(join(r, map))).toBe(false); }
     },
   );
 
@@ -223,8 +225,9 @@ describe("Pages artifact input profile", () => {
       { ...a1, id: 5, workflow_run: { ...a1.workflow_run, head_branch: "candidate" } }, { ...a1, id: 6, workflow_run: { ...a1.workflow_run, head_repository_id: 200 } },
     ]).map((e) => e.id)).toEqual([2, 1]);
     expect(selectPagesReleaseRuns([
-      run(10, sA, { updated_at: "2026-10-07T01:00:00Z" }), run(10, sA, { updated_at: "2026-10-07T01:00:00Z" }),
-      run(11, sB, { path: REBUILD, event: "schedule", updated_at: "2026-10-07T02:00:00Z" }),
+      run(10, sA, { created_at: "2026-10-07T01:00:00Z", updated_at: "2026-10-08T09:00:00Z" }),
+      run(10, sA, { created_at: "2026-10-07T01:00:00Z" }),
+      run(11, sB, { path: REBUILD, event: "schedule", created_at: "2026-10-07T02:00:00Z", updated_at: "2026-10-07T02:05:00Z" }),
       run(12, sA, { status: "in_progress" }), run(13, sA, { conclusion: "failure" }), run(14, sA, { head_branch: "candidate" }),
       run(15, "short"), run(16, sA, { event: "pull_request" }), run(17, sA, { path: ".github/workflows/other.yml" }),
       run(18, sA, { head_repository: { full_name: "fork/pharos-watch" } }), run(19, sA, { head_repository: undefined }),
@@ -246,25 +249,31 @@ describe("Pages artifact input profile", () => {
       gh.mockClear();
     }
 
-    // Newest deploy lacks artifact, rebuild has expired/mismatched artifacts, third run wins; API failure degrades.
-    gh.mockReturnValueOnce(buf({ workflow_runs: [run(30, sC, { updated_at: "2026-10-08T03:00:00Z" }), run(10, sA, { updated_at: "2026-10-08T01:00:00Z" })] }))
-      .mockReturnValueOnce(buf({ workflow_runs: [run(20, sB, { path: REBUILD, event: "schedule", updated_at: "2026-10-08T02:00:00Z" })] }))
+    // Newest deploy lacks artifact, rebuild has expired/mismatched artifacts, third run wins; single-workflow fault stays isolated.
+    gh.mockReturnValueOnce(buf({ workflow_runs: [run(30, sC, { created_at: "2026-10-08T03:00:00Z" }), run(10, sA, { created_at: "2026-10-08T01:00:00Z" })] }))
+      .mockReturnValueOnce(buf({ workflow_runs: [run(20, sB, { path: REBUILD, event: "schedule", created_at: "2026-10-08T02:00:00Z" })] }))
       .mockReturnValueOnce(buf({ artifacts: [] }))
       .mockReturnValueOnce(buf({ artifacts: [art(2, 20, sB, { expired: true }), art(3, 99, sB)] }))
       .mockReturnValueOnce(buf({ artifacts: [a1] }))
       .mockImplementationOnce(() => { throw new Error("pages-artifact-data-invalid: zip 1"); });
     expect(() => preparePagesReleaseData(makeRoot(), makeRoot())).toThrow("zip 1");
     expect(gh.mock.calls.map((c) => (c[1] as string[]).at(-1))).toEqual([
-      `${API}/workflows/deploy-cloudflare.yml/runs?branch=main&status=success&per_page=10`,
-      `${API}/workflows/rebuild-pages.yml/runs?branch=main&status=success&per_page=10`,
+      `${API}/workflows/deploy-cloudflare.yml/runs?branch=main&status=success&per_page=30`,
+      `${API}/workflows/rebuild-pages.yml/runs?branch=main&status=success&per_page=30`,
       `${API}/runs/30/artifacts?name=pages-release-data-${sC}&per_page=100`,
       `${API}/runs/20/artifacts?name=pages-release-data-${sB}&per_page=100`,
       `${API}/runs/10/artifacts?name=pages-release-data-${sA}&per_page=100`,
       `${API}/artifacts/1/zip`,
     ]);
-    gh.mockClear().mockImplementationOnce(() => { throw new Error("gh network down"); });
+    gh.mockClear()
+      .mockReturnValueOnce(buf({ workflow_runs: [run(10, sA)] }))
+      .mockImplementationOnce(() => { throw new Error("rebuild API 500"); })
+      .mockReturnValueOnce(buf({ artifacts: [a1] }))
+      .mockImplementationOnce(() => { throw new Error("pages-artifact-data-invalid: survived rebuild fault"); });
+    expect(() => preparePagesReleaseData(makeRoot(), makeRoot())).toThrow("survived rebuild fault");
+    gh.mockClear().mockImplementation(() => { throw new Error("gh network down"); });
     expect(preparePagesReleaseData(makeRoot(), makeRoot()).dataStatus).toBe("degraded-data");
-    gh.mockClear();
+    gh.mockReset();
   });
 });
 

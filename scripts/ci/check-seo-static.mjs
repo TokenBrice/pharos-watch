@@ -1976,12 +1976,12 @@ export function collectSeoStaticCheckResult({
     }
   }
 
-  const knownSocialPreviewUrls = new Set();
+  const socialPreviewUrlByRoute = new Map();
   const socialPreviewMap = readJsonFile(socialPreviewMapPath);
   if (socialPreviewMap && typeof socialPreviewMap === "object" && !Array.isArray(socialPreviewMap)) {
-    for (const entry of Object.values(socialPreviewMap)) {
+    for (const [routeKey, entry] of Object.entries(socialPreviewMap)) {
       if (typeof entry?.url === "string" && socialPreviewAssetIdentity(entry.url)) {
-        knownSocialPreviewUrls.add(entry.url);
+        socialPreviewUrlByRoute.set(routeKey, entry.url);
       }
     }
   }
@@ -2008,12 +2008,16 @@ export function collectSeoStaticCheckResult({
         continue;
       }
       const filePath = path.join(outDir, localPath.replace(/^\/+/, ""));
-      // R2-first exports omit out/og/v2/: admit any canonical /og/v2/ identity
-      // registered in the generated preview map, or present in out/ for local builds.
+      // R2-first exports omit out/og/v2/: admit a canonical /og/v2/ identity only
+      // when it matches this route's registered preview-map entry (or "/" fallback
+      // on non-public chrome routes absent from the map), or exists on disk in out/.
+      const expectedRoutePreviewUrl = socialPreviewUrlByRoute.has(record.route)
+        ? socialPreviewUrlByRoute.get(record.route)
+        : socialPreviewUrlByRoute.get("/");
       const isMappedEvergreenPreview =
         localPath.startsWith("/og/v2/")
         && socialPreviewAssetIdentity(localPath) !== null
-        && knownSocialPreviewUrls.has(localPath);
+        && expectedRoutePreviewUrl === localPath;
       if (!isMappedEvergreenPreview && !fs.existsSync(filePath)) {
         missingOgImagePaths.add(localPath);
         errors.push(`${record.route}: ${field} references missing file ${localPath}`);

@@ -784,6 +784,9 @@ export function projectWorkerRuntimeCoin(coin, index) {
   if (typeof coin.geckoId === "string" && coin.geckoId.length > 0) {
     projected.geckoId = coin.geckoId;
   }
+  if (typeof coin.detailProvider === "string" && coin.detailProvider.length > 0) {
+    projected.detailProvider = coin.detailProvider;
+  }
   if (coin.flags.navToken === true) {
     projected.navToken = true;
   }
