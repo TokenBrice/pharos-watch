@@ -20,7 +20,7 @@ import type { PegSummaryCoin } from "@shared/types/peg";
 import type { StablecoinData } from "@shared/types/supply";
 import type { DexLiquidityMap } from "@shared/types/dex-liquidity";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
-import { makeStablecoin } from "@shared/test-utils/stablecoin";
+import { makeChainGapGuard, makeStablecoin } from "@shared/test-utils/stablecoin";
 import { FX_REOPEN_QUOTE_AT, makeFxCurrentPeg } from "@shared/test-utils/boundary-contract-vectors.test-support";
 import { getQuoteMatchedNavPriceReference } from "@/lib/nav-price-reference";
 import { formatComparisonPrice } from "@/lib/current-peg";
@@ -659,11 +659,7 @@ describe("supply-change semantics", () => {
   it.each(["change24h", "change7d"] as const)("sorts partial %s last in both directions and exports no change", (key) => {
     const partial = makeCoin("partial", "Partial", {
       circulating: { peggedUSD: 50 },
-      supplyChainGuard: {
-        reason: "supply-chain-dropout", status: "chains-unavailable", partialCoverage: true,
-        chains: [{ chainId: "ethereum", chainLabel: "Ethereum", listCurrentUsd: 0,
-          baselineUsd: 50, baselineObservedAt: 1_792_700_000, baselineSource: "state", resolution: "unavailable" }],
-      },
+      supplyChainGuard: makeChainGapGuard(true),
     });
     const unchanged = makeCoin("unchanged", "Unchanged", { circulating: { peggedUSD: 1_000_000 } });
     const zero = makeCoin("zero", "Zero", { circulating: { peggedUSD: 0 } });

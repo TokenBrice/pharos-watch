@@ -3,6 +3,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { McapChart } from "@/components/chart-primitives/mcap-chart";
+import { makeChainGapGuard } from "@shared/test-utils/stablecoin";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const START = Date.UTC(2026, 0, 1) / 1000;
@@ -66,13 +67,7 @@ it("withholds the 24h change when either day is a recorded partial-chain remaind
   const partialProvenance = {
     supplySource: "defillama",
     supplyObservedAt: null,
-    supplyChainGuard: {
-      reason: "supply-chain-dropout" as const, status: "chains-unavailable" as const, partialCoverage: true as const,
-      chains: [{
-        chainLabel: "HyperEVM", listCurrentUsd: 0, baselineUsd: 3_000, baselineObservedAt: START - 86_400,
-        baselineSource: "state" as const, resolution: "unavailable" as const,
-      }],
-    },
+    supplyChainGuard: makeChainGapGuard(true),
   };
   const { rerender } = render(<McapChart data={[
     data[0], { ...data[1], supplyProvenance: partialProvenance },

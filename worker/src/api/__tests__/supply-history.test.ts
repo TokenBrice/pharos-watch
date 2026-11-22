@@ -2,6 +2,7 @@ import * as perimeters from "@shared/lib/supply-perimeter-changes";
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, it, expect, vi } from "vitest";
 import { mockD1 as baseMockD1 } from "@shared/test-utils/mock-d1";
+import { makeChainGapGuard } from "@shared/test-utils/stablecoin";
 import { makeSupplyRow } from "../../test-helpers/__shared/fixtures";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleSupplyHistory } from "../supply-history";
@@ -191,13 +192,7 @@ describe("handleSupplyHistory", () => {
     const now = 1_800_000_000;
     vi.spyOn(Date, "now").mockReturnValue(now * 1000);
     const { db, sqlite } = fixtures.open();
-    const partialGuard = {
-      reason: "supply-chain-dropout", status: "chains-unavailable", partialCoverage: true, quarantinedSince: now - 9 * 86_400,
-      chains: [{
-        chainId: "hyperevm", chainLabel: "HyperEVM", listCurrentUsd: 0, baselineUsd: 3_000,
-        baselineObservedAt: now - 10 * 86_400, baselineSource: "state", resolution: "unavailable",
-      }],
-    };
+    const partialGuard = makeChainGapGuard(true);
     const complete = { supplySource: "defillama", supplyObservedAt: null, supplyChainGuard: null };
     const partial = { supplySource: "defillama", supplyObservedAt: now - 3 * 86_400 - 120, supplyChainGuard: partialGuard };
     const insert = sqlite.prepare(

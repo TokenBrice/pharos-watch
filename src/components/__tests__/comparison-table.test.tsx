@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ComparisonTable } from "@/components/compare/comparison-table";
 import type { StablecoinData } from "@shared/types/supply";
-import { makeStablecoin } from "@shared/test-utils/stablecoin";
+import { makeChainGapGuard, makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makeUnreportedBluechipRating } from "@shared/test-utils/bluechip.test-support";
 import type { ComparisonCoinEntry } from "@/lib/compare-derive";
 import { BLUECHIP_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/bluechip-freshness";
@@ -384,10 +384,7 @@ describe("ComparisonTable", () => {
 
   it("withholds market-cap deltas when current supply is a partial-coverage remainder", () => {
     const coin = makeCoin("test", "TST");
-    coin.data = { ...coin.data, supplyChainGuard: {
-      reason: "supply-chain-dropout", status: "chains-unavailable", partialCoverage: true,
-      chains: [{ chainLabel: "HyperEVM", listCurrentUsd: null, baselineUsd: 10, baselineObservedAt: 1, baselineSource: "state", resolution: "unavailable" }],
-    } };
+    coin.data = { ...coin.data, supplyChainGuard: makeChainGapGuard(true) };
     const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} />);
     const rows = html.match(/<tr\b[^>]*>[\s\S]*?<\/tr>/g)?.filter((row) => row.includes("Market-cap change ·"));
     expect(rows).toHaveLength(3);

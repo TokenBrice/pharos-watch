@@ -8,6 +8,7 @@ import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
 import { useCompareShareActions } from "../use-compare-share-actions";
 import type { ComparisonCoinEntry } from "@/lib/compare-derive";
 import type { StablecoinData } from "@shared/types/supply";
+import { makeChainGapGuard } from "@shared/test-utils/stablecoin";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 
 const shareImageMocks = vi.hoisted(() => ({
@@ -72,11 +73,7 @@ describe("useCompareShareActions", () => {
     const missing = makeCoin("usdc-circle", "USDC");
     missing.data = coverage === "unavailable" ? { ...missing.data, circulating: {} } : {
       ...missing.data,
-      supplyChainGuard: {
-        reason: "supply-chain-dropout", status: "chains-unavailable", partialCoverage: true,
-        chains: [{ chainId: "ethereum", chainLabel: "Ethereum", listCurrentUsd: 0,
-          baselineUsd: 50, baselineObservedAt: 1_792_700_000, baselineSource: "state", resolution: "unavailable" }],
-      },
+      supplyChainGuard: makeChainGapGuard(true),
     };
     const zero = makeCoin("usdt-tether", "USDT");
     zero.data = { ...zero.data, circulating: { peggedUSD: 0 } };
