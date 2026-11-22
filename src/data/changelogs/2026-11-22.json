@@ -1,0 +1,147 @@
+{
+  "dateRange": {
+    "from": "2026-11-16",
+    "to": "2026-11-22"
+  },
+  "headline": "All 11 methodologies now share one admission verdict for prices and references, and every API key maps to a plan.",
+  "fieldNotes": "Weekend and non-USD depeg errors came from each consumer judging staleness on its own. The 19 November release replaced that with one admission verdict carried by every price and reference, so a held value displays as held, not as a stale number. Later releases repaired places where strict evidence withheld too much: USDC's 24h change had gone blank over a 0.05% Cardano gap, and PAXG and XAUT physical exits had left the Exit pillar every weekend.",
+  "summary": [
+    {
+      "label": "Reference admission",
+      "tag": "feature",
+      "description": "One release on 19 November moved all 11 methodologies. Prices, FX rates and peg references keep their source clock and market session, and the API, pages and alerts show held values instead of stale numbers.",
+      "href": "/methodology/"
+    },
+    {
+      "label": "Pricing 6.90",
+      "tag": "feature",
+      "description": "Seven releases, 6.84 to 6.90. A rejected vault rate no longer falls back to its cached rate, stale DEX pools cannot replace a fresh quote, and USDC regains its 24h and 7d changes across a Cardano provider gap.",
+      "href": "/methodology/pricing-pipeline-changelog/"
+    },
+    {
+      "label": "Depeg detection 6.54",
+      "tag": "feature",
+      "description": "Seven releases, 6.48 to 6.54. PegScore reads NR after a full day without a usable price, Solayer sUSD loses a false +1,814 bps deviation, and a disputed fragment no longer lowers an incident's worst peak.",
+      "href": "/methodology/depeg-changelog/"
+    },
+    {
+      "label": "Safety Score 10.49",
+      "tag": "feature",
+      "description": "Four releases, 10.46 to 10.49. Reserve claims on the coin itself earn no Backing credit, an expired reviewed composition no longer reads as nondisclosure, and PAXG and XAUT exits stay scored through metal closures.",
+      "href": "/methodology/scoring-changelog/"
+    },
+    {
+      "label": "Liquidity Score 7.53",
+      "tag": "feature",
+      "description": "Four releases, 7.5 to 7.53. DEX prices keep their observation clocks, headline TVL deducts reviewed Curve overlap, and a closed FX or metal market no longer strips measured exit capacity from a route.",
+      "href": "/methodology/liquidity-score-changelog/"
+    },
+    {
+      "label": "Yield 8.60",
+      "tag": "feature",
+      "description": "Six releases, 8.55 to 8.60. Unclaimable reward campaigns no longer inflate APY, on-chain sources measure 30-day APY from the share price, two Morpho vaults use Morpho's net APY and sBOLD is held after its exploit.",
+      "href": "/methodology/yield-changelog/"
+    },
+    {
+      "label": "API plans and endpoints",
+      "tag": "feature",
+      "description": "Every API key maps to a plan, with monthly quotas from 1 January 2027. Compliance, contract-resolver and Risk-Gate endpoints, a stateless MCP server and an embeddable Safety badge ship with a rebuilt /api/ page.",
+      "href": "/api/"
+    },
+    {
+      "label": "Pages and previews",
+      "tag": "design",
+      "description": "Coin pages put a halt, open depeg or paused redemption above calm figures, and the redesign reaches nearly every page. Shared links show grade-free artwork, while grades move to dated scorecards."
+    },
+    {
+      "label": "Catalog and reserves",
+      "tag": "coverage",
+      "description": "DJED joins the cemetery after its wind-down notice, with three older failures recorded. MiCA coverage grows from 236 to 294 assessed coins, 11 stale reserve compositions are renewed and six adapters repaired."
+    }
+  ],
+  "stats": {
+    "totalCommits": 258
+  },
+  "commits": [
+    {
+      "hash": "74ea83bd",
+      "message": "test(compliance): align client-boundary assertions with mounted hidden regime panels"
+    },
+    {
+      "hash": "2cd05e04",
+      "message": "fix(pages): clear build-size, CSS canary, and SEO static gates"
+    },
+    {
+      "hash": "abbda670",
+      "message": "fix(ci): refresh og-cemetery, fix architecture boundaries, and align updated tests"
+    },
+    {
+      "hash": "b8213286",
+      "message": "chore(methodology): date Pricing v6.90 from its first publication"
+    },
+    {
+      "hash": "e97c50da",
+      "message": "fix(table): reset sticky thead offset when horizontal scroll viewport is active"
+    },
+    {
+      "hash": "72e2a1c5",
+      "message": "fix(stability-index): balance hero columns with top drags, Beacon sizing, and Regime scale pills"
+    },
+    {
+      "hash": "f38113cf",
+      "message": "fix(supply): compare a matched perimeter across an uncounted chain gap (Pricing v6.90)"
+    },
+    {
+      "hash": "151e2a46",
+      "message": "fix(depeg): balance hero columns by moving DEWS alert queue to full-width bottom band"
+    },
+    {
+      "hash": "81e89ff2",
+      "message": "Fix Carbon High review and live QA findings across redesign"
+    },
+    {
+      "hash": "7eadddff",
+      "message": "Implement Phases 4 & 5 redesign: power tools, chrome, analytics, compliance, discovery"
+    },
+    {
+      "hash": "15844fdb",
+      "message": "fix(overview-table): calibrate column min-widths for shared table-shell padding and visible star cells"
+    },
+    {
+      "hash": "13b24692",
+      "message": "feat(api-page): own section for free badges, symmetric offers, policy copy"
+    },
+    {
+      "hash": "6c729f2c",
+      "message": "fix(yield): deduplicate SourceRiskDriverChips keys and layer T-Bill label above scatter"
+    },
+    {
+      "hash": "c0005737",
+      "message": "fix(ui-qa): deduplicate yield warnings, float scatter T-Bill label, tighten compact no-call label"
+    },
+    {
+      "hash": "9f087527",
+      "message": "design(phase-2-3): overhaul dossier, homepage, and 5 core rail instruments"
+    },
+    {
+      "hash": "38818648",
+      "message": "design(phase-0-1): fix P0 collisions, WCAG frost-blue, tonal ladder, and unified tables"
+    },
+    {
+      "hash": "39e2bf71",
+      "message": "feat(api-page): value-first /api/ landing with real examples and team plans"
+    },
+    {
+      "hash": "07a5361d",
+      "message": "test(ci): expect the new public routes in the post-deploy sweep run"
+    },
+    {
+      "hash": "9521a928",
+      "message": "test(ci): register the new isolate caches and sweep the new public routes"
+    },
+    {
+      "hash": "4fbbd8e0",
+      "message": "fix(api-page,blog): real MCP tool names, supporter wording, one partner roster"
+    }
+  ]
+}
