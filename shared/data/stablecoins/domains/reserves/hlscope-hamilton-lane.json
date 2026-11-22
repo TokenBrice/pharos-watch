@@ -2,11 +2,11 @@
   "id": "hlscope-hamilton-lane",
   "reserves": [
     {
-      "name": "Hamilton Lane SCOPE Securitize Tokenized Feeder LP interest (Main Fund NAV)",
-      "pct": 100,
+      "name": "First Lien Senior Secured private credit loans (Hamilton Lane SCOPE Main Fund look-through via Securitize tokenized feeder)",
+      "pct": 99,
       "risk": "high",
-      "assetClass": "fund-share",
-      "issuerOrObligor": "Hamilton Lane SCOPE Securitize Tokenized Feeder, LP (Delaware) investing into Hamilton Lane Senior Credit Opportunities Fund S.A. SICAV-RAIF (Luxembourg); underlying private-credit borrowers",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "Hamilton Lane SCOPE Securitize Tokenized Feeder, LP (Delaware) investing into Hamilton Lane Senior Credit Opportunities Fund S.A. SICAV-RAIF (Luxembourg); diversified private-credit borrowers (>500 issuers across 139 investments; top 10 positions 1.54% to 2.15% each)",
       "riskFactors": [
         "credit",
         "liquidity",
@@ -14,44 +14,67 @@
         "custody",
         "counterparty",
         "concentration",
-        "legal"
+        "legal",
+        "leverage"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    },
+    {
+      "name": "Junior Debt private credit loans (Hamilton Lane SCOPE Main Fund look-through via Securitize tokenized feeder)",
+      "pct": 1,
+      "risk": "very-high",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "Hamilton Lane SCOPE Securitize Tokenized Feeder, LP (Delaware) investing into Hamilton Lane Senior Credit Opportunities Fund S.A. SICAV-RAIF (Luxembourg); subordinated private-credit borrowers",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "market",
+        "custody",
+        "counterparty",
+        "concentration",
+        "legal",
+        "leverage"
       ],
       "liquidityHorizon": "over-seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (CurB21YUSD)",
-    "confidence": "verified",
+    "reviewedAt": "2026-11-22",
+    "reviewer": "Pharos reserve research 2026-11-22 (#2148 Batch A)",
+    "confidence": "probable",
     "sources": [
       {
-        "label": "SEC Form D/A: Hamilton Lane SCOPE Securitize Tokenized Feeder, LP (CIK 0001976710; filed 2025-08-01)",
-        "url": "https://www.sec.gov/Archives/edgar/data/1976710/000197671025000002/primary_doc.xml"
+        "label": "Hamilton Lane SCOPE Global Monthly Report (September 2026; Main Fund portfolio as of 2026-09-30, PDF created 2026-10-30, SHA-256 cedc564f18509b4afe246ed264cf8770318f76f55678305f15f7177b0d2aaf62)",
+        "url": "https://www.hamiltonlane.com/getContentAsset/b42dd6c0-d057-4082-bde2-3e8c1fee015c/0b0e59f2-9970-4afa-b744-ecfc2d550dff/SCOPE-Global-Monthly-Report-September-2026.pdf?language=en-US"
+      },
+      {
+        "label": "Hamilton Lane SCOPE strategy page (monthly manager valuation; Share Class Performance dated 31/10/2026 observed 2026-11-22, no October monthly report PDF or feeder composition published)",
+        "url": "https://www.hamiltonlane.com/en-us/strategies/evergreen/global/senior-credit-opportunities-fund"
+      },
+      {
+        "label": "Hamilton Lane SCOPE monthly report archive (checked 2026-11-22; newest archive entry August 2026, September 2026 on main strategy page)",
+        "url": "https://www.hamiltonlane.com/en-us/fact-sheet-archive/scope-row"
       },
       {
         "label": "Hamilton Lane SCOPE SA SICAV-RAIF private placement memorandum (December 2025)",
         "url": "https://www.hamiltonlane.com/getContentAsset/f266e02e-c9a9-42f7-a85a-4d5ece6100bf/dfc3d011-8f63-43f6-9ed8-4b444333a1d0/HL-SCOPE-SA-SICAV-RAIF-PPM-December-2025.pdf?language=en-US"
       },
       {
-        "label": "Hamilton Lane SCOPE Global Monthly Report (June 2026)",
-        "url": "https://www.hamiltonlane.com/getContentAsset/106530b1-f11a-4ad0-b56d-b19b3861b165/dfc3d011-8f63-43f6-9ed8-4b444333a1d0/SCOPE-Global-Monthly-Report-June-2026.pdf?language=en-US"
-      },
-      {
-        "label": "Hamilton Lane SCOPE strategy page (monthly valuation cadence; newer Share Class Performance dated 31/08/2026 observed 2026-10-01, not a feeder composition report)",
-        "url": "https://www.hamiltonlane.com/en-us/strategies/evergreen/global/senior-credit-opportunities-fund"
+        "label": "SEC Form D/A: Hamilton Lane SCOPE Securitize Tokenized Feeder, LP (CIK 0001976710; filed 2025-08-01)",
+        "url": "https://www.sec.gov/Archives/edgar/data/1976710/000197671025000002/primary_doc.xml"
       },
       {
         "label": "Hamilton Lane / Securitize HLSCOPE launch (tokenized feeder structure)",
         "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize"
       },
       {
-        "label": "Securitize HLSCOPE primary-market page",
+        "label": "Securitize HLSCOPE primary-market page (checked 2026-11-22; no public feeder holdings report)",
         "url": "https://securitize.io/primary-market/hl-scope"
       }
     ],
-    "rationale": "Re-reviewed on 2026-10-01 as a standing-structure composition: Hamilton Lane's issuer disclosure and Securitize's primary-market page continue to identify HLSCOPE as the tokenized feeder interest in SCOPE. The single reserve row remains conservatively high risk, with its previously curated 2026-07-31 composition date retained. The current manager strategy page separately shows Share Class Performance dated 31/08/2026 and confirms monthly manager valuation; this newer NAV observation supplies no dated feeder holdings composition, so the period-matched July performance observation is retained in proofOfReserves.latestReport. The issuer's public monthly-report archive still lists June 2026 as its newest report. The June report and December 2025 PPM remain historical Main Fund risk context. No new underlying loan weights, cash sleeve, composition date or protective custody terms are inferred, and the SEC filing was not newly re-verified because its archive endpoint was inaccessible.",
-    "compositionBasis": "Retained 2026-07-31 curated feeder-interest composition; tokenized-feeder structure re-verified from Hamilton Lane issuer disclosure and Securitize primary-market page on 2026-10-01; August manager performance is a separate NAV observation, not a composition refresh",
-    "compositionAsOf": "2026-07-31",
+    "rationale": "Updated on 2026-11-22 from Hamilton Lane's SCOPE Global Monthly Report for September 2026 (as of 2026-09-30; PDF metadata creation date 2026-10-30, SHA-256 cedc564f18509b4afe246ed264cf8770318f76f55678305f15f7177b0d2aaf62). Page 2 Current Portfolio Construction reports Main Fund Security Type weights totaling 100%: 99% First Lien Senior Secured and 1% Junior Debt (100% floating rate; $2.69B fund total assets at manager-approved fair market value; 89% North America and 11% Europe; 34% Industrials Business Services, 18% IT, 15% Health Care, 11% Consumer Discretionary, 9% Industrials Other, 5% Financials, 3% Communication Services, 2% Consumer Staples, 2% Materials, 1% Real Estate; >500 issuers across 139 unique investments; 43% weighted-average company LTV, 5.1x average borrower debt-to-EBITDA, 2.3x interest coverage, and moderate fund-level leverage). Confidence stays probable because this report measures the Luxembourg Main Fund (SCOPE S.A. SICAV-RAIF) rather than the separate Delaware tokenized feeder (Hamilton Lane SCOPE Securitize Tokenized Feeder, LP), is unaudited manager reporting without liability reconciliation, and does not disclose feeder-level cash, fees, leverage, or a token-to-fund share denominator. The strategy page Share Class Performance table was separately observed updated to 31/10/2026, but neither an October 2026 Main Fund PDF nor any public tokenized-feeder holdings report was published as of 2026-11-22; the tokenized-feeder report remains an open issuer wait.",
+    "compositionBasis": "Hamilton Lane SCOPE Global Monthly Report (September 2026, as of 2026-09-30) Main Fund Security Type breakdown (99% First Lien Senior Secured, 1% Junior Debt); Main Fund look-through proxy pending a dedicated tokenized-feeder report",
+    "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
     "observations": [
       {
@@ -90,8 +113,24 @@
         "instrumentKey": "Hamilton Lane SCOPE Securitize Tokenized Feeder, LP (Delaware) investing into Hamilton Lane Senior Credit Opportunities Fund S.A. SICAV-RAIF (Luxembourg); underlying private-credit borrowers"
       }
     ],
-    "knownUnknownExposure": "No residual unknown exposure within the reserve composition: the entire reserve is the tokenized feeder LP interest. The underlying Main Fund loan-level weights and cash sleeve are look-through risk details, not reserve slices.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposure": "The September 2026 report covers the Luxembourg Main Fund (SCOPE S.A. SICAV-RAIF) rather than the Delaware tokenized feeder LP, omits feeder-level cash, liabilities, and token-to-fund share reconciliation, and discloses only the top 10 loan weights (18.16% combined) out of 139 investments across >500 issuers. Both Main Fund security-type slices remain basket-needs-split look-through buckets until a dedicated tokenized-feeder holdings and liability report is published.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "First Lien Senior Secured private credit loans (Hamilton Lane SCOPE Main Fund look-through via Securitize tokenized feeder)",
+        "pct": 99,
+        "disposition": "basket-needs-split",
+        "rationale": "Main Fund September 2026 Security Type slice across >500 private-credit borrowers and 139 investments; individual obligors beyond the top 10 and any feeder-level cash or liability adjustments are not publicly disclosed."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Junior Debt private credit loans (Hamilton Lane SCOPE Main Fund look-through via Securitize tokenized feeder)",
+        "pct": 1,
+        "disposition": "basket-needs-split",
+        "rationale": "Main Fund September 2026 subordinated private-credit slice; individual borrowers, maturity schedules, and feeder-level scope reconciliation are not publicly disclosed."
+      }
+    ]
   },
   "custodyProfile": {
     "providers": [

@@ -22,15 +22,20 @@
     "attestorTier": "self",
     "cadence": "monthly",
     "latestReport": {
-      "periodEnd": "2026-07-31",
+      "periodEnd": "2026-09-30",
+      "publishedAt": "2026-10-30",
       "assuranceMethod": "self-verification",
       "scope": "assets-only",
       "liabilityReconciliation": "none",
-      "reviewer": "Sol curation pass 2026-10-01 (CurB21YUSD)",
+      "reviewer": "Pharos reserve research 2026-11-22 (#2148 Batch A)",
       "confidence": "probable",
       "sources": [
         {
-          "label": "Hamilton Lane SCOPE strategy page (prior Share Class Performance dated 31/07/2026, observed 2026-08-29; retained with July composition; newer 31/08/2026 performance observed 2026-10-01 is recorded in reserveReview, not a new composition report; publication date not stated)",
+          "label": "Hamilton Lane SCOPE Global Monthly Report (September 2026; Main Fund total assets $2.69B at fair market value, 99% First Lien Senior Secured / 1% Junior Debt; PDF metadata dated 2026-10-30; Main Fund scope, not tokenized feeder)",
+          "url": "https://www.hamiltonlane.com/getContentAsset/b42dd6c0-d057-4082-bde2-3e8c1fee015c/0b0e59f2-9970-4afa-b744-ecfc2d550dff/SCOPE-Global-Monthly-Report-September-2026.pdf?language=en-US"
+        },
+        {
+          "label": "Hamilton Lane SCOPE strategy page (monthly manager valuation; Share Class Performance updated to 31/10/2026 observed 2026-11-22, no October PDF or feeder report published)",
           "url": "https://www.hamiltonlane.com/en-us/strategies/evergreen/global/senior-credit-opportunities-fund"
         }
       ]

@@ -49,16 +49,16 @@
     "attestorTier": "niche",
     "cadence": "real-time",
     "latestReport": {
-      "periodEnd": "2026-08-28",
-      "publishedAt": "2026-08-29",
+      "periodEnd": "2026-11-17",
+      "publishedAt": "2026-11-22",
       "assuranceMethod": "onchain-proof",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Pharos reserve research",
+      "reviewer": "Pharos reserve research 2026-11-22 (#2148 Batch A)",
       "confidence": "probable",
       "sources": [
         {
-          "label": "Yuzu Accountable dashboard API",
+          "label": "Yuzu Accountable dashboard API (exposure_split_ts 2026.11.17 07:50:11 UTC; dashboard ts 2026-11-22T15:31:11.623Z; 3.846507% unattributed shortfall and -$10.09M signed Ethena USDe Loop persist)",
           "url": "https://cache.accountable.capital/dashboard/yuzu"
         },
         {

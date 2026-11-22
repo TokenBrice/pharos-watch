@@ -20,32 +20,40 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "GROK-RESEARCH wave-8 reserve susd1plus-lorenzo",
+    "reviewedAt": "2026-11-22",
+    "reviewer": "Reserve renewal 2026-11-22 (issue #2148 batch B pinned on-chain pass)",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Lorenzo USD1+ OTF mainnet launch (issuer publication)",
+        "label": "Pinned BSC sUSD1+ vault reads at finalized block 135105062 (2026-11-22T15:43:09Z; cross-checked at block 134557903)",
+        "url": "https://bnb-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Verified sUSD1PlusVault implementation source and ABI (0x972c27ee69b19d7648cef365700c22713a9a31fd)",
+        "url": "https://sourcify.dev/server/v2/contract/56/0x972c27ee69b19d7648cef365700c22713a9a31fd?fields=sources,abi"
+      },
+      {
+        "label": "Lorenzo vault detail API (retrieved 2026-11-22; supported_assets usd1/usdt/usdc, unit_nav 1.03559329, tvl $80.02M)",
+        "url": "https://otf.lorenzo-protocol.xyz/lorenzo/v1/vault/detail/56/0x4F2760B32720F013E900DC92F65480137391199b"
+      },
+      {
+        "label": "Lorenzo OTF GraphQL API (retrieved 2026-11-22; aggregatedTVL $80.02M vs detailedTVL $516.59K with invalid Bybit key)",
+        "url": "https://lorenzo-api.lorenzo-protocol.xyz/v1/graphql/otf"
+      },
+      {
+        "label": "Lorenzo USD1+ OTF mainnet launch (issuer publication dated 2025-07-21, re-checked 2026-11-22)",
         "url": "https://lorenzo-protocol.ghost.io/usd1-mainnet-launch/"
       },
       {
-        "label": "Lorenzo USD1+ OTF guide (issuer publication)",
-        "url": "https://lorenzo-protocol.ghost.io/your-quick-guide-to-joining-the-lorenzo-usd1-otf-testnet/"
-      },
-      {
-        "label": "sUSD1+ BSC proxy underlying() = WLFI USD1 (on-chain)",
-        "url": "https://bscscan.com/address/0x4f2760b32720f013e900dc92f65480137391199b#readProxyContract"
-      },
-      {
-        "label": "Phemex Academy Lorenzo overview (independent secondary)",
-        "url": "https://phemex.com/academy/what-is-lorenzo-protocol"
+        "label": "Lorenzo sUSD1+ OTF redemption guide (dated 2026-03-27, re-checked 2026-11-22; 3-6 day NAV settlement)",
+        "url": "https://lorenzo-protocol.ghost.io/susd1-otf-redemption-guide/"
       }
     ],
-    "rationale": "Re-opened 2026-09-04 against Lorenzo's issuer launch publication dated 2025-07-21. The publication identifies sUSD1+ as a non-rebasing fund share in USD1+ OTF, accepts USD1, USDT, and USDC deposits, and combines RWA, CeFi quantitative, and DeFi strategies before settling redemptions in WLFI USD1. The BSC proxy underlying() read at block 0x6b4e24 during the 2026-07-28 review points to USD1, but that settlement and contract reference does not establish that 100% of the strategy portfolio is USD1. The issuer publishes no weights for the accepted inputs or strategy sleeves and no reconciled custody inventory, so this portfolio cannot be represented as a single tracked-parent reserve link.",
-    "compositionBasis": "Lorenzo USD1+ OTF issuer launch publication dated 2025-07-21 and companion OTF guide; BSC underlying() call at block 0x6b4e24; Phemex Academy overview updated 2026-07-20",
-    "compositionAsOf": "2026-07-28",
+    "rationale": "2026-11-22 pinned renewal replacing the earlier invalid pre-deployment BSC block 0x6b4e24. Pinned reads at finalized BSC block 135105062 (hash 0xd17dd951447a985c059fe779e9059378fe6e9f69913f773c8fac7b10381c822d, 2026-11-22T15:43:09Z; cross-checked post-deployment at block 134557903, 2026-11-19T19:18:02Z) confirm sUSD1+ proxy 0x4f2760b32720f013e900dc92f65480137391199b delegates to verified UUPS implementation 0x972c27ee69b19d7648cef365700c22713a9a31fd. The contract is a custom OTF vault rather than ERC-4626 (totalAssets() reverts; verified ABI exposes underlying(), acceptUnderlying(), totalSupply(), getCurrentUnitNav(), portfolios(), and weights()). At block 135105062, underlying() returns BSC WLFI USD1 (0x8d0d...8b0d), acceptUnderlying() returns true for BSC USDT and BSC USDC, totalSupply() is 77,267,454.651691 sUSD1+ (18 decimals), getCurrentUnitNav() is 1.03559329 (implied BSC NAV $80,017,657.62), settlementPeriod() is 106, unsettledWithdrawShares() is 70,778.486922, and portfolios()/weights() route 100% of deposits to EOA 0x8fc570c84ee087c1102ed3f137db329980f08c4c (empty bytecode). Idle on-chain balances at block 135105062 are only 674.610814 USD1 (0.00084% of NAV) in the proxy and zero USDT/USDC; both 0x8fc5...8c4c and the unused usd1PlusVault 0xaefc...4867 hold zero USD1, USDT, and USDC. Lorenzo's vault detail and GraphQL APIs on 2026-11-22 confirm accepted deposits (USD1, USDT, USDC) and aggregatedTVL of $80,017,794.13 ($80,017,657.57 BSC plus $136.56 Ethereum), while detailedTVL reports only $516,590.27 (0.65% of TVL) across Binance/OKX/Bybit sub-accounts with an invalid Bybit API key and zero Cobo transit. Because >99.3% of backing sits in undisclosed off-chain RWA, CeFi quant, and DeFi sleeves with no dated issuer weights, the composition remains one explicit 100% fund-share basket at conservative high risk and probable confidence without a single-parent usd1-world-liberty-financial reserve link (consistent with owner ruling D26).",
+    "compositionBasis": "Pinned BSC vault state and idle balance reads at finalized block 135105062 (2026-11-22T15:43:09Z), verified sUSD1PlusVault source/ABI, Lorenzo vault detail and GraphQL APIs (2026-11-22), and issuer launch/redemption publications; strategy sleeve weights remain undisclosed",
+    "compositionAsOf": "2026-11-22",
     "scope": "full-composition",
-    "knownUnknownExposure": "The 100% strategy portfolio is not split among accepted USD1, USDT, and USDC deposits or the RWA, CeFi quantitative, and DeFi positions; no single-parent USD1 share is established. Under owner ruling D26 reviewed on 2026-10-01, the USD1 brand and settlement relationship do not support favorable single-parent inheritance until a measured USD1 claim is proven.",
+    "knownUnknownExposure": "The 100% strategy portfolio is not split among accepted USD1, USDT, and USDC deposits or the RWA, CeFi quantitative, and DeFi positions; only $674.61 USD1 sits idle in the BSC vault and $516,590.27 (0.65% of $80.02M TVL) appears in Lorenzo's partial detailedTVL exchange feed. Under owner ruling D26 reviewed on 2026-10-01, USD1 branding, underlying(), and USD1 settlement do not establish a measured single-parent USD1 reserve claim.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -53,7 +61,12 @@
         "reserveName": "Lorenzo USD1+ OTF mixed strategy portfolio (USD1, USDT, and USDC deposits; RWA, CeFi quant, and DeFi strategies)",
         "pct": 100,
         "disposition": "basket-needs-split",
-        "rationale": "The issuer publication dated 2025-07-21 names USD1, USDT, and USDC as accepted inputs and identifies RWA, CeFi quantitative, and DeFi sleeves, but publishes no weights. The BSC underlying() pointer confirms USD1 settlement and cannot prove 100% USD1 reserve exposure."
+        "rationale": "Verified on-chain state (acceptUnderlying for USDT and USDC; $674.61 idle USD1 vs $80.02M NAV) and issuer APIs/publications confirm accepted USD1, USDT, and USDC deposits deployed off-chain across RWA, CeFi quant, and DeFi sleeves with no published weights; underlying() confirms USD1 settlement only and cannot prove 100% USD1 backing.",
+        "candidateCoinIds": [
+          "usd1-world-liberty-financial",
+          "usdt-tether",
+          "usdc-circle"
+        ]
       }
     ]
   },
