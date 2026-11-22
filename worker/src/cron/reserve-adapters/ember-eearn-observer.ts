@@ -16,6 +16,7 @@ export const EARN_VAULT_ABI = parseAbi([
 export const EARN_VALIDATOR_ABI = parseAbi([
   "function withdrawalFee(address vault) view returns (uint256 permanentFeePercentage, uint256 timeBasedFeePercentage, uint256 balanceThreshold)",
   "function depositAllowListCount(address vault) view returns (uint256)",
+  "function withdrawAllowListCount(address vault) view returns (uint256)",
 ]);
 export const EARN_PROTOCOL_CONFIG_ABI = parseAbi([
   "function getProtocolPauseStatus() view returns (bool)",
@@ -26,29 +27,29 @@ const EARN = {
   vault: {
     address: "0x9be9294722f8aad37b11a9792be2c782182cafa2",
     codeHash: "0x864cc9ad53b338b82da1f7cab85ab0b3d5c8861acb422b6fec63cf36234f36a6",
-    implementationAddress: "0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e",
-    implementationCodeHash: "0x4448a74aff5a6b95fe30cebf1187f9dc647d81413ae7e06410e7772b4b64efc4",
+    implementationAddress: "0xd0ac2cd802604702df874bc45aee88e8884b896d",
+    implementationCodeHash: "0x740c8ffb95fd1cbfbaeae31d19808a5ae9a0000e4b696954a8b7b2a5b1b77eb8",
   } satisfies ProxyIdentity,
   validator: {
     address: "0x4c735b0989f1a7464991bcca9f0e8c661ba54465",
     codeHash: "0x864cc9ad53b338b82da1f7cab85ab0b3d5c8861acb422b6fec63cf36234f36a6",
-    implementationAddress: "0x2bebb55c0ca126b0d883fb94843c0a2c13102522",
-    implementationCodeHash: "0x537bb88a640ed963c5848c27bdb3ac3b7da135642908db377b4c9a362cdd61f9",
+    implementationAddress: "0x5ad0f3f05181fff16ecb9c57d0128908edf6a501",
+    implementationCodeHash: "0xf0a9c4d15b616bebb64bbc17cc63f136fcd992fe5463948390d95799eb885037",
   } satisfies ProxyIdentity,
   protocolConfig: {
     address: "0x1dc4836e5a0a95105bee1899e3b6bbb1714480fb",
     codeHash: "0x864cc9ad53b338b82da1f7cab85ab0b3d5c8861acb422b6fec63cf36234f36a6",
-    implementationAddress: "0x540db273e41587a748365f01f35adb095b58bfeb",
-    implementationCodeHash: "0x2c629d0cdee4894f27ca680a5d168a46ae8ed829e6d5e0c424f5d3e12dc866c7",
+    implementationAddress: "0xf65f23f12810b934e7d561c51ebf959b89c73d70",
+    implementationCodeHash: "0xcbafb5b3b5d63b031422fe385a4b3e405d82b52741c70555f1eebb559cac66aa",
   } satisfies ProxyIdentity,
   assetAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
   assetDecimals: 6,
   sourceUrls: [
     "https://ember.so/earn/eEARN",
     "https://etherscan.io/address/0x9be9294722f8aad37b11a9792be2c782182cafa2#readContract",
-    "https://eth.blockscout.com/address/0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e?tab=contract",
-    "https://eth.blockscout.com/address/0x2bebb55c0ca126b0d883fb94843c0a2c13102522?tab=contract",
-    "https://eth.blockscout.com/address/0x540db273e41587a748365f01f35adb095b58bfeb?tab=contract",
+    "https://eth.blockscout.com/address/0xd0ac2cd802604702df874bc45aee88e8884b896d?tab=contract",
+    "https://eth.blockscout.com/address/0x5ad0f3f05181fff16ecb9c57d0128908edf6a501?tab=contract",
+    "https://eth.blockscout.com/address/0xf65f23f12810b934e7d561c51ebf959b89c73d70?tab=contract",
   ],
 } as const;
 
@@ -118,6 +119,13 @@ function earnFields() {
       args: [EARN.vault.address],
     }),
     abiObservation({
+      label: "earn-withdraw-allow-list-count",
+      contract: EARN.validator.address,
+      abi: EARN_VALIDATOR_ABI,
+      functionName: "withdrawAllowListCount",
+      args: [EARN.vault.address],
+    }),
+    abiObservation({
       label: "earn-protocol-paused",
       contract: EARN.protocolConfig.address,
       abi: EARN_PROTOCOL_CONFIG_ABI,
@@ -160,6 +168,7 @@ export async function observeEarn(
   );
   const pauseStatus = state.values["earn-pause-status"] as readonly [boolean, boolean, boolean];
   const protocolPaused = state.values["earn-protocol-paused"] as boolean;
+  const withdrawAllowListCount = state.values["earn-withdraw-allow-list-count"] as bigint;
   const feeParts = state.values["earn-withdrawal-fee"] as readonly [bigint, bigint, bigint];
   const totalFeeRaw = feeParts[0] + feeParts[1];
   const feeBps = fixedPointFeeBpsCeil(totalFeeRaw, 10n ** 18n, EARN.coinId);
@@ -193,7 +202,7 @@ export async function observeEarn(
       ? "Ember withdrawal requests are open onchain and redeem to USDC at the vault's NAV share price, but settlement is operator-batched with no proven <=300-second completion bound"
       : "Ember withdrawal requests or privileged processing are paused onchain",
     feeBps,
-    holderEligibility: "any-holder",
+    holderEligibility: withdrawAllowListCount === 0n ? "any-holder" : "whitelisted-primary",
     blockNumber,
     sourceTimestamp: blockTimestamp,
     sourceUrls: [...EARN.sourceUrls],
@@ -215,6 +224,7 @@ export async function observeEarn(
       pendingWithdrawals: (state.values["earn-pending-withdrawals"] as bigint).toString(),
       minWithdrawableSharesRaw: (state.values["earn-min-withdrawable-shares"] as bigint).toString(),
       depositAllowListCount: (state.values["earn-deposit-allow-list-count"] as bigint).toString(),
+      withdrawAllowListCount: withdrawAllowListCount.toString(),
       totalAssetsRaw: (state.values["earn-total-assets"] as bigint).toString(),
       idleUnderlyingBalanceRaw: (state.values["earn-idle-usdc"] as bigint).toString(),
       idleUnderlyingUsedAsCapacity: false,

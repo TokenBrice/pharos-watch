@@ -1,5 +1,6 @@
 import type { DexExecutionCapabilityGate } from "@shared/types/dex-execution";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
+import type { DexValuationPrices } from "../../../lib/dex-api-token-pricing";
 import type { PriceValidationReferences } from "../../../lib/price-validation";
 import type { UniV3ExecutionCandidate, UniswapV4ExecutionCandidate } from "../../measured-execution/candidate-types";
 import type { EvmV2ExecutionCandidate } from "../types";
@@ -10,7 +11,7 @@ export interface DexExecutionTargetFactoryInput {
     chainAddressToId: SymbolLookups["chainAddressToId"];
     symbolToChainScopedIds: SymbolLookups["symbolToChainScopedIds"];
     contractMetaByChainAddress?: SymbolLookups["contractMetaByChainAddress"];
-    stablecoinPriceById?: Map<string, number>;
+    stablecoinPriceById?: DexValuationPrices;
     validationReferences?: PriceValidationReferences;
     measuredTargetCapturedAt: number;
     uniV3ExecutionCandidates: Map<string, UniV3ExecutionCandidate[]>;

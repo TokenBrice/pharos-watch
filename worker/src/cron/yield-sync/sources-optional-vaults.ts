@@ -3,6 +3,7 @@ import { isRecord } from "@shared/lib/type-guards";
 import { MORPHO_NET_YIELD_SOURCES, OPTIONAL_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 import { CHAIN_META, normalizeChainId } from "@shared/types/chain-identity";
 import { throwIfAborted } from "../../lib/abort";
+import { finiteDecimalNumberFromBigInt } from "../../lib/bigint";
 import { USER_AGENT } from "../../lib/constants";
 import { DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES, fetchJsonWithRetry, fetchWithRetry } from "../../lib/fetch-retry";
 import { cancelResponseBodyQuietly, readResponseJsonWithinLimitWithSignal } from "../../lib/response-body";
@@ -100,58 +101,188 @@ interface MorphoVaultItem {
 }
 
 const MORPHO_GRAPHQL_URL = "https://api.morpho.org/graphql";
+const MORPHO_REST_V0_BASE_URL = "https://api.morpho.org/v0";
+const ETHEREUM_USDC_ADDRESS = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
+const ETHEREUM_USDC_DECIMALS = 6;
+const MORPHO_FEE_WAD_MAX = 10n ** 18n;
+const MORPHO_PRICE_FUTURE_SKEW_SEC = 5 * 60;
+const MORPHO_REST_MAX_RESPONSE_BYTES = 16 * 1024;
+
+function parseUnsignedBigInt(value: unknown): bigint | null {
+  return typeof value === "string" && /^\d+$/.test(value) ? BigInt(value) : null;
+}
+
+function parseMorphoUnixTimestamp(value: unknown): number | null {
+  if (typeof value === "number") return Number.isSafeInteger(value) && value > 0 ? value : null;
+  if (typeof value === "string" && /^\d+$/.test(value)) {
+    const parsed = Number(value);
+    return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+  }
+  return null;
+}
+
+async function fetchMorphoRestJson(
+  path: string,
+  signal: AbortSignal,
+  errorMessage: string,
+): Promise<Record<string, unknown>> {
+  throwIfAborted(signal);
+  const result = await fetchJsonWithRetry<unknown>(
+    `${MORPHO_REST_V0_BASE_URL}${path}`,
+    { headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal },
+    0,
+    { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS, maxResponseBytes: MORPHO_REST_MAX_RESPONSE_BYTES },
+  );
+  if (!result?.response.ok || !isRecord(result.body)) {
+    throw new Error(errorMessage);
+  }
+  return result.body;
+}
 
 export async function fetchMorphoNetVaultSource(
   config: typeof MORPHO_NET_YIELD_SOURCES[keyof typeof MORPHO_NET_YIELD_SOURCES],
   startSec: number,
   signal: AbortSignal,
 ): Promise<ResolvedYield | null> {
-  const result = await fetchJsonWithRetry<unknown>(MORPHO_GRAPHQL_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
-    body: JSON.stringify({
-      query: `query($address: String!) {
-        vaultByAddress(address: $address, chainId: 1) {
-          address chain { id }
-          state { netApy fee timestamp totalAssetsUsd }
-        }
-      }`,
-      variables: { address: config.vaultAddress },
-    }),
-    signal,
-  }, 0, { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS, maxResponseBytes: 8 * 1024 });
-  if (!result?.response.ok || !isRecord(result.body) || result.body.errors != null) {
-    throw new Error("Morpho V1 vault query failed");
-  }
-  const { data } = result.body;
-  const vault = isRecord(data) ? data.vaultByAddress : null;
-  if (!isRecord(vault) || typeof vault.address !== "string" || vault.address.toLowerCase() !== config.vaultAddress
-    || !isRecord(vault.chain) || vault.chain.id !== 1) {
+  const vaultKey = `1:${config.vaultAddress}`;
+
+  const vaultBody = await fetchMorphoRestJson(`/vaults-v1/${vaultKey}`, signal, "Morpho V1 vault query failed");
+  const vault = vaultBody.data;
+  if (
+    !isRecord(vault) ||
+    vault.chain_id !== 1 ||
+    typeof vault.address !== "string" ||
+    vault.address.toLowerCase() !== config.vaultAddress
+  ) {
     throw new Error("Morpho V1 vault identity mismatch");
   }
-  if (vault.state === null) return null;
-  if (!isRecord(vault.state)) throw new Error("Malformed Morpho V1 vault state");
-  const { timestamp, fee: rawFee, totalAssetsUsd, netApy: rawNetApy } = vault.state;
-  if (timestamp === undefined || rawFee === undefined || totalAssetsUsd === undefined || rawNetApy === undefined) {
-    throw new Error("Incomplete Morpho V1 vault state");
+  if (
+    !isRecord(vault.asset) ||
+    typeof vault.asset.address !== "string" ||
+    vault.asset.address.toLowerCase() !== ETHEREUM_USDC_ADDRESS ||
+    vault.asset.decimals !== ETHEREUM_USDC_DECIMALS
+  ) {
+    throw new Error("Morpho V1 vault asset identity mismatch");
   }
-  const sourceObservedAt = getFiniteNumber(timestamp);
-  const sourceFetchedAt = Math.floor(Date.now() / 1000);
-  if (sourceObservedAt == null || !Number.isSafeInteger(sourceObservedAt) || sourceObservedAt <= 0
-    || sourceObservedAt > Math.min(startSec, sourceFetchedAt) || (startSec - sourceObservedAt) * 1000 > STALE_THRESHOLD_MS) {
+  if (vault.fee_wad === undefined) throw new Error("Incomplete Morpho V1 vault metadata");
+  if (vault.fee_wad === null) return null;
+  const feeWad = parseUnsignedBigInt(vault.fee_wad);
+  if (feeWad == null) throw new Error("Malformed Morpho V1 vault metadata");
+  if (feeWad <= 0n || feeWad > MORPHO_FEE_WAD_MAX) return null;
+
+  const stateBody = await fetchMorphoRestJson(
+    `/vaults-v1/${vaultKey}/state`,
+    signal,
+    "Morpho V1 vault state query failed",
+  );
+  if (stateBody.data === null) return null;
+  if (!isRecord(stateBody.data)) throw new Error("Malformed Morpho V1 vault state");
+  if (
+    stateBody.data.chain_id !== 1 ||
+    typeof stateBody.data.address !== "string" ||
+    stateBody.data.address.toLowerCase() !== config.vaultAddress
+  ) {
+    throw new Error("Morpho V1 vault state identity mismatch");
+  }
+  if (stateBody.data.total_assets === undefined) throw new Error("Incomplete Morpho V1 vault state");
+  if (stateBody.data.total_assets === null) return null;
+  const totalAssetsRaw = parseUnsignedBigInt(stateBody.data.total_assets);
+  if (totalAssetsRaw == null) throw new Error("Malformed Morpho V1 vault state");
+  if (totalAssetsRaw <= 0n) return null;
+
+  const historyBody = await fetchMorphoRestJson(
+    `/vaults-v1/${vaultKey}/apy/history?lookback=six_hours`,
+    signal,
+    "Morpho V1 vault APY history query failed",
+  );
+  const historyParams = historyBody.params;
+  if (
+    !isRecord(historyParams) ||
+    (historyParams.chain_id !== "1" && historyParams.chain_id !== 1) ||
+    typeof historyParams.vault_address !== "string" ||
+    historyParams.vault_address.toLowerCase() !== config.vaultAddress
+  ) {
+    throw new Error("Morpho V1 vault APY history identity mismatch");
+  }
+  if (historyBody.data === null) return null;
+  if (!Array.isArray(historyBody.data)) throw new Error("Malformed Morpho V1 vault APY history");
+  if (historyBody.data.length === 0) return null;
+
+  let latestPoint: Record<string, unknown> | null = null;
+  let sourceObservedAt = -Infinity;
+  const lastHistoryItem = historyBody.data[historyBody.data.length - 1];
+  for (const point of historyBody.data) {
+    if (!isRecord(point) || point.timestamp === undefined || point.apy === undefined) {
+      throw new Error("Incomplete Morpho V1 vault APY history");
+    }
+    if (point.timestamp === null) {
+      if (point === lastHistoryItem) return null;
+      continue;
+    }
+    const ts = parseMorphoUnixTimestamp(point.timestamp);
+    if (ts == null) throw new Error("Malformed Morpho V1 vault APY history");
+    if (ts >= sourceObservedAt) {
+      sourceObservedAt = ts;
+      latestPoint = point;
+    }
+  }
+  if (!latestPoint) return null;
+  if (latestPoint.apy === null) return null;
+  if (typeof latestPoint.apy !== "number") throw new Error("Malformed Morpho V1 vault APY history");
+  const netApy = getFiniteNumber(latestPoint.apy);
+  if (netApy == null) return null;
+
+  const apyCheckedAt = Math.floor(Date.now() / 1000);
+  if (
+    sourceObservedAt > Math.min(startSec, apyCheckedAt) ||
+    (startSec - sourceObservedAt) * 1000 > STALE_THRESHOLD_MS
+  ) {
     return null;
   }
-
-  const fee = getFiniteNumber(rawFee);
-  const sourceTvlUsd = getFiniteNumber(totalAssetsUsd);
-  const netApy = getFiniteNumber(rawNetApy);
-  if (fee == null || fee <= 0 || fee > 1 || sourceTvlUsd == null || sourceTvlUsd <= 0 || netApy == null) return null;
   const currentApy = netApy * 100;
   if (currentApy < -100 || !isDeterministicApyWithinSanityBounds(currentApy)) return null;
 
+  const priceBody = await fetchMorphoRestJson(
+    `/tokens/1:${ETHEREUM_USDC_ADDRESS}/price`,
+    signal,
+    "Morpho V1 token price query failed",
+  );
+  if (priceBody.data === null) return null;
+  if (
+    !isRecord(priceBody.data) ||
+    priceBody.data.chain_id !== 1 ||
+    typeof priceBody.data.address !== "string" ||
+    priceBody.data.address.toLowerCase() !== ETHEREUM_USDC_ADDRESS
+  ) {
+    throw new Error("Morpho V1 token price identity mismatch");
+  }
+  if (priceBody.data.price === undefined || priceBody.data.timestamp === undefined) {
+    throw new Error("Incomplete Morpho V1 token price");
+  }
+  if (priceBody.data.price === null || priceBody.data.timestamp === null) return null;
+  if (typeof priceBody.data.price !== "number") throw new Error("Malformed Morpho V1 token price");
+  const assetPriceUsd = getFiniteNumber(priceBody.data.price);
+  const priceTimestamp = parseMorphoUnixTimestamp(priceBody.data.timestamp);
+  if (priceTimestamp == null) throw new Error("Malformed Morpho V1 token price");
+
+  const sourceFetchedAt = Math.floor(Date.now() / 1000);
+  const maxPriceTimestamp = Math.min(sourceFetchedAt, startSec + MORPHO_PRICE_FUTURE_SKEW_SEC);
+  if (
+    assetPriceUsd == null ||
+    assetPriceUsd <= 0 ||
+    priceTimestamp > maxPriceTimestamp ||
+    (startSec - priceTimestamp) * 1000 > STALE_THRESHOLD_MS
+  ) {
+    return null;
+  }
+
+  const totalAssets = finiteDecimalNumberFromBigInt(totalAssetsRaw, ETHEREUM_USDC_DECIMALS);
+  const sourceTvlUsd = totalAssets != null ? totalAssets * assetPriceUsd : null;
+  if (sourceTvlUsd == null || !Number.isFinite(sourceTvlUsd) || sourceTvlUsd <= 0) return null;
+
   return {
     currentApy,
-    apyBase: null,
+    apyBase: currentApy,
     apyReward: null,
     sourcePool: config.corroboratingPoolId,
     sourceTvlUsd,

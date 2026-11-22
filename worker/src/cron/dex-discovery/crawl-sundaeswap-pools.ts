@@ -1,6 +1,7 @@
 import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import { readRecord as asRecord } from "@shared/lib/type-guards";
 import { BPS_PER_UNIT, toTokenUnits } from "@shared/lib/math";
+import { DAY_SECONDS, HOUR_SECONDS } from "@shared/lib/time-constants";
 import { isSundaeSwapDiscoveryDeployment } from "@shared/lib/dex-deployment-coverage";
 import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
@@ -8,6 +9,7 @@ import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { buildPriceValidationContext, getReferencePriceForContext } from "../../lib/price-validation";
 import { DEX_LIQUIDITY_POOL_MIN_TVL_USD } from "../dex-liquidity/constants";
+import { passesUsdVolumeSourcePreflight } from "../dex-liquidity/pool-volume-sanity";
 import { isPlausibleDexObservationPrice } from "../dex-liquidity/price-sanity";
 import { fetchDexDiscoveryJsonEndpoint } from "./fetch-json-endpoint";
 import { type CrawlStageContext, toStagedPool } from "./staged-pool";
@@ -16,7 +18,7 @@ import { STAGED_POOL_MAX_TVL_USD, makeDexDeploymentProviderCheck, type DexDeploy
 /** SundaeSwap's keyless GraphQL index covers its V1, V3, Stableswaps and V4 pools. */
 const SUNDAESWAP_GRAPHQL_URL = "https://api.sundae.fi/graphql";
 const SUNDAESWAP_POOLS_QUERY =
-  "query($asset: ID!) { pools { byAsset(asset: $asset) { id version bidFee askFee prices rates quantities assets { id ticker } modules { kind identifier } } } }";
+  "query($asset: ID!, $start: String!, $end: String!) { pools { byAsset(asset: $asset) { id version bidFee askFee prices rates quantities assets { id ticker } modules { kind identifier } current { asOf { unixMilli } } ticks(interval: Hourly, start: $start, end: $end) { rich { start { unixMilli } end { unixMilli } volume(unit: AssetA) { quantity asset { id decimals } } } } } } }";
 /**
  * `byAsset` takes no pagination and silently stops at 50 rows (2026-11-15:
  * ADA returned exactly 50 of 3,340 pools), so a full page is a capped read.
@@ -27,12 +29,21 @@ const SUNDAESWAP_MAX_RESPONSE_BYTES = 256 * 1024;
 const SUNDAESWAP_TIMEOUT_MS = 8_000;
 const SUNDAESWAP_MAX_RETRIES = 1;
 const SUNDAESWAP = "sundaeswap";
+const SUNDAESWAP_AS_OF_FUTURE_GRACE_SEC = 300;
+const SUNDAESWAP_LEG_DIVISOR = new Map<string, number>([
+  ["V1", 1],
+  ["V3", 1],
+  ["Stableswaps", 1],
+  ["V4", 2],
+]);
 
 const LEGACY_SHAPES = new Map([["V1", "constant-product"], ["V3", "constant-product"], ["Stableswaps", "stableswap"]]);
 const UNVALUED = { tvlUsd: null, priceUsd: null } as const;
+const NO_VOLUME = { volume24h: null, volumeWindowEndSec: null } as const;
 
 interface SundaePool {
   id: string;
+  version: string;
   /** Curve family: legacy version or the V4 invariant module, e.g. `constant-sum`. */
   shape: string;
   feeBps: number | null;
@@ -40,7 +51,8 @@ interface SundaePool {
   oneToOne: boolean;
   assets: Array<{ id: string; ticker: string }>;
   quantities: bigint[];
-  raw: unknown;
+  asOfMs: number | null;
+  tickRows: unknown[] | null;
 }
 
 export interface SundaeSwapPoolsStageResult {
@@ -83,6 +95,21 @@ function parseFeeBps(value: unknown): number | null {
     : null;
 }
 
+function formatSundaeUtc(epochSec: number): string {
+  return new Date(epochSec * 1_000).toISOString().slice(0, 19).replace("T", " ");
+}
+
+function parseUnixMilli(value: unknown): number | null {
+  if (typeof value === "number") {
+    return Number.isSafeInteger(value) && value >= 0 ? value : null;
+  }
+  if (typeof value === "string" && /^(?:0|[1-9]\d*)$/u.test(value)) {
+    const parsed = Number(value);
+    return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : null;
+  }
+  return null;
+}
+
 function parsePool(value: unknown): SundaePool | null {
   const row = asRecord(value);
   const assetRows: unknown[] | null = Array.isArray(row?.assets) ? row.assets : null;
@@ -106,8 +133,9 @@ function parsePool(value: unknown): SundaePool | null {
 
   const modules: unknown[] = Array.isArray(row.modules) ? row.modules : [];
   const invariant = asRecord(modules.find((module) => asRecord(module)?.kind === "invariant"))?.identifier;
-  const shape = LEGACY_SHAPES.get(String(row.version)) ??
-    (row.version === "V4" && typeof invariant === "string" && /^[a-z_]{1,40}$/u.test(invariant)
+  const version = typeof row.version === "string" ? row.version : "";
+  const shape = LEGACY_SHAPES.get(version) ??
+    (version === "V4" && typeof invariant === "string" && /^[a-z_]{1,40}$/u.test(invariant)
       ? invariant.replaceAll("_", "-")
       : "unknown");
   const configuredRates: unknown[] = [
@@ -116,14 +144,19 @@ function parsePool(value: unknown): SundaePool | null {
   ];
   const bidBps = parseFeeBps(row.bidFee);
   const askBps = parseFeeBps(row.askFee);
+  const asOfMs = parseUnixMilli(asRecord(asRecord(row.current)?.asOf)?.unixMilli);
+  const rawRich = asRecord(row.ticks)?.rich;
+  const tickRows = Array.isArray(rawRich) ? rawRich : null;
   return {
     id: row.id,
+    version,
     shape,
     feeBps: bidBps == null || askBps == null ? null : Math.max(bidBps, askBps),
     oneToOne: configuredRates.every((rate) => rate === configuredRates[0]),
     assets: assets as SundaePool["assets"],
     quantities: quantities as bigint[],
-    raw: value,
+    asOfMs,
+    tickRows,
   };
 }
 
@@ -167,8 +200,93 @@ function valuePool(
     : UNVALUED;
 }
 
+/**
+ * Compute provable 24h USD volume for an already-valued stable-counter pool from
+ * its 24 complete hourly `ticks` buckets denominated in `AssetA`. V1, V3, and
+ * Stableswaps report single-leg volume (1x); V4 reports double-leg volume (÷2).
+ * Fails closed to null on partial GraphQL errors, stale/missing `current.asOf`,
+ * unknown versions, malformed ticks, or excessive turnover.
+ */
+function valuePoolVolume24h(
+  pool: SundaePool,
+  trackedIndex: number,
+  target: ContractDeployment,
+  tvlUsd: number | null,
+  hasGraphqlErrors: boolean,
+  context: CrawlStageContext,
+): { volume24h: number | null; volumeWindowEndSec: number | null } {
+  if (hasGraphqlErrors || tvlUsd == null || tvlUsd < DEX_LIQUIDITY_POOL_MIN_TVL_USD) return NO_VOLUME;
+  const legDivisor = SUNDAESWAP_LEG_DIVISOR.get(pool.version) ?? null;
+  if (legDivisor == null || pool.asOfMs == null || pool.tickRows == null) return NO_VOLUME;
+  const asOfSec = Math.floor(pool.asOfMs / 1_000);
+  const floorHourSec = Math.floor(context.nowSec / HOUR_SECONDS) * HOUR_SECONDS;
+  if (asOfSec <= 0 || asOfSec > context.nowSec + SUNDAESWAP_AS_OF_FUTURE_GRACE_SEC) return NO_VOLUME;
+  const effectiveWindowEndSec = Math.min(floorHourSec, Math.floor(asOfSec / HOUR_SECONDS) * HOUR_SECONDS);
+  if (effectiveWindowEndSec <= 0 || effectiveWindowEndSec < floorHourSec - HOUR_SECONDS) return NO_VOLUME;
+
+  const assetA = pool.assets[0];
+  const assetAInfo = trackedIndex === 0
+    ? { stablecoinId: context.stablecoinId, decimals: target.decimals }
+    : assetA ? trackedCardanoAssets.get(assetA.id) : undefined;
+  if (!assetA || !assetAInfo || assetAInfo.decimals == null) return NO_VOLUME;
+  const assetARef = getReferencePriceForContext(
+    buildPriceValidationContext({ stablecoinId: assetAInfo.stablecoinId }),
+    context.references,
+  );
+  if (assetARef == null || !Number.isFinite(assetARef) || assetARef <= 0) return NO_VOLUME;
+
+  const windowStartSec = effectiveWindowEndSec - DAY_SECONDS;
+  const qtyByStartSec = new Map<number, bigint>();
+  for (const rawTick of pool.tickRows) {
+    const tick = asRecord(rawTick);
+    const startMs = parseUnixMilli(asRecord(tick?.start)?.unixMilli);
+    const endMs = parseUnixMilli(asRecord(tick?.end)?.unixMilli);
+    if (startMs == null || endMs == null || startMs % 1_000 !== 0 || endMs % 1_000 !== 0 || endMs < startMs) {
+      return NO_VOLUME;
+    }
+    const startSec = startMs / 1_000;
+    const endSec = endMs / 1_000;
+    if (startSec < windowStartSec || endSec > effectiveWindowEndSec) continue;
+    if (endSec - startSec !== HOUR_SECONDS || startSec % HOUR_SECONDS !== 0) return NO_VOLUME;
+    const volume = asRecord(tick?.volume);
+    const volumeAsset = asRecord(volume?.asset);
+    const volumeAssetId = toRegistryAsset(volumeAsset?.id);
+    const quantityStr = volume?.quantity;
+    if (
+      volumeAssetId !== assetA.id
+      || volumeAsset?.decimals !== assetAInfo.decimals
+      || typeof quantityStr !== "string"
+      || !/^(?:0|[1-9]\d*)$/u.test(quantityStr)
+    ) {
+      return NO_VOLUME;
+    }
+    const qty = BigInt(quantityStr);
+    const prev = qtyByStartSec.get(startSec);
+    if (prev !== undefined) {
+      if (prev !== qty) return NO_VOLUME;
+      continue;
+    }
+    qtyByStartSec.set(startSec, qty);
+  }
+  let sumRawQty = 0n;
+  for (const qty of qtyByStartSec.values()) sumRawQty += qty;
+  const rawUnits = sumRawQty === 0n ? 0 : toTokenUnits(sumRawQty, assetAInfo.decimals);
+  if (rawUnits == null) return NO_VOLUME;
+  const volume24h = (rawUnits / legDivisor) * assetARef;
+  if (!Number.isFinite(volume24h) || volume24h < 0 || !passesUsdVolumeSourcePreflight(tvlUsd, volume24h)) {
+    return NO_VOLUME;
+  }
+  return { volume24h, volumeWindowEndSec: effectiveWindowEndSec };
+}
+
 /** Stages one pool; returns whether it counts as observed for the census. */
-function stagePool(pool: SundaePool, trackedIndex: number, target: ContractDeployment, context: CrawlStageContext): boolean {
+function stagePool(
+  pool: SundaePool,
+  trackedIndex: number,
+  target: ContractDeployment,
+  hasGraphqlErrors: boolean,
+  context: CrawlStageContext,
+): boolean {
   const valued = valuePool(pool, trackedIndex, target, context);
   const { tvlUsd, priceUsd } = valued.tvlUsd != null && valued.tvlUsd <= STAGED_POOL_MAX_TVL_USD ? valued : UNVALUED;
   // A valued pool under the retained-pool floor is a completed below-threshold
@@ -176,6 +294,7 @@ function stagePool(pool: SundaePool, trackedIndex: number, target: ContractDeplo
   if (tvlUsd != null && tvlUsd < DEX_LIQUIDITY_POOL_MIN_TVL_USD) return false;
   const poolId = canonicalExitRouteScopedKey(target.chain, pool.id);
   if (context.hasKnownPool(poolId)) return true;
+  const { volume24h, volumeWindowEndSec } = valuePoolVolume24h(pool, trackedIndex, target, tvlUsd, hasGraphqlErrors, context);
   const pair = pool.assets.length === 2;
   context.addPool(
     toStagedPool(context, {
@@ -186,7 +305,7 @@ function stagePool(pool: SundaePool, trackedIndex: number, target: ContractDeplo
       dexId: SUNDAESWAP,
       symbol: pool.assets.map((asset) => asset.ticker).join(" / "),
       tvlUsd,
-      volume24h: null,
+      volume24h,
       qualityMultiplier: null,
       poolType: `sundaeswap-${pool.shape}`,
       feeTier: pool.feeBps,
@@ -197,7 +316,7 @@ function stagePool(pool: SundaePool, trackedIndex: number, target: ContractDeplo
       quoteSymbol: pair ? pool.assets[1]!.ticker : null,
       priceUsd,
       lockedLiqPct: null,
-      rawJson: JSON.stringify(pool.raw),
+      rawJson: volumeWindowEndSec != null ? JSON.stringify({ sundaeswapVolumeWindowEndSec: volumeWindowEndSec }) : null,
     }),
   );
   return true;
@@ -210,9 +329,10 @@ function stageTargetPools(body: unknown, target: ContractDeployment, context: Cr
     return { ...makeDexDeploymentProviderCheck(target, SUNDAESWAP, "degraded"), error: "sundaeswap-malformed-payload" };
   }
   const rows: unknown[] = byAsset;
+  const hasGraphqlErrors = root?.errors != null;
   // GraphQL reports resolver errors beside partial data under HTTP 200, and a
   // full page is the silent row cap: neither is a complete answer.
-  let error = root?.errors != null ? "sundaeswap-graphql-errors"
+  let error = hasGraphqlErrors ? "sundaeswap-graphql-errors"
     : rows.length >= SUNDAESWAP_BY_ASSET_ROW_CAP ? "sundaeswap-row-cap" : undefined;
   let observedPoolCount = 0;
   for (const row of rows) {
@@ -222,7 +342,7 @@ function stageTargetPools(body: unknown, target: ContractDeployment, context: Cr
       error ??= "sundaeswap-malformed-row";
       continue;
     }
-    if (stagePool(pool, trackedIndex, target, context)) observedPoolCount += 1;
+    if (stagePool(pool, trackedIndex, target, hasGraphqlErrors, context)) observedPoolCount += 1;
   }
   const check = makeDexDeploymentProviderCheck(target, SUNDAESWAP, error ? "degraded" : "success", {
     observedPoolCount: error && observedPoolCount === 0 ? undefined : observedPoolCount,
@@ -249,6 +369,10 @@ export async function crawlSundaeSwapPoolsStage(input: {
   if (input.context.timeExceeded()) return { providerChecks: [], stoppedEarly: true };
   if (!(await shouldAttemptFetch(input.db, CIRCUIT_SOURCE.SUNDAESWAP_DISCOVERY))) return { providerChecks: [] };
 
+  const floorHourSec = Math.floor(input.context.nowSec / HOUR_SECONDS) * HOUR_SECONDS;
+  const tickWindowStart = formatSundaeUtc(floorHourSec - 25 * HOUR_SECONDS);
+  const tickWindowEnd = formatSundaeUtc(floorHourSec);
+
   const providerChecks: DexDeploymentProviderCheck[] = [];
   let stoppedEarly = false;
   let transportFailed = false;
@@ -261,7 +385,11 @@ export async function crawlSundaeSwapPoolsStage(input: {
       url: SUNDAESWAP_GRAPHQL_URL,
       body: JSON.stringify({
         query: SUNDAESWAP_POOLS_QUERY,
-        variables: { asset: `${target.address.slice(0, 56)}.${target.address.slice(56)}` },
+        variables: {
+          asset: `${target.address.slice(0, 56)}.${target.address.slice(56)}`,
+          start: tickWindowStart,
+          end: tickWindowEnd,
+        },
       }),
       signal: input.context.buildStageSignal(SUNDAESWAP_TIMEOUT_MS),
       maxRetries: SUNDAESWAP_MAX_RETRIES,

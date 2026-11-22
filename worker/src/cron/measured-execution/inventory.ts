@@ -154,7 +154,7 @@ export function buildPancakeMeasuredExecutionTargets(input: {
   chainAddressToId: Map<string, string>;
   symbolToChainScopedIds: Map<string, Map<string, string[]>>;
   validationReferences?: PriceValidationReferences;
-  stablecoinPriceById?: Map<string, number>;
+  stablecoinPriceById?: DexValuationPrices;
   capturedAt: number;
 }): Map<string, DexMeasuredExecutionTarget> {
   const targets = new Map<string, DexMeasuredExecutionTarget>();
@@ -238,7 +238,7 @@ export function buildPancakeMeasuredExecutionTargets(input: {
 interface ClMeasuredExecutionTargetInput {
   stablecoinId: string;
   candidate: UniV3ExecutionCandidate | SlipstreamExecutionCandidate;
-  stablecoinPriceById: Map<string, number> | undefined;
+  stablecoinPriceById: DexValuationPrices | undefined;
   chainAddressToId: Map<string, string>;
   symbolToChainScopedIds?: Map<string, Map<string, string[]>>;
   validationReferences?: PriceValidationReferences;
@@ -400,7 +400,7 @@ const UNISWAP_V4_TARGET_MAX_TVL_RELATIVE_DRIFT = 0.02;
 export function buildUniswapV4MeasuredExecutionTarget(input: {
   stablecoinId: string;
   candidate: UniswapV4ExecutionCandidate;
-  stablecoinPriceById: Map<string, number> | undefined;
+  stablecoinPriceById: DexValuationPrices | undefined;
   chainAddressToId: Map<string, string>;
   symbolToChainScopedIds?: Map<string, Map<string, string[]>>;
   validationReferences?: PriceValidationReferences;
@@ -588,7 +588,7 @@ export function buildUniV3DirectMeasuredExecutionTargets(input: {
   chainAddressToId: Map<string, string>;
   symbolToChainScopedIds: Map<string, Map<string, string[]>>;
   validationReferences?: PriceValidationReferences;
-  stablecoinPriceById?: Map<string, number>;
+  stablecoinPriceById?: DexValuationPrices;
   capturedAt: number;
   adapterProfileId?: DexMeasuredExecutionDeployment["adapterProfileId"];
 }): Map<string, DexMeasuredExecutionTarget> {
@@ -677,7 +677,7 @@ export function buildSlipstreamMeasuredExecutionTargets(input: {
   chainAddressToId: Map<string, string>;
   symbolToChainScopedIds: Map<string, Map<string, string[]>>;
   validationReferences?: PriceValidationReferences;
-  stablecoinPriceById?: Map<string, number>;
+  stablecoinPriceById?: DexValuationPrices;
   capturedAt: number;
   adapterProfileId?: DexMeasuredExecutionDeployment["adapterProfileId"];
 }): Map<string, DexMeasuredExecutionTarget> {

@@ -13,14 +13,20 @@ export function isPancakeV3Writeback(row: Pick<StagedPool, "source" | "poolType"
   return row.source === "direct_api" && row.poolType?.startsWith("pancakeswap-v3") === true;
 }
 
+function isSundaeSwapPool(row: Pick<StagedPool, "source">): boolean {
+  return row.source === "sundaeswap";
+}
+
 export function checkedRegistryClock(clock: unknown, readAt: number): number | null {
   return typeof clock === "number" && Number.isSafeInteger(clock) && clock > 0 && clock <= readAt ? clock : null;
 }
 
-export function checkedPancakeWindowEnd(clock: unknown, readAt: number): number | null {
+function checkedHourlyWindowEnd(clock: unknown, readAt: number): number | null {
   const second = checkedRegistryClock(clock, readAt);
   return second != null && second % HOUR_SECONDS === 0 ? second : null;
 }
+
+export const checkedPancakeWindowEnd = checkedHourlyWindowEnd;
 
 export function checkedCurveOverlap(
   chain: string, poolId: string, tvlUsd: number | null, evidence: unknown,
@@ -53,9 +59,13 @@ export function getHorizonValuationAt(raw: string | null, readAt: number): numbe
 }
 
 export function getRegistryVolumeObservedAt(row: StagedPool): number | null {
-  return isPancakeV3Writeback(row)
-    ? checkedPancakeWindowEnd(parseJsonObject(row.rawJson)?.pancakeV3VolumeWindowEndSec, row.refreshedAt)
-    : row.refreshedAt;
+  if (isPancakeV3Writeback(row)) {
+    return checkedHourlyWindowEnd(parseJsonObject(row.rawJson)?.pancakeV3VolumeWindowEndSec, row.refreshedAt);
+  }
+  if (isSundaeSwapPool(row)) {
+    return checkedHourlyWindowEnd(parseJsonObject(row.rawJson)?.sundaeswapVolumeWindowEndSec, row.refreshedAt);
+  }
+  return row.refreshedAt;
 }
 
 export function getRegistryCurveOverlap(row: StagedPool): PoolEntry["curveBasePoolOverlap"] {

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { DEX_MEASURED_ADAPTER_PROFILE_IDS } from "@shared/types/measured-execution";
 import { DexAmmExecutionModelSchema } from "@shared/types/dex-execution";
+import type { DexMarketMark, DexValuationPrices } from "../../../lib/dex-api-token-pricing";
+import { createDexMeasuredValuationAdmission } from "../../measured-execution/valuation-admission";
 import {
   buildCurveStableSwapNgMeasuredExecutionTarget,
   buildCurveStableSwapMeasuredExecutionTargets,
@@ -433,6 +435,90 @@ describe("buildCurveStableswapExecutionModel", () => {
       retainedPoolPriceUsd: 0.9998,
       tokenIn: { address: CRVUSD, trackedAssetId: "crvusd-curve" },
       tokenOut: { address: WBTC, referencePriceUsd: 65_000 },
+    });
+  });
+
+  it("uses closed-reference marks on both Curve CryptoSwap legs while preserving open-session Curve fallback", () => {
+    const CADD = "0x16f93ebc5320c89efc8701577efe49d14a276a06";
+    const FRXUSD = "0xcacd6fd266af91b8aed52accc382b4e165586e29";
+    const PMUSD = "0xc0c17dd08263c16f6b64e772fb9b723bf1344ddf";
+    const IREET = "0x00000000000000000000000000000000000001ee";
+    const CADD_POOL = "0x384ca8992f955009bdd94849488e580559590157";
+    const PMUSD_POOL = "0x57129759d0e23116c1e7402dbc084e53d2e209a2";
+    const saturdaySec = Date.parse("2026-11-21T12:00:00Z") / 1000;
+    const fxMark: DexMarketMark = {
+      priceUsd: 0.69895855,
+      observedAtSec: Date.parse("2026-11-20T21:00:00Z") / 1000,
+      source: "fx-reference:peggedCAD",
+      fxReference: { pegKey: "peggedCAD", cadence: "business-daily", mode: "live", sourceDate: "2026-11-20" },
+    };
+    const marketMarks = new Map<string, DexMarketMark>([["cadd-cad-digital", fxMark]]);
+    const rejected = new Set<string>();
+    const prices: DexValuationPrices = Object.assign(new Map([["frxusd-frax", 0.9999]]), {
+      marketMarks,
+      closureValuationRejectedAssetIds: rejected,
+    });
+    const addrMap = new Map([
+      [`ethereum:${CADD}`, "cadd-cad-digital"],
+      [`ethereum:${FRXUSD}`, "frxusd-frax"],
+      [`ethereum:${PMUSD}`, "pmusd-precious-metals"],
+    ]);
+    const caddCurve = entry({
+      poolAddress: CADD_POOL, apiIsBroken: false, registryId: "factory-twocrypto",
+      executionCoins: [
+        { address: CADD, symbol: "CADD", decimals: 18, balance: 158_000, usdPrice: 0.701046 },
+        { address: FRXUSD, symbol: "frxUSD", decimals: 18, balance: 110_000, usdPrice: 0.9999 },
+      ],
+    });
+    const admission = createDexMeasuredValuationAdmission(saturdaySec, rejected, marketMarks);
+
+    const caddIn = buildCurveCryptoSwapMeasuredExecutionTarget({
+      curveData: caddCurve, chain: "ethereum", stablecoinId: "cadd-cad-digital",
+      chainAddressToId: addrMap, stablecoinPriceById: prices, retainedTvlUsd: 221_426, capturedAt: saturdaySec,
+    });
+    expect(caddIn).toMatchObject({
+      retainedPoolPriceUsd: 0.69895855,
+      tokenIn: { referencePriceUsd: 0.69895855, marketMark: { stablecoinId: "cadd-cad-digital", source: "fx-reference:peggedCAD" } },
+      tokenOut: { referencePriceUsd: 0.9999, trackedAssetId: "frxusd-frax" },
+    });
+    expect(admission.rejectsStagedTarget(caddIn!)).toBe(false);
+
+    const frxOut = buildCurveCryptoSwapMeasuredExecutionTarget({
+      curveData: caddCurve, chain: "ethereum", stablecoinId: "frxusd-frax",
+      chainAddressToId: addrMap, stablecoinPriceById: prices, retainedTvlUsd: 221_426, capturedAt: saturdaySec,
+    });
+    expect(frxOut).toMatchObject({
+      tokenIn: { referencePriceUsd: 0.9999, trackedAssetId: "frxusd-frax" },
+      tokenOut: { referencePriceUsd: 0.69895855, marketMark: { stablecoinId: "cadd-cad-digital", source: "fx-reference:peggedCAD" } },
+    });
+    expect(admission.rejectsStagedTarget(frxOut!)).toBe(false);
+
+    const noMarkRejected = new Set<string>();
+    const noMarkPrices: DexValuationPrices = Object.assign(new Map([["frxusd-frax", 0.9999]]), {
+      marketMarks: new Map<string, DexMarketMark>(),
+      closureValuationRejectedAssetIds: noMarkRejected,
+    });
+    expect(buildCurveCryptoSwapMeasuredExecutionTarget({
+      curveData: caddCurve, chain: "ethereum", stablecoinId: "cadd-cad-digital",
+      chainAddressToId: addrMap, stablecoinPriceById: noMarkPrices, retainedTvlUsd: 221_426, capturedAt: saturdaySec,
+    })).toBeNull();
+    expect(noMarkRejected.has("cadd-cad-digital")).toBe(true);
+
+    // Guardrail: open-session depegged USD coin without canonical price keeps Curve usdPrice (never $1.00).
+    const pmUsdTarget = buildCurveCryptoSwapMeasuredExecutionTarget({
+      curveData: entry({
+        poolAddress: PMUSD_POOL, apiIsBroken: false, registryId: "factory-twocrypto",
+        executionCoins: [
+          { address: PMUSD, symbol: "pmUSD", decimals: 18, balance: 3_000_000, usdPrice: 0.4582 },
+          { address: IREET, symbol: "iREET", decimals: 18, balance: 1_500_000, usdPrice: 1.15 },
+        ],
+      }),
+      chain: "ethereum", stablecoinId: "pmusd-precious-metals",
+      chainAddressToId: addrMap, stablecoinPriceById: prices, retainedTvlUsd: 3_100_000, capturedAt: saturdaySec,
+    });
+    expect(pmUsdTarget).toMatchObject({
+      retainedPoolPriceUsd: 0.4582,
+      tokenIn: { referencePriceUsd: 0.4582, trackedAssetId: "pmusd-precious-metals" },
     });
   });
 

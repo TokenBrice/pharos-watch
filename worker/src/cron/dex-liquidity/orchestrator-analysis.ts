@@ -100,6 +100,14 @@ function isFiniteNonNegative(value: number | null | undefined): value is number 
   return typeof value === "number" && Number.isFinite(value) && value >= 0;
 }
 
+function isObservedBaselineRow(
+  row: Pick<PreviousCoinTvlRow, "coverage_class" | "total_tvl_usd"> | undefined,
+): boolean {
+  return !!row?.coverage_class && row.coverage_class !== "unobserved" && isFiniteNonNegative(row.total_tvl_usd);
+}
+
+const REJECTION_BASELINE_WALKBACK_CHUNK_SIZE = 50;
+
 function computeMajorCoverageGuardTvl(totalTvl: number, effectiveTvl: number | null | undefined): number {
   if (!isFinitePositive(totalTvl)) return 0;
   if (!isFiniteNonNegative(effectiveTvl)) return totalTvl;
@@ -489,10 +497,15 @@ export async function analyzeDexLiquidityPostScoring(params: {
       .filter(([id]) => ACTIVE_IDS.has(id))),
   };
   const rejectionBaselineBeforeSec = carriedRejectionCoverage?.baselineBeforeSec ?? Math.floor(nowMs / 1000);
-  let rejectionBaseline = coinTvlRead.status === "fulfilled" && coinTvlRead.value.success
+  let isBootstrapBaseline = coinTvlRead.status === "fulfilled" && coinTvlRead.value.success
+    && (previousCoinTvlRows?.length ?? 0) === 0
+    && globalRead.status === "fulfilled" && previousGlobalRow == null;
+  let walkbackBeforeSec: number | null = null;
+  let rejectionBaseline: Map<string, number> | null = coinTvlRead.status === "fulfilled" && coinTvlRead.value.success
     && (previousCoinTvlRows ?? []).every((row) => isFiniteNonNegative(row.total_tvl_usd))
-    && ((previousCoinTvlRows?.length ?? 0) > 0 || (globalRead.status === "fulfilled" && previousGlobalRow == null))
-    ? new Map((previousCoinTvlRows ?? []).map((row) => [row.stablecoin_id, row.total_tvl_usd])) : null;
+    && ((previousCoinTvlRows?.length ?? 0) > 0 || isBootstrapBaseline)
+    ? new Map((previousCoinTvlRows ?? []).filter(isObservedBaselineRow).map((row) => [row.stablecoin_id, row.total_tvl_usd]))
+    : null;
   const rejectionCandidates = getDexPoolRejectionCandidates(params.poolRejections ?? []);
   const attributedRejections = rejectionCandidates.some((row) => Object.keys(row.tvlUsdByStablecoin ?? {}).length > 0);
   // At rollout the latest publication may already exclude the rejected pools.
@@ -501,10 +514,14 @@ export async function analyzeDexLiquidityPostScoring(params: {
     || (attributedRejections && !Object.keys(carriedRejectionCoverage?.baselineTvlUsdByCoin ?? {}).length
       && (previousProductive == null || (previousProductive.poolRejectionMateriality?.candidateRejectedPoolCount ?? previousProductive.rowsDropped) !== 0))) {
     rejectionBaseline = null;
+    isBootstrapBaseline = false;
+    walkbackBeforeSec = rejectionBaselineBeforeSec;
     try {
       const clean = await runWithOverloadRetry(() => params.db.prepare(
-        `SELECT stablecoin_id, total_tvl_usd FROM dex_liquidity_run_rows
-         WHERE stablecoin_id != '__global__' AND generation_id = (
+        `SELECT r.stablecoin_id, r.total_tvl_usd, r.coverage_class, g.started_at AS generation_started_at
+         FROM dex_liquidity_run_rows r
+         JOIN dex_liquidity_publication_generations g ON g.generation_id = r.generation_id
+         WHERE r.stablecoin_id != '__global__' AND r.generation_id = (
            SELECT g.generation_id FROM cron_runs c
            JOIN dex_liquidity_publication_generations g
              ON g.generation_id = json_extract(CASE WHEN json_valid(c.metadata) THEN c.metadata ELSE '{}' END, '$.persistence.generationId')
@@ -517,12 +534,75 @@ export async function analyzeDexLiquidityPostScoring(params: {
              AND json_extract(CASE WHEN json_valid(c.metadata) THEN c.metadata ELSE '{}' END, '$.persistence.skipped') = 0
            ORDER BY c.started_at DESC LIMIT 1
          )`,
-      ).bind(rejectionBaselineBeforeSec).all<{ stablecoin_id: string; total_tvl_usd: number }>());
+      ).bind(rejectionBaselineBeforeSec).all<{
+        stablecoin_id: string;
+        total_tvl_usd: number;
+        coverage_class: string | null;
+        generation_started_at?: number | null;
+      }>());
       if (clean.success && clean.results.length > 0 && clean.results.every((row) => isFiniteNonNegative(row.total_tvl_usd))) {
-        rejectionBaseline = new Map(clean.results.map((row) => [row.stablecoin_id, row.total_tvl_usd]));
+        const cleanStartedAt = clean.results[0]?.generation_started_at;
+        if (typeof cleanStartedAt === "number" && Number.isFinite(cleanStartedAt)) {
+          walkbackBeforeSec = Math.min(rejectionBaselineBeforeSec, cleanStartedAt);
+        }
+        rejectionBaseline = new Map(clean.results.filter(isObservedBaselineRow).map((row) => [row.stablecoin_id, row.total_tvl_usd]));
       }
     } catch (err) {
       logWorkerEventArgs("handler", "warn", "[dex-liquidity] rejection coverage baseline unavailable:", toErrorMessage(err));
+    }
+  }
+  const carriedAnchors = carriedRejectionCoverage?.baselineTvlUsdByCoin ?? {};
+  const baselineLookupIds = [...new Set([
+    ...rejectionCandidates.flatMap((row) => Object.keys(row.tvlUsdByStablecoin ?? {})),
+    ...Object.entries(carriedAnchors)
+      .filter(([, tvl]) => tvl === null)
+      .map(([id]) => id),
+  ])].filter((id) => carriedAnchors[id] == null);
+  if (!isBootstrapBaseline && rejectionBaseline != null) {
+    const walkbackIds = baselineLookupIds.filter((id) => !rejectionBaseline!.has(id));
+    if (walkbackIds.length > 0) {
+      try {
+        for (let offset = 0; offset < walkbackIds.length; offset += REJECTION_BASELINE_WALKBACK_CHUNK_SIZE) {
+          const chunk = walkbackIds.slice(offset, offset + REJECTION_BASELINE_WALKBACK_CHUNK_SIZE);
+          const walkback = await runWithOverloadRetry(() => params.db.prepare(
+            `SELECT stablecoin_id, total_tvl_usd
+             FROM (
+               SELECT r.stablecoin_id, r.total_tvl_usd,
+                      ROW_NUMBER() OVER (PARTITION BY r.stablecoin_id ORDER BY g.started_at DESC, g.generation_id DESC) AS rn
+               FROM dex_liquidity_run_rows r
+               JOIN dex_liquidity_publication_generations g ON g.generation_id = r.generation_id
+               WHERE g.state = 'published'
+                 AND (? IS NULL OR r.generation_id != ?)
+                 AND (? IS NULL OR g.started_at < ?)
+                 AND r.stablecoin_id IN (SELECT value FROM json_each(?))
+                 AND r.coverage_class IS NOT NULL
+                 AND r.coverage_class != 'unobserved'
+             )
+             WHERE rn = 1`,
+          ).bind(
+            params.currentGenerationId ?? null,
+            params.currentGenerationId ?? null,
+            walkbackBeforeSec,
+            walkbackBeforeSec,
+            JSON.stringify(chunk),
+          ).all<{ stablecoin_id: string; total_tvl_usd: number }>());
+          if (!walkback.success || !walkback.results.every((row) => isFiniteNonNegative(row.total_tvl_usd))) {
+            rejectionBaseline = null;
+            break;
+          }
+          for (const row of walkback.results) {
+            rejectionBaseline.set(row.stablecoin_id, row.total_tvl_usd);
+          }
+        }
+      } catch (err) {
+        rejectionBaseline = null;
+        logWorkerEventArgs("handler", "warn", "[dex-liquidity] rejection coverage baseline walk-back unavailable:", toErrorMessage(err));
+      }
+      // A non-bootstrap run whose walk-back recovered zero observed rows must
+      // fail closed instead of handing an empty map (interpreted as bootstrap 0).
+      if (rejectionBaseline != null && rejectionBaseline.size === 0) {
+        rejectionBaseline = null;
+      }
     }
   }
   const { stablecoinId, baselineBeforeSec, anchorTvlUsd, evidenceRef } = review;

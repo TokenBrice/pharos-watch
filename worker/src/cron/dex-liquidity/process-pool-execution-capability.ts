@@ -4,6 +4,7 @@ import {
   canonicalExitRouteChain,
 } from "@shared/types/exit-route-identity";
 import type { DexApiPool } from "../../lib/dex-api-common";
+import { getClosedReferenceDexValuation, type DexValuationPrices } from "../../lib/dex-api-token-pricing";
 import type {
   CurvePoolEntry,
   CurveStableswapRateInputExecutionCandidate,
@@ -314,13 +315,35 @@ export function buildCurveStableswapExecutionCapability(
   };
 }
 
+function resolveCurveCryptoSwapLegReferencePriceUsd(input: {
+  trackedAssetId: string | undefined;
+  sourceUsdPrice: number;
+  stablecoinPriceById: DexValuationPrices | undefined;
+  capturedAt: number;
+}): number | null {
+  const { trackedAssetId, sourceUsdPrice, stablecoinPriceById, capturedAt } = input;
+  if (trackedAssetId) {
+    const closure = getClosedReferenceDexValuation(stablecoinPriceById, trackedAssetId, capturedAt);
+    if (closure != null) {
+      if (closure.mark) return closure.mark.priceUsd;
+      stablecoinPriceById?.closureValuationRejectedAssetIds?.add(trackedAssetId);
+      return null;
+    }
+    const canonicalPriceUsd = stablecoinPriceById?.get(trackedAssetId);
+    if (canonicalPriceUsd != null && Number.isFinite(canonicalPriceUsd) && canonicalPriceUsd > 0) {
+      return canonicalPriceUsd;
+    }
+  }
+  return Number.isFinite(sourceUsdPrice) && sourceUsdPrice > 0 ? sourceUsdPrice : null;
+}
+
 /** @internal Exported for focused execution-target validation. */
 export function buildCurveCryptoSwapMeasuredExecutionTarget(input: {
   curveData: CurvePoolEntry | undefined;
   chain: string;
   stablecoinId: string;
   chainAddressToId: Map<string, string>;
-  stablecoinPriceById?: Map<string, number>;
+  stablecoinPriceById?: DexValuationPrices;
   retainedTvlUsd: number;
   capturedAt: number;
 }): DexMeasuredExecutionTarget | null {
@@ -342,16 +365,21 @@ export function buildCurveCryptoSwapMeasuredExecutionTarget(input: {
   const outputIndex = inputIndex === 0 ? 1 : 0;
   const tokenIn = executionCoins[inputIndex]!;
   const tokenOut = executionCoins[outputIndex]!;
-  const inputReferencePriceUsd = input.stablecoinPriceById?.get(input.stablecoinId) ?? tokenIn.usdPrice;
-  if (
-    !Number.isFinite(inputReferencePriceUsd) ||
-    inputReferencePriceUsd <= 0 ||
-    !Number.isFinite(tokenOut.usdPrice) ||
-    tokenOut.usdPrice <= 0
-  )
-    return null;
   const outputStablecoinId = input.chainAddressToId.get(canonicalExitRouteAssetKey(input.chain, tokenOut.address));
   if (outputStablecoinId === input.stablecoinId) return null;
+  const inputReferencePriceUsd = resolveCurveCryptoSwapLegReferencePriceUsd({
+    trackedAssetId: input.stablecoinId,
+    sourceUsdPrice: tokenIn.usdPrice,
+    stablecoinPriceById: input.stablecoinPriceById,
+    capturedAt: input.capturedAt,
+  });
+  const outputReferencePriceUsd = resolveCurveCryptoSwapLegReferencePriceUsd({
+    trackedAssetId: outputStablecoinId,
+    sourceUsdPrice: tokenOut.usdPrice,
+    stablecoinPriceById: input.stablecoinPriceById,
+    capturedAt: input.capturedAt,
+  });
+  if (inputReferencePriceUsd == null || outputReferencePriceUsd == null) return null;
   const poolId = canonicalExitRouteAssetKey(input.chain, poolAddress);
   const canonicalTokens = poolTokenAddresses as [`0x${string}`, `0x${string}`];
   return buildMeasuredExecutionTargetValue({
@@ -372,13 +400,13 @@ export function buildCurveCryptoSwapMeasuredExecutionTarget(input: {
       address: canonicalTokens[outputIndex]!,
       symbol: tokenOut.symbol,
       decimals: tokenOut.decimals,
-      referencePriceUsd: tokenOut.usdPrice,
+      referencePriceUsd: outputReferencePriceUsd,
       ...(outputStablecoinId ? { trackedAssetId: outputStablecoinId } : {}),
     },
     retainedTvlUsd: input.retainedTvlUsd,
     retainedPoolPriceUsd: inputReferencePriceUsd,
     capturedAt: input.capturedAt,
-  }, { tokenIn: input.stablecoinPriceById });
+  }, { tokenIn: input.stablecoinPriceById, tokenOut: input.stablecoinPriceById });
 }
 
 const CURVE_3POOL_REVIEWED_INPUT_IDS = new Set(["usdc-circle", "usdt-tether"]);
@@ -420,7 +448,7 @@ export function buildCurveStableSwapMeasuredExecutionTargets(input: {
   chain: string;
   stablecoinId: string;
   chainAddressToId: Map<string, string>;
-  stablecoinPriceById?: Map<string, number>;
+  stablecoinPriceById?: DexValuationPrices;
   retainedTvlUsd: number;
   capturedAt: number;
 }): DexMeasuredExecutionTarget[] {
@@ -517,7 +545,7 @@ export function buildCurveStableSwapNgMeasuredExecutionTarget(input: {
   chain: string;
   stablecoinId: string;
   chainAddressToId: Map<string, string>;
-  stablecoinPriceById?: Map<string, number>;
+  stablecoinPriceById?: DexValuationPrices;
   retainedTvlUsd: number;
   capturedAt: number;
 }): DexMeasuredExecutionTarget | null {

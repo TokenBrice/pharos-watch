@@ -157,6 +157,69 @@ describe("adaptFraxBalanceSheet", () => {
     }));
   });
 
+  it("pins frxUSD, sfrxUSD, and FPI rows on Legacy FRAX to tracked sibling deployments", () => {
+    const fraxContracts = TRACKED_META_BY_ID.get("frax-frax")!.contracts;
+    const solanaFrxusdMint = TRACKED_META_BY_ID.get("frxusd-frax")!.contracts!.find((row) => row.chain === "solana")!.address;
+    const validRows = [
+      { chain: "ethereum", tokenAddress: "0xCAcd6fd266aF91b8AeD52aCCc382b4e165586E29", tokenSymbol: "frxUSD", totalValueUsd: 20 },
+      { chain: "fraxtal", tokenAddress: "0xfc00000000000000000000000000000000000001", tokenSymbol: "frxUSD", totalValueUsd: 10 },
+      { chain: "stable", tokenAddress: "0x80eede496655fb9047dd39d9f418d5483ed600df", tokenSymbol: "frxUSD", totalValueUsd: 10 },
+      { chain: "solana", tokenAddress: solanaFrxusdMint, tokenSymbol: "frxUSD", totalValueUsd: 10 },
+      { chain: "fraxtal", tokenAddress: "0xfc00000000000000000000000000000000000001", tokenSymbol: "FRAX", totalValueUsd: 5 },
+      { chain: "ethereum", tokenAddress: "0xcf62f905562626cfcdd2261162a51fd02fc9c5b6", tokenSymbol: "sfrxUSD", totalValueUsd: 10 },
+      { chain: "fraxtal", tokenAddress: "0xfc00000000000000000000000000000000000008", tokenSymbol: "sfrxUSD", totalValueUsd: 10 },
+      { chain: "stable", tokenAddress: "0x5bff88ca1442c2496f7e475e9e7786383bc070c0", tokenSymbol: "sfrxUSD", totalValueUsd: 5 },
+      { chain: "ethereum", tokenAddress: "0x5ca135cb8527d76e932f34b5145575f9d8cbe08e", tokenSymbol: "FPI", totalValueUsd: 10 },
+      { chain: "fraxtal", tokenAddress: "0xfc00000000000000000000000000000000000003", tokenSymbol: "FPI", totalValueUsd: 10 },
+    ].map((row) => ({ ...row, category: "asset:owned:frax" }));
+    const ok = adaptFraxBalanceSheet({ totalAssets: 100, assets: [...FERRY_ROWS, ...validRows] }, "frax-frax", fraxContracts);
+    expect(ok.warnings).toBeUndefined();
+    expect(ok.slices).toEqual(expect.arrayContaining([
+      expect.objectContaining({ sourceKey: "frax-balance-sheet:frxusd", coinId: "frxusd-frax", pct: expect.closeTo(55, 10) }),
+      expect.objectContaining({ sourceKey: "frax-balance-sheet:sfrxusd", coinId: "sfrxusd-frax", pct: 25 }),
+      expect.objectContaining({ sourceKey: "frax-balance-sheet:fpi", pct: 20 }),
+    ]));
+
+    const wrongCaseSolanaFrxusdMint = `${solanaFrxusdMint[0]!.toLowerCase()}${solanaFrxusdMint.slice(1)}`;
+    expect(wrongCaseSolanaFrxusdMint).not.toBe(solanaFrxusdMint);
+    for (const bad of [
+      { chain: "ethereum", tokenAddress: "0x1111111111111111111111111111111111111111", tokenSymbol: "frxUSD" },
+      { chain: "fraxtal", tokenAddress: "0x1111111111111111111111111111111111111111", tokenSymbol: "sfrxUSD" },
+      { chain: "ethereum", tokenAddress: "0x1111111111111111111111111111111111111111", tokenSymbol: "FPI" },
+      { chain: "solana", tokenAddress: wrongCaseSolanaFrxusdMint, tokenSymbol: "frxUSD" },
+      { chain: "ethereum", tokenAddress: "0xcf62f905562626cfcdd2261162a51fd02fc9c5b6", tokenSymbol: "frxUSD" },
+      { chain: "ethereum", tokenAddress: "0x5ca135cb8527d76e932f34b5145575f9d8cbe08e", tokenSymbol: "frxUSD" },
+      { chain: undefined, tokenAddress: "0xcacd6fd266af91b8aed52accc382b4e165586e29", tokenSymbol: "frxUSD" },
+      { chain: "ethereum", tokenAddress: undefined, tokenSymbol: "sfrxUSD" },
+      { chain: "ethereum", tokenAddress: "0x0000000000000000000000000000000000000000", tokenSymbol: "FPI" },
+    ]) {
+      const res = adaptFraxBalanceSheet({
+        totalAssets: 100,
+        assets: [
+          ...FERRY_ROWS,
+          { tokenSymbol: "USDC", totalValueUsd: 90, category: "asset:owned:usd" },
+          { ...bad, totalValueUsd: 10, category: "asset:owned:frax" },
+        ],
+      }, "frax-frax", fraxContracts);
+      expect(res.warnings).toContainEqual(expect.objectContaining({ code: "asset-coverage-incomplete", effect: "fatal" }));
+      expect(res.slices.some((slice) => slice.sourceKey === `frax-balance-sheet:${bad.tokenSymbol.toLowerCase()}`)).toBe(false);
+    }
+
+    const injectedEmpty = adaptFraxBalanceSheet({
+      totalAssets: 100,
+      assets: [
+        ...FERRY_ROWS,
+        { tokenSymbol: "USDC", totalValueUsd: 90, category: "asset:owned:usd" },
+        { chain: "fraxtal", tokenAddress: "0xfc00000000000000000000000000000000000001", tokenSymbol: "FRAX", totalValueUsd: 10, category: "asset:owned:frax" },
+      ],
+    }, "frax-frax", fraxContracts, { frxUSD: [] });
+    expect(injectedEmpty.warnings).toContainEqual(expect.objectContaining({
+      code: "asset-coverage-incomplete", effect: "fatal",
+      message: expect.stringContaining("matches no verified frxUSD deployment"),
+    }));
+    expect(injectedEmpty.slices.some((slice) => slice.sourceKey === "frax-balance-sheet:frxusd")).toBe(false);
+  });
+
   it.each([true, false])("preserves Solana mint case when matching a registry deployment (%s)", (exact) => {
     const deployments = TRACKED_META_BY_ID.get("frax-frax")!.contracts!;
     const mint = deployments.find(row => row.chain === "solana")!.address;

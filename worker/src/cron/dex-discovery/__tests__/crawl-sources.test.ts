@@ -1365,4 +1365,87 @@ describe("crawlCoin DexScreener hardening", () => {
     expect((await crawlSundaeSwapPoolsStage(input)).providerChecks).toMatchObject([{ status: "failure", retryable: true }]);
     expect(recordOutcomeSafe).toHaveBeenLastCalledWith(expect.anything(), CIRCUIT_SOURCE.SUNDAESWAP_DISCOVERY, false);
   });
+
+  it("computes SundaeSwap 24h volume from hourly ticks with V4 leg halving and fail-closed guards", async () => {
+    const [usdm, usdcx, usdrf] = ["usdm-moneta", "usdc-circle", "usdrf-realfi"].map((id) =>
+      WORKER_ACTIVE_META_BY_ID.get(id)!.contracts!.find(({ chain }) => chain === "cardano")!.address!);
+    const dot = (id: string) => `${id.slice(0, 56)}.${id.slice(56)}`;
+    const nowSec = 1_795_347_000; // 2026-11-22 11:30:00Z -> floorHour = 1_795_345_200 (11:00:00Z)
+    const floorHour = 1_795_345_200;
+    const tick = (startSec: number, assetId: string, quantity: string, decimals = 6) => ({
+      start: { unixMilli: String(startSec * 1_000) },
+      end: { unixMilli: String((startSec + 3600) * 1_000) },
+      volume: { quantity, asset: { id: dot(assetId), decimals } },
+    });
+    const makeSundaePool = (
+      id: string, version: string, ids: [string, string], quantities: [string, string],
+      asOfSec: number, rich: unknown[], identifier?: string,
+    ) => ({
+      id, version, quantities, assets: ids.map((a) => ({ id: dot(a) })),
+      modules: identifier ? [{ kind: "invariant", identifier }] : [],
+      current: { asOf: { unixMilli: String(asOfSec * 1_000) } },
+      ticks: { rich },
+    });
+
+    vi.mocked(fetchJsonWithRetry).mockResolvedValueOnce({
+      response: new Response(null, { status: 200 }),
+      body: {
+        data: {
+          pools: {
+            byAsset: [
+              // V4 constant-sum USDCx/USDRF: 13_114.8135 total raw => ÷2 = 6_557.40675; includes out-of-window 25th hour
+              makeSundaePool("062ed6", "V4", [usdcx, usdrf], ["400000000000", "400000000000"], nowSec - 60, [
+                tick(floorHour - 3600, usdcx, "157500000"),
+                tick(floorHour - 7200, usdcx, "12957313500"),
+                tick(floorHour - 25 * 3600, usdcx, "999999999"), // outside 24h window -> ignored
+              ], "constant_sum"),
+              // Stableswaps USDCx/USDM: 1x leg
+              makeSundaePool("d7c7a7", "Stableswaps", [usdcx, usdm], ["145500000000", "145500000000"], nowSec - 60, [
+                tick(floorHour - 3600, usdcx, "9708160000"),
+              ]),
+              // V3 constant-product: 1x leg
+              makeSundaePool("a30001", "V3", [usdcx, usdm], ["50000000000", "50000000000"], nowSec - 60, [
+                tick(floorHour - 3600, usdcx, "4200000000"),
+              ]),
+              // Valid empty rich => measured 0
+              makeSundaePool("000000", "Stableswaps", [usdcx, usdm], ["50000000000", "50000000000"], nowSec - 60, []),
+              // Stale asOf (>2h behind) => fail closed null
+              makeSundaePool("dead01", "Stableswaps", [usdcx, usdm], ["50000000000", "50000000000"], floorHour - 2 * 3600 - 1, [
+                tick(floorHour - 3600, usdcx, "1000000000"),
+              ]),
+              // Unknown future version V5 => fail closed null
+              makeSundaePool("f50001", "V5", [usdcx, usdm], ["50000000000", "50000000000"], nowSec - 60, [
+                tick(floorHour - 3600, usdcx, "1000000000"),
+              ], "constant_product"),
+              // Excessive turnover (>50x TVL $100k -> $6M) => preflight rejects => null
+              makeSundaePool("beef01", "Stableswaps", [usdcx, usdm], ["50000000000", "50000000000"], nowSec - 60, [
+                tick(floorHour - 3600, usdcx, "6000000000000"),
+              ]),
+            ],
+          },
+        },
+      },
+    });
+    const ctx = createCrawlStageContext({ stablecoinId: "usdc-circle", knownPoolIds: new Set(), nowSec, pools: [] });
+    await crawlSundaeSwapPoolsStage({
+      db: createMockDb(), coinTargets: [{ chain: "cardano", address: usdcx, decimals: 6 }], context: ctx,
+    });
+    const reqBody = JSON.parse(String(vi.mocked(fetchJsonWithRetry).mock.lastCall![1]!.body));
+    expect(reqBody.variables).toEqual({
+      asset: dot(usdcx),
+      start: "2026-11-21 10:00:00",
+      end: "2026-11-22 11:00:00",
+    });
+    const byId = new Map(ctx.pools.map((p) => [p.poolId, p]));
+    expect(byId.get("cardano:062ed6")?.volume24h).toBeCloseTo(6_557.40675, 4);
+    expect(byId.get("cardano:062ed6")?.rawJson).toBe(JSON.stringify({ sundaeswapVolumeWindowEndSec: floorHour }));
+    expect(byId.get("cardano:d7c7a7")?.volume24h).toBeCloseTo(9_708.16, 4);
+    expect(byId.get("cardano:a30001")?.volume24h).toBeCloseTo(4_200, 4);
+    expect(byId.get("cardano:000000")).toMatchObject({
+      volume24h: 0, rawJson: JSON.stringify({ sundaeswapVolumeWindowEndSec: floorHour }),
+    });
+    for (const badId of ["cardano:dead01", "cardano:f50001", "cardano:beef01"]) {
+      expect(byId.get(badId)).toMatchObject({ volume24h: null, rawJson: null });
+    }
+  });
 });

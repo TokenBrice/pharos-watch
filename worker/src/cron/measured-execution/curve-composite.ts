@@ -2,6 +2,7 @@ import { encodeFunctionData, parseAbi } from "viem/utils";
 
 import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
+import type { DexValuationPrices } from "../../lib/dex-api-token-pricing";
 import type { CurveGetDyQuoteFailure } from "./curve-get-dy-quote-engine";
 import { canonicalEvmAddress } from "./evm-codecs";
 import { getCurveCompositePolicy, type CurveCompositePoolPolicy } from "@shared/lib/curve-composite-policies";
@@ -52,7 +53,7 @@ export function buildCurveCompositeMeasuredExecutionTarget(input: {
   chain: string;
   stablecoinId: string;
   chainAddressToId: Map<string, string>;
-  stablecoinPriceById?: Map<string, number>;
+  stablecoinPriceById?: DexValuationPrices;
   retainedTvlUsd: number;
   capturedAt: number;
 }): DexMeasuredExecutionTarget | null {
