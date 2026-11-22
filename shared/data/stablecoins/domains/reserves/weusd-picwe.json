@@ -2,7 +2,7 @@
   "id": "weusd-picwe",
   "reserves": [
     {
-      "name": "PicWe WEUSD backing (docs 100% USDC claim; Movement dual MOVE+stablecoin mint-state; unreconciled)",
+      "name": "PicWe WEUSD backing (docs 100% USDC claim; Movement legacy dual MOVE+USDT mint-state and cross-chain V2 USDC escrows unreconciled)",
       "pct": 100,
       "risk": "very-high",
       "assetClass": "other",
@@ -20,64 +20,76 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-30",
-    "reviewer": "Grok T16 safety-v9 unknown-reduction w2",
+    "reviewedAt": "2026-11-22",
+    "reviewer": "Reserve renewal 2026-11-22 (issue #2148 batch B pinned on-chain pass)",
     "confidence": "probable",
     "sources": [
       {
-        "label": "PicWe What is WEUSD (Phase 1 100% USDC; on-chain reserves; real-time auditability claim)",
+        "label": "PicWe What is WEUSD (retrieved 2026-11-22; Phase 1 100% USDC claim, no itemized reserve report)",
         "url": "https://docs.picwe.org/what-is-weusd"
       },
       {
-        "label": "PicWe mint and redeem (1:1 USDC mint; 1% redeem fee; Phase 1 100% USDC)",
+        "label": "PicWe mint and redeem (retrieved 2026-11-22; 1:1 USDC mint/redeem narrative)",
         "url": "https://docs.picwe.org/mint-and-redeem"
       },
       {
-        "label": "PicWe contract directory (WEUSD + Mint/Redeem + Cross-Chain addresses)",
+        "label": "PicWe contract directory (retrieved 2026-11-22; BSC, Base, Arbitrum, HashKey, Plume, and Movement addresses)",
         "url": "https://docs.picwe.org/developers/contracts"
       },
       {
-        "label": "PicWe gitbook What is WEUSD (100% user-supplied USDC collateral claim)",
-        "url": "https://picwe.gitbook.io/picwe/usdweusd/what-is-usdweusd.md"
+        "label": "Pinned BSC WEUSD and WeUSDMintRedeem reads at finalized block 135105062 (2026-11-22T15:43:09Z; cross-checked at block 134557903)",
+        "url": "https://bnb-mainnet.g.alchemy.com/v2/"
       },
       {
-        "label": "BscScan WEUSD token 0xdd73…d89d56",
-        "url": "https://bscscan.com/address/0xdd73ea766b80417c0607a3f08e34a0c415d89d56#code"
+        "label": "Pinned Base WEUSD and WeUSDMintRedeem reads at finalized block 60855375 (2026-11-22T15:30:50Z)",
+        "url": "https://base-mainnet.g.alchemy.com/v2/"
       },
       {
-        "label": "Movement Aptos REST: current PicWe package resources (MintState dual-reserve fields)",
+        "label": "Pinned Arbitrum WEUSD and WeUSDMintRedeem reads at finalized block 526552416 (2026-11-22T15:29:17Z)",
+        "url": "https://arb-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Pinned Plume WEUSD and WeUSDMintRedeem reads at block 107474119 (2026-11-22T15:22:00Z)",
+        "url": "https://rpc.plume.org"
+      },
+      {
+        "label": "Pinned Movement current PicWe package resources at ledger_version 240654443 (block 107395950, 2026-11-22T15:43:09Z)",
         "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/resources"
       },
       {
-        "label": "Movement Aptos REST: legacy WEUSD package resources (move_reserves + stablecoin_reserves; dominant supply)",
+        "label": "Pinned Movement legacy WEUSD package resources at ledger_version 240654443 (dominant supply; dual MOVE+USDT MintState)",
         "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xed805e77c40d7e6ac5cd3e67514c485176621a2aa21e860cd515121d44a2f83d/resources"
       },
       {
-        "label": "DefiLlama WEUSD chain supplies (id 278)",
+        "label": "Pinned Movement MOVE CoinInfo at ledger_version 240654443 (verifies decimals = 8)",
+        "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x1/resource/0x1::coin::CoinInfo%3C0x1::aptos_coin::AptosCoin%3E"
+      },
+      {
+        "label": "DefiLlama WEUSD chain supplies (id 278, retrieved 2026-11-22)",
         "url": "https://stablecoins.llama.fi/stablecoin/278"
       },
       {
-        "label": "CoinGecko WEUSD market price (~$0.64, 2026-07-30)",
-        "url": "https://api.coingecko.com/api/v3/coins/weusd"
-      },
-      {
-        "label": "Archived PicWe What is WEUSD (2026-02-10; same Phase 1 USDC claim)",
-        "url": "https://web.archive.org/web/20260210025231/https://docs.picwe.org/what-is-weusd"
+        "label": "CoinGecko WEUSD and MOVE market prices (2026-11-22; WEUSD ~$0.665, MOVE ~$0.00459)",
+        "url": "https://api.coingecko.com/api/v3/simple/price?ids=weusd,movement&vs_currencies=usd"
       }
     ],
-    "rationale": "2026-07-30 re-review. Current PicWe docs and gitbook still assert Phase 1 100% USDC backing with 1:1 mint/redeem and 'on-chain reserves' / 'real-time auditability', but publish no itemized reserve inventory, attestation, or PoR report (docs.picwe.org transparency/reserves/proof-of-reserves paths 404). On-chain pins contradict a simple full USDC float: BSC block 113074656 (2026-07-30T20:34:28Z) WEUSD totalSupply 32433.922065 with mint/redeem contract 0x5D54…F22C holding only ~0.624899 USDC (BSC USDC 0x8AC7…580d balanceOf); Movement legacy package 0xed80…f83d (DefiLlama Movement supply source) reports weusd::total_supply 465086.702603 while weusd_operations::MintState holds stablecoin_reserves 58.232342 (6-dec) and move_reserves 1343.060443 with move_ratio 1000, dual-asset mint state, not pure USDC, and far below circulating supply; current PicWe package 0xf39c…1ff6 MintState holds stablecoin_reserves 841.166803 + cross_chain_reserves 16637.901559 against weusd::total_supply 841.166803. CoinGecko WEUSD ~$0.64. No public ratio table reconciles docs, legacy dual-reserve mint-state, EVM mint underfill, and market price. Composition therefore remains a single unresolved 100% residual (not a forced USDC link).",
-    "compositionBasis": "Issuer Phase-1 USDC documentation re-checked against multi-chain mint/reserve contract reads and market price; unresolved dual-disclosure conflict retained",
-    "compositionAsOf": "2026-07-30",
+    "rationale": "2026-11-22 pinned renewal. PicWe docs still claim Phase 1 100% USDC 1:1 backing without publishing an itemized reserve inventory or attestation. Pinned reads across all five tracked chains confirm two divergent accounting regimes that remain unreconciled. Across the V2 omni-chain deployments (BSC block 135105062, hash 0xd17dd951447a985c059fe779e9059378fe6e9f69913f773c8fac7b10381c822d, 2026-11-22T15:43:09Z, matching block 134557903; Base block 60855375; Arbitrum block 526552416; Plume block 107474119; Movement current package 0xf39c...1ff6 at ledger_version 240654443, block 107395950, hash 0x495963f7306363697927dd9b8254774180547b18162a9142ecd4d5dd04d99ece, 2026-11-22T15:43:09Z), issued V2 WEUSD totals 26,136.814303 (BSC 21,426.157806, Base 1,447.438032, Arbitrum 2,409.501399, Plume 12.200567, Movement current 841.516499; plus 5.097300 on HashKey Chain outside the tracked contract list) against 26,549.144040 USDC held in the five mint/redeem escrows (BSC 0.624899 USDC plus 9.99 USDT against a 21,425.533417 crossChainDeficit; Base 7,101.842108; Arbitrum 1,941.499061; Plume 1.139986; Movement current resource account 0x16bb...e3ab 17,504.037986 USDC covering 841.516499 stablecoin_reserves plus 16,662.521487 cross_chain_reserves). However, the dominant supply remains on the legacy Movement package 0xed80...f83d (ConcurrentSupply 465,086.702603 WEUSD, 94.68% of combined tracked supply and DefiLlama's Movement supply source). At ledger_version 240654443, legacy weusd_operations::MintState records stablecoin_reserves 58232342 (58.232342 USDT, matching resource account 0x4261...0e39 balance) and move_reserves 1343060443 with move_ratio 1000; CoinInfo<0x1::aptos_coin::AptosCoin> verifies MOVE has 8 decimals on Movement, so move_reserves equals 13.43060443 MOVE (matching 0x4261...0e39 AptosCoin balance, worth ~$0.06 at CoinGecko MOVE $0.00459, correcting the prior 100x decimal misread of 1,343.06 MOVE). Legacy get_total_reserves() still returns unbacked counters (550,700 MOVE and 458,021 USDT) not present in the resource account, and WEUSD trades near $0.665 on CoinGecko. Because no published reconciliation accounts for the 465,086.702603 legacy Movement liability or links it legally to V2 USDC escrows, composition remains one explicit 100% unreconciled residual at conservative very-high risk and probable confidence.",
+    "compositionBasis": "Pinned multi-chain supply and escrow reads on 2026-11-22 (BSC block 135105062, Base 60855375, Arbitrum 526552416, Plume 107474119, Movement ledger_version 240654443) re-checked against PicWe docs, DefiLlama, and CoinGecko",
+    "compositionAsOf": "2026-11-22",
     "scope": "full-composition",
-    "knownUnknownExposure": "Actual reserve mix, weights, and locations are undisclosed: current docs claim 100% USDC while the dominant Movement supply package stores dual MOVE+stablecoin mint-state fields, EVM mint contracts do not hold matching USDC, and no attestation reconciles liabilities to assets.",
+    "knownUnknownExposure": "Actual whole-book reserve mix, weights, and locations remain undisclosed: the dominant Movement legacy WEUSD supply (465,086.702603 WEUSD, 94.68% of combined tracked supply) holds only 58.232342 USDT and 13.43060443 MOVE on-chain while V2 mint escrows hold 26,549.144040 USDC against 26,136.814303 V2 WEUSD, and no attestation reconciles legacy liabilities, V2 escrows, and issuer docs.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "PicWe WEUSD backing (docs 100% USDC claim; Movement dual MOVE+stablecoin mint-state; unreconciled)",
+        "reserveName": "PicWe WEUSD backing (docs 100% USDC claim; Movement legacy dual MOVE+USDT mint-state and cross-chain V2 USDC escrows unreconciled)",
         "pct": 100,
         "disposition": "basket-needs-split",
-        "rationale": "Cannot link as USDC (or any tracked coin) because Phase-1 100% USDC documentation conflicts with on-chain Movement dual MOVE+stablecoin mint-state on the dominant supply package and with EVM mint USDC balances that do not match issued supply; no dated inventory splits the basket."
+        "rationale": "Cannot link as USDC or split into verified weights because 94.68% of combined tracked supply sits on the legacy Movement package holding only 58.232342 USDT and 13.43060443 MOVE on-chain, contradicting the Phase 1 100% USDC documentation, with no dated issuer reconciliation linking legacy liabilities and V2 USDC escrows.",
+        "candidateCoinIds": [
+          "usdc-circle",
+          "usdt-tether"
+        ]
       }
     ]
   },

@@ -2,8 +2,193 @@
   "id": "usg-tangent",
   "reserves": [
     {
+      "name": "USDC exposure through productive Curve LP collateral",
+      "pct": 25.95496321468565,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle USDC through Tangent-supported Curve LP collateral",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "reUSD exposure through productive Curve LP collateral",
+      "pct": 16.026536859114866,
+      "risk": "high",
+      "coinId": "reusd-resupply",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Resupply reUSD through Tangent-supported Curve LP collateral",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "fxUSD exposure through productive Curve LP collateral",
+      "pct": 13.625628437535516,
+      "risk": "medium",
+      "coinId": "fxusd-f-x-protocol",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "f(x) Protocol fxUSD through Tangent-supported Curve LP collateral",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "msETH exposure through productive Curve LP collateral",
+      "pct": 12.03026422365664,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "msETH token ethereum:0x64351fc9810adad17a690e4e1717df5e7e085160 through Tangent-supported Curve LP collateral",
+      "riskFactors": [
+        "market",
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "crvUSD exposure through productive Curve LP collateral",
+      "pct": 7.472930633871261,
+      "risk": "medium",
+      "coinId": "crvusd-curve",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Curve crvUSD through Tangent-supported Curve LP collateral",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "BOLD exposure through productive Curve LP collateral",
+      "pct": 7.010251422687894,
+      "risk": "low",
+      "coinId": "bold-liquity",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Liquity BOLD through Tangent-supported Curve LP collateral",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "sDOLA exposure through productive Curve LP collateral",
+      "pct": 3.7446243362319316,
+      "risk": "medium",
+      "coinId": "sdola-inverse-finance",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Inverse Finance sDOLA through Tangent-supported Curve LP collateral",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "scrvUSD exposure through productive Curve LP collateral",
+      "pct": 3.614532467606388,
+      "risk": "medium",
+      "coinId": "scrvusd-curve",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Curve scrvUSD through Tangent-supported Curve LP collateral",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "PYUSD exposure through productive Curve LP collateral",
+      "pct": 3.0108770336284496,
+      "risk": "low",
+      "coinId": "pyusd-paypal",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Paxos PayPal USD through Tangent-supported Curve LP collateral",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "RLUSD exposure through productive Curve LP collateral",
+      "pct": 2.369062632206172,
+      "risk": "medium",
+      "coinId": "rlusd-ripple",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Ripple RLUSD through Tangent-supported Curve LP collateral",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "USDT exposure through productive Curve LP collateral",
+      "pct": 1.5630129710539276,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether USDT through Tangent-supported Curve LP collateral",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
       "name": "frxUSD exposure through productive Curve LP collateral",
-      "pct": 7.904297919641657,
+      "pct": 1.5323353834129267,
       "risk": "low",
       "coinId": "frxusd-frax",
       "depType": "collateral",
@@ -19,217 +204,166 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "name": "msETH exposure through productive Curve LP collateral",
-      "pct": 11.317746385888615,
-      "risk": "high",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "msETH token ethereum:0x64351fc9810adad17a690e4e1717df5e7e085160 through Tangent-supported Curve LP collateral",
-      "riskFactors": ["market", "counterparty", "smart-contract", "liquidity", "concentration"],
-      "liquidityHorizon": "unknown"
-    },
-    {
       "name": "WETH exposure through productive Curve LP collateral",
-      "pct": 0.9407430307973984,
+      "pct": 0.9661651486376488,
       "risk": "very-low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Ethereum WETH ethereum:0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2 through Tangent-supported Curve LP collateral",
-      "riskFactors": ["market", "smart-contract", "liquidity", "concentration"],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "USDC exposure through productive Curve LP collateral",
-      "pct": 16.60145097433801,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "collateral",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Circle USDC through Tangent-supported Curve LP collateral",
-      "riskFactors": ["counterparty", "custody", "smart-contract", "liquidity", "concentration"],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "fxUSD exposure through productive Curve LP collateral",
-      "pct": 11.299905167309866,
-      "risk": "medium",
-      "coinId": "fxusd-f-x-protocol",
-      "depType": "collateral",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "f(x) Protocol fxUSD through Tangent-supported Curve LP collateral",
-      "riskFactors": ["counterparty", "custody", "smart-contract", "liquidity", "concentration"],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "reUSD exposure through productive Curve LP collateral",
-      "pct": 14.394718358404962,
-      "risk": "high",
-      "coinId": "reusd-resupply",
-      "depType": "collateral",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Resupply reUSD through Tangent-supported Curve LP collateral",
-      "riskFactors": ["counterparty", "custody", "smart-contract", "liquidity", "concentration"],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "OUSD exposure through productive Curve LP collateral",
-      "pct": 0.7835592083488879,
-      "risk": "medium",
-      "coinId": "ousd-origin-protocol",
-      "depType": "collateral",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Origin OUSD through Tangent-supported Curve LP collateral",
-      "riskFactors": ["counterparty", "custody", "smart-contract", "liquidity", "concentration"],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "scrvUSD exposure through productive Curve LP collateral",
-      "pct": 2.1695627598593727,
-      "risk": "medium",
-      "coinId": "scrvusd-curve",
-      "depType": "collateral",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Curve scrvUSD through Tangent-supported Curve LP collateral",
-      "riskFactors": ["counterparty", "custody", "smart-contract", "liquidity", "concentration"],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "eUSD exposure through productive Curve LP collateral",
-      "pct": 0.000051194442772452896,
-      "risk": "medium",
-      "coinId": "eusd-electronic-usd",
-      "depType": "collateral",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Reserve Electronic USD through Tangent-supported Curve LP collateral",
-      "riskFactors": ["counterparty", "custody", "smart-contract", "liquidity", "concentration"],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "USDT exposure through productive Curve LP collateral",
-      "pct": 4.069146812038247,
-      "risk": "low",
-      "coinId": "usdt-tether",
-      "depType": "collateral",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Tether USDT through Tangent-supported Curve LP collateral",
-      "riskFactors": ["counterparty", "custody", "smart-contract", "liquidity", "concentration"],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "crvUSD exposure through productive Curve LP collateral",
-      "pct": 2.834513573538268,
-      "risk": "medium",
-      "coinId": "crvusd-curve",
-      "depType": "collateral",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Curve crvUSD through Tangent-supported Curve LP collateral",
-      "riskFactors": ["counterparty", "custody", "smart-contract", "liquidity", "concentration"],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "sDOLA exposure through productive Curve LP collateral",
-      "pct": 7.927811631646366,
-      "risk": "medium",
-      "coinId": "sdola-inverse-finance",
-      "depType": "collateral",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Inverse Finance sDOLA through Tangent-supported Curve LP collateral",
-      "riskFactors": ["counterparty", "custody", "smart-contract", "liquidity", "concentration"],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "BOLD exposure through productive Curve LP collateral",
-      "pct": 5.089071217097366,
-      "risk": "low",
-      "coinId": "bold-liquity",
-      "depType": "collateral",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Liquity BOLD through Tangent-supported Curve LP collateral",
-      "riskFactors": ["counterparty", "custody", "smart-contract", "liquidity", "concentration"],
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
       "liquidityHorizon": "unknown"
     },
     {
       "name": "sUSDS exposure through productive Curve LP collateral",
-      "pct": 4.670337302630205,
+      "pct": 0.8089713377381877,
       "risk": "medium",
       "coinId": "susds-sky",
       "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Sky sUSDS through Tangent-supported Curve LP collateral",
-      "riskFactors": ["counterparty", "custody", "smart-contract", "liquidity", "concentration"],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "RLUSD exposure through productive Curve LP collateral",
-      "pct": 3.336698013600755,
-      "risk": "medium",
-      "coinId": "rlusd-ripple",
-      "depType": "collateral",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Ripple RLUSD through Tangent-supported Curve LP collateral",
-      "riskFactors": ["counterparty", "custody", "smart-contract", "liquidity", "concentration"],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "PYUSD exposure through productive Curve LP collateral",
-      "pct": 1.762984808150635,
-      "risk": "low",
-      "coinId": "pyusd-paypal",
-      "depType": "collateral",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Paxos PayPal USD through Tangent-supported Curve LP collateral",
-      "riskFactors": ["counterparty", "custody", "smart-contract", "liquidity", "concentration"],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "OETH exposure through productive Curve LP collateral",
-      "pct": 0.000002451700961666957,
-      "risk": "medium",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "OETH token ethereum:0x856c4efb76c1d1ae02e20ceb03a2a6a08b0b8dc3 through Tangent-supported Curve LP collateral",
-      "riskFactors": ["market", "counterparty", "smart-contract", "liquidity", "concentration"],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "cbBTC exposure through productive Curve LP collateral",
-      "pct": 1.3139531957974646,
-      "risk": "medium",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "cbBTC token ethereum:0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf through Tangent-supported Curve LP collateral",
-      "riskFactors": ["market", "counterparty", "custody", "smart-contract", "liquidity", "concentration"],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "WBTC exposure through productive Curve LP collateral",
-      "pct": 3.4752219348957696,
-      "risk": "medium",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "WBTC token ethereum:0x2260fac5e5542a773aa44fbcfedf7c193bc2c599 through Tangent-supported Curve LP collateral",
-      "riskFactors": ["market", "counterparty", "custody", "smart-contract", "liquidity", "concentration"],
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
       "liquidityHorizon": "unknown"
     },
     {
       "name": "CVX exposure through productive Curve LP collateral",
-      "pct": 0.10821843800342683,
+      "pct": 0.16243850450939254,
       "risk": "very-high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Convex CVX ethereum:0x4e3fbd56cd56c3e72c1403e103b45db9da5b9d2b through Tangent-supported Curve LP collateral",
-      "riskFactors": ["market", "smart-contract", "liquidity", "concentration"],
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "OUSD exposure through productive Curve LP collateral",
+      "pct": 0.10438040234218512,
+      "risk": "medium",
+      "coinId": "ousd-origin-protocol",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Origin OUSD through Tangent-supported Curve LP collateral",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "cbBTC exposure through productive Curve LP collateral",
+      "pct": 0.002212101021618974,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "cbBTC token ethereum:0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf through Tangent-supported Curve LP collateral",
+      "riskFactors": [
+        "market",
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "WBTC exposure through productive Curve LP collateral",
+      "pct": 0.0007279379295617747,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "WBTC token ethereum:0x2260fac5e5542a773aa44fbcfedf7c193bc2c599 through Tangent-supported Curve LP collateral",
+      "riskFactors": [
+        "market",
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "eUSD exposure through productive Curve LP collateral",
+      "pct": 0.0000628711730889489,
+      "risk": "medium",
+      "coinId": "eusd-electronic-usd",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Reserve Electronic USD through Tangent-supported Curve LP collateral",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
       "liquidityHorizon": "unknown"
     },
     {
       "name": "DUSD exposure through productive Curve LP collateral",
-      "pct": 0.0000056218690148415306,
+      "pct": 0.000010957238571908628,
       "risk": "medium",
       "coinId": "dusd-alto",
       "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Alto DUSD through Tangent-supported Curve LP collateral",
-      "riskFactors": ["counterparty", "custody", "smart-contract", "liquidity", "concentration"],
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "CRV exposure through productive Curve LP collateral",
+      "pct": 0.000008577395662253582,
+      "risk": "very-high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Curve DAO CRV ethereum:0xd533a949740bb3306d119cc777fa900ba034cd52 through Tangent-supported Curve LP collateral",
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "OETH exposure through productive Curve LP collateral",
+      "pct": 0.00000254632245341509,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "OETH token ethereum:0x856c4efb76c1d1ae02e20ceb03a2a6a08b0b8dc3 through Tangent-supported Curve LP collateral",
+      "riskFactors": [
+        "market",
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-20",
-    "reviewer": "FD11 bottom-up refinement; current 18-market collateral-book review",
+    "reviewedAt": "2026-11-22",
+    "reviewer": "Issue #945 Wave A reserve refresh 2026-11-22 (21-market collateral-book census)",
     "confidence": "verified",
     "sources": [
       {
@@ -239,10 +373,6 @@
       {
         "label": "Tangent USG overview",
         "url": "https://docs.tangent.finance/docs/usg/overview_usg"
-      },
-      {
-        "label": "Ethereum block 25874387",
-        "url": "https://etherscan.io/block/25874387"
       },
       {
         "label": "Exact verified USG runtime and all issuance entrypoints",
@@ -269,14 +399,6 @@
         "url": "https://sourcify.dev/server/v2/contract/1/0xf89615f75c8161dc185c03020240905f6b66bad9?fields=all"
       },
       {
-        "label": "Same-block market, Curve stored-rate, debt, supply and PegKeeper observations",
-        "url": "https://etherscan.io/block/26122502"
-      },
-      {
-        "label": "The source review archived same-block collateral, constituent balances, rates and token-unit reads",
-        "url": "https://api-ethereum-mainnet.n.dwellir.com"
-      },
-      {
         "label": "Verified CurveStableSwapNG normalized-balance and stored-rate accounting",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5018be882dcce5e3f2f3b0913ae2096b9b3fb61f"
       },
@@ -289,63 +411,82 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x67fe41a94e779ccfa22cff02cc2957dc9c0e4286"
       },
       {
-        "label": "Current complete collateral and authorization census pin",
+        "label": "Verified WETH/CVX Curve crypto-pool normalized balance and price-scale accounting",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576491f1e6e5e62f1d8f26062ee822b40b0e0d4"
+      },
+      {
+        "label": "Verified crvUSD/WETH/CRV Curve tricrypto-pool normalized balance and price-scale accounting",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ebdf703948ddcea3b11f675b4d1fba9d2414a14"
+      },
+      {
+        "label": "Prior 18-market census baseline pin",
         "url": "https://etherscan.io/block/26236645"
       },
       {
-        "label": "Verified WETH/CVX Curve crypto-pool normalized balance and price-scale accounting",
-        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576491f1e6e5e62f1d8f26062ee822b40b0e0d4"
+        "label": "Current complete 21-market collateral and authorization census pin",
+        "url": "https://etherscan.io/block/26471538"
+      },
+      {
+        "label": "Pinned Ethereum RPC endpoint used for block 26471538 state and numeric-range log reads (keyless)",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
       }
     ],
-    "rationale": "At Ethereum block 26236645, hash 0xf38b2bd0053476d221004fafbc18da6ac77c23947336529b54eb1974d489280e, timestamp 2026-10-20T22:00:11Z, the complete current census contains 18 authorized markets. The original W3R48 16-market baseline at block 26122502 was independently reproduced; a successful full numeric-range delta scan through the current pin recovers exactly two additional factory registrations, CVX/ETH and frxUSD/DUSD, with no intervening SetIsMinter/SetIsBurner/SetIsIRProducer/SetIsPegKeeper or SetIsMarketCreator events. All 18 market identities return isMinter=true at the current pin. Same-block collatToken(), collatOracle(), totalCollateral(), collatDecimals() and oracle latestAnswer(true) measure $5,036,355.30149916 of protocol-oracle-marked borrower collateral. All underlying constituent identities, balances and token decimals were read at that pin. Each market mark is allocated using its pool's native normalized-balance accounting: balance times stored_rates() for fifteen NG pools, fixed decimal multipliers for two legacy pools, and price_scale for the WETH/CVX crypto pool. All 21 measured constituents are explicit; fifteen exact tracked stablecoin contract matches establish collateral dependencies, while six non-stablecoin instruments remain untracked cryptoasset exposures. This replaces the unclassified look-through residual without known-only normalization or assumed holdings. Both PegKeepers still hold exactly 20M prefunded USG and have debt()=0, so these self-token inventories remain excluded. The current collateral observation does not certify whole-liability financial reconciliation, funded redemption, custody safeguards or stressed realization. Raw numeric-pin requests, successful census ranges, responses and calculations are retained in agents/2026-10-20-safety-refinement/results/FD11-usg-current-reserve-evidence.json; the independently reproduced historical baseline remains in FD11-usg-reserve-evidence.json. CompositionAsOf is the actual current observation date, not a renewed historical portfolio.",
-    "compositionBasis": "Complete current 18-market borrower-collateral census and deployed oracle marks at Ethereum block 26236645; exact LP constituent attribution by same-block native pool accounting. Prefunded PegKeeper USG remains excluded.",
+    "rationale": "At finalized Ethereum block 26471538, hash 0x0ed7ff86e140f8da55c14e9ee58a6370dfa17efeaeb7eb8e0b4c6086869979e9, timestamp 2026-11-22T15:25:11Z (read via keyless endpoint https://eth-mainnet.g.alchemy.com/v2/), the complete current census contains 21 authorized markets. The prior 18-market baseline at block 26236645 ($5,036,355.30149916) was independently reproduced within floating-point precision (max constituent diff 5.33e-15 percentage points). A full numeric-range delta scan from block 26236645 through 26471538 (plus full-history confirmation from block 24570211) recovers exactly three additional StakeDao Vault factory registrations: frxUSD/crvUSD (0xe1065be419cacaf05477ea77a32cb33e8bcbc7da, block 26284662), crvUSD/ETH/CRV (0xb4edf0dd81b2ad31703b61da098401d0c83607bf, block 26393392), and PYUSD/crvUSD (0xf9fbb128d4569bfc6f97124e13ae32cd6fb6a48b, block 26442041), with zero intervening ControlTower events, zero former-MarketCreator events, and zero USG role events (SetIsMinter, SetIsBurner, SetIsIRProducer, SetIsPegKeeper, OwnershipTransferred). All 21 markets return isMinter=true at block 26471538. Same-block collatToken(), collatOracle(), totalCollateral(), collatDecimals(), and oracle latestAnswer(true) measure $3,274,560.92411909 of protocol-oracle-marked borrower collateral. Each market mark is allocated using its pool's verified native normalized-balance accounting: balance times stored_rates() for seventeen CurveStableSwapNG pools, fixed decimal multipliers for two legacy pools (msETH/WETH and USDT/crvUSD), price_scale() for the WETH/CVX 2-coin crypto pool, and precisions() with price_scale(0..1) for the crvUSD/WETH/CRV tricrypto pool. All 22 measured constituents are explicit and sum to 100%; fifteen exact Ethereum contract matches establish tracked stablecoin collateral dependencies, while seven non-stablecoin instruments (msETH, WETH, CVX, cbBTC, WBTC, CRV, and OETH) remain untracked cryptoasset exposures with matching non-link dispositions. Both registered PegKeepers (0xf89615f75c8161dc185c03020240905f6b66bad9 and 0x8a7f16508d1e8b48bdf36023f378cc04d9506d4e) hold 1,500,000 prefunded USG each (3,000,000 USG total, down from 20,000,000 each at block 26236645) and both report debt()=0, so these self-token inventories remain excluded; USG totalSupply is 5,605,854.67213403 USG (2,605,854.67213403 USG outside PegKeepers), sum of market debt is 2,606,203.11172069 USG, IRCalculator.mintableInterests() is 348.43958666 USG (3,591 wei truncation difference), and badDebt() is zero on all 21 markets. This collateral observation does not certify whole-liability financial reconciliation, funded redemption, custody protections, or stressed realization.",
+    "compositionBasis": "Complete current 21-market borrower-collateral census and deployed oracle marks at finalized Ethereum block 26471538; exact LP constituent attribution by same-block native pool accounting. Prefunded PegKeeper USG remains excluded.",
     "scope": "full-composition",
-    "knownUnknownExposure": "The complete collateral book is identified at the 2026-10-20 pin. Whole-position stressed realization, custody safeguards of underlying instruments and complete native-supply financial reconciliation remain unestablished; none is inferred from LP balance/rate accounting.",
+    "knownUnknownExposure": "The complete 21-market collateral book is identified at the 2026-11-22 pin. Whole-position stressed realization, custody protections of underlying instruments, and complete native-supply financial reconciliation remain unestablished; none is inferred from LP balance/rate accounting.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
-        "reserveIndex": 1,
+        "reserveIndex": 3,
         "reserveName": "msETH exposure through productive Curve LP collateral",
-        "pct": 11.317746385888615,
+        "pct": 12.03026422365664,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Exact same-block pool constituent is msETH, an ETH-denominated cryptoasset rather than a tracked stablecoin."
       },
       {
-        "reserveIndex": 2,
+        "reserveIndex": 12,
         "reserveName": "WETH exposure through productive Curve LP collateral",
-        "pct": 0.9407430307973984,
+        "pct": 0.9661651486376488,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Exact same-block pool constituent is wrapped native ETH, not a tracked stablecoin."
       },
       {
-        "reserveIndex": 16,
-        "reserveName": "OETH exposure through productive Curve LP collateral",
-        "pct": 0.000002451700961666957,
+        "reserveIndex": 14,
+        "reserveName": "CVX exposure through productive Curve LP collateral",
+        "pct": 0.16243850450939254,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "Exact same-block pool constituent is OETH, an ETH-denominated cryptoasset rather than a tracked stablecoin."
+        "rationale": "Exact same-block crypto-pool constituent is CVX, a governance token rather than a tracked stablecoin; the very-high legacy risk tier is retained."
       },
       {
-        "reserveIndex": 17,
+        "reserveIndex": 16,
         "reserveName": "cbBTC exposure through productive Curve LP collateral",
-        "pct": 1.3139531957974646,
+        "pct": 0.002212101021618974,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Exact same-block pool constituent is cbBTC, a custodial Bitcoin representation rather than a tracked stablecoin."
       },
       {
-        "reserveIndex": 18,
+        "reserveIndex": 17,
         "reserveName": "WBTC exposure through productive Curve LP collateral",
-        "pct": 3.4752219348957696,
+        "pct": 0.0007279379295617747,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Exact same-block pool constituent is WBTC, a custodial Bitcoin representation rather than a tracked stablecoin."
       },
       {
-        "reserveIndex": 19,
-        "reserveName": "CVX exposure through productive Curve LP collateral",
-        "pct": 0.10821843800342683,
+        "reserveIndex": 20,
+        "reserveName": "CRV exposure through productive Curve LP collateral",
+        "pct": 0.000008577395662253582,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "Exact same-block crypto-pool constituent is CVX, a governance token rather than a tracked stablecoin; the very-high legacy risk tier is retained."
+        "rationale": "Exact same-block tricrypto-pool constituent is CRV, a governance token rather than a tracked stablecoin; the canonical very-high legacy risk tier is applied."
+      },
+      {
+        "reserveIndex": 21,
+        "reserveName": "OETH exposure through productive Curve LP collateral",
+        "pct": 0.00000254632245341509,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Exact same-block pool constituent is OETH, an ETH-denominated cryptoasset rather than a tracked stablecoin."
       }
     ],
-    "compositionAsOf": "2026-10-20"
+    "compositionAsOf": "2026-11-22"
   }
 }

@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "USDC in Hubble Peg Stability Module",
-      "pct": 94.4468,
+      "pct": 94.2011,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -21,8 +21,8 @@
       "liquidityHorizon": "immediate"
     },
     {
-      "name": "mSOL CDP collateral",
-      "pct": 3.1323,
+      "name": "mSOL CDP collateral (market0)",
+      "pct": 2.7885,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Marinade Finance (mSOL) posted in Hubble borrowing market0",
@@ -35,8 +35,22 @@
       "liquidityHorizon": "immediate"
     },
     {
-      "name": "SOL CDP collateral",
-      "pct": 1.1633,
+      "name": "USDH self-collateral in Kamino kUSDH-USDC vault (market2)",
+      "pct": 1.5962,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Hubble USDH held inside deprecated Kamino kUSDH-USDC Orca vault posted as Hubble market2 collateral",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "SOL CDP collateral (market0)",
+      "pct": 1.0161,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Native SOL posted in Hubble borrowing market0",
@@ -49,11 +63,11 @@
       "liquidityHorizon": "immediate"
     },
     {
-      "name": "kUSDH-USDC Orca kToken CDP collateral",
-      "pct": 0.725,
+      "name": "daoSOL CDP collateral (market0)",
+      "pct": 0.2009,
       "risk": "high",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "Kamino Finance kUSDH-USDC Orca kToken posted in Hubble borrowing market2",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "MonkeDAO / SPL stake pool (daoSOL) posted in Hubble borrowing market0",
       "riskFactors": [
         "market",
         "liquidity",
@@ -63,118 +77,123 @@
       "liquidityHorizon": "immediate"
     },
     {
-      "name": "daoSOL CDP collateral",
-      "pct": 0.2264,
+      "name": "USDC in Kamino kUSDH-USDC vault (market2)",
+      "pct": 0.113,
       "risk": "high",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "Drift Protocol / DAO DAO (daoSOL) posted in Hubble borrowing market0",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "intermediary": {
+        "kind": "vault-share",
+        "label": "Kamino kUSDH-USDC Orca kToken",
+        "chain": "solana",
+        "contract": "5BmZgW7dk1kximGfn7MPvDigp3yRmgT64jS9Skdq4nPY",
+        "verified": true,
+        "sourceUrl": "https://explorer.solana.com/address/Cfuy5T6osdazUeLego5LFycBQebm9PP3H7VNdCndXXEN"
+      },
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial / USDC held inside deprecated Kamino kUSDH-USDC Orca vault posted as Hubble market2 collateral",
       "riskFactors": [
-        "market",
-        "liquidity",
+        "counterparty",
+        "custody",
+        "legal",
         "smart-contract",
+        "liquidity",
         "concentration"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "unknown"
     },
     {
-      "name": "BTC CDP collateral",
-      "pct": 0.225,
+      "name": "Other CDP collateral (stSOL, Portal WETH, RAY, Solend cSOL, and impaired/unpriced Sollet soBTC, LDO, soFTT, SRM dust)",
+      "pct": 0.0841,
       "risk": "high",
       "assetClass": "cryptoasset",
-      "issuerOrObligor": "Wrapped/bridged BTC collateral posted in Hubble borrowing market0",
+      "issuerOrObligor": "Lido stSOL, Wormhole Portal WETH, Raydium RAY, Solend cSOL, and residual impaired/Scope-unpriced Sollet soBTC, Wormhole LDO, Sollet soFTT, and SRM posted in Hubble borrowing market0 and market1",
       "riskFactors": [
         "market",
         "liquidity",
         "smart-contract",
         "concentration"
       ],
-      "liquidityHorizon": "immediate"
-    },
-    {
-      "name": "Other CDP collateral (STSOL, ETH, cSOL, RAY, LDO, FTT)",
-      "pct": 0.0812,
-      "risk": "high",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "Lido stSOL, Ethereum ETH, Solend cSOL, Raydium RAY, Lido LDO, FTX Token FTT posted in Hubble borrowing market0",
-      "riskFactors": [
-        "market",
-        "liquidity",
-        "smart-contract",
-        "concentration"
-      ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos Dependency Map WS1.D issuance-route review",
+    "reviewedAt": "2026-11-22",
+    "reviewer": "Reserve renewal 2026-11-22 (issue #2148 batch B pinned Solana Account Archive pass)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Hubble technical resources and proof-of-reserve vaults",
-        "url": "https://docs.hubbleprotocol.io/resources/technical-resources"
+        "label": "Pinned Solana Account Archive reads at finalized slot 472595150 (blockhash fdLiDwvY5dGFgPJGE68cNWcMkKySCg7YCAZsMJQdWDL, 2026-11-22T15:43:01Z)",
+        "url": "https://solana-mainnet.g.alchemy.com/v2/"
       },
       {
-        "label": "Hubble Peg Stability Module documentation",
-        "url": "https://docs.hubbleprotocol.io/faq/usdh-peg-stability/peg-stability-module"
+        "label": "Hubble PSM Reserve PDA (7AvwRQhSKtUUbEcP4eqYZbbKWgYyygehAqEp68nnc747) and PSM USDC vault (3U8M83jrC9knHGSG6NehgLtbwykgrE6sozu4yzKMhJwN)",
+        "url": "https://explorer.solana.com/address/7AvwRQhSKtUUbEcP4eqYZbbKWgYyygehAqEp68nnc747"
       },
       {
-        "label": "Solana mainnet RPC (PSM and borrowing-market reads, slot 438037097)",
-        "url": "https://api.mainnet-beta.solana.com"
+        "label": "Hubble BorrowingMarketState market0 (YSp9bJpQom2HA7VThxYZX9pNwrcBH88NBcBNWs5yskR)",
+        "url": "https://explorer.solana.com/address/YSp9bJpQom2HA7VThxYZX9pNwrcBH88NBcBNWs5yskR"
       },
       {
-        "label": "Scope Hubble feed OraclePrices account",
+        "label": "Hubble BorrowingMarketState market2 (2catbAPzCLX6YZA1axobPEYwbNo1XQaqhvWrZfR4Yxms)",
+        "url": "https://explorer.solana.com/address/2catbAPzCLX6YZA1axobPEYwbNo1XQaqhvWrZfR4Yxms"
+      },
+      {
+        "label": "Kamino kUSDH-USDC WhirlpoolStrategy (Cfuy5T6osdazUeLego5LFycBQebm9PP3H7VNdCndXXEN; deprecated, Orca liquidity 0, vaults 93.39% USDH / 6.61% USDC)",
+        "url": "https://explorer.solana.com/address/Cfuy5T6osdazUeLego5LFycBQebm9PP3H7VNdCndXXEN"
+      },
+      {
+        "label": "Scope Hubble feed OraclePrices (3NJYftD5sjVfxSnUdZ1wVML8f3aC6mp1CXCL6L7TnU8C) and OracleMappings (Chpu5ZgfWX5ZzVpUx9Xvv4WPM75Xd7zPJNDPsFnCpLpk)",
         "url": "https://explorer.solana.com/address/3NJYftD5sjVfxSnUdZ1wVML8f3aC6mp1CXCL6L7TnU8C"
+      },
+      {
+        "label": "DefiLlama Solana mint-exact spot prices (2026-11-22; bounds impaired Sollet soBTC $84.36 and Scope FixedPrice placeholder dust)",
+        "url": "https://coins.llama.fi/prices/current/solana:9n4nbM75f5Ui33ZbPYXn59EwSgE8CGsHtAeTH5YFeJ9E"
       }
     ],
-    "rationale": "A finalized Solana read through Hubble's official SDK at slot 434386680 returned 1,069,376.821209 USDC both deposited and minted through the PSM, plus 62,876.204453 USDH borrowed across the three configured borrowing markets. Those issuance-path liabilities reconcile to circulating supply within 0.0041% and normalize to 94.4468% PSM USDC and 5.5532% CDP-backed USDH. The 2026-08-08 R13 pass split the sub-material CDP branch using active depositedCollateral from borrowing-market states at Solana slot 438037097 priced through the Scope Hubble feed (with CoinGecko spots for SRM, FTT and LDO placeholder prices). The resulting weights are mSOL 56.41%, SOL 20.95%, kUSDH-USDC Orca kToken 13.06%, daoSOL 4.08%, BTC 4.05%, and a grouped 'other' slice 1.46% (STSOL, ETH, cSOL, RAY, LDO, FTT).",
-    "compositionBasis": "Finalized Hubble SDK state for PSM minted USDH and all configured borrowing-market debt at Solana slot 434386680; CDP collateral split from active depositedCollateral at Solana slot 438037097",
-    "compositionAsOf": "2026-08-08",
+    "rationale": "Single-slot finalized Solana Account Archive renewal at slot 472595150 (blockhash fdLiDwvY5dGFgPJGE68cNWcMkKySCg7YCAZsMJQdWDL, 2026-11-22T15:43:01Z; docs.hubbleprotocol.io currently fails DNS, so on-chain program state decoded with official @hubbleprotocol/hubble-config@8.0.0 and hubble-sdk@8.0.5 IDLs is authoritative). USDH mint supply is 1,121,043.234924 USDH. Issuance-path liabilities at the same slot total 1,121,091.034524 USDH (+47.799600 USDH, +0.0043% reconciliation): PSM Reserve PDA 7AvwR...c747 records 1,056,080.632049 USDC deposited and 1,056,080.632049 USDH minted (matching psmVault 3U8M8...hJwN SPL USDC balance exactly; separate PSM fee treasury HoXoF...dSFi holds 26,119.459282 USDC and is excluded; protocol USDH fee/treasury/stability-pool accounts holding 15,507.41 / 13,378.99 / 36,913.18 USDH sit inside circulating supply and are excluded from backing), plus borrowing-market debt of 45,846.416470 USDH in market0 (4.0894%), 2.058051 USDH in market1 (0.0002%), and 19,161.927954 USDH in market2 (1.7092%). Each market's own debt is attributed directly to its active depositedCollateral (verified vault-by-vault to match deposited + inactive SPL balances to the atomic unit). For market2 (21,041.140914 kUSDH-USDC shares), Scope[42] is a FixedPrice (type=23) $1.00 placeholder; direct on-chain look-through of deprecated Kamino WhirlpoolStrategy Cfuy5T6...dXXEN (status=2) and Orca position GdS4B...5r (liquidity=0) shows 26,985.584074 USDH in tokenAVault and 1,910.591992 USDC in tokenBVault across 27,528.883627 sharesIssued, splitting market2's 1.7092% liability into 1.5962% self-referential USDH (disposition: self-reserve, ownLiability: true) and 0.1130% USDC. For market0, active collateral is valued from same-slot Scope live feeds (mSOL 892.936041 at $99.70 = $89,025.46; SOL 461.154581 at $70.35 = $32,440.24; daoSOL 72.645844 via Scope[10]*Scope[0] at $88.29 = $6,413.73; Portal WETH 0.317106 at $1,715.54 = $544.01; RAY 22.303263 at $1.31 = $29.30) and Solido on-chain exchange rate (stSOL 22.850616 at 1.296276 SOL/stSOL = $2,083.69). Market0 tokenId 2 (0.104830 Sollet soBTC, mint 9n4nb...J9E) is post-FTX impaired Sollet BTC trading near $84.36 (~$8.84), not canonical BTC ($60,756.44 on Scope[2], which overstated it by 720x in August); Scope indices 19 (LDO), 5 (soFTT), and 3 (SRM) are FixedPrice 1e-6 placeholders, and DefiLlama/CoinGecko mint-exact spots bound all four impaired/placeholder assets combined at ~$23.66 (0.0181% of market0 collateral, 0.0007% of total USDH), grouped with stSOL, Portal WETH, RAY, and market1 Solend cSOL (0.844600 cSOL = $71.10 at Solend reserve rate 1.196604 SOL/cSOL) into the 0.0841% residual slice. Independent 4-decimal rounding sums to 99.9999% with no artificial plug.",
+    "compositionBasis": "Single-slot finalized Solana Account Archive decode at slot 472595150 (blockhash fdLiDwvY5dGFgPJGE68cNWcMkKySCg7YCAZsMJQdWDL, 2026-11-22T15:43:01Z): PSM minted/deposited USDC and per-market borrowing debt normalized over issuance-path liabilities (reconciling to USDH supply within 0.0043%), with direct Kamino kUSDH-USDC vault look-through, live Scope/Solido/Solend on-chain pricing, and DefiLlama/CoinGecko bounds for impaired Sollet soBTC and Scope FixedPrice dust",
+    "compositionAsOf": "2026-11-22",
     "scope": "full-composition",
-    "knownUnknownExposure": "N04-07: PSM documentation accessed 2026-09-30 explicitly describes swapping USDC for USDH and the resulting USDC backing/freeze risk. It supplies no new PSM minted/deposited balances or borrowing-market debt. The authored 94.4468% is historical and must not be renewed by this documentation review. Next evidence: finalized same-slot USDH supply, PSM USDC/minted USDH and all borrowing-market debt, then active collateral/receipt valuations at that checkpoint; reconcile reserve/treasury exclusions and LP look-through before replacing weights. The August 8 composition date is preserved. Sol curation campaign 2026-10-09 (Lane54Enosys), observed 2026-10-09T10:30:34Z: the issuer Technical Resources page identifies USDH mint USDH1SM1ojwWUga67PGrgFWUHibbjqMvuMaDkRJTgkX and eleven proof-of-reserves vaults, including USDC and KUSDHUSDCORCA. The PSM page discloses the USDC swap and freeze risk, but neither page provides a current dated complete collateral/PSM valuation with LP look-through and a reconciled denominator. Public vault addresses are research leads, not refreshed historical weights. The scoped C classification records absent complete composition disclosure; it does not assert that public raw balances are unavailable.",
+    "knownUnknownExposure": "Market0 retains four tiny residual positions lacking reliable live Scope feeds at slot 472595150: impaired Sollet soBTC (0.104830, Scope[2] uses generic BTC), Wormhole LDO (33.570024), Sollet soFTT (37.678774), and SRM (23.780016), where Scope indices 19, 5, and 3 carry FixedPrice 1e-6 placeholders. Mint-exact market spots bound all four combined at ~$23.66 (0.0007% of total USDH), included inside the 0.0841% Other CDP collateral slice. Kamino kUSDH-USDC strategy Cfuy5T6...dXXEN is deprecated (status=2) with 100.019843 burned shares between sharesIssued (27,528.883627) and sharesMint supply (27,428.863784) plus negligible uncollected Orca fees (2.59 USDH, 2.53 USDC), which do not change the 93.39% USDH / 6.61% USDC look-through ratio. Active borrow/redemption execution outside PSM (blockRedeem=true on GlobalConfig; blockPsmBurn=false with 50 bps fee) remains unverified by transaction replay.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 1,
-        "reserveName": "mSOL CDP collateral",
-        "pct": 3.1323,
+        "reserveName": "mSOL CDP collateral (market0)",
+        "pct": 2.7885,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "mSOL is an exogenous cryptoasset rather than a tracked stablecoin dependency."
+        "rationale": "mSOL is an exogenous liquid-staked cryptoasset rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 2,
-        "reserveName": "SOL CDP collateral",
-        "pct": 1.1633,
+        "reserveName": "USDH self-collateral in Kamino kUSDH-USDC vault (market2)",
+        "pct": 1.5962,
+        "disposition": "self-reserve",
+        "ownLiability": true,
+        "rationale": "At Solana slot 472595150, deprecated Kamino WhirlpoolStrategy Cfuy5T6...dXXEN holds 26,985.584074 USDH and 1,910.591992 USDC with zero Orca Whirlpool liquidity; 93.3881% of market2's kUSDH-USDC collateral is Hubble USDH itself, a circular own-liability claim rather than independent backing."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "SOL CDP collateral (market0)",
+        "pct": 1.0161,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Native SOL is an exogenous cryptoasset rather than a tracked stablecoin dependency."
       },
       {
-        "reserveIndex": 3,
-        "reserveName": "kUSDH-USDC Orca kToken CDP collateral",
-        "pct": 0.725,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "The Kamino kUSDH-USDC Orca kToken is a protocol position rather than a tracked stablecoin dependency."
-      },
-      {
         "reserveIndex": 4,
-        "reserveName": "daoSOL CDP collateral",
-        "pct": 0.2264,
+        "reserveName": "daoSOL CDP collateral (market0)",
+        "pct": 0.2009,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "daoSOL is an exogenous cryptoasset rather than a tracked stablecoin dependency."
-      },
-      {
-        "reserveIndex": 5,
-        "reserveName": "BTC CDP collateral",
-        "pct": 0.225,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "BTC collateral is an exogenous cryptoasset rather than a tracked stablecoin dependency."
+        "rationale": "daoSOL is an exogenous liquid-staked cryptoasset rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 6,
-        "reserveName": "Other CDP collateral (STSOL, ETH, cSOL, RAY, LDO, FTT)",
-        "pct": 0.0812,
+        "reserveName": "Other CDP collateral (stSOL, Portal WETH, RAY, Solend cSOL, and impaired/unpriced Sollet soBTC, LDO, soFTT, SRM dust)",
+        "pct": 0.0841,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "The grouped residual cryptoassets are exogenous rather than tracked stablecoin dependencies."
+        "rationale": "The grouped residual collateral consists of exogenous Solana cryptoassets and protocol receipts (plus ~$23.66 of impaired/Scope-placeholder dust), not tracked stablecoin dependencies."
       }
     ]
   },

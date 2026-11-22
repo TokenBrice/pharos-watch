@@ -3,11 +3,11 @@
   "reserves": [
     {
       "sourceKey": "chainlink-nav:mglobal-midas-fasanara",
-      "name": "Fasanara global private-credit / strategy portfolio",
-      "pct": 100,
+      "name": "Fasanara global private-credit fund shares (Aureum Securitisation Fund, Compartment mGLOBAL)",
+      "pct": 93.143888,
       "risk": "high",
       "assetClass": "private-credit",
-      "issuerOrObligor": "Fasanara Capital receivables strategy portfolio (SME trade receivables, digital invoices, asset-based finance) held via Aureum Securitisation Fund, Compartment mGLOBAL",
+      "issuerOrObligor": "Fasanara Capital receivables strategy portfolio (Fasanara SA SICAV-RAIF, mGLOBAL Fund, SF 36; SME trade receivables, digital invoices, asset-based finance) held via Aureum Securitisation Fund, Compartment mGLOBAL",
       "riskFactors": [
         "credit",
         "liquidity",
@@ -16,15 +16,47 @@
         "concentration"
       ],
       "liquidityHorizon": "over-seven-days"
+    },
+    {
+      "name": "Aave V3 Ethereum USDC (aEthUSDC liquidity reserve)",
+      "pct": 6.856112,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave V3 Ethereum Core Pool (aEthUSDC 0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c; pool 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2) backed by Circle USDC",
+      "riskFactors": [
+        "smart-contract",
+        "counterparty",
+        "liquidity"
+      ],
+      "liquidityHorizon": "one-day"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-14",
-    "reviewer": "OpenAI Codex reserve disclosure review",
+    "reviewedAt": "2026-11-22",
+    "reviewer": "Pharos reserve research 2026-11-22 (#2148 Batch A)",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Midas mGLOBAL transparency dashboard",
+        "label": "Midas PoR v2 canonical token and reserve-wallet registry (tokens.json; mGLOBAL proofId 0x5f683091...f05121 and Aave aEthUSDC wallets)",
+        "url": "https://raw.githubusercontent.com/midas-apps/midas-por-v2/main/tokens.json"
+      },
+      {
+        "label": "Midas PoR v2 partner integration guide (SaveRegistryWithClaim 0x2D6e9F60...809d and IPFS recovery)",
+        "url": "https://raw.githubusercontent.com/midas-apps/midas-por-v2/main/INTEGRATION.md"
+      },
+      {
+        "label": "Midas mGLOBAL October 23, 2026 SAVE attestation (CID QmSyz2zcMwrJFu2fUqAuiM69CaugRKpK4pBztmJbHWLDUF; method-2 ops fallback, 1token aave $2.11M / general_wallet $31.96M; UnixFS DAG-PB hash verified against pinned block 26471570)",
+        "url": "https://gateway.pinata.cloud/ipfs/QmSyz2zcMwrJFu2fUqAuiM69CaugRKpK4pBztmJbHWLDUF"
+      },
+      {
+        "label": "Pinned Ethereum finalized block 26471570 (2026-11-22T15:31:35Z, hash 0x45711a6f...d691f) read via Alchemy RPC: mGLOBAL totalSupply, Chainlink NAV oracle, USDC oracle, and unencumbered aEthUSDC balances",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Midas mGLOBAL transparency dashboard (direct API returned HTTP 403 Cloudflare on 2026-11-22)",
         "url": "https://midas.app/transparency?token=mglobal"
       },
       {
@@ -36,43 +68,23 @@
         "url": "https://app.rwa.xyz/assets/mGLOBAL"
       },
       {
-        "label": "Midas Attestation Engine",
-        "url": "https://blog.midas.app/introducing-the-midas-attestation-engine/"
-      },
-      {
-        "label": "Midas mGLOBAL product page",
-        "url": "https://midas.app/mGLOBAL"
-      },
-      {
-        "label": "Midas mGLOBAL July 13, 2026 SAVE attestation (JTC valuation basis May 31)",
-        "url": "https://gateway.pinata.cloud/ipfs/QmSYEwis7JebUZD3s9FAY6V77hUPNY6vVTfd4yrR75eYwD"
-      },
-      {
-        "label": "September 28 SAVE registry transaction (attestation publication, not valuation date)",
-        "url": "https://etherscan.io/tx/0x9297ef8430eacbfaa91732be7c8350c4471ab5846ed29c9f6bc8a1d5afa29b9c"
-      },
-      {
-        "label": "Recovered September 28 SAVE attestation; embedded manager valuation and portfolio anchor July 31",
+        "label": "Recovered September 28 SAVE attestation (historical JTC July 31 valuation context)",
         "url": "https://ipfs.filebase.io/ipfs/f01701220e8ceed07773f32cc481930b91ad1d5667e1276be5235869af56dcbaf55b129f3"
-      },
-      {
-        "label": "Midas primary registry and attestation interpretation guide",
-        "url": "https://raw.githubusercontent.com/midas-apps/midas-por-v2/main/INTEGRATION.md"
       }
     ],
-    "rationale": "Midas identifies mGLOBAL as exposure to Fasanara receivables and asset-based finance. On September 14 the latest visible aggregate proof-of-reserve report was dated July 13; current product TVL and operational wallets do not refresh that report or disclose a current loan tape. The reserve remains one unresolved private-credit strategy envelope. Redemption-liquidity targets are policy disclosures, not measured reserve-line weights. September 15 onchain registry and IPFS follow-up confirmed that July 13 is the attestation publication date, while its JTC fund-manager claim explicitly values Fasanara SA SICAV-RAIF, mGLOBAL Fund, SF 36, Class A USD ACC as of May 31, 2026. The claim reports $34,462,903.46 fund value and $21,841,041.59 pending subscription. These older, distinct amounts cannot be combined with current operational wallet balances or treated as current held fund shares. Supplemental source-access check 2026-10-09 by Sol curation campaign 2026-10-09 (Lane51Tokenised): direct product, transparency and legal-documentation reads returned HTTP 403; alternate extraction supplied only shared footer disclosures. A browser subsequently recovered the mGLOBAL dashboard, which displayed a latest September 28 PoR/NAV checkpoint, $65.30M gross AUM and $65.25M snapshot TVL, distinct from its $34.06M live product TVL. The displayed aggregate comparison and operational wallet list did not provide a constituent allocation. The attestation itself could not be inspected because concurrent browser sessions shared and changed the relay target. The June 23 strategy article and October 2 September recap remain readable, but neither supplies a complete dated holdings mix. This incomplete report recovery is not evidence of issuer non-disclosure. The campaign leaves the composition cause unresearched pending the underlying current attestation and manager report; no dates, weights or assurance have been refreshed.",
-    "compositionBasis": "Midas issuer strategy disclosure plus independent rwa.xyz Asset-Backed Credit / Fasanara Global Fund envelope; no published constituent weights",
-    "compositionAsOf": "2026-07-28",
+    "rationale": "Renewed on 2026-11-22 from a pinned finalized Ethereum block 26471570 read (hash 0x45711a6f3d1aff45ca6714be1651188e3cd4b1ea01eaa5cf18800d68097d691f, timestamp 2026-11-22T15:31:35Z) joined to Midas's canonical midas-por-v2 token registry and latest on-chain SAVE attestation. At block 26471570, mGLOBAL gross totalSupply is 33,350,224.137091 tokens (supplyExclusionWallet 0x1e0f..20d7 holds 972,093.258676 tokens) and the Chainlink NAV oracle (0x66Aa..5E38, updated 2026-10-23T11:40:59Z) quotes $1.02783667, giving gross token TVL of $34,278,583.32 (matching Midas's gross-supply TVL convention confirmed against historical block 26255839 on 2026-10-23). The two mGLOBAL-exclusive Aave V3 Ethereum wallets declared in midas-por-v2 tokens.json otherTokens hold 32,435.569521 aEthUSDC (Fordefi 1, 0xb38c..bcf6) and 2,318,071.703042 aEthUSDC (RV Aave, 0xA0Fc..b01B), totaling 2,350,507.272563 aEthUSDC with zero Aave V3 debt ($2,350,178.20 at pinned Chainlink USDC/USD $0.99986000, or 6.856112% of gross TVL; verified aEthUSDC symbol, 6 decimals, USDC underlying, and Aave V3 Core Pool 0x8787..a4e2). The remaining 93.143888% ($31,928,405.12) represents the off-chain Fasanara private-credit fund-share book. At the same block, SaveRegistryWithClaim.proofIdToLatestAttestation points to CID QmSyz2zcMwrJFu2fUqAuiM69CaugRKpK4pBztmJbHWLDUF (2026-10-23T14:09:23Z, expired 2026-10-30; reconstructed UnixFS DAG-PB SHA-256 matches on-chain bytes32 0x44ff16d7...1f46ea4). That attestation fell back to method-2 ops-reported gross NAV ($34,244,856.13, zero vlayerClaimHash, no JTC fund-manager email) and recorded 1token equity of $31.9587M general_wallet and $2.1055M aave (reconciled to block 26255839 Fordefi 1 plus RV Aave balances of $2,106,160.39). Confidence remains probable rather than verified because the 93.143888% fund-share residual relies on the October 23 ops-reported NAV oracle without a current notarized JTC valuation, underlying loan-level obligors remain undisclosed, direct api-prod.midas.app returned HTTP 403, and mGLOBAL-exclusive usdcWallet1 (0xf5Ca..4184) additionally holds 1,008,612.425607 unencumbered aEthUSDC ($1,008,471.22, 2.941987% of gross TVL; plus $166.57 idle USDC across wallets) outside the declared otherTokens and 1token Aave perimeter.",
+    "compositionBasis": "Pinned finalized Ethereum block 26471570 (2026-11-22T15:31:35Z) on-chain mGLOBAL gross TVL ($34,278,583.32 using October 23 Chainlink NAV oracle $1.02783667) split between verified declared Aave V3 Ethereum aEthUSDC liquidity reserve ($2,350,178.20 at pinned USDC/USD $0.99986, 6.856112%) and Fasanara private-credit fund-share residual (93.143888%)",
+    "compositionAsOf": "2026-11-22",
     "scope": "full-composition",
-    "knownUnknownExposure": "Loan-level weights, obligors, originators, warehouse facilities and cash-versus-receivables allocation remain unverified. Source-maintenance check 2026-10-07: mGLOBAL API updatedAt=2026-10-07T20:08:00.124Z labels 93.83% USDT and 6.17% Aave USDC, but the official June 23 structure describes receivables/digital invoices/asset-based finance and general_wallet is unmapped. Do not promote that label to verified Tether reserves. The retained July SAVE CID's manager valuation is May 31 and ops claim June 29; publication or proof update cannot renew valuation. Exact equity/NAV agreement may echo the September 24 NAV rather than prove constituents. Preserve the 4000000-second NAV cap; monthly manager reporting does not authorize that age for loan-level composition. Supplemental source recovery 2026-10-09 by Sol curation campaign 2026-10-09 (W2L21Alchemix) supersedes the earlier browser-collision access blocker, not the reserve review or composition dates: September 28 registry transaction 0x9297ef8430eacbfaa91732be7c8350c4471ab5846ed29c9f6bc8a1d5afa29b9c at Ethereum block 26075343 points to attestation e8ceed07773f32cc481930b91ad1d5667e1276be5235869af56dcbaf55b129f3. The recovered gzip object's reconstructed UnixFS DAG-PB SHA-256 exactly matches that hash. Its metadata createdAt is 2026-09-28T10:25:21.435Z and expiresAt is 2026-10-05T10:25:21.435Z, but the embedded JTC email values Fasanara SA SICAV-RAIF, mGLOBAL Fund, SF 36, Class A USD ACC as of July 31, 2026 at $60,921,529.12 with $134,760 pending subscription. The separate onetoken_report explicitly anchors to July 31 at 23:59:59 UTC, not September 28. The document reports $65,296,469.78 gross reserves and $65,249,665.15 TVL, not underlying loan weights. Its Midas signature and TLS-notary proof were not independently validated; content-hash binding is not reserve assurance. A separately recovered September 28 10:00 UTC API protocol-equity split of 90.71% general_wallet/unmapped and 9.29% Aave is not this attestation's embedded July snapshot or proven whole-economic-reserve mix. Curated dates, weights, confidence and unresolved strategy envelope remain unchanged.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "The 93.143888% Fasanara private-credit fund-share slice remains an unresolved credit-fund basket: individual receivables obligors, originators, warehouse facilities, and cash-versus-receivables split are unpublished, and no newer Vlayer-notarized JTC fund-manager valuation email has been anchored on-chain since the September 28 attestation (July 31 JTC basis). The latest on-chain SAVE attestation (2026-10-23, CID QmSyz2zcMwrJFu2fUqAuiM69CaugRKpK4pBztmJbHWLDUF) used method-2 ops-reported NAV with an expired 2026-10-30 validity window and a zero vlayerClaimHash. Additionally, mGLOBAL-exclusive usdcWallet1 (0xf5Ca9DcbabecDd95A5b7b091A2a70b81ddFa4184) holds 1,008,612.425607 unencumbered aEthUSDC (2.941987% of gross TVL) at block 26471570 that is not declared in midas-por-v2 tokens.json otherTokens or counted in the October 23 1token aave leg; its exact attribution (backing reserve versus settlement or fee sleeve) could not be confirmed because api-prod.midas.app/api/transparency?token=mGLOBAL returned HTTP 403.",
+    "knownUnknownExposurePct": 93.143888,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Fasanara global private-credit / strategy portfolio",
-        "pct": 100,
+        "reserveName": "Fasanara global private-credit fund shares (Aureum Securitisation Fund, Compartment mGLOBAL)",
+        "pct": 93.143888,
         "disposition": "basket-needs-split",
-        "rationale": "Issuer and independent RWA registry identify the Fasanara receivables / GDADF strategy envelope but do not publish current underlying portfolio allocation or individual obligor and counterparty exposures."
+        "rationale": "Identifies the Fasanara private-credit fund-share residual net of declared Aave V3 Ethereum aEthUSDC positions, but underlying receivables obligors, cash sleeve, and current JTC fund-manager valuation remain undisclosed."
       }
     ]
   },

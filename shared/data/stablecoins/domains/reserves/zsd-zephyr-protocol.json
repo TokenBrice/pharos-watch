@@ -17,12 +17,12 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-29",
-    "reviewer": "Sol curation campaign 2026-10-29 (R-COMP-4)",
+    "reviewedAt": "2026-11-22",
+    "reviewer": "Issue #945 Wave A reserve refresh 2026-11-22",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Zephyr reserve snapshot captured 2026-10-17T15:17:42.772Z at height 887405; observed 2026-10-29",
+        "label": "Zephyr reserve snapshot captured 2026-11-22T12:42:30.987Z at height 913184; observed 2026-11-22T15:42:24Z",
         "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc"
       },
       {
@@ -30,7 +30,7 @@
         "url": "https://zephyrprotocol.com/documentation/scanner-api"
       },
       {
-        "label": "Zephyr reserve snapshot captured 2026-10-10T18:47:02.883Z at height 882485; observed 2026-10-10T23:28:46Z",
+        "label": "Zephyr reserve snapshot captured 2026-10-17T15:17:42.772Z at height 887405; observed 2026-10-29",
         "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc"
       },
       {
@@ -38,9 +38,9 @@
         "url": "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf"
       }
     ],
-    "rationale": "The newest Zephyr reserve snapshot, captured_at 2026-10-17T15:17:42.772Z at reserve_height 887405, was still the latest record in the series when observed on 2026-10-29 (569 snapshots returned, descending). It reports on_chain.zeph_reserve_atoms 4877686188547337100 (4,877,686.188547337 ZEPH) and zsd_circ_atoms 383960207767254379 (383,960.2077672544 ZSD). The scanner documentation identifies zeph_in_reserve as ZEPH locked in the DJED reserve. The complete single-asset reserve remains one 100% ZEPH slice, unchanged from the October 10 review; the snapshot's reserve_ratio 3.819930 is a coverage observation, not a composition weight, and it replaced the October 10 ratio of 4.014344 because reserve and circulating amounts moved. This review establishes reserve composition from the issuer's itemized native reserve snapshot and documented asset identity. It does not assert an independently pinned daemon read, an independent attestation, a liquidation horizon, or legal custody protection.",
-    "compositionBasis": "Zephyr Protocol single-asset reserve design and complete primary reserve snapshot captured 2026-10-17T15:17:42.772Z at height 887405",
-    "compositionAsOf": "2026-10-17",
+    "rationale": "The newest Zephyr reserve snapshot, captured_at 2026-11-22T12:42:30.987Z at reserve_height 913184 (pricing_record timestamp 1795351227, 2026-11-22T12:40:27Z), was observed fresh (x-stale: 0, total 659 snapshots descending) on 2026-11-22T15:42:24Z. It reports on_chain.zeph_reserve_atoms 5242494971858117907 (5,242,494.971858117907 ZEPH) and zsd_circ_atoms 339523561042720755 (339,523.561042720755 ZSD). The scanner documentation identifies zeph_in_reserve as ZEPH locked in the DJED reserve. The complete single-asset reserve remains one 100% ZEPH slice, unchanged from the October 17 snapshot; the snapshot's reserve_ratio 1.845614 is a coverage observation rather than a composition weight, replacing the October 17 ratio of 3.819930 as reserve amounts, circulating ZSD, and ZEPH spot moved. This review establishes reserve composition from the issuer's itemized native reserve snapshot and documented asset identity. It does not assert an independently pinned daemon read, an independent attestation, a liquidation horizon, or legal custody protection.",
+    "compositionBasis": "Zephyr Protocol single-asset reserve design and complete primary reserve snapshot captured 2026-11-22T12:42:30.987Z at height 913184",
+    "compositionAsOf": "2026-11-22",
     "scope": "full-composition",
     "knownUnknownExposure": "The latest published snapshot identifies the entire reserve as ZEPH and the ZSD liabilities; it does not establish a liquidation horizon or legal custody/insolvency protection, which remain outside composition.",
     "knownUnknownExposurePct": 0,
