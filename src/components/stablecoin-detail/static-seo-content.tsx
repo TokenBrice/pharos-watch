@@ -85,11 +85,13 @@ const FACT_VALUE_CLASS = "mt-1 text-sm leading-relaxed text-foreground";
 const ACTION_ICON_CLASS = "h-3.5 w-3.5 shrink-0 text-muted-foreground";
 const INLINE_LINK_CLASS = "pharos-focus-ring rounded-sm text-brand-accent-text underline-offset-2 hover:underline";
 
+const EN_SENTENCE_SEGMENTER = new Intl.Segmenter("en", { granularity: "sentence" });
+
 function summarizeText(text: string, maxLength = 280): string {
   const normalized = normalizeWhitespace(stripTermMarkup(text));
   if (normalized.length <= maxLength) return normalized;
 
-  const sentences = [...new Intl.Segmenter("en", { granularity: "sentence" }).segment(normalized)];
+  const sentences = [...EN_SENTENCE_SEGMENTER.segment(normalized)];
   let complete = "";
   for (const { segment } of sentences) {
     const candidate = `${complete}${segment}`;

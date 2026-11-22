@@ -33,6 +33,36 @@ export const INDEXABLE_DEPEG_EVENT_ENTRIES: readonly DepegEventEntry[] = DEPEG_E
   (event) => !NOINDEX_DEPEG_EVENT_SLUGS.has(event.slug),
 );
 
+const eventsByStablecoinIdCache = new WeakMap<
+  readonly DepegEventEntry[],
+  ReadonlyMap<string, readonly DepegEventEntry[]>
+>();
+
+function getEventsByStablecoinId(
+  entries: readonly DepegEventEntry[],
+): ReadonlyMap<string, readonly DepegEventEntry[]> {
+  const cached = eventsByStablecoinIdCache.get(entries);
+  if (cached) return cached;
+
+  const byCoin = new Map<string, DepegEventEntry[]>();
+  for (const event of entries) {
+    let list = byCoin.get(event.stablecoinId);
+    if (!list) {
+      list = [];
+      byCoin.set(event.stablecoinId, list);
+    }
+    list.push(event);
+  }
+  eventsByStablecoinIdCache.set(entries, byCoin);
+  return byCoin;
+}
+
+const EXPLORE_DEPEG_DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
 /**
  * The coin's newest permanent depeg event pages ("USDC depeg Mar 2023").
  */
@@ -41,15 +71,11 @@ export function buildExploreDepegEventLinks(
   symbol: string,
   limit = 5,
 ): Array<{ href: string; label: string }> {
-  return DEPEG_EVENT_ENTRIES.filter((event) => event.stablecoinId === coinId)
+  return (getEventsByStablecoinId(DEPEG_EVENT_ENTRIES).get(coinId) ?? [])
     .slice(0, limit)
     .map((event) => ({
       href: `/depeg/${event.slug}/`,
-      label: `${symbol} depeg ${new Date(event.startedAt * 1000).toLocaleDateString("en-US", {
-        month: "short",
-        year: "numeric",
-        timeZone: "UTC",
-      })}`,
+      label: `${symbol} depeg ${EXPLORE_DEPEG_DATE_FORMATTER.format(new Date(event.startedAt * 1000))}`,
     }));
 }
 

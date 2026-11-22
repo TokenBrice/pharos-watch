@@ -162,6 +162,47 @@ describe("release Next.js typecheck handoff", () => {
 
     expect(createNextConfig("phase-production-build").typescript).toBeUndefined();
   });
+
+  it("sets build-speed defaults and env-gated prerender/CPU/webpack-cache controls", () => {
+    vi.stubEnv("CI", "");
+    vi.stubEnv("PHAROS_DISABLE_PRERENDER_SOURCE_MAPS", "");
+    vi.stubEnv("PHAROS_NEXT_BUILD_CPUS", "");
+    vi.stubEnv("PHAROS_DISABLE_WEBPACK_FS_CACHE", "");
+
+    const defaultConfig = createNextConfig("phase-production-build");
+    expect(defaultConfig.experimental?.serverMinification).toBe(false);
+    expect(defaultConfig.experimental?.cpus).toBeUndefined();
+    expect(defaultConfig.enablePrerenderSourceMaps).toBeUndefined();
+    expect(defaultConfig.outputFileTracingExcludes).toEqual({
+      "*": ["public/**", "data/**", "shared/data/**", "docs/**", "scripts/**", "worker/**"],
+    });
+
+    vi.stubEnv("CI", "true");
+    vi.stubEnv("PHAROS_NEXT_BUILD_CPUS", "4");
+    const ciConfig = createNextConfig("phase-production-build");
+    expect(ciConfig.enablePrerenderSourceMaps).toBe(false);
+    expect(ciConfig.experimental?.cpus).toBe(4);
+
+    vi.stubEnv("CI", "");
+    vi.stubEnv("PHAROS_DISABLE_PRERENDER_SOURCE_MAPS", "1");
+    for (const invalid of ["0", "-2", "4.5", "4abc"]) {
+      vi.stubEnv("PHAROS_NEXT_BUILD_CPUS", invalid);
+      const invalidCpuConfig = createNextConfig("phase-production-build");
+      expect(invalidCpuConfig.enablePrerenderSourceMaps).toBe(false);
+      expect(invalidCpuConfig.experimental?.cpus).toBeUndefined();
+    }
+
+    const webpackContext = { dev: false, isServer: true } as Parameters<NonNullable<typeof defaultConfig.webpack>>[1];
+    expect(defaultConfig.webpack?.({ cache: { type: "filesystem" } }, webpackContext).cache).toEqual({
+      type: "filesystem",
+    });
+
+    vi.stubEnv("PHAROS_DISABLE_WEBPACK_FS_CACHE", "1");
+    expect(defaultConfig.webpack?.({ cache: { type: "filesystem" } }, webpackContext).cache).toBe(false);
+    expect(
+      defaultConfig.webpack?.({ cache: { type: "filesystem" } }, { ...webpackContext, dev: true }).cache,
+    ).toEqual({ type: "filesystem" });
+  });
 });
 
 describe("deterministic Next.js build ID", () => {

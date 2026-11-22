@@ -99,6 +99,9 @@ describe("Pages artifact input profile", () => {
       "--import", "tsx", "scripts/maintenance/run-generated-artifacts.ts",
       `--only=${RERUN_COMPILE_INPUT_IDS.join(",")}`,
     ]);
+    expect(compileInputs[0][2].env.PHAROS_GENERATED_SKIP_EXISTING_DEPS).toBe("1");
+    const postRefresh = spawn.mock.calls.find((call) => call[1].includes("generated:post-refresh"));
+    expect(postRefresh?.[2].env.PHAROS_GENERATED_SKIP_EXISTING_DEPS).toBe("1");
     expect(spawn.mock.calls.some((call) => call[1].includes("generated:compile-input"))).toBe(false);
   });
 
@@ -124,8 +127,34 @@ describe("Pages artifact input profile", () => {
   it("keeps the full compile-input lifecycle without the reuse flag", async () => {
     const root = makeRoot();
     dataFixture(root);
+    vi.stubEnv("PHAROS_GENERATED_SKIP_EXISTING_DEPS", "1");
     await runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false });
-    expect(spawn.mock.calls.some((call) => call[0] === "npm" && call[1].includes("generated:compile-input"))).toBe(true);
+    const compileInput = spawn.mock.calls.find((call) => call[0] === "npm" && call[1].includes("generated:compile-input"));
+    const postRefresh = spawn.mock.calls.find((call) => call[0] === "npm" && call[1].includes("generated:post-refresh"));
+    expect(compileInput).toBeDefined();
+    expect(compileInput?.[2].env.PHAROS_GENERATED_SKIP_EXISTING_DEPS).toBe("");
+    expect(postRefresh?.[2].env.PHAROS_GENERATED_SKIP_EXISTING_DEPS).toBe("");
+    const nextBuild = spawn.mock.calls.find((call) => call[0] === "npx" && call[1].includes("next"));
+    expect(nextBuild?.[2].env).toMatchObject({
+      NEXT_TELEMETRY_DISABLED: "1",
+      PHAROS_DISABLE_WEBPACK_FS_CACHE: "1",
+      PHAROS_NEXT_BUILD_CPUS: "4",
+    });
+  });
+
+  it("preserves caller build-tuning overrides on webpack-export", async () => {
+    const root = makeRoot();
+    dataFixture(root);
+    vi.stubEnv("NEXT_TELEMETRY_DISABLED", "0");
+    vi.stubEnv("PHAROS_DISABLE_WEBPACK_FS_CACHE", "0");
+    vi.stubEnv("PHAROS_NEXT_BUILD_CPUS", "2");
+    await runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false });
+    const nextBuild = spawn.mock.calls.find((call) => call[0] === "npx" && call[1].includes("next"));
+    expect(nextBuild?.[2].env).toMatchObject({
+      NEXT_TELEMETRY_DISABLED: "0",
+      PHAROS_DISABLE_WEBPACK_FS_CACHE: "0",
+      PHAROS_NEXT_BUILD_CPUS: "2",
+    });
   });
 
   it.each([

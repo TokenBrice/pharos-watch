@@ -7,7 +7,15 @@
 @source not "../../scripts";
 @source not "../../functions";
 @source not "../../worker";
+@source not "../../data";
+@source not "../../public";
 @source not "../../shared/data";
+@source not "../../shared/lib/__tests__";
+@source not "../../shared/test-utils";
+@source not "../../.github";
+@source not "../../.claude";
+@source not "../../.codex";
+@source not "../../.agents";
 @source not "../**/__tests__";
 /* Score-track band fills: v4 scanning misses some of these /70 tones even as
    plain literals (bg-blue-500/70 was silently dropped) — force-emit them. */

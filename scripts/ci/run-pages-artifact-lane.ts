@@ -131,6 +131,7 @@ export function pagesArtifactEnvironment(env: Partial<NodeJS.ProcessEnv>, previo
     PHAROS_RELEASE_PR_TYPECHECKED: "1",
     // Never inherit a replay waiver for degraded data or offline rehearsal.
     PHAROS_PAGES_REPLAY: "",
+    PHAROS_GENERATED_SKIP_EXISTING_DEPS: "",
     PHAROS_DETAIL_SNAPSHOT_BOOTSTRAP: "",
     PHAROS_DETAIL_SNAPSHOT_CHECK: "1",
     PUBLIC_DATASETS_API_URL: "",
@@ -207,14 +208,17 @@ export async function runPagesArtifactLane({ repoRoot = REPO_ROOT, acquireReleas
     const criticalCssScope = criticalCssScopeForLane(process.env);
     report(`- Critical CSS: ${criticalCssScope === "gates" ? "gate-measured routes only" : "full public pass"}`);
     const reusePreparedWorkspace = process.env.PHAROS_PAGES_REUSE_PREPARED_WORKSPACE === "1";
+    const skipExistingDepsEnv: Partial<NodeJS.ProcessEnv> = reusePreparedWorkspace
+      ? { PHAROS_GENERATED_SKIP_EXISTING_DEPS: "1" }
+      : {};
     const reducedCompileInput = reusePreparedWorkspace ? compileInputStageArtifacts(repoRoot) : [];
     if (reducedCompileInput.length > 0) {
       report(`- Compile input: reused prepared workspace; reran ${reducedCompileInput.join(", ")}`);
       command("compile-input", process.execPath, [
         "--import", "tsx", "scripts/maintenance/run-generated-artifacts.ts", `--only=${reducedCompileInput.join(",")}`,
-      ]);
+      ], skipExistingDepsEnv);
     } else {
-      command("compile-input", "npm", ["run", "generated:compile-input"]);
+      command("compile-input", "npm", ["run", "generated:compile-input"], skipExistingDepsEnv);
     }
     // This generator-owned bootstrap is always offline, before replay. It also
     // removes obsolete catalog envelopes and seeds newly added coins.
@@ -222,10 +226,14 @@ export async function runPagesArtifactLane({ repoRoot = REPO_ROOT, acquireReleas
       PHAROS_DETAIL_SNAPSHOT_BOOTSTRAP: "1", PHAROS_DETAIL_SNAPSHOT_CHECK: "",
     });
     if (retained) replayPagesDetailSnapshots(repoRoot, join(temporary, "overlay"));
-    command("post-refresh-replay", "npm", ["run", "generated:post-refresh"]);
+    command("post-refresh-replay", "npm", ["run", "generated:post-refresh"], skipExistingDepsEnv);
     rmSync(join(repoRoot, ".next"), { recursive: true, force: true });
     rmSync(join(repoRoot, "out"), { recursive: true, force: true });
-    command("webpack-export", "npx", ["--no-install", "next", "build", "--webpack"]);
+    command("webpack-export", "npx", ["--no-install", "next", "build", "--webpack"], {
+      NEXT_TELEMETRY_DISABLED: env.NEXT_TELEMETRY_DISABLED ?? "1",
+      PHAROS_DISABLE_WEBPACK_FS_CACHE: env.PHAROS_DISABLE_WEBPACK_FS_CACHE ?? "1",
+      PHAROS_NEXT_BUILD_CPUS: env.PHAROS_NEXT_BUILD_CPUS ?? "4",
+    });
     command("postbuild", "npm", ["run", "postbuild"], { PHAROS_CRITICAL_CSS_SCOPE: criticalCssScope });
     command("pages-release-artifact-gates", "npm", ["run", "check:pages-release"]);
     // Lighthouse is an explicit opt-in so the PR lane stays off the critical

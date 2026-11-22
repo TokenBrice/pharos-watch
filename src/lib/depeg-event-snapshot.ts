@@ -1,5 +1,5 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { z } from "zod";
 import { hasUnverifiedDepegPeak } from "./depeg-event-config";
 import {
@@ -9,6 +9,33 @@ import {
 } from "@shared/types/peg";
 
 export const DEPEG_EVENT_DATA_DIR = join(process.cwd(), "data/depeg-events");
+const RESOLVED_DEPEG_EVENT_DATA_DIR = resolve(DEPEG_EVENT_DATA_DIR);
+
+let defaultSnapshotCache: { signature: string; entries: readonly DepegEventEntry[] } | null = null;
+let defaultPageEntriesCache: {
+  indexSignature: string;
+  snapshotSignature: string;
+  entries: readonly DepegEventEntry[];
+} | null = null;
+
+function tryFileStatSignature(path: string): string | null {
+  try {
+    const stats = statSync(path);
+    return `${stats.ino}:${stats.size}:${stats.mtimeMs}`;
+  } catch {
+    return null;
+  }
+}
+
+function buildShardsSignature(dataDir: string, shardNames: readonly string[]): string | null {
+  const parts: string[] = [];
+  for (const name of shardNames) {
+    const sig = tryFileStatSignature(join(dataDir, name));
+    if (sig === null) return null;
+    parts.push(`${name}:${sig}`);
+  }
+  return parts.join("|");
+}
 
 const DepegEventIndexEntrySchema = z.object({
   slug: z.string().min(1),
@@ -103,11 +130,23 @@ export function readDepegEventSnapshot({ missing }: { missing: "empty" | "throw"
     throw new Error(`No yearly depeg event shards found under ${dataDir}.`);
   }
 
+  // Only memoize the production data directory (keyed by shard inode/size/mtime)
+  // so temp-dir test fixtures mutated in-place within a single clock tick never read stale data.
+  const isDefaultDir = resolve(dataDir) === RESOLVED_DEPEG_EVENT_DATA_DIR;
+  const signature = isDefaultDir ? buildShardsSignature(dataDir, shardNames) : null;
+  if (signature !== null && defaultSnapshotCache?.signature === signature) {
+    return defaultSnapshotCache.entries.slice();
+  }
+
   const entries = shardNames.flatMap((name) => readDepegEventShard(join(dataDir, name)));
-  return entries.sort((a, b) => {
+  entries.sort((a, b) => {
     if (b.startedAt !== a.startedAt) return b.startedAt - a.startedAt;
     return b.id - a.id;
   });
+  if (signature !== null) {
+    defaultSnapshotCache = { signature, entries };
+  }
+  return entries.slice();
 }
 
 export function hasReviewedDepegEvent(event: DepegEventEntry): boolean {
@@ -122,8 +161,22 @@ export function resolveRetainedDepegEventPage(retained: DepegEventEntry, current
 
 /** Resolve the permanent route index against the current ledger, newest first. */
 export function readDepegEventPageEntries(dataDir = DEPEG_EVENT_DATA_DIR): DepegEventEntry[] {
-  const index = readDepegEventIndex({ missing: "throw" }, join(dataDir, "index.json"));
-  const bySlug = new Map(readDepegEventSnapshot({ missing: "throw" }, dataDir).map((event) => [event.slug, event] as const));
+  const indexPath = join(dataDir, "index.json");
+  const isDefaultDir = resolve(dataDir) === RESOLVED_DEPEG_EVENT_DATA_DIR;
+  const indexSignature = isDefaultDir ? tryFileStatSignature(indexPath) : null;
+  const snapshot = readDepegEventSnapshot({ missing: "throw" }, dataDir);
+  const snapshotSignature = isDefaultDir ? (defaultSnapshotCache?.signature ?? null) : null;
+  if (
+    indexSignature !== null
+    && snapshotSignature !== null
+    && defaultPageEntriesCache?.indexSignature === indexSignature
+    && defaultPageEntriesCache.snapshotSignature === snapshotSignature
+  ) {
+    return defaultPageEntriesCache.entries.slice();
+  }
+
+  const index = readDepegEventIndex({ missing: "throw" }, indexPath);
+  const bySlug = new Map(snapshot.map((event) => [event.slug, event] as const));
   const pages = index.map(({ slug, retainedPage }) => {
     const current = bySlug.get(slug);
     const event = retainedPage ? resolveRetainedDepegEventPage(retainedPage, current) : current;
@@ -138,5 +191,9 @@ export function readDepegEventPageEntries(dataDir = DEPEG_EVENT_DATA_DIR): Depeg
   for (const event of bySlug.values()) {
     if (hasUnverifiedDepegPeak(event) && !indexedSlugs.has(event.slug)) pages.push(event);
   }
-  return pages.sort((a, b) => b.startedAt - a.startedAt || a.slug.localeCompare(b.slug));
+  pages.sort((a, b) => b.startedAt - a.startedAt || a.slug.localeCompare(b.slug));
+  if (indexSignature !== null && snapshotSignature !== null) {
+    defaultPageEntriesCache = { indexSignature, snapshotSignature, entries: pages };
+  }
+  return pages.slice();
 }
