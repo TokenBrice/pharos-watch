@@ -231,11 +231,11 @@ export interface ReviewedSupplyCarry {
 export const REVIEWED_SUPPLY_CARRIES: readonly ReviewedSupplyCarry[] = [
   {
     stablecoinId: "said-gaib",
-    reviewedAt: Date.UTC(2026, 10, 11, 23, 19, 58) / 1000,
-    expiresAt: Date.UTC(2026, 10, 25, 23, 19, 58) / 1000,
+    reviewedAt: Date.UTC(2026, 10, 22, 12, 38) / 1000,
+    expiresAt: Date.UTC(2026, 11, 6, 12, 38) / 1000,
     owner: "ops",
     reason: "nav-parent-price-gap",
-    evidence: "Re-reviewed 2026-11-11 23:19:58 UTC: the successful 23:17:26 UTC CoinGecko batch GET (https://api.coingecko.com/api/v3/simple/price?ids=rupiah-token,decentralized-euro,parallel-usdp,xusd-babelfish,gaib-aid,gaib-said,wrapped-itry&vs_currencies=usd&include_24hr_vol=true&include_market_cap=true&include_last_updated_at=true) reports gaib-said $0.64483 dated 2026-07-05T21:35:30Z and AID $1.004 dated 2026-11-11T08:26:53Z; later single-asset retries were rate-limited. AID tickers are empty (https://api.coingecko.com/api/v3/coins/gaib-aid/tickers), and its observed Curve pool has only $1,474.55 with zero volume (https://api.geckoterminal.com/api/v2/networks/eth/tokens/0x18f52b3fb465118731d9e0d276d4eb3599d57596/pools). No fresh trusted AID parent supports ERC-4626 NAV supply valuation. The prior carried on-chain valuation and supplyObservedAt 2026-11-11T08:46:08Z are recorded in price-acked-gaps-b.md as read 2026-11-11 22:45Z, not re-read from production here. STABLECOIN_PRICE_GAP_REVIEWS in stablecoin-publication-reviews.ts supports aid-gaib's gap through 2026-11-25T23:19:58Z. This review classifies only: no price, supply, original clock, quarantine or carry ceiling changes.",
+    evidence: "Re-reviewed 2026-11-22 12:38 UTC with fresh GETs: CoinGecko (https://api.coingecko.com/api/v3/simple/price?ids=gaib-aid,gaib-said&vs_currencies=usd&include_24hr_vol=true&include_market_cap=true&include_last_updated_at=true) still reports gaib-said $0.64483 frozen at 2026-07-05T21:35:30Z and parent gaib-aid $0.997702 ($1.00 24h volume) dated 2026-11-19T15:02:33Z; AID tickers are empty (https://api.coingecko.com/api/v3/coins/gaib-aid/tickers) and its largest GeckoTerminal Ethereum pools hold $1,402.52 and $1,378.62 with zero volume (https://api.geckoterminal.com/api/v2/networks/eth/tokens/0x18f52b3fb465118731d9e0d276d4eb3599d57596/pools). No fresh trusted AID parent supports ERC-4626 NAV supply valuation. Live /api/stablecoins (https://api.pharos.watch/api/stablecoins) confirms supplyRestored true, supplySource onchain-total-supply and supplyObservedAt 2026-11-19T15:30:35Z. STABLECOIN_PRICE_GAP_REVIEWS in stablecoin-publication-reviews.ts supports aid-gaib's gap through 2026-12-06T12:38:00Z. This review classifies only: no price, supply, original clock, quarantine or carry ceiling changes.",
   },
 ];
 

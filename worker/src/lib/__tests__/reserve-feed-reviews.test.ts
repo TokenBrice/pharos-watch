@@ -84,7 +84,7 @@ describe("reserve feed review policy", () => {
   });
   it("retires Yuzu, dates nWISDOM and retains the exact error/category boundary", async () => {
     const r = RESERVE_FEED_REVIEWS.find((r) => r.stablecoinId === "nwisdom-nest")!;
-    expect([r.reviewedAt, r.expiresAt]).toEqual(["2026-11-12T19:31:00Z", "2026-11-19T19:31:00Z"].map((s) => Date.parse(s) / 1000));
+    expect([r.reviewedAt, r.expiresAt]).toEqual(["2026-11-22T12:38:00Z", "2026-12-06T12:38:00Z"].map((s) => Date.parse(s) / 1000));
     expect(RESERVE_FEED_REVIEWS.some((r) => r.stablecoinId === "yzusd-yuzu")).toBe(false);
     expect(review.failureCategory).toBe("unknown");
     expect(review.errorPrefix).toBe(accountable + "exposure_split has no contemporaneous timeline reserve total for reconciliation");

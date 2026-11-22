@@ -11,15 +11,15 @@ import { hasScoringEligibleLiveReserveFreshness } from "./live-reserves/store-sn
 export const RESERVE_FEED_REVIEWS: readonly ReserveFeedReview[] = [
   {
     stablecoinId: "nwisdom-nest", adapterKey: "nest-vault-positions", failureCategory: null,
-    warningCodes: ["stale-source-data"], errorPrefix: null, sourceTimestamp: 1793302678,
-    owner: "ops", reason: "Issuer positions, price and last-price-update GETs rechecked 2026-11-12T19:31Z: latest accountant updatedAt remains 1793302678 (2026-10-29T19:37:58Z), about 14 days old. Settled positions total $14,463.39090297394, including $14,407.79 unidentified nUSDR (99.6156%); reported NAV is $14,463.384577405013. The 2026-11-12T19:28Z production status still acknowledges the same null-category, null-error stale-source-data finding and source clock. Renew only the exact stalled clock and stale-source-data warning for seven days, not nUSDR identity or fresh backing. Preserve original clocks, quarantine and scoring refusal; clock advancement or a different warning/cause requires reassessment.",
+    warningCodes: ["stale-source-data"], errorPrefix: null, sourceTimestamp: 1794584792,
+    owner: "ops", reason: "Issuer positions, price and last-price-update GETs rechecked 2026-11-22T12:38Z: latest accountant updatedAt is 1794584792 (2026-11-13T15:46:32Z), about 8.9 days old and beyond the 259,200s source-age budget. Settled positions total $14,413.255347973938, including $14,367.79 unidentified nUSDR (99.6845%); reported NAV is $14,413.257478399777 at $0.892579 across 16,147.878763 shares. Production /api/stablecoin-reserves/nwisdom-nest reports mode live-stale, status degraded, null failureCategory, null error and the exact stale-source-data warning for sourceTimestamp 1794584792. Renew only the exact stalled clock and stale-source-data warning for 14 days, not nUSDR identity or fresh backing. Preserve original clocks, quarantine and scoring refusal; clock advancement or a different warning/cause requires reassessment.",
     sources: [
-      { url: "https://api.nest.credit/v1/vaults/nest-wisdom-vault/positions", evidenceDate: "2026-11-12" },
-      { url: "https://api.nest.credit/v1/vaults/nest-wisdom-vault/last-price-update", evidenceDate: "2026-11-12" },
-      { url: "https://api.nest.credit/v1/vaults/nest-wisdom-vault/price", evidenceDate: "2026-11-12" },
+      { url: "https://api.nest.credit/v1/vaults/nest-wisdom-vault/positions", evidenceDate: "2026-11-22" },
+      { url: "https://api.nest.credit/v1/vaults/nest-wisdom-vault/last-price-update", evidenceDate: "2026-11-22" },
+      { url: "https://api.nest.credit/v1/vaults/nest-wisdom-vault/price", evidenceDate: "2026-11-22" },
     ],
-    reviewedAt: Date.UTC(2026, 10, 12, 19, 31) / 1000,
-    expiresAt: Date.UTC(2026, 10, 19, 19, 31) / 1000,
+    reviewedAt: Date.UTC(2026, 10, 22, 12, 38) / 1000,
+    expiresAt: Date.UTC(2026, 11, 6, 12, 38) / 1000,
   },
 ];
 

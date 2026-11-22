@@ -476,7 +476,7 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     expect(next.missingActiveAssets[0]).toMatchObject({ consecutiveMissingGenerations: null, alertEligible: true });
   });
 
-  it.each(["wusd-worldwide", "aid-gaib", "bd-basedollar", "idrt-rupiah-token", "deuro-deuro", "fusd-finchain", "usdp-parallel", "xusd-babelfish"])("keeps %s missing while acknowledged, re-alerts at expiry, and clears on a real price", (id) => {
+  it.each(["wusd-worldwide", "aid-gaib", "bd-basedollar", "dllr-sovryn", "gbpe-monerium", "deuro-deuro", "fusd-finchain", "xusd-babelfish"])("keeps %s missing while acknowledged, re-alerts at expiry, and clears on a real price", (id) => {
     const review = reviewFor(id);
     const ids = [review.stablecoinId, "usdt-tether"];
     const first = priceCoverage(
@@ -776,17 +776,17 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     });
   });
 
-  it("renews the October 29 WUSD source review as a 30-day owner decision without retiring the lifecycle question", () => {
+  it("renews the WUSD source review without retiring the October 23 lifecycle question", () => {
     const id = "wusd-worldwide";
     const review = reviewFor(id);
-    expect(review).toMatchObject({ owner: "ops", reviewedAt: Date.UTC(2026, 9, 29, 11) / 1000 });
-    expect(review.expiresAt).toBe(Date.UTC(2026, 10, 27, 11) / 1000);
+    expect(review).toMatchObject({ owner: "ops", reviewedAt: Date.UTC(2026, 10, 22, 12, 38) / 1000 });
+    expect(review.expiresAt).toBe(Date.UTC(2026, 11, 6, 12, 38) / 1000);
     expect(review.expiresAt - review.reviewedAt).toBeLessThanOrEqual(30 * 86_400);
-    expect(review.reason).toContain("2026-10-29 11:00 UTC");
+    expect(review.reason).toContain("2026-11-22 12:38 UTC");
     expect(review.reason).toContain("2026-08-21 22:51:40 UTC");
     expect(review.reason).toContain("$1.17");
     expect(review.reason).toContain("zero tickers");
-    expect(review.reason).toContain("$1,135.07");
+    expect(review.reason).toContain("$1,183.06");
     expect(review.reason).toContain("$50K per-pool floor");
     expect(review.reason).toContain("NXDOMAIN");
     expect(review.reason).toContain("Owner decision 2026-10-29: keep active pending a primary discontinuation source; freeze if one appears");
@@ -806,21 +806,22 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     });
   });
 
-  it("reviews IDRT's empty lanes; priced rows and retired USDK reviews acknowledge nothing", () => {
-    const id = "idrt-rupiah-token", review = reviewFor(id);
-    expect(review.owner).toBe("ops");
-    expect(review.expiresAt - review.reviewedAt).toBeLessThanOrEqual(30 * 86400);
-    expect(review.sources.join()).toContain("api.coingecko.com/api/v3/simple/price?");
-    expect(review.sources.join()).toContain("api.dexscreener.com/token-pairs/v1/ethereum/");
-    expect(priceCoverage([{ id, price: 0.00005568 }], [id], { nowSec: review.reviewedAt }))
-      .toMatchObject({ complete: true, pricedActiveIds: [id], missingPriceCount: 0, acknowledgedGapCount: 0 });
-    const usdk = "usdk-kast", nowSec = Date.UTC(2026, 9, 29, 12) / 1000;
-    expect(ACTIVE_IDS.has(usdk)).toBe(true);
-    expect(reviewFor(usdk)).toBeUndefined();
-    const first = priceCoverage([unpricedUsd(usdk)], [usdk], { nowSec });
-    const second = priceCoverage([unpricedUsd(usdk)], [usdk], { nowSec: nowSec + 900, previousCoverage: first });
-    expect(second).toMatchObject({ missingActiveIds: [usdk], acknowledgedGapIds: [], alertEligibleIds: [usdk] });
-    expect([...second.expiredGapReviewIds, ...second.invalidGapReviewIds]).not.toContain(usdk);
+  it("retires the recovered IDRT and USDp reviews alongside retired USDK", () => {
+    const nowSec = Date.UTC(2026, 10, 22, 12, 38) / 1000;
+    for (const [id, price, priceSource] of [
+      ["idrt-rupiah-token", 0.0000361, "coingecko-low-volume"],
+      ["usdp-parallel", 0.999218, "defillama"],
+      ["usdk-kast", 1, "coingecko"],
+    ] as const) {
+      expect(ACTIVE_IDS.has(id)).toBe(true);
+      expect(reviewFor(id)).toBeUndefined();
+      expect(priceCoverage([{ id, price, priceSource, priceObservedAt: nowSec - 60 }], [id], { nowSec }))
+        .toMatchObject({ complete: true, pricedActiveIds: [id], missingPriceCount: 0, acknowledgedGapCount: 0 });
+      const first = priceCoverage([unpricedUsd(id)], [id], { nowSec });
+      const second = priceCoverage([unpricedUsd(id)], [id], { nowSec: nowSec + 900, previousCoverage: first });
+      expect(second).toMatchObject({ missingActiveIds: [id], acknowledgedGapIds: [], alertEligibleIds: [id] });
+      expect([...second.expiredGapReviewIds, ...second.invalidGapReviewIds]).not.toContain(id);
+    }
   });
 
   it("closes PHT's holder-exit review with a sourced scope delisting", () => {
