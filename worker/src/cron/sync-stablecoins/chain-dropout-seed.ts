@@ -123,27 +123,29 @@ export const REVIEWED_CHAIN_SUPPLY_COLLAPSES: readonly ReviewedChainSupplyCollap
     reviewedAt: Date.parse("2026-11-04T09:03:51Z") / 1000,
     evidenceUrl: "https://basescan.org/token/0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
   },
-  // 2026-11-12: Tempo is still absent from provider list/detail. Finalized block
-  // 48710775 confirms 17,177,908.27 BUIDL shares; native aggregate publication
-  // includes this stock independently. Retain provider omission, never par-NAV valuation.
+  // 2026-11-22 12:38 UTC: Tempo is still absent from DefiLlama detail 173 (8 chains). Finalized
+  // Tempo block 50269323 (hash 0x6bb14f...a416) confirms 17,192,163.43 BUIDL shares (6 decimals);
+  // native aggregate publication includes this stock independently. Retain provider omission, never par-NAV valuation.
   {
     assetId: "buidl-blackrock", chainId: "tempo",
     policy: "exclude-omitted",
-    reviewedAt: Date.parse("2026-11-12T19:35:00Z") / 1000,
-    excludeOmittedUntil: Date.parse("2026-11-26T19:35:00Z") / 1000,
+    reviewedAt: Date.parse("2026-11-22T12:38:00Z") / 1000,
+    excludeOmittedUntil: Date.parse("2026-12-06T12:38:00Z") / 1000,
     evidenceUrl: "https://explorer.tempo.xyz/token/0xb5ff12bd8010baef823d1bfa2ce6bdc0109cbb24",
   },
-  // Tempo block 48741970 (2026-11-13): 1,000,000 fxUSD exist, also omitted by list/detail, and
-  // 999,996 of them sit in the Tempo OFT adapter 0xd87bbc92431f2908fbba780ce902f309a171335c.
-  // Its Ethereum peer 0x06013F99661B59e5A5BFD62AFEEd6fe7C10bdDE9 locks 8 fxUSD (block 26402372).
-  // Only 4 fxUSD are outside the Tempo adapter; its balance may be inventory or bridge custody.
-  // Ethereum's 8 are not exactly reconciled. Retain the omitted-chain exclusion.
-  // Renewal requires token(), reciprocal peers, totalSupply() and both adapter balance reads.
+  // 2026-11-22 12:38 UTC: DefiLlama detail 168 still omits Tempo (2 chains: Ethereum, Base).
+  // Finalized Tempo block 50269323 (hash 0x6bb14f...a416): totalSupply() is 1,000,000 fxUSD (6 decimals);
+  // Tempo OFT adapter 0xd87bbc92431f2908fbba780ce902f309a171335c returns token() 0x20c0...b72c,
+  // peers(30101) 0x06013f99661b59e5a5bfd62afeed6fe7c10bdde9, endpoint().eid() 30410, and holds 999,996 fxUSD.
+  // Finalized Ethereum block 26470611 (hash 0x97a784...b3dd): Ethereum OFT adapter 0x06013F99...dDE9
+  // returns token() 0x085780639cc2cacd35e474e71f4d000e2405d8f6, reciprocal peers(30410) 0xd87b...335c,
+  // and locks 8 fxUSD. Only 4 fxUSD are outside the Tempo adapter and Ethereum's 8 remain unreconciled.
+  // Retain the omitted-chain exclusion. Renewal requires token(), reciprocal peers, totalSupply() and both adapter balance reads.
   {
     assetId: "fxusd-f-x-protocol", chainId: "tempo",
     policy: "exclude-omitted",
-    reviewedAt: Date.parse("2026-11-13T00:12:36Z") / 1000,
-    excludeOmittedUntil: Date.parse("2026-11-27T00:12:36Z") / 1000,
+    reviewedAt: Date.parse("2026-11-22T12:38:00Z") / 1000,
+    excludeOmittedUntil: Date.parse("2026-12-06T12:38:00Z") / 1000,
     evidenceUrl: "https://explorer.tempo.xyz/token/0x20c000000000000000000000850e533bd762b72c",
   },
   // 2026-11-19: BSC transaction 0x79a04103…d5e0 (block 134368693, status 1) burned 69,858,138.73 satUSD:

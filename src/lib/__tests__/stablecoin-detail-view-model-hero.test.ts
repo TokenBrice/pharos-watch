@@ -16,22 +16,24 @@ vi.mock("@/lib/feature-flags", async (importOriginal) => {
   return { ...actual, isQuietDeviationsEnabled: () => quietDeviations.value ?? actual.isQuietDeviationsEnabled() };
 });
 
+const coinOf = (id: string) => TRACKED_META_BY_ID.get(id)!;
+const tile = (hero: ReturnType<typeof buildDetailHero>, key: string) => hero.tertiaryMetrics.find((m) => m.key === key)!.display;
+const passport = (hero: ReturnType<typeof buildDetailHero>, key: string) => hero.passportItems.find((i) => i.key === key);
+const makeReport = (assuranceMethod: "examination" | "audit") => ({
+  periodEnd: "2026-09-30", assuranceMethod, scope: "assets-and-liabilities", liabilityReconciliation: "full",
+  reviewer: "test", confidence: "verified", sources: [{ label: "Report", url: "https://example.com/report" }],
+});
+
 describe("stablecoin detail hero view-model builder", () => {
-  const SAVED = {
-    grade: "A-" as const, score: 81, dewsScore: 17, dewsBand: "WATCH" as const, liquidityScore: 67,
-    asOfMs: Date.UTC(2026, 9, 22, 8),
-  };
+  const SAVED = { grade: "A-" as const, score: 81, dewsScore: 17, dewsBand: "WATCH" as const, liquidityScore: 67, asOfMs: Date.UTC(2026, 9, 22, 8) };
   const ALL_PENDING = { reportCard: true, stress: true, liquidity: true, peg: true, yield: true };
 
-  it("shows dated release values or neutral placeholders while live reads are pending, never unavailable", () => {
-    const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
+  it("shows dated release values or neutral placeholders while pending, and holds in-flight passport slots", () => {
+    const coin = coinOf("usdt-tether");
     const pending = buildDetailHero({ coin, pendingReads: ALL_PENDING, savedAssessment: null });
-    const tile = (hero: typeof pending, key: string) => hero.tertiaryMetrics.find((metric) => metric.key === key)!.display;
-    for (const key of ["dews", "peg-score", "liquidity", "excess-yield"]) {
-      expect(tile(pending, key)).toMatchObject({ value: "", pending: true });
-    }
+    for (const key of ["dews", "peg-score", "liquidity", "excess-yield"]) expect(tile(pending, key)).toMatchObject({ value: "", pending: true });
     expect(pending.savedGrade).toBeNull();
-    expect(pending.signalRailItems.find((item) => item.key === "liquidity")).toMatchObject({ pending: true });
+    expect(pending.signalRailItems.find((i) => i.key === "liquidity")).toMatchObject({ pending: true });
 
     const saved = buildDetailHero({ coin, pendingReads: ALL_PENDING, savedAssessment: SAVED });
     expect(tile(saved, "dews")).toMatchObject({ value: "Watch", band: "WATCH", sub: "17/100 · as of 2026-10-22" });
@@ -40,693 +42,205 @@ describe("stablecoin detail hero view-model builder", () => {
     expect(saved.savedGrade).toBe(SAVED);
     expect(saved.signalRailItems[0]).toMatchObject({ key: "safety", primary: "A-", secondary: "81/100", note: "as of 2026-10-22" });
 
-    // Settled reads keep their own verdicts; a saved value never stands in for them.
     const settled = buildDetailHero({ coin, savedAssessment: SAVED });
-    expect(tile(settled, "dews")).toMatchObject({ value: "—" });
-    expect(tile(settled, "liquidity")).toMatchObject({ value: "—" });
-    expect(settled.savedGrade).toBeNull();
-    expect(settled.signalRailItems[0]).toMatchObject({ primary: "—" });
-    expect(settled.signalRailItems[0]?.note).toBeUndefined();
-  });
+    expect([tile(settled, "dews").value, tile(settled, "liquidity").value, settled.savedGrade]).toEqual(["—", "—", null]);
+    expect(settled.signalRailItems[0].primary).toBe("—");
+    expect(settled.signalRailItems[0].note).toBeUndefined();
 
-  it("holds the passport slot of a fact whose read is in flight, never one that cannot land", () => {
-    const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
     const reads = { peg: true, redemption: true };
     expect(buildDetailHero({ coin, pendingReads: reads }).passportPendingKeys).toEqual(["redeemability", "record"]);
-    // A settled read, a NAV token's absent peg record and a frozen archive hold no slot.
     expect(buildDetailHero({ coin }).passportPendingKeys).toEqual([]);
     expect(buildDetailHero({ coin, isNavToken: true, pendingReads: reads }).passportPendingKeys).toEqual(["redeemability"]);
     expect(buildDetailHero({ coin: { ...coin, status: "frozen" }, pendingReads: reads }).passportPendingKeys).toEqual([]);
-    const landed = buildDetailHero({ coin, pendingReads: reads, redemptionBackstop: { accessModel: "issuer-api" } as never });
-    expect(landed.passportPendingKeys).toEqual(["record"]);
-  });
+    expect(buildDetailHero({ coin, pendingReads: reads, redemptionBackstop: { accessModel: "issuer-api" } as never }).passportPendingKeys).toEqual(["record"]);
 
-  it("keeps NAV tokens and frozen archives out of the pending peg and DEWS reads", () => {
-    const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
     const nav = buildDetailHero({ coin, isNavToken: true, pendingReads: ALL_PENDING, savedAssessment: SAVED });
-    expect(nav.tertiaryMetrics.find((metric) => metric.key === "dews")!.display).toMatchObject({ value: "—" });
-    // A NAV token has no peg: the tile carries no reading and the hero leaves it out.
-    expect(nav.tertiaryMetrics.find((metric) => metric.key === "peg-score")!.display).toMatchObject({ value: "—" });
+    expect([tile(nav, "dews").value, tile(nav, "peg-score").value]).toEqual(["—", "—"]);
     expect(nav.passportPendingKeys).toEqual([]);
   });
 
   it.each([900, null])("keeps native current paired with its checkpoints rather than mixing displayed supply %s", (supply) => {
-    const hero = buildDetailHero({
-      coin: TRACKED_META_BY_ID.get("usdc-circle")!,
-      supply,
-      nativeSupply: { current: 1_100, prevWeek: 1_000, prevMonth: 950 },
-    });
-
+    const hero = buildDetailHero({ coin: coinOf("usdc-circle"), supply, nativeSupply: { current: 1_100, prevWeek: 1_000, prevMonth: 950 } });
     expect(hero.market.supply).toBe(supply);
-    expect(hero.market.supplyTrend).toMatchObject({
-      current: 1_100,
-      safePrevWeek: 1_000,
-      safePrevMonth: 950,
-      hasPrevMonth: true,
-    });
-    expect(hero.market.supplyTrend.prevWeekTrendClass).toBe(DIRECTION_TONE_CLASSES.up);
-    expect(hero.market.supplyTrend.prevMonthTrendClass).toBe(DIRECTION_TONE_CLASSES.up);
+    expect(hero.market.supplyTrend).toMatchObject({ current: 1_100, safePrevWeek: 1_000, safePrevMonth: 950, hasPrevMonth: true, prevWeekTrendClass: DIRECTION_TONE_CLASSES.up, prevMonthTrendClass: DIRECTION_TONE_CLASSES.up });
   });
 
-  it("derives hero display metrics and signal rail from raw detail inputs", () => {
-    const coin = TRACKED_META_BY_ID.get("usdc-circle");
-    expect(coin).toBeDefined();
-
+  it("derives hero display metrics, signal rail, passport chips, and case study callout from raw detail inputs", () => {
     const hero = buildDetailHero({
-      coin: coin!,
-      coinData: {
-        id: "usdc-circle",
-        name: "USD Coin",
-        symbol: "USDC",
-        pegType: "peggedUSD",
-        price: 0.97,
-        circulating: { peggedUSD: 500_000 },
-        circulatingPrevDay: { peggedUSD: 600_000 },
-        circulatingPrevWeek: { peggedUSD: 450_000 },
-        circulatingPrevMonth: { peggedUSD: 0 },
-        chains: ["ethereum", "base"],
-      } as never,
-      isNavToken: false,
-      mcap: 500_000,
-      supply: 500_000,
-      prevDay: 600_000,
-      nativeSupply: { current: 500_000, prevWeek: 450_000, prevMonth: 0 },
-      performanceVsUsd1y: 12.34,
-      pegRef: 1,
-      deviationBps: -300,
-      pegReferenceUnavailable: false,
-      pegScoreResult: makePegSummaryCoin({
-        id: "usdc-circle",
-        symbol: "USDC",
-        pegScore: 45,
-        pegPct: 99.4,
-        eventCount: 2,
-        trackingSpanDays: 365,
-        activeDepeg: true,
-        depegEventCoverageLimited: true,
-      }),
-      liquidityData: {
-        liquidityScore: 28,
-        poolCount: 4,
-      } as never,
-      yieldRanking: {
-        excessYield: -0.25,
-        benchmarkLabel: "USD 3M T-Bill",
-        benchmarkCurrency: "USD",
-        benchmarkRecordDate: "2026-04-21",
-        benchmarkIsFallback: false,
-        benchmarkFallbackMode: null,
-        benchmarkSelectionMode: "native",
-        benchmarkIsProxy: false,
-      } as never,
-      stressSignal: {
-        score: 31,
-        band: "WATCH",
-      } as never,
-      reportCard: makeV9Card({
-        id: "usdc-circle",
-        grade: "B+",
-        score: 79,
-        accessPosture: {
-          ...makeV9Card().accessPosture,
-          freezeExposure: "direct",
-        },
-      }),
-      verdict: {
-        archetype: "distressed",
-        label: "Distressed",
-      },
-      resolvedMechanismArchetype: "fiat-cash",
-      mintAuthority: {
-        status: "reviewed",
-        mintPathLabel: "Issuer direct mint",
-        mintPathShortLabel: "Issuer direct",
-      } as never,
+      coin: coinOf("usdc-circle"),
+      coinData: { id: "usdc-circle", name: "USD Coin", symbol: "USDC", pegType: "peggedUSD", price: 0.97, circulating: { peggedUSD: 500_000 }, circulatingPrevDay: { peggedUSD: 600_000 }, circulatingPrevWeek: { peggedUSD: 450_000 }, circulatingPrevMonth: { peggedUSD: 0 }, chains: ["ethereum", "base"] } as never,
+      isNavToken: false, mcap: 500_000, supply: 500_000, prevDay: 600_000, nativeSupply: { current: 500_000, prevWeek: 450_000, prevMonth: 0 },
+      performanceVsUsd1y: 12.34, pegRef: 1, deviationBps: -300, pegReferenceUnavailable: false,
+      pegScoreResult: makePegSummaryCoin({ id: "usdc-circle", symbol: "USDC", pegScore: 45, pegPct: 99.4, eventCount: 2, trackingSpanDays: 365, activeDepeg: true, depegEventCoverageLimited: true }),
+      liquidityData: { liquidityScore: 28, poolCount: 4 } as never,
+      yieldRanking: { excessYield: -0.25, benchmarkLabel: "USD 3M T-Bill", benchmarkCurrency: "USD", benchmarkRecordDate: "2026-04-21", benchmarkIsFallback: false, benchmarkFallbackMode: null, benchmarkSelectionMode: "native", benchmarkIsProxy: false } as never,
+      stressSignal: { score: 31, band: "WATCH" } as never,
+      reportCard: makeV9Card({ id: "usdc-circle", grade: "B+", score: 79, accessPosture: { ...makeV9Card().accessPosture, freezeExposure: "direct" } }),
+      verdict: { archetype: "distressed", label: "Distressed" }, resolvedMechanismArchetype: "fiat-cash",
+      mintAuthority: { status: "reviewed", mintPathLabel: "Issuer direct mint", mintPathShortLabel: "Issuer direct" } as never,
       redemptionBackstop: { accessModel: "issuer-api" } as never,
     });
 
     expect(hero.market.supplyTrend.safePrevMonth).toBeNull();
-    expect(hero.market.prevDayTrendClass).toBe(DIRECTION_TONE_CLASSES.down);
-    expect(hero.market.supplyTrend.prevWeekTrendClass).toBe(DIRECTION_TONE_CLASSES.up);
+    expect([hero.market.prevDayTrendClass, hero.market.supplyTrend.prevWeekTrendClass]).toEqual([DIRECTION_TONE_CLASSES.down, DIRECTION_TONE_CLASSES.up]);
     expect(hero.price.limitedDepegCoverageNote).toContain("Below $1.00M live-event floor");
+    expect(tile(hero, "peg-score")).toMatchObject({ value: "45", sub: "99.4% at peg" });
+    expect(tile(hero, "performance-vs-usd")).toMatchObject({ value: "+12.34%", color: DIRECTION_TONE_CLASSES.up });
+    expect(tile(hero, "excess-yield").color).toBe(DIRECTION_TONE_CLASSES.down);
+    expect(hero.desktopTertiaryMetrics.map((m) => m.key)).not.toContain("dews");
+    expect(hero.signalRailItems.find((i) => i.key === "safety")).toMatchObject({ primary: "B+", secondary: "79/100" });
 
-    const pegMetric = hero.tertiaryMetrics.find((metric) => metric.key === "peg-score");
-    expect(pegMetric?.display).toMatchObject({ value: "45", sub: "99.4% at peg" });
-
-    expect(hero.tertiaryMetrics.find((metric) => metric.key === "performance-vs-usd")?.display).toMatchObject({ value: "+12.34%", color: DIRECTION_TONE_CLASSES.up });
-    expect(hero.tertiaryMetrics.find((metric) => metric.key === "excess-yield")?.display.color).toBe(DIRECTION_TONE_CLASSES.down);
-    expect(hero.desktopTertiaryMetrics.map((metric) => metric.key)).not.toContain("dews");
-    expect(hero.signalRailItems.find((item) => item.key === "safety")).toMatchObject({
-      primary: "B+",
-      secondary: "79/100",
-    });
-
-    expect(hero.passportItems.find((item) => item.key === "mechanism")).toMatchObject({
-      value: "Custodial Cash",
-      href: "#mechanism",
-    });
-    // USDC is blacklist-tracked, so the freeze chip prefers the live tracker.
-    expect(hero.passportItems.find((item) => item.key === "freeze")).toMatchObject({
-      value: "Yes",
-      href: "#blacklist",
-    });
-    expect(hero.passportItems.find((item) => item.key === "chains")).toMatchObject({
-      value: "2",
-      href: "#contracts",
-    });
-    expect(hero.passportItems.find((item) => item.key === "jurisdiction")?.href).toBe("#jurisdiction");
-    // Passport-short projections carry the value; the aria keeps the full label.
-    expect(hero.passportItems.find((item) => item.key === "redeemability")).toMatchObject({
-      value: "Institutional",
-      href: "#redemption",
-      ariaLabel: "Redeemability: Issuer / institutional — jump to redemption route",
-    });
-    expect(hero.passportItems.find((item) => item.key === "minting")).toMatchObject({
-      value: "Issuer direct",
-      href: "#mint-authority",
-      ariaLabel: "Minting: Issuer direct mint — jump to Mint Authority",
-    });
-    // USDC carries MiCA + GENIUS regulatory visas in the registry data.
-    expect(hero.passportItems.find((item) => item.key === "mica")).toMatchObject({
-      value: "Authorized",
-      href: "#jurisdiction",
-      valueClass: "text-green-700 dark:text-green-400",
-    });
-    expect(hero.passportItems.find((item) => item.key === "genius")?.href).toBe("/compliance/?regime=genius");
-    // Coverage-limited peg summary -> no Record field (can't honestly claim one).
-    expect(hero.passportItems.some((item) => item.key === "record")).toBe(false);
-
-    // USDC is the subject of the SVB case study -> dossier callout populated.
+    expect(passport(hero, "mechanism")).toMatchObject({ value: "Custodial Cash", href: "#mechanism" });
+    expect(passport(hero, "freeze")).toMatchObject({ value: "Yes", href: "#blacklist" });
+    expect(passport(hero, "chains")).toMatchObject({ value: "2", href: "#contracts" });
+    expect(passport(hero, "jurisdiction")?.href).toBe("#jurisdiction");
+    expect(passport(hero, "redeemability")).toMatchObject({ value: "Institutional", href: "#redemption", ariaLabel: "Redeemability: Issuer / institutional — jump to redemption route" });
+    expect(passport(hero, "minting")).toMatchObject({ value: "Issuer direct", href: "#mint-authority", ariaLabel: "Minting: Issuer direct mint — jump to Mint Authority" });
+    expect(passport(hero, "mica")).toMatchObject({ value: "Authorized", href: "#jurisdiction", valueClass: "text-green-700 dark:text-green-400" });
+    expect(passport(hero, "genius")?.href).toBe("/compliance/?regime=genius");
+    expect(passport(hero, "record")).toBeUndefined();
     expect(hero.caseStudyCallout).toEqual({
-      href: "/learn/case-studies/usdc-svb-2023/",
-      title: "USDC and the Silicon Valley Bank weekend",
-      outcomeLabel: "Survived",
-      outcomeChipClass: "border-emerald-500/40 text-emerald-700 dark:text-emerald-400",
+      href: "/learn/case-studies/usdc-svb-2023/", title: "USDC and the Silicon Valley Bank weekend",
+      outcomeLabel: "Survived", outcomeChipClass: "border-emerald-500/40 text-emerald-700 dark:text-emerald-400",
     });
   });
 
-  it("keeps the incident count out of the peg tile: the passport Record owns it", () => {
-    const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
-    const pegDisplay = (hero: ReturnType<typeof buildDetailHero>) =>
-      hero.tertiaryMetrics.find((metric) => metric.key === "peg-score")!.display;
+  it("keeps incident count in passport Record and marks early peg scores under 30 tracking days", () => {
+    const coin = coinOf("usdt-tether");
+    const pegFor = (extra: Partial<Parameters<typeof makePegSummaryCoin>[0]>) =>
+      buildDetailHero({ coin, pegScoreResult: makePegSummaryCoin({ id: coin.id, symbol: coin.symbol, pegScore: 100, pegPct: 100, eventCount: 0, trackingSpanDays: 365, ...extra }) });
 
-    const limited = buildDetailHero({
-      coin,
-      pegScoreResult: makePegSummaryCoin({
-        id: coin.id, symbol: coin.symbol, pegScore: 100, pegPct: 100,
-        eventCount: 0, trackingSpanDays: 365, depegEventCoverageLimited: true,
-      }),
-    });
-    expect(pegDisplay(limited).sub).toBe("100.0% at peg");
-    expect(pegDisplay(limited).sub).not.toContain("incidents");
+    expect(tile(pegFor({ depegEventCoverageLimited: true }), "peg-score").sub).toBe("100.0% at peg");
+    const observed = pegFor({});
+    expect(tile(observed, "peg-score").sub).toBe("100.0% at peg");
+    expect(passport(observed, "record")?.value).toBe("0 recorded");
 
-    const observed = buildDetailHero({
-      coin,
-      pegScoreResult: makePegSummaryCoin({
-        id: coin.id, symbol: coin.symbol, pegScore: 100, pegPct: 100, eventCount: 0, trackingSpanDays: 365,
-      }),
-    });
-    expect(pegDisplay(observed).sub).toBe("100.0% at peg");
-    expect(observed.passportItems.find((item) => item.key === "record")?.value).toBe("0 recorded");
+    expect(tile(pegFor({ trackingSpanDays: 10 }), "peg-score")).toMatchObject({ value: "100", sub: "Early score · 10d tracked", color: pegScoreColor(100) });
+    expect(tile(pegFor({ trackingSpanDays: 29 }), "peg-score").sub).toBe("Early score · 29d tracked");
+    expect(tile(pegFor({ trackingSpanDays: 30 }), "peg-score").sub).toBe("100.0% at peg");
   });
 
-  it("marks a numeric peg score under 30 tracking days as early while keeping its score colour", () => {
-    const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
-    const pegDisplay = (trackingSpanDays: number) =>
-      buildDetailHero({
-        coin,
-        pegScoreResult: makePegSummaryCoin({
-          id: coin.id, symbol: coin.symbol, pegScore: 100, pegPct: 100, eventCount: 0, trackingSpanDays,
-        }),
-      }).tertiaryMetrics.find((metric) => metric.key === "peg-score")!.display;
-
-    // Only the sub-line is muted; the number keeps the score's own tier colour.
-    expect(pegDisplay(10)).toMatchObject({
-      value: "100",
-      sub: "Early score · 10d tracked",
-      color: pegScoreColor(100),
+  it("derives unavailable peg score, upstream/reviewed FreezeWatch precedence, and attestor/jurisdiction chips", () => {
+    const dai = coinOf("dai-makerdao");
+    const daiHero = buildDetailHero({
+      coin: dai, coinData: { id: "dai-makerdao", name: "Dai", symbol: "DAI", pegType: "peggedUSD", price: 1, circulating: { peggedUSD: 100 }, chains: [] } as never,
+      pegScoreResult: makePegSummaryCoin({ id: "dai-makerdao", symbol: "DAI", name: "Dai", pegScore: null, pegPct: 0, eventCount: 0, trackingSpanDays: 3, activeDepeg: false }),
+      reportCard: makeV9Card({ id: "dai-makerdao", accessPosture: { ...makeV9Card().accessPosture, freezeExposure: "upstream" } }),
+      verdict: { archetype: "uncategorized", label: "Uncategorized" },
+      mintAuthority: { status: "reviewed", mintPathLabel: "User-collateralized, governed", mintPathShortLabel: "Governed CDP" } as never,
     });
-    expect(pegDisplay(10).sub).not.toContain("incidents");
-    expect(pegDisplay(29).sub).toBe("Early score · 29d tracked");
-    expect(pegDisplay(30).sub).toBe("100.0% at peg");
-  });
+    expect(tile(daiHero, "peg-score")).toMatchObject({ value: "NR", sub: "3d tracked" });
+    expect(passport(daiHero, "freeze")).toMatchObject({ value: "Upstream risk", href: buildCoinTrackerLink("dai-makerdao", "freezewatch", "DAI").href });
+    expect(passport(daiHero, "redeemability")).toBeUndefined();
+    expect(passport(buildDetailHero({ coin: { ...dai, blacklistabilitySummary: {} as never }, reportCard: makeV9Card({ id: "dai-makerdao" }) }), "freeze")?.href).toBe("#freeze-seizure");
 
-  it("derives unavailable peg score and upstream freeze states", () => {
-    const coin = TRACKED_META_BY_ID.get("dai-makerdao");
-    expect(coin).toBeDefined();
-
-    const hero = buildDetailHero({
-      coin: coin!,
-      coinData: {
-        id: "dai-makerdao",
-        name: "Dai",
-        symbol: "DAI",
-        pegType: "peggedUSD",
-        price: 1,
-        circulating: { peggedUSD: 100 },
-        chains: [],
-      } as never,
-      pegScoreResult: makePegSummaryCoin({
-        id: "dai-makerdao",
-        symbol: "DAI",
-        name: "Dai",
-        pegScore: null,
-        pegPct: 0,
-        eventCount: 0,
-        trackingSpanDays: 3,
-        activeDepeg: false,
-      }),
-      reportCard: makeV9Card({
-        id: "dai-makerdao",
-        accessPosture: {
-          ...makeV9Card().accessPosture,
-          freezeExposure: "upstream",
-        },
-      }),
-      verdict: {
-        archetype: "uncategorized",
-        label: "Uncategorized",
-      },
-      mintAuthority: {
-        status: "reviewed",
-        mintPathLabel: "User-collateralized, governed",
-        mintPathShortLabel: "Governed CDP",
-      } as never,
+    const lusdHero = buildDetailHero({
+      coin: coinOf("lusd-liquity"), coinData: { id: "lusd-liquity", name: "Liquity USD", symbol: "LUSD", pegType: "peggedUSD", price: 1, circulating: { peggedUSD: 100 }, chains: [] } as never,
+      reportCard: makeV9Card({ id: "lusd-liquity", accessPosture: { ...makeV9Card().accessPosture, freezeExposure: "possible" } }),
+      mintAuthority: { status: "not-reviewed" } as never,
     });
+    expect(passport(lusdHero, "freeze")).toMatchObject({ value: "No" });
 
-    expect(hero.tertiaryMetrics.find((metric) => metric.key === "peg-score")?.display).toMatchObject({
-      value: "NR",
-      sub: "3d tracked",
-    });
-    // DAI has no reviewed Freeze & seizure card and is not blacklist-tracked,
-    // so the chip leaves for the FreezeWatch coverage page — never the
-    // mint-authority section.
-    expect(hero.passportItems.find((item) => item.key === "freeze")).toMatchObject({
-      value: "Upstream risk",
-      href: buildCoinTrackerLink("dai-makerdao", "freezewatch", "DAI").href,
-    });
-    const reviewedFreezeHero = buildDetailHero({
-      coin: { ...coin!, blacklistabilitySummary: {} as never },
-      reportCard: makeV9Card({ id: "dai-makerdao" }),
-    });
-    expect(reviewedFreezeHero.passportItems.find((item) => item.key === "freeze")?.href).toBe("#freeze-seizure");
-    // No redemption backstop record -> the redeemability entry is omitted.
-    expect(hero.passportItems.some((item) => item.key === "redeemability")).toBe(false);
-  });
-
-  it("uses reviewed FreezeWatch status before stale V9 freeze exposure in the hero passport", () => {
-    const coin = TRACKED_META_BY_ID.get("lusd-liquity");
-    expect(coin).toBeDefined();
-
-    const hero = buildDetailHero({
-      coin: coin!,
-      coinData: {
-        id: "lusd-liquity",
-        name: "Liquity USD",
-        symbol: "LUSD",
-        pegType: "peggedUSD",
-        price: 1,
-        circulating: { peggedUSD: 100 },
-        chains: [],
-      } as never,
-      reportCard: makeV9Card({
-        id: "lusd-liquity",
-        accessPosture: {
-          ...makeV9Card().accessPosture,
-          freezeExposure: "possible",
-        },
-      }),
-      mintAuthority: {
-        status: "not-reviewed",
-      } as never,
-    });
-
-    expect(hero.passportItems.find((item) => item.key === "freeze")).toMatchObject({
-      value: "No",
-    });
-  });
-
-  it("builds attestor and jurisdiction passport chips from coin metadata", () => {
     const attestedCoin = {
-      id: "mock-attested",
-      symbol: "MAT",
-      name: "Mock Attested",
-      collateral: "Cash and T-Bills",
-      pegMechanism: "Fiat redemption",
-      jurisdiction: { country: "Switzerland", regulator: "FINMA" },
-      proofOfReserves: { type: "independent-audit", url: "https://example.com", attestorTier: "big4" },
-      contracts: [{ chain: "ethereum", address: "0x1" }],
-      flags: {
-        backing: "rwa-backed",
-        governance: "centralized",
-        pegCurrency: "USD",
-      },
+      id: "mock-attested", symbol: "MAT", name: "Mock Attested", collateral: "Cash and T-Bills", pegMechanism: "Fiat redemption",
+      jurisdiction: { country: "Switzerland", regulator: "FINMA" }, proofOfReserves: { type: "independent-audit", url: "https://example.com", attestorTier: "big4" },
+      contracts: [{ chain: "ethereum", address: "0x1" }], flags: { backing: "rwa-backed", governance: "centralized", pegCurrency: "USD" },
     } as never;
+    const matData = (chains: string[]) => ({ id: "mock-attested", name: "Mock Attested", symbol: "MAT", pegType: "peggedUSD", price: 1, circulating: { peggedUSD: 100 }, chains }) as never;
+    const attested = buildDetailHero({ coin: attestedCoin, coinData: matData(["ethereum", "base", "solana"]), resolvedMechanismArchetype: "tbill", mintAuthority: { status: "reviewed", mintPathLabel: "Permissioned minter", mintPathShortLabel: "Permissioned" } as never, redemptionBackstop: { accessModel: "permissionless-onchain" } as never });
+    expect(passport(attested, "mechanism")).toMatchObject({ value: "Tokenized Treasury", href: "#mechanism" });
+    expect(passport(attested, "redeemability")).toMatchObject({ value: "Permissionless", href: "#redemption" });
+    expect(passport(attested, "minting")).toMatchObject({ value: "Permissioned", href: "#mint-authority" });
+    expect(passport(attested, "attestor")).toMatchObject({ value: "Big-4", href: "#attestation", ariaLabel: "Reserve report: Independent Report; Big-4 attestor — jump to Proof of Reserves" });
+    expect(passport(attested, "jurisdiction")).toMatchObject({ value: "Switzerland", href: "#info" });
+    expect(passport(attested, "chains")).toMatchObject({ value: "3", href: "#contracts" });
+    expect(passport(attested, "chains")).not.toHaveProperty("chip");
 
-    const hero = buildDetailHero({
-      coin: attestedCoin,
-      coinData: {
-        id: "mock-attested",
-        name: "Mock Attested",
-        symbol: "MAT",
-        pegType: "peggedUSD",
-        price: 1,
-        circulating: { peggedUSD: 100 },
-        chains: ["ethereum", "base", "solana"],
-      } as never,
-      resolvedMechanismArchetype: "tbill",
-      mintAuthority: {
-        status: "reviewed",
-        mintPathLabel: "Permissioned minter",
-        mintPathShortLabel: "Permissioned",
-      } as never,
-      redemptionBackstop: { accessModel: "permissionless-onchain" } as never,
-    });
-
-    const byKey = new Map(hero.passportItems.map((item) => [item.key, item]));
-    expect(byKey.get("mechanism")).toMatchObject({ value: "Tokenized Treasury", href: "#mechanism" });
-    expect(byKey.get("redeemability")).toMatchObject({
-      value: "Permissionless",
-      href: "#redemption",
-    });
-    expect(byKey.get("minting")).toMatchObject({ value: "Permissioned", href: "#mint-authority" });
-    // Passport-short attestor tier (Figma coin template); the aria-label keeps the full label.
-    expect(byKey.get("attestor")).toMatchObject({
-      value: "Big-4",
-      href: "#attestation",
-      ariaLabel: "Reserve report: Independent Report; Big-4 attestor — jump to Proof of Reserves",
-    });
-    // No curated MiCA/GENIUS profile on this fixture, so jurisdiction has no
-    // Regulatory standing module to target.
-    expect(byKey.get("jurisdiction")).toMatchObject({ value: "Switzerland", href: "#info" });
-    expect(byKey.get("chains")).toMatchObject({ value: "3", href: "#contracts" });
-    expect(byKey.get("chains")).not.toHaveProperty("chip");
-
-    // A decentralized coin omits the attestor chip (it publishes no reserve
-    // attestation) and routes jurisdiction to the overview section.
-    const decentralizedHero = buildDetailHero({
-      coin: {
-        ...(attestedCoin as object),
-        flags: { backing: "crypto-backed", governance: "decentralized", pegCurrency: "USD" },
-      } as never,
-      coinData: {
-        id: "mock-attested",
-        name: "Mock Attested",
-        symbol: "MAT",
-        pegType: "peggedUSD",
-        price: 1,
-        circulating: { peggedUSD: 100 },
-        chains: ["ethereum"],
-      } as never,
-      resolvedMechanismArchetype: "cdp",
-      mintAuthority: {
-        status: "reviewed",
-        mintPathLabel: "User-collateralized, governed",
-        mintPathShortLabel: "Governed CDP",
-      } as never,
-    });
-
-    const decentralizedByKey = new Map(decentralizedHero.passportItems.map((item) => [item.key, item]));
-    expect(decentralizedByKey.has("attestor")).toBe(false);
-    expect(decentralizedByKey.get("jurisdiction")?.href).toBe("#info");
+    const decentralized = buildDetailHero({ coin: { ...(attestedCoin as object), flags: { backing: "crypto-backed", governance: "decentralized", pegCurrency: "USD" } } as never, coinData: matData(["ethereum"]), resolvedMechanismArchetype: "cdp", mintAuthority: { status: "reviewed", mintPathLabel: "User-collateralized, governed", mintPathShortLabel: "Governed CDP" } as never });
+    expect(passport(decentralized, "attestor")).toBeUndefined();
+    expect(passport(decentralized, "jurisdiction")?.href).toBe("#info");
   });
 
-  type HeroBuilderParams = Parameters<typeof buildDetailHero>[0];
-
-  // Shared scaffold for the attestor / MiCA / GENIUS / Record passport cases:
-  // a plain centralized mock coin with every conditional dataset absent unless
-  // a case opts in.
-  function buildPassportHero({
-    coin = {},
-    pegRecord = null,
-    isNavToken = false,
-    mintAuthority = { status: "not-reviewed" } as HeroBuilderParams["mintAuthority"],
-    redemptionBackstop = null,
-  }: {
-    coin?: Record<string, unknown>;
-    pegRecord?: { eventCount?: number; depegEventCoverageLimited?: boolean } | null;
-    isNavToken?: boolean;
-    mintAuthority?: HeroBuilderParams["mintAuthority"];
-    redemptionBackstop?: HeroBuilderParams["redemptionBackstop"];
+  type HeroParams = Parameters<typeof buildDetailHero>[0];
+  function buildPassportHero({ coin = {}, pegRecord = null, isNavToken = false, mintAuthority = { status: "not-reviewed" } as HeroParams["mintAuthority"], redemptionBackstop = null }: {
+    coin?: Record<string, unknown>; pegRecord?: { eventCount?: number; depegEventCoverageLimited?: boolean } | null;
+    isNavToken?: boolean; mintAuthority?: HeroParams["mintAuthority"]; redemptionBackstop?: HeroParams["redemptionBackstop"];
   } = {}) {
     return buildDetailHero({
-      coin: {
-        id: "mock-passport",
-        symbol: "MPP",
-        name: "Mock Passport",
-        jurisdiction: { country: "United States" },
-        contracts: [{ chain: "ethereum", address: "0x1" }],
-        flags: { backing: "rwa-backed", governance: "centralized", pegCurrency: "USD" },
-        ...coin,
-      } as never,
-      coinData: {
-        id: "mock-passport",
-        name: "Mock Passport",
-        symbol: "MPP",
-        pegType: "peggedUSD",
-        price: 1,
-        circulating: { peggedUSD: 100 },
-        chains: ["ethereum"],
-      } as never,
-      isNavToken,
-      pegScoreResult: pegRecord ? makePegSummaryCoin({ id: "mock-passport", symbol: "MPP", ...pegRecord }) : null,
-      mintAuthority,
-      redemptionBackstop,
+      coin: { id: "mock-passport", symbol: "MPP", name: "Mock Passport", jurisdiction: { country: "United States" }, contracts: [{ chain: "ethereum", address: "0x1" }], flags: { backing: "rwa-backed", governance: "centralized", pegCurrency: "USD" }, ...coin } as never,
+      coinData: { id: "mock-passport", name: "Mock Passport", symbol: "MPP", pegType: "peggedUSD", price: 1, circulating: { peggedUSD: 100 }, chains: ["ethereum"] } as never,
+      isNavToken, pegScoreResult: pegRecord ? makePegSummaryCoin({ id: "mock-passport", symbol: "MPP", ...pegRecord }) : null, mintAuthority, redemptionBackstop,
     });
   }
 
-  it.each<{
-    name: string;
-    input: Parameters<typeof buildPassportHero>[0];
-    key: string;
-    expected: Record<string, unknown>;
-    unstyled?: boolean;
-  }>([
-    {
-      name: "distinguishes a reviewed absence of an attestor", key: "attestor",
-      input: { coin: { proofOfReserves: { type: "self-reported", url: "https://example.com", attestorTier: "none" } } },
-      expected: {
-        value: "None", valueClass: "text-red-700 dark:text-red-400",
-        ariaLabel: "Reserve report: Self-Reported PoR; No attestation — jump to Proof of Reserves",
-      },
-    },
-    {
-      name: "keeps an undisclosed attestor muted rather than claiming None", key: "attestor",
-      input: { coin: { proofOfReserves: { type: "self-reported", url: "https://example.com", attestorTier: "undisclosed" } } },
-      expected: {
-        value: "Not disclosed", valueClass: "text-muted-foreground",
-        ariaLabel: "Reserve report: Self-Reported PoR; Not disclosed — jump to Proof of Reserves",
-      },
-    },
-    {
-      name: "names the reviewed examination beside the tier in the accessible name", key: "attestor",
-      input: {
-        coin: {
-          proofOfReserves: {
-            type: "independent-audit", url: "https://example.com", provider: "Example CPA", attestorTier: "regional",
-            latestReport: {
-              periodEnd: "2026-09-30", assuranceMethod: "examination", scope: "assets-and-liabilities",
-              liabilityReconciliation: "full", reviewer: "test", confidence: "verified",
-              sources: [{ label: "Report", url: "https://example.com/report" }],
-            },
-          },
-        },
-      },
-      expected: {
-        value: "Regional CPA", valueClass: "text-blue-700 dark:text-blue-400",
-        ariaLabel: "Reserve report: Examination; Regional CPA — jump to Proof of Reserves",
-      },
-    },
-    {
-      name: "names a reviewed audit engagement", key: "attestor",
-      input: {
-        coin: {
-          proofOfReserves: {
-            type: "independent-audit", url: "https://example.com", attestorTier: "big4",
-            latestReport: {
-              periodEnd: "2026-09-30", assuranceMethod: "audit", scope: "assets-and-liabilities",
-              liabilityReconciliation: "full", reviewer: "test", confidence: "verified",
-              sources: [{ label: "Report", url: "https://example.com/report" }],
-            },
-          },
-        },
-      },
-      expected: {
-        value: "Big-4", valueClass: "text-emerald-700 dark:text-emerald-400",
-        ariaLabel: "Reserve report: Audit; Big-4 attestor — jump to Proof of Reserves",
-      },
-    },
-    {
-      name: "uses the resolved engagement as the value without a tier", key: "attestor",
-      input: {
-        coin: {
-          proofOfReserves: {
-            type: "independent-audit", url: "https://example.com",
-            latestReport: {
-              periodEnd: "2026-09-30", assuranceMethod: "examination", scope: "assets-and-liabilities",
-              liabilityReconciliation: "full", reviewer: "test", confidence: "verified",
-              sources: [{ label: "Report", url: "https://example.com/report" }],
-            },
-          },
-        },
-      },
-      expected: {
-        value: "Examination",
-        ariaLabel: "Reserve report: Examination — jump to Proof of Reserves",
-      },
-    },
-    {
-      name: "does not assert an audit for an unresolved method without a tier", key: "attestor",
-      input: { coin: { proofOfReserves: { type: "independent-audit", url: "https://example.com" } } },
-      expected: {
-        value: "Independent Report",
-        ariaLabel: "Reserve report: Independent Report — jump to Proof of Reserves",
-      },
-    },
-    {
-      name: "builds the pending MiCA visa", key: "mica",
-      input: { coin: { mica: { status: "pending" } } },
-      expected: {
-        category: "MiCA", value: "Pending", href: "#jurisdiction",
-        valueClass: "text-amber-700 dark:text-amber-400",
-        ariaLabel: "MiCA status: Pending — jump to jurisdiction details",
-      },
-    },
-    {
-      name: "builds the GENIUS filing pathway", key: "genius",
-      input: { coin: { genius: { authorizationStatus: "official-application-pending" } } },
-      expected: {
-        category: "GENIUS", value: "Filing Pending", href: "/compliance/?regime=genius",
-        ariaLabel: `GENIUS Act pathway: Filing Pending (regime effective ${GENIUS_REGIME_STATE.effectiveDate}) — view the Compliance Tracker`,
-      },
-    },
-    {
-      name: "records zero incidents without an alarm tone", key: "record",
-      input: { pegRecord: { eventCount: 0 } }, unstyled: true,
-      expected: {
-        category: "Record", value: "0 recorded", href: "#depeg-history",
-        ariaLabel: "Peg record: no depeg incidents recorded in the score coverage window — jump to Depeg History",
-      },
-    },
-    {
-      name: "records one incident with singular copy", key: "record",
-      input: { pegRecord: { eventCount: 1 } },
-      expected: {
-        value: "1 incident",
-        ariaLabel: "Peg record: 1 depeg incident in the score coverage window — jump to Depeg History",
-      },
-    },
-    {
-      name: "records several incidents without an alarm tone", key: "record",
-      input: { pegRecord: { eventCount: 3 } }, unstyled: true,
-      expected: {
-        value: "3 incidents",
-        ariaLabel: "Peg record: 3 depeg incidents in the score coverage window — jump to Depeg History",
-      },
-    },
-  ])("$name", ({ input, key, expected, unstyled }) => {
-    const item = buildPassportHero(input).passportItems.find((item) => item.key === key);
+  it.each<{ name: string; input: Parameters<typeof buildPassportHero>[0]; key: string; expected: Record<string, unknown>; unstyled?: boolean }>([
+    { name: "reviewed absence of attestor", key: "attestor", input: { coin: { proofOfReserves: { type: "self-reported", url: "https://example.com", attestorTier: "none" } } }, expected: { value: "None", valueClass: "text-red-700 dark:text-red-400", ariaLabel: "Reserve report: Self-Reported PoR; No attestation — jump to Proof of Reserves" } },
+    { name: "undisclosed attestor muted", key: "attestor", input: { coin: { proofOfReserves: { type: "self-reported", url: "https://example.com", attestorTier: "undisclosed" } } }, expected: { value: "Not disclosed", valueClass: "text-muted-foreground", ariaLabel: "Reserve report: Self-Reported PoR; Not disclosed — jump to Proof of Reserves" } },
+    { name: "reviewed examination + regional tier", key: "attestor", input: { coin: { proofOfReserves: { type: "independent-audit", url: "https://example.com", provider: "Example CPA", attestorTier: "regional", latestReport: makeReport("examination") } } }, expected: { value: "Regional CPA", valueClass: "text-blue-700 dark:text-blue-400", ariaLabel: "Reserve report: Examination; Regional CPA — jump to Proof of Reserves" } },
+    { name: "reviewed audit + big4 tier", key: "attestor", input: { coin: { proofOfReserves: { type: "independent-audit", url: "https://example.com", attestorTier: "big4", latestReport: makeReport("audit") } } }, expected: { value: "Big-4", valueClass: "text-emerald-700 dark:text-emerald-400", ariaLabel: "Reserve report: Audit; Big-4 attestor — jump to Proof of Reserves" } },
+    { name: "resolved engagement without tier", key: "attestor", input: { coin: { proofOfReserves: { type: "independent-audit", url: "https://example.com", latestReport: makeReport("examination") } } }, expected: { value: "Examination", ariaLabel: "Reserve report: Examination — jump to Proof of Reserves" } },
+    { name: "unresolved method without tier", key: "attestor", input: { coin: { proofOfReserves: { type: "independent-audit", url: "https://example.com" } } }, expected: { value: "Independent Report", ariaLabel: "Reserve report: Independent Report — jump to Proof of Reserves" } },
+    { name: "pending MiCA visa", key: "mica", input: { coin: { mica: { status: "pending" } } }, expected: { category: "MiCA", value: "Pending", href: "#jurisdiction", valueClass: "text-amber-700 dark:text-amber-400", ariaLabel: "MiCA status: Pending — jump to jurisdiction details" } },
+    { name: "frozen MiCA historical", key: "mica", input: { coin: { status: "frozen", mica: { status: "authorized" } } }, expected: { ariaLabel: "Historical MiCA status: Authorized — jump to jurisdiction details" } },
+    { name: "GENIUS filing pathway", key: "genius", input: { coin: { genius: { authorizationStatus: "official-application-pending" } } }, expected: { category: "GENIUS", value: "Filing Pending", href: "/compliance/?regime=genius", ariaLabel: `GENIUS Act pathway: Filing Pending (regime effective ${GENIUS_REGIME_STATE.effectiveDate}) — view the Compliance Tracker` } },
+    { name: "zero incidents unstyled", key: "record", input: { pegRecord: { eventCount: 0 } }, unstyled: true, expected: { category: "Record", value: "0 recorded", href: "#depeg-history", ariaLabel: "Peg record: no depeg incidents recorded in the score coverage window — jump to Depeg History" } },
+    { name: "one incident singular", key: "record", input: { pegRecord: { eventCount: 1 } }, expected: { value: "1 incident", ariaLabel: "Peg record: 1 depeg incident in the score coverage window — jump to Depeg History" } },
+    { name: "several incidents unstyled", key: "record", input: { pegRecord: { eventCount: 3 } }, unstyled: true, expected: { value: "3 incidents", ariaLabel: "Peg record: 3 depeg incidents in the score coverage window — jump to Depeg History" } },
+  ])("passport fact: $name", ({ input, key, expected, unstyled }) => {
+    const item = passport(buildPassportHero(input), key);
     expect(item).toMatchObject(expected);
     if (unstyled) expect(item?.valueClass).toBeUndefined();
   });
 
-  it("omits the Chains fact for a coin with no curated contract record", () => {
-    const coin = TRACKED_META_BY_ID.get("hbd-hive")!;
-    expect(coin.contracts).toBeUndefined();
+  it("omits Chains without contracts and omits absent/inapplicable passport facts", () => {
+    const hiveHero = buildDetailHero({ coin: coinOf("hbd-hive") });
+    expect(passport(hiveHero, "chains")).toBeUndefined();
+    expect(hiveHero.passportItems.every((i) => !/Deployed on 0 chains/.test(i.ariaLabel))).toBe(true);
 
-    const hero = buildDetailHero({ coin });
-
-    expect(hero.passportItems.some((item) => item.key === "chains")).toBe(false);
-    expect(hero.passportItems.every((item) => !/Deployed on 0 chains/.test(item.ariaLabel))).toBe(true);
-  });
-
-  it("frames frozen MiCA authorization as historical", () => {
-    const frozenMica = buildPassportHero({
-      coin: { status: "frozen", mica: { status: "authorized" } },
-    }).passportItems.find((item) => item.key === "mica");
-    expect(frozenMica?.ariaLabel).toBe("Historical MiCA status: Authorized — jump to jurisdiction details");
-  });
-
-  it.each<{ name: string; input: Parameters<typeof buildPassportHero>[0]; key: string }>([
-    { name: "absent MiCA profile", input: undefined, key: "mica" },
-    { name: "not-applicable GENIUS pathway", input: { coin: { genius: { authorizationStatus: "not-applicable" } } }, key: "genius" },
-    { name: "unknown GENIUS pathway", input: { coin: { genius: { authorizationStatus: "unknown" } } }, key: "genius" },
-    { name: "absent GENIUS profile", input: undefined, key: "genius" },
-    { name: "coverage-limited peg record", input: { pegRecord: { eventCount: 2, depegEventCoverageLimited: true } }, key: "record" },
-    { name: "NAV-token peg record", input: { pegRecord: { eventCount: 0 }, isNavToken: true }, key: "record" },
-    { name: "missing peg summary", input: undefined, key: "record" },
-  ])("omits $name instead of claiming a passport fact", ({ input, key }) => {
-    expect(buildPassportHero(input).passportItems.some((item) => item.key === key)).toBe(false);
-  });
-
-});
-
-describe("hero trend direction follows the printed percentage", () => {
-  afterEach(() => { quietDeviations.value = null; });
-  const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
-
-  it.each([false, true])("mutes a rounded zero and tones real moves by direction (quiet=%s)", (quiet) => {
-    quietDeviations.value = quiet;
-    const trend = (mcap: number, prevDay: number) => buildDetailHero({ coin, mcap, prevDay }).market.prevDayTrendClass;
-    expect(trend(100, 100)).toBe("text-muted-foreground");
-    expect(trend(99.999, 100)).toBe("text-muted-foreground");
-    expect(trend(100.001, 100)).toBe("text-muted-foreground");
-    expect(trend(99, 100)).toBe(DIRECTION_TONE_CLASSES.down);
-    expect(trend(101, 100)).toBe(DIRECTION_TONE_CLASSES.up);
-    expect(trend(0, 100)).toBe(DIRECTION_TONE_CLASSES.down);
-    // Within the quiet threshold only the flag decides.
-    expect(trend(100.2, 100)).toBe(quiet ? "text-muted-foreground" : DIRECTION_TONE_CLASSES.up);
-  });
-
-  it("withholds the 24h change when current supply is partial", () => {
-    const base = buildDetailHero({ coin }).coinData;
-    const hero = buildDetailHero({ coin, mcap: 99, prevDay: 100, coinData: { ...base, supplyExcludedChains: ["HyperEVM"] } });
-    expect(hero.market.safePrevDay).toBeNull();
-    expect(hero.market.prevDayTrendClass).toBe("text-muted-foreground");
-  });
-
-  it("stays muted without a previous value", () => {
-    expect(buildDetailHero({ coin, mcap: 100, prevDay: null }).market.prevDayTrendClass).toBe("text-muted-foreground");
-  });
-});
-
-describe("excess-yield tile help", () => {
-  it("binds the 30d Excess tile to the excess-yield definition, not PYS, keeping its label", () => {
-    const hero = buildDetailHero({ coin: TRACKED_META_BY_ID.get("usdt-tether")! });
-    const metric = hero.tertiaryMetrics.find((entry) => entry.key === "excess-yield")!;
-    expect(metric).toMatchObject({ label: "30d Excess", methodologyTopic: "excessYield" });
-    expect(METHODOLOGY_CONTEXT.excessYield).toMatchObject({
-      title: "Excess yield",
-      summary: "30-day APY minus its benchmark rate.",
-    });
-  });
-
-  it("keeps DEFINITIONS free of clause dashes, risk-free claims, and V9/V10 reader labels", () => {
-    for (const def of Object.values(DEFINITIONS)) {
-      for (const field of [def.label, "term" in def ? def.term : undefined, def.short, "detail" in def ? def.detail : undefined, "long" in def ? def.long : undefined]) {
-        if (!field) continue;
-        expect(field).not.toMatch(/[\u2012\u2013\u2014\u2015]/);
-        expect(field).not.toMatch(/\brisk[- ]free\b/i);
-        expect(field).not.toMatch(/\bV(?:9|10)\b/);
-      }
+    for (const [input, key] of [
+      [undefined, "mica"],
+      [{ coin: { genius: { authorizationStatus: "not-applicable" } } }, "genius"],
+      [{ coin: { genius: { authorizationStatus: "unknown" } } }, "genius"],
+      [undefined, "genius"],
+      [{ pegRecord: { eventCount: 2, depegEventCoverageLimited: true } }, "record"],
+      [{ pegRecord: { eventCount: 0 }, isNavToken: true }, "record"],
+      [undefined, "record"],
+    ] as const) {
+      expect(passport(buildPassportHero(input), key)).toBeUndefined();
     }
   });
 });
 
-describe("coin tracker hatnote links", () => {
-  it("routes each tracker to a distinct coin section anchor or dedicated surface", () => {
-    const usdcLinks = Object.fromEntries(
-      buildAllCoinTrackerLinks("usdc-circle", undefined, "USDC").map((link) => [link.tracker, link.href]),
-    );
+describe("hero trend direction, excess-yield help, and tracker links", () => {
+  afterEach(() => { quietDeviations.value = null; });
+  const coin = coinOf("usdc-circle");
+
+  it.each([false, true])("mutes rounded zero, tones real moves, and withholds partial/missing baselines (quiet=%s)", (quiet) => {
+    quietDeviations.value = quiet;
+    const trend = (mcap: number, prevDay: number | null) => buildDetailHero({ coin, mcap, prevDay }).market.prevDayTrendClass;
+    expect([trend(100, 100), trend(99.999, 100), trend(100.001, 100), trend(100, null)]).toEqual(Array(4).fill("text-muted-foreground"));
+    expect([trend(99, 100), trend(101, 100), trend(0, 100)]).toEqual([DIRECTION_TONE_CLASSES.down, DIRECTION_TONE_CLASSES.up, DIRECTION_TONE_CLASSES.down]);
+    expect(trend(100.2, 100)).toBe(quiet ? "text-muted-foreground" : DIRECTION_TONE_CLASSES.up);
+
+    const partial = buildDetailHero({ coin, mcap: 99, prevDay: 100, coinData: { ...buildDetailHero({ coin }).coinData, supplyExcludedChains: ["HyperEVM"] } });
+    expect([partial.market.safePrevDay, partial.market.prevDayTrendClass]).toEqual([null, "text-muted-foreground"]);
+  });
+
+  it("binds 30d Excess to excess-yield definition, keeps DEFINITIONS clean, and routes tracker hatnotes", () => {
+    expect(buildDetailHero({ coin: coinOf("usdt-tether") }).tertiaryMetrics.find((e) => e.key === "excess-yield")).toMatchObject({ label: "30d Excess", methodologyTopic: "excessYield" });
+    expect(METHODOLOGY_CONTEXT.excessYield).toMatchObject({ title: "Excess yield", summary: "30-day APY minus its benchmark rate." });
+
+    for (const def of Object.values(DEFINITIONS)) {
+      for (const field of [def.label, "term" in def ? def.term : undefined, def.short, "detail" in def ? def.detail : undefined, "long" in def ? def.long : undefined]) {
+        if (field) expect(field).not.toMatch(/[\u2012\u2013\u2014\u2015]|\brisk[- ]free\b|\bV(?:9|10)\b/i);
+      }
+    }
+
+    const usdcLinks = Object.fromEntries(buildAllCoinTrackerLinks("usdc-circle", undefined, "USDC").map((l) => [l.tracker, l.href]));
     expect(usdcLinks).toEqual({
-      "stablecoin-profile": "/stablecoin/usdc-circle/",
-      "safety-score": "/stablecoin/usdc-circle/#overview",
-      liquidity: "/stablecoin/usdc-circle/#liquidity",
-      "depeg-history": "/stablecoin/usdc-circle/#history",
-      yield: "/yield/",
-      flows: "/flows/",
-      freezewatch: "/freezewatch/?stablecoin=USDC",
-      timeline: "/timeline/?coin=usdc-circle",
+      "stablecoin-profile": "/stablecoin/usdc-circle/", "safety-score": "/stablecoin/usdc-circle/#overview",
+      liquidity: "/stablecoin/usdc-circle/#liquidity", "depeg-history": "/stablecoin/usdc-circle/#history",
+      yield: "/yield/", flows: "/flows/", freezewatch: "/freezewatch/?stablecoin=USDC", timeline: "/timeline/?coin=usdc-circle",
     });
     expect(new Set(Object.values(usdcLinks)).size).toBe(Object.keys(usdcLinks).length);
     expect(buildCoinTrackerLink("susde-ethena", "yield", "sUSDe").href).toBe("/stablecoin/susde-ethena/yield/");

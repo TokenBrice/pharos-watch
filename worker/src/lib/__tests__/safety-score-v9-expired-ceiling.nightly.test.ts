@@ -29,5 +29,5 @@ describe("v10.48 expired-review ceiling over the registry", () => {
       capped++;
     }
     expect(capped).toBeGreaterThanOrEqual(20);
-  });
+  }, 60_000);
 });

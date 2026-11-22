@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { COLLIDING_DEPEG_EVENT_SLUGS, DEPEG_EVENT_ENTRIES } from "@/lib/depeg-event-page-data";
+import { buildExploreDepegEventLinks, COLLIDING_DEPEG_EVENT_SLUGS, DEPEG_EVENT_ENTRIES } from "@/lib/depeg-event-page-data";
 import { readDepegEventSnapshot } from "@/lib/depeg-event-snapshot";
 import {
   buildDepegEventDescription,
@@ -274,5 +274,16 @@ describe("depeg closure presentation", () => {
   it("classifies an omitted legacy reason as recovery only with recovery-price evidence", () => {
     expect(classifyDepegClosure({ endedAt: base.endedAt, recoveryPrice: 1 })).toBe("legacy_recovered");
     expect(classifyDepegClosure({ endedAt: base.endedAt, recoveryPrice: null })).toBe("unknown_closed");
+  });
+});
+
+describe("buildExploreDepegEventLinks", () => {
+  it("uses the compact month-year label for the newest event pages", () => {
+    const kau = buildExploreDepegEventLinks("kau-kinesis", "KAU");
+    expect(kau).toHaveLength(5);
+    for (const link of kau) {
+      expect(link.label).toMatch(/^KAU depeg [A-Z][a-z]{2} \d{4}$/);
+      expect(link.href).toMatch(/^\/depeg\/kau-/);
+    }
   });
 });

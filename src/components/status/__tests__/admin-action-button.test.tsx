@@ -4,570 +4,279 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { API_PATHS, type StatusPageAction } from "@shared/lib/api-endpoints";
 import { AdminActionButton } from "@/components/status/admin-action-button";
-import {
-  AdminActionExecutionProvider,
-  useAdminActionExecutions,
-} from "@/components/status/admin-action-execution-provider";
+import { AdminActionExecutionProvider, useAdminActionExecutions } from "@/components/status/admin-action-execution-provider";
 import type { ActionReadinessCheck } from "@/lib/status/admin-ops-insights";
 import { mockFetch, type MockFetchSpy } from "@shared/test-utils/mock-fetch";
 
 const ASSET_SCOPE: StatusPageAction["scope"] = {
-  type: "asset-or-batch",
-  assetIdentifier: "stablecoin-id",
-  assetLabel: "Stablecoin ID",
-  assetPlaceholder: "e.g. usdt-tether",
-  batchLabel: "Bounded registry batch",
-  queryParam: "stablecoin",
+  type: "asset-or-batch", assetIdentifier: "stablecoin-id", assetLabel: "Stablecoin ID",
+  assetPlaceholder: "e.g. usdt-tether", batchLabel: "Bounded registry batch", queryParam: "stablecoin",
 };
 
-function makeAction(overrides: Partial<StatusPageAction> = {}): StatusPageAction {
-  return {
-    label: "Repair Blacklist Gaps",
-    path: API_PATHS.remediateBlacklistAmountGaps(),
-    confirm: "Backfill supply history snapshots?",
-    destructive: false,
-    method: "POST",
-    acceptsStablecoinFilter: false,
-    group: "recovery",
-    kind: "backfill",
-    risk: "read-only",
-    scope: { type: "global", label: "Test scope" },
-    dryRun: { supported: false, default: false, liveSupported: true },
-    expectedDuration: "Seconds",
-    preconditions: [],
-    blockedBy: [],
-    resultMode: "immediate",
-    ...overrides,
-  };
-}
+const makeAction = (overrides: Partial<StatusPageAction> = {}): StatusPageAction => ({
+  label: "Repair Blacklist Gaps", path: API_PATHS.remediateBlacklistAmountGaps(),
+  confirm: "Backfill supply history snapshots?", destructive: false, method: "POST",
+  acceptsStablecoinFilter: false, group: "recovery", kind: "backfill", risk: "read-only",
+  scope: { type: "global", label: "Test scope" }, dryRun: { supported: false, default: false, liveSupported: true },
+  expectedDuration: "Seconds", preconditions: [], blockedBy: [], resultMode: "immediate", ...overrides,
+});
 
-function renderActions(actions: StatusPageAction[], createIdempotencyKey: () => string = () => "intent-key-for-test") {
-  return render(
-    <AdminActionExecutionProvider createIdempotencyKey={createIdempotencyKey}>
-      {actions.map((action, index) => (
-        <AdminActionButton key={`${action.path}-${index}`} action={action} />
-      ))}
-    </AdminActionExecutionProvider>,
-  );
-}
+const renderActions = (actions: StatusPageAction[], createIdempotencyKey: () => string = () => "intent-key-for-test") => render(
+  <AdminActionExecutionProvider createIdempotencyKey={createIdempotencyKey}>
+    {actions.map((action, i) => <AdminActionButton key={`${action.path}-${i}`} action={action} />)}
+  </AdminActionExecutionProvider>,
+);
 
-function requestIdempotencyKey(callIndex: number): string | null {
-  const [, init] = fetchMock.mock.calls[callIndex] ?? [];
-  return new Headers(init?.headers).get("Idempotency-Key");
-}
+const btn = (name: string | RegExp) => screen.getByRole("button", { name }) as HTMLButtonElement;
+const clickBtn = (name: string | RegExp) => fireEvent.click(btn(name));
+const openAndConfirm = (label = "Repair Blacklist Gaps") => { clickBtn(label); clickBtn("Confirm"); };
+const jsonResp = (body: unknown, status = 200, headers: Record<string, string> = {}) =>
+  new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", ...headers } });
+const requestIdempotencyKey = (callIndex: number): string | null =>
+  new Headers(fetchMock.mock.calls[callIndex]?.[1]?.headers).get("Idempotency-Key");
 
 function ExecutionIdentity() {
   const execution = useAdminActionExecutions()[0];
   return <output aria-label="Execution identity">{execution?.idempotencyKeyHash}</output>;
 }
 
-function selectAsset(search: string, optionName: RegExp): void {
-  fireEvent.click(screen.getByRole("button", { name: "Add stablecoin..." }));
+function selectAsset(search: string, optionName: RegExp) {
+  clickBtn("Add stablecoin...");
   fireEvent.change(screen.getByRole("combobox", { name: "Search coins" }), { target: { value: search } });
   fireEvent.click(screen.getByRole("option", { name: optionName }));
 }
 
 let fetchMock: MockFetchSpy;
-
-function installFetch(routes: Parameters<typeof mockFetch>[0] = [{ match: "/api/admin/", body: { ok: true } }]): void {
+const installFetch = (routes: Parameters<typeof mockFetch>[0] = [{ match: "/api/admin/", body: { ok: true } }]) => {
   fetchMock = mockFetch(routes, { requireMatch: true });
+};
+
+function installDeferredFetch() {
+  let resolveFetch!: (response: Response) => void;
+  installFetch([{ match: "/api/admin/", respond: () => new Promise<Response>((r) => { resolveFetch = r; }) }]);
+  return async (body: unknown = { ok: true }) => {
+    await waitFor(() => { if (typeof resolveFetch !== "function") throw new Error("fetch responder not installed"); });
+    resolveFetch(jsonResp(body));
+  };
 }
 
 describe("AdminActionButton", () => {
-  beforeEach(() => {
-    installFetch();
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.restoreAllMocks();
-  });
+  beforeEach(() => installFetch());
+  afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
   it("projects the SHA-256 hash of the exact key sent with the session request", async () => {
     render(
       <AdminActionExecutionProvider createIdempotencyKey={() => "key-1"}>
-        <AdminActionButton action={makeAction()} />
-        <ExecutionIdentity />
+        <AdminActionButton action={makeAction()} /><ExecutionIdentity />
       </AdminActionExecutionProvider>,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+    openAndConfirm();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(requestIdempotencyKey(0)).toBe("key-1");
-    expect(screen.getByLabelText("Execution identity").textContent)
-      .toBe("be2974546978e3739e6d6da85c4be9f334ce32df2b9fd4b6ff1b55c0d57e9d44");
+    expect(screen.getByLabelText("Execution identity").textContent).toBe("be2974546978e3739e6d6da85c4be9f334ce32df2b9fd4b6ff1b55c0d57e9d44");
   });
 
-
-  it("derives symbol-scoped requests from a tracked stablecoin selection", async () => {
-    renderActions([
-      makeAction({
-        label: "Repair Symbol Rows",
-        path: "/api/repair-symbol-rows",
-        acceptsStablecoinFilter: true,
-        scope: { ...ASSET_SCOPE, assetIdentifier: "symbol", queryParam: "symbol" },
-        risk: "moderate",
-      }),
-    ]);
-
-    fireEvent.click(screen.getByRole("button", { name: "Repair Symbol Rows" }));
+  it("derives symbol-scoped requests and locks selected asset after settling", async () => {
+    const { unmount } = renderActions([makeAction({ label: "Repair Symbol Rows", path: "/api/repair-symbol-rows", acceptsStablecoinFilter: true, scope: { ...ASSET_SCOPE, assetIdentifier: "symbol", queryParam: "symbol" }, risk: "moderate" })]);
+    clickBtn("Repair Symbol Rows");
     selectAsset("Tether", /Tether.*USDT/i);
-    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
-
+    clickBtn("Confirm");
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/admin/repair-symbol-rows?symbol=USDT");
-  });
+    unmount();
 
-  it("locks the selected asset after an execution settles", async () => {
-    renderActions([
-      makeAction({ acceptsStablecoinFilter: true, scope: ASSET_SCOPE, risk: "moderate" }),
-    ]);
-
-    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
+    renderActions([makeAction({ acceptsStablecoinFilter: true, scope: ASSET_SCOPE, risk: "moderate" })]);
+    clickBtn("Repair Blacklist Gaps");
     selectAsset("CAD Digital", /CAD Digital.*CADD/i);
-    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
-
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    expect((screen.getByRole("button", { name: "Remove CAD Digital" }) as HTMLButtonElement).disabled).toBe(true);
+    clickBtn("Confirm");
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(btn("Remove CAD Digital").disabled).toBe(true);
   });
-
 
   it("requires an explicit asset or acknowledged batch scope", async () => {
-    renderActions([
-      makeAction({
-        acceptsStablecoinFilter: true,
-        scope: ASSET_SCOPE,
-        risk: "moderate",
-      }),
-    ]);
-
-    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
-    expect((screen.getByRole("button", { name: "Confirm" }) as HTMLButtonElement).disabled).toBe(true);
-
+    renderActions([makeAction({ acceptsStablecoinFilter: true, scope: ASSET_SCOPE, risk: "moderate" })]);
+    clickBtn("Repair Blacklist Gaps");
+    expect(btn("Confirm").disabled).toBe(true);
     fireEvent.click(screen.getByLabelText("Batch"));
-    const acknowledgement = screen.getByLabelText(/I acknowledge this live action affects/i);
-    expect((screen.getByRole("button", { name: "Confirm" }) as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.click(acknowledgement);
-    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
-
+    const ack = screen.getByLabelText(/I acknowledge this live action affects/i);
+    expect(btn("Confirm").disabled).toBe(true);
+    fireEvent.click(ack);
+    clickBtn("Confirm");
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/admin/remediate-blacklist-amount-gaps");
   });
 
-  it("uses the configured dry-run query contract by default", async () => {
-    renderActions([
-      makeAction({
-        label: "Remediate Blacklist Gaps",
-        path: "/api/remediate-blacklist-amount-gaps",
-        confirm: "Run remediation?",
-        risk: "moderate",
-        dryRun: {
-          supported: true,
-          default: true,
-          liveSupported: true,
-          queryParam: "dryRun",
-        },
-        expectedDuration: "Up to one minute",
-        preconditions: ["Review candidate counts."],
-        blockedBy: ["Live mode requires chain RPCs."],
-        runbookPath: "docs/runbooks/blacklist-sync.md",
-      }),
-    ]);
-
-    fireEvent.click(screen.getByRole("button", { name: "Remediate Blacklist Gaps" }));
+  it("uses dry-run contract by default and supports dual-mode live switch and preview-only actions", async () => {
+    const { unmount } = renderActions([makeAction({
+      label: "Remediate Blacklist Gaps", path: "/api/remediate-blacklist-amount-gaps", confirm: "Run remediation?", risk: "moderate",
+      dryRun: { supported: true, default: true, liveSupported: true, queryParam: "dryRun" },
+      expectedDuration: "Up to one minute", preconditions: ["Review candidate counts."], blockedBy: ["Live mode requires chain RPCs."], runbookPath: "docs/runbooks/blacklist-sync.md",
+    })]);
+    clickBtn("Remediate Blacklist Gaps");
     expect((screen.getByLabelText(/^Dry run/) as HTMLInputElement).checked).toBe(true);
-    expect(screen.getByText("Moderate risk")).toBeTruthy();
-    expect(screen.getByText("Up to one minute")).toBeTruthy();
-    expect(screen.getByText("Review candidate counts.")).toBeTruthy();
-    expect(screen.getByText("Live mode requires chain RPCs.")).toBeTruthy();
-    const runbookLink = screen.getByRole("link", {
-      name: /Open operator reference.*opens in a new tab/i,
-    });
-    expect(runbookLink.getAttribute("href")).toBe(
-      "https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks/blacklist-sync.md",
-    );
-    expect(runbookLink.getAttribute("target")).toBe("_blank");
-    expect(runbookLink.getAttribute("rel")).toBe("noopener noreferrer");
-    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
-
+    for (const t of ["Moderate risk", "Up to one minute", "Review candidate counts.", "Live mode requires chain RPCs."]) expect(screen.getByText(t)).toBeTruthy();
+    const runbookLink = screen.getByRole("link", { name: /Open operator reference.*opens in a new tab/i });
+    expect([runbookLink.getAttribute("href"), runbookLink.getAttribute("target"), runbookLink.getAttribute("rel")])
+      .toEqual(["https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks/blacklist-sync.md", "_blank", "noopener noreferrer"]);
+    clickBtn("Confirm");
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/admin/remediate-blacklist-amount-gaps?dryRun=true");
-  });
+    unmount();
 
-  it("switches a dual-mode dry run to its live method only after acknowledgement", async () => {
-    renderActions([
-      makeAction({
-        label: "Audit Depegs",
-        path: "/api/backfill-dews?repair=refresh-current&dry-run=true",
-        confirm: "Audit depegs?",
-        method: "GET",
-        risk: "high",
-        dryRun: {
-          supported: true,
-          default: true,
-          liveSupported: true,
-          queryParam: "dry-run",
-          dryRunMethod: "GET",
-          liveMethod: "POST",
-        },
-      }),
-    ]);
-
-    fireEvent.click(screen.getByRole("button", { name: "Audit Depegs" }));
+    const { unmount: u2 } = renderActions([makeAction({
+      label: "Audit Depegs", path: "/api/backfill-dews?repair=refresh-current&dry-run=true", confirm: "Audit depegs?", method: "GET", risk: "high",
+      dryRun: { supported: true, default: true, liveSupported: true, queryParam: "dry-run", dryRunMethod: "GET", liveMethod: "POST" },
+    })]);
+    clickBtn("Audit Depegs");
     fireEvent.click(screen.getByLabelText(/^Dry run/));
-    expect((screen.getByRole("button", { name: "Confirm" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(btn("Confirm").disabled).toBe(true);
     fireEvent.click(screen.getByLabelText(/I acknowledge this live action affects/i));
-    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+    clickBtn("Confirm");
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(fetchMock.mock.calls[1]?.[0]).toBe("/api/admin/backfill-dews?repair=refresh-current&dry-run=false");
+    expect(fetchMock.mock.calls[1]?.[1]?.method).toBe("POST");
+    u2();
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    const [url, init] = fetchMock.mock.calls[0] ?? [];
-    expect(url).toBe("/api/admin/backfill-dews?repair=refresh-current&dry-run=false");
-    expect(init?.method).toBe("POST");
+    renderActions([makeAction({
+      label: "Preview Mint/Burn Price Repair", path: "/api/preview-repair", confirm: "Preview repairs?", kind: "inspect", risk: "high",
+      dryRun: { supported: true, default: true, liveSupported: false, queryParam: "dry-run" },
+    })]);
+    clickBtn("Preview Mint/Burn Price Repair");
+    expect(screen.getByText("Dry run only from this dashboard control.")).toBeTruthy();
+    expect(screen.queryByLabelText(/^Dry run/)).toBeNull();
+    clickBtn("Confirm");
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    expect(fetchMock.mock.calls[2]?.[0]).toBe("/api/admin/preview-repair?dry-run=true");
+    expect(fetchMock.mock.calls[2]?.[1]?.method).toBe("POST");
   });
 
-  it("rechecks live readiness while the confirmation dialog is open", async () => {
+  it("rechecks live readiness while open and resets broad acknowledgement on scope or mode change", async () => {
     const action = makeAction({ risk: "moderate" });
-    const readyChecks: readonly ActionReadinessCheck[] = [
-      { id: "d1-writes", label: "D1 writes", state: "ready", detail: "Write probe passed." },
-    ];
-    const blockedChecks: readonly ActionReadinessCheck[] = [
-      { id: "d1-writes", label: "D1 writes", state: "blocked", detail: "Write probe is failing." },
-    ];
-    const view = render(
-      <AdminActionExecutionProvider>
-        <AdminActionButton action={action} readinessChecks={readyChecks} />
-      </AdminActionExecutionProvider>,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
+    const ready: readonly ActionReadinessCheck[] = [{ id: "d1-writes", label: "D1 writes", state: "ready", detail: "Write probe passed." }];
+    const blocked: readonly ActionReadinessCheck[] = [{ id: "d1-writes", label: "D1 writes", state: "blocked", detail: "Write probe is failing." }];
+    const view = render(<AdminActionExecutionProvider><AdminActionButton action={action} readinessChecks={ready} /></AdminActionExecutionProvider>);
+    clickBtn("Repair Blacklist Gaps");
     fireEvent.click(screen.getByLabelText(/I acknowledge this live action affects/i));
-    expect((screen.getByRole("button", { name: "Confirm" }) as HTMLButtonElement).disabled).toBe(false);
-
-    view.rerender(
-      <AdminActionExecutionProvider>
-        <AdminActionButton action={action} readinessChecks={blockedChecks} />
-      </AdminActionExecutionProvider>,
-    );
-
+    expect(btn("Confirm").disabled).toBe(false);
+    view.rerender(<AdminActionExecutionProvider><AdminActionButton action={action} readinessChecks={blocked} /></AdminActionExecutionProvider>);
     expect(await screen.findByText("Live execution blocked")).toBeTruthy();
-    const confirm = screen.getByRole("button", { name: "Confirm" }) as HTMLButtonElement;
-    expect(confirm.disabled).toBe(true);
-    fireEvent.click(confirm);
+    expect(btn("Confirm").disabled).toBe(true);
+    clickBtn("Confirm");
     expect(fetchMock).not.toHaveBeenCalled();
-  });
+    view.unmount();
 
-  it("resets broad acknowledgement when scope or execution mode changes", () => {
-    renderActions([
-      makeAction({
-        acceptsStablecoinFilter: true,
-        scope: ASSET_SCOPE,
-        risk: "high",
-        dryRun: {
-          supported: true,
-          default: true,
-          liveSupported: true,
-          queryParam: "dry-run",
-        },
-      }),
-    ]);
-
-    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
+    renderActions([makeAction({ acceptsStablecoinFilter: true, scope: ASSET_SCOPE, risk: "high", dryRun: { supported: true, default: true, liveSupported: true, queryParam: "dry-run" } })]);
+    clickBtn("Repair Blacklist Gaps");
     fireEvent.click(screen.getByLabelText("Batch"));
     fireEvent.click(screen.getByLabelText(/^Dry run/));
-    let acknowledgement = screen.getByLabelText(/I acknowledge this live action affects/i) as HTMLInputElement;
-    fireEvent.click(acknowledgement);
-    expect(acknowledgement.checked).toBe(true);
-    expect((screen.getByRole("button", { name: "Confirm" }) as HTMLButtonElement).disabled).toBe(false);
-
+    const ack = () => screen.getByLabelText(/I acknowledge this live action affects/i) as HTMLInputElement;
+    fireEvent.click(ack());
+    expect([ack().checked, btn("Confirm").disabled]).toEqual([true, false]);
     fireEvent.click(screen.getByLabelText("Single asset"));
     fireEvent.click(screen.getByLabelText("Batch"));
-    acknowledgement = screen.getByLabelText(/I acknowledge this live action affects/i) as HTMLInputElement;
-    expect(acknowledgement.checked).toBe(false);
-    expect((screen.getByRole("button", { name: "Confirm" }) as HTMLButtonElement).disabled).toBe(true);
-
-    fireEvent.click(acknowledgement);
+    expect([ack().checked, btn("Confirm").disabled]).toEqual([false, true]);
+    fireEvent.click(ack());
     fireEvent.click(screen.getByLabelText(/^Dry run/));
     expect(screen.queryByLabelText(/I acknowledge this live action affects/i)).toBeNull();
     fireEvent.click(screen.getByLabelText(/^Dry run/));
-    acknowledgement = screen.getByLabelText(/I acknowledge this live action affects/i) as HTMLInputElement;
-    expect(acknowledgement.checked).toBe(false);
+    expect(ack().checked).toBe(false);
   });
 
-  it("keeps preview-only actions on their dry-run request contract", async () => {
-    renderActions([
-      makeAction({
-        label: "Preview Mint/Burn Price Repair",
-        path: "/api/preview-repair",
-        confirm: "Preview repairs?",
-        kind: "inspect",
-        risk: "high",
-        dryRun: {
-          supported: true,
-          default: true,
-          liveSupported: false,
-          queryParam: "dry-run",
-        },
-      }),
-    ]);
-
-    fireEvent.click(screen.getByRole("button", { name: "Preview Mint/Burn Price Repair" }));
-    expect(screen.getByText("Dry run only from this dashboard control.")).toBeTruthy();
-    expect(screen.queryByLabelText(/^Dry run/)).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
-
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    const [url, init] = fetchMock.mock.calls[0] ?? [];
-    expect(url).toBe("/api/admin/preview-repair?dry-run=true");
-    expect(init?.method).toBe("POST");
-  });
-
-  it("retries a timed-out execution with the original idempotency key", async () => {
+  it("retries timed-out execution with original key and creates new key only for new execution", async () => {
     fetchMock
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ error: "upstream_timeout" }), {
-          status: 504,
-          headers: { "Content-Type": "application/json" },
-        }),
-      )
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ ok: true }), {
-          status: 200,
-          headers: {
-            "Content-Type": "application/json",
-            "Idempotency-Key": "first-intent-key",
-            "X-Idempotent-Replay": "true",
-          },
-        }),
-      );
+      .mockResolvedValueOnce(jsonResp({ error: "upstream_timeout" }, 504))
+      .mockResolvedValueOnce(jsonResp({ ok: true }, 200, { "Idempotency-Key": "first-intent-key", "X-Idempotent-Replay": "true" }));
     const keys = ["first-intent-key", "second-intent-key"];
-    renderActions([makeAction()], () => keys.shift() ?? "unexpected-key");
-
-    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+    const { unmount } = renderActions([makeAction()], () => keys.shift() ?? "unexpected-key");
+    openAndConfirm();
     await screen.findByText("Outcome unknown");
-
-    fireEvent.click(screen.getByRole("button", { name: "Retry same execution" }));
+    clickBtn("Retry same execution");
     await screen.findByText("Succeeded");
-
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(requestIdempotencyKey(0)).toBe("first-intent-key");
-    expect(requestIdempotencyKey(1)).toBe("first-intent-key");
+    expect([requestIdempotencyKey(0), requestIdempotencyKey(1)]).toEqual(["first-intent-key", "first-intent-key"]);
     expect(screen.getByText("Idempotent replay: yes")).toBeTruthy();
-  });
+    unmount();
 
-  it("creates a new key only after the operator starts a new execution", async () => {
-    fetchMock
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ error: "invalid_scope" }), {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        }),
-      )
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ ok: true }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        }),
-      );
-    const keys = ["first-intent-key", "second-intent-key"];
-    renderActions([makeAction()], () => keys.shift() ?? "unexpected-key");
-
-    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+    installFetch();
+    fetchMock.mockResolvedValueOnce(jsonResp({ error: "invalid_scope" }, 400)).mockResolvedValueOnce(jsonResp({ ok: true }));
+    const keys2 = ["first-intent-key", "second-intent-key"];
+    renderActions([makeAction()], () => keys2.shift() ?? "unexpected-key");
+    openAndConfirm();
     await screen.findByText("Failed");
-
     expect(screen.queryByRole("button", { name: "Confirm" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Start new execution" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+    clickBtn("Start new execution");
+    clickBtn("Confirm");
     await screen.findByText("Succeeded");
-
-    expect(requestIdempotencyKey(0)).toBe("first-intent-key");
-    expect(requestIdempotencyKey(1)).toBe("second-intent-key");
+    expect([requestIdempotencyKey(0), requestIdempotencyKey(1)]).toEqual(["first-intent-key", "second-intent-key"]);
   });
 
-  it("treats a same-key idempotency ownership-loss conflict as unknown", async () => {
-    installFetch([{
-      match: "/api/admin/",
-      body: { error: "Idempotency reservation ownership was lost" },
-      status: 409,
-      headers: {
-          "Idempotency-Key": "intent-key-for-test",
-          "X-Idempotent-Replay": "true",
-      },
-    }]);
-    renderActions([makeAction()]);
-
-    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
-
+  it("distinguishes ownership-loss 409 (unknown) from payload-reuse 409 (failed) and renders unsafe followUpUrl as text", async () => {
+    installFetch([{ match: "/api/admin/", body: { error: "Idempotency reservation ownership was lost" }, status: 409, headers: { "Idempotency-Key": "intent-key-for-test", "X-Idempotent-Replay": "true" } }]);
+    const { unmount } = renderActions([makeAction()]);
+    openAndConfirm();
     await screen.findByText("Outcome unknown");
-    expect(screen.getByRole("button", { name: "Retry same execution" })).toBeTruthy();
+    expect(btn("Retry same execution")).toBeTruthy();
     expect(screen.queryByText("Failed")).toBeNull();
     expect(screen.getByText(/Idempotency reservation ownership was lost/)).toBeTruthy();
-  });
+    unmount();
 
-  it("keeps a payload-reuse 409 as a definite failure", async () => {
-    installFetch([{
-      match: "/api/admin/",
-      body: { error: "Idempotency key reuse with different request payload" },
-      status: 409,
-    }]);
-    renderActions([makeAction()]);
-
-    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
-
+    installFetch([{ match: "/api/admin/", body: { error: "Idempotency key reuse with different request payload" }, status: 409 }]);
+    const { unmount: u2 } = renderActions([makeAction()]);
+    openAndConfirm();
     await screen.findByText("Failed");
     expect(screen.queryByText("Outcome unknown")).toBeNull();
     expect(screen.getByText(/Idempotency key reuse with different request payload/)).toBeTruthy();
-  });
+    u2();
 
-  it("coalesces a double confirmation into one request", async () => {
-    let resolveFetch!: (response: Response) => void;
-    installFetch([{
-      match: "/api/admin/",
-      respond: () => new Promise<Response>((resolve) => {
-        resolveFetch = resolve;
-      }),
-    }]);
+    installFetch([{ match: "/api/admin/", body: { status: "succeeded", followUpUrl: "//evil.example/jobs/42" } }]);
     renderActions([makeAction()]);
-
-    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
-    const confirm = screen.getByRole("button", { name: "Confirm" });
-    fireEvent.click(confirm);
-    fireEvent.click(confirm);
-
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    await waitFor(() => {
-      if (typeof resolveFetch !== "function") throw new Error("fetch responder not installed");
-    });
-    resolveFetch(
-      new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
-    await screen.findByText("Succeeded");
+    openAndConfirm();
+    expect((await screen.findByText("//evil.example/jobs/42")).closest("a")).toBeNull();
   });
 
-  it("shares running and result state across duplicate action instances", async () => {
-    let resolveFetch!: (response: Response) => void;
-    installFetch([{
-      match: "/api/admin/",
-      respond: () => new Promise<Response>((resolve) => {
-        resolveFetch = resolve;
-      }),
-    }]);
-    const action = makeAction({ acceptsStablecoinFilter: false });
-    renderActions([action, action]);
+  it("coalesces double confirmation, locks dismissal while running, shares state across duplicates, and retains result across remount", async () => {
+    const finish1 = installDeferredFetch();
+    const { unmount } = renderActions([makeAction()]);
+    clickBtn("Repair Blacklist Gaps");
+    const confirmButton = btn("Confirm");
+    fireEvent.click(confirmButton);
+    fireEvent.click(confirmButton);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy());
+    expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
+    expect(btn("Cancel").disabled).toBe(true);
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    await finish1();
+    await screen.findByText("Succeeded");
+    expect(screen.queryByRole("button", { name: "Confirm" })).toBeNull();
+    expect(btn("Start new execution")).toBeTruthy();
+    unmount();
 
+    const finish2 = installDeferredFetch();
+    const action = makeAction();
+    const { unmount: u2 } = renderActions([action, action]);
     fireEvent.click(screen.getAllByRole("button", { name: "Repair Blacklist Gaps" })[0]);
     expect(screen.getAllByRole("dialog")).toHaveLength(1);
-    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
-
+    clickBtn("Confirm");
     expect(document.querySelectorAll('[data-execution-status="running"]')).toHaveLength(2);
-    await waitFor(() => {
-      if (typeof resolveFetch !== "function") throw new Error("fetch responder not installed");
-    });
-    resolveFetch(
-      new Response(JSON.stringify({ ok: true, run: "shared-result" }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+    await finish2({ ok: true, run: "shared-result" });
     await screen.findByText("Succeeded");
-    const footerClose = screen
-      .getAllByRole("button", { name: "Close" })
-      .find((button) => button.getAttribute("data-slot") === "button");
-    expect(footerClose).toBeTruthy();
-    fireEvent.click(footerClose!);
-
+    fireEvent.click(screen.getAllByRole("button", { name: "Close" }).find((b) => b.getAttribute("data-slot") === "button")!);
     fireEvent.click(screen.getAllByRole("button", { name: "Repair Blacklist Gaps" })[1]);
     expect(await screen.findByText(/shared-result/)).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledTimes(1);
-  });
+    u2();
 
-  it("renders an unsafe follow-up value as inert text", async () => {
-    installFetch([{
-      match: "/api/admin/",
-      body: { status: "succeeded", followUpUrl: "//evil.example/jobs/42" },
-    }]);
-    renderActions([makeAction()]);
-
-    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
-
-    const followUp = await screen.findByText("//evil.example/jobs/42");
-    expect(followUp.closest("a")).toBeNull();
-  });
-
-  it("does not offer another confirmation after a successful execution", async () => {
-    renderActions([makeAction()]);
-
-    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
-    await screen.findByText("Succeeded");
-
-    expect(screen.queryByRole("button", { name: "Confirm" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Start new execution" })).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-  });
-
-  it("keeps execution results when the action lane unmounts and remounts", async () => {
-    const action = makeAction();
-    const createIdempotencyKey = () => "persistent-intent-key";
-    const view = render(
-      <AdminActionExecutionProvider createIdempotencyKey={createIdempotencyKey}>
-        <AdminActionButton action={action} />
-      </AdminActionExecutionProvider>,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+    installFetch();
+    const createKey = () => "persistent-intent-key";
+    const view = render(<AdminActionExecutionProvider createIdempotencyKey={createKey}><AdminActionButton action={action} /></AdminActionExecutionProvider>);
+    openAndConfirm();
     await screen.findByText("Succeeded");
     fireEvent.click(screen.getAllByRole("button", { name: "Close" })[0]);
-
-    view.rerender(
-      <AdminActionExecutionProvider createIdempotencyKey={createIdempotencyKey}>
-        <div>Another operator lane</div>
-      </AdminActionExecutionProvider>,
-    );
-    view.rerender(
-      <AdminActionExecutionProvider createIdempotencyKey={createIdempotencyKey}>
-        <AdminActionButton action={action} />
-      </AdminActionExecutionProvider>,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
+    view.rerender(<AdminActionExecutionProvider createIdempotencyKey={createKey}><div>Another operator lane</div></AdminActionExecutionProvider>);
+    view.rerender(<AdminActionExecutionProvider createIdempotencyKey={createKey}><AdminActionButton action={action} /></AdminActionExecutionProvider>);
+    clickBtn("Repair Blacklist Gaps");
     expect(await screen.findByText("Succeeded")).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledTimes(1);
-  });
-
-  it("keeps the dialog open and removes casual dismissal while a request is running", async () => {
-    let resolveFetch!: (response: Response) => void;
-    installFetch([{
-      match: "/api/admin/",
-      respond: () => new Promise<Response>((resolve) => {
-        resolveFetch = resolve;
-      }),
-    }]);
-    renderActions([makeAction()]);
-
-    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
-    await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy());
-
-    expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
-    expect((screen.getByRole("button", { name: "Cancel" }) as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.keyDown(document, { key: "Escape" });
-    expect(screen.getByRole("dialog")).toBeTruthy();
-
-    resolveFetch(
-      new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
-    await screen.findByText("Succeeded");
   });
 });

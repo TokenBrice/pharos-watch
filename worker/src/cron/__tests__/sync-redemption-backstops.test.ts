@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createMockD1Preset, type MockTableConfig } from "@shared/test-utils/mock-d1";
+import { createMockD1Preset } from "@shared/test-utils/mock-d1";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import { ConsumedReserveInputSchema, RedemptionReserveRunMetadataSchema } from "@shared/types/reserve-input";
@@ -13,11 +13,7 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import type * as StoreWriteModule from "../../lib/redemption-backstops-store-write";
 import type * as ExecutableObserversModule from "../reserve-adapters/executable-redemption-observers";
 
-const DEFAULT_REDEMPTION_BACKSTOP_D1_TABLES: MockTableConfig[] = [
-  { match: "FROM depeg_events", rows: [] },
-];
-
-const mockD1 = createMockD1Preset(DEFAULT_REDEMPTION_BACKSTOP_D1_TABLES);
+const mockD1 = createMockD1Preset([{ match: "FROM depeg_events", rows: [] }]);
 
 const loadStablecoinsCacheMock = vi.fn();
 const loadDexLiquidityScoresMock = vi.fn();
@@ -34,103 +30,92 @@ const GATE_LOAD_TIMEOUT_MS = 15_000;
 
 function makeResolvedSnapshot(stablecoinId: string, now: number, overrides: Partial<RedemptionBackstopEntry> = {}): RedemptionBackstopEntry {
   return {
-    stablecoinId,
-    score: 88,
-    dexLiquidityScore: 29,
-    accessScore: 100,
-    settlementScore: 100,
-    executionCertaintyScore: 80,
-    capacityScore: 100,
-    outputAssetQualityScore: 80,
-    costScore: 40,
-    routeFamily: "basket-redeem",
-    accessModel: "permissionless-onchain",
-    settlementModel: "atomic",
-    executionModel: "deterministic-basket",
-    outputAssetType: "stable-basket",
-    provider: "supply-ratio-model",
-    sourceMode: "estimated",
-    routeStatus: "unknown",
-    routeStatusSource: "static-config",
-    holderEligibility: "unknown",
-    resolutionState: "resolved",
-    capacityConfidence: "documented-bound",
-    capacitySemantics: "immediate-bounded",
-    feeConfidence: "undisclosed-reviewed",
-    feeModelKind: "documented-variable",
-    modelConfidence: "medium",
-    immediateCapacityUsd: 10_000_000,
-    immediateCapacityRatio: 0.5,
-    feeBps: null,
-    queueEnabled: false,
-    methodologyVersion: "1.0",
-    updatedAt: now,
-    capsApplied: [],
-    ...overrides,
+    stablecoinId, score: 88, dexLiquidityScore: 29, accessScore: 100, settlementScore: 100,
+    executionCertaintyScore: 80, capacityScore: 100, outputAssetQualityScore: 80, costScore: 40,
+    routeFamily: "basket-redeem", accessModel: "permissionless-onchain", settlementModel: "atomic",
+    executionModel: "deterministic-basket", outputAssetType: "stable-basket", provider: "supply-ratio-model",
+    sourceMode: "estimated", routeStatus: "unknown", routeStatusSource: "static-config",
+    holderEligibility: "unknown", resolutionState: "resolved", capacityConfidence: "documented-bound",
+    capacitySemantics: "immediate-bounded", feeConfidence: "undisclosed-reviewed",
+    feeModelKind: "documented-variable", modelConfidence: "medium", immediateCapacityUsd: 10_000_000,
+    immediateCapacityRatio: 0.5, feeBps: null, queueEnabled: false, methodologyVersion: "1.0",
+    updatedAt: now, capsApplied: [], ...overrides,
   };
+}
+
+function makeMissingCapacitySnapshot(stablecoinId: string, now: number, overrides: Partial<RedemptionBackstopEntry> = {}) {
+  return makeResolvedSnapshot(stablecoinId, now, {
+    score: null, capacityScore: null, provider: "reserve-sync-metadata", sourceMode: "static",
+    resolutionState: "missing-capacity", capacityConfidence: "dynamic", capacitySemantics: "immediate-bounded",
+    modelConfidence: "low", immediateCapacityUsd: null, immediateCapacityRatio: null,
+    notes: ["Live reserve metadata lacks scoring-grade freshness evidence"], ...overrides,
+  });
+}
+
+function mockStablecoins(peggedAssets: unknown[], ...rest: [number | undefined] | []) {
+  const updatedAt = rest.length > 0 ? rest[0] : Math.floor(Date.now() / 1000);
+  loadStablecoinsCacheMock.mockResolvedValue({ kind: "ok", updatedAt, payload: { peggedAssets } });
+}
+
+async function runSync(opts: {
+  db?: D1Database;
+  signal?: AbortSignal;
+  reportProgress?: (update: { stage?: string; itemsDone?: number }) => Promise<void>;
+} = {}) {
+  const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+  const result = await syncRedemptionBackstops(
+    opts.db ?? mockD1(),
+    opts.signal ?? new AbortController().signal,
+    undefined,
+    opts.reportProgress as never,
+  );
+  return { result, meta: JSON.parse(result.metadata ?? "{}") };
 }
 
 vi.mock("../../lib/stablecoins-cache", () => ({
   loadStablecoinsCache: loadStablecoinsCacheMock,
   hasUsableStablecoinsPayload: (result: { kind: string; payload?: { peggedAssets?: unknown[] } | null }) =>
-    (result.kind === "ok" || result.kind === "degraded") &&
-    !!result.payload &&
-    Array.isArray(result.payload.peggedAssets) &&
-    result.payload.peggedAssets.length > 0,
+    (result.kind === "ok" || result.kind === "degraded") && !!result.payload &&
+    Array.isArray(result.payload.peggedAssets) && result.payload.peggedAssets.length > 0,
 }));
-
-vi.mock("../../lib/dex-liquidity", () => ({
-  loadDexLiquidityScores: loadDexLiquidityScoresMock,
-}));
-
+vi.mock("../../lib/dex-liquidity", () => ({ loadDexLiquidityScores: loadDexLiquidityScoresMock }));
 vi.mock("../../lib/redemption-backstop/sources", async (importOriginal) => ({
   ...(await importOriginal<typeof SourcesModule>()),
   buildFailedRedemptionBackstopEntry: buildFailedRedemptionBackstopEntryMock,
   buildRedemptionBackstopEntry: buildRedemptionBackstopEntryMock,
   resolveRedemptionBackstopEntry: resolveRedemptionBackstopEntryMock,
 }));
-
 vi.mock("../../lib/redemption-backstops-store-write", async (importOriginal) => ({
   ...(await importOriginal<typeof StoreWriteModule>()),
   upsertRedemptionBackstopSnapshots: upsertRedemptionBackstopSnapshotsMock,
 }));
-
 vi.mock("../reserve-adapters/executable-redemption-observers", async (importOriginal) => ({
   ...(await importOriginal<typeof ExecutableObserversModule>()),
   observeExecutableRedemptionRoute: observeExecutableRedemptionRouteMock,
 }));
-
 vi.mock("../../lib/exit-execution/runtime", () => ({
   observeReviewedExitExecutionRoutes: async () => ({ observations: [], failures: [] }),
 }));
-
 vi.mock("../../lib/accepted-reserve-generation", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../lib/accepted-reserve-generation")>()),
   loadAcceptedReserveGeneration: loadAcceptedReserveGenerationMock,
 }));
-
 vi.mock("@shared/lib/redemption-backstops", async (importOriginal) => ({
   ...(await importOriginal<typeof RedemptionConfigsModule>()),
   getConfiguredRedemptionBackstopIds: () => configuredIdsMock,
-  getRedemptionBackstopConfig: (id: string) =>
-    configuredIdsMock.includes(id)
-      ? {
-          routeFamily: "basket-redeem",
-          accessModel: "permissionless-onchain",
-          settlementModel: "atomic",
-          executionModel: "deterministic-basket",
-          outputAssetType: "stable-basket",
-          capacityModel: directObserverEnabledMock && id === "usdfr-forest-road"
-            ? { kind: "executable-observer", observerId: "usdfr-par-controller", requiredOutputAssetKeys: ["usdc-circle"] }
-            : { kind: "supply-full" },
-          outputAssets: outputAssetsByIdMock[id],
-          costModel: { kind: "dynamic-or-unclear" },
-        }
-      : null,
+  getRedemptionBackstopConfig: (id: string) => configuredIdsMock.includes(id)
+    ? {
+        routeFamily: "basket-redeem", accessModel: "permissionless-onchain", settlementModel: "atomic",
+        executionModel: "deterministic-basket", outputAssetType: "stable-basket",
+        capacityModel: directObserverEnabledMock && id === "usdfr-forest-road"
+          ? { kind: "executable-observer", observerId: "usdfr-par-controller", requiredOutputAssetKeys: ["usdc-circle"] }
+          : { kind: "supply-full" },
+        outputAssets: outputAssetsByIdMock[id],
+        costModel: { kind: "dynamic-or-unclear" },
+      }
+    : null,
 }));
 
-// Cron/source/store imports below are deferred: their mock factories reference
-// non-hoisted suite state, so static imports would execute before initialization.
 describe("syncRedemptionBackstops", () => {
   beforeEach(() => {
     const now = Math.floor(Date.now() / 1000);
@@ -139,53 +124,37 @@ describe("syncRedemptionBackstops", () => {
     directObserverEnabledMock = false;
     observeExecutableRedemptionRouteMock.mockReset();
     vi.clearAllMocks();
-    loadStablecoinsCacheMock.mockResolvedValue({
-      kind: "ok",
-      updatedAt: now,
-      payload: {
-        peggedAssets: [
-          makeAsset({ id: "cusd-cap", symbol: "CUSD", circulating: { peggedUSD: 10_000_000 } }),
-          makeAsset({ id: "iusd-infinifi", symbol: "IUSD", circulating: { peggedUSD: 20_000_000 } }),
-        ],
-      },
-    });
+    mockStablecoins([
+      makeAsset({ id: "cusd-cap", symbol: "CUSD", circulating: { peggedUSD: 10_000_000 } }),
+      makeAsset({ id: "iusd-infinifi", symbol: "IUSD", circulating: { peggedUSD: 20_000_000 } }),
+    ], now);
     loadDexLiquidityScoresMock.mockResolvedValue({
-      map: {
-        "cusd-cap": { liquidityScore: 29 },
-        "iusd-infinifi": { liquidityScore: 47 },
-      },
+      map: { "cusd-cap": { liquidityScore: 29 }, "iusd-infinifi": { liquidityScore: 47 } },
       latestUpdatedAt: now,
     });
     buildRedemptionBackstopEntryMock.mockResolvedValue(makeResolvedSnapshot("iusd-infinifi", now, {
-      score: null, dexLiquidityScore: 47, capacityScore: null,
-      provider: "supply-full-model", sourceMode: "static", resolutionState: "missing-cache",
-      capacityConfidence: "heuristic", capacitySemantics: "eventual-only",
-      feeModelKind: "undisclosed-reviewed", modelConfidence: "low",
-      immediateCapacityUsd: null, immediateCapacityRatio: null,
+      score: null, dexLiquidityScore: 47, capacityScore: null, provider: "supply-full-model", sourceMode: "static",
+      resolutionState: "missing-cache", capacityConfidence: "heuristic", capacitySemantics: "eventual-only",
+      feeModelKind: "undisclosed-reviewed", modelConfidence: "low", immediateCapacityUsd: null, immediateCapacityRatio: null,
     }));
-    buildFailedRedemptionBackstopEntryMock.mockImplementation(
-      (stablecoinId: string, _config: unknown, failedAt: number) => makeResolvedSnapshot(stablecoinId, failedAt, {
-        score: null, dexLiquidityScore: null, capacityScore: null,
-        provider: "sync-error", sourceMode: "static", resolutionState: "failed",
-        capacityConfidence: "heuristic", capacitySemantics: "eventual-only",
-        feeModelKind: "undisclosed-reviewed", modelConfidence: "low",
-        immediateCapacityUsd: null, immediateCapacityRatio: null,
+    buildFailedRedemptionBackstopEntryMock.mockImplementation((stablecoinId: string, _config: unknown, failedAt: number) =>
+      makeResolvedSnapshot(stablecoinId, failedAt, {
+        score: null, dexLiquidityScore: null, capacityScore: null, provider: "sync-error", sourceMode: "static",
+        resolutionState: "failed", capacityConfidence: "heuristic", capacitySemantics: "eventual-only",
+        feeModelKind: "undisclosed-reviewed", modelConfidence: "low", immediateCapacityUsd: null, immediateCapacityRatio: null,
         notes: ["Latest redemption-backstop sync failed"],
       }),
     );
     loadAcceptedReserveGenerationMock.mockReset().mockResolvedValue({
-      schemaVersion: 2, generationId: "reserve:1700000000:test", root: { scheduleKey: "fourHourlyReserveSync", slotStartedAt: 1700000000, queueHash: "test" },
-      sealedBy: { attemptNo: 1, executionGeneration: 1, invocationId: "test" }, producerCompletedAtSec: now, contentSha256: "a".repeat(64), members: [],
+      schemaVersion: 2, generationId: "reserve:1700000000:test",
+      root: { scheduleKey: "fourHourlyReserveSync", slotStartedAt: 1700000000, queueHash: "test" },
+      sealedBy: { attemptNo: 1, executionGeneration: 1, invocationId: "test" },
+      producerCompletedAtSec: now, contentSha256: "a".repeat(64), members: [],
     });
-    upsertRedemptionBackstopSnapshotsMock.mockImplementation((_db: unknown, snapshots: unknown[]) =>
-      Promise.resolve({
-        runId: "redemption:test-run",
-        attemptedCount: snapshots.length,
-        runRowsWrittenCount: snapshots.length,
-        historyWrittenCount: snapshots.length,
-        warnings: [],
-      }),
-    );
+    upsertRedemptionBackstopSnapshotsMock.mockImplementation((_db: unknown, snapshots: unknown[]) => Promise.resolve({
+      runId: "redemption:test-run", attemptedCount: snapshots.length,
+      runRowsWrittenCount: snapshots.length, historyWrittenCount: snapshots.length, warnings: [],
+    }));
     resolveRedemptionBackstopEntryMock.mockImplementation((_db: unknown, asset: { id: string }) =>
       Promise.resolve(makeResolvedSnapshot(asset.id, now)),
     );
@@ -198,25 +167,22 @@ describe("syncRedemptionBackstops", () => {
     const clock = vi.spyOn(Date, "now").mockReturnValue(assessed * 1000);
     try {
       configuredIdsMock = [id];
-      loadStablecoinsCacheMock.mockResolvedValueOnce({
-        kind: "ok", updatedAt: assessed, payload: { peggedAssets: [makeAsset({ id })] },
-      });
+      loadStablecoinsCacheMock.mockResolvedValueOnce({ kind: "ok", updatedAt: assessed, payload: { peggedAssets: [makeAsset({ id })] } });
       resolveRedemptionBackstopEntryMock.mockResolvedValueOnce(makeResolvedSnapshot(id, assessed, {
         routeStatus: "open", routeStatusSource: "onchain", freshnessKind: "same-run-onchain",
         sourceTimestamp: assessed, settlementDelaySec: 60, capacityKind: "documented-bound",
         immediateCapacityUsd: null, immediateCapacityRatio: null,
       }));
-      const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-      await syncRedemptionBackstops(mockD1(), new AbortController().signal, undefined, async ({ stage }) => {
-        if (stage === "publishing-redemption-backstops") clock.mockReturnValue((reopened ? reopen : reopen - 10) * 1000);
+      await runSync({
+        reportProgress: async ({ stage }) => {
+          if (stage === "publishing-redemption-backstops") clock.mockReturnValue((reopened ? reopen : reopen - 10) * 1000);
+        },
       });
       const [stored] = upsertRedemptionBackstopSnapshotsMock.mock.calls[0][1] as RedemptionBackstopEntry[];
       expect(stored.updatedAt).toBe(assessed);
       expect(stored.resolutionState).toBe(reopened ? "missing-capacity" : "resolved");
       expect(stored.settlementDelaySec).toBe(reopened ? undefined : 60);
-    } finally {
-      clock.mockRestore();
-    }
+    } finally { clock.mockRestore(); }
   });
 
   it.each(["reserve", "stablecoins"])("opens no manifest or rows on a global %s admission hold", async (input) => {
@@ -224,11 +190,9 @@ describe("syncRedemptionBackstops", () => {
     try {
       if (input === "reserve") loadAcceptedReserveGenerationMock.mockRejectedValueOnce(new Error("unavailable"));
       else loadStablecoinsCacheMock.mockResolvedValueOnce({ kind: "error", reason: "missing-cache", updatedAt: null });
-      const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-      const result = await syncRedemptionBackstops(db, new AbortController().signal);
+      const { result, meta } = await runSync({ db });
       expect(result.status).toBe("error");
-      expect(JSON.parse(result.metadata ?? "{}").reason).toBe(input === "reserve"
-        ? "accepted-reserve-view-unavailable" : "stablecoins-cache:missing-cache");
+      expect(meta.reason).toBe(input === "reserve" ? "accepted-reserve-view-unavailable" : "stablecoins-cache:missing-cache");
       expect(upsertRedemptionBackstopSnapshotsMock).not.toHaveBeenCalled();
       expect(sqlite.prepare("SELECT COUNT(*) AS count FROM redemption_backstop_runs").get()).toEqual({ count: 0 });
       expect(sqlite.prepare("SELECT COUNT(*) AS count FROM redemption_backstop_run_rows").get()).toEqual({ count: 0 });
@@ -245,12 +209,8 @@ describe("syncRedemptionBackstops", () => {
     const clock = Math.floor(Date.now() / 1000);
     vi.spyOn(Date, "now").mockReturnValue(clock * 1000);
     try {
-      loadStablecoinsCacheMock.mockResolvedValue({
-        kind: "ok", updatedAt: timestamp(clock),
-        payload: { peggedAssets: [makeAsset({ id: "cusd-cap", circulating: { peggedUSD: 10_000_000 } })] },
-      });
-      const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-      const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+      mockStablecoins([makeAsset({ id: "cusd-cap", circulating: { peggedUSD: 10_000_000 } })], timestamp(clock));
+      const { result } = await runSync();
       expect(result.status).toBe("error");
       expect(resolveRedemptionBackstopEntryMock).not.toHaveBeenCalled();
       expect(buildRedemptionBackstopEntryMock).not.toHaveBeenCalled();
@@ -262,16 +222,9 @@ describe("syncRedemptionBackstops", () => {
     const clock = Math.floor(Date.now() / 1000);
     vi.spyOn(Date, "now").mockReturnValue(clock * 1000);
     try {
-      const input = {
-        updatedAt: clock - age,
-        assessedAt: clock, maxAgeSec: CRON_INTERVALS["sync-stablecoins"] * 2,
-      };
-      loadStablecoinsCacheMock.mockResolvedValue({
-        kind: "ok", updatedAt: input.updatedAt,
-        payload: { peggedAssets: [makeAsset({ id: "cusd-cap", circulating: { peggedUSD: 10_000_000 } })] },
-      });
-      const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-      await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+      const input = { updatedAt: clock - age, assessedAt: clock, maxAgeSec: CRON_INTERVALS["sync-stablecoins"] * 2 };
+      mockStablecoins([makeAsset({ id: "cusd-cap", circulating: { peggedUSD: 10_000_000 } })], input.updatedAt);
+      await runSync();
       expect(upsertRedemptionBackstopSnapshotsMock.mock.calls[0][2].metadata.stablecoinsInput).toEqual(input);
       expect(upsertRedemptionBackstopSnapshotsMock.mock.calls[0][2].metadata.stablecoinsInput.maxAgeSec)
         .toBeGreaterThanOrEqual(CRON_INTERVALS["sync-stablecoins"] * 2);
@@ -281,10 +234,7 @@ describe("syncRedemptionBackstops", () => {
   it("aborts before loading inputs when the signal is already aborted", async () => {
     const controller = new AbortController();
     controller.abort(new Error("manual abort"));
-
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-
-    await expect(syncRedemptionBackstops(mockD1(), controller.signal)).rejects.toThrow("manual abort");
+    await expect(runSync({ signal: controller.signal })).rejects.toThrow("manual abort");
     expect(loadStablecoinsCacheMock).not.toHaveBeenCalled();
     expect(resolveRedemptionBackstopEntryMock).not.toHaveBeenCalled();
     expect(upsertRedemptionBackstopSnapshotsMock).not.toHaveBeenCalled();
@@ -297,10 +247,7 @@ describe("syncRedemptionBackstops", () => {
       controller.abort(new Error("abort after first row"));
       return Promise.resolve(makeResolvedSnapshot(asset.id, now));
     });
-
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-
-    await expect(syncRedemptionBackstops(mockD1(), controller.signal)).rejects.toThrow("abort after first row");
+    await expect(runSync({ signal: controller.signal })).rejects.toThrow("abort after first row");
     expect(resolveRedemptionBackstopEntryMock).toHaveBeenCalledTimes(1);
     expect(upsertRedemptionBackstopSnapshotsMock).not.toHaveBeenCalled();
   });
@@ -309,49 +256,37 @@ describe("syncRedemptionBackstops", () => {
     const now = Math.floor(Date.now() / 1000);
     const controller = new AbortController();
     resolveRedemptionBackstopEntryMock.mockImplementation((_db: unknown, asset: { id: string }) => {
-      if (asset.id === "iusd-infinifi") {
-        controller.abort(new Error("abort before write"));
-      }
+      if (asset.id === "iusd-infinifi") controller.abort(new Error("abort before write"));
       return Promise.resolve(makeResolvedSnapshot(asset.id, now));
     });
-
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-
-    await expect(syncRedemptionBackstops(mockD1(), controller.signal)).rejects.toThrow("abort before write");
+    await expect(runSync({ signal: controller.signal })).rejects.toThrow("abort before write");
     expect(resolveRedemptionBackstopEntryMock).toHaveBeenCalledTimes(2);
     expect(upsertRedemptionBackstopSnapshotsMock).not.toHaveBeenCalled();
   });
 
   it("persists bounded per-route failure reasons through cron metadata compaction", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    configuredIdsMock = Array.from({ length: 30 }, (_, index) => `failure-${index}`);
-    loadStablecoinsCacheMock.mockResolvedValue({
-      kind: "ok", updatedAt: now,
-      payload: { peggedAssets: configuredIdsMock.map(id => makeAsset({ id })) },
-    });
+    configuredIdsMock = Array.from({ length: 30 }, (_, i) => `failure-${i}`);
+    mockStablecoins(configuredIdsMock.map((id) => makeAsset({ id })));
     resolveRedemptionBackstopEntryMock.mockRejectedValue(new Error(
       `USDfr par observer: route state unavailable https://rpc.example/private-key token=private-token ${"x".repeat(400)}`,
     ));
-    // Non-hoisted suite mocks must initialize before loading the cron module.
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
-    const metadata = JSON.parse(result.metadata ?? "{}");
+    const { result, meta } = await runSync();
+
     expect(result.status).toBe("error");
-    expect(Object.keys(metadata.sourceFailureReasons)).toEqual(configuredIdsMock.slice(0, 25));
-    expect(metadata.sourceFailureReasonsTruncated).toBe(true);
-    for (const reason of Object.values(metadata.sourceFailureReasons) as { code: string; message: string }[]) {
+    expect(Object.keys(meta.sourceFailureReasons)).toEqual(configuredIdsMock.slice(0, 25));
+    expect(meta.sourceFailureReasonsTruncated).toBe(true);
+    for (const reason of Object.values(meta.sourceFailureReasons) as { code: string; message: string }[]) {
       expect(reason.code).toBe("route-resolution-failed");
       expect(reason.message).toContain("USDfr par observer: route state unavailable");
       expect(reason.message.length).toBeLessThanOrEqual(240);
       expect(reason.message).not.toContain("private-key");
       expect(reason.message).not.toContain("private-token");
     }
-    expect(upsertRedemptionBackstopSnapshotsMock.mock.calls[0][2].metadata.sourceFailureReasons)
-      .toEqual(metadata.sourceFailureReasons);
-    const oversized = { ...metadata, adapterLatency: { payload: "x".repeat(30_000) } };
+    expect(upsertRedemptionBackstopSnapshotsMock.mock.calls[0][2].metadata.sourceFailureReasons).toEqual(meta.sourceFailureReasons);
+    const oversized = { ...meta, adapterLatency: { payload: "x".repeat(30_000) } };
     const compacted = compactCronMetadataForPersistence(JSON.stringify(oversized), oversized, "sync-redemption-backstops");
     expect(compacted.compacted).toBe(true);
-    expect(JSON.parse(compacted.metadata ?? "{}").sourceFailureReasons).toEqual(metadata.sourceFailureReasons);
+    expect(JSON.parse(compacted.metadata ?? "{}").sourceFailureReasons).toEqual(meta.sourceFailureReasons);
   });
 
   it.each(["code-unavailable", "implementation-unavailable", "code-drift", "implementation-drift"] as const)(
@@ -365,50 +300,37 @@ describe("syncRedemptionBackstops", () => {
         if (asset.id === configuredIdsMock[0]) throw error;
         return makeResolvedSnapshot(asset.id, now);
       });
-      // Non-hoisted suite mocks must initialize before loading the cron module.
-      const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-      const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
-      const metadata = JSON.parse(result.metadata ?? "{}");
-      const failure = metadata.sourceFailureReasons[configuredIdsMock[0]];
+      const { meta } = await runSync();
+      const failure = meta.sourceFailureReasons[configuredIdsMock[0]];
       expect(failure.code).toBe(rejectionCode);
       expect(failure.message).toContain("block 26224349");
       expect(failure.message.length).toBeLessThanOrEqual(240);
       expect(failure.message).not.toMatch(/private-key|private-token/);
-      expect(metadata.failed).toBe(1);
+      expect(meta.failed).toBe(1);
       expect(upsertRedemptionBackstopSnapshotsMock.mock.calls[0][1]).toHaveLength(configuredIdsMock.length);
-      expect(upsertRedemptionBackstopSnapshotsMock.mock.calls[0][2].metadata.sourceFailureReasons)
-        .toEqual(metadata.sourceFailureReasons);
+      expect(upsertRedemptionBackstopSnapshotsMock.mock.calls[0][2].metadata.sourceFailureReasons).toEqual(meta.sourceFailureReasons);
     },
   );
 
   it("bounds independent resolvers, publishes input order and isolates failures while advancing progress", async () => {
     const now = Math.floor(Date.now() / 1000);
-    configuredIdsMock = Array.from({ length: 13 }, (_, index) => `resolver-${index}`);
-    loadStablecoinsCacheMock.mockResolvedValue({
-      kind: "ok", updatedAt: now,
-      payload: { peggedAssets: configuredIdsMock.map((id) => makeAsset({ id })) },
-    });
+    configuredIdsMock = Array.from({ length: 13 }, (_, i) => `resolver-${i}`);
+    mockStablecoins(configuredIdsMock.map((id) => makeAsset({ id })), now);
     const gates = configuredIdsMock.map(() => createDeferredPromise());
     const started: number[] = [];
-    let active = 0;
-    let peak = 0;
+    let active = 0, peak = 0;
     resolveRedemptionBackstopEntryMock.mockImplementation(async (_db: unknown, asset: { id: string }) => {
       const index = configuredIdsMock.indexOf(asset.id);
       started.push(index);
-      active++;
-      peak = Math.max(peak, active);
+      peak = Math.max(peak, ++active);
       try {
         await gates[index].promise;
         if (index === 1) throw new Error("isolated observer failure");
         return makeResolvedSnapshot(asset.id, now);
-      } finally {
-        active--;
-      }
+      } finally { active--; }
     });
-    // Non-hoisted mock variables must initialize before the cron module loads.
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
     const reportProgress = vi.fn().mockResolvedValue(undefined);
-    const pending = syncRedemptionBackstops(mockD1(), new AbortController().signal, undefined, reportProgress);
+    const pending = runSync({ reportProgress });
     await vi.waitFor(() => expect(started).toHaveLength(REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY));
     gates[2].resolve();
     await vi.waitFor(() => expect(started).toHaveLength(REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY + 1));
@@ -417,31 +339,26 @@ describe("syncRedemptionBackstops", () => {
     expect(upsertRedemptionBackstopSnapshotsMock).not.toHaveBeenCalled();
     gates[0].resolve();
     for (const gate of gates.slice(3)) gate.resolve();
-    const result = await pending;
+    const { result, meta } = await pending;
     expect(peak).toBe(REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY);
     expect(active).toBe(0);
     const rows = upsertRedemptionBackstopSnapshotsMock.mock.calls[0][1] as RedemptionBackstopEntry[];
-    expect(rows.map((row) => row.stablecoinId)).toEqual(configuredIdsMock);
+    expect(rows.map((r) => r.stablecoinId)).toEqual(configuredIdsMock);
     expect(rows[1].resolutionState).toBe("failed");
-    expect(rows.filter((row) => row.resolutionState === "resolved")).toHaveLength(12);
-    expect(JSON.parse(result.metadata ?? "{}").failedIds).toEqual(["resolver-1"]);
+    expect(rows.filter((r) => r.resolutionState === "resolved")).toHaveLength(12);
+    expect(meta.failedIds).toEqual(["resolver-1"]);
     expect(result.status).toBe("degraded");
-    expect(reportProgress.mock.calls
-      .filter(([update]) => update.stage === "resolving-redemption-backstops")
-      .map(([update]) => update.itemsDone)).toEqual([0, 10, 13]);
+    expect(reportProgress.mock.calls.filter(([u]) => u.stage === "resolving-redemption-backstops").map(([u]) => u.itemsDone))
+      .toEqual([0, 10, 13]);
   });
 
   it("stops admitting resolvers on abort, drains in-flight work and never publishes a partial snapshot", async () => {
     const now = Math.floor(Date.now() / 1000);
-    configuredIdsMock = Array.from({ length: REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY + 3 }, (_, index) => `abort-${index}`);
-    loadStablecoinsCacheMock.mockResolvedValue({
-      kind: "ok", updatedAt: now,
-      payload: { peggedAssets: configuredIdsMock.map((id) => makeAsset({ id })) },
-    });
+    configuredIdsMock = Array.from({ length: REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY + 3 }, (_, i) => `abort-${i}`);
+    mockStablecoins(configuredIdsMock.map((id) => makeAsset({ id })), now);
     const controller = new AbortController();
     const gates = configuredIdsMock.map(() => createDeferredPromise());
-    const started: number[] = [];
-    const finished: number[] = [];
+    const started: number[] = [], finished: number[] = [];
     resolveRedemptionBackstopEntryMock.mockImplementation(async (_db: unknown, asset: { id: string }, _score: unknown, _now: unknown, options: { signal: AbortSignal }) => {
       const index = configuredIdsMock.indexOf(asset.id);
       expect(options.signal).toBe(controller.signal);
@@ -450,11 +367,8 @@ describe("syncRedemptionBackstops", () => {
       finished.push(index);
       return makeResolvedSnapshot(asset.id, now);
     });
-    // Non-hoisted mock variables must initialize before the cron module loads.
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-    const pending = syncRedemptionBackstops(mockD1(), controller.signal);
     let settled = false;
-    const observed = pending.catch((error: unknown) => { settled = true; return error; });
+    const observed = runSync({ signal: controller.signal }).catch((e: unknown) => { settled = true; return e; });
     await vi.waitFor(() => expect(started).toHaveLength(REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY));
     const reason = new Error("parent aborted");
     controller.abort(reason);
@@ -479,15 +393,12 @@ describe("syncRedemptionBackstops", () => {
       if (asset.id === "iusd-infinifi") throw new Error("Downstream read unavailable");
       return Promise.resolve(upstream);
     });
-    // This suite initializes non-hoisted mocks before loading the cron module.
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-    await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+    await runSync();
     const persisted = upsertRedemptionBackstopSnapshotsMock.mock.calls[0][1] as RedemptionBackstopEntry[];
-    expect(persisted.find((entry) => entry.stablecoinId === "cusd-cap")).toEqual({
-      ...upstream,
-      outputDependencyResolution: { stablecoinId: "iusd-infinifi", resolutionState: "failed" },
+    expect(persisted.find((e) => e.stablecoinId === "cusd-cap")).toEqual({
+      ...upstream, outputDependencyResolution: { stablecoinId: "iusd-infinifi", resolutionState: "failed" },
     });
-    expect(persisted.find((entry) => entry.stablecoinId === "iusd-infinifi")?.resolutionState).toBe("failed");
+    expect(persisted.find((e) => e.stablecoinId === "iusd-infinifi")?.resolutionState).toBe("failed");
     expect(upstream).not.toHaveProperty("outputDependencyResolution");
   });
 
@@ -498,14 +409,12 @@ describe("syncRedemptionBackstops", () => {
       if (asset.id === "iusd-infinifi") throw new Error("Downstream read unavailable");
       return Promise.resolve(makeResolvedSnapshot(asset.id, now));
     });
-    // This suite initializes non-hoisted mocks before loading the cron module.
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-    await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+    await runSync();
     const first = upsertRedemptionBackstopSnapshotsMock.mock.calls[0][1] as RedemptionBackstopEntry[];
     resolveRedemptionBackstopEntryMock.mockImplementation((_db: unknown, asset: { id: string }) =>
       Promise.resolve(makeResolvedSnapshot(asset.id, now)),
     );
-    await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+    await runSync();
     const second = upsertRedemptionBackstopSnapshotsMock.mock.calls[1][1] as RedemptionBackstopEntry[];
     expect(first[0].outputDependencyResolution?.resolutionState).toBe("failed");
     expect(second[0]).not.toHaveProperty("outputDependencyResolution");
@@ -516,14 +425,10 @@ describe("syncRedemptionBackstops", () => {
     const now = Math.floor(Date.now() / 1000);
     configuredIdsMock = ["cusd-cap", "iusd-infinifi", "usdc-circle"];
     outputAssetsByIdMock = { "cusd-cap": ["iusd-infinifi"] };
-    loadStablecoinsCacheMock.mockResolvedValueOnce({
-      kind: "ok", updatedAt: now, payload: { peggedAssets: configuredIdsMock.map((id) => makeAsset({ id })) },
-    });
+    loadStablecoinsCacheMock.mockResolvedValueOnce({ kind: "ok", updatedAt: now, payload: { peggedAssets: configuredIdsMock.map((id) => makeAsset({ id })) } });
     resolveRedemptionBackstopEntryMock.mockImplementation((_db: unknown, asset: { id: string }) =>
-      Promise.resolve(makeResolvedSnapshot(asset.id, now, stage === "resolver" && asset.id === "iusd-infinifi"
-        ? { sourceUrls: ["not-a-url"] } : {})),
+      Promise.resolve(makeResolvedSnapshot(asset.id, now, stage === "resolver" && asset.id === "iusd-infinifi" ? { sourceUrls: ["not-a-url"] } : {})),
     );
-    // Defer module loading until this suite's non-hoisted mock functions exist.
     const sources = await import("../../lib/redemption-backstop/sources");
     const originalJoin = sources.applyOutputDependencyResolution;
     const join = vi.spyOn(sources, "applyOutputDependencyResolution");
@@ -532,20 +437,15 @@ describe("syncRedemptionBackstops", () => {
       transformed[1] = { ...transformed[1], sourceUrls: ["not-a-url"] };
       return transformed;
     });
-    const writer = await vi.importActual<typeof StoreWriteModule>(
-      "../../lib/redemption-backstops-store-write",
-    );
+    const writer = await vi.importActual<typeof StoreWriteModule>("../../lib/redemption-backstops-store-write");
     upsertRedemptionBackstopSnapshotsMock.mockImplementationOnce(writer.upsertRedemptionBackstopSnapshots);
     const { sqlite, db } = createLatestSchemaSqlite();
     try {
-      // The cron and reader share the mocked writer, initialized above.
-      const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
       const { loadRedemptionBackstopSnapshot } = await import("../../lib/redemption-backstops-store");
-      const result = await syncRedemptionBackstops(db, new AbortController().signal);
+      const { result, meta } = await runSync({ db });
       expect(result.status).toBe("degraded");
-      const metadata = JSON.parse(result.metadata ?? "{}");
-      expect(metadata.failedIds).toEqual(["iusd-infinifi"]);
-      expect(metadata.sourceFailureReasons["iusd-infinifi"]).toMatchObject({
+      expect(meta.failedIds).toEqual(["iusd-infinifi"]);
+      expect(meta.sourceFailureReasons["iusd-infinifi"]).toMatchObject({
         code: "redemption-snapshot-schema-invalid", schemaPath: "sourceUrls.0", schemaReason: expect.any(String),
       });
       expect(sqlite.prepare("SELECT status, expected_count, written_count FROM redemption_backstop_runs").get())
@@ -565,9 +465,7 @@ describe("syncRedemptionBackstops", () => {
     const now = Math.floor(Date.now() / 1000);
     configuredIdsMock = ["usdfr-forest-road"];
     directObserverEnabledMock = true;
-    loadStablecoinsCacheMock.mockResolvedValueOnce({
-      kind: "ok", updatedAt: now, payload: { peggedAssets: [makeAsset({ id: "usdfr-forest-road" })] },
-    });
+    loadStablecoinsCacheMock.mockResolvedValueOnce({ kind: "ok", updatedAt: now, payload: { peggedAssets: [makeAsset({ id: "usdfr-forest-road" })] } });
     if (outcome === "unavailable") observeExecutableRedemptionRouteMock.mockRejectedValueOnce(new Error("RPC unavailable"));
     else observeExecutableRedemptionRouteMock.mockResolvedValueOnce({
       capacityRaw: 1_000_000n, capacitySource: "observed", capacityState: "measured", underlyingDecimals: 6,
@@ -578,12 +476,9 @@ describe("syncRedemptionBackstops", () => {
     });
     const sources = await vi.importActual<typeof SourcesModule>("../../lib/redemption-backstop/sources");
     resolveRedemptionBackstopEntryMock.mockImplementationOnce(sources.resolveRedemptionBackstopEntry);
-    // Static loading would evaluate this suite's mock factories before setup.
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
-    const metadata = JSON.parse(result.metadata ?? "{}");
+    const { meta } = await runSync();
     expect(observeExecutableRedemptionRouteMock).toHaveBeenCalledTimes(1);
-    expect(metadata).toMatchObject({
+    expect(meta).toMatchObject({
       routeStatusProducerFetches: true, directObserverAttemptedCount: 1,
       directObserverConsumedCount: outcome === "success" ? 1 : 0,
       directObserverUnavailableCount: outcome === "success" ? 0 : 1,
@@ -597,120 +492,68 @@ describe("syncRedemptionBackstops", () => {
   it("writes snapshots and summarizes source-mode coverage", async () => {
     resolveRedemptionBackstopEntryMock
       .mockResolvedValueOnce(makeResolvedSnapshot("cusd-cap", 1_700_000_000))
-      .mockResolvedValueOnce(
-        makeResolvedSnapshot("iusd-infinifi", 1_700_000_000, {
-          score: 70,
-          dexLiquidityScore: 47,
-          settlementScore: 20,
-          executionCertaintyScore: 60,
-          capacityScore: 70,
-          outputAssetQualityScore: 100,
-          costScore: 100,
-          routeFamily: "queue-redeem",
-          settlementModel: "queued",
-          executionModel: "rules-based-nav",
-          outputAssetType: "stable-single",
-          provider: "reserve-sync-metadata",
-          sourceMode: "dynamic",
-          capacityConfidence: "dynamic",
-          capacitySemantics: "immediate-bounded",
-          feeConfidence: "fixed",
-          feeModelKind: "fixed-bps",
-          modelConfidence: "high",
-          immediateCapacityUsd: 32_000_000,
-          immediateCapacityRatio: 0.19,
-          feeBps: 0,
-          queueEnabled: true,
-          capsApplied: ["queue-route-cap"],
-        }),
-      );
-
+      .mockResolvedValueOnce(makeResolvedSnapshot("iusd-infinifi", 1_700_000_000, {
+        score: 70, dexLiquidityScore: 47, settlementScore: 20, executionCertaintyScore: 60, capacityScore: 70,
+        outputAssetQualityScore: 100, costScore: 100, routeFamily: "queue-redeem", settlementModel: "queued",
+        executionModel: "rules-based-nav", outputAssetType: "stable-single", provider: "reserve-sync-metadata",
+        sourceMode: "dynamic", capacityConfidence: "dynamic", feeConfidence: "fixed", feeModelKind: "fixed-bps",
+        modelConfidence: "high", immediateCapacityUsd: 32_000_000, immediateCapacityRatio: 0.19,
+        feeBps: 0, queueEnabled: true, capsApplied: ["queue-route-cap"],
+      }));
     const db = mockD1();
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
     const reportProgress = vi.fn().mockResolvedValue(undefined);
-    const result = await syncRedemptionBackstops(db, new AbortController().signal, undefined, reportProgress);
+    const { result, meta } = await runSync({ db, reportProgress });
 
-    expect(reportProgress.mock.calls.map(([update]) => update.stage)).toEqual([
+    expect(reportProgress.mock.calls.map(([u]) => u.stage)).toEqual([
       "loading-redemption-reserves", "loading-redemption-stablecoins", "loading-redemption-liquidity",
       "loading-redemption-availability", "resolving-redemption-backstops", "resolving-redemption-backstops", "publishing-redemption-backstops",
     ]);
-
-    expect(result.status).toBe("ok");
-    expect(result.itemCount).toBe(2);
+    expect(result).toMatchObject({ status: "ok", itemCount: 2 });
     expect(upsertRedemptionBackstopSnapshotsMock).toHaveBeenCalledTimes(1);
-    // The legacy current-table mirror is retired: the cron no longer reads or
-    // prunes the redemption_backstop table directly.
-    expect(db.getHistory().some((entry) => entry.sql.includes("FROM redemption_backstop"))).toBe(false);
-
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-    expect(metadata.resolved).toBe(2);
-    expect(metadata.unresolved).toBe(0);
-    expect(metadata.familyMissingCapacityBy).toBeUndefined();
-    expect(metadata.providerMissingCapacityBy).toBeUndefined();
-    expect(metadata.dynamic).toBe(1);
-    expect(metadata.estimated).toBe(1);
-    expect(metadata.routeStatusProducer).toBe("live-reserve-adapters-plus-executable-observers-plus-static-policy");
-    expect(metadata).toMatchObject({
-      routeStatusProducerFetches: false,
-      directObserverAttemptedCount: 0, directObserverConsumedCount: 0, directObserverUnavailableCount: 0,
+    expect(db.getHistory().some((e) => e.sql.includes("FROM redemption_backstop"))).toBe(false);
+    expect(meta).toMatchObject({
+      resolved: 2, unresolved: 0, dynamic: 1, estimated: 1, snapshotRunId: "redemption:test-run", runRowsWrittenCount: 2,
+      routeStatusProducer: "live-reserve-adapters-plus-executable-observers-plus-static-policy",
+      routeStatusProducerFetches: false, directObserverAttemptedCount: 0, directObserverConsumedCount: 0, directObserverUnavailableCount: 0,
     });
-    expect(metadata.snapshotRunId).toBe("redemption:test-run");
-    expect(metadata.runRowsWrittenCount).toBe(2);
-    expect(metadata.currentMirroredCount).toBeUndefined();
-    expect(typeof metadata.registryHash).toBe("string");
-    expect(typeof metadata.v4ScoringParametersHash).toBe("string");
+    expect(meta.familyMissingCapacityBy).toBeUndefined();
+    expect(meta.providerMissingCapacityBy).toBeUndefined();
+    expect(meta.currentMirroredCount).toBeUndefined();
+    expect(typeof meta.registryHash).toBe("string");
+    expect(typeof meta.v4ScoringParametersHash).toBe("string");
   });
 
   it("hashes registry config content independently of row order without changing producer order", async () => {
-    // Load after the suite's non-hoisted mocks are initialized.
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
     const forward = [...configuredIdsMock];
-    const first = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
-    const firstHash = JSON.parse(first.metadata ?? "{}").registryHash;
+    const first = await runSync();
     expect(configuredIdsMock).toEqual(forward);
-    expect(upsertRedemptionBackstopSnapshotsMock.mock.calls[0][1].map(
-      (entry: RedemptionBackstopEntry) => entry.stablecoinId,
-    )).toEqual(forward);
+    expect(upsertRedemptionBackstopSnapshotsMock.mock.calls[0][1].map((e: RedemptionBackstopEntry) => e.stablecoinId)).toEqual(forward);
     configuredIdsMock = [...forward].reverse();
-    const second = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
-    expect(JSON.parse(second.metadata ?? "{}").registryHash).toBe(firstHash);
-    expect(upsertRedemptionBackstopSnapshotsMock.mock.calls[1][1].map(
-      (entry: RedemptionBackstopEntry) => entry.stablecoinId,
-    )).toEqual([...forward].reverse());
+    const second = await runSync();
+    expect(second.meta.registryHash).toBe(first.meta.registryHash);
+    expect(upsertRedemptionBackstopSnapshotsMock.mock.calls[1][1].map((e: RedemptionBackstopEntry) => e.stablecoinId)).toEqual([...forward].reverse());
     outputAssetsByIdMock = { "cusd-cap": ["usdc-circle"] };
-    const changed = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
-    expect(JSON.parse(changed.metadata ?? "{}").registryHash).not.toBe(firstHash);
+    expect((await runSync()).meta.registryHash).not.toBe(first.meta.registryHash);
   });
 
   it.each([true, false])("uses cache-present coverage while retaining cache-absent absolute capacity (active resolved=%s)", async (activeResolved) => {
     const now = Math.floor(Date.now() / 1000);
-    loadStablecoinsCacheMock.mockResolvedValue({
-      kind: "ok", updatedAt: now,
-      payload: { peggedAssets: [makeAsset({ id: "cusd-cap", circulating: { peggedUSD: 10_000_000 } })] },
-    });
+    mockStablecoins([makeAsset({ id: "cusd-cap", circulating: { peggedUSD: 10_000_000 } })], now);
     resolveRedemptionBackstopEntryMock.mockResolvedValue(makeResolvedSnapshot("cusd-cap", now, activeResolved ? {} : {
-      score: null, capacityScore: null, immediateCapacityUsd: null, immediateCapacityRatio: null,
-      resolutionState: "missing-capacity",
+      score: null, capacityScore: null, immediateCapacityUsd: null, immediateCapacityRatio: null, resolutionState: "missing-capacity",
     }));
     buildRedemptionBackstopEntryMock.mockResolvedValue(makeResolvedSnapshot("iusd-infinifi", now, {
       provider: "reserve-sync", sourceMode: "dynamic", capacityConfidence: "live-direct",
       immediateCapacityUsd: 1_000_000, immediateCapacityRatio: null,
     }));
-    // The module's mock factories need the non-hoisted functions above initialized first.
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
-    const metadata = JSON.parse(result.metadata ?? "{}");
-    expect(metadata).toMatchObject({
+    const { meta } = await runSync();
+    expect(meta).toMatchObject({
       configured: 2, activeConfigured: 1, cacheAbsentConfigured: 1,
-      resolved: activeResolved ? 2 : 1, activeResolved: activeResolved ? 1 : 0,
-      coverageRatio: activeResolved ? 1 : 0,
+      resolved: activeResolved ? 2 : 1, activeResolved: activeResolved ? 1 : 0, coverageRatio: activeResolved ? 1 : 0,
     });
-    expect(metadata.coverageRatio).toBe(metadata.activeResolved / metadata.activeConfigured);
+    expect(meta.coverageRatio).toBe(meta.activeResolved / meta.activeConfigured);
     expect(upsertRedemptionBackstopSnapshotsMock.mock.calls[0][1]).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        stablecoinId: "iusd-infinifi", resolutionState: "resolved",
-        immediateCapacityUsd: 1_000_000, immediateCapacityRatio: null,
-      }),
+      expect.objectContaining({ stablecoinId: "iusd-infinifi", resolutionState: "resolved", immediateCapacityUsd: 1_000_000, immediateCapacityRatio: null }),
     ]));
     expect(buildRedemptionBackstopEntryMock).toHaveBeenCalledWith(
       expect.anything(), "iusd-infinifi", expect.anything(), null, expect.anything(), expect.any(Number), expect.anything(),
@@ -720,41 +563,27 @@ describe("syncRedemptionBackstops", () => {
   it("records only consumed reserve inputs using the shared sealed-input schema", async () => {
     const now = Math.floor(Date.now() / 1000);
     const reserveInput = ConsumedReserveInputSchema.parse({
-      generationId: "reserve:1700000000:test",
-      contentSha256: "a".repeat(64),
-      stablecoinId: "cusd-cap",
-      attemptId: "accepted-attempt",
-      configFingerprint: "b".repeat(64),
+      generationId: "reserve:1700000000:test", contentSha256: "a".repeat(64),
+      stablecoinId: "cusd-cap", attemptId: "accepted-attempt", configFingerprint: "b".repeat(64),
       freshness: {
-        stale: false, staleReasons: [], assessedAt: now, fetchedAt: now - 60,
-        attemptId: "accepted-attempt", fetchAgeSec: 60, fetchBudgetSec: 172800,
-        freshnessMode: "not-applicable", sourceFreshnessInvalid: false,
+        stale: false, staleReasons: [], assessedAt: now, fetchedAt: now - 60, attemptId: "accepted-attempt",
+        fetchAgeSec: 60, fetchBudgetSec: 172800, freshnessMode: "not-applicable", sourceFreshnessInvalid: false,
         sourceTimestamp: null, sourceAgeSec: null, sourceAgeBudgetSec: null, sourceAgeBudgetCap: null,
       },
     });
     resolveRedemptionBackstopEntryMock
       .mockResolvedValueOnce(makeResolvedSnapshot("cusd-cap", now, { reserveInput }))
       .mockResolvedValueOnce(makeResolvedSnapshot("iusd-infinifi", now));
-
-    // Load after the non-hoisted mock functions initialize; a static import would run their factories too early.
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+    const { result } = await runSync();
     const metadata = RedemptionReserveRunMetadataSchema.parse(JSON.parse(result.metadata ?? "{}"));
-
     expect(metadata.consumedReserveInputs).toEqual({ "cusd-cap": reserveInput });
     expect(metadata.consumedReserveInputs).not.toHaveProperty("iusd-infinifi");
-    expect(upsertRedemptionBackstopSnapshotsMock.mock.calls[0][2].metadata.consumedReserveInputs)
-      .toEqual(metadata.consumedReserveInputs);
+    expect(upsertRedemptionBackstopSnapshotsMock.mock.calls[0][2].metadata.consumedReserveInputs).toEqual(metadata.consumedReserveInputs);
   });
 
   it("propagates snapshot write failures without reporting successful metadata", async () => {
     upsertRedemptionBackstopSnapshotsMock.mockRejectedValueOnce(new Error("snapshot write failed"));
-
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-
-    await expect(syncRedemptionBackstops(mockD1(), new AbortController().signal)).rejects.toThrow(
-      "snapshot write failed",
-    );
+    await expect(runSync()).rejects.toThrow("snapshot write failed");
     expect(resolveRedemptionBackstopEntryMock).toHaveBeenCalledTimes(2);
   });
 
@@ -763,420 +592,186 @@ describe("syncRedemptionBackstops", () => {
     upsertRedemptionBackstopSnapshotsMock.mockImplementationOnce((_db: unknown, snapshots: unknown[]) => {
       controller.abort(new Error("abort during write"));
       return Promise.resolve({
-        runId: "redemption:test-run",
-        attemptedCount: snapshots.length,
-        runRowsWrittenCount: snapshots.length,
-        historyWrittenCount: snapshots.length,
-        warnings: [],
+        runId: "redemption:test-run", attemptedCount: snapshots.length,
+        runRowsWrittenCount: snapshots.length, historyWrittenCount: snapshots.length, warnings: [],
       });
     });
-
-    const db = mockD1();
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-
-    await expect(syncRedemptionBackstops(db, controller.signal)).rejects.toThrow("abort during write");
+    await expect(runSync({ signal: controller.signal })).rejects.toThrow("abort during write");
   });
 
   it("continues with degraded static rows when optional DEX preload fails", async () => {
     loadDexLiquidityScoresMock.mockRejectedValueOnce(new Error("dex unavailable"));
-
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
-
+    const { result, meta } = await runSync();
     expect(result.status).toBe("degraded");
     expect(resolveRedemptionBackstopEntryMock).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ id: "cusd-cap" }),
-      null,
-      expect.any(Number),
-      expect.anything(),
+      expect.anything(), expect.objectContaining({ id: "cusd-cap" }), null, expect.any(Number), expect.anything(),
     );
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-    expect(metadata.preloadDegraded).toBe(true);
-    expect(metadata.preloadWarnings).toEqual([expect.stringContaining("dex-liquidity:dex unavailable")]);
-    expect(metadata.liquidityStale).toBe(true);
+    expect(meta).toMatchObject({
+      preloadDegraded: true, preloadWarnings: [expect.stringContaining("dex-liquidity:dex unavailable")], liquidityStale: true,
+    });
   });
 
   it.each(["accepted-reserve-view-unavailable", "accepted-reserve-view-invalid"] as const)("writes no run when accepted input is %s", async (reason) => {
     const { AcceptedReserveViewError } = await import("../../lib/accepted-reserve-generation");
     loadAcceptedReserveGenerationMock.mockRejectedValueOnce(new AcceptedReserveViewError(reason));
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+    const { result, meta } = await runSync();
     expect(result.status).toBe("error");
-    expect(JSON.parse(result.metadata ?? "{}").reason).toBe(reason);
+    expect(meta.reason).toBe(reason);
     expect(resolveRedemptionBackstopEntryMock).not.toHaveBeenCalled();
     expect(upsertRedemptionBackstopSnapshotsMock).not.toHaveBeenCalled();
   });
 
   it("passes severe active depeg availability into builders without degrading the cron", async () => {
     const now = Math.floor(Date.now() / 1000);
-    loadStablecoinsCacheMock.mockResolvedValue({
-      kind: "ok",
-      updatedAt: now - 60,
-      payload: {
-        peggedAssets: [
-          makeAsset({
-            id: "cusd-cap",
-            symbol: "CUSD",
-            circulating: { peggedUSD: 10_000_000 },
-            price: 0.1668,
-            priceSource: "pyth",
-            priceConfidence: "single-source",
-            priceObservedAt: now - 60,
-            priceUpdatedAt: now - 60,
-            priceObservedAtMode: "upstream",
-            agreeSources: ["pyth"],
-          }),
-          makeAsset({ id: "iusd-infinifi", symbol: "IUSD", circulating: { peggedUSD: 20_000_000 } }),
-        ],
-      },
-    });
+    mockStablecoins([
+      makeAsset({
+        id: "cusd-cap", symbol: "CUSD", circulating: { peggedUSD: 10_000_000 }, price: 0.1668,
+        priceSource: "pyth", priceConfidence: "single-source", priceObservedAt: now - 60,
+        priceUpdatedAt: now - 60, priceObservedAtMode: "upstream", agreeSources: ["pyth"],
+      }),
+      makeAsset({ id: "iusd-infinifi", symbol: "IUSD", circulating: { peggedUSD: 20_000_000 } }),
+    ], now - 60);
     resolveRedemptionBackstopEntryMock
-      .mockResolvedValueOnce(
-        makeResolvedSnapshot("cusd-cap", now, {
-          score: null,
-          resolutionState: "impaired",
-          routeStatus: "degraded",
-          routeStatusSource: "market-implied",
-          routeStatusReason:
-            "Active severe depeg of 8332 bps started 2026-03-22; static redemption route requires current live-open evidence before it can score.",
-          routeStatusReviewedAt: "2026-04-14",
-          modelConfidence: "low",
-        }),
-      )
+      .mockResolvedValueOnce(makeResolvedSnapshot("cusd-cap", now, {
+        score: null, resolutionState: "impaired", routeStatus: "degraded", routeStatusSource: "market-implied",
+        routeStatusReason: "Active severe depeg of 8332 bps started 2026-03-22; static redemption route requires current live-open evidence before it can score.",
+        routeStatusReviewedAt: "2026-04-14", modelConfidence: "low",
+      }))
       .mockResolvedValueOnce(makeResolvedSnapshot("iusd-infinifi", now));
-
-    const db = mockD1([
-      {
-        match: "FROM depeg_events",
-        rows: [
-          {
-            stablecoin_id: "cusd-cap",
-            direction: "below",
-            started_at: 1_774_145_097,
-          },
-        ],
-      },
-    ]);
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-    const result = await syncRedemptionBackstops(db, new AbortController().signal);
+    const db = mockD1([{ match: "FROM depeg_events", rows: [{ stablecoin_id: "cusd-cap", direction: "below", started_at: 1_774_145_097 }] }]);
+    const { result, meta } = await runSync({ db });
 
     expect(result.status).toBe("ok");
     expect(resolveRedemptionBackstopEntryMock).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ id: "cusd-cap" }),
-      29,
-      expect.any(Number),
-      expect.objectContaining({
-        routeAvailability: expect.objectContaining({
-          routeStatus: "degraded",
-          routeStatusSource: "market-implied",
-          activeDepegBps: 8332,
-        }),
-      }),
+      expect.anything(), expect.objectContaining({ id: "cusd-cap" }), 29, expect.any(Number),
+      expect.objectContaining({ routeAvailability: expect.objectContaining({ routeStatus: "degraded", routeStatusSource: "market-implied", activeDepegBps: 8332 }) }),
     );
-
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-    expect(metadata.availabilityDegraded).toBe(1);
-    expect(metadata.availabilityDegradedIds).toEqual(["cusd-cap"]);
-    expect(metadata.marketImpliedDegraded).toBe(1);
-    expect(metadata.marketEvidenceUncertain).toBe(0);
-    expect(metadata.unresolvedCritical).toBe(0);
-    expect(metadata.severeActiveDepegThresholdBps).toBe(2500);
+    expect(meta).toMatchObject({
+      availabilityDegraded: 1, availabilityDegradedIds: ["cusd-cap"], marketImpliedDegraded: 1,
+      marketEvidenceUncertain: 0, unresolvedCritical: 0, severeActiveDepegThresholdBps: 2500,
+    });
   });
 
   it("does not convert impairment-only runs into zero-resolved errors", async () => {
     const now = Math.floor(Date.now() / 1000);
     configuredIdsMock = ["cusd-cap"];
-    loadStablecoinsCacheMock.mockResolvedValue({
-      kind: "ok",
-      updatedAt: now,
-      payload: {
-        peggedAssets: [makeAsset({ id: "cusd-cap", symbol: "CUSD", circulating: { peggedUSD: 10_000_000 } })],
-      },
-    });
-    resolveRedemptionBackstopEntryMock.mockResolvedValueOnce(
-      makeResolvedSnapshot("cusd-cap", now, {
-        score: null,
-        resolutionState: "impaired",
-        routeStatus: "degraded",
-        routeStatusSource: "market-implied",
-        modelConfidence: "low",
-      }),
-    );
-
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
-
+    mockStablecoins([makeAsset({ id: "cusd-cap", symbol: "CUSD", circulating: { peggedUSD: 10_000_000 } })], now);
+    resolveRedemptionBackstopEntryMock.mockResolvedValueOnce(makeResolvedSnapshot("cusd-cap", now, {
+      score: null, resolutionState: "impaired", routeStatus: "degraded", routeStatusSource: "market-implied", modelConfidence: "low",
+    }));
+    const { result, meta } = await runSync();
     expect(result.status).toBe("ok");
-
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-    expect(metadata.resolved).toBe(0);
-    expect(metadata.unresolved).toBe(1);
-    expect(metadata.unresolvedCritical).toBe(0);
-    expect(metadata.availabilityDegraded).toBe(1);
+    expect(meta).toMatchObject({ resolved: 0, unresolved: 1, unresolvedCritical: 0, availabilityDegraded: 1 });
   });
 
   it("snapshots configured ids that are absent from the active stablecoins cache without degrading", async () => {
-    loadStablecoinsCacheMock.mockResolvedValue({
-      kind: "ok",
-      updatedAt: Math.floor(Date.now() / 1000),
-      payload: {
-        peggedAssets: [makeAsset({ id: "cusd-cap", symbol: "CUSD", circulating: { peggedUSD: 10_000_000 } })],
-      },
-    });
+    const now = Math.floor(Date.now() / 1000);
+    mockStablecoins([makeAsset({ id: "cusd-cap", symbol: "CUSD", circulating: { peggedUSD: 10_000_000 } })], now);
+    resolveRedemptionBackstopEntryMock.mockResolvedValueOnce(makeResolvedSnapshot("cusd-cap", now));
+    const { result, meta } = await runSync();
 
-    resolveRedemptionBackstopEntryMock.mockResolvedValueOnce(
-      makeResolvedSnapshot("cusd-cap", Math.floor(Date.now() / 1000)),
-    );
-
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
-
-    expect(result.status).toBe("ok");
-    expect(result.itemCount).toBe(2);
+    expect(result).toMatchObject({ status: "ok", itemCount: 2 });
     expect(resolveRedemptionBackstopEntryMock).toHaveBeenCalledTimes(1);
     expect(buildRedemptionBackstopEntryMock).toHaveBeenCalledWith(
-      expect.anything(),
-      "iusd-infinifi",
-      expect.objectContaining({ routeFamily: "basket-redeem" }),
-      null,
-      47,
-      expect.any(Number),
-      expect.objectContaining({ reserveSnapshotMetadata: null, routeAvailability: null }),
+      expect.anything(), "iusd-infinifi", expect.objectContaining({ routeFamily: "basket-redeem" }), null, 47,
+      expect.any(Number), expect.objectContaining({ reserveSnapshotMetadata: null, routeAvailability: null }),
     );
     expect(upsertRedemptionBackstopSnapshotsMock).toHaveBeenCalledWith(
       expect.anything(),
-      expect.arrayContaining([
-        expect.objectContaining({ stablecoinId: "cusd-cap" }),
-        expect.objectContaining({ stablecoinId: "iusd-infinifi" }),
-      ]),
-      expect.objectContaining({
-        expectedCount: 2,
-        metadata: expect.objectContaining({ configured: 2 }),
-      }),
+      expect.arrayContaining([expect.objectContaining({ stablecoinId: "cusd-cap" }), expect.objectContaining({ stablecoinId: "iusd-infinifi" })]),
+      expect.objectContaining({ expectedCount: 2, metadata: expect.objectContaining({ configured: 2 }) }),
     );
-
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-    expect(metadata.synced).toBe(2);
-    expect(metadata.resolved).toBe(1);
-    expect(metadata.unresolved).toBe(1);
-    expect(metadata.unresolvedCritical).toBe(0);
-    expect(metadata.activeConfigured).toBe(1);
-    expect(metadata.cacheAbsentConfigured).toBe(1);
-    expect(metadata.coverageRatio).toBe(1);
-    expect(metadata.missingFromCache).toEqual(["iusd-infinifi"]);
+    expect(meta).toMatchObject({
+      synced: 2, resolved: 1, unresolved: 1, unresolvedCritical: 0, activeConfigured: 1,
+      cacheAbsentConfigured: 1, coverageRatio: 1, missingFromCache: ["iusd-infinifi"],
+    });
   });
 
   it("errors when every configured route is absent from the active stablecoins cache", async () => {
     configuredIdsMock = ["iusd-infinifi"];
-    loadStablecoinsCacheMock.mockResolvedValue({
-      kind: "ok",
-      updatedAt: Math.floor(Date.now() / 1000),
-      payload: {
-        peggedAssets: [makeAsset({ id: "cusd-cap", symbol: "CUSD", circulating: { peggedUSD: 10_000_000 } })],
-      },
-    });
-
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
-
+    mockStablecoins([makeAsset({ id: "cusd-cap", symbol: "CUSD", circulating: { peggedUSD: 10_000_000 } })]);
+    const { result, meta } = await runSync();
     expect(result.status).toBe("error");
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-    expect(metadata.activeConfigured).toBe(0);
-    expect(metadata.activeResolved).toBe(0);
-    expect(metadata.coverageRatio).toBe(0);
-    expect(metadata.cacheAbsentConfigured).toBe(1);
-    expect(metadata.missingFromCache).toEqual(["iusd-infinifi"]);
+    expect(meta).toMatchObject({
+      activeConfigured: 0, activeResolved: 0, coverageRatio: 0, cacheAbsentConfigured: 1, missingFromCache: ["iusd-infinifi"],
+    });
   });
 
   it("keeps a tiny missing-capacity tail as ok when no failures or cache misses remain", async () => {
     const now = Math.floor(Date.now() / 1000);
-    loadStablecoinsCacheMock.mockResolvedValue({
-      kind: "ok",
-      updatedAt: now,
-      payload: {
-        peggedAssets: [
-          makeAsset({ id: "cusd-cap", symbol: "CUSD", circulating: { peggedUSD: 10_000_000 } }),
-          makeAsset({ id: "iusd-infinifi", symbol: "IUSD", circulating: { peggedUSD: 20_000_000 } }),
-        ],
-      },
-    });
     resolveRedemptionBackstopEntryMock
       .mockResolvedValueOnce(makeResolvedSnapshot("cusd-cap", now))
-      .mockResolvedValueOnce(makeResolvedSnapshot("iusd-infinifi", now, {
-        score: null, dexLiquidityScore: 47, capacityScore: null,
-        provider: "reserve-sync-metadata", sourceMode: "static", resolutionState: "missing-capacity",
-        capacityConfidence: "dynamic", feeModelKind: "undisclosed-reviewed", modelConfidence: "low",
-        immediateCapacityUsd: null, immediateCapacityRatio: null,
-        notes: ["Live reserve metadata lacks scoring-grade freshness evidence"],
-      }));
-
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
-
+      .mockResolvedValueOnce(makeMissingCapacitySnapshot("iusd-infinifi", now, { dexLiquidityScore: 47, feeModelKind: "undisclosed-reviewed" }));
+    const { result, meta } = await runSync();
     expect(result.status).toBe("ok");
-
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-    expect(metadata.resolved).toBe(1);
-    expect(metadata.unresolved).toBe(1);
-    expect(metadata.unresolvedMissingCapacity).toBe(1);
-    expect(metadata.familyMissingCapacityBy).toEqual({ "basket-redeem": 1 });
-    expect(metadata.providerMissingCapacityBy).toEqual({ "reserve-sync-metadata": 1 });
-    expect(metadata.unresolvedCritical).toBe(0);
-    expect(metadata.missingCapacityOkThreshold).toBe(1);
+    expect(meta).toMatchObject({
+      resolved: 1, unresolved: 1, unresolvedMissingCapacity: 1, unresolvedCritical: 0, missingCapacityOkThreshold: 1,
+      familyMissingCapacityBy: { "basket-redeem": 1 }, providerMissingCapacityBy: { "reserve-sync-metadata": 1 },
+    });
   });
 
   it("reports error when every configured route is missing capacity", async () => {
     const now = Math.floor(Date.now() / 1000);
     configuredIdsMock = ["cusd-cap"];
-    loadStablecoinsCacheMock.mockResolvedValue({
-      kind: "ok",
-      updatedAt: now,
-      payload: {
-        peggedAssets: [makeAsset({ id: "cusd-cap", symbol: "CUSD", circulating: { peggedUSD: 10_000_000 } })],
-      },
-    });
-    resolveRedemptionBackstopEntryMock.mockResolvedValueOnce(
-      makeResolvedSnapshot("cusd-cap", now, {
-        score: null,
-        capacityScore: null,
-        provider: "reserve-sync-metadata",
-        sourceMode: "static",
-        resolutionState: "missing-capacity",
-        capacityConfidence: "dynamic",
-        capacitySemantics: "immediate-bounded",
-        modelConfidence: "low",
-        immediateCapacityUsd: null,
-        immediateCapacityRatio: null,
-        notes: ["Live reserve metadata lacks scoring-grade freshness evidence"],
-      }),
-    );
-
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
-
+    mockStablecoins([makeAsset({ id: "cusd-cap", symbol: "CUSD", circulating: { peggedUSD: 10_000_000 } })], now);
+    resolveRedemptionBackstopEntryMock.mockResolvedValueOnce(makeMissingCapacitySnapshot("cusd-cap", now));
+    const { result, meta } = await runSync();
     expect(result.status).toBe("error");
-
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-    expect(metadata.resolved).toBe(0);
-    expect(metadata.unresolvedMissingCapacity).toBe(1);
-    expect(metadata.unresolvedCritical).toBe(0);
+    expect(meta).toMatchObject({ resolved: 0, unresolvedMissingCapacity: 1, unresolvedCritical: 0 });
   });
 
   it("reports missing-capacity drift beyond the tolerance budget as quality, not a degraded run", async () => {
     const now = Math.floor(Date.now() / 1000);
-    configuredIdsMock = Array.from({ length: 101 }, (_value, index) => `coin-${index + 1}`);
+    configuredIdsMock = Array.from({ length: 101 }, (_, i) => `coin-${i + 1}`);
     const unresolvedIds = new Set(["coin-1", "coin-2", "coin-3"]);
-
-    loadStablecoinsCacheMock.mockResolvedValue({
-      kind: "ok",
-      updatedAt: now,
-      payload: {
-        peggedAssets: configuredIdsMock.map((id) =>
-          makeAsset({ id, symbol: id.toUpperCase(), circulating: { peggedUSD: 1_000_000 } }),
-        ),
-      },
-    });
-    loadDexLiquidityScoresMock.mockResolvedValue({
-      map: {},
-      latestUpdatedAt: now,
-    });
+    mockStablecoins(configuredIdsMock.map((id) => makeAsset({ id, symbol: id.toUpperCase(), circulating: { peggedUSD: 1_000_000 } })), now);
+    loadDexLiquidityScoresMock.mockResolvedValue({ map: {}, latestUpdatedAt: now });
     resolveRedemptionBackstopEntryMock.mockImplementation((_db: unknown, asset: { id: string }) =>
-      Promise.resolve(
-        unresolvedIds.has(asset.id)
-          ? makeResolvedSnapshot(asset.id, now, {
-              score: null,
-              capacityScore: null,
-              provider: "reserve-sync-metadata",
-              sourceMode: "static",
-              resolutionState: "missing-capacity",
-              capacityConfidence: "dynamic",
-              capacitySemantics: "immediate-bounded",
-              modelConfidence: "low",
-              immediateCapacityUsd: null,
-              immediateCapacityRatio: null,
-              notes: ["Live reserve metadata lacks scoring-grade freshness evidence"],
-            })
-          : makeResolvedSnapshot(asset.id, now),
-      ),
+      Promise.resolve(unresolvedIds.has(asset.id) ? makeMissingCapacitySnapshot(asset.id, now) : makeResolvedSnapshot(asset.id, now)),
     );
-
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
-
+    const { result, meta } = await runSync();
     expect(result.status).toBe("ok");
-
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-    expect(metadata.resolved).toBe(98);
-    expect(metadata.unresolved).toBe(3);
-    expect(metadata.unresolvedMissingCapacity).toBe(3);
-    expect(metadata.familyMissingCapacityBy).toEqual({ "basket-redeem": 3 });
-    expect(metadata.providerMissingCapacityBy).toEqual({ "reserve-sync-metadata": 3 });
-    expect(metadata.unresolvedCritical).toBe(0);
-    expect(metadata.missingCapacityOkThreshold).toBe(2);
-    expect(metadata.quality).toEqual({
-      reason: "capacity-coverage-floor",
-      unresolvedMissingCapacity: 3,
-      structuralMissingCapacity: 0,
-      runtimeMissingCapacity: 3,
-      missingCapacityOkThreshold: 2,
+    expect(meta).toMatchObject({
+      resolved: 98, unresolved: 3, unresolvedMissingCapacity: 3, unresolvedCritical: 0, missingCapacityOkThreshold: 2,
+      familyMissingCapacityBy: { "basket-redeem": 3 }, providerMissingCapacityBy: { "reserve-sync-metadata": 3 },
+      quality: { reason: "capacity-coverage-floor", unresolvedMissingCapacity: 3, structuralMissingCapacity: 0, runtimeMissingCapacity: 3, missingCapacityOkThreshold: 2 },
     });
   });
 
   it("excludes structural missing capacity from the coverage floor while publishing its census", async () => {
     const now = Math.floor(Date.now() / 1000);
-    configuredIdsMock = Array.from({ length: 101 }, (_value, index) => `coin-${index + 1}`);
+    configuredIdsMock = Array.from({ length: 101 }, (_, i) => `coin-${i + 1}`);
     const reserveSync = { provider: "reserve-sync-metadata", capacityConfidence: "dynamic", capacitySemantics: "immediate-bounded" } as const;
     const missing: Record<string, Partial<RedemptionBackstopEntry>> = {
       "coin-1": { ...reserveSync, sourceMode: "static", notes: ["Live reserve metadata lacks scoring-grade freshness evidence"] },
-      "coin-7": { ...reserveSync, sourceMode: "dynamic", capacityRejectionReason: "settlement-bound-unproven",
-        notes: ["Live redemption settlement completion bound is unproven; capacity is not established"] },
+      "coin-7": { ...reserveSync, sourceMode: "dynamic", capacityRejectionReason: "settlement-bound-unproven", notes: ["Live redemption settlement completion bound is unproven; capacity is not established"] },
     };
     for (const id of ["coin-2", "coin-3", "coin-4", "coin-5", "coin-6"]) {
-      missing[id] = { provider: "unquantified-model", sourceMode: "static", capacityConfidence: "heuristic",
-        capacitySemantics: "eventual-only", notes: ["redemption-capacity-unquantified"] };
+      missing[id] = { provider: "unquantified-model", sourceMode: "static", capacityConfidence: "heuristic", capacitySemantics: "eventual-only", notes: ["redemption-capacity-unquantified"] };
     }
-    loadStablecoinsCacheMock.mockResolvedValue({ kind: "ok", updatedAt: now, payload: {
-      peggedAssets: configuredIdsMock.map((id) => makeAsset({ id, symbol: id.toUpperCase(), circulating: { peggedUSD: 1_000_000 } })),
-    } });
+    mockStablecoins(configuredIdsMock.map((id) => makeAsset({ id, symbol: id.toUpperCase(), circulating: { peggedUSD: 1_000_000 } })), now);
     loadDexLiquidityScoresMock.mockResolvedValue({ map: {}, latestUpdatedAt: now });
     resolveRedemptionBackstopEntryMock.mockImplementation((_db: unknown, asset: { id: string }) =>
-      Promise.resolve(makeResolvedSnapshot(asset.id, now, missing[asset.id] && {
-        score: null, capacityScore: null, resolutionState: "missing-capacity", modelConfidence: "low",
-        immediateCapacityUsd: null, immediateCapacityRatio: null, ...missing[asset.id],
-      })));
-
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
-
+      Promise.resolve(missing[asset.id] ? makeMissingCapacitySnapshot(asset.id, now, missing[asset.id]) : makeResolvedSnapshot(asset.id, now)),
+    );
+    const { result, meta } = await runSync();
     expect(result.status).toBe("ok");
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-    expect(metadata).toMatchObject({
-      unresolvedMissingCapacity: 7,
-      structuralMissingCapacity: 6,
+    expect(meta).toMatchObject({
+      unresolvedMissingCapacity: 7, structuralMissingCapacity: 6, missingCapacityOkThreshold: 1,
       structuralMissingCapacityBy: { "unquantified-model": 5, "settlement-bound-unproven": 1 },
       providerMissingCapacityBy: { "reserve-sync-metadata": 2, "unquantified-model": 5 },
-      // 101 active minus 5 capability-structural routes -> threshold 1; the
-      // reason-based structural row stays in the denominator.
-      missingCapacityOkThreshold: 1,
     });
-    expect(metadata.quality).toBeUndefined();
+    expect(meta.quality).toBeUndefined();
   });
 
   it("materializes failed rows instead of leaving the coin absent from the new snapshot", async () => {
     resolveRedemptionBackstopEntryMock
       .mockResolvedValueOnce(makeResolvedSnapshot("cusd-cap", 1_700_000_000))
       .mockRejectedValueOnce(new Error("resolver blew up"));
-
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
-
+    const { result, meta } = await runSync();
     expect(result.status).toBe("degraded");
     expect(buildFailedRedemptionBackstopEntryMock).toHaveBeenCalledWith(
-      "iusd-infinifi",
-      expect.objectContaining({ routeFamily: "basket-redeem" }),
-      expect.any(Number),
+      "iusd-infinifi", expect.objectContaining({ routeFamily: "basket-redeem" }), expect.any(Number),
     );
     expect(upsertRedemptionBackstopSnapshotsMock).toHaveBeenCalledWith(
       expect.anything(),
@@ -1184,84 +779,44 @@ describe("syncRedemptionBackstops", () => {
         expect.objectContaining({ stablecoinId: "cusd-cap", resolutionState: "resolved" }),
         expect.objectContaining({ stablecoinId: "iusd-infinifi", resolutionState: "failed" }),
       ]),
-      expect.objectContaining({
-        expectedCount: 2,
-        metadata: expect.objectContaining({ configured: 2 }),
-      }),
+      expect.objectContaining({ expectedCount: 2, metadata: expect.objectContaining({ configured: 2 }) }),
     );
-
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-    expect(metadata.failed).toBe(1);
-    expect(metadata.failedIds).toEqual(["iusd-infinifi"]);
+    expect(meta).toMatchObject({ failed: 1, failedIds: ["iusd-infinifi"] });
   });
 
   it("marks the run degraded but keeps computing effective-exit scores from stale-but-present DEX data", async () => {
-    // Staleness is now an operational signal (degraded-run + metadata) but no
-    // longer suppresses effectiveExitScore. Matches the report-cards path,
-    // which also uses the last-known DEX score when stale.
     const staleNow = Math.floor(Date.now() / 1000);
     loadDexLiquidityScoresMock.mockResolvedValue({
-      map: {
-        "cusd-cap": { liquidityScore: 29 },
-        "iusd-infinifi": { liquidityScore: 47 },
-      },
+      map: { "cusd-cap": { liquidityScore: 29 }, "iusd-infinifi": { liquidityScore: 47 } },
       latestUpdatedAt: staleNow - 14_401,
     });
-
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
-
+    const { result, meta } = await runSync();
     expect(result.status).toBe("degraded");
     expect(resolveRedemptionBackstopEntryMock).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ id: "cusd-cap" }),
-      29,
-      expect.any(Number),
+      expect.anything(), expect.objectContaining({ id: "cusd-cap" }), 29, expect.any(Number),
       expect.not.objectContaining({ suppressEffectiveExitScore: expect.anything() }),
     );
-
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-    expect(metadata.liquidityStale).toBe(true);
+    expect(meta.liquidityStale).toBe(true);
   });
 
   it("marks a future-dated DEX liquidity snapshot as stale instead of fresh", async () => {
     const now = Math.floor(Date.now() / 1000);
     loadDexLiquidityScoresMock.mockResolvedValue({
-      map: {
-        "cusd-cap": { liquidityScore: 29 },
-        "iusd-infinifi": { liquidityScore: 47 },
-      },
+      map: { "cusd-cap": { liquidityScore: 29 }, "iusd-infinifi": { liquidityScore: 47 } },
       latestUpdatedAt: now + 60,
     });
-
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
-
+    const { result, meta } = await runSync();
     expect(result.status).toBe("degraded");
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-    expect(metadata.liquidityStale).toBe(true);
-    expect(metadata.reason).toBe("liquidity-evidence-stale");
+    expect(meta).toMatchObject({ liquidityStale: true, reason: "liquidity-evidence-stale" });
   });
 
   it("marks missing DEX liquidity snapshots as stale", async () => {
-    loadDexLiquidityScoresMock.mockResolvedValue({
-      map: {},
-      latestUpdatedAt: null,
-    });
-
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
-
+    loadDexLiquidityScoresMock.mockResolvedValue({ map: {}, latestUpdatedAt: null });
+    const { result, meta } = await runSync();
     expect(result.status).toBe("degraded");
     expect(resolveRedemptionBackstopEntryMock).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ id: "cusd-cap" }),
-      null,
-      expect.any(Number),
-      expect.anything(),
+      expect.anything(), expect.objectContaining({ id: "cusd-cap" }), null, expect.any(Number), expect.anything(),
     );
-
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-    expect(metadata.liquidityStale).toBe(true);
+    expect(meta.liquidityStale).toBe(true);
   });
 });

@@ -156,7 +156,7 @@ describe("depeg canary checks", () => {
     ["reopened", false, gap, 0, {}, 1],
   ] as const)("grades actionable census gaps: %s", async (kind, nominal, reason, reviewClock, overrides, actionable) => {
     const review = kind === "psi" ? psi[0] : gaps[0];
-    if (kind === "psi") expect([review?.reviewedAt, review?.expiresAt]).toEqual([1794524520, 1795734120]);
+    if (kind === "psi") expect([review?.reviewedAt, review?.expiresAt]).toEqual([1795351080, 1796560680]);
     if (kind !== "psi") psi.length = 0;
     const reopen = Date.UTC(2026, 10, 8, 23) / 1000;
     const market = ["closure", "reopening wait", "reopened"].includes(kind);
@@ -420,17 +420,16 @@ describe("depeg canary checks", () => {
   });
 
   it("validates the blind review registry and rejects duplicates", () => {
+    const at = Date.UTC(2026, 10, 22, 12, 38) / 1000;
     for (const entry of DEPEG_BLIND_EVENT_REVIEWS) {
-      if (entry.eventId === 90605) {
-        expect(entry.expiresAt - entry.reviewedAt).toBe(3 * 86400);
-        expect(resolveDepegBlindEventReviews(entry.expiresAt - 1).get(90605)).toEqual(entry);
-        expect(resolveDepegBlindEventReviews(entry.expiresAt).has(90605)).toBe(false);
-        continue;
+      const durationSec = entry.eventId === 90605 || entry.eventId === 91052 ? 7 * 86400 : 14 * 86400;
+      expect([DepegBlindEventReviewSchema.safeParse(entry).success, entry.reviewedAt, entry.expiresAt]).toEqual([true, at, at + durationSec]);
+      if (entry.eventId === 90605 || entry.eventId === 91052) {
+        expect(resolveDepegBlindEventReviews(entry.expiresAt - 1).get(entry.eventId)).toEqual(entry);
+        expect(resolveDepegBlindEventReviews(entry.expiresAt).has(entry.eventId)).toBe(false);
       }
-      const at = 1795110060;
-      expect([DepegBlindEventReviewSchema.safeParse(entry).success, entry.reviewedAt, entry.expiresAt]).toEqual([true, at, at + 604800]);
     }
-    expect([...resolveDepegBlindEventReviews(1795110060).keys()]).toEqual([91042, 90793, 90748, 84563, 90804, 91037, 90807, 89787, 90773, 90738, 91052]);
+    expect([...resolveDepegBlindEventReviews(at).keys()]).toEqual([91042, 90793, 90748, 84563, 90804, 91037, 90807, 89787, 90773, 90738, 91052, 90605]);
     expect(resolveDepegBlindEventReviews(review.reviewedAt, [review, review]).size).toBe(0);
     expect(resolveDepegBlindEventReviews(review.reviewedAt, [review, { ...review, reason: "" }]).size).toBe(0);
   });

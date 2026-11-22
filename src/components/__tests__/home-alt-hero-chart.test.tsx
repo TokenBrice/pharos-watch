@@ -1,8 +1,11 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { HomeAltHeroChart } from "@/components/homepage/home-alt-hero-chart";
+import { HomeAltHeroStaticChart } from "@/components/homepage/home-alt-hero-static-chart";
+import { HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS } from "@/lib/homepage-hero-snapshot";
+import type { HomepageHistory, HomepageLaneMeta } from "@shared/types/homepage";
 
 vi.mock("@/hooks/use-chart-shell", () => ({
   useChartShell: () => ({
@@ -117,5 +120,34 @@ describe("HomeAltHeroChart", () => {
     expect(totalPath?.getAttribute("d")).toBe("");
     expect(container.innerHTML).not.toContain("NaN");
     expect(container.innerHTML).not.toContain("Infinity");
+  });
+});
+
+describe("dated hero history preview", () => {
+  afterEach(cleanup);
+  const now = Date.parse("2026-10-18T12:00:00Z");
+  function history(updatedAt: number | null): HomepageHistory {
+    const assessment = { source: "stablecoin-charts", assessedAt: now / 1000, freshBudgetSec: 3600, degradedBudgetSec: 7200, reason: "dated-build-fallback", warning: null };
+    const meta: HomepageLaneMeta = updatedAt === null
+      ? { ...assessment, updatedAt: null, ageSeconds: null, status: "unknown" }
+      : { ...assessment, updatedAt, ageSeconds: Math.max(0, now / 1000 - updatedAt), status: "stale" };
+    return { sources: { total: meta, usdt: meta, usdc: meta, usds: meta, dai: meta }, rows: [100, null, 120].map((total, index) => ({
+      ts: now - (3 - index) * 86400000, total, usdt: null, usdc: null, sky: null, others: null, nonUsd: null,
+    })) };
+  }
+
+  it("renders real dated content through the inclusive 72-hour bound with axes, gridlines, and preserved gaps", () => {
+    const { container } = render(<HomeAltHeroStaticChart history={history((now - HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS) / 1000)} nowMs={now} />);
+    expect(screen.getByText(/^Total market cap history · as of/)).toBeTruthy();
+    expect(screen.queryByText(/Fallback|loading/i)).toBeNull();
+    expect(screen.queryByText(/^Live ·/)).toBeNull();
+    expect(screen.queryByText(/Latest observed total/)).toBeNull();
+    expect(container.querySelector("path")?.getAttribute("d")?.match(/M/g)).toHaveLength(2);
+    expect(container.querySelectorAll("line").length).toBeGreaterThanOrEqual(2);
+  });
+
+  it.each([null, (now - HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS - 1) / 1000, now / 1000 + 1])("withholds an undated, expired or future generation (%s)", (updatedAt) => {
+    render(<HomeAltHeroStaticChart history={history(updatedAt)} nowMs={now} />);
+    expect(screen.queryByText(/Total market cap history/)).toBeNull();
   });
 });

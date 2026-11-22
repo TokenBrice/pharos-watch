@@ -190,7 +190,7 @@ describe("supply integrity", () => {
     expect(expiresAt - reviewedAt).toBeGreaterThan(0);
     expect(expiresAt - reviewedAt).toBeLessThanOrEqual(RESERVE_FEED_REVIEW_MAX_AGE_SEC);
     if (review.stablecoinId === "said-gaib") {
-      expect(reviewedAt).toBe(Date.UTC(2026, 10, 11, 23, 19, 58) / 1000);
+      expect(reviewedAt).toBe(Date.UTC(2026, 10, 22, 12, 38) / 1000);
       expect(expiresAt).toBeLessThanOrEqual(STABLECOIN_PRICE_GAP_REVIEWS.find(r => r.stablecoinId === "aid-gaib")!.expiresAt);
     }
     const carried = [{ id: stablecoinId, current: 0, previous: 100, supplyRestored: true, supplyObservedAt: reviewedAt - 3600,

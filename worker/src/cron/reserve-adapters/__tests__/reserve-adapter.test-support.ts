@@ -738,11 +738,24 @@ export async function runAdapter(
 export async function runAdapterWithFakeTimers<T>(run: () => Promise<T>, advanceMs = 30_000): Promise<T> {
   vi.useFakeTimers();
   try {
+    const state = { settled: false };
     const outcome = run().then(
-      (value) => ({ ok: true as const, value }),
-      (error: unknown) => ({ ok: false as const, error }),
+      (value) => {
+        state.settled = true;
+        return { ok: true as const, value };
+      },
+      (error: unknown) => {
+        state.settled = true;
+        return { ok: false as const, error };
+      },
     );
-    await vi.advanceTimersByTimeAsync(advanceMs);
+    const stepMs = 500;
+    let remainingMs = advanceMs;
+    while (!state.settled && remainingMs > 0) {
+      const slice = Math.min(stepMs, remainingMs);
+      await vi.advanceTimersByTimeAsync(slice);
+      remainingMs -= slice;
+    }
     const settled = await outcome;
     if (!settled.ok) throw settled.error;
     return settled.value;

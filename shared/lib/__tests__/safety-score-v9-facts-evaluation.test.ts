@@ -30,36 +30,70 @@ import { projectSafetyScoreV9Card } from "../safety-score-v9/public";
 import { computeV9UnknownPricedWeightShare } from "../../types/safety-score-v9-public-breakdowns";
 import * as backingArchetypes from "../safety-score-v9/archetypes";
 
-function mutableNativeFactSet() {
-  // Schema parsing creates an authoring DTO; structuredClone preserves compiled aliasing.
-  return CompiledV9FactSetV3Schema.parse(compileNativeV3FactSet(coreFixture()));
-}
+const P = V9_CANDIDATE_POLICY_V1;
+type V3Core = Omit<ReturnType<typeof CompiledV9FactSetV3Schema.parse>, "v9FactSetDigest">;
+type EvalResult = ReturnType<typeof evaluateV9FactSet>;
+
+const mutableNativeFactSet = () => CompiledV9FactSetV3Schema.parse(compileNativeV3FactSet(coreFixture()));
+const nativeCore = (assetId = "alpha") => {
+  const { v9FactSetDigest: _digest, ...core } = mutableNativeFactSet();
+  return { core, asset: core.assets.find((r) => r.assetId === assetId)! };
+};
+const evalCoreAll = (core: V3Core) => evaluateV9FactSet(compileV9FactSetV3(core), P);
+const evalCore = (core: V3Core, assetId = "alpha") => evalCoreAll(core).assets.find((r) => r.assetId === assetId)!;
+const evalInput = (input: ReturnType<typeof coreFixture>) => evaluateV9FactSet(compileNativeV3FactSet(input), P);
+const evalInputAsset = (input: ReturnType<typeof coreFixture>, assetId = "alpha") =>
+  evalInput(input).assets.find((r) => r.assetId === assetId)!;
+const assetById = (evaluated: EvalResult, assetId: string) => evaluated.assets.find((a) => a.assetId === assetId)!;
+const depSignal = (evaluated: EvalResult, assetId: string, domainKey: string) =>
+  assetById(evaluated, assetId).scoreInput.dependencyStructuralSignals.find((s) => s.failureDomainKeys.includes(domainKey));
+
+const reqStatus = (
+  rule: string,
+  observationState: Parameters<typeof createV9FactStatus>[0]["observationState"],
+  gapIds: string[],
+  evidenceRefIds: string[] = ["evidence:base"],
+) => createV9FactStatus({ applicability: requiredV9Applicability(rule), observationState, gapIds, evidenceRefIds });
+
+const manualSerialDeps = (
+  upstreamAssetId: string,
+  failureDomains: Array<{ kind: "mint-control"; key: string }>,
+) => ({
+  status: knownStatus(),
+  sourceGenerationId: SOURCE_FINGERPRINTS.researchOverlays.generationId,
+  source: "manual" as const, baseSource: "manual" as const,
+  dependencyFromLive: false, mappedLiveReserveWeight: null, fallbackReason: null,
+  edges: [{
+    edgeKey: canonicalV9DependencyEdgeKey("mechanism", upstreamAssetId),
+    upstreamAssetId, dependencyType: "mechanism" as const, pathKind: "serial-dependency" as const,
+    weight: 1, economicRole: "serial-claim" as const, evidenceRefIds: ["evidence:base"], failureDomains,
+  }],
+  diagnostics: { graphState: "valid" as const, issueCodes: [], sccMemberAssetIds: [] },
+});
 
 it("rejects a known ordinary reserve with a missing asset class marked not applicable", () => {
-  const asset = mutableNativeFactSet().assets.find(row => row.assetId === "alpha")!;
-  const exposure = asset.reserveExposures.find(row => row.exposureKey === "exposure:cash")!;
+  const asset = mutableNativeFactSet().assets.find((r) => r.assetId === "alpha")!;
+  const exposure = asset.reserveExposures.find((r) => r.exposureKey === "exposure:cash")!;
   exposure.assetClass = null;
-  exposure.factorStatuses = { ...exposure.factorStatuses, assetClass: {
-    ...exposure.status,
-    applicability: { state: "not-applicable", policyRuleId: "fixture.reserve-class", rationale: "Fixture", gapId: null },
-  } };
-  const parsed = V9AssetFactsV3Schema.safeParse(asset);
-  expect(parsed.error?.issues ?? []).toContainEqual(expect.objectContaining({
-    path: ["reserveExposures", expect.any(Number), "assetClass"],
-  }));
+  exposure.factorStatuses = {
+    ...exposure.factorStatuses,
+    assetClass: { ...exposure.status, applicability: { state: "not-applicable", policyRuleId: "fixture.reserve-class", rationale: "Fixture", gapId: null } },
+  };
+  expect(V9AssetFactsV3Schema.safeParse(asset).error?.issues ?? []).toContainEqual(
+    expect.objectContaining({ path: ["reserveExposures", expect.any(Number), "assetClass"] }),
+  );
 });
 
 function certifyGap(asset: V9AssetFactsV3, gap: V9AssetFactsV3["gaps"][number], cause: "A" | "C") {
   if (gap.path.kind !== "local-component") throw new Error("Fixture proof requires an exact local component");
   const scope = {
-    pillar: gap.ownerDomain === "backing" ? "backing" as const : gap.ownerDomain === "exit" ? "exit" as const : "control" as const,
+    pillar: gap.ownerDomain === "backing" ? ("backing" as const) : gap.ownerDomain === "exit" ? ("exit" as const) : ("control" as const),
     componentKey: gap.path.componentKey, factorKey: null, routeKey: null, exposureId: null, requiredDatum: gap.policyRuleId,
   };
   gap.causeScope = scope;
   if (cause === "C") {
     const resolved = resolveV9EvidenceCause({
-      assetId: asset.assetId, scope, asOfSec: AS_OF_SEC, sourceGenerationId: "fixture:research",
-      evidenceReferences: asset.evidence,
+      assetId: asset.assetId, scope, asOfSec: AS_OF_SEC, sourceGenerationId: "fixture:research", evidenceReferences: asset.evidence,
       classification: {
         id: `classification:${gap.gapId}`, assetId: asset.assetId, scope, cause,
         reviewedAt: "1970-01-01T00:10:00Z", reviewer: "fixture-reviewer",
@@ -71,7 +105,7 @@ function certifyGap(asset: V9AssetFactsV3, gap: V9AssetFactsV3["gaps"][number], 
     gap.causeProof = resolved.causeProof;
     gap.evidenceRefIds = resolved.causeProof.evidenceRefIds;
     gap.responsibility = resolved.responsibility;
-    asset.evidence.push(...resolved.evidenceReferences.filter((ref) => gap.evidenceRefIds.includes(ref.evidenceId)));
+    asset.evidence.push(...resolved.evidenceReferences.filter((r) => gap.evidenceRefIds.includes(r.evidenceId)));
     return;
   }
   const evidenceId = `proof:${gap.gapId}`;
@@ -88,34 +122,39 @@ function certifyGap(asset: V9AssetFactsV3, gap: V9AssetFactsV3["gaps"][number], 
     causeBinding: { assetId: asset.assetId, scope, adverseFactId: null, producerState: "producer-failed", rejectionCode: "fixture-reader-failure" },
   }, AS_OF_SEC));
 }
-function exitFactorGap(asset: V9AssetFactsV3, route: V9AssetFactsV3["exitRoutes"][number], cause: "A" | "B" | "C", factorKey: "cost" | "settlement" | "observationConfidence" = "cost") {
+
+function exitFactorGap(
+  asset: V9AssetFactsV3,
+  route: V9AssetFactsV3["exitRoutes"][number],
+  cause: "A" | "B" | "C",
+  factorKey: "cost" | "settlement" | "observationConfidence" = "cost",
+) {
   const gap = createV9FactGapV3({
     gapId: `alpha:gap:${route.routeKey}:${factorKey}`, reasonCode: "missing-same-notional-route", ownerDomain: "exit",
     policyRuleId: "v9.exit.route-factors", observationState: "missing",
     path: { kind: "local-component", componentKey: "exit-route" },
     message: `The route ${factorKey} factor is not admitted.`, responsibility: "unresearched",
   });
-  const scope = { pillar: "exit" as const, componentKey: "exit-route", factorKey,
-    routeKey: route.routeKey, exposureId: null, requiredDatum: factorKey };
+  const scope = { pillar: "exit" as const, componentKey: "exit-route", factorKey, routeKey: route.routeKey, exposureId: null, requiredDatum: factorKey };
   if (cause === "A") {
     certifyGap(asset, gap, cause);
-    asset.evidence.find((ref) => ref.evidenceId === gap.evidenceRefIds[0])!.causeBinding!.scope = scope;
+    asset.evidence.find((r) => r.evidenceId === gap.evidenceRefIds[0])!.causeBinding!.scope = scope;
   } else {
     const reviewedAt = new Date(AS_OF_SEC * 1_000).toISOString().replace(".000Z", "Z");
     const resolved = resolveV9EvidenceCause({
       assetId: asset.assetId, scope, asOfSec: AS_OF_SEC,
       sourceGenerationId: SOURCE_FINGERPRINTS.researchOverlays.generationId, evidenceReferences: asset.evidence,
-      classification: { id: `classification:${gap.gapId}`, assetId: asset.assetId, scope,
-        ...(cause === "C" ? {
-          cause, assertion: "researched-nondisclosure" as const,
-          searchedSurfaces: ["https://issuer.example/route-evidence"],
-          rationale: "The required route datum is not disclosed on the reviewed surface.",
-        } : { cause, assertion: "required-data-public" as const }),
-        reviewedAt, reviewer: "fixture-reviewer",
-        sources: [{ url: "https://issuer.example/route-evidence", observedAt: reviewedAt, datumAsOf: null,
-          location: `Route ${factorKey} evidence`,
+      classification: {
+        id: `classification:${gap.gapId}`, assetId: asset.assetId, scope, reviewedAt, reviewer: "fixture-reviewer",
+        ...(cause === "C"
+          ? { cause, assertion: "researched-nondisclosure" as const, searchedSurfaces: ["https://issuer.example/route-evidence"], rationale: "The required route datum is not disclosed on the reviewed surface." }
+          : { cause, assertion: "required-data-public" as const }),
+        sources: [{
+          url: "https://issuer.example/route-evidence", observedAt: reviewedAt, datumAsOf: null, location: `Route ${factorKey} evidence`,
           excerpt: cause === "C" ? "The issuer does not publish a current execution-cost bound." : `The route ${factorKey} datum is published.`,
-          assertion: cause === "C" ? "The required route datum is undisclosed." : `The required route ${factorKey} datum is public but uncurated.` }] },
+          assertion: cause === "C" ? "The required route datum is undisclosed." : `The required route ${factorKey} datum is public but uncurated.`,
+        }],
+      },
     });
     gap.causeProof = resolved.causeProof;
     gap.evidenceRefIds = resolved.causeProof.evidenceRefIds;
@@ -126,20 +165,16 @@ function exitFactorGap(asset: V9AssetFactsV3, route: V9AssetFactsV3["exitRoutes"
   gap.path = { kind: "optional-exit", routeKey: route.routeKey };
   gap.causeScope = scope;
   asset.gaps.push(gap);
-  route.factorStatuses = { ...route.factorStatuses, [factorKey]: createV9FactStatus({
-    applicability: requiredV9Applicability(gap.policyRuleId), observationState: "missing",
-    gapIds: [gap.gapId], evidenceRefIds: gap.evidenceRefIds,
-  }) };
+  route.factorStatuses = { ...route.factorStatuses, [factorKey]: reqStatus(gap.policyRuleId, "missing", [gap.gapId], gap.evidenceRefIds) };
   return gap;
 }
 
 function exitPromotionFixture() {
-  const { v9FactSetDigest: _digest, ...core } = mutableNativeFactSet();
-  const asset = core.assets.find((row) => row.assetId === "alpha")!;
+  const { core, asset } = nativeCore();
   asset.dependencies.edges = [];
-  asset.gaps = asset.gaps.filter((gap) => gap.ownerDomain !== "exit");
-  asset.exitRoutes = asset.exitRoutes.filter((route) => route.scoreEligible);
-  asset.evidence = asset.evidence.filter((ref) => ref.evidenceId !== "evidence:rejected-route");
+  asset.gaps = asset.gaps.filter((g) => g.ownerDomain !== "exit");
+  asset.exitRoutes = asset.exitRoutes.filter((r) => r.scoreEligible);
+  asset.evidence = asset.evidence.filter((r) => r.evidenceId !== "evidence:rejected-route");
   return { core, asset };
 }
 
@@ -150,7 +185,7 @@ describe("Safety Score v9 fact evaluation", () => {
     { absent: ["exit", "control"], included: ["backing"], ratingStatus: "pipeline-gap" },
   ] as const)("does not count evidence-free $absent subjects toward rating availability", ({ absent, included, ratingStatus }) => {
     const { core, asset } = exitPromotionFixture();
-    if (absent.some((pillar) => pillar === "exit")) {
+    if (absent.some((p) => p === "exit")) {
       const gap = createV9FactGapV3({
         gapId: "alpha:no-exit-subject", reasonCode: "missing-runtime-route-evidence", ownerDomain: "exit",
         policyRuleId: "exit.routes.review", observationState: "missing", responsibility: "unresearched",
@@ -158,24 +193,19 @@ describe("Safety Score v9 fact evaluation", () => {
         message: "No reviewed route inventory or admitted route establishes an Exit subject.",
       });
       asset.gaps.push(gap);
-      asset.exitStatus = createV9FactStatus({
-        applicability: requiredV9Applicability(gap.policyRuleId), observationState: "missing",
-        gapIds: [gap.gapId], evidenceRefIds: [],
-      });
+      asset.exitStatus = reqStatus(gap.policyRuleId, "missing", [gap.gapId], []);
       asset.exitRoutes = [];
-      asset.evidence = asset.evidence.filter((ref) => ref.evidenceId !== "evidence:route");
+      asset.evidence = asset.evidence.filter((r) => r.evidenceId !== "evidence:route");
     }
-    if (absent.some((pillar) => pillar === "control")) {
-      asset.gaps = asset.gaps.filter((gap) => gap.ownerDomain !== "control");
-      const emptyControlAsset = core.assets.find((row) => row.assetId === "beta")!;
+    if (absent.some((p) => p === "control")) {
+      asset.gaps = asset.gaps.filter((g) => g.ownerDomain !== "control");
+      const emptyControlAsset = core.assets.find((r) => r.assetId === "beta")!;
       asset.controls = [];
       asset.accessReview = structuredClone(emptyControlAsset.accessReview);
       asset.economicControlReview = structuredClone(emptyControlAsset.economicControlReview);
       for (const [componentKey, reasonCode] of [
-        ["inventory", "unresolved-control-identity"],
-        ["mint", "missing-mint-authority"],
-        ["oracle", "missing-oracle-profile"],
-        ["bridge", "missing-bridge-routes"],
+        ["inventory", "unresolved-control-identity"], ["mint", "missing-mint-authority"],
+        ["oracle", "missing-oracle-profile"], ["bridge", "missing-bridge-routes"],
       ] as const) {
         const gap = createV9FactGapV3({
           gapId: `alpha:no-control-subject:${componentKey}`, reasonCode, ownerDomain: "control",
@@ -184,29 +214,20 @@ describe("Safety Score v9 fact evaluation", () => {
           message: "No admitted authority or mechanism review establishes this Control subject.",
         });
         asset.gaps.push(gap);
-        const status = createV9FactStatus({
-          applicability: requiredV9Applicability(gap.policyRuleId), observationState: "missing",
-          gapIds: [gap.gapId], evidenceRefIds: [],
-        });
+        const status = reqStatus(gap.policyRuleId, "missing", [gap.gapId], []);
         if (componentKey === "inventory") asset.controlStatus = status;
         else {
-          const review = asset.economicControlReview[componentKey];
-          review.status = status;
+          asset.economicControlReview[componentKey].status = status;
           if (componentKey === "mint") asset.economicControlReview.mint.factorStatuses = { reconciliation: status, supervision: status };
           else if (componentKey === "oracle") asset.economicControlReview.oracle.factorStatuses = { tier: status };
           else asset.economicControlReview.bridge.factorStatuses = { tier: status };
         }
       }
     }
-    const evaluated = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1).assets
-      .find((row) => row.assetId === asset.assetId)!;
+    const evaluated = evalCore(core);
     for (const pillar of absent) {
-      // A subject-free default does not become admitted evidence. AM10 prices
-      // the unavailable pillar separately without altering its null diagnostic.
       expect(evaluated[pillar].score).toEqual(expect.any(Number));
-      expect(evaluated.scoreInput.pillars[pillar]).toMatchObject({
-        score: null, aggregationDisposition: "unavailable", supportedComponentKeys: [],
-      });
+      expect(evaluated.scoreInput.pillars[pillar]).toMatchObject({ score: null, aggregationDisposition: "unavailable", supportedComponentKeys: [] });
       expect(evaluated.trace.includedPillars).not.toContain(pillar);
     }
     expect(evaluated.trace.includedPillars).toEqual(expect.arrayContaining([...included]));
@@ -214,48 +235,38 @@ describe("Safety Score v9 fact evaluation", () => {
     expect(evaluated.trace.ratingStatus).toBe(ratingStatus);
     if (ratingStatus === "rated") {
       expect(evaluated.trace.finalScore).not.toBeNull();
-      const weights = V9_CANDIDATE_POLICY_V1.policy.semantic.formula.pillarWeights;
-      expect(evaluated.trace.effectiveScoringWeights).toEqual(weights);
+      expect(evaluated.trace.effectiveScoringWeights).toEqual(P.policy.semantic.formula.pillarWeights);
       for (const pillar of absent) {
-        expect(evaluated.trace.aggregation?.pricedUnknownPillars).toContainEqual(
-          expect.objectContaining({ pillar, cause: "U", score: unknownQuality(pillar, "U") }),
-        );
+        expect(evaluated.trace.aggregation?.pricedUnknownPillars).toContainEqual(expect.objectContaining({ pillar, cause: "U", score: unknownQuality(pillar, "U") }));
         expect(evaluated.trace.diagnosticPillarScores[pillar]).toBeNull();
       }
     } else {
-      expect(evaluated.trace).toMatchObject({
-        finalScore: null, finalGrade: null, aggregation: null, effectiveScoringWeights: null,
-      });
+      expect(evaluated.trace).toMatchObject({ finalScore: null, finalGrade: null, aggregation: null, effectiveScoringWeights: null });
     }
   });
 
   it.each(["A", "B"] as const)("publishes no partial flag for a diagnostic-only optional Exit factor (%s)", (cause) => {
     const { core, asset } = exitPromotionFixture();
-    const primary = asset.exitRoutes.find((route) => route.lane === "dex")!;
-    const alternative = asset.exitRoutes.find((route) => route.lane === "redemption")!;
+    const primary = asset.exitRoutes.find((r) => r.lane === "dex")!;
+    const alternative = asset.exitRoutes.find((r) => r.lane === "redemption")!;
     alternative.scoreEligible = false;
     alternative.coverageClass = "diagnostic";
-    const baseline = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1).assets.find((row) => row.assetId === asset.assetId)!;
+    const baseline = evalCore(core);
     const gap = exitFactorGap(asset, alternative, cause);
-    const evaluated = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1).assets.find((row) => row.assetId === asset.assetId)!;
+    const evaluated = evalCore(core);
     expect(evaluated.exit.primaryRouteKey).toBe(primary.routeKey);
-    expect(evaluated.exit.routes.find((route) => route.routeKey === alternative.routeKey)).toMatchObject({
-      included: false, score: null, components: null,
-    });
+    expect(evaluated.exit.routes.find((r) => r.routeKey === alternative.routeKey)).toMatchObject({ included: false, score: null, components: null });
     expect(evaluated.exit.causeGapIds).toContain(gap.gapId);
-    expect(evaluated.scoreInput.pillars.exit.causeGapIds).toContain(gap.gapId);
-    expect(evaluated.scoreInput.pillars.exit.excludedCauseGapIds).toEqual([]);
-    expect(evaluated.scoreInput.pillars.exit.excludedComponentKeys).toEqual([]);
-    expect(evaluated.trace.partialEvidence).toBeNull();
-    expect(evaluated.trace.limitingPillars).toEqual(baseline.trace.limitingPillars);
-    expect(evaluated.trace.nrReasons).toEqual(baseline.trace.nrReasons);
-    expect(evaluated.trace.finalScore).toBe(baseline.trace.finalScore);
-    expect(evaluated.trace.finalGrade).toBe(baseline.trace.finalGrade);
+    expect(evaluated.scoreInput.pillars.exit).toMatchObject({
+      causeGapIds: expect.arrayContaining([gap.gapId]), excludedCauseGapIds: [], excludedComponentKeys: [],
+    });
+    expect([evaluated.trace.partialEvidence, evaluated.trace.limitingPillars, evaluated.trace.nrReasons, evaluated.trace.finalScore, evaluated.trace.finalGrade])
+      .toEqual([null, baseline.trace.limitingPillars, baseline.trace.nrReasons, baseline.trace.finalScore, baseline.trace.finalGrade]);
   });
 
   it.each(["A", "B"] as const)("keeps a diagnostic-only Exit factor out of partial evidence when no route is admitted (%s)", (cause) => {
     const { core, asset } = exitPromotionFixture();
-    const alternative = asset.exitRoutes.find((route) => route.lane === "redemption")!;
+    const alternative = asset.exitRoutes.find((r) => r.lane === "redemption")!;
     asset.exitRoutes = [alternative];
     alternative.scoreEligible = false;
     alternative.coverageClass = "diagnostic";
@@ -263,34 +274,27 @@ describe("Safety Score v9 fact evaluation", () => {
       gapId: "alpha:gap:exit:capacity", reasonCode: "missing-same-notional-route", ownerDomain: "exit",
       policyRuleId: "v9.exit.route-factors", observationState: "missing",
       path: { kind: "optional-exit", routeKey: alternative.routeKey },
-      causeScope: { pillar: "exit", componentKey: "exit-route", factorKey: "capacity",
-        routeKey: alternative.routeKey, exposureId: null, requiredDatum: "capacity" },
+      causeScope: { pillar: "exit", componentKey: "exit-route", factorKey: "capacity", routeKey: alternative.routeKey, exposureId: null, requiredDatum: "capacity" },
       message: "Executable capacity has not been researched.", responsibility: "unresearched",
     });
     asset.gaps.push(capacityGap);
-    alternative.factorStatuses = { capacity: createV9FactStatus({
-      applicability: requiredV9Applicability(capacityGap.policyRuleId), observationState: "missing",
-      gapIds: [capacityGap.gapId], evidenceRefIds: [],
-    }) };
-    const baseline = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1).assets.find((row) => row.assetId === asset.assetId)!;
+    alternative.factorStatuses = { capacity: reqStatus(capacityGap.policyRuleId, "missing", [capacityGap.gapId], []) };
+    const baseline = evalCore(core);
     const gap = exitFactorGap(asset, alternative, cause);
-    const evaluated = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1).assets.find((row) => row.assetId === asset.assetId)!;
+    const evaluated = evalCore(core);
     expect(evaluated.exit).toMatchObject({ primaryRouteKey: null, diversificationRouteKey: null, score: unknownQuality("exit", "U") });
-    expect(evaluated.exit.routes.every((route) => !route.included && route.score === null && route.components === null)).toBe(true);
+    expect(evaluated.exit.routes.every((r) => !r.included && r.score === null && r.components === null)).toBe(true);
     expect(evaluated.scoreInput.pillars.exit.causeGapIds).toEqual(expect.arrayContaining([gap.gapId, capacityGap.gapId]));
     expect(evaluated.trace.partialEvidence).toBeNull();
     expect(evaluated.trace.limitingPillars).toEqual(baseline.trace.limitingPillars);
-    expect(evaluated.trace.limitingPillars).toContainEqual({
-      pillar: "exit", causes: ["U"], causeGapIds: [capacityGap.gapId],
-    });
-    expect(evaluated.trace.nrReasons).toEqual(baseline.trace.nrReasons);
-    expect(evaluated.trace.finalScore).toBe(baseline.trace.finalScore);
-    expect(evaluated.trace.finalGrade).toBe(baseline.trace.finalGrade);
+    expect(evaluated.trace.limitingPillars).toContainEqual({ pillar: "exit", causes: ["U"], causeGapIds: [capacityGap.gapId] });
+    expect([evaluated.trace.nrReasons, evaluated.trace.finalScore, evaluated.trace.finalGrade])
+      .toEqual([baseline.trace.nrReasons, baseline.trace.finalScore, baseline.trace.finalGrade]);
   });
 
   it("preserves the published C/U causes when whole-Exit uncertainty has one price", () => {
     const { core, asset } = exitPromotionFixture();
-    const candidate = asset.exitRoutes.find((route) => route.lane === "redemption")!;
+    const candidate = asset.exitRoutes.find((r) => r.lane === "redemption")!;
     asset.exitRoutes = [candidate];
     candidate.scoreEligible = false;
     candidate.coverageClass = "diagnostic";
@@ -298,148 +302,105 @@ describe("Safety Score v9 fact evaluation", () => {
       gapId: "alpha:gap:exit:capacity", reasonCode: "missing-same-notional-route", ownerDomain: "exit",
       policyRuleId: "v9.exit.route-factors", observationState: "missing",
       path: { kind: "optional-exit", routeKey: candidate.routeKey },
-      causeScope: { pillar: "exit", componentKey: "exit-route", factorKey: "capacity",
-        routeKey: candidate.routeKey, exposureId: null, requiredDatum: "capacity" },
+      causeScope: { pillar: "exit", componentKey: "exit-route", factorKey: "capacity", routeKey: candidate.routeKey, exposureId: null, requiredDatum: "capacity" },
       message: "Executable capacity has not been researched.", responsibility: "unresearched",
     });
     asset.gaps.push(capacityGap);
-    candidate.factorStatuses = { capacity: createV9FactStatus({
-      applicability: requiredV9Applicability(capacityGap.policyRuleId), observationState: "missing",
-      gapIds: [capacityGap.gapId], evidenceRefIds: [],
-    }) };
-    candidate.status = candidate.factorStatuses.capacity!;
+    candidate.status = reqStatus(capacityGap.policyRuleId, "missing", [capacityGap.gapId], []);
+    candidate.factorStatuses = { capacity: candidate.status };
     candidate.capacityCurve = [];
     candidate.request = null;
     exitFactorGap(asset, candidate, "C");
-    const evaluated = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1)
-      .assets.find((row) => row.assetId === asset.assetId)!;
+    const evaluated = evalCore(core);
     expect(evaluated.exit).toMatchObject({ score: 50, limitedEvidenceCauses: ["C", "U"] });
-    expect(evaluated.scoreInput.pillars.exit.score).toBe(evaluated.exit.score);
-    expect(evaluated.scoreInput.pillars.exit.limitedEvidenceCauses).toEqual(evaluated.exit.limitedEvidenceCauses);
+    expect(evaluated.scoreInput.pillars.exit).toMatchObject({ score: 50, limitedEvidenceCauses: ["C", "U"] });
   });
 
   it.each(["A", "B"] as const)("retains a no-primary admission gap without an independent blocker (%s)", (cause) => {
     const { core, asset } = exitPromotionFixture();
-    const dust = asset.exitRoutes.find((route) => route.lane === "dex")!;
-    dust.capacityCurve = dust.capacityCurve.map((point) => ({ ...point, executableUsd: 0, completionRatio: 0 }));
-    const candidate = asset.exitRoutes.find((route) => route.lane === "redemption")!;
+    const dust = asset.exitRoutes.find((r) => r.lane === "dex")!;
+    dust.capacityCurve = dust.capacityCurve.map((p) => ({ ...p, executableUsd: 0, completionRatio: 0 }));
+    const candidate = asset.exitRoutes.find((r) => r.lane === "redemption")!;
     asset.exitRoutes = [candidate];
-    candidate.scoreEligible = false;
-    candidate.coverageClass = "diagnostic";
-    candidate.settlementModel = "bounded-delay";
-    candidate.settlementSlaSec = null;
+    Object.assign(candidate, { scoreEligible: false, coverageClass: "diagnostic", settlementModel: "bounded-delay", settlementSlaSec: null });
     const gap = exitFactorGap(asset, candidate, cause, "settlement");
-    const evaluated = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1).assets.find((row) => row.assetId === asset.assetId)!;
+    const evaluated = evalCore(core);
     expect(evaluated.exit.primaryRouteKey).toBeNull();
-    expect(evaluated.trace.partialEvidence).toMatchObject({
-      excludedPillars: [], excludedComponentKeys: [], causes: [cause], causeGapIds: [gap.gapId],
-    });
+    expect(evaluated.trace.partialEvidence).toMatchObject({ excludedPillars: [], excludedComponentKeys: [], causes: [cause], causeGapIds: [gap.gapId] });
     expect(evaluated.scoreInput.pillars.exit.limitingCauseGapIds).not.toContain(gap.gapId);
     asset.exitRoutes.push(dust);
-    const withDust = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1).assets.find((row) => row.assetId === asset.assetId)!;
-    expect(withDust.scoreInput.pillars.exit).toMatchObject({ score: evaluated.exit.score,
-      evidenceLevel: evaluated.scoreInput.pillars.exit.evidenceLevel });
+    expect(evalCore(core).scoreInput.pillars.exit).toMatchObject({ score: evaluated.exit.score, evidenceLevel: evaluated.scoreInput.pillars.exit.evidenceLevel });
   });
 
   it.each(["A", "B"] as const)("preserves a selected primary Exit route's factor exclusion (%s)", (cause) => {
     const { core, asset } = exitPromotionFixture();
-    const primary = asset.exitRoutes.find((route) => route.lane === "dex")!;
+    const primary = asset.exitRoutes.find((r) => r.lane === "dex")!;
     asset.exitRoutes = [primary];
     const gap = exitFactorGap(asset, primary, cause, "observationConfidence");
-    const evaluated = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1).assets.find((row) => row.assetId === asset.assetId)!;
+    const evaluated = evalCore(core);
     expect(evaluated.exit.primaryRouteKey).toBe(primary.routeKey);
-    expect(evaluated.trace.partialEvidence).toMatchObject({
-      excludedPillars: [], excludedComponentKeys: [],
-      causes: [cause], causeGapIds: [gap.gapId],
-    });
+    expect(evaluated.trace.partialEvidence).toMatchObject({ excludedPillars: [], excludedComponentKeys: [], causes: [cause], causeGapIds: [gap.gapId] });
   });
 
   it.each(["A", "B"] as const)("preserves excluded factors on an admitted alternative inside an included Exit pillar (%s)", (cause) => {
     const { core, asset } = exitPromotionFixture();
-    const alternative = asset.exitRoutes.find((route) => route.lane === "redemption")!;
+    const alternative = asset.exitRoutes.find((r) => r.lane === "redemption")!;
     const gap = exitFactorGap(asset, alternative, cause);
-    const evaluated = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1).assets.find((row) => row.assetId === asset.assetId)!;
-    expect(evaluated.exit.routes.find((route) => route.routeKey === alternative.routeKey)?.included).toBe(true);
+    const evaluated = evalCore(core);
+    expect(evaluated.exit.routes.find((r) => r.routeKey === alternative.routeKey)?.included).toBe(true);
     expect(evaluated.scoreInput.pillars.exit.aggregationDisposition).toBe("included");
-    expect(evaluated.trace.partialEvidence).toMatchObject({
-      excludedPillars: [], excludedComponentKeys: [`${alternative.routeKey}:cost`],
-      causes: [cause], causeGapIds: [gap.gapId],
-    });
+    expect(evaluated.trace.partialEvidence).toMatchObject({ excludedPillars: [], excludedComponentKeys: [`${alternative.routeKey}:cost`], causes: [cause], causeGapIds: [gap.gapId] });
   });
 
-  it.each(["protocol-position", "shared-reserve", "ucits-trs-fund"] as const)(
-    "admits %s oracle tier gaps without relaxing path binding", (archetype) => {
-    const { v9FactSetDigest: _digest, ...core } = mutableNativeFactSet();
-    const asset = core.assets.find((row) => row.assetId === "alpha")!;
+  it.each(["protocol-position", "shared-reserve", "ucits-trs-fund"] as const)("admits %s oracle tier gaps without relaxing path binding", (archetype) => {
+    const { core, asset } = nativeCore();
     asset.archetype = archetype;
     const review = archetype === "ucits-trs-fund"
-      ? { archetype, fundClaimAndSegregation: mechanismFact(), navAndReconciliation: mechanismFact(),
-        portfolioHedge: mechanismFact(), counterpartyAndCollateral: mechanismFact(),
-        custodyContinuity: mechanismFact(), defaultRecovery: mechanismFact() }
+      ? { archetype, fundClaimAndSegregation: mechanismFact(), navAndReconciliation: mechanismFact(), portfolioHedge: mechanismFact(), counterpartyAndCollateral: mechanismFact(), custodyContinuity: mechanismFact(), defaultRecovery: mechanismFact() }
       : archetype === "shared-reserve"
-        ? { archetype, holderClaim: mechanismFact(), liabilityConservation: mechanismFact(),
-          reserveCustody: mechanismFact(), encumbranceAndAllocation: mechanismFact(), defaultRecovery: mechanismFact() }
-        : { archetype, holderClaim: mechanismFact(), liabilityConservation: mechanismFact(),
-          positionCustody: mechanismFact(), encumbranceAndAllocation: mechanismFact(), defaultRecovery: mechanismFact() };
-    asset.mechanismRiskReview = {
-      status: knownStatus("evidence:base", "backing.mechanism.review"), review,
-    };
+        ? { archetype, holderClaim: mechanismFact(), liabilityConservation: mechanismFact(), reserveCustody: mechanismFact(), encumbranceAndAllocation: mechanismFact(), defaultRecovery: mechanismFact() }
+        : { archetype, holderClaim: mechanismFact(), liabilityConservation: mechanismFact(), positionCustody: mechanismFact(), encumbranceAndAllocation: mechanismFact(), defaultRecovery: mechanismFact() };
+    asset.mechanismRiskReview = { status: knownStatus("evidence:base", "backing.mechanism.review"), review };
     const gap = createV9FactGapV3({
-      gapId: "alpha:gap:economic-control:oracle::tier",
-      reasonCode: "missing-oracle-profile", ownerDomain: "control",
+      gapId: "alpha:gap:economic-control:oracle::tier", reasonCode: "missing-oracle-profile", ownerDomain: "control",
       policyRuleId: "v9.control.tier", observationState: "bounded-unknown",
       path: { kind: "local-component", componentKey: "economic-control:oracle" },
-      causeScope: { pillar: "control", componentKey: "economic-control:oracle",
-        factorKey: "tier", routeKey: null, exposureId: null, requiredDatum: "tier" },
+      causeScope: { pillar: "control", componentKey: "economic-control:oracle", factorKey: "tier", routeKey: null, exposureId: null, requiredDatum: "tier" },
       message: `The ${archetype} oracle tier requires review.`, responsibility: "unresearched",
     });
     asset.gaps.push(gap);
-    asset.economicControlReview.oracle.factorStatuses = { tier: createV9FactStatus({
-      applicability: requiredV9Applicability("v9.control.tier"), observationState: "bounded-unknown",
-      gapIds: [gap.gapId], evidenceRefIds: ["evidence:base"],
-    }) };
-    const entry = buildV9EvidenceGapQueue({
-      factSet: compileV9FactSetV3(core), policy: V9_CANDIDATE_POLICY_V1,
-    }).entries.find((row) => row.gapId === gap.gapId)!;
-    expect(entry.policyBindingIssues).toEqual([]);
-    expect(entry).toMatchObject({ action: "collect-evidence", cause: "U", treatment: "pillar" });
+    asset.economicControlReview.oracle.factorStatuses = { tier: reqStatus("v9.control.tier", "bounded-unknown", [gap.gapId]) };
+    const queueEntry = () => buildV9EvidenceGapQueue({ factSet: compileV9FactSetV3(core), policy: P }).entries.find((r) => r.gapId === gap.gapId)!;
+    expect(queueEntry()).toMatchObject({ policyBindingIssues: [], action: "collect-evidence", cause: "U", treatment: "pillar" });
 
     gap.path = { kind: "methodology", componentKey: "economic-control:oracle" };
-    const invalidPathEntry = buildV9EvidenceGapQueue({
-      factSet: compileV9FactSetV3(core), policy: V9_CANDIDATE_POLICY_V1,
-    }).entries.find((row) => row.gapId === gap.gapId)!;
-    expect(invalidPathEntry.policyBindingIssues).toEqual(["path-kind-not-permitted"]);
-    expect(invalidPathEntry.action).toBe("reconcile-policy-binding");
+    expect(queueEntry()).toMatchObject({ policyBindingIssues: ["path-kind-not-permitted"], action: "reconcile-policy-binding" });
   });
+
   it.each(["A", "C", "U"] as const)("classifies nonbinding inventory evidence independently of its numeric score (%s)", (cause) => {
-    const { v9FactSetDigest: _digest, ...core } = mutableNativeFactSet();
-    const asset = core.assets.find((row) => row.assetId === "alpha")!;
-    const baseline = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1).assets.find((row) => row.assetId === asset.assetId)!;
+    const { core, asset } = nativeCore();
+    const baseline = evalCore(core);
     const gap = createV9FactGapV3({
       gapId: "alpha:inventory-review", reasonCode: "unresolved-control-identity", ownerDomain: "control",
       policyRuleId: "control.inventory.review", observationState: "bounded-unknown",
       path: { kind: "local-component", componentKey: "deployment-controls" },
-      message: "The complete control inventory is not admitted.", responsibility: "unresearched",
-      evidenceRefIds: ["evidence:base"],
+      message: "The complete control inventory is not admitted.", responsibility: "unresearched", evidenceRefIds: ["evidence:base"],
     });
     if (cause !== "U") certifyGap(asset, gap, cause);
     asset.gaps.push(gap);
-    asset.controlStatus = createV9FactStatus({
-      applicability: requiredV9Applicability("control.inventory.review"), observationState: "bounded-unknown",
-      gapIds: [gap.gapId], evidenceRefIds: gap.evidenceRefIds,
-    });
-    const evaluated = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1).assets.find((row) => row.assetId === asset.assetId)!;
-    expect(evaluated.scoreInput.pillars.control.score).toBe(baseline.scoreInput.pillars.control.score);
+    asset.controlStatus = reqStatus("control.inventory.review", "bounded-unknown", [gap.gapId], gap.evidenceRefIds);
+    const evaluated = evalCore(core);
     expect(evaluated.scoreInput.pillars.control).toMatchObject({
+      score: baseline.scoreInput.pillars.control.score,
       evidenceLevel: cause === "A" ? "strong" : "limited",
       limitedEvidenceCauses: cause === "A" ? [] : [cause],
       limitingCauseGapIds: cause === "A" ? [] : [gap.gapId],
     });
     expect(evaluated.trace.finalGrade).not.toBe("NR");
   });
+
   it("rates an USDSM-shaped limited mint review after independent control questions close", () => {
-    const { v9FactSetDigest: _digest, ...core } = mutableNativeFactSet();
-    const asset = core.assets.find((row) => row.assetId === "alpha")!;
+    const { core, asset } = nativeCore();
     asset.dependencies.edges = [];
     asset.reserveExposures = [];
     const reserveGap = createV9FactGapV3({
@@ -450,10 +411,7 @@ describe("Safety Score v9 fact evaluation", () => {
     });
     certifyGap(asset, reserveGap, "C");
     asset.gaps.push(reserveGap);
-    asset.reserveStatus = createV9FactStatus({
-      applicability: requiredV9Applicability(reserveGap.policyRuleId), observationState: "bounded-unknown",
-      gapIds: [reserveGap.gapId], evidenceRefIds: reserveGap.evidenceRefIds,
-    });
+    asset.reserveStatus = reqStatus(reserveGap.policyRuleId, "bounded-unknown", [reserveGap.gapId], reserveGap.evidenceRefIds);
     asset.reserveResiduals = [{ residualId: "unidentified", weight: 1, status: asset.reserveStatus }];
     const review = asset.mechanismRiskReview.review!;
     if (review.archetype !== "fiat-cash") throw new Error("Expected fiat fixture");
@@ -466,10 +424,7 @@ describe("Safety Score v9 fact evaluation", () => {
       });
       certifyGap(asset, gap, "C");
       asset.gaps.push(gap);
-      review[key] = { ...review[key], quality: null, status: createV9FactStatus({
-        applicability: requiredV9Applicability(gap.policyRuleId), observationState: "bounded-unknown",
-        gapIds: [gap.gapId], evidenceRefIds: gap.evidenceRefIds,
-      }) };
+      review[key] = { ...review[key], quality: null, status: reqStatus(gap.policyRuleId, "bounded-unknown", [gap.gapId], gap.evidenceRefIds) };
     }
     const mintGap = createV9FactGapV3({
       gapId: "alpha:economic-control:mint", reasonCode: "missing-mint-authority", ownerDomain: "control",
@@ -478,28 +433,19 @@ describe("Safety Score v9 fact evaluation", () => {
       message: "The aggregate mint review remains unresearched.", responsibility: "unresearched",
     });
     asset.gaps.push(mintGap);
-    asset.economicControlReview.mint.status = createV9FactStatus({
-      applicability: requiredV9Applicability(mintGap.policyRuleId), observationState: "bounded-unknown",
-      gapIds: [mintGap.gapId], evidenceRefIds: ["evidence:base"],
-    });
-    const evaluated = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1).assets.find((row) => row.assetId === asset.assetId)!;
-    expect(asset.controls.find((control) => control.controlKey === asset.economicControlReview.mint.controlKey)?.status.gapIds).toEqual([]);
-    expect(evaluated.scoreInput.pillars.control).toMatchObject({
-      evidenceLevel: "limited", limitedEvidenceCauses: ["U"], limitingCauseGapIds: [mintGap.gapId],
-    });
-    expect(evaluated.scoreInput.pillars.control.reasons).toContainEqual(expect.objectContaining({
-      code: "unresolved-mint-authority", cause: "U", causeGapIds: [mintGap.gapId],
-    }));
+    asset.economicControlReview.mint.status = reqStatus(mintGap.policyRuleId, "bounded-unknown", [mintGap.gapId]);
+    const evaluated = evalCore(core);
+    expect(asset.controls.find((c) => c.controlKey === asset.economicControlReview.mint.controlKey)?.status.gapIds).toEqual([]);
+    expect(evaluated.scoreInput.pillars.control).toMatchObject({ evidenceLevel: "limited", limitedEvidenceCauses: ["U"], limitingCauseGapIds: [mintGap.gapId] });
+    expect(evaluated.scoreInput.pillars.control.reasons).toContainEqual(expect.objectContaining({ code: "unresolved-mint-authority", cause: "U", causeGapIds: [mintGap.gapId] }));
     expect(evaluated.scoreInput.pillars.backing.evidenceLevel).toBe("limited");
     expect(evaluated.scoreInput.pillars.exit.evidenceLevel).toBe("adequate");
-    expect(evaluated.trace.ratingStatus).toBe("rated");
-    expect(evaluated.trace.finalScore).toEqual(expect.any(Number));
-    expect(evaluated.trace.nrReasons).toEqual([]);
+    expect(evaluated.trace).toMatchObject({ ratingStatus: "rated", finalScore: expect.any(Number), nrReasons: [] });
   });
+
   it.each(["C", "U"] as const)("joins issuer reconciliation questions only to their exact aggregate factor (%s)", (cause) => {
-    const { v9FactSetDigest: _digest, ...core } = mutableNativeFactSet();
-    const asset = core.assets.find((row) => row.assetId === "alpha")!;
-    const minter = asset.controls.find((control) => control.controlKey === asset.economicControlReview.mint.controlKey)!;
+    const { core, asset } = nativeCore();
+    const minter = asset.controls.find((c) => c.controlKey === asset.economicControlReview.mint.controlKey)!;
     minter.authority = { authorityKey: "issuer:backend", model: "issuer-backend", threshold: null };
     asset.economicControlReview.mint.reconciliation = "unknown";
     const gap = createV9FactGapV3({
@@ -510,47 +456,37 @@ describe("Safety Score v9 fact evaluation", () => {
     });
     if (cause === "C") certifyGap(asset, gap, cause);
     asset.gaps.push(gap);
-    asset.economicControlReview.mint.factorStatuses = { ...asset.economicControlReview.mint.factorStatuses,
-      reconciliation: createV9FactStatus({
-        applicability: requiredV9Applicability(gap.policyRuleId), observationState: "bounded-unknown",
-        gapIds: [gap.gapId], evidenceRefIds: cause === "C" ? gap.evidenceRefIds : ["evidence:base"],
-      }),
+    asset.economicControlReview.mint.factorStatuses = {
+      ...asset.economicControlReview.mint.factorStatuses,
+      reconciliation: reqStatus(gap.policyRuleId, "bounded-unknown", [gap.gapId], cause === "C" ? gap.evidenceRefIds : ["evidence:base"]),
     };
-    const evaluated = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1).assets.find((row) => row.assetId === asset.assetId)!;
-    expect(evaluated.scoreInput.pillars.control.reasons).toContainEqual(expect.objectContaining({
-      code: "mint-control-question", cause, causeGapIds: [gap.gapId],
-    }));
+    const evaluated = evalCore(core);
+    expect(evaluated.scoreInput.pillars.control.reasons).toContainEqual(expect.objectContaining({ code: "mint-control-question", cause, causeGapIds: [gap.gapId] }));
     expect(evaluated.scoreInput.pillars.control.limitingCauseGapIds).toContain(gap.gapId);
   });
+
   it("keeps real bounded exit witnesses when a reviewed physical profile explains the missing runtime route", () => {
-    const { v9FactSetDigest: _digest, ...core } = mutableNativeFactSet();
-    const asset = core.assets.find((row) => row.assetId === "alpha")!;
+    const { core, asset } = nativeCore();
     const gap = createV9FactGapV3({
       gapId: "alpha:physical-runtime", reasonCode: "missing-same-notional-route", ownerDomain: "exit",
       policyRuleId: "exit.runtime.required", observationState: "missing",
       path: { kind: "local-component", componentKey: "exit-routes" },
       message: "The reviewed physical redemption has no admitted execution model.", responsibility: "unresearched",
     });
-    asset.gaps.push(gap);
+    asset.gaps = [...asset.gaps.filter((r) => r.ownerDomain !== "exit"), gap];
     asset.exitRoutes = [];
-    asset.gaps = asset.gaps.filter((row) => row.ownerDomain !== "exit" || row.gapId === gap.gapId);
-    asset.evidence = asset.evidence.filter((row) => row.evidenceId !== "evidence:route" && row.evidenceId !== "evidence:rejected-route");
-    asset.exitStatus = createV9FactStatus({
-      applicability: requiredV9Applicability("exit.runtime.required"), observationState: "missing", gapIds: [gap.gapId],
-    });
+    asset.evidence = asset.evidence.filter((r) => r.evidenceId !== "evidence:route" && r.evidenceId !== "evidence:rejected-route");
+    asset.exitStatus = reqStatus("exit.runtime.required", "missing", [gap.gapId], []);
     asset.mechanismExitFacts = [{ factKey: "physical-redemption", disposition: "supported", quality: "limited", evidenceRefIds: ["evidence:base"] }];
-    const evaluated = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1).assets.find((row) => row.assetId === asset.assetId)!;
-    expect(evaluated.exit.score).toBe(unknownQuality("exit", "U", V9_CANDIDATE_POLICY_V1.policy.semantic));
-    expect(evaluated.scoreInput.pillars.exit.aggregationDisposition).toBe("included");
-    expect(evaluated.scoreInput.pillars.exit.score).toBe(evaluated.exit.score);
-    expect(evaluated.trace.boundedUncertaintyAttribution).toContainEqual(expect.objectContaining({
-      cause: "U", code: "missing-same-notional-route", causeGapIds: [gap.gapId],
-    }));
-    expect(evaluated.trace.nrReasons.some((reason) => reason.field === "boundedUncertaintyAttribution")).toBe(false);
+    const evaluated = evalCore(core);
+    expect(evaluated.exit.score).toBe(unknownQuality("exit", "U", P.policy.semantic));
+    expect(evaluated.scoreInput.pillars.exit).toMatchObject({ aggregationDisposition: "included", score: evaluated.exit.score });
+    expect(evaluated.trace.boundedUncertaintyAttribution).toContainEqual(expect.objectContaining({ cause: "U", code: "missing-same-notional-route", causeGapIds: [gap.gapId] }));
+    expect(evaluated.trace.nrReasons.some((r) => r.field === "boundedUncertaintyAttribution")).toBe(false);
   });
+
   it("keeps a missing runtime-route subject unavailable without borrowing another surface", () => {
-    const { v9FactSetDigest: _digest, ...core } = mutableNativeFactSet();
-    const asset = core.assets.find((row) => row.assetId === "alpha")!;
+    const { core, asset } = nativeCore();
     const gap = createV9FactGapV3({
       gapId: "alpha:runtime-inventory", reasonCode: "missing-runtime-route-evidence", ownerDomain: "exit",
       policyRuleId: "exit.runtime.required", observationState: "missing",
@@ -564,29 +500,23 @@ describe("Safety Score v9 fact evaluation", () => {
       message: "An unrelated Exit datum is missing.", responsibility: "unresearched",
     });
     asset.exitRoutes = [];
-    asset.gaps = [...asset.gaps.filter((row) => row.ownerDomain !== "exit"), gap, decoy];
-    asset.evidence = asset.evidence.filter((row) => row.evidenceId !== "evidence:route" && row.evidenceId !== "evidence:rejected-route");
-    asset.exitStatus = createV9FactStatus({
-      applicability: requiredV9Applicability("exit.runtime.required"), observationState: "missing", gapIds: [gap.gapId, decoy.gapId],
-    });
+    asset.gaps = [...asset.gaps.filter((r) => r.ownerDomain !== "exit"), gap, decoy];
+    asset.evidence = asset.evidence.filter((r) => r.evidenceId !== "evidence:route" && r.evidenceId !== "evidence:rejected-route");
+    asset.exitStatus = reqStatus("exit.runtime.required", "missing", [gap.gapId, decoy.gapId], []);
     asset.mechanismExitFacts = [];
-    const evaluated = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1).assets.find((row) => row.assetId === asset.assetId)!;
-    expect(evaluated.scoreInput.pillars.exit).toMatchObject({
-      score: null, evidenceLevel: "insufficient", aggregationDisposition: "unavailable",
-      limitedEvidenceCauses: [], limitingCauseGapIds: [],
-    });
+    const evaluated = evalCore(core);
+    expect(evaluated.scoreInput.pillars.exit).toMatchObject({ score: null, evidenceLevel: "insufficient", aggregationDisposition: "unavailable", limitedEvidenceCauses: [], limitingCauseGapIds: [] });
     expect(evaluated.trace.includedPillars).not.toContain("exit");
-    expect(evaluated.trace.boundedUncertaintyAttribution.flatMap((row) => row.causeGapIds ?? []))
-      .not.toContain(decoy.gapId);
+    expect(evaluated.trace.boundedUncertaintyAttribution.flatMap((r) => r.causeGapIds ?? [])).not.toContain(decoy.gapId);
   });
+
   it.each([
     { label: "in-range", cashWeights: [0.5, 0.1, 0.013], betaWeight: 0.118, remainderWeight: 0.269, clamped: false },
     { label: "floating-point tail", cashWeights: [0.7020000000000001, 0.17600000000000002, 0.004], betaWeight: 0.11800000000000001, remainderWeight: 0, clamped: true },
   ])("preserves the backing structural percentage contract for $label shares", ({ cashWeights, betaWeight, remainderWeight, clamped }) => {
     const input = coreFixture();
-    const alpha = input.assets.find((asset) => asset.assetId === "alpha")! as unknown as V9AssetFactsV2;
-    const cash = alpha.reserveExposures[0]!;
-    const beta = alpha.reserveExposures[1]!;
+    const alpha = input.assets.find((a) => a.assetId === "alpha")! as unknown as V9AssetFactsV2;
+    const [cash, beta] = alpha.reserveExposures as [V9AssetFactsV2["reserveExposures"][number], V9AssetFactsV2["reserveExposures"][number]];
     const sharedCustodian = [{ kind: "reserve-custodian" as const, key: "custodian:shared" }];
     alpha.reserveExposures = [
       { ...cash, exposureKey: "exposure:base", weight: cashWeights[0]!, failureDomains: sharedCustodian },
@@ -596,44 +526,26 @@ describe("Safety Score v9 fact evaluation", () => {
       ...(remainderWeight > 0 ? [{ ...cash, exposureKey: "exposure:remainder", weight: remainderWeight }] : []),
     ];
     alpha.dependencies.mappedLiveReserveWeight = betaWeight;
-    alpha.dependencies.edges = alpha.dependencies.edges.map((edge) =>
-      edge.dependencyType === "collateral" ? { ...edge, weight: betaWeight } : edge,
-    );
+    alpha.dependencies.edges = alpha.dependencies.edges.map((e) => (e.dependencyType === "collateral" ? { ...e, weight: betaWeight } : e));
     const factSet = compileNativeV3FactSet(input);
     const evaluateBacking = backingArchetypes.evaluateV9Backing;
-    // Compilation can remove the source weights' float tail. Inject arithmetic
-    // noise into the backing result that the structural projection actually reads.
-    const backing = clamped ? vi.spyOn(backingArchetypes, "evaluateV9Backing").mockImplementation((asset, review, policy) => {
-      const result = evaluateBacking(asset, review, policy);
-      return asset.assetId !== "alpha" ? result : {
-        ...result,
-        structuralReasons: result.structuralReasons.map((reason) =>
-          reason.pathKey === "common-mode:reserve-custodian:custodian:shared"
-            ? { ...reason, materialShare: 1.0000000000308 }
-            : reason,
-        ),
+    const backing = clamped ? vi.spyOn(backingArchetypes, "evaluateV9Backing").mockImplementation((a, rev, pol) => {
+      const res = evaluateBacking(a, rev, pol);
+      return a.assetId !== "alpha" ? res : {
+        ...res,
+        structuralReasons: res.structuralReasons.map((r) => (r.pathKey === "common-mode:reserve-custodian:custodian:shared" ? { ...r, materialShare: 1.0000000000308 } : r)),
       };
     }) : null;
-
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     try {
-      const evaluated = evaluateV9FactSet(factSet, V9_CANDIDATE_POLICY_V1)
-        .assets.find((asset) => asset.assetId === "alpha")!;
-      const reason = evaluated.backing.structuralReasons.find((item) =>
-        item.pathKey === "common-mode:reserve-custodian:custodian:shared",
-      )!;
-      const signal = evaluated.scoreInput.pillars.backing.structuralSignals.find((item) =>
-        item.failureDomainKeys?.includes("reserve-custodian:custodian:shared"),
-      );
-
+      const evaluated = evaluateV9FactSet(factSet, P).assets.find((a) => a.assetId === "alpha")!;
+      const reason = evaluated.backing.structuralReasons.find((i) => i.pathKey === "common-mode:reserve-custodian:custodian:shared")!;
+      const signal = evaluated.scoreInput.pillars.backing.structuralSignals.find((i) => i.failureDomainKeys?.includes("reserve-custodian:custodian:shared"));
       if (clamped) {
         expect(reason.materialShare).toBeGreaterThan(1);
         expect(signal?.materialSharePct).toBe(100);
         expect(warn).toHaveBeenCalledWith("safety_score_v9_structural_signal_percentage_clamped", {
-          assetId: "alpha",
-          fieldPath: "structuralSignals[*].materialSharePct",
-          rawValue: reason.materialShare! * 100,
-          arithmetic: `${reason.materialShare} * 100`,
+          assetId: "alpha", fieldPath: "structuralSignals[*].materialSharePct", rawValue: reason.materialShare! * 100, arithmetic: `${reason.materialShare} * 100`,
         });
       } else {
         expect(reason.materialShare).toBeCloseTo(0.731);
@@ -645,418 +557,214 @@ describe("Safety Score v9 fact evaluation", () => {
       warn.mockRestore();
     }
   });
+
   it.each([-0.01, 1.01])("rejects an out-of-range backing structural share (%s) at the asset quarantine boundary", (materialShare) => {
     const factSet = compileNativeV3FactSet(coreFixture());
     const evaluateBacking = backingArchetypes.evaluateV9Backing;
-    // Validated facts cannot admit these shares. Inject a defective evaluator
-    // result to prove the projection does not hide it behind a generic clamp.
-    const backing = vi.spyOn(backingArchetypes, "evaluateV9Backing").mockImplementation((asset, review, policy) => {
-      const result = evaluateBacking(asset, review, policy);
-      return asset.assetId !== "alpha" ? result : {
-        ...result,
-        structuralReasons: [...result.structuralReasons, {
-          kind: "unsafe-backing",
-          severity: "high",
-          responsibility: "measured-adverse",
-          pathKey: "fixture:out-of-range",
-          materialShare,
-          ceiling: policy.policy.semantic.backing.structural.unsafeExposureQuality,
-          evidenceRefIds: [],
-          failureDomains: [],
+    const backing = vi.spyOn(backingArchetypes, "evaluateV9Backing").mockImplementation((a, rev, pol) => {
+      const res = evaluateBacking(a, rev, pol);
+      return a.assetId !== "alpha" ? res : {
+        ...res,
+        structuralReasons: [...res.structuralReasons, {
+          kind: "unsafe-backing", severity: "high", responsibility: "measured-adverse", pathKey: "fixture:out-of-range",
+          materialShare, ceiling: pol.policy.semantic.backing.structural.unsafeExposureQuality, evidenceRefIds: [], failureDomains: [],
         }],
       };
     });
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     try {
-      expect(() => evaluateV9FactSet(factSet, V9_CANDIDATE_POLICY_V1)).toThrowError(
-        /asset alpha evaluation failed at structuralSignals\[\d+\]\.materialSharePct/,
-      );
+      expect(() => evaluateV9FactSet(factSet, P)).toThrowError(/asset alpha evaluation failed at structuralSignals\[\d+\]\.materialSharePct/);
       expect(warn).not.toHaveBeenCalledWith("safety_score_v9_structural_signal_percentage_clamped", expect.anything());
     } finally {
       backing.mockRestore();
       warn.mockRestore();
     }
   });
+
   it("transports a technical serial parent gap without manufacturing NR or parent quality", () => {
-    const { v9FactSetDigest: _digest, ...core } = mutableNativeFactSet();
-    const parent = core.assets.find((asset) => asset.assetId === "beta")!;
-    const child = core.assets.find((asset) => asset.assetId === "gamma")!;
-    const baselineControl = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1).assets.find((asset) => asset.assetId === child.assetId)!.trace.diagnosticPillarScores.control;
+    const { core, asset: parent } = nativeCore("beta");
+    const child = core.assets.find((a) => a.assetId === "gamma")!;
+    const baselineControl = evalCore(core, child.assetId).trace.diagnosticPillarScores.control;
     const backingGap = createV9FactGapV3({
       gapId: "beta:backing-reader", reasonCode: "missing-pillar-evidence", ownerDomain: "backing",
       policyRuleId: "backing.mechanism.required", observationState: "missing",
-      path: { kind: "local-component", componentKey: "mechanism-review" }, message: "Captured backing reader failure.",
-      responsibility: "unresearched",
+      path: { kind: "local-component", componentKey: "mechanism-review" }, message: "Captured backing reader failure.", responsibility: "unresearched",
     });
     const exitGap = createV9FactGapV3({
       gapId: "beta:exit-reader", reasonCode: "missing-runtime-route-evidence", ownerDomain: "exit",
       policyRuleId: "exit.routes.review", observationState: "missing",
-      path: { kind: "local-component", componentKey: "exit-routes" }, message: "Captured route reader failure.",
-      responsibility: "unresearched",
+      path: { kind: "local-component", componentKey: "exit-routes" }, message: "Captured route reader failure.", responsibility: "unresearched",
     });
     certifyGap(parent, backingGap, "A");
     certifyGap(parent, exitGap, "A");
     parent.gaps.push(backingGap, exitGap);
-    parent.mechanismRiskReview = {
-      status: createV9FactStatus({ applicability: requiredV9Applicability("backing.mechanism.required"), observationState: "missing", gapIds: [backingGap.gapId] }), review: null,
-    };
-    parent.exitStatus = createV9FactStatus({ applicability: requiredV9Applicability("exit.routes.review"), observationState: "missing", gapIds: [exitGap.gapId] });
-    child.dependencies.source = "manual";
-    child.dependencies.baseSource = "manual";
-    child.dependencies.status = knownStatus("evidence:base", "dependencies.parent");
-    child.dependencies.edges = [{
-      edgeKey: canonicalV9DependencyEdgeKey("mechanism", parent.assetId, "serial-claim"),
-      upstreamAssetId: parent.assetId, dependencyType: "mechanism", economicRole: "serial-claim",
-      pathKind: "serial-dependency", weight: 1, evidenceRefIds: ["evidence:base"], failureDomains: [],
-    }];
-    const result = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1);
+    parent.mechanismRiskReview = { status: reqStatus("backing.mechanism.required", "missing", [backingGap.gapId], []), review: null };
+    parent.exitStatus = reqStatus("exit.routes.review", "missing", [exitGap.gapId], []);
+    Object.assign(child.dependencies, {
+      source: "manual", baseSource: "manual", status: knownStatus("evidence:base", "dependencies.parent"),
+      edges: [{
+        edgeKey: canonicalV9DependencyEdgeKey("mechanism", parent.assetId, "serial-claim"),
+        upstreamAssetId: parent.assetId, dependencyType: "mechanism", economicRole: "serial-claim",
+        pathKind: "serial-dependency", weight: 1, evidenceRefIds: ["evidence:base"], failureDomains: [],
+      }],
+    });
+    const result = evalCoreAll(core);
     for (const id of ["beta", "gamma"]) {
-      const evaluated = result.assets.find((asset) => asset.assetId === id)!;
-      expect(evaluated.trace).toMatchObject({ ratingStatus: "pipeline-gap", finalScore: null, finalGrade: null, aggregation: null });
+      const evaluated = assetById(result, id);
+      expect(evaluated.trace).toMatchObject({ ratingStatus: "pipeline-gap", finalScore: null, finalGrade: null, aggregation: null, limitedEvidenceCauses: [] });
       expect(evaluated.trace.partialEvidence).toMatchObject({ causes: ["A"], excludedPillars: ["backing", "exit"] });
-      expect(evaluated.trace.limitedEvidenceCauses).toEqual([]);
-      expect(evaluated.trace.nrReasons.every((reason) => reason.code !== "missing-parent-score")).toBe(true);
+      expect(evaluated.trace.nrReasons.every((r) => r.code !== "missing-parent-score")).toBe(true);
     }
-    const childResult = result.assets.find((asset) => asset.assetId === child.assetId)!;
+    const childResult = assetById(result, child.assetId);
     expect(childResult.scoreInput.parent).toMatchObject({ score: null, ratingStatus: "pipeline-gap" });
-    expect(childResult.dependencyInputs.serial[0]).toMatchObject({ score: null, blocked: false, ratingStatus: "pipeline-gap" });
-    expect(childResult.dependencyInputs.serial[0]?.causeGapIds).toEqual(expect.arrayContaining([backingGap.gapId, exitGap.gapId]));
+    expect(childResult.dependencyInputs.serial[0]).toMatchObject({
+      score: null, blocked: false, ratingStatus: "pipeline-gap", causeGapIds: expect.arrayContaining([backingGap.gapId, exitGap.gapId]),
+    });
     expect(childResult.trace.diagnosticPillarScores.control).toBe(baselineControl);
   });
 
   it("bounds unproven serial-parent uncertainty without pipeline relief or direct missing-parent NR", () => {
     const input = coreFixture();
-    const parent = input.assets.find((asset) => asset.assetId === "gamma")! as unknown as V9AssetFactsV2;
+    const parent = input.assets.find((a) => a.assetId === "gamma")! as unknown as V9AssetFactsV2;
     const grandparent = minimalAsset("delta");
-    const grandparentFacts = grandparent as unknown as V9AssetFactsV2;
     unresolvedArchetype(parent, "gamma:gap:missing-archetype");
-    parent.dependencies = {
-      status: knownStatus(),
-      sourceGenerationId: SOURCE_FINGERPRINTS.researchOverlays.generationId,
-      source: "manual",
-      baseSource: "manual",
-      dependencyFromLive: false,
-      mappedLiveReserveWeight: null,
-      fallbackReason: null,
-      edges: [
-        {
-          edgeKey: canonicalV9DependencyEdgeKey("mechanism", "delta"),
-          upstreamAssetId: "delta",
-          dependencyType: "mechanism",
-          pathKind: "serial-dependency",
-          weight: 1,
-          economicRole: "serial-claim",
-          evidenceRefIds: ["evidence:base"],
-          failureDomains: [
-            { kind: "mint-control", key: "mechanism:delta" },
-          ],
-        },
-      ],
-      diagnostics: {
-        graphState: "valid",
-        issueCodes: [],
-        sccMemberAssetIds: [],
-      },
-    };
-    unresolvedArchetype(grandparentFacts, "delta:gap:missing-archetype");
+    parent.dependencies = manualSerialDeps("delta", [{ kind: "mint-control", key: "mechanism:delta" }]);
+    unresolvedArchetype(grandparent as unknown as V9AssetFactsV2, "delta:gap:missing-archetype");
     input.assets.push(grandparent);
     input.activeAssetIds.push("delta");
 
-    const evaluated = evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1);
-    const child = evaluated.assets.find((asset) => asset.assetId === "alpha")!;
+    const child = evalInputAsset(input, "alpha");
     expect(child.scoreInput.parent.score).not.toBe(100);
     expect(child.trace.ratingStatus).not.toBe("pipeline-gap");
     expect(child.trace.partialEvidence).toBeNull();
-    expect(child.trace.nrReasons.every((reason) => reason.code !== "missing-parent-score")).toBe(true);
+    expect(child.trace.nrReasons.every((r) => r.code !== "missing-parent-score")).toBe(true);
   });
+
   it.each(["C", "U"] as const)("links opaque oracle topology to its scoped tier gap (%s)", (cause) => {
-    const { v9FactSetDigest: _digest, ...core } = mutableNativeFactSet();
-    const asset = core.assets.find((row) => row.assetId === "alpha")!;
+    const { core, asset } = nativeCore();
     const gap = createV9FactGapV3({
-      gapId: "alpha:gap:economic-control:oracle::tier",
-      reasonCode: "missing-oracle-profile", ownerDomain: "control",
+      gapId: "alpha:gap:economic-control:oracle::tier", reasonCode: "missing-oracle-profile", ownerDomain: "control",
       policyRuleId: "control.oracle.tier", observationState: "bounded-unknown",
       path: { kind: "local-component", componentKey: "economic-control:oracle" },
-      message: "The reviewed inventory does not establish oracle tier.",
-      responsibility: "unresearched", evidenceRefIds: ["evidence:base"],
+      message: "The reviewed inventory does not establish oracle tier.", responsibility: "unresearched", evidenceRefIds: ["evidence:base"],
     });
     if (cause === "C") certifyGap(asset, gap, cause);
     asset.gaps.push(gap);
     asset.economicControlReview.oracle = {
       status: knownStatus("evidence:base", "control.oracle.review"),
       tier: "opaque-or-unknown", liquidationBranchesApplicable: false, branches: [],
-      factorStatuses: { tier: createV9FactStatus({
-        applicability: requiredV9Applicability("control.oracle.tier"), observationState: "bounded-unknown",
-        gapIds: [gap.gapId], evidenceRefIds: gap.evidenceRefIds,
-      }) },
+      factorStatuses: { tier: reqStatus("control.oracle.tier", "bounded-unknown", [gap.gapId], gap.evidenceRefIds) },
     };
-    const evaluated = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1)
-      .assets.find((row) => row.assetId === asset.assetId)!;
-    const oracleScore = unknownQuality("control", cause, V9_CANDIDATE_POLICY_V1.policy.semantic);
-    expect(evaluated.control.components.find((component) => component.kind === "oracle")).toMatchObject({
-      score: oracleScore, cause, causeGapIds: [gap.gapId],
-    });
+    const evaluated = evalCore(core);
+    expect(evaluated.control.components.find((c) => c.kind === "oracle")).toMatchObject({ score: unknownQuality("control", cause, P.policy.semantic), cause, causeGapIds: [gap.gapId] });
     expect(evaluated.scoreInput.pillars.control.reasons).toContainEqual(expect.objectContaining({
-      code: "oracle-topology-undisclosed", cause, causeGapIds: [gap.gapId],
-      responsibility: cause === "C" ? "issuer-undisclosed" : "unresearched",
+      code: "oracle-topology-undisclosed", cause, causeGapIds: [gap.gapId], responsibility: cause === "C" ? "issuer-undisclosed" : "unresearched",
     }));
-    expect(evaluated.trace.boundedUncertaintyAttribution).toContainEqual(expect.objectContaining({
-      code: "oracle-topology-undisclosed", cause, causeGapIds: [gap.gapId],
-    }));
-    expect(evaluated.trace.nrReasons.some((reason) => reason.field === "boundedUncertaintyAttribution")).toBe(false);
+    expect(evaluated.trace.boundedUncertaintyAttribution).toContainEqual(expect.objectContaining({ code: "oracle-topology-undisclosed", cause, causeGapIds: [gap.gapId] }));
+    expect(evaluated.trace.nrReasons.some((r) => r.field === "boundedUncertaintyAttribution")).toBe(false);
 
-    // Existing matching-code witnesses keep the same score and attribution.
     gap.reasonCode = "oracle-topology-undisclosed";
-    const alreadyLinked = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1)
-      .assets.find((row) => row.assetId === asset.assetId)!;
-    expect(alreadyLinked.control.score).toBe(evaluated.control.score);
-    expect(alreadyLinked.trace.finalScore).toBe(evaluated.trace.finalScore);
-    expect(alreadyLinked.trace.finalGrade).toBe(evaluated.trace.finalGrade);
-    expect(alreadyLinked.trace.boundedUncertaintyAttribution).toEqual(evaluated.trace.boundedUncertaintyAttribution);
+    const alreadyLinked = evalCore(core);
+    expect([alreadyLinked.control.score, alreadyLinked.trace.finalScore, alreadyLinked.trace.finalGrade, alreadyLinked.trace.boundedUncertaintyAttribution])
+      .toEqual([evaluated.control.score, evaluated.trace.finalScore, evaluated.trace.finalGrade, evaluated.trace.boundedUncertaintyAttribution]);
   });
+
   it("attributes a derived oracle reason to the exact reviewed disclosure gap", () => {
-    const native = mutableNativeFactSet();
-    const { v9FactSetDigest: _digest, ...core } = native;
-    const alpha = core.assets.find(
-      (asset) => asset.assetId === "alpha",
-    ) as V9AssetFactsV3;
+    const { core, asset: alpha } = nativeCore();
     const gap = createV9FactGapV3({
-      gapId: "alpha:gap:economic-control:oracle",
-      reasonCode: "missing-oracle-profile",
-      ownerDomain: "control",
-      policyRuleId: "control.oracle.review",
-      observationState: "bounded-unknown",
-      path: {
-        kind: "local-component",
-        componentKey: "economic-control:oracle",
-      },
-      message: "The issuer review does not disclose a complete oracle profile.",
-      evidenceRefIds: ["evidence:base"],
-      responsibility: "issuer-undisclosed",
+      gapId: "alpha:gap:economic-control:oracle", reasonCode: "missing-oracle-profile", ownerDomain: "control",
+      policyRuleId: "control.oracle.review", observationState: "bounded-unknown",
+      path: { kind: "local-component", componentKey: "economic-control:oracle" },
+      message: "The issuer review does not disclose a complete oracle profile.", evidenceRefIds: ["evidence:base"], responsibility: "issuer-undisclosed",
     });
     certifyGap(alpha, gap, "C");
     alpha.gaps.push(gap);
     alpha.economicControlReview.oracle = {
-      status: createV9FactStatus({
-        applicability: requiredV9Applicability("control.oracle.review"),
-        observationState: "bounded-unknown",
-        evidenceRefIds: ["evidence:base"],
-        gapIds: [gap.gapId],
-      }),
-      tier: null,
-      factorStatuses: { tier: createV9FactStatus({ applicability: requiredV9Applicability("control.oracle.review"), observationState: "bounded-unknown", evidenceRefIds: gap.evidenceRefIds, gapIds: [gap.gapId] }) },
-      branches: [],
+      status: reqStatus("control.oracle.review", "bounded-unknown", [gap.gapId]), tier: null,
+      factorStatuses: { tier: reqStatus("control.oracle.review", "bounded-unknown", [gap.gapId], gap.evidenceRefIds) }, branches: [],
     };
-
-    const evaluated = evaluateV9FactSet(
-      compileV9FactSetV3(core),
-      V9_CANDIDATE_POLICY_V1,
-    );
-    const reasons = evaluated.assets.find(
-      (asset) => asset.assetId === "alpha",
-    )!.scoreInput.pillars.control.reasons;
-
-    expect(reasons).toContainEqual(
-      expect.objectContaining({
-        code: "incomplete-oracle-liquidation-branch",
-        path:
-          "control:oracle:cause:alpha%3Agap%3Aeconomic-control%3Aoracle",
-        responsibility: "issuer-undisclosed",
-      }),
-    );
-    expect(
-      reasons.some(
-        (reason) =>
-          reason.code === "incomplete-oracle-liquidation-branch" &&
-          reason.responsibility === "integration-missing",
-      ),
-    ).toBe(false);
+    const reasons = evalCore(core).scoreInput.pillars.control.reasons;
+    expect(reasons).toContainEqual(expect.objectContaining({
+      code: "incomplete-oracle-liquidation-branch", path: "control:oracle:cause:alpha%3Agap%3Aeconomic-control%3Aoracle", responsibility: "issuer-undisclosed",
+    }));
+    expect(reasons.some((r) => r.code === "incomplete-oracle-liquidation-branch" && r.responsibility === "integration-missing")).toBe(false);
   });
+
   it("scopes a control-specific reason before considering aggregate control gaps", () => {
-    const native = mutableNativeFactSet();
-    const { v9FactSetDigest: _digest, ...core } = native;
-    const alpha = core.assets.find(
-      (asset) => asset.assetId === "alpha",
-    ) as V9AssetFactsV3;
-    const admin = alpha.controls.find(
-      (control) => control.controlKey === "control:admin",
-    )!;
+    const { core, asset: alpha } = nativeCore();
+    const admin = alpha.controls.find((c) => c.controlKey === "control:admin")!;
     admin.controlKind = "governance";
     const controlGap = createV9FactGapV3({
-      gapId: "alpha:gap:deployment-control:admin",
-      reasonCode: "unresolved-control-identity",
-      ownerDomain: "control",
-      policyRuleId: "control.deployment.review",
-      observationState: "bounded-unknown",
-      path: {
-        kind: "local-component",
-        componentKey: "control:control:admin",
-      },
-      message: "The issuer has not disclosed the admin control semantics.",
-      evidenceRefIds: ["evidence:base"],
-      responsibility: "issuer-undisclosed",
+      gapId: "alpha:gap:deployment-control:admin", reasonCode: "unresolved-control-identity", ownerDomain: "control",
+      policyRuleId: "control.deployment.review", observationState: "bounded-unknown",
+      path: { kind: "local-component", componentKey: "control:control:admin" },
+      message: "The issuer has not disclosed the admin control semantics.", evidenceRefIds: ["evidence:base"], responsibility: "issuer-undisclosed",
     });
     const aggregateGap = createV9FactGapV3({
-      gapId: "alpha:gap:deployment-controls",
-      reasonCode: "unresolved-control-identity",
-      ownerDomain: "control",
-      policyRuleId: "control.inventory.review",
-      observationState: "bounded-unknown",
-      path: {
-        kind: "local-component",
-        componentKey: "deployment-controls",
-      },
-      message: "The producer cannot reconcile the aggregate control inventory.",
-      evidenceRefIds: ["evidence:base"],
-      responsibility: "producer-failed",
+      gapId: "alpha:gap:deployment-controls", reasonCode: "unresolved-control-identity", ownerDomain: "control",
+      policyRuleId: "control.inventory.review", observationState: "bounded-unknown",
+      path: { kind: "local-component", componentKey: "deployment-controls" },
+      message: "The producer cannot reconcile the aggregate control inventory.", evidenceRefIds: ["evidence:base"], responsibility: "producer-failed",
     });
     certifyGap(alpha, controlGap, "C");
     certifyGap(alpha, aggregateGap, "A");
     alpha.gaps.push(controlGap, aggregateGap);
-    admin.status = createV9FactStatus({
-      applicability: requiredV9Applicability("control.deployment.review"),
-      observationState: "bounded-unknown",
-      evidenceRefIds: ["evidence:base"],
-      gapIds: [controlGap.gapId],
-    });
-    alpha.controlStatus = createV9FactStatus({
-      applicability: requiredV9Applicability("control.inventory.review"),
-      observationState: "bounded-unknown",
-      evidenceRefIds: ["evidence:base"],
-      gapIds: [aggregateGap.gapId],
-    });
+    admin.status = reqStatus("control.deployment.review", "bounded-unknown", [controlGap.gapId]);
+    alpha.controlStatus = reqStatus("control.inventory.review", "bounded-unknown", [aggregateGap.gapId]);
 
-    const evaluated = evaluateV9FactSet(
-      compileV9FactSetV3(core),
-      V9_CANDIDATE_POLICY_V1,
+    const specific = evalCore(core).scoreInput.pillars.control.reasons.filter(
+      (r) => r.code === "unresolved-control-identity" && r.path === "control:control:control:admin:cause:alpha%3Agap%3Adeployment-control%3Aadmin",
     );
-    const controlSpecific = evaluated.assets
-      .find((asset) => asset.assetId === "alpha")!
-      .scoreInput.pillars.control.reasons.filter(
-        (reason) =>
-          reason.code === "unresolved-control-identity" &&
-          reason.path ===
-            "control:control:control:admin:cause:alpha%3Agap%3Adeployment-control%3Aadmin",
-      );
-
-    expect(controlSpecific).toHaveLength(1);
-    expect(controlSpecific[0]!.responsibility).toBe("issuer-undisclosed");
+    expect(specific).toHaveLength(1);
+    expect(specific[0]!.responsibility).toBe("issuer-undisclosed");
   });
+
   it("keeps mixed upstream backing owners on distinct causal score paths", () => {
-    const native = mutableNativeFactSet();
-    const { v9FactSetDigest: _digest, ...core } = native;
-    const beta = core.assets.find(
-      (asset) => asset.assetId === "beta",
-    ) as V9AssetFactsV3;
+    const { core, asset: beta } = nativeCore("beta");
     const issuerGap = createV9FactGapV3({
-      gapId: "beta:gap:mechanism-archetype:z-issuer",
-      reasonCode: "missing-archetype",
-      ownerDomain: "backing",
-      policyRuleId: "backing.archetype.review",
-      observationState: "missing",
-      path: {
-        kind: "local-component",
-        componentKey: "mechanism-archetype:issuer",
-      },
-      message: "The issuer has not disclosed the mechanism archetype.",
-      evidenceRefIds: ["evidence:base"],
-      responsibility: "issuer-undisclosed",
+      gapId: "beta:gap:mechanism-archetype:z-issuer", reasonCode: "missing-archetype", ownerDomain: "backing",
+      policyRuleId: "backing.archetype.review", observationState: "missing",
+      path: { kind: "local-component", componentKey: "mechanism-archetype:issuer" },
+      message: "The issuer has not disclosed the mechanism archetype.", evidenceRefIds: ["evidence:base"], responsibility: "issuer-undisclosed",
     });
     const producerGap = createV9FactGapV3({
-      gapId: "beta:gap:mechanism-archetype:a-producer",
-      reasonCode: "missing-archetype",
-      ownerDomain: "backing",
-      policyRuleId: "backing.archetype.review",
-      observationState: "missing",
-      path: {
-        kind: "local-component",
-        componentKey: "mechanism-archetype:producer",
-      },
-      message: "The current producer capture cannot resolve the mechanism archetype.",
-      evidenceRefIds: ["evidence:base"],
-      responsibility: "producer-failed",
+      gapId: "beta:gap:mechanism-archetype:a-producer", reasonCode: "missing-archetype", ownerDomain: "backing",
+      policyRuleId: "backing.archetype.review", observationState: "missing",
+      path: { kind: "local-component", componentKey: "mechanism-archetype:producer" },
+      message: "The current producer capture cannot resolve the mechanism archetype.", evidenceRefIds: ["evidence:base"], responsibility: "producer-failed",
     });
     certifyGap(beta, issuerGap, "C");
     certifyGap(beta, producerGap, "A");
     beta.archetype = "unresolved";
     beta.gaps = [issuerGap, producerGap];
-    beta.mechanismRiskReview = {
-      status: createV9FactStatus({
-        applicability: requiredV9Applicability("backing.archetype.review"),
-        observationState: "missing",
-        evidenceRefIds: ["evidence:base"],
-        gapIds: [issuerGap.gapId, producerGap.gapId],
-      }),
-      review: null,
-    };
+    beta.mechanismRiskReview = { status: reqStatus("backing.archetype.review", "missing", [issuerGap.gapId, producerGap.gapId]), review: null };
 
     const singleRootCore = structuredClone(core);
-    const singleRootBeta = singleRootCore.assets.find(
-      (asset) => asset.assetId === "beta",
-    ) as V9AssetFactsV3;
+    const singleRootBeta = singleRootCore.assets.find((a) => a.assetId === "beta")!;
     singleRootBeta.gaps = [issuerGap];
-    singleRootBeta.evidence = singleRootBeta.evidence.filter((ref) => !producerGap.evidenceRefIds.includes(ref.evidenceId));
-    singleRootBeta.mechanismRiskReview.status = createV9FactStatus({
-      applicability: requiredV9Applicability("backing.archetype.review"),
-      observationState: "missing",
-      evidenceRefIds: ["evidence:base"],
-      gapIds: [issuerGap.gapId],
-    });
-    const singleRootEvaluation = evaluateV9FactSet(
-      compileV9FactSetV3(singleRootCore),
-      V9_CANDIDATE_POLICY_V1,
-    );
-    const singleRootReasons = singleRootEvaluation.assets
-      .find((asset) => asset.assetId === "alpha")!
-      .scoreInput.pillars.backing.reasons.filter(
-        (reason) => reason.cause === "C" || reason.cause === "A",
-      );
-    const evaluated = evaluateV9FactSet(
-      compileV9FactSetV3(core),
-      V9_CANDIDATE_POLICY_V1,
-    );
-    const reasons = evaluated.assets
-      .find((asset) => asset.assetId === "alpha")!
-      .scoreInput.pillars.backing.reasons.filter(
-        (reason) => reason.cause === "C" || reason.cause === "A",
-      );
-    const singleDirectIssuerReason = singleRootEvaluation.assets
-      .find((asset) => asset.assetId === "beta")!
-      .scoreInput.pillars.backing.reasons.find(
-        (reason) =>
-          reason.code === "missing-archetype" &&
-          reason.responsibility === "issuer-undisclosed",
-      );
-    const mixedDirectIssuerReason = evaluated.assets
-      .find((asset) => asset.assetId === "beta")!
-      .scoreInput.pillars.backing.reasons.find(
-        (reason) =>
-          reason.code === "missing-archetype" &&
-          reason.responsibility === "issuer-undisclosed",
-      );
+    singleRootBeta.evidence = singleRootBeta.evidence.filter((r) => !producerGap.evidenceRefIds.includes(r.evidenceId));
+    singleRootBeta.mechanismRiskReview.status = reqStatus("backing.archetype.review", "missing", [issuerGap.gapId]);
 
-    const singleIssuerReason = singleRootReasons.find(
-      (reason) => reason.responsibility === "issuer-undisclosed",
-    );
-    const mixedIssuerReason = reasons.find(
-      (reason) => reason.responsibility === "issuer-undisclosed",
-    );
-    for (const reason of [singleIssuerReason, mixedIssuerReason, singleDirectIssuerReason, mixedDirectIssuerReason]) {
+    const singleEval = evalCoreAll(singleRootCore);
+    const mixedEval = evalCoreAll(core);
+    const findIssuerReason = (res: EvalResult, id: string, code?: string) =>
+      assetById(res, id).scoreInput.pillars.backing.reasons.find((r) => r.responsibility === "issuer-undisclosed" && (!code || r.code === code));
+    for (const reason of [
+      findIssuerReason(singleEval, "alpha"), findIssuerReason(mixedEval, "alpha"),
+      findIssuerReason(singleEval, "beta", "missing-archetype"), findIssuerReason(mixedEval, "beta", "missing-archetype"),
+    ]) {
       expect(reason).toMatchObject({ cause: "C", responsibility: "issuer-undisclosed" });
       expect(reason?.causeGapIds).toContain(issuerGap.gapId);
     }
-    const child = evaluated.assets.find((asset) => asset.assetId === "alpha")!;
-    const singleChild = singleRootEvaluation.assets.find((asset) => asset.assetId === "alpha")!;
+    const child = assetById(mixedEval, "alpha");
     expect(child.scoreInput.pillars.backing.limitedEvidenceCauses).toContain("C");
-    expect(child.scoreInput.pillars.backing.score).toBe(singleChild.scoreInput.pillars.backing.score);
+    expect(child.scoreInput.pillars.backing.score).toBe(assetById(singleEval, "alpha").scoreInput.pillars.backing.score);
     expect(child.trace.partialEvidence?.causes).toContain("A");
     expect(child.trace.partialEvidence?.causeGapIds).toContain(producerGap.gapId);
   });
+
   it("inherits admitted parent claims monotonically but prices parent-denominated strategies independently", () => {
-    const evaluateWithParentQuality = (
-      quality: "adequate" | "strong", parentWeight = 1,
-      exposureClass: "stablecoin" | "protocol-position" = "stablecoin",
-    ) => {
+    const run = (quality: "adequate" | "strong", parentWeight = 1, assetClass: "stablecoin" | "protocol-position" = "stablecoin") => {
       const input = coreFixture();
       const child = input.assets[1]! as unknown as V9AssetFactsV2;
       const parent = input.assets[2]! as unknown as V9AssetFactsV2;
@@ -1064,838 +772,452 @@ describe("Safety Score v9 fact evaluation", () => {
       parent.assetId = "parent";
       child.variantKind = "savings-passthrough";
       child.reserveStatus = knownStatus("evidence:base", "backing.wrapper-live-parent");
-      child.reserveExposures = [
-        {
-          exposureKey: "exposure:parent",
-          classificationKey: "stablecoin:parent",
-          sourceGenerationId: SOURCE_FINGERPRINTS.liveReserves.generationId,
-          provenance: "live",
-          status: knownStatus("evidence:base", "backing.wrapper-live-parent"),
-          name: "Parent stablecoin",
-          weight: parentWeight,
-          trackedAssetId: parent.assetId,
-          assetClass: exposureClass,
-          issuerOrObligorKey: "asset:parent",
-          riskFactors: ["counterparty"],
-          liquidityHorizon: "immediate",
-          maturityDaysMax: null,
-          failureDomains: [{ kind: "reserve-issuer", key: "asset:parent" }],
-        },
-      ];
+      child.reserveExposures = [{
+        exposureKey: "exposure:parent", classificationKey: "stablecoin:parent",
+        sourceGenerationId: SOURCE_FINGERPRINTS.liveReserves.generationId, provenance: "live",
+        status: knownStatus("evidence:base", "backing.wrapper-live-parent"), name: "Parent stablecoin",
+        weight: parentWeight, trackedAssetId: "parent", assetClass, issuerOrObligorKey: "asset:parent",
+        riskFactors: ["counterparty"], liquidityHorizon: "immediate", maturityDaysMax: null,
+        failureDomains: [{ kind: "reserve-issuer", key: "asset:parent" }],
+      }];
       child.dependencies = {
         status: knownStatus("evidence:base", "dependencies.wrapper-parent"),
-        sourceGenerationId: SOURCE_FINGERPRINTS.liveReserves.generationId,
-        source: "variant",
-        baseSource: "live-reserve",
-        dependencyFromLive: true,
-        mappedLiveReserveWeight: parentWeight,
-        fallbackReason: null,
-        edges: [
-          {
-            edgeKey: canonicalV9DependencyEdgeKey("wrapper", parent.assetId),
-            upstreamAssetId: parent.assetId,
-            dependencyType: "wrapper",
-            pathKind: "serial-dependency",
-            weight: 1,
-            economicRole: "serial-claim",
-            evidenceRefIds: ["evidence:base"],
-            failureDomains: [{ kind: "mint-control", key: "asset:parent" }],
-          },
-        ],
+        sourceGenerationId: SOURCE_FINGERPRINTS.liveReserves.generationId, source: "variant", baseSource: "live-reserve",
+        dependencyFromLive: true, mappedLiveReserveWeight: parentWeight, fallbackReason: null,
+        edges: [{
+          edgeKey: canonicalV9DependencyEdgeKey("wrapper", "parent"), upstreamAssetId: "parent",
+          dependencyType: "wrapper", pathKind: "serial-dependency", weight: 1, economicRole: "serial-claim",
+          evidenceRefIds: ["evidence:base"], failureDomains: [{ kind: "mint-control", key: "asset:parent" }],
+        }],
         diagnostics: { graphState: "valid", issueCodes: [], sccMemberAssetIds: [] },
       };
       const parentReview = parent.mechanismRiskReview.review;
-      if (parentReview === null || parentReview.archetype !== "algorithmic") {
-        throw new Error("Expected algorithmic parent fixture");
+      if (!parentReview || parentReview.archetype !== "algorithmic") throw new Error("Expected algorithmic parent fixture");
+      for (const comp of [parentReview.contractionCapacity, parentReview.confidenceAndIncentives, parentReview.oracleAndControlAssumptions, parentReview.emergencyRecovery, parentReview.lossRecovery]) {
+        comp.quality = quality;
       }
-      for (const component of [
-        parentReview.contractionCapacity,
-        parentReview.confidenceAndIncentives,
-        parentReview.oracleAndControlAssumptions,
-        parentReview.emergencyRecovery,
-        parentReview.lossRecovery,
-      ]) {
-        component.quality = quality;
-      }
-      input.activeAssetIds = [child.assetId, parent.assetId];
+      input.activeAssetIds = ["child", "parent"];
       input.assets = [child as never, parent as never];
-
-      const evaluated = evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1);
-      return {
-        child: evaluated.assets.find((asset) => asset.assetId === child.assetId)!,
-        parent: evaluated.assets.find((asset) => asset.assetId === parent.assetId)!,
-      };
+      const evaluated = evalInput(input);
+      return { child: assetById(evaluated, "child"), parent: assetById(evaluated, "parent") };
     };
 
-    const adequate = evaluateWithParentQuality("adequate");
-    const strong = evaluateWithParentQuality("strong");
-    const belowThreshold = evaluateWithParentQuality("strong", 0.98);
-    const strategy = evaluateWithParentQuality("strong", 1, "protocol-position");
-    for (const result of [adequate, strong]) {
-      expect(result.child.backing.score).toBeCloseTo(result.parent.backing.score!, 12);
-      expect(result.child.backing.contributions).toContainEqual(
-        expect.objectContaining({
-          componentKey: "reserve:inherited-backing:parent",
-          observationState: "known",
-          provenance: "live",
-        }),
-      );
-      expect(result.child.backing.contributions.some((entry) => entry.source === "mechanism")).toBe(false);
-      expect(result.child.trace.finalScore).toBeLessThanOrEqual(result.parent.trace.finalScore!);
+    const adequate = run("adequate");
+    const strong = run("strong");
+    const belowThreshold = run("strong", 0.98);
+    const strategy = run("strong", 1, "protocol-position");
+    for (const res of [adequate, strong]) {
+      expect(res.child.backing.score).toBeCloseTo(res.parent.backing.score!, 12);
+      expect(res.child.backing.contributions).toContainEqual(expect.objectContaining({ componentKey: "reserve:inherited-backing:parent", observationState: "known", provenance: "live" }));
+      expect(res.child.backing.contributions.some((e) => e.source === "mechanism")).toBe(false);
+      expect(res.child.trace.finalScore).toBeLessThanOrEqual(res.parent.trace.finalScore!);
     }
     expect(strong.child.backing.score!).toBeGreaterThan(adequate.child.backing.score!);
-    expect(
-      belowThreshold.child.backing.contributions.some((entry) =>
-        entry.componentKey.startsWith("reserve:inherited-backing:"),
-      ),
-    ).toBe(false);
-    expect(belowThreshold.child.backing.contributions.some((entry) => entry.source === "mechanism")).toBe(true);
-    expect(strategy.child.backing.contributions.some(entry =>
-      entry.componentKey.startsWith("reserve:inherited-backing:"))).toBe(false);
-    expect(strategy.child.backing.contributions.some(entry => entry.source === "mechanism")).toBe(true);
+    for (const res of [belowThreshold, strategy]) {
+      expect(res.child.backing.contributions.some((e) => e.componentKey.startsWith("reserve:inherited-backing:"))).toBe(false);
+      expect(res.child.backing.contributions.some((e) => e.source === "mechanism")).toBe(true);
+    }
     expect(strategy.child.backing.score!).toBeLessThan(strategy.parent.backing.score!);
   });
+
   it("deduplicates transitive physical-resource overlap in the capacity resolver", () => {
     const alpha = coreFixture().assets[0]! as unknown as V9AssetFactsV2;
-    const primary = alpha.exitRoutes.find((route) => route.routeId === "amm-main")!;
-    const projected = projectV9ExitEvaluationRoute(primary);
-    const overlappingRoute = (routeKey: string, executableUsd: number, physicalResourceKeys: string[]) => ({
-      ...projected,
-      routeKey,
-      physicalResourceKeys,
-      capacityCurve: projected.capacityCurve.map((point) => {
-        const executableAtPoint = Math.min(executableUsd, point.requestedNotionalUsd);
-        return {
-          ...point,
-          executableUsd: executableAtPoint,
-          completionRatio: executableAtPoint / point.requestedNotionalUsd,
-        };
+    const projected = projectV9ExitEvaluationRoute(alpha.exitRoutes.find((r) => r.routeId === "amm-main")!);
+    const mk = (routeKey: string, executableUsd: number, physicalResourceKeys: string[]) => ({
+      ...projected, routeKey, physicalResourceKeys,
+      capacityCurve: projected.capacityCurve.map((p) => {
+        const exec = Math.min(executableUsd, p.requestedNotionalUsd);
+        return { ...p, executableUsd: exec, completionRatio: exec / p.requestedNotionalUsd };
       }),
     });
-    expect(
-      resolveV9DistinctExitCapacity(
-        [
-          overlappingRoute("route:a", 20_000, ["resource:a"]),
-          overlappingRoute("route:b", 30_000, ["resource:a", "resource:b"]),
-          overlappingRoute("route:c", 40_000, ["resource:b"]),
-        ],
-        {
-          requestedNotionalUsd: 1_000_000,
-          maxCostBps: 200,
-          comparisonWindowSec: 300,
-          rawSupplyRequestUsd: 1_000_000,
-        },
-        V9_CANDIDATE_POLICY_V1,
-      ).valuedExecutableUsd,
-    ).toBe(40_000);
+    expect(resolveV9DistinctExitCapacity(
+      [mk("route:a", 20_000, ["resource:a"]), mk("route:b", 30_000, ["resource:a", "resource:b"]), mk("route:c", 40_000, ["resource:b"])],
+      { requestedNotionalUsd: 1_000_000, maxCostBps: 200, comparisonWindowSec: 300, rawSupplyRequestUsd: 1_000_000 }, P,
+    ).valuedExecutableUsd).toBe(40_000);
   });
+
   it("keeps subthreshold DEX capacity low in common-mode materiality", () => {
     const input = coreFixture();
     const alpha = input.assets[0]! as unknown as V9AssetFactsV2;
     const delta = structuredClone(alpha);
     delta.assetId = "delta";
-    input.activeAssetIds.push(delta.assetId);
+    input.activeAssetIds.push("delta");
     input.assets.push(delta as never);
     for (const asset of [alpha, delta]) {
-      const primary = asset.exitRoutes.find((route) => route.routeId === "amm-main")!;
-      primary.capacityCurve = primary.capacityCurve.map((point) => ({
-        ...point,
-        executableUsd: 30_000,
-        completionRatio: 30_000 / point.requestedNotionalUsd,
-      }));
+      const primary = asset.exitRoutes.find((r) => r.routeId === "amm-main")!;
+      primary.capacityCurve = primary.capacityCurve.map((p) => ({ ...p, executableUsd: 30_000, completionRatio: 30_000 / p.requestedNotionalUsd }));
     }
-
-    const evaluated = evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1);
-    for (const assetId of ["alpha", "delta"]) {
-      const signal = evaluated.assets
-        .find((asset) => asset.assetId === assetId)!
-        .scoreInput.dependencyStructuralSignals.find((candidate) =>
-          candidate.failureDomainKeys.includes("dex-protocol:dex:fixture"),
-        );
-      expect(signal).toMatchObject({ kind: "critical-dependency", severity: "low" });
-    }
+    const evaluated = evalInput(input);
+    for (const id of ["alpha", "delta"]) expect(depSignal(evaluated, id, "dex-protocol:dex:fixture")).toMatchObject({ kind: "critical-dependency", severity: "low" });
   });
+
   it("qualifies DEX common-mode groups with score-bearing routes only", () => {
-    const evaluateSharedDex = (alphaEligible: boolean, deltaEligible: boolean) => {
+    const run = (alphaEligible: boolean, deltaEligible: boolean) => {
       const input = coreFixture();
       const alpha = input.assets[0]! as unknown as V9AssetFactsV2;
       const delta = structuredClone(alpha);
       delta.assetId = "delta";
-      input.activeAssetIds.push(delta.assetId);
+      input.activeAssetIds.push("delta");
       input.assets.push(delta as never);
-      for (const [asset, eligible] of [
-        [alpha, alphaEligible],
-        [delta, deltaEligible],
-      ] as const) {
+      for (const [asset, eligible] of [[alpha, alphaEligible], [delta, deltaEligible]] as const) {
         if (eligible) continue;
-        const route = asset.exitRoutes.find((candidate) => candidate.routeId === "amm-main")!;
-        route.coverageClass = "diagnostic";
-        route.scoreEligible = false;
+        Object.assign(asset.exitRoutes.find((c) => c.routeId === "amm-main")!, { coverageClass: "diagnostic", scoreEligible: false });
       }
-      return evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1);
+      return evalInput(input);
     };
-    const dexSignal = (evaluated: ReturnType<typeof evaluateV9FactSet>, assetId: string) =>
-      evaluated.assets
-        .find((asset) => asset.assetId === assetId)!
-        .scoreInput.dependencyStructuralSignals.find((signal) =>
-          signal.failureDomainKeys.includes("dex-protocol:dex:fixture"),
-        );
-
-    const diagnosticOnly = evaluateSharedDex(false, false);
-    expect(dexSignal(diagnosticOnly, "alpha")).toBeUndefined();
-    expect(dexSignal(diagnosticOnly, "delta")).toBeUndefined();
-
-    const oneEligible = evaluateSharedDex(true, false);
-    expect(dexSignal(oneEligible, "alpha")).toBeUndefined();
-    expect(dexSignal(oneEligible, "delta")).toBeUndefined();
-
-    const twoEligible = evaluateSharedDex(true, true);
-    expect(dexSignal(twoEligible, "alpha")).toMatchObject({
-      severity: "high",
-      responsibility: "measured-adverse",
-    });
-    expect(dexSignal(twoEligible, "delta")).toMatchObject({
-      severity: "high",
-      responsibility: "measured-adverse",
-    });
+    for (const evaluated of [run(false, false), run(true, false)]) {
+      expect(depSignal(evaluated, "alpha", "dex-protocol:dex:fixture")).toBeUndefined();
+      expect(depSignal(evaluated, "delta", "dex-protocol:dex:fixture")).toBeUndefined();
+    }
+    const twoEligible = run(true, true);
+    for (const id of ["alpha", "delta"]) expect(depSignal(twoEligible, id, "dex-protocol:dex:fixture")).toMatchObject({ severity: "high", responsibility: "measured-adverse" });
   });
+
   it("joins dependency-owned mint-control groups through asset issuer identity", () => {
-    const evaluateSharedMint = (betaIssuer: string | null, gammaIssuer: string | null) => {
+    const run = (betaIssuer: string | null, gammaIssuer: string | null) => {
       const input = coreFixture();
-      const beta = input.assets[1]! as unknown as V9AssetFactsV2;
-      const gamma = input.assets[2]! as unknown as V9AssetFactsV2;
-      for (const [asset, issuer] of [
-        [beta, betaIssuer],
-        [gamma, gammaIssuer],
-      ] as const) {
+      for (const [asset, issuer] of [[input.assets[1]! as unknown as V9AssetFactsV2, betaIssuer], [input.assets[2]! as unknown as V9AssetFactsV2, gammaIssuer]] as const) {
         asset.assetIssuerKey = issuer;
-        asset.dependencies = {
-          status: knownStatus(),
-          sourceGenerationId: SOURCE_FINGERPRINTS.researchOverlays.generationId,
-          source: "manual",
-          baseSource: "manual",
-          dependencyFromLive: false,
-          mappedLiveReserveWeight: null,
-          fallbackReason: null,
-          edges: [
-            {
-              edgeKey: canonicalV9DependencyEdgeKey("mechanism", "alpha"),
-              upstreamAssetId: "alpha",
-              dependencyType: "mechanism",
-              pathKind: "serial-dependency",
-              weight: 1,
-              economicRole: "serial-claim",
-              evidenceRefIds: ["evidence:base"],
-              failureDomains: [{ kind: "mint-control", key: "shared:dependency-minter" }],
-            },
-          ],
-          diagnostics: { graphState: "valid", issueCodes: [], sccMemberAssetIds: [] },
-        };
+        asset.dependencies = manualSerialDeps("alpha", [{ kind: "mint-control", key: "shared:dependency-minter" }]);
       }
-      return evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1);
+      return evalInput(input);
     };
-    const signal = (evaluated: ReturnType<typeof evaluateV9FactSet>, assetId: string) =>
-      evaluated.assets
-        .find((asset) => asset.assetId === assetId)!
-        .scoreInput.dependencyStructuralSignals.find((candidate) =>
-          candidate.failureDomainKeys.includes("mint-control:shared:dependency-minter"),
-        );
-
-    const sameIssuer = evaluateSharedMint("issuer:shared", "issuer:shared");
-    expect(signal(sameIssuer, "beta")).toMatchObject({ severity: "low" });
-    expect(signal(sameIssuer, "gamma")).toMatchObject({ severity: "low" });
-
-    const crossIssuer = evaluateSharedMint("issuer:shared", "issuer:other");
-    expect(signal(crossIssuer, "beta")).toMatchObject({
-      severity: "high",
-      responsibility: "measured-adverse",
-    });
-    expect(signal(crossIssuer, "gamma")).toMatchObject({
-      severity: "high",
-      responsibility: "measured-adverse",
-    });
-
-    const unresolved = evaluateSharedMint("issuer:shared", null);
-    expect(signal(unresolved, "beta")).toMatchObject({
-      severity: "high",
-      responsibility: "integration-missing",
-    });
-    expect(signal(unresolved, "gamma")).toMatchObject({
-      severity: "high",
-      responsibility: "integration-missing",
-    });
+    const same = run("issuer:shared", "issuer:shared");
+    const cross = run("issuer:shared", "issuer:other");
+    const unresolved = run("issuer:shared", null);
+    for (const id of ["beta", "gamma"]) {
+      expect(depSignal(same, id, "mint-control:shared:dependency-minter")).toMatchObject({ severity: "low" });
+      expect(depSignal(cross, id, "mint-control:shared:dependency-minter")).toMatchObject({ severity: "high", responsibility: "measured-adverse" });
+      expect(depSignal(unresolved, id, "mint-control:shared:dependency-minter")).toMatchObject({ severity: "high", responsibility: "integration-missing" });
+    }
   });
+
   it("keeps merged and disjoint split mint-controller domains score-neutral while the diagnostic signal rekeys", () => {
-    const evaluateSharedMint = (mintKey: (assetId: string) => string) => {
+    const run = (mintKey: (assetId: string) => string) => {
       const input = coreFixture();
       const beta = input.assets[1]! as unknown as V9AssetFactsV2;
       const gamma = input.assets[2]! as unknown as V9AssetFactsV2;
-      const delta = structuredClone(beta);
-      delta.assetId = "delta";
-      const epsilon = structuredClone(beta);
-      epsilon.assetId = "epsilon";
-      input.activeAssetIds.push(delta.assetId, epsilon.assetId);
+      const delta = { ...structuredClone(beta), assetId: "delta" };
+      const epsilon = { ...structuredClone(beta), assetId: "epsilon" };
+      input.activeAssetIds.push("delta", "epsilon");
       input.assets.push(delta as never, epsilon as never);
       for (const asset of [beta, gamma, delta, epsilon]) {
         asset.assetIssuerKey = "issuer:circle";
-        asset.dependencies = {
-          status: knownStatus(),
-          sourceGenerationId: SOURCE_FINGERPRINTS.researchOverlays.generationId,
-          source: "manual",
-          baseSource: "manual",
-          dependencyFromLive: false,
-          mappedLiveReserveWeight: null,
-          fallbackReason: null,
-          edges: [
-            {
-              edgeKey: canonicalV9DependencyEdgeKey("mechanism", "alpha"),
-              upstreamAssetId: "alpha",
-              dependencyType: "mechanism",
-              pathKind: "serial-dependency",
-              weight: 1,
-              economicRole: "serial-claim",
-              evidenceRefIds: ["evidence:base"],
-              failureDomains: [{ kind: "mint-control", key: mintKey(asset.assetId) }],
-            },
-          ],
-          diagnostics: { graphState: "valid", issueCodes: [], sccMemberAssetIds: [] },
-        };
+        asset.dependencies = manualSerialDeps("alpha", [{ kind: "mint-control", key: mintKey(asset.assetId) }]);
       }
-      return evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1);
+      return evalInput(input);
     };
-    const asset = (evaluated: ReturnType<typeof evaluateV9FactSet>, assetId: string) =>
-      evaluated.assets.find((candidate) => candidate.assetId === assetId)!;
-    const mintSignal = (evaluated: ReturnType<typeof evaluateV9FactSet>, assetId: string) =>
-      asset(evaluated, assetId).scoreInput.dependencyStructuralSignals.find((candidate) =>
-        candidate.failureDomainKeys.some((key) => key.startsWith("mint-control:")),
-      );
+    const mintSignal = (evaluated: EvalResult, id: string) =>
+      assetById(evaluated, id).scoreInput.dependencyStructuralSignals.find((c) => c.failureDomainKeys.some((k) => k.startsWith("mint-control:")));
 
-    const merged = evaluateSharedMint(() => "shared:mint");
-    const split = evaluateSharedMint((assetId) =>
-      assetId === "beta" || assetId === "gamma" ? "shared:mint-a" : "shared:mint-b",
-    );
-
-    // The merged run emits one diagnostic common-mode signal for the whole
-    // group; the disjoint split emits two, keyed per slice, and the merged key
-    // is absent. Both stay same-issuer diagnostic ("low"), so neither binds.
-    for (const assetId of ["beta", "gamma", "delta", "epsilon"]) {
-      expect(mintSignal(merged, assetId)).toMatchObject({
-        severity: "low",
-        failureDomainKeys: ["mint-control:shared:mint"],
-      });
-      expect(mintSignal(merged, assetId)?.reason).toContain("same-issuer controller, diagnostic only");
-
-      const expectedKey =
-        assetId === "beta" || assetId === "gamma" ? "mint-control:shared:mint-a" : "mint-control:shared:mint-b";
-      expect(mintSignal(split, assetId)).toMatchObject({ severity: "low", failureDomainKeys: [expectedKey] });
-      expect(mintSignal(split, assetId)?.reason).toContain("same-issuer controller, diagnostic only");
-      expect(mintSignal(split, assetId)?.failureDomainKeys).not.toContain("mint-control:shared:mint");
-
-      // Score neutrality: merging the split domains back together changes the
-      // diagnostic grouping but never the score, caps, or binding cap.
-      expect(asset(merged, assetId).trace.finalScore).toBe(asset(split, assetId).trace.finalScore);
-      expect(asset(merged, assetId).trace.caps).toEqual(asset(split, assetId).trace.caps);
-      expect(asset(merged, assetId).trace.bindingCap).toEqual(asset(split, assetId).trace.bindingCap);
+    const merged = run(() => "shared:mint");
+    const split = run((id) => (id === "beta" || id === "gamma" ? "shared:mint-a" : "shared:mint-b"));
+    for (const id of ["beta", "gamma", "delta", "epsilon"]) {
+      const mergedSig = mintSignal(merged, id);
+      const splitSig = mintSignal(split, id);
+      const expectedKey = id === "beta" || id === "gamma" ? "mint-control:shared:mint-a" : "mint-control:shared:mint-b";
+      expect(mergedSig).toMatchObject({ severity: "low", failureDomainKeys: ["mint-control:shared:mint"] });
+      expect(mergedSig?.reason).toContain("same-issuer controller, diagnostic only");
+      expect(splitSig).toMatchObject({ severity: "low", failureDomainKeys: [expectedKey] });
+      expect(splitSig?.reason).toContain("same-issuer controller, diagnostic only");
+      expect(splitSig?.failureDomainKeys).not.toContain("mint-control:shared:mint");
+      expect([assetById(merged, id).trace.finalScore, assetById(merged, id).trace.caps, assetById(merged, id).trace.bindingCap])
+        .toEqual([assetById(split, id).trace.finalScore, assetById(split, id).trace.caps, assetById(split, id).trace.bindingCap]);
     }
   });
 
   it("keeps a shared upgrade-control ceiling adverse when one member is bounded-unknown", () => {
-    const evaluateSharedUpgrade = (boundedUnknownAssetId: string | null) => {
+    const run = (boundedUnknownAssetId: string | null) => {
       const input = coreFixture();
       const assets = input.assets as unknown as V9AssetFactsV2[];
-      const controlTemplate = structuredClone(
-        assets[0]!.controls.find((control) => control.controlKey === "control:admin")!,
-      );
+      const controlTemplate = structuredClone(assets[0]!.controls.find((c) => c.controlKey === "control:admin")!);
       const sharedDomain = { kind: "upgrade-control" as const, key: "platform:fixture" };
-
       for (const asset of assets) {
         asset.assetIssuerKey = `issuer:${asset.assetId}`;
         const controlKey = `control:shared-upgrade:${asset.assetId}`;
         const deploymentKey = `deployment:${asset.assetId}`;
+        const isBounded = asset.assetId === boundedUnknownAssetId;
         const boundedGapId = `${asset.assetId}:gap:shared-upgrade-bounded`;
-        const status =
-          asset.assetId === boundedUnknownAssetId
-            ? createV9FactStatus({
-                applicability: requiredV9Applicability("control.upgrade.shared"),
-                observationState: "bounded-unknown",
-                evidenceRefIds: ["evidence:base"],
-                gapIds: [boundedGapId],
-              })
-            : knownStatus("evidence:base", "control.upgrade.shared");
-        if (asset.assetId === boundedUnknownAssetId) {
-          asset.gaps.push(
-            createV9FactGap({
-              gapId: boundedGapId,
-              reasonCode: "unknown-upgrade-authority",
-              ownerDomain: "control",
-              policyRuleId: "control.upgrade.shared",
-              observationState: "bounded-unknown",
-              path: { kind: "deployment-control", deploymentKey, controlKey },
-              message: "The shared upgrade authority was re-verified, but its custody is not established.",
-              evidenceRefIds: ["evidence:base"],
-            }),
-          );
+        const status = isBounded ? reqStatus("control.upgrade.shared", "bounded-unknown", [boundedGapId]) : knownStatus("evidence:base", "control.upgrade.shared");
+        if (isBounded) {
+          asset.gaps.push(createV9FactGap({
+            gapId: boundedGapId, reasonCode: "unknown-upgrade-authority", ownerDomain: "control",
+            policyRuleId: "control.upgrade.shared", observationState: "bounded-unknown",
+            path: { kind: "deployment-control", deploymentKey, controlKey },
+            message: "The shared upgrade authority was re-verified, but its custody is not established.", evidenceRefIds: ["evidence:base"],
+          }));
         }
-        const control = {
-          ...controlTemplate,
-          controlKey,
-          deploymentKey,
-          status,
-          failureDomains: [sharedDomain],
-          ...(asset.assetId === boundedUnknownAssetId
-            ? {
-                authority: {
-                  authorityKey: `programdata:${asset.assetId}`,
-                  model: "unknown" as const,
-                  threshold: null,
-                },
-                capSemantics: { kind: "unknown" as const, bound: null },
-                claimImpairment: "unknown" as const,
-                economicLossScope: "unknown" as const,
-                keyCustody: "unknown" as const,
-                modulesOrGuards: "unknown" as const,
-              }
-            : {}),
-        };
-        asset.controls.push(control);
+        asset.controls.push({
+          ...controlTemplate, controlKey, deploymentKey, status, failureDomains: [sharedDomain],
+          ...(isBounded ? {
+            authority: { authorityKey: `programdata:${asset.assetId}`, model: "unknown" as const, threshold: null },
+            capSemantics: { kind: "unknown" as const, bound: null }, claimImpairment: "unknown" as const,
+            economicLossScope: "unknown" as const, keyCustody: "unknown" as const, modulesOrGuards: "unknown" as const,
+          } : {}),
+        });
         if (asset.assetId !== "alpha") asset.controlStatus = status;
       }
-
-      return evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1);
+      return evalInput(input);
     };
-    const signal = (evaluated: ReturnType<typeof evaluateV9FactSet>, assetId: string) =>
-      evaluated.assets
-        .find((asset) => asset.assetId === assetId)!
-        .scoreInput.dependencyStructuralSignals.find((candidate) =>
-          candidate.failureDomainKeys.includes("upgrade-control:platform:fixture"),
-        );
-    const asset = (evaluated: ReturnType<typeof evaluateV9FactSet>, assetId: string) =>
-      evaluated.assets.find((candidate) => candidate.assetId === assetId)!;
 
-    const allKnown = evaluateSharedUpgrade(null);
-    const degraded = evaluateSharedUpgrade("gamma");
-    for (const assetId of ["alpha", "beta"]) {
-      expect(signal(degraded, assetId)).toMatchObject({
-        severity: "high",
-        responsibility: "measured-adverse",
-        evidenceConfidence: "high",
-      });
-      expect(asset(degraded, assetId).trace.caps).not.toContainEqual(
-        expect.objectContaining({ kind: "signal:critical-dependency:high" }),
-      );
-      expect(asset(degraded, assetId).trace.finalScore).toBeLessThanOrEqual(asset(allKnown, assetId).trace.finalScore!);
-      expect(signal(degraded, assetId)?.reason).toContain("remain");
-      expect(signal(degraded, assetId)?.reason).toContain("unresolved");
+    const allKnown = run(null);
+    const degraded = run("gamma");
+    for (const id of ["alpha", "beta"]) {
+      const sig = depSignal(degraded, id, "upgrade-control:platform:fixture");
+      expect(sig).toMatchObject({ severity: "high", responsibility: "measured-adverse", evidenceConfidence: "high" });
+      expect(sig?.reason).toContain("remain");
+      expect(sig?.reason).toContain("unresolved");
+      expect(assetById(degraded, id).trace.caps).not.toContainEqual(expect.objectContaining({ kind: "signal:critical-dependency:high" }));
+      expect(assetById(degraded, id).trace.finalScore).toBeLessThanOrEqual(assetById(allKnown, id).trace.finalScore!);
     }
-
-    expect(signal(degraded, "gamma")).toMatchObject({
-      severity: "high",
-      responsibility: "measured-adverse",
-      evidenceConfidence: "low",
-    });
-    expect(asset(degraded, "gamma").trace.finalScore).toBeLessThanOrEqual(
-      asset(allKnown, "gamma").trace.finalScore!,
-    );
+    expect(depSignal(degraded, "gamma", "upgrade-control:platform:fixture")).toMatchObject({ severity: "high", responsibility: "measured-adverse", evidenceConfidence: "low" });
+    expect(assetById(degraded, "gamma").trace.finalScore).toBeLessThanOrEqual(assetById(allKnown, "gamma").trace.finalScore!);
   });
+
   it("derives bridge share bounds through reviewed control and deployment joins", () => {
     type BridgeJoinVariant =
-      | "known"
-      | "aggregate-mismatch"
-      | "contradictory-share"
-      | "missing-capability"
-      | "null-control-share"
-      | "same-domain-epsilon-no-row"
-      | "same-domain-invalid"
-      | "same-domain-null-no-row"
-      | "same-domain-zero-no-row"
-      | "separate-domain-unjoined"
-      | "supply-mismatch"
-      | "stale-control"
-      | "stale-review"
-      | "unmatched"
-      | "wrong-kind";
-    const evaluateBridgeSignals = (
-      targetShare: number,
-      variant: BridgeJoinVariant = "known",
-    ) => {
+      | "known" | "aggregate-mismatch" | "contradictory-share" | "missing-capability" | "null-control-share"
+      | "same-domain-epsilon-no-row" | "same-domain-invalid" | "same-domain-null-no-row" | "same-domain-zero-no-row"
+      | "separate-domain-unjoined" | "supply-mismatch" | "stale-control" | "stale-review" | "unmatched" | "wrong-kind";
+    const evalSignals = (targetShare: number, variant: BridgeJoinVariant = "known") => {
       const { input, assets } = commonDomainFixture();
       for (const asset of assets) {
         const targetDomain = { kind: "bridge-route" as const, key: "protocol:fixture-bridge" };
-        const nativeDomain = {
-          kind: "bridge-route" as const,
-          key: variant === "separate-domain-unjoined" ? "bridge:native" : `native:${asset.assetId}`,
-        };
+        const nativeDomain = { kind: "bridge-route" as const, key: variant === "separate-domain-unjoined" ? "bridge:native" : `native:${asset.assetId}` };
         const targetControl: V9AssetFactsV2["controls"][number] = {
           ...bridgeControl(asset, "target", targetShare, targetDomain.key),
           controlKind: variant === "wrong-kind" ? "mint" : "bridge",
           capabilities: variant === "missing-capability" ? [] : ["bridge-mint"],
-          materialSupplyShare:
-            variant === "null-control-share" ? null : variant === "contradictory-share" ? 1 : targetShare,
+          materialSupplyShare: variant === "null-control-share" ? null : variant === "contradictory-share" ? 1 : targetShare,
         };
         const nativeControl = bridgeControl(asset, "native", 1 - targetShare, nativeDomain.key);
-        const sameDomainMissingRow = [
-          "same-domain-epsilon-no-row",
-          "same-domain-invalid",
-          "same-domain-null-no-row",
-          "same-domain-zero-no-row",
-        ].includes(variant);
-        const invalidSameDomainControl: V9AssetFactsV2["controls"][number] | null = sameDomainMissingRow
-          ? bridgeControl(
-              asset,
-              "invalid",
-              variant === "same-domain-zero-no-row" ? 0
-                : variant === "same-domain-null-no-row" ? null
-                  : variant === "same-domain-epsilon-no-row" ? Number.EPSILON : targetShare,
-              targetDomain.key,
-            )
+        const sameDomainMissingRow = ["same-domain-epsilon-no-row", "same-domain-invalid", "same-domain-null-no-row", "same-domain-zero-no-row"].includes(variant);
+        const invalidSame = sameDomainMissingRow
+          ? bridgeControl(asset, "invalid", variant === "same-domain-zero-no-row" ? 0 : variant === "same-domain-null-no-row" ? null : variant === "same-domain-epsilon-no-row" ? Number.EPSILON : targetShare, targetDomain.key)
           : null;
         if (variant === "stale-control") {
-          targetControl.status = staleBridgeStatus(asset, "control", {
-            kind: "deployment-control",
-            deploymentKey: targetControl.deploymentKey,
-            controlKey: targetControl.controlKey,
-          }, "control.bridge.current");
+          targetControl.status = staleBridgeStatus(asset, "control", { kind: "deployment-control", deploymentKey: targetControl.deploymentKey, controlKey: targetControl.controlKey }, "control.bridge.current");
         }
-        asset.controls.push(
-          targetControl,
-          ...(variant === "separate-domain-unjoined" ? [] : [nativeControl]),
-          ...(invalidSameDomainControl === null ? [] : [invalidSameDomainControl]),
-        );
-        const targetUsesLowRiskTier = sameDomainMissingRow || variant === "separate-domain-unjoined";
+        asset.controls.push(targetControl, ...(variant === "separate-domain-unjoined" ? [] : [nativeControl]), ...(invalidSame ? [invalidSame] : []));
         asset.economicControlReview.bridge = {
           status: knownStatus("evidence:base", "control.bridge.review"),
           routes: [
-            {
-              controlKey: targetControl.controlKey,
-              tier: targetUsesLowRiskTier ? "external-validated-network" : "opaque-or-unknown",
-            },
-            ...(variant === "separate-domain-unjoined"
-              ? []
-              : [{ controlKey: nativeControl.controlKey, tier: "single-chain-or-native" as const }]),
-            ...(invalidSameDomainControl === null
-              ? []
-              : [{ controlKey: invalidSameDomainControl.controlKey, tier: "canonical-rollup-bridge" as const }]),
+            { controlKey: targetControl.controlKey, tier: sameDomainMissingRow || variant === "separate-domain-unjoined" ? "external-validated-network" : "opaque-or-unknown" },
+            ...(variant === "separate-domain-unjoined" ? [] : [{ controlKey: nativeControl.controlKey, tier: "single-chain-or-native" as const }]),
+            ...(invalidSame ? [{ controlKey: invalidSame.controlKey, tier: "canonical-rollup-bridge" as const }] : []),
           ],
         };
         if (variant === "stale-review") {
-          asset.economicControlReview.bridge.status = staleBridgeStatus(asset, "review", {
-            kind: "deployment-control",
-            deploymentKey: targetControl.deploymentKey,
-            controlKey: targetControl.controlKey,
-          }, "control.bridge.review.current");
+          asset.economicControlReview.bridge.status = staleBridgeStatus(asset, "review", { kind: "deployment-control", deploymentKey: targetControl.deploymentKey, controlKey: targetControl.controlKey }, "control.bridge.review.current");
         }
-        asset.supply.selectedBridgeRoutes = [
-          bridgeSupplyRow(
-            variant === "unmatched" ? "bridge:unmatched" : targetControl.deploymentKey,
-            targetShare,
-            (variant === "supply-mismatch" ? 9_000_000 : 10_000_000) * targetShare,
-          ),
-          bridgeSupplyRow(nativeControl.deploymentKey, 1 - targetShare),
-        ];
-        asset.supply.selectedRouteSupplyShare = variant === "aggregate-mismatch" ? 0.99 : 1;
-        asset.supply.unknownRouteSupplyShare = 0;
-        asset.supply.unreviewedRouteSupplyShare = 0;
+        Object.assign(asset.supply, {
+          selectedBridgeRoutes: [
+            bridgeSupplyRow(variant === "unmatched" ? "bridge:unmatched" : targetControl.deploymentKey, targetShare, (variant === "supply-mismatch" ? 9_000_000 : 10_000_000) * targetShare),
+            bridgeSupplyRow(nativeControl.deploymentKey, 1 - targetShare),
+          ],
+          selectedRouteSupplyShare: variant === "aggregate-mismatch" ? 0.99 : 1,
+          unknownRouteSupplyShare: 0, unreviewedRouteSupplyShare: 0,
+        });
         asset.supply.failureDomains.push(targetDomain, nativeDomain);
       }
-
-      const evaluated = evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1);
-      return evaluated.assets
-        .find((asset) => asset.assetId === "alpha")!
-        .scoreInput.dependencyStructuralSignals;
+      return evalInputAsset(input, "alpha").scoreInput.dependencyStructuralSignals;
     };
-    const evaluateBridgeSignal = (targetShare: number, variant: BridgeJoinVariant = "known") =>
-      evaluateBridgeSignals(targetShare, variant).find((signal) =>
-        signal.failureDomainKeys.includes("bridge-route:protocol:fixture-bridge"),
-      )!;
-    const evaluateBridgeSeverity = (targetShare: number, variant: BridgeJoinVariant = "known") =>
-      evaluateBridgeSignal(targetShare, variant).severity;
+    const bridgeSig = (share: number, variant: BridgeJoinVariant = "known") =>
+      evalSignals(share, variant).find((s) => s.failureDomainKeys.includes("bridge-route:protocol:fixture-bridge"))!;
 
-    expect(evaluateBridgeSeverity(0.0999)).toBe("low");
-    expect(evaluateBridgeSeverity(0.1)).toBe("moderate");
-    expect(evaluateBridgeSeverity(0.2499)).toBe("moderate");
-    expect(evaluateBridgeSeverity(0.0499, "contradictory-share")).toBe("high");
-    expect(evaluateBridgeSeverity(0.0499, "missing-capability")).toBe("high");
-    expect(evaluateBridgeSeverity(0.0499, "null-control-share")).toBe("high");
-    expect(evaluateBridgeSeverity(0.0499, "same-domain-zero-no-row")).toBe("low");
-    expect(evaluateBridgeSeverity(0.0499, "same-domain-null-no-row")).toBe("high");
-    expect(evaluateBridgeSeverity(0.0499, "same-domain-epsilon-no-row")).toBe("high");
-    expect(evaluateBridgeSeverity(0.0499, "same-domain-invalid")).toBe("high");
-    const separateDomainSignals = evaluateBridgeSignals(0.0499, "separate-domain-unjoined");
-    expect(separateDomainSignals.find((signal) =>
-      signal.failureDomainKeys.includes("bridge-route:protocol:fixture-bridge"),
-    )).toMatchObject({ severity: "low" });
-    expect(separateDomainSignals.find((signal) =>
-      signal.failureDomainKeys.includes("bridge-route:bridge:native"),
-    )).toMatchObject({ severity: "high" });
-    expect(evaluateBridgeSeverity(0.0499, "supply-mismatch")).toBe("high");
-    expect(evaluateBridgeSeverity(0.0499, "unmatched")).toBe("high");
-    expect(evaluateBridgeSeverity(0.0499, "wrong-kind")).toBe("high");
-    expect(evaluateBridgeSeverity(0.0499, "stale-control")).toBe("high");
-    expect(evaluateBridgeSeverity(0.0499, "stale-review")).toBe("high");
-    expect(evaluateBridgeSignal(0.25)).toMatchObject({
-      severity: "high",
-      responsibility: "measured-adverse",
-    });
-    expect(evaluateBridgeSignal(0.0499, "aggregate-mismatch")).toMatchObject({
-      severity: "high",
-      responsibility: "integration-missing",
-    });
+    for (const [share, variant, severity] of [
+      [0.0999, "known", "low"], [0.1, "known", "moderate"], [0.2499, "known", "moderate"],
+      [0.0499, "contradictory-share", "high"], [0.0499, "missing-capability", "high"], [0.0499, "null-control-share", "high"],
+      [0.0499, "same-domain-zero-no-row", "low"], [0.0499, "same-domain-null-no-row", "high"],
+      [0.0499, "same-domain-epsilon-no-row", "high"], [0.0499, "same-domain-invalid", "high"],
+      [0.0499, "supply-mismatch", "high"], [0.0499, "unmatched", "high"], [0.0499, "wrong-kind", "high"],
+      [0.0499, "stale-control", "high"], [0.0499, "stale-review", "high"],
+    ] as const) {
+      expect(bridgeSig(share, variant).severity, `${share}/${variant}`).toBe(severity);
+    }
+    const separate = evalSignals(0.0499, "separate-domain-unjoined");
+    expect(separate.find((s) => s.failureDomainKeys.includes("bridge-route:protocol:fixture-bridge"))).toMatchObject({ severity: "low" });
+    expect(separate.find((s) => s.failureDomainKeys.includes("bridge-route:bridge:native"))).toMatchObject({ severity: "high" });
+    expect(bridgeSig(0.25)).toMatchObject({ severity: "high", responsibility: "measured-adverse" });
+    expect(bridgeSig(0.0499, "aggregate-mismatch")).toMatchObject({ severity: "high", responsibility: "integration-missing" });
   });
+
   it("does not treat a control-only bridge domain as exact supply attribution", () => {
     const { input, assets } = commonDomainFixture();
     for (const asset of assets) {
       const targetDomain = { kind: "bridge-route" as const, key: "protocol:fixture-bridge" };
-      const controlOnlyDomain = { kind: "bridge-route" as const, key: "bridge:native" };
       const targetControl = bridgeControl(asset, "target", 0.0499, targetDomain.key);
-      const decoyControl = bridgeControl(asset, "decoy", 0, controlOnlyDomain.key);
+      const decoyControl = bridgeControl(asset, "decoy", 0, "bridge:native");
       asset.controls.push(targetControl, decoyControl);
       asset.economicControlReview.bridge = {
         status: knownStatus("evidence:base", "control.bridge.review"),
-        routes: [
-          { controlKey: targetControl.controlKey, tier: "external-validated-network" },
-          { controlKey: decoyControl.controlKey, tier: "canonical-rollup-bridge" },
-        ],
+        routes: [{ controlKey: targetControl.controlKey, tier: "external-validated-network" }, { controlKey: decoyControl.controlKey, tier: "canonical-rollup-bridge" }],
       };
-      asset.supply.selectedBridgeRoutes = [
-        bridgeSupplyRow(targetControl.deploymentKey, 0.0499),
-        bridgeSupplyRow("bridge:native", 0.9501),
-      ];
-      asset.supply.selectedRouteSupplyShare = 1;
-      asset.supply.unknownRouteSupplyShare = 0;
-      asset.supply.unreviewedRouteSupplyShare = 0;
+      Object.assign(asset.supply, {
+        selectedBridgeRoutes: [bridgeSupplyRow(targetControl.deploymentKey, 0.0499), bridgeSupplyRow("bridge:native", 0.9501)],
+        selectedRouteSupplyShare: 1, unknownRouteSupplyShare: 0, unreviewedRouteSupplyShare: 0,
+      });
       asset.supply.failureDomains.push(targetDomain);
     }
-
-    const evaluated = evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1);
-    for (const assetId of ["alpha", "delta"]) {
-      expect(
-        evaluated.assets
-          .find((asset) => asset.assetId === assetId)!
-          .scoreInput.dependencyStructuralSignals.find((signal) =>
-            signal.failureDomainKeys.includes("bridge-route:protocol:fixture-bridge"),
-          ),
-      ).toMatchObject({ severity: "high" });
-    }
+    const evaluated = evalInput(input);
+    for (const id of ["alpha", "delta"]) expect(depSignal(evaluated, id, "bridge-route:protocol:fixture-bridge")).toMatchObject({ severity: "high" });
   });
+
   it("rejects bridge reviews that reference a missing control before evaluation", () => {
     const input = coreFixture();
-    const alpha = input.assets[0]! as unknown as V9AssetFactsV2;
-    alpha.economicControlReview.bridge = {
+    (input.assets[0]! as unknown as V9AssetFactsV2).economicControlReview.bridge = {
       status: knownStatus("evidence:base", "control.bridge.review"),
       routes: [{ controlKey: "control:missing-bridge", tier: "external-validated-network" }],
     };
     expect(() => compileV9FactSetV2(input)).toThrow(/review references unknown control control:missing-bridge/);
   });
+
   it("does not turn pillar or diagnostic reasons into a global limited-evidence cap", () => {
     const pillarInput = coreFixture();
     const pillarAsset = pillarInput.assets[0]! as unknown as V9AssetFactsV2;
     const pillarGap = createV9FactGap({
-      gapId: "gap:bounded-mechanism",
-      reasonCode: "bounded-mechanism-review",
-      ownerDomain: "backing",
-      policyRuleId: "backing.mechanism.bounded",
-      observationState: "bounded-unknown",
+      gapId: "gap:bounded-mechanism", reasonCode: "bounded-mechanism-review", ownerDomain: "backing",
+      policyRuleId: "backing.mechanism.bounded", observationState: "bounded-unknown",
       path: { kind: "local-component", componentKey: "assurance-and-reconciliation" },
-      message: "The assurance component is conservatively bounded.",
-      evidenceRefIds: ["evidence:base"],
+      message: "The assurance component is conservatively bounded.", evidenceRefIds: ["evidence:base"],
     });
     pillarAsset.gaps.push(pillarGap);
     const pillarReview = pillarAsset.mechanismRiskReview.review!;
     if (pillarReview.archetype !== "fiat-cash") throw new Error("Expected fiat fixture");
-    pillarReview.assuranceAndReconciliation = {
-      ...pillarReview.assuranceAndReconciliation,
-      status: createV9FactStatus({
-        applicability: requiredV9Applicability("backing.mechanism.bounded"),
-        observationState: "bounded-unknown",
-        evidenceRefIds: ["evidence:base"],
-        gapIds: [pillarGap.gapId],
-      }),
-      quality: null,
-    };
-    const pillarEvaluated = evaluateV9FactSet(compileNativeV3FactSet(pillarInput), V9_CANDIDATE_POLICY_V1).assets.find(
-      (asset) => asset.assetId === "alpha",
-    )!;
-    expect(pillarEvaluated.scoreInput.pillars.backing).toMatchObject({
-      evidenceLevel: "strong",
-      limitedEvidenceCauses: [],
-      limitingCauseGapIds: [],
-    });
+    pillarReview.assuranceAndReconciliation = { ...pillarReview.assuranceAndReconciliation, status: reqStatus("backing.mechanism.bounded", "bounded-unknown", [pillarGap.gapId]), quality: null };
+    const pillarEvaluated = evalInputAsset(pillarInput);
+    expect(pillarEvaluated.scoreInput.pillars.backing).toMatchObject({ evidenceLevel: "strong", limitedEvidenceCauses: [], limitingCauseGapIds: [] });
     expect(pillarEvaluated.scoreInput.pillars.backing.reasons).toContainEqual(expect.objectContaining({ code: "bounded-mechanism-review" }));
-    const baselineBacking = evaluateV9FactSet(compileNativeV3FactSet(coreFixture()), V9_CANDIDATE_POLICY_V1).assets.find(
-      (asset) => asset.assetId === "alpha",
-    )!.scoreInput.pillars.backing.score!;
-    expect(pillarEvaluated.scoreInput.pillars.backing.score).toBeLessThan(baselineBacking);
-    expect(pillarEvaluated.trace.caps.map((cap) => cap.kind)).not.toContain("evidence:limited");
+    expect(pillarEvaluated.scoreInput.pillars.backing.score).toBeLessThan(evalInputAsset(coreFixture()).scoreInput.pillars.backing.score!);
+    expect(pillarEvaluated.trace.caps.map((c) => c.kind)).not.toContain("evidence:limited");
 
-    const diagnosticInput = coreFixture();
-    const diagnosticAsset = diagnosticInput.assets[0]! as unknown as V9AssetFactsV2;
-    const dexRoute = diagnosticAsset.exitRoutes.find((route) => route.routeId === "amm-main")!;
-    const redemptionRoute = diagnosticAsset.exitRoutes.find((route) => route.routeId === "issuer-main")!;
-    redemptionRoute.failureDomains.push(dexRoute.failureDomains.find((domain) => domain.kind === "dex-protocol")!);
-    const diagnosticEvaluated = evaluateV9FactSet(
-      compileNativeV3FactSet(diagnosticInput),
-      V9_CANDIDATE_POLICY_V1,
-    ).assets.find((asset) => asset.assetId === "alpha")!;
-    expect(diagnosticEvaluated.exit.reasons).toContain("correlated-exit-routes");
-    expect(diagnosticEvaluated.trace.caps.map((cap) => cap.kind)).not.toContain("evidence:limited");
+    const diagInput = coreFixture();
+    const diagAsset = diagInput.assets[0]! as unknown as V9AssetFactsV2;
+    const dexRoute = diagAsset.exitRoutes.find((r) => r.routeId === "amm-main")!;
+    diagAsset.exitRoutes.find((r) => r.routeId === "issuer-main")!.failureDomains.push(dexRoute.failureDomains.find((d) => d.kind === "dex-protocol")!);
+    const diagEvaluated = evalInputAsset(diagInput);
+    expect(diagEvaluated.exit.reasons).toContain("correlated-exit-routes");
+    expect(diagEvaluated.trace.caps.map((c) => c.kind)).not.toContain("evidence:limited");
   });
+
   it.each([
-    ["exact-complete", "known"],
-    ["exact-complete", "stale"],
-    ["exact-lower-bound", "known"],
-    ["exact-lower-bound", "stale"],
+    ["exact-complete", "known"], ["exact-complete", "stale"], ["exact-lower-bound", "known"], ["exact-lower-bound", "stale"],
   ] as const)("retains R1 materiality and completion gates for %s capacity with %s observations", (coverageClass, observationState) => {
-    for (const scenario of [
+    for (const s of [
       { name: "submaterial prefix", supplyUsd: 1_000_000, requestUsd: 1_000_000, materialityRequestUsd: 100_000, executableUsd: 1, material: false },
       { name: "1% asset-relative boundary below stress floor", supplyUsd: 1_000_000, requestUsd: 1_000_000, materialityRequestUsd: 100_000, executableUsd: 1_000, material: true },
       { name: "below both boundaries", supplyUsd: 1_000_000_000, requestUsd: 25_000_000, materialityRequestUsd: 25_000_000, executableUsd: 99_999, material: false },
       { name: "$100k absolute boundary", supplyUsd: 1_000_000_000, requestUsd: 25_000_000, materialityRequestUsd: 25_000_000, executableUsd: 100_000, material: true },
     ]) {
       const input = coreFixture();
-      const alpha = input.assets.find((asset) => asset.assetId === "alpha")! as unknown as V9AssetFactsV2;
-      const beta = input.assets.find((asset) => asset.assetId === "beta")! as unknown as V9AssetFactsV2;
-      beta.supply.circulatingUsd = scenario.supplyUsd;
-      for (const chain of beta.supply.chainDistribution!.chains) {
-        chain.supplyUsd = scenario.supplyUsd * chain.supplyShare;
-      }
-      const routeEvidence = alpha.evidence.find((evidence) => evidence.evidenceId === "evidence:route")!;
-      const measuredRoute = structuredClone(alpha.exitRoutes.find((route) => route.routeId === "amm-main")!);
+      const alpha = input.assets.find((a) => a.assetId === "alpha")! as unknown as V9AssetFactsV2;
+      const beta = input.assets.find((a) => a.assetId === "beta")! as unknown as V9AssetFactsV2;
+      beta.supply.circulatingUsd = s.supplyUsd;
+      for (const chain of beta.supply.chainDistribution!.chains) chain.supplyUsd = s.supplyUsd * chain.supplyShare;
+      const routeEvidence = alpha.evidence.find((e) => e.evidenceId === "evidence:route")!;
+      const measuredRoute = structuredClone(alpha.exitRoutes.find((r) => r.routeId === "amm-main")!);
       measuredRoute.coverageClass = coverageClass;
       measuredRoute.status = { ...measuredRoute.status, observationState };
       if (observationState === "stale") {
         const staleEvidence = createV9EvidenceReference({
-          evidenceId: "evidence:retained-stale-exit",
-          sourceId: routeEvidence.sourceId,
-          sourceGenerationId: routeEvidence.sourceGenerationId,
-          disposition: "published",
-          observedAtSec: 600,
-          publishedAtSec: 610,
-          maxAgeSec: 100,
+          evidenceId: "evidence:retained-stale-exit", sourceId: routeEvidence.sourceId, sourceGenerationId: routeEvidence.sourceGenerationId,
+          disposition: "published", observedAtSec: 600, publishedAtSec: 610, maxAgeSec: 100,
         }, AS_OF_SEC);
         beta.evidence.push(staleEvidence);
-        measuredRoute.status = { ...measuredRoute.status, evidenceRefIds: [staleEvidence.evidenceId] };
         const gap = createV9FactGap({
-          gapId: "gap:retained-stale-exit",
-          reasonCode: "missing-runtime-route-evidence",
-          ownerDomain: "exit",
-          policyRuleId: "exit.route.freshness",
-          observationState: "stale",
-          path: { kind: "optional-exit", routeKey: measuredRoute.routeKey },
-          message: "The route observation retains its original expired evidence clock.",
-          evidenceRefIds: measuredRoute.status.evidenceRefIds,
+          gapId: "gap:retained-stale-exit", reasonCode: "missing-runtime-route-evidence", ownerDomain: "exit",
+          policyRuleId: "exit.route.freshness", observationState: "stale", path: { kind: "optional-exit", routeKey: measuredRoute.routeKey },
+          message: "The route observation retains its original expired evidence clock.", evidenceRefIds: [staleEvidence.evidenceId],
         });
         beta.gaps.push(gap);
-        measuredRoute.status = { ...measuredRoute.status, gapIds: [gap.gapId] };
+        measuredRoute.status = { ...measuredRoute.status, evidenceRefIds: [staleEvidence.evidenceId], gapIds: [gap.gapId] };
       }
-      measuredRoute.request = { ...measuredRoute.request!, requestedNotionalUsd: scenario.requestUsd };
-      measuredRoute.capacityCurve = [100_000, 1_000_000, 25_000_000].map((requestedNotionalUsd) => ({
-        requestedNotionalUsd,
-        maxCostBps: 200,
-        executableUsd: scenario.executableUsd,
-        completionRatio: scenario.executableUsd / requestedNotionalUsd,
-        executionCostBps: 200,
+      measuredRoute.request = { ...measuredRoute.request!, requestedNotionalUsd: s.requestUsd };
+      measuredRoute.capacityCurve = [100_000, 1_000_000, 25_000_000].map((req) => ({
+        requestedNotionalUsd: req, maxCostBps: 200, executableUsd: s.executableUsd, completionRatio: s.executableUsd / req, executionCostBps: 200,
       }));
       beta.evidence.push(routeEvidence);
       beta.exitStatus = knownStatus(routeEvidence.evidenceId, "exit.portfolio.reviewed");
       beta.exitRoutes = [measuredRoute];
-      const evaluated = evaluateV9FactSet(
-        compileNativeV3FactSet(input),
-        V9_CANDIDATE_POLICY_V1,
-      ).assets.find((asset) => asset.assetId === "beta")!;
-      const trace = evaluated.exit.routes.find((route) => route.routeKey === measuredRoute.routeKey)!;
-      expect(evaluated.exit.stressRequest?.requestedNotionalUsd, scenario.name).toBe(scenario.requestUsd);
-      expect(evaluated.exit.stressRequest?.rawSupplyRequestUsd, scenario.name).toBe(scenario.materialityRequestUsd);
-      if (!scenario.material) {
-        expect(trace, scenario.name).toMatchObject({ included: false, score: coverageClass === "exact-complete" ? 0 : null,
-          exclusionReason: "missing-same-notional-route" });
+      const evaluated = evalInputAsset(input, "beta");
+      const trace = evaluated.exit.routes.find((r) => r.routeKey === measuredRoute.routeKey)!;
+      expect(evaluated.exit.stressRequest, s.name).toMatchObject({ requestedNotionalUsd: s.requestUsd, rawSupplyRequestUsd: s.materialityRequestUsd });
+      if (!s.material) {
+        expect(trace, s.name).toMatchObject({ included: false, score: coverageClass === "exact-complete" ? 0 : null, exclusionReason: "missing-same-notional-route" });
         expect(trace.capacityPoint!.executableUsd).toBeGreaterThan(0);
-        expect(evaluated.exit.primaryRouteKey, scenario.name).toBeNull();
-        expect(evaluated.exit.score, scenario.name).toBe(0);
+        expect(evaluated.exit.primaryRouteKey, s.name).toBeNull();
+        expect(evaluated.exit.score, s.name).toBe(0);
       } else {
-        expect(trace.included, scenario.name).toBe(true);
-        expect(trace.score, scenario.name).toBeGreaterThan(0);
-        expect(evaluated.exit.primaryRouteKey, scenario.name).toBe(measuredRoute.routeKey);
-        expect(trace.capsApplied, scenario.name).not.toContain("immaterial-executable-capacity");
-        expect(trace.capsApplied, scenario.name).toContain("insufficient-completion:50");
-        expect(trace.score, scenario.name).toBeCloseTo(50 * trace.confidenceFactor!, 10);
+        expect(trace.included, s.name).toBe(true);
+        expect(trace.score, s.name).toBeGreaterThan(0);
+        expect(evaluated.exit.primaryRouteKey, s.name).toBe(measuredRoute.routeKey);
+        expect(trace.capsApplied, s.name).not.toContain("immaterial-executable-capacity");
+        expect(trace.capsApplied, s.name).toContain("insufficient-completion:50");
+        expect(trace.score, s.name).toBeCloseTo(50 * trace.confidenceFactor!, 10);
       }
       expect(evaluated.scoreInput.pillars.exit.score).toBe(evaluated.exit.score);
       expect(evaluated.trace.finalScore).not.toBeNull();
       expect(evaluated.trace.nrReasons).toEqual([]);
     }
   });
+
   it.each(["unknown", "dust-gap", "empty", "issuer-zero", "not-applicable"])("dust preserves public Exit evidence and unknown weight: %s", (scenario) => {
     const input = coreFixture();
-    const alpha = input.assets.find((asset) => asset.assetId === "alpha")! as unknown as V9AssetFactsV2;
-    const beta = input.assets.find((asset) => asset.assetId === "beta")! as unknown as V9AssetFactsV2;
+    const alpha = input.assets.find((a) => a.assetId === "alpha")! as unknown as V9AssetFactsV2;
+    const beta = input.assets.find((a) => a.assetId === "beta")! as unknown as V9AssetFactsV2;
     const evidence = beta.evidence;
-    const routeEvidence = alpha.evidence.find((ref) => ref.evidenceId === "evidence:route")!;
-    const dust = structuredClone(alpha.exitRoutes.find((route) => route.lane === "dex")!);
-    const issuer = structuredClone(alpha.exitRoutes.find((route) => route.lane === "redemption")!);
-    issuer.capacityCurve = issuer.capacityCurve.map((point) => ({ ...point, executableUsd: 0, completionRatio: 0 }));
+    const routeEvidence = alpha.evidence.find((r) => r.evidenceId === "evidence:route")!;
+    const dust = structuredClone(alpha.exitRoutes.find((r) => r.lane === "dex")!);
+    const issuer = structuredClone(alpha.exitRoutes.find((r) => r.lane === "redemption")!);
+    issuer.capacityCurve = issuer.capacityCurve.map((p) => ({ ...p, executableUsd: 0, completionRatio: 0 }));
     if (scenario === "empty") beta.exitStatus = knownStatus(routeEvidence.evidenceId, "exit.portfolio.reviewed");
-    if (scenario === "not-applicable") issuer.status.applicability = {
-      state: "not-applicable", policyRuleId: "no-issuer", rationale: "No issuer rail applies.", gapId: null,
-    };
+    if (scenario === "not-applicable") issuer.status.applicability = { state: "not-applicable", policyRuleId: "no-issuer", rationale: "No issuer rail applies.", gapId: null };
     if (scenario === "issuer-zero" || scenario === "not-applicable") beta.exitRoutes = [issuer];
     const evaluate = () => {
       beta.evidence = [...evidence, ...(beta.exitRoutes.length > 0 || scenario === "empty" ? [routeEvidence] : [])];
       const { v9FactSetDigest: _digest, ...core } = CompiledV9FactSetV3Schema.parse(compileNativeV3FactSet(input));
-      const target = core.assets.find((asset) => asset.assetId === "beta")!;
-      const measured = target.exitRoutes.find((route) => route.routeKey === dust.routeKey);
+      const target = core.assets.find((a) => a.assetId === "beta")!;
+      const measured = target.exitRoutes.find((r) => r.routeKey === dust.routeKey);
       if (scenario === "dust-gap" && measured) exitFactorGap(target, measured, "B");
-      const result = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1)
-        .assets.find((asset) => asset.assetId === "beta")!;
-      return projectSafetyScoreV9Card({ ...result, policy: V9_CANDIDATE_POLICY_V1, display: {
-        exitHolderEligibility: Object.fromEntries(beta.exitRoutes.map((route) => [route.routeKey, projectV9ExitEvaluationRoute(route).holderEligibility])),
-      } }).card;
+      const result = evalCore(core, "beta");
+      return projectSafetyScoreV9Card({
+        ...result, policy: P,
+        display: { exitHolderEligibility: Object.fromEntries(beta.exitRoutes.map((r) => [r.routeKey, projectV9ExitEvaluationRoute(r).holderEligibility])) },
+      }).card;
     };
-    const accounting = (card: ReturnType<typeof evaluate>) => [card.score, card.pillars.exit.score, card.pillars.exit.evidenceLevel,
-      computeV9UnknownPricedWeightShare(card.breakdowns, card.scoreTrace.aggregation)];
+    const accounting = (c: ReturnType<typeof evaluate>) => [c.score, c.pillars.exit.score, c.pillars.exit.evidenceLevel, computeV9UnknownPricedWeightShare(c.breakdowns, c.scoreTrace.aggregation)];
     const before = evaluate();
     for (const executableUsd of [0, 1]) {
-      dust.capacityCurve = dust.capacityCurve.map((point) => ({ ...point, executableUsd, completionRatio: executableUsd / point.requestedNotionalUsd }));
+      dust.capacityCurve = dust.capacityCurve.map((p) => ({ ...p, executableUsd, completionRatio: executableUsd / p.requestedNotionalUsd }));
       beta.exitRoutes.push(dust);
       const after = evaluate();
       expect(accounting(after)).toEqual(accounting(before));
-      expect(after.breakdowns!.exit.alternatives.some((route) => route.label.includes("Negligible"))).toBe(true);
+      expect(after.breakdowns!.exit.alternatives.some((r) => r.label.includes("Negligible"))).toBe(true);
       beta.exitRoutes.pop();
     }
   });
+
   it.each(["exact-complete", "exact-lower-bound"] as const)("does not attribute non-score-eligible %s redemption zero as measured exhaustion", (coverageClass) => {
     const input = coreFixture();
-    const alpha = input.assets.find((asset) => asset.assetId === "alpha")! as unknown as V9AssetFactsV2;
-    const beta = input.assets.find((asset) => asset.assetId === "beta")! as unknown as V9AssetFactsV2;
-    const routeEvidence = alpha.evidence.find((evidence) => evidence.evidenceId === "evidence:route")!;
-    const redemptionRoute = structuredClone(
-      alpha.exitRoutes.find((route) => route.routeId === "issuer-main")!,
-    );
-    redemptionRoute.routeFamily = "protocol-redemption";
-    redemptionRoute.scoreEligible = false;
-    redemptionRoute.evidenceKind = "live-reserve-state";
-    redemptionRoute.coverageClass = coverageClass;
-    redemptionRoute.settlementModel = "queued";
-    redemptionRoute.settlementSlaSec = 86_400;
-    redemptionRoute.capacityCurve = redemptionRoute.capacityCurve.map((point) => ({
-      ...point,
-      executableUsd: 0,
-      completionRatio: 0,
-    }));
+    const alpha = input.assets.find((a) => a.assetId === "alpha")! as unknown as V9AssetFactsV2;
+    const beta = input.assets.find((a) => a.assetId === "beta")! as unknown as V9AssetFactsV2;
+    const routeEvidence = alpha.evidence.find((e) => e.evidenceId === "evidence:route")!;
+    const redemptionRoute = structuredClone(alpha.exitRoutes.find((r) => r.routeId === "issuer-main")!);
+    Object.assign(redemptionRoute, {
+      routeFamily: "protocol-redemption", scoreEligible: false, evidenceKind: "live-reserve-state",
+      coverageClass, settlementModel: "queued", settlementSlaSec: 86_400,
+      capacityCurve: redemptionRoute.capacityCurve.map((p) => ({ ...p, executableUsd: 0, completionRatio: 0 })),
+    });
     beta.evidence.push(routeEvidence);
     beta.exitStatus = knownStatus(routeEvidence.evidenceId, "exit.portfolio.reviewed");
     beta.exitRoutes = [redemptionRoute];
 
-    const evaluated = evaluateV9FactSet(
-      compileNativeV3FactSet(input),
-      V9_CANDIDATE_POLICY_V1,
-    ).assets.find((asset) => asset.assetId === "beta")!;
-    expect(evaluated.exit.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.exit.U);
+    const evaluated = evalInputAsset(input, "beta");
+    expect(evaluated.exit.score).toBe(P.policy.semantic.unknownQuality.exit.U);
     expect(evaluated.exit.reasons).toContain("missing-same-notional-route");
     expect(evaluated.exit.reasons).not.toContain("no-viable-exit-path");
     expect(evaluated.scoreInput.pillars.exit.adverseAttribution).toEqual([]);
-    expect(evaluated.trace.adverseAttribution).not.toContainEqual(expect.objectContaining({
-      source: "pillar-score", path: expect.stringMatching(/^pillar:exit:/),
-    }));
+    expect(evaluated.trace.adverseAttribution).not.toContainEqual(expect.objectContaining({ source: "pillar-score", path: expect.stringMatching(/^pillar:exit:/) }));
     expect(evaluated.trace.finalGrade).not.toBe("F");
   });
 });

@@ -14,104 +14,49 @@ function installFetch(implementation: (request: Request) => Response | Promise<R
   return mockFetch([{ match: () => true, respond: implementation }]);
 }
 
-
-function emptyTronResponse() {
-  return new Response(JSON.stringify({ success: true, data: [] }), {
-    status: 200, headers: { "Content-Type": "application/json" },
-  });
+function jsonResp(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 }
+
+const emptyTronResponse = () => jsonResp({ success: true, data: [] });
 
 vi.mock("../../lib/blacklist-contracts", () => ({
   CONTRACT_CONFIGS: [
     {
       configKey: "ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      chain: {
-        chainId: "ethereum",
-        chainName: "Ethereum",
-        evmChainId: 1,
-        explorerUrl: "https://etherscan.io",
-        type: "evm",
-      },
-      stablecoinId: "usdc-circle",
-      stablecoin: "USDC",
-      contractAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      decimals: 6,
-      events: [
-        {
-          signature: "Blacklisted(address)",
-          topicHash: "0xffa4e6181777692565cf28528fc88fd1516ea86b56da075235fa575af6a4b855",
-          eventType: "blacklist",
-          hasAmount: false,
-        },
-      ],
+      chain: { chainId: "ethereum", chainName: "Ethereum", evmChainId: 1, explorerUrl: "https://etherscan.io", type: "evm" },
+      stablecoinId: "usdc-circle", stablecoin: "USDC",
+      contractAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", decimals: 6,
+      events: [{ signature: "Blacklisted(address)", topicHash: "0xffa4e6181777692565cf28528fc88fd1516ea86b56da075235fa575af6a4b855", eventType: "blacklist", hasAmount: false }],
     },
     {
       configKey: "base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
-      chain: {
-        chainId: "base",
-        chainName: "Base",
-        evmChainId: 8453,
-        explorerUrl: "https://basescan.org",
-        type: "evm",
-      },
-      stablecoinId: "usdc-circle",
-      stablecoin: "USDC",
-      contractAddress: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
-      decimals: 6,
-      startBlock: 19950001,
-      events: [
-        {
-          signature: "Blacklisted(address)",
-          topicHash: "0xffa4e6181777692565cf28528fc88fd1516ea86b56da075235fa575af6a4b855",
-          eventType: "blacklist",
-          hasAmount: false,
-        },
-      ],
+      chain: { chainId: "base", chainName: "Base", evmChainId: 8453, explorerUrl: "https://basescan.org", type: "evm" },
+      stablecoinId: "usdc-circle", stablecoin: "USDC",
+      contractAddress: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", decimals: 6, startBlock: 19950001,
+      events: [{ signature: "Blacklisted(address)", topicHash: "0xffa4e6181777692565cf28528fc88fd1516ea86b56da075235fa575af6a4b855", eventType: "blacklist", hasAmount: false }],
     },
     {
       configKey: "tron-tr7nhqjekqxgtci8q8zy4pl8otszgjlj6t",
-      chain: {
-        chainId: "tron",
-        chainName: "Tron",
-        evmChainId: null,
-        explorerUrl: "https://tronscan.org",
-        type: "tron",
-      },
-      stablecoinId: "usdt-tether",
-      stablecoin: "USDT",
-      contractAddress: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
-      decimals: 6,
-      events: [
-        {
-          signature: "AddedBlackList(address)",
-          topicHash: "0x42e160154868087d6bfdc0ca23d96a1c1cfa32f1b72ba9c306f83367e8cfd27b",
-          eventType: "blacklist",
-          hasAmount: false,
-        },
-      ],
+      chain: { chainId: "tron", chainName: "Tron", evmChainId: null, explorerUrl: "https://tronscan.org", type: "tron" },
+      stablecoinId: "usdt-tether", stablecoin: "USDT",
+      contractAddress: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", decimals: 6,
+      events: [{ signature: "AddedBlackList(address)", topicHash: "0x42e160154868087d6bfdc0ca23d96a1c1cfa32f1b72ba9c306f83367e8cfd27b", eventType: "blacklist", hasAmount: false }],
     },
   ],
-  getBlacklistTopicHashes: (config: { events: Array<{ topicHash: string }> }) => [
-    ...new Set(config.events.map((event) => event.topicHash)),
-  ],
+  getBlacklistTopicHashes: (config: { events: Array<{ topicHash: string }> }) => [...new Set(config.events.map((e) => e.topicHash))],
   getBlacklistEventByTopic: (
     config: { events: Array<{ topicHash: string; signature: string; eventType: string; hasAmount: boolean }> },
     topicHash: string | null | undefined,
-  ) =>
-    topicHash ? config.events.find((event) => event.topicHash.toLowerCase() === topicHash.toLowerCase()) : undefined,
+  ) => (topicHash ? config.events.find((e) => e.topicHash.toLowerCase() === topicHash.toLowerCase()) : undefined),
   getBlacklistEventBySignature: (
     config: { events: Array<{ signature: string; eventType: string; hasAmount: boolean }> },
     signature: string | null | undefined,
-  ) =>
-    signature
-      ? config.events.find((event) => event.signature === signature || event.signature.split("(")[0] === signature)
-      : undefined,
+  ) => (signature ? config.events.find((e) => e.signature === signature || e.signature.split("(")[0] === signature) : undefined),
   getBlacklistConfigsForSymbolAndChain: () => [],
-  // This fixture roster has no Ethereum USDT configuration.
   getBlacklistConfigByContract: () => undefined,
 }));
 
-// Real implementations by default; individual tests inject repair-stage throws.
 vi.mock("../../lib/blacklist/amount-recovery", async (importOriginal) => {
   const actual = await importOriginal<typeof AmountRecoveryModule>();
   return { ...actual, backfillAmounts: vi.fn(actual.backfillAmounts) };
@@ -124,12 +69,10 @@ vi.mock("../../lib/blacklist/tron-order-recovery", async (importOriginal) => {
   const actual = await importOriginal<typeof TronOrderRecoveryModule>();
   return { ...actual, resolveTronBlacklistOrder: vi.fn(actual.resolveTronBlacklistOrder) };
 });
-
 vi.mock("../../lib/blacklist-gaps", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../lib/blacklist-gaps")>();
   return { ...actual, materializeBlacklistGapMetrics: vi.fn(actual.materializeBlacklistGapMetrics) };
 });
-
 vi.mock("../../lib/alchemy-logs", async (importOriginal) => ({
   ...(await importOriginal<typeof AlchemyLogsModule>()),
   fetchAlchemyLogs: vi.fn(async () => ({ logs: [], complete: true, scannedToBlock: 20000000, calls: 1, maxDepth: 0 })),
@@ -137,7 +80,6 @@ vi.mock("../../lib/alchemy-logs", async (importOriginal) => ({
   resolveBlockTimestamps: vi.fn(async () => new Map()),
 }));
 
-// Stub evm-logs — heavy EVM interaction primitives
 vi.mock("../../lib/evm-logs", () => ({
   createBudget: vi.fn((limit = 900) => ({ count: 0, limit })),
   budgetExhausted: vi.fn((b: { count: number; limit: number }) => b.count >= b.limit),
@@ -156,11 +98,7 @@ vi.mock("../../lib/evm-logs", () => ({
   getEvmBlockNumber: vi.fn(async () => 20010000),
   fetchEvmLogsForTopic: vi.fn(async () => []),
   fetchEvmLogsForTopicWithCompleteness: vi.fn(async () => ({
-    logs: [],
-    complete: true,
-    scannedToBlock: 99999999,
-    calls: 1,
-    maxDepth: 0,
+    logs: [], complete: true, scannedToBlock: 99999999, calls: 1, maxDepth: 0,
   })),
   readDataWord: vi.fn((hex: string, slotIndex: number) => {
     const cleaned = hex.startsWith("0x") ? hex.slice(2) : hex;
@@ -169,49 +107,27 @@ vi.mock("../../lib/evm-logs", () => ({
   }),
 }));
 
-vi.mock("../../lib/chain-registry", async (importOriginal) => {
-  const original = await importOriginal<typeof import("../../lib/chain-registry")>();
-  return {
-    ...original,
-    getChainRpc: vi.fn((_chainRpcs: Map<string, unknown>, chainId: string) =>
-      chainId === "base" ? baseChainRpcConfig() : undefined,
-    ),
-  };
-});
+vi.mock("../../lib/chain-registry", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/chain-registry")>()),
+  getChainRpc: vi.fn((_chainRpcs: Map<string, unknown>, chainId: string) =>
+    chainId === "base" ? baseChainRpcConfig() : undefined,
+  ),
+}));
 
-/** Hoisted so the `vi.mock` factory above can build the same fixture the tests use. */
 function baseChainRpcConfig(): ChainRpcConfig {
   return {
-    chainId: "base",
-    chainName: "Base",
-    type: "evm",
-    endpoints: [
-      {
-        url: "https://base-rpc.example",
-        operator: "public",
-        keyed: false,
-        position: "registry",
-        stateHistory: "archive",
-        logsHistory: "full",
-      },
-    ],
-    explorerUrl: "https://basescan.org",
+    chainId: "base", chainName: "Base", type: "evm", explorerUrl: "https://basescan.org",
+    endpoints: [{ url: "https://base-rpc.example", operator: "public", keyed: false, position: "registry", stateHistory: "archive", logsHistory: "full" }],
   };
 }
 
 vi.mock("../../lib/bigint", () => ({
   decimalNumberFromBigInt: vi.fn((value: bigint, decimals: number) => Number(value) / Math.pow(10, decimals)),
 }));
-
-vi.mock("../../lib/db", async (importOriginal) => {
-  const orig = await importOriginal<typeof import("../../lib/db")>();
-  return {
-    ...orig,
-    batchExecute: vi.fn(async (_db, stmts: D1PreparedStatement[]) => stmts.length),
-  };
-});
-
-// Stub chains module (used by blacklist-contracts)
+vi.mock("../../lib/db", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/db")>()),
+  batchExecute: vi.fn(async (_db, stmts: D1PreparedStatement[]) => stmts.length),
+}));
 vi.mock("@shared/types/chain-identity", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@shared/types/chain-identity")>()),
   CHAIN_META: {
@@ -240,10 +156,14 @@ import { materializeBlacklistGapMetrics } from "../../lib/blacklist-gaps";
 import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../../lib/blacklist-summary-service";
 import { BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY } from "../../lib/blacklist-cache-keys";
 
+const BLACKLISTED_TOPIC = "0xffa4e6181777692565cf28528fc88fd1516ea86b56da075235fa575af6a4b855";
+const UNBLACKLISTED_TOPIC = "0x117e3210bb9aa7d9baff172026820255c6f6c30ba8999d1c2fd88e2848137c4e";
+const TOPIC_USER = "0x000000000000000000000000abcdef1234567890abcdef1234567890abcdef12";
+const ETH_USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
+const BASE_USDC = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
+
 const mockD1 = createMockD1Preset([
-  { match: "blacklist-summary-fence-capture", rows: [], first: {
-    generation: null, summaryValue: null, rollbackValue: null, rollbackUpdatedAt: null,
-  } },
+  { match: "blacklist-summary-fence-capture", rows: [], first: { generation: null, summaryValue: null, rollbackValue: null, rollbackUpdatedAt: null } },
   { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
   { match: "SELECT value FROM cache WHERE key = ?", rows: [], first: null },
   { match: "blacklist:decode-retry:", rows: [] },
@@ -264,63 +184,87 @@ const mockD1 = createMockD1Preset([
   { match: "blacklist-gap-metrics-cache-write", rows: [] },
 ]);
 
-
 const testChainRpcs = new Map<string, ChainRpcConfig>([["base", baseChainRpcConfig()]]);
 
 function buildTestOpts(overrides: Partial<SyncBlacklistOptions> = {}): SyncBlacklistOptions {
   return {
-    db: makeDb(),
-    etherscanApiKey: "etherscan-key",
-    trongridApiKey: "tron-key",
-    drpcApiKey: null,
-    chainRpcs: testChainRpcs,
-    ...overrides,
+    db: makeDb(), etherscanApiKey: "etherscan-key", trongridApiKey: "tron-key",
+    drpcApiKey: null, chainRpcs: testChainRpcs, ...overrides,
   };
-}
-
-function emptyBlacklistAggregateTables() {
-  return [
-    { match: "blacklist-gap-aggregate", rows: [], first: {
-      total: 0, missing: null, missing_recent: null, oldest_gap_age_sec: null,
-      never_attempted: null, repeated_failures: null, unrecoverable: null,
-    } },
-    { match: "blacklist-summary-public-aggregate", rows: [], first: {
-      total: 0, max_ts: null, recent_30d: null, recent_24h: null,
-      freeze_24h: null, freeze_7d: null, freeze_usd_24h: null, freeze_usd_7d: null,
-      freeze_known_24h: null, freeze_known_7d: null,
-    } },
-  ];
 }
 
 function makeDb(syncStateRows: Record<string, unknown>[] = [], tables: Parameters<typeof mockD1>[0] = []) {
   return mockD1([
     ...tables,
-    ...emptyBlacklistAggregateTables(),
+    { match: "blacklist-gap-aggregate", rows: [], first: {
+      total: 0, missing: null, missing_recent: null, oldest_gap_age_sec: null,
+      never_attempted: null, repeated_failures: null, unrecoverable: null,
+    } },
+    { match: "blacklist-summary-public-aggregate", rows: [], first: {
+      total: 0, max_ts: null, recent_30d: null, recent_24h: null, freeze_24h: null,
+      freeze_7d: null, freeze_usd_24h: null, freeze_usd_7d: null, freeze_known_24h: null, freeze_known_7d: null,
+    } },
     { match: "blacklist-summary-latest-event-type-history", rows: [] },
     { match: "blacklist_sync_state", rows: syncStateRows },
     { match: "blacklist_events", rows: [] },
   ]);
 }
 
+function openCircuitDb(circuitKey: string, openedAt: number) {
+  return mockD1([
+    {
+      match: "FROM cache WHERE key = ?", matchBinds: [circuitKey],
+      rows: [{
+        key: circuitKey, updated_at: openedAt,
+        value: JSON.stringify({ state: "open", consecutiveFailures: 3, lastFailureAt: openedAt, lastSuccessAt: null, openedAt }),
+      }],
+    },
+    { match: "blacklist_sync_state", rows: [] },
+    { match: "blacklist_events", rows: [] },
+  ]);
+}
+
+async function runSync(overrides: Partial<SyncBlacklistOptions> = {}) {
+  const result = await syncBlacklist(buildTestOpts(overrides));
+  return { result, meta: JSON.parse(result.metadata) };
+}
+
 function findStateFinalization(db: ReturnType<typeof makeDb>, configKey: string) {
-  return db
-    .getHistory()
-    .find((entry) => entry.sql.includes("blacklist-state-finalize") && entry.binds[16] === configKey);
+  return db.getHistory().find((e) => e.sql.includes("blacklist-state-finalize") && e.binds[16] === configKey);
 }
 
-function completeEtherscanLogs(logs: EtherscanLogEntry[] = []): EvmLogFetchResult {
-  return { logs, complete: true, scannedToBlock: 99999999, calls: 1, maxDepth: 0 };
-}
+const completeEtherscanLogs = (logs: EtherscanLogEntry[] = []): EvmLogFetchResult => ({
+  logs, complete: true, scannedToBlock: 99999999, calls: 1, maxDepth: 0,
+});
+const failedEtherscanLogs = (): EvmLogFetchResult => ({
+  logs: [], complete: false, scannedToBlock: -1, calls: 1, maxDepth: 0, failureReason: "test-failure",
+});
 
-function failedEtherscanLogs(): EvmLogFetchResult {
+function makeEvmLog(overrides: Partial<EtherscanLogEntry> = {}): EtherscanLogEntry {
   return {
-    logs: [],
-    complete: false,
-    scannedToBlock: -1,
-    calls: 1,
-    maxDepth: 0,
-    failureReason: "test-failure",
+    address: ETH_USDC, topics: [BLACKLISTED_TOPIC, TOPIC_USER], data: "0x",
+    blockNumber: "0x1312d00", timeStamp: "0x6670a780", transactionHash: "0x" + "ab".repeat(32), logIndex: "0x0",
+    ...overrides,
   };
+}
+
+function makeAlchemyLog() {
+  return {
+    address: BASE_USDC, topics: [BLACKLISTED_TOPIC, TOPIC_USER], data: "0x",
+    blockNumber: "0x1312d00", transactionHash: "0x" + "ba".repeat(32),
+    transactionIndex: "0x0", blockHash: "0xblockhash", logIndex: "0x0", removed: false,
+  };
+}
+
+function makeTronEventResponse(txByte: string, user: string) {
+  return jsonResp({
+    success: true,
+    data: [{
+      block_number: 50000000, block_timestamp: 1718650752000, transaction_id: txByte.repeat(32),
+      event_index: 0, event_name: "AddedBlackList", result: { _user: user },
+    }],
+    meta: {},
+  });
 }
 
 describe("syncBlacklist", () => {
@@ -331,13 +275,7 @@ describe("syncBlacklist", () => {
     vi.mocked(batchExecute).mockImplementation(async (_db, stmts) => stmts.length);
     vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
     vi.mocked(getEvmBlockNumber).mockResolvedValue(20010000);
-    vi.mocked(fetchAlchemyLogs).mockResolvedValue({
-      logs: [],
-      complete: true,
-      scannedToBlock: 20000000,
-      calls: 1,
-      maxDepth: 0,
-    });
+    vi.mocked(fetchAlchemyLogs).mockResolvedValue({ logs: [], complete: true, scannedToBlock: 20000000, calls: 1, maxDepth: 0 });
     vi.mocked(getAlchemyBlockNumber).mockResolvedValue(20000450);
     vi.mocked(resolveBlockTimestamps).mockResolvedValue(new Map());
     vi.mocked(getChainRpc).mockImplementation((_chainRpcs: Map<string, unknown>, chainId: string) =>
@@ -364,8 +302,7 @@ describe("syncBlacklist", () => {
       await materializeBlacklistSummarySnapshot(db, now, now);
       const invalidate = vi.fn(() => invalidateBlacklistDerivedCaches(db));
       const stored = () => sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY);
-      const repairs = !["scan", "gaps"].includes(phase);
-      if (repairs) {
+      if (!["scan", "gaps"].includes(phase)) {
         const insert = sqlite.prepare(`INSERT INTO blacklist_events
           (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
            timestamp, config_key, amount_status, explorer_tx_url, explorer_address_url)
@@ -398,22 +335,21 @@ describe("syncBlacklist", () => {
         if (phase === "foreign-after") await invalidate();
         return result;
       });
-      const result = await syncBlacklist(buildTestOpts({ db }));
-      const metadata = JSON.parse(result.metadata);
+      const { result, meta } = await runSync({ db });
       expect(invalidate).toHaveBeenCalledTimes(phase === "own" || phase === "crash" ? 0 : 1);
       if (phase === "own" || phase === "crash") {
-        expect(metadata.tronOrderPositionsResolved).toBe(2);
+        expect(meta.tronOrderPositionsResolved).toBe(2);
         expect(sqlite.prepare("SELECT value FROM cache WHERE key = 'blacklist:derived-generation'").get()).toBeDefined();
         expect(sqlite.prepare("SELECT transaction_index FROM blacklist_events ORDER BY id").all())
           .toEqual([{ transaction_index: 0 }, { transaction_index: 1 }]);
-        expect(metadata.producerSummarySnapshot).toBe(phase === "own");
+        expect(meta.producerSummarySnapshot).toBe(phase === "own");
         if (phase === "crash") {
           expect(stored()).toBeUndefined();
           expect((await handleBlacklistSummary(db)).status).toBe(200);
           expect(stored()).toBeDefined();
         }
       } else {
-        expect(metadata).toMatchObject({ producerSummarySnapshot: false, producerSnapshotReason: "superseded", reason: "superseded" });
+        expect(meta).toMatchObject({ producerSummarySnapshot: false, producerSnapshotReason: "superseded", reason: "superseded" });
         expect(result.status).toBe("degraded");
         expect(stored()).toBeUndefined();
       }
@@ -421,36 +357,15 @@ describe("syncBlacklist", () => {
   );
 
   it("processes events and writes to DB on normal path", async () => {
-    const db = makeDb();
-
-    vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValueOnce(
-      completeEtherscanLogs([
-        {
-          address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-          topics: [
-            "0xffa4e6181777692565cf28528fc88fd1516ea86b56da075235fa575af6a4b855",
-            "0x000000000000000000000000abcdef1234567890abcdef1234567890abcdef12",
-          ],
-          data: "0x",
-          blockNumber: "0x1312d00", // 20,000,000
-          timeStamp: "0x6670a780", // 1718650752
-          transactionHash: "0x" + "ab".repeat(32),
-          logIndex: "0x0",
-        },
-      ]),
-    );
-
+    vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValueOnce(completeEtherscanLogs([makeEvmLog()]));
     installFetch(emptyTronResponse);
-
-    const result = await syncBlacklist(buildTestOpts({ db }));
+    const { result, meta } = await runSync();
 
     expect(result.itemCount).toBe(1);
-    const meta = JSON.parse(result.metadata);
-    expect(meta.apiErrors).toBe(0);
-    expect(meta.rowsWritten).toBe(1);
-    expect(meta.eventsFetched).toBe(1);
-    expect(meta.currentBalanceCacheSkippedDueBudget).toBe(0);
-    expect(meta.currentBalanceCacheBudgetExhausted).toBe(false);
+    expect(meta).toMatchObject({
+      apiErrors: 0, rowsWritten: 1, eventsFetched: 1,
+      currentBalanceCacheSkippedDueBudget: 0, currentBalanceCacheBudgetExhausted: false,
+    });
     expect(meta).not.toHaveProperty("currentBalanceCacheDeleted");
     expect(meta).not.toHaveProperty("tronLedgerUpdated");
     expect(batchExecute).toHaveBeenCalled();
@@ -463,44 +378,20 @@ describe("syncBlacklist", () => {
       { match: "SELECT id FROM blacklist_events WHERE id IN", rows: [{ id: duplicateId }] },
       { match: "blacklist_events", rows: [] },
     ]);
-
     vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValueOnce(
-      completeEtherscanLogs([
-        {
-          address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-          topics: [
-            "0xffa4e6181777692565cf28528fc88fd1516ea86b56da075235fa575af6a4b855",
-            "0x000000000000000000000000abcdef1234567890abcdef1234567890abcdef12",
-          ],
-          data: "0x",
-          blockNumber: "0x1312d00",
-          timeStamp: "0x6670a780",
-          transactionHash: "0x" + "de".repeat(32),
-          logIndex: "0x0",
-        },
-      ]),
+      completeEtherscanLogs([makeEvmLog({ transactionHash: "0x" + "de".repeat(32) })]),
     );
-
     installFetch(emptyTronResponse);
-
-    const result = await syncBlacklist(buildTestOpts({ db }));
+    const { result, meta } = await runSync({ db });
 
     expect(result.itemCount).toBe(0);
-    const meta = JSON.parse(result.metadata);
-    expect(meta.rowsWritten).toBe(0);
-    expect(meta.eventsFetched).toBe(1);
-    expect(meta.enrichAttempted).toBe(0);
-    expect(meta.currentBalanceCacheUpdated).toBe(0);
+    expect(meta).toMatchObject({ rowsWritten: 0, eventsFetched: 1, enrichAttempted: 0, currentBalanceCacheUpdated: 0 });
   });
 
   it("records thrown config scan exceptions and continues the sync", async () => {
-    const db = makeDb();
     vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockRejectedValueOnce(new TypeError("explorer down"));
-
     installFetch(emptyTronResponse);
-
-    const result = await syncBlacklist(buildTestOpts({ db }));
-    const meta = JSON.parse(result.metadata);
+    const { meta } = await runSync();
 
     expect(meta.apiErrors).toBe(1);
     expect(meta.apiErrorClasses.TypeError).toBe(1);
@@ -508,105 +399,33 @@ describe("syncBlacklist", () => {
   });
 
   it("isolates per-chain errors — Etherscan 429 does not block Tron", async () => {
-    const db = makeDb();
-
     vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValueOnce(failedEtherscanLogs());
-
     const fetchMock = installFetch(async (url: string | Request) => {
       const urlStr = typeof url === "string" ? url : url.url;
       if (urlStr.includes("trongrid.io/v1/contracts") && urlStr.includes("event_name=AddedBlackList")) {
-        return new Response(
-          JSON.stringify({
-            success: true,
-            data: [
-              {
-                block_number: 50000000,
-                block_timestamp: 1718650752000,
-                transaction_id: "ab".repeat(32),
-                event_index: 0,
-                event_name: "AddedBlackList",
-                result: { _user: "0x" + "de".repeat(20) },
-              },
-            ],
-            meta: {},
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
+        return makeTronEventResponse("ab", "0x" + "de".repeat(20));
       }
-      if (urlStr.includes("trongrid.io/v1/contracts")) {
-        // Other Tron event names return empty
-        return emptyTronResponse();
-      }
-      // Etherscan balance/block fetches — success with dummy data
-      if (urlStr.includes("etherscan.io")) {
-        return new Response(JSON.stringify({ result: "0x1312d00" }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-      // Default: TronGrid account lookups
-      return new Response(JSON.stringify({ success: true, data: [{ trc20: [] }] }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
+      if (urlStr.includes("trongrid.io/v1/contracts")) return emptyTronResponse();
+      if (urlStr.includes("etherscan.io")) return jsonResp({ result: "0x1312d00" });
+      return jsonResp({ success: true, data: [{ trc20: [] }] });
     });
-    const result = await syncBlacklist(buildTestOpts({ db }));
+    const { result, meta } = await runSync();
 
     expect(result.itemCount).toBe(1);
-    const meta = JSON.parse(result.metadata);
     expect(meta.apiErrors).toBe(1);
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes("trongrid.io"))).toBe(true);
   });
 
   it("runs Tron and RPC-primary configs when the Etherscan circuit is open", async () => {
-    const openedAt = Math.floor(Date.now() / 1000);
-    const db = mockD1([
-      {
-        match: "FROM cache WHERE key = ?",
-        matchBinds: ["circuit:etherscan"],
-        rows: [
-          {
-            key: "circuit:etherscan",
-            updated_at: openedAt,
-            value: JSON.stringify({
-              state: "open",
-              consecutiveFailures: 3,
-              lastFailureAt: openedAt,
-              lastSuccessAt: null,
-              openedAt,
-            }),
-          },
-        ],
-      },
-      { match: "blacklist_sync_state", rows: [] },
-      { match: "blacklist_events", rows: [] },
-    ]);
-
+    const db = openCircuitDb("circuit:etherscan", Math.floor(Date.now() / 1000));
     const fetchMock = installFetch(async (url: string | Request) => {
       const urlStr = typeof url === "string" ? url : url.url;
       if (urlStr.includes("trongrid.io/v1/contracts") && urlStr.includes("event_name=AddedBlackList")) {
-        return new Response(
-          JSON.stringify({
-            success: true,
-            data: [
-              {
-                block_number: 50000000,
-                block_timestamp: 1718650752000,
-                transaction_id: "cd".repeat(32),
-                event_index: 0,
-                event_name: "AddedBlackList",
-                result: { _user: "0x00000000000000000000000000000000000000cd" },
-              },
-            ],
-            meta: {},
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
+        return makeTronEventResponse("cd", "0x00000000000000000000000000000000000000cd");
       }
       return emptyTronResponse();
     });
-    const result = await syncBlacklist(buildTestOpts({ db }));
-    const meta = JSON.parse(result.metadata);
+    const { result, meta } = await runSync({ db });
 
     expect(result.status).toBe("degraded");
     expect(result.itemCount).toBe(1);
@@ -617,108 +436,45 @@ describe("syncBlacklist", () => {
   });
 
   it("marks TronGrid circuit-open skips as degraded instead of successful completion", async () => {
-    const openedAt = Math.floor(Date.now() / 1000);
-    const db = mockD1([
-      {
-        match: "FROM cache WHERE key = ?",
-        matchBinds: ["circuit:trongrid"],
-        rows: [
-          {
-            key: "circuit:trongrid",
-            updated_at: openedAt,
-            value: JSON.stringify({
-              state: "open",
-              consecutiveFailures: 3,
-              lastFailureAt: openedAt,
-              lastSuccessAt: null,
-              openedAt,
-            }),
-          },
-        ],
-      },
-      { match: "blacklist_sync_state", rows: [] },
-      { match: "blacklist_events", rows: [] },
-    ]);
-    const fetchMock = installFetch(
-      async (_url: string | Request) =>
-        emptyTronResponse(),
-    );
-    const result = await syncBlacklist(buildTestOpts({ db }));
-    const meta = JSON.parse(result.metadata);
+    const db = openCircuitDb("circuit:trongrid", Math.floor(Date.now() / 1000));
+    const fetchMock = installFetch(emptyTronResponse);
+    const { result, meta } = await runSync({ db });
 
     expect(result.status).toBe("degraded");
-    // The scan skips every Tron config and the replay tail skips its own lane.
     expect(meta.tronGridCircuitSkips).toBeGreaterThan(0);
-    expect(meta.tronAmountRepairOutcome).toBe("skipped");
-    expect(meta.tronAmountRepairReason).toBe("provider-circuit-open");
-    expect(meta.tronOrderOutcome).toBe("skipped");
-    expect(meta.tronAmountRepairAttempted).toBeNull();
-    expect(meta.tronAmountRepairLimit).toBeNull();
-    expect(meta.tronOrderBlocksAttempted).toBeNull();
-    expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-tron-replay-candidates"))).toBe(false);
+    expect(meta).toMatchObject({
+      tronAmountRepairOutcome: "skipped", tronAmountRepairReason: "provider-circuit-open",
+      tronOrderOutcome: "skipped", tronAmountRepairAttempted: null, tronAmountRepairLimit: null, tronOrderBlocksAttempted: null,
+    });
+    expect(db.getHistory().some((e) => e.sql.includes("blacklist-tron-replay-candidates"))).toBe(false);
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes("trongrid.io/v1/contracts"))).toBe(false);
   });
 
   it("keeps a historical Tron event unresolved after refreshing its current balance", async () => {
     const { sqlite } = sqliteFixtures.open();
     const history: string[] = [];
-    const db = createSqliteD1(sqlite, {
-      onRun: (sql) => history.push(sql),
-      onAll: (sql) => history.push(sql),
-    });
+    const db = createSqliteD1(sqlite, { onRun: (sql) => history.push(sql), onAll: (sql) => history.push(sql) });
     const actualDb = await vi.importActual<typeof import("../../lib/db")>("../../lib/db");
     vi.mocked(batchExecute).mockImplementation(actualDb.batchExecute);
-
 
     installFetch(async (url: string | Request) => {
       const urlStr = typeof url === "string" ? url : url.url;
       if (urlStr.includes("trongrid.io/v1/contracts") && urlStr.includes("event_name=AddedBlackList")) {
-        return new Response(
-          JSON.stringify({
-            success: true,
-            data: [
-              {
-                block_number: 50000000,
-                block_timestamp: 1718650752000,
-                transaction_id: "ef".repeat(32),
-                event_index: 0,
-                event_name: "AddedBlackList",
-                result: { _user: "0x00000000000000000000000000000000000000ab" },
-              },
-            ],
-            meta: {},
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
-      }
-      if (urlStr.includes("trongrid.io/v1/contracts")) {
-        return emptyTronResponse();
+        return makeTronEventResponse("ef", "0x00000000000000000000000000000000000000ab");
       }
       if (urlStr.includes("api.trongrid.io/jsonrpc")) {
-        return new Response(
-          JSON.stringify({
-            jsonrpc: "2.0",
-            id: 1,
-            result: "0x00000000000000000000000000000000000000000000000000000000000f4240",
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
+        return jsonResp({ jsonrpc: "2.0", id: 1, result: "0x00000000000000000000000000000000000000000000000000000000000f4240" });
       }
       return emptyTronResponse();
     });
     await syncBlacklist(buildTestOpts({ db }));
 
-    const refreshIndex = history.findIndex((sql) => sql.includes("INSERT INTO blacklist_current_balances"));
-    expect(refreshIndex).toBeGreaterThanOrEqual(0);
+    expect(history.findIndex((sql) => sql.includes("INSERT INTO blacklist_current_balances"))).toBeGreaterThanOrEqual(0);
     expect(sqlite.prepare("SELECT amount_native, amount_usd_at_event, amount_source, amount_status FROM blacklist_events WHERE tx_hash = ?").all("ef".repeat(32))).toEqual([{
-      amount_native: null,
-      amount_usd_at_event: null,
-      amount_source: "unavailable",
-      amount_status: "recoverable_pending",
+      amount_native: null, amount_usd_at_event: null, amount_source: "unavailable", amount_status: "recoverable_pending",
     }]);
     expect(sqlite.prepare("SELECT amount_native, amount_usd FROM blacklist_current_balances WHERE chain_id = 'tron'").all()).toEqual([{
-      amount_native: 1,
-      amount_usd: 1,
+      amount_native: 1, amount_usd: 1,
     }]);
   });
 
@@ -727,10 +483,9 @@ describe("syncBlacklist", () => {
     { error: "D1_ERROR: internal error; reference = persistent", failures: 4, attempts: 4, recovers: false },
     { error: "D1_ERROR: no such table: cache", failures: 1, attempts: 1, recovers: false },
   ])("handles final decode diagnostics failure: $error", async ({ error, failures, attempts, recovers }) => {
-    const diagnosticRows = [{ configKey: CONTRACT_CONFIGS[0].configKey, count: 2 }];
     const diagnosticFixture = {
       match: "blacklist:decode-retry:",
-      rows: diagnosticRows,
+      rows: [{ configKey: CONTRACT_CONFIGS[0].configKey, count: 2 }],
       throwError: undefined as Error | undefined,
     };
     const db = makeDb([], [diagnosticFixture]);
@@ -742,9 +497,7 @@ describe("syncBlacklist", () => {
       }
       return prepare(sql);
     });
-    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
-      headers: { "Content-Type": "application/json" },
-    }));
+    installFetch(emptyTronResponse);
 
     const outcomePromise = syncBlacklist(buildTestOpts({ db })).then(
       (result) => ({ result, error: null }),
@@ -756,8 +509,7 @@ describe("syncBlacklist", () => {
       expect(outcome.error).toBeNull();
       expect(outcome.result?.status).toBe("ok");
       expect(JSON.parse(outcome.result!.metadata)).toMatchObject({
-        configsSucceeded: CONTRACT_CONFIGS.length,
-        decodeRetryCounts: { [CONTRACT_CONFIGS[0].configKey]: 2 },
+        configsSucceeded: CONTRACT_CONFIGS.length, decodeRetryCounts: { [CONTRACT_CONFIGS[0].configKey]: 2 },
       });
     } else {
       expect(outcome.result).toBeNull();
@@ -767,29 +519,18 @@ describe("syncBlacklist", () => {
   });
 
   it("returns zero events when all APIs return empty", async () => {
-    const db = makeDb(
-      CONTRACT_CONFIGS.map((config) => ({
-        config_key: config.configKey,
-        last_block: 0,
-        cursor_value: 0,
-        attempt_generation: 1,
-        last_succeeded_at: Math.floor(Date.now() / 1000) - 60,
-      })),
-    );
-
-
+    const db = makeDb(CONTRACT_CONFIGS.map((c) => ({
+      config_key: c.configKey, last_block: 0, cursor_value: 0,
+      attempt_generation: 1, last_succeeded_at: Math.floor(Date.now() / 1000) - 60,
+    })));
     installFetch(emptyTronResponse);
-
-    const result = await syncBlacklist(buildTestOpts({ db }));
+    const { result, meta } = await runSync({ db });
 
     expect(result.itemCount).toBe(0);
-    const meta = JSON.parse(result.metadata);
-    expect(meta.apiErrors).toBe(0);
-    expect(meta.rowsWritten).toBe(0);
-    expect(meta.eventsFetched).toBe(0);
-    expect(meta.producerGapMetricSnapshots).toBe(2);
-    expect(meta.producerSummarySnapshot).toBe(true);
-    expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-snapshot-write"))).toBe(true);
+    expect(meta).toMatchObject({
+      apiErrors: 0, rowsWritten: 0, eventsFetched: 0, producerGapMetricSnapshots: 2, producerSummarySnapshot: true,
+    });
+    expect(db.getHistory().some((e) => e.sql.includes("blacklist-summary-snapshot-write"))).toBe(true);
   });
 
   it.each([
@@ -798,28 +539,25 @@ describe("syncBlacklist", () => {
     { lag: BLACKLIST_COVERAGE_LAG_TOLERANCE_BLOCKS + 1, expectedStatus: "degraded" },
   ])("uses the measured lag tolerance for run status ($lag blocks)", async ({ lag, expectedStatus }) => {
     const priorSuccess = Math.floor(Date.now() / 1000) - 3600;
-    const db = makeDb(CONTRACT_CONFIGS.map((config) => ({
-      config_key: config.configKey,
-      // Finish Base's complete 50,000-block request window just below safe head.
-      // A short response to a larger requested range is a provider gap, not tolerated lag.
-      last_block: config.chain.chainId === "base" ? 19_950_000 - lag : 0,
-      cursor_value: config.chain.chainId === "base" ? 19_950_000 - lag : 0,
+    const db = makeDb(CONTRACT_CONFIGS.map((c) => ({
+      config_key: c.configKey,
+      last_block: c.chain.chainId === "base" ? 19_950_000 - lag : 0,
+      cursor_value: c.chain.chainId === "base" ? 19_950_000 - lag : 0,
       attempt_generation: 1, last_succeeded_at: priorSuccess,
     })));
-    vi.mocked(fetchAlchemyLogs).mockResolvedValueOnce({
-      logs: [], complete: true, scannedToBlock: 20_000_000 - lag, calls: 1, maxDepth: 0,
-    });
+    vi.mocked(fetchAlchemyLogs).mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 20_000_000 - lag, calls: 1, maxDepth: 0 });
     installFetch(emptyTronResponse);
-    const result = await syncBlacklist(buildTestOpts({ db }));
-    const metadata = JSON.parse(result.metadata);
-    expect(result.status).toBe(expectedStatus);
-    expect(metadata.coverageLagToleranceBlocks).toBe(BLACKLIST_COVERAGE_LAG_TOLERANCE_BLOCKS);
-    expect(metadata.coverageFailures).toBe(expectedStatus === "ok" ? 0 : 1);
-    expect(metadata.coverageLaggingWithinTolerance).toBe(expectedStatus === "ok" ? 1 : 0);
-    expect(metadata.oldestConfigSuccessAt).toBe(priorSuccess);
-    expect(metadata.coverageFailureConfigs).toEqual([expect.objectContaining({ lag, samples: ["behind-safe-head"] })]);
-  });
+    const { result, meta } = await runSync({ db });
 
+    expect(result.status).toBe(expectedStatus);
+    expect(meta).toMatchObject({
+      coverageLagToleranceBlocks: BLACKLIST_COVERAGE_LAG_TOLERANCE_BLOCKS,
+      coverageFailures: expectedStatus === "ok" ? 0 : 1,
+      coverageLaggingWithinTolerance: expectedStatus === "ok" ? 1 : 0,
+      oldestConfigSuccessAt: priorSuccess,
+    });
+    expect(meta.coverageFailureConfigs).toEqual([expect.objectContaining({ lag, samples: ["behind-safe-head"] })]);
+  });
 
   it.each([
     { complete: true, previouslySucceeded: true },
@@ -828,38 +566,23 @@ describe("syncBlacklist", () => {
   ])("refreshes observed summaries during degraded RPC coverage $complete/$previouslySucceeded without renewing freshness", async ({ complete, previouslySucceeded }) => {
     const now = Math.floor(Date.now() / 1000);
     const priorSuccess = previouslySucceeded ? now - 2 * 86400 : null;
-    const db = makeDb(CONTRACT_CONFIGS.map((config) => ({
-      config_key: config.configKey,
-      last_block: 0,
-      cursor_value: 0,
-      attempt_generation: 1,
-      last_succeeded_at: priorSuccess,
+    const db = makeDb(CONTRACT_CONFIGS.map((c) => ({
+      config_key: c.configKey, last_block: 0, cursor_value: 0, attempt_generation: 1, last_succeeded_at: priorSuccess,
     })));
-    vi.mocked(fetchAlchemyLogs).mockResolvedValueOnce({
-      logs: [],
-      complete,
-      scannedToBlock: 19_960_000,
-      calls: 9,
-      maxDepth: 3,
-    });
+    vi.mocked(fetchAlchemyLogs).mockResolvedValueOnce({ logs: [], complete, scannedToBlock: 19_960_000, calls: 9, maxDepth: 3 });
     installFetch(emptyTronResponse);
-
-    const result = await syncBlacklist(buildTestOpts({ db }));
+    const { result, meta } = await runSync({ db });
 
     expect(result.status).toBe("degraded");
-    expect(JSON.parse(result.metadata)).toMatchObject({
-      configsSucceeded: CONTRACT_CONFIGS.length - 1,
-      oldestConfigSuccessAt: priorSuccess,
-      producerSnapshotSkipped: false,
-      producerSummarySnapshot: true,
+    expect(meta).toMatchObject({
+      configsSucceeded: CONTRACT_CONFIGS.length - 1, oldestConfigSuccessAt: priorSuccess,
+      producerSnapshotSkipped: false, producerSummarySnapshot: true,
       producerGapMetricSnapshots: previouslySucceeded ? 2 : 0,
     });
-    const write = db.getHistory().find((entry) => entry.sql.includes("blacklist-summary-snapshot-write"));
+    const write = db.getHistory().find((e) => e.sql.includes("blacklist-summary-snapshot-write"));
     expect(write).toBeDefined();
     expect(JSON.parse(String(write!.binds[1]))).toMatchObject({
-      materializedAt: now,
-      freshnessTs: priorSuccess,
-      freshnessStatus: previouslySucceeded ? "ok" : "missing",
+      materializedAt: now, freshnessTs: priorSuccess, freshnessStatus: previouslySucceeded ? "ok" : "missing",
       payload: { refresh: { observedAt: now, behindConfigs: [expect.objectContaining({ lastSucceededAt: priorSuccess })] } },
     });
     expect(write!.binds[2]).toBe(now);
@@ -867,22 +590,16 @@ describe("syncBlacklist", () => {
 
   it("stops cleanly before the cron wrapper timeout when runtime budget is nearly exhausted", async () => {
     const db = makeDb();
-
-
     installFetch(async () => {
-        vi.setSystemTime(new Date("2025-06-15T12:09:30Z"));
-        return emptyTronResponse();
-      });
-
-    const result = await syncBlacklist(buildTestOpts({ db }));
+      vi.setSystemTime(new Date("2025-06-15T12:09:30Z"));
+      return emptyTronResponse();
+    });
+    const { result, meta } = await runSync({ db });
 
     expect(result.status).toBe("degraded");
-    const meta = JSON.parse(result.metadata);
-    expect(meta.runtimeBudgetReached).toBe(true);
+    expect(meta).toMatchObject({ runtimeBudgetReached: true, producerSnapshotSkipped: true, producerSnapshotAttempts: 0 });
     expect(meta.contractsSkipped).toBeGreaterThan(0);
-    expect(meta.producerSnapshotSkipped).toBe(true);
-    expect(meta.producerSnapshotAttempts).toBe(0);
-    expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-snapshot-write"))).toBe(false);
+    expect(db.getHistory().some((e) => e.sql.includes("blacklist-summary-snapshot-write"))).toBe(false);
   });
 
   it("preserves later maintenance and snapshots when a long EVM repair reaches its own deadline", async () => {
@@ -892,8 +609,7 @@ describe("syncBlacklist", () => {
       expect(options?.attemptDeadlineMs).toBe(budget.deadlineMs - 55_000);
       expect(options?.attemptDeadlineMs).toBe(startedAt + 590_000);
       vi.setSystemTime(options!.attemptDeadlineMs!);
-      return { runtimeBudgetReached: false, repairWindowExhausted: true,
-        attempted: 400, resolved: 400, retried: 0, unrecoverable: 0 };
+      return { runtimeBudgetReached: false, repairWindowExhausted: true, attempted: 400, resolved: 400, retried: 0, unrecoverable: 0 };
     });
     vi.mocked(resolveTronBlacklistOrder).mockImplementationOnce(async () => {
       vi.setSystemTime(Date.now() + 10_000);
@@ -905,9 +621,9 @@ describe("syncBlacklist", () => {
     });
     installFetch(emptyTronResponse);
 
-    const result = await syncBlacklist(buildTestOpts({ db }));
+    const { result, meta } = await runSync({ db });
     expect(result.status).toBe("ok");
-    expect(JSON.parse(result.metadata)).toMatchObject({
+    expect(meta).toMatchObject({
       runtimeBudgetReached: false, amountRepairOutcome: "partial", amountRepairReason: "maintenance-tail-reserved",
       amountRepairAttempted: 400, tronOrderOutcome: "ok", tronAmountRepairOutcome: "ok",
       producerSnapshotSkipped: false, producerSnapshotWindowUnavailable: false,
@@ -915,7 +631,7 @@ describe("syncBlacklist", () => {
     });
     expect(resolveTronBlacklistOrder).toHaveBeenCalledOnce();
     expect(backfillTronBlacklistAmounts).toHaveBeenCalledOnce();
-    expect(db.getHistory().some((entry) => entry.sql.includes("FROM cache AS debt"))).toBe(true);
+    expect(db.getHistory().some((e) => e.sql.includes("FROM cache AS debt"))).toBe(true);
   });
 
   it("keeps the exhausted-scan row cap while deferring EVM repair to preserve the remaining tail", async () => {
@@ -924,88 +640,47 @@ describe("syncBlacklist", () => {
       {
         match: "blacklist-amount-recovery-evm-candidates",
         rows: [{
-          id: "repair-row-1",
-          chain_id: "ethereum",
-          event_type: "blacklist",
-          address: "0x1111111111111111111111111111111111111111",
-          block_number: 100,
-          stablecoin: "USDC",
-          tx_hash: "0xrepair",
-          config_key: null,
-          contract_address: null,
-          amount_attempt_count: 0,
-          amount_last_attempted_at: null,
-          amount_last_error_class: null,
-          amount_last_provider: null,
-          amount_source: "unavailable",
-          queue_attempt_count: 0,
+          id: "repair-row-1", chain_id: "ethereum", event_type: "blacklist",
+          address: "0x1111111111111111111111111111111111111111", block_number: 100, stablecoin: "USDC",
+          tx_hash: "0xrepair", config_key: null, contract_address: null, amount_attempt_count: 0,
+          amount_last_attempted_at: null, amount_last_error_class: null, amount_last_provider: null,
+          amount_source: "unavailable", queue_attempt_count: 0,
         }],
       },
       { match: "blacklist_events", rows: [] },
     ]);
-
     vi.mocked(fetchAlchemyLogs).mockImplementationOnce(async () => {
       vi.setSystemTime(new Date("2025-06-15T12:10:05Z"));
-      return {
-        logs: [],
-        complete: true,
-        scannedToBlock: 20000000,
-        calls: 1,
-        maxDepth: 0,
-      };
+      return { logs: [], complete: true, scannedToBlock: 20000000, calls: 1, maxDepth: 0 };
     });
-    installFetch(async () => new Response(JSON.stringify({ result: "0x0000000000000000000000000000000000000000000000000000000000989680" }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
-
-    const result = await syncBlacklist(buildTestOpts({ db }));
-    const meta = JSON.parse(result.metadata);
+    installFetch(async () => jsonResp({ result: "0x0000000000000000000000000000000000000000000000000000000000989680" }));
+    const { result, meta } = await runSync({ db });
 
     expect(result.status).toBe("degraded");
-    expect(meta.runtimeBudgetReached).toBe(true);
-    expect(meta.amountRepairTailWindowUsed).toBe(true);
-    expect(meta.amountRepairTailLimit).toBe(10);
-    expect(meta.amountRepairAttempted).toBe(0);
-    expect(meta.amountRepairResolved).toBe(0);
-    expect(meta.amountRepairRetried).toBe(0);
-    expect(meta.amountRepairOutcome).toBe("partial");
-    expect(meta.amountRepairReason).toBe("maintenance-tail-reserved");
-    expect(meta.maintenanceRuntimeBudgetMs).toBe(645_000);
-    const candidateQuery = db.getHistory().find((entry) =>
-      entry.sql.includes("blacklist-amount-recovery-evm-candidates"),
-    );
-    expect(candidateQuery).toBeUndefined();
+    expect(meta).toMatchObject({
+      runtimeBudgetReached: true, amountRepairTailWindowUsed: true, amountRepairTailLimit: 10,
+      amountRepairAttempted: 0, amountRepairResolved: 0, amountRepairRetried: 0,
+      amountRepairOutcome: "partial", amountRepairReason: "maintenance-tail-reserved", maintenanceRuntimeBudgetMs: 645_000,
+    });
+    expect(db.getHistory().find((e) => e.sql.includes("blacklist-amount-recovery-evm-candidates"))).toBeUndefined();
     expect(vi.mocked(backfillAmounts).mock.calls[0][5]?.maxRows).toBe(10);
   });
 
   it("degrades a one-contract runtime tail and withholds producer snapshots", async () => {
     const db = makeDb();
-
     vi.mocked(fetchAlchemyLogs).mockImplementationOnce(async () => {
       vi.setSystemTime(new Date("2025-06-15T12:09:30Z"));
-      return {
-        logs: [],
-        complete: true,
-        scannedToBlock: 20000000,
-        calls: 1,
-        maxDepth: 0,
-      };
+      return { logs: [], complete: true, scannedToBlock: 20000000, calls: 1, maxDepth: 0 };
     });
-
     installFetch(emptyTronResponse);
-
-    const result = await syncBlacklist(buildTestOpts({ db }));
+    const { result, meta } = await runSync({ db });
 
     expect(result.status).toBe("degraded");
-    const meta = JSON.parse(result.metadata);
-    expect(meta.runtimeBudgetReached).toBe(true);
-    expect(meta.contractsSkipped).toBe(1);
-    expect(meta.incompleteRuntimeConfigs).toBe(0);
-    expect(meta.subrequestBudgetReached).toBe(false);
-    expect(meta.producerSnapshotWindowUnavailable).toBe(false);
-    expect(meta.producerSnapshotSkipped).toBe(true);
-    expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-snapshot-write"))).toBe(false);
+    expect(meta).toMatchObject({
+      runtimeBudgetReached: true, contractsSkipped: 1, incompleteRuntimeConfigs: 0,
+      subrequestBudgetReached: false, producerSnapshotWindowUnavailable: false, producerSnapshotSkipped: true,
+    });
+    expect(db.getHistory().some((e) => e.sql.includes("blacklist-summary-snapshot-write"))).toBe(false);
   });
 
   it.each([
@@ -1017,41 +692,40 @@ describe("syncBlacklist", () => {
     const retried = mode === "once" || mode === "twice";
     const error = mode ? "D1 DB is overloaded: consumed within a 10 second window" : "snapshot write failed".repeat(40);
     let reads = 0;
-    const db = makeDb([], [
-      { match, throwError: mode ? undefined : new Error(error), get rows() {
+    const db = makeDb([], [{
+      match, throwError: mode ? undefined : new Error(error),
+      get rows() {
         if (++reads <= (mode === "twice" ? 2 : 1)) {
           if (mode === "late") vi.setSystemTime(Date.now() + 625_000);
           throw new Error(error);
         }
         return [];
-      } },
-    ]);
+      },
+    }]);
     const onProgress = vi.fn();
     installFetch(emptyTronResponse);
-    const pending = syncBlacklist(buildTestOpts({ db, onProgress }));
+    const pending = runSync({ db, onProgress });
     await vi.runAllTimersAsync();
-    const result = await pending;
+    const { result, meta } = await pending;
     if (mode === "late") expect(Date.now() - startedAt).toBeLessThan(635_000);
     if (mode === "once") {
       expect(result.status).toBe("ok");
-      expect(JSON.parse(result.metadata).producerSummarySnapshot).toBe(true);
+      expect(meta.producerSummarySnapshot).toBe(true);
       expect(materializeBlacklistGapMetrics).toHaveBeenCalledTimes(2);
       expect(Date.now() - startedAt).toBeGreaterThanOrEqual(10_000);
-      expect(db.getHistory().find((row) => row.sql.includes("blacklist-summary-snapshot-write"))?.binds[2]).toBe(startedAt / 1000);
+      expect(db.getHistory().find((r) => r.sql.includes("blacklist-summary-snapshot-write"))?.binds[2]).toBe(startedAt / 1000);
     }
-    expect(JSON.parse(result.metadata).producerSnapshotAttempts).toBe(retried ? 2 : 1);
+    expect(meta.producerSnapshotAttempts).toBe(retried ? 2 : 1);
     expect(reads).toBe(mode ? (retried ? 2 : 1) : 0);
     if (mode === "once") return;
     expect(result.status).toBe("degraded");
-    expect(JSON.parse(result.metadata)).toMatchObject({
-      reason: "blacklist-snapshot-publication-failed",
-      reasons: ["blacklist-snapshot-publication-failed"],
+    expect(meta).toMatchObject({
+      reason: "blacklist-snapshot-publication-failed", reasons: ["blacklist-snapshot-publication-failed"],
       producerSnapshotError: error.slice(0, 500), producerSnapshotErrorOperation: operation,
       producerGapMetricSnapshots: gaps, producerSummarySnapshot: false, producerSnapshotSkipped: false,
     });
     expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({
-      stage: "producer-snapshots",
-      message: "Failed to materialize blacklist producer snapshots",
+      stage: "producer-snapshots", message: "Failed to materialize blacklist producer snapshots",
       metadata: expect.objectContaining({ errorMessage: error.slice(0, 500) }),
     }));
   });
@@ -1061,63 +735,48 @@ describe("syncBlacklist", () => {
 
     it("reports successful empty repair stages as ok with observed zero", async () => {
       emptyOk();
-      const result = await syncBlacklist(buildTestOpts({ db: makeDb() }));
-      const meta = JSON.parse(result.metadata);
-
+      const { result, meta } = await runSync();
       expect(result.status).toBe("ok");
       expect(meta.reasons).toBeUndefined();
       for (const prefix of ["amountRepair", "tronOrder", "tronAmountRepair"]) {
         expect(meta[`${prefix}Outcome`]).toBe("ok");
         expect(meta[`${prefix}Reason`]).toBeNull();
       }
-      expect(meta.amountRepairAttempted).toBe(0);
-      expect(meta.tronAmountRepairAttempted).toBe(0);
-      expect(meta.tronOrderBlocksAttempted).toBe(0);
+      expect(meta).toMatchObject({ amountRepairAttempted: 0, tronAmountRepairAttempted: 0, tronOrderBlocksAttempted: 0 });
     });
 
     it("marks a thrown EVM amount repair failed with null counters", async () => {
       emptyOk();
       vi.mocked(backfillAmounts).mockRejectedValueOnce(new Error("repair boom"));
-      const result = await syncBlacklist(buildTestOpts({ db: makeDb() }));
-      const meta = JSON.parse(result.metadata);
-
+      const { result, meta } = await runSync();
       expect(result.status).toBe("degraded");
-      expect(meta.reason).toBe("blacklist-evm-amount-repair-failed");
-      expect(meta.reasons).toEqual(["blacklist-evm-amount-repair-failed"]);
-      expect(meta.amountRepairOutcome).toBe("failed");
-      expect(meta.amountRepairAttempted).toBeNull();
-      expect(meta.amountRepairResolved).toBeNull();
-      expect(meta.tronAmountRepairOutcome).toBe("ok");
+      expect(meta).toMatchObject({
+        reason: "blacklist-evm-amount-repair-failed", reasons: ["blacklist-evm-amount-repair-failed"],
+        amountRepairOutcome: "failed", amountRepairAttempted: null, amountRepairResolved: null, tronAmountRepairOutcome: "ok",
+      });
     });
 
     it("names the order failure when Tron order repair throws and skips replay", async () => {
       emptyOk();
       vi.mocked(resolveTronBlacklistOrder).mockRejectedValueOnce(new Error("order boom"));
-      const result = await syncBlacklist(buildTestOpts({ db: makeDb() }));
-      const meta = JSON.parse(result.metadata);
-
+      const { result, meta } = await runSync();
       expect(result.status).toBe("degraded");
-      expect(meta.reasons).toEqual(["blacklist-tron-order-repair-failed"]);
-      expect(meta.tronOrderOutcome).toBe("failed");
-      expect(meta.tronOrderBlocksAttempted).toBeNull();
-      expect(meta.tronAmountRepairOutcome).toBe("skipped");
-      expect(meta.tronAmountRepairReason).toBe("tron-order-repair-failed");
-      expect(meta.tronAmountRepairAttempted).toBeNull();
+      expect(meta).toMatchObject({
+        reasons: ["blacklist-tron-order-repair-failed"], tronOrderOutcome: "failed", tronOrderBlocksAttempted: null,
+        tronAmountRepairOutcome: "skipped", tronAmountRepairReason: "tron-order-repair-failed", tronAmountRepairAttempted: null,
+      });
       expect(backfillTronBlacklistAmounts).not.toHaveBeenCalled();
     });
 
     it("keeps order counters when Tron amount replay throws", async () => {
       emptyOk();
       vi.mocked(backfillTronBlacklistAmounts).mockRejectedValueOnce(new Error("replay boom"));
-      const result = await syncBlacklist(buildTestOpts({ db: makeDb() }));
-      const meta = JSON.parse(result.metadata);
-
+      const { result, meta } = await runSync();
       expect(result.status).toBe("degraded");
-      expect(meta.reasons).toEqual(["blacklist-tron-amount-repair-failed"]);
-      expect(meta.tronOrderOutcome).toBe("ok");
-      expect(meta.tronOrderBlocksAttempted).toBe(0);
-      expect(meta.tronAmountRepairOutcome).toBe("failed");
-      expect(meta.tronAmountRepairLimit).toBeNull();
+      expect(meta).toMatchObject({
+        reasons: ["blacklist-tron-amount-repair-failed"], tronOrderOutcome: "ok",
+        tronOrderBlocksAttempted: 0, tronAmountRepairOutcome: "failed", tronAmountRepairLimit: null,
+      });
     });
 
     it.each([false, true])("reports replay limits (page cap %s)", async (pageCapReached) => {
@@ -1125,157 +784,95 @@ describe("syncBlacklist", () => {
       vi.mocked(backfillTronBlacklistAmounts).mockResolvedValueOnce({
         runtimeBudgetReached: !pageCapReached, pageCapReached, attempted: 2, resolved: 1, retried: 1, parked: 0, limit: 24,
       });
-      const result = await syncBlacklist(buildTestOpts({ db: makeDb() }));
-      const meta = JSON.parse(result.metadata);
-
-      expect(meta.tronAmountRepairOutcome).toBe("partial");
+      const { result, meta } = await runSync();
       expect(result.status).toBe(pageCapReached ? "ok" : "degraded");
-      expect(meta.tronAmountRepairReason).toBe(pageCapReached ? "blacklist-tron-amount-repair-page-cap" : "blacklist-budget-exhausted");
+      expect(meta).toMatchObject({
+        tronAmountRepairOutcome: "partial",
+        tronAmountRepairReason: pageCapReached ? "blacklist-tron-amount-repair-page-cap" : "blacklist-budget-exhausted",
+        tronAmountRepairAttempted: 2, tronAmountRepairLimit: 24, producerSnapshotSkipped: false, producerSummarySnapshot: true,
+      });
       expect(meta.quality?.reason).toBe(pageCapReached ? meta.tronAmountRepairReason : undefined);
-      expect(meta.tronAmountRepairAttempted).toBe(2);
-      expect(meta.tronAmountRepairLimit).toBe(24);
-      expect(meta).toMatchObject({ producerSnapshotSkipped: false, producerSummarySnapshot: true });
     });
 
     it("skips EVM repair with provider-circuit-open when the Etherscan circuit is open", async () => {
-      const openedAt = Math.floor(Date.now() / 1000);
-      const db = mockD1([
-        {
-          match: "FROM cache WHERE key = ?",
-          matchBinds: ["circuit:etherscan"],
-          rows: [{
-            key: "circuit:etherscan",
-            updated_at: openedAt,
-            value: JSON.stringify({ state: "open", consecutiveFailures: 3, lastFailureAt: openedAt, lastSuccessAt: null, openedAt }),
-          }],
-        },
-        { match: "blacklist_sync_state", rows: [] },
-        { match: "blacklist_events", rows: [] },
-      ]);
+      const db = openCircuitDb("circuit:etherscan", Math.floor(Date.now() / 1000));
       emptyOk();
-      const result = await syncBlacklist(buildTestOpts({ db }));
-      const meta = JSON.parse(result.metadata);
-
-      expect(meta.amountRepairOutcome).toBe("skipped");
-      expect(meta.amountRepairReason).toBe("provider-circuit-open");
-      expect(meta.amountRepairAttempted).toBeNull();
+      const { meta } = await runSync({ db });
+      expect(meta).toMatchObject({ amountRepairOutcome: "skipped", amountRepairReason: "provider-circuit-open", amountRepairAttempted: null });
       expect(backfillAmounts).not.toHaveBeenCalled();
     });
 
     it("skips EVM repair with subrequest-budget-exhausted when the shared budget refused it", async () => {
       emptyOk();
       vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockImplementation(
-        async (_evmChainId, _contract, _topic, _apiKey, _fromBlock, toBlock, _depth, _limiter, budget) => {
+        async (_id, _c, _t, _k, _from, toBlock, _d, _l, budget) => {
           budget.count = budget.limit;
           return { logs: [], complete: true, scannedToBlock: toBlock, calls: 1, maxDepth: 0 };
         },
       );
-      const result = await syncBlacklist(buildTestOpts({ db: makeDb() }));
-      const meta = JSON.parse(result.metadata);
-
-      expect(meta.subrequestBudgetReached).toBe(true);
-      expect(meta.tronAmountRepairOutcome).toBe("skipped");
-      expect(meta.tronAmountRepairReason).toBe("subrequest-budget-exhausted");
-      // The EVM lane was refused for the same reason; it must not report an
-      // observed empty repair queue (R2).
-      expect(meta.amountRepairOutcome).toBe("skipped");
-      expect(meta.amountRepairReason).toBe("subrequest-budget-exhausted");
-      expect(meta.amountRepairAttempted).toBeNull();
+      const { meta } = await runSync();
+      expect(meta).toMatchObject({
+        subrequestBudgetReached: true, tronAmountRepairOutcome: "skipped", tronAmountRepairReason: "subrequest-budget-exhausted",
+        amountRepairOutcome: "skipped", amountRepairReason: "subrequest-budget-exhausted", amountRepairAttempted: null,
+      });
       expect(backfillAmounts).not.toHaveBeenCalled();
     });
 
     it("admits new amount-gap rows to the repair queue even when the maintenance tail is starved", async () => {
       emptyOk();
       const startedAt = Date.now();
-      // One config's scan overruns the 10m45s maintenance deadline, exactly like
-      // the 2026-11-03 flood runs: every maintenance lane must be skipped.
       vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockImplementation(async () => {
         vi.setSystemTime(startedAt + 650_000);
         return completeEtherscanLogs();
       });
       const db = makeDb();
-      const result = await syncBlacklist(buildTestOpts({ db }));
-      const meta = JSON.parse(result.metadata);
-
-      expect(meta.amountRepairOutcome).toBe("skipped");
-      expect(meta.amountRepairReason).toBe("maintenance-budget-exhausted");
-      expect(meta.amountRepairAttempted).toBeNull();
+      const { meta } = await runSync({ db });
+      expect(meta).toMatchObject({ amountRepairOutcome: "skipped", amountRepairReason: "maintenance-budget-exhausted", amountRepairAttempted: null });
       expect(backfillAmounts).not.toHaveBeenCalled();
-      // Queue admission is bookkeeping, not repair: it still ran after the scans.
-      expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-amount-repair-queue-enqueue"))).toBe(true);
+      expect(db.getHistory().some((e) => e.sql.includes("blacklist-amount-repair-queue-enqueue"))).toBe(true);
     });
 
     it("degrades instead of rejecting when the current-balance debt lane throws", async () => {
-      const db = makeDb([], [
-        { match: "FROM cache AS debt", rows: [], throwError: new Error("D1_ERROR: internal error; reference = overloaded") },
-      ]);
+      const db = makeDb([], [{ match: "FROM cache AS debt", rows: [], throwError: new Error("D1_ERROR: internal error; reference = overloaded") }]);
       emptyOk();
-      vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValueOnce(
-        completeEtherscanLogs([
-          {
-            address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-            topics: [
-              "0xffa4e6181777692565cf28528fc88fd1516ea86b56da075235fa575af6a4b855",
-              "0x000000000000000000000000abcdef1234567890abcdef1234567890abcdef12",
-            ],
-            data: "0x",
-            blockNumber: "0x1312d00",
-            timeStamp: "0x6670a780",
-            transactionHash: "0x" + "ab".repeat(32),
-            logIndex: "0x0",
-          },
-        ]),
-      );
+      vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValueOnce(completeEtherscanLogs([makeEvmLog()]));
       const nowSec = Math.floor(Date.now() / 1000);
-
-      const result = await syncBlacklist(buildTestOpts({ db }));
-      const meta = JSON.parse(result.metadata);
+      const { result, meta } = await runSync({ db });
 
       expect(result.status).toBe("degraded");
       expect(result.itemCount).toBe(1);
-      const reasons = meta.reasons as string[];
-      expect(reasons).toContain("blacklist-current-balance-debt-repair-failed");
-      expect(meta.reason).toBe("blacklist-current-balance-debt-repair-failed");
-      expect(meta.currentBalanceDebtOutcome).toBe("failed");
-      expect(meta.currentBalanceDebtReason).toBe("repair-threw");
-      // The completed scan's evidence and confirmed output clock survive the tail failure.
-      expect(meta.configsAttempted).toBe(CONTRACT_CONFIGS.length);
-      expect(meta.configsSucceeded).toBe(CONTRACT_CONFIGS.length);
-      expect(meta.rowsWritten).toBe(1);
-      expect(meta.outputPublishedAt).toBe(nowSec);
+      expect(meta.reasons).toContain("blacklist-current-balance-debt-repair-failed");
+      expect(meta).toMatchObject({
+        reason: "blacklist-current-balance-debt-repair-failed", currentBalanceDebtOutcome: "failed",
+        currentBalanceDebtReason: "repair-threw", configsAttempted: CONTRACT_CONFIGS.length,
+        configsSucceeded: CONTRACT_CONFIGS.length, rowsWritten: 1, outputPublishedAt: nowSec,
+      });
     });
 
     it("preserves scan reason first and lists publication and repair failures together", async () => {
-      const db = makeDb([], [
-        { match: "blacklist-summary-snapshot-write", rows: [], throwError: new Error("snapshot write failed") },
-      ]);
+      const db = makeDb([], [{ match: "blacklist-summary-snapshot-write", rows: [], throwError: new Error("snapshot write failed") }]);
       vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockRejectedValueOnce(new TypeError("explorer down"));
       vi.mocked(backfillAmounts).mockRejectedValueOnce(new Error("repair boom"));
       vi.mocked(backfillTronBlacklistAmounts).mockRejectedValueOnce(new Error("replay boom"));
       emptyOk();
-      const result = await syncBlacklist(buildTestOpts({ db }));
-      const meta = JSON.parse(result.metadata);
+      const { result, meta } = await runSync({ db });
 
       expect(result.status).toBe("degraded");
       expect(meta.reason).toBe("blacklist-source-coverage-incomplete");
       expect(meta.reasons).toEqual([
-        "blacklist-source-coverage-incomplete",
-        "blacklist-snapshot-publication-failed",
-        "blacklist-evm-amount-repair-failed",
-        "blacklist-tron-amount-repair-failed",
+        "blacklist-source-coverage-incomplete", "blacklist-snapshot-publication-failed",
+        "blacklist-evm-amount-repair-failed", "blacklist-tron-amount-repair-failed",
       ]);
     });
 
     it("never lowers an error status when publication or repair also fails", async () => {
-      const db = makeDb();
       vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockRejectedValue(new TypeError("explorer down"));
       vi.mocked(fetchAlchemyLogs).mockRejectedValue(new TypeError("rpc down"));
       vi.mocked(backfillAmounts).mockRejectedValueOnce(new Error("repair boom"));
       installFetch(async () => new Response("down", { status: 500 }));
-      const resultPromise = syncBlacklist(buildTestOpts({ db }));
+      const pending = runSync();
       await vi.runAllTimersAsync();
-      const result = await resultPromise;
-      const meta = JSON.parse(result.metadata);
+      const { result, meta } = await pending;
 
       expect(result.status).toBe("error");
       expect(meta.reasons).toContain("blacklist-evm-amount-repair-failed");
@@ -1285,106 +882,35 @@ describe("syncBlacklist", () => {
 
   it("advances sync state for EVM chains toward chain head when no events", async () => {
     const db = makeDb();
-
     vi.mocked(getEvmBlockNumber).mockResolvedValue(20000000);
-
     installFetch(emptyTronResponse);
-
     await syncBlacklist(buildTestOpts({ db }));
 
-    const baseFinalization = findStateFinalization(db, "base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913");
-    const ethereumFinalization = findStateFinalization(db, "ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
-    expect(baseFinalization?.binds[0]).toBeGreaterThan(19_950_000);
-    expect(ethereumFinalization?.binds[0]).toBeGreaterThan(0);
+    expect(findStateFinalization(db, `base-${BASE_USDC}`)?.binds[0]).toBeGreaterThan(19_950_000);
+    expect(findStateFinalization(db, `ethereum-${ETH_USDC}`)?.binds[0]).toBeGreaterThan(0);
   });
 
   it("falls back to RPC log scans for paid-only Etherscan chains", async () => {
-    const db = makeDb();
-
-    vi.mocked(fetchAlchemyLogs).mockResolvedValueOnce({
-      logs: [
-        {
-          address: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
-          topics: [
-            "0xffa4e6181777692565cf28528fc88fd1516ea86b56da075235fa575af6a4b855",
-            "0x000000000000000000000000abcdef1234567890abcdef1234567890abcdef12",
-          ],
-          data: "0x",
-          blockNumber: "0x1312d00",
-          transactionHash: "0x" + "ba".repeat(32),
-          transactionIndex: "0x0",
-          blockHash: "0xblockhash",
-          logIndex: "0x0",
-          removed: false,
-        },
-      ],
-      complete: true,
-      scannedToBlock: 20000000,
-      calls: 1,
-      maxDepth: 0,
-    });
+    vi.mocked(fetchAlchemyLogs).mockResolvedValueOnce({ logs: [makeAlchemyLog()], complete: true, scannedToBlock: 20000000, calls: 1, maxDepth: 0 });
     vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[20000000, 1718650752]]));
-
     installFetch(emptyTronResponse);
-
-    const result = await syncBlacklist(buildTestOpts({ db }));
+    const { result, meta } = await runSync();
 
     expect(result.itemCount).toBe(1);
-    const meta = JSON.parse(result.metadata);
     expect(meta.apiErrors).toBe(0);
     expect(meta.rpcLogConfigs).toBeGreaterThanOrEqual(1);
   });
 
   it("tries chain RPC after a dRPC miss for non-mainnet balance enrichment", async () => {
-    const db = makeDb();
-
-    vi.mocked(fetchAlchemyLogs).mockResolvedValueOnce({
-      logs: [
-        {
-          address: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
-          topics: [
-            "0xffa4e6181777692565cf28528fc88fd1516ea86b56da075235fa575af6a4b855",
-            "0x000000000000000000000000abcdef1234567890abcdef1234567890abcdef12",
-          ],
-          data: "0x",
-          blockNumber: "0x1312d00",
-          transactionHash: "0x" + "ba".repeat(32),
-          transactionIndex: "0x0",
-          blockHash: "0xblockhash",
-          logIndex: "0x0",
-          removed: false,
-        },
-      ],
-      complete: true,
-      scannedToBlock: 20000000,
-      calls: 1,
-      maxDepth: 0,
-    });
+    vi.mocked(fetchAlchemyLogs).mockResolvedValueOnce({ logs: [makeAlchemyLog()], complete: true, scannedToBlock: 20000000, calls: 1, maxDepth: 0 });
     vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[20000000, 1718650752]]));
     const fetchMock = installFetch(async (url: string | Request) => {
       const urlStr = typeof url === "string" ? url : url.url;
-      if (urlStr.includes("lb.drpc.org")) {
-        return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: "0x" }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-      if (urlStr.includes("base-rpc.example")) {
-        return new Response(
-          JSON.stringify({
-            jsonrpc: "2.0",
-            id: 1,
-            result: "0x0000000000000000000000000000000000000000000000000000000000000000",
-          }),
-          {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          },
-        );
-      }
+      if (urlStr.includes("lb.drpc.org")) return jsonResp({ jsonrpc: "2.0", id: 1, result: "0x" });
+      if (urlStr.includes("base-rpc.example")) return jsonResp({ jsonrpc: "2.0", id: 1, result: "0x" + "0".repeat(64) });
       return emptyTronResponse();
     });
-    const result = await syncBlacklist(buildTestOpts({ db, drpcApiKey: "drpc-key" }));
+    const { result } = await runSync({ drpcApiKey: "drpc-key" });
 
     expect(result.itemCount).toBe(1);
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes("lb.drpc.org"))).toBe(true);
@@ -1393,49 +919,35 @@ describe("syncBlacklist", () => {
 
   it("orders backfill work newest-first so recent gaps are not starved by old backlog", async () => {
     const db = makeDb();
-
     installFetch(emptyTronResponse);
-
     await syncBlacklist(buildTestOpts({ db }));
-
-    const backfillQuery = db
-      .getHistory()
-      .find(
-        (entry) =>
-          entry.sql.includes("FROM blacklist_events") &&
-          entry.sql.includes("amount_status IN") &&
-          entry.sql.includes("LIMIT ?"),
-      );
+    const backfillQuery = db.getHistory().find(
+      (e) => e.sql.includes("FROM blacklist_events") && e.sql.includes("amount_status IN") && e.sql.includes("LIMIT ?"),
+    );
     expect(backfillQuery?.sql).toContain("timestamp DESC");
   });
 
-  it.each([[null, 0, false, "degraded"], [60, 0, false, "ok"], [60, 1, false, "degraded"], [60, 0, true, "degraded"], [60, 0, "exhausted", "degraded"], [7 * 86400, 0, false, "degraded"], [-86400, 0, false, "degraded"]] as const)(
-    "retains partial progress; success=%s failures=%s peerPartial=%s grades %s", async (success, failures, peerPartial, status) => {
+  it.each([
+    [null, 0, false, "degraded"], [60, 0, false, "ok"], [60, 1, false, "degraded"],
+    [60, 0, true, "degraded"], [60, 0, "exhausted", "degraded"],
+    [7 * 86400, 0, false, "degraded"], [-86400, 0, false, "degraded"],
+  ] as const)("retains partial progress; success=%s failures=%s peerPartial=%s grades %s", async (success, failures, peerPartial, status) => {
     const base = CONTRACT_CONFIGS[1];
     const peer = { ...base, configKey: "base-peer" };
     const now = Math.floor(Date.now() / 1000);
     CONTRACT_CONFIGS.push(peer);
-    const db = makeDb(CONTRACT_CONFIGS.map((config) => ({
-      config_key: config.configKey, last_block: config === base && success == null ? 0 : 19_950_000,
-      last_succeeded_at: config === base && success == null ? null : now - (config === base ? success! : 60),
-      consecutive_failures: config === base ? failures : 0,
-      last_attempted_at: config.chain.chainId === "ethereum" ? 1 : 2,
+    const db = makeDb(CONTRACT_CONFIGS.map((c) => ({
+      config_key: c.configKey, last_block: c === base && success == null ? 0 : 19_950_000,
+      last_succeeded_at: c === base && success == null ? null : now - (c === base ? success! : 60),
+      consecutive_failures: c === base ? failures : 0,
+      last_attempted_at: c.chain.chainId === "ethereum" ? 1 : 2,
     })));
-
     vi.mocked(fetchAlchemyLogs).mockResolvedValueOnce({
-      logs: [],
-      complete: false,
-      scannedToBlock: 19_960_000,
-      calls: 9,
-      maxDepth: 3, failureReason: "provider-timeout",
+      logs: [], complete: false, scannedToBlock: 19_960_000, calls: 9, maxDepth: 3, failureReason: "provider-timeout",
     });
-
-    if (peerPartial === true) vi.mocked(fetchAlchemyLogs).mockResolvedValueOnce({
-      logs: [], complete: false, scannedToBlock: 19_960_000, calls: 9, maxDepth: 3,
-    });
+    if (peerPartial === true) vi.mocked(fetchAlchemyLogs).mockResolvedValueOnce({ logs: [], complete: false, scannedToBlock: 19_960_000, calls: 9, maxDepth: 3 });
     if (peerPartial === "exhausted") vi.mocked(fetchAlchemyLogs).mockImplementationOnce(async (...args) => {
-      const budget = args[5];
-      if (budget) budget.count = budget.limit;
+      if (args[5]) args[5].count = args[5].limit;
       return { logs: [], complete: true, scannedToBlock: 20_000_000, calls: 1, maxDepth: 0 };
     });
     installFetch(emptyTronResponse);
@@ -1444,8 +956,8 @@ describe("syncBlacklist", () => {
     expect(result.status).toBe(status);
     expect(result.itemCount).toBe(0);
     const metadata = {
-      ...JSON.parse(result.metadata), configLag: Object.fromEntries(Array.from({ length: 66 }, (_, i) =>
-        [i, { cursorKind: "evm_block", frontier: 19_960_000, safeHead: 20_000_000, lag: 40_000 }])),
+      ...JSON.parse(result.metadata),
+      configLag: Object.fromEntries(Array.from({ length: 66 }, (_, i) => [i, { cursorKind: "evm_block", frontier: 19_960_000, safeHead: 20_000_000, lag: 40_000 }])),
     };
     const pack = (data: Record<string, unknown>) => compactCronMetadataForPersistence(JSON.stringify(data), undefined, "sync-blacklist");
     const meta = JSON.parse(pack(metadata).metadata!);
@@ -1454,32 +966,33 @@ describe("syncBlacklist", () => {
     if (peerPartial === "exhausted") expect(meta).toMatchObject({ reason: "blacklist-budget-exhausted", subrequestBudgetReached: true });
     expect(meta.apiErrorConfigs).toEqual([
       expect.objectContaining({
-        configKey: base.configKey,
-        stablecoin: "USDC",
-        chainId: "base",
+        configKey: base.configKey, stablecoin: "USDC", chainId: "base",
         reason: "partial-coverage", errorClass: "provider-timeout", failureSamples: ["provider-timeout"],
         frontier: 19_960_000, safeHead: 20_000_000, providerCalls: 9, maxSplitDepth: 3,
       }),
       ...(peerPartial === true ? [expect.objectContaining({ configKey: peer.configKey })] : []),
     ]);
     if (success == null) expect(JSON.parse(result.metadata).zeroCursorConfigs).toContain(base.configKey);
-    if (status === "ok") expect(meta.quality).toEqual({ reason: "blacklist-isolated-partial-coverage", configKey: base.configKey });
-    if (status === "ok") for (const text of ["a", String.fromCharCode(0, 34, 92, 0x2603)]) {
-      const sample = text.repeat(120).slice(0, 120);
-      const entries = Array.from({ length: 10 }, (_, i) => ({ ...meta.apiErrorConfigs[0],
-        configKey: base.configKey + i, errorClass: i + sample, failureSamples: Array(4).fill(sample),
-      }));
-      const packed = pack({ ...metadata, apiErrorConfigs: entries,
-        apiErrorClasses: Object.fromEntries(Array.from({ length: 20 }, (_, i) => [i < 2 ? ["constructor", "__proto__"][i] : i + sample, 1])),
-        schedulerAttemptKey: "attempt", resourcePressure: { outcome: "ok", pending: false },
-      });
-      const bounded = JSON.parse(packed.metadata!);
-      expect.soft(packed.persistedBytes).toBeLessThanOrEqual(getCronMetadataBudgetBytes("sync-blacklist"));
-      expect(bounded.apiErrorConfigs.map((entry: { configKey: string }) => entry.configKey)).toEqual(entries.map((entry) => entry.configKey));
-      expect.soft(bounded.apiErrorDetailsOmitted).toBeGreaterThan(0);
-      expect(Object.values<number>(bounded.apiErrorClasses).reduce((a, b) => a + b, 0)).toBe(20);
-      expect.soft(Object.keys(bounded.apiErrorClasses).length).toBeLessThanOrEqual(10);
-      expect.soft(Object.keys(bounded.apiErrorClasses).every((code) => /^[a-zA-Z0-9:._-]{1,64}$/.test(code))).toBe(true);
+    if (status === "ok") {
+      expect(meta.quality).toEqual({ reason: "blacklist-isolated-partial-coverage", configKey: base.configKey });
+      for (const text of ["a", String.fromCharCode(0, 34, 92, 0x2603)]) {
+        const sample = text.repeat(120).slice(0, 120);
+        const entries = Array.from({ length: 10 }, (_, i) => ({
+          ...meta.apiErrorConfigs[0], configKey: base.configKey + i, errorClass: i + sample, failureSamples: Array(4).fill(sample),
+        }));
+        const packed = pack({
+          ...metadata, apiErrorConfigs: entries,
+          apiErrorClasses: Object.fromEntries(Array.from({ length: 20 }, (_, i) => [i < 2 ? ["constructor", "__proto__"][i] : i + sample, 1])),
+          schedulerAttemptKey: "attempt", resourcePressure: { outcome: "ok", pending: false },
+        });
+        const bounded = JSON.parse(packed.metadata!);
+        expect.soft(packed.persistedBytes).toBeLessThanOrEqual(getCronMetadataBudgetBytes("sync-blacklist"));
+        expect(bounded.apiErrorConfigs.map((e: { configKey: string }) => e.configKey)).toEqual(entries.map((e) => e.configKey));
+        expect.soft(bounded.apiErrorDetailsOmitted).toBeGreaterThan(0);
+        expect(Object.values<number>(bounded.apiErrorClasses).reduce((a, b) => a + b, 0)).toBe(20);
+        expect.soft(Object.keys(bounded.apiErrorClasses).length).toBeLessThanOrEqual(10);
+        expect.soft(Object.keys(bounded.apiErrorClasses).every((code) => /^[a-zA-Z0-9:._-]{1,64}$/.test(code))).toBe(true);
+      }
     }
     const finalization = findStateFinalization(db, base.configKey);
     expect(finalization?.binds[0]).toBe(19_960_000);
@@ -1489,50 +1002,22 @@ describe("syncBlacklist", () => {
 
   it("does not advance a shared Etherscan cursor when one configured topic fails", async () => {
     const db = makeDb();
-    const ethereumConfig = CONTRACT_CONFIGS.find((config) => config.chain.chainId === "ethereum");
-    expect(ethereumConfig).toBeDefined();
-    if (!ethereumConfig) return;
-
+    const ethereumConfig = CONTRACT_CONFIGS.find((c) => c.chain.chainId === "ethereum")!;
     const previousEvents = ethereumConfig.events;
-    const firstEvent = previousEvents[0];
-    expect(firstEvent).toBeDefined();
-    if (!firstEvent) return;
     ethereumConfig.events = [
       ...previousEvents,
-      {
-        signature: "UnBlacklisted(address)",
-        topicHash: "0x117e3210bb9aa7d9baff172026820255c6f6c30ba8999d1c2fd88e2848137c4e",
-        eventType: "unblacklist",
-        hasAmount: false,
-      },
+      { signature: "UnBlacklisted(address)", topicHash: UNBLACKLISTED_TOPIC, eventType: "unblacklist", hasAmount: false },
     ];
-
     vi.mocked(fetchEvmLogsForTopicWithCompleteness)
-      .mockResolvedValueOnce(
-        completeEtherscanLogs([
-          {
-            address: ethereumConfig.contractAddress,
-            topics: [firstEvent.topicHash, "0x000000000000000000000000abcdef1234567890abcdef1234567890abcdef12"],
-            data: "0x",
-            blockNumber: "0xc8",
-            timeStamp: "0x6670a780",
-            transactionHash: "0x" + "fa".repeat(32),
-            logIndex: "0x0",
-          },
-        ]),
-      )
+      .mockResolvedValueOnce(completeEtherscanLogs([makeEvmLog({ blockNumber: "0xc8", transactionHash: "0x" + "fa".repeat(32) })]))
       .mockResolvedValueOnce(failedEtherscanLogs())
       .mockResolvedValue(completeEtherscanLogs());
-
     installFetch(emptyTronResponse);
 
     try {
-      const result = await syncBlacklist(buildTestOpts({ db }));
-      const meta = JSON.parse(result.metadata);
-
-      expect(meta.apiErrors).toBe(1);
-      expect(meta.eventsFetched).toBe(1);
-      const finalization = findStateFinalization(db, "ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
+      const { meta } = await runSync({ db });
+      expect(meta).toMatchObject({ apiErrors: 1, eventsFetched: 1 });
+      const finalization = findStateFinalization(db, `ethereum-${ETH_USDC}`);
       expect(finalization?.binds[0]).toBe(0);
       expect(finalization?.binds[11]).toBe("missing_topic");
     } finally {
@@ -1542,58 +1027,28 @@ describe("syncBlacklist", () => {
 
   it("advances a multi-topic RPC cursor after one complete OR-topic scan", async () => {
     const db = makeDb();
-    const baseConfig = CONTRACT_CONFIGS.find((config) => config.chain.chainId === "base");
-    expect(baseConfig).toBeDefined();
-    if (!baseConfig) return;
-
+    const baseConfig = CONTRACT_CONFIGS.find((c) => c.chain.chainId === "base")!;
     const previousEvents = baseConfig.events;
     baseConfig.events = [
       ...previousEvents,
-      {
-        signature: "UnBlacklisted(address)",
-        topicHash: "0x117e3210bb9aa7d9baff172026820255c6f6c30ba8999d1c2fd88e2848137c4e",
-        eventType: "unblacklist",
-        hasAmount: false,
-      },
+      { signature: "UnBlacklisted(address)", topicHash: UNBLACKLISTED_TOPIC, eventType: "unblacklist", hasAmount: false },
     ];
-
-    // A complete OR scan must reach the observed safe head, even if it consumes the budget.
     vi.mocked(getAlchemyBlockNumber).mockResolvedValue(19_960_450);
-    vi.mocked(fetchAlchemyLogs).mockImplementationOnce(
-      async (_rpcUrl, _contractAddress, _topics, _fromBlock, _toBlock, budget) => {
-        budget.count = budget.limit;
-        return {
-          logs: [],
-          complete: true,
-          scannedToBlock: 19_960_000,
-          calls: 1,
-          maxDepth: 0,
-        };
-      },
-    );
-
+    vi.mocked(fetchAlchemyLogs).mockImplementationOnce(async (_rpc, _addr, _topics, _from, _to, budget) => {
+      budget.count = budget.limit;
+      return { logs: [], complete: true, scannedToBlock: 19_960_000, calls: 1, maxDepth: 0 };
+    });
     installFetch(emptyTronResponse);
 
     try {
-      const result = await syncBlacklist(buildTestOpts({ db }));
-      const meta = JSON.parse(result.metadata);
-
+      const { result, meta } = await runSync({ db });
       expect(result.status).toBe("degraded");
-      expect(meta.runtimeBudgetReached).toBe(true);
-      expect(meta.subrequestBudgetReached).toBe(true);
+      expect(meta).toMatchObject({ runtimeBudgetReached: true, subrequestBudgetReached: true });
       expect(fetchAlchemyLogs).toHaveBeenCalledTimes(1);
-      const finalization = findStateFinalization(db, "base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913");
+      const finalization = findStateFinalization(db, `base-${BASE_USDC}`);
       expect(finalization?.binds[0]).toBe(19_960_000);
       expect(finalization?.binds[11]).toBe("quiet");
-      expect(vi.mocked(fetchAlchemyLogs).mock.calls[0]?.[2]).toEqual([
-        {
-          index: 0,
-          value: [
-            "0xffa4e6181777692565cf28528fc88fd1516ea86b56da075235fa575af6a4b855",
-            "0x117e3210bb9aa7d9baff172026820255c6f6c30ba8999d1c2fd88e2848137c4e",
-          ],
-        },
-      ]);
+      expect(vi.mocked(fetchAlchemyLogs).mock.calls[0]?.[2]).toEqual([{ index: 0, value: [BLACKLISTED_TOPIC, UNBLACKLISTED_TOPIC] }]);
     } finally {
       baseConfig.events = previousEvents;
     }
@@ -1601,51 +1056,30 @@ describe("syncBlacklist", () => {
 
   it("uses configured startBlock and bounded RPC scan windows for zero-cursor configs", async () => {
     const db = makeDb();
-    const baseConfig = CONTRACT_CONFIGS.find((config) => config.chain.chainId === "base");
-    expect(baseConfig).toBeDefined();
-    const previousStartBlock = baseConfig?.startBlock;
-    if (!baseConfig) return;
-
+    const baseConfig = CONTRACT_CONFIGS.find((c) => c.chain.chainId === "base")!;
+    const previousStartBlock = baseConfig.startBlock;
     baseConfig.startBlock = 1_000_000;
-    vi.mocked(fetchAlchemyLogs).mockResolvedValueOnce({
-      logs: [],
-      complete: true,
-      scannedToBlock: 1_049_999,
-      calls: 1,
-      maxDepth: 0,
-    });
-
+    vi.mocked(fetchAlchemyLogs).mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 1_049_999, calls: 1, maxDepth: 0 });
     installFetch(emptyTronResponse);
 
     try {
-      const result = await syncBlacklist(buildTestOpts({ db }));
-      const metadata = JSON.parse(result.metadata);
+      const { result, meta } = await runSync({ db });
       expect(result.status).toBe("degraded");
-      expect(metadata.producerSnapshotSkipped).toBe(false);
-      expect(metadata.producerSummarySnapshot).toBe(true);
-      expect(metadata.configLag[baseConfig.configKey]).toMatchObject({
-        frontier: 1_049_999, safeHead: 20_000_000, lag: 18_950_001,
+      expect(meta).toMatchObject({
+        producerSnapshotSkipped: false, producerSummarySnapshot: true,
+        reason: "blacklist-source-coverage-incomplete",
+        configLag: { [baseConfig.configKey]: { frontier: 1_049_999, safeHead: 20_000_000, lag: 18_950_001 } },
       });
-      expect(metadata.reason).toBe("blacklist-source-coverage-incomplete");
-      expect(metadata.coverageFailureConfigs).toContainEqual({
-        configKey: baseConfig.configKey,
-        outcome: "incomplete",
-        cursorKind: "evm_block",
-        frontier: 1_049_999,
-        safeHead: 20_000_000,
-        lag: 18_950_001,
-        samples: ["behind-safe-head"],
+      expect(meta.coverageFailureConfigs).toContainEqual({
+        configKey: baseConfig.configKey, outcome: "incomplete", cursorKind: "evm_block",
+        frontier: 1_049_999, safeHead: 20_000_000, lag: 18_950_001, samples: ["behind-safe-head"],
       });
-      expect(metadata.coverageFailureConfigs.length).toBeLessThanOrEqual(6);
-
-      const baseCalls = vi
-        .mocked(fetchAlchemyLogs)
-        .mock.calls.filter((call) => call[1] === "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913");
+      expect(meta.coverageFailureConfigs.length).toBeLessThanOrEqual(6);
+      const baseCalls = vi.mocked(fetchAlchemyLogs).mock.calls.filter((c) => c[1] === BASE_USDC);
       const baseCall = baseCalls[baseCalls.length - 1];
       expect(baseCall?.[3]).toBe(1_000_000);
       expect(baseCall?.[4]).toBe(1_049_999);
-      const finalization = findStateFinalization(db, "base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913");
-      expect(finalization?.binds[0]).toBe(1_049_999);
+      expect(findStateFinalization(db, `base-${BASE_USDC}`)?.binds[0]).toBe(1_049_999);
     } finally {
       baseConfig.startBlock = previousStartBlock;
     }
