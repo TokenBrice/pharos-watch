@@ -201,11 +201,15 @@ function valuePool(
 }
 
 /**
- * Compute provable 24h USD volume for an already-valued stable-counter pool from
- * its 24 complete hourly `ticks` buckets denominated in `AssetA`. V1, V3, and
- * Stableswaps report single-leg volume (1x); V4 reports double-leg volume (÷2).
- * Fails closed to null on partial GraphQL errors, stale/missing `current.asOf`,
- * unknown versions, malformed ticks, or excessive turnover.
+ * Compute 24h USD volume for an already-valued stable-counter pool from the
+ * hourly `ticks` buckets (denominated in `AssetA`) returned inside the 24
+ * complete hours ending at the window end. V1, V3, and Stableswaps report
+ * single-leg volume (1x); V4 reports double-leg volume (÷2). SundaeSwap omits
+ * zero-trade hours, and `current.asOf` is the index's response clock (current
+ * for idle pools too), so only an in-window bucket proves the tick feed: an
+ * empty window is unmeasured, never zero. Also fails closed to null on partial
+ * GraphQL errors, stale/missing `current.asOf`, unknown versions, malformed
+ * ticks, or excessive turnover.
  */
 function valuePoolVolume24h(
   pool: SundaePool,
@@ -268,6 +272,7 @@ function valuePoolVolume24h(
     }
     qtyByStartSec.set(startSec, qty);
   }
+  if (qtyByStartSec.size === 0) return NO_VOLUME;
   let sumRawQty = 0n;
   for (const qty of qtyByStartSec.values()) sumRawQty += qty;
   const rawUnits = sumRawQty === 0n ? 0 : toTokenUnits(sumRawQty, assetAInfo.decimals);

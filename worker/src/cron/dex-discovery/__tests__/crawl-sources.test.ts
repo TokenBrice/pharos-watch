@@ -1407,7 +1407,7 @@ describe("crawlCoin DexScreener hardening", () => {
               makeSundaePool("a30001", "V3", [usdcx, usdm], ["50000000000", "50000000000"], nowSec - 60, [
                 tick(floorHour - 3600, usdcx, "4200000000"),
               ]),
-              // Valid empty rich => measured 0
+              // SundaeSwap omits idle hours and asOf is always current: empty rich is unproven => null
               makeSundaePool("000000", "Stableswaps", [usdcx, usdm], ["50000000000", "50000000000"], nowSec - 60, []),
               // Stale asOf (>2h behind) => fail closed null
               makeSundaePool("dead01", "Stableswaps", [usdcx, usdm], ["50000000000", "50000000000"], floorHour - 2 * 3600 - 1, [
@@ -1441,10 +1441,7 @@ describe("crawlCoin DexScreener hardening", () => {
     expect(byId.get("cardano:062ed6")?.rawJson).toBe(JSON.stringify({ sundaeswapVolumeWindowEndSec: floorHour }));
     expect(byId.get("cardano:d7c7a7")?.volume24h).toBeCloseTo(9_708.16, 4);
     expect(byId.get("cardano:a30001")?.volume24h).toBeCloseTo(4_200, 4);
-    expect(byId.get("cardano:000000")).toMatchObject({
-      volume24h: 0, rawJson: JSON.stringify({ sundaeswapVolumeWindowEndSec: floorHour }),
-    });
-    for (const badId of ["cardano:dead01", "cardano:f50001", "cardano:beef01"]) {
+    for (const badId of ["cardano:000000", "cardano:dead01", "cardano:f50001", "cardano:beef01"]) {
       expect(byId.get(badId)).toMatchObject({ volume24h: null, rawJson: null });
     }
   });

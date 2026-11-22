@@ -74,9 +74,6 @@ export interface DexDeploymentCensusRow {
   deployment_last_attempt_at?: number | null;
   /** Equals the coin fence only when the new writer attributed that fence. */
   deployment_fence_attribution_at?: number | null;
-  /** Backoff counters from dex_discovery_meta for dormant empty-census deferral guarding. */
-  discovery_consecutive_misses?: number | null;
-  discovery_last_hit_at?: number | null;
 }
 
 export type DexPlaceholderCoverageState =
@@ -319,30 +316,13 @@ export function classifyDexPlaceholderCoverage(params: {
         case "observed-pools":
           observedPoolsCount++;
           break;
-        case "superseded": {
-          // Dormant 0-pool coins advance their crawl fence before an in-flight
-          // or deferred re-crawl finishes. Keep a fresh verified_no_pools row
-          // populated while the prior observation is still within maxAgeSec and
-          // no pool hit or provider-registry change invalidated it.
-          const isDormantVerifiedNoPoolsDeferral =
-            row.outcome === "verified_no_pools" &&
-            row.observed_pool_count === 0 &&
-            !providerSetSuperseded &&
-            !isStale &&
-            typeof row.discovery_consecutive_misses === "number" &&
-            Number.isInteger(row.discovery_consecutive_misses) &&
-            row.discovery_consecutive_misses >= DISCOVERY_TIERS.BACKOFF_DORMANT_MISSES &&
-            (row.discovery_last_hit_at == null || row.discovery_last_hit_at <= row.observed_at);
-          if (isDormantVerifiedNoPoolsDeferral) {
-            verifiedNoPoolsCount++;
-            break;
-          }
-          // Otherwise either a non-dormant/failed crawl advanced the fence or
-          // the row claims no registered provider supports this chain while the
-          // registry now resolves one; mark superseded so it fails closed.
+        case "superseded":
+          // A later attempt fence or a provider-registry change outranks this
+          // row. Discovery fences before network work and updates its backoff
+          // counters only after a completed crawl, so an in-flight, aborted or
+          // discarded attempt must not leave the older empty result current.
           supersededOutcomeCount++;
           break;
-        }
         case "unsupported-scope":
           providerInaccessibleCount++;
           unsupportedMethodOutcomeCount++;
