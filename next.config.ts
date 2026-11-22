@@ -96,7 +96,18 @@ const baseConfig: NextConfig = {
   transpilePackages: ["@pharos/contracts"],
   images: { unoptimized: true },
   reactStrictMode: true,
+  outputFileTracingExcludes: {
+    "*": [
+      "public/**",
+      "data/**",
+      "shared/data/**",
+      "docs/**",
+      "scripts/**",
+      "worker/**",
+    ],
+  },
   experimental: {
+    serverMinification: false,
     optimizePackageImports: [
       "recharts",
       "lucide-react",
@@ -104,7 +115,11 @@ const baseConfig: NextConfig = {
       "@tanstack/react-virtual",
     ],
   },
-  webpack(config, { isServer }) {
+  webpack(config, { dev, isServer }) {
+    if (!dev && process.env.PHAROS_DISABLE_WEBPACK_FS_CACHE === "1") {
+      config.cache = false;
+    }
+
     if (!isServer) {
       const splitChunks = config.optimization?.splitChunks;
       if (splitChunks && typeof splitChunks === "object") {
@@ -150,6 +165,17 @@ function releaseTypeScriptConfig(): Partial<Pick<NextConfig, "typescript">> {
     : {};
 }
 
+function parseBuildCpus(): number | undefined {
+  const raw = process.env.PHAROS_NEXT_BUILD_CPUS?.trim();
+  if (!raw || !/^\d+$/u.test(raw)) return undefined;
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function shouldDisablePrerenderSourceMaps(): boolean {
+  return process.env.CI === "true" || process.env.PHAROS_DISABLE_PRERENDER_SOURCE_MAPS === "1";
+}
+
 async function devRewrites() {
   // When SITE_API_SHARED_SECRET is configured in .env.local, route through
   // the local dev proxy (scripts/maintenance/dev-api-proxy.ts) which injects the secret
@@ -184,9 +210,15 @@ function devAllowedOrigins() {
 }
 
 export default function createNextConfig(phase: string): NextConfig {
+  const buildCpus = parseBuildCpus();
   const config: NextConfig = {
     ...baseConfig,
     ...releaseTypeScriptConfig(),
+    ...(shouldDisablePrerenderSourceMaps() ? { enablePrerenderSourceMaps: false } : {}),
+    experimental: {
+      ...baseConfig.experimental,
+      ...(buildCpus !== undefined ? { cpus: buildCpus } : {}),
+    },
     // Next leaves unset public vars uninlined; give dead-code elimination a literal off value.
     env: { NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK: process.env.NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK ?? "false" },
   };

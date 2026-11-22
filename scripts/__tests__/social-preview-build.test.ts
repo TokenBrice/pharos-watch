@@ -1,11 +1,14 @@
 import { createHash, randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import sharp from "sharp";
 import {
   buildSocialPreviewImages,
   discoverSocialPreviewPages,
+  loadSocialCardValidationAssets,
+  loadSocialPreviewEntries,
+  renderSocialPreviewCards,
   SOCIAL_PREVIEW_MAP_PATH,
   type SocialPreviewEntry,
 } from "../lib/social-preview-build";
@@ -74,23 +77,40 @@ describe("evergreen destination previews", () => {
     expect(svg).toHaveBeenCalledTimes(3);
     expect(readdirSync(join(root, "public/og/v2")).sort()).toEqual(Object.values(map()).map(({ url }) => url.slice(7)).filter((url, index, urls) => urls.indexOf(url) === index).sort());
     await expect(build("render")).resolves.toMatchObject({ rendered: 0 });
+    const sh = makeTempDir();
+    for (const [f, c] of Object.entries(files)) { mkdirSync(join(sh, f, ".."), { recursive: true }); writeFileSync(join(sh, f), c); }
+    const [s0, s1] = await Promise.all([0, 1].map((index) => buildSocialPreviewImages({ repoRoot: sh, mode: "render", load: async () => ({ entries, fonts: ["font.ttf"], background: "#101e2b" }), shard: { index, count: 2 } })));
+    expect([s0.rendered + s1.rendered, existsSync(join(sh, SOCIAL_PREVIEW_MAP_PATH))]).toEqual([4, false]);
     const noise = await sharp(randomBytes(1200 * 630 * 3), { raw: { width: 1200, height: 630, channels: 3 } }).png().toBuffer();
     writeFileSync(join(root, "public/cover.png"), noise);
     await expect(build("check")).rejects.toThrow("Social preview exceeds 500 KB: public/cover.png");
   });
 
-  it("keeps WebP logos visibly present through the real card renderer and rasterizer", async () => {
+  it("keeps WebP logos visible and matches worker_threads and validation-only mode", async () => {
     const card: SocialCardDossier = {
       template: "dossier", path: "/stablecoin/format-proof/", label: "Stablecoin dossier",
-      copy: { title: "Format proof", description: "Format proof.", alt: "Format proof." },
+      copy: { title: "F", description: "F.", alt: "F." },
       identity: { symbol: "BLD", name: "Agoric", logoPath: "/chains/agoric.webp" },
       headline: "BLD", subline: "Agoric", hook: "A WebP logo stays visible", chips: [], lifecycle: "active",
     };
-    const assets = await loadSocialCardAssets(process.cwd(), [card]);
+    const dark: SocialCardDossier = { ...card, identity: { symbol: "0G", name: "0G", logoPath: "/chains/0g.png" }, lifecycle: "historical", stamp: "HISTORICAL" };
+    const assets = await loadSocialCardAssets(process.cwd(), [card, dark]);
     const bytes = await renderSvgPngWithResvg({ svg: await renderSocialCardSvg(card, assets), fontBuffers: [], background: DARK.ground, width: 1200 });
-    // The lens centre (800, 315) holds the logo; an empty plate would stay near the dark ground.
-    const region = await sharp(bytes).extract({ left: 760, top: 275, width: 80, height: 80 }).toBuffer();
-    const brightest = Math.max(...(await sharp(region).stats()).channels.slice(0, 3).map((channel) => channel.mean));
-    expect(brightest).toBeGreaterThan(110);
+    expect(Math.max(...(await sharp(await sharp(bytes).extract({ left: 760, top: 275, width: 80, height: 80 }).toBuffer()).stats()).channels.slice(0, 3).map((c) => c.mean))).toBeGreaterThan(110);
+    const out = makeTempDir(), tasks = [{ url: "/og/v2/w1.png", spec: card }, { url: "/og/v2/w2.png", spec: dark }];
+    mkdirSync(join(out, "public/og/v2"), { recursive: true });
+    await expect(renderSocialPreviewCards({ repoRoot: out, tasks, renderAssets: assets, workerCount: 2 })).resolves.toEqual({ rendered: 2 });
+    expect(Buffer.compare(readFileSync(join(out, "public/og/v2/w1.png")), Buffer.from(bytes))).toBe(0);
+    await expect(renderSocialPreviewCards({ repoRoot: out, tasks: [tasks[0]!, { url: "/og/v2/wb.png", spec: { ...card, headline: "≠" } }], renderAssets: assets, workerCount: 2 })).rejects.toThrow('no glyph for "≠"');
+    const drawn = (await loadSocialPreviewEntries(process.cwd(), { includePngBuffers: false })).entries.find((e): e is Extract<SocialPreviewEntry, { drawn: unknown }> => "drawn" in e)!;
+    expect(() => drawn.validate()).not.toThrow();
+    expect(() => drawn.svg()).toThrow(/logo PNG buffers were not loaded/);
+    mkdirSync(join(out, "public/logos"), { recursive: true });
+    symlinkSync(join(process.cwd(), "worker"), join(out, "worker"));
+    writeFileSync(join(out, "public/logos/e.svg"), '<svg xmlns="http://www.w3.org/2000/svg"><script>1</script></svg>');
+    writeFileSync(join(out, "public/logos/b.png"), "x");
+    for (const [p, err] of [["/logos/e.svg", "external"], ["/logos/b.png", "decoded"], ["/logos/m.png", "missing"]] as const) {
+      await expect(loadSocialCardValidationAssets(out, [{ ...card, identity: { symbol: "T", name: "T", logoPath: p } }])).rejects.toThrow(err);
+    }
   });
 });

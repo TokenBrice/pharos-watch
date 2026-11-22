@@ -76,24 +76,25 @@ export function getCanonical(html) {
 
 export function extractJsonLdBlocks(html) {
   const blocks = [];
-  // ASCII-only lowercasing keeps indexes aligned with `html`; String#toLowerCase
-  // can lengthen text ("İ" → "i̇"), which would shift every later slice.
-  const lowerHtml = html.replace(/[A-Z]+/g, (run) => run.toLowerCase());
-  let offset = 0;
-  while (offset < html.length) {
-    const scriptStart = lowerHtml.indexOf("<script", offset);
-    if (scriptStart < 0) break;
-    const openTagEnd = html.indexOf(">", scriptStart);
+  const openPattern = /<script(?=[\s/>]|$)/gi;
+  const closePattern = /<\/script>/gi;
+  let openMatch = openPattern.exec(html);
+  while (openMatch) {
+    const scriptStart = openMatch.index;
+    const openTagEnd = html.indexOf(">", scriptStart + "<script".length);
     if (openTagEnd < 0) break;
-    const closeTagStart = lowerHtml.indexOf("</script>", openTagEnd + 1);
-    if (closeTagStart < 0) break;
+    closePattern.lastIndex = openTagEnd + 1;
+    const closeMatch = closePattern.exec(html);
+    if (!closeMatch) break;
+    const closeTagStart = closeMatch.index;
     const openTag = html.slice(scriptStart, openTagEnd + 1);
     const attrs = parseAttributes(openTag);
     const type = (attrs.get("type") ?? "").split(";")[0].trim().toLowerCase();
     if (type === "application/ld+json") {
       blocks.push(html.slice(openTagEnd + 1, closeTagStart));
     }
-    offset = closeTagStart + "</script>".length;
+    openPattern.lastIndex = closeTagStart + "</script>".length;
+    openMatch = openPattern.exec(html);
   }
   return blocks;
 }

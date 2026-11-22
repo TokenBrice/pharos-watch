@@ -10,7 +10,6 @@ import {
 import {
   createExecutionUnit,
   createNpmScriptCommand,
-  runExecutionUnit,
   runParallelExecutionUnits,
   runSpawnCommand,
   type CommandImplementation,
@@ -31,26 +30,15 @@ export async function runPagesReleaseChecks({
     createExecutionUnit([createNpmScriptCommand("check:feature-flag-inlining")], { leaf: "feature-flag inlining" }),
     createExecutionUnit([createNpmScriptCommand("check:build-size")], { leaf: "build-size / CSS integrity" }),
     createExecutionUnit([createNpmScriptCommand("check:phishing-signatures")], { leaf: "phishing signatures" }),
-  ], { reporter, runCommandImpl });
+    createExecutionUnit([createNpmScriptCommand("seo:check")], { leaf: "SEO / published archive continuity" }),
+  ], { continueOnError: true, reporter, runCommandImpl });
   const rows = parallelResult.results.map((result) => ({
     leaf: result.unit.leaf,
     command: result.unit.commands[0].cmd,
     outcome: result.aborted ? "aborted" : result.status === 0 ? "passed" : "failed",
     detail: result.signal ? `signal ${result.signal}` : `exit ${result.status}`,
   }));
-  let status = parallelResult.status;
-  if (status === 0) {
-    const seoResult = await runExecutionUnit(createExecutionUnit([
-      createNpmScriptCommand("seo:check"),
-    ]), { reporter, runCommandImpl });
-    status = seoResult.status;
-    rows.push({ leaf: "SEO / published archive continuity", command: "npm run seo:check",
-      outcome: seoResult.aborted ? "aborted" : status === 0 ? "passed" : "failed",
-      detail: seoResult.signal ? `signal ${seoResult.signal}` : `exit ${status}` });
-  } else {
-    rows.push({ leaf: "SEO / published archive continuity", command: "npm run seo:check",
-      outcome: "skipped", detail: "prerequisite artifact gate failed" });
-  }
+  const status = parallelResult.status;
   try {
     rows.push({ leaf: "Snapshot producer age", command: "local generated detail snapshots",
       outcome: "advisory", detail: reportSnapshotProducerAges(readSnapshots()) });

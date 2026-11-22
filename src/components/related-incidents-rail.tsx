@@ -46,7 +46,12 @@ interface RelatedGroup {
   items: RelatedItem[];
 }
 
-const RELATED_DEPEG_EVENTS = depegEventRelatedData as readonly DepegEventSearchEntry[];
+const SORTED_RELATED_DEPEG_EVENTS: readonly DepegEventSearchEntry[] = [
+  ...(depegEventRelatedData as readonly DepegEventSearchEntry[]),
+].sort((a, b) => {
+  if (b.startedAt !== a.startedAt) return b.startedAt - a.startedAt;
+  return a.slug.localeCompare(b.slug);
+});
 
 function toRelatedItem(event: DepegEventSearchEntry): RelatedItem {
   return {
@@ -61,11 +66,19 @@ function toRelatedItem(event: DepegEventSearchEntry): RelatedItem {
   };
 }
 
-function sortNewest<T extends { startedAt: number; slug: string }>(events: readonly T[]): T[] {
-  return [...events].sort((a, b) => {
-    if (b.startedAt !== a.startedAt) return b.startedAt - a.startedAt;
-    return a.slug.localeCompare(b.slug);
-  });
+function pickNewest(
+  limit: number,
+  excludeEventId: string | undefined,
+  used: ReadonlySet<string>,
+  predicate: (event: DepegEventSearchEntry) => boolean,
+): DepegEventSearchEntry[] {
+  const picked: DepegEventSearchEntry[] = [];
+  for (const event of SORTED_RELATED_DEPEG_EVENTS) {
+    if (event.slug === excludeEventId || used.has(event.slug) || !predicate(event)) continue;
+    picked.push(event);
+    if (picked.length >= limit) break;
+  }
+  return picked;
 }
 
 function selectGroups({
@@ -77,16 +90,17 @@ function selectGroups({
   RelatedIncidentsRailProps,
   "excludeEventId" | "pegCurrency" | "riskArchetype" | "startedAt"
 >): RelatedGroup[] {
-  const pool = RELATED_DEPEG_EVENTS.filter((event) => event.slug !== excludeEventId);
   const used = new Set<string>();
   const groups: RelatedGroup[] = [];
 
   if (pegCurrency) {
     const canonicalPegType = pegTypeFromCurrency(pegCurrency);
-    const cohort = pool.filter((event) => event.pegType === canonicalPegType);
-    const items = sortNewest(cohort)
-      .filter((event) => !used.has(event.slug))
-      .slice(0, MAX_PER_GROUP);
+    const items = pickNewest(
+      MAX_PER_GROUP,
+      excludeEventId,
+      used,
+      (event) => event.pegType === canonicalPegType,
+    );
     if (items.length > 0) {
       items.forEach((event) => used.add(event.slug));
       groups.push({
@@ -97,12 +111,12 @@ function selectGroups({
   }
 
   if (riskArchetype) {
-    const cohort = pool.filter(
+    const items = pickNewest(
+      MAX_PER_GROUP,
+      excludeEventId,
+      used,
       (event) => ARCHETYPE_BY_COIN.get(event.stablecoinId) === riskArchetype,
     );
-    const items = sortNewest(cohort)
-      .filter((event) => !used.has(event.slug))
-      .slice(0, MAX_PER_GROUP);
     if (items.length > 0) {
       items.forEach((event) => used.add(event.slug));
       groups.push({
@@ -116,12 +130,12 @@ function selectGroups({
   // We do not consume live DEWS history here (Workers-only); the timestamp
   // cohort approximates "other stablecoins under stress at the same moment."
   if (startedAt) {
-    const cohort = pool.filter(
+    const items = pickNewest(
+      2,
+      excludeEventId,
+      used,
       (event) => Math.abs(event.startedAt - startedAt) <= DEWS_CONTEXT_WINDOW_SEC,
     );
-    const items = sortNewest(cohort)
-      .filter((event) => !used.has(event.slug))
-      .slice(0, 2);
     if (items.length > 0) {
       items.forEach((event) => used.add(event.slug));
       groups.push({

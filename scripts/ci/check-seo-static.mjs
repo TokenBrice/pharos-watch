@@ -1,7 +1,5 @@
 import fs from "node:fs";
 import { STABLECOIN_DETAIL_HISTORY_PILOT_IDS, CHAIN_CONTRACT_TABLE_PILOTS } from "../../src/lib/presentation-pilots.mjs";
-import { register as registerCommonJs } from "tsx/cjs/api";
-import { register as registerEsm } from "tsx/esm/api";
 import { availableParallelism } from "node:os";
 import path from "node:path";
 import { isMainThread, parentPort, Worker, workerData } from "node:worker_threads";
@@ -26,6 +24,7 @@ import { findDuplicateSitemapLocs, parseSitemapLocs, walkOutFiles } from "../lib
 import { RETIRED_PUBLIC_ROUTES as RETIRED_INTERNAL_ROUTE_PREFIXES } from "../lib/retired-public-routes.mjs";
 
 const DEFAULT_OUT_DIR = path.resolve("out");
+const IS_PAGE_RECORD_WORKER = !isMainThread && workerData?.kind === "pharos-seo-page-records";
 // These families dropped their route-level loading.tsx (2026-10-25 SEO plan,
 // TR3): its Suspense fallback put a skeleton in the static <main> and streamed
 // the real h1, copy and JSON-LD into a hidden div after it. /flows/ also
@@ -967,6 +966,9 @@ export function buildSeoPageRecord(
           loadingWordRatio: words > 0 ? loadingWords / words : 0,
         }
       : null,
+    profileRenderErrors: STABLECOIN_PROFILE_ROUTE_PATTERN.test(route)
+      ? collectStablecoinProfileRenderErrors(route, html)
+      : [],
   };
 }
 
@@ -1145,6 +1147,20 @@ function validateStablecoinProfileHistoryPreview(route, html, errors) {
   }
 }
 
+function collectStablecoinProfileRenderErrors(route, html) {
+  const errors = [];
+  const unresolved = html.match(UNRESOLVED_GRADE_CLAIM_PATTERN);
+  if (unresolved) errors.push(`${route}: profile HTML renders an unresolved claim ("${unresolved[0]}")`);
+  if (html.includes(LOADING_DOSSIER_TEXT) && !html.includes(STATIC_PROFILE_MARKER)) {
+    errors.push(`${route}: profile HTML is a "${LOADING_DOSSIER_TEXT}" shell without the static profile`);
+  }
+  if (html.includes("/compare/?coins=")) {
+    errors.push(`${route}: profile HTML links to a /compare/?coins= facet URL (use buildComparePrefillUrl)`);
+  }
+  validateStablecoinProfileHistoryPreview(route, html, errors);
+  return errors;
+}
+
 /**
  * Profiles are indexed in their prerendered state, hidden streamed segments
  * included: no unresolved grade claim, and a loading dossier never stands
@@ -1152,17 +1168,14 @@ function validateStablecoinProfileHistoryPreview(route, html, errors) {
  */
 function validateStablecoinProfileRender(pageRecords, errors) {
   for (const record of pageRecords) {
-    if (!STABLECOIN_PROFILE_ROUTE_PATTERN.test(record.route) || !record.filePath || !fs.existsSync(record.filePath)) continue;
+    if (!STABLECOIN_PROFILE_ROUTE_PATTERN.test(record.route)) continue;
+    if (Array.isArray(record.profileRenderErrors)) {
+      errors.push(...record.profileRenderErrors);
+      continue;
+    }
+    if (!record.filePath || !fs.existsSync(record.filePath)) continue;
     const html = fs.readFileSync(record.filePath, "utf8");
-    const unresolved = html.match(UNRESOLVED_GRADE_CLAIM_PATTERN);
-    if (unresolved) errors.push(`${record.route}: profile HTML renders an unresolved claim ("${unresolved[0]}")`);
-    if (html.includes(LOADING_DOSSIER_TEXT) && !html.includes(STATIC_PROFILE_MARKER)) {
-      errors.push(`${record.route}: profile HTML is a "${LOADING_DOSSIER_TEXT}" shell without the static profile`);
-    }
-    if (html.includes("/compare/?coins=")) {
-      errors.push(`${record.route}: profile HTML links to a /compare/?coins= facet URL (use buildComparePrefillUrl)`);
-    }
-    validateStablecoinProfileHistoryPreview(record.route, html, errors);
+    errors.push(...collectStablecoinProfileRenderErrors(record.route, html));
   }
 }
 
@@ -1229,14 +1242,22 @@ function findContractAddressFold(html) {
  * as the overflow path.
  */
 function validateContractDeploymentSurfaces(pageRecords, errors, warnings) {
-  const htmlByRoute = new Map(
+  const filePathByRoute = new Map(
     pageRecords
-      .filter((record) => record.filePath && fs.existsSync(record.filePath))
-      .map((record) => [record.route, fs.readFileSync(record.filePath, "utf8")]),
+      .filter((record) => record.filePath)
+      .map((record) => [record.route, record.filePath]),
   );
+  const htmlCache = new Map();
+  const getHtml = (route) => {
+    if (htmlCache.has(route)) return htmlCache.get(route);
+    const filePath = filePathByRoute.get(route);
+    const html = filePath && fs.existsSync(filePath) ? fs.readFileSync(filePath, "utf8") : undefined;
+    htmlCache.set(route, html);
+    return html;
+  };
 
   for (const route of CONTRACT_FOLD_PROFILE_ROUTES) {
-    const html = htmlByRoute.get(route);
+    const html = getHtml(route);
     if (!html) continue;
     const coinId = route.split("/")[2];
     const coin = readCheckedInCoin(coinId);
@@ -1272,7 +1293,7 @@ function validateContractDeploymentSurfaces(pageRecords, errors, warnings) {
 
   for (const { chain, chainName } of CHAIN_CONTRACT_TABLE_PILOTS) {
     const route = `/chains/${chain}/`;
-    const html = htmlByRoute.get(route);
+    const html = getHtml(route);
     if (!html) continue;
     const heading = `Recorded contract addresses on ${chainName}`;
     const visibleText = extractDocumentText(html);
@@ -1320,7 +1341,7 @@ function validateContractDeploymentSurfaces(pageRecords, errors, warnings) {
         continue;
       }
       const targetRoute = `${href.replace(/\/+$/, "")}/`;
-      const targetHtml = htmlByRoute.get(targetRoute);
+      const targetHtml = getHtml(targetRoute);
       if (!targetHtml) {
         errors.push(`${route}: contract table destination ${targetRoute} is not part of the export`);
         continue;
@@ -1344,12 +1365,23 @@ function validateContractDeploymentSurfaces(pageRecords, errors, warnings) {
 const SAFETY_SCORES_ROUTE = "/safety-scores/";
 const SAFETY_RESULTS_REGION_LABEL = "Safety score cards";
 const SAFETY_RESULTS_REGION_ID = "data";
-registerCommonJs();
-registerEsm();
-const { API_HOSTNAME } = await import("../../shared/lib/runtime-origins.ts");
-const { dossierOgFallbackPath } = await import("../../shared/lib/social-preview-asset.ts");
-const { admitSafetyScoresPreviewRows, SAFETY_SCORES_PREVIEW_PROJECTION_VERSIONS, SAFETY_SCORES_PREVIEW_MAX_ROWS } =
-  await import("../../src/lib/safety-grade-snapshot.ts");
+let API_HOSTNAME;
+let dossierOgFallbackPath;
+let admitSafetyScoresPreviewRows;
+let SAFETY_SCORES_PREVIEW_PROJECTION_VERSIONS;
+let SAFETY_SCORES_PREVIEW_MAX_ROWS;
+if (!IS_PAGE_RECORD_WORKER) {
+  const [{ register: registerCommonJs }, { register: registerEsm }] = await Promise.all([
+    import("tsx/cjs/api"),
+    import("tsx/esm/api"),
+  ]);
+  registerCommonJs();
+  registerEsm();
+  ({ API_HOSTNAME } = await import("../../shared/lib/runtime-origins.ts"));
+  ({ dossierOgFallbackPath } = await import("../../shared/lib/social-preview-asset.ts"));
+  ({ admitSafetyScoresPreviewRows, SAFETY_SCORES_PREVIEW_PROJECTION_VERSIONS, SAFETY_SCORES_PREVIEW_MAX_ROWS } =
+    await import("../../src/lib/safety-grade-snapshot.ts"));
+}
 const SAFETY_PROFILE_HREF_PATTERN = /^\/stablecoin\/[^/]+\/$/;
 const PUBLIC_DATASETS_DIR = path.resolve("public/datasets");
 const PUBLIC_DATASET_CURRENT_MODULE_PATH = path.resolve("src/lib/datasets/public-dataset-current.ts");
@@ -2251,24 +2283,34 @@ function fail(errors, warning = []) {
   process.exit(1);
 }
 
+async function fetchPreviousSitemapXml(previousSitemapUrl) {
+  try {
+    const url = new URL(previousSitemapUrl);
+    url.searchParams.set("archiveContinuity", String(Date.now()));
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(20_000),
+      headers: { "Cache-Control": "no-cache", "User-Agent": "PharosSeoArchiveContinuity/1.0" },
+    });
+    if (!response.ok) throw new Error(`returned ${response.status}`);
+    return { ok: true, xml: await response.text() };
+  } catch (error) {
+    return { ok: false, error };
+  }
+}
+
 async function main() {
+  const previousSitemapUrl = process.env.SEO_PREVIOUS_SITEMAP_URL?.trim();
+  const previousSitemapPromise = previousSitemapUrl ? fetchPreviousSitemapXml(previousSitemapUrl) : null;
   const { errors, warnings, pageRecords, redirectRules } = await collectSeoStaticCheckResultParallel();
 
-  const previousSitemapUrl = process.env.SEO_PREVIOUS_SITEMAP_URL?.trim();
-  if (previousSitemapUrl) {
+  if (previousSitemapPromise) {
     try {
-      const url = new URL(previousSitemapUrl);
-      url.searchParams.set("archiveContinuity", String(Date.now()));
-      const response = await fetch(url, {
-        signal: AbortSignal.timeout(20_000),
-        headers: { "Cache-Control": "no-cache", "User-Agent": "PharosSeoArchiveContinuity/1.0" },
-      });
-      if (!response.ok) throw new Error(`returned ${response.status}`);
-      const previousSitemapXml = await response.text();
+      const previousSitemap = await previousSitemapPromise;
+      if (!previousSitemap.ok) throw previousSitemap.error;
       const currentSitemapXml = fs.readFileSync(path.join(DEFAULT_OUT_DIR, "sitemap.xml"), "utf8");
       errors.push(
         ...findPublishedArchiveContinuityErrors(
-          previousSitemapXml,
+          previousSitemap.xml,
           currentSitemapXml,
           redirectRules,
           new Set(pageRecords.map((record) => record.route)),
@@ -2291,7 +2333,7 @@ async function main() {
   console.log("OK: SEO static checks passed");
 }
 
-if (!isMainThread && workerData?.kind === "pharos-seo-page-records") {
+if (IS_PAGE_RECORD_WORKER) {
   parentPort?.postMessage(
     parsePageRecordChunk(
       workerData.files,

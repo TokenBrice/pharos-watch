@@ -95,14 +95,14 @@ function normalizeR2BucketLifecycle(result: unknown, bucket: string): BucketLife
 export async function fetchRequiredR2BucketLifecycles({
   accountId, requiredR2Bindings, apiToken, fetchImpl = fetch,
 }: { accountId: string; requiredR2Bindings: RequiredR2Bindings; apiToken: string; fetchImpl?: typeof fetch }): Promise<BucketLifecycles> {
-  const lifecycles: BucketLifecycles = {};
-  for (const bucket of new Set(Object.values(requiredR2Bindings))) {
+  const buckets = [...new Set(Object.values(requiredR2Bindings))];
+  const entries = await Promise.all(buckets.map(async (bucket) => {
     const result = await readCloudflareResult(fetchImpl, apiToken,
       `/accounts/${encodeURIComponent(accountId)}/r2/buckets/${encodeURIComponent(bucket)}/lifecycle`,
       `Cloudflare R2 bucket ${bucket} lifecycle lookup`);
-    lifecycles[bucket] = normalizeR2BucketLifecycle(result, bucket);
-  }
-  return lifecycles;
+    return [bucket, normalizeR2BucketLifecycle(result, bucket)] as const;
+  }));
+  return Object.fromEntries(entries);
 }
 
 export function comparePagesR2Storage(requiredR2Bindings: RequiredR2Bindings, bindings: unknown, lifecycles: unknown): string[] {
@@ -132,13 +132,16 @@ export async function preflightCloudflarePagesR2({
 }: { manifest: PagesR2Manifest; accountId?: string; apiToken?: string; fetchImpl?: typeof fetch }): Promise<void> {
   if (!accountId?.trim()) throw new Error("CLOUDFLARE_ACCOUNT_ID is required for the social preview configuration preflight.");
   if (!apiToken?.trim()) throw new Error("CLOUDFLARE_API_TOKEN is required with Pages project and R2 bucket lifecycle read access.");
-  const project = await readCloudflareResult(fetchImpl, apiToken,
-    `/accounts/${encodeURIComponent(accountId.trim())}/pages/projects/${encodeURIComponent(manifest.pages.project)}`,
-    "Cloudflare Pages project lookup");
+  const trimmedAccountId = accountId.trim();
+  const requiredR2Bindings = manifest.pages.production.requiredR2Bindings;
+  const [project, lifecycles] = await Promise.all([
+    readCloudflareResult(fetchImpl, apiToken,
+      `/accounts/${encodeURIComponent(trimmedAccountId)}/pages/projects/${encodeURIComponent(manifest.pages.project)}`,
+      "Cloudflare Pages project lookup"),
+    fetchRequiredR2BucketLifecycles({ accountId: trimmedAccountId, requiredR2Bindings, apiToken, fetchImpl }),
+  ]);
   if (!isRecord(project) || project.name !== manifest.pages.project || !isRecord(project.deployment_configs)
     || !isRecord(project.deployment_configs.production)) throw new Error("Cloudflare Pages project lookup returned a malformed production project.");
-  const requiredR2Bindings = manifest.pages.production.requiredR2Bindings;
-  const lifecycles = await fetchRequiredR2BucketLifecycles({ accountId: accountId.trim(), requiredR2Bindings, apiToken, fetchImpl });
   const drift = comparePagesR2Storage(requiredR2Bindings, normalizePagesR2Bindings(project.deployment_configs.production), lifecycles);
   if (drift.length > 0) throw new Error(`Social preview configuration preflight failed:\n${drift.join("\n")}`);
 }

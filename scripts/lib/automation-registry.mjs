@@ -823,6 +823,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
       "scripts/lib/social-card-catalog.ts",
       "scripts/lib/social-card-render.ts",
       "scripts/lib/social-preview-build.ts",
+      "scripts/lib/social-preview-worker.mjs",
       "shared/data/dead-stablecoins.json",
       "shared/data/methodology-changelogs/**",
       "shared/lib/chains/**",

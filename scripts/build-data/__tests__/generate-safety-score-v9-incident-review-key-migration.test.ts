@@ -36,7 +36,7 @@ describe("incident review key migration", () => {
     expect(generated.counts.skipped).toBe(registry.negativeReviews.length - subjects.length);
     expect(generated.counts.total + generated.counts.skipped).toBe(registry.negativeReviews.length);
     expect(generated.counts.orphans).toBe(23);
-    expect(generated.counts.authoredRetired).toBe(1);
+    expect(generated.counts.authoredRetired).toBe(2);
     expect(generated.counts.orphans + generated.counts.authoredRetired).toBe(generated.counts.retired);
     expect(generated.counts.mapped + generated.counts.retired).toBe(generated.counts.total);
   });
@@ -59,11 +59,13 @@ describe("incident review key migration", () => {
       new Set(Object.keys(INCIDENT_REVIEW_ORPHAN_ADJUDICATIONS)),
     );
     expect(adjudicated).toHaveLength(23);
-    expect(retired).toHaveLength(24);
+    expect(retired).toHaveLength(25);
     expect(retired.filter((row) => row.collidesWithCurrentCandidate)).toHaveLength(11);
     expect(retired.every((row) => row.authored === null && row.reason.length > 0 && row.applied === "retired")).toBe(true);
     expect(retired.find((row) => row.reviewId === "i203-cngn-compliant-naira-3ed94b7a7d58976299ac-20261011"))
       .toMatchObject({ legacyControlKey: null, digestMatch: false, reason: expect.stringContaining("Lisk") });
+    expect(retired.find((row) => row.reviewId === "j14susde-susde-ethena-4757f6af08b19cd8b007-20261011"))
+      .toMatchObject({ legacyControlKey: null, digestMatch: false });
   });
 
   it.each([false, true])("applies every authored scope and retires the adjudicated orphans with provenance (already retired: %s)", (alreadyRetired) => {
@@ -77,15 +79,16 @@ describe("incident review key migration", () => {
     const authoredRetirements = retired.filter((review) => typeof review.scope.controlKey !== "string");
     const legacyDigests = reviews.negativeReviews.filter((review) =>
       typeof review.scope.controlKey === "string");
-    expect(authored).toHaveLength(641);
+    expect(authored).toHaveLength(645);
     expect(authored).toHaveLength(generated.counts.authoredApplied + generated.counts.legacyBlocked);
     expect(authored.every((review) => typeof review.scope.routeId === "string" || review.scope.controlId !== undefined)).toBe(true);
     expect(retired).toHaveLength(generated.counts.retired);
     expect(adjudicatedRetirements).toHaveLength(generated.counts.orphans);
     expect(adjudicatedRetirements.every((review) =>
       review.retired?.reviewedAt === REVIEW_KEY_MIGRATION_RETIRED_AT && review.retired.reason.length > 0)).toBe(true);
-    expect(authoredRetirements).toEqual([
-      expect.objectContaining({ reviewId: "i203-cngn-compliant-naira-3ed94b7a7d58976299ac-20261011" }),
+    expect(authoredRetirements.map((r) => r.reviewId)).toEqual([
+      "j14susde-susde-ethena-4757f6af08b19cd8b007-20261011",
+      "i203-cngn-compliant-naira-3ed94b7a7d58976299ac-20261011",
     ]);
     // Only the adjudicated orphan rows keep the digest scope they were retired under.
     expect(legacyDigests).toHaveLength(adjudicatedRetirements.length);

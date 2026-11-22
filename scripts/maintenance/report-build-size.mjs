@@ -357,10 +357,15 @@ export function runReportBuildSize({
   const classicZodChunkNames = jsFiles
     .filter((file) => readFileSync(file.path, "utf8").includes(CLASSIC_ZOD_CHUNK_MARKER))
     .map((file) => path.basename(file.path));
-  const classicZodHtmlReferenceCount = countDocumentsReferencingChunks(
-    htmlFiles.map((file) => readFileSync(file.path, "utf8")),
-    classicZodChunkNames,
-  );
+  let classicZodHtmlReferenceCount = 0;
+  if (classicZodChunkNames.length > 0) {
+    for (const file of htmlFiles) {
+      classicZodHtmlReferenceCount += countDocumentsReferencingChunks(
+        [readFileSync(file.path, "utf8")],
+        classicZodChunkNames,
+      );
+    }
+  }
   const classicZodHtmlReferenceRatio = htmlFiles.length > 0 ? classicZodHtmlReferenceCount / htmlFiles.length : 0;
 
   console.log("# Pharos Build Size Report");

@@ -7,9 +7,7 @@ import GithubSlugger from "github-slugger";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeSlug from "rehype-slug";
 import remarkGfm from "remark-gfm";
-import remarkParse from "remark-parse";
 import ReactMarkdown from "react-markdown";
-import { unified } from "unified";
 import { ChevronDown } from "lucide-react";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { JsonLdScript } from "@/components/json-ld-script";
@@ -133,32 +131,31 @@ function extractMdastText(node: MdastNode): string {
 }
 
 /**
- * Extracts level-2 (`##`) headings from the parsed CommonMark/GFM AST using the
- * exact `GithubSlugger` sequence `rehype-slug` walks across all headings (depth
- * 1..6) so every TOC anchor matches its rendered DOM `id`.
+ * Collects level-2 (`##`) headings during `ReactMarkdown`'s single CommonMark/GFM
+ * pass using the exact `GithubSlugger` sequence `rehype-slug` walks across all
+ * headings (depth 1..6) so every TOC anchor matches its rendered DOM `id`.
  */
-function extractMarkdownH2Headings(markdown: string): DocTocHeading[] {
-  const tree = unified().use(remarkParse).use(remarkGfm).parse(markdown) as MdastNode;
-  const slugger = new GithubSlugger();
-  const headings: DocTocHeading[] = [];
+function remarkCollectH2Headings(headings: DocTocHeading[]) {
+  return () => (tree: MdastNode): void => {
+    const slugger = new GithubSlugger();
 
-  const visit = (node: MdastNode): void => {
-    if (node.type === "heading") {
-      const rawText = extractMdastText(node);
-      const id = slugger.slug(rawText);
-      const text = rawText.replace(/\s+/g, " ").trim();
-      if (node.depth === 2 && text) {
-        headings.push({ id, text });
+    const visit = (node: MdastNode): void => {
+      if (node.type === "heading") {
+        const rawText = extractMdastText(node);
+        const id = slugger.slug(rawText);
+        const text = rawText.replace(/\s+/g, " ").trim();
+        if (node.depth === 2 && text) {
+          headings.push({ id, text });
+        }
+        return;
       }
-      return;
-    }
-    for (const child of node.children ?? []) {
-      visit(child);
-    }
-  };
+      for (const child of node.children ?? []) {
+        visit(child);
+      }
+    };
 
-  visit(tree);
-  return headings;
+    visit(tree);
+  };
 }
 
 function renderDoc(doc: (typeof PUBLIC_DOC_BY_SLUG extends ReadonlyMap<string, infer T> ? T : never), slug: string) {
@@ -168,18 +165,18 @@ function renderDoc(doc: (typeof PUBLIC_DOC_BY_SLUG extends ReadonlyMap<string, i
   });
   const meta = (docsMetadata as Record<string, { dateModified: string; dateCreated: string }>)[slug];
   const updatedDate = meta?.dateModified?.slice(0, 10) ?? null;
-  const headings = extractMarkdownH2Headings(source);
+  const headings: DocTocHeading[] = [];
+  const renderedMarkdown = ReactMarkdown({
+    children: source,
+    components: mdxComponents,
+    remarkPlugins: [remarkGfm, remarkCollectH2Headings(headings)],
+    rehypePlugins: [rehypeSlug, [rehypeAutolinkHeadings, { behavior: "wrap" }]],
+  });
   const hasToc = headings.length >= 2;
 
   const articleBody = (
     <article className="min-w-0 max-w-3xl space-y-5 text-sm leading-7 text-muted-foreground [&_h2]:scroll-mt-24 [&_h2]:pt-4 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:tracking-tight [&_h2]:text-foreground [&_h3]:scroll-mt-24 [&_h3]:pt-3 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-foreground [&_h4]:text-base [&_h4]:font-semibold [&_h4]:text-foreground [&_p]:leading-7 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5 [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:text-foreground/80 [&_code]:rounded-sm [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-foreground [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:border [&_pre]:border-border/60 [&_pre]:bg-muted/35 [&_pre]:p-4 [&_pre_code]:bg-transparent [&_pre_code]:p-0">
-      <ReactMarkdown
-        components={mdxComponents}
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeSlug, [rehypeAutolinkHeadings, { behavior: "wrap" }]]}
-      >
-        {source}
-      </ReactMarkdown>
+      {renderedMarkdown}
     </article>
   );
 

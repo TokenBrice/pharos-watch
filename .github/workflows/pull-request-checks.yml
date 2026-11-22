@@ -346,7 +346,11 @@ jobs:
           # runs inline the gate-measured routes and reuse the prepared
           # workspace outputs for everything else.
           PHAROS_CRITICAL_CSS_FULL_PASS: ${{ needs.prepare.outputs.pages_critical_css_full_pass }}
+          PHAROS_CRITICAL_CSS_WORKERS: "4"
           PHAROS_PAGES_REUSE_PREPARED_WORKSPACE: "1"
+          NEXT_TELEMETRY_DISABLED: "1"
+          PHAROS_DISABLE_WEBPACK_FS_CACHE: "1"
+          PHAROS_NEXT_BUILD_CPUS: "4"
           PR_LANE_ID: pages-artifact
         run: node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --run
 

@@ -5,6 +5,7 @@ import { runInNewContext } from "node:vm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   collectCriticalCssPages,
+  compileCriticalCssPlans,
   criticalCssWorkerCount,
   GATE_SCOPED_LARGEST_HTML_PAGES,
   optimizeCriticalCssPages,
@@ -14,24 +15,7 @@ import { gatedHtmlRoutes } from "../maintenance/report-build-size.mjs";
 
 const temporaryRoots: string[] = [];
 const stylesheet = ".home{color:red}.coin{color:blue}.yield{color:green}.dark{color-scheme:dark;--background:black}.unused{padding:2rem}";
-const pageNames = [
-  "index.html",
-  "stablecoin/alpha/index.html",
-  "stablecoin/alpha/yield/index.html",
-  "stablecoin/beta/index.html",
-  "stablecoin/beta/yield/index.html",
-  "stablecoin/gamma/index.html",
-  "stablecoin/delta/index.html",
-  "depeg/index.html",
-  "about/index.html",
-  "stablecoin/alpha/history/index.html",
-  "methodology/scoring/example/index.html",
-  "digest/index.html",
-  "digest/2026-10-25/index.html",
-  "404.html",
-  "archive/legacy.html",
-  "admin-guide/index.html",
-];
+const pageNames = ["index.html", "stablecoin/alpha/index.html", "stablecoin/alpha/yield/index.html", "stablecoin/beta/index.html", "stablecoin/beta/yield/index.html", "stablecoin/gamma/index.html", "stablecoin/delta/index.html", "depeg/index.html", "about/index.html", "stablecoin/alpha/history/index.html", "methodology/scoring/example/index.html", "digest/index.html", "digest/2026-10-25/index.html", "404.html", "archive/legacy.html", "admin-guide/index.html"];
 
 function fixture(): string {
   const root = mkdtempSync(path.join(tmpdir(), "pharos-critical-css-"));
@@ -90,24 +74,14 @@ describe("critical CSS worker pool", () => {
     const outDir = fixture();
     addGateRoutes(outDir);
     const oversized = (bytes: number) => `<!DOCTYPE html><html><head><link rel="stylesheet" href="/_next/static/css/app.css"></head><body><main class="coin">${"x".repeat(bytes)}</main></body></html>`;
-    const routes = [
-      ["digest/oversized/index.html", 20_000],
-      ["digest/second/index.html", 10_000],
-      ["digest/third/index.html", 5_000],
-      ["digest/fourth/index.html", 1_000],
-    ] as const;
+    const routes = [["digest/oversized/index.html", 20_000], ["digest/second/index.html", 10_000], ["digest/third/index.html", 5_000], ["digest/fourth/index.html", 1_000]] as const;
     for (const [route, bytes] of routes) {
       const file = path.join(outDir, route);
       mkdirSync(path.dirname(file), { recursive: true });
       writeFileSync(file, oversized(bytes));
     }
     const scoped = selectCriticalCssPages(outDir, "gates").map((file) => path.relative(outDir, file).split(path.sep).join("/"));
-    expect(scoped).toEqual(expect.arrayContaining([
-      ...gatedHtmlRoutes(),
-      "digest/oversized/index.html",
-      "digest/second/index.html",
-      "digest/third/index.html",
-    ]));
+    expect(scoped).toEqual(expect.arrayContaining([...gatedHtmlRoutes(), "digest/oversized/index.html", "digest/second/index.html", "digest/third/index.html"]));
     expect(scoped).not.toContain("digest/fourth/index.html");
   });
 
@@ -185,28 +159,27 @@ describe("critical CSS worker pool", () => {
     expect(after).toContain('<meta name="robots" content="index"></head><body class="coin"><svg><title>Chart</title></svg>');
   });
 
-  it("preserves functional-selector spacing, responsive rules, properties and cascade order", async () => {
+  it("preserves functional-selector spacing, responsive/nested/:root rules, strips @font-face, and finds chunk CSS", async () => {
     const outDir = fixture();
     const css = [
-      "@layer theme,base,utilities;",
-      "@layer theme{:root{--spacing:.25rem}}",
-      "@layer base{:where(p){margin:0}}",
-      "@layer utilities{",
-      ":where(.space-y-2>:not(:last-child)){--tw-space-y-reverse:0;margin-block-end:calc(var(--spacing) * 2)}",
+      '@font-face{font-family:"I";src:url(/i.woff2);unicode-range:U+0-FF}',
+      "@layer theme,base,utilities;@layer theme{:root{--spacing:.25rem}}@layer base{:where(p){margin:0}}",
+      "@layer utilities{:where(.space-y-2>:not(:last-child)){--tw-space-y-reverse:0;margin-block-end:calc(var(--spacing) * 2)}",
       "@media(min-width:40rem){:where(.sm\\:space-y-4>:not(:last-child)){margin-block-end:calc(var(--spacing) * 4)}}",
-      ":is(.coin,.home)>p{line-height:1.5}",
-      ".unused{padding:2rem}}",
+      ":is(.coin,.home)>p{line-height:1.5}.unused{padding:2rem}}",
       '@property --tw-space-y-reverse{syntax:"*";inherits:false;initial-value:0}',
     ].join("");
-    writeFileSync(path.join(outDir, "_next/static/css/app.css"), css);
+    const chunk = path.join(outDir, "_next/static/chunks/l.css");
+    mkdirSync(path.dirname(chunk), { recursive: true });
+    writeFileSync(chunk, css);
+    const { plans } = compileCriticalCssPlans(outDir);
+    expect([plans.map((p) => p[1]), /@font-face|unicode-range/.test(JSON.stringify(plans))]).toEqual([["/_next/static/chunks/l.css", "/_next/static/css/app.css"], false]);
     const file = path.join(outDir, "depeg/index.html");
-    writeFileSync(file, '<html><head><link rel="stylesheet" href="/_next/static/css/app.css"></head><body><main class="coin space-y-2 sm:space-y-4"><p>First</p><p>Second</p></main></body></html>');
-
+    writeFileSync(file, '<html><head><link rel="stylesheet" href="/_next/static/chunks/l.css"></head><body><main class="coin space-y-2 sm:space-y-4"><p>A</p><p>B</p></main></body></html>');
     await optimizeCriticalCssPages(outDir, [file], 1);
-
     const after = readFileSync(file, "utf8");
-    expect(after).toContain(`<style>${css.replace(".unused{padding:2rem}", "")}</style>`);
-    expect(readFileSync(path.join(outDir, "_next/static/css/app.css"), "utf8")).toBe(css);
+    expect(after).toContain(`<style>${css.replace('@font-face{font-family:"I";src:url(/i.woff2);unicode-range:U+0-FF}', "").replace(".unused{padding:2rem}", "")}</style>`);
+    expect(readFileSync(chunk, "utf8")).toBe(css);
   });
 
   it.each([

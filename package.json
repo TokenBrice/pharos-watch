@@ -35,7 +35,7 @@
     "prebuild": "node --import tsx scripts/maintenance/run-generated-artifacts.ts --build-lifecycle=compile-input,post-refresh",
     "build": "next build --webpack",
     "build:world-map": "tsx scripts/maintenance/build-world-map-svg.ts",
-    "postbuild": "tsx scripts/maintenance/generate-markdown-exports.ts && node --import tsx scripts/maintenance/inline-homepage-critical-css.ts",
+    "postbuild": "tsx scripts/maintenance/generate-markdown-exports.ts & md_pid=$!; node --import tsx scripts/maintenance/inline-homepage-critical-css.ts & css_pid=$!; wait \"$md_pid\"; md_status=$?; wait \"$css_pid\"; css_status=$?; [ \"$md_status\" -eq 0 ] && [ \"$css_status\" -eq 0 ]",
     "start": "npm run serve:static-export",
     "lint": "eslint . --cache --cache-strategy content --cache-location .cache/eslint/ --max-warnings=0",
     "lint:changed": "node --import tsx scripts/ci/run-changed-eslint.ts",

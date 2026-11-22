@@ -5,7 +5,8 @@ import { availableParallelism } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Worker } from "node:worker_threads";
-import Beasties, { type Logger, type Options } from "beasties";
+import { compileSheet, encodePlan, type CompactPlan } from "beasties/compiler";
+import { createProcessor } from "beasties/runtime";
 import { runDirectCli } from "../lib/cli-args.mjs";
 import { gatedHtmlRoutes } from "./report-build-size.mjs";
 
@@ -104,51 +105,97 @@ export interface PageOptimizationResult extends OptimizationResult {
   logs: OptimizationLog[];
 }
 
-// A worker owns one optimizer and processes its partition sequentially. Source
-// CSS is never pruned, so separate workers only write their own HTML files.
+// Keep theme tokens even on pages without dark utility classes.
+// Beasties strips leading selector functions, losing Tailwind spacing/dividers.
+const CRITICAL_CSS_ALLOW_RULES: Array<string | RegExp> = [
+  ".dark", /^:(?:where|is)\(/,
+  // Header's portalled Sheet is absent from SSR; keep its viewport, rail and motion rules.
+  ".fixed", ".inset-0", ".inset-y-0", ".left-0", ".z-modal", ".h-full", ".w-full", ".sm\\:max-w-full",
+  ".overflow-y-auto", ".min-h-16", ".min-w-14", ".grid-cols-2", ".gap-4", ".mt-2",
+  ".border-r", ".border-border\\/45", ".border-transparent", ".bg-black\\/50", ".bg-card", ".bg-muted", ".bg-muted\\/60",
+  ".p-0", ".py-4", ".pt-3", ".pl-\\[14px\\]", ".pb-\\[calc\\(env\\(safe-area-inset-bottom\\)\\+0\\.5rem\\)\\]",
+  ".leading-tight", ".tabular-nums", ".shadow-lg", ".transition", ".transition-\\[background-color\\,border-color\\,color\\,box-shadow\\]",
+  ".\\[animation-fill-mode\\:backwards\\]", ".fade-in", ".slide-in-from-left-2", ".slide-in-from-right-2",
+  /^\.(?:motion-reduce\\:)?data-\\\[state\\=(?:open|closed)\\\]\\:(?:animate-|duration-|fade-|slide-)/,
+  ".motion-reduce\\:animate-none",
+];
+
+function collectStylesheetFiles(outDir: string): string[] {
+  return readdirSync(outDir, { withFileTypes: true, recursive: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".css"))
+    .map((entry) => path.join(entry.parentPath, entry.name))
+    .filter((file) => !path.relative(outDir, file).startsWith(`admin${path.sep}`))
+    .sort();
+}
+
+export function compileCriticalCssPlans(outDir: string): { plans: CompactPlan[]; warnings: string[] } {
+  const warnings: string[] = [];
+  const plans: CompactPlan[] = [];
+  for (const cssFile of collectStylesheetFiles(outDir)) {
+    const href = `/${path.relative(outDir, cssFile).split(path.sep).join("/")}`;
+    const sheet = compileSheet(readFileSync(cssFile, "utf8"), {
+      href,
+      allowRules: CRITICAL_CSS_ALLOW_RULES,
+      exact: true,
+    });
+    // Fonts are never inlined or preloaded (`fonts: false, inlineFonts: false`).
+    // Dropping @font-face rules also prevents beasties/runtime from enabling
+    // full-text unicode-range codepoint scanning and busting its page cache.
+    sheet.rules = sheet.rules.filter((rule) => !rule.fontFace);
+    warnings.push(...sheet.warnings);
+    plans.push(encodePlan(sheet));
+  }
+  return { plans, warnings };
+}
+
+function resolveLogThreshold(): number {
+  const raw = process.env.BEASTIES_LOG_LEVEL || "error";
+  const index = logLevels.indexOf(raw as (typeof logLevels)[number]);
+  return index >= 0 ? index : logLevels.indexOf("error");
+}
+
+function partitionFilesBySize(files: readonly string[], poolSize: number): string[][] {
+  const weighted = files
+    .map((file) => ({ file, size: statSync(file).size }))
+    .sort((left, right) => right.size - left.size || left.file.localeCompare(right.file));
+  const partitions = Array.from({ length: poolSize }, () => ({ bytes: 0, files: [] as string[] }));
+  for (const entry of weighted) {
+    let lightest = partitions[0]!;
+    for (let index = 1; index < partitions.length; index += 1) {
+      if (partitions[index]!.bytes < lightest.bytes) lightest = partitions[index]!;
+    }
+    lightest.files.push(entry.file);
+    lightest.bytes += entry.size;
+  }
+  return partitions.map((partition) => partition.files).filter((partition) => partition.length > 0);
+}
+
+// A worker owns one compiled-plan processor and processes its partition
+// sequentially. Source CSS is never pruned, so workers only write their own HTML.
 export async function optimizeCriticalCssBatch(
   outDir: string,
   filePaths: string[],
+  plans?: CompactPlan[],
 ): Promise<PageOptimizationResult[]> {
-  const logLevel = (process.env.BEASTIES_LOG_LEVEL || "error") as Options["logLevel"];
-  const threshold = logLevels.indexOf(logLevel!);
+  const threshold = resolveLogThreshold();
+  const logWarn = logLevels.indexOf("warn") >= threshold;
+  const compiled = plans ? { plans, warnings: [] as string[] } : compileCriticalCssPlans(outDir);
   let logs: OptimizationLog[] = [];
-  const logger: Logger = {};
-  for (const level of logLevels) {
-    if (level !== "silent" && logLevels.indexOf(level) >= threshold) {
-      logger[level] = (message) => logs.push({ level, message });
-    }
-  }
-  const optimizer = new Beasties({
-    path: outDir,
-    publicPath: "/",
+  const processor = createProcessor(compiled.plans, {
     preload: "media",
-    pruneSource: false,
-    reduceInlineStyles: false,
     inlineFonts: false,
     fonts: false,
-    // Keep theme tokens even on pages without dark utility classes.
-    // Beasties strips leading selector functions, losing Tailwind spacing/dividers.
-    allowRules: [
-      ".dark", /^:(?:where|is)\(/,
-      // Header's portalled Sheet is absent from SSR; keep its viewport, rail and motion rules.
-      ".fixed", ".inset-0", ".inset-y-0", ".left-0", ".z-modal", ".h-full", ".w-full", ".sm\\:max-w-full",
-      ".overflow-y-auto", ".min-h-16", ".min-w-14", ".grid-cols-2", ".gap-4", ".mt-2",
-      ".border-r", ".border-border\\/45", ".border-transparent", ".bg-black\\/50", ".bg-card", ".bg-muted", ".bg-muted\\/60",
-      ".p-0", ".py-4", ".pt-3", ".pl-\\[14px\\]", ".pb-\\[calc\\(env\\(safe-area-inset-bottom\\)\\+0\\.5rem\\)\\]",
-      ".leading-tight", ".tabular-nums", ".shadow-lg", ".transition", ".transition-\\[background-color\\,border-color\\,color\\,box-shadow\\]",
-      ".\\[animation-fill-mode\\:backwards\\]", ".fade-in", ".slide-in-from-left-2", ".slide-in-from-right-2",
-      /^\.(?:motion-reduce\\:)?data-\\\[state\\=(?:open|closed)\\\]\\:(?:animate-|duration-|fade-|slide-)/,
-      ".motion-reduce\\:animate-none",
-    ],
-    logLevel,
-    logger,
+    cache: { maxSize: 2000 },
+    logger: logWarn ? { warn: (message) => logs.push({ level: "warn", message }) } : undefined,
   });
   const results: PageOptimizationResult[] = [];
-  for (const filePath of filePaths) {
-    logs = [];
+  for (let index = 0; index < filePaths.length; index += 1) {
+    const filePath = filePaths[index]!;
+    logs = index === 0 && logWarn
+      ? compiled.warnings.map((message) => ({ level: "warn" as const, message }))
+      : [];
     const label = path.relative(path.dirname(outDir), filePath);
-    const result = await optimizePage(optimizer, filePath, label);
+    const result = optimizePage(processor, filePath, label);
     results.push({ ...result, label, logs });
   }
   return results;
@@ -161,20 +208,28 @@ export async function optimizeCriticalCssPages(
 ): Promise<PageOptimizationResult[]> {
   const files = [...filePaths].sort();
   if (files.length === 0) return [];
+  const { plans, warnings } = compileCriticalCssPlans(outDir);
+  const threshold = resolveLogThreshold();
+  const compileLogs: OptimizationLog[] = logLevels.indexOf("warn") >= threshold
+    ? warnings.map((message) => ({ level: "warn", message }))
+    : [];
   const poolSize = Math.min(workerCount, files.length);
-  if (poolSize === 1) return optimizeCriticalCssBatch(outDir, files);
-
-  const partitions = Array.from({ length: poolSize }, () => [] as string[]);
-  for (let index = 0; index < files.length; index++) {
-    partitions[index % poolSize].push(files[index]);
+  if (poolSize === 1) {
+    const results = await optimizeCriticalCssBatch(outDir, files, plans);
+    if (results.length > 0 && compileLogs.length > 0) {
+      results[0]!.logs = [...compileLogs, ...results[0]!.logs];
+    }
+    return results;
   }
+
+  const partitions = partitionFilesBySize(files, poolSize);
   const workers: Worker[] = [];
   try {
     const pending = partitions.map((partition) => {
       // scripts/maintenance/critical-css-worker.mjs registers tsx in the worker
       // before importing this module, without relying on inherited loader hooks.
       const worker = new Worker(new URL("./critical-css-worker.mjs", import.meta.url), {
-        workerData: { outDir, filePaths: partition },
+        workerData: { outDir, filePaths: partition, plans },
       });
       workers.push(worker);
       return new Promise<PageOptimizationResult[]>((resolve, reject) => {
@@ -189,16 +244,24 @@ export async function optimizeCriticalCssPages(
         });
       });
     });
-    return (await Promise.all(pending)).flat().sort((a, b) =>
+    const results = (await Promise.all(pending)).flat().sort((a, b) =>
       a.label < b.label ? -1 : a.label > b.label ? 1 : 0,
     );
+    if (results.length > 0 && compileLogs.length > 0) {
+      results[0]!.logs = [...compileLogs, ...results[0]!.logs];
+    }
+    return results;
   } finally {
     // In particular, stop the other partitions before reporting a page failure.
     await Promise.all(workers.map((worker) => worker.terminate()));
   }
 }
 
-async function optimizePage(optimizer: Beasties, filePath: string, label: string): Promise<OptimizationResult> {
+function optimizePage(
+  processor: ReturnType<typeof createProcessor>,
+  filePath: string,
+  label: string,
+): OptimizationResult {
   const before = readFileSync(filePath, "utf8");
 
   // Re-running Beasties on an already-optimized page re-attaches onload
@@ -218,11 +281,17 @@ async function optimizePage(optimizer: Beasties, filePath: string, label: string
   const extractionHtmlTag = before.includes('src="/portfolio-bootstrap.js"')
     ? darkHtmlTag.replace(/>$/, " data-portfolio-empty>")
     : darkHtmlTag;
-  let after = (await optimizer.process(before.replace(htmlTag, extractionHtmlTag)))
+  let after = processor.process(before.replace(htmlTag, extractionHtmlTag))
     .replace(/<html\b[^>]*>/i, htmlTag);
 
+  // Scope async stylesheet rewriting and loader insertion to <head> so huge
+  // inline RSC <script> payloads in <body> are never scanned by link regexes.
+  const headCloseIndex = after.search(/<\/head>/i);
+  const headSlice = headCloseIndex >= 0 ? after.slice(0, headCloseIndex) : after;
+  const tailSlice = headCloseIndex >= 0 ? after.slice(headCloseIndex) : "";
+
   let hasAsyncStylesheet = false;
-  after = after.replace(asyncStylesheetPattern, (tag) => {
+  let rewrittenHead = headSlice.replace(asyncStylesheetPattern, (tag) => {
     hasAsyncStylesheet = true;
     const withoutInlineHandler = tag.replace(/\s+onload=["']this\.media\s*=\s*["']all["']["']/i, "");
 
@@ -233,12 +302,12 @@ async function optimizePage(optimizer: Beasties, filePath: string, label: string
     return withoutInlineHandler.replace(/\s*\/?>$/, ' data-pharos-critical-css="async">');
   });
 
-  if (hasAsyncStylesheet && !after.includes(`src="${asyncCssLoaderPath}"`)) {
-    const lastLink = [...after.matchAll(/<link\b[^>]*data-pharos-critical-css="async"[^>]*>/g)].at(-1)!;
+  if (hasAsyncStylesheet && !rewrittenHead.includes(`src="${asyncCssLoaderPath}"`)) {
+    const lastLink = [...rewrittenHead.matchAll(/<link\b[^>]*data-pharos-critical-css="async"[^>]*>/g)].at(-1)!;
     const insertAt = lastLink.index + lastLink[0].length;
-    after = `${after.slice(0, insertAt)}<script src="${asyncCssLoaderPath}" async></script>${after.slice(insertAt)}`;
+    rewrittenHead = `${rewrittenHead.slice(0, insertAt)}<script src="${asyncCssLoaderPath}" async></script>${rewrittenHead.slice(insertAt)}`;
   }
-  after = hoistShareMetadata(after);
+  after = hoistShareMetadata(rewrittenHead + tailSlice);
 
   const withoutNoscript = after.replace(/<noscript\b[\s\S]*?<\/noscript>/gi, "");
 

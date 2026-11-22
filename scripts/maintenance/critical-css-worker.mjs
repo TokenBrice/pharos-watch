@@ -7,5 +7,5 @@ import { register as registerEsm } from "tsx/esm/api";
 registerCommonJs();
 registerEsm();
 const { optimizeCriticalCssBatch } = await import("./inline-homepage-critical-css.ts");
-const results = await optimizeCriticalCssBatch(workerData.outDir, workerData.filePaths);
+const results = await optimizeCriticalCssBatch(workerData.outDir, workerData.filePaths, workerData.plans);
 parentPort.postMessage(results);

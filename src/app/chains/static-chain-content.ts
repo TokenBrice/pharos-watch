@@ -73,20 +73,27 @@ export const CHAIN_STABLECOIN_FEATURE_LINKS: readonly ChainFeatureLink[] = [
   },
 ];
 
-/**
- * One entry per tracked coin with at least one recorded deployment on the
- * chain. The filtered contract records travel with the entry so consumers can
- * render address rows without a second registry scan; the coin stays the unit
- * of the directory, metadata and JSON-LD lists.
- */
-export function getTrackedDeploymentsForChain(chainId: string): ChainTrackedDeployment[] {
-  return ACTIVE_STABLECOINS.flatMap((stablecoin) => {
-    const contracts = (stablecoin.contracts ?? []).filter((contract) => contract.chain === chainId);
-    if (contracts.length === 0) {
-      return [];
+let trackedDeploymentsByChainCache: Map<string, readonly ChainTrackedDeployment[]> | null = null;
+
+function getTrackedDeploymentsByChain(): Map<string, readonly ChainTrackedDeployment[]> {
+  if (trackedDeploymentsByChainCache) return trackedDeploymentsByChainCache;
+
+  const byChain = new Map<string, ChainTrackedDeployment[]>();
+  for (const stablecoin of ACTIVE_STABLECOINS) {
+    const contracts = stablecoin.contracts;
+    if (!contracts || contracts.length === 0) continue;
+
+    const contractsByChain = new Map<string, NonNullable<StablecoinMeta["contracts"]>>();
+    for (const contract of contracts) {
+      let list = contractsByChain.get(contract.chain);
+      if (!list) {
+        list = [];
+        contractsByChain.set(contract.chain, list);
+      }
+      list.push(contract);
     }
 
-    return {
+    const base = {
       id: stablecoin.id,
       name: stablecoin.name,
       symbol: stablecoin.symbol,
@@ -94,11 +101,35 @@ export function getTrackedDeploymentsForChain(chainId: string): ChainTrackedDepl
       pegLabel: PEG_LABELS_SHORT[stablecoin.flags.pegCurrency] ?? stablecoin.flags.pegCurrency,
       backingLabel: BACKING_LABELS_SHORT[stablecoin.flags.backing] ?? stablecoin.flags.backing,
       governanceLabel: GOVERNANCE_LABELS_SHORT[stablecoin.flags.governance] ?? stablecoin.flags.governance,
-      contractCount: contracts.length,
-      contracts,
       isNavOrVariant: stablecoin.flags.navToken || stablecoin.variantOf != null,
     };
-  });
+
+    for (const [chainId, chainContracts] of contractsByChain) {
+      let deployments = byChain.get(chainId);
+      if (!deployments) {
+        deployments = [];
+        byChain.set(chainId, deployments);
+      }
+      deployments.push({
+        ...base,
+        contractCount: chainContracts.length,
+        contracts: chainContracts,
+      });
+    }
+  }
+
+  trackedDeploymentsByChainCache = byChain;
+  return byChain;
+}
+
+/**
+ * One entry per tracked coin with at least one recorded deployment on the
+ * chain. The filtered contract records travel with the entry so consumers can
+ * render address rows without a second registry scan; the coin stays the unit
+ * of the directory, metadata and JSON-LD lists.
+ */
+export function getTrackedDeploymentsForChain(chainId: string): ChainTrackedDeployment[] {
+  return [...(getTrackedDeploymentsByChain().get(chainId) ?? [])];
 }
 
 /**
@@ -153,24 +184,31 @@ export function getChainDirectoryEntries(): ChainDirectoryEntry[] {
     .sort((left, right) => left.name.localeCompare(right.name));
 }
 
+let allChainTaxonomyPagesCache: ReadonlyArray<{
+  href: string;
+  title: string;
+  coins: readonly { id: string }[];
+}> | null = null;
+
+function getAllChainTaxonomyPages() {
+  if (!allChainTaxonomyPagesCache) {
+    allChainTaxonomyPagesCache = [
+      ...PEG_TAXONOMY_PAGES,
+      ...BACKING_TAXONOMY_PAGES,
+      ...GOVERNANCE_TAXONOMY_PAGES,
+      ...INFRASTRUCTURE_TAXONOMY_PAGES,
+    ];
+  }
+  return allChainTaxonomyPagesCache;
+}
+
 export function getRelatedChainTaxonomyLinks(deployments: readonly ChainTrackedDeployment[]): ChainTaxonomyLink[] {
   const deployedIds = new Set(deployments.map((deployment) => deployment.id));
   if (deployedIds.size === 0) {
     return [];
   }
 
-  const taxonomyPages: ReadonlyArray<{
-    href: string;
-    title: string;
-    coins: readonly { id: string }[];
-  }> = [
-    ...PEG_TAXONOMY_PAGES,
-    ...BACKING_TAXONOMY_PAGES,
-    ...GOVERNANCE_TAXONOMY_PAGES,
-    ...INFRASTRUCTURE_TAXONOMY_PAGES,
-  ];
-
-  return taxonomyPages
+  return getAllChainTaxonomyPages()
     .map((page) => ({
       href: page.href,
       title: page.title,
