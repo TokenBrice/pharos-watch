@@ -2,7 +2,8 @@ import { z } from "zod";
 import { StablecoinLiveSummarySchema } from "./stablecoin-live-summary";
 import { SupplyHistoryResponseSchema } from "./supply";
 // Wire-contract batch bounds; producers and consumers import this same authority.
-export const DETAIL_SNAPSHOT_INPUT_BATCH_SIZE = 10;
+export const DETAIL_SNAPSHOT_INPUT_BATCH_SIZE = 20;
+export const DETAIL_SNAPSHOT_INPUT_LEGACY_BATCH_SIZE = 10;
 export const DETAIL_SNAPSHOT_INPUT_MAX_BATCH_SIZE = 20;
 
 const SourceClockSchema = z.number().finite().nonnegative().nullable();

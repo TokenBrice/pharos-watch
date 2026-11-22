@@ -37,12 +37,12 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseArgs } from "node:util";
 import { PUBLIC_DATASET_TOPICS, type PublicDatasetTopic } from "@shared/lib/api-endpoints/datasets";
 import { formatUtcDateOnly } from "@shared/lib/format";
 import type { DepegEvent } from "@shared/types/peg";
 import { PublicSnapshotEnvelopeSchema } from "@shared/types/public-snapshot";
 import { DEPEG_EVENT_DATA_DIR, readDepegEventSnapshot } from "../../src/lib/depeg-event-snapshot";
+import { assertCliUsage, parseStrictCliArgs, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { projectRetiredPublicRouteRedirects } from "../lib/retired-public-routes.mjs";
 import { readDepegLedgerCapture, type DepegLedgerCapture } from "../lib/depeg-ledger-capture";
@@ -426,33 +426,78 @@ async function fetchLatestSnapshotDate(apiBase: string): Promise<string | null> 
   return indexPayload?.snapshots[0]?.snapshotDate ?? null;
 }
 
+const USAGE = `Usage: npx tsx scripts/maintenance/generate-public-datasets.ts [options]
+
+Options:
+  --check                   Validate checked-in public dataset mirrors
+  --integrity-only          Waive mirror age during --check (PR validation)
+  --allow-stub              Emit explicit placeholder mirrors when no API base is set
+  --repoint-current         Repoint latest aliases and current frontend imports on historical runs
+  --snapshot-file <path>    Read a prefetched immutable public snapshot JSON instead of fetching it
+  -h, --help                Show this help`;
+
+function readSnapshotFile(snapshotFile: string, expectedSnapshotDate: string): SnapshotEnvelope {
+  let raw: string;
+  try {
+    raw = readFileSync(snapshotFile, "utf8");
+  } catch (err) {
+    throw new Error(
+      `Failed to read prefetched public snapshot file ${snapshotFile}: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+  let payload: unknown;
+  try {
+    payload = JSON.parse(raw);
+  } catch (err) {
+    throw new Error(
+      `Prefetched public snapshot file ${snapshotFile} is not valid JSON: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+  const parsed = PublicSnapshotEnvelopeSchema.safeParse(payload);
+  if (!parsed.success || !isProjectionEnvelope(parsed.data)) {
+    throw new Error(`Prefetched public snapshot file ${snapshotFile} is not a valid public snapshot envelope`);
+  }
+  if (parsed.data.snapshotDate !== expectedSnapshotDate) {
+    throw new Error(
+      `Prefetched public snapshot file ${snapshotFile} is dated ${parsed.data.snapshotDate}; expected ${expectedSnapshotDate}`,
+    );
+  }
+  return parsed.data;
+}
+
 export async function loadPublicDatasetLiveInputs(
   apiBase: string,
   requestedSnapshotDate: string,
+  options: { snapshotFile?: string } = {},
 ): Promise<PublicDatasetLiveInputs> {
   const historical = isHistoricalSnapshotDate(requestedSnapshotDate);
   let effectiveSnapshotDate = requestedSnapshotDate;
-  let envelope = await fetchSnapshot(apiBase, requestedSnapshotDate);
-  if (!envelope) {
-    if (historical) {
-      throw new Error(
-        `No immutable public snapshot is available for historical date ${requestedSnapshotDate}; `
-          + "API-backed public dataset generation requires the exact dated snapshot.",
-      );
-    }
-    const latestDate = await fetchLatestSnapshotDate(apiBase);
-    if (latestDate) {
-      effectiveSnapshotDate = latestDate;
-      envelope = await fetchSnapshot(apiBase, latestDate);
-    }
+  let envelope: SnapshotEnvelope | null;
+  if (options.snapshotFile) {
+    envelope = readSnapshotFile(options.snapshotFile, requestedSnapshotDate);
+  } else {
+    envelope = await fetchSnapshot(apiBase, requestedSnapshotDate);
     if (!envelope) {
-      const latestDetail = latestDate
-        ? `latest indexed snapshot ${latestDate} could not be fetched`
-        : "the snapshot index contains no latest sealed snapshot";
-      throw new Error(
-        `No immutable public snapshot is available for current-date build ${requestedSnapshotDate}; ${latestDetail}. `
-          + "API-backed public dataset generation requires today's snapshot or the latest sealed snapshot.",
-      );
+      if (historical) {
+        throw new Error(
+          `No immutable public snapshot is available for historical date ${requestedSnapshotDate}; `
+            + "API-backed public dataset generation requires the exact dated snapshot.",
+        );
+      }
+      const latestDate = await fetchLatestSnapshotDate(apiBase);
+      if (latestDate) {
+        effectiveSnapshotDate = latestDate;
+        envelope = await fetchSnapshot(apiBase, latestDate);
+      }
+      if (!envelope) {
+        const latestDetail = latestDate
+          ? `latest indexed snapshot ${latestDate} could not be fetched`
+          : "the snapshot index contains no latest sealed snapshot";
+        throw new Error(
+          `No immutable public snapshot is available for current-date build ${requestedSnapshotDate}; ${latestDetail}. `
+            + "API-backed public dataset generation requires today's snapshot or the latest sealed snapshot.",
+        );
+      }
     }
   }
   effectiveSnapshotDate = envelope.snapshotDate || effectiveSnapshotDate;
@@ -519,42 +564,45 @@ function preserveExistingDatasetMirrorsAfterFetchFailure(error: unknown): boolea
 }
 
 async function main(): Promise<void> {
-  const { values } = parseArgs({
+  const { values } = parseStrictCliArgs(process.argv.slice(2), {
+    conflicts: [["check", "snapshot-file"]],
     options: {
       check: { type: "boolean", default: false },
       "allow-stub": { type: "boolean", default: false },
       "repoint-current": { type: "boolean", default: false },
       "integrity-only": { type: "boolean", default: false },
+      "snapshot-file": { type: "string" },
     },
   });
-  if (values["integrity-only"] && !values.check) {
-    throw new Error("--integrity-only requires --check");
-  }
-  const allowStub = values["allow-stub"] || process.env.PUBLIC_DATASETS_ALLOW_STUB === "1";
+  if (writeCliHelpIfRequested(values, USAGE)) return;
+  assertCliUsage(!values["integrity-only"] || values.check === true, "--integrity-only requires --check");
+  const snapshotFile = typeof values["snapshot-file"] === "string" ? values["snapshot-file"] : undefined;
+  const allowStub = values["allow-stub"] === true || process.env.PUBLIC_DATASETS_ALLOW_STUB === "1";
   const requestedSnapshotDate = resolveSnapshotDate();
   let snapshotDate = requestedSnapshotDate;
 
-  if (values.check) {
-    const result = checkAllTopics(DEFAULT_ARTIFACT_DIRS, values["integrity-only"]);
+  if (values.check === true) {
+    const result = checkAllTopics(DEFAULT_ARTIFACT_DIRS, values["integrity-only"] === true);
     if (!result.ok) {
       console.error(
         `Public dataset mirrors failed validation. Run \`tsx scripts/maintenance/generate-public-datasets.ts\`. (${result.reason})`,
       );
       process.exit(1);
     }
-    console.log(values["integrity-only"] ? "Public dataset mirror integrity passed" : "Public dataset mirrors are current");
+    console.log(values["integrity-only"] === true ? "Public dataset mirror integrity passed" : "Public dataset mirrors are current");
     return;
   }
 
   const apiBase = resolveGeneratorApiBase();
+  const hasLiveSource = Boolean(snapshotFile || apiBase);
   let envelope: SnapshotEnvelope | null = null;
   let depegEvents: DepegEvent[] = [];
   let depegCapture: DepegLedgerCapture | undefined;
   let asOfISO = `${snapshotDate}T00:00:00.000Z`;
 
-  if (apiBase) {
+  if (hasLiveSource) {
     try {
-      const liveInputs = await loadPublicDatasetLiveInputs(apiBase, requestedSnapshotDate);
+      const liveInputs = await loadPublicDatasetLiveInputs(apiBase ?? "", requestedSnapshotDate, { snapshotFile });
       envelope = liveInputs.envelope;
       depegEvents = liveInputs.depegEvents;
       depegCapture = liveInputs.depegCapture;
@@ -566,7 +614,7 @@ async function main(): Promise<void> {
         );
       }
     } catch (err) {
-      if (preserveExistingDatasetMirrorsAfterFetchFailure(err)) {
+      if (!snapshotFile && preserveExistingDatasetMirrorsAfterFetchFailure(err)) {
         return;
       }
       throw err;
@@ -595,13 +643,13 @@ async function main(): Promise<void> {
   }
 
   const historical = isHistoricalSnapshotDate(requestedSnapshotDate);
-  const repointCurrent = !historical || values["repoint-current"];
+  const repointCurrent = !historical || values["repoint-current"] === true;
   const specs = buildTopicSpecs(envelope, depegEvents, snapshotDate, {
     historical,
-    requireCurrentSafety: values["repoint-current"] || overwritesCurrentScores(snapshotDate),
+    requireCurrentSafety: values["repoint-current"] === true || overwritesCurrentScores(snapshotDate),
     depegCapture,
   });
-  if (apiBase) {
+  if (hasLiveSource) {
     for (const spec of specs) {
       validateTopicRowFloor(spec.topic, spec.rows);
     }

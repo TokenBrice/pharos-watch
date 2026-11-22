@@ -15,10 +15,10 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { formatUtcDateOnly } from "@shared/lib/format";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { PUBLIC_DATASETS_REQUIRE_CURRENT_SAFETY } from "../lib/public-dataset-projections";
+import { PublicSnapshotEnvelopeSchema } from "@shared/types/public-snapshot";
+import { isProjectionEnvelope, PUBLIC_DATASETS_REQUIRE_CURRENT_SAFETY } from "../lib/public-dataset-projections";
 import { parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import {
-  createNpmScriptCommand,
   createSpawnCommand,
   runSpawnCommand,
   type CommandResult,
@@ -26,6 +26,12 @@ import {
 } from "../lib/command-runner.mts";
 import { localBin } from "../lib/local-bin.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import {
+  fetchWithRetry,
+  GENERATOR_API_URL_ENV_NAMES,
+  generatorFetchHeaders,
+  resolveApiPathUrl,
+} from "../lib/sync-from-api";
 
 const USAGE = `Usage: node --import tsx scripts/maintenance/refresh-pages-release-data.ts [options]
 
@@ -41,9 +47,9 @@ const PUBLIC_DATASET_BUNDLE_PATHS = [
 ] as const;
 
 export interface ReleaseRefreshResult {
-  depegEvents: { ok: boolean };
-  digests: { committedCount: number; ok: boolean; refreshedCount: number; shrinkRejected: boolean };
-  publicDatasets: { ok: boolean; rolledBack: boolean };
+  depegEvents: { durationMs: number; ok: boolean };
+  digests: { committedCount: number; durationMs: number; ok: boolean; refreshedCount: number; shrinkRejected: boolean };
+  publicDatasets: { durationMs: number; ok: boolean; rolledBack: boolean };
   resultPath: string;
 }
 
@@ -56,9 +62,11 @@ export function shouldFailReleaseRefresh(result: ReleaseRefreshResult): boolean 
 
 interface RefreshProducerContext {
   outputPath?: string;
+  snapshotFile?: string;
 }
 
 type RefreshProducer = (context: RefreshProducerContext) => Promise<CommandResult>;
+type SettledProducerResult = CommandResult & { durationMs: number };
 
 export interface ReleaseRefreshDependencies {
   depegEvents: RefreshProducer;
@@ -79,7 +87,46 @@ function captured(command: SpawnCommand, extraEnv?: Record<string, string>): Pro
   return runSpawnCommand({ ...command, captureOutput: true }, extraEnv);
 }
 
-function defaultDependencies(repoRoot: string, datasetBackupDir: string, datasetDate?: string): ReleaseRefreshDependencies {
+function resolvePrefetchApiBase(env: NodeJS.ProcessEnv): string | null {
+  const raw = GENERATOR_API_URL_ENV_NAMES.map((name) => env[name]?.trim()).find((value) => value);
+  return raw ? raw.replace(/\/+$/, "") : null;
+}
+
+async function prefetchPublicSnapshot(
+  apiBase: string,
+  snapshotDate: string,
+  destinationPath: string,
+): Promise<{ snapshotFile?: string; log: string }> {
+  const url = resolveApiPathUrl(apiBase, `/api/snapshots/${snapshotDate}.json`);
+  try {
+    const headers = await generatorFetchHeaders(url);
+    const response = await fetchWithRetry(url, { headers }, { logLabel: "refresh-pages-release-data" });
+    if (!response.ok) {
+      await response.body?.cancel();
+      return { log: `[refresh-pages-release-data] Snapshot prefetch ${url} returned HTTP ${response.status}; falling back to generator fetch\n` };
+    }
+    const text = await response.text();
+    const parsed = PublicSnapshotEnvelopeSchema.safeParse(JSON.parse(text));
+    if (!parsed.success || !isProjectionEnvelope(parsed.data) || parsed.data.snapshotDate !== snapshotDate) {
+      return { log: `[refresh-pages-release-data] Snapshot prefetch ${url} returned an invalid or mismatched envelope; falling back to generator fetch\n` };
+    }
+    writeFileSync(destinationPath, text, "utf8");
+    return {
+      snapshotFile: destinationPath,
+      log: `[refresh-pages-release-data] Prefetched immutable public snapshot ${snapshotDate} to ${destinationPath}\n`,
+    };
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return { log: `[refresh-pages-release-data] Snapshot prefetch ${url} failed (${reason}); falling back to generator fetch\n` };
+  }
+}
+
+function defaultDependencies(
+  repoRoot: string,
+  datasetBackupDir: string,
+  targetDatasetDate: string,
+  explicitDatasetDate?: string,
+): ReleaseRefreshDependencies {
   return {
     digests: ({ outputPath }) => captured(createSpawnCommand(localBin("tsx"), [
       "scripts/maintenance/sync-digests.ts",
@@ -91,14 +138,18 @@ function defaultDependencies(repoRoot: string, datasetBackupDir: string, dataset
       "--output",
       outputPath!,
     ])),
-    publicDatasets: () => {
-      if (datasetDate) return captured(createNpmScriptCommand("generate:public-datasets"), { PUBLIC_DATASETS_DATE: datasetDate });
-      // The current UTC date is still open for depeg onsets when Pages refreshes.
-      const completedDate = formatUtcDateOnly(new Date(Date.now() - DAY_SECONDS * 1_000));
-      return captured(createNpmScriptCommand("generate:public-datasets", ["--repoint-current"]), {
-        PUBLIC_DATASETS_DATE: completedDate,
-        [PUBLIC_DATASETS_REQUIRE_CURRENT_SAFETY]: "1",
-      });
+    publicDatasets: ({ snapshotFile }) => {
+      const args = [
+        "scripts/maintenance/generate-public-datasets.ts",
+        ...(!explicitDatasetDate ? ["--repoint-current"] : []),
+        ...(snapshotFile ? ["--snapshot-file", snapshotFile] : []),
+      ];
+      return captured(
+        createSpawnCommand(localBin("tsx"), args),
+        explicitDatasetDate
+          ? { PUBLIC_DATASETS_DATE: targetDatasetDate }
+          : { PUBLIC_DATASETS_DATE: targetDatasetDate, [PUBLIC_DATASETS_REQUIRE_CURRENT_SAFETY]: "1" },
+      );
     },
     rollbackPublicDatasets: async () => {
       for (const path of PUBLIC_DATASET_BUNDLE_PATHS) {
@@ -127,16 +178,19 @@ function readJsonArrayCount(path: string): number {
 async function settledProducer(
   producer: RefreshProducer,
   context: RefreshProducerContext,
-): Promise<CommandResult> {
+): Promise<SettledProducerResult> {
+  const startedAt = performance.now();
+  const elapsed = () => Math.max(0, Math.round(performance.now() - startedAt));
   try {
     const result = await producer(context);
-    if (result.error && !result.output) return { ...result, output: `${result.error.message}\n` };
-    return result;
+    if (result.error && !result.output) return { ...result, output: `${result.error.message}\n`, durationMs: elapsed() };
+    return { ...result, durationMs: elapsed() };
   } catch (error) {
     return {
       aborted: false,
       status: 1,
       output: `${error instanceof Error ? error.message : String(error)}\n`,
+      durationMs: elapsed(),
     };
   }
 }
@@ -161,7 +215,13 @@ export async function refreshPagesReleaseData({
   );
   mkdirSync(resolvedRefreshDir, { recursive: true });
   const datasetBackupDir = join(resolvedRefreshDir, "public-dataset-bundle");
-  const dependencies = { ...defaultDependencies(repoRoot, datasetBackupDir, env.PUBLIC_DATASETS_DATE?.trim()), ...overrides };
+  const explicitDatasetDate = env.PUBLIC_DATASETS_DATE?.trim() || undefined;
+  // The current UTC date is still open for depeg onsets when Pages refreshes.
+  const targetDatasetDate = explicitDatasetDate ?? formatUtcDateOnly(new Date(Date.now() - DAY_SECONDS * 1_000));
+  const dependencies = {
+    ...defaultDependencies(repoRoot, datasetBackupDir, targetDatasetDate, explicitDatasetDate),
+    ...overrides,
+  };
 
   const committedDigestPath = join(repoRoot, "data/digests.json");
   const committedDepegPath = join(repoRoot, "data/depeg-events");
@@ -170,10 +230,14 @@ export async function refreshPagesReleaseData({
   copyFileSync(committedDigestPath, refreshedDigestPath);
   cpSync(committedDepegPath, join(resolvedRefreshDir, "depeg-events"), { recursive: true });
   const committedCount = readJsonArrayCount(committedDigestPath);
+  const prefetchApiBase = !overrides.publicDatasets ? resolvePrefetchApiBase(env) : null;
 
-  const [digestRun, depegRun] = await Promise.all([
+  const [digestRun, depegRun, prefetchedSnapshot] = await Promise.all([
     settledProducer(dependencies.digests, { outputPath: refreshedDigestPath }),
     settledProducer(dependencies.depegEvents, { outputPath: refreshedDepegPath }),
+    prefetchApiBase
+      ? prefetchPublicSnapshot(prefetchApiBase, targetDatasetDate, join(resolvedRefreshDir, "prefetched-snapshot.json"))
+      : Promise.resolve<{ snapshotFile?: string; log: string }>({ log: "" }),
   ]);
 
   const refreshedCount = readJsonArrayCount(refreshedDigestPath);
@@ -217,10 +281,12 @@ export async function refreshPagesReleaseData({
     }
   }
 
-  const datasetsRun = await settledProducer(dependencies.publicDatasets, {});
+  const datasetsRun = await settledProducer(dependencies.publicDatasets, {
+    ...(prefetchedSnapshot.snapshotFile ? { snapshotFile: prefetchedSnapshot.snapshotFile } : {}),
+  });
 
   const datasetsOk = datasetsRun.status === 0;
-  let datasetsLog = datasetsRun.output ?? "";
+  let datasetsLog = `${prefetchedSnapshot.log}${datasetsRun.output ?? ""}`;
   let rolledBack = false;
   if (!datasetsOk) {
     datasetsLog = appendLog(
@@ -251,9 +317,9 @@ export async function refreshPagesReleaseData({
 
   const resolvedResultPath = resolve(resultPath ?? join(resolvedRefreshDir, "result.json"));
   const result: ReleaseRefreshResult = {
-    digests: { committedCount, ok: digestOk, refreshedCount, shrinkRejected },
-    depegEvents: { ok: depegOk },
-    publicDatasets: { ok: datasetsOk, rolledBack },
+    digests: { committedCount, durationMs: digestRun.durationMs, ok: digestOk, refreshedCount, shrinkRejected },
+    depegEvents: { durationMs: depegRun.durationMs, ok: depegOk },
+    publicDatasets: { durationMs: datasetsRun.durationMs, ok: datasetsOk, rolledBack },
     resultPath: resolvedResultPath,
   };
   writeFileSync(resolvedResultPath, `${JSON.stringify(result, null, 2)}\n`);
