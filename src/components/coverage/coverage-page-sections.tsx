@@ -398,7 +398,7 @@ function CoverageMatrixTable({
         className="pharos-table-shell hidden overflow-clip @5xl:block"
         tableClassName="w-full min-w-[1340px] border-collapse"
         tableProps={{ "aria-describedby": COVERAGE_COLUMN_GUIDE_ID }}
-        viewportClassName="overflow-x-auto overscroll-x-contain scroll-shadow min-[1460px]:overflow-visible min-[1460px]:bg-none"
+        viewportClassName="overflow-x-auto overscroll-x-contain scroll-shadow [--table-header-top:0px] min-[1460px]:overflow-visible min-[1460px]:bg-none min-[1460px]:[--table-header-top:var(--sticky-header-bottom,3.75rem)]"
         viewportProps={{
           compactBottomPadding: false,
           horizontal: false,

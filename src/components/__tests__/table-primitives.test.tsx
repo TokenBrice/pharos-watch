@@ -374,8 +374,10 @@ describe("Pharos table primitives", () => {
     const pageViewport = pageShell.querySelector("[data-slot='table-viewport']")!;
     expect(pageShell.getAttribute("data-sticky-mode")).toBe("page");
     expect(pageShell.className).toContain("overflow-clip");
-    expect(pageShell.className).toContain("top-[var(--sticky-header-bottom,3.75rem)]");
+    expect(pageShell.className).toContain("[--table-header-top:var(--sticky-header-bottom,3.75rem)]");
+    expect(pageShell.className).toContain("[&_thead]:top-[var(--table-header-top,0px)]");
     expect(pageViewport.getAttribute("data-sticky-mode")).toBe("page");
+    expect(pageViewport.getAttribute("data-scroll-x")).toBe("responsive");
 
     rerender(
       <DataTableShell
@@ -503,6 +505,8 @@ describe("Pharos table primitives", () => {
       expect(viewport.className).toContain("overflow-x-auto");
       expect(viewport.className).toContain("scroll-shadow");
       expect(viewport.className).not.toContain("overflow-visible");
+      expect(viewport.getAttribute("data-scroll-x")).toBe("true");
+      expect(viewport.className).toContain("[--table-header-top:0px]");
 
       Object.defineProperty(table, "scrollWidth", { configurable: true, value: 980 });
       act(() => {
@@ -512,6 +516,8 @@ describe("Pharos table primitives", () => {
       expect(viewport.className).toContain("overflow-visible");
       expect(viewport.className).not.toContain("overflow-x-auto");
       expect(viewport.className).not.toContain("scroll-shadow");
+      expect(viewport.getAttribute("data-scroll-x")).toBeNull();
+      expect(viewport.className).not.toContain("[--table-header-top:0px]");
     } finally {
       globalThis.ResizeObserver = originalResizeObserver;
     }

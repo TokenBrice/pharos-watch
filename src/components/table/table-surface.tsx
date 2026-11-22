@@ -18,7 +18,7 @@ const CHROME_CLASS_NAMES: Record<TableChrome, string> = {
 };
 
 const STICKY_MODE_CLASS_NAMES: Record<TableStickyMode, string> = {
-  page: "overflow-clip [--table-header-top:var(--sticky-header-bottom,3.75rem)] [--table-header-bg:var(--card-bg)] [&_thead]:sticky [&_thead]:top-[var(--sticky-header-bottom,3.75rem)] [&_thead]:z-10 [&_thead]:bg-card [&_thead_tr]:border-b [&_thead_tr]:border-border [&_thead_tr]:bg-card",
+  page: "overflow-clip [--table-header-top:var(--sticky-header-bottom,3.75rem)] [--table-header-bg:var(--card-bg)] [&_thead]:sticky [&_thead]:top-[var(--table-header-top,0px)] [&_thead]:z-10 [&_thead]:bg-card [&_thead_tr]:border-b [&_thead_tr]:border-border [&_thead_tr]:bg-card",
   viewport: "[--table-header-top:0px] [--table-header-bg:var(--card-bg)] [&_thead]:sticky [&_thead]:top-0 [&_thead]:z-10 [&_thead]:bg-card [&_thead_tr]:border-b [&_thead_tr]:border-border [&_thead_tr]:bg-card",
 };
 

@@ -1339,6 +1339,18 @@
        becomes sticky on scroll. */
     transition: box-shadow 200ms var(--motion-ease-decelerate);
   }
+  /* Whenever a table viewport scrolls horizontally (`overflow-x: auto`), CSS
+     makes that viewport the sticky scroll container; zeroing `--table-header-top`
+     prevents the page-header offset from pushing `<thead>` down over row 1. */
+  [data-slot="table-viewport"][data-scroll-x="true"],
+  [data-slot="table-viewport"][data-scroll-x="responsive"] {
+    --table-header-top: 0px;
+  }
+  @media (min-width: 1024px) {
+    [data-slot="table-viewport"][data-scroll-x="responsive"] {
+      --table-header-top: var(--sticky-header-bottom, 3.75rem);
+    }
+  }
   .table-header-sticky thead tr {
     background: var(--table-header-bg);
     box-shadow: var(--table-header-shadow);

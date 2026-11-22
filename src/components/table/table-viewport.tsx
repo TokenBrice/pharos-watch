@@ -75,31 +75,39 @@ export function TableViewport({
 
   const activeOverflow = autoMeasureOverflow ? measuredOverflow : null;
 
-  const horizontalOverflowClass = isPageSticky
-    ? horizontal === true
-      ? "overflow-x-auto"
-      : horizontal === false
+  // CSS Overflow L3 §3.2: whenever `overflow-x: auto` is active on this div,
+  // `overflow-y` computes to `auto` and this viewport becomes the sticky
+  // containing block for `<thead>`. Leaving a page-header `--table-header-top`
+  // (56–59px) active would offset `<thead>` down into Row 1 with an empty gap
+  // above it. Reset `--table-header-top` to 0px whenever horizontal scrolling
+  // is active, and restore the page offset once the table fits horizontally.
+  const scrollXState: "true" | "responsive" | undefined = isPageSticky
+    ? horizontal === true || activeOverflow === true
+      ? "true"
+      : horizontal === false || activeOverflow === false
         ? undefined
-        : activeOverflow === true
-          ? "overflow-x-auto"
-          : activeOverflow === false
-            ? "overflow-visible"
-            : "overflow-x-auto lg:overflow-visible"
+        : "responsive"
+    : undefined;
+
+  const horizontalOverflowClass = isPageSticky
+    ? scrollXState === "true"
+      ? "overflow-x-auto"
+      : scrollXState === "responsive"
+        ? "overflow-x-auto lg:overflow-visible"
+        : horizontal === false
+          ? undefined
+          : "overflow-visible"
     : (horizontal ?? true)
       ? "overflow-x-auto"
       : undefined;
   const scrollShadowClass = !scrollShadow
     ? undefined
     : isPageSticky
-      ? horizontal === true
+      ? scrollXState === "true"
         ? "scroll-shadow"
-        : horizontal === false
-          ? undefined
-          : activeOverflow === true
-            ? "scroll-shadow"
-            : activeOverflow === false
-              ? undefined
-              : "scroll-shadow lg:bg-none"
+        : scrollXState === "responsive"
+          ? "scroll-shadow lg:bg-none"
+          : undefined
       : "scroll-shadow";
 
   return (
@@ -114,6 +122,7 @@ export function TableViewport({
         ref={setViewportRef}
         data-slot="table-viewport"
         data-sticky-mode={stickyMode}
+        data-scroll-x={scrollXState}
         className={cn(
           // Containing block for absolutely-positioned descendants (e.g.
           // `sr-only` header labels): without it they escape the scroller's
@@ -121,10 +130,12 @@ export function TableViewport({
           "relative",
           scrollShadowClass,
           horizontalOverflowClass,
-          // A vertically scrolling viewport is the sticky header's scroll
-          // container, so the page-level `--table-header-top` offset (sized
-          // for the site header) would float the thead mid-viewport.
+          // A vertically or horizontally scrolling viewport is the sticky
+          // header's scroll container, so the page-level `--table-header-top`
+          // offset (sized for the site header) would float the thead over row 1.
           isViewportSticky && "overflow-y-auto [--table-header-top:0px]",
+          scrollXState === "true" && "[--table-header-top:0px]",
+          scrollXState === "responsive" && "[--table-header-top:0px] lg:[--table-header-top:var(--sticky-header-bottom,3.75rem)]",
           overscrollX && horizontal !== false && "overscroll-x-contain",
           compactBottomPadding && "pb-3 sm:pb-0",
           className,
