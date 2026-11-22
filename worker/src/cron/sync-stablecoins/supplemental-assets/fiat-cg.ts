@@ -1,7 +1,7 @@
 import type { PriceCacheEntry } from "../../../lib/price-cache";
 import { logWorkerEvent, logWorkerEventArgs } from "../../../lib/structured-log";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { REVIEWED_ONCHAIN_SUPPLY_PLANS, getOnchainSupplyHoldReason, isOnchainSupplyPartitionExcluded, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract } from "@shared/lib/onchain-supply-probe";
+import { REVIEWED_ONCHAIN_SUPPLY_PLANS, getOnchainSupplyHoldReason, isOnchainSupplyPartitionExcluded, prefersReviewedNativeFiatSupply, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract } from "@shared/lib/onchain-supply-probe";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import { ONCHAIN_PARTITION_DIVERGENCE_DETAIL_LIMIT, type OnchainPartitionSummary } from "@shared/types/status/cron";
@@ -34,8 +34,11 @@ import {
   type CoinGeckoMcapData,
 } from "./shared";
 
-// BUIDL retains DefiLlama detail/history identity, but reviewed native stock owns live supply.
-export const FIAT_CG_METAS = ACTIVE_STABLECOINS.filter((stablecoin) => stablecoin.detailProvider === "coingecko" || stablecoin.id === "buidl-blackrock");
+// BUIDL and reviewed non-commodity preferred-native assets retain DefiLlama detail/history
+// identity where configured, while reviewed native stock owns live supply.
+export const FIAT_CG_METAS = ACTIVE_STABLECOINS.filter(
+  (stablecoin) => stablecoin.detailProvider === "coingecko" || prefersReviewedNativeFiatSupply(stablecoin),
+);
 const FIAT_CG_TOKEN_CONCURRENCY = 2;
 // Measured full-roster reads need more than 20s; retain rotation under the 30s ceiling.
 export const ONCHAIN_PARTITION_STAGE_BUDGET_MS = 30_000;

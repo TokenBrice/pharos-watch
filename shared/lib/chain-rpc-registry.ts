@@ -140,6 +140,8 @@ export const SUPPLY_RPC_DEFAULTS = {
   "rootstock": { rpcUrl: "https://public-node.rsk.co" },
   "conflux": { rpcUrl: "https://evm.confluxrpc.com", fallbackRpcUrl: "https://evm.confluxrpc.org" },
   "harmony": { rpcUrl: "https://api.harmony.one", fallbackRpcUrl: "https://api.s0.t.hmny.io" },
+  // Keyless Moonbeam endpoints, eth_chainId (0x504) and BRLA totalSupply() verified 2026-11-22.
+  "moonbeam": { rpcUrl: "https://moonbeam.api.onfinality.io/public", fallbackRpcUrl: "https://moonbeam.api.pocket.network" },
 } as const;
 
 // V9 reviewed Centrifuge reads use rpc1, not the supply profile's monadinfra.

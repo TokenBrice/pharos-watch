@@ -78,12 +78,51 @@ export const SUPPLY_PERIMETER_CHANGES = [
   },
   // Movement USDCx, 2026-11-22: Pricing v6.91 prefers Movement's pinned-ledger ConcurrentSupply reconciled to
   // Ethereum Circle xReserve (562,714.44 USDCx vs 568,408.47 USDC, +101.19 bps excess) over CoinGecko's
-  // stalled market cap ($600,982 frozen since 2026-11-14T00:41:51Z). Provisional activation; re-date at deploy.
+  // stalled market cap ($600,982 frozen since 2026-11-14T00:41:51Z).
   {
     stablecoinId: "usdcx-movement",
-    changedAt: Date.parse("2026-11-22T12:30:00Z") / 1000,
+    changedAt: Date.parse("2026-11-22T15:00:00Z") / 1000,
     chainIds: ["movement"],
     evidenceUrl: "https://github.com/TokenBrice/pharos-watch/issues/2145",
+    marketWide: false,
+  },
+  // === #2169 Wave-1 non-USD reviewed on-chain supply checkpoints ===
+  // Transition from undated DefiLlama USD caps to clocked on-chain native totalSupply()
+  // checkpoints so DEWS 1d/7d supply velocity activates cleanly without FX-deflation noise.
+  // Live parity verified 2026-11-22 within 0.00%-0.074% of DefiLlama (asset-scoped cutovers).
+  {
+    stablecoinId: "eurcv-societe-generale-forge",
+    changedAt: Date.parse("2026-11-22T15:00:00Z") / 1000,
+    chainIds: ["ethereum", "xrpl", "stellar", "solana"],
+    evidenceUrl: "https://github.com/TokenBrice/pharos-watch/issues/2169",
+    marketWide: false,
+  },
+  {
+    stablecoinId: "jpysc-sbi-startale",
+    changedAt: Date.parse("2026-11-22T15:00:00Z") / 1000,
+    chainIds: ["ethereum"],
+    evidenceUrl: "https://github.com/TokenBrice/pharos-watch/issues/2169",
+    marketWide: false,
+  },
+  {
+    stablecoinId: "brla-brla-digital",
+    changedAt: Date.parse("2026-11-22T15:00:00Z") / 1000,
+    chainIds: ["polygon", "gnosis", "celo", "moonbeam"],
+    evidenceUrl: "https://github.com/TokenBrice/pharos-watch/issues/2169",
+    marketWide: false,
+  },
+  {
+    stablecoinId: "zchf-frankencoin",
+    changedAt: Date.parse("2026-11-22T15:00:00Z") / 1000,
+    chainIds: ["ethereum", "optimism", "gnosis", "base", "arbitrum", "polygon", "avalanche", "sonic"],
+    evidenceUrl: "https://github.com/TokenBrice/pharos-watch/issues/2169",
+    marketWide: false,
+  },
+  {
+    stablecoinId: "euri-banking-circle",
+    changedAt: Date.parse("2026-11-22T15:00:00Z") / 1000,
+    chainIds: ["ethereum", "bsc"],
+    evidenceUrl: "https://github.com/TokenBrice/pharos-watch/issues/2169",
     marketWide: false,
   },
 ] as const;

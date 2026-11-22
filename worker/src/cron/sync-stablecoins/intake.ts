@@ -1,4 +1,5 @@
 import { REGISTRY_BY_LLAMA_ID } from "@shared/lib/stablecoin-id-registry";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { FROZEN_SNAPSHOTS } from "@shared/lib/stablecoins/frozen-snapshots";
 import type { FrozenSnapshot } from "@shared/lib/stablecoins/frozen-snapshots";
 import { detectDefiLlamaListFillDefaultPrices, isObservedPrice } from "@shared/lib/pricing-source-policy";
@@ -18,7 +19,7 @@ import { validatePublishedAssetPrice } from "../../lib/price-publish-policy";
 import { reportStablecoinsStage, returnIfAborted } from "./runtime";
 import { createCronResult } from "../../lib/cron-result";
 import { isRecord } from "@shared/lib/type-guards";
-import { isKinesisWrapperSupplyId } from "@shared/lib/onchain-supply-probe";
+import { isKinesisWrapperSupplyId, prefersReviewedNativeFiatSupply } from "@shared/lib/onchain-supply-probe";
 import { isKinesisWrapperSupplyCutoverActive } from "@shared/lib/supply-perimeter-changes";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import type { PeggedAsset } from "./enrich-prices";
@@ -500,9 +501,13 @@ export async function loadStablecoinsIntake(
   }
 
   const supplementalAssets = [...goldTokens, ...silverTokens, ...fiatCgTokens];
-  // BUIDL's reviewed native stock is primary even if DefiLlama relists it.
-  // A skipped/failed supplemental read follows preferred-native restore/withhold, never list supply.
-  assets = assets.filter((asset) => asset.id !== "buidl-blackrock" && !isKinesisWrapperSupplyCutoverActive(asset.id, input.syncStartSec));
+  // Reviewed non-commodity preferred-native stock (BUIDL and Wave-1 non-USD checkpoints) is primary
+  // even when DefiLlama lists the asset; skipped/failed reads follow preferred-native restore/withhold.
+  assets = assets.filter((asset) => {
+    const meta = ACTIVE_META_BY_ID.get(asset.id);
+    if (meta && meta.detailProvider !== "coingecko" && prefersReviewedNativeFiatSupply(meta)) return false;
+    return !isKinesisWrapperSupplyCutoverActive(asset.id, input.syncStartSec);
+  });
   for (const asset of assets) {
     if (asset.frozen) continue;
     const clock = asset.supplyObservedAt;

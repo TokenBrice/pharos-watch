@@ -194,6 +194,7 @@ async function readContractSupplyRaw(input: {
   dwellirNative?: DwellirNativeCapability;
   rpcUrl?: string;
   fallbackRpcUrl?: string;
+  stellarAssetCode?: string;
 }): Promise<bigint | null> {
   const { supplyContract } = input;
   const evmContext = input.family === "evm" && input.chainRpcs
@@ -208,7 +209,10 @@ async function readContractSupplyRaw(input: {
     return fetchEearnSuiSupply(supplyContract.address, supplyContract.decimals, input.signal);
   }
 
-  if (input.family === "stellar") return fetchStellarSupply(supplyContract.address, supplyContract.decimals, input.signal);
+  if (input.family === "stellar") {
+    const stellarAddress = input.stellarAssetCode ? `${input.stellarAssetCode}-${supplyContract.address}` : supplyContract.address;
+    return fetchStellarSupply(stellarAddress, supplyContract.decimals, input.signal);
+  }
   if (input.family === "noble") return fetchNobleSupply(supplyContract.address, supplyContract.decimals, input.signal);
 
   if (input.family === "starknet") {
@@ -366,7 +370,7 @@ async function fetchOnChainSupplyForContract(input: {
   chainRpcs?: Map<string, ChainRpcConfig>;
   dwellirNative?: DwellirNativeCapability;
   signal?: AbortSignal;
-  curated?: { rpcUrl?: string; fallbackRpcUrl?: string; allowZeroSupply?: boolean; hotwallet?: readonly string[] };
+  curated?: { rpcUrl?: string; fallbackRpcUrl?: string; allowZeroSupply?: boolean; hotwallet?: readonly string[]; stellarAssetCode?: string };
   observedBlocks?: Map<string, EvmBlockHeader>;
   onFailure?: (reason: PartitionReadFailure) => void;
 }): Promise<ContractOnChainMcapResult | null> {
@@ -382,7 +386,7 @@ async function fetchOnChainSupplyForContract(input: {
     });
     return null;
   };
-  const family = onchainSupplyProbeFamily(supplyContract);
+  const family = onchainSupplyProbeFamily(supplyContract, input.curated?.stellarAssetCode);
   if (family === null) return reject("unsupported-chain-family");
   const supplySignal = input.signal ?? AbortSignal.timeout(10_000);
   const chainRpc = input.chainRpcs?.get(input.supplyContract.chain);
@@ -453,6 +457,7 @@ async function fetchOnChainSupplyForContract(input: {
       dwellirNative: input.dwellirNative,
       rpcUrl,
       fallbackRpcUrl,
+      stellarAssetCode: input.curated?.stellarAssetCode,
     });
     throwIfAborted(supplySignal);
     if (raw == null) return reject("total-supply-read-unavailable", undefined, "legs-unreadable");

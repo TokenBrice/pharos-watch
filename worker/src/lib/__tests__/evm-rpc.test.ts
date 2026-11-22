@@ -989,6 +989,34 @@ describe("evm-rpc helpers", () => {
     expect(attemptedUrls()).toEqual([retained.url, retained.url]);
   });
 
+  it.each([false, true])("extrapolates fast-block cold history within <=14 RPC calls (calibrationBlock=%s)", async (seeded) => {
+    const head = 400_000_000;
+    const headTs = 1_795_305_600;
+    const target = headTs - 4 * 86_400; // 4 days behind head on a ~0.25s/block L2
+    const tsAt = (n: number) => Math.floor(headTs - (head - n) * 0.25 + Math.sin(n / 50_000) * 15);
+    fetchWithRetryMock.mockImplementation(async (_url, init) => {
+      const body = JSON.parse(String(init?.body)) as { params: [string, boolean] };
+      const blockNum = Number.parseInt(body.params[0], 16);
+      return rpcResponse({ result: blockResult(blockNum, `0x${tsAt(blockNum).toString(16)}`) });
+    });
+
+    const block = await resolveClosestBlockAtOrBeforeTimestamp(
+      "arbitrum",
+      target,
+      { latestBlockNumber: head, blockTimestampByNumber: new Map([[head, headTs]]) },
+      {
+        extraRpcUrls: ["https://arb.example"],
+        maxRetries: 0,
+        ...(seeded ? { calibrationBlock: { blockNumber: head - 50_000, timestamp: tsAt(head - 50_000) } } : {}),
+      },
+    );
+
+    expect(block).not.toBeNull();
+    expect(tsAt(block!)).toBeLessThanOrEqual(target);
+    expect(tsAt(block! + 1)).toBeGreaterThan(target);
+    expect(fetchWithRetryMock.mock.calls.length).toBeLessThanOrEqual(14);
+  });
+
   it("fetches proxy hex results from Etherscan", async () => {
     fetchWithRetryMock.mockResolvedValue(
       rpcResponse({ result: "0x000000000000000000000000aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" }),

@@ -17,6 +17,8 @@ export interface CuratedOnchainSupplyContractConfig {
   fallbackRpcUrl?: string;
   /** Issuer-documented operational holders excluded by XRPL gateway_balances. */
   hotwallet?: readonly string[];
+  /** Explicit classic Stellar asset code when catalog metadata stores only the bare issuer G-account. */
+  stellarAssetCode?: string;
   /**
    * Some reviewed native deployments are live with zero supply. Keep this
    * opt-in so ordinary aggregate paths still fail closed on empty reads.
@@ -139,6 +141,15 @@ export function isOnchainSupplyPartitionExcluded(assetId: string): boolean {
 
 export function prefersOnChainSupplyMcap(meta: Pick<StablecoinMeta, "id">): boolean {
   return REVIEWED_ONCHAIN_SUPPLY_PLANS[meta.id]?.preferMcap === true;
+}
+
+/** Non-commodity preferred-native plans run through the shared fiat-cg native-supply lane. */
+export function prefersReviewedNativeFiatSupply(
+  meta: Pick<StablecoinMeta, "id" | "flags">,
+): boolean {
+  return meta.flags.pegCurrency !== "GOLD"
+    && meta.flags.pegCurrency !== "SILVER"
+    && prefersOnChainSupplyMcap(meta);
 }
 
 export function isKinesisWrapperSupplyId(id: string): boolean {
@@ -1589,6 +1600,69 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
   "sfrax-frax": {
     preferMcap: true,
   },
+  // === #2169 Wave-1 non-USD reviewed on-chain supply checkpoints (clocked native DEWS velocity) ===
+  // EURCV: SG-FORGE issuer-native across Ethereum, XRPL, Stellar and Solana (no lock/mint bridge).
+  // Verified live 2026-11-22: Ethereum 141,867,733.95 + XRPL 10,000,000.00 (validated ledger
+  // 108496941, zero frozen/locked) + Stellar 15,030,600.00 (Horizon classic EURCV) + Solana
+  // 1,938,004.30 = 168,836,338.25 EURCV (-0.0535% vs DefiLlama implied 168,926,766.20;
+  // SG-FORGE 22/11/2026 disclosure 169,866,718.22). Stellar metadata stores the bare issuer
+  // G-account, so bind classic code EURCV explicitly.
+  "eurcv-societe-generale-forge": {
+    preferMcap: true,
+    aggregateContracts: [
+      { chain: "ethereum" },
+      supplyProbeChain("xrpl"),
+      { chain: "stellar", stellarAssetCode: "EURCV" },
+      { chain: "solana" },
+    ],
+  },
+  // JPYSC: SBI Shinsei Trust Bank sole Ethereum ERC-20 deployment (no bridges).
+  // Verified live 2026-11-22: Ethereum 20,287,400,234 JPYSC (bit-exact match to DefiLlama).
+  "jpysc-sbi-startale": {
+    preferMcap: true,
+    aggregateContracts: [{ chain: "ethereum" }],
+  },
+  // BRLA: Avenia issuer-native OPERATOR_ROLE mint/redeem across four EVM chains (no lockbox).
+  // Verified live 2026-11-22: Polygon 19,008,139.84 + Gnosis 2,959,038.35 + Celo 294,839,691.11
+  // + Moonbeam 4,293.52 (0.0014%, allowZeroSupply) = 316,811,162.82 BRLA (+0.0736% vs DefiLlama
+  // implied 316,578,144.91, which reported Moonbeam at 0).
+  "brla-brla-digital": {
+    preferMcap: true,
+    aggregateContracts: [
+      { chain: "polygon" },
+      { chain: "gnosis" },
+      { chain: "celo" },
+      supplyProbeChain("moonbeam", { allowZeroSupply: true }),
+    ],
+  },
+  // ZCHF: Frankencoin native Ethereum + seven Chainlink CCIP BurnMintTokenPool 1.5.1 L2 spokes.
+  // Verified live 2026-11-22: Ethereum CCIP pool 0x9359cd75549DaE00Cdd8D22297BC9B13FbBe4B79 holds
+  // 0 ZCHF (zero escrow double-count); Ethereum 27,751,496.09 + Optimism 1,960,211.88 + Gnosis
+  // 1,201,882.65 + Base 1,608,214.90 + Arbitrum 15,054.19 + Polygon 1,133.02 + Avalanche 16.67 +
+  // Sonic 4.00 = 32,538,013.40 ZCHF (-0.0050% vs DefiLlama implied 32,539,636.63).
+  "zchf-frankencoin": {
+    preferMcap: true,
+    aggregateContracts: [
+      { chain: "ethereum" },
+      { chain: "optimism" },
+      { chain: "gnosis" },
+      { chain: "base" },
+      { chain: "arbitrum" },
+      { chain: "polygon" },
+      { chain: "avalanche", allowZeroSupply: true },
+      supplyProbeChain("sonic", { allowZeroSupply: true }),
+    ],
+  },
+  // EURI: Banking Circle issuer-native deployments on Ethereum and BSC (no bridge lockbox).
+  // Verified live 2026-11-22: Ethereum 25,539,092.81 + BSC 2,963,988.35 = 28,503,081.16 EURI
+  // (bit-exact match to DefiLlama implied 28,503,081.16).
+  "euri-banking-circle": {
+    preferMcap: true,
+    aggregateContracts: [
+      { chain: "ethereum" },
+      { chain: "bsc" },
+    ],
+  },
 };
 
 // These canonical-chain totalSupply values already include tokens escrowed for
@@ -1646,7 +1720,10 @@ export function reviewedOnchainSupplyReader(
  * Resolve which supply reader can read a tracked deployment, or null when no
  * reader exists for that chain family or the address shape is wrong.
  */
-export function onchainSupplyProbeFamily(contract: OnchainSupplyContract): OnchainSupplyProbeFamily | null {
+export function onchainSupplyProbeFamily(
+  contract: OnchainSupplyContract,
+  stellarAssetCode?: string,
+): OnchainSupplyProbeFamily | null {
   if (contract.chain === "sui") return [EEARN_SUI_COIN_TYPE, USDY_SUI_COIN_TYPE].includes(contract.address) ? "sui" : null;
   switch (NON_EVM_PROBE_FAMILY_BY_CHAIN[contract.chain]) {
     case "solana":
@@ -1662,7 +1739,10 @@ export function onchainSupplyProbeFamily(contract: OnchainSupplyContract): Oncha
     case "stellar":
       // eslint-disable-next-line security/detect-unsafe-regex -- bounded optional code plus fixed-width StrKey; linear.
       return /^(?:[a-zA-Z0-9]{1,12}-)?C[A-Z2-7]{55}$/.test(contract.address)
-        || /^[a-zA-Z0-9]{1,12}-G[A-Z2-7]{55}$/.test(contract.address) ? "stellar" : null;
+        || /^[a-zA-Z0-9]{1,12}-G[A-Z2-7]{55}$/.test(contract.address)
+        || (stellarAssetCode != null
+          && /^[a-zA-Z0-9]{1,12}$/.test(stellarAssetCode)
+          && /^G[A-Z2-7]{55}$/.test(contract.address)) ? "stellar" : null;
     case "noble":
       return contract.address === "ausdy" ? "noble" : null;
     case "xrpl": {
@@ -1708,7 +1788,7 @@ export function selectCuratedAggregateOnchainSupplyProbeContracts(
     const matches = meta.contracts?.filter((entry) => entry.chain === config.chain
       && (config.address == null || entry.address === config.address));
     const contract = matches?.length === 1 ? matches[0] : undefined;
-    if (!contract || !supportsOnchainSupplyProbe(contract)) return null;
+    if (!contract || onchainSupplyProbeFamily(contract, config.stellarAssetCode) === null) return null;
     selected.push({ config, contract });
   }
 

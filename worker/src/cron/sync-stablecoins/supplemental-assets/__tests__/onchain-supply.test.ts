@@ -37,6 +37,7 @@ vi.mock("../../../../lib/chain-observation", () => ({
 }));
 
 import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap, fetchOnChainSupplyPartition, prefersOnChainSupplyMcap } from "../onchain-supply";
+import * as xrplSupply from "../xrpl-supply";
 const BLOCK_HASH = `0x${"1".repeat(64)}` as const;
 beforeEach(() => {
   const nowMs = Date.now();
@@ -1200,5 +1201,26 @@ describe("discovery native supply aggregates", () => {
     await expect(fetchCuratedAggregateOnChainMcap(
       makeMeta({ id, name: id, symbol: id, contracts }), 1.25, buildChainRpcs(),
     )).resolves.toBeNull();
+  });
+
+  it("prefixes bare EURCV Stellar issuer with curated stellarAssetCode across its 4-chain native aggregate", async () => {
+    const meta = TRACKED_META_BY_ID.get("eurcv-societe-generale-forge")!;
+    const xrplObs = Math.floor(Date.now() / 1000) - 20;
+    probeTrackedTokenSupplyMock.mockImplementation(async (_meta, input) =>
+      input.kind === "onchain-solana" ? 2_000_000n * 100n : 140_000_000n * 10n ** 18n,
+    );
+    fetchSolanaTokenSupplyMock.mockResolvedValue(2_000_000n * 100n);
+    fetchStellarSupplyMock.mockReset().mockResolvedValue(15_000_000n * 10n ** 7n);
+    vi.spyOn(xrplSupply, "fetchXrplSupply").mockResolvedValue({ supply: 10_000_000, observedAt: xrplObs });
+
+    const result = await fetchCuratedAggregateOnChainMcap(meta, 1.1, buildChainRpcs());
+    expect(fetchStellarSupplyMock).toHaveBeenCalledWith(
+      "EURCV-GCEYGIVOLAVBF2TG2RUSGTUJCIN75KEX3NGLMY4VPL4GFE5L355AXW3G",
+      7,
+      expect.any(AbortSignal),
+    );
+    expect(result?.nativeSupply).toBeCloseTo(167_000_000, 6);
+    expect(result?.mcap).toBeCloseTo(167_000_000 * 1.1, 4);
+    expect(result?.observedAt).toBe(xrplObs);
   });
 });
