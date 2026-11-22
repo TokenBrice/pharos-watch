@@ -94,6 +94,10 @@ jobs:
           PHAROS_CRITICAL_CSS_WORKERS: "4"
           # Reuse compile-input artifacts already materialized by pages-prepare.
           PHAROS_GENERATED_SKIP_EXISTING_DEPS: "1"
+          # R2-first evergreen OG previews: emit only the route map during build
+          # so out/ stays lean; the pre-activation publisher renders and uploads
+          # only identities absent from R2.
+          PHAROS_OG_EVERGREEN_MAP_ONLY: "1"
           NEXT_TELEMETRY_DISABLED: "1"
           PHAROS_DISABLE_WEBPACK_FS_CACHE: "1"
           PHAROS_NEXT_BUILD_CPUS: "4"

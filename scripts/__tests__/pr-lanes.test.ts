@@ -36,15 +36,7 @@ const missingWorkspaceTools = [
 
 describe("PR lane manifest", () => {
   it("is the workflow matrix source of truth", () => {
-    expect(PR_LANES.map((lane) => lane.id)).toEqual([
-      "preflight",
-      "v9-resource",
-      "static-guards",
-      "tests",
-      "static-compile",
-      "pages-artifact",
-      "gate",
-    ]);
+    expect(PR_LANES.map((lane) => lane.id)).toEqual(["preflight", "v9-resource", "static-guards", "tests", "static-compile", "pages-artifact", "gate"]);
     const prepare = WORKFLOW.jobs.prepare;
     const validation = WORKFLOW.jobs.validation;
     const generator = prepare.steps.find((step) => step.id === "matrix");
@@ -54,7 +46,7 @@ describe("PR lane manifest", () => {
     expect(Object.keys(WORKFLOW.jobs)).toEqual(["secrets", "prepare", "validation", "pages-artifact", "pr-gate"]);
     expect(WORKFLOW.jobs["pr-gate"].needs).toEqual(["secrets", "prepare", "validation", "pages-artifact"]);
     expect(Object.keys(prepare.outputs ?? {})).toEqual([
-      "docs_only", "docs_inline_succeeded", "matrix", "pages_critical_css_full_pass",
+      "docs_only", "docs_inline_succeeded", "matrix", "pages_critical_css_full_pass", "pages_og_render_check",
       "playwright_firefox_required", "pages_artifact_required", "test_corpus_budget", "workspace_artifact_name",
     ]);
     expect(validation.needs).toBe("prepare");

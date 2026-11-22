@@ -51,16 +51,12 @@ describe("R2 measurements client", () => {
       .mockResolvedValueOnce(new Response("compressed"))
       .mockResolvedValueOnce(new Response(null, { status: 404 }))
       .mockResolvedValueOnce(new Response(null, { status: 404 }))
-      .mockResolvedValueOnce(new Response(null, { headers: {
-        etag: '"version-1"', "content-length": "123", "content-type": "application/gzip",
-      } }));
+      .mockResolvedValueOnce(new Response(null, { headers: { etag: '"version-1"', "content-length": "123", "content-type": "application/gzip" } }));
     const client = createR2MeasurementsClient({ ...credentials, fetch: fetchMock });
     await expect(client.get("capture.gz")).resolves.toEqual(Buffer.from("compressed"));
     await expect(client.get("missing.gz")).resolves.toBeNull();
     await expect(client.head("missing.gz")).resolves.toBeNull();
-    await expect(client.head("capture.gz")).resolves.toEqual({
-      etag: '"version-1"', contentLength: 123, contentType: "application/gzip", customMetadata: {},
-    });
+    await expect(client.head("capture.gz")).resolves.toEqual({ etag: '"version-1"', contentLength: 123, contentType: "application/gzip", customMetadata: {} });
   });
 
   it("refuses traversal and absolute keys before fetching", async () => {
@@ -346,5 +342,26 @@ describe("permanent social preview publication", () => {
     write(SOCIAL_PREVIEW_MAP_PATH, JSON.stringify({ "/": { url: "/og-card.png" } }));
     await rejectBeforeS3("Invalid social preview route map URL");
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("supports R2-first exports without out/og/v2 by rendering only absent identities fail-closed", async () => {
+    const { repoRoot, bytes, stored, client, publish } = await publicationFixture(2);
+    rmSync(join(repoRoot, "out/og/v2"), { recursive: true, force: true });
+    await expect(publish({ env: {} })).resolves.toEqual({ assets: 2, created: 0, existing: 0, dryRun: true });
+    const [k0, k1] = ["0", "1"].map((n) => `evergreen/v2/image-${createHash("sha256").update(n).digest("hex")}.png`);
+    stored.set(k0, { bytes, options: {} }); stored.set(k1, { bytes, options: {} });
+    const renderMissing = vi.fn(async () => new Map<string, Buffer>());
+    await expect(publish({ execute: true, renderMissing })).resolves.toEqual({ assets: 2, created: 0, existing: 2, dryRun: false });
+    expect(renderMissing).not.toHaveBeenCalled();
+    stored.delete(k1); renderMissing.mockResolvedValueOnce(new Map([[k1, bytes]]));
+    await expect(publish({ execute: true, renderMissing })).resolves.toEqual({ assets: 2, created: 1, existing: 1, dryRun: false });
+    expect(renderMissing).toHaveBeenCalledExactlyOnceWith(new Set([k1]));
+    expect(stored.get(k1)?.bytes).toEqual(bytes);
+    stored.delete(k1); client.put.mockClear();
+    renderMissing.mockResolvedValueOnce(new Map());
+    await expect(publish({ execute: true, renderMissing })).rejects.toThrow("Missing rendered social preview bytes");
+    renderMissing.mockResolvedValueOnce(new Map([[k1, Buffer.from("not-png")]]));
+    await expect(publish({ execute: true, renderMissing })).rejects.toThrow("Invalid social preview PNG");
+    expect(client.put).not.toHaveBeenCalled();
   });
 });

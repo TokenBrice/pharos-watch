@@ -11,27 +11,19 @@ function readRepoFile(path: string): string {
 
 describe("CI workflow scope", () => {
   it.each([
-    ["weekly-validation", "ci-report"],
-    ["agent-maintenance-candidates", null],
-    ["curation-expiry-sweep", null],
-    ["ddr-curation-watch", null],
-    ["ops-followups", null],
+    ["weekly-validation", "ci-report"], ["agent-maintenance-candidates", null],
+    ["curation-expiry-sweep", null], ["ddr-curation-watch", null], ["ops-followups", null],
   ])("serializes %s issue publication without cancellation", (name, job) => {
     const workflow = parseYaml(readRepoFile(`.github/workflows/${name}.yml`));
-    expect((job ? workflow.jobs[job] : workflow).concurrency).toEqual({
-      group: `${name}-publication`, "cancel-in-progress": false,
-    });
+    expect((job ? workflow.jobs[job] : workflow).concurrency).toEqual({ group: `${name}-publication`, "cancel-in-progress": false });
   });
 
   it("transports ignored compile/serve inputs without an unused Next cache branch", () => {
     const action = parseYaml(readRepoFile(".github/actions/setup-workspace/action.yml"));
-    expect(action.inputs["next-cache"]).toBeUndefined();
-    expect(action.inputs["next-cache-save"]).toBeUndefined();
-    expect(action.runs.steps.some((step: { with?: { path?: string } }) => step.with?.path === ".next/cache"))
-      .toBe(false);
+    expect([action.inputs["next-cache"], action.inputs["next-cache-save"]]).toEqual([undefined, undefined]);
+    expect(action.runs.steps.some((step: { with?: { path?: string } }) => step.with?.path === ".next/cache")).toBe(false);
     const packageStep = action.runs.steps.find((step: { name?: string }) => step.name === "Package required workspace");
-    const paths = packageStep.env.WORKSPACE_PATHS.trim().split("\n");
-    expect(paths).toEqual(expect.arrayContaining([
+    expect(packageStep.env.WORKSPACE_PATHS.trim().split("\n")).toEqual(expect.arrayContaining([
       "public/llms.txt", "src/lib/case-study-client-index.ts", "src/data/changelogs/index.ts",
     ]));
   });
@@ -348,37 +340,29 @@ describe("CI workflow scope", () => {
       expect(found).toBeGreaterThan(-1);
       return found;
     };
-    // Full first-parent ancestry; the resolver refuses a shallow history.
     expect(steps[0].with).toMatchObject({ "persist-credentials": false, "fetch-depth": 0 });
-    const plan = index((step) => step.run?.includes("--mode plan") === true);
-    const resolveSource = index((step) => step.id === "source");
+    const plan = index((s) => s.run?.includes("--mode plan") === true), resolveSource = index((s) => s.id === "source");
     expect(steps[resolveSource].run).toContain("--mode resolve-source");
     expect(steps[resolveSource].env).toEqual({ TRUSTED_REF: "${{ github.sha }}" });
-    const checkout = index((step) => step.run?.includes("git worktree add --detach") === true);
+    const checkout = index((s) => s.run?.includes("git worktree add --detach") === true);
     expect(steps[checkout].env).toEqual({ COMMIT_SHA: "${{ steps.source.outputs.commit_sha }}" });
-    const setups = steps.filter((step) => step.uses?.startsWith("actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1"));
-    expect(setups.map((step) => step.with?.["node-version-file"])).toEqual(["${{ env.EVALUATOR_DIR }}/.nvmrc", ".nvmrc"]);
+    const setups = steps.filter((s) => s.uses?.startsWith("actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1"));
+    expect(setups.map((s) => s.with?.["node-version-file"])).toEqual(["${{ env.EVALUATOR_DIR }}/.nvmrc", ".nvmrc"]);
     const historicalNode = steps.indexOf(setups[0]!), currentNode = steps.indexOf(setups[1]!);
-    const install = index((step) => step.run?.includes("npm ci") === true && step["working-directory"] === "${{ env.EVALUATOR_DIR }}");
+    const install = index((s) => s.run?.includes("npm ci") === true && s["working-directory"] === "${{ env.EVALUATOR_DIR }}");
     expect(steps[install].run).toContain("npm run generate:safety-score-v9-evaluation-build -- --check");
     expect(steps[install].run).toContain("git diff --exit-code");
-    const historical = index((step) => step.run?.includes("--accepted-cache-export") === true);
+    const historical = index((s) => s.run?.includes("--accepted-cache-export") === true);
     expect(steps[historical]["working-directory"]).toBe("${{ env.EVALUATOR_DIR }}");
     expect(steps[historical].run).toContain("--mode compute");
-    const publish = index((step) => step.run?.includes("--mode publish") === true);
-    expect([plan, resolveSource, checkout, historicalNode, install, historical, currentNode, publish])
-      .toEqual([...[plan, resolveSource, checkout, historicalNode, install, historical, currentNode, publish]].sort((a, b) => a - b));
-    // Secrets reach only the current-code plan and publish steps.
+    const publish = index((s) => s.run?.includes("--mode publish") === true);
+    const order = [plan, resolveSource, checkout, historicalNode, install, historical, currentNode, publish];
+    expect(order).toEqual([...order].sort((a, b) => a - b));
     for (const [position, step] of steps.entries()) {
-      const secretBearing = JSON.stringify(step).includes("secrets.");
-      expect(secretBearing, step.name ?? step.uses).toBe(position === plan || position === publish);
+      expect(JSON.stringify(step).includes("secrets."), step.name ?? step.uses).toBe(position === plan || position === publish);
     }
-    const upload = steps.find((step) => step.uses?.startsWith("actions/upload-artifact@"));
-    expect(upload?.with?.path.trim().split("\n")).toEqual([
-      "${{ env.SCENARIO_OUT_DIR }}/artifact.json",
-      "${{ env.SCENARIO_OUT_DIR }}/artifact.verified.sha256",
-      "${{ env.SCENARIO_OUT_DIR }}/source.json",
-    ]);
+    const upload = steps.find((s) => s.uses?.startsWith("actions/upload-artifact@"));
+    expect(upload?.with?.path.trim().split("\n")).toEqual(["${{ env.SCENARIO_OUT_DIR }}/artifact.json", "${{ env.SCENARIO_OUT_DIR }}/artifact.verified.sha256", "${{ env.SCENARIO_OUT_DIR }}/source.json"]);
   });
 
   it("checks public live cache policy independently of secret-bearing account evidence", () => {
@@ -415,27 +399,25 @@ describe("CI workflow scope", () => {
     const steps = workflow.jobs["pages-release"].steps as Array<{
       uses?: string; run?: string; with?: Record<string, unknown>; env?: Record<string, string>;
     }>;
-    const setup = steps.find((step) => step.uses === "$/.github/actions/setup-workspace");
-    expect(setup?.with?.["bootstrap-generated"]).toBe("false");
-    expect(setup?.with?.["install-deps"]).toBe("false");
-    expect(setup?.with?.["cache-npm"]).toBe("false");
-    expect(setup?.with?.["next-cache"]).toBeUndefined();
-    expect(setup?.with?.["next-cache-save"]).toBeUndefined();
-    expect(steps.some((step) => step.uses?.startsWith("actions/cache"))).toBe(false);
-    const restore = steps.findIndex((step) => step.run?.includes("tar --zstd -xf"));
-    const refresh = steps.findIndex((step) => step.run === "node --import tsx scripts/maintenance/refresh-pages-release-data.ts");
-    const build = steps.findIndex((step) => step.run?.split("\n").includes("npm run generated:post-refresh"));
-    const check = steps.findIndex((step) => step.run === "npm run check:pages-release");
+    const setup = steps.find((s) => s.uses === "$/.github/actions/setup-workspace");
+    expect(setup?.with).toMatchObject({ "bootstrap-generated": "false", "install-deps": "false", "cache-npm": "false" });
+    expect([setup?.with?.["next-cache"], setup?.with?.["next-cache-save"]]).toEqual([undefined, undefined]);
+    expect(steps.some((s) => s.uses?.startsWith("actions/cache"))).toBe(false);
+    const restore = steps.findIndex((s) => s.run?.includes("tar --zstd -xf"));
+    const refresh = steps.findIndex((s) => s.run === "node --import tsx scripts/maintenance/refresh-pages-release-data.ts");
+    const build = steps.findIndex((s) => s.run?.split("\n").includes("npm run generated:post-refresh"));
+    const check = steps.findIndex((s) => s.run === "npm run check:pages-release");
     expect(restore).toBeGreaterThanOrEqual(0);
     expect(refresh).toBeGreaterThan(restore);
     expect(build).toBeGreaterThan(refresh);
     expect(check).toBeGreaterThan(build);
-    expect(steps[build].env?.PHAROS_RELEASE_PR_TYPECHECKED).toBe("1");
-    expect(steps[build].env?.PHAROS_DETAIL_SNAPSHOT_SOURCE).toBe("bulk");
-    expect(steps[build].env?.SITE_API_SHARED_SECRET).toBe("${{ secrets.SITE_API_SHARED_SECRET }}");
+    expect(steps[build].env).toMatchObject({
+      PHAROS_RELEASE_PR_TYPECHECKED: "1", PHAROS_DETAIL_SNAPSHOT_SOURCE: "bulk", PHAROS_OG_EVERGREEN_MAP_ONLY: "1",
+      SITE_API_SHARED_SECRET: "${{ secrets.SITE_API_SHARED_SECRET }}",
+    });
     expect(steps[build].run).toContain('if [ -z "${SITE_API_SHARED_SECRET//[[:space:]]/}" ]; then');
     expect(steps[build].run?.indexOf("exit 1")).toBeLessThan(steps[build].run!.indexOf("npm run generated:post-refresh"));
-    expect(steps.filter((step) => step.env?.SITE_API_SHARED_SECRET != null)).toHaveLength(1);
+    expect(steps.filter((s) => s.env?.SITE_API_SHARED_SECRET != null)).toHaveLength(1);
   });
 
   it.each(["deploy-cloudflare.yml", "pages-release.yml", "rebuild-pages.yml", "pages-prepare.yml"])(
@@ -466,55 +448,34 @@ describe("CI workflow scope", () => {
     const prepare = parseYaml(readRepoFile(".github/workflows/pages-prepare.yml"));
     const release = parseYaml(readRepoFile(".github/workflows/pages-release.yml"));
     const artifactName = "pages-workspace-production-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}";
-    const steps = prepare.jobs["pages-prepare"].steps as Array<{
-      id?: string; uses?: string; run?: string; with?: Record<string, unknown>; env?: Record<string, string>;
-    }>;
-
+    const steps = prepare.jobs["pages-prepare"].steps as Array<{ id?: string; uses?: string; run?: string; with?: Record<string, unknown>; env?: Record<string, string> }>;
     expect(deploy.jobs["deploy-worker"].needs).toEqual(["plan"]);
     const workerDeployCondition = String(deploy.jobs["deploy-worker"].if).replace(/\s+/g, " ");
     expect(workerDeployCondition).toContain("!cancelled()");
     expect(workerDeployCondition).not.toContain("always()");
     expect(workerDeployCondition).toContain("needs.plan.outputs.worker_required == 'true'");
-    expect(deploy.jobs["pages-prepare"].needs).toBe("plan");
-    expect(deploy.jobs["pages-prepare"].uses).toBe("$/.github/workflows/pages-prepare.yml");
-    expect(deploy.jobs["pages-prepare"].if).toBe("${{ needs.plan.outputs.pages_required == 'true' }}");
+    expect(deploy.jobs["pages-prepare"]).toMatchObject({ needs: "plan", uses: "$/.github/workflows/pages-prepare.yml", if: "${{ needs.plan.outputs.pages_required == 'true' }}" });
     expect(deploy.jobs["pages-release"].needs).toEqual(["plan", "deploy-worker", "pages-prepare"]);
-    expect(deploy.jobs["pages-release"].if).toContain("always()");
-    expect(deploy.jobs["pages-release"].if).toContain("needs.plan.result == 'success'");
-    expect(deploy.jobs["pages-release"].if).toContain("needs.plan.outputs.pages_required == 'true'");
-    expect(deploy.jobs["pages-release"].if).toContain("needs.pages-prepare.result == 'success'");
-    expect(String(deploy.jobs["pages-release"].if).replace(/\s+/g, " ")).toContain(
-      "needs.plan.outputs.worker_required != 'true' || needs.deploy-worker.result == 'success'",
-    );
+    for (const frag of ["always()", "needs.plan.result == 'success'", "needs.plan.outputs.pages_required == 'true'", "needs.pages-prepare.result == 'success'"]) expect(deploy.jobs["pages-release"].if).toContain(frag);
+    expect(String(deploy.jobs["pages-release"].if).replace(/\s+/g, " ")).toContain("needs.plan.outputs.worker_required != 'true' || needs.deploy-worker.result == 'success'");
     expect(rebuild.jobs["pages-prepare"].uses).toBe("$/.github/workflows/pages-prepare.yml");
-    expect(rebuild.jobs["pages-release"].needs).toBe("pages-prepare");
-    expect(rebuild.jobs["pages-release"].uses).toBe(deploy.jobs["pages-release"].uses);
-    expect(rebuild.jobs["pages-release"].with.refresh_data).toBeUndefined();
-    expect(deploy.jobs["pages-release"].with.refresh_data).toBeUndefined();
-    expect(release.on.workflow_call.inputs.refresh_data).toBeUndefined();
-    const releaseSteps = release.jobs["pages-release"].steps as Array<{
-      name?: string; if?: string; run?: string;
-    }>;
-    const refresh = releaseSteps.find((step) => step.name === "Refresh API-backed release data")!;
-    expect(refresh.if).toBeUndefined();
-    expect(refresh.run).toBe("node --import tsx scripts/maintenance/refresh-pages-release-data.ts");
-    expect(releaseSteps.some((step) => step.name === "Validate release-data refresh result")).toBe(false);
-    expect(releaseSteps.some((step) => step.run?.includes("PAGES_REFRESH_RESULT_PATH"))).toBe(false);
-
-    expect(prepare.jobs["pages-prepare"].environment).toBeUndefined();
-    expect(prepare.on.workflow_call?.secrets).toBeUndefined();
-    expect(steps.find((step) => step.uses?.startsWith("actions/checkout@"))?.with?.["fetch-depth"]).toBe(0);
-    expect(steps.some((step) => step.run === "npm run generated:compile-input")).toBe(true);
-    expect(steps.some((step) => /refresh-pages-release-data|post-refresh|next build|pages deploy/.test(step.run ?? ""))).toBe(false);
-    const upload = steps.find((step) => step.uses?.startsWith("actions/upload-artifact@"));
-    const name = steps.find((step) => step.id === "workspace-artifact-name")!;
+    expect(rebuild.jobs["pages-release"]).toMatchObject({ needs: "pages-prepare", uses: deploy.jobs["pages-release"].uses });
+    expect([rebuild.jobs["pages-release"].with.refresh_data, deploy.jobs["pages-release"].with.refresh_data, release.on.workflow_call.inputs.refresh_data]).toEqual([undefined, undefined, undefined]);
+    const releaseSteps = release.jobs["pages-release"].steps as Array<{ name?: string; if?: string; run?: string }>;
+    const refresh = releaseSteps.find((s) => s.name === "Refresh API-backed release data")!;
+    expect([refresh.if, refresh.run]).toEqual([undefined, "node --import tsx scripts/maintenance/refresh-pages-release-data.ts"]);
+    expect(releaseSteps.some((s) => s.name === "Validate release-data refresh result" || s.run?.includes("PAGES_REFRESH_RESULT_PATH"))).toBe(false);
+    expect([prepare.jobs["pages-prepare"].environment, prepare.on.workflow_call?.secrets]).toEqual([undefined, undefined]);
+    expect(steps.find((s) => s.uses?.startsWith("actions/checkout@"))?.with?.["fetch-depth"]).toBe(0);
+    expect(steps.some((s) => s.run === "npm run generated:compile-input")).toBe(true);
+    expect(steps.some((s) => /refresh-pages-release-data|post-refresh|next build|pages deploy/.test(s.run ?? ""))).toBe(false);
+    const upload = steps.find((s) => s.uses?.startsWith("actions/upload-artifact@"));
+    const name = steps.find((s) => s.id === "workspace-artifact-name")!;
     expect(name.env?.WORKSPACE_ARTIFACT_NAME).toBe(artifactName);
     expect(name.run).not.toContain("${{");
     expect(prepare.jobs["pages-prepare"].outputs.workspace_artifact_name).toBe("${{ steps.workspace-artifact-name.outputs.name }}");
     expect(prepare.on.workflow_call.outputs.workspace_artifact_name.value).toBe("${{ jobs.pages-prepare.outputs.workspace_artifact_name }}");
-    for (const caller of [deploy, rebuild]) {
-      expect(caller.jobs["pages-release"].with.workspace_artifact_name).toBe("${{ needs.pages-prepare.outputs.workspace_artifact_name }}");
-    }
+    for (const caller of [deploy, rebuild]) expect(caller.jobs["pages-release"].with.workspace_artifact_name).toBe("${{ needs.pages-prepare.outputs.workspace_artifact_name }}");
     expect(release.on.workflow_call.inputs.workspace_artifact_name).toMatchObject({ required: true, type: "string" });
     expect(release.on.workflow_call.secrets.SITE_API_SHARED_SECRET).toEqual({ required: true });
     expect(release.on.workflow_call.secrets.SITE_SESSION_SIGNING_KEY).toEqual({ required: false });
@@ -522,13 +483,9 @@ describe("CI workflow scope", () => {
       for (const caller of [deploy, rebuild]) expect(caller.jobs["pages-release"].secrets[key]).toBe(`\${{ secrets.${key} }}`);
     }
     expect(release.jobs["pages-release"].env.SITE_API_SHARED_SECRET).toBeUndefined();
-    expect(upload?.with).toMatchObject({
-      name: "${{ steps.workspace-artifact-name.outputs.name }}", "compression-level": 0, "if-no-files-found": "error",
-    });
-    expect(steps.find((step) => step.run?.includes("tar -I"))?.run).toContain("zstd -T0 -3");
-    const download = release.jobs["pages-release"].steps.find(
-      (step: { uses?: string }) => step.uses?.startsWith("actions/download-artifact@"),
-    );
+    expect(upload?.with).toMatchObject({ name: "${{ steps.workspace-artifact-name.outputs.name }}", "compression-level": 0, "if-no-files-found": "error" });
+    expect(steps.find((s) => s.run?.includes("tar -I"))?.run).toContain("zstd -T0 -3");
+    const download = release.jobs["pages-release"].steps.find((s: { uses?: string }) => s.uses?.startsWith("actions/download-artifact@"));
     expect(download.with.name).toBe("${{ inputs.workspace_artifact_name }}");
     expect(download.with.name).not.toContain("run_attempt");
     expect(release.jobs["pages-release"].environment.name).toBe("production");
@@ -563,12 +520,12 @@ describe("CI workflow scope", () => {
   it("packages both Workers before one migration and deploys heavy then public with individual proofs", () => {
     const workflow = parseYaml(readRepoFile(".github/workflows/deploy-cloudflare.yml"));
     const steps = workflow.jobs["deploy-worker"].steps as Array<{ id?: string; run?: string }>;
-    const packageStep = steps.findIndex((step) => step.run === "npm run check:worker-package");
-    const migrations = steps.map((step, index) => /d1 migrations apply/.test(step.run ?? "") ? index : -1).filter((index) => index >= 0);
-    const heavyDeploy = steps.findIndex((step) => /wrangler deploy.*--config wrangler.heavy.toml/.test(step.run ?? ""));
-    const publicDeploy = steps.findIndex((step) => /wrangler deploy.*--config wrangler.toml/.test(step.run ?? ""));
-    const heavyVerify = steps.findIndex((step) => step.id === "verify-heavy-deployment");
-    const publicVerify = steps.findIndex((step) => step.id === "verify-worker-deployment");
+    const packageStep = steps.findIndex((s) => s.run === "npm run check:worker-package");
+    const migrations = steps.map((s, i) => /d1 migrations apply/.test(s.run ?? "") ? i : -1).filter((i) => i >= 0);
+    const heavyDeploy = steps.findIndex((s) => /wrangler deploy.*--config wrangler\.heavy\.toml/.test(s.run ?? ""));
+    const publicDeploy = steps.findIndex((s) => /wrangler deploy.*--config wrangler\.toml/.test(s.run ?? ""));
+    const heavyVerify = steps.findIndex((s) => s.id === "verify-heavy-deployment");
+    const publicVerify = steps.findIndex((s) => s.id === "verify-worker-deployment");
     expect(packageStep).toBeGreaterThanOrEqual(0);
     expect(migrations).toHaveLength(1);
     expect(migrations[0]).toBeGreaterThan(packageStep);
@@ -576,12 +533,10 @@ describe("CI workflow scope", () => {
     expect(heavyVerify).toBeGreaterThan(heavyDeploy);
     expect(publicDeploy).toBeGreaterThan(heavyVerify);
     expect(publicVerify).toBeGreaterThan(publicDeploy);
-    for (const index of [heavyDeploy, publicDeploy]) {
-      expect(steps[index].run).toContain('--message "GitHub Actions deploy ${GITHUB_SHA}"');
-    }
+    for (const i of [heavyDeploy, publicDeploy]) expect(steps[i].run).toContain('--message "GitHub Actions deploy ${GITHUB_SHA}"');
     expect(steps[heavyVerify].run).toContain("--script-name stablecoin-heavy");
     expect(steps[publicVerify].run).toContain("--script-name stablecoin-api");
-    expect(steps.slice(0, heavyDeploy).some((step) => /deployments list|versions list/.test(step.run ?? ""))).toBe(false);
+    expect(steps.slice(0, heavyDeploy).some((s) => /deployments list|versions list/.test(s.run ?? ""))).toBe(false);
   });
 
   it("records both verified role markers monotonically only after paired proof", () => {
@@ -650,23 +605,16 @@ describe("CI workflow scope", () => {
     });
     expect(job.steps?.some((step) => /npm|npx|wrangler/.test(step.run ?? ""))).toBe(false);
     expect(acceptance?.env).toMatchObject({
-      EXPECTED_PAGES_COMMIT: "${{ github.sha }}",
-      EXPECTED_WORKER_VERSION: "${{ needs.deploy-worker.outputs.worker_version }}",
-      OBSERVED_WORKER_VERSION: "${{ steps.verify-worker-identity.outputs.worker_version }}",
-      EXPECTED_HEAVY_WORKER_VERSION: "${{ needs.deploy-worker.outputs.heavy_worker_version }}",
-      OBSERVED_HEAVY_WORKER_VERSION: "${{ steps.verify-heavy-identity.outputs.worker_version }}",
-      PHAROS_API_KEY: "${{ secrets.PHAROS_API_KEY }}",
+      EXPECTED_PAGES_COMMIT: "${{ github.sha }}", EXPECTED_WORKER_VERSION: "${{ needs.deploy-worker.outputs.worker_version }}",
+      OBSERVED_WORKER_VERSION: "${{ steps.verify-worker-identity.outputs.worker_version }}", EXPECTED_HEAVY_WORKER_VERSION: "${{ needs.deploy-worker.outputs.heavy_worker_version }}",
+      OBSERVED_HEAVY_WORKER_VERSION: "${{ steps.verify-heavy-identity.outputs.worker_version }}", PHAROS_API_KEY: "${{ secrets.PHAROS_API_KEY }}",
     });
   });
 
   it("gates every Shock Coverage Refresh credential path on main", () => {
-    const shock = parseYaml(readRepoFile(".github/workflows/shock-coverage-refresh.yml")) as {
-      jobs: Record<string, { if?: string }>;
-    };
-    expect(shock.jobs.targets.if)
-      .toBe("${{ github.ref == 'refs/heads/main' && (github.event_name != 'schedule' || github.event.schedule == '41 3 * * *') }}");
-    expect(shock.jobs.measure.if).toBe("${{ github.ref == 'refs/heads/main' }}");
-    expect(shock.jobs.refresh.if).toBe("${{ github.ref == 'refs/heads/main' }}");
+    const shock = parseYaml(readRepoFile(".github/workflows/shock-coverage-refresh.yml")) as { jobs: Record<string, { if?: string }> };
+    expect(shock.jobs.targets.if).toBe("${{ github.ref == 'refs/heads/main' && (github.event_name != 'schedule' || github.event.schedule == '41 3 * * *') }}");
+    expect([shock.jobs.measure.if, shock.jobs.refresh.if]).toEqual(["${{ github.ref == 'refs/heads/main' }}", "${{ github.ref == 'refs/heads/main' }}"]);
   });
 
   it("restores Worker incident evidence from its own completed main run even when an evidence job alerts", () => {
@@ -707,49 +655,30 @@ describe("CI workflow scope", () => {
   it("keeps the curation expiry sweep process-only with sentinel verdicts and by-week renewal views", () => {
     const workflow = parseYaml(readRepoFile(".github/workflows/curation-expiry-sweep.yml")) as {
       permissions?: Record<string, string>;
-      jobs: Record<string, {
-        permissions?: Record<string, string>;
-        steps: Array<{
-          id?: string; name?: string; run?: string; uses?: string;
-          with?: Record<string, unknown>; env?: Record<string, string>; "timeout-minutes"?: number;
-        }>;
-      }>;
+      jobs: Record<string, { permissions?: Record<string, string>; steps: Array<{ id?: string; name?: string; run?: string; uses?: string; with?: Record<string, unknown>; env?: Record<string, string>; "timeout-minutes"?: number }> }>;
     };
-    const job = workflow.jobs.sweep;
-    const steps = job.steps;
-    const sentinels = steps.find((step) => step.id === "sentinels")!;
-    const renewals = steps.find((step) => step.id === "renewals")!;
-    const calendar = steps.find((step) => step.id === "calendar")!;
-    const issue = steps.find((step) => step.run?.includes("gh issue edit"))!;
-    const commands = steps.map((step) => step.run ?? "").join("\n");
-
-    // Process-only: the sweep may maintain its own issue, never the repository or the ledger.
+    const job = workflow.jobs.sweep, steps = job.steps;
+    const sentinels = steps.find((s) => s.id === "sentinels")!, renewals = steps.find((s) => s.id === "renewals")!;
+    const calendar = steps.find((s) => s.id === "calendar")!, issue = steps.find((s) => s.run?.includes("gh issue edit"))!;
+    const commands = steps.map((s) => s.run ?? "").join("\n");
     expect(workflow.permissions).toEqual({ contents: "read" });
     expect(job.permissions).toEqual({ contents: "read", issues: "write" });
     expect(commands).not.toMatch(/\bgit push\b/);
     expect(commands).not.toMatch(/\bgh pr (create|merge|edit|close)\b/);
     expect(commands).not.toContain("ledger-append");
     expect(issue.run).toContain("gh issue edit");
-
-    // The sentinel verdicts read the same ledger the applier writes and the registry this sweep regenerates.
-    expect(sentinels.run).toContain("worker/scripts/check-safety-score-v9-ledger-sentinels.ts");
-    expect(sentinels.run).toContain("--registry agents/sweep/missing-data-registry.json");
-    expect(sentinels.run).toContain("--ledger .github/artifacts/safety-score-missing-data-reviewed-ledger.json");
-    expect(sentinels.run).toContain("--replay agents/sweep/replay.json");
-    expect(sentinels.run).toContain("--markdown agents/sweep/sentinel-resolutions.md");
-    expect(steps.indexOf(steps.find((step) => step.id === "registry")!)).toBeLessThan(steps.indexOf(sentinels));
-
-    // By-week views: the 14-day renewal section and the program-horizon calendar artifact.
+    for (const arg of [
+      "worker/scripts/check-safety-score-v9-ledger-sentinels.ts", "--registry agents/sweep/missing-data-registry.json",
+      "--ledger .github/artifacts/safety-score-missing-data-reviewed-ledger.json", "--replay agents/sweep/replay.json", "--markdown agents/sweep/sentinel-resolutions.md",
+    ]) expect(sentinels.run).toContain(arg);
+    expect(steps.indexOf(steps.find((s) => s.id === "registry")!)).toBeLessThan(steps.indexOf(sentinels));
     expect(renewals.run).toContain("--days 14 --by-week");
     expect(calendar.run).toContain('--horizon "$RENEWAL_HORIZON" --by-week');
     expect(calendar.env?.RENEWAL_HORIZON).toBe("2027-01-19");
     expect(steps.indexOf(sentinels)).toBeLessThan(steps.indexOf(renewals));
     expect(steps.indexOf(renewals)).toBeLessThan(steps.indexOf(calendar));
-
-    // Each new read is deadline-bounded inside the 40-minute job and rides the 30-day artifact.
     for (const step of [sentinels, renewals, calendar]) expect(step["timeout-minutes"]).toBe(10);
-    const upload = steps.find((step) => step.id === "snapshots")!;
-    expect(upload.with?.path).toBe("agents/sweep/");
+    expect(steps.find((s) => s.id === "snapshots")!.with?.path).toBe("agents/sweep/");
   });
 
   type WorkflowStep = {
@@ -824,9 +753,12 @@ describe("CI workflow scope", () => {
     expect(checkoutOf(pr.jobs.validation)?.with?.["fetch-depth"]).toBe(0);
     expect(pr.jobs.prepare.outputs?.pages_critical_css_full_pass)
       .toBe("${{ steps.classify.outputs.pages_critical_css_full_pass }}");
+    expect(pr.jobs.prepare.outputs?.pages_og_render_check)
+      .toBe("${{ steps.classify.outputs.pages_og_render_check }}");
     const replay = pr.jobs["pages-artifact"].steps?.find((step) => step.env?.PR_LANE_ID === "pages-artifact");
     expect(replay?.env).toMatchObject({
       PHAROS_CRITICAL_CSS_FULL_PASS: "${{ needs.prepare.outputs.pages_critical_css_full_pass }}",
+      PHAROS_OG_RENDER_CHECK: "${{ needs.prepare.outputs.pages_og_render_check }}",
       PHAROS_PAGES_REUSE_PREPARED_WORKSPACE: "1",
     });
   });
@@ -1002,19 +934,10 @@ describe("CI workflow scope", () => {
       "",
     ].join("\n"), { mode: 0o755 });
     const base: NodeJS.ProcessEnv = {
-      ...process.env,
-      PATH: `${root}:${process.env.PATH ?? ""}`,
-      GH_LOG: log,
-      RUNNER_TEMP: root,
-      RUN_URL: "https://example.test/run/1",
-      FULL_STATIC_RESULT: "success",
-      FULL_TESTS_RESULT: "success",
-      SAFETY_MAP_RENDER_RESULT: "success",
-      V9_RESOURCE_RESULT: "success",
-      LIGHTHOUSE_RESULT: "success",
-      WEB_VITALS_RESULT: "skipped",
-      TEST_TIMINGS_RESULT: "success",
-      TEST_PLAN_PARITY_RESULT: "success",
+      ...process.env, PATH: `${root}:${process.env.PATH ?? ""}`, GH_LOG: log, RUNNER_TEMP: root,
+      RUN_URL: "https://example.test/run/1", FULL_STATIC_RESULT: "success", FULL_TESTS_RESULT: "success",
+      SAFETY_MAP_RENDER_RESULT: "success", V9_RESOURCE_RESULT: "success", LIGHTHOUSE_RESULT: "success",
+      WEB_VITALS_RESULT: "skipped", TEST_TIMINGS_RESULT: "success", TEST_PLAN_PARITY_RESULT: "success",
       WORKER_SHARED_STABILITY_RESULT: "success",
     };
     const run = (overrides: Partial<NodeJS.ProcessEnv>): string => {
@@ -1182,43 +1105,23 @@ describe("external scheduler delivery monitor", () => {
   });
   it("fails on an aged registry lane or a stale operator channel", () => {
     const now = Math.floor(Date.now() / 1000);
-    expect(runMonitor({ schedulerLiveness: {
-      status: "healthy", observedAt: now, lastAnyStartedAt: now - 30, lastFiveMinuteStartedAt: now - 30,
-      ageSeconds: 30, warningAfterSec: 600, staleAfterSec: 1200,
-      lanes: ["fiveMinuteReserveRecovery", "fiveMinuteTelegramAlerts", "digestTriggerPoll"].map((scheduleKey) => ({
-        scheduleKey, lastStartedAt: now - 30,
-      })),
-      heavy: { status: "healthy", scheduleKey: ["v9", "SupplyAttributionOffset"].join(""), lastStartedAt: now - 30,
-        ageSeconds: 30, warningAfterSec: 1800, staleAfterSec: 2700, unavailableReason: null },
-      expectedLanes: [
-        { scheduleKey: "statusSelfCheckOffset", lastStartedAt: now - 30, ageSeconds: 30,
-          warningAfterSec: 1800, staleAfterSec: 2700, status: "healthy", unavailableReason: null },
-        { scheduleKey: "daily0300Utc", lastStartedAt: now - 259_201, ageSeconds: 259_201,
-          warningAfterSec: 172_800, staleAfterSec: 259_200, status: "stale", unavailableReason: null },
-      ],
-    } }).status).toBe(1);
-    expect(runMonitor({ operatorAlerts: {
-      status: "stale", operatorConfigured: false, lastDeliveredAt: null,
-      pendingSince: now - 86_401, pendingAgeSec: 86_401, maxPendingSec: 86_400,
-      pendingProducers: ["freshness"], reason: "operator-alert-delivery-pending", unavailableReason: null,
-    } }).status).toBe(1);
+    const lanes = ["fiveMinuteReserveRecovery", "fiveMinuteTelegramAlerts", "digestTriggerPoll"].map((scheduleKey) => ({ scheduleKey, lastStartedAt: now - 30 }));
+    const heavy = { status: "healthy", scheduleKey: ["v9", "SupplyAttributionOffset"].join(""), lastStartedAt: now - 30, ageSeconds: 30, warningAfterSec: 1800, staleAfterSec: 2700, unavailableReason: null };
+    const healthyLane = { scheduleKey: "statusSelfCheckOffset", lastStartedAt: now - 30, ageSeconds: 30, warningAfterSec: 1800, staleAfterSec: 2700, status: "healthy", unavailableReason: null };
+    const baseLiveness = { status: "healthy", observedAt: now, lastAnyStartedAt: now - 30, lastFiveMinuteStartedAt: now - 30, ageSeconds: 30, warningAfterSec: 600, staleAfterSec: 1200, lanes, heavy };
+    expect(runMonitor({ schedulerLiveness: { ...baseLiveness, expectedLanes: [healthyLane, { scheduleKey: "daily0300Utc", lastStartedAt: now - 259_201, ageSeconds: 259_201, warningAfterSec: 172_800, staleAfterSec: 259_200, status: "stale", unavailableReason: null }] } }).status).toBe(1);
+    expect(runMonitor({ operatorAlerts: { status: "stale", operatorConfigured: false, lastDeliveredAt: null, pendingSince: now - 86_401, pendingAgeSec: 86_401, maxPendingSec: 86_400, pendingProducers: ["freshness"], reason: "operator-alert-delivery-pending", unavailableReason: null } }).status).toBe(1);
   });
   it("warns on a degraded lane inside its stale budget instead of opening an incident", () => {
     const now = Math.floor(Date.now() / 1000);
     const result = runMonitor({ schedulerLiveness: {
-      status: "healthy", observedAt: now, lastAnyStartedAt: now - 30, lastFiveMinuteStartedAt: now - 30,
-      ageSeconds: 30, warningAfterSec: 600, staleAfterSec: 1200,
-      lanes: ["fiveMinuteReserveRecovery", "fiveMinuteTelegramAlerts", "digestTriggerPoll"].map((scheduleKey) => ({
-        scheduleKey, lastStartedAt: now - 30,
-      })),
-      heavy: { status: "healthy", scheduleKey: ["v9", "SupplyAttributionOffset"].join(""), lastStartedAt: now - 30,
-        ageSeconds: 30, warningAfterSec: 1800, staleAfterSec: 2700, unavailableReason: null },
+      status: "healthy", observedAt: now, lastAnyStartedAt: now - 30, lastFiveMinuteStartedAt: now - 30, ageSeconds: 30, warningAfterSec: 600, staleAfterSec: 1200,
+      lanes: ["fiveMinuteReserveRecovery", "fiveMinuteTelegramAlerts", "digestTriggerPoll"].map((scheduleKey) => ({ scheduleKey, lastStartedAt: now - 30 })),
+      heavy: { status: "healthy", scheduleKey: ["v9", "SupplyAttributionOffset"].join(""), lastStartedAt: now - 30, ageSeconds: 30, warningAfterSec: 1800, staleAfterSec: 2700, unavailableReason: null },
       expectedLanes: [
-        { scheduleKey: "statusSelfCheckOffset", lastStartedAt: now - 30, ageSeconds: 30,
-          warningAfterSec: 1800, staleAfterSec: 2700, status: "healthy", unavailableReason: null },
+        { scheduleKey: "statusSelfCheckOffset", lastStartedAt: now - 30, ageSeconds: 30, warningAfterSec: 1800, staleAfterSec: 2700, status: "healthy", unavailableReason: null },
         // Two missed 5-minute deliveries: inside the lane's own 3x stale budget.
-        { scheduleKey: "fiveMinuteTelegramAlerts", lastStartedAt: now - 601, ageSeconds: 601,
-          warningAfterSec: 600, staleAfterSec: 900, status: "degraded", unavailableReason: null },
+        { scheduleKey: "fiveMinuteTelegramAlerts", lastStartedAt: now - 601, ageSeconds: 601, warningAfterSec: 600, staleAfterSec: 900, status: "degraded", unavailableReason: null },
       ],
     } });
     expect(result.status).toBe(0);
@@ -1261,29 +1164,15 @@ describe("Cloudflare deployment credential scope", () => {
   };
 
   it.each([
-    ["deploy-worker", ".github/workflows/deploy-cloudflare.yml", [
-      "Verify pre-provisioned reserve Queue and dead-letter Queue",
-      "Preflight remote D1 baseline adoption",
-      "Apply production D1 migrations",
-      "Deploy heavy Worker",
-      "Verify active heavy Worker deployment",
-      "Deploy public Worker",
-      "Verify active public Worker deployment",
-      "Record verified Worker activation markers",
-    ]],
-    ["pages-release", ".github/workflows/pages-release.yml", [
-      "Publish immutable preview objects before Pages activation",
-      "Deploy Pages",
-      "Resolve active Pages deployment",
-    ]],
+    ["deploy-worker", ".github/workflows/deploy-cloudflare.yml", ["Verify pre-provisioned reserve Queue and dead-letter Queue", "Preflight remote D1 baseline adoption", "Apply production D1 migrations", "Deploy heavy Worker", "Verify active heavy Worker deployment", "Deploy public Worker", "Verify active public Worker deployment", "Record verified Worker activation markers"]],
+    ["pages-release", ".github/workflows/pages-release.yml", ["Publish immutable preview objects before Pages activation", "Deploy Pages", "Resolve active Pages deployment"]],
   ])("%s exposes credentials only to named consumer steps", (jobName, path, consumers) => {
     const { job, holders, effective } = consumerSteps(path, jobName);
     for (const key of credentialKeys) expect(job.env?.[key]).toBeUndefined();
     expect(holders).toEqual(consumers);
     for (const { env, step } of effective) {
       if (!consumers.includes(step.name ?? "")) continue;
-      expect(env.CLOUDFLARE_API_TOKEN).toBe("${{ secrets.CLOUDFLARE_API_TOKEN }}");
-      expect(env.CLOUDFLARE_ACCOUNT_ID).toBe("${{ secrets.CLOUDFLARE_ACCOUNT_ID }}");
+      expect([env.CLOUDFLARE_API_TOKEN, env.CLOUDFLARE_ACCOUNT_ID]).toEqual(["${{ secrets.CLOUDFLARE_API_TOKEN }}", "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"]);
     }
   });
 
@@ -1320,14 +1209,9 @@ describe("Cloudflare deployment credential scope", () => {
     for (const key of s3CredentialKeys) {
       expect(job.env?.[key]).toBeUndefined();
       expect(publisher?.env[key]).toBe(`\${{ secrets.${key} }}`);
-      expect(effective.filter(({ step, env }) => JSON.stringify({ ...step, env }).includes(key))
-        .map(({ step }) => step.name)).toEqual([publisherName]);
+      expect(effective.filter(({ step, env }) => JSON.stringify({ ...step, env }).includes(key)).map(({ step }) => step.name)).toEqual([publisherName]);
     }
-    for (const path of [
-      ".github/workflows/pages-prepare.yml",
-      ".github/workflows/pull-request-checks.yml",
-      ".github/actions/setup-workspace/action.yml",
-    ]) {
+    for (const path of [".github/workflows/pages-prepare.yml", ".github/workflows/pull-request-checks.yml", ".github/actions/setup-workspace/action.yml"]) {
       const source = readRepoFile(path);
       for (const key of s3CredentialKeys) expect(source).not.toContain(key);
     }

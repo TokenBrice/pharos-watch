@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createHash } from "node:crypto";
 import { crc32 } from "node:zlib";
 import sharp from "sharp";
@@ -94,16 +94,12 @@ async function evergreenContext(customMetadata: Record<string, string> = LEGACY_
   text.copy(chunk, 8);
   chunk.writeUInt32BE(crc32(chunk.subarray(4, -4)), chunk.length - 4);
   const bytes = Buffer.concat([plain.subarray(0, -12), chunk, plain.subarray(-12)]);
-  const hash = createHash("sha256").update(bytes).digest("hex");
-  const filename = `image-${"d".repeat(64)}.png`;
+  const hash = createHash("sha256").update(bytes).digest("hex"), filename = `image-${"d".repeat(64)}.png`;
   const stored = { arrayBuffer: async () => Uint8Array.from(bytes).buffer, text: async () => "", customMetadata };
   const get = vi.fn(async () => stored as typeof stored | null);
   const put = vi.fn(async () => { throw new Error("reader must never write"); });
   const next = vi.fn(async (_input?: Request | string, _init?: RequestInit) => new Response(null, { status: 404 }));
-  return {
-    request: new Request(`https://pharos.watch/og/v2/${filename}`),
-    env: { SOCIAL_PREVIEWS: { get, put } }, next, get, bytes, hash, filename,
-  };
+  return { request: new Request(`https://pharos.watch/og/v2/${filename}`), env: { SOCIAL_PREVIEWS: { get, put } }, next, get, bytes, hash, filename };
 }
 
 describe("permanent evergreen preview assets", () => {
@@ -111,12 +107,9 @@ describe("permanent evergreen preview assets", () => {
     const ctx = await evergreenContext();
     ctx.next.mockImplementation(async () => new Response(Uint8Array.from(ctx.bytes), { headers: { "Content-Type": "image/png" } }));
     const response = await serveEvergreenPreview(ctx);
-    expect(response.status).toBe(200);
+    expect([response.status, response.headers.get("etag"), response.headers.has("x-robots-tag")]).toEqual([200, `"${ctx.hash}"`, false]);
     expect(Buffer.from(await response.arrayBuffer())).toEqual(ctx.bytes);
-    expect(response.headers.get("etag")).toBe(`"${ctx.hash}"`);
     expect(response.headers.get("cache-control")).toContain("immutable");
-    // Article JSON-LD names these images, so they stay indexable.
-    expect(response.headers.has("x-robots-tag")).toBe(false);
     expect(ctx.get).not.toHaveBeenCalled();
   });
 
@@ -188,5 +181,42 @@ describe("permanent evergreen preview assets", () => {
       expect(response.status).toBe(502);
       expect(response.headers.get("cache-control")).toBe("no-store");
     }
+  });
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("serves POP caches.default hits, populates via waitUntil, and fails open on cache errors", async () => {
+    const ctx = await evergreenContext();
+    const store = new Map<string, { bytes: Uint8Array; status: number; headers: Headers }>();
+    const match = vi.fn(async (req: Request) => {
+      const e = store.get(req.url);
+      return e ? new Response(e.bytes.slice(), { status: e.status, headers: new Headers(e.headers) }) : undefined;
+    });
+    const put = vi.fn(async (req: Request, res: Response) => {
+      store.set(req.url, { bytes: new Uint8Array(await res.arrayBuffer()), status: res.status, headers: new Headers(res.headers) });
+    });
+    vi.stubGlobal("caches", { default: { match, put } });
+    const pending: Promise<unknown>[] = [], waitUntil = vi.fn((p: Promise<unknown>) => { pending.push(p); });
+    const miss = await serveEvergreenPreview({ ...ctx, request: new Request(`${ctx.request.url}?utm=1`), waitUntil });
+    expect([miss.status, Buffer.from(await miss.arrayBuffer())]).toEqual([200, ctx.bytes]);
+    expect(waitUntil).toHaveBeenCalledOnce();
+    await Promise.all(pending);
+    expect(put).toHaveBeenCalledOnce();
+    expect(put.mock.calls[0][0].url).toBe(`https://pharos.watch/og/v2/${ctx.filename}`);
+    ctx.next.mockClear(); ctx.get.mockClear();
+    const hit = await serveEvergreenPreview({ ...ctx, request: new Request(`${ctx.request.url}?other=2`) });
+    expect([hit.status, Buffer.from(await hit.arrayBuffer())]).toEqual([200, ctx.bytes]);
+    expect(ctx.next).not.toHaveBeenCalled(); expect(ctx.get).not.toHaveBeenCalled();
+    const notMod = await serveEvergreenPreview({ ...ctx, request: new Request(ctx.request.url, { headers: { "If-None-Match": `W/"${ctx.hash}"` } }) });
+    expect([notMod.status, await notMod.text()]).toEqual([304, ""]);
+    const head = await serveEvergreenPreview({ ...ctx, request: new Request(ctx.request.url, { method: "HEAD" }) });
+    expect([head.status, await head.text(), head.headers.get("etag")]).toEqual([200, "", `"${ctx.hash}"`]);
+    expect(ctx.next).not.toHaveBeenCalled();
+    match.mockRejectedValueOnce(new Error("cache read failed"));
+    put.mockRejectedValueOnce(new Error("cache write failed"));
+    const fallback = await serveEvergreenPreview({ ...ctx, waitUntil });
+    expect([fallback.status, Buffer.from(await fallback.arrayBuffer())]).toEqual([200, ctx.bytes]);
+    await Promise.all(pending);
+    expect(ctx.get).toHaveBeenCalledOnce();
   });
 });

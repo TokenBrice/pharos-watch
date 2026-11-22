@@ -63,6 +63,10 @@ export function criticalCssScopeForLane(env: Partial<NodeJS.ProcessEnv>): "gates
   return env.PHAROS_CRITICAL_CSS_FULL_PASS === "false" ? "gates" : "all";
 }
 
+export function ogRenderCheckForLane(env: Partial<NodeJS.ProcessEnv>): boolean {
+  return env.PHAROS_OG_RENDER_CHECK !== "false";
+}
+
 // Post-refresh outputs (including ignored public/llms.txt) are regenerated
 // from the overlaid release data, so they are restored with the inputs: the
 // lane must leave no edits behind in the candidate checkout.
@@ -207,6 +211,8 @@ export async function runPagesArtifactLane({ repoRoot = REPO_ROOT, acquireReleas
     if (!retained) report("- Reason: `pages-artifact-data-unavailable`; committed snapshots + offline detail bootstrap. All artifact gates remain required; empty detail lanes are weaker size evidence, not realistic release-data proof.");
     const criticalCssScope = criticalCssScopeForLane(process.env);
     report(`- Critical CSS: ${criticalCssScope === "gates" ? "gate-measured routes only" : "full public pass"}`);
+    const ogRenderCheck = ogRenderCheckForLane(process.env);
+    report(`- Evergreen OG render check: ${ogRenderCheck ? "temp-dir full render" : "map-only (no OG render input change)"}`);
     const reusePreparedWorkspace = process.env.PHAROS_PAGES_REUSE_PREPARED_WORKSPACE === "1";
     const skipExistingDepsEnv: Partial<NodeJS.ProcessEnv> = reusePreparedWorkspace
       ? { PHAROS_GENERATED_SKIP_EXISTING_DEPS: "1" }
@@ -226,7 +232,18 @@ export async function runPagesArtifactLane({ repoRoot = REPO_ROOT, acquireReleas
       PHAROS_DETAIL_SNAPSHOT_BOOTSTRAP: "1", PHAROS_DETAIL_SNAPSHOT_CHECK: "",
     });
     if (retained) replayPagesDetailSnapshots(repoRoot, join(temporary, "overlay"));
-    command("post-refresh-replay", "npm", ["run", "generated:post-refresh"], skipExistingDepsEnv);
+    // Always keep out/ free of public/og/v2 so PR exports match production's
+    // R2-first file count 1:1; OG render changes render into temporary below.
+    command("post-refresh-replay", "npm", ["run", "generated:post-refresh"], {
+      ...skipExistingDepsEnv,
+      PHAROS_OG_EVERGREEN_MAP_ONLY: "1",
+    });
+    if (ogRenderCheck) {
+      const ogRenderDir = join(temporary, "og-render-check");
+      command("og-render-check", process.execPath, [
+        "--import", "tsx", "scripts/maintenance/build-og-evergreen.ts", "--out-dir", ogRenderDir,
+      ], { PHAROS_OG_EVERGREEN_MAP_ONLY: "" });
+    }
     rmSync(join(repoRoot, ".next"), { recursive: true, force: true });
     rmSync(join(repoRoot, "out"), { recursive: true, force: true });
     command("webpack-export", "npx", ["--no-install", "next", "build", "--webpack"], {

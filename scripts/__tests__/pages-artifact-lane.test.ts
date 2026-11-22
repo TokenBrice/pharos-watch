@@ -7,6 +7,7 @@ import {
   compileInputStageArtifacts,
   criticalCssScopeForLane,
   dropRetiredDepegEventEntries,
+  ogRenderCheckForLane,
   pagesArtifactEnvironment,
   preparedWorkspaceCompileInputArtifacts,
   runPagesArtifactLane,
@@ -114,12 +115,8 @@ describe("Pages artifact input profile", () => {
     expect(compileInputs).toHaveLength(1);
     const only = (compileInputs[0][1] as string[]).find((arg) => arg.startsWith("--only="))!;
     expect(only.slice("--only=".length).split(",")).toEqual(expect.arrayContaining([
-      ...RERUN_COMPILE_INPUT_IDS,
-      "sitemap-dates",
-      "docs-metadata",
-      "safety-score-v9-incident-runtime",
-      "safety-score-v9-incident-review-key-migration",
-      "safety-score-v9-lane-emitter-descriptors",
+      ...RERUN_COMPILE_INPUT_IDS, "sitemap-dates", "docs-metadata", "safety-score-v9-incident-runtime",
+      "safety-score-v9-incident-review-key-migration", "safety-score-v9-lane-emitter-descriptors",
     ]));
     expect(spawn.mock.calls.some((call) => call[0] === "npm" && call[1].includes("generated:compile-input"))).toBe(false);
   });
@@ -141,53 +138,55 @@ describe("Pages artifact input profile", () => {
     expect(spawn.mock.calls.find((call) => call[1].includes("postbuild"))?.[2].env.PHAROS_CRITICAL_CSS_SCOPE).toBe(scope);
   });
 
+  it.each([["false", false], ["true", true], ["0", true], [undefined, true]] as const)("runs temp-dir OG render check unless explicitly false (%s)", async (value, expected) => {
+    expect(ogRenderCheckForLane({ PHAROS_OG_RENDER_CHECK: value })).toBe(expected);
+    const root = makeRoot(); dataFixture(root); vi.stubEnv("PHAROS_OG_RENDER_CHECK", value);
+    await runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false });
+    const postRefresh = spawn.mock.calls.find((call) => call[1].includes("generated:post-refresh"));
+    expect(postRefresh?.[2].env.PHAROS_OG_EVERGREEN_MAP_ONLY).toBe("1");
+    const ogCheck = spawn.mock.calls.find((call) => call[1].includes("scripts/maintenance/build-og-evergreen.ts"));
+    expect(Boolean(ogCheck)).toBe(expected);
+    if (ogCheck) {
+      expect(ogCheck[0]).toBe(process.execPath);
+      expect(ogCheck[1][2]).toBe("scripts/maintenance/build-og-evergreen.ts");
+      expect(ogCheck[1][3]).toBe("--out-dir");
+      expect(ogCheck[1][4]).not.toContain(root);
+      expect(ogCheck[2].env.PHAROS_OG_EVERGREEN_MAP_ONLY).toBe("");
+    }
+  });
+
   it("never forwards acquisition tokens or other credentials to generator/build children", async () => {
-    const root = makeRoot();
-    dataFixture(root);
+    const root = makeRoot(); dataFixture(root);
     vi.stubEnv("PHAROS_PAGES_REPLAY", "1");
     vi.stubEnv("GITHUB_STEP_SUMMARY", join(root, "summary.md"));
-    for (const name of ["GH_TOKEN", "GITHUB_TOKEN", "SITE_API_SHARED_SECRET", "PHAROS_API_KEY", "CLOUDFLARE_API_TOKEN", "npm_config_auth"]) {
-      vi.stubEnv(name, "test-credential");
-    }
-    const result = await runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false });
-    expect(result.dataStatus).toBe("degraded-data");
+    const secrets = ["GH_TOKEN", "GITHUB_TOKEN", "SITE_API_SHARED_SECRET", "PHAROS_API_KEY", "CLOUDFLARE_API_TOKEN", "npm_config_auth"];
+    for (const name of secrets) vi.stubEnv(name, "test-credential");
+    expect((await runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false })).dataStatus).toBe("degraded-data");
     const summary = readFileSync(join(root, "summary.md"), "utf8");
     expect(summary).toContain("Data status: `degraded-data`");
     expect(summary).toContain("Reason: `pages-artifact-data-unavailable`");
     expect(spawn.mock.calls.length).toBeGreaterThan(0);
     for (const call of spawn.mock.calls) {
       const childEnv = call[2].env as NodeJS.ProcessEnv;
-      expect(childEnv.NODE_ENV).toBe("production");
-      expect(childEnv.PHAROS_PAGES_REPLAY).toBe("");
-      for (const name of ["GH_TOKEN", "GITHUB_TOKEN", "SITE_API_SHARED_SECRET", "PHAROS_API_KEY", "CLOUDFLARE_API_TOKEN", "npm_config_auth"]) {
-        expect(childEnv).not.toHaveProperty(name);
-      }
+      expect([childEnv.NODE_ENV, childEnv.PHAROS_PAGES_REPLAY]).toEqual(["production", ""]);
+      for (const name of secrets) expect(childEnv).not.toHaveProperty(name);
     }
   });
 
   it("waives only wall-clock age after validating and overlaying retained release data", async () => {
-    const root = makeRoot();
-    const release = join(root, "release");
-    const candidate = join(root, "candidate");
-    const acquisition = join(root, "acquisition");
-    dataFixture(release);
-    dataFixture(candidate);
+    const root = makeRoot(), release = join(root, "release"), candidate = join(root, "candidate"), acquisition = join(root, "acquisition");
+    dataFixture(release); dataFixture(candidate);
     const artifactName = `pages-release-data-${"a".repeat(40)}`;
     createPagesReleaseDataArchive(release, join(acquisition, PAGES_RELEASE_DATA_ARCHIVE));
-    write(acquisition, "release-data-result.json", JSON.stringify({
-      schemaVersion: 1, dataStatus: "release-snapshot", artifactName,
-    }));
+    write(acquisition, "release-data-result.json", JSON.stringify({ schemaVersion: 1, dataStatus: "release-snapshot", artifactName }));
     vi.stubEnv("PAGES_RELEASE_DATA_DIR", acquisition);
     vi.stubEnv("GITHUB_STEP_SUMMARY", join(root, "summary.md"));
-    await expect(runPagesArtifactLane({ repoRoot: candidate })).resolves.toEqual({
-      dataStatus: "release-snapshot", artifactName,
-    });
+    await expect(runPagesArtifactLane({ repoRoot: candidate })).resolves.toEqual({ dataStatus: "release-snapshot", artifactName });
     const summary = readFileSync(join(root, "summary.md"), "utf8");
     expect(summary).toContain(`Release artifact: \`${artifactName}\``);
     expect(summary).not.toContain("pages-artifact-data-unavailable");
     expect(spawn.mock.calls.length).toBeGreaterThan(0);
     for (const call of spawn.mock.calls) expect(call[2].env.PHAROS_PAGES_REPLAY).toBe("1");
-
     // Corruption must fail before any generator/build receives the waiver.
     write(acquisition, PAGES_RELEASE_DATA_ARCHIVE, "corrupt archive");
     spawn.mockClear();

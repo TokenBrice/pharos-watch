@@ -7,20 +7,56 @@ import {
 } from "@shared/lib/social-preview-asset";
 import type { SocialPreviewBucket } from "@shared/lib/social-preview-storage";
 
+interface EdgeCache {
+  match(request: Request): Promise<Response | undefined>;
+  put(request: Request, response: Response): Promise<void>;
+}
+
 interface Context {
   request: Request;
   env: { SOCIAL_PREVIEWS?: SocialPreviewBucket };
   next: (input?: Request | string, init?: RequestInit) => Promise<Response>;
+  waitUntil?: (promise: Promise<unknown>) => void;
 }
 
-/** Current export first; previously published identities survive replacement/rollback in permanent R2. */
-export async function onRequest({ request, env, next }: Context): Promise<Response> {
+/** POP cache -> current export (when bundled) -> permanent R2 archive. */
+export async function onRequest({ request, env, next, waitUntil }: Context): Promise<Response> {
   const fail = (status: number) => new Response(null, {
     status, headers: { "Cache-Control": "no-store", ...(status === 405 ? { Allow: "GET, HEAD" } : {}) },
   });
   if (request.method !== "GET" && request.method !== "HEAD") return fail(405);
   const identity = socialPreviewAssetIdentity(new URL(request.url).pathname);
   if (!identity) return fail(404);
+  const matchesIfNoneMatch = (etag: string | null): boolean =>
+    Boolean(etag && request.headers.get("if-none-match")?.split(",").some((value) => {
+      const candidate = value.trim();
+      return candidate === "*" || candidate.replace(/^W\//, "") === etag;
+    }));
+  const canonicalUrl = new URL(`/og/v2/${identity.filename}`, request.url).toString();
+  const cacheKey = new Request(canonicalUrl, { method: "GET" });
+  const edgeCache = (globalThis as { caches?: { default?: EdgeCache } }).caches?.default;
+  if (edgeCache) {
+    try {
+      const cached = await edgeCache.match(cacheKey);
+      if (cached && cached.status === 200) {
+        const cachedEtag = cached.headers.get("etag");
+        if (cachedEtag) {
+          if (matchesIfNoneMatch(cachedEtag)) {
+            await cached.body?.cancel();
+            return new Response(null, { status: 304, headers: cached.headers });
+          }
+          if (request.method === "HEAD") {
+            await cached.body?.cancel();
+            return new Response(null, { status: 200, headers: cached.headers });
+          }
+          return cached;
+        }
+      }
+      await cached?.body?.cancel();
+    } catch {
+      // Cache API failures must fail open to static assets / R2.
+    }
+  }
   try {
     // Read complete static bytes even for HEAD/conditional requests: a 304 or
     // cached metadata alone cannot establish PNG integrity. Never fetch a live image.
@@ -54,10 +90,16 @@ export async function onRequest({ request, env, next }: Context): Promise<Respon
       ETag: etag,
       "X-Content-Type-Options": "nosniff",
     };
-    const notModified = request.headers.get("if-none-match")?.split(",").some((value) => {
-      const candidate = value.trim();
-      return candidate === "*" || candidate.replace(/^W\//, "") === etag;
-    });
+    const notModified = matchesIfNoneMatch(etag);
+    if (edgeCache) {
+      try {
+        const store = Promise.resolve(edgeCache.put(cacheKey, new Response(bytes, { status: 200, headers }))).catch(() => {});
+        if (waitUntil) waitUntil(store);
+        else await store;
+      } catch {
+        // Cache write failures must not break a verified image response.
+      }
+    }
     if (notModified) return new Response(null, { status: 304, headers });
     return new Response(request.method === "HEAD" ? null : bytes, { headers });
   } catch {

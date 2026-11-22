@@ -5,6 +5,7 @@ import { matchesGlob } from "node:path";
 import {
   hasCriticalCssPipelineImpact,
   hasDeployImpact,
+  hasOgRenderImpact,
   hasOnlyInternalDocsImpact,
   hasPagesDeployImpact,
   hasPagesPublishImpact,
@@ -40,6 +41,7 @@ export interface DeployClassification {
   pagesChanged: boolean;
   pagesCriticalCssFullPass: boolean;
   pagesDeployRequired: boolean;
+  pagesOgRenderCheck: boolean;
   playwrightFirefoxRequired: boolean;
   reason: string;
   v9ResourceRequired: boolean;
@@ -58,6 +60,7 @@ interface ClassifyDeployChangesOptions {
 export {
   hasCriticalCssPipelineImpact,
   hasDeployImpact,
+  hasOgRenderImpact,
   hasOnlyInternalDocsImpact,
   hasPagesDeployImpact,
   hasPagesPublishImpact,
@@ -196,6 +199,7 @@ export function classifyChangedFiles(
     pagesChanged,
     pagesCriticalCssFullPass: hasCriticalCssPipelineImpact(normalizedFiles),
     pagesDeployRequired,
+    pagesOgRenderCheck: hasOgRenderImpact(normalizedFiles),
     playwrightFirefoxRequired: GENERATED_ARTIFACT_REGISTRY.some(
       (artifact) => generatedArtifactIds.includes(artifact.id) && artifact.requiredBrowsers?.includes("firefox"),
     ),
@@ -225,6 +229,7 @@ export function classifyDeployChanges({
     pagesChanged: true,
     pagesCriticalCssFullPass: true,
     pagesDeployRequired: true,
+    pagesOgRenderCheck: true,
     playwrightFirefoxRequired: true,
     reason,
     v9ResourceRequired: true,
@@ -266,6 +271,7 @@ export function emitGithubOutputs(classification: DeployClassification): void {
   writeGithubOutputLine("pages_artifact_required", classification.pagesArtifactRequired ? "true" : "false");
   writeGithubOutputLine("pages_critical_css_full_pass", classification.pagesCriticalCssFullPass ? "true" : "false");
   writeGithubOutputLine("pages_deploy_required", classification.pagesDeployRequired ? "true" : "false");
+  writeGithubOutputLine("pages_og_render_check", classification.pagesOgRenderCheck ? "true" : "false");
   writeGithubOutputLine(
     "playwright_firefox_required",
     classification.playwrightFirefoxRequired ? "true" : "false",
@@ -291,6 +297,7 @@ export function runCli(env: NodeJS.ProcessEnv = process.env): void {
   console.error(`[deploy-changes] pages_artifact_required=${classification.pagesArtifactRequired}`);
   console.error(`[deploy-changes] pages_critical_css_full_pass=${classification.pagesCriticalCssFullPass}`);
   console.error(`[deploy-changes] pages_deploy_required=${classification.pagesDeployRequired}`);
+  console.error(`[deploy-changes] pages_og_render_check=${classification.pagesOgRenderCheck}`);
   console.error(`[deploy-changes] playwright_firefox_required=${classification.playwrightFirefoxRequired}`);
   console.error(`[deploy-changes] worker_changed=${classification.workerChanged}`);
   console.error(`[deploy-changes] worker_deploy_required=${classification.workerDeployRequired}`);

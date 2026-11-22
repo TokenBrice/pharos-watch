@@ -1367,6 +1367,7 @@ const SAFETY_RESULTS_REGION_LABEL = "Safety score cards";
 const SAFETY_RESULTS_REGION_ID = "data";
 let API_HOSTNAME;
 let dossierOgFallbackPath;
+let socialPreviewAssetIdentity;
 let admitSafetyScoresPreviewRows;
 let SAFETY_SCORES_PREVIEW_PROJECTION_VERSIONS;
 let SAFETY_SCORES_PREVIEW_MAX_ROWS;
@@ -1378,7 +1379,7 @@ if (!IS_PAGE_RECORD_WORKER) {
   registerCommonJs();
   registerEsm();
   ({ API_HOSTNAME } = await import("../../shared/lib/runtime-origins.ts"));
-  ({ dossierOgFallbackPath } = await import("../../shared/lib/social-preview-asset.ts"));
+  ({ dossierOgFallbackPath, socialPreviewAssetIdentity } = await import("../../shared/lib/social-preview-asset.ts"));
   ({ admitSafetyScoresPreviewRows, SAFETY_SCORES_PREVIEW_PROJECTION_VERSIONS, SAFETY_SCORES_PREVIEW_MAX_ROWS } =
     await import("../../src/lib/safety-grade-snapshot.ts"));
 }
@@ -1386,6 +1387,7 @@ const SAFETY_PROFILE_HREF_PATTERN = /^\/stablecoin\/[^/]+\/$/;
 const PUBLIC_DATASETS_DIR = path.resolve("public/datasets");
 const PUBLIC_DATASET_CURRENT_MODULE_PATH = path.resolve("src/lib/datasets/public-dataset-current.ts");
 const COMPLIANCE_DATA_DIR = path.resolve("shared/data/stablecoins/domains/compliance");
+const DEFAULT_SOCIAL_PREVIEW_MAP_PATH = path.resolve("src/generated/social-preview-images.json");
 let safetyScoresPreviewExpectationCache;
 let compliancePanelExpectationCache;
 
@@ -1851,6 +1853,7 @@ export function collectSeoStaticCheckResult({
   structuredDataRouteMatrix = STRUCTURED_DATA_ROUTE_MATRIX,
   safetyScoresPreviewExpectation,
   compliancePanelExpectation,
+  socialPreviewMapPath = DEFAULT_SOCIAL_PREVIEW_MAP_PATH,
   pageRecords: suppliedPageRecords,
 } = {}) {
   const errors = [];
@@ -1973,6 +1976,16 @@ export function collectSeoStaticCheckResult({
     }
   }
 
+  const knownSocialPreviewUrls = new Set();
+  const socialPreviewMap = readJsonFile(socialPreviewMapPath);
+  if (socialPreviewMap && typeof socialPreviewMap === "object" && !Array.isArray(socialPreviewMap)) {
+    for (const entry of Object.values(socialPreviewMap)) {
+      if (typeof entry?.url === "string" && socialPreviewAssetIdentity(entry.url)) {
+        knownSocialPreviewUrls.add(entry.url);
+      }
+    }
+  }
+
   const missingOgImagePaths = new Set();
   for (const record of pageRecords) {
     for (const [field, value] of [
@@ -1995,7 +2008,13 @@ export function collectSeoStaticCheckResult({
         continue;
       }
       const filePath = path.join(outDir, localPath.replace(/^\/+/, ""));
-      if (!fs.existsSync(filePath)) {
+      // R2-first exports omit out/og/v2/: admit any canonical /og/v2/ identity
+      // registered in the generated preview map, or present in out/ for local builds.
+      const isMappedEvergreenPreview =
+        localPath.startsWith("/og/v2/")
+        && socialPreviewAssetIdentity(localPath) !== null
+        && knownSocialPreviewUrls.has(localPath);
+      if (!isMappedEvergreenPreview && !fs.existsSync(filePath)) {
         missingOgImagePaths.add(localPath);
         errors.push(`${record.route}: ${field} references missing file ${localPath}`);
       }

@@ -36,6 +36,10 @@ const CRITICAL_CSS_PIPELINE_EXACT_PATHS = new Set<string>([
   "package-lock.json",
 ]);
 
+function isMalformedRepoPath(file: string): boolean {
+  return !file || file.startsWith("/") || file.split("/").some((part) => part === "." || part === ".." || part === "");
+}
+
 export function hasCriticalCssPipelineImpact(files: readonly string[]): boolean {
   // An empty or malformed diff cannot establish that CSS inputs are absent.
   if (files.length === 0) return true;
@@ -43,10 +47,55 @@ export function hasCriticalCssPipelineImpact(files: readonly string[]): boolean 
     const file = normalizeRepoPath(rawFile);
     // Reject absolute, empty-component and traversal paths like hasV9ResourceImpact:
     // a malformed diff cannot establish that CSS inputs are absent.
-    if (!file || file.startsWith("/") || file.split("/").some((part) => part === "." || part === ".." || part === "")) return true;
+    if (isMalformedRepoPath(file)) return true;
     return CRITICAL_CSS_PIPELINE_EXACT_PATHS.has(file)
       || file.endsWith(".css")
       || /(^|\/)(?:tailwind|postcss|next)\.config\.[cm]?[jt]s$/.test(file);
+  });
+}
+
+// Evergreen OG render-pipeline inputs: templates, renderer/worker/rasterizer,
+// fonts, logos, authored covers, and lockfile dependency versions (`satori`,
+// `@cf-wasm/resvg`, `sharp`, `harfbuzzjs`). Ordinary page/component edits keep
+// map-only validation without rasterizing all PNGs in PR CI.
+const OG_RENDER_EXACT_PATHS = new Set<string>([
+  "data/logos.json",
+  "package.json",
+  "package-lock.json",
+  "public/og-cemetery.png",
+  "public/pharos-mark-on-dark.svg",
+  "public/pharos-mark-on-light.svg",
+  "scripts/lib/og-resvg-render.mts",
+  "scripts/lib/social-card-catalog.ts",
+  "scripts/lib/social-card-render.ts",
+  "scripts/lib/social-preview-build.ts",
+  "scripts/lib/social-preview-worker.mjs",
+  "scripts/maintenance/build-og-cemetery.ts",
+  "scripts/maintenance/build-og-evergreen.ts",
+  "shared/lib/classification.ts",
+  "shared/lib/classification/domain.ts",
+  "shared/lib/classification/grades.ts",
+  "shared/lib/format.ts",
+  "shared/lib/report-card-core.ts",
+]);
+const OG_RENDER_PREFIXES = [
+  "public/chains/",
+  "public/dexes/",
+  "public/logos/",
+  "shared/lib/social-card/",
+  "worker/assets/fonts/social-card/",
+] as const;
+
+export function hasOgRenderImpact(files: readonly string[]): boolean {
+  // An empty or malformed diff cannot establish that OG render inputs are absent.
+  if (files.length === 0) return true;
+  return files.some((rawFile) => {
+    const file = normalizeRepoPath(rawFile);
+    if (isMalformedRepoPath(file)) return true;
+    return OG_RENDER_EXACT_PATHS.has(file)
+      || OG_RENDER_PREFIXES.some((prefix) => file.startsWith(prefix))
+      || /^shared\/lib\/social-preview[^/]*\.ts$/.test(file)
+      || /^public\/blog\/[^/]+-cover\.png$/.test(file);
   });
 }
 

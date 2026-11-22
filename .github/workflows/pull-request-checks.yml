@@ -67,6 +67,7 @@ jobs:
       docs_inline_succeeded: ${{ steps.docs.outcome == 'success' }}
       matrix: ${{ steps.matrix.outputs.matrix }}
       pages_critical_css_full_pass: ${{ steps.classify.outputs.pages_critical_css_full_pass }}
+      pages_og_render_check: ${{ steps.classify.outputs.pages_og_render_check }}
       playwright_firefox_required: ${{ steps.classify.outputs.playwright_firefox_required }}
       pages_artifact_required: ${{ steps.classify.outputs.pages_artifact_required }}
       test_corpus_budget: ${{ steps.test-corpus-budget.outputs.exit-code }}
@@ -346,6 +347,9 @@ jobs:
           # runs inline the gate-measured routes and reuse the prepared
           # workspace outputs for everything else.
           PHAROS_CRITICAL_CSS_FULL_PASS: ${{ needs.prepare.outputs.pages_critical_css_full_pass }}
+          # Only OG render-pipeline inputs run the full temp-dir PNG render check;
+          # out/ stays R2-first (map-only) on every run to match production 1:1.
+          PHAROS_OG_RENDER_CHECK: ${{ needs.prepare.outputs.pages_og_render_check }}
           PHAROS_CRITICAL_CSS_WORKERS: "4"
           PHAROS_PAGES_REUSE_PREPARED_WORKSPACE: "1"
           NEXT_TELEMETRY_DISABLED: "1"
