@@ -914,7 +914,7 @@ describe("curation-expanded complete supply rosters", () => {
     {
       id: "apyusd-apyx",
       canonical: "ethereum",
-      supplies: { ethereum: 100, base: 10, bsc: 10, solana: 10 },
+      supplies: { ethereum: 100, base: 10, bsc: 10, monad: 10, solana: 10 },
     },
     { id: "uty-xsy", canonical: "base", supplies: { base: 100, avalanche: 10, katana: 20 } },
     { id: "mxne-real-mxn", supplies: { base: 100, solana: 10, stellar: 0 } },

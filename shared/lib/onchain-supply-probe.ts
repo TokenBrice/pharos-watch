@@ -678,11 +678,18 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
   "ftusd-flying-tulip": {
     aggregateContracts: [{ chain: "ethereum" }, { chain: "sonic" }],
   },
-  // Reviewed 2026-10-25: Ethereum CCIP LockRelease escrows apyUSD for Base,
-  // BNB and Solana BurnMint representations; conserve canonical shares.
-  // Unregistered Monad and unmatched pool custody remain an explicit residual.
+  // Reviewed 2026-11-22: Ethereum CCIP LockRelease escrows apyUSD for Base,
+  // BNB, Monad (reciprocally peer-verified at blocks 26471570/124473582) and
+  // Solana BurnMint representations; conserve canonical shares and keep
+  // escrowResidual for the remaining ~1.138 apyUSD unmatched pool custody.
   "apyusd-apyx": {
-    aggregateContracts: [{ chain: "ethereum" }, { chain: "base" }, { chain: "bsc" }, { chain: "solana" }],
+    aggregateContracts: [
+      { chain: "ethereum" },
+      { chain: "base" },
+      { chain: "bsc" },
+      supplyProbeChain("monad"),
+      { chain: "solana" },
+    ],
     canonicalSupplyChain: "ethereum",
     escrowResidual: {
       escrowAddress: "0x0f1bac2ea0311130da778c1ca287204338739f73",
