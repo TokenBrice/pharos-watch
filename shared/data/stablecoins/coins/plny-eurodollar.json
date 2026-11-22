@@ -39,7 +39,7 @@
   },
   "status": "pre-launch",
   "announcedDate": "2026-02-11",
-  "launchPhaseDetail": "The issuer states that the Ethereum smart contract is deployed but no PLNY tokens have been issued. Its white paper is dated 11 February 2026, with a management disclosure correction on 9 October 2026. Olbra markets the same deployment under the same company number and LEI; the ESMA register and GLEIF still name Eurodollar ApS. No launch date is stated.",
+  "launchPhaseDetail": "The issuer states that the Ethereum smart contract is deployed but no PLNY tokens have been issued. Its white paper is dated 11 February 2026, with a management disclosure correction on 9 October 2026. Eurodollar ApS changed its name to Olbra ApS in July 2026, keeping the same company number and LEI; the ESMA register and GLEIF still show the former name. No launch date is stated.",
   "milestones": [
     {
       "date": "2026-02-11",

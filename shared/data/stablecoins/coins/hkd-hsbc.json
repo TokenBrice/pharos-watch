@@ -32,7 +32,7 @@
   "status": "pre-launch",
   "announcedDate": "2026-03",
   "launchPhase": "launching-soon",
-  "launchPhaseDetail": "HKMA-licensed stablecoin issuer FRS02, effective April 10 2026. HSBC named the token HSBC RedCoin on September 30 2026 and launched it on October 23 2026 under the ticker RCHKD, available on PayMe by HSBC (3.3M users) for peer-to-peer and merchant payments, with HSBC Digital Assets Custody providing safekeeping. HSBC plans to add wallet functionality to the HSBC HK Mobile Banking App and tokenized investment subscriptions later in 2026. 1:1 backed by HKD-denominated high-quality liquid assets in segregated accounts. HSBC now publishes issuer-reported circulation and reserve figures; its 27 October 2026 daily update showed HK$81.4 million outstanding against HK$82.4 million of cash reserves. Pharos keeps RCHKD in pre-launch until public on-chain issuance and a verifiable price and supply path exist.",
+  "launchPhaseDetail": "HKMA-licensed stablecoin issuer FRS02, effective April 10 2026. HSBC named the token HSBC RedCoin on September 30 2026 and launched it on October 23 2026 under the ticker RCHKD, available on PayMe by HSBC (3.3M users) for peer-to-peer and merchant payments, with HSBC Digital Assets Custody providing safekeeping. On November 19 2026 HSBC added RedCoin wallets to the HSBC HK Mobile Banking App, where eligible customers can use RCHKD to subscribe to a tokenized unit class (Class SD) of its Hong Kong dollar money market fund. 1:1 backed by HKD-denominated high-quality liquid assets in segregated accounts. HSBC now publishes issuer-reported circulation and reserve figures; its 21 November 2026 daily update showed HK$592.8 million outstanding against HK$593.8 million of cash reserves. Pharos keeps RCHKD in pre-launch until public on-chain issuance and a verifiable price and supply path exist.",
   "featuredContent": [
     {
       "type": "blog",
@@ -110,6 +110,13 @@
       "title": "HSBC reports 50,000 RedCoin users after launch",
       "description": "HSBC group CEO Georges Elhedery said at Hong Kong FinTech Week that RedCoin had about 50,000 users since its October 23 launch.",
       "sourceUrl": "https://www.scmp.com/business/banking-finance/article/3372972/hsbcs-redcoin-stablecoin-draws-50000-users-first-week-bank-deepens-local-tech-push"
+    },
+    {
+      "date": "2026-11-19",
+      "type": "milestone",
+      "title": "HSBC RedCoin goes live in the HSBC HK Mobile Banking App with tokenized fund access",
+      "description": "HSBC made RedCoin (RCHKD) available in the HSBC HK Mobile Banking App, where eligible customers can activate a stablecoin wallet and use RCHKD to subscribe to Class SD, a tokenized unit class of the HSBC Global Money Funds Hong Kong dollar fund, from HKD 100. RedCoin still runs on HSBC's own DLT network rather than a public blockchain.",
+      "sourceUrl": "https://www.about.hsbc.com.hk/news-and-media/hsbc-redcoin-expands-into-wealth-with-tokenised-fund-access"
     }
   ],
   "dateHistory": [
