@@ -275,4 +275,60 @@ describe("liquidity page model", () => {
     });
     expect(model.summaryStats).not.toHaveProperty("totalVolAvailability");
   });
+
+  it("computes median 7d change, null-safe Depth/MCap aggregate, triage filters, and exit-route filters", () => {
+    const [deepCurve, thinFluid, nrOther] = ACTIVE_STABLECOINS;
+    const map: DexLiquidityMap = {
+      [DEX_GLOBAL_KEY]: makeLiquidity({
+        totalTvlUsd: 500,
+        protocolTvl: { curve: 300, fluid: 100, aerodrome: 100 },
+        chainTvl: { ethereum: 400, base: 100 },
+      }),
+      [deepCurve.id]: makeLiquidity({
+        liquidityScore: 82,
+        totalTvlUsd: 300,
+        tvlChange7d: 10,
+        protocolTvl: { curve: 300 },
+        chainTvl: { ethereum: 300 },
+      }),
+      [thinFluid.id]: makeLiquidity({
+        liquidityScore: 30,
+        totalTvlUsd: 100,
+        tvlChange7d: -100,
+        protocolTvl: { fluid: 100 },
+        chainTvl: { ethereum: 100 },
+      }),
+      [nrOther.id]: makeLiquidity({
+        liquidityScore: null,
+        totalTvlUsd: 100,
+        tvlChange7d: 20,
+        protocolTvl: { aerodrome: 100 },
+        chainTvl: { base: 100 },
+      }),
+    };
+    const mcapById = new Map<string, number | null>([
+      [deepCurve.id, 1_000],
+      [thinFluid.id, 0],
+      [nrOther.id, null],
+    ]);
+
+    const full = buildLiquidityViewModel(map, "all", "", { mcapById });
+    expect(full.summaryStats).toMatchObject({
+      agg7dChange: null,
+      median7dChange: 10,
+      change7dCoinCount: 3,
+      aggDepthToMcapRatio: 0.3,
+      aggDepthToMcapObservedCount: 1,
+    });
+
+    const thinOnly = buildLiquidityViewModel(map, "all", "", { mcapById, triageFilter: "thin" });
+    expect(thinOnly.leaderboardRows.map((row) => row.meta.id)).toEqual([thinFluid.id]);
+
+    const otherProtocols = buildLiquidityViewModel(map, "all", "", {
+      mcapById,
+      routeFilter: { kind: "protocol", key: "_other-routes", label: "Other routes" },
+      routeNamedTopKeys: new Set(["curve", "fluid"]),
+    });
+    expect(otherProtocols.leaderboardRows.map((row) => row.meta.id)).toEqual([nrOther.id]);
+  });
 });

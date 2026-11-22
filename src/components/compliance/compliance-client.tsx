@@ -309,45 +309,51 @@ export function ComplianceClient() {
     { getParam, setParam },
   );
 
-  // Each regime keeps its own model so every panel is mounted independently.
-  // Status and MiCA token type only narrow the selected regime; the inactive
-  // regime stays unfiltered and GENIUS never takes a token type.
+  // Only build and mount the active view's model so inactive tabs do not keep
+  // hidden duplicate tables in the DOM. Status and MiCA token type only narrow
+  // the active regime, and GENIUS never takes a token type.
   const mica = useMemo(
     () =>
-      buildComplianceViewModel({
-        regime: "mica",
-        status: regimeFilter === "mica" ? statusFilter : "all",
-        tokenType: regimeFilter === "mica" ? tokenTypeFilter : "all",
-        peg: pegFilter,
-        search: deferredSearch,
-      }),
+      regimeFilter === "mica"
+        ? buildComplianceViewModel({
+            regime: "mica",
+            status: statusFilter,
+            tokenType: tokenTypeFilter,
+            peg: pegFilter,
+            search: deferredSearch,
+          })
+        : null,
     [regimeFilter, statusFilter, tokenTypeFilter, pegFilter, deferredSearch],
   );
   const genius = useMemo(
     () =>
-      buildComplianceViewModel({
-        regime: "genius",
-        status: regimeFilter === "genius" ? statusFilter : "all",
-        tokenType: "all",
-        peg: pegFilter,
-        search: deferredSearch,
-      }),
+      regimeFilter === "genius"
+        ? buildComplianceViewModel({
+            regime: "genius",
+            status: statusFilter,
+            tokenType: "all",
+            peg: pegFilter,
+            search: deferredSearch,
+          })
+        : null,
     [regimeFilter, statusFilter, pegFilter, deferredSearch],
   );
   const overview = useMemo(
-    () => buildComplianceOverviewModel({ peg: pegFilter, search: deferredSearch }),
-    [pegFilter, deferredSearch],
+    () =>
+      regimeFilter === "all"
+        ? buildComplianceOverviewModel({ peg: pegFilter, search: deferredSearch })
+        : null,
+    [regimeFilter, pegFilter, deferredSearch],
   );
 
   const activeModel = regimeFilter === "mica" ? mica : regimeFilter === "genius" ? genius : null;
   const statusOptions = regimeFilter === "genius" ? GENIUS_STATUS_FILTER_OPTIONS : MICA_STATUS_FILTER_OPTIONS;
-  const matchingCount = activeModel ? activeModel.rows.length + activeModel.watchRows.length : overview.rows.length;
-  const totalCount = activeModel ? activeModel.regimeTotal : overview.totalCoins;
-  // A shared search exposes matches in both panels; a regime status filter only
-  // opens the selected regime's bands, so an inactive panel stays collapsed.
+  const matchingCount = activeModel
+    ? activeModel.rows.length + activeModel.watchRows.length
+    : (overview?.rows.length ?? 0);
+  const totalCount = activeModel ? activeModel.regimeTotal : (overview?.totalCoins ?? 0);
   const searchForcesBandsOpen = deferredSearch.trim().length > 0;
-  const micaForceBandsOpen = searchForcesBandsOpen || (regimeFilter === "mica" && statusFilter !== "all");
-  const geniusForceBandsOpen = searchForcesBandsOpen || (regimeFilter === "genius" && statusFilter !== "all");
+  const forceActiveBandsOpen = searchForcesBandsOpen || statusFilter !== "all";
 
   // A heading permalink only aligns an already-visible panel; the explicit
   // `regime` query stays the single regime-state authority.
@@ -424,48 +430,49 @@ export function ComplianceClient() {
           </div>
         </div>
 
-        <div
-          id={COMPLIANCE_PANEL_IDS.all}
-          role="tabpanel"
-          aria-labelledby={COMPLIANCE_TAB_IDS.all}
-          tabIndex={0}
-          hidden={regimeFilter !== "all"}
-        >
-          <OverviewDirectory
-            rows={overview.rows}
-            logos={logos}
-            onStatusClick={openOverviewStatus}
-            filterKey={`${pegFilter}:${searchInput}`}
-          />
-        </div>
-        <div
-          id={COMPLIANCE_PANEL_IDS.mica}
-          role="tabpanel"
-          aria-labelledby={COMPLIANCE_TAB_IDS.mica}
-          tabIndex={0}
-          hidden={regimeFilter !== "mica"}
-        >
-          <ComplianceRegimePanel
-            regime="mica"
-            model={mica}
-            logos={logos}
-            forceCollapsedBandsOpen={micaForceBandsOpen}
-          />
-        </div>
-        <div
-          id={COMPLIANCE_PANEL_IDS.genius}
-          role="tabpanel"
-          aria-labelledby={COMPLIANCE_TAB_IDS.genius}
-          tabIndex={0}
-          hidden={regimeFilter !== "genius"}
-        >
-          <ComplianceRegimePanel
-            regime="genius"
-            model={genius}
-            logos={logos}
-            forceCollapsedBandsOpen={geniusForceBandsOpen}
-          />
-        </div>
+        {regimeFilter === "all" && overview ? (
+          <div
+            id={COMPLIANCE_PANEL_IDS.all}
+            role="tabpanel"
+            aria-labelledby={COMPLIANCE_TAB_IDS.all}
+            tabIndex={0}
+          >
+            <OverviewDirectory
+              rows={overview.rows}
+              logos={logos}
+              onStatusClick={openOverviewStatus}
+              filterKey={`${pegFilter}:${searchInput}`}
+            />
+          </div>
+        ) : regimeFilter === "mica" && mica ? (
+          <div
+            id={COMPLIANCE_PANEL_IDS.mica}
+            role="tabpanel"
+            aria-labelledby={COMPLIANCE_TAB_IDS.mica}
+            tabIndex={0}
+          >
+            <ComplianceRegimePanel
+              regime="mica"
+              model={mica}
+              logos={logos}
+              forceCollapsedBandsOpen={forceActiveBandsOpen}
+            />
+          </div>
+        ) : genius ? (
+          <div
+            id={COMPLIANCE_PANEL_IDS.genius}
+            role="tabpanel"
+            aria-labelledby={COMPLIANCE_TAB_IDS.genius}
+            tabIndex={0}
+          >
+            <ComplianceRegimePanel
+              regime="genius"
+              model={genius}
+              logos={logos}
+              forceCollapsedBandsOpen={forceActiveBandsOpen}
+            />
+          </div>
+        ) : null}
       </section>
     </div>
   );

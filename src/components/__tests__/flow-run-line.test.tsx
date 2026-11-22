@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { FlowRunLine } from "@/components/mint-burn/flow-run-line";
 import { buildRunLineModel } from "@/lib/flow-run-line-model";
 import { GAUGE_BAND_RANGES } from "@shared/lib/mint-burn-gauge-bands";
@@ -113,5 +113,23 @@ describe("FlowRunLine", () => {
     expect(usdeBottom).toBeGreaterThanOrEqual(6 + (190 - 6) * Math.sqrt(40 / 200) + 4 - 0.1);
     expect(reusdBottom).toBeGreaterThanOrEqual(6 + (190 - 6) * Math.sqrt(18 / 200) + 4 - 0.1);
     expect(Math.abs(usdeBottom - reusdBottom)).toBeGreaterThanOrEqual(13);
+  });
+
+  it("renders focusable and clickable tick buttons that invoke onSelectCoin without nesting inside role=img", () => {
+    const onSelectCoin = vi.fn();
+    const { container } = render(
+      <FlowRunLine
+        model={buildRunLineModel(gauge(), coins)}
+        selectedCoinId="usdc-circle"
+        onSelectCoin={onSelectCoin}
+      />,
+    );
+
+    const tickButton = container.querySelector<HTMLButtonElement>('button[data-run-line-coin-id="usdc-circle"]');
+    expect(tickButton).toBeTruthy();
+    expect(tickButton!.getAttribute("aria-pressed")).toBe("true");
+    expect(tickButton!.closest('[role="img"]')).toBeNull();
+    fireEvent.click(tickButton!);
+    expect(onSelectCoin).toHaveBeenCalledExactlyOnceWith("usdc-circle");
   });
 });

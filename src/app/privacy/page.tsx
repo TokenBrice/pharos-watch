@@ -85,10 +85,7 @@ export default function PrivacyPage() {
           <h2 className="pharos-section-title">Stablecoin picker storage</h2>
           <p>
             The Picker at <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">/screener/picker/</code> uses
-            functional browser storage. The long-lived local key in the current build is the callout dismissal key,{" "}
-            <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">pharos.selector.callout.v1</code>. It is scoped to
-            this site, does not contain an IP address or user identifier, and remains until you clear browser site data.
-            A tab-scoped <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">sessionStorage</code> key,{" "}
+            functional browser storage. A tab-scoped <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">sessionStorage</code> key,{" "}
             <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">pharos.selector.sessionResult.v1</code>, can hold the
             answers from the last successful live run and their save time for accidental navigation recovery, not the
             generated result. Restoring them regenerates a shortlist against current data. This clears when the browser session ends.

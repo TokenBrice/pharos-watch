@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, render, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WorldMap } from "@/app/alt-pegs/fiat-world-atlas/world-map";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
@@ -73,6 +73,31 @@ describe("WorldMap", () => {
     await flushAsync();
 
     expect(container.querySelector("svg")).toBeNull();
+  });
+
+  it("marks active peg territories interactive, highlights selectedPeg, and toggles on click", async () => {
+    const EUR_SVG = '<svg viewBox="0 0 900 460"><g class="world-countries"><path id="DE" /><path id="US" /></g></svg>';
+    mockFetch([{ match: "/maps/world-countries.svg", body: EUR_SVG }], { requireMatch: true });
+    const onSelectPeg = vi.fn();
+
+    const { container, rerender } = render(
+      <WorldMap selectedPeg={null} activePegs={["EUR"]} onSelectPeg={onSelectPeg} />,
+    );
+    await waitFor(() => expect(container.querySelector('path[id="DE"][data-peg="EUR"]')).not.toBeNull());
+
+    const germany = container.querySelector('path[id="DE"]')!;
+    expect(germany.getAttribute("data-peg-interactive")).toBe("true");
+    expect(germany.getAttribute("data-peg-selected")).toBeNull();
+    expect(container.querySelector('path[id="US"]')?.getAttribute("data-peg-interactive")).toBeNull();
+
+    fireEvent.click(germany);
+    expect(onSelectPeg).toHaveBeenCalledExactlyOnceWith("EUR");
+
+    rerender(<WorldMap selectedPeg="EUR" activePegs={["EUR"]} onSelectPeg={onSelectPeg} />);
+    await waitFor(() => expect(container.querySelector('path[id="DE"]')?.getAttribute("data-peg-selected")).toBe("true"));
+
+    fireEvent.click(container.querySelector('path[id="DE"]')!);
+    expect(onSelectPeg).toHaveBeenLastCalledWith(null);
   });
 
 });

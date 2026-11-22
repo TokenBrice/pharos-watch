@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { getDigestBodyParagraphs, EDITORIAL_BODY_STYLE, parseDigestParagraph } from "@/lib/digest";
 import { DigestIntelligencePanel } from "@/components/digest/digest-intelligence";
+import { TermText } from "@/components/term-text";
 import { digestDisplay } from "@/lib/fonts/digest";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@shared/lib/format";
@@ -23,7 +24,7 @@ function DigestRiskSignalPill({ signal }: { signal: DigestRiskSignal | null | un
   return (
     <div
       className={cn(
-        "inline-flex w-fit items-center rounded-full border px-2.5 py-1 font-mono text-[0.68rem] font-semibold uppercase tracking-[0.18em]",
+        "inline-flex w-fit items-center rounded-full border px-2.5 py-1 font-mono text-2xs font-semibold",
         signal.severity === "critical"
           ? "border-red-500/35 bg-red-500/10 text-red-700 dark:text-red-300"
           : "border-amber-500/35 bg-amber-500/10 text-amber-700 dark:text-amber-300",
@@ -56,7 +57,7 @@ function DigestParagraphList({ paragraphs, getParagraphClassName }: DigestParagr
                 {headerText}.{" "}
               </span>
             )}
-            {bodyText}
+            <TermText text={bodyText} />
           </p>
         );
       })}
@@ -95,9 +96,9 @@ function HomepagePreviewLayout({ title, riskSignal, compactIntelligence, bodyBlo
   return (
     <div className="grid gap-6 py-6 lg:grid-cols-[minmax(0,0.64fr)_minmax(0,1.36fr)] lg:gap-10">
       <div className="min-w-0 space-y-5">
-        <div className="flex items-center gap-3 text-[0.72rem] uppercase tracking-[0.28em] text-muted-foreground/80">
+        <div className="flex items-center gap-3">
           <span className="h-px w-12 bg-border/70" />
-          <span className="pharos-kicker">Executive Summary</span>
+          <span className="pharos-label">Executive Summary</span>
         </div>
         <h2
           className={cn(
@@ -146,7 +147,7 @@ export function DailyDigest({ data, detailHref }: DailyDigestProps) {
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-2 lg:self-end">
         <Link
           href={detailHref ?? "/digest/"}
-          className="font-mono text-[0.76rem] font-semibold uppercase tracking-[0.26em] text-muted-foreground transition-colors hover:text-foreground"
+          className="pharos-label pharos-focus-ring rounded-sm transition-colors hover:text-foreground"
         >
           {ctaLabel} &rarr;
         </Link>
@@ -157,7 +158,7 @@ export function DailyDigest({ data, detailHref }: DailyDigestProps) {
               href="https://t.me/pharoswatch"
               target="_blank"
               rel="noopener noreferrer"
-              className="font-mono text-[0.76rem] font-semibold uppercase tracking-[0.26em] text-muted-foreground transition-colors hover:text-foreground"
+              className="pharos-label pharos-focus-ring rounded-sm transition-colors hover:text-foreground"
             >
               Telegram &rarr;
             </a>

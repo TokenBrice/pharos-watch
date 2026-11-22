@@ -38,4 +38,23 @@ describe("command palette action helpers", () => {
       expect(preview?.sublabel).toBe(parsed.error);
     }
   });
+
+  it("previews and executes portfolio and deep section intents", () => {
+    const executor = {
+      push: vi.fn(), closePalette: vi.fn(), addToWatchlist: vi.fn(),
+      removeFromWatchlist: vi.fn(), clearWatchlist: vi.fn(),
+    };
+
+    const portfolioParsed = parsePaletteInput("portfolio USDC USDT");
+    const portfolioPreview = buildVerbPreview(portfolioParsed);
+    expect(portfolioPreview).toMatchObject({ runnable: true, label: "Portfolio USDC, USDT" });
+    expect(executeParsedVerb(portfolioParsed, executor)).toBe(true);
+    expect(executor.push).toHaveBeenCalledWith("/portfolio/?coins=usdc-circle,usdt-tether");
+
+    const sectionParsed = parsePaletteInput("usdc freeze");
+    const sectionPreview = buildVerbPreview(sectionParsed);
+    expect(sectionPreview).toMatchObject({ runnable: true, label: "USD Coin · Freeze & Blacklist" });
+    expect(executeParsedVerb(sectionParsed, executor)).toBe(true);
+    expect(executor.push).toHaveBeenCalledWith("/stablecoin/usdc-circle/#activity");
+  });
 });

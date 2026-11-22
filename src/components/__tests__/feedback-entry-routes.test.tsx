@@ -42,9 +42,14 @@ describe("floating feedback entry routes", () => {
     }
   });
 
-  it("keeps the phone dock's feedback pill off a stablecoin dossier, which has its own report action", () => {
+  it("hides both desktop FeedbackButton and mobile dock feedback on a stablecoin dossier, which has its own report actions", () => {
     pathnameMock.mockReturnValue("/stablecoin/usdc-circle/");
-    render(<MobileUtilityDock />);
+    render(
+      <>
+        <FeedbackButton />
+        <MobileUtilityDock />
+      </>,
+    );
 
     expect(screen.queryByRole("button", { name: /feedback/i })).toBeNull();
     expect(screen.queryByRole("button", { name: "Scroll to top" })).toBeNull();
@@ -54,7 +59,7 @@ describe("floating feedback entry routes", () => {
     expect(screen.getByRole("button", { name: "Scroll to top" })).toBeTruthy();
   });
 
-  it("keeps both feedback controls on other product routes without rendering a half-empty dock pill", () => {
+  it("keeps desktop FeedbackButton restricted to xl gutters on other product routes", () => {
     pathnameMock.mockReturnValue("/yield/");
     render(
       <>
@@ -64,7 +69,10 @@ describe("floating feedback entry routes", () => {
     );
 
     // At scrollY=0 only desktop FeedbackButton mounts; mobile dock stays unmounted.
-    expect(screen.getAllByRole("button", { name: /feedback/i })).toHaveLength(1);
+    const [desktopButton] = screen.getAllByRole("button", { name: /feedback/i });
+    expect(desktopButton.className).toContain("hidden");
+    expect(desktopButton.className).toContain("xl:flex");
+    expect(desktopButton.className).not.toContain("sm:flex");
     for (const scrollY of [23, 24, 25, 399, 400, 401, 24]) {
       fireEvent.scroll(window, { target: { scrollY } });
       expect(screen.getAllByRole("button", { name: /feedback/i })).toHaveLength(scrollY > 24 ? 2 : 1);

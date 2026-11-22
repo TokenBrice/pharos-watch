@@ -185,14 +185,68 @@ describe("FlowTable", () => {
     expect([...order].sort((a, b) => a - b)).toEqual(order);
   });
 
-  it("names coverage-unknown nets once per column instead of a * on each cell", () => {
+  it("consolidates coverage-unknown nets into a single toolbar OpsStatusChip naming every affected window", () => {
     // A payload without `valuation` is coverage-unknown on every window.
-    const html = table([coin]);
+    const { container } = render(<FlowTable coins={[coin]} isLoading={false} />);
 
-    expect((html.match(/data-reason-codes="valuation-unknown"/g) ?? []).length).toBe(4);
-    expect(html).toContain("Unverified");
-    expect(html).not.toMatch(/align-super[^>]*>\*</);
+    const chips = container.querySelectorAll('[data-reason-codes="valuation-unknown"]');
+    expect(chips).toHaveLength(1);
+    expect(chips[0]?.textContent).toContain("Unverified");
+    expect(container.innerHTML).not.toMatch(/align-super[^>]*>\*</);
     // The per-cell reason stays available to assistive tech.
-    expect(html).toContain("(coverage unknown)");
+    expect(container.innerHTML).toContain("(coverage unknown)");
+
+    fireEvent.click(chips[0]!);
+    for (const label of ["Net 24h", "Net 7d", "Net 30d", "Net 90d"]) {
+      expect(document.body.textContent).toContain(label);
+    }
+  });
+
+  it("filters rows by search query and triage pills, and highlights a selected run-line coin", () => {
+    const mintingCoin = makeMintBurnFlowCoin({
+      stablecoinId: "usdc-circle",
+      symbol: "USDC",
+      pressureShiftScore: 45,
+      pressureShiftState: "improving",
+      netFlowDirection24h: "minting",
+      netFlow24hUsd: 25_000_000,
+    });
+    const burningCoin = {
+      ...coin,
+      pressureShiftScore: -60,
+      netFlowDirection24h: "burning" as const,
+      netFlow24hUsd: -12_000_000,
+    };
+
+    const { rerender } = render(
+      <FlowTable coins={[mintingCoin, burningCoin]} isLoading={false} />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Net minting" }));
+    expect(screen.getByRole("link", { name: "Open USDC flow detail" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Open USDT flow detail" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "High intensity" }));
+    expect(screen.getByRole("link", { name: "Open USDC flow detail" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Open USDT flow detail" })).toBeTruthy();
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Search flow coins by name or symbol" }), {
+      target: { value: "usdt" },
+    });
+    expect(screen.queryByRole("link", { name: "Open USDC flow detail" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Open USDT flow detail" })).toBeTruthy();
+
+    // Selecting USDC from FlowRunLine resets active filters so the target row is visible and highlighted.
+    rerender(
+      <FlowTable
+        coins={[mintingCoin, burningCoin]}
+        isLoading={false}
+        highlightedCoinId="usdc-circle"
+        highlightRequestKey={1}
+      />,
+    );
+    const highlightedRow = document.getElementById("flow-row-usdc-circle");
+    expect(highlightedRow).toBeTruthy();
+    expect(highlightedRow?.className).toContain("bg-muted/40");
   });
 });

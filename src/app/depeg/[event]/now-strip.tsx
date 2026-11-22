@@ -72,7 +72,7 @@ export function DepegEventNowStrip({
       aria-label={`${symbol} live state`}
       className="pharos-card-shell flex min-h-12 flex-wrap items-center gap-x-5 gap-y-1.5 px-4 py-2.5 text-sm"
     >
-      <span className="pharos-kicker">Now</span>
+      <span className="pharos-label">Now</span>
       {status ? (
         <span className="text-muted-foreground">{status}</span>
       ) : (

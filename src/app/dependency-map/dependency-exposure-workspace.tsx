@@ -4,24 +4,35 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
 import type { DependencyGraphResponse } from "@shared/types/dependency-graph";
 import { useDependencyExposureMode, type DependencyExposureResult, type DependencyExposureRow } from "@/hooks/use-dependency-exposure-mode";
+import { copyText } from "@/lib/clipboard";
 import { readDependencyExposureUrl, writeDependencyExposureUrl, type DependencyExposureUrlState } from "@/lib/dependency-exposure-url";
 import { trackEvent } from "@/lib/analytics";
-import { DependencyExposureControls, type ExposureRootOption } from "./dependency-exposure-controls";
+import { DependencyExposureControls, type ExposureRootOption, type QuickTraceHub } from "./dependency-exposure-controls";
 import { DependencyExposureResults } from "./dependency-exposure-results";
+
+export type ExposureShareStatus = "idle" | "copied" | "failed";
 
 export function useDependencyExposureWorkspace(publication: DependencyGraphResponse | undefined) {
   const [state, setState] = useState<DependencyExposureUrlState>({ mode: "explore", roots: [] });
   const [inspectedId, setInspectedId] = useState<string | null>(null);
   const [tab, setTab] = useState<"setup" | "results" | "graph">("setup");
+  const [shareStatus, setShareStatus] = useState<ExposureShareStatus>("idle");
+  const shareTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resultsTab = useRef<HTMLButtonElement>(null);
   const opener = useRef<HTMLElement | null>(null);
   const exposure = useDependencyExposureMode(publication, state.roots);
+
+  useEffect(() => () => {
+    if (shareTimer.current) clearTimeout(shareTimer.current);
+  }, []);
+
   useEffect(() => {
     const readUrl = () => { const next = readDependencyExposureUrl(window.location.search); setState(next); setTab(next.roots.length ? "results" : "setup"); setInspectedId(null); };
     readUrl();
     window.addEventListener("popstate", readUrl);
     return () => window.removeEventListener("popstate", readUrl);
   }, []);
+
   const update = (next: DependencyExposureUrlState) => {
     setState(next);
     setInspectedId(null);
@@ -48,8 +59,19 @@ export function useDependencyExposureWorkspace(publication: DependencyGraphRespo
     });
     trackEvent("dependency_map_action", { action: "mode_switch", value: mode });
   };
+  const share = () => {
+    void copyText(window.location.href).then((res) => {
+      if (shareTimer.current) clearTimeout(shareTimer.current);
+      setShareStatus(res.ok ? "copied" : "failed");
+      shareTimer.current = setTimeout(() => {
+        setShareStatus("idle");
+        shareTimer.current = null;
+      }, 2500);
+    });
+    trackEvent("dependency_map_action", { action: "share", value: "exposure" });
+  };
   const modeControls = <div className="pharos-segmented m-3" role="group" aria-label="Dependency map mode">{(["explore", "exposure"] as const).map(mode => <button key={mode} data-exposure-mode={mode} type="button" aria-pressed={state.mode === mode} className="pharos-focus-ring pharos-segmented-item text-sm" onClick={() => switchMode(mode)}>{mode === "explore" ? "Explore" : "Exposure"}</button>)}</div>;
-  return { state, exposure, overlay, modeControls, addRoot, inspectedId, tab, setTab, resultsTab,
+  return { state, exposure, overlay, modeControls, addRoot, inspectedId, tab, setTab, resultsTab, shareStatus,
     removeRoot: (id: string) => { update({ ...state, roots: state.roots.filter(root => root !== id) }); trackEvent("dependency_map_action", { action: "root_change", value: id }); },
     reset: () => {
       update({ mode: "explore", roots: [] });
@@ -60,7 +82,7 @@ export function useDependencyExposureWorkspace(publication: DependencyGraphRespo
         else document.querySelector<HTMLButtonElement>('[data-exposure-mode="explore"]')?.focus();
       });
     },
-    share: () => { void navigator.clipboard?.writeText(window.location.href); trackEvent("dependency_map_action", { action: "share", value: "exposure" }); },
+    share,
     inspect: (id: string) => { setInspectedId(id); trackEvent("dependency_map_action", { action: "inspect_path", value: id }); },
     close: () => switchMode("explore"),
   };
@@ -75,6 +97,7 @@ export interface DependencyExposureWorkspaceState {
   removeRoot: (id: string) => void;
   reset: () => void;
   share: () => void;
+  shareStatus: ExposureShareStatus;
   inspect: (id: string) => void;
   close: () => void;
   inspectedId: string | null;
@@ -83,8 +106,12 @@ export interface DependencyExposureWorkspaceState {
   resultsTab: RefObject<HTMLButtonElement | null>;
 }
 
-export function DependencyExposureWorkspace({ workspace, options, children }: {
-  workspace: DependencyExposureWorkspaceState; options: readonly ExposureRootOption[]; children: ReactNode;
+export function DependencyExposureWorkspace({ workspace, options, quickTraceHubs, logos, children }: {
+  workspace: DependencyExposureWorkspaceState;
+  options: readonly ExposureRootOption[];
+  quickTraceHubs?: readonly QuickTraceHub[];
+  logos?: Record<string, string>;
+  children: ReactNode;
 }) {
   const { state, exposure, tab, setTab } = workspace;
   return <div className="space-y-4">
@@ -103,8 +130,8 @@ export function DependencyExposureWorkspace({ workspace, options, children }: {
     </div>}
     <div className={state.mode === "exposure" ? "grid gap-4 md:grid-cols-[minmax(0,1fr)_19rem]" : "grid gap-4"}>
       <div id="exposure-panel-graph" role={state.mode === "exposure" ? "tabpanel" : undefined} aria-labelledby={state.mode === "exposure" ? "exposure-tab-graph" : undefined} className={state.mode === "exposure" && tab !== "graph" ? "hidden min-w-0 md:block" : "min-w-0 md:col-span-1"}>{children}</div>
-      {state.mode === "exposure" && <div id="exposure-panel-setup" role="tabpanel" aria-labelledby="exposure-tab-setup" className={tab !== "setup" ? "hidden md:block" : "block"}><DependencyExposureControls roots={state.roots} options={options} onAdd={workspace.addRoot} onRemove={workspace.removeRoot} onReset={workspace.reset} onShare={workspace.share} /></div>}
+      {state.mode === "exposure" && <div id="exposure-panel-setup" role="tabpanel" aria-labelledby="exposure-tab-setup" className={tab !== "setup" ? "hidden md:block" : "block"}><DependencyExposureControls roots={state.roots} options={options} quickTraceHubs={quickTraceHubs} logos={logos} shareStatus={workspace.shareStatus} onAdd={workspace.addRoot} onRemove={workspace.removeRoot} onReset={workspace.reset} onShare={workspace.share} /></div>}
     </div>
-    {state.mode === "exposure" && exposure.result && exposure.publication && <div id="exposure-panel-results" role="tabpanel" aria-labelledby="exposure-tab-results" className={tab !== "results" ? "hidden md:block" : "block"}><DependencyExposureResults result={exposure.result} publication={exposure.publication} roots={state.roots} options={options} inspectedId={workspace.inspectedId} onInspect={workspace.inspect} networkUpdated={exposure.networkUpdated} held={exposure.held} /></div>}
+    {state.mode === "exposure" && exposure.result && exposure.publication && <div id="exposure-panel-results" role="tabpanel" aria-labelledby="exposure-tab-results" className={tab !== "results" ? "hidden md:block" : "block"}><DependencyExposureResults result={exposure.result} publication={exposure.publication} roots={state.roots} options={options} logos={logos} inspectedId={workspace.inspectedId} onInspect={workspace.inspect} networkUpdated={exposure.networkUpdated} held={exposure.held} /></div>}
   </div>;
 }

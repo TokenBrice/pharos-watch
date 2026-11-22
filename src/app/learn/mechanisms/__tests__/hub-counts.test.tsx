@@ -26,9 +26,11 @@ describe("mechanism explainers hub counts", () => {
     const unresolved = ACTIVE_STABLECOINS.length - active + upcomingAll - upcoming + FROZEN_STABLECOINS.length - frozen;
     const html = renderToStaticMarkup(<MechanismExplainersHub />);
 
-    expect(html).toContain("Active coins by mechanism");
+    expect(html.split(">Active coins by mechanism<").length - 1).toBe(1);
+    expect(html).toContain("Breakdown by design");
     expect(html).toContain(`+${upcoming}</span>${upcoming === upcomingAll ? "" : ` of ${upcomingAll}`} upcoming`);
     expect(html.includes(`${active}</span> of ${ACTIVE_STABLECOINS.length} active`)).toBe(active !== ACTIVE_STABLECOINS.length);
-    expect(html.includes(`${unresolved}</span> with an unresolved mechanism`)).toBe(unresolved > 0);
+    expect(html.includes(`${unresolved}</span> pending mechanism classification`)).toBe(unresolved > 0);
+    expect(html).not.toContain("in no design");
   });
 });

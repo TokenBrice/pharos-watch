@@ -61,7 +61,7 @@ export function DigestNameplate({ issueNumber, date, author, className }: Digest
         )}
       >
         Pharos Digest
-        <span className="sr-only"> &mdash; daily and weekly stablecoin recap archive</span>
+        <span className="sr-only">: daily and weekly stablecoin recap archive</span>
       </h1>
 
       {dateline.length > 0 && (

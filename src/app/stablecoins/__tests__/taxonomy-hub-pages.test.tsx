@@ -34,7 +34,7 @@ describe("stablecoin taxonomy hub pages", () => {
     expect(renderToStaticMarkup(await Page(page.slug))).toContain(page.title);
   });
 
-  it("names the tracked-profile directory as a stablecoin list, not an active ranking", () => {
+  it("leads with the four browse axes ahead of the tracked-profile A-Z list without a self-link", () => {
     const html = renderToStaticMarkup(<StablecoinsHubPage />);
 
     expect(html).toContain('id="stablecoin-profile-directory-heading"');
@@ -43,6 +43,22 @@ describe("stablecoin taxonomy hub pages", () => {
     expect(html).toContain(">By peg currency</h2>");
     expect(html).not.toMatch(/<a[^>]*href="\/stablecoins\/?"[^>]*>By peg currency<\/a>/);
     expect(html).toMatch(/href="\/stablecoins\/backing\/?"/);
+    expect(html.indexOf(">By peg currency</h2>")).toBeLessThan(
+      html.indexOf('id="stablecoin-profile-directory-heading"'),
+    );
+  });
+
+  it("orders relatedPages with same-axis siblings first and omits internal metadata prose", async () => {
+    const infraFirst = INFRASTRUCTURE_TAXONOMY_PAGES[0];
+    const infraSibling = INFRASTRUCTURE_TAXONOMY_PAGES[1];
+    const html = renderToStaticMarkup(
+      await infrastructureRoute.default({ params: Promise.resolve({ infrastructure: infraFirst.slug }) }),
+    );
+    const moreIdx = html.indexOf("More stablecoin hubs");
+    expect(moreIdx).toBeGreaterThan(-1);
+    const relatedHtml = html.slice(moreIdx);
+    expect(relatedHtml).toContain(infraSibling.href.replace(/\/$/, ""));
+    expect(relatedHtml).not.toContain("checked-in StablecoinMeta");
   });
 
   it("scopes the decentralized governance cohort to Pharos's DeFi classification", async () => {

@@ -9,6 +9,7 @@ import { TELEGRAM_COVERAGE_SENTENCE, TELEGRAM_FAQ, TELEGRAM_PAGE_DESCRIPTION } f
 import { buildTelegramPageJsonLd } from "./telegram-json-ld";
 import { InstrumentPanel } from "./instrument-panel";
 import { AlertFamilies } from "./alert-families";
+import { SubscribeCommandBuilder } from "./subscribe-builder";
 import {
   AlertControls,
   CommandReference,
@@ -27,10 +28,10 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 /**
- * Product page for the Telegram bot on the shared feature-page shell: pitch and
- * CTAs → live adoption hero → alert families with verbatim previews → setup →
- * low-noise controls → Mini App → channels → command card → FAQ (incl.
- * reliability and privacy) → closing CTA.
+ * Product page for the Telegram bot on the shared feature-page shell: pitch,
+ * clarified CTAs & inline social-proof chip → above-the-fold verbatim alert
+ * previews → subscribe command builder → setup → low-noise controls → Mini App
+ * → live adoption telemetry → channels → command card → FAQ → closing CTA.
  */
 export default function PharosWatchBotPage() {
   return (
@@ -41,11 +42,12 @@ export default function PharosWatchBotPage() {
       leadParagraphs={[TELEGRAM_COVERAGE_SENTENCE]}
       headerSupplement={<PrimaryActions />}
     >
-      <InstrumentPanel />
       <AlertFamilies />
+      <SubscribeCommandBuilder />
       <GettingStarted />
       <AlertControls />
       <MiniAppShowcase />
+      <InstrumentPanel />
       <TelegramChannels />
       <CommandReference />
       <FaqSection items={TELEGRAM_FAQ} title="Frequently asked questions" includeJsonLd />

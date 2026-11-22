@@ -36,7 +36,7 @@ import {
   STABILITY_INDEX_SECTION_CONTENT,
 } from "@/lib/methodology-content";
 import { METHODOLOGY_HISTORY_ARCHIVES, methodologyHistoryAnchor } from "@shared/lib/methodology-versions/archives";
-import { SAFETY_GRADE_FACTS } from "@/app/methodology/sections/core/safety-scores-overview";
+import { SAFETY_GRADE_SCALE_TIERS } from "@/app/methodology/sections/core/safety-scores-overview";
 
 // The page is static (no props, constant date): render once and reuse the parsed document.
 let cachedHtml: string | null = null;
@@ -113,15 +113,25 @@ describe("MethodologyPage", () => {
     expect(copy()).toContain("scoped issuer report");
   });
 
-  it("leads with the grade bands before reading meta", () => {
+  it("leads with the 6-tier grade scale bar and desktop Reader guide toggle before reading meta", () => {
     const html = methodologyHtml();
     const glanceAt = html.indexOf('id="methodology-at-a-glance"');
     expect(glanceAt).toBeGreaterThan(-1);
     for (const meta of ["Page rhythm:", "How to read this page", "Editorial preface"]) {
       expect(html.indexOf(meta), meta).toBeGreaterThan(glanceAt);
     }
-    const glance = methodologyDocument().querySelector('[aria-labelledby="methodology-at-a-glance"]')!;
-    for (const { label, value } of SAFETY_GRADE_FACTS) expect(glance.textContent).toContain(`${label}${value}`);
+    const root = methodologyDocument();
+    const desktopGuide = root.querySelector('[data-testid="methodology-reader-guide-desktop"]')!;
+    expect(desktopGuide).not.toBeNull();
+    expect(desktopGuide.querySelector('[aria-label="Methodology view mode"]')).not.toBeNull();
+    const glance = root.querySelector('[aria-labelledby="methodology-at-a-glance"]')!;
+    const scaleBar = glance.querySelector('[data-testid="safety-grade-scale-bar"]')!;
+    expect(scaleBar).not.toBeNull();
+    for (const { tier, range, meaning } of SAFETY_GRADE_SCALE_TIERS) {
+      expect(scaleBar.textContent).toContain(tier);
+      expect(scaleBar.textContent).toContain(range);
+      expect(scaleBar.textContent).toContain(meaning);
+    }
     expect(glance.querySelector('a[href="#safety-scores-methodology"]')).not.toBeNull();
   });
 

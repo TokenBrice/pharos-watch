@@ -659,12 +659,10 @@
 
   /* Label register (two variants, one tracking token). `.pharos-label` is the
      default: sentence-case sans for section labels, card kickers, stat and
-     field labels. `.pharos-kicker` is its legacy name (same rule; the sweep
-     renames call sites). `.pharos-eyebrow` is the one restrained uppercase
-     variant, for a short route or hero eyebrow above a title only. Mono stays
-     with figures, tickers, addresses and codes (`.pharos-numeric`). */
-  .pharos-label,
-  .pharos-kicker {
+     field labels. `.pharos-eyebrow` is the one restrained uppercase variant,
+     for a short route or hero eyebrow above a title only. Mono stays with
+     figures, tickers, addresses and codes (`.pharos-numeric`). */
+  .pharos-label {
     @apply text-xs font-semibold text-muted-foreground;
     line-height: 1.25;
     letter-spacing: normal;
@@ -1255,33 +1253,21 @@
   }
 
 
-  /* Confidence typography — visual weight reflects data confidence */
+  /* Confidence typography — visual weight reflects data confidence without
+     dashed underlines that collide with interactive <Term> dotted triggers. */
   .pharos-confidence-high {
     /* No modification — full rendering is the default */
   }
   .pharos-confidence-single-source {
-    opacity: 0.78;
-    text-decoration: underline;
-    text-decoration-style: dashed;
-    text-decoration-color: var(--border-default);
-    text-underline-offset: 3px;
-    text-decoration-thickness: 1px;
+    opacity: 0.82;
+    font-style: italic;
   }
   .pharos-confidence-low {
-    opacity: 0.62;
-    text-decoration: underline;
-    text-decoration-style: dashed;
-    text-decoration-color: var(--border-strong);
-    text-underline-offset: 3px;
-    text-decoration-thickness: 1px;
+    opacity: 0.68;
+    font-style: italic;
   }
   .pharos-confidence-fallback {
-    opacity: 0.5;
-    text-decoration: underline;
-    text-decoration-style: dashed;
-    text-decoration-color: var(--border-strong);
-    text-underline-offset: 3px;
-    text-decoration-thickness: 1px;
+    opacity: 0.56;
     font-style: italic;
   }
 }

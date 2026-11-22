@@ -4,17 +4,20 @@ import { PEG_CHART_COLORS } from "@shared/lib/classification";
 import { useHoverState } from "@/app/alt-pegs/fiat-world-atlas/hover-context";
 import type { PlacedCoin } from "@/lib/alt-peg-hero";
 
-/** Hover-only cohort membership: hairlines from the hovered coin to its same-peg siblings, in the peg's hue. */
+/** Hover or active-peg cohort membership: hairlines from the focal coin to its same-peg siblings, in the peg's hue. */
 export function CohortThreads({ coins }: { coins: readonly PlacedCoin[] }) {
-  const { hoveredCoinId, hoveredPeg } = useHoverState();
-  if (!hoveredCoinId || !hoveredPeg) return null;
-  const origin = coins.find((c) => c.id === hoveredCoinId);
+  const { hoveredCoinId, hoveredPeg, selectedPeg } = useHoverState();
+  const activePeg = hoveredPeg ?? selectedPeg;
+  if (!activePeg) return null;
+  const origin = hoveredCoinId
+    ? coins.find((c) => c.id === hoveredCoinId)
+    : coins.find((c) => c.pegCurrency === activePeg);
   if (!origin) return null;
   const siblings = coins.filter(
-    (c) => c.pegCurrency === hoveredPeg && c.id !== hoveredCoinId,
+    (c) => c.pegCurrency === activePeg && c.id !== origin.id,
   );
   if (siblings.length === 0) return null;
-  const colorHex = PEG_CHART_COLORS[hoveredPeg]?.hex ?? PEG_CHART_COLORS.OTHER.hex;
+  const colorHex = PEG_CHART_COLORS[activePeg]?.hex ?? PEG_CHART_COLORS.OTHER.hex;
 
   return (
     <svg

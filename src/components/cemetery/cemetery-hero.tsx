@@ -48,8 +48,9 @@ export function CemeteryHero({ rows, stats, asOf, atlas, portraitAspectRatio }: 
               {CEMETERY_HERO_COPY.title}
             </h1>
             <p className={styles.lead}>Failed or discontinued stablecoins, by cause of death and year.</p>
+            <p className={styles.whisper}>Click any stone for its obituary · click a cause sign to zoom</p>
             <p className={styles.links}>
-              <a href="#methodology">Methodology</a> · <a href="#register">Register ↓</a> · <a href="#dataset">Dataset</a>
+              <a href="#register">Find a coin ↓</a> · <a href="#methodology">Methodology</a> · <a href="#dataset">Dataset</a>
             </p>
           </header>
           <div className={styles.figure} data-plot-figure>

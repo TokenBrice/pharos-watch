@@ -87,5 +87,12 @@ describe("About disclosure and reuse copy", () => {
     expect(html).not.toMatch(/\blooked safe\b/i);
     expect(html).not.toContain("VIX for stablecoins");
     expect(html).toContain("0-100 market-regime gauge");
+    expect(html).not.toContain("future paid API access");
+    expect(html).toContain("paid API plans");
+    expect(html).toContain("Backing, Exit, and Economic Control");
+    expect(html).toContain('aria-label="About page sections"');
+    for (const anchor of ["#principles", "#team", "#coverage", "#data-pipeline", "#contact"]) {
+      expect(html).toContain(`href="${anchor}"`);
+    }
   });
 });

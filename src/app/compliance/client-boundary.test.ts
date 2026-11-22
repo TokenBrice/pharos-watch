@@ -47,27 +47,30 @@ describe("Compliance client boundary", () => {
     delete (HTMLElement.prototype as { scrollIntoView?: unknown }).scrollIntoView;
   });
 
-  it("mounts all three panels and exposes only Overview before any click", async () => {
+  it("mounts only the active tab panel and exposes Overview before any click", async () => {
     await renderWorkbench();
 
     expect(panel("compliance-overview-panel").hidden).toBe(false);
-    expect(panel("compliance-mica-panel").hidden).toBe(true);
-    expect(panel("compliance-genius-panel").hidden).toBe(true);
+    expect(document.getElementById("compliance-mica-panel")).toBeNull();
+    expect(document.getElementById("compliance-genius-panel")).toBeNull();
     expect(screen.getAllByRole("tabpanel")).toHaveLength(1);
     expect(screen.getByRole("tabpanel", { name: "Overview" })).toBeTruthy();
     expect(screen.queryByRole("tabpanel", { name: "MiCA" })).toBeNull();
     expect(screen.queryByRole("tabpanel", { name: "GENIUS" })).toBeNull();
 
+    fireEvent.click(tab("MiCA"));
+    await waitFor(() => expect(document.getElementById("compliance-mica-panel")).not.toBeNull());
     const micaHeading = document.getElementById("mica");
-    const geniusHeading = document.getElementById("genius");
     expect(micaHeading?.tagName).toBe("H2");
     expect(micaHeading?.textContent).toBe("MiCA authorization");
     expect(micaHeading?.querySelector("a")?.getAttribute("href")).toBe("/compliance/?regime=mica#mica");
+
+    fireEvent.click(tab("GENIUS"));
+    await waitFor(() => expect(document.getElementById("compliance-genius-panel")).not.toBeNull());
+    const geniusHeading = document.getElementById("genius");
     expect(geniusHeading?.tagName).toBe("H2");
     expect(geniusHeading?.textContent).toBe("GENIUS Act status");
     expect(geniusHeading?.querySelector("a")?.getAttribute("href")).toBe("/compliance/?regime=genius#genius");
-    expect(document.querySelectorAll("#mica")).toHaveLength(1);
-    expect(document.querySelectorAll("#genius")).toHaveLength(1);
     expect(document.querySelectorAll("#implementation-watch")).toHaveLength(1);
     const ids = [...document.querySelectorAll("[id]")].map((element) => element.id);
     expect(new Set(ids).size).toBe(ids.length);
@@ -94,8 +97,8 @@ describe("Compliance client boundary", () => {
 
     expect(tab("MiCA").getAttribute("aria-selected")).toBe("true");
     expect(panel("compliance-mica-panel").hidden).toBe(false);
-    expect(panel("compliance-overview-panel").hidden).toBe(true);
-    expect(panel("compliance-genius-panel").hidden).toBe(true);
+    expect(document.getElementById("compliance-overview-panel")).toBeNull();
+    expect(document.getElementById("compliance-genius-panel")).toBeNull();
     expect(within(screen.getByRole("group", { name: "Filter by MiCA token type" })).getByRole("button", { name: "EMT" }).getAttribute("aria-pressed")).toBe("true");
     expect(within(screen.getByRole("group", { name: "Filter by MiCA status" })).getByRole("button", { name: "Authorized" }).getAttribute("aria-pressed")).toBe("true");
     const pegs = within(screen.getByRole("group", { name: "Filter by peg currency" }));
@@ -134,22 +137,23 @@ describe("Compliance client boundary", () => {
     expect(overview.tabIndex).toBe(0);
     expect(tab("MiCA").tabIndex).toBe(-1);
     expect(panel("compliance-overview-panel").getAttribute("aria-labelledby")).toBe("compliance-tab-all");
-    expect(panel("compliance-mica-panel").getAttribute("aria-labelledby")).toBe("compliance-tab-mica");
-    expect(panel("compliance-genius-panel").getAttribute("aria-labelledby")).toBe("compliance-tab-genius");
-    expect(panel("compliance-genius-panel").getAttribute("role")).toBe("tabpanel");
+    expect(document.getElementById("compliance-mica-panel")).toBeNull();
+    expect(document.getElementById("compliance-genius-panel")).toBeNull();
 
     overview.focus();
     fireEvent.keyDown(overview, { key: "ArrowRight" });
     await waitFor(() => expect(tab("MiCA").getAttribute("aria-selected")).toBe("true"));
     expect(document.activeElement).toBe(tab("MiCA"));
     expect(tab("MiCA").tabIndex).toBe(0);
-    expect(panel("compliance-mica-panel").hidden).toBe(false);
+    expect(panel("compliance-mica-panel").getAttribute("aria-labelledby")).toBe("compliance-tab-mica");
+    expect(document.getElementById("compliance-overview-panel")).toBeNull();
 
     fireEvent.keyDown(tab("MiCA"), { key: "End" });
     await waitFor(() => expect(tab("GENIUS").getAttribute("aria-selected")).toBe("true"));
     expect(document.activeElement).toBe(tab("GENIUS"));
-    expect(panel("compliance-genius-panel").hidden).toBe(false);
-    expect(panel("compliance-mica-panel").hidden).toBe(true);
+    expect(panel("compliance-genius-panel").getAttribute("aria-labelledby")).toBe("compliance-tab-genius");
+    expect(panel("compliance-genius-panel").getAttribute("role")).toBe("tabpanel");
+    expect(document.getElementById("compliance-mica-panel")).toBeNull();
 
     fireEvent.keyDown(tab("GENIUS"), { key: "ArrowRight" });
     await waitFor(() => expect(tab("Overview").getAttribute("aria-selected")).toBe("true"));
@@ -174,12 +178,12 @@ describe("Compliance client boundary", () => {
     expect(scrollIntoView.mock.instances.at(-1)).toBe(document.getElementById("genius"));
   }, 30_000);
 
-  it("does not infer a regime from a fragment or scroll to a hidden heading", async () => {
+  it("does not infer a regime from a fragment or scroll to an unmounted heading", async () => {
     window.history.replaceState(null, "", "/compliance/#genius");
     await renderWorkbench();
 
     await waitFor(() => expect(tab("Overview").getAttribute("aria-selected")).toBe("true"));
-    expect(panel("compliance-genius-panel").hidden).toBe(true);
+    expect(document.getElementById("compliance-genius-panel")).toBeNull();
     expect(scrollIntoView).not.toHaveBeenCalled();
   }, 30_000);
 
@@ -192,7 +196,7 @@ describe("Compliance client boundary", () => {
     window.dispatchEvent(new PopStateEvent("popstate"));
     await waitFor(() => expect(tab("GENIUS").getAttribute("aria-selected")).toBe("true"));
     expect(panel("compliance-genius-panel").hidden).toBe(false);
-    expect(panel("compliance-mica-panel").hidden).toBe(true);
+    expect(document.getElementById("compliance-mica-panel")).toBeNull();
     expect(new URLSearchParams(window.location.search).get("status")).toBe("issuer-announced-intent");
   }, 30_000);
 });

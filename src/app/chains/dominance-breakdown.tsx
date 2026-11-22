@@ -112,20 +112,25 @@ export function DominanceBreakdown({
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
         {topBySupply.map((chain, idx) => (
           <span key={chain.id} className="inline-flex items-center gap-1.5">
-            <span
-              className="inline-block h-2 w-2 rounded-full"
-              style={{ backgroundColor: dominanceColor(idx) }}
-            />
-            <Image
-              src={resolveCompactLogoSrc(chain.logoPath, 14)!}
-              alt=""
-              width={14}
-              height={14}
-              className={cn("rounded-full", CHAIN_META[chain.id]?.darkInvert ? "dark:invert" : "")}
-              style={{ width: 14, height: 14 }}
-            />
+            {chain.logoPath ? (
+              <Image
+                src={resolveCompactLogoSrc(chain.logoPath, 14)!}
+                alt=""
+                width={14}
+                height={14}
+                className={cn("rounded-full", CHAIN_META[chain.id]?.darkInvert ? "dark:invert" : "")}
+                style={{ width: 14, height: 14 }}
+              />
+            ) : (
+              <span
+                className="inline-block h-2 w-2 rounded-full"
+                style={{ backgroundColor: dominanceColor(idx) }}
+              />
+            )}
             <span className={chain.id === beamChainId ? "font-medium text-foreground" : undefined}>{chain.name}</span>
-            {chain.id === beamChainId ? null : <span className="pharos-numeric">{formatChainShare(chain.dominanceShare)}</span>}
+            <span className={cn("pharos-numeric", chain.id === beamChainId ? "font-medium text-foreground" : undefined)}>
+              {formatChainShare(chain.dominanceShare)}
+            </span>
           </span>
         ))}
         {showOtherChains && (

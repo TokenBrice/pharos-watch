@@ -112,6 +112,7 @@ function SupporterKeyCard({ coins, gradesAsOf, supporterCount }: SupporterOfferP
       </div>
       <div className="space-y-1.5 text-xs leading-relaxed text-muted-foreground">
         <p>{describeCountingCoins(coins, gradesAsOf)}</p>
+        <p>Direct wallet transfers only; ETH, exchange withdrawals, and Giveth streams do not count.</p>
         {supporterCount > 0 ? (
           <p className="text-foreground">
             Backed by <span className="pharos-numeric">{supporterCount}</span>{" "}
@@ -128,7 +129,7 @@ function SupporterKeyCard({ coins, gradesAsOf, supporterCount }: SupporterOfferP
             </Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="w-full gap-2 bg-transparent sm:w-auto">
-            <Link href="/funding/#how-to-support">
+            <Link href="/funding/#direct-wallet">
               Donate ${DONOR_API_KEY_MIN_USD}+
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
@@ -217,7 +218,7 @@ function TeamPlansCard({ coverage }: { coverage?: ApiCoverageFacts }) {
         <p className="pharos-meta">
           Opens a chat with @{API_ACCESS_TELEGRAM_HANDLE} on Telegram; replies within {PARTNER_KEY_REPLY_BUSINESS_DAYS}{" "}
           business days. Paid in stablecoins, only to the addresses on the{" "}
-          <Link href="/funding/#how-to-support" className="pharos-prose-link">
+          <Link href="/funding/#direct-wallet" className="pharos-prose-link">
             funding page
           </Link>
           . Pharos never asks for wallet credentials.

@@ -25,6 +25,18 @@ export function executeParsedVerb(
       executor.closePalette();
       return true;
     }
+    case "portfolio": {
+      if (parsedVerb.resolvedCoinIds.length === 0) return false;
+      executor.push(parsedVerb.href);
+      executor.closePalette();
+      return true;
+    }
+    case "section": {
+      if (!parsedVerb.resolvedCoinId || !parsedVerb.href) return false;
+      executor.push(parsedVerb.href);
+      executor.closePalette();
+      return true;
+    }
     case "screen": {
       if (parsedVerb.error || Object.keys(parsedVerb.filters).length === 0) return false;
       executor.push(parsedVerb.href);
@@ -76,6 +88,46 @@ export function buildVerbPreview(parsedVerb: ParsedVerb): CommandPaletteVerbPrev
       return {
         label: `Compare ${upperSymbols}`,
         sublabel: `Open /compare with ${ids.length} stablecoin${ids.length === 1 ? "" : "s"}${unresolvedNote}`,
+        runnable: true,
+      };
+    }
+    case "portfolio": {
+      const ids = parsedVerb.resolvedCoinIds;
+      if (ids.length === 0) {
+        return {
+          label: "Portfolio",
+          sublabel: "Type tickers separated by spaces (e.g. portfolio USDC USDS)",
+          runnable: false,
+        };
+      }
+      const upperSymbols = parsedVerb.coinSymbols.map((s) => s.toUpperCase()).join(", ");
+      const unresolvedNote = parsedVerb.unresolved.length
+        ? ` · skipped: ${parsedVerb.unresolved.join(", ")}`
+        : "";
+      return {
+        label: `Portfolio ${upperSymbols}`,
+        sublabel: `Open /portfolio with ${ids.length} stablecoin${ids.length === 1 ? "" : "s"}${unresolvedNote}`,
+        runnable: true,
+      };
+    }
+    case "section": {
+      if (!parsedVerb.coinQuery) {
+        return {
+          label: parsedVerb.sectionLabel,
+          sublabel: `Type a ticker (e.g. ${parsedVerb.sectionKey === "history" ? "depeg" : parsedVerb.sectionKey} USDC)`,
+          runnable: false,
+        };
+      }
+      if (!parsedVerb.resolvedCoinId || !parsedVerb.resolvedCoinName) {
+        return {
+          label: `${parsedVerb.coinQuery.toUpperCase()} · ${parsedVerb.sectionLabel}`,
+          sublabel: "No matching stablecoin",
+          runnable: false,
+        };
+      }
+      return {
+        label: `${parsedVerb.resolvedCoinName} · ${parsedVerb.sectionLabel}`,
+        sublabel: `Jump to ${parsedVerb.href}`,
         runnable: true,
       };
     }

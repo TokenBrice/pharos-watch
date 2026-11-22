@@ -22,6 +22,7 @@ import { CLIENT_TRACKED_META_BY_ID, CLIENT_TRACKED_STABLECOINS } from "@shared/l
 import { hasStaticYieldWorkbench } from "@shared/lib/yield-auto-lending";
 import { PEG_TAXONOMY_PAGES } from "@/lib/peg-taxonomy";
 import { buildStaticComparisonSlug, STATIC_COMPARE_PAIRS } from "@/lib/compare-links";
+import { DOSSIER_SECTION_INTENT_TOKENS } from "@/lib/command-palette-verbs";
 import { PUBLIC_DOCS } from "@shared/lib/public-docs";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
 import { MECHANISM_ARCHETYPE_LABELS, MECHANISM_ARCHETYPE_ONE_LINERS, DEPEG_AUDIT_DISPUTED_BADGE } from "@shared/lib/classification";
@@ -150,6 +151,7 @@ const COMMAND_PALETTE_PAGES = dedupeCommandPalettePages([
 ]);
 const COMMAND_PALETTE_SECTION_ORDER: readonly CommandPaletteSection[] = [
   "Run command",
+  "This coin",
   "Recent",
   "Popular",
   "Stablecoins",
@@ -230,13 +232,31 @@ const YIELD_WORKBENCH_IDS: ReadonlySet<string> = new Set(
 
 const VERB_HINTS: ReadonlyArray<{ id: string; label: string; prefill: string }> = [
   { id: "verb-hint-compare", label: "compare USDT USDC USDe", prefill: "compare USDT USDC USDe" },
+  { id: "verb-hint-portfolio", label: "portfolio USDC USDS DAI", prefill: "portfolio USDC USDS DAI" },
+  { id: "verb-hint-reserves", label: "USDC reserves", prefill: "USDC reserves" },
   { id: "verb-hint-screen", label: "screen safety>=80 dews<20", prefill: "screen safety>=80 dews<20" },
-  { id: "verb-hint-pin", label: "pin USDS", prefill: "pin USDS" },
 ];
 
 const STABLECOIN_BY_ID = new Map<string, (typeof COMMAND_PALETTE_STABLECOINS)[number]>(
   COMMAND_PALETTE_STABLECOINS.map((coin) => [coin[0], coin]),
 );
+
+/**
+ * Extract the tracked stablecoin id when the palette is opened on a
+ * `/stablecoin/[id]/...` dossier route. Returns null everywhere else.
+ */
+export function extractStablecoinIdFromPathname(pathname: string | null | undefined): string | null {
+  if (!pathname) return null;
+  const match = /^\/stablecoin\/([^/]+)/.exec(pathname);
+  if (!match) return null;
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(match[1]);
+  } catch {
+    return null;
+  }
+  return STABLECOIN_BY_ID.has(decoded) ? decoded : null;
+}
 
 function stablecoinLifecycleLabel(status: string | undefined, frozenAt?: string): string | null {
   if (status === "pre-launch") return "Pre-launch";
@@ -315,6 +335,17 @@ function buildCommandPaletteActionDefinitions(
     },
   ];
 
+  if (watchlistCount >= 1) {
+    actions.push({
+      id: "action-portfolio-watchlist",
+      actionId: "portfolio-watchlist",
+      label: `Open watchlist in Portfolio (${watchlistCount})`,
+      sublabel: "Load your starred stablecoins into /portfolio",
+      keywords: "portfolio watchlist pinned starred holdings book",
+      icon: "portfolio-watchlist",
+    });
+  }
+
   if (watchlistCount >= 2) {
     actions.push({
       id: "action-compare-watchlist",
@@ -392,21 +423,87 @@ export function groupCommandPaletteResults<TItem extends CommandPaletteSectioned
   return groups;
 }
 
+function buildRouteContextActionDefinitions(
+  coinId: string,
+  isWatched: boolean,
+): CommandPaletteActionDefinition[] {
+  const coin = STABLECOIN_BY_ID.get(coinId);
+  if (!coin) return [];
+  const [, name, symbol] = coin;
+  return [
+    {
+      id: `context-watch-${coinId}`,
+      actionId: "context-watch",
+      label: isWatched ? `Unwatch ${symbol}` : `Watch ${symbol}`,
+      sublabel: isWatched ? `Remove ${name} from your watchlist` : `Star ${name} in your watchlist`,
+      keywords: `watch unwatch star pin watchlist ${symbol.toLowerCase()} ${name.toLowerCase()}`,
+      icon: isWatched ? "unwatch" : "watch",
+    },
+    {
+      id: `context-portfolio-${coinId}`,
+      actionId: "context-portfolio",
+      label: `Add ${symbol} to Portfolio`,
+      sublabel: `Open /portfolio with ${symbol} preloaded`,
+      keywords: `portfolio add holdings book ${symbol.toLowerCase()} ${name.toLowerCase()}`,
+      icon: "portfolio-watchlist",
+    },
+    {
+      id: `context-compare-${coinId}`,
+      actionId: "context-compare",
+      label: `Compare ${symbol}`,
+      sublabel: `Open /compare with ${symbol} selected`,
+      keywords: `compare vs versus peer ${symbol.toLowerCase()} ${name.toLowerCase()}`,
+      icon: "compare-watchlist",
+    },
+    {
+      id: `context-alerts-${coinId}`,
+      actionId: "context-alerts",
+      label: `Alerts for ${symbol}`,
+      sublabel: "Configure Telegram DEWS, depeg, and grade alerts",
+      keywords: `alerts telegram bot subscribe notify ${symbol.toLowerCase()} ${name.toLowerCase()}`,
+      icon: "alerts",
+    },
+  ];
+}
+
 export function buildCommandPaletteResultDescriptors({
   query,
   history,
   isDark,
   watchlistCount = 0,
+  watchlistIds = [],
+  pathname,
   stablecoinLiveMetadata,
 }: {
   query: string;
   history: readonly CommandPaletteHistoryItem[];
   isDark: boolean;
   watchlistCount?: number;
+  watchlistIds?: readonly string[];
+  pathname?: string | null;
   stablecoinLiveMetadata?: ReadonlyMap<string, CommandPaletteStablecoinLiveMetadata>;
 }): CommandPaletteResultDescriptor[] {
   const q = query.trim();
   const items: CommandPaletteResultDescriptor[] = [];
+
+  const contextCoinId = extractStablecoinIdFromPathname(pathname);
+  if (contextCoinId) {
+    const isWatched = watchlistIds.includes(contextCoinId);
+    for (const action of buildRouteContextActionDefinitions(contextCoinId, isWatched)) {
+      if (!q || fuzzyMatch(q, action.label) || fuzzyMatch(q, action.keywords)) {
+        items.push({
+          id: action.id,
+          label: action.label,
+          sublabel: action.sublabel,
+          section: "This coin",
+          kind: "action",
+          actionIcon: action.icon,
+          actionId: action.actionId,
+          contextCoinId,
+        });
+      }
+    }
+  }
 
   if (!q && history.length > 0) {
     for (const item of history.slice(0, SECTION_RESULT_CAP)) {
@@ -423,12 +520,16 @@ export function buildCommandPaletteResultDescriptors({
   }
 
   if (q) {
-    // "yield" / "apy" are intent tokens, not content: strip them so "usde
-    // yield" still finds the coin and can attach its yield deep-link row.
+    // Yield and dossier-section intent tokens ("yield", "apy", "reserves",
+    // "liquidity", "history", "freeze") are stripped when paired with a coin
+    // query so "usde yield" and "usdc reserves" still match the coin itself.
     const queryTokens = q.toLowerCase().split(/\s+/).filter(Boolean);
-    const contentTokens = queryTokens.filter((token) => token !== "yield" && token !== "apy");
-    const hasYieldIntent = contentTokens.length < queryTokens.length;
-    const searchQuery = hasYieldIntent && contentTokens.length > 0 ? contentTokens.join(" ") : q;
+    const hasYieldIntent = queryTokens.some((token) => token === "yield" || token === "apy");
+    const contentTokens = queryTokens.filter(
+      (token) => token !== "yield" && token !== "apy" && !DOSSIER_SECTION_INTENT_TOKENS.has(token),
+    );
+    const hasIntentToken = contentTokens.length < queryTokens.length;
+    const searchQuery = hasIntentToken && contentTokens.length > 0 ? contentTokens.join(" ") : q;
 
     const matched: Array<{
       coin: (typeof COMMAND_PALETTE_STABLECOINS)[number];

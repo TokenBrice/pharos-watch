@@ -169,7 +169,8 @@ describe("ComparisonTable", () => {
     const coin = makeCoin("xmd", "XMD");
     coin.safetyCard = makeReportCardsV9PipelineGapCard();
     const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} logos={{}} />);
-    expect(html).toContain("Pipeline gap — no Safety Score published");
+    expect(html).toContain("Pipeline gap");
+    expect(html).toContain("No Safety Score published");
     expect(html).not.toContain("Score withheld");
     const driverRow = html.match(/<tr\b[^>]*>(?:(?!<\/tr>)[\s\S])*Top driver(?:(?!<\/tr>)[\s\S])*<\/tr>/)?.[0];
     expect(driverRow).toContain("No comparable data available");
@@ -423,7 +424,8 @@ describe("ComparisonTable", () => {
     const row = metricRow(html, "Binding cap");
     expect(row).not.toContain(">None<");
     expect(row?.match(/No comparable data available/g)).toHaveLength(2);
-    expect(html).toContain("Pipeline gap — no Safety Score published");
+    expect(html).toContain("Pipeline gap");
+    expect(html).toContain("No Safety Score published");
   });
 
   it("keeps 'None' for a rated card without a binding cap", () => {
@@ -466,5 +468,26 @@ describe("ComparisonTable", () => {
     );
     expect(row).toContain("Savings variant of an untracked asset");
     expect(row).not.toContain("unknown-parent");
+  });
+
+  it("renders sticky page header, section jumps, Differences only control, SafetyGradeBadge, and semantic DEWS styles", () => {
+    const a = makeCoin("usdc-circle", "USDC");
+    const b = makeCoin("usdt-tether", "USDT");
+    b.stress = {
+      band: "WARNING",
+      score: 68,
+      signals: {},
+      computedAt: 1_788_048_000,
+      methodologyVersion: "2.0",
+    };
+    const html = renderToStaticMarkup(<ComparisonTable coins={[a, b]} logos={{}} />);
+    expect(html).toContain("Differences only");
+    expect(html).toContain('aria-label="Jump to comparison section"');
+    expect(html).toContain('href="#compare-section-overview"');
+    expect(html).toContain('href="#compare-section-exit"');
+    expect(html).toContain('aria-label="Safety grade A-, score 84"');
+    expect(html).toContain("Warning");
+    expect(html).toContain("68");
+    expect(html).not.toContain("Exact V10 pillars");
   });
 });

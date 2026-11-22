@@ -11,6 +11,7 @@ import { MECHANISM_EXPLAINER_TITLES } from "@/lib/mechanism-explainer-registry";
 import { LearnPageShell } from "../../_shared/learn-page-shell";
 import { ARCHETYPE_CONTENT } from "@/lib/mechanism-explainers";
 import { ArchetypeExplainerBody } from "../explainer-shell";
+import { stripEngineVersionPrefixes } from "../explainer-prose";
 
 const ARCHETYPE_BY_SLUG = new Map<string, MechanismArchetype>(
   MECHANISM_ARCHETYPE_VALUES.map((archetype) => [archetype, archetype]),
@@ -52,8 +53,8 @@ function renderArchetypeExplainer(slug: MechanismArchetype) {
         { name: label, url: explainerPath },
       ]}
       title={content.headline}
-      subtitle={content.subtitle}
-      leadParagraphs={content.lead}
+      subtitle={stripEngineVersionPrefixes(content.subtitle)}
+      leadParagraphs={content.lead.map(stripEngineVersionPrefixes)}
       titleClassName="max-w-[22ch]"
     >
       <ArchetypeArticleJsonLd archetype={slug} />

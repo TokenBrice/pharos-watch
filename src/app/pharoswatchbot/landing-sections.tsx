@@ -21,6 +21,7 @@ import {
 } from "@/lib/telegram-route-constants";
 import { BotSection } from "./bot-section";
 import { CommandManual } from "./command-manual";
+import { TelegramSocialProofChip } from "./instrument-panel";
 import { MiniAppScreenshotCarousel } from "./mini-app-screenshot-carousel";
 import {
   DAILY_CHANGES_TIME,
@@ -37,20 +38,22 @@ const PROSE_LINK_CLASS =
 /** Header CTAs. `#bot` is the anchor other routes link to for "get alerts". */
 export function PrimaryActions() {
   return (
-    <div id="bot" className="flex scroll-mt-24 flex-wrap items-center gap-x-3 gap-y-3 pt-2">
+    <div id="bot" className="flex scroll-mt-24 flex-wrap items-center gap-x-3 gap-y-2.5 pt-2">
       <Button asChild size="lg" className="gap-2">
         <a href={SETUP_DEEP_LINK} target="_blank" rel="noopener noreferrer">
           <Send className="h-4 w-4" aria-hidden="true" />
-          Open in Telegram
+          Start @PharosWatchBot
           <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
         </a>
       </Button>
       <Button asChild size="lg" variant="outline" className="gap-2">
         <a href={MINI_APP_HOME_DEEP_LINK} target="_blank" rel="noopener noreferrer">
           <Smartphone className="h-4 w-4" aria-hidden="true" />
-          Open the Mini App
+          Open Manage Alerts (Mini App)
+          <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
         </a>
       </Button>
+      <TelegramSocialProofChip />
       <p className="pharos-meta">Free. No sign-up beyond Telegram. Works in private chats and groups.</p>
     </div>
   );
@@ -174,7 +177,7 @@ export function MiniAppShowcase() {
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)] lg:items-center lg:gap-12">
         <div>
           <div className="max-w-2xl space-y-1.5">
-            <p className="pharos-kicker">Mini App</p>
+            <p className="pharos-label">Mini App</p>
             <h2 id="control-title" className="pharos-section-title">
               Manage Alerts, without typing commands
             </h2>
@@ -193,10 +196,11 @@ export function MiniAppShowcase() {
             ))}
           </ul>
           <div className="mt-6">
-            <Button asChild className="gap-2">
+            <Button asChild variant="outline" className="gap-2">
               <a href={MINI_APP_HOME_DEEP_LINK} target="_blank" rel="noopener noreferrer">
                 <Smartphone className="h-4 w-4" aria-hidden="true" />
-                Open the Mini App
+                Open Manage Alerts (Mini App)
+                <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
               </a>
             </Button>
           </div>
@@ -280,7 +284,7 @@ export function FinalCta() {
       <Button asChild size="lg" className="w-fit gap-2">
         <a href={SETUP_DEEP_LINK} target="_blank" rel="noopener noreferrer">
           <Send className="h-4 w-4" aria-hidden="true" />
-          Open in Telegram
+          Start @PharosWatchBot
           <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
         </a>
       </Button>

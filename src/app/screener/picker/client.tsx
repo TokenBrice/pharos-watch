@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Check } from "lucide-react";
 import {
   decodeSelectorState,
   highestValidStep,
@@ -201,6 +202,22 @@ export function SelectorClient() {
     <div className="space-y-6">
       <div ref={announceRef} role="status" aria-live="polite" aria-atomic="true" className="sr-only" />
 
+      <PickerProgressTrail
+        currentStep={renderResult ? "result" : state.step}
+        totalSteps={totalSteps}
+        profile={profile}
+        onSelectStep={(targetStep) => {
+          if (renderResult && output) {
+            handleEditAnswer(targetStep, output);
+            return;
+          }
+          dispatch({
+            type: "restore-session",
+            state: { ...state, step: targetStep, sid: null, ev: null },
+          });
+        }}
+      />
+
       {renderResult ? (
         <ResultPane
           key={shareInputKey}
@@ -298,6 +315,73 @@ export function SelectorClient() {
         })
       )}
     </div>
+  );
+}
+
+function PickerProgressTrail({
+  currentStep,
+  totalSteps,
+  profile,
+  onSelectStep,
+}: {
+  currentStep: SelectorStep;
+  totalSteps: number;
+  profile: SelectorProfile | null;
+  onSelectStep: (step: Exclude<SelectorStep, "result">) => void;
+}) {
+  const steps: Array<{ step: Exclude<SelectorStep, "result">; label: string }> = [
+    { step: 1, label: "Profile" },
+    { step: 2, label: "Peg" },
+    { step: 3, label: "Horizon" },
+    { step: 4, label: "Tolerance" },
+    { step: 5, label: profile === "treasury" ? "Rails" : "Venues" },
+    ...(totalSteps >= 6 ? [{ step: 6 as const, label: "Exit" }] : []),
+  ];
+
+  const isResult = currentStep === "result";
+  const activeStepNumber = typeof currentStep === "number" ? currentStep : totalSteps + 1;
+
+  return (
+    <nav aria-label="Picker progress" className="overflow-x-auto">
+      <ol className="flex min-w-fit items-center gap-1.5 text-xs">
+        {steps.map((item, index) => {
+          const isCompleted = isResult || item.step < activeStepNumber;
+          const isCurrent = !isResult && item.step === activeStepNumber;
+          return (
+            <li key={item.step} className="flex items-center gap-1.5">
+              {index > 0 ? (
+                <span aria-hidden="true" className="h-px w-3 shrink-0 bg-border" />
+              ) : null}
+              {isCompleted ? (
+                <button
+                  type="button"
+                  onClick={() => onSelectStep(item.step)}
+                  aria-label={`Step ${item.step}: ${item.label} (completed)`}
+                  className="pharos-focus-ring inline-flex min-h-8 items-center gap-1.5 whitespace-nowrap rounded-full border border-border bg-card px-2.5 py-1 font-medium text-foreground transition-colors hover:border-foreground/40"
+                >
+                  <span className="inline-flex size-4 items-center justify-center rounded-full bg-state-positive-subtle text-state-positive">
+                    <Check className="h-2.5 w-2.5" aria-hidden="true" />
+                  </span>
+                  <span>{item.label}</span>
+                </button>
+              ) : (
+                <span
+                  aria-current={isCurrent ? "step" : undefined}
+                  className={
+                    isCurrent
+                      ? "inline-flex min-h-8 items-center gap-1.5 whitespace-nowrap rounded-full border border-foreground/55 bg-foreground px-2.5 py-1 font-semibold text-background"
+                      : "inline-flex min-h-8 items-center gap-1.5 whitespace-nowrap rounded-full border border-border/55 bg-background/50 px-2.5 py-1 text-muted-foreground"
+                  }
+                >
+                  <span className="pharos-numeric">{item.step}</span>
+                  <span>{item.label}</span>
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
   );
 }
 

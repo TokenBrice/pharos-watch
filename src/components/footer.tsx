@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Rss, SquareArrowOutUpRight } from "lucide-react";
+import { RouteSeeAlsoFooter } from "@/components/see-also-footer";
 
 const SOCIAL_LINK_CLASS =
   "pharos-focus-ring grid h-6 w-6 place-items-center rounded-md border border-border/60 bg-muted/35 text-muted-foreground transition-colors hover:border-border hover:bg-muted/55 hover:text-foreground";
@@ -29,6 +30,7 @@ const FOOTER_NAV: ReadonlyArray<{ href: string; label: string }> = [
   { href: "/methodology/", label: "Methodology" },
   { href: "/coverage/", label: "Coverage" },
   { href: "/api/", label: "API" },
+  { href: "/status/", label: "Status" },
 ];
 
 const FOOTER_META: ReadonlyArray<{ href: string; label: string; external?: boolean }> = [
@@ -40,7 +42,9 @@ const FOOTER_META: ReadonlyArray<{ href: string; label: string; external?: boole
 
 export function Footer() {
   return (
-    <footer className="border-t border-border/70 py-1 sm:py-2">
+    <>
+      <RouteSeeAlsoFooter />
+      <footer className="border-t border-border/70 py-1 sm:py-2">
       <div className="mx-auto w-full max-w-[120rem] space-y-1 px-4 pb-[var(--mobile-utility-safe-offset,0px)] sm:pb-0 lg:px-5 xl:px-9">
         {/* Side-by-side only from lg. The eleven-chip nav is shrink-0, so at sm/md
             it claimed ~709 of 768px and crushed the disclaimer to a one-character
@@ -120,6 +124,7 @@ export function Footer() {
           </div>
         </div>
       </div>
-    </footer>
+      </footer>
+    </>
   );
 }

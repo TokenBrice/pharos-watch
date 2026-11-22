@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parsePaletteInput } from "@/lib/command-palette-verbs";
+import { buildPortfolioHrefFromCoinIds, parsePaletteInput } from "@/lib/command-palette-verbs";
 import { COMMAND_PALETTE_STABLECOINS } from "@/lib/command-palette-search-data";
 import { SCREENER_URL_SCHEMA } from "@/lib/screener-filters";
 import { decodeState } from "@/lib/url-state";
@@ -115,5 +115,44 @@ describe("palette verb coin resolution", () => {
   it("keeps a uniquely owned ticker resolvable", () => {
     const parsed = parsePaletteInput("pin usdc");
     expect(parsed.kind === "pin" && parsed.resolvedCoinId).toBe("usdc-circle");
+  });
+
+  it("parses the portfolio verb and routes through mergeCoinsParam", () => {
+    const parsed = parsePaletteInput("portfolio USDC USDS");
+    expect(parsed.kind).toBe("portfolio");
+    if (parsed.kind !== "portfolio") return;
+    expect(parsed.resolvedCoinIds).toEqual(["usdc-circle", "usds-sky"]);
+    expect(parsed.href).toBe("/portfolio/?coins=usdc-circle,usds-sky");
+
+    expect(buildPortfolioHrefFromCoinIds(["usds-sky"], "usdc-circle:10000")).toBe(
+      "/portfolio/?p=usdc-circle%3A10000%2Cusds-sky%3A0",
+    );
+  });
+
+  it.each([
+    ["usdc reserves", "/stablecoin/usdc-circle/#reserves"],
+    ["reserves usdc", "/stablecoin/usdc-circle/#reserves"],
+    ["usdc liquidity", "/stablecoin/usdc-circle/#liquidity"],
+    ["usdc history", "/stablecoin/usdc-circle/#history"],
+    ["depeg usdc", "/stablecoin/usdc-circle/#history"],
+    ["usdc freeze", "/stablecoin/usdc-circle/#activity"],
+  ])("resolves deep section intent %s -> %s", (input, expectedHref) => {
+    const parsed = parsePaletteInput(input);
+    expect(parsed.kind).toBe("section");
+    if (parsed.kind !== "section") return;
+    expect(parsed.href).toBe(expectedHref);
+  });
+
+  it("keeps bare section keywords as normal page searches while trailing space prompts for a ticker", () => {
+    expect(parsePaletteInput("depeg")).toEqual({ kind: "none" });
+    expect(parsePaletteInput("reserves")).toEqual({ kind: "none" });
+    expect(parsePaletteInput("liquidity")).toEqual({ kind: "none" });
+    expect(parsePaletteInput("freeze")).toEqual({ kind: "none" });
+
+    const prompt = parsePaletteInput("reserves ");
+    expect(prompt.kind).toBe("section");
+    if (prompt.kind === "section") {
+      expect(prompt.resolvedCoinId).toBeNull();
+    }
   });
 });

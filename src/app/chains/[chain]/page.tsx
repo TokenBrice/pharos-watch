@@ -18,6 +18,7 @@ import {
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { ShareButton } from "@/components/share-button";
 import { JsonLdScript } from "@/components/json-ld-script";
+import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { ChainProfileClient } from "./client";
 import { ChainContractTable } from "./chain-contract-table";
 import {
@@ -233,36 +234,30 @@ function ChainDeploymentAnchors({
   }
 
   return (
-    <nav className="space-y-3" aria-labelledby="chain-deployment-anchors-heading">
-      <div className="space-y-1.5">
-        <h2
-          id="chain-deployment-anchors-heading"
-          className="pharos-label"
-        >
-          Tracked Stablecoins On {chainName}
-        </h2>
+    <ModuleDisclosure label={`Tracked stablecoins on ${chainName}`} count={deployments.length}>
+      <nav className="mt-2 space-y-3" aria-label={`Tracked stablecoins on ${chainName}`}>
         <p className="text-sm text-muted-foreground">
-          Crawlable links to the stablecoin profiles with checked-in deployments on this chain.
+          Tracked stablecoin profiles with verified contract deployments on {chainName}.
         </p>
-      </div>
-      <ul className="grid gap-x-4 gap-y-1 sm:grid-cols-2 lg:grid-cols-4">
-        {deployments.map((deployment) => (
-          <li key={deployment.id} className="min-w-0">
-            <Link
-              href={deployment.href}
-              title={`${deployment.pegLabel} / ${deployment.backingLabel} / ${deployment.governanceLabel}`}
-              className="pharos-focus-ring flex min-w-0 items-baseline justify-between gap-3 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent"
-            >
-              <span className="min-w-0 truncate font-medium text-foreground">{deployment.name}</span>
-              <span className="shrink-0 font-mono text-xs text-muted-foreground">
-                {deployment.symbol}
-                {deployment.contractCount > 1 ? ` ×${deployment.contractCount}` : ""}
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </nav>
+        <ul className="grid gap-x-4 gap-y-1 sm:grid-cols-2 lg:grid-cols-4">
+          {deployments.map((deployment) => (
+            <li key={deployment.id} className="min-w-0">
+              <Link
+                href={deployment.href}
+                title={`${deployment.pegLabel} / ${deployment.backingLabel} / ${deployment.governanceLabel}`}
+                className="pharos-focus-ring flex min-w-0 items-baseline justify-between gap-3 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent"
+              >
+                <span className="min-w-0 truncate font-medium text-foreground">{deployment.name}</span>
+                <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                  {deployment.symbol}
+                  {deployment.contractCount > 1 ? ` ×${deployment.contractCount}` : ""}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </ModuleDisclosure>
   );
 }
 
@@ -331,7 +326,7 @@ export default async function ChainProfilePage({ params }: { params: Promise<{ c
         { name: "Chains", url: "/chains/" },
         { name: meta.name, url: `/chains/${chain}/` },
       ]}
-      title={chainPageTitle(meta.name, deployments)}
+      title={`${meta.name} Stablecoins`}
       header="instrument"
       methodology={{
         label: "Chain Health methodology",

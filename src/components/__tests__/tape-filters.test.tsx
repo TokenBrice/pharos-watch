@@ -48,5 +48,23 @@ describe("TapeFilters search input", () => {
     expect(severityGroup.className).toContain("pharos-segmented");
     expect(screen.getByRole("button", { name: "7d" }).getAttribute("aria-pressed")).toBe("true");
     expect(screen.getByRole("button", { name: "Notice+" }).getAttribute("aria-pressed")).toBe("true");
+
+    const classGroup = screen.getByRole("group", { name: "Filter by event type" });
+    const allPill = classGroup.querySelector("button");
+    expect(allPill?.textContent).toBe("All");
+    expect(allPill?.getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("clears selected event classes when the explicit All pill is clicked", () => {
+    const setParam = vi.fn();
+    render(<TapeFilters state={{ ...baseState, typeRaw: "depeg.*", type: ["depeg.*"] }} setParam={setParam} />);
+
+    const classGroup = screen.getAllByRole("group", { name: "Filter by event type" })[0];
+    const allPill = classGroup.querySelector("button")!;
+    expect(allPill.textContent).toBe("All");
+    expect(allPill.getAttribute("aria-pressed")).toBe("false");
+
+    fireEvent.click(allPill);
+    expect(setParam).toHaveBeenCalledWith("type", "");
   });
 });

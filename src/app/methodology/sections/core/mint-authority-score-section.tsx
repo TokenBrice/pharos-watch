@@ -18,7 +18,7 @@ export function MintAuthorityScoreMethodologySection() {
       <p>{markdownParagraphs[0]}</p>
       <MethodologyFacts
         facts={[
-          { label: "Where it lives", value: "Safety Score V10 Economic Control pillar" },
+          { label: "Where it lives", value: "Safety Score Economic Control pillar" },
           { label: "Potential authority", value: "One weakest-effective-path ladder, including upgrades and allocators" },
           { label: "Component maximum", value: `${ladder.maxComponentQuality}, after bound and assurance credits` },
           { label: "Measured compromise", value: `${ladder.compromised}, without assurance credit` },

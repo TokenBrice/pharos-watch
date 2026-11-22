@@ -1,16 +1,24 @@
 "use client";
 
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { X } from "lucide-react";
 import { useDexLiquidity } from "@/hooks/api-hooks";
+import { useStablecoins } from "@/hooks/use-stablecoins";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { FilterSearchInput } from "@/components/filter-search-input";
+import { TableExportMenu } from "@/components/table-export-menu";
 import { logosById } from "@/lib/logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { LiquidityHero } from "@/components/liquidity/liquidity-hero";
 import { LiquidityTable } from "@/components/liquidity/liquidity-table";
-import { LIQUIDITY_NR_REASON_LABELS } from "@/components/liquidity/liquidity-table-logic";
+import {
+  computeDepthToMcapRatio,
+  LIQUIDITY_NR_REASON_LABELS,
+  type LiquidityRow,
+} from "@/components/liquidity/liquidity-table-logic";
+import { buildLiquidityExitRouteModel } from "@/components/liquidity/exit-route-model";
 import type { LiquidityStatsData } from "@/components/liquidity/liquidity-stats-types";
 import { ControlPillToggle } from "@/components/control-pill-toggle";
 import { HeroMetricRow } from "@/components/feature-hero-split";
@@ -23,16 +31,25 @@ import { useUrlState } from "@/hooks/use-url-state";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { formatDateTimeLocale, timeAgo } from "@shared/lib/format";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { dexVolumeToTvlRatio } from "@shared/lib/dex-volume-availability";
+import { LIQUIDITY_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
+import { prettifyProtocol } from "@/lib/dex-display-constants";
+import type { CsvColumn } from "@/lib/exports/csv";
 import { LiquidityStatusChip } from "./status-chip";
 import { LiquidityContentLoadingState } from "./loading-state";
 import {
+  LIQUIDITY_TRIAGE_FILTERS,
   PEG_FILTERS,
   buildLiquidityViewModel,
+  type LiquidityRouteFilter,
+  type LiquidityTriageFilter,
   type LiquidityViewModel,
 } from "./model";
 
 interface LiquidityUrlState {
   peg: PegCurrency | "all";
+  tier: LiquidityTriageFilter;
 }
 
 const LIQUIDITY_PEG_VALUES: readonly (PegCurrency | "all")[] = [
@@ -40,25 +57,81 @@ const LIQUIDITY_PEG_VALUES: readonly (PegCurrency | "all")[] = [
   ...(Object.keys(PEG_LABELS_SHORT) as PegCurrency[]),
 ];
 
+const LIQUIDITY_TIER_VALUES: readonly LiquidityTriageFilter[] = ["all", "deep", "thin", "nr"];
+
 export const LIQUIDITY_URL_SCHEMA: UrlStateSchema<LiquidityUrlState> = {
   peg: {
     kind: "enum",
     defaultValue: "all",
     allowedValues: LIQUIDITY_PEG_VALUES,
   },
+  tier: {
+    kind: "enum",
+    defaultValue: "all",
+    allowedValues: LIQUIDITY_TIER_VALUES,
+  },
 };
+
+const LIQUIDITY_EXPORT_COLUMNS: CsvColumn<LiquidityRow>[] = [
+  { header: "Symbol", accessor: (row) => row.meta.symbol },
+  { header: "Name", accessor: (row) => row.meta.name },
+  { header: "Liquidity Score", accessor: (row) => row.liq.liquidityScore },
+  { header: "DEX TVL (USD)", accessor: (row) => Math.round(row.liq.totalTvlUsd) },
+  {
+    header: "Depth/MCap (%)",
+    accessor: (row) => {
+      const ratio = computeDepthToMcapRatio(row.liq.totalTvlUsd, row.mcapUsd);
+      return ratio != null ? Number((ratio * 100).toFixed(2)) : null;
+    },
+  },
+  { header: "TVL 7d Change (%)", accessor: (row) => row.liq.tvlChange7d },
+  { header: "24h Volume (USD)", accessor: (row) => row.liq.totalVolume24hUsd },
+  {
+    header: "Vol/TVL (%)",
+    accessor: (row) => {
+      const ratio = dexVolumeToTvlRatio(row.liq.totalVolume24hUsd, row.liq.totalTvlUsd);
+      return ratio != null ? Number((ratio * 100).toFixed(2)) : null;
+    },
+  },
+  { header: "Pools", accessor: (row) => row.liq.poolCount },
+  { header: "Chains", accessor: (row) => row.liq.chainCount },
+  {
+    header: "Top Protocol",
+    accessor: (row) => {
+      const top = Object.entries(row.liq.protocolTvl).sort((a, b) => b[1] - a[1])[0];
+      return top ? prettifyProtocol(top[0]) : null;
+    },
+  },
+  {
+    header: "Balance (%)",
+    accessor: (row) => (row.liq.weightedBalanceRatio != null ? Math.round(row.liq.weightedBalanceRatio * 100) : null),
+  },
+  {
+    header: "Organic (%)",
+    accessor: (row) => (row.liq.organicFraction != null ? Math.round(row.liq.organicFraction * 100) : null),
+  },
+  { header: "Durability", accessor: (row) => row.liq.durabilityScore },
+];
 
 export function LiquidityClient() {
   const { data: liquidityMap, isLoading, error, dataUpdatedAt, refetch, meta } = useDexLiquidity();
+  const stablecoinsQuery = useStablecoins();
   const logos = logosById;
   const { getParam, setParam } = useUrlFilters();
-  const { state: { peg: pegFilter }, patchState } = useUrlState(
+  const { state: { peg: pegFilter, tier: triageFilter }, patchState } = useUrlState(
     LIQUIDITY_URL_SCHEMA, { clear: { key: "peg" } },
   );
+  const [routeFilter, setRouteFilter] = useState<LiquidityRouteFilter | null>(null);
   const setPegFilter = useCallback(
     (v: PegCurrency | "all") => {
       trackEvent("filter_applied", { page: "liquidity", filter_type: "peg", filter_value: v });
       patchState({ peg: v });
+    }, [patchState],
+  );
+  const setTriageFilter = useCallback(
+    (v: LiquidityTriageFilter) => {
+      trackEvent("filter_applied", { page: "liquidity", filter_type: "liquidity_tier", filter_value: v });
+      patchState({ tier: v });
     }, [patchState],
   );
   const router = useRouter();
@@ -70,9 +143,35 @@ export function LiquidityClient() {
     { getParam, setParam },
   );
 
+  const mcapById = useMemo(() => {
+    const map = new Map<string, number | null>();
+    const assets = stablecoinsQuery.data?.peggedAssets;
+    if (!assets) return map;
+    for (const asset of assets) {
+      map.set(asset.id, getCirculatingRawOrNull(asset));
+    }
+    return map;
+  }, [stablecoinsQuery.data?.peggedAssets]);
+
+  const routeNamedTopKeys = useMemo(() => {
+    if (!liquidityMap || !routeFilter || routeFilter.key !== "_other-routes") return undefined;
+    const exitModel = buildLiquidityExitRouteModel(liquidityMap);
+    if (!exitModel) return undefined;
+    if (routeFilter.kind === "protocol") {
+      return new Set(exitModel.protocolRoutes.filter((r) => !r.isOther).map((r) => r.key));
+    }
+    return new Set(exitModel.chainRoutes.filter((r) => !r.isOther).map((r) => r.key.toLowerCase()));
+  }, [liquidityMap, routeFilter]);
+
   const { leaderboardRows, unobservedRows, unavailableRows, summaryStats } = useMemo(
-    () => buildLiquidityViewModel(liquidityMap, pegFilter, deferredSearch),
-    [liquidityMap, pegFilter, deferredSearch],
+    () =>
+      buildLiquidityViewModel(liquidityMap, pegFilter, deferredSearch, {
+        mcapById,
+        triageFilter,
+        routeFilter,
+        routeNamedTopKeys,
+      }),
+    [liquidityMap, pegFilter, deferredSearch, mcapById, triageFilter, routeFilter, routeNamedTopKeys],
   );
 
   const handleRowClick = useCallback(
@@ -84,11 +183,60 @@ export function LiquidityClient() {
   const handleRetry = useCallback(() => {
     void refetch();
   }, [refetch]);
+  const handleClearFilters = useCallback(() => {
+    patchState({ peg: "all", tier: "all" });
+    setRouteFilter(null);
+    setSearchInput("");
+  }, [patchState, setSearchInput]);
+
   const searchActive = deferredSearch.trim().length > 0;
+  const hasAnyFilter = pegFilter !== "all" || triageFilter !== "all" || routeFilter != null || searchActive;
+  const exportAsOfISO = meta?.updatedAt != null ? new Date(meta.updatedAt * 1000).toISOString() : "";
 
   const leaderboardToolbar = (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <h2 className="pharos-label">Liquidity leaderboard</h2>
+    <div className="space-y-2.5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="pharos-label">Liquidity leaderboard</h2>
+          {routeFilter ? (
+            <button
+              type="button"
+              data-testid="active-route-filter-chip"
+              onClick={() => setRouteFilter(null)}
+              className="pharos-focus-ring pharos-control-pill pharos-control-pill-active min-h-8 gap-1.5 text-xs"
+            >
+              <span>
+                {routeFilter.kind === "protocol" ? "Protocol" : "Chain"}: {routeFilter.label}
+              </span>
+              <X className="h-3 w-3" aria-hidden="true" />
+              <span className="sr-only">Clear {routeFilter.label} filter</span>
+            </button>
+          ) : null}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <FilterSearchInput
+            value={searchInput}
+            onValueChange={setSearchInput}
+            placeholder="Search..."
+            className="relative w-full sm:w-44"
+            inputClassName="pl-8 h-11 md:h-8 text-xs"
+            ariaLabel="Search stablecoins by name or symbol"
+          />
+          <TableExportMenu
+            data={leaderboardRows}
+            columns={LIQUIDITY_EXPORT_COLUMNS}
+            filename="pharos-dex-liquidity"
+            asOfISO={exportAsOfISO}
+            endpoint="dex-liquidity"
+            methodologyLabel={`dex-liquidity ${LIQUIDITY_METHODOLOGY_VERSION_LABEL}`}
+            sourceGenerations={{
+              dexLiquidity: meta?.updatedAt != null ? new Date(meta.updatedAt * 1000).toISOString() : null,
+              stablecoins: stablecoinsQuery.meta?.updatedAt != null ? new Date(stablecoinsQuery.meta.updatedAt * 1000).toISOString() : null,
+            }}
+            disabled={leaderboardRows.length === 0}
+          />
+        </div>
+      </div>
       <div className="flex flex-wrap items-center gap-2">
         <ControlPillToggle
           className="flex flex-wrap gap-1.5"
@@ -96,16 +244,25 @@ export function LiquidityClient() {
           options={PEG_FILTERS}
           value={pegFilter}
           onChange={setPegFilter}
-          buttonClassName="min-h-11 md:min-h-9"
+          buttonClassName="min-h-11 md:min-h-8"
         />
-        <FilterSearchInput
-          value={searchInput}
-          onValueChange={setSearchInput}
-          placeholder="Search..."
-          className="relative w-full sm:w-44"
-          inputClassName="pl-8 h-11 md:h-8 text-xs"
-          ariaLabel="Search stablecoins by name or symbol"
+        <ControlPillToggle
+          className="flex flex-wrap gap-1.5"
+          ariaLabel="Filter by liquidity tier"
+          options={LIQUIDITY_TRIAGE_FILTERS}
+          value={triageFilter}
+          onChange={setTriageFilter}
+          buttonClassName="min-h-11 md:min-h-8"
         />
+        {hasAnyFilter ? (
+          <button
+            type="button"
+            onClick={handleClearFilters}
+            className="pharos-focus-ring ml-auto min-h-11 rounded-sm text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline md:min-h-8"
+          >
+            Clear filters
+          </button>
+        ) : null}
       </div>
     </div>
   );
@@ -128,6 +285,8 @@ export function LiquidityClient() {
           stats={summaryStats}
           liquidityMap={liquidityMap}
           status={<LiquidityStatusChip meta={meta} stats={summaryStats} dataUpdatedAt={dataUpdatedAt} error={error} />}
+          activeRouteFilter={routeFilter}
+          onRouteFilterChange={setRouteFilter}
         />
       )}
 
@@ -139,6 +298,7 @@ export function LiquidityClient() {
           searchQuery={deferredSearch}
           onRowClick={handleRowClick}
           toolbar={leaderboardToolbar}
+          onClearFilters={hasAnyFilter ? handleClearFilters : undefined}
         />
       </section>
 

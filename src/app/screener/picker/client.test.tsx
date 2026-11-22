@@ -664,4 +664,19 @@ describe("SelectorClient — Q4 multi-select", () => {
     expect(screen.queryByText(/how fast do you need to be out/i)).toBeNull();
     expect(window.location.search).toContain("step=5");
   });
+
+  it("renders a compact progress trail reflecting 5-step vs 6-step flow and jumps back on completed steps", async () => {
+    setUrlSearch("p=treasury&h=6mplus&d=zero&step=5");
+    render(<SelectorClient />);
+
+    const progress = screen.getByRole("navigation", { name: "Picker progress" });
+    const items = progress.querySelectorAll("li");
+    // Treasury + 6m+ + zero tolerance skips Exit, producing a 5-step trail.
+    expect(items).toHaveLength(5);
+    expect(progress.querySelector('[aria-current="step"]')?.textContent).toContain("Rails");
+
+    // Clicking a completed step jumps back cleanly.
+    fireEvent.click(screen.getByRole("button", { name: /Step 2: Peg \(completed\)/i }));
+    expect((await screen.findAllByText(/Which peg currency should it target/i)).length).toBeGreaterThan(0);
+  });
 });

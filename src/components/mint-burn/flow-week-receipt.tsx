@@ -48,8 +48,14 @@ function statusLabel(status: string): string {
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
+const RECEIPT_ROW_LABELS: Record<string, string> = {
+  "mint-7d": "Minted 7d",
+  "burn-7d": "Burned 7d",
+  "net-7d": "Net 7d",
+};
+
 /**
- * "7-day receipt" fold: printed, shredded and net tracked flow over the week,
+ * "7-day receipt" fold: minted, burned and net tracked flow over the week,
  * the week's leaders, and the coverage behind them, on hairlines rather than
  * nested cards. Labels describe observed configured-chain events, never
  * market-wide issuance.
@@ -67,7 +73,7 @@ export function FlowWeekReceipt({ coins, weeklyHourly, scopeLabel, hourlyScopeLa
       <dl className="grid divide-y divide-border/50 border-y border-border/50 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
         {model.rows.map((row) => (
           <div key={row.id} className="space-y-1 py-3 sm:px-4 sm:first:pl-0">
-            <dt className="text-sm text-muted-foreground">{row.label}</dt>
+            <dt className="text-sm text-muted-foreground">{RECEIPT_ROW_LABELS[row.id] ?? row.label}</dt>
             <dd>
               <ReceiptValue row={row} />
             </dd>

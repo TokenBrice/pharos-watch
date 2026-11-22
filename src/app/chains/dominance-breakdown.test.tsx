@@ -55,8 +55,12 @@ describe("DominanceBreakdown", () => {
     expect(screen.getByText("20.0%")).toBeTruthy();
   });
 
-  it("names the beam's chain without repeating its share, and prints a nonzero sliver as <0.1%", () => {
-    const withTail = [...topBySupply, makeChain({ id: "exsat", name: "exSat", dominanceShare: 0.0001 })];
+  it("always shows the beam chain's share cleanly without duplicate logo dots, and prints a nonzero sliver as <0.1%", () => {
+    const withTail = [
+      makeChain({ id: "ethereum", name: "Ethereum", dominanceShare: 0.5, logoPath: "/chains/ethereum.png" }),
+      makeChain({ id: "tron", name: "Tron", dominanceShare: 0.2, logoPath: undefined }),
+      makeChain({ id: "exsat", name: "exSat", dominanceShare: 0.0001 }),
+    ];
     const { container } = render(
       <DominanceBreakdown
         topBySupply={withTail}
@@ -68,11 +72,13 @@ describe("DominanceBreakdown", () => {
       />,
     );
 
-    expect(screen.getByText("Ethereum")).toBeTruthy();
-    expect(screen.queryByText("50.0%")).toBeNull();
+    const ethEntry = screen.getByText("Ethereum").parentElement!;
+    expect(ethEntry.textContent).toContain("50.0%");
+    expect(ethEntry.querySelector("img")).toBeTruthy();
+    // No duplicate circular swatch dot when a chain logo is rendered.
+    expect(ethEntry.querySelector("span.rounded-full")).toBeNull();
     expect(screen.getByText("20.0%")).toBeTruthy();
     expect(screen.getByText("<0.1%")).toBeTruthy();
-    // the bar's accessible label still carries every share
     expect(dominanceBarLabel(container)).toContain("Ethereum 50.0%");
   });
 

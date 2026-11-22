@@ -76,10 +76,13 @@ describe("Exposure mode", () => {
     fireEvent.click(await screen.findByRole("button", { name: /^Exposure$/ }));
     expect(screen.getByRole("button", { name: /^Explore$/ })).toBeTruthy();
     expect(screen.getByRole("figure", { name: /Dependency graph showing/ })).toBeTruthy();
-    expect(screen.getByLabelText("Add upstream coin")).toBeTruthy();
+    const pickerGroup = screen.getByRole("group", { name: "Add upstream coin" });
+    expect(pickerGroup).toBeTruthy();
     expect(screen.getByText("Choose one or more upstream coins to trace exposure")).toBeTruthy();
     expect(screen.queryByText(/No mapped downstream exposure found/)).toBeNull();
-    fireEvent.change(screen.getByLabelText("Add upstream coin"), { target: { value: "unknown" } });
+    fireEvent.click(within(pickerGroup).getByRole("button", { name: /Add stablecoin/i }));
+    fireEvent.change(within(pickerGroup).getByRole("combobox", { name: "Search coins" }), { target: { value: "unknown" } });
+    fireEvent.click(within(pickerGroup).getByRole("option", { name: /unknown/i }));
     fireEvent.click(screen.getByRole("button", { name: "Trace exposure" }));
     expect(screen.getByText(/No mapped downstream exposure found/)).toBeTruthy();
     expect(screen.queryByText("Choose one or more upstream coins to trace exposure")).toBeNull();

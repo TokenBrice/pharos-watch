@@ -189,4 +189,47 @@ describe("ChainsLeaderboardClient", () => {
     expect(container.textContent).not.toMatch(/-0\.0+%|\+0\.0+%/);
     expectText("0.0%", "0.00%", "-5.00%");
   });
+
+  it("filters chains by search input and triage presets", () => {
+    renderChains({
+      chains: [
+        makeChain({
+          id: "ethereum",
+          name: "Ethereum",
+          totalUsd: 100_000_000_000,
+          change7dPct: RatioSchema.parse(0.03),
+          dominantStablecoin: { id: "usdt-tether", symbol: "USDT", share: RatioSchema.parse(0.55) },
+        }),
+        makeChain({
+          id: "tron",
+          name: "Tron",
+          totalUsd: 50_000_000_000,
+          change7dPct: RatioSchema.parse(-0.02),
+          dominantStablecoin: { id: "usdt-tether", symbol: "USDT", share: RatioSchema.parse(0.92) },
+        }),
+        makeChain({
+          id: "sonic",
+          name: "Sonic",
+          totalUsd: 250_000_000,
+          change7dPct: RatioSchema.parse(0.08),
+          dominantStablecoin: { id: "usdc-circle", symbol: "USDC", share: RatioSchema.parse(0.6) },
+        }),
+      ],
+      globalTotalUsd: 150_250_000_000,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "High concentration" }));
+    expect(screen.getByRole("link", { name: /Tron.*supply/ })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /Ethereum.*supply/ })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Top chains ($1B+)" }));
+    expect(screen.getByRole("link", { name: /Ethereum.*supply/ })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /Sonic.*supply/ })).toBeNull();
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Search chains by name or dominant stablecoin" }), {
+      target: { value: "eth" },
+    });
+    expect(screen.getByRole("link", { name: /Ethereum.*supply/ })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /Tron.*supply/ })).toBeNull();
+  });
 });

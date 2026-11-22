@@ -33,7 +33,7 @@ function PortfolioPreview() {
           illustrative and labelled as such. */}
       <div className="grid gap-4 sm:grid-cols-[0.9fr_1.1fr] sm:gap-0 sm:divide-x sm:divide-border/50">
         <div className="min-w-0 sm:pr-4">
-          <p className="text-sm font-medium text-foreground">Weighted V10 safety aggregate</p>
+          <p className="text-sm font-medium text-foreground">Weighted safety aggregate</p>
           <p className="mt-1 pharos-numeric text-2xl text-foreground">
             82<span className="text-sm text-muted-foreground">/100</span>
           </p>

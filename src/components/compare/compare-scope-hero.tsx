@@ -1,19 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
-import { FeatureHeroSplit } from "@/components/feature-hero-split";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { CHART_PALETTE } from "@/lib/chart-colors";
-import { COMPARISON_PRESETS, MAX_COMPARE_COINS } from "@/lib/compare-config";
+import { COMPARISON_PRESETS, MAX_COMPARE_COINS, isComparePresetAvailable } from "@/lib/compare-config";
+import { useWatchlist } from "@/hooks/use-watchlist";
 import type { CoinOption } from "@/lib/compare-types";
-
-// ---------------------------------------------------------------------------
-// CompareScopeHero — FeatureHeroSplit hero band for the compare hub. One Beam =
-// the size of the comparable registry (a neutral magnitude, so it takes the
-// frost recipe); the right slot decomposes that universe by peg currency with
-// the flat proportional-bar idiom. Frost stays the beam: segments use the
-// non-frost CHART_PALETTE sequence tones.
-// ---------------------------------------------------------------------------
 
 const PEG_SEGMENT_COLORS = CHART_PALETTE.slice(1);
 const MAX_PEG_SEGMENTS = 4;
@@ -34,21 +26,12 @@ function buildPegSegments(coinOptions: CoinOption[]) {
   }));
   if (restCount > 0) {
     segments.push({
-      label: "Other pegs",
+      label: "Other",
       count: restCount,
       color: PEG_SEGMENT_COLORS[MAX_PEG_SEGMENTS % PEG_SEGMENT_COLORS.length],
     });
   }
   return segments;
-}
-
-function CompareHeroMetricRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-baseline justify-between gap-3 py-2">
-      <span className="min-w-0 truncate text-sm text-muted-foreground">{label}</span>
-      <span className="pharos-numeric shrink-0 text-sm font-semibold text-foreground">{value}</span>
-    </div>
-  );
 }
 
 export function CompareScopeHero({
@@ -58,48 +41,66 @@ export function CompareScopeHero({
   coinOptions: CoinOption[];
   selectedCount: number;
 }) {
+  const { ids: watchlistIds } = useWatchlist();
+  const visiblePresetCount = useMemo(
+    () => COMPARISON_PRESETS.filter((preset) => isComparePresetAvailable(preset, watchlistIds)).length,
+    [watchlistIds],
+  );
   const segments = useMemo(() => buildPegSegments(coinOptions), [coinOptions]);
   const legend = segments.map((segment) => `${segment.count} ${segment.label}`).join(", ");
 
   return (
-    <FeatureHeroSplit
-      ariaLabel="Comparison scope overview"
-      beamLabel="Active + frozen"
-      beamValue={coinOptions.length}
-      subKicker="Set Scope"
-      sub={
-        <div className="divide-y divide-border/50">
-          <CompareHeroMetricRow label="Assets per set" value="2–5" />
-          <CompareHeroMetricRow label="Preset packs" value={String(COMPARISON_PRESETS.length)} />
-          <CompareHeroMetricRow label="Selected now" value={`${selectedCount}/${MAX_COMPARE_COINS}`} />
-        </div>
-      }
+    <div
+      role="group"
+      aria-label="Comparison scope overview"
+      className="pharos-card-shell flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-2.5"
     >
-      <div className="flex h-full flex-col justify-center space-y-3 p-5 sm:p-6 lg:p-7">
-        <p className="pharos-label">Comparable coins by peg</p>
-        <div
-          className="flex h-2 w-full overflow-hidden rounded-full bg-border/40"
-          role="img"
-          aria-label={`Comparable coins by peg: ${legend}.`}
-        >
-          {segments.map((segment) => (
-            <span
-              key={segment.label}
-              aria-hidden="true"
-              style={{ flexGrow: segment.count, backgroundColor: segment.color }}
-            />
-          ))}
-        </div>
-        <ul className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-          {segments.map((segment) => (
-            <li key={segment.label} className="flex items-center gap-1.5">
-              <span aria-hidden="true" className="h-2 w-2 rounded-sm" style={{ backgroundColor: segment.color }} />
-              <span className="pharos-numeric text-xs font-semibold text-foreground">{segment.count}</span>
-              <span className="text-2xs text-muted-foreground">{segment.label}</span>
-            </li>
-          ))}
-        </ul>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <span className="inline-flex items-center gap-1.5 text-xs">
+          <span className="pharos-label">Active + frozen</span>
+          <span className="pharos-numeric font-semibold text-foreground">{coinOptions.length}</span>
+        </span>
+        {segments.length > 0 ? (
+          <div className="hidden items-center gap-2 md:flex">
+            <div
+              className="flex h-1.5 w-24 overflow-hidden rounded-full bg-border/40"
+              role="img"
+              aria-label={`Comparable coins by peg: ${legend}.`}
+            >
+              {segments.map((segment) => (
+                <span
+                  key={segment.label}
+                  aria-hidden="true"
+                  style={{ flexGrow: segment.count, backgroundColor: segment.color }}
+                />
+              ))}
+            </div>
+            <ul className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+              {segments.map((segment) => (
+                <li key={segment.label} className="flex items-center gap-1 text-2xs text-muted-foreground">
+                  <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: segment.color }} />
+                  <span className="pharos-numeric font-medium text-foreground">{segment.count}</span>
+                  <span>{segment.label}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </div>
-    </FeatureHeroSplit>
+
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        <span>
+          <span className="pharos-numeric font-semibold text-foreground">2–{MAX_COMPARE_COINS}</span> assets
+        </span>
+        <span aria-hidden="true" className="text-border">·</span>
+        <span>
+          <span className="pharos-numeric font-semibold text-foreground">{visiblePresetCount}</span> preset packs
+        </span>
+        <span aria-hidden="true" className="text-border">·</span>
+        <span>
+          <span className="pharos-numeric font-semibold text-foreground">{selectedCount}/{MAX_COMPARE_COINS}</span> selected
+        </span>
+      </div>
+    </div>
   );
 }

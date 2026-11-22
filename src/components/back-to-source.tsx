@@ -6,8 +6,9 @@ import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 
-/** Only a preceding in-document tracker route exposes a contextual return link. */
-const TRACKER_LABELS: Record<string, string> = {
+/** Only a preceding in-document tracker or hub route exposes a contextual return link. */
+export const TRACKER_LABELS: Readonly<Record<string, string>> = {
+  "/": "Overview",
   "/screener": "Screener results",
   "/compare": "Compare",
   "/timeline": "Tape",
@@ -18,7 +19,19 @@ const TRACKER_LABELS: Record<string, string> = {
   "/safety-scores": "Safety Scores",
   "/freezewatch": "FreezeWatch",
   "/flows": "Mint/Burn Flows",
+  "/alt-pegs": "Non-USD Pegs",
+  "/compliance": "Compliance",
+  "/chains": "Chains",
+  "/stability-index": "Stability Index",
+  "/dependency-map": "Dependency Map",
 };
+
+export function getSourceSegment(sourceUrl: string | null): string | null {
+  if (!sourceUrl) return null;
+  const pathname = sourceUrl.split("?")[0] ?? "";
+  const firstSegment = pathname.split("/").filter(Boolean)[0];
+  return firstSegment ? `/${firstSegment}` : "/";
+}
 
 interface SourceStore {
   visit: (url: string) => void;
@@ -69,7 +82,7 @@ export function SourceNavigationProvider({ children }: { children: ReactNode }) 
 export function BackToSource({ className }: { className?: string }) {
   const store = useContext(PreviousSourceContext);
   const sourceUrl = useSyncExternalStore(store?.subscribe ?? subscribeNothing, store?.getSnapshot ?? getServerSnapshot, getServerSnapshot);
-  const segment = sourceUrl ? "/" + sourceUrl.split("?")[0].split("/").filter(Boolean)[0] : null;
+  const segment = getSourceSegment(sourceUrl);
   const label = segment ? TRACKER_LABELS[segment] : null;
   const backLink = sourceUrl && label ? { href: sourceUrl, label } : null;
 

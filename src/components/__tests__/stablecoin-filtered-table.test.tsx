@@ -11,8 +11,8 @@ vi.mock("@/hooks/api-hooks", () => ({ usePegSummary: mocks.peg, useDexLiquidityT
 vi.mock("@/lib/logos", () => ({ logosById: {} }));
 vi.mock("@/hooks/use-coin-states", () => ({ useCoinStates: () => ({ byId: new Map(), liveReady: false }) }));
 vi.mock("@/lib/stablecoin-table-inputs", () => ({
-  buildStablecoinTableInputs: ({ pegSummaryCoins, reportCardsV9 }: { pegSummaryCoins: unknown; reportCardsV9: { cards: unknown } }) => ({
-    pegRateSources: {}, pegScores: pegSummaryCoins, reportCards: reportCardsV9.cards,
+  buildStablecoinTableInputs: ({ pegSummaryCoins, reportCardsV9 }: { pegSummaryCoins: unknown; reportCardsV9?: { cards: unknown } }) => ({
+    pegRateSources: {}, pegScores: pegSummaryCoins, reportCards: reportCardsV9?.cards,
   }),
 }));
 vi.mock("@/components/stablecoin-directory/stablecoin-table", () => ({
@@ -87,4 +87,55 @@ it("shows neither held publication nor a failed refresh over saved ratings", () 
   expect(screen.queryByText(/Ratings are held at the last verified snapshot/)).toBeNull();
   expect(screen.queryByText("Refresh failed; showing saved data")).toBeNull();
   expect(screen.getByTestId("saved-table").textContent).toContain('"grade":"B+"');
+});
+
+it("renders the cohort summary KPI strip with null-safe unavailable handling and wires inline coin search", () => {
+  mocks.stablecoins.mockReturnValue(query({
+    peggedAssets: [
+      { id: "usdc-circle", name: "USD Coin", symbol: "USDC", circulating: { peggedUSD: 600 } },
+      { id: "usdt-tether", name: "Tether", symbol: "USDT", circulating: { peggedUSD: 400 } },
+      { id: "dai-makerdao", name: "Dai", symbol: "DAI", circulating: {} },
+    ],
+  }));
+  mocks.ratings.mockReturnValue(query({
+    cards: {
+      "usdc-circle": { grade: "A-", score: 84 },
+      "usdt-tether": { grade: "B", score: 70 },
+    },
+  }));
+
+  render(<StablecoinFilteredTable activeFilters={[]} />);
+
+  const summary = screen.getByRole("region", { name: "Cohort summary" });
+  expect(summary.textContent).toContain("$1.00K");
+  expect(summary.textContent).toContain("2 of 3 observed");
+  expect(summary.textContent).toContain("of known active cap");
+  expect(summary.textContent).toContain("B+");
+  expect(summary.textContent).toContain("2 of 3 rated");
+  expect(summary.textContent).toContain("USDC, USDT");
+
+  const searchInput = screen.getByLabelText("Filter coins in this cohort by name or symbol");
+  fireEvent.change(searchInput, { target: { value: "usdc" } });
+  expect(screen.getByTestId("saved-table").textContent).toContain('"searchQuery":"usdc"');
+  // Cohort summary stats stay anchored to the full unfiltered cohort (R7 / ADR-34).
+  expect(summary.textContent).toContain("$1.00K");
+
+  fireEvent.click(screen.getByRole("button", { name: "Clear search" }));
+  expect(screen.getByTestId("saved-table").textContent).toContain('"searchQuery":""');
+});
+
+it("preserves unavailable cohort KPIs as dashes when no supply is observed", () => {
+  mocks.stablecoins.mockReturnValue(query({
+    peggedAssets: [{ id: "usdc-circle", name: "USD Coin", symbol: "USDC", circulating: {} }],
+  }));
+  mocks.ratings.mockReturnValue(query(undefined));
+
+  render(<StablecoinFilteredTable activeFilters={[]} />);
+
+  const summary = screen.getByRole("region", { name: "Cohort summary" });
+  expect(summary.textContent).toContain("Supply unavailable");
+  expect(summary.textContent).toContain("Share unavailable");
+  expect(summary.textContent).toContain("Grades unavailable");
+  expect(summary.textContent).toContain("Concentration unavailable");
+  expect(summary.textContent).not.toContain("$0");
 });

@@ -124,10 +124,12 @@ describe("FlowGaugeHero", () => {
     const { container } = render(<FlowGaugeHero {...heroProps} />);
     const hero = screen.getByRole("group", { name: "Bank Run Gauge overview" });
 
-    expect(hero.querySelector("p.pharos-numeric")?.textContent).toBe("−48Stress");
+    expect(hero.querySelector("p.pharos-hero-kpi")?.textContent).toBe("−48Stress");
     expect(container.textContent).not.toMatch(/Net direction unavailable|Pressure stable|Minting Pressure/i);
     expect(screen.getByText(/Weighted redemption pressure is heavy against the 30-day norm\. USDC pulls it down most/)).toBeTruthy();
-    expect(screen.getByText("Printed 24h")).toBeTruthy();
+    expect(screen.getByText("Minted 24h")).toBeTruthy();
+    expect(screen.getByText("Burned 24h")).toBeTruthy();
+    expect(screen.getByText("Flight to quality").parentElement?.textContent).toContain("Inactive");
     expect(screen.getByRole("img", { name: /Run line: 2 coins in the Bank Run Gauge/ })).toBeTruthy();
     expect(screen.getByRole("table")).toBeTruthy();
     expect(screen.getAllByRole("row")).toHaveLength(4);
@@ -149,7 +151,7 @@ describe("FlowGaugeHero", () => {
 
   it("renders an unrated gauge as an em dash with a Not rated chip, never 0", () => {
     const { container } = render(<FlowGaugeHero {...heroProps} gauge={gauge({ score: null, band: null })} coins={[]} sync={null} />);
-    const beam = container.querySelector("p.pharos-numeric");
+    const beam = container.querySelector("p.pharos-hero-kpi");
 
     expect(container.querySelector('[data-reason-codes="gauge-score-null"]')).toBeTruthy();
     expect(screen.getAllByText("Not rated").length).toBeGreaterThan(0);
@@ -161,8 +163,8 @@ describe("FlowGaugeHero", () => {
     const { container, rerender } = render(<FlowGaugeHero gauge={null} coins={[]} sync={null} />);
 
     expect(container.textContent).not.toMatch(/not rated this window|history and fully valued/i);
-    expect(container.querySelector("p.pharos-numeric")?.textContent).toBe("—Not rated");
-    expect(screen.getByText("Printed 24h")).toBeTruthy();
+    expect(container.querySelector("p.pharos-hero-kpi")?.textContent).toBe("—Not rated");
+    expect(screen.getByText("Minted 24h")).toBeTruthy();
     rerender(<FlowGaugeHero gauge={null} sync={null} coins={[
       makeMintBurnFlowCoin({ gaugeWeightUsd: 90, netFlow24hUsd: 100, valuation: undefined }),
       makeMintBurnFlowCoin({ gaugeWeightUsd: 10, netFlow24hUsd: null,
@@ -215,10 +217,10 @@ describe("FlowGaugeHero", () => {
       />,
     );
 
-    expect(container.querySelector("p.pharos-numeric")?.textContent).toBe("−48");
-    expect(container.querySelector('[data-reason-codes="band-not-robust-to-withheld-weight"]')?.textContent).toContain(
-      "Band unsettled",
-    );
+    expect(container.querySelector("p.pharos-hero-kpi")?.textContent).toBe("−48");
+    const chip = container.querySelector('[data-reason-codes~="band-not-robust-to-withheld-weight"]');
+    expect(chip?.textContent).toContain("Band unsettled");
+    expect(chip?.getAttribute("data-reason-codes")).toContain("partial-valuation-inputs");
     expect(container.textContent).not.toMatch(/Weighted redemption pressure is heavy/);
     expect(screen.getByText("USDC pulls it down most; USDG lifts it most.")).toBeTruthy();
   });
@@ -265,12 +267,52 @@ describe("FlowGaugeHero", () => {
     expect(container.querySelector(`[data-reason-codes="classification-unavailable ${reason}"]`)).toBeTruthy();
     // "Active" also labels the independent tracked-universe chip, not an FTQ verdict.
     expect(screen.getByRole("button", { name: /^Universe: Active,/ })).toBeTruthy();
-    expect(screen.queryByText("Flight to quality")).toBeNull();
+    const ftqRow = screen.getByText("Flight to quality").parentElement!;
+    expect(ftqRow.textContent).toContain("Unavailable");
+    expect(ftqRow.textContent).not.toContain("Active");
     fireEvent.click(screen.getByRole("button", { name: /FTQ unavailable/ }));
     expect(screen.getByText(/Flight-to-quality classification unavailable: Safety Score source/)).toBeTruthy();
     expect(screen.getByText(/Safety Score dependency budget: 1h/)).toBeTruthy();
     expect(document.body.textContent).not.toContain("199 -");
     expect(document.body.textContent).not.toContain("Missing valuation could change");
+  });
+
+  it("consolidates multiple simultaneous status conditions into a single OpsStatusChip popover", () => {
+    const { container } = render(
+      <FlowGaugeHero
+        {...heroProps}
+        gauge={gauge({
+          partialValuationInputs: 1,
+          partialValuationMcapUsd: 80,
+          scoredMcapUsd: 220,
+          flightToQuality: null,
+          flightIntensity: null,
+          classificationSource: "safety-score-v9-publication",
+          classificationReason: null,
+          scanCoverage: {
+            complete: false,
+            unavailableReason: "scan-coverage-incomplete",
+            admittedCoins: 2,
+            excludedCoins: 1,
+            excludedMcapUsd: 5_000_000,
+          },
+        })}
+        window={evidenceWindow({ ageSec: 36000, unavailableReason: "scan-watermark-stale" })}
+      />,
+    );
+
+    const chips = container.querySelectorAll("[data-reason-codes]");
+    expect(chips).toHaveLength(1);
+    const chip = chips[0] as HTMLElement;
+    expect(chip.textContent).toContain("(+4)");
+    expect(chip.getAttribute("data-reason-codes")).toContain("scan-watermark-stale");
+    expect(chip.getAttribute("data-reason-codes")).toContain("band-not-robust-to-withheld-weight");
+    expect(chip.getAttribute("data-reason-codes")).toContain("partial-valuation-inputs");
+    expect(chip.getAttribute("data-reason-codes")).toContain("valuation-incomplete");
+    expect(chip.getAttribute("data-reason-codes")).toContain("scan-coverage-incomplete");
+    fireEvent.click(chip);
+    expect(screen.getByText(/Weight withheld for incomplete flow inputs/)).toBeTruthy();
+    expect(screen.getByText(/Missing valuation could change the flight-to-quality verdict/)).toBeTruthy();
   });
 
   it("retains the valuation-specific FTQ reason when classification is admitted", () => {

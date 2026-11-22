@@ -10,6 +10,7 @@ import { useUrlFilters } from "@/hooks/use-url-filters";
 import { DailyDigest } from "@/components/digest/daily-digest";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
+import { TermText } from "@/components/term-text";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/classification";
 import { formatBps, formatCurrency, formatLongDate } from "@shared/lib/format";
 import type { DigestArchiveEntry, DigestContentEntry, DigestRiskSignal } from "@shared/types/digest";
@@ -108,7 +109,7 @@ function WeeklyTeaser({ entry }: { entry: WeeklyTeaserEntry }) {
   return (
     <div>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="font-mono text-[0.72rem] font-semibold uppercase tracking-[0.25em] text-muted-foreground">
+        <p className="pharos-label">
           {weeklyLabel}
         </p>
         <p className="text-xs text-muted-foreground">{formatWeeklyMasthead(entry)}</p>
@@ -117,11 +118,11 @@ function WeeklyTeaser({ entry }: { entry: WeeklyTeaserEntry }) {
         {entry.digestTitle || "The Week in Review"}
       </h3>
       <p className="mt-1.5 text-sm leading-relaxed text-foreground/75 line-clamp-2" style={EDITORIAL_BODY_STYLE}>
-        {teaser}
+        <TermText text={teaser} />
       </p>
       <Link
         href={`/digest/${toDigestSlug(entry.generatedAt, "weekly")}/`}
-        className="inline-block mt-3 font-mono text-[0.72rem] font-semibold uppercase tracking-[0.26em] text-muted-foreground transition-colors hover:text-foreground"
+        className="pharos-label pharos-focus-ring mt-3 inline-block rounded-sm transition-colors hover:text-foreground"
       >
         Read the full recap &rarr;
       </Link>
@@ -133,7 +134,7 @@ function WireSectionRule({ label }: { label: string }) {
   return (
     <div className="flex items-center gap-3">
       <span aria-hidden className="h-px flex-1 bg-border" />
-      <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+      <span className="pharos-label">
         {label}
       </span>
       <span aria-hidden className="h-px flex-1 bg-border" />
@@ -168,7 +169,7 @@ function TriggerRecordStat({
 }) {
   return (
     <div className="rounded-md border border-border/50 bg-background/45 px-2.5 py-2">
-      <p className="font-mono text-[0.63rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+      <p className="pharos-label">
         {label}
       </p>
       <p className={cn("mt-1 font-mono text-lg font-semibold", TRIGGER_STATUS_CLASSES[status])}>{value}</p>
@@ -183,7 +184,7 @@ function TriggerRecordSection({ record }: { record: DigestTriggerRecord }) {
       <div className="pharos-card-shell space-y-4 p-4 sm:p-5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div>
-            <p className="pharos-kicker">The digest’s own scoreboard</p>
+            <p className="pharos-label">The digest’s own scoreboard</p>
             <h2 id="digest-trigger-record" className="text-lg font-semibold tracking-tight text-foreground">
               Issued triggers, with every outcome visible
             </h2>
@@ -207,7 +208,7 @@ function TriggerRecordSection({ record }: { record: DigestTriggerRecord }) {
 
             <div className="space-y-2 border-t border-border/50 pt-3">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <p className="font-mono text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                <p className="pharos-label">
                   Resolved trigger record
                 </p>
                 <p className="font-mono text-sm font-semibold text-foreground">
@@ -220,7 +221,7 @@ function TriggerRecordSection({ record }: { record: DigestTriggerRecord }) {
             </div>
 
             <div className="space-y-2 border-t border-border/50 pt-3">
-              <p className="font-mono text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              <p className="pharos-label">
                 By trigger class
               </p>
               <div className="space-y-2">
@@ -232,7 +233,7 @@ function TriggerRecordSection({ record }: { record: DigestTriggerRecord }) {
                         {bucket.total} outcome{bucket.total === 1 ? "" : "s"} · {bucket.resolved} resolved · {formatDigestTriggerRate(bucket.hitRate)} hit share
                       </p>
                     </div>
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 font-mono text-[0.68rem] uppercase tracking-[0.12em]">
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 font-mono text-2xs">
                       <span className={TRIGGER_STATUS_CLASSES.hit}>H {bucket.hit}</span>
                       <span className={TRIGGER_STATUS_CLASSES.missed}>M {bucket.missed}</span>
                       <span className={TRIGGER_STATUS_CLASSES.expired}>E {bucket.expired}</span>
@@ -412,7 +413,7 @@ function DigestArchive({ latestDailySlug, query }: { latestDailySlug: string | n
         <div className="space-y-3 rounded-lg border border-border/50 bg-muted/10 p-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <fieldset className="space-y-1.5">
-              <legend className="font-mono text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              <legend className="pharos-label">
                 Edition type
               </legend>
               <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter by edition type">
@@ -423,7 +424,7 @@ function DigestArchive({ latestDailySlug, query }: { latestDailySlug: string | n
                     aria-pressed={activeView === view}
                     onClick={() => setParam("view", view)}
                     className={cn(
-                      "pharos-control-pill min-h-10 px-3 text-xs font-semibold uppercase tracking-[0.14em] sm:min-h-8",
+                      "pharos-control-pill min-h-10 px-3 text-xs font-semibold capitalize sm:min-h-8",
                       activeView === view && "pharos-control-pill-active",
                     )}
                   >
@@ -435,7 +436,7 @@ function DigestArchive({ latestDailySlug, query }: { latestDailySlug: string | n
 
             {monthOptions.length > 1 && (
               <label className="space-y-1.5 text-left">
-                <span className="block font-mono text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                <span className="pharos-label block">
                   Month
                 </span>
                 <select
@@ -455,7 +456,7 @@ function DigestArchive({ latestDailySlug, query }: { latestDailySlug: string | n
           </div>
 
           <label className="block space-y-1.5">
-            <span className="block font-mono text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            <span className="pharos-label block">
               Search title and body
             </span>
             <span className="relative block">
@@ -532,14 +533,14 @@ function DigestArchive({ latestDailySlug, query }: { latestDailySlug: string | n
                   >
                     {d.digestTitle || (isWeekly ? "The Week in Review" : "Signal & Noise")}
                     {isWeekly && (
-                      <span className="rounded border border-border/60 px-1.5 py-0.5 font-mono text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <span className="rounded-sm border border-border/60 px-1.5 py-0.5 font-mono text-3xs font-semibold text-muted-foreground">
                         Weekly{d.editionNumber ? ` #${d.editionNumber}` : ""}
                       </span>
                     )}
                     {riskSignal && (
                       <span
                         className={cn(
-                          "hidden rounded border px-1.5 py-0.5 font-mono text-[0.65rem] font-semibold uppercase tracking-wider sm:inline",
+                          "hidden rounded-sm border px-1.5 py-0.5 font-mono text-3xs font-semibold sm:inline",
                           riskSignal.severity === "critical"
                             ? "border-red-500/35 bg-red-500/10 text-red-700 dark:text-red-300"
                             : "border-amber-500/35 bg-amber-500/10 text-amber-700 dark:text-amber-300",

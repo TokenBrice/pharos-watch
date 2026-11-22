@@ -8,6 +8,7 @@ import { DEX_VOLUME_BOUND_MIN_USD, dexVolumeToTvlRatio } from "@shared/lib/dex-v
 export type LiquiditySortKey =
   | "score"
   | "tvl"
+  | "depthRatio"
   | "tvlTrend"
   | "volume"
   | "volume7d"
@@ -21,6 +22,21 @@ export type LiquiditySortKey =
 export interface LiquidityRow {
   meta: StablecoinClientMeta;
   liq: DexLiquidityData;
+  /** Null-safe circulating market cap (USD) from `getCirculatingRawOrNull()`; null when unavailable. */
+  mcapUsd?: number | null;
+}
+
+/**
+ * Null-safe DEX TVL / circulating market cap ratio.
+ * Unavailable or non-positive supply returns null (never 0% or Infinity).
+ */
+export function computeDepthToMcapRatio(
+  totalTvlUsd: number,
+  mcapUsd: number | null | undefined,
+): number | null {
+  if (mcapUsd == null || !Number.isFinite(mcapUsd) || mcapUsd <= 0) return null;
+  if (!Number.isFinite(totalTvlUsd) || totalTvlUsd < 0) return null;
+  return totalTvlUsd / mcapUsd;
 }
 
 /** Short labels for the producer's NR reason codes (never inferred client-side). */
@@ -36,6 +52,7 @@ export const LIQUIDITY_NR_REASON_LABELS: Record<LiquidityScoreUnavailableReason,
 const compareByColumn = createTableComparator<LiquiditySortKey, LiquidityRow>({
   score: (r) => r.liq.liquidityScore,
   tvl: (r) => r.liq.totalTvlUsd,
+  depthRatio: (r) => computeDepthToMcapRatio(r.liq.totalTvlUsd, r.mcapUsd),
   tvlTrend: (r) => r.liq.tvlChange7d,
   // Unavailable volume (null) is not zero activity: it sorts last in both directions.
   volume: (r) => r.liq.totalVolume24hUsd,

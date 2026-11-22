@@ -27,6 +27,8 @@ import {
   SectionKicker,
 } from "../_shared/section-primitives";
 import type { ArchetypeContent, ArchetypeDecommissioned } from "@/lib/mechanism-explainers";
+import type { GlossarySlug } from "@/lib/glossary";
+import { renderMechanismProse, stripEngineVersionPrefixes } from "./explainer-prose";
 
 const DEAD_LOGO_BY_ID = new Map(
   DEAD_STABLECOINS.map((d) => [
@@ -53,7 +55,12 @@ export function ArchetypeExplainerBody({
       <WhatToWatch bullets={content.whatToWatch} />
       <TrackedCoinList archetype={content.archetype} />
       <MechanismCaseStudies archetype={content.archetype} />
-      <CrossLinksFooter links={content.crossLinks} />
+      <CrossLinksFooter
+        links={content.crossLinks.map((link) => ({
+          ...link,
+          label: stripEngineVersionPrefixes(link.label),
+        }))}
+      />
     </>
   );
 }
@@ -85,6 +92,7 @@ function HowItWorks({
 }: {
   steps: ArchetypeContent["howItWorks"];
 }) {
+  const seenSlugs = new Set<GlossarySlug>();
   return (
     <section className="space-y-6">
       <div className="space-y-2">
@@ -105,7 +113,7 @@ function HowItWorks({
                 {step.title}
               </h3>
               <p className="text-base leading-relaxed text-muted-foreground">
-                {step.body}
+                {renderMechanismProse(step.body, seenSlugs)}
               </p>
             </div>
           </li>
@@ -120,6 +128,7 @@ function RiskProfile({
 }: {
   items: ArchetypeContent["riskProfile"];
 }) {
+  const seenSlugs = new Set<GlossarySlug>();
   return (
     <section className="space-y-6">
       <div className="space-y-2">
@@ -138,7 +147,7 @@ function RiskProfile({
               {item.headline}
             </dt>
             <dd className="text-base leading-relaxed text-muted-foreground">
-              {item.body}
+              {renderMechanismProse(item.body, seenSlugs)}
             </dd>
           </div>
         ))}
@@ -152,9 +161,10 @@ function WhatToWatch({
 }: {
   bullets: ArchetypeContent["whatToWatch"];
 }) {
+  const seenSlugs = new Set<GlossarySlug>();
   return (
     <NumberedListSection
-      items={bullets}
+      items={bullets.map((bullet) => renderMechanismProse(bullet, seenSlugs))}
       kicker="What to watch on Pharos"
       heading="Signals that matter most"
     />
@@ -185,6 +195,7 @@ function Variations({
 }: {
   items: ArchetypeContent["variations"];
 }) {
+  const seenSlugs = new Set<GlossarySlug>();
   return (
     <section className="space-y-6">
       <div className="space-y-2">
@@ -201,7 +212,7 @@ function Variations({
               {item.title}
             </dt>
             <dd className="text-base leading-relaxed text-muted-foreground">
-              {item.body}
+              {renderMechanismProse(item.body, seenSlugs)}
             </dd>
           </div>
         ))}

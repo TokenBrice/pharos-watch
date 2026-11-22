@@ -169,10 +169,13 @@ export function MechanismComparisonMatrix() {
         testId="mechanism-comparison-matrix-table"
         chrome="content"
         density="compact"
-        className="rounded-lg bg-card/20"
-        tableClassName="w-full table-fixed border-collapse text-left text-xs"
+        className="rounded-lg bg-card"
+        tableClassName="w-full min-w-[46rem] table-fixed border-collapse text-left text-xs"
         tableProps={{ "aria-label": "Stablecoin mechanism comparison matrix" }}
-        viewportProps={{ compactBottomPadding: false, mobileScrollHint: false }}
+        viewportProps={{
+          compactBottomPadding: false,
+          mobileScrollHint: "Swipe sideways to compare mechanisms",
+        }}
       >
         <TableCaption className="sr-only">Stablecoin mechanism comparison matrix</TableCaption>
         <colgroup>
@@ -189,7 +192,7 @@ export function MechanismComparisonMatrix() {
           <TableRow className="border-b border-border/60 bg-muted/30 hover:bg-transparent">
             <TableHead
               scope="col"
-              className="h-auto whitespace-normal px-3 py-2.5 align-bottom font-semibold text-foreground"
+              className="sticky left-0 z-10 h-auto whitespace-normal border-r border-border/50 bg-card px-3 py-2.5 align-bottom font-semibold text-foreground"
             >
               Mechanism
             </TableHead>
@@ -219,10 +222,7 @@ export function MechanismComparisonMatrix() {
               >
                 <TableHead
                   scope="row"
-                  className={cn(
-                    "sticky left-0 z-1 h-auto whitespace-normal px-3 py-2.5 align-top text-left font-medium text-foreground",
-                    i % 2 === 1 ? "bg-muted/10" : "bg-background",
-                  )}
+                  className="sticky left-0 z-1 h-auto whitespace-normal border-r border-border/50 bg-card px-3 py-2.5 align-top text-left font-medium text-foreground"
                 >
                   <Link
                     href={getMechanismExplainerPath(archetype)}

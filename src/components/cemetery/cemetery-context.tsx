@@ -154,7 +154,7 @@ function ReadDeeperCard({ kicker, title, children }: { kicker: string; title: st
   return (
     <div className="pharos-card-shell min-w-0 space-y-3 px-4 py-4 md:px-5 md:py-5">
       <div className="space-y-1">
-        <p className="pharos-kicker">{kicker}</p>
+        <p className="pharos-label">{kicker}</p>
         <h4 className={COLUMN_TITLE_CLASS}>{title}</h4>
       </div>
       {children}
@@ -212,11 +212,11 @@ export function CemeteryContext({ stats, caseStudies }: CemeteryContextProps) {
             <h3 className={COLUMN_TITLE_CLASS}>Inclusion and primary cause</h3>
             <dl className="space-y-3 text-sm leading-relaxed">
               <div className="space-y-1">
-                <dt className="pharos-kicker">Inclusion</dt>
+                <dt className="pharos-label">Inclusion</dt>
                 <dd className="text-foreground/90">{CEMETERY_INCLUSION_RULE}</dd>
               </div>
               <div className="space-y-1">
-                <dt className="pharos-kicker">Primary cause</dt>
+                <dt className="pharos-label">Primary cause</dt>
                 <dd className="text-foreground/90">{CEMETERY_PRIMARY_CAUSE_RULE}</dd>
               </div>
             </dl>
@@ -235,7 +235,7 @@ export function CemeteryContext({ stats, caseStudies }: CemeteryContextProps) {
 
       {caseStudies.length > 0 || mechanisms.length > 0 ? (
         <div className="space-y-3">
-          <h3 className="pharos-kicker">Read deeper</h3>
+          <h3 className="pharos-label">Read deeper</h3>
           <div className="grid gap-4 md:grid-cols-2">
             {caseStudies.length > 0 ? (
               <ReadDeeperCard kicker="Case studies" title="Full reconstructions of documented deaths">

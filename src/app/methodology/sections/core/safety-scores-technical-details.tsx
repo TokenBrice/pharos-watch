@@ -24,7 +24,7 @@ export function SafetyScoresTechnicalDetails() {
 
   return (
     <>
-      <MethodologyDetails summary="Current V10 technical contract" primary>
+      <MethodologyDetails summary="Current Safety Score technical contract" primary>
         <p>
           The checked policy normally uses Backing {formula.pillarWeights.backing * 100}%, Exit{" "}
           {formula.pillarWeights.exit * 100}%, and Economic Control {formula.pillarWeights.control * 100}%.
@@ -47,7 +47,7 @@ export function SafetyScoresTechnicalDetails() {
           {`Verified worse facts score lower than unresolved ones: proving an opaque controller is a single key lowers its authority base from ${authorityLadder.opaqueController} to ${authorityLadder.singleSigner}. Unknown is priced as uncertainty, not as safety. Research can lower a score. The overall Economic Control pillar is clamped at ${authorityLadder.maxComponentQuality}, including non-authority paths; supervision is not required above 80.`}
         </p>
         <p>
-          {`Provisional labels identify rated cards with more than ${V9_PROVISIONAL_UNKNOWN_WEIGHT_THRESHOLD * 100}% of original scoring weight priced at unknown constants. They disclose uncertainty without changing the score, grade or availability. Older archives without the fields remain unlabelled. Exit sizes a continuous ${stressRequest.supplyRatio * 100}% of usable supply within $${stressRequest.floorUsd / 1_000_000}m–$${stressRequest.capUsd / 1_000_000}m; smaller execution receipts remain lower bounds, not proof of full-request completion.`}
+          {`Provisional labels identify rated cards with more than ${V9_PROVISIONAL_UNKNOWN_WEIGHT_THRESHOLD * 100}% of original scoring weight priced at unknown constants. They disclose uncertainty without changing the score, grade or availability. Older archives without the fields remain unlabeled. Exit sizes a continuous ${stressRequest.supplyRatio * 100}% of usable supply within $${stressRequest.floorUsd / 1_000_000}m–$${stressRequest.capUsd / 1_000_000}m; smaller execution receipts remain lower bounds, not proof of full-request completion.`}
         </p>
         <p className="pharos-numeric">
           candidate = weakestPriced + {formula.compensabilityHeadroom} × tanh((weightedQuality − weakestPriced) /{" "}

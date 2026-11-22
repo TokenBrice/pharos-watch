@@ -7,14 +7,19 @@ import { TopNav } from "@/components/top-nav";
 import { NAV_GROUPS } from "@/lib/nav-config";
 import { cleanupFrontendTest, installMatchMediaMock } from "@/test-utils/frontend";
 
-const { useHealthMock, useHomepageSnapshotMock, pathnameMock } = vi.hoisted(() => ({
+const { useHealthMock, useHomepageSnapshotMock, pathnameMock, hydratedMock } = vi.hoisted(() => ({
   useHealthMock: vi.fn(),
   useHomepageSnapshotMock: vi.fn(() => ({ data: undefined as unknown })),
   pathnameMock: { current: "/" as string },
+  hydratedMock: { current: false },
 }));
 
 vi.mock("next/navigation", () => ({
   usePathname: () => pathnameMock.current,
+}));
+
+vi.mock("@/hooks/use-hydrated", () => ({
+  useHydrated: () => hydratedMock.current,
 }));
 
 vi.mock("next-themes", () => ({
@@ -60,6 +65,7 @@ afterEach(() => {
 describe("TopNav", () => {
   beforeEach(() => {
     pathnameMock.current = "/";
+    hydratedMock.current = false;
     useHealthMock.mockReset();
   });
 
@@ -131,7 +137,7 @@ describe("TopNav", () => {
     expect(hoverBridge?.className).toContain("pt-2");
   });
 
-  it("opens after 350ms from closed, switches after 100ms, and closes after 250ms", () => {
+  it("opens after 350ms from closed, switches after 100ms, and closes after 450ms", () => {
     vi.useFakeTimers();
     installMatchMediaMock(true);
 
@@ -153,7 +159,7 @@ describe("TopNav", () => {
     expect(secondTrigger.getAttribute("aria-expanded")).toBe("true");
 
     fireEvent.mouseLeave(secondTrigger.closest("[data-section-menu]")!);
-    act(() => vi.advanceTimersByTime(249));
+    act(() => vi.advanceTimersByTime(449));
     expect(secondTrigger.getAttribute("aria-expanded")).toBe("true");
     act(() => vi.advanceTimersByTime(1));
     expect(secondTrigger.getAttribute("aria-expanded")).toBe("false");
@@ -254,6 +260,78 @@ describe("TopNav", () => {
     expect(statusLink?.textContent).toBe("Status");
     expect(statusLink?.querySelector("span.rounded-full")).toBeNull();
     expect(useHealthMock).not.toHaveBeenCalled();
+  });
+
+  it("steps Stability and FreezeWatch labels in at xl, unifies active pills, and includes Documentation in Learn", () => {
+    installMatchMediaMock(true);
+    pathnameMock.current = "/compliance/";
+    render(<TopNav />);
+
+    const stabilityLink = document.querySelector<HTMLAnchorElement>('nav[aria-label="Quick links"] a[href^="/stability-index"]')!;
+    const compactTier = stabilityLink.querySelector("span.xl\\:hidden");
+    const shortTier = stabilityLink.querySelector("span.xl\\:inline");
+    expect(compactTier?.textContent).toBe("PSI");
+    expect(shortTier?.textContent).toBe("Stability");
+
+    const freezeLink = document.querySelector<HTMLAnchorElement>('nav[aria-label="Quick links"] a[href^="/freezewatch"]')!;
+    expect(freezeLink.querySelector("span.xl\\:hidden")?.textContent).toBe("Freeze");
+    expect(freezeLink.querySelector("span.xl\\:inline")?.textContent).toBe("FreezeWatch");
+
+    // Active section dropdown shares the Stage 1D dark-mode active pill grammar.
+    const riskTrigger = screen.getByRole("button", { name: "Risk" });
+    expect(riskTrigger.className).toContain("dark:bg-card");
+    expect(riskTrigger.className).toContain("dark:ring-1");
+    expect(riskTrigger.className).toContain("dark:ring-border/80");
+
+    // Utility divider separates sections from utility controls.
+    expect(document.querySelector('span[aria-hidden="true"].h-4.w-px')).not.toBeNull();
+
+    // Learn includes Documentation (/docs/) and Alert Bot description omits stale "launches".
+    const learn = NAV_GROUPS.find((group) => group.key === "learn")!;
+    expect(learn.items.some((item) => item.href === "/docs/" && item.label === "Documentation")).toBe(true);
+    const tools = NAV_GROUPS.find((group) => group.key === "tools")!;
+    const alertBot = tools.items.find((item) => item.href === "/pharoswatchbot/");
+    expect(alertBot?.description).toBeTruthy();
+    expect(alertBot?.description?.toLowerCase()).not.toContain("launches");
+  });
+
+  it("renders OS-aware hydration-safe search shortcut badges and triggers keyboard shortcuts from ?", () => {
+    installMatchMediaMock(true);
+    const originalUserAgent = navigator.userAgent;
+    Object.defineProperty(navigator, "userAgent", {
+      value: "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0)",
+      configurable: true,
+    });
+
+    try {
+      // Before hydration: SSR-safe Ctrl K default.
+      const { rerender } = render(<TopNav />);
+      const searchBtn = screen.getByRole("button", { name: "Search" });
+      expect(searchBtn.querySelector("kbd")?.textContent).toBe("Ctrl K");
+
+      // After hydration on Apple user agent: switches to ⌘K.
+      hydratedMock.current = true;
+      rerender(<TopNav />);
+      expect(screen.getByRole("button", { name: "Search" }).querySelector("kbd")?.textContent).toBe("⌘K");
+
+      // ? trigger dispatches the global shortcuts keydown on non-editorial routes.
+      const onKeyDown = vi.fn();
+      window.addEventListener("keydown", onKeyDown);
+      fireEvent.click(screen.getByRole("button", { name: "Keyboard shortcuts" }));
+      expect(onKeyDown).toHaveBeenCalledTimes(1);
+      expect((onKeyDown.mock.calls[0]![0] as KeyboardEvent).key).toBe("?");
+      window.removeEventListener("keydown", onKeyDown);
+
+      // Editorial routes omit the ? trigger because InteractiveProviders is not mounted there.
+      pathnameMock.current = "/about/";
+      rerender(<TopNav />);
+      expect(screen.queryByRole("button", { name: "Keyboard shortcuts" })).toBeNull();
+    } finally {
+      Object.defineProperty(navigator, "userAgent", {
+        value: originalUserAgent,
+        configurable: true,
+      });
+    }
   });
 
 });

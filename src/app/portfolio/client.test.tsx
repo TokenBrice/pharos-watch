@@ -1,16 +1,19 @@
 // @vitest-environment jsdom
 
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { renderToStaticMarkup, renderToString } from "react-dom/server";
 import { readFileSync } from "node:fs";
 import { compile } from "tailwindcss";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PortfolioClient } from "./client";
 import PortfolioPage from "./page";
 import type { ReportCardsV9Response } from "@shared/types/report-cards-v9-current";
+import type { ReportCardsV9TableResponse } from "@shared/types/report-cards-v9-projections";
+import { projectV9Table } from "@shared/lib/report-cards-v9-projections";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
+import { mutateWatchlist } from "@/lib/watchlist-storage";
 
 let portfolioState: {
   holdings: Array<{ coinId: string; amount: number }>;
@@ -24,7 +27,7 @@ let portfolioState: {
 };
 
 const reportCardsState: {
-  data: ReportCardsV9Response | undefined;
+  data: ReportCardsV9Response | ReportCardsV9TableResponse | undefined;
   isLoading: boolean;
   dataUpdatedAt: number;
   error: Error | null;
@@ -38,6 +41,7 @@ const reportCardsState: {
 };
 const reportQueryOptions = vi.hoisted(() => vi.fn());
 const coinStates = vi.hoisted(() => ({ byId: new Map() as ReadonlyMap<string, readonly unknown[]> }));
+const copyTextMock = vi.hoisted(() => vi.fn());
 const bootstrapScript = readFileSync("public/portfolio-bootstrap.js", "utf8");
 
 vi.mock("@/hooks/api-hooks", () => ({
@@ -49,6 +53,10 @@ vi.mock("@/hooks/api-hooks", () => ({
 
 vi.mock("@/hooks/use-coin-states", () => ({
   useCoinStates: () => ({ byId: coinStates.byId, liveReady: true }),
+}));
+
+vi.mock("@/lib/clipboard", () => ({
+  copyText: (...args: unknown[]) => copyTextMock(...args),
 }));
 
 vi.mock("@/lib/logos", () => ({
@@ -79,7 +87,11 @@ vi.mock("@/components/ui/skeleton", () => ({
 }));
 
 vi.mock("@/components/coin-selector", () => ({
-  CoinSelector: () => <div>coin-selector</div>,
+  CoinSelector: ({ onSelect }: { onSelect: (coin: { id: string }) => void }) => (
+    <button type="button" onClick={() => onSelect({ id: "usdc-circle" })}>
+      coin-selector
+    </button>
+  ),
 }));
 
 vi.mock("@/components/stablecoin-logo", () => ({
@@ -107,19 +119,28 @@ function basePortfolioState(): typeof portfolioState {
     clearAll: vi.fn(),
     removeCoin: vi.fn(),
     setAmount: vi.fn(),
-    shareUrl: vi.fn(() => "https://pharos.watch/portfolio/"),
+    shareUrl: vi.fn(() => "https://pharos.watch/portfolio/?p=usdc-circle:100"),
   };
 }
 
-describe("PortfolioClient URL sync", () => {
-
+describe("PortfolioClient URL sync and risk workspace", () => {
   beforeEach(() => {
     portfolioState = basePortfolioState();
     reportCardsState.data = undefined;
     reportCardsState.isLoading = false;
     reportQueryOptions.mockClear();
+    copyTextMock.mockReset();
+    copyTextMock.mockResolvedValue({ ok: true });
     coinStates.byId = new Map();
+    mutateWatchlist(() => []);
+    window.localStorage.clear();
     window.history.replaceState(null, "", "/portfolio/");
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    mutateWatchlist(() => []);
+    window.localStorage.clear();
   });
 
   it("leads with exceptional holdings and names what known-only subtotals leave out", () => {
@@ -130,28 +151,167 @@ describe("PortfolioClient URL sync", () => {
     const callout = screen.getByRole("region", { name: "Holdings in an exceptional state" });
     expect(within(callout).getAllByRole("listitem").map((item) => item.textContent)).toEqual(["USDT$300Critical notice · Halted", "USDC$100DEWS Alert"]);
     screen.getByText("Sum of your entered amounts at face value, not live prices");
-    expect(screen.getByText("exit · known-only subtotal").parentElement?.textContent).toContain("100 USD of 400 USD · excludes USDT");
+    const exitLabel = screen.getByText("Exit · known-only subtotal");
+    expect(exitLabel.parentElement?.parentElement?.textContent).toContain("100 USD of 400 USD · excludes USDT");
   });
 
-  it("renders the empty editor without requesting report cards", () => {
+  it("drops the Modelable stablecoins empty hero and surfaces starter mixes above the fold without requesting report cards", () => {
     reportCardsState.isLoading = true;
     render(<PortfolioClient />);
     expect(reportQueryOptions).toHaveBeenLastCalledWith({ enabled: false });
+    expect(screen.queryByText(/Modelable stablecoins/i)).toBeNull();
+    expect(screen.getByRole("group", { name: "Starter mixes" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "CeFi Core" })).toBeTruthy();
     expect(screen.getByText("coin-selector")).toBeTruthy();
     expect(screen.getByText("portfolio-empty-state")).toBeTruthy();
   });
 
-  it("uses Economic Control in the live subtotals and the empty preview", async () => {
+  it("shows Import my Watchlist (N) when starred coins exist and imports them into the portfolio", () => {
+    mutateWatchlist(() => ["usdc-circle", "usdt-tether"]);
+
+    render(<PortfolioClient />);
+
+    const importButton = screen.getByRole("button", { name: /Import my Watchlist \(2\)/i });
+    fireEvent.click(importButton);
+    expect(portfolioState.addCoin).toHaveBeenCalledWith("usdc-circle", 0);
+    expect(portfolioState.addCoin).toHaveBeenCalledWith("usdt-tether", 0);
+  });
+
+  it("auto-focuses newly added holding inputs, debounces amount edits, and shows live % weights", () => {
+    vi.useFakeTimers();
+    portfolioState = {
+      ...basePortfolioState(),
+      holdings: [
+        { coinId: "usdc-circle", amount: 750 },
+        { coinId: "usdt-tether", amount: 250 },
+      ],
+      totalUsd: 1000,
+    };
+    const { rerender } = render(<PortfolioClient />);
+
+    expect(screen.getByLabelText("USDC portfolio weight 75.0%").textContent).toBe("75.0%");
+    expect(screen.getByLabelText("USDT portfolio weight 25.0%").textContent).toBe("25.0%");
+
+    // Simulate adding USDC via CoinSelector to trigger auto-focus on its amount input.
+    fireEvent.click(screen.getByRole("button", { name: "coin-selector" }));
+    rerender(<PortfolioClient />);
+    const usdcInput = screen.getByLabelText("Amount in USD for USD Coin");
+    expect(document.activeElement).toBe(usdcInput);
+
+    // Type a new USD amount and verify smooth debounced commit.
+    fireEvent.focus(usdcInput);
+    fireEvent.change(usdcInput, { target: { value: "1250" } });
+    expect(portfolioState.setAmount).not.toHaveBeenCalled();
+    act(() => {
+      vi.advanceTimersByTime(260);
+    });
+    expect(portfolioState.setAmount).toHaveBeenCalledWith("usdc-circle", 1250);
+  });
+
+  it("renders grouped dependencyExposure[], concentration strips, and outbound Compare / Dependency / Telegram links", () => {
+    portfolioState = {
+      ...basePortfolioState(),
+      holdings: [
+        { coinId: "dai-makerdao", amount: 6000 },
+        { coinId: "frax-frax", amount: 4000 },
+      ],
+      totalUsd: 10_000,
+    };
+    const table = projectV9Table(
+      makeReportCardsV9Response({
+        cards: [
+          makeV9Card({ id: "dai-makerdao", score: 85 }),
+          makeV9Card({ id: "frax-frax", score: 75 }),
+          makeV9Card({ id: "usdc-circle", score: 90 }),
+        ],
+      }),
+    );
+    table.dependencyGraph = {
+      edges: [
+        {
+          from: "usdc-circle",
+          to: "dai-makerdao",
+          kind: "basket",
+          weight: 0.25,
+          upstreamScore: 90,
+          materiality: "basket-weighted",
+        },
+        {
+          from: "usdc-circle",
+          to: "frax-frax",
+          kind: "basket",
+          weight: null,
+          upstreamScore: 90,
+          materiality: "basket-bounded-unknown",
+        },
+      ],
+    };
+    reportCardsState.data = table;
+
+    render(<PortfolioClient />);
+
+    // Upstream exposure breakdown grouped by upstream coin
+    const upstreamList = screen.getByRole("list", { name: "Upstream collateral exposure by asset" });
+    expect(upstreamList.textContent).toContain("USDC");
+    expect(upstreamList.textContent).toContain("$1,500");
+    expect(upstreamList.textContent).toContain("15.0%");
+    expect(upstreamList.textContent).toContain("+1 unmeasured route");
+    expect(upstreamList.textContent).toContain("DAI");
+    expect(upstreamList.textContent).toContain("FRAX");
+    const mapLink = within(upstreamList).getByRole("link", { name: /Trace on Dependency Map/i });
+    expect(mapLink.getAttribute("href")).toMatch(/^\/dependency-map\/?\?mode=exposure&root=usdc-circle$/);
+
+    // Concentration strips
+    expect(screen.getByTestId("portfolio-concentration-freeze")).toBeTruthy();
+    expect(screen.getByTestId("portfolio-concentration-governance")).toBeTruthy();
+    expect(screen.getByTestId("portfolio-concentration-custody")).toBeTruthy();
+    expect(screen.getByTestId("portfolio-concentration-peg")).toBeTruthy();
+
+    // Outbound cross-tool actions
+    expect(screen.getByRole("link", { name: /Compare holdings/i }).getAttribute("href")).toMatch(
+      /^\/compare\/?\?coins=dai-makerdao,frax-frax$/,
+    );
+    expect(screen.getByRole("link", { name: /Trace upstream risks/i }).getAttribute("href")).toMatch(
+      /^\/dependency-map\/?\?mode=exposure&root=usdc-circle$/,
+    );
+    expect(screen.getByRole("heading", { name: "Follow book in Telegram" })).toBeTruthy();
+    expect(screen.getByText("/subscribe dews, depeg, safety dai-makerdao, frax-frax")).toBeTruthy();
+
+    // No V9/V10 engine prefixes in reader-facing copy
+    expect(screen.queryByText(/V10|V9/)).toBeNull();
+  });
+
+  it("uses an inline share fallback instead of window.prompt when clipboard access fails", async () => {
+    const promptSpy = vi.spyOn(window, "prompt").mockImplementation(() => null);
+    copyTextMock.mockResolvedValue({ ok: false });
+    portfolioState = {
+      ...basePortfolioState(),
+      holdings: [{ coinId: "usdc-circle", amount: 100 }],
+      totalUsd: 100,
+    };
+
+    render(<PortfolioClient />);
+    fireEvent.click(screen.getByRole("button", { name: /Share/i }));
+
+    const fallbackRegion = await screen.findByRole("region", { name: "Shareable portfolio link" });
+    expect(within(fallbackRegion).getByDisplayValue("https://pharos.watch/portfolio/?p=usdc-circle:100")).toBeTruthy();
+    expect(promptSpy).not.toHaveBeenCalled();
+    promptSpy.mockRestore();
+  });
+
+  it("uses Economic Control in the live subtotals and the empty preview without V10 prefixes", async () => {
     portfolioState = { ...basePortfolioState(), holdings: [{ coinId: "usdc-circle", amount: 100 }], totalUsd: 100 };
     reportCardsState.data = makeReportCardsV9Response({ cards: [makeV9Card({ id: "usdc-circle" })] });
     render(<PortfolioClient />);
     expect(screen.getByText("Economic Control")).toBeTruthy();
+    expect(screen.getByText("Weighted safety aggregate")).toBeTruthy();
 
     const { PortfolioEmptyState } = await vi.importActual<typeof import("@/components/portfolio/portfolio-empty-state")>("@/components/portfolio/portfolio-empty-state");
     const preview = renderToStaticMarkup(<PortfolioEmptyState presets={[]} onApplyPreset={() => {}} />);
     expect(preview).toContain(">Economic Control</span>");
     expect(preview).toContain("Backing, Exit and Economic Control subtotals");
     expect(preview).not.toContain("Economic control");
+    expect(preview).not.toContain("V10");
   });
 
   it.each([
@@ -212,7 +372,7 @@ describe("PortfolioClient URL sync", () => {
     expect(reportQueryOptions).toHaveBeenLastCalledWith({ enabled: true });
     expect(screen.getByText("coin-selector")).toBeTruthy();
     expect(screen.getByText("Loading holdings safety evidence…")).toBeTruthy();
-    expect(screen.queryByText(/Weighted V10 safety aggregate/)).toBeNull();
+    expect(screen.queryByText(/Weighted safety aggregate/)).toBeNull();
   });
 
   it.each([false, true])("normalizes legacy URL holdings (retained %s)", async (retained) => {
@@ -236,9 +396,10 @@ describe("PortfolioClient URL sync", () => {
       pillars: { ...partialPillars, backing: { ...partialPillars.backing, score: 90 }, control: { ...partialPillars.control, score: 90 } } });
     reportCardsState.data = makeReportCardsV9Response({ cards: [complete, partial] });
     render(<PortfolioClient />);
-    expect(screen.getByText("Known-only weighted V10 safety subtotal")).toBeTruthy();
-    expect(screen.getByText("exit · known-only subtotal").parentElement?.textContent).toContain("60/100");
-    expect(screen.getByText("exit · known-only subtotal").parentElement?.textContent).toContain("100 USD of 400 USD");
+    expect(screen.getByText("Known-only weighted safety subtotal")).toBeTruthy();
+    const exitCard = screen.getByText("Exit · known-only subtotal").parentElement?.parentElement;
+    expect(exitCard?.textContent).toContain("60/100");
+    expect(exitCard?.textContent).toContain("100 USD of 400 USD");
     const curationGap = screen.getByText("Exit excluded · awaiting curation");
     expect(curationGap.getAttribute("title")).toBe(
       "Exit is left out of the score for now (public data awaiting curation); the measured pillars carry the weight.",

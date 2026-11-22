@@ -55,6 +55,14 @@ export default function DocsIndexPage() {
       leadParagraphs={[
         "Methodology and API references for Pharos. Every page is also served as plain markdown for agents.",
       ]}
+      headerSupplement={
+        <p className="text-sm text-muted-foreground">
+          Want the guided overview with Reader/Analyst mode and worked examples?{" "}
+          <Link href="/methodology/" className="pharos-prose-link text-foreground">
+            Open the Methodology manual &rarr;
+          </Link>
+        </p>
+      }
     >
       <div className="space-y-10">
         <section aria-labelledby="docs-start-here" className="space-y-4 border-y border-border/60 py-5">
@@ -99,7 +107,12 @@ export default function DocsIndexPage() {
         </section>
         {DOC_GROUPS.map((group) => (
           <section key={group} className="space-y-4">
-            <h2 className="pharos-display text-2xl font-bold tracking-tight text-foreground">{GROUP_TITLES[group]}</h2>
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="pharos-display text-2xl font-bold tracking-tight text-foreground">{GROUP_TITLES[group]}</h2>
+              <Link href="/methodology/" className="pharos-prose-link text-sm text-muted-foreground hover:text-foreground">
+                Interactive Methodology manual &rarr;
+              </Link>
+            </div>
             <ul className="space-y-3">
               {byGroup[group].map((doc) => (
                 <li key={doc.slug} className="border-b border-border/50 pb-3 last:border-b-0">

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChartSkeleton } from "@/components/chart-skeleton";
 import { ShareButton } from "@/components/share-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
@@ -15,10 +16,10 @@ const route = createClientFeaturePage({
   },
   loadClient: () => import("./client").then((mod) => ({ default: mod.AltPegsClient })),
   loading: (
-    <div className="space-y-6">
-      <Skeleton className="h-[300px] w-full rounded-xl" />
-      <Skeleton className="h-[420px] w-full rounded-xl" />
-      <Skeleton className="h-[520px] w-full rounded-xl" />
+    <div className="space-y-4">
+      <Skeleton className="h-[200px] w-full rounded-xl" />
+      <ChartSkeleton variant="area" className="h-[380px] w-full rounded-xl" />
+      <ChartSkeleton variant="area" className="h-[340px] w-full rounded-xl" />
     </div>
   ),
   shell: {

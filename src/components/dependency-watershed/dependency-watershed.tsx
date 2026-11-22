@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { formatCurrency } from "@shared/lib/format";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { DependencyGraphResponse } from "@shared/types/dependency-graph";
 import { ControlPillToggle } from "@/components/control-pill-toggle";
 import { computeDependencyExposure, type DependencyExposureResult } from "@/hooks/use-dependency-exposure-mode";
@@ -134,8 +136,12 @@ export function DependencyWatershed({ publication, overlay, result, labelOf, onA
               {pinBeam && pinnedId && (
                 <>
                   <button type="button" className="pharos-focus-ring rounded-md text-xs font-medium text-foreground underline underline-offset-2" onClick={() => trace(pinnedId)}>Trace exposure →</button>
+                  <Link href={buildStablecoinUrl(pinnedId)} className="pharos-focus-ring rounded-md text-xs font-medium text-brand-accent-text underline-offset-2 hover:underline">Open profile →</Link>
                   <button type="button" className="pharos-focus-ring rounded-md text-xs text-muted-foreground underline underline-offset-2" onClick={() => setPinnedId(null)}>Clear</button>
                 </>
+              )}
+              {beam && roots.length === 1 && (
+                <Link href={buildStablecoinUrl(roots[0]!)} className="pharos-focus-ring rounded-md text-xs font-medium text-brand-accent-text underline-offset-2 hover:underline">Open profile →</Link>
               )}
             </div>
           </>
@@ -171,10 +177,15 @@ export function DependencyWatershed({ publication, overlay, result, labelOf, onA
       <WatershedLegend model={model} labelOf={labelOf} />
       <WatershedOtherBasins model={model} labelOf={labelOf} roots={rootSet} onCommit={trace} />
       <WatershedTable model={model} labelOf={labelOf} />
-      <p className="break-all text-xs text-muted-foreground">
-        Publication supply basis · V10 {publication.methodologyVersion} · publication {publication.publicationGenerationId.split(":").pop()?.slice(0, 7)} · {supplyClocks.length === 0 ? "supply clock not published" : supplyClocks.length === 1 ? `supply as of ${formatEventTimestamp(supplyClocks[0]!, true)}` : `mixed supply clocks, ${formatEventTimestamp(supplyClocks[0]!, true)} to ${formatEventTimestamp(supplyClocks[supplyClocks.length - 1]!, true)}`}
-        {publication.publicationStatus === "held" ? " · held publication" : ""}
-      </p>
+      <details className="border-t border-border/50 pt-2 text-xs text-muted-foreground">
+        <summary className="pharos-focus-ring cursor-pointer rounded-sm py-1 font-medium text-muted-foreground hover:text-foreground">
+          Provenance &amp; supply clock
+        </summary>
+        <p className="mt-1 break-all">
+          Publication supply basis · Safety Score {publication.methodologyVersion} · publication {publication.publicationGenerationId.split(":").pop()?.slice(0, 7)} · {supplyClocks.length === 0 ? "supply clock not published" : supplyClocks.length === 1 ? `supply as of ${formatEventTimestamp(supplyClocks[0]!, true)}` : `mixed supply clocks, ${formatEventTimestamp(supplyClocks[0]!, true)} to ${formatEventTimestamp(supplyClocks[supplyClocks.length - 1]!, true)}`}
+          {publication.publicationStatus === "held" ? " · held publication" : ""}
+        </p>
+      </details>
     </section>
   );
 }

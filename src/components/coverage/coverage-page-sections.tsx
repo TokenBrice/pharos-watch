@@ -1,21 +1,26 @@
 "use client";
 
+import { Fragment, useCallback, useRef } from "react";
 import { ChevronDown, Search, SearchX } from "lucide-react";
 import { getPricingSourceLabel } from "@shared/lib/pricing-sources";
 import { CoverageLensSummary } from "@/components/coverage/coverage-lens-summary";
 import { SafetyScoreDataCoverage } from "@/components/safety-scores/data-coverage-module";
-import { ReferenceTable } from "@/components/reference-table";
-import { TableCell, TableHead, TableRow } from "@/components/table";
+import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
+import { TablePagination } from "@/components/table-pagination";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { COVERAGE_FEATURES } from "@/lib/coverage";
+import { useReferenceTablePage } from "@/hooks/use-reference-table-page";
+import { COVERAGE_FEATURES, type CoverageRow } from "@/lib/coverage";
 import {
   AUTHORITATIVE_ACCENT,
-  getFilterGroups,
   getLegendGroups,
-  SORT_OPTIONS,
-  type CoverageSortKey,
 } from "@/lib/coverage-page-config";
+import {
+  COVERAGE_MATRIX_SORT_OPTIONS,
+  getCoverageMatrixFilterGroups,
+  type CoverageMatrixFilterKey,
+  type CoverageMatrixSortKey,
+} from "@/components/coverage/coverage-matrix-controls";
 import { cn } from "@/lib/utils";
 import { CoverageBadge } from "@/components/coverage/coverage-badge";
 import { CoverageCoinIdentity } from "@/components/coverage/coverage-coin-identity";
@@ -299,15 +304,11 @@ export function CoveragePricingSourcesCard({
   );
 }
 
-export function CoverageMatrixCard(
-  model: Pick<
+export interface CoverageMatrixCardProps
+  extends Pick<
     CoveragePageModel,
     | "logos"
     | "rows"
-    | "filter"
-    | "setFilter"
-    | "sort"
-    | "setSort"
     | "search"
     | "setSearch"
     | "filteredRows"
@@ -315,9 +316,161 @@ export function CoverageMatrixCard(
     | "resetFilters"
     | "unavailableFeatures"
     | "dataAsOfMs"
-  >,
-) {
-  const filterGroups = getFilterGroups();
+  > {
+  filter: CoverageMatrixFilterKey;
+  setFilter: (next: CoverageMatrixFilterKey) => void;
+  sort: CoverageMatrixSortKey;
+  setSort: (next: CoverageMatrixSortKey) => void;
+}
+
+const COVERAGE_COLUMN_GUIDE_ID = "coverage-matrix-column-guide";
+const COVERAGE_COLUMN_GUIDE_TEXT = COVERAGE_FEATURES.map(
+  (feature) => `${feature.label}: ${feature.description}`,
+).join(" ");
+
+function CoverageMatrixTable({
+  rows,
+  totalCount,
+  logos,
+  resetKey,
+}: {
+  rows: readonly CoverageRow[];
+  totalCount: number;
+  logos: Record<string, string> | undefined;
+  resetKey: string;
+}) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const { page, totalPages, pageStartIndex, rangeStart, rangeEnd, setPage } = useReferenceTablePage({
+    totalRows: rows.length,
+    pageSize: COVERAGE_PAGE_SIZE,
+    param: "page",
+    resetKey,
+  });
+  const pageRows = rows.slice(pageStartIndex, pageStartIndex + COVERAGE_PAGE_SIZE);
+
+  const goToPage = useCallback(
+    (next: number) => {
+      setPage(next);
+      const top = rootRef.current?.getBoundingClientRect().top;
+      if (top != null && top < 0) rootRef.current?.scrollIntoView({ block: "start" });
+    },
+    [setPage],
+  );
+
+  const isFiltered = totalCount !== rows.length;
+  const renderPagination = (bordered: boolean) => (
+    <TablePagination
+      bordered={bordered}
+      page={page - 1}
+      totalPages={totalPages}
+      rangeStart={rangeStart}
+      rangeEnd={rangeEnd}
+      total={rows.length}
+      noun="coins"
+      onPrevious={() => goToPage(page - 1)}
+      onNext={() => goToPage(page + 1)}
+      showControls={totalPages > 1}
+      supplementaryText={
+        isFiltered || totalPages > 1 ? (
+          <>
+            {totalPages > 1 ? `Page ${page} of ${totalPages}` : null}
+            {isFiltered && totalPages > 1 ? " · " : null}
+            {isFiltered ? `filtered from ${totalCount.toLocaleString("en-US")}` : null}
+          </>
+        ) : null
+      }
+    />
+  );
+
+  return (
+    <div ref={rootRef} className="@container scroll-mt-[var(--table-header-top,0px)]">
+      <p id={COVERAGE_COLUMN_GUIDE_ID} className="sr-only">
+        {COVERAGE_COLUMN_GUIDE_TEXT}
+      </p>
+      <TableFrame
+        tableId="coverage-matrix"
+        testId="coverage-matrix-table"
+        caption={`Per-coin feature availability across ${totalCount} active stablecoins.`}
+        captionClassName="sr-only"
+        chrome="bare"
+        density="compact"
+        stickyHeader
+        className="pharos-table-shell hidden overflow-clip @5xl:block"
+        tableClassName="w-full min-w-[1340px] border-collapse"
+        tableProps={{ "aria-describedby": COVERAGE_COLUMN_GUIDE_ID }}
+        viewportClassName="overflow-x-auto overscroll-x-contain scroll-shadow min-[1360px]:overflow-visible min-[1360px]:bg-none"
+        viewportProps={{
+          compactBottomPadding: false,
+          horizontal: false,
+          mobileScrollHint: false,
+          overscrollX: false,
+          scrollShadow: false,
+        }}
+        footerSlot={renderPagination(true)}
+      >
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            <TableHead
+              scope="col"
+              className="sticky left-0 z-10 h-11 w-[200px] min-w-[200px] border-r border-border/60 bg-card px-4 text-sm font-medium text-foreground"
+            >
+              Stablecoin
+            </TableHead>
+            {COVERAGE_FEATURES.map((feature) => (
+              <TableHead
+                key={feature.key}
+                scope="col"
+                title={`${feature.label}: ${feature.description}`}
+                className="h-11 px-1.5 text-sm font-medium text-foreground"
+              >
+                {feature.shortLabel === feature.label ? (
+                  feature.shortLabel
+                ) : (
+                  <>
+                    <span aria-hidden="true">{feature.shortLabel}</span>
+                    <span className="sr-only">{feature.label}</span>
+                  </>
+                )}
+              </TableHead>
+            ))}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {pageRows.map((row) => (
+            <Fragment key={row.id}>
+              <TableRow className="group">
+                <TableHead
+                  scope="row"
+                  className="sticky left-0 z-1 h-auto w-[200px] min-w-[200px] max-w-[200px] whitespace-normal border-r border-border/60 bg-card px-4 py-2.5 text-left font-normal text-foreground"
+                >
+                  <CoverageCoinIdentity row={row} logoSrc={logos?.[row.id]} logoSize={24} linked />
+                </TableHead>
+                {COVERAGE_FEATURES.map((feature) => (
+                  <TableCell key={feature.key} className="px-1.5 py-2.5 align-middle">
+                    <CoverageBadge status={row.statuses[feature.key]} compact />
+                  </TableCell>
+                ))}
+              </TableRow>
+            </Fragment>
+          ))}
+        </TableBody>
+      </TableFrame>
+      <div className="@5xl:hidden">
+        <ul className="space-y-3">
+          {pageRows.map((row) => (
+            <li key={row.id} className="[contain-intrinsic-size:auto_240px] [content-visibility:auto]">
+              <CoverageMobileCard row={row} logoSrc={logos?.[row.id]} />
+            </li>
+          ))}
+        </ul>
+        <div className="mt-3 rounded-xl border border-border/60">{renderPagination(false)}</div>
+      </div>
+    </div>
+  );
+}
+
+export function CoverageMatrixCard(model: CoverageMatrixCardProps) {
+  const filterGroups = getCoverageMatrixFilterGroups();
   const unavailableFeatureLabels = model.unavailableFeatures
     .map((key) => COVERAGE_FEATURES.find((feature) => feature.key === key)?.shortLabel ?? key)
     .join(", ");
@@ -340,7 +493,7 @@ export function CoverageMatrixCard(
           <CardDescription className="max-w-3xl leading-relaxed">
             Search, filter, and inspect one asset at a time. The desktop table keeps the full comparison view; mobile
             cards show the highest-signal states first. Available counts all coins with any data for a feature. Headline
-            counts apply stricter thresholds — for example, pricing requires three or more independent sources, and
+            counts apply stricter thresholds: for example, pricing requires three or more independent sources, and
             reserve coverage requires live composition feeds.
           </CardDescription>
         </div>
@@ -365,11 +518,11 @@ export function CoverageMatrixCard(
               <span className="shrink-0">Sort</span>
               <select
                 value={model.sort}
-                onChange={(event) => model.setSort(event.target.value as CoverageSortKey)}
+                onChange={(event) => model.setSort(event.target.value as CoverageMatrixSortKey)}
                 className="pharos-focus-ring h-11 rounded-full border border-border/65 bg-background/45 px-4 text-sm text-foreground transition-colors hover:border-foreground/20 sm:h-10"
                 aria-label="Sort coverage table"
               >
-                {SORT_OPTIONS.map((group) => (
+                {COVERAGE_MATRIX_SORT_OPTIONS.map((group) => (
                   <optgroup key={group.group} label={group.group}>
                     {group.options.map((option) => (
                       <option key={option.key} value={option.key}>
@@ -504,48 +657,11 @@ export function CoverageMatrixCard(
             ) : null}
           </div>
         ) : (
-          <ReferenceTable
-            tableId="coverage-matrix"
-            testId="coverage-matrix-table"
-            caption={`Per-coin feature availability across ${model.rows.length} active stablecoins.`}
+          <CoverageMatrixTable
             rows={model.filteredRows}
             totalCount={model.rows.length}
-            getRowKey={(row) => row.id}
-            noun="coins"
-            pageSize={COVERAGE_PAGE_SIZE}
+            logos={model.logos}
             resetKey={`${model.filter}:${model.search}:${model.sort}`}
-            tableClassName="table-fixed"
-            head={
-              <TableRow className="hover:bg-transparent">
-                <TableHead scope="col" className="h-11 w-[200px] px-4 text-sm font-medium text-foreground">
-                  Stablecoin
-                </TableHead>
-                {COVERAGE_FEATURES.map((feature) => (
-                  <TableHead key={feature.key} scope="col" className="h-11 px-1 text-sm font-medium text-foreground">
-                    <span>{feature.shortLabel}</span>
-                    <span className="sr-only">
-                      : {feature.label}. {feature.description}
-                    </span>
-                  </TableHead>
-                ))}
-              </TableRow>
-            }
-            renderRow={(row) => (
-              <TableRow className="group">
-                <TableHead
-                  scope="row"
-                  className="h-auto w-[200px] max-w-[200px] whitespace-normal px-4 py-2.5 text-left font-normal text-foreground"
-                >
-                  <CoverageCoinIdentity row={row} logoSrc={model.logos?.[row.id]} logoSize={24} linked />
-                </TableHead>
-                {COVERAGE_FEATURES.map((feature) => (
-                  <TableCell key={feature.key} className="px-1 py-2.5 align-middle">
-                    <CoverageBadge status={row.statuses[feature.key]} compact />
-                  </TableCell>
-                ))}
-              </TableRow>
-            )}
-            renderCard={(row) => <CoverageMobileCard row={row} logoSrc={model.logos?.[row.id]} />}
           />
         )}
       </CardContent>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { FeatureHeroSplit, HeroMetricRow } from "@/components/feature-hero-split";
 import { FlowRunLine } from "@/components/mint-burn/flow-run-line";
 import { FlowSignedNetValue, FlowVolumeValue } from "@/components/mint-burn/flow-valuation-value";
@@ -8,6 +8,7 @@ import { MethodologyLabel } from "@/components/methodology-hint";
 import { OpsStatusChip } from "@/components/ops-status-chip";
 import { UniverseChip } from "@/components/universe-chip";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ChartSkeleton } from "@/components/chart-skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { buildRunLineModel, selectRunLineDrivers, type RunLineModel } from "@/lib/flow-run-line-model";
 import { formatDataHealthWarning, isPublicWarning, type DataHealthInfo } from "@/lib/data-health";
@@ -46,10 +47,18 @@ interface FlowGaugeHeroProps {
   /** The worst degraded or stale read behind the page (`deriveDataHealth`); a chip, never a banner. */
   dataHealth?: DataHealthInfo | null;
   isLoading?: boolean;
+  selectedCoinId?: string | null;
+  onSelectCoin?: (coinId: string) => void;
 }
 
-/** A public data-health finding as a chip: label, machine reasons, and the budget and generation it was judged against (R3/R4). */
-function DataHealthChip({ health }: { health: DataHealthInfo }) {
+interface StatusNoticeItem {
+  id: string;
+  label: string;
+  reasonCodes: string[];
+  content: ReactNode;
+}
+
+function buildDataHealthItem(health: DataHealthInfo): StatusNoticeItem {
   const label = health.state === "stale" ? "Older snapshot" : "Data unavailable";
   const reason = health.meta && "reason" in health.meta ? health.meta.reason : undefined;
   const budgetSec = health.meta && "freshBudgetSec" in health.meta && typeof health.meta.freshBudgetSec === "number"
@@ -57,16 +66,21 @@ function DataHealthChip({ health }: { health: DataHealthInfo }) {
     : API_FRESHNESS_MAX_AGE_SEC.mintBurnFlows;
   const codes = [`data-health-${health.state}`, health.degradationReason, typeof reason === "string" ? reason : undefined]
     .filter((code): code is string => Boolean(code));
-  return (
-    <OpsStatusChip label={label} reasonCodes={codes}>
-      <p>{health.message}</p>
-      {health.meta?.warning ? <p>{formatDataHealthWarning(health.meta.warning)}</p> : null}
-      <p className="text-muted-foreground">
-        Flow observation budget: fresh within {formatElapsedSeconds(budgetSec)}
-        {health.ageMs != null ? ` · generation ${formatElapsedSeconds(health.ageMs / 1000)} old` : " · generation time unknown"}.
-      </p>
-    </OpsStatusChip>
-  );
+  return {
+    id: "data-health",
+    label,
+    reasonCodes: codes,
+    content: (
+      <>
+        <p>{health.message}</p>
+        {health.meta?.warning ? <p>{formatDataHealthWarning(health.meta.warning)}</p> : null}
+        <p className="text-muted-foreground">
+          Flow observation budget: fresh within {formatElapsedSeconds(budgetSec)}
+          {health.ageMs != null ? ` · generation ${formatElapsedSeconds(health.ageMs / 1000)} old` : " · generation time unknown"}.
+        </p>
+      </>
+    ),
+  };
 }
 
 function HeroLoading() {
@@ -78,15 +92,15 @@ function HeroLoading() {
         <Skeleton className="h-6 w-48" />
         <Skeleton className="mt-6 h-24 w-full" />
       </div>
-      <Skeleton className="h-56 w-full" />
+      <ChartSkeleton variant="bars" className="h-56" aria-hidden />
     </div>
   );
 }
 
 /**
- * Ops and partial-input state for the beam, each an amber chip with its
- * machine-readable reason (R4) and the budget or counts behind it (R3). Codes
- * name the published field that set them; none is inferred from figures.
+ * Ops and partial-input state for the beam, consolidated into one amber chip
+ * carrying every machine-readable reason (R4) and full provenance/budget detail
+ * inside its popover (R3). Codes name the published field that set them.
  */
 function GaugeStatusChips({
   gauge,
@@ -107,10 +121,15 @@ function GaugeStatusChips({
   const budgetMin = Math.round(API_FRESHNESS_MAX_AGE_SEC.mintBurnFlows / 60);
   const ftqDependency = dataHealth?.meta?.dependencies?.[MINT_BURN_FTQ_DEPENDENCY_KEY];
   const classificationReason = gauge?.classificationReason ?? ftqDependency?.reason ?? "classification-unavailable";
-  return (
-    <>
-      {(gauge?.scanCoverage?.excludedCoins ?? 0) > 0 ? (
-        <OpsStatusChip label="Partial" reasonCodes={["scan-coverage-incomplete"]}>
+  const items: StatusNoticeItem[] = [];
+
+  if ((gauge?.scanCoverage?.excludedCoins ?? 0) > 0) {
+    items.push({
+      id: "scan-coverage",
+      label: "Partial",
+      reasonCodes: ["scan-coverage-incomplete"],
+      content: (
+        <>
           <p>
             {gauge?.scanCoverage?.admittedCoins != null
               ? `${gauge.scanCoverage.admittedCoins} of ${gauge.trackedCoins} flow-tracked coins have admitted 24h scan coverage. `
@@ -123,13 +142,18 @@ function GaugeStatusChips({
               ? formatCurrency(gauge.scanCoverage.excludedMcapUsd, 1)
               : "unavailable"}.
           </p>
-        </OpsStatusChip>
-      ) : null}
-      {watermark?.unavailableReason ? (
-        <OpsStatusChip
-          label={watermark.unavailableReason === "scan-watermark-stale" ? "Data delayed" : "Data time unavailable"}
-          reasonCodes={[watermark.unavailableReason]}
-        >
+        </>
+      ),
+    });
+  }
+
+  if (watermark?.unavailableReason) {
+    items.push({
+      id: "watermark",
+      label: watermark.unavailableReason === "scan-watermark-stale" ? "Data delayed" : "Data time unavailable",
+      reasonCodes: [watermark.unavailableReason],
+      content: (
+        <>
           <p>{watermark.unavailableReason === "scan-watermark-stale"
             ? "The common closed-hour scan watermark is too old to admit current flow signals."
             : "No common closed-hour scan watermark is available; current flow signals cannot be admitted."}</p>
@@ -137,18 +161,32 @@ function GaugeStatusChips({
             Evidence budget: {formatElapsedSeconds(watermark.maxAgeSec)}
             {watermark.ageSec != null ? ` · watermark ${formatElapsedSeconds(watermark.ageSec)} old` : ""}.
           </p>
-        </OpsStatusChip>
-      ) : null}
-      {gauge && gauge.score == null ? (
-        <OpsStatusChip label="Not rated" reasonCodes={["gauge-score-null"]}>
-          <p>
-            No weighted coin has a pressure shift this window. A coin scores with 7 days of baseline history, at
-            least $50K of 24h flow, complete classification and fully valued window and baseline.
-          </p>
-        </OpsStatusChip>
-      ) : null}
-      {model.bandUnsettled ? (
-        <OpsStatusChip label="Band unsettled" reasonCodes={["band-not-robust-to-withheld-weight"]}>
+        </>
+      ),
+    });
+  }
+
+  if (gauge && gauge.score == null) {
+    items.push({
+      id: "gauge-null",
+      label: "Not rated",
+      reasonCodes: ["gauge-score-null"],
+      content: (
+        <p>
+          No weighted coin has a pressure shift this window. A coin scores with 7 days of baseline history, at
+          least $50K of 24h flow, complete classification and fully valued window and baseline.
+        </p>
+      ),
+    });
+  }
+
+  if (model.bandUnsettled) {
+    items.push({
+      id: "band-unsettled",
+      label: "Band unsettled",
+      reasonCodes: ["band-not-robust-to-withheld-weight"],
+      content: (
+        <>
           <p>
             Weight withheld for incomplete flow inputs could carry the full-cohort score across a band edge, so no band is
             claimed.
@@ -158,10 +196,18 @@ function GaugeStatusChips({
               ? `Full-cohort score could be ${formatBankRunGaugeScore(model.scoreInterval[0])} to ${formatBankRunGaugeScore(model.scoreInterval[1])}.`
               : "The withheld weight is not published, so the score is unbounded."}
           </p>
-        </OpsStatusChip>
-      ) : null}
-      {withheld > 0 ? (
-        <OpsStatusChip label="Incomplete flow inputs" reasonCodes={["partial-valuation-inputs"]}>
+        </>
+      ),
+    });
+  }
+
+  if (withheld > 0) {
+    items.push({
+      id: "withheld",
+      label: "Incomplete flow inputs",
+      reasonCodes: ["partial-valuation-inputs"],
+      content: (
+        <>
           <p>
             {withheld} weighted {withheld === 1 ? "coin has" : "coins have"} incomplete classification or valuation in the 24h window or
             baseline, so {withheld === 1 ? "its pressure is" : "their pressure is"} withheld and the gauge re-weights
@@ -173,18 +219,32 @@ function GaugeStatusChips({
               {formatCurrency(gauge.partialValuationMcapUsd, 1)}.
             </p>
           ) : null}
-        </OpsStatusChip>
-      ) : null}
-      {weightsMissing > 0 ? (
-        <OpsStatusChip label="Weights missing" reasonCodes={["mcap-unavailable-coins"]}>
-          <p>
-            {weightsMissing} tracked {weightsMissing === 1 ? "coin has" : "coins have"} no observed supply weight, so
-            the gauge excludes {weightsMissing === 1 ? "it" : "them"} rather than weighting them at zero.
-          </p>
-        </OpsStatusChip>
-      ) : null}
-      {gauge?.classificationSource === "unavailable" ? (
-        <OpsStatusChip label="FTQ unavailable" reasonCodes={["classification-unavailable", classificationReason]}>
+        </>
+      ),
+    });
+  }
+
+  if (weightsMissing > 0) {
+    items.push({
+      id: "weights-missing",
+      label: "Weights missing",
+      reasonCodes: ["mcap-unavailable-coins"],
+      content: (
+        <p>
+          {weightsMissing} tracked {weightsMissing === 1 ? "coin has" : "coins have"} no observed supply weight, so
+          the gauge excludes {weightsMissing === 1 ? "it" : "them"} rather than weighting them at zero.
+        </p>
+      ),
+    });
+  }
+
+  if (gauge?.classificationSource === "unavailable") {
+    items.push({
+      id: "ftq-classification",
+      label: "FTQ unavailable",
+      reasonCodes: ["classification-unavailable", classificationReason],
+      content: (
+        <>
           <p>{sync?.classificationWarning
             ? formatDataHealthWarning(sync.classificationWarning)
             : `Flight-to-quality classification is unavailable because the Safety Score source could not be admitted (${classificationReason}).`}</p>
@@ -198,25 +258,40 @@ function GaugeStatusChips({
               {ftqDependency.ageSeconds != null ? ` · source ${formatElapsedSeconds(ftqDependency.ageSeconds)} old` : ""}.
             </p>
           ) : null}
-        </OpsStatusChip>
-      ) : gauge?.flightToQuality === null ? (
-        <OpsStatusChip label="FTQ unavailable" reasonCodes={[gauge.flightToQualityReason ?? "valuation-incomplete"]}>
-          <p>{gauge.flightToQualityReason === "cohort-member-unpublished"
-            ? "A graded coin has no published 24h flow, so the flight-to-quality verdict is withheld."
-            : gauge.flightToQualityReason === "flow-window-unavailable"
-              ? "An incomplete 24h scan window could change the flight-to-quality verdict, so none is published."
-              : gauge.flightToQualityReason === "classification-unresolved"
-                ? "Events awaiting classification review could change the flight-to-quality verdict, so none is published."
-                : gauge.flightToQualityReason === "classification-unknown"
-                  ? "Historical classification completeness is unknown, so no flight-to-quality verdict is published."
-                  : "Missing valuation could change the flight-to-quality verdict, so none is published."}</p>
-        </OpsStatusChip>
-      ) : null}
-      {/* Degraded reads (source advisories, failed refreshes, catch-up) are operator signal, not chips. */}
-      {dataHealth && isPublicWarning(dataHealth) && !(sync?.warning && sync.freshnessStatus === "stale")
-        ? <DataHealthChip health={dataHealth} /> : null}
-      {sync?.warning && sync.freshnessStatus === "stale" ? (
-        <OpsStatusChip label="Sync delayed" reasonCodes={[`freshness-${sync.freshnessStatus}`]}>
+        </>
+      ),
+    });
+  } else if (gauge?.flightToQuality === null) {
+    items.push({
+      id: "ftq-withheld",
+      label: "FTQ unavailable",
+      reasonCodes: [gauge.flightToQualityReason ?? "valuation-incomplete"],
+      content: (
+        <p>{gauge.flightToQualityReason === "cohort-member-unpublished"
+          ? "A graded coin has no published 24h flow, so the flight-to-quality verdict is withheld."
+          : gauge.flightToQualityReason === "flow-window-unavailable"
+            ? "An incomplete 24h scan window could change the flight-to-quality verdict, so none is published."
+            : gauge.flightToQualityReason === "classification-unresolved"
+              ? "Events awaiting classification review could change the flight-to-quality verdict, so none is published."
+              : gauge.flightToQualityReason === "classification-unknown"
+                ? "Historical classification completeness is unknown, so no flight-to-quality verdict is published."
+                : "Missing valuation could change the flight-to-quality verdict, so none is published."}</p>
+      ),
+    });
+  }
+
+  // Degraded reads (source advisories, failed refreshes, catch-up) are operator signal, not chips.
+  if (dataHealth && isPublicWarning(dataHealth) && !(sync?.warning && sync.freshnessStatus === "stale")) {
+    items.push(buildDataHealthItem(dataHealth));
+  }
+
+  if (sync?.warning && sync.freshnessStatus === "stale") {
+    items.push({
+      id: "sync-delayed",
+      label: "Sync delayed",
+      reasonCodes: [`freshness-${sync.freshnessStatus}`],
+      content: (
+        <>
           <p>{formatDataHealthWarning(sync.warning)}</p>
           <p className="text-muted-foreground">
             Budget: {budgetMin} min from the last critical-lane sync
@@ -225,9 +300,35 @@ function GaugeStatusChips({
               : " · no successful sync recorded"}
             .
           </p>
-        </OpsStatusChip>
-      ) : null}
-    </>
+        </>
+      ),
+    });
+  }
+
+  if (items.length === 0) return null;
+  if (items.length === 1) {
+    const single = items[0]!;
+    return (
+      <OpsStatusChip label={single.label} reasonCodes={single.reasonCodes}>
+        {single.content}
+      </OpsStatusChip>
+    );
+  }
+
+  return (
+    <OpsStatusChip
+      label={`${items[0]!.label} (+${items.length - 1})`}
+      reasonCodes={items.flatMap((item) => item.reasonCodes)}
+    >
+      <div className="divide-y divide-border/50">
+        {items.map((item) => (
+          <div key={item.id} className="space-y-1 py-2 first:pt-0 last:pb-0">
+            <p className="font-semibold text-foreground">{item.label}</p>
+            {item.content}
+          </div>
+        ))}
+      </div>
+    </OpsStatusChip>
   );
 }
 
@@ -237,7 +338,16 @@ function GaugeStatusChips({
  * line showing why the gauge sits where it does. Degraded states are chips and
  * the beam label, never a headline.
  */
-export function FlowGaugeHero({ gauge, coins, sync, window, dataHealth = null, isLoading }: FlowGaugeHeroProps) {
+export function FlowGaugeHero({
+  gauge,
+  coins,
+  sync,
+  window,
+  dataHealth = null,
+  isLoading,
+  selectedCoinId = null,
+  onSelectCoin,
+}: FlowGaugeHeroProps) {
   const model = useMemo(() => buildRunLineModel(gauge, coins), [gauge, coins]);
   const aggregate = useMemo(() => aggregateCoinFlows24h(coins), [coins]);
 
@@ -340,7 +450,7 @@ export function FlowGaugeHero({ gauge, coins, sync, window, dataHealth = null, i
           ) : null}
           <div className="divide-y divide-border/50">
             <HeroMetricRow
-              label="Printed 24h"
+              label="Minted 24h"
               value={
                 <FlowVolumeValue
                   valueUsd={aggregate.mintVolumeUsd}
@@ -354,7 +464,7 @@ export function FlowGaugeHero({ gauge, coins, sync, window, dataHealth = null, i
               }
             />
             <HeroMetricRow
-              label="Shredded 24h"
+              label="Burned 24h"
               value={
                 <FlowVolumeValue
                   valueUsd={aggregate.burnVolumeUsd}
@@ -379,11 +489,25 @@ export function FlowGaugeHero({ gauge, coins, sync, window, dataHealth = null, i
               }
               detail={aggregate.net.bound ? "proven bound" : undefined}
             />
-            {gauge?.flightToQuality === true ? (
+            {gauge != null ? (
               <HeroMetricRow
                 label="Flight to quality"
-                value={<span className="text-state-warn-strong">Active</span>}
-                detail={gauge.flightIntensity != null ? `${Math.round(gauge.flightIntensity)}% intensity` : undefined}
+                value={
+                  gauge.flightToQuality === true ? (
+                    <span className="text-state-warn-strong">Active</span>
+                  ) : gauge.flightToQuality === false ? (
+                    <span className="text-muted-foreground">Inactive</span>
+                  ) : (
+                    <span className="text-muted-foreground">Unavailable</span>
+                  )
+                }
+                detail={
+                  gauge.flightToQuality === true
+                    ? gauge.flightIntensity != null ? `${Math.round(gauge.flightIntensity)}% intensity` : undefined
+                    : gauge.flightToQuality === false
+                      ? "No safe-haven rotation"
+                      : "Withheld pending inputs"
+                }
               />
             ) : null}
           </div>
@@ -391,7 +515,7 @@ export function FlowGaugeHero({ gauge, coins, sync, window, dataHealth = null, i
       }
     >
       <div className="flex h-full flex-col justify-center p-5 sm:p-6 lg:p-7">
-        <FlowRunLine model={model} />
+        <FlowRunLine model={model} selectedCoinId={selectedCoinId} onSelectCoin={onSelectCoin} />
       </div>
     </FeatureHeroSplit>
   );

@@ -65,11 +65,20 @@ export default function ChangelogPage() {
       )}
       leadParagraphs={[
         <>
-          Weekly release notes. Follow{" "}
+          Weekly release notes. Use{" "}
           <Link href="/pharoswatchbot/" className="pharos-prose-link">
-            @PharosWatch on Telegram
+            @PharosWatchBot
           </Link>{" "}
-          for real-time alerts, or browse the{" "}
+          for real-time alerts, follow the{" "}
+          <a
+            href="https://t.me/pharoswatch"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="pharos-prose-link"
+          >
+            @pharoswatch
+          </a>{" "}
+          Telegram channel for daily digests, or browse the{" "}
           <a
             href="https://github.com/TokenBrice/pharos-watch/commits/main/"
             target="_blank"

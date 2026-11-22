@@ -213,7 +213,7 @@ interface OpenIncidentsSectionProps {
 }
 
 /** Census rows shown before "Show all"; the heading always counts the whole census. */
-const OPEN_INCIDENT_PREVIEW = 5;
+const OPEN_INCIDENT_PREVIEW = 3;
 
 export function OpenIncidentsSection({ incidents, inactive, status, health, onRetry, logos, nowMs }: OpenIncidentsSectionProps) {
   const [showAll, setShowAll] = useState(false);
@@ -232,19 +232,23 @@ export function OpenIncidentsSection({ incidents, inactive, status, health, onRe
       aria-label={retained
         ? `${event.symbol} depeg incident ${event.id}, open at last observation`
         : `${event.symbol} active depeg incident ${event.id}`}
-      className="pharos-focus-ring flex flex-wrap items-center gap-2 border-b border-border/60 px-3 py-2 font-mono text-xs hover:bg-muted/30"
+      className="pharos-focus-ring grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-0.5 border-b border-border/60 px-3 py-1.5 font-mono text-xs tabular-nums hover:bg-muted/30 sm:grid-cols-[minmax(6.5rem,auto)_minmax(0,1fr)_auto_auto]"
     >
-      <StablecoinLogo src={getLogoSrc(logos, event.stablecoinId)} name={event.symbol} size={22} />
-      <span className="font-semibold">{event.symbol}</span>
-      <span className="text-amber-700 dark:text-amber-400">
+      <span className="inline-flex min-w-0 items-center gap-2">
+        <StablecoinLogo src={getLogoSrc(logos, event.stablecoinId)} name={event.symbol} size={20} />
+        <span className="truncate font-semibold">{event.symbol}</span>
+      </span>
+      <span className="truncate text-amber-700 dark:text-amber-400">
         {retained ? retainedIncidentPrefix(event, health.dataUpdatedAt) : openIncidentPrefix(event, nowMs)}
       </span>
-      <time dateTime={new Date(event.startedAt * 1000).toISOString()} className="text-muted-foreground">
+      <time dateTime={new Date(event.startedAt * 1000).toISOString()} className="whitespace-nowrap text-muted-foreground">
         Started {new Date(event.startedAt * 1000).toISOString().replace("T", " ").slice(0, 16)} UTC
       </time>
-      {event.constituentEventCount != null ? (
-        <span className="text-muted-foreground">{event.constituentEventCount} threshold {event.constituentEventCount === 1 ? "crossing" : "crossings"}</span>
-      ) : null}
+      <span className="whitespace-nowrap text-right text-muted-foreground">
+        {event.constituentEventCount != null
+          ? `${event.constituentEventCount} threshold ${event.constituentEventCount === 1 ? "crossing" : "crossings"}`
+          : "—"}
+      </span>
     </Link>
   );
   const inactiveDisclosure = (summary: string) => inactive?.length ? (
@@ -295,10 +299,19 @@ export function OpenIncidentsSection({ incidents, inactive, status, health, onRe
         </div>
       ) : (
         <div className="border-y border-amber-500/30">
-          <p className="px-3 py-1 font-mono text-[11px] text-muted-foreground">
+          <p className="border-b border-border/40 px-3 py-1 font-mono text-[11px] text-muted-foreground">
             {retained ? "Incidents open at last observation" : "Incidents on active coins"}, newest first · independent of feed filters
             {health.dataUpdatedAt > 0 ? ` · Updated ${timeAgo(Math.floor(health.dataUpdatedAt / 1000), nowMs / 1000)}` : ""}
           </p>
+          <div
+            aria-hidden="true"
+            className="hidden border-b border-border/50 bg-muted/20 px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground sm:grid sm:grid-cols-[minmax(6.5rem,auto)_minmax(0,1fr)_auto_auto] sm:gap-x-4"
+          >
+            <span>Coin</span>
+            <span>Status</span>
+            <span>Started</span>
+            <span className="text-right">Crossings</span>
+          </div>
           {(showAll ? incidents : incidents.slice(0, OPEN_INCIDENT_PREVIEW)).map(incidentRow)}
           {incidents.length > OPEN_INCIDENT_PREVIEW ? (
             <button

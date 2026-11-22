@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildCommandPaletteResultDescriptors,
   buildPopularStablecoinDescriptors,
+  extractStablecoinIdFromPathname,
   groupCommandPaletteResults,
   rankCommandPaletteResults,
 } from "@/components/command-palette/command-palette-model";
@@ -127,5 +128,33 @@ describe("command palette model", () => {
     const ordinary = buildCommandPaletteResultDescriptors({ query: ordinaryEvent.slug, history: [], isDark: false })
       .find((item) => item.id === `depeg-${ordinaryEvent.slug}`);
     expect(ordinary?.sublabel).not.toContain("Disputed");
+  });
+
+  it("emits route-contextual actions on dossier routes and watchlist portfolio action", () => {
+    expect(extractStablecoinIdFromPathname("/stablecoin/usdc-circle/")).toBe("usdc-circle");
+    expect(extractStablecoinIdFromPathname("/stablecoin/nonexistent-coin/")).toBeNull();
+    expect(extractStablecoinIdFromPathname("/yield/")).toBeNull();
+
+    const groups = groupCommandPaletteResults(
+      buildCommandPaletteResultDescriptors({
+        query: "",
+        history: [],
+        isDark: false,
+        watchlistCount: 1,
+        watchlistIds: ["usdc-circle"],
+        pathname: "/stablecoin/usdc-circle/",
+      }),
+    );
+
+    expect(groups[0]?.section).toBe("This coin");
+    expect(groups[0]?.items.map((item) => item.label)).toEqual([
+      "Unwatch USDC",
+      "Add USDC to Portfolio",
+      "Compare USDC",
+      "Alerts for USDC",
+    ]);
+
+    const actionsGroup = groups.find((group) => group.section === "Actions");
+    expect(actionsGroup?.items.some((item) => item.actionId === "portfolio-watchlist")).toBe(true);
   });
 });

@@ -239,6 +239,7 @@ describe("ContagionGraph", () => {
     screen.getByRole("button", { name: /^USDe, Grade A, market cap [^,]+, Depeg: / });
     fireEvent.click(screen.getByRole("button", { name: /^USDC, Grade A/ }));
     const panel = () => screen.getAllByRole("region", { name: "Selected node details" })[0];
+    expect(within(panel()).getByRole("link", { name: "Open profile →" }).getAttribute("href")).toBe("/stablecoin/usdc-circle");
     expect(within(panel()).getByText("Live incidents upstream").parentElement?.textContent).toContain("USDeDepeg");
     // A scheduled deadline, like pre-launch, is not a live incident.
     rerender(graph(new Map([["usde-ethena", [{ kind: "deadline", notice: { type: "warning", title: "M", deadline: "2026-12-01" }, daysToDeadline: 13 }]]])));

@@ -27,6 +27,9 @@ export interface CoverageBadgeProps {
   compact?: boolean;
 }
 
+const SLATE_BADGE_SURFACE_CLASS =
+  "border-border bg-muted text-foreground/80 bg-[repeating-linear-gradient(135deg,transparent_0_5px,var(--border)_5px_6px)]";
+
 export function CoverageBadge({ status, compact = false }: CoverageBadgeProps) {
   const countSuffix =
     status.sourceCount != null && status.sourceCount > 0
@@ -44,7 +47,7 @@ export function CoverageBadge({ status, compact = false }: CoverageBadgeProps) {
       className={cn(
         "inline-flex items-center justify-center whitespace-nowrap rounded-full border py-1 text-2xs font-medium",
         compact ? "min-w-[4.25rem] px-1.5" : "min-w-[5rem] px-2",
-        COVERAGE_BADGE_TONE_CLASS[status.tone],
+        status.tone === "slate" ? SLATE_BADGE_SURFACE_CLASS : COVERAGE_BADGE_TONE_CLASS[status.tone],
       )}
     >
       <span aria-hidden="true">

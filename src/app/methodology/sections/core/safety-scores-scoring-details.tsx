@@ -145,8 +145,8 @@ export function SafetyScoresScoringDetails() {
       <div className="space-y-2">
         <h3 className="text-foreground font-medium">No-Liquidity-Data Penalty</h3>
         <p>
-          A further 0.9&times; multiplier is applied when a coin has no exit-liquidity signal at all — neither DEX
-          liquidity nor redemption-backstop coverage. Weights are redistributed across available dimensions; this
+          A further 0.9&times; multiplier is applied when a coin has no exit-liquidity signal at all (neither DEX
+          liquidity nor redemption-backstop coverage). Weights are redistributed across available dimensions; this
           0.9&times; multiplier is then applied to the final score to correct for the missing liquidity data by applying
           a flat 10% penalty.
         </p>

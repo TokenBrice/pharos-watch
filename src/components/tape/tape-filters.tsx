@@ -136,8 +136,17 @@ export function TapeFilters({ state, setParam, coin, onClearCoin }: TapeFiltersP
   // shared link with active classes opens expanded; manual collapse sticks.
   const [mobileClassesOpen, setMobileClassesOpen] = useState(activeClassCount > 0);
 
+  const allClassesActive = state.type.length === 0;
   const classChips = (
-    <div className="flex flex-wrap items-center gap-2 sm:gap-1" aria-label="Filter by event type">
+    <div role="group" className="flex flex-wrap items-center gap-2 sm:gap-1" aria-label="Filter by event type">
+      <button
+        type="button"
+        onClick={() => setParam("type", "")}
+        aria-pressed={allClassesActive}
+        className={`${CHIP_BASE} ${allClassesActive ? CHIP_ACTIVE : CHIP_INACTIVE}`}
+      >
+        All
+      </button>
       {TAPE_CLASSES.map((cls) => {
         const slug = `${cls.slug}.*`;
         const active = activeClassSet.has(slug);

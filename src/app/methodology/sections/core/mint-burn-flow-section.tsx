@@ -201,7 +201,7 @@ export function MintBurnFlowMethodologySection() {
                 newly joined chain with shorter history.
               </p>
               <p>
-                Historical hours before the fixed October 20, 2026 noon UTC cutover may use explicitly labelled
+                Historical hours before the fixed October 20, 2026 noon UTC cutover may use explicitly labeled
                 legacy cursor/event assurance. At and after the cutover, current-fingerprint durable scan proof is
                 mandatory. Dirty hours and missing valuation remain unavailable. This bounded transition expires
                 after the 90-day window passes the cutover. The Bank Run Gauge weights only admitted scored coins;
@@ -311,7 +311,7 @@ export function MintBurnFlowMethodologySection() {
                       net and unpriced burns can only lower it, so a window with only one side unpriced shows the
                       known net as an explicit bound (&ge; or &le;); direction also requires complete scan coverage
                       and missing valuation that cannot flip it. Buckets aggregated before v6.22 read as coverage unknown and keep their
-                      old-method net, labelled, until they leave the 30-day baseline and 7/30/90-day windows.
+                      old-method net, labeled, until they leave the 30-day baseline and 7/30/90-day windows.
                     </li>
                     <li>
                       <span className="text-foreground">Event-time pricing</span> &mdash; an event is valued only with a

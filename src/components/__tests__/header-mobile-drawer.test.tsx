@@ -125,4 +125,24 @@ describe("Header mobile drawer", () => {
     }
   });
 
+  it("shows non-bottom-nav tools in the quick grid without left-alignment skew", () => {
+    render(<Header />);
+    openDrawer();
+
+    const drawer = screen.getByTestId("mobile-drawer");
+    expect(drawer.innerHTML).not.toContain("pl-[14px]");
+
+    const quickGrid = drawer.querySelector(".grid.grid-cols-2");
+    expect(quickGrid).not.toBeNull();
+    const quickLabels = [...quickGrid!.querySelectorAll("a")].map((link) => link.textContent?.trim());
+    expect(quickLabels).toEqual([
+      "Stability",
+      "FreezeWatch",
+      "Screener",
+      "Compare",
+      "Portfolio",
+      "Alert Bot",
+    ]);
+  });
+
 });

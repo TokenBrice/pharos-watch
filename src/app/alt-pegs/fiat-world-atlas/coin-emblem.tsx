@@ -37,10 +37,11 @@ function CoinEmblemInner({
   hoverCardYPlacement?: HoverCardYPlacement;
   showTickerLabel?: boolean;
 }) {
-  const { setHoveredCoin, isHovered, isSibling, isDimmed } = useHoverState();
+  const { setHoveredCoin, isHovered, isSibling, isSelectedPeg, isDimmed } = useHoverState();
   const target = useMemo(() => ({ id: coin.id, pegCurrency: coin.pegCurrency }), [coin.id, coin.pegCurrency]);
   const hovered = isHovered(coin.id);
   const sibling = isSibling(target);
+  const selected = isSelectedPeg(coin.pegCurrency);
   const dimmed = isDimmed(target);
 
   const onEnter = useCallback(() => setHoveredCoin(target), [setHoveredCoin, target]);
@@ -80,6 +81,7 @@ function CoinEmblemInner({
     `coin-emblem--${variant}`,
     hovered && "is-hovered",
     sibling && "is-sibling",
+    selected && "is-selected-peg",
     dimmed && "is-dimmed",
   ]
     .filter(Boolean)

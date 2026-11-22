@@ -121,3 +121,31 @@ export function mergeCoinsParam(p: string | null | undefined, coins: string | nu
   const extra = coins.split(",").filter((token) => token && !held.has(token)).map((token) => `${token}:0`);
   return [p, ...extra].filter(Boolean).join(",") || undefined;
 }
+
+/**
+ * Build a `/portfolio/` handoff URL from canonical coin IDs, validated through
+ * `mergeCoinsParam` + `parsePortfolioUrlParam` so unknown or duplicate tokens
+ * are never emitted.
+ */
+export function buildPortfolioCoinsHref(
+  coinIds: readonly string[],
+  existingPortfolioParam?: string | null,
+): string {
+  const encodedTokens = coinIds
+    .map((coinId) => encodeStablecoinUrlToken(coinId))
+    .filter((token): token is string => token !== null);
+  const merged = mergeCoinsParam(existingPortfolioParam, encodedTokens.join(","));
+  if (!merged) return "/portfolio/";
+
+  if (existingPortfolioParam) {
+    const normalized = encodePortfolioHoldings(parsePortfolioUrlParam(merged));
+    return normalized ? `/portfolio/?p=${encodeURIComponent(normalized)}` : "/portfolio/";
+  }
+
+  const validTokens = parsePortfolioUrlParam(merged)
+    .map((holding) => encodeStablecoinUrlToken(holding.coinId))
+    .filter((token): token is string => token !== null);
+  return validTokens.length > 0
+    ? `/portfolio/?coins=${validTokens.map((token) => encodeURIComponent(token)).join(",")}`
+    : "/portfolio/";
+}

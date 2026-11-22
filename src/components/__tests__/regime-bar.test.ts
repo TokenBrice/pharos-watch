@@ -88,11 +88,29 @@ describe("RegimeBar freshness", () => {
       expect(html.startsWith("<div")).toBe(true);
       expect(html.match(/<button/g)).toHaveLength(1);
       expect(html).toContain('aria-label="Close market regime details"');
+      expect(html).toContain("size-11");
+      expect(html).toContain("sm:size-9");
+      expect(html).toContain("top-[var(--sticky-header-bottom,3.75rem)]");
+      expect(html).toMatch(/href="\/stability-index\/?"/);
+      expect(html).toContain("Open Stability Index");
       // The beacon glyph is decorative (the button carries the label) and drops to an outline when retained.
       expect(html).toMatch(/<svg[^>]*aria-hidden="true"[^>]*data-testid="psi-beacon-micro"[^>]*data-state="(current|retained)"/);
       expect(html).toContain(`data-state="${state === "fresh" ? "current" : "retained"}"`);
     },
   );
+
+  it("renders a visible hairline while PSI is loading instead of a transparent bar", () => {
+    useStabilityIndexMock.mockReturnValue({
+      data: undefined,
+      dataUpdatedAt: 0,
+      error: null,
+      meta: null,
+      isPending: true,
+    });
+    const html = renderToStaticMarkup(createElement(RegimeBar));
+    expect(html).toContain("bg-border/60");
+    expect(html).toContain("h-[3px]");
+  });
 });
 
 describe("RegimeBarToggle", () => {
@@ -105,12 +123,34 @@ describe("RegimeBarToggle", () => {
   });
 
   it("is a labelled disclosure for the regime panel whose name contains its visible text", () => {
+    usePathnameMock.mockReturnValue("/depeg/");
     fresh();
     const html = renderToStaticMarkup(createElement(RegimeBarToggle));
     expect(html).toMatch(/^<button type="button" aria-expanded="false" aria-controls="regime-bar-panel"/);
     // One decimal, as on the pages.
     expect(html).toContain('aria-label="Market regime: Steady, PSI 72.0, raw instant. Market regime details"');
     expect(html).toMatch(/PSI <span[^>]*>72\.0<\/span>/);
+    expect(html).toContain("rounded-full border");
+    expect(html).toContain("min-w-[6rem]");
+    expect(html).toContain("<svg");
+  });
+
+  it("reserves pill width on interior routes while loading and renders nothing on home", () => {
+    useStabilityIndexMock.mockReturnValue({
+      data: undefined,
+      dataUpdatedAt: 0,
+      error: null,
+      meta: null,
+      isPending: true,
+    });
+    usePathnameMock.mockReturnValue("/depeg/");
+    const loadingHtml = renderToStaticMarkup(createElement(RegimeBarToggle));
+    expect(loadingHtml).toContain("min-w-[6rem]");
+    expect(loadingHtml).toContain('aria-hidden="true"');
+
+    usePathnameMock.mockReturnValue("/");
+    expect(renderToStaticMarkup(createElement(RegimeBarToggle))).toBe("");
+    usePathnameMock.mockReturnValue("/depeg/");
   });
 
 });

@@ -636,7 +636,7 @@ export const DEFINITIONS = {
   "money-market-fund": {
     label: "Money-Market Fund (MMF)",
     short:
-      "A SEC-registered short-duration fund holding T-bills, repos, and cash. Used as the reserve vehicle for several major fiat-backed stablecoins.",
+      "An SEC-registered short-duration fund holding T-bills, repos, and cash. Used as the reserve vehicle for several major fiat-backed stablecoins.",
     listed: true,
   },
   treasury: {
@@ -650,6 +650,82 @@ export const DEFINITIONS = {
     short:
       "A stablecoin that uses on-chain mint/burn rules (not 1:1 backing) to defend its peg. Generally riskier; UST/Terra was the canonical failure.",
     listed: true,
+  },
+  backing: {
+    label: "Backing",
+    short:
+      "Safety Score pillar (40% weight) measuring collateral quality, reserve transparency, custody posture, and structural solvency.",
+    listed: true,
+    seeAlso: ["safetyScore", "reserveRisk", "custody"],
+  },
+  exit: {
+    label: "Exit",
+    short:
+      "Safety Score pillar (35% weight) measuring how reliably holders can exit at par through primary redemption or secondary DEX liquidity.",
+    listed: true,
+    seeAlso: ["safetyScore", "effectiveExit", "redemptionBackstop", "liquidityScore"],
+  },
+  economicControl: {
+    label: "Economic Control",
+    short:
+      "Safety Score pillar (25% weight) measuring who can mint, upgrade, pause, freeze, or redirect backing assets across contracts and bridges.",
+    listed: true,
+    seeAlso: ["safetyScore", "mintAuthorityScore", "freezable"],
+  },
+  reserveRisk: {
+    label: "Reserve Risk",
+    short:
+      "Exposure to credit, duration, liquidity, or counterparty losses in the assets backing a stablecoin.",
+    listed: true,
+    seeAlso: ["backing", "proofOfReserves", "custody"],
+  },
+  coreVariants: {
+    label: "Core / Variants",
+    short:
+      "Core coins are canonical primary stablecoins; variants are staked, wrapped, or yield-bearing wrappers derived from a core coin.",
+    listed: true,
+  },
+  nav: {
+    label: "NAV (Net Asset Value)",
+    short:
+      "Per-token claim on underlying reserves. NAV-tracking wrappers appreciate as yield accrues rather than holding a flat 1.00 peg.",
+    listed: true,
+    seeAlso: ["yield-bearing"],
+  },
+  eoa: {
+    label: "EOA (Externally Owned Account)",
+    short:
+      "A single private-key wallet address (as opposed to a multisig or timelocked governance contract). Privileged roles held by an EOA carry single-key compromise risk.",
+    listed: true,
+    seeAlso: ["economicControl", "mintAuthorityScore"],
+  },
+  mica: {
+    label: "MiCA (Markets in Crypto-Assets)",
+    short:
+      "European Union regulatory framework governing e-money tokens (EMTs) and asset-referenced tokens (ARTs), requiring issuer authorization and reserve rules.",
+    listed: true,
+    seeAlso: ["emi", "genius"],
+  },
+  genius: {
+    label: "GENIUS Act",
+    short:
+      "U.S. federal stablecoin legislative framework establishing reserve, redemption, and supervision standards for permitted payment stablecoin issuers (PPSIs).",
+    listed: true,
+    seeAlso: ["ppsi", "mica"],
+  },
+  ppsi: {
+    label: "PPSI (Permitted Payment Stablecoin Issuer)",
+    short:
+      "A regulated entity authorized under the U.S. GENIUS Act framework to issue payment stablecoins subject to 1:1 reserve and supervision rules.",
+    listed: true,
+    seeAlso: ["genius"],
+  },
+  emi: {
+    label: "EMI (Electronic Money Institution)",
+    short:
+      "A licensed European financial institution authorized to issue e-money tokens (EMTs) under EU law and MiCA.",
+    listed: true,
+    seeAlso: ["mica"],
   },
 } as const satisfies Record<string, Definition>;
 

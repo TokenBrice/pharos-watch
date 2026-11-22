@@ -20,53 +20,6 @@ const coverageDescription =
 
 const COVERAGE_DATASET_JSON_LD = buildCoverageDatasetJsonLd();
 
-const COVERAGE_STATIC_SECTION = (
-  <section className="pharos-card-shell px-4 py-4">
-    <p className="pharos-label">How to read coverage</p>
-    <div className="mt-3 grid gap-3 text-sm leading-relaxed text-muted-foreground lg:grid-cols-3">
-      <p>
-        Coverage answers whether Pharos can show a feature for a specific asset today. A blank or unavailable state is a
-        data boundary, not an implied risk grade.
-      </p>
-      <p>
-        Use the matrix before comparing{" "}
-        <Link
-          href="/depeg/"
-          className="pharos-prose-link"
-        >
-          depegs
-        </Link>
-        ,{" "}
-        <Link
-          href="/liquidity/"
-          className="pharos-prose-link"
-        >
-          liquidity
-        </Link>
-        ,{" "}
-        <Link
-          href="/yield/"
-          className="pharos-prose-link"
-        >
-          yield
-        </Link>
-        , or{" "}
-        <Link
-          href="/flows/"
-          className="pharos-prose-link"
-        >
-          mint/burn flows
-        </Link>{" "}
-        across long-tail assets.
-      </p>
-      <p>
-        Market-cap coverage shows how much of the stablecoin economy each feature reaches; coin-count coverage shows how
-        broad the underlying asset support is.
-      </p>
-    </div>
-  </section>
-);
-
 const route = createClientFeaturePage({
   path: "/coverage/",
   metadata: {
@@ -76,11 +29,33 @@ const route = createClientFeaturePage({
   loadClient: () => import("./client").then((m) => ({ default: m.default })),
   loading: <Skeleton className="h-[560px] w-full rounded-xl" />,
   shell: {
+    header: "instrument",
+    leadDisclosureLabel: "How to read coverage",
     breadcrumbName: "Coverage",
     title: "Coverage Matrix",
     leadParagraphs: [
       `What Pharos can show for each of the ${ACTIVE_STABLECOIN_COUNT} active stablecoins, and how much of the ${TRACKED_STABLECOIN_COUNT}-asset tracked market each feature reaches.`,
-      "Start with the feature snapshot for breadth, then open the matrix for asset-level detail.",
+      "Coverage answers whether Pharos can show a feature for a specific asset today. A blank or unavailable state is a data boundary, not an implied risk grade.",
+      <>
+        Use the matrix before comparing{" "}
+        <Link href="/depeg/" className="pharos-prose-link">
+          depegs
+        </Link>
+        ,{" "}
+        <Link href="/liquidity/" className="pharos-prose-link">
+          liquidity
+        </Link>
+        ,{" "}
+        <Link href="/yield/" className="pharos-prose-link">
+          yield
+        </Link>
+        , or{" "}
+        <Link href="/flows/" className="pharos-prose-link">
+          mint/burn flows
+        </Link>{" "}
+        across long-tail assets. Market-cap coverage shows how much of the stablecoin economy each feature reaches;
+        coin-count coverage shows how broad the underlying asset support is.
+      </>,
       <>
         {PRE_LAUNCH_STABLECOIN_COUNT}{" "}
         <Link href="/upcoming/" className="pharos-prose-link">
@@ -89,11 +64,8 @@ const route = createClientFeaturePage({
         (upcoming, or launched and awaiting data) are excluded until they enter active tracking.
       </>,
     ],
-    preface: (
-      <JsonLdScript json={safeJsonLd(COVERAGE_DATASET_JSON_LD)} />
-    ),
+    preface: <JsonLdScript json={safeJsonLd(COVERAGE_DATASET_JSON_LD)} />,
   },
-  beforeClient: COVERAGE_STATIC_SECTION,
   afterClient: (
     <>
       <RemovedStablecoinsSection />

@@ -1,17 +1,20 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useChains } from "@/hooks/use-chains";
 import { useSort } from "@/hooks/use-sort";
 import { TableCell } from "@/components/table";
-import { DataTableShell, type DataTableColumn, type DataTableSortControls } from "@/components/data-table-shell";
+import { DataTableEmptyRow, DataTableShell, type DataTableColumn, type DataTableSortControls } from "@/components/data-table-shell";
+import { ControlPillToggle } from "@/components/control-pill-toggle";
+import { FilterSearchInput } from "@/components/filter-search-input";
 import { InteractiveTableRow } from "@/components/interactive-table-row";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { QueryErrorNotice } from "@/components/query-error-notice";
+import { ChartSkeleton } from "@/components/chart-skeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { formatChainShare, trendColor } from "@/lib/chain-ui";
@@ -19,7 +22,7 @@ import { formatEventTimestamp } from "@/lib/depeg-event-display";
 import { formatCompactUsd, formatSignedPercent } from "@shared/lib/format";
 import { harborFlag, isSupplyRetained, type HarborSceneInput } from "@shared/lib/harbor-scene";
 import type { ApiMeta } from "@/lib/api";
-import { FeatureHeroSplit, HeroMetricRow } from "@/components/feature-hero-split";
+import { CardExpandButton } from "@/components/home-alt-mini-cards/pulse-card-header";
 import { OpsStatusChip } from "@/components/ops-status-chip";
 import { UniverseChip } from "@/components/universe-chip";
 import { ChainTypeBadge } from "@/components/chain-type-badge";
@@ -67,17 +70,17 @@ export function ChainsLeaderboardClient() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="pharos-card-shell space-y-4 p-5 sm:p-6 lg:p-7">
+      <div className="space-y-4">
+        <div className="pharos-card-shell space-y-3 p-4 sm:p-5 lg:px-6 lg:py-4">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <Skeleton className="h-4 w-64" />
-              <Skeleton className="mt-3 h-10 w-36" />
-              <Skeleton className="mt-3 h-6 w-48 rounded-full" />
+              <Skeleton className="h-4 w-56" />
+              <Skeleton className="mt-2 h-9 w-32" />
+              <Skeleton className="mt-2 h-6 w-48 rounded-full" />
             </div>
-            <div className="w-full max-w-md space-y-3">
+            <div className="grid w-full max-w-xl grid-cols-3 gap-4">
               {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-5 w-full" />
+                <Skeleton key={i} className="h-10 w-full" />
               ))}
             </div>
           </div>
@@ -89,7 +92,7 @@ export function ChainsLeaderboardClient() {
           </div>
         </div>
         {/* the harbor's box at its drawn aspect (wide plan / phone portrait), so the scene lands without a shift */}
-        <Skeleton className="aspect-[1/2.1] w-full rounded-lg min-[761px]:aspect-[2.6/1]" />
+        <ChartSkeleton variant="bars" className="aspect-[1/2.1] min-[761px]:aspect-[2.6/1]" aria-hidden />
         <div className="pharos-table-shell">
           {Array.from({ length: 10 }).map((_, i) => (
             <Skeleton key={i} className="mx-3 my-2.5 h-8 rounded-sm" />
@@ -115,7 +118,7 @@ export function ChainsLeaderboardClient() {
   return (
     <SectionErrorBoundary name="Chains">
       <HarborSelectionProvider chainIds={chainIds}>
-        <div className="space-y-6">
+        <div className="space-y-4">
           <QueryFreshnessNotices
             error={error}
             hasData={!!data?.chains?.length}
@@ -206,47 +209,57 @@ function ChainsHero({ data, meta, dataUpdatedAt, retained }: { data: ChainsRespo
     </>
   ) : null;
 
+  const beamLabel = first
+    ? `Largest chain's share · ${first.name}${partial ? " · partial" : ""}`
+    : `Largest chain's share${partial ? " · partial" : ""}`;
+
   return (
-    <FeatureHeroSplit
-      layout="stacked"
-      ariaLabel="Chain concentration"
-      beamLabel={
-        first
-          ? `Largest chain's share · ${first.name}${partial ? " · partial" : ""}`
-          : `Largest chain's share${partial ? " · partial" : ""}`
-      }
-      beamTitle="Share of observed global stablecoin supply held on the largest chain"
-      beamValue={first ? formatChainShare(first.dominanceShare) : "Unavailable"}
-      status={status}
-      universe={<UniverseChip universe="core" value={`${data.chains.length} of ${REGISTERED_CHAIN_COUNT} chains with supply`} />}
-      expand={{ href: "#chains-leaderboard", label: "Jump to the chain leaderboard" }}
-      sub={
-        <div className="divide-y divide-border/50">
-          <HeroMetricRow
-            label={excludedAssets > 0 ? "Known supply subtotal" : "Observed stablecoin supply"}
-            value={data.globalTotalUsd == null ? "Unavailable" : formatCompactUsd(data.globalTotalUsd)}
-          />
-          <HeroMetricRow
-            label="7d change"
-            value={
-              change7dPct == null ? (
+    <div className="pharos-card-shell relative overflow-hidden" role="group" aria-label="Chain concentration">
+      <div className="grid grid-cols-1 gap-4 border-b border-border/50 px-4 py-3.5 sm:px-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-center lg:gap-6 lg:px-6 lg:py-4">
+        <div className="space-y-1.5">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+              <p className="text-sm font-medium text-muted-foreground" title="Share of observed global stablecoin supply held on the largest chain">
+                {beamLabel}
+              </p>
+              {status}
+            </div>
+            <CardExpandButton href="#chains-leaderboard" expandLabel="Jump to the chain leaderboard" className="-mr-2" />
+          </div>
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1.5">
+            <p className="pharos-hero-kpi">{first ? formatChainShare(first.dominanceShare) : "Unavailable"}</p>
+            <UniverseChip universe="core" value={`${data.chains.length} of ${REGISTERED_CHAIN_COUNT} chains with supply`} />
+          </div>
+        </div>
+        <dl className="grid grid-cols-1 divide-y divide-border/50 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          <div className="py-1.5 sm:px-4 sm:py-0 sm:first:pl-0">
+            <dt className="text-xs text-muted-foreground">{excludedAssets > 0 ? "Known supply subtotal" : "Observed stablecoin supply"}</dt>
+            <dd className="pharos-numeric mt-0.5 text-base font-semibold text-foreground">
+              {data.globalTotalUsd == null ? "Unavailable" : formatCompactUsd(data.globalTotalUsd)}
+            </dd>
+          </div>
+          <div className="py-1.5 sm:px-4 sm:py-0">
+            <dt className="text-xs text-muted-foreground">7d change</dt>
+            <dd className="pharos-numeric mt-0.5 text-base font-semibold text-foreground">
+              {change7dPct == null ? (
                 <span className="text-muted-foreground">—</span>
               ) : (
                 <span className={trendColor(change7dPct)}>{formatSignedPercent(change7dPct * 100, 1)}</span>
-              )
-            }
-          />
+              )}
+            </dd>
+          </div>
           {first && second ? (
-            <HeroMetricRow
-              label="Top two chains"
-              value={formatChainShare(first.dominanceShare! + second.dominanceShare!)}
-              detail={`${first.name} + ${second.name}`}
-            />
+            <div className="py-1.5 sm:px-4 sm:py-0">
+              <dt className="text-xs text-muted-foreground">Top two chains</dt>
+              <dd className="pharos-numeric mt-0.5 text-base font-semibold text-foreground">
+                {formatChainShare(first.dominanceShare! + second.dominanceShare!)}
+              </dd>
+              <dd className="text-2xs text-muted-foreground">{first.name} + {second.name}</dd>
+            </div>
           ) : null}
-        </div>
-      }
-    >
-      <div className="space-y-2.5 p-5 sm:p-6 lg:px-7 lg:py-6">
+        </dl>
+      </div>
+      <div className="space-y-2 px-4 py-3 sm:px-5 lg:px-6 lg:py-3.5">
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <p className="pharos-label">Observed supply by chain</p>
           <span className={cn("pharos-numeric text-2xs", retained ? "text-foreground" : "text-muted-foreground")}>{stamp}</span>
@@ -264,8 +277,27 @@ function ChainsHero({ data, meta, dataUpdatedAt, retained }: { data: ChainsRespo
           />
         ) : null}
       </div>
-    </FeatureHeroSplit>
+    </div>
   );
+}
+
+type ChainTriageFilter = "all" | "top" | "concentrated" | "growing";
+
+const CHAIN_TRIAGE_OPTIONS: readonly { value: ChainTriageFilter; label: string }[] = [
+  { value: "all", label: "All chains" },
+  { value: "top", label: "Top chains ($1B+)" },
+  { value: "concentrated", label: "High concentration" },
+  { value: "growing", label: "Growing 7d" },
+];
+
+const TOP_CHAIN_MIN_USD = 1_000_000_000;
+const HIGH_CONCENTRATION_SHARE = 0.7;
+
+function matchesChainTriage(chain: ChainSummary, triage: ChainTriageFilter): boolean {
+  if (triage === "all") return true;
+  if (triage === "top") return chain.totalUsd >= TOP_CHAIN_MIN_USD;
+  if (triage === "concentrated") return chain.dominantStablecoin.share >= HIGH_CONCENTRATION_SHARE;
+  return chain.change7dPct != null && chain.change7dPct > 0.01;
 }
 
 /**
@@ -281,8 +313,25 @@ function ChainsLeaderboardTable({
   sorted: readonly ChainSummary[];
   sort: DataTableSortControls<ChainSortKey>;
 }) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [triageFilter, setTriageFilter] = useState<ChainTriageFilter>("all");
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const hasFilters = normalizedQuery.length > 0 || triageFilter !== "all";
+  const visibleRows = useMemo(
+    () =>
+      sorted.filter((chain) => {
+        if (!matchesChainTriage(chain, triageFilter)) return false;
+        if (!normalizedQuery) return true;
+        return (
+          chain.name.toLowerCase().includes(normalizedQuery) ||
+          chain.id.toLowerCase().includes(normalizedQuery) ||
+          chain.dominantStablecoin.symbol.toLowerCase().includes(normalizedQuery)
+        );
+      }),
+    [normalizedQuery, sorted, triageFilter],
+  );
   // One Harbor flag per row; an NR reason is shown once above the table, since a title tooltip never reaches touch.
-  const flags = new Map(sorted.map((chain) => [chain.id, harborFlag(chain, data)]));
+  const flags = new Map(visibleRows.map((chain) => [chain.id, harborFlag(chain, data)]));
   const nrReasons = new Map<string, number>();
   for (const flag of flags.values()) if (flag.kind === "unrated") nrReasons.set(flag.reason, (nrReasons.get(flag.reason) ?? 0) + 1);
   const router = useRouter();
@@ -292,13 +341,28 @@ function ChainsLeaderboardTable({
   useEffect(
     () =>
       registerRevealRow((chainId) => {
-        const row = document.getElementById(`chain-row-${chainId}`);
-        if (!row) return;
-        row.scrollIntoView({ block: "center", behavior: reducedMotion ? "auto" : "smooth" });
-        row.querySelector<HTMLAnchorElement>("[data-chain-identity-link]")?.focus({ preventScroll: true });
+        const scrollToRow = () => {
+          const row = document.getElementById(`chain-row-${chainId}`);
+          if (!row) return false;
+          row.scrollIntoView({ block: "center", behavior: reducedMotion ? "auto" : "smooth" });
+          row.querySelector<HTMLAnchorElement>("[data-chain-identity-link]")?.focus({ preventScroll: true });
+          return true;
+        };
+        if (!scrollToRow()) {
+          setSearchQuery("");
+          setTriageFilter("all");
+          window.requestAnimationFrame(() => {
+            scrollToRow();
+          });
+        }
       }),
     [registerRevealRow, reducedMotion],
   );
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setTriageFilter("all");
+  };
 
   return (
     <div
@@ -328,25 +392,58 @@ function ChainsLeaderboardTable({
         tableClassName="min-w-[760px] w-full"
         stickyHeader
         topSlot={
-          nrReasons.size > 0 ? (
-            <ul className="border-b border-border/50 px-3 py-2 text-2xs text-muted-foreground" aria-label="Chain Health not rated">
-              {[...nrReasons].map(([reason, count]) => (
-                <li key={reason}>
-                  <span className="font-medium text-foreground">Health NR</span> · {count} {count === 1 ? "chain" : "chains"} · {reason}
-                </li>
-              ))}
-            </ul>
-          ) : null
+          <>
+            <div className="pharos-table-toolbar">
+              <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                <ControlPillToggle
+                  ariaLabel="Filter chains"
+                  options={CHAIN_TRIAGE_OPTIONS}
+                  value={triageFilter}
+                  onChange={setTriageFilter}
+                  className="flex flex-wrap gap-1.5"
+                  buttonClassName="min-h-11 md:min-h-8"
+                />
+                <div className="flex items-center gap-2">
+                  <FilterSearchInput
+                    value={searchQuery}
+                    onValueChange={setSearchQuery}
+                    placeholder="Search chains..."
+                    ariaLabel="Search chains by name or dominant stablecoin"
+                    className="relative w-full sm:w-48"
+                    inputClassName="h-11 pl-8 text-xs md:h-8"
+                  />
+                  {hasFilters ? (
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="pharos-focus-ring shrink-0 min-h-11 rounded-sm text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline md:min-h-8"
+                    >
+                      Clear
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+            {nrReasons.size > 0 ? (
+              <ul className="border-b border-border/50 px-3 py-2 text-2xs text-muted-foreground" aria-label="Chain Health not rated">
+                {[...nrReasons].map(([reason, count]) => (
+                  <li key={reason}>
+                    <span className="font-medium text-foreground">Health NR</span> · {count} {count === 1 ? "chain" : "chains"} · {reason}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </>
         }
       >
-        {sorted.map((chain, i) => {
+        {visibleRows.map((chain, i) => {
           const rank = i + 1;
           return (
             <InteractiveTableRow
               key={chain.id}
               id={`chain-row-${chain.id}`}
               className={cn(
-                "group h-11 border-l-2 border-l-transparent transition-all duration-150 hover:border-l-frost-blue hover:bg-muted/30 hover:translate-x-[1px] data-[state=selected]:border-l-frost-blue sm:h-auto",
+                "group h-11 border-l-2 border-l-transparent transition-colors duration-150 hover:border-l-frost-blue hover:bg-muted/30 data-[state=selected]:border-l-frost-blue sm:h-auto",
                 revealedChainId === chain.id ? "border-l-frost-blue bg-muted/40" : "",
               )}
               onHover={() => setHoverChainId(chain.id)}
@@ -425,6 +522,20 @@ function ChainsLeaderboardTable({
             </InteractiveTableRow>
           );
         })}
+        {visibleRows.length === 0 ? (
+          <DataTableEmptyRow colSpan={CHAIN_COLUMNS.length}>
+            <span className="flex flex-col items-center gap-3">
+              <span>No chains match the current filter.</span>
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="pharos-focus-ring rounded-full border border-border/60 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+              >
+                Clear filters
+              </button>
+            </span>
+          </DataTableEmptyRow>
+        ) : null}
       </DataTableShell>
     </div>
   );

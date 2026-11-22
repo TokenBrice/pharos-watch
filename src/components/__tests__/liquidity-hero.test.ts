@@ -195,4 +195,28 @@ describe("LiquidityHero", () => {
     expect(row.textContent).toContain("↓2.4%");
     expect(row.innerHTML).not.toMatch(/text-(red|green|emerald)/);
   });
+
+  it("surfaces median 7d change, Depth/MCap readout, dashed-line key, and bidirectional route filter callbacks", () => {
+    const onRouteFilterChange = vi.fn();
+    render(createElement(LiquidityHero, {
+      stats: makeStats({
+        agg7dChange: null,
+        median7dChange: 3.2,
+        change7dCoinCount: 42,
+        aggDepthToMcapRatio: 0.084,
+        aggDepthToMcapObservedCount: 38,
+      }),
+      liquidityMap: { [DEX_GLOBAL_KEY]: TAIL_GLOBAL },
+      onRouteFilterChange,
+    }));
+
+    expect(screen.getByText("7d change, coins with 7d history").parentElement?.textContent).toContain("↑3.2%");
+    expect(screen.getByText("7d change, coins with 7d history").parentElement?.textContent).toContain("median across 42 coins");
+    expect(screen.getByText("Depth / MCap").parentElement?.textContent).toContain("8.4%");
+    expect(screen.getByTestId("exit-route-dashed-key").textContent).toContain("< 70%");
+    expect(screen.getByTestId("exit-route-dashed-key").textContent).toContain("< 60%");
+
+    fireEvent.click(screen.getByTestId("protocol-door-curve"));
+    expect(onRouteFilterChange).toHaveBeenCalledWith({ kind: "protocol", key: "curve", label: "Curve" });
+  });
 });

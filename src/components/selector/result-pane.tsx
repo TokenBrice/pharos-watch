@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import {
   getTemplate,
   type SelectorInput,
@@ -9,9 +10,8 @@ import {
 } from "@shared/lib/selector";
 import { selectorComponentReadingLabel } from "@shared/lib/selector/selector-labels";
 import { formatScoreTrimmed as formatScore } from "@shared/lib/format";
-import { Bot, ExternalLink } from "lucide-react";
+import { Wallet } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CopyButton } from "@/components/copy-button";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { useYieldRankings } from "@/hooks/api-hooks";
 import { useLiveYieldRankings } from "@/hooks/use-yield-source-clock";
@@ -26,6 +26,10 @@ import {
 } from "@/components/selector/selector-empty-state";
 import { SelectorSkippedDisclosure } from "@/components/selector/selector-skipped-disclosure";
 import { SelectorSnapshotBanner } from "@/components/selector/selector-snapshot-banner";
+import {
+  TelegramSubscribeCommand,
+  buildTelegramSubscribeCommandForIds,
+} from "@/components/selector/telegram-subscribe-command";
 import type { SelectorProfile } from "@shared/lib/selector/types";
 import type { SelectorStep, SelectorWizardState } from "@/lib/selector-state";
 import { PROFILE_LABEL } from "@/lib/selector-options";
@@ -37,9 +41,8 @@ import {
   buildYieldInspectionHref,
   stepForAnswerKey,
 } from "@/lib/selector-handoff";
+import { buildPortfolioCoinsHref } from "@/lib/portfolio-codec";
 import type { UseSelectorResult } from "@/hooks/use-selector";
-import { PHAROSWATCHBOT_BOT_URL } from "@/lib/telegram-route-constants";
-import { isTelegramReservedTargetToken } from "@shared/lib/telegram-command-vocabulary";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 
 export interface ResultPaneProps {
@@ -150,7 +153,8 @@ export function ResultPane({
   const compareShortlistHref = buildCompareShortlistHref(output);
   const compareWatchoutsHref = buildCompareWithWatchoutsHref(output, state);
   const yieldInspectionHref = buildYieldInspectionHref(output);
-  const telegramSubscribeCommand = buildTelegramSubscribeCommand(output.recommended);
+  const portfolioHref = buildPortfolioCoinsHref(output.recommended.map((rec) => rec.id));
+  const telegramSubscribeCommand = buildTelegramSubscribeCommandForIds(output.recommended.map((rec) => rec.id));
   const liveComparisonOutput = selectorResult.status === "snapshot-found" ? selectorResult.liveOutput : null;
   const snapshotBanner =
     selectorResult.status === "snapshot-found" ? (
@@ -211,15 +215,14 @@ export function ResultPane({
         lowConfidence={output.lowConfidence}
         coverageWarnings={output.coverageWarnings}
         compareActionsSlot={
-          showCompareShortlist || output.lowerRanked.length > 0 || yieldInspectionHref ? (
-            <>
-              {yieldInspectionHref ? (
-                <YieldInspectionAction href={yieldInspectionHref} primary={!showCompareShortlist} />
-              ) : null}
-              {showCompareShortlist ? <CompareShortlistAction href={compareShortlistHref} /> : null}
-              {output.lowerRanked.length > 0 ? <CompareWatchoutsAction href={compareWatchoutsHref} /> : null}
-            </>
-          ) : undefined
+          <>
+            {yieldInspectionHref ? (
+              <YieldInspectionAction href={yieldInspectionHref} primary={!showCompareShortlist} />
+            ) : null}
+            {showCompareShortlist ? <CompareShortlistAction href={compareShortlistHref} /> : null}
+            <ModelInPortfolioAction href={portfolioHref} />
+            {output.lowerRanked.length > 0 ? <CompareWatchoutsAction href={compareWatchoutsHref} /> : null}
+          </>
         }
         {...buildResultSummaryCoordinationProps({
           output,
@@ -227,8 +230,6 @@ export function ResultPane({
           screenerHandoff,
         })}
       />
-
-      <TelegramSubscribeCommand command={telegramSubscribeCommand} />
 
       {sessionRecovered ? <SessionRecoveredBanner /> : null}
 
@@ -292,6 +293,8 @@ export function ResultPane({
           })}
         </ol>
       </section>
+
+      <TelegramSubscribeCommand command={telegramSubscribeCommand} />
 
       {output.lowerRanked.length > 0 ? (
         <section aria-labelledby="selector-lower-ranked-heading" className="space-y-3">
@@ -365,75 +368,21 @@ function YieldInspectionAction({ href, primary }: { href: string; primary: boole
   );
 }
 
+function ModelInPortfolioAction({ href }: { href: string }) {
+  return (
+    <Link href={href} className="pharos-focus-ring pharos-control-pill min-h-10 gap-1.5 px-3 text-sm">
+      <Wallet className="h-3.5 w-3.5" aria-hidden="true" />
+      <span>Model in Portfolio</span>
+    </Link>
+  );
+}
+
 function CompareWatchoutsAction({ href }: { href: string }) {
   return (
     <a href={href} className="pharos-focus-ring pharos-control-pill min-h-10 px-3 text-sm">
       Compare shortlist vs watch-outs
     </a>
   );
-}
-
-function TelegramSubscribeCommand({ command }: { command: string }) {
-  return (
-    <section aria-labelledby="selector-telegram-command-heading" className="pharos-card-shell p-4 sm:p-5">
-      <div className="space-y-3">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-background/60 text-muted-foreground">
-              <Bot className="h-4 w-4" aria-hidden="true" />
-            </span>
-            <div className="min-w-0">
-              <p className="pharos-label">Telegram follow command</p>
-              <h2
-                id="selector-telegram-command-heading"
-                className="text-sm font-semibold tracking-tight text-foreground"
-              >
-                Follow this shortlist in PharosWatchBot
-              </h2>
-            </div>
-          </div>
-          <a
-            href={PHAROSWATCHBOT_BOT_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="pharos-focus-ring inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-full border border-foreground/60 bg-foreground px-3.5 text-sm font-medium text-background hover:bg-foreground/90"
-          >
-            Open PharosWatchBot
-            <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-          </a>
-        </div>
-        <div className="flex min-w-0 items-center gap-2 rounded-lg border border-border/60 bg-background/85 px-3 py-2.5 shadow-[inset_0_1px_0_oklch(1_0_0_/_0.04)]">
-          <span aria-hidden="true" className="font-mono text-sm font-semibold text-muted-foreground">
-            ▸
-          </span>
-          <code className="block min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-xs font-medium text-foreground sm:text-sm">
-            {command}
-          </code>
-          <CopyButton
-            text={command}
-            className="size-8 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground"
-          />
-        </div>
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          Copies a Telegram command for DEWS, depeg, and safety alerts on the shortlisted stablecoins.
-        </p>
-      </div>
-    </section>
-  );
-}
-
-const TELEGRAM_TARGET_TOKEN_PATTERN = /^[A-Za-z0-9_-]+$/;
-
-function buildTelegramSubscribeCommand(recommendations: readonly SelectorRecommendation[]): string {
-  const targets = Array.from(new Set(recommendations.map((rec) => safeTelegramTargetToken(rec.id)).filter(Boolean)));
-  return `/subscribe dews, depeg, safety ${targets.join(", ")}`.trim();
-}
-
-function safeTelegramTargetToken(value: string): string | null {
-  const token = value.trim();
-  if (!TELEGRAM_TARGET_TOKEN_PATTERN.test(token)) return null;
-  if (isTelegramReservedTargetToken(token)) return null;
-  return token;
 }
 
 function NearMissesDisclosure({ survivors }: { survivors: readonly SelectorClosestSurvivor[] }) {

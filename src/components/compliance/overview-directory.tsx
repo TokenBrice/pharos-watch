@@ -204,6 +204,12 @@ function OverviewStatusButton({
   onClick: (regime: "mica" | "genius", status: MicaStatus | GeniusAuthorizationStatus) => void;
 }) {
   const { badge, description } = complianceStatusMeta(regime, status);
+  const neutralOverride =
+    regime === "genius" && status === "unknown"
+      ? "border-dashed border-muted-foreground/60 bg-muted/60"
+      : regime === "genius" && status === "not-applicable"
+        ? "bg-muted/20 border-border/50"
+        : undefined;
 
   return (
     <button
@@ -212,8 +218,9 @@ function OverviewStatusButton({
       aria-label={`Show ${regime === "mica" ? "MiCA" : "GENIUS"} ${badge.label} stablecoins; selected from ${coinSymbol}`}
       onClick={() => onClick(regime, status)}
       className={cn(
-        "pharos-focus-ring inline-flex max-w-full items-center justify-center whitespace-normal rounded-full border px-1.5 py-1 text-center text-3xs font-semibold leading-tight sm:px-3 sm:text-xs",
+        "pharos-focus-ring inline-flex min-h-11 max-w-full items-center justify-center whitespace-normal rounded-full border px-2 py-1 text-center text-3xs font-semibold leading-tight sm:min-h-8 sm:px-3 sm:text-xs",
         badge.cls,
+        neutralOverride,
       )}
     >
       {badge.label}

@@ -57,6 +57,7 @@ type EventMap = {
   portfolio_shared: { coin_count: number };
   portfolio_cleared: { coin_count: number };
   portfolio_preset_loaded: { preset: string };
+  portfolio_watchlist_imported: { coin_count: number };
   theme_toggled: { theme: string };
   social_share: {
     action: "copy_link" | "copy_image" | "download_png" | "dated_scorecard";

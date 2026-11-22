@@ -1,11 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { CoinStateChip } from "@/components/coin-state-chip";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import type { ResolvedLink } from "@/components/contagion-graph/contagion-graph-graph";
 import type { GraphNode } from "@/lib/contagion-layout";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@shared/lib/format";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { HubExposure } from "@shared/lib/dependency-exposure";
 import type { CoinState } from "@shared/lib/coin-state";
 import { graphNodeLabel } from "@/components/contagion-graph/contagion-graph-model";
@@ -200,19 +202,28 @@ export function ContagionGraphInsights({
           </div>
         )}
 
-        <button
-          type="button"
-          className="pharos-focus-ring inline-flex min-h-11 w-full items-center justify-center rounded-sm border text-3xs text-foreground transition-colors hover:bg-muted/40"
-          style={{ borderColor: "var(--graph-grid-line)" }}
-          onClick={() => onTraceNode(inspectedNode.id)}
-        >
-          Trace neighborhood
-        </button>
-        {onUseAsExposureRoot && (
-          <button type="button" data-use-exposure-root className="pharos-focus-ring inline-flex min-h-11 w-full items-center justify-center rounded-sm border text-xs" onClick={() => onUseAsExposureRoot(inspectedNode.id)}>
-            Use as exposure root
+        <div className="space-y-1.5">
+          <Link
+            href={buildStablecoinUrl(inspectedNode.id)}
+            className="pharos-focus-ring inline-flex min-h-11 w-full items-center justify-center rounded-sm border text-xs font-medium text-brand-accent-text transition-colors hover:bg-muted/40 hover:text-foreground"
+            style={{ borderColor: "var(--graph-grid-line)" }}
+          >
+            Open profile →
+          </Link>
+          <button
+            type="button"
+            className="pharos-focus-ring inline-flex min-h-11 w-full items-center justify-center rounded-sm border text-3xs text-foreground transition-colors hover:bg-muted/40"
+            style={{ borderColor: "var(--graph-grid-line)" }}
+            onClick={() => onTraceNode(inspectedNode.id)}
+          >
+            Trace neighborhood
           </button>
-        )}
+          {onUseAsExposureRoot && (
+            <button type="button" data-use-exposure-root className="pharos-focus-ring inline-flex min-h-11 w-full items-center justify-center rounded-sm border text-xs" style={{ borderColor: "var(--graph-grid-line)" }} onClick={() => onUseAsExposureRoot(inspectedNode.id)}>
+              Use as exposure root
+            </button>
+          )}
+        </div>
       </div>
     </aside>
   );

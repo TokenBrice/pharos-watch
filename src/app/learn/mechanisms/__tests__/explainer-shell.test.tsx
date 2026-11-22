@@ -30,4 +30,18 @@ describe("ArchetypeExplainerBody representative coins", () => {
     expect(screen.queryByRole("link", { name: /BENJI/ })).toBeNull();
     expect(screen.getAllByRole("link", { name: /BUIDL/ }).length).toBeGreaterThan(0);
   });
+
+  it("strips internal scoring engine version prefixes and wires glossary terms without nesting buttons in links", () => {
+    for (const archetype of ["cdp", "fiat-cash", "tbill", "rwa-credit-fund"] as const) {
+      cleanup();
+      const { container } = render(<ArchetypeExplainerBody content={ARCHETYPE_CONTENT[archetype]} />);
+      expect(container.textContent).not.toMatch(/\bV(?:8|9|10)\b/);
+      // Never nest interactive glossary buttons inside links.
+      expect(container.querySelectorAll("a button").length).toBe(0);
+    }
+
+    cleanup();
+    render(<ArchetypeExplainerBody content={ARCHETYPE_CONTENT.cdp} />);
+    expect(screen.getAllByRole("button", { name: /overcollateralization|CDP|AMO/i }).length).toBeGreaterThan(0);
+  });
 });

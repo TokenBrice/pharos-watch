@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest";
 import { render, screen, within } from "@testing-library/react";
-import { CostBreakdown, DonorList, FundingHero } from "../funding-page-sections";
+import { CostBreakdown, DonorList, FundingFaq, FundingHero, SupportCtas } from "../funding-page-sections";
 import type { CostLineItem, Donation } from "@shared/lib/funding/schema";
 import type { DonationSummary, MonthlyFunding } from "@shared/lib/funding/helpers";
 
@@ -104,5 +104,23 @@ describe("DonorList", () => {
     expect(screen.getByText("Show 15 earlier donations")).toBeTruthy();
     expect(screen.getByText("25 donations in the public ledger, newest first.")).toBeTruthy();
     expect(screen.getAllByRole("row")).toHaveLength(27);
+  });
+});
+
+describe("SupportCtas and FundingFaq", () => {
+  it("exposes the #direct-wallet anchor and clarifies A/B-grade direct-wallet eligibility", () => {
+    render(<SupportCtas />);
+    const walletCard = document.getElementById("direct-wallet");
+    expect(walletCard).not.toBeNull();
+    expect(walletCard!.textContent).toMatch(/A- or B-grade stablecoin/i);
+    expect(walletCard!.textContent).toMatch(/not Giveth or ETH/i);
+  });
+
+  it("renders FundingFaq via the shared FaqSection disclosures with inline API links", () => {
+    render(<FundingFaq />);
+    const details = document.querySelectorAll("details");
+    expect(details.length).toBeGreaterThanOrEqual(6);
+    expect(screen.getByRole("link", { name: "See the API page" }).getAttribute("href")).toMatch(/^\/api\/?#supporter-key$/);
+    expect(screen.getByRole("link", { name: "partner key" }).getAttribute("href")).toMatch(/^\/api\/?#partner-access$/);
   });
 });

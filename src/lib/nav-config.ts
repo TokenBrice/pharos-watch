@@ -9,6 +9,7 @@ import {
   Info,
   Layers,
   BookOpen,
+  FileText,
   KeyRound,
   Lightbulb,
   ShieldCheck,
@@ -154,8 +155,8 @@ const DEPEG_NAV_ITEM: NavItem = {
  * Desktop quick rail: the six highest-traffic routes, promoted out of the
  * dropdowns so they cost one click instead of hover-then-scan. Apart from
  * Home, the rail is their sole desktop navigation surface. Labels step down
- * in three tiers to fit the masthead (measured 2026-10-11): `compactLabel`
- * below 1440px, `shortLabel` from 1440px, the canonical `label` from 1680px.
+ * in three tiers to fit the masthead: `compactLabel` below 1280px (`xl:`),
+ * `shortLabel` from 1280px, and the canonical `label` from 1680px.
  */
 export const QUICK_NAV_ITEMS: readonly NavItem[] = [
   DASHBOARD_NAV_ITEM,
@@ -165,10 +166,55 @@ export const QUICK_NAV_ITEMS: readonly NavItem[] = [
   { ...YIELD_NAV_ITEM, label: "Yield", shortLabel: "Yield" },
   // Compact labels keep the rail and section menus within the masthead.
   { ...DEPEG_NAV_ITEM, shortLabel: "Depeg" },
-  // "Stability" is a real word and wins wherever it fits; below 1440px the
-  // six-item rail only fits the in-product acronym. The palette keeps `psi`.
+  // "Stability" and "FreezeWatch" step in at 1280px (xl:); below xl the
+  // six-item rail uses the compact forms so 1024px fits without crowding.
   { ...STABILITY_INDEX_NAV_ITEM, shortLabel: "Stability", compactLabel: "PSI" },
   { ...FREEZEWATCH_NAV_ITEM, shortLabel: "FreezeWatch", compactLabel: "Freeze" },
+];
+
+const SCREENER_NAV_ITEM: NavItem = {
+  href: "/screener/",
+  label: "Screener",
+  icon: SlidersHorizontal,
+  description: "Filter every stablecoin on any axis",
+  keywords: "screener filter find search criteria",
+};
+
+const COMPARE_NAV_ITEM: NavItem = {
+  href: "/compare/",
+  label: "Compare",
+  icon: ArrowLeftRight,
+  description: "Peer sets and substitutes side by side",
+  keywords: "compare vs versus side by side alternative",
+};
+
+const PORTFOLIO_NAV_ITEM: NavItem = {
+  href: "/portfolio/",
+  label: "Portfolio",
+  icon: Wallet,
+  description: "Your holdings as one stablecoin book",
+  keywords: "portfolio holdings my coins wallet exposure",
+};
+
+const ALERT_BOT_NAV_ITEM: NavItem = {
+  href: "/pharoswatchbot/",
+  label: "Alert Bot",
+  icon: Send,
+  description: "Telegram depeg, stress, and grade alerts",
+  keywords: "alert bot telegram notifications subscribe watch dews depeg freeze grade",
+};
+
+/**
+ * Mobile drawer quick grid: six high-value tools not already pinned in the
+ * persistent bottom bar (Home, Safety, Yield, Depeg stay one tap away there).
+ */
+export const MOBILE_DRAWER_QUICK_ITEMS: readonly NavItem[] = [
+  { ...STABILITY_INDEX_NAV_ITEM, shortLabel: "Stability" },
+  FREEZEWATCH_NAV_ITEM,
+  SCREENER_NAV_ITEM,
+  COMPARE_NAV_ITEM,
+  PORTFOLIO_NAV_ITEM,
+  ALERT_BOT_NAV_ITEM,
 ];
 
 // Learn holds the reference corpus; the compact tier below it holds the pages
@@ -183,6 +229,7 @@ const LEARN_SECTIONS: readonly NavSection[] = [
       { href: "/learn/mechanisms/", label: "Mechanisms", icon: Lightbulb, description: "How each design holds its peg", keywords: "mechanism archetype design how it works collateral algorithmic" },
       { href: "/learn/case-studies/", label: "Case Studies", icon: BookMarked, description: "Retrospectives of major depegs", keywords: "case study retrospective post-mortem history terra ust svb" },
       { href: "/methodology/", label: "Methodology", icon: Sigma, description: "Formulas, thresholds, and versions", keywords: "methodology formula threshold how computed calculated version glossary definitions terms" },
+      { href: "/docs/", label: "Documentation", icon: FileText, description: "Public specs, pipelines, and data contracts", keywords: "docs documentation specs architecture data contracts markdown reference" },
     ],
   },
   {
@@ -241,10 +288,10 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     key: "tools",
     label: "Tools",
     items: [
-      { href: "/screener/", label: "Screener", icon: SlidersHorizontal, description: "Filter every stablecoin on any axis", keywords: "screener filter find search criteria" },
-      { href: "/compare/", label: "Compare", icon: ArrowLeftRight, description: "Peer sets and substitutes side by side", keywords: "compare vs versus side by side alternative" },
-      { href: "/portfolio/", label: "Portfolio", icon: Wallet, description: "Your holdings as one stablecoin book", keywords: "portfolio holdings my coins wallet exposure" },
-      { href: "/pharoswatchbot/", label: "Alert Bot", icon: Send, description: "Telegram alerts for depegs and launches", keywords: "alert bot telegram notifications subscribe watch" },
+      SCREENER_NAV_ITEM,
+      COMPARE_NAV_ITEM,
+      PORTFOLIO_NAV_ITEM,
+      ALERT_BOT_NAV_ITEM,
       { href: "/api/", label: "API", icon: KeyRound, description: "Free grades, access keys, and docs", keywords: "api key developer access endpoint docs reference integration" },
     ],
   },

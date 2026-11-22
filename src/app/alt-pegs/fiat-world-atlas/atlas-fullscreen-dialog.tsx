@@ -2,10 +2,10 @@
 
 import { useRef } from "react";
 import { X } from "lucide-react";
+import type { PegCurrency } from "@shared/types/core";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { PegDiversityHeroLive } from "@/app/alt-pegs/fiat-world-atlas/peg-diversity-hero-live";
-import { WorldMap } from "@/app/alt-pegs/fiat-world-atlas/world-map";
 import { useBrowserFullscreen } from "@/hooks/use-browser-fullscreen";
 
 const DIALOG_CONTENT_CLASSES =
@@ -14,9 +14,13 @@ const DIALOG_CONTENT_CLASSES =
 export function AtlasFullscreenDialog({
   open,
   onOpenChange,
+  selectedPeg = null,
+  onSelectPeg,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  selectedPeg?: PegCurrency | null;
+  onSelectPeg?: (peg: PegCurrency | null) => void;
 }) {
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const contentRef = useBrowserFullscreen(open);
@@ -51,7 +55,7 @@ export function AtlasFullscreenDialog({
         </div>
         <div className="atlas-fullscreen-dialog__body">
           <div className="peg-hero__viewport" role="group" aria-label="Peg diversity map atlas">
-            <PegDiversityHeroLive worldMap={<WorldMap />} variant="fullscreen" />
+            <PegDiversityHeroLive variant="fullscreen" selectedPeg={selectedPeg} onSelectPeg={onSelectPeg} />
           </div>
         </div>
       </DialogContent>

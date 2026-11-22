@@ -20,6 +20,7 @@ import { getScoreColor, getDurabilityColor } from "@/lib/severity-colors";
 import { TABLE_PAGE_SIZE } from "@/lib/constants";
 import {
   compareLiquidityRows,
+  computeDepthToMcapRatio,
   informativeVolumeLowerBound,
   LIQUIDITY_NR_REASON_LABELS,
   type LiquidityRow,
@@ -37,8 +38,9 @@ interface LiquidityTableProps {
   logos: Record<string, string> | undefined;
   searchQuery: string;
   onRowClick: (id: string) => void;
-  /** Workbench toolbar (filters + search) rendered inside the table shell header. */
+  /** Workbench toolbar (filters + search + export) rendered inside the table shell header. */
   toolbar?: ReactNode;
+  onClearFilters?: () => void;
 }
 
 // Every column has a width so the fixed layout never ellipsizes a header; lower-value
@@ -55,6 +57,13 @@ const LIQUIDITY_COLUMNS: readonly DataTableColumn<LiquiditySortKey>[] = [
     className: "w-[5.25rem] text-right sm:w-[7.25rem]",
   },
   { id: "tvl", label: "DEX TVL", sortKey: "tvl", className: "w-[6.5rem] text-right" },
+  {
+    id: "depthRatio",
+    label: "Depth/MCap",
+    sortKey: "depthRatio",
+    className: "hidden w-[6.25rem] md:table-cell text-right",
+    title: "DEX TVL divided by circulating supply",
+  },
   { id: "tvlTrend", label: "TVL 7d", sortKey: "tvlTrend", className: "hidden w-24 lg:table-cell text-right" },
   { id: "volume", label: "24h vol", sortKey: "volume", className: "w-[6.5rem] text-right" },
   { id: "volume7d", label: "7d vol", sortKey: "volume7d", className: "hidden w-[6.5rem] 2xl:table-cell text-right" },
@@ -94,7 +103,14 @@ function VolumeCell({ volume }: { volume: ReturnType<typeof describeDexVolume> }
   return <span className="text-muted-foreground">{informativeVolumeLowerBound(volume) ?? volume.text}</span>;
 }
 
-export function LiquidityTable({ rows, logos, searchQuery, onRowClick, toolbar }: LiquidityTableProps) {
+export function LiquidityTable({
+  rows,
+  logos,
+  searchQuery,
+  onRowClick,
+  toolbar,
+  onClearFilters,
+}: LiquidityTableProps) {
   const {
     sortKey,
     sortDirection,
@@ -130,6 +146,8 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick, toolbar }
         columns={LIQUIDITY_COLUMNS}
         topSlot={toolbar ? <div className="pharos-table-toolbar">{toolbar}</div> : undefined}
         striped
+        stickyHeader
+        stickyMode="page"
         sort={{
           sortKey,
           sortDirection,
@@ -153,6 +171,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick, toolbar }
       >
         {paginated.map((row, index) => {
           const liq = row.liq;
+          const depthRatio = computeDepthToMcapRatio(liq.totalTvlUsd, row.mcapUsd);
           const vtRatio = dexVolumeToTvlRatio(liq.totalVolume24hUsd, liq.totalTvlUsd);
           const volume24h = describeDexVolume(liq.totalVolume24hUsd, liq.volume24hAvailability);
           const volume7d = describeDexVolume(liq.totalVolume7dUsd, liq.volume7dAvailability);
@@ -207,6 +226,13 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick, toolbar }
                 )}
               </TableCell>
               <TableCell className="text-right pharos-numeric">{formatCurrency(liq.totalTvlUsd)}</TableCell>
+              <TableCell className="hidden md:table-cell text-right pharos-numeric text-sm">
+                {depthRatio != null ? (
+                  depthRatio > 0 && depthRatio < 0.0005 ? "<0.1%" : formatPercent(depthRatio * 100, 1)
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </TableCell>
               <TableCell className="hidden lg:table-cell text-right pharos-numeric text-sm">
                 {liq.tvlChange7d != null ? (
                   <span className={getNetColor(liq.tvlChange7d, { positiveInclusiveZero: true })}>
@@ -271,9 +297,22 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick, toolbar }
         })}
         {sorted.length === 0 && (
           <DataTableEmptyRow colSpan={LIQUIDITY_COLUMNS.length}>
-            {searchQuery
-              ? `Nothing matched "${searchQuery}". Try a symbol like USDT.`
-              : "No coins match. Loosen the filter."}
+            <span className="flex flex-col items-center gap-3">
+              <span>
+                {searchQuery
+                  ? `Nothing matched "${searchQuery}". Try a symbol like USDT.`
+                  : "No coins match. Loosen the filter."}
+              </span>
+              {onClearFilters ? (
+                <button
+                  type="button"
+                  onClick={onClearFilters}
+                  className="pharos-focus-ring rounded-full border border-border/60 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Clear filters
+                </button>
+              ) : null}
+            </span>
           </DataTableEmptyRow>
         )}
       </DataTableShell>

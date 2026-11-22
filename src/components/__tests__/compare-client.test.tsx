@@ -24,6 +24,7 @@ vi.mock("@/hooks/use-preferences", () => ({ usePreference: () => ["peg", vi.fn()
 vi.mock("next/dynamic", () => ({ default: () => () => null }));
 
 import { CompareClient } from "@/components/compare/compare-client";
+import { CompareCoinSlot } from "@/components/compare/compare-coin-slot";
 import { CompareEmptyState } from "@/components/compare/compare-empty-state";
 import { CoinSelector } from "@/components/coin-selector";
 import { FlowComparisonChart } from "@/components/compare/flow-comparison-chart";
@@ -120,6 +121,7 @@ describe("CompareClient and coin selector", () => {
   });
 
   it("names the active-plus-frozen population behind the comparable count", () => {
+    window.localStorage.removeItem(WATCHLIST_STORAGE_KEY);
     useCompareDataModelMock.mockReturnValue({
       comparisonCoins: [], detailErrors: {}, detailLoading: false, flowCardData: [], flowCoverageCount: 0,
       flowErrorNotice: null, flowScopeLabel: "Configured issuance chains", flowSeries: [],
@@ -130,7 +132,34 @@ describe("CompareClient and coin selector", () => {
     const hero = screen.getByRole("group", { name: "Comparison scope overview" });
     expect(hero.textContent).toContain("Active + frozen");
     expect(hero.textContent).toContain("3");
+    expect(hero.textContent).toContain(`${COMPARISON_PRESETS.length - 1} preset packs`);
     expect(container.textContent).not.toContain("Stablecoins ready to compare");
+    expect(screen.getByRole("link", { name: "Model in Portfolio" }).getAttribute("href")).toMatch(
+      /^\/portfolio\/?\?coins=usdc-circle%2Cusdt-tether$/,
+    );
+    expect(screen.getByRole("button", { name: "Copy comparison link" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Share comparison image" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Clear all selected coins" })).toBeTruthy();
+  });
+
+  it("allows click-to-swap on a filled CompareCoinSlot without removing first", () => {
+    const onSelect = vi.fn();
+    const onRemove = vi.fn();
+    render(
+      <CompareCoinSlot
+        coins={compareOptions}
+        selected={compareOptions[0]}
+        disabledIds={new Set([compareOptions[0].id])}
+        onSelect={onSelect}
+        onRemove={onRemove}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Swap USD Coin (USDC)" }));
+    const search = screen.getByRole("combobox", { name: "Replace USD Coin" });
+    fireEvent.change(search, { target: { value: "EURC" } });
+    fireEvent.click(screen.getByRole("option", { name: /EURC/ }));
+    expect(onSelect).toHaveBeenCalledWith(compareOptions[2]);
+    expect(onRemove).not.toHaveBeenCalled();
   });
 
   it("hides the My Watchlist preset until at least two comparable coins are starred", () => {

@@ -48,23 +48,28 @@ function expectHrefAllowTrailingSlash(html: string, href: string) {
 }
 
 describe("ChainProfilePage", () => {
-  it("renders the live client profile before related route hubs", async () => {
+  it("decouples visible H1 from SEO title and folds the deployment list inside a disclosure", async () => {
     const html = renderToStaticMarkup(
       await ChainProfilePage({ params: Promise.resolve({ chain: "ethereum" }) }),
     );
+    const meta = await generateMetadata({ params: Promise.resolve({ chain: "ethereum" }) });
 
-    expect(html).toContain("Ethereum Stablecoins: USDT, USDC, and USDe, Supply &amp; Risk");
+    expect(meta.title).toContain("Ethereum Stablecoins: USDT, USDC, and USDe, Supply & Risk");
+    expect(html).toContain(">Ethereum Stablecoins</h1>");
+    expect(html).not.toContain("Ethereum Stablecoins: USDT, USDC, and USDe, Supply &amp; Risk</h1>");
+    expect(html).not.toContain("Crawlable links");
     expect(html).toContain("Ethereum has");
     expect(html).toContain("Compare cohort");
     expect(html).toContain("Set up alerts");
     expect(html).toContain("chain client ethereum");
-    expect(html).toContain("Tracked Stablecoins On Ethereum");
+    expect(html).toContain("Tracked stablecoins on Ethereum");
+    expect(html).toContain("<details");
     expect(html).toContain('href="/stablecoin/usdc-circle"');
     expect(html).toContain('href="/stablecoins"');
     expect(html).toContain('href="/safety-scores"');
     expect(html).toContain("Stablecoin Research Surfaces");
-    expect(html.indexOf("chain client ethereum")).toBeLessThan(html.indexOf("Tracked Stablecoins On Ethereum"));
-    expect(html.indexOf("Tracked Stablecoins On Ethereum")).toBeLessThan(html.indexOf("Related Stablecoin Hubs"));
+    expect(html.indexOf("chain client ethereum")).toBeLessThan(html.indexOf("Tracked stablecoins on Ethereum"));
+    expect(html.indexOf("Tracked stablecoins on Ethereum")).toBeLessThan(html.indexOf("Related Stablecoin Hubs"));
     expect(html.indexOf("chain client ethereum")).toBeLessThan(html.indexOf("Related Stablecoin Hubs"));
   });
 
@@ -118,7 +123,7 @@ describe("ChainProfilePage", () => {
 
     expect(html.indexOf("chain client solana")).toBeLessThan(html.indexOf("Recorded contract addresses on Solana"));
     expect(html.indexOf("Recorded contract addresses on Solana")).toBeLessThan(
-      html.indexOf("Tracked Stablecoins On Solana"),
+      html.indexOf("Tracked stablecoins on Solana"),
     );
   });
 
@@ -152,7 +157,7 @@ describe("ChainProfilePage", () => {
     for (const deployment of deployments) {
       expectHrefAllowTrailingSlash(html, deployment.href);
     }
-    expect(html).toContain("Tracked Stablecoins On");
+    expect(html).toContain("Tracked stablecoins on");
     if (candidates.length > 20) {
       const lastDeployment = deployments[deployments.length - 1];
       expectHrefAllowTrailingSlash(html, lastDeployment.href);
@@ -177,7 +182,7 @@ describe("ChainProfilePage", () => {
     const html = await renderChainPage("ethereum");
     expect(html).not.toContain("chain-contract-addresses");
     expect(html).not.toContain("Recorded contract addresses on");
-    expect(html).toContain("Tracked Stablecoins On Ethereum");
+    expect(html).toContain("Tracked stablecoins on Ethereum");
   });
 
   it("adds no table to a nonpilot chain with no recorded deployment", async () => {

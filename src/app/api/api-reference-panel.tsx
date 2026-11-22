@@ -337,7 +337,7 @@ function EndpointDirectory({ endpoints }: { endpoints: ApiReferenceEndpointSumma
         <p className="pharos-label">Endpoint directory</p>
         <h2 className="text-2xl font-semibold tracking-tight text-foreground">Public API routes</h2>
         <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Every public route on one screen. Each links to its field tables, examples, and edge-case contract above.
+          Every public route on one screen. Each links to its field tables, examples, and edge-case contract below.
         </p>
       </div>
 
@@ -365,8 +365,12 @@ export async function ApiReferencePanel() {
   const document = await loadApiReferenceDocument();
   const referenceSections = document.sections.filter((s) => !HIDDEN_SECTIONS.has(s.id));
   const endpoints = getPublicApiEndpointSummaries(document);
+  const [externalLane, ...internalLanes] = HERO_LANES;
+  const ExternalLaneIcon = externalLane.icon;
   const sidebarSections: SidebarSection[] = [
     { id: "quickstart", label: "Quickstart", subsections: [] },
+    { id: "endpoint-directory", label: "Endpoint directory", subsections: [] },
+    { id: "public-datasets", label: "Public datasets", subsections: [] },
     ...referenceSections.map((section) => ({
       id: section.id,
       label: stripMarkdownHeadingFormatting(section.title),
@@ -376,7 +380,6 @@ export async function ApiReferencePanel() {
         method: sub.method,
       })),
     })),
-    { id: "endpoint-directory", label: "Endpoint directory", subsections: [] },
   ];
 
   return (
@@ -404,39 +407,59 @@ export async function ApiReferencePanel() {
           .
         </p>
       </div>
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {HERO_LANES.map((lane) => {
-          const Icon = lane.icon;
-          return (
-            <section key={lane.title} className="pharos-card-shell px-4 py-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1.5">
-                  <p className="pharos-label">{lane.eyebrow}</p>
-                  <h2 className="text-lg font-semibold tracking-tight text-foreground">{lane.title}</h2>
-                </div>
-                <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/75 text-foreground">
-                  <Icon className="h-4 w-4" aria-hidden="true" />
-                </span>
-              </div>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground"><InlineMarkdown text={lane.description} /></p>
-            </section>
-          );
-        })}
 
-        <div className="pharos-card-shell px-4 py-4">
-          <p className="pharos-label">Quick facts</p>
-          <ul className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
-            <li>
-              <span className="font-semibold text-foreground">Public auth:</span> <InlineCode>{PUBLIC_API_KEY_HEADER}</InlineCode>
-            </li>
-            <li>
-              <span className="font-semibold text-foreground">Admin auth:</span> Cloudflare Access on the ops hosts
-            </li>
-          </ul>
+      <div className="space-y-3">
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <section className="pharos-card-shell px-4 py-4 sm:px-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1.5">
+                <p className="pharos-label">{externalLane.eyebrow}</p>
+                <h2 className="text-lg font-semibold tracking-tight text-foreground">{externalLane.title}</h2>
+              </div>
+              <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/75 text-foreground">
+                <ExternalLaneIcon className="h-4 w-4" aria-hidden="true" />
+              </span>
+            </div>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              <InlineMarkdown text={externalLane.description} />
+            </p>
+          </section>
+
+          <div className="pharos-card-shell px-4 py-4">
+            <p className="pharos-label">Quick facts</p>
+            <ul className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
+              <li>
+                <span className="font-semibold text-foreground">Public auth:</span> <InlineCode>{PUBLIC_API_KEY_HEADER}</InlineCode>
+              </li>
+              <li>
+                <span className="font-semibold text-foreground">Admin auth:</span> Cloudflare Access on the ops hosts
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          {internalLanes.map((lane) => {
+            const Icon = lane.icon;
+            return (
+              <section key={lane.title} className="pharos-inset px-4 py-3.5">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                    <h2 className="text-sm font-semibold tracking-tight text-foreground">{lane.title}</h2>
+                    <span className="pharos-label">{lane.eyebrow}</span>
+                  </div>
+                  <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                </div>
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                  <InlineMarkdown text={lane.description} />
+                </p>
+              </section>
+            );
+          })}
         </div>
       </div>
 
-      <section id="quickstart" className="pharos-card-shell space-y-4 px-4 py-5 sm:px-5 sm:py-6">
+      <section id="quickstart" className="pharos-card-shell scroll-mt-24 space-y-4 px-4 py-5 sm:px-5 sm:py-6">
         <div className="space-y-2">
           <p className="pharos-label">Quickstart</p>
           <h2 className="text-2xl font-semibold tracking-tight text-foreground">Call Pharos from your stack</h2>
@@ -452,7 +475,11 @@ export async function ApiReferencePanel() {
         </div>
       </section>
 
-      <section id="public-datasets" className="pharos-card-shell space-y-5 px-4 py-5 sm:px-5 sm:py-6">
+      <div id="endpoint-directory" className="scroll-mt-24">
+        <EndpointDirectory endpoints={endpoints} />
+      </div>
+
+      <section id="public-datasets" className="pharos-card-shell scroll-mt-24 space-y-5 px-4 py-5 sm:px-5 sm:py-6">
         <div className="space-y-2">
           <p className="pharos-label">No API key required</p>
           <h2 className="text-2xl font-semibold tracking-tight text-foreground">Public dataset downloads</h2>
@@ -521,9 +548,6 @@ export async function ApiReferencePanel() {
         {referenceSections.map((section) => (
           <SectionRenderer key={section.id} section={section} />
         ))}
-        <div id="endpoint-directory">
-          <EndpointDirectory endpoints={endpoints} />
-        </div>
       </ApiReferenceLayout>
     </div>
   );

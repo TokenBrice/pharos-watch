@@ -20,12 +20,12 @@ describe("FlowWeekReceipt", () => {
       />,
     );
 
-    expect(screen.getByText("Printed 7d")).toBeTruthy();
+    expect(screen.getByText("Minted 7d")).toBeTruthy();
     expect(screen.getByText("$10.00M")).toBeTruthy();
-    expect(screen.getByText("Shredded 7d")).toBeTruthy();
+    expect(screen.getByText("Burned 7d")).toBeTruthy();
     expect(screen.getByText("$3.00M")).toBeTruthy();
     expect(screen.getByText("+$35.00M")).toBeTruthy();
-    expect(container.textContent).not.toMatch(/Printed 24h|Shredded 24h|Net 24h/);
+    expect(container.textContent).not.toMatch(/Printed|Shredded|Minted 24h|Burned 24h|Net 24h/);
     // Leaders share the fold's 7-day window.
     expect(screen.getByText("Top net minter, 7d")).toBeTruthy();
     expect(screen.getByText("USDC +$40.00M")).toBeTruthy();

@@ -2,6 +2,12 @@ import { describe, expect, it } from "vitest";
 import { COVERAGE_FEATURES, type CoverageFeatureKey, type CoverageRow, type CoverageStatus } from "@/lib/coverage";
 import { getFilterGroups, type CoverageFilterKey } from "@/lib/coverage-page-config";
 import { filterCoverageRows, matchesCoverageFilter, sortCoverageRows } from "@/lib/coverage-filtering";
+import {
+  getCoverageMatrixFilterGroups,
+  matchesCoverageMatrixFilter,
+  sortCoverageMatrixRows,
+  type CoverageMatrixFilterKey,
+} from "@/components/coverage/coverage-matrix-controls";
 
 // The full-coverage filters are defined against the shipped feature registry.
 const FEATURE_COUNT = COVERAGE_FEATURES.length;
@@ -236,6 +242,63 @@ describe("coverage filtering", () => {
     expect(filterCoverageRows(rows, "yield", "market-cap", "bet").map((row) => row.id)).toEqual(["beta"]);
     // Alpha matches the search but has no yield data, so it must stay excluded.
     expect(filterCoverageRows(rows, "yield", "market-cap", "alp").map((row) => row.id)).toEqual([]);
+  });
+
+  it("supports MiCA, GENIUS, and Mint Auth filter and weakest-first sort parity", () => {
+    const chips = getCoverageMatrixFilterGroups().flat();
+    expect(chips.map((c) => c.key)).toEqual(
+      expect.arrayContaining([
+        "mica",
+        "genius",
+        "mint-authority",
+        "missing-mica",
+        "missing-genius",
+        "missing-mint-authority",
+      ]),
+    );
+
+    const assessed = makeRow({
+      id: "assessed",
+      name: "Assessed USD",
+      symbol: "ASD",
+      marketCapUsd: 200,
+      statuses: {
+        mica: status("authorized", true, 5),
+        genius: status("issuer-announced-intent", true, 4),
+        mintAuthority: status("issuer-or-backend-mint", true, 3),
+      },
+    });
+    const unassessed = makeRow({
+      id: "unassessed",
+      name: "Unassessed USD",
+      symbol: "UNA",
+      marketCapUsd: 500,
+      statuses: {
+        mica: status("unassessed", false, 0),
+        genius: status("unassessed", false, 0),
+        mintAuthority: status("unknown", false, 0),
+      },
+    });
+    const pair = [assessed, unassessed];
+
+    const filterCases: Array<[CoverageMatrixFilterKey, string[]]> = [
+      ["mica", ["assessed"]],
+      ["missing-mica", ["unassessed"]],
+      ["genius", ["assessed"]],
+      ["missing-genius", ["unassessed"]],
+      ["mint-authority", ["assessed"]],
+      ["missing-mint-authority", ["unassessed"]],
+    ];
+    for (const [key, expected] of filterCases) {
+      expect(pair.filter((row) => matchesCoverageMatrixFilter(row, key)).map((row) => row.id)).toEqual(expected);
+    }
+
+    expect(sortCoverageMatrixRows(pair, "weakest-mica").map((row) => row.id)).toEqual(["unassessed", "assessed"]);
+    expect(sortCoverageMatrixRows(pair, "weakest-genius").map((row) => row.id)).toEqual(["unassessed", "assessed"]);
+    expect(sortCoverageMatrixRows(pair, "weakest-mint-authority").map((row) => row.id)).toEqual([
+      "unassessed",
+      "assessed",
+    ]);
   });
 
 });

@@ -66,8 +66,8 @@ export function StablecoinTaxonomyHub({
         ))}
       </section>
       <p className="text-xs leading-relaxed text-muted-foreground">
-        Source: checked-in StablecoinMeta profile fields in the current Pharos build. Active counts are static taxonomy
-        context and should be paired with the linked live directories for current market coverage.
+        Membership comes from the Pharos stablecoin registry in this build. Active counts are static directory context
+        and pair with the linked live tables for current market coverage.
       </p>
     </FeaturePageShell>
   );

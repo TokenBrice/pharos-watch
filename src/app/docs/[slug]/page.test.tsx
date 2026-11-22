@@ -64,4 +64,20 @@ describe("DocPage", () => {
       expect(`${title} | Pharos`.length).toBeLessThanOrEqual(62);
     }
   });
+
+  it("renders the Updated date, Plain Markdown link, /methodology/ bridge, and matching H2 TOC anchors", async () => {
+    const html = renderToStaticMarkup(await DocPage({ params: Promise.resolve({ slug: "depeg-detection" }) }));
+    expect(html).toMatch(/Updated <time[^>]*>\d{4}-\d{2}-\d{2}<\/time>/);
+    expect(html).toContain('href="/docs/depeg-detection/index.md"');
+    expect(html).toContain("Plain Markdown");
+    expect(html).toContain('href="/methodology/"');
+
+    const navMatch = /<nav aria-label="On this page"[^>]*>([\s\S]*?)<\/nav>/.exec(html);
+    expect(navMatch).not.toBeNull();
+    const tocIds = Array.from(navMatch![1]!.matchAll(/href="#([^"]+)"/g), ([, id]) => id!);
+    expect(tocIds.length).toBeGreaterThanOrEqual(2);
+    for (const id of tocIds) {
+      expect(html, `TOC anchor #${id} missing in rendered article`).toContain(`id="${id}"`);
+    }
+  });
 });

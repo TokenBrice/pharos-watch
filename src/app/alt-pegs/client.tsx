@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ChartSkeleton } from "@/components/chart-skeleton";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { StaleDataBanner } from "@/components/stale-data-banner";
@@ -126,11 +127,11 @@ export function AltPegsClient() {
 
   if (stablecoinsQuery.isLoading && !stablecoinsQuery.data?.peggedAssets?.length) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-[280px] w-full rounded-xl" />
-        <Skeleton className="h-[520px] w-full rounded-xl" />
-        <Skeleton className="h-[360px] w-full rounded-xl" />
-        <Skeleton className="h-[360px] w-full rounded-xl" />
+      <div className="space-y-4">
+        <Skeleton className="h-[200px] w-full rounded-xl" />
+        <ChartSkeleton variant="area" className="h-[380px] w-full rounded-xl" />
+        <ChartSkeleton variant="area" className="h-[340px] w-full rounded-xl" />
+        <ChartSkeleton variant="area" className="h-[340px] w-full rounded-xl" />
       </div>
     );
   }
@@ -148,7 +149,7 @@ export function AltPegsClient() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200 motion-reduce:animate-none">
+    <div className="space-y-4 animate-in fade-in duration-200 motion-reduce:animate-none">
       <StaleDataBanner
         queries={[
           {
@@ -201,7 +202,7 @@ export function AltPegsClient() {
         supplyAsOfSec={stablecoinsQuery.meta?.updatedAt ?? null}
       />
 
-      <FiatWorldAtlas />
+      <FiatWorldAtlas selectedPeg={selectedPeg} onSelectPeg={setSelectedPeg} />
 
       <PegRanking
         rows={snapshot.distributionRows}

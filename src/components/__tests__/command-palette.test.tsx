@@ -13,26 +13,31 @@ import type { StablecoinListResponse } from "@shared/types/supply";
 
 const {
   pushMock,
+  pathnameMock,
   addToHistoryMock,
   clearHistoryMock,
   toggleThemeMock,
   addToWatchlistMock,
   removeFromWatchlistMock,
   clearWatchlistMock,
+  watchlistIdsMock,
   useCoinStatesMock,
 } = vi.hoisted(() => ({
   useCoinStatesMock: vi.fn(),
   pushMock: vi.fn(),
+  pathnameMock: { current: "/" as string },
   addToHistoryMock: vi.fn(),
   clearHistoryMock: vi.fn(),
   toggleThemeMock: vi.fn(),
   addToWatchlistMock: vi.fn(),
   removeFromWatchlistMock: vi.fn(),
   clearWatchlistMock: vi.fn(),
+  watchlistIdsMock: { current: [] as string[] },
 }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: pushMock }),
+  usePathname: () => pathnameMock.current,
 }));
 
 vi.mock("next/image", () => ({
@@ -62,11 +67,11 @@ vi.mock("@/hooks/use-coin-states", () => ({ useCoinStates: useCoinStatesMock }))
 
 vi.mock("@/hooks/use-watchlist", () => ({
   useWatchlist: () => ({
-    ids: [],
+    ids: watchlistIdsMock.current,
     add: addToWatchlistMock,
     remove: removeFromWatchlistMock,
     clear: clearWatchlistMock,
-    count: 0,
+    count: watchlistIdsMock.current.length,
   }),
 }));
 
@@ -101,6 +106,8 @@ describe("CommandPalette", () => {
   let queryClient: QueryClient;
 
   beforeEach(() => {
+    pathnameMock.current = "/";
+    watchlistIdsMock.current = [];
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
       callback(0);
       return 0;
@@ -254,5 +261,59 @@ describe("CommandPalette", () => {
     });
     expect(JSON.stringify((window.gtag as Mock).mock.calls)).not.toContain("USDT");
     delete window.gtag;
+  });
+
+  it("shows compact SafetyGradeBadge inline when grade data is cached", () => {
+    queryClient.setQueryData(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9Table.queryKey, {
+      data: {
+        cards: [
+          { id: "usdc-circle", grade: "A", score: 86 },
+        ],
+      },
+      meta: { updatedAt: Date.now() / 1000, ageSeconds: 0, status: "fresh" },
+    });
+    renderPalette();
+    fireEvent.change(screen.getByRole("combobox", { name: "Search" }), { target: { value: "USDC" } });
+    const row = screen.getByRole("option", { name: /USD Coin.*USDC/i });
+    expect(row.querySelector('[aria-label="Safety grade A"]')?.textContent).toBe("A");
+  });
+
+  it("surfaces route-contextual dossier actions and top verb hint chips", () => {
+    pathnameMock.current = "/stablecoin/usdc-circle/";
+    renderPalette();
+
+    // Top verb hint chips prefill the search input.
+    const compareChip = screen.getByRole("button", { name: "compare" });
+    expect(screen.getByRole("button", { name: "portfolio" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "reserves" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "depeg" })).toBeTruthy();
+
+    // Dossier route actions render in "This coin".
+    fireEvent.click(screen.getByRole("option", { name: /Watch USDC/i }));
+    expect(addToWatchlistMock).toHaveBeenCalledWith("usdc-circle");
+
+    fireEvent.click(screen.getByRole("option", { name: /Add USDC to Portfolio/i }));
+    expect(pushMock).toHaveBeenCalledWith("/portfolio/?coins=usdc-circle");
+
+    fireEvent.click(screen.getByRole("option", { name: /Compare USDC/i }));
+    expect(pushMock).toHaveBeenCalledWith("/compare/?coins=usdc-circle");
+
+    fireEvent.click(screen.getByRole("option", { name: /Alerts for USDC/i }));
+    expect(pushMock).toHaveBeenCalledWith("/pharoswatchbot/?coin=usdc-circle");
+
+    fireEvent.click(compareChip);
+    expect((screen.getByRole("combobox", { name: "Search" }) as HTMLInputElement).value).toBe("compare ");
+  });
+
+  it("routes deep section intents and portfolio watchlist action directly", () => {
+    watchlistIdsMock.current = ["usdc-circle", "usds-sky"];
+    renderPalette();
+
+    fireEvent.click(screen.getByRole("option", { name: /Open watchlist in Portfolio \(2\)/i }));
+    expect(pushMock).toHaveBeenCalledWith("/portfolio/?coins=usdc-circle,usds-sky");
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Search" }), { target: { value: "usdc reserves" } });
+    fireEvent.keyDown(screen.getByRole("combobox", { name: "Search" }), { key: "Enter" });
+    expect(pushMock).toHaveBeenCalledWith("/stablecoin/usdc-circle/#reserves");
   });
 });

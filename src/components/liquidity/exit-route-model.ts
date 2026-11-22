@@ -17,18 +17,18 @@ export const OTHER_ROUTE_COLOR = "oklch(0.68 0.02 248)";
 
 export const EXIT_ROUTE_SCENE = {
   width: 1000,
-  height: 400,
+  height: 392,
   doorX: 58,
-  doorY: 76,
-  doorRowGap: 50,
+  doorY: 68,
+  doorRowGap: 52,
   doorApertureX: 208,
   doorApertureMaxWidth: 132,
   leftCollectorX: 392,
   throatX: 510,
   rightCollectorX: 650,
   laneX: 734,
-  laneY: 70,
-  laneRowGap: 54,
+  laneY: 62,
+  laneRowGap: 52,
   laneMaxWidth: 174,
   laneLabelX: 748,
   laneLogoX: 936,
@@ -37,16 +37,16 @@ export const EXIT_ROUTE_SCENE = {
 /** Static landmark coordinates for the instrument backdrop (grid lines + flow markers).
  *  Kept here, alongside EXIT_ROUTE_SCENE, so viewport geometry lives in one place. */
 export const EXIT_ROUTE_INSTRUMENT_GEOMETRY = {
-  gridTop: 42,
-  gridBottom: 388,
+  gridTop: 40,
+  gridBottom: 376,
   gridLeft: 40,
   gridRight: 960,
   gridVerticalX: [372, 660],
   flowMarkers: [
-    { x1: 424, x2: 596, y: 158 },
-    { x1: 420, x2: 600, y: 192 },
-    { x1: 420, x2: 600, y: 238 },
-    { x1: 424, x2: 596, y: 272 },
+    { x1: 424, x2: 596, y: 156 },
+    { x1: 420, x2: 600, y: 190 },
+    { x1: 420, x2: 600, y: 234 },
+    { x1: 424, x2: 596, y: 268 },
   ],
 } as const;
 
@@ -193,7 +193,7 @@ const THROAT_HALF_WIDTH_BY_BAND: Record<ExitRouteCrowdingBand, number> = {
 export function routeMagnitudeScale(sharePct: number | null | undefined, min: number, max: number): number {
   if (max <= min) return min;
   const share = Math.max(0, Math.min(ROUTE_SCALE_DOMAIN_PCT, finiteNumber(sharePct)));
-  const normalized = Math.sqrt(share / ROUTE_SCALE_DOMAIN_PCT);
+  const normalized = share / ROUTE_SCALE_DOMAIN_PCT;
   return Math.round(min + normalized * (max - min));
 }
 
@@ -251,20 +251,20 @@ export function aggregateThroatSelection(model: LiquidityExitRouteModel): Liquid
 
 export function protocolRouteGeometry(route: LiquidityExitRouteItem, index: number): ExitRouteProtocolGeometry {
   const y = routeY(index, EXIT_ROUTE_SCENE.doorY, EXIT_ROUTE_SCENE.doorRowGap);
-  const apertureWidth = routeMagnitudeScale(route.sharePct, 28, EXIT_ROUTE_SCENE.doorApertureMaxWidth);
-  const strokeWidth = routeMagnitudeScale(route.sharePct, 2, 12);
+  const apertureWidth = routeMagnitudeScale(route.sharePct, 16, EXIT_ROUTE_SCENE.doorApertureMaxWidth);
+  const strokeWidth = routeMagnitudeScale(route.sharePct, 2, 10);
   return {
     y,
     apertureWidth,
     strokeWidth,
-    pathD: `M ${EXIT_ROUTE_SCENE.doorApertureX + apertureWidth} ${y} C 288 ${y}, 330 ${176 + index * 8}, ${EXIT_ROUTE_SCENE.leftCollectorX} 202`,
+    pathD: `M ${EXIT_ROUTE_SCENE.doorApertureX + apertureWidth} ${y} C 288 ${y}, 330 ${172 + index * 8}, ${EXIT_ROUTE_SCENE.leftCollectorX} 198`,
   };
 }
 
 export function chainRouteGeometry(route: LiquidityExitRouteItem, index: number): ExitRouteChainGeometry {
   const y = routeY(index, EXIT_ROUTE_SCENE.laneY, EXIT_ROUTE_SCENE.laneRowGap);
-  const laneWidth = routeMagnitudeScale(route.sharePct, 52, EXIT_ROUTE_SCENE.laneMaxWidth);
-  const laneHeight = routeMagnitudeScale(route.sharePct, 7, 18);
+  const laneWidth = routeMagnitudeScale(route.sharePct, 18, EXIT_ROUTE_SCENE.laneMaxWidth);
+  const laneHeight = routeMagnitudeScale(route.sharePct, 8, 16);
   const strokeWidth = routeMagnitudeScale(route.sharePct, 2, 10);
   const laneBarY = y + 14;
   const logoY = laneBarY + laneHeight / 2;
@@ -275,7 +275,7 @@ export function chainRouteGeometry(route: LiquidityExitRouteItem, index: number)
     strokeWidth,
     laneBarY,
     logoY,
-    pathD: `M ${EXIT_ROUTE_SCENE.rightCollectorX} 228 C 680 ${240 - index * 8}, 700 ${logoY}, ${EXIT_ROUTE_SCENE.laneX} ${logoY}`,
+    pathD: `M ${EXIT_ROUTE_SCENE.rightCollectorX} 224 C 680 ${236 - index * 8}, 700 ${logoY}, ${EXIT_ROUTE_SCENE.laneX} ${logoY}`,
   };
 }
 

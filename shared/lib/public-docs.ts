@@ -81,14 +81,14 @@ const PUBLIC_DOC_METADATA: Readonly<Record<string, Omit<PublicDoc, "source">>> =
     slug: "report-cards",
     title: "Report Cards",
     summary:
-      "Stablecoin V9 report-card methodology for Backing, Exit, Economic Control, peg behavior, dependency exposure, evidence constraints, and portfolios.",
+      "Stablecoin Safety Score and report-card methodology for Backing, Exit, Economic Control, peg behavior, dependency exposure, evidence constraints, and portfolios.",
     group: "methodology",
   },
   "redemption-backstops.md": {
     slug: "redemption-backstops",
     title: "Redemption Backstops",
     summary:
-      "Redemption Backstops methodology for standalone route scoring, redemption terms, V9 Exit evidence, operational disclosures, and stored review evidence.",
+      "Redemption Backstops methodology for standalone route scoring, redemption terms, Exit pillar evidence, operational disclosures, and stored review evidence.",
     group: "methodology",
   },
   "chain-health.md": {

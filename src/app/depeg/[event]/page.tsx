@@ -2,6 +2,7 @@ import { hasUnverifiedDepegPeak } from "@/lib/depeg-event-config";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BackToSource } from "@/components/back-to-source";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { PreferredSourcePrompt } from "@/components/preferred-source-prompt";
@@ -406,21 +407,24 @@ export default async function DepegEventPage(
       />
       <JsonLdScript json={safeJsonLd(newsArticleJsonLd)} />
 
-      <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-        <Link
-          href="/depeg/"
-          className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-sm font-medium text-foreground underline-offset-4 hover:underline sm:min-h-0"
-        >
-          ← Depeg Tracker
-        </Link>
-        <span aria-hidden="true">/</span>
-        <Link
-          href="/depeg/archive/"
-          className="pharos-focus-ring inline-flex min-h-11 items-center rounded-sm hover:text-foreground hover:underline sm:min-h-0"
-        >
-          Event Archive
-        </Link>
-      </nav>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+          <Link
+            href="/depeg/"
+            className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-sm font-medium text-foreground underline-offset-4 hover:underline sm:min-h-0"
+          >
+            ← Depeg Tracker
+          </Link>
+          <span aria-hidden="true">/</span>
+          <Link
+            href="/depeg/archive/"
+            className="pharos-focus-ring inline-flex min-h-11 items-center rounded-sm hover:text-foreground hover:underline sm:min-h-0"
+          >
+            Event Archive
+          </Link>
+        </nav>
+        <BackToSource className="min-h-11 sm:min-h-0" />
+      </div>
 
       {/* The record below is the build snapshot; a still-open event leads with its live state. */}
       {event.endedAt == null ? (
@@ -433,7 +437,7 @@ export default async function DepegEventPage(
       ) : null}
 
       <div className="space-y-2">
-        <p className="pharos-kicker">
+        <p className="pharos-label">
           {editorial && incidentKicker ? incidentKicker : "Depeg event"}
         </p>
         {editorial ? (
@@ -468,7 +472,7 @@ export default async function DepegEventPage(
             </p>
           ))}
           <div className="space-y-2 border-t border-border/40 pt-4">
-            <p className="pharos-kicker">What to watch next time</p>
+            <p className="pharos-label">What to watch next time</p>
             <p
               className="text-[1.05rem] leading-8 text-foreground/92"
               style={EDITORIAL_BODY_STYLE}
@@ -480,7 +484,7 @@ export default async function DepegEventPage(
       ) : null}
 
       <section className="pharos-card-shell space-y-4 px-5 py-5">
-        <p className="pharos-kicker">Event summary</p>
+        <p className="pharos-label">Event summary</p>
         <PricePathBar event={event} />
         <RecoveryPanel event={event} includeTime={isCollision} />
       </section>
@@ -494,7 +498,7 @@ export default async function DepegEventPage(
 
       {coin ? (
         <section className="pharos-card-shell space-y-2 px-5 py-5">
-          <p className="pharos-kicker">Stablecoin</p>
+          <p className="pharos-label">Stablecoin</p>
           <Link
             href={buildStablecoinUrl(coin.id)}
             className="pharos-focus-ring text-brand-accent-text underline-offset-2 hover:underline"
@@ -509,7 +513,7 @@ export default async function DepegEventPage(
 
       {CASE_STUDY_BY_DEPEG_SLUG[event.slug] ? (
         <section className="pharos-card-shell space-y-2 px-5 py-5">
-          <p className="pharos-kicker">Deep dive</p>
+          <p className="pharos-label">Deep dive</p>
           <Link
             href={`/learn/case-studies/${CASE_STUDY_BY_DEPEG_SLUG[event.slug].slug}/`}
             className="pharos-focus-ring text-brand-accent-text underline-offset-2 hover:underline"
@@ -521,7 +525,7 @@ export default async function DepegEventPage(
 
       {curated?.href ? (
         <section className="pharos-card-shell space-y-2 px-5 py-5">
-          <p className="pharos-kicker">Primary source</p>
+          <p className="pharos-label">Primary source</p>
           <a
             href={curated.href}
             target="_blank"

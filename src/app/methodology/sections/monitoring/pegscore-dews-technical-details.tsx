@@ -208,7 +208,7 @@ function PegScoreTechnicalDetails() {
               <TableCell className="whitespace-normal px-4 py-2">0&ndash;15</TableCell>
               <TableCell className="whitespace-normal px-4 py-2">
                   Confidence-weighted standard deviation of below-peg peak deviations (mean and variance divide by the weight sum), scaled. Penalizes erratic, unpredictable
-                  depeg behaviour. Only applies when &ge;2 below-peg events exist
+                  depeg behavior. Only applies when &ge;2 below-peg events exist
               </TableCell>
             </TableRow>
           </TableBody>

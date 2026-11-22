@@ -22,12 +22,12 @@ const ComparisonChart = dynamic(() => import("@/components/compare/comparison-ch
 });
 
 const CompareRadarV9 = dynamic(() => import("@/components/compare/radar-chart-v9").then((m) => m.CompareRadarV9), {
-  loading: () => <ChartSkeleton className="h-[420px] rounded-xl" />,
+  loading: () => <ChartSkeleton variant="radar" className="h-[420px] rounded-xl" />,
 });
 
 const FlowComparisonChart = dynamic(
   () => import("@/components/compare/flow-comparison-chart").then((m) => ({ default: m.FlowComparisonChart })),
-  { loading: () => <div className="h-[280px] rounded-xl animate-pulse bg-muted/20" /> },
+  { loading: () => <ChartSkeleton variant="bars" className="h-[280px] rounded-xl" /> },
 );
 
 export function CompareResultsPanel({ data, selection, logos, flowUpdatedMinutes, radarCohort, setRadarCohort }: {

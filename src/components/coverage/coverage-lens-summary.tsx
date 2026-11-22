@@ -3,13 +3,16 @@
 import { useMemo } from "react";
 import { formatCurrency } from "@shared/lib/format";
 import { summarizeCoverageMarketCap, type CoverageRow } from "@/lib/coverage";
-import { FILTER_OPTIONS, type CoverageFilterKey } from "@/lib/coverage-page-config";
+import {
+  COVERAGE_MATRIX_FILTER_OPTIONS,
+  type CoverageMatrixFilterKey,
+} from "@/components/coverage/coverage-matrix-controls";
 
 interface CoverageLensSummaryProps {
   rows: CoverageRow[];
   filteredRows: CoverageRow[];
   search: string;
-  filter: CoverageFilterKey;
+  filter: CoverageMatrixFilterKey;
 }
 
 export function CoverageLensSummary({ rows, filteredRows, search, filter }: CoverageLensSummaryProps) {
@@ -28,7 +31,8 @@ export function CoverageLensSummary({ rows, filteredRows, search, filter }: Cove
         : filteredMcapSharePct > 99 && filteredMcapSharePct < 100
           ? ">99%"
           : `${Math.round(filteredMcapSharePct)}%`;
-    const activeFilterLabel = FILTER_OPTIONS.find((option) => option.key === filter)?.label ?? "All";
+    const activeFilterLabel =
+      COVERAGE_MATRIX_FILTER_OPTIONS.find((option) => option.key === filter)?.label ?? "All";
     const trimmedSearch = search.trim();
     const lensSummary = trimmedSearch
       ? `Search lens: "${trimmedSearch}"`
