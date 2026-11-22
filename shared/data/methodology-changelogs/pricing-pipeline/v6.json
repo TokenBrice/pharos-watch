@@ -3,7 +3,7 @@
     "version": "6.90",
     "title": "An uncounted chain gap compares a matched perimeter instead of withholding changes",
     "date": "2026-11-22",
-    "effectiveAt": 1795339800,
+    "effectiveAt": 1795338031,
     "summary": "When a chain gap below the chain-dropout guard's 2% materiality bound adds nothing to the published amount, because the provider reads that chain as zero or omits it, each 24h, 7d and 30d change compares the same chains at both ends instead of being withheld, during the gap and after it closes.",
     "impact": [
       "From about 14:00 UTC on 2026-11-21, DefiLlama's list read every bridged stablecoin on Cardano at zero while its own Cardano chart still showed USDC at about $36.1M. The guard withheld the chart repair because USDC's other chains gained $3.2M in the same run, so Cardano stayed unavailable, and the v6.78 comparison rule blanked USDC's directory 24h and 7d changes and its detail-page 24h market-cap and 7d supply changes over a 0.05% gap.",
