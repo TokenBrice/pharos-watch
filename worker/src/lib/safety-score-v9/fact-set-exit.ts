@@ -990,6 +990,20 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
     }), exitRoutes: routes };
   }
   if (routes.length === 0) {
+    const resolvePriorVerifiedEmptyExitCeiling = (): V9AssetFactsV3["priorVerifiedEmptyExitCeiling"] => {
+      const witness = context.verifiedEmptyExitByAssetId?.[context.asset.assetId];
+      if (witness === undefined) return undefined;
+      const maxAgeSec = policy.policy.semantic.exit.verifiedEmptyCarryMaxAgeSec;
+      if (witness.verifiedAtSec > context.fixedInput.clockSec || context.fixedInput.clockSec - witness.verifiedAtSec > maxAgeSec) {
+        return undefined;
+      }
+      return {
+        scoreCeiling: 0,
+        verifiedAtSec: witness.verifiedAtSec,
+        sourceGenerationId: witness.dexGenerationId,
+        maxAgeSec,
+      };
+    };
     // Local 0/0 pool coverage proves global exhaustion only when the captured
     // deployment census also accounts for every supply-bearing chain.
     const emptyCoverage = context.fixedInput.dexLiqMap[context.asset.assetId]?.exitRouteObservationCoverage;
@@ -1073,6 +1087,10 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
         context.evidence.get(coverageEvidenceId)!.freshness.state === "current"
         ? supplyCoverage!.verifiedNoPoolsSupplyRatio : null;
       if (!fullSupplyVerifiedEmpty) {
+        const priorVerifiedEmptyExitCeiling =
+          (supplyCoverage?.observedSupplyUsd ?? 0) === 0 && (emptyCoverage?.retainedPoolCount ?? 0) === 0
+            ? resolvePriorVerifiedEmptyExitCeiling()
+            : undefined;
         return {
           exitStatus: missingLocalFact(context, {
             componentKey: "exit-routes",
@@ -1089,6 +1107,7 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
           ...(currentCoveredShare !== null ? { exitCoverage: {
             verifiedNoPoolsSupplyShare: currentCoveredShare, evidenceRefIds: [coverageEvidenceId],
           } } : {}),
+          ...(priorVerifiedEmptyExitCeiling === undefined ? {} : { priorVerifiedEmptyExitCeiling }),
         };
       }
       const coverageStale = context.evidence.get(coverageEvidenceId)!.freshness.state === "stale";
@@ -1108,6 +1127,7 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
             }),
           )
         : null;
+      const staleCeiling = coverageStale ? resolvePriorVerifiedEmptyExitCeiling() : undefined;
       return {
         exitStatus: createV9FactStatus({
           applicability: requiredV9Applicability("v9.exit.same-notional-route"),
@@ -1116,6 +1136,7 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
           gapIds: staleGapId ? [staleGapId] : [],
         }),
         exitRoutes: [],
+        ...(staleCeiling === undefined ? {} : { priorVerifiedEmptyExitCeiling: staleCeiling }),
       };
     }
     // R4 scope (owner ruling 2026-07-29): a zero-route surface whose census
@@ -1169,6 +1190,10 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
         exitRoutes: [],
       };
     }
+    const priorVerifiedEmptyExitCeiling =
+      (supplyCoverage?.observedSupplyUsd ?? 0) === 0 && (emptyCoverage?.retainedPoolCount ?? 0) === 0
+        ? resolvePriorVerifiedEmptyExitCeiling()
+        : undefined;
     return {
       exitStatus: missingLocalFact(context, {
         componentKey: "exit-routes",
@@ -1179,6 +1204,7 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
         message: "No exact DEX, redemption, or retained route observation is available.",
       }).status,
       exitRoutes: [],
+      ...(priorVerifiedEmptyExitCeiling === undefined ? {} : { priorVerifiedEmptyExitCeiling }),
     };
   }
   // A withdrawn channel does not make the observation of independent channels incomplete.

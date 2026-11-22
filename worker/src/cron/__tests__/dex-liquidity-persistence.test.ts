@@ -14,6 +14,7 @@ import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/
 import { DEX_ROUTE_CAPABILITY_MATRIX_VERSION } from "@shared/lib/p4-exit-route-capability-policy";
 import { batchExecute, executeAtomicBatch } from "../../lib/db";
 import type * as DbModule from "../../lib/db";
+import * as structuredLog from "../../lib/structured-log";
 import { computeDexDeploymentSupplyCoverage } from "../../lib/report-cards-snapshot-inputs";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { initMetrics } from "../dex-liquidity/__tests__/scoring-test-builders";
@@ -34,7 +35,12 @@ import {
   makeCompleteVolumeAvailability,
   makeFullScoreResult,
 } from "./dex-liquidity-persistence.test-support";
-import type { DexDeploymentCensusRow } from "../dex-liquidity/deployment-census-coverage";
+import {
+  buildDexPlaceholderScoreDetailsJson,
+  classifyDexPlaceholderCoverage,
+  DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC,
+  type DexDeploymentCensusRow,
+} from "../dex-liquidity/deployment-census-coverage";
 import type { FullScoreResult } from "../dex-liquidity/types";
 
 const INACTIVE_TRACKED_STABLECOIN = TRACKED_STABLECOINS.find((coin) => !ACTIVE_IDS.has(coin.id));
@@ -617,6 +623,147 @@ describe("dex-liquidity persistence", () => {
       expect(db.getHistory().filter(({ sql }) => sql.includes("FROM dex_deployment_outcomes"))).toHaveLength(1);
     },
   );
+
+  it("carries fresh complete-empty coverage verbatim on census read failure and warns on regression after expiry", async () => {
+    const meta = ACTIVE_STABLECOINS.find((coin) => coin.id === "eurot-token-teknoloji")
+      ?? ACTIVE_STABLECOINS.find((coin) => coin.id === "bbqusdc-steakhouse");
+    if (!meta) throw new Error("expected eurot-token-teknoloji in active registry");
+    const nowSec = 1_800_000_000;
+    const priorPublishedAtSec = nowSec - 1_800;
+    const freshObservedAtSec = nowSec - 3_600;
+    const priorGenerationId = buildDexLiquidityPublicationGenerationId(priorPublishedAtSec);
+    const makePriorEmptyJson = (observedAtSec: number): string => {
+      const deployments = [...(meta.contracts ?? []), ...(meta.tradedContracts ?? [])];
+      const classification = classifyDexPlaceholderCoverage({
+        deployments,
+        outcomeRows: deployments.map((deployment) => ({
+          stablecoin_id: meta.id,
+          chain: deployment.chain,
+          contract_address: deployment.address,
+          outcome: "verified_no_pools",
+          provider_set_json: JSON.stringify(["coingecko", "geckoterminal", "dexscreener", "curve"]),
+          reason: "A provider completed the direct-token query with no eligible pool",
+          observed_pool_count: 0,
+          observed_at: observedAtSec,
+          discovery_last_crawl_at: observedAtSec - 30,
+        })),
+        nowSec: priorPublishedAtSec,
+      });
+      expect(classification.state).toBe("complete-empty");
+      return buildDexPlaceholderScoreDetailsJson({
+        classification,
+        generationId: priorGenerationId,
+        publishedAtSec: priorPublishedAtSec,
+      });
+    };
+
+    const logSpy = vi.spyOn(structuredLog, "logWorkerEvent");
+    const freshPriorJson = makePriorEmptyJson(freshObservedAtSec);
+    await persistScores(
+      makeDb({
+        currentRouteRows: [{ stablecoin_id: meta.id, score_components_json: freshPriorJson }],
+        onCensusRead: () => {
+          throw new Error("D1 read timeout");
+        },
+      }),
+      new Map(),
+      new Map(),
+      {
+        totalTvl: 0, totalVol24h: 0, totalVol7d: 0,
+        volumeAvailability: makeCompleteVolumeAvailability(0, 0),
+        poolCount: 0, chainCount: 0, protocolTvl: {}, chainTvl: {},
+      },
+      nowSec,
+      new Map(),
+    );
+
+    const carriedRow = extractDexLiquidityRunRows(
+      getPreparedBatchStatements("INSERT OR REPLACE INTO dex_liquidity_run_rows"),
+    ).find((candidate) => candidate[1] === meta.id);
+    const carriedDetails = JSON.parse(String(carriedRow?.[22]));
+    expect(carriedDetails.exitRouteObservationCoverage).toMatchObject({
+      status: "populated",
+      retainedPoolCount: 0,
+      unsupportedPoolCount: 0,
+    });
+    // R6: carried empty census preserves original observation and publication timestamps verbatim.
+    expect(carriedDetails.dexDeploymentCensus).toMatchObject({
+      state: "complete-empty",
+      generationId: priorGenerationId,
+      publishedAtSec: priorPublishedAtSec,
+      oldestObservedAtSec: freshObservedAtSec,
+    });
+    expect(
+      logSpy.mock.calls.some(([entry]) => entry.event === "dex_liquidity_empty_coverage_regression"),
+    ).toBe(false);
+
+    // Once the prior empty observation exceeds DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC,
+    // carry refuses and logs a structured regression warning.
+    vi.mocked(batchExecute).mockClear();
+    logSpy.mockClear();
+    const expiredObservedAtSec = nowSec - DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC - 60;
+    const expiredPriorPublishedAtSec = expiredObservedAtSec + 60;
+    const expiredDeployments = [...(meta.contracts ?? []), ...(meta.tradedContracts ?? [])];
+    const expiredPriorClassification = classifyDexPlaceholderCoverage({
+      deployments: expiredDeployments,
+      outcomeRows: expiredDeployments.map((deployment) => ({
+        stablecoin_id: meta.id,
+        chain: deployment.chain,
+        contract_address: deployment.address,
+        outcome: "verified_no_pools",
+        provider_set_json: JSON.stringify(["coingecko", "geckoterminal", "dexscreener", "curve"]),
+        reason: "A provider completed the direct-token query with no eligible pool",
+        observed_pool_count: 0,
+        observed_at: expiredObservedAtSec,
+        discovery_last_crawl_at: expiredObservedAtSec - 30,
+      })),
+      nowSec: expiredPriorPublishedAtSec,
+    });
+    const expiredPriorJson = buildDexPlaceholderScoreDetailsJson({
+      classification: expiredPriorClassification,
+      generationId: buildDexLiquidityPublicationGenerationId(expiredPriorPublishedAtSec),
+      publishedAtSec: expiredPriorPublishedAtSec,
+    });
+
+    await persistScores(
+      makeDb({
+        currentRouteRows: [{ stablecoin_id: meta.id, score_components_json: expiredPriorJson }],
+        onCensusRead: () => {
+          throw new Error("D1 read timeout");
+        },
+      }),
+      new Map(),
+      new Map(),
+      {
+        totalTvl: 0, totalVol24h: 0, totalVol7d: 0,
+        volumeAvailability: makeCompleteVolumeAvailability(0, 0),
+        poolCount: 0, chainCount: 0, protocolTvl: {}, chainTvl: {},
+      },
+      nowSec,
+      new Map(),
+    );
+
+    const expiredRow = extractDexLiquidityRunRows(
+      getPreparedBatchStatements("INSERT OR REPLACE INTO dex_liquidity_run_rows"),
+    ).find((candidate) => candidate[1] === meta.id);
+    const expiredDetails = JSON.parse(String(expiredRow?.[22]));
+    expect(expiredDetails.exitRouteObservationCoverage.status).toBe("unknown");
+    expect(expiredDetails.dexDeploymentCensus.state).toBe("discovery-deferral");
+    const regressionLog = logSpy.mock.calls.find(
+      ([entry]) => entry.event === "dex_liquidity_empty_coverage_regression" && entry.metadata?.assetId === meta.id,
+    )?.[0];
+    expect(regressionLog).toMatchObject({
+      level: "warn",
+      event: "dex_liquidity_empty_coverage_regression",
+      job: "sync-dex-liquidity",
+      metadata: {
+        assetId: meta.id,
+        state: "discovery-deferral",
+        reasonCounts: expect.objectContaining({ deploymentCensusUnavailable: 1 }),
+        oldestObservedAtSec: expiredObservedAtSec,
+      },
+    });
+  });
 
   it("classifies the deployment census for a scored row that retained no pool", async () => {
     // Shape under test (formerly the hlusd-hela fixture, now quarantined): an

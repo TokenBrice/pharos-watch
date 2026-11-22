@@ -24,6 +24,7 @@ import type {
 } from "@shared/types/safety-score-v9-facts";
 import type { V9AssetFactsV3, V9ExitRouteFactV2 } from "@shared/types/safety-score-v9-facts";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
+import type { SafetyScoreV9VerifiedEmptyExitWitness } from "./publication-assessment";
 import type {
   AssetExtension,
   SafetyScoreV9FactSetExtensionV2,
@@ -93,6 +94,7 @@ export interface AssetBuildContext {
   readonly extension: SafetyScoreV9FactSetExtensionV2;
   readonly asset: AssetExtension;
   readonly researchPayloadSha256: string;
+  readonly verifiedEmptyExitByAssetId?: Readonly<Record<string, SafetyScoreV9VerifiedEmptyExitWitness>>;
   readonly evidence: Map<string, V9EvidenceReferenceV2>;
   readonly evidencePublisherById: Map<string, V9PublishedEvidenceAttribution>;
   readonly gaps: Map<string, V9FactGapV3>;
@@ -749,12 +751,14 @@ export function createAssetBuildContext(
   extension: SafetyScoreV9FactSetExtensionV2,
   asset: AssetExtension,
   researchPayloadSha256: string,
+  verifiedEmptyExitByAssetId?: Readonly<Record<string, SafetyScoreV9VerifiedEmptyExitWitness>>,
 ): AssetBuildContext {
   return {
     fixedInput,
     extension,
     asset,
     researchPayloadSha256,
+    ...(verifiedEmptyExitByAssetId === undefined ? {} : { verifiedEmptyExitByAssetId }),
     evidence: new Map(),
     evidencePublisherById: new Map(),
     gaps: new Map(),

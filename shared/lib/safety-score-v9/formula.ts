@@ -148,6 +148,8 @@ export interface V9ScoreCoverage {
     causeGapIds: readonly string[];
   }[];
   parentStatus?: V9RatingStatus;
+  /** v10.50: bounded ceiling for an unavailable/excluded Exit priced via pricedUnknownPillars. */
+  exitPricedUnknownCeiling?: number;
 }
 
 export interface V9ScoreTrace {
@@ -704,8 +706,12 @@ export function scoreV9Input(
   const pricedUnknownPillars: V9PricedUnknownPillar[] = pipelineGap ? [] : excludedPillars.map((pillar) => {
     const unavailable = coverage?.unavailablePillars?.find((item) => item.pillar === pillar);
     const cause = unavailable?.causes.includes("C") ? "C" as const : "U" as const;
+    const baseScore = unknownQuality(pillar, cause, policy.policy.semantic);
+    const score = pillar === "exit" && coverage?.exitPricedUnknownCeiling !== undefined
+      ? Math.min(baseScore, coverage.exitPricedUnknownCeiling)
+      : baseScore;
     return {
-      pillar, cause, score: unknownQuality(pillar, cause, policy.policy.semantic),
+      pillar, cause, score,
       causeGapIds: unavailable?.causeGapIds ?? [],
     };
   });

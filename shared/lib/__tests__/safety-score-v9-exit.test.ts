@@ -1051,6 +1051,41 @@ describe("cause-aware Exit and max-feasible portfolios", () => {
     expect(result.limitedEvidenceCauses).toEqual([cause]);
     expect(result.reasons).not.toContain("no-viable-exit-path");
   });
+
+  it("caps cause-U unavailable Exit at priorVerifiedEmptyExitCeiling without fabricating no-viable-exit-path (v10.50)", () => {
+    const missing = gap("U", "unavailable-census");
+    const ceiling = {
+      scoreCeiling: 0,
+      verifiedAtSec: 1_795_000_000,
+      sourceGenerationId: "dex-liquidity-1795000000",
+      maxAgeSec: 172_800,
+    };
+    const uncapped = evaluateV9Exit({
+      circulatingUsd: 20_000_000, portfolioStatus: "incomplete",
+      portfolioFactStatus: missing.status, gaps: [missing.gap], routes: [],
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(uncapped.score).toBe(50);
+
+    const capped = evaluateV9Exit({
+      circulatingUsd: 20_000_000, portfolioStatus: "incomplete",
+      portfolioFactStatus: missing.status, gaps: [missing.gap], routes: [],
+      priorVerifiedEmptyExitCeiling: ceiling,
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(capped.score).toBe(0);
+    expect(capped.aggregationDisposition).toBe("included");
+    expect(capped.limitedEvidenceCauses).toEqual(["U"]);
+    expect(capped.reasons).toContain("missing-same-notional-route");
+    expect(capped.reasons).not.toContain("no-viable-exit-path");
+
+    // Any positive score-eligible route ignores the prior verified-empty ceiling.
+    const recovered = evaluateV9Exit({
+      circulatingUsd: 20_000_000,
+      routes: [route()],
+      priorVerifiedEmptyExitCeiling: ceiling,
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(recovered.score).toBeGreaterThan(0);
+    expect(recovered.primaryRouteKey).not.toBeNull();
+  });
 });
 
 describe("bounded settlement subfactors", () => {

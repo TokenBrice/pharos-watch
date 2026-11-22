@@ -39,6 +39,7 @@ import { makeV9FixedInput } from "../../src/test-helpers/v9-fixed-input";
 import { makeSupplyFullRedemption } from "../../src/lib/__tests__/redemption-backstops-store.test-support";
 import { deriveSupplyModelExitRouteObservation } from "../../src/lib/redemption-exit-route-observations";
 import { computeRedemptionPayloadFingerprint, projectReportCardsFixedInputMethodologyVersions } from "@shared/lib/report-cards-fixed-input-identity";
+import { SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v9/evaluation-build-manifest-v1";
 import { normalizeSafetyScoreV9CompilerInput } from "../../src/lib/safety-score-v9/native-input";
 
 const CLOCK_SEC = v9TestClockSec();
@@ -164,11 +165,27 @@ describe("Safety Score v9 deterministic replay CLI", () => {
       expect(daiFacts.evidence.some(({ evidenceId }) => evidenceId === "dai-makerdao:aggregate-supply")).toBe(false);
       expect(pipeline.candidate.cards).toContainEqual(expect.objectContaining({ id: "dai-makerdao",
         supply: { circulatingUsdAtEvaluation: null, asOfSec: null, generationId: null } }));
-      expect(replayScenario).toEqual({ kind: "asset-admission", sourceBaseInputGenerationId: input.baseInputGenerationId,
-        registryFingerprint: base.registryFingerprint, assets: [
-        { assetId: "dai-makerdao", captureIdSuffix: "+admit:dai-makerdao", supplyObservation: observation },
-        { assetId: "usdt-tether", captureIdSuffix: "+admit:usdt-tether" },
-      ] });
+      expect(replayScenario).toEqual({
+        kind: "asset-admission",
+        sourceBaseInputGenerationId: input.baseInputGenerationId,
+        registryFingerprint: base.registryFingerprint,
+        evaluationBuildDigest: SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST,
+        assets: [
+          { assetId: "dai-makerdao", captureIdSuffix: "+admit:dai-makerdao", supplyObservation: observation },
+          { assetId: "usdt-tether", captureIdSuffix: "+admit:usdt-tether" },
+        ],
+      });
+      expect(replayScenario?.kind === "asset-admission" ? replayScenario.evaluationBuildDigest : null)
+        .toBe(pipeline.candidateIdentity.evaluationBuildDigest);
+      expect(() => buildSafetyScoreV9ReplayArtifact({
+        fixedInput: pipeline.fixedInput,
+        publishedAtSec: input.clockSec,
+        allowRegistryMismatch: true,
+        replayScenario: {
+          ...(replayScenario as Extract<NonNullable<typeof replayScenario>, { kind: "asset-admission" }>),
+          evaluationBuildDigest: "0".repeat(64),
+        },
+      })).toThrow(/evaluationBuildDigest/i);
       await runSafetyScoreV9ReplayCli([...args, ...dai, ...usdt]);
       expect(readFileSync(output, "utf8")).toBe(bytes);
 

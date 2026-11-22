@@ -1,5 +1,20 @@
 [
   {
+    "version": "10.50",
+    "title": "Bounded verified-empty Exit ceiling prevents transient DEX read failures from inflating zero-exit scores",
+    "date": "2026-11-22",
+    "effectiveAt": 1795360920,
+    "summary": "When a stablecoin's Exit pillar becomes temporarily unavailable after a recently accepted verified-empty Exit observation (no-viable-exit-path, score 0, cause D), its unknown Exit price is capped at 0 for up to 48 hours (verifiedEmptyCarryMaxAgeSec = 172800) instead of jumping to the generic U50 unknown bound, while keeping honest missing-runtime-route-evidence / producer-failed provenance. Any positive route observation clears the witness immediately.",
+    "impact": [
+      "Prevents transient DEX deployment-census read failures or dormant 0-pool discovery deferrals from inflating an observed zero-exit stablecoin's overall Safety Score (for example EUROT jumping +27 points from 18 to 45 when unavailable Exit priced at U50 instead of 0).",
+      "Applies symmetrically to both cause-U bounded-unknown Exit evaluations and excluded-a-b / unavailable Exit pillars priced through pricedUnknownPillars, while never fabricating no-viable-exit-path when live DEX evidence was unavailable (preserving R1 and R2).",
+      "Accepted publication baselines retain sorted verifiedEmptyExitByAssetId witnesses across intermediate unavailable runs up to the 48-hour cap without refreshing the original verification timestamp, and clear them immediately upon any positive route observation; after 48 hours without a fresh verified-empty observation, ordinary unknown pricing resumes.",
+      "Paired with DEX liquidity persistence hardening that carries fresh complete-empty deployment-census coverage verbatim (preserving original observedAt/publishedAt timestamps) during transient census read errors, guards dormant 0-pool coins during in-flight discovery deferrals within the 48-hour census budget, and logs structured dex_liquidity_empty_coverage_regression warnings."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "10.49",
     "title": "Physical metal exits keep the session-close benchmark through a market closure",
     "date": "2026-11-21",

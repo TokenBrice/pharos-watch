@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "10.49",
+  "releaseVersion": "10.50",
   "semantic": {
     "unknownQuality": {
       "backing": { "C": 35, "U": 50 },
@@ -915,6 +915,7 @@
       "staleObservationConfidenceFactor": 0.6,
       "limitedCapacityConfidenceFactor": 0.75,
       "maximumScoreEligiblePortfolioCandidates": 64,
+      "verifiedEmptyCarryMaxAgeSec": 172800,
       "scoreableEvidenceKinds": {
         "dex": [
           "measured-executable-depth",

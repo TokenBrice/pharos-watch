@@ -531,22 +531,23 @@ Listing a stablecoin, and promoting a pre-launch row to active, must pass the ne
 
 #### Receipt
 
-Commit one receipt per gated asset at `.github/artifacts/new-asset-evidence-packet/<id>.json`, named by the canonical asset id (lowercase `ticker-issuer`; the file name and `assetId` must agree). `NewAssetAdmissionReceiptSchema` in the gate is the field authority and prints exact errors. `card` is the replay's `openEvidence.byCard[]` row for the asset — the same counts the publication shows — and the schema rejects a `questions[]` list that contradicts it. `questions[]` holds one row per question the card carries across all three buckets (`open`, `issuer`, `documentation`), with `inherited` set only when the key is rooted at another asset; the gate's open-question and mint-authority checks read this audit trail, and only the open-bucket counts and documentation obligations are cross-checked mechanically. `registryFingerprint` must be the branch tree's registry fingerprint **after** the listing or promotion. Replay after the last coin edit: a second gated asset in the same PR changes the fingerprint and stales the first receipt. `captureId` and `captureClockSec` are provenance, not a freshness budget.
+Commit one `schemaVersion: 2` receipt per gated asset at `.github/artifacts/new-asset-evidence-packet/<id>.json`, named by the canonical asset id (lowercase `ticker-issuer`; the file name and `assetId` must agree). `NewAssetAdmissionReceiptSchema` in the gate is the field authority and prints exact errors; historical committed `schemaVersion: 1` receipts stay parseable in-repo without rewrites, while newly gated listings and promotions must submit `schemaVersion: 2`. `card` is the replay's `openEvidence.byCard[]` row for the asset — the same counts the publication shows — and the schema rejects a `questions[]` list that contradicts it. `questions[]` holds one row per question the card carries across all three buckets (`open`, `issuer`, `documentation`), with `inherited` set only when the key is rooted at another asset; the gate's open-question and mint-authority checks read this audit trail, and only the open-bucket counts and documentation obligations are cross-checked mechanically. `registryFingerprint` must be the branch tree's registry fingerprint **after** the listing or promotion, and `evaluationBuildDigest` must match the branch checkout's `SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST`. Replay after the last coin, overlay, or scorer edit: a second gated asset changes the registry fingerprint and stales the first receipt, and any Safety Score evaluation-build change rotates `evaluationBuildDigest` and stales the receipt. `captureId` and `captureClockSec` are provenance, not a freshness budget.
 
 #### Gate conditions
 
 The gate fails an asset when:
 
 - the receipt is missing, is not valid JSON, fails the schema, or names another asset;
+- the receipt uses historical `schemaVersion: 1` instead of `schemaVersion: 2`, or its `evaluationBuildDigest` differs from the checkout's `SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST` (`stale-evaluation-build`);
 - its `registryFingerprint` differs from the PR checkout's fingerprint, recomputed over the loaded registry with the same authority the replay snapshot uses;
 - the asset's own open questions exceed `NEW_ASSET_OPEN_QUESTION_LIMIT` (6). Own means `bucket: "open"` with `inherited: false`, i.e. `openBucketQuestionsCarried` minus `inheritedOpenBucketQuestionsCarried`. Inherited questions are counted once at their root: the pass line discloses them, and a non-documentation `missing-mint-authority` datum on an inherited question is a warning, not a failure;
 - any of the asset's own questions carries a `missing-mint-authority` datum with `documentation: false`. The condition is per datum, not per code: a `missing-mint-authority` datum the documentation classifier assigned a documentation reason (`documentation: true`, a documentation-only gap such as a narrow reconciliation or supervision item) passes; a whole-profile, authority or topology gap stays counted.
 
-The failure kinds are `invalid-asset-id`, `missing-receipt`, `invalid-receipt`, `mismatched-receipt`, `stale-receipt`, `open-question-limit`, and `missing-mint-authority`.
+The failure kinds are `invalid-asset-id`, `missing-receipt`, `invalid-receipt`, `mismatched-receipt`, `stale-receipt`, `stale-evaluation-build`, `open-question-limit`, and `missing-mint-authority`.
 
 #### Override
 
-The `new-asset-gate-override` owner label (the check's `--override`) bypasses the open-question count only. It never waives the receipt, its fingerprint binding, or the mint-authority condition, and the pass line marks the asset as overridden. Reserve it for an owner-approved addition whose remaining open questions are deliberately accepted, and say why in the reviewer notes.
+The `new-asset-gate-override` owner label (the check's `--override`) bypasses the open-question count only. It never waives the receipt, its `schemaVersion: 2` / `evaluationBuildDigest` build binding, its fingerprint binding, or the mint-authority condition, and the pass line marks the asset as overridden. Reserve it for an owner-approved addition whose remaining open questions are deliberately accepted, and say why in the reviewer notes.
 
 #### Authoring the receipt
 
@@ -564,12 +565,15 @@ Repeat `--admit-asset` for a batch. Each ID must be active locally and absent fr
 
 If an admitted asset has neither a captured aggregate observation nor chain supply eligible under the compiler’s rules, pass `--supply-observations <path>`. An observed aggregate zero satisfies the captured-supply requirement. Supply a JSON object keyed by the assets that need a fallback. Each entry needs `circulating` (the observed USD peg buckets), `url` (the public source), `field` (the exact source field), `retrievedAtSec`, and `observedAtSec` in Unix seconds. Use `null` for `observedAtSec` when the source supplies no observation clock. For example, for a DefiLlama list row, record its `circulating` field in USD as returned. Keep the retrieval clock even if it follows the capture. A clockless fallback retains its amount in `replayObservation` and leaves canonical supply null in the compiled fact, card, and missing-data registry. To rerun the scenario, pass the original capture and the same admission arguments. Production cache reads and writes reject scenario supply observations.
 
-For each receipt, build `captureId` from the prepare-time input generation and the asset's admission suffix. Use `replayScenario.registryFingerprint` for the receipt's registry fingerprint.
+For each `schemaVersion: 2` receipt, build `captureId` from the prepare-time input generation and the asset's admission suffix. Copy `replayScenario.registryFingerprint` and `replayScenario.evaluationBuildDigest` (equal to `pipeline.candidateIdentity.evaluationBuildDigest`) into the receipt.
 
 ```bash
-jq -er --arg id "$asset_id" '.replayScenario |
-  (.sourceBaseInputGenerationId | strings) +
-  (.assets[] | select(.assetId == $id) | .captureIdSuffix | strings)' "$replay"
+jq -er --arg id "$asset_id" '.replayScenario | {
+  captureId: ((.sourceBaseInputGenerationId | strings) +
+    (.assets[] | select(.assetId == $id) | .captureIdSuffix | strings)),
+  registryFingerprint: (.registryFingerprint | strings),
+  evaluationBuildDigest: (.evaluationBuildDigest | strings)
+}' "$replay"
 ```
 
 #### Run it locally

@@ -952,6 +952,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
         full.quarantineAffectedAssetIds,
       bridgeJoinDiagnostics: full.bridgeJoinDiagnostics,
       measuredExitExpiry: full.measuredExitExpiry,
+      verifiedEmptyExitBaselineOptions: full.verifiedEmptyExitBaselineOptions,
     });
     expect(() =>
       evaluateValidatedV9FactSet(structuredClone(full.compiledFacts), clockBoundPolicy),

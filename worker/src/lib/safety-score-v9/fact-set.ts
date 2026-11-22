@@ -73,6 +73,7 @@ import {
 import { buildWrapperLocalFacts, resolveWrapperForm } from "./fact-set-wrapper";
 import { buildLenderBookFact } from "./fact-set-lender-book";
 import type { SafetyScoreV9BaselineExtensionSource } from "./extension";
+import type { SafetyScoreV9VerifiedEmptyExitWitness } from "./publication-assessment";
 
 export {
   SafetyScoreV9FactSetExtensionV2Schema,
@@ -461,6 +462,7 @@ function compileAssetOutcome(
   extension: SafetyScoreV9FactSetExtensionV2,
   asset: AssetExtension,
   researchPayloadSha256: string,
+  verifiedEmptyExitByAssetId?: Readonly<Record<string, SafetyScoreV9VerifiedEmptyExitWitness>>,
 ): {
   facts: V9AssetFactsV3;
   quarantine: V9AssetQuarantine | null;
@@ -470,6 +472,7 @@ function compileAssetOutcome(
     extension,
     asset,
     researchPayloadSha256,
+    verifiedEmptyExitByAssetId,
   );
   const admission = asset.admissionQuarantine;
   if (admission !== undefined) {
@@ -560,8 +563,17 @@ export function compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
   extension: SafetyScoreV9FactSetExtensionV2,
   evaluationFailures: ReadonlyMap<string, string> = new Map(),
   consumeExtensionAssets = false,
+  verifiedEmptyExitByAssetId?: Readonly<Record<string, SafetyScoreV9VerifiedEmptyExitWitness>>,
 ): Readonly<SafetyScoreV9FactCompilationResult> {
-  return compileSafetyScoreV9FactSetWithIsolation(fixedInput, extension, evaluationFailures, consumeExtensionAssets);
+  return compileSafetyScoreV9FactSetWithIsolation(
+    fixedInput,
+    extension,
+    evaluationFailures,
+    consumeExtensionAssets,
+    undefined,
+    undefined,
+    verifiedEmptyExitByAssetId,
+  );
 }
 
 interface StreamedExtensionCompilation {
@@ -579,6 +591,7 @@ export function compileSafetyScoreV9FactSetFromExtensionSource(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   source: SafetyScoreV9BaselineExtensionSource,
   evaluationFailures: ReadonlyMap<string, string> = new Map(),
+  verifiedEmptyExitByAssetId?: Readonly<Record<string, SafetyScoreV9VerifiedEmptyExitWitness>>,
 ) {
   const { assets: _assets, ...header } = source.extension;
   const extension = { ...admitSafetyScoreV9FactSetExtensionHeader(header), assets: [] };
@@ -617,7 +630,7 @@ export function compileSafetyScoreV9FactSetFromExtensionSource(
       return { researchPayloadSha256: researchHash.update("]}").digest("hex"),
         shockCoveragePayloadSha256: shockHash.update("]}").digest("hex"), shockCoverageObservedAtSec, shockCoverageCount };
     },
-  });
+  }, verifiedEmptyExitByAssetId);
   return { ...compilation, bridgeJoinDiagnostics: bridgeJoinDiagnostics.sort((left, right) => compareText(left.assetId, right.assetId)) };
 }
 
@@ -628,6 +641,7 @@ function compileSafetyScoreV9FactSetWithIsolation(
   consumeExtensionAssets: boolean,
   reuseAsset?: (asset: AssetExtension, researchPayloadSha256: string) => V9AssetFactsV3 | undefined,
   streamed?: StreamedExtensionCompilation,
+  verifiedEmptyExitByAssetId?: Readonly<Record<string, SafetyScoreV9VerifiedEmptyExitWitness>>,
 ): Readonly<SafetyScoreV9FactCompilationResult> {
   if (!materializedExtensions.has(extension)) {
     throw new Error("Trusted Safety Score v9 compilation requires an in-process materialized extension");
@@ -669,7 +683,7 @@ function compileSafetyScoreV9FactSetWithIsolation(
     const reused = evaluationFailure === undefined ? reuseAsset?.(asset, researchPayloadSha256) : undefined;
     outcomes[index] = reused !== undefined ? { facts: reused, quarantine: null }
       : evaluationFailure === undefined
-        ? compileAssetOutcome(fixedInput, extension, asset, researchPayloadSha256)
+        ? compileAssetOutcome(fixedInput, extension, asset, researchPayloadSha256, verifiedEmptyExitByAssetId)
         : evaluationQuarantineOutcome(fixedInput, extension, asset, researchPayloadSha256, evaluationFailure);
     if (compactAsset !== null) outcomes[index]!.facts = compactAsset(outcomes[index]!.facts);
     // The materializer owns this array; assets themselves remain immutable.
