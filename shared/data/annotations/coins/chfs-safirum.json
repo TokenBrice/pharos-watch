@@ -1,0 +1,10 @@
+[
+  {
+    "date": "2026-11-03",
+    "kind": "governance",
+    "label": "Safirum launches whitelisted CHF-S stablecoin on Solana",
+    "severity": "med",
+    "href": "https://www.safirum.com/press#chf-s-live-2026-11-03",
+    "note": "Safirum AG announced the live launch of Swiss franc stablecoin CHF-S on Solana Token-2022 on November 3, backed 1:1 by Swiss francs in segregated Swiss bank accounts with protocol-level KYC/KYB wallet whitelisting. Safirum has not published a mint address, supply figure, or reserve attestation."
+  }
+]

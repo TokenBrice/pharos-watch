@@ -1,3 +1,4 @@
 [
-  {"date":"2026-08-01","kind":"governance","label":"BaseDollar production contracts deploy to Base mainnet","severity":"med","href":"https://github.com/basedollar/basedollar/pull/160","note":"2026-08-01: BaseDollar production contracts deployed to Base mainnet."}
+  {"date":"2026-08-01","kind":"governance","label":"BaseDollar production contracts deploy to Base mainnet","severity":"med","href":"https://github.com/basedollar/basedollar/pull/160","note":"2026-08-01: BaseDollar production contracts deployed to Base mainnet."},
+  {"date":"2026-08-20","kind":"governance","label":"Base Dollar opens public BD borrowing and Stability Pools on Base","severity":"med","href":"https://basedollar.org/blog/launch","note":"Base Dollar announced its public launch on Base on August 20, opening BD borrowing against ETH, wstETH, rETH, cbETH, and cbBTC collateral alongside Stability Pool deposits. This marks public user availability after the August 1 contract deployment."}
 ]
