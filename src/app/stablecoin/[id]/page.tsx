@@ -343,7 +343,8 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
               logos={logosById}
             />
           }
-          snapshot={detailSnapshot}
+          // Zero volatile artifact provenance across the RSC boundary so unchanged snapshots emit identical HTML/RSC bytes.
+          snapshot={detailSnapshot ? { ...detailSnapshot, generatedAt: 0 } : detailSnapshot}
           archivedLiveSummary={archivedLiveSummary}
           initialRedeemability={initialRedeemability}
         />
