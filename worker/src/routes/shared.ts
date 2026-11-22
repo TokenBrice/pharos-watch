@@ -21,6 +21,7 @@ export interface RouteContext {
   execCtx: ExecutionContext;
   request: Request;
   trustedAdmin: boolean;
+  requestLane?: "public-api" | "site-api" | null;
   /** Set by in-process probers so canonical operator audit is skipped. */
   internalProbe?: InternalRouteProbe;
 }

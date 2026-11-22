@@ -18,7 +18,10 @@ export const PUBLIC_STATIC_ROUTES = [
     const { handleBlacklistSummary } = await import("../lib/blacklist-summary-service");
     return ({ db, execCtx }) => handleBlacklistSummary(db, execCtx);
   }),
-  defineLazyDbUrlRoute("depeg-events", () => import("../api/depeg-events").then(({ handleDepegEvents }) => handleDepegEvents)),
+  defineLazyStaticRoute("depeg-events", async () => {
+    const { handleDepegEvents } = await import("../api/depeg-events");
+    return ({ db, url, requestLane }) => handleDepegEvents(db, url, requestLane);
+  }),
   defineLazyDbUrlRoute("events", () => import("../api/events").then(({ handleEvents }) => handleEvents)),
   defineLazyDbRoute("peg-summary", () => import("../api/peg-summary").then(({ handlePegSummary }) => handlePegSummary)),
   defineLazyDbRoute("health", () => import("../api/health").then(({ handleHealth }) => handleHealth)),

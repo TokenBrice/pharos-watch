@@ -641,48 +641,45 @@ describe("stablecoin detail snapshot generator", () => {
     expect(fetch).toHaveBeenCalledTimes(6);
   });
 
-  it("reads only the history lane for an inactive record whose bulk row proves the detail cache absent", async () => {
+  it("reads only the history lane for unavailable inactive rows and inlines history-only bulk entries", async () => {
     credentials("fixture-key", "fixture-site-secret");
     clearApiUrls();
     const log = silence("log");
     silence();
     const now = 1_800_000_000_000;
     vi.spyOn(Date, "now").mockReturnValue(now);
-    const frozenId = COINS.find((coin) => coin.status === "frozen")!.id;
+    const [frozenId, inlineFrozenId] = COINS.filter((coin) => coin.status === "frozen").map((coin) => coin.id);
     const activeId = COINS.find((coin) => coin.status == null || coin.status === "active")!.id;
-    const sources = EMPTY_SOURCES;
-    const perCoin: string[] = [];
+    const sources = EMPTY_SOURCES, perCoin: string[] = [];
     let historyAvailable = true;
     vi.stubGlobal("fetch", vi.fn(async (raw: string) => {
       const { url, history, id } = coinRequest(raw);
       if (url.pathname.endsWith("/stablecoin-detail-snapshot-inputs")) {
-        return bulkResponse(url, (id) => id === frozenId || id === activeId
-          ? { id, status: "unavailable", reason: "detail-cache-missing", sources }
-          : bulkEntry(id, now - 60_000));
+        return bulkResponse(url, (id) => id === inlineFrozenId
+          ? { id, status: "history-only", reason: "detail-cache-missing", supplyHistory: [], updatedAt: { supplyHistory: 1_799_999_900_000 },
+            freshness: { supplyHistory: { status: "fresh", maxAgeSec: 86_400 } }, sources }
+          : id === frozenId || id === activeId
+            ? { id, status: "unavailable", reason: "detail-cache-missing", sources }
+            : bulkEntry(id, now - 60_000));
       }
       perCoin.push(`${history ? "history" : "detail"}:${id}`);
       if (!historyAvailable) return new Response("", { status: 404 });
       return Response.json(history ? [] : { price: 1 }, { headers: { "X-Data-Updated-At": "1799999900" } });
     }));
     const snapshots = await generateSnapshots(false, { source: "bulk", generatedAt: now });
-    // The API answers an inactive record with no cached detail from that same absent
-    // row, so the reviewed fallback must not spend a detail read on it.
     expect(perCoin).not.toContain(`detail:${frozenId}`);
+    expect(perCoin).not.toContain(`detail:${inlineFrozenId}`);
+    expect(perCoin).not.toContain(`history:${inlineFrozenId}`);
     expect(perCoin).toContain(`history:${frozenId}`);
     expect(perCoin).toContain(`detail:${activeId}`);
-    const frozen = snapshotFor(snapshots, frozenId);
-    expect(frozen.lanes).toEqual({ supplyHistory: [] });
-    expect(frozen.updatedAt).toEqual({ supplyHistory: 1_799_999_900_000 });
+    expect(snapshotFor(snapshots, frozenId)).toMatchObject({ lanes: { supplyHistory: [] }, updatedAt: { supplyHistory: 1_799_999_900_000 } });
+    expect(snapshotFor(snapshots, inlineFrozenId)).toMatchObject({ lanes: { supplyHistory: [] }, updatedAt: { supplyHistory: 1_799_999_900_000 } });
     const evidence = JSON.parse(log.mock.calls[0][0] as string).detailSnapshotAcquisition;
-    expect(entryFor(evidence.entries, frozenId)).toMatchObject({
-      source: "bulk-unavailable-history-only", reason: "detail-cache-missing", updatedAt: { supplyHistory: 1_799_999_900_000 },
-    });
-    expect(entryFor(evidence.entries, activeId))
-      .toMatchObject({ source: "bulk-unavailable-fallback" });
-    // History is still mandatory for every acquired coin.
+    expect(entryFor(evidence.entries, inlineFrozenId)).toMatchObject({ source: "bulk-history-only", reason: "detail-cache-missing", updatedAt: { supplyHistory: 1_799_999_900_000 } });
+    expect(entryFor(evidence.entries, frozenId)).toMatchObject({ source: "bulk-unavailable-history-only", reason: "detail-cache-missing", updatedAt: { supplyHistory: 1_799_999_900_000 } });
+    expect(entryFor(evidence.entries, activeId)).toMatchObject({ source: "bulk-unavailable-fallback" });
     historyAvailable = false;
-    await expect(generateSnapshots(false, { source: "bulk", generatedAt: now }))
-      .rejects.toThrow(/No detail snapshot lanes were available/);
+    await expect(generateSnapshots(false, { source: "bulk", generatedAt: now })).rejects.toThrow(/No detail snapshot lanes were available/);
   });
 
 });

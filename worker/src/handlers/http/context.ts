@@ -1,7 +1,7 @@
 import type { EndpointDependency } from "@shared/lib/api-endpoints";
 import type { Env } from "../../lib/env";
 import { ROUTE_DEPENDENCY_HYDRATORS } from "../../routes/dependency-hydrators";
-import type { FullRouteContext, RouteContextFor } from "../../routes/shared";
+import type { FullRouteContext, RouteContext, RouteContextFor } from "../../routes/shared";
 
 export function buildRouteContext<const Deps extends readonly EndpointDependency[]>(config: {
   request: Request;
@@ -9,6 +9,7 @@ export function buildRouteContext<const Deps extends readonly EndpointDependency
   env: Env;
   execCtx: ExecutionContext;
   trustedAdmin: boolean;
+  requestLane?: RouteContext["requestLane"];
   routeDependencies: Deps;
 }): RouteContextFor<Deps> {
   const routeCtx: FullRouteContext = {
@@ -17,6 +18,7 @@ export function buildRouteContext<const Deps extends readonly EndpointDependency
     execCtx: config.execCtx,
     request: config.request,
     trustedAdmin: config.trustedAdmin,
+    ...(config.requestLane !== undefined ? { requestLane: config.requestLane } : {}),
   };
 
   for (const dependency of config.routeDependencies) {

@@ -26,6 +26,12 @@ afterEach(() => {
 
 describe("handleDepegEvents", () => {
   const row = makeDepegRow();
+  const call = (db: D1Database, q = "", lane?: "public-api" | "site-api" | null) =>
+    handleDepegEvents(db, new URL(`https://x/api/depeg-events${q}`), lane);
+  const LINK_SQL = "INSERT INTO depeg_resolver_incident_event_links (incident_key, event_id, relation, linked_at) VALUES (?, ?, 'observed', ?)";
+  const ALIAS_INC_SQL = `INSERT INTO depeg_resolver_incidents (incident_key, stablecoin_id, peg_currency, direction, first_event_id, current_event_id,
+    first_started_at, current_started_at, first_observed_peak_bucket_bps, incident_state, superseded_by_incident_key, source_fingerprint, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
   function mockEvents(rows: Record<string, unknown>[], total: number | null, extra: MockTableConfig[] = []) {
     return mockD1([
@@ -38,30 +44,18 @@ describe("handleDepegEvents", () => {
 
   it("returns dependency unavailability rather than raw history when incident projection fails", async () => {
     const db = mockD1([
-      {
-        match: "pharos:depeg-event-projection:active-incidents",
-        rows: [],
-        throwError: new Error("projection read timed out"),
-      },
+      { match: "pharos:depeg-event-projection:active-incidents", rows: [], throwError: new Error("projection read timed out") },
       { match: "pharos:depeg-events:count", rows: [{ total: 2 }] },
       { match: "depeg_events", rows: [row, { ...row, id: 2 }] },
     ]);
-    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events"));
-    expect(await readJsonResponse(res, 503)).toEqual({
-      error: "Canonical incident history unavailable",
-      reason: "incident-projection-read-failed",
-    });
+    const res = await call(db);
+    expect(await readJsonResponse(res, 503)).toEqual({ error: "Canonical incident history unavailable", reason: "incident-projection-read-failed" });
     expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
 
   it.each([
-    { current_event_id: null },
-    { first_started_at: null },
-    { first_start_price: "0.97" },
-    { first_peg_reference: -1 },
-    { constituent_event_count: 0 },
-    { constituent_event_count: 1.5 },
-    { incident_peak_json: "{}" },
+    { current_event_id: null }, { first_started_at: null }, { first_start_price: "0.97" },
+    { first_peg_reference: -1 }, { constituent_event_count: 0 }, { constituent_event_count: 1.5 }, { incident_peak_json: "{}" },
   ].map((invalid) => ({
     current_event_id: 2, first_started_at: 1_700_000_000, first_start_price: 0.97,
     first_peg_reference: 1, constituent_event_count: 2, incident_peak_json: null, ...invalid,
@@ -71,17 +65,13 @@ describe("handleDepegEvents", () => {
       { match: "pharos:depeg-events:count", rows: [{ total: 0 }] },
       { match: "pharos:depeg-events:page", rows: [] },
     ]);
-    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events"));
-    expect(await readJsonResponse(res, 503)).toEqual({
-      error: "Canonical incident history unavailable", reason: "incident-projection-invalid",
-    });
+    const res = await call(db);
+    expect(await readJsonResponse(res, 503)).toEqual({ error: "Canonical incident history unavailable", reason: "incident-projection-invalid" });
     expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
 
   it("keeps a successful empty incident projection readable", async () => {
-    const db = mockEvents([row], 1);
-    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events"));
-    const body = await readJsonResponse(res, 200) as { events: unknown[]; total: number };
+    const body = await readJsonResponse(await call(mockEvents([row], 1)), 200) as { events: unknown[]; total: number };
     expect(body.total).toBe(1);
     expect(body.events).toHaveLength(1);
   });
@@ -91,8 +81,7 @@ describe("handleDepegEvents", () => {
       makeDepegRow({ id: 1, stablecoin_id: "bean-beanstalk", symbol: "BEAN" }),
       makeDepegRow({ id: 2, stablecoin_id: "usdt-tether", symbol: "USDT" }),
     ], 2);
-    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events"));
-    const body = DepegEventsResponseSchema.parse(await readJsonResponse(res, 200));
+    const body = DepegEventsResponseSchema.parse(await readJsonResponse(await call(db), 200));
     const byId = new Map(body.events.map((event) => [event.id, event]));
     expect(byId.get(1)?.retired).toBe(true);
     expect(byId.get(2)).not.toHaveProperty("retired");
@@ -103,21 +92,14 @@ describe("handleDepegEvents", () => {
     const { sqlite, db } = fixtures.open();
     const key = `ddr2:${"a".repeat(32)}`;
     for (const id of eventIds) {
-      sqlite.prepare(`INSERT INTO depeg_events
-        (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peg_reference)
-        VALUES (?, ?, ?, ?, 'below', 300, ?, ?, 1)`)
-        .run(id, stablecoinId, symbol, `pegged${pegCurrency}`, start + (id - firstId) * 1_000, id === firstId ? 0.97 : 0.96);
+      sqlite.prepare(`INSERT INTO depeg_events (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peg_reference)
+        VALUES (?, ?, ?, ?, 'below', 300, ?, ?, 1)`).run(id, stablecoinId, symbol, `pegged${pegCurrency}`, start + (id - firstId) * 1_000, id === firstId ? 0.97 : 0.96);
     }
-    for (const id of new Set(linkIds)) {
-      sqlite.prepare(`INSERT INTO depeg_resolver_incident_event_links (incident_key, event_id, relation, linked_at)
-        VALUES (?, ?, 'observed', 1700000000)`).run(key, id);
-    }
+    for (const id of new Set(linkIds)) sqlite.prepare(LINK_SQL).run(key, id, 1700000000);
     // Seed unsealed dangling pointers directly: no duplicate-deletion trigger or disabled seal guard.
-    sqlite.prepare(`INSERT INTO depeg_resolver_incidents
-      (incident_key, stablecoin_id, peg_currency, direction, first_event_id, current_event_id,
-       first_started_at, current_started_at, first_observed_peak_bucket_bps, source_fingerprint, created_at, updated_at)
-      VALUES (?, ?, ?, 'below', ?, ?, ?, ?, 300, ?, 1700000000, 1700001000)`)
-      .run(key, stablecoinId, pegCurrency, firstId, currentId, start, start + 1_000, "b".repeat(64));
+    sqlite.prepare(`INSERT INTO depeg_resolver_incidents (incident_key, stablecoin_id, peg_currency, direction, first_event_id, current_event_id,
+      first_started_at, current_started_at, first_observed_peak_bucket_bps, source_fingerprint, created_at, updated_at)
+      VALUES (?, ?, ?, 'below', ?, ?, ?, ?, 300, ?, 1700000000, 1700001000)`).run(key, stablecoinId, pegCurrency, firstId, currentId, start, start + 1_000, "b".repeat(64));
     return { sqlite, db, key };
   }
 
@@ -125,92 +107,56 @@ describe("handleDepegEvents", () => {
     const { sqlite, db } = seedIncident(101, 102, [101, 102]);
     const start = 1_700_000_000;
     const update = sqlite.prepare("UPDATE depeg_events SET admitted_coverage_json = ?, disposition = 'admitted-coverage' WHERE id = ?");
-    const first = { fromSec: start + 1, toSec: start + 50 };
-    const last = { fromSec: start + 1000, toSec: start + 1050 };
+    const first = { fromSec: start + 1, toSec: start + 50 }, last = { fromSec: start + 1000, toSec: start + 1050 };
     update.run(JSON.stringify([first]), 101);
     update.run(JSON.stringify([last]), 102);
     sqlite.exec("UPDATE depeg_events SET peak_deviation_bps = CASE id WHEN 101 THEN -960 ELSE -437 END");
     sqlite.prepare("UPDATE depeg_events SET ended_at = ?, recovery_price = 1 WHERE id = 102").run(start + 1200);
-    const readEvent = async () => {
-      const response = await handleDepegEvents(db, new URL("https://x/api/depeg-events"));
-      return (await readJsonResponse(response, 200) as { events: Record<string, unknown>[] }).events[0];
-    };
-    expect(await readEvent()).toMatchObject({
-      id: 102, startedAt: start, endedAt: start + 1200, peakDeviationBps: -960, analyticRecoveryAt: null, admittedCoverage: [first, last],
-    });
+    const readEvent = async () => (await readJsonResponse(await call(db), 200) as { events: Record<string, unknown>[] }).events[0];
+    expect(await readEvent()).toMatchObject({ id: 102, startedAt: start, endedAt: start + 1200, peakDeviationBps: -960, analyticRecoveryAt: null, admittedCoverage: [first, last] });
     sqlite.prepare("UPDATE depeg_events SET admitted_coverage_json = '[]', disposition = 'repaired' WHERE id = 101").run();
-    expect(await readEvent()).toMatchObject({
-      id: 102, endedAt: start + 1200, peakDeviationBps: -437, admittedCoverage: [], provenance: { pegScoreEligible: false },
-    });
+    expect(await readEvent()).toMatchObject({ id: 102, endedAt: start + 1200, peakDeviationBps: -437, admittedCoverage: [], provenance: { pegScoreEligible: false } });
   });
 
   it("excludes only disputed constituents from a reviewed dispute's worst peak", async () => {
-    const { sqlite, db } = fixtures.open();
-    const start = 1_780_000_000;
-    const key = `ddr2:${"e".repeat(32)}`;
-    const insertEvent = sqlite.prepare(`INSERT INTO depeg_events
-      (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peg_reference, source)
+    const { sqlite, db } = fixtures.open(), start = 1_780_000_000, key = `ddr2:${"e".repeat(32)}`;
+    const insertEvent = sqlite.prepare(`INSERT INTO depeg_events (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peg_reference, source)
       VALUES (?, 'audd-novatti', 'AUDD', 'peggedAUD', 'below', ?, ?, ?, 0.65, 1, 'live')`);
     for (const [id, peak, endedAt] of [[101, -293, start + 500], [102, -396, start + 900], [103, -960, start + 1400], [104, -437, null]] as const) {
       insertEvent.run(id, peak, start + (id - 101) * 100, endedAt);
-      sqlite.prepare(`INSERT INTO depeg_resolver_incident_event_links
-        (incident_key, event_id, relation, linked_at) VALUES (?, ?, 'observed', 1780000000)`).run(key, id);
+      sqlite.prepare(LINK_SQL).run(key, id, 1780000000);
     }
-    sqlite.prepare(`INSERT INTO depeg_resolver_incidents
-      (incident_key, stablecoin_id, peg_currency, direction, first_event_id, current_event_id,
-       first_started_at, current_started_at, first_observed_peak_bucket_bps, source_fingerprint, created_at, updated_at)
-      VALUES (?, 'audd-novatti', 'AUD', 'below', 101, 104, ?, ?, 293, ?, 1780000000, 1780000100)`)
-      .run(key, start, start + 300, "f".repeat(64));
+    sqlite.prepare(`INSERT INTO depeg_resolver_incidents (incident_key, stablecoin_id, peg_currency, direction, first_event_id, current_event_id,
+      first_started_at, current_started_at, first_observed_peak_bucket_bps, source_fingerprint, created_at, updated_at)
+      VALUES (?, 'audd-novatti', 'AUD', 'below', 101, 104, ?, ?, 293, ?, 1780000000, 1780000100)`).run(key, start, start + 300, "f".repeat(64));
     sqlite.exec("UPDATE depeg_events SET peak_price = 0.60568, peak_peg_reference = 0.67, peak_quote_domain = 'usd' WHERE id = 103");
-    const readEvent = async () => DepegEventsResponseSchema.parse(await readJsonResponse(
-      await handleDepegEvents(db, new URL("https://x/api/depeg-events?stablecoin=audd-novatti&active=true")), 200)).events[0]!;
-    const markDisputed = sqlite.prepare(`INSERT INTO depeg_event_provenance
-      (event_id, source_kind, audit_verdict, created_at, updated_at) VALUES (?, 'live', 'disputed', 1780000200, 1780000200)`);
-
-    // AUDD shape: only the onset fragment is disputed; the clean 960 constituent sets the peak.
+    const readEvent = async () => DepegEventsResponseSchema.parse(await readJsonResponse(await call(db, "?stablecoin=audd-novatti&active=true"), 200)).events[0]!;
+    const markDisputed = sqlite.prepare("INSERT INTO depeg_event_provenance (event_id, source_kind, audit_verdict, created_at, updated_at) VALUES (?, 'live', 'disputed', 1780000200, 1780000200)");
     markDisputed.run(101);
     expect(await readEvent()).toMatchObject({
-      id: 104, startedAt: start, constituentEventCount: 4,
-      peakDeviationBps: -960, peakPrice: 0.60568, peakPegReference: 0.67, peakQuoteDomain: "usd",
-      onsetFragmentPeakBps: -293, currentFragmentPeakBps: -437,
-      admittedCoverage: [], provenance: { pegScoreEligible: false },
+      id: 104, startedAt: start, constituentEventCount: 4, peakDeviationBps: -960, peakPrice: 0.60568, peakPegReference: 0.67,
+      peakQuoteDomain: "usd", onsetFragmentPeakBps: -293, currentFragmentPeakBps: -437, admittedCoverage: [], provenance: { pegScoreEligible: false },
     });
-
-    // The disputed constituent is the worst one: the next clean constituent is selected instead.
     sqlite.exec("DELETE FROM depeg_event_provenance; UPDATE depeg_events SET peak_deviation_bps = -500 WHERE id = 102");
     markDisputed.run(103);
-    expect(await readEvent()).toMatchObject({
-      id: 104, peakDeviationBps: -500, currentFragmentPeakBps: -437, admittedCoverage: [],
-    });
-
-    // The current row itself is disputed: today's behaviour is kept exactly.
+    expect(await readEvent()).toMatchObject({ id: 104, peakDeviationBps: -500, currentFragmentPeakBps: -437, admittedCoverage: [] });
     sqlite.exec("DELETE FROM depeg_event_provenance");
     markDisputed.run(104);
     const currentDisputed = await readEvent();
-    expect(currentDisputed).toMatchObject({
-      id: 104, peakDeviationBps: -437, admittedCoverage: [], provenance: { pegScoreEligible: false },
-    });
+    expect(currentDisputed).toMatchObject({ id: 104, peakDeviationBps: -437, admittedCoverage: [], provenance: { pegScoreEligible: false } });
     expect(currentDisputed).not.toHaveProperty("currentFragmentPeakBps");
-
-    // An undisputed incident keeps the v6.53 worst-constituent peak.
     sqlite.exec("DELETE FROM depeg_event_provenance");
-    expect(await readEvent()).toMatchObject({
-      id: 104, peakDeviationBps: -960, peakPrice: 0.60568, currentFragmentPeakBps: -437,
-    });
+    expect(await readEvent()).toMatchObject({ id: 104, peakDeviationBps: -960, peakPrice: 0.60568, currentFragmentPeakBps: -437 });
   });
 
   it("keeps the peer median outside the fiat conversion field and retains a reviewed BRZ peak", async () => {
-    const reference = 0.2;
-    const price = 0.24;
+    const reference = 0.2, price = 0.24;
     const sample = { basis: "peer-relative", observedAt: 1_700_000_100, price, pegReference: reference, bps: 2000 };
-    // Enriched D1 rows use the original peak receipt vocabulary consumed by Telegram.
-    const response = await handleDepegEvents(mockEvents([{
-      ...makeDepegRow({
-        id: 89170, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", direction: "above",
-        started_at: sample.observedAt, start_price: price, peg_reference: reference, peak_deviation_bps: 2000, peak_price: price,
-      }),
+    const response = await call(mockEvents([{
+      ...makeDepegRow({ id: 89170, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", direction: "above",
+        started_at: sample.observedAt, start_price: price, peg_reference: reference, peak_deviation_bps: 2000, peak_price: price }),
       peak_peg_reference: reference, peak_quote_domain: "usd", peer_basis_json: JSON.stringify({ onset: sample, peak: sample }),
-    }], 1), new URL("https://x/api/depeg-events"));
+    }], 1));
     const event = (await readJsonResponse(response, 200) as { events: Record<string, unknown>[] }).events[0];
     expect(event).toMatchObject({ peakPrice: price, onsetBasis: "peer-relative", peakBasis: "peer-relative", peakPeerMedianUsd: reference, peakReview: "unverified" });
     expect(event).not.toHaveProperty("peakPegReference");
@@ -223,20 +169,16 @@ describe("handleDepegEvents", () => {
       SELECT n, 'usdt-tether', 'USDT', 'peggedUSD', 'below', -200, 1700000000 + n, 0.98, 1 FROM ids`);
     const url = new URL("https://x/api/depeg-events?limit=1000");
     type Page = { events: unknown[]; total: number; nextCursor: string | null };
-    const readPage = async () => (await (await handleDepegEvents(db, url)).json()) as Page;
-    const first = await readPage();
+    const first = (await (await handleDepegEvents(db, url)).json()) as Page;
     url.searchParams.set("ledgerGeneration", "latest");
     expect(await (await handleDepegEvents(db, url)).json()).toMatchObject({ reason: "ledger-manifest-unavailable" });
-    const directory = mkdtempSync(join(tmpdir(), "pharos-ledger-test-"));
-    const path = join(directory, "export.sqlite");
+    const directory = mkdtempSync(join(tmpdir(), "pharos-ledger-test-")), path = join(directory, "export.sqlite");
     let prepared: Awaited<ReturnType<typeof prepareDepegLedgerManifest>>;
     try {
       sqlite.prepare("VACUUM INTO ?").run(path);
-      const receipt = {
-        version: 1, scope: "whole-public-depeg-ledger", snapshotSha256: await sha256Hex(readFileSync(path)),
+      const receipt = { version: 1, scope: "whole-public-depeg-ledger", snapshotSha256: await sha256Hex(readFileSync(path)),
         coveredFromSec: 1_700_000_000, coveredThroughSec: 1_700_100_000, attestedAtSec: 1_700_200_000,
-        attestedBy: "fixture source", coverageEvidenceRef: "source-coverage-fixture",
-      };
+        attestedBy: "fixture source", coverageEvidenceRef: "source-coverage-fixture" };
       await expect(prepareDepegLedgerManifest(path, { ...receipt, snapshotSha256: "0".repeat(64) })).rejects.toThrow("SHA-256");
       await expect(prepareDepegLedgerManifest(path, { ...receipt, coveredFromSec: undefined })).rejects.toThrow();
       prepared = await prepareDepegLedgerManifest(path, receipt);
@@ -252,9 +194,7 @@ describe("handleDepegEvents", () => {
     expect(await (await handleDepegEvents(db, url)).json()).toMatchObject({ ledgerProof, nextCursor: null });
     sqlite.prepare("UPDATE depeg_events SET peak_deviation_bps = -500 WHERE id = 1").run();
     expect(await readJsonResponse(await handleDepegEvents(db, url), 409)).toMatchObject({ reason: "ledger-page-changed" });
-    sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(
-      JSON.stringify({ ...manifest, coveredThroughSec: manifest.coveredThroughSec - 1 }), DEPEG_LEDGER_MANIFEST_KEY,
-    );
+    sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(JSON.stringify({ ...manifest, coveredThroughSec: manifest.coveredThroughSec - 1 }), DEPEG_LEDGER_MANIFEST_KEY);
     expect(await readJsonResponse(await handleDepegEvents(db, url), 409)).toMatchObject({ reason: "ledger-generation-changed" });
   });
 
@@ -267,82 +207,49 @@ describe("handleDepegEvents", () => {
   ])("returns named 503 for dangling $name references in migrated SQLite", async ({ first, current, events, links }) => {
     const { db } = seedIncident(first, current, events, links);
     for (const query of ["?active=true", "?active=true&stablecoin=usdt-tether"]) {
-      const res = await handleDepegEvents(db, new URL(`https://x/api/depeg-events${query}`));
-      expect(await readJsonResponse(res, 503)).toEqual({
-        error: "Canonical incident history unavailable", reason: "incident-projection-dangling-reference",
-      });
+      const res = await call(db, query);
+      expect(await readJsonResponse(res, 503)).toEqual({ error: "Canonical incident history unavailable", reason: "incident-projection-dangling-reference" });
       expect(res.headers.get("Cache-Control")).toBe("no-store");
     }
   });
 
   it.each([101, 102])("publishes valid canonical cohorts with current event %s in migrated SQLite", async (current) => {
     const { db } = seedIncident(101, current, current === 101 ? [101] : [101, 102]);
-    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?active=true&stablecoin=usdt-tether"));
-    const body = await readJsonResponse(res, 200) as { events: Array<Record<string, unknown>>; total: number };
+    const body = await readJsonResponse(await call(db, "?active=true&stablecoin=usdt-tether"), 200) as { events: Array<Record<string, unknown>>; total: number };
     expect(body.total).toBe(1);
-    expect(body.events).toEqual([expect.objectContaining({
-      id: current, startedAt: 1_700_000_000, startPrice: 0.97, constituentEventCount: current === 101 ? 1 : 2,
-    })]);
+    expect(body.events).toEqual([expect.objectContaining({ id: current, startedAt: 1_700_000_000, startPrice: 0.97, constituentEventCount: current === 101 ? 1 : 2 })]);
   });
 
   it.each([
     { label: "live native heuristic", source: "live", quoteMode: null },
     { label: "backfilled native provenance", source: "backfill", quoteMode: "native-peg" },
   ])("keeps each observation in its own quote domain ($label)", async ({ source, quoteMode }) => {
-    const { sqlite, db } = fixtures.open();
-    const key = `ddr2:${"c".repeat(32)}`;
-    const insertEvent = sqlite.prepare(`INSERT INTO depeg_events
-      (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at,
-       start_price, peak_price, peg_reference, source)
+    const { sqlite, db } = fixtures.open(), key = `ddr2:${"c".repeat(32)}`;
+    const insertEvent = sqlite.prepare(`INSERT INTO depeg_events (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference, source)
       VALUES (?, 'pht-pht', 'PHT', 'peggedPHP', 'below', ?, ?, ?, ?, ?, ?)`);
-    // First constituent: USD-domain quote (USD/PHP reference).
     insertEvent.run(101, -400, 1_700_000_000, 0.0162, 0.01584, 0.016472576, "live");
     sqlite.prepare("UPDATE depeg_events SET peak_peg_reference = 0.0165, peak_quote_domain = 'usd' WHERE id = 101").run();
-    // Current constituent: native PHP-domain quote with reference 1.
     insertEvent.run(102, -159, 1_700_001_000, 0.9844, 0.9841, 1, source);
-    if (quoteMode != null) {
-      sqlite.prepare(`INSERT INTO depeg_event_provenance
-        (event_id, source_kind, quote_mode, public_json, created_at, updated_at)
-        VALUES (102, 'backfill', ?, ?, 1700001000, 1700001000)`)
-        .run(quoteMode, JSON.stringify({ quoteMode }));
-    }
-    for (const id of [101, 102]) {
-      sqlite.prepare(`INSERT INTO depeg_resolver_incident_event_links
-        (incident_key, event_id, relation, linked_at) VALUES (?, ?, 'observed', 1700002000)`).run(key, id);
-    }
-    sqlite.prepare(`INSERT INTO depeg_resolver_incidents
-      (incident_key, stablecoin_id, peg_currency, direction, first_event_id, current_event_id,
-       first_started_at, current_started_at, first_observed_peak_bucket_bps, source_fingerprint, created_at, updated_at)
-      VALUES (?, 'pht-pht', 'PHP', 'below', 101, 102, 1700000000, 1700001000, 400, ?, 1700000000, 1700001000)`)
-      .run(key, "d".repeat(64));
-
-    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?active=true&stablecoin=pht-pht"));
-    const body = await readJsonResponse(res, 200) as { events: Array<Record<string, unknown>>; total: number };
+    if (quoteMode != null) sqlite.prepare("INSERT INTO depeg_event_provenance (event_id, source_kind, quote_mode, public_json, created_at, updated_at) VALUES (102, 'backfill', ?, ?, 1700001000, 1700001000)").run(quoteMode, JSON.stringify({ quoteMode }));
+    for (const id of [101, 102]) sqlite.prepare(LINK_SQL).run(key, id, 1700002000);
+    sqlite.prepare(`INSERT INTO depeg_resolver_incidents (incident_key, stablecoin_id, peg_currency, direction, first_event_id, current_event_id,
+      first_started_at, current_started_at, first_observed_peak_bucket_bps, source_fingerprint, created_at, updated_at)
+      VALUES (?, 'pht-pht', 'PHP', 'below', 101, 102, 1700000000, 1700001000, 400, ?, 1700000000, 1700001000)`).run(key, "d".repeat(64));
+    const body = await readJsonResponse(await call(db, "?active=true&stablecoin=pht-pht"), 200) as { events: Array<Record<string, unknown>>; total: number };
     expect(body.total).toBe(1);
     expect(body.events).toEqual([expect.objectContaining({
-      id: 102,
-      startedAt: 1_700_000_000,
-      startPrice: 0.9844,
-      pegReference: 1,
-      peakDeviationBps: -400,
-      peakPrice: 0.01584,
-      peakPegReference: 0.0165,
-      peakQuoteDomain: "usd",
-      constituentEventCount: 2,
+      id: 102, startedAt: 1_700_000_000, startPrice: 0.9844, pegReference: 1, peakDeviationBps: -400,
+      peakPrice: 0.01584, peakPegReference: 0.0165, peakQuoteDomain: "usd", constituentEventCount: 2,
     })]);
   });
 
   it("keeps canonical active identity distinct from closed same-coin episodes", async () => {
     const { sqlite, db } = seedIncident(101, 102, [101, 102]);
     for (const [id, reason] of [[103, "recovered-primary"], [104, "coverage-lost-supply"], [105, "superseded-direction"]] as const) {
-      sqlite.prepare(`INSERT INTO depeg_events
-        (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at,
-         start_price, peg_reference, recovery_price, close_reason, source)
-        VALUES (?, 'usdt-tether', 'USDT', 'peggedUSD', 'below', 300, ?, 1699991000,
-          .97, 1, ?, ?, 'live')`).run(id, 1_699_990_000 + id, reason === "recovered-primary" ? 1 : null, reason);
+      sqlite.prepare(`INSERT INTO depeg_events (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peg_reference, recovery_price, close_reason, source)
+        VALUES (?, 'usdt-tether', 'USDT', 'peggedUSD', 'below', 300, ?, 1699991000, .97, 1, ?, ?, 'live')`).run(id, 1_699_990_000 + id, reason === "recovered-primary" ? 1 : null, reason);
     }
-    const response = await handleDepegEvents(db, new URL("https://x/api/depeg-events?active=true&includeTotal=false&limit=1"));
-    const body = DepegEventsResponseSchema.parse(await readJsonResponse(response, 200));
+    const body = DepegEventsResponseSchema.parse(await readJsonResponse(await call(db, "?active=true&includeTotal=false&limit=1"), 200));
     expect(body.events.map(({ id }) => id)).toEqual([102]);
     expect(body.events[0]).toMatchObject({ startedAt: 1_700_000_000, constituentEventCount: 2, endedAt: null });
     expect(body.events[0]).not.toHaveProperty("constituentEventIds");
@@ -350,25 +257,20 @@ describe("handleDepegEvents", () => {
   });
 
   it("publishes a genuinely empty active cohort in migrated SQLite", async () => {
-    const { db } = fixtures.open();
-    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?active=true"));
-    expect(await readJsonResponse(res, 200)).toMatchObject({ events: [], total: 0 });
+    expect(await readJsonResponse(await call(fixtures.open().db, "?active=true"), 200)).toMatchObject({ events: [], total: 0 });
   });
 
   it.each([true, false])("pages interleaved public onsets with stable ties and methodology asOf (includeTotal=%s)", async (includeTotal) => {
     const { sqlite, db } = seedIncident(101, 102, [101, 102]);
     for (const [id, onset] of [[103, 1_700_000_500], [104, 1_700_000_000], [105, 1_699_999_000]]) {
-      sqlite.prepare(`INSERT INTO depeg_events
-        (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peg_reference, source)
-        VALUES (?, 'usdt-tether', 'USDT', 'peggedUSD', 'below', 200, ?, .98, 1, ?)`)
-        .run(id, onset, id === 104 ? "backfill" : "live");
+      sqlite.prepare(`INSERT INTO depeg_events (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peg_reference, source)
+        VALUES (?, 'usdt-tether', 'USDT', 'peggedUSD', 'below', 200, ?, .98, 1, ?)`).run(id, onset, id === 104 ? "backfill" : "live");
     }
     for (const filter of ["", "&stablecoin=usdt-tether&active=true"]) {
       let cursor: string | null = null;
       const ids: number[] = [];
       for (const [id, onset] of [[103, 1_700_000_500], [104, 1_700_000_000], [102, 1_700_000_000], [105, 1_699_999_000]]) {
-        const res = await handleDepegEvents(db, new URL(`https://x/api/depeg-events?limit=1&includeTotal=${includeTotal}${filter}${cursor ? `&cursor=${cursor}` : ""}`));
-        const body = DepegEventsResponseSchema.parse(await readJsonResponse(res, 200));
+        const body = DepegEventsResponseSchema.parse(await readJsonResponse(await call(db, `?limit=1&includeTotal=${includeTotal}${filter}${cursor ? `&cursor=${cursor}` : ""}`), 200));
         expect(body.events.map((event) => event.id)).toEqual([id]);
         expect(body.events[0]?.startedAt).toBe(onset);
         expect(body.methodology?.asOf).toBe(onset);
@@ -381,8 +283,7 @@ describe("handleDepegEvents", () => {
         expect(cursor === null).toBe(id === 105);
       }
       expect(ids).toEqual([103, 104, 102, 105]);
-      const offset = await handleDepegEvents(db, new URL(`https://x/api/depeg-events?limit=1&offset=2&includeTotal=${includeTotal}${filter}`));
-      const offsetBody = DepegEventsResponseSchema.parse(await readJsonResponse(offset, 200));
+      const offsetBody = DepegEventsResponseSchema.parse(await readJsonResponse(await call(db, `?limit=1&offset=2&includeTotal=${includeTotal}${filter}`), 200));
       expect(offsetBody.events[0]?.id).toBe(102);
       expect(offsetBody.total).toBe(4);
     }
@@ -397,25 +298,16 @@ describe("handleDepegEvents", () => {
     const advance = () => {
       if (advanced) return;
       sqlite.exec("BEGIN IMMEDIATE");
-      // Membership is required even for a dangling current pointer.
-      sqlite.prepare(`INSERT OR IGNORE INTO depeg_resolver_incident_event_links
-        (incident_key, event_id, relation, linked_at) VALUES (?, ?, 'observed', 1700002000)`).run(key, nextId);
-      sqlite.prepare(`UPDATE depeg_resolver_incidents SET current_event_id = ?, current_started_at = 1700002000
-        WHERE incident_key = ?`).run(nextId, key);
+      sqlite.prepare("INSERT OR IGNORE INTO depeg_resolver_incident_event_links (incident_key, event_id, relation, linked_at) VALUES (?, ?, 'observed', 1700002000)").run(key, nextId);
+      sqlite.prepare("UPDATE depeg_resolver_incidents SET current_event_id = ?, current_started_at = 1700002000 WHERE incident_key = ?").run(nextId, key);
       sqlite.exec("COMMIT");
       advanced = true;
     };
     const executed: string[] = [];
-    const db = createSqliteD1(sqlite, { onAll: (sql) => {
-      if (sql.includes("pharos:depeg-event-projection:active-incidents")) advance();
-    }, onRun: (sql) => { executed.push(sql); } });
+    const db = createSqliteD1(sqlite, { onAll: (sql) => { if (sql.includes("pharos:depeg-event-projection:active-incidents")) advance(); }, onRun: (sql) => { executed.push(sql); } });
     const batch = db.batch.bind(db);
-    const batchSpy = vi.spyOn(db, "batch").mockImplementation((statements) => {
-      expect(statements).toHaveLength(includeTotal ? 4 : 2);
-      advance();
-      return batch(statements);
-    });
-    const res = await handleDepegEvents(db, new URL(`https://x/api/depeg-events?active=true&includeTotal=${includeTotal}`));
+    const batchSpy = vi.spyOn(db, "batch").mockImplementation((statements) => { expect(statements).toHaveLength(includeTotal ? 4 : 2); advance(); return batch(statements); });
+    const res = await call(db, `?active=true&includeTotal=${includeTotal}`);
     expect(batchSpy).toHaveBeenCalledTimes(1);
     expect(executed.map((sql) => sql.match(/pharos:[\w:-]+/)?.[0])).toEqual([
       "pharos:depeg-event-projection:active-incidents",
@@ -424,253 +316,130 @@ describe("handleDepegEvents", () => {
     ]);
     expect(advanced).toBe(true);
     if (nextId === 999) {
-      expect(await readJsonResponse(res, 503)).toEqual({
-        error: "Canonical incident history unavailable", reason: "incident-projection-dangling-reference",
-      });
+      expect(await readJsonResponse(res, 503)).toEqual({ error: "Canonical incident history unavailable", reason: "incident-projection-dangling-reference" });
       expect(res.headers.get("Cache-Control")).toBe("no-store");
     } else {
       const body = DepegEventsResponseSchema.parse(await readJsonResponse(res, 200));
-      expect(body.events).toEqual([expect.objectContaining({
-        id: 103, startedAt: 1_700_000_000, startPrice: .97, constituentEventCount: 3,
-      })]);
+      expect(body.events).toEqual([expect.objectContaining({ id: 103, startedAt: 1_700_000_000, startPrice: .97, constituentEventCount: 3 })]);
       expect(body.total).toBe(1);
       expect(body.methodology?.asOf).toBe(1_700_000_000);
     }
   });
 
   it("exposes closeReason for terminal depeg rows", async () => {
-    const db = mockEvents([
-      makeDepegRow({
-        ended_at: 1_800_000_000,
-        recovery_price: null,
-        close_reason: "coverage-lost-supply",
-      }),
-    ], 1);
-    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events"));
-    const body = DepegEventsResponseSchema.parse(await res.json());
-    expect(body.events[0]?.closeReason).toBe("coverage-lost-supply");
+    const db = mockEvents([makeDepegRow({ ended_at: 1_800_000_000, recovery_price: null, close_reason: "coverage-lost-supply" })], 1);
+    expect(DepegEventsResponseSchema.parse(await (await call(db)).json()).events[0]?.closeReason).toBe("coverage-lost-supply");
   });
 
   it("maps optional provenance JSON while preserving legacy rows", async () => {
     const db = mockEvents([
-      {
-        ...row,
-        provenance_json: JSON.stringify({
-          sourceKind: "market",
-          replayRunId: "run-1",
-          confidenceTier: "medium",
-          auditVerdict: "confirmed",
-        }),
-      },
+      { ...row, provenance_json: JSON.stringify({ sourceKind: "market", replayRunId: "run-1", confidenceTier: "medium", auditVerdict: "confirmed" }) },
       { ...row, id: 2 },
     ], 2);
-    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events"));
-    const body = (await res.json()) as { events: Array<Record<string, unknown>> };
-    expect(body.events[0]?.provenance).toMatchObject({
-      sourceKind: "market",
-      replayRunId: "run-1",
-      confidenceTier: "medium",
-      auditVerdict: "confirmed",
-    });
+    const body = (await (await call(db)).json()) as { events: Array<Record<string, unknown>> };
+    expect(body.events[0]?.provenance).toMatchObject({ sourceKind: "market", replayRunId: "run-1", confidenceTier: "medium", auditVerdict: "confirmed" });
     expect(body.events[1]?.provenance).toBeNull();
   });
 
   it("returns 200 with empty results when no data", async () => {
-    const emptyDb = mockEvents([], 0);
-    const res = await handleDepegEvents(emptyDb, new URL("https://x/api/depeg-events"));
-    const body = (await readJsonResponse(res, 200)) as { events: unknown[]; total: number };
+    const body = (await readJsonResponse(await call(mockEvents([], 0)), 200)) as { events: unknown[]; total: number };
     expect(body.events).toHaveLength(0);
     expect(body.total).toBe(0);
   });
 
-  registerStablecoinParameterContract({
-    name: "depeg events",
-    path: "/api/depeg-events",
-    invoke: handleDepegEvents,
-    cases: [{ kind: "unknown", stablecoin: "<script>" }],
-  });
+  registerStablecoinParameterContract({ name: "depeg events", path: "/api/depeg-events", invoke: handleDepegEvents, cases: [{ kind: "unknown", stablecoin: "<script>" }] });
 
   it("filters active events", async () => {
     const db = mockEvents([makeDepegRow({ ended_at: null })], 1);
-
-    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?active=true"));
-
-    const body = (await readJsonResponse(res, 200)) as { events: unknown[]; total: number };
+    const body = (await readJsonResponse(await call(db, "?active=true"), 200)) as { events: unknown[]; total: number };
     expect(body.events).toHaveLength(1);
     expect(body.total).toBe(1);
-    const dataQuery = db
-      .getHistory()
-      .find((entry) => entry.sql.includes("pharos:depeg-events:page"));
-    expect(dataQuery?.sql).toContain("ended_at IS NULL");
+    expect(db.getHistory().find((entry) => entry.sql.includes("pharos:depeg-events:page"))?.sql).toContain("ended_at IS NULL");
   });
 
   it("rejects malformed active booleans instead of silently treating them as false", async () => {
-    const res = await handleDepegEvents(mockD1([]), new URL("https://x/api/depeg-events?active=yes"));
+    const res = await call(mockD1([]), "?active=yes");
     expect(res.status).toBe(400);
     await expect(res.json()).resolves.toEqual({ error: "Invalid active: must be true or false" });
   });
 
   it("counts a superseded alias's linked rows in the projected public incident", async () => {
-    const { sqlite, db } = fixtures.open();
-    const canonicalKey = `ddr2:${"a".repeat(32)}`;
-    const aliasKey = `ddr2:${"b".repeat(32)}`;
-    const insertEvent = sqlite.prepare(`INSERT INTO depeg_events
-      (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at,
-       start_price, peg_reference, source)
-      VALUES (?, 'apxusd-apyx', 'apxUSD', 'peggedUSD', 'below', 635, ?, ?, ?, 1, 'live')`);
+    const { sqlite, db } = fixtures.open(), canonicalKey = `ddr2:${"a".repeat(32)}`, aliasKey = `ddr2:${"b".repeat(32)}`;
+    const insertEvent = sqlite.prepare("INSERT INTO depeg_events (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peg_reference, source) VALUES (?, 'apxusd-apyx', 'apxUSD', 'peggedUSD', 'below', 635, ?, ?, ?, 1, 'live')");
     insertEvent.run(90089, 1_780_671_044, 1_781_624_981, 0.9365);
     insertEvent.run(90203, 1_781_632_159, null, 0.94);
-    const insertLink = sqlite.prepare(`INSERT INTO depeg_resolver_incident_event_links
-      (incident_key, event_id, relation, linked_at) VALUES (?, ?, 'observed', 1781632160)`);
-    insertLink.run(canonicalKey, 90089);
-    insertLink.run(aliasKey, 90203);
-    const insertIncident = sqlite.prepare(`INSERT INTO depeg_resolver_incidents
-      (incident_key, stablecoin_id, peg_currency, direction, first_event_id, current_event_id,
-       first_started_at, current_started_at, first_observed_peak_bucket_bps, incident_state,
-       superseded_by_incident_key, source_fingerprint, created_at, updated_at)
-      VALUES (?, 'apxusd-apyx', 'USD', 'below', ?, ?, ?, ?, 635, ?, ?, ?, 1781632160, 1781632160)`);
-    insertIncident.run(canonicalKey, 90089, 90089, 1_780_671_044, 1_780_671_044, "active", null, "a".repeat(64));
-    // Migration 0162's shape: the sealed duplicate keeps its own tail crossing.
-    insertIncident.run(aliasKey, 90203, 90203, 1_781_632_159, 1_781_632_159, "superseded", canonicalKey, "b".repeat(64));
-
-    const body = await readJsonResponse(
-      await handleDepegEvents(db, new URL("https://x/api/depeg-events?stablecoin=apxusd-apyx&includeTotal=false")),
-      200,
-    ) as { events: Array<Record<string, unknown>> };
-
-    // One public row groups both raw threshold crossings, including the row it publishes.
-    expect(body.events).toEqual([expect.objectContaining({
-      id: 90203, startedAt: 1_780_671_044, constituentEventCount: 2,
-    })]);
+    const insertLink = sqlite.prepare(LINK_SQL);
+    insertLink.run(canonicalKey, 90089, 1781632160);
+    insertLink.run(aliasKey, 90203, 1781632160);
+    const insertIncident = sqlite.prepare(ALIAS_INC_SQL);
+    insertIncident.run(canonicalKey, "apxusd-apyx", "USD", "below", 90089, 90089, 1_780_671_044, 1_780_671_044, 635, "active", null, "a".repeat(64), 1781632160, 1781632160);
+    insertIncident.run(aliasKey, "apxusd-apyx", "USD", "below", 90203, 90203, 1_781_632_159, 1_781_632_159, 635, "superseded", canonicalKey, "b".repeat(64), 1781632160, 1781632160);
+    const body = await readJsonResponse(await call(db, "?stablecoin=apxusd-apyx&includeTotal=false"), 200) as { events: Array<Record<string, unknown>> };
+    expect(body.events).toEqual([expect.objectContaining({ id: 90203, startedAt: 1_780_671_044, constituentEventCount: 2 })]);
   });
 
   it("excludes a superseded alias's non-current links from the public incident page", async () => {
-    const { sqlite, db } = fixtures.open();
-    const canonicalKey = `ddr2:${"a".repeat(32)}`;
-    const aliasKey = `ddr2:${"b".repeat(32)}`;
-    const insertEvent = sqlite.prepare(`INSERT INTO depeg_events
-      (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at,
-       start_price, peak_price, peg_reference, source)
-      VALUES (?, 'apxusd-apyx', 'apxUSD', 'peggedUSD', 'below', ?, ?, ?, ?, ?, 1, 'live')`);
+    const { sqlite, db } = fixtures.open(), canonicalKey = `ddr2:${"a".repeat(32)}`, aliasKey = `ddr2:${"b".repeat(32)}`;
+    const insertEvent = sqlite.prepare("INSERT INTO depeg_events (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, peg_reference, source) VALUES (?, 'apxusd-apyx', 'apxUSD', 'peggedUSD', 'below', ?, ?, ?, ?, ?, 1, 'live')");
     insertEvent.run(91001, 635, 1_780_671_044, 1_781_000_000, 0.9365, 0.9201);
     insertEvent.run(91002, 612, 1_781_000_001, null, 0.9391, 0.9385);
     insertEvent.run(91003, 540, 1_782_000_000, 1_782_500_000, 0.9458, 0.9461);
     insertEvent.run(91004, 588, 1_782_500_001, null, 0.9412, 0.9408);
-    const insertLink = sqlite.prepare(`INSERT INTO depeg_resolver_incident_event_links
-      (incident_key, event_id, relation, linked_at) VALUES (?, ?, 'observed', 1782600000)`);
-    for (const eventId of [91001, 91002]) insertLink.run(canonicalKey, eventId);
-    for (const eventId of [91003, 91004]) insertLink.run(aliasKey, eventId);
-    const insertIncident = sqlite.prepare(`INSERT INTO depeg_resolver_incidents
-      (incident_key, stablecoin_id, peg_currency, direction, first_event_id, current_event_id,
-       first_started_at, current_started_at, first_observed_peak_bucket_bps, incident_state,
-       superseded_by_incident_key, source_fingerprint, created_at, updated_at)
-      VALUES (?, 'apxusd-apyx', 'USD', 'below', ?, ?, ?, ?, ?, ?, ?, ?, 1782600000, 1782600000)`);
-    insertIncident.run(canonicalKey, 91001, 91002, 1_780_671_044, 1_781_000_001, 635, "active", null, "a".repeat(64));
-    insertIncident.run(aliasKey, 91003, 91004, 1_782_000_000, 1_782_500_001, 540, "superseded", canonicalKey, "b".repeat(64));
-
-    const body = await readJsonResponse(
-      await handleDepegEvents(db, new URL("https://x/api/depeg-events?stablecoin=apxusd-apyx")),
-      200,
-    ) as { total: number; events: Array<{ id: number; startedAt: number; constituentEventCount: number }> };
-
-    // One logical incident: the alias's published row projects to the canonical
-    // onset and counts every linked crossing, while its non-current link 91003
-    // must not leak as a standalone incident.
-    expect({
-      total: body.total,
-      events: body.events.map(({ id, startedAt, constituentEventCount }) => ({ id, startedAt, constituentEventCount })),
-    }).toEqual({ total: 1, events: [{ id: 91004, startedAt: 1_780_671_044, constituentEventCount: 4 }] });
+    const insertLink = sqlite.prepare(LINK_SQL);
+    for (const eventId of [91001, 91002]) insertLink.run(canonicalKey, eventId, 1782600000);
+    for (const eventId of [91003, 91004]) insertLink.run(aliasKey, eventId, 1782600000);
+    const insertIncident = sqlite.prepare(ALIAS_INC_SQL);
+    insertIncident.run(canonicalKey, "apxusd-apyx", "USD", "below", 91001, 91002, 1_780_671_044, 1_781_000_001, 635, "active", null, "a".repeat(64), 1782600000, 1782600000);
+    insertIncident.run(aliasKey, "apxusd-apyx", "USD", "below", 91003, 91004, 1_782_000_000, 1_782_500_001, 540, "superseded", canonicalKey, "b".repeat(64), 1782600000, 1782600000);
+    const body = await readJsonResponse(await call(db, "?stablecoin=apxusd-apyx"), 200) as { total: number; events: Array<{ id: number; startedAt: number; constituentEventCount: number }> };
+    expect({ total: body.total, events: body.events.map(({ id, startedAt, constituentEventCount }) => ({ id, startedAt, constituentEventCount })) })
+      .toEqual({ total: 1, events: [{ id: 91004, startedAt: 1_780_671_044, constituentEventCount: 4 }] });
   });
 
   it("collapses every link of multiple superseded aliases into one canonical public incident", async () => {
-    const { sqlite, db } = fixtures.open();
-    const canonicalKey = `ddr2:${"a".repeat(32)}`;
-    const aliasKeys = [`ddr2:${"b".repeat(32)}`, `ddr2:${"c".repeat(32)}`];
-    const insertEvent = sqlite.prepare(`INSERT INTO depeg_events
-      (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at,
-       start_price, peg_reference, source)
-      VALUES (?, 'apxusd-apyx', 'apxUSD', 'peggedUSD', 'below', 635, ?, ?, ?, 1, 'live')`);
+    const { sqlite, db } = fixtures.open(), canonicalKey = `ddr2:${"a".repeat(32)}`, aliasKeys = [`ddr2:${"b".repeat(32)}`, `ddr2:${"c".repeat(32)}`];
+    const insertEvent = sqlite.prepare("INSERT INTO depeg_events (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peg_reference, source) VALUES (?, 'apxusd-apyx', 'apxUSD', 'peggedUSD', 'below', 635, ?, ?, ?, 1, 'live')");
     insertEvent.run(101, 1_780_671_044, 1_781_000_000, 0.9365);
     insertEvent.run(102, 1_781_000_001, null, 0.9391);
     insertEvent.run(201, 1_782_000_000, 1_782_500_000, 0.9458);
     insertEvent.run(301, 1_782_600_000, null, 0.9412);
-    const insertLink = sqlite.prepare(`INSERT INTO depeg_resolver_incident_event_links
-      (incident_key, event_id, relation, linked_at) VALUES (?, ?, 'observed', 1782600000)`);
-    for (const eventId of [101, 102]) insertLink.run(canonicalKey, eventId);
-    insertLink.run(aliasKeys[0], 201);
-    insertLink.run(aliasKeys[1], 301);
-    const insertIncident = sqlite.prepare(`INSERT INTO depeg_resolver_incidents
-      (incident_key, stablecoin_id, peg_currency, direction, first_event_id, current_event_id,
-       first_started_at, current_started_at, first_observed_peak_bucket_bps, incident_state,
-       superseded_by_incident_key, source_fingerprint, created_at, updated_at)
-      VALUES (?, 'apxusd-apyx', 'USD', 'below', ?, ?, ?, ?, 635, ?, ?, ?, 1782600000, 1782600000)`);
-    insertIncident.run(canonicalKey, 101, 102, 1_780_671_044, 1_781_000_001, "active", null, "a".repeat(64));
-    insertIncident.run(aliasKeys[0], 201, 201, 1_782_000_000, 1_782_000_000, "superseded", canonicalKey, "b".repeat(64));
-    insertIncident.run(aliasKeys[1], 301, 301, 1_782_600_000, 1_782_600_000, "superseded", canonicalKey, "c".repeat(64));
-
-    const body = await readJsonResponse(
-      await handleDepegEvents(db, new URL("https://x/api/depeg-events?stablecoin=apxusd-apyx")),
-      200,
-    ) as { total: number; events: Array<{ id: number; startedAt: number; constituentEventCount: number }> };
-
-    // Two superseded aliases are one logical incident: the effective tail is
-    // published once and counts all four linked crossings, including the other alias's.
-    expect({
-      total: body.total,
-      events: body.events.map(({ id, startedAt, constituentEventCount }) => ({ id, startedAt, constituentEventCount })),
-    }).toEqual({ total: 1, events: [{ id: 301, startedAt: 1_780_671_044, constituentEventCount: 4 }] });
+    const insertLink = sqlite.prepare(LINK_SQL);
+    for (const eventId of [101, 102]) insertLink.run(canonicalKey, eventId, 1782600000);
+    insertLink.run(aliasKeys[0], 201, 1782600000);
+    insertLink.run(aliasKeys[1], 301, 1782600000);
+    const insertIncident = sqlite.prepare(ALIAS_INC_SQL);
+    insertIncident.run(canonicalKey, "apxusd-apyx", "USD", "below", 101, 102, 1_780_671_044, 1_781_000_001, 635, "active", null, "a".repeat(64), 1782600000, 1782600000);
+    insertIncident.run(aliasKeys[0], "apxusd-apyx", "USD", "below", 201, 201, 1_782_000_000, 1_782_000_000, 635, "superseded", canonicalKey, "b".repeat(64), 1782600000, 1782600000);
+    insertIncident.run(aliasKeys[1], "apxusd-apyx", "USD", "below", 301, 301, 1_782_600_000, 1_782_600_000, 635, "superseded", canonicalKey, "c".repeat(64), 1782600000, 1782600000);
+    const body = await readJsonResponse(await call(db, "?stablecoin=apxusd-apyx"), 200) as { total: number; events: Array<{ id: number; startedAt: number; constituentEventCount: number }> };
+    expect({ total: body.total, events: body.events.map(({ id, startedAt, constituentEventCount }) => ({ id, startedAt, constituentEventCount })) })
+      .toEqual({ total: 1, events: [{ id: 301, startedAt: 1_780_671_044, constituentEventCount: 4 }] });
   });
 
   it.each([960, -960])("keeps the newer effective row and publishes an older alias's %s bps peak", async (peak) => {
-    const { sqlite, db } = fixtures.open();
-    const direction = peak < 0 ? "below" : "above";
-    const currentPeak = Math.sign(peak) * 437;
-    const peakPrice = peak < 0 ? 0.60568 : 0.73432;
-    const onsetPeak = Math.sign(peak) * 400;
-    const canonicalKey = `ddr2:${"a".repeat(32)}`;
-    const aliasKey = `ddr2:${"b".repeat(32)}`;
-    const insertEvent = sqlite.prepare(`INSERT INTO depeg_events
-      (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at,
-       start_price, peg_reference, source)
-      VALUES (?, 'audd-novatti', 'AUDD', 'peggedAUD', ?, ?, ?, ?, ?, 0.67, 'live')`);
+    const { sqlite, db } = fixtures.open(), direction = peak < 0 ? "below" : "above";
+    const currentPeak = Math.sign(peak) * 437, peakPrice = peak < 0 ? 0.60568 : 0.73432, onsetPeak = Math.sign(peak) * 400;
+    const canonicalKey = `ddr2:${"a".repeat(32)}`, aliasKey = `ddr2:${"b".repeat(32)}`;
+    const insertEvent = sqlite.prepare("INSERT INTO depeg_events (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peg_reference, source) VALUES (?, 'audd-novatti', 'AUDD', 'peggedAUD', ?, ?, ?, ?, ?, 0.67, 'live')");
     insertEvent.run(101, direction, onsetPeak, 1_780_671_044, 1_781_000_000, 0.65);
     insertEvent.run(103, direction, Math.abs(peak), 1_782_000_000, 1_782_500_000, 0.65);
     insertEvent.run(104, direction, currentPeak, 1_783_000_000, null, 0.65);
-    const insertLink = sqlite.prepare(`INSERT INTO depeg_resolver_incident_event_links
-      (incident_key, event_id, relation, linked_at) VALUES (?, ?, 'observed', 1783000000)`);
-    for (const eventId of [101, 104]) insertLink.run(canonicalKey, eventId);
-    insertLink.run(aliasKey, 103);
-    const insertIncident = sqlite.prepare(`INSERT INTO depeg_resolver_incidents
-      (incident_key, stablecoin_id, peg_currency, direction, first_event_id, current_event_id,
-       first_started_at, current_started_at, first_observed_peak_bucket_bps, incident_state,
-       superseded_by_incident_key, source_fingerprint, created_at, updated_at)
-      VALUES (?, 'audd-novatti', 'AUD', ?, ?, ?, ?, ?, 400, ?, ?, ?, 1783000000, 1783000000)`);
-    insertIncident.run(canonicalKey, direction, 101, 104, 1_780_671_044, 1_783_000_000, "active", null, "a".repeat(64));
-    insertIncident.run(aliasKey, direction, 103, 103, 1_782_000_000, 1_782_000_000, "superseded", canonicalKey, "b".repeat(64));
-    sqlite.prepare(`UPDATE depeg_events SET peak_price = ?, peg_reference = 0,
-      peak_peg_reference = 0.67, peak_quote_domain = 'usd' WHERE id = 103`).run(peakPrice);
-
-    const body = DepegEventsResponseSchema.parse(await readJsonResponse(
-      await handleDepegEvents(db, new URL("https://x/api/depeg-events?stablecoin=audd-novatti&active=true")),
-      200,
-    ));
-
-    // The effective current fragment is the later one, so the open canonical
-    // tail stays published and the superseded alias tail is absorbed into it.
-    expect({
-      total: body.total,
-      events: body.events,
-    }).toEqual({ total: 1, events: [expect.objectContaining({
-      id: 104, startedAt: 1_780_671_044, endedAt: null, constituentEventCount: 3,
-      peakDeviationBps: peak, peakPrice, peakPegReference: 0.67, peakQuoteDomain: "usd",
-      onsetFragmentPeakBps: onsetPeak, currentFragmentPeakBps: currentPeak,
+    const insertLink = sqlite.prepare(LINK_SQL);
+    for (const eventId of [101, 104]) insertLink.run(canonicalKey, eventId, 1783000000);
+    insertLink.run(aliasKey, 103, 1783000000);
+    const insertIncident = sqlite.prepare(ALIAS_INC_SQL);
+    insertIncident.run(canonicalKey, "audd-novatti", "AUD", direction, 101, 104, 1_780_671_044, 1_783_000_000, 400, "active", null, "a".repeat(64), 1783000000, 1783000000);
+    insertIncident.run(aliasKey, "audd-novatti", "AUD", direction, 103, 103, 1_782_000_000, 1_782_000_000, 400, "superseded", canonicalKey, "b".repeat(64), 1783000000, 1783000000);
+    sqlite.prepare("UPDATE depeg_events SET peak_price = ?, peg_reference = 0, peak_peg_reference = 0.67, peak_quote_domain = 'usd' WHERE id = 103").run(peakPrice);
+    const body = DepegEventsResponseSchema.parse(await readJsonResponse(await call(db, "?stablecoin=audd-novatti&active=true"), 200));
+    expect({ total: body.total, events: body.events }).toEqual({ total: 1, events: [expect.objectContaining({
+      id: 104, startedAt: 1_780_671_044, endedAt: null, constituentEventCount: 3, peakDeviationBps: peak,
+      peakPrice, peakPegReference: 0.67, peakQuoteDomain: "usd", onsetFragmentPeakBps: onsetPeak, currentFragmentPeakBps: currentPeak,
     })] });
     sqlite.exec(`UPDATE depeg_events SET peak_price = -1, peak_peg_reference = 1, peak_quote_domain = 'usd' WHERE id = 103;
       INSERT INTO depeg_events (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peg_reference)
       VALUES (105, 'usdt-tether', 'USDT', 'peggedUSD', 'below', -300, 1783000000, 0.97, 1)`);
-    const readLedger = async () => DepegEventsResponseSchema.parse(await readJsonResponse(
-      await handleDepegEvents(db, new URL("https://x/api/depeg-events")), 200,
-    ));
+    const readLedger = async () => DepegEventsResponseSchema.parse(await readJsonResponse(await call(db), 200));
     const invalidQuote = await readLedger();
     expect(invalidQuote.events.map(({ id }) => id)).toEqual([105, 104]);
     expect(invalidQuote.events[1]).toMatchObject({ peakDeviationBps: peak, peakPrice: null });
@@ -858,42 +627,17 @@ describe("handleDepegEvents", () => {
   });
 
   it.each([0, 0.9893])("projects observed first-event price %s without replacing zero", async (startPrice) => {
-    const currentRow = makeDepegRow({
-      id: 90089,
-      stablecoin_id: "apxusd-apyx",
-      started_at: 1_780_671_044,
-      start_price: 0.9365,
-    });
+    const currentRow = makeDepegRow({ id: 90089, stablecoin_id: "apxusd-apyx", started_at: 1_780_671_044, start_price: 0.9365 });
     const db = mockD1([
-      {
-        match: "FROM depeg_resolver_incidents incidents",
-        matchBinds: ["apxusd-apyx"],
-        rows: [
-          {
-            current_event_id: 90089,
-            first_started_at: 1_780_437_028,
-            first_start_price: startPrice,
-            first_peg_reference: 1,
-            constituent_event_count: 4,
-            references_valid: 1,
-            incident_peak_json: null,
-          },
-        ],
-      },
+      { match: "FROM depeg_resolver_incidents incidents", matchBinds: ["apxusd-apyx"], rows: [{
+        current_event_id: 90089, first_started_at: 1_780_437_028, first_start_price: startPrice,
+        first_peg_reference: 1, constituent_event_count: 4, references_valid: 1, incident_peak_json: null,
+      }] },
       { match: "pharos:depeg-events:count", rows: [{ total: 1 }] },
       { match: "FROM depeg_events_with_provenance", rows: [currentRow] },
     ]) as MockD1Database;
-
-    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?stablecoin=apxusd-apyx"));
-
-    const body = (await readJsonResponse(res, 200)) as { events: Array<Record<string, unknown>> };
-    expect(body.events[0]).toMatchObject({
-      id: 90089,
-      startedAt: 1_780_437_028,
-      startPrice,
-      pegReference: 1,
-      constituentEventCount: 4,
-    });
+    const body = (await readJsonResponse(await handleDepegEvents(db, new URL("https://x/api/depeg-events?stablecoin=apxusd-apyx")), 200)) as { events: Array<Record<string, unknown>> };
+    expect(body.events[0]).toMatchObject({ id: 90089, startedAt: 1_780_437_028, startPrice, pegReference: 1, constituentEventCount: 4 });
   });
 
   it("uses latest successful sync timestamp for freshness headers", async () => {
@@ -905,12 +649,22 @@ describe("handleDepegEvents", () => {
     expect(res.headers.get("X-Data-Age")).toBe("45");
   });
 
-  it("rejects oversized limits instead of coercing them", async () => {
-    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }]);
-    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?limit=1001"));
-    expect(res.status).toBe(400);
-    await expect(res.json()).resolves.toEqual({ error: "Invalid limit: must be between 1 and 1000" });
-    expect(db.getHistory()).toEqual([]);
+  it("rejects oversized limits instead of coercing them and allows limit=5000 only on site-api", async () => {
+    for (const lane of [undefined, "public-api"] as const) {
+      const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }]);
+      const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?limit=1001"), lane);
+      expect(res.status).toBe(400);
+      await expect(res.json()).resolves.toEqual({ error: "Invalid limit: must be between 1 and 1000" });
+      expect(db.getHistory()).toEqual([]);
+    }
+    const okDb = mockEvents([row], 1);
+    expect((await handleDepegEvents(okDb, new URL("https://x/api/depeg-events?limit=5000"), "site-api")).status).toBe(200);
+    const badSiteDb = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }]);
+    const over = await handleDepegEvents(badSiteDb, new URL("https://x/api/depeg-events?limit=5001"), "site-api");
+    expect(over.status).toBe(400);
+    await expect(over.json()).resolves.toEqual({ error: "Invalid limit: must be between 1 and 5000" });
+    expect((await handleDepegEvents(badSiteDb, new URL("https://x/api/depeg-events?limit=5000&ledgerGeneration=latest"), "site-api")).status).toBe(400);
+    expect(badSiteDb.getHistory()).toEqual([]);
   });
 
   it("rejects offsets above the endpoint cap", async () => {
@@ -922,33 +676,18 @@ describe("handleDepegEvents", () => {
   });
 
   it.each([
-    "active=yes",
-    "includePending=yes",
-    "includeTotal=yes",
-    "limit=1001",
-    "limit=abc",
-    "offset=50001",
-    "offset=-1",
-    "cursor=invalid",
+    "active=yes", "includePending=yes", "includeTotal=yes", "limit=1001", "limit=abc", "offset=50001", "offset=-1", "cursor=invalid",
     `cursor=${btoa(JSON.stringify({ v: 1, values: [1_700_000_000, 1] }))}`,
     `cursor=${btoa(JSON.stringify({ v: 2, values: [1_700_000_000, 1] }))}&offset=1`,
   ])("rejects invalid query %s before reading an unavailable incident projection", async (query) => {
-    const db = mockD1([{
-      match: "pharos:depeg-event-projection:active-incidents",
-      rows: [],
-      throwError: new Error("projection read timed out"),
-    }]);
-    const res = await handleDepegEvents(db, new URL(`https://x/api/depeg-events?${query}`));
-    expect(res.status).toBe(400);
+    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [], throwError: new Error("projection read timed out") }]);
+    expect((await handleDepegEvents(db, new URL(`https://x/api/depeg-events?${query}`))).status).toBe(400);
     expect(db.getHistory()).toEqual([]);
   });
 
   it("can skip the exact total count for cursor-style callers", async () => {
     const db = mockEvents([row], null);
-
-    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?includeTotal=false"));
-
-    const body = (await readJsonResponse(res, 200)) as { events: unknown[]; total: number; totalExact: boolean };
+    const body = (await readJsonResponse(await handleDepegEvents(db, new URL("https://x/api/depeg-events?includeTotal=false")), 200)) as { events: unknown[]; total: number; totalExact: boolean };
     expect(body.events).toHaveLength(1);
     expect(body.total).toBe(1);
     expect(body.totalExact).toBe(false);
@@ -957,13 +696,7 @@ describe("handleDepegEvents", () => {
 
   it("does not query or emit derived incident counts", async () => {
     const db = mockEvents([row], null);
-
-    const res = await handleDepegEvents(
-      db,
-      new URL("https://x/api/depeg-events?stablecoin=usdt-tether&includeTotal=false"),
-    );
-
-    const body = (await readJsonResponse(res, 200)) as Record<string, unknown>;
+    const body = (await readJsonResponse(await handleDepegEvents(db, new URL("https://x/api/depeg-events?stablecoin=usdt-tether&includeTotal=false")), 200)) as Record<string, unknown>;
     expect(body).not.toHaveProperty("counts");
     expect(db.getHistory().some((entry) => entry.sql.includes("threshold-crossing-count"))).toBe(false);
   });

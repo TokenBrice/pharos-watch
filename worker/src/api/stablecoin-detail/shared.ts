@@ -150,14 +150,42 @@ export function applyWrapperDetailHistoryFreshness(
   return true;
 }
 
+export function createFreshCacheHitHeaders(ageSeconds: number, updatedAt: number): Headers {
+  const headers = new Headers({
+    "Content-Type": "application/json",
+    "Cache-Control": buildPerCoinCacheControl(CACHE_TTL_SECONDS - ageSeconds),
+  });
+  headers.set("X-Data-Age", String(Math.max(0, ageSeconds)));
+  headers.set("X-Data-Updated-At", String(updatedAt));
+  return headers;
+}
+
 export function createFreshCacheHitResponse(cachedValue: string, ageSeconds: number, updatedAt: number): Response {
-  const response = createJsonResponse(
-    cachedValue,
-    buildPerCoinCacheControl(CACHE_TTL_SECONDS - ageSeconds),
-  );
-  response.headers.set("X-Data-Age", String(Math.max(0, ageSeconds)));
-  response.headers.set("X-Data-Updated-At", String(updatedAt));
-  return response;
+  return new Response(cachedValue, { headers: createFreshCacheHitHeaders(ageSeconds, updatedAt) });
+}
+
+export function buildFallbackDetailFromTokens(
+  tokens: DetailTokens,
+  observedAt: number | null,
+  body?: Record<string, unknown>,
+): { detail: Record<string, unknown>; headers: Headers } {
+  const now = Math.floor(Date.now() / 1000);
+  const assessment = assessFreshnessTimestamp(now, observedAt);
+  const meta = assessment.reason == null && observedAt != null
+    ? detailHistoryFreshness(observedAt, now)
+    : { updatedAt: null, ageSeconds: null, assessedAt: now, status: "unknown" as const,
+        freshBudgetSec: DETAIL_HISTORY_MAX_AGE_SECONDS, degradedBudgetSec: DETAIL_HISTORY_MAX_AGE_SECONDS,
+        reason: assessment.reason };
+  const headers = new Headers({
+    "Content-Type": "application/json",
+    "Cache-Control": CACHE_PROFILES.noStore,
+    "X-Data-Updated-At": meta.updatedAt == null ? "unknown" : String(meta.updatedAt),
+    "X-Data-Age": meta.ageSeconds == null ? "unavailable" : String(meta.ageSeconds),
+    "X-Data-Freshness": meta.status,
+    "X-Data-Freshness-Reason": meta.reason ?? DETAIL_HISTORY_FALLBACK_REASON,
+    Warning: '110 - "Stablecoin detail history is retained fallback data"',
+  });
+  return { detail: { ...body, tokens, _meta: meta }, headers };
 }
 
 export function createStaleCacheHitResponse(cachedValue: string, ageSeconds: number, updatedAt: number): Response {
@@ -312,20 +340,8 @@ export function createDetailResponseHelpers(config: {
     observedAt: number | null,
     body?: Record<string, unknown>,
   ): Response => {
-    const now = Math.floor(Date.now() / 1000);
-    const assessment = assessFreshnessTimestamp(now, observedAt);
-    const meta = assessment.reason == null && observedAt != null
-      ? detailHistoryFreshness(observedAt, now)
-      : { updatedAt: null, ageSeconds: null, assessedAt: now, status: "unknown" as const,
-          freshBudgetSec: DETAIL_HISTORY_MAX_AGE_SECONDS, degradedBudgetSec: DETAIL_HISTORY_MAX_AGE_SECONDS,
-          reason: assessment.reason };
-    const response = createJsonResponse(JSON.stringify({ ...body, tokens, _meta: meta }), CACHE_PROFILES.noStore);
-    response.headers.set("X-Data-Updated-At", meta.updatedAt == null ? "unknown" : String(meta.updatedAt));
-    response.headers.set("X-Data-Age", meta.ageSeconds == null ? "unavailable" : String(meta.ageSeconds));
-    response.headers.set("X-Data-Freshness", meta.status);
-    response.headers.set("X-Data-Freshness-Reason", meta.reason ?? DETAIL_HISTORY_FALLBACK_REASON);
-    response.headers.set("Warning", '110 - "Stablecoin detail history is retained fallback data"');
-    return response;
+    const { detail, headers } = buildFallbackDetailFromTokens(tokens, observedAt, body);
+    return new Response(JSON.stringify(detail), { headers });
   };
 
   const createResponseFromResolvedTokens = (
@@ -405,7 +421,7 @@ export function createDetailResponseHelpers(config: {
 }
 
 /** Fallback: build tokens array from D1 supply_history when external APIs have no data. */
-async function fetchSupplyHistoryFallback(
+export async function fetchSupplyHistoryFallback(
   db: D1Database,
   stablecoinId: string,
   pegType: string,

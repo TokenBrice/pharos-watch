@@ -276,7 +276,11 @@ async function verifyLedgerPage(db: D1Database, response: Response, generation: 
   } }, { headers: Object.fromEntries(headers.entries()) });
 }
 
-export const handleDepegEvents = async (db: D1Database, url: URL): Promise<Response> => {
+export const handleDepegEvents = async (
+  db: D1Database,
+  url: URL,
+  requestLane: "public-api" | "site-api" | null = null,
+): Promise<Response> => {
     const params = url.searchParams;
     const stablecoin = params.get("stablecoin");
     const active = parseBooleanParam(params.get("active"), "active", false);
@@ -287,7 +291,12 @@ export const handleDepegEvents = async (db: D1Database, url: URL): Promise<Respo
     if (includePending instanceof Response) {
       return includePending;
     }
-    const pagination = { defaultLimit: 100, minLimit: 1, maxLimit: 1000, maxOffset: 50_000 };
+    const pagination = {
+      defaultLimit: 100,
+      minLimit: 1,
+      maxLimit: requestLane === "site-api" ? 5000 : 1000,
+      maxOffset: 50_000,
+    };
     const cursor = {
       version: 2,
       columns: [

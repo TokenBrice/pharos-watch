@@ -11,38 +11,66 @@ import { hasUsableCurrentPrice } from "../../lib/current-peg-observations";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { applyWrapperDetailHistoryFreshness, createWrapperDetailUnavailableResponse, hasCurrentCommodityHistory } from "./shared";
 
-/** Enrich the response only; historical detail cache generations stay provider-owned. */
-export async function overlayCanonicalDetail(
+interface OverlayCanonicalDetailInput {
+  detail: Record<string, unknown>;
+  status?: number;
+  statusText?: string;
+  headers: Headers;
+}
+
+interface OverlayCanonicalDetailResult {
+  ok: boolean;
+  status: number;
+  statusText: string;
+  headers: Headers;
+  detail: Record<string, unknown>;
+  unavailableResponse?: Response;
+  mutated: boolean;
+}
+
+async function applyCanonicalDetailOverlay(
   db: D1Database,
   stablecoinId: string,
-  response: Response,
+  input: OverlayCanonicalDetailInput,
   publication?: StablecoinsCacheLoadResult,
-): Promise<Response> {
-  const now = Math.floor(Date.now() / 1000);
+  now = Math.floor(Date.now() / 1000),
+): Promise<OverlayCanonicalDetailResult> {
   const wrapper = isKinesisWrapperSupplyCutoverActive(stablecoinId, now);
-  if (!response.ok && !(wrapper && response.status === 503)) return response;
+  let detail = input.detail;
+  let status = input.status ?? 200;
+  let statusText = input.statusText ?? "";
+  let headers = new Headers(input.headers);
+  let unavailableResponse: Response | undefined;
+  let mutated = false;
+  const currentResult = (): OverlayCanonicalDetailResult => ({
+    ok: status >= 200 && status < 300,
+    status,
+    statusText,
+    headers,
+    detail,
+    unavailableResponse,
+    mutated,
+  });
 
   try {
-    let detail = response.ok ? await response.clone().json() as Record<string, unknown> | null : { tokens: [] };
-    if (!detail || typeof detail !== "object" || Array.isArray(detail)) return response;
     const currentHistory = hasCurrentCommodityHistory(stablecoinId, detail);
     let hasWrapperHistory = false;
     if (!currentHistory || wrapper) {
-      const headers = new Headers(response.headers);
       headers.delete("Content-Length");
       hasWrapperHistory = wrapper && currentHistory && applyWrapperDetailHistoryFreshness(detail, headers, now);
       if (wrapper && !hasWrapperHistory) {
         detail = { tokens: [] };
-        response = createWrapperDetailUnavailableResponse();
-      } else {
-        if (!currentHistory) {
-          detail = { tokens: [] };
-          headers.delete("X-Data-Updated-At");
-          headers.delete("X-Data-Age");
-          headers.set("Cache-Control", "no-store");
-        }
-        response = new Response(JSON.stringify(detail), { status: response.status, statusText: response.statusText, headers });
+        unavailableResponse = createWrapperDetailUnavailableResponse();
+        status = unavailableResponse.status;
+        statusText = unavailableResponse.statusText;
+        headers = new Headers(unavailableResponse.headers);
+      } else if (!currentHistory) {
+        detail = { tokens: [] };
+        headers.delete("X-Data-Updated-At");
+        headers.delete("X-Data-Age");
+        headers.set("Cache-Control", "no-store");
       }
+      mutated = true;
     }
     // Only the admitted publication can set canonical checkpoints and provenance.
     if ("currentSupplyRestored" in detail || "currentSupplyUnavailableReason" in detail || "currentSupplyExcludedChains" in detail
@@ -60,35 +88,32 @@ export async function overlayCanonicalDetail(
       delete detail.currentCirculatingPrevWeekUSD;
       delete detail.currentCirculatingPrevMonthUSD;
       delete detail.supplyChangeBaselines;
-      const headers = new Headers(response.headers);
       headers.delete("Content-Length");
-      response = new Response(JSON.stringify(detail), { status: response.status, statusText: response.statusText, headers });
+      mutated = true;
     }
     if (stablecoinId === LEGACY_SOLOMON_USDV_ID) {
       delete detail.price;
       delete detail.gecko_id;
       delete detail.geckoId;
-      const headers = new Headers(response.headers);
       headers.delete("Content-Length");
-      response = new Response(JSON.stringify(detail), { status: response.status, statusText: response.statusText, headers });
+      mutated = true;
     }
-    if (response.ok && !isObservedPrice({
+    if (status >= 200 && status < 300 && !isObservedPrice({
       priceSource: typeof detail.priceSource === "string" ? detail.priceSource : null,
       priceObservedAtMode: typeof detail.priceObservedAtMode === "string" ? detail.priceObservedAtMode : null,
     })) {
       detail.price = null;
       detail.priceConfidence = null;
       detail.priceObservedAt = null;
-      const headers = new Headers(response.headers);
       headers.delete("Content-Length");
-      response = new Response(JSON.stringify(detail), { status: response.status, statusText: response.statusText, headers });
+      mutated = true;
     }
     // Read the publication, not price_cache: a last-good replay could resurrect
     // a quote that the current pricing pipeline deliberately withheld.
     const canonical = publication ?? await loadStablecoinsCache(db, { mode: "strict", contract: "published" });
-    if (canonical.kind !== "ok") return response;
+    if (canonical.kind !== "ok") return currentResult();
     const cacheAge = now - canonical.updatedAt;
-    if (!Number.isFinite(cacheAge) || canonical.updatedAt <= 0 || cacheAge < 0) return response;
+    if (!Number.isFinite(cacheAge) || canonical.updatedAt <= 0 || cacheAge < 0) return currentResult();
 
     const coin = canonical.payload.peggedAssets.find((asset) => asset.id === stablecoinId);
     // Reuse the already-read publication: current USD supply must match the list,
@@ -145,15 +170,14 @@ export async function overlayCanonicalDetail(
     // fallback cannot put a different quote beside its current peg fields.
     const canEnrichPrice = coin != null && !coin.frozen && (coin.currentPeg != null || hasUsableCurrentPrice(coin)) &&
       isSolomonPriceIdentityAllowed(stablecoinId, coin.priceSource, coin.agreeSources);
-    if (!hasCurrentSupply && !supplyUnavailable && !coin?.nominalPriceReference && !canEnrichPrice) return response;
+    if (!hasCurrentSupply && !supplyUnavailable && !coin?.nominalPriceReference && !canEnrichPrice) return currentResult();
     const wrapperCurrentOnly = wrapper && !hasWrapperHistory;
     if (wrapperCurrentOnly) {
       const currentPrice = canEnrichPrice && coin != null && hasUsableCurrentPrice(coin) && typeof observedAt === "number" &&
         observedAt > 0 && observedAt <= now && now - observedAt <= API_FRESHNESS_MAX_AGE_SEC.stablecoins;
-      if (cacheAge > API_FRESHNESS_MAX_AGE_SEC.stablecoins || (!hasCurrentSupply && !currentPrice)) return response;
+      if (cacheAge > API_FRESHNESS_MAX_AGE_SEC.stablecoins || (!hasCurrentSupply && !currentPrice)) return currentResult();
     }
 
-    const headers = new Headers(response.headers);
     // Detail display follows the current publication, not the stricter observation
     // window for triggering depeg events. Preserve the quote's original timestamp.
     const remaining = Math.max(0, Math.floor(API_FRESHNESS_MAX_AGE_SEC.stablecoins - cacheAge));
@@ -185,7 +209,12 @@ export async function overlayCanonicalDetail(
       ));
     }
     headers.delete("Content-Length");
-    return new Response(JSON.stringify({
+    unavailableResponse = undefined;
+    if (wrapperCurrentOnly) {
+      status = 200;
+      statusText = "";
+    }
+    detail = {
       ...detail,
       ...(canEnrichPrice && coin ? {
         price: coin.price,
@@ -201,10 +230,52 @@ export async function overlayCanonicalDetail(
         priceSourceConfidenceProfile: coin.priceSourceConfidenceProfile,
         ...(coin.priceDerivation ? { priceDerivation: coin.priceDerivation } : {}),
       } : {}),
-    }), {
-      status: wrapperCurrentOnly ? 200 : response.status,
-      statusText: wrapperCurrentOnly ? undefined : response.statusText,
-      headers,
+    };
+    mutated = true;
+    return currentResult();
+  } catch (error) {
+    logWorkerEventArgs("api", "warn", `[detail] canonical price unavailable stablecoin=${stablecoinId}`, error);
+    return currentResult();
+  }
+}
+
+/** Object-returning overlay for internal callers to avoid redundant JSON stringify/parse cycles. */
+export async function overlayCanonicalDetailObject(
+  db: D1Database,
+  stablecoinId: string,
+  input: OverlayCanonicalDetailInput,
+  publication?: StablecoinsCacheLoadResult,
+): Promise<OverlayCanonicalDetailResult> {
+  return applyCanonicalDetailOverlay(db, stablecoinId, input, publication);
+}
+
+/** Enrich the response only; historical detail cache generations stay provider-owned. */
+export async function overlayCanonicalDetail(
+  db: D1Database,
+  stablecoinId: string,
+  response: Response,
+  publication?: StablecoinsCacheLoadResult,
+): Promise<Response> {
+  const now = Math.floor(Date.now() / 1000);
+  const wrapper = isKinesisWrapperSupplyCutoverActive(stablecoinId, now);
+  if (!response.ok && !(wrapper && response.status === 503)) return response;
+
+  try {
+    const parsed = response.ok ? await response.clone().json() as Record<string, unknown> | null : { tokens: [] };
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return response;
+    const result = await applyCanonicalDetailOverlay(
+      db,
+      stablecoinId,
+      { detail: parsed, status: response.status, statusText: response.statusText, headers: response.headers },
+      publication,
+      now,
+    );
+    if (result.unavailableResponse) return result.unavailableResponse;
+    if (!result.mutated) return response;
+    return new Response(JSON.stringify(result.detail), {
+      status: result.status,
+      statusText: result.statusText || undefined,
+      headers: result.headers,
     });
   } catch (error) {
     logWorkerEventArgs("api", "warn", `[detail] canonical price unavailable stablecoin=${stablecoinId}`, error);
