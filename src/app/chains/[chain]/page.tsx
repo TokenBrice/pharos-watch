@@ -235,7 +235,10 @@ function ChainDeploymentAnchors({
 
   return (
     <ModuleDisclosure label={`Tracked stablecoins on ${chainName}`} count={deployments.length}>
-      <nav className="mt-2 space-y-3" aria-label={`Tracked stablecoins on ${chainName}`}>
+      <nav className="mt-2 space-y-3" aria-labelledby="chain-deployment-anchors-heading">
+        <h2 id="chain-deployment-anchors-heading" className="sr-only">
+          Tracked stablecoins on {chainName}
+        </h2>
         <p className="text-sm text-muted-foreground">
           Tracked stablecoin profiles with verified contract deployments on {chainName}.
         </p>

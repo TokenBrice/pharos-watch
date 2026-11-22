@@ -44,7 +44,11 @@ const DEFAULT_BUDGETS = {
   // 2026-10-29); the PR build on current main, including that day's registry
   // data, measured 14,600,043 B. Previous ceiling 14,500,000; rounded up to the
   // next 50,000 B.
-  totalJsBytes: 14_650_000,
+  // Re-baselined 2026-11-22 from 14,650,000 B for the Phases 0–5 web redesign
+  // (#2247): the PR build measured 14.4 MiB (~15,097 KiB raw across all chunks,
+  // +3.1%) while cutting largest JS chunk (-65%), total CSS (-24%), and home
+  // eager JS (-55%). Rounded up with ~2% headroom.
+  totalJsBytes: 15_400_000,
   // Keep generated client-registry growth reviewable.
   largestJsBytes: 1_560_000,
   totalCssBytes: 650_000,
@@ -64,7 +68,9 @@ const DEFAULT_BUDGETS = {
   // 829,576 B (owner decision on #1825), so ordinary copy growth no longer fails.
   // Re-baselined 2026-11-16 from 855,000 B for the dossier redesign (#2092):
   // the USDe profile measured ~838 KiB (~858,100 B) in the PR build; ~2% headroom.
-  representativeDetailHtmlBytes: 875_000,
+  // Re-baselined 2026-11-22 from 875,000 B for the Phases 0–5 web redesign
+  // (#2247): USDe measured 855 KiB (~875,408 B, +408 B) in the PR build; ~2% headroom.
+  representativeDetailHtmlBytes: 895_000,
   representativeDetailPageTxtBytes: 145_000,
   // Sum gzip sizes of all script chunks referenced by a detail page's HTML.
   // Keep narrow headroom so shared first-load chunk growth stays reviewable.
@@ -73,13 +79,16 @@ const DEFAULT_BUDGETS = {
   // first production-profile measurement rather than assuming lab transfer bytes.
   homeHtmlBytes: 400_000,
   homeEagerJsGzipBytes: 1_000_000,
-  // Per-route first-load ceilings retain 5% headroom over the measured export.
+  // Per-route first-load ceilings retain ~5% headroom over the measured export.
+  // Screener (635 KiB / ~650.4 KiB) and Portfolio (614 KiB / ~628.6 KiB) were
+  // re-baselined 2026-11-22 in #2247 for compare-tray, concentration, upstream
+  // exposure, and Telegram-follow handoff additions (~5% headroom).
   depegEagerJsGzipBytes: 787_000,
   safetyScoresEagerJsGzipBytes: 781_000,
   stablecoinsEagerJsGzipBytes: 368_000,
   statusEagerJsGzipBytes: 661_000,
-  screenerEagerJsGzipBytes: 648_000,
-  portfolioEagerJsGzipBytes: 613_000,
+  screenerEagerJsGzipBytes: 683_000,
+  portfolioEagerJsGzipBytes: 660_000,
   // Cemetery server-renders the plot-map hero and Autopsy Register, with shared
   // register rows in its RSC flight, plus inlined critical CSS in the HTML.
   // Keep about 5% headroom for these payloads.
@@ -504,7 +513,7 @@ export function runReportBuildSize({
     console.log("\nDeploy gate (blocking)");
     checkCountBudget("total out files", allOutFiles.length, budgets.totalOutFiles, failures);
     const cssBundle = cssFiles.map((file) => readFileSync(file.path, "utf8")).join("\n");
-    if (!cssBundle.includes(".xl\\:w-\\[15rem\\]")) {
+    if (!cssBundle.includes(".xl\\:w-\\[10rem\\]")) {
       failures.push("compiled CSS is missing the desktop search width utility");
     }
 

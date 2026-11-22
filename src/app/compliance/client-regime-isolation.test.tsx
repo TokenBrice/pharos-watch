@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { clearAllTrackingTimers } from "@/lib/analytics";
 
-// Fixture rows with distinct regimes prove that only the active panel mounts
-// and switching regimes never leaks status or token-type filters across views.
+// Fixture rows with distinct regimes let the client test prove that status and
+// token-type filters never narrow the inactive, hidden panel's model.
 const fixtures = vi.hoisted(() => {
   const metas = [
     { id: "euro-emt", name: "Euro EMT", symbol: "EEMT", status: "active", flags: { pegCurrency: "EUR" } },
@@ -86,28 +86,25 @@ describe("Compliance client regime isolation", () => {
     clearAllTrackingTimers();
   });
 
-  it("mounts only GENIUS while GENIUS owns status/type and switches cleanly to an unfiltered MiCA panel", async () => {
+  it("keeps the inactive MiCA panel unfiltered while GENIUS owns status and type", async () => {
     window.history.replaceState(null, "", "/compliance/?regime=genius&status=issuer-announced-intent&type=ART");
     render(<ComplianceClient />);
 
     await screen.findByRole("region", { name: "Compliance data" });
 
     const geniusText = panel("compliance-genius-panel").textContent ?? "";
+    // Only the selected GENIUS status is filtered; GENIUS never takes a type.
     expect(geniusText).toContain("Dollar Intent");
     expect(geniusText).not.toContain("Dollar Qualified");
-    expect(document.getElementById("compliance-mica-panel")).toBeNull();
-    expect(document.getElementById("compliance-overview-panel")).toBeNull();
-
-    fireEvent.click(screen.getByRole("tab", { name: "MiCA" }));
-    await waitFor(() => expect(document.getElementById("compliance-mica-panel")).not.toBeNull());
-    expect(document.getElementById("compliance-genius-panel")).toBeNull();
+    expect(panel("compliance-mica-panel").hidden).toBe(true);
+    expect(panel("compliance-overview-panel").hidden).toBe(true);
 
     const micaText = panel("compliance-mica-panel").textContent ?? "";
     expect(micaText).toContain("Euro EMT");
     expect(micaText).toContain("Basket Reference");
   });
 
-  it("mounts only MiCA while MiCA owns status/type and switches cleanly to an unfiltered GENIUS panel", async () => {
+  it("keeps the inactive GENIUS panel unfiltered while MiCA owns status and type", async () => {
     window.history.replaceState(null, "", "/compliance/?regime=mica&status=authorized&type=EMT");
     render(<ComplianceClient />);
 
@@ -116,12 +113,9 @@ describe("Compliance client regime isolation", () => {
     const micaText = panel("compliance-mica-panel").textContent ?? "";
     expect(micaText).toContain("Euro EMT");
     expect(micaText).not.toContain("Basket Reference");
-    expect(document.getElementById("compliance-genius-panel")).toBeNull();
+    expect(panel("compliance-genius-panel").hidden).toBe(true);
 
-    fireEvent.click(screen.getByRole("tab", { name: "GENIUS" }));
-    await waitFor(() => expect(document.getElementById("compliance-genius-panel")).not.toBeNull());
-    expect(document.getElementById("compliance-mica-panel")).toBeNull();
-
+    await waitFor(() => expect(panel("compliance-genius-panel").textContent).toContain("Dollar Intent"));
     const geniusText = panel("compliance-genius-panel").textContent ?? "";
     expect(geniusText).toContain("Dollar Intent");
     expect(geniusText).toContain("Dollar Qualified");

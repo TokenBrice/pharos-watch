@@ -537,7 +537,7 @@ export function TopNav() {
           // masthead; xl (1280-1535px) fits "Search" + shortcut; 2xl (1536px+)
           // expands to the fuller "Coin or page" prompt. Both xl and 2xl are
           // named breakpoints so only one label is ever displayed.
-          className="pharos-focus-ring inline-flex h-9 w-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-border/70 bg-muted/20 text-sm text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground xl:w-40 xl:justify-start xl:px-2.5 2xl:w-60 2xl:gap-2 2xl:px-3"
+          className="pharos-focus-ring inline-flex h-9 w-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-border/70 bg-muted/20 text-sm text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground xl:w-[10rem] xl:justify-start xl:px-2.5 2xl:w-60 2xl:gap-2 2xl:px-3"
         >
           <Search className="size-4 shrink-0" aria-hidden />
           <span className="hidden xl:inline 2xl:hidden">Search</span>

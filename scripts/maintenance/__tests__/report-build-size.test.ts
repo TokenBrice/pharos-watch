@@ -12,7 +12,7 @@ const ZOD_CHUNK = "out/_next/static/chunks/framework-zod.js";
 const PAGE_CHUNK = "out/_next/static/chunks/page-abc.js";
 const CSS_BUNDLE = "out/_next/static/css/app.css";
 const DETAIL_ROUTE = "out/stablecoin/usdc-circle";
-const SEARCH_WIDTH_UTILITY = ".xl\\:w-\\[15rem\\]{width:15rem}";
+const SEARCH_WIDTH_UTILITY = ".xl\\:w-\\[10rem\\]{width:10rem}";
 const SHELL_HTML = '<!doctype html><html><body><script src="/_next/static/chunks/framework-zod.js"></script></body></html>';
 const DETAIL_HTML = '<!doctype html><html><body><script src="/_next/static/chunks/page-abc.js"></script></body></html>';
 const PROSE_ROUTES = PUBLIC_ROUTE_PATHS
