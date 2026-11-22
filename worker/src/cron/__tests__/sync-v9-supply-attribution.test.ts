@@ -1282,6 +1282,52 @@ describe("hosted lane screening phase", () => {
     expect(outcome).toMatchObject({
       status: "published", reason: "lane-screening-completed", catalog: 1,
       attempted: 1, admitted: 1, certificatesWritten: 1,
+      deferredByReason: {},
+      failedLanes: [],
+    });
+  });
+
+  it("surfaces deferredByReason counts and up to 5 compact failedLanes entries", async () => {
+    const longDetail = `window-end-in-future:${"x".repeat(200)}`;
+    const failingLanes = Array.from({ length: 7 }, (_, i) => ({
+      subjectDeploymentKey: `${i % 2 === 0 ? "hyperevm" : "stable"}:0x${String(i + 1).padStart(40, "0")}`,
+      outcome: "failed",
+      reason: "non-finalized-head",
+      detail: longDetail,
+    }));
+    const run = vi.fn().mockResolvedValue({
+      status: "degraded",
+      itemCount: 2,
+      metadata: JSON.stringify({
+        catalog: 11, candidates: 9, attempted: 9, admitted: 2, failed: 7,
+        certificatesWritten: 2, deadlineExhausted: false,
+        deferred: { "failure-backoff": 2, current: 1 },
+        lanes: [
+          { subjectDeploymentKey: "arbitrum:0x1111111111111111111111111111111111111111", outcome: "admitted" },
+          ...failingLanes,
+        ],
+      }),
+    });
+    const outcome = await runV9LaneScreeningShadowPhase({
+      db, signal, executionWindow: window, options: { descriptors: [descriptor()], run },
+    });
+    expect(outcome).toMatchObject({
+      status: "published",
+      reason: "lane-screening-completed",
+      failed: 7,
+      deferredByReason: { "failure-backoff": 2, current: 1 },
+    });
+    expect(outcome.failedLanes).toHaveLength(5);
+    expect(outcome.failedLanes[0]).toEqual({
+      laneKey: "hyperevm:0x0000000000000000000000000000000000000001",
+      chain: "hyperevm",
+      failureCode: "non-finalized-head",
+      detail: longDetail.slice(0, 120),
+    });
+    expect(outcome.failedLanes[1]).toMatchObject({
+      laneKey: "stable:0x0000000000000000000000000000000000000002",
+      chain: "stable",
+      failureCode: "non-finalized-head",
     });
   });
 

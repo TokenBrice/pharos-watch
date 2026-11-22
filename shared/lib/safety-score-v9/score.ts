@@ -59,6 +59,8 @@ export interface V9PillarEvaluation {
   structuralSignals: readonly V9StructuralSignal[];
   deploymentAuthorities?: readonly V9DeploymentAuthority[];
   adverseAttribution?: readonly V9PillarAdverseAttribution[];
+  /** v10.50: bounded ceiling on priced-unknown substitution when Exit is unavailable/excluded. */
+  pricedUnknownScoreCeiling?: number;
 }
 
 export interface V9ProductionScoreIdentity {
@@ -543,6 +545,9 @@ export function scoreV9EvaluatedAsset(
       authoritySignalIndices: new Set(authorities.flatMap((authority) =>
         (authority.sourceSignalIndices ?? []).map((index) => index +
           input.pillars.backing.structuralSignals.length + input.pillars.exit.structuralSignals.length))),
+      ...(input.pillars.exit.pricedUnknownScoreCeiling === undefined
+        ? {}
+        : { exitPricedUnknownCeiling: input.pillars.exit.pricedUnknownScoreCeiling }),
     },
   );
   const premium = resolveV9AssetPremium(input, ordinaryTrace, envelope);

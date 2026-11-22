@@ -464,6 +464,13 @@ export type SafetyScoreV9LaneScreeningShadowReason =
   | "lane-screening-completed"
   | "lane-screening-failed";
 
+export type SafetyScoreV9LaneScreeningFailedLaneSummary = {
+  laneKey: string;
+  chain: string;
+  failureCode: string;
+  detail: string | null;
+};
+
 /**
  * Per-run journal of the hosted lane-screening phase. The phase is a serialized
  * shadow consumer of the reviewed emitter catalog: it runs after the
@@ -480,9 +487,14 @@ export type SafetyScoreV9LaneScreeningShadowOutcome = {
   failed: number | null;
   certificatesWritten: number | null;
   deadlineExhausted: boolean | null;
+  deferredByReason: Record<string, number>;
+  failedLanes: SafetyScoreV9LaneScreeningFailedLaneSummary[];
   remainingMs: number | null;
   code?: string;
 };
+
+const LANE_SCREENING_MAX_FAILED_LANE_SUMMARIES = 5;
+const LANE_SCREENING_MAX_FAILED_DETAIL_LENGTH = 120;
 
 export interface SafetyScoreV9LaneScreeningShadowOptions {
   /** Reviewed catalog override (tests, replays); production reads the generated artifact. */
@@ -519,6 +531,8 @@ export async function runV9LaneScreeningShadowPhase(input: {
     failed: null,
     certificatesWritten: null,
     deadlineExhausted: null,
+    deferredByReason: {} as Record<string, number>,
+    failedLanes: [] as SafetyScoreV9LaneScreeningFailedLaneSummary[],
     remainingMs,
   };
   if (input.signal?.aborted) return { ...base, status: "skipped", reason: "lane-screening-aborted" };
@@ -544,6 +558,33 @@ export async function runV9LaneScreeningShadowPhase(input: {
     const metadata: Record<string, unknown> = isRecord(parsedMetadata) ? parsedMetadata : {};
     const metric = (key: string): number | null =>
       typeof metadata[key] === "number" ? metadata[key] as number : null;
+    const deferredByReason: Record<string, number> = {};
+    if (isRecord(metadata.deferred)) {
+      for (const [key, value] of Object.entries(metadata.deferred)) {
+        if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
+          deferredByReason[key] = value;
+        }
+      }
+    }
+    const failedLanes: SafetyScoreV9LaneScreeningFailedLaneSummary[] = [];
+    if (Array.isArray(metadata.lanes)) {
+      for (const lane of metadata.lanes) {
+        if (failedLanes.length >= LANE_SCREENING_MAX_FAILED_LANE_SUMMARIES) break;
+        if (!isRecord(lane) || lane.outcome !== "failed" || typeof lane.subjectDeploymentKey !== "string") {
+          continue;
+        }
+        const laneKey = lane.subjectDeploymentKey;
+        const separator = laneKey.indexOf(":");
+        failedLanes.push({
+          laneKey,
+          chain: separator > 0 ? laneKey.slice(0, separator) : "unknown",
+          failureCode: typeof lane.reason === "string" ? lane.reason : "unknown",
+          detail: typeof lane.detail === "string"
+            ? lane.detail.slice(0, LANE_SCREENING_MAX_FAILED_DETAIL_LENGTH)
+            : null,
+        });
+      }
+    }
     return {
       status: result.status === "ok" || result.status === "degraded" ? "published" : "skipped",
       reason: "lane-screening-completed",
@@ -554,6 +595,8 @@ export async function runV9LaneScreeningShadowPhase(input: {
       failed: metric("failed"),
       certificatesWritten: metric("certificatesWritten"),
       deadlineExhausted: typeof metadata.deadlineExhausted === "boolean" ? metadata.deadlineExhausted : null,
+      deferredByReason,
+      failedLanes,
       remainingMs,
     };
   } catch (error) {

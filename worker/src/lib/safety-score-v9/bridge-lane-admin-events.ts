@@ -345,7 +345,12 @@ export async function screenLaneAdminEvents(
     return failedResult(subjectDeploymentKey, "malformed-read", observedAtSec, "window-clock-inversion");
   }
   if (toHeader.timestamp > observedAtSec) {
-    return failedResult(subjectDeploymentKey, "non-finalized-head", observedAtSec, "window-end-in-future");
+    return failedResult(
+      subjectDeploymentKey,
+      "non-finalized-head",
+      observedAtSec,
+      `window-end-in-future:${toHeader.timestamp}>${observedAtSec}`,
+    );
   }
 
   const observedCodeHashes = new Map<string, string>();

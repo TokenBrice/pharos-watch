@@ -12,7 +12,12 @@ import { resolveCauseGapId } from "@shared/types/safety-score-v9-public-cause-ga
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
 import { buildSafetyScoreV9PublicationIdentity } from "../report-cards-v9-cache";
 import { logWorkerEvent } from "../structured-log";
-import { AcceptedPublicationBaselineSchema, buildSafetyScoreV9AcceptedPublicationBaseline, type SafetyScoreV9DexExpiryWitness } from "./publication-assessment";
+import {
+  AcceptedPublicationBaselineSchema,
+  buildSafetyScoreV9AcceptedPublicationBaseline,
+  type BuildAcceptedBaselineVerifiedEmptyOptions,
+  type SafetyScoreV9DexExpiryWitness,
+} from "./publication-assessment";
 
 // Prerequisite-E sizing (2026-10-15): real accepted baseline 111,663 B and
 // all-eligible lender inventory 250,179 B. Caps are >=4x the larger observed
@@ -76,9 +81,11 @@ function projectionHeader(publication: Readonly<SafetyScoreV9CurrentResponse>): 
 export function buildSafetyScoreV9AcceptedBaselineProjection(
   publication: Readonly<SafetyScoreV9CurrentResponse>,
   dexExpiryByAssetId: Readonly<Record<string, SafetyScoreV9DexExpiryWitness[]>> = {},
+  verifiedEmptyOptions: BuildAcceptedBaselineVerifiedEmptyOptions = {},
 ): SafetyScoreV9AcceptedBaselineProjectionV1 {
   return SafetyScoreV9AcceptedBaselineProjectionSchema.parse({
-    ...projectionHeader(publication), baseline: buildSafetyScoreV9AcceptedPublicationBaseline(publication, dexExpiryByAssetId),
+    ...projectionHeader(publication),
+    baseline: buildSafetyScoreV9AcceptedPublicationBaseline(publication, dexExpiryByAssetId, verifiedEmptyOptions),
   });
 }
 
@@ -195,10 +202,13 @@ export function parseSafetyScoreV9LenderCollateralProjection(row: { value: strin
 export function buildSafetyScoreV9AcceptedProjections(
   publication: Readonly<SafetyScoreV9CurrentResponse>,
   dexExpiryByAssetId: Readonly<Record<string, SafetyScoreV9DexExpiryWitness[]>> = {},
+  verifiedEmptyOptions: BuildAcceptedBaselineVerifiedEmptyOptions = {},
 ): { baseline: string; lender: string; cohort: string } {
   const projections = {
     cohort: serializeSafetyScoreV9CohortProjection(buildSafetyScoreV9CohortProjection(publication)),
-    baseline: serializeSafetyScoreV9AcceptedBaselineProjection(buildSafetyScoreV9AcceptedBaselineProjection(publication, dexExpiryByAssetId)),
+    baseline: serializeSafetyScoreV9AcceptedBaselineProjection(
+      buildSafetyScoreV9AcceptedBaselineProjection(publication, dexExpiryByAssetId, verifiedEmptyOptions),
+    ),
     lender: serializeSafetyScoreV9LenderCollateralProjection(buildSafetyScoreV9LenderCollateralProjection(publication)),
   };
   const cohortBytes = new TextEncoder().encode(projections.cohort).byteLength;

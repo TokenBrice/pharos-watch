@@ -156,6 +156,31 @@ describe("Safety Score V9 publication runner", () => {
     } finally { vi.useRealTimers(); sqlite.close(); }
   });
 
+  it("skips a generation with a recorded recovery failure when skipPriorFailedGeneration is enabled", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
+    const publication = makeWorkerSafetyScoreV9Publication();
+    try {
+      await store.persistSafetyScoreV9Publication(db, { ...currentInput(publication), deferPublicMaterialization: true });
+      sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .run(
+          publicationHealth.SAFETY_SCORE_V9_CACHE_KEYS.publicMaterializationFailure,
+          JSON.stringify({ publicationGenerationId: publication.publicationGenerationId, reason: "v9-public-materialization-retry-failed" }),
+          publication.publishedAtSec,
+        );
+      vi.useFakeTimers({ toFake: ["Date"] });
+      const decode = vi.spyOn(publicationCodec, "parseSafetyScoreV9Publication");
+      try {
+        const result = await recoverSafetyScoreV9PublicMaterialization(
+          db, new AbortController().signal, Date.now() + 180_000, { skipPriorFailedGeneration: true },
+        );
+        expect(result.status).toBe("skipped_neutral");
+        expect(JSON.parse(result.metadata!)).toMatchObject({ reason: "v9-public-materialization-retry-already-failed" });
+        expect(decode).not.toHaveBeenCalled();
+      } finally { decode.mockRestore(); }
+    } finally { vi.useRealTimers(); sqlite.close(); }
+  });
+
   it.each(["aborted", "ambiguous", "deadline"])("confirms committed selection after a late %s outcome", async mode => {
     const { sqlite, db } = createLatestSchemaSqlite();
     const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");

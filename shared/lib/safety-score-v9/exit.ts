@@ -146,6 +146,8 @@ export interface V9ExitEvaluationResult {
   causeGapIds: readonly string[];
   limitedEvidenceCauses: readonly ("A" | "C" | "U")[];
   supportedComponentKeys: readonly string[];
+  /** v10.50: carried verified-empty ceiling when Exit is unavailable/excluded. */
+  priorVerifiedEmptyExitCeiling?: V9AssetFactsBase["priorVerifiedEmptyExitCeiling"];
   stressRequest: V9ExitStressRequest | null;
   primaryRouteKey: string | null;
   diversificationRouteKey: string | null;
@@ -1034,13 +1036,19 @@ function resolveV9ExitSupplySizing(
 }
 
 export function projectV9ExitAssetFacts(
-  asset: Pick<V9AssetFactsBase, "supply" | "exitStatus" | "exitRoutes"> & Partial<Pick<V9AssetFactsBase, "evidence" | "exitCoverage">> & { gaps?: readonly V9FactGapV3[] },
+  asset: Pick<V9AssetFactsBase, "supply" | "exitStatus" | "exitRoutes"> &
+    Partial<Pick<V9AssetFactsBase, "evidence" | "exitCoverage" | "priorVerifiedEmptyExitCeiling">> & {
+      gaps?: readonly V9FactGapV3[];
+    },
 ) {
   return {
     ...resolveV9ExitSupplySizing(asset),
     gaps: asset.gaps,
     portfolioFactStatus: asset.exitStatus,
     verifiedNoPoolsSupplyShare: asset.exitCoverage?.verifiedNoPoolsSupplyShare,
+    ...(asset.priorVerifiedEmptyExitCeiling === undefined
+      ? {}
+      : { priorVerifiedEmptyExitCeiling: asset.priorVerifiedEmptyExitCeiling }),
     portfolioStatus:
       asset.exitStatus.observationState === "known" && asset.exitStatus.applicability.state === "required"
         ? "reviewed-complete" as const
@@ -1079,6 +1087,7 @@ export function evaluateV9Exit(
     portfolioStatus?: "reviewed-complete" | "incomplete";
     portfolioFactStatus?: V9FactStatusV2;
     verifiedNoPoolsSupplyShare?: number;
+    priorVerifiedEmptyExitCeiling?: V9AssetFactsBase["priorVerifiedEmptyExitCeiling"];
     gaps?: readonly V9FactGapV3[];
     routes: readonly V9ExitEvaluationRoute[];
   },
@@ -1216,12 +1225,27 @@ export function evaluateV9Exit(
         .flatMap((route) => resolveV9StatusCauses(Object.values(route.factorStatuses ?? {}), route.gaps).causes),
       ...(inventoryCause.cause === null && traces.every((trace) => excludedCause(trace).cause === null) ? ["U"] : []),
     ]).filter((cause): cause is "A" | "C" | "U" => cause === "A" || cause === "C" || cause === "U");
+    const baseUnavailableScore = roundTo(
+      (1 - (args.verifiedNoPoolsSupplyShare ?? 0)) *
+        unknownQuality(
+          "exit",
+          pillarMetadata.limitedEvidenceCauses.includes("C") ? "C" : inventoryCause.cause,
+          envelope.policy.semantic,
+        ),
+      2,
+    );
+    const ceiling = provenEmptyInventory ? undefined : args.priorVerifiedEmptyExitCeiling;
     return {
       ...pillarMetadata,
       aggregationDisposition: pureExcludedInventory ? "excluded-a-b" : "included",
-      score: provenEmptyInventory ? 0 : pureExcludedInventory ? null
-        : roundTo((1 - (args.verifiedNoPoolsSupplyShare ?? 0)) *
-            unknownQuality("exit", pillarMetadata.limitedEvidenceCauses.includes("C") ? "C" : inventoryCause.cause, envelope.policy.semantic), 2),
+      score: provenEmptyInventory
+        ? 0
+        : pureExcludedInventory
+          ? null
+          : ceiling !== undefined
+            ? Math.min(baseUnavailableScore, ceiling.scoreCeiling)
+            : baseUnavailableScore,
+      ...(ceiling === undefined ? {} : { priorVerifiedEmptyExitCeiling: ceiling }),
       stressRequest,
       primaryRouteKey: null,
       diversificationRouteKey: null,

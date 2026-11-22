@@ -14,10 +14,14 @@
  * Gate contract:
  *  - ≤ `NEW_ASSET_OPEN_QUESTION_LIMIT` open questions rooted at the asset;
  *  - zero non-documentation `missing-mint-authority` datums (U2);
- *  - the receipt's `registryFingerprint` must equal the fingerprint of the PR
- *    checkout's registry (a receipt replayed before the addition is stale);
+ *  - the receipt must use `schemaVersion: 2`, its `registryFingerprint` must
+ *    equal the fingerprint of the PR checkout's registry, and its
+ *    `evaluationBuildDigest` must equal `SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST`
+ *    (a receipt replayed before the addition or against an older Safety Score
+ *    build is stale);
  *  - the `new-asset-gate-override` owner label bypasses only the question
- *    count: never the receipt, its fingerprint binding, or the mint condition.
+ *    count: never the receipt, its fingerprint or build binding, or the mint
+ *    condition.
  *
  * Existing assets are out of scope. Candidates are coin files the PR *adds*
  * with an active lifecycle status, plus modified files whose status moves
@@ -25,15 +29,18 @@
  * questions, so they are not gated until promotion.
  *
  * Receipt shape (committed at `.github/artifacts/new-asset-evidence-packet/<assetId>.json`):
- * `{ schemaVersion: 1, kind, assetId, captureId, captureClockSec,
- *    registryFingerprint, card, questions }`; `NewAssetAdmissionReceiptSchema`
- * is the authority.
+ * `{ schemaVersion: 2, kind, assetId, captureId, captureClockSec,
+ *    registryFingerprint, evaluationBuildDigest, card, questions }`;
+ * `NewAssetAdmissionReceiptSchema` is the authority (historical
+ * `schemaVersion: 1` receipts remain parseable for archival verification, but
+ * newly gated candidates must submit `schemaVersion: 2`).
  */
 
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { z } from "zod";
+import { SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v9/evaluation-build-manifest-v1";
 import { compareCodeUnits } from "@shared/lib/compare";
 import { isActiveStablecoinMeta, isPreLaunchStablecoinMeta } from "@shared/lib/stablecoins/status";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
@@ -137,23 +144,42 @@ const ReceiptQuestionSchema = z
     }
   });
 
+const ReceiptBaseFields = {
+  kind: z.literal(NEW_ASSET_RECEIPT_KIND),
+  assetId: z.string().min(1),
+  captureId: z.string().min(1),
+  captureClockSec: z.number().int().positive(),
+  registryFingerprint: z.string().regex(/^[0-9a-f]{64}$/u),
+  card: V9OpenEvidenceByCardSchema,
+  questions: z.array(ReceiptQuestionSchema),
+};
+
+const NewAssetAdmissionReceiptV1ObjectSchema = z.strictObject({
+  schemaVersion: z.literal(1),
+  ...ReceiptBaseFields,
+});
+
+const NewAssetAdmissionReceiptV2ObjectSchema = z.strictObject({
+  schemaVersion: z.literal(2),
+  ...ReceiptBaseFields,
+  evaluationBuildDigest: z.string().regex(/^[0-9a-f]{64}$/u),
+});
+
 /**
  * U1 admission receipt. `card` is CNT-1's published by-card row, so the gate
  * reads the same counts the publication would; `questions` is the audit trail
  * behind those counts and the only place the documentation class of a
  * `missing-mint-authority` datum is recorded.
+ *
+ * Historical `schemaVersion: 1` receipts stay parseable, while newly gated
+ * candidates must supply `schemaVersion: 2` bound to the current Safety Score
+ * `evaluationBuildDigest`.
  */
 export const NewAssetAdmissionReceiptSchema = z
-  .strictObject({
-    schemaVersion: z.literal(1),
-    kind: z.literal(NEW_ASSET_RECEIPT_KIND),
-    assetId: z.string().min(1),
-    captureId: z.string().min(1),
-    captureClockSec: z.number().int().positive(),
-    registryFingerprint: z.string().regex(/^[0-9a-f]{64}$/u),
-    card: V9OpenEvidenceByCardSchema,
-    questions: z.array(ReceiptQuestionSchema),
-  })
+  .discriminatedUnion("schemaVersion", [
+    NewAssetAdmissionReceiptV1ObjectSchema,
+    NewAssetAdmissionReceiptV2ObjectSchema,
+  ])
   .superRefine((receipt, ctx) => {
     if (receipt.card.id !== receipt.assetId) {
       ctx.addIssue({ code: "custom", path: ["card", "id"], message: "card row must be the receipt's asset" });
@@ -210,6 +236,7 @@ export type NewAssetGateFailureKind =
   | "invalid-receipt"
   | "mismatched-receipt"
   | "stale-receipt"
+  | "stale-evaluation-build"
   | "open-question-limit"
   | "missing-mint-authority";
 
@@ -239,6 +266,7 @@ export interface NewAssetGateReport {
 export interface EvaluateNewAssetEvidencePacketInput {
   candidates: readonly NewAssetGateCandidate[];
   registryFingerprint: string;
+  evaluationBuildDigest?: string;
   override: boolean;
   /** Raw committed receipt JSON for the candidate, or null when none is committed. */
   readReceipt: (candidate: NewAssetGateCandidate) => string | null;
@@ -341,6 +369,7 @@ function formatReceiptIssues(error: z.ZodError): string {
 export function evaluateNewAssetEvidencePacket({
   candidates,
   registryFingerprint,
+  evaluationBuildDigest = SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST,
   override,
   readReceipt,
 }: EvaluateNewAssetEvidencePacketInput): NewAssetGateReport {
@@ -380,12 +409,30 @@ export function evaluateNewAssetEvidencePacket({
       fail(candidate, "mismatched-receipt", `receipt names asset "${receipt.assetId}"`);
       continue;
     }
+    if (receipt.schemaVersion !== 2) {
+      fail(
+        candidate,
+        "stale-evaluation-build",
+        "receipt uses historical schemaVersion 1 without evaluationBuildDigest; " +
+          "re-run the replay on this branch and commit a schemaVersion 2 receipt (this condition has no override)",
+      );
+      continue;
+    }
     if (receipt.registryFingerprint !== registryFingerprint) {
       fail(
         candidate,
         "stale-receipt",
         `receipt replayed registry ${receipt.registryFingerprint}, this checkout is ${registryFingerprint}; ` +
           "re-run the replay on this branch so the addition is inside the receipt",
+      );
+      continue;
+    }
+    if (receipt.evaluationBuildDigest !== evaluationBuildDigest) {
+      fail(
+        candidate,
+        "stale-evaluation-build",
+        `receipt replayed evaluation build ${receipt.evaluationBuildDigest}, this checkout is ${evaluationBuildDigest}; ` +
+          "re-run the replay on this branch so the receipt binds the current Safety Score build (this condition has no override)",
       );
       continue;
     }
@@ -509,6 +556,7 @@ export interface NewAssetEvidencePacketCheckResult {
   head: string;
   mergeBase: string;
   registryFingerprint: string;
+  evaluationBuildDigest: string;
   override: boolean;
   receiptDir: string;
   report: NewAssetGateReport;
@@ -534,13 +582,15 @@ export async function inspectNewAssetEvidencePacket(
     readBaseCoin: (path) => readGitCoin(mergeBase, path, cwd),
   });
   const registryFingerprint = candidates.length === 0 ? "" : await computeNewAssetRegistryFingerprint();
+  const evaluationBuildDigest = SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST;
   const report = evaluateNewAssetEvidencePacket({
     candidates,
     registryFingerprint,
+    evaluationBuildDigest,
     override,
     readReceipt: (candidate) => readCommittedReceipt(candidate.assetId, receiptDir, cwd),
   });
-  return { base, head, mergeBase, registryFingerprint, override, receiptDir, report, skipped };
+  return { base, head, mergeBase, registryFingerprint, evaluationBuildDigest, override, receiptDir, report, skipped };
 }
 
 export async function runNewAssetEvidencePacketCheck(

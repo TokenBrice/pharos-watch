@@ -747,4 +747,44 @@ describe("genuinely unavailable pillars", () => {
       }
     });
   }
+
+  it.each(["unavailable", "excluded-a-b"] as const)(
+    "bounds pricedUnknownPillars Exit score for EUROT-like %s Exit with priorVerifiedEmptyExitCeiling (v10.50)",
+    (disposition) => {
+      const exitBase = disposition === "excluded-a-b"
+        ? pillar(null, {
+            aggregationDisposition: "excluded-a-b",
+            supportedComponentKeys: [],
+            causeGapIds: ["eurot:gap:dex"],
+            excludedCauseGapIds: ["eurot:gap:dex"],
+            excludedCauses: ["A"],
+            excludedComponentKeys: ["exit-routes"],
+          })
+        : pillar(null, {
+            aggregationDisposition: "unavailable",
+            supportedComponentKeys: [],
+          });
+
+      const uncapped = scoreV9EvaluatedAsset(input({
+        pillars: { backing: pillar(38), exit: exitBase, control: pillar(50) },
+      }), V9_CANDIDATE_POLICY_V1);
+      expect(uncapped.finalScore).toBe(45);
+      expect(uncapped.aggregation?.pricedUnknownPillars).toContainEqual(
+        expect.objectContaining({ pillar: "exit", score: 50 }),
+      );
+
+      const capped = scoreV9EvaluatedAsset(input({
+        pillars: {
+          backing: pillar(38),
+          exit: { ...exitBase, pricedUnknownScoreCeiling: 0 },
+          control: pillar(50),
+        },
+      }), V9_CANDIDATE_POLICY_V1);
+      expect(capped.finalScore).toBe(18);
+      expect(capped.finalGrade).toBe("F");
+      expect(capped.aggregation?.pricedUnknownPillars).toContainEqual(
+        expect.objectContaining({ pillar: "exit", score: 0 }),
+      );
+    },
+  );
 });

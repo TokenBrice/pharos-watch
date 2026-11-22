@@ -873,6 +873,9 @@ function exitPillar(
     // Keep the complete inventory; only promotion into partial evidence is filtered.
     causeGapIds: result.causeGapIds,
     score: result.score,
+    ...(result.priorVerifiedEmptyExitCeiling === undefined
+      ? {}
+      : { pricedUnknownScoreCeiling: result.priorVerifiedEmptyExitCeiling.scoreCeiling }),
     evidenceLevel: primaryStrong ? "strong" : "adequate",
     reasons: canonicalReasons(
       effectiveReasons.flatMap(({ code, sourceCode, profileFactKeys, profileResponsibility: responsibility }) => {

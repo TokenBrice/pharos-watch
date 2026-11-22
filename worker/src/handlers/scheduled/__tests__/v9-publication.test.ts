@@ -264,4 +264,130 @@ describe("scheduled supply-attribution native context", () => {
     await runV9SupplyAttributionSlot(runtime);
     expect(mocks.syncSupplyAttribution).toHaveBeenCalledExactlyOnceWith(runtime.db, runtime.chainRpcs, signal, window, dwellirNative);
   });
+
+  const attributionSlot = getCronJobMeta("sync-v9-supply-attribution")!.scheduleKey;
+
+  it("runs D1-only public materialization recovery before attribution only on the :38 slot", async () => {
+    vi.useFakeTimers();
+    const nowMs = Date.parse("2026-11-22T12:38:01Z");
+    vi.setSystemTime(nowMs);
+    try {
+      const order: string[] = [];
+      const signal = new AbortController().signal;
+      const window = { slotStartedAtSec: Date.parse("2026-11-22T12:38:00Z") / 1_000, deadlineMs: Date.parse("2026-11-22T12:41:00Z"), minimumRemainingMs: 60_000 };
+      mocks.runV9AfterCoreWithinWindow.mockImplementation(async (_input, run) => run(signal, window));
+      mocks.recoverSafetyScoreV9PublicMaterialization.mockImplementation(async () => {
+        order.push("recover");
+        return { status: "ok", itemCount: 1, metadata: JSON.stringify({ reason: "v9-public-materialization-retry-materialized" }) };
+      });
+      mocks.syncSupplyAttribution.mockImplementation(async () => {
+        order.push("attribution");
+        return { status: "ok", itemCount: 1 };
+      });
+
+      const runtime = makeScheduledRuntime({
+        cron: "38 * * * *",
+        scheduleKey: attributionSlot,
+        scheduledTimeMs: Date.parse("2026-11-22T12:38:00Z"),
+        slotStartedAt: Date.parse("2026-11-22T12:38:00Z") / 1_000,
+      });
+      await runV9SupplyAttributionSlot(runtime);
+
+      expect(order).toEqual(["recover", "attribution"]);
+      expect(mocks.recoverSafetyScoreV9PublicMaterialization).toHaveBeenCalledExactlyOnceWith(
+        runtime.db,
+        signal,
+        nowMs + 60_000,
+        { skipPriorFailedGeneration: true },
+      );
+      expect(mocks.syncSupplyAttribution).toHaveBeenCalledExactlyOnceWith(runtime.db, runtime.chainRpcs, signal, window, undefined);
+      expect(mocks.logWorkerEvent).toHaveBeenCalledWith(expect.objectContaining({
+        level: "info",
+        event: "safety_score_v9_public_materialization_piggyback",
+      }));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each([
+    ["8 * * * *", "2026-11-22T12:08:00Z"],
+    ["23 * * * *", "2026-11-22T12:23:00Z"],
+    ["53 * * * *", "2026-11-22T12:53:00Z"],
+  ] as const)("does not run materialization recovery on the %s attribution slot", async (cron, iso) => {
+    const signal = new AbortController().signal;
+    const scheduledTimeMs = Date.parse(iso);
+    const window = { slotStartedAtSec: scheduledTimeMs / 1_000, deadlineMs: scheduledTimeMs + 180_000, minimumRemainingMs: 60_000 };
+    mocks.runV9AfterCoreWithinWindow.mockImplementation(async (_input, run) => run(signal, window));
+    mocks.syncSupplyAttribution.mockResolvedValue({ status: "ok", itemCount: 1 });
+
+    const runtime = makeScheduledRuntime({
+      cron,
+      scheduleKey: attributionSlot,
+      scheduledTimeMs,
+      slotStartedAt: scheduledTimeMs / 1_000,
+    });
+    await runV9SupplyAttributionSlot(runtime);
+
+    expect(mocks.recoverSafetyScoreV9PublicMaterialization).not.toHaveBeenCalled();
+    expect(mocks.syncSupplyAttribution).toHaveBeenCalledOnce();
+  });
+
+  it.each(["throws", "degraded"] as const)("continues attribution when :38 materialization recovery %s", async mode => {
+    vi.useFakeTimers();
+    const nowMs = Date.parse("2026-11-22T12:38:01Z");
+    vi.setSystemTime(nowMs);
+    try {
+      const signal = new AbortController().signal;
+      const window = { slotStartedAtSec: Date.parse("2026-11-22T12:38:00Z") / 1_000, deadlineMs: Date.parse("2026-11-22T12:41:00Z"), minimumRemainingMs: 60_000 };
+      mocks.runV9AfterCoreWithinWindow.mockImplementation(async (_input, run) => run(signal, window));
+      if (mode === "throws") {
+        mocks.recoverSafetyScoreV9PublicMaterialization.mockRejectedValue(new Error("D1 read failed"));
+      } else {
+        mocks.recoverSafetyScoreV9PublicMaterialization.mockResolvedValue({
+          status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: "v9-public-materialization-retry-failed" }),
+        });
+      }
+      mocks.syncSupplyAttribution.mockResolvedValue({ status: "ok", itemCount: 1 });
+
+      const runtime = makeScheduledRuntime({
+        cron: "38 * * * *",
+        scheduleKey: attributionSlot,
+        scheduledTimeMs: Date.parse("2026-11-22T12:38:00Z"),
+        slotStartedAt: Date.parse("2026-11-22T12:38:00Z") / 1_000,
+      });
+      await runV9SupplyAttributionSlot(runtime);
+
+      expect(mocks.syncSupplyAttribution).toHaveBeenCalledOnce();
+      expect(mocks.logWorkerEvent).toHaveBeenCalledWith(expect.objectContaining({ level: "warn" }));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("skips :38 materialization recovery when remaining window leaves insufficient slack above attribution minimum", async () => {
+    vi.useFakeTimers();
+    const nowMs = Date.parse("2026-11-22T12:39:40Z");
+    vi.setSystemTime(nowMs);
+    try {
+      const signal = new AbortController().signal;
+      // 80s remaining minus 60s attribution floor = 20s (< 50s needed for recovery).
+      const window = { slotStartedAtSec: Date.parse("2026-11-22T12:38:00Z") / 1_000, deadlineMs: Date.parse("2026-11-22T12:41:00Z"), minimumRemainingMs: 60_000 };
+      mocks.runV9AfterCoreWithinWindow.mockImplementation(async (_input, run) => run(signal, window));
+      mocks.syncSupplyAttribution.mockResolvedValue({ status: "ok", itemCount: 1 });
+
+      const runtime = makeScheduledRuntime({
+        cron: "38 * * * *",
+        scheduleKey: attributionSlot,
+        scheduledTimeMs: Date.parse("2026-11-22T12:38:00Z"),
+        slotStartedAt: Date.parse("2026-11-22T12:38:00Z") / 1_000,
+      });
+      await runV9SupplyAttributionSlot(runtime);
+
+      expect(mocks.recoverSafetyScoreV9PublicMaterialization).not.toHaveBeenCalled();
+      expect(mocks.syncSupplyAttribution).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

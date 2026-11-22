@@ -7,6 +7,7 @@ import { createR2MeasurementsClient } from "../../scripts/lib/r2-measurements-cl
 import type { R2ObjectClient } from "../../scripts/lib/r2-object-client";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v9/evaluation-build-manifest-v1";
 import mechanismReviewOverlaysAsset from "@shared/data/safety-score-v9/mechanism-review-overlays-v1.json";
 import { parseIsoDateOrUtcInstantSec } from "@shared/types/date-primitives";
 import {
@@ -154,6 +155,7 @@ interface AssetAdmissionScenario {
   kind: "asset-admission";
   sourceBaseInputGenerationId: string;
   registryFingerprint: string;
+  evaluationBuildDigest: string;
   assets: Array<{
     assetId: string;
     captureIdSuffix: string;
@@ -359,6 +361,7 @@ function buildAssetAdmissionScenario(
     kind: "asset-admission",
     sourceBaseInputGenerationId: baseInputGenerationId,
     registryFingerprint: computeReportCardsRegistryFingerprint(),
+    evaluationBuildDigest: SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST,
     assets,
   };
   return {
@@ -404,6 +407,37 @@ export function buildSafetyScoreV9ReplayArtifact(input: {
     !("registryFingerprint" in input.fixedInput) || input.fixedInput.registryFingerprint !== input.registrySnapshot.fingerprint)) {
     throw new Error("Capture registry fingerprint does not match supplied snapshot");
   }
+  const pipeline = buildSafetyScoreV9Candidate({
+    ...candidateInput,
+    rederiveRetainedReserveCompositionAdmission: true,
+    // The lane witnesses the publication actually read: without them a
+    // replayed publication cannot reproduce a closure it applied.
+    ...(laneScreening === undefined || laneScreening === null ? {} : {
+      laneIncidentCertificates: replayLaneIncidentCertificates(laneScreening),
+      laneEmitterDescriptors: laneScreening.descriptors,
+    }),
+    // Reproduce 10.35 measured-route quarantine against the same accepted baseline.
+    ...(sourceAdmissionBaseline === undefined ? {} : { measuredExitExpiry: {
+      routes: projectExpiredMeasuredExitRoutes(input.fixedInput as SafetyScoreV9CompilerInput),
+      acceptedPublication: sourceAdmissionBaseline,
+    } }),
+    ...(input.registrySnapshot ? {
+      registry: {
+        metaById: new Map(verifyRegistrySnapshot(input.registrySnapshot).activeStablecoins.map((coin) => [coin.id, coin])),
+        registryFingerprint: input.registrySnapshot.fingerprint,
+        reviewedTransferFacts: new Map(input.registrySnapshot.transferReviews.map((review) => [review.assetId, review])),
+      },
+    } : {}),
+  }, replayScenario?.kind);
+  if (
+    replayScenario?.kind === "asset-admission" &&
+    replayScenario.evaluationBuildDigest !== pipeline.candidateIdentity.evaluationBuildDigest
+  ) {
+    throw new Error(
+      `Asset-admission replayScenario evaluationBuildDigest (${replayScenario.evaluationBuildDigest}) ` +
+        `does not match pipeline evaluationBuildDigest (${pipeline.candidateIdentity.evaluationBuildDigest})`,
+    );
+  }
   return {
     schemaVersion: 1,
     kind: "safety-score-v9-candidate-replay",
@@ -415,28 +449,7 @@ export function buildSafetyScoreV9ReplayArtifact(input: {
     ...(sourceAdmissionBaseline === undefined ? {} : { sourceAdmissionBaseline }),
     ...(laneScreening === undefined ? {} : { laneScreening }),
     ...(replayScenario === undefined ? {} : { replayScenario }),
-    pipeline: buildSafetyScoreV9Candidate({
-      ...candidateInput,
-      rederiveRetainedReserveCompositionAdmission: true,
-      // The lane witnesses the publication actually read: without them a
-      // replayed publication cannot reproduce a closure it applied.
-      ...(laneScreening === undefined || laneScreening === null ? {} : {
-        laneIncidentCertificates: replayLaneIncidentCertificates(laneScreening),
-        laneEmitterDescriptors: laneScreening.descriptors,
-      }),
-      // Reproduce 10.35 measured-route quarantine against the same accepted baseline.
-      ...(sourceAdmissionBaseline === undefined ? {} : { measuredExitExpiry: {
-        routes: projectExpiredMeasuredExitRoutes(input.fixedInput as SafetyScoreV9CompilerInput),
-        acceptedPublication: sourceAdmissionBaseline,
-      } }),
-      ...(input.registrySnapshot ? {
-        registry: {
-          metaById: new Map(verifyRegistrySnapshot(input.registrySnapshot).activeStablecoins.map((coin) => [coin.id, coin])),
-          registryFingerprint: input.registrySnapshot.fingerprint,
-          reviewedTransferFacts: new Map(input.registrySnapshot.transferReviews.map((review) => [review.assetId, review])),
-        },
-      } : {}),
-    }, replayScenario?.kind),
+    pipeline,
   };
 }
 

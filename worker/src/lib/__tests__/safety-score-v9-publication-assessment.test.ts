@@ -620,4 +620,113 @@ describe("Safety Score V9 publication assessment", () => {
     })).toThrow();
   });
 
+  it("populates, carries across unavailable runs up to 48h, expires, clears, and validates verifiedEmptyExitByAssetId (v10.50)", () => {
+    const t0 = 1_700_000_000;
+    const verifiedEmptyCard = (id: string) => {
+      const card = makeWorkerV9Card({ id, score: 18, grade: "F" });
+      card.pillars.exit = {
+        ...card.pillars.exit,
+        score: 0,
+        aggregationDisposition: "included",
+        reasons: [{ code: "no-viable-exit-path", message: "No viable exit path", path: "exit:no-viable-exit-path", cause: "D", causeGapRefs: [] }],
+      };
+      card.breakdowns!.exit = {
+        ...card.breakdowns!.exit,
+        evaluatedScore: 0,
+        publishedScore: 0,
+        primaryRoute: null,
+        diversification: null,
+        alternatives: [],
+      };
+      return card;
+    };
+    const unavailableExitCard = (id: string) => {
+      const card = makeWorkerV9Card({ id, score: 18, grade: "F" });
+      card.pillars.exit = {
+        ...card.pillars.exit,
+        score: null,
+        aggregationDisposition: "unavailable",
+        reasons: [{ code: "missing-runtime-route-evidence", message: "No exact DEX route", path: "exit:missing-runtime-route-evidence", cause: "U", causeGapRefs: [] }],
+      };
+      card.breakdowns!.exit = {
+        ...card.breakdowns!.exit,
+        evaluatedScore: null,
+        publishedScore: null,
+        primaryRoute: null,
+        diversification: null,
+        alternatives: [],
+      };
+      return card;
+    };
+
+    const pub0 = {
+      ...candidate([verifiedEmptyCard("alpha"), makeWorkerV9Card({ id: "beta", score: 80, grade: "A-" }), verifiedEmptyCard("gamma")]),
+      sourceGenerations: { registry: "registry:test", dex: "dex-liquidity-1700000000" },
+      asOfSec: t0,
+      publishedAtSec: t0 + 30,
+      publicationGenerationId: "report-cards:v9:v1:pub0",
+    };
+    const baseline0 = AcceptedPublicationBaselineSchema.parse(buildSafetyScoreV9AcceptedPublicationBaseline(pub0));
+    expect(Object.keys(baseline0.verifiedEmptyExitByAssetId ?? {})).toEqual(["alpha", "gamma"]);
+    expect(baseline0.verifiedEmptyExitByAssetId).toEqual({
+      alpha: { verifiedAtSec: t0, dexGenerationId: "dex-liquidity-1700000000", publicationGenerationId: "report-cards:v9:v1:pub0" },
+      gamma: { verifiedAtSec: t0, dexGenerationId: "dex-liquidity-1700000000", publicationGenerationId: "report-cards:v9:v1:pub0" },
+    });
+
+    // Intermediate unavailable run within 48h preserves original verifiedAtSec; positive route on gamma clears gamma immediately.
+    const pub1 = {
+      ...candidate([unavailableExitCard("alpha"), makeWorkerV9Card({ id: "beta", score: 80, grade: "A-" }), makeWorkerV9Card({ id: "gamma", score: 75, grade: "B+" })]),
+      sourceGenerations: { registry: "registry:test", dex: "dex-liquidity-1700003600" },
+      asOfSec: t0 + 3_600,
+      publishedAtSec: t0 + 3_630,
+      publicationGenerationId: "report-cards:v9:v1:pub1",
+    };
+    const baseline1 = AcceptedPublicationBaselineSchema.parse(
+      buildSafetyScoreV9AcceptedPublicationBaseline(pub1, {}, {
+        priorVerifiedEmptyExitByAssetId: baseline0.verifiedEmptyExitByAssetId,
+        verifiedEmptyCarryMaxAgeSec: 172_800,
+      }),
+    );
+    expect(baseline1.verifiedEmptyExitByAssetId).toEqual({
+      alpha: { verifiedAtSec: t0, dexGenerationId: "dex-liquidity-1700000000", publicationGenerationId: "report-cards:v9:v1:pub0" },
+    });
+
+    // Past 48h window, carried witness expires.
+    const pubExpired = {
+      ...candidate([unavailableExitCard("alpha")]),
+      sourceGenerations: { registry: "registry:test", dex: "dex-liquidity-1700172801" },
+      asOfSec: t0 + 172_801,
+      publishedAtSec: t0 + 172_831,
+      publicationGenerationId: "report-cards:v9:v1:pubExpired",
+    };
+    const baselineExpired = AcceptedPublicationBaselineSchema.parse(
+      buildSafetyScoreV9AcceptedPublicationBaseline(pubExpired, {}, {
+        priorVerifiedEmptyExitByAssetId: baseline1.verifiedEmptyExitByAssetId,
+        verifiedEmptyCarryMaxAgeSec: 172_800,
+      }),
+    );
+    expect(baselineExpired.verifiedEmptyExitByAssetId).toBeUndefined();
+
+    // Schema rejects unsorted keys, unknown asset IDs, and future verifiedAtSec.
+    expect(AcceptedPublicationBaselineSchema.safeParse({
+      ...baseline0,
+      verifiedEmptyExitByAssetId: {
+        gamma: baseline0.verifiedEmptyExitByAssetId!.gamma,
+        alpha: baseline0.verifiedEmptyExitByAssetId!.alpha,
+      },
+    }).success).toBe(false);
+    expect(AcceptedPublicationBaselineSchema.safeParse({
+      ...baseline0,
+      verifiedEmptyExitByAssetId: {
+        unknown: baseline0.verifiedEmptyExitByAssetId!.alpha,
+      },
+    }).success).toBe(false);
+    expect(AcceptedPublicationBaselineSchema.safeParse({
+      ...baseline0,
+      verifiedEmptyExitByAssetId: {
+        alpha: { ...baseline0.verifiedEmptyExitByAssetId!.alpha, verifiedAtSec: baseline0.publishedAtSec + 1 },
+      },
+    }).success).toBe(false);
+  });
+
 });

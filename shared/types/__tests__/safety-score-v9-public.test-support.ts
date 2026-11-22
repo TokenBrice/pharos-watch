@@ -534,7 +534,11 @@ function assertPreviousReaderSource() {
   // objects and refinements for inputs without them are byte-identical (verified by substituting
   // the v10.48 commit's two files, which restores the prior 708cb50b… digest). previousReader()
   // rejects admittedScoreCeiling, as the frozen strict breakdown did.
-  if (hash.digest("hex") !== "a7bc5357db02ba3f548d348b7f539b185ca35b8bbdebb4c8c5702fd97c1556d7") throw new Error("Pre-dust reader source/refinement inputs changed");
+  // v10.50 verified-empty Exit ceiling refresh: additive-only changes in safety-score-v9-facts.ts
+  // (optional priorVerifiedEmptyExitCeiling fact) and safety-score-v9.ts + policy.semantic.exit
+  // (verifiedEmptyCarryMaxAgeSec = 172800). No public card, breakdown, or trace schema changed;
+  // strict public objects and refinements remain byte-identical for all pre-dust inputs.
+  if (hash.digest("hex") !== "e4db44efbb710b6f731a2466464f0b531765dbfbc12ed59bc3e4669b6474cc4a") throw new Error("Pre-dust reader source/refinement inputs changed");
 }
 
 export async function previousReader() {

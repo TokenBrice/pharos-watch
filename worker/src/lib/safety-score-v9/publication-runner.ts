@@ -787,7 +787,11 @@ export async function runSafetyScoreV9Publication(
     const persisted = await persistSafetyScoreV9Publication(input.db, {
       publication,
       buildAcceptedProjections: (accepted) =>
-        buildSafetyScoreV9AcceptedProjections(accepted, pipeline.measuredExitExpiry.witnessesByAssetId),
+        buildSafetyScoreV9AcceptedProjections(
+          accepted,
+          pipeline.measuredExitExpiry.witnessesByAssetId,
+          pipeline.verifiedEmptyExitBaselineOptions,
+        ),
       publicationReplayCaptureValue: replayCaptureValue,
       publicationReplayBaseValue: replayCaptureValue === undefined ? undefined : input.fixedInputCacheValue,
       publicationHealth: {

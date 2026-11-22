@@ -145,6 +145,31 @@ describe("lane screening window planning", () => {
     expect(planLaneScreeningWindow({ descriptor: descriptor(), finalizedHead: HEADER, certifiedToBlock: 10_000 }))
       .toBeNull();
   });
+
+  it("backs off 60 blocks on instant-finality BFT heads and preserves contiguous chaining", () => {
+    const bftHead = { number: 51_339_239, timestamp: NOW + 1, hash: `0x${"7".repeat(64)}` as `0x${string}` };
+    expect(planLaneScreeningWindow({
+      descriptor: descriptor("hyperevm:0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a", 50_000),
+      finalizedHead: bftHead,
+      certifiedToBlock: null,
+      observedAtSec: NOW,
+    })).toEqual({ fromBlock: 51_289_180, toBlock: 51_339_179 });
+
+    expect(planLaneScreeningWindow({
+      descriptor: descriptor("hyperevm:0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a", 50_000),
+      finalizedHead: { ...bftHead, number: 51_339_500 },
+      certifiedToBlock: 51_339_179,
+      observedAtSec: NOW,
+    })).toEqual({ fromBlock: 51_339_180, toBlock: 51_339_440 });
+
+    // Within the 60-block tip backoff margin: defer cleanly as current (null).
+    expect(planLaneScreeningWindow({
+      descriptor: descriptor("hyperevm:0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a", 50_000),
+      finalizedHead: { ...bftHead, number: 51_339_230 },
+      certifiedToBlock: 51_339_179,
+      observedAtSec: NOW,
+    })).toBeNull();
+  });
 });
 
 describe("due-lane selection", () => {
@@ -450,5 +475,100 @@ describe("syncV9LaneAdminEvents", () => {
       detail: "finalized-head",
     });
     expect(await certificateRows(db)).toBe(0);
+  });
+
+  it("refreshes per-lane clock and backs off instant-finality BFT heads to prevent window-end-in-future", async () => {
+    const { db } = fixtures.open();
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW * 1_000);
+    const actual = await vi.importActual<typeof LaneAdminEventModule>(
+      "../../lib/safety-score-v9/bridge-lane-admin-events",
+    );
+    mocks.screen.mockImplementation(actual.screenLaneAdminEvents);
+
+    const hyperevmLane = "hyperevm:0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a";
+    const rpcs = new Map<string, ChainRpcConfig>([
+      ["ethereum", { chainId: "ethereum", chainName: "Ethereum", type: "evm" } as ChainRpcConfig],
+      ["hyperevm", { chainId: "hyperevm", chainName: "HyperEVM", type: "evm" } as ChainRpcConfig],
+    ]);
+    const codeSha = sha256HexFromBytes(new Uint8Array([0x60, 0]));
+    const ethLane = { ...descriptor(LANE, 100), emitters: [{ ...EMITTER, expectedRuntimeCodeSha256: codeSha }] };
+    const bftLane = { ...descriptor(hyperevmLane, 100), emitters: [{ ...EMITTER, expectedRuntimeCodeSha256: codeSha }] };
+
+    // Simulate earlier lane taking 5s wall clock, then HyperEVM returning a
+    // finalized BFT header whose timestamp is +1s ahead of wall clock (and +6s
+    // ahead of entry time). 1 block = 1s on HyperEVM.
+    let hyperevmTip = 51_339_239;
+    let hyperevmTipTs = NOW + 6;
+    mocks.head.mockImplementation(async (chainId: string) => {
+      if (chainId === "ethereum") return { number: 10_000, timestamp: NOW - 900, hash: HEADER.hash };
+      return { number: hyperevmTip, timestamp: hyperevmTipTs, hash: `0x${"8".repeat(64)}` as `0x${string}` };
+    });
+    vi.spyOn(evmRpc, "usableCcipRpcEndpoints").mockReturnValue([{
+      url: "https://rpc.example", operator: "public", maxLogBlockSpan: 10_000,
+      keyed: false, position: "registry", stateHistory: "archive", logsHistory: "full",
+    }]);
+    vi.spyOn(evmRpc, "fetchEvmRpcBatchDetailed").mockImplementation(async (chainId, calls) => {
+      if (chainId === "ethereum" && calls[0]?.method === "eth_getLogs") {
+        vi.setSystemTime(Date.now() + 5_000);
+      }
+      return {
+        results: calls.map(call => {
+          if (call.method === "eth_getCode") return "0x6000";
+          if (call.method === "eth_getLogs") return [];
+          const blockNum = Number.parseInt(String(call.params[0]), 16);
+          const ts = chainId === "ethereum"
+            ? NOW - 900 - (10_000 - blockNum)
+            : hyperevmTipTs - (hyperevmTip - blockNum);
+          return { number: call.params[0], timestamp: `0x${ts.toString(16)}`, hash: HEADER.hash };
+        }),
+        errors: [],
+      };
+    });
+
+    // Omit observedAtSec so driver uses real/fake Date.now() per lane.
+    const first = await syncV9LaneAdminEvents(db, rpcs, undefined, { descriptors: [ethLane, bftLane] });
+    expect(first.status).toBe("ok");
+    expect(JSON.parse(first.metadata!)).toMatchObject({ admitted: 2, failed: 0 });
+    const firstAttempt = await readAttempt(db, hyperevmLane);
+    expect(firstAttempt).toMatchObject({
+      outcome: "admitted",
+      fromBlock: 51_339_080,
+      toBlock: 51_339_179,
+      consecutiveFailures: 0,
+    });
+    expect(firstAttempt!.attemptedAtSec).toBe(NOW + 5);
+
+    // Within 60 blocks of the backed-off tip on a later run -> defers as current with zero failures.
+    vi.setSystemTime((NOW + 3_700) * 1_000);
+    hyperevmTip = 51_339_230;
+    hyperevmTipTs = NOW + 3_701;
+    const stillCurrent = await syncV9LaneAdminEvents(db, rpcs, undefined, { descriptors: [bftLane] });
+    expect(stillCurrent.status).toBe("skipped_neutral");
+    expect(JSON.parse(stillCurrent.metadata!)).toMatchObject({ failed: 0, deferred: { current: 1 } });
+
+    // Once tip advances past the 60-block margin, chains contiguously from 51_339_180.
+    vi.setSystemTime((NOW + 7_400) * 1_000);
+    hyperevmTip = 51_339_500;
+    hyperevmTipTs = NOW + 7_401;
+    const chained = await syncV9LaneAdminEvents(db, rpcs, undefined, { descriptors: [bftLane] });
+    expect(chained.status).toBe("ok");
+    expect(await readAttempt(db, hyperevmLane)).toMatchObject({
+      outcome: "admitted",
+      fromBlock: 51_339_180,
+      toBlock: 51_339_440,
+      consecutiveFailures: 0,
+    });
+  });
+
+  it("fits all 9 admitted catalog lanes within the default per-invocation lane cap", async () => {
+    const { db } = fixtures.open();
+    const lanes = Array.from({ length: 9 }, (_, i) => `ethereum:${`0x${String(i + 1).padStart(40, "0")}`}`);
+    mocks.screen.mockImplementation(async (target: { subjectDeploymentKey: string }) =>
+      admitted(certificate(target.subjectDeploymentKey, 9_001, 10_000)));
+
+    const result = await sync(db, { descriptors: lanes.map(lane => descriptor(lane)) });
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata!)).toMatchObject({ attempted: 9, admitted: 9, deferredByCap: 0 });
   });
 });

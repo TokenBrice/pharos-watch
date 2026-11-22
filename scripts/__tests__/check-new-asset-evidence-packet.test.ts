@@ -1,8 +1,11 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { REPORT_CARDS_BASE_INPUT_GENERATION_ID_PREFIX } from "@shared/lib/report-cards-base-input-identity";
 import {
   NEW_ASSET_GATE_OVERRIDE_LABEL,
   NEW_ASSET_OPEN_QUESTION_LIMIT,
+  NEW_ASSET_RECEIPT_DIR,
   NewAssetAdmissionReceiptSchema,
   classifyNewAssetGateCandidates,
   evaluateNewAssetEvidencePacket,
@@ -13,6 +16,7 @@ import {
 } from "../ci/check-new-asset-evidence-packet";
 
 const REGISTRY_FINGERPRINT = "a".repeat(64);
+const EVALUATION_BUILD_DIGEST = "e".repeat(64);
 const CAPTURE_ID = "20261029T1814Z";
 const CAPTURE_CLOCK_SEC = 1_793_294_244;
 
@@ -27,24 +31,29 @@ interface QuestionFixture {
 }
 
 function receiptJson({
+  schemaVersion = 2,
   assetId = "newcoin-test",
   registryFingerprint = REGISTRY_FINGERPRINT,
+  evaluationBuildDigest = EVALUATION_BUILD_DIGEST,
   questions,
   card = {},
 }: {
+  schemaVersion?: 1 | 2;
   assetId?: string;
   registryFingerprint?: string;
+  evaluationBuildDigest?: string;
   questions: QuestionFixture[];
   card?: Record<string, unknown>;
 }): string {
   const open = questions.filter((question) => question.bucket === "open");
   return JSON.stringify({
-    schemaVersion: 1,
+    schemaVersion,
     kind: "safety-score-v9-new-asset-admission-receipt",
     assetId,
     captureId: CAPTURE_ID,
     captureClockSec: CAPTURE_CLOCK_SEC,
     registryFingerprint,
+    ...(schemaVersion === 2 ? { evaluationBuildDigest } : {}),
     card: {
       id: assetId,
       openBucketQuestionsCarried: open.length,
@@ -84,10 +93,14 @@ function openQuestions(count: number, prefix = "newcoin-test"): QuestionFixture[
   }));
 }
 
-function evaluate(receipt: string | null, { override = false, assetId = "newcoin-test" } = {}) {
+function evaluate(
+  receipt: string | null,
+  { override = false, assetId = "newcoin-test", evaluationBuildDigest = EVALUATION_BUILD_DIGEST } = {},
+) {
   return evaluateNewAssetEvidencePacket({
     candidates: [candidate(assetId)],
     registryFingerprint: REGISTRY_FINGERPRINT,
+    evaluationBuildDigest,
     override,
     readReceipt: () => receipt,
   });
@@ -191,6 +204,38 @@ describe("new-asset evidence packet gate", () => {
     })) as unknown;
     expect(NewAssetAdmissionReceiptSchema.safeParse(inconsistent).success).toBe(false);
     expect(NewAssetAdmissionReceiptSchema.safeParse(JSON.parse(receiptJson({ questions: openQuestions(1) }))).success).toBe(true);
+  });
+
+  it("rejects a mismatched evaluationBuildDigest or legacy v1 receipt on a newly gated asset even under override", () => {
+    const staleBuild = receiptJson({
+      evaluationBuildDigest: "f".repeat(64),
+      questions: openQuestions(1),
+    });
+    const legacyV1 = receiptJson({
+      schemaVersion: 1,
+      questions: openQuestions(1),
+    });
+
+    expect(NewAssetAdmissionReceiptSchema.safeParse(JSON.parse(legacyV1)).success).toBe(true);
+    for (const override of [false, true]) {
+      const staleReport = evaluate(staleBuild, { override });
+      expect(failKinds(staleReport)).toEqual(["stale-evaluation-build"]);
+      expect(staleReport.passed).toEqual([]);
+
+      const legacyReport = evaluate(legacyV1, { override });
+      expect(failKinds(legacyReport)).toEqual(["stale-evaluation-build"]);
+      expect(legacyReport.passed).toEqual([]);
+    }
+  });
+
+  it("keeps every committed historical receipt parseable under NewAssetAdmissionReceiptSchema", () => {
+    const receiptDir = resolve(import.meta.dirname, "../..", NEW_ASSET_RECEIPT_DIR);
+    const files = readdirSync(receiptDir).filter((name) => name.endsWith(".json")).sort();
+    expect(files.length).toBeGreaterThanOrEqual(5);
+    for (const file of files) {
+      const parsed = JSON.parse(readFileSync(resolve(receiptDir, file), "utf8")) as unknown;
+      expect(NewAssetAdmissionReceiptSchema.safeParse(parsed).success, file).toBe(true);
+    }
   });
 });
 

@@ -76,6 +76,7 @@ import {
 import { applySafetyScoreV9GradeHysteresis } from "@shared/lib/safety-score-v9/grade-hysteresis";
 import {
   resolveMeasuredExitExpiry,
+  type BuildAcceptedBaselineVerifiedEmptyOptions,
   type SafetyScoreV9AcceptedPublicationBaseline,
   type SafetyScoreV9DexExpiryWitness,
   type SafetyScoreV9ExpiredMeasuredExitRoutes,
@@ -118,6 +119,11 @@ export interface BuildSafetyScoreV9CandidateInput {
     routes: SafetyScoreV9ExpiredMeasuredExitRoutes;
     acceptedPublication: SafetyScoreV9AcceptedPublicationBaseline | null;
   };
+  /**
+   * 10.50 prior accepted baseline for bounded verified-empty Exit ceilings.
+   * When omitted, falls back to `measuredExitExpiry?.acceptedPublication`.
+   */
+  acceptedPublication?: SafetyScoreV9AcceptedPublicationBaseline | null;
   /** Operator-only reuse context; never supplied by the production publisher. */
   liveWithheldCompilation?: {
     source: SafetyScoreV9LiveWithheldCompilation;
@@ -156,6 +162,7 @@ export interface SafetyScoreV9CandidatePipelineResult {
   quarantineAffectedAssetIds: readonly string[];
   bridgeJoinDiagnostics: readonly SafetyScoreV9BridgeJoinDiagnostic[];
   measuredExitExpiry: SafetyScoreV9MeasuredExitExpiryResult;
+  verifiedEmptyExitBaselineOptions: BuildAcceptedBaselineVerifiedEmptyOptions;
 }
 
 export interface SafetyScoreV9PublicationResult {
@@ -166,6 +173,7 @@ export interface SafetyScoreV9PublicationResult {
   quarantineAffectedAssetIds: readonly string[];
   bridgeJoinDiagnostics: readonly SafetyScoreV9BridgeJoinDiagnostic[];
   measuredExitExpiry: SafetyScoreV9MeasuredExitExpiryResult;
+  verifiedEmptyExitBaselineOptions: BuildAcceptedBaselineVerifiedEmptyOptions;
 }
 
 /** Quarantined expired-route assets and the witnesses the next baseline retains. */
@@ -751,13 +759,15 @@ function buildSafetyScoreV9CandidatePipeline(
         : [{ assetId: asset.assetId, ...diagnostics }];
     })
     .sort((left, right) => compareText(left.assetId, right.assetId));
+  const effectiveAcceptedPublication = input.acceptedPublication ?? input.measuredExitExpiry?.acceptedPublication ?? null;
+  const verifiedEmptyExitByAssetId = effectiveAcceptedPublication?.verifiedEmptyExitByAssetId;
   const compileFacts = (extension: SafetyScoreV9FactSetExtensionV2, failures?: ReadonlyMap<string, string>):
     ReturnType<typeof compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension> |
     ReturnType<typeof compileSafetyScoreV9FactSetFromExtensionSource> =>
     extensionSource !== null
-      ? compileSafetyScoreV9FactSetFromExtensionSource(fixedInput!, extensionSource, failures)
+      ? compileSafetyScoreV9FactSetFromExtensionSource(fixedInput!, extensionSource, failures, verifiedEmptyExitByAssetId)
       : input.liveWithheldCompilation === undefined
-      ? compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(fixedInput!, extension, failures, !retainIntermediates)
+      ? compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(fixedInput!, extension, failures, !retainIntermediates, verifiedEmptyExitByAssetId)
       : input.liveWithheldCompilation.source.compile(
         fixedInput!, extension, input.liveWithheldCompilation.assetId, failures, !retainIntermediates,
       );
@@ -973,6 +983,11 @@ function buildSafetyScoreV9CandidatePipeline(
     return { candidate, candidateIdentity, retained };
   }
 
+  const verifiedEmptyExitBaselineOptions: BuildAcceptedBaselineVerifiedEmptyOptions = {
+    ...(verifiedEmptyExitByAssetId === undefined ? {} : { priorVerifiedEmptyExitByAssetId: verifiedEmptyExitByAssetId }),
+    observedAtByAssetId: Object.fromEntries([...dexObservedAtSec].sort(([left], [right]) => compareText(left, right))),
+    verifiedEmptyCarryMaxAgeSec: policy.policy.semantic.exit.verifiedEmptyCarryMaxAgeSec,
+  };
   if (retained === null) {
     return {
       candidate,
@@ -982,6 +997,7 @@ function buildSafetyScoreV9CandidatePipeline(
       quarantineAffectedAssetIds: affectedAssetIds,
       bridgeJoinDiagnostics,
       measuredExitExpiry,
+      verifiedEmptyExitBaselineOptions,
     };
   }
 
@@ -1000,5 +1016,6 @@ function buildSafetyScoreV9CandidatePipeline(
     quarantineAffectedAssetIds: affectedAssetIds,
     bridgeJoinDiagnostics,
     measuredExitExpiry,
+    verifiedEmptyExitBaselineOptions,
   };
 }

@@ -216,6 +216,21 @@ const DexExpiryWitnessSchema = z.strictObject({
 });
 export type SafetyScoreV9DexExpiryWitness = z.infer<typeof DexExpiryWitnessSchema>;
 
+const VerifiedEmptyExitWitnessSchema = z.strictObject({
+  verifiedAtSec: UnixSecondsSchema,
+  dexGenerationId: z.string().min(1),
+  publicationGenerationId: z.string().min(1),
+});
+export type SafetyScoreV9VerifiedEmptyExitWitness = z.infer<typeof VerifiedEmptyExitWitnessSchema>;
+
+const DEFAULT_VERIFIED_EMPTY_EXIT_CARRY_MAX_AGE_SEC = 172_800;
+
+export interface BuildAcceptedBaselineVerifiedEmptyOptions {
+  priorVerifiedEmptyExitByAssetId?: Readonly<Record<string, SafetyScoreV9VerifiedEmptyExitWitness>>;
+  observedAtByAssetId?: Readonly<Record<string, number>>;
+  verifiedEmptyCarryMaxAgeSec?: number;
+}
+
 /**
  * The publication gate only needs identity, deterioration, and delta fields
  * from the previously accepted publication. Keeping this compact projection
@@ -229,6 +244,8 @@ export const AcceptedPublicationBaselineSchema = z.strictObject({
   cards: z.array(AcceptedCardBaselineSchema),
   // 10.35: unresolved measured-route expiry, keyed by the quarantined asset.
   dexExpiryByAssetId: z.record(z.string().min(1), z.array(DexExpiryWitnessSchema).min(1)).optional(),
+  // 10.50: bounded verified-empty Exit witness, keyed by sorted asset ID.
+  verifiedEmptyExitByAssetId: z.record(z.string().min(1), VerifiedEmptyExitWitnessSchema).optional(),
 }).superRefine((value, ctx) => {
   if (value.cards.some((card, index) => index > 0 && compareCodeUnits(value.cards[index - 1]!.id, card.id) >= 0)) {
     ctx.addIssue({ code: "custom", path: ["cards"], message: "Baseline card IDs must be unique and sorted" });
@@ -244,16 +261,96 @@ export const AcceptedPublicationBaselineSchema = z.strictObject({
       ctx.addIssue({ code: "custom", path: ["dexExpiryByAssetId", assetId], message: "Expiry witnesses must be route-sorted, unique and not postdate publication" });
     }
   }
+  const verifiedEmptyEntries = Object.entries(value.verifiedEmptyExitByAssetId ?? {});
+  for (let index = 0; index < verifiedEmptyEntries.length; index++) {
+    const [assetId, witness] = verifiedEmptyEntries[index]!;
+    if (index > 0 && compareCodeUnits(verifiedEmptyEntries[index - 1]![0], assetId) >= 0) {
+      ctx.addIssue({ code: "custom", path: ["verifiedEmptyExitByAssetId", assetId], message: "Verified-empty Exit witnesses must be sorted by asset ID" });
+    }
+    if (!cardsById.has(assetId)) {
+      ctx.addIssue({ code: "custom", path: ["verifiedEmptyExitByAssetId", assetId], message: "Verified-empty Exit witness must name a published card" });
+    }
+    if (witness.verifiedAtSec > value.publishedAtSec) {
+      ctx.addIssue({ code: "custom", path: ["verifiedEmptyExitByAssetId", assetId, "verifiedAtSec"], message: "Verified-empty Exit witness must not postdate publication" });
+    }
+  }
 });
 export type SafetyScoreV9AcceptedPublicationBaseline = z.infer<typeof AcceptedPublicationBaselineSchema>;
+
+function isCardVerifiedEmptyExit(card: SafetyScoreV9CurrentResponse["cards"][number]): boolean {
+  const breakdowns = "breakdowns" in card && card.breakdowns !== null ? card.breakdowns : null;
+  const disposition = card.pillars.exit.aggregationDisposition ?? "included";
+  return (
+    card.ratingStatus === "rated" &&
+    card.pillars.exit.score === 0 &&
+    disposition === "included" &&
+    (breakdowns === null || breakdowns.exit.primaryRoute === null) &&
+    card.pillars.exit.reasons.some((reason) => reason.code === "no-viable-exit-path" && reason.cause === "D")
+  );
+}
+
+function hasCardPositiveExitRoute(card: SafetyScoreV9CurrentResponse["cards"][number]): boolean {
+  const breakdowns = "breakdowns" in card && card.breakdowns !== null ? card.breakdowns : null;
+  if (breakdowns !== null) {
+    if (breakdowns.exit.primaryRoute !== null) return true;
+    if (breakdowns.exit.alternatives.some((route) =>
+      route.included || (route.capacity !== null && route.capacity !== undefined && route.capacity.executableUsd > 0),
+    )) {
+      return true;
+    }
+  }
+  return (
+    card.pillars.exit.score !== null &&
+    card.pillars.exit.score > 0 &&
+    !card.pillars.exit.reasons.some(
+      (reason) => reason.code === "missing-same-notional-route" || reason.code === "missing-runtime-route-evidence",
+    )
+  );
+}
 
 export function buildSafetyScoreV9AcceptedPublicationBaseline(
   publication: SafetyScoreV9CurrentResponse,
   dexExpiryByAssetId: Readonly<Record<string, SafetyScoreV9DexExpiryWitness[]>> = {},
+  verifiedEmptyOptions: BuildAcceptedBaselineVerifiedEmptyOptions = {},
 ): SafetyScoreV9AcceptedPublicationBaseline {
   const witnessEntries = Object.entries(dexExpiryByAssetId).sort(([left], [right]) => compareCodeUnits(left, right));
+  const carryMaxAgeSec = verifiedEmptyOptions.verifiedEmptyCarryMaxAgeSec ?? DEFAULT_VERIFIED_EMPTY_EXIT_CARRY_MAX_AGE_SEC;
+  const observedAtByAssetId = verifiedEmptyOptions.observedAtByAssetId;
+  const priorVerifiedEmpty = verifiedEmptyOptions.priorVerifiedEmptyExitByAssetId;
+  const verifiedEmptyEntries: Array<[string, SafetyScoreV9VerifiedEmptyExitWitness]> = [];
+  for (const card of publication.cards) {
+    if (isCardVerifiedEmptyExit(card)) {
+      const observedAt = observedAtByAssetId?.[card.id];
+      const verifiedAtSec =
+        observedAt !== undefined && Number.isInteger(observedAt) && observedAt > 0 && observedAt <= publication.publishedAtSec
+          ? observedAt
+          : publication.asOfSec;
+      verifiedEmptyEntries.push([
+        card.id,
+        {
+          verifiedAtSec,
+          dexGenerationId: publication.sourceGenerations.dex ?? publication.publicationGenerationId,
+          publicationGenerationId: publication.publicationGenerationId,
+        },
+      ]);
+      continue;
+    }
+    if (!hasCardPositiveExitRoute(card)) {
+      const prior = priorVerifiedEmpty?.[card.id];
+      if (
+        prior !== undefined &&
+        prior.verifiedAtSec <= publication.asOfSec &&
+        publication.asOfSec - prior.verifiedAtSec <= carryMaxAgeSec &&
+        prior.verifiedAtSec <= publication.publishedAtSec
+      ) {
+        verifiedEmptyEntries.push([card.id, prior]);
+      }
+    }
+  }
+  verifiedEmptyEntries.sort(([left], [right]) => compareCodeUnits(left, right));
   return {
     ...(witnessEntries.length === 0 ? {} : { dexExpiryByAssetId: Object.fromEntries(witnessEntries) }),
+    ...(verifiedEmptyEntries.length === 0 ? {} : { verifiedEmptyExitByAssetId: Object.fromEntries(verifiedEmptyEntries) }),
     publicationGenerationId: publication.publicationGenerationId,
     publishedAtSec: publication.publishedAtSec,
     policyVersion: publication.policyVersion,

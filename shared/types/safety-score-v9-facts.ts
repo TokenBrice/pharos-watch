@@ -1712,6 +1712,16 @@ const V9AssetFactsBaseFields = {
     verifiedNoPoolsSupplyShare: z.number().finite().min(0).max(1),
     evidenceRefIds: CanonicalStringArraySchema,
   }).strict().optional(),
+  // v10.50: bounded ceiling carried from a recent verified-empty Exit
+  // publication so a transient unavailable DEX reading cannot score higher than
+  // the observed zero-exit state while preserving honest missing/producer-failed
+  // provenance (R1/R2).
+  priorVerifiedEmptyExitCeiling: z.object({
+    scoreCeiling: z.number().finite().min(0).max(100),
+    verifiedAtSec: UnixSecondsSchema,
+    sourceGenerationId: CanonicalTextSchema,
+    maxAgeSec: z.number().int().positive(),
+  }).strict().optional(),
   exitRoutes: canonicalArrayBy(V9ExitRouteFactV2Schema, (route) => route.routeKey),
   controlStatus: V9FactStatusV2Schema,
   controls: canonicalArrayBy(V9DeploymentControlFactV2Schema, (control) => control.controlKey),

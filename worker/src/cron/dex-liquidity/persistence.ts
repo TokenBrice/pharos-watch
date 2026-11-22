@@ -39,6 +39,7 @@ import {
   buildDexDeploymentCensusDetail,
   buildDexPlaceholderScoreDetailsJson,
   classifyDexPlaceholderCoverage,
+  DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC,
   type DexDeploymentCensusDetailParams,
   type DexDeploymentCensusRow,
 } from "./deployment-census-coverage";
@@ -267,6 +268,120 @@ function parseCurrentDexRouteSet(raw: string | null): {
         currentAdmissionPolicy: parsedRouteSet.exitRouteAdmissionPolicyVersion === DEX_ROUTE_ADMISSION_POLICY_VERSION,
       }
     : null;
+}
+
+interface PriorPopulatedEmptyCoverage {
+  coverage: ExitRouteObservationCoverage;
+  censusDetail: Record<string, unknown> | null;
+  oldestObservedAtSec: number | null;
+  publishedAtSec: number | null;
+}
+
+function parsePriorPopulatedEmptyCoverage(raw: string | null): PriorPopulatedEmptyCoverage | null {
+  if (raw === null) return null;
+  const parsed = tryParseJson(raw, "dex liquidity previous empty coverage");
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return null;
+  }
+  const record = parsed as {
+    exitRouteObservationCoverage?: unknown;
+    dexDeploymentCensus?: unknown;
+  };
+  const coverage = ExitRouteObservationCoverageSchema.safeParse(record.exitRouteObservationCoverage);
+  if (
+    !coverage.success ||
+    coverage.data.status !== "populated" ||
+    coverage.data.retainedPoolCount !== 0 ||
+    coverage.data.unsupportedPoolCount !== 0
+  ) {
+    return null;
+  }
+  const rawCensus = record.dexDeploymentCensus;
+  let censusDetail: Record<string, unknown> | null = null;
+  let oldestObservedAtSec: number | null = null;
+  let publishedAtSec: number | null = null;
+  if (rawCensus !== null && typeof rawCensus === "object" && !Array.isArray(rawCensus)) {
+    const censusObj = rawCensus as Record<string, unknown>;
+    const rawOldest = censusObj.oldestObservedAtSec;
+    const rawPublished = censusObj.publishedAtSec;
+    if (typeof rawOldest === "number" && Number.isInteger(rawOldest) && rawOldest > 0) {
+      oldestObservedAtSec = rawOldest;
+    }
+    if (typeof rawPublished === "number" && Number.isInteger(rawPublished) && rawPublished > 0) {
+      publishedAtSec = rawPublished;
+    }
+    if (
+      censusObj.state === "complete-empty" &&
+      publishedAtSec !== null &&
+      (rawOldest === null || oldestObservedAtSec !== null)
+    ) {
+      censusDetail = censusObj;
+    }
+  }
+  return {
+    coverage: coverage.data,
+    censusDetail,
+    oldestObservedAtSec,
+    publishedAtSec,
+  };
+}
+
+function resolveZeroPoolCensusDetail(params: {
+  assetId: string;
+  deployments: readonly ContractDeployment[];
+  outcomeRows: readonly DexDeploymentCensusRow[];
+  nowSec: number;
+  censusReadCompletedAtSec: number;
+  censusAvailable: boolean;
+  previousRaw: string | null;
+  generationId: string;
+}): DexDeploymentCensusDetailParams {
+  const classification = classifyDexPlaceholderCoverage({
+    deployments: params.deployments,
+    outcomeRows: params.outcomeRows,
+    nowSec: params.censusReadCompletedAtSec,
+    censusAvailable: params.censusAvailable,
+  });
+  const prior = parsePriorPopulatedEmptyCoverage(params.previousRaw);
+  if (!params.censusAvailable && prior !== null && prior.censusDetail !== null) {
+    const referenceAtSec = prior.oldestObservedAtSec ?? prior.publishedAtSec;
+    if (
+      referenceAtSec !== null &&
+      referenceAtSec <= params.nowSec &&
+      params.nowSec - referenceAtSec <= DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC
+    ) {
+      return {
+        classification: {
+          ...classification,
+          state: "complete-empty",
+          coverage: prior.coverage,
+        },
+        generationId: params.generationId,
+        publishedAtSec: params.nowSec,
+        preservedCensusDetail: prior.censusDetail,
+      };
+    }
+  }
+  if (prior !== null && classification.coverage.status === "unknown") {
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "dex_liquidity_empty_coverage_regression",
+      job: "sync-dex-liquidity",
+      message: "Previously populated empty DEX coverage regressed to unknown",
+      metadata: {
+        assetId: params.assetId,
+        state: classification.state,
+        reasonCounts: classification.coverage.unsupportedReasons,
+        oldestObservedAtSec: classification.census.oldestObservedAtSec ?? prior.oldestObservedAtSec,
+      },
+    });
+  }
+  return {
+    classification,
+    generationId: params.generationId,
+    publishedAtSec: params.nowSec,
+  };
 }
 
 /** @internal Exported for focused route-churn containment tests. */
@@ -903,7 +1018,9 @@ export async function persistScores(
                 outcome.observed_pool_count, outcome.observed_at,
                 meta.last_crawl_at AS discovery_last_crawl_at,
                 outcome.last_attempt_at AS deployment_last_attempt_at,
-                meta.deployment_fence_attribution_at
+                meta.deployment_fence_attribution_at,
+                meta.consecutive_misses AS discovery_consecutive_misses,
+                meta.last_hit_at AS discovery_last_hit_at
            FROM dex_deployment_outcomes outcome
            LEFT JOIN dex_discovery_meta meta
              ON meta.stablecoin_id = outcome.stablecoin_id
@@ -1028,6 +1145,7 @@ export async function persistScores(
               exitRouteObservations: heldRouteSet.observations,
               exitRouteObservationCoverage: heldRouteSet.coverage,
             } as FullScoreResult;
+      const previousScoreDetailsRaw = currentRouteSets.get(id) ?? null;
       recordTurnover(id, (persistedScoreResult as P4aFullScoreResult).exitRouteObservations ?? []);
       currentRouteSets.delete(id);
       // A scored row that retained no pool never reaches the placeholder loop,
@@ -1036,16 +1154,16 @@ export async function persistScores(
       const scoredCoverage = (persistedScoreResult as P4aFullScoreResult).exitRouteObservationCoverage;
       const scoredCensus: DexDeploymentCensusDetailParams | null =
         scoredCoverage != null && scoredCoverage.retainedPoolCount === 0
-          ? {
-              classification: classifyDexPlaceholderCoverage({
-                deployments: censusDeployments(activeMetaById.get(id)),
-                outcomeRows: deploymentCensusById.get(id) ?? [],
-                nowSec: deploymentCensusReadCompletedAtSec,
-                censusAvailable: deploymentCensusAvailable,
-              }),
+          ? resolveZeroPoolCensusDetail({
+              assetId: id,
+              deployments: censusDeployments(activeMetaById.get(id)),
+              outcomeRows: deploymentCensusById.get(id) ?? [],
+              nowSec,
+              censusReadCompletedAtSec: deploymentCensusReadCompletedAtSec,
+              censusAvailable: deploymentCensusAvailable,
+              previousRaw: previousScoreDetailsRaw,
               generationId,
-              publishedAtSec: nowSec,
-            }
+            })
           : null;
       if (heldRouteSet !== null) scoreResults.set(id, persistedScoreResult);
       if (heldRouteSet !== null) {
@@ -1120,11 +1238,17 @@ export async function persistScores(
           exitRouteContinuity.refused++;
           incrementReason(exitRouteContinuity.refusedReasons, "empty-candidate");
         }
-        const coverage = classifyDexPlaceholderCoverage({
+        const previousPlaceholderRaw = currentRouteSets.get(meta.id) ?? null;
+        currentRouteSets.delete(meta.id);
+        const placeholderCensus = resolveZeroPoolCensusDetail({
+          assetId: meta.id,
           deployments: censusDeployments(meta),
           outcomeRows: deploymentCensusById.get(meta.id) ?? [],
-          nowSec: deploymentCensusReadCompletedAtSec,
+          nowSec,
+          censusReadCompletedAtSec: deploymentCensusReadCompletedAtSec,
           censusAvailable: deploymentCensusAvailable,
+          previousRaw: previousPlaceholderRaw,
+          generationId,
         });
         deploymentCensusById.delete(meta.id);
         await queueRunRow([
@@ -1147,11 +1271,7 @@ export async function persistScores(
           null,
           0,
           null,
-          buildDexPlaceholderScoreDetailsJson({
-            classification: coverage,
-            generationId,
-            publishedAtSec: nowSec,
-          }),
+          buildDexPlaceholderScoreDetailsJson(placeholderCensus),
           null,
           "unobserved",
           0,

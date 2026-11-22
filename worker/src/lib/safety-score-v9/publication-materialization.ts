@@ -16,18 +16,24 @@ export type SafetyScoreV9PublicMaterializationRunResult =
   | { status: "skipped"; reason: "post-commit-interrupted" }
   | { status: "skipped"; reason: "insufficient-budget"; remainingMs: number; requiredMs: number };
 
+export interface SafetyScoreV9PublicMaterializationRetryOptions {
+  /** Skip generations that already recorded a failed recovery attempt. */
+  skipPriorFailedGeneration?: boolean;
+}
+
 /**
  * Minimum time left to the publisher's deadline before an in-run attempt
- * starts; below it the :52 second chance owns materialization. Evidence
- * (publicationWork, 2026-11-13): the 15:22 run timed out with 44.3 s left,
- * while every run with 64 s or more materialized.
+ * starts; below it the :38 piggyback or :52 second chance owns materialization.
+ * Evidence (publicationWork, 2026-11-13): the 15:22 run timed out with 44.3 s
+ * left, while every run with 64 s or more materialized.
  */
-const SAFETY_SCORE_V9_PUBLIC_MATERIALIZATION_MIN_REMAINING_MS = 45_000;
+export const SAFETY_SCORE_V9_PUBLIC_MATERIALIZATION_MIN_REMAINING_MS = 45_000;
 
 /**
  * Best-effort post-acceptance materialization. Acceptance is already durable;
  * a failure leaves readers on the previously selected generation and is retried
- * once in-run, then in the :52 second-chance slot without another compute.
+ * once in-run, then in the :38 piggyback or :52 second-chance slot without
+ * another compute.
  */
 export async function materializeAcceptedPublication(
   db: D1Database,
@@ -76,9 +82,12 @@ export async function materializeAcceptedPublication(
   }
 }
 
-/** The :52 recovery path owns this invocation; candidate inputs are never loaded. */
+/** The :38 piggyback and :52 recovery paths own this invocation; candidate inputs are never loaded. */
 export async function retryPendingSafetyScoreV9PublicMaterialization(
-  db: D1Database, signal: AbortSignal | undefined, deadlineMs: number,
+  db: D1Database,
+  signal: AbortSignal | undefined,
+  deadlineMs: number,
+  options?: SafetyScoreV9PublicMaterializationRetryOptions,
 ): Promise<{
   status: SafetyScoreV9PublicMaterializationRunResult["status"]; publishedAtSec: number | null;
   publicationGenerationId: string | null; reason: string; budgetMs: number;
@@ -99,16 +108,32 @@ export async function retryPendingSafetyScoreV9PublicMaterialization(
     json_extract(p.value, '$.payloadSha256') AS payload_sha256,
     CASE WHEN json_extract(m.value, '$.publicationGenerationId') = json_extract(p.value, '$.identity.publicationGenerationId')
       AND json_extract(m.value, '$.payloadSha256') = json_extract(p.value, '$.payloadSha256')
-      AND json_extract(m.value, '$.projectionVersion') = ? THEN 1 ELSE 0 END AS materialized
-    FROM cache p LEFT JOIN cache m ON m.key = ? WHERE p.key = ?`)
-    .bind(V9_PUBLIC_REPRESENTATION_VERSION, V9_PUBLIC_MATERIALIZATION_CACHE_KEY, SAFETY_SCORE_V9_CACHE_KEYS.publication)
-    .first<{ published_at: number; generation_id: string; payload_sha256: string; materialized: number }>();
+      AND json_extract(m.value, '$.projectionVersion') = ? THEN 1 ELSE 0 END AS materialized,
+    CASE WHEN json_extract(f.value, '$.publicationGenerationId') = json_extract(p.value, '$.identity.publicationGenerationId')
+      THEN 1 ELSE 0 END AS failed
+    FROM cache p LEFT JOIN cache m ON m.key = ? LEFT JOIN cache f ON f.key = ? WHERE p.key = ?`)
+    .bind(
+      V9_PUBLIC_REPRESENTATION_VERSION,
+      V9_PUBLIC_MATERIALIZATION_CACHE_KEY,
+      SAFETY_SCORE_V9_CACHE_KEYS.publicMaterializationFailure,
+      SAFETY_SCORE_V9_CACHE_KEYS.publication,
+    )
+    .first<{ published_at: number; generation_id: string; payload_sha256: string; materialized: number; failed: number }>();
   if (!row) {
     checkBudget();
     return { status: "skipped", publishedAtSec: null, publicationGenerationId: null,
       reason: "v9-public-materialization-retry-source-unavailable", budgetMs };
   }
   if (row.materialized === 1) return null;
+  if (options?.skipPriorFailedGeneration && row.failed === 1) {
+    return {
+      status: "skipped",
+      publishedAtSec: row.published_at,
+      publicationGenerationId: row.generation_id,
+      reason: "v9-public-materialization-retry-already-failed",
+      budgetMs,
+    };
+  }
   try {
     checkBudget();
     let source = await loadSafetyScoreV9PublicationStoredRow(db, retrySignal);
@@ -148,13 +173,20 @@ export async function retryPendingSafetyScoreV9PublicMaterialization(
 }
 
 export async function recoverSafetyScoreV9PublicMaterialization(
-  db: D1Database, signal: AbortSignal, deadlineMs: number,
+  db: D1Database,
+  signal: AbortSignal,
+  deadlineMs: number,
+  options?: SafetyScoreV9PublicMaterializationRetryOptions,
 ): Promise<CronResult> {
   try {
-    const retry = await retryPendingSafetyScoreV9PublicMaterialization(db, signal, deadlineMs);
+    const retry = await retryPendingSafetyScoreV9PublicMaterialization(db, signal, deadlineMs, options);
     const reason = retry?.reason ?? "v9-public-materialization-already-selected";
+    const neutral =
+      retry === null ||
+      retry.status === "superseded" ||
+      retry.reason === "v9-public-materialization-retry-already-failed";
     return createCronResult({
-      status: retry === null || retry.status === "superseded" ? "skipped_neutral" : retry.status === "materialized" ? "ok" : "degraded",
+      status: neutral ? "skipped_neutral" : retry.status === "materialized" ? "ok" : "degraded",
       itemCount: retry?.status === "materialized" ? 1 : 0,
       metadata: { reason, publicMaterialization: retry },
       productivity: { productive: retry?.status === "materialized", reason },

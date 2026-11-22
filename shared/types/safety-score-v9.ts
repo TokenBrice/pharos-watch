@@ -1137,6 +1137,8 @@ const V9ExitPolicySchema = z
       .strict(),
     limitedCapacityConfidenceFactor: z.number().finite().min(0).max(1),
     maximumScoreEligiblePortfolioCandidates: z.number().int().positive().max(64),
+    /** Maximum age (seconds) a prior verified-empty Exit observation may bound an unavailable Exit score (v10.50). */
+    verifiedEmptyCarryMaxAgeSec: z.number().int().positive(),
     /**
      * Credit retained by a route whose observation aged past its lane freshness
      * bound but is otherwise a known, supported, reviewed route. A retained

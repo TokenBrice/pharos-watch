@@ -58,9 +58,9 @@ describe("Safety Score V9 incremental publication byte budgets", () => {
 
 describe("Safety Score V9 compile admission", () => {
   it.each([
-    [520, 397, true],
-    [521, 397, false],
-    [520, 398, false],
+    [560, 397, true],
+    [561, 397, false],
+    [560, 398, false],
   ])("admits catalog %i and active %i without slicing", (catalogAssets, activeAssets, admitted) => {
     const result = assessSafetyScoreV9ResourceBudget({
       catalogAssets, activeAssets, inputBytes: REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES,
@@ -70,7 +70,7 @@ describe("Safety Score V9 compile admission", () => {
       resourcePressure: {
         phase: "compile-admission", observedAt: expect.any(Number),
         bodyCapBytes: null, cacheCapBytes: null, cacheEntryCapBytes: null, maxConcurrentDecodes: null,
-        inputCapBytes: REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES, catalogMaxAssets: 520,
+        inputCapBytes: REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES, catalogMaxAssets: 560,
         intakeBytes: null, cacheBytes: null, rejectedBodies: null,
         inputBytes: REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES, catalogAssets,
         intakeBasis: "unavailable", cacheBasis: "unavailable",
@@ -83,11 +83,11 @@ describe("Safety Score V9 compile admission", () => {
 
   it("uses the codec expanded-byte ceiling and preserves unknown measurement", () => {
     expect(assessSafetyScoreV9ResourceBudget({
-      catalogAssets: 520, activeAssets: 397,
+      catalogAssets: 560, activeAssets: 397,
       inputBytes: REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES + 1,
     })).toMatchObject({ admitted: false, reason: "resource-budget-exceeded" });
     expect(assessSafetyScoreV9ResourceBudget({
-      catalogAssets: 520, activeAssets: 397, inputBytes: null,
+      catalogAssets: 560, activeAssets: 397, inputBytes: null,
     })).toMatchObject({ admitted: true, resourcePressure: { inputBytes: null } });
   });
 
@@ -98,7 +98,7 @@ describe("Safety Score V9 compile admission", () => {
     [8_000_000, true, "approaching-resource-budget"],
     [8_000_001, false, "resource-budget-exceeded"],
   ] as const)("reports input headroom at %s bytes without weakening admission", (inputBytes, admitted, guard) => {
-    expect(assessSafetyScoreV9ResourceBudget({ catalogAssets: 520, activeAssets: 397, inputBytes }))
+    expect(assessSafetyScoreV9ResourceBudget({ catalogAssets: 560, activeAssets: 397, inputBytes }))
       .toMatchObject({ admitted, reason: admitted ? null : "resource-budget-exceeded", resourcePressure: { inputBytes, guard } });
   });
 

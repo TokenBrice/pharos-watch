@@ -74,6 +74,9 @@ export interface DexDeploymentCensusRow {
   deployment_last_attempt_at?: number | null;
   /** Equals the coin fence only when the new writer attributed that fence. */
   deployment_fence_attribution_at?: number | null;
+  /** Backoff counters from dex_discovery_meta for dormant empty-census deferral guarding. */
+  discovery_consecutive_misses?: number | null;
+  discovery_last_hit_at?: number | null;
 }
 
 export type DexPlaceholderCoverageState =
@@ -281,17 +284,23 @@ export function classifyDexPlaceholderCoverage(params: {
         newestObservedAtSec === null
           ? row.observed_at
           : Math.max(newestObservedAtSec, row.observed_at);
-      if (isStoredDexCensusEvidenceStale({
+      const isStale = isStoredDexCensusEvidenceStale({
         observedAt: row.observed_at,
         nowSec: params.nowSec,
         maxAgeSec,
-      })) staleOutcomeCount++;
+      });
+      if (isStale) staleOutcomeCount++;
       const providerSet = parseProviderSet(row.provider_set_json);
       if (providerSet === null) {
         invalidOutcomeCount++;
         continue;
       }
       const providerCount = providerSet.length;
+      const providerSetSuperseded = isCensusProviderSetSupersededByRegistry(
+        row.chain,
+        row.contract_address,
+        providerSet,
+      );
       const censusState = classifyStoredDexCensusState({
         outcome: row.outcome,
         reason: row.reason,
@@ -301,11 +310,7 @@ export function classifyDexPlaceholderCoverage(params: {
         providerCount,
         nowSec: params.nowSec,
         maxAgeSec,
-        providerSetSuperseded: isCensusProviderSetSupersededByRegistry(
-          row.chain,
-          row.contract_address,
-          providerSet,
-        ),
+        providerSetSuperseded,
       });
       switch (censusState.disposition) {
         case "verified-no-pools":
@@ -314,15 +319,30 @@ export function classifyDexPlaceholderCoverage(params: {
         case "observed-pools":
           observedPoolsCount++;
           break;
-        case "superseded":
-          // The row claims no registered provider supports this chain while the
-          // registry now resolves one (this key is only reviewed because
-          // `getDexDiscoveryProviders()` returned a provider above). It is a
-          // pre-coverage artifact the crawl rotation has not overwritten yet, so
-          // it is superseded evidence — publishing it as a standing scope limit
-          // attributed a solved integration gap to "Pharos has no method here".
+        case "superseded": {
+          // Dormant 0-pool coins advance their crawl fence before an in-flight
+          // or deferred re-crawl finishes. Keep a fresh verified_no_pools row
+          // populated while the prior observation is still within maxAgeSec and
+          // no pool hit or provider-registry change invalidated it.
+          const isDormantVerifiedNoPoolsDeferral =
+            row.outcome === "verified_no_pools" &&
+            row.observed_pool_count === 0 &&
+            !providerSetSuperseded &&
+            !isStale &&
+            typeof row.discovery_consecutive_misses === "number" &&
+            Number.isInteger(row.discovery_consecutive_misses) &&
+            row.discovery_consecutive_misses >= DISCOVERY_TIERS.BACKOFF_DORMANT_MISSES &&
+            (row.discovery_last_hit_at == null || row.discovery_last_hit_at <= row.observed_at);
+          if (isDormantVerifiedNoPoolsDeferral) {
+            verifiedNoPoolsCount++;
+            break;
+          }
+          // Otherwise either a non-dormant/failed crawl advanced the fence or
+          // the row claims no registered provider supports this chain while the
+          // registry now resolves one; mark superseded so it fails closed.
           supersededOutcomeCount++;
           break;
+        }
         case "unsupported-scope":
           providerInaccessibleCount++;
           unsupportedMethodOutcomeCount++;
@@ -430,12 +450,17 @@ export interface DexDeploymentCensusDetailParams {
   classification: DexPlaceholderCoverageClassification;
   generationId: string;
   publishedAtSec: number;
+  /** When carrying a prior fresh complete-empty census on read error, emit verbatim without rewriting clocks (R6). */
+  preservedCensusDetail?: Record<string, unknown>;
 }
 
 /** The published census block, shared by placeholder and zero-pool scored rows. */
 export function buildDexDeploymentCensusDetail(
   params: DexDeploymentCensusDetailParams,
 ): Record<string, unknown> {
+  if (params.preservedCensusDetail !== undefined) {
+    return params.preservedCensusDetail;
+  }
   return {
     schemaVersion: 1,
     state: params.classification.state,

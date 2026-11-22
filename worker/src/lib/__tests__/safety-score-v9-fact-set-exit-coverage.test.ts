@@ -53,6 +53,8 @@ import {
 } from "../../test-helpers/v9-fixed-input";
 import { buildRoutes } from "../safety-score-v9/fact-set-exit";
 import { buildSupply } from "../safety-score-v9/fact-set-peg-supply";
+import { buildSafetyScoreV9Candidate } from "../safety-score-v9/candidate";
+import { buildSafetyScoreV9AcceptedPublicationBaseline } from "../safety-score-v9/publication-assessment";
 import { factBuilderContext } from "./safety-score-v9-fact-builders.test-support";
 
 describe("route compiler policy reuse", () => {
@@ -1402,5 +1404,128 @@ describe("direct exit fact builder", () => {
     const context = factBuilderContext(fixed, reviewed);
     expect(() => buildRoutes(context, buildSupply(context)))
       .toThrow(/Route reviews do not match captured observations/);
+  });
+
+  it("compiles priorVerifiedEmptyExitCeiling on unavailable DEX coverage, prevents score jump, expires after 48h, and clears on positive route (v10.50)", () => {
+    const t0 = Date.parse("2026-10-20T12:00:00Z") / 1_000;
+    const makeEmptyRun = (clockSec: number, coverageStatus: "populated" | "unknown") => {
+      const draft = exactFixedInput({ clockSec });
+      draft.dexLiqMap.alpha!.exitRouteObservations = [];
+      draft.dexLiqMap.alpha!.exitRouteObservationCoverage = {
+        status: coverageStatus,
+        capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION,
+        retainedPoolCount: 0,
+        observationCount: 0,
+        scoreEligibleObservationCount: 0,
+        scoreEligiblePoolCount: 0,
+        scoreEligibleCapabilityPoolCount: 0,
+        unsupportedPoolCount: 0,
+        evidenceCounts: {},
+        unsupportedReasons: coverageStatus === "populated" ? {} : { deploymentCensusUnavailable: 1 },
+      };
+      if (coverageStatus === "populated") {
+        draft.dexDeploymentSupplyCoverageById.alpha = {
+          totalSupplyUsd: 10_000_000, verifiedNoPoolsSupplyUsd: 10_000_000, verifiedNoPoolsSupplyRatio: 1,
+          observedSupplyUsd: 0, observedSupplyRatio: 0, providerInaccessibleSupplyUsd: 0,
+          providerInaccessibleSupplyRatio: 0, unknownSupplyUsd: 0, unknownSupplyRatio: 0, unknownChains: [],
+        };
+      } else {
+        delete draft.dexDeploymentSupplyCoverageById.alpha;
+      }
+      const fixed = rebuildFixed(draft);
+      const reviewed = structuredClone(extension({ clockSec, registryFingerprint: fixed.registryFingerprint }));
+      reviewed.assets[0]!.routeReviews = [];
+      return { fixed, reviewed };
+    };
+
+    // 1. Initial verified-empty publication establishes the baseline witness.
+    const verifiedEmptyRun = makeEmptyRun(t0, "populated");
+    const baselinePipeline = buildSafetyScoreV9Candidate({
+      fixedInput: verifiedEmptyRun.fixed,
+      extension: verifiedEmptyRun.reviewed,
+      publishedAtSec: t0,
+    });
+    const baselineCard = baselinePipeline.candidate.cards.find((card) => card.id === "alpha")!;
+    expect(baselineCard.pillars.exit.score).toBe(0);
+    expect(baselineCard.pillars.exit.reasons).toContainEqual(
+      expect.objectContaining({ code: "no-viable-exit-path", cause: "D" }),
+    );
+    const verifiedEmptyScore = baselineCard.score!;
+    const acceptedBaseline = buildSafetyScoreV9AcceptedPublicationBaseline(baselinePipeline.candidate);
+    expect(acceptedBaseline.verifiedEmptyExitByAssetId?.alpha).toEqual({
+      verifiedAtSec: t0,
+      dexGenerationId: baselinePipeline.candidate.sourceGenerations.dex,
+      publicationGenerationId: baselinePipeline.candidate.publicationGenerationId,
+    });
+
+    // 2. Subsequent unavailable DEX run within 48h without baseline jumps; WITH baseline stays capped at verified-empty score while keeping honest R1 gap.
+    const t1 = t0 + 3_600;
+    const unavailableRun = makeEmptyRun(t1, "unknown");
+    const uncappedPipeline = buildSafetyScoreV9Candidate({
+      fixedInput: unavailableRun.fixed,
+      extension: unavailableRun.reviewed,
+      publishedAtSec: t1,
+    });
+    const uncappedCard = uncappedPipeline.candidate.cards.find((card) => card.id === "alpha")!;
+    expect(uncappedCard.score!).toBeGreaterThan(verifiedEmptyScore);
+
+    const cappedPipeline = buildSafetyScoreV9Candidate({
+      fixedInput: unavailableRun.fixed,
+      extension: unavailableRun.reviewed,
+      publishedAtSec: t1,
+      acceptedPublication: acceptedBaseline,
+    });
+    const cappedFacts = cappedPipeline.compiledFacts.assets.find((asset) => asset.assetId === "alpha")!;
+    const cappedCard = cappedPipeline.candidate.cards.find((card) => card.id === "alpha")!;
+    expect(cappedFacts.priorVerifiedEmptyExitCeiling).toEqual({
+      scoreCeiling: 0,
+      verifiedAtSec: t0,
+      sourceGenerationId: baselinePipeline.candidate.sourceGenerations.dex,
+      maxAgeSec: 172_800,
+    });
+    expect(cappedFacts.exitStatus.observationState).toBe("missing");
+    expect(cappedFacts.gaps).toContainEqual(
+      expect.objectContaining({
+        reasonCode: "missing-runtime-route-evidence",
+        observationState: "missing",
+        message: "No exact DEX, redemption, or retained route observation is available.",
+      }),
+    );
+    expect(cappedCard.score).toBe(verifiedEmptyScore);
+    expect(cappedCard.pillars.exit.reasons.some((reason) => reason.code === "no-viable-exit-path")).toBe(false);
+    expect(cappedCard.scoreTrace.aggregation?.pricedUnknownPillars).toContainEqual(
+      expect.objectContaining({ pillar: "exit", score: 0 }),
+    );
+
+    // 3. Past 48h (verifiedEmptyCarryMaxAgeSec = 172_800), ceiling expires and ordinary unknown pricing resumes.
+    const tExpired = t0 + 172_801;
+    const expiredRun = makeEmptyRun(tExpired, "unknown");
+    const expiredPipeline = buildSafetyScoreV9Candidate({
+      fixedInput: expiredRun.fixed,
+      extension: expiredRun.reviewed,
+      publishedAtSec: tExpired,
+      acceptedPublication: acceptedBaseline,
+    });
+    const expiredFacts = expiredPipeline.compiledFacts.assets.find((asset) => asset.assetId === "alpha")!;
+    const expiredCard = expiredPipeline.candidate.cards.find((card) => card.id === "alpha")!;
+    expect(expiredFacts.priorVerifiedEmptyExitCeiling).toBeUndefined();
+    expect(expiredCard.score!).toBeGreaterThan(verifiedEmptyScore);
+
+    // 4. When a positive DEX route observation appears within 48h, ceiling is not compiled and baseline clears the witness.
+    const positiveFixed = exactFixedInput({ clockSec: t1 });
+    const positiveReviewed = extension({ clockSec: t1, registryFingerprint: positiveFixed.registryFingerprint });
+    const recoveredPipeline = buildSafetyScoreV9Candidate({
+      fixedInput: positiveFixed,
+      extension: positiveReviewed,
+      publishedAtSec: t1,
+      acceptedPublication: acceptedBaseline,
+    });
+    expect(recoveredPipeline.compiledFacts.assets[0]!.priorVerifiedEmptyExitCeiling).toBeUndefined();
+    const recoveredBaseline = buildSafetyScoreV9AcceptedPublicationBaseline(
+      recoveredPipeline.candidate,
+      {},
+      { priorVerifiedEmptyExitByAssetId: acceptedBaseline.verifiedEmptyExitByAssetId },
+    );
+    expect(recoveredBaseline.verifiedEmptyExitByAssetId).toBeUndefined();
   });
 });
