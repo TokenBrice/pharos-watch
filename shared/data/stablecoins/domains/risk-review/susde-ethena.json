@@ -139,7 +139,7 @@
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-10-01",
         "observedBlock": 26095796,
-        "reviewNote": "Pinned ethereum block 26095796: symbol() = sUSDe; decimals() = 18; asset() = USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3; owner() = 0xe8dc0fab349ea169283c48ccfd09d797e6db7c94. Canonical staking shares; the separate Ethereum OFT adapter token() returns this vault address. Supplementary escrow review by Sol curation campaign 2026-10-11 (C19SUSDe), observed 2026-10-11T00:54:51Z: Ethereum block 26160000, hash 0x2d90aeb4d9d143f85dde7c5f8f230072c6f3dcab7879cbdbf5ef9b9458470820, timestamp 2026-10-10T05:40:35Z, confirms adapter 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2 token() = this vault, owner() = 0xe8dc0fab349ea169283c48ccfd09d797e6db7c94 and endpoint() = 0x1a44076050125825900e736c501f859c50fe728c. Vault balanceOf(adapter) = 300651242718604000000000000 raw 18-decimal shares; vault totalSupply() = 969312041424878458344856558 raw shares. Verified inherited OFTAdapter._debit locks these shares by safeTransferFrom and _credit unlocks them; independent-liability total-supply summation would double-count escrow-backed receipts. RateLimiter.amountInFlight decays with time and is not an authenticated undelivered-message balance. These point observations establish neither exhaustive escrow/receipt coverage nor any materialSupplyShare; prior route and whole-profile observation clocks remain unchanged.",
+        "reviewNote": "Pinned ethereum block 26095796: symbol() = sUSDe; decimals() = 18; asset() = USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3; owner() = 0xe8dc0fab349ea169283c48ccfd09d797e6db7c94. Canonical staking shares; the separate Ethereum OFT adapter token() returns this vault address. Supplementary escrow review by Sol curation campaign 2026-10-11 (C19SUSDe), observed 2026-10-11T00:54:51Z: Ethereum block 26160000, hash 0x2d90aeb4d9d143f85dde7c5f8f230072c6f3dcab7879cbdbf5ef9b9458470820, timestamp 2026-10-10T05:40:35Z, confirms adapter 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2 token() = this vault, owner() = 0xe8dc0fab349ea169283c48ccfd09d797e6db7c94 and endpoint() = 0x1a44076050125825900e736c501f859c50fe728c. Vault balanceOf(adapter) = 300651242718604000000000000 raw 18-decimal shares; vault totalSupply() = 969312041424878458344856558 raw shares. Verified inherited OFTAdapter._debit locks these shares by safeTransferFrom and _credit unlocks them; independent-liability total-supply summation would double-count escrow-backed receipts. RateLimiter.amountInFlight decays with time and is not an authenticated undelivered-message balance. These point observations establish neither exhaustive escrow/receipt coverage nor any materialSupplyShare; prior route and whole-profile observation clocks remain unchanged. Supplementary 2026-11-22 adapter peer census at Ethereum block 26471602 (hash 0x721c4070de036bc8800296dd9f7bd5412f1476a968e69407bde6cc717de78c9e, 2026-11-22T15:37:59.000Z): vault totalSupply=909241392900628292095867149, adapter escrow balance=145395311047621000000000000; 16 active peered EIDs (bsc, avalanche, aptos [30108->0xa84fcc...], arbitrum, optimism, solana, mantle, base, fraxtal, xlayer, morph-l2, berachain, hyperevm, plasma, monad, tempo [30410->0x100c1237...]) and 10 unpeered EIDs (swellchain, metis, zksync, kava, scroll, manta, mode, linea, zircuit, blast). Prior route and whole-profile observation clocks remain unchanged; TON/Aptos/Tempo OFT escrow fail-closed guard remains strictly intact.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -208,7 +208,10 @@
           "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
           "contract:plasma:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
         ],
-        "observedBlock": 33896578
+        "observedBlock": 33896578,
+        "providerKeys": [
+          "layerzero"
+        ]
       },
       {
         "id": "linea:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
@@ -226,7 +229,7 @@
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-10-01",
         "observedBlock": 32198402,
-        "reviewNote": "Pinned linea block 32198402: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0x022f6538ab8468d75314d91f906c867e6b048c74. getMinDelay() = 86400 seconds. This does not prove every operation is delayed; whitelist bypass and messaging configuration remain unverified.",
+        "reviewNote": "Pinned linea block 32198402: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0x022f6538ab8468d75314d91f906c867e6b048c74. getMinDelay() = 86400 seconds. This does not prove every operation is delayed; whitelist bypass and messaging configuration remain unverified. Supplementary 2026-11-22 unpeering observation: Unpeered on both sides: Ethereum StakedUSDeOFTAdapter unpeered EID 30183 on 2026-09-30T21:09:59Z (block 26092893, tx 0xdcdc897a...) and Linea block 32680731 confirms peers(30101)=0x0 while 446.243660 sUSDe remains on-chain. Prior route observation clock retained.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -251,6 +254,9 @@
           "protocol:layerzero-v2",
           "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
           "contract:linea:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
+        ],
+        "providerKeys": [
+          "layerzero"
         ]
       },
       {
@@ -269,7 +275,7 @@
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-10-01",
         "observedBlock": 42013426,
-        "reviewNote": "Pinned fraxtal block 42013426: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0xc66bbbf821f2cfb3a85683acf0326eac92c160bd. getThreshold() = 5; getOwners() returns 10 owners. Modules, guards, signer custody and complete messaging configuration remain unverified.",
+        "reviewNote": "Pinned fraxtal block 42013426: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0xc66bbbf821f2cfb3a85683acf0326eac92c160bd. getThreshold() = 5; getOwners() returns 10 owners. Modules, guards, signer custody and complete messaging configuration remain unverified. Supplementary 2026-11-22 check at Fraxtal block 44275378: still reciprocally peered with Ethereum, and owner() migrated from 5-of-10 Safe 0xc66bbbf821f2cfb3a85683acf0326eac92c160bd to EthenaTimelockController 0xbb4db1dd2851a4c06afbc2c115de874d103090b4.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -294,6 +300,9 @@
           "protocol:layerzero-v2",
           "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
           "contract:fraxtal:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
+        ],
+        "providerKeys": [
+          "layerzero"
         ]
       },
       {
@@ -337,6 +346,9 @@
           "protocol:layerzero-v2",
           "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
           "contract:hyperevm:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
+        ],
+        "providerKeys": [
+          "layerzero"
         ]
       },
       {
@@ -353,9 +365,9 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-01",
-        "observedBlock": 26911422,
-        "reviewNote": "Pinned berachain block 26911422: symbol() = sUSDe; decimals() = 18; endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b; owner() = 0x093d3f4785149a3d2600cb10d63afa14f9b09364. getThreshold() = 5; getOwners() returns 10 owners. Modules, guards, signer custody and complete messaging configuration remain unverified.",
+        "observedAt": "2026-11-22",
+        "observedBlock": 29174069,
+        "reviewNote": "Pinned berachain block 29174069 (hash 0x24ff5966a7450163d5ae88698413c517a8ec417f1e4ae4db5aae2741027a7230, 2026-11-22T15:54:14.000Z): reciprocally peered with Ethereum StakedUSDeOFTAdapter (EID 30101 -> 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2, verified at Ethereum block 26471602); owner()=delegate()=0x7f2315418c2bbdbab0bd325ab7b0e5a791a7683b (5-of-10 Safe 0x093d3f4785149a3d2600cb10d63afa14f9b09364 (modules=[], guard=0x0) holding PROPOSER_ROLE, EXECUTOR_ROLE and WHITELISTED_EXECUTOR_ROLE on EthenaTimelockController 0x7f2315418c2bbdbab0bd325ab7b0e5a791a7683b (owner migrated from Safe 0x093d3f47... to Timelock since 2026-10-01; getMinDelay()=86400s; setPeer and updateBlackList whitelisted for zero-delay bypass)); blackList(self)=false; rateLimits(30101) limit=10,000,000 sUSDe / 3600s; ULN EID 30101 requires 2 required DVNs (LayerZero Labs + Canary Subsidized: 0x2649bfeb5e1f115b3ba744262a65cb8da794a37d, 0x282b3386571f7f794450d5789911a9804fa346b4) + 2-of-3 optional DVNs (Horizen, StablecoinX, Twinstake: 0xdd7b5e1db4aafd5c8ec3b764efb8ed265aa5445b, 0xecbaa45c33ce6fa284995e5f8314f5bc7f1c2008, 0xeefa0163c1f25a074bfb2a582e9854ec169aded1); runtimeCodeSha256=66a521a96f9ae46973fa2d42baf974e5a24a6a83aca15102005a9146950b662b. Signer custody independence and full supply reconciliation (TON/Aptos/Tempo OFT escrow residual) remain unresolved.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -372,6 +384,18 @@
           {
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "berachain pinned finalized OFT, Timelock, Safe and DVN reads (block 29174069)",
+            "url": "https://rpc.berachain.com"
+          },
+          {
+            "label": "Exact-bytecode-identical (sha256 66a521a9...) verified StakedUSDeOFT source and ABI",
+            "url": "https://explorer-api.morphl2.io/api/v2/smart-contracts/0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
+          },
+          {
+            "label": "Ethereum pinned StakedUSDeOFTAdapter reciprocal peering read (block 26471602)",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
           }
         ],
         "controllerChain": "berachain",
@@ -380,6 +404,9 @@
           "protocol:layerzero-v2",
           "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
           "contract:berachain:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
+        ],
+        "providerKeys": [
+          "layerzero"
         ]
       },
       {
@@ -398,7 +425,7 @@
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-10-01",
         "observedBlock": 35450675,
-        "reviewNote": "Pinned zircuit block 35450675: symbol() = sUSDe; decimals() = 18; endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b; owner() = 0x07762c592e243d4add1648a7ab4916d898780bae. getThreshold() = 5; getOwners() returns 10 owners. Modules, guards, signer custody and complete messaging configuration remain unverified.",
+        "reviewNote": "Pinned zircuit block 35450675: symbol() = sUSDe; decimals() = 18; endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b; owner() = 0x07762c592e243d4add1648a7ab4916d898780bae. getThreshold() = 5; getOwners() returns 10 owners. Modules, guards, signer custody and complete messaging configuration remain unverified. Supplementary 2026-11-22 unpeering observation: Unpeered on both sides and rate-limit window frozen at uint256.max: Ethereum unpeered EID 30303 on 2026-10-20T09:51:23Z (block 26233013, tx 0x5b0f0c52...) and Zircuit block 37707944 confirms peers(30101)=0x0 while 1.390000 sUSDe remains on-chain. Prior route observation clock retained.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -423,6 +450,9 @@
           "protocol:layerzero-v2",
           "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
           "contract:zircuit:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
+        ],
+        "providerKeys": [
+          "layerzero"
         ]
       },
       {
@@ -441,7 +471,7 @@
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-10-01",
         "observedBlock": 23225232,
-        "reviewNote": "Pinned metis block 23225232: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0x795db361ed5727f3f27dccde15b7d0d975fc94e0. getThreshold() = 5; getOwners() returns 10 owners. Modules, guards, signer custody and complete messaging configuration remain unverified.",
+        "reviewNote": "Pinned metis block 23225232: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0x795db361ed5727f3f27dccde15b7d0d975fc94e0. getThreshold() = 5; getOwners() returns 10 owners. Modules, guards, signer custody and complete messaging configuration remain unverified. Supplementary 2026-11-22 unpeering observation: Asymmetrically broken / one-way unpeered: Ethereum unpeered EID 30151 on 2026-09-24T07:10:35Z (block 26045746, tx 0x1c08e737...), while Metis block 23448289 still has peers(30101)=0x211cc4... and rateLimits(30101) window=uint256.max with 16.429024 sUSDe remaining on-chain. Prior route observation clock retained.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -466,6 +496,9 @@
           "protocol:layerzero-v2",
           "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
           "contract:metis:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
+        ],
+        "providerKeys": [
+          "layerzero"
         ]
       },
       {
@@ -482,7 +515,7 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-01",
+        "observedAt": "2026-11-22",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -499,9 +532,21 @@
           {
             "label": "sUSDe OFT on xlayer explorer (verified 2026-07-20)",
             "url": "https://www.oklink.com/xlayer/address/0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
+          },
+          {
+            "label": "xlayer pinned finalized OFT, Timelock, Safe and DVN reads (block 76592366)",
+            "url": "https://rpc.xlayer.tech"
+          },
+          {
+            "label": "Exact-bytecode-identical (sha256 068726ce...) Sourcify exact_match StakedUSDeOFT source and ABI",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2?fields=all"
+          },
+          {
+            "label": "Ethereum pinned StakedUSDeOFTAdapter reciprocal peering read (block 26471602)",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
           }
         ],
-        "reviewNote": "Historical 2026-07-20 review reported a 5-of-10 Safe owner. Current owner differs. Pinned xlayer block 72068529: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0xa179d46706d78a8bb24bd36bfb6472d4a0e15569. getMinDelay() = 86400 seconds. This does not prove every operation is delayed; whitelist bypass and messaging configuration remain unverified.",
+        "reviewNote": "Pinned xlayer block 76592366 (hash 0xbe6f3130f41dba6f900aa7239454f2be5130a5a575c0f0d8ad3683e184f6efe3, 2026-11-22T15:30:02.000Z): reciprocally peered with Ethereum StakedUSDeOFTAdapter (EID 30101 -> 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2, verified at Ethereum block 26471602); owner()=delegate()=0xa179d46706d78a8bb24bd36bfb6472d4a0e15569 (5-of-10 Safe 0xce2f77841a8b974ce8e79157bccbecf17599f0e8 (modules=[], guard=0x0) holding PROPOSER_ROLE, EXECUTOR_ROLE and WHITELISTED_EXECUTOR_ROLE on EthenaTimelockController 0xa179d46706d78a8bb24bd36bfb6472d4a0e15569 (getMinDelay()=86400s; setPeer and updateBlackList whitelisted for zero-delay bypass)); blackList(self)=false; rateLimits(30101) limit=10,000,000 sUSDe / 3600s; ULN EID 30101 requires 2 required DVNs (LayerZero Labs + Canary Subsidized: 0x1176b42a5c76b41e0895705af028ff8a75c08156, 0x9c061c9a4782294eef65ef28cb88233a987f4bdd) + 2-of-3 optional DVNs (Horizen, StablecoinX, Twinstake: 0x28af4dadbc5066e994986e8bb105240023dc44b6, 0x47fe112e334f5f766db3c44f7c1813468240ede9, 0xdd7b5e1db4aafd5c8ec3b764efb8ed265aa5445b); runtimeCodeSha256=068726ce833e7e12ef90562c2abac2b3246e2e71889576643a33d9e61da3f9a1. Signer custody independence and full supply reconciliation (TON/Aptos/Tempo OFT escrow residual) remain unresolved.",
         "controllerChain": "xlayer",
         "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
         "failureDomainKeys": [
@@ -509,7 +554,10 @@
           "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
           "contract:xlayer:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
         ],
-        "observedBlock": 72068529
+        "observedBlock": 76592366,
+        "providerKeys": [
+          "layerzero"
+        ]
       },
       {
         "id": "base:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
@@ -525,9 +573,9 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-01",
-        "observedBlock": 52024109,
-        "reviewNote": "Pinned base block 52024109: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0xd896f26f76ed089a1711284a00af497b19d65171. getMinDelay() = 86400 seconds. This does not prove every operation is delayed; whitelist bypass and messaging configuration remain unverified.",
+        "observedAt": "2026-11-22",
+        "observedBlock": 60857252,
+        "reviewNote": "Pinned base block 60857252 (hash 0x3aa4cead948c024883a14020a3a5a2d4c72f1a7a7e9df116ce6d0881d7975de5, 2026-11-22T15:37:06.000Z): reciprocally peered with Ethereum StakedUSDeOFTAdapter (EID 30101 -> 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2, verified at Ethereum block 26471602); owner()=delegate()=0xd896f26f76ed089a1711284a00af497b19d65171 (5-of-10 Safe 0xbc89d10eb486b6591583f218acb9545087dbf293 (modules=[], guard=0x0) holding PROPOSER_ROLE, EXECUTOR_ROLE and WHITELISTED_EXECUTOR_ROLE on EthenaTimelockController 0xd896f26f76ed089a1711284a00af497b19d65171 (getMinDelay()=86400s; setPeer and updateBlackList whitelisted for zero-delay bypass)); blackList(self)=false; rateLimits(30101) limit=10,000,000 sUSDe / 3600s; ULN EID 30101 requires 2 required DVNs (LayerZero Labs + Canary Subsidized: 0x9e059a54699a285714207b43b055483e78faac25, 0xdcacd7e37f392ffad4b2703a21f6a0c8e2451e96) + 2-of-3 optional DVNs (Horizen, StablecoinX, Twinstake: 0x8b4874a130d7f1f702d59115f6d31bcc3e0972c3, 0xa7b5189bca84cd304d8553977c7c614329750d99, 0xcd37ca043f8479064e10635020c65ffc005d36f6); runtimeCodeSha256=068726ce833e7e12ef90562c2abac2b3246e2e71889576643a33d9e61da3f9a1. Signer custody independence and full supply reconciliation (TON/Aptos/Tempo OFT escrow residual) remain unresolved.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -544,6 +592,18 @@
           {
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "base pinned finalized OFT, Timelock, Safe and DVN reads (block 60857252)",
+            "url": "https://base-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Sourcify exact_match verified Base StakedUSDeOFT source and ABI",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2?fields=all"
+          },
+          {
+            "label": "Ethereum pinned StakedUSDeOFTAdapter reciprocal peering read (block 26471602)",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
           }
         ],
         "controllerChain": "base",
@@ -552,6 +612,9 @@
           "protocol:layerzero-v2",
           "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
           "contract:base:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
+        ],
+        "providerKeys": [
+          "layerzero"
         ]
       },
       {
@@ -568,9 +631,9 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-01",
-        "observedBlock": 125055767,
-        "reviewNote": "Pinned bsc block 125055767: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0x89bad41d3307072cfd3118b5fd08101e23b2e129. Owner policy and complete messaging configuration remain unverified.",
+        "observedAt": "2026-11-22",
+        "observedBlock": 135106545,
+        "reviewNote": "Pinned bsc block 135106545 (hash 0x0b7617c3fc1b6e00b3656c6e1585e94d1b2961406bb1ffc3eed012d30354f537, 2026-11-22T15:54:17.000Z): reciprocally peered with Ethereum StakedUSDeOFTAdapter (EID 30101 -> 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2, verified at Ethereum block 26471602); owner()=delegate()=0x89bad41d3307072cfd3118b5fd08101e23b2e129 (5-of-10 Safe 0xc9647361742eb964965b461c44bdf5c4bc3c406d (modules=[], guard=0x0) holding PROPOSER_ROLE, EXECUTOR_ROLE and WHITELISTED_EXECUTOR_ROLE on EthenaTimelockController 0x89bad41d3307072cfd3118b5fd08101e23b2e129 (getMinDelay()=86400s; setPeer and updateBlackList whitelisted for zero-delay bypass)); blackList(self)=false; rateLimits(30101) limit=10,000,000 sUSDe / 3600s; ULN EID 30101 requires 2 required DVNs (LayerZero Labs + Canary Subsidized: 0x165bcb144efe79a955c608a3d69e08e21c91c79d, 0xfd6865c841c2d64565562fcc7e05e619a30615f0) + 2-of-3 optional DVNs (Horizen, StablecoinX, Twinstake: 0x0cea5a94f8cd3330c4f84944bf4500f8dacd440c, 0x247624e2143504730aec22912ed41f092498bef2, 0x31f748a368a893bdb5abb67ec95f232507601a73); runtimeCodeSha256=2da6bcb00483ea5635346e919cd93f40d4b34377ff96e0858175ab970c208a26. Signer custody independence and full supply reconciliation (TON/Aptos/Tempo OFT escrow residual) remain unresolved.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -587,6 +650,18 @@
           {
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "bsc pinned finalized OFT, Timelock, Safe and DVN reads (block 135106545)",
+            "url": "https://bnb-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Sourcify exact_match verified BNB Smart Chain StakedUSDeOFT source and ABI",
+            "url": "https://sourcify.dev/server/v2/contract/56/0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2?fields=all"
+          },
+          {
+            "label": "Ethereum pinned StakedUSDeOFTAdapter reciprocal peering read (block 26471602)",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
           }
         ],
         "controllerChain": "bsc",
@@ -595,6 +670,9 @@
           "protocol:layerzero-v2",
           "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
           "contract:bsc:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
+        ],
+        "providerKeys": [
+          "layerzero"
         ]
       },
       {
@@ -611,9 +689,9 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-01",
-        "observedBlock": 27633747,
-        "reviewNote": "Pinned morph-l2 block 27633747: symbol() = sUSDe; decimals() = 18; endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b; owner() = 0x2a07237ebe1abf114f35c876c3673e2f5229e567. getThreshold() = 5; getOwners() returns 10 owners. Modules, guards, signer custody and complete messaging configuration remain unverified.",
+        "observedAt": "2026-11-22",
+        "observedBlock": 30245115,
+        "reviewNote": "Pinned morph-l2 block 30245115 (hash 0xb5c98867985b191fc2ba21581d2e6336652950961076968bab6f9030725fcda9, 2026-11-22T15:35:40.000Z): reciprocally peered with Ethereum StakedUSDeOFTAdapter (EID 30101 -> 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2, verified at Ethereum block 26471602); owner()=delegate()=0xc2d078399e05a59b52d92550fc44f9221e48c2c2 (5-of-10 Safe 0x2a07237ebe1abf114f35c876c3673e2f5229e567 (modules=[], guard=0x0) holding PROPOSER_ROLE, EXECUTOR_ROLE and WHITELISTED_EXECUTOR_ROLE on EthenaTimelockController 0xc2d078399e05a59b52d92550fc44f9221e48c2c2 (owner migrated from Safe 0x2a07237e... to Timelock since 2026-10-01; getMinDelay()=86400s; setPeer and updateBlackList whitelisted for zero-delay bypass)); blackList(self)=false; rateLimits(30101) limit=10,000,000 sUSDe / 3600s; ULN EID 30101 requires 2 required DVNs (LayerZero Labs + Canary Subsidized: 0x6788f52439aca6bff597d3eec2dc9a44b8fee842, 0xc4df7f3f230aee0a8cca85b44817f53e56ce524d) + 2-of-3 optional DVNs (Horizen, StablecoinX, Twinstake: 0x6c5f923b63fdd52fb9c45daefa8695fa6b55a935, 0xdd779aaad20e62275457af91b123bb13dd5afd0b, 0xdf30c9f6a70ce65a152c5bd09826525d7e97ba49); runtimeCodeSha256=66a521a96f9ae46973fa2d42baf974e5a24a6a83aca15102005a9146950b662b. Signer custody independence and full supply reconciliation (TON/Aptos/Tempo OFT escrow residual) remain unresolved.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -630,6 +708,18 @@
           {
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "morph-l2 pinned finalized OFT, Timelock, Safe and DVN reads (block 30245115)",
+            "url": "https://lb.drpc.org/ogrpc?network=morph"
+          },
+          {
+            "label": "Morph Explorer Blockscout verified Morph-L2 StakedUSDeOFT source and ABI",
+            "url": "https://explorer-api.morphl2.io/api/v2/smart-contracts/0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
+          },
+          {
+            "label": "Ethereum pinned StakedUSDeOFTAdapter reciprocal peering read (block 26471602)",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
           }
         ],
         "controllerChain": "morph-l2",
@@ -638,6 +728,9 @@
           "protocol:layerzero-v2",
           "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
           "contract:morph-l2:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
+        ],
+        "providerKeys": [
+          "layerzero"
         ]
       },
       {
@@ -656,7 +749,7 @@
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-10-01",
         "observedBlock": 35235158,
-        "reviewNote": "Pinned scroll block 35235158: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0x3970a0af8819613f139ae9cccf4bb0412a6c68aa. getMinDelay() = 86400 seconds. This does not prove every operation is delayed; whitelist bypass and messaging configuration remain unverified.",
+        "reviewNote": "Pinned scroll block 35235158: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0x3970a0af8819613f139ae9cccf4bb0412a6c68aa. getMinDelay() = 86400 seconds. This does not prove every operation is delayed; whitelist bypass and messaging configuration remain unverified. Supplementary 2026-11-22 unpeering observation: Unpeered on both sides and rate-limit window frozen at uint256.max: Ethereum unpeered EID 30214 on 2026-09-24T07:10:35Z (block 26045746, tx 0x1c08e737...) and Scroll block 35819929 confirms peers(30101)=0x0 while 517.829004 sUSDe remains on-chain. Prior route observation clock retained.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -681,6 +774,9 @@
           "protocol:layerzero-v2",
           "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
           "contract:scroll:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
+        ],
+        "providerKeys": [
+          "layerzero"
         ]
       },
       {
@@ -699,7 +795,7 @@
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-10-01",
         "observedBlock": 22820786,
-        "reviewNote": "Pinned kava block 22820786: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0x10e9219dd188d0f3af30824469dc874a539733b6. getThreshold() = 5; getOwners() returns 10 owners. Modules, guards, signer custody and complete messaging configuration remain unverified.",
+        "reviewNote": "Pinned kava block 22820786: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0x10e9219dd188d0f3af30824469dc874a539733b6. getThreshold() = 5; getOwners() returns 10 owners. Modules, guards, signer custody and complete messaging configuration remain unverified. Supplementary 2026-11-22 unpeering observation: Unpeered on both sides and rate-limit window frozen at uint256.max: Ethereum unpeered EID 30177 on 2026-09-24T07:10:35Z (block 26045746, tx 0x1c08e737...) and Kava block 23613080 confirms peers(30101)=0x0 while 1.192754 sUSDe remains on-chain. Prior route observation clock retained.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -724,6 +820,9 @@
           "protocol:layerzero-v2",
           "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
           "contract:kava:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
+        ],
+        "providerKeys": [
+          "layerzero"
         ]
       },
       {
@@ -742,7 +841,7 @@
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-10-01",
         "observedBlock": 29048789,
-        "reviewNote": "Pinned swellchain block 29048789: symbol() = sUSDe; decimals() = 18; endpoint() = 0xcb566e3b6934fa77258d68ea18e931fa75e1aaaa; owner() = 0x182ad0c7526e201102e5c486cc20ae50d6528481. getThreshold() = 5; getOwners() returns 10 owners. Modules, guards, signer custody and complete messaging configuration remain unverified.",
+        "reviewNote": "Pinned swellchain block 29048789: symbol() = sUSDe; decimals() = 18; endpoint() = 0xcb566e3b6934fa77258d68ea18e931fa75e1aaaa; owner() = 0x182ad0c7526e201102e5c486cc20ae50d6528481. getThreshold() = 5; getOwners() returns 10 owners. Modules, guards, signer custody and complete messaging configuration remain unverified. Supplementary 2026-11-22 unpeering observation: Unpeered on both sides and rate-limit window frozen at uint256.max: Ethereum unpeered EID 30335 on 2026-07-07T08:54:35Z (block 25479604, tx 0x4b996d7c...) and Swellchain block 31311125 confirms peers(30101)=0x0 while 2,511.029112 sUSDe remains on-chain. Prior route observation clock retained.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -767,6 +866,9 @@
           "protocol:layerzero-v2",
           "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
           "contract:swellchain:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
+        ],
+        "providerKeys": [
+          "layerzero"
         ]
       },
       {
@@ -785,7 +887,7 @@
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-10-01",
         "observedBlock": 45334991,
-        "reviewNote": "Pinned mode block 45334991: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0x273ced5b9da8f5ba6e40c82c126898cb5307b2ea. getThreshold() = 5; getOwners() returns 10 owners. Modules, guards, signer custody and complete messaging configuration remain unverified.",
+        "reviewNote": "Pinned mode block 45334991: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0x273ced5b9da8f5ba6e40c82c126898cb5307b2ea. getThreshold() = 5; getOwners() returns 10 owners. Modules, guards, signer custody and complete messaging configuration remain unverified. Supplementary 2026-11-22 unpeering observation: Unpeered on both sides and rate-limit window frozen at uint256.max: Ethereum unpeered EID 30260 on 2026-09-24T07:10:35Z (block 26045746, tx 0x1c08e737...) and Mode block 47597685 confirms peers(30101)=0x0 while 412.446364 sUSDe remains on-chain. Prior route observation clock retained.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -810,6 +912,9 @@
           "protocol:layerzero-v2",
           "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
           "contract:mode:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
+        ],
+        "providerKeys": [
+          "layerzero"
         ]
       },
       {
@@ -853,6 +958,9 @@
           "protocol:layerzero-v2",
           "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
           "contract:mantle:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
+        ],
+        "providerKeys": [
+          "layerzero"
         ]
       },
       {
@@ -896,6 +1004,9 @@
           "protocol:layerzero-v2",
           "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
           "contract:arbitrum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
+        ],
+        "providerKeys": [
+          "layerzero"
         ]
       },
       {
@@ -914,7 +1025,7 @@
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-10-01",
         "observedBlock": 9661360,
-        "reviewNote": "Pinned manta block 9661360: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0xa408fd6724341b27f2e348faf9eccec04a2299ea. getThreshold() = 5; getOwners() returns 10 owners. Modules, guards, signer custody and complete messaging configuration remain unverified.",
+        "reviewNote": "Pinned manta block 9661360: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0xa408fd6724341b27f2e348faf9eccec04a2299ea. getThreshold() = 5; getOwners() returns 10 owners. Modules, guards, signer custody and complete messaging configuration remain unverified. Supplementary 2026-11-22 unpeering observation: Unpeered on both sides and rate-limit window frozen at uint256.max (canSend=0): Ethereum unpeered EID 30217 on 2026-09-24T07:10:35Z (block 26045746, tx 0x1c08e737...) and Manta block 10113130 confirms peers(30101)=0x0 while 35.142860 sUSDe remains on-chain. Prior route observation clock retained.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -939,6 +1050,9 @@
           "protocol:layerzero-v2",
           "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
           "contract:manta:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
+        ],
+        "providerKeys": [
+          "layerzero"
         ]
       },
       {
@@ -957,7 +1071,7 @@
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-10-01",
         "observedBlock": 41013875,
-        "reviewNote": "Pinned blast block 41013875: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0x689272b1d2b2f37a0b3fe1f5af0420c64f6cc9e3. getThreshold() = 5; getOwners() returns 10 owners. Modules, guards, signer custody and complete messaging configuration remain unverified.",
+        "reviewNote": "Pinned blast block 41013875: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0x689272b1d2b2f37a0b3fe1f5af0420c64f6cc9e3. getThreshold() = 5; getOwners() returns 10 owners. Modules, guards, signer custody and complete messaging configuration remain unverified. Supplementary 2026-11-22 unpeering observation: Unpeered on Ethereum 15 days after the 2026-10-11 j14susde review: Ethereum StakedUSDeOFTAdapter unpeered EID 30243 on 2026-10-26T07:25:35Z (block 26275355, tx 0x26107217...) and remains unpeered at Ethereum block 26471602. Destination Blast RPCs (rpc.blast.io, blast-rpc.publicnode.com, blast.drpc.org) failed on 2026-11-22. Prior route observation clock retained.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -982,6 +1096,9 @@
           "protocol:layerzero-v2",
           "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
           "contract:blast:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
+        ],
+        "providerKeys": [
+          "layerzero"
         ]
       },
       {
@@ -1025,6 +1142,9 @@
           "protocol:layerzero-v2",
           "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
           "contract:optimism:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
+        ],
+        "providerKeys": [
+          "layerzero"
         ]
       },
       {
@@ -1132,7 +1252,7 @@
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-10-01",
         "observedBlock": 72286734,
-        "reviewNote": "Pinned zksync block 72286734: symbol() = sUSDe; decimals() = 18; endpoint() = 0xd07c30af3ff30d96bdc9c6044958230eb797ddbf; owner() = 0xa026e9a5e54e16349d7b594449f32901e02c609a. getThreshold() = 5; getOwners() returns 10 owners. Modules, guards, signer custody and complete messaging configuration remain unverified.",
+        "reviewNote": "Pinned zksync block 72286734: symbol() = sUSDe; decimals() = 18; endpoint() = 0xd07c30af3ff30d96bdc9c6044958230eb797ddbf; owner() = 0xa026e9a5e54e16349d7b594449f32901e02c609a. getThreshold() = 5; getOwners() returns 10 owners. Modules, guards, signer custody and complete messaging configuration remain unverified. Supplementary 2026-11-22 unpeering observation: Unpeered on both sides: Ethereum unpeered EID 30165 on 2026-09-24T07:10:35Z (block 26045746, tx 0x1c08e737...) and zkSync Era block 73054245 confirms peers(30101)=0x0 while 610.607525 sUSDe remains on-chain. Prior route observation clock retained.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -1157,6 +1277,9 @@
           "protocol:layerzero-v2",
           "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
           "contract:zksync:0xad17da2f6ac76746ef261e835c50b2651ce36da8"
+        ],
+        "providerKeys": [
+          "layerzero"
         ]
       },
       {
@@ -1200,6 +1323,9 @@
           "protocol:layerzero-v2",
           "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
           "contract:avalanche:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
+        ],
+        "providerKeys": [
+          "layerzero"
         ]
       },
       {
@@ -1258,15 +1384,16 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "MonadScan verifies this exact contract as StakedUSDeOFT with an exact-match source whose constructor takes the LayerZero endpoint, a delegate and rate-limit configurations; the Ethena Foundation's July-September 2026 governance update and Monad Foundation's July 2026 ecosystem post place sUSDe on Monad, and CoinGecko's Monad platform metadata maps the same deployment at 18 decimals (2026-10-30). This is a LayerZero OFT representation of Ethereum sUSDe, not Ethena-native minting on Monad. The endpoint, delegate, peer set and configured limits were not read.",
+        "reviewNote": "Pinned monad block 124474981 (hash 0xb43d45836be1d05db5fd534894dea73fca2012589ea0bea20146f2dd4e959762, 2026-11-22T15:54:19.000Z): reciprocally peered with Ethereum StakedUSDeOFTAdapter (EID 30101 -> 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2, verified at Ethereum block 26471602); owner()=delegate()=0xf0527f03479bb6d467102ad90c77ef424ac1f2c7 (5-of-10 Safe 0x648209c3e51cf5b43faa5466ac13ab0514710aa0 (modules=[], non-zero guard=0x74abe7805541c28f31953b3cda9711dc96278d29) holding PROPOSER_ROLE, EXECUTOR_ROLE, CANCELLER_ROLE and WHITELISTED_EXECUTOR_ROLE on EthenaTimelockController 0xf0527f03479bb6d467102ad90c77ef424ac1f2c7 (getMinDelay()=86400s; setPeer and updateBlackList whitelisted for zero-delay bypass; 3-of-6 Safe 0xa07591b02fbd07d03df21ed9a574f058bf45c344 and EOA 0x352040dc5f272563a2d6e0ef7abcd567a7440e8f additionally hold EXECUTOR_ROLE only)); blackList(self)=false; rateLimits(30101) limit=10,000,000 sUSDe / 3600s; ULN EID 30101 requires 2 required DVNs (LayerZero Labs + Canary Subsidized: 0x282b3386571f7f794450d5789911a9804fa346b4, 0x3b3c3ad540829d57af7b22c6cdff83fe7d43a8b6) + 2-of-3 optional DVNs (Horizen, StablecoinX, Twinstake: 0x4d09c99ed8788b191144d6cdd129014fde70326f, 0xacde1f22eeab249d3ca6ba8805c8fee9f52a16e7, 0xdcdd4628f858b45260c31d6ad076bd2c3d3c2f73); runtimeCodeSha256=aec1df1065801c8e23316ee94bb6a60c68f671529572c00d92deb6cbe319e4d0. Signer custody independence and full supply reconciliation (TON/Aptos/Tempo OFT escrow residual) remain unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "monad",
         "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
         "failureDomainKeys": [
           "protocol:layerzero-v2",
-          "contract:monad:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
+          "contract:monad:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+          "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
         ],
-        "observedAt": "2026-10-30",
+        "observedAt": "2026-11-22",
         "sources": [
           {
             "label": "sUSDe on MonadScan (verified StakedUSDeOFT source, 2026-10-30)",
@@ -1283,8 +1410,24 @@
           {
             "label": "CoinGecko ethena-staked-usde platform metadata (monad entry, accessed 2026-10-30)",
             "url": "https://api.coingecko.com/api/v3/coins/ethena-staked-usde?localization=false&tickers=false&market_data=false&community_data=false&developer_data=false&sparkline=false"
+          },
+          {
+            "label": "monad pinned finalized OFT, Timelock, Safe and DVN reads (block 124474981)",
+            "url": "https://rpc.monad.xyz"
+          },
+          {
+            "label": "MonadScan verified Monad StakedUSDeOFT source and ABI",
+            "url": "https://monadscan.com/address/0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2#code"
+          },
+          {
+            "label": "Ethereum pinned StakedUSDeOFTAdapter reciprocal peering read (block 26471602)",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
           }
-        ]
+        ],
+        "providerKeys": [
+          "layerzero"
+        ],
+        "observedBlock": 124474981
       }
     ]
   }

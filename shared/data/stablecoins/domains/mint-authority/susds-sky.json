@@ -82,8 +82,8 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "Pause Proxy can change SSR, authorize rate/upgrade wards and upgrade sUSDS through UUPS after the current 48-hour Pause. Current auth does not mint sUSDS shares or authorize a share-minter; parent-USDS issuance is inherited through the dependency.",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26112822,
+        "observedAt": "2026-11-22",
+        "observedBlock": 26471602,
         "sources": [
           {
             "label": "Sky Chainlog",
@@ -96,48 +96,88 @@
         ],
         "executionScope": {
           "controllerDeployment": "ethereum:0xbe8e3e3618f7474f8cb1d074a26affef007e98fb",
-          "reviewedAt": "2026-10-03",
-          "observedAt": "2026-10-03",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol v10.02 D14/D29 sweep (U2SkyGoverned)",
-          "confidence": "partial",
+          "reviewedAt": "2026-11-22",
+          "observedAt": "2026-11-22",
+          "expiresAt": "2027-02-20",
+          "reviewer": "Issue #1683 Part 2A complete executionScope curation (ETH@26471602)",
+          "confidence": "verified",
           "sources": [
             {
-              "label": "Verified sUSDS local auth and share-deposit mechanics",
-              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0"
+              "label": "Verified DSPauseProxy source (single exec delegatecall entrypoint)",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbe8e3e3618f7474f8cb1d074a26affef007e98fb"
             },
             {
-              "label": "Verified DSPause delay enforcement",
+              "label": "Verified DSPause delay enforcement source",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbe286431454714f511008713973d3b053a2d38f3"
             },
             {
-              "label": "Verified SKY Chief locked approval weight",
-              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x929d9a1435662357f54adcf64dcee4d6b867a6f9"
+              "label": "Verified sUSDS implementation source and auth gates",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0"
+            },
+            {
+              "label": "Pinned Ethereum state and sUSDS admin-log delta (block 26471602, hash 0x721c4070de036bc8800296dd9f7bd5412f1476a968e69407bde6cc717de78c9e, 2026-11-22T15:37:59Z; observed 2026-11-22T16:03:07Z)",
+              "url": "https://eth-mainnet.g.alchemy.com/v2/"
             }
           ],
           "pin": {
-            "position": "26112822",
-            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "position": "26471602",
+            "hash": "0x721c4070de036bc8800296dd9f7bd5412f1476a968e69407bde6cc717de78c9e",
             "runtimeIdentity": "sha256:ab4f2b404904fa69f1402692bd3be3c8dcfd2ab89ee0f7604b77d8cf7b431cb9",
-            "signerIdentity": "0xbe8e3e3618f7474f8cb1d074a26affef007e98fb owned by DSPause 0xbe286431454714f511008713973d3b053a2d38f3;Pause.owner=0;Pause.authority=SKY Chief 0x929d9a1435662357f54adcf64dcee4d6b867a6f9;escrowed SKY approval weight;Pause.delay=172800;sUSDS.wards(Pause Proxy)=1;alternative local SPBEAM scope partial"
+            "signerIdentity": "DSPauseProxy.owner=DSPause(0xbe286431454714f511008713973d3b053a2d38f3,sha256:28f1e60481c4af98a7d6bd032b202708c6267f55da11549b7210aaa26af00eff);Pause.owner=0x0;Pause.authority=SKYChief(0x929d9a1435662357f54adcf64dcee4d6b867a6f9);Pause.delay=172800;sUSDS.impl=0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0(sha256:2b0bb429f9846f24dedf2e04cea6bd75c3149caa0dea4859acbb8b4e0c1278ba);sUSDS.wards={PauseProxy,SPBEAM}(0 admin logs 26112822..26471602)"
           },
           "observedState": {
-            "position": "26112822",
-            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "position": "26471602",
+            "hash": "0x721c4070de036bc8800296dd9f7bd5412f1476a968e69407bde6cc717de78c9e",
             "runtimeIdentity": "sha256:ab4f2b404904fa69f1402692bd3be3c8dcfd2ab89ee0f7604b77d8cf7b431cb9",
-            "signerIdentity": "0xbe8e3e3618f7474f8cb1d074a26affef007e98fb owned by DSPause 0xbe286431454714f511008713973d3b053a2d38f3;Pause.owner=0;Pause.authority=SKY Chief 0x929d9a1435662357f54adcf64dcee4d6b867a6f9;escrowed SKY approval weight;Pause.delay=172800;sUSDS.wards(Pause Proxy)=1;alternative local SPBEAM scope partial"
+            "signerIdentity": "DSPauseProxy.owner=DSPause(0xbe286431454714f511008713973d3b053a2d38f3,sha256:28f1e60481c4af98a7d6bd032b202708c6267f55da11549b7210aaa26af00eff);Pause.owner=0x0;Pause.authority=SKYChief(0x929d9a1435662357f54adcf64dcee4d6b867a6f9);Pause.delay=172800;sUSDS.impl=0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0(sha256:2b0bb429f9846f24dedf2e04cea6bd75c3149caa0dea4859acbb8b4e0c1278ba);sUSDS.wards={PauseProxy,SPBEAM}(0 admin logs 26112822..26471602)"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
+            {
+              "id": "pause-proxy-exec",
+              "targetDeployment": "ethereum:0xbe8e3e3618f7474f8cb1d074a26affef007e98fb",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xbe6002c2"
+              ],
+              "callMode": "delegatecall",
+              "capabilities": [
+                "mint",
+                "upgrade",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 172800,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "susds-sky",
+                "usds-sky",
+                "dai-makerdao"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
             {
               "id": "native-governance-upgrade",
               "targetDeployment": "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
@@ -164,7 +204,9 @@
                 "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
               ],
               "reach": "root",
-              "controlRefs": [],
+              "controlRefs": [
+                "pause-proxy-exec"
+              ],
               "reactivationRefs": [],
               "permissionChangeRefs": [],
               "upgradeRefs": [],
@@ -187,7 +229,7 @@
                 "kind": "not-applicable",
                 "bound": null
               },
-              "claimImpairment": "bounded",
+              "claimImpairment": "unbounded",
               "economicLossScope": "global-claim",
               "unavoidableDelaySec": 172800,
               "activation": "active",
@@ -198,17 +240,21 @@
                 "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
               ],
               "reach": "root",
-              "controlRefs": [],
+              "controlRefs": [
+                "pause-proxy-exec"
+              ],
               "reactivationRefs": [],
               "permissionChangeRefs": [
                 "native-governance-upgrade"
               ],
-              "upgradeRefs": [],
+              "upgradeRefs": [
+                "native-governance-upgrade"
+              ],
               "bypassRefs": []
             }
           ]
         },
-        "evidence": "Pinned block 26112822 confirms sUSDS.wards(Pause Proxy)=1, Proxy.owner=Pause, Pause.owner=0, Pause.authority=SKY Chief and delay=172800. Verified SUsds auth permits SSR changes, rely/deny and _authorizeUpgrade, but no privileged share _mint or share-minter authorization entrypoint. The current governor chain uses escrowed SKY Chief approval weight, no fixed vote duration, and the two-day Pause; local upgrade risk remains separately scoped. Broader parent issuance and alternative local SPBEAM caller closure are not certified."
+        "evidence": "Pinned block 26112822 confirms sUSDS.wards(Pause Proxy)=1, Proxy.owner=Pause, Pause.owner=0, Pause.authority=SKY Chief and delay=172800. Verified SUsds auth permits SSR changes, rely/deny and _authorizeUpgrade, but no privileged share _mint or share-minter authorization entrypoint. The current governor chain uses escrowed SKY Chief approval weight, no fixed vote duration, and the two-day Pause; local upgrade risk remains separately scoped. Broader parent issuance and alternative local SPBEAM caller closure are not certified. Re-read 2026-11-22 at Ethereum block 26471602: runtime bytecode, governance chain, and Rely/Deny/Upgraded log delta unchanged; executionScope upgraded to inventory=complete."
       },
       {
         "chain": "ethereum",
@@ -222,8 +268,8 @@
         "directMintAbility": "parameter-only",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-09",
-        "observedBlock": 26146894,
+        "observedAt": "2026-11-22",
+        "observedBlock": 26471602,
         "capDescription": "SPBEAM is an sUSDS ward whose verified set path changes SSR within configured rate bounds; it does not mint shares, add share minters, perform arbitrary calls or invoke sUSDS upgrades. Parent USDS accrued by SSR is carried by the usds-sky dependency.",
         "sources": [
           {
@@ -249,42 +295,50 @@
         ],
         "executionScope": {
           "controllerDeployment": "ethereum:0x36b072ed8afe665e3aa6daba79decbec63752b22",
-          "reviewedAt": "2026-10-09",
-          "observedAt": "2026-10-09",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation campaign 2026-10-09 (W2L08Sky)",
-          "confidence": "partial",
+          "reviewedAt": "2026-11-22",
+          "observedAt": "2026-11-22",
+          "expiresAt": "2027-02-20",
+          "reviewer": "Issue #1683 Part 2A complete executionScope curation (ETH@26471602)",
+          "confidence": "verified",
           "sources": [
             {
-              "label": "Verified SPBEAM runtime and set implementation",
+              "label": "Verified SPBEAM immutable contract source (all 7 mutating selectors)",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x36b072ed8afe665e3aa6daba79decbec63752b22"
             },
             {
-              "label": "Pinned Ethereum runtime, permissions and rate configuration: block 26146894, 2026-10-08T09:50:23Z; observed 2026-10-09T11:42:23.975Z",
-              "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+              "label": "Verified SPBEAMMom emergency halt authority source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf0c6e6ec8b367cc483a411e595d3ba0a816d37d0"
+            },
+            {
+              "label": "Verified CompatibilityFallbackHandler on SPBEAM facilitator Safe",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfd0732dc9e303f09fcef3a7388ad10a83459ec99"
+            },
+            {
+              "label": "Pinned Ethereum state, Safe state and SPBEAM log delta 26122343..26471602 (block 26471602, hash 0x721c4070de036bc8800296dd9f7bd5412f1476a968e69407bde6cc717de78c9e, 2026-11-22T15:37:59Z; observed 2026-11-22T16:03:07Z)",
+              "url": "https://eth-mainnet.g.alchemy.com/v2/"
             }
           ],
           "pin": {
-            "position": "26146894",
-            "hash": "0x05d13e67d25b7f3ab8c88fdd89f5d93b98fc57a36ad6433b30d035c1a769e2e0",
+            "position": "26471602",
+            "hash": "0x721c4070de036bc8800296dd9f7bd5412f1476a968e69407bde6cc717de78c9e",
             "runtimeIdentity": "sha256:e1d23692fa9f0c430fc4ddba97aa74760e1fca8cceb921aabbb0d2418d7ee868",
-            "signerIdentity": "sUSDS.wards(SPBEAM)=1;SPBEAM.wards(Pause Proxy)=1;SPBEAM.wards(SPBEAMMom)=1;SPBEAM.buds(0xe1c6f81d0c3cd570a77813b81aa064c5fff80309)=1;cfgs(SSR) min=200,max=3000,step=400 basis points;tau=57600;bad=0;current full wards/buds/caller and cross-target closure not certified"
+            "signerIdentity": "SPBEAM.wards={PauseProxy(0xbe8e3e3618f7474f8cb1d074a26affef007e98fb),SPBEAMMom(0xf0c6e6ec8b367cc483a411e595d3ba0a816d37d0,sha256:348ace846b2262b91ba5aa62510ef0fc80f6afc41a967b2ed846523f9f010e63)};SPBEAM.buds={Safe(0xe1c6f81d0c3cd570a77813b81aa064c5fff80309,2-of-3,modules=[],guard=0x0,fallback=0xfd0732dc9e303f09fcef3a7388ad10a83459ec99)};cfgs(SSR)=200/3000/400;tau=57600;bad=0;toc=1791392327;0 Rely/Deny/Kiss/Diss/File logs 26122343..26471602"
           },
           "observedState": {
-            "position": "26146894",
-            "hash": "0x05d13e67d25b7f3ab8c88fdd89f5d93b98fc57a36ad6433b30d035c1a769e2e0",
+            "position": "26471602",
+            "hash": "0x721c4070de036bc8800296dd9f7bd5412f1476a968e69407bde6cc717de78c9e",
             "runtimeIdentity": "sha256:e1d23692fa9f0c430fc4ddba97aa74760e1fca8cceb921aabbb0d2418d7ee868",
-            "signerIdentity": "sUSDS.wards(SPBEAM)=1;SPBEAM.wards(Pause Proxy)=1;SPBEAM.wards(SPBEAMMom)=1;SPBEAM.buds(0xe1c6f81d0c3cd570a77813b81aa064c5fff80309)=1;cfgs(SSR) min=200,max=3000,step=400 basis points;tau=57600;bad=0;current full wards/buds/caller and cross-target closure not certified"
+            "signerIdentity": "SPBEAM.wards={PauseProxy(0xbe8e3e3618f7474f8cb1d074a26affef007e98fb),SPBEAMMom(0xf0c6e6ec8b367cc483a411e595d3ba0a816d37d0,sha256:348ace846b2262b91ba5aa62510ef0fc80f6afc41a967b2ed846523f9f010e63)};SPBEAM.buds={Safe(0xe1c6f81d0c3cd570a77813b81aa064c5fff80309,2-of-3,modules=[],guard=0x0,fallback=0xfd0732dc9e303f09fcef3a7388ad10a83459ec99)};cfgs(SSR)=200/3000/400;tau=57600;bad=0;toc=1791392327;0 Rely/Deny/Kiss/Diss/File logs 26122343..26471602"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
@@ -307,7 +361,9 @@
               "unavoidableDelaySec": 0,
               "activation": "active",
               "affectedLiabilityIds": [
-                "susds-sky"
+                "susds-sky",
+                "usds-sky",
+                "dai-makerdao"
               ],
               "affectedDeployments": [
                 "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
@@ -316,43 +372,84 @@
               "controlRefs": [],
               "reactivationRefs": [],
               "permissionChangeRefs": [
-                "spbeam-administration"
+                "spbeam-pause-administration",
+                "spbeam-halt-and-file"
               ],
               "upgradeRefs": [],
               "bypassRefs": []
             },
             {
-              "id": "spbeam-administration",
+              "id": "spbeam-halt-and-file",
               "targetDeployment": "ethereum:0x36b072ed8afe665e3aa6daba79decbec63752b22",
               "entrypointKind": "evm-selector",
               "entrypoints": [
-                "0x65fae35e",
-                "0x9c52a7f1",
-                "0xf29c29c4",
-                "0x65c4ce7a",
-                "0x29ae8114",
-                "0x1a0b287e"
+                "0x29ae8114"
               ],
               "callMode": "call",
               "capabilities": [
                 "parameter-change"
               ],
               "capSemantics": {
-                "kind": "not-applicable",
+                "kind": "unbounded",
                 "bound": null
               },
-              "claimImpairment": "unknown",
-              "economicLossScope": "unknown",
-              "unavoidableDelaySec": null,
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
               "activation": "active",
               "affectedLiabilityIds": [
-                "susds-sky"
+                "susds-sky",
+                "usds-sky",
+                "dai-makerdao"
               ],
               "affectedDeployments": [
                 "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
               ],
-              "reach": "unknown",
+              "reach": "root",
               "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [
+                "spbeam-pause-administration"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "spbeam-pause-administration",
+              "targetDeployment": "ethereum:0x36b072ed8afe665e3aa6daba79decbec63752b22",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x1a0b287e",
+                "0x65c4ce7a",
+                "0x65fae35e",
+                "0x9c52a7f1",
+                "0xf29c29c4"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 172800,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "susds-sky",
+                "usds-sky",
+                "dai-makerdao"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
+              ],
+              "reach": "root",
+              "controlRefs": [
+                "delegated-ssr-update",
+                "spbeam-halt-and-file"
+              ],
               "reactivationRefs": [],
               "permissionChangeRefs": [],
               "upgradeRefs": [],
@@ -360,7 +457,7 @@
             }
           ]
         },
-        "evidence": "The full-history sUSDS Rely/Deny census and pinned wards reads at block 26112822 identify SPBEAM and Pause Proxy as the only live wards at that historical pin. SPBEAM.susds() equals the sUSDS proxy; its deployed runtime exactly matches verified source. cfgs(SSR) returned min=200, max=3000 and step=400 basis points, with tau=57600 seconds. set requires a facilitator bud, enforces configured min/max/step and elapsed tau, and invokes sUSDS drip/file(SSR); it never calls share mint or upgrade. Supplemental review completed 2026-10-05 of reads observed 2026-10-04 at block 26122343: binary-search creation block 22227542 and 78 log windows (77 complete 50000-block windows plus a final partial window to the pin) recover five Rely/Deny/Kiss/Diss events. Wards at that pin were Pause Proxy and SPBEAMMom 0xf0c6e6ec8b367cc483a411e595d3ba0a816d37d0; sole bud was Safe 0xe1c6f81d0c3cd570a77813b81aa064c5fff80309, pinned 2-of-3 with terminal empty module pagination, zero guard and nonzero fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Mom owner was Pause Proxy and authority was SKY Chief; verified halt bypasses the Pause delay but can only file bad=1. Wave-2 reads at Ethereum block 26146894, hash 0x05d13e67d25b7f3ab8c88fdd89f5d93b98fc57a36ad6433b30d035c1a769e2e0, timestamp 2026-10-08T09:50:23Z, through https://api-ethereum-mainnet-erigon.n.dwellir.com observed 2026-10-09T11:37:59.303Z through 11:42:23.975Z independently reproduce the verified SPBEAM runtime, sUSDS ward, the two named SPBEAM wards, named facilitator bud, SSR bounds, tau=57600 and bad=0. Verified SPBEAM source additionally inventories ward-only rely/deny/kiss/diss and both file overloads; administrators can change bounds, cooldown, toc, halt and facilitator permissions, so the set path is not an immutable bounds/delay promise. The newly inventoried spbeam-administration path retains unknown economic reach and delay. These subset getter reads do not extend the historical full permission census or Safe-extension proof. Execution remains partial: complete current callers, cross-target Jug/Pot, mutable sUSDS implementation, bypasses and liability closure are not certified."
+        "evidence": "The full-history sUSDS Rely/Deny census and pinned wards reads at block 26112822 identify SPBEAM and Pause Proxy as the only live wards at that historical pin. SPBEAM.susds() equals the sUSDS proxy; its deployed runtime exactly matches verified source. cfgs(SSR) returned min=200, max=3000 and step=400 basis points, with tau=57600 seconds. set requires a facilitator bud, enforces configured min/max/step and elapsed tau, and invokes sUSDS drip/file(SSR); it never calls share mint or upgrade. Supplemental review completed 2026-10-05 of reads observed 2026-10-04 at block 26122343: binary-search creation block 22227542 and 78 log windows (77 complete 50000-block windows plus a final partial window to the pin) recover five Rely/Deny/Kiss/Diss events. Wards at that pin were Pause Proxy and SPBEAMMom 0xf0c6e6ec8b367cc483a411e595d3ba0a816d37d0; sole bud was Safe 0xe1c6f81d0c3cd570a77813b81aa064c5fff80309, pinned 2-of-3 with terminal empty module pagination, zero guard and nonzero fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Mom owner was Pause Proxy and authority was SKY Chief; verified halt bypasses the Pause delay but can only file bad=1. Wave-2 reads at Ethereum block 26146894, hash 0x05d13e67d25b7f3ab8c88fdd89f5d93b98fc57a36ad6433b30d035c1a769e2e0, timestamp 2026-10-08T09:50:23Z, through https://api-ethereum-mainnet-erigon.n.dwellir.com observed 2026-10-09T11:37:59.303Z through 11:42:23.975Z independently reproduce the verified SPBEAM runtime, sUSDS ward, the two named SPBEAM wards, named facilitator bud, SSR bounds, tau=57600 and bad=0. Verified SPBEAM source additionally inventories ward-only rely/deny/kiss/diss and both file overloads; administrators can change bounds, cooldown, toc, halt and facilitator permissions, so the set path is not an immutable bounds/delay promise. The newly inventoried spbeam-administration path retains unknown economic reach and delay. These subset getter reads do not extend the historical full permission census or Safe-extension proof. Execution remains partial: complete current callers, cross-target Jug/Pot, mutable sUSDS implementation, bypasses and liability closure are not certified. Re-read 2026-11-22 at Ethereum block 26471602: runtime bytecode, governance chain, and Rely/Deny/Kiss/Diss/File log delta unchanged; executionScope upgraded to inventory=complete."
       }
     ],
     "economicCapSemantics": "bounded",

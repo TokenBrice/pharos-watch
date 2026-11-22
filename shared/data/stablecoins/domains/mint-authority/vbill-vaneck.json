@@ -213,44 +213,60 @@
           "controllerDeployment": "ethereum:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee",
           "reviewedAt": "2026-11-22",
           "observedAt": "2026-11-22",
-          "expiresAt": "2026-12-22",
-          "reviewer": "Pharos #945 Wave B renewal 2026-11-22",
-          "confidence": "partial",
+          "expiresAt": "2027-02-20",
+          "reviewer": "Issue #1683 Part 2A complete EOA executionScope curation (ETH@26471602, AVAX@101083289, BSC@135106372)",
+          "confidence": "verified",
           "sources": [
             {
-              "label": "VBILL verified current DSToken implementation",
+              "label": "Verified Ethereum DSToken implementation source (72 fns)",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xaf88485377cca5e690e7dcb1ba81370f0b575156"
             },
             {
-              "label": "Ethereum pinned RPC",
-              "url": "https://ethereum-rpc.publicnode.com"
+              "label": "Verified Ethereum TrustService implementation source (27 fns)",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6087e879d554d60a8b05a073f07b14d891895bb9"
             },
             {
-              "label": "Pinned Ethereum block 26471665 (2026-11-22T15:50:47.000Z, hash 0x74c8c2a37821736862ce355c7c0995911a74bd9128d1ec2f9c0b53b817b81f68) plus Avalanche 101084346 and BSC 135108436: Ethereum proxy 0x22557188 implementation 0xaf884853 (SHA-256 3a6c4b4e...), admin 0x0, owner EOA 0x59c1eace (code 0x), TrustService MASTER role (1), cap 0, and Avalanche/BSC mirror roles unchanged",
+              "label": "Sourcify verified BSC DSToken and TrustService ABIs",
+              "url": "https://sourcify.dev/server/v2/contract/56/0xcd01d1c5c78ad428cd01913d4664c20ed1e61923?fields=abi"
+            },
+            {
+              "label": "Routescan verified Avalanche DSToken ABI",
+              "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getabi&address=0xc7579a9a4801a805b66742e5bd56a1581705fe0d"
+            },
+            {
+              "label": "Pinned Ethereum block 26471602 (hash 0x721c4070de036bc8800296dd9f7bd5412f1476a968e69407bde6cc717de78c9e, 2026-11-22T15:37:59Z; observed 2026-11-22T15:54Z)",
               "url": "https://eth-mainnet.g.alchemy.com/v2/"
+            },
+            {
+              "label": "Pinned Avalanche block 101083289 (hash 0x53f555710903d73ee5a149822069b241904108ec6602e220943741cfd168cdba, 2026-11-22T15:52:52Z)",
+              "url": "https://avax-mainnet.g.alchemy.com/v2/"
+            },
+            {
+              "label": "Pinned BSC block 135106372 (hash 0x31b682d7942b7f530cbaddb48b70f263c08f983793ce235587cff7473be5d022, 2026-11-22T15:52:59Z)",
+              "url": "https://bnb-mainnet.g.alchemy.com/v2/"
             }
           ],
           "pin": {
-            "position": "26471665",
-            "hash": "0x74c8c2a37821736862ce355c7c0995911a74bd9128d1ec2f9c0b53b817b81f68",
+            "position": "26471602",
+            "hash": "0x721c4070de036bc8800296dd9f7bd5412f1476a968e69407bde6cc717de78c9e",
             "runtimeIdentity": "eth_getCode:0x",
-            "signerIdentity": "ethereum:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee"
+            "signerIdentity": "eoa:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee;token.owner=eoa;cap=0;TrustService.getRole(eoa)=1(MASTER) on ETH@26471602(sole MASTER;12 ISSUER;2 TA),AVAX@101083289,BSC@135106372;WormholeAdapter.role=0(NONE)"
           },
           "observedState": {
-            "position": "26471665",
-            "hash": "0x74c8c2a37821736862ce355c7c0995911a74bd9128d1ec2f9c0b53b817b81f68",
+            "position": "26471602",
+            "hash": "0x721c4070de036bc8800296dd9f7bd5412f1476a968e69407bde6cc717de78c9e",
             "runtimeIdentity": "eth_getCode:0x",
-            "signerIdentity": "ethereum:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee"
+            "signerIdentity": "eoa:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee;token.owner=eoa;cap=0;TrustService.getRole(eoa)=1(MASTER) on ETH@26471602(sole MASTER;12 ISSUER;2 TA),AVAX@101083289,BSC@135106372;WormholeAdapter.role=0(NONE)"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
@@ -262,7 +278,12 @@
               ],
               "callMode": "call",
               "capabilities": [
-                "upgrade"
+                "upgrade",
+                "mint",
+                "burn",
+                "freeze",
+                "seize",
+                "parameter-change"
               ],
               "capSemantics": {
                 "kind": "unbounded",
@@ -284,11 +305,347 @@
               "permissionChangeRefs": [],
               "upgradeRefs": [],
               "bypassRefs": []
+            },
+            {
+              "id": "vbill-ethereum-owner-direct-issuance",
+              "targetDeployment": "ethereum:0x2255718832bc9fd3be1caf75084f4803da14ff01",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x475a9fa9",
+                "0x712d5fa2",
+                "0x24ffea9a",
+                "0x93af4a47"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "vbill-vaneck"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x2255718832bc9fd3be1caf75084f4803da14ff01"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [
+                "vbill-ethereum-trust-service-admin"
+              ],
+              "upgradeRefs": [
+                "vbill-ethereum-owner-uups-upgrade"
+              ],
+              "bypassRefs": []
+            },
+            {
+              "id": "vbill-ethereum-owner-token-admin",
+              "targetDeployment": "ethereum:0x2255718832bc9fd3be1caf75084f4803da14ff01",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x15f570dc",
+                "0xb9683af0",
+                "0x3ce5aae9",
+                "0xfbb24bf4",
+                "0x8456cb59",
+                "0x3f4ba83a",
+                "0x47786d37",
+                "0x082af7c0",
+                "0x59fefa47",
+                "0x356c52b0",
+                "0xf2fde38b",
+                "0x715018a6"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "burn",
+                "seize",
+                "freeze",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "vbill-vaneck"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x2255718832bc9fd3be1caf75084f4803da14ff01"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [
+                "vbill-ethereum-trust-service-admin"
+              ],
+              "upgradeRefs": [
+                "vbill-ethereum-owner-uups-upgrade"
+              ],
+              "bypassRefs": []
+            },
+            {
+              "id": "vbill-ethereum-trust-service-admin",
+              "targetDeployment": "ethereum:0x08b9c1f3e2f236890b975dee37ee3579a0d4516b",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x4f1ef286",
+                "0xe7692ee5",
+                "0x571c3e60",
+                "0x26f2f9cb",
+                "0x4762155d",
+                "0xb7fb6bd5",
+                "0x6b4ef495",
+                "0x50545d2f",
+                "0x335eb2cd",
+                "0x0120e355",
+                "0xad545eca"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "upgrade",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "vbill-vaneck"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x2255718832bc9fd3be1caf75084f4803da14ff01"
+              ],
+              "reach": "root",
+              "controlRefs": [
+                "vbill-ethereum-owner-uups-upgrade",
+                "vbill-ethereum-owner-direct-issuance",
+                "vbill-ethereum-owner-token-admin"
+              ],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "vbill-avalanche-owner-dstoken-control",
+              "targetDeployment": "avalanche:0x7f4546ef315efc65336187fe3765ea779ac90183",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x4f1ef286",
+                "0x475a9fa9",
+                "0x712d5fa2",
+                "0x24ffea9a",
+                "0x93af4a47",
+                "0x15f570dc",
+                "0xb9683af0",
+                "0x3ce5aae9",
+                "0xfbb24bf4",
+                "0x8456cb59",
+                "0x3f4ba83a",
+                "0x47786d37",
+                "0x082af7c0",
+                "0x59fefa47",
+                "0x356c52b0",
+                "0xf2fde38b",
+                "0x715018a6"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "upgrade",
+                "mint",
+                "burn",
+                "freeze",
+                "seize",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "vbill-vaneck"
+              ],
+              "affectedDeployments": [
+                "avalanche:0x7f4546ef315efc65336187fe3765ea779ac90183"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [
+                "vbill-avalanche-trust-service-admin"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "vbill-avalanche-trust-service-admin",
+              "targetDeployment": "avalanche:0x5c5ff37cb5da4dcc25f166a502fbc4fc3d158cd4",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x4f1ef286",
+                "0xe7692ee5",
+                "0x571c3e60",
+                "0x26f2f9cb",
+                "0x4762155d",
+                "0xb7fb6bd5",
+                "0x6b4ef495",
+                "0x50545d2f",
+                "0x335eb2cd",
+                "0x0120e355",
+                "0xad545eca"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "upgrade",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "vbill-vaneck"
+              ],
+              "affectedDeployments": [
+                "avalanche:0x7f4546ef315efc65336187fe3765ea779ac90183"
+              ],
+              "reach": "root",
+              "controlRefs": [
+                "vbill-avalanche-owner-dstoken-control"
+              ],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "vbill-bsc-owner-dstoken-control",
+              "targetDeployment": "bsc:0x14d72634328c4d03bba184a48081df65f1911279",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x4f1ef286",
+                "0x475a9fa9",
+                "0x712d5fa2",
+                "0x24ffea9a",
+                "0x93af4a47",
+                "0x15f570dc",
+                "0xb9683af0",
+                "0x3ce5aae9",
+                "0xfbb24bf4",
+                "0x8456cb59",
+                "0x3f4ba83a",
+                "0x47786d37",
+                "0x082af7c0",
+                "0x59fefa47",
+                "0x356c52b0",
+                "0xf2fde38b",
+                "0x715018a6"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "upgrade",
+                "mint",
+                "burn",
+                "freeze",
+                "seize",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "vbill-vaneck"
+              ],
+              "affectedDeployments": [
+                "bsc:0x14d72634328c4d03bba184a48081df65f1911279"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [
+                "vbill-bsc-trust-service-admin"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "vbill-bsc-trust-service-admin",
+              "targetDeployment": "bsc:0x079864f3dab043382f3cab4683fcb2aaa56894a4",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x4f1ef286",
+                "0xe7692ee5",
+                "0x571c3e60",
+                "0x26f2f9cb",
+                "0x4762155d",
+                "0xb7fb6bd5",
+                "0x6b4ef495",
+                "0x50545d2f",
+                "0x335eb2cd",
+                "0x0120e355",
+                "0xad545eca"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "upgrade",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "vbill-vaneck"
+              ],
+              "affectedDeployments": [
+                "bsc:0x14d72634328c4d03bba184a48081df65f1911279"
+              ],
+              "reach": "root",
+              "controlRefs": [
+                "vbill-bsc-owner-dstoken-control"
+              ],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
             }
           ]
         },
         "observedAt": "2026-11-22",
-        "observedBlock": 26471665,
+        "observedBlock": 26471602,
         "sources": [
           {
             "label": "Etherscan VBILL owner address",
@@ -303,7 +660,7 @@
             "url": "https://bsc-dataseed.binance.org"
           }
         ],
-        "evidence": "Re-read 2026-10-29T18:38Z at pinned Ethereum block 26300150 (hash 0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781, Dwellir): owner() of VBILL 0x2255718832bc9fd3be1caf75084f4803da14ff01 still returned 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee, EIP-1967 implementation still 0xaf88485377cca5e690e7dcb1ba81370f0b575156 and eth_getCode(owner) still 0x. On 2026-10-01, owner() returned the same code-empty EOA 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee on Ethereum at block 26095800, Avalanche at block 96511203, and BNB Chain at block 125056599. Verified deployment sources gate issuance through trust-service issuer/master roles and UUPS authorization through owner-or-master. getDSService(1) identified each trust service, and getRole(sharedOwner) returned 1 (MASTER) at Ethereum block 26095800, Avalanche block 96511203 and BNB block 125059607, establishing direct native mint authority as well as administrative control. These reads do not enumerate every other authorized role holder. Off-chain MPC/HSM custody is indistinguishable from the EOA read. Re-read 2026-10-27 at Ethereum block 26282946 (hash 0xa3b7f0aacd03ae55ce28304089412b9952990e5b819dcf5e3938d6cea0ccdace, ethereum-rpc.publicnode.com): the proxy 0x2255718832bc9fd3be1caf75084f4803da14ff01 still has EIP-1967 implementation 0xaf88485377cca5e690e7dcb1ba81370f0b575156 and owner() 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee, which still has empty eth_getCode; getDSService(1) returned trust service 0x08B9C1F3E2F236890b975dEe37eE3579A0d4516b whose getRole(owner) is still 1 (MASTER). Avalanche and BNB Chain were not re-read in this pass; the other authorized role holders are still not enumerated. Re-read 2026-11-22 at pinned Ethereum block 26471665 (hash 0x74c8c2a37821736862ce355c7c0995911a74bd9128d1ec2f9c0b53b817b81f68, 2026-11-22T15:50:47.000Z, https://eth-mainnet.g.alchemy.com/v2/) plus Avalanche block 101084346 and BSC block 135108436: Ethereum proxy 0x22557188 implementation 0xaf884853 (SHA-256 3a6c4b4e...), adminSlot 0x0, owner EOA 0x59c1eace (eth_getCode 0x), TrustService 0x08b9c1f3 getRole(owner)=1 (MASTER), cap=0, and Avalanche/BSC TrustService MASTER roles unchanged."
+        "evidence": "Re-read 2026-10-29T18:38Z at pinned Ethereum block 26300150 (hash 0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781, Dwellir): owner() of VBILL 0x2255718832bc9fd3be1caf75084f4803da14ff01 still returned 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee, EIP-1967 implementation still 0xaf88485377cca5e690e7dcb1ba81370f0b575156 and eth_getCode(owner) still 0x. On 2026-10-01, owner() returned the same code-empty EOA 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee on Ethereum at block 26095800, Avalanche at block 96511203, and BNB Chain at block 125056599. Verified deployment sources gate issuance through trust-service issuer/master roles and UUPS authorization through owner-or-master. getDSService(1) identified each trust service, and getRole(sharedOwner) returned 1 (MASTER) at Ethereum block 26095800, Avalanche block 96511203 and BNB block 125059607, establishing direct native mint authority as well as administrative control. These reads do not enumerate every other authorized role holder. Off-chain MPC/HSM custody is indistinguishable from the EOA read. Re-read 2026-10-27 at Ethereum block 26282946 (hash 0xa3b7f0aacd03ae55ce28304089412b9952990e5b819dcf5e3938d6cea0ccdace, ethereum-rpc.publicnode.com): the proxy 0x2255718832bc9fd3be1caf75084f4803da14ff01 still has EIP-1967 implementation 0xaf88485377cca5e690e7dcb1ba81370f0b575156 and owner() 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee, which still has empty eth_getCode; getDSService(1) returned trust service 0x08B9C1F3E2F236890b975dEe37eE3579A0d4516b whose getRole(owner) is still 1 (MASTER). Avalanche and BNB Chain were not re-read in this pass; the other authorized role holders are still not enumerated. Re-read 2026-11-22 at pinned Ethereum block 26471665 (hash 0x74c8c2a37821736862ce355c7c0995911a74bd9128d1ec2f9c0b53b817b81f68, 2026-11-22T15:50:47.000Z, https://eth-mainnet.g.alchemy.com/v2/) plus Avalanche block 101084346 and BSC block 135108436: Ethereum proxy 0x22557188 implementation 0xaf884853 (SHA-256 3a6c4b4e...), adminSlot 0x0, owner EOA 0x59c1eace (eth_getCode 0x), TrustService 0x08b9c1f3 getRole(owner)=1 (MASTER), cap=0, and Avalanche/BSC TrustService MASTER roles unchanged. Re-read 2026-11-22 at Ethereum block 26471602, Avalanche block 101083289, and BSC block 135106372: full Ethereum TrustService role history confirms 0x59c1eacec450c57dcb9b8725d0f96635c2b676ee is a code-empty EOA and the sole Ethereum MASTER (role 1) alongside 12 ISSUER and 2 TRANSFER_AGENT addresses; executionScope upgraded to inventory=complete through 2027-02-20."
       },
       {
         "chain": "solana",
