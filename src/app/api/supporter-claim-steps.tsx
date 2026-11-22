@@ -85,9 +85,12 @@ export function SupporterClaimSteps({
   const hasUnavailableGrades = coins.length === 0 || coins.some((coin) => coin.status === "unavailable");
   return (
     <section id={API_PAGE_ANCHORS.claim} aria-labelledby="claim-title" className="scroll-mt-20 space-y-6">
-      <h2 id="claim-title" className="text-2xl font-semibold tracking-tight text-foreground">
-        Claim your supporter key
-      </h2>
+      <div className="space-y-1.5 border-t border-border/55 pt-8">
+        <p className="pharos-label">Supporter key</p>
+        <h2 id="claim-title" className="text-2xl font-semibold tracking-tight text-foreground">
+          Claim your supporter key
+        </h2>
+      </div>
       <ol className="grid gap-6 sm:grid-cols-3 sm:gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
         <li className={STEP_CLASS_NAME}>
           <p className={STEP_NUMBER_CLASS_NAME}>01</p>
@@ -99,34 +102,33 @@ export function SupporterClaimSteps({
               ? "No listed stablecoin is confirmed to count; some grades are unavailable. Check grades again before donating."
               : "No listed stablecoin counts at its current grade."}
           </p>
-          <dl className="mt-3 space-y-2">
-            {groups.map((group, index) => (
-              <div key={group.status}>
-                <dt className="text-xs text-muted-foreground">
-                  {group.label}
-                  {index === 0 ? (
-                    <>
-                      {" "}
-                      (grades as of <span className="pharos-numeric whitespace-nowrap">{gradesAsOf}</span>)
-                    </>
-                  ) : null}
-                </dt>
-                <dd>
-                  <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
-                    {group.coins.map((coin) => (
-                      <li
-                        key={coin.stablecoinId}
-                        className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground"
-                      >
-                        {coin.label}
-                        {coin.grade ? <SafetyGradeBadge grade={coin.grade} size="xs" /> : null}
-                      </li>
-                    ))}
-                  </ul>
-                </dd>
-              </div>
-            ))}
-          </dl>
+          <div className="mt-3">
+            <ApiDisclosure
+              summary={`Which stablecoins count (${coins.filter((coin) => coin.status === "counts").length} of ${coins.length}, grades as of ${gradesAsOf})`}
+              framed={false}
+            >
+              <dl className="space-y-2">
+                {groups.map((group) => (
+                  <div key={group.status}>
+                    <dt className="text-xs text-muted-foreground">{group.label}</dt>
+                    <dd>
+                      <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+                        {group.coins.map((coin) => (
+                          <li
+                            key={coin.stablecoinId}
+                            className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground"
+                          >
+                            {coin.label}
+                            {coin.grade ? <SafetyGradeBadge grade={coin.grade} size="xs" /> : null}
+                          </li>
+                        ))}
+                      </ul>
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </ApiDisclosure>
+          </div>
           <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
             Each coin counts only on its listed networks. Exchange withdrawals and Giveth streams cannot claim.
             Smart-contract wallets cannot claim yet.
@@ -137,10 +139,11 @@ export function SupporterClaimSteps({
         </li>
         <li className={STEP_CLASS_NAME}>
           <p className={STEP_NUMBER_CLASS_NAME}>02</p>
-          <h3 className={STEP_TITLE_CLASS_NAME}>Wait for Sunday&apos;s update</h3>
+          <h3 className={STEP_TITLE_CLASS_NAME}>Wait for the Sunday update</h3>
           <p className={STEP_BODY_CLASS_NAME}>
-            The donor list is updated every Sunday. This page includes donations sent before{" "}
-            <span className="pharos-numeric">{ledgerReconciledDate}</span>.
+            The donor list is updated every Sunday, so a key is ready within 7 days of your donation. This page
+            includes donations sent before <span className="pharos-numeric">{ledgerReconciledDate}</span>. Donations are
+            public on the funding ledger, including the sending wallet.
           </p>
         </li>
         <li className={STEP_CLASS_NAME}>
@@ -189,7 +192,7 @@ export function SupporterClaimSteps({
         </ApiDisclosure>
         <ApiDisclosure summary="Lost key, privacy and terms">
           <ul className={TERMS_LIST_CLASS_NAME}>
-            <li>For personal, non-commercial use. Commercial products need a partner key.</li>
+            <li>Personal use only: not for reselling the data or powering a paid service. Those need a team plan.</li>
             <li>
               A key carries {DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute and{" "}
               {DONOR_API_KEY_MONTHLY_REQUEST_QUOTA.toLocaleString("en-US")} requests per month, counted per UTC calendar

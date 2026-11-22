@@ -26,6 +26,7 @@ export const API_PAGE_ANCHORS = {
   partnerAccess: "partner-access",
   integrationPreview: "integration-preview",
   claim: "claim",
+  badges: "badges",
   developerResources: "developer-resources",
 } as const;
 
