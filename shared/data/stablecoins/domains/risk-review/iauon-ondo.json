@@ -130,9 +130,18 @@
         "label": "NR3 2026-10-21 exact HyperEVM BridgeRegistrar verified source",
         "url": "https://hyperevmscan.io/address/0xe3153764ab2a0a928a59c3805503b2ac56b802a3#code"
       },
-      {"label": "NR3 final exact Ethereum timelock source and role/delay semantics", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1"},
-      {"label": "NR3 final exact BSC timelock source/runtime correspondence", "url": "https://sourcify.dev/server/v2/contract/56/0x8860bbfc7a83e4788a981f4e9f30878331413b26?fields=compilation,sources,runtimeBytecode"},
-      {"label": "NR3 final exact HyperEVM timelock source/runtime correspondence", "url": "https://hyperevmscan.io/address/0x6253fbc5bcf4f49c80745694366f05d6c7be0e83#code"},
+      {
+        "label": "NR3 final exact Ethereum timelock source and role/delay semantics",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1"
+      },
+      {
+        "label": "NR3 final exact BSC timelock source/runtime correspondence",
+        "url": "https://sourcify.dev/server/v2/contract/56/0x8860bbfc7a83e4788a981f4e9f30878331413b26?fields=compilation,sources,runtimeBytecode"
+      },
+      {
+        "label": "NR3 final exact HyperEVM timelock source/runtime correspondence",
+        "url": "https://hyperevmscan.io/address/0x6253fbc5bcf4f49c80745694366f05d6c7be0e83#code"
+      },
       {
         "label": "Ondo Stocks bridge: native burn/mint on all supported EVM chains and same token amount",
         "url": "https://docs.ondo.finance/tools/ondo-bridge.md"
@@ -160,6 +169,9 @@
             "label": "Ondo Global Markets",
             "url": "https://ondo.finance/"
           }
+        ],
+        "providerKeys": [
+          "layerzero"
         ]
       },
       {
@@ -183,6 +195,9 @@
             "label": "Ondo Global Markets",
             "url": "https://ondo.finance/"
           }
+        ],
+        "providerKeys": [
+          "layerzero"
         ]
       },
       {
@@ -244,6 +259,9 @@
             "label": "HyperEVM RPC",
             "url": "https://rpc.hyperliquid.xyz/evm"
           }
+        ],
+        "providerKeys": [
+          "layerzero"
         ]
       }
     ],

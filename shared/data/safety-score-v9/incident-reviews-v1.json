@@ -17194,7 +17194,12 @@
         "source:a82281011e4f87e3530248d5",
         "source:dbe4c5694e8451318267e534",
         "source:da07c403339705d7f6c0a66f"
-      ]
+      ],
+      "retired": {
+        "reviewedAt": "2026-11-22T16:30:00Z",
+        "reviewer": "Pharos #1683 Part 2B sUSDe bridge-route and incident research (2026-11-22)",
+        "reason": "Ethereum StakedUSDeOFTAdapter 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2 unpeered Blast (EID 30243 -> 0x0) at Ethereum block 26275355 (2026-10-26T07:25:35Z, hash 0x165d9040ca9e2c364170c145342bb9da8342678c946c51bd18206591ff251e5c, tx 0x2610721728553b8d3f65540ba218cfd0c316fc7e6d1f3ec04bbe73a4781511a5), 15 days after the 2026-10-11 review, and remains unpeered at Ethereum block 26471602 (2026-11-22T15:37:59Z). A currently unpeered/suspended bridge route disqualifies no-known-incident under docs/process/report-cards-appendix.md:314,722 and safety-score-v9-incidents.ts:340-342."
+      }
     },
     {
       "reviewId": "j14susde-susde-ethena-7608dc7e681bc182c511-20261011",
@@ -28259,6 +28264,166 @@
         "surface:0855a45e0a205f2766d91f76",
         "surface:06691d9fdaebdbb5b9ec38ac",
         "surface:1bdb336165318e702b7fb13c"
+      ]
+    },
+    {
+      "reviewId": "w5susde-susde-ethena-base-20261122",
+      "assetId": "susde-ethena",
+      "scope": {
+        "kind": "control",
+        "routeId": "base:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "controlId": "*"
+      },
+      "reviewedAt": "2026-11-22T16:30:00Z",
+      "reviewer": "Pharos #1683 Part 2B sUSDe bridge-route and incident research (2026-11-22)",
+      "windowStartSec": 1718326583,
+      "windowEndSec": 1795361826,
+      "conclusion": "no-known-incident",
+      "searchedSurfacesRefs": [
+        "surface:ce557d74568b39b6b509d2d4",
+        "surface:4809a1cd4221c86699a736a0",
+        "surface:554d40235faccca4578a5829",
+        "surface:99db53c4432597f28190a60d",
+        "surface:4065af2ea008ec1f800d8b20"
+      ],
+      "sourcesRefs": [
+        "source:e6287266f84bb5099a07abce",
+        "source:0831872f23a002fce8864a0c",
+        "source:ced06e3e9871e78340765ec4",
+        "source:4d85b0d7ae5a8f15e8c4ed54",
+        "source:2e6ab9d8823383fca4970cd5",
+        "source:687091658e8539c21a87db00",
+        "source:d9f733440aca39d347ac7514",
+        "source:49968b2edae8119aa0055722",
+        "source:f3278bcd80a64f4fd48ae52a"
+      ]
+    },
+    {
+      "reviewId": "w5susde-susde-ethena-bsc-20261122",
+      "assetId": "susde-ethena",
+      "scope": {
+        "kind": "control",
+        "routeId": "bsc:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "controlId": "*"
+      },
+      "reviewedAt": "2026-11-22T16:30:00Z",
+      "reviewer": "Pharos #1683 Part 2B sUSDe bridge-route and incident research (2026-11-22)",
+      "windowStartSec": 1710187105,
+      "windowEndSec": 1795362857,
+      "conclusion": "no-known-incident",
+      "searchedSurfacesRefs": [
+        "surface:ce557d74568b39b6b509d2d4",
+        "surface:4809a1cd4221c86699a736a0",
+        "surface:554d40235faccca4578a5829",
+        "surface:99db53c4432597f28190a60d",
+        "surface:1ad2754e0010b30f89428a34"
+      ],
+      "sourcesRefs": [
+        "source:e6287266f84bb5099a07abce",
+        "source:0831872f23a002fce8864a0c",
+        "source:ced06e3e9871e78340765ec4",
+        "source:4d85b0d7ae5a8f15e8c4ed54",
+        "source:2e6ab9d8823383fca4970cd5",
+        "source:295eef3a46af77257051efc1",
+        "source:173b6706ecb9227f0d9503c7",
+        "source:6fdf70cb9324ffd3892f8e6d",
+        "source:f687e757cde2208aecb299b8"
+      ]
+    },
+    {
+      "reviewId": "w5susde-susde-ethena-berachain-20261122",
+      "assetId": "susde-ethena",
+      "scope": {
+        "kind": "control",
+        "routeId": "berachain:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "controlId": "*"
+      },
+      "reviewedAt": "2026-11-22T16:30:00Z",
+      "reviewer": "Pharos #1683 Part 2B sUSDe bridge-route and incident research (2026-11-22)",
+      "windowStartSec": 1737667686,
+      "windowEndSec": 1795362854,
+      "conclusion": "no-known-incident",
+      "searchedSurfacesRefs": [
+        "surface:ce557d74568b39b6b509d2d4",
+        "surface:4809a1cd4221c86699a736a0",
+        "surface:554d40235faccca4578a5829",
+        "surface:99db53c4432597f28190a60d",
+        "surface:b1f8bdcfbc4c0d24c214fa66"
+      ],
+      "sourcesRefs": [
+        "source:e6287266f84bb5099a07abce",
+        "source:0831872f23a002fce8864a0c",
+        "source:ced06e3e9871e78340765ec4",
+        "source:4d85b0d7ae5a8f15e8c4ed54",
+        "source:2e6ab9d8823383fca4970cd5",
+        "source:f8edca08ca970aec5da5e6ec",
+        "source:1c6eb21b535341a46cc51dd0",
+        "source:994f96c30a3b95665ffa7e5e",
+        "source:41f6f13069e8e6901a35f3fa"
+      ]
+    },
+    {
+      "reviewId": "w5susde-susde-ethena-monad-20261122",
+      "assetId": "susde-ethena",
+      "scope": {
+        "kind": "control",
+        "routeId": "monad:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "controlId": "*"
+      },
+      "reviewedAt": "2026-11-22T16:30:00Z",
+      "reviewer": "Pharos #1683 Part 2B sUSDe bridge-route and incident research (2026-11-22)",
+      "windowStartSec": 1781186234,
+      "windowEndSec": 1795362859,
+      "conclusion": "no-known-incident",
+      "searchedSurfacesRefs": [
+        "surface:ce557d74568b39b6b509d2d4",
+        "surface:4809a1cd4221c86699a736a0",
+        "surface:554d40235faccca4578a5829",
+        "surface:99db53c4432597f28190a60d",
+        "surface:79d61a00608053323600dd5c"
+      ],
+      "sourcesRefs": [
+        "source:e6287266f84bb5099a07abce",
+        "source:0831872f23a002fce8864a0c",
+        "source:ced06e3e9871e78340765ec4",
+        "source:4d85b0d7ae5a8f15e8c4ed54",
+        "source:2e6ab9d8823383fca4970cd5",
+        "source:675fe1dd5eafa8c47a4cc52e",
+        "source:03db4ea4c727b18564910bfa",
+        "source:694b0f2c51d67400a94ada28",
+        "source:fcfb04fcfe9ff0eee08053d7"
+      ]
+    },
+    {
+      "reviewId": "w5susde-susde-ethena-morph-l2-20261122",
+      "assetId": "susde-ethena",
+      "scope": {
+        "kind": "control",
+        "routeId": "morph-l2:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "controlId": "*"
+      },
+      "reviewedAt": "2026-11-22T16:30:00Z",
+      "reviewer": "Pharos #1683 Part 2B sUSDe bridge-route and incident research (2026-11-22)",
+      "windowStartSec": 1734390796,
+      "windowEndSec": 1795361740,
+      "conclusion": "no-known-incident",
+      "searchedSurfacesRefs": [
+        "surface:ce557d74568b39b6b509d2d4",
+        "surface:4809a1cd4221c86699a736a0",
+        "surface:554d40235faccca4578a5829",
+        "surface:99db53c4432597f28190a60d",
+        "surface:00d41d95ddb6a1608dcbb169"
+      ],
+      "sourcesRefs": [
+        "source:e6287266f84bb5099a07abce",
+        "source:0831872f23a002fce8864a0c",
+        "source:ced06e3e9871e78340765ec4",
+        "source:4d85b0d7ae5a8f15e8c4ed54",
+        "source:2e6ab9d8823383fca4970cd5",
+        "source:b9485618381a61c13eae9b81",
+        "source:f123a2f908156b79d166d998",
+        "source:b91788d5d3d364333a8cb3e5",
+        "source:db5a7c7873f4ea9695faaa8b"
       ]
     }
   ],
@@ -66792,6 +66957,256 @@
         "location": "Arbitrum block 526552416 (hash 0x9461879161df387780503df155a5e4c1b2b287cc28d807bb900f85b6344570eb, 2026-11-22T15:29:17Z) and Ethereum block 26471570 (hash 0x45711a6f3d1aff45ca6714be1651188e3cd4b1ea01eaa5cf18800d68097d691f, 2026-11-22T15:31:35Z) via https://eth-mainnet.g.alchemy.com/v2/",
         "excerpt": "Arbitrum syrupUSDG totalSupply 141741031.172779, pool 0x5355292a5c36c4094b93fb62aa1fefca6e28b75f (BurnMintTokenPool 2.0.0) reciprocally peered to Ethereum LockRelease 0x120391e1512287f0eb8036037d464de2da602543 (1.6.1), owner RBACTimelock 0x8a89770722c84b60ce02989aedb22ac4791f8c7f"
       }
+    },
+    {
+      "id": "source:e6287266f84bb5099a07abce",
+      "value": {
+        "label": "DefiLlama full serialized hacks dataset (1373 records through 2026-11-21)",
+        "url": "https://api.llama.fi/hacks",
+        "observedAt": "2026-11-22T15:52:00Z",
+        "location": "All 1373 returned records searched for Ethena, sUSDe, USDe, StakedUSDe, LayerZero, OFT and exact contract addresses",
+        "excerpt": "Full serialized 1373-record DefiLlama hacks dataset searched through 2026-11-21: zero matches for Ethena, sUSDe, USDe or exact StakedUSDeOFT / StakedUSDeOFTAdapter addresses. LayerZero/OFT rows (KelpDAO 2026-04-18, GriffinAI 2025-09-24, Yala 2025-09-14, Aethir 2026-04-09, Stake DAO 2026-05-27, The Sandbox 2026-08-22) were inspected and concern unrelated OApps or the KelpDAO LayerZero Labs DVN compromise independently excluded by pinned point-in-time reads."
+      }
+    },
+    {
+      "id": "source:0831872f23a002fce8864a0c",
+      "value": {
+        "label": "Rekt.news leaderboard incident index search",
+        "url": "https://rekt.news/leaderboard/",
+        "observedAt": "2026-11-22T15:52:00Z",
+        "location": "Published leaderboard searched for Ethena, sUSDe, USDe and LayerZero",
+        "excerpt": "Zero matching Ethena, sUSDe or USDe control-integrity exploits on the published Rekt leaderboard as of 2026-11-22. The listed KelpDAO incident (2026-04-18) is independently excluded for this route by pinned historical ULN DVN configuration reads or post-exposure deployment proof."
+      }
+    },
+    {
+      "id": "source:ced06e3e9871e78340765ec4",
+      "value": {
+        "label": "LayerZero Labs KelpDAO primary incident report",
+        "url": "https://layerzero.network/blog/layerzero-labs-kelpdao-incident-report",
+        "observedAt": "2026-11-22T15:53:00Z",
+        "location": "Primary disclosure of 2026-03-06..2026-05-20 LayerZero Labs DVN exposure",
+        "excerpt": "LayerZero Labs disclosed compromise of its DVN signing infrastructure affecting OApps that relied on a 1-of-1 LayerZero Labs DVN quorum (KelpDAO rsETH, 2026-04-18). No Ethena sUSDe route was compromised; this review does not rely on provider prose alone and attaches exact pinned point-in-time DVN quorum or post-exposure deployment proof."
+      }
+    },
+    {
+      "id": "source:4d85b0d7ae5a8f15e8c4ed54",
+      "value": {
+        "label": "Ethena Foundation March-April 2026 governance update (precautionary LayerZero bridge pause and hardening)",
+        "url": "https://gov.ethenafoundation.com/t/ethena-s-march-april-2026-governance-update/791",
+        "observedAt": "2026-11-22T15:54:00Z",
+        "location": "Topic 791 governance summary",
+        "excerpt": "Ethena Foundation confirmed it paused LayerZero OFT bridging for USDe and sUSDe on April 19-20, 2026 as a precautionary measure during the KelpDAO/rsETH incident, then restored bridging hardened from 2-of-2 to 4-of-4 required DVNs with $10M/hr rate limits and zero user fund loss or bridge supply integrity failure."
+      }
+    },
+    {
+      "id": "source:2e6ab9d8823383fca4970cd5",
+      "value": {
+        "label": "Ethena Foundation October 2026 governance update",
+        "url": "https://gov.ethenafoundation.com/t/ethena-s-october-2026-governance-update/879",
+        "observedAt": "2026-11-22T15:54:00Z",
+        "location": "Topic 879 governance summary (plus Topics 796, 808 and 857 May-Sep 2026)",
+        "excerpt": "Ethena Foundation's May-October 2026 governance updates (topics 796, 808, 857, 879) report no sUSDe OFT bridge exploit, unbacked mint, escrow drain or stuck supply on active routes. The late-October Binance operational/hedging event involved ~$8.8M unrealized PnL exposure only and no on-chain sUSDe bridge control failure."
+      }
+    },
+    {
+      "id": "source:687091658e8539c21a87db00",
+      "value": {
+        "label": "Ethereum StakedUSDeOFTAdapter reciprocal peering read for base at block 26471602",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/",
+        "observedAt": "2026-11-22T16:18:18.594Z",
+        "location": "Ethereum finalized block 26471602 (hash 0x721c4070de036bc8800296dd9f7bd5412f1476a968e69407bde6cc717de78c9e, 2026-11-22T15:37:59.000Z)",
+        "excerpt": "Ethereum StakedUSDeOFTAdapter 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2 (owner=delegate=0xe8dc0fab349ea169283c48ccfd09d797e6db7c94, runtimeCodeSha256=e342ac09f1a95365fa09981911759e83c6aa186976f9c31f38680469a153318b) reciprocally peers base (EID 30184 -> 0x000000000000000000000000211cc4dd073734da055fbf44a2b4667d5e5fe5d2). Ethereum adapter 50,000-block admin-event scan [26421603..26471602] across 11 verified ABI admin events returned 0 matches (empty, not proof of lifetime absence)."
+      }
+    },
+    {
+      "id": "source:d9f733440aca39d347ac7514",
+      "value": {
+        "label": "base pinned finalized emergency-state, DVN, Timelock and KelpDAO verification RPC",
+        "url": "https://base-mainnet.g.alchemy.com/v2/",
+        "observedAt": "2026-11-22T16:07:53.732Z",
+        "location": "base finalized block 60857252 (hash 0x3aa4cead948c024883a14020a3a5a2d4c72f1a7a7e9df116ce6d0881d7975de5, 2026-11-22T15:37:06.000Z) plus creation block 15768618 (2024-06-14T00:56:23.000Z)",
+        "excerpt": "Pinned base block 60857252 (2026-11-22T15:37:06.000Z, hash 0x3aa4cead948c024883a14020a3a5a2d4c72f1a7a7e9df116ce6d0881d7975de5): peers(30101)=0x000000000000000000000000211cc4dd073734da055fbf44a2b4667d5e5fe5d2; blackList(self)=false; rateLimits(30101)=[598139757000000000000, 1795258346, 10000000000000000000000000, 3600]; getAmountCanBeSent(30101)=[0, 10000000000000000000000000] ($10M/3600s active capacity); owner=delegate=0xd896f26f76ed089a1711284a00af497b19d65171 (5-of-10 Safe 0xbc89d10eb486b6591583f218acb9545087dbf293 (modules=[], guard=0x0) holding PROPOSER_ROLE, EXECUTOR_ROLE and WHITELISTED_EXECUTOR_ROLE on EthenaTimelockController 0xd896f26f76ed089a1711284a00af497b19d65171 (getMinDelay()=86400s; setPeer and updateBlackList whitelisted for zero-delay bypass)); receiveLibrary=0xc70ab6f32772f59fbfc23889caf4ba3376c84baf (isDefault=false, timeoutExpiry=0); current ULN for EID 30101 requires 2 required DVNs (0x9e059a54699a285714207b43b055483e78faac25, 0xdcacd7e37f392ffad4b2703a21f6a0c8e2451e96) + 2-of-3 optional DVNs (0x8b4874a130d7f1f702d59115f6d31bcc3e0972c3, 0xa7b5189bca84cd304d8553977c7c614329750d99, 0xcd37ca043f8479064e10635020c65ffc005d36f6); totalSupplyRaw=3539294711104000000000000; runtimeCodeSha256=068726ce833e7e12ef90562c2abac2b3246e2e71889576643a33d9e61da3f9a1 (15007 bytes). Three pinned Base bracketing reads inside the 2026-03-06..2026-05-20 KelpDAO LayerZero Labs DVN exposure window (blocks 43004527 [2026-03-06T12:00:01Z, 23 peered EIDs, all 2-of-2 required LayerZero Labs + Horizen], 44602927 [2026-04-12T12:00:01Z, 23 peered EIDs, all 2-of-2 required LayerZero Labs + Horizen], and 46201327 [2026-05-19T12:00:01Z, 1 peered EID 30101, 4-of-4 required Canary + LayerZero Labs + Horizen + Twinstake]) confirm Base sUSDe never relied solely on the compromised LayerZero Labs DVN. Note: StakedUSDeOFT has no global paused() getter; this is a pinned point-in-time read, not lifetime completeness proof."
+      }
+    },
+    {
+      "id": "source:49968b2edae8119aa0055722",
+      "value": {
+        "label": "base exact deployment creation receipt and bounded 50000-block admin-event log screen",
+        "url": "https://basescan.org/address/0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2#events",
+        "observedAt": "2026-11-22T16:04:37.548Z",
+        "location": "base creation block 15768618 (tx 0x6bb655f443e534066677f8fd33bcf8a4ede9746d478c447f352d77cb717f8e50) and eth_getLogs [60807253..60857252] via https://base-mainnet.g.alchemy.com/v2/",
+        "excerpt": "Creation pinned at base block 15768618 (hash 0x6f08731aac1cc1b8eafccf84be158840e578766255deaf71c82f9483dc93aa18, 2024-06-14T00:56:23.000Z, tx 0x6bb655f443e534066677f8fd33bcf8a4ede9746d478c447f352d77cb717f8e50) creating 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2. Bounded eth_getLogs over inclusive [60807253, 60857252] (50000 blocks) via https://base-mainnet.g.alchemy.com/v2/ filtered across all 11 verified StakedUSDeOFT admin events (BlackListUpdated, BlackListerSet, EnforcedOptionSet, MsgInspectorSet, OwnershipTransferStarted, OwnershipTransferred, PeerSet, PreCrimeSet, RateLimiterSet, RateLimitsChanged, RedistributeFunds) returned 0 matches (bounded empty result, not proof of lifetime absence)."
+      }
+    },
+    {
+      "id": "source:f3278bcd80a64f4fd48ae52a",
+      "value": {
+        "label": "Sourcify exact_match verified Base StakedUSDeOFT source and ABI",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2?fields=all",
+        "observedAt": "2026-11-22T15:58:00Z",
+        "location": "Verified StakedUSDeOFT ABI matching runtimeCodeSha256 068726ce833e7e12ef90562c2abac2b3246e2e71889576643a33d9e61da3f9a1",
+        "excerpt": "Verified StakedUSDeOFT ABI enumerates all 11 admin-relevant events used in the bounded eth_getLogs filter and confirms there is no global paused() getter (bridging is controlled via setPeer, setRateLimits and blackList/redistributeBlackListedFunds)."
+      }
+    },
+    {
+      "id": "source:295eef3a46af77257051efc1",
+      "value": {
+        "label": "Ethereum StakedUSDeOFTAdapter reciprocal peering read for bsc at block 26471602",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/",
+        "observedAt": "2026-11-22T16:18:18.594Z",
+        "location": "Ethereum finalized block 26471602 (hash 0x721c4070de036bc8800296dd9f7bd5412f1476a968e69407bde6cc717de78c9e, 2026-11-22T15:37:59.000Z)",
+        "excerpt": "Ethereum StakedUSDeOFTAdapter 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2 (owner=delegate=0xe8dc0fab349ea169283c48ccfd09d797e6db7c94, runtimeCodeSha256=e342ac09f1a95365fa09981911759e83c6aa186976f9c31f38680469a153318b) reciprocally peers bsc (EID 30102 -> 0x000000000000000000000000211cc4dd073734da055fbf44a2b4667d5e5fe5d2). Ethereum adapter 50,000-block admin-event scan [26421603..26471602] across 11 verified ABI admin events returned 0 matches (empty, not proof of lifetime absence)."
+      }
+    },
+    {
+      "id": "source:173b6706ecb9227f0d9503c7",
+      "value": {
+        "label": "bsc pinned finalized emergency-state, DVN, Timelock and KelpDAO verification RPC",
+        "url": "https://bnb-mainnet.g.alchemy.com/v2/",
+        "observedAt": "2026-11-22T16:07:55.629Z",
+        "location": "bsc finalized block 135106545 (hash 0x0b7617c3fc1b6e00b3656c6e1585e94d1b2961406bb1ffc3eed012d30354f537, 2026-11-22T15:54:17.000Z) plus creation block 36884574 (2024-03-11T19:58:25.000Z)",
+        "excerpt": "Pinned bsc block 135106545 (2026-11-22T15:54:17.000Z, hash 0x0b7617c3fc1b6e00b3656c6e1585e94d1b2961406bb1ffc3eed012d30354f537): peers(30101)=0x000000000000000000000000211cc4dd073734da055fbf44a2b4667d5e5fe5d2; blackList(self)=false; rateLimits(30101)=[33337914485053232158279, 1794566435, 10000000000000000000000000, 3600]; getAmountCanBeSent(30101)=[0, 10000000000000000000000000] ($10M/3600s active capacity); owner=delegate=0x89bad41d3307072cfd3118b5fd08101e23b2e129 (5-of-10 Safe 0xc9647361742eb964965b461c44bdf5c4bc3c406d (modules=[], guard=0x0) holding PROPOSER_ROLE, EXECUTOR_ROLE and WHITELISTED_EXECUTOR_ROLE on EthenaTimelockController 0x89bad41d3307072cfd3118b5fd08101e23b2e129 (getMinDelay()=86400s; setPeer and updateBlackList whitelisted for zero-delay bypass)); receiveLibrary=0xb217266c3a98c8b2709ee26836c98cf12f6ccec1 (isDefault=false, timeoutExpiry=0); current ULN for EID 30101 requires 2 required DVNs (0x165bcb144efe79a955c608a3d69e08e21c91c79d, 0xfd6865c841c2d64565562fcc7e05e619a30615f0) + 2-of-3 optional DVNs (0x0cea5a94f8cd3330c4f84944bf4500f8dacd440c, 0x247624e2143504730aec22912ed41f092498bef2, 0x31f748a368a893bdb5abb67ec95f232507601a73); totalSupplyRaw=1912817354429000000000000; runtimeCodeSha256=2da6bcb00483ea5635346e919cd93f40d4b34377ff96e0858175ab970c208a26 (15007 bytes). Three pinned BSC bracketing reads inside the 2026-03-06..2026-05-20 KelpDAO LayerZero Labs DVN exposure window (blocks 85005076 [2026-03-06T12:00:00Z, 19 peered EIDs, all 2-of-2 required Horizen + LayerZero Labs], 92099342 [2026-04-12T12:00:00Z, 19 peered EIDs, all 2-of-2 required Horizen + LayerZero Labs], and 99193593 [2026-05-19T12:00:00Z, 1 peered EID 30101, 4-of-4 required Horizen + Twinstake + Canary + LayerZero Labs]) confirm BSC sUSDe never relied solely on the compromised LayerZero Labs DVN. Note: StakedUSDeOFT has no global paused() getter; this is a pinned point-in-time read, not lifetime completeness proof."
+      }
+    },
+    {
+      "id": "source:6fdf70cb9324ffd3892f8e6d",
+      "value": {
+        "label": "bsc exact deployment creation receipt and bounded 50000-block admin-event log screen",
+        "url": "https://bscscan.com/address/0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2#events",
+        "observedAt": "2026-11-22T16:04:48.313Z",
+        "location": "bsc creation block 36884574 (tx 0xbd00dd5a289aeed05dad24c44b3c96f7fcc7e671fd793d5d1751f22ca7fbdaf4) and eth_getLogs [135056546..135106545] via https://bnb-mainnet.g.alchemy.com/v2/",
+        "excerpt": "Creation pinned at bsc block 36884574 (hash 0xffa0a7ad4c7e39e167d99f63df31a01c1e33b9d920e7cd3d7ee9767e40eb6e2a, 2024-03-11T19:58:25.000Z, tx 0xbd00dd5a289aeed05dad24c44b3c96f7fcc7e671fd793d5d1751f22ca7fbdaf4) creating 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2. Bounded eth_getLogs over inclusive [135056546, 135106545] (50000 blocks) via https://bnb-mainnet.g.alchemy.com/v2/ filtered across all 11 verified StakedUSDeOFT admin events (BlackListUpdated, BlackListerSet, EnforcedOptionSet, MsgInspectorSet, OwnershipTransferStarted, OwnershipTransferred, PeerSet, PreCrimeSet, RateLimiterSet, RateLimitsChanged, RedistributeFunds) returned 0 matches (bounded empty result, not proof of lifetime absence)."
+      }
+    },
+    {
+      "id": "source:f687e757cde2208aecb299b8",
+      "value": {
+        "label": "Sourcify exact_match verified BNB Smart Chain StakedUSDeOFT source and ABI",
+        "url": "https://sourcify.dev/server/v2/contract/56/0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2?fields=all",
+        "observedAt": "2026-11-22T15:58:00Z",
+        "location": "Verified StakedUSDeOFT ABI matching runtimeCodeSha256 2da6bcb00483ea5635346e919cd93f40d4b34377ff96e0858175ab970c208a26",
+        "excerpt": "Verified StakedUSDeOFT ABI enumerates all 11 admin-relevant events used in the bounded eth_getLogs filter and confirms there is no global paused() getter (bridging is controlled via setPeer, setRateLimits and blackList/redistributeBlackListedFunds)."
+      }
+    },
+    {
+      "id": "source:f8edca08ca970aec5da5e6ec",
+      "value": {
+        "label": "Ethereum StakedUSDeOFTAdapter reciprocal peering read for berachain at block 26471602",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/",
+        "observedAt": "2026-11-22T16:18:18.594Z",
+        "location": "Ethereum finalized block 26471602 (hash 0x721c4070de036bc8800296dd9f7bd5412f1476a968e69407bde6cc717de78c9e, 2026-11-22T15:37:59.000Z)",
+        "excerpt": "Ethereum StakedUSDeOFTAdapter 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2 (owner=delegate=0xe8dc0fab349ea169283c48ccfd09d797e6db7c94, runtimeCodeSha256=e342ac09f1a95365fa09981911759e83c6aa186976f9c31f38680469a153318b) reciprocally peers berachain (EID 30362 -> 0x000000000000000000000000211cc4dd073734da055fbf44a2b4667d5e5fe5d2). Ethereum adapter 50,000-block admin-event scan [26421603..26471602] across 11 verified ABI admin events returned 0 matches (empty, not proof of lifetime absence)."
+      }
+    },
+    {
+      "id": "source:1c6eb21b535341a46cc51dd0",
+      "value": {
+        "label": "berachain pinned finalized emergency-state, DVN, Timelock and KelpDAO verification RPC",
+        "url": "https://rpc.berachain.com",
+        "observedAt": "2026-11-22T16:07:57.574Z",
+        "location": "berachain finalized block 29174069 (hash 0x24ff5966a7450163d5ae88698413c517a8ec417f1e4ae4db5aae2741027a7230, 2026-11-22T15:54:14.000Z) plus creation block 150352 (2025-01-23T21:28:06.000Z)",
+        "excerpt": "Pinned berachain block 29174069 (2026-11-22T15:54:14.000Z, hash 0x24ff5966a7450163d5ae88698413c517a8ec417f1e4ae4db5aae2741027a7230): peers(30101)=0x000000000000000000000000211cc4dd073734da055fbf44a2b4667d5e5fe5d2; blackList(self)=false; rateLimits(30101)=[875662978000000000000, 1794982098, 10000000000000000000000000, 3600]; getAmountCanBeSent(30101)=[0, 10000000000000000000000000] ($10M/3600s active capacity); owner=delegate=0x7f2315418c2bbdbab0bd325ab7b0e5a791a7683b (5-of-10 Safe 0x093d3f4785149a3d2600cb10d63afa14f9b09364 (modules=[], guard=0x0) holding PROPOSER_ROLE, EXECUTOR_ROLE and WHITELISTED_EXECUTOR_ROLE on EthenaTimelockController 0x7f2315418c2bbdbab0bd325ab7b0e5a791a7683b (owner migrated from Safe 0x093d3f47... to Timelock since 2026-10-01; getMinDelay()=86400s; setPeer and updateBlackList whitelisted for zero-delay bypass)); receiveLibrary=0xe1844c5d63a9543023008d332bd3d2e6f1fe1043 (isDefault=false, timeoutExpiry=0); current ULN for EID 30101 requires 2 required DVNs (0x2649bfeb5e1f115b3ba744262a65cb8da794a37d, 0x282b3386571f7f794450d5789911a9804fa346b4) + 2-of-3 optional DVNs (0xdd7b5e1db4aafd5c8ec3b764efb8ed265aa5445b, 0xecbaa45c33ce6fa284995e5f8314f5bc7f1c2008, 0xeefa0163c1f25a074bfb2a582e9854ec169aded1); totalSupplyRaw=747104860349000000000000; runtimeCodeSha256=66a521a96f9ae46973fa2d42baf974e5a24a6a83aca15102005a9146950b662b (15007 bytes). Three pinned Berachain bracketing reads inside the 2026-03-06..2026-05-20 KelpDAO LayerZero Labs DVN exposure window (blocks 17891842 [2026-03-06T12:00:00Z, EID 30101, 2-of-2 required LayerZero Labs + Twinstake], 19490242 [2026-04-12T12:00:00Z, EID 30101, 2-of-2 required LayerZero Labs + Twinstake], and 21088642 [2026-05-19T12:00:00Z, EID 30101, 4-of-4 required LayerZero Labs + Canary + Twinstake + Horizen]) confirm Berachain sUSDe never relied solely on the compromised LayerZero Labs DVN. Note: StakedUSDeOFT has no global paused() getter; this is a pinned point-in-time read, not lifetime completeness proof."
+      }
+    },
+    {
+      "id": "source:994f96c30a3b95665ffa7e5e",
+      "value": {
+        "label": "berachain exact deployment creation receipt and bounded 50000-block admin-event log screen",
+        "url": "https://berascan.com/address/0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2#events",
+        "observedAt": "2026-11-22T16:04:58.743Z",
+        "location": "berachain creation block 150352 (tx 0x74f016392808b87299c10af2d76fbcfd6c06285ff58808f224a7f66c3a60567d) and eth_getLogs [29124070..29174069] via https://rpc.berachain.com",
+        "excerpt": "Creation pinned at berachain block 150352 (hash 0x409bf31c5371d559103952bbdf52227f760c9273a2bcb7c1f9fe2799979aae4d, 2025-01-23T21:28:06.000Z, tx 0x74f016392808b87299c10af2d76fbcfd6c06285ff58808f224a7f66c3a60567d) creating 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2. Bounded eth_getLogs over inclusive [29124070, 29174069] (50000 blocks) via https://rpc.berachain.com filtered across all 11 verified StakedUSDeOFT admin events (BlackListUpdated, BlackListerSet, EnforcedOptionSet, MsgInspectorSet, OwnershipTransferStarted, OwnershipTransferred, PeerSet, PreCrimeSet, RateLimiterSet, RateLimitsChanged, RedistributeFunds) returned 0 matches (bounded empty result, not proof of lifetime absence)."
+      }
+    },
+    {
+      "id": "source:41f6f13069e8e6901a35f3fa",
+      "value": {
+        "label": "Exact-bytecode-identical (sha256 66a521a9...) verified StakedUSDeOFT source and ABI",
+        "url": "https://explorer-api.morphl2.io/api/v2/smart-contracts/0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "observedAt": "2026-11-22T15:58:00Z",
+        "location": "Verified StakedUSDeOFT ABI matching runtimeCodeSha256 66a521a96f9ae46973fa2d42baf974e5a24a6a83aca15102005a9146950b662b",
+        "excerpt": "Verified StakedUSDeOFT ABI enumerates all 11 admin-relevant events used in the bounded eth_getLogs filter and confirms there is no global paused() getter (bridging is controlled via setPeer, setRateLimits and blackList/redistributeBlackListedFunds)."
+      }
+    },
+    {
+      "id": "source:675fe1dd5eafa8c47a4cc52e",
+      "value": {
+        "label": "Ethereum StakedUSDeOFTAdapter reciprocal peering read for monad at block 26471602",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/",
+        "observedAt": "2026-11-22T16:18:18.594Z",
+        "location": "Ethereum finalized block 26471602 (hash 0x721c4070de036bc8800296dd9f7bd5412f1476a968e69407bde6cc717de78c9e, 2026-11-22T15:37:59.000Z)",
+        "excerpt": "Ethereum StakedUSDeOFTAdapter 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2 (owner=delegate=0xe8dc0fab349ea169283c48ccfd09d797e6db7c94, runtimeCodeSha256=e342ac09f1a95365fa09981911759e83c6aa186976f9c31f38680469a153318b) reciprocally peers monad (EID 30390 -> 0x000000000000000000000000211cc4dd073734da055fbf44a2b4667d5e5fe5d2). Ethereum adapter 50,000-block admin-event scan [26421603..26471602] across 11 verified ABI admin events returned 0 matches (empty, not proof of lifetime absence)."
+      }
+    },
+    {
+      "id": "source:03db4ea4c727b18564910bfa",
+      "value": {
+        "label": "monad pinned finalized emergency-state, DVN, Timelock and KelpDAO verification RPC",
+        "url": "https://rpc.monad.xyz",
+        "observedAt": "2026-11-22T16:07:59.477Z",
+        "location": "monad finalized block 124474981 (hash 0xb43d45836be1d05db5fd534894dea73fca2012589ea0bea20146f2dd4e959762, 2026-11-22T15:54:19.000Z) plus creation block 80592237 (2026-06-11T13:57:14.000Z)",
+        "excerpt": "Pinned monad block 124474981 (2026-11-22T15:54:19.000Z, hash 0xb43d45836be1d05db5fd534894dea73fca2012589ea0bea20146f2dd4e959762): peers(30101)=0x000000000000000000000000211cc4dd073734da055fbf44a2b4667d5e5fe5d2; blackList(self)=false; rateLimits(30101)=[749850000000000000000, 1795283750, 10000000000000000000000000, 3600]; getAmountCanBeSent(30101)=[0, 10000000000000000000000000] ($10M/3600s active capacity); owner=delegate=0xf0527f03479bb6d467102ad90c77ef424ac1f2c7 (5-of-10 Safe 0x648209c3e51cf5b43faa5466ac13ab0514710aa0 (modules=[], non-zero guard=0x74abe7805541c28f31953b3cda9711dc96278d29) holding PROPOSER_ROLE, EXECUTOR_ROLE, CANCELLER_ROLE and WHITELISTED_EXECUTOR_ROLE on EthenaTimelockController 0xf0527f03479bb6d467102ad90c77ef424ac1f2c7 (getMinDelay()=86400s; setPeer and updateBlackList whitelisted for zero-delay bypass; 3-of-6 Safe 0xa07591b02fbd07d03df21ed9a574f058bf45c344 and EOA 0x352040dc5f272563a2d6e0ef7abcd567a7440e8f additionally hold EXECUTOR_ROLE only)); receiveLibrary=0xe1844c5d63a9543023008d332bd3d2e6f1fe1043 (isDefault=false, timeoutExpiry=0); current ULN for EID 30101 requires 2 required DVNs (0x282b3386571f7f794450d5789911a9804fa346b4, 0x3b3c3ad540829d57af7b22c6cdff83fe7d43a8b6) + 2-of-3 optional DVNs (0x4d09c99ed8788b191144d6cdd129014fde70326f, 0xacde1f22eeab249d3ca6ba8805c8fee9f52a16e7, 0xdcdd4628f858b45260c31d6ad076bd2c3d3c2f73); totalSupplyRaw=12368133652954000000000000; runtimeCodeSha256=aec1df1065801c8e23316ee94bb6a60c68f671529572c00d92deb6cbe319e4d0 (12227 bytes). Deployed after exposure: Monad StakedUSDeOFT was created at block 80592237 (2026-06-11T13:57:14Z, timestampSec 1781186234, tx 0x36ddbbea3aefcf8724f4a20bc757ecaceb668bfad81326b04fdfb2daa44a1723) and peered on Ethereum at block 25336379 (2026-06-17T09:29:47Z, tx 0x59abb1f382f31ab9ba0fce64c831c5b2facfbe2f19993426c32c53d8a3a0df64), strictly after the 2026-03-06..2026-05-20 (exposureEndSec 1779321599) KelpDAO LayerZero Labs DVN exposure window. Note: StakedUSDeOFT has no global paused() getter; this is a pinned point-in-time read, not lifetime completeness proof."
+      }
+    },
+    {
+      "id": "source:694b0f2c51d67400a94ada28",
+      "value": {
+        "label": "monad exact deployment creation receipt and bounded 50000-block admin-event log screen",
+        "url": "https://monad-mainnet.g.alchemy.com/v2/",
+        "observedAt": "2026-11-22T16:05:56.021Z",
+        "location": "monad creation block 80592237 (tx 0x36ddbbea3aefcf8724f4a20bc757ecaceb668bfad81326b04fdfb2daa44a1723) and eth_getLogs [124424982..124474981] via https://monad-mainnet.g.alchemy.com/v2/",
+        "excerpt": "Creation pinned at monad block 80592237 (hash 0x79decce57feccde6c2f27b6e64a33316c889158d502fc12c13f59b1da47e665d, 2026-06-11T13:57:14.000Z, tx 0x36ddbbea3aefcf8724f4a20bc757ecaceb668bfad81326b04fdfb2daa44a1723) creating 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2. Bounded eth_getLogs over inclusive [124424982, 124474981] (50000 blocks) via https://monad-mainnet.g.alchemy.com/v2/ filtered across all 11 verified StakedUSDeOFT admin events (BlackListUpdated, BlackListerSet, EnforcedOptionSet, MsgInspectorSet, OwnershipTransferStarted, OwnershipTransferred, PeerSet, PreCrimeSet, RateLimiterSet, RateLimitsChanged, RedistributeFunds) returned 0 matches (bounded empty result, not proof of lifetime absence)."
+      }
+    },
+    {
+      "id": "source:fcfb04fcfe9ff0eee08053d7",
+      "value": {
+        "label": "MonadScan verified Monad StakedUSDeOFT source and ABI",
+        "url": "https://monadscan.com/address/0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2#code",
+        "observedAt": "2026-11-22T15:58:00Z",
+        "location": "Verified StakedUSDeOFT ABI matching runtimeCodeSha256 aec1df1065801c8e23316ee94bb6a60c68f671529572c00d92deb6cbe319e4d0",
+        "excerpt": "Verified StakedUSDeOFT ABI enumerates all 11 admin-relevant events used in the bounded eth_getLogs filter and confirms there is no global paused() getter (bridging is controlled via setPeer, setRateLimits and blackList/redistributeBlackListedFunds)."
+      }
+    },
+    {
+      "id": "source:b9485618381a61c13eae9b81",
+      "value": {
+        "label": "Ethereum StakedUSDeOFTAdapter reciprocal peering read for morph-l2 at block 26471602",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/",
+        "observedAt": "2026-11-22T16:18:18.594Z",
+        "location": "Ethereum finalized block 26471602 (hash 0x721c4070de036bc8800296dd9f7bd5412f1476a968e69407bde6cc717de78c9e, 2026-11-22T15:37:59.000Z)",
+        "excerpt": "Ethereum StakedUSDeOFTAdapter 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2 (owner=delegate=0xe8dc0fab349ea169283c48ccfd09d797e6db7c94, runtimeCodeSha256=e342ac09f1a95365fa09981911759e83c6aa186976f9c31f38680469a153318b) reciprocally peers morph-l2 (EID 30322 -> 0x000000000000000000000000211cc4dd073734da055fbf44a2b4667d5e5fe5d2). Ethereum adapter 50,000-block admin-event scan [26421603..26471602] across 11 verified ABI admin events returned 0 matches (empty, not proof of lifetime absence)."
+      }
+    },
+    {
+      "id": "source:f123a2f908156b79d166d998",
+      "value": {
+        "label": "morph-l2 pinned finalized emergency-state, DVN, Timelock and KelpDAO verification RPC",
+        "url": "https://lb.drpc.org/ogrpc?network=morph",
+        "observedAt": "2026-11-22T16:13:22.066Z",
+        "location": "morph-l2 finalized block 30245115 (hash 0xb5c98867985b191fc2ba21581d2e6336652950961076968bab6f9030725fcda9, 2026-11-22T15:35:40.000Z) plus creation block 1263271 (2024-12-16T23:13:16.000Z)",
+        "excerpt": "Pinned morph-l2 block 30245115 (2026-11-22T15:35:40.000Z, hash 0xb5c98867985b191fc2ba21581d2e6336652950961076968bab6f9030725fcda9): peers(30101)=0x000000000000000000000000211cc4dd073734da055fbf44a2b4667d5e5fe5d2; blackList(self)=false; rateLimits(30101)=[9545312054708000000000000, 1750827139, 10000000000000000000000000, 3600]; getAmountCanBeSent(30101)=[0, 10000000000000000000000000] ($10M/3600s active capacity); owner=delegate=0xc2d078399e05a59b52d92550fc44f9221e48c2c2 (5-of-10 Safe 0x2a07237ebe1abf114f35c876c3673e2f5229e567 (modules=[], guard=0x0) holding PROPOSER_ROLE, EXECUTOR_ROLE and WHITELISTED_EXECUTOR_ROLE on EthenaTimelockController 0xc2d078399e05a59b52d92550fc44f9221e48c2c2 (owner migrated from Safe 0x2a07237e... to Timelock since 2026-10-01; getMinDelay()=86400s; setPeer and updateBlackList whitelisted for zero-delay bypass)); receiveLibrary=0xe1844c5d63a9543023008d332bd3d2e6f1fe1043 (isDefault=false, timeoutExpiry=0); current ULN for EID 30101 requires 2 required DVNs (0x6788f52439aca6bff597d3eec2dc9a44b8fee842, 0xc4df7f3f230aee0a8cca85b44817f53e56ce524d) + 2-of-3 optional DVNs (0x6c5f923b63fdd52fb9c45daefa8695fa6b55a935, 0xdd779aaad20e62275457af91b123bb13dd5afd0b, 0xdf30c9f6a70ce65a152c5bd09826525d7e97ba49); totalSupplyRaw=8897116000000000000; runtimeCodeSha256=66a521a96f9ae46973fa2d42baf974e5a24a6a83aca15102005a9146950b662b (15007 bytes). Three pinned Morph-L2 bracketing reads inside the 2026-03-06..2026-05-20 KelpDAO LayerZero Labs DVN exposure window (blocks 21248636 [2026-03-06T12:00:03Z, 17 peered EIDs, all 2-of-2 required LayerZero Labs + Horizen], 22113125 [2026-04-12T12:00:03Z, 17 peered EIDs, all 2-of-2 required LayerZero Labs + Horizen], and 22995623 [2026-05-19T12:00:00Z, 1 peered EID 30101, 4-of-4 required LayerZero Labs + Horizen + Twinstake + Canary]) confirm Morph-L2 sUSDe never relied solely on the compromised LayerZero Labs DVN. Note: StakedUSDeOFT has no global paused() getter; this is a pinned point-in-time read, not lifetime completeness proof."
+      }
+    },
+    {
+      "id": "source:b91788d5d3d364333a8cb3e5",
+      "value": {
+        "label": "morph-l2 exact deployment creation receipt and bounded 50000-block admin-event log screen",
+        "url": "https://rpc.morphl2.io",
+        "observedAt": "2026-11-22T16:05:58.944Z",
+        "location": "morph-l2 creation block 1263271 (tx 0xbe47c8aeb7964e71e5fd59ffbdbd7b7662d6872fcc6d49fa11eb3709b821a6e0) and eth_getLogs [30195116..30245115] via https://rpc.morphl2.io",
+        "excerpt": "Creation pinned at morph-l2 block 1263271 (hash 0xc20b5c7a596d918e1955a3aec4baab0b22977e762e4f80f3ff126702e1bf8b4f, 2024-12-16T23:13:16.000Z, tx 0xbe47c8aeb7964e71e5fd59ffbdbd7b7662d6872fcc6d49fa11eb3709b821a6e0) creating 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2. Bounded eth_getLogs over inclusive [30195116, 30245115] (50000 blocks) via https://rpc.morphl2.io filtered across all 11 verified StakedUSDeOFT admin events (BlackListUpdated, BlackListerSet, EnforcedOptionSet, MsgInspectorSet, OwnershipTransferStarted, OwnershipTransferred, PeerSet, PreCrimeSet, RateLimiterSet, RateLimitsChanged, RedistributeFunds) returned 0 matches (bounded empty result, not proof of lifetime absence)."
+      }
+    },
+    {
+      "id": "source:db5a7c7873f4ea9695faaa8b",
+      "value": {
+        "label": "Morph Explorer Blockscout verified Morph-L2 StakedUSDeOFT source and ABI",
+        "url": "https://explorer-api.morphl2.io/api/v2/smart-contracts/0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "observedAt": "2026-11-22T15:58:00Z",
+        "location": "Verified StakedUSDeOFT ABI matching runtimeCodeSha256 66a521a96f9ae46973fa2d42baf974e5a24a6a83aca15102005a9146950b662b",
+        "excerpt": "Verified StakedUSDeOFT ABI enumerates all 11 admin-relevant events used in the bounded eth_getLogs filter and confirms there is no global paused() getter (bridging is controlled via setPeer, setRateLimits and blackList/redistributeBlackListedFunds)."
+      }
     }
   ],
   "searchedSurfaceObservations": [
@@ -82225,6 +82640,78 @@
         "kind": "incident-tracker",
         "url": "https://api.llama.fi/hacks",
         "finding": "Full DefiLlama hacks dataset read 2026-11-22 (1,373 rows, 2011-06-19 to 2026-11-21): zero rows naming Maple, syrupUSDG, Chainlink CCIP, or any covered route. Tracker omissions are not proof of absence."
+      }
+    },
+    {
+      "id": "surface:ce557d74568b39b6b509d2d4",
+      "value": {
+        "kind": "issuer-announcements",
+        "url": "https://gov.ethenafoundation.com/t/ethena-s-october-2026-governance-update/879",
+        "finding": "Ethena Foundation governance updates (topics 791, 796, 808, 857, 879 covering March-October 2026) and key-address docs searched for sUSDe, LayerZero OFT and bridge incidents. Topic 791 records the resolved April 19-20, 2026 precautionary LayerZero bridge pause (zero loss, hardened from 2-of-2 to 4-of-4 DVNs and $10M/hr rate limits). Topic 879 discloses only a non-control ~$8.8M unrealized PnL Binance event. No exact-route bridge control compromise, unbacked mint or ongoing pause on this active lane is disclosed; governance posts are not represented as an exhaustive private-report archive."
+      }
+    },
+    {
+      "id": "surface:4809a1cd4221c86699a736a0",
+      "value": {
+        "kind": "incident-tracker",
+        "url": "https://api.llama.fi/hacks",
+        "finding": "All 1373 serialized DefiLlama hacks records through 2026-11-21 searched for Ethena, sUSDe, USDe, LayerZero, OFT and exact contract addresses. Zero matches for Ethena/sUSDe/USDe; LayerZero/OFT rows are unrelated OApps or the KelpDAO LayerZero Labs DVN compromise excluded below by pinned on-chain proof."
+      }
+    },
+    {
+      "id": "surface:554d40235faccca4578a5829",
+      "value": {
+        "kind": "incident-tracker",
+        "url": "https://rekt.news/leaderboard/",
+        "finding": "Published rekt.news leaderboard searched on 2026-11-22 for Ethena, sUSDe, USDe and LayerZero. Zero Ethena/sUSDe/USDe entries; KelpDAO (2026-04-18) is independently excluded for this route by pinned point-in-time on-chain DVN quorum or post-exposure deployment proof."
+      }
+    },
+    {
+      "id": "surface:99db53c4432597f28190a60d",
+      "value": {
+        "kind": "incident-tracker",
+        "url": "https://layerzero.network/blog/layerzero-labs-kelpdao-incident-report",
+        "finding": "LayerZero Labs primary KelpDAO incident report reviewed alongside pinned historical ULN DVN reads (or post-exposure deployment receipt). Confirms this route did not rely on a compromised-only LayerZero Labs DVN quorum during 2026-03-06..2026-05-20."
+      }
+    },
+    {
+      "id": "surface:4065af2ea008ec1f800d8b20",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://basescan.org/address/0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2#events",
+        "finding": "Creation pinned at base block 15768618 (hash 0x6f08731aac1cc1b8eafccf84be158840e578766255deaf71c82f9483dc93aa18, 2024-06-14T00:56:23.000Z, tx 0x6bb655f443e534066677f8fd33bcf8a4ede9746d478c447f352d77cb717f8e50) creating 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2. Bounded eth_getLogs over inclusive [60807253, 60857252] (50000 blocks) via https://base-mainnet.g.alchemy.com/v2/ filtered across all 11 verified StakedUSDeOFT admin events (BlackListUpdated, BlackListerSet, EnforcedOptionSet, MsgInspectorSet, OwnershipTransferStarted, OwnershipTransferred, PeerSet, PreCrimeSet, RateLimiterSet, RateLimitsChanged, RedistributeFunds) returned 0 matches (bounded empty result, not proof of lifetime absence). Pinned base block 60857252 (2026-11-22T15:37:06.000Z, hash 0x3aa4cead948c024883a14020a3a5a2d4c72f1a7a7e9df116ce6d0881d7975de5): peers(30101)=0x000000000000000000000000211cc4dd073734da055fbf44a2b4667d5e5fe5d2; blackList(self)=false; rateLimits(30101)=[598139757000000000000, 1795258346, 10000000000000000000000000, 3600]; getAmountCanBeSent(30101)=[0, 10000000000000000000000000] ($10M/3600s active capacity); owner=delegate=0xd896f26f76ed089a1711284a00af497b19d65171 (5-of-10 Safe 0xbc89d10eb486b6591583f218acb9545087dbf293 (modules=[], guard=0x0) holding PROPOSER_ROLE, EXECUTOR_ROLE and WHITELISTED_EXECUTOR_ROLE on EthenaTimelockController 0xd896f26f76ed089a1711284a00af497b19d65171 (getMinDelay()=86400s; setPeer and updateBlackList whitelisted for zero-delay bypass)); receiveLibrary=0xc70ab6f32772f59fbfc23889caf4ba3376c84baf (isDefault=false, timeoutExpiry=0); current ULN for EID 30101 requires 2 required DVNs (0x9e059a54699a285714207b43b055483e78faac25, 0xdcacd7e37f392ffad4b2703a21f6a0c8e2451e96) + 2-of-3 optional DVNs (0x8b4874a130d7f1f702d59115f6d31bcc3e0972c3, 0xa7b5189bca84cd304d8553977c7c614329750d99, 0xcd37ca043f8479064e10635020c65ffc005d36f6); totalSupplyRaw=3539294711104000000000000; runtimeCodeSha256=068726ce833e7e12ef90562c2abac2b3246e2e71889576643a33d9e61da3f9a1 (15007 bytes). Three pinned Base bracketing reads inside the 2026-03-06..2026-05-20 KelpDAO LayerZero Labs DVN exposure window (blocks 43004527 [2026-03-06T12:00:01Z, 23 peered EIDs, all 2-of-2 required LayerZero Labs + Horizen], 44602927 [2026-04-12T12:00:01Z, 23 peered EIDs, all 2-of-2 required LayerZero Labs + Horizen], and 46201327 [2026-05-19T12:00:01Z, 1 peered EID 30101, 4-of-4 required Canary + LayerZero Labs + Horizen + Twinstake]) confirm Base sUSDe never relied solely on the compromised LayerZero Labs DVN. Note: StakedUSDeOFT has no global paused() getter; this is a pinned point-in-time read, not lifetime completeness proof. Ethereum StakedUSDeOFTAdapter 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2 (owner=delegate=0xe8dc0fab349ea169283c48ccfd09d797e6db7c94, runtimeCodeSha256=e342ac09f1a95365fa09981911759e83c6aa186976f9c31f38680469a153318b) reciprocally peers base (EID 30184 -> 0x000000000000000000000000211cc4dd073734da055fbf44a2b4667d5e5fe5d2). Ethereum adapter 50,000-block admin-event scan [26421603..26471602] across 11 verified ABI admin events returned 0 matches (empty, not proof of lifetime absence)."
+      }
+    },
+    {
+      "id": "surface:1ad2754e0010b30f89428a34",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://bscscan.com/address/0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2#events",
+        "finding": "Creation pinned at bsc block 36884574 (hash 0xffa0a7ad4c7e39e167d99f63df31a01c1e33b9d920e7cd3d7ee9767e40eb6e2a, 2024-03-11T19:58:25.000Z, tx 0xbd00dd5a289aeed05dad24c44b3c96f7fcc7e671fd793d5d1751f22ca7fbdaf4) creating 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2. Bounded eth_getLogs over inclusive [135056546, 135106545] (50000 blocks) via https://bnb-mainnet.g.alchemy.com/v2/ filtered across all 11 verified StakedUSDeOFT admin events (BlackListUpdated, BlackListerSet, EnforcedOptionSet, MsgInspectorSet, OwnershipTransferStarted, OwnershipTransferred, PeerSet, PreCrimeSet, RateLimiterSet, RateLimitsChanged, RedistributeFunds) returned 0 matches (bounded empty result, not proof of lifetime absence). Pinned bsc block 135106545 (2026-11-22T15:54:17.000Z, hash 0x0b7617c3fc1b6e00b3656c6e1585e94d1b2961406bb1ffc3eed012d30354f537): peers(30101)=0x000000000000000000000000211cc4dd073734da055fbf44a2b4667d5e5fe5d2; blackList(self)=false; rateLimits(30101)=[33337914485053232158279, 1794566435, 10000000000000000000000000, 3600]; getAmountCanBeSent(30101)=[0, 10000000000000000000000000] ($10M/3600s active capacity); owner=delegate=0x89bad41d3307072cfd3118b5fd08101e23b2e129 (5-of-10 Safe 0xc9647361742eb964965b461c44bdf5c4bc3c406d (modules=[], guard=0x0) holding PROPOSER_ROLE, EXECUTOR_ROLE and WHITELISTED_EXECUTOR_ROLE on EthenaTimelockController 0x89bad41d3307072cfd3118b5fd08101e23b2e129 (getMinDelay()=86400s; setPeer and updateBlackList whitelisted for zero-delay bypass)); receiveLibrary=0xb217266c3a98c8b2709ee26836c98cf12f6ccec1 (isDefault=false, timeoutExpiry=0); current ULN for EID 30101 requires 2 required DVNs (0x165bcb144efe79a955c608a3d69e08e21c91c79d, 0xfd6865c841c2d64565562fcc7e05e619a30615f0) + 2-of-3 optional DVNs (0x0cea5a94f8cd3330c4f84944bf4500f8dacd440c, 0x247624e2143504730aec22912ed41f092498bef2, 0x31f748a368a893bdb5abb67ec95f232507601a73); totalSupplyRaw=1912817354429000000000000; runtimeCodeSha256=2da6bcb00483ea5635346e919cd93f40d4b34377ff96e0858175ab970c208a26 (15007 bytes). Three pinned BSC bracketing reads inside the 2026-03-06..2026-05-20 KelpDAO LayerZero Labs DVN exposure window (blocks 85005076 [2026-03-06T12:00:00Z, 19 peered EIDs, all 2-of-2 required Horizen + LayerZero Labs], 92099342 [2026-04-12T12:00:00Z, 19 peered EIDs, all 2-of-2 required Horizen + LayerZero Labs], and 99193593 [2026-05-19T12:00:00Z, 1 peered EID 30101, 4-of-4 required Horizen + Twinstake + Canary + LayerZero Labs]) confirm BSC sUSDe never relied solely on the compromised LayerZero Labs DVN. Note: StakedUSDeOFT has no global paused() getter; this is a pinned point-in-time read, not lifetime completeness proof. Ethereum StakedUSDeOFTAdapter 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2 (owner=delegate=0xe8dc0fab349ea169283c48ccfd09d797e6db7c94, runtimeCodeSha256=e342ac09f1a95365fa09981911759e83c6aa186976f9c31f38680469a153318b) reciprocally peers bsc (EID 30102 -> 0x000000000000000000000000211cc4dd073734da055fbf44a2b4667d5e5fe5d2). Ethereum adapter 50,000-block admin-event scan [26421603..26471602] across 11 verified ABI admin events returned 0 matches (empty, not proof of lifetime absence)."
+      }
+    },
+    {
+      "id": "surface:b1f8bdcfbc4c0d24c214fa66",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://berascan.com/address/0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2#events",
+        "finding": "Creation pinned at berachain block 150352 (hash 0x409bf31c5371d559103952bbdf52227f760c9273a2bcb7c1f9fe2799979aae4d, 2025-01-23T21:28:06.000Z, tx 0x74f016392808b87299c10af2d76fbcfd6c06285ff58808f224a7f66c3a60567d) creating 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2. Bounded eth_getLogs over inclusive [29124070, 29174069] (50000 blocks) via https://rpc.berachain.com filtered across all 11 verified StakedUSDeOFT admin events (BlackListUpdated, BlackListerSet, EnforcedOptionSet, MsgInspectorSet, OwnershipTransferStarted, OwnershipTransferred, PeerSet, PreCrimeSet, RateLimiterSet, RateLimitsChanged, RedistributeFunds) returned 0 matches (bounded empty result, not proof of lifetime absence). Pinned berachain block 29174069 (2026-11-22T15:54:14.000Z, hash 0x24ff5966a7450163d5ae88698413c517a8ec417f1e4ae4db5aae2741027a7230): peers(30101)=0x000000000000000000000000211cc4dd073734da055fbf44a2b4667d5e5fe5d2; blackList(self)=false; rateLimits(30101)=[875662978000000000000, 1794982098, 10000000000000000000000000, 3600]; getAmountCanBeSent(30101)=[0, 10000000000000000000000000] ($10M/3600s active capacity); owner=delegate=0x7f2315418c2bbdbab0bd325ab7b0e5a791a7683b (5-of-10 Safe 0x093d3f4785149a3d2600cb10d63afa14f9b09364 (modules=[], guard=0x0) holding PROPOSER_ROLE, EXECUTOR_ROLE and WHITELISTED_EXECUTOR_ROLE on EthenaTimelockController 0x7f2315418c2bbdbab0bd325ab7b0e5a791a7683b (owner migrated from Safe 0x093d3f47... to Timelock since 2026-10-01; getMinDelay()=86400s; setPeer and updateBlackList whitelisted for zero-delay bypass)); receiveLibrary=0xe1844c5d63a9543023008d332bd3d2e6f1fe1043 (isDefault=false, timeoutExpiry=0); current ULN for EID 30101 requires 2 required DVNs (0x2649bfeb5e1f115b3ba744262a65cb8da794a37d, 0x282b3386571f7f794450d5789911a9804fa346b4) + 2-of-3 optional DVNs (0xdd7b5e1db4aafd5c8ec3b764efb8ed265aa5445b, 0xecbaa45c33ce6fa284995e5f8314f5bc7f1c2008, 0xeefa0163c1f25a074bfb2a582e9854ec169aded1); totalSupplyRaw=747104860349000000000000; runtimeCodeSha256=66a521a96f9ae46973fa2d42baf974e5a24a6a83aca15102005a9146950b662b (15007 bytes). Three pinned Berachain bracketing reads inside the 2026-03-06..2026-05-20 KelpDAO LayerZero Labs DVN exposure window (blocks 17891842 [2026-03-06T12:00:00Z, EID 30101, 2-of-2 required LayerZero Labs + Twinstake], 19490242 [2026-04-12T12:00:00Z, EID 30101, 2-of-2 required LayerZero Labs + Twinstake], and 21088642 [2026-05-19T12:00:00Z, EID 30101, 4-of-4 required LayerZero Labs + Canary + Twinstake + Horizen]) confirm Berachain sUSDe never relied solely on the compromised LayerZero Labs DVN. Note: StakedUSDeOFT has no global paused() getter; this is a pinned point-in-time read, not lifetime completeness proof. Ethereum StakedUSDeOFTAdapter 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2 (owner=delegate=0xe8dc0fab349ea169283c48ccfd09d797e6db7c94, runtimeCodeSha256=e342ac09f1a95365fa09981911759e83c6aa186976f9c31f38680469a153318b) reciprocally peers berachain (EID 30362 -> 0x000000000000000000000000211cc4dd073734da055fbf44a2b4667d5e5fe5d2). Ethereum adapter 50,000-block admin-event scan [26421603..26471602] across 11 verified ABI admin events returned 0 matches (empty, not proof of lifetime absence)."
+      }
+    },
+    {
+      "id": "surface:79d61a00608053323600dd5c",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://monad-mainnet.g.alchemy.com/v2/",
+        "finding": "Creation pinned at monad block 80592237 (hash 0x79decce57feccde6c2f27b6e64a33316c889158d502fc12c13f59b1da47e665d, 2026-06-11T13:57:14.000Z, tx 0x36ddbbea3aefcf8724f4a20bc757ecaceb668bfad81326b04fdfb2daa44a1723) creating 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2. Bounded eth_getLogs over inclusive [124424982, 124474981] (50000 blocks) via https://monad-mainnet.g.alchemy.com/v2/ filtered across all 11 verified StakedUSDeOFT admin events (BlackListUpdated, BlackListerSet, EnforcedOptionSet, MsgInspectorSet, OwnershipTransferStarted, OwnershipTransferred, PeerSet, PreCrimeSet, RateLimiterSet, RateLimitsChanged, RedistributeFunds) returned 0 matches (bounded empty result, not proof of lifetime absence). Pinned monad block 124474981 (2026-11-22T15:54:19.000Z, hash 0xb43d45836be1d05db5fd534894dea73fca2012589ea0bea20146f2dd4e959762): peers(30101)=0x000000000000000000000000211cc4dd073734da055fbf44a2b4667d5e5fe5d2; blackList(self)=false; rateLimits(30101)=[749850000000000000000, 1795283750, 10000000000000000000000000, 3600]; getAmountCanBeSent(30101)=[0, 10000000000000000000000000] ($10M/3600s active capacity); owner=delegate=0xf0527f03479bb6d467102ad90c77ef424ac1f2c7 (5-of-10 Safe 0x648209c3e51cf5b43faa5466ac13ab0514710aa0 (modules=[], non-zero guard=0x74abe7805541c28f31953b3cda9711dc96278d29) holding PROPOSER_ROLE, EXECUTOR_ROLE, CANCELLER_ROLE and WHITELISTED_EXECUTOR_ROLE on EthenaTimelockController 0xf0527f03479bb6d467102ad90c77ef424ac1f2c7 (getMinDelay()=86400s; setPeer and updateBlackList whitelisted for zero-delay bypass; 3-of-6 Safe 0xa07591b02fbd07d03df21ed9a574f058bf45c344 and EOA 0x352040dc5f272563a2d6e0ef7abcd567a7440e8f additionally hold EXECUTOR_ROLE only)); receiveLibrary=0xe1844c5d63a9543023008d332bd3d2e6f1fe1043 (isDefault=false, timeoutExpiry=0); current ULN for EID 30101 requires 2 required DVNs (0x282b3386571f7f794450d5789911a9804fa346b4, 0x3b3c3ad540829d57af7b22c6cdff83fe7d43a8b6) + 2-of-3 optional DVNs (0x4d09c99ed8788b191144d6cdd129014fde70326f, 0xacde1f22eeab249d3ca6ba8805c8fee9f52a16e7, 0xdcdd4628f858b45260c31d6ad076bd2c3d3c2f73); totalSupplyRaw=12368133652954000000000000; runtimeCodeSha256=aec1df1065801c8e23316ee94bb6a60c68f671529572c00d92deb6cbe319e4d0 (12227 bytes). Deployed after exposure: Monad StakedUSDeOFT was created at block 80592237 (2026-06-11T13:57:14Z, timestampSec 1781186234, tx 0x36ddbbea3aefcf8724f4a20bc757ecaceb668bfad81326b04fdfb2daa44a1723) and peered on Ethereum at block 25336379 (2026-06-17T09:29:47Z, tx 0x59abb1f382f31ab9ba0fce64c831c5b2facfbe2f19993426c32c53d8a3a0df64), strictly after the 2026-03-06..2026-05-20 (exposureEndSec 1779321599) KelpDAO LayerZero Labs DVN exposure window. Note: StakedUSDeOFT has no global paused() getter; this is a pinned point-in-time read, not lifetime completeness proof. Ethereum StakedUSDeOFTAdapter 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2 (owner=delegate=0xe8dc0fab349ea169283c48ccfd09d797e6db7c94, runtimeCodeSha256=e342ac09f1a95365fa09981911759e83c6aa186976f9c31f38680469a153318b) reciprocally peers monad (EID 30390 -> 0x000000000000000000000000211cc4dd073734da055fbf44a2b4667d5e5fe5d2). Ethereum adapter 50,000-block admin-event scan [26421603..26471602] across 11 verified ABI admin events returned 0 matches (empty, not proof of lifetime absence)."
+      }
+    },
+    {
+      "id": "surface:00d41d95ddb6a1608dcbb169",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://rpc.morphl2.io",
+        "finding": "Creation pinned at morph-l2 block 1263271 (hash 0xc20b5c7a596d918e1955a3aec4baab0b22977e762e4f80f3ff126702e1bf8b4f, 2024-12-16T23:13:16.000Z, tx 0xbe47c8aeb7964e71e5fd59ffbdbd7b7662d6872fcc6d49fa11eb3709b821a6e0) creating 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2. Bounded eth_getLogs over inclusive [30195116, 30245115] (50000 blocks) via https://rpc.morphl2.io filtered across all 11 verified StakedUSDeOFT admin events (BlackListUpdated, BlackListerSet, EnforcedOptionSet, MsgInspectorSet, OwnershipTransferStarted, OwnershipTransferred, PeerSet, PreCrimeSet, RateLimiterSet, RateLimitsChanged, RedistributeFunds) returned 0 matches (bounded empty result, not proof of lifetime absence). Pinned morph-l2 block 30245115 (2026-11-22T15:35:40.000Z, hash 0xb5c98867985b191fc2ba21581d2e6336652950961076968bab6f9030725fcda9): peers(30101)=0x000000000000000000000000211cc4dd073734da055fbf44a2b4667d5e5fe5d2; blackList(self)=false; rateLimits(30101)=[9545312054708000000000000, 1750827139, 10000000000000000000000000, 3600]; getAmountCanBeSent(30101)=[0, 10000000000000000000000000] ($10M/3600s active capacity); owner=delegate=0xc2d078399e05a59b52d92550fc44f9221e48c2c2 (5-of-10 Safe 0x2a07237ebe1abf114f35c876c3673e2f5229e567 (modules=[], guard=0x0) holding PROPOSER_ROLE, EXECUTOR_ROLE and WHITELISTED_EXECUTOR_ROLE on EthenaTimelockController 0xc2d078399e05a59b52d92550fc44f9221e48c2c2 (owner migrated from Safe 0x2a07237e... to Timelock since 2026-10-01; getMinDelay()=86400s; setPeer and updateBlackList whitelisted for zero-delay bypass)); receiveLibrary=0xe1844c5d63a9543023008d332bd3d2e6f1fe1043 (isDefault=false, timeoutExpiry=0); current ULN for EID 30101 requires 2 required DVNs (0x6788f52439aca6bff597d3eec2dc9a44b8fee842, 0xc4df7f3f230aee0a8cca85b44817f53e56ce524d) + 2-of-3 optional DVNs (0x6c5f923b63fdd52fb9c45daefa8695fa6b55a935, 0xdd779aaad20e62275457af91b123bb13dd5afd0b, 0xdf30c9f6a70ce65a152c5bd09826525d7e97ba49); totalSupplyRaw=8897116000000000000; runtimeCodeSha256=66a521a96f9ae46973fa2d42baf974e5a24a6a83aca15102005a9146950b662b (15007 bytes). Three pinned Morph-L2 bracketing reads inside the 2026-03-06..2026-05-20 KelpDAO LayerZero Labs DVN exposure window (blocks 21248636 [2026-03-06T12:00:03Z, 17 peered EIDs, all 2-of-2 required LayerZero Labs + Horizen], 22113125 [2026-04-12T12:00:03Z, 17 peered EIDs, all 2-of-2 required LayerZero Labs + Horizen], and 22995623 [2026-05-19T12:00:00Z, 1 peered EID 30101, 4-of-4 required LayerZero Labs + Horizen + Twinstake + Canary]) confirm Morph-L2 sUSDe never relied solely on the compromised LayerZero Labs DVN. Note: StakedUSDeOFT has no global paused() getter; this is a pinned point-in-time read, not lifetime completeness proof. Ethereum StakedUSDeOFTAdapter 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2 (owner=delegate=0xe8dc0fab349ea169283c48ccfd09d797e6db7c94, runtimeCodeSha256=e342ac09f1a95365fa09981911759e83c6aa186976f9c31f38680469a153318b) reciprocally peers morph-l2 (EID 30322 -> 0x000000000000000000000000211cc4dd073734da055fbf44a2b4667d5e5fe5d2). Ethereum adapter 50,000-block admin-event scan [26421603..26471602] across 11 verified ABI admin events returned 0 matches (empty, not proof of lifetime absence)."
       }
     }
   ]

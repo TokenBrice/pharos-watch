@@ -113,6 +113,9 @@
             "label": "Ethereum nTBILL NestVault",
             "url": "https://etherscan.io/address/0x250c2d14ed6376fb392fba1edd2cfd11d2bf7f12#code"
           }
+        ],
+        "providerKeys": [
+          "layerzero"
         ]
       },
       {
@@ -148,6 +151,9 @@
             "label": "Plume nTBILL NestVault",
             "url": "https://explorer.plume.org/address/0x250c2d14ed6376fb392fba1edd2cfd11d2bf7f12?tab=contract"
           }
+        ],
+        "providerKeys": [
+          "layerzero"
         ]
       },
       {
@@ -191,6 +197,9 @@
             "label": "Nest nTBILL integration guide (current; Arbitrum omitted)",
             "url": "https://docs.nest.credit/developers/integration-guides/ntbill"
           }
+        ],
+        "providerKeys": [
+          "layerzero"
         ]
       },
       {
@@ -225,6 +234,9 @@
             "label": "Recovered NestVaultOFT implementation direct SHARE.exit/enter source, reviewed 2026-10-09 by Sol curation campaign 2026-10-09 (W4T07Midas)",
             "url": "https://bscscan.com/address/0xee3e8334d90a18589935209f6a9a75b02b6a76d7#code"
           }
+        ],
+        "providerKeys": [
+          "layerzero"
         ]
       },
       {
@@ -272,6 +284,10 @@
             "label": "nTBILL Solana OFT store on Solscan",
             "url": "https://solscan.io/account/5B25A3r4yyN5iGi9PZEyte2ZyZEyx8CdASEX5GQErRSL"
           }
+        ],
+        "providerKeys": [
+          "circle-cctp",
+          "layerzero"
         ]
       }
     ],
