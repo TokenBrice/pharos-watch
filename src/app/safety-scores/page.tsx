@@ -68,13 +68,13 @@ export default function SafetyScoresPage() {
   preload(`/safety-scores/map.webp?w=${SAFETY_MAP_TEASER_MOBILE_WIDTH}`, {
     as: "image",
     type: "image/webp",
-    media: "(max-width: 1023px)",
+    media: "(max-width: 639px)",
     fetchPriority: "high",
   });
   preload("/safety-scores/map.webp", {
     as: "image",
     type: "image/webp",
-    media: "(min-width: 1024px)",
+    media: "(min-width: 640px)",
     fetchPriority: "high",
   });
   return (

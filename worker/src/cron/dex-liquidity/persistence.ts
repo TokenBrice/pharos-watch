@@ -1018,9 +1018,7 @@ export async function persistScores(
                 outcome.observed_pool_count, outcome.observed_at,
                 meta.last_crawl_at AS discovery_last_crawl_at,
                 outcome.last_attempt_at AS deployment_last_attempt_at,
-                meta.deployment_fence_attribution_at,
-                meta.consecutive_misses AS discovery_consecutive_misses,
-                meta.last_hit_at AS discovery_last_hit_at
+                meta.deployment_fence_attribution_at
            FROM dex_deployment_outcomes outcome
            LEFT JOIN dex_discovery_meta meta
              ON meta.stablecoin_id = outcome.stablecoin_id

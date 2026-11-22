@@ -909,8 +909,8 @@ function safetyPreviewRegion({
   return `${region}${Array.from({ length: regionCount - 1 }, () => region).join("")}`;
 }
 
-const MAP_PRELOAD_MOBILE = '<link rel="preload" as="image" href="/safety-scores/map.webp?w=400" media="(max-width: 1023px)" fetchpriority="high">';
-const MAP_PRELOAD_DESKTOP = '<link rel="preload" as="image" href="/safety-scores/map.webp" media="(min-width: 1024px)" fetchpriority="high">';
+const MAP_PRELOAD_MOBILE = '<link rel="preload" as="image" href="/safety-scores/map.webp?w=400" media="(max-width: 639px)" fetchpriority="high">';
+const MAP_PRELOAD_DESKTOP = '<link rel="preload" as="image" href="/safety-scores/map.webp" media="(min-width: 640px)" fetchpriority="high">';
 const MAP_PRELOAD_UNSCOPED = '<link rel="preload" as="image" href="/safety-scores/map.webp" fetchpriority="high">';
 const MAP_PRELOAD = MAP_PRELOAD_MOBILE + MAP_PRELOAD_DESKTOP;
 const HEAD_CHUNK = '<script src="/_next/static/chunks/app/safety-scores/page.js"></script>';

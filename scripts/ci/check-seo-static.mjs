@@ -1493,12 +1493,12 @@ function validateSafetyScoresPreview(pageRecords, errors, warnings, expectation)
   );
   const mobilePreload = mapPreloads.find((tag) =>
     tag.attrs.get("href") === "/safety-scores/map.webp?w=400"
-    && tag.attrs.get("media") === "(max-width: 1023px)"
+    && tag.attrs.get("media") === "(max-width: 639px)"
     && tag.attrs.get("fetchpriority") === "high",
   );
   const desktopPreload = mapPreloads.find((tag) =>
     tag.attrs.get("href") === "/safety-scores/map.webp"
-    && tag.attrs.get("media") === "(min-width: 1024px)"
+    && tag.attrs.get("media") === "(min-width: 640px)"
     && tag.attrs.get("fetchpriority") === "high",
   );
   const unscopedPreload = mapPreloads.find((tag) => !tag.attrs.get("media"));

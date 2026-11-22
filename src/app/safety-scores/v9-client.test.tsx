@@ -33,12 +33,12 @@ function expectMediaScopedMapPreloads(html: string) {
   expect(mapLinks).toHaveLength(2);
   expect(mapLinks.some((tag) =>
     tag.includes('href="/safety-scores/map.webp?w=400"')
-    && tag.includes('media="(max-width: 1023px)"')
+    && tag.includes('media="(max-width: 639px)"')
     && /fetchPriority="high"/i.test(tag),
   )).toBe(true);
   expect(mapLinks.some((tag) =>
     tag.includes('href="/safety-scores/map.webp"')
-    && tag.includes('media="(min-width: 1024px)"')
+    && tag.includes('media="(min-width: 640px)"')
     && /fetchPriority="high"/i.test(tag),
   )).toBe(true);
   expect(mapLinks.every((tag) => tag.includes('media="'))).toBe(true);

@@ -460,6 +460,8 @@ export type SafetyScoreV9LaneScreeningShadowReason =
   | "lane-screening-aborted"
   | "lane-screening-slot-window-unavailable"
   | "lane-screening-window-insufficient"
+  // Set by the :38 slot handler when its materialization piggyback's elapsed time caused the skip.
+  | "lane-screening-window-consumed-by-materialization-recovery"
   | "lane-screening-no-descriptors"
   | "lane-screening-completed"
   | "lane-screening-failed";
@@ -511,7 +513,7 @@ export interface SafetyScoreV9LaneScreeningShadowOptions {
 export const LANE_SCREENING_SETTLE_RESERVE_MS = 15_000;
 
 /** The phase needs this much usable budget after its settlement reserve. */
-const LANE_SCREENING_MINIMUM_REMAINING_MS = 60_000;
+export const LANE_SCREENING_MINIMUM_REMAINING_MS = 60_000;
 
 export async function runV9LaneScreeningShadowPhase(input: {
   db: D1Database;

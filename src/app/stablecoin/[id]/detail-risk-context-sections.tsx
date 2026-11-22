@@ -466,22 +466,12 @@ export function DetailRiskContextSections({
     ? reportCardsResponse.documentationOnlyLimited
     : undefined;
   const showScoreCard = reportCard != null && reportCardsResponse != null;
-  // Active (non-frozen) coins with an in-flight report-card fetch or a saved
-  // build-time grade signal reserve the paired score column from first paint so
-  // the score+reserves row never flips 1-col -> 2-col or shifts `#how-it-breaks`.
-  // Frozen coins, failed fetches, and settled-empty cards collapse cleanly.
-  const hasGradeSignal =
-    viewModel.hero.savedGrade != null
-    || viewModel.hero.signalRailItems.some(
-      (item) => item.key === "safety" && item.primary !== "—",
-    );
-  const reserveScoreCardSlot =
-    !showScoreCard
-    && viewModel.coin.status !== "frozen"
-    && (
-      viewModel.gradeRead === "pending"
-      || (viewModel.reportCardsResponse == null && viewModel.gradeRead !== "failed" && hasGradeSignal)
-    );
+  // Reserve the paired score column from first paint only when the build
+  // snapshot's saved letter grade says a rated card will render: `savedGrade`
+  // exists only while an active coin's first report-card read is in flight.
+  // Coins without one (unrated, pipeline gap, no published row) reserve
+  // nothing, so a read that returns no card has no placeholder to collapse.
+  const reserveScoreCardSlot = !showScoreCard && viewModel.hero.savedGrade != null;
   const hasScoreCardSlot = showScoreCard || reserveScoreCardSlot;
   const reserveScoreNote = describeReserveScoreAdmission(
     viewModel.coin.reserveAdmissionSummary,

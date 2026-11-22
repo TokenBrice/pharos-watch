@@ -698,71 +698,35 @@ describe("DEX placeholder deployment-census coverage", () => {
     });
   });
 
-  it("guards dormant 0-pool coins against discovery-deferral while verified_no_pools is still fresh, and expires after maxAgeSec", () => {
-    const freshObservedAt = NOW_SEC - 3_600;
-    const inFlightAttemptAt = NOW_SEC - 30;
-    const guarded = classifyDexPlaceholderCoverage({
+  it("keeps a verified-empty row superseded by a later attempt fence, even for a dormant zero-pool coin", () => {
+    // Discovery fences before network work and updates backoff counters only
+    // after a completed crawl, so an aborted or discarded attempt leaves both
+    // untouched. The counters on the census read cannot resurrect the older
+    // empty result.
+    const attemptAt = NOW_SEC - 1_800;
+    const row = {
+      ...outcome({
+        observed_at: NOW_SEC - 3_600,
+        discovery_last_crawl_at: attemptAt,
+        deployment_last_attempt_at: attemptAt,
+        deployment_fence_attribution_at: attemptAt,
+      }),
+      discovery_consecutive_misses: 10,
+      discovery_last_hit_at: null,
+    };
+    const classification = classifyDexPlaceholderCoverage({
       deployments: [deployment()],
-      outcomeRows: [
-        outcome({
-          observed_at: freshObservedAt,
-          discovery_last_crawl_at: inFlightAttemptAt,
-          deployment_last_attempt_at: inFlightAttemptAt,
-          deployment_fence_attribution_at: inFlightAttemptAt,
-          discovery_consecutive_misses: 10,
-          discovery_last_hit_at: null,
-        }),
-      ],
+      outcomeRows: [row],
       nowSec: NOW_SEC,
     });
 
-    expect(guarded.state).toBe("complete-empty");
-    expect(guarded.coverage.status).toBe("populated");
-    expect(guarded.census.oldestObservedAtSec).toBe(freshObservedAt);
-    expect(guarded.census.supersededOutcomeCount).toBe(0);
-
-    // Once the verified_no_pools observation ages past DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC,
-    // the guard stops applying and the row degrades to discovery-deferral.
-    const expiredObservedAt = NOW_SEC - DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC - 1;
-    const expired = classifyDexPlaceholderCoverage({
-      deployments: [deployment()],
-      outcomeRows: [
-        outcome({
-          observed_at: expiredObservedAt,
-          discovery_last_crawl_at: inFlightAttemptAt,
-          deployment_last_attempt_at: inFlightAttemptAt,
-          deployment_fence_attribution_at: inFlightAttemptAt,
-          discovery_consecutive_misses: 10,
-          discovery_last_hit_at: null,
-        }),
-      ],
-      nowSec: NOW_SEC,
+    expect(classification.state).toBe("discovery-deferral");
+    expect(classification.coverage.status).toBe("unknown");
+    expect(classification.census).toMatchObject({
+      verifiedNoPoolsCount: 0,
+      supersededOutcomeCount: 1,
+      staleOutcomeCount: 0,
     });
-
-    expect(expired.state).toBe("discovery-deferral");
-    expect(expired.coverage.status).toBe("unknown");
-    expect(expired.census.staleOutcomeCount).toBe(1);
-    expect(expired.census.supersededOutcomeCount).toBe(1);
-
-    // A pool hit after observed_at invalidates the dormant empty guard immediately.
-    const hitAfterObservation = classifyDexPlaceholderCoverage({
-      deployments: [deployment()],
-      outcomeRows: [
-        outcome({
-          observed_at: freshObservedAt,
-          discovery_last_crawl_at: inFlightAttemptAt,
-          deployment_last_attempt_at: inFlightAttemptAt,
-          deployment_fence_attribution_at: inFlightAttemptAt,
-          discovery_consecutive_misses: 10,
-          discovery_last_hit_at: freshObservedAt + 60,
-        }),
-      ],
-      nowSec: NOW_SEC,
-    });
-
-    expect(hitAfterObservation.state).toBe("discovery-deferral");
-    expect(hitAfterObservation.coverage.status).toBe("unknown");
-    expect(hitAfterObservation.census.supersededOutcomeCount).toBe(1);
   });
 });
 
