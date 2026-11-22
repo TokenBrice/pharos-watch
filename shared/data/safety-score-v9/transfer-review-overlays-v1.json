@@ -9039,15 +9039,15 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-29",
-        "expiresAt": "2026-11-28",
-        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
+        "reviewedAt": "2026-11-22",
+        "expiresAt": "2026-12-22",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-11-22 (#945 Wave B)",
         "deploymentKey": "ethereum:0xfc8c624b6080a0a780583799f2a862de936f6e22",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Reviewed sole exact liability deployment at Ethereum block 26299900 (2026-10-29T17:29:23.000Z; hash 0xa2c5afac766488431b1a9f5f0d09f19d5018e1bb0316df1b1a19497e41613eef), re-read 2026-10-29: sendSharesGate, receiveSharesGate, receiveAssetsGate zero with those setters abdicated; deposit-only sendAssetsGate zero with setSendAssetsGate not abdicated; totalSupply raw 481870471304769264777764851 at 18 decimals; share asset 0x8292bb45bf1ee4d140127049757c2e0ff06317ed; runtime code keccak 0x0b10d3ab9979405d0970771ee305d10e8c62ea4afd94a6176a7db3ecd97dfd9a",
-            "url": "https://etherscan.io/block/26299900"
+            "label": "Reviewed sole exact liability deployment at Ethereum block 26471665 (2026-11-22T15:50:47.000Z; hash 0x74c8c2a37821736862ce355c7c0995911a74bd9128d1ec2f9c0b53b817b81f68), re-read 2026-11-22: sendSharesGate, receiveSharesGate, receiveAssetsGate zero with those setters abdicated; deposit-only sendAssetsGate zero with setSendAssetsGate not abdicated; totalSupply raw 499889506949286975164705732 at 18 decimals; share asset 0x8292bb45bf1ee4d140127049757c2e0ff06317ed; runtime code keccak 0x0b10d3ab9979405d0970771ee305d10e8c62ea4afd94a6176a7db3ecd97dfd9a",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
           },
           {
             "label": "Blockscout verified VaultV2 source (verified 2026-09-02T01:19:39.917710Z, solc v0.8.28+commit.7893614a, partial verification) reports runtime bytecode byte-identical to the pinned code with no proxy implementation; retrieved 2026-10-29",
@@ -11139,15 +11139,15 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-29",
-        "expiresAt": "2026-11-29",
-        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
+        "reviewedAt": "2026-11-22",
+        "expiresAt": "2026-12-22",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-11-22 (#945 Wave B)",
         "deploymentKey": "ethereum:0x69af64f409c08e9076bf7f3ed9db3a7409717161",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Reviewed sole exact liability deployment at Ethereum block 26299900 (2026-10-29T17:29:23.000Z; hash 0xa2c5afac766488431b1a9f5f0d09f19d5018e1bb0316df1b1a19497e41613eef), re-read 2026-10-29: EIP-1967 implementation slot still binds 0x29ed41cb1013a4df63d87b82346b384847db7511; owner()=0xd173e69192b9ff22069aa913ef6e6e94b19f0778, paused()=false, totalSupply raw 3900000000000 at 8 decimals; proxy runtime keccak 0x83a07bf9dad5cf079394093f6515d474baa8c83af5f9a780ee8027340e52c944",
-            "url": "https://etherscan.io/block/26299900"
+            "label": "Reviewed sole exact liability deployment at Ethereum block 26471665 (2026-11-22T15:50:47.000Z; hash 0x74c8c2a37821736862ce355c7c0995911a74bd9128d1ec2f9c0b53b817b81f68), re-read 2026-11-22: EIP-1967 implementation slot still binds 0x29ed41cb1013a4df63d87b82346b384847db7511; owner()=0xd173e69192b9ff22069aa913ef6e6e94b19f0778, paused()=false, totalSupply raw 3900000000000 at 8 decimals; proxy runtime keccak 0x83a07bf9dad5cf079394093f6515d474baa8c83af5f9a780ee8027340e52c944",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
           },
           {
             "label": "Sourcify exact runtime match for the reviewed HKGXToken implementation (matchId 9672084, verified 2025-10-28T02:30:27Z); retrieved 2026-10-29",
@@ -11205,14 +11205,14 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-29",
-        "expiresAt": "2026-11-28",
-        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
+        "reviewedAt": "2026-11-22",
+        "expiresAt": "2026-12-22",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-11-22 (#945 Wave B)",
         "deploymentKey": "solana:5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Exact-slot Alchemy getAccountInfo of the reviewed sole mint at finalized Solana slot 462950000 (2026-10-29T16:34:16.000Z; hash H7xrd77VsXQF5YhEdHegRKH4FoxvjjxBTXAWEPeovWDv): mintAuthority UuicDY26j4dUf5QraXJ99PwPzGwZjRWZmnxcyMhJAgk, freezeAuthority 78gLf8nzh9KpfgHJ3dXN61frauTzdAw5yeBXQbFsVnZi, mint-close UuicDY26j4dUf5QraXJ99PwPzGwZjRWZmnxcyMhJAgk, metadata update UuicDY26j4dUf5QraXJ99PwPzGwZjRWZmnxcyMhJAgk, pausable/freeze/metadata-pointer/transfer-hook authority 78gLf8nzh9KpfgHJ3dXN61frauTzdAw5yeBXQbFsVnZi, permanent delegate 3DkHJVMsC7zLLdBa7SamKpr4r6jC9C8AWQdzzvcYjVdc, fee and interest authority 96h1KDUmgqkn6EsSiYFsNiezhEJeB4jEioKmJRZ6Y849, all unchanged from the 2026-10-27 review; paused=false, default state initialized, transfer-hook program unset, supply 8,177,042 at 6 decimals",
+            "label": "Exact-slot Alchemy getAccountInfo of the reviewed sole mint at finalized Solana slot 472602264 (2026-11-22T16:08:27.000Z; blockhash BsXh74skDrSqwzgUUYtMPiRe3vLAp23m53ijJB7791f5): mintAuthority UuicDY26j4dUf5QraXJ99PwPzGwZjRWZmnxcyMhJAgk, freezeAuthority 78gLf8nzh9KpfgHJ3dXN61frauTzdAw5yeBXQbFsVnZi, mint-close UuicDY26j4dUf5QraXJ99PwPzGwZjRWZmnxcyMhJAgk, metadata update UuicDY26j4dUf5QraXJ99PwPzGwZjRWZmnxcyMhJAgk, pausable/freeze/metadata-pointer/transfer-hook authority 78gLf8nzh9KpfgHJ3dXN61frauTzdAw5yeBXQbFsVnZi, permanent delegate 3DkHJVMsC7zLLdBa7SamKpr4r6jC9C8AWQdzzvcYjVdc, fee and interest authority 96h1KDUmgqkn6EsSiYFsNiezhEJeB4jEioKmJRZ6Y849, all unchanged; paused=false, default state initialized, transfer-hook program unset, supply 10,177,042 at 6 decimals",
             "url": "https://solana-mainnet.g.alchemy.com/v2/"
           }
         ]

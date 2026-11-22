@@ -25,6 +25,7 @@ import { makeV9CohortFixedInput, V9_EVALUATION_TEST_TIMEOUT_MS } from "../../tes
 import { alphaMeta } from "./safety-score-v9-fact-set.test-support";
 import { assessV9Publication } from "../safety-score-v9/publication-assessment";
 import supplyRegistry from "@shared/data/safety-score-v9/supply-attribution-reviews-v1.json";
+import { FRAX_PROVIDER_ROW_EXCLUSION_FIXTURE } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";
 
 describe("reviewed registry provenance identity", () => {
   // Full authored-registry admission exceeds 20s under weekly V8 coverage.
@@ -203,7 +204,7 @@ const economicPlan = {
   excludedRegistryDeploymentKeys: [], exclusions: [], conversionSources: [], escrows: [],
   referencePriceSource: null, liabilityInFlightSource: null,
 };
-const exclusionReview = { ...supplyRegistry.providerRowExclusionReviews[0]!, assetId: "alpha" };
+const exclusionReview = { ...FRAX_PROVIDER_ROW_EXCLUSION_FIXTURE, assetId: "alpha" };
 
 const mechanismReview = {
   assetId: "alpha", archetype: "fiat-cash", reviewedAt: "1970-01-01",

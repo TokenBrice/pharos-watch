@@ -343,15 +343,15 @@
             "state": "absent"
           },
           "pin": {
-            "position": "107985452",
-            "hash": "9AB79690C7514C5671CDAC9187523D674FC9F8520910F55E20D1A80FA79199AE",
+            "position": "108500166",
+            "hash": "11B60D6B0DF0A0E20F56D113ADCCA8DD7A31E43564EC9E121005D8186DE0318A",
             "runtimeIdentity": "xrpl-native-multisigning:SignerList",
             "signerIdentity": "sha256:c6e29e73001fbe3fbef574ca9841e8553dacd04f55b82042ff2ac22cee7a66f8"
           },
           "status": "verified",
-          "reviewedAt": "2026-10-29",
-          "expiresAt": "2026-11-28",
-          "reviewer": "R-MINT-6 renewal 2026-10-29",
+          "reviewedAt": "2026-11-22",
+          "expiresAt": "2026-12-22",
+          "reviewer": "Pharos #945 Wave B renewal 2026-11-22",
           "sources": [
             {
               "label": "Schuman EUROP official issuer roster",
@@ -364,13 +364,17 @@
             {
               "label": "XRPL native multi-signing and weighted quorum semantics",
               "url": "https://xrpl.org/docs/concepts/accounts/multi-signing"
+            },
+            {
+              "label": "XRPL validated ledger 108500166 (2026-11-22T16:08:41Z, hash 11B60D6B0DF0A0E20F56D113ADCCA8DD7A31E43564EC9E121005D8186DE0318A): masterKey disabled, regularKey absent, quorum 3, 6 signers/weights (1,1,1,3,1,1) unchanged",
+              "url": "https://s1.ripple.com:51234/"
             }
           ]
         },
         "directMintAbility": "direct",
         "canRaiseCap": true,
-        "observedAt": "2026-10-27",
-        "observedBlock": 107933446,
+        "observedAt": "2026-11-22",
+        "observedBlock": 108500166,
         "sources": [
           {
             "label": "Schuman EUROP smart-contract addresses",
@@ -381,7 +385,7 @@
             "url": "https://livenet.xrpl.org/accounts/rMkEuRii9w9uBMQDnWV5AA43gvYZR9JxVK"
           }
         ],
-        "evidence": "At validated XRPL ledger 107367076 (hash 8B4EC40E70B8C609CC954472238EDB2656F4E111CF14819EF57DEDE111A176F0), account_info reports the master key disabled, no RegularKey, and a signer list with weighted quorum 3 across six signers (weights 1,1,1,3,1,1). Signer rMRvXUPc8cWPPYCBP2dWAWtAwSq3rjTSpi alone has weight 3 and satisfies the quorum; this is not a 3-of-6 signature requirement. Schuman's official deployment page binds this account to EUROP issuance. weightedQuorum represents the native SignerList exactly without uniform threshold/signerCount or human-independence/key-custody credit. The signing identity is SHA-256 of JSON.stringify({issuer,quorum,signers,masterKey,regularKey}) with signers sorted by account.localeCompare. No complete execution-scope or off-chain operational-security certificate is asserted. Re-read 2026-10-27 at validated XRPL ledger 107933446 (hash 9FB58B97B7018BB7B9AA9B83D7852E29725C549B8CC7477595A581A003FDFAE5, s1.ripple.com:51234 account_info with signer_lists): the master key is still disabled, there is still no RegularKey, and the single SignerList (last modified at ledger 98865169, before the previous review) has quorum 3 over the same six signers and weights (1,1,1,3,1,1) with rMRvXUPc8cWPPYCBP2dWAWtAwSq3rjTSpi at weight 3; the recomputed signing identity hash is unchanged; schuman.io/smart-contracts/ still lists this account."
+        "evidence": "At validated XRPL ledger 107367076 (hash 8B4EC40E70B8C609CC954472238EDB2656F4E111CF14819EF57DEDE111A176F0), account_info reports the master key disabled, no RegularKey, and a signer list with weighted quorum 3 across six signers (weights 1,1,1,3,1,1). Signer rMRvXUPc8cWPPYCBP2dWAWtAwSq3rjTSpi alone has weight 3 and satisfies the quorum; this is not a 3-of-6 signature requirement. Schuman's official deployment page binds this account to EUROP issuance. weightedQuorum represents the native SignerList exactly without uniform threshold/signerCount or human-independence/key-custody credit. The signing identity is SHA-256 of JSON.stringify({issuer,quorum,signers,masterKey,regularKey}) with signers sorted by account.localeCompare. No complete execution-scope or off-chain operational-security certificate is asserted. Re-read 2026-10-27 at validated XRPL ledger 107933446 (hash 9FB58B97B7018BB7B9AA9B83D7852E29725C549B8CC7477595A581A003FDFAE5, s1.ripple.com:51234 account_info with signer_lists): the master key is still disabled, there is still no RegularKey, and the single SignerList (last modified at ledger 98865169, before the previous review) has quorum 3 over the same six signers and weights (1,1,1,3,1,1) with rMRvXUPc8cWPPYCBP2dWAWtAwSq3rjTSpi at weight 3; the recomputed signing identity hash is unchanged; schuman.io/smart-contracts/ still lists this account. Re-read 2026-11-22 at XRPL validated ledger 108500166 (hash 11B60D6B0DF0A0E20F56D113ADCCA8DD7A31E43564EC9E121005D8186DE0318A, 2026-11-22T16:08:41Z, https://s1.ripple.com:51234/): masterKey disabled, regularKey absent, quorum 3, exact 6 signers/weights (1,1,1,3,1,1), PreviousTxnLgrSeq 98865169, signerIdentity sha256 match unchanged."
       }
     ],
     "economicCapSemantics": "unbounded",

@@ -15,6 +15,31 @@ import {
 } from "../safety-score-v9/control-primitives";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import { SafetyScoreV9IssuanceSummarySchema, type SafetyScoreV9IssuanceSummary } from "../../types/safety-score-v9-public-breakdowns";
+import { ReviewedProviderRowExclusionSchema } from "../../types/safety-score-v9-supply-attribution";
+
+export const FRAX_PROVIDER_ROW_EXCLUSION_FIXTURE = ReviewedProviderRowExclusionSchema.parse({
+  assetId: "frax-frax",
+  providerChainLabel: "Fraxtal",
+  belongsToAssetId: "frxusd-frax",
+  chainId: "fraxtal",
+  contractAddress: "0xfc00000000000000000000000000000000000001",
+  reviewer: "Fixture reviewer (historical Fraxtal frxUSD provider-row exclusion prior to DefiLlama PR #1001)",
+  reviewedAtSec: 1793299224,
+  expiresAtSec: 1795891224,
+  evidenceUrls: ["https://docs.frax.com/frxusd/frxusd-contracts"],
+  rationale: "Fixture historical provider-row exclusion for Fraxtal 0xfc00...01 (frxUSD) prior to upstream DefiLlama PR #1001 removal.",
+  provenance: {
+    provider: "defillama",
+    providerAssetId: "6",
+    adapterSourceUrl: "https://raw.githubusercontent.com/DefiLlama/peggedassets-server/f9dcc3cf255e5bcb7a026983c55a47d255b5b2d8/src/adapters/peggedAssets/frax/index.ts",
+    blockNumber: 43231534,
+    blockHash: "0xde6b611438c1e36c331ad0fa76091d3c6ae740012df14be9324b7b4295a5c94c",
+    observedAtSec: 1793299172,
+    rpcUrl: "https://rpc.frax.com",
+    remoteChainId: "ethereum",
+    remoteTokenAddress: "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+  },
+});
 
 export function requiredKnown(rule = "fixture.required"): V9FactStatusV2 {
   return {
