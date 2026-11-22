@@ -32,7 +32,9 @@ vi.mock("../../../lib/safety-score-v9/publication-materialization", () => ({
 vi.mock("../../../lib/structured-log", () => ({
   logWorkerEvent: mocks.logWorkerEvent,
 }));
-vi.mock("../../../cron/sync-v9-supply-attribution", () => ({ syncSafetyScoreV9SupplyAttribution: mocks.syncSupplyAttribution }));
+vi.mock("../../../cron/sync-v9-supply-attribution", () => ({
+  syncSafetyScoreV9SupplyAttribution: mocks.syncSupplyAttribution, LANE_SCREENING_MINIMUM_REMAINING_MS: 60_000,
+}));
 import { getCronJobMeta } from "@shared/lib/cron-jobs";
 import { createDwellirNativeCapability } from "../../../lib/dwellir-native";
 import { runV9PublicationSlot } from "../v9-publication";
@@ -235,6 +237,9 @@ describe("V9 publication scheduling", () => {
 });
 
 describe("scheduled supply-attribution native context", () => {
+  let lastResult: CronResult | undefined;
+  const persisted = () => JSON.parse(lastResult?.metadata ?? "{}");
+  const laneSkip = JSON.stringify({ laneScreening: { status: "skipped", reason: "lane-screening-window-insufficient", remainingMs: 30_000 } });
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.runScheduledSlotGroups.mockImplementation(async (
@@ -247,7 +252,7 @@ describe("scheduled supply-attribution native context", () => {
         ) => Promise<unknown>;
       }> }>>,
     ) => {
-      await stages[0]?.[0]?.tasks[0]?.run(new AbortController().signal, vi.fn());
+      lastResult = await stages[0]?.[0]?.tasks[0]?.run(new AbortController().signal, vi.fn()) as CronResult;
       return { jobsRun: 1, jobsSucceeded: 1, jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 0 };
     });
   });
@@ -278,11 +283,12 @@ describe("scheduled supply-attribution native context", () => {
       mocks.runV9AfterCoreWithinWindow.mockImplementation(async (_input, run) => run(signal, window));
       mocks.recoverSafetyScoreV9PublicMaterialization.mockImplementation(async () => {
         order.push("recover");
-        return { status: "ok", itemCount: 1, metadata: JSON.stringify({ reason: "v9-public-materialization-retry-materialized" }) };
+        vi.setSystemTime(nowMs + 40_000);
+        return { status: "ok", itemCount: 1, metadata: JSON.stringify({ reason: "v9-public-materialization-retry-materialized", publicMaterialization: { publicationGenerationId: "gen-1" } }) };
       });
       mocks.syncSupplyAttribution.mockImplementation(async () => {
         order.push("attribution");
-        return { status: "ok", itemCount: 1 };
+        return { status: "ok", itemCount: 1, metadata: laneSkip };
       });
 
       const runtime = makeScheduledRuntime({
@@ -305,6 +311,12 @@ describe("scheduled supply-attribution native context", () => {
         level: "info",
         event: "safety_score_v9_public_materialization_piggyback",
       }));
+      // 30s left + 40s recovery would have met lane screening's 60s minimum.
+      expect(persisted()).toEqual({
+        laneScreening: expect.objectContaining({ reason: "lane-screening-window-consumed-by-materialization-recovery" }),
+        publicMaterializationRecovery: { status: "ok", reason: "v9-public-materialization-retry-materialized",
+          publicationGenerationId: "gen-1", budgetMs: 60_000, durationMs: 40_000, remainingMs: 139_000 },
+      });
     } finally {
       vi.useRealTimers();
     }
@@ -331,6 +343,7 @@ describe("scheduled supply-attribution native context", () => {
 
     expect(mocks.recoverSafetyScoreV9PublicMaterialization).not.toHaveBeenCalled();
     expect(mocks.syncSupplyAttribution).toHaveBeenCalledOnce();
+    expect(lastResult).toEqual({ status: "ok", itemCount: 1 });
   });
 
   it.each(["throws", "degraded"] as const)("continues attribution when :38 materialization recovery %s", async mode => {
@@ -348,7 +361,7 @@ describe("scheduled supply-attribution native context", () => {
           status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: "v9-public-materialization-retry-failed" }),
         });
       }
-      mocks.syncSupplyAttribution.mockResolvedValue({ status: "ok", itemCount: 1 });
+      mocks.syncSupplyAttribution.mockResolvedValue({ status: "ok", itemCount: 1, metadata: laneSkip });
 
       const runtime = makeScheduledRuntime({
         cron: "38 * * * *",
@@ -360,6 +373,13 @@ describe("scheduled supply-attribution native context", () => {
 
       expect(mocks.syncSupplyAttribution).toHaveBeenCalledOnce();
       expect(mocks.logWorkerEvent).toHaveBeenCalledWith(expect.objectContaining({ level: "warn" }));
+      // Zero recovery time did not cause the lane-screening skip.
+      expect(persisted()).toMatchObject({
+        laneScreening: { reason: "lane-screening-window-insufficient" },
+        publicMaterializationRecovery: mode === "throws"
+          ? { status: "failed", reason: "v9-public-materialization-piggyback-failed", durationMs: 0 }
+          : { status: "degraded", reason: "v9-public-materialization-retry-failed", durationMs: 0 },
+      });
     } finally {
       vi.useRealTimers();
     }
@@ -386,6 +406,8 @@ describe("scheduled supply-attribution native context", () => {
 
       expect(mocks.recoverSafetyScoreV9PublicMaterialization).not.toHaveBeenCalled();
       expect(mocks.syncSupplyAttribution).toHaveBeenCalledOnce();
+      expect(persisted().publicMaterializationRecovery).toEqual({ status: "skipped", publicationGenerationId: null,
+        reason: "v9-public-materialization-piggyback-window-insufficient", budgetMs: 20_000, durationMs: null, remainingMs: 80_000 });
     } finally {
       vi.useRealTimers();
     }
