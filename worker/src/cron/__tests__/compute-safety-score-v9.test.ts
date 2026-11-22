@@ -1103,7 +1103,7 @@ describe("computeSafetyScoreV9", () => {
     const result = await computeSafetyScoreV9({} as D1Database);
     expect(result.status).toBe(count === 397 ? "ok" : "degraded");
     const metadata = JSON.parse(result.metadata!);
-    expect(metadata.resourcePressure).toMatchObject({ inputCapBytes: 8_000_000, catalogMaxAssets: 520, catalogAssets: TRACKED_SOURCE_COINS.length });
+    expect(metadata.resourcePressure).toMatchObject({ inputCapBytes: 8_000_000, catalogMaxAssets: 560, catalogAssets: TRACKED_SOURCE_COINS.length });
     if (count === 398) {
       expect(metadata.reason).toBe("resource-budget-exceeded");
       expect(mocks.runPublication).not.toHaveBeenCalled();

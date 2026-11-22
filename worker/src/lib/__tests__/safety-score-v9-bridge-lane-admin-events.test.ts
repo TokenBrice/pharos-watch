@@ -334,7 +334,11 @@ describe("pinned multi-emitter lane screening", () => {
       .toMatchObject({ outcome: "failed", failureReason: "non-finalized-head" });
     expect(logCalls).toHaveLength(0);
     expect(await screenLaneAdminEvents(target([emitter(OAPP, ["Paused"])]), options(makeChainRpcs([CHAIN]), CLOCK - 1)))
-      .toMatchObject({ outcome: "failed", failureReason: "non-finalized-head", detail: "window-end-in-future" });
+      .toMatchObject({
+        outcome: "failed",
+        failureReason: "non-finalized-head",
+        detail: `window-end-in-future:${headerAt(FINALIZED_NUMBER).timestamp}>${CLOCK - 1}`,
+      });
   });
 
   it("refuses chains without an EVM endpoint", async () => {

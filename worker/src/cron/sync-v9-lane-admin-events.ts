@@ -56,8 +56,16 @@ import {
 /** One cache row per lane; the store is the certificate authority, this is the attempt log. */
 const LANE_SCREENING_ATTEMPT_CACHE_PREFIX = "v9:lane-screening:attempt:v1:";
 
-/** Per-invocation lane cap. Eight lanes bound a run to at most 8 x 34 RPC batches. */
-const LANE_SCREENING_MAX_LANES_PER_INVOCATION = 8;
+/** Per-invocation lane cap. Twelve serial lanes cover the admitted catalog in one hourly pass. */
+const LANE_SCREENING_MAX_LANES_PER_INVOCATION = 12;
+/**
+ * Instant-finality BFT chains (e.g. HyperEVM, Stable) publish "finalized" block
+ * headers at or slightly ahead of wall-clock now. Backing off from the tip
+ * keeps pinned windows strictly finalized, behind wall clock, and clear of
+ * tip-lagging archive RPCs while preserving contiguous block chaining.
+ */
+const INSTANT_FINALITY_HEAD_AGE_THRESHOLD_SEC = 30;
+const INSTANT_FINALITY_TIP_BACKOFF_BLOCKS = 60;
 /** A lane is not re-attempted inside this window, which makes a rerun of the same slot a no-op. */
 const LANE_SCREENING_REFRESH_INTERVAL_SEC = 60 * 60;
 /** First failure backoff; consecutive failures double it up to the ceiling. */
@@ -289,8 +297,15 @@ export function planLaneScreeningWindow(input: {
   descriptor: LaneScreeningDescriptor;
   finalizedHead: EvmBlockHeader;
   certifiedToBlock: number | null;
+  observedAtSec?: number;
 }): { fromBlock: number; toBlock: number } | null {
-  const headNumber = input.finalizedHead.number;
+  const isInstantFinalityHead =
+    input.observedAtSec !== undefined &&
+    input.finalizedHead.timestamp > input.observedAtSec - INSTANT_FINALITY_HEAD_AGE_THRESHOLD_SEC;
+  const headNumber = isInstantFinalityHead
+    ? input.finalizedHead.number - INSTANT_FINALITY_TIP_BACKOFF_BLOCKS
+    : input.finalizedHead.number;
+  if (headNumber < 0) return null;
   const fromBlock =
     input.certifiedToBlock == null
       ? Math.max(0, headNumber - input.descriptor.lookbackBlocks + 1)
@@ -417,11 +432,12 @@ export async function syncV9LaneAdminEvents(
 
   const deferDeadline = async (key: string, window = { fromBlock: 0, toBlock: 0 }) => {
     deadlineExhausted = true;
+    const deferredAtSec = options.observedAtSec ?? Math.floor(Date.now() / 1_000);
     const attempt: LaneScreeningAttempt = {
-      subjectDeploymentKey: key, attemptedAtSec: nowSec, ...window,
+      subjectDeploymentKey: key, attemptedAtSec: deferredAtSec, ...window,
       outcome: "deferred", reason: "deadline", consecutiveFailures: 0,
     };
-    await setCacheIfNewer(db, laneScreeningAttemptCacheKey(key), JSON.stringify(attempt), nowSec, signal);
+    await setCacheIfNewer(db, laneScreeningAttemptCacheKey(key), JSON.stringify(attempt), deferredAtSec, signal);
     attempts.set(key, attempt);
     deferred.push({ subjectDeploymentKey: key, reason: "deadline" });
     outcomes.push({ subjectDeploymentKey: key, outcome: "deferred", reason: "deadline", ...window });
@@ -456,12 +472,15 @@ export async function syncV9LaneAdminEvents(
       await deferDeadline(key);
       break;
     }
+    // Refresh producer clock per lane after finalized-head resolution so earlier
+    // lanes' wall time never makes a freshly finalized BFT block look future-dated.
+    const laneObservedAtSec = options.observedAtSec ?? Math.floor(Date.now() / 1_000);
     if (!finalizedHead) {
       attempted += 1;
       failed += 1;
       const attempt: LaneScreeningAttempt = {
         subjectDeploymentKey: key,
-        attemptedAtSec: nowSec,
+        attemptedAtSec: laneObservedAtSec,
         fromBlock: 0,
         toBlock: 0,
         outcome: "failed",
@@ -469,7 +488,7 @@ export async function syncV9LaneAdminEvents(
         detail: "finalized-head",
         consecutiveFailures: nextConsecutiveFailures(attempts.get(key)),
       };
-      await setCacheIfNewer(db, laneScreeningAttemptCacheKey(key), JSON.stringify(attempt), nowSec, signal);
+      await setCacheIfNewer(db, laneScreeningAttemptCacheKey(key), JSON.stringify(attempt), laneObservedAtSec, signal);
       attempts.set(key, attempt);
       outcomes.push({ subjectDeploymentKey: key, outcome: "failed", reason: "rpc-unavailable", detail: "finalized-head" });
       continue;
@@ -479,6 +498,7 @@ export async function syncV9LaneAdminEvents(
       descriptor,
       finalizedHead,
       certifiedToBlock: certifiedToBlock.get(key) ?? null,
+      observedAtSec: laneObservedAtSec,
     });
     if (!window) {
       deferred.push({ subjectDeploymentKey: key, reason: "current" });
@@ -499,7 +519,7 @@ export async function syncV9LaneAdminEvents(
         signal,
         timeoutMs,
         deadlineMs: options.deadlineMs,
-        observedAtSec: nowSec,
+        observedAtSec: laneObservedAtSec,
         // Reuse the head this driver pinned the window to instead of a second,
         // possibly lagging `finalized` read.
         finalizedHead,
@@ -513,7 +533,7 @@ export async function syncV9LaneAdminEvents(
       failed += 1;
       const attempt: LaneScreeningAttempt = {
         subjectDeploymentKey: key,
-        attemptedAtSec: nowSec,
+        attemptedAtSec: laneObservedAtSec,
         fromBlock: window.fromBlock,
         toBlock: window.toBlock,
         outcome: "failed",
@@ -521,7 +541,7 @@ export async function syncV9LaneAdminEvents(
         ...(sanitizeDetail(result.detail) === undefined ? {} : { detail: sanitizeDetail(result.detail) }),
         consecutiveFailures: nextConsecutiveFailures(attempts.get(key)),
       };
-      await setCacheIfNewer(db, laneScreeningAttemptCacheKey(key), JSON.stringify(attempt), nowSec, signal);
+      await setCacheIfNewer(db, laneScreeningAttemptCacheKey(key), JSON.stringify(attempt), laneObservedAtSec, signal);
       attempts.set(key, attempt);
       outcomes.push({
         subjectDeploymentKey: key,
@@ -538,21 +558,21 @@ export async function syncV9LaneAdminEvents(
     try {
       const persisted = await persistLaneIncidentCertificates(db, [{
         certificate, contributorControlIds: descriptor.provenance.controlIds,
-      }], nowSec, signal);
+      }], laneObservedAtSec, signal);
       written += persisted.written;
       pruned += persisted.pruned;
     } catch {
       failed += 1;
       const attempt: LaneScreeningAttempt = {
         subjectDeploymentKey: key,
-        attemptedAtSec: nowSec,
+        attemptedAtSec: laneObservedAtSec,
         fromBlock: window.fromBlock,
         toBlock: window.toBlock,
         outcome: "store-error",
         detail: "certificate-store-write-failed",
         consecutiveFailures: nextConsecutiveFailures(attempts.get(key)),
       };
-      await setCacheIfNewer(db, laneScreeningAttemptCacheKey(key), JSON.stringify(attempt), nowSec, signal);
+      await setCacheIfNewer(db, laneScreeningAttemptCacheKey(key), JSON.stringify(attempt), laneObservedAtSec, signal);
       attempts.set(key, attempt);
       outcomes.push({
         subjectDeploymentKey: key,
@@ -567,14 +587,14 @@ export async function syncV9LaneAdminEvents(
     admitted += 1;
     const attempt: LaneScreeningAttempt = {
       subjectDeploymentKey: key,
-      attemptedAtSec: nowSec,
+      attemptedAtSec: laneObservedAtSec,
       fromBlock: window.fromBlock,
       toBlock: window.toBlock,
       outcome: "admitted",
       certificateId: certificate.certificateId,
       consecutiveFailures: 0,
     };
-    await setCacheIfNewer(db, laneScreeningAttemptCacheKey(key), JSON.stringify(attempt), nowSec, signal);
+    await setCacheIfNewer(db, laneScreeningAttemptCacheKey(key), JSON.stringify(attempt), laneObservedAtSec, signal);
     attempts.set(key, attempt);
     outcomes.push({
       subjectDeploymentKey: key,
