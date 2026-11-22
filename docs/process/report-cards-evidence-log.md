@@ -7,6 +7,16 @@ These records preserve review dates, scope limits and operator observations form
 The existing wrapper allocation/local-review schemas carry scoped rationale and observations, not a free-standing historical-ruling field. Per-asset measurement summaries are capture manifests, not review-note sidecars. These records therefore stay here rather than adding fields or unrelated history to score-bearing JSON.
 
 
+## OUSG Independent Assurance Engagement Check — 2026-11-22
+
+[#1302](https://github.com/TokenBrice/pharos-watch/issues/1302): Checked Ondo's public OUSG proof-of-reserve and legal-documentation surfaces on `2026-11-22T15:43Z` to determine whether an offline independent-assurance compiler profile for `ousg-ondo-finance` can be authored for BPM LLP's annual private-fund audit.
+
+- The proof-of-reserve Google Drive folder (`https://drive.google.com/drive/folders/1Ti8IzoXTibM3B2RWxystT38ISrPH-rRP?usp=sharing`) returned HTTP `302` redirecting to Google Sign-In (`accounts.google.com/ServiceLogin`), confirming it is login-gated.
+- `https://app.ondo.finance/legal-documentation/us` (HTTP `307` -> `?month=2026-11`, HTTP `200`) published 14 daily November 2026 NAV Consulting administrator report triplets through `2026-11-20` (`Trial Balance`, `Statement of Assets and Liabilities`, and `Account Statement`), all explicitly marked `(Unaudited)`, with `Statement of Assets and Liabilities` and `Account Statement` signed on behalf of Ondo I GP LLC; zero BPM LLP audit or engagement documents appear on the public surface.
+- Ondo's official Trust and Transparency documentation (`https://docs.ondo.finance/qualified-access-products/ousg/trust-and-transparency.md`, HTTP `200`) states that Qualified Access Funds are audited annually, with results provided to investors (Ondo I LP is a Reg D Rule 506(c) / Section 3(c)(7) private fund).
+
+Because no public exact-fund BPM LLP engagement report or audit PDF is accessible without investor login, `ousg-ondo-finance` remains outside `scripts/lib/independent-assurance-profiles/registry.ts` (preserving its existing `proofOfReserves.attestorTier: "regional"` metadata from `#2191`). This observation does not grant independent-assurance credit or alter scoring inputs.
+
 ## YLDS September 30, 2026 Form 10-Q Observation — 2026-11-20
 
 [#1685](https://github.com/TokenBrice/pharos-watch/issues/1685): Figure Certificate Company's Form 10-Q for the quarter ended September 30, 2026 is retained here as a supplemental historical observation, outside `ylds-figure`'s audited reserve-review source list. The v9 named-report admission merges every `reserveReview.sources` entry into Backing evidence stamped with the audited period end (2025-12-31) and publication date (2026-03-20), and a source-label caveat never reaches that compiled evidence, so an unaudited interim filing must not sit in that list. This observation renews neither the KPMG-audited December 31, 2025 composition nor its clock.

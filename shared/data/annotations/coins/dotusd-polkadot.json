@@ -8,6 +8,14 @@
     "note": "The Polkadot Community Foundation reported that referendum 1944 took effect on October 8, creating dotUSD and its initial Asset Hub pool. Initial minting and redemption use USDT; DOT-collateral vaults were a later phase."
   },
   {
+    "date": "2026-10-26",
+    "kind": "exploit",
+    "label": "XCM bug cuts dotUSD recorded supply, draining $1.38M from Treasury pool",
+    "severity": "high",
+    "href": "https://forum.polkadot.network/t/xcm-incident-review-what-happened-and-what-we-learned/19207",
+    "note": "The Polkadot Technical Fellowship's October 26 disclosure (forum topic 19126) reported that an Asset Hub XCM bug cut recorded dotUSD issuance by about 4.06 million without altering user balances. Parity's November 2 incident review (topic 19207) confirmed exploitation between October 24 and 26, distorting the DOT/dotUSD pool price and costing the Polkadot Treasury roughly $1.381 million in DOT value, with redemption capacity restricted until the October 30 OpenGov runtime repair (Referendum 1961)."
+  },
+  {
     "date": "2026-10-30",
     "kind": "governance",
     "label": "Referendum 1961 repairs dotUSD recorded supply",
