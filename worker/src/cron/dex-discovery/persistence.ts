@@ -90,6 +90,11 @@ const STAGING_EVIDENCE_ENVELOPE_SQL = `CASE WHEN json_valid(raw_json) THEN
       AND json_extract(raw_json, '$.pancakeV3VolumeWindowEndSec') BETWEEN 1 AND refreshed_at
       AND json_extract(raw_json, '$.pancakeV3VolumeWindowEndSec') % ${HOUR_SECONDS} = 0
       THEN json_object('pancakeV3VolumeWindowEndSec', json_extract(raw_json, '$.pancakeV3VolumeWindowEndSec'))
+    WHEN source = 'sundaeswap'
+      AND json_type(raw_json, '$.sundaeswapVolumeWindowEndSec') = 'integer'
+      AND json_extract(raw_json, '$.sundaeswapVolumeWindowEndSec') BETWEEN 1 AND refreshed_at
+      AND json_extract(raw_json, '$.sundaeswapVolumeWindowEndSec') % ${HOUR_SECONDS} = 0
+      THEN json_object('sundaeswapVolumeWindowEndSec', json_extract(raw_json, '$.sundaeswapVolumeWindowEndSec'))
     WHEN source = 'horizon' AND json_extract(raw_json, '$.valuation.kind') = 'market'
       AND json_type(raw_json, '$.valuation.observedAtSec') = 'integer'
       AND json_extract(raw_json, '$.valuation.observedAtSec') BETWEEN 1 AND refreshed_at

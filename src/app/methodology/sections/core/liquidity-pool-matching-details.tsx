@@ -37,9 +37,12 @@ export function LiquidityPoolMatchingDetails() {
           id. A pool is valued only when its other asset is an active tracked Cardano stablecoin with a usable peg
           reference: constant-product pools count twice that counter&apos;s value and must imply a plausible price,
           while stable-curve pools with a 1:1 rate count twice their smaller side and stage no price. ADA pairs stay
-          unvalued, pools below $10K are not staged, and pools take the generic 0.3x tier with no volume reading.
-          SundaeSwap is one venue, so its empty answer never certifies that a coin has no Cardano pools, and
-          without a clean SundaeSwap answer the token-pool indexes, which miss its pools, cannot certify it either.
+          unvalued, pools below $10K are not staged, and pools take the generic 0.3x tier. Since v7.54, valued
+          stable-counter pools also read 24-hour volume from 24 complete hourly ticks in AssetA with version-specific
+          leg normalization (V4 divided by 2; V1, V3 and Stableswaps at 1x) and an asOf-proven hourly observation
+          clock, failing closed on errors, stale clocks, unknown versions or excessive turnover. SundaeSwap is one
+          venue, so its empty answer never certifies that a coin has no Cardano pools, and without a clean SundaeSwap
+          answer the token-pool indexes, which miss its pools, cannot certify it either.
         </p>
         <p>
           Matching is chain-aware: `chain + address` resolves first, and symbol fallback is only allowed when it is

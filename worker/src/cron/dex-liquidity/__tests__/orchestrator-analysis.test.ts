@@ -805,15 +805,15 @@ describe("analyzeDexLiquidityPostScoring", () => {
     expect(unknown.material).toBeNull();
     expect(assessPoolRejectionCoverage([], prior, prior, unknown).reason).toBe(unknown.reason);
     for (const mode of ["retained", "expired", "scoped"] as const) {
-      const rows = [{ stablecoin_id: "usdt-tether", total_tvl_usd: 100_000 }];
+      const rows = [{ stablecoin_id: "usdt-tether", total_tvl_usd: 100_000, coverage_class: "primary" }];
       const clean = mode === "scoped";
       const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({ poolRejections: [rejection],
         db: mockAnalysisDb([
-          { match: "FROM dex_liquidity_run_rows r", rows: [{ stablecoin_id: "usdt-tether", total_tvl_usd: clean ? 100_000 : 90_000 }] },
           ...(clean ? [{ match: "FROM cron_runs", rows: [{ status: "ok", metadata: JSON.stringify({ rowsDropped: 67,
             poolRejectionMateriality: { candidateRejectedPoolCount: 0 }, sourceCoverage: {
               poolRejectionCoverage: assessPoolRejectionCoverage([], null, new Map(), undefined, 1),
-            } }) }] }] : [{ match: "SELECT stablecoin_id, total_tvl_usd FROM dex_liquidity_run_rows", rows: mode === "expired" ? [] : rows }]),
+            } }) }] }] : [{ match: "g.started_at AS generation_started_at", rows: mode === "expired" ? [] : rows }]),
+          { match: "FROM dex_liquidity_run_rows r", rows: [{ stablecoin_id: "usdt-tether", total_tvl_usd: clean ? 100_000 : 90_000, coverage_class: "primary" }] },
         ]), scoreResults: new Map([["usdt-tether", { ...BASE_SCORE_RESULT, tvl: 90_000 }]]),
       }));
       expect(analysis.sourceCoverage.poolRejectionCoverage.reason)
@@ -863,7 +863,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
       persistScores(db, new Map([[coin, { ...initMetrics(coin, "sUSDat"), totalTvlUsd: tvl }]]),
         new Map([[coin, { ...BASE_SCORE_RESULT, tvl, coverageClass: "mixed" }]]), BASE_GLOBAL_AGG, Date.now() / 1000,
         new Map(), undefined, undefined, pools(tvl), decision);
-    return { sqlite, publish, close: fixtures.closeAll, async assess(current: number | null, unobserved = false,
+    return { sqlite, db, publish, close: fixtures.closeAll, async assess(current: number | null, unobserved = false,
       decayed = false, tvlMeasured: true | null = true) {
       const scoreResults = new Map([[other, { ...BASE_SCORE_RESULT, tvl: 99_000 }]]);
       if (current !== null) scoreResults.set(coin, { ...BASE_SCORE_RESULT, tvl: current,
@@ -1014,6 +1014,129 @@ describe("analyzeDexLiquidityPostScoring", () => {
     }));
     expect(analysis.sourceCoverage.coinsCrawlerOnly).toBe(decayed ? 1 : 0);
     expect(analysis.sourceCoverage.retainedPoolCountBySourceFamily.dl).toBe(1);
+  });
+
+  it("rebases the reviewed sUSDat anchor with a <=5% decayed tail and live primary pool, deferring beyond bounds", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(reviewTime);
+    const { db, close } = reviewedEpisodeFixture({ latest: 2_600_000 });
+    const run = (pools: ReturnType<typeof makePool>[]) =>
+      analyzeDexLiquidityPostScoring(makeAnalysisInput({
+        db, currentGenerationId: buildDexLiquidityPublicationGenerationId(reviewTime / 1000),
+        scoreResults: new Map([
+          [other, { ...BASE_SCORE_RESULT, tvl: 99_000 }],
+          [coin, { ...BASE_SCORE_RESULT, tvl: 2_540_000, coverageClass: "mixed" }],
+        ]),
+        retainedPoolsByStablecoin: new Map([[coin, pools]]),
+      }));
+    try {
+      const ok = await run([
+        makePool({ source: "dl", tvlUsd: 2_486_000, extra: { measurement: { tvlMeasured: true, decayed: false } } }),
+        makePool({ poolId: "ethereum:0xdecay", source: "cg_onchain", tvlUsd: 54_000, extra: { measurement: { tvlMeasured: true, decayed: true } } }),
+      ]);
+      expect(ok.sourceCoverage.poolRejectionCoverage).toMatchObject({
+        reason: null, anchorReviewDecision: { outcome: "applied", acceptedTvlUsd: 2_540_000 },
+      });
+      const overCap = await run([
+        makePool({ source: "dl", tvlUsd: 2_336_800, extra: { measurement: { tvlMeasured: true, decayed: false } } }),
+        makePool({ poolId: "ethereum:0xdecay", source: "cg_onchain", tvlUsd: 203_200, extra: { measurement: { tvlMeasured: true, decayed: true } } }),
+      ]);
+      expect(overCap.sourceCoverage.poolRejectionCoverage.anchorReviewDecision).toBeUndefined();
+      const noLivePrimary = await run([
+        makePool({ source: "cg_onchain", tvlUsd: 2_500_000, extra: { measurement: { tvlMeasured: true, decayed: false } } }),
+        makePool({ poolId: "ethereum:0xdecay", source: "dl", tvlUsd: 40_000, extra: { measurement: { tvlMeasured: true, decayed: true } } }),
+      ]);
+      expect(noLivePrimary.sourceCoverage.poolRejectionCoverage.anchorReviewDecision).toBeUndefined();
+    } finally {
+      close();
+      vi.restoreAllMocks();
+    }
+  });
+
+  it("walks back past unobserved placeholders for pool-rejection baselines and fails closed when unavailable", async () => {
+    const baseSec = 1_795_300_000;
+    const rejection = scopePoolRejections([{
+      reason: "invalid-pool-volume", project: "uniswap-v3", poolIds: ["bad"], count: 1,
+      tvlUsd: 500_000, tvlUsdByStablecoin: { "usdt-tether": 500_000 }, details: [],
+    }], new Set(["uniswap-v3"]))[0]!;
+    const openTracker = createLatestSchemaFixtureTracker();
+    const seedGen = (sqlite: ReturnType<typeof openTracker.open>["sqlite"], at: number,
+      rows: Array<[string, number, string]>, candidateRejectedPoolCount = 0) => {
+      const genId = buildDexLiquidityPublicationGenerationId(at);
+      sqlite.prepare(`INSERT INTO dex_liquidity_publication_generations
+        (generation_id, started_at, state, expected_row_count, created_at, published_at)
+        VALUES (?, ?, 'published', ?, ?, ?)`).run(genId, at, rows.length, at, at);
+      for (const [id, tvl, cls] of rows) {
+        sqlite.prepare(`INSERT INTO dex_liquidity_run_rows
+          (generation_id, stablecoin_id, symbol, total_tvl_usd, updated_at, coverage_class)
+          VALUES (?, ?, ?, ?, ?, ?)`).run(genId, id, id.toUpperCase(), tvl, at, cls);
+      }
+      sqlite.prepare(`INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata)
+        VALUES ('sync-dex-liquidity', ?, 1000, 'ok', ?)`).run(at, JSON.stringify({
+          poolRejectionMateriality: { candidateRejectedPoolCount },
+          sourceCoverage: { poolRejectionCoverage: { reason: null, material: false, baselineBeforeSec: at, baselineTvlUsdByCoin: {}, coins: [], coinsOmitted: 0 } },
+          persistence: { generationId: genId, skipped: false },
+        }));
+    };
+    try {
+      // 1. $3.0M observed -> unobserved placeholder (0) -> $2.579M + $500k rejection => material loss against $3.0M
+      const f1 = openTracker.open();
+      seedGen(f1.sqlite, baseSec - 7200, [["usdt-tether", 3_000_000, "primary"], ["usdc-circle", 9_000_000, "primary"]]);
+      seedGen(f1.sqlite, baseSec - 3600, [["usdt-tether", 0, "unobserved"], ["usdc-circle", 9_000_000, "primary"]]);
+      const r1 = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+        db: f1.db, currentGenerationId: buildDexLiquidityPublicationGenerationId(baseSec),
+        poolRejections: [rejection], scoreResults: new Map([["usdt-tether", { ...BASE_SCORE_RESULT, tvl: 2_579_000 }]]),
+      }));
+      expect(r1.sourceCoverage.poolRejectionCoverage).toMatchObject({
+        reason: "material-pool-rejections", material: true, baselineTvlUsdByCoin: { "usdt-tether": 3_000_000 },
+      });
+
+      // 2. Clean-generation fallback where latest clean gen had unobserved row walks back before cutoff
+      const f2 = openTracker.open();
+      seedGen(f2.sqlite, baseSec - 10_800, [["usdt-tether", 3_000_000, "primary"]], 0);
+      seedGen(f2.sqlite, baseSec - 7200, [["usdt-tether", 0, "unobserved"], ["usdc-circle", 9_000_000, "primary"]], 0);
+      seedGen(f2.sqlite, baseSec - 3600, [["usdt-tether", 2_579_000, "primary"]], 1);
+      const r2 = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+        db: f2.db, currentGenerationId: buildDexLiquidityPublicationGenerationId(baseSec),
+        poolRejections: [rejection], scoreResults: new Map([["usdt-tether", { ...BASE_SCORE_RESULT, tvl: 2_579_000 }]]),
+      }));
+      expect(r2.sourceCoverage.poolRejectionCoverage).toMatchObject({
+        reason: "material-pool-rejections", baselineTvlUsdByCoin: { "usdt-tether": 3_000_000 },
+      });
+
+      // 3. Exhausted retention (only unobserved rows) fails closed, never 0
+      const f3 = openTracker.open();
+      seedGen(f3.sqlite, baseSec - 3600, [["usdt-tether", 0, "unobserved"]]);
+      const r3 = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+        db: f3.db, currentGenerationId: buildDexLiquidityPublicationGenerationId(baseSec),
+        poolRejections: [rejection], scoreResults: new Map([["usdt-tether", { ...BASE_SCORE_RESULT, tvl: 2_579_000 }]]),
+      }));
+      expect(r3.sourceCoverage.poolRejectionCoverage.reason).toBe("pool-rejection-baseline-unavailable");
+
+      // 4. Walk-back D1 read failure fails closed + clean run issues zero walk-back queries
+      const sqlLog: string[] = [];
+      const origPrepare = f1.db.prepare.bind(f1.db);
+      const prepareSpy = vi.spyOn(f1.db, "prepare").mockImplementation((sql: string) => {
+        sqlLog.push(sql);
+        if (sql.includes("ROW_NUMBER()")) {
+          return { bind: () => ({ all: async () => { throw new Error("walkback failed"); } }) } as unknown as D1PreparedStatement;
+        }
+        return origPrepare(sql);
+      });
+      const r4 = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+        db: f1.db, currentGenerationId: buildDexLiquidityPublicationGenerationId(baseSec),
+        poolRejections: [rejection], scoreResults: new Map([["usdt-tether", { ...BASE_SCORE_RESULT, tvl: 2_579_000 }]]),
+      }));
+      expect(r4.sourceCoverage.poolRejectionCoverage.reason).toBe("pool-rejection-baseline-unavailable");
+      sqlLog.length = 0;
+      await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+        db: f1.db, currentGenerationId: buildDexLiquidityPublicationGenerationId(baseSec),
+        poolRejections: [], scoreResults: new Map([["usdt-tether", { ...BASE_SCORE_RESULT, tvl: 2_579_000 }]]),
+      }));
+      expect(sqlLog.some((s) => s.includes("ROW_NUMBER()"))).toBe(false);
+      prepareSpy.mockRestore();
+    } finally {
+      openTracker.closeAll();
+    }
   });
 
 });

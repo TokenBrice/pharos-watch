@@ -138,7 +138,7 @@ describe("registered concentrated execution-target factories", () => {
       input.identity.pool.underlyingTokens = [TOKEN0, thusd];
       input.enrichment.rawContribTvl = 5_561_855;
       input.context.chainAddressToId.set(`ethereum:${thusd}`, "thusd-theo");
-      input.context.stablecoinPriceById!.set("thusd-theo", 1);
+      input.context.stablecoinPriceById = new Map([...(input.context.stablecoinPriceById ?? []), ["thusd-theo", 1]]);
       const key = buildUniswapV4ExecutionCandidateKey("ethereum", [TOKEN0, thusd], 100)!;
       input.context.uniswapV4ExecutionCandidates = new Map([[key, [{
         chain: "ethereum", poolId, feePips: 100, tickSpacing: 1,

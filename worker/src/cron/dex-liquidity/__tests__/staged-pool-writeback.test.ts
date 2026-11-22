@@ -283,6 +283,42 @@ describe("buildStagedPoolWriteback", () => {
     });
   });
 
+  it("preserves SundaeSwap volume window clock past raw-payload cleanup and rejects legacy rows without it", async () => {
+    const windowEnd = Math.floor(NOW / 3600) * 3600;
+    const refreshedAt = windowEnd + 600;
+    const replayAt = refreshedAt + 5 * 3600;
+    const { sqlite, db } = fixtures.open();
+    vi.spyOn(Date, "now").mockReturnValue(replayAt * 1000);
+    await upsertStagedPools(db, [
+      {
+        poolId: "cardano:062ed6", stablecoinId: "usdrf-realfi", source: "sundaeswap", chain: "cardano",
+        protocol: "sundaeswap", dexId: "sundaeswap", symbol: "USDCx / USDrf", tvlUsd: 800_000, volume24h: 6_557.4,
+        qualityMultiplier: null, poolType: "sundaeswap-constant-sum", feeTier: 5, balanceRatio: null,
+        isStable: true, baseToken: "usdcx", quoteToken: "usdrf", quoteSymbol: "USDrf", priceUsd: null,
+        lockedLiqPct: null, rawJson: JSON.stringify({ sundaeswapVolumeWindowEndSec: windowEnd, extra: "prune" }),
+        discoveredAt: refreshedAt, refreshedAt,
+      },
+      {
+        poolId: "cardano:legacy01", stablecoinId: "usdrf-realfi", source: "sundaeswap", chain: "cardano",
+        protocol: "sundaeswap", dexId: "sundaeswap", symbol: "USDCx / USDrf", tvlUsd: 100_000, volume24h: 1_234,
+        qualityMultiplier: null, poolType: "sundaeswap-stableswap", feeTier: 5, balanceRatio: null,
+        isStable: true, baseToken: "usdcx", quoteToken: "usdrf", quoteSymbol: "USDrf", priceUsd: null,
+        lockedLiqPct: null, rawJson: JSON.stringify({ id: "legacy01" }),
+        discoveredAt: refreshedAt, refreshedAt,
+      },
+    ]);
+    expect(await cleanupStaging(db, replayAt)).toMatchObject({ rawJsonClearedRows: 2, error: null });
+    expect(sqlite.prepare("SELECT pool_id, raw_json FROM dex_pool_registry ORDER BY pool_id").all()).toEqual([
+      { pool_id: "cardano:062ed6", raw_json: JSON.stringify({ sundaeswapVolumeWindowEndSec: windowEnd }) },
+      { pool_id: "cardano:legacy01", raw_json: null },
+    ]);
+    const metrics = new Map<string, SourcePoolGraph>();
+    await mergeStagedPools(db, metrics, createKnownPoolIdentityIndex(), replayAt, new Map());
+    const byId = new Map((metrics.get("usdrf-realfi")?.pools ?? []).map((p) => [p.poolId, p]));
+    expect(byId.get("cardano:062ed6")?.volumeReading).toEqual({ volume24hUsd: 6_557.4, volume7dUsd: null, observedAtSec: windowEnd });
+    expect(byId.get("cardano:legacy01")?.volumeReading).toEqual({ volume24hUsd: null, volume7dUsd: null, observedAtSec: null });
+  });
+
   it("nets decayed registry metapool LP claims against a live Curve base pool", async () => {
     const basePoolKey = "ethereum:0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7";
     const meta = makePoolEntry({
