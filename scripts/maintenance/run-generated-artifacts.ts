@@ -22,6 +22,7 @@ interface GeneratedArtifactOptions {
   buildLifecycles?: readonly string[];
   check?: boolean;
   cwd?: string;
+  includeHistory?: boolean;
   integrityOnly?: boolean;
   only?: readonly string[];
   phases?: readonly number[];
@@ -35,6 +36,7 @@ interface GeneratedArtifactDefinition {
   buildLifecycle?: string;
   dependsOn?: string[];
   outputPaths?: string[];
+  requiresGitHistory?: boolean;
 }
 
 interface GeneratedArtifactPhase {
@@ -97,16 +99,21 @@ function planGeneratedArtifactExecutionPhases({
   buildLifecycles = [],
   check = false,
   cwd = process.cwd(),
+  includeHistory = false,
   integrityOnly = false,
   only = [],
   phases = [],
   skipExistingDeps = false,
 }: GeneratedArtifactOptions = {}): { executionPhases: ArtifactExecutionPhase[]; skippedIds: string[] } {
   if (integrityOnly && !check) throw new CliUsageError("--integrity-only requires --check");
+  if (includeHistory && (check || !bootstrap)) {
+    throw new CliUsageError("--include-history requires --bootstrap (and cannot be combined with --check)");
+  }
   const registryPhases: GeneratedArtifactPhase[] = buildGeneratedArtifactPhases({
     bootstrap,
     buildLifecycles: [...buildLifecycles],
     check,
+    includeHistory,
     integrityOnly,
     only: [...only],
     phases: [...phases],
@@ -139,7 +146,7 @@ function planGeneratedArtifactExecutionPhases({
     for (const artifact of artifacts) {
       artifactById.set(artifact.id, artifact);
       const isDirectTarget =
-        (!bootstrap || artifact.bootstrap === true)
+        (!bootstrap || artifact.bootstrap === true || (includeHistory && artifact.requiresGitHistory === true))
         && (buildLifecycleSet.size === 0 || (artifact.buildLifecycle !== undefined && buildLifecycleSet.has(artifact.buildLifecycle)))
         && (onlySet.size === 0 || onlySet.has(artifact.id))
         && (phaseSet.size === 0 || phaseSet.has(phase));
@@ -225,6 +232,7 @@ export function parseGeneratedArtifactsArgs(argv: readonly string[] = []): {
   bootstrap: boolean;
   buildLifecycles: string[];
   check: boolean;
+  includeHistory: boolean;
   integrityOnly: boolean;
   continueOnError: boolean;
   dryRun: boolean;
@@ -237,6 +245,7 @@ export function parseGeneratedArtifactsArgs(argv: readonly string[] = []): {
     bootstrap: boolean;
     buildLifecycles: string[];
     check: boolean;
+    includeHistory: boolean;
     integrityOnly: boolean;
     continueOnError: boolean;
     dryRun: boolean;
@@ -248,6 +257,7 @@ export function parseGeneratedArtifactsArgs(argv: readonly string[] = []): {
     bootstrap: false,
     buildLifecycles: [],
     check: false,
+    includeHistory: false,
     integrityOnly: false,
     continueOnError: false,
     dryRun: false,
@@ -261,6 +271,10 @@ export function parseGeneratedArtifactsArgs(argv: readonly string[] = []): {
     const arg = argv[index];
     if (arg === "--bootstrap") {
       options.bootstrap = true;
+      continue;
+    }
+    if (arg === "--include-history") {
+      options.includeHistory = true;
       continue;
     }
     if (arg === "--check") {
@@ -325,6 +339,9 @@ export function parseGeneratedArtifactsArgs(argv: readonly string[] = []): {
   }
 
   if (options.integrityOnly && !options.check) throw new CliUsageError("--integrity-only requires --check");
+  if (options.includeHistory && (options.check || !options.bootstrap)) {
+    throw new CliUsageError("--include-history requires --bootstrap (and cannot be combined with --check)");
+  }
   if (options.check) {
     // Check mode remains the authoritative freshness mode by default; it ignores
     // bootstrap narrowing unless the caller provides explicit --only/--phase filters.
@@ -339,11 +356,12 @@ export function parseGeneratedArtifactsArgs(argv: readonly string[] = []): {
 
 export function printGeneratedArtifactsHelp(log = console.log) {
   log(
-    "Usage: npm run prebuild -- [--bootstrap|--check [--integrity-only]] [--build-lifecycle name[,name]] [--continue-on-error] [--skip-existing-deps] [--only id[,id]] [--phase n[,n]] [--dry-run|--help]",
+    "Usage: npm run prebuild -- [--bootstrap [--include-history]|--check [--integrity-only]] [--build-lifecycle name[,name]] [--continue-on-error] [--skip-existing-deps] [--only id[,id]] [--phase n[,n]] [--dry-run|--help]",
   );
   log("");
   log("Options:");
   log("  --bootstrap          Run only bootstrap-safe generators (ignored in --check mode).");
+  log("  --include-history    With --bootstrap, also run git-history-derived projections in the same DAG.");
   log("  --check              Verify generated artifacts instead of writing them.");
   log("  --integrity-only     With --check, waive only public dataset maximum age (PR integrity checks).");
   log("  --build-lifecycle <names>  Run artifacts in one or more declared build lifecycle groups.");
@@ -566,6 +584,7 @@ export async function runGeneratedArtifacts({
     bootstrap,
     buildLifecycles,
     check,
+    includeHistory,
     integrityOnly,
     continueOnError: cliContinueOnError,
     dryRun,
@@ -591,6 +610,7 @@ export async function runGeneratedArtifacts({
     buildLifecycles,
     check,
     cwd,
+    includeHistory,
     integrityOnly,
     only,
     phases,

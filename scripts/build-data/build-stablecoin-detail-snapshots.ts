@@ -11,7 +11,12 @@ import { SITE_DATA_PATH_PREFIX } from "@shared/lib/site-data-lane";
 import {
   detailSnapshotSourceUpdatedAt,
 } from "@shared/lib/detail-snapshot-inputs";
-import { DETAIL_SNAPSHOT_INPUT_BATCH_SIZE, DetailSnapshotInputsResponseSchema, type DetailSnapshotInputEntry } from "@shared/types/detail-snapshot-inputs";
+import {
+  DETAIL_SNAPSHOT_INPUT_BATCH_SIZE,
+  DETAIL_SNAPSHOT_INPUT_LEGACY_BATCH_SIZE,
+  DetailSnapshotInputsResponseSchema,
+  type DetailSnapshotInputEntry,
+} from "@shared/types/detail-snapshot-inputs";
 import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { classifySupplyCoverage } from "@shared/lib/supply-provenance";
@@ -41,10 +46,11 @@ export const DETAIL_SNAPSHOT_OUTPUT_DIR = resolve(REPO_ROOT, "src/generated/stab
 // its loading state in the static export. The bound stays a hard cap; every
 // other envelope is well under it.
 export const DETAIL_SNAPSHOT_TARGET_BYTES = 12 * 1024;
-const MAX_PARALLEL_COIN_REQUESTS = 6;
+// Each coin fetches detail + history concurrently; 3 coins x 2 lanes stays within the 6-connection budget.
+const MAX_PARALLEL_COIN_REQUESTS = 3;
 // Match the six-connection budget; bulk bodies finish before fallback reads begin.
 const MAX_PARALLEL_BULK_REQUESTS = 6;
-// A just-invalidated detail cache makes fallback reads more expensive.
+// A just-invalidated detail cache makes fallback reads more expensive; 3 coins x 2 lanes = 6 sockets.
 const MAX_PARALLEL_FALLBACK_REQUESTS = 3;
 // This is the UI stale band, not the endpoint's much stricter advisory budget.
 export const DETAIL_SNAPSHOT_UI_STALE_AFTER_MS =
@@ -362,19 +368,21 @@ export async function generateSnapshots(
     console.warn("[stablecoin-detail-snapshots] bulk requires SITE_API_SHARED_SECRET; using per-coin acquisition");
     source = "per-coin";
   }
+  const fetchDetailLane = (id: string) => fetchOptionalDetailSnapshotLane(
+    `coin detail for ${id}`,
+    resolveApiPathUrl(apiBase, API_PATHS.stablecoinDetail(id)),
+    StablecoinDetailResponseSchema,
+  );
+  const fetchHistoryLane = (id: string) => fetchOptionalDetailSnapshotLane(
+    `supply history for ${id}`,
+    resolveApiPathUrl(apiBase, API_PATHS.supplyHistory(id, STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS)),
+    SupplyHistoryResponseSchema,
+  );
   const fetchCoin = async (id: string, detailLane = true): Promise<SnapshotCoinLanes> => {
-    const detail = detailLane
-      ? await fetchOptionalDetailSnapshotLane(
-        `coin detail for ${id}`,
-        resolveApiPathUrl(apiBase, API_PATHS.stablecoinDetail(id)),
-        StablecoinDetailResponseSchema,
-      )
-      : null;
-    const history = await fetchOptionalDetailSnapshotLane(
-      `supply history for ${id}`,
-      resolveApiPathUrl(apiBase, API_PATHS.supplyHistory(id, STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS)),
-      SupplyHistoryResponseSchema,
-    );
+    const [detail, history] = await Promise.all([
+      detailLane ? fetchDetailLane(id) : Promise.resolve(null),
+      fetchHistoryLane(id),
+    ]);
     if (!detail && !history) {
       throw new Error(`No detail snapshot lanes were available for live stablecoin ${id}.`);
     }
@@ -413,7 +421,7 @@ export async function generateSnapshots(
     for (let offset = 0; offset < liveIds.length; offset += DETAIL_SNAPSHOT_INPUT_BATCH_SIZE) {
       batches.push(liveIds.slice(offset, offset + DETAIL_SNAPSHOT_INPUT_BATCH_SIZE));
     }
-    const responses = await mapWithConcurrency(batches, MAX_PARALLEL_BULK_REQUESTS, async (ids) => {
+    const fetchBulkChunk = async (ids: readonly string[]): Promise<DetailSnapshotInputEntry[]> => {
       const payload = await fetchDetailSnapshotJson(
         resolveApiPathUrl(bulkApiBase, API_PATHS.stablecoinDetailSnapshotInputs(ids)),
       );
@@ -424,6 +432,38 @@ export async function generateSnapshots(
         throw new Error("Bulk detail snapshot response did not account for every requested coin exactly once");
       }
       return entries;
+    };
+    let legacyBatchCap = false;
+    const fetchLegacySplit = async (ids: readonly string[]): Promise<DetailSnapshotInputEntry[]> => {
+      const split: DetailSnapshotInputEntry[] = [];
+      for (let offset = 0; offset < ids.length; offset += DETAIL_SNAPSHOT_INPUT_LEGACY_BATCH_SIZE) {
+        split.push(...await fetchBulkChunk(ids.slice(offset, offset + DETAIL_SNAPSHOT_INPUT_LEGACY_BATCH_SIZE)));
+      }
+      return split;
+    };
+    const responses = await mapWithConcurrency(batches, MAX_PARALLEL_BULK_REQUESTS, async (ids) => {
+      if (legacyBatchCap && ids.length > DETAIL_SNAPSHOT_INPUT_LEGACY_BATCH_SIZE) {
+        return fetchLegacySplit(ids);
+      }
+      try {
+        return await fetchBulkChunk(ids);
+      } catch (error) {
+        if (
+          error instanceof DetailSnapshotHttpError
+          && error.status === 400
+          && ids.length > DETAIL_SNAPSHOT_INPUT_LEGACY_BATCH_SIZE
+        ) {
+          if (!legacyBatchCap) {
+            legacyBatchCap = true;
+            console.warn(
+              `[stablecoin-detail-snapshots] Bulk batch of ${ids.length} rejected with HTTP 400; ` +
+              `falling back to legacy batch size ${DETAIL_SNAPSHOT_INPUT_LEGACY_BATCH_SIZE}`,
+            );
+          }
+          return fetchLegacySplit(ids);
+        }
+        throw error;
+      }
     });
     const entries = responses.flat();
     staleCandidateCount = entries.filter((entry) =>
@@ -458,11 +498,24 @@ export async function generateSnapshots(
       } else if (historyOnly) {
         console.warn(`[stablecoin-detail-snapshots] ${source} for ${entry.id}; fetching supply history only`);
         lane = await fetchCoin(entry.id, false);
-      } else if (entry.status === "unavailable" || refresh) {
+      } else if (entry.status === "unavailable") {
         console.warn(`[stablecoin-detail-snapshots] ${source} for ${entry.id}; fetching per-coin`);
+        lane = await fetchCoin(entry.id);
+      } else if (refresh) {
+        console.warn(`[stablecoin-detail-snapshots] ${source} for ${entry.id}; refreshing detail lane`);
         // The route may serve the original generation while revalidating. Do not
         // mistake a successful GET for a new producer generation or re-stamp it.
-        lane = await fetchCoin(entry.id);
+        // Reuse the bulk supplyHistory lane and clock instead of re-fetching /api/supply-history.
+        const detail = await fetchDetailLane(entry.id);
+        lane = {
+          id: entry.id,
+          liveSummary: detail ? projectStablecoinLiveSummary(detail.data, entry.id) : null,
+          supplyHistory: entry.supplyHistory,
+          updatedAt: {
+            ...(detail?.updatedAt != null ? { liveSummary: detail.updatedAt } : {}),
+            supplyHistory: entry.updatedAt.supplyHistory,
+          },
+        };
       } else {
         lane = {
           id: entry.id,

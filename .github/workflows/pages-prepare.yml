@@ -45,14 +45,44 @@ jobs:
           fi
           echo "name=${WORKSPACE_ARTIFACT_NAME}" >> "$GITHUB_OUTPUT"
       - name: Package prepared production workspace
+        env:
+          WORKSPACE_PATHS: |
+            node_modules
+            public/maps/world-countries.svg
+            public/openapi.json
+            public/postman/pharos-api.postman_collection.json
+            public/postman/pharos-api.postman_environment.json
+            shared/data/safety-score-v9/incident-review-key-migration-v1.generated.json
+            shared/data/safety-score-v9/incident-runtime-v1.generated.json
+            shared/data/safety-score-v9/lane-emitter-descriptors-v1.generated.json
+            shared/data/stablecoins/coins.client.detail
+            shared/data/stablecoins/coins.client.list.generated.json
+            shared/data/stablecoins/coins.compliance.generated.json
+            shared/data/stablecoins/coins.generated.json
+            shared/data/stablecoins/coins.telegram-mini-app.generated.json
+            shared/data/stablecoins/coins.worker-full.generated.json
+            shared/data/stablecoins/coins.worker-runtime.generated.json
+            shared/data/stablecoins/legacy-llama-redirects.generated.json
+            shared/data/stablecoins/report-card-registry-fingerprint.generated.ts
+            shared/lib/editorial-style.generated.ts
+            src/data/changelogs/index.ts
+            src/generated/command-palette-search-data.ts
+            src/generated/docs-metadata.json
+            src/generated/docs-metadata.json.d.ts
+            src/generated/sitemap-dates.json
+            src/generated/sitemap-dates.json.d.ts
+            src/generated/stablecoin-static-data.ts
+            src/lib/case-study-client-index.ts
+            worker/src/lib/mint-burn-conservation-runtime.generated.json
         run: |
           mkdir -p "${RUNNER_TEMP}/pharos-pages-workspace"
-          # Transfer the whole compile-input output closure, including generated
-          # tracked files, modes and dependency symlinks. Git history is checked
-          # out independently by the consumer; no compiler cache is promoted.
-          tar -I 'zstd -T0 -3' \
-            --exclude='./.git' --exclude='./.next' --exclude='./.cache' \
-            -cf "${RUNNER_TEMP}/pharos-pages-workspace/workspace.tar.zst" .
+          mapfile -t paths <<< "${WORKSPACE_PATHS%$'\n'}"
+          if [ -d worker/node_modules ]; then paths+=(worker/node_modules); fi
+          if [ -d shared/contracts/node_modules ]; then paths+=(shared/contracts/node_modules); fi
+          # Transfer only installed dependencies and the compile-input output
+          # closure, preserving modes and symlinks. Tracked repo files come from
+          # actions/checkout in pages-release; no compiler cache is promoted.
+          tar -I 'zstd -T0 -3' -cf "${RUNNER_TEMP}/pharos-pages-workspace/workspace.tar.zst" "${paths[@]}"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ${{ steps.workspace-artifact-name.outputs.name }}

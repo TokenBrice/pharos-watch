@@ -955,6 +955,7 @@ export function selectCheckableArtifactIds(ids) {
  *   bootstrap?: boolean,
  *   buildLifecycles?: string[],
  *   check?: boolean,
+ *   includeHistory?: boolean,
  *   only?: string[],
  *   phases?: number[],
  * }} [options]
@@ -963,12 +964,16 @@ export function selectGeneratedArtifacts({
   bootstrap = false,
   buildLifecycles = [],
   check = false,
+  includeHistory = false,
   only = [],
   phases = [],
 } = {}) {
   assertKnownGeneratedArtifactIds(only);
   assertKnownGeneratedArtifactPhases(phases);
   assertKnownGeneratedArtifactBuildLifecycles(buildLifecycles);
+  if (includeHistory && (check || !bootstrap)) {
+    throw new CliUsageError("--include-history requires --bootstrap (and cannot be combined with --check)");
+  }
   if (check) {
     const uncheckable = GENERATED_ARTIFACT_REGISTRY.filter((artifact) => only.includes(artifact.id) && artifact.checkable === false);
     if (uncheckable.length > 0) {
@@ -999,10 +1004,14 @@ export function selectGeneratedArtifacts({
     return !check || artifact.checkable !== false;
   }
 
+  function isBootstrapEligible(artifact) {
+    return artifact.bootstrap === true || (includeHistory && artifact.requiresGitHistory === true);
+  }
+
   function isEligibleBaseArtifact(artifact) {
     return (
       isCheckEligible(artifact) &&
-      (!bootstrap || artifact.bootstrap === true) &&
+      (!bootstrap || isBootstrapEligible(artifact)) &&
       (buildLifecycleSet.size === 0 || buildLifecycleSet.has(artifact.buildLifecycle)) &&
       (!usesExplicitIdSelection || onlyIds.has(artifact.id)) &&
       (phaseSet.size === 0 || phaseSet.has(artifact.phase))
@@ -1014,7 +1023,7 @@ export function selectGeneratedArtifacts({
     const artifact = artifactById.get(id);
     if (
       !artifact ||
-      (bootstrap && artifact.bootstrap !== true) ||
+      (bootstrap && !isBootstrapEligible(artifact)) ||
       !isCheckEligible(artifact)
     ) return;
 
@@ -1037,18 +1046,19 @@ export function selectGeneratedArtifacts({
   return GENERATED_ARTIFACT_REGISTRY.filter((artifact) => selectedIds.has(artifact.id));
 }
 
-/** @param {{ bootstrap?: boolean, buildLifecycles?: string[], check?: boolean, integrityOnly?: boolean, only?: string[], phases?: number[] }} [options] */
+/** @param {{ bootstrap?: boolean, buildLifecycles?: string[], check?: boolean, includeHistory?: boolean, integrityOnly?: boolean, only?: string[], phases?: number[] }} [options] */
 export function buildGeneratedArtifactPhases({
   bootstrap = false,
   buildLifecycles = [],
   check = false,
+  includeHistory = false,
   integrityOnly = false,
   only = [],
   phases: phaseFilters = [],
 } = {}) {
   const phaseGroups = new Map();
 
-  for (const artifact of selectGeneratedArtifacts({ bootstrap, buildLifecycles, check, only, phases: phaseFilters })) {
+  for (const artifact of selectGeneratedArtifacts({ bootstrap, buildLifecycles, check, includeHistory, only, phases: phaseFilters })) {
     const command = check && artifact.checkCommand
       ? (integrityOnly ? artifact.integrityCheckCommand ?? artifact.checkCommand : artifact.checkCommand)
       : (bootstrap ? artifact.bootstrapCommand ?? artifact.command : artifact.command);

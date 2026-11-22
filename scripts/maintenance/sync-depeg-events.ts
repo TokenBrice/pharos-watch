@@ -18,6 +18,8 @@ import {
   type DepegEventEntry,
 } from "@shared/types/peg";
 import { formatIsoDate } from "@shared/lib/format";
+import { SITE_API_ORIGIN } from "@shared/lib/runtime-origins";
+import { DEPEG_LEDGER_PAGE_SIZE } from "@shared/types/depeg-event-projection";
 import { DdrResponseSchema, DdrV2BaseRowSchema, DdrV2LiveOverlaySchema } from "@shared/types/depeg-resolver";
 import { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
@@ -71,6 +73,7 @@ const DepegArchiveLineageSchema = DdrResponseSchema.pick({ rows: true }).extend(
 type DepegArchiveLineage = z.infer<typeof DepegArchiveLineageSchema>["rows"];
 
 const MAX_DEPEG_SYNC_PAGES = 1000;
+const SITE_API_DEPEG_SYNC_LIMIT = 5000;
 
 export interface DepegSyncCliOptions {
   allowArchiveShrink: boolean;
@@ -344,13 +347,17 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
       let ledgerProof: DepegLedgerCapture["ledgerProof"];
       let cursor: string | null = null;
       let expectedTotal: number | undefined;
-      const limit = 1000;
+      const isSiteApi = new URL(apiUrl).hostname === new URL(SITE_API_ORIGIN).hostname;
+      const skipLedgerProbe = process.env.PHAROS_DEPEG_SKIP_LEDGER_PROBE?.trim() === "1";
+      // Verified-ledger probes require DEPEG_LEDGER_PAGE_SIZE (1000); unpinned site-api
+      // reads can use limit=5000 with HTTP 400 fallback for rolled-back Workers.
+      let limit = skipLedgerProbe && isSiteApi ? SITE_API_DEPEG_SYNC_LIMIT : DEPEG_LEDGER_PAGE_SIZE;
       const maxPages = MAX_DEPEG_SYNC_PAGES; // safety ceiling, never a successful partial ledger
       for (let page = 0; page < maxPages; page++) {
         const params = new URLSearchParams();
         params.set("limit", String(limit));
         params.set("includeTotal", "true");
-        if (page === 0 || ledgerProof) params.set("ledgerGeneration", ledgerProof?.generation ?? "latest");
+        if ((!skipLedgerProbe && page === 0) || ledgerProof) params.set("ledgerGeneration", ledgerProof?.generation ?? "latest");
         if (cursor) params.set("cursor", cursor);
         const fetchPage = () => fetchWithRetry(`${apiUrl}?${params}`, { headers }, {
           logLabel: "sync-depeg-events",
@@ -359,10 +366,24 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
           terminalResponse: isMissingLedgerManifest,
         });
         let res = await fetchPage();
-        let unpinned = false;
-        if (page === 0 && await isMissingLedgerManifest(res)) {
+        let unpinned = skipLedgerProbe;
+        if (page === 0 && !skipLedgerProbe && await isMissingLedgerManifest(res)) {
+          await res.body?.cancel();
           params.delete("ledgerGeneration");
           unpinned = true;
+          if (isSiteApi) {
+            limit = SITE_API_DEPEG_SYNC_LIMIT;
+            params.set("limit", String(limit));
+          }
+          res = await fetchPage();
+        }
+        if (page === 0 && unpinned && limit > DEPEG_LEDGER_PAGE_SIZE && res.status === 400) {
+          await res.body?.cancel();
+          console.warn(
+            `[sync-depeg-events] API rejected limit=${limit} with HTTP 400; falling back to limit=${DEPEG_LEDGER_PAGE_SIZE}`,
+          );
+          limit = DEPEG_LEDGER_PAGE_SIZE;
+          params.set("limit", String(limit));
           res = await fetchPage();
         }
         if (!res.ok) {

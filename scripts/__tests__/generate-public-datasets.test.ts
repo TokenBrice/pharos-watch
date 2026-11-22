@@ -114,145 +114,70 @@ function runGenerator(root: string, args: string[] = [], env: Partial<NodeJS.Pro
 
 function makeEnvelope(snapshotDate = DATE) {
   return {
-    snapshotDate,
-    generatedAt: 1_779_000_000,
-    methodologyVersions: {},
-    stablecoins: [
-      {
-        id: "usdc-circle",
-        name: "USD Coin",
-        symbol: "USDC",
-        pegType: "peggedUSD",
-        pegMechanism: "fiat-backed",
-        price: 1,
-        circulating: { ethereum: 1_000_000 } as Record<string, number>,
-        chains: ["ethereum"],
-        mechanismArchetype: "fiat-cash",
-        pegReferenceId: "usdc-circle",
-        jurisdiction: { country: "United States" },
-      },
-    ],
+    snapshotDate, generatedAt: 1_779_000_000, methodologyVersions: {},
+    stablecoins: [{
+      id: "usdc-circle", name: "USD Coin", symbol: "USDC", pegType: "peggedUSD", pegMechanism: "fiat-backed",
+      price: 1, circulating: { ethereum: 1_000_000 } as Record<string, number>, chains: ["ethereum"],
+      mechanismArchetype: "fiat-cash", pegReferenceId: "usdc-circle", jurisdiction: { country: "United States" },
+    }],
     reportCards: { scores: { "usdc-circle": { pegScore: 99, safetyGrade: "A" } } },
     dews: [{ stablecoinId: "usdc-circle", score: 4, band: "normal" }],
     liquidity: [{ stablecoinId: "usdc-circle", liquidityScore: 95, coverageClass: "deep" }],
   };
 }
 
-// Nonzero documentation counts would also require matching documentationCauseGaps.
 function makeOpenEvidence(cardId = "usdc-circle"): V9OpenEvidence {
   return {
-    semantics: "open-question-v1",
-    totals: { questions: 3, open: 1, issuer: 2, documentation: 0, obligations: 6 },
+    semantics: "open-question-v1", totals: { questions: 3, open: 1, issuer: 2, documentation: 0, obligations: 6 },
     owners: [{ responsibility: "unresearched", questions: 1, obligations: 2 }],
-    // Rows are canonical: unique and sorted by bucket, then code.
     reasons: [
       { code: "material-reserve-slice-unstructured", bucket: "issuer", questions: 2, obligations: 4 },
       { code: "unresolved-control-identity", bucket: "open", questions: 1, obligations: 2 },
     ],
     documentation: { questions: 0, datums: 0, facts: 0, reasons: [] },
     issuer: { questions: 2, assets: 1, oldestReviewedAtSec: 1_752_000_000, newestReviewedAtSec: 1_752_500_000 },
-    byCard: [{
-      id: cardId,
-      openBucketQuestionsCarried: 1,
-      inheritedOpenBucketQuestionsCarried: 0,
-      openBucketObligationsCarried: 2,
-      documentationObligationsCarried: 0,
-    }],
+    byCard: [{ id: cardId, openBucketQuestionsCarried: 1, inheritedOpenBucketQuestionsCarried: 0, openBucketObligationsCarried: 2, documentationObligationsCarried: 0 }],
   };
 }
 
 function makeCurrentEnvelope(snapshotDate = DATE) {
-  const response = makeReportCardsV9Response({
-    cards: [makeV9Card({ id: "usdc-circle", score: 88, grade: "A+" })],
-    openEvidence: makeOpenEvidence(),
-  });
+  const response = makeReportCardsV9Response({ cards: [makeV9Card({ id: "usdc-circle", score: 88, grade: "A+" })], openEvidence: makeOpenEvidence() });
   return {
-    ...makeEnvelope(snapshotDate),
-    version: 2,
-    safetyScoreIdentity: response.safetyScoreIdentity,
-    reportCards: response,
+    ...makeEnvelope(snapshotDate), version: 2, safetyScoreIdentity: response.safetyScoreIdentity, reportCards: response,
     dews: [{ stablecoinId: "usdc-circle", computedAt: 1_778_900_000, score: 4, band: "normal" }],
-    liquidity: [{
-      stablecoinId: "usdc-circle",
-      liquidityScore: 95,
-      coverageClass: "deep",
-      updatedAt: 1_778_900_100,
-      unavailableReason: null,
-      methodologyVersion: "6.98",
-    }],
+    liquidity: [{ stablecoinId: "usdc-circle", liquidityScore: 95, coverageClass: "deep", updatedAt: 1_778_900_100, unavailableReason: null, methodologyVersion: "6.98" }],
   };
 }
 
-function withReport(reportCards: ReturnType<typeof makeReportCardsV9Response>) {
-  return { ...makeCurrentEnvelope(), reportCards, safetyScoreIdentity: reportCards.safetyScoreIdentity };
-}
-
+const withReport = (reportCards: ReturnType<typeof makeReportCardsV9Response>) => ({ ...makeCurrentEnvelope(), reportCards, safetyScoreIdentity: reportCards.safetyScoreIdentity });
 type TopicInputs = Parameters<typeof buildTopicSpecs>;
-
-function specFor(
-  topic: string,
-  envelope: TopicInputs[0] = makeEnvelope(),
-  events: TopicInputs[1] = [],
-  options: TopicInputs[3] = {},
-) {
-  return buildTopicSpecs(envelope, events, envelope?.snapshotDate ?? DATE, options)
-    .find((spec) => spec.topic === topic)!;
-}
-
+const specFor = (topic: string, envelope: TopicInputs[0] = makeEnvelope(), events: TopicInputs[1] = [], options: TopicInputs[3] = {}) =>
+  buildTopicSpecs(envelope, events, envelope?.snapshotDate ?? DATE, options).find((s) => s.topic === topic)!;
 const depegRows = (events: Parameters<typeof projectDepegHistory>[0]) => projectDepegHistory(events, DATE);
 const parseLines = (text: string) => text.trim().split("\n").map((line) => JSON.parse(line));
 const readMeta = (text: string) => JSON.parse(text.split("\n")[0]!);
 const csvLines = (text: string) => text.trimEnd().split("\n").filter((line) => !line.startsWith("#"));
 const artifactsFor = (spec: ReturnType<typeof specFor>) => buildTopicArtifacts(spec, AS_OF);
-function render(spec: ReturnType<typeof specFor>, asOf = AS_OF) {
+const render = (spec: ReturnType<typeof specFor>, asOf = AS_OF) => {
   const artifacts = buildTopicArtifacts(spec, asOf);
   return { artifacts, json: JSON.parse(artifacts.json), ndjsonMeta: readMeta(artifacts.ndjson) };
-}
+};
 const loadInputs = () => loadPublicDatasetLiveInputs("https://api.example.test", DATE);
 
 function makeEvent(pendingReason: string | null) {
   return {
-    id: 42,
-    slug: "usdc-circle-2026-05-14",
-    stablecoinId: "usdc-circle",
-    symbol: "USDC",
-    pegType: "USD",
-    direction: "below" as const,
-    peakDeviationBps: 300,
-    startedAt: Date.UTC(2026, 4, 14) / 1000,
-    endedAt: Date.UTC(2026, 4, 15) / 1000,
-    startPrice: 1,
-    peakPrice: 0.97,
-    recoveryPrice: 1,
-    pegReference: 1,
-    source: "live" as const,
-    confirmationSources: "CoinGecko",
-    pendingReason,
-    closeReason: null,
-    provenance: null,
+    id: 42, slug: "usdc-circle-2026-05-14", stablecoinId: "usdc-circle", symbol: "USDC", pegType: "USD",
+    direction: "below" as const, peakDeviationBps: 300, startedAt: Date.UTC(2026, 4, 14) / 1000, endedAt: Date.UTC(2026, 4, 15) / 1000,
+    startPrice: 1, peakPrice: 0.97, recoveryPrice: 1, pegReference: 1, source: "live" as const,
+    confirmationSources: "CoinGecko", pendingReason, closeReason: null, provenance: null,
   };
 }
-
-function makeCoverageSentinel() {
-  return {
-    ...makeEvent(null),
-    id: 43,
-    startedAt: Date.parse("2026-02-13T23:59:00Z") / 1000,
-  };
-}
-
-function makeCapture(eventCount = 2): depegCapture.DepegLedgerCapture {
-  return {
-    schemaVersion: 1,
-    captureId: `sha256:${"a".repeat(64)}`,
-    observationStartedAtISO: "2026-05-19T10:00:00.000Z",
-    observedAtISO: "2026-05-19T10:01:00.000Z",
-    sourceUrl: "https://api.example.test/api/depeg-events",
-    methodologyVersionLabel: "v7.0",
-    eventCount,
-    apiTotal: eventCount,
-  };
-}
+const makeCoverageSentinel = () => ({ ...makeEvent(null), id: 43, startedAt: Date.parse("2026-02-13T23:59:00Z") / 1000 });
+const makeCapture = (eventCount = 2): depegCapture.DepegLedgerCapture => ({
+  schemaVersion: 1, captureId: `sha256:${"a".repeat(64)}`, observationStartedAtISO: "2026-05-19T10:00:00.000Z",
+  observedAtISO: "2026-05-19T10:01:00.000Z", sourceUrl: "https://api.example.test/api/depeg-events",
+  methodologyVersionLabel: "v7.0", eventCount, apiTotal: eventCount,
+});
 
 describe("generate-public-datasets", () => {
   it("preserves supply null/zero and appends reason after existing columns", () => {
@@ -523,125 +448,61 @@ describe("generate-public-datasets", () => {
   });
 
   it("emits JSON/NDJSON projection and one CSV preamble", () => {
-    const envelope = makeCurrentEnvelope();
-    const spec = specFor("scores-latest", envelope);
-
+    const envelope = makeCurrentEnvelope(), spec = specFor("scores-latest", envelope);
     expect(spec.displayProjection).toMatchObject({
-      version: 2,
-      snapshotDate: "2026-05-16",
-      capturedAtSec: envelope.generatedAt,
-      sourceSnapshotPath: "/api/snapshots/2026-05-16.json",
-      safetyUnavailableReason: null,
+      version: 2, snapshotDate: "2026-05-16", capturedAtSec: envelope.generatedAt,
+      sourceSnapshotPath: "/api/snapshots/2026-05-16.json", safetyUnavailableReason: null,
       safety: {
-        identity: envelope.reportCards.safetyScoreIdentity,
-        asOfSec: envelope.reportCards.asOfSec,
-        publishedAtSec: envelope.reportCards.updatedAt,
-        sourceGenerations: envelope.reportCards.source.sourceGenerations,
-        publicationHealth: envelope.reportCards.publicationHealth,
-        completeness: envelope.reportCards.completeness,
+        identity: envelope.reportCards.safetyScoreIdentity, asOfSec: envelope.reportCards.asOfSec,
+        publishedAtSec: envelope.reportCards.updatedAt, sourceGenerations: envelope.reportCards.source.sourceGenerations,
+        publicationHealth: envelope.reportCards.publicationHealth, completeness: envelope.reportCards.completeness,
       },
-      openEvidence: {
-        semantics: "open-question-v1",
-        totals: envelope.reportCards.openEvidence!.totals,
-      },
+      openEvidence: { semantics: "open-question-v1", totals: envelope.reportCards.openEvidence!.totals },
       openEvidenceUnavailableReason: null,
     });
-
     const { artifacts, json, ndjsonMeta } = render(spec);
     expect(json._meta.asOfISO).toBe(AS_OF);
     expect(json._meta.displayProjection).toEqual(spec.displayProjection);
     expect(ndjsonMeta._meta.displayProjection).toEqual(spec.displayProjection);
-    // A second comment would collapse Sheets IMPORTDATA into one cell.
     expect(artifacts.csv.split("\n").filter((line) => line.startsWith("#"))).toHaveLength(1);
     expect(artifacts.csv).not.toContain("Display projection");
     expect(artifacts.csv).not.toContain('"version":2');
-    expect(csvLines(artifacts.csv)[0]?.split(",")).toEqual(
-      expect.arrayContaining([
-        "ratingStatus",
-        "safetyDisplay",
-        "dewsComputedAt",
-        "liquidityUpdatedAt",
-        "liquidityUnavailableReason",
-        "liquidityMethodologyVersion",
-      ]),
-    );
+    expect(csvLines(artifacts.csv)[0]?.split(",")).toEqual(expect.arrayContaining([
+      "ratingStatus", "safetyDisplay", "dewsComputedAt", "liquidityUpdatedAt", "liquidityUnavailableReason", "liquidityMethodologyVersion",
+    ]));
     expect(json.rows).toEqual([expect.objectContaining({
-      stablecoinId: "usdc-circle",
-      ratingStatus: "rated",
+      stablecoinId: "usdc-circle", ratingStatus: "rated",
       safetyDisplay: { nrReasons: [], reasonCodes: [], partialEvidence: null },
-      dewsComputedAt: 1_778_900_000,
-      liquidityUpdatedAt: 1_778_900_100,
-      liquidityUnavailableReason: null,
-      liquidityMethodologyVersion: "6.98",
+      dewsComputedAt: 1_778_900_000, liquidityUpdatedAt: 1_778_900_100, liquidityUnavailableReason: null, liquidityMethodologyVersion: "6.98",
     })]);
   });
 
   it("retains rated cards with missing market/liquidity data", () => {
     const response = makeReportCardsV9Response({
-      cards: [
-        makeV9Card({ id: "usdc-circle", score: 88, grade: "A+" }),
-        makeV9Card({ id: "usdt-tether", score: 86, grade: "A" }),
-      ],
+      cards: [makeV9Card({ id: "usdc-circle", score: 88, grade: "A+" }), makeV9Card({ id: "usdt-tether", score: 86, grade: "A" })],
     });
-    const envelope = withReport(response);
-    const rows = specFor("scores-latest", envelope)?.rows as Array<Record<string, unknown>>;
-
-    expect(rows.map((row) => row.stablecoinId)).toEqual(["usdc-circle", "usdt-tether"]);
-    expect(rows[1]).toMatchObject({
-      symbol: "USDT",
-      safetyScore: 86,
-      safetyGrade: "A",
-      ratingStatus: "rated",
-      liquidityScore: null,
-      liquidityUnavailableReason: "source-row-missing",
-    });
+    const rows = specFor("scores-latest", withReport(response))?.rows as Array<Record<string, unknown>>;
+    expect(rows.map((r) => r.stablecoinId)).toEqual(["usdc-circle", "usdt-tether"]);
+    expect(rows[1]).toMatchObject({ symbol: "USDT", safetyScore: 86, safetyGrade: "A", ratingStatus: "rated", liquidityScore: null, liquidityUnavailableReason: "source-row-missing" });
   });
 
   it("preserves liquidity rejection reasons and methodology versions", () => {
-    const envelope = makeCurrentEnvelope();
     const row = projectScoresLatest({
-      ...envelope,
-      liquidity: [{
-        stablecoinId: "usdc-circle",
-        liquidityScore: null,
-        coverageClass: null,
-        updatedAt: 1_778_900_100,
-        unavailableReason: "invalid-coverage-evidence",
-        methodologyVersion: "6.97",
-      }],
+      ...makeCurrentEnvelope(),
+      liquidity: [{ stablecoinId: "usdc-circle", liquidityScore: null, coverageClass: null, updatedAt: 1_778_900_100, unavailableReason: "invalid-coverage-evidence", methodologyVersion: "6.97" }],
     }).rows[0]!;
-    expect(row).toMatchObject({
-      liquidityScore: null,
-      coverageClass: null,
-      liquidityUpdatedAt: 1_778_900_100,
-      liquidityUnavailableReason: "invalid-coverage-evidence",
-      liquidityMethodologyVersion: "6.97",
-    });
+    expect(row).toMatchObject({ liquidityScore: null, coverageClass: null, liquidityUpdatedAt: 1_778_900_100, liquidityUnavailableReason: "invalid-coverage-evidence", liquidityMethodologyVersion: "6.97" });
   });
 
   it("rejects accepted IDs absent from market and registry", () => {
-    const response = makeReportCardsV9Response({
-      cards: [makeV9Card({ id: "ghost-coin", score: 88, grade: "A+" })],
-    });
-    const envelope = withReport(response);
-    expect(() => buildTopicSpecs(envelope, [], DATE)).toThrow(
-      "neither a market row nor a tracked registry identity",
-    );
+    const envelope = withReport(makeReportCardsV9Response({ cards: [makeV9Card({ id: "ghost-coin", score: 88, grade: "A+" })] }));
+    expect(() => buildTopicSpecs(envelope, [], DATE)).toThrow("neither a market row nor a tracked registry identity");
   });
 
   it("rejects Safety identity mismatches and future publication clocks", () => {
     const envelope = makeCurrentEnvelope();
-    expect(() => projectScoresLatest({
-      ...envelope,
-      safetyScoreIdentity: {
-        ...envelope.reportCards.safetyScoreIdentity,
-        publicationGenerationId: "another-publication",
-      },
-    })).toThrow("identity does not match");
-    expect(() => projectScoresLatest({
-      ...envelope,
-      generatedAt: envelope.reportCards.updatedAt - 1,
-    })).toThrow("clocks do not precede the snapshot collection clock");
+    expect(() => projectScoresLatest({ ...envelope, safetyScoreIdentity: { ...envelope.reportCards.safetyScoreIdentity, publicationGenerationId: "another-publication" } })).toThrow("identity does not match");
+    expect(() => projectScoresLatest({ ...envelope, generatedAt: envelope.reportCards.updatedAt - 1 })).toThrow("clocks do not precede the snapshot collection clock");
   });
 
   it("preserves pipeline gaps and grade holds without NR/provisional", () => {
@@ -680,47 +541,22 @@ describe("generate-public-datasets", () => {
 
   it("retains report8 archive facts on historical dates only", () => {
     const envelope = makeCurrentEnvelope();
-    const {
-      openEvidence: _openEvidence,
-      openEvidenceUnavailableReason: _unavailableReason,
-      ...archived
-    } = envelope.reportCards;
-    void _openEvidence;
-    void _unavailableReason;
-    const archivedEnvelope = {
-      ...envelope,
-      reportCards: { ...archived, schemaVersion: 8 },
-    };
+    const { openEvidence: _oe, openEvidenceUnavailableReason: _ur, ...archived } = envelope.reportCards;
+    void _oe; void _ur;
+    const archivedEnvelope = { ...envelope, reportCards: { ...archived, schemaVersion: 8 } };
     const spec = specFor("scores-latest", archivedEnvelope, undefined, { historical: true });
-
     expect(spec.displayProjection).toMatchObject({
-      version: 2,
-      safety: {
-        asOfSec: envelope.reportCards.asOfSec,
-        publishedAtSec: envelope.reportCards.updatedAt,
-        completeness: envelope.reportCards.completeness,
-      },
-      safetyUnavailableReason: null,
-      openEvidence: null,
-      openEvidenceUnavailableReason: "open-evidence-unavailable",
+      version: 2, safetyUnavailableReason: null, openEvidence: null, openEvidenceUnavailableReason: "open-evidence-unavailable",
+      safety: { asOfSec: envelope.reportCards.asOfSec, publishedAtSec: envelope.reportCards.updatedAt, completeness: envelope.reportCards.completeness },
     });
     expect(spec.rows[0]).toMatchObject({
-      stablecoinId: "usdc-circle",
-      symbol: "USDC",
-      safetyScore: 88,
-      safetyGrade: "A+",
-      ratingStatus: "rated",
-      dewsScore: 4,
-      safetyDisplay: { nrReasons: [], reasonCodes: [], partialEvidence: null },
+      stablecoinId: "usdc-circle", symbol: "USDC", safetyScore: 88, safetyGrade: "A+", ratingStatus: "rated",
+      dewsScore: 4, safetyDisplay: { nrReasons: [], reasonCodes: [], partialEvidence: null },
     });
-
-    expect(() => projectScoresLatest(archivedEnvelope, { historical: false }))
-      .toThrow("invalid V9 Safety publication");
-    expect(() => specFor("scores-latest", archivedEnvelope, [], { historical: true, requireCurrentSafety: true }))
-      .toThrow("invalid V9 Safety publication");
+    expect(() => projectScoresLatest(archivedEnvelope, { historical: false })).toThrow("invalid V9 Safety publication");
+    expect(() => specFor("scores-latest", archivedEnvelope, [], { historical: true, requireCurrentSafety: true })).toThrow("invalid V9 Safety publication");
     vi.stubEnv(PUBLIC_DATASETS_REQUIRE_CURRENT_SAFETY, "1");
-    expect(() => specFor("scores-latest", archivedEnvelope, [], { historical: true }))
-      .toThrow("invalid V9 Safety publication");
+    expect(() => specFor("scores-latest", archivedEnvelope, [], { historical: true })).toThrow("invalid V9 Safety publication");
   });
 
   it.each([
@@ -804,47 +640,28 @@ describe("generate-public-datasets", () => {
   });
 
   it("projects envelope peg metadata and methodology", () => {
-    const envelope = {
-      ...makeEnvelope(),
-      methodologyVersions: { reportCard: "7.25", dews: "6.0", liquidityScore: "5.6" },
-    };
-
+    const envelope = { ...makeEnvelope(), methodologyVersions: { reportCard: "7.25", dews: "6.0", liquidityScore: "5.6" } };
     const specs = buildTopicSpecs(envelope, [], "2026-05-16", { historical: true });
-    const pegRows = specs.find((spec) => spec.topic === "peg-mechanism-distribution")?.rows as Array<Record<string, unknown>>;
-
-    expect(pegRows).toEqual([{
-      mechanismArchetype: "fiat-cash",
-      mechanismLabel: "Custodial Cash and Cash-Equivalents",
-      pegReferenceId: "usdc-circle",
-      jurisdiction: "United States",
-      coinCount: 1,
+    expect(specs.find((s) => s.topic === "peg-mechanism-distribution")?.rows).toEqual([{
+      mechanismArchetype: "fiat-cash", mechanismLabel: "Custodial Cash and Cash-Equivalents", pegReferenceId: "usdc-circle", jurisdiction: "United States", coinCount: 1,
     }]);
-    expect(specs.find((spec) => spec.topic === "top-stablecoins")?.methodologyLabel).toBe("safety-score v7.25");
-    expect(specs.find((spec) => spec.topic === "depeg-history")?.methodologyLabel).toBe(`depeg-dews ${DEPEG_DEWS_METHODOLOGY_VERSION_LABEL}`);
-    expect(specs.find((spec) => spec.topic === "scores-latest")?.methodologyLabel).toBe(
-      "safety-score v7.25 | dews v6.0 | liquidity v5.6",
-    );
+    expect(specs.find((s) => s.topic === "top-stablecoins")?.methodologyLabel).toBe("safety-score v7.25");
+    expect(specs.find((s) => s.topic === "depeg-history")?.methodologyLabel).toBe(`depeg-dews ${DEPEG_DEWS_METHODOLOGY_VERSION_LABEL}`);
+    expect(specs.find((s) => s.topic === "scores-latest")?.methodologyLabel).toBe("safety-score v7.25 | dews v6.0 | liquidity v5.6");
   });
 
   it("warns on approximated legacy peg metadata", () => {
-    const coin = makeEnvelope().stablecoins[0]!;
-    const { mechanismArchetype, pegReferenceId, jurisdiction, ...legacyCoin } = coin;
-    void mechanismArchetype;
-    void pegReferenceId;
-    void jurisdiction;
+    const { mechanismArchetype: _m, pegReferenceId: _p, jurisdiction: _j, ...legacyCoin } = makeEnvelope().stablecoins[0]!;
+    void _m; void _p; void _j;
     const envelope = { ...makeEnvelope(), stablecoins: [legacyCoin, { ...legacyCoin, id: "unclassified-test-coin" }] };
     const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-
     const pegSpec = specFor("peg-mechanism-distribution", envelope, undefined, { historical: true });
     const latest = specFor("peg-mechanism-distribution", envelope, undefined, { historical: false });
     expect(latest.rows).toEqual(pegSpec.rows);
     expect(latest.rows).toHaveLength(2);
     expect(latest.rows).toContainEqual(expect.objectContaining({ pegReferenceId: "unknown", coinCount: 1 }));
     expect(latest.metadataNote).toMatch(/enrichment sha256:[0-9a-f]{64}/);
-
-    expect(warning).toHaveBeenCalledWith(
-      expect.stringContaining("using current catalog metadata as an approximation"),
-    );
+    expect(warning).toHaveBeenCalledWith(expect.stringContaining("using current catalog metadata as an approximation"));
     expect(pegSpec?.metadataStatus).toBe("approximated");
     expect(pegSpec?.metadataNote).toContain("legacy snapshot 2026-05-16");
     warning.mockRestore();
@@ -1098,6 +915,28 @@ describe("PR mirror integrity mode", () => {
     for (const mode of [false, true]) expect(checkAllTopics(dirs, mode)).toMatchObject({ ok: false, reason: expect.stringContaining(reason) });
   });
 
+  it("reads validated --snapshot-file without fetching and fails closed on invalid or mismatched files", async () => {
+    const root = await makeRoot();
+    const fetchMock = vi.fn(() => { throw new Error("network forbidden"); });
+    vi.stubGlobal("fetch", fetchMock);
+    const validPath = path.join(root, "snapshot.json");
+    await writeFile(validPath, JSON.stringify(makeEnvelope()));
+    const inputs = await loadPublicDatasetLiveInputs("", DATE, { snapshotFile: validPath });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(inputs.effectiveSnapshotDate).toBe(DATE);
+    expect(inputs.envelope.snapshotDate).toBe(DATE);
+    const badPath = path.join(root, "bad.json");
+    await expect(loadPublicDatasetLiveInputs("", DATE, { snapshotFile: path.join(root, "missing.json") })).rejects.toThrow("Failed to read");
+    for (const [body, err] of [
+      ["{broken", "not valid JSON"],
+      [JSON.stringify({ ...makeEnvelope(), stablecoins: "bad" }), "not a valid public snapshot envelope"],
+      [JSON.stringify(makeEnvelope("2026-05-15")), `expected ${DATE}`],
+    ] as const) {
+      await writeFile(badPath, body);
+      await expect(loadPublicDatasetLiveInputs("", DATE, { snapshotFile: badPath })).rejects.toThrow(err);
+    }
+  });
+
   it("keeps CLI checks read-only and generation/fallback strict", async () => {
     const root = await makeRoot();
     await copyDatasetWorkspace(root);
@@ -1108,8 +947,12 @@ describe("PR mirror integrity mode", () => {
     const checked = await runGenerator(root, ["--check", "--integrity-only"]);
     expect(checked.stdout).toContain("integrity passed");
     expect(checked.stdout).not.toContain("are current");
+    const badSnapshot = path.join(root, "bad-snap.json");
+    await writeFile(badSnapshot, JSON.stringify(makeEnvelope("2026-05-15")));
     for (const [args, env, reason] of [
       [["--integrity-only"], {}, "requires --check"],
+      [["--check", "--snapshot-file", badSnapshot], {}, "cannot be used together"],
+      [["--snapshot-file", badSnapshot], { PAGES_RELEASE_ALLOW_EXISTING_DATA_ON_FETCH_FAILURE: "1" }, `expected ${DATE}`],
       [["--check"], {}, "no more than 2 days old"],
       [[], { PUBLIC_DATASETS_REQUIRE_API: "1" }, "No public dataset API source configured"],
       [[], {}, "no more than 2 days old"],

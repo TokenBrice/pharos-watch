@@ -4,6 +4,21 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
+import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
+
+type WorkflowStep = {
+  id?: string; name?: string; uses?: string; run?: string; if?: string;
+  permissions?: Record<string, string>;
+  "continue-on-error"?: boolean; "timeout-minutes"?: number;
+  with?: Record<string, unknown>; env?: Record<string, string>;
+};
+type WorkflowJob = {
+  environment?: unknown; needs?: string | string[]; if?: string;
+  permissions?: Record<string, string>; "continue-on-error"?: boolean;
+  "timeout-minutes"?: number; env?: Record<string, string>;
+  outputs?: Record<string, string>; strategy?: Record<string, unknown>; steps?: WorkflowStep[];
+};
+type Workflow = { permissions?: Record<string, string>; jobs: Record<string, WorkflowJob> };
 
 function readRepoFile(path: string): string {
   return readFileSync(resolve(process.cwd(), path), "utf8");
@@ -28,147 +43,82 @@ describe("CI workflow scope", () => {
     ]));
   });
 
-  it("checks incident review keys once on the prepared PR workspace", () => {
-    const workflow = parseYaml(readRepoFile(".github/workflows/pull-request-checks.yml")) as {
-      jobs: Record<string, { steps: Array<{ name?: string; uses?: string; run?: string }> }>;
-    };
-    const steps = workflow.jobs.prepare.steps;
-    const gate = steps.findIndex((step) => step.name === "Check incident review keys");
+  it("runs per-PR data, admission, and corpus-budget checks once in parallel with test planning", () => {
+    const workflow = parseYaml(readRepoFile(".github/workflows/pull-request-checks.yml")) as Workflow;
+    const steps = workflow.jobs.prepare.steps!;
     const setup = steps.findIndex((step) => step.uses === "./.github/actions/setup-workspace");
+    const gate = steps.findIndex((step) => step.id === "test-corpus-budget");
     expect(setup).toBeGreaterThanOrEqual(0);
     expect(gate).toBeGreaterThan(setup);
-    // One invocation per PR: restored validation shards never re-run the gate.
-    expect(steps.filter((step) => step.run?.includes("check:incident-review-keys"))).toHaveLength(1);
-    expect(steps[gate].run).toBe("npm run check:incident-review-keys");
-  });
-
-  it("gates new stablecoin admissions once on the prepared workspace against the frozen base", () => {
-    const workflow = parseYaml(readRepoFile(".github/workflows/pull-request-checks.yml")) as {
-      jobs: Record<string, { steps: Array<{ name?: string; uses?: string; run?: string; env?: Record<string, string> }> }>;
-    };
-    const steps = workflow.jobs.prepare.steps;
-    const gate = steps.findIndex((step) => step.name === "Check new-asset evidence packet");
-    // The receipt is bound to the post-addition registry fingerprint, so the
-    // gate must run after npm ci + bootstrap:generated inside setup-workspace.
-    const setup = steps.findIndex((step) => step.uses === "./.github/actions/setup-workspace");
-    expect(setup).toBeGreaterThanOrEqual(0);
-    expect(gate).toBeGreaterThan(setup);
-    // One invocation per PR: restored validation shards never re-run the gate.
-    expect(steps.filter((step) => step.run?.includes("check:new-asset-evidence-packet"))).toHaveLength(1);
-    expect(steps[gate].env).toEqual({
-      PR_BASE_SHA: "${{ github.event.pull_request.base.sha }}",
-      NEW_ASSET_GATE_OVERRIDE: "${{ contains(github.event.pull_request.labels.*.name, 'new-asset-gate-override') }}",
-    });
-    // The owner label is the only path to `--override`; it never bypasses a
-    // missing receipt or a counted mint-authority gap.
-    expect(steps[gate].run?.match(/--override/g)).toHaveLength(1);
-    expect(steps[gate].run)
-      .toContain('if [[ "${NEW_ASSET_GATE_OVERRIDE}" == "true" ]]; then args+=(--override); fi');
-  });
-
-  it("runs the test corpus budget once per PR, outside the selection that skips test-only PRs", () => {
-    const workflow = parseYaml(readRepoFile(".github/workflows/pull-request-checks.yml")) as {
-      jobs: Record<string, {
-        outputs?: Record<string, string>;
-        env?: Record<string, string>;
-        steps: Array<{ name?: string; id?: string; uses?: string; run?: string; if?: string; env?: Record<string, string>; "continue-on-error"?: boolean }>;
-      }>;
-    };
-    const steps = workflow.jobs.prepare.steps;
-    const gate = steps.findIndex((step) => step.name === "Check test corpus budget");
-    const setup = steps.findIndex((step) => step.uses === "./.github/actions/setup-workspace");
-    expect(setup).toBeGreaterThanOrEqual(0);
-    expect(gate).toBeGreaterThan(setup);
-    expect(steps.filter((step) => step.run?.includes("check:test-corpus-budget"))).toHaveLength(1);
-    // Unconditional: check:structural's selection skips test-only PRs, so the
-    // gate must not inherit a condition from the classify step.
     expect(steps[gate].if).toBeUndefined();
+    expect(steps[gate]["continue-on-error"]).toBeUndefined();
+    for (const cmd of ["check:incident-review-keys", "check:new-asset-evidence-packet", "check:test-corpus-budget", "check-donation-ledger-transition.ts"]) {
+      expect(steps.filter((step) => step.run?.includes(cmd))).toHaveLength(1);
+    }
     expect(steps[gate].env).toEqual({
+      DOCS_ONLY: "${{ steps.classify.outputs.docs_only }}",
+      GIT_OPTIONAL_LOCKS: "0",
       PR_BASE_SHA: "${{ github.event.pull_request.base.sha }}",
       TEST_BUDGET_OVERRIDE: "${{ contains(github.event.pull_request.labels.*.name, 'test-budget-override') }}",
+      NEW_ASSET_GATE_OVERRIDE: "${{ contains(github.event.pull_request.labels.*.name, 'new-asset-gate-override') }}",
     });
-    expect(steps[gate].run?.match(/--override/g)).toHaveLength(1);
-    expect(steps[gate].run)
-      .toContain('if [[ "${TEST_BUDGET_OVERRIDE}" == "true" ]]; then args+=(--override); fi');
-
-    // Non-fatal in prepare, because a failure there must not skip the validation
-    // lanes; the recorded exit code is what the PR gate enforces.
-    expect(steps[gate].id).toBe("test-corpus-budget");
-    expect(steps[gate]["continue-on-error"]).toBe(true);
-    expect(steps[gate].run).toContain('echo "exit-code=${status}" >> "${GITHUB_OUTPUT}"');
+    // Each owner label maps only to its own `--override` flag; budget failure
+    // stays non-fatal in prepare (recorded for PR gate) while the other checks fail fast.
+    expect(steps[gate].run?.match(/--override/g)).toHaveLength(2);
+    expect(steps[gate].run).toContain('if [[ "${TEST_BUDGET_OVERRIDE}" == "true" ]]; then budget_args+=(--override); fi');
+    expect(steps[gate].run).toContain('if [[ "${NEW_ASSET_GATE_OVERRIDE}" == "true" ]]; then new_asset_args+=(--override); fi');
+    expect(steps[gate].run).toContain('echo "exit-code=${budget_status}" >> "${GITHUB_OUTPUT}"');
     expect(steps[gate].run).toContain("GITHUB_STEP_SUMMARY");
     expect(workflow.jobs.prepare.outputs?.test_corpus_budget).toBe("${{ steps.test-corpus-budget.outputs.exit-code }}");
     const prGate = workflow.jobs["pr-gate"];
     expect(prGate.env?.TEST_CORPUS_BUDGET).toBe("${{ needs.prepare.outputs.test_corpus_budget }}");
-    const require = prGate.steps.find((step) => step.name === "Require the manifest-selected validation path");
+    const require = prGate.steps!.find((step) => step.name === "Require the manifest-selected validation path");
     expect(require?.run).toContain('if [ "${TEST_CORPUS_BUDGET:-missing}" != "0" ]; then');
     expect(require?.run).toContain("exit 1");
 
-    const nightly = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as {
-      jobs: Record<string, { steps: Array<{ name?: string; run?: string }> }>;
-    };
-    // The schedule has no PR base, so the nightly declares H2-only instead of
-    // leaving the add diff to an implicit empty base.
-    expect(nightly.jobs["full-static"].steps.filter((step) => step.run?.startsWith("npm run check:test-corpus-budget")))
-      .toHaveLength(1);
-    expect(nightly.jobs["full-static"].steps.some((step) => step.run?.includes("check:test-corpus-budget -- --metrics-only")))
-      .toBe(true);
+    const nightly = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as Workflow;
+    expect(nightly.jobs["full-static"].steps!.filter((step) => step.run?.startsWith("npm run check:test-corpus-budget"))).toHaveLength(1);
+    expect(nightly.jobs["full-static"].steps!.some((step) => step.run?.includes("check:test-corpus-budget -- --metrics-only"))).toBe(true);
   });
 
   it("feeds nightly Lighthouse trusted retained release data with a token confined to acquisition", () => {
-    const workflow = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as {
-      jobs: Record<string, {
-        if?: string;
-        permissions?: Record<string, string>;
-        env?: Record<string, string>;
-        steps: Array<{ name?: string; run?: string; env?: Record<string, string> }>;
-      }>;
-    };
+    const workflow = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as Workflow;
     const job = workflow.jobs.lighthouse;
+    const steps = job.steps!;
     expect(job.if).toContain("refs/heads/main");
     expect(job.permissions).toEqual({ contents: "read", actions: "read" });
     expect(job.env?.GH_TOKEN).toBeUndefined();
-    const acquire = job.steps.findIndex((step) => step.run?.includes("preparePagesReleaseData"));
-    const build = job.steps.findIndex((step) => step.run === "npm run check:pages-artifact");
+    const acquire = steps.findIndex((step) => step.run?.includes("preparePagesReleaseData"));
+    const build = steps.findIndex((step) => step.run === "npm run check:pages-artifact");
     expect(acquire).toBeGreaterThan(-1);
     expect(build).toBeGreaterThan(acquire);
-    expect(job.steps[acquire].env?.GH_TOKEN).toBe("${{ github.token }}");
-    const directory = job.steps[acquire].env?.PAGES_RELEASE_DATA_DIR;
+    expect(steps[acquire].env?.GH_TOKEN).toBe("${{ github.token }}");
+    const directory = steps[acquire].env?.PAGES_RELEASE_DATA_DIR;
     expect(directory).toContain("runner.temp");
-    expect(job.steps[build].env?.PAGES_RELEASE_DATA_DIR).toBe(directory);
-    for (const [index, step] of job.steps.entries()) {
+    expect(steps[build].env?.PAGES_RELEASE_DATA_DIR).toBe(directory);
+    for (const [index, step] of steps.entries()) {
       if (index !== acquire) expect(step.env?.GH_TOKEN).toBeUndefined();
       expect(step.run ?? "").not.toContain("acquireReleaseData:false");
     }
   });
 
   it("bootstraps full history before the blocking weekly critical coverage", () => {
-    const weekly = parseYaml(readRepoFile(".github/workflows/weekly-validation.yml")) as {
-      jobs: Record<string, {
-        env?: Record<string, string>;
-        steps: Array<{ uses?: string; run?: string; with?: Record<string, unknown> }>;
-      }>;
-    };
+    const weekly = parseYaml(readRepoFile(".github/workflows/weekly-validation.yml")) as Workflow;
     const coverage = Object.values(weekly.jobs).find((job) =>
-      job.steps.some((step) => step.run === "npm run coverage:critical"))!;
+      job.steps?.some((step) => step.run === "npm run coverage:critical"))!;
+    const steps = coverage.steps!;
     expect(coverage.env?.CRITICAL_COVERAGE_RATCHET_ALL).toBe("1");
-    const checkout = coverage.steps.find((step) => step.uses?.startsWith("actions/checkout@"));
+    const checkout = steps.find((step) => step.uses?.startsWith("actions/checkout@"));
     expect(checkout?.with?.["fetch-depth"]).toBe(0);
-    const setup = coverage.steps.findIndex((step) => step.uses === "$/.github/actions/setup-workspace");
-    const run = coverage.steps.findIndex((step) => step.run === "npm run coverage:critical");
+    const setup = steps.findIndex((step) => step.uses === "$/.github/actions/setup-workspace");
+    const run = steps.findIndex((step) => step.run === "npm run coverage:critical");
     expect(setup).toBeGreaterThan(-1);
     expect(run).toBeGreaterThan(setup);
-    expect(coverage.steps[setup].with?.["bootstrap-history"]).toBe("true");
+    expect(steps[setup].with?.["bootstrap-history"]).toBe("true");
   });
 
   it("installs each nightly Node 24 lane independently", () => {
-    const workflow = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as {
-      jobs: Record<string, {
-        needs?: string | string[];
-        "continue-on-error"?: boolean;
-        steps?: Array<{ uses?: string; run?: string; if?: string; id?: string; name?: string; env?: Record<string, string>; "continue-on-error"?: boolean; with?: Record<string, unknown> }>;
-      }>;
-    };
+    const workflow = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as Workflow;
     // The workspace-artifact fan-out was measured across three paired
     // nightlies and lengthened the critical path (+104s median) while the npm
     // cache was already hot in every job, so each lane installs on its own.
@@ -397,27 +347,38 @@ describe("CI workflow scope", () => {
   it("builds Pages without the Next compiler cache and consolidates artifact checks", () => {
     const workflow = parseYaml(readRepoFile(".github/workflows/pages-release.yml"));
     const steps = workflow.jobs["pages-release"].steps as Array<{
-      uses?: string; run?: string; with?: Record<string, unknown>; env?: Record<string, string>;
+      name?: string; uses?: string; run?: string; with?: Record<string, unknown>; env?: Record<string, string>;
     }>;
-    const setup = steps.find((s) => s.uses === "$/.github/actions/setup-workspace");
-    expect(setup?.with).toMatchObject({ "bootstrap-generated": "false", "install-deps": "false", "cache-npm": "false" });
-    expect([setup?.with?.["next-cache"], setup?.with?.["next-cache-save"]]).toEqual([undefined, undefined]);
-    expect(steps.some((s) => s.uses?.startsWith("actions/cache"))).toBe(false);
+    expect(steps.find((s) => s.uses?.startsWith("actions/checkout@"))?.with?.["fetch-depth"]).toBe(1);
+    const setupNode = steps.find((s) => s.uses?.startsWith("actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1"));
+    expect(setupNode?.with).toEqual({ "node-version": "24.16.0" });
+    expect(steps.some((s) => s.uses?.includes("setup-workspace") || s.uses?.startsWith("actions/cache"))).toBe(false);
     const restore = steps.findIndex((s) => s.run?.includes("tar --zstd -xf"));
     const refresh = steps.findIndex((s) => s.run === "node --import tsx scripts/maintenance/refresh-pages-release-data.ts");
     const build = steps.findIndex((s) => s.run?.split("\n").includes("npm run generated:post-refresh"));
-    const check = steps.findIndex((s) => s.run === "npm run check:pages-release");
+    const check = steps.findIndex((s) => s.run?.includes("npm run check:pages-release"));
+    const retain = steps.findIndex((s) => s.uses?.startsWith("actions/upload-artifact@"));
     expect(restore).toBeGreaterThanOrEqual(0);
     expect(refresh).toBeGreaterThan(restore);
     expect(build).toBeGreaterThan(refresh);
     expect(check).toBeGreaterThan(build);
+    expect(retain).toBe(check + 1);
+    expect(steps[check].run).toContain("createPagesReleaseDataArchive");
+    expect(steps[refresh].env).toMatchObject({
+      SITE_API_SHARED_SECRET: "${{ secrets.SITE_API_SHARED_SECRET }}",
+      DIGEST_API_URL: "https://site-api.pharos.watch",
+      DEPEG_EVENTS_API_URL: "https://site-api.pharos.watch",
+      PUBLIC_DATASETS_API_URL: "https://site-api.pharos.watch",
+    });
     expect(steps[build].env).toMatchObject({
       PHAROS_RELEASE_PR_TYPECHECKED: "1", PHAROS_DETAIL_SNAPSHOT_SOURCE: "bulk", PHAROS_OG_EVERGREEN_MAP_ONLY: "1",
       SITE_API_SHARED_SECRET: "${{ secrets.SITE_API_SHARED_SECRET }}",
     });
     expect(steps[build].run).toContain('if [ -z "${SITE_API_SHARED_SECRET//[[:space:]]/}" ]; then');
     expect(steps[build].run?.indexOf("exit 1")).toBeLessThan(steps[build].run!.indexOf("npm run generated:post-refresh"));
-    expect(steps.filter((s) => s.env?.SITE_API_SHARED_SECRET != null)).toHaveLength(1);
+    expect(steps.filter((s) => s.env?.SITE_API_SHARED_SECRET != null).map((s) => s.name)).toEqual([
+      "Refresh API-backed release data", "Build clean production export",
+    ]);
   });
 
   it.each(["deploy-cloudflare.yml", "pages-release.yml", "rebuild-pages.yml", "pages-prepare.yml"])(
@@ -484,7 +445,13 @@ describe("CI workflow scope", () => {
     }
     expect(release.jobs["pages-release"].env.SITE_API_SHARED_SECRET).toBeUndefined();
     expect(upload?.with).toMatchObject({ name: "${{ steps.workspace-artifact-name.outputs.name }}", "compression-level": 0, "if-no-files-found": "error" });
-    expect(steps.find((s) => s.run?.includes("tar -I"))?.run).toContain("zstd -T0 -3");
+    const packStep = steps.find((s) => s.run?.includes("tar -I"))!;
+    expect(packStep.run).toContain("zstd -T0 -3");
+    const packedPaths = packStep.env?.WORKSPACE_PATHS?.trim().split("\n") ?? [];
+    const compileInputOutputs = (GENERATED_ARTIFACT_REGISTRY as Array<{ buildLifecycle: string; outputPaths: string[] }>)
+      .filter((a) => a.buildLifecycle === "compile-input")
+      .flatMap((a) => a.outputPaths);
+    expect(packedPaths).toEqual(expect.arrayContaining(["node_modules", ...compileInputOutputs]));
     const download = release.jobs["pages-release"].steps.find((s: { uses?: string }) => s.uses?.startsWith("actions/download-artifact@"));
     expect(download.with.name).toBe("${{ inputs.workspace_artifact_name }}");
     expect(download.with.name).not.toContain("run_attempt");
@@ -520,13 +487,23 @@ describe("CI workflow scope", () => {
   it("packages both Workers before one migration and deploys heavy then public with individual proofs", () => {
     const workflow = parseYaml(readRepoFile(".github/workflows/deploy-cloudflare.yml"));
     const steps = workflow.jobs["deploy-worker"].steps as Array<{ id?: string; run?: string }>;
-    const packageStep = steps.findIndex((s) => s.run === "npm run check:worker-package");
+    const workerBootstrap = steps.findIndex((s) => s.run?.includes("npm run bootstrap:generated:worker"));
+    const packageStep = steps.findIndex((s) => s.run?.includes("npm run check:worker-package"));
     const migrations = steps.map((s, i) => /d1 migrations apply/.test(s.run ?? "") ? i : -1).filter((i) => i >= 0);
     const heavyDeploy = steps.findIndex((s) => /wrangler deploy.*--config wrangler\.heavy\.toml/.test(s.run ?? ""));
     const publicDeploy = steps.findIndex((s) => /wrangler deploy.*--config wrangler\.toml/.test(s.run ?? ""));
     const heavyVerify = steps.findIndex((s) => s.id === "verify-heavy-deployment");
     const publicVerify = steps.findIndex((s) => s.id === "verify-worker-deployment");
-    expect(packageStep).toBeGreaterThanOrEqual(0);
+    expect(workerBootstrap).toBeGreaterThanOrEqual(0);
+    expect(steps[workerBootstrap].run).toContain("assertBootstrapTrackedOutputsUnchanged");
+    expect(packageStep).toBeGreaterThan(workerBootstrap);
+    for (const cmd of [
+      "env -u CLOUDFLARE_API_TOKEN -u CLOUDFLARE_ACCOUNT_ID npm run check:migrations",
+      "env -u CLOUDFLARE_API_TOKEN -u CLOUDFLARE_ACCOUNT_ID npm run check:worker-package",
+      "wrangler queues info pharos-reserve-continuation --config worker/wrangler.toml",
+      "wrangler queues info pharos-reserve-continuation-dlq --config worker/wrangler.toml",
+      "npm run check:remote-d1-baseline-ledger",
+    ]) expect(steps[packageStep].run).toContain(cmd);
     expect(migrations).toHaveLength(1);
     expect(migrations[0]).toBeGreaterThan(packageStep);
     expect(heavyDeploy).toBeGreaterThan(migrations[0]);
@@ -562,18 +539,7 @@ describe("CI workflow scope", () => {
   });
 
   it("records read-only post-deploy acceptance for successfully deployed surfaces", () => {
-    const workflow = parseYaml(readRepoFile(".github/workflows/deploy-cloudflare.yml")) as {
-      jobs: Record<string, {
-        environment?: unknown;
-        needs?: string[];
-        outputs?: Record<string, string>;
-        permissions?: Record<string, string>;
-        steps?: Array<{
-          env?: Record<string, string>; id?: string; name?: string; run?: string; if?: string;
-          uses?: string; with?: Record<string, string>;
-        }>;
-      }>;
-    };
+    const workflow = parseYaml(readRepoFile(".github/workflows/deploy-cloudflare.yml")) as Workflow;
     const job = workflow.jobs["post-deploy-acceptance"];
     const acceptance = job.steps?.find((step) => step.name === "Record deployment identity and operational acceptance");
 
@@ -599,10 +565,9 @@ describe("CI workflow scope", () => {
     const heavyIdentity = job.steps?.find((step) => step.id === "verify-heavy-identity");
     expect(heavyIdentity?.if).toBe("${{ always() && needs.deploy-worker.result == 'success' }}");
     expect(job.steps?.some((step) => step.name === "Require unchanged heavy activation identity")).toBe(false);
-    const setup = job.steps?.find((step) => step.uses === "$/.github/actions/setup-workspace");
-    expect(setup?.with).toMatchObject({
-      "install-deps": "false", "cache-npm": "false", "bootstrap-generated": "false",
-    });
+    const setupNode = job.steps?.find((step) => step.uses?.startsWith("actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1"));
+    expect(setupNode?.with).toEqual({ "node-version": "24.16.0" });
+    expect(job.steps?.some((step) => step.uses?.includes("setup-workspace"))).toBe(false);
     expect(job.steps?.some((step) => /npm|npx|wrangler/.test(step.run ?? ""))).toBe(false);
     expect(acceptance?.env).toMatchObject({
       EXPECTED_PAGES_COMMIT: "${{ github.sha }}", EXPECTED_WORKER_VERSION: "${{ needs.deploy-worker.outputs.worker_version }}",
@@ -612,16 +577,14 @@ describe("CI workflow scope", () => {
   });
 
   it("gates every Shock Coverage Refresh credential path on main", () => {
-    const shock = parseYaml(readRepoFile(".github/workflows/shock-coverage-refresh.yml")) as { jobs: Record<string, { if?: string }> };
+    const shock = parseYaml(readRepoFile(".github/workflows/shock-coverage-refresh.yml")) as Workflow;
     expect(shock.jobs.targets.if).toBe("${{ github.ref == 'refs/heads/main' && (github.event_name != 'schedule' || github.event.schedule == '41 3 * * *') }}");
     expect([shock.jobs.measure.if, shock.jobs.refresh.if]).toEqual(["${{ github.ref == 'refs/heads/main' }}", "${{ github.ref == 'refs/heads/main' }}"]);
   });
 
   it("restores Worker incident evidence from its own completed main run even when an evidence job alerts", () => {
-    const monitor = parseYaml(readRepoFile(".github/workflows/worker-memory-monitor.yml")) as {
-      jobs: Record<string, { steps: Array<{ id?: string; if?: string; name?: string; run?: string; env?: Record<string, string> }> }>;
-    };
-    const restore = monitor.jobs.incidents.steps.find((step) => step.name === "Restore latest rolling evidence archive")!;
+    const monitor = parseYaml(readRepoFile(".github/workflows/worker-memory-monitor.yml")) as Workflow;
+    const restore = monitor.jobs.incidents.steps!.find((step) => step.name === "Restore latest rolling evidence archive")!;
     // A pull_request run executes in this repository and reports its head ref
     // in workflow_run.head_branch, so artifact metadata alone is not an
     // identity: authenticate the producing run before trusting the archive.
@@ -643,7 +606,7 @@ describe("CI workflow scope", () => {
     // A red run is restorable only because a failed restore never captures:
     // otherwise its one-day shard would replace the 21-day window.
     expect(restore.id).toBe("restore-archive");
-    const capture = monitor.jobs.incidents.steps.find((step) => step.name === "Capture deployment delivery child and publication evidence")!;
+    const capture = monitor.jobs.incidents.steps!.find((step) => step.name === "Capture deployment delivery child and publication evidence")!;
     expect(capture.if).toContain("steps.restore-archive.outcome == 'success'");
     // An unreadable producing-run lookup fails the restore instead of counting
     // as a rejection, which would start a one-day window over a good archive.
@@ -653,11 +616,8 @@ describe("CI workflow scope", () => {
   });
 
   it("keeps the curation expiry sweep process-only with sentinel verdicts and by-week renewal views", () => {
-    const workflow = parseYaml(readRepoFile(".github/workflows/curation-expiry-sweep.yml")) as {
-      permissions?: Record<string, string>;
-      jobs: Record<string, { permissions?: Record<string, string>; steps: Array<{ id?: string; name?: string; run?: string; uses?: string; with?: Record<string, unknown>; env?: Record<string, string>; "timeout-minutes"?: number }> }>;
-    };
-    const job = workflow.jobs.sweep, steps = job.steps;
+    const workflow = parseYaml(readRepoFile(".github/workflows/curation-expiry-sweep.yml")) as Workflow;
+    const job = workflow.jobs.sweep, steps = job.steps!;
     const sentinels = steps.find((s) => s.id === "sentinels")!, renewals = steps.find((s) => s.id === "renewals")!;
     const calendar = steps.find((s) => s.id === "calendar")!, issue = steps.find((s) => s.run?.includes("gh issue edit"))!;
     const commands = steps.map((s) => s.run ?? "").join("\n");
@@ -680,19 +640,6 @@ describe("CI workflow scope", () => {
     for (const step of [sentinels, renewals, calendar]) expect(step["timeout-minutes"]).toBe(10);
     expect(steps.find((s) => s.id === "snapshots")!.with?.path).toBe("agents/sweep/");
   });
-
-  type WorkflowStep = {
-    id?: string; name?: string; uses?: string; run?: string; if?: string;
-    permissions?: Record<string, string>;
-    "continue-on-error"?: boolean; "timeout-minutes"?: number;
-    with?: Record<string, unknown>; env?: Record<string, string>;
-  };
-  type WorkflowJob = {
-    needs?: string | string[]; if?: string; permissions?: Record<string, string>;
-    "timeout-minutes"?: number; env?: Record<string, string>;
-    outputs?: Record<string, string>; strategy?: Record<string, unknown>; steps?: WorkflowStep[];
-  };
-  type Workflow = { jobs: Record<string, WorkflowJob> };
 
   it("resolves local action references only where the checkout is the workflow commit", () => {
     const names = readdirSync(resolve(process.cwd(), ".github/workflows")).filter((file) => file.endsWith(".yml"));
@@ -741,9 +688,9 @@ describe("CI workflow scope", () => {
     // pages-release job, so it never restores a writable dependency cache.
     expect(setupOf(preparePages.jobs["pages-prepare"])?.with).toMatchObject({ "node-modules-cache": "false" });
     // Production credential holders install without a writable dependency cache.
-    expect(setupOf(deploy.jobs["deploy-worker"])?.with).toMatchObject({ "node-modules-cache": "false" });
-    expect(setupOf(deploy.jobs["post-deploy-acceptance"])?.with).toMatchObject({ "install-deps": "false" });
-    expect(setupOf(deploy.jobs.plan)?.with).toMatchObject({ "install-deps": "false" });
+    expect(setupOf(deploy.jobs["deploy-worker"])?.with).toMatchObject({ "node-modules-cache": "false", "bootstrap-generated": "false" });
+    expect(setupOf(deploy.jobs["post-deploy-acceptance"])).toBeUndefined();
+    expect(setupOf(deploy.jobs.plan)).toBeUndefined();
   });
 
   it("keeps validation history and wires the Pages critical-CSS scope", () => {
@@ -751,6 +698,11 @@ describe("CI workflow scope", () => {
     const checkoutOf = (job: WorkflowJob) => job.steps?.find((step) => step.uses?.startsWith("actions/checkout@"));
     expect(pr.jobs.validation.strategy?.["max-parallel"]).toBe(14);
     expect(checkoutOf(pr.jobs.validation)?.with?.["fetch-depth"]).toBe(0);
+    expect(checkoutOf(pr.jobs["pages-artifact"])?.with?.["fetch-depth"]).toBe(1);
+    const pagesAcquire = pr.jobs["pages-artifact"].steps?.find((step) => step.name === "Acquire release data with the trusted base helper");
+    expect(pagesAcquire?.run).toContain('git fetch --no-tags --depth=1 --filter=blob:none origin "${TRUSTED_PAGES_BASE_SHA}"');
+    const pagesSetup = pr.jobs["pages-artifact"].steps?.find((step) => step.uses === "./.github/actions/setup-workspace");
+    expect(pagesSetup?.with).toMatchObject({ "setup-node": "false", "install-deps": "false", "workspace-artifact": "restore" });
     expect(pr.jobs.prepare.outputs?.pages_critical_css_full_pass)
       .toBe("${{ steps.classify.outputs.pages_critical_css_full_pass }}");
     expect(pr.jobs.prepare.outputs?.pages_og_render_check)
@@ -1164,7 +1116,7 @@ describe("Cloudflare deployment credential scope", () => {
   };
 
   it.each([
-    ["deploy-worker", ".github/workflows/deploy-cloudflare.yml", ["Verify pre-provisioned reserve Queue and dead-letter Queue", "Preflight remote D1 baseline adoption", "Apply production D1 migrations", "Deploy heavy Worker", "Verify active heavy Worker deployment", "Deploy public Worker", "Verify active public Worker deployment", "Record verified Worker activation markers"]],
+    ["deploy-worker", ".github/workflows/deploy-cloudflare.yml", ["Run read-only Worker preflights before D1 mutation", "Apply production D1 migrations", "Deploy heavy Worker", "Verify active heavy Worker deployment", "Deploy public Worker", "Verify active public Worker deployment", "Record verified Worker activation markers"]],
     ["pages-release", ".github/workflows/pages-release.yml", ["Publish immutable preview objects before Pages activation", "Deploy Pages", "Resolve active Pages deployment"]],
   ])("%s exposes credentials only to named consumer steps", (jobName, path, consumers) => {
     const { job, holders, effective } = consumerSteps(path, jobName);

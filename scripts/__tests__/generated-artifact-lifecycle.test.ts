@@ -77,7 +77,12 @@ describe("generated artifact lifecycle", () => {
     // Bootstrap writes only the map; the post-refresh Pages build renders the PNGs.
     const command = (options: Record<string, unknown>) => phases(options).flatMap((p) => p.artifacts).find((a) => a.id === previews.id)?.command;
     expect(command({ bootstrap: true })).toMatch(/build-og-evergreen\.ts --map-only$/);
+    expect(command({ bootstrap: true, includeHistory: true })).toMatch(/build-og-evergreen\.ts --map-only$/);
     expect(command({ buildLifecycles: ["post-refresh"] })).toMatch(/build-og-evergreen\.ts$/);
+    expect(selectedIds({ bootstrap: true, includeHistory: true }).sort())
+      .toEqual([...selectedIds({ bootstrap: true }), "docs-metadata", "sitemap-dates"].sort());
+    expect(() => phases({ includeHistory: true })).toThrow(/--include-history requires --bootstrap/);
+    expect(() => phases({ bootstrap: true, check: true, includeHistory: true })).toThrow(/--include-history requires --bootstrap/);
   });
 });
 
