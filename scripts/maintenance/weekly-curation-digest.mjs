@@ -201,9 +201,6 @@ function analyzeAnnotationQueue(queueText, curatedTimestamps) {
     }
   }
 
-  const lastSweptMatch = /<!--\s*last_swept_at:\s*(\d{4}-\d{2}-\d{2})\s*-->/.exec(queueText);
-  const lastSweptAt = lastSweptMatch ? lastSweptMatch[1] : null;
-
   const ts = curatedTimestamps;
   const cutoffMs = Date.now() - ANNOTATION_STALE_YEARS * 365.25 * 24 * 60 * 60 * 1000;
   let staleCount = 0;
@@ -224,7 +221,6 @@ function analyzeAnnotationQueue(queueText, curatedTimestamps) {
     queuePresent: queueText.length > 0,
     rowCount,
     oldestDate,
-    lastSweptAt,
     annotationCount: ts.length,
     annotationsOlderThanYears: staleCount,
     warnings,
@@ -331,7 +327,6 @@ function renderQueueHealth(report) {
     return lines.join("\n");
   }
   lines.push(`Rows pending review: ${report.rowCount}`);
-  lines.push(`Last swept: ${report.lastSweptAt ?? "(never recorded)"}`);
   lines.push(`Oldest dated row: ${report.oldestDate ?? "(none)"}`);
   lines.push(
     `Curated annotations on file: ${report.annotationCount} total; ${report.annotationsOlderThanYears} are older than ${ANNOTATION_STALE_YEARS} years (quarterly hand-check anchors).`,

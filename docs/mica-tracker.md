@@ -48,6 +48,12 @@ Leave `mica` **undefined** for coins not yet assessed — the page distinguishes
 
 `out-of-scope` rows are explicit assessments, but they must not carry in-scope MiCA classification fields such as `tokenType`, `authorizationType`, `competentAuthority`, or `authorizedEntity`. Use those fields only when the row is asserting an EMT/ART posture inside the MiCA status model.
 
+### Boundary rules
+
+- **ESMA interim `EMT_NO_WP` rows (`authorized`):** An ESMA interim `EMT_NO_WP` row supports `authorized` when ESMA lists the issuer's active EMI or credit-institution authorization, the national competent-authority register confirms the license, and the issuer publishes a MiCA Art. 51 white paper naming the exact token. White-paper-only ESMA tallies lag behind issuer notifications and exclude `EMT_NO_WP` rows until ESMA ingests the white paper.
+- **Issuer EEA exclusion vs. venue restriction (`out-of-scope`):** Binding issuer terms that exclude EEA/EU offering and admission keep a token `out-of-scope` even if an EU/EEA venue lists it on a restricted-assets page, because the venue list enforces territorial exclusion rather than proving an unlawful EU offering.
+- **Decentralized / no-identifiable-issuer exemption (Recital 22 / ESMA Q&A 2552):** Immutable, governance-free decentralized protocols (for example, LUSD and BOLD) and protocols holding a published third-party legal notice or classification memo placing them under that exemption (for example, ZCHF / LEXR) stay `out-of-scope` even when an EU venue lists them as restricted. Governance-controlled protocols without such primary legal or immutability evidence (for example, DAI, MAI, and FRAX) follow in-force EU venue restriction notices (`non-compliant`).
+
 ### Token type (`tokenType`)
 
 - **EMT (E-money token):** references a single official currency. Most EUR and USD fiat-backed stablecoins are EMTs.

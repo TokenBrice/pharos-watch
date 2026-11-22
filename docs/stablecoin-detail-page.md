@@ -52,6 +52,8 @@ Active stablecoin Dataset JSON-LD describes the build-time markdown profile, not
 
 Static HTML and Markdown overviews with supported live claim placeholders are withheld when their inputs are unavailable, using the shared `hasAvailableAiSummaryClaims` eligibility check rather than asserting an `N/A` grade or score. The static profile and summary provenance remain visible. The interactive summary resolves claims from live values. While the live report card is pending (the prerender included), the grade claim reads the build snapshot's dated release grade. A claim with no input withholds the overview behind the same `AI_SUMMARY_UNAVAILABLE_NOTICE`, never `N/A`. Markdown projects glossary markup to its readable labels, never internal `{{term:…}}` delimiters.
 
+Server-rendered profile supply facts are intentionally omitted (documented no-go): `usde-ethena` sits with ~19.6 KiB headroom under the 895,000 B `representativeDetailHtmlBytes` build-size ceiling (`scripts/maintenance/report-build-size.mjs`), while supply hydrates client-side and dated supply snapshots remain published on `/stablecoins/` and the `top-stablecoins` dataset.
+
 ### Metadata
 
 `buildStablecoinDetailMetadata()` (`src/lib/page-metadata.ts`) owns every profile `<title>` and meta description. Titles keep a 51-character core so the full title with the root ` | Pharos` suffix fits about 60 characters; frozen archives keep their earlier 61-character core. Descriptions are composed from whole sentences with `composeDescription()` at 180 characters or fewer and never end in "…".

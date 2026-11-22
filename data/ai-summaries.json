@@ -2939,17 +2939,17 @@
   },
   "wsrusd-reservoir": {
     "title": "Reservoir's rUSD savings wrapper",
-    "text": "wsrUSD is Reservoir's non-rebasing ERC-4626 savings wrapper over rUSD: depositing burns rUSD, withdrawing mints it back, and the share price rises as protocol yield accrues, so the token trades above a dollar by design. Its only direct reserve is that rUSD claim, verified from the wrapper's constructor and pinned contract reads; the T-bill, lending-vault, and basis strategies behind it live on the rUSD entry and are inherited rather than duplicated. That inheritance is the trade-off. Upstream rUSD reserves are actively re-deployed into lending markets and credit, no bankruptcy-remote structure is documented for holders, and rUSD {{term:redemption}}redemption{{/term}} is immediate only up to available {{term:psm}}PSM{{/term}} liquidity. The {{grade}} overall grade is held at the parent cap, because a child cannot rate above rUSD, and economic control is the weakest pillar since Pharos cannot yet resolve the supply share behind each bridge route. The wrapper contract is immutable, but its manager role sits with a 3-of-5 Safe that an admin EOA can still reassign, and all but one of its tracked deployments are {{term:bridge}}bridge{{/term}} representations, mostly LayerZero OFTs. The durable constraint is that wsrUSD carries every rUSD risk plus its own bridge and liquidity dependencies.",
-    "updatedAt": "2026-10-19",
+    "text": "wsrUSD is Reservoir's non-rebasing ERC-4626 savings wrapper over rUSD: depositing burns rUSD, withdrawing mints it back, and the share price rises as protocol yield accrues, so the token trades above a dollar by design. Its only direct reserve is that rUSD claim, verified from the wrapper's constructor and pinned contract reads; the RWA, lending-vault, and credit strategies behind it live on the rUSD entry and are inherited rather than duplicated. That inheritance is the trade-off. Upstream rUSD reserves are actively re-deployed into lending markets and credit, no bankruptcy-remote structure is documented for holders, and rUSD {{term:redemption}}redemption{{/term}} is immediate only up to available {{term:psm}}PSM{{/term}} liquidity. The {{grade}} overall grade reflects both rUSD's parent cap and unresolved oracle, bridge-route, and control-identity evidence across wsrUSD's multichain footprint. The wrapper contract is immutable, but its manager role sits with a 3-of-5 Safe that an admin EOA can still reassign, and all but one of its tracked deployments are {{term:bridge}}bridge{{/term}} representations, mostly LayerZero OFTs. The durable constraint is that wsrUSD carries every rUSD risk plus its own bridge and liquidity dependencies.",
+    "updatedAt": "2026-11-22",
     "authoredBy": "ai",
-    "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19",
+    "model": "gemini-4-neon",
+    "factsAsOf": "2026-11-22",
     "claimTokens": [
       {
         "token": "grade",
         "placeholder": "{{grade}}",
         "source": "report-card.grade",
-        "factsAsOf": "2026-10-19"
+        "factsAsOf": "2026-11-22"
       }
     ]
   },
