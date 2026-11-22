@@ -6,13 +6,16 @@ import sharp from "sharp";
 import {
   buildSocialPreviewImages,
   discoverSocialPreviewPages,
+  loadSocialCardValidationAssets,
+  loadSocialPreviewEntries,
+  renderSocialPreviewCards,
   SOCIAL_PREVIEW_MAP_PATH,
   type SocialPreviewEntry,
 } from "../lib/social-preview-build";
 import { loadSocialCardAssets, renderSocialCardSvg } from "../lib/social-card-render";
 import { renderSvgPngWithResvg } from "../lib/og-resvg-render.mts";
 import { DARK } from "../../shared/lib/social-card/tokens";
-import type { SocialCardDossier } from "../../shared/lib/social-card/spec";
+import type { SocialCardDossier, SocialCardSpec } from "../../shared/lib/social-card/spec";
 
 import { createTempRepoTracker } from "./helpers/test-state";
 
@@ -92,5 +95,131 @@ describe("evergreen destination previews", () => {
     const region = await sharp(bytes).extract({ left: 760, top: 275, width: 80, height: 80 }).toBuffer();
     const brightest = Math.max(...(await sharp(region).stats()).channels.slice(0, 3).map((channel) => channel.mean));
     expect(brightest).toBeGreaterThan(110);
+  });
+
+  it("refuses SVG rendering when entries are loaded with includePngBuffers: false and validates logo failures", async () => {
+    const loaded = await loadSocialPreviewEntries(process.cwd(), { includePngBuffers: false });
+    const drawnEntry = loaded.entries.find((entry): entry is Extract<SocialPreviewEntry, { drawn: unknown }> => "drawn" in entry)!;
+    expect(() => drawnEntry.validate()).not.toThrow();
+    expect(() => drawnEntry.svg()).toThrow(/logo PNG buffers were not loaded/);
+
+    const root = makeTempDir();
+    mkdirSync(join(root, "worker/assets/fonts/social-card"), { recursive: true });
+    for (const file of readdirSync(join(process.cwd(), "worker/assets/fonts/social-card"))) {
+      writeFileSync(join(root, "worker/assets/fonts/social-card", file), readFileSync(join(process.cwd(), "worker/assets/fonts/social-card", file)));
+    }
+    mkdirSync(join(root, "public/logos"), { recursive: true });
+    writeFileSync(join(root, "public/logos/evil.svg"), '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>');
+    writeFileSync(join(root, "public/logos/corrupt.png"), "not-a-png");
+    const makeSpec = (logoPath: string): SocialCardDossier => ({
+      template: "dossier", path: "/stablecoin/test/", label: "Stablecoin dossier",
+      copy: { title: "Test", description: "Test.", alt: "Test." },
+      identity: { symbol: "TST", name: "Test", logoPath },
+      headline: "TST", subline: "Test", hook: "Validation parity", chips: [], lifecycle: "active",
+    });
+    await expect(loadSocialCardValidationAssets(root, [makeSpec("/logos/evil.svg")])).rejects.toThrow("external or executable resource");
+    await expect(loadSocialCardValidationAssets(root, [makeSpec("/logos/corrupt.png")])).rejects.toThrow("could not be decoded");
+    await expect(loadSocialCardValidationAssets(root, [makeSpec("/logos/missing.png")])).rejects.toThrow("bytes are missing");
+  });
+
+  it("renders cards via worker_threads byte-identically to single-threaded rendering and propagates errors cleanly", async () => {
+    const outRoot = makeTempDir();
+    mkdirSync(join(outRoot, "public/og/v2"), { recursive: true });
+    const copy = { title: "Worker proof", description: "Worker proof.", alt: "Worker proof." };
+    const cards: { url: string; spec: SocialCardSpec }[] = [
+      {
+        url: "/og/v2/worker-svg.png",
+        spec: {
+          template: "versus", path: "/compare/usdt-vs-usdc/", label: "Stablecoin comparison", copy,
+          left: { symbol: "USDT", name: "Tether", logoPath: "/logos/1-usdt.svg", detail: "Tether" },
+          right: { symbol: "USDC", name: "USD Coin", logoPath: "/logos/2-usdc.svg", detail: "Circle" },
+          hook: "Same peg. Different promises.",
+        },
+      },
+      {
+        url: "/og/v2/worker-light-plate.png",
+        spec: {
+          template: "dossier", path: "/chains/0g/", label: "Chain dossier", copy,
+          identity: { symbol: "0G", name: "0G", logoPath: "/chains/0g.png" },
+          headline: "0G", subline: "0G chain", hook: "Dark mark on light plate", chips: [], lifecycle: "active",
+        },
+      },
+      {
+        url: "/og/v2/worker-webp.png",
+        spec: {
+          template: "dossier", path: "/chains/agoric/", label: "Chain dossier", copy,
+          identity: { symbol: "BLD", name: "Agoric", logoPath: "/chains/agoric.webp" },
+          headline: "BLD", subline: "Agoric", hook: "WebP raster logo", chips: [], lifecycle: "active",
+        },
+      },
+      {
+        url: "/og/v2/worker-historical.png",
+        spec: {
+          template: "dossier", path: "/stablecoin/aeur-anchored-coins/", label: "Historical dossier", copy,
+          identity: { symbol: "AEUR", name: "Anchored Euro", logoPath: "/logos/147-aeur.png" },
+          headline: "AEUR", subline: "Anchored Euro", hook: "Historical greyscale logo",
+          chips: ["Died Jul 2024"], lifecycle: "historical", stamp: "HISTORICAL RECORD",
+        },
+      },
+    ];
+    const renderAssets = await loadSocialCardAssets(process.cwd(), cards.map((card) => card.spec));
+    await expect(renderSocialPreviewCards({
+      repoRoot: outRoot,
+      tasks: cards,
+      renderAssets,
+      workerCount: 2,
+    })).resolves.toEqual({ rendered: 4 });
+
+    for (const { url, spec } of cards) {
+      const workerBytes = readFileSync(join(outRoot, `public${url}`));
+      const directBytes = await renderSvgPngWithResvg({
+        svg: await renderSocialCardSvg(spec, renderAssets),
+        fontBuffers: [],
+        background: DARK.ground,
+        width: 1200,
+      });
+      expect(Buffer.compare(workerBytes, Buffer.from(directBytes)), url).toBe(0);
+    }
+
+    // Worker failure rejects cleanly and terminates sibling workers without hanging.
+    await expect(renderSocialPreviewCards({
+      repoRoot: outRoot,
+      tasks: [
+        cards[0]!,
+        {
+          url: "/og/v2/worker-bad.png",
+          spec: { ...cards[1]!.spec, headline: "Peg ≠ par" } as SocialCardSpec,
+        },
+      ],
+      renderAssets,
+      workerCount: 2,
+    })).rejects.toThrow('no glyph for "≠"');
+  });
+
+  it("supports --shard slices without overlapping or writing the route map", async () => {
+    const root = makeTempDir();
+    for (const [file, content] of [
+      ["scripts/lib/og-resvg-render.mts", "rasterizer"],
+      ["font.ttf", fontBuffers[0]],
+      ["a.svg", "a"],
+      ["b.svg", "b"],
+      ["c.svg", "c"],
+    ] as const) {
+      mkdirSync(join(root, file, ".."), { recursive: true });
+      writeFileSync(join(root, file), content);
+    }
+    const svg = async () => '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630"><rect width="1200" height="630" fill="#2b4a5e"/></svg>';
+    const copy = (title: string) => ({ title, description: `${title}.`, alt: `${title}.` });
+    const entries: SocialPreviewEntry[] = [
+      { path: "/a/", copy: copy("A"), drawn: { id: "a" }, inputs: ["a.svg"], validate: () => {}, svg },
+      { path: "/b/", copy: copy("B"), drawn: { id: "b" }, inputs: ["b.svg"], validate: () => {}, svg },
+      { path: "/c/", copy: copy("C"), drawn: { id: "c" }, inputs: ["c.svg"], validate: () => {}, svg },
+    ];
+    const load = async () => ({ entries, fonts: ["font.ttf"], background: "#101e2b" });
+    const s0 = await buildSocialPreviewImages({ repoRoot: root, mode: "render", load, shard: { index: 0, count: 2 } });
+    const s1 = await buildSocialPreviewImages({ repoRoot: root, mode: "render", load, shard: { index: 1, count: 2 } });
+    expect(s0.rendered + s1.rendered).toBe(3);
+    expect(existsSync(join(root, SOCIAL_PREVIEW_MAP_PATH))).toBe(false);
+    expect(readdirSync(join(root, "public/og/v2"))).toHaveLength(3);
   });
 });

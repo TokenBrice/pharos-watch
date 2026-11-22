@@ -206,6 +206,7 @@ const PAGES_ARTIFACT_LANE_SCRIPTS = [
   "scripts/maintenance/inline-homepage-critical-css.ts",
   // Loaded as a `new Worker(new URL(...))` module, so not an import edge.
   "scripts/maintenance/critical-css-worker.mjs",
+  "scripts/lib/social-preview-worker.mjs",
 ] as const;
 /**
  * Workflow and registry edits that redefine what the lane builds or runs. The

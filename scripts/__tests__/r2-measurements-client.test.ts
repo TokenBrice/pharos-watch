@@ -240,7 +240,10 @@ describe("permanent social preview publication", () => {
     write(accountStatePath, JSON.stringify(accountState));
     await expect(publish({ execute: true })).resolves.toEqual({ assets: 1, created: 1, existing: 0, dryRun: false });
     await expect(publish({ execute: true })).resolves.toEqual({ assets: 1, created: 0, existing: 1, dryRun: false });
-    expect(events).toEqual(["project", "lifecycle", "list", "put", "project", "lifecycle", "list"]);
+    expect(new Set(events.slice(0, 2))).toEqual(new Set(["project", "lifecycle"]));
+    expect(events.slice(2, 4)).toEqual(["list", "put"]);
+    expect(new Set(events.slice(4, 6))).toEqual(new Set(["project", "lifecycle"]));
+    expect(events.slice(6)).toEqual(["list"]);
     expect(client.list).toHaveBeenCalledWith("evergreen/v2/");
     expect(stored.get(`evergreen/v2/${url.slice(7)}`)).toEqual({ bytes, options: {
       ifNoneMatch: "*", contentType: "image/png", cacheControl: "public, max-age=31536000, immutable",
@@ -250,6 +253,39 @@ describe("permanent social preview publication", () => {
       expect(new URL(String(request)).origin).toBe("https://api.cloudflare.com");
       expect(init?.method).toBe("GET");
       expect(new Headers(init?.headers).get("Authorization")).toBe(`Bearer ${env.CLOUDFLARE_API_TOKEN}`);
+    }
+  });
+
+  it("issues Pages project and R2 lifecycle preflight GETs concurrently before any S3 call", async () => {
+    const { publish, fetchImpl, project, events, client } = await publicationFixture();
+    const projectGate = Promise.withResolvers<Response>();
+    const lifecycleGate = Promise.withResolvers<Response>();
+    fetchImpl.mockImplementation(async (input: RequestInfo | URL) => {
+      const path = new URL(String(input)).pathname;
+      if (path.includes("/pages/projects/")) {
+        events.push("project");
+        return projectGate.promise;
+      }
+      if (path.endsWith("/lifecycle")) {
+        events.push("lifecycle");
+        return lifecycleGate.promise;
+      }
+      throw new Error(`Unexpected URL: ${input}`);
+    });
+    const pending = publish({ execute: true });
+    try {
+      await vi.waitFor(() => expect(events).toEqual(["project", "lifecycle"]));
+      expect(client.list).not.toHaveBeenCalled();
+      expect(client.put).not.toHaveBeenCalled();
+      lifecycleGate.resolve(Response.json({ success: true, result: { rules: [] } }));
+      await Promise.resolve();
+      expect(client.list).not.toHaveBeenCalled();
+      projectGate.resolve(project(productionBinding("legacy")));
+      await expect(pending).resolves.toEqual({ assets: 1, created: 1, existing: 0, dryRun: false });
+      expect(events.slice(2)).toEqual(["list", "put"]);
+    } finally {
+      projectGate.resolve(project(productionBinding("legacy")));
+      lifecycleGate.resolve(Response.json({ success: true, result: { rules: [] } }));
     }
   });
 

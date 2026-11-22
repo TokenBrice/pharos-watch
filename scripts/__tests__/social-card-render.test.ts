@@ -14,6 +14,7 @@ import {
   validateSocialCardSpec,
   type SocialCardRenderAssets,
 } from "../lib/social-card-render";
+import { loadSocialCardValidationAssets } from "../lib/social-preview-build";
 
 const copy = { title: "t", description: "d", alt: "a" };
 const usdt = { symbol: "USDT", name: "Tether", logoPath: "/logos/1-usdt.svg" };
@@ -99,5 +100,54 @@ describe("social card renderer", () => {
   it("inlines the brand marks exactly as public/ serves them", () => {
     expect(PHAROS_MARK_ON_DARK_SVG).toBe(readFileSync("public/pharos-mark-on-dark.svg", "utf8").trim());
     expect(PHAROS_MARK_ON_LIGHT_SVG).toBe(readFileSync("public/pharos-mark-on-light.svg", "utf8").trim());
+  });
+
+  it("matches full asset light-plate analysis when skipping PNG buffer encoding", async () => {
+    const specs: SocialCardSpec[] = [
+      hub,
+      {
+        ...dossier,
+        path: "/chains/0g/",
+        identity: { symbol: "0G", name: "0G", logoPath: "/chains/0g.png" },
+        lifecycle: "active",
+        stamp: undefined,
+      },
+      {
+        ...dossier,
+        path: "/chains/abcore/",
+        identity: { symbol: "AB", name: "ABCore", logoPath: "/chains/abcore.png" },
+        lifecycle: "active",
+        stamp: undefined,
+      },
+      {
+        ...dossier,
+        path: "/chains/agoric/",
+        identity: { symbol: "BLD", name: "Agoric", logoPath: "/chains/agoric.webp" },
+        lifecycle: "active",
+        stamp: undefined,
+      },
+      {
+        ...dossier,
+        path: "/stablecoin/aeur-anchored-coins/",
+        identity: { symbol: "AEUR", name: "Anchored Euro", logoPath: "/logos/147-aeur.png" },
+        lifecycle: "historical",
+        stamp: "HISTORICAL RECORD",
+      },
+    ];
+    const [full, validationOnly] = await Promise.all([
+      loadSocialCardAssets(process.cwd(), specs),
+      loadSocialCardValidationAssets(process.cwd(), specs),
+    ]);
+    expect([...validationOnly.logos.keys()]).toEqual([...full.logos.keys()]);
+    expect(full.logos.get("/chains/0g.png")?.lightPlate).toBe(true);
+    expect(full.logos.get("/chains/abcore.png")?.lightPlate).toBeUndefined();
+    for (const [logoPath, fullLogo] of full.logos) {
+      const valLogo = validationOnly.logos.get(logoPath)!;
+      expect(Boolean(valLogo.lightPlate), logoPath).toBe(Boolean(fullLogo.lightPlate));
+      expect(Boolean(valLogo.grey), logoPath).toBe(Boolean(fullLogo.grey));
+    }
+    for (const spec of specs) {
+      expect(() => validateSocialCardSpec(spec, validationOnly)).not.toThrow();
+    }
   });
 });
