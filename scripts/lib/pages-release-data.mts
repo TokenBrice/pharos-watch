@@ -102,6 +102,10 @@ export function overlayPagesReleaseData(repoRoot: string, archivePath: string, s
   }
 }
 
+const TRUSTED_WORKFLOW_FILES = ["deploy-cloudflare.yml", "rebuild-pages.yml"] as const;
+const TRUSTED_WORKFLOW_PATHS: readonly string[] = TRUSTED_WORKFLOW_FILES.map((file) => `.github/workflows/${file}`);
+const TRUSTED_EVENTS: readonly string[] = ["push", "schedule", "workflow_dispatch"];
+
 interface ReleaseArtifact {
   id: number;
   name: string;
@@ -109,14 +113,42 @@ interface ReleaseArtifact {
   created_at: string;
   workflow_run?: { id: number; head_branch: string; head_sha: string; head_repository_id: number; repository_id: number };
 }
-interface ReleaseRun { conclusion: string; head_branch: string; head_sha: string; path: string; event: string; head_repository?: { full_name: string } }
+interface ReleaseRun {
+  id: number;
+  status: string;
+  conclusion: string;
+  head_branch: string;
+  head_sha: string;
+  path: string;
+  event: string;
+  created_at: string;
+  updated_at?: string;
+  head_repository?: { full_name: string };
+}
 
 export function selectPagesReleaseArtifacts(artifacts: readonly ReleaseArtifact[]): ReleaseArtifact[] {
-  return artifacts.filter((artifact) => !artifact.expired && artifact.workflow_run?.head_branch === "main"
+  return artifacts.filter((artifact) => Number.isSafeInteger(artifact.id) && artifact.id > 0
+    && !artifact.expired && artifact.workflow_run?.head_branch === "main"
     && artifact.workflow_run.head_repository_id === artifact.workflow_run.repository_id
     && artifact.name === `pages-release-data-${artifact.workflow_run.head_sha}`
     && /^[a-f0-9]{40}$/.test(artifact.workflow_run.head_sha))
     .sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+export function selectPagesReleaseRuns(runs: readonly ReleaseRun[]): ReleaseRun[] {
+  const seen = new Set<number>();
+  return runs.filter((run) => {
+    if (!Number.isSafeInteger(run.id) || run.id <= 0 || seen.has(run.id)) return false;
+    if (run.status !== "completed" || run.conclusion !== "success" || run.head_branch !== "main"
+      || !/^[a-f0-9]{40}$/.test(run.head_sha) || !TRUSTED_EVENTS.includes(run.event)
+      || run.head_repository?.full_name !== REPOSITORY || !TRUSTED_WORKFLOW_PATHS.includes(run.path)) return false;
+    seen.add(run.id);
+    return true;
+  }).sort((a, b) =>
+    (b.updated_at || b.created_at || "").localeCompare(a.updated_at || a.created_at || "")
+    || (b.created_at || "").localeCompare(a.created_at || "")
+    || b.id - a.id,
+  );
 }
 
 interface AcquiredReleaseData { archive: string; name: string }
@@ -125,12 +157,20 @@ function acquireReleaseData(directory: string, repoRoot: string): AcquiredReleas
   const gh = (args: string[]) => execFileSync("gh", args, { cwd: repoRoot, stdio: ["ignore", "pipe", "pipe"], maxBuffer: 128 * 1024 * 1024 });
   // No ambient repo inference: forks still replay only successful trusted-main
   // release data. Every GitHub operation below is GET-only.
-  const pages = JSON.parse(gh(["api", "--method", "GET", "--paginate", "--slurp", `repos/${REPOSITORY}/actions/artifacts?per_page=100`]).toString()) as { artifacts: ReleaseArtifact[] }[];
-  for (const artifact of selectPagesReleaseArtifacts(pages.flatMap((page) => page.artifacts))) {
-    const run = JSON.parse(gh(["api", "--method", "GET", `repos/${REPOSITORY}/actions/runs/${artifact.workflow_run!.id}`]).toString()) as ReleaseRun;
-    if (run.conclusion !== "success" || run.head_branch !== "main" || run.head_sha !== artifact.workflow_run!.head_sha
-      || !["push", "schedule", "workflow_dispatch"].includes(run.event) || run.head_repository?.full_name !== REPOSITORY
-      || ![".github/workflows/deploy-cloudflare.yml", ".github/workflows/rebuild-pages.yml"].includes(run.path)) continue;
+  const runs = TRUSTED_WORKFLOW_FILES.flatMap((workflow) => {
+    const response = JSON.parse(
+      gh(["api", "--method", "GET", `repos/${REPOSITORY}/actions/workflows/${workflow}/runs?branch=main&status=success&per_page=10`]).toString(),
+    ) as { workflow_runs?: ReleaseRun[] };
+    return Array.isArray(response.workflow_runs) ? response.workflow_runs : [];
+  });
+  for (const run of selectPagesReleaseRuns(runs)) {
+    const expectedName = `pages-release-data-${run.head_sha}`;
+    const response = JSON.parse(
+      gh(["api", "--method", "GET", `repos/${REPOSITORY}/actions/runs/${run.id}/artifacts?name=${expectedName}&per_page=100`]).toString(),
+    ) as { artifacts?: ReleaseArtifact[] };
+    const artifact = selectPagesReleaseArtifacts(Array.isArray(response.artifacts) ? response.artifacts : [])
+      .find((candidate) => candidate.workflow_run?.id === run.id && candidate.workflow_run?.head_sha === run.head_sha);
+    if (!artifact) continue;
     const zip = join(directory, "release-data.zip");
     writeFileSync(zip, gh(["api", "--method", "GET", `repos/${REPOSITORY}/actions/artifacts/${artifact.id}/zip`]));
     const members = execFileSync("unzip", ["-Z1", zip], { encoding: "utf8" }).trim().split("\n");
