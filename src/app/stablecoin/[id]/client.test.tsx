@@ -378,7 +378,7 @@ describe("StablecoinDetailClient", () => {
     expect(screen.getByRole("button", { name: "Retry reserves" }).hasAttribute("disabled")).toBe(true);
   });
 
-  it("reserves the paired score column while pending or carrying a saved grade, then collapses on failure or frozen", () => {
+  it("reserves the paired score column only while a saved grade awaits its card, never for coins without one", () => {
     const coin = { ...TRACKED_META_BY_ID.get("usdt-tether")!, reserves: [{ name: "T-Bills", pct: 100, risk: "very-low" as const }], reserveQualitySummary: undefined, reserveLookThrough: undefined };
     const staticCoin = buildStablecoinStaticMeta(coin);
     const grid = (el: HTMLElement) => el.querySelector("#report-card")!.parentElement!;
@@ -390,11 +390,8 @@ describe("StablecoinDetailClient", () => {
       return rerender ? (rerender(ui), null) : render(ui);
     };
 
-    const { container, rerender } = renderState(makeReadyViewModel({ coin, gradeRead: "pending" }))!;
-    expect(grid(container).className).toContain("lg:grid-cols-2");
-    expect(slot(container)).not.toBeNull();
-
-    renderState(makeReadyViewModel({ coin, gradeRead: "settled", reportCardsResponse: undefined, hero: { savedGrade: { grade: "C", score: 54, asOfMs: 1_780_000_000_000 }, signalRailItems: [] } }), rerender);
+    const savedHero = { savedGrade: { grade: "C", score: 54, asOfMs: 1_780_000_000_000 }, signalRailItems: [] };
+    const { container, rerender } = renderState(makeReadyViewModel({ coin, gradeRead: "pending", hero: savedHero }))!;
     expect(grid(container).className).toContain("lg:grid-cols-2");
     expect(slot(container)).not.toBeNull();
 
@@ -403,7 +400,8 @@ describe("StablecoinDetailClient", () => {
     expect(slot(container)).toBeNull();
     expect(screen.getByTestId("report-card")).toBeTruthy();
 
-    for (const vm of [makeReadyViewModel({ coin, gradeRead: "failed" }), { ...makeFrozenViewModel(coin), gradeRead: "pending" }]) {
+    // Without a saved grade the read may settle with no card, so nothing is reserved to collapse.
+    for (const vm of [makeReadyViewModel({ coin, gradeRead: "pending" }), makeReadyViewModel({ coin, gradeRead: "failed" }), { ...makeFrozenViewModel(coin), gradeRead: "pending" }]) {
       renderState(vm, rerender);
       expect(grid(container).className).not.toContain("lg:grid-cols-2");
       expect(slot(container)).toBeNull();

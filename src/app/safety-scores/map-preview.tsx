@@ -11,8 +11,8 @@ const SAFETY_MAP_PATH = "/safety-scores/map/";
 const SAFETY_MAP_IMAGE_PATH = "/safety-scores/map.webp";
 const SAFETY_MAP_MOBILE_IMAGE_PATH = `/safety-scores/map.webp?w=${SAFETY_MAP_TEASER_MOBILE_WIDTH}`;
 const SAFETY_MAP_FALLBACK_IMAGE_PATH = "/safety-scores/map.png";
-const SAFETY_MAP_MOBILE_MEDIA = "(max-width: 1023px)";
-const SAFETY_MAP_DESKTOP_MEDIA = "(min-width: 1024px)";
+const SAFETY_MAP_MOBILE_MEDIA = "(max-width: 639px)";
+const SAFETY_MAP_DESKTOP_MEDIA = "(min-width: 640px)";
 
 function useSafetyMapImage() {
   const [imagePath, setImagePath] = useState(SAFETY_MAP_IMAGE_PATH);
