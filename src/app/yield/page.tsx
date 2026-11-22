@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AlertsHeaderLink } from "@/components/alerts-header-link";
 import { FaqSection } from "@/components/faq-section";
 import { ShareButton } from "@/components/share-button";
-import { YieldContentLoadingState } from "@/app/yield/loading-state";
+import { YieldContentLoadingState } from "@/components/yield/yield-loading-state";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,

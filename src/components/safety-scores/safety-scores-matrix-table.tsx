@@ -28,7 +28,7 @@ import {
   resolveSafetyCardMeta,
   resolveSafetyCardTopDriver,
   type V9SortKey,
-} from "@/app/safety-scores/v9-view-model";
+} from "@/components/safety-scores/safety-card-helpers";
 
 const MATRIX_REFRESH_QUERY_KEYS: readonly QueryKey[] = [
   FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9Table.queryKey,

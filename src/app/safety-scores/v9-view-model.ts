@@ -1,11 +1,13 @@
 import { formatCurrency } from "@shared/lib/format";
-import { PEG_METADATA } from "@shared/lib/classification";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { gradeRange, scoreToGrade } from "@shared/lib/report-card-core";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import type { SafetyGradeSupplyMix } from "@/components/safety-scores/safety-grade-distribution-bar";
-import type { SafetyScoreTopDriverProps } from "@/components/safety-scores/safety-score-top-driver";
+import {
+  resolveSafetyCardMeta,
+  type V9SortKey,
+} from "@/components/safety-scores/safety-card-helpers";
 import {
   describePartialEvidence,
   formatPartialEvidenceHeadline,
@@ -14,7 +16,7 @@ import {
 import { humanizeSafetyScoreV9Value } from "@/lib/stablecoin-safety-score-v9-presentation";
 import type { V9TableConsumerCard as V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 
-export type V9SortKey = "overall" | "backing" | "exit" | "control" | "mcap" | "coin";
+export { resolveSafetyCardMeta, type V9SortKey };
 export type V9SortDirection = "asc" | "desc";
 export type SafetyScoresViewMode = "table" | "grid";
 export type GradeFilter = "all" | "A" | "B" | "C" | "D" | "F" | "NR" | "pipeline-gap";
@@ -35,51 +37,6 @@ const PILLAR_LABELS = {
   exit: "Exit",
   control: "Economic Control",
 } as const;
-
-export interface SafetyCardMeta {
-  name: string;
-  symbol: string;
-  pegLabel: string;
-}
-
-export function resolveSafetyCardMeta(card: Pick<V9ConsumerCard, "id">): SafetyCardMeta {
-  const meta = CLIENT_TRACKED_META_BY_ID.get(card.id);
-  const pegCurrency = meta?.flags.pegCurrency;
-  const pegLabel = pegCurrency ? (PEG_METADATA[pegCurrency]?.filterLabel ?? pegCurrency) : "—";
-  return {
-    name: meta?.name ?? card.id,
-    symbol: meta?.symbol ?? card.id,
-    pegLabel,
-  };
-}
-
-/**
- * The table projection names a binding cap or a withheld score, but not the
- * peg multiplier, so an uncapped card shows no driver rather than a weakest
- * pillar that may not have set its grade (docs/report-cards.md#consumers).
- */
-export function resolveSafetyCardTopDriver(
-  card: V9ConsumerCard,
-): SafetyScoreTopDriverProps["driver"] {
-  if (card.ratingStatus === "not-rated") {
-    const rawReason = card.nrReasons[0]?.message;
-    return {
-      kind: "withheld",
-      label: null,
-      value: null,
-      reason: rawReason ? humanizeSafetyScoreReason(rawReason) : "Required evidence is withheld.",
-    };
-  }
-  if (card.bindingCap !== null) {
-    return {
-      kind: "cap-bound",
-      label: card.bindingCap.kind,
-      value: card.bindingCap.limit,
-      reason: humanizeSafetyScoreReason(card.bindingCap.reason),
-    };
-  }
-  return null;
-}
 
 export function formatSafetyCardTopDriverExport(card: V9ConsumerCard): string {
   if (card.ratingStatus === "not-rated") {

@@ -53,8 +53,8 @@ describe("command palette action helpers", () => {
 
     const sectionParsed = parsePaletteInput("usdc freeze");
     const sectionPreview = buildVerbPreview(sectionParsed);
-    expect(sectionPreview).toMatchObject({ runnable: true, label: "USD Coin · Freeze & Blacklist" });
+    expect(sectionPreview).toMatchObject({ runnable: true, label: "USD Coin · Freeze & Seizure" });
     expect(executeParsedVerb(sectionParsed, executor)).toBe(true);
-    expect(executor.push).toHaveBeenCalledWith("/stablecoin/usdc-circle/#activity");
+    expect(executor.push).toHaveBeenCalledWith("/stablecoin/usdc-circle/#freeze-seizure");
   });
 });

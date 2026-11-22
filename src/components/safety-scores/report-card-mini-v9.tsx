@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CompareRadarV9 } from "@/components/compare/radar-chart-v9";
 import { SafetyGradeBadge } from "@/components/safety-scores/safety-grade-badge";
 import { SafetyScoreTopDriver } from "@/components/safety-scores/safety-score-top-driver";
-import { resolveSafetyCardTopDriver } from "@/app/safety-scores/v9-view-model";
+import { resolveSafetyCardTopDriver } from "@/components/safety-scores/safety-card-helpers";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { GRADE_RADAR_COLORS, PEG_METADATA } from "@shared/lib/classification";

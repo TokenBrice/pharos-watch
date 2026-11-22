@@ -91,9 +91,9 @@ describe("DailyDigestCard full-width editorial strip", () => {
     render(<QueryClientProvider client={client}><DailyDigestCard /></QueryClientProvider>);
 
     expect(screen.getByRole("heading", { name: "Daily Digest" })).toBeTruthy();
-    expect(screen.getByText(/Current headline/).textContent).toBe("#400 — Current headline");
-    expect(screen.getByText(/Previous headline/).textContent).toBe("Nov 14, 2023 · #399 — Previous headline");
-    expect(screen.getByText(/Earlier headline/).textContent).toBe("Nov 14, 2023 · #398 — Earlier headline");
+    expect(screen.getByText(/Current headline/).textContent).toBe("#400: Current headline");
+    expect(screen.getByText(/Previous headline/).textContent).toBe("Nov 14, 2023 · #399: Previous headline");
+    expect(screen.getByText(/Earlier headline/).textContent).toBe("Nov 14, 2023 · #398: Earlier headline");
     expect(screen.getByText("Current excerpt.")).toBeTruthy();
   });
 

@@ -4,7 +4,7 @@ import { useMemo, useCallback, useEffect, useRef, useState, type ReactNode } fro
 import Link from "next/link";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { YieldContentLoadingState } from "@/app/yield/loading-state";
+import { YieldContentLoadingState } from "@/components/yield/yield-loading-state";
 import { usePegSummary, useYieldAdapterManifest, useYieldRankingsSummary } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { getLogoSrc, logosById } from "@/lib/logos";

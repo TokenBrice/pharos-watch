@@ -3,6 +3,7 @@ import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import { NUMERIC_INPUT_STATES } from "@shared/test-utils/boundary-contract-vectors.test-support";
 import { projectV9TableCard } from "@shared/lib/report-cards-v9-projections";
+import { resolveSafetyCardTopDriver } from "@/components/safety-scores/safety-card-helpers";
 import {
   buildSafetyMcapMap,
   buildSafetyPegTypeMap,
@@ -14,7 +15,6 @@ import {
   formatSafetyCardTopDriverExport,
   groupV9CardsByGrade,
   resolveSafetyCardMeta,
-  resolveSafetyCardTopDriver,
 } from "./v9-view-model";
 
 describe("Safety Scores view model", () => {
