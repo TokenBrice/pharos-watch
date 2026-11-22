@@ -664,7 +664,10 @@ export async function loadStablecoinsIntake(
 
   for (const asset of assets) {
     const observation = listObservations.get(asset);
-    if (!observation || observation.usd == null || asset.supplyRestored || asset.supplyGapFill || asset.supplyChainGuard ||
+    // An immaterial chain gap leaves the provider amount complete (v6.78), so its token quantity stands too (v6.90).
+    const guard = asset.supplyChainGuard;
+    if (!observation || observation.usd == null || asset.supplyRestored || asset.supplyGapFill ||
+      (guard && (guard.status !== "chains-unavailable" || guard.partialCoverage)) ||
       observation.usd !== getCirculatingRawOrNull(asset)) continue;
     if (isKinesisWrapperSupplyId(asset.id)) continue;
     const price = observation.price;

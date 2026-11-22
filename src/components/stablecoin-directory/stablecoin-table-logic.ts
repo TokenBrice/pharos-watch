@@ -10,7 +10,7 @@ import { GRADE_FILTER_TAGS, getFilterTags, gradeMatchesFilter } from "@shared/li
 import { pegCurrencySymbol } from "@shared/lib/peg-format";
 import { getPegTaxonomyByCurrency } from "@shared/lib/peg-taxonomy";
 import { getCirculatingRawOrNull, getUsdMarketCapBaselineOrNull } from "@shared/lib/supply";
-import { buildSupplyObservationProvenance, classifySupplyCoverage } from "@shared/lib/supply-provenance";
+import { buildSupplyObservationProvenance, isSupplyWindowComparable } from "@shared/lib/supply-provenance";
 import {
   CLIENT_ACTIVE_IDS as ACTIVE_IDS,
   CLIENT_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS,
@@ -94,7 +94,7 @@ export function getSupplyChangeBaseline(coin: StablecoinData, window: "day" | "w
 }
 
 export function getMarketCapBaseline(coin: StablecoinData, window: "day" | "week" | "month"): number | null {
-  if (coin.supplyRestored === true || classifySupplyCoverage(buildSupplyObservationProvenance(coin)) !== "complete") return null;
+  if (coin.supplyRestored === true || !isSupplyWindowComparable(buildSupplyObservationProvenance(coin), window)) return null;
   return getUsdMarketCapBaselineOrNull(coin, window);
 }
 

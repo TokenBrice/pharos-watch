@@ -4,7 +4,7 @@ import { LEGACY_SOLOMON_USDV_ID } from "../../lib/solomon-usdv-identity";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_META_BY_ID, FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { admitSupplyBuckets, getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull, getPrevMonthRawOrNull, hasDatedUsdValuation, type SupplyBucketInvalidReason, type SupplyChangeBaselines } from "@shared/lib/supply";
-import { CHAIN_CIRCULATING_KEYS, normalizeChainSupplyValue } from "@shared/lib/chains/circulating";
+import { CHAIN_CIRCULATING_KEYS, canonicalizeChainCirculating, normalizeChainSupplyValue } from "@shared/lib/chains/circulating";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { isRecord } from "@shared/lib/type-guards";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
@@ -13,8 +13,10 @@ import { historicalSupplyQuantity, type HistoricalSupplyQuantityRow } from "../.
 import { throwIfAborted } from "../../lib/abort";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { buildSupplyObservationProvenance, classifySupplyCoverage, parseSupplyObservationProvenance } from "@shared/lib/supply-provenance";
+import { buildSupplyObservationProvenance, classifySupplyAmountCoverage, classifySupplyCoverage, parseSupplyObservationProvenance } from "@shared/lib/supply-provenance";
+import type { SupplyChainGuardProvenance } from "@shared/types/supply";
 import type { PeggedAsset } from "./enrich-prices";
+import { CHAIN_DROPOUT_POLICY } from "./chain-dropout-guard";
 import { pendingCarriedSupplyBaselines, producerSupplyBaselines } from "./enrich-prices-shared";
 import { isSupplyObservationWithinRestoreCeiling, reviewedOnchainSupplyHoldFields, type PreviousStablecoinsCacheState } from "./shared";
 import { TRACKED_ASSET_ADDRESS_OVERRIDES } from "./tracked-asset-overrides";
@@ -277,6 +279,65 @@ const SUPPLY_WINDOWS = [
   ["month", 30, "circulatingPrevMonth", getPrevMonthRawOrNull],
 ] as const;
 
+/**
+ * Pricing v6.90 matched comparison perimeter. A guarded chain gap below the materiality bound that the provider
+ * reads as zero or omits adds nothing to the published amount, so each window's provider aggregate minus those
+ * chains' own buckets from the same packet is the prior supply of exactly the chains the amount counts. Returns
+ * the windows rewritten this way; an unobserved or inconsistent bucket withholds its window (never clamped).
+ */
+function matchComparisonPerimeter(
+  asset: PeggedAsset,
+  admits: (window: keyof SupplyChangeBaselines) => boolean,
+): Array<keyof SupplyChangeBaselines> {
+  const guard = asset.supplyChainGuard;
+  const [peg, ...otherPegs] = Object.keys(asset.circulating ?? {});
+  if (!guard || guard.status !== "chains-unavailable" || guard.partialCoverage || !peg || otherPegs.length > 0 ||
+    asset.pegType !== "peggedUSD" || asset.supplySource !== "defillama" ||
+    guard.chains.some((chain) => chain.resolution !== "unavailable" || (chain.listCurrentUsd ?? 0) !== 0)) return [];
+  const rows = guard.chains.map((chain) => guardChainRows(asset, chain));
+  if (rows.some((chainRows) => chainRows.length === 0)) return [];
+  const matched: Array<keyof SupplyChangeBaselines> = [];
+  for (const [window, , field, readLegacy] of SUPPLY_WINDOWS) {
+    if (!admits(window)) continue;
+    const aggregate = readLegacy(asset);
+    const excluded = rows.flat().map((row) => normalizeChainSupplyValue(row[field]));
+    if (aggregate == null || Object.keys(asset[field] ?? {}).some((key) => key !== peg) || excluded.includes(null)) continue;
+    const prior = aggregate - excluded.reduce<number>((sum, value) => sum + value!, 0);
+    if (!(prior > 0)) continue;
+    asset[field] = { [peg]: prior };
+    matched.push(window);
+  }
+  return matched;
+}
+
+type GuardChain = SupplyChainGuardProvenance["chains"][number];
+
+function guardChainRows(asset: PeggedAsset, chain: GuardChain) {
+  return Object.entries(asset.chainCirculating ?? {})
+    .filter(([label, row]) => chain.chainId == null
+      ? label === chain.chainLabel : canonicalizeChainCirculating({ [label]: row }).has(chain.chainId))
+    .map(([, row]) => row);
+}
+
+/**
+ * Pricing v6.90: whether the provider's prior bucket counts a gap stored on its target date. The stored row
+ * judged only the provider's current at that time; the comparison crosses the gap only when the packet's own
+ * prior row for an unavailable chain is unobserved, or collapsed below its stored baseline while the current
+ * row is not (a lower level at both ends is the provider's level, not a gap).
+ */
+function priorCountsStoredGap(asset: PeggedAsset, gap: GuardChain[] | undefined, field: (typeof SUPPLY_WINDOWS)[number][2]): boolean {
+  return gap?.some((chain) => {
+    if (chain.resolution !== "unavailable") return false;
+    const rows = guardChainRows(asset, chain);
+    const bound = CHAIN_DROPOUT_POLICY.collapseRatio * chain.baselineUsd;
+    const prior = rows.map((row) => normalizeChainSupplyValue(row[field]));
+    const current = rows.map((row) => normalizeChainSupplyValue(row.current));
+    const sum = (values: Array<number | null>) => values.reduce<number>((total, value) => total + value!, 0);
+    return rows.length === 0 || prior.includes(null) ||
+      (sum(prior) <= bound && (current.includes(null) || sum(current) > bound));
+  }) ?? false;
+}
+
 export async function fillMissingSupplyHistory(
   db: D1Database,
   assets: PeggedAsset[],
@@ -410,7 +471,9 @@ export async function fillMissingSupplyHistory(
     circulatingNative: number | null;
     source: string | null;
   };
-  const historyById = new Map<string, { assessedDates: Set<number>; closes: Close[]; legacyUsd: Map<number, number> }>();
+  const historyById = new Map<string, {
+    assessedDates: Set<number>; closes: Close[]; legacyUsd: Map<number, number>; storedGaps: Map<number, GuardChain[]>;
+  }>();
   for (const row of historyRows.results ?? []) {
     if (!runDates.has(row.snapshot_date) && !restoredHistoryIds.has(row.stablecoin_id)) continue;
     const { provenance, invalid } = parseSupplyObservationProvenance(row.supply_provenance);
@@ -431,9 +494,15 @@ export async function fillMissingSupplyHistory(
       row.valuation_observed_at_sec == null;
     if (unassessed && !legacyUsdEligible) continue;
     const history = historyById.get(row.stablecoin_id) ?? {
-      assessedDates: new Set<number>(), closes: [] as Close[], legacyUsd: new Map<number, number>(),
+      assessedDates: new Set<number>(), closes: [] as Close[], legacyUsd: new Map<number, number>(), storedGaps: new Map(),
     };
     historyById.set(row.stablecoin_id, history);
+    // Pricing v6.90: an undated immaterial gap is not an assessment of the provider's own prior bucket.
+    if (legacyUsdEligible && observedAt == null && !invalid && coverage === "partial" &&
+      classifySupplyAmountCoverage(provenance) === "complete") {
+      history.storedGaps.set(row.snapshot_date, provenance!.supplyChainGuard!.chains);
+      continue;
+    }
     if (unassessed) {
       history.legacyUsd.set(row.snapshot_date, row.circulating_usd);
       continue;
@@ -513,10 +582,20 @@ export async function fillMissingSupplyHistory(
     const currentUsd = getCirculatingRawOrNull(asset);
     const undatedList = clock == null && asset.supplySource === "defillama";
     const undatedNonUsdList = undatedList && asset.pegType !== "peggedUSD";
-    if ((!undatedList && (clock == null || !Number.isSafeInteger(clock) || clock <= 0 || clock > now || now - clock > DAY_SECONDS)) ||
-      asset.frozen || currentUsd == null ||
+    const clockComparable = undatedList ||
+      (clock != null && Number.isSafeInteger(clock) && clock > 0 && clock <= now && now - clock <= DAY_SECONDS);
+    if (!clockComparable || asset.frozen || currentUsd == null ||
       classifySupplyCoverage(buildSupplyObservationProvenance(asset)) !== "complete") {
+      const matched = clockComparable && !asset.frozen && currentUsd != null ? matchComparisonPerimeter(asset, (window) => {
+        const [, days, field] = SUPPLY_WINDOWS.find(([candidate]) => candidate === window)!;
+        const targetDate = bucketUnixSecondsToUtcDay((clock ?? now) - days * DAY_SECONDS);
+        return !priorCountsStoredGap(asset, history.storedGaps.get(targetDate), field);
+      }) : [];
       asset.supplyChangeBaselines = { day: null, week: null, month: null };
+      for (const window of matched) delete asset.supplyChangeBaselines[window];
+      // An empty map would record a refusal; fully matched windows read their rewritten buckets.
+      if (matched.length === SUPPLY_WINDOWS.length) delete asset.supplyChangeBaselines;
+      if (matched.length > 0) asset.supplyChainGuard!.matchedComparisonWindows = matched;
       continue;
     }
 
@@ -536,7 +615,8 @@ export async function fillMissingSupplyHistory(
       const targetDate = bucketUnixSecondsToUtcDay(target);
       // Non-USD legacy buckets value the old balance at today's price. USD buckets
       // remain usable for dates on which there was no historical assessment.
-      if (asset.pegType !== "peggedUSD" || history.assessedDates.has(targetDate)) baselines[window] = null;
+      if (asset.pegType !== "peggedUSD" || history.assessedDates.has(targetDate) ||
+        priorCountsStoredGap(asset, history.storedGaps.get(targetDate), field)) baselines[window] = null;
       const legacyUsd = history.legacyUsd.get(targetDate);
       // An undated non-USD list cap replaces the provider bucket with the cap snapshotted on that UTC date.
       const snapshottedListCap = undatedNonUsdList && !history.assessedDates.has(targetDate);

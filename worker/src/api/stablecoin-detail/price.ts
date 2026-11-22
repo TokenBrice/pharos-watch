@@ -46,6 +46,7 @@ export async function overlayCanonicalDetail(
     }
     // Only the admitted publication can set canonical checkpoints and provenance.
     if ("currentSupplyRestored" in detail || "currentSupplyUnavailableReason" in detail || "currentSupplyExcludedChains" in detail
+      || "currentSupplyComparisonExcludedChains" in detail
       || "currentCirculatingPrevWeekUSD" in detail || "currentCirculatingPrevMonthUSD" in detail
       || "currentCirculatingNative" in detail || "supplyChangeBaselines" in detail || "priceDerivation" in detail || "nominalPriceReference" in detail || "currentPeg" in detail) {
       delete detail.currentPeg;
@@ -54,6 +55,7 @@ export async function overlayCanonicalDetail(
       delete detail.currentSupplyRestored;
       delete detail.currentSupplyUnavailableReason;
       delete detail.currentSupplyExcludedChains;
+      delete detail.currentSupplyComparisonExcludedChains;
       delete detail.currentCirculatingNative;
       delete detail.currentCirculatingPrevWeekUSD;
       delete detail.currentCirculatingPrevMonthUSD;
@@ -105,12 +107,15 @@ export async function overlayCanonicalDetail(
         detail.currentSupplyExcludedChains = coin.supplyChainGuard.chains
           .filter((chain) => chain.resolution === "unavailable").map((chain) => chain.chainLabel);
       }
+      const matchedPerimeter = coin.supplyChainGuard?.partialCoverage !== true && coin.supplyChainGuard?.matchedComparisonWindows != null;
+      if (matchedPerimeter) detail.currentSupplyComparisonExcludedChains = coin.supplyChainGuard!.chains.map((chain) => chain.chainLabel);
       const historicalBuckets = (window: keyof SupplyChangeBaselines, previous: Record<string, number>) =>
         getUsdMarketCapBaselineOrNull(coin, window) == null ? {} : projectUsdMarketCapBaselineBuckets(coin, window, previous);
       if (coin.supplyChangeBaselines !== undefined) detail.supplyChangeBaselines = coin.supplyChangeBaselines;
       detail.currentCirculatingPrevDayUSD = historicalBuckets("day", coin.circulatingPrevDay);
-      // Provider history can carry a different valuation from the admitted non-USD close.
-      if (coin.pegType !== "peggedUSD") {
+      // Provider history can carry a different valuation from the admitted non-USD close, and still counts
+      // the chains a matched comparison perimeter excludes (Pricing v6.90).
+      if (coin.pegType !== "peggedUSD" || matchedPerimeter) {
         detail.currentCirculatingPrevWeekUSD = historicalBuckets("week", coin.circulatingPrevWeek);
         detail.currentCirculatingPrevMonthUSD = historicalBuckets("month", coin.circulatingPrevMonth);
       }

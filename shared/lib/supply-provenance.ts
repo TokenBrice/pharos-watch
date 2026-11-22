@@ -83,6 +83,19 @@ export function classifySupplyCoverage(provenance: SupplyObservationProvenance |
 }
 
 /**
+ * Comparison coverage of one window of a live row: complete coverage, or (Pricing v6.90) a guard whose
+ * `matchedComparisonWindows` removed its unavailable chains from both ends of that window's comparison.
+ */
+export function isSupplyWindowComparable(
+  provenance: SupplyObservationProvenance | null | undefined,
+  window: "day" | "week" | "month",
+): boolean {
+  if (classifySupplyCoverage(provenance) === "complete") return true;
+  const guard = provenance?.supplyChainGuard;
+  return guard?.partialCoverage !== true && guard?.matchedComparisonWindows?.includes(window) === true;
+}
+
+/**
  * Coverage of the published amount on its own, for totals, cohorts and shares (Pricing v6.78). Only a guard
  * that sets `partialCoverage` publishes a remainder. Below the guard's 2% materiality bound the gap
  * removes nothing from the published aggregate, so the amount is complete while `classifySupplyCoverage` still

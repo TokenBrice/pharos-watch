@@ -19,8 +19,8 @@ export function makeChainGapGuard(partialCoverage?: true): SupplyChainGuardProve
 }
 
 /** Chain-dropout guard builders: one provider chain row, one persisted pair, a gap-fill and a chain chart read. */
-export function makeChainLeg(current: number, circulatingPrevDay = current) {
-  return { current, circulatingPrevDay };
+export function makeChainLeg(current: number, circulatingPrevDay = current, circulatingPrevWeek?: number, circulatingPrevMonth?: number) {
+  return { current, circulatingPrevDay, ...(circulatingPrevWeek == null ? {} : { circulatingPrevWeek, circulatingPrevMonth }) };
 }
 
 export function makeChainBaseline(chainId: string, baselineUsd: number, baselineObservedAt: number, quarantinedSince: number | null = null) {

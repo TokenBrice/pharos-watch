@@ -7,7 +7,7 @@ import { resolveMintAuthorityScoreDisplay, resolveMintAuthorityStatus } from "@/
 import { deviationColorClass } from "@/lib/severity-colors";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
-import { buildSupplyObservationProvenance, classifySupplyCoverage } from "@shared/lib/supply-provenance";
+import { buildSupplyObservationProvenance, classifySupplyCoverage, isSupplyWindowComparable } from "@shared/lib/supply-provenance";
 import { getVariantAccessibleLabel, getVariantDisplay } from "@shared/lib/variant-display";
 import type { DexLiquidityTableMap } from "@shared/types/dex-liquidity";
 import type { PegSummaryCoin } from "@shared/types/peg";
@@ -30,6 +30,7 @@ export function buildStablecoinTableRowModel({
   variant: StablecoinTableRowVariant;
 }) {
   const circulating = getCirculatingRawOrNull(coin);
+  const provenance = buildSupplyObservationProvenance(coin);
   const prevDay = getMarketCapBaseline(coin, "day");
   const prevWeek = getMarketCapBaseline(coin, "week");
   const meta = TRACKED_META_BY_ID.get(coin.id);
@@ -62,7 +63,9 @@ export function buildStablecoinTableRowModel({
     mintAuthorityScore: resolveMintAuthorityScoreDisplay(reportCards?.[coin.id]?.mint),
     change24h: getSupplyChangePercent(coin, "day"),
     change7d: getSupplyChangePercent(coin, "week"),
-    supplySparklineValues: classifySupplyCoverage(buildSupplyObservationProvenance(coin)) === "partial"
+    // A partial row keeps its sparkline only when both windows compare a matched perimeter (Pricing v6.90).
+    supplySparklineValues: classifySupplyCoverage(provenance) === "partial"
+      && !(isSupplyWindowComparable(provenance, "day") && isSupplyWindowComparable(provenance, "week"))
       ? [] : [prevWeek, prevDay, circulating],
     isOverview,
     isCompactDensity: density === "compact",

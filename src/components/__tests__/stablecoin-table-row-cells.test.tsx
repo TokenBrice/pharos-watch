@@ -7,7 +7,7 @@ import type * as RowSparklineModule from "@/components/row-sparkline";
 import { buildStablecoinTableRowModel } from "@/components/stablecoin-directory/stablecoin-table-row-model";
 import type { StablecoinTableRowCellProps } from "@/components/stablecoin-directory/stablecoin-table-row-types";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
-import { makeStablecoin } from "@shared/test-utils/stablecoin";
+import { makeChainGapGuard, makeStablecoin } from "@shared/test-utils/stablecoin";
 import { buildV9SafetyTableMap } from "@/lib/safety-score-v9-consumers";
 import { makeReportCardsV9Response } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
@@ -181,11 +181,7 @@ describe("StablecoinTableRowCells supply availability", () => {
     row.coin = makeStablecoin({
       circulating: { peggedUSD: 50 },
       circulatingPrevDay: { peggedUSD: 100 }, circulatingPrevWeek: { peggedUSD: 100 },
-      supplyChainGuard: {
-        reason: "supply-chain-dropout", status: "chains-unavailable", partialCoverage: true,
-        chains: [{ chainId: "ethereum", chainLabel: "Ethereum", listCurrentUsd: 0,
-          baselineUsd: 50, baselineObservedAt: 1_792_700_000, baselineSource: "state", resolution: "unavailable" }],
-      },
+      supplyChainGuard: makeChainGapGuard(true),
     });
     row.isVisible = (column) => ["mcap", "change24h", "change7d"].includes(column);
     const model = buildStablecoinTableRowModel({ coin: row.coin, density: row.density, variant: "default" });

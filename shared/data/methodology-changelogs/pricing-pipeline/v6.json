@@ -1,5 +1,21 @@
 [
   {
+    "version": "6.90",
+    "title": "An uncounted chain gap compares a matched perimeter instead of withholding changes",
+    "date": "2026-11-22",
+    "effectiveAt": 1795339800,
+    "summary": "When a chain gap below the chain-dropout guard's 2% materiality bound adds nothing to the published amount, because the provider reads that chain as zero or omits it, each 24h, 7d and 30d change compares the same chains at both ends instead of being withheld, during the gap and after it closes.",
+    "impact": [
+      "From about 14:00 UTC on 2026-11-21, DefiLlama's list read every bridged stablecoin on Cardano at zero while its own Cardano chart still showed USDC at about $36.1M. The guard withheld the chart repair because USDC's other chains gained $3.2M in the same run, so Cardano stayed unavailable, and the v6.78 comparison rule blanked USDC's directory 24h and 7d changes and its detail-page 24h market-cap and 7d supply changes over a 0.05% gap.",
+      "The prior side of each window is the provider's aggregate bucket minus the excluded chains' own buckets from the same packet. The current amount is unchanged and nothing is imputed for an excluded chain. A window with an unobserved aggregate or chain bucket, or a difference that is not positive, stays withheld. The guard lists the matched windows as supplyChainGuard.matchedComparisonWindows, and the detail API names the excluded chains as currentSupplyComparisonExcludedChains.",
+      "After the gap closes, a daily row stored during it no longer withholds the provider's own prior bucket for an undated list row. That row judged only the provider's current at the time. The window is still withheld when the packet's prior row for a chain the stored guard held unavailable is unobserved, or sits at or below half that stored baseline while the current row is above it, because the prior side would then count the gap. Without this, USDC's 24h change would have stayed blank until 2026-11-24, and its 7d and 30d changes would have blanked again on the days their windows reach the stored 2026-11-21 and 2026-11-22 rows.",
+      "Only a USD-pegged DefiLlama list row qualifies: its guard reports chains-unavailable without partialCoverage, and every guarded chain is unrepaired with a list current of zero or omitted. A partial remainder, a repair, a carry, or a chain the provider still counts at a reduced value keeps every change withheld. Stored daily history across the gap keeps partial comparison coverage, so the detail chart, Compare series, digest flow confirmation and native-quantity history are unchanged.",
+      "A qualifying row also publishes its token quantity, and the detail page's 7d and 30d supply trend values the matched prior buckets at the current quantity's own valuation instead of provider token history that still counts the excluded chains. If the provider moved the excluded supply onto another chain, a matched change can show that move as an inflow, bounded by the concurrent healthy-chain gain the guard records."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.89",
     "title": "Kraken upstream quote clocks switched off: the upgrade is rejected from the Worker",
     "date": "2026-11-20",
