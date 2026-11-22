@@ -33,7 +33,7 @@ import {
 export const metadata: Metadata = buildPageMetadata({
   title: "API Terms: Keys, Limits And Notice",
   description:
-    "Terms for Pharos API keys: scope, data licence and attribution, key handling, per-minute and monthly limits, change notice, payment in stablecoins, suspension and contact.",
+    "Terms for Pharos API keys: scope, data license and attribution, key handling, per-minute and monthly limits, change notice, payment in stablecoins, suspension and contact.",
   canonical: "/api/terms/",
 });
 
@@ -65,10 +65,10 @@ export default function ApiTermsPage() {
         </section>
 
         <section className="space-y-2">
-          <h2 className="pharos-section-title">Data licence and attribution</h2>
+          <h2 className="pharos-section-title">Data license and attribution</h2>
           <p>
             Pharos code, data and data exports are MIT-licensed, and editorial content is licensed under CC BY 4.0.
-            These terms govern access to keys, not the data licence. Credit &quot;Pharos (pharos.watch)&quot; when you
+            These terms govern access to keys, not the data license. Credit &quot;Pharos (pharos.watch)&quot; when you
             republish what the API returns, and, where a response carries third-party market data, also credit its
             upstream sources as shown on the{" "}
             <Link href="/about/" className="pharos-prose-link">

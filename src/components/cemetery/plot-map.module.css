@@ -164,15 +164,22 @@
   white-space: nowrap;
 }
 .lead {
-  margin: 8px 0 0;
-  font-size: 0.95rem;
-  line-height: 1.45;
+  margin: 5px 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.38;
   color: var(--muted-foreground);
 }
+.whisper {
+  margin: 4px 0 0;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--muted-foreground);
+  opacity: 0.85;
+}
 .links {
-  margin: 8px 0 0;
+  margin: 5px 0 0;
   font-size: 0.8125rem;
-  line-height: 1.5;
+  line-height: 1.45;
   color: var(--muted-foreground);
 }
 .links a {
@@ -213,9 +220,9 @@
   pointer-events: none;
 }
 .beamLabel {
-  margin: 0 0 4px;
+  margin: 0 0 2px;
   font-size: 0.875rem;
-  line-height: 1.43;
+  line-height: 1.38;
   font-weight: 500;
   color: var(--muted-foreground);
 }
@@ -223,26 +230,26 @@
   margin: 0;
 }
 .beamSub {
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   font-size: 0.75rem;
-  line-height: 1.35;
+  line-height: 1.3;
   color: var(--muted-foreground);
   white-space: nowrap;
 }
 .beamPlaque {
-  margin: 8px 0 0;
+  margin: 5px 0 0;
   font-weight: 600;
   font-size: 10.5px;
-  line-height: 1.3;
+  line-height: 1.25;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--muted-foreground);
   white-space: nowrap;
 }
 .beamRest {
-  margin: 3px 0 0;
+  margin: 2px 0 0;
   font-size: 12px;
-  line-height: 1.35;
+  line-height: 1.3;
   color: var(--muted-foreground);
   white-space: nowrap;
 }
@@ -259,7 +266,7 @@
 .stage {
   --sky: var(--sky0);
   position: relative;
-  margin-top: calc(10px - clamp(0px, min(var(--sky), var(--ov-terms)), var(--head-keep)));
+  margin-top: calc(0px - clamp(0px, min(var(--sky), var(--ov-terms)), var(--head-keep)));
 }
 /* a size container: signpost plates clamp themselves inside the frame with `cqw` */
 .frame {

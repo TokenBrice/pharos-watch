@@ -2,10 +2,15 @@
 import fs from "node:fs";
 import path from "node:path";
 import type React from "react";
+import Link from "next/link";
+import GithubSlugger from "github-slugger";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeSlug from "rehype-slug";
 import remarkGfm from "remark-gfm";
+import remarkParse from "remark-parse";
 import ReactMarkdown from "react-markdown";
+import { unified } from "unified";
+import { ChevronDown } from "lucide-react";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { markdownLinkComponent } from "@/components/markdown-link";
@@ -107,12 +112,76 @@ const mdxComponents = {
   ),
 };
 
+interface DocTocHeading {
+  id: string;
+  text: string;
+}
+
+interface MdastNode {
+  type: string;
+  depth?: number;
+  value?: string;
+  children?: MdastNode[];
+}
+
+function extractMdastText(node: MdastNode): string {
+  if (node.type === "text" || node.type === "inlineCode") {
+    return node.value ?? "";
+  }
+  if (node.type === "break") return "\n";
+  return (node.children ?? []).map(extractMdastText).join("");
+}
+
+/**
+ * Extracts level-2 (`##`) headings from the parsed CommonMark/GFM AST using the
+ * exact `GithubSlugger` sequence `rehype-slug` walks across all headings (depth
+ * 1..6) so every TOC anchor matches its rendered DOM `id`.
+ */
+function extractMarkdownH2Headings(markdown: string): DocTocHeading[] {
+  const tree = unified().use(remarkParse).use(remarkGfm).parse(markdown) as MdastNode;
+  const slugger = new GithubSlugger();
+  const headings: DocTocHeading[] = [];
+
+  const visit = (node: MdastNode): void => {
+    if (node.type === "heading") {
+      const rawText = extractMdastText(node);
+      const id = slugger.slug(rawText);
+      const text = rawText.replace(/\s+/g, " ").trim();
+      if (node.depth === 2 && text) {
+        headings.push({ id, text });
+      }
+      return;
+    }
+    for (const child of node.children ?? []) {
+      visit(child);
+    }
+  };
+
+  visit(tree);
+  return headings;
+}
+
 function renderDoc(doc: (typeof PUBLIC_DOC_BY_SLUG extends ReadonlyMap<string, infer T> ? T : never), slug: string) {
   const source = preparePublicDocMarkdown(fs.readFileSync(path.join(DOCS_DIR, doc.source), "utf-8"), {
     stripTitle: true,
     stripAgentNavigation: true,
   });
   const meta = (docsMetadata as Record<string, { dateModified: string; dateCreated: string }>)[slug];
+  const updatedDate = meta?.dateModified?.slice(0, 10) ?? null;
+  const headings = extractMarkdownH2Headings(source);
+  const hasToc = headings.length >= 2;
+
+  const articleBody = (
+    <article className="min-w-0 max-w-3xl space-y-5 text-sm leading-7 text-muted-foreground [&_h2]:scroll-mt-24 [&_h2]:pt-4 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:tracking-tight [&_h2]:text-foreground [&_h3]:scroll-mt-24 [&_h3]:pt-3 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-foreground [&_h4]:text-base [&_h4]:font-semibold [&_h4]:text-foreground [&_p]:leading-7 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5 [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:text-foreground/80 [&_code]:rounded-sm [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-foreground [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:border [&_pre]:border-border/60 [&_pre]:bg-muted/35 [&_pre]:p-4 [&_pre_code]:bg-transparent [&_pre_code]:p-0">
+      <ReactMarkdown
+        components={mdxComponents}
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeSlug, [rehypeAutolinkHeadings, { behavior: "wrap" }]]}
+      >
+        {source}
+      </ReactMarkdown>
+    </article>
+  );
 
   return (
     <FeaturePageShell
@@ -120,12 +189,39 @@ function renderDoc(doc: (typeof PUBLIC_DOC_BY_SLUG extends ReadonlyMap<string, i
       path={`/docs/${slug}/`}
       title={doc.title}
       variant="longform"
+      containerClassName={hasToc ? "max-w-5xl" : undefined}
       breadcrumbItems={[
         { name: "Home", url: "/" },
         { name: "Docs", url: "/docs/" },
         { name: doc.title, url: `/docs/${slug}/` },
       ]}
       leadParagraphs={[doc.summary]}
+      headerSupplement={
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground">
+          {updatedDate ? (
+            <span>
+              Updated{" "}
+              <time dateTime={meta.dateModified} className="pharos-numeric text-foreground/85">
+                {updatedDate}
+              </time>
+            </span>
+          ) : null}
+          {updatedDate ? <span aria-hidden="true">·</span> : null}
+          <a
+            href={`/docs/${slug}/index.md`}
+            className="pharos-focus-ring rounded-sm underline underline-offset-4 transition-colors hover:text-foreground"
+          >
+            Plain Markdown
+          </a>
+          <span aria-hidden="true">·</span>
+          <Link
+            href="/methodology/"
+            className="pharos-focus-ring rounded-sm underline underline-offset-4 transition-colors hover:text-foreground"
+          >
+            Methodology overview &rarr;
+          </Link>
+        </div>
+      }
     >
       <JsonLdScript
         json={safeJsonLd(
@@ -142,15 +238,55 @@ function renderDoc(doc: (typeof PUBLIC_DOC_BY_SLUG extends ReadonlyMap<string, i
             }),
           )}
       />
-      <article className="space-y-5 text-sm leading-7 text-muted-foreground [&_h2]:pt-4 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:tracking-tight [&_h2]:text-foreground [&_h3]:pt-3 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-foreground [&_h4]:text-base [&_h4]:font-semibold [&_h4]:text-foreground [&_p]:leading-7 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5 [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:text-foreground/80 [&_code]:rounded-sm [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-foreground [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:border [&_pre]:border-border/60 [&_pre]:bg-muted/35 [&_pre]:p-4 [&_pre_code]:bg-transparent [&_pre_code]:p-0">
-        <ReactMarkdown
-          components={mdxComponents}
-          remarkPlugins={[remarkGfm]}
-          rehypePlugins={[rehypeSlug, [rehypeAutolinkHeadings, { behavior: "wrap" }]]}
-        >
-          {source}
-        </ReactMarkdown>
-      </article>
+      {hasToc ? (
+        <div className="space-y-6 lg:grid lg:grid-cols-[minmax(0,1fr)_15rem] lg:items-start lg:gap-10 lg:space-y-0">
+          <details className="group rounded-lg border border-border/60 bg-muted/20 px-4 py-3 lg:hidden">
+            <summary className="pharos-focus-ring flex cursor-pointer list-none items-center justify-between gap-2 rounded-sm text-xs font-semibold text-foreground [&::-webkit-details-marker]:hidden">
+              <span>On this page ({headings.length})</span>
+              <ChevronDown
+                aria-hidden="true"
+                className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
+              />
+            </summary>
+            <nav aria-label="On this page (mobile)" className="mt-3 border-t border-border/50 pt-3">
+              <ol className="space-y-1.5 text-xs">
+                {headings.map((heading) => (
+                  <li key={heading.id}>
+                    <a
+                      href={`#${heading.id}`}
+                      className="pharos-focus-ring block rounded-sm py-0.5 text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      {heading.text}
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          </details>
+
+          {articleBody}
+
+          <aside className="hidden lg:sticky lg:top-[var(--sticky-header-bottom,4rem)] lg:block lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto lg:border-l lg:border-border/60 lg:pl-4">
+            <nav aria-label="On this page" className="space-y-2.5">
+              <p className="pharos-label">On this page</p>
+              <ol className="space-y-1.5 text-xs">
+                {headings.map((heading) => (
+                  <li key={heading.id}>
+                    <a
+                      href={`#${heading.id}`}
+                      className="pharos-focus-ring block rounded-sm py-0.5 leading-snug text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      {heading.text}
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          </aside>
+        </div>
+      ) : (
+        articleBody
+      )}
     </FeaturePageShell>
   );
 }

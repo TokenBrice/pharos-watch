@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -14,11 +14,14 @@ import {
   DataTableShell,
   type DataTableColumn,
 } from "@/components/data-table-shell";
+import { ControlPillToggle } from "@/components/control-pill-toggle";
+import { FilterSearchInput } from "@/components/filter-search-input";
 import { StablecoinIdentity } from "@/components/stablecoin-identity";
 import { InteractiveTableRow } from "@/components/interactive-table-row";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { logosById } from "@/lib/logos";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { useSortedTableRows } from "@/hooks/use-sorted-table-rows";
 import { formatCurrency, formatSignedCurrency, getNetPrefix } from "@shared/lib/format";
 import { getNetColor } from "@shared/lib/classification/flows";
@@ -44,65 +47,87 @@ import { RUN_LINE_EXCLUSION_LABELS, resolveRunLineExclusionReason } from "@/lib/
 import type { MintBurnSignedNetView } from "@shared/lib/mint-burn-valuation-display";
 import { stablecoinLabel } from "@/lib/stablecoin-label";
 
+export type FlowTriageFilter = "all" | "minting" | "burning" | "high-intensity";
+
+const FLOW_TRIAGE_OPTIONS: readonly { value: FlowTriageFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "minting", label: "Net minting" },
+  { value: "burning", label: "Net burning" },
+  { value: "high-intensity", label: "High intensity" },
+];
+
+const HIGH_INTENSITY_THRESHOLD = 30;
+
 interface FlowTableProps {
   coins: MintBurnCoinFlow[];
   isLoading: boolean;
+  /** Coin selected from the hero Run Line: scrolls smoothly to and highlights its row. */
+  highlightedCoinId?: string | null;
+  highlightRequestKey?: number;
 }
 
 const UNKNOWN_MARKED_WINDOWS = ["24h", "7d", "30d", "90d"] as const satisfies readonly MintBurnNetWindow[];
 type UnknownCounts = Record<(typeof UNKNOWN_MARKED_WINDOWS)[number], number>;
+const WINDOW_LABELS: Record<(typeof UNKNOWN_MARKED_WINDOWS)[number], string> = {
+  "24h": "24h",
+  "7d": "7-day",
+  "30d": "30-day",
+  "90d": "90-day",
+};
 
 /**
  * Coverage-unknown nets (legacy hours aggregated before valuation completeness
- * was recorded) keep their known-valuation value. The state is named once per
- * column as a chip with the count, rather than as a `*` on nearly every cell.
+ * was recorded) keep their known-valuation value. Consolidated into one chip
+ * in the toolbar naming every affected window, instead of 4 amber column chips.
  */
-function UnknownCoverageChip({ count, total, windowLabel }: { count: number; total: number; windowLabel: string }) {
+function ConsolidatedUnknownCoverageChip({
+  unknown,
+  total,
+}: {
+  unknown: UnknownCounts;
+  total: number;
+}) {
+  const affected = UNKNOWN_MARKED_WINDOWS.filter((window) => unknown[window] > 0);
+  if (affected.length === 0) return null;
   return (
-    <OpsStatusChip label="Unverified" reasonCodes={["valuation-unknown"]} className="px-1.5 text-3xs">
+    <OpsStatusChip
+      label={affected.length === 1 ? `Unverified ${affected[0]}` : "Unverified"}
+      reasonCodes={["valuation-unknown"]}
+    >
       <p>
-        {count} of {total} {windowLabel} nets include hours aggregated before valuation completeness was recorded, so
-        their coverage is unknown. Each shows its known-valuation net; the screen-reader reading marks the affected
-        cells.
+        Some nets include hours aggregated before valuation completeness was recorded, so their coverage is unknown.
+        Each cell shows its known-valuation net; assistive text marks affected cells.
       </p>
+      <ul className="space-y-0.5 text-muted-foreground">
+        {affected.map((window) => (
+          <li key={window}>
+            <span className="font-medium text-foreground">{WINDOW_LABELS[window]}</span>:{" "}
+            <span className="pharos-numeric">{unknown[window]}</span> of <span className="pharos-numeric">{total}</span> nets
+          </li>
+        ))}
+      </ul>
       <p className="text-muted-foreground">These hours age out of the window; nothing reconstructs them.</p>
     </OpsStatusChip>
   );
 }
 
-function buildFlowTableColumns(unknown: UnknownCounts, total: number): readonly DataTableColumn<FlowTableSortKey>[] {
-  const chip = (window: keyof UnknownCounts, windowLabel: string) =>
-    unknown[window] > 0 ? <UnknownCoverageChip count={unknown[window]} total={total} windowLabel={windowLabel} /> : undefined;
-  return [
-    { id: "coin", label: "Coin", className: "w-[126px] max-w-[126px] sm:w-[150px] sm:max-w-[150px]" },
-    {
-      id: "pressure",
-      label: "Pressure vs 30d",
-      headerAdornment: <MethodologyHint topic="pressureShift" />,
-      sortKey: "pressure",
-      className: "w-[124px] text-right sm:w-[156px]",
-    },
-    { id: "net24h", label: "Net 24h", headerAdornment: chip("24h", "24h"), sortKey: "net24h", className: "w-[108px] text-right" },
-    { id: "mint24h", label: "Minted 24h", sortKey: "mint24h", className: "hidden w-[112px] text-right sm:table-cell" },
-    { id: "burn24h", label: "Burned 24h", sortKey: "burn24h", className: "hidden w-[112px] text-right sm:table-cell" },
-    { id: "net7d", label: "Net 7d", headerAdornment: chip("7d", "7-day"), sortKey: "net7d", className: "hidden w-[112px] text-right md:table-cell" },
-    {
-      id: "net30d",
-      label: "Net 30d",
-      headerAdornment: chip("30d", "30-day"),
-      sortKey: "net30d",
-      className: unknown["30d"] > 0 ? "hidden w-[188px] text-right lg:table-cell" : "hidden w-[112px] text-right lg:table-cell",
-    },
-    {
-      id: "net90d",
-      label: "Net 90d",
-      headerAdornment: chip("90d", "90-day"),
-      sortKey: "net90d",
-      className: unknown["90d"] > 0 ? "hidden w-[188px] text-right xl:table-cell" : "hidden w-[112px] text-right xl:table-cell",
-    },
-    { id: "largest", label: "Largest valued event", sortKey: "largest", className: "hidden w-[124px] text-right xl:table-cell" },
-  ];
-}
+const FLOW_TABLE_COLUMNS: readonly DataTableColumn<FlowTableSortKey>[] = [
+  { id: "coin", label: "Coin", className: "w-[126px] max-w-[126px] sm:w-[150px] sm:max-w-[150px]" },
+  {
+    id: "pressure",
+    label: "Pressure vs 30d",
+    headerAdornment: <MethodologyHint topic="pressureShift" />,
+    sortKey: "pressure",
+    className: "w-[124px] text-right sm:w-[156px]",
+  },
+  { id: "net24h", label: "Net 24h", sortKey: "net24h", className: "w-[108px] text-right" },
+  { id: "mint24h", label: "Minted 24h", sortKey: "mint24h", className: "hidden w-[112px] text-right sm:table-cell" },
+  { id: "burn24h", label: "Burned 24h", sortKey: "burn24h", className: "hidden w-[112px] text-right sm:table-cell" },
+  { id: "net7d", label: "Net 7d", sortKey: "net7d", className: "hidden w-[112px] text-right md:table-cell" },
+  { id: "net30d", label: "Net 30d", sortKey: "net30d", className: "hidden w-[112px] text-right lg:table-cell" },
+  { id: "net90d", label: "Net 90d", sortKey: "net90d", className: "hidden w-[112px] text-right xl:table-cell" },
+  { id: "largest", label: "Largest valued event", sortKey: "largest", className: "hidden w-[124px] text-right xl:table-cell" },
+];
 
 function countUnknownNets(coins: readonly MintBurnCoinFlow[]): UnknownCounts {
   const counts: UnknownCounts = { "24h": 0, "7d": 0, "30d": 0, "90d": 0 };
@@ -115,7 +140,16 @@ function countUnknownNets(coins: readonly MintBurnCoinFlow[]): UnknownCounts {
   return counts;
 }
 
-const LOADING_COLUMNS = buildFlowTableColumns({ "24h": 0, "7d": 0, "30d": 0, "90d": 0 }, 0);
+function matchesFlowTriage(coin: MintBurnCoinFlow, triage: FlowTriageFilter): boolean {
+  if (triage === "all") return true;
+  if (triage === "high-intensity") {
+    const score = getPressureScore(coin);
+    return score != null && Math.abs(score) >= HIGH_INTENSITY_THRESHOLD;
+  }
+  const net24h = resolveCoinNetFlow(coin, "24h", true).valueUsd;
+  if (triage === "minting") return net24h != null && net24h > 0;
+  return net24h != null && net24h < 0;
+}
 
 function FlowNetCell({
   net,
@@ -165,9 +199,25 @@ function hasNoObserved24hActivity(coin: MintBurnCoinFlow): boolean {
   );
 }
 
-export function FlowTable({ coins, isLoading }: FlowTableProps) {
+export function FlowTable({
+  coins,
+  isLoading,
+  highlightedCoinId = null,
+  highlightRequestKey = 0,
+}: FlowTableProps) {
   const router = useRouter();
+  const reducedMotion = usePrefersReducedMotion();
   const [showIdle, setShowIdle] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [triageFilter, setTriageFilter] = useState<FlowTriageFilter>("all");
+  const [syncedHighlightKey, setSyncedHighlightKey] = useState(highlightRequestKey);
+  if (highlightRequestKey !== syncedHighlightKey) {
+    setSyncedHighlightKey(highlightRequestKey);
+    if (highlightedCoinId) {
+      setSearchQuery("");
+      setTriageFilter("all");
+    }
+  }
   const {
     sortKey,
     sortDirection,
@@ -183,14 +233,77 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
   const logos = logosById;
   const prefetch = usePrefetchStablecoin();
 
-  const idleCount = sorted.filter(hasNoObserved24hActivity).length;
-  const visibleRows = showIdle ? sorted : sorted.filter((coin) => !hasNoObserved24hActivity(coin));
-  const columns = buildFlowTableColumns(countUnknownNets(visibleRows), visibleRows.length);
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const hasFilters = normalizedQuery.length > 0 || triageFilter !== "all";
+
+  // Reveal the coin if a Run Line selection targets a filtered or idle row, then scroll smoothly.
+  useEffect(() => {
+    if (!highlightedCoinId) return;
+    const row = document.getElementById(`flow-row-${highlightedCoinId}`);
+    if (row) {
+      row.scrollIntoView?.({ block: "center", behavior: reducedMotion ? "auto" : "smooth" });
+      row.querySelector<HTMLAnchorElement>("a[href]")?.focus({ preventScroll: true });
+    }
+  }, [highlightedCoinId, highlightRequestKey, reducedMotion, showIdle, searchQuery, triageFilter]);
+
+  const filteredBySearchAndTriage = useMemo(
+    () =>
+      sorted.filter((coin) => {
+        if (!matchesFlowTriage(coin, triageFilter)) return false;
+        if (!normalizedQuery) return true;
+        const meta = TRACKED_META_BY_ID.get(coin.stablecoinId);
+        const name = meta?.name ?? coin.symbol;
+        const label = stablecoinLabel({ id: coin.stablecoinId, symbol: coin.symbol });
+        return (
+          coin.symbol.toLowerCase().includes(normalizedQuery) ||
+          name.toLowerCase().includes(normalizedQuery) ||
+          label.toLowerCase().includes(normalizedQuery) ||
+          coin.stablecoinId.toLowerCase().includes(normalizedQuery)
+        );
+      }),
+    [normalizedQuery, sorted, triageFilter],
+  );
+
+  const idleCount = hasFilters ? 0 : sorted.filter(hasNoObserved24hActivity).length;
+  const visibleRows = hasFilters || showIdle
+    ? filteredBySearchAndTriage
+    : filteredBySearchAndTriage.filter((coin) => !hasNoObserved24hActivity(coin) || coin.stablecoinId === highlightedCoinId);
+  const unknownCounts = useMemo(() => countUnknownNets(visibleRows), [visibleRows]);
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setTriageFilter("all");
+  };
 
   const toolbar = (
     <TableToolbarFrame
-      eyebrow="Per-coin flows"
+      eyebrow={
+        <span className="inline-flex flex-wrap items-center gap-2">
+          <span>Per-coin flows</span>
+          <ConsolidatedUnknownCoverageChip unknown={unknownCounts} total={visibleRows.length} />
+        </span>
+      }
       description="Minting and redemption per coin on each configured issuance chain, worst pressure against its 30-day norm first."
+      actions={
+        <>
+          <ControlPillToggle
+            ariaLabel="Filter by flow signal"
+            options={FLOW_TRIAGE_OPTIONS}
+            value={triageFilter}
+            onChange={setTriageFilter}
+            className="flex flex-wrap gap-1.5"
+            buttonClassName="min-h-11 md:min-h-8"
+          />
+          <FilterSearchInput
+            value={searchQuery}
+            onValueChange={setSearchQuery}
+            placeholder="Search coin..."
+            ariaLabel="Search flow coins by name or symbol"
+            className="relative w-full sm:w-44"
+            inputClassName="h-11 pl-8 text-xs md:h-8"
+          />
+        </>
+      }
     />
   );
 
@@ -199,11 +312,13 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
       <DataTableShell
         tableId="mint-burn-flow"
         testId="mint-burn-flow-table"
-        columns={LOADING_COLUMNS}
+        columns={FLOW_TABLE_COLUMNS}
         striped
+        stickyHeader
+        stickyMode="page"
         topSlot={toolbar}
       >
-        <DataTableLoadingRows columns={LOADING_COLUMNS} rowCount={5} />
+        <DataTableLoadingRows columns={FLOW_TABLE_COLUMNS} rowCount={5} />
       </DataTableShell>
     );
   }
@@ -212,8 +327,10 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
     <DataTableShell
       tableId="mint-burn-flow"
       testId="mint-burn-flow-table"
-      columns={columns}
+      columns={FLOW_TABLE_COLUMNS}
       striped
+      stickyHeader
+      stickyMode="page"
       tableClassName="min-w-[358px] table-fixed"
       topSlot={toolbar}
       sort={{
@@ -236,12 +353,18 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
             const pressureDisplay = pressureScore != null
               ? getPressureShiftDisplay(pressureScore)
               : null;
+            const isHighlighted = highlightedCoinId === coin.stablecoinId;
             return (
               <InteractiveTableRow
                 key={coin.stablecoinId}
+                id={`flow-row-${coin.stablecoinId}`}
+                data-highlighted={isHighlighted ? "true" : undefined}
                 onActivate={() => router.push(buildStablecoinUrl(coin.stablecoinId))}
                 onHover={() => prefetch(coin.stablecoinId)}
-                className="h-11 sm:h-auto"
+                className={cn(
+                  "h-11 sm:h-auto",
+                  isHighlighted ? "border-l-2 border-l-brand-accent bg-muted/40" : "",
+                )}
               >
                 <TableCell className="w-[126px] max-w-[126px] overflow-hidden sm:w-[150px] sm:max-w-[150px]">
                   <Link
@@ -368,7 +491,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
       })}
       {idleCount > 0 && (
         <TableRow rowIntent="static">
-          <TableCell colSpan={columns.length} className="py-3 text-center text-sm text-muted-foreground">
+          <TableCell colSpan={FLOW_TABLE_COLUMNS.length} className="py-3 text-center text-sm text-muted-foreground">
             <button
               type="button"
               onClick={() => setShowIdle((value) => !value)}
@@ -382,9 +505,22 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
           </TableCell>
         </TableRow>
       )}
-      {sorted.length === 0 && (
-        <DataTableEmptyRow colSpan={columns.length}>
-          No mint/burn events in this period.
+      {visibleRows.length === 0 && (
+        <DataTableEmptyRow colSpan={FLOW_TABLE_COLUMNS.length}>
+          {hasFilters ? (
+            <span className="flex flex-col items-center gap-3">
+              <span>No flow coins match the current search or filter.</span>
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="pharos-focus-ring rounded-full border border-border/60 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+              >
+                Clear filters
+              </button>
+            </span>
+          ) : (
+            "No mint/burn events in this period."
+          )}
         </DataTableEmptyRow>
       )}
     </DataTableShell>

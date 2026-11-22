@@ -1,7 +1,7 @@
 "use client";
 
+import { useEffect, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
 import { getRouteCapabilities } from "@/lib/route-capabilities";
 
 export function RouteChrome({ children, dataTableOnly = false }: { children: ReactNode; dataTableOnly?: boolean }) {
@@ -14,7 +14,13 @@ export function RouteChrome({ children, dataTableOnly = false }: { children: Rea
 
 export function RegimeBarChrome({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  if (!getRouteCapabilities(pathname).regimeBar) return null;
+  const hasRegimeBar = getRouteCapabilities(pathname).regimeBar;
+
+  useEffect(() => {
+    document.documentElement.dataset.regimeBar = hasRegimeBar ? "on" : "off";
+  }, [hasRegimeBar]);
+
+  if (!hasRegimeBar) return null;
   return children;
 }
 
@@ -35,7 +41,7 @@ export function GlobalFooterChrome({ children }: { children: ReactNode }) {
 
 export function MainContent({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { chrome, chromeless, home } = getRouteCapabilities(pathname);
+  const { chrome, chromeless, home, regimeBar } = getRouteCapabilities(pathname);
   if (chrome === "ops") return children;
   const className = chromeless
     ? "flex-1 min-w-0"
@@ -44,7 +50,7 @@ export function MainContent({ children }: { children: ReactNode }) {
       : "pharos-mobile-utility-safe flex-1 mx-auto w-full max-w-[120rem] px-4 py-6 md:py-7 lg:px-5 xl:px-9";
 
   return (
-    <main id="main-content" className={className}>
+    <main id="main-content" data-regime-bar={regimeBar ? "on" : "off"} className={className}>
       {children}
     </main>
   );

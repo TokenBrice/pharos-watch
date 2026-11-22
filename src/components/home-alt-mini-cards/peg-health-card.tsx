@@ -14,7 +14,7 @@ import {
 } from "@shared/lib/classification";
 
 // Buckets, fills and legend all come from the shared peg-deviation levels
-// (healthy green → mild amber → moderate orange → severe red).
+// (healthy green -> mild amber -> moderate orange -> severe red).
 const { mild, moderate, severe } = PEG_DEVIATION_LEVEL_MIN_BPS;
 const SEGMENT_RANGES: ReadonlyArray<readonly [PegDeviationLevel, string]> = [
   ["healthy", `<${mild} bps`],
@@ -44,9 +44,9 @@ export function PegHealthCard(): React.JSX.Element {
 
   return (
     <PulseCard
-      className="pharos-card-shell flex h-full flex-col gap-4 p-4"
-      href="/screener/"
-      expandLabel="Open Screener"
+      className="pharos-card-shell flex h-full min-h-[322px] flex-col gap-4 p-4"
+      href="/depeg/"
+      expandLabel="Open Depeg monitor"
       label="Peg health"
       state={state}
       loadingContent={
@@ -60,10 +60,13 @@ export function PegHealthCard(): React.JSX.Element {
       {summary ? (
         <div className="flex flex-1 flex-col">
           <div>
-            <div className="flex items-baseline pharos-numeric text-4xl font-bold tracking-tight">
-              <span className="text-foreground">{summary.coinsAtPeg}</span>
-              <span className="mx-2 text-2xl text-muted-foreground/50">/</span>
-              <span className="text-muted-foreground">{summary.totalTracked}</span>
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+              <span className="flex items-baseline pharos-numeric text-4xl font-bold leading-none tracking-tight">
+                <span className="text-foreground">{summary.coinsAtPeg}</span>
+                <span className="mx-1.5 text-2xl text-muted-foreground/50">/</span>
+                <span className="text-muted-foreground">{summary.totalTracked}</span>
+              </span>
+              <span className="text-xs text-muted-foreground">priced non-NAV coins</span>
             </div>
             {/* The active-depeg count already answers on the market-state line and
                 its own card; this card speaks in deviation bands. */}

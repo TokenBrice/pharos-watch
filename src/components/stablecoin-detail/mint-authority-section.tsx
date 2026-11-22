@@ -356,7 +356,7 @@ function MintAuthorityScoreBreakdown({ score }: { score: MintAuthorityDetailScor
             <ul className="mt-1 space-y-1">
               {score.caps.map((cap) => (
                 <li key={cap.kind}>
-                  {cap.label} <span className="pharos-numeric">{cap.limitLabel}</span> — {cap.reason}
+                  {cap.label} <span className="pharos-numeric">{cap.limitLabel}</span>: {cap.reason}
                 </li>
               ))}
             </ul>

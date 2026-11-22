@@ -1,15 +1,38 @@
 import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 import { FaqSection } from "@/components/faq-section";
-import { CardExpandButton } from "@/components/home-alt-mini-cards/pulse-card-header";
+import { Term } from "@/components/term";
 import { ComplianceContentLoadingState } from "@/app/compliance/loading-state";
 import { buildComplianceStatusDistribution, buildComplianceSummary } from "@/lib/compliance-model";
 import { ComplianceStatusDistributionBars } from "@/app/compliance/status-distribution-bar";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import type { FaqItem } from "@/lib/faq";
 import { GENIUS_REGIME_STATE } from "@shared/lib/compliance-regime-state";
+import type { GeniusAuthorizationStatus } from "@shared/types/compliance-vocabulary";
 
 const COMPLIANCE_SUMMARY = buildComplianceSummary();
-const complianceDescription = `${COMPLIANCE_SUMMARY.micaAuthorized} of ${COMPLIANCE_SUMMARY.micaAssessed} active stablecoins assessed for MiCA hold MiCA authorization. GENIUS Act status for ${COMPLIANCE_SUMMARY.geniusTracked} coins (effective ${GENIUS_REGIME_STATE.effectiveDate}), from public registers.`;
+const COMPLIANCE_STATUS_DISTRIBUTION = buildComplianceStatusDistribution();
+
+const GENIUS_ACTIVE_SIGNAL_STATUSES: ReadonlySet<GeniusAuthorizationStatus> = new Set([
+  "ppsi-approved",
+  "state-qualified",
+  "official-application-pending",
+  "issuer-announced-intent",
+]);
+
+const MICA_OUT_OF_SCOPE =
+  COMPLIANCE_STATUS_DISTRIBUTION.mica.find((item) => item.status === "out-of-scope")?.count ?? 0;
+const MICA_NON_COMPLIANT =
+  COMPLIANCE_STATUS_DISTRIBUTION.mica.find((item) => item.status === "non-compliant")?.count ?? 0;
+const MICA_IN_SCOPE = Math.max(COMPLIANCE_SUMMARY.micaAssessed - MICA_OUT_OF_SCOPE, 0);
+const MICA_IN_SCOPE_PCT =
+  MICA_IN_SCOPE > 0 ? Math.round((COMPLIANCE_SUMMARY.micaAuthorized / MICA_IN_SCOPE) * 100) : 0;
+const GENIUS_ACTIVE_SIGNALS = COMPLIANCE_STATUS_DISTRIBUTION.genius.reduce(
+  (sum, item) => (GENIUS_ACTIVE_SIGNAL_STATUSES.has(item.status) ? sum + item.count : sum),
+  0,
+);
+
+const complianceDescription = `${COMPLIANCE_SUMMARY.micaAuthorized} of ${MICA_IN_SCOPE} in-scope active stablecoins (${COMPLIANCE_SUMMARY.micaAssessed} assessed) hold MiCA authorization. ${GENIUS_ACTIVE_SIGNALS} GENIUS Act active signals across ${COMPLIANCE_SUMMARY.geniusTracked} tracked coins (effective ${GENIUS_REGIME_STATE.effectiveDate}).`;
 
 const COMPLIANCE_FAQ_ITEMS = [
   {
@@ -34,108 +57,144 @@ const COMPLIANCE_FAQ_ITEMS = [
   },
 ] as const satisfies readonly FaqItem[];
 
-const COMPLIANCE_STATUS_DISTRIBUTION = buildComplianceStatusDistribution();
-
-const COMPLIANCE_HERO = (
-  <section aria-label="Compliance coverage summary" className="pharos-card-shell overflow-hidden">
-    <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b border-border/50 p-5 sm:p-6">
-      <div className="space-y-1.5">
-        <p className="text-sm font-medium text-muted-foreground">MiCA-authorized active stablecoins</p>
-        <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-foreground sm:text-[2.45rem]">
-          {COMPLIANCE_SUMMARY.micaAuthorized.toLocaleString()}
-        </p>
-        <p className="pharos-meta">of {COMPLIANCE_SUMMARY.micaAssessed.toLocaleString()} active stablecoins assessed for MiCA</p>
-      </div>
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/30 px-3 py-1 text-xs font-medium text-muted-foreground">
-          GENIUS regime
-          <span className="capitalize text-foreground">{GENIUS_REGIME_STATE.rulemakingPhase.replace(/-/g, " ")}</span>
-          <span className="pharos-numeric text-foreground">· effective {GENIUS_REGIME_STATE.effectiveDate}</span>
-        </span>
-        <CardExpandButton href="#data" expandLabel="Jump to compliance tables" />
-      </div>
-    </div>
-    <dl className="grid grid-cols-3 divide-x divide-border/40">
-      <div className="min-w-0 space-y-1 px-4 py-4 sm:px-6 sm:py-5">
-        <dt className="pharos-meta">Authorized share of active MiCA rows</dt>
-        <dd className="pharos-numeric text-lg font-semibold text-foreground sm:text-xl">
-          {COMPLIANCE_SUMMARY.micaAuthorizedPct}%
-        </dd>
-      </div>
-      <div className="min-w-0 space-y-1 px-4 py-4 sm:px-6 sm:py-5">
-        <dt className="pharos-meta">GENIUS tracked</dt>
-        <dd className="pharos-numeric text-lg font-semibold text-foreground sm:text-xl">
-          {COMPLIANCE_SUMMARY.geniusTracked.toLocaleString()}
-        </dd>
-      </div>
-      <div className="min-w-0 space-y-1 px-4 py-4 sm:px-6 sm:py-5">
-        <dt className="pharos-meta">Assessed regime rows</dt>
-        <dd className="pharos-numeric text-lg font-semibold text-foreground sm:text-xl">
-          {COMPLIANCE_SUMMARY.assessedRegimeRows.toLocaleString()}
-        </dd>
-      </div>
-    </dl>
-    <ComplianceStatusDistributionBars distribution={COMPLIANCE_STATUS_DISTRIBUTION} />
-  </section>
-);
-
 const sourceReferences = GENIUS_REGIME_STATE.sourceReferences ?? [
   { label: GENIUS_REGIME_STATE.sourceLabel, url: GENIUS_REGIME_STATE.sourceUrl },
 ];
 
-const COMPLIANCE_STATIC_SECTION = (
-  <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-    <div className="pharos-card-shell p-5">
-      <p className="pharos-label">How to read status</p>
-      <div className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
-        <p>
-          <span className="font-medium text-foreground">MiCA authorized</span> means the issuer holds an in-effect EMI
-          or credit-institution authorization listed on a competent-authority register. Pending, transitional,
-          non-compliant, and out-of-scope retain the existing MiCA editorial meanings.
-        </p>
-        <p>
-          <span className="font-medium text-foreground">GENIUS rows are not compliance approvals.</span> They track
-          source-backed public posture such as issuer-announced intent, regulator-sourced applications, or future PPSI
-          approvals once the regime is operational.
-        </p>
+const COMPLIANCE_HERO = (
+  <section aria-label="Compliance coverage summary" className="pharos-card-shell overflow-hidden">
+    <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-4 sm:px-5">
+      <div className="flex flex-wrap items-baseline gap-x-8 gap-y-3">
+        <div className="space-y-0.5">
+          <p className="pharos-label">MiCA Authorized</p>
+          <p className="flex flex-wrap items-baseline gap-x-2">
+            <span className="pharos-numeric text-2xl font-semibold leading-none tracking-tight text-foreground sm:text-3xl">
+              {COMPLIANCE_SUMMARY.micaAuthorized.toLocaleString()}
+            </span>
+            <span className="pharos-numeric text-xs font-medium text-muted-foreground">
+              {MICA_IN_SCOPE_PCT}% of {MICA_IN_SCOPE.toLocaleString()} in-scope
+            </span>
+          </p>
+          <p className="pharos-meta">
+            of {COMPLIANCE_SUMMARY.micaAssessed.toLocaleString()} active stablecoins assessed for MiCA
+          </p>
+        </div>
+
+        <div className="space-y-0.5">
+          <p className="pharos-label">GENIUS Active Signals</p>
+          <p className="flex flex-wrap items-baseline gap-x-2">
+            <span className="pharos-numeric text-2xl font-semibold leading-none tracking-tight text-foreground sm:text-3xl">
+              {GENIUS_ACTIVE_SIGNALS.toLocaleString()}
+            </span>
+            <span className="pharos-numeric text-xs font-medium text-muted-foreground">
+              of {COMPLIANCE_SUMMARY.geniusTracked.toLocaleString()} tracked
+            </span>
+          </p>
+          <p className="pharos-meta">
+            <span className="capitalize">{GENIUS_REGIME_STATE.rulemakingPhase.replace(/-/g, " ")}</span> · effective{" "}
+            <span className="pharos-numeric">{GENIUS_REGIME_STATE.effectiveDate}</span>
+          </p>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-1.5" aria-label="Quick compliance filters">
+        <Link
+          href="/compliance/?regime=mica&status=authorized#data"
+          className="pharos-focus-ring pharos-control-pill min-h-11 px-3 text-xs font-medium sm:min-h-8"
+        >
+          MiCA Authorized ({COMPLIANCE_SUMMARY.micaAuthorized.toLocaleString()})
+        </Link>
+        {MICA_NON_COMPLIANT > 0 ? (
+          <Link
+            href="/compliance/?regime=mica&status=non-compliant#data"
+            className="pharos-focus-ring pharos-control-pill min-h-11 px-3 text-xs font-medium sm:min-h-8"
+          >
+            MiCA Non-Compliant ({MICA_NON_COMPLIANT.toLocaleString()})
+          </Link>
+        ) : null}
+        {GENIUS_ACTIVE_SIGNALS > 0 ? (
+          <Link
+            href="/compliance/?regime=genius#data"
+            className="pharos-focus-ring pharos-control-pill min-h-11 px-3 text-xs font-medium sm:min-h-8"
+          >
+            GENIUS Active Signals ({GENIUS_ACTIVE_SIGNALS.toLocaleString()})
+          </Link>
+        ) : null}
       </div>
     </div>
-    <div className="pharos-card-shell p-5">
-      <p className="pharos-label">GENIUS regime state</p>
-      <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-        <dt className="text-muted-foreground">Public law</dt>
-        <dd className="pharos-numeric text-foreground">{GENIUS_REGIME_STATE.publicLawDate}</dd>
-        <dt className="text-muted-foreground">Effective date</dt>
-        <dd className="pharos-numeric text-foreground">{GENIUS_REGIME_STATE.effectiveDate}</dd>
-        <dt className="text-muted-foreground">Phase</dt>
-        <dd className="capitalize text-foreground">{GENIUS_REGIME_STATE.rulemakingPhase.replace(/-/g, " ")}</dd>
-      </dl>
-      <details className="mt-3 text-sm text-muted-foreground">
-        <summary className="pharos-focus-ring cursor-pointer rounded-sm py-1 hover:text-foreground">
-          Sources ({sourceReferences.length})
-        </summary>
-        <ul className="mt-2 list-disc space-y-1 pl-5 leading-relaxed">
-          {sourceReferences.map((source) => (
-            <li key={source.url}>
-              <a href={source.url} target="_blank" rel="noopener noreferrer" className="pharos-prose-link">
-                {source.label}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </details>
-      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-        Pair this with{" "}
-        <Link href="/screener/" className="pharos-prose-link">
-          Screener
-        </Link>{" "}
-        and{" "}
-        <Link href="/safety-scores/" className="pharos-prose-link">
-          Safety Scores
-        </Link>{" "}
-        for the non-legal risk picture.
-      </p>
-    </div>
+
+    <ComplianceStatusDistributionBars distribution={COMPLIANCE_STATUS_DISTRIBUTION} />
+
+    <details className="group border-t border-border/50 bg-muted/20">
+      <summary className="pharos-focus-ring flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-2.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden sm:min-h-9 sm:px-5">
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+          <span className="text-foreground">How to read status &amp; GENIUS regime state</span>
+          <span aria-hidden="true">·</span>
+          <span className="pharos-numeric">
+            GENIUS effective {GENIUS_REGIME_STATE.effectiveDate} · {sourceReferences.length} sources
+          </span>
+        </span>
+        <ChevronDown
+          aria-hidden="true"
+          className="h-4 w-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none group-open:rotate-180"
+        />
+      </summary>
+      <div className="grid gap-4 border-t border-border/50 px-4 py-4 sm:px-5 lg:grid-cols-2">
+        <div className="space-y-2 text-sm leading-relaxed text-muted-foreground">
+          <p className="pharos-label">How to read status</p>
+          <p>
+            Compliance status here is narrow and source-backed: it does not prove reserve sufficiency, operational
+            controls, or sanctions and AML effectiveness.
+          </p>
+          <p>
+            <span className="font-medium text-foreground">
+              <Term slug="mica">MiCA</Term> authorized
+            </span>{" "}
+            means the issuer holds an in-effect <Term slug="emi">EMI</Term> or credit-institution authorization listed
+            on a competent-authority register. Pending, transitional, non-compliant, and out-of-scope retain the
+            existing MiCA editorial meanings.
+          </p>
+          <p>
+            <span className="font-medium text-foreground">
+              <Term slug="genius">GENIUS</Term> rows are not compliance approvals.
+            </span>{" "}
+            They track source-backed public posture such as issuer-announced intent, regulator-sourced applications, or
+            future <Term slug="ppsi">PPSI</Term> approvals once the regime is operational.
+          </p>
+        </div>
+        <div className="space-y-3 text-sm leading-relaxed text-muted-foreground">
+          <p className="pharos-label">GENIUS regime state</p>
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+            <dt className="text-muted-foreground">Public law</dt>
+            <dd className="pharos-numeric text-foreground">{GENIUS_REGIME_STATE.publicLawDate}</dd>
+            <dt className="text-muted-foreground">Effective date</dt>
+            <dd className="pharos-numeric text-foreground">{GENIUS_REGIME_STATE.effectiveDate}</dd>
+            <dt className="text-muted-foreground">Phase</dt>
+            <dd className="capitalize text-foreground">{GENIUS_REGIME_STATE.rulemakingPhase.replace(/-/g, " ")}</dd>
+          </dl>
+          <ul className="list-disc space-y-1 pl-5 text-xs leading-relaxed">
+            {sourceReferences.map((source) => (
+              <li key={source.url}>
+                <a href={source.url} target="_blank" rel="noopener noreferrer" className="pharos-prose-link">
+                  {source.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Pair this with{" "}
+            <Link href="/screener/" className="pharos-prose-link">
+              Screener
+            </Link>{" "}
+            and{" "}
+            <Link href="/safety-scores/" className="pharos-prose-link">
+              Safety Scores
+            </Link>{" "}
+            for the non-legal risk picture.
+          </p>
+        </div>
+      </div>
+    </details>
   </section>
 );
 
@@ -148,24 +207,17 @@ const route = createClientFeaturePage({
   loadClient: () => import("./client").then((m) => ({ default: m.ComplianceClient })),
   loading: <ComplianceContentLoadingState />,
   shell: {
+    header: "instrument",
     breadcrumbName: "Compliance",
     title: "Compliance Tracker",
     leadParagraphs: [
-      "Where each assessed stablecoin stands under EU MiCA and the U.S. GENIUS Act, sourced from public registers, regulator notices, and issuer disclosures.",
+      <>
+        Where each assessed stablecoin stands under EU <Term slug="mica">MiCA</Term> and the U.S.{" "}
+        <Term slug="genius">GENIUS Act</Term>, sourced from public registers, regulator notices, and issuer disclosures.
+      </>,
     ],
-    headerSupplement: (
-      <p className="pharos-lead hidden sm:block">
-        Compliance status here is narrow and source-backed: it does not prove reserve sufficiency, operational
-        controls, or sanctions and AML effectiveness.
-      </p>
-    ),
   },
-  beforeClient: (
-    <>
-      {COMPLIANCE_HERO}
-      {COMPLIANCE_STATIC_SECTION}
-    </>
-  ),
+  beforeClient: COMPLIANCE_HERO,
   afterClient: <FaqSection items={COMPLIANCE_FAQ_ITEMS} includeJsonLd />,
 });
 

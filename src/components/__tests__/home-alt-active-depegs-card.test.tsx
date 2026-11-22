@@ -122,7 +122,7 @@ describe("ActiveDepegsCard", () => {
     expect(screen.getByText("Active depegs")).toBeTruthy();
     expect(screen.getByText("USDC")).toBeTruthy();
     expect(screen.getByText("EURS")).toBeTruthy();
-    expect(screen.getByText(/120/)).toBeTruthy();
+    expect(screen.getByText(/120 bps/)).toBeTruthy();
     expect(screen.queryByText(/9025/)).toBeNull();
     expect(screen.queryByText("PMUSD")).toBeNull();
   });

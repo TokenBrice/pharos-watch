@@ -482,6 +482,38 @@ const pharosBoundaryPlugin = {
         };
       },
     },
+    "no-bare-frost-blue-text": {
+      meta: {
+        type: "problem",
+        schema: [],
+        messages: {
+          bare: "Bare frost-blue foreground {{value}} fails WCAG AA on light surfaces (1.96:1): use text-brand-accent-text (5.93:1 light / 8.84:1 dark) or qualify with dark: on dark-only surfaces.",
+        },
+      },
+      create(context) {
+        // Foreground text utilities on frost-blue / brand-accent (`text-frost-blue`,
+        // `text-brand-accent`, `text-[var(--brand-accent)]`, `hover:text-frost-blue`,
+        // `text-frost-blue/80`, `!text-frost-blue`) fail WCAG AA contrast on light
+        // surfaces. Explicit `dark:`-prefixed variants stay legal.
+        const corePattern = /^!?text-(?:frost-blue|brand-accent|\[var\(--(?:frost-blue|brand-accent)\)\])(?:\/|!|$)/;
+        function check(node, text) {
+          if (typeof text !== "string") return;
+          for (const token of text.split(/\s|["'`]/)) {
+            if (!token) continue;
+            const lastColon = token.lastIndexOf(":");
+            const core = token.slice(lastColon + 1);
+            if (!corePattern.test(core)) continue;
+            const variants = lastColon >= 0 ? token.slice(0, lastColon).split(":") : [];
+            if (variants.includes("dark")) continue;
+            context.report({ node, messageId: "bare", data: { value: token } });
+          }
+        }
+        return {
+          Literal: (node) => check(node, node.value),
+          TemplateElement: (node) => check(node, node.value.cooked),
+        };
+      },
+    },
     "require-shared-alias": {
       meta: {
         type: "problem",
@@ -820,6 +852,16 @@ const eslintConfig = defineConfig([
     plugins: { pharos: pharosBoundaryPlugin },
     rules: {
       "pharos/no-raw-palette-colour": "error",
+    },
+  },
+  {
+    // WCAG foreground contrast guardrail: bare text-frost-blue fails AA on
+    // light surfaces (1.96:1). Use text-brand-accent-text or qualify with dark:.
+    files: ["src/**/*.{ts,tsx}", "shared/**/*.{ts,tsx}"],
+    ignores: DESIGN_TEST_IGNORES,
+    plugins: { pharos: pharosBoundaryPlugin },
+    rules: {
+      "pharos/no-bare-frost-blue-text": "error",
     },
   },
   {

@@ -29,7 +29,10 @@ vi.mock("@/components/homepage/home-alt-status-telegram", () => ({
 vi.mock("@/components/homepage/home-alt-upcoming-horizon-constellation", () => ({
   HomeAltUpcomingHorizonConstellation: () => <h2 id="upcoming-horizon-constellation-title" data-testid="horizon">Horizon</h2>,
 }));
-vi.mock("@/components/homepage/shortcuts-section", () => ({ ShortcutsSection: () => null }));
+vi.mock("@/components/home-alt-mini-cards/daily-digest-card", () => ({
+  DailyDigestCard: () => <h2 id="daily-digest-title" data-testid="digest">Daily Digest</h2>,
+}));
+vi.mock("@/components/homepage/shortcuts-section", () => ({ ShortcutsSection: () => <div data-testid="shortcuts">Shortcuts</div> }));
 
 const intersections: Array<() => void> = [];
 const scrollIntoView = vi.fn();
@@ -64,12 +67,28 @@ afterEach(() => {
 });
 
 describe("HomeAltClient", () => {
-  it("places server-rendered media before system status", async () => {
-    render(<HomeAltClient><div data-testid="media">Seen on</div></HomeAltClient>);
-    const media = screen.getByTestId("media");
+  it("renders bands in the locked Q6 triage order with blog banner below pulse and yield ahead of horizon and DDR", async () => {
+    render(
+      <HomeAltClient blogBanner={<div data-testid="blog-banner">Blog</div>}>
+        <div data-testid="media">Seen on</div>
+      </HomeAltClient>,
+    );
     await act(async () => intersections.forEach((intersect) => intersect()));
-    const status = await screen.findByTestId("status");
-    expect(media.compareDocumentPosition(status) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const ordered = [
+      await screen.findByTestId("mini-cards"),
+      screen.getByTestId("blog-banner"),
+      await screen.findByRole("region", { name: "Loaded rankings" }),
+      await screen.findByTestId("digest"),
+      await screen.findByTestId("yield"),
+      await screen.findByTestId("horizon"),
+      await screen.findByTestId("ddr"),
+      screen.getByTestId("shortcuts"),
+      screen.getByTestId("media"),
+      await screen.findByTestId("status"),
+    ];
+    for (let i = 0; i < ordered.length - 1; i += 1) {
+      expect(ordered[i]!.compareDocumentPosition(ordered[i + 1]!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
   });
 
   it("keeps rankings unmounted until the real lazy boundary intersects", async () => {
@@ -96,6 +115,7 @@ describe("HomeAltClient", () => {
   });
 
   it.each([
+    ["daily-digest-title", "digest"],
     ["upcoming-horizon-constellation-title", "horizon"],
     ["ddr-overview-title", "ddr"],
     ["yield-overview-title", "yield"],
@@ -108,7 +128,7 @@ describe("HomeAltClient", () => {
     expect(scrollIntoView.mock.contexts).toContain(target);
     expect(screen.queryByRole("heading", { name: "Loaded rankings" })).toBeNull();
     expect(screen.queryByTestId("mini-cards")).toBeNull();
-    for (const other of ["horizon", "ddr", "yield", "status"]) {
+    for (const other of ["digest", "horizon", "ddr", "yield", "status"]) {
       if (other !== testId) expect(screen.queryByTestId(other)).toBeNull();
     }
   });

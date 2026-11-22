@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 
-import { render, screen, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { useDependencyGraph } from "@/hooks/use-dependency-graph";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { projectDependencyGraph } from "@shared/types/dependency-graph";
+import { readDependencyMapView, writeDependencyMapView } from "@/lib/dependency-watershed/view-url";
 
 vi.mock("@/hooks/use-dependency-graph", () => ({
   useDependencyGraph: vi.fn(),
@@ -41,6 +42,13 @@ function makeQueryResult(data: unknown) {
 
 describe("DependencyMapClient", () => {
   beforeEach(() => {
+    window.history.replaceState(null, "", "/dependency-map/");
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: query === "(min-width: 768px)",
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
     mockUseDependencyGraph.mockReset();
     mockUseStablecoins.mockReset();
     useCoinStatesMock.mockReturnValue({ byId: new Map(), liveReady: true });
@@ -75,16 +83,52 @@ describe("DependencyMapClient", () => {
     );
   });
 
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("keeps the graph visible when the market-cap endpoint fails", async () => {
     mockUseStablecoins.mockReturnValue({
       ...makeQueryResult(undefined),
       error: new Error("Stablecoins unavailable"),
     } as unknown as ReturnType<typeof useStablecoins>);
     render(<DependencyMapClient />);
-    expect(await screen.findByRole("figure", { name: /Dependency graph showing/ })).toBeTruthy();
+    expect(await screen.findByRole("group", { name: /Dependency watershed/ })).toBeTruthy();
     expect(screen.getByText(/Market-cap data is unavailable/)).toBeTruthy();
     expect(screen.getByText("Supply data unavailable")).toBeTruthy();
     expect(screen.getByText(/Excludes 1 coins without supply data/)).toBeTruthy();
+  });
+
+  it("defaults desktop to Watershed and switches to Network on demand", async () => {
+    render(<DependencyMapClient />);
+    expect(screen.getByRole("group", { name: /Dependency watershed/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Watershed" }).getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: "Network" }));
+    expect(await screen.findByRole("figure", { name: /Dependency graph showing/ })).toBeTruthy();
+    expect(new URLSearchParams(window.location.search).get("view")).toBe("network");
+
+    fireEvent.click(screen.getByRole("button", { name: "Watershed" }));
+    expect(await screen.findByRole("group", { name: /Dependency watershed/ })).toBeTruthy();
+    const afterParams = new URLSearchParams(window.location.search);
+    expect(afterParams.has("view")).toBe(false);
+    expect(afterParams.has("focus")).toBe(false);
+    expect(afterParams.has("trace")).toBe(false);
+    expect(afterParams.has("type")).toBe(false);
+    expect(afterParams.has("limit")).toBe(false);
+    expect(readDependencyMapView(window.location.search)).toBe("watershed");
+  });
+
+  it("clears Network-scoped query params when writing watershed view while preserving unrelated params", () => {
+    const cleaned = writeDependencyMapView("?focus=all&type=all&limit=25&view=network", "watershed");
+    expect(cleaned).toBe("");
+    expect(readDependencyMapView(cleaned)).toBe("watershed");
+
+    const preserved = writeDependencyMapView(
+      "?mode=exposure&root=usdc-circle&focus=hub&trace=usdc-circle&type=collateral&limit=50&view=network",
+      "watershed",
+    );
+    expect(preserved).toBe("?mode=exposure&root=usdc-circle");
+    expect(readDependencyMapView(preserved)).toBe("watershed");
   });
 
   it("feeds the live coin-state layer to the incidents list and the graph nodes", async () => {
@@ -95,6 +139,7 @@ describe("DependencyMapClient", () => {
     render(<DependencyMapClient />);
     const incidents = screen.getByRole("region", { name: "Live incidents upstream" });
     expect(within(incidents).getByRole("listitem").textContent).toMatch(/USD Coin.*Depeg.*below peg/);
+    fireEvent.click(screen.getByRole("button", { name: "Network" }));
     expect(await screen.findByRole("button", { name: /^USDC, .*Depeg/ })).toBeTruthy();
   });
 
@@ -119,7 +164,7 @@ describe("DependencyMapClient", () => {
     const meta = { updatedAt: nowSec - 120, ageSeconds: 120, status: "fresh" as const };
     mockUseStablecoins.mockReturnValue({ ...makeQueryResult(supply), meta, dataUpdatedAt: Date.now() } as unknown as ReturnType<typeof useStablecoins>);
     const view = render(<DependencyMapClient />);
-    await screen.findByRole("figure", { name: /Dependency graph showing/ });
+    await screen.findByRole("group", { name: /Dependency watershed/ });
     const asOf = screen.getByText(/^market cap as of /).textContent;
     expect(asOf).not.toContain("unknown");
 
@@ -139,7 +184,7 @@ describe("DependencyMapClient", () => {
     const graph = mockUseDependencyGraph()!.data as { updatedAt: number };
     graph.updatedAt = Math.floor(Date.now() / 1000) - 400 * 86_400;
     render(<DependencyMapClient />);
-    await screen.findByRole("figure", { name: /Dependency graph showing/ });
+    await screen.findByRole("group", { name: /Dependency watershed/ });
     expect(await screen.findByText("Showing an older snapshot")).toBeTruthy();
   });
 
@@ -152,9 +197,9 @@ describe("DependencyMapClient", () => {
     expect(slim.nodes.every(node => node.circulatingUsdAtEvaluation === null && node.supplyAsOfSec === null && node.dependencyCoverageCount === null)).toBe(true);
     mockUseDependencyGraph.mockReturnValue(makeQueryResult(slim) as unknown as ReturnType<typeof useDependencyGraph>);
     render(<DependencyMapClient />);
-    await screen.findByRole("figure", { name: /Dependency graph showing/ });
+    await screen.findByRole("group", { name: /Dependency watershed/ });
     expect(screen.queryByText(/Ratings are held at the last verified snapshot/)).toBeNull();
     expect(screen.getByText(/Not published for this generation/)).toBeTruthy();
-    expect(screen.getByRole("figure", { name: /Dependency graph showing/ })).toBeTruthy();
+    expect(screen.getByRole("group", { name: /Dependency watershed/ })).toBeTruthy();
   });
 });

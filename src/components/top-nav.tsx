@@ -6,6 +6,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { ArrowUpRight, ChevronDown, Search, SunMoon } from "lucide-react";
 import { PharosLogo } from "@/components/pharos-logo";
 import { useHomepageSnapshot } from "@/hooks/api-hooks";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { RegimeBarToggle } from "@/components/psi-beacon/regime-bar";
 import { ThemeControls } from "@/components/theme-controls";
 import {
@@ -15,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { openCommandPalette } from "@/lib/command-palette";
 import { trackEvent } from "@/lib/analytics";
+import { getRouteCapabilities } from "@/lib/route-capabilities";
 import {
   NAV_GROUPS,
   QUICK_NAV_ITEMS,
@@ -27,6 +29,12 @@ import { cn } from "@/lib/utils";
 
 const TOP_MENUS: readonly NavGroup[] = NAV_GROUPS;
 const APPEARANCE_MENU_KEY = "appearance";
+const HOVER_CLOSE_DELAY_MS = 450;
+
+function openKeyboardShortcuts(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new KeyboardEvent("keydown", { key: "?", bubbles: true, cancelable: true }));
+}
 
 /**
  * Single menu row. `row` renders the authored `description` on a second line
@@ -69,7 +77,7 @@ function NavMenuItem({
         className={cn(
           "group/nav-item relative flex cursor-default items-center rounded-lg text-sm outline-hidden select-none transition-colors hover:bg-muted/60 focus:bg-muted/60 focus:text-accent-foreground",
           isRow ? "gap-3 px-2 py-1.5" : "h-8 gap-2 px-2",
-          isActive && "bg-muted/60",
+          isActive && "bg-muted/60 ring-1 ring-border/60 dark:bg-card dark:ring-border/80",
         )}
         {...(item.external ? { target: "_blank", rel: "noreferrer" } : {})}
       >
@@ -121,6 +129,11 @@ function NavMenuItem({
 export function TopNav() {
   const pathname = usePathname();
   const topOffsetClass = stickyChromeTopOffsetClass(pathname);
+  const isEditorialRoute = getRouteCapabilities(pathname).editorial;
+  const hydrated = useHydrated();
+  const isApplePlatform =
+    hydrated && typeof navigator !== "undefined" && /Mac|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const searchShortcutLabel = isApplePlatform ? "⌘K" : "Ctrl K";
   // Neutral count of open confirmed incidents on the Depeg item: the compact
   // snapshot's incidents lane (the /depeg/ census), absent while unavailable.
   const activeDepegCount = useHomepageSnapshot().data?.incidents.data?.activeDepegCount ?? null;
@@ -211,7 +224,7 @@ export function TopNav() {
       if (activeRegion?.contains(document.activeElement)) return;
       hoverOpenRef.current = false;
       setOpenMenu(null);
-    }, 250);
+    }, HOVER_CLOSE_DELAY_MS);
   };
   const activateMenu = (key: string) => {
     cancelOpen();
@@ -259,14 +272,14 @@ export function TopNav() {
     <header
       aria-label="Primary"
       className={cn(
-        "sticky z-chrome-header hidden h-14 w-full items-center gap-2 border-b border-border/70 bg-background/85 px-4 backdrop-blur-md lg:flex xl:px-6",
+        "sticky z-chrome-header hidden h-14 w-full items-center gap-1.5 border-b border-border/70 bg-background/85 px-3 backdrop-blur-md lg:flex xl:gap-2 xl:px-4 2xl:px-6",
         topOffsetClass,
       )}
     >
       <Link
         href="/"
         prefetch={false}
-        className="pharos-focus-ring flex shrink-0 items-center gap-2.5 rounded-lg pr-2"
+        className="pharos-focus-ring flex shrink-0 items-center gap-2 rounded-lg pr-0.5 xl:pr-1 2xl:gap-2.5 2xl:pr-2"
         aria-label="Pharos home"
       >
         <PharosLogo size={28} className="rounded-full shadow-sm" priority />
@@ -277,9 +290,9 @@ export function TopNav() {
       </Link>
 
       {/* Destinations sit left of the fold; browsing sits on the right, next to
-          search — one direction for "go", one for "explore". */}
+          search: one direction for "go", one for "explore". */}
       <nav aria-label="Quick links" className="flex shrink-0 items-center gap-0.5">
-        <span className="flex items-center gap-0 rounded-lg bg-muted/35 p-0.5 min-[1440px]:gap-0.5">
+        <span className="flex items-center gap-0 rounded-lg bg-muted/35 p-0.5 2xl:gap-0.5">
           {QUICK_NAV_ITEMS.map((item) => {
             const isActive = isNavItemActive(pathname, item);
             const Icon = item.icon;
@@ -293,9 +306,9 @@ export function TopNav() {
                 title={item.description}
                 onClick={() => trackEvent("nav_click", { surface: "rail", group: "rail", href: item.href })}
                 className={cn(
-                  "pharos-focus-ring inline-flex h-8 items-center gap-1.5 rounded-md px-1.5 text-sm font-semibold whitespace-nowrap transition-colors xl:px-2 min-[1440px]:px-2.5",
+                  "pharos-focus-ring inline-flex h-8 items-center gap-1 rounded-md px-1.5 text-sm font-semibold whitespace-nowrap transition-colors 2xl:gap-1.5 2xl:px-2.5",
                   isActive
-                    ? "bg-background text-foreground shadow-sm"
+                    ? "bg-background text-foreground ring-1 ring-border/70 dark:bg-card dark:ring-1 dark:ring-border/80"
                     : "text-muted-foreground hover:bg-background/70 hover:text-foreground",
                 )}
               >
@@ -303,11 +316,13 @@ export function TopNav() {
                     a menu trigger; triggers carry a chevron and no glyph. */}
                 <Icon className="size-4 shrink-0 opacity-70" aria-hidden />
                 {/* Three label tiers keep six items inside the masthead next to
-                    the menus and search (measured 2026-10-11): compact below
-                    1440px, short to 1679px, canonical from 1680px. */}
-                <span className="min-[1440px]:hidden">{item.compactLabel ?? item.shortLabel ?? item.label}</span>
-                <span className="hidden min-[1440px]:inline min-[1680px]:hidden">{item.shortLabel ?? item.label}</span>
-                <span className="hidden min-[1680px]:inline">{item.label}</span>
+                    the menus and search: compact below 1280px (xl:), short
+                    ("Stability", "FreezeWatch") from 1280px to 1679px,
+                    canonical from 1680px (105rem — rem unit matches xl's 80rem
+                    so Tailwind v4 media-query ordering stays deterministic). */}
+                <span className="xl:hidden">{item.compactLabel ?? item.shortLabel ?? item.label}</span>
+                <span className="hidden xl:inline min-[105rem]:hidden">{item.shortLabel ?? item.label}</span>
+                <span className="hidden min-[105rem]:inline">{item.label}</span>
                 {/* A 16px glyph is too small to carry a count; it reads as a neutral pill after the label. */}
                 {badge ? (
                   <span
@@ -324,9 +339,8 @@ export function TopNav() {
         </span>
       </nav>
 
-      {/* Right cluster reads menus → appearance → search, flush to the edge;
-          the quick rail keeps the left for direct destinations. */}
-      <div className="ml-auto flex shrink-0 items-center gap-1 xl:gap-2">
+      {/* Right cluster reads menus -> divider -> PSI -> shortcuts -> appearance -> search. */}
+      <div className="ml-auto flex min-w-0 shrink-0 items-center gap-1 2xl:gap-2">
         <nav ref={sectionNavRef} aria-label="Sections" className="flex shrink-0 items-center gap-0.5">
           {TOP_MENUS.map((menu) => {
             const isActive = menu.items.some((item) => isNavItemActive(pathname, item));
@@ -400,10 +414,12 @@ export function TopNav() {
                 }}
                   onClick={() => activateMenu(menu.key)}
                   className={cn(
-                    "pharos-focus-ring inline-flex h-9 items-center gap-1 rounded-md px-2 text-sm font-medium whitespace-nowrap transition-colors min-[1440px]:px-3",
+                    "pharos-focus-ring inline-flex h-8 items-center gap-1 rounded-md px-1.5 text-sm font-medium whitespace-nowrap transition-colors 2xl:px-3",
                     isActive
-                      ? "bg-muted/60 text-foreground"
-                      : "text-muted-foreground hover:bg-muted/40 hover:text-foreground",
+                      ? "bg-muted/60 text-foreground ring-1 ring-border/70 dark:bg-card dark:ring-1 dark:ring-border/80"
+                      : isOpen
+                        ? "bg-muted/40 text-foreground"
+                        : "text-muted-foreground hover:bg-muted/40 hover:text-foreground",
                   )}
                 >
                   {menu.label}
@@ -461,7 +477,19 @@ export function TopNav() {
             );
           })}
         </nav>
+        <span aria-hidden="true" className="h-4 w-px shrink-0 bg-border/60" />
         <RegimeBarToggle />
+        {!isEditorialRoute ? (
+          <button
+            type="button"
+            onClick={openKeyboardShortcuts}
+            aria-label="Keyboard shortcuts"
+            title="Keyboard shortcuts (?)"
+            className="pharos-focus-ring inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-muted/20 font-mono text-xs font-medium text-muted-foreground transition-colors hover:border-border hover:bg-muted/40 hover:text-foreground"
+          >
+            <span aria-hidden="true">?</span>
+          </button>
+        ) : null}
         <DropdownMenu
           modal={false}
           open={openMenu === APPEARANCE_MENU_KEY}
@@ -484,7 +512,7 @@ export function TopNav() {
                 cancelClose();
                 hoverOpenRef.current = false;
               }}
-              className="pharos-focus-ring inline-flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
+              className="pharos-focus-ring inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground 2xl:size-9"
             >
               <SunMoon className="size-4" aria-hidden />
             </button>
@@ -505,16 +533,17 @@ export function TopNav() {
           type="button"
           onClick={openCommandPalette}
           aria-label="Search"
-          // Icon-only below xl: at 1024 the rail's "Stability" label already
-          // spends the masthead budget, so the ⌘K hint waits for xl with the
-          // text label rather than overflowing the header. The field stays
-          // 12rem until 1440px so the labelled search still fits at 1280.
-          className="pharos-focus-ring inline-flex h-9 w-9 items-center justify-center gap-2 rounded-lg border border-border/70 bg-muted/20 text-sm text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground xl:w-[15rem] xl:justify-start xl:px-3 xl:max-[1440px]:w-[12rem] 2xl:w-72"
+          // Icon-only below xl: at 1024px the six-item rail and menus fill the
+          // masthead; xl (1280-1535px) fits "Search" + shortcut; 2xl (1536px+)
+          // expands to the fuller "Coin or page" prompt. Both xl and 2xl are
+          // named breakpoints so only one label is ever displayed.
+          className="pharos-focus-ring inline-flex h-9 w-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-border/70 bg-muted/20 text-sm text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground xl:w-[10rem] xl:justify-start xl:px-2.5 2xl:w-60 2xl:gap-2 2xl:px-3"
         >
           <Search className="size-4 shrink-0" aria-hidden />
-          <span className="hidden xl:inline">Coin or page</span>
-          <kbd className="ml-auto hidden rounded-sm border border-border/70 bg-background px-1.5 font-mono text-3xs text-muted-foreground xl:inline">
-            ⌘K
+          <span className="hidden xl:inline 2xl:hidden">Search</span>
+          <span className="hidden 2xl:inline">Coin or page</span>
+          <kbd className="ml-auto hidden shrink-0 rounded-sm border border-border/70 bg-background px-1.5 font-mono text-3xs whitespace-nowrap text-muted-foreground xl:inline">
+            {searchShortcutLabel}
           </kbd>
         </button>
 

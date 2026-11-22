@@ -37,11 +37,6 @@ export const FEATURE_FLAGS = {
   // retirementCriterion: remove once human visual review passes on USDC, USDe, and an active depeg.
   // expiresAt: 2026-11-15 — exact-build visual review required by the 2026-10-08 operator decision
   quietDeviations: process.env.NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS === "true",
-  // owner: tokenbrice; evidence: 2026-07-29 sticky summary and scrollspy tests pass.
-  // retirementCriterion: remove once real-device iOS Safari and Android Chrome scrollspy review passes.
-  // expiresAt: 2026-11-15 — awaiting real-device iOS Safari and Android Chrome scrollspy review
-  mobileStickySummary:
-    process.env.NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY === "true",
   // owner: tokenbrice
   // retirementCriterion: remove with DDRR after 30 deployed rollback-free days on the accepted baseline and populated reviewer evidence.
   // expiresAt: 2026-12-15 — DDR emergency rollback, awaiting deployed stability and populated reviewer evidence
@@ -74,11 +69,6 @@ export const FEATURE_FLAG_LIFECYCLE = {
     expiresAt: "2026-11-15",
     retirementCriterion: "remove once human visual review passes on USDC, USDe, and an active depeg",
   },
-  mobileStickySummary: {
-    owner: "tokenbrice",
-    expiresAt: "2026-11-15",
-    retirementCriterion: "remove once real-device iOS Safari and Android Chrome scrollspy review passes",
-  },
   depegResolver: {
     owner: "tokenbrice",
     expiresAt: "2026-12-15",
@@ -102,11 +92,6 @@ export function isHeroVerdictEnabled(): boolean {
 export function isQuietDeviationsEnabled(): boolean {
   return FEATURE_FLAGS.quietDeviations;
 }
-
-export function isMobileStickySummaryEnabled(): boolean {
-  return FEATURE_FLAGS.mobileStickySummary;
-}
-
 
 export function isDepegResolverEnabled(): boolean {
   return FEATURE_FLAGS.depegResolver;

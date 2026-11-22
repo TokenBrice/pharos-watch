@@ -149,7 +149,11 @@ describe("DEWSDetail", () => {
       ],
     } });
     const { container } = render(<DEWSDetail stablecoinId="usdt-tether" />);
-    fireEvent.click(screen.getByRole("button", { name: "Signal breakdown" }));
+    const modeGroup = screen.getByRole("group", { name: "DEWS chart mode" });
+    expect(modeGroup.className).toContain("pharos-segmented");
+    const breakdownBtn = screen.getByRole("button", { name: "Signal breakdown" });
+    expect(breakdownBtn.className).toContain("pharos-segmented-item");
+    fireEvent.click(breakdownBtn);
     const points = chartMock.mock.calls.at(-1)![0].data;
     expect(points.map((point: { black: number | null }) => point.black)).toEqual([80, null, 0, null]);
     expect(areaMock.mock.calls.filter(([props]) => props.dataKey === "black").at(-1)![0].connectNulls).toBe(false);

@@ -13,15 +13,6 @@ import { CardExpandButton } from "@/components/home-alt-mini-cards/pulse-card-he
  * first child inside the shell, not as a title replacement.
  */
 
-/**
- * The rail-page hero KPI recipe, shared by heroes that do not use this split
- * shell (FreezeWatch, Depeg). Neutral ink: a hero figure takes color only from
- * a semantic scale in `shared/lib/classification.ts` (grade, severity, regime),
- * never from the frost brand accent.
- */
-export const HERO_KPI_VALUE_CLASS =
-  "pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-foreground sm:text-[2.45rem]";
-
 export interface FeatureHeroSplitProps {
   /** Small muted label above the beam figure (e.g. "Aggregate DEX Depth"). */
   beamLabel: React.ReactNode;
@@ -117,7 +108,7 @@ export function FeatureHeroSplit({
         </div>
         {expand ? <CardExpandButton href={expand.href} expandLabel={expand.label} className="-mr-2" /> : null}
       </div>
-      <p className={beamValueClassName ?? HERO_KPI_VALUE_CLASS}>{beamValue}</p>
+      <p className={beamValueClassName ?? "pharos-hero-kpi"}>{beamValue}</p>
       {universe ? <div>{universe}</div> : null}
     </div>
   );

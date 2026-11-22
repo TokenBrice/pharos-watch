@@ -71,7 +71,13 @@ vi.mock("@/hooks/use-coin-states", () => ({ useCoinStates: () => ({ byId: new Ma
 vi.mock("@/hooks/use-mint-burn-flows", () => ({ useMintBurnFlows: hooks.useMintBurnFlows }));
 vi.mock("@/hooks/use-stablecoins", () => ({ useStablecoins: hooks.useStablecoins }));
 vi.mock("@/hooks/use-home-alt-filters", () => ({
-  useHomeAltFilters: () => ({ activeFilters: [], activeUniverse: "catalog", setActiveUniverse: vi.fn() }),
+  useHomeAltFilters: () => ({
+    activeFilters: [],
+    activePeg: "all",
+    setActivePeg: vi.fn(),
+    activeUniverse: "catalog",
+    setActiveUniverse: vi.fn(),
+  }),
 }));
 vi.mock("@/hooks/use-pinned-stablecoins", () => ({ usePinnedStablecoins: () => ({ pinnedIds: [], togglePinned: vi.fn() }) }));
 vi.mock("@/hooks/use-hydrated", () => ({ useHydrated: () => true }));
@@ -219,7 +225,13 @@ function configure(c: HealthCase) {
 }
 
 function expectNoHealthUi(container: HTMLElement) {
-  expect(container.querySelector('[role="status"], [role="alert"]')).toBeNull();
+  expect(container.querySelector('[role="alert"]')).toBeNull();
+  // An idle SWR TableBackgroundRefreshingBar keeps an empty opacity-0 live region;
+  // any visible or text-bearing status landmark on the homepage is banned.
+  const visibleStatuses = Array.from(container.querySelectorAll('[role="status"]')).filter(
+    (el) => (el.textContent ?? "").trim().length > 0 || !el.className.includes("opacity-0"),
+  );
+  expect(visibleStatuses).toHaveLength(0);
   expect(container.textContent).not.toMatch(WARNING_COPY);
   for (const element of container.querySelectorAll("[aria-label], [title]")) {
     expect(`${element.getAttribute("aria-label") ?? ""} ${element.getAttribute("title") ?? ""}`).not.toMatch(WARNING_COPY);

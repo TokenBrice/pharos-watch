@@ -1,9 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { resolveCurrentDeviationBps } from "@/lib/current-peg";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
-import { SelectorCallout } from "@/components/selector/selector-callout";
 import { TableExportMenu } from "@/components/table-export-menu";
 import { ScreenerToolbar } from "@/components/screener/screener-toolbar";
 import { ScreenerTable } from "@/components/screener/screener-table";
@@ -198,7 +197,33 @@ export function ScreenerClient() {
     window.history.replaceState(null, "", `${window.location.pathname}${nextSearch}${window.location.hash}`);
   }, [hasHydrated]);
 
-  const resetFilters = useCallback(() => setFilters(SCREENER_FILTER_DEFAULTS), [setFilters]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  const resetFilters = useCallback(() => {
+    setSearchQuery("");
+    setFilters(SCREENER_FILTER_DEFAULTS);
+  }, [setFilters]);
+
+  const handleToggleSelect = useCallback((coinId: string) => {
+    setSelectedIds((prev) => (prev.includes(coinId) ? prev.filter((id) => id !== coinId) : [...prev, coinId]));
+  }, []);
+
+  const handleToggleSelectPage = useCallback((pageIds: readonly string[], checked: boolean) => {
+    setSelectedIds((prev) => {
+      if (checked) {
+        const merged = new Set(prev);
+        for (const id of pageIds) merged.add(id);
+        return Array.from(merged);
+      }
+      const pageSet = new Set(pageIds);
+      return prev.filter((id) => !pageSet.has(id));
+    });
+  }, []);
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedIds([]);
+  }, []);
 
   // Source-local projections must not be rebuilt (or readmitted) whenever a
   // sibling query arrives.
@@ -293,10 +318,18 @@ export function ScreenerClient() {
     // Deadline states wait for the visitor's day clock: loading until then, never zero matches.
     clock: { loading: !clockReady, hasData: clockReady },
   });
-  const filteredRows = useMemo(
-    () => scoreFilterDataState === "ready" ? applyFilters(allRows, filters) : [],
-    [allRows, filters, scoreFilterDataState],
-  );
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const filteredRows = useMemo(() => {
+    if (scoreFilterDataState !== "ready") return [];
+    const base = applyFilters(allRows, filters);
+    if (!normalizedSearch) return base;
+    return base.filter(
+      (row) =>
+        row.symbol.toLowerCase().includes(normalizedSearch) ||
+        row.name.toLowerCase().includes(normalizedSearch) ||
+        row.id.toLowerCase().includes(normalizedSearch),
+    );
+  }, [allRows, filters, normalizedSearch, scoreFilterDataState]);
   const { sortKey, sortDirection, toggleSort, getAriaSortValue } = useSort<ScreenerSortKey>("safetyScore", "desc");
   const sortedRows = useMemo(
     () => sortScreenerRows(filteredRows, sortKey, sortDirection),
@@ -382,21 +415,19 @@ export function ScreenerClient() {
   const totalTracked = SCREENABLE_COINS.length;
   const totalRows = hasStablecoinRows ? allRows.length : totalTracked;
   const matchingRows = filteredRows.length;
-  const active = hasActiveFilters(filters);
-  const activeFilterCount = countActiveScreenerFilters(filters);
+  const active = hasActiveFilters(filters) || normalizedSearch.length > 0;
+  const activeFilterCount = countActiveScreenerFilters(filters) + (normalizedSearch.length > 0 ? 1 : 0);
   // One coin-count story: the screener universe is the full tracked registry
   // (visible pre-launch and frozen rows included), unlike the active-only dashboard table.
   // Policy-withheld quarantined and delisted records remain detail-only.
   // The live matched count is the toolbar's One Beam (frost) figure.
 
   return (
-    <div className="space-y-6">
-      {hasHydrated ? <SelectorCallout /> : (
-        <div className="h-[50px] animate-pulse rounded-md bg-muted/30 sm:h-[136px] lg:h-[113px] xl:h-[89px]" aria-hidden="true" />
-      )}
-
+    <div className="space-y-4">
       <ScreenerToolbar
         filters={filters}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
         matchingRows={matchingRows}
         totalRows={totalRows}
         dataState={dataState}
@@ -424,7 +455,7 @@ export function ScreenerClient() {
         }
       />
 
-      <section id="data" aria-label="Data table" tabIndex={-1} className="space-y-6">
+      <section id="data" aria-label="Data table" tabIndex={-1} className="space-y-4">
         <QueryFreshnessNotices
           error={freshnessGroup.globalError}
           hasData={hasStablecoinRows}
@@ -438,6 +469,10 @@ export function ScreenerClient() {
           onClearFilters={active ? resetFilters : undefined}
           hasActiveFilters={active}
           sort={{ sortKey, sortDirection, toggleSort, getAriaSortValue }}
+          selectedIds={selectedIds}
+          onToggleSelect={handleToggleSelect}
+          onToggleSelectPage={handleToggleSelectPage}
+          onClearSelection={handleClearSelection}
         />
       </section>
     </div>

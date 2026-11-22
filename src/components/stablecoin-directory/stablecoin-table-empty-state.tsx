@@ -60,13 +60,13 @@ export function StablecoinTableEmptyState({
   const description = unavailableRead
     ? undefined
     : noData
-      ? "Check back soon — we're constantly monitoring the market."
+      ? "Check back soon: we're constantly monitoring the market."
       : activeFilters.length > 0 || searchQuery
         ? "Try adjusting your filters or clearing them to see the full tracked universe."
-        : "Check back soon — we're constantly monitoring the market.";
+        : "Check back soon: we're constantly monitoring the market.";
   const showActions = !noData && (!!searchQuery || activeFilters.length > 0);
   return (
-    <TableRow>
+    <TableRow rowIntent="static">
       <TableCell colSpan={99} className="py-10">
         <div className="flex flex-col items-center text-center">
           <EmptyStateIllustration

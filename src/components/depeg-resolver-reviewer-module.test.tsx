@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import {
   DepegResolverReviewerModule,
 } from "@/components/depeg/depeg-resolver-reviewer-module";
@@ -102,7 +102,44 @@ function pendingPrediction(overrides: Partial<typeof row> = {}): typeof row {
   };
 }
 
+function expandAudit() {
+  fireEvent.click(screen.getByRole("button", { name: /View full grading audit/i }));
+}
+
 describe("DepegResolverReviewerModule", () => {
+  it("starts collapsed behind a 1-row Track Record disclosure and reveals calibration tables on click", () => {
+    const template = makeSummary().byPredictionPolicy.find((segment) => segment.segmentKind === "all")!.metrics;
+    const richSummary: DdrrSummary = {
+      ...makeSummary({
+        recoveryLikelihoodCorrectCount: 61,
+        recoveryLikelihoodScoredCount: 74,
+        recoveryLikelihoodAccuracyPct: RatioSchema.parse(61 / 74),
+        policyUniverseIncidentCount: 92,
+        horizonSkill: [{ horizon: "24h", scored: 12, brier: 0.15, baseRateBrier: 0.2, brierSkill: 0.25 }],
+      }),
+      byPredictionPolicy: [
+        ...makeSummary({ policyUniverseIncidentCount: 92 }).byPredictionPolicy,
+        makePredictionPolicySegment(template, "4.3", 12, 10),
+      ],
+    };
+
+    render(<DepegResolverReviewerModule data={response({ summary: richSummary })} />);
+
+    const toggle = screen.getByRole("button", { name: /Track Record · View full grading audit/i });
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.getByText(/82\.4% \(61\/74\)/)).toBeTruthy();
+    // Dense ML calibration tables stay unmounted while collapsed.
+    expect(screen.queryByText(/Brier skill/i)).toBeNull();
+    expect(screen.queryByText(/90% CI/i)).toBeNull();
+    expect(screen.queryByText(/policy-universe incidents/i)).toBeNull();
+
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByText(/Brier skill/i)).toBeTruthy();
+    expect(screen.getByText(/90% CI/i)).toBeTruthy();
+    expect(screen.getByText(/92 policy-universe incidents/)).toBeTruthy();
+  });
+
   it.each([false, true])("counts only published pending forecasts with browse truncation=%s", (truncated) => {
     const pending = pendingPrediction();
     const cohort = [row, pending];
@@ -110,6 +147,7 @@ describe("DepegResolverReviewerModule", () => {
     data._meta.publicRowLimit = truncated ? 1 : 100;
     data._meta.publicRowsTruncated = truncated;
     render(<DepegResolverReviewerModule data={data} />);
+    expandAudit();
     expect(screen.getByRole("img", { name: "1 scored of 2, 1 still maturing" })).toBeTruthy();
     expect(screen.getByText("1 scored · 1 maturing")).toBeTruthy();
   });
@@ -120,6 +158,7 @@ describe("DepegResolverReviewerModule", () => {
       sourceEventState: "active", actualOutcome: "still_open", actualEndedAt: null };
     const fullSummary = summarizeDdrrRows([pendingLock]);
     render(<DepegResolverReviewerModule data={response({ summary: fullSummary, rows: [pendingLock] })} />);
+    expandAudit();
     expect(screen.getByRole("img", { name: "0 scored of 0, 0 still maturing" })).toBeTruthy();
     expect(screen.getByText("1 policy-universe incidents")).toBeTruthy();
     expect(fullSummary.headline.pendingLockCount).toBe(1);
@@ -135,6 +174,7 @@ describe("DepegResolverReviewerModule", () => {
       pendingPrediction({ incidentKey: "old-pending", predictionPolicyVersion: "legacy-policy" })];
     const fullSummary = summarizeDdrrRows(cohort);
     render(<DepegResolverReviewerModule data={response({ summary: fullSummary, rows: [row] })} />);
+    expandAudit();
     expect(fullSummary.headlineScope).toBe(count === 20 ? "current_policy" : "all_ddrv2");
     expect(screen.getByRole("img", { name: count === 20
       ? "20 scored of 21, 1 still maturing" : "20 scored of 22, 2 still maturing" })).toBeTruthy();
@@ -145,6 +185,7 @@ describe("DepegResolverReviewerModule", () => {
     const current = DdrrResponseSchema.parse(response());
     expect(current.summary.headline.pendingRecoveryLikelihoodCount).toBe(1);
     const { rerender } = render(<DepegResolverReviewerModule data={current} />);
+    expandAudit();
     expect(screen.getByRole("img", { name: "4 scored of 5, 1 still maturing" })).toBeTruthy();
     const retainedBody = JSON.parse(JSON.stringify(response(), (key, value) =>
       key === "pendingRecoveryLikelihoodCount" ? undefined : value));
@@ -167,6 +208,7 @@ describe("DepegResolverReviewerModule", () => {
     }));
     const fullSummary = summarizeDdrrRows(predictions);
     render(<DepegResolverReviewerModule data={response({ summary: fullSummary, rows: predictions.slice(0, 400) })} />);
+    expandAudit();
 
     expect(screen.getByText("false terminal").parentElement?.textContent).toBe("1false terminal");
     expect(screen.getByText("inside typical range").parentElement?.textContent).toBe("400/401inside typical range");
@@ -178,6 +220,7 @@ describe("DepegResolverReviewerModule", () => {
       verdictReview: "false_recoverable", withinIqr: false };
     const fullSummary = summarizeDdrrRows([...current, old]);
     render(<DepegResolverReviewerModule data={response({ summary: fullSummary, rows: [...current, old] })} />);
+    expandAudit();
 
     expect(fullSummary.headlineScope).toBe("current_policy");
     expect(screen.getByText("false recoverable").parentElement?.textContent).toBe("0false recoverable");
@@ -188,12 +231,14 @@ describe("DepegResolverReviewerModule", () => {
     const oldSummary = makeSummary({ falseTerminalCount: undefined, falseRecoverableCount: undefined,
       withinIqrCount: undefined, iqrScoredCount: undefined });
     render(<DepegResolverReviewerModule data={response({ summary: oldSummary })} />);
+    expandAudit();
     expect(screen.getByText("false terminal").parentElement?.textContent).toBe("—false terminal");
     expect(screen.getByText("inside typical range").parentElement?.textContent).toBe("—inside typical range");
   });
 
   it("shows the calibration ledger as fractions while the scored sample is thin", () => {
     render(<DepegResolverReviewerModule data={response()} />);
+    expandAudit();
 
     expect(screen.getByText("Recovery calls")).toBeTruthy();
     expect(screen.getByText("Duration calls")).toBeTruthy();
@@ -229,9 +274,10 @@ describe("DepegResolverReviewerModule", () => {
         })}
       />,
     );
+    expandAudit();
 
     expect(screen.getByText("5 / 5")).toBeTruthy();
-    expect(screen.getByText(/100%/)).toBeTruthy();
+    expect(screen.getAllByText(/100%/).length).toBeGreaterThan(0);
     expect(screen.getByText("Review")).toBeTruthy();
     expect(screen.queryByText("Calibrating")).toBeNull();
   });
@@ -254,6 +300,7 @@ describe("DepegResolverReviewerModule", () => {
         })}
       />,
     );
+    expandAudit();
 
     expect(screen.getByText("Coverage accountability")).toBeTruthy();
     expect(screen.getByText("20 policy-universe incidents")).toBeTruthy();
@@ -283,6 +330,7 @@ describe("DepegResolverReviewerModule", () => {
     ];
     const fullSummary = summarizeDdrrRows([...predictions, ...debt]);
     render(<DepegResolverReviewerModule data={response({ summary: fullSummary, rows: [...predictions, ...debt] })} />);
+    expandAudit();
 
     expect(screen.getByText(`${count + 4} policy-universe incidents`)).toBeTruthy();
     const ledger = screen.getByText("Coverage accountability").closest(".pharos-card-shell")!;
@@ -310,6 +358,7 @@ describe("DepegResolverReviewerModule", () => {
       ],
     });
     render(<DepegResolverReviewerModule data={response({ summary: v5Summary })} />);
+    expandAudit();
 
     // A calibrated sample leads with the aggregate track record, as on the homepage.
     expect(screen.getByText("95.9%")).toBeTruthy();
@@ -330,6 +379,7 @@ describe("DepegResolverReviewerModule", () => {
       delete retained.headline[key];
     }
     render(<DepegResolverReviewerModule data={response({ summary: retained })} />);
+    expandAudit();
 
     expect(screen.getByText("Always-recover baseline unavailable")).toBeTruthy();
     expect(screen.getByText("Terminal calls: unavailable")).toBeTruthy();
@@ -342,6 +392,7 @@ describe("DepegResolverReviewerModule", () => {
   it("labels terminal-at-lock rows as unscored curation debt", () => {
     const atLock: DdrrResponseRow = { ...row, verdictReview: "terminal_at_lock", durationReview: "duration_unscored" };
     render(<DepegResolverReviewerModule data={response({ rows: [atLock] })} />);
+    expandAudit();
 
     const badge = screen.getByText("Terminal at lock");
     expect(badge.getAttribute("title")).toMatch(/registry curation lag, not scored/);
@@ -359,6 +410,7 @@ describe("DepegResolverReviewerModule", () => {
       ],
     };
     render(<DepegResolverReviewerModule data={response({ summary: versioned })} />);
+    expandAudit();
 
     expect(screen.getByText("Accuracy by version")).toBeTruthy();
     expect(screen.getByText("83.3% · 90% CI 50–96% · n 6")).toBeTruthy();
@@ -387,7 +439,7 @@ describe("DepegResolverReviewerModule", () => {
     data._meta.degraded = true;
     data._meta.degradedReason = "stale-cache";
     render(<DepegResolverReviewerModule data={data} error={new Error("HTTP 503")} />);
-    expect(screen.getByText("Track record")).toBeTruthy();
+    expect(screen.getByText("Track Record")).toBeTruthy();
     expect(screen.queryByText(/Reviewer snapshot is degraded/)).toBeNull();
     expect(screen.queryByText(/stale-cache/)).toBeNull();
     expect(screen.queryByText("Reviewer data is temporarily unavailable.")).toBeNull();

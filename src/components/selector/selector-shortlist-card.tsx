@@ -200,7 +200,7 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
         <div className="min-w-0 flex-1 space-y-1">
           <h3 id={headlineId} className="text-base font-semibold tracking-tight text-foreground sm:text-lg">
             <span className="font-bold">{rec.symbol}</span>
-            <span className="break-words text-muted-foreground"> — {rec.name}</span>
+            <span className="break-words text-muted-foreground"> · {rec.name}</span>
           </h3>
           <div className="flex flex-wrap items-center gap-1.5">
             <SafetyGradeBadge grade={rec.safetyGrade} size="xs" />
@@ -314,7 +314,7 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
         {rec.confidence != null && rec.confidence < 60 ? (
           <span className="inline-flex items-center gap-1 rounded-full border border-state-warn-solid/40 bg-state-warn-solid/[0.07] px-2 py-0.5 text-xs font-medium text-state-warn-strong">
             <Clock className="h-3 w-3" aria-hidden="true" />
-            Lower confidence — limited data
+            Lower confidence: limited data
           </span>
         ) : rec.confidence != null && rec.confidence < 80 ? (
           <span className="inline-flex items-center gap-1 rounded-full border border-border/55 bg-background/65 px-2 py-0.5 text-xs text-muted-foreground">

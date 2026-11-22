@@ -117,8 +117,8 @@ export function SupplyMovesCard(): React.JSX.Element {
   return (
     <PulseCard
       className="pharos-card-shell flex h-full flex-col gap-3 overflow-hidden p-4"
-      href="/screener/"
-      expandLabel="Open Screener"
+      href="/flows/"
+      expandLabel="Open Mint/Burn Flows"
       label={
         <>
           Biggest supply moves{" "}
@@ -141,7 +141,7 @@ export function SupplyMovesCard(): React.JSX.Element {
           prefetch={false}
           href={buildStablecoinUrl(peak.id)}
           className="pharos-focus-ring -mx-1 flex items-center justify-between gap-3 rounded-sm px-1 py-0.5 transition-colors hover:bg-muted/50"
-          aria-label={`${peak.symbol} — peak 7-day supply mover: ${formatPct(peak.pctChange)}`}
+          aria-label={`${peak.symbol}, peak 7-day supply mover: ${formatPct(peak.pctChange)}`}
         >
           <span className="flex min-w-0 items-center gap-2.5">
             {peakLogoSrc && (

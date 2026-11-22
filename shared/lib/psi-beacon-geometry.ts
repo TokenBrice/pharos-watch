@@ -46,10 +46,44 @@ export interface PsiBeaconLine {
   y2: number;
 }
 
+export type PsiBeaconTextAnchor = "start" | "middle" | "end";
+
 export interface PsiBeaconLabel {
   x: number;
   y: number;
   text: string;
+  anchor?: PsiBeaconTextAnchor;
+}
+
+export interface PsiBeaconLabelBox {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+
+/** Conservative monospace bounding-box estimate (8.5px font) in SVG user units for collision checks. */
+const LABEL_CHAR_WIDTH = 5.4;
+const LABEL_HEIGHT = 10;
+const LABEL_COLLISION_PAD = 2;
+/** Flip right-side ruler ticks to end-anchored past this score to clear the fog lower bound and right edge. */
+const RIGHT_ANCHOR_SCORE_THRESHOLD = 75;
+const LEFT_ANCHOR_SCORE_THRESHOLD = 15;
+
+export function estimatePsiBeaconLabelBox(lbl: PsiBeaconLabel): PsiBeaconLabelBox {
+  const width = Math.max(LABEL_CHAR_WIDTH, lbl.text.length * LABEL_CHAR_WIDTH);
+  const anchor = lbl.anchor ?? "middle";
+  const x0 = anchor === "start" ? lbl.x : anchor === "end" ? lbl.x - width : lbl.x - width / 2;
+  return {
+    x0,
+    y0: lbl.y - LABEL_HEIGHT + 1.5,
+    x1: x0 + width,
+    y1: lbl.y + 1.5,
+  };
+}
+
+function boxesOverlap(a: PsiBeaconLabelBox, b: PsiBeaconLabelBox, pad = LABEL_COLLISION_PAD): boolean {
+  return a.x0 - pad < b.x1 && b.x0 - pad < a.x1 && a.y0 - pad < b.y1 && b.y0 - pad < a.y1;
 }
 
 export interface PsiBeaconLayout {
@@ -92,7 +126,7 @@ export function psiBeaconViewBox(p: PsiBeaconProjection): { x: number; y: number
   const ys = pts.map((pt) => pt[1]);
   const x = Math.floor(Math.min(...xs) - pad);
   const y = Math.floor(Math.min(...ys) - pad);
-  return { x, y, width: Math.ceil(Math.max(...xs) + pad + 14) - x, height: Math.ceil(Math.max(...ys) + pad) - y };
+  return { x, y, width: Math.ceil(Math.max(...xs) + pad + 22) - x, height: Math.ceil(Math.max(...ys) + pad) - y };
 }
 
 function arcPoint(p: PsiBeaconProjection, r: number, theta: number): Point {
@@ -129,8 +163,8 @@ function cross(p: PsiBeaconProjection, value: number, halfLength: number): PsiBe
   return { x1: round1(x1), y1: round1(y1), x2: round1(x2), y2: round1(y2) };
 }
 
-function label(pt: Point, text: string): PsiBeaconLabel {
-  return { x: round1(pt[0]), y: round1(pt[1]), text };
+function label(pt: Point, text: string, anchor?: PsiBeaconTextAnchor): PsiBeaconLabel {
+  return anchor ? { x: round1(pt[0]), y: round1(pt[1]), text, anchor } : { x: round1(pt[0]), y: round1(pt[1]), text };
 }
 
 function drawn(span: PsiBeaconSpan): [number, number] {
@@ -193,8 +227,9 @@ export function layoutPsiBeacon(model: PsiBeaconModel, p: PsiBeaconProjection): 
   const fog = model.fog.map((bank) => {
     const [from, to] = drawn(bank);
     const value = bank.belowFloor ? "<0.3" : bank.value.toFixed(2);
+    // Keep the SVG rail compact (`≥`); full unpriced-count prose lives in the legend below.
     const lowerBound = bank.lowerBound
-      ? label(side((bank.from + bank.to) / 2, -LABEL_ROW_2), `≥ · ${bank.lowerBound.unpricedCount ?? "some"} unpriced`)
+      ? label(side((bank.from + bank.to) / 2, -LABEL_ROW_2), "≥")
       : null;
     return { key: bank.key, points: strip(p, from, to, w), title: `${FOG_TITLES[bank.key]}: ${value} points of light lost`, lowerBound };
   });
@@ -204,6 +239,67 @@ export function layoutPsiBeacon(model: PsiBeaconModel, p: PsiBeaconProjection): 
         label: label(side((model.unknown.from + model.unknown.to) / 2, -LABEL_ROW_2), "?"),
       }
     : null;
+  const clampTick = model.clamp
+    ? {
+        line: cross(p, model.clamp.at, w(psiBeaconRadius(model.clamp.at)) + 0.4),
+        label: label(
+          side(model.clamp.at, -LABEL_ROW_2),
+          `clamped at ${model.clamp.at}`,
+          model.clamp.at >= RIGHT_ANCHOR_SCORE_THRESHOLD
+            ? "end"
+            : model.clamp.at <= LEFT_ANCHOR_SCORE_THRESHOLD
+              ? "start"
+              : undefined,
+        ),
+      }
+    : null;
+
+  const avgTick = model.avgTick
+    ? (() => {
+        const avgValue = model.avgTick.value;
+        const avgText = `24h avg ${avgValue.toFixed(1)}`;
+        const preferredAnchor: PsiBeaconTextAnchor =
+          avgValue >= RIGHT_ANCHOR_SCORE_THRESHOLD
+            ? "end"
+            : avgValue <= LEFT_ANCHOR_SCORE_THRESHOLD
+              ? "start"
+              : "middle";
+        const obstacles = [
+          ...fog.flatMap((bank) => (bank.lowerBound ? [estimatePsiBeaconLabelBox(bank.lowerBound)] : [])),
+          ...(clampTick ? [estimatePsiBeaconLabelBox(clampTick.label)] : []),
+          ...(unknown ? [estimatePsiBeaconLabelBox(unknown.label)] : []),
+          ...rings.map((ring) => estimatePsiBeaconLabelBox(ring.label)),
+        ];
+        const zoneObstacles = zones.map((zone) => estimatePsiBeaconLabelBox(zone.label));
+        const viewBox = psiBeaconViewBox(p);
+        const fitsInViewBox = (candidate: PsiBeaconLabel): boolean => {
+          const box = estimatePsiBeaconLabelBox(candidate);
+          return box.x0 >= viewBox.x && box.x1 <= viewBox.x + viewBox.width;
+        };
+        const upperPoint = side(avgValue, -LABEL_ROW_1);
+        const lowerPoint = side(avgValue, LABEL_ROW_1);
+        const candidates: Array<{ lbl: PsiBeaconLabel; checkZones: boolean }> = [
+          { lbl: label(upperPoint, avgText, preferredAnchor), checkZones: false },
+          { lbl: label(upperPoint, avgText, "end"), checkZones: false },
+          { lbl: label(upperPoint, avgText, "start"), checkZones: false },
+          { lbl: label(lowerPoint, avgText, preferredAnchor), checkZones: true },
+          { lbl: label(lowerPoint, avgText, "end"), checkZones: true },
+        ];
+        const chosen =
+          candidates.find(({ lbl, checkZones }) => {
+            if (!fitsInViewBox(lbl)) return false;
+            const box = estimatePsiBeaconLabelBox(lbl);
+            if (obstacles.some((other) => boxesOverlap(box, other))) return false;
+            if (checkZones && zoneObstacles.some((other) => boxesOverlap(box, other))) return false;
+            return true;
+          })?.lbl ?? label(upperPoint, avgText, preferredAnchor);
+        return {
+          line: cross(p, avgValue, w(psiBeaconRadius(avgValue)) + 0.4),
+          label: chosen,
+        };
+      })()
+    : null;
+
   const tipR = psiBeaconRadius(model.beam.to);
   const tip = cross(p, model.beam.to, w(tipR));
   const halo: Width = (r) => w(r) * HALO_SCALE;
@@ -218,18 +314,8 @@ export function layoutPsiBeacon(model: PsiBeaconModel, p: PsiBeaconProjection): 
     drag: model.drag ? strip(p, ...drawn(model.drag), w) : null,
     fog,
     unknown,
-    avgTick: model.avgTick
-      ? {
-          line: cross(p, model.avgTick.value, w(psiBeaconRadius(model.avgTick.value)) + 0.4),
-          label: label(side(model.avgTick.value, -LABEL_ROW_1), `24h avg ${model.avgTick.value.toFixed(1)}`),
-        }
-      : null,
-    clampTick: model.clamp
-      ? {
-          line: cross(p, model.clamp.at, w(psiBeaconRadius(model.clamp.at)) + 0.4),
-          label: label(side(model.clamp.at, -LABEL_ROW_2), `clamped at ${model.clamp.at}`),
-        }
-      : null,
+    avgTick,
+    clampTick,
     zeroLabel: model.beam.to === 0 ? label(side(0, -LABEL_ROW_1), "0") : null,
   };
 }

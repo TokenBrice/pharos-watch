@@ -76,6 +76,21 @@ async function createDatedScorecard(stablecoinId: string, signal: AbortSignal): 
   throw new RequestFailure("http", "/_site-data/scorecard", "Site session required", { status: 401 });
 }
 
+const PRIVATE_SHARE_QUERY_PARAMS = new Set(["holdings", "answers"]);
+
+function buildShareableLinkUrl(): string {
+  const canonical = document.querySelector('link[rel="canonical"]')?.getAttribute("href");
+  const shareUrl = new URL(canonical || window.location.pathname, SITE_ORIGIN);
+  const params = new URLSearchParams(window.location.search);
+  for (const key of PRIVATE_SHARE_QUERY_PARAMS) {
+    params.delete(key);
+  }
+  const search = params.toString();
+  shareUrl.search = search ? `?${search}` : "";
+  shareUrl.hash = "";
+  return shareUrl.toString();
+}
+
 export function ShareButton({ stablecoinId, label = "Share", compactAtDesktop = false, datedScorecard = true, depegBriefingUrl }: ShareButtonProps) {
   const [status, setStatus] = useState<Status>("idle");
   const [datedShare, setDatedShare] = useState<SocialScorecardCreated | null>(null);
@@ -106,11 +121,7 @@ export function ShareButton({ stablecoinId, label = "Share", compactAtDesktop = 
   }, []);
 
   const copyLink = useCallback(async () => {
-    const canonical = document.querySelector('link[rel="canonical"]')?.getAttribute("href");
-    const canonicalUrl = new URL(canonical || window.location.pathname, SITE_ORIGIN);
-    canonicalUrl.search = "";
-    canonicalUrl.hash = "";
-    const url = canonicalUrl.toString();
+    const url = buildShareableLinkUrl();
     try {
       const result = await requestSequence.current.run(() => copyText(url));
       setManualCopyUrl(result.ok ? null : url);

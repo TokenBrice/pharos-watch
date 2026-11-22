@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  CX,
+  CY,
   buildDewsSummaryViewModel,
   computeBandCounts,
+  elevatedVisualRadius,
   mcapDotRadius,
   resolveRadarClick,
 } from "@/components/dews/dews-summary-model";
+import { scoreToRadius } from "@/lib/dews-radar-utils";
 
 describe("computeBandCounts", () => {
   it("counts each known threat band and ignores unknown values", () => {
@@ -82,5 +86,40 @@ describe("buildDewsSummaryViewModel", () => {
     expect(viewModel.elevated.find((coin) => coin.id === "zero")?.mcap).toBe(0);
     expect(mcapDotRadius(null)).toBeUndefined();
     expect(mcapDotRadius(0)).toBe(5);
+  });
+
+  it("deterministically repels overlapping ALERT+ logos while preserving exact score radii", () => {
+    const signals = {
+      "coin-1": { score: 42, band: "ALERT" },
+      "coin-2": { score: 42, band: "ALERT" },
+      "coin-3": { score: 42, band: "ALERT" },
+      "coin-4": { score: 66, band: "WARNING" },
+      "coin-5": { score: 66, band: "WARNING" },
+    };
+    const logos = Object.fromEntries(Object.keys(signals).map((id) => [id, `/logos/${id}.png`]));
+    const caps = new Map<string, number | null>(Object.keys(signals).map((id) => [id, 1_000_000_000]));
+
+    const first = buildDewsSummaryViewModel({ updatedAt: 1_775_898_800, signals }, logos, caps);
+    const second = buildDewsSummaryViewModel({ updatedAt: 1_775_898_800, signals }, logos, caps);
+
+    // Strictly deterministic across invocations.
+    expect(first.elevated.map((c) => [c.id, c.x, c.y])).toEqual(second.elevated.map((c) => [c.id, c.x, c.y]));
+
+    // Every coin remains on its exact score-derived radial ring.
+    for (const coin of first.elevated) {
+      const actualR = Math.hypot(coin.x - CX, coin.y - CY);
+      expect(actualR).toBeCloseTo(scoreToRadius(coin.score, coin.band), 4);
+    }
+
+    // Repelled ALERT+ logos do not pile on top of each other.
+    for (let i = 0; i < first.elevated.length; i += 1) {
+      for (let j = i + 1; j < first.elevated.length; j += 1) {
+        const a = first.elevated[i];
+        const b = first.elevated[j];
+        const dist = Math.hypot(b.x - a.x, b.y - a.y);
+        const minSumR = elevatedVisualRadius(a) + elevatedVisualRadius(b);
+        expect(dist).toBeGreaterThanOrEqual(minSumR);
+      }
+    }
   });
 });

@@ -48,7 +48,7 @@ type ComplianceRecord = (typeof complianceAsset)[number];
  * Integration-preview examples from release data, so the page never contradicts
  * itself: the Safety grade and score come from the same scores-latest snapshot as
  * the claim list, and the compliance fields from the reviewed dossier. Market
- * fields are labelled illustrative where they render.
+ * fields are labeled illustrative where they render.
  */
 export function buildApiPreviewExamples(asOfDate: string): ApiPreviewExamples {
   const meta = TRACKED_META_BY_ID.get(PREVIEW_STABLECOIN_ID);

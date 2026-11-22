@@ -171,8 +171,25 @@ describe("ReferenceRatesStrip", () => {
     ["MXN", "Mex$"],
   ] as const)("renders the shared glyph or deliberate override for %s", (currency, glyph) => {
     render(<ReferenceRatesStrip fallbackBenchmark={makeBenchmark(currency, currency, `${currency} reference`, 3, "2026-05-19")} />);
-    const row = screen.getByText(currency).closest("tr")!;
+    const table = screen.getByRole("table");
+    const row = within(table).getByText(currency).closest("tr")!;
     expect(within(row).getByText(glyph)).toBeTruthy();
+  });
+
+  it("renders compact mobile cards alongside the desktop table without risk-free phrasing", () => {
+    render(<ReferenceRatesStrip benchmarks={benchmarks} currencyCounts={{ USD: 18, EUR: 5, CHF: 2, AUD: 1 }} />);
+
+    expect(screen.getByText("Reference benchmark per currency")).toBeTruthy();
+    expect(screen.queryByText(/risk-free/i)).toBeNull();
+
+    const chfCard = screen.getByTestId("reference-rate-card-CHF");
+    expect(chfCard.textContent).toContain("CHF");
+    expect(chfCard.textContent).toContain("-0.05%");
+    expect(chfCard.textContent).toContain("−373 bps");
+    expect(chfCard.textContent).toContain("2 tracked");
+
+    const usdCard = screen.getByTestId("reference-rate-card-USD");
+    expect(usdCard.textContent).toContain("USD base");
   });
 
   it("renders the fallback provenance benchmark when the optional registry is absent", () => {
@@ -233,7 +250,8 @@ describe("ReferenceRatesStrip", () => {
     } as YieldBenchmarkRegistry;
 
     render(<ReferenceRatesStrip benchmarks={registry} />);
-    const rowFor = (currency: string) => screen.getByText(currency).closest("tr")!;
+    const table = screen.getByRole("table");
+    const rowFor = (currency: string) => within(table).getByText(currency).closest("tr")!;
 
     for (const currency of ["USD", "CAD", "EUR"]) {
       const row = rowFor(currency);

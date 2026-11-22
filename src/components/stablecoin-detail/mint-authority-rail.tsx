@@ -122,7 +122,7 @@ function ControlChip({ node }: { node: RailControlNode }) {
   // the delay wrap under it instead.
   return (
     <span
-      title={`${names.join(", ")} — ${control.securitySetupLabel}`}
+      title={`${names.join(", ")}: ${control.securitySetupLabel}`}
       className="inline-flex max-w-full flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded-md border border-border/60 bg-muted/20 px-2 py-1"
     >
       <span className="inline-flex items-center gap-1.5 whitespace-nowrap">

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, ClipboardCopy, Download, FileJson } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +17,8 @@ import { copyMarkdownWithPreamble } from "@/lib/exports/markdown";
 import type { ExportPreamble } from "@/lib/exports/preamble";
 
 type Status = "idle" | "copied" | "error";
+
+export type TableExportFormat = "csv" | "ndjson" | "markdown";
 
 export interface TableExportMenuProps<T> {
   data: T[];
@@ -36,6 +39,8 @@ export interface TableExportMenuProps<T> {
   triggerClassName?: string;
   /** Disable export actions while backing rows are still resolving. */
   disabled?: boolean;
+  /** Optional callback fired after an export action runs. */
+  onExportComplete?: (format: TableExportFormat) => void;
 }
 
 function buildPreamble(
@@ -64,6 +69,7 @@ export function TableExportMenu<T>({
   triggerLabel = "Export",
   triggerClassName,
   disabled = false,
+  onExportComplete,
 }: TableExportMenuProps<T>): React.ReactElement {
   const [status, setStatus] = useState<Status>("idle");
   const resetTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -90,7 +96,8 @@ export function TableExportMenu<T>({
       filename,
       buildPreamble(endpoint, methodologyLabel, asOfISO, sourceGenerations),
     );
-  }, [asOfISO, columns, data, disabled, endpoint, filename, methodologyLabel, sourceGenerations]);
+    onExportComplete?.("csv");
+  }, [asOfISO, columns, data, disabled, endpoint, filename, methodologyLabel, onExportComplete, sourceGenerations]);
 
   const handleNdjson = useCallback(() => {
     if (disabled) return;
@@ -100,7 +107,8 @@ export function TableExportMenu<T>({
       filename,
       buildPreamble(endpoint, methodologyLabel, asOfISO, sourceGenerations),
     );
-  }, [asOfISO, columns, data, disabled, endpoint, filename, methodologyLabel, sourceGenerations]);
+    onExportComplete?.("ndjson");
+  }, [asOfISO, columns, data, disabled, endpoint, filename, methodologyLabel, onExportComplete, sourceGenerations]);
 
   const handleMarkdown = useCallback(async () => {
     if (disabled) return;
@@ -111,8 +119,9 @@ export function TableExportMenu<T>({
     );
     if (!mounted.current) return;
     setStatus(ok ? "copied" : "error");
+    if (ok) onExportComplete?.("markdown");
     resetStatusAfterDelay();
-  }, [asOfISO, columns, data, disabled, endpoint, methodologyLabel, resetStatusAfterDelay, sourceGenerations]);
+  }, [asOfISO, columns, data, disabled, endpoint, methodologyLabel, onExportComplete, resetStatusAfterDelay, sourceGenerations]);
 
   const triggerText =
     status === "copied" ? "Copied!" : status === "error" ? "Copy failed" : triggerLabel;
@@ -124,11 +133,11 @@ export function TableExportMenu<T>({
         <Button
           variant="outline"
           size="sm"
-          className={triggerClassName}
+          className={cn("min-h-11 rounded-md sm:min-h-8", triggerClassName)}
           disabled={disabled}
-          aria-label={`Export table as CSV, NDJSON, or Markdown`}
+          aria-label="Export table as CSV, NDJSON, or Markdown"
         >
-          <TriggerIcon />
+          <TriggerIcon className="h-3.5 w-3.5" aria-hidden="true" />
           <span>{triggerText}</span>
         </Button>
       </DropdownMenuTrigger>

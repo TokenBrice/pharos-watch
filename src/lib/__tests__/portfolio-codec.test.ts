@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildPortfolioCoinsHref,
   encodePortfolioHoldings,
+  mergeCoinsParam,
   migratePortfolioIds,
   parsePortfolioUrlParam,
 } from "../portfolio-codec";
@@ -85,5 +87,22 @@ describe("parsePortfolioUrlParam edge cases", () => {
       "usdc-circle:0,usdt-tether:-5,dai-makerdao:Infinity,frax-frax:NaN,pyusd-paypal:1abc,lusd-liquity:1:2",
     );
     expect(result).toEqual([{ coinId: "usdc-circle", amount: 0 }]);
+  });
+});
+
+describe("buildPortfolioCoinsHref", () => {
+  it("builds a canonical deduplicated /portfolio/?coins= handoff URL via mergeCoinsParam", () => {
+    expect(buildPortfolioCoinsHref(["usdc-circle", "usdt-tether", "usdc-circle", "not-a-coin"])).toBe(
+      "/portfolio/?coins=usdc-circle,usdt-tether",
+    );
+    expect(buildPortfolioCoinsHref([])).toBe("/portfolio/");
+    expect(buildPortfolioCoinsHref(["not-a-coin"])).toBe("/portfolio/");
+  });
+
+  it("merges new coins into an existing p parameter without overriding existing amounts", () => {
+    expect(mergeCoinsParam("usdc-circle:500", "usdc-circle,usdt-tether")).toBe("usdc-circle:500,usdt-tether:0");
+    expect(buildPortfolioCoinsHref(["usdc-circle", "usdt-tether"], "usdc-circle:500")).toBe(
+      "/portfolio/?p=usdc-circle%3A500%2Cusdt-tether%3A0",
+    );
   });
 });

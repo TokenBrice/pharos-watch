@@ -121,6 +121,7 @@ export default function UpcomingPage() {
     >
       <UpcomingClient
         coins={PRE_LAUNCH_CLIENT_COINS}
+        launchedCount={LAUNCHED_STABLECOINS.length}
         logos={PRE_LAUNCH_LOGOS}
         teasers={PRE_LAUNCH_TEASERS}
       />

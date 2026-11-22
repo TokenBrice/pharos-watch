@@ -6,7 +6,11 @@
 
 `src/app/screener/page.tsx` owns the static shell and metadata; `client.tsx` joins live data. `createClientFeaturePage()` preserves the shell shape while loading. `src/lib/screener-filters.ts` owns row/filter semantics and `src/lib/url-state.ts` the codec. Picker orchestration lives in `src/app/screener/picker/`, wizard state in `src/lib/selector-state.ts`, and runtime-neutral engine/adapter logic in `shared/lib/selector/`.
 
-The Picker callout reserves a responsive placeholder until hydration, then mounts directly in the viewport-appropriate layout with its stored dismissal preference.
+Both `/screener/` and `/screener/picker/` share a `.pharos-segmented` header mode switch (`Screener | Guided Picker`) in `FeaturePageShell.headerActions` instead of a dismissible promotional banner. The Screener toolbar collapses its 18 filter controls into a 1-row Primary Bar (client-side text search, 1-click preset pills, compact Grade/Mechanism/Peg/Supply selectors) plus an expandable `All filters` disclosure that defaults collapsed on both mobile and desktop so table rows sit above the fold.
+
+`ScreenerTable` mounts on `DataTableShell` with `stickyHeader` and `stickyMode="page"`, using CSS `@container` switching (`@3xl:hidden` cards / `hidden @3xl:block` table) instead of viewport JS branching. Row checkboxes feed a sticky batch tray (`Compare (N)` to `/compare/?coins=...`, `Model in Portfolio` to `/portfolio/?coins=...` via `buildPortfolioCoinsHref`/`mergeCoinsParam`, and `Copy link`).
+
+Picker displays a compact dynamic step progress trail above the wizard and renders `TelegramSubscribeCommand` below the shortlist alongside a `Model in Portfolio` action.
 
 ## Universe And Data Sources
 
@@ -34,11 +38,11 @@ Active predicates require their own source publication: DEWS ranges use stress s
 
 ## Sorting And Export
 
-Default sorting is descending Safety Score; shared comparator/`useSort()` owns unrated handling, direction and `aria-sort`. The table presents published Backing / Exit / Economic Control, weakest pillar, evidence, pipeline gaps and cap context without rescoring. Each row leads with its highest exceptional state (`CoinStateChip`; phone cards inline the specifics). DEWS reads as its band word beside the score, never a bare number. With an exact `coins=` shortlist, the phone filter panel folds behind a Show filters toggle so the results start near the top.
+Default sorting is descending Safety Score; shared comparator/`useSort()` owns unrated handling, direction and `aria-sort`. The table presents published Backing / Exit / Economic Control, weakest pillar, evidence, pipeline gaps and cap context without rescoring. Each row leads with its highest exceptional state (`CoinStateChip`; phone cards inline the specifics). DEWS reads as its band word beside the score, never a bare number. The `All filters` drawer starts collapsed on mobile and desktop so results start near the top, including for exact `coins=` Picker shortlists.
 
 Peg Range is `[worst tracked deviation, current deviation]`: the worst value comes from peg summary and the current endpoint from the stablecoins row’s `currentPeg`, with peg-summary fallback for legacy rows. It is not a 30-day history or a per-coin history fetch; labels/tooltips must agree. The separate 30d Supply sparkline compares monthly/current endpoints.
 
-Only the active responsive layout mounts. Available results render in 50-row pages with an explicit “Showing N–M of total” range; pagination bounds presentation only. Filtering and sorting run over the full matched set before paging, and the toolbar count and export remain independent of the displayed page. Desktop row-cursor shortcuts operate on the current page and yield to interactive controls, including pager and sort buttons.
+CSS `@container` breakpoints switch between mobile cards and the desktop `DataTableShell` without a post-hydration layout swap. Available results render in 50-row pages with an explicit “Showing N–M of total” range; pagination bounds presentation only. Filtering and sorting run over the full matched set before paging, and the toolbar count and export remain independent of the displayed page. Desktop row-cursor shortcuts operate on the current page and yield to interactive controls, including pager and sort buttons.
 
 `TableExportMenu` exports the complete filtered, sorted set, never just the displayed page. Preserve identity/classification, supply, score, pillar/evidence/cap, rating/partial-cause, custody/control and mint fields. Mint is the published Safety Score component through V9-named consumers, not a separate authority. CSV headers `mint_authority`, `mint_authority_score`, `mint_authority_score_band` differ intentionally from title-case directory exports; URL band keys remain stable. Stamp Safety Score provenance, including the mint component.
 
@@ -90,7 +94,7 @@ Desktop history walks completed wizard steps; mobile commits one result after re
 
 ## Browser Storage
 
-`pharos.selector.callout.v1` stores dismissal in localStorage; a valid current value takes precedence over the read-only legacy `pharos-selector-callout-v1` fallback, so restoring the callout survives remount even when the legacy key remains dismissed. `pharos.selector.sessionResult.v1` stores only completed wizard answers (`state`) and save time (`savedAt`) in sessionStorage, not generated output. Older envelopes' extra output is ignored. There is no long-lived result history. Recovery restores answers and regenerates against current data with a banner; it is not frozen replay. [Privacy](./privacy-page.md) owns user-facing categories.
+`pharos.selector.sessionResult.v1` stores only completed wizard answers (`state`) and save time (`savedAt`) in sessionStorage, not generated output. Older envelopes' extra output is ignored. There is no long-lived result history. Recovery restores answers and regenerates against current data with a banner; it is not frozen replay. [Privacy](./privacy-page.md) owns user-facing categories.
 
 ## Snapshot Sharing
 

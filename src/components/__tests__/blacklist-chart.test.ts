@@ -3,7 +3,12 @@
 import { createElement, isValidElement } from "react";
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getBlacklistChartCoins, getBlacklistTooltipSummary, BlacklistChart } from "@/components/freezewatch/blacklist-chart";
+import {
+  buildBlacklistChartModel,
+  getBlacklistChartCoins,
+  getBlacklistTooltipSummary,
+  BlacklistChart,
+} from "@/components/freezewatch/blacklist-chart";
 import type { QuarterlyStackedBarChart } from "@/components/chart-primitives/quarterly-stacked-bar-chart";
 import type { BlacklistSummaryResponse } from "@shared/types/blacklist";
 
@@ -75,29 +80,50 @@ describe("getBlacklistTooltipSummary", () => {
     expect(coins).toEqual(["BRZ", "BUIDL"]);
   });
 
-  it("configures the shared quarterly frame without changing the issuer series or total overlay", () => {
+  it("collapses more than 5 active coins into top-5 plus an Other rollup without a bar-slicing Total spline", () => {
     const chart = [
-      { quarter: "Q1 '26", USDT: 10, USDC: 5, total: 15 },
-      { quarter: "Q2 '26", USDT: 20, USDC: 0, total: 20 },
+      {
+        quarter: "Q1 '26",
+        USDT: 500,
+        USDC: 300,
+        PAXG: 200,
+        XAUT: 150,
+        USDG: 100,
+        PYUSD: 50,
+        FDUSD: 30,
+        BRZ: 20,
+        total: 1_350,
+      },
     ] as unknown as BlacklistSummaryResponse["chart"];
+
+    const model = buildBlacklistChartModel(chart);
+    expect(model.topCoins).toEqual(["USDT", "USDC", "PAXG", "XAUT", "USDG"]);
+    expect(model.otherCoins).toEqual(["PYUSD", "FDUSD", "BRZ"]);
+    expect(model.seriesKeys).toEqual(["USDT", "USDC", "PAXG", "XAUT", "USDG", "Other"]);
+    expect(model.rows[0]).toMatchObject({ quarter: "Q1 '26", USDT: 500, Other: 100, total: 1_350 });
 
     render(createElement(BlacklistChart, { chart, isLoading: false }));
 
+    const legend = screen.getByTestId("blacklist-chart-legend");
+    expect(legend.textContent).toContain("USDT");
+    expect(legend.textContent).toContain("Other (3)");
+    expect(legend.textContent).not.toContain("PYUSD");
+    expect(legend.textContent).not.toContain("Total");
+
     expect(quarterlyChartMock).toHaveBeenCalledOnce();
     const props = quarterlyChartMock.mock.calls[0]![0];
-    expect(props.data).toBe(chart);
-    expect(props.series).toEqual([
-      { dataKey: "USDC", color: expect.any(String), fillOpacity: 0.75, radius: undefined },
-      { dataKey: "USDT", color: expect.any(String), fillOpacity: 0.62, radius: [3, 3, 0, 0] },
-    ]);
+    expect(props.series.map((s) => s.dataKey)).toEqual(["USDT", "USDC", "PAXG", "XAUT", "USDG", "Other"]);
+    expect(props.children).toBeUndefined();
     expect(props.yAxis.width).toBe(62);
     expect(props.yAxis.tickFormatter!(1_000, 0)).toBe("$1K");
-    expect(props.ariaLabel).toContain("showing 2 quarters");
+    expect(props.ariaLabel).toContain("showing 1 quarters");
     expect(props.height).toBe("h-[220px] sm:h-[280px]");
     expect(isValidElement(props.tooltipContent)).toBe(true);
-    expect(isValidElement(props.children)).toBe(true);
-    if (!isValidElement<{ dataKey: string }>(props.children)) throw new Error("Expected total overlay element");
-    expect(props.children.props.dataKey).toBe("total");
+  });
+
+  it("renders a bar-variant ChartSkeleton while loading", () => {
+    const { container } = render(createElement(BlacklistChart, { chart: undefined, isLoading: true }));
+    expect(container.querySelector('[data-chart-skeleton-variant="bars"]')).not.toBeNull();
   });
 
   it("shows an unavailable notice instead of the empty-ledger copy when the summary read fails", () => {

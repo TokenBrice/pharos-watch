@@ -82,7 +82,7 @@ export function CemeteryDataset() {
           </div>
 
           <div className="min-w-0 space-y-3 border-t border-border/60 px-4 py-4 md:px-5 md:py-5 lg:border-l lg:border-t-0">
-            <h3 className="pharos-kicker">How to cite</h3>
+            <h3 className="pharos-label">How to cite</h3>
             <p className="rounded-md border border-border/50 bg-card/40 px-3 py-2 font-mono text-[12px] leading-relaxed text-foreground/80 [overflow-wrap:anywhere]">
               {citation}
             </p>

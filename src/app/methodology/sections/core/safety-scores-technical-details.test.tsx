@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { SafetyScoresTechnicalDetails } from "./safety-scores-technical-details";
 
-const CURRENT_SUMMARY = "Current V10 technical contract";
+const CURRENT_SUMMARY = "Current Safety Score technical contract";
 const HISTORICAL_SUMMARY = "Historical V8.17 methodology: dimensions, formulas, thresholds, and caveats";
 
 function disclosure(html: string, summary: string, nextSummary?: string): string {

@@ -94,7 +94,7 @@ export function EmptyStateIllustration({
         />
         <div className="relative rounded-full border border-[var(--brand-accent)]/20 bg-[var(--brand-accent)]/5 p-4">
           <Icon
-            className="h-8 w-8 text-[var(--brand-accent)]"
+            className="h-8 w-8 text-brand-accent-text"
             strokeWidth={1.5}
             aria-hidden="true"
           />

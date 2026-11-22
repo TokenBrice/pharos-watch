@@ -80,7 +80,7 @@ export function GeniusReserveCell({ row }: { row: GeniusComplianceRow }) {
       href={row.reserveDisclosureUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className="pharos-focus-ring inline-flex flex-col rounded-sm text-sm text-frost-blue hover:underline"
+      className="pharos-focus-ring inline-flex flex-col rounded-sm text-sm text-brand-accent-text hover:underline"
     >
       {content}
     </a>

@@ -1,12 +1,12 @@
 "use client";
 
-import { useCallback, useMemo, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useCallback, useId, useMemo, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartShell } from "@/hooks/use-chart-shell";
 import {
+  CHART_BLUE,
   CHART_ORANGE,
   CHART_PALETTE,
-  CHART_SLATE_SOFT,
   CHART_SLATE_STRONG,
   USDC_BLUE,
   USDT_GREEN,
@@ -23,18 +23,26 @@ import { computeChartYDomain } from "@/lib/chart-utils";
 import { ChartTooltipSurface } from "@/components/pharos-chart-tooltip";
 import type { TotalMcapChartRow } from "@shared/lib/total-mcap-chart";
 import { formatChartDate, formatCurrency } from "@shared/lib/format";
+import { DAY_MS } from "@shared/lib/time-constants";
 
-const HOME_ALT_CHART_MARGIN = { top: 24, right: 32, bottom: 12, left: 0 } as const;
-const HOME_ALT_Y_AXIS_WIDTH = 68;
-const HOME_ALT_X_AXIS_HEIGHT = 30;
+const HOME_ALT_CHART_MARGIN = { top: 10, right: 24, bottom: 10, left: 0 } as const;
+const HOME_ALT_Y_AXIS_WIDTH = 64;
+const HOME_ALT_X_AXIS_HEIGHT = 26;
 const HOME_ALT_DATE_TICK_FORMATTER = new Intl.DateTimeFormat("en-US", {
   month: "short",
   year: "2-digit",
   timeZone: "UTC",
 });
 const HOME_ALT_YEAR_TICK_FORMATTER = new Intl.DateTimeFormat("en-US", { year: "numeric", timeZone: "UTC" });
-// Narrow charts keep fewer calendar ticks so year labels never collide.
 const HOME_ALT_NARROW_WIDTH = 640;
+
+type HeroChartRange = "90d" | "1y" | "all";
+
+const RANGE_OPTIONS: readonly { value: HeroChartRange; label: string; days: number | null }[] = [
+  { value: "90d", label: "90D", days: 90 },
+  { value: "1y", label: "1Y", days: 365 },
+  { value: "all", label: "ALL", days: null },
+];
 
 interface HomeAltHeroChartProps {
   rows: TotalMcapChartRow[];
@@ -47,65 +55,51 @@ interface ChartBounds {
   y1: number;
 }
 
-interface ChartLayer {
-  key: keyof Pick<TotalMcapChartRow, "usdt" | "total">;
+type StackedCohortKey = "usdt" | "usdc" | "sky" | "others";
+
+interface StackedBand {
+  key: StackedCohortKey;
   label: string;
   color: string;
-  gradientId: string;
   topOpacity: number;
   bottomOpacity: number;
 }
 
-interface CohortLine {
-  key: keyof Pick<TotalMcapChartRow, "usdc" | "sky" | "others" | "nonUsd">;
-  label: string;
-  color: string;
-  dashArray?: string;
-}
-
-// Two-tone chart per the Figma: a gray total-market-cap envelope with the
-// dominant USDT cohort filled green beneath it. Both areas baseline at zero and
-// draw gray-first so the green cohort reads at the bottom and gray above.
-const CHART_LAYERS: readonly ChartLayer[] = [
-  {
-    key: "total",
-    label: "Total market cap",
-    color: CHART_SLATE_SOFT,
-    gradientId: "homeAltTotalGrad",
-    topOpacity: 0.65,
-    bottomOpacity: 0.06,
-  },
-  {
-    key: "usdt",
-    label: "USDT",
-    color: USDT_GREEN,
-    gradientId: "homeAltUsdtGrad",
-    topOpacity: 0.55,
-    bottomOpacity: 0.1,
-  },
+// True stacked cohort areas matching the left breakdown shares bottom-to-top:
+// USDT + USDC + USDS + DAI + Others = Total market cap.
+const STACKED_BANDS: readonly StackedBand[] = [
+  { key: "usdt", label: "USDT", color: USDT_GREEN, topOpacity: 0.34, bottomOpacity: 0.14 },
+  { key: "usdc", label: "USDC", color: USDC_BLUE, topOpacity: 0.3, bottomOpacity: 0.12 },
+  { key: "sky", label: "USDS + DAI", color: CHART_ORANGE, topOpacity: 0.3, bottomOpacity: 0.12 },
+  { key: "others", label: "Others", color: CHART_PALETTE[1], topOpacity: 0.24, bottomOpacity: 0.08 },
 ];
 
-const COHORT_LINES: readonly CohortLine[] = [
-  { key: "usdc", label: "USDC", color: USDC_BLUE },
-  { key: "sky", label: "USDS + DAI", color: CHART_ORANGE },
-  { key: "others", label: "Others", color: CHART_PALETTE[1] },
-  { key: "nonUsd", label: "Non-USD share", color: CHART_SLATE_STRONG, dashArray: "4 4" },
-];
+const TOTAL_SERIES_COLOR = CHART_BLUE;
+const NON_USD_LINE = {
+  key: "nonUsd" as const,
+  label: "Non-USD share",
+  color: CHART_SLATE_STRONG,
+  dashArray: "4 4",
+};
 
-/**
- * Series shown in the hover readout, ordered the way the chart stacks them:
- * total envelope first, then the cohorts drawn beneath it. Derived from the
- * drawn layers/lines so colors can never drift from the plotted series.
- */
 const HOVER_SERIES: readonly {
-  key: ChartLayer["key"] | CohortLine["key"];
+  key: keyof Pick<TotalMcapChartRow, "total" | StackedCohortKey | "nonUsd">;
   label: string;
   color: string;
 }[] = [
-  ...CHART_LAYERS.map(({ key, label, color }) => ({ key, label, color })),
-  ...COHORT_LINES.map(({ key, label, color }) => ({ key, label, color })),
+  { key: "total", label: "Total market cap", color: TOTAL_SERIES_COLOR },
+  ...STACKED_BANDS.map(({ key, label, color }) => ({ key, label, color })),
+  { key: NON_USD_LINE.key, label: NON_USD_LINE.label, color: NON_USD_LINE.color },
 ];
 
+function filterRowsByRange(rows: TotalMcapChartRow[], range: HeroChartRange): TotalMcapChartRow[] {
+  if (range === "all" || rows.length <= 2) return rows;
+  const days = range === "90d" ? 90 : 365;
+  const lastTs = rows[rows.length - 1]!.ts;
+  const cutoff = lastTs - days * DAY_MS;
+  const filtered = rows.filter((row) => row.ts >= cutoff);
+  return filtered.length >= 2 ? filtered : rows;
+}
 
 function makeScales({
   rows,
@@ -133,13 +127,81 @@ function formatPoint(x: number, y: number): string {
   return `${x.toFixed(1)} ${y.toFixed(1)}`;
 }
 
-function buildAreaPath({
+/**
+ * Resolve stacked [y0, y1] cumulative bounds for a cohort band on one row.
+ * Returns null if any underlying cohort operand is missing so gaps stay gaps (R1).
+ */
+function resolveBandBounds(row: TotalMcapChartRow, key: StackedCohortKey): [number, number] | null {
+  const usdt = row.usdt;
+  if (usdt === null || !Number.isFinite(usdt)) return null;
+  if (key === "usdt") return [0, usdt];
+  const usdc = row.usdc;
+  if (usdc === null || !Number.isFinite(usdc)) return null;
+  if (key === "usdc") return [usdt, usdt + usdc];
+  const sky = row.sky;
+  if (sky === null || !Number.isFinite(sky)) return null;
+  if (key === "sky") return [usdt + usdc, usdt + usdc + sky];
+  const others = row.others;
+  if (others === null || !Number.isFinite(others)) return null;
+  return [usdt + usdc + sky, usdt + usdc + sky + others];
+}
+
+function buildRibbonPaths({
   rows,
-  layer,
+  key,
   scales,
 }: {
   rows: TotalMcapChartRow[];
-  layer: ChartLayer;
+  key: StackedCohortKey;
+  scales: ReturnType<typeof makeScales>;
+}): { area: string; topLine: string } {
+  const areaCommands: string[] = [];
+  const lineCommands: string[] = [];
+  let upperPoints: string[] = [];
+  let lowerPoints: string[] = [];
+
+  const flushSegment = () => {
+    if (upperPoints.length > 0) {
+      lineCommands.push(`M ${upperPoints[0]}`);
+      for (let i = 1; i < upperPoints.length; i += 1) {
+        lineCommands.push(`L ${upperPoints[i]}`);
+      }
+    }
+    // Omit degenerate filled singletons; gaps stay clean.
+    if (upperPoints.length > 1) {
+      areaCommands.push(`M ${upperPoints[0]}`);
+      for (let i = 1; i < upperPoints.length; i += 1) {
+        areaCommands.push(`L ${upperPoints[i]}`);
+      }
+      for (let i = lowerPoints.length - 1; i >= 0; i -= 1) {
+        areaCommands.push(`L ${lowerPoints[i]}`);
+      }
+      areaCommands.push("Z");
+    }
+    upperPoints = [];
+    lowerPoints = [];
+  };
+
+  for (const row of rows) {
+    const band = resolveBandBounds(row, key);
+    if (!band) {
+      flushSegment();
+      continue;
+    }
+    const x = scales.x(row.ts);
+    upperPoints.push(formatPoint(x, scales.y(band[1])));
+    lowerPoints.push(formatPoint(x, scales.y(band[0])));
+  }
+  flushSegment();
+
+  return { area: areaCommands.join(" "), topLine: lineCommands.join(" ") };
+}
+
+function buildTotalAreaPath({
+  rows,
+  scales,
+}: {
+  rows: TotalMcapChartRow[];
   scales: ReturnType<typeof makeScales>;
 }): string {
   const commands: string[] = [];
@@ -156,7 +218,7 @@ function buildAreaPath({
     }
   };
   for (const row of rows) {
-    const value = row[layer.key];
+    const value = row.total;
     if (value === null || !Number.isFinite(value)) {
       closeSegment();
       continue;
@@ -171,37 +233,24 @@ function buildAreaPath({
   return commands.join(" ");
 }
 
-function buildTopLinePath({
+function buildLinePath({
   rows,
-  layer,
+  key,
   scales,
 }: {
   rows: TotalMcapChartRow[];
-  layer: ChartLayer;
-  scales: ReturnType<typeof makeScales>;
-}): string {
-  return buildCohortLinePath({ rows, line: layer, scales });
-}
-
-function buildCohortLinePath({
-  rows,
-  line,
-  scales,
-}: {
-  rows: TotalMcapChartRow[];
-  line: Pick<CohortLine | ChartLayer, "key">;
+  key: "total" | "nonUsd";
   scales: ReturnType<typeof makeScales>;
 }): string {
   let hasPreviousPoint = false;
   const commands: string[] = [];
 
   for (const row of rows) {
-    const value = row[line.key];
+    const value = row[key];
     if (value === null || !Number.isFinite(value)) {
       hasPreviousPoint = false;
       continue;
     }
-
     commands.push(`${hasPreviousPoint ? "L" : "M"} ${formatPoint(scales.x(row.ts), scales.y(value))}`);
     hasPreviousPoint = true;
   }
@@ -209,10 +258,6 @@ function buildCohortLinePath({
   return commands.join(" ");
 }
 
-/**
- * Nearest drawn point to a timestamp. The crosshair snaps to sampled rows so
- * the readout always matches a point the chart actually plotted.
- */
 function findNearestRowIndex(rows: TotalMcapChartRow[], ts: number): number {
   let lo = 0;
   let hi = rows.length - 1;
@@ -223,6 +268,16 @@ function findNearestRowIndex(rows: TotalMcapChartRow[], ts: number): number {
   }
   const prev = Math.max(0, lo - 1);
   return Math.abs(rows[prev]!.ts - ts) <= Math.abs(rows[lo]!.ts - ts) ? prev : lo;
+}
+
+function resolveHoverYValue(
+  row: TotalMcapChartRow,
+  key: (typeof HOVER_SERIES)[number]["key"],
+): number | null {
+  if (key === "total") return row.total;
+  if (key === "nonUsd") return row.nonUsd;
+  const band = resolveBandBounds(row, key);
+  return band ? band[1] : null;
 }
 
 function HomeAltChartFrame({
@@ -237,9 +292,10 @@ function HomeAltChartFrame({
   yDomain: ReturnType<typeof computeChartYDomain>;
 }) {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const rawId = useId();
+  const idPrefix = `home-hero-${rawId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  const totalGradId = `${idPrefix}-total`;
 
-  // Geometry is memoized so pointer moves only re-render the hover overlay --
-  // path building walks every sampled row and must not run per mouse event.
   const geometry = useMemo(() => {
     const x0 = HOME_ALT_CHART_MARGIN.left + HOME_ALT_Y_AXIS_WIDTH;
     const x1 = Math.max(x0, width - HOME_ALT_CHART_MARGIN.right);
@@ -248,16 +304,15 @@ function HomeAltChartFrame({
     const bounds = { x0, x1, y0, y1 };
     const start = rows[0]!.ts;
     const end = rows[rows.length - 1]!.ts;
-    const maxFromRows = rows.reduce((max, row) => row.total === null ? max : Math.max(max, row.total), 0);
-    // The value domain extends to the nice tick above the data, so the top
-    // gridline caps the envelope.
+    const maxFromRows = rows.reduce((max, row) => {
+      const top = row.total ?? 0;
+      return Math.max(max, Number.isFinite(top) ? top : 0);
+    }, 0);
     const { domain: resolvedYDomain, ticks: yTicks } = niceTicks(
       yDomain[0],
       typeof yDomain[1] === "number" ? yDomain[1] : maxFromRows,
       { kind: "currency", includeZero: true },
     );
-    // Keep observed points and gap boundaries: thinning can connect across a
-    // missing day or reduce the final observed segment to a vertical sliver.
     const visibleRows = rows;
     const scales = makeScales({ rows: visibleRows, bounds, yDomain: resolvedYDomain });
     const xTicks = niceTimeTicks(start, end, width < HOME_ALT_NARROW_WIDTH ? 4 : 6);
@@ -267,9 +322,10 @@ function HomeAltChartFrame({
 
   const { bounds, visibleRows, scales, yTicks, xTicks } = geometry;
   const paths = useMemo(() => ({
-    areas: CHART_LAYERS.map((layer) => buildAreaPath({ rows: visibleRows, layer, scales })),
-    tops: CHART_LAYERS.map((layer) => buildTopLinePath({ rows: visibleRows, layer, scales })),
-    cohorts: COHORT_LINES.map((line) => buildCohortLinePath({ rows: visibleRows, line, scales })),
+    totalArea: buildTotalAreaPath({ rows: visibleRows, scales }),
+    totalLine: buildLinePath({ rows: visibleRows, key: "total", scales }),
+    stacked: STACKED_BANDS.map((band) => buildRibbonPaths({ rows: visibleRows, key: band.key, scales })),
+    nonUsdLine: buildLinePath({ rows: visibleRows, key: "nonUsd", scales }),
   }), [visibleRows, scales]);
   const { x0, x1, y0, y1 } = bounds;
 
@@ -298,16 +354,20 @@ function HomeAltChartFrame({
         width={width}
         height={height}
         role="img"
-        aria-label="Stablecoin market cap history by major cohort"
+        aria-label="Stablecoin market cap history stacked by major cohort"
         onPointerMove={handlePointerMove}
         onPointerLeave={handlePointerLeave}
         onPointerCancel={handlePointerLeave}
       >
         <defs>
-          {CHART_LAYERS.map((layer) => (
-            <linearGradient key={layer.key} id={layer.gradientId} x1={0} y1={0} x2={0} y2={1}>
-              <stop offset="5%" stopColor={layer.color} stopOpacity={layer.topOpacity} />
-              <stop offset="95%" stopColor={layer.color} stopOpacity={layer.bottomOpacity} />
+          <linearGradient id={totalGradId} x1={0} y1={0} x2={0} y2={1}>
+            <stop offset="5%" stopColor={TOTAL_SERIES_COLOR} stopOpacity={0.14} />
+            <stop offset="95%" stopColor={TOTAL_SERIES_COLOR} stopOpacity={0.01} />
+          </linearGradient>
+          {STACKED_BANDS.map((band) => (
+            <linearGradient key={band.key} id={`${idPrefix}-${band.key}`} x1={0} y1={0} x2={0} y2={1}>
+              <stop offset="5%" stopColor={band.color} stopOpacity={band.topOpacity} />
+              <stop offset="95%" stopColor={band.color} stopOpacity={band.bottomOpacity} />
             </linearGradient>
           ))}
         </defs>
@@ -338,40 +398,54 @@ function HomeAltChartFrame({
           ))}
           {visibleRows.length > 0 ? (
             <g>
-              {CHART_LAYERS.map((layer, index) => (
+              {/* Soft total envelope backdrop stays visible even when cohort history has gaps. */}
+              <path
+                data-series="total-area"
+                d={paths.totalArea}
+                fill={`url(#${totalGradId})`}
+              />
+              {STACKED_BANDS.map((band, index) => (
                 <path
-                  key={layer.key}
-                  d={paths.areas[index]}
-                  fill={`url(#${layer.gradientId})`}
+                  key={`${band.key}-area`}
+                  data-series={`${band.key}-area`}
+                  d={paths.stacked[index]!.area}
+                  fill={`url(#${idPrefix}-${band.key})`}
                 />
               ))}
-              {CHART_LAYERS.map((layer, index) => (
+              {STACKED_BANDS.map((band, index) => (
                 <path
-                  key={`${layer.key}-line`}
-                  d={paths.tops[index]}
+                  key={`${band.key}-line`}
+                  d={paths.stacked[index]!.topLine}
                   fill="none"
-                  stroke={layer.color}
-                  strokeWidth={1.5}
+                  stroke={band.color}
+                  strokeWidth={1.25}
                   strokeLinejoin="round"
                   strokeLinecap="round"
                 >
-                  <title>{layer.label}</title>
+                  <title>{band.label}</title>
                 </path>
               ))}
-              {COHORT_LINES.map((line, index) => (
-                <path
-                  key={`${line.key}-line`}
-                  d={paths.cohorts[index]}
-                  fill="none"
-                  stroke={line.color}
-                  strokeDasharray={line.dashArray}
-                  strokeWidth={1.4}
-                  strokeLinejoin="round"
-                  strokeLinecap="round"
-                >
-                  <title>{line.label}</title>
-                </path>
-              ))}
+              <path
+                d={paths.nonUsdLine}
+                fill="none"
+                stroke={NON_USD_LINE.color}
+                strokeDasharray={NON_USD_LINE.dashArray}
+                strokeWidth={1.35}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              >
+                <title>{NON_USD_LINE.label}</title>
+              </path>
+              <path
+                d={paths.totalLine}
+                fill="none"
+                stroke={TOTAL_SERIES_COLOR}
+                strokeWidth={2.2}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              >
+                <title>Total market cap</title>
+              </path>
             </g>
           ) : null}
         </g>
@@ -388,14 +462,14 @@ function HomeAltChartFrame({
               style={{ opacity: 0.7 }}
             />
             {HOVER_SERIES.map((series) => {
-              const value = hoveredRow[series.key];
-              if (value === null || !Number.isFinite(value)) return null;
+              const yValue = resolveHoverYValue(hoveredRow, series.key);
+              if (yValue === null || !Number.isFinite(yValue)) return null;
               return (
                 <circle
                   key={series.key}
                   cx={hoverX}
-                  cy={scales.y(value)}
-                  r={3.5}
+                  cy={scales.y(yValue)}
+                  r={series.key === "total" ? 4 : 3}
                   fill="var(--color-card)"
                   stroke={series.color}
                   strokeWidth={2}
@@ -423,16 +497,12 @@ function HomeAltHoverReadout({
   hoverX: number;
   top: number;
 }) {
-  // Flip the card to the left of the crosshair once the pointer passes the
-  // midpoint so it never spills past the chart's right edge.
   const flip = hoverX > chartWidth / 2;
 
   return (
     <ChartTooltipSurface
-      // Pointer-only affordance: a live region would announce on every mouse
-      // move, and the SVG already carries the chart's accessible name.
       role="tooltip"
-      className="pointer-events-none absolute z-10 min-w-[11.5rem]"
+      className="pointer-events-none absolute z-10 min-w-[12.5rem]"
       style={
         flip
           ? { right: Math.max(8, chartWidth - hoverX + 12), top }
@@ -443,6 +513,9 @@ function HomeAltHoverReadout({
       <dl className="space-y-1">
         {HOVER_SERIES.map((series) => {
           const value = row[series.key];
+          const share = series.key !== "total" && value != null && row.total != null && row.total > 0
+            ? (value / row.total) * 100
+            : null;
           return (
             <div key={series.key} className="flex items-center justify-between gap-4 text-xs">
               <dt className="flex items-center gap-1.5 text-muted-foreground">
@@ -453,8 +526,15 @@ function HomeAltHoverReadout({
                 />
                 {series.label}
               </dt>
-              <dd className="font-mono tabular-nums text-foreground">
-                {value === null || !Number.isFinite(value) ? "—" : formatCurrency(value)}
+              <dd className="pharos-numeric text-foreground">
+                {value === null || !Number.isFinite(value) ? "—" : (
+                  <>
+                    {formatCurrency(value)}
+                    {share !== null ? (
+                      <span className="ml-1 text-2xs text-muted-foreground">({share.toFixed(0)}%)</span>
+                    ) : null}
+                  </>
+                )}
               </dd>
             </div>
           );
@@ -465,32 +545,58 @@ function HomeAltHoverReadout({
 }
 
 export function HomeAltHeroChart({ rows }: HomeAltHeroChartProps) {
+  const [range, setRange] = useState<HeroChartRange>("all");
   const { chartContainerRef, isChartReady, width, height } = useChartShell<HTMLDivElement>();
+
+  const rangedRows = useMemo(() => filterRowsByRange(rows, range), [rows, range]);
 
   const yDomain = useMemo(
     () =>
       computeChartYDomain(
-        rows.map((d) => d.total).filter((v): v is number => v != null),
+        rangedRows.map((d) => d.total).filter((v): v is number => v != null),
         true,
       ),
-    [rows],
+    [rangedRows],
   );
-  const chartReady = isChartReady && rows.length > 0;
+  const chartReady = isChartReady && rangedRows.length > 0;
 
   return (
     <div
-      ref={chartContainerRef}
-      className="relative h-[260px] w-full sm:h-[320px] lg:h-full"
+      className="flex h-[268px] w-full flex-col sm:h-[296px] lg:h-full"
       role="figure"
-      aria-label="Stablecoin market cap history by major cohort"
+      aria-label="Stablecoin market cap history stacked by major cohort"
     >
-      {chartReady ? (
-        <HomeAltChartFrame width={width} height={height} rows={rows} yDomain={yDomain} />
-      ) : (
-        <div className="h-full p-5">
-          <ChartSkeleton aria-hidden className="h-full w-full" />
+      <div className="flex items-center justify-between gap-2 px-4 pt-2.5 pb-0.5 sm:px-5">
+        <div className="flex items-center gap-3 text-2xs text-muted-foreground">
+          <span className="pharos-chart-legend-chip">
+            <span className="inline-block h-0.5 w-3 rounded-full" style={{ backgroundColor: TOTAL_SERIES_COLOR }} aria-hidden="true" />
+            <span>Total</span>
+          </span>
+          <span className="hidden sm:inline">Stacked cohorts</span>
         </div>
-      )}
+        <div role="group" aria-label="Market cap chart range" className="pharos-segmented">
+          {RANGE_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              aria-pressed={range === option.value}
+              onClick={() => setRange(option.value)}
+              className="pharos-focus-ring pharos-segmented-item min-h-11 px-2.5 font-mono text-2xs sm:min-h-7"
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div ref={chartContainerRef} className="relative min-h-0 flex-1 w-full">
+        {chartReady ? (
+          <HomeAltChartFrame width={width} height={height} rows={rangedRows} yDomain={yDomain} />
+        ) : (
+          <div className="h-full p-4">
+            <ChartSkeleton aria-hidden className="h-full w-full" />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

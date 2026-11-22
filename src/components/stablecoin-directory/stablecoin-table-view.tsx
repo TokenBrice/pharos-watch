@@ -3,7 +3,6 @@
 import type { ReactNode, Ref } from "react";
 import Link from "next/link";
 import type { VirtualItem } from "@tanstack/react-virtual";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   TableBody,
   TableCaption,
@@ -12,6 +11,8 @@ import {
   type TableSkeletonColumn,
 } from "@/components/table";
 import { TableBackgroundRefreshingBar } from "@/components/data-table-shell";
+import { TablePagination } from "@/components/table-pagination";
+import { StablecoinOverviewSkeleton } from "@/components/stablecoin-directory/stablecoin-overview-skeleton";
 import { StablecoinTableEmptyState } from "@/components/stablecoin-directory/stablecoin-table-empty-state";
 import { StablecoinVirtualRow } from "@/components/stablecoin-directory/stablecoin-table-row";
 import {
@@ -30,10 +31,15 @@ import type { StablecoinData } from "@shared/types/supply";
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 import type { CoinState } from "@shared/lib/coin-state";
 
+export { StablecoinOverviewSkeleton };
+
 const SKELETON_ROW_COUNT = 10;
+const EAGER_LOGO_ROW_LIMIT = 20;
 
 interface StablecoinTableViewProps {
   isLoading: boolean;
+  isVirtualized: boolean;
+  needsHorizontalScroll: boolean;
   variant: StablecoinTableVisualVariant;
   density: TableDensity;
   tableMinWidthPx: number;
@@ -70,7 +76,7 @@ interface StablecoinTableViewProps {
   activateCursorAtIndex: (index: number) => void;
   onNavigate: (stablecoinId: string) => void;
   onPrefetch: (stablecoinId: string) => void;
-  measureVirtualRow: (element: HTMLTableRowElement | null) => void;
+  measureVirtualRow?: (element: HTMLTableRowElement | null) => void;
   searchQuery?: string;
   activeFilters: readonly FilterTag[];
   data: StablecoinData[] | undefined;
@@ -81,24 +87,12 @@ interface StablecoinTableViewProps {
 
 type StablecoinTableFrameMode = "loading" | "ready";
 
-const STABLECOIN_FRAME_CLASS_NAMES: Record<
-  StablecoinTableFrameMode,
-  Record<StablecoinTableVisualVariant, string | undefined>
-> = {
-  loading: {
-    default: undefined,
-    figmaOverview: "pharos-overview-table-shell",
-  },
-  ready: {
-    default: "animate-in fade-in duration-200",
-    figmaOverview: "pharos-overview-table-shell animate-in fade-in duration-200",
-  },
-};
-
 function StablecoinTableFrame({
   children,
   mode,
   variant,
+  isVirtualized,
+  needsHorizontalScroll,
   density,
   tableMinWidthPx,
   viewportRef,
@@ -109,6 +103,8 @@ function StablecoinTableFrame({
   children: ReactNode;
   mode: StablecoinTableFrameMode;
   variant: StablecoinTableVisualVariant;
+  isVirtualized: boolean;
+  needsHorizontalScroll: boolean;
   density: TableDensity;
   tableMinWidthPx: number;
   viewportRef: Ref<HTMLDivElement>;
@@ -121,14 +117,27 @@ function StablecoinTableFrame({
   return (
     <TableFrame
       {...STABLECOIN_FRAME_SHARED}
-      viewportDefaults="virtual"
+      chrome="default"
+      viewportDefaults={isVirtualized ? "virtual" : undefined}
       surfaceRef={surfaceRef}
-      className={STABLECOIN_FRAME_CLASS_NAMES[mode][variant]}
+      className={mode === "ready" ? "animate-in fade-in duration-200" : undefined}
       density={density}
       striped="indexed"
+      stickyHeader
+      stickyMode={isVirtualized ? "viewport" : "page"}
       mobileScrollHint={isOverview ? false : STABLECOIN_FRAME_SHARED.mobileScrollHint}
       viewportRef={viewportRef}
-      viewportClassName={isOverview ? "pharos-overview-table-viewport" : STABLECOIN_FRAME_SHARED.viewportClassName}
+      viewportClassName={isVirtualized ? STABLECOIN_FRAME_SHARED.viewportClassName : undefined}
+      viewportProps={
+        isVirtualized
+          ? undefined
+          : {
+              horizontal: needsHorizontalScroll,
+              scrollShadow: needsHorizontalScroll,
+              overscrollX: needsHorizontalScroll,
+              compactBottomPadding: false,
+            }
+      }
       tableProps={{ style: { minWidth: tableMinWidthPx } }}
       topSlot={topSlot}
       footerSlot={footerSlot}
@@ -140,6 +149,8 @@ function StablecoinTableFrame({
 
 function LoadingTable({
   variant,
+  isVirtualized,
+  needsHorizontalScroll,
   density,
   tableMinWidthPx,
   viewportRef,
@@ -149,6 +160,8 @@ function LoadingTable({
 }: Pick<
   StablecoinTableViewProps,
   | "variant"
+  | "isVirtualized"
+  | "needsHorizontalScroll"
   | "density"
   | "tableMinWidthPx"
   | "viewportRef"
@@ -156,10 +169,31 @@ function LoadingTable({
   | "isVisible"
   | "skeletonColumns"
 >) {
+  if (variant === "figmaOverview") {
+    return (
+      <StablecoinOverviewSkeleton
+        showToolbar
+        density={density}
+        tableMinWidthPx={tableMinWidthPx}
+        columns={skeletonColumns}
+        header={
+          <StablecoinTableHeader
+            showPinnedControls={showPinnedControls}
+            isVisible={isVisible}
+            variant={variant}
+            sticky
+          />
+        }
+      />
+    );
+  }
+
   return (
     <StablecoinTableFrame
       mode="loading"
       variant={variant}
+      isVirtualized={isVirtualized}
+      needsHorizontalScroll={needsHorizontalScroll}
       density={density}
       tableMinWidthPx={tableMinWidthPx}
       viewportRef={viewportRef}
@@ -179,7 +213,7 @@ function DefaultFooter({ count }: { count: number }) {
     <div className="flex flex-col gap-1 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
       <span className="text-sm text-muted-foreground">
         Showing <span className="font-mono tabular-nums text-foreground">{count.toLocaleString("en-US")}</span>{" "}
-        active stablecoins — all inactive lifecycle states excluded,{" "}
+        active stablecoins · all inactive lifecycle states excluded,{" "}
         <Link
           href="/screener/"
           className="pharos-focus-ring rounded-sm underline decoration-dotted underline-offset-4 transition-colors hover:text-foreground"
@@ -194,100 +228,62 @@ function DefaultFooter({ count }: { count: number }) {
   );
 }
 
-function OverviewFooter({
-  count,
-  pageIndex,
-  pageCount,
-  pageStart,
-  pageEnd,
-  onPrevious,
-  onNext,
-}: {
-  count: number;
-  pageIndex: number;
-  pageCount: number;
-  pageStart: number;
-  pageEnd: number;
-  onPrevious: () => void;
-  onNext: () => void;
-}) {
-  if (count === 0) return null;
-  return (
-    <div className="pharos-overview-table-footer">
-      <span>
-        Showing <span className="tabular-nums">{pageStart + 1}-{pageEnd}</span> of{" "}
-        <span className="tabular-nums">{count.toLocaleString("en-US")}</span>
-      </span>
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          className="pharos-overview-pagination-button"
-          disabled={pageIndex === 0}
-          onClick={onPrevious}
-        >
-          <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
-          Previous
-        </button>
-        <button
-          type="button"
-          className="pharos-overview-pagination-button"
-          disabled={pageIndex >= pageCount - 1}
-          onClick={onNext}
-        >
-          Next
-          <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
 function StablecoinRows(props: StablecoinTableViewProps) {
+  const renderRow = (coin: StablecoinData, index: number) => {
+    const rowIndex = props.variant === "figmaOverview"
+      ? props.overviewPageStart + index
+      : index;
+    return (
+      <StablecoinVirtualRow
+        key={coin.id}
+        coin={coin}
+        rank={props.sortedRankById.get(coin.id) ?? rowIndex + 1}
+        virtualIndex={index}
+        isStriped={rowIndex % 2 === 1}
+        densityConfig={props.densityConfig}
+        density={props.density}
+        variant={props.variant}
+        isVisible={props.isVisible}
+        logos={props.logos}
+        pegScores={props.pegScores}
+        dexLiquidity={props.dexLiquidity}
+        reportCards={props.reportCards}
+        coinState={props.coinStates?.get(coin.id)?.[0] ?? null}
+        showPinnedControl={props.showPinnedControls}
+        isPinned={props.pinnedStablecoinSet.has(coin.id)}
+        onTogglePinned={props.onTogglePinnedStablecoin}
+        isCursor={index === props.activeCursorIndex}
+        onCursorMouseEnter={props.activateCursorAtIndex}
+        onNavigate={props.onNavigate}
+        onPrefetch={props.onPrefetch}
+        measureElement={props.measureVirtualRow}
+        eagerLogo={!props.isVirtualized || index < EAGER_LOGO_ROW_LIMIT}
+      />
+    );
+  };
+
   return (
     <TableBody>
-      {props.paddingTop > 0 ? (
-        <tr>
-          <td colSpan={props.visibleColumnCount} style={{ height: props.paddingTop, padding: 0 }} />
-        </tr>
-      ) : null}
-      {props.virtualItems.map((virtualRow) => {
-        const coin = props.displayedRows[virtualRow.index];
-        if (!coin) return null;
-        const rowIndex = props.variant === "figmaOverview"
-          ? props.overviewPageStart + virtualRow.index
-          : virtualRow.index;
-        return (
-          <StablecoinVirtualRow
-            key={coin.id}
-            coin={coin}
-            rank={props.sortedRankById.get(coin.id) ?? rowIndex + 1}
-            virtualIndex={virtualRow.index}
-            isStriped={rowIndex % 2 === 1}
-            densityConfig={props.densityConfig}
-            density={props.density}
-            variant={props.variant}
-            isVisible={props.isVisible}
-            logos={props.logos}
-            pegScores={props.pegScores}
-            dexLiquidity={props.dexLiquidity}
-            reportCards={props.reportCards}
-            coinState={props.coinStates?.get(coin.id)?.[0] ?? null}
-            showPinnedControl={props.showPinnedControls}
-            isPinned={props.pinnedStablecoinSet.has(coin.id)}
-            onTogglePinned={props.onTogglePinnedStablecoin}
-            isCursor={virtualRow.index === props.activeCursorIndex}
-            onCursorMouseEnter={props.activateCursorAtIndex}
-            onNavigate={props.onNavigate}
-            onPrefetch={props.onPrefetch}
-            measureElement={props.measureVirtualRow}
-          />
-        );
-      })}
-      {props.paddingBottom > 0 ? (
-        <tr>
-          <td colSpan={props.visibleColumnCount} style={{ height: props.paddingBottom, padding: 0 }} />
-        </tr>
-      ) : null}
+      {props.isVirtualized ? (
+        <>
+          {props.paddingTop > 0 ? (
+            <tr>
+              <td colSpan={props.visibleColumnCount} style={{ height: props.paddingTop, padding: 0 }} />
+            </tr>
+          ) : null}
+          {props.virtualItems.map((virtualRow) => {
+            const coin = props.displayedRows[virtualRow.index];
+            return coin ? renderRow(coin, virtualRow.index) : null;
+          })}
+          {props.paddingBottom > 0 ? (
+            <tr>
+              <td colSpan={props.visibleColumnCount} style={{ height: props.paddingBottom, padding: 0 }} />
+            </tr>
+          ) : null}
+        </>
+      ) : (
+        props.displayedRows.map((coin, index) => renderRow(coin, index))
+      )}
       {props.displayed.length === 0 ? (
         <StablecoinTableEmptyState
           searchQuery={props.searchQuery}
@@ -308,15 +304,18 @@ export function StablecoinTableView(props: StablecoinTableViewProps) {
 
   const isOverview = props.variant === "figmaOverview";
   const footer = isOverview ? (
-    <OverviewFooter
-      count={props.displayed.length}
-      pageIndex={props.overviewPageIndex}
-      pageCount={props.overviewPageCount}
-      pageStart={props.overviewPageStart}
-      pageEnd={props.overviewPageEnd}
-      onPrevious={props.onPreviousOverviewPage}
-      onNext={props.onNextOverviewPage}
-    />
+    props.displayed.length > 0 ? (
+      <TablePagination
+        page={props.overviewPageIndex}
+        totalPages={props.overviewPageCount}
+        rangeStart={props.overviewPageStart + 1}
+        rangeEnd={props.overviewPageEnd}
+        total={props.displayed.length}
+        noun="stablecoins"
+        onPrevious={props.onPreviousOverviewPage}
+        onNext={props.onNextOverviewPage}
+      />
+    ) : null
   ) : (
     <DefaultFooter count={props.displayed.length} />
   );
@@ -324,15 +323,15 @@ export function StablecoinTableView(props: StablecoinTableViewProps) {
     <StablecoinTableFrame
       mode="ready"
       variant={props.variant}
+      isVirtualized={props.isVirtualized}
+      needsHorizontalScroll={props.needsHorizontalScroll}
       density={props.density}
       tableMinWidthPx={props.tableMinWidthPx}
       viewportRef={props.viewportRef}
       surfaceRef={props.surfaceRef}
       topSlot={
         <>
-          {isOverview ? null : (
-            <TableBackgroundRefreshingBar queryKeys={STABLECOIN_TABLE_REFRESH_QUERY_KEYS} isPending={props.isLoading} />
-          )}
+          <TableBackgroundRefreshingBar queryKeys={STABLECOIN_TABLE_REFRESH_QUERY_KEYS} isPending={props.isLoading} />
           {isOverview ? null : props.tableToolbar}
           {props.filterPanel}
         </>

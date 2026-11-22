@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useCallback } from "react";
-import { ScatterChart, Scatter, XAxis, YAxis, Tooltip, ReferenceArea, ReferenceLine } from "recharts";
+import { CartesianGrid, ScatterChart, Scatter, XAxis, YAxis, Tooltip, ReferenceArea, ReferenceLine } from "recharts";
 import {
   CHART_AMBER,
   CHART_BLUE,
@@ -11,7 +11,7 @@ import {
   CHART_SLATE,
   CHART_TEAL,
 } from "@/lib/chart-colors";
-import { PharosChartTooltip } from "@/components/pharos-chart-tooltip";
+import { ChartTooltipSurface, TooltipRow } from "@/components/pharos-chart-tooltip";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { useSvgId } from "@/components/chart-primitives/axes";
@@ -25,7 +25,14 @@ import {
   SAFETY_SCORE_THRESHOLD,
   type ScatterMarkerKind,
 } from "@/lib/yield-scatter";
-import { CHART_AXIS_LABEL, CHART_AXIS_LINE, CHART_AXIS_TICK, CHART_REFERENCE_DASH } from "@/lib/chart-theme";
+import {
+  CHART_AXIS_LABEL,
+  CHART_AXIS_LINE,
+  CHART_AXIS_TICK,
+  CHART_GRID_DASH,
+  CHART_GRID_STROKE,
+  CHART_REFERENCE_DASH,
+} from "@/lib/chart-theme";
 import { niceTicks } from "@/lib/chart-ticks";
 import {
   getYieldBenchmarkDisplayLabel,
@@ -92,16 +99,21 @@ interface YieldScatterPlotProps {
   /**
    * "stage" (default) wraps the chart in its own `pharos-chart-stage` frame.
    * "bare" drops the frame + padding so the chart fills its container
-   * edge-to-edge — used when the plot is promoted into the hero's right slot,
-   * which already supplies the card surface (avoids a nested card).
+   * edge-to-edge when promoted into the hero's right slot.
    */
   frame?: "stage" | "bare";
+  /** Click callback on a scatter point (scrolls to and highlights the leaderboard row). */
+  onSelectRow?: (id: string) => void;
+  /** Currently hovered or focused leaderboard row ID to highlight on the scatter. */
+  highlightedRowId?: string | null;
+  /** Optional hover callback for scatter-to-table coupling. */
+  onHoverRow?: (id: string | null) => void;
 }
 
 const SCATTER_Y_VISUAL_PADDING = 0.4;
 const QUADRANT_LABEL_STYLE = {
-  fontSize: 13,
-  opacity: 0.9,
+  fontSize: 12,
+  opacity: 0.95,
   fontWeight: 700,
 } as const;
 const YIELD_SCATTER_QUADRANTS = [
@@ -112,7 +124,8 @@ const YIELD_SCATTER_QUADRANTS = [
     label: YIELD_ZONE_LABELS["sweet-spot"],
     labelPosition: "insideTopRight",
     fill: CHART_GREEN,
-    fillOpacity: 0.12,
+    labelFill: "var(--state-positive-text)",
+    fillOpacity: 0.1,
   },
   {
     key: "danger-zone",
@@ -121,7 +134,8 @@ const YIELD_SCATTER_QUADRANTS = [
     label: YIELD_ZONE_LABELS["danger-zone"],
     labelPosition: "insideTopLeft",
     fill: CHART_RED,
-    fillOpacity: 0.12,
+    labelFill: "var(--state-danger-text)",
+    fillOpacity: 0.1,
   },
   {
     key: "play-it-safe",
@@ -130,7 +144,8 @@ const YIELD_SCATTER_QUADRANTS = [
     label: YIELD_ZONE_LABELS["play-it-safe"],
     labelPosition: "insideBottomRight",
     fill: CHART_BLUE,
-    fillOpacity: 0.12,
+    labelFill: "var(--state-info-text)",
+    fillOpacity: 0.1,
   },
   {
     key: "why-bother",
@@ -139,8 +154,16 @@ const YIELD_SCATTER_QUADRANTS = [
     label: YIELD_ZONE_LABELS["why-bother"],
     labelPosition: "insideBottomLeft",
     fill: CHART_SLATE,
-    fillOpacity: 0.07,
+    labelFill: "var(--color-muted-foreground)",
+    fillOpacity: 0.06,
   },
+] as const;
+
+const RING_TIER_LEGEND = [
+  { label: `≥${YIELD_RISK_BUDGET_MIN_SAFETY.conservative}`, color: CHART_GREEN },
+  { label: `≥${YIELD_RISK_BUDGET_MIN_SAFETY.balanced}`, color: CHART_TEAL },
+  { label: `≥${YIELD_RISK_BUDGET_MIN_SAFETY.opportunistic}`, color: CHART_AMBER },
+  { label: `<${YIELD_RISK_BUDGET_MIN_SAFETY.opportunistic}`, color: CHART_ORANGE },
 ] as const;
 
 type YieldScatterQuadrant = (typeof YIELD_SCATTER_QUADRANTS)[number];
@@ -167,10 +190,8 @@ function getYieldScatterQuadrantBounds(
   };
 }
 
-// Mirrors YIELD_RISK_BUDGET_MIN_SAFETY thresholds so the risk-tolerance slider
-// acts as the legend for the scatter: each dot's ring tier matches the band
-// that would just barely include it. The <opportunistic tier (CHART_ORANGE)
-// has no risk-budget counterpart and is intentionally scatter-only.
+// Mirrors YIELD_RISK_BUDGET_MIN_SAFETY thresholds so each point's ring color
+// matches the risk-tolerance band that includes it.
 function safetyTierColor(safetyScore: number | null): string {
   if (safetyScore === null) return "var(--color-border)";
   if (safetyScore >= YIELD_RISK_BUDGET_MIN_SAFETY.conservative) return CHART_GREEN;
@@ -185,6 +206,7 @@ interface LogoScatterShapeProps {
   payload?: ScatterDataPoint;
   emphasized?: boolean;
   compact?: boolean;
+  clickable?: boolean;
   idPrefix?: string;
 }
 
@@ -198,6 +220,7 @@ function LogoScatterPoint({
   payload,
   emphasized = false,
   compact = false,
+  clickable = false,
   idPrefix = "yield-logo",
 }: LogoScatterShapeProps) {
   if (typeof cx !== "number" || typeof cy !== "number" || !payload) return null;
@@ -207,12 +230,13 @@ function LogoScatterPoint({
   const haloRadius = radius + (emphasized ? 3 : 2);
   const clipId = `${idPrefix}-${sanitizeSvgId(payload.id)}-${emphasized ? "active" : "idle"}`;
   const ringStroke = emphasized ? CHART_BLUE : safetyTierColor(payload.x);
+  const cursorStyle = clickable ? { cursor: "pointer" } : undefined;
 
   // A crowded point keeps its exact position as a tier-colored dot; hover
-  // (the active shape) still shows its logo.
+  // or row-coupled highlight still shows its logo.
   if (payload.marker === "dot" && !emphasized) {
     return (
-      <g transform={`translate(${cx}, ${cy})`}>
+      <g transform={`translate(${cx}, ${cy})`} style={cursorStyle}>
         <circle r={3.5} fill={ringStroke} stroke="var(--color-card)" strokeWidth={1} />
         {payload.isClipped ? (
           <path
@@ -227,7 +251,7 @@ function LogoScatterPoint({
   }
 
   return (
-    <g transform={`translate(${cx}, ${cy})`}>
+    <g transform={`translate(${cx}, ${cy})`} style={cursorStyle}>
       <circle r={haloRadius} fill="var(--color-background)" opacity={0.9} />
       {payload.logoSrc ? (
         <>
@@ -236,7 +260,7 @@ function LogoScatterPoint({
               <circle r={radius} />
             </clipPath>
           </defs>
-          <circle r={radius + 0.5} fill="var(--color-card)" stroke={ringStroke} strokeWidth={emphasized ? 2 : 1} />
+          <circle r={radius + 0.5} fill="var(--color-card)" stroke={ringStroke} strokeWidth={emphasized ? 2 : 1.25} />
           <image
             href={payload.logoSrc}
             x={-radius}
@@ -249,7 +273,7 @@ function LogoScatterPoint({
         </>
       ) : (
         <>
-          <circle r={radius} fill="var(--color-muted)" stroke={ringStroke} strokeWidth={emphasized ? 2 : 1} />
+          <circle r={radius} fill="var(--color-muted)" stroke={ringStroke} strokeWidth={emphasized ? 2 : 1.25} />
           <text
             textAnchor="middle"
             dominantBaseline="central"
@@ -270,10 +294,46 @@ function LogoScatterPoint({
         />
       ) : null}
       {emphasized ? (
-        <circle r={haloRadius + 1.5} fill="none" stroke={CHART_BLUE} strokeOpacity={0.35} strokeWidth={1.5} />
+        <circle r={haloRadius + 1.5} fill="none" stroke={CHART_BLUE} strokeOpacity={0.45} strokeWidth={1.75} />
       ) : null}
     </g>
   );
+}
+
+function ReferenceBenchmarkLabel({
+  viewBox,
+  text,
+}: {
+  viewBox?: { x?: number; y?: number; width?: number; height?: number };
+  text: string;
+}) {
+  if (!viewBox || typeof viewBox.x !== "number" || typeof viewBox.y !== "number" || typeof viewBox.width !== "number") {
+    return null;
+  }
+  return (
+    <text
+      x={viewBox.x + viewBox.width - 8}
+      y={viewBox.y - 6}
+      textAnchor="end"
+      fill="var(--color-foreground)"
+      fontSize={12}
+      fontWeight={600}
+      paintOrder="stroke"
+      stroke="var(--color-card)"
+      strokeWidth={4}
+      strokeLinejoin="round"
+    >
+      {text}
+    </text>
+  );
+}
+
+function extractScatterPointId(entry: unknown): string | null {
+  if (!entry || typeof entry !== "object") return null;
+  const record = entry as { id?: unknown; payload?: { id?: unknown } };
+  if (typeof record.payload?.id === "string") return record.payload.id;
+  if (typeof record.id === "string") return record.id;
+  return null;
 }
 
 function CustomTooltip({
@@ -287,51 +347,40 @@ function CustomTooltip({
 }) {
   if (!active || !payload || payload.length === 0) return null;
   const d = payload[0].payload;
+  const safetyValue = `${d.safetyGrade ?? "—"} (${d.x}/100)`;
   return (
-    <PharosChartTooltip active={active} className="text-xs">
+    <ChartTooltipSurface className="min-w-[210px] max-w-[280px] space-y-1 text-xs">
       <div className="mb-2 flex items-center gap-2">
         <StablecoinLogo src={d.logoSrc} name={d.name} size={18} />
         <div className="min-w-0">
-          <p className="font-semibold text-foreground leading-none">{d.name}</p>
+          <p className="truncate font-semibold leading-none text-foreground">{d.name}</p>
           <p className="text-2xs uppercase text-muted-foreground">{d.symbol}</p>
         </div>
       </div>
-      <p className="text-muted-foreground">
-        APY: <span className="pharos-numeric">{d.y.toFixed(2)}%</span>
-      </p>
-      {d.benchmarkRate != null && (
+      <TooltipRow label="APY (30d)" value={`${d.y.toFixed(2)}%`} bold />
+      {d.benchmarkRate != null ? (
         <>
-          <p className="text-muted-foreground">
-            Benchmark: <span className="pharos-numeric">{d.benchmarkRate.toFixed(2)}%</span>{" "}
-            <span className="text-2xs">({d.benchmarkLabel})</span>
-          </p>
-          <p className="text-muted-foreground">
-            Excess: <span className="pharos-numeric">{d.excessYield != null ? formatYieldApyDelta(d.excessYield) : "—"}</span>
-          </p>
+          <TooltipRow label={`Benchmark (${d.benchmarkLabel})`} value={`${d.benchmarkRate.toFixed(2)}%`} />
+          <TooltipRow label="Excess" value={d.excessYield != null ? formatYieldApyDelta(d.excessYield) : "—"} />
         </>
-      )}
+      ) : null}
       {d.isClipped && d.clipThreshold !== null ? (
-        <p className="text-muted-foreground">
-          Chart rail:{" "}
-          <span className="pharos-numeric">
-            {d.clippedBelow ? "<" : ">"} {d.clipThreshold.toFixed(0)}%
-          </span>
-          {usesDefaultBenchmarkFrame ? " (USD frame)" : ""}
-        </p>
+        <TooltipRow
+          label="Chart rail"
+          value={`${d.clippedBelow ? "<" : ">"} ${d.clipThreshold.toFixed(0)}%${usesDefaultBenchmarkFrame ? " (USD frame)" : ""}`}
+        />
       ) : null}
-      <p className="text-muted-foreground">
-        {d.opportunityDerivedSafety ? "Opportunity safety" : "Safety"}:{" "}
-        <span className="font-mono tabular-nums">{d.safetyGrade ?? "—"}</span> ({d.x}/100)
-      </p>
+      <TooltipRow
+        label={d.opportunityDerivedSafety ? "Venue-adjusted safety" : "Safety"}
+        value={safetyValue}
+      />
       {d.opportunityDerivedSafety ? (
-        <p className="text-muted-foreground">{YIELD_OPPORTUNITY_SAFETY_DESCRIPTION}</p>
+        <p className="pt-0.5 text-2xs leading-snug text-muted-foreground">{YIELD_OPPORTUNITY_SAFETY_DESCRIPTION}</p>
       ) : null}
-      <p className="text-muted-foreground">Type: {YIELD_TYPE_LABELS[d.yieldType] ?? d.yieldType}</p>
-      <p className="text-muted-foreground">
-        PYS: <span className="pharos-numeric">{d.pharosYieldScore !== null ? d.pharosYieldScore.toFixed(1) : "—"}</span>
-      </p>
-      <p className="text-muted-foreground">Source: {d.yieldSource}</p>
-    </PharosChartTooltip>
+      <TooltipRow label="Type" value={YIELD_TYPE_LABELS[d.yieldType] ?? d.yieldType} />
+      <TooltipRow label="PYS" value={d.pharosYieldScore !== null ? d.pharosYieldScore.toFixed(1) : "—"} bold />
+      <TooltipRow label="Source" value={d.yieldSource} />
+    </ChartTooltipSurface>
   );
 }
 
@@ -347,6 +396,9 @@ export function YieldScatterPlot({
   logos,
   compact = false,
   frame = "stage",
+  onSelectRow,
+  highlightedRowId = null,
+  onHoverRow,
 }: YieldScatterPlotProps) {
   const isMobile = useIsMobile();
   const compactMarker = compact || isMobile;
@@ -357,11 +409,8 @@ export function YieldScatterPlot({
     return rankings
       .filter((r) => r.safetyScore !== null && !(r.provenance?.usedDefaultSafety || r.provenance?.safetyProvenance === "default-safety"))
       .map((r) => {
-        // E5: one resolution per row — a missing row rate resolves from the
-        // registry by the row's benchmark key before the chart-wide USD frame,
-        // and the (fallback) marker follows the selection mode rather than the
-        // payload's benchmarkIsFallback flag, which is false on documented
-        // proxy selections.
+        // E5: one resolution per row; a missing row rate resolves from the
+        // registry by the row's benchmark key before the chart-wide USD frame.
         const benchmark = resolveYieldRowBenchmark(r, benchmarks, benchmarkRate);
         return {
           x: r.safetyScore!,
@@ -424,18 +473,13 @@ export function YieldScatterPlot({
     return declutterScatterMarkers(clipped, safetyDomain, plotYDomain, plotWidth, plotHeight, compactMarker);
   }, [apyAxis, rawData, safetyDomain, plotYDomain, width, height, isMobile, compactMarker]);
 
-  // Ticks stay inside the data domain; each clipping rail gets its own
-  // ">N" / "<N" label rather than a bare domain-end tick.
   const safetyTicks = useMemo(
     () => niceTicks(safetyDomain[0], safetyDomain[1], { kind: "score", count: isMobile ? 5 : 6, extend: false }).ticks,
     [safetyDomain, isMobile],
   );
   const apyTicks = useMemo(() => {
-    // Whole-percent steps ("count" rules): a 2.5 step labels "12.5", which the narrow axis clips.
     let ticks = niceTicks(apyAxis.domainMin, apyAxis.domainMax, { kind: "count", count: isMobile ? 5 : 7, extend: false }).ticks;
-    // Drop a nice tick that would crowd a rail label.
     const minGap = (ticks.length > 1 ? ticks[ticks.length - 1] - ticks[ticks.length - 2] : apyAxis.domainMax - apyAxis.domainMin) * 0.5;
-    // Even a small losing tail next to a large positive range needs a negative label.
     if (apyAxis.domainMin < 0 && !ticks.some((tick) => tick < 0)) ticks.unshift(apyAxis.domainMin);
     if (apyAxis.floorThreshold !== null) {
       ticks = [apyAxis.domainMin, ...ticks.filter((tick) => tick - apyAxis.domainMin >= minGap)];
@@ -458,39 +502,80 @@ export function YieldScatterPlot({
   const logoIdPrefix = useSvgId("yield-logo");
 
   const renderLogoMarker = useCallback(
-    (props: LogoScatterShapeProps) => <LogoScatterPoint {...props} compact={compactMarker} idPrefix={logoIdPrefix} />,
-    [compactMarker, logoIdPrefix],
+    (props: LogoScatterShapeProps) => (
+      <LogoScatterPoint
+        {...props}
+        compact={compactMarker}
+        clickable={!!onSelectRow}
+        emphasized={highlightedRowId !== null && props.payload?.id === highlightedRowId}
+        idPrefix={logoIdPrefix}
+      />
+    ),
+    [compactMarker, highlightedRowId, logoIdPrefix, onSelectRow],
   );
 
   const renderActiveLogoMarker = useCallback(
     (props: LogoScatterShapeProps) => (
-      <LogoScatterPoint {...props} compact={compactMarker} emphasized idPrefix={logoIdPrefix} />
+      <LogoScatterPoint
+        {...props}
+        compact={compactMarker}
+        clickable={!!onSelectRow}
+        emphasized
+        idPrefix={logoIdPrefix}
+      />
     ),
-    [compactMarker, logoIdPrefix],
+    [compactMarker, logoIdPrefix, onSelectRow],
   );
+
+  const handleScatterClick = useCallback(
+    (entry: unknown) => {
+      if (!onSelectRow) return;
+      const id = extractScatterPointId(entry);
+      if (id) onSelectRow(id);
+    },
+    [onSelectRow],
+  );
+
+  const handleScatterMouseEnter = useCallback(
+    (entry: unknown) => {
+      if (!onHoverRow) return;
+      onHoverRow(extractScatterPointId(entry));
+    },
+    [onHoverRow],
+  );
+
+  const handleScatterMouseLeave = useCallback(() => {
+    onHoverRow?.(null);
+  }, [onHoverRow]);
+
   const resolvedBenchmarkLabel = getYieldBenchmarkDisplayLabel({
     benchmarkLabel,
     benchmarkIsFallback,
     ...benchmarkAgeEvidence,
   });
 
-  // E17: rows dropped for a missing safety score are counted and annotated,
-  // not silently gone — the doc promises the full tracked universe.
+  const referenceLineLabelText =
+    benchmarkRate != null
+      ? usesDefaultBenchmarkFrame
+        ? `${resolvedBenchmarkLabel} frame ${benchmarkRate.toFixed(2)}%`
+        : `${resolvedBenchmarkLabel} ${benchmarkRate.toFixed(2)}%`
+      : null;
+
+  // E17: rows dropped for a missing safety score are counted and annotated.
   const droppedUnscoredCount = rankings.length - rawData.length;
-  const safetyAxisLabel = rawData.some((point) => point.opportunityDerivedSafety) ? "Row / opportunity safety" : "Safety Score";
-  // E10: the clipped-outlier count renders on every surface — hero viewers see
-  // triangles at the rail, so they get the count too (previously legend-only).
-  // E13: in mixed-currency views the rail is the chart-wide USD frame, so the
-  // pin note says so instead of reading as a per-row benchmark fact.
+  const safetyAxisLabel = rawData.some((point) => point.opportunityDerivedSafety)
+    ? "Venue-adjusted Safety Score"
+    : "Safety Score";
+
   const floorNote =
     apyAxis.floorClippedCount > 0 && apyAxis.floorThreshold !== null ? (
       <span
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5",
+          "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1",
           SEVERITY_TONE_CLASS.caution.banner,
         )}
       >
-        <span className={cn("h-2.5 w-2.5 rounded-full", YIELD_ZONE_OUTLIER_DOT_CLASS)} />
+        <span className={cn("h-2 w-2 rounded-full", YIELD_ZONE_OUTLIER_DOT_CLASS)} />
         {apyAxis.floorClippedCount} outlier{apyAxis.floorClippedCount === 1 ? "" : "s"} pinned below{" "}
         {apyAxis.floorThreshold.toFixed(0)}%
       </span>
@@ -499,11 +584,11 @@ export function YieldScatterPlot({
     apyAxis.clippedCount > 0 && apyAxis.clipThreshold !== null ? (
       <span
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5",
+          "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1",
           SEVERITY_TONE_CLASS.caution.banner,
         )}
       >
-        <span className={cn("h-2.5 w-2.5 rounded-full", YIELD_ZONE_OUTLIER_DOT_CLASS)} />
+        <span className={cn("h-2 w-2 rounded-full", YIELD_ZONE_OUTLIER_DOT_CLASS)} />
         {apyAxis.clippedCount} outlier{apyAxis.clippedCount === 1 ? "" : "s"} pinned above{" "}
         {apyAxis.clipThreshold.toFixed(0)}%
         {usesDefaultBenchmarkFrame ? <span className="hidden md:inline">(USD frame)</span> : null}
@@ -518,7 +603,7 @@ export function YieldScatterPlot({
 
   if (data.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-[500px] text-sm text-muted-foreground">
+      <div className="flex h-[500px] flex-col items-center justify-center text-sm text-muted-foreground">
         <p>No scatter data available (safety scores required)</p>
         <p className="mt-1 text-xs text-muted-foreground/70">
           Safety scores refresh with each yield publication.
@@ -529,7 +614,7 @@ export function YieldScatterPlot({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2.5">
       <div
         className={
           frame === "bare"
@@ -541,7 +626,7 @@ export function YieldScatterPlot({
               : "pharos-chart-stage h-[600px] overflow-hidden p-2 sm:h-[850px] sm:p-4"
         }
         role="figure"
-        aria-label={`Yield vs row safety scatter plot with ${data.length} yield-source rows plotted, including ${apyAxis.clippedCount} on the upper rail and ${apyAxis.floorClippedCount} on the lower rail.${droppedUnscoredCount > 0 ? ` ${droppedUnscoredCount} row${droppedUnscoredCount === 1 ? "" : "s"} without a measured safety score not shown.` : ""}${usesDefaultBenchmarkFrame ? " The background benchmark frame uses the default USD benchmark for mixed views." : ""}${compact ? " Compressed mini-map." : ""} Use the leaderboard for accessible row actions.`}
+        aria-label={`Yield vs venue-adjusted safety scatter plot with ${data.length} yield-source rows plotted, including ${apyAxis.clippedCount} on the upper rail and ${apyAxis.floorClippedCount} on the lower rail.${droppedUnscoredCount > 0 ? ` ${droppedUnscoredCount} row${droppedUnscoredCount === 1 ? "" : "s"} without a measured safety score not shown.` : ""}${usesDefaultBenchmarkFrame ? " The background benchmark frame uses the default USD benchmark for mixed views." : ""}${compact ? " Compressed mini-map." : ""} Use the leaderboard for accessible row actions.`}
       >
         <div ref={chartContainerRef} className="h-full w-full">
           {isChartReady ? (
@@ -556,6 +641,12 @@ export function YieldScatterPlot({
                     : { top: 10, right: 14, bottom: 16, left: 2 }
               }
             >
+              <CartesianGrid
+                stroke={CHART_GRID_STROKE}
+                strokeDasharray={CHART_GRID_DASH}
+                strokeOpacity={0.55}
+              />
+
               {showBenchmarkReference && benchmarkRate != null
                 ? YIELD_SCATTER_QUADRANTS.map((quadrant) =>
                     shouldRenderYieldScatterQuadrant(quadrant, safetyDomain) ? (
@@ -570,7 +661,7 @@ export function YieldScatterPlot({
                             : {
                                 value: quadrant.label,
                                 position: quadrant.labelPosition,
-                                fill: quadrant.fill,
+                                fill: quadrant.labelFill,
                                 ...QUADRANT_LABEL_STYLE,
                               }
                         }
@@ -591,20 +682,6 @@ export function YieldScatterPlot({
                   y={benchmarkRate}
                   stroke={CHART_SLATE}
                   strokeDasharray={CHART_REFERENCE_DASH}
-                  label={
-                    hideAxisLabels
-                      ? undefined
-                      : {
-                          value: usesDefaultBenchmarkFrame
-                            ? `${resolvedBenchmarkLabel} frame ${benchmarkRate.toFixed(2)}%`
-                            : `${resolvedBenchmarkLabel} ${benchmarkRate.toFixed(2)}%`,
-                          // Inside the plot: "right" sits in the narrow right margin and clips to one letter.
-                          position: "insideTopRight",
-                          fill: CHART_SLATE,
-                          fontSize: 13,
-                          fontWeight: 600,
-                        }
-                  }
                 />
               ) : null}
 
@@ -665,41 +742,108 @@ export function YieldScatterPlot({
                 data={data}
                 shape={renderLogoMarker}
                 activeShape={renderActiveLogoMarker}
+                onClick={onSelectRow ? handleScatterClick : undefined}
+                onMouseEnter={onHoverRow ? handleScatterMouseEnter : undefined}
+                onMouseLeave={onHoverRow ? handleScatterMouseLeave : undefined}
+                cursor={onSelectRow ? "pointer" : undefined}
               />
+
+              {showBenchmarkReference && benchmarkRate != null && !hideAxisLabels && referenceLineLabelText ? (
+                <ReferenceLine
+                  y={benchmarkRate}
+                  stroke="none"
+                  zIndex={1000}
+                  label={<ReferenceBenchmarkLabel text={referenceLineLabelText} />}
+                />
+              ) : null}
             </ScatterChart>
           ) : (
             <ChartSkeleton className="h-full rounded-xl" />
           )}
         </div>
       </div>
+
+      {/* Compact ring/dot legend + mixed-currency benchmark clarification */}
+      <div className={cn("flex flex-wrap items-center gap-x-3 gap-y-1.5 text-2xs text-muted-foreground", frame === "bare" && "px-4 pb-3")}>
+        <span className="pharos-chart-legend-chip">
+          <span className="font-medium text-foreground">Ring:</span>
+          <span className="inline-flex items-center gap-2">
+            {RING_TIER_LEGEND.map((tier) => (
+              <span key={tier.label} className="inline-flex items-center gap-1 font-mono tabular-nums">
+                <span
+                  aria-hidden="true"
+                  className="inline-block h-2.5 w-2.5 rounded-full border-2 bg-card"
+                  style={{ borderColor: tier.color }}
+                />
+                <span>{tier.label}</span>
+              </span>
+            ))}
+          </span>
+        </span>
+        <span className="pharos-chart-legend-chip">
+          <span
+            aria-hidden="true"
+            className="inline-block h-2 w-2 rounded-full bg-muted-foreground/70"
+          />
+          <span>Dot = crowded spot</span>
+        </span>
+        {usesDefaultBenchmarkFrame ? (
+          <span className="text-2xs text-muted-foreground">
+            Non-USD coins compare to local rates on hover and in the table
+          </span>
+        ) : null}
+      </div>
+
+      {/* Mobile 4-chip quadrant key (SVG quadrant labels are hidden on narrow screens) */}
+      {showBenchmarkReference && benchmarkRate != null ? (
+        <div
+          aria-label="Scatter quadrant key"
+          className={cn("grid grid-cols-2 gap-1.5 sm:hidden", frame === "bare" && "px-4 pb-3")}
+        >
+          {YIELD_SCATTER_QUADRANTS.map((quadrant) => (
+            <span
+              key={quadrant.key}
+              className="pharos-chart-legend-chip rounded-md border border-border/50 bg-muted/25 px-2 py-1 text-2xs"
+            >
+              <span
+                aria-hidden="true"
+                className={cn("h-2 w-2 shrink-0 rounded-full", YIELD_ZONE_STYLES[quadrant.key].dot)}
+              />
+              <span className="truncate font-medium text-foreground">{quadrant.label}</span>
+            </span>
+          ))}
+        </div>
+      ) : null}
+
       {outlierNote || floorNote || unscoredNote ? (
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <div className={cn("flex flex-wrap items-center gap-2 text-xs text-muted-foreground", frame === "bare" && "px-4 pb-3")}>
           {outlierNote}
           {floorNote}
           {unscoredNote}
         </div>
       ) : null}
+
       {compact ? null : (
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5", SEVERITY_TONE_CLASS.ok.banner)}>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+          <span className="pharos-chart-legend-chip">
             <span className={cn("h-2.5 w-2.5 rounded-full", YIELD_ZONE_STYLES["sweet-spot"].dot)} />
-            <span className="text-foreground font-medium">Sweet spot</span>
+            <span className="font-medium text-foreground">Sweet Spot</span>
             {showBenchmarkReference && usesDefaultBenchmarkFrame ? (
               <span className="hidden md:inline">
-                = above the USD frame and right of {SAFETY_SCORE_THRESHOLD}; row tags still show local benchmarks
+                above the USD frame and right of {SAFETY_SCORE_THRESHOLD}; row tags use local benchmarks
               </span>
             ) : showBenchmarkReference && benchmarkRate != null ? (
               <span className="hidden md:inline">
-                = above {benchmarkRate.toFixed(2)}% and right of {SAFETY_SCORE_THRESHOLD}
+                above {benchmarkRate.toFixed(2)}% and right of {SAFETY_SCORE_THRESHOLD}
               </span>
             ) : (
-              <span className="hidden md:inline">= high safety with yield that clears the local benchmark</span>
+              <span className="hidden md:inline">high safety with yield clearing the local benchmark</span>
             )}
           </span>
-          <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5", SEVERITY_TONE_CLASS.danger.banner)}>
+          <span className="pharos-chart-legend-chip">
             <span className={cn("h-2.5 w-2.5 rounded-full", YIELD_ZONE_STYLES["danger-zone"].dot)} />
-            <span className="text-foreground font-medium">Danger zone</span>
-            <span className="hidden md:inline">= high APY on low safety</span>
+            <span className="font-medium text-foreground">Danger Zone</span>
+            <span className="hidden md:inline">high APY on lower safety</span>
           </span>
         </div>
       )}

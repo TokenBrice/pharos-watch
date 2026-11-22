@@ -77,7 +77,7 @@ export function ChainContractTable({
             target="_blank"
             rel="noopener noreferrer"
             aria-label={`View on ${chainName} explorer`}
-            className="pharos-focus-ring rounded-sm text-frost-blue hover:underline"
+            className="pharos-focus-ring rounded-sm text-brand-accent-text hover:underline"
           >
             Explorer
           </a>

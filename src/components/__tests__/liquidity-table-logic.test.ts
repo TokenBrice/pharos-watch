@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { compareLiquidityRows, type LiquidityRow } from "@/components/liquidity/liquidity-table-logic";
+import { compareLiquidityRows, computeDepthToMcapRatio, type LiquidityRow } from "@/components/liquidity/liquidity-table-logic";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import type { DexLiquidityData } from "@shared/types/dex-liquidity";
 import type { StablecoinClientMeta } from "@shared/types/stablecoin-client-meta";
 
-function makeRow(overrides: Partial<DexLiquidityData> = {}): LiquidityRow {
+function makeRow(overrides: Partial<DexLiquidityData> = {}, mcapUsd?: number | null): LiquidityRow {
   return {
     meta: { id: "usdc", symbol: "USDC", name: "USD Coin", listingClass: "core-stablecoin" } as StablecoinClientMeta,
     liq: makeDexLiquidityData(overrides),
+    ...(mcapUsd !== undefined ? { mcapUsd } : {}),
   };
 }
 
@@ -61,11 +62,26 @@ describe("compareLiquidityRows", () => {
     const smallerNr = makeRow({ liquidityScore: null, totalTvlUsd: 10 });
     expect(Math.sign(compareLiquidityRows(deepNr, smallerNr, { key: "tvl", direction }))).toBe(direction === "desc" ? -1 : 1);
     for (const key of [
-      "score", "tvl", "tvlTrend", "volume", "volume7d", "vtRatio",
+      "score", "tvl", "depthRatio", "tvlTrend", "volume", "volume7d", "vtRatio",
       "pools", "chains", "balance", "organic", "durability",
     ] as const) {
       expect(compareLiquidityRows(deepNr, shallowRated, { key, direction })).toBeGreaterThan(0);
       expect(compareLiquidityRows(shallowRated, deepNr, { key, direction })).toBeLessThan(0);
+    }
+  });
+
+  it("computes null-safe Depth/MCap ratios and sorts unavailable ratios last in both directions", () => {
+    expect(computeDepthToMcapRatio(250, 1_000)).toBeCloseTo(0.25);
+    expect(computeDepthToMcapRatio(250, null)).toBeNull();
+    expect(computeDepthToMcapRatio(250, 0)).toBeNull();
+    expect(computeDepthToMcapRatio(250, -50)).toBeNull();
+
+    const high = makeRow({ liquidityScore: 50, totalTvlUsd: 300 }, 1_000);
+    const low = makeRow({ liquidityScore: 50, totalTvlUsd: 50 }, 1_000);
+    const missing = makeRow({ liquidityScore: 50, totalTvlUsd: 500 }, null);
+    for (const direction of ["asc", "desc"] as const) {
+      const sorted = [missing, low, high].sort((a, b) => compareLiquidityRows(a, b, { key: "depthRatio", direction }));
+      expect(sorted[2]).toBe(missing);
     }
   });
 

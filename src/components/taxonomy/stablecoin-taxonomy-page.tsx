@@ -10,8 +10,30 @@ interface StablecoinTaxonomyPageProps {
   page: StablecoinTaxonomyPageConfig<BackingType | GovernanceType | InfrastructureTaxonomyValue>;
 }
 
+function buildAxisAwareRelatedPages(
+  page: StablecoinTaxonomyPageConfig<BackingType | GovernanceType | InfrastructureTaxonomyValue>,
+  limit = 6,
+) {
+  const siblings = ALL_STABLECOIN_TAXONOMY_PAGES.filter(
+    (candidate) => candidate.kind === page.kind && candidate.href !== page.href,
+  );
+  const otherAxes = (["backing", "governance", "infrastructure"] as const)
+    .filter((kind) => kind !== page.kind)
+    .map((kind) => ALL_STABLECOIN_TAXONOMY_PAGES.filter((candidate) => candidate.kind === kind));
+
+  const crossAxis: typeof siblings = [];
+  const maxDepth = Math.max(0, ...otherAxes.map((group) => group.length));
+  for (let index = 0; index < maxDepth; index++) {
+    for (const group of otherAxes) {
+      if (group[index]) crossAxis.push(group[index]);
+    }
+  }
+
+  return [...siblings, ...crossAxis].slice(0, limit);
+}
+
 export function StablecoinTaxonomyPage({ page }: StablecoinTaxonomyPageProps) {
-  const relatedPages = ALL_STABLECOIN_TAXONOMY_PAGES.filter((candidate) => candidate.href !== page.href).slice(0, 6);
+  const relatedPages = buildAxisAwareRelatedPages(page, 6);
   const parentName =
     page.kind === "backing"
       ? "Backing"

@@ -3,6 +3,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { LazySection } from "@/components/lazy-section";
 import { DigestIntelligencePanel } from "@/components/digest/digest-intelligence";
+import { Term } from "@/components/term";
 import { useDigestSnapshot } from "@/hooks/api-hooks";
 import { useImageUnavailable } from "@/hooks/use-image-unavailable";
 import { parseDigestSafetyMapCapture, type DigestSafetyMapArchiveTier as StoredSafetyMapTier } from "@shared/types/digest-safety-map-contract";
@@ -36,7 +37,7 @@ function SnapshotCard({
 }) {
   return (
     <div className="rounded-lg border border-border/50 p-3 space-y-1.5">
-      <h3 className="pharos-kicker">
+      <h3 className="pharos-label">
         <span className="flex items-center gap-1.5">
           {icon}
           {title}
@@ -51,7 +52,7 @@ function SnapshotCard({
 function SnapshotUnavailable() {
   return (
     <section className="mt-8 space-y-3">
-      <p className="pharos-kicker">The data behind this digest</p>
+      <p className="pharos-label">The data behind this digest</p>
       <div className="rounded-lg border border-border/50 p-3 text-sm text-muted-foreground">
         Digest context is unavailable for this archive entry.
       </div>
@@ -106,7 +107,7 @@ function DigestSafetyMapCard({ inputData }: { inputData: DigestSnapshotInputData
     <section aria-labelledby="digest-safety-map" className="space-y-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
-          <p className="pharos-kicker">Safety Map</p>
+          <p className="pharos-label">Safety Map</p>
           <h3 id="digest-safety-map" className="text-base font-semibold text-foreground">
             The dated market census behind this edition
           </h3>
@@ -129,7 +130,7 @@ function DigestSafetyMapCard({ inputData }: { inputData: DigestSnapshotInputData
           </figcaption>
         </figure>
         <div className="flex flex-col justify-center gap-2 rounded-md border border-border/50 bg-background/45 p-3">
-          <p className="font-mono text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          <p className="pharos-label">
             {freshnessLabel}
           </p>
           <div className="space-y-1.5 text-sm text-foreground/90">
@@ -269,7 +270,7 @@ function DigestSnapshotContent({ date }: { date: string }) {
   if (isLoading) {
     return (
       <section className="mt-8 space-y-3">
-        <p className="pharos-kicker">The data behind this digest</p>
+        <p className="pharos-label">The data behind this digest</p>
         <Skeleton className="h-4 w-3/4" />
         <Skeleton className="h-4 w-1/2" />
         <Skeleton className="h-4 w-2/3" />
@@ -301,7 +302,7 @@ function DigestSnapshotContent({ date }: { date: string }) {
 
   return (
     <section className="mt-8 space-y-4 animate-in fade-in duration-300">
-      <p className="pharos-kicker">
+      <p className="pharos-label">
         The data behind this digest
       </p>
 
@@ -455,7 +456,7 @@ function DigestSnapshotContent({ date }: { date: string }) {
               <ul className="space-y-0.5">
                 {blacklistEvents.slice(0, 5).map((e) => (
                   <li key={`${e.timestamp}-${e.address}`} className="text-xs text-muted-foreground">
-                    {e.stablecoin} on {e.chainName} &mdash; {e.eventType}
+                    {e.stablecoin} on {e.chainName} · {e.eventType}
                     {e.amountUsdAtEvent != null ? (
                       <span> ({formatCurrency(e.amountUsdAtEvent)})</span>
                     ) : e.amountNative != null ? (
@@ -494,8 +495,8 @@ function DigestSnapshotContent({ date }: { date: string }) {
                         :{" "}
                         <span className="font-medium">{coin.grade === null ? "Pipeline gap" : coin.grade}</span>{" "}
                         <span className="text-muted-foreground">
-                          ({formatDigestScore(coin.score)}; backing {formatDigestScore(coin.pillars.backing.score)},{" "}
-                          exit {formatDigestScore(coin.pillars.exit.score)}, control {formatDigestScore(coin.pillars.control.score)})
+                          ({formatDigestScore(coin.score)}; <Term slug="backing">backing</Term> {formatDigestScore(coin.pillars.backing.score)},{" "}
+                          <Term slug="exit">exit</Term> {formatDigestScore(coin.pillars.exit.score)}, <Term slug="economicControl">control</Term> {formatDigestScore(coin.pillars.control.score)})
                         </span>
                         {partial ? (
                           <span className="block text-muted-foreground" title={partial.summary}>

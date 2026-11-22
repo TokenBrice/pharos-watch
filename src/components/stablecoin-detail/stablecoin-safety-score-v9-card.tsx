@@ -13,6 +13,7 @@ import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosu
 import { ScoreConstructionPanel } from "@/components/stablecoin-detail/score-construction-panel";
 import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import {
+  DETAIL_HEADER_ICON_BUTTON_CLASS,
   DETAIL_MODULE_HEADER_CLASS,
   DETAIL_MODULE_SHELL_CLASS,
   DETAIL_MODULE_TITLE_CLASS,
@@ -31,9 +32,6 @@ import { METHODOLOGY_CONTEXT } from "@/lib/methodology-context";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import { buildStablecoinSafetyScoreV9Presentation } from "@/lib/stablecoin-safety-score-v9-presentation";
 import { cn } from "@/lib/utils";
-
-const HEADER_ICON_BUTTON_CLASS =
-  "pharos-focus-ring inline-flex !h-11 !min-h-11 !w-11 items-center justify-center rounded-md border border-border/60 bg-muted/50 text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground md:!h-5 md:!min-h-0 md:!w-5";
 
 type StablecoinSafetyScoreV9DisplayCard = SafetyScoreV9CurrentCard;
 
@@ -54,18 +52,18 @@ function HeaderActions({ updatedAtMs }: { updatedAtMs: number | null }) {
           <span className="text-muted-foreground/50" aria-hidden="true">·</span>
         </span>
       ) : null}
-      <MethodologyHint topic="safetyScore" buttonClassName={HEADER_ICON_BUTTON_CLASS} />
+      <MethodologyHint topic="safetyScore" buttonClassName={DETAIL_HEADER_ICON_BUTTON_CLASS} />
       {methodology.changelogPath ? (
         <IntentLink
           href={methodology.changelogPath}
           aria-label="Safety Score version history"
-          className={HEADER_ICON_BUTTON_CLASS}
+          className={DETAIL_HEADER_ICON_BUTTON_CLASS}
         >
-          <History className="h-3 w-3" aria-hidden="true" />
+          <History className="h-3.5 w-3.5" aria-hidden="true" />
         </IntentLink>
       ) : null}
-      <ShowYourWorkToggle className={HEADER_ICON_BUTTON_CLASS}>
-        <Table2 className="h-3 w-3" aria-hidden="true" />
+      <ShowYourWorkToggle className={DETAIL_HEADER_ICON_BUTTON_CLASS}>
+        <Table2 className="h-3.5 w-3.5" aria-hidden="true" />
         <span className="sr-only">Toggle score inputs</span>
       </ShowYourWorkToggle>
     </div>

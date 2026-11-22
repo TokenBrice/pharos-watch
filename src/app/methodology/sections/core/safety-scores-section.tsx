@@ -15,7 +15,7 @@ export function SafetyScoresMethodologySection() {
       title={SAFETY_SCORES_SECTION_CONTENT.title}
       versionBadge={{ label: SAFETY_SCORE_METHODOLOGY_VERSION_LABEL.toUpperCase() }}
       changelogPath={SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH}
-      versionNote="V10 is the sole active publication and consumer contract. V8.17 remains available only in version history."
+      versionNote="Active Safety Score publication and consumer contract. Retired scoring models remain documented in version history."
       changelogClassName={METHODOLOGY_SECTION_ACCENT_CLASSES.safetyScores.changelogHover}
     >
       <SafetyScoresOverview />

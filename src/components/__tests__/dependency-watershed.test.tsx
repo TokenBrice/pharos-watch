@@ -57,6 +57,8 @@ describe("DependencyWatershed", () => {
     expect(aaa!.getAttribute("aria-pressed")).toBe("true");
     fireEvent.blur(aaa!);
     expect(screen.getByText(/^Downstream of AAA: /)).toBeTruthy();
+    const profileLink = screen.getByRole("link", { name: "Open profile →" });
+    expect(profileLink.getAttribute("href")).toBe("/stablecoin/aaa");
     fireEvent.click(screen.getByRole("button", { name: "Trace exposure →" }));
     expect(onAddRoot).toHaveBeenCalledWith("aaa");
     fireEvent.keyDown(aaa!, { key: "Escape" });

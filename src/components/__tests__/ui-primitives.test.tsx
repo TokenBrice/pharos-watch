@@ -3,6 +3,7 @@
 import { fireEvent, cleanup, render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ChartSkeleton } from "@/components/chart-skeleton";
 import { CopyButton } from "@/components/copy-button";
 import { DataTableShell } from "@/components/data-table-shell";
 import { EmptyStateSurface } from "@/components/empty-state-surface";
@@ -192,12 +193,25 @@ describe("MobileSortPills", () => {
     );
 
     expect(screen.getByRole("group", { name: "Sort rows" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Supply/ }).getAttribute("aria-pressed")).toBe("true");
+    const activeButton = screen.getByRole("button", { name: /Supply/ });
+    expect(activeButton.getAttribute("aria-pressed")).toBe("true");
+    expect(activeButton.className).toContain("pharos-control-pill-active");
+    expect(activeButton.className).not.toContain("bg-foreground");
     expect(screen.getByText("↓")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Peg" }));
 
     expect(onSort).toHaveBeenCalledWith("peg");
+  });
+});
+
+describe("ChartSkeleton", () => {
+  it.each(["area", "bars", "radar"] as const)("renders framed %s placeholder", (variant) => {
+    const { container } = render(<ChartSkeleton variant={variant} aria-hidden />);
+    const root = container.firstElementChild;
+    expect(root?.getAttribute("data-chart-skeleton-variant")).toBe(variant);
+    expect(root?.getAttribute("aria-hidden")).toBe("true");
+    expect(root?.className).toContain("pharos-chart-stage");
   });
 });
 

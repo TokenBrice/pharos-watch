@@ -33,19 +33,11 @@ export const BLACKLIST_STATUS_BUCKET_COLORS: Record<BlacklistStatusBucketKey, st
   no: "#22c55e",
 };
 
-export const BLACKLIST_STATUS_BUCKET_LABELS: Record<BlacklistStatusBucketKey, string> = {
+const BLACKLIST_STATUS_BUCKET_LABELS: Record<BlacklistStatusBucketKey, string> = {
   yes: "Yes",
   upstream: "Upstream",
   possible: "Possible",
   no: "No",
-};
-
-export const BLACKLIST_STATUS_BUCKET_DESCRIPTIONS: Record<BlacklistStatusBucketKey, string> = {
-  yes: "Direct token, vault, or issuer controls can freeze, block, seize, or destroy user balances.",
-  upstream: "No direct control is resolved; exposure comes from freezable upstream collateral or parent assets.",
-  possible:
-    "Mutable or pause-capable admin surfaces indicate possible controls, but active address-level freezing is not confirmed.",
-  no: "No direct, upstream, or possible freeze exposure is resolved in the current model.",
 };
 
 export function resolveBlacklistStatusBucket(

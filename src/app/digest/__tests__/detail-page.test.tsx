@@ -85,10 +85,11 @@ describe("digest detail model credit", () => {
 });
 
 describe("digest detail navigation", () => {
-  it("links weekly recaps to the neighbouring weeklies instead of the adjacent daily editions", async () => {
+  it("links weekly recaps to the neighboring weeklies instead of the adjacent daily editions", async () => {
     const newestWeekly = await renderDigest("2026-10-12-weekly");
     expect(newestWeekly).toContain('href="/digest/2026-10-05-weekly/"');
     expect(newestWeekly).not.toContain('href="/digest/2026-10-12/"');
+    expect(newestWeekly).not.toContain("pharos-kicker");
 
     const oldestWeekly = await renderDigest("2026-10-05-weekly");
     expect(oldestWeekly).toContain('href="/digest/2026-10-12-weekly/"');

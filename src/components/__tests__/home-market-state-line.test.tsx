@@ -5,9 +5,22 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { HomeMarketStateLine } from "@/components/homepage/home-market-state-line";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 
-const { useHomepageSnapshotMock } = vi.hoisted(() => ({ useHomepageSnapshotMock: vi.fn() }));
-vi.mock("@/hooks/api-hooks", () => ({ useHomepageSnapshot: useHomepageSnapshotMock }));
-afterEach(() => { cleanup(); vi.clearAllMocks(); });
+const { useHomepageSnapshotMock, useStabilityIndexMock, usePegSummaryMock } = vi.hoisted(() => ({
+  useHomepageSnapshotMock: vi.fn(),
+  useStabilityIndexMock: vi.fn((): Record<string, unknown> => ({ data: undefined, dataUpdatedAt: 0, error: null, meta: undefined })),
+  usePegSummaryMock: vi.fn((): Record<string, unknown> => ({ data: undefined })),
+}));
+vi.mock("@/hooks/api-hooks", () => ({
+  useHomepageSnapshot: useHomepageSnapshotMock,
+  useStabilityIndex: useStabilityIndexMock,
+  usePegSummary: usePegSummaryMock,
+}));
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+  useStabilityIndexMock.mockReturnValue({ data: undefined, dataUpdatedAt: 0, error: null, meta: undefined });
+  usePegSummaryMock.mockReturnValue({ data: undefined });
+});
 
 const now = Date.parse("2026-10-18T12:00:00Z");
 function meta(source: string, updatedAt = now / 1000) {
@@ -54,5 +67,25 @@ describe("HomeMarketStateLine compact lanes", () => {
     render(<HomeMarketStateLine nowMs={now} />);
     expect(screen.getAllByText("—")).toHaveLength(2);
     expect(screen.queryByText("0")).toBeNull();
+  });
+
+  it("falls back passively to cached stability index and peg summary when the compact snapshot is absent", () => {
+    useHomepageSnapshotMock.mockReturnValue({ data: undefined, dataUpdatedAt: 0, error: new Error("failed"), isLoading: false });
+    useStabilityIndexMock.mockReturnValue({
+      data: {
+        current: { score: 88.2, band: "STEADY", avg24h: 89.4, avg24hBand: "STEADY", computedAt: now / 1000 },
+      },
+      dataUpdatedAt: now,
+      error: null,
+      meta: meta("stability-index"),
+    });
+    usePegSummaryMock.mockReturnValue({
+      data: { summary: { activeDepegCount: 3 } },
+    });
+    render(<HomeMarketStateLine nowMs={now} />);
+    expect(useStabilityIndexMock).toHaveBeenCalledWith({ enabled: false });
+    expect(usePegSummaryMock).toHaveBeenCalledWith({ enabled: false });
+    expect(screen.getByRole("link", { name: /PSI/ }).textContent).toContain("Steady89.4");
+    expect(screen.getByRole("link", { name: /active depegs/ }).textContent).toContain("3active depegs");
   });
 });

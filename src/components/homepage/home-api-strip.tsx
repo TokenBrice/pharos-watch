@@ -9,7 +9,7 @@ export function HomeApiStrip(): React.JSX.Element {
   const names = API_PARTNERS.map((partner) => partner.name);
 
   return (
-    <section aria-labelledby="home-api-strip-title" className="lg:shrink-0">
+    <section aria-labelledby="home-api-strip-title" className="min-w-0 lg:shrink-0">
       <h2 id="home-api-strip-title" className="sr-only">
         Pharos API
       </h2>

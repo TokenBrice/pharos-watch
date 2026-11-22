@@ -10,6 +10,7 @@ import type { NavItem } from "@/lib/nav-config";
 
 export type CommandPaletteSection =
   | "Run command"
+  | "This coin"
   | "Recent"
   | "Popular"
   | "Stablecoins"
@@ -30,7 +31,12 @@ export type CommandPaletteActionId =
   | "open-digest"
   | "open-methodology"
   | "open-api-docs"
-  | "compare-watchlist";
+  | "compare-watchlist"
+  | "portfolio-watchlist"
+  | "context-watch"
+  | "context-portfolio"
+  | "context-compare"
+  | "context-alerts";
 export type CommandPaletteActionIcon =
   | "theme-light"
   | "theme-dark"
@@ -39,6 +45,10 @@ export type CommandPaletteActionIcon =
   | "methodology"
   | "api-docs"
   | "compare-watchlist"
+  | "portfolio-watchlist"
+  | "watch"
+  | "unwatch"
+  | "alerts"
   | "verb-hint"
   | "run-command";
 
@@ -121,6 +131,8 @@ export interface CommandPaletteResultDescriptor extends CommandPaletteSectionedI
   pageIcon?: NavItem["icon"];
   actionIcon?: CommandPaletteActionIcon;
   actionId?: CommandPaletteActionId;
+  /** Target coin id for route-contextual dossier actions. */
+  contextCoinId?: string;
   /** For verb-hint rows: the literal text the palette input should be set to. */
   prefill?: string;
   history?: {

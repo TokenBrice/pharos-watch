@@ -70,6 +70,9 @@ describe("PsiBandCard", () => {
     const polyline = container.querySelector("polyline");
     expect(polyline).toBeTruthy();
     expect(polyline?.getAttribute("points")?.trim().split(/\s+/)).toHaveLength(4);
+    expect(polyline?.getAttribute("vector-effect")).toBe("non-scaling-stroke");
+    const gradient = container.querySelector("linearGradient");
+    expect(gradient?.getAttribute("id")).toMatch(/^stability-area-fill-.+/);
   });
 
   it("keeps the band hue and lights the beacon while the sample is fresh", () => {

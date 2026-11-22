@@ -8,7 +8,7 @@ import { useCoinStates } from "@/hooks/use-coin-states";
 import { logosById } from "@/lib/logos";
 import { DependencyMapBasinList } from "@/components/dependency-watershed/dependency-map-basin-list";
 import { stablecoinLabel } from "@/lib/stablecoin-label";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ChartSkeleton } from "@/components/chart-skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { StaleDataBanner } from "@/components/stale-data-banner";
@@ -94,7 +94,7 @@ export function DependencyMapClient() {
     return (
       <Card>
         <CardContent className="pt-4 pb-4">
-          <Skeleton className="h-[520px] w-full rounded-lg" />
+          <ChartSkeleton className="h-[520px] rounded-xl" />
         </CardContent>
       </Card>
     );

@@ -108,7 +108,7 @@ The lighthouse metaphor is useful only when it communicates data. Decorative nov
 
 - Core UI and analytics prose use the sans token.
 - Numeric values, tickers, timestamps, and compact data labels use `.pharos-numeric` or the mono token.
-- Page titles use `.pharos-page-title`, with the 16px `.pharos-page-deck` description under them on every `FeaturePageShell` route (Learn and methodology keep the larger `.pharos-page-lead`). The rail pages other than the homepage, the Markets pages and the `/stablecoins/**` cohort pages use `header: "instrument"`: a one-line deck (about 105 characters, the rest folded), the same action set (`AlertsHeaderLink` where a Telegram alert family exists, then `ShareButton`), and one hero figure face (`HERO_KPI_VALUE_CLASS`); compact panel headings use `.pharos-section-title` rather than hero-scale type. A page with a public explainer sets `methodology.docsPath`, and the methodology meta row adds a "How this is computed" link after Version history (Liquidity, Yield, Stability and Depeg to their `/docs/` page; FreezeWatch to `/docs/blacklist-tracker/`).
+- Page titles use `.pharos-page-title`, with the 16px `.pharos-page-deck` description under them on every `FeaturePageShell` route (Learn and methodology keep the larger `.pharos-page-lead`). The rail pages other than the homepage, the Markets pages and the `/stablecoins/**` cohort pages use `header: "instrument"`: a one-line deck (about 105 characters, the rest folded behind a styled chevron disclosure — never a raw browser `<details>` triangle), the same action set (`AlertsHeaderLink` where a Telegram alert family exists, then `ShareButton`, inlined beside the H1 when `methodology` is absent), and one hero figure face (`.pharos-hero-kpi`); compact panel headings use `.pharos-section-title` rather than hero-scale type. A page with a public explainer sets `methodology.docsPath`, and the methodology meta row adds a "How this is computed" link after Version history (Liquidity, Yield, Stability and Depeg to their `/docs/` page; FreezeWatch to `/docs/blacklist-tracker/`), with non-breaking arrows so mobile lines never orphan `→`.
 - Core analytics surfaces use three registers only: Bricolage display for page and section titles, the system sans for UI text and labels, and JetBrains Mono for figures, tickers, addresses and codes.
 - Labels are sentence-case sans: `.pharos-label` (legacy name `.pharos-kicker`) introduces a short category, section or field label. It is supporting hierarchy, not body copy. `.pharos-eyebrow` is the single uppercase variant, for at most one short route or hero eyebrow above a title. Do not hand-roll `uppercase tracking-[…] font-mono` labels; the [type scale](./design-tokens.md#type-scale) owns sizes and the one tracking step. Card, section, metric and table-column titles are sentence case too ("Unfreezable market share"); page H1s and metadata titles, product and proper names, acronyms and tickers keep their casing. Proper names are products and tools (Market Pulse, Safety Scores, FreezeWatch, Daily Digest, Stability Index, Dependency Map, Peg Tracker, Stablecoin Picker, Depeg Duration Resolver, Depeg Early Warning, Telegram Mini App), named scores (Safety Score, Peg Score, Liquidity Score, Mint Score, Chain Health Score), and the methodology's named pillars, factors and signals (Mint Authority, Price Transparency, Economic Control, Custody Model, Dependency Risk, Peg Stability, Backing Diversity, Pressure Shift). Generic descriptions are sentence case: "Market cap", "Key links", "Live reserve sync", "Liquidity by protocol".
 - The editorial serif resolves through `font-serif`: Newsreader inside a subtree that mounts `digestDisplay.variable`, Georgia elsewhere (not-found and error boundaries stay on Georgia so the Newsreader files never load app-wide).
@@ -150,14 +150,17 @@ Prefer the established utilities in `src/app/globals.css`:
 | --- | --- |
 | `.pharos-card-shell` | Default framed analytics surface using shared background, border, and elevation tokens. |
 | `.pharos-interactive-card` | Clickable card hover and press motion; pair it with `.pharos-focus-ring` for the focus treatment. |
-| `.pharos-control-pill` | Dense option or mode control; pair the selected state with `.pharos-control-pill-active`. |
+| `.pharos-control-pill` | Multi-select filter or binary toggle chip; active state uses `.pharos-control-pill-active` or `[aria-pressed="true"]`. |
+| `.pharos-segmented` / `.pharos-segmented-item` | Single bordered track for mutually exclusive mode, time-range, or tab switches (`aria-pressed`, `aria-selected`, or `aria-current="page"`). |
+| `.pharos-hero-kpi` | Canonical rail-page hero KPI figure (`tabular-nums slashed-zero`, neutral ink). |
 | `.pharos-focus-ring` | Shared keyboard focus treatment for custom interactive elements. |
-| `.pharos-table-shell` / `.pharos-table-toolbar` | Shared framing and controls for tabular workspaces. |
+| `.pharos-table-shell` / `.pharos-table-toolbar` | Shared framing (`overflow-clip` for page-level sticky headers) and controls for tabular workspaces. |
 | `.pharos-chart-stage` | Inner chart surface distinct from its surrounding section. |
+| `.pharos-chart-legend-chip` | Borderless non-interactive `swatch + label` legend item (no button-pill chrome). |
 | `.pharos-subtle-band` | Low-emphasis grouped information without introducing another card. |
 | `.pharos-inset` | Nested tile inside a card or panel (stat tiles, metric boxes, grouped facts): `rounded-lg`, hairline border, one background wash. Notes and empty states keep `bg-muted/*`; code blocks keep their own surface. |
 | `.pharos-label` / `.pharos-eyebrow` / `.pharos-numeric` | Sentence-case label, the single uppercase eyebrow, and mono tabular figures; see [Label and figure utilities](./design-tokens.md#label-and-figure-utilities). |
-| `.pharos-empty-note` | Bounded empty-state treatment inside a data surface. |
+| `.pharos-empty-note` | Bounded `rounded-lg` empty-state treatment inside a data surface. |
 | `.pharos-meta` | Compact secondary metadata. |
 | `.pharos-prose-link` | Inline link treatment in explanatory copy. |
 | `.pharos-source-list` | External source list rendered by `SourceLinkList`: CSS-masked external-link glyph, focus ring and underline on bare `<li><a>` rows. |
@@ -182,9 +185,9 @@ Check the current declarations before depending on exact padding, radius, shadow
 
 ### Control Pills
 
-`.pharos-control-pill` is the canonical compact option shell. Use `.pharos-control-pill-active` for its selected state, keep labels short enough to wrap safely, and expose group/pressed semantics appropriate to the interaction. The current visual values live in `src/app/globals.css`.
+Interactive controls standardize on three families: `.pharos-control-pill` (multi-select filter/action/sort chips), `.pharos-segmented` (mutually exclusive mode, time-range, and section-tab switches), and flat `Button` (outline without resting shadow). `.pharos-toggle-pill` and solid-ink active sort pills are retired. Use `.pharos-control-pill-active` (or `[aria-pressed="true"]`) for selected chips, keep labels short enough to wrap safely, and expose group/pressed semantics appropriate to the interaction. The current visual values live in `src/app/globals.css`.
 
-Use `ControlPillToggle` in `src/components/control-pill-toggle.tsx` for plain controlled, pressed-option groups. Callers retain labels, layout, responsive density, and state ownership. Keep radio controls, directional sort buttons, and bespoke icon/count/action or focus treatments local rather than adding modes to the primitive.
+Use `ControlPillToggle` in `src/components/control-pill-toggle.tsx` (`variant="pill"` or `variant="segmented"`) for plain controlled, pressed-option groups. Callers retain labels, layout, responsive density, and state ownership. Keep radio controls, directional sort buttons, and bespoke icon/count/action or focus treatments local rather than adding modes to the primitive.
 
 ### Tape (Special)
 

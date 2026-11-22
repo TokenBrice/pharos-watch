@@ -326,7 +326,7 @@ export function PermanentLiquidityProof({ entries }: { entries: PermanentLiquidi
                 href={holderUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="pharos-focus-ring rounded-sm font-mono text-frost-blue hover:underline"
+                className="pharos-focus-ring rounded-sm font-mono text-brand-accent-text hover:underline"
               >
                 {formatAddress(lock.holder)}
               </a>

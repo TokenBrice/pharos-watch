@@ -10,6 +10,7 @@ import {
 } from "@shared/lib/classification";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { FilterSearchInput } from "@/components/filter-search-input";
 import { LaunchDriftBadge, LaunchPhaseBadge } from "@/components/upcoming/pre-launch-badge";
 import { UpcomingHorizonHero } from "@/components/upcoming/upcoming-horizon-hero";
 import { FeatureHeroSplit, HeroMetricRow } from "@/components/feature-hero-split";
@@ -35,6 +36,7 @@ import {
   type DriftDisplayStatus,
   type PreLaunchClockView,
 } from "@/lib/pre-launch";
+import { computeLaunchClock, describeLaunchWindow, parseFuzzyRange } from "@/lib/pre-launch-dossier";
 import { stripTermMarkup } from "@/lib/term-markup";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { UpcomingLaunchPhase } from "@shared/types/stablecoin-lifecycle";
@@ -73,10 +75,14 @@ const ALL_PHASES: UpcomingLaunchPhase[] = ["announced", "testnet", "auditing", "
 export type PhaseFilterValue = UpcomingLaunchPhase | "unphased";
 const PHASE_FILTER_VALUES: readonly PhaseFilterValue[] = [...ALL_PHASES, "unphased"];
 
+export type TargetFilterValue = "all" | "dated" | "slipped";
+const TARGET_FILTER_VALUES: readonly TargetFilterValue[] = ["all", "dated", "slipped"];
+
 export interface UpcomingUrlState {
   phase: readonly PhaseFilterValue[];
   peg: readonly string[];
   backing: readonly string[];
+  target: TargetFilterValue;
   sort: SortKey;
   dir: SortDirection;
 }
@@ -99,6 +105,11 @@ export function createUpcomingUrlSchema(coins: readonly UpcomingCoin[]): UrlStat
       kind: "enumList",
       defaultValue: [],
       allowedValues: backings,
+    },
+    target: {
+      kind: "enum",
+      defaultValue: "all",
+      allowedValues: TARGET_FILTER_VALUES,
     },
     sort: {
       kind: "enum",
@@ -191,12 +202,18 @@ function backingLabel(coin: UpcomingCoin): string {
   return BACKING_LABELS_SHORT[coin.flags.backing] ?? coin.flags.backing;
 }
 
+function isSlippedStatus(drift: DriftDisplayStatus): boolean {
+  return drift === "pushed-once" || drift === "pushed-multiple" || drift === "overdue";
+}
+
 /**
  * The tracker's one visitor-clock read. Static export renders without a clock,
  * so Slipped, Soonest, the rings and the drift column all appear after mount
  * and recompute at the next target expiry without a fetch.
  */
-function usePreLaunchClockView(coins: readonly UpcomingCoin[]): PreLaunchClockView<UpcomingCoin> | null {
+function usePreLaunchClockView(
+  coins: readonly UpcomingCoin[],
+): { view: PreLaunchClockView<UpcomingCoin>; nowMs: number } | null {
   const [nowMs, setNowMs] = useState<number | null>(null);
   useEffect(() => {
     let timer: number | undefined;
@@ -209,7 +226,10 @@ function usePreLaunchClockView(coins: readonly UpcomingCoin[]): PreLaunchClockVi
     update();
     return () => window.clearTimeout(timer);
   }, [coins]);
-  return useMemo(() => (nowMs === null ? null : selectPreLaunchClockView(coins, nowMs)), [coins, nowMs]);
+  return useMemo(
+    () => (nowMs === null ? null : { view: selectPreLaunchClockView(coins, nowMs), nowMs }),
+    [coins, nowMs],
+  );
 }
 
 /* tw: min-h-11 sm:min-h-8 — keep literal for Tailwind scanner */
@@ -217,8 +237,8 @@ const FILTER_TOUCH = "min-h-11 sm:min-h-8";
 
 function filterPillClass(active: boolean): string {
   return active
-    ? `pharos-control-pill pharos-control-pill-active ${FILTER_TOUCH} gap-1.5`
-    : `pharos-toggle-pill ${FILTER_TOUCH} gap-1.5`;
+    ? `pharos-focus-ring pharos-control-pill pharos-control-pill-active ${FILTER_TOUCH} gap-1.5`
+    : `pharos-focus-ring pharos-control-pill ${FILTER_TOUCH} gap-1.5`;
 }
 
 const UPCOMING_COLUMNS: readonly DataTableColumn<SortKey>[] = [
@@ -262,10 +282,12 @@ function ClockPending(): React.JSX.Element {
 // here instead of importing the full registry and logo map.
 export function UpcomingClient({
   coins,
+  launchedCount = 0,
   logos,
   teasers,
 }: {
   coins: readonly UpcomingCoin[];
+  launchedCount?: number;
   logos: Readonly<Record<string, string | undefined>>;
   teasers: Record<string, string>;
 }) {
@@ -274,13 +296,21 @@ export function UpcomingClient({
   const phaseFilter = useMemo(() => new Set(filters.phase), [filters.phase]);
   const pegFilter = useMemo(() => new Set(filters.peg), [filters.peg]);
   const backingFilter = useMemo(() => new Set(filters.backing), [filters.backing]);
-  const clock = usePreLaunchClockView(coins);
+  const targetFilter = filters.target;
+  const clockSnapshot = usePreLaunchClockView(coins);
+  const clock = clockSnapshot?.view ?? null;
+  const nowMs = clockSnapshot?.nowMs ?? null;
+  const [searchQuery, setSearchQuery] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const togglePhase = useCallback((phase: PhaseFilterValue) => {
     writeFilters({ phase: Array.from(toggleSet(phaseFilter, phase)) });
   }, [phaseFilter, writeFilters]);
+
+  const clearPhaseFilter = useCallback(() => {
+    writeFilters({ phase: [] });
+  }, [writeFilters]);
 
   const togglePeg = useCallback((peg: string) => {
     writeFilters({ peg: Array.from(toggleSet(pegFilter, peg)) });
@@ -290,7 +320,14 @@ export function UpcomingClient({
     writeFilters({ backing: Array.from(toggleSet(backingFilter, backing)) });
   }, [backingFilter, writeFilters]);
 
-  const clearFilters = useCallback(() => writeFilters({ phase: [], peg: [], backing: [] }), [writeFilters]);
+  const toggleTarget = useCallback((nextTarget: Exclude<TargetFilterValue, "all">) => {
+    writeFilters({ target: targetFilter === nextTarget ? "all" : nextTarget });
+  }, [targetFilter, writeFilters]);
+
+  const clearFilters = useCallback(() => {
+    setSearchQuery("");
+    writeFilters({ phase: [], peg: [], backing: [], target: "all" });
+  }, [writeFilters]);
 
   const countBy = useCallback(
     <K extends string>(key: (coin: UpcomingCoin) => K) => {
@@ -312,7 +349,8 @@ export function UpcomingClient({
     [pegCounts],
   );
   const allBackings = useMemo(() => [...backingCounts.keys()], [backingCounts]);
-  const noTargetCount = useMemo(() => coins.filter((coin) => !coin.expectedLaunchDate).length, [coins]);
+  const datedCount = useMemo(() => coins.filter((coin) => Boolean(coin.expectedLaunchDate)).length, [coins]);
+  const noTargetCount = coins.length - datedCount;
 
   const sortKey = filters.sort;
   const sortDirection = filters.dir;
@@ -337,44 +375,98 @@ export function UpcomingClient({
     [clock],
   );
 
-  const filtered = useMemo(() => {
-    const filteredCoins = coins.filter(
-      (coin) =>
-        (phaseFilter.size === 0 || phaseFilter.has(phaseOf(coin))) &&
-        (pegFilter.size === 0 || pegFilter.has(coin.flags.pegCurrency)) &&
-        (backingFilter.size === 0 || backingFilter.has(coin.flags.backing)),
-    );
-    return sortUpcomingCoins(filteredCoins, sortKey, sortDirection, driftOf);
-  }, [backingFilter, coins, driftOf, pegFilter, phaseFilter, sortDirection, sortKey]);
+  const slippedCount = useMemo(
+    () => clock?.slipped ?? coins.filter((coin) => isSlippedStatus(driftOf(coin))).length,
+    [clock, coins, driftOf],
+  );
 
-  const activeFilterCount = phaseFilter.size + pegFilter.size + backingFilter.size;
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+
+  const filtered = useMemo(() => {
+    const filteredCoins = coins.filter((coin) => {
+      if (phaseFilter.size > 0 && !phaseFilter.has(phaseOf(coin))) return false;
+      if (pegFilter.size > 0 && !pegFilter.has(coin.flags.pegCurrency)) return false;
+      if (backingFilter.size > 0 && !backingFilter.has(coin.flags.backing)) return false;
+      if (targetFilter === "dated" && !coin.expectedLaunchDate) return false;
+      if (targetFilter === "slipped" && !isSlippedStatus(driftOf(coin))) return false;
+      if (normalizedQuery) {
+        const pegText = pegLabel(coin).toLowerCase();
+        const backingText = backingLabel(coin).toLowerCase();
+        const matches =
+          coin.name.toLowerCase().includes(normalizedQuery) ||
+          coin.symbol.toLowerCase().includes(normalizedQuery) ||
+          pegText.includes(normalizedQuery) ||
+          backingText.includes(normalizedQuery);
+        if (!matches) return false;
+      }
+      return true;
+    });
+    return sortUpcomingCoins(filteredCoins, sortKey, sortDirection, driftOf);
+  }, [backingFilter, coins, driftOf, normalizedQuery, pegFilter, phaseFilter, sortDirection, sortKey, targetFilter]);
+
+  const activeFilterCount =
+    phaseFilter.size +
+    pegFilter.size +
+    backingFilter.size +
+    (targetFilter !== "all" ? 1 : 0) +
+    (normalizedQuery ? 1 : 0);
   const hasActiveFilters = activeFilterCount > 0;
 
   const soonest = clock?.soonest ?? null;
 
   const toolbar = (
     <div className="pharos-table-toolbar gap-2.5">
-      <div className="flex items-center justify-between gap-3 sm:hidden">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          aria-expanded={filtersOpen}
-          aria-controls="upcoming-filters"
-          onClick={() => setFiltersOpen((open) => !open)}
-          className="min-h-11 rounded-md border-border/70"
-        >
-          <SlidersHorizontal aria-hidden="true" className="h-3.5 w-3.5" />
-          Filters
-          {hasActiveFilters ? <span className="pharos-numeric text-muted-foreground">({activeFilterCount})</span> : null}
-          <ChevronDown
-            aria-hidden="true"
-            className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform", filtersOpen ? "rotate-180" : "")}
-          />
-        </Button>
-        <p className="pharos-meta pharos-numeric" aria-live="polite">
-          {filtered.length} of {coins.length}
-        </p>
+      <div className="flex flex-wrap items-center gap-2.5">
+        <FilterSearchInput
+          value={searchQuery}
+          onValueChange={setSearchQuery}
+          placeholder="Search upcoming coins..."
+          ariaLabel="Search upcoming stablecoins"
+          className="relative w-full sm:w-56"
+          inputClassName="h-11 pl-8 text-xs sm:h-8"
+        />
+        <div role="group" aria-label="Target status" className="flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            aria-pressed={targetFilter === "dated"}
+            onClick={() => toggleTarget("dated")}
+            className={filterPillClass(targetFilter === "dated")}
+          >
+            Dated targets
+            <span className="pharos-numeric text-muted-foreground">{datedCount}</span>
+          </button>
+          <button
+            type="button"
+            aria-pressed={targetFilter === "slipped"}
+            onClick={() => toggleTarget("slipped")}
+            className={filterPillClass(targetFilter === "slipped")}
+          >
+            Slipped
+            <span className="pharos-numeric text-muted-foreground">{slippedCount}</span>
+          </button>
+        </div>
+        <div className="flex w-full items-center justify-between gap-3 sm:hidden">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            aria-expanded={filtersOpen}
+            aria-controls="upcoming-filters"
+            onClick={() => setFiltersOpen((open) => !open)}
+            className="min-h-11 rounded-md border-border/70"
+          >
+            <SlidersHorizontal aria-hidden="true" className="h-3.5 w-3.5" />
+            Filters
+            {hasActiveFilters ? <span className="pharos-numeric text-muted-foreground">({activeFilterCount})</span> : null}
+            <ChevronDown
+              aria-hidden="true"
+              className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform", filtersOpen ? "rotate-180" : "")}
+            />
+          </Button>
+          <p className="pharos-meta pharos-numeric" aria-live="polite">
+            {filtered.length} of {coins.length}
+          </p>
+        </div>
       </div>
       <div
         id="upcoming-filters"
@@ -470,7 +562,30 @@ export function UpcomingClient({
         layout="stacked"
         beamLabel="Tracked launches"
         beamValue={coins.length}
-        universe={<UniverseChip universe="preLaunch" value="not yet live" />}
+        universe={(
+          <div className="flex flex-wrap items-center gap-2">
+            <UniverseChip universe="preLaunch" value="not yet live" />
+            <span
+              data-testid="upcoming-launched-split"
+              className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/35 px-2.5 py-0.5 text-2xs font-medium text-muted-foreground"
+            >
+              <span className="pharos-numeric text-foreground">{coins.length}</span> upcoming
+              <span aria-hidden="true">·</span>
+              {launchedCount > 0 ? (
+                <a
+                  href="#launched-not-tracked"
+                  className="pharos-focus-ring rounded-sm text-foreground underline-offset-4 hover:underline"
+                >
+                  <span className="pharos-numeric">{launchedCount}</span> launched
+                </a>
+              ) : (
+                <span>
+                  <span className="pharos-numeric text-foreground">{launchedCount}</span> launched
+                </span>
+              )}
+            </span>
+          </div>
+        )}
         sub={
           <div className="divide-y divide-border/50">
             <HeroMetricRow
@@ -501,19 +616,31 @@ export function UpcomingClient({
           </div>
         }
       >
-        <UpcomingHorizonHero driftById={clock?.driftById} />
+        <UpcomingHorizonHero
+          driftById={clock?.driftById}
+          selectedPhases={phaseFilter}
+          onTogglePhase={togglePhase}
+          onClearPhases={clearPhaseFilter}
+        />
       </FeatureHeroSplit>
 
       <section id="data" aria-labelledby="upcoming-list-title" tabIndex={-1} className="space-y-4 outline-none">
-        <h2 id="upcoming-list-title" className="pharos-label">
-          Upcoming (<span className="pharos-numeric">{coins.length}</span>)
-        </h2>
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 id="upcoming-list-title" className="pharos-label">
+            Upcoming (<span className="pharos-numeric">{coins.length}</span>)
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            Click a phase orb above to filter, or open any row for target history and milestones.
+          </p>
+        </div>
         <DataTableShell
           tableId="upcoming-table"
           testId="upcoming-table"
           columns={UPCOMING_COLUMNS}
           sort={{ sortKey, sortDirection, toggleSort, getAriaSortValue }}
           topSlot={toolbar}
+          stickyHeader
+          stickyMode="page"
           mobileScrollHint={false}
           tableClassName="w-full"
         >
@@ -538,6 +665,7 @@ export function UpcomingClient({
                 logoSrc={getLogoSrc(logos, coin.id)}
                 teaser={teasers[coin.id]}
                 drift={clock ? driftOf(coin) : null}
+                nowMs={nowMs}
                 expanded={expandedId === coin.id}
                 onToggle={() => setExpandedId((current) => (current === coin.id ? null : coin.id))}
               />
@@ -577,6 +705,7 @@ function UpcomingRow({
   logoSrc,
   teaser,
   drift,
+  nowMs,
   expanded,
   onToggle,
 }: {
@@ -585,6 +714,7 @@ function UpcomingRow({
   teaser: string | undefined;
   /** Null until the visitor clock is read. */
   drift: DriftDisplayStatus | null;
+  nowMs: number | null;
   expanded: boolean;
   onToggle: () => void;
 }): React.JSX.Element {
@@ -592,6 +722,12 @@ function UpcomingRow({
   const detailsId = `upcoming-details-${coin.id}`;
   const milestoneCount = coin.milestones?.length ?? 0;
   const teaserText = teaser ? stripTermMarkup(teaser) : null;
+  const countdownCue = useMemo(() => {
+    if (nowMs === null || !coin.expectedLaunchDate) return null;
+    const range = parseFuzzyRange(coin.expectedLaunchDate);
+    if (!range) return null;
+    return describeLaunchWindow(computeLaunchClock(coin, nowMs), range.precision);
+  }, [coin, nowMs]);
 
   return (
     <Fragment>
@@ -639,7 +775,12 @@ function UpcomingRow({
         </TableCell>
         <TableCell className="pharos-numeric whitespace-nowrap text-xs text-foreground">
           {coin.expectedLaunchDate ? (
-            formatFuzzyDate(coin.expectedLaunchDate)
+            <div className="flex flex-col gap-0.5">
+              <span>{formatFuzzyDate(coin.expectedLaunchDate)}</span>
+              {countdownCue ? (
+                <span className="font-sans text-3xs text-muted-foreground">{countdownCue}</span>
+              ) : null}
+            </div>
           ) : (
             <span className="text-muted-foreground" title="No stated launch target">—</span>
           )}
@@ -659,7 +800,7 @@ function UpcomingRow({
           <button
             type="button"
             aria-expanded={expanded}
-            aria-controls={detailsId}
+            aria-controls={expanded ? detailsId : undefined}
             aria-label={`${expanded ? "Hide" : "Show"} details for ${coin.name}`}
             onClick={onToggle}
             className="pharos-focus-ring inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -671,43 +812,45 @@ function UpcomingRow({
           </button>
         </TableCell>
       </TableRow>
-      {/* Always mounted (hidden when collapsed) so the chevron's aria-controls resolves. */}
-      <TableRow rowIntent="static" id={detailsId} hidden={!expanded} className="bg-muted/20 hover:bg-muted/20">
-        <TableCell colSpan={UPCOMING_COLUMNS.length} className="whitespace-normal px-4 py-3 sm:pl-12">
-          <div className="max-w-3xl space-y-2">
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              {teaserText ?? "No summary written yet; the dossier carries the sourced milestones."}
-            </p>
-            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-2xs text-muted-foreground">
-              {coin.launchPhase ? <LaunchPhaseBadge phase={coin.launchPhase} /> : <span>{PRE_LAUNCH_UNPHASED_LABEL}</span>}
-              <span>{PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency}</span>
-              <span aria-hidden="true">·</span>
-              <span>{BACKING_LABELS_SHORT[coin.flags.backing] ?? coin.flags.backing}</span>
-              <span aria-hidden="true">·</span>
-              <span>{GOVERNANCE_LABELS_SHORT[coin.flags.governance] ?? coin.flags.governance}</span>
-              {coin.announcedDate ? (
-                <>
-                  <span aria-hidden="true">·</span>
-                  <span>
-                    Announced <span className="pharos-numeric">{formatFuzzyDate(coin.announcedDate)}</span>
-                  </span>
-                </>
-              ) : null}
-              <span aria-hidden="true">·</span>
-              <span>
-                <span className="pharos-numeric">{milestoneCount}</span> milestone{milestoneCount === 1 ? "" : "s"}
-              </span>
-            </p>
-            <Link
-              href={href}
-              prefetch={false}
-              className="pharos-focus-ring inline-flex rounded-sm text-xs font-medium text-foreground underline-offset-4 hover:underline"
-            >
-              Open the pre-launch dossier &rarr;
-            </Link>
-          </div>
-        </TableCell>
-      </TableRow>
+      {/* Lazy-mounted: expanded detail rows only enter the DOM when opened. */}
+      {expanded ? (
+        <TableRow rowIntent="static" id={detailsId} className="bg-muted/20 hover:bg-muted/20">
+          <TableCell colSpan={UPCOMING_COLUMNS.length} className="whitespace-normal px-4 py-3 sm:pl-12">
+            <div className="max-w-3xl space-y-2">
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                {teaserText ?? "No summary written yet; the dossier carries the sourced milestones."}
+              </p>
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-2xs text-muted-foreground">
+                {coin.launchPhase ? <LaunchPhaseBadge phase={coin.launchPhase} /> : <span>{PRE_LAUNCH_UNPHASED_LABEL}</span>}
+                <span>{PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency}</span>
+                <span aria-hidden="true">·</span>
+                <span>{BACKING_LABELS_SHORT[coin.flags.backing] ?? coin.flags.backing}</span>
+                <span aria-hidden="true">·</span>
+                <span>{GOVERNANCE_LABELS_SHORT[coin.flags.governance] ?? coin.flags.governance}</span>
+                {coin.announcedDate ? (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <span>
+                      Announced <span className="pharos-numeric">{formatFuzzyDate(coin.announcedDate)}</span>
+                    </span>
+                  </>
+                ) : null}
+                <span aria-hidden="true">·</span>
+                <span>
+                  <span className="pharos-numeric">{milestoneCount}</span> milestone{milestoneCount === 1 ? "" : "s"}
+                </span>
+              </p>
+              <Link
+                href={href}
+                prefetch={false}
+                className="pharos-focus-ring inline-flex rounded-sm text-xs font-medium text-foreground underline-offset-4 hover:underline"
+              >
+                Open the pre-launch dossier &rarr;
+              </Link>
+            </div>
+          </TableCell>
+        </TableRow>
+      ) : null}
     </Fragment>
   );
 }

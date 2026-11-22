@@ -26,6 +26,8 @@ const { EVENTS, EVENTS_BY_SLUG, RECOVERED_EVENT } = vi.hoisted(() => {
   };
   const recovered = {
     ...base, id: 4, slug: "recovered-event", provenance: null, closeReason: "recovered-primary" as const,
+    pendingReason: "large-cap+low-confidence",
+    confirmationSources: "temporal:15m+cex:binance",
     endedAt: base.startedAt + 1800, analyticRecoveryAt: base.startedAt + 900,
   };
   const events = [
@@ -166,6 +168,25 @@ describe("depeg event page metadata and briefing", () => {
   it("uses the admitted recovery time for the permanent record and recent feed", async () => {
     await renderPage(RECOVERED_EVENT.slug);
     expect(screen.getByText("Duration").nextElementSibling?.textContent).toBe("15 min");
+
+    // Visible breadcrumb back-link, Start -> Peak -> Recovery price-path bar, and human-readable close/quality labels.
+    const breadcrumb = screen.getByRole("navigation", { name: "Breadcrumb" });
+    expect(within(breadcrumb).getByRole("link", { name: /← Depeg Tracker/ }).getAttribute("href")).toBe("/depeg");
+    const pricePath = screen.getByTestId("depeg-price-path-bar");
+    expect(pricePath.textContent).toContain("Start");
+    expect(pricePath.textContent).toContain("$0.9900");
+    expect(pricePath.textContent).toContain("Peak");
+    expect(pricePath.textContent).toContain("$0.9800");
+    expect(pricePath.textContent).toContain("Recovery");
+    expect(pricePath.textContent).toContain("$1.00");
+
+    const pageText = document.body.textContent ?? "";
+    expect(pageText).toContain("recovered on primary price feed");
+    expect(pageText).toContain("large cap, price needs verification");
+    expect(pageText).toContain("15m persistence, Binance");
+    expect(pageText).not.toContain("recovered-primary");
+    expect(pageText).not.toContain("large-cap+low-confidence");
+    expect(pageText).not.toContain("temporal:15m+cex:binance");
 
     installMatchMediaMock(true);
     const { container } = render(<DepegFeed events={[

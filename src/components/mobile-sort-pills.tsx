@@ -63,11 +63,11 @@ export function MobileSortPills<TKey extends string>({
             type="button"
             aria-pressed={active}
             onClick={() => onSort(option.key)}
-            className={`pharos-focus-ring inline-flex min-h-11 items-center rounded-full border px-3 text-xs font-medium transition-colors ${
+            className={
               active
-                ? "border-foreground/20 bg-foreground text-background"
-                : "border-border/60 bg-background/60 text-muted-foreground hover:text-foreground"
-            }`}
+                ? "pharos-focus-ring pharos-control-pill pharos-control-pill-active min-h-11"
+                : "pharos-focus-ring pharos-control-pill min-h-11"
+            }
           >
             {option.label}
             {active ? (

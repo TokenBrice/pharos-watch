@@ -7,10 +7,11 @@ import { LiquidityExitRouteMap } from "@/components/liquidity/exit-route-map";
 import { ExitRouteLedger } from "@/components/liquidity/exit-route-ledger";
 import { buildLiquidityExitRouteModel } from "@/components/liquidity/exit-route-model";
 import { MethodologyLabel } from "@/components/methodology-hint";
-import { formatCurrency } from "@shared/lib/format";
+import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { describeDexVolume } from "@/lib/dex-volume-display";
 import type { DexLiquidityData } from "@shared/types/dex-liquidity";
 import type { LiquidityStatsData } from "@/components/liquidity/liquidity-stats-types";
+import type { LiquidityRouteFilter } from "@/app/liquidity/model";
 import { informativeVolumeLowerBound } from "@/components/liquidity/liquidity-table-logic";
 
 /**
@@ -21,16 +22,48 @@ export function LiquidityHero({
   stats,
   liquidityMap,
   status,
+  activeRouteFilter = null,
+  onRouteFilterChange,
 }: {
   stats: LiquidityStatsData;
   liquidityMap: Record<string, DexLiquidityData>;
   /** Ops state for the beam label (`OpsStatusChip`). */
   status?: ReactNode;
+  activeRouteFilter?: LiquidityRouteFilter | null;
+  onRouteFilterChange?: (filter: LiquidityRouteFilter | null) => void;
 }) {
   const model = useMemo(() => buildLiquidityExitRouteModel(liquidityMap, stats), [liquidityMap, stats]);
   const volume = describeDexVolume(stats.totalVol, stats.totalVolAvailability);
   const volumeBound = informativeVolumeLowerBound(volume);
   const change = stats.agg7dChange;
+  const useMedianFallback = change === null && stats.median7dChange != null && Number.isFinite(stats.median7dChange);
+  const displayChange = change != null && Number.isFinite(change)
+    ? change
+    : useMedianFallback
+      ? stats.median7dChange!
+      : null;
+  const changeDetail = useMedianFallback
+    ? `median across ${(stats.change7dCoinCount ?? 0).toLocaleString("en-US")} coins`
+    : change != null && Number.isFinite(change) && stats.agg7dChangeBasis === "global"
+      ? "global deduped TVL"
+      : change === null && (stats.change7dCoinCount ?? 0) === 0
+        ? undefined
+        : undefined;
+  const aggDepthRatio = stats.aggDepthToMcapRatio;
+  const hasAggDepthRatio = aggDepthRatio != null && Number.isFinite(aggDepthRatio);
+  const medianDepthRatio = stats.medianDepthToMcapRatio;
+  const useMedianDepthRatio = !hasAggDepthRatio && medianDepthRatio != null && Number.isFinite(medianDepthRatio);
+  const depthRatio = hasAggDepthRatio ? aggDepthRatio : useMedianDepthRatio ? medianDepthRatio : null;
+  const depthRatioLabel = useMedianDepthRatio ? "Median depth / MCap" : "Depth / MCap";
+  const depthRatioDetail = hasAggDepthRatio
+    ? "deduped DEX TVL / circulating supply"
+    : useMedianDepthRatio
+      ? stats.aggDepthToMcapObservedCount != null && stats.aggDepthToMcapObservedCount < stats.withLiquidity
+        ? `${stats.aggDepthToMcapObservedCount.toLocaleString("en-US")} of ${stats.withLiquidity.toLocaleString("en-US")} with supply`
+        : stats.aggDepthToMcapObservedCount != null
+          ? `across ${stats.aggDepthToMcapObservedCount.toLocaleString("en-US")} coins`
+          : "per-coin DEX TVL / circulating supply"
+      : undefined;
 
   return (
     <FeatureHeroSplit
@@ -50,15 +83,16 @@ export function LiquidityHero({
           <HeroMetricRow
             label="7d change, coins with 7d history"
             value={
-              change == null || !Number.isFinite(change) ? (
+              displayChange == null ? (
                 <span className="text-muted-foreground">—</span>
               ) : (
                 <>
-                  <span aria-hidden="true">{change >= 0 ? "↑" : "↓"}</span>
-                  {Math.abs(change).toFixed(1)}%
+                  <span aria-hidden="true">{displayChange >= 0 ? "↑" : "↓"}</span>
+                  {Math.abs(displayChange).toFixed(1)}%
                 </>
               )
             }
+            detail={changeDetail}
           />
           {/* A partial window headlines its admitted sum as an explicit lower bound, never a total (R1/R7). */}
           <HeroMetricRow
@@ -77,16 +111,35 @@ export function LiquidityHero({
                 : volume.view.partialGrossUsd == null ? (volume.detail ?? undefined) : undefined
             }
           />
+          {depthRatio != null && Number.isFinite(depthRatio) ? (
+            <HeroMetricRow
+              label={depthRatioLabel}
+              value={depthRatio > 0 && depthRatio < 0.0005 ? "<0.1%" : formatPercent(depthRatio * 100, 1)}
+              detail={depthRatioDetail}
+            />
+          ) : null}
           <HeroMetricRow
             label={<MethodologyLabel topic="liquidityScore">Liquidity Score</MethodologyLabel>}
             value={`${stats.ratedCount.toLocaleString("en-US")} rated · ${stats.nrObservedCount.toLocaleString("en-US")} NR`}
           />
         </div>
       }
-      footer={model ? <ExitRouteLedger model={model} /> : undefined}
+      footer={
+        model ? (
+          <ExitRouteLedger
+            model={model}
+            activeRouteFilter={activeRouteFilter}
+            onRouteFilterChange={onRouteFilterChange}
+          />
+        ) : undefined
+      }
     >
       {model ? (
-        <LiquidityExitRouteMap model={model} />
+        <LiquidityExitRouteMap
+          model={model}
+          activeRouteFilter={activeRouteFilter}
+          onRouteFilterChange={onRouteFilterChange}
+        />
       ) : (
         <p className="pharos-empty-note m-5 sm:m-6 lg:m-7">
           Exit routes are unavailable for this snapshot: no published global DEX depth.

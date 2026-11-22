@@ -11,7 +11,7 @@ import {
   ReferenceDot,
   DefaultZIndexes,
 } from "recharts";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ChartSkeleton } from "@/components/chart-skeleton";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
 import { TimeXAxis, MonoYAxis, TimeGrid, useNiceValueAxis } from "@/components/chart-primitives/axes";
 import { ChartLegendChip } from "@/components/chart-primitives/legend";
@@ -164,7 +164,7 @@ export function FlowChart({ hourly, isLoading, publishedWindow }: FlowChartProps
   );
 
   if (isLoading) {
-    return <Skeleton className={`${CHART_HEIGHT} w-full rounded-xl`} />;
+    return <ChartSkeleton variant="bars" className={CHART_HEIGHT} />;
   }
 
   const animationActive = !prefersReducedMotion && !hasEntered;
@@ -202,8 +202,8 @@ export function FlowChart({ hourly, isLoading, publishedWindow }: FlowChartProps
         caption={(rows, truncated, total) => {
           const bucketLabel = useDailyBuckets ? "daily" : "hourly";
           return truncated
-            ? `Mint and burn flow — most recent ${rows.length} of ${total} ${bucketLabel} buckets`
-            : `Mint and burn flow — ${total} ${bucketLabel} buckets`;
+            ? `Mint and burn flow: most recent ${rows.length} of ${total} ${bucketLabel} buckets`
+            : `Mint and burn flow: ${total} ${bucketLabel} buckets`;
         }}
         ariaLabel={`Mint and burn waterfall chart showing ${chartData.length} ${useDailyBuckets ? "daily" : "hourly"} data points`}
         emptyMessage="No flow data available for this period."

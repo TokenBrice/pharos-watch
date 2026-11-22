@@ -78,23 +78,3 @@ export function MetricStatCard({ variant = "default", className, ...props }: Met
     </Card>
   );
 }
-
-export function InteractiveMetricStatCard({
-  actionLabel,
-  onClick,
-  variant = "hero",
-  className,
-  ...props
-}: MetricStatCardProps & { actionLabel: string; onClick: () => void }) {
-  return (
-    <Card className={cn("@container pharos-card-shell relative transition-colors hover:bg-muted/40", className)}>
-      <MetricStatCardContent {...props} variant={variant} />
-      <button
-        type="button"
-        className="absolute inset-0 cursor-pointer rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        aria-label={actionLabel}
-        onClick={onClick}
-      />
-    </Card>
-  );
-}

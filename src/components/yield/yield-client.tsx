@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useCallback, useEffect, useRef, type ReactNode } from "react";
+import { useMemo, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { Skeleton } from "@/components/ui/skeleton";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { QueryErrorNotice } from "@/components/query-error-notice";
+import { YieldContentLoadingState } from "@/components/yield/yield-loading-state";
 import { usePegSummary, useYieldAdapterManifest, useYieldRankingsSummary } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { getLogoSrc, logosById } from "@/lib/logos";
@@ -52,6 +52,8 @@ import { resolveYieldZone } from "@/lib/yield-scatter";
 import { resolveYieldRowBenchmark } from "@/lib/yield-benchmark";
 import { getYieldBenchmarkComparisonApy, hasYieldBenchmarkUnitMismatch } from "@shared/lib/yield-benchmark-freshness";
 import { buildYieldStoryCallouts } from "@/lib/yield-story-callouts";
+import { formatYieldApyDelta } from "@/lib/yield-presentation";
+import { formatCompactBenchmarkLabel } from "@/components/yield/yield-row-metrics";
 import { trackEvent } from "@/lib/analytics";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { dedupeYieldRankings } from "@shared/lib/yield-rankings";
@@ -141,24 +143,25 @@ function HeroPysPodium({ rows, logos, onSelect }: HeroPysPodiumProps) {
   );
 }
 
-// A folded KPI tile: the standalone interchangeable-tile grid is retired in
-// favour of these compact, click-to-scroll metric rows in the hero sub-slot.
+// A folded KPI tile: compact, click-to-scroll metric rows in the hero sub-slot.
 function HeroHighlightRow({ label, logoSrc, name, symbol, value, unit, context, onClick }: HeroHighlightRowProps) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="pharos-focus-ring group flex w-full items-center justify-between gap-3 rounded-md py-2 text-left transition-colors"
+      className="pharos-focus-ring group flex w-full items-start justify-between gap-3 rounded-md py-2 text-left transition-colors"
     >
-      <span className="flex min-w-0 items-center gap-2">
-        <StablecoinLogo src={logoSrc} name={name} size={18} />
+      <span className="flex min-w-0 items-start gap-2">
+        <span className="mt-0.5 shrink-0">
+          <StablecoinLogo src={logoSrc} name={name} size={18} />
+        </span>
         <span className="min-w-0">
           <span className="block truncate pharos-label">{label}</span>
           <span className="block truncate text-sm font-semibold text-foreground">{symbol}</span>
-          <span className="block truncate text-2xs text-muted-foreground">{context}</span>
+          <span className="block text-2xs leading-snug text-muted-foreground">{context}</span>
         </span>
       </span>
-      <span className="shrink-0 text-right">
+      <span className="shrink-0 pt-0.5 text-right">
         <span className="pharos-numeric text-sm font-semibold text-foreground">{value}</span>
         <span className="ml-1 pharos-label">{unit}</span>
       </span>
@@ -172,21 +175,19 @@ function formatHeroRiskContext(
   benchmarks: YieldBenchmarkRegistry | null | undefined,
   liveStateNote: string | null = null,
 ): ReactNode {
-  // E5: judge the hero zone against the row's own benchmark — a missing row
-  // rate resolves from the registry by benchmarkKey before the USD frame.
+  // E5: judge the hero zone against the row's own benchmark.
   const benchmark = resolveYieldRowBenchmark(row, benchmarks, riskFreeRate);
   const zone = resolveYieldZone(row.safetyScore, row.apy30d, benchmark.rate);
   const opportunitySafety = isOpportunityDerivedSafety(row.provenance?.safetyProvenance);
-  // An opportunity grade starts from the row coin's own Safety Score and is then
-  // adjusted for venue and market, so the label names whose grade it builds on.
-  const safetyLabel = opportunitySafety ? `opportunity safety (${row.symbol} base)` : "safety";
-  const safety = row.safetyGrade && row.safetyGrade !== "NR" ? `${row.safetyGrade} ${safetyLabel}` : opportunitySafety ? "Opportunity safety NR" : "Safety NR";
+  const gradeDisplay =
+    row.safetyGrade && row.safetyGrade !== "NR"
+      ? `${row.safetyGrade}${opportunitySafety ? "\u2020" : ""}`
+      : "NR";
   const pys = row.pharosYieldScore !== null ? `PYS ${row.pharosYieldScore.toFixed(1)}` : "PYS NR";
-  const posture = row.sourcePosture ? row.sourcePosture.replaceAll("-", " ") : "posture unknown";
   const states = row.coinStates ?? [];
   // Counts what the warnings filter hides: investment signals plus blocking coin/venue states.
   const warningCount = selectInvestmentWarningSignals(row.warningSignals).length + states.filter(isYieldBlockingCoinState).length;
-  const parts = [safety, pys, posture, `${warningCount} warning${warningCount === 1 ? "" : "s"}`];
+  const parts = [gradeDisplay, pys, `${warningCount} ${warningCount === 1 ? "warn" : "warns"}`];
   if (zone !== null) parts.unshift(YIELD_ZONE_LABELS[zone]);
   if (liveStateNote) parts.push(liveStateNote);
   return (
@@ -347,8 +348,23 @@ export function YieldClient() {
   const topPysRow = topPysRows[0] ?? null;
 
   const leaderboardRef = useRef<YieldLeaderboardHandle>(null);
+  const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [highlightedRowId, setHighlightedRowId] = useState<string | null>(null);
+  const [hoveredRowId, setHoveredRowId] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (highlightTimeoutRef.current !== null) clearTimeout(highlightTimeoutRef.current);
+    };
+  }, []);
+
   const handleScrollToRow = useCallback((id: string) => {
     leaderboardRef.current?.revealRow(id);
+    setHighlightedRowId(id);
+    if (highlightTimeoutRef.current !== null) clearTimeout(highlightTimeoutRef.current);
+    highlightTimeoutRef.current = setTimeout(() => {
+      setHighlightedRowId((current) => (current === id ? null : current));
+    }, 2200);
   }, []);
   const sourceBoardRows = useMemo(
     () => selectVisibleYieldRows(yieldUniverse, { ...urlParams, depth: null, sourceConfidence: null, sourcePosture: null }),
@@ -506,13 +522,7 @@ export function YieldClient() {
   const stats = viewModel.stats;
 
   if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <Skeleton className="h-10 w-full rounded-xl" />
-        <Skeleton className="h-[500px] w-full rounded-xl" />
-        <Skeleton className="h-[400px] w-full rounded-xl" />
-      </div>
-    );
+    return <YieldContentLoadingState />;
   }
 
   if (!data) {
@@ -531,6 +541,10 @@ export function YieldClient() {
 
   const exhibitTiles = storyCallouts;
   const heroBenchmarks = data.benchmarks ?? data.provenance?.benchmarks ?? null;
+  const topPysBenchmark = topPysRow ? resolveYieldRowBenchmark(topPysRow, heroBenchmarks, data.riskFreeRate) : null;
+  const topPysExcess =
+    topPysRow && topPysBenchmark?.rate != null ? topPysRow.apy30d - topPysBenchmark.rate : null;
+  const topPysCompactBenchmark = topPysBenchmark ? formatCompactBenchmarkLabel(topPysBenchmark.label) : null;
 
   return (
     <div className="space-y-6">
@@ -539,12 +553,12 @@ export function YieldClient() {
       <SelectorHandoffNotice visible={arrivedFromSelector} />
       <YieldWorkbenchFallbackNotice stablecoinId={workbenchFallbackId} />
 
-      <div className="flex flex-col gap-6">
-        <section aria-label="Risk tolerance" className="order-1 lg:order-2">
+      <div className="flex flex-col gap-5">
+        <section aria-label="Risk tolerance">
           <YieldRiskBudgetSlider stops={viewModel.riskBudget.stops} onSelect={handleApplyRiskBudget} />
         </section>
 
-        <section className="order-2 lg:order-1">
+        <section>
           <FeatureHeroSplit
             ariaLabel="Yield landscape overview"
             mobileSubBeforeVisual
@@ -554,7 +568,7 @@ export function YieldClient() {
                   <span className="block">
                     Best-paid risk in view <span className="text-foreground/70">· {topPysRow.symbol}</span>
                   </span>
-                  <span className="block text-2xs font-normal text-muted-foreground">
+                  <span className="block text-2xs font-normal leading-snug text-muted-foreground">
                     {formatHeroRiskContext(topPysRow, data.riskFreeRate, heroBenchmarks, describeYieldPickLiveState(pegSummary, coinStates.clockReady))}
                   </span>
                 </span>
@@ -564,10 +578,49 @@ export function YieldClient() {
             }
             beamValue={
               topPysRow ? (
-                <span className="flex w-full items-end justify-between gap-2">
-                  <RailHeroFigureTransition rail="yield">
-                    <span>{formatPercent(topPysRow.apy30d)}</span>
-                  </RailHeroFigureTransition>
+                <span className="flex w-full flex-wrap items-end justify-between gap-3">
+                  <span className="flex min-w-0 flex-col gap-1.5">
+                    <RailHeroFigureTransition rail="yield">
+                      <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                        {topPysRow.pharosYieldScore != null ? (
+                          <span className="inline-flex items-baseline gap-1.5">
+                            <span className="pharos-label text-xs font-semibold text-muted-foreground">PYS</span>
+                            <span>{topPysRow.pharosYieldScore.toFixed(1)}</span>
+                          </span>
+                        ) : null}
+                        <span
+                          className={cn(
+                            "inline-flex items-baseline gap-1 font-mono tabular-nums",
+                            topPysRow.pharosYieldScore != null
+                              ? "text-xl font-semibold tracking-tight text-muted-foreground sm:text-2xl"
+                              : "",
+                          )}
+                        >
+                          <span>{formatPercent(topPysRow.apy30d)}</span>
+                          <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                            APY
+                          </span>
+                        </span>
+                      </span>
+                    </RailHeroFigureTransition>
+                    {topPysExcess != null && topPysCompactBenchmark ? (
+                      <span
+                        data-testid="hero-local-spread-pill"
+                        title={
+                          topPysBenchmark?.rate != null
+                            ? `30-day APY spread vs ${topPysBenchmark.label} (${formatPercent(topPysBenchmark.rate)})`
+                            : undefined
+                        }
+                        className={cn(
+                          "inline-flex w-fit items-center gap-1 rounded-full border px-2.5 py-0.5 font-mono text-xs font-medium leading-tight tracking-normal tabular-nums",
+                          topPysExcess >= 0 ? SEVERITY_TONE_CLASS.ok.pill : SEVERITY_TONE_CLASS.caution.pill,
+                        )}
+                      >
+                        <span>{formatYieldApyDelta(topPysExcess)}</span>
+                        <span className="font-sans text-2xs font-normal">vs {topPysCompactBenchmark}</span>
+                      </span>
+                    ) : null}
+                  </span>
                   <HeroPysPodium rows={topPysRows} logos={logos} onSelect={handleScrollToRow} />
                 </span>
               ) : (
@@ -576,7 +629,7 @@ export function YieldClient() {
             }
             beamTitle={
               topPysRow && topPysRow.pharosYieldScore != null
-                ? `Best Pharos Yield Score in view: ${topPysRow.pharosYieldScore.toFixed(1)} — highest yield per unit of risk, not the safest coin`
+                ? `Best Pharos Yield Score in view: ${topPysRow.pharosYieldScore.toFixed(1)}. Highest yield per unit of risk, not the lowest-risk coin.`
                 : undefined
             }
             universe={
@@ -640,8 +693,13 @@ export function YieldClient() {
           >
             {visibleRows.length > 0 ? (
               <div>
-                <div className="flex items-center justify-between gap-3 border-b border-border/50 px-4 py-2 text-2xs text-muted-foreground">
-                  <span>X: Row / opportunity safety · Y: APY · outliers are capped</span>
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-border/50 px-4 py-2 text-2xs text-muted-foreground">
+                  <span>
+                    X: Venue-adjusted Safety Score · Y: APY · click any coin to jump to its row
+                    {stats.usesDefaultBenchmarkFrame
+                      ? " · Non-USD coins are graded vs local currency rates (USD line shown for reference)"
+                      : ""}
+                  </span>
                   <a
                     href="#data"
                     className="pharos-focus-ring shrink-0 rounded-sm font-medium text-foreground underline underline-offset-2"
@@ -663,6 +721,9 @@ export function YieldClient() {
                   logos={logos}
                   compact
                   frame="bare"
+                  onSelectRow={handleScrollToRow}
+                  highlightedRowId={hoveredRowId ?? highlightedRowId}
+                  onHoverRow={setHoveredRowId}
                 />
               </div>
             ) : (
@@ -673,7 +734,7 @@ export function YieldClient() {
           </FeatureHeroSplit>
         </section>
 
-        <section className="order-3" aria-label="Yield filters">
+        <section aria-label="Yield filters">
           <YieldLeaderboardControls
             viewModel={viewModel}
             hasExplicitFilterParams={hasExplicitFilterParams}
@@ -683,7 +744,7 @@ export function YieldClient() {
           />
         </section>
 
-        <section id="data" tabIndex={-1} aria-labelledby="leaderboard-heading" className="order-4">
+        <section id="data" tabIndex={-1} aria-labelledby="leaderboard-heading">
           <div className="space-y-3">
             <YieldLeaderboard
               ref={leaderboardRef}
@@ -699,6 +760,8 @@ export function YieldClient() {
               sourceClock={sourceClock}
               updatedAt={data.updatedAt}
               methodologyLabel={data.methodology?.versionLabel ?? "Pharos Yield Score current"}
+              highlightedRowId={highlightedRowId}
+              onHoverRow={setHoveredRowId}
               filterSummary={{
                 visibleCount: visibleRows.length,
                 totalCount: viewModel.totalRows,
@@ -709,7 +772,7 @@ export function YieldClient() {
           </div>
         </section>
 
-        <section className="order-5 space-y-6" aria-label="Yield reference rates and sources">
+        <section className="space-y-6" aria-label="Yield reference rates and sources">
           <YieldEmptyStateNotice emptyState={viewModel.emptyState} onFilterChange={handleFilterChange} />
           {visibleRows.length > 0 || sourceBoardModel.selectedCount > 0 ? (
             <>

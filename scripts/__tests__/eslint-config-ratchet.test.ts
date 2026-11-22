@@ -177,6 +177,21 @@ describe("ESLint config ratchets", () => {
       filePath: filePath ?? "src/components/__radius-fixture.tsx",
     })),
     ...([
+      ["bare foreground", 'export const A = () => <p className="text-frost-blue">x</p>;', 1],
+      ["bare brand-accent foreground", 'export const c = "text-brand-accent hover:text-brand-accent text-brand-accent/80";', 3],
+      ["arbitrary css-var frost-blue and brand-accent", 'export const c = "text-[var(--frost-blue)] text-[var(--brand-accent)] hover:text-[var(--brand-accent)]/80";', 3],
+      ["hover and group-hover", 'export const c = "hover:text-frost-blue group-hover:text-frost-blue";', 2],
+      ["opacity and important", 'export const c = "text-frost-blue/80 !text-frost-blue text-frost-blue!";', 3],
+      ["template chunk", "export const c = `focus:text-frost-blue ${'x'}`;", 1],
+      ["shared module", 'export const c = "text-frost-blue";', 1, "shared/lib/__frost-fixture.ts"],
+      ["dark-qualified passes", 'export const c = "dark:text-frost-blue sm:dark:hover:text-frost-blue/80 dark:text-brand-accent dark:text-[var(--brand-accent)] dark:text-[var(--frost-blue)]";', 0],
+      ["brand-accent-text and non-text utilities pass", 'export const c = "border-frost-blue/30 bg-frost-blue/10 bg-brand-accent/10 ring-brand-accent text-brand-accent-text";', 0],
+      ["test file passes", 'export const c = "text-frost-blue";', 0, "src/components/__tests__/__frost-fixture.test.tsx"],
+    ] satisfies Array<[string, string, number, string?]>).map(([name, source, count, filePath]) => ({
+      rule: "pharos/no-bare-frost-blue-text", name, source, count,
+      filePath: filePath ?? "src/components/__frost-fixture.tsx",
+    })),
+    ...([
       ["Worker guard and parser copies", 4, "worker/src/lib/__helper-copy-fixture.ts"],
       ["frontend guard copy", 2, "src/lib/__helper-copy-fixture.ts"],
       ["canonical guards pass", 0, "shared/lib/type-guards.ts"],

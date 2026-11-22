@@ -2,12 +2,10 @@
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { BlacklistMetricCardSkeletonGrid } from "@/components/freezewatch/blacklist-metric-card-skeleton-grid";
-import { InteractiveMetricStatCard, MetricStatCard } from "@/components/metric-stat-card";
+import { MetricStatCard } from "@/components/metric-stat-card";
 import { QueryStateNotice } from "@/components/query-state-notice";
 import { resolveQueryViewState } from "@/lib/query-view-state";
-import type { BlacklistStatusBucket } from "@shared/lib/blacklist-status-buckets";
-import { computeFreezableSummary } from "@shared/lib/freezewatch/freezable-summary";
-import { formatCurrency, formatPercent } from "@shared/lib/format";
+import { formatCurrency } from "@shared/lib/format";
 import type { BlacklistSummaryResponse } from "@shared/types/blacklist";
 import { formatBlacklistValuation } from "@/lib/blacklist-valuation";
 
@@ -15,74 +13,19 @@ interface BlacklistStatsProps {
   summary: BlacklistSummaryResponse | undefined;
   isLoading: boolean;
   error?: unknown;
-  blacklistStatusBuckets: BlacklistStatusBucket[] | null;
-  supportDataLoading: boolean;
-  supportError?: unknown;
   onRetry?: () => void;
-  onUnfreezableSelect?: () => void;
-}
-
-function formatMarketSharePercentage(value: number): string {
-  if (value < 0.1) return formatPercent(value, 3);
-  if (value < 1) return formatPercent(value, 2);
-  return formatPercent(value, 1);
 }
 
 export function BlacklistStats({
   summary,
   isLoading,
   error,
-  blacklistStatusBuckets,
-  supportDataLoading,
-  supportError,
   onRetry,
-  onUnfreezableSelect,
 }: BlacklistStatsProps) {
   const summaryState = resolveQueryViewState({ hasData: summary !== undefined, isLoading, error });
-  const supportState = resolveQueryViewState({
-    hasData: blacklistStatusBuckets !== null,
-    isLoading: supportDataLoading,
-    error: supportError,
-  });
   const summaryUnavailable = summaryState === "unavailable";
-  const supportUnavailable = supportState === "unavailable";
   const stats = summary?.stats;
   const dataQuality = summary?.dataQuality;
-  const freezableSummary = computeFreezableSummary(blacklistStatusBuckets);
-  const totalTrackedMarketCap = freezableSummary.totalMarketCap;
-  const unfreezableBucket = blacklistStatusBuckets?.find((bucket) => bucket.key === "no") ?? null;
-  // Shares divide by observed supply only; a bucket or market with no observed supply has no share.
-  const unfreezableSupplyObserved =
-    unfreezableBucket !== null && unfreezableBucket.supplyUnavailableCount < unfreezableBucket.count;
-  const unfreezableMarketSharePct =
-    unfreezableBucket && unfreezableSupplyObserved && totalTrackedMarketCap > 0
-      ? (unfreezableBucket.marketCap / totalTrackedMarketCap) * 100
-      : null;
-  const isUnfreezableShareLoading = supportDataLoading;
-  const unfreezableSharePartial = freezableSummary.coverage === "partial";
-  // A partial observed-supply denominator is disclosed in the subtext ("observed", excluded count), not beside the figure.
-  const unfreezableMarketShareValue =
-    isUnfreezableShareLoading || supportUnavailable || unfreezableMarketSharePct === null
-      ? "—"
-      : formatMarketSharePercentage(unfreezableMarketSharePct);
-  const unfreezableCount = isUnfreezableShareLoading ? "syncing" : `${unfreezableBucket?.count ?? 0} stablecoins`;
-  const baseUnfreezableSubtext = supportUnavailable
-    ? "Freeze status data unavailable"
-    : unfreezableBucket && unfreezableMarketSharePct !== null
-      ? unfreezableSharePartial
-        ? `${unfreezableCount} · ${formatCurrency(unfreezableBucket.marketCap)} of ${formatCurrency(totalTrackedMarketCap)} observed · ${freezableSummary.supplyUnavailableCount} without supply data excluded`
-        : `${unfreezableCount} · ${formatCurrency(unfreezableBucket.marketCap)} of ${formatCurrency(totalTrackedMarketCap)} total`
-      : freezableSummary.coverage === "unavailable" && blacklistStatusBuckets !== null
-        ? `${unfreezableCount} · supply data unavailable`
-        : "Freezable: No / total market cap";
-  const canDrillIntoUnfreezable =
-    typeof onUnfreezableSelect === "function" &&
-    !isUnfreezableShareLoading &&
-    !supportUnavailable &&
-    (unfreezableBucket?.count ?? 0) > 0;
-  const unfreezableMarketShareSubtext = canDrillIntoUnfreezable
-    ? `${baseUnfreezableSubtext} · View list →`
-    : baseUnfreezableSubtext;
   const ambiguousOrderCount = dataQuality?.ambiguousOrderCount ?? 0;
   // Only material staleness is a reader notice; degraded ledger checks are operator signal.
   const hasFreezeLedgerWarnings = dataQuality?.status === "stale";
@@ -92,12 +35,16 @@ export function BlacklistStats({
       <BlacklistMetricCardSkeletonGrid
         gridClassName="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5"
         cardClassName="rounded-xl"
+        count={2}
       />
     );
   }
 
   return (
-    <div className="grid grid-cols-1 gap-3 animate-in fade-in duration-300 sm:grid-cols-2 sm:gap-5">
+    <section
+      aria-label="Observed freeze enforcement"
+      className="grid grid-cols-1 gap-3 animate-in fade-in duration-300 sm:grid-cols-2 sm:gap-5"
+    >
       {summaryUnavailable ? (
         <div className="sm:col-span-2">
           <QueryStateNotice state="unavailable" label="Freeze ledger data" onRetry={onRetry} />
@@ -142,24 +89,6 @@ export function BlacklistStats({
           </CardContent>
         </Card>
       ) : null}
-      {canDrillIntoUnfreezable && onUnfreezableSelect ? (
-        <InteractiveMetricStatCard
-          title="Unfreezable market share"
-          value={unfreezableMarketShareValue}
-          subtext={unfreezableMarketShareSubtext}
-          className="sm:col-span-2"
-          onClick={onUnfreezableSelect}
-          actionLabel="Show unfreezable stablecoins"
-        />
-      ) : (
-        <MetricStatCard
-          title="Unfreezable market share"
-          value={unfreezableMarketShareValue}
-          subtext={unfreezableMarketShareSubtext}
-          variant="hero"
-          className="sm:col-span-2"
-        />
-      )}
       <MetricStatCard
         title="Tracked frozen total"
         value={
@@ -183,6 +112,6 @@ export function BlacklistStats({
         valueClassName="pharos-numeric text-3xl font-semibold"
         subtextClassName="text-sm text-muted-foreground"
       />
-    </div>
+    </section>
   );
 }

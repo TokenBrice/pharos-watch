@@ -6,7 +6,7 @@ const DEPEG_SKELETON_ROW_COUNT = 8;
 export function DepegContentLoadingState() {
   return (
     <>
-      <PageLoadingSplitHero visualClassName="h-80 lg:h-[36rem]" />
+      <PageLoadingSplitHero visualClassName="h-80 lg:h-[28rem]" visualVariant="radar" />
       <PageLoadingRowList
         rowCount={DEPEG_SKELETON_ROW_COUNT}
         titleWidth="w-36"

@@ -24,7 +24,9 @@ export const createNoopComponentMock = (name: string) => ({ [name]: () => null }
 
 export const createHeroCardMock = () => ({
   HeroCard: () => <div data-testid="hero-card" />,
-  HeroIdentityHeader: () => <div data-testid="hero-identity-toolbar" />,
+  HeroIdentityHeader: ({ opsStatusSlot }: { opsStatusSlot?: ReactNode }) => (
+    <div data-testid="hero-identity-toolbar">{opsStatusSlot}</div>
+  ),
 });
 
 export const createContagionSnapshotMock = () => ({

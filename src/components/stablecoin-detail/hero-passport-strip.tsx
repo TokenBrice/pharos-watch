@@ -13,6 +13,19 @@ const ORDERED_KEYS: HeroPassportItemViewModel["key"][] = [
   "jurisdiction", "mica", "genius", "attestor",
 ];
 
+const PENDING_CATEGORY_LABELS: Record<HeroPassportItemViewModel["key"], HeroPassportItemViewModel["category"]> = {
+  mechanism: "Mechanism",
+  redeemability: "Redeemability",
+  minting: "Minting",
+  freeze: "Freeze",
+  record: "Record",
+  chains: "Chains",
+  jurisdiction: "Jurisdiction",
+  mica: "MiCA",
+  genius: "GENIUS",
+  attestor: "Attestor",
+};
+
 /**
  * Desktop cell width by cell count. Every fact shares one row while the strip
  * gives each 8.5rem; past that the cells wrap into two rows as even as
@@ -133,8 +146,8 @@ export function HeroPassportStrip({
             compactDesktop ? "lg:hidden" : "lg:flex-wrap lg:gap-x-4 lg:overflow-visible"
           }`}
         >
-          {slots.map(({ key, item }) => {
-            if (!item) return <span key={key} aria-hidden="true" data-passport-reserve={key} className="min-h-16 w-40 shrink-0" />;
+          {slots.map(({ item }) => {
+            if (!item) return null;
             const isHashJump = item.href.startsWith("#");
             return withPassportTooltip(
               item,
@@ -150,14 +163,14 @@ export function HeroPassportStrip({
                       }
                     : undefined
                 }
-                className={`pharos-focus-ring group flex shrink-0 snap-start flex-col justify-center rounded-sm ${compactDesktop ? "min-h-16 w-40" : "min-h-11 lg:min-h-0"}`}
+                className={`pharos-focus-ring group flex shrink-0 snap-start flex-col justify-center rounded-sm ${compactDesktop ? "min-h-11" : "min-h-11 lg:min-h-0"}`}
               >
                 <span className="pharos-label leading-tight">
                   {item.category}
                 </span>
                 <PassportItemValue
                   item={item}
-                  valueClassName={`${compactDesktop ? "break-words" : "whitespace-nowrap"} text-xs font-semibold leading-snug`}
+                  valueClassName="whitespace-nowrap text-xs font-semibold leading-snug"
                 />
               </IntentLink>,
             );
@@ -171,13 +184,17 @@ export function HeroPassportStrip({
           <div className="-mb-px -mr-px flex flex-wrap">
             {desktopSlots.map(({ key, item }) => {
               if (!item) {
+                const pendingLabel = PENDING_CATEGORY_LABELS[key];
                 return (
                   <span
                     key={key}
                     aria-hidden="true"
                     data-passport-reserve={key}
-                    className={`min-h-[4.5rem] grow border-b border-r border-border/40 ${desktopCellBasis}`}
-                  />
+                    className={`flex min-h-[4.5rem] grow flex-col justify-center border-b border-r border-border/40 px-4 py-3 ${desktopCellBasis}`}
+                  >
+                    <span className="pharos-label leading-tight">{pendingLabel}</span>
+                    <span className="mt-1.5 block h-3.5 w-20 animate-pulse rounded-sm bg-muted motion-reduce:animate-none" />
+                  </span>
                 );
               }
               const isHashJump = item.href.startsWith("#");

@@ -1,11 +1,11 @@
 import Link from "next/link";
-import {
-  BLACKLIST_STATUS_BUCKET_DESCRIPTIONS,
-  BLACKLIST_STATUS_BUCKET_LABELS,
-  buildBlacklistStatusBuckets,
-} from "@shared/lib/blacklist-status-buckets";
+import { buildBlacklistStatusBuckets } from "@shared/lib/blacklist-status-buckets";
 import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
 import { coinIdBySymbol } from "@/lib/coin-id-by-symbol";
+import {
+  FREEZEWATCH_BUCKET_DESCRIPTIONS,
+  FREEZEWATCH_BUCKET_LABELS,
+} from "@/components/freezewatch/bucket-display";
 
 /** Registry-only facts (no live data): reviewed exposure classes and event-tracked assets. */
 export function FreezeWatchRegistryBlock() {
@@ -23,9 +23,9 @@ export function FreezeWatchRegistryBlock() {
         {buckets.map((bucket) => (
           <div key={bucket.key} className="space-y-1">
             <dt className="text-sm font-medium text-foreground">
-              {BLACKLIST_STATUS_BUCKET_LABELS[bucket.key]}: {bucket.count} active {bucket.count === 1 ? "coin" : "coins"}
+              {FREEZEWATCH_BUCKET_LABELS[bucket.key]}: {bucket.count} active {bucket.count === 1 ? "coin" : "coins"}
             </dt>
-            <dd className="pharos-meta">{BLACKLIST_STATUS_BUCKET_DESCRIPTIONS[bucket.key]}</dd>
+            <dd className="pharos-meta">{FREEZEWATCH_BUCKET_DESCRIPTIONS[bucket.key]}</dd>
           </div>
         ))}
       </dl>

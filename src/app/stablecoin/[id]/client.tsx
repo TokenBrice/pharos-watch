@@ -25,6 +25,7 @@ import type { MechanismCollateralizationView } from "@/lib/mechanism-collaterali
 import type { MechanismReviewView } from "@/lib/mechanism-review";
 import type { TransferReviewView } from "@/lib/transfer-review";
 import type { FailureScenarioSelection } from "@/components/stablecoin-detail/failure-scenario/scenario-model";
+import type { HeroPassportItemViewModel } from "@/lib/stablecoin-detail-passport";
 import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-client-coin";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import type { StablecoinDetailSnapshot } from "@/lib/api";
@@ -156,6 +157,8 @@ interface StablecoinDetailClientProps {
   snapshot?: StablecoinDetailSnapshot | null;
   /** Frozen coins only: archived list row used when the live detail row is unavailable. */
   archivedLiveSummary?: StablecoinLiveSummary | null;
+  /** Server-derived reviewed redeemability item so the hero passport paints immediately. */
+  initialRedeemability?: HeroPassportItemViewModel | null;
 }
 
 export function StablecoinDetailSnapshotHydrator({
@@ -222,11 +225,12 @@ function StablecoinDetailClientContent({
   heading,
   snapshot = null,
   archivedLiveSummary = null,
+  initialRedeemability = null,
 }: StablecoinDetailClientProps) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [activeBannerId, setActiveBannerId] = useState("overview");
   const heroRef = useRef<HTMLDivElement>(null);
-  const { ref: overviewGateRef, near: overviewNear } = useNearViewport<HTMLDivElement>("600px");
+  const { ref: overviewGateRef, near: overviewNear } = useNearViewport<HTMLElement>("600px");
   const { ref: activityGateRef, near: activityNear } = useNearViewport<HTMLDivElement>("600px");
   const { ref: historyGateRef, near: historyNear } = useNearViewport<HTMLDivElement>("600px");
   const overviewActive = overviewNear;
@@ -242,16 +246,16 @@ function StablecoinDetailClientContent({
     archivedLiveSummary,
     savedAssessment,
     supplementalQueryControls: {
-      // Hero liquidity/yield observers now read only this coin's scoped projections.
+      // Hero liquidity/yield/redemption and first-fold rail reserves load eagerly
+      // so neither the hero passport nor the right-rail Backing KPI wait on scroll.
       liquidity: true,
       reportCards: true,
-      // The redemption route lives in the Risk zone's exit evidence.
-      redemption: overviewActive,
+      redemption: true,
       yield: true,
       stress: true,
       flows: overviewActive || activityOrHistoryActive,
       blacklist: activityOrHistoryActive,
-      reserves: overviewActive,
+      reserves: true,
     },
   });
 
@@ -307,6 +311,7 @@ function StablecoinDetailClientContent({
         heroRef={heroRef}
         historyActive={historyActive}
         historyGateRef={historyGateRef}
+        initialRedeemability={initialRedeemability}
         onActiveBannerChange={setActiveBannerId}
         mechanismBacking={mechanismBacking}
         mechanismCollateralization={mechanismCollateralization}

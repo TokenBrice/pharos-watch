@@ -29,11 +29,11 @@ function StablecoinVirtualRowBase({
   return (
     <TableRow
       ref={measureElement}
-      className={`group cursor-pointer data-[cursor=true]:bg-muted/40 data-[cursor=true]:shadow-[inset_3px_0_0_0_var(--brand-accent)] ${model.isOverview ? "pharos-overview-table-row" : ""} ${model.riskClass}`}
-      style={{ height: row.densityConfig.rowHeight }}
+      className={`group cursor-pointer data-[cursor=true]:bg-muted/40 data-[cursor=true]:shadow-[inset_3px_0_0_0_var(--brand-accent)] ${model.riskClass}`}
+      style={measureElement ? { height: row.densityConfig.rowHeight } : undefined}
       data-cursor={isCursor ? "true" : undefined}
       data-index={virtualIndex}
-      rowIntent={model.isOverview ? "scan" : undefined}
+      rowIntent="interactive"
       data-row-striped={isStriped ? "true" : undefined}
       tabIndex={isCursor ? 0 : undefined}
       onClick={(event) => {

@@ -10,6 +10,7 @@ import { usePreference } from "@/hooks/use-preferences";
 import { formatChartDate, formatCurrency, formatSignedPercent, roundForDisplay } from "@shared/lib/format";
 import { DIRECTION_TONE_CLASSES } from "@shared/lib/classification";
 import { CHART_BLUE } from "@/lib/chart-colors";
+import { formatCurrencyTick } from "@/lib/chart-ticks";
 import { ChartRangeToggle, ChartScaleToggle } from "@/components/chart-primitives/scale-toggle";
 import { ChartAreaGradient, DateTooltip, MonoYAxis, useNiceValueAxis, useSvgId } from "@/components/chart-primitives/axes";
 import type { ChartDataTableColumn } from "@/components/chart-primitives/data-table";
@@ -296,7 +297,7 @@ function McapChartBody({
       variant="area"
     >
           <MonoYAxis
-            tickFormatter={(val: number) => formatCurrency(val).replace(/(\.\d*?)0+(?=[KMBT]$)/, "$1").replace(/\.(?=[KMBT]$)/, "")}
+            tickFormatter={formatCurrencyTick}
             {...valueAxis}
             scale={useLog ? "log" : "auto"}
             allowDataOverflow={useLog}

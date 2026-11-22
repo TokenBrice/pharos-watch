@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
 import { CoinStateChip } from "@/components/coin-state-chip";
 import { HomeAltTrackerLink } from "@/components/homepage/home-alt-tracker-link";
+import { HomeSectionHeader } from "@/components/homepage/home-section-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { YieldSafetyBadge } from "@/components/yield/yield-row-metrics";
 import { UniverseChip } from "@/components/universe-chip";
@@ -88,29 +89,25 @@ function buildOverview(
 
 function OverviewHeader({ coveredCount }: { coveredCount: number | null }): React.JSX.Element {
   return (
-    <div className="space-y-1 sm:space-y-1.5">
-      <div className="flex items-center justify-between gap-3">
-        <p className="font-display text-2xl font-bold text-foreground sm:text-3xl">Yield Intelligence</p>
-        <div className="flex shrink-0 items-center gap-3 sm:pt-0">
-          {coveredCount !== null && (
-            <>
-              <span className="hidden text-sm text-muted-foreground sm:inline">
-                <span className="pharos-numeric font-semibold text-foreground">{coveredCount}</span> covered
-              </span>
-              <span aria-hidden="true" className="hidden h-1 w-1 rounded-full bg-border sm:inline-block" />
-            </>
-          )}
-          <HomeAltTrackerLink
-            href="/yield/"
-            prefetch={false}
-            ariaLabel="Open yield tracker"
-          />
-        </div>
-      </div>
-      <p className="text-3xs leading-snug text-muted-foreground sm:text-sm">
-        Risk-adjusted stablecoin yield, scored by the Pharos Yield Score.
-      </p>
-    </div>
+    <HomeSectionHeader
+      titleId="yield-overview-title"
+      title="Yield Intelligence"
+      subtitle="Risk-adjusted stablecoin yield, scored by the Pharos Yield Score."
+      stat={
+        coveredCount !== null ? (
+          <>
+            <span className="pharos-numeric font-semibold text-foreground">{coveredCount}</span> covered
+          </>
+        ) : undefined
+      }
+      action={
+        <HomeAltTrackerLink
+          href="/yield/"
+          prefetch={false}
+          ariaLabel="Open yield tracker"
+        />
+      }
+    />
   );
 }
 
@@ -274,9 +271,6 @@ export function HomeAltYieldOverview(): React.JSX.Element | null {
   if (!overview || overview.leaders.length === 0) {
     return (
       <section aria-labelledby="yield-overview-title" className="space-y-3 sm:space-y-4">
-        <h2 id="yield-overview-title" className="sr-only">
-          Yield Intelligence overview
-        </h2>
         <OverviewHeader coveredCount={null} />
         <div className="pharos-card-shell flex items-center justify-center p-6">
           <span className="font-mono text-sm text-muted-foreground">Updating</span>
@@ -287,10 +281,6 @@ export function HomeAltYieldOverview(): React.JSX.Element | null {
 
   return (
     <section aria-labelledby="yield-overview-title" className="space-y-3 sm:space-y-4">
-      <h2 id="yield-overview-title" className="sr-only">
-        Yield Intelligence overview
-      </h2>
-
       <OverviewHeader coveredCount={overview.coveredCount} />
 
       <div className="pharos-card-shell overflow-hidden p-4">

@@ -4,13 +4,26 @@ import { computePsiDepegContribution } from "@shared/lib/psi-contribution";
 import { getConditionBand, PSI_COMPONENT_LIMITS, PSI_CONDITION_BANDS } from "@shared/lib/psi-policy";
 import { PSI_BAND_CLASSES, PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/classification";
 import type { StabilityIndexEventScore } from "@shared/types/stability";
+import type { PsiChartPoint } from "@shared/lib/psi-view-model";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { StabilityContributor } from "@/hooks/api-hooks";
 import { PSI_EVENTS } from "@shared/lib/psi-events";
+import { CASE_STUDY_CLIENT_LIST } from "@/lib/case-study-client-index";
 
 const HISTORY_WINDOW_DAYS = 30;
 const SCORE_DECIMAL_PLACES = 1;
+const FOCUSED_EVENT_PADDING_MS = 45 * DAY_SECONDS * 1000;
+
+const CASE_STUDY_TITLE_BY_SLUG = new Map(
+  CASE_STUDY_CLIENT_LIST.map((entry) => [entry.slug, entry.title] as const),
+);
+
+const PSI_EVENT_CASE_STUDY_SLUGS: Readonly<Record<string, readonly string[]>> = {
+  "SVB Weekend": ["usdc-svb-2023", "lusd-flight-to-safety-2023"],
+  "UST Collapse": ["terra-ust-2022"],
+  "COVID Crash": ["dai-black-thursday"],
+};
 
 export type PsiHistoryPoint = { date: number; score: number; band: string };
 
@@ -21,10 +34,19 @@ export interface HistoryStatItem {
   sub: string | null;
 }
 
+export interface PsiEventCaseStudyLink {
+  slug: string;
+  title: string;
+  href: string;
+}
+
 export interface PsiEventTimelineRow {
   label: string;
+  date: number;
+  dateEnd?: number;
   dateStr: string;
   links: Array<{ title: string; url: string }>;
+  caseStudies: PsiEventCaseStudyLink[];
   psi: number | null;
   psiBand: string;
   psiColor: string;
@@ -201,10 +223,17 @@ export function buildPsiEventTimelineRows(scores: readonly StabilityIndexEventSc
       : formatChartDate(event.date, "short-year");
     const psi = scores.find((score) => score.date === event.date)?.score ?? null;
     const psiBand = psi !== null && psi >= PSI_CONDITION_BANDS[PSI_CONDITION_BANDS.length - 1].min ? getConditionBand(psi) : "";
+    const caseStudies = (PSI_EVENT_CASE_STUDY_SLUGS[event.label] ?? []).flatMap((slug) => {
+      const title = CASE_STUDY_TITLE_BY_SLUG.get(slug);
+      return title ? [{ slug, title, href: `/learn/case-studies/${slug}/` }] : [];
+    });
     return {
       label: event.label,
+      date: event.date,
+      dateEnd: event.dateEnd,
       dateStr,
       links: [...event.links],
+      caseStudies,
       psi,
       psiBand,
       psiColor: psiBand
@@ -215,6 +244,21 @@ export function buildPsiEventTimelineRows(scores: readonly StabilityIndexEventSc
         : "var(--muted-foreground)",
     };
   });
+}
+
+/**
+ * Slices PSI chart data to a padded window around an authored timeline event.
+ * Returns null when the loaded chart series does not yet cover that window.
+ */
+export function buildFocusedPsiEventWindow(
+  chartData: readonly PsiChartPoint[],
+  event: Pick<PsiEventTimelineRow, "date" | "dateEnd"> | null,
+): PsiChartPoint[] | null {
+  if (!event || chartData.length === 0) return null;
+  const startMs = event.date - FOCUSED_EVENT_PADDING_MS;
+  const endMs = (event.dateEnd ?? event.date) + FOCUSED_EVENT_PADDING_MS;
+  const windowed = chartData.filter((point) => point.ts >= startMs && point.ts <= endMs);
+  return windowed.length >= 2 ? windowed : null;
 }
 
 export function buildPsiContributorRows(

@@ -34,8 +34,11 @@ export const DETAIL_SECTION_TITLE_CLASS = "text-lg font-semibold tracking-tight"
 export const DETAIL_MODULE_SHELL_CLASS = "pharos-card-shell gap-0 overflow-hidden py-0";
 export const DETAIL_MODULE_HEADER_CLASS =
   "flex flex-row flex-wrap items-center justify-between gap-3 border-b border-border/40 px-4 py-5 sm:px-5";
-export const DETAIL_MODULE_TITLE_CLASS = "text-sm font-semibold tracking-normal text-muted-foreground";
+export const DETAIL_MODULE_TITLE_CLASS = "text-sm font-semibold tracking-normal text-foreground";
 export const DETAIL_MODULE_BODY_CLASS = "px-4 py-5 sm:px-5";
+/** Standardized header icon button: 44px mobile hit target, 28px (`size-7`) desktop square. */
+export const DETAIL_HEADER_ICON_BUTTON_CLASS =
+  "pharos-focus-ring inline-flex size-11 shrink-0 items-center justify-center rounded-md border border-border/60 bg-muted/50 text-muted-foreground transition-colors after:hidden hover:border-border hover:bg-muted hover:text-foreground md:size-7";
 
 /** Shared scroll-margin for anchored detail-page sections; clears the mobile
  *  sticky summary bar on small viewports and, on lg+, the global header plus the

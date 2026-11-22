@@ -20,8 +20,8 @@ import { desktopPlotLayout } from "./plot-map-scene";
 import { PlotMapDefs, plotTokenStyle } from "./plot-map-shapes";
 import styles from "./plot-map.module.css";
 
-/** FeatureHeroSplit's `DEFAULT_BEAM_VALUE_CLASS` recipe (frost blue: the page's only frost text). */
-const BEAM_VALUE_CLASS = "pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]";
+/** FeatureHeroSplit's `DEFAULT_BEAM_VALUE_CLASS` recipe (brand-accent text: sky-700 on light daylight sky, frost-blue on dark night sky). */
+const BEAM_VALUE_CLASS = "pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-brand-accent-text sm:text-[2.45rem]";
 
 export interface CemeteryHeroProps {
   /** Register rows in their default newest-first order (`buildCemeteryRegisterRows`): pass the array the register receives. */
@@ -48,8 +48,9 @@ export function CemeteryHero({ rows, stats, asOf, atlas, portraitAspectRatio }: 
               {CEMETERY_HERO_COPY.title}
             </h1>
             <p className={styles.lead}>Failed or discontinued stablecoins, by cause of death and year.</p>
+            <p className={styles.whisper}>Click any stone for its obituary · click a cause sign to zoom</p>
             <p className={styles.links}>
-              <a href="#methodology">Methodology</a> · <a href="#register">Register ↓</a> · <a href="#dataset">Dataset</a>
+              <a href="#register">Find a coin ↓</a> · <a href="#methodology">Methodology</a> · <a href="#dataset">Dataset</a>
             </p>
           </header>
           <div className={styles.figure} data-plot-figure>

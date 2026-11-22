@@ -38,12 +38,11 @@ export function BackingBreakdown({
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button"
+            aria-pressed={activeFilter === null}
             onClick={() => onFilterChange(null)}
             className={cn(
-              "gap-2 text-xs",
-              activeFilter === null
-                ? "pharos-focus-ring pharos-control-pill pharos-control-pill-active"
-                : "pharos-focus-ring pharos-toggle-pill",
+              "pharos-focus-ring pharos-control-pill gap-2 text-xs",
+              activeFilter === null && "pharos-control-pill-active",
             )}
             title={activeFilter === null ? "Showing all stablecoins" : "Click to show all stablecoins"}
           >
@@ -58,12 +57,11 @@ export function BackingBreakdown({
             return (
               <button type="button"
                 key={type}
+                aria-pressed={isActive}
                 onClick={() => onFilterChange(isActive ? null : type)}
                 className={cn(
-                  "gap-2 text-xs",
-                  isActive
-                    ? "pharos-focus-ring pharos-control-pill pharos-control-pill-active"
-                    : "pharos-focus-ring pharos-toggle-pill",
+                  "pharos-focus-ring pharos-control-pill gap-2 text-xs",
+                  isActive && "pharos-control-pill-active",
                 )}
                 title={isActive ? "Click to clear filter" : `Click to filter by ${BACKING_LABELS_SHORT[type as keyof typeof BACKING_LABELS_SHORT] ?? type}`}
               >

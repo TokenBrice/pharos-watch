@@ -251,13 +251,17 @@ describe("ContractDeployments complete address list", () => {
     expect(container.querySelectorAll("#contracts")).toHaveLength(1);
   });
 
-  it("keeps the rail show-all toggle and adds no fold there", () => {
+  it("caps the rail list at four rows and opens a searchable deployment modal without adding a fold", () => {
     const { container } = render(<ContractDeployments coinId={meta.id} contracts={manyContracts} compact />);
 
     expect(container.querySelectorAll("details[data-module-fold]")).toHaveLength(0);
     expect(screen.queryByRole("button", { name: "Copy Injective contract address" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Show all 12 contract deployments" }));
-    expect(screen.getByRole("button", { name: "Collapse contract deployments" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Search all 12 contract deployments" }));
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.textContent).toContain("Contract deployments (12)");
+    fireEvent.change(screen.getByRole("searchbox", { name: "Filter contract deployments" }), {
+      target: { value: "Injective" },
+    });
     expect(screen.getByRole("button", { name: "Copy Injective contract address" })).toBeTruthy();
   });
 

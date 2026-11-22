@@ -57,21 +57,21 @@ const COLUMN_MIN_WIDTH_PX: Record<ColumnId, number> = {
   flags: 72,
 };
 const OVERVIEW_COLUMN_MIN_WIDTH_PX: Record<ColumnId, number> = {
-  rank: 44,
-  name: 190,
-  price: 104,
-  peg: 84,
-  mcap: 100,
-  change24h: 84,
-  change7d: 112,
-  grade: 88,
-  stability: 112,
-  liquidity: 72,
-  blacklistable: 120,
-  mintAuthority: 112,
-  backing: 84,
-  type: 80,
-  flags: 72,
+  rank: 48,
+  name: 176,
+  price: 114,
+  peg: 94,
+  mcap: 114,
+  change24h: 98,
+  change7d: 144,
+  grade: 120,
+  stability: 142,
+  liquidity: 108,
+  blacklistable: 108,
+  mintAuthority: 128,
+  backing: 100,
+  type: 100,
+  flags: 76,
 };
 
 export const SKELETON_WIDTH_BY_COLUMN: Partial<Record<ColumnId, string>> = {
@@ -131,7 +131,7 @@ export const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
     label: "Peg",
     sortKey: "peg",
     className: "w-[92px] text-right",
-    title: "Sort by peg deviation — ascending shows tightest pegs first, descending shows worst depegs first",
+    title: "Sort by peg deviation: ascending shows tightest pegs first, descending shows worst depegs first",
   },
   { id: "mcap", label: "Market cap", sortKey: "mcap", className: "w-[144px] text-right" },
   { id: "change24h", label: "MCap 24h", sortKey: "change24h", className: "w-[92px] text-right", title: "24-hour market cap change" },
@@ -142,7 +142,7 @@ export const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
     headerAdornment: <MethodologyHint topic="safetyScore" />,
     sortKey: "grade",
     className: "w-[124px] text-center",
-    title: "Pharos Grade: V10 safety score across Backing, Exit, and Economic Control, then constrained by peg behavior, dependencies, evidence, and structural caps",
+    title: "Pharos Grade: Safety Score across Backing, Exit, and Economic Control, then constrained by peg behavior, dependencies, evidence, and structural caps",
   },
   {
     id: "stability",
@@ -167,7 +167,7 @@ export const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
     headerAdornment: <MethodologyHint topic="mintAuthorityScore" />,
     sortKey: "mintAuthority",
     className: "w-[160px] text-center",
-    title: "Safety V10 mint-control component (0-100): reviewed privileged-mint evidence within Economic Control.",
+    title: "Safety Score mint-control component (0-100): reviewed privileged-mint evidence within Economic Control.",
   },
   { id: "backing", label: "Backing", className: "w-[92px] text-center", title: "Collateral backing type" },
   { id: "type", label: "Type", className: "w-[92px] text-center", title: "Stablecoin mechanism type" },
@@ -176,21 +176,21 @@ export const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
 
 const OVERVIEW_HEADER_LABELS: Partial<Record<ColumnId, string>> = { mcap: "MC" };
 const OVERVIEW_HEADER_CLASS_NAMES: Partial<Record<ColumnId, string>> = {
-  rank: "w-[44px] text-right",
-  name: "w-[190px] max-w-[190px]",
-  price: "w-[104px] text-right",
-  peg: "w-[84px] text-right",
-  mcap: "w-[100px] text-right",
-  change24h: "w-[84px] text-right",
-  change7d: "w-[112px] text-right",
-  grade: "w-[88px] text-center",
-  stability: "w-[112px] text-right",
-  liquidity: "w-[72px] text-right",
-  blacklistable: "w-[120px] text-center",
-  mintAuthority: "w-[112px] text-center",
-  backing: "w-[84px] text-center",
-  type: "w-[80px] text-center",
-  flags: "w-[72px] text-center",
+  rank: "w-[48px] px-2 text-right",
+  name: "w-[176px] max-w-[176px]",
+  price: "w-[114px] text-right",
+  peg: "w-[94px] text-right",
+  mcap: "w-[114px] text-right",
+  change24h: "w-[98px] text-right",
+  change7d: "w-[144px] text-right",
+  grade: "w-[120px] text-center",
+  stability: "w-[142px] text-right",
+  liquidity: "w-[108px] text-right",
+  blacklistable: "w-[108px] text-center",
+  mintAuthority: "w-[128px] text-center",
+  backing: "w-[100px] text-center",
+  type: "w-[100px] text-center",
+  flags: "w-[76px] text-center",
 };
 
 function getHeaderLabel(column: StablecoinHeaderDef, variant: StablecoinTableVisualVariant): string {
@@ -234,10 +234,10 @@ export function StablecoinTableHeader({
     return column;
   }), [rows]);
   return (
-    <TableHeader className={`${sticky ? "sticky top-0 z-10 bg-muted" : "bg-muted"} ${variant === "figmaOverview" ? "pharos-overview-table-header" : ""}`}>
-      <TableRow rowIntent={sort ? undefined : "static"}>
+    <TableHeader className={sticky ? "bg-card" : "bg-muted"}>
+      <TableRow rowIntent="static">
         {showPinnedControls ? (
-          <TableHead scope="col" className={variant === "figmaOverview" ? "w-[48px] text-center" : "w-[44px] text-center lg:w-[36px]"}>
+          <TableHead scope="col" className={variant === "figmaOverview" ? "w-[48px] px-1 text-center" : "w-[44px] px-1 text-center lg:w-[36px]"}>
             <span className="sr-only">Starred</span>
           </TableHead>
         ) : null}
@@ -282,10 +282,10 @@ export function ColumnFitToggle({
     <Button
       variant="outline"
       size="sm"
-      className={compact ? "h-8 min-h-8 rounded-md px-2 sm:px-3" : "rounded-md min-h-11 sm:min-h-8"}
+      className={compact ? "h-11 rounded-md px-2.5 sm:h-8 sm:px-3" : "min-h-11 rounded-md sm:min-h-8"}
       onClick={onToggle}
       title={fitToWidth
-        ? `${hiddenCount} column${plural} hidden to fit the width — show all with horizontal scroll`
+        ? `${hiddenCount} column${plural} hidden to fit the width · show all with horizontal scroll`
         : "Hide overflow columns so the table fits without horizontal scroll"}
     >
       {fitToWidth ? `+${hiddenCount} column${plural}` : "Fit columns"}

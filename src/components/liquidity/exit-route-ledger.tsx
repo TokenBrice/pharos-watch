@@ -1,10 +1,12 @@
 import { formatCurrency } from "@shared/lib/format";
+import type { LiquidityRouteFilter } from "@/app/liquidity/model";
 import {
   OTHER_ROUTE_COLOR,
   type LiquidityExitRouteItem,
   type LiquidityExitRouteModel,
   type LiquidityExitRouteTailEntry,
 } from "@/components/liquidity/exit-route-model";
+import { cn } from "@/lib/utils";
 
 /** Tail routes named one by one before the rest fold into a counted remainder. */
 const LEDGER_TAIL_LISTED = 6;
@@ -20,12 +22,18 @@ interface LedgerSegment {
 
 function LedgerRow({
   title,
+  kind,
   routes,
   tail,
+  activeRouteFilter,
+  onRouteFilterChange,
 }: {
   title: string;
+  kind: "protocol" | "chain";
   routes: readonly LiquidityExitRouteItem[];
   tail: readonly LiquidityExitRouteTailEntry[];
+  activeRouteFilter?: LiquidityRouteFilter | null;
+  onRouteFilterChange?: (filter: LiquidityRouteFilter | null) => void;
 }) {
   const named = routes.filter((route) => !route.isOther);
   const listedTail = tail.slice(0, LEDGER_TAIL_LISTED);
@@ -41,6 +49,12 @@ function LedgerRow({
   ];
   const total = segments.reduce((sum, segment) => sum + segment.valueUsd, 0);
   if (total <= 0) return null;
+
+  const toggleRoute = (key: string, label: string) => {
+    if (!onRouteFilterChange) return;
+    const isSame = activeRouteFilter?.kind === kind && activeRouteFilter.key === key;
+    onRouteFilterChange(isSame ? null : { kind, key, label });
+  };
 
   return (
     <div className="grid gap-x-6 gap-y-2 lg:grid-cols-[6.5rem_minmax(0,1fr)]">
@@ -65,26 +79,72 @@ function LedgerRow({
           ))}
         </div>
         <ul className="flex flex-wrap gap-x-5 gap-y-1.5 text-sm">
-          {named.map((route) => (
-            <li key={route.key} className="inline-flex items-center gap-1.5">
-              <span
-                className="h-2 w-2 shrink-0 rounded-full"
-                style={{ backgroundColor: route.colorHex, opacity: ROUTE_FILL_OPACITY }}
-                aria-hidden="true"
-              />
-              <span>{route.label}</span>
-              <span className="pharos-numeric text-xs text-muted-foreground">{formatCurrency(route.valueUsd)}</span>
-            </li>
-          ))}
+          {named.map((route) => {
+            const isActive = activeRouteFilter?.kind === kind && activeRouteFilter.key === route.key;
+            const inner = (
+              <>
+                <span
+                  className="h-2 w-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: route.colorHex, opacity: ROUTE_FILL_OPACITY }}
+                  aria-hidden="true"
+                />
+                <span>{route.label}</span>
+                <span className="pharos-numeric text-xs text-muted-foreground">{formatCurrency(route.valueUsd)}</span>
+              </>
+            );
+            return (
+              <li key={route.key} className="inline-flex items-center">
+                {onRouteFilterChange ? (
+                  <button
+                    type="button"
+                    aria-pressed={isActive}
+                    onClick={() => toggleRoute(route.key, route.label)}
+                    className={cn(
+                      "pharos-focus-ring inline-flex items-center gap-1.5 rounded-sm transition-colors hover:text-foreground",
+                      isActive ? "font-semibold text-foreground underline underline-offset-4" : "",
+                    )}
+                  >
+                    {inner}
+                  </button>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5">{inner}</span>
+                )}
+              </li>
+            );
+          })}
           {tailUsd > 0 ? (
-            <li className="inline-flex items-center gap-1.5">
-              <span
-                className="h-2 w-2 shrink-0 rounded-full"
-                style={{ backgroundColor: OTHER_ROUTE_COLOR, opacity: ROUTE_FILL_OPACITY }}
-                aria-hidden="true"
-              />
-              <span>Other routes</span>
-              <span className="pharos-numeric text-xs text-muted-foreground">{formatCurrency(tailUsd)}</span>
+            <li className="inline-flex items-center">
+              {onRouteFilterChange ? (
+                <button
+                  type="button"
+                  aria-pressed={activeRouteFilter?.kind === kind && activeRouteFilter.key === "_other-routes"}
+                  onClick={() => toggleRoute("_other-routes", "Other routes")}
+                  className={cn(
+                    "pharos-focus-ring inline-flex items-center gap-1.5 rounded-sm transition-colors hover:text-foreground",
+                    activeRouteFilter?.kind === kind && activeRouteFilter.key === "_other-routes"
+                      ? "font-semibold text-foreground underline underline-offset-4"
+                      : "",
+                  )}
+                >
+                  <span
+                    className="h-2 w-2 shrink-0 rounded-full"
+                    style={{ backgroundColor: OTHER_ROUTE_COLOR, opacity: ROUTE_FILL_OPACITY }}
+                    aria-hidden="true"
+                  />
+                  <span>Other routes</span>
+                  <span className="pharos-numeric text-xs text-muted-foreground">{formatCurrency(tailUsd)}</span>
+                </button>
+              ) : (
+                <span className="inline-flex items-center gap-1.5">
+                  <span
+                    className="h-2 w-2 shrink-0 rounded-full"
+                    style={{ backgroundColor: OTHER_ROUTE_COLOR, opacity: ROUTE_FILL_OPACITY }}
+                    aria-hidden="true"
+                  />
+                  <span>Other routes</span>
+                  <span className="pharos-numeric text-xs text-muted-foreground">{formatCurrency(tailUsd)}</span>
+                </span>
+              )}
             </li>
           ) : null}
         </ul>
@@ -116,11 +176,33 @@ function LedgerRow({
  * exact door and lane colours. It carries the exact dollar depth the map draws
  * as shares, and breaks "Other routes" into its named long tail.
  */
-export function ExitRouteLedger({ model }: { model: LiquidityExitRouteModel }) {
+export function ExitRouteLedger({
+  model,
+  activeRouteFilter = null,
+  onRouteFilterChange,
+}: {
+  model: LiquidityExitRouteModel;
+  activeRouteFilter?: LiquidityRouteFilter | null;
+  onRouteFilterChange?: (filter: LiquidityRouteFilter | null) => void;
+}) {
   return (
     <div className="space-y-4" data-testid="exit-route-ledger">
-      <LedgerRow title="Venue mix" routes={model.protocolRoutes} tail={model.protocolTail} />
-      <LedgerRow title="Chain mix" routes={model.chainRoutes} tail={model.chainTail} />
+      <LedgerRow
+        title="Venue mix"
+        kind="protocol"
+        routes={model.protocolRoutes}
+        tail={model.protocolTail}
+        activeRouteFilter={activeRouteFilter}
+        onRouteFilterChange={onRouteFilterChange}
+      />
+      <LedgerRow
+        title="Chain mix"
+        kind="chain"
+        routes={model.chainRoutes}
+        tail={model.chainTail}
+        activeRouteFilter={activeRouteFilter}
+        onRouteFilterChange={onRouteFilterChange}
+      />
     </div>
   );
 }

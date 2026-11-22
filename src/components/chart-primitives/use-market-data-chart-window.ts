@@ -12,15 +12,18 @@ export interface MarketDataTimePoint {
 }
 
 export function useMarketDataChartFrame<T extends MarketDataTimePoint>({
-  chartData, controlledRange,
+  chartData, controlledRange, marginRight = 12,
 }: {
-  chartData: T[]; controlledRange?: TimeRangeOption;
+  chartData: T[]; controlledRange?: TimeRangeOption; marginRight?: number;
 }) {
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
   const { range, setRange, filteredData, options } = useTimeRangeFilter(chartData, "ts", undefined, {
     externalRange: controlledRange,
   });
-  const margin = useMemo(() => ({ top: 5, right: 12, bottom: range === "all" ? 32 : 20, left: 5 }), [range]);
+  const margin = useMemo(
+    () => ({ top: 5, right: marginRight, bottom: range === "all" ? 32 : 20, left: 5 }),
+    [marginRight, range],
+  );
   const chartWindow = useMarketDataChartWindow({ filteredData, margin, range });
   const crosshair = chartWindow.sync
     ? {

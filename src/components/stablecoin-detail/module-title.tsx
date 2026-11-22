@@ -65,7 +65,7 @@ export function StablecoinModuleTitle({
         // wrap; the heading keeps the symbol for assistive tech.
         <span className="hidden shrink-0 items-center gap-2 md:inline-flex">
           <StablecoinLogo src={resolvedLogoSrc} name={resolvedSymbol} size={20} />
-          <span className="text-sm font-semibold text-foreground/80" aria-hidden="true">{resolvedSymbol}</span>
+          <span className="text-xs font-medium text-muted-foreground" aria-hidden="true">{resolvedSymbol}</span>
           <span className="text-muted-foreground/50" aria-hidden="true">·</span>
         </span>
       ) : null}

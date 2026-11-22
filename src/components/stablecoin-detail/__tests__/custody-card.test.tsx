@@ -143,4 +143,17 @@ describe("CustodyModule", () => {
     expect(folds[0]!.textContent).toContain(BASE_PROFILE.providers[0]!.name);
     expect(container.textContent).toContain(BASE_PROFILE.reviewedAt);
   });
+
+  it("renders a two-segment stepped rung for contractual-only protection instead of a continuous 50% bar", () => {
+    const { container } = render(
+      <CustodyModule
+        summary={summaryFor({ bankruptcyRemoteness: "contractual-only" })}
+        variant="tile"
+        stripForm
+      />,
+    );
+    const stepped = container.querySelector('[data-rung-stepped="2"]');
+    expect(stepped).not.toBeNull();
+    expect(stepped?.children).toHaveLength(2);
+  });
 });

@@ -456,7 +456,7 @@ describe("TimelineClient", () => {
     expect(banner.querySelector("[data-event-id]")).toBeNull();
   });
 
-  it("lists the census newest first, collapsing past five", () => {
+  it("lists the census newest first, collapsing past three, and exposes an All class pill", () => {
     mockEvents([makeTapeEvent()]);
     const now = Math.floor(Date.now() / 1000);
     mockActiveEvents([
@@ -464,11 +464,16 @@ describe("TimelineClient", () => {
       ...Array.from({ length: 6 }, (_, i) => activeEvent({ id: 305 - i, startedAt: now - 600 * (6 - i) })),
     ]);
     render(<TimelineClient />);
+    const classRow = document.querySelector('[aria-label="Filter by event type"]') as HTMLElement;
+    const allClassPill = within(classRow).getByRole("button", { name: "All" });
+    expect(allClassPill.getAttribute("aria-pressed")).toBe("true");
+
     const banner = screen.getByRole("region", { name: "Currently open · 6 incidents" });
     const census = () => [...banner.querySelectorAll(":scope > div > a")].map((link) => link.getAttribute("data-depeg-event-id"));
-    expect(census()).toEqual(["300", "301", "302", "303", "304"]);
+    expect(census()).toEqual(["300", "301", "302"]);
     fireEvent.click(within(banner).getByRole("button", { name: "Show all 6" }));
     expect(census()).toEqual(["300", "301", "302", "303", "304", "305"]);
+    expect(within(banner).getByRole("button", { name: "Show the 3 newest" })).toBeTruthy();
     expect(banner.querySelector("details summary")?.textContent).toContain("+1 on frozen or retired coins");
     screen.getByText("6 open incidents");
   });

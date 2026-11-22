@@ -56,6 +56,21 @@ describe("ReportCardMiniV9 viewport radar", () => {
     expect(container.textContent).toContain("Backing 80/100; Exit 70/100; Economic Control 60/100.");
   });
 
+  it("surfaces visible B · E · C micro-bars and null-safe MCap footer", () => {
+    const { rerender } = render(
+      <ReportCardMiniV9 card={card} identity={identity} mcap={120_000_000_000} highlightedMetric="mcap" />,
+    );
+    const bars = screen.getByTestId("grid-pillar-microbars");
+    expect(bars.textContent).toContain("B80");
+    expect(bars.textContent).toContain("E70");
+    expect(bars.textContent).toContain("C60");
+    expect(screen.getByText("$120.00B")).toBeTruthy();
+
+    rerender(<ReportCardMiniV9 card={card} identity={identity} mcap={null} />);
+    expect(screen.getByText("—")).toBeTruthy();
+    expect(screen.queryByText("$0")).toBeNull();
+  });
+
   it("draws a rated card with a missing pillar and names the curation gap without pipeline wording", () => {
     installMatchMediaMock();
     const partial = projectV9TableCard(makeReportCardsV9PartialCard("exit", "B", { id: "usdt-tether" }));
@@ -102,6 +117,22 @@ describe("ReportCardMiniV9 viewport radar", () => {
     expect(cappedHtml).not.toContain("Evidence age"); // the table projection carries no freshness verdict
     expect(cappedHtml.match(/<a /g)).toHaveLength(1); // the chip never nests a link in the card link
     expect(renderToStaticMarkup(<ReportCardMiniV9 card={uncapped} identity={identity} />)).not.toMatch(/Binding cap|Weakest pillar|Score withheld/);
+
+    const rawTokenCapped = {
+      ...uncapped,
+      score: 40,
+      bindingCap: {
+        kind: "parent:cap",
+        limit: 40,
+        source: "parent" as const,
+        reason: "v9 materialSupplyShare unresolved on chain:solana.",
+        binding: true,
+      },
+    };
+    const humanizedHtml = renderToStaticMarkup(<ReportCardMiniV9 card={rawTokenCapped} identity={identity} />);
+    expect(humanizedHtml).toContain("bridged supply share");
+    expect(humanizedHtml).not.toContain("materialSupplyShare");
+    expect(humanizedHtml).not.toContain("chain:solana");
   });
 
   it("keeps data-pipeline-unavailable wording only for cause A and hides the radar below two pillars", () => {

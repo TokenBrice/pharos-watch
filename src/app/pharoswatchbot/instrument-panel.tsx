@@ -8,9 +8,9 @@ import { useTelegramPulse } from "@/hooks/api-hooks";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { useCountUp } from "@/hooks/use-count-up";
 import { useFreshnessBoundary } from "@/hooks/use-freshness-boundary";
+import { ChartSkeleton } from "@/components/chart-skeleton";
 import { DataHealthBanner } from "@/components/data-health-banner";
 import { FeatureHeroSplit } from "@/components/feature-hero-split";
-import { Skeleton } from "@/components/ui/skeleton";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import { DAY_MS } from "@/lib/constants";
 import { deriveDataHealth, isPublicWarning } from "@/lib/data-health";
@@ -159,13 +159,48 @@ function WatcherGrowthChart({ data }: { data: TelegramWatcherHistoryPoint[] }) {
 function PanelLoading() {
   return (
     <div role="status" aria-label="Loading Telegram adoption metrics" aria-live="polite" aria-busy="true" className="p-5 sm:p-6 lg:p-7">
-      <Skeleton className="h-[260px]" />
+      <ChartSkeleton className="h-[260px] rounded-lg" />
     </div>
   );
 }
 
 const PROSE_LINK_CLASS =
   "pharos-focus-ring rounded-sm underline underline-offset-4 transition-colors hover:text-foreground";
+
+/**
+ * Crisp inline social-proof chip for the hero bar, backed by the same
+ * `useTelegramPulse` cache as `InstrumentPanel`. Renders nothing while loading
+ * or unavailable so zero is never fabricated.
+ */
+export function TelegramSocialProofChip() {
+  const query = useTelegramPulse();
+  const { data } = query;
+  if (!isTelegramPulseAvailable(query) || !data) return null;
+  const unavailableFields = data.quality?.unavailableFields ?? [];
+  const watcherCount = admittedCount(data.activeWatchers, "activeWatchers", unavailableFields);
+  const followCount = admittedCount(data.coinSubscriptions, "coinSubscriptions", unavailableFields);
+  if (watcherCount == null) return null;
+
+  return (
+    <a
+      href="#panel"
+      className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-muted/40 px-3 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground"
+    >
+      <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-state-positive" />
+      <span>
+        <span className="pharos-numeric font-semibold text-foreground">{formatCount(watcherCount)}</span> active watchers
+      </span>
+      {followCount != null ? (
+        <>
+          <span aria-hidden="true">·</span>
+          <span>
+            <span className="pharos-numeric font-semibold text-foreground">{formatCount(followCount)}</span> follows
+          </span>
+        </>
+      ) : null}
+    </a>
+  );
+}
 
 /**
  * The page hero: live, aggregate adoption counts from the bot itself on the
@@ -206,7 +241,7 @@ export function InstrumentPanel() {
         { label: "New today", value: live.newWatchersToday },
         { label: "Reactivated today", value: live.reactivatedWatchersToday },
         { label: "Churned today", value: live.churnedWatchersToday },
-      ].filter((item): item is { label: string; value: number } => typeof item.value === "number")
+      ].filter((item): item is { label: string; value: number } => typeof item.value === "number" && item.value > 0)
     : [];
 
   return (
@@ -233,7 +268,7 @@ export function InstrumentPanel() {
           live ? (
             <dl className="space-y-5">
               <div>
-                <dt className="pharos-kicker" title={TELEGRAM_METRIC_SEMANTICS.coinFollows.description}>
+                <dt className="pharos-label" title={TELEGRAM_METRIC_SEMANTICS.coinFollows.description}>
                   {TELEGRAM_METRIC_SEMANTICS.coinFollows.label}
                 </dt>
                 <dd className="mt-2 pharos-numeric text-2xl font-semibold leading-none text-foreground">
@@ -266,7 +301,7 @@ export function InstrumentPanel() {
                 </div>
               ) : null}
               <div>
-                <dt className="pharos-kicker">Most followed</dt>
+                <dt className="pharos-label">Most followed</dt>
                 <dd className="mt-2">
                   {rankingUnavailable ? (
                     <p className="text-xs text-muted-foreground">Follow rankings are temporarily unavailable.</p>

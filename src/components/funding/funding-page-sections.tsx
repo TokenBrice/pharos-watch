@@ -1,11 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Fragment, type ReactNode } from "react";
 import { ArrowUpRight, Building2, ExternalLink, Heart, KeyRound, Server, Share2, Star, Wallet, Wrench } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/copy-button";
+import { FaqSection } from "@/components/faq-section";
 import { FeatureHeroSplit, HeroMetricRow } from "@/components/feature-hero-split";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
+import type { FaqItem } from "@/lib/faq";
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import { formatAddress, formatDecimal, formatEventDate } from "@shared/lib/format";
 import { CHAIN_META } from "@shared/types/chain-identity";
@@ -493,18 +496,17 @@ function SupporterKeyNote() {
       <div className="space-y-1">
         <p className="text-sm font-semibold text-foreground">Supporter API key</p>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          A direct transfer of ${DONOR_API_KEY_MIN_USD}+ in{" "}
+          A direct wallet transfer of ${DONOR_API_KEY_MIN_USD}+ in{" "}
           {QUALIFYING_LABELS.length > MAX_INLINE_QUALIFYING_COINS ? (
             <Link href={SUPPORTER_KEY_HREF} className="pharos-prose-link">
-              one of {QUALIFYING_LABELS.length} reviewed stablecoins
+              one of {QUALIFYING_LABELS.length} reviewed A- or B-grade stablecoins
             </Link>
           ) : (
-            QUALIFYING_COINS_TEXT
+            `${QUALIFYING_COINS_TEXT} (currently graded A or B)`
           )}{" "}
-          from a wallet you can sign with
-          (not an exchange withdrawal or a Giveth stream) earns a personal, non-commercial key with{" "}
-          {DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute, {DONOR_API_KEY_DAYS_PER_MIN_USD} days of access per $
-          {DONOR_API_KEY_MIN_USD}:{" "}
+          from a wallet you can sign with (direct wallet transfers only, not Giveth, ETH, or an exchange withdrawal)
+          earns a personal, non-commercial key with {DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute,{" "}
+          {DONOR_API_KEY_DAYS_PER_MIN_USD} days of access per ${DONOR_API_KEY_MIN_USD}:{" "}
           <Link href={SUPPORTER_KEY_HREF} className="pharos-prose-link">
             claim it on the API page
           </Link>
@@ -550,7 +552,7 @@ function PrimaryGivethTile() {
 
 function WalletTile() {
   return (
-    <div className="flex h-full flex-col gap-2 pharos-inset p-4 lg:col-span-1">
+    <div id="direct-wallet" className="flex h-full scroll-mt-24 flex-col gap-2 pharos-inset p-4 lg:col-span-1">
       <div className="flex items-center gap-2">
         <Wallet className="h-4 w-4 text-foreground" />
         <p className="text-sm font-medium text-foreground">Direct wallet</p>
@@ -559,9 +561,10 @@ function WalletTile() {
         <p className="font-mono text-base font-semibold text-foreground">{PHAROS_FUNDING_ENS}</p>
         <CopyButton text={PHAROS_FUNDING_ENS} />
       </div>
-      <p className="text-xs text-muted-foreground">
-        The same address on every supported chain; Base and Gnosis usually have the cheapest gas. ETH, stablecoins
-        and other ERC-20s accepted.
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        The same address on every supported chain; Base and Gnosis usually have the cheapest gas. ETH, stablecoins,
+        and other ERC-20s are accepted as donations. For a supporter API key, send ${DONOR_API_KEY_MIN_USD}+ in a
+        reviewed A- or B-grade stablecoin directly from a wallet you control (not Giveth or ETH).
       </p>
       <div className="mt-auto space-y-2 pt-2">
         <div className="flex items-center gap-2 rounded-md border border-border/60 bg-background px-3 py-1.5">
@@ -607,64 +610,73 @@ function SocialButton({
   );
 }
 
+const FUNDING_FAQ_ITEMS: readonly FaqItem[] = [
+  {
+    question: "Why does Pharos ask for support?",
+    answer:
+      "Independent stablecoin analytics has real data, infrastructure, and research costs. Support keeps the website free for everyone instead of making risk analysis available only through private terminals.",
+  },
+  {
+    question: "Does funding affect Safety Scores?",
+    answer:
+      "No. Pharos takes no money for listings, reviews, ratings or placement, from issuers or anyone else. If Pharos does paid service work for an issuer or its DAO, it is public, listed on this page, and kept apart from that coin's score. The scoring code and methodology are open, so anyone can check.",
+  },
+  {
+    question: "How will Pharos stay funded?",
+    answer:
+      "From three sources: community donations, paid API access for commercial products, and infrastructure sponsored in kind. The website stays free for everyone, with no paywall.",
+  },
+  {
+    question: "Is my donation tax-deductible?",
+    answer:
+      "No. Pharos is not a registered charity. Giveth donations may qualify in some jurisdictions; check Giveth's documentation.",
+  },
+  {
+    question: "What do supporters get?",
+    answer:
+      `A place on the supporter list. A direct wallet donation of $${DONOR_API_KEY_MIN_USD} or more in reviewed A- or B-grade stablecoins from a wallet you can sign with (not Giveth or ETH) also earns a personal, non-commercial supporter API key: ${DONOR_API_KEY_DAYS_PER_MIN_USD} days of access per $${DONOR_API_KEY_MIN_USD}, extended by signing again after a later donation. [See the API page](${SUPPORTER_KEY_HREF}). The donor list is updated every Sunday and grades are checked at claim time. Commercial products use a [partner key](${PARTNER_ACCESS_HREF}).`,
+  },
+  {
+    question: "Can I help without donating?",
+    answer:
+      "Yes. Share Pharos, star the MIT-licensed repo, open issues for bad data, join Telegram, or contribute code and research.",
+  },
+  {
+    question: "What does support make possible?",
+    answer:
+      "More stablecoins covered, faster fixes when data breaks, clearer risk explanations, and a public reference that analysts, builders, and users can check before trusting a peg.",
+  },
+];
+
+function renderFundingFaqAnswer(answer: string): ReactNode {
+  const parts: ReactNode[] = [];
+  const linkPattern = /\[([^\]]+)\]\(([^)]+)\)/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = linkPattern.exec(answer)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(answer.slice(lastIndex, match.index));
+    }
+    parts.push(
+      <Link key={`${match[2]}-${match.index}`} href={match[2]} className="pharos-prose-link">
+        {match[1]}
+      </Link>,
+    );
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < answer.length) {
+    parts.push(answer.slice(lastIndex));
+  }
+  return parts.length === 1 ? parts[0] : <Fragment>{parts}</Fragment>;
+}
+
 export function FundingFaq() {
-  const qa: Array<{ q: string; a: React.ReactNode }> = [
-    {
-      q: "Why does Pharos ask for support?",
-      a: "Independent stablecoin analytics has real data, infrastructure, and research costs. Support keeps the website free for everyone instead of making risk analysis available only through private terminals.",
-    },
-    {
-      q: "Does funding affect Safety Scores?",
-      a: "No. Pharos takes no money for listings, reviews, ratings or placement, from issuers or anyone else. If Pharos does paid service work for an issuer or its DAO, it is public, listed on this page, and kept apart from that coin's score. The scoring code and methodology are open, so anyone can check.",
-    },
-    {
-      q: "How will Pharos stay funded?",
-      a: "From three sources: community donations, paid API access for commercial products, and infrastructure sponsored in kind. The website stays free for everyone, with no paywall.",
-    },
-    {
-      q: "Is my donation tax-deductible?",
-      a: "No. Pharos is not a registered charity. Giveth donations may qualify in some jurisdictions; check Giveth's documentation.",
-    },
-    {
-      q: "What do supporters get?",
-      a: (
-        <>
-          A place on the supporter list. A donation of ${DONOR_API_KEY_MIN_USD} or more in qualifying stablecoins from a
-          wallet you can sign with also buys a personal, non-commercial supporter API key: {DONOR_API_KEY_DAYS_PER_MIN_USD}{" "}
-          days of access per ${DONOR_API_KEY_MIN_USD}, extended by signing again after a later donation.{" "}
-          <Link href={SUPPORTER_KEY_HREF} className="pharos-prose-link">
-            See the API page
-          </Link>
-          . The donor list is updated every Sunday and grades are checked at claim time. Commercial products use a{" "}
-          <Link href={PARTNER_ACCESS_HREF} className="pharos-prose-link">
-            partner key
-          </Link>
-          .
-        </>
-      ),
-    },
-    {
-      q: "Can I help without donating?",
-      a: "Yes. Share Pharos, star the MIT-licensed repo, open issues for bad data, join Telegram, or contribute code and research.",
-    },
-    {
-      q: "What does support make possible?",
-      a: "More stablecoins covered, faster fixes when data breaks, clearer risk explanations, and a public reference that analysts, builders, and users can check before trusting a peg.",
-    },
-  ];
   return (
-    <Card variant="shell">
-      <CardHeader kicker="Questions" heading="FAQ" />
-      <CardContent>
-        <dl className="space-y-3">
-          {qa.map(({ q, a }) => (
-            <div key={q} className="space-y-1">
-              <dt className="text-sm font-medium text-foreground">{q}</dt>
-              <dd className="text-sm text-muted-foreground">{a}</dd>
-            </div>
-          ))}
-        </dl>
-      </CardContent>
-    </Card>
+    <FaqSection
+      items={FUNDING_FAQ_ITEMS}
+      title="Funding FAQ"
+      includeJsonLd
+      renderAnswer={renderFundingFaqAnswer}
+    />
   );
 }

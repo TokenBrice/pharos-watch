@@ -83,5 +83,16 @@ describe("About disclosure and reuse copy", () => {
     expect(html).toContain('href="https://github.com/TokenBrice/pharos-watch"');
     expect(html).toContain('href="https://x.com/PharosWatch"');
     expect(html).toContain('href="https://tokenbrice.xyz/"');
+    expect(html).not.toContain("text-frost-blue");
+    expect(html).not.toMatch(/\blooked safe\b/i);
+    expect(html).not.toContain("VIX for stablecoins");
+    expect(html).toContain("0-100 market-regime gauge");
+    expect(html).not.toContain("future paid API access");
+    expect(html).toContain("paid API plans");
+    expect(html).toContain("Backing, Exit, and Economic Control");
+    expect(html).toContain('aria-label="About page sections"');
+    for (const anchor of ["#principles", "#team", "#coverage", "#data-pipeline", "#contact"]) {
+      expect(html).toContain(`href="${anchor}"`);
+    }
   });
 });

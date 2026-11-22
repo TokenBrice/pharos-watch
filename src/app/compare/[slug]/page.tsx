@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { ArrowRight, Bell, Code2, Rss } from "lucide-react";
 import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT, getProofOfReservesStyle } from "@shared/lib/classification";
+import { BackToSource } from "@/components/back-to-source";
 import { FaqSection } from "@/components/faq-section";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { JsonLdScript } from "@/components/json-ld-script";
+import { Button } from "@/components/ui/button";
 import {
   TableBody,
   TableCaption,
@@ -115,6 +117,7 @@ function StaticComparisonContent(page: (typeof STATIC_COMPARISON_PAGES)[number])
       ]}
       title={`${page.left.name} (${page.left.symbol}) vs ${page.right.name} (${page.right.symbol})`}
       leadParagraphs={[page.intro]}
+      headerSupplement={<BackToSource />}
       preface={
         <JsonLdScript json={safeJsonLd(buildStaticComparisonJsonLd(page, comparisonRows))} />
       }
@@ -123,31 +126,30 @@ function StaticComparisonContent(page: (typeof STATIC_COMPARISON_PAGES)[number])
         <div className="pharos-card-shell px-4 py-4">
           <p className="pharos-label">Comparison brief</p>
           <p className="mt-3 max-w-4xl text-sm leading-relaxed text-muted-foreground">{page.summary}</p>
-          <div className="mt-4 flex flex-wrap gap-2 text-sm">
+          <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
+            <Button asChild size="sm" className="gap-2">
+              <Link href={liveCompareHref}>
+                Open live compare
+                <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
+              </Link>
+            </Button>
             <Link
-              href={liveCompareHref}
-              className="pharos-focus-ring inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-accent"
-            >
-              <ArrowRight aria-hidden="true" className="h-3.5 w-3.5 text-muted-foreground" />
-              Open live compare
-            </Link>
-            <Link
-              href="/pharoswatchbot/#getting-started"
-              className="pharos-focus-ring inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-accent"
+              href={`/pharoswatchbot/?coin=${encodeURIComponent(page.left.id)}#builder`}
+              className="pharos-focus-ring pharos-control-pill inline-flex min-h-9 items-center gap-2 px-3 py-1.5 text-xs font-medium text-foreground"
             >
               <Bell aria-hidden="true" className="h-3.5 w-3.5 text-muted-foreground" />
               Telegram alerts
             </Link>
             <a
               href="/feed/digest.xml"
-              className="pharos-focus-ring inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-accent"
+              className="pharos-focus-ring pharos-control-pill inline-flex min-h-9 items-center gap-2 px-3 py-1.5 text-xs font-medium text-foreground"
             >
               <Rss aria-hidden="true" className="h-3.5 w-3.5 text-muted-foreground" />
               Digest RSS
             </a>
             <Link
               href="/api/"
-              className="pharos-focus-ring inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-accent"
+              className="pharos-focus-ring pharos-control-pill inline-flex min-h-9 items-center gap-2 px-3 py-1.5 text-xs font-medium text-foreground"
             >
               <Code2 aria-hidden="true" className="h-3.5 w-3.5 text-muted-foreground" />
               API access

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { ArrowRight, ExternalLink, GitBranch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FeaturePageShell } from "@/components/feature-page-shell";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FaqSection } from "@/components/faq-section";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { formatLongDate } from "@shared/lib/format";
@@ -18,7 +17,6 @@ import {
   COMPUTED_FEATURES,
   DATA_PIPELINE_STEPS,
   DATA_SOURCE_GROUPS,
-  getAboutLeadParagraphs,
   getAboutFaqItems,
   getTrackedFeatures,
   TEAM_MEMBERS,
@@ -48,9 +46,9 @@ import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
 const UPCOMING_STABLECOIN_COUNT = PRE_LAUNCH_STABLECOINS.filter((coin) => !isLaunchedAwaitingData(coin)).length;
 
 // Intentionally extends pharos-prose-link with inline-flex/gap-1 for icon-paired links (ExternalLink icon)
-// and frost-blue hover for visual differentiation. Cannot collapse to pharos-prose-link which has no flex layout.
+// and brand-accent hover for visual differentiation. Cannot collapse to pharos-prose-link which has no flex layout.
 const INLINE_EXTERNAL_LINK_CLASS =
-  "pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-foreground underline underline-offset-4 transition-colors hover:text-frost-blue";
+  "pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-foreground underline underline-offset-4 transition-colors hover:text-brand-accent-text";
 const CTA_BUTTON_CLASS =
   "min-h-11 w-full justify-between rounded-xl border-border/65 bg-background/50 px-4 py-2 whitespace-normal text-left sm:h-9 sm:min-h-0 sm:w-auto sm:justify-center sm:whitespace-nowrap sm:rounded-full";
 const TELEGRAM_CTA_BUTTON_CLASS = cn(
@@ -126,26 +124,22 @@ function PipelineSources() {
       {DATA_SOURCE_GROUPS.map((group) => (
         <div key={group.label} className="min-w-0 space-y-1">
           <dt className="pharos-label">{group.label}</dt>
-          {"summary" in group ? (
-            <dd className="space-y-1 text-sm leading-relaxed text-muted-foreground">
-              <p>{group.summary}</p>
-              <details className="group/sources">
-                <summary className="pharos-focus-ring cursor-pointer rounded-sm text-xs font-medium text-foreground/80 hover:text-foreground">
-                  Full source list
-                </summary>
-                <p className="mt-1 text-xs leading-relaxed [overflow-wrap:anywhere]">{group.sources}</p>
-                {"documentation" in group && (
-                  <p className="mt-1 text-xs">
-                    <a className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground" href={group.documentation.href}>
-                      {group.documentation.label}
-                    </a>
-                  </p>
-                )}
-              </details>
-            </dd>
-          ) : (
-            <dd className="text-sm leading-relaxed text-muted-foreground">{group.sources}</dd>
-          )}
+          <dd className="space-y-1 text-sm leading-relaxed text-muted-foreground">
+            <p>{group.summary}</p>
+            <details className="group/sources">
+              <summary className="pharos-focus-ring cursor-pointer rounded-sm text-xs font-medium text-foreground/80 hover:text-foreground">
+                Full source list
+              </summary>
+              <p className="mt-1 text-xs leading-relaxed [overflow-wrap:anywhere]">{group.sources}</p>
+              {"documentation" in group && (
+                <p className="mt-1 text-xs">
+                  <a className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground" href={group.documentation.href}>
+                    {group.documentation.label}
+                  </a>
+                </p>
+              )}
+            </details>
+          </dd>
         </div>
       ))}
     </dl>
@@ -268,6 +262,14 @@ function AppearanceRow({ appearance }: { appearance: MediaAppearance }) {
   );
 }
 
+const ABOUT_JUMP_ANCHORS = [
+  { href: "#principles", label: "Principles" },
+  { href: "#team", label: "Team" },
+  { href: "#coverage", label: "Coverage" },
+  { href: "#data-pipeline", label: "Data pipeline" },
+  { href: "#contact", label: "Contact" },
+] as const;
+
 function AboutSection({
   id,
   eyebrow,
@@ -282,16 +284,13 @@ function AboutSection({
   contentClassName?: string;
 }) {
   return (
-    <Card id={id} className="scroll-mt-24 rounded-xl">
-      <CardHeader className="space-y-2">
-        <div className="flex items-center gap-3">
-          <p className="pharos-label">{eyebrow}</p>
-          <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
-        </div>
-        <CardTitle as="h2">{title}</CardTitle>
-      </CardHeader>
-      <CardContent className={contentClassName}>{children}</CardContent>
-    </Card>
+    <section id={id} className="scroll-mt-24 space-y-5 border-t border-border/60 pt-8">
+      <div className="space-y-1.5">
+        <p className="pharos-label">{eyebrow}</p>
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground">{title}</h2>
+      </div>
+      <div className={contentClassName}>{children}</div>
+    </section>
   );
 }
 
@@ -324,12 +323,14 @@ function PrincipleBody({ principle }: { principle: PrincipleAxiom }) {
 }
 
 function AboutFeatureSection({
+  id,
   eyebrow,
   title,
   intro,
   items,
   footer,
 }: {
+  id?: string;
   eyebrow: string;
   title: string;
   intro: ReactNode;
@@ -337,8 +338,8 @@ function AboutFeatureSection({
   footer?: ReactNode;
 }) {
   return (
-    <AboutSection eyebrow={eyebrow} title={title} contentClassName="space-y-0">
-      <div className="-mt-2 mb-4 px-4 text-sm leading-relaxed text-muted-foreground">{intro}</div>
+    <AboutSection id={id} eyebrow={eyebrow} title={title} contentClassName="space-y-4">
+      <div className="max-w-3xl text-sm leading-relaxed text-muted-foreground">{intro}</div>
       <div className="divide-y divide-border/60">
         {items.map((item) => (
           <AboutFeatureRow key={item.title} item={item} />
@@ -359,10 +360,10 @@ export function AboutPageContent() {
     activeStablecoins: CORE_AGGREGATE_STABLECOIN_COUNT,
     deadStablecoins: DEAD_STABLECOIN_COUNT,
   });
-  const leadParagraphs = getAboutLeadParagraphs({ activeStablecoins: CORE_AGGREGATE_STABLECOIN_COUNT });
   const featuredAppearance = MEDIA_APPEARANCES.find((appearance) => appearance.featured);
   const otherAppearances = MEDIA_APPEARANCES.filter((appearance) => appearance !== featuredAppearance);
   const heroStats: readonly { label: string; value: string | number }[] = [
+    { label: "Active", value: HEADLINE_STABLECOIN_COUNT },
     { label: "Core", value: CORE_AGGREGATE_STABLECOIN_COUNT },
     { label: "Variants", value: ACTIVE_VARIANT_STABLECOIN_COUNT },
     { label: "Stable-value", value: ACTIVE_STABLE_VALUE_INVESTMENT_COUNT },
@@ -389,40 +390,28 @@ export function AboutPageContent() {
       breadcrumbName="About Pharos"
       path="/about/"
       title="About Pharos"
-      leadParagraphs={leadParagraphs}
+      leadParagraphs={["Most trackers show price. Pharos shows risk."]}
       preface={
         <JsonLdScript json={safeJsonLd(ABOUT_PAGE_JSON_LD)} />
       }
     >
-      <div className="space-y-8">
-        <section aria-labelledby="about-lede" className="space-y-6 pb-2">
-          <div className="space-y-4">
-            <div className="space-y-1">
-              <p className="pharos-label">Active stablecoins</p>
-              <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-foreground sm:text-[2.45rem]">
-                {HEADLINE_STABLECOIN_COUNT}
-              </p>
-            </div>
-            <div className="space-y-3">
-              <p
-                id="about-lede"
-                className="w-full max-w-none text-xl font-semibold leading-[1.18] tracking-tight text-foreground/95 [text-wrap:balance] sm:text-2xl"
-              >
-                Every stablecoin makes two promises at once: that it will redeem at par, and that it can be redeemed at
-                all. Pharos watches both across {CORE_AGGREGATE_STABLECOIN_COUNT} core assets and{" "}
-                {ACTIVE_VARIANT_STABLECOIN_COUNT} tracked variants, plus {ACTIVE_STABLE_VALUE_INVESTMENT_COUNT}{" "}
-                stable-value investments, and the chains and reserves beneath them so that desks, treasuries, and
-                researchers can read the peg the way navigators read weather.
-              </p>
-              <p className="font-mono text-xs text-muted-foreground/80">
-                Edited by TokenBrice &middot; Engineered with Claude &amp; Codex &middot; MIT
-              </p>
-              <p className="pharos-label">
-                Watching the peg.
-              </p>
-            </div>
+      <div className="space-y-10">
+        <section aria-labelledby="about-lede" className="space-y-5">
+          <div className="space-y-3">
+            <p
+              id="about-lede"
+              className="w-full max-w-4xl text-xl font-semibold leading-snug tracking-tight text-foreground/95 [text-wrap:balance] sm:text-2xl"
+            >
+              Every stablecoin makes two promises at once: that it will redeem at par, and that it can be redeemed at
+              all. Pharos watches both across active stablecoins, tracked variants, stable-value investments, and the
+              chains and reserves beneath them so desks, treasuries, and researchers can read the peg the way
+              navigators read weather.
+            </p>
+            <p className="font-mono text-xs text-muted-foreground/80">
+              Edited by TokenBrice &middot; Engineered with Claude &amp; Codex &middot; MIT
+            </p>
           </div>
-          <dl className="flex flex-wrap gap-x-10 gap-y-4 border-t border-border/60 pt-5">
+          <dl className="flex flex-wrap gap-x-8 gap-y-4 border-y border-border/60 py-5">
             {heroStats.map((stat) => (
               <div key={stat.label} className="space-y-1">
                 <dt className="pharos-label">{stat.label}</dt>
@@ -430,27 +419,32 @@ export function AboutPageContent() {
               </div>
             ))}
           </dl>
+          <nav aria-label="About page sections" className="flex flex-wrap gap-2">
+            {ABOUT_JUMP_ANCHORS.map((anchor) => (
+              <a key={anchor.href} href={anchor.href} className="pharos-control-pill pharos-focus-ring">
+                {anchor.label}
+              </a>
+            ))}
+          </nav>
         </section>
 
         <AboutSection
           eyebrow="Why it exists"
           title="Why Pharos?"
-          contentClassName="space-y-3 text-sm leading-relaxed text-muted-foreground"
+          contentClassName="max-w-3xl space-y-3 text-sm leading-relaxed text-muted-foreground"
         >
           <p>
             The data needed to evaluate stablecoins is scattered, inconsistent, or buried behind paywalls. Worse,
             marketing claims rarely match reality: a &quot;decentralized&quot; stablecoin may rely entirely on
             centralized collateral, an issuer can freeze balances without warning, and a major stablecoin&apos;s failure
-            transmits stress to dozens of derivatives that looked safe in isolation.
+            transmits stress to dozens of derivatives that looked independent in isolation.
           </p>
           <p>
-            Pharos tracks {CORE_AGGREGATE_STABLECOIN_COUNT} core stablecoins and cash equivalents, plus{" "}
-            {ACTIVE_VARIANT_STABLECOIN_COUNT} variants, {ACTIVE_STABLE_VALUE_INVESTMENT_COUNT} stable-value investments,{" "}
-            {UPCOMING_STABLECOIN_COUNT} upcoming launches, and {DEAD_STABLECOIN_COUNT} dead ones, then scores the core
-            universe with honest governance classification, transitive dependency scoring, and live reserve composition
-            where available. Real-time depeg detection, freeze monitoring across {BLACKLIST_STABLECOINS.length} stablecoins,
-            and a 30-minute ecosystem-wide stability index surface stress as it builds, before it reaches the
-            headlines.
+            Across the active catalog, {UPCOMING_STABLECOIN_COUNT} upcoming launches, and {DEAD_STABLECOIN_COUNT} dead
+            coins, Pharos scores the core universe with honest governance classification, transitive dependency
+            scoring, and live reserve composition where a reviewed adapter exists. Real-time depeg detection, freeze
+            monitoring across {BLACKLIST_STABLECOINS.length} stablecoins, and a 30-minute ecosystem-wide stability
+            index surface stress as it builds, before it reaches the headlines.
           </p>
           <p>
             When a tracked stablecoin effectively dies (issuer abandonment, supply trending to zero,
@@ -463,7 +457,11 @@ export function AboutPageContent() {
           </p>
           <p>
             Pharos is a public good. The dashboard stays free, the code is open source, and sustainability comes from
-            community support plus future paid API access for heavy programmatic usage.{" "}
+            community support, in-kind infrastructure sponsorships, and{" "}
+            <Link href="/api/" className={INLINE_EXTERNAL_LINK_CLASS}>
+              paid API plans
+            </Link>{" "}
+            for production teams.{" "}
             <Link href="/funding/" className={INLINE_EXTERNAL_LINK_CLASS}>
               See the funding ledger
             </Link>
@@ -519,6 +517,7 @@ export function AboutPageContent() {
         </AboutSection>
 
         <AboutSection
+          id="team"
           eyebrow="The team"
           title="Who Is Building Pharos?"
           contentClassName="grid gap-4 text-sm leading-relaxed text-muted-foreground lg:grid-cols-[auto_minmax(0,1fr)] lg:gap-5"
@@ -610,6 +609,7 @@ export function AboutPageContent() {
         </AboutSection>
 
         <AboutFeatureSection
+          id="coverage"
           eyebrow="Coverage"
           title="What Pharos tracks"
           intro="The raw monitoring layer: live supply, peg behavior, blacklist activity, liquidity depth, and chain-level flow data pulled from 50+ sources into one operating picture."
@@ -619,7 +619,7 @@ export function AboutPageContent() {
         <AboutFeatureSection
           eyebrow="Signals"
           title="What Pharos computes"
-          intro="The analysis layer: models and forecasts Pharos computes from its own pipeline, including a VIX for stablecoins, dependency-capped safety grades, and forward-looking depeg pressure."
+          intro="The analysis layer: models and forecasts Pharos computes from its own pipeline, including a 0-100 market-regime gauge for stablecoins, dependency-capped safety grades, and forward-looking depeg pressure."
           items={COMPUTED_FEATURES}
           footer={
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -701,7 +701,7 @@ export function AboutPageContent() {
             </ul>
           </div>
           <p>
-            <span className="font-medium text-foreground">Roster suspended</span> while the V10 grade floor is under
+            <span className="font-medium text-foreground">Roster suspended</span> while the grade floor is under
             review. It resumes under the same rule: the live intersection of external Bluechip A-tier ratings and
             Pharos A-tier report cards, current-state rather than historical. Bluechip rides the Safety Score
             methodology ({SAFETY_SCORE_METHODOLOGY_VERSION_LABEL}) and is re-derived, never grandfathered, when a
@@ -723,6 +723,7 @@ export function AboutPageContent() {
         </AboutSection>
 
         <AboutSection
+          id="data-pipeline"
           eyebrow="Source flow"
           title="Data pipeline"
           contentClassName="space-y-5 text-sm leading-relaxed text-muted-foreground"
@@ -761,10 +762,10 @@ export function AboutPageContent() {
         <AboutSection
           eyebrow="Scoring details"
           title="Methodology"
-          contentClassName="space-y-3 text-sm leading-relaxed text-muted-foreground"
+          contentClassName="max-w-3xl space-y-3 text-sm leading-relaxed text-muted-foreground"
         >
           <p>
-            Pharos Safety Score V10 grades stablecoins across Backing Quality, Exit Strength, and Economic Control,
+            Pharos Safety Score grades stablecoins across Backing, Exit, and Economic Control,
             then applies peg behavior, deployment adjustments, and binding caps. The methodology page covers the
             full grading formula, peg score computation, DEX liquidity scoring, and dependency propagation.
           </p>
@@ -788,6 +789,7 @@ export function AboutPageContent() {
         </aside>
 
         <AboutSection
+          id="contact"
           eyebrow="Reach out"
           title="Get in touch"
           contentClassName="space-y-3 text-sm leading-relaxed text-muted-foreground"

@@ -70,7 +70,7 @@ describe("HeroVariantChip", () => {
     const { container } = render(
       <HeroVariantChip
         variantParent={parent}
-        variantChipClass="border-frost-blue/30 bg-frost-blue/10 text-frost-blue"
+        variantChipClass="border-frost-blue/30 bg-frost-blue/10 text-brand-accent-text"
         mobile
       />,
     );

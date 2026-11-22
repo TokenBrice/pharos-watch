@@ -41,7 +41,7 @@ export function MobileBottomNav() {
               aria-current={active ? "page" : undefined}
               className={
                 active
-                  ? "pharos-focus-ring flex min-h-11 flex-col items-center justify-center gap-1 text-frost-blue transition-colors duration-[220ms] ease-[var(--motion-ease-standard)] motion-reduce:transition-none"
+                  ? "pharos-focus-ring flex min-h-11 flex-col items-center justify-center gap-1 text-brand-accent-text transition-colors duration-[220ms] ease-[var(--motion-ease-standard)] motion-reduce:transition-none"
                   : "pharos-focus-ring flex min-h-11 flex-col items-center justify-center gap-1 text-muted-foreground transition-colors duration-[220ms] ease-[var(--motion-ease-standard)] hover:text-foreground motion-reduce:transition-none"
               }
             >

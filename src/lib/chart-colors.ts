@@ -1,26 +1,26 @@
 /* ═══════════════════════════════════════════════════════════════════
    Chart Color Tokens
    General chart palette and tokens; classification colors live in
-   shared/lib/classification children. Hex tokens here match semantic.css.
-   Recharts needs literal hex strings — CSS var() doesn't work in SVG
-   fill/stroke attributes rendered by React.
+   shared/lib/classification children. Primary series colors resolve via
+   theme-paired CSS variables (`--chart-series-*` in semantic.css) so
+   both light (#fff) and dark (L=0.20) chart cards meet >=3:1 contrast.
    ═══════════════════════════════════════════════════════════════════ */
 
 /** Centralized color tokens — edit here, not in individual components */
 const TOKEN = {
-  blue: "#4bc4de",
+  blue: "var(--chart-series-blue)",
   purple: "#8b5cf6",
   pink: "#ec4899",
   orange: "#f97316",
-  green: "#3bcc87",
-  cyan: "#23a7c8",
+  green: "var(--chart-series-green)",
+  cyan: "var(--chart-series-cyan)",
   yellow: "#eab308",
   red: "#ef4444",
   indigo: "#6366f1",
   teal: "#14b8a6",
-  amber: "#f59e0b",
+  amber: "var(--chart-series-amber)",
   lime: "#84cc16",
-  slate: "#94a3b8",
+  slate: "var(--chart-series-slate)",
   darkRed: "#991b1b",
 } as const;
 
@@ -46,7 +46,6 @@ export const CHART_GREEN = TOKEN.green;
 export const CHART_ORANGE = TOKEN.orange;
 export const CHART_RED = TOKEN.red;
 export const CHART_SLATE = TOKEN.slate;
-export const CHART_SLATE_SOFT = "#cbd5e1";
 export const CHART_SLATE_STRONG = "#64748b";
 export const CHART_AMBER = TOKEN.amber;
 export const CHART_TEAL = TOKEN.teal;
@@ -74,5 +73,5 @@ export const SIGNAL_CHART_COLORS: Record<string, string> = {
 };
 
 /** Brand-specific colors for market-cap charts. */
-export const USDT_GREEN = "#3bcc87";
-export const USDC_BLUE = "#4bc4de";
+export const USDT_GREEN = TOKEN.green;
+export const USDC_BLUE = TOKEN.blue;

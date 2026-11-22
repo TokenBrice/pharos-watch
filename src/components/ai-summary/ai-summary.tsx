@@ -4,6 +4,7 @@ import { AiSummaryProse } from "@/components/ai-summary/ai-summary-prose";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
 import { TermText } from "@/components/term-text";
 import type { AiSummaryClaimValues, StablecoinAiSummary } from "@shared/types/editorial";
 import {
@@ -46,9 +47,9 @@ export function AiSummary({
   const resolved = resolveAiSummaryClaims(text, claimTokens, claimValues);
 
   return (
-    <Card>
-      <CardHeader>
-        <DetailSectionTitle>{title}</DetailSectionTitle>
+    <Card className="gap-3 py-4">
+      <CardHeader className="pb-0">
+        <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>{title}</DetailSectionTitle>
       </CardHeader>
       <CardContent>
         {openNotice ? (

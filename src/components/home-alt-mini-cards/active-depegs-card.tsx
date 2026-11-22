@@ -86,7 +86,6 @@ export function ActiveDepegsCard(): React.JSX.Element {
     const byId = new Map<string, DdrCall>();
     if (!isResolverBookAvailable(resolverData)) return byId;
     for (const row of resolverData.rows) {
-      // As rankOpenIncidents: only the coin's active incident speaks, never an older closed one.
       if (row.live.eventState !== "active") continue;
       if (isCurrentForecast(row)) {
         const meta = getTierMeta(getResolution(row).tier, getTierVocabulary(row));
@@ -98,6 +97,7 @@ export function ActiveDepegsCard(): React.JSX.Element {
     }
     return byId;
   }, [resolverData]);
+
   // The complete summary owns the incident census; the event page supplies detail only.
   const activeRows = useMemo<ActiveRow[]>(() => {
     const eventsById = new Map((data?.events ?? []).map((event) => [event.stablecoinId, event]));
@@ -120,11 +120,9 @@ export function ActiveDepegsCard(): React.JSX.Element {
       rankValue(b.exposureUsd) - rankValue(a.exposureUsd)
       || rankValue(b.bps == null ? null : Math.abs(b.bps)) - rankValue(a.bps == null ? null : Math.abs(a.bps)));
   }, [activeCoins, data?.events, nowSec, marketCaps, verdicts]);
-  // Name the key the order actually used: without any supply it is the deviation alone.
+
   const rankKey = activeRows.some((row) => row.exposureUsd != null) ? "USD off peg" : "deviation";
 
-  // Same figure and denominator as the /depeg/ hero: the peg summary's confirmed
-  // (non-NAV) active-depeg count over the peg catalog it was read from.
   const activeCount = pegSummaryData?.summary?.activeDepegCount ?? null;
   const catalogCount = pegSummaryData?.coins.length ?? null;
   const flashClass = useFlashOnChange(activeCount);
@@ -137,15 +135,23 @@ export function ActiveDepegsCard(): React.JSX.Element {
 
   return (
     <PulseCard
-      className="pharos-card-shell flex h-full flex-col gap-3 overflow-hidden p-4"
+      className="pharos-card-shell flex h-full min-h-[322px] flex-col gap-2.5 p-4"
       href="/depeg/"
       expandLabel="Open Depeg monitor"
       label="Active depegs"
+      aside={
+        catalogCount != null ? (
+          <UniverseChip
+            universe="pegCatalog"
+            value={`${catalogCount.toLocaleString()} coins`}
+          />
+        ) : null
+      }
       state={state}
       loadingContent={
         <>
           <Skeleton className="h-12 w-28" />
-          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-24 w-full" />
         </>
       }
       emptyContent={
@@ -157,23 +163,20 @@ export function ActiveDepegsCard(): React.JSX.Element {
       }
       hasRenderableData={pegSummaryData !== undefined}
     >
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      <div className="flex items-baseline gap-2">
         <RailHeroFigureTransition rail="depeg">
-          <span className={`rounded-md pharos-numeric text-4xl font-bold tracking-tight text-foreground ${flashClass}`}>{activeCount ?? "—"}</span>
+          <span className={`rounded-md pharos-numeric text-3xl font-bold leading-none tracking-tight text-foreground sm:text-4xl ${flashClass}`}>
+            {activeCount ?? "—"}
+          </span>
         </RailHeroFigureTransition>
         {activeCount !== null ? (
-          <span className="text-xs text-muted-foreground">
+          <span className="min-w-0 truncate text-xs text-muted-foreground">
             {activeCount === 1 ? "coin with an open confirmed incident" : "coins with open confirmed incidents"}
           </span>
         ) : null}
-        <UniverseChip
-          universe="pegCatalog"
-          value={catalogCount == null ? undefined : `${catalogCount.toLocaleString()} coins`}
-          className="sm:ml-auto"
-        />
       </div>
       {activeRows.length > MAX_ROWS ? (
-        <p className="-mb-2 pharos-meta">Top {MAX_ROWS} of {activeRows.length} by {rankKey}</p>
+        <p className="-mt-1 pharos-meta">Top {MAX_ROWS} of {activeRows.length} by {rankKey}</p>
       ) : null}
       <ul
         aria-label={
@@ -181,7 +184,7 @@ export function ActiveDepegsCard(): React.JSX.Element {
             ? `Top ${MAX_ROWS} of ${activeRows.length} active depegs by ${rankKey}`
             : `Active depegs by ${rankKey}`
         }
-        className="flex flex-col border-t border-border/50 pt-2 font-mono text-xs"
+        className="flex flex-col gap-0.5 border-t border-border/50 pt-2 font-mono text-xs"
       >
         {activeRows.slice(0, MAX_ROWS).map((row, index) => (
           <DepegRow key={row.id} row={row} logoSrc={getLogoSrc(logoMap, row.id)} isLead={index === 0} />
@@ -211,7 +214,7 @@ function DepegRow({
         prefetch={false}
         href={buildStablecoinUrl(row.id)}
         title={OPEN_INCIDENT_EVIDENCE_LABELS[row.evidence]}
-        className={`pharos-focus-ring -mx-1 grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-x-2 rounded-sm px-1 py-0.5 pharos-numeric transition-colors hover:bg-muted/50 ${isLead ? "bg-muted/55" : ""}`}
+        className={`pharos-focus-ring -mx-1 grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-x-2 rounded-sm px-1 py-1 pharos-numeric transition-colors hover:bg-muted/50 ${isLead ? "bg-muted/55" : ""}`}
       >
         <CoinCell logoSrc={logoSrc} />
         <span className="flex min-w-0 items-baseline gap-1.5">
@@ -228,7 +231,7 @@ function DepegRow({
           title={row.exposureUsd != null ? `${formatCompactUsdShort(row.exposureUsd)} ${below ? "below" : "above"} peg` : undefined}
         >
           {row.referenceNote ? row.referenceNote : row.bps == null ? "Observation unavailable" : (
-            <><span aria-hidden="true" className="mr-0.5">{below ? "↓" : "↑"}</span>{Math.abs(row.bps).toFixed(0)}</>
+            <><span aria-hidden="true" className="mr-0.5">{below ? "↓" : "↑"}</span>{Math.abs(row.bps).toFixed(0)} bps</>
           )}
         </span>
         {/* Second line: DDR verdict, market cap and incident age; unavailable stays named. */}

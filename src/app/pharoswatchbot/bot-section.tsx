@@ -21,7 +21,7 @@ export function BotSection({ id, kicker, title, lead, className, children }: Bot
       className={cn("pharos-card-shell scroll-mt-24 p-5 sm:p-6 lg:p-7", className)}
     >
       <div className="max-w-3xl space-y-1.5">
-        <p className="pharos-kicker">{kicker}</p>
+        <p className="pharos-label">{kicker}</p>
         <h2 id={`${id}-title`} className="pharos-section-title">
           {title}
         </h2>

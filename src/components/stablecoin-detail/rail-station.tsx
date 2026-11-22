@@ -22,8 +22,8 @@ export function StationLabel({ children }: { children: string }) {
 function HorizontalArrowHead() {
   return (
     <>
-      <span className="h-px w-full bg-border" />
-      <span className="border-y-4 border-l-[5px] border-border border-y-transparent" />
+      <span className="h-px w-full bg-muted-foreground/55" />
+      <span className="border-y-4 border-l-[5px] border-muted-foreground/55 border-y-transparent" />
     </>
   );
 }
@@ -31,8 +31,8 @@ function HorizontalArrowHead() {
 function VerticalArrowHead() {
   return (
     <>
-      <span className="h-full w-px bg-border" />
-      <span className="border-x-4 border-t-[5px] border-border border-x-transparent" />
+      <span className="h-full w-px bg-muted-foreground/55" />
+      <span className="border-x-4 border-t-[5px] border-muted-foreground/55 border-x-transparent" />
     </>
   );
 }

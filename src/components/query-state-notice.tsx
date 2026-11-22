@@ -26,7 +26,7 @@ export function QueryStateNotice({
     <div
       role="alert"
       aria-live="polite"
-      className={`flex items-start gap-2 rounded-md ${tone.tone} ${
+      className={`flex items-start gap-2 rounded-md border ${tone.tone} ${
         compact ? "px-2.5 py-2 text-xs" : "px-3 py-2.5 text-sm"
       }`}
     >

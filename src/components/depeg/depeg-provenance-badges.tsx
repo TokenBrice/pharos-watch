@@ -15,6 +15,18 @@ const REASON_LABELS: Record<string, string> = {
   "large-cap": "large cap",
   "low-confidence": "price needs verification",
   "extreme-move": "extreme move",
+  "stale-primary": "stale primary price",
+  "confirm-required": "secondary confirmation required",
+  "native-origin": "native peg quote origin",
+};
+
+const CLOSE_REASON_LABELS: Record<string, string> = {
+  "recovered-primary": "recovered on primary price feed",
+  "recovered-dex": "recovered on DEX price check",
+  "recovered-native": "recovered on native peg quote",
+  "coverage-lost-supply": "tracking closed after supply fell below floor",
+  "superseded-direction": "tracking closed when deviation reversed direction",
+  "orphan-tracking-removed": "tracking closed after asset left catalog",
 };
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -30,11 +42,15 @@ const SOURCE_LABELS: Record<string, string> = {
   "pool:curve:geckoterminal": "Curve pool",
 };
 
-function labelReason(reason: string): string {
+export function formatDepegPendingReason(reason: string): string {
   return reason
     .split("+")
-    .map((part) => REASON_LABELS[part] ?? part.replaceAll("-", " "))
+    .map((part) => REASON_LABELS[part] ?? part.replaceAll("-", " ").replaceAll("_", " "))
     .join(", ");
+}
+
+export function formatDepegCloseReason(reason: string): string {
+  return CLOSE_REASON_LABELS[reason] ?? reason.replaceAll("-", " ").replaceAll("_", " ");
 }
 
 function labelConfirmationSource(source: string): string {
@@ -53,7 +69,7 @@ function labelConfirmationSource(source: string): string {
   return source.replaceAll("-", " ").replaceAll("_", " ");
 }
 
-function labelConfirmationSources(sources: string): string {
+export function formatDepegConfirmationSources(sources: string): string {
   const parts = sources.includes("+") ? sources.split("+") : sources.split(",");
   return parts.map((part) => labelConfirmationSource(part.trim())).filter(Boolean).join(", ");
 }
@@ -92,7 +108,7 @@ export function DepegProvenanceBadges({
               className={cn(source ? "ml-1" : reasonLeadingClass, BADGE_CLASS, "cursor-help")}
               aria-label="Reason this incident used the pending-confirmation path."
             >
-              {labelReason(pendingReason)}
+              {formatDepegPendingReason(pendingReason)}
             </span>
           </TooltipTrigger>
           <TooltipContent className="text-2xs">
@@ -108,7 +124,7 @@ export function DepegProvenanceBadges({
               className={cn(pendingReason || source ? "ml-1" : reasonLeadingClass, BADGE_CLASS, "cursor-help")}
               aria-label="Sources that corroborated the pending incident."
             >
-              confirmed: {labelConfirmationSources(confirmationSources)}
+              confirmed: {formatDepegConfirmationSources(confirmationSources)}
             </span>
           </TooltipTrigger>
           <TooltipContent className="text-2xs">

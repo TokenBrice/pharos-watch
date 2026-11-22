@@ -26,6 +26,9 @@ const DEFAULT_TIMEOUT_MS = 30_000;
 const DEFAULT_TOUCH_TARGET_PX = 44;
 const DEFAULT_TOUCH_HARD_FLOOR_PX = 24;
 const DEFAULT_DESKTOP_VIEWPORT = { label: "desktop-1280x900", width: 1280, height: 900 };
+export const DEFAULT_TABLET_VIEWPORT = { label: "tablet-768x1024", width: 768, height: 1024 };
+export const DEFAULT_MOBILE_UI_THEMES = ["light"];
+const ALLOWED_THEMES = new Set(["light", "dark"]);
 const DEFAULT_MOBILE_UI_WORKERS = 2;
 const MAX_MOBILE_UI_WORKERS = 6;
 
@@ -34,6 +37,10 @@ export const DEFAULT_MOBILE_UI_ROUTES = [
   "/stablecoins/",
   "/screener/",
   "/stablecoin/usdt-tether/",
+  "/stablecoin/usdc-circle/",
+  "/safety-scores/",
+  "/depeg/",
+  "/stability-index/",
   "/timeline/",
   "/compare/",
   "/dependency-map/",
@@ -60,10 +67,12 @@ export function parseArgs(argv) {
   const args = {
     desktopViewport: process.env.SMOKE_MOBILE_UI_DESKTOP_VIEWPORT ?? "",
     failureScreenshotDir: process.env.SMOKE_MOBILE_UI_FAILURE_SCREENSHOT_DIR ?? "",
+    includeTablet: process.env.SMOKE_MOBILE_UI_INCLUDE_TABLET === "1",
     routes: process.env.SMOKE_MOBILE_UI_ROUTES ?? "",
     skipDesktop: skipDesktopDefault,
     skipTouch: process.env.SMOKE_MOBILE_UI_SKIP_TOUCH === "1",
     strictTouchTargets: process.env.SMOKE_MOBILE_UI_STRICT_TOUCH_TARGETS === "1",
+    themes: process.env.SMOKE_MOBILE_UI_THEMES ?? "",
     timeoutMs: process.env.SMOKE_MOBILE_UI_TIMEOUT_MS ?? "",
     url: DEFAULT_URL,
     viewports: process.env.SMOKE_MOBILE_UI_VIEWPORTS ?? "",
@@ -83,6 +92,13 @@ export function parseArgs(argv) {
     "--viewports": ({ readValue }) => {
       args.viewports = readValue();
       return "value";
+    },
+    "--themes": ({ readValue }) => {
+      args.themes = readValue();
+      return "value";
+    },
+    "--include-tablet": () => {
+      args.includeTablet = true;
     },
     "--desktop-viewport": ({ readValue }) => {
       args.desktopViewport = readValue();
@@ -153,6 +169,18 @@ function parseDesktopViewport(input) {
   return parseViewportToken(input) ?? DEFAULT_DESKTOP_VIEWPORT;
 }
 
+export function parseThemeList(input, fallback = DEFAULT_MOBILE_UI_THEMES) {
+  const seen = new Set();
+  const themes = [];
+  for (const token of (input ?? "").split(",")) {
+    const normalized = token.trim().toLowerCase();
+    if (!normalized || !ALLOWED_THEMES.has(normalized) || seen.has(normalized)) continue;
+    seen.add(normalized);
+    themes.push(normalized);
+  }
+  return themes.length > 0 ? themes : fallback;
+}
+
 export function isAllowedSmallTouchTarget(target) {
   if (target.explicitAllow) return true;
   if (target.inVisualization) return true;
@@ -173,7 +201,11 @@ export function getTouchScanOutcome(scan, { strictTouchTargets = false } = {}) {
   const hardFloor = scan.violations.filter((entry) => entry.severity === "hard-floor");
   const targetWarnings = scan.violations.filter((entry) => entry.severity === "target");
   const strictFailures = strictTouchTargets
-    ? targetWarnings.filter((entry) => entry.strictRequired !== false && entry.height < DEFAULT_TOUCH_TARGET_PX)
+    ? targetWarnings.filter(
+        (entry) =>
+          entry.strictRequired !== false
+          && Math.min(entry.width ?? entry.height, entry.height) < DEFAULT_TOUCH_TARGET_PX,
+      )
     : [];
   return {
     failCount: hardFloor.length + strictFailures.length,
@@ -341,9 +373,13 @@ function buildRouteCaptureScript() {
       const isFixedStatusStrip =
         style.position === "fixed" && rect.width >= window.innerWidth - 2 && rect.height <= 8;
       const strictRequired = Boolean(
-        tagName === "tr"
+        tagName === "button"
+        || tagName === "summary"
+        || tagName === "tr"
         || ["input", "select", "textarea"].includes(tagName)
-        || /(?:^|\\s)(?:h-11|min-h-11|w-11|min-w-11)(?:\\s|$)/.test(className)
+        || ["button", "combobox", "tab", "menuitem", "switch", "checkbox", "radio"].includes(role)
+        || hasButtonChrome
+        || /(?:^|\\s)(?:h-11|min-h-11|w-11|min-w-11|size-11)(?:\\s|$)/.test(className)
       );
       return {
         className,
@@ -383,12 +419,54 @@ function buildRouteCaptureScript() {
       return { left: 0, right: window.innerWidth, top: 0, bottom: window.innerHeight };
     };
 
-    const textLikelyOverflowsCell = (cell) => {
-      const text = (cell.innerText ?? "").replace(/\\s+/g, " ").trim();
+    const getHorizontalClipAncestor = (el) => {
+      let current = el.parentElement;
+      while (current && current !== document.body) {
+        const style = getComputedStyle(current);
+        const overflowX = style.overflowX || style.overflow || "visible";
+        if (overflowX === "auto" || overflowX === "scroll") {
+          return null;
+        }
+        if (overflowX === "clip" || overflowX === "hidden") {
+          return current;
+        }
+        current = current.parentElement;
+      }
+      return null;
+    };
+
+    const hasCollidingInlineChildren = (cell) => {
+      const cellRect = cell.getBoundingClientRect();
+      if (cellRect.width <= 0) return false;
+      for (const child of Array.from(cell.children)) {
+        if (!isElementVisible(child)) continue;
+        const childStyle = getComputedStyle(child);
+        if (childStyle.position === "absolute" || childStyle.position === "fixed") continue;
+        if (safeClassName(child).split(" ").includes("sr-only")) continue;
+        const childRect = child.getBoundingClientRect();
+        if (childRect.right > cellRect.right + 4 || childRect.left < cellRect.left - 4) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    const textLikelyOverflowsCell = (cell, { isFixedTable = false } = {}) => {
+      const text = (cell.innerText ?? cell.textContent ?? "").replace(/\\s+/g, " ").trim();
       if (text.length <= 1) return false;
       const style = getComputedStyle(cell);
-      if (style.overflowX !== "visible" && style.overflow !== "visible") return false;
-      return cell.scrollWidth > cell.clientWidth + 8 && cell.clientWidth < 96;
+      const overflowX = style.overflowX || style.overflow || "visible";
+      const allowsOverflow = overflowX === "visible";
+      const clipsWithoutEllipsis =
+        (overflowX === "hidden" || overflowX === "clip") && style.textOverflow !== "ellipsis";
+      const overflowsHorizontally = cell.clientWidth > 0 && cell.scrollWidth > cell.clientWidth + 4;
+      if (allowsOverflow && (overflowsHorizontally || hasCollidingInlineChildren(cell))) {
+        return true;
+      }
+      if (isFixedTable && clipsWithoutEllipsis && overflowsHorizontally) {
+        return true;
+      }
+      return false;
     };
 
     const describeTableCell = (cell) => {
@@ -423,7 +501,21 @@ function buildRouteCaptureScript() {
         if (measurableRows.length === 0) continue;
         tableScan.checked += 1;
         const tableRect = table.getBoundingClientRect();
+        const isFixedTable =
+          getComputedStyle(table).tableLayout === "fixed" || table.classList.contains("table-fixed");
         const tableViewport = getHorizontalViewport(table);
+        const clipAncestor = getHorizontalClipAncestor(table);
+        if (clipAncestor) {
+          const clipWidth = clipAncestor.clientWidth || Math.round(clipAncestor.getBoundingClientRect().width);
+          const tableWidth = Math.max(table.scrollWidth, Math.round(tableRect.width));
+          if (clipWidth > 0 && tableWidth > clipWidth + 2) {
+            tableScan.issues.push({
+              kind: "table-clipped-by-ancestor",
+              selector: shortSelector(table),
+              detail: \`table width \${Math.round(tableWidth)}px clipped by \${shortSelector(clipAncestor)} (\${Math.round(clipWidth)}px)\`,
+            });
+          }
+        }
         const headerCells = Array.from(table.querySelectorAll("thead th")).filter(isElementVisible);
         const visibleHeaderCells = headerCells
           .map((cell) => ({ cell, rect: cell.getBoundingClientRect() }))
@@ -451,7 +543,9 @@ function buildRouteCaptureScript() {
           }
         }
 
-        const overflowingHeader = visibleHeaderCells.find(({ cell }) => textLikelyOverflowsCell(cell));
+        const overflowingHeader = visibleHeaderCells.find(({ cell }) =>
+          textLikelyOverflowsCell(cell, { isFixedTable }),
+        );
         if (overflowingHeader) {
           tableScan.issues.push({
             kind: "header-text-overflow",
@@ -466,7 +560,9 @@ function buildRouteCaptureScript() {
             .map((cell) => ({ cell, rect: cell.getBoundingClientRect() }))
             .filter(({ rect }) => rect.width > 1 && intersects(rect, tableViewport))
             .sort((a, b) => a.rect.left - b.rect.left);
-          const overflowingCell = visibleCells.find(({ cell }) => textLikelyOverflowsCell(cell));
+          const overflowingCell = visibleCells.find(({ cell }) =>
+            textLikelyOverflowsCell(cell, { isFixedTable }),
+          );
           if (overflowingCell) {
             tableScan.issues.push({
               kind: "body-cell-text-overflow",
@@ -703,7 +799,7 @@ async function maybeCaptureFailureScreenshot(page, dir, label) {
 }
 
 async function runRouteCheck(page, options) {
-  const { failureScreenshotDir, strictTouchTargets, viewport } = options;
+  const { failureScreenshotDir, strictTouchTargets, theme = "light", viewport } = options;
   await page.setViewportSize({ height: viewport.height, width: viewport.width });
   const consoleMessages = [];
   const detachRuntimeListeners = attachRuntimeMessageListeners(page, consoleMessages);
@@ -712,7 +808,7 @@ async function runRouteCheck(page, options) {
       retries: 1,
       onRetry: ({ error: navigationError }) => {
         console.log(
-          `[mobile-ui-smoke] RETRY ${options.route} @ ${formatViewport(viewport)} after navigation error: ${
+          `[mobile-ui-smoke] RETRY ${options.route} @ ${formatViewport(viewport)} [${theme}] after navigation error: ${
             navigationError instanceof Error ? navigationError.message.split("\n")[0] : String(navigationError)
           }`,
         );
@@ -723,7 +819,7 @@ async function runRouteCheck(page, options) {
       const screenshotPath = await maybeCaptureFailureScreenshot(
         page,
         failureScreenshotDir,
-        `${formatViewport(viewport)}-${options.route}`,
+        `${theme}-${formatViewport(viewport)}-${options.route}`,
       );
       return { consoleMessages, failures, screenshotPath, summary };
     }
@@ -751,11 +847,13 @@ function printConsoleWarnings(prefix, consoleMessages) {
   console.log(`[mobile-ui-smoke] WARN ${prefix} console warnings=${warnings.length}: ${preview}`);
 }
 
-function toCheckPlans(routes, viewports) {
+function toCheckPlans(routes, viewports, themes = DEFAULT_MOBILE_UI_THEMES) {
   const plans = [];
-  for (const viewport of viewports) {
-    for (const route of routes) {
-      plans.push({ route, viewport });
+  for (const theme of themes) {
+    for (const viewport of viewports) {
+      for (const route of routes) {
+        plans.push({ route, theme, viewport });
+      }
     }
   }
   return plans;
@@ -771,12 +869,32 @@ export function getMobileWorkerCount(taskCount, workersInput) {
   });
 }
 
+async function createThemedContext(browser, url, sessionCookie, theme) {
+  const context = await browser.newContext({ colorScheme: theme });
+  if (sessionCookie) await context.addCookies([{ ...sessionCookie, domain: new URL(url).hostname }]);
+  await context.addInitScript((selectedTheme) => {
+    try {
+      window.localStorage.setItem("theme", selectedTheme);
+    } catch {
+      // Ignore storage restrictions on opaque origins.
+    }
+  }, theme);
+  return context;
+}
+
 export async function run(argv = process.argv.slice(2)) {
   const rawArgs = parseArgs(argv);
   const url = ensureUrl(rawArgs.url);
   const routes = parseRouteList(rawArgs.routes);
-  const viewports = parseViewportList(rawArgs.viewports);
-  const mobilePlans = toCheckPlans(routes, viewports);
+  const parsedViewports = parseViewportList(rawArgs.viewports);
+  const hasTabletViewport = parsedViewports.some(
+    (vp) => vp.width === DEFAULT_TABLET_VIEWPORT.width && vp.height === DEFAULT_TABLET_VIEWPORT.height,
+  );
+  const viewports = rawArgs.includeTablet && !hasTabletViewport
+    ? [...parsedViewports, DEFAULT_TABLET_VIEWPORT]
+    : parsedViewports;
+  const themes = parseThemeList(rawArgs.themes);
+  const mobilePlans = toCheckPlans(routes, viewports, themes);
   const mobileWorkerCount = getMobileWorkerCount(mobilePlans.length, rawArgs.workers);
   const desktopViewport = parseDesktopViewport(rawArgs.desktopViewport);
   const timeoutMs = parsePositiveInt(rawArgs.timeoutMs, DEFAULT_TIMEOUT_MS);
@@ -785,6 +903,7 @@ export async function run(argv = process.argv.slice(2)) {
   console.log(`[mobile-ui-smoke] URL ${url}`);
   console.log(`[mobile-ui-smoke] Routes ${routes.join(", ")}`);
   console.log(`[mobile-ui-smoke] Mobile viewports ${viewports.map(formatViewport).join(", ")}`);
+  console.log(`[mobile-ui-smoke] Themes ${themes.join(", ")}`);
   if (!rawArgs.skipDesktop) {
     console.log(`[mobile-ui-smoke] Desktop spot viewport ${formatViewport(desktopViewport)}`);
   }
@@ -797,30 +916,39 @@ export async function run(argv = process.argv.slice(2)) {
 
   const chromium = await loadChromium();
   const browser = await launchChromiumBrowser(chromium);
-  const context = await browser.newContext();
   const sessionCookie = await siteSessionCookie(url);
-  if (sessionCookie) await context.addCookies([{ ...sessionCookie, domain: new URL(url).hostname }]);
+  const contextsByTheme = new Map();
+  for (const theme of themes) {
+    contextsByTheme.set(theme, await createThemedContext(browser, url, sessionCookie, theme));
+  }
   const failures = [];
+  const formatThemeSuffix = (theme) => (themes.length === 1 && theme === "light" ? "" : ` [${theme}]`);
 
   try {
     const runMobileWorker = async (workerIndex) => {
-      const page = await context.newPage();
+      const pagesByTheme = new Map();
       try {
         for (let planIndex = workerIndex; planIndex < mobilePlans.length; planIndex += mobileWorkerCount) {
-          const { route, viewport } = mobilePlans[planIndex];
+          const { route, theme, viewport } = mobilePlans[planIndex];
+          let page = pagesByTheme.get(theme);
+          if (!page) {
+            page = await contextsByTheme.get(theme).newPage();
+            pagesByTheme.set(theme, page);
+          }
           const result = await runRouteCheck(page, {
             failureScreenshotDir: rawArgs.failureScreenshotDir,
             route,
             scanTableGeometry: true,
             scanTouchTargets: !rawArgs.skipTouch,
             strictTouchTargets: rawArgs.strictTouchTargets,
+            theme,
             timeoutMs,
             url,
             viewport,
             waitMs,
           });
           const { summary } = result;
-          const prefix = `${route} @ ${formatViewport(viewport)}`;
+          const prefix = `${route} @ ${formatViewport(viewport)}${formatThemeSuffix(theme)}`;
           if (result.failures.length > 0) {
             failures.push({ ...result, prefix });
             console.log(`[mobile-ui-smoke] FAIL mobile ${prefix}: ${result.failures.join("; ")}`);
@@ -838,44 +966,49 @@ export async function run(argv = process.argv.slice(2)) {
           }
         }
       } finally {
-        await page.close();
+        for (const page of pagesByTheme.values()) {
+          await page.close();
+        }
       }
     };
 
     await Promise.all(Array.from({ length: mobileWorkerCount }, (_unused, index) => runMobileWorker(index)));
 
     if (!rawArgs.skipDesktop) {
-      const desktopPage = await context.newPage();
-      try {
-        for (const route of routes) {
-          const result = await runRouteCheck(desktopPage, {
-            failureScreenshotDir: rawArgs.failureScreenshotDir,
-            route,
-            scanTableGeometry: false,
-            scanTouchTargets: false,
-            strictTouchTargets: false,
-            timeoutMs,
-            url,
-            viewport: desktopViewport,
-            waitMs,
-          });
-          const { summary } = result;
-          const prefix = `${route} @ ${formatViewport(desktopViewport)}`;
-          if (result.failures.length > 0) {
-            failures.push({ ...result, prefix });
-            console.log(`[mobile-ui-smoke] FAIL desktop ${prefix}: ${result.failures.join("; ")}`);
-            if (result.screenshotPath) {
-              console.log(`[mobile-ui-smoke] FAIL screenshot ${result.screenshotPath}`);
+      for (const theme of themes) {
+        const desktopPage = await contextsByTheme.get(theme).newPage();
+        try {
+          for (const route of routes) {
+            const result = await runRouteCheck(desktopPage, {
+              failureScreenshotDir: rawArgs.failureScreenshotDir,
+              route,
+              scanTableGeometry: true,
+              scanTouchTargets: false,
+              strictTouchTargets: false,
+              theme,
+              timeoutMs,
+              url,
+              viewport: desktopViewport,
+              waitMs,
+            });
+            const { summary } = result;
+            const prefix = `${route} @ ${formatViewport(desktopViewport)}${formatThemeSuffix(theme)}`;
+            if (result.failures.length > 0) {
+              failures.push({ ...result, prefix });
+              console.log(`[mobile-ui-smoke] FAIL desktop ${prefix}: ${result.failures.join("; ")}`);
+              if (result.screenshotPath) {
+                console.log(`[mobile-ui-smoke] FAIL screenshot ${result.screenshotPath}`);
+              }
+            } else {
+              console.log(
+                `[mobile-ui-smoke] OK desktop ${prefix} overflow=${summary.overflowDelta}px tablesChecked=${summary.tableScan.checked}`,
+              );
+              printConsoleWarnings(prefix, result.consoleMessages);
             }
-          } else {
-            console.log(
-              `[mobile-ui-smoke] OK desktop ${prefix} overflow=${summary.overflowDelta}px tablesChecked=${summary.tableScan.checked}`,
-            );
-            printConsoleWarnings(prefix, result.consoleMessages);
           }
+        } finally {
+          await desktopPage.close();
         }
-      } finally {
-        await desktopPage.close();
       }
     }
 
@@ -886,7 +1019,9 @@ export async function run(argv = process.argv.slice(2)) {
 
     console.log("[mobile-ui-smoke] All checks passed.");
   } finally {
-    await context.close();
+    for (const context of contextsByTheme.values()) {
+      await context.close();
+    }
     await browser.close();
   }
 }

@@ -295,7 +295,7 @@ function PillarBreakdownDetails({
                   ) : null}
                 </span>
                 <span className="shrink-0 text-right font-mono text-3xs text-muted-foreground">
-                  {route.score === null ? "Not scored" : `V10 route ${route.score.toFixed(0)} / 100`}
+                  {route.score === null ? "Not scored" : `Route score ${route.score.toFixed(0)} / 100`}
                   {route.redundancyCredit !== null
                     ? ` · backup +${route.redundancyCredit.toFixed(1)}`
                     : route.included

@@ -136,6 +136,21 @@ describe("CoverageMatrixCard", () => {
     window.history.replaceState(null, "", "/coverage/");
   });
 
+  it("keeps column headers concise with a table-level column guide and sticky first column", () => {
+    const { container } = render(<CoverageMatrixCard {...makeMatrixModel()} />);
+    const table = container.querySelector("table")!;
+    expect(table.getAttribute("aria-describedby")).toBe("coverage-matrix-column-guide");
+    expect(document.getElementById("coverage-matrix-column-guide")?.textContent).toContain("Safety Score:");
+
+    const headers = [...table.querySelectorAll("thead th")];
+    expect(headers[0].className).toContain("sticky");
+    expect(headers[0].className).toContain("left-0");
+    // No 30-word description prose repeated inside every <th>.
+    for (const th of headers) {
+      expect((th.textContent ?? "").split(/\s+/).length).toBeLessThanOrEqual(4);
+    }
+  });
+
 });
 
 describe("CoverageSafetyScoreDataCard", () => {

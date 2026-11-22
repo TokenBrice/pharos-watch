@@ -124,13 +124,16 @@ export function DepegResolverRowCard({ row, logos, marketCapUsd }: DepegResolver
   const meta = getTierMeta(tier, vocabulary);
   const factors = resolution.factors;
   const kills = factors.filter((f) => f.kind === "kill");
+  const orderedKills = [...kills].sort((a, b) => SEVERITY_WEIGHT[b.severity] - SEVERITY_WEIGHT[a.severity]);
   const anchors = factors.filter((f) => f.kind === "anchor");
   const killWeight = kills.reduce((sum, f) => sum + SEVERITY_WEIGHT[f.severity], 0);
   const anchorWeight = anchors.reduce((sum, f) => sum + SEVERITY_WEIGHT[f.severity], 0);
 
   const terminal = tier === "recovery_unlikely";
   const insufficient = tier === "insufficient_signal";
-  const showTension = factors.length > 0 && !insufficient;
+  // Terminal cards surface their fired kill signals inline; keep the
+  // collapsible tension comparison when recovery anchors are also present.
+  const showTension = factors.length > 0 && !insufficient && (!terminal || anchors.length > 0);
   const chronic = duration.ageStatus === "chronic_tail";
   const currentDeviationBps = getLiveCurrentDeviationBps(row);
   const pegRatioLabel =
@@ -220,7 +223,7 @@ export function DepegResolverRowCard({ row, logos, marketCapUsd }: DepegResolver
 
         {chronic ? (
           <p className="text-xs font-medium text-state-warn">
-            Unusually prolonged — already past comparable incidents&apos; P99.
+            Unusually prolonged: already past comparable incidents&apos; P99.
           </p>
         ) : null}
 
@@ -241,6 +244,26 @@ export function DepegResolverRowCard({ row, logos, marketCapUsd }: DepegResolver
                 </p>
               </>
             )}
+            {orderedKills.length > 0 ? (
+              <div className="mt-2 border-t border-state-danger-solid/20 pt-2" data-ddr-terminal-signals="">
+                <p className="pharos-label text-state-danger">
+                  {orderedKills.length === 1 ? "Fired kill signal" : "Fired kill signals"}
+                </p>
+                <ul className="mt-1 space-y-1">
+                  {orderedKills.map((factor) => (
+                    <li key={factor.code} className="flex items-start gap-2 text-xs">
+                      <SeverityPips kind="kill" weight={SEVERITY_WEIGHT[factor.severity]} />
+                      <span className="min-w-0 break-words font-medium leading-snug text-foreground">
+                        {factor.label}
+                      </span>
+                      <span className="pharos-meta ml-auto shrink-0 pl-1">
+                        {SEVERITY_LABEL[factor.severity]}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
             <Link
               href="/cemetery"
               className="pharos-focus-ring mt-1.5 inline-block rounded-sm text-xs font-medium text-state-danger hover:underline"

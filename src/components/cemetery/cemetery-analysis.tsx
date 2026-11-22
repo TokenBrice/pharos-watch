@@ -39,7 +39,7 @@ function ChartCardHeader({
 }) {
   return (
     <div className="space-y-2">
-      <p className="pharos-kicker">{kicker}</p>
+      <p className="pharos-label">{kicker}</p>
       <h3 id={titleId} className="pharos-section-title">
         {title}
       </h3>

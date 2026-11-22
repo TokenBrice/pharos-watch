@@ -16,7 +16,7 @@ export function CemeterySectionHeader({ id, kicker, title, meta, actions, level 
   return (
     <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
       <div className="min-w-0 max-w-3xl space-y-1">
-        <p className="pharos-kicker">{kicker}</p>
+        <p className="pharos-label">{kicker}</p>
         <Heading id={id} className="pharos-section-title">
           {title}
         </Heading>

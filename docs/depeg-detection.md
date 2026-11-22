@@ -571,11 +571,21 @@ Cache: producer-backed profile (`s-maxage=300`, `max-age=60`, `stale-while-reval
 
 ## Frontend
 
-The [Depeg & Recovery board](https://pharos.watch/depeg/) separates live incidents,
-forecast grading and resolved history. The [permanent archive](https://pharos.watch/depeg/archive/)
-retains qualifying published event URLs; sub-threshold detections remain in the
-API and per-coin history. Route/crawl contracts live in `docs/depeg-page.md#event-history-and-crawlability`;
-detail-history presentation lives in `docs/stablecoin-detail-page.md`.
+The [Depeg & Recovery board](https://pharos.watch/depeg/) opens with a 4-stage pipeline
+jump strip (`Early Stress (DEWS) -> Live Incidents -> Recovery Forecast (DDR) -> Peg History`)
+and a live "Now" hero pairing active incidents and signed worst deviation with the DEWS radar.
+DDR recovery outlook and DDRR track-record summaries live in the resolver module header with
+inline fired kill signals on terminal cards; detailed ML calibration tables stay collapsed
+behind a one-row `Track Record` grading disclosure by default. The peg control board uses
+`DataTableShell` with sticky clickable sort headers, a `Status` filter (`All`, `Active/Pending`,
+`DEWS Alert+`, `At peg`), concise `at peg` occupancy sublines, and CSV/NDJSON/Markdown export.
+The [permanent archive](https://pharos.watch/depeg/archive/) remains server-rendered for full
+link crawlability with client-side coin, direction, and severity filters; individual
+`/depeg/<event>/` pages include a visible breadcrumb back-link, a `Start -> Peak -> Recovery`
+price-path bar, and human-readable close and quality labels. Sub-threshold detections remain in
+the API and per-coin history. Route/crawl contracts live in
+`docs/depeg-page.md#event-history-and-crawlability`; detail-history presentation lives in
+`docs/stablecoin-detail-page.md`.
 
 ## Peg Stability Metrics (`peg-stability.ts`)
 

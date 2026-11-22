@@ -9,33 +9,37 @@ import { HomeSectionErrorBoundary } from "@/components/homepage/home-section-err
 import { ShortcutsSection } from "@/components/homepage/shortcuts-section";
 import { LazySection } from "@/components/lazy-section";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  TableBody,
-  TableCaption,
-  TableFrame,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableSkeletonRows,
-  type TableSkeletonColumn,
-} from "@/components/table";
+import { StablecoinOverviewSkeleton } from "@/components/stablecoin-directory/stablecoin-overview-skeleton";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { HOMEPAGE_TOP_CORE_STABLECOINS } from "@/lib/stablecoin-static-data";
 
 function MiniCardGridFallback() {
   return (
-    <div className="@container space-y-3">
-      <div className="grid grid-cols-1 gap-3 @xl:grid-cols-2 @4xl:grid-cols-3">
-        <Skeleton className="h-28 w-full" />
-        <Skeleton className="h-28 w-full" />
-        <Skeleton className="h-28 w-full" />
+    <>
+      <div className="space-y-2.5 md:hidden">
+        <div className="grid grid-cols-2 gap-2.5">
+          <Skeleton className="h-[104px] w-full rounded-xl" />
+          <Skeleton className="h-[104px] w-full rounded-xl" />
+          <Skeleton className="h-[104px] w-full rounded-xl" />
+          <Skeleton className="h-[104px] w-full rounded-xl" />
+        </div>
+        <div className="grid grid-cols-2 gap-2.5">
+          <Skeleton className="h-11 w-full rounded-xl" />
+          <Skeleton className="h-11 w-full rounded-xl" />
+        </div>
       </div>
-      <div className="grid grid-cols-1 gap-3 @xl:grid-cols-2 @4xl:grid-cols-3">
-        <Skeleton className="h-40 w-full" />
-        <Skeleton className="h-40 w-full" />
-        <Skeleton className="h-40 w-full" />
+      <div className="@container hidden space-y-3 md:block">
+        <div className="grid grid-cols-1 gap-3 @xl:grid-cols-2 @4xl:grid-cols-3">
+          <Skeleton className="h-80 w-full rounded-xl" />
+          <Skeleton className="h-80 w-full rounded-xl" />
+          <Skeleton className="h-80 w-full rounded-xl" />
+        </div>
+        <div className="grid grid-cols-1 gap-3 @xl:grid-cols-2">
+          <Skeleton className="h-56 w-full rounded-xl" />
+          <Skeleton className="h-56 w-full rounded-xl" />
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -46,27 +50,6 @@ const HomeAltMiniCardGrid = dynamic(
     loading: MiniCardGridFallback,
   },
 );
-
-/* Approximates the loaded table's column rhythm (rank · coin · 6 numeric/badge
- * columns) so the reserved space reads as the table arriving, not a void. */
-const RANKINGS_SKELETON_COLUMNS: readonly TableSkeletonColumn[] = [
-  { id: "rank", cellClassName: "w-10", skeletonClassName: "h-4 w-5" },
-  { id: "name", skeletonClassName: "h-4 w-36" },
-  { id: "price", cellClassName: "text-right", skeletonClassName: "ml-auto h-4 w-14" },
-  { id: "peg", cellClassName: "text-right hidden sm:table-cell", skeletonClassName: "ml-auto h-4 w-12" },
-  { id: "mcap", cellClassName: "text-right", skeletonClassName: "ml-auto h-4 w-16" },
-  { id: "change24h", cellClassName: "text-right hidden md:table-cell", skeletonClassName: "ml-auto h-4 w-12" },
-  { id: "change7d", cellClassName: "text-right hidden lg:table-cell", skeletonClassName: "ml-auto h-4 w-12" },
-  { id: "grade", cellClassName: "text-center hidden md:table-cell", skeletonClassName: "mx-auto h-4 w-7" },
-];
-
-const RANKINGS_SKELETON_HEADERS = ["#", "Name", "Price", "Peg", "Market cap", "24h", "7d", "Grade"] as const;
-const RANKINGS_HEADER_VISIBILITY: Record<string, string> = {
-  Peg: "hidden sm:table-cell",
-  "24h": "hidden md:table-cell",
-  "7d": "hidden lg:table-cell",
-  Grade: "hidden md:table-cell",
-};
 
 const STATIC_PROFILE_LINKS = HOMEPAGE_TOP_CORE_STABLECOINS.slice(0, 8);
 
@@ -103,11 +86,11 @@ function HomepageStaticProfileDirectory(): React.JSX.Element {
   );
 }
 
-/* Mirrors the loaded section's order — header, external toolbar, table shell,
- * peg browse strip beneath — so content doesn't jump when the chunk mounts. */
+/* Mirrors the loaded section's order: header, crawlable core links, unified
+ * StablecoinOverviewSkeleton, and peg browse strip beneath. */
 function RankingsSectionFallback() {
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="space-y-1.5">
         <h2
           id="home-alt-rankings-title"
@@ -120,28 +103,7 @@ function RankingsSectionFallback() {
         </p>
       </div>
       <HomepageStaticProfileDirectory />
-      <div className="space-y-3">
-        {/* External toolbar placeholder (figmaOverview renders it above the shell) */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Skeleton className="h-9 w-64 max-w-full" />
-          <Skeleton className="h-9 w-40" />
-        </div>
-        <TableFrame tableId="stablecoin-overview-loading">
-          <TableCaption className="sr-only">Stablecoin data table loading</TableCaption>
-          <TableHeader className="bg-muted">
-            <TableRow rowIntent="static">
-              {RANKINGS_SKELETON_HEADERS.map((label) => (
-                <TableHead key={label} scope="col" className={RANKINGS_HEADER_VISIBILITY[label]}>
-                  {label}
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <TableSkeletonRows columns={RANKINGS_SKELETON_COLUMNS} rowCount={20} rowClassName="h-14" />
-          </TableBody>
-        </TableFrame>
-      </div>
+      <StablecoinOverviewSkeleton showToolbar />
       <div className="flex flex-wrap gap-2">
         {Array.from({ length: 6 }).map((_, i) => (
           <Skeleton key={i} className="h-8 w-24 rounded-full" />
@@ -159,10 +121,39 @@ const HomeAltRankingsSection = dynamic(
   },
 );
 
-/* Below-fold overview modules (after On The Horizon) are code-split and SSR-off:
- * each owns a live hook, so deferring the chunk keeps them off the homepage's
- * critical path. This generic skeleton reserves the header+panel rhythm for the
- * brief chunk-download window; each module then renders its own loading state. */
+function DigestStripFallback(): React.JSX.Element {
+  return (
+    <div className="pharos-card-shell grid grid-cols-1 gap-4 p-5 sm:p-6 lg:grid-cols-[minmax(0,4fr)_minmax(0,5fr)_minmax(0,3fr)]">
+      <div className="space-y-2.5">
+        <Skeleton className="h-7 w-40" />
+        <Skeleton className="h-4 w-56" />
+        <div className="flex gap-2 pt-1">
+          <Skeleton className="h-8 w-28 rounded-md" />
+          <Skeleton className="h-8 w-36 rounded-md" />
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Skeleton className="h-5 w-48" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-4/5" />
+      </div>
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-28" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-5/6" />
+      </div>
+    </div>
+  );
+}
+
+const DailyDigestCard = dynamic(
+  () => import("@/components/home-alt-mini-cards/daily-digest-card").then((mod) => mod.DailyDigestCard),
+  {
+    ssr: false,
+    loading: DigestStripFallback,
+  },
+);
+
 function ModuleFallback(): React.JSX.Element {
   return (
     <div className="space-y-3 sm:space-y-4">
@@ -175,8 +166,6 @@ function ModuleFallback(): React.JSX.Element {
   );
 }
 
-/* The status strip is a single slim row, so it reserves a much shorter band
- * than the header+panel modules above it. */
 function StatusStripFallback(): React.JSX.Element {
   return (
     <div className="pharos-card-shell flex flex-col gap-x-4 gap-y-1.5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -231,9 +220,10 @@ const HomeAltStatusTelegram = dynamic(
 const HASH_TARGET_SECTIONS: Readonly<Record<string, string>> = {
   "home-alt-rankings": "rankings",
   "home-alt-rankings-title": "rankings",
+  "daily-digest-title": "digest",
+  "yield-overview-title": "yield",
   "upcoming-horizon-constellation-title": "horizon",
   "ddr-overview-title": "ddr",
-  "yield-overview-title": "yield",
   "home-alt-status-telegram-title": "status",
 };
 
@@ -263,8 +253,6 @@ function useHashTargetForceMount() {
       return true;
     };
     if (scrollToTarget()) return;
-    // A heading inside a dynamic section may arrive after this effect. Wait
-    // for that actual target, not a timer or every other section's payload.
     const observer = new MutationObserver(() => {
       if (scrollToTarget()) observer.disconnect();
     });
@@ -275,9 +263,8 @@ function useHashTargetForceMount() {
   return target?.section;
 }
 
-// Reserves are the measured rendered heights (390 base / 1440 `lg:`), as static
-// Tailwind classes: an under-reserved section shifts the footer on mount (CLS),
-// an over-reserved one only leaves whitespace while it is in view.
+// Reserves are measured rendered heights (390 base / desktop `md:` or `lg:`),
+// as static Tailwind classes so mounting deferred sections never shifts the footer.
 function BelowFold({
   forced,
   reserveClassName,
@@ -298,23 +285,30 @@ function BelowFold({
   );
 }
 
-export function HomeAltClient({ children }: { children?: ReactNode }) {
+export function HomeAltClient({
+  blogBanner,
+  children,
+}: {
+  blogBanner?: ReactNode;
+  children?: ReactNode;
+}) {
   const hashTargetSection = useHashTargetForceMount();
 
   return (
     <div id="data" tabIndex={-1}>
+      {/* Band 3: Market Pulse Grid (Row 1 permanently leads with Active depegs;
+          mobile compresses into a dense 2x2 KPI grid). */}
       <div className="space-y-3">
-        <BelowFold forced={false} reserveClassName="min-h-[1584px] lg:min-h-[594px]" rootMargin="0px">
+        <BelowFold forced={false} reserveClassName="min-h-[340px] md:min-h-[600px]" rootMargin="0px">
           <HomeAltMiniCardGrid />
         </BelowFold>
       </div>
 
-      <div className="mt-5 sm:mt-6">
-        <ShortcutsSection />
-      </div>
+      {/* Band 4: Server-rendered fresh blog banner below Market Pulse so Row 1
+          sits cleanly above 1280x800 and 1440x900 desktop folds. */}
+      {blogBanner ? <div className="mt-4 sm:mt-5">{blogBanner}</div> : null}
 
-      {/* The directory table is the product's workbench — it follows the
-          shortcuts directly. */}
+      {/* Band 5: Stablecoin Overview workbench with 300px viewport prefetch. */}
       <section
         id="home-alt-rankings"
         role="region"
@@ -324,13 +318,32 @@ export function HomeAltClient({ children }: { children?: ReactNode }) {
         <BelowFold
           forced={hashTargetSection === "rankings"}
           reserveClassName="min-h-[1230px] lg:min-h-[1015px]"
-          rootMargin="0px"
+          rootMargin="300px"
           placeholder={<RankingsSectionFallback />}
         >
           <HomeAltRankingsSection titleId="home-alt-rankings-title" />
         </BelowFold>
       </section>
 
+      {/* Band 6: Full-width Cross-Device Daily Digest Editorial Strip. */}
+      <BelowFold forced={hashTargetSection === "digest"} reserveClassName="min-h-[260px] lg:min-h-[188px]">
+        <div className="mt-8 sm:mt-10">
+          <HomeSectionErrorBoundary name="daily digest">
+            <DailyDigestCard />
+          </HomeSectionErrorBoundary>
+        </div>
+      </BelowFold>
+
+      {/* Band 7: Yield Intelligence (promoted ahead of On the horizon & DDR). */}
+      <BelowFold forced={hashTargetSection === "yield"} reserveClassName="min-h-[564px] lg:min-h-[489px]">
+        <div className="mt-8 sm:mt-10">
+          <HomeSectionErrorBoundary name="yield intelligence overview">
+            <HomeAltYieldOverview />
+          </HomeSectionErrorBoundary>
+        </div>
+      </BelowFold>
+
+      {/* Band 8: On the horizon & Depeg Duration Resolver. */}
       <BelowFold forced={hashTargetSection === "horizon"} reserveClassName="min-h-[212px] lg:min-h-[335px]">
         <div className="mt-8 sm:mt-10">
           <HomeAltUpcomingHorizonConstellation />
@@ -345,14 +358,12 @@ export function HomeAltClient({ children }: { children?: ReactNode }) {
         </div>
       </BelowFold>
 
-      <BelowFold forced={hashTargetSection === "yield"} reserveClassName="min-h-[564px] lg:min-h-[489px]">
-        <div className="mt-8 sm:mt-10">
-          <HomeSectionErrorBoundary name="yield intelligence overview">
-            <HomeAltYieldOverview />
-          </HomeSectionErrorBoundary>
-        </div>
-      </BelowFold>
+      {/* Band 9: Curated 6-tool ShortcutsSection below Overview & modules. */}
+      <div className="mt-8 sm:mt-10">
+        <ShortcutsSection />
+      </div>
 
+      {/* Band 10: API / Media strips + Status / Telegram strip. */}
       {children}
 
       <BelowFold forced={hashTargetSection === "status"} reserveClassName="min-h-[83px] lg:min-h-[53px]">

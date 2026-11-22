@@ -80,7 +80,7 @@ function BasinDrillDown({ hub, publication, labelOf, hubIds, onExposure }: {
       })}
       <div className="flex flex-wrap gap-3">
         {onExposure && <button type="button" className="pharos-focus-ring min-h-11 rounded-md border border-border px-3 text-sm" aria-label={`Use ${labelOf(rootId)} as exposure root`} onClick={() => onExposure(rootId)}>Use as exposure root</button>}
-        <Link href={buildStablecoinUrl(rootId)} aria-label={`Open coin ${labelOf(rootId)}`} className="pharos-focus-ring inline-flex min-h-11 items-center rounded-md px-2 text-sm text-frost-blue" onClick={() => trackEvent("dependency_map_action", { action: "hub_open_coin", value: rootId })}>Open coin</Link>
+        <Link href={buildStablecoinUrl(rootId)} aria-label={`Open coin ${labelOf(rootId)}`} className="pharos-focus-ring inline-flex min-h-11 items-center rounded-md px-2 text-sm text-brand-accent-text" onClick={() => trackEvent("dependency_map_action", { action: "hub_open_coin", value: rootId })}>Open coin</Link>
       </div>
     </div>
   );

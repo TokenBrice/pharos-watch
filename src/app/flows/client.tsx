@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import type { StaleQuery } from "@/components/stale-data-banner";
@@ -84,6 +84,16 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
   // The overview already needs the authoritative weekly window. Start the chart
   // there too; the 30-day variant is fetched only when the reader selects it.
   const [hours, setHours] = useState(168);
+  const [highlightedCoinId, setHighlightedCoinId] = useState<string | null>(null);
+  const [highlightRequestKey, setHighlightRequestKey] = useState(0);
+  const handleSelectRunLineCoin = useCallback((coinId: string) => {
+    if (highlightedCoinId === coinId) {
+      setHighlightedCoinId(null);
+      return;
+    }
+    setHighlightedCoinId(coinId);
+    setHighlightRequestKey((count) => count + 1);
+  }, [highlightedCoinId]);
   const {
     data: summaryData,
     meta: summaryMeta,
@@ -195,10 +205,17 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
             window={summaryData?.window}
             dataHealth={dataHealth}
             isLoading={isSummaryLoading}
+            selectedCoinId={highlightedCoinId}
+            onSelectCoin={handleSelectRunLineCoin}
           />
 
           <section id="data" tabIndex={-1} aria-label="Per-coin flows">
-            <FlowTable coins={coins} isLoading={isSummaryLoading} />
+            <FlowTable
+              coins={coins}
+              isLoading={isSummaryLoading}
+              highlightedCoinId={highlightedCoinId}
+              highlightRequestKey={highlightRequestKey}
+            />
           </section>
         </>
       )}

@@ -43,31 +43,31 @@ export function SafetyScoresDimensionDetails() {
         <h3 className="text-foreground font-medium">V8.17 Decentralization Scoring (retired)</h3>
         <p>
           This historical V8.17 dimension started from the governance quality tier, then applied a chain-risk penalty for protocols on less decentralized chains
-          &mdash; governance decentralization is undermined when the underlying chain has centralisation concerns
-          &mdash; followed by a branch-aware CDP-only oracle setup blend (v8.11), reviewed bridge-route blend (v8.12),
-          and the penalty-only Mint Authority blend (v8.0). It is not used by Safety Score V10; the retained metadata is
+          (governance decentralization is undermined when the underlying chain has centralization concerns),
+          followed by a branch-aware CDP-only oracle setup blend (v8.11), reviewed bridge-route blend (v8.12),
+          and the penalty-only Mint Authority blend (v8.0). It is not used by the active Safety Score; the retained metadata is
           displayed only as the descriptive Control posture classification:
         </p>
         <ul className="list-disc list-inside space-y-1">
           <li>
-            <span className="text-foreground">Immutable code</span> &mdash; 100 (no admin keys, no upgrade path &mdash;
+            <span className="text-foreground">Immutable code</span>: 100 (no admin keys, no upgrade path,
             e.g.&nbsp;LUSD, BOLD). Exempt from chain-risk penalty
           </li>
           <li>
-            <span className="text-foreground">DAO governance</span> &mdash; 85 (e.g.&nbsp;DAI)
+            <span className="text-foreground">DAO governance</span>: 85 (e.g.&nbsp;DAI)
           </li>
           <li>
-            <span className="text-foreground">Multisig</span> &mdash; 55 (e.g.&nbsp;GHO, FRAX)
+            <span className="text-foreground">Multisig</span>: 55 (e.g.&nbsp;GHO, FRAX)
           </li>
           <li>
-            <span className="text-foreground">Regulated entity</span> &mdash; 40 (named regulator, license, and
-            independent audit &mdash; e.g.&nbsp;USDC, USDT)
+            <span className="text-foreground">Regulated entity</span>: 40 (named regulator, license, and
+            independent audit, e.g.&nbsp;USDC, USDT)
           </li>
           <li>
-            <span className="text-foreground">Single entity</span> &mdash; 20 (unregulated or unverified issuer)
+            <span className="text-foreground">Single entity</span>: 20 (unregulated or unverified issuer)
           </li>
           <li>
-            <span className="text-foreground">Wrapper</span> &mdash; inherits tracked parent Decentralization with a
+            <span className="text-foreground">Wrapper</span>: inherits tracked parent Decentralization with a
             wrapper-kind haircut; unresolved wrappers fall back to 10
           </li>
         </ul>
@@ -109,20 +109,20 @@ export function SafetyScoresDimensionDetails() {
         <p>
           A rated Mint Authority Score applies as the final stage:{" "}
           <span className="pharos-numeric">min(score, round(score &times; 0.65 + MAS &times; 0.35))</span>. The blend
-          only drags the dimension down &mdash; a weak privileged-mint path undermines a decentralization claim, while a
+          only drags the dimension down: a weak privileged-mint path undermines a decentralization claim, while a
           strong one never lifts it. Coins without a rated Mint Authority Score are unchanged, and wrappers take the
           drag once on their inherited pre-blend score (capped at the parent&apos;s blended score).
         </p>
         <p className="font-medium text-foreground mt-2">
-          Chain-risk penalty (DAO and multisig governance &mdash; exempt for immutable-code, wrapper, regulated-entity,
+          Chain-risk penalty (DAO and multisig governance; exempt for immutable-code, wrapper, regulated-entity,
           single-entity):
         </p>
         <ul className="list-disc list-inside space-y-1">
-          <li>Combined score &ge;80 &mdash; no penalty</li>
-          <li>Combined score &ge;60 &mdash; &minus;10</li>
-          <li>Combined score &ge;40 &mdash; &minus;25</li>
-          <li>Combined score &ge;20 &mdash; &minus;40</li>
-          <li>Combined score &lt;20 &mdash; &minus;60</li>
+          <li>Combined score &ge;80: no penalty</li>
+          <li>Combined score &ge;60: &minus;10</li>
+          <li>Combined score &ge;40: &minus;25</li>
+          <li>Combined score &ge;20: &minus;40</li>
+          <li>Combined score &lt;20: &minus;60</li>
         </ul>
         <p className="text-xs">
           Example: hyUSD (DAO governance, Solana, combined score 45) = 85 &minus; 25 ={" "}
@@ -140,22 +140,22 @@ export function SafetyScoresDimensionDetails() {
         </p>
         <ul className="list-disc list-inside space-y-1">
           <li>
-            <span className="text-foreground">Self-backed coins</span> &mdash; score by governance baseline:
+            <span className="text-foreground">Self-backed coins</span>: score by governance baseline:
             decentralized&nbsp;90, centralized-dependent&nbsp;75, centralized&nbsp;95
           </li>
           <li>
-            <span className="text-foreground">With mapped dependencies</span> &mdash; blended score: each
+            <span className="text-foreground">With mapped dependencies</span>: blended score where each
             upstream&apos;s grade is weighted by its collateral fraction, and the self-backed portion (non-stablecoin
             collateral) scores vary by governance type (decentralized&nbsp;90, centralized-dependent&nbsp;75,
             centralized&nbsp;95). A &minus;10 penalty applies if any upstream dependency scores below 75
           </li>
           <li>
-            <span className="text-foreground">Unavailable upstream scores</span> &mdash; every unavailable weight is
+            <span className="text-foreground">Unavailable upstream scores</span>: every unavailable weight is
             scored at 70 inside the same blend, including when every upstream is unavailable. It still triggers the weak
             dependency penalty and remains subject to wrapper or mechanism ceilings
           </li>
           <li>
-            <span className="text-foreground">Variants and self-holdings</span> &mdash; a tracked variant has one serial
+            <span className="text-foreground">Variants and self-holdings</span>: a tracked variant has one serial
             wrapper dependency on its parent. Mirrored parent reserves do not add parallel weight, and a coin&apos;s own
             treasury-held token remains reserve evidence without becoming a self-dependency
           </li>
@@ -167,7 +167,7 @@ export function SafetyScoresDimensionDetails() {
           availability, self-backed share, the weak penalty, and any binding ceiling.
         </p>
         <p className="mt-2">
-          <span className="text-foreground font-medium">Dependency type ceilings</span> &mdash; each dependency is
+          <span className="text-foreground font-medium">Dependency type ceilings:</span> each dependency is
           classified as <em>wrapper</em>, <em>mechanism</em>, or <em>collateral</em> (default). Legacy wrappers (e.g.,
           syrupUSDC &rarr; USDC) are capped at <code className="text-xs">upstream &minus; 3</code>. Tracked
           parent-linked variants keep the same wrapper edge but use family-specific ceilings: savings &minus;3,
@@ -176,7 +176,7 @@ export function SafetyScoresDimensionDetails() {
           <Link href="/learn/mechanisms/cdp/" className={METHODOLOGY_LINK_CLASS}>
             PSM
           </Link>
-          ) are essential to the peg &mdash; score is capped at the upstream&apos;s score. Collateral dependencies use
+          ) are essential to the peg, so the score is capped at the upstream&apos;s score. Collateral dependencies use
           the blended formula with no ceiling.
         </p>
         <p className="text-xs">
@@ -210,11 +210,11 @@ export function SafetyScoresDimensionDetails() {
         <ul className="list-disc list-inside space-y-1">
           <li>
             <span className="text-foreground font-medium">NR (Not Rated)</span> is used when fewer than 2 base
-            dimensions have data &mdash; no misleading partial grades
+            dimensions have data, avoiding misleading partial grades
           </li>
           <li>Weight is redistributed proportionally among rated base dimensions when some are NR</li>
           <li>
-            Peg stability acts as a multiplier, not a base dimension &mdash; maintaining a peg is table stakes, not a
+            Peg stability acts as a multiplier, not a base dimension. Maintaining a peg is table stakes, not a
             differentiator
           </li>
           <li>Cemetery (defunct) coins receive a permanent F</li>
@@ -256,7 +256,7 @@ export function SafetyScoresDimensionDetails() {
         <h3 className="text-foreground font-medium">Limitations</h3>
         <ul className="list-disc list-inside space-y-1">
           <li>
-            Peg stability only reflects price data &mdash; can&apos;t detect coins &ldquo;stable&rdquo; because nobody
+            Peg stability only reflects price data and can&apos;t detect coins &ldquo;stable&rdquo; because nobody
             trades them
           </li>
           <li>Decentralization is structural, not a value judgment</li>

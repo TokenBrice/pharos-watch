@@ -42,7 +42,7 @@ export default function NotFound() {
         {/* Georgia (`font-serif`), not Newsreader: the not-found boundary is
             bundled into every route, and importing digestDisplay here
             preloaded the digest font CSS app-wide (mythos review #19). */}
-        <p className="font-serif text-xs font-semibold uppercase tracking-[0.22em] text-frost-blue/80">
+        <p className="font-serif text-xs font-semibold uppercase tracking-[0.22em] text-brand-accent-text/80">
           Trail gone cold
         </p>
         <h1 className="font-serif text-4xl font-semibold tracking-tight sm:text-5xl">
@@ -61,7 +61,7 @@ export default function NotFound() {
 
       {topSuggestion && (
         <div className="w-full max-w-xl rounded-xl border border-frost-blue/40 bg-frost-blue/5 px-4 py-3 text-left">
-          <p className="text-xs font-mono uppercase tracking-wider text-frost-blue/80">
+          <p className="text-xs font-mono uppercase tracking-wider text-brand-accent-text/80">
             Did you mean?
           </p>
           <ul className="mt-2 space-y-1">

@@ -54,7 +54,7 @@ export function RelatedCoinsList({
                     />
                   ) : null}
                   <div className="flex min-w-0 flex-col gap-0.5">
-                    <span className="font-mono text-sm font-semibold text-foreground transition-colors group-hover:text-frost-blue">
+                    <span className="font-mono text-sm font-semibold text-foreground transition-colors group-hover:text-brand-accent-text">
                       {meta.symbol}
                     </span>
                     <span className="text-xs leading-snug text-muted-foreground">
@@ -66,7 +66,7 @@ export function RelatedCoinsList({
                   {coin.note}
                 </p>
                 <ArrowUpRight
-                  className="hidden h-4 w-4 shrink-0 self-center text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-frost-blue sm:block"
+                  className="hidden h-4 w-4 shrink-0 self-center text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-brand-accent-text sm:block"
                   aria-hidden="true"
                 />
               </Link>

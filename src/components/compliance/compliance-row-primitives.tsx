@@ -58,10 +58,20 @@ export function ComplianceStatusBadge({
   status: MicaStatus | GeniusAuthorizationStatus;
 }) {
   const { badge, description } = complianceStatusMeta(regime, status);
+  const neutralOverride =
+    regime === "genius" && status === "unknown"
+      ? "border-dashed border-muted-foreground/60 bg-muted/60"
+      : regime === "genius" && status === "not-applicable"
+        ? "bg-muted/20 border-border/50"
+        : undefined;
   return (
     <span
       title={description}
-      className={cn("inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold", badge.cls)}
+      className={cn(
+        "inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold",
+        badge.cls,
+        neutralOverride,
+      )}
     >
       {badge.label}
     </span>

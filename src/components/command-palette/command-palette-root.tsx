@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 import { FileText, Coins, Clock, Trash2, Search, X } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
@@ -9,11 +9,14 @@ import { logosById } from "@/lib/logos";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useCommandPaletteHistory } from "@/hooks/use-command-palette-history";
+import { useReportCardsV9, useReportCardsV9Table, useSafetyGrades } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useThemeToggle } from "@/hooks/use-theme-toggle";
 import { useWatchlist } from "@/hooks/use-watchlist";
 import { useCoinStates } from "@/hooks/use-coin-states";
 import { CoinStateChip } from "@/components/coin-state-chip";
+import { SafetyGradeBadge } from "@/components/safety-scores/safety-grade-badge";
+import type { ReportCardGrade } from "@shared/types/report-card-grade";
 import { groupCommandPaletteResults } from "@/components/command-palette/command-palette-model";
 import { clampCommandPaletteSelectedIndex } from "@/components/command-palette/command-palette-actions";
 import {
@@ -73,6 +76,13 @@ const EMPTY_STATE_CHIPS: { label: string; href: string }[] = [
   { label: "Screener", href: "/screener/" },
 ];
 
+const TOP_VERB_CHIPS: ReadonlyArray<{ label: string; prefill: string; title: string }> = [
+  { label: "compare", prefill: "compare ", title: "Compare stablecoins side by side (e.g. compare USDC USDT)" },
+  { label: "portfolio", prefill: "portfolio ", title: "Open stablecoins in Portfolio (e.g. portfolio USDC USDS)" },
+  { label: "reserves", prefill: "reserves ", title: "Jump to a coin's reserves section (e.g. reserves USDC)" },
+  { label: "depeg", prefill: "depeg ", title: "Jump to a coin's depeg history (e.g. depeg USDC)" },
+];
+
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
   const [rawSelectedIndex, setSelectedIndex] = useState(0);
@@ -86,13 +96,39 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const lastFocusedElementRef = useRef<HTMLElement | null>(null);
   const wasOpenRef = useRef(false);
   const router = useRouter();
+  const pathname = usePathname();
   const { isDark, toggleTheme } = useThemeToggle();
   const logos = logosById;
-  const { data: stablecoinsData, meta, dataUpdatedAt, error } = useStablecoins();
+  const { data: stablecoinsData, meta, dataUpdatedAt, error } = useStablecoins({ enabled: open });
+  // Cache-only grade reads: reuse any already-populated safety-score query
+  // without issuing unsolicited network requests on static/editorial routes.
+  const { data: reportCardsTableData } = useReportCardsV9Table({ enabled: false });
+  const { data: reportCardsFullData } = useReportCardsV9({ enabled: false });
+  const { data: safetyGradesData } = useSafetyGrades({ enabled: false });
   const { history, addToHistory, clearHistory } = useCommandPaletteHistory();
   const { ids: watchlistIds, add: addToWatchlist, remove: removeFromWatchlist, clear: clearWatchlist, count: watchlistCount } = useWatchlist();
   // The one exceptional-state ladder; its live reads run only while the palette is open.
   const { byId: coinStates } = useCoinStates({ enabled: open });
+
+  const cachedSafetyGrades = useMemo(() => {
+    const map = new Map<string, ReportCardGrade>();
+    if (safetyGradesData?.grades) {
+      for (const row of safetyGradesData.grades) {
+        if (row.grade) map.set(row.id, row.grade);
+      }
+    }
+    if (reportCardsFullData?.cards) {
+      for (const card of reportCardsFullData.cards) {
+        if (card.grade) map.set(card.id, card.grade);
+      }
+    }
+    if (reportCardsTableData?.cards) {
+      for (const card of reportCardsTableData.cards) {
+        if (card.grade) map.set(card.id, card.grade);
+      }
+    }
+    return map;
+  }, [reportCardsTableData, reportCardsFullData, safetyGradesData]);
   const freshnessNow = useFreshnessBoundary([{
     ...DATA_HEALTH_PRESETS.stablecoins,
     dataUpdatedAt,
@@ -159,12 +195,15 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       isDark,
       watchlistCount,
       watchlistIds,
+      pathname,
       stablecoinLiveMetadata,
       popularIds,
       logos,
       router,
       closePalette,
       addToHistory,
+      addToWatchlist,
+      removeFromWatchlist,
       toggleTheme,
       setQuery,
       verbPreview,
@@ -176,12 +215,15 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     isDark,
     watchlistCount,
     watchlistIds,
+    pathname,
     stablecoinLiveMetadata,
     popularIds,
     logos,
     router,
     closePalette,
     addToHistory,
+    addToWatchlist,
+    removeFromWatchlist,
     toggleTheme,
     verbPreview,
     runVerb,
@@ -296,7 +338,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search or type a verb (compare, screen, pin)…"
+            placeholder="Search or type a verb (compare, portfolio, reserves, screen)..."
             className="h-14 w-full border-b border-border/70 bg-transparent pl-10 pr-14 text-base text-foreground placeholder:text-muted-foreground focus:outline-none sm:h-12 sm:pr-4"
             aria-label="Search"
             role="combobox"
@@ -316,6 +358,27 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           >
             <X className="h-4 w-4" />
           </button>
+        </div>
+
+        <div
+          className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-border/50 bg-muted/15 px-4 py-1.5"
+          aria-label="Quick command verbs"
+        >
+          <span className="pharos-label mr-1 text-muted-foreground/80">Commands</span>
+          {TOP_VERB_CHIPS.map((chip) => (
+            <button
+              key={chip.label}
+              type="button"
+              title={chip.title}
+              onClick={() => {
+                setQuery(chip.prefill);
+                inputRef.current?.focus();
+              }}
+              className="pharos-focus-ring inline-flex min-h-7 items-center rounded-full border border-border/60 bg-background/80 px-2.5 py-0.5 font-mono text-2xs text-muted-foreground transition-colors hover:border-border hover:bg-muted/50 hover:text-foreground"
+            >
+              {chip.label}
+            </button>
+          ))}
         </div>
 
         <div
@@ -372,6 +435,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                 const currentIndex = flatIndex++;
                 const isSelected = currentIndex === selectedIndex;
                 const coinState = item.coinId ? coinStates.get(item.coinId)?.[0] : undefined;
+                const safetyGrade = item.coinId ? cachedSafetyGrades.get(item.coinId) : undefined;
 
                 return (
                   <button type="button"
@@ -429,6 +493,13 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                         </span>
                       )}
                     </div>
+                    {safetyGrade ? (
+                      <SafetyGradeBadge
+                        grade={safetyGrade}
+                        size="xs"
+                        className="shrink-0 px-1.5 py-0 font-mono text-3xs leading-tight"
+                      />
+                    ) : null}
                     {typeof item.marketCap === "number" ? (
                       <span className="shrink-0 pl-3 text-right pharos-numeric text-xs text-muted-foreground">
                         {formatCommandPaletteMarketCap(item.marketCap)}

@@ -1,6 +1,5 @@
 "use client";
 
-import { FeatureHeroSplit, HeroMetricRow } from "@/components/feature-hero-split";
 import { OpsStatusChip } from "@/components/ops-status-chip";
 import { UniverseChip } from "@/components/universe-chip";
 import { UNIVERSES } from "@/lib/universe-vocabulary";
@@ -66,7 +65,7 @@ function CohortMixBar({ snapshot }: { snapshot: AltPegSnapshot }) {
   const commodityShare = snapshot.commoditySharePct ?? 0;
 
   return (
-    <div className="space-y-3 px-5 py-5 sm:px-6 lg:px-7" data-testid="cohort-mix">
+    <div className="space-y-2 px-4 py-3 sm:px-5 lg:px-6 lg:py-3.5" data-testid="cohort-mix">
       <p className="pharos-label">Cohort mix</p>
       {complete ? (
         <div className="space-y-1.5">
@@ -85,7 +84,7 @@ function CohortMixBar({ snapshot }: { snapshot: AltPegSnapshot }) {
             }, { offset: 0, labels: [] }).labels}
           </div>
           <div
-            className="flex h-3.5 w-full gap-px overflow-hidden rounded-sm"
+            className="flex h-3 w-full gap-px overflow-hidden rounded-sm"
             role="img"
             aria-label={`Non-USD market cap by peg: ${segments.map((segment) => `${segment.label} ${formatNonUsdShare(segment.sharePct)}`).join(", ")}`}
           >
@@ -99,11 +98,11 @@ function CohortMixBar({ snapshot }: { snapshot: AltPegSnapshot }) {
             ))}
           </div>
           {/* Brackets under the bar span the commodity and currency/index runs. */}
-          <div className="grid gap-2 pt-1" style={{ gridTemplateColumns: `minmax(0, ${commodityShare}fr) minmax(0, ${100 - commodityShare}fr)` }}>
-            <div className="min-w-max border-t border-foreground/25 pt-1.5">
+          <div className="grid gap-2 pt-0.5" style={{ gridTemplateColumns: `minmax(0, ${commodityShare}fr) minmax(0, ${100 - commodityShare}fr)` }}>
+            <div className="min-w-max border-t border-foreground/25 pt-1">
               <MixBracket label="Commodities" marketCap={snapshot.commodityMarketCap} sharePct={snapshot.commoditySharePct} partial={false} />
             </div>
-            <div className="border-t border-foreground/25 pt-1.5">
+            <div className="border-t border-foreground/25 pt-1">
               <MixBracket label="Currencies and indexes" marketCap={snapshot.nonCommodityMarketCap} sharePct={snapshot.nonCommoditySharePct} partial={false} />
             </div>
           </div>
@@ -111,7 +110,7 @@ function CohortMixBar({ snapshot }: { snapshot: AltPegSnapshot }) {
       ) : (
         <div className="space-y-2">
           <div
-            className="flex h-3.5 w-full items-center justify-center rounded-sm border border-border bg-muted-foreground/25 bg-[image:repeating-linear-gradient(135deg,var(--color-card)_0_2px,transparent_2px_6px)]"
+            className="flex h-3 w-full items-center justify-center rounded-sm border border-border bg-muted-foreground/25 bg-[image:repeating-linear-gradient(135deg,var(--color-card)_0_2px,transparent_2px_6px)]"
             role="img"
             aria-label={`Cohort mix withheld: ${snapshot.altSupplyUnavailableCount} of ${snapshot.altCoinCount} non-USD coins have no supply observation${snapshot.altSupplyPartialCount > 0 ? ` and ${snapshot.altSupplyPartialCount} report only a partial-chain remainder` : ""}`}
           />
@@ -148,58 +147,86 @@ export function NonUsdHero({
   const shareDetail = trendStats
     ? `as of ${formatChartDate(trendStats.latestDate * 1000, "short-year")}${trendStats.latestCoverageIncomplete ? " · partial coverage" : ""}`
     : undefined;
+  const changeDetail = trendStats?.valueCoverageIncomplete
+    ? "tracked core history · partial coverage"
+    : "tracked core history";
 
   return (
-    <FeatureHeroSplit
-      layout="stacked"
-      ariaLabel="Non-USD stablecoin market"
-      beamLabel={partial ? "Non-USD stablecoin market cap · known subtotal, partial" : "Non-USD stablecoin market cap"}
-      beamValue={formatCap(snapshot.altMarketCap)}
-      status={partial ? (
-        <OpsStatusChip
-          label="Partial supply"
-          reasonCodes={[
-            ...(snapshot.altSupplyUnavailableCount > 0 ? ["supply-unavailable"] : []),
-            ...(snapshot.altSupplyPartialCount > 0 ? ["supply-partial"] : []),
-          ]}
-        >
-          <p>
-            {snapshot.altSupplyUnavailableCount > 0 ? (
-              <>
-                <span className="pharos-numeric">{snapshot.altSupplyUnavailableCount}</span> of{" "}
-                <span className="pharos-numeric">{snapshot.altCoinCount}</span> core non-USD coins have no current supply observation.
-              </>
-            ) : null}
-            {snapshot.altSupplyPartialCount > 0 ? (
-              <>
-                {" "}<span className="pharos-numeric">{snapshot.altSupplyPartialCount}</span> report only a partial-chain remainder.
-              </>
-            ) : null}
-            {" "}The figure sums the <span className="pharos-numeric">{snapshot.altSupplyObservedCount}</span> with a reported supply; shares and the cohort mix are withheld.
-          </p>
-          {supplyAsOfSec != null ? (
-            <p className="text-muted-foreground">Stablecoin list as of {formatChartDate(supplyAsOfSec * 1000, "full")} UTC.</p>
-          ) : null}
-        </OpsStatusChip>
-      ) : null}
-      universe={<UniverseChip universe="core" value={`${snapshot.altCoinCount} non-USD of ${coreCount}`} />}
-      sub={
-        <div className="divide-y divide-border/50">
-          <HeroMetricRow
-            label="Share of tracked core supply"
-            value={trendStats ? formatPercent(trendStats.latestSharePct, 2) : "—"}
-            detail={shareDetail}
-          />
-          <HeroMetricRow
-            label="1-year change"
-            value={formatSignedPercent(trendStats?.yearlyMarketCapChangePct, 1, "—")}
-            detail={trendStats?.valueCoverageIncomplete ? "tracked core history · partial coverage" : "tracked core history"}
-          />
-          <HeroMetricRow label="Non-USD pegs" value={snapshot.altPegCount} detail="with core coins" />
-        </div>
-      }
+    <div
+      className="pharos-card-shell overflow-hidden"
+      role="group"
+      aria-label="Non-USD stablecoin market"
     >
-      <CohortMixBar snapshot={snapshot} />
-    </FeatureHeroSplit>
+      <div className="flex flex-col gap-3 px-4 py-3.5 sm:px-5 lg:flex-row lg:items-end lg:justify-between lg:px-6 lg:py-4">
+        <div className="min-w-0 space-y-1">
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+            <p className="pharos-label">
+              {partial ? "Non-USD stablecoin market cap · known subtotal, partial" : "Non-USD stablecoin market cap"}
+            </p>
+            {partial ? (
+              <OpsStatusChip
+                label="Partial supply"
+                reasonCodes={[
+                  ...(snapshot.altSupplyUnavailableCount > 0 ? ["supply-unavailable"] : []),
+                  ...(snapshot.altSupplyPartialCount > 0 ? ["supply-partial"] : []),
+                ]}
+              >
+                <p>
+                  {snapshot.altSupplyUnavailableCount > 0 ? (
+                    <>
+                      <span className="pharos-numeric">{snapshot.altSupplyUnavailableCount}</span> of{" "}
+                      <span className="pharos-numeric">{snapshot.altCoinCount}</span> core non-USD coins have no current supply observation.
+                    </>
+                  ) : null}
+                  {snapshot.altSupplyPartialCount > 0 ? (
+                    <>
+                      {" "}<span className="pharos-numeric">{snapshot.altSupplyPartialCount}</span> report only a partial-chain remainder.
+                    </>
+                  ) : null}
+                  {" "}The figure sums the <span className="pharos-numeric">{snapshot.altSupplyObservedCount}</span> with a reported supply; shares and the cohort mix are withheld.
+                </p>
+                {supplyAsOfSec != null ? (
+                  <p className="text-muted-foreground">Stablecoin list as of {formatChartDate(supplyAsOfSec * 1000, "full")} UTC.</p>
+                ) : null}
+              </OpsStatusChip>
+            ) : null}
+            <UniverseChip universe="core" value={`${snapshot.altCoinCount} non-USD of ${coreCount}`} />
+          </div>
+          <p className="pharos-numeric text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+            {formatCap(snapshot.altMarketCap)}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 divide-y divide-border/50 border-t border-border/50 pt-2.5 sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:border-t-0 sm:pt-0 lg:min-w-[30rem]">
+          <div className="flex flex-col gap-0.5 py-1.5 first:pt-0 sm:px-4 sm:py-0 sm:first:pl-0 sm:last:pr-0">
+            <span className="text-xs text-muted-foreground">Share of tracked core supply</span>
+            <span className="pharos-numeric text-sm font-semibold text-foreground">
+              {trendStats ? formatPercent(trendStats.latestSharePct, 2) : "—"}
+            </span>
+            {shareDetail ? (
+              <span className="text-2xs text-muted-foreground">{shareDetail}</span>
+            ) : null}
+          </div>
+          <div className="flex flex-col gap-0.5 py-1.5 sm:px-4 sm:py-0">
+            <span className="text-xs text-muted-foreground">1-year change</span>
+            <span className="pharos-numeric text-sm font-semibold text-foreground">
+              {formatSignedPercent(trendStats?.yearlyMarketCapChangePct, 1, "—")}
+            </span>
+            <span className="text-2xs text-muted-foreground">{changeDetail}</span>
+          </div>
+          <div className="flex flex-col gap-0.5 py-1.5 last:pb-0 sm:px-4 sm:py-0 sm:last:pr-0">
+            <span className="text-xs text-muted-foreground">Non-USD pegs</span>
+            <span className="pharos-numeric text-sm font-semibold text-foreground">
+              {snapshot.altPegCount}
+            </span>
+            <span className="text-2xs text-muted-foreground">with core coins</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="border-t border-border/50">
+        <CohortMixBar snapshot={snapshot} />
+      </div>
+    </div>
   );
 }

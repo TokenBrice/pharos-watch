@@ -71,7 +71,7 @@ export function SelectorEmptyState({
               <li key={survivor.id} className="text-foreground">
                 <span className="font-semibold">{survivor.symbol}</span>
                 <span className="text-muted-foreground">
-                  {" "}— {readableFailingDimension(survivor.failingDimension)}: {survivor.liveReading}
+                  : {readableFailingDimension(survivor.failingDimension)} ({survivor.liveReading})
                 </span>
               </li>
             ))}
@@ -110,7 +110,7 @@ export function SelectorEmptyState({
       </div>
 
       <p className="text-xs leading-relaxed text-muted-foreground">
-        Or accept the answer — the dataset may genuinely not contain a fit for these inputs.
+        Or accept the answer: the dataset may genuinely not contain a fit for these inputs.
       </p>
     </section>
   );

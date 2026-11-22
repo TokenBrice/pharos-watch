@@ -136,7 +136,7 @@ function formatPriceReferenceLine({
   referenceNote: string | null;
   isNavToken: boolean;
 }): string {
-  if (isNavToken) return "NAV token — no fixed peg";
+  if (isNavToken) return "NAV token · no fixed peg";
   if (referenceNote) return referenceNote;
   if (pegReferenceUnavailable) return "Peg reference unavailable";
   return deviationBps == null ? "N/A" : formatBps(deviationBps);
@@ -447,7 +447,11 @@ function MetricChip({
     <div className="flex min-h-16 min-w-0 flex-col rounded-lg border border-border/60 bg-background/45 px-3 py-2">
       <span className="pharos-label flex h-6 min-w-0 items-center whitespace-nowrap">{label}</span>
       <span className={`text-lg font-bold leading-tight pharos-numeric ${colorClass}`}>{value}</span>
-      {subValue ? <span className="mt-0.5 text-2xs text-muted-foreground">{subValue}</span> : null}
+      {subValue ? (
+        <span className="mt-0.5 truncate whitespace-nowrap text-2xs text-muted-foreground" title={subValue}>
+          {subValue}
+        </span>
+      ) : null}
     </div>
   );
 }

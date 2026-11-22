@@ -304,16 +304,13 @@ export function FailureScenarioModule({ selection }: { selection: FailureScenari
       headerRight={
         <>
           <Badge variant="outline" className={NEUTRAL_CHIP_CLASS}>
-            Not part of the Safety Score
-          </Badge>
-          <Badge variant="outline" className={NEUTRAL_CHIP_CLASS}>
             <FlaskConical aria-hidden="true" />
-            Hypothetical scenario
+            Hypothetical · unscored
           </Badge>
           {isDraft ? (
             <Badge variant="outline" className={cn(CHIP_CLASS, SEVERITY_TONE_CLASS.caution.pill)}>
               <FilePen aria-hidden="true" />
-              Draft — not approved
+              Draft · not approved
             </Badge>
           ) : null}
         </>

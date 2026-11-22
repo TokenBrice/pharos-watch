@@ -1,17 +1,18 @@
 import Link from "next/link";
 import { FaqSection } from "@/components/faq-section";
+import { ScreenerModeSwitch } from "@/components/screener/screener-mode-switch";
 import { ScreenerContentLoadingState } from "@/app/screener/loading-state";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import type { FaqItem } from "@/lib/faq";
 
 const screenerDescription =
-  "Filter the screenable stablecoin catalog by DEWS, Safety Grade, V10 pillars and mint-control posture, supply, type, mechanism, peg, and lifecycle.";
+  "Filter the screenable stablecoin catalog by DEWS, Safety Grade, Safety Score pillars and mint-control posture, supply, type, mechanism, peg, and lifecycle.";
 
 const FAQ_ITEMS = [
   {
     question: "What does the Pharos Screener do?",
     answer:
-      "The Screener filters active, pre-launch, and frozen catalog records by DEWS, Safety Grade, the three V10 pillars, V10 mint-control component and posture, supply, type, mechanism, peg, mint route, and lifecycle. Quarantined and delisted records remain available through static detail pages. Share the URL to share the exact filter state.",
+      "The Screener filters active, pre-launch, and frozen catalog records by DEWS, Safety Grade, the three Safety Score pillars, Mint Control score and posture, supply, type, mechanism, peg, mint route, and lifecycle. Quarantined and delisted records remain available through static detail pages. Share the URL to share the exact filter state.",
   },
   {
     question: "How is filter state shared?",
@@ -38,10 +39,10 @@ const SCREENER_SUPPORT_SECTION = (
         <div className="space-y-2">
           <p className="pharos-label">Reading the filters</p>
           <p>
-            Numeric thresholds narrow the candidate set on DEWS stress, the V10 mint component, the three Safety Score
+            Numeric thresholds narrow the candidate set on DEWS stress, the Mint Control score, the three Safety Score
             pillars, and USD-denominated supply. Multi-select pills filter by exceptional state (critical or paused
             notice, active depeg, DEWS Alert or worse, holder deadline), Safety Grade, type, mechanism archetype,
-            curated mint-authority route and V10 mint-posture band, peg, and lifecycle.
+            curated mint-authority route and Mint Control posture band, peg, and lifecycle.
           </p>
           <p>
             Cross-reference results against the{" "}
@@ -93,6 +94,7 @@ const route = createClientFeaturePage({
   shell: {
     breadcrumbName: "Screener",
     title: "Pharos Screener",
+    headerActions: <ScreenerModeSwitch active="screener" />,
     leadParagraphs: [
       "Filter the tracked stablecoin universe by safety grade, risk dimensions, supply, type, mechanism, peg, and lifecycle. Every filter lives in the URL, so sharing the link shares the view.",
     ],

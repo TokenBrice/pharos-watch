@@ -133,7 +133,7 @@ export function CemeteryKeyFacts({ stats, datasetMeta }: CemeteryKeyFactsProps) 
               key={cell.key}
               className={`${styles.fact} min-w-0 border-border/60 px-4 py-4 md:px-5 md:py-5 ${CELL_POSITION_CLASSES[index]} ${cells.length === 3 && index === 2 ? "col-span-2 md:col-span-1" : ""}`}
             >
-              <dt className="pharos-kicker">{cell.label}</dt>
+              <dt className="pharos-label">{cell.label}</dt>
               <dd className="pharos-numeric text-[1.35rem] font-semibold leading-tight text-foreground md:text-[1.75rem]">
                 {cell.value}
               </dd>

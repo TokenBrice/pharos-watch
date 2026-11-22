@@ -3,6 +3,7 @@ import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import { NUMERIC_INPUT_STATES } from "@shared/test-utils/boundary-contract-vectors.test-support";
 import { projectV9TableCard } from "@shared/lib/report-cards-v9-projections";
+import { resolveSafetyCardTopDriver } from "@/components/safety-scores/safety-card-helpers";
 import {
   buildSafetyMcapMap,
   buildSafetyPegTypeMap,
@@ -11,10 +12,12 @@ import {
   buildV9PillarAverages,
   buildV9SupplyMix,
   filterAndSortV9Cards,
+  formatSafetyCardTopDriverExport,
   groupV9CardsByGrade,
+  resolveSafetyCardMeta,
 } from "./v9-view-model";
 
-describe("Safety Scores V9 view model", () => {
+describe("Safety Scores view model", () => {
   const cards = [
     makeV9Card({ id: "asset-a", grade: "A", score: 90 }),
     makeV9Card({ id: "asset-b", grade: "B+", score: 80 }),
@@ -30,12 +33,12 @@ describe("Safety Scores V9 view model", () => {
     }),
   ].map(projectV9TableCard);
 
-  it("groups and counts V9 grades using the existing grade sections", () => {
+  it("groups and counts grades using the existing grade sections", () => {
     expect(buildV9GradeCounts(cards)).toMatchObject({ A: 1, B: 1, C: 1 });
     expect(groupV9CardsByGrade(cards).map((group) => group.grade)).toEqual(["A", "B", "C"]);
   });
 
-  it("builds the existing hero metrics from V9 scores and supply", () => {
+  it("builds the existing hero metrics from scores and supply", () => {
     const stats = buildV9HeadlineStats(cards, new Map([
       ["asset-a", 60],
       ["asset-b", 30],
@@ -116,6 +119,9 @@ describe("Safety Scores V9 view model", () => {
     expect(filterAndSortV9Cards(cards, {
       gradeFilter: "all", pegFilter: "all", pegTypeMap: new Map(), sortKey: "mcap", mcapMap: map,
     }).map((card) => card.id)).toEqual(["asset-b", "asset-a", "asset-c"]);
+    expect(filterAndSortV9Cards(cards, {
+      gradeFilter: "all", pegFilter: "all", pegTypeMap: new Map(), sortKey: "mcap", sortDirection: "asc", mcapMap: map,
+    }).map((card) => card.id)).toEqual(["asset-b", "asset-a", "asset-c"]);
     expect(buildV9HeadlineStats(cards, map)[1]).toMatchObject({
       label: "Known supply in A/B", value: "Unavailable",
     });
@@ -137,6 +143,7 @@ describe("Safety Scores V9 view model", () => {
       label: "Supply in A/B", value: "Unavailable", detail: "$0.00",
     });
   });
+
   it("derives peg buckets from the client registry instead of the optional stablecoins read", () => {
     const realCards = [
       makeV9Card({ id: "usdc-circle" }),
@@ -160,17 +167,50 @@ describe("Safety Scores V9 view model", () => {
     ]);
   });
 
+  it("filters by search query across coin name, symbol, and id, and supports ascending/coin sorting", () => {
+    const realCards = [
+      makeV9Card({ id: "usdc-circle", score: 85, grade: "A" }),
+      makeV9Card({ id: "eurs-stasis", score: 70, grade: "B" }),
+      makeV9Card({ id: "usdt-tether", score: 65, grade: "B-" }),
+    ].map(projectV9TableCard);
+    const base = {
+      gradeFilter: "all" as const,
+      pegFilter: "all" as const,
+      pegTypeMap: buildSafetyPegTypeMap(realCards),
+      sortKey: "overall" as const,
+      mcapMap: new Map<string, number | null>(),
+    };
+
+    expect(filterAndSortV9Cards(realCards, { ...base, searchQuery: "tether" }).map((c) => c.id)).toEqual(["usdt-tether"]);
+    expect(filterAndSortV9Cards(realCards, { ...base, searchQuery: "USDC" }).map((c) => c.id)).toEqual(["usdc-circle"]);
+    expect(filterAndSortV9Cards(realCards, { ...base, sortDirection: "asc" }).map((c) => c.id)).toEqual([
+      "usdt-tether",
+      "eurs-stasis",
+      "usdc-circle",
+    ]);
+    expect(filterAndSortV9Cards(realCards, { ...base, sortKey: "coin", sortDirection: "asc" }).map((c) => c.id)).toEqual([
+      "eurs-stasis",
+      "usdc-circle",
+      "usdt-tether",
+    ]);
+    expect(resolveSafetyCardMeta(realCards[0])).toEqual({
+      name: "USD Coin",
+      symbol: "USDC",
+      pegLabel: "USD",
+    });
+  });
+
   it("separates Pipeline gap from NR and keeps partial ratings ranked without filling missing pillars", () => {
     const gap = makeReportCardsV9PipelineGapCard("control", "A", { id: "gap" });
     const partial = makeReportCardsV9PartialCard("exit", "B", { id: "partial", score: 75 });
     const nr = makeV9Card({ id: "nr", score: null, grade: "NR", ratingStatus: "not-rated" });
-    // The page now consumes the table projection, including its published mint seam.
+    // The page consumes the table projection, including its published mint seam.
     const input = [gap, nr, partial].map(projectV9TableCard);
     expect(buildV9GradeCounts(input)).toMatchObject({ B: 1, NR: 1, F: 0, "pipeline-gap": 1 });
-    expect(groupV9CardsByGrade(input).map(group => group.grade)).toEqual(["B", "NR", "pipeline-gap"]);
+    expect(groupV9CardsByGrade(input).map((group) => group.grade)).toEqual(["B", "NR", "pipeline-gap"]);
     const options = { gradeFilter: "pipeline-gap" as const, pegFilter: "all" as const, pegTypeMap: new Map<string, string>(), sortKey: "overall" as const, mcapMap: new Map([["partial", 100], ["gap", 900]]) };
-    expect(filterAndSortV9Cards(input, options).map(card => card.id)).toEqual(["gap"]);
-    expect(filterAndSortV9Cards(input, { ...options, gradeFilter: "all", sortKey: "control" }).map(card => card.id)).toEqual(["partial", "gap", "nr"]);
+    expect(filterAndSortV9Cards(input, options).map((card) => card.id)).toEqual(["gap"]);
+    expect(filterAndSortV9Cards(input, { ...options, gradeFilter: "all", sortKey: "control" }).map((card) => card.id)).toEqual(["partial", "gap", "nr"]);
     expect(buildV9HeadlineStats(input, options.mcapMap)[0]).toMatchObject({ value: "75" });
     expect(buildV9PillarAverages(input)).toEqual([
       { pillar: "backing", label: "Backing", average: 80, scoredCount: 1, isLowest: true },
@@ -178,6 +218,8 @@ describe("Safety Scores V9 view model", () => {
     ]);
     expect(partial.pillars.exit.score).toBeNull();
     expect(gap.score).toBeNull();
+    expect(resolveSafetyCardTopDriver(input[2]!)).toBeNull();
+    expect(formatSafetyCardTopDriverExport(input[2]!)).toBe("Exit excluded · awaiting curation");
+    expect(formatSafetyCardTopDriverExport(input[0]!)).not.toMatch(/\(A\)|\(B\)/);
   });
-
 });

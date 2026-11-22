@@ -44,14 +44,14 @@ export function EditorialColophon({
       <p className="max-w-[68ch]">{productionNote}</p>
 
       {methodologyVersion && (
-        <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground/80">
+        <p className="pharos-label">
           Methodology {methodologyVersion}
         </p>
       )}
 
       {citation && citationLine && (
         <div className="space-y-1.5">
-          <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground/80">
+          <p className="pharos-label">
             How to cite this page
           </p>
           <p className="max-w-[68ch] text-[13px]">{citationLine}</p>

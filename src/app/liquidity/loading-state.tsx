@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { ChartSkeleton } from "@/components/chart-skeleton";
 import { PageLoadingRowList } from "@/components/page-loading-skeleton";
 
 // Stacked One Beam hero (beam row, exit route map, ledger) + leaderboard.
@@ -21,7 +22,7 @@ export function LiquidityContentLoadingState() {
           </div>
         </div>
         <div className="p-5 sm:p-6 lg:p-7">
-          <Skeleton className="h-[240px] w-full rounded-lg md:h-[440px]" />
+          <ChartSkeleton variant="bars" className="h-[240px] md:h-[360px]" aria-hidden />
         </div>
         <div className="space-y-4 border-t border-border/50 p-5 sm:p-6 lg:px-7 lg:py-5">
           <Skeleton className="h-2 w-full rounded-full" />

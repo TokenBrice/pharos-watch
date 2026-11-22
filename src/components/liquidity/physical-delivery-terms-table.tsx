@@ -9,7 +9,7 @@ import { buildStablecoinUrl } from "@shared/lib/urls";
 
 const METAL_BY_PEG: Partial<Record<PegCurrency, "XAU" | "XAG">> = { GOLD: "XAU", SILVER: "XAG" };
 const NOT_RECORDED = "Not recorded";
-const LINK_CLASS = "pharos-focus-ring rounded-sm text-frost-blue underline-offset-2 hover:underline";
+const LINK_CLASS = "pharos-focus-ring rounded-sm text-brand-accent-text underline-offset-2 hover:underline";
 
 const COLUMNS = [
   { id: "token", header: "Token", rowHeader: true },

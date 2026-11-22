@@ -3,20 +3,16 @@
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { DEWSRadarPanel } from "@/components/dews/dews-summary";
-import { HERO_KPI_VALUE_CLASS } from "@/components/feature-hero-split";
 import { MethodologyLabel } from "@/components/methodology-hint";
-import { getTierMeta } from "@/components/depeg/depeg-resolver-row-card-model";
 import { describeDdrVerdict } from "@/components/depeg/depeg-resolver-row-card-state";
 import { UniverseChip } from "@/components/universe-chip";
 import { RailHeroFigureTransition } from "@/components/view-transitions";
-import type { OpenIncidentRow, ResolverBookSummary } from "@/components/depeg/depeg-resolver-book-summary";
+import type { OpenIncidentRow } from "@/components/depeg/depeg-resolver-book-summary";
 import { cn } from "@/lib/utils";
-import { describePromotedAccuracy, formatPromotedAccuracyLines } from "@/lib/ddr-promoted-accuracy";
 import { deviationBorderClass, deviationColorClass } from "@/lib/severity-colors";
 import { DEPEG_PENDING_STATE_LABELS } from "@shared/lib/classification";
-import { formatCompactUsdShort, formatPercent } from "@shared/lib/format";
+import { formatCompactUsdShort } from "@shared/lib/format";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import type { DdrrSummary } from "@shared/types/depeg-resolver-review";
 import type { PegSummaryStats } from "@shared/types/peg";
 
 interface DepegOutlookHeroProps {
@@ -32,13 +28,7 @@ interface DepegOutlookHeroProps {
   /** DEWS ALERT-or-worse coins, restricted to the peg catalog. */
   dewsAlertCount: number | null;
   /** First reads still needed by each figure or rail group. */
-  pendingSources?: { peg: boolean; pegCatalog?: boolean; dews: boolean; radar?: boolean; events: boolean; resolver: boolean; review: boolean };
-  /** Whole-book recovery posture from DDR; omitted when the flag is off. */
-  book?: ResolverBookSummary | null;
-  /** DDR calibration lineage, shown as the posture's provenance. */
-  lineage?: { incidentCount: number; coinCount: number } | null;
-  /** DDRR headline accuracy; omitted when the reviewer flag is off. */
-  review?: DdrrSummary | null;
+  pendingSources?: { peg: boolean; pegCatalog?: boolean; dews: boolean; radar?: boolean; events: boolean };
   logos?: Record<string, string>;
   /** Compose the queue with the first-show reservation decision. */
   alertQueue?: (reserveSpace: boolean) => ReactNode;
@@ -91,7 +81,9 @@ function OpenIncidentList({ rows }: { rows: readonly OpenIncidentRow[] }) {
                 <span className="pharos-numeric w-18 shrink-0 text-right text-foreground" title={row.referenceNote ?? undefined}>
                   {deviation}
                 </span>
-                <span className={cn("w-24 shrink-0 truncate", verdict.accent)}>{verdict.label}</span>
+                <span className={cn("max-w-32 shrink-0 truncate", verdict.accent)} title={verdict.label}>
+                  {verdict.label}
+                </span>
                 <span className="pharos-numeric w-14 shrink-0 text-right text-muted-foreground">{cap}</span>
               </Link>
             </li>
@@ -102,26 +94,16 @@ function OpenIncidentList({ rows }: { rows: readonly OpenIncidentRow[] }) {
   );
 }
 
-function RailGroup({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="border-t border-border/60 pt-3">
-      <p className="pharos-label">{label}</p>
-      <div className="mt-1.5">{children}</div>
-    </div>
-  );
-}
-
 /**
- * The route's signature hero: a command rail stating the whole current picture —
- * confirmed incidents, early warning, recovery posture and forecast track record
- * — beside the DEWS radar drawn at hero scale.
+ * The route's signature hero: a live "Now" command rail (confirmed incidents,
+ * worst live move, awaiting confirmations, DEWS alerts, holding peg, median
+ * deviation) beside the DEWS radar drawn at hero scale.
  *
  * Scope matters here. The headline count is non-NAV confirmed detections across
  * the peg catalog; worst-live move and holding-peg split come from the
  * live-peg-status subset; the ALERT+ figure is scoped to the peg catalog; the
- * radar plots every DEWS-covered asset. Each figure names its own
- * universe, and this hero is the single owner of all of them — no later module
- * on the route restates them.
+ * radar plots every DEWS-covered asset. Recovery forecasts (DDR) and track
+ * record (DDRR) live in DepegResolverModule below.
  */
 export function DepegOutlookHero({
   stats,
@@ -131,9 +113,6 @@ export function DepegOutlookHero({
   openIncidents,
   dewsAlertCount,
   pendingSources,
-  book,
-  lineage,
-  review,
   logos,
   alertQueue,
   footer,
@@ -145,14 +124,14 @@ export function DepegOutlookHero({
   const queue = alertQueue?.(reserveQueue);
   const activeCount = stats?.activeDepegCount ?? 0;
   const worst = stats?.worstCurrent;
-  const tierGroups = book?.tierGroups ?? [];
-  const headline = review?.headline;
-  const accuracyPct = headline?.recoveryLikelihoodAccuracyPct ?? null;
-  const accuracyLines = review ? formatPromotedAccuracyLines(describePromotedAccuracy(review)) : null;
+  const signedWorstBps = worst ? `${worst.bps > 0 ? "+" : ""}${worst.bps}` : null;
+  const worstHref = worst
+    ? buildStablecoinUrl(worst.id, activeDepegIds.has(worst.id) ? "#depeg-resolver" : undefined)
+    : null;
   const pegMissing = pendingSources?.peg ? "Loading peg summary…" : "peg summary unavailable";
 
   return (
-    <section aria-label="Live depeg outlook" className="pharos-card-shell overflow-hidden">
+    <section id="live-outlook" aria-label="Live depeg outlook" className="pharos-card-shell scroll-mt-24 overflow-hidden">
       {/* Static column utilities on purpose: an arbitrary `grid-cols-[minmax(...)]`
           track is a one-off Tailwind class, and a dev server whose CSS predates it
           silently collapses this hero to a single column. */}
@@ -164,7 +143,7 @@ export function DepegOutlookHero({
             </p>
             <div className={cn("mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1", reservedSources?.peg && "min-h-16 content-start lg:min-h-20")}>
               <RailHeroFigureTransition rail="depeg">
-                <span className={HERO_KPI_VALUE_CLASS}>
+                <span className="pharos-hero-kpi">
                   {stats ? activeCount : "—"}
                 </span>
               </RailHeroFigureTransition>
@@ -178,18 +157,21 @@ export function DepegOutlookHero({
                     ? "coin with an open confirmed incident"
                     : "coins with open confirmed incidents"}
               </span>
-              {worst ? (
-                <span
+              {worst && signedWorstBps && worstHref ? (
+                <Link
+                  prefetch={false}
+                  href={worstHref}
                   className={cn(
-                    "ml-auto inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium",
+                    "pharos-focus-ring ml-auto inline-flex min-h-11 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-opacity hover:opacity-85 sm:min-h-6 sm:px-2 sm:py-0.5",
                     deviationBorderClass(Math.abs(worst.bps)),
                     deviationColorClass(Math.abs(worst.bps)),
                   )}
-                  title="Worst live move"
+                  title={`Worst live move: ${signedWorstBps} bps (${worst.symbol})`}
+                  aria-label={`Worst live move: ${signedWorstBps} bps ${worst.symbol}, open coin detail`}
                 >
-                  <span className="pharos-numeric">{Math.abs(worst.bps)} bps</span>
-                  <span className="opacity-80">{worst.symbol}</span>
-                </span>
+                  <span className="pharos-numeric">{signedWorstBps} bps</span>
+                  <span className="opacity-85">{worst.symbol}</span>
+                </Link>
               ) : null}
             </div>
             {/* The headline counts the peg catalog minus NAV tokens; the chip names
@@ -230,67 +212,8 @@ export function DepegOutlookHero({
               detail={!stats ? pegMissing : stats.medianDeviationBps === null ? "live peg status unavailable" : "live peg status"}
             />
           </div>
-
-          {reservedSources?.resolver || (book && book.total > 0) || pendingSources?.resolver ? (
-            <div className={reservedSources?.resolver ? "min-h-32" : undefined}>
-              {book && book.total > 0 ? (
-                <RailGroup label="Recovery outlook · DDR">
-                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    {tierGroups.map(({ tier, vocabulary, count }) => {
-                      const meta = getTierMeta(tier, vocabulary);
-                      return (
-                        <span key={`${tier}:${vocabulary}`} className="inline-flex items-baseline gap-1 text-xs">
-                          <span className={cn("pharos-numeric text-sm font-semibold", meta.accent)}>{count}</span>
-                          <span className={meta.accent}>{meta.label.toLowerCase()}</span>
-                        </span>
-                      );
-                    })}
-                  </div>
-                  <p className="pharos-meta mt-1">
-                    {book.pastPeakCount > 0 ? (
-                      <span className="text-state-warn">
-                        {book.pastPeakCount} at a new worst ·{" "}
-                      </span>
-                    ) : null}
-                    {lineage
-                      ? `calibrated on ${lineage.incidentCount.toLocaleString()} historical incidents`
-                      : `${book.total} open ${book.total === 1 ? "forecast" : "forecasts"}`}
-                  </p>
-                </RailGroup>
-              ) : pendingSources?.resolver ? (
-                <RailGroup label="Recovery outlook · DDR">
-                  <p className="pharos-meta">Loading DDR…</p>
-                </RailGroup>
-              ) : null}
-            </div>
-          ) : null}
-
-          {reservedSources?.review || (headline && headline.recoveryLikelihoodScoredCount > 0) || pendingSources?.review ? (
-            <div className={reservedSources?.review ? "min-h-28" : undefined}>
-              {headline && accuracyLines && headline.recoveryLikelihoodScoredCount > 0 ? (
-                <RailGroup label="Forecast track record · DDRR">
-                  <p className="flex flex-wrap items-baseline gap-x-2">
-                    <span className="pharos-numeric text-lg font-semibold text-foreground">
-                      {accuracyPct != null ? formatPercent(accuracyPct * 100, 1) : "—"}
-                    </span>
-                    <span className="text-xs text-muted-foreground">{accuracyLines.calls}</span>
-                  </p>
-                  <p className="pharos-meta mt-1">
-                    {review?.headlineLabel ?? headline.accuracyDenominatorLabel} ·{" "}
-                    <a href="#forecast-grading" className="pharos-prose-link">
-                      see the grading
-                    </a>
-                  </p>
-                </RailGroup>
-              ) : pendingSources?.review ? (
-                <RailGroup label="Forecast track record · DDRR">
-                  <p className="pharos-meta">Loading DDRR…</p>
-                </RailGroup>
-              ) : null}
-            </div>
-          ) : null}
         </div>
-        <div className="flex min-w-0 flex-col gap-2 lg:col-span-2">
+        <div id="dews-radar" className="flex min-w-0 scroll-mt-24 flex-col gap-2 lg:col-span-2">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
             <h2 className="pharos-section-title">
               <MethodologyLabel topic="dews">DEWS early warning</MethodologyLabel>
@@ -300,15 +223,24 @@ export function DepegOutlookHero({
           <DEWSRadarPanel
             logos={logos}
             activeDepegIds={activeDepegIds}
-            maxHeight={520}
+            maxHeight={368}
             reserveSpace={reserveRadar}
             reserveLegend={reserveQueue}
           />
-          {/* The precursor queue is the radar's detail layer, so it sits under it and balances
-              the rail's depeg column instead of lengthening it. */}
-          {queue || reserveQueue ? <div className={cn("border-t border-border/60 pt-3", reserveQueue && "min-h-84 sm:min-h-76")}>{queue}</div> : null}
         </div>
       </div>
+      {/* The precursor queue spans full width under the 2-part hero so the left
+          command rail and right DEWS radar stay balanced in height on desktop. */}
+      {queue || reserveQueue ? (
+        <div
+          className={cn(
+            "border-t border-border/60 px-5 py-4 sm:px-6",
+            reserveQueue && "min-h-84 sm:min-h-76 lg:min-h-40",
+          )}
+        >
+          {queue}
+        </div>
+      ) : null}
       {footer ? <div className="border-t border-border/60 px-5 py-4 sm:px-6">{footer}</div> : null}
     </section>
   );

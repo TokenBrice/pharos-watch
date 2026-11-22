@@ -61,6 +61,15 @@ describe("API reference authentication guidance", () => {
     expect(answer).toContain(`${API_BREAKING_CHANGE_NOTICE_DAYS} days' notice`);
     expect(answer).toContain("/api/terms/");
   });
+
+  it("positions the EndpointDirectory directly beneath Quickstart ahead of detailed reference sections", async () => {
+    render(await ApiReferencePanel());
+    const quickstart = document.getElementById("quickstart")!;
+    const directory = document.getElementById("endpoint-directory")!;
+    const auth = document.getElementById("public-api-auth")!;
+    expect(quickstart.compareDocumentPosition(directory) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(directory.compareDocumentPosition(auth) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
 });
 
 describe("API reference dataset cards", () => {

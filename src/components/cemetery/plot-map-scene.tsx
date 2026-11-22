@@ -40,15 +40,15 @@ export const PLOT_VIEWPORT_BANDS = [
 
 /** CSS px of the HTML parts the layout keeps apart, measured at 1440 × 800 and rounded up (system-font tolerant). */
 const EST = {
-  /** Route head: h1 + two-line lead + links (117 px measured). */
-  headH: 118,
+  /** Route head: h1 + two-line lead + whisper + links (~124 px measured). */
+  headH: 124,
   /** Route head width (min(360 px, 36 %)) + 24 px keep-out. */
   headKeepW: 384,
-  /** One Beam block: label, 113, sub-line, plaque, at-rest line (318 × 126 measured). */
+  /** One Beam block: label, 113, sub-line, plaque, at-rest line (318 × 116 measured). */
   figureW: 330,
-  figureH: 128,
-  /** Centre of the `113` digits below the block top (label 24 px + 55 % of the 39.2 px digits). */
-  figureValueY: 46,
+  figureH: 116,
+  /** Centre of the `113` digits below the block top (label 22 px + 55 % of the 39.2 px digits). */
+  figureValueY: 44,
   /** The figure's right edge sits this far left of the lantern. */
   figureGap: 22,
   plateH: 24,
@@ -60,7 +60,7 @@ const EST = {
   scrollbar: 17,
 } as const;
 /** The plan never slides further up than the route head (`--head-keep` in CSS). */
-const HEAD_KEEP = EST.headH + 10;
+const HEAD_KEEP = EST.headH + 4;
 /** Largest frame (1920 px main column − 2 × 36 px) and smallest desktop frame (761 px − 17 px scrollbar − 32 px). */
 const FRAME_RANGE = [712, 1848] as const;
 /** Viewport width below which plates and chips use the compact plate (the CSS module's `max-width: 1279px`). */
@@ -169,8 +169,8 @@ export function desktopPlotLayout(map: DesktopPlotMap): PlotDesktopLayout {
     hullById.set(`grave:${g.id}`, hull(drawn));
   }
 
-  // the route head's sky: the drawn skyline left of the head's right edge, 14 px under the head (per band, lower bound)
-  const skyAt = (W: number) => (skyTopLeftOf(map, vbX + (EST.headKeepW * vbW) / W) - vbY) * (W / vbW) - 14;
+  // the route head's sky: the drawn skyline left of the head's right edge, 8 px under the head (per band, lower bound)
+  const skyAt = (W: number) => (skyTopLeftOf(map, vbX + (EST.headKeepW * vbW) / W) - vbY) * (W / vbW) - 8;
   const sky = PLOT_VIEWPORT_BANDS.map((band) => {
     const ws = bandWidths(band);
     const lo = ws[0];
@@ -181,16 +181,16 @@ export function desktopPlotLayout(map: DesktopPlotMap): PlotDesktopLayout {
     return { a: round6(a), b: Math.floor(b * 10) / 10 };
   });
   const terms: OverlapTerm[] = [];
-  // a plate whose left edge reaches under the route head stays 14 px below it
+  // a plate whose left edge reaches under the route head stays 8 px below it
   for (const p of plates) {
-    terms.push({ a: round6(fy(p.top[1])), b: -EST.plateH - 14, gates: [{ c: round6(fx(p.top[0])), d: 5 - p.w - EST.headKeepW }] });
+    terms.push({ a: round6(fy(p.top[1])), b: -EST.plateH - 8, gates: [{ c: round6(fx(p.top[0])), d: 5 - p.w - EST.headKeepW }] });
   }
   // a monument whose box reaches under the One Beam block stays 6 px below the block
   const frameSamples = Array.from({ length: 24 }, (_, k) => FRAME_RANGE[0] + ((FRAME_RANGE[1] - FRAME_RANGE[0]) * k) / 23);
   for (const o of map.obstacles) {
     const t: OverlapTerm = {
       a: round6(fy(o.y0)),
-      b: EST.headH + 10 - EST.figureH - 6,
+      b: EST.headH - EST.figureH - 6,
       gates: [
         { c: round6(lanternF - fx(o.x1)), d: -(EST.figureGap + EST.figureW) },
         { c: round6(fx(o.x0) - lanternF), d: EST.figureGap },
@@ -203,7 +203,7 @@ export function desktopPlotLayout(map: DesktopPlotMap): PlotDesktopLayout {
     const half = chipWidth(c.name, c.peak, c.month) / 2;
     const t: OverlapTerm = {
       a: round6(fy(c.top[1])),
-      b: EST.headH + 10 - EST.figureH - 4 - 26 - EST.chipH,
+      b: EST.headH - EST.figureH - 4 - 26 - EST.chipH,
       gates: [
         { c: round6(lanternF - fx(c.top[0])), d: -(EST.figureGap + EST.figureW + half) },
         { c: round6(fx(c.top[0]) - lanternF), d: EST.figureGap - half },
@@ -222,7 +222,7 @@ export function desktopPlotLayout(map: DesktopPlotMap): PlotDesktopLayout {
     const s = sky[bandOf(W)];
     return Math.min(HEAD_KEEP, Math.max(0, Math.min(s.a * W + s.b, ...terms.map((t) => termAt(t, W)))));
   };
-  const frameTopAt = (W: number) => EST.headH + 10 - overlapAt(W);
+  const frameTopAt = (W: number) => EST.headH - overlapAt(W);
 
   const chipOrder = [...map.colossi].sort((p, q) => p.top[1] - q.top[1]);
   const chips = chipOrder.map((c) => ({ id: c.id, left: pct(c.top[0] - vbX, vbW), top: pct(c.top[1] - vbY, map.viewBox[3]), bands: [] as PlotBandChip[] }));

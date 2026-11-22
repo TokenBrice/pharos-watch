@@ -84,7 +84,9 @@ function SummarySkeleton() {
   return (
     <Card className={DETAIL_MODULE_SHELL_CLASS}>
       <CardHeader className="border-b border-border/40 px-4 py-4 sm:px-5">
-        <Skeleton className="h-4 w-40" />
+        <StablecoinModuleTitle as="h3" className={DETAIL_MODULE_TITLE_CLASS}>
+          Mint &amp; Burn Flows
+        </StablecoinModuleTitle>
       </CardHeader>
       <CardContent className="space-y-5 px-4 py-5 sm:px-5">
         <div className="grid gap-4 lg:grid-cols-2">

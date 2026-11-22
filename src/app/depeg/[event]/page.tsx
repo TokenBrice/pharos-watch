@@ -2,6 +2,7 @@ import { hasUnverifiedDepegPeak } from "@/lib/depeg-event-config";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BackToSource } from "@/components/back-to-source";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { PreferredSourcePrompt } from "@/components/preferred-source-prompt";
@@ -49,6 +50,11 @@ import {
 import { getDepegEditorial } from "./editorials";
 import { DepegEventNowStrip } from "./now-strip";
 import { CASE_STUDY_BY_DEPEG_SLUG } from "@/lib/case-studies";
+import {
+  formatDepegCloseReason,
+  formatDepegConfirmationSources,
+  formatDepegPendingReason,
+} from "@/components/depeg/depeg-provenance-badges";
 
 export function generateStaticParams() {
   return DEPEG_EVENT_ENTRIES.map((event) => ({ event: event.slug }));
@@ -116,7 +122,7 @@ function ProvenanceLine({ event }: { event: DepegEventEntry }) {
   const parts: string[] = [`Detected under ${versionLabel}`];
   if (provenance?.confidenceTier) parts.push(`${provenance.confidenceTier} confidence`);
   if (provenance?.auditVerdict && !disputed) parts.push(`audit: ${provenance.auditVerdict}`);
-  if (event.confirmationSources) parts.push(`confirmed via ${event.confirmationSources}`);
+  if (event.confirmationSources) parts.push(`confirmed via ${formatDepegConfirmationSources(event.confirmationSources)}`);
   return (
     <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
       {disputed ? (
@@ -126,6 +132,94 @@ function ProvenanceLine({ event }: { event: DepegEventEntry }) {
       ) : null}
       <span>{parts.join(" · ")}</span>
     </p>
+  );
+}
+
+/**
+ * Compact visual price-path stepper (Start → Peak → Recovery/Outcome) rendered
+ * at the top of the Event summary card. Preserves non-recovery closure labels
+ * and unverified peaks without inventing absent prices.
+ */
+function PricePathBar({ event }: { event: DepegEventEntry }) {
+  const startLabel = event.onsetQuoteFromLaterFragment ? "Later quote" : "Start";
+  const startPrice = formatEventPrice(event.startPrice, event, "start");
+  const peakPrice = formatEventPrice(event.peakPrice, event, "peak");
+  const { closure, label: closureLabel, isRecovery } = getDepegEventClosurePresentation(event);
+  const recoveryPrice = isRecovery ? formatEventPrice(event.recoveryPrice, event, "recovery") : null;
+  const peakUnverified = hasUnverifiedDepegPeak(event);
+  const peakDeltaText = peakUnverified
+    ? "Peak unverified"
+    : `${event.direction === "below" ? "↓" : "↑"} ${formatDeviationBps(event.peakDeviationBps)}`;
+  const endLabel = isRecovery ? "Recovery" : closure === "open" ? "Status" : "Outcome";
+  const endValue = isRecovery
+    ? (recoveryPrice ?? "Recovered")
+    : closure === "open"
+      ? "Ongoing"
+      : closureLabel;
+
+  const peakDotClass = event.direction === "below" ? "bg-state-danger-solid" : "bg-state-warn-solid";
+  const peakValueClass = event.direction === "below" ? "text-state-danger" : "text-state-warn";
+  const endDotClass = isRecovery
+    ? "bg-state-positive-solid"
+    : closure === "open"
+      ? "bg-state-danger-solid"
+      : "bg-muted-foreground";
+  const endTrackClass = isRecovery
+    ? "border-t border-state-positive-solid/45"
+    : "border-t border-dashed border-border";
+
+  return (
+    <div
+      role="group"
+      aria-label="Event price path from start to peak to resolution"
+      data-testid="depeg-price-path-bar"
+      className="rounded-lg border border-border/60 bg-muted/25 px-3.5 py-3"
+    >
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center sm:gap-2">
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className="h-2 w-2 shrink-0 rounded-full bg-muted-foreground" aria-hidden="true" />
+            <span className="pharos-label">{startLabel}</span>
+          </div>
+          <p className="pharos-numeric mt-1 text-sm font-semibold text-foreground">
+            {startPrice ?? "—"}
+          </p>
+        </div>
+
+        <div className="hidden w-10 items-center sm:flex" aria-hidden="true">
+          <span className="w-full border-t border-border" />
+          <span className="ml-0.5 text-2xs text-muted-foreground">→</span>
+        </div>
+
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${peakDotClass}`} aria-hidden="true" />
+            <span className="pharos-label">Peak</span>
+          </div>
+          <p className={`pharos-numeric mt-1 text-sm font-semibold ${peakValueClass}`}>
+            {peakPrice ?? peakDeltaText}
+          </p>
+          {peakPrice ? (
+            <p className="pharos-meta pharos-numeric">{peakDeltaText}</p>
+          ) : null}
+        </div>
+
+        <div className="hidden w-10 items-center sm:flex" aria-hidden="true">
+          <span className={`w-full ${endTrackClass}`} />
+          <span className="ml-0.5 text-2xs text-muted-foreground">→</span>
+        </div>
+
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className={`h-2 w-2 shrink-0 rounded-full ${endDotClass}`} aria-hidden="true" />
+            <span className="pharos-label">{endLabel}</span>
+          </div>
+          <p className="pharos-numeric mt-1 text-sm font-semibold text-foreground">
+            {endValue}
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -237,13 +331,13 @@ function buildDepegRecordContext({
         ? `${event.onsetQuoteFromLaterFragment ? "A later observation uses" : "The checked-in record uses"} a ${referenceLabel} of ${pegReference}.`
         : "The checked-in record preserves the measured direction and peak deviation.";
   const confirmation = event.confirmationSources
-    ? ` Confirmation evidence is recorded as “${event.confirmationSources}”.`
+    ? ` Confirmation evidence is recorded as “${formatDepegConfirmationSources(event.confirmationSources)}”.`
     : "";
   const confidenceFlag = event.pendingReason
-    ? ` The source row also retains the quality flag “${event.pendingReason}”.`
+    ? ` The source row also retains the quality flag “${formatDepegPendingReason(event.pendingReason)}”.`
     : "";
   const closeReason = event.closeReason
-    ? ` Its recorded close reason is “${event.closeReason}”.`
+    ? ` Its recorded close reason is “${formatDepegCloseReason(event.closeReason)}”.`
     : "";
 
   return `${pricePath} Pharos captured the incident through ${sourceLabel} and evaluates it under ${versionLabel}.${confirmation}${confidenceFlag}${closeReason} The record reports the observed price path and resolution state without inferring a cause from those measurements.`;
@@ -262,7 +356,7 @@ export default async function DepegEventPage(
   const { qualified } = getDepegEventOnset(event);
   const baseHeroTitle = buildDepegEventTitle(event, isCollision);
   const heroTitle = curated?.label
-    ? `${curated.label}${isCollision ? ` — ${formatEventUtcTime(event.startedAt)}` : ""}`
+    ? `${curated.label}${isCollision ? ` · ${formatEventUtcTime(event.startedAt)}` : ""}`
     : baseHeroTitle;
   const heroDescription = buildDepegEventDescription(event, isCollision, coin?.name ?? null);
   const eventSynopsis = buildDepegEventSynopsis(event);
@@ -313,6 +407,25 @@ export default async function DepegEventPage(
       />
       <JsonLdScript json={safeJsonLd(newsArticleJsonLd)} />
 
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+          <Link
+            href="/depeg/"
+            className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-sm font-medium text-foreground underline-offset-4 hover:underline sm:min-h-0"
+          >
+            ← Depeg Tracker
+          </Link>
+          <span aria-hidden="true">/</span>
+          <Link
+            href="/depeg/archive/"
+            className="pharos-focus-ring inline-flex min-h-11 items-center rounded-sm hover:text-foreground hover:underline sm:min-h-0"
+          >
+            Event Archive
+          </Link>
+        </nav>
+        <BackToSource className="min-h-11 sm:min-h-0" />
+      </div>
+
       {/* The record below is the build snapshot; a still-open event leads with its live state. */}
       {event.endedAt == null ? (
         <DepegEventNowStrip
@@ -324,7 +437,7 @@ export default async function DepegEventPage(
       ) : null}
 
       <div className="space-y-2">
-        <p className="pharos-kicker">
+        <p className="pharos-label">
           {editorial && incidentKicker ? incidentKicker : "Depeg event"}
         </p>
         {editorial ? (
@@ -359,7 +472,7 @@ export default async function DepegEventPage(
             </p>
           ))}
           <div className="space-y-2 border-t border-border/40 pt-4">
-            <p className="pharos-kicker">What to watch next time</p>
+            <p className="pharos-label">What to watch next time</p>
             <p
               className="text-[1.05rem] leading-8 text-foreground/92"
               style={EDITORIAL_BODY_STYLE}
@@ -371,7 +484,8 @@ export default async function DepegEventPage(
       ) : null}
 
       <section className="pharos-card-shell space-y-4 px-5 py-5">
-        <p className="pharos-kicker">Event summary</p>
+        <p className="pharos-label">Event summary</p>
+        <PricePathBar event={event} />
         <RecoveryPanel event={event} includeTime={isCollision} />
       </section>
 
@@ -384,10 +498,10 @@ export default async function DepegEventPage(
 
       {coin ? (
         <section className="pharos-card-shell space-y-2 px-5 py-5">
-          <p className="pharos-kicker">Stablecoin</p>
+          <p className="pharos-label">Stablecoin</p>
           <Link
             href={buildStablecoinUrl(coin.id)}
-            className="pharos-focus-ring text-frost-blue underline-offset-2 hover:underline"
+            className="pharos-focus-ring text-brand-accent-text underline-offset-2 hover:underline"
           >
             {coin.name} ({coin.symbol}) →
           </Link>
@@ -399,24 +513,24 @@ export default async function DepegEventPage(
 
       {CASE_STUDY_BY_DEPEG_SLUG[event.slug] ? (
         <section className="pharos-card-shell space-y-2 px-5 py-5">
-          <p className="pharos-kicker">Deep dive</p>
+          <p className="pharos-label">Deep dive</p>
           <Link
             href={`/learn/case-studies/${CASE_STUDY_BY_DEPEG_SLUG[event.slug].slug}/`}
-            className="pharos-focus-ring text-frost-blue underline-offset-2 hover:underline"
+            className="pharos-focus-ring text-brand-accent-text underline-offset-2 hover:underline"
           >
-            {CASE_STUDY_BY_DEPEG_SLUG[event.slug].title} — full case study →
+            {CASE_STUDY_BY_DEPEG_SLUG[event.slug].title}: full case study →
           </Link>
         </section>
       ) : null}
 
       {curated?.href ? (
         <section className="pharos-card-shell space-y-2 px-5 py-5">
-          <p className="pharos-kicker">Primary source</p>
+          <p className="pharos-label">Primary source</p>
           <a
             href={curated.href}
             target="_blank"
             rel="noopener noreferrer"
-            className="pharos-focus-ring text-frost-blue underline-offset-2 hover:underline"
+            className="pharos-focus-ring text-brand-accent-text underline-offset-2 hover:underline"
           >
             {curated.label} ↗
           </a>

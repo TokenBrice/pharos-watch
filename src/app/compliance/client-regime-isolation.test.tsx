@@ -96,6 +96,8 @@ describe("Compliance client regime isolation", () => {
     // Only the selected GENIUS status is filtered; GENIUS never takes a type.
     expect(geniusText).toContain("Dollar Intent");
     expect(geniusText).not.toContain("Dollar Qualified");
+    expect(panel("compliance-mica-panel").hidden).toBe(true);
+    expect(panel("compliance-overview-panel").hidden).toBe(true);
 
     const micaText = panel("compliance-mica-panel").textContent ?? "";
     expect(micaText).toContain("Euro EMT");
@@ -111,9 +113,11 @@ describe("Compliance client regime isolation", () => {
     const micaText = panel("compliance-mica-panel").textContent ?? "";
     expect(micaText).toContain("Euro EMT");
     expect(micaText).not.toContain("Basket Reference");
+    expect(panel("compliance-genius-panel").hidden).toBe(true);
 
     await waitFor(() => expect(panel("compliance-genius-panel").textContent).toContain("Dollar Intent"));
     const geniusText = panel("compliance-genius-panel").textContent ?? "";
+    expect(geniusText).toContain("Dollar Intent");
     expect(geniusText).toContain("Dollar Qualified");
   });
 

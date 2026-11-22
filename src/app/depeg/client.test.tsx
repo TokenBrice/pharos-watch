@@ -84,7 +84,6 @@ vi.mock("@/components/depeg/depeg-outlook-hero", () => ({
       data-active-ids={[...(props.activeDepegIds ?? [])].join(",")}
       data-pending={String(props.pendingCount)}
       data-alerts={String(props.dewsAlertCount)}
-      data-resolver-total={props.book?.total ?? "unavailable"}
       data-open-incidents={props.openIncidents?.map((row) => row.id).join(",")}
       data-footer={props.footer == null ? "none" : "present"}
     >
@@ -97,19 +96,30 @@ vi.mock("@/components/dews/dews-alert-feed", () => ({
   DEWSAlertFeed: () => <div data-testid="dews-alert-feed" />,
 }));
 
-vi.mock("@/components/depeg/depeg-control-board", () => ({
-  DepegControlBoard: ({ rows }: { rows: import("@/lib/depeg-sort").DepegTrackerRow[] }) => (
-    <div
-      data-testid="depeg-control-board"
-      data-row-ids={rows.map((row) => row.coin.id).join(",")}
-      data-evidence={rows.map((row) => `${row.coin.id}:${row.openIncidentEvidence ?? "none"}`).join(",")}
-      data-pending-rows={String(rows.filter((row) => row.pendingIncident).length)}
-      data-caps={rows.map((row) => `${row.coin.id}:${row.marketCapUsd}`).join(",")}
-    >
-      <span>Leaderboard controls</span>
-    </div>
-  ),
-}));
+vi.mock("@/components/depeg/depeg-control-board", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/components/depeg/depeg-control-board")>();
+  return {
+    ...actual,
+    DepegControlBoard: ({
+      rows,
+      statusFilter,
+    }: {
+      rows: import("@/lib/depeg-sort").DepegTrackerRow[];
+      statusFilter?: string;
+    }) => (
+      <div
+        data-testid="depeg-control-board"
+        data-row-ids={rows.map((row) => row.coin.id).join(",")}
+        data-evidence={rows.map((row) => `${row.coin.id}:${row.openIncidentEvidence ?? "none"}`).join(",")}
+        data-pending-rows={String(rows.filter((row) => row.pendingIncident).length)}
+        data-caps={rows.map((row) => `${row.coin.id}:${row.marketCapUsd}`).join(",")}
+        data-status-filter={statusFilter ?? "all"}
+      >
+        <span>Leaderboard controls</span>
+      </div>
+    ),
+  };
+});
 
 vi.mock("@/components/depeg/depeg-feed", () => ({
   DepegFeed: ({ title = "Recent depeg events", events }: { title?: string; events: unknown[] }) => (
@@ -117,9 +127,30 @@ vi.mock("@/components/depeg/depeg-feed", () => ({
   ),
 }));
 
-vi.mock("@/components/depeg/depeg-resolver-module", () => ({
-  DepegResolverModule: () => <div data-testid="depeg-resolver" />,
-}));
+vi.mock("@/components/depeg/depeg-resolver-module", async () => {
+  const summary = await vi.importActual<typeof import("@/components/depeg/depeg-resolver-book-summary")>(
+    "@/components/depeg/depeg-resolver-book-summary",
+  );
+  return {
+    DepegResolverModule: (
+      props: Parameters<typeof import("@/components/depeg/depeg-resolver-module").DepegResolverModule>[0],
+    ) => {
+      const available = summary.isResolverBookAvailable(props.data);
+      const loading = [
+        props.resolverPending ? "resolver" : null,
+        props.reviewPending ? "review" : null,
+      ].filter(Boolean).join(",");
+      return (
+        <div
+          data-testid="depeg-resolver"
+          data-resolver-total={available && props.data ? String(summary.summarizeResolverBook(props.data.rows).total) : "unavailable"}
+          data-loading={loading}
+          data-review={props.review ? "present" : "none"}
+        />
+      );
+    },
+  };
+});
 
 vi.mock("@/components/depeg/depeg-resolver-reviewer-module", () => ({
   DepegResolverReviewerModule: () => <div data-testid="depeg-resolver-reviewer" />,
@@ -180,7 +211,7 @@ describe("DepegClient", () => {
     [true, "secondary-overlay-unavailable", "unavailable"],
     [true, "manifest-fallback:missing-cache", "unavailable"],
     [true, "unknown-failure", "unavailable"],
-  ] as const)("gates hero recovery totals with forecast availability (%s, %s)", (degraded, degradedReason, expected) => {
+  ] as const)("gates resolver recovery totals with forecast availability (%s, %s)", (degraded, degradedReason, expected) => {
     mountDepegRoute({ resolverData: {
       _meta: { ...DDR_TEST_META, degraded, degradedReason },
       rows: [makeFrozenDdrV2Row(makeDdrSourceRow())],
@@ -189,7 +220,20 @@ describe("DepegClient", () => {
         changelogPath: "/methodology/depeg-resolver-changelog/", asOf: 1, isCurrent: true,
       },
     } });
-    expect(screen.getByTestId("depeg-hero").dataset.resolverTotal).toBe(expected);
+    expect(screen.getByTestId("depeg-resolver").dataset.resolverTotal).toBe(expected);
+  });
+
+  it("renders the 4-stage pipeline jump strip anchored to route sections and syncs status URL filter", () => {
+    mountDepegRoute({ params: { status: "active_pending" } });
+    const nav = screen.getByRole("navigation", { name: "Depeg monitoring pipeline" });
+    const links = [...nav.querySelectorAll("a")].map((link) => [link.textContent, link.getAttribute("href")]);
+    expect(links).toEqual([
+      ["1. Early Stress (DEWS)", "#dews-radar"],
+      ["2. Live Incidents", "#live-outlook"],
+      ["3. Recovery Forecast (DDR)", "#recovery-forecast"],
+      ["4. Peg History", "#peg-history"],
+    ]);
+    expect(screen.getByTestId("depeg-control-board").dataset.statusFilter).toBe("active_pending");
   });
 
   it.each(["events", "dews", "peg"] as const)("does not manufacture headline counts when %s query settles without data", (missing) => {
@@ -226,16 +270,23 @@ describe("DepegClient", () => {
     expect(screen.queryByTestId("depeg-hero")).toBeNull();
     advanceTime(1);
     const hero = screen.getByTestId("depeg-hero");
-    expect(hero.dataset.loading).toContain(source === "resolverReview" ? "review" : source);
+    const resolverEl = screen.getByTestId("depeg-resolver");
+    if (source === "resolver" || source === "resolverReview") {
+      expect(resolverEl.dataset.loading).toContain(source === "resolverReview" ? "review" : "resolver");
+    } else {
+      expect(hero.dataset.loading).toContain(source);
+    }
     if (source === "dews") expect(screen.getByTestId("dews-alert-feed")).not.toBeNull();
     publish({ ...waiting, error: new Error("first read failed") });
     view.rerender(<DepegClient />);
     expect(hero.dataset.loading).toBe("");
+    expect(resolverEl.dataset.loading).toBe("");
     if (source === "dews") expect(screen.queryByTestId("dews-alert-feed")).toBeNull();
     publish(result);
     view.rerender(<DepegClient />);
     expect(screen.getByTestId("depeg-hero")).toBe(hero);
     expect(hero.dataset.loading).toBe("");
+    expect(resolverEl.dataset.loading).toBe("");
     if (source === "dews") expect(screen.getByTestId("dews-alert-feed")).not.toBeNull();
     publish({ ...result, error: new Error("refresh failed") });
     view.rerender(<DepegClient />);

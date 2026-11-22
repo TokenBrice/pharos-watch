@@ -72,6 +72,10 @@ function renderBoard(
   );
 }
 
+function getRowFor(symbol = "SUSD"): HTMLTableRowElement {
+  return screen.getByRole("button", { name: `Open ${symbol} depeg detail` }).closest("tr")!;
+}
+
 describe("DepegControlBoard", () => {
   it.each([
     { pegScore: 60, tier: "bad" },
@@ -114,21 +118,21 @@ describe("DepegControlBoard", () => {
     { currentDeviationBps: 0, dews: null },
   ])("does not claim clear health with incomplete live observations: %j", ({ currentDeviationBps, dews }) => {
     renderBoard([makeRow({ activeDepeg: false, currentDeviationBps, pegScore: null }, dews)]);
-    const row = screen.getByRole("button", { name: /open susd depeg detail/i });
+    const row = getRowFor();
     expect(within(row).getByText("unknown")).toBeTruthy();
     expect(within(row).queryByText("clear")).toBeNull();
   });
 
   it("distinguishes observed zero readings from unknown health", () => {
     renderBoard([makeRow({ activeDepeg: false, currentDeviationBps: 0 }, makeDews({ score: 0, band: "CALM" }))]);
-    const row = screen.getByRole("button", { name: /open susd depeg detail/i });
+    const row = getRowFor();
     expect(within(row).getByText("clear")).toBeTruthy();
     expect(within(row).queryByText("unknown")).toBeNull();
   });
 
   it("does not paint an unavailable live deviation with the healthy tone", () => {
     renderBoard([makeRow({ activeDepeg: false, currentDeviationBps: null, pegScore: null }, makeDews({ score: 0, band: "CALM" }))]);
-    const row = screen.getByRole("button", { name: /open susd depeg detail/i });
+    const row = getRowFor();
     const values = within(row).getAllByText("—");
     for (const deviation of values) {
       expect(deviation.className).toContain("text-muted-foreground");
@@ -138,7 +142,7 @@ describe("DepegControlBoard", () => {
 
   it("keeps the healthy tone for an observed zero deviation", () => {
     renderBoard([makeRow({ activeDepeg: false, currentDeviationBps: 0 }, makeDews({ score: 0, band: "CALM" }))]);
-    const row = screen.getByRole("button", { name: /open susd depeg detail/i });
+    const row = getRowFor();
     for (const value of within(row).getAllByText("0 bps")) {
       expect(value.className).toContain(PEG_DEVIATION_TONE_CLASSES.healthy.text);
     }
@@ -154,9 +158,8 @@ describe("DepegControlBoard", () => {
       ageSec: 60,
     });
     const view = renderBoard([row], { nowSeconds: NOW });
-    const renderedRow = () => screen.getByRole("button", { name: /open susd depeg detail/i });
-    expect(within(renderedRow()).getByText("12m")).toBeTruthy();
-    expect(within(renderedRow()).queryByText("1m")).toBeNull();
+    expect(within(getRowFor()).getByText("12m")).toBeTruthy();
+    expect(within(getRowFor()).queryByText("1m")).toBeNull();
 
     view.rerender(
       <DepegControlBoard
@@ -173,7 +176,7 @@ describe("DepegControlBoard", () => {
         nowSeconds={NOW + 600}
       />,
     );
-    expect(within(renderedRow()).getByText("22m")).toBeTruthy();
+    expect(within(getRowFor()).getByText("22m")).toBeTruthy();
   });
 
   it.each(["open", "awaiting", "floor", "warning", "danger"] as const)(
@@ -191,7 +194,7 @@ describe("DepegControlBoard", () => {
         row.pendingIncident = makePendingIncident({ stablecoinId: row.coin.id, symbol: row.coin.symbol });
       }
       renderBoard([row]);
-      const renderedRow = screen.getByRole("button", { name: /open susd depeg detail/i });
+      const renderedRow = getRowFor();
       expect(within(renderedRow).getByText(status)).toBeTruthy();
       expect(within(renderedRow).queryByText("unknown")).toBeNull();
     },
@@ -206,7 +209,7 @@ describe("DepegControlBoard", () => {
     const row = makeRow({ activeDepeg: true, currentDeviationBps: 0 });
     row.openIncidentEvidence = evidence;
     renderBoard([row]);
-    const renderedRow = screen.getByRole("button", { name: /open susd depeg detail/i });
+    const renderedRow = getRowFor();
     expect(within(renderedRow).getByText("open")).toBeTruthy();
     expect(within(renderedRow).getByText(label)).toBeTruthy();
     expect(within(renderedRow).queryByText("live")).toBeNull();
@@ -216,7 +219,7 @@ describe("DepegControlBoard", () => {
     const row = makeRow({ activeDepeg: false });
     row.openIncidentEvidence = "outside";
     renderBoard([row]);
-    const renderedRow = screen.getByRole("button", { name: /open susd depeg detail/i });
+    const renderedRow = getRowFor();
     expect(within(renderedRow).queryByText("Observed outside recovery band")).toBeNull();
   });
 
@@ -224,7 +227,7 @@ describe("DepegControlBoard", () => {
     renderBoard([makeRow({
       dexPriceCheck: { agrees: true, dexPrice: 1, dexDeviationBps: 0, sourcePools, sourceTvl: 1_740_000 },
     })]);
-    const row = screen.getByRole("button", { name: /open susd depeg detail/i });
+    const row = getRowFor();
     const label = `${sourcePools} price ${sourcePools === 1 ? "source" : "sources"} · $1.74M`;
     expect(within(row).getByText(label)).toBeTruthy();
     expect(within(row).queryByText(/\b\d+ pools?\b/)).toBeNull();
@@ -232,58 +235,97 @@ describe("DepegControlBoard", () => {
 
   it("renders unknown peg occupancy as unavailable rather than zero or perfect stability", () => {
     renderBoard([makeRow({ pegScore: null, pegPct: null })]);
-    const row = screen.getByRole("button", { name: /open susd depeg detail/i });
+    const btn = screen.getByRole("button", { name: /open susd depeg detail/i });
+    const row = btn.closest("tr")!;
     expect(within(row).getByText("-")).toBeTruthy();
-    const description = document.getElementById(row.getAttribute("aria-describedby")!)!;
-    expect(description.textContent).toMatch(/-\s*recorded-window peg occupancy estimate/i);
+    const description = document.getElementById(btn.getAttribute("aria-describedby")!)!;
+    expect(description.textContent).toMatch(/-\s*at peg.*recorded-window peg occupancy estimate/i);
     expect(description.textContent).not.toMatch(/0\.0%|100\.0%/);
   });
 
   it.each([
-    { pegPct: 62.1, activeDepeg: false, currentDeviationBps: 0 },
+    { pegPct: 99.8, activeDepeg: false, currentDeviationBps: 0 },
     { pegPct: 100, activeDepeg: false, currentDeviationBps: null },
     { pegPct: 0, activeDepeg: true, currentDeviationBps: -500 },
-  ])("keeps occupancy %s record-derived even without terminal closure provenance", (coin) => {
+  ])("renders concise at-peg subline while keeping occupancy %s record-derived and accessible", (coin) => {
     renderBoard([makeRow(coin)]);
-    const row = screen.getByRole("button", { name: /open susd depeg detail/i });
-    const description = document.getElementById(row.getAttribute("aria-describedby")!)!;
-    expect(description.textContent).toContain(`${coin.pegPct.toFixed(1)}%`);
+    const btn = screen.getByRole("button", { name: /open susd depeg detail/i });
+    const row = btn.closest("tr")!;
+    const description = document.getElementById(btn.getAttribute("aria-describedby")!)!;
+    expect(description.textContent).toContain(`${coin.pegPct.toFixed(1)}% at peg`);
     expect(description.textContent).toMatch(/recorded-window peg occupancy estimate/i);
     expect(description.textContent).toMatch(/tracking closure can leave unobserved time/i);
     expect(description.textContent).toMatch(/not proof of recovery or continuous observation/i);
-    // The caveat is accessible description, not per-row copy.
+    // The verbose caveat is accessible description, not visible per-row copy.
     expect(within(description).getByText(/tracking closure/i).className).toContain("sr-only");
     expect(within(row).queryByText(/recovered|coverage lost|asset removed|direction superseded/i)).toBeNull();
   });
+
   it.each([[276_400_000, "$276.4M cap"], [null, "cap unavailable"]] as const)("labels market cap %s without zero-filling", (marketCapUsd, label) => {
     renderBoard([{ ...makeRow(), marketCapUsd }]);
-    expect(within(screen.getByRole("button", { name: /open susd depeg detail/i })).getByText(label)).toBeTruthy();
+    expect(within(getRowFor()).getByText(label)).toBeTruthy();
   });
 
-  it("renders rows without side-stripe or blanket severity tint and keeps units explicit", () => {
+  it("renders rows inside DataTableShell with clickable sort headers and export menu", () => {
     renderBoard([makeRow()]);
 
     expect(screen.getByText("worst -6988 bps")).toBeTruthy();
-    expect(screen.getAllByText("Peg health").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Sort by Asset" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Sort by Deviation" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Sort by DEWS" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Sort by Peg health" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Sort by Events" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Sort by DEX check" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Export table as CSV, NDJSON, or Markdown/i })).toBeTruthy();
     expect(screen.queryByText("Peg score")).toBeNull();
-    expect(screen.getAllByText("DEX check").length).toBeGreaterThan(0);
   });
 
-  it("shows truthful sort direction and reverses attention ordering", () => {
+  it("shows truthful sort direction via clickable column headers and reverses attention ordering", () => {
     renderBoard([
       makeRow({ id: "active", symbol: "LIVE", name: "Live Asset", activeDepeg: true }),
       makeRow({ id: "clear", symbol: "CLEAR", name: "Clear Asset", currentDeviationBps: 0, activeDepeg: false, eventCount: 0, pegScore: 100, pegPct: 100 }, makeDews({ score: 0, band: "CALM" })),
     ]);
 
-    expect(screen.getByRole("button", { name: /Attention sort, desc/i })).toBeTruthy();
+    const assetHeaderBtn = screen.getByRole("button", { name: "Sort by Asset" });
+    expect(assetHeaderBtn.closest("th")?.getAttribute("aria-sort")).toBe("descending");
     let rows = screen.getAllByRole("button", { name: /open .* depeg detail/i });
     expect(within(rows[0]).getByText("LIVE")).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: /Attention sort, desc/i }));
+    fireEvent.click(assetHeaderBtn);
 
-    expect(screen.getByRole("button", { name: /Attention sort, asc/i })).toBeTruthy();
+    expect(assetHeaderBtn.closest("th")?.getAttribute("aria-sort")).toBe("ascending");
     rows = screen.getAllByRole("button", { name: /open .* depeg detail/i });
     expect(within(rows[0]).getByText("CLEAR")).toBeTruthy();
+  });
+
+  it("filters rows by Status segmented control (All | Active/Pending | DEWS Alert+ | At peg) without misclassifying unknown deviations", () => {
+    const active = makeRow({ id: "active", symbol: "ACT", activeDepeg: true, currentDeviationBps: -400 }, makeDews({ score: 20, band: "WATCH" }));
+    const pending = makeRow({ id: "pending", symbol: "PND", activeDepeg: false, currentDeviationBps: -130 }, makeDews({ score: 15, band: "WATCH" }));
+    pending.pendingIncident = makePendingIncident({ stablecoinId: "pending", symbol: "PND" });
+    const alertOnly = makeRow({ id: "alert", symbol: "ALRT", activeDepeg: false, currentDeviationBps: -20 }, makeDews({ score: 50, band: "ALERT" }));
+    const atPeg = makeRow({ id: "calm", symbol: "CALM", activeDepeg: false, currentDeviationBps: 5 }, makeDews({ score: 5, band: "CALM" }));
+    const unknown = makeRow({ id: "unk", symbol: "UNK", activeDepeg: false, currentDeviationBps: null }, makeDews({ score: 0, band: "CALM" }));
+
+    renderBoard([active, pending, alertOnly, atPeg, unknown]);
+
+    const statusGroup = screen.getByRole("group", { name: "Filter by peg status" });
+    const visibleSymbols = () =>
+      screen.getAllByRole("button", { name: /open .* depeg detail/i }).map((el) => el.getAttribute("aria-label"));
+
+    expect(visibleSymbols()).toHaveLength(5);
+
+    fireEvent.click(within(statusGroup).getByRole("button", { name: "Active/Pending" }));
+    expect(visibleSymbols()).toEqual(["Open ACT depeg detail", "Open PND depeg detail"]);
+
+    fireEvent.click(within(statusGroup).getByRole("button", { name: "DEWS Alert+" }));
+    expect(visibleSymbols()).toEqual(["Open ALRT depeg detail"]);
+
+    fireEvent.click(within(statusGroup).getByRole("button", { name: "At peg" }));
+    // ALRT (-20 bps) and CALM (5 bps) are observed within peg; UNK (null deviation) is never claimed at peg.
+    expect(visibleSymbols()).toEqual(["Open ALRT depeg detail", "Open CALM depeg detail"]);
+
+    fireEvent.click(within(statusGroup).getByRole("button", { name: "All" }));
+    expect(visibleSymbols()).toHaveLength(5);
   });
 
   it("counts below-floor rows in the same filtered universe as the attention figure", () => {

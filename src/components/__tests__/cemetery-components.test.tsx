@@ -183,6 +183,13 @@ describe("CemeteryHero", () => {
     const { plan } = renderHero();
     expect(plan.querySelectorAll("*").length).toBeLessThanOrEqual(3500);
   });
+
+  it("exposes the interactive whisper and Find a coin jump link in the hero", () => {
+    renderHero();
+    expect(screen.getByText("Click any stone for its obituary · click a cause sign to zoom")).toBeTruthy();
+    const jumpLink = screen.getByRole("link", { name: /Find a coin/ });
+    expect(jumpLink.getAttribute("href")).toBe("#register");
+  });
 });
 
 describe("CemeteryKeyFacts", () => {

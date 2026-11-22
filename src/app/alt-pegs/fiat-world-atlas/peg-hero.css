@@ -64,21 +64,25 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   border: 1px solid var(--atlas-sea-edge);
   border-radius: 12px;
   background: var(--atlas-sea);
-  padding: 12px 0 0;
+  padding: 10px 0 0;
 }
 
-/* Capped so the plan stays inspectable without becoming a 700px wall on wide screens. */
+/* Capped so the plan fits inside the desktop 900px fold while staying crisp and inspectable. */
 .peg-hero__earth {
   position: relative;
   z-index: 3;
   width: 100%;
-  max-width: 1180px;
+  max-width: 860px;
   margin: 0 auto;
   container-type: inline-size;
+}
+
+.peg-hero--fullscreen .peg-hero__earth {
+  max-width: none;
 }
 
 .peg-hero__map-frame {
@@ -96,8 +100,10 @@
 
 .fiat-world-map {
   z-index: 1;
-  pointer-events: none;
   transition: opacity 180ms ease-out;
+}
+.fiat-world-map svg {
+  pointer-events: none;
 }
 .peg-hero__map-frame:has(.coin-emblem.is-hovered) .fiat-world-map,
 .peg-hero__map-frame:has(.coin-emblem:focus-visible) .fiat-world-map {
@@ -145,6 +151,11 @@
   gap: 6px;
   padding: 0 2px 5px;
   border-bottom: 1px solid var(--atlas-baseline);
+  transition: border-color 180ms ease-out;
+}
+
+.peg-shelf__group[data-selected="true"] .peg-shelf__coins {
+  border-bottom: 2px solid var(--foreground);
 }
 
 .peg-shelf__slot {
@@ -163,6 +174,34 @@
   color: var(--foreground);
   font-size: 12px;
   font-weight: 500;
+}
+
+.peg-shelf__label--interactive {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  border-radius: 6px;
+  min-height: 44px;
+  cursor: pointer;
+  transition: background-color 150ms ease-out, color 150ms ease-out;
+}
+
+.peg-shelf__label--interactive:hover {
+  background: var(--accent);
+}
+
+.peg-shelf__group[data-selected="true"] .peg-shelf__label--interactive {
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+@media (min-width: 768px) {
+  .peg-shelf__label--interactive {
+    min-height: 28px;
+  }
 }
 
 .peg-shelf__dot {
@@ -224,6 +263,7 @@
     var(--atlas-shadow);
   transform: translate(-50%, -50%);
   cursor: pointer;
+  pointer-events: auto;
   display: block;
   z-index: var(--coin-z, 5);
   transition:
@@ -264,6 +304,12 @@
     0 0 0 2.5px var(--peg, var(--ring)),
     var(--atlas-shadow);
   z-index: 6;
+}
+.coin-emblem.is-selected-peg {
+  box-shadow:
+    0 0 0 2.5px var(--peg, var(--ring)),
+    var(--atlas-shadow-lift);
+  z-index: 12;
 }
 .coin-emblem.is-dimmed {
   opacity: var(--atlas-dim);
@@ -439,6 +485,7 @@
   position: absolute;
   inset: 0;
   z-index: 2;
+  pointer-events: none;
 }
 
 /* ------------------------------------------------------------------ responsive */
@@ -452,9 +499,23 @@
 
 @media (max-width: 767px) {
   .peg-hero__live-shell {
-    --peg-coin-scale: 0.56;
-    --peg-coin-hover-scale: 0.66;
-    --peg-hit-scale: 1.35;
+    --peg-coin-scale: 0.64;
+    --peg-coin-hover-scale: 0.74;
+    --peg-hit-scale: 1.4;
+  }
+
+  .peg-hero__viewport {
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+  }
+
+  .peg-hero__map-frame {
+    min-width: 520px;
+  }
+
+  .coin-emblem-hit-target {
+    min-width: 44px;
+    min-height: 44px;
   }
 
   .peg-shelf {
@@ -465,6 +526,13 @@
     bottom: -14px;
     font-size: 8px;
     padding: 3px 5px;
+  }
+}
+
+@media (pointer: coarse) {
+  .coin-emblem-hit-target {
+    min-width: 44px;
+    min-height: 44px;
   }
 }
 

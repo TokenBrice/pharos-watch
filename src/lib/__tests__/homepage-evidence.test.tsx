@@ -17,6 +17,8 @@ vi.mock("@/lib/homepage-evidence-persistence", () => ({
 }));
 vi.mock("@/hooks/api-hooks", () => ({
   useHomepageSnapshot: () => useQuery({ queryKey: ["homepage-snapshot"], queryFn: liveRead, retry: false }),
+  useStabilityIndex: () => ({ data: undefined, dataUpdatedAt: 0, error: null, meta: null }),
+  usePegSummary: () => ({ data: undefined }),
 }));
 vi.mock("@/components/homepage/home-alt-hero-chart-gate", () => ({ HomeAltHeroChartGate: () => <div /> }));
 vi.mock("@/lib/analytics", () => ({ trackFreshDataReady: vi.fn() }));

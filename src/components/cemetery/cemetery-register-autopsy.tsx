@@ -44,7 +44,7 @@ export function CemeteryRegisterAutopsy({ row, expanded, onShowOnField }: Cemete
   return (
     <div className={styles.autopsy}>
       <div className="min-w-0 space-y-3">
-        <p className="pharos-kicker">{`Autopsy · ${row.name} (${row.symbol})`}</p>
+        <p className="pharos-label">{`Autopsy · ${row.name} (${row.symbol})`}</p>
         {row.epitaph ? <p className={`${digestDisplay.className} ${styles.epitaph}`}>{row.epitaph}</p> : null}
         <p className={styles.obituary}>{row.obituary}</p>
         <ul className={styles.actions}>

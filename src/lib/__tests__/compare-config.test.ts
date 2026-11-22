@@ -10,6 +10,7 @@ import {
   COMPARE_COIN_OPTIONS,
   COMPARISON_PRESETS,
   getPresetCoins,
+  isComparePresetAvailable,
   parseIdList,
 } from "../compare-config";
 
@@ -57,5 +58,12 @@ describe("getPresetCoins", () => {
 
     expect(FROZEN_IDS.has("usr-resolv")).toBe(true);
     expect(getPresetCoins(watchlistPreset)).toEqual(["usdc-circle", "usr-resolv"]);
+  });
+
+  it("marks the dynamic watchlist preset available only when at least two comparable coins are starred", () => {
+    expect(isComparePresetAvailable(watchlistPreset, [])).toBe(false);
+    expect(isComparePresetAvailable(watchlistPreset, ["usdc-circle"])).toBe(false);
+    expect(isComparePresetAvailable(watchlistPreset, ["usdc-circle", "not-a-stablecoin"])).toBe(false);
+    expect(isComparePresetAvailable(watchlistPreset, ["usdc-circle", "usdt-tether"])).toBe(true);
   });
 });

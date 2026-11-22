@@ -19,6 +19,7 @@ import { safeJsonLd } from "@/lib/json-ld";
 import { MechanismJsonLd } from "@/lib/mechanism-json-ld";
 import { CHART_PALETTE } from "@/lib/chart-colors";
 import { mechanismDiagramFor } from "@/components/stablecoin-detail/mechanism-diagrams";
+import { Term } from "@/components/term";
 import { LearnHero } from "../_shared/learn-hero";
 import { LearnPageShell } from "../_shared/learn-page-shell";
 import { SectionHeading, SectionKicker } from "../_shared/section-primitives";
@@ -74,7 +75,7 @@ function MechanismDistribution({ counts }: { counts: Record<MechanismArchetype, 
   const legend = segments.map((segment) => `${segment.count} ${segment.label}`).join(", ");
   return (
     <div className="space-y-3">
-      <p className="pharos-label">Active coins by mechanism</p>
+      <p className="pharos-label">Breakdown by design</p>
       <div
         className="flex h-2 w-full overflow-hidden rounded-full bg-border/40"
         role="img"
@@ -167,7 +168,7 @@ export default function MechanismExplainersHub() {
             ) : null}
             {unresolvedTotal > 0 ? (
               <p className="pharos-numeric text-muted-foreground">
-                <span className="text-foreground">{unresolvedTotal}</span> with an unresolved mechanism, in no design
+                <span className="text-foreground">{unresolvedTotal}</span> pending mechanism classification
               </p>
             ) : null}
           </div>
@@ -185,8 +186,8 @@ export default function MechanismExplainersHub() {
             Collateral paths to read first
           </SectionHeading>
           <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-            Three high-signal explainers for readers comparing off-chain collateral, fund gates, and reflexive peg
-            mechanics.
+            Three high-signal explainers for readers comparing <Term slug="rwa">off-chain collateral</Term>,{" "}
+            <Term slug="nav">NAV</Term> fund gates, and <Term slug="algorithmic">reflexive peg mechanics</Term>.
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-3">
@@ -196,7 +197,7 @@ export default function MechanismExplainersHub() {
               href={getMechanismExplainerPath(item.archetype)}
               className="pharos-focus-ring group block border-t border-border/60 pt-4 md:border-t-0 md:pt-0"
             >
-              <p className="text-sm font-semibold text-foreground transition-colors group-hover:text-frost-blue">
+              <p className="text-sm font-semibold text-foreground transition-colors group-hover:text-brand-accent-text">
                 {item.label}
               </p>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.description}</p>
@@ -230,7 +231,7 @@ export default function MechanismExplainersHub() {
                 className="pharos-focus-ring group grid gap-6 py-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-12 lg:py-10"
               >
                 <div className="flex flex-col gap-3">
-                  <h2 className="pharos-display text-2xl font-bold tracking-tight text-foreground transition-colors group-hover:text-frost-blue sm:text-3xl">
+                  <h2 className="pharos-display text-2xl font-bold tracking-tight text-foreground transition-colors group-hover:text-brand-accent-text sm:text-3xl">
                     <span className="pharos-numeric mr-3 text-[0.5em] font-semibold text-muted-foreground align-baseline">
                       {indexLabel}.
                     </span>

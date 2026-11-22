@@ -88,7 +88,11 @@ describe("LiquidityHero", () => {
     expect(within(hero).getByText(formatCurrency(10_000))).toBeTruthy();
     expect(within(hero).getByText("4 of 6 observed on DEX")).toBeTruthy();
     expect(within(hero).getByText("3 rated · 1 NR")).toBeTruthy();
-    expect(screen.getByTestId("exit-route-instrument").getAttribute("role")).toBe("img");
+    const instrument = screen.getByTestId("exit-route-instrument");
+    expect(instrument.getAttribute("role")).toBe("group");
+    const gradientId = instrument.querySelector("linearGradient")?.getAttribute("id");
+    expect(gradientId).toMatch(/^exit-route-channel-fill-.+/);
+    expect(instrument.querySelector(".exit-route-instrument__channel")?.getAttribute("fill")).toBe(`url(#${gradientId})`);
     // The fallback lists keep the protocol crowding the hidden scene carries on phones.
     expect(screen.getByTestId("exit-route-fallback-crowding").textContent).toContain("0.31");
     expect(screen.getByTestId("exit-route-fallback-crowding").textContent).toContain("Protocol crowding");
@@ -157,7 +161,7 @@ describe("LiquidityHero", () => {
       liquidityMap: {},
     }));
     const hero = screen.getByRole("group", { name: "Secondary exit depth" });
-    expect(hero.querySelector('p[class*="text-[2.1rem]"]')?.textContent).toBe("—");
+    expect(hero.querySelector('p.pharos-hero-kpi, p[class*="text-[2.1rem]"]')?.textContent).toBe("—");
     expect(screen.queryByTestId("exit-route-instrument")).toBeNull();
     expect(screen.getByText(/Exit routes are unavailable/)).toBeTruthy();
     unmount();
@@ -190,5 +194,46 @@ describe("LiquidityHero", () => {
     const row = screen.getByText("7d change, coins with 7d history").parentElement as HTMLElement;
     expect(row.textContent).toContain("↓2.4%");
     expect(row.innerHTML).not.toMatch(/text-(red|green|emerald)/);
+  });
+
+  it("surfaces median 7d change, Depth/MCap readout, dashed-line key, and bidirectional route filter callbacks", () => {
+    const onRouteFilterChange = vi.fn();
+    render(createElement(LiquidityHero, {
+      stats: makeStats({
+        agg7dChange: null,
+        median7dChange: 3.2,
+        change7dCoinCount: 42,
+        aggDepthToMcapRatio: 0.084,
+        aggDepthToMcapObservedCount: 38,
+      }),
+      liquidityMap: { [DEX_GLOBAL_KEY]: TAIL_GLOBAL },
+      onRouteFilterChange,
+    }));
+
+    expect(screen.getByText("7d change, coins with 7d history").parentElement?.textContent).toContain("↑3.2%");
+    expect(screen.getByText("7d change, coins with 7d history").parentElement?.textContent).toContain("median across 42 coins");
+    expect(screen.getByText("Depth / MCap").parentElement?.textContent).toContain("8.4%");
+    expect(screen.getByText("Depth / MCap").parentElement?.textContent).toContain("deduped DEX TVL / circulating supply");
+    expect(screen.getByTestId("exit-route-dashed-key").textContent).toContain("< 70%");
+    expect(screen.getByTestId("exit-route-dashed-key").textContent).toContain("< 60%");
+
+    fireEvent.click(screen.getByTestId("protocol-door-curve"));
+    expect(onRouteFilterChange).toHaveBeenCalledWith({ kind: "protocol", key: "curve", label: "Curve" });
+  });
+
+  it("falls back to labeled per-coin median depth/MCap when aggregate cohorts diverge", () => {
+    render(createElement(LiquidityHero, {
+      stats: makeStats({
+        withLiquidity: 4,
+        aggDepthToMcapRatio: null,
+        medianDepthToMcapRatio: 0.024,
+        aggDepthToMcapObservedCount: 3,
+      }),
+      liquidityMap: { [DEX_GLOBAL_KEY]: TAIL_GLOBAL },
+    }));
+
+    const row = screen.getByText("Median depth / MCap").parentElement as HTMLElement;
+    expect(row.textContent).toContain("2.4%");
+    expect(row.textContent).toContain("3 of 4 with supply");
   });
 });

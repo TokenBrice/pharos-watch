@@ -142,19 +142,19 @@ describe("ShareButton", () => {
     expect(screen.getByRole("button", { name: "Share" })).toHaveProperty("disabled", false);
   });
 
-  it.each(["clean", "private-state", "missing"])("strips private query and fragment state from shared links; canonical=%s", async (canonicalKind) => {
-    window.history.replaceState(null, "", "/stablecoin/usdc-circle/?holdings=private&answers=secret#private-state");
+  it.each(["clean", "private-state", "missing"])("preserves public search params while stripping private params and fragments; canonical=%s", async (canonicalKind) => {
+    window.history.replaceState(null, "", "/freezewatch/?stablecoin=USDC&holdings=private&answers=secret#private-state");
     const writeText = mockCopy();
     if (canonicalKind !== "missing") {
       const canonical = document.createElement("link");
       canonical.rel = "canonical";
-      canonical.href = `https://pharos.watch/stablecoin/usdc-circle/${canonicalKind === "private-state" ? "?answers=secret#private-state" : ""}`;
+      canonical.href = `https://pharos.watch/freezewatch/${canonicalKind === "private-state" ? "?answers=secret#private-state" : ""}`;
       canonical.dataset.shareTest = "true";
       document.head.append(canonical);
     }
-    render(<ShareButton stablecoinId="usdc-circle" />);
+    render(<ShareButton />);
     await select("Copy link");
-    expect(writeText).toHaveBeenCalledWith("https://pharos.watch/stablecoin/usdc-circle/");
+    expect(writeText).toHaveBeenCalledWith("https://pharos.watch/freezewatch/?stablecoin=USDC");
   });
 
   it("creates and copies a retained edition using only stablecoin identity", async () => {

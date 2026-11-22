@@ -86,4 +86,24 @@ describe("Chain detail StablecoinTable", () => {
     expect([...chips].map((chip) => chip.getAttribute("data-coin-state"))).toEqual(["paused"]);
     expect(chips[0].closest("tr")?.textContent).toContain("USD Coin");
   });
+
+  it("filters chain stablecoins via search input and triage presets", () => {
+    renderCoins([
+      makeCoin({ id: "usdc-circle", name: "USD Coin", symbol: "USDC", chainShare: RatioSchema.parse(0.4), change7dPct: RatioSchema.parse(0.05) }),
+      makeCoin({ id: "dai-maker", name: "DAI", symbol: "DAI", chainShare: RatioSchema.parse(0.02), change7dPct: RatioSchema.parse(-0.04) }),
+    ]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Top share (5%+)" }));
+    expect(screen.getByRole("link", { name: /USD Coin \(USDC\)/ })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /DAI \(DAI\)/ })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Shrinking 7d" }));
+    expect(screen.getByRole("link", { name: /DAI \(DAI\)/ })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /USD Coin \(USDC\)/ })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Search stablecoins on this chain" }), { target: { value: "usdc" } });
+    expect(screen.getByRole("link", { name: /USD Coin \(USDC\)/ })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /DAI \(DAI\)/ })).toBeNull();
+  });
 });

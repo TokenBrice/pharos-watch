@@ -1,5 +1,7 @@
-import { Skeleton } from "@/components/ui/skeleton";
+import { AlertsHeaderLink } from "@/components/alerts-header-link";
+import { ChartSkeleton } from "@/components/chart-skeleton";
 import { FaqSection } from "@/components/faq-section";
+import { PageLoadingSplitHero } from "@/components/page-loading-skeleton";
 import { ShareButton } from "@/components/share-button";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import type { FaqItem } from "@/lib/faq";
@@ -34,9 +36,10 @@ const route = createClientFeaturePage({
   loadClient: () => import("./client").then((m) => ({ default: m.StabilityIndexClient })),
   loading: (
     <div className="space-y-6">
-      <Skeleton className="h-48 w-full rounded-xl" />
-      <Skeleton className="h-[350px] w-full rounded-xl" />
-      <Skeleton className="h-[350px] w-full rounded-xl" />
+      <PageLoadingSplitHero visualClassName="min-h-[260px]" visualVariant="area" />
+      <div className="pharos-card-shell p-5 sm:p-6">
+        <ChartSkeleton variant="area" className="h-[250px] w-full sm:h-[350px]" />
+      </div>
     </div>
   ),
   shell: {
@@ -48,9 +51,17 @@ const route = createClientFeaturePage({
       docsPath: "/docs/stability-index/",
     },
     header: "instrument",
-    headerActions: <ShareButton />,
+    headerActions: (
+      <>
+        <AlertsHeaderLink
+          href="/pharoswatchbot/#getting-started"
+          description="Get Telegram alerts when PSI crosses condition bands"
+        />
+        <ShareButton />
+      </>
+    ),
     leadParagraphs: [
-      "A VIX for stablecoins: read the market regime before you trade.",
+      "A 0-100 market-regime gauge for stablecoins: 100 is calm Bedrock, 0 is Meltdown.",
     ],
   },
   afterClient: <FaqSection items={FAQ_ITEMS} includeJsonLd />,

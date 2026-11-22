@@ -161,40 +161,44 @@ describe("FreezeWatchClient", () => {
     }));
   });
 
-  it.each([
-    ["Supply", "useStablecoins", { peggedAssets: [] }],
-    ["Report Cards", "useReportCardsV9", { cards: [] }],
-  ] as const)("names stale-success %s independently of fresh blacklist clocks", (label, hook, data) => {
+  it("names stale-success Supply independently of fresh blacklist clocks and ignores stale optional reportCards", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-10-20T12:00:00Z"));
     mocks.useBlacklistSummary.mockReturnValue(stubQuery({ data: makeSummary() }));
     mocks.useBlacklistEventsPage.mockReturnValue(stubQuery({ data: { events: [], total: 0 } }));
-    mocks.useStablecoins.mockReturnValue(stubQuery({ data: { peggedAssets: [] } }));
-    mocks.useReportCardsV9.mockReturnValue(stubQuery({ data: { cards: [] } }));
-    mocks[hook].mockReturnValue(stubQuery({
-      data, meta: {
+    mocks.useReportCardsV9.mockReturnValue(stubQuery({
+      data: { cards: [] },
+      meta: {
+        updatedAt: Date.now() / 1000 - 100, ageSeconds: 100, status: "stale",
+        freshBudgetSec: 10, degradedBudgetSec: 20,
+      },
+    }));
+    mocks.useStablecoins.mockReturnValue(stubQuery({
+      data: { peggedAssets: [] }, meta: {
         updatedAt: Date.now() / 1000 - 100, ageSeconds: 100, status: "fresh",
         freshBudgetSec: 10, degradedBudgetSec: 20,
       },
     }));
     const { rerender } = render(<FreezeWatchClient />);
-    const notice = screen.getByText((text) => text.startsWith(`${label} last refreshed`));
+    const notice = screen.getByText((text) => text.startsWith("Supply last refreshed"));
     expect(notice.closest('[role="status"]')?.getAttribute("data-health-state")).toBe("stale");
     expect(notice.textContent).not.toContain("Blacklist");
-    mocks[hook].mockReturnValue({
-      ...mocks[hook].mock.results.at(-1)?.value, dataUpdatedAt: Date.now() + 1000,
+    expect(screen.queryByText(/Report Cards/)).toBeNull();
+    mocks.useStablecoins.mockReturnValue({
+      ...mocks.useStablecoins.mock.results.at(-1)?.value, dataUpdatedAt: Date.now() + 1000,
     });
     rerender(<FreezeWatchClient />);
-    expect(screen.getByText((text) => text.startsWith(`${label} last refreshed`))).toBeTruthy();
+    expect(screen.getByText((text) => text.startsWith("Supply last refreshed"))).toBeTruthy();
   });
 
-  it("names both failed support reads without treating fresh blacklist as failed", () => {
+  it("names failed Supply without raising a page-top alarm for optional Report Cards", () => {
     mocks.useBlacklistSummary.mockReturnValue(stubQuery({ data: makeSummary() }));
     mocks.useBlacklistEventsPage.mockReturnValue(stubQuery({ data: { events: [], total: 0 } }));
     mocks.useStablecoins.mockReturnValue(stubQuery({ error: new Error("supply offline") }));
     mocks.useReportCardsV9.mockReturnValue(stubQuery({ error: new Error("scores offline") }));
     render(<FreezeWatchClient />);
-    expect(screen.getByText("Could not refresh Supply and Report Cards.")).toBeTruthy();
+    expect(screen.getByText("Could not refresh Supply.")).toBeTruthy();
+    expect(screen.queryByText(/Report Cards/)).toBeNull();
     expect(screen.queryByText(/Could not refresh Blacklist/)).toBeNull();
   });
 
@@ -332,5 +336,72 @@ describe("FreezeWatchClient", () => {
     expect(screen.getByText("Check an address")).toBeTruthy();
     if (sentence) expect(screen.getByText(sentence)).toBeTruthy();
     else expect(screen.queryByText(/records|No freeze, release/)).toBeNull();
+  });
+
+  it("auto-clears active ledger filters when checking an address and reveals the unfiltered verdict", () => {
+    currentSearch = "?stablecoin=USDC&chain=ethereum";
+    mocks.useBlacklistSummary.mockReturnValue(stubQuery({ data: makeSummary() }));
+    mocks.useBlacklistEventsPage.mockImplementation((params: { stablecoin?: string; query?: string }) =>
+      stubQuery({
+        data:
+          params.stablecoin === "all" && params.query === ADDR
+            ? { events: [{ address: ADDR, stablecoin: "USDT", timestamp: 1700049600 }], total: 1 }
+            : { events: [], total: 0 },
+        meta: meta("fresh"),
+      }),
+    );
+
+    const { rerender } = render(<FreezeWatchClient />);
+    fireEvent.change(screen.getByLabelText("Check an address"), { target: { value: ADDR } });
+    rerender(<FreezeWatchClient />);
+
+    expect(new URLSearchParams(currentSearch).get("stablecoin")).toBeNull();
+    expect(new URLSearchParams(currentSearch).get("chain")).toBeNull();
+    expect(new URLSearchParams(currentSearch).get("q")).toBe(ADDR);
+    expect(screen.getByText(/Cleared active ledger filters/)).toBeTruthy();
+    expect(screen.getByText(/Pharos records 1 freeze, release or wipe event for this address\./)).toBeTruthy();
+  });
+
+  it("uses renamed capability tiers without Safe haven, keeps a single Unfreezable share, deduplicates the seismograph heading, and scrolls from the lattice", () => {
+    const scrollSpy = vi.fn();
+    HTMLElement.prototype.scrollIntoView = scrollSpy;
+    const oneYes = CLIENT_ACTIVE_STABLECOINS.find((m) => CLIENT_TRACKED_META_BY_ID.get(m.id)?.blacklistStatus === true);
+    const oneNo = CLIENT_ACTIVE_STABLECOINS.find((m) => CLIENT_TRACKED_META_BY_ID.get(m.id)?.blacklistStatus === false);
+    mocks.useBlacklistSummary.mockReturnValue(stubQuery({ data: makeSummary() }));
+    mocks.useStablecoins.mockReturnValue(
+      stubQuery({
+        data: {
+          peggedAssets: [
+            ...(oneYes ? [makeStablecoin({ id: oneYes.id, circulating: { peggedUSD: 99_950_000_000 } })] : []),
+            ...(oneNo ? [makeStablecoin({ id: oneNo.id, circulating: { peggedUSD: 50_000_000 } })] : []),
+          ],
+        },
+      }),
+    );
+
+    const { container } = render(<FreezeWatchClient />);
+
+    // Renamed tiers & zero "Safe haven" or duplicate "Unfreezable market share" card.
+    expect(screen.getByText("Direct freeze")).toBeTruthy();
+    expect(screen.getByText("Upstream exposure")).toBeTruthy();
+    expect(screen.getByText("Possible controls")).toBeTruthy();
+    expect(screen.getByText("Unfreezable")).toBeTruthy();
+    expect(screen.queryByText(/Safe haven/i)).toBeNull();
+    expect(screen.queryByText(/Unfreezable market share/i)).toBeNull();
+
+    // Non-zero tiny Unfreezable bar slice carries min-w-[4px] visual floor.
+    const noSegment = container.querySelector('[data-bucket-segment="no"]');
+    expect(noSegment?.className).toContain("min-w-[4px]");
+
+    // Exactly one h2 for "Quarterly freeze, release, and wipe events".
+    const seismographHeadings = screen.getAllByRole("heading", {
+      name: "Quarterly freeze, release, and wipe events",
+    });
+    expect(seismographHeadings).toHaveLength(1);
+
+    // SovereigntyLattice prose says "above" and clicking a cell scrolls smoothly to #data.
+    expect(screen.getByText(/filter the event ledger above/i)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "USDC Ethereum coverage supported" }));
+    expect(scrollSpy).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
   });
 });

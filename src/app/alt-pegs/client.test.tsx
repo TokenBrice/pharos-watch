@@ -444,6 +444,21 @@ describe("AltPegsClient", () => {
     await waitFor(() => expect(new URLSearchParams(window.location.search).get("peg")).toBeNull());
   });
 
+  it("syncs selectedPeg bidirectionally between FiatWorldAtlas and the peg filter", async () => {
+    render(<AltPegsClient />);
+    const atlasEuroChip = screen.getByRole("button", { name: "Filter atlas by Euro" });
+    fireEvent.click(atlasEuroChip);
+
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("peg")).toBe("eur"));
+    expect(screen.getByTestId("alt-peg-stablecoin-table").getAttribute("data-selected-peg")).toBe("EUR");
+    expect(atlasEuroChip.getAttribute("aria-pressed")).toBe("true");
+
+    const clearChip = screen.getByTestId("atlas-active-peg-chip");
+    fireEvent.click(clearChip);
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("peg")).toBeNull());
+    expect(screen.getByTestId("alt-peg-stablecoin-table").getAttribute("data-selected-peg")).toBe("");
+  });
+
   it("restores a focused share chart from the URL", () => {
     window.history.replaceState(null, "", "/alt-pegs/?view=focused&chart=share&range=90d");
 

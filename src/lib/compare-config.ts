@@ -6,6 +6,7 @@ import type { CoinOption, ComparePreset } from "@/lib/compare-types";
 import { decodeStablecoinUrlToken } from "@/lib/stablecoin-url-codec";
 import { readWatchlistSnapshot } from "@/lib/watchlist-storage";
 
+const MIN_COMPARE_COINS = 2;
 export const MAX_COMPARE_COINS = 5;
 export const COMPARE_COLORS = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6"] as const;
 
@@ -27,11 +28,13 @@ const ID_TO_COMPARE_COIN = new Map<string, CoinOption>(
 
 /**
  * Build the dynamic "My Watchlist" coin list from the unified watchlist
- * snapshot, filtered against the known compare coin set so frozen/unknown
+ * snapshot, filtered against the known compare coin set so withheld/unknown
  * coins are dropped without surfacing broken entries.
  */
-function resolveWatchlistPresetCoins(): readonly string[] {
-  return readWatchlistSnapshot()
+function resolveWatchlistPresetCoins(
+  watchlistIds: readonly string[] = readWatchlistSnapshot(),
+): readonly string[] {
+  return watchlistIds
     .filter((id) => ID_TO_COMPARE_COIN.has(id))
     .slice(0, MAX_COMPARE_COINS);
 }
@@ -93,10 +96,31 @@ export const COMPARISON_PRESETS: readonly ComparePreset[] = [
 /**
  * Resolve a preset's coin list, preferring the runtime resolver when present.
  * Returns the static `coins` for built-in presets and the dynamic snapshot for
- * presets like "My Watchlist".
+ * presets like "My Watchlist". Passing `watchlistIds` keeps client renders
+ * synchronized with `useWatchlist()` without bypassing SSR snapshots.
  */
-export function getPresetCoins(preset: ComparePreset): readonly string[] {
-  return preset.getCoinsAtRuntime ? preset.getCoinsAtRuntime() : preset.coins;
+export function getPresetCoins(
+  preset: ComparePreset,
+  watchlistIds?: readonly string[],
+): readonly string[] {
+  if (preset.getCoinsAtRuntime) {
+    if (watchlistIds !== undefined && preset.getCoinsAtRuntime === resolveWatchlistPresetCoins) {
+      return resolveWatchlistPresetCoins(watchlistIds);
+    }
+    return preset.getCoinsAtRuntime();
+  }
+  return preset.coins;
+}
+
+/**
+ * True when a preset resolves enough comparable coins to start a comparison.
+ * Hides dynamic presets like "My Watchlist" when fewer than two coins are starred.
+ */
+export function isComparePresetAvailable(
+  preset: ComparePreset,
+  watchlistIds?: readonly string[],
+): boolean {
+  return getPresetCoins(preset, watchlistIds).length >= MIN_COMPARE_COINS;
 }
 
 export function parseIdList(

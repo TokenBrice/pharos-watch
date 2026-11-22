@@ -1,24 +1,41 @@
 "use client";
 
 import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
-import { DdrInfoTooltip } from "@/components/depeg/depeg-resolver-info-tooltip";
+import { MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
 import { Badge } from "@/components/ui/badge";
 import { DepegResolverRowCard } from "@/components/depeg/depeg-resolver-row-card-parts";
+import { getTierMeta } from "@/components/depeg/depeg-resolver-row-card-model";
 import {
   compareResolverUrgency,
   isResolverBookAvailable,
   summarizeResolverBook,
   type MarketCapById,
+  type ResolverBookSummary,
 } from "@/components/depeg/depeg-resolver-book-summary";
+import { describePromotedAccuracy, formatPromotedAccuracyLines } from "@/lib/ddr-promoted-accuracy";
 import { isDepegResolverEnabled } from "@/lib/feature-flags";
+import { cn } from "@/lib/utils";
+import { formatPercent } from "@shared/lib/format";
 import { DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
-import { DDR_PUBLIC_WARNING, type DdrResponse } from "@shared/types/depeg-resolver";
+import {
+  DDR_PUBLIC_WARNING,
+  DDR_RESOLUTION_TIER_VALUES,
+  type DdrResolutionTier,
+  type DdrResponse,
+} from "@shared/types/depeg-resolver";
+import type { DdrrSummary } from "@shared/types/depeg-resolver-review";
 
 interface DepegResolverModuleProps {
   data: DdrResponse | undefined;
   logos?: Record<string, string>;
   /** Circulating supply for exposure ranking and the card cap line; undefined while unread. */
   marketCaps?: MarketCapById;
+  /** DDRR headline accuracy summary moved from the hero into the resolver header. */
+  review?: DdrrSummary | null;
+  /** True while the first DDR read is still pending after the route skeleton releases. */
+  resolverPending?: boolean;
+  /** True while the first DDRR read is still pending after the route skeleton releases. */
+  reviewPending?: boolean;
 }
 
 /**
@@ -27,66 +44,184 @@ interface DepegResolverModuleProps {
  */
 const DEFAULT_VISIBLE_ROWS = 4;
 
-function ResolverHeader({ data, summary }: { data: DdrResponse | undefined; summary: ReactNode }) {
+interface NormalizedTierSummary {
+  tier: DdrResolutionTier;
+  count: number;
+  label: string;
+  accent: string;
+  breakdownTitle?: string;
+}
+
+/**
+ * Collapse mixed v5 (`evidence_class`) and pre-v5 (`legacy`) counts for the
+ * same underlying tier into one reader-facing aggregate pill, preserving exact
+ * vocabulary counts in the title attribute when both exist. Individual cards
+ * keep the exact vocabulary they were locked under.
+ */
+function normalizeResolverTierSummary(book: ResolverBookSummary): NormalizedTierSummary[] {
+  const result: NormalizedTierSummary[] = [];
+  for (const tier of DDR_RESOLUTION_TIER_VALUES) {
+    const groups = book.tierGroups.filter((group) => group.tier === tier);
+    if (groups.length === 0) continue;
+    const total = groups.reduce((sum, group) => sum + group.count, 0);
+    const hasEvidenceClass = groups.some((group) => group.vocabulary === "evidence_class");
+    const primaryVocab = hasEvidenceClass ? "evidence_class" : "legacy";
+    const meta = getTierMeta(tier, primaryVocab);
+    const breakdownTitle = groups.length > 1
+      ? groups
+          .map((group) => `${group.count} ${getTierMeta(tier, group.vocabulary).label.toLowerCase()} (${group.vocabulary === "evidence_class" ? "current" : "pre-v5"})`)
+          .join(" · ")
+      : undefined;
+    result.push({
+      tier,
+      count: total,
+      label: meta.label.toLowerCase(),
+      accent: meta.accent,
+      breakdownTitle,
+    });
+  }
+  return result;
+}
+
+function ResolverHeader({
+  data,
+  book,
+  bookAvailable,
+  review,
+  resolverPending,
+  reviewPending,
+  summary,
+}: {
+  data: DdrResponse | undefined;
+  book: ResolverBookSummary;
+  bookAvailable: boolean;
+  review?: DdrrSummary | null;
+  resolverPending?: boolean;
+  reviewPending?: boolean;
+  summary: ReactNode;
+}) {
   const lineage = data?._meta.lineage ?? null;
   const versionLabel = data?.methodology.currentVersionLabel ?? DDR_METHODOLOGY_VERSION_LABEL;
+  const normalizedTiers = bookAvailable && book.total > 0 ? normalizeResolverTierSummary(book) : [];
+  const headline = review?.headline;
+  const accuracyPct = headline?.recoveryLikelihoodAccuracyPct ?? null;
+  const accuracyLines = review ? formatPromotedAccuracyLines(describePromotedAccuracy(review)) : null;
+  const showOutlookBlock = (bookAvailable && book.total > 0) || Boolean(resolverPending);
+  const showTrackRecordBlock = Boolean(
+    (headline && accuracyLines && headline.recoveryLikelihoodScoredCount > 0) || reviewPending,
+  );
+
   return (
-    <div className="space-y-1.5">
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
-        <div className="flex items-center gap-2.5">
-          <span className="rounded-md bg-foreground px-1.5 py-0.5 font-mono text-2xs font-bold text-background">
-            DDR
-          </span>
-          <h2 className="pharos-section-title">Depeg Duration Resolver</h2>
-          {versionLabel ? (
+    <div className="space-y-3">
+      <div className="space-y-1.5">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="rounded-md bg-foreground px-1.5 py-0.5 font-mono text-2xs font-bold text-background">
+              DDR
+            </span>
+            <h2 className="pharos-section-title">Depeg Duration Resolver</h2>
+            {versionLabel ? (
+              <Badge
+                variant="outline"
+                className="border-border/60 bg-muted/40 px-1.5 py-0 text-3xs font-mono uppercase text-muted-foreground"
+              >
+                {versionLabel}
+              </Badge>
+            ) : null}
             <Badge
               variant="outline"
-              className="border-border/60 bg-muted/40 px-1.5 py-0 text-3xs font-mono uppercase text-muted-foreground"
+              className="border-state-warn bg-state-warn-subtle px-1.5 py-0 text-3xs uppercase text-state-warn"
             >
-              {versionLabel}
+              Beta
             </Badge>
+            <MethodologyHint topic="ddr" />
+          </div>
+          {lineage ? (
+            <p className="text-2xs text-muted-foreground">
+              Calibrated on <span className="pharos-numeric">{lineage.incidentCount.toLocaleString()}</span> historical
+              incidents · <span className="pharos-numeric">{lineage.coinCount}</span> coins
+              {lineage.quarantinedCoins > 0 ? (
+                <>
+                  {" ("}
+                  <span className="pharos-numeric">{lineage.quarantinedCoins}</span> excluded)
+                </>
+              ) : null}
+            </p>
           ) : null}
-          <Badge
-            variant="outline"
-            className="border-state-warn bg-state-warn-subtle px-1.5 py-0 text-3xs uppercase text-state-warn"
-          >
-            Beta
-          </Badge>
-          <DdrInfoTooltip
-            ariaLabel="About the Depeg Duration Resolver"
-            content={
-              <>
-                For each open confirmed depeg, the resolver weighs kill signals against recovery anchors for a
-                mechanistic verdict, then — when recovery is plausible — an empirical expected duration from comparable
-                historical incidents.
-              </>
-            }
-          />
         </div>
-        {lineage ? (
-          <p className="text-2xs text-muted-foreground">
-            Calibrated on <span className="pharos-numeric">{lineage.incidentCount.toLocaleString()}</span> historical
-            incidents · <span className="pharos-numeric">{lineage.coinCount}</span> coins
-            {lineage.quarantinedCoins > 0 ? (
-              <>
-                {" ("}
-                <span className="pharos-numeric">{lineage.quarantinedCoins}</span> excluded)
-              </>
-            ) : null}
-          </p>
-        ) : null}
+        <p className="text-pretty text-sm text-muted-foreground">
+          Calls whether a live depeg recovers, and how long it takes,{" "}
+          <span className="text-foreground">before the event resolves</span>.{" "}
+          <span className="text-muted-foreground/70">{DDR_PUBLIC_WARNING}</span>
+        </p>
+        {summary}
       </div>
-      <p className="text-pretty text-sm text-muted-foreground">
-        Calls whether a live depeg recovers — and how long it takes —{" "}
-        <span className="text-foreground">before the event resolves</span>.{" "}
-        <span className="text-muted-foreground/70">{DDR_PUBLIC_WARNING}</span>
-      </p>
-      {summary}
+
+      {showOutlookBlock || showTrackRecordBlock ? (
+        <div className="pharos-card-shell grid grid-cols-1 divide-y divide-border/60 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+          {showOutlookBlock ? (
+            <div className="px-4 py-3">
+              <p className="pharos-label">
+                <MethodologyLabel topic="ddr" compact>Recovery outlook · DDR</MethodologyLabel>
+              </p>
+              {bookAvailable && book.total > 0 ? (
+                <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  {normalizedTiers.map(({ tier, count, label, accent, breakdownTitle }) => (
+                    <span
+                      key={tier}
+                      title={breakdownTitle}
+                      className="inline-flex items-baseline gap-1 text-xs"
+                    >
+                      <span className={cn("pharos-numeric text-sm font-semibold", accent)}>{count}</span>
+                      <span className={accent}>{label}</span>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="pharos-meta mt-1">Loading DDR…</p>
+              )}
+            </div>
+          ) : null}
+
+          {showTrackRecordBlock ? (
+            <div className="px-4 py-3">
+              <p className="pharos-label">
+                <MethodologyLabel topic="ddrr" compact>Forecast track record · DDRR</MethodologyLabel>
+              </p>
+              {headline && accuracyLines && headline.recoveryLikelihoodScoredCount > 0 ? (
+                <>
+                  <p className="mt-1 flex flex-wrap items-baseline gap-x-2">
+                    <span className="pharos-numeric text-lg font-semibold leading-tight text-foreground">
+                      {accuracyPct != null ? formatPercent(accuracyPct * 100, 1) : "—"}
+                    </span>
+                    <span className="text-xs text-muted-foreground">{accuracyLines.calls}</span>
+                  </p>
+                  <p className="pharos-meta mt-0.5">
+                    {review?.headlineLabel ?? headline.accuracyDenominatorLabel} ·{" "}
+                    <a href="#forecast-grading" className="pharos-prose-link">
+                      see the grading
+                    </a>
+                  </p>
+                </>
+              ) : (
+                <p className="pharos-meta mt-1">Loading DDRR…</p>
+              )}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
 
-export function DepegResolverModule({ data, logos, marketCaps }: DepegResolverModuleProps) {
+export function DepegResolverModule({
+  data,
+  logos,
+  marketCaps,
+  review,
+  resolverPending = false,
+  reviewPending = false,
+}: DepegResolverModuleProps) {
   const [showAll, setShowAll] = useState(false);
   const rows = useMemo(() => data?.rows ?? [], [data]);
 
@@ -99,9 +234,6 @@ export function DepegResolverModule({ data, logos, marketCaps }: DepegResolverMo
   const visible = showAll ? ordered : ordered.slice(0, DEFAULT_VISIBLE_ROWS);
   const hiddenCount = ordered.length - visible.length;
 
-  // The recovery-verdict split lives in the hero, which owns route-level
-  // posture. This header only states the book size and which slice is on
-  // screen, so the four cards are never mistaken for the whole book.
   const summary =
     bookAvailable && rows.length > 0 ? (
       <p className="pharos-meta">
@@ -118,8 +250,16 @@ export function DepegResolverModule({ data, logos, marketCaps }: DepegResolverMo
     ) : null;
 
   return (
-    <section aria-label="Depeg Duration Resolver" className="space-y-4">
-      <ResolverHeader data={data} summary={summary} />
+    <section id="recovery-forecast" aria-label="Depeg Duration Resolver" className="scroll-mt-24 space-y-4">
+      <ResolverHeader
+        data={data}
+        book={book}
+        bookAvailable={bookAvailable}
+        review={review}
+        resolverPending={resolverPending}
+        reviewPending={reviewPending}
+        summary={summary}
+      />
 
       {!data ? (
         <div className="pharos-empty-note text-center">Resolver data is loading.</div>
@@ -129,7 +269,7 @@ export function DepegResolverModule({ data, logos, marketCaps }: DepegResolverMo
         <div className="pharos-empty-note">
           <p className="font-medium text-foreground">No active confirmed depegs.</p>
           <p className="mt-1">
-            When Pharos confirms an open depeg, its recovery verdict and — if recovery looks likely — an
+            When Pharos confirms an open depeg, its recovery verdict and, if recovery looks likely, an
             expected-duration band appear here.
           </p>
         </div>

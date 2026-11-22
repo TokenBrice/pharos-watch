@@ -5,7 +5,6 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { render } from "@testing-library/react";
 import { DepegOutlookHero } from "../depeg/depeg-outlook-hero";
 import type { PegSummaryStats } from "@shared/types/peg";
-import { summarizeResolverBook } from "../depeg/depeg-resolver-book-summary";
 import { makeDdrSourceRow, makeFrozenDdrV2Row } from "../depeg-resolver-test-support";
 import { DdrV2ResponseRowSchema } from "@shared/types/depeg-resolver";
 
@@ -23,7 +22,7 @@ function markup(props: Partial<Parameters<typeof DepegOutlookHero>[0]>) {
   return renderToStaticMarkup(<DepegOutlookHero {...baseProps} {...props} />);
 }
 
-const pending = (loading = false) => ({ peg: loading, dews: loading, events: loading, resolver: loading, review: loading });
+const pending = (loading = false) => ({ peg: loading, dews: loading, events: loading });
 
 function renderHero(stats: PegSummaryStats | undefined, pendingCount: number | null, dewsAlertCount: number | null, loading = false) {
   return markup({ stats, pendingCount, dewsAlertCount, pendingSources: pending(loading) });
@@ -31,34 +30,35 @@ function renderHero(stats: PegSummaryStats | undefined, pendingCount: number | n
 
 describe("DepegOutlookHero source availability", () => {
   it.each([false, true])("renders missing peg summary without zero observations (pending=%s)", (loading) => {
-    const markup = renderHero(undefined, 2, 3, loading);
-    expect(markup).toContain(loading ? "Loading peg summary…" : "peg summary unavailable");
-    expect(markup).not.toContain("0 / 0");
-    expect(markup).not.toContain("0 bps");
-    expect(markup).not.toContain("coins with open confirmed incidents");
+    const html = renderHero(undefined, 2, 3, loading);
+    expect(html).toContain(loading ? "Loading peg summary…" : "peg summary unavailable");
+    expect(html).toContain("pharos-hero-kpi");
+    expect(html).not.toContain("0 / 0");
+    expect(html).not.toContain("0 bps");
+    expect(html).not.toContain("coins with open confirmed incidents");
   });
 
   it("renders an unavailable median independently of observed cohort and historical counts", () => {
-    const markup = renderHero({ ...observedZero, medianDeviationBps: null, depegEventsToday: 2 }, 0, 0);
-    expect(markup).toContain("live peg status unavailable");
-    expect(markup).toMatch(/Median deviation<\/p><p[^>]*><span[^>]*>—<\/span>/);
-    expect(markup).toContain("0 / 0");
-    expect(markup).not.toContain("0 bps");
-    expect(markup).not.toContain("null bps");
-    expect(markup).not.toContain("peg summary unavailable");
+    const html = renderHero({ ...observedZero, medianDeviationBps: null, depegEventsToday: 2 }, 0, 0);
+    expect(html).toContain("live peg status unavailable");
+    expect(html).toMatch(/Median deviation<\/p><p[^>]*><span[^>]*>—<\/span>/);
+    expect(html).toContain("0 / 0");
+    expect(html).not.toContain("0 bps");
+    expect(html).not.toContain("null bps");
+    expect(html).not.toContain("peg summary unavailable");
   });
 
-  it.each([false, true])("distinguishes pending/unavailable and latches first-show slots (%s)", (loading) => {
-    const markup = renderHero(observedZero, null, null, loading);
-    expect(markup).toContain(loading ? "Loading event data…" : "event data unavailable");
-    expect(markup).toContain(loading ? "Loading DEWS…" : "DEWS or peg catalog unavailable");
-    for (const source of ["DDR", "DDRR"]) expect(markup.includes(`Loading ${source}…`)).toBe(loading);
-    expect(markup).toContain("0 / 0");
-    expect(markup).toContain("0 bps");
+  it.each([false, true])("distinguishes pending/unavailable and latches first-show slots without DDR/DDRR (%s)", (loading) => {
+    const html = renderHero(observedZero, null, null, loading);
+    expect(html).toContain(loading ? "Loading event data…" : "event data unavailable");
+    expect(html).toContain(loading ? "Loading DEWS…" : "DEWS or peg catalog unavailable");
+    expect(html).not.toMatch(/Recovery outlook|Forecast track record|Loading DDR/);
+    expect(html).toContain("0 / 0");
+    expect(html).toContain("0 bps");
     const v = render(<DepegOutlookHero {...baseProps} pendingSources={pending(loading)} />);
     for (let i = 0; i < 2; i++) {
-      expect(v.container.querySelectorAll('[class*="min-h-"]:not(button)')).toHaveLength(loading ? 10 : 0);
-      for (const slot of ["min-h-20", "min-h-32", "min-h-28", "min-h-67 sm:min-h-52", "border-t border-border/60 pt-3 min-h-84 sm:min-h-76"])
+      expect(v.container.querySelectorAll('[class*="min-h-"]:not(button)')).toHaveLength(loading ? 8 : 0);
+      for (const slot of ["min-h-20", "min-h-67 sm:min-h-52", "border-t border-border/60 px-5 py-4 sm:px-6 min-h-84 sm:min-h-76 lg:min-h-40"])
         expect(v.container.innerHTML.includes(`class="${slot}"`)).toBe(loading);
       v.rerender(<DepegOutlookHero {...baseProps} />);
     }
@@ -71,16 +71,16 @@ describe("DepegOutlookHero source availability", () => {
   });
 
   it("preserves successful zero counts rather than treating zero as unavailable", () => {
-    const markup = renderHero(observedZero, 0, 0);
-    expect(markup).toContain("coins with open confirmed incidents");
-    expect(markup).not.toContain("all pegs holding");
-    expect(markup).toContain("crossings");
-    expect(markup).toContain("of the peg catalog");
-    expect(markup).not.toContain("unavailable");
+    const html = renderHero(observedZero, 0, 0);
+    expect(html).toContain("coins with open confirmed incidents");
+    expect(html).not.toContain("all pegs holding");
+    expect(html).toContain("crossings");
+    expect(html).toContain("of the peg catalog");
+    expect(html).not.toContain("unavailable");
   });
 });
 
-describe("DepegOutlookHero open-incident wording", () => {
+describe("DepegOutlookHero open-incident wording and clickable worst move", () => {
   it("counts coins with open confirmed incidents, independent of current recovery evidence", () => {
     const one = markup({ stats: { ...observedZero, activeDepegCount: 1 }, activeDepegIds: new Set(["a"]) });
     expect(one).toContain("coin with an open confirmed incident");
@@ -89,20 +89,52 @@ describe("DepegOutlookHero open-incident wording", () => {
     const many = renderHero({ ...observedZero, activeDepegCount: 3 }, 0, 0);
     expect(many).toContain("coins with open confirmed incidents");
   });
+
+  it("renders a clickable signed worst-deviation callout linking to the affected coin", () => {
+    const negative = markup({
+      stats: { ...observedZero, activeDepegCount: 1, worstCurrent: { id: "idrt-rupiah-token", symbol: "IDRT", bps: -3407 } },
+      activeDepegIds: new Set(["idrt-rupiah-token"]),
+    });
+    expect(negative).toContain("-3407 bps");
+    expect(negative).toContain("IDRT");
+    expect(negative).toContain('href="/stablecoin/idrt-rupiah-token#depeg-resolver"');
+
+    const positive = markup({
+      stats: { ...observedZero, worstCurrent: { id: "eurc-circle", symbol: "EURC", bps: 145 } },
+    });
+    expect(positive).toContain("+145 bps");
+    expect(positive).toContain('href="/stablecoin/eurc-circle"');
+  });
 });
 
 describe("DepegOutlookHero open incidents", () => {
-  it("names the census top five with deviation, verdict and cap", () => {
+  it("names the census top five with deviation, verdict (including sealed insufficient signal) and cap", () => {
     const frozen = makeFrozenDdrV2Row(makeDdrSourceRow({ resolution: { tier: "recovery_unlikely", factors: [] } }));
+    if (frozen.kind !== "prediction") throw new Error("Expected frozen fixture");
+    const noCall = DdrV2ResponseRowSchema.parse({
+      ...frozen,
+      kind: "no_call",
+      prediction: { ...frozen.prediction, state: "no_call" },
+      frozen: null,
+      noCall: {
+        lockedAt: frozen.prediction.lockedAt,
+        eventAgeAtLockSec: frozen.prediction.eventAgeAtLockSec,
+        missingReasons: [],
+        relatedContext: frozen.frozen.relatedContext,
+      },
+    });
     const rows = Array.from({ length: 7 }, (_, i) => ({
       id: `coin-${i}`, symbol: `C${i}`, deviationBps: i === 0 ? -4_510 : null,
       referenceNote: i === 1 ? "Reference market closed" : i === 2 ? "Reference not yet updated" : null,
-      marketCapUsd: i === 0 ? 49e6 : null, ddr: i === 0 ? frozen : null,
+      marketCapUsd: i === 0 ? 49e6 : null, ddr: i === 0 ? frozen : i === 3 ? noCall : null,
     }));
     const html = markup({ openIncidents: rows, stats: { ...observedZero, activeDepegCount: 7 } });
     expect(html).toContain("Top 5 of 7 by holder exposure");
     expect(html).toContain('href="/stablecoin/coin-0#depeg-resolver"');
-    for (const text of ["−4510 bps", "Terminal", "$49.0M", "Reference market closed", "Reference not yet updated"]) expect(html).toContain(text);
+    for (const text of ["−4510 bps", "Terminal", "Insufficient signal", "$49.0M", "Reference market closed", "Reference not yet updated"]) {
+      expect(html).toContain(text);
+    }
+    expect(html).not.toContain("No-call locked");
     expect(html).not.toContain("C5<");
     expect(html).toContain("Awaiting confirmation");
     expect(markup({ openIncidents: [] })).not.toContain("Open incidents");
@@ -116,85 +148,5 @@ describe("DepegOutlookHero universe chip", () => {
     const unread = markup({ stats: undefined, catalogCount: null });
     expect(unread).toContain("Peg catalog");
     expect(unread).not.toContain("coins<");
-  });
-});
-
-describe("DepegOutlookHero current forecast posture", () => {
-  it("excludes invalidated original outcomes and non-prediction rows from recovery outlook", () => {
-    const valid = makeFrozenDdrV2Row(makeDdrSourceRow({ resolution: { tier: "recovery_likely", factors: [] } }));
-    if (valid.kind !== "prediction") throw new Error("Expected frozen fixture");
-    const invalidated = DdrV2ResponseRowSchema.parse({
-      ...valid, kind: "invalidated_prediction", prediction: { ...valid.prediction, state: "invalidated" },
-      originalKind: "prediction", originalOutcome: valid.frozen, noCall: null,
-    });
-    const pending = DdrV2ResponseRowSchema.parse({
-      ...valid, kind: "pending", prediction: { ...valid.prediction, state: "pending_lock" }, frozen: null,
-    });
-    const noCall = DdrV2ResponseRowSchema.parse({
-      ...valid, kind: "no_call", prediction: { ...valid.prediction, state: "no_call" }, frozen: null,
-      noCall: { lockedAt: valid.prediction.lockedAt, eventAgeAtLockSec: valid.prediction.eventAgeAtLockSec,
-        missingReasons: [], relatedContext: valid.frozen.relatedContext },
-    });
-    const mixed = markup({ book: summarizeResolverBook([valid, invalidated, pending, noCall]) });
-    expect(mixed).toContain("1 open forecast");
-    expect(mixed).toContain("no break signals");
-    expect(mixed).not.toContain("recovery likely");
-    expect(mixed).not.toContain("4 open forecasts");
-    const auditOnly = markup({ book: summarizeResolverBook([invalidated, pending, noCall]) });
-    expect(auditOnly).not.toContain("Recovery outlook");
-    expect(auditOnly).not.toContain("recovery likely");
-  });
-});
-
-describe("DepegOutlookHero recovery outlook caption", () => {
-  const book = (pastPeakCount: number) => ({
-    total: 3, rowCount: 3, tierGroups: [], pastPeakCount,
-    tierCounts: { recovery_likely: 0, at_risk: 3, recovery_unlikely: 0, insufficient_signal: 0 },
-  });
-
-  it.each([[1, "1 at a new worst"], [3, "3 at a new worst"]] as const)("states %s live new-worst incidents", (count, caption) => {
-    const html = markup({ book: book(count) });
-    expect(html).toContain(caption);
-    expect(html).not.toContain("past their worst");
-  });
-
-  it.each([[8_466, "calibrated on 8,466 historical incidents"], [0, "calibrated on 0 historical incidents"]] as const)(
-    "passes the producer lineage count %s through as historical incidents",
-    (incidentCount, caption) => {
-      const html = markup({ book: book(0), lineage: { incidentCount, coinCount: 41 } });
-      expect(html).toContain(caption);
-      expect(html).not.toContain("recovered incidents");
-    },
-  );
-
-  it.each([null, undefined])("falls back to forecast count without lineage (%s), omitting zero new-worst", (lineage) => {
-    const html = markup({ book: book(0), lineage });
-    expect(html).toContain("3 open forecasts");
-    expect(html).not.toContain("calibrated on");
-    expect(html).not.toContain("new worst");
-  });
-
-});
-
-describe("DepegOutlookHero forecast track record", () => {
-  const review = (baseline: number | undefined, segments: Array<[string, number]>) => ({
-    headlineScope: "current_policy",
-    headlineLabel: "Current DDRv2 public prediction policy",
-    headline: {
-      recoveryLikelihoodCorrectCount: 61, recoveryLikelihoodScoredCount: 74, recoveryLikelihoodAccuracyPct: 61 / 74,
-      baselineRecoverableCorrectCount: baseline, accuracyDenominatorLabel: "scored",
-    },
-    byPredictionPolicy: segments.map(([version, scored]) => ({
-      segmentKind: "prediction_policy", predictionMethodologyVersion: version, predictionPolicyVersion: "sticky-24h-v1",
-      metrics: { recoveryLikelihoodScoredCount: scored },
-    })),
-  }) as unknown as Parameters<typeof DepegOutlookHero>[0]["review"];
-
-  it("shows the captured fraction with no sub-text under the figure", () => {
-    const html = markup({ review: review(70, [["2.0", 6], ["3.04", 49], ["4.6", 19]]) });
-    expect(html).toContain("Recovery calls correct: 61/74");
-    expect(html).not.toContain("Always-recover baseline");
-    expect(html).not.toContain("Graded calls");
-    expect(html).toContain("see the grading");
   });
 });

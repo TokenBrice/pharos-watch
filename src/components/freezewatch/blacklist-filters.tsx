@@ -1,10 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { useMemo } from "react";
+import { RotateCcw } from "lucide-react";
 import { ControlPillToggle } from "@/components/control-pill-toggle";
+import { FilterCombobox } from "@/components/filter-combobox";
+import { Button } from "@/components/ui/button";
 import type { BlacklistStablecoin, BlacklistEventType } from "@shared/types/blacklist";
 import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
+
+export const TOP_COIN_PILL_LIMIT = 8;
 
 const EVENT_TYPE_FILTER_OPTIONS: { value: BlacklistEventType | "all"; label: string }[] = [
   { value: "all", label: "All" },
@@ -13,9 +17,6 @@ const EVENT_TYPE_FILTER_OPTIONS: { value: BlacklistEventType | "all"; label: str
   { value: "destroy", label: "Wipe" },
 ];
 
-const ALL_STABLECOIN_FILTER_OPTIONS = ["all", ...BLACKLIST_STABLECOINS] as const;
-
-// Raw stablecoin tickers are their own labels; only the "all" sentinel differs.
 function formatStablecoinFilterLabel(value: BlacklistStablecoin | "all"): string {
   return value === "all" ? "All" : value;
 }
@@ -26,9 +27,11 @@ interface BlacklistFiltersProps {
   chainFilter: string;
   eventTypeFilter: BlacklistEventType | "all";
   perCoinTotalEvents?: Partial<Record<BlacklistStablecoin, number>>;
+  hasActiveFilters?: boolean;
   onStablecoinChange: (value: BlacklistStablecoin | "all") => void;
   onChainChange: (value: string) => void;
   onEventTypeChange: (value: BlacklistEventType | "all") => void;
+  onResetFilters?: () => void;
 }
 
 export function BlacklistFilters({
@@ -37,21 +40,36 @@ export function BlacklistFilters({
   chainFilter,
   eventTypeFilter,
   perCoinTotalEvents,
+  hasActiveFilters,
   onStablecoinChange,
   onChainChange,
   onEventTypeChange,
+  onResetFilters,
 }: BlacklistFiltersProps) {
-  const { stablecoinOptions, withoutEvents } = useMemo(() => {
-    const visibleOptions: Array<BlacklistStablecoin | "all"> = ["all"];
-    const withoutE: BlacklistStablecoin[] = [];
-    for (const coin of BLACKLIST_STABLECOINS) {
-      const count = perCoinTotalEvents?.[coin];
-      (count === 0 ? withoutE : visibleOptions).push(coin);
-    }
-    return {
-      stablecoinOptions: perCoinTotalEvents == null ? ALL_STABLECOIN_FILTER_OPTIONS : visibleOptions,
-      withoutEvents: withoutE,
-    };
+  const { topPillOptions, comboboxOptions } = useMemo(() => {
+    const orderIndex = new Map(BLACKLIST_STABLECOINS.map((coin, index) => [coin, index] as const));
+    const rankedCoins = [...BLACKLIST_STABLECOINS].sort((a, b) => {
+      const countA = perCoinTotalEvents?.[a] ?? -1;
+      const countB = perCoinTotalEvents?.[b] ?? -1;
+      if (countB !== countA) return countB - countA;
+      return (orderIndex.get(a) ?? 0) - (orderIndex.get(b) ?? 0);
+    });
+
+    const topCoins = rankedCoins.slice(0, TOP_COIN_PILL_LIMIT);
+    const pills: Array<BlacklistStablecoin | "all"> = ["all", ...topCoins];
+
+    const combobox = [
+      { value: "all", label: "All tracked coins" },
+      ...rankedCoins.map((coin) => {
+        const count = perCoinTotalEvents?.[coin];
+        return {
+          value: coin,
+          label: count == null ? coin : `${coin} (${count.toLocaleString("en-US")})`,
+        };
+      }),
+    ];
+
+    return { topPillOptions: pills, comboboxOptions: combobox };
   }, [perCoinTotalEvents]);
 
   const chainOptions = useMemo(
@@ -59,61 +77,40 @@ export function BlacklistFilters({
     [chains],
   );
 
-  const hasEventCounts = perCoinTotalEvents != null;
-  const selectionHiddenByDefault =
-    stablecoinFilter !== "all" && withoutEvents.includes(stablecoinFilter as BlacklistStablecoin);
-  const [showWithoutEvents, setShowWithoutEvents] = useState(selectionHiddenByDefault);
-  const withoutEventsExpanded = showWithoutEvents || selectionHiddenByDefault;
+  const showReset =
+    typeof onResetFilters === "function" &&
+    (hasActiveFilters ?? (stablecoinFilter !== "all" || chainFilter !== "all" || eventTypeFilter !== "all"));
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:flex lg:flex-wrap lg:gap-6">
+    <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end lg:gap-6">
       <div className="space-y-1.5">
         <span className="pharos-label">Stablecoin</span>
-        <ControlPillToggle
-          className="flex w-full flex-wrap justify-start gap-1.5"
-          ariaLabel="Filter by stablecoin"
-          options={stablecoinOptions}
-          value={stablecoinFilter}
-          onChange={onStablecoinChange}
-          formatLabel={formatStablecoinFilterLabel}
-          buttonClassName="min-h-11 px-3 sm:min-h-8"
-        />
-        {hasEventCounts && withoutEvents.length > 0 ? (
-          <div className="space-y-1.5">
-            <button
-              type="button"
-              disabled={selectionHiddenByDefault}
-              onClick={() => setShowWithoutEvents((v) => !v)}
-              aria-expanded={withoutEventsExpanded}
-              aria-controls="blacklist-no-events-filter-group"
-              className="mt-1 inline-flex min-h-11 items-center gap-1 rounded-sm py-2 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:min-h-0 sm:py-0"
-            >
-              <ChevronDown
-                className={`h-3 w-3 transition-transform ${withoutEventsExpanded ? "rotate-0" : "-rotate-90"}`}
-                aria-hidden="true"
-              />
-              {withoutEventsExpanded ? "Hide" : "Show"} tracked without events yet ({withoutEvents.length})
-            </button>
-            {withoutEventsExpanded ? (
-              <div id="blacklist-no-events-filter-group" className="opacity-80">
-                <ControlPillToggle
-                  className="flex w-full flex-wrap justify-start gap-1.5"
-                  ariaLabel="Filter by stablecoin without recorded events"
-                  options={withoutEvents}
-                  value={stablecoinFilter}
-                  onChange={onStablecoinChange}
-                  formatLabel={formatStablecoinFilterLabel}
-                  buttonClassName="min-h-11 px-3 sm:min-h-8"
-                />
-              </div>
-            ) : null}
-          </div>
-        ) : null}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <ControlPillToggle
+            className="flex flex-wrap justify-start gap-1.5"
+            ariaLabel="Filter by stablecoin"
+            options={topPillOptions}
+            value={stablecoinFilter}
+            onChange={onStablecoinChange}
+            formatLabel={formatStablecoinFilterLabel}
+            buttonClassName="min-h-11 px-3 sm:min-h-8"
+          />
+          <FilterCombobox
+            label="All coins"
+            value={stablecoinFilter}
+            onValueChange={(nextValue) => onStablecoinChange(nextValue as BlacklistStablecoin | "all")}
+            options={comboboxOptions}
+            placeholder="All tracked"
+            emptyLabel="No tracked stablecoin matches."
+            triggerClassName="pharos-control-pill min-h-11 px-3 text-xs sm:min-h-8"
+          />
+        </div>
       </div>
+
       <div className="space-y-1.5">
         <span className="pharos-label">Chain</span>
         <ControlPillToggle
-          className="flex w-full flex-wrap justify-start gap-1.5"
+          className="flex flex-wrap justify-start gap-1.5"
           ariaLabel="Filter by chain"
           options={chainOptions}
           value={chainFilter}
@@ -121,10 +118,11 @@ export function BlacklistFilters({
           buttonClassName="min-h-11 px-3 sm:min-h-8"
         />
       </div>
+
       <div className="space-y-1.5">
         <span className="pharos-label">Event type</span>
         <ControlPillToggle
-          className="flex w-full flex-wrap justify-start gap-1.5"
+          variant="segmented"
           ariaLabel="Filter by event type"
           options={EVENT_TYPE_FILTER_OPTIONS}
           value={eventTypeFilter}
@@ -132,6 +130,19 @@ export function BlacklistFilters({
           buttonClassName="min-h-11 px-3 sm:min-h-8"
         />
       </div>
+
+      {showReset ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="pharos-focus-ring min-h-11 self-start gap-1.5 sm:min-h-8 lg:self-end"
+          onClick={onResetFilters}
+        >
+          <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+          Reset filters
+        </Button>
+      ) : null}
     </div>
   );
 }

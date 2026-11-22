@@ -270,14 +270,14 @@ export type YieldZoneKey = "sweet-spot" | "danger-zone" | "play-it-safe" | "why-
 export const YIELD_ZONE_LABELS: Record<YieldZoneKey, string> = {
   "sweet-spot": "Sweet Spot",
   "danger-zone": "Danger Zone",
-  "play-it-safe": "Play It Safe",
+  "play-it-safe": "High grade, modest APY",
   "why-bother": "Why Bother?",
 };
 
 export const YIELD_ZONE_DESCRIPTIONS: Record<YieldZoneKey, string> = {
-  "sweet-spot": "Safety 60+ and APY above its benchmark: paid to hold a safer coin.",
-  "danger-zone": "Safety below 60 with APY above its benchmark: well-paid risk, not a safe pick.",
-  "play-it-safe": "Safety 60+ but APY at or below its benchmark: safe, underpaid.",
+  "sweet-spot": "Safety 60+ and APY above its benchmark: above-hurdle yield on a higher-graded coin.",
+  "danger-zone": "Safety below 60 with APY above its benchmark: well-paid risk on a lower-graded coin.",
+  "play-it-safe": "Safety 60+ with APY at or below its benchmark: higher-graded coin, modest yield.",
   "why-bother": "Safety below 60 and APY at or below its benchmark: risk without pay.",
 };
 

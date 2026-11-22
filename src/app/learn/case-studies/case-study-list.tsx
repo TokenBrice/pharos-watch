@@ -40,13 +40,12 @@ const OUTCOME_FILTERS: ReadonlyArray<{ value: OutcomeFilter; label: string }> = 
 /* tw: min-h-11 sm:min-h-9 — keep literal for the Tailwind scanner */
 const FILTER_TOUCH = "min-h-11 sm:min-h-9";
 
-// Neutral toggle-pill filter chips. DESIGN.md §5 keeps frost out of controls:
-// the active chip takes the near-black `control-ink` fill (via
-// `pharos-control-pill-active`), inactive chips rest as quiet toggle-pills.
+// Neutral control-pill filter chips. DESIGN.md §5 keeps frost out of controls:
+// active chips use the elevated neutral ring+tint (`pharos-control-pill-active`).
 function segmentBtnClass(active: boolean): string {
   return active
     ? `pharos-focus-ring pharos-control-pill pharos-control-pill-active ${FILTER_TOUCH}`
-    : `pharos-focus-ring pharos-toggle-pill ${FILTER_TOUCH}`;
+    : `pharos-focus-ring pharos-control-pill ${FILTER_TOUCH}`;
 }
 
 export function CaseStudyList({
@@ -148,7 +147,7 @@ export function CaseStudyList({
                   <p className="pharos-label">
                     {study.eyebrow}
                   </p>
-                  <h2 className="pharos-display text-2xl font-bold tracking-tight text-foreground transition-colors group-hover:text-frost-blue sm:text-3xl">
+                  <h2 className="pharos-display text-2xl font-bold tracking-tight text-foreground transition-colors group-hover:text-brand-accent-text sm:text-3xl">
                     {study.title}
                   </h2>
                   <p className="max-w-2xl text-base leading-relaxed text-muted-foreground">

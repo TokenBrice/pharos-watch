@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type FormEvent, type ReactNode } from "react";
+import { useCallback, useRef, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { FilterSearchInput } from "@/components/filter-search-input";
@@ -15,10 +15,7 @@ import { BlacklistFilters } from "@/components/freezewatch/blacklist-filters";
 import { BlacklistTable } from "@/components/freezewatch/blacklist-table";
 import { TablePagination } from "@/components/table-pagination";
 import { CoinCrossTrackerHatnote } from "@/components/coin-cross-tracker-hatnote";
-import { AlertsHeaderLink } from "@/components/alerts-header-link";
-import { FeaturePageShell } from "@/components/feature-page-shell";
-import { ShareButton } from "@/components/share-button";
-import { HERO_KPI_VALUE_CLASS } from "@/components/feature-hero-split";
+import { FeatureHeroSplit } from "@/components/feature-hero-split";
 import { UniverseChip } from "@/components/universe-chip";
 import { RailHeroFigureTransition } from "@/components/view-transitions";
 import { FreezableSupplyMeter } from "@/components/freezewatch/freezable-supply-meter";
@@ -28,11 +25,8 @@ import { SovereigntyLattice } from "@/components/freezewatch/sovereignty-lattice
 import { coinIdBySymbol } from "@/lib/coin-id-by-symbol";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import { formatCurrency, formatEventDate } from "@shared/lib/format";
-import {
-  BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
-  BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/methodology-versions/constants";
-import { resolveAddressCheck, useFreezeWatchPageController } from "./view-model";
+import type { BlacklistStablecoin } from "@shared/types/blacklist";
+import { isCompleteAddress, resolveAddressCheck, useFreezeWatchPageController } from "./view-model";
 
 function FreezeWatchSection({
   eyebrow,
@@ -96,11 +90,17 @@ export default function FreezeWatchClient({ children }: { children?: ReactNode }
     sortKey,
     sortDirection,
     searchInput,
+    hasActiveLedgerFilters,
+    hasConflictingAddressFilters,
+    filtersClearedForAddressCheck,
     handleStablecoinChange,
     handleChainChange,
     handleLatticeSelection,
     handleEventTypeChange,
     handleSearchChange,
+    handleHeroAddressChange,
+    handleHeroAddressSubmit,
+    handleResetFilters,
     handleSortChange,
     handleStatusBucketChange,
     handleStatusBucketClear,
@@ -143,43 +143,30 @@ export default function FreezeWatchClient({ children }: { children?: ReactNode }
   const classifiedCount = freezableSummary.registryCount;
 
   const ledgerRef = useRef<HTMLElement>(null);
-  const ledgerUnfiltered =
-    stablecoinFilter === "all" && chainFilter === "all" && eventTypeFilter === "all" &&
-    sortKey === "date" && sortDirection === "desc" && clampedPage === 1;
-  // Only a settled read for exactly the typed address may produce a sentence.
+  const ledgerUnfiltered = !hasConflictingAddressFilters;
+  const hasCompleteAddressQuery = isCompleteAddress(searchInput);
+  // Only a settled read for exactly the typed address on the unfiltered ledger may produce a verdict sentence.
   const addressCheck =
     ledgerUnfiltered && searchInput.trim() === searchQuery.trim()
       ? resolveAddressCheck({ query: searchQuery, settled: pageSettled, events, total })
       : null;
+
   const handleAddressSubmit = (event: FormEvent) => {
     event.preventDefault();
-    ledgerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    handleHeroAddressSubmit();
+    ledgerRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
   };
 
+  const handleLatticeCellSelect = useCallback(
+    (selection: { stablecoin: BlacklistStablecoin; chainId: string }) => {
+      handleLatticeSelection(selection);
+      ledgerRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    },
+    [handleLatticeSelection],
+  );
+
   return (
-    <FeaturePageShell
-      breadcrumbName="FreezeWatch"
-      path="/freezewatch/"
-      title="FreezeWatch"
-      methodology={{
-        version: BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
-        changelogPath: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
-        docsPath: "/docs/blacklist-tracker/",
-      }}
-      header="instrument"
-      headerActions={
-        <>
-          <AlertsHeaderLink
-            href="/pharoswatchbot/#getting-started"
-            description="Get Telegram alerts when an issuer freezes, releases, or wipes a tracked stablecoin"
-          />
-          <ShareButton />
-        </>
-      }
-      leadParagraphs={[
-        "Live issuer freezes, releases, and wipes, with frozen value and direct vs. upstream exposure per asset.",
-      ]}
-    >
+    <div className="space-y-6">
       {focusedCoinId ? (
         <CoinCrossTrackerHatnote
           coinId={focusedCoinId}
@@ -198,29 +185,31 @@ export default function FreezeWatchClient({ children }: { children?: ReactNode }
         queries={freshnessQueries}
       />
 
-      <section
-        aria-label="Freeze exposure overview"
-        className="pharos-card-shell overflow-hidden animate-in fade-in duration-300"
-      >
-        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4 border-b border-border/50 p-5 sm:p-6">
-          <div className="min-w-0 space-y-1.5">
-            <p className="text-sm font-medium text-muted-foreground">Freeze-exposed share of tracked supply</p>
-            {heroLoading && !heroUnavailable ? (
-              <Skeleton className="h-10 w-32" />
-            ) : (
-              <RailHeroFigureTransition rail="freezewatch">
-                <p className={HERO_KPI_VALUE_CLASS}>
-                  {heroUnavailable || freezableShare === null || freezableSummary.coverage === "unavailable"
-                    ? "—"
-                    : formatShare(freezableShare)}
-                </p>
-              </RailHeroFigureTransition>
-            )}
-            {heroUnavailable || heroLoading ? null : (
-              <UniverseChip universe="active" value={`${classifiedCount} coins classified`} />
-            )}
-          </div>
-          <dl className="flex flex-wrap items-end gap-x-8 gap-y-3">
+      <FeatureHeroSplit
+        layout="stacked"
+        ariaLabel="Freeze exposure overview"
+        beamLabel="Freeze-exposed share of tracked supply"
+        beamValueClassName="pharos-hero-kpi"
+        beamValue={
+          heroLoading && !heroUnavailable ? (
+            <span className="skeleton-shimmer inline-block h-10 w-32 rounded-md align-middle" aria-hidden="true" />
+          ) : (
+            <RailHeroFigureTransition rail="freezewatch">
+              <span>
+                {heroUnavailable || freezableShare === null || freezableSummary.coverage === "unavailable"
+                  ? "—"
+                  : formatShare(freezableShare)}
+              </span>
+            </RailHeroFigureTransition>
+          )
+        }
+        universe={
+          heroUnavailable || heroLoading ? null : (
+            <UniverseChip universe="active" value={`${classifiedCount} coins classified`} />
+          )
+        }
+        sub={
+          <dl className="flex flex-wrap items-end gap-x-8 gap-y-3 lg:justify-end">
             <HeroStat
               label="Freeze-exposed value"
               value={heroUnavailable || !supplyAvailable || freezableMarketCap === null ? "—" : formatCurrency(freezableMarketCap, 0)}
@@ -232,7 +221,64 @@ export default function FreezeWatchClient({ children }: { children?: ReactNode }
               loading={heroLoading && !heroUnavailable}
             />
           </dl>
-        </div>
+        }
+        footer={
+          <form onSubmit={handleAddressSubmit} className="space-y-2">
+            <label htmlFor="freezewatch-address-check" className="pharos-label">Check an address</label>
+            <div className="flex flex-wrap gap-2">
+              <Input
+                id="freezewatch-address-check"
+                value={searchInput}
+                onChange={(event) => handleHeroAddressChange(event.target.value)}
+                placeholder="0x… or T… address"
+                autoComplete="off"
+                spellCheck={false}
+                className="h-11 w-full sm:h-9 sm:w-96"
+              />
+              <button
+                type="submit"
+                className="pharos-focus-ring h-11 rounded-md border border-border/60 px-4 text-sm transition-colors hover:bg-muted/50 sm:h-9"
+              >
+                Show in ledger
+              </button>
+            </div>
+            <p className="pharos-meta max-w-3xl">
+              Pharos freeze checker: look up a full address in the recorded freeze, release and wipe events.
+              Coverage is limited to the contracts Pharos scans.
+            </p>
+            {filtersClearedForAddressCheck ? (
+              <p className="text-xs text-muted-foreground" role="status">
+                Cleared active ledger filters to check this address across all scanned contracts.
+              </p>
+            ) : null}
+            {!ledgerUnfiltered && hasCompleteAddressQuery ? (
+              <p className="text-xs text-muted-foreground" role="status">
+                Active ledger filters narrow this lookup.{" "}
+                <button
+                  type="button"
+                  onClick={handleHeroAddressSubmit}
+                  className="pharos-focus-ring rounded-sm font-medium text-brand-accent-text underline underline-offset-4"
+                >
+                  Clear filters to check all scanned contracts
+                </button>
+              </p>
+            ) : null}
+            <p className="pharos-meta max-w-3xl" aria-live="polite">
+              {addressCheck?.kind === "found"
+                ? `Pharos records ${addressCheck.count} freeze, release or wipe ${addressCheck.count === 1 ? "event" : "events"} for this address. Latest: ${addressCheck.stablecoin}, ${formatEventDate(addressCheck.timestamp)}.`
+                : null}
+              {addressCheck?.kind === "none" ? (
+                <>
+                  No freeze, release or wipe event is recorded for this address on the contracts Pharos scans.{" "}
+                  <Link href="/docs/blacklist-tracker/" className="underline">
+                    Coverage limits
+                  </Link>
+                </>
+              ) : null}
+            </p>
+          </form>
+        }
+      >
         <FreezableSupplyMeter
           buckets={blacklistStatusBuckets}
           isLoading={heroLoading}
@@ -241,54 +287,13 @@ export default function FreezeWatchClient({ children }: { children?: ReactNode }
           selectedBucket={statusBucket}
           onBucketSelect={handleStatusBucketChange}
         />
-        <form
-          onSubmit={handleAddressSubmit}
-          className="space-y-2 border-t border-border/50 p-5 sm:p-6"
-        >
-          <label htmlFor="freezewatch-address-check" className="pharos-label">Check an address</label>
-          <div className="flex flex-wrap gap-2">
-            <Input
-              id="freezewatch-address-check"
-              value={searchInput}
-              onChange={(event) => handleSearchChange(event.target.value)}
-              placeholder="0x… or T… address"
-              autoComplete="off"
-              spellCheck={false}
-              className="h-11 w-full sm:h-9 sm:w-96"
-            />
-            <button type="submit" className="pharos-focus-ring h-11 rounded-md border border-border/60 px-4 text-sm sm:h-9">
-              Show in ledger
-            </button>
-          </div>
-          <p className="pharos-meta max-w-3xl">
-            Pharos freeze checker: look up a full address in the recorded freeze, release and wipe events.
-            Coverage is limited to the contracts Pharos scans.
-          </p>
-          <p className="pharos-meta max-w-3xl" aria-live="polite">
-            {addressCheck?.kind === "found"
-              ? `Pharos records ${addressCheck.count} freeze, release or wipe ${addressCheck.count === 1 ? "event" : "events"} for this address. Latest: ${addressCheck.stablecoin}, ${formatEventDate(addressCheck.timestamp)}.`
-              : null}
-            {addressCheck?.kind === "none" ? (
-              <>
-                No freeze, release or wipe event is recorded for this address on the contracts Pharos scans.{" "}
-                <Link href="/docs/blacklist-tracker/" className="underline">
-                  Coverage limits
-                </Link>
-              </>
-            ) : null}
-          </p>
-        </form>
-      </section>
+      </FeatureHeroSplit>
 
       <BlacklistStats
         summary={summary}
         isLoading={summaryLoading}
         error={summaryError}
-        blacklistStatusBuckets={blacklistStatusBuckets}
-        supportDataLoading={supportDataLoading}
-        supportError={stablecoinsError}
         onRetry={() => void refetchSummary()}
-        onUnfreezableSelect={() => handleStatusBucketChange("no")}
       />
 
       {statusBucket ? (
@@ -328,9 +333,11 @@ export default function FreezeWatchClient({ children }: { children?: ReactNode }
               chainFilter={chainFilter}
               eventTypeFilter={eventTypeFilter}
               perCoinTotalEvents={summary?.stats.perCoinTotalEvents}
+              hasActiveFilters={hasActiveLedgerFilters}
               onStablecoinChange={handleStablecoinChange}
               onChainChange={handleChainChange}
               onEventTypeChange={handleEventTypeChange}
+              onResetFilters={handleResetFilters}
             />
             <FilterSearchInput
               value={searchInput}
@@ -343,7 +350,7 @@ export default function FreezeWatchClient({ children }: { children?: ReactNode }
           </div>
         </div>
 
-        <section id="data" ref={ledgerRef} aria-label="Data table" tabIndex={-1}>
+        <section id="data" ref={ledgerRef} aria-label="Data table" tabIndex={-1} className="scroll-mt-24">
           <BlacklistTable
             events={events}
             isLoading={pageLoading}
@@ -393,24 +400,18 @@ export default function FreezeWatchClient({ children }: { children?: ReactNode }
           isLoading={summaryLoading}
           error={summaryError}
           onRetry={() => void refetchSummary()}
-          onCellSelect={handleLatticeSelection}
+          onCellSelect={handleLatticeCellSelect}
         />
       </FreezeWatchSection>
 
-      <FreezeWatchSection
-        eyebrow="Timeline"
-        title="Quarterly freeze, release, and wipe events"
-        description="Historical event volume by quarter. Use the ledger above for address-level rows."
-      >
-        <InterventionSeismograph
-          stats={summary?.stats}
-          chart={summary?.chart}
-          totalEvents={summary?.totalEvents}
-          isLoading={summaryLoading}
-          error={summaryError}
-          onRetry={() => void refetchSummary()}
-        />
-      </FreezeWatchSection>
+      <InterventionSeismograph
+        stats={summary?.stats}
+        chart={summary?.chart}
+        totalEvents={summary?.totalEvents}
+        isLoading={summaryLoading}
+        error={summaryError}
+        onRetry={() => void refetchSummary()}
+      />
 
       <FreezeWatchSection
         eyebrow="Monitors"
@@ -424,6 +425,6 @@ export default function FreezeWatchClient({ children }: { children?: ReactNode }
       </FreezeWatchSection>
 
       {children}
-    </FeaturePageShell>
+    </div>
   );
 }

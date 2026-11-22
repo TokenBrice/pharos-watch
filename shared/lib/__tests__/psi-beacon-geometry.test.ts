@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { buildPsiBeaconModel, derivePsiBeaconState, type PsiBeaconCurrentLike } from "../psi-beacon";
-import { layoutPsiBeacon, psiBeaconRadius, psiBeaconViewBox } from "../psi-beacon-geometry";
+import {
+  estimatePsiBeaconLabelBox,
+  layoutPsiBeacon,
+  psiBeaconRadius,
+  psiBeaconViewBox,
+  type PsiBeaconLabelBox,
+} from "../psi-beacon-geometry";
 import { SCENE_DIMETRIC } from "../scene/projection";
 
 const LIVE: PsiBeaconCurrentLike = {
@@ -54,8 +60,45 @@ describe("layoutPsiBeacon", () => {
     expect(result.zeroLabel?.text).toBe("0");
   });
 
-  it("names the lower bound on the severity bank", () => {
+  it("keeps the lower-bound mark compact on the severity bank", () => {
     const result = layout({ ...LIVE, inputDegradation: { openDepegNoPrice: true, openDepegsWithoutPrice: 3 } });
-    expect(result.fog[0].lowerBound?.text).toBe("≥ · 3 unpriced");
+    expect(result.fog[0].lowerBound?.text).toBe("≥");
   });
+
+  it.each([
+    [89.0, 89.0, { severity: 0.02, breadth: 9.5, stressBreadth: 1.48, trend: 0 }],
+    [91.9, 92.1, LIVE.components!],
+    [91.9, 96.5, LIVE.components!],
+    [91.9, 99.5, LIVE.components!],
+  ])(
+    "flips avgTick past 75 and avoids bounding collision or right-edge clipping at score=%s avg=%s with unpriced lower bound",
+    (score, avg24h, components) => {
+      const box = psiBeaconViewBox(SCENE_DIMETRIC);
+      const result = layout({
+        ...LIVE,
+        score,
+        band: score >= 90 ? "BEDROCK" : "STEADY",
+        avg24h,
+        components,
+        inputDegradation: { openDepegNoPrice: true, openDepegsWithoutPrice: 3 },
+      });
+      const avgLabel = result.avgTick!.label;
+      const lowerBound = result.fog[0]!.lowerBound!;
+      expect(avgLabel.anchor).toBe("end");
+
+      const overlaps = (a: PsiBeaconLabelBox, b: PsiBeaconLabelBox) =>
+        a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+
+      const avgBox = estimatePsiBeaconLabelBox(avgLabel);
+      const lowerBox = estimatePsiBeaconLabelBox(lowerBound);
+      expect(overlaps(avgBox, lowerBox)).toBe(false);
+      for (const ring of result.rings) {
+        expect(overlaps(avgBox, estimatePsiBeaconLabelBox(ring.label))).toBe(false);
+      }
+      for (const candidate of [avgBox, lowerBox, ...result.rings.map((ring) => estimatePsiBeaconLabelBox(ring.label))]) {
+        expect(candidate.x0).toBeGreaterThanOrEqual(box.x);
+        expect(candidate.x1).toBeLessThanOrEqual(box.x + box.width);
+      }
+    },
+  );
 });

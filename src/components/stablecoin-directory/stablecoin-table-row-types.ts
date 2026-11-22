@@ -34,6 +34,8 @@ export interface StablecoinVirtualRowProps {
   isCursor?: boolean;
   onCursorMouseEnter?: (index: number) => void;
   measureElement?: (element: HTMLTableRowElement | null) => void;
+  /** Load logo eagerly for above-fold / top-20 rows instead of redundant lazy loading. */
+  eagerLogo?: boolean;
 }
 
 export type StablecoinTableRowCellProps = Omit<

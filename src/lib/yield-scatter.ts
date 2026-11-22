@@ -93,7 +93,7 @@ export function computeSafetyDomain(scores: number[], isMobile: boolean): [numbe
 export const LOGO_DIAMETER_DESKTOP = 16;
 export const LOGO_DIAMETER_MOBILE = 14;
 /** Clear space kept between two logo markers, in pixels. */
-const LOGO_GAP = 2;
+export const LOGO_GAP = 6;
 
 export type ScatterMarkerKind = "logo" | "dot";
 

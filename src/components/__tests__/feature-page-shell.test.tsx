@@ -32,8 +32,28 @@ describe("FeaturePageShell instrument header", () => {
     screen.getByRole("button", { name: "Share" });
     const details = container.querySelector("details");
     expect(details?.querySelector("summary")?.textContent).toBe("How to read it");
+    expect(details?.querySelector("summary svg")).not.toBeNull();
     expect(details?.textContent).toContain("The longer how-to-read paragraph.");
     expect(screen.queryByRole("link", { name: /How this is computed/ })).toBeNull();
+  });
+
+  it("inlines header actions beside the H1 when methodology is absent", () => {
+    render(
+      <FeaturePageShell
+        breadcrumbName="Example"
+        path="/example/"
+        title="Example"
+        header="instrument"
+        headerActions={<button type="button">Share</button>}
+        leadParagraphs={["The deck."]}
+      >
+        <div>body</div>
+      </FeaturePageShell>,
+    );
+
+    const heading = screen.getByRole("heading", { level: 1, name: "Example" });
+    const share = screen.getByRole("button", { name: "Share" });
+    expect(heading.parentElement?.contains(share)).toBe(true);
   });
 
   it.each(["instrument", "standard"] as const)("links the methodology docs page in the %s header meta row", (header) => {

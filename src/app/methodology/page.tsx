@@ -18,8 +18,8 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-
 import { SAFETY_SCORE_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/registry";
 import { V9_PROVISIONAL_UNKNOWN_WEIGHT_THRESHOLD } from "@shared/types/safety-score-v9-public";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { METHODOLOGY_LINK_CLASS, METHODOLOGY_READING_STEPS, MethodologyFacts, READER_GUIDE_COPY } from "./methodology-shared";
-import { SAFETY_GRADE_FACTS } from "./sections/core/safety-scores-overview";
+import { METHODOLOGY_LINK_CLASS, METHODOLOGY_READING_STEPS, READER_GUIDE_COPY } from "./methodology-shared";
+import { SafetyGradeScaleBar } from "./sections/core/safety-scores-overview";
 import { METHODOLOGY_SECTIONS } from "@/lib/methodology-content";
 import { DEFINITIONS } from "@/lib/definitions";
 
@@ -42,12 +42,12 @@ const METHODOLOGY_FAQ_ITEMS = [
   {
     question: "How does Pharos grade stablecoins?",
     answer:
-      `Safety Score V10 evaluates Backing (40%), Exit (35%), and Economic Control (25%). Exit stresses 5% of usable supply within $1M–$25M. Route materiality separately uses 5% of supply within $100K–$25M: capacity below both 1% of that amount and $100K gets no route credit. A material route with valued completion below 1% of the actual stress request is capped at 50 before confidence. Bounded aggregation limits how far strong pillars lift a weak path; peg behavior, caps, dependencies and wrappers can constrain the result. At least two usable pillars permit rating, pricing an unavailable third as uncertainty; fewer are a technical Pipeline gap, while genuine required-parent unavailability can yield NR. Grades range from A+ (87+) to F (0–39). A Provisional label marks more than ${V9_PROVISIONAL_UNKNOWN_WEIGHT_THRESHOLD * 100}% unknown-priced scoring weight without changing the score.`,
+      `The Safety Score evaluates Backing (40%), Exit (35%), and Economic Control (25%). Exit stresses 5% of usable supply within $1M-$25M. Route materiality separately uses 5% of supply within $100K-$25M: capacity below both 1% of that amount and $100K gets no route credit. A material route with valued completion below 1% of the actual stress request is capped at 50 before confidence. Bounded aggregation limits how far strong pillars lift a weak path; peg behavior, caps, dependencies and wrappers can constrain the result. At least two usable pillars permit rating, pricing an unavailable third as uncertainty; fewer are a technical Pipeline gap, while genuine required-parent unavailability can yield NR. Grades range from A+ (87+) to F (0-39). A Provisional label marks more than ${V9_PROVISIONAL_UNKNOWN_WEIGHT_THRESHOLD * 100}% unknown-priced scoring weight without changing the score.`,
   },
   {
     question: "How is the Pharos peg score calculated?",
     answer:
-      "The peg score is a composite 0–100 measure combining time-at-peg (50%) and event severity (50%), minus penalties for active depegs and erratic behavior. The tracking window spans up to 4 years but begins at a reviewed replay-coverage date when one exists; otherwise it falls back to the coin's age or earliest durable observation. It requires at least 7 days of tracking data and a usable price within the last UTC day; a coin with no usable price for a full UTC day reads NR.",
+      "The peg score is a composite 0-100 measure combining time-at-peg (50%) and event severity (50%), minus penalties for active depegs and erratic behavior. The tracking window spans up to 4 years but begins at a reviewed replay-coverage date when one exists; otherwise it falls back to the coin's age or earliest durable observation. It requires at least 7 days of tracking data and a usable price within the last UTC day; a coin with no usable price for a full UTC day reads NR.",
   },
   {
     question: "What is the DEWS early-warning system?",
@@ -62,7 +62,7 @@ const METHODOLOGY_FAQ_ITEMS = [
   {
     question: "What is the Mint Authority Score?",
     answer:
-      "Since methodology v9.1 mint risk is graded once, by the Safety Score V9 Economic Control pillar; the standalone Mint Authority Score is retired. The published 0-100 mint component evaluates native issuance on the canonical deployment or deployments and the controls that can expand or replace it. Representations, adapters, lockboxes, messaging, route limits, bridge upgrades, and bridge administrators are scored separately on the bridge routes they govern, even when a controller also appears in Mint Authority. Missing or unresolved required evidence stays explicit as NR rather than receiving a guessed score.",
+      "Since methodology v9.1, mint risk is graded once by the Safety Score Economic Control pillar; the standalone Mint Authority Score is retired. The published 0-100 mint component evaluates native issuance on the canonical deployment or deployments and the controls that can expand or replace it. Representations, adapters, lockboxes, messaging, route limits, bridge upgrades, and bridge administrators are scored separately on the bridge routes they govern, even when a controller also appears in Mint Authority. Missing or unresolved required evidence stays explicit as NR rather than receiving a guessed score.",
   },
   {
     question: "How does Pharos confirm depegs and maintain DEWS history?",
@@ -99,7 +99,7 @@ export default function MethodologyPage() {
               keywords: [
                 "stablecoin methodology",
                 "safety score",
-                "V10 mint-control component",
+                "mint-control component",
                 "PegScore",
                 "DEWS",
                 "PSI",
@@ -116,7 +116,7 @@ export default function MethodologyPage() {
             <div className="space-y-2">
               <h1 className="pharos-page-title">Methodology</h1>
               <p className="pharos-page-lead max-w-3xl">
-                How Pharos grades stablecoins: transparent scoring across safety, peg stability, V10 mint control,
+                How Pharos grades stablecoins: transparent scoring across safety, peg stability, mint control,
                 liquidity, yield, and dependency risk.
               </p>
               <p className="pharos-numeric text-xs text-muted-foreground">
@@ -132,17 +132,18 @@ export default function MethodologyPage() {
               </p>
             </div>
           </div>
-          <div className="hidden pharos-card-shell px-4 py-4 md:block">
-            <p className="pharos-label">Reader guide</p>
-            <p className="mt-2 text-sm text-foreground">
-              {READER_GUIDE_COPY} Use the jump rail toggle to switch modes without losing your place in the page.
-            </p>
+          <div className="hidden pharos-card-shell space-y-3 px-4 py-4 md:block" data-testid="methodology-reader-guide-desktop">
+            <div className="space-y-1.5">
+              <p className="pharos-label">Reader guide</p>
+              <p className="text-sm text-foreground">{READER_GUIDE_COPY}</p>
+            </div>
+            <MethodologyModeToggle />
           </div>
         </div>
       </div>
 
       {/* Answer first: what a grade means and its bands, before the reader meta. */}
-      <section aria-labelledby="methodology-at-a-glance" className="pharos-card-shell space-y-3 px-4 py-4">
+      <section aria-labelledby="methodology-at-a-glance" className="pharos-card-shell space-y-4 px-4 py-4">
         <div className="space-y-1">
           <p className="pharos-label">At a glance</p>
           <h2 id="methodology-at-a-glance" className="text-lg font-semibold tracking-tight text-foreground">
@@ -159,7 +160,7 @@ export default function MethodologyPage() {
             Full Safety Score method
           </a>
         </p>
-        <MethodologyFacts facts={SAFETY_GRADE_FACTS} />
+        <SafetyGradeScaleBar />
       </section>
 
       <div className="pharos-card-shell px-4 py-4 md:hidden">
@@ -220,10 +221,10 @@ export default function MethodologyPage() {
         </CardContent>
       </Card>
 
-      {/* Long-form preface — pinned copy, written once, not regenerated. */}
+      {/* Long-form preface: pinned copy, written once, not regenerated. */}
       <section
         aria-label="Editorial preface"
-        className="mx-auto w-full max-w-[88ch] border-y border-border/60 py-10 md:py-12"
+        className="mx-auto w-full max-w-[68ch] border-y border-border/60 py-10 md:py-12"
       >
         <p className="pharos-label text-foreground/80">Editorial preface</p>
         <h2
@@ -234,16 +235,17 @@ export default function MethodologyPage() {
         <div className="mt-6 space-y-5 text-[0.97rem] leading-7 text-foreground/88 sm:text-base sm:leading-8">
           <p>
             Every safety grade Pharos publishes is the answer to one question: if this stablecoin started bleeding
-            tomorrow, how much of the loss would the holder eat before the system stopped it? V10 answers through three
-            material pillars. Backing (40%) measures the assets and loss-absorption structure behind the claim. Exit
-            (35%) measures whether holders can leave through executable market or redemption routes. Economic Control
-            (25%) measures who can change, freeze, mint, or otherwise impair that claim.
+            tomorrow, how much of the loss would the holder eat before the system stopped it? The Safety Score answers
+            through three material pillars. Backing (40%) measures the assets and loss-absorption structure behind the
+            claim. Exit (35%) measures whether holders can leave through executable market or redemption routes.
+            Economic Control (25%) measures who can change, freeze, mint, or otherwise impair that claim.
           </p>
           <p>
-            V10 does not let a strong unrelated pillar average away a weak material path. Its bounded aggregation grants
-            limited headroom above the weakest pillar, then peg behavior, evidence sufficiency, track record, structural
-            caps, dependencies, and wrapper-local risks can only constrain the published result. A missing required fact
-            returns NR unless a reviewed bounded policy states exactly why the remaining uncertainty is rateable.
+            The model does not let a strong unrelated pillar average away a weak material path. Its bounded aggregation
+            grants limited headroom above the weakest pillar, then peg behavior, evidence sufficiency, track record,
+            structural caps, dependencies, and wrapper-local risks can only constrain the published result. A missing
+            required fact returns NR unless a reviewed bounded policy states exactly why the remaining uncertainty is
+            rateable.
           </p>
           <p>
             Dependencies are causal inputs rather than a standalone score. A serial wrapper cannot escape its parent;
@@ -266,7 +268,7 @@ export default function MethodologyPage() {
           </p>
         </div>
         <p className="mt-8 text-sm italic text-muted-foreground">
-          &mdash; Pharos, July 2026
+          Pharos, July 2026
         </p>
       </section>
 
@@ -278,7 +280,7 @@ export default function MethodologyPage() {
           // A hairline separates the mode controls from the scrolling pills so a
           // clipped last pill fades out instead of butting into "Show inputs".
           <div className="hidden items-center gap-3 border-l border-border/60 pl-3 md:flex">
-            <ShowYourWorkToggle className="pharos-toggle-pill pharos-focus-ring min-h-9" />
+            <ShowYourWorkToggle className="pharos-control-pill pharos-focus-ring min-h-9" />
             <MethodologyModeToggle />
           </div>
         }

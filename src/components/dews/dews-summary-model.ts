@@ -90,6 +90,90 @@ export function mcapDotRadius(mcap: number | null | undefined): number | undefin
   return 5;                              // small: <=50M
 }
 
+const DEWS_LOGO_SCALE_BY_BAND: Partial<Record<ElevatedBand, number>> = {
+  ALERT: 2.25,
+  WARNING: 2.7,
+  DANGER: 3.24,
+};
+
+/** Crisp fixed radius for WATCH dots so dense WATCH populations never smear. */
+export const WATCH_DOT_RADIUS = 3;
+
+export function dewsLogoRadius(coin: Pick<ElevatedCoin, "band" | "mcap">): number {
+  const scale = DEWS_LOGO_SCALE_BY_BAND[coin.band] ?? 1;
+  const baseR = mcapDotRadius(coin.mcap) ?? 8;
+  return baseR * scale;
+}
+
+/** Visual radius used both by rendering and ALERT+ angular repulsion. */
+export function elevatedVisualRadius(coin: Pick<ElevatedCoin, "band" | "mcap" | "logoUrl">): number {
+  if (coin.band === "WATCH") return WATCH_DOT_RADIUS;
+  if (coin.logoUrl) return dewsLogoRadius(coin);
+  const isHighTier = coin.band === "WARNING" || coin.band === "DANGER";
+  return mcapDotRadius(coin.mcap) ?? (isHighTier ? 9 : 6);
+}
+
+const REPULSION_GAP_PX = 4;
+const REPULSION_MAX_ITERS = 36;
+
+function wrapAngleDelta(delta: number): number {
+  let d = delta;
+  while (d > Math.PI) d -= 2 * Math.PI;
+  while (d < -Math.PI) d += 2 * Math.PI;
+  return d;
+}
+
+interface RepulsionNode {
+  index: number;
+  id: string;
+  r: number;
+  angle: number;
+  visualR: number;
+}
+
+/**
+ * Deterministically repel overlapping ALERT+ marks along their fixed score
+ * rings so logos and halos stay readable without altering DEWS radial scores.
+ */
+function applyAlertPlusAngularRepulsion(nodes: RepulsionNode[]): void {
+  if (nodes.length < 2) return;
+  // Deterministic pair iteration order independent of input object order.
+  const ordered = [...nodes].sort((a, b) => a.id.localeCompare(b.id));
+
+  for (let iter = 0; iter < REPULSION_MAX_ITERS; iter += 1) {
+    let maxOverlap = 0;
+    const damping = 0.55 * (1 - (iter / REPULSION_MAX_ITERS) * 0.35);
+
+    for (let i = 0; i < ordered.length; i += 1) {
+      const a = ordered[i];
+      const ax = CX + a.r * Math.cos(a.angle);
+      const ay = CY + a.r * Math.sin(a.angle);
+
+      for (let j = i + 1; j < ordered.length; j += 1) {
+        const b = ordered[j];
+        const bx = CX + b.r * Math.cos(b.angle);
+        const by = CY + b.r * Math.sin(b.angle);
+
+        const dist = Math.hypot(bx - ax, by - ay);
+        const minDist = a.visualR + b.visualR + REPULSION_GAP_PX;
+        if (dist >= minDist) continue;
+
+        const overlap = minDist - dist;
+        if (overlap > maxOverlap) maxOverlap = overlap;
+
+        const dTheta = wrapAngleDelta(b.angle - a.angle);
+        const sign = Math.abs(dTheta) < 1e-4 ? (a.id < b.id ? 1 : -1) : Math.sign(dTheta);
+        const avgR = Math.max(24, (a.r + b.r) / 2);
+        const step = Math.min(0.32, (overlap / avgR) * damping + 0.015);
+        a.angle -= sign * step;
+        b.angle += sign * step;
+      }
+    }
+
+    if (maxOverlap <= 0.5) break;
+  }
+}
+
 function computePositions(
   signals: Record<string, { score: number; band: string }>,
   logos: Record<string, string> | undefined,
@@ -109,6 +193,7 @@ function computePositions(
   }
 
   const result: ElevatedCoin[] = [];
+  const alertPlusNodes: RepulsionNode[] = [];
 
   for (const band of RING_BANDS) {
     const coins = byBand[band];
@@ -117,18 +202,38 @@ function computePositions(
       const r = scoreToRadius(coin.score, band);
       const angle = angles[i] + deterministicOffset(coin.id);
       const meta = PSI_ELIGIBLE_META_BY_ID.get(coin.id);
+      const logoUrl = logos?.[coin.id];
+      const mcap = mcapById?.get(coin.id);
+      const entryIndex = result.length;
       result.push({
         id: coin.id,
         score: coin.score,
         band,
         symbol: meta?.symbol ?? coin.id,
         name: meta?.name ?? coin.id,
-        logoUrl: logos?.[coin.id],
-        mcap: mcapById?.get(coin.id),
+        logoUrl,
+        mcap,
         x: CX + r * Math.cos(angle),
         y: CY + r * Math.sin(angle),
       });
+      if (band !== "WATCH") {
+        alertPlusNodes.push({
+          index: entryIndex,
+          id: coin.id,
+          r,
+          angle,
+          visualR: elevatedVisualRadius({ band, mcap, logoUrl }),
+        });
+      }
     });
+  }
+
+  if (alertPlusNodes.length >= 2) {
+    applyAlertPlusAngularRepulsion(alertPlusNodes);
+    for (const node of alertPlusNodes) {
+      result[node.index].x = CX + node.r * Math.cos(node.angle);
+      result[node.index].y = CY + node.r * Math.sin(node.angle);
+    }
   }
 
   return result;

@@ -242,7 +242,25 @@ describe("LongformScrollspyNav", () => {
     const stickyNav = container.querySelector(".sticky");
     expect(stickyNav?.className).toContain("z-chrome");
     expect(stickyNav?.className).not.toContain("z-chrome-header");
-    expect(stickyNav?.className).toContain("lg:top-[calc(env(safe-area-inset-top)+3px+3.5rem)]");
+    expect(stickyNav?.className).toContain("top-[var(--sticky-header-bottom,3.75rem)]");
+  });
+
+  it("adds opaque backdrop, flex-1 flanking rules, and mobile right-edge fade on pill-tabs", () => {
+    const { container } = render(
+      <LongformScrollspyNav sections={SECTIONS} navAriaLabel="Dossier sections" emphasis="pill-tabs" />,
+    );
+
+    const stickyNav = container.querySelector(".sticky");
+    expect(stickyNav?.className).toContain("top-[var(--sticky-header-bottom,3.75rem)]");
+    expect(stickyNav?.className).toContain("bg-background/90");
+    expect(stickyNav?.className).toContain("backdrop-blur-md");
+    const rules = container.querySelectorAll(".pharos-pill-tabs-rule");
+    expect(rules).toHaveLength(2);
+    for (const rule of rules) {
+      expect(rule.className).toContain("flex-1");
+    }
+    const mobileFade = container.querySelector(".bg-gradient-to-l.lg\\:hidden");
+    expect(mobileFade).not.toBeNull();
   });
 
 });

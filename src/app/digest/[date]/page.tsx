@@ -5,6 +5,7 @@ import { DigestSnapshot } from "@/components/digest/digest-snapshot";
 import { EditorialColophon } from "@/components/digest/editorial-colophon";
 import { PreferredSourcePrompt } from "@/components/preferred-source-prompt";
 import { EditorialMasthead } from "@/components/digest/editorial-masthead";
+import { TermText } from "@/components/term-text";
 import { splitDigestParagraphs, EDITORIAL_BODY_STYLE, formatDigestDateLabel, parseDigestParagraph } from "@/lib/digest";
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
@@ -109,7 +110,7 @@ function renderDigestDetail(digest: DigestContentEntry) {
       />
       <EditorialMasthead date={formatted} editor={getDigestModelLabel(persistedMetadata.llm?.servedModel)} />
       <div className="space-y-2">
-        <p className="pharos-kicker">{editionKicker}</p>
+        <p className="pharos-label">{editionKicker}</p>
         <h1
           className={`${digestDisplay.className} text-[clamp(2.2rem,5vw,3.5rem)] font-semibold leading-[0.92] tracking-[-0.04em] text-foreground/98 [text-wrap:balance]`}
         >
@@ -120,14 +121,14 @@ function renderDigestDetail(digest: DigestContentEntry) {
       <article className="space-y-6">
         {correction && (
           <aside className="pharos-card-shell rounded-[1.5rem] px-5 py-5" aria-label="Editorial correction">
-            <p className="pharos-kicker">Correction · <time dateTime={correction.date}>{formatDate(correction.date)}</time></p>
-            <p className="mt-3 leading-relaxed">{correction.text}</p>
+            <p className="pharos-label">Correction · <time dateTime={correction.date}>{formatDate(correction.date)}</time></p>
+            <p className="mt-3 leading-relaxed"><TermText text={correction.text} /></p>
           </aside>
         )}
         <div className="pharos-card-shell rounded-[1.5rem] px-5 py-5">
-          <p className="pharos-kicker">Executive Summary</p>
+          <p className="pharos-label">Executive Summary</p>
           <p className="mt-3 text-[1.1rem] leading-8 text-foreground/92" style={EDITORIAL_BODY_STYLE}>
-            {digest.text}
+            <TermText text={digest.text} />
           </p>
         </div>
 
@@ -137,7 +138,7 @@ function renderDigestDetail(digest: DigestContentEntry) {
             return (
               <p key={i} className="text-[1.05rem] leading-8 text-foreground/92" style={EDITORIAL_BODY_STYLE}>
                 {headerText && <span className="font-semibold tracking-wide">{headerText}. </span>}
-                {bodyText}
+                <TermText text={bodyText} />
               </p>
             );
           })}
@@ -148,7 +149,7 @@ function renderDigestDetail(digest: DigestContentEntry) {
 
       <section aria-labelledby="digest-research-links" className="space-y-3 border-t border-border/50 pt-5">
         <div className="space-y-1">
-          <p className="pharos-kicker">Research Context</p>
+          <p className="pharos-label">Research Context</p>
           <h2 id="digest-research-links" className="text-base font-semibold text-foreground">
             Follow the signals behind this {isWeekly ? "weekly recap" : "daily digest"}
           </h2>
@@ -160,7 +161,7 @@ function renderDigestDetail(digest: DigestContentEntry) {
               href={link.href}
               className="pharos-focus-ring group block rounded-lg border border-border/60 bg-background/55 px-3 py-3 transition-colors hover:bg-accent"
             >
-              <p className="text-sm font-semibold text-foreground transition-colors group-hover:text-frost-blue">
+              <p className="text-sm font-semibold text-foreground transition-colors group-hover:text-brand-accent-text">
                 {link.label}
               </p>
               <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{link.description}</p>

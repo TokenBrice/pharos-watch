@@ -114,7 +114,7 @@ describe("YieldInstrumentBoard", () => {
       mobile = false;
       act(() => ref.current?.revealRow(rows[0]!.id));
       expect(scroll).toHaveBeenCalledTimes(2);
-      expect(scroll.mock.instances[1]).toBe(view.container.querySelector(`div[data-yield-row-display="${rows[0]!.id}"]`));
+      expect(scroll.mock.instances[1]).toBe(view.container.querySelector(`tr[data-yield-row-display="${rows[0]!.id}"]`));
     } finally {
       rects.mockRestore();
       if (originalScroll) Object.defineProperty(HTMLElement.prototype, "scrollIntoView", originalScroll);
@@ -127,9 +127,9 @@ describe("YieldInstrumentBoard", () => {
     { apy30d: 4.3, spread: "+0.60 pp" },
     { apy30d: 2.5, spread: "-1.20 pp" },
     { apy30d: 3.699, spread: "+0.00 pp" },
-  ])("labels the collapsed board benchmark difference in pp: $spread", ({ apy30d, spread }) => {
+  ])("labels the collapsed board benchmark difference in pp with compact benchmark tag: $spread", ({ apy30d, spread }) => {
     const { container } = renderBoard({ ...baseRow, apy30d });
-    expect(container.textContent).toContain(`${spread} vs USD 3M T-Bill`);
+    expect(container.textContent).toContain(`${spread} vs T-Bill`);
     expect(screen.getByText(`30-day APY: ${apy30d.toFixed(2)}%`)).toBeTruthy();
   });
 
@@ -234,13 +234,22 @@ describe("YieldInstrumentBoard", () => {
     expect(screen.getByText("Source risk 42/100 | 1.32x")).toBeTruthy();
   });
 
-  it.each([null, undefined])("discloses score-only risk with penalty %s in the board indicator", async (sourceRiskPenalty) => {
-    renderBoard({ ...baseRow, sourceRisk: { sourceRiskScore: 42, sourceRiskPenalty } });
-    const indicator = screen.getByRole("button", { name: "Source risk 42/100 | n/a" });
-    fireEvent.focus(indicator);
-    const tooltip = await screen.findByRole("tooltip");
-    expect(tooltip.textContent).toContain("Source risk 42/100 | n/a");
-    expect(tooltip.textContent).not.toMatch(/0\.00[x×]|1\.00[x×]/);
+  it.each([null, undefined])("discloses score-only risk inline in Source without a duplicate Coin warning icon (penalty=%s)", (sourceRiskPenalty) => {
+    const { container } = renderBoard({ ...baseRow, warningSignals: [], sourceRisk: { sourceRiskScore: 42, sourceRiskPenalty } });
+    expect(screen.getByText("Source risk 42/100 | n/a")).toBeTruthy();
+    expect(container.textContent).not.toMatch(/0\.00[x×]|1\.00[x×]/);
+    // Suppresses duplicate Coin-column warning icon when warningSignalCount === 0.
+    expect(screen.queryByRole("button", { name: /Source risk 42\/100/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /warning signal/ })).toBeNull();
+  });
+
+  it("renders a crisp numeric warning pill on desktop when warning signals exist", () => {
+    renderBoard({
+      ...baseRow,
+      warningSignals: ["reward-heavy", "yield-spike"],
+    });
+    const pill = screen.getByRole("button", { name: "2 warning signals" });
+    expect(pill.textContent).toBe("2");
   });
 
   it("reads a native row with no venue TVL as Native depth-not-applicable, board and card alike", () => {
@@ -321,12 +330,24 @@ describe("YieldInstrumentBoard", () => {
     expect(onToggleCompare).toHaveBeenCalledWith("usdt-tether");
   });
 
-  it("renders sort pills wired to the sort handler", () => {
+  it("makes desktop column headers directly sortable via SortableTableHead without a redundant sort-pill row", () => {
     const onToggleSort = vi.fn();
     renderBoard(baseRow, false, { onToggleSort });
 
-    fireEvent.click(screen.getByRole("button", { name: /APY sort/ }));
+    expect(screen.queryByRole("group", { name: "Sort yield leaderboard" })).toBeNull();
+    const pysHeader = screen.getByRole("columnheader", { name: /PYS/ });
+    expect(pysHeader.getAttribute("aria-sort")).toBe("descending");
+
+    fireEvent.click(screen.getByRole("button", { name: "Sort by APY 30d" }));
     expect(onToggleSort).toHaveBeenCalledWith("apy30d");
+  });
+
+  it("links the coin symbol directly to the stablecoin dossier on desktop and omits micro-bars", () => {
+    const { container } = renderBoard(baseRow);
+    const symbolLink = screen.getByRole("link", { name: "USDT" });
+    expect(symbolLink.getAttribute("href")).toBe("/stablecoin/usdt-tether");
+    expect(container.querySelector('[aria-label*="Safety score"]')).toBeNull();
+    expect(container.querySelector('[aria-label*="Pharos Yield Score"]')).toBeNull();
   });
 
   it("keeps core board and mobile card row affordances in parity", () => {
@@ -427,8 +448,7 @@ describe("YieldInstrumentBoard — zone chip benchmark resolution", () => {
     // frame (3.5): a Sweet Spot chip proves the EUR rate was used.
     renderBoard(eurRowWithoutRate(), false, { benchmarks: REGISTRY_WITH_EUR });
     expect(screen.getByText("Sweet Spot")).toBeTruthy();
-    expect(screen.getByText("+0.06 pp vs EUR 3M compounded €STR")).toBeTruthy();
-    expect(screen.getByRole("img", { name: /benchmark 1.9 percent/ })).toBeTruthy();
+    expect(screen.getByText("+0.06 pp vs EUR 3M")).toBeTruthy();
   });
 
   it("uses the same resolved EUR benchmark for the expanded history chart", () => {
@@ -441,7 +461,7 @@ describe("YieldInstrumentBoard — zone chip benchmark resolution", () => {
 
   it("uses an explicitly USD display frame without attributing it to the published PYS", () => {
     renderBoard(eurRowWithoutRate(), true);
-    expect(screen.getByText("Play It Safe")).toBeTruthy();
+    expect(screen.getByText("High grade, modest APY")).toBeTruthy();
     const chart = screen.getByTestId("yield-history-chart");
     expect(chart.getAttribute("data-benchmark-rate")).toBe("3.5");
     expect(chart.getAttribute("data-benchmark-label")).toBe("USD benchmark (display fallback)");
@@ -544,7 +564,7 @@ describe("YieldMobileCard — zone chip benchmark resolution", () => {
 
   it("identifies the USD display frame without claiming it was the published PYS hurdle", () => {
     renderYieldMobileCard(eurRowWithoutRate, { expanded: true });
-    expect(screen.getByText("Play It Safe")).toBeTruthy();
+    expect(screen.getByText("High grade, modest APY")).toBeTruthy();
     const chart = screen.getByTestId("yield-history-chart");
     expect(chart.getAttribute("data-benchmark-rate")).toBe("3.5");
     expect(chart.getAttribute("data-benchmark-label")).toBe("USD benchmark (display fallback)");

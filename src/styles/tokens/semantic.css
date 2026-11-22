@@ -11,8 +11,8 @@
   color-scheme: light;
 
   /* ── Surfaces ─────────────────────────────────────────────────── */
-  --surface-base: oklch(0.985 0 0);
-  --surface-raised: oklch(0.97 0 0);
+  --surface-base: oklch(0.968 0.002 260);
+  --surface-raised: oklch(0.97 0.002 260);
   --surface-overlay: oklch(1 0 0);
 
   /* ── Text ─────────────────────────────────────────────────────── */
@@ -22,9 +22,15 @@
   --text-inverse: var(--p-neutral-50);
 
   /* ── Borders ──────────────────────────────────────────────────── */
-  --border-default: var(--p-neutral-200);
-  --border-subtle: var(--p-neutral-100);
-  --border-strong: var(--p-neutral-300);
+  --border-default: oklch(0.895 0.004 260);
+  --border-subtle: oklch(0.935 0.003 260);
+  --border-strong: oklch(0.835 0.005 260);
+
+  /* ── Skeletons ────────────────────────────────────────────────── */
+  /* Theme-paired shimmer stops separating cleanly from both #fff light cards
+     and L=0.200 dark cards. */
+  --skeleton-base: light-dark(oklch(0.925 0.003 260), oklch(0.255 0.004 260));
+  --skeleton-highlight: light-dark(oklch(0.965 0.002 260), oklch(0.315 0.005 260));
 
   /* ── Brand ────────────────────────────────────────────────────── */
   --brand-accent: var(--p-frost-blue);
@@ -174,9 +180,16 @@
   /* ── Chart ────────────────────────────────────────────────────── */
   --chart-grid-opacity: 0.12;
   --chart-fill-opacity: 0.28;
-  --chart-primary: var(--p-frost-blue);
-  --chart-secondary: #3bcc87;
-  --chart-tertiary: #23a7c8;
+  /* Theme-paired chart series tokens (≥3:1 contrast on both #fff light cards
+     and L=0.20 dark cards). */
+  --chart-series-blue: light-dark(#0284c7, #4bc4de);
+  --chart-series-green: light-dark(#059669, #3bcc87);
+  --chart-series-amber: light-dark(#b45309, #f59e0b);
+  --chart-series-cyan: light-dark(#0e7490, #22d3ee);
+  --chart-series-slate: light-dark(#475569, #94a3b8);
+  --chart-primary: var(--chart-series-blue);
+  --chart-secondary: var(--chart-series-green);
+  --chart-tertiary: var(--chart-series-cyan);
   --chart-negative: light-dark(var(--p-red-500), var(--p-red-400));
   --chart-stage-bg: oklch(0.995 0.003 260 / 0.78);
   --chart-stage-border: oklch(0.9 0.008 255 / 0.82);
@@ -297,7 +310,6 @@
   /* ── Chart ────────────────────────────────────────────────────── */
   --chart-grid-opacity: 0.08;
   --chart-fill-opacity: 0.24;
-  --chart-primary: var(--p-frost-blue);
   --chart-stage-bg: oklch(1 0 0 / 0.03);
   --chart-stage-border: oklch(1 0 0 / 0.08);
   --chart-stage-shadow: inset 0 1px 0 oklch(1 0 0 / 0.05);
@@ -342,6 +354,7 @@
   --color-meter-neutral: var(--meter-neutral-fill);
   --color-meter-track: var(--meter-track-bg);
   --color-meter-track-border: var(--meter-track-border);
+  --color-brand-accent: var(--brand-accent);
   --color-brand-accent-text: var(--brand-accent-text);
 }
 

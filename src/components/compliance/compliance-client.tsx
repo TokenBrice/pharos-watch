@@ -309,9 +309,10 @@ export function ComplianceClient() {
     { getParam, setParam },
   );
 
-  // Each regime keeps its own model so every panel is mounted independently.
-  // Status and MiCA token type only narrow the selected regime; the inactive
-  // regime stays unfiltered and GENIUS never takes a token type.
+  // Each regime keeps its own model so every panel is mounted independently
+  // for static HTML crawlability (SEO contract B2). Status and MiCA token type
+  // only narrow the selected regime; the inactive regime stays unfiltered and
+  // GENIUS never takes a token type.
   const mica = useMemo(
     () =>
       buildComplianceViewModel({
@@ -341,7 +342,9 @@ export function ComplianceClient() {
 
   const activeModel = regimeFilter === "mica" ? mica : regimeFilter === "genius" ? genius : null;
   const statusOptions = regimeFilter === "genius" ? GENIUS_STATUS_FILTER_OPTIONS : MICA_STATUS_FILTER_OPTIONS;
-  const matchingCount = activeModel ? activeModel.rows.length + activeModel.watchRows.length : overview.rows.length;
+  const matchingCount = activeModel
+    ? activeModel.rows.length + activeModel.watchRows.length
+    : overview.rows.length;
   const totalCount = activeModel ? activeModel.regimeTotal : overview.totalCoins;
   // A shared search exposes matches in both panels; a regime status filter only
   // opens the selected regime's bands, so an inactive panel stays collapsed.

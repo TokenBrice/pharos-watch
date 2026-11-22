@@ -35,7 +35,7 @@ export function PageErrorEditorial({ kicker, title, body, error, reset }: PageEr
       <PageErrorBackLink />
       <div className="mx-auto flex min-h-[50vh] max-w-2xl flex-col items-center justify-center gap-5 text-center">
         <BeamSvg />
-        <p className="font-serif text-xs font-semibold uppercase tracking-[0.22em] text-frost-blue/80">
+        <p className="font-serif text-xs font-semibold uppercase tracking-[0.22em] text-brand-accent-text/80">
           {kicker}
         </p>
         <h2 className="font-serif text-3xl font-semibold leading-tight tracking-tight text-foreground/95 sm:text-4xl">
@@ -73,7 +73,7 @@ function BeamSvg() {
       stroke="currentColor"
       strokeWidth="1"
       strokeLinecap="round"
-      className="text-frost-blue/35"
+      className="text-brand-accent-text/35"
       aria-hidden="true"
     >
       <circle cx="42" cy="42" r="3" strokeWidth="1.2" />

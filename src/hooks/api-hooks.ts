@@ -311,7 +311,7 @@ export function useSafetyScoreHistoryV2(stablecoinId: string, days = 3650) {
 
 export const useStablecoinCharts = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.stablecoinCharts);
 export const useNonUsdShare = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.nonUsdShare);
-export const useStabilityIndex = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.stabilityIndex);
+export const useStabilityIndex = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.stabilityIndex, undefined);
 export const useStabilityIndexDetail = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.stabilityIndexDetail);
 export const useStabilityIndexFullHistory = bindRegisteredApiQuery(
   FRONTEND_API_QUERY_DESCRIPTORS.stabilityIndexFullHistory,

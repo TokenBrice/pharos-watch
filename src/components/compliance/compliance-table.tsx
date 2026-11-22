@@ -132,7 +132,7 @@ function ComplianceBand({
               className="pharos-focus-ring flex min-h-11 w-full items-center justify-between gap-3 rounded-sm px-3 py-2 text-left text-sm font-medium text-foreground"
             >
               <span>
-                {band.label} <span className="font-normal text-muted-foreground">— {countLabel}, {isExpanded ? "collapse" : "expand"}</span>
+                {band.label} <span className="font-normal text-muted-foreground">· {countLabel}, {isExpanded ? "collapse" : "expand"}</span>
               </span>
               <ChevronDown
                 className={cn("h-4 w-4 shrink-0 transition-transform", isExpanded && "rotate-180")}

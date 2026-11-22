@@ -5,7 +5,6 @@ import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { SafetyGradeBadge } from "@/components/safety-scores/safety-grade-badge";
 import { formatHeroNativePrice } from "@/components/stablecoin-detail/hero-card-metrics";
-import { isMobileStickySummaryEnabled } from "@/lib/feature-flags";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { DetailQuote } from "@/lib/stablecoin-detail-view-model-types";
@@ -40,9 +39,8 @@ export function MobileStickySummary({
   reportCard,
   observeTarget,
 }: MobileStickySummaryProps) {
-  const enabled = isMobileStickySummaryEnabled();
   const isMobile = useIsMobile(1024);
-  const active = enabled && isMobile;
+  const active = isMobile;
   const [visible, setVisible] = useState(false);
   const summaryRef = useRef<HTMLDivElement | null>(null);
 
@@ -88,7 +86,7 @@ export function MobileStickySummary({
     <div
       ref={summaryRef}
       aria-hidden={false}
-      className="sticky top-0 z-chrome -mx-4 flex items-center gap-2 border-b border-border/60 bg-background/95 px-4 py-1.5 lg:hidden"
+      className="sticky top-[var(--sticky-header-bottom,3.75rem)] z-chrome -mx-4 flex items-center gap-2 border-b border-border/60 bg-background/95 px-4 py-1.5 lg:hidden"
     >
       <StablecoinLogo src={logoSrc} name={coin.name} size={20} />
       <span className="text-sm font-semibold">{coin.symbol}</span>

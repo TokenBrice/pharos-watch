@@ -128,14 +128,39 @@ describe("BlacklistTable", () => {
     expect(screen.getAllByText("No freeze events match your filters.")).toHaveLength(2);
     expect(screen.queryByText(/Freeze ledger data is temporarily unavailable/)).toBeNull();
   });
-  it("renders amount provenance and unresolved status badges", () => {
-    renderTable();
+  it("renders CSS container-query layout, sticky page header, linked stablecoin with logo, copy address button, and compact provenance tooltip", () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
 
-    expect(screen.getByTestId("freezewatch-events-table").getAttribute("data-table-id")).toBe(
-      "freezewatch-events",
-    );
-    expect(screen.getAllByText("Snapshot").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("provider failed").length).toBeGreaterThan(0);
+    const { container } = renderTable();
+
+    // Container query wrapper drives mobile/desktop switching with zero JS hydration bounce.
+    expect(container.querySelector(".\\@container")).not.toBeNull();
+
+    const tableShell = screen.getByTestId("freezewatch-events-table");
+    expect(tableShell.getAttribute("data-table-id")).toBe("freezewatch-events");
+    expect(tableShell.getAttribute("data-sticky-mode")).toBe("page");
+
+    // Stablecoin column links to dossier with StablecoinLogo.
+    const coinLinks = screen.getAllByRole("link", { name: /USDT/i });
+    expect(coinLinks.length).toBeGreaterThanOrEqual(2);
+    expect(coinLinks[0].getAttribute("href")).toBe("/stablecoin/usdt-tether/");
+
+    // 1-click address copy button copies full address.
+    const copyButtons = screen.getAllByRole("button", { name: `Copy address ${event.address}` });
+    expect(copyButtons.length).toBeGreaterThanOrEqual(2);
+    fireEvent.click(copyButtons[0]);
+    expect(writeText).toHaveBeenCalledWith(event.address);
+
+    // Provenance is conveyed via compact focusable info trigger instead of noisy inline uppercase badges.
+    const infoTriggers = screen.getAllByRole("button", {
+      name: /Amount provenance \(Source: Snapshot, Status: provider failed\)/i,
+    });
+    expect(infoTriggers.length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText("Snapshot")).toBeNull();
   });
 
   it("keeps the amount/status matrix identical across desktop, mobile, and detail renderers", () => {

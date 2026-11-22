@@ -148,4 +148,25 @@ describe("InterventionSeismograph", () => {
       expect(legendSwatch.style.backgroundColor).toBe(expectedSwatch.style.backgroundColor);
     }
   });
+
+  it("renders Y-axis ticks, gridlines, and interactive ChartTooltipSurface on quarter hover", () => {
+    const { container } = render(
+      createElement(InterventionSeismograph, {
+        stats: makeStats({ USDC: [{ quarter: "Q1 '26", blacklist: 120, unblacklist: 20, destroy: 10 }] }),
+        chart: [],
+        isLoading: false,
+      }),
+    );
+
+    expect(container.querySelectorAll("[data-seismograph-ytick]").length).toBeGreaterThanOrEqual(2);
+    const chart = screen.getByRole("img", { name: "Quarterly intervention seismograph" });
+    const quarterGroup = chart.querySelector("g");
+    expect(quarterGroup).not.toBeNull();
+    fireEvent.mouseEnter(quarterGroup!);
+
+    const tooltip = screen.getByTestId("seismograph-tooltip");
+    expect(tooltip.textContent).toContain("Q1 '26");
+    expect(tooltip.textContent).toContain("120");
+    expect(tooltip.textContent).toContain("150");
+  });
 });

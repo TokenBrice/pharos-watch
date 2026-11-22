@@ -86,12 +86,17 @@ export function TableFrame({
     tableChildren,
   );
   const virtual = viewportDefaults === "virtual";
+  const resolvedVertical = vertical ?? (virtual ? true : undefined);
+  const resolvedStickyMode = surfaceProps.stickyHeader
+    ? (surfaceProps.stickyMode ?? (resolvedVertical ? "viewport" : "page"))
+    : surfaceProps.stickyMode;
 
   return (
     <TableSurface
       {...surfaceProps}
       ref={composedSurfaceRef}
       striped={striped ?? (virtual ? "indexed" : undefined)}
+      stickyMode={resolvedStickyMode}
     >
       {topSlot}
       <TableViewport
@@ -99,7 +104,8 @@ export function TableFrame({
         ref={composedViewportRef}
         className={viewportClassName}
         mobileScrollHint={viewportPropsMobileScrollHint}
-        vertical={vertical ?? (virtual ? true : undefined)}
+        vertical={resolvedVertical}
+        stickyMode={resolvedStickyMode}
         compactBottomPadding={compactBottomPadding ?? (virtual ? false : undefined)}
       >
         <TableElement className={tableClassName} {...resolvedTableProps}>

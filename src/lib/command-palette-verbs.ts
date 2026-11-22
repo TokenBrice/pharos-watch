@@ -17,14 +17,31 @@
 import { COMMAND_PALETTE_STABLECOINS } from "@/lib/command-palette-search-data";
 import { MAX_COMPARE_COINS } from "@/lib/compare-config";
 import { buildLiveCompareUrl, buildStaticComparisonSlug, STATIC_COMPARE_PAIRS } from "@/lib/compare-links";
+import { mergeCoinsParam } from "@/lib/portfolio-codec";
 import { decodeState, encodeState } from "@/lib/url-state";
+import { buildStablecoinUrl } from "@shared/lib/urls";
+import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
 import {
   SCREENER_URL_SCHEMA,
   type ScreenerFilters,
 } from "@/lib/screener-filters";
 
+export type CommandPaletteDossierSectionKey = "reserves" | "liquidity" | "history" | "freeze" | "overview";
+
 export type ParsedVerb =
   | { kind: "compare"; coinSymbols: string[]; resolvedCoinIds: string[]; unresolved: string[]; href: string }
+  | { kind: "portfolio"; coinSymbols: string[]; resolvedCoinIds: string[]; unresolved: string[]; href: string }
+  | {
+      kind: "section";
+      sectionKey: CommandPaletteDossierSectionKey;
+      sectionLabel: string;
+      coinQuery: string;
+      resolvedCoinId: string | null;
+      resolvedCoinName: string | null;
+      resolvedCoinSymbol: string | null;
+      hash: string;
+      href: string;
+    }
   | { kind: "screen"; filters: Record<string, string | string[] | number>; href: string; error?: string }
   | { kind: "pin"; coinSymbol: string; resolvedCoinId: string | null }
   | { kind: "unpin"; coinSymbol: string | "all"; resolvedCoinId: string | null }
@@ -148,7 +165,152 @@ function buildCompareVerb(tokens: string[]): Extract<ParsedVerb, { kind: "compar
   };
 }
 
-const VERB_KEYWORDS = ["compare", "screen", "pin", "unpin", "tape:"] as const;
+const STABLECOIN_META_BY_ID = new Map<string, { name: string; symbol: string }>(
+  COMMAND_PALETTE_STABLECOINS.map(([id, name, symbol]) => [id, { name, symbol }]),
+);
+
+const BLACKLIST_SYMBOL_SET: ReadonlySet<string> = new Set(BLACKLIST_STABLECOINS);
+
+interface SectionIntentSpec {
+  sectionKey: CommandPaletteDossierSectionKey;
+  sectionLabel: string;
+  hash: string;
+  resolveTarget?: (meta: { name: string; symbol: string } | null) => { sectionLabel: string; hash: string };
+}
+
+const SECTION_INTENT_BY_TOKEN: Readonly<Record<string, SectionIntentSpec>> = {
+  reserves: { sectionKey: "reserves", sectionLabel: "Reserves", hash: "#reserves" },
+  reserve: { sectionKey: "reserves", sectionLabel: "Reserves", hash: "#reserves" },
+  backing: { sectionKey: "reserves", sectionLabel: "Reserves", hash: "#reserves" },
+  overview: { sectionKey: "overview", sectionLabel: "Risk overview", hash: "#overview" },
+  liquidity: { sectionKey: "liquidity", sectionLabel: "Liquidity", hash: "#liquidity" },
+  dex: { sectionKey: "liquidity", sectionLabel: "Liquidity", hash: "#liquidity" },
+  history: { sectionKey: "history", sectionLabel: "History", hash: "#history" },
+  depeg: { sectionKey: "history", sectionLabel: "Depeg history", hash: "#history" },
+  depegs: { sectionKey: "history", sectionLabel: "Depeg history", hash: "#history" },
+  freeze: { sectionKey: "freeze", sectionLabel: "Freeze & Seizure", hash: "#freeze-seizure" },
+  freezes: { sectionKey: "freeze", sectionLabel: "Freeze & Seizure", hash: "#freeze-seizure" },
+  blacklist: {
+    sectionKey: "freeze",
+    sectionLabel: "Blacklist Events",
+    hash: "#blacklist",
+    resolveTarget: (meta) => {
+      if (!meta || BLACKLIST_SYMBOL_SET.has(meta.symbol)) {
+        return { sectionLabel: "Blacklist Events", hash: "#blacklist" };
+      }
+      return { sectionLabel: "Freeze & Seizure", hash: "#freeze-seizure" };
+    },
+  },
+};
+
+/**
+ * Tokens that express a dossier deep-section jump when combined with a coin
+ * ticker/name (e.g. "usdc reserves", "usdc liquidity", "usdc history",
+ * "usdc freeze", or verb-first "reserves usdc", "depeg usdc").
+ */
+export const DOSSIER_SECTION_INTENT_TOKENS: ReadonlySet<string> = new Set(Object.keys(SECTION_INTENT_BY_TOKEN));
+
+function buildSectionVerb(
+  spec: SectionIntentSpec,
+  coinQuery: string,
+): Extract<ParsedVerb, { kind: "section" }> {
+  const trimmedCoin = coinQuery.trim();
+  const resolvedCoinId = trimmedCoin ? resolveCoinIdFromToken(trimmedCoin) : null;
+  const meta = resolvedCoinId ? STABLECOIN_META_BY_ID.get(resolvedCoinId) ?? null : null;
+  const resolvedTarget = spec.resolveTarget ? spec.resolveTarget(meta) : spec;
+  return {
+    kind: "section",
+    sectionKey: spec.sectionKey,
+    sectionLabel: resolvedTarget.sectionLabel,
+    coinQuery: trimmedCoin,
+    resolvedCoinId,
+    resolvedCoinName: meta?.name ?? null,
+    resolvedCoinSymbol: meta?.symbol ?? null,
+    hash: resolvedTarget.hash,
+    href: resolvedCoinId ? `${buildStablecoinUrl(resolvedCoinId)}${resolvedTarget.hash}` : "",
+  };
+}
+
+/**
+ * Detect dossier deep-section intents:
+ *   - "<coin> <section>" (e.g. "usdc reserves", "usdc liquidity", "usdc history", "usdc freeze")
+ *   - "<section> <coin>" (e.g. "reserves usdc", "depeg usdc")
+ *   - "<section> " (trailing space from clicking a verb chip; bare "<section>" stays normal search)
+ */
+function detectSectionIntent(input: string): Extract<ParsedVerb, { kind: "section" }> | null {
+  const trimmedStart = input.trimStart();
+  if (!trimmedStart) return null;
+  const lower = trimmedStart.toLowerCase();
+
+  // Leading section keyword followed by whitespace ("reserves ", "depeg usdc").
+  const leadingSpaceIdx = lower.indexOf(" ");
+  if (leadingSpaceIdx > 0) {
+    const first = lower.slice(0, leadingSpaceIdx);
+    const leadingSpec = SECTION_INTENT_BY_TOKEN[first];
+    if (leadingSpec) {
+      const rest = trimmedStart.slice(leadingSpaceIdx + 1).trim();
+      return buildSectionVerb(leadingSpec, rest);
+    }
+  }
+
+  // Trailing section keyword ("usdc reserves", "usd coin liquidity").
+  const tokens = trimmedStart.trim().split(/\s+/).filter(Boolean);
+  if (tokens.length < 2) return null;
+  const lastToken = tokens.at(-1)!.toLowerCase();
+  const trailingSpec = SECTION_INTENT_BY_TOKEN[lastToken];
+  if (!trailingSpec) return null;
+  const coinQuery = tokens.slice(0, -1).join(" ");
+  const verb = buildSectionVerb(trailingSpec, coinQuery);
+  return verb.resolvedCoinId ? verb : null;
+}
+
+/**
+ * Build a `/portfolio/?coins=...` URL (or merge into an existing `p` param)
+ * routed through `mergeCoinsParam` so token formatting stays aligned with
+ * `src/lib/portfolio-codec.ts`.
+ */
+export function buildPortfolioHrefFromCoinIds(
+  coinIds: readonly string[],
+  existingPortfolioParam?: string | null,
+): string {
+  const uniqueIds = [...new Set(coinIds.map((id) => id.trim()).filter(Boolean))];
+  if (uniqueIds.length === 0) return "/portfolio/";
+  if (existingPortfolioParam) {
+    const merged = mergeCoinsParam(existingPortfolioParam, uniqueIds.join(","));
+    return merged ? `/portfolio/?p=${encodeURIComponent(merged)}` : "/portfolio/";
+  }
+  const merged = mergeCoinsParam(null, uniqueIds.join(","));
+  if (!merged) return "/portfolio/";
+  const tokens = merged
+    .split(",")
+    .map((part) => part.split(":")[0])
+    .filter((token): token is string => Boolean(token));
+  return `/portfolio/?coins=${tokens.map((id) => encodeURIComponent(id)).join(",")}`;
+}
+
+function buildPortfolioVerb(tokens: string[]): Extract<ParsedVerb, { kind: "portfolio" }> {
+  const resolved: string[] = [];
+  const unresolved: string[] = [];
+  const seen = new Set<string>();
+  for (const token of tokens) {
+    const id = resolveCoinIdFromToken(token);
+    if (id && !seen.has(id)) {
+      resolved.push(id);
+      seen.add(id);
+    } else if (!id) {
+      unresolved.push(token);
+    }
+  }
+  return {
+    kind: "portfolio",
+    coinSymbols: tokens,
+    resolvedCoinIds: resolved,
+    unresolved,
+    href: buildPortfolioHrefFromCoinIds(resolved),
+  };
+}
+
+const VERB_KEYWORDS = ["compare", "portfolio", "screen", "pin", "unpin", "tape:"] as const;
 type VerbKeyword = (typeof VERB_KEYWORDS)[number];
 
 interface VerbLead {
@@ -370,6 +532,22 @@ export function parsePaletteInput(input: string): ParsedVerb {
         return buildCompareVerb(tokens);
       }
 
+      case "portfolio": {
+        const tokens = lead.rest
+          .split(/[\s,]+/)
+          .filter(Boolean);
+        if (tokens.length === 0) {
+          return {
+            kind: "portfolio",
+            coinSymbols: [],
+            resolvedCoinIds: [],
+            unresolved: [],
+            href: "/portfolio/",
+          };
+        }
+        return buildPortfolioVerb(tokens);
+      }
+
       case "screen":
         return buildScreenerResult(parseScreenTokens(lead.rest));
 
@@ -401,6 +579,8 @@ export function parsePaletteInput(input: string): ParsedVerb {
 
   const vsTokens = detectVsPhrase(input);
   if (vsTokens) return buildCompareVerb(vsTokens);
+  const sectionIntent = detectSectionIntent(input);
+  if (sectionIntent) return sectionIntent;
   return { kind: "none" };
 }
 

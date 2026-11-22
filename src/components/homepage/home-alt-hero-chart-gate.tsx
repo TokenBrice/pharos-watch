@@ -7,6 +7,7 @@ import { useHydrated } from "@/hooks/use-hydrated";
 import { useNearViewport } from "@/hooks/use-near-viewport";
 import { scheduleIdle } from "@/lib/browser-utils";
 import type { HomepageHistory } from "@shared/types/homepage";
+import type { TotalMcapChartRow } from "@shared/lib/total-mcap-chart";
 import { HomeAltHeroStaticChart } from "@/components/homepage/home-alt-hero-static-chart";
 
 const HomeAltHeroLiveChart = dynamic(
@@ -17,7 +18,15 @@ const HomeAltHeroLiveChart = dynamic(
   },
 );
 
-export function HomeAltHeroChartGate({ history, nowMs = 0 }: { history?: HomepageHistory; nowMs?: number }): React.JSX.Element {
+export function HomeAltHeroChartGate({
+  history,
+  nowMs = 0,
+  onLiveHistoryRows,
+}: {
+  history?: HomepageHistory;
+  nowMs?: number;
+  onLiveHistoryRows?: (rows: readonly TotalMcapChartRow[]) => void;
+}): React.JSX.Element {
   const hydrated = useHydrated();
   const { ref, near } = useNearViewport<HTMLDivElement>("0px 0px -20% 0px");
   const [active, setActive] = useState(false);
@@ -29,5 +38,13 @@ export function HomeAltHeroChartGate({ history, nowMs = 0 }: { history?: Homepag
     return scheduleIdle(() => setActive(true), { timeoutMs: 2_500, fallbackDelayMs: 150 });
   }, [active, hydrated, near]);
 
-  return <div ref={ref} className="lg:absolute lg:inset-0">{active ? <HomeAltHeroLiveChart history={history} nowMs={nowMs} /> : <HomeAltHeroStaticChart history={history} nowMs={nowMs} />}</div>;
+  return (
+    <div ref={ref} className="lg:absolute lg:inset-0">
+      {active ? (
+        <HomeAltHeroLiveChart history={history} nowMs={nowMs} onLiveHistoryRows={onLiveHistoryRows} />
+      ) : (
+        <HomeAltHeroStaticChart history={history} nowMs={nowMs} />
+      )}
+    </div>
+  );
 }

@@ -6,7 +6,7 @@ type StatTileVariant = "default" | "tile" | "yield";
 const TILE_CLASS_BY_VARIANT: Record<StatTileVariant, string> = {
   default: "rounded-lg border border-border/50 p-3",
   tile: "pharos-inset p-3",
-  yield: "rounded-xl border border-border/60 bg-muted/20 px-3 py-2 sm:p-3",
+  yield: "rounded-lg border border-border/60 bg-muted/20 px-3 py-2 sm:p-3",
 };
 
 const LABEL_CLASS_BY_VARIANT: Record<StatTileVariant, string> = {

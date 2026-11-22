@@ -68,6 +68,43 @@ describe("PsiBeacon", () => {
     expect(svg.textContent).toContain("No current reading");
   });
 
+  it("end-anchors high 24h average labels and moves unpriced prose into the legend", () => {
+    const { root, svg } = renderBeacon({
+      ...LIVE,
+      score: 89.0,
+      band: "STEADY",
+      avg24h: 89.0,
+      avg24hBand: "STEADY",
+      components: { severity: 0.02, breadth: 9.5, stressBreadth: 1.48, trend: 0 },
+      inputDegradation: { openDepegNoPrice: true, openDepegsWithoutPrice: 3 },
+    });
+    const avgText = root.querySelector('[data-testid="psi-beacon-avg-tick"] text');
+    expect(avgText?.textContent).toBe("24h avg 89.0");
+    expect(avgText?.getAttribute("text-anchor")).toBe("end");
+    expect(svg.textContent).toContain("≥");
+    expect(svg.textContent).not.toContain("3 unpriced");
+    expect(root.querySelector('[data-testid="psi-beacon-legend"]')?.textContent).toContain("≥ · 3 unpriced");
+  });
+
+  it("hides per-component legend rows when showComponents is false while preserving instant, 24h avg, and unpriced caveats", () => {
+    const state = derivePsiBeaconState({
+      current: {
+        ...LIVE,
+        inputDegradation: { openDepegNoPrice: true, openDepegsWithoutPrice: 2 },
+      },
+      isFresh: true,
+      healthMessage: "Data is stale.",
+      asOfLabel: "Oct 12, 2:32 PM",
+    });
+    const { container } = render(<PsiBeacon state={state} showComponents={false} />);
+    const legendText = container.querySelector('[data-testid="psi-beacon-legend"]')?.textContent ?? "";
+    expect(legendText).toContain("instant");
+    expect(legendText).toContain("24h avg");
+    expect(legendText).toContain("≥ · 2 unpriced");
+    expect(legendText).not.toContain("breadth");
+    expect(legendText).not.toContain("stress breadth");
+    expect(legendText).not.toContain("trend");
+  });
 });
 
 describe("PsiBeaconMicro", () => {

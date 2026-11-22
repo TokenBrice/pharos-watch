@@ -29,10 +29,8 @@ export function MintBurnCard({ embedded = false }: { embedded?: boolean } = {}):
   const logoMap = logos ?? {};
 
   const { topMovers, totalNet, hasUnavailableNet, hasActivity } = useMemo(() => {
-    // Unknown windows still participate: dropping them would turn unavailable totals into zero.
     const activeCoins = (data?.coins ?? []).filter((coin) => inferHas24hActivity(coin) !== false);
     const nets = activeCoins.map((c) => ({ coin: c, net: resolveCoinNetFlow(c, "24h") }));
-    // Only displayable nonzero nets rank as movers; an unavailable net is never ranked as 0.
     const movers: Mover[] = nets.flatMap(({ coin, net }) =>
       net.valueUsd == null || net.valueUsd === 0
         ? []
@@ -62,8 +60,6 @@ export function MintBurnCard({ embedded = false }: { embedded?: boolean } = {}):
       state={state}
     >
       <div className="flex flex-col gap-2">
-        {/* The movers keep their full width so amounts never clip; the gauge
-            column gives way instead and its Net/coverage line wraps. */}
         <div className="flex items-center gap-4">
           <div className="min-w-0 flex-1">
             {state === "loading" ? (
@@ -83,11 +79,28 @@ export function MintBurnCard({ embedded = false }: { embedded?: boolean } = {}):
                     </span>
                   )}
                   Net{" "}
-                  <FlowSignedNetValue
-                    net={totalNet}
-                    format={formatSignedCompactUsd}
-                    className="pharos-numeric text-foreground/85"
-                  />
+                  {totalNet.valueUsd == null && totalNet.subtotal ? (
+                    <span className="pharos-numeric text-foreground/85" title={totalNet.note ?? undefined}>
+                      {formatSignedCompactUsd(totalNet.subtotal.valueUsd)}
+                      {totalNet.subtotal.coverageUnknown ? (
+                        <>
+                          <span aria-hidden="true" className="ml-0.5 align-super text-3xs text-muted-foreground">*</span>
+                          <span className="sr-only"> (coverage unknown)</span>
+                        </>
+                      ) : null}
+                      <span aria-hidden="true" className="mx-1 text-muted-foreground/60">·</span>
+                      <span className="text-muted-foreground">
+                        {totalNet.subtotal.included} of {totalNet.subtotal.total} coins
+                      </span>
+                      <span className="sr-only"> ({totalNet.note})</span>
+                    </span>
+                  ) : (
+                    <FlowSignedNetValue
+                      net={totalNet}
+                      format={formatSignedCompactUsd}
+                      className="pharos-numeric text-foreground/85"
+                    />
+                  )}
                 </>
               ) : (
                 "Net flow"

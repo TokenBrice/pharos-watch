@@ -491,7 +491,7 @@ export function SafetyScoreHistorySection({
                       <p className="font-semibold">{seg.grade}</p>
                       <p>
                         {formatChartDate(seg.start * 1000, "long")}
-                        {" — "}
+                        {" – "}
                         {formatChartDate(seg.end * 1000, "long")}
                       </p>
                       <p className="text-muted-foreground">{formatDuration(seg.start, seg.end)}</p>

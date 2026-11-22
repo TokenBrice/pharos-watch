@@ -1,18 +1,45 @@
 // @vitest-environment jsdom
-import { within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import { CLIENT_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import type { DexLiquidityMap } from "@shared/types/dex-liquidity";
+import { DEX_GLOBAL_KEY, type DexLiquidityMap } from "@shared/types/dex-liquidity";
+import type { StablecoinData } from "@shared/types/supply";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import { LiquidityClient } from "./client";
 
-const response = vi.hoisted(() => ({ data: {} as DexLiquidityMap }));
-vi.mock("@/hooks/api-hooks", () => ({
-  useDexLiquidity: () => ({ data: response.data, isLoading: false, error: null, dataUpdatedAt: 0, refetch: vi.fn(), meta: null }),
+const response = vi.hoisted(() => ({
+  data: {} as DexLiquidityMap,
+  peggedAssets: [] as StablecoinData[],
+  dexMeta: null as { updatedAt: number | null } | null,
+  stablecoinsMeta: null as { updatedAt: number | null } | null,
+  lastExportProps: null as { asOfISO: string; sourceGenerations?: Record<string, string | null> } | null,
 }));
+vi.mock("@/hooks/api-hooks", () => ({
+  useDexLiquidity: () => ({ data: response.data, isLoading: false, error: null, dataUpdatedAt: 0, refetch: vi.fn(), meta: response.dexMeta }),
+}));
+vi.mock("@/hooks/use-stablecoins", () => ({
+  useStablecoins: () => ({
+    data: { peggedAssets: response.peggedAssets },
+    isLoading: false,
+    error: null,
+    dataUpdatedAt: 0,
+    refetch: vi.fn(),
+    meta: response.stablecoinsMeta,
+  }),
+}));
+vi.mock("@/components/table-export-menu", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/components/table-export-menu")>();
+  return {
+    ...actual,
+    TableExportMenu: (props: Parameters<typeof actual.TableExportMenu>[0]) => {
+      response.lastExportProps = { asOfISO: props.asOfISO, sourceGenerations: props.sourceGenerations };
+      return actual.TableExportMenu(props);
+    },
+  };
+});
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("next/link", async () => {
   // The mock factory is hoisted, so the shared Link helper cannot be a static import.
@@ -72,5 +99,76 @@ describe("LiquidityClient pool quality fold", () => {
       "On the map, rails turn dashed when pool balance is under 70% and flow lines turn dashed when base-yield share is under 60%. Durability is scored per coin; see the Durability column in the leaderboard.",
     );
     expect(text).not.toMatch(/Organic liquidity, fee-based/);
+  });
+});
+
+describe("LiquidityClient bidirectional route filtering and triage", () => {
+  it("filters the table when clicking an exit route door and clears via the active route chip", () => {
+    const [curveCoin, fluidCoin] = CLIENT_ACTIVE_STABLECOINS;
+    response.peggedAssets = [];
+    response.data = {
+      [DEX_GLOBAL_KEY]: makeDexLiquidityData({
+        totalTvlUsd: 10_000,
+        protocolTvl: { curve: 6_000, fluid: 4_000 },
+        chainTvl: { ethereum: 10_000 },
+        poolCount: 4,
+      }),
+      [curveCoin.id]: makeDexLiquidityData({
+        totalTvlUsd: 6_000,
+        liquidityScore: 80,
+        protocolTvl: { curve: 6_000 },
+        chainTvl: { ethereum: 6_000 },
+      }),
+      [fluidCoin.id]: makeDexLiquidityData({
+        totalTvlUsd: 4_000,
+        liquidityScore: 30,
+        protocolTvl: { fluid: 4_000 },
+        chainTvl: { ethereum: 4_000 },
+      }),
+    };
+
+    render(<QueryClientProvider client={new QueryClient()}><LiquidityClient /></QueryClientProvider>);
+
+    fireEvent.click(screen.getByTestId("protocol-door-curve"));
+    const chip = screen.getByTestId("active-route-filter-chip");
+    expect(chip.textContent).toContain("Curve");
+    expect(screen.getByRole("link", { name: `Open ${curveCoin.symbol} liquidity detail` })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: `Open ${fluidCoin.symbol} liquidity detail` })).toBeNull();
+
+    fireEvent.click(chip);
+    expect(screen.queryByTestId("active-route-filter-chip")).toBeNull();
+    expect(screen.getByRole("link", { name: `Open ${fluidCoin.symbol} liquidity detail` })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Thin exit" }));
+    expect(screen.getByRole("link", { name: `Open ${fluidCoin.symbol} liquidity detail` })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: `Open ${curveCoin.symbol} liquidity detail` })).toBeNull();
+  });
+
+  it("stamps mixed-source export asOfISO with the oldest producer clock or unknown when incomplete", () => {
+    const [coin] = CLIENT_ACTIVE_STABLECOINS;
+    response.data = {
+      [coin.id]: makeDexLiquidityData({ totalTvlUsd: 1_000, liquidityScore: 70 }),
+    };
+    response.dexMeta = { updatedAt: 1_800_003_600 };
+    response.stablecoinsMeta = { updatedAt: 1_800_000_000 };
+    renderClient();
+    expect(response.lastExportProps).toEqual({
+      asOfISO: new Date(1_800_000_000 * 1000).toISOString(),
+      sourceGenerations: {
+        dexLiquidity: new Date(1_800_003_600 * 1000).toISOString(),
+        stablecoins: new Date(1_800_000_000 * 1000).toISOString(),
+      },
+    });
+
+    response.stablecoinsMeta = null;
+    renderClient();
+    expect(response.lastExportProps).toEqual({
+      asOfISO: "unknown",
+      sourceGenerations: {
+        dexLiquidity: new Date(1_800_003_600 * 1000).toISOString(),
+        stablecoins: null,
+      },
+    });
+    response.dexMeta = null;
   });
 });

@@ -30,7 +30,7 @@ function SourceRiskDriverChips({ drivers }: { drivers: readonly YieldSourceBoard
   return (
     <div className="flex flex-wrap gap-2" aria-label="Top source-risk drivers">
       {drivers.map((driver) => (
-        <Tooltip key={driver.key}>
+        <Tooltip key={`${driver.key}|${driver.label}|${driver.description}`}>
           <TooltipTrigger asChild>
             <span
               role="button"

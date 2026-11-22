@@ -10,6 +10,7 @@ import type { CsvColumn } from "@/lib/exports/csv";
 import { escapeCsvField } from "@shared/lib/csv";
 
 import { ScreenerClient } from "./client";
+import { ScreenerModeSwitch } from "@/components/screener/screener-mode-switch";
 
 const mocks = vi.hoisted(() => ({
   QueryFreshnessNotices: vi.fn(),
@@ -31,10 +32,6 @@ vi.mock("@/components/query-freshness-notices", () => ({
     mocks.QueryFreshnessNotices(props);
     return <div data-testid="freshness-notices" />;
   },
-}));
-
-vi.mock("@/components/selector/selector-callout", () => ({
-  SelectorCallout: () => <div data-testid="selector-callout" />,
 }));
 
 vi.mock("@/components/screener/screener-table", () => ({
@@ -156,39 +153,39 @@ describe("ScreenerClient freshness notices", () => {
     setDefaultMocks();
   });
 
-  it("reserves the Picker slot until its viewport and stored preference can be read", () => {
-    mocks.useHydrated.mockReturnValue(false);
-    const view = render(<ScreenerClient />);
-    expect(view.queryByTestId("selector-callout")).toBeNull();
+  it("renders the segmented Screener | Guided Picker header switch without a separate callout banner", () => {
+    render(<ScreenerClient />);
 
-    mocks.useHydrated.mockReturnValue(true);
-    view.rerender(<ScreenerClient />);
-    expect(view.getByTestId("selector-callout")).toBeTruthy();
+    const modeSwitch = render(<ScreenerModeSwitch active="screener" />);
+    const screenerLink = modeSwitch.getByRole("link", { name: "Screener" });
+    const pickerLink = modeSwitch.getByRole("link", { name: "Guided Picker" });
+    expect(screenerLink.getAttribute("href")).toMatch(/^\/screener\/?$/);
+    expect(screenerLink.getAttribute("aria-current")).toBe("page");
+    expect(pickerLink.getAttribute("href")).toMatch(/^\/screener\/picker\/?$/);
+    expect(pickerLink.getAttribute("aria-current")).toBeNull();
   });
 
-  it.each([null, "dismissed"])("retains Picker restoration across remount with legacy %s", async (legacy) => {
-    const { SelectorCallout } = await vi.importActual<typeof import("@/components/selector/selector-callout")>("@/components/selector/selector-callout");
-    const currentKey = "pharos.selector.callout.v1";
-    const legacyKey = "pharos-selector-callout-v1";
-    localStorage.removeItem(currentKey);
-    localStorage.removeItem(legacyKey);
-    if (legacy) localStorage.setItem(legacyKey, legacy);
-    let view = render(<SelectorCallout />);
-    expect(Boolean(view.queryByRole("link", { name: "Try the Picker" }))).toBe(legacy === null);
-    if (!legacy) fireEvent.click(view.getByRole("button", { name: "Dismiss Picker callout" }));
-    fireEvent.click(view.getByRole("button", { name: /Bring back the Picker/ }));
-    expect(localStorage.getItem(currentKey)).toBe("default");
-    view.unmount();
-    view = render(<SelectorCallout />);
-    expect(view.getByRole("link", { name: "Try the Picker" })).toBeTruthy();
-    fireEvent.click(view.getByRole("button", { name: "Dismiss Picker callout" }));
-    view.unmount();
-    view = render(<SelectorCallout />);
-    expect(view.getByRole("button", { name: /Bring back the Picker/ })).toBeTruthy();
-    expect(localStorage.getItem(currentKey)).toBe("dismissed");
-    expect(localStorage.getItem(legacyKey)).toBe(legacy);
-    localStorage.removeItem(currentKey);
-    localStorage.removeItem(legacyKey);
+  it("filters rows by client-side ticker/name search and passes batch selection handlers to ScreenerTable", () => {
+    mocks.useStablecoins.mockReturnValue({
+      data: { peggedAssets: [makeStablecoin({ id: "usdc-circle" }), makeStablecoin({ id: "usdt-tether", name: "Tether", symbol: "USDT" })] },
+      isLoading: false,
+      error: null,
+      dataUpdatedAt: 1_700_000_000,
+      meta: null,
+      refetch,
+    });
+    const view = render(<ScreenerClient />);
+    fireEvent.change(view.getByLabelText(/Search stablecoins by name or ticker/i), {
+      target: { value: "usdc-circle" },
+    });
+    const table = mocks.ScreenerTable.mock.calls.at(-1)?.[0] as {
+      rows: ScreenerRow[];
+      selectedIds: string[];
+      onToggleSelect: (id: string) => void;
+    };
+    expect(table.rows.map((entry) => entry.id)).toEqual(["usdc-circle"]);
+    expect(table.selectedIds).toEqual([]);
+    expect(typeof table.onToggleSelect).toBe("function");
   });
 
   it("keeps counts and export controls at a fixed footprint across loading and ready states", () => {

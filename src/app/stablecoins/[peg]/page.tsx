@@ -2,8 +2,12 @@ import { FormerPegCoinsSection, PegAtAGlanceSection, UpcomingPegCoinsSection } f
 import { StablecoinTaxonomyShell } from "@/components/taxonomy/stablecoin-taxonomy-shell";
 import { TaxonomyHeaderActions } from "@/components/taxonomy/taxonomy-header-actions";
 import { buildFormerPegCoinEntries, buildPegAtAGlanceRows, buildUpcomingPegCoinEntries } from "@/lib/peg-hub-content";
-import { PEG_HUB_PAGES, PEG_TAXONOMY_PAGE_BY_SLUG } from "@/lib/peg-taxonomy";
-import { ALL_STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
+import { PEG_HUB_PAGES, PEG_TAXONOMY_PAGES, PEG_TAXONOMY_PAGE_BY_SLUG } from "@/lib/peg-taxonomy";
+import {
+  BACKING_TAXONOMY_PAGES,
+  GOVERNANCE_TAXONOMY_PAGES,
+  INFRASTRUCTURE_TAXONOMY_PAGES,
+} from "@/lib/stablecoin-taxonomy";
 import { createStaticSlugRoute } from "@/lib/static-slug-page";
 import { PegLandingClient } from "./client";
 import { PhysicalDeliveryTermsTable } from "@/components/liquidity/physical-delivery-terms-table";
@@ -41,7 +45,12 @@ const route = createStaticSlugRoute({
         showUsageGuide={!page.preLaunchOnly}
         definedTermCode={String(page.value)}
         definedTermSetHref="/stablecoins/"
-        relatedPages={ALL_STABLECOIN_TAXONOMY_PAGES.slice(0, 6)}
+        relatedPages={[
+          ...PEG_TAXONOMY_PAGES.filter((candidate) => candidate.href !== page.href).slice(0, 3),
+          ...BACKING_TAXONOMY_PAGES.slice(0, 1),
+          ...GOVERNANCE_TAXONOMY_PAGES.slice(0, 1),
+          ...INFRASTRUCTURE_TAXONOMY_PAGES.slice(0, 1),
+        ].slice(0, 6)}
         headerActions={
           page.preLaunchOnly ? undefined : (
             <TaxonomyHeaderActions

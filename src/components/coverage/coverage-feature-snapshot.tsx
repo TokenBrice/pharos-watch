@@ -9,8 +9,32 @@ import { cn } from "@/lib/utils";
 import { CoverageFeatureLink } from "@/components/coverage/coverage-feature-link";
 
 const PRICE_SOURCE_DEPTH_KEYS = new Set(["sources-5-plus", "sources-3-4", "sources-1-2"]);
-const BAR_TEXT_CLASS = "text-white [text-shadow:0_1px_2px_oklch(0_0_0_/0.75)]";
+const BAR_TEXT_ON_DARK_CLASS = "text-white";
+const GAP_BAR_SURFACE_CLASS =
+  "bg-muted text-foreground bg-[repeating-linear-gradient(135deg,transparent_0_5px,var(--border)_5px_6px)]";
 const BAR_LABEL_MIN_PCT = 8;
+
+/**
+ * Only print text inside a stacked-bar slice when the slice is wide enough to
+ * render the label cleanly without mid-word ellipsis ("not cover..."). Full
+ * labels always remain in `title` and the bar's `aria-label`.
+ */
+function resolveBarSegmentLabel(
+  label: string,
+  count: number,
+  pct: number,
+  compactFallback?: string,
+): string | null {
+  const full = `${label} ${count}`;
+  if (pct >= Math.max(BAR_LABEL_MIN_PCT, full.length * 1.4)) return full;
+  if (compactFallback) {
+    const compact = `${compactFallback} ${count}`;
+    if (pct >= Math.max(BAR_LABEL_MIN_PCT, compact.length * 1.4)) return compact;
+  }
+  const numericOnly = String(count);
+  if (pct >= BAR_LABEL_MIN_PCT && pct >= numericOnly.length * 2.2) return numericOnly;
+  return null;
+}
 const BAR_LABELS: Partial<Record<string, string>> = {
   "sources-5-plus": "5+",
   "sources-3-4": "3-4",
@@ -156,52 +180,56 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
           {barItems.map((item) => {
             const visual = COVERAGE_BREAKDOWN_VISUAL_CLASSES[summary.feature.key]?.[item.key];
             const pct = barTotalCount > 0 ? (item.count / barTotalCount) * 100 : 0;
-            const showLabel = pct >= BAR_LABEL_MIN_PCT;
             const visibleLabel = BAR_LABELS[item.key] ?? item.label;
+            const barText = resolveBarSegmentLabel(
+              visibleLabel,
+              item.count,
+              pct,
+              item.key === "uncovered" ? "gap" : item.key === "unassessed" ? "none" : undefined,
+            );
+            const isGapBar = visual?.bar === COVERAGE_GAP_BAR_CLASS;
             return (
               <div
                 key={`${summary.feature.key}-${item.key}-bar`}
                 className={cn(
                   "flex h-full min-w-0 items-center justify-center border-r border-card/80 px-1.5 last:border-r-0",
-                  visual?.bar ?? accent.countBar,
+                  isGapBar ? GAP_BAR_SURFACE_CLASS : (visual?.bar ?? accent.countBar),
                 )}
                 style={{ flexGrow: item.count, flexBasis: 0 }}
                 title={`${item.label}: ${item.count}`}
               >
-                {showLabel ? (
+                {barText ? (
                   <span
                     className={cn(
-                      "truncate text-3xs font-semibold leading-none pharos-numeric",
-                      visual?.barText ?? BAR_TEXT_CLASS,
+                      "whitespace-nowrap text-3xs font-semibold leading-none pharos-numeric",
+                      isGapBar ? "text-foreground" : (visual?.barText ?? BAR_TEXT_ON_DARK_CLASS),
                     )}
                   >
-                    {visibleLabel} {item.count}
+                    {barText}
                   </span>
                 ) : null}
               </div>
             );
           })}
-          {missingCount > 0 ? (
-            <div
-              className={cn(
-                "flex h-full min-w-0 items-center justify-center border-r border-card/80 px-1.5 last:border-r-0",
-                COVERAGE_GAP_BAR_CLASS,
-              )}
-              style={{ flexGrow: missingCount, flexBasis: 0 }}
-              title={`not covered: ${missingCount}`}
-            >
-              {missingPct >= BAR_LABEL_MIN_PCT ? (
-                <span
-                  className={cn(
-                    "truncate text-3xs font-semibold leading-none pharos-numeric",
-                    BAR_TEXT_CLASS,
-                  )}
-                >
-                  not covered {missingCount}
-                </span>
-              ) : null}
-            </div>
-          ) : null}
+          {missingCount > 0 ? (() => {
+            const missingText = resolveBarSegmentLabel("not covered", missingCount, missingPct, "gap");
+            return (
+              <div
+                className={cn(
+                  "flex h-full min-w-0 items-center justify-center border-r border-card/80 px-1.5 last:border-r-0",
+                  GAP_BAR_SURFACE_CLASS,
+                )}
+                style={{ flexGrow: missingCount, flexBasis: 0 }}
+                title={`not covered: ${missingCount}`}
+              >
+                {missingText ? (
+                  <span className="whitespace-nowrap text-3xs font-semibold leading-none text-foreground pharos-numeric">
+                    {missingText}
+                  </span>
+                ) : null}
+              </div>
+            );
+          })() : null}
         </div>
       </div>
 

@@ -27,6 +27,8 @@ import {
   SectionKicker,
 } from "../_shared/section-primitives";
 import type { ArchetypeContent, ArchetypeDecommissioned } from "@/lib/mechanism-explainers";
+import type { GlossarySlug } from "@/lib/glossary";
+import { renderMechanismProse, stripEngineVersionPrefixes } from "./explainer-prose";
 
 const DEAD_LOGO_BY_ID = new Map(
   DEAD_STABLECOINS.map((d) => [
@@ -53,7 +55,12 @@ export function ArchetypeExplainerBody({
       <WhatToWatch bullets={content.whatToWatch} />
       <TrackedCoinList archetype={content.archetype} />
       <MechanismCaseStudies archetype={content.archetype} />
-      <CrossLinksFooter links={content.crossLinks} />
+      <CrossLinksFooter
+        links={content.crossLinks.map((link) => ({
+          ...link,
+          label: stripEngineVersionPrefixes(link.label),
+        }))}
+      />
     </>
   );
 }
@@ -85,6 +92,7 @@ function HowItWorks({
 }: {
   steps: ArchetypeContent["howItWorks"];
 }) {
+  const seenSlugs = new Set<GlossarySlug>();
   return (
     <section className="space-y-6">
       <div className="space-y-2">
@@ -105,7 +113,7 @@ function HowItWorks({
                 {step.title}
               </h3>
               <p className="text-base leading-relaxed text-muted-foreground">
-                {step.body}
+                {renderMechanismProse(step.body, seenSlugs)}
               </p>
             </div>
           </li>
@@ -120,6 +128,7 @@ function RiskProfile({
 }: {
   items: ArchetypeContent["riskProfile"];
 }) {
+  const seenSlugs = new Set<GlossarySlug>();
   return (
     <section className="space-y-6">
       <div className="space-y-2">
@@ -138,7 +147,7 @@ function RiskProfile({
               {item.headline}
             </dt>
             <dd className="text-base leading-relaxed text-muted-foreground">
-              {item.body}
+              {renderMechanismProse(item.body, seenSlugs)}
             </dd>
           </div>
         ))}
@@ -152,9 +161,10 @@ function WhatToWatch({
 }: {
   bullets: ArchetypeContent["whatToWatch"];
 }) {
+  const seenSlugs = new Set<GlossarySlug>();
   return (
     <NumberedListSection
-      items={bullets}
+      items={bullets.map((bullet) => renderMechanismProse(bullet, seenSlugs))}
       kicker="What to watch on Pharos"
       heading="Signals that matter most"
     />
@@ -185,6 +195,7 @@ function Variations({
 }: {
   items: ArchetypeContent["variations"];
 }) {
+  const seenSlugs = new Set<GlossarySlug>();
   return (
     <section className="space-y-6">
       <div className="space-y-2">
@@ -201,7 +212,7 @@ function Variations({
               {item.title}
             </dt>
             <dd className="text-base leading-relaxed text-muted-foreground">
-              {item.body}
+              {renderMechanismProse(item.body, seenSlugs)}
             </dd>
           </div>
         ))}
@@ -257,7 +268,7 @@ function Decommissioned({
         Full obituaries, peak market caps, and post-mortems in the{" "}
         <Link
           href="/cemetery/"
-          className="pharos-focus-ring font-medium text-foreground underline-offset-4 hover:text-frost-blue hover:underline"
+          className="pharos-focus-ring font-medium text-foreground underline-offset-4 hover:text-brand-accent-text hover:underline"
         >
           stablecoin cemetery
         </Link>
@@ -292,13 +303,13 @@ function TrackedCoinRow({
               ↳
             </span>
           ) : null}
-          <span className="font-mono text-sm font-semibold text-foreground transition-colors group-hover:text-frost-blue">
+          <span className="font-mono text-sm font-semibold text-foreground transition-colors group-hover:text-brand-accent-text">
             {coin.symbol}
           </span>
         </div>
         <span className="text-sm text-muted-foreground">{coin.name}</span>
         <ArrowUpRight
-          className="hidden h-4 w-4 shrink-0 self-center text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-frost-blue sm:block"
+          className="hidden h-4 w-4 shrink-0 self-center text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-brand-accent-text sm:block"
           aria-hidden="true"
         />
       </Link>
@@ -335,7 +346,7 @@ function TrackedCoinList({
       node: (
         <Link
           href={`/screener/?mechanisms=${archetype}&lifecycle=pre-launch`}
-          className="pharos-focus-ring underline-offset-4 hover:text-frost-blue hover:underline"
+          className="pharos-focus-ring underline-offset-4 hover:text-brand-accent-text hover:underline"
         >
           +{preLaunchCount} upcoming
         </Link>
@@ -348,7 +359,7 @@ function TrackedCoinList({
       node: (
         <Link
           href={`/screener/?mechanisms=${archetype}&lifecycle=frozen`}
-          className="pharos-focus-ring underline-offset-4 hover:text-frost-blue hover:underline"
+          className="pharos-focus-ring underline-offset-4 hover:text-brand-accent-text hover:underline"
         >
           +{frozenCount} frozen
         </Link>
@@ -438,7 +449,7 @@ function MechanismCaseStudies({
                 <p className="pharos-label">
                   {study.eyebrow}
                 </p>
-                <h3 className="text-base font-semibold tracking-tight text-foreground transition-colors group-hover:text-frost-blue sm:text-lg">
+                <h3 className="text-base font-semibold tracking-tight text-foreground transition-colors group-hover:text-brand-accent-text sm:text-lg">
                   {study.title}
                 </h3>
               </div>

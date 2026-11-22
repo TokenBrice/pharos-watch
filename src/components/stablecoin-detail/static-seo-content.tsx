@@ -56,7 +56,7 @@ import { stripTermMarkup } from "@/lib/term-markup";
 import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { getVariantAccessibleLabel, getVariantDisplay } from "@shared/lib/variant-display";
-import { ListingStateBanner } from "@/components/stablecoin-detail/listing-state-banner";
+import { ListingStateBanner, type ActivePeerOfframp } from "@/components/stablecoin-detail/listing-state-banner";
 import {
   getDisplayedVariantSiblings,
   SameTickerStablecoins,
@@ -68,6 +68,9 @@ interface StablecoinDetailSeoContentProps {
   /** Rendered after the dossier: skip the blocks the dossier and the FAQ below already carry. */
   afterDossier?: boolean;
   summary?: StablecoinAiSummary | null;
+  /** Active cohort peers surfaced as an off-ramp on quarantined profiles. */
+  activePeers?: readonly ActivePeerOfframp[];
+  logos?: Record<string, string>;
 }
 
 const LINK_PILL_CLASS =
@@ -80,7 +83,7 @@ const ACTION_LINK_CLASS =
 const FACT_LABEL_CLASS = "pharos-label";
 const FACT_VALUE_CLASS = "mt-1 text-sm leading-relaxed text-foreground";
 const ACTION_ICON_CLASS = "h-3.5 w-3.5 shrink-0 text-muted-foreground";
-const INLINE_LINK_CLASS = "pharos-focus-ring rounded-sm text-frost-blue underline-offset-2 hover:underline";
+const INLINE_LINK_CLASS = "pharos-focus-ring rounded-sm text-brand-accent-text underline-offset-2 hover:underline";
 
 function summarizeText(text: string, maxLength = 280): string {
   const normalized = normalizeWhitespace(stripTermMarkup(text));
@@ -568,7 +571,7 @@ function ProofOfReservesValue({ coin, linkReserves }: { coin: StablecoinMeta; li
         href={proof.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="pharos-focus-ring rounded-sm text-frost-blue underline-offset-2 hover:underline"
+        className="pharos-focus-ring rounded-sm text-brand-accent-text underline-offset-2 hover:underline"
       >
         Reserve source
       </a>
@@ -581,6 +584,8 @@ export function StablecoinDetailSeoContent({
   includeHeading = true,
   afterDossier = false,
   summary = null,
+  activePeers,
+  logos,
 }: StablecoinDetailSeoContentProps) {
   const pegHref = buildPegLandingUrl(coin.flags.pegCurrency);
   const pegLabel = getProfilePegLabel(
@@ -758,7 +763,7 @@ export function StablecoinDetailSeoContent({
         </h1>
       ) : null}
 
-      <ListingStateBanner coin={coin} />
+      <ListingStateBanner coin={coin} activePeers={activePeers} logos={logos} />
 
       {afterDossier ? null : (
       <section aria-labelledby="stablecoin-identity-answer-title" className="pharos-card-shell px-4 py-4 sm:px-5">

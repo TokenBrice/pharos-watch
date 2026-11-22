@@ -5,6 +5,7 @@ import { cloneElement, createElement, isValidElement, type ReactElement } from "
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import type * as Recharts from "recharts";
 import { YieldScatterPlot } from "@/components/yield/yield-scatter-plot";
+import { LOGO_GAP } from "@/lib/yield-scatter";
 import { prepareYieldUniverse, selectVisibleYieldRows } from "@/lib/yield-view-model";
 import { makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 import { YIELD_OPPORTUNITY_SAFETY_DESCRIPTION } from "@shared/lib/yield-opportunity-provenance";
@@ -76,7 +77,7 @@ describe("YieldScatterPlot", () => {
     expect(screen.getByText(/1 row without a measured safety score not shown/)).toBeTruthy();
     const tooltip = showTooltip("rocket");
     expect(screen.getByText("200.00%")).toBeTruthy();
-    expect(screen.getByText(/Chart rail:/)).toBeTruthy();
+    expect(screen.getByText("Chart rail")).toBeTruthy();
     tooltip.unmount();
     rerender(
       <YieldScatterPlot
@@ -111,14 +112,48 @@ describe("YieldScatterPlot", () => {
       makeYieldRanking({ safetyScore: 72, safetyGrade: "B", provenance: makeYieldProvenance({ safetyProvenance: "opportunity-safety" }) }),
       makeYieldRanking({ id: "holder", safetyScore: 90, safetyGrade: "A", provenance: makeYieldProvenance({ safetyProvenance: "live-report-card" }) }),
     ]} benchmarkRate={4.25} />);
-    expect(screen.getByText("Row / opportunity safety")).toBeTruthy();
+    expect(screen.getByText("Venue-adjusted Safety Score")).toBeTruthy();
     const opportunity = showTooltip("usdc-circle");
-    expect(screen.getByText(/Opportunity safety:/).textContent).toContain("(72/100)");
+    expect(screen.getByText("Venue-adjusted safety")).toBeTruthy();
+    expect(screen.getByText("B (72/100)")).toBeTruthy();
     expect(screen.getByText(YIELD_OPPORTUNITY_SAFETY_DESCRIPTION)).toBeTruthy();
     opportunity.unmount();
     showTooltip("holder");
-    expect(screen.getByText(/^Safety:/).textContent).toContain("(90/100)");
+    expect(screen.getByText("Safety")).toBeTruthy();
+    expect(screen.getByText("A (90/100)")).toBeTruthy();
     expect(screen.queryByText(YIELD_OPPORTUNITY_SAFETY_DESCRIPTION)).toBeNull();
+  });
+
+  it("wires Scatter onClick to onSelectRow and renders the ring legend and mobile quadrant key", () => {
+    const onSelectRow = vi.fn();
+    render(
+      <YieldScatterPlot
+        rankings={[
+          makeYieldRanking({ id: "zchf-frankencoin", symbol: "ZCHF", apy30d: 3.5, safetyScore: 82 }),
+          makeYieldRanking({ id: "usdc-circle", symbol: "USDC", apy30d: 5.0, safetyScore: 88 }),
+        ]}
+        benchmarkRate={4.39}
+        usesDefaultBenchmarkFrame
+        onSelectRow={onSelectRow}
+      />,
+    );
+
+    const scatterProps = chart.scatter.mock.calls.at(-1)?.[0] as {
+      onClick?: (entry: unknown) => void;
+    };
+    expect(typeof scatterProps.onClick).toBe("function");
+    scatterProps.onClick?.({ payload: { id: "zchf-frankencoin" } });
+    expect(onSelectRow).toHaveBeenCalledWith("zchf-frankencoin");
+
+    expect(screen.getByText("Ring:")).toBeTruthy();
+    expect(screen.getByText("Dot = crowded spot")).toBeTruthy();
+    expect(screen.getByText(/Non-USD coins compare to local rates/)).toBeTruthy();
+    const quadrantKey = screen.getByLabelText("Scatter quadrant key");
+    expect(quadrantKey.textContent).toContain("Sweet Spot");
+    expect(quadrantKey.textContent).toContain("Danger Zone");
+    expect(quadrantKey.textContent).toContain("High grade, modest APY");
+    expect(quadrantKey.textContent).toContain("Why Bother?");
+    expect(LOGO_GAP).toBe(6);
   });
 
   it("discloses an entirely unscored population", () => {

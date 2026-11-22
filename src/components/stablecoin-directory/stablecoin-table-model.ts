@@ -75,11 +75,10 @@ export function useStablecoinTableColumns({
   const [density, setDensity] = useTableDensity();
   const densityConfig = DENSITY_CONFIGS[density];
   const deviceDefault = useMemo<ColumnId[]>(() => {
-    if (isOverview && initialVisibleColumns?.length) return [...initialVisibleColumns];
     if (isMobileColumns) return [...MOBILE_DEFAULT_COLUMNS];
     if (initialVisibleColumns?.length) return [...initialVisibleColumns];
     return [...DEFAULT_VISIBLE_COLUMNS];
-  }, [initialVisibleColumns, isMobileColumns, isOverview]);
+  }, [initialVisibleColumns, isMobileColumns]);
   const preferenceKey = isMobileColumns
     ? `${columnPreferenceNamespace}-columns-mobile`
     : `${columnPreferenceNamespace}-columns`;
@@ -135,6 +134,7 @@ export function useStablecoinTableColumns({
     [isVisible, showPinnedControls],
   );
   const intentOverflows = viewportWidth > 0 && intentMinWidthPx > viewportWidth;
+  const needsHorizontalScroll = isMobileColumns || (!fitToWidth && intentOverflows);
 
   return {
     density,
@@ -151,6 +151,7 @@ export function useStablecoinTableColumns({
     visibleColumnCount: renderedColumns.length + (showPinnedControls ? 1 : 0),
     skeletonColumns,
     isMobileColumns,
+    needsHorizontalScroll,
     scrollRef,
     viewportRef,
     hiddenByFit,
@@ -178,6 +179,7 @@ export function useStablecoinTableRows({
   density,
   densityConfig,
   scrollRef,
+  surfaceRef,
 }: {
   data: StablecoinData[] | undefined;
   activeFilters: readonly FilterTag[];
@@ -196,10 +198,12 @@ export function useStablecoinTableRows({
   density: TableDensity;
   densityConfig: { rowHeight: number; iconSize: number };
   scrollRef: RefObject<HTMLDivElement | null>;
+  surfaceRef?: RefObject<HTMLDivElement | null>;
 }) {
+  const isVirtualized = !isOverview;
   const effectiveSortKey = useMemo(
-    () => resolveEffectiveSortKey(sort.key, renderedSet, isMobileColumns && !isOverview),
-    [isMobileColumns, isOverview, renderedSet, sort.key],
+    () => resolveEffectiveSortKey(sort.key, renderedSet, isMobileColumns),
+    [isMobileColumns, renderedSet, sort.key],
   );
   const trackedIds = useMemo(
     () => buildTrackedIdSet(activeFilters, reportCards, eligibleIds),
@@ -258,11 +262,13 @@ export function useStablecoinTableRows({
 
   useEffect(() => {
     if (previousNavigationKeyRef.current !== navigationKey) {
-      scrollRef.current?.scrollTo({ top: 0 });
+      if (isVirtualized) {
+        scrollRef.current?.scrollTo({ top: 0 });
+      }
       if (isOverview) setOverviewPageIndex(0);
     }
     previousNavigationKeyRef.current = navigationKey;
-  }, [navigationKey, isOverview, scrollRef]);
+  }, [navigationKey, isOverview, isVirtualized, scrollRef]);
 
   const virtualDensityConfig = useMemo(
     () => ({
@@ -276,21 +282,22 @@ export function useStablecoinTableRows({
     }),
     [density, densityConfig, isMobileColumns, isOverview],
   );
-  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual is intentional for large datasets.
-  const virtualizer = useVirtualizer({
-    count: displayedRows.length,
-    getScrollElement: () => scrollRef.current,
+  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual is intentional for unpaginated directory tables.
+  const rawVirtualizer = useVirtualizer({
+    count: isVirtualized ? displayedRows.length : 0,
+    getScrollElement: () => (isVirtualized ? scrollRef.current : null),
     estimateSize: () => virtualDensityConfig.rowHeight,
     measureElement: (element) => element?.getBoundingClientRect().height ?? virtualDensityConfig.rowHeight,
-    overscan: OVERSCAN,
+    overscan: isVirtualized ? OVERSCAN : 0,
   });
-  const virtualItems = virtualizer.getVirtualItems();
-  const totalHeight = virtualizer.getTotalSize();
+  const virtualizer = isVirtualized ? rawVirtualizer : null;
+  const virtualItems = virtualizer ? virtualizer.getVirtualItems() : [];
+  const totalHeight = virtualizer ? virtualizer.getTotalSize() : 0;
   const paddingTop = virtualItems.length > 0 ? virtualItems[0].start : 0;
   const paddingBottom = virtualItems.length > 0 ? totalHeight - virtualItems[virtualItems.length - 1].end : 0;
   const measureVirtualRow = useCallback(
     (element: HTMLTableRowElement | null) => {
-      if (!element || typeof virtualizer.measureElement !== "function") return;
+      if (!virtualizer || !element || typeof virtualizer.measureElement !== "function") return;
       virtualizer.measureElement(element);
     },
     [virtualizer],
@@ -306,16 +313,23 @@ export function useStablecoinTableRows({
       reportCardsMethodologyVersion,
     );
   }, [dexLiquidity, displayed, pegScores, reportCards, reportCardsMethodologyVersion, sortedRankById, sourceGenerations]);
+  const scrollOverviewTopIntoView = useCallback(() => {
+    const top = surfaceRef?.current?.getBoundingClientRect().top;
+    if (top != null && top < 0 && typeof surfaceRef?.current?.scrollIntoView === "function") {
+      surfaceRef.current.scrollIntoView({ block: "start" });
+    }
+  }, [surfaceRef]);
   const onPreviousOverviewPage = useCallback(() => {
     setOverviewPageIndex((current) => Math.max(0, current - 1));
-    scrollRef.current?.scrollTo({ top: 0 });
-  }, [scrollRef]);
+    scrollOverviewTopIntoView();
+  }, [scrollOverviewTopIntoView]);
   const onNextOverviewPage = useCallback(() => {
     setOverviewPageIndex((current) => Math.min(overviewPageCount - 1, current + 1));
-    scrollRef.current?.scrollTo({ top: 0 });
-  }, [overviewPageCount, scrollRef]);
+    scrollOverviewTopIntoView();
+  }, [overviewPageCount, scrollOverviewTopIntoView]);
 
   return {
+    isVirtualized,
     displayed,
     displayedRows,
     sortedRankById,
@@ -329,7 +343,7 @@ export function useStablecoinTableRows({
     virtualItems,
     paddingTop,
     paddingBottom,
-    measureVirtualRow,
+    measureVirtualRow: isVirtualized ? measureVirtualRow : undefined,
     handleCsvExport,
     onPreviousOverviewPage,
     onNextOverviewPage,

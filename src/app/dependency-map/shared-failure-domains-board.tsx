@@ -39,7 +39,7 @@ function DomainRows({ rows }: { rows: readonly SharedFailureDomainRow[] }) {
         {row.oldestAsOfSec !== null && <p className="text-xs text-muted-foreground">Oldest supply date: {new Date(row.oldestAsOfSec * 1000).toISOString().slice(0, 10)}</p>}
         {row.supplyDateIncomplete && <p className="text-xs text-muted-foreground">Some supply dates unavailable.</p>}
       </TableCell>
-      <TableCell className="align-top"><ul className="flex max-w-2xl flex-wrap gap-x-3 gap-y-0.5">{row.members.map(member => <li key={member.id}><Link href={buildStablecoinUrl(member.id)} title={member.name} className="pharos-focus-ring inline-flex min-h-11 items-center rounded-sm text-xs sm:min-h-6 text-frost-blue hover:text-foreground">{stablecoinLabel(member)}</Link></li>)}</ul></TableCell>
+      <TableCell className="align-top"><ul className="flex max-w-2xl flex-wrap gap-x-3 gap-y-0.5">{row.members.map(member => <li key={member.id}><Link href={buildStablecoinUrl(member.id)} title={member.name} className="pharos-focus-ring inline-flex min-h-11 items-center rounded-sm text-xs sm:min-h-6 text-brand-accent-text hover:text-foreground">{stablecoinLabel(member)}</Link></li>)}</ul></TableCell>
       <TableCell className="max-w-96 align-top">
         {row.effects.length === 0 ? <p className="text-xs text-muted-foreground">No published effect references. This does not establish an absence of risk.</p> : <>
           <ul className="space-y-2 text-xs">{row.effects.slice(0, EFFECTS_PREVIEW).map(renderEffect)}</ul>

@@ -248,7 +248,7 @@ describe("PysBreakdown", () => {
       );
       expect((container.textContent ?? "").includes(`default ${PYS_DEFAULT_SAFETY_SCORE}`)).toBe(true);
       expect(
-        screen.getByLabelText(`No safety grade available — defaulted to ${PYS_DEFAULT_SAFETY_SCORE}`),
+        screen.getByLabelText(`No safety grade available, defaulted to ${PYS_DEFAULT_SAFETY_SCORE}`),
       ).toBeTruthy();
     });
 

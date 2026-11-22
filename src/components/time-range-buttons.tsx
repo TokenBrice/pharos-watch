@@ -15,8 +15,10 @@ const formatTimeRangeLabel = (range: TimeRangeOption): string =>
 export function TimeRangeButtons({ options, value, onChange }: TimeRangeButtonsProps) {
   return (
     <ControlPillToggle
-      className="flex min-w-0 max-w-full flex-1 gap-1 overflow-x-auto scrollbar-none sm:flex-none"
-      buttonClassName="shrink-0 px-3 sm:px-2.5 sm:py-1"
+      variant="segmented"
+      ariaLabel="Chart time range"
+      className="min-w-0 max-w-full overflow-x-auto scrollbar-none"
+      buttonClassName="min-h-11 shrink-0 px-3 sm:min-h-8 sm:px-2.5"
       options={options}
       // Parents track the active range as a plain string; options carry the domain.
       value={value as TimeRangeOption}

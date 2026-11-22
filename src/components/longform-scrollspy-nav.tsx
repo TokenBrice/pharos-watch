@@ -288,9 +288,9 @@ export function LongformScrollspyNav({
       <div
         ref={railRef}
         className={cn(
-          "sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-chrome md:mx-0 lg:top-[calc(env(safe-area-inset-top)+3px+3.5rem)]",
+          "sticky top-[var(--sticky-header-bottom,3.75rem)] z-chrome md:mx-0",
           isPillTabs
-            ? "mx-0 bg-transparent px-0 py-0"
+            ? "mx-0 bg-background/90 px-0 py-1.5 backdrop-blur-md"
             : "-mx-4 rounded-xl border border-border/60 bg-background px-3 py-2 md:px-4 md:py-2.5",
           className,
         )}
@@ -298,21 +298,25 @@ export function LongformScrollspyNav({
       >
         <div className={cn("relative flex items-center", isPillTabs ? "justify-center gap-2" : "gap-3")}>
           {/* Fade mask hints at off-screen pills on narrow viewports */}
-          <div
-            className={cn(
-              "pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-background to-transparent",
-              // The pill bar can still scroll up to lg (seven zones at 900 px).
-              isPillTabs ? "lg:hidden" : "sm:hidden",
-            )}
-            aria-hidden="true"
-          />
+          {!isPillTabs && !edgeFade ? (
+            <div
+              className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-background to-transparent sm:hidden"
+              aria-hidden="true"
+            />
+          ) : null}
           {isPillTabs ? (
             <span
               aria-hidden="true"
-              className="pharos-pill-tabs-rule pharos-pill-tabs-rule-left hidden h-px w-28 shrink-0 lg:block xl:w-36 2xl:w-44"
+              className="pharos-pill-tabs-rule pharos-pill-tabs-rule-left hidden h-px min-w-8 flex-1 lg:block"
             />
           ) : null}
-          <div className={edgeFade ? "relative min-w-0 flex-1 overflow-hidden" : "contents"}>
+          <div
+            className={cn(
+              edgeFade || isPillTabs ? "relative min-w-0 overflow-hidden" : "contents",
+              edgeFade && !isPillTabs && "flex-1",
+              isPillTabs && "max-w-full",
+            )}
+          >
           <nav
             ref={bannerScrollerRef}
             aria-label={navAriaLabel}
@@ -325,7 +329,7 @@ export function LongformScrollspyNav({
               className={cn(
                 "flex min-w-max snap-x snap-mandatory items-center",
                 isPillTabs ? "gap-0.5" : "gap-1.5",
-                edgeFade && "pr-16",
+                edgeFade ? "pr-16" : isPillTabs && "pr-12 lg:pr-0",
               )}
             >
               {sections.map((section) => {
@@ -364,7 +368,7 @@ export function LongformScrollspyNav({
                             ? "hidden h-4 w-4 text-current lg:block"
                             : cn(
                                 "h-3.5 w-3.5",
-                                isActive ? "text-frost-blue" : "text-muted-foreground/80 group-hover:text-foreground",
+                                isActive ? "text-brand-accent-text" : "text-muted-foreground/80 group-hover:text-foreground",
                               ),
                         )}
                       />
@@ -375,9 +379,12 @@ export function LongformScrollspyNav({
               })}
             </div>
           </nav>
-          {edgeFade ? (
+          {edgeFade || isPillTabs ? (
             <div
-              className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-background via-background/80 to-transparent"
+              className={cn(
+                "pointer-events-none absolute inset-y-0 right-0 z-10 bg-gradient-to-l from-background via-background/80 to-transparent",
+                edgeFade ? "w-16" : "inset-y-px right-px w-12 rounded-r-lg lg:hidden",
+              )}
               aria-hidden="true"
             />
           ) : null}
@@ -385,7 +392,7 @@ export function LongformScrollspyNav({
           {isPillTabs ? (
             <span
               aria-hidden="true"
-              className="pharos-pill-tabs-rule pharos-pill-tabs-rule-right hidden h-px w-28 shrink-0 lg:block xl:w-36 2xl:w-44"
+              className="pharos-pill-tabs-rule pharos-pill-tabs-rule-right hidden h-px min-w-8 flex-1 lg:block"
             />
           ) : null}
           {rightSlot && <div className="hidden shrink-0 sm:block">{rightSlot}</div>}

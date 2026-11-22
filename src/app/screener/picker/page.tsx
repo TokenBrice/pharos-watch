@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { ScreenerModeSwitch } from "@/components/screener/screener-mode-switch";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 
 const description =
@@ -23,6 +24,7 @@ const route = createClientFeaturePage({
     breadcrumbName: "Picker",
     title: "Stablecoin Picker",
     variant: "longform",
+    headerActions: <ScreenerModeSwitch active="picker" />,
     leadParagraphs: [LEAD_PARAGRAPH],
     breadcrumbItems: [
       { name: "Home", url: "/" },

@@ -1,9 +1,12 @@
 "use client";
 
 import { useCallback, useState, type KeyboardEvent } from "react";
+import { X } from "lucide-react";
+import { useSvgId } from "@/components/chart-primitives/axes";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { getHhiBand } from "@shared/lib/classification";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
+import type { LiquidityRouteFilter } from "@/app/liquidity/model";
 import {
   aggregateThroatSelection,
   chainRouteGeometry,
@@ -21,18 +24,30 @@ import {
 } from "@/components/liquidity/exit-route-model";
 import "./exit-route-instrument.css";
 
-function SelectedExitRoutePanel({ selection }: { selection: LiquidityExitRouteSelection }) {
+function SelectedExitRoutePanel({
+  selection,
+  activeRouteFilter,
+  onClearRouteFilter,
+}: {
+  selection: LiquidityExitRouteSelection;
+  activeRouteFilter?: LiquidityRouteFilter | null;
+  onClearRouteFilter?: () => void;
+}) {
   if (selection.kind === "throat") {
     // The aggregate depth is the hero beam; the readout gives the protocol crowding read instead of repeating it.
     return (
       <div className="exit-route-selection-panel" data-testid="selected-exit-route-panel" aria-live="polite">
         <span className="pharos-label">Exit throat</span>
         <span className="min-w-0 text-muted-foreground">
-          <span className="font-semibold text-foreground">{selection.detail}.</span> Hover or focus a door or lane for its depth.
+          <span className="font-semibold text-foreground">{selection.detail}.</span> Hover a door or lane for its depth, or click to filter the table.
         </span>
       </div>
     );
   }
+  const isFilteredBySelection =
+    activeRouteFilter != null &&
+    activeRouteFilter.kind === selection.kind &&
+    activeRouteFilter.key === selection.key;
   return (
     <div className="exit-route-selection-panel" data-testid="selected-exit-route-panel" aria-live="polite">
       <span className="pharos-label">{selection.kind === "protocol" ? "Protocol door" : "Chain lane"}</span>
@@ -42,6 +57,16 @@ function SelectedExitRoutePanel({ selection }: { selection: LiquidityExitRouteSe
         {selection.sharePct == null ? "100%" : formatPercent(selection.sharePct, 1)} of depth
       </span>
       <span className="min-w-0 text-muted-foreground">{selection.detail}</span>
+      {isFilteredBySelection && onClearRouteFilter ? (
+        <button
+          type="button"
+          onClick={onClearRouteFilter}
+          className="pharos-focus-ring ml-auto inline-flex min-h-7 items-center gap-1 rounded-full border border-border/70 bg-muted/50 px-2.5 py-0.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+        >
+          <span>Filtering table</span>
+          <X className="h-3 w-3" aria-hidden="true" />
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -83,13 +108,15 @@ function InteractiveExitRouteGroup({
   route,
   kind,
   selected,
-  onSelect,
+  onPreview,
+  onActivate,
   children,
 }: {
   route: LiquidityExitRouteItem;
   kind: "protocol" | "chain";
   selected: LiquidityExitRouteSelection;
-  onSelect: (selection: LiquidityExitRouteSelection) => void;
+  onPreview: (selection: LiquidityExitRouteSelection) => void;
+  onActivate: (selection: LiquidityExitRouteSelection) => void;
   children: React.ReactNode;
 }) {
   const nextSelection = selectionFromRoute(kind, route);
@@ -101,7 +128,7 @@ function InteractiveExitRouteGroup({
   const handleKeyDown = (event: KeyboardEvent<SVGGElement>) => {
     if (event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
-    onSelect(nextSelection);
+    onActivate(nextSelection);
   };
 
   return (
@@ -114,9 +141,9 @@ function InteractiveExitRouteGroup({
       data-flow-intensity={route.flowIntensity}
       data-share-pct={route.sharePct.toFixed(2)}
       aria-label={`${route.label} ${kindLabel}, ${formatCurrency(route.valueUsd)}, ${formatPercent(route.sharePct, 1)} of DEX TVL`}
-      onFocus={() => onSelect(nextSelection)}
-      onMouseEnter={() => onSelect(nextSelection)}
-      onClick={() => onSelect(nextSelection)}
+      onFocus={() => onPreview(nextSelection)}
+      onMouseEnter={() => onPreview(nextSelection)}
+      onClick={() => onActivate(nextSelection)}
       onKeyDown={handleKeyDown}
     >
       <title>{`${route.label}: ${formatCurrency(route.valueUsd)} ${kindLabel} (${formatPercent(route.sharePct, 1)})`}</title>
@@ -128,12 +155,17 @@ function InteractiveExitRouteGroup({
 function ExitRouteInstrumentScene({
   model,
   selected,
-  onSelect,
+  onPreview,
+  onClearPreview,
+  onActivate,
 }: {
   model: LiquidityExitRouteModel;
   selected: LiquidityExitRouteSelection;
-  onSelect: (selection: LiquidityExitRouteSelection) => void;
+  onPreview: (selection: LiquidityExitRouteSelection) => void;
+  onClearPreview: () => void;
+  onActivate: (selection: LiquidityExitRouteSelection) => void;
 }) {
+  const channelFillId = useSvgId("exit-route-channel-fill");
   const throat = throatGeometry(model);
   const crowding = getHhiBand(model.concentrationHhi);
   const routeSummary = [
@@ -147,7 +179,7 @@ function ExitRouteInstrumentScene({
   const handleRouteKeyDown = (event: KeyboardEvent<SVGGElement>, nextSelection: LiquidityExitRouteSelection) => {
     if (event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
-    onSelect(nextSelection);
+    onActivate(nextSelection);
   };
 
   return (
@@ -155,13 +187,14 @@ function ExitRouteInstrumentScene({
       <div className="exit-route-instrument__viewport">
         <svg
           viewBox={`0 0 ${EXIT_ROUTE_SCENE.width} ${EXIT_ROUTE_SCENE.height}`}
-          role="img"
+          role="group"
           aria-label={`Exit route instrument: ${routeSummary}. Secondary-market DEX exits only.`}
           className="exit-route-instrument__scene"
           data-testid="exit-route-instrument"
+          onMouseLeave={onClearPreview}
         >
           <defs>
-            <linearGradient id="exit-route-channel-fill" x1="0" x2="1">
+            <linearGradient id={channelFillId} x1="0" x2="1">
               <stop offset="0%" stopColor="var(--route-channel-edge)" />
               <stop offset="50%" stopColor="var(--route-channel-throat)" />
               <stop offset="100%" stopColor="var(--route-channel-edge)" />
@@ -183,7 +216,7 @@ function ExitRouteInstrumentScene({
             Chain lanes
           </text>
 
-          <path className="exit-route-instrument__channel" d={throat.channelPath} fill="url(#exit-route-channel-fill)" opacity="0.78" aria-hidden="true" />
+          <path className="exit-route-instrument__channel" d={throat.channelPath} fill={`url(#${channelFillId})`} opacity="0.78" aria-hidden="true" />
           <path d={throat.upperRail} fill="none" stroke="var(--route-rail)" strokeWidth="2" strokeDasharray={throat.railDashArray} aria-hidden="true" />
           <path d={throat.lowerRail} fill="none" stroke="var(--route-rail)" strokeWidth="2" strokeDasharray={throat.railDashArray} aria-hidden="true" />
 
@@ -196,7 +229,8 @@ function ExitRouteInstrumentScene({
                 route={route}
                 kind="protocol"
                 selected={selected}
-                onSelect={onSelect}
+                onPreview={onPreview}
+                onActivate={onActivate}
               >
                 <path
                   className="exit-route-instrument__route-path"
@@ -239,7 +273,8 @@ function ExitRouteInstrumentScene({
                 route={route}
                 kind="chain"
                 selected={selected}
-                onSelect={onSelect}
+                onPreview={onPreview}
+                onActivate={onActivate}
               >
                 <path
                   className="exit-route-instrument__route-path"
@@ -278,9 +313,9 @@ function ExitRouteInstrumentScene({
             data-testid="exit-throat"
             data-crowding-band={throat.band}
             aria-label={`Aggregate exit throat, ${formatCurrency(model.totalTvlUsd)} total DEX TVL, protocol crowding ${!crowding ? "not scored" : `${model.concentrationHhi!.toFixed(2)}, ${crowding.concentrationLabel.toLowerCase()} crowding`}`}
-            onFocus={() => onSelect(throatSelection)}
-            onMouseEnter={() => onSelect(throatSelection)}
-            onClick={() => onSelect(throatSelection)}
+            onFocus={() => onPreview(throatSelection)}
+            onMouseEnter={() => onPreview(throatSelection)}
+            onClick={() => onActivate(throatSelection)}
             onKeyDown={(event) => handleRouteKeyDown(event, throatSelection)}
           >
             <rect x={EXIT_ROUTE_SCENE.throatX - 64} y="174" width="128" height="82" rx="6" fill="var(--route-throat-panel)" stroke="var(--route-rail)" strokeWidth="1" />
@@ -325,22 +360,39 @@ function ExitRouteInstrumentScene({
 
 function FallbackRouteColumn({
   title,
+  kind,
   routes,
+  activeRouteFilter,
+  onToggleRoute,
 }: {
   title: string;
+  kind: "protocol" | "chain";
   routes: readonly LiquidityExitRouteItem[];
+  activeRouteFilter?: LiquidityRouteFilter | null;
+  onToggleRoute?: (filter: LiquidityRouteFilter) => void;
 }) {
   return (
     <div className="min-w-0">
       <p className="pharos-label pb-1">{title}</p>
       <ol className="divide-y divide-border/50">
-        {routes.map((route) => (
-          <li key={route.key} className="flex min-h-9 items-center gap-2 text-sm">
-            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: route.colorHex }} aria-hidden="true" />
-            <span className="min-w-0 flex-1 truncate">{route.label}</span>
-            <span className="pharos-numeric text-xs text-muted-foreground">{formatPercent(route.sharePct, 1)}</span>
-          </li>
-        ))}
+        {routes.map((route) => {
+          const isActive =
+            activeRouteFilter?.kind === kind && activeRouteFilter.key === route.key;
+          return (
+            <li key={route.key}>
+              <button
+                type="button"
+                aria-pressed={isActive}
+                onClick={() => onToggleRoute?.({ kind, key: route.key, label: route.label })}
+                className={`pharos-focus-ring flex min-h-11 w-full items-center gap-2 rounded-sm px-1 text-left text-sm transition-colors hover:bg-muted/40 ${isActive ? "bg-muted/60 font-semibold text-foreground" : ""}`}
+              >
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: route.colorHex }} aria-hidden="true" />
+                <span className="min-w-0 flex-1 truncate">{route.label}</span>
+                <span className="pharos-numeric text-xs text-muted-foreground">{formatPercent(route.sharePct, 1)}</span>
+              </button>
+            </li>
+          );
+        })}
       </ol>
     </div>
   );
@@ -350,7 +402,15 @@ function FallbackRouteColumn({
  * Below 768px the scene would crop; the same doors and lanes read as two short
  * lists, and the throat's protocol crowding (shown nowhere else) leads them.
  */
-function ExitRouteFallbackList({ model }: { model: LiquidityExitRouteModel }) {
+function ExitRouteFallbackList({
+  model,
+  activeRouteFilter,
+  onToggleRoute,
+}: {
+  model: LiquidityExitRouteModel;
+  activeRouteFilter?: LiquidityRouteFilter | null;
+  onToggleRoute?: (filter: LiquidityRouteFilter) => void;
+}) {
   const crowding = getHhiBand(model.concentrationHhi);
   return (
     <div className="exit-route-fallback-list" data-testid="exit-route-fallback-list" aria-label="Exit routes as a list">
@@ -365,28 +425,86 @@ function ExitRouteFallbackList({ model }: { model: LiquidityExitRouteModel }) {
           </span>
         </span>
       </p>
-      <FallbackRouteColumn title="Protocol doors" routes={model.protocolRoutes} />
-      <FallbackRouteColumn title="Chain lanes" routes={model.chainRoutes} />
+      <FallbackRouteColumn
+        title="Protocol doors"
+        kind="protocol"
+        routes={model.protocolRoutes}
+        activeRouteFilter={activeRouteFilter}
+        onToggleRoute={onToggleRoute}
+      />
+      <FallbackRouteColumn
+        title="Chain lanes"
+        kind="chain"
+        routes={model.chainRoutes}
+        activeRouteFilter={activeRouteFilter}
+        onToggleRoute={onToggleRoute}
+      />
     </div>
   );
 }
 
 /**
  * The exit route instrument as a hero visual: unframed on the hero surface, the
- * selection readout under the scene, and the route census as its caption.
- * Shares are drawn here; exact dollar depth lives in the ledger beneath.
+ * selection readout under the scene, and the route census + dashed-line key as
+ * its caption. Shares are drawn here; exact dollar depth lives in the ledger beneath.
  */
-export function LiquidityExitRouteMap({ model }: { model: LiquidityExitRouteModel }) {
-  const [selectedRouteKey, setSelectedRouteKey] = useState<string | null>(null);
-  const handleSelectRoute = useCallback((selection: LiquidityExitRouteSelection) => {
-    setSelectedRouteKey(selectionKey(selection.kind, selection.key));
+export function LiquidityExitRouteMap({
+  model,
+  activeRouteFilter = null,
+  onRouteFilterChange,
+}: {
+  model: LiquidityExitRouteModel;
+  activeRouteFilter?: LiquidityRouteFilter | null;
+  onRouteFilterChange?: (filter: LiquidityRouteFilter | null) => void;
+}) {
+  const [previewRouteKey, setPreviewRouteKey] = useState<string | null>(null);
+  const handlePreviewRoute = useCallback((selection: LiquidityExitRouteSelection) => {
+    setPreviewRouteKey(selectionKey(selection.kind, selection.key));
   }, []);
+  const handleClearPreview = useCallback(() => {
+    setPreviewRouteKey(null);
+  }, []);
+  const handleToggleFilter = useCallback(
+    (filter: LiquidityRouteFilter) => {
+      if (!onRouteFilterChange) return;
+      const same =
+        activeRouteFilter != null &&
+        activeRouteFilter.kind === filter.kind &&
+        activeRouteFilter.key === filter.key;
+      onRouteFilterChange(same ? null : filter);
+    },
+    [activeRouteFilter, onRouteFilterChange],
+  );
+  const handleActivateRoute = useCallback(
+    (selection: LiquidityExitRouteSelection) => {
+      if (selection.kind === "throat") {
+        setPreviewRouteKey(selectionKey("throat", "aggregate"));
+        onRouteFilterChange?.(null);
+        return;
+      }
+      const same =
+        activeRouteFilter != null &&
+        activeRouteFilter.kind === selection.kind &&
+        activeRouteFilter.key === selection.key;
+      if (same) {
+        setPreviewRouteKey(null);
+        onRouteFilterChange?.(null);
+      } else {
+        setPreviewRouteKey(selectionKey(selection.kind, selection.key));
+        onRouteFilterChange?.({ kind: selection.kind, key: selection.key, label: selection.label });
+      }
+    },
+    [activeRouteFilter, onRouteFilterChange],
+  );
+
   const allSelections = [
     ...model.protocolRoutes.map((route) => selectionFromRoute("protocol", route)),
     ...model.chainRoutes.map((route) => selectionFromRoute("chain", route)),
     aggregateThroatSelection(model),
   ];
-  const selected = allSelections.find((selection) => selectionKey(selection.kind, selection.key) === selectedRouteKey)
+  const activeKey = activeRouteFilter ? selectionKey(activeRouteFilter.kind, activeRouteFilter.key) : null;
+  const effectiveKey = previewRouteKey ?? activeKey;
+  const selected = allSelections.find((selection) => selectionKey(selection.kind, selection.key) === effectiveKey)
     // At rest the aggregate throat is selected, so no route is dimmed.
     ?? aggregateThroatSelection(model);
 
@@ -394,16 +512,51 @@ export function LiquidityExitRouteMap({ model }: { model: LiquidityExitRouteMode
     <div className="space-y-3 px-5 py-5 sm:px-6 lg:px-7" data-testid="exit-route-map">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h2 className="pharos-section-title">Exit route map</h2>
-        <p className="pharos-meta">Protocol doors and chain lanes, sized by their share of DEX depth</p>
+        <p className="pharos-meta">Protocol doors and chain lanes, sized linearly by their share of DEX depth</p>
       </div>
-      <ExitRouteInstrumentScene model={model} selected={selected} onSelect={handleSelectRoute} />
-      <SelectedExitRoutePanel selection={selected} />
-      <ExitRouteFallbackList model={model} />
-      <p className="pharos-meta">
-        <span className="pharos-numeric">{model.protocolCount.toLocaleString("en-US")}</span> protocol doors ·{" "}
-        <span className="pharos-numeric">{model.chainCount.toLocaleString("en-US")}</span> chain lanes ·{" "}
-        <span className="pharos-numeric">{model.poolCount.toLocaleString("en-US")}</span> pools
-      </p>
+      <ExitRouteInstrumentScene
+        model={model}
+        selected={selected}
+        onPreview={handlePreviewRoute}
+        onClearPreview={handleClearPreview}
+        onActivate={handleActivateRoute}
+      />
+      <SelectedExitRoutePanel
+        selection={selected}
+        activeRouteFilter={activeRouteFilter}
+        onClearRouteFilter={onRouteFilterChange ? () => {
+          setPreviewRouteKey(null);
+          onRouteFilterChange(null);
+        } : undefined}
+      />
+      <ExitRouteFallbackList
+        model={model}
+        activeRouteFilter={activeRouteFilter}
+        onToggleRoute={handleToggleFilter}
+      />
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1.5 pharos-meta">
+        <p>
+          <span className="pharos-numeric">{model.protocolCount.toLocaleString("en-US")}</span> protocol doors ·{" "}
+          <span className="pharos-numeric">{model.chainCount.toLocaleString("en-US")}</span> chain lanes ·{" "}
+          <span className="pharos-numeric">{model.poolCount.toLocaleString("en-US")}</span> pools
+        </p>
+        <p className="flex flex-wrap items-center gap-x-4 gap-y-1" data-testid="exit-route-dashed-key">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="inline-block w-5 border-t-2 border-dashed border-muted-foreground/70" aria-hidden="true" />
+            <span>
+              Dashed rails: pool balance &lt; 70%
+              {model.weightedBalancePct != null ? ` (${model.weightedBalancePct}%)` : ""}
+            </span>
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="inline-block w-5 border-t-2 border-dotted border-muted-foreground/70" aria-hidden="true" />
+            <span>
+              Dashed flows: base-yield &lt; 60%
+              {model.organicPct != null ? ` (${model.organicPct}%)` : ""}
+            </span>
+          </span>
+        </p>
+      </div>
     </div>
   );
 }

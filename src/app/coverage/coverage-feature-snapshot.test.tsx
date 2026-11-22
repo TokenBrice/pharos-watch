@@ -245,4 +245,34 @@ describe("CoverageFeatureSnapshotRow", () => {
     expect(tile.textContent).toMatch(/n\/a/);
     expect(tile.textContent).not.toContain("Price");
   });
+
+  it("renders narrow gap segments with crisp semantic foreground contrast and no mid-word truncation", () => {
+    const summary: CoverageFeatureSummary = {
+      feature: COVERAGE_FEATURES.find((feature) => feature.key === "dex")!,
+      availableCount: 162,
+      totalCount: 185,
+      coveragePct: 88,
+      coverageUnavailable: false,
+      coveredMcapUsd: 900,
+      marketCapObservedCount: 185,
+      marketCapComplete: true,
+      mcapSharePct: 90,
+      countLabel: "Coin count",
+      coverageLabel: "88% of active coins",
+      shareLabel: "Active market-cap reach",
+      breakdown: [
+        { key: "primary", label: "primary", count: 162 },
+      ],
+      denominatorBreakdown: [{ key: "primary", label: "primary", count: 162 }],
+    };
+
+    render(<CoverageFeatureSnapshotRow summary={summary} />);
+
+    const gapSegment = screen.getByTitle("not covered: 23");
+    expect(gapSegment.className).toContain("bg-muted");
+    expect(gapSegment.className).toContain("text-foreground");
+    expect(gapSegment.className).not.toContain("text-white");
+    // At ~12.4% width, full "not covered 23" would clip to "not cover..."; compact "gap 23" fits cleanly.
+    expect(gapSegment.textContent).toBe("gap 23");
+  });
 });

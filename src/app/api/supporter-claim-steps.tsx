@@ -130,10 +130,10 @@ export function SupporterClaimSteps({
             </ApiDisclosure>
           </div>
           <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-            Each coin counts only on its listed networks. Exchange withdrawals and Giveth streams cannot claim.
-            Smart-contract wallets cannot claim yet.
+            Direct wallet transfers only, on each coin&apos;s listed networks. ETH, exchange withdrawals, and Giveth
+            streams cannot claim. Smart-contract wallets cannot claim yet.
           </p>
-          <Link href="/funding/#how-to-support" className="pharos-prose-link mt-2 inline-block text-sm text-foreground">
+          <Link href="/funding/#direct-wallet" className="pharos-prose-link mt-2 inline-block text-sm text-foreground">
             Donate on the funding page
           </Link>
         </li>

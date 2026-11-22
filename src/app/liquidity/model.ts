@@ -4,6 +4,7 @@ import type { PegCurrency } from "@shared/types/core";
 import { DEX_GLOBAL_KEY } from "@shared/types/dex-liquidity";
 import type { LiquidityStatsData } from "@/components/liquidity/liquidity-stats-types";
 import type { LiquidityRow } from "@/components/liquidity/liquidity-table";
+import { computeDepthToMcapRatio } from "@/components/liquidity/liquidity-table-logic";
 import { parseDataHealthWarnings } from "@/lib/data-health";
 
 export const PEG_FILTERS: { value: PegCurrency | "all"; label: string }[] = [
@@ -12,6 +13,69 @@ export const PEG_FILTERS: { value: PegCurrency | "all"; label: string }[] = [
   { value: "EUR", label: "EUR" },
   { value: "GOLD", label: "Gold" },
 ];
+
+export type LiquidityTriageFilter = "all" | "deep" | "thin" | "nr";
+
+export const LIQUIDITY_TRIAGE_FILTERS: readonly { value: LiquidityTriageFilter; label: string }[] = [
+  { value: "all", label: "All depth" },
+  { value: "deep", label: "Deep liquidity" },
+  { value: "thin", label: "Thin exit" },
+  { value: "nr", label: "Unrated" },
+];
+
+export interface LiquidityRouteFilter {
+  kind: "protocol" | "chain";
+  key: string;
+  label: string;
+}
+
+export interface LiquidityViewModelOptions {
+  mcapById?: ReadonlyMap<string, number | null>;
+  triageFilter?: LiquidityTriageFilter;
+  routeFilter?: LiquidityRouteFilter | null;
+  /** Top named protocol/chain keys shown on the Exit Route Map, used to match `_other-routes`. */
+  routeNamedTopKeys?: ReadonlySet<string>;
+}
+
+function matchesLiquidityTriage(liq: DexLiquidityData, triage: LiquidityTriageFilter): boolean {
+  if (triage === "all") return true;
+  if (triage === "deep") return liq.liquidityScore != null && liq.liquidityScore >= 70;
+  if (triage === "thin") return liq.liquidityScore != null && liq.liquidityScore < 40;
+  return liq.liquidityScore == null;
+}
+
+function matchesExitRouteFilter(
+  liq: DexLiquidityData,
+  filter: LiquidityRouteFilter,
+  namedTopKeys?: ReadonlySet<string>,
+): boolean {
+  if (filter.kind === "protocol") {
+    const entries = Object.entries(liq.protocolTvl ?? {});
+    if (filter.key === "_other-routes") {
+      return entries.some(([key, value]) => value > 0 && !(namedTopKeys?.has(key) ?? false));
+    }
+    return (liq.protocolTvl?.[filter.key] ?? 0) > 0;
+  }
+  const entries = Object.entries(liq.chainTvl ?? {});
+  const target = filter.key.toLowerCase();
+  if (filter.key === "_other-routes") {
+    return entries.some(([key, value]) => value > 0 && !(namedTopKeys?.has(key.toLowerCase()) ?? false));
+  }
+  return entries.some(([key, value]) => key.toLowerCase() === target && value > 0);
+}
+
+function computeRawMedian(values: readonly number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  const raw = sorted.length % 2 === 1 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
+  return Number.isFinite(raw) ? raw : null;
+}
+
+function computeMedian(values: readonly number[]): number | null {
+  const raw = computeRawMedian(values);
+  return raw != null ? Math.round(raw * 10) / 10 : null;
+}
 
 export interface LiquidityViewModel {
   rows: LiquidityRow[];
@@ -77,8 +141,12 @@ function computeLiquidityStats(
   let balanceWeight = 0;
   let totalOrganic = 0;
   let organicWeight = 0;
+  const change7dValues: number[] = [];
+  let depthRatioMcapSum = 0;
+  let aggDepthToMcapObservedCount = 0;
+  const depthToMcapValues: number[] = [];
 
-  for (const { liq } of allRows) {
+  for (const { liq, mcapUsd } of allRows) {
     if (isUnavailableDexEvidence(liq)) continue;
     if (liq.liquidityScore != null) ratedCount++;
     // Retained markets remain covered when required activity makes the score NR.
@@ -87,8 +155,15 @@ function computeLiquidityStats(
       if (liq.liquidityScore == null) nrObservedCount++;
       if (liq.coverageClass === "primary" || liq.coverageClass === "mixed") highConfidenceCoverage++;
       if (liq.coverageClass === "fallback") fallbackCoverage++;
+      const coinDepthRatio = computeDepthToMcapRatio(liq.totalTvlUsd, mcapUsd);
+      if (coinDepthRatio != null && mcapUsd != null) {
+        depthRatioMcapSum += mcapUsd;
+        aggDepthToMcapObservedCount++;
+        depthToMcapValues.push(coinDepthRatio);
+      }
     }
-    if (liq.tvlChange7d != null && liq.totalTvlUsd > 0) {
+    if (liq.tvlChange7d != null && Number.isFinite(liq.tvlChange7d) && liq.totalTvlUsd > 0) {
+      change7dValues.push(liq.tvlChange7d);
       // A published -100.00% (any >99.996% collapse) has no invertible prior
       // value; adding Infinity would turn the whole aggregate into NaN.
       const denominator = 1 + liq.tvlChange7d / 100;
@@ -114,10 +189,32 @@ function computeLiquidityStats(
     }
   }
 
-  const agg7dChange =
+  const publishedGlobal7d =
+    totalTvlUnavailableReason == null && globalData.tvlChange7d != null && Number.isFinite(globalData.tvlChange7d)
+      ? globalData.tvlChange7d
+      : null;
+  const weighted7d =
     !hasNonInvertibleBaseline && totalPrevTvl > 0
       ? ((tvlForChange - totalPrevTvl) / totalPrevTvl) * 100
       : null;
+  const rawAgg7dChange = publishedGlobal7d ?? weighted7d;
+  const agg7dChangeBasis =
+    publishedGlobal7d != null ? "global" as const : weighted7d != null ? "weighted" as const : null;
+  const median7dChange = computeMedian(change7dValues);
+  // Per-coin totalTvlUsd is gross (multi-stablecoin pools count full pool TVL in every
+  // constituent coin), while globalData.totalTvlUsd is cross-coin deduped. Publish the
+  // aggregate ratio only from deduped global TVL when every observed DEX coin has positive
+  // supply so numerator and denominator share the exact same cohort (R7). Otherwise fall
+  // back to the per-coin median, which never double-counts shared pools across coins.
+  const aggDepthToMcapRatio =
+    totalTvl != null &&
+    withLiquidity > 0 &&
+    aggDepthToMcapObservedCount === withLiquidity &&
+    depthRatioMcapSum > 0 &&
+    Number.isFinite(totalTvl / depthRatioMcapSum)
+      ? totalTvl / depthRatioMcapSum
+      : null;
+  const medianDepthToMcapRatio = computeRawMedian(depthToMcapValues);
 
   return {
     totalTvl,
@@ -132,7 +229,13 @@ function computeLiquidityStats(
     highConfidenceCoverage,
     fallbackCoverage,
     totalTracked: ACTIVE_STABLECOINS.length,
-    agg7dChange: agg7dChange != null && Number.isFinite(agg7dChange) ? Math.round(agg7dChange * 10) / 10 : null,
+    agg7dChange: rawAgg7dChange != null && Number.isFinite(rawAgg7dChange) ? Math.round(rawAgg7dChange * 10) / 10 : null,
+    agg7dChangeBasis,
+    median7dChange,
+    change7dCoinCount: change7dValues.length,
+    aggDepthToMcapRatio,
+    medianDepthToMcapRatio,
+    aggDepthToMcapObservedCount,
     avgBalance: balanceWeight > 0 ? Math.round((totalBalance / balanceWeight) * 100) : null,
     avgOrganic: organicWeight > 0 ? Math.round((totalOrganic / organicWeight) * 100) : null,
   };
@@ -142,22 +245,36 @@ export function buildLiquidityViewModel(
   liquidityMap: DexLiquidityMap | undefined,
   pegFilter: PegCurrency | "all",
   searchQuery: string,
+  options?: LiquidityViewModelOptions,
 ): LiquidityViewModel {
   if (!liquidityMap) {
     return { rows: [], leaderboardRows: [], unobservedRows: [], unavailableRows: [], summaryStats: null };
   }
+  const mcapById = options?.mcapById;
+  const triageFilter = options?.triageFilter ?? "all";
+  const routeFilter = options?.routeFilter ?? null;
+  const routeNamedTopKeys = options?.routeNamedTopKeys;
   // Single pass: build all rows, then filter for display.
   const q = searchQuery.toLowerCase().trim();
-  const allRows = ACTIVE_STABLECOINS
-    .map((meta) => ({ meta, liq: liquidityMap[meta.id] }))
-    .filter((row): row is LiquidityRow => row.liq != null);
+  const allRows: LiquidityRow[] = ACTIVE_STABLECOINS
+    .flatMap((meta) => {
+      const liq = liquidityMap[meta.id];
+      if (liq == null) return [];
+      return [{ meta, liq, mcapUsd: mcapById?.get(meta.id) ?? null }];
+    });
   const rows = allRows.filter(({ meta }) => {
     if (pegFilter !== "all" && meta.flags.pegCurrency !== pegFilter) return false;
     return !q || meta.name.toLowerCase().includes(q) || meta.symbol.toLowerCase().includes(q);
   });
+  const leaderboardRows = rows.filter(({ liq }) => {
+    if (isUnavailableDexEvidence(liq) || (liq.liquidityScore == null && !isObservedOnDex(liq))) return false;
+    if (!matchesLiquidityTriage(liq, triageFilter)) return false;
+    if (routeFilter && !matchesExitRouteFilter(liq, routeFilter, routeNamedTopKeys)) return false;
+    return true;
+  });
   return {
     rows,
-    leaderboardRows: rows.filter(({ liq }) => !isUnavailableDexEvidence(liq) && (liq.liquidityScore != null || isObservedOnDex(liq))),
+    leaderboardRows,
     unobservedRows: rows.filter(({ liq }) => !isUnavailableDexEvidence(liq) && liq.liquidityScore == null && !isObservedOnDex(liq)),
     unavailableRows: rows.filter(({ liq }) => isUnavailableDexEvidence(liq)),
     summaryStats: computeLiquidityStats(liquidityMap, allRows),

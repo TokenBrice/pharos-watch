@@ -116,6 +116,8 @@ npm run test:smoke-ui:mobile -- --url http://localhost:3000
 npm run test:smoke-pages-assets -- --url https://pharos.watch --mode live
 ```
 
+`test:smoke-ui:mobile` (`scripts/maintenance/smoke-mobile-ui.mjs`) runs horizontal-overflow, table-geometry (including `table-fixed` cell overflow/clipping without `text-overflow: ellipsis` and colliding inline children), and touch-target checks across mobile viewports; pass `--themes light,dark`, `--include-tablet` (`768x1024`), or `--include-desktop` to expand coverage, and `--strict-touch-targets` enforces the 44px target floor on buttons and interactive controls not explicitly exempted.
+
 Markdown variants are generated for `/methodology/`, methodology changelogs, `/changelog/`, `/digest/[date]/`, stablecoin detail pages, and `/docs/*`. [Fixed renderer examples](#markdown-export-fixtures-scripts__tests__fixturesmarkdown) are independent of ordinary source curation; the owning suite separately checks live content semantics and current dataset aliases.
 
 `npm run audit:pricing-providers` checks the configured CEX provider contracts against live metadata and is covered by mocked unit tests for success, regional blocking, provider drift, non-OK responses, and malformed metadata shapes. Optional live source-shape probes can be run with `npx tsx scripts/maintenance/audit-pricing-provider-config.ts --live-source-shapes`; this adds Jupiter V3 shape validation and, when `CMC_API_KEY` is set, a CoinMarketCap category shape check. Stablecoins sync metadata also emits `pricingSourceAuditReport`, which summarizes source distribution risks such as missing prices, fallback/cache reliance, low-confidence pricing, assets without an independent hard source, and structured provider rejection counts.
@@ -517,7 +519,7 @@ Repeat the measurement-and-backlog campaign with the [`ci-slim-pass`](../.codex/
 
 [`eslint.config.mjs`](../eslint.config.mjs) and [`eslint.typed.config.mjs`](../eslint.typed.config.mjs) own scopes, rules and exclusions; do not duplicate their rule tables, allowlists or ignored-path arrays. Typed unsafe-value and promise rules remain blocking in configured scopes. Decode external data as `unknown` and validate it at the typed boundary.
 
-`pharos/no-local-helper-copies` reserves record-guard names and exact object/non-null/non-array guard bodies for `shared/lib/type-guards.ts` and Worker JSON-parser names for `worker/src/lib/json-parse.ts` in production code.
+`pharos/no-local-helper-copies` reserves record-guard names and exact object/non-null/non-array guard bodies for `shared/lib/type-guards.ts` and Worker JSON-parser names for `worker/src/lib/json-parse.ts` in production code. `pharos/no-bare-frost-blue-text` forbids bare `text-frost-blue` foreground utilities (including state variants like `hover:text-frost-blue`) across `src/` and `shared/` outside tests unless explicitly qualified with `dark:`, directing dual-theme text to `text-brand-accent-text`.
 
 The inherited Next plugin scope includes CommonJS source files so global React Hooks rule overrides always resolve their plugin. Frozen, compiled compatibility-reader fixtures are excluded from source linting to preserve their historical bytes; config regression tests cover both boundaries.
 

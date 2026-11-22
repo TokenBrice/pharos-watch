@@ -213,7 +213,7 @@ function VerticalTimeline({
 function DesktopLinearTimeline({ entries }: { entries: readonly CaseStudyTimelineEntry[] }) {
   return (
     <details className="hidden rounded-xl border border-border/50 bg-card/30 p-5 lg:block">
-      <summary className="pharos-focus-ring cursor-pointer text-2xs text-muted-foreground transition-colors hover:text-frost-blue">
+      <summary className="pharos-focus-ring cursor-pointer text-2xs text-muted-foreground transition-colors hover:text-brand-accent-text">
         Linear timeline
       </summary>
       <VerticalTimeline entries={entries} desktop />

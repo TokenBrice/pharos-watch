@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, type ReactNode } from "react";
+import { PEG_LABELS_SHORT } from "@shared/lib/classification";
+import type { PegCurrency } from "@shared/types/core";
 import { formatCompactUsd } from "@shared/lib/format";
 import {
   coinEmblemSize,
@@ -14,6 +16,7 @@ import { StaleDataBanner } from "@/components/stale-data-banner";
 import { HoverProvider } from "@/app/alt-pegs/fiat-world-atlas/hover-context";
 import { OffMapShelf } from "@/app/alt-pegs/fiat-world-atlas/off-map-shelf";
 import { FiatEmblems } from "@/app/alt-pegs/fiat-world-atlas/fiat-emblems";
+import { WorldMap } from "@/app/alt-pegs/fiat-world-atlas/world-map";
 
 function formatSizeStep(value: number): string {
   return formatCompactUsd(value).replace(/\.0+(?=[KMBT]$)/u, "");
@@ -57,14 +60,37 @@ function SizeKey() {
 export function PegDiversityHeroLive({
   worldMap,
   variant = "default",
+  selectedPeg = null,
+  onSelectPeg,
 }: {
-  worldMap: ReactNode;
+  worldMap?: ReactNode;
   variant?: "default" | "fullscreen";
+  selectedPeg?: PegCurrency | null;
+  onSelectPeg?: (peg: PegCurrency | null) => void;
 }) {
   const stablecoinsQuery = useStablecoins();
   const { data } = stablecoinsQuery;
   const peggedAssets = data?.peggedAssets;
   const hero = useMemo(() => buildPegDiversityHero(peggedAssets), [peggedAssets]);
+  const activeMapPegs = useMemo(() => hero.pegClusters.map((cluster) => cluster.peg), [hero.pegClusters]);
+  const regionChips = useMemo(() => {
+    const items = [
+      ...hero.pegClusters.map((cluster) => ({
+        peg: cluster.peg,
+        label: PEG_LABELS_SHORT[cluster.peg] ?? cluster.peg,
+        colorHex: cluster.colorHex,
+        marketCap: cluster.cohort.marketCap ?? -1,
+      })),
+      ...hero.shelfGroups.map((group) => ({
+        peg: group.peg,
+        label: group.label,
+        colorHex: group.colorHex,
+        marketCap: group.cohort.marketCap ?? -1,
+      })),
+    ];
+    return items.sort((a, b) => b.marketCap - a.marketCap || a.label.localeCompare(b.label));
+  }, [hero.pegClusters, hero.shelfGroups]);
+
   // Retained positions stay drawn through a failed refresh; only settled absence is unavailable.
   const renderable = !!peggedAssets?.length;
   const showStatusOverlay = !renderable;
@@ -72,8 +98,19 @@ export function PegDiversityHeroLive({
     ? "Loading live coin positions."
     : "Live coin layer unavailable; the ranking and table below still list every peg.";
 
+  const resolvedWorldMap =
+    worldMap !== undefined ? (
+      worldMap
+    ) : (
+      <WorldMap
+        selectedPeg={selectedPeg}
+        activePegs={activeMapPegs}
+        onSelectPeg={onSelectPeg}
+      />
+    );
+
   return (
-    <HoverProvider>
+    <HoverProvider selectedPeg={selectedPeg}>
       <div
         className={
           variant === "fullscreen"
@@ -102,14 +139,62 @@ export function PegDiversityHeroLive({
               {statusCopy}
             </div>
           ) : null}
-          <OffMapShelf groups={hero.shelfGroups} />
+          <OffMapShelf
+            groups={hero.shelfGroups}
+            selectedPeg={selectedPeg}
+            onSelectPeg={onSelectPeg}
+          />
           <div className="peg-hero__earth">
             <div className="peg-hero__map-frame">
-              {worldMap}
+              {resolvedWorldMap}
               <FiatEmblems clusters={hero.pegClusters} />
             </div>
           </div>
         </div>
+        {onSelectPeg && regionChips.length > 0 ? (
+          <div
+            role="group"
+            aria-label="Filter by currency region"
+            className="mt-2.5 flex flex-wrap items-center gap-1.5"
+          >
+            <button
+              type="button"
+              aria-pressed={selectedPeg === null}
+              onClick={() => onSelectPeg(null)}
+              className={
+                selectedPeg === null
+                  ? "pharos-focus-ring pharos-control-pill pharos-control-pill-active min-h-11 text-xs md:min-h-7"
+                  : "pharos-focus-ring pharos-control-pill min-h-11 text-xs md:min-h-7"
+              }
+            >
+              All pegs
+            </button>
+            {regionChips.map((item) => {
+              const isSelected = selectedPeg === item.peg;
+              return (
+                <button
+                  key={item.peg}
+                  type="button"
+                  aria-label={`Filter atlas by ${item.label}`}
+                  aria-pressed={isSelected}
+                  onClick={() => onSelectPeg(isSelected ? null : item.peg)}
+                  className={
+                    isSelected
+                      ? "pharos-focus-ring pharos-control-pill pharos-control-pill-active min-h-11 gap-1.5 text-xs md:min-h-7"
+                      : "pharos-focus-ring pharos-control-pill min-h-11 gap-1.5 text-xs md:min-h-7"
+                  }
+                >
+                  <span
+                    className="h-2 w-2 shrink-0 rounded-full"
+                    style={{ backgroundColor: item.colorHex }}
+                    aria-hidden="true"
+                  />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
         <SizeKey />
       </div>
     </HoverProvider>

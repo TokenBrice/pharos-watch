@@ -18,8 +18,8 @@ const VARIANT_DISPLAY: Record<
   "savings-passthrough": {
     shortLabel: "Savings",
     fullLabel: "Savings variant",
-    badgeClass: "border-frost-blue/30 bg-frost-blue/10 text-frost-blue",
-    chipClass: "border-frost-blue/30 bg-frost-blue/10 text-frost-blue",
+    badgeClass: "border-frost-blue/30 bg-frost-blue/10 text-brand-accent-text",
+    chipClass: "border-frost-blue/30 bg-frost-blue/10 text-brand-accent-text",
   },
   "strategy-vault": {
     shortLabel: "Strategy",

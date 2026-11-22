@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { TableBody, TableCaption, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
@@ -15,6 +17,8 @@ import { formatClaimSubtotal } from "@/lib/dependency-watershed/known";
 
 type CoinStates = ReadonlyMap<string, readonly CoinState[]>;
 
+const INITIAL_LIVE_INCIDENTS = 3;
+
 function formatDirectExposure(hub: DependencyHub): string {
   return hub.directKnown ? `${formatCurrency(hub.direct.knownUsd, 2)}${hub.direct.complete ? "" : " (known only)"}` : "Unavailable";
 }
@@ -27,25 +31,62 @@ function formatDirectExposure(hub: DependencyHub): string {
  * rankings are unchanged, and an upstream without a known state is not listed.
  */
 export function LiveIncidentsUpstream({ model, coinStates, logos, onExposure }: { model: DependencyHubsModel; coinStates: CoinStates; logos?: Record<string, string>; onExposure?: (id: string) => void }) {
+  const [showAll, setShowAll] = useState(false);
   const incidents = model.hubs.flatMap(hub => {
     const state = coinStates.get(hub.id)?.find(s => s.kind !== "pre-launch" && s.kind !== "deadline");
     return state ? [{ hub, state }] : [];
   });
   if (incidents.length === 0) return null;
+  const visibleIncidents = showAll ? incidents : incidents.slice(0, INITIAL_LIVE_INCIDENTS);
+  const hasMore = incidents.length > INITIAL_LIVE_INCIDENTS;
+
   return (
-    <section className="pharos-card-shell space-y-3 p-4" aria-labelledby="live-incidents-upstream-heading">
-      <div className="space-y-1">
-        <h2 id="live-incidents-upstream-heading" className="font-semibold">Live incidents upstream</h2>
-        <p className="text-sm text-muted-foreground">{incidents.length} published {incidents.length === 1 ? "upstream is" : "upstreams are"} in an exceptional state now, ranked by the direct exposure their dependents map to them. Linked coins; not a loss forecast.</p>
+    <section className="pharos-card-shell space-y-2.5 p-3.5 sm:p-4" aria-labelledby="live-incidents-upstream-heading">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="space-y-0.5">
+          <h2 id="live-incidents-upstream-heading" className="text-sm font-semibold text-foreground">Live incidents upstream</h2>
+          <p className="text-xs text-muted-foreground">
+            {incidents.length} published {incidents.length === 1 ? "upstream is" : "upstreams are"} in an exceptional state now, ranked by direct mapped dependent exposure. Linked coins; not a loss forecast.
+          </p>
+        </div>
+        {hasMore ? (
+          <button
+            type="button"
+            aria-expanded={showAll}
+            onClick={() => setShowAll((prev) => !prev)}
+            className="pharos-focus-ring pharos-control-pill inline-flex min-h-11 shrink-0 items-center gap-1 px-3 py-1.5 text-xs font-medium text-foreground sm:min-h-8"
+          >
+            {showAll ? (
+              <>
+                Show top {INITIAL_LIVE_INCIDENTS}
+                <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+              </>
+            ) : (
+              <>
+                Show all {incidents.length}
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+              </>
+            )}
+          </button>
+        ) : null}
       </div>
-      <ul className="divide-y divide-border/60">{incidents.map(({ hub, state }) => (
+      <ul className="divide-y divide-border/60">{visibleIncidents.map(({ hub, state }) => (
         <li key={hub.id} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 py-2 text-sm">
           <StablecoinLogo src={logos?.[hub.id]} name={hub.label} size={20} />
           <Link href={buildStablecoinUrl(hub.id)} className="pharos-focus-ring rounded-sm font-semibold hover:underline">{hub.label}</Link>
           <CoinStateChip state={state} showDetail />
-          <span className="text-muted-foreground">{hub.dependentCount} direct {hub.dependentCount === 1 ? "dependent" : "dependents"}{hub.topDependent ? ` · ${Math.round(hub.topDependent.shareOfHubExposure * 100)}% from ${hub.topDependentSymbol}` : ""}</span>
+          <span className="text-xs text-muted-foreground">{hub.dependentCount} direct {hub.dependentCount === 1 ? "dependent" : "dependents"}{hub.topDependent ? ` · ${Math.round(hub.topDependent.shareOfHubExposure * 100)}% from ${hub.topDependentSymbol}` : ""}</span>
           <span className="pharos-numeric ml-auto font-semibold">{formatDirectExposure(hub)}</span>
-          {onExposure && <button type="button" aria-label={`Trace exposure from ${hub.label}`} className="pharos-focus-ring min-h-11 rounded-sm px-2 text-xs underline" onClick={() => onExposure(hub.id)}>Exposure</button>}
+          {onExposure && (
+            <button
+              type="button"
+              aria-label={`Trace exposure from ${hub.label}`}
+              className="pharos-focus-ring pharos-control-pill inline-flex min-h-11 items-center px-3 py-1 text-xs font-medium text-foreground sm:min-h-8"
+              onClick={() => onExposure(hub.id)}
+            >
+              Trace exposure →
+            </button>
+          )}
         </li>
       ))}</ul>
     </section>
@@ -86,7 +127,7 @@ export function DependencyHubsBoard({ model, logos, onExposure, coinStates }: { 
               <TableCell className="pharos-numeric max-w-56 whitespace-normal">{hub.unknownFormCount > 0 && hub.vaultClaimCount === 0 ? "Split unavailable" : <>{formatClaimSubtotal(hub.vaultClaimUsd, hub.claimAvailability["vault-claim"])}{hub.unknownFormCount > 0 && <p className="text-xs text-muted-foreground">Classified claims only</p>}</>}</TableCell>
               <TableCell className="pharos-numeric">{hub.dependentCount}</TableCell>
               <TableCell>{hub.topDependent ? `${Math.round(hub.topDependent.shareOfHubExposure * 100)}% from ${hub.topDependentSymbol}` : "n/a"}</TableCell>
-              <TableCell><div className="flex gap-2"><Link href={buildStablecoinUrl(hub.id)} className="pharos-focus-ring inline-flex min-h-11 items-center rounded-sm text-xs text-frost-blue hover:text-foreground" aria-label={`Open coin ${hub.label}`} onClick={() => trackEvent("dependency_map_action", { action: "hub_open_coin", value: hub.id })}>Open coin</Link>{onExposure && <button type="button" aria-label={`Trace exposure from ${hub.label}`} className="pharos-focus-ring min-h-11 rounded-sm px-2 text-xs underline" onClick={() => onExposure(hub.id)}>Exposure</button>}</div></TableCell>
+              <TableCell><div className="flex items-center gap-2"><Link href={buildStablecoinUrl(hub.id)} className="pharos-focus-ring inline-flex min-h-11 items-center rounded-sm text-xs text-brand-accent-text hover:text-foreground" aria-label={`Open coin ${hub.label}`} onClick={() => trackEvent("dependency_map_action", { action: "hub_open_coin", value: hub.id })}>Open profile →</Link>{onExposure && <button type="button" aria-label={`Trace exposure from ${hub.label}`} className="pharos-focus-ring pharos-control-pill inline-flex min-h-8 items-center px-2.5 py-1 text-xs font-medium text-foreground" onClick={() => onExposure(hub.id)}>Trace exposure →</button>}</div></TableCell>
             </TableRow>
           ); })}</TableBody>
         </TableFrame>

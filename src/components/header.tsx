@@ -9,8 +9,8 @@ import { ThemeControls } from "@/components/theme-controls";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import {
+  MOBILE_DRAWER_QUICK_ITEMS,
   NAV_GROUPS,
-  QUICK_NAV_ITEMS,
   isNavItemActive,
   stickyChromeTopOffsetClass,
 } from "@/lib/nav-config";
@@ -100,6 +100,7 @@ export function Header() {
   const returnFocusCategoryKeyRef = useRef<string | null>(null);
   const navRef = useRef<HTMLElement>(null);
   const drawerOpenerRef = useRef<HTMLElement | null>(null);
+  const suppressCloseAutoFocusRef = useRef(false);
   // One taxonomy at every width: the drawer's categories are the desktop
   // menus, and a sectioned menu (Learn) keeps its labelled sections as subheads.
   const mobileCategories = NAV_GROUPS.map((group) => {
@@ -122,6 +123,8 @@ export function Header() {
   }
 
   function handleNavigate() {
+    drawerOpenerRef.current = null;
+    suppressCloseAutoFocusRef.current = true;
     handleOpenChange(false);
   }
 
@@ -140,6 +143,7 @@ export function Header() {
       // The bottom-nav Menu is the drawer's one entry point (no header twin);
       // focus returns to whatever opened it.
       drawerOpenerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      suppressCloseAutoFocusRef.current = false;
       setActiveCategoryKey(null);
       returnFocusCategoryKeyRef.current = null;
       setOpen(true);
@@ -176,9 +180,9 @@ export function Header() {
   // sliding beneath it while scrolling.
   return (
     <header
-      className={`sticky z-chrome-header border-b border-border/80 bg-background/85 backdrop-blur-md lg:hidden ${topOffsetClass}`}
+      className={`sticky z-chrome-header h-14 border-b border-border/80 bg-background/85 backdrop-blur-md lg:hidden ${topOffsetClass}`}
     >
-      <div className="container mx-auto flex h-14 items-center justify-between px-4">
+      <div className="container mx-auto flex h-full items-center justify-between px-4">
         <Link
           prefetch={false}
           href="/"
@@ -210,6 +214,11 @@ export function Header() {
               side="left"
               showCloseButton={false}
               onCloseAutoFocus={(event) => {
+                if (suppressCloseAutoFocusRef.current) {
+                  suppressCloseAutoFocusRef.current = false;
+                  event.preventDefault();
+                  return;
+                }
                 // Without a recorded opener, Radix restores focus itself.
                 if (!drawerOpenerRef.current) return;
                 event.preventDefault();
@@ -282,12 +291,12 @@ export function Header() {
                     key="root"
                     className="animate-in fade-in slide-in-from-left-2 duration-[220ms] ease-[var(--motion-ease-standard)] motion-reduce:animate-none"
                   >
-                    {/* Quick rail: the highest-traffic routes, always visible. */}
+                    {/* Quick grid: high-value tools not already pinned in the mobile bottom bar. */}
                     <div
-                      className="grid grid-cols-2 gap-2 pl-[14px] animate-in fade-in slide-in-from-left-2 ease-[var(--motion-ease-standard)] [animation-fill-mode:backwards] motion-reduce:animate-none"
+                      className="grid grid-cols-2 gap-2 animate-in fade-in slide-in-from-left-2 ease-[var(--motion-ease-standard)] [animation-fill-mode:backwards] motion-reduce:animate-none"
                       style={{ animationDelay: "0ms", animationDuration: "220ms" }}
                     >
-                      {QUICK_NAV_ITEMS.map((item) => {
+                      {MOBILE_DRAWER_QUICK_ITEMS.map((item) => {
                         const Icon = item.icon;
                         const active = isNavItemActive(pathname, item);
                         return (
@@ -305,7 +314,9 @@ export function Header() {
                             }`}
                           >
                             <Icon className="h-4 w-4 text-muted-foreground" aria-hidden />
-                            <span className="text-sm font-semibold leading-tight text-foreground">{item.label}</span>
+                            <span className="text-sm font-semibold leading-tight text-foreground">
+                              {item.shortLabel ?? item.label}
+                            </span>
                           </Link>
                         );
                       })}
@@ -316,9 +327,7 @@ export function Header() {
                       return (
                         <div
                           key={category.key}
-                          className={`mt-2 animate-in fade-in slide-in-from-left-2 ease-[var(--motion-ease-standard)] [animation-fill-mode:backwards] motion-reduce:animate-none ${
-                            categoryIsActive ? "border-l-2 border-l-frost-blue pl-3" : "pl-[14px]"
-                          }`}
+                          className="mt-2 animate-in fade-in slide-in-from-left-2 ease-[var(--motion-ease-standard)] [animation-fill-mode:backwards] motion-reduce:animate-none"
                           style={{
                             animationDelay: `${(mobileLeadItemCount + categoryIndex) * 50}ms`,
                             animationDuration: "220ms",
@@ -332,7 +341,11 @@ export function Header() {
                             type="button"
                             onClick={() => openCategory(category.key)}
                             aria-label={`${category.label}, ${category.items.length} pages`}
-                            className="pharos-focus-ring flex min-h-11 w-full items-center justify-between rounded-md border border-transparent px-3 text-sm font-medium text-foreground transition-[background-color,border-color,color,box-shadow] duration-[220ms] ease-[var(--motion-ease-standard)] hover:border-border/55 hover:bg-muted/45 motion-reduce:transition-none"
+                            className={`pharos-focus-ring flex min-h-11 w-full items-center justify-between rounded-md border px-3 text-sm transition-[background-color,border-color,color,box-shadow] duration-[220ms] ease-[var(--motion-ease-standard)] motion-reduce:transition-none ${
+                              categoryIsActive
+                                ? "border-border/70 bg-muted/60 font-semibold text-foreground"
+                                : "border-transparent font-medium text-foreground hover:border-border/55 hover:bg-muted/45"
+                            }`}
                           >
                             <span className="flex items-center gap-2">
                               {category.label}
@@ -356,6 +369,8 @@ export function Header() {
                   size="sm"
                   className="gap-2 min-h-11"
                   onClick={() => {
+                    drawerOpenerRef.current = null;
+                    suppressCloseAutoFocusRef.current = true;
                     handleOpenChange(false);
                     openCommandPalette();
                   }}

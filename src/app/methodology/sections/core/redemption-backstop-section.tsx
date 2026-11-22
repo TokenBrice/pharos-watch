@@ -21,13 +21,13 @@ export function RedemptionBackstopMethodologySection() {
       title={REDEMPTION_BACKSTOP_SECTION_CONTENT.title}
       versionBadge={{ label: REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL }}
       changelogPath={REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH}
-      versionNote="The standalone route score and V10 Exit share scoring primitives but ask different capacity requests."
+      versionNote="The standalone route score and Safety Score Exit pillar share scoring primitives but ask different capacity requests."
       changelogClassName={METHODOLOGY_SECTION_ACCENT_CLASSES.redemptionBackstop.changelogHover}
     >
       <p>
         The Redemption Backstop score rates one issuer or protocol redemption route from 0 to 100. It is a standalone
-        route diagnostic, separate from Safety Score V10 Exit. Both consume the same reviewed access, settlement,
-        execution, capacity, output, and cost primitives; V10 re-evaluates exact same-notional evidence under its own
+        route diagnostic, separate from the Safety Score Exit pillar. Both consume the same reviewed access, settlement,
+        execution, capacity, output, and cost primitives; Safety Score re-evaluates exact same-notional evidence under its own
         stress request, evidence ceilings, danger interlocks, and redundancy policy.
       </p>
       <p>
@@ -53,7 +53,7 @@ export function RedemptionBackstopMethodologySection() {
         existing routes. Avalon, Youves, hyUSD and wARS retain unquantified capacity; Solayer&apos;s USDC
         holder path is queued QLP fulfillment, not atomic redemption. pathUSD&apos;s processing target is
         not a completed-payout maximum. The existing-route bound review grants no new config-only upgrade.
-        Exact smaller-probe receipts under Safety v10.18 prove only executed input, not full-request completion
+        Exact smaller-probe receipts under the Safety Score prove only executed input, not full-request completion
         or exhaustion. Weights and ladders are unchanged; fresh observations and final fixed-clock comparison
         remain required. Activation: October 14, 2026 12:40 UTC (release cut; 1791981600).
       </p>
@@ -61,7 +61,7 @@ export function RedemptionBackstopMethodologySection() {
         facts={[
           { label: "Version", value: REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL },
           { label: "Output", value: "0–100 route score; null when required route evidence cannot resolve" },
-          { label: "V10 relationship", value: "Shared primitives, independent V10 Exit evaluation" },
+          { label: "Safety Score relationship", value: "Shared primitives, independent Exit pillar evaluation" },
         ]}
       />
       <MethodologyDetails summary="Current route-score formula" primary>
@@ -76,7 +76,7 @@ export function RedemptionBackstopMethodologySection() {
           and capped at ${request.capUsd.toLocaleString()}. A measured zero-capacity route, or a positive route below
           both the 1% completion and $100,000 absolute breakpoints, receives a zero headline; missing capacity remains
           unrated; the same gate applies to the eventual-redeemability headline. Reviewed settlement terms are shared
-          with V10, a review that withholds settlement takes multi-day settlement rather than a same-day default, favorable corrections retain the 365-day evidence expiry, and reserve-sync full-supply eventual
+          with Safety Score, a review that withholds settlement takes multi-day settlement rather than a same-day default, favorable corrections retain the 365-day evidence expiry, and reserve-sync full-supply eventual
           capacity requires an explicit dated evidence opt-in. On-chain formula-rate probes pin their return-value decimal
           scale before fresh fees can enter scoring. Route-family ceilings, holder eligibility, delay, queue,
           minimum-redemption, severe-depeg, freshness, and evidence rules can only reduce or withhold the result. An open
@@ -89,7 +89,7 @@ export function RedemptionBackstopMethodologySection() {
         <p>
           Reserve-backed observations keep the validated source time, or the producing snapshot&apos;s fetch time
           for same-run on-chain and API evidence, separate from publication time. Republishing retained evidence
-          does not reset its age or V10&apos;s eight-hour redemption evidence budget. Capacity percentages divide
+          does not reset its age or Safety Score&apos;s eight-hour redemption evidence budget. Capacity percentages divide
           finalized executable dollars by the same positive current supply, including daily scoring bounds;
           issuer-reported ratios cannot override that denominator.
         </p>

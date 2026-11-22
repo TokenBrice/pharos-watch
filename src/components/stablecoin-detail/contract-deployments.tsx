@@ -1,17 +1,26 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Check, Copy, ExternalLink, Maximize2, Minimize2 } from "lucide-react";
+import { Check, Copy, ExternalLink, Maximize2, Search } from "lucide-react";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import {
+  DETAIL_HEADER_ICON_BUTTON_CLASS,
   DETAIL_MODULE_BODY_CLASS,
   DETAIL_MODULE_HEADER_CLASS,
   DETAIL_MODULE_SHELL_CLASS,
   DETAIL_MODULE_TITLE_CLASS,
   SECTION_SCROLL_MT,
 } from "@/components/stablecoin-detail/section-title-class";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { buildContractDeploymentParts } from "@/lib/contract-deployment-summary";
 import { trackEvent } from "@/lib/analytics";
 import { copyText } from "@/lib/clipboard";
@@ -65,13 +74,26 @@ export function ContractDeployments({
   compact?: boolean;
 }) {
   const [openContractKey, setOpenContractKey] = useState<string | null>(null);
-  // The rail's show-all toggle. The in-flow card replaced its toggle with the
-  // closed "Contract addresses (N)" fold, which is what crawlers read.
-  const [showAllContracts, setShowAllContracts] = useState(false);
+  // Rail searchable modal state (replaces inline expansion that blew out rail height on multi-chain coins).
+  const [modalOpen, setModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   // Keyed by chain+address: some coins deploy twice on one chain, and a
   // chain-only key would flash the copied check on both rows.
   const [copiedContract, setCopiedContract] = useState<string | null>(null);
   const copyResetTimer = useRef<ReturnType<typeof setTimeout>>(null);
+
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const filteredContracts = useMemo(() => {
+    if (!normalizedSearch) return contracts;
+    return contracts.filter((contract) => {
+      const chainName = (CHAIN_META[contract.chain]?.name ?? contract.chain).toLowerCase();
+      return (
+        chainName.includes(normalizedSearch)
+        || contract.chain.toLowerCase().includes(normalizedSearch)
+        || contract.address.toLowerCase().includes(normalizedSearch)
+      );
+    });
+  }, [contracts, normalizedSearch]);
 
   useEffect(
     () => () => {
@@ -107,58 +129,112 @@ export function ContractDeployments({
   }
 
   if (compact) {
-    const ToggleIcon = showAllContracts ? Minimize2 : Maximize2;
-    const visibleDesktopContracts = showAllContracts ? contracts : desktopContractsPreview;
+    const handleModalOpenChange = (nextOpen: boolean) => {
+      setModalOpen(nextOpen);
+      if (!nextOpen) setSearchQuery("");
+    };
     return (
-      <section
-        // The in-flow instance owns `#contracts` but is xl:hidden;
-        // the passport strip's hash jump falls back to this visible twin.
-        data-anchor-twin="contracts"
-        className={cn("pharos-card-shell overflow-hidden", SECTION_SCROLL_MT)}
-        aria-label={`Contracts, ${contracts.length} deployments`}
-      >
-        <div className="flex items-center justify-between gap-3 border-b border-border/50 px-4 py-3.5">
-          <div className="flex items-center gap-2">
-            <h2 className={DETAIL_MODULE_TITLE_CLASS}>
-              {coinSymbol ? (
-                <>
-                  <span className="sr-only">{coinSymbol}</span>{" "}
-                </>
-              ) : null}
-              Contracts
-            </h2>
-            <span className="text-muted-foreground/50" aria-hidden="true">
-              ·
-            </span>
-            <span className="font-mono text-xs text-muted-foreground">{contracts.length}</span>
+      <Dialog open={modalOpen} onOpenChange={handleModalOpenChange}>
+        <section
+          // The in-flow instance owns `#contracts` but is xl:hidden;
+          // the passport strip's hash jump falls back to this visible twin.
+          data-anchor-twin="contracts"
+          className={cn("pharos-card-shell overflow-hidden", SECTION_SCROLL_MT)}
+          aria-label={`Contracts, ${contracts.length} deployments`}
+        >
+          <div className="flex items-center justify-between gap-3 border-b border-border/50 px-4 py-3.5">
+            <div className="flex items-center gap-2">
+              <h2 className={DETAIL_MODULE_TITLE_CLASS}>
+                {coinSymbol ? (
+                  <>
+                    <span className="sr-only">{coinSymbol}</span>{" "}
+                  </>
+                ) : null}
+                Contracts
+              </h2>
+              <span className="text-muted-foreground/50" aria-hidden="true">
+                ·
+              </span>
+              <span className="font-mono text-xs text-muted-foreground">{contracts.length}</span>
+            </div>
+            {hiddenDesktopContractCount > 0 ? (
+              <DialogTrigger asChild>
+                <button
+                  type="button"
+                  className={DETAIL_HEADER_ICON_BUTTON_CLASS}
+                  aria-label={`Search all ${contracts.length} contract deployments`}
+                  title={`All ${contracts.length} deployments`}
+                >
+                  <Maximize2 className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+              </DialogTrigger>
+            ) : null}
           </div>
-          {hiddenDesktopContractCount > 0 ? (
-            <button
-              type="button"
-              onClick={() => setShowAllContracts((current) => !current)}
-              className="pharos-focus-ring inline-flex size-6 items-center justify-center rounded-md border border-border/60 bg-muted/50 text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground"
-              aria-label={
-                showAllContracts
-                  ? "Collapse contract deployments"
-                  : `Show all ${contracts.length} contract deployments`
-              }
-              title={showAllContracts ? "Collapse contracts" : `Show all ${contracts.length} contracts`}
-            >
-              <ToggleIcon className="h-3 w-3" aria-hidden="true" />
-            </button>
-          ) : null}
-        </div>
-        <div className="space-y-1.5 px-4 py-3">
-          {visibleDesktopContracts.map((contract) => (
-            <CompactContractRow
-              key={`${contract.chain}-${contract.address}`}
-              contract={contract}
-              copied={copiedContract === `${contract.chain}:${contract.address}`}
-              onCopy={copyContractAddress}
-            />
-          ))}
-        </div>
-      </section>
+          <div className="space-y-1.5 px-4 py-3">
+            {desktopContractsPreview.map((contract) => (
+              <CompactContractRow
+                key={`${contract.chain}-${contract.address}`}
+                contract={contract}
+                copied={copiedContract === `${contract.chain}:${contract.address}`}
+                onCopy={copyContractAddress}
+              />
+            ))}
+            {hiddenDesktopContractCount > 0 ? (
+              <DialogTrigger asChild>
+                <button
+                  type="button"
+                  className="pharos-focus-ring mt-1 flex min-h-9 w-full items-center justify-between rounded-md border border-border/60 bg-muted/40 px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-border hover:bg-muted/70 hover:text-foreground"
+                >
+                  <span>All {contracts.length} deployments</span>
+                  <span className="font-mono text-2xs">+{hiddenDesktopContractCount} more</span>
+                </button>
+              </DialogTrigger>
+            ) : null}
+          </div>
+        </section>
+        {hiddenDesktopContractCount > 0 ? (
+          <DialogContent className="sm:max-w-xl">
+            <DialogHeader>
+              <DialogTitle>
+                {coinSymbol ? `${coinSymbol} contract deployments` : "Contract deployments"} ({contracts.length})
+              </DialogTitle>
+              <DialogDescription>
+                Filter by chain name or contract address. Copy an address or inspect it on its block explorer.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="relative">
+              <Search
+                aria-hidden="true"
+                className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              />
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search chains or addresses…"
+                aria-label="Filter contract deployments"
+                className="pharos-focus-ring h-10 w-full rounded-md border border-border bg-background pr-3 pl-9 text-sm text-foreground placeholder:text-muted-foreground"
+              />
+            </div>
+            <div className="max-h-[55vh] space-y-1.5 overflow-y-auto pr-1">
+              {filteredContracts.length > 0 ? (
+                filteredContracts.map((contract) => (
+                  <CompactContractRow
+                    key={`${contract.chain}-${contract.address}`}
+                    contract={contract}
+                    copied={copiedContract === `${contract.chain}:${contract.address}`}
+                    onCopy={copyContractAddress}
+                  />
+                ))
+              ) : (
+                <p className="py-6 text-center text-sm text-muted-foreground">
+                  No deployments matching &ldquo;{searchQuery.trim()}&rdquo;.
+                </p>
+              )}
+            </div>
+          </DialogContent>
+        ) : null}
+      </Dialog>
     );
   }
 
@@ -506,7 +582,7 @@ function ContractExplorerAction({
         href={explorerUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="pharos-focus-ring mt-2 inline-flex min-h-10 items-center gap-1 rounded-md text-xs text-frost-blue hover:underline"
+        className="pharos-focus-ring mt-2 inline-flex min-h-10 items-center gap-1 rounded-md text-xs text-brand-accent-text hover:underline"
       >
         View on {chain?.name ? `${chain.name} explorer` : "explorer"}
         <ExternalLink className="h-3 w-3" />

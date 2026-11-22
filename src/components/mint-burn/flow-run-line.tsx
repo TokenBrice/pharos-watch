@@ -72,11 +72,28 @@ interface PlacedLabel {
   anchor: "center" | "left" | "right";
 }
 
+function labelHorizontalSpan(pct: number, anchor: PlacedLabel["anchor"]): [number, number] {
+  if (anchor === "left") return [pct, pct + LABEL_MIN_GAP_PCT];
+  if (anchor === "right") return [pct - LABEL_MIN_GAP_PCT, pct];
+  return [pct - LABEL_MIN_GAP_PCT / 2, pct + LABEL_MIN_GAP_PCT / 2];
+}
+
+function labelsOverlap(
+  a: Pick<PlacedLabel, "pct" | "bottomPx" | "anchor">,
+  b: Pick<PlacedLabel, "pct" | "bottomPx" | "anchor">,
+): boolean {
+  if (Math.abs(a.bottomPx - b.bottomPx) >= LABEL_LINE_PX) return false;
+  const [a0, a1] = labelHorizontalSpan(a.pct, a.anchor);
+  const [b0, b1] = labelHorizontalSpan(b.pct, b.anchor);
+  return a0 < b1 && b0 < a1;
+}
+
 /**
- * Greedy stacking: a label near an already placed one moves up a line. Drivers
- * (named in the verdict) are placed first and never dropped: one that would
- * overflow the headroom hangs beside its own tick top instead. Other labels
- * (the extremes) drop when there is no room.
+ * Greedy 2D stacking: checks both horizontal span (`pct`, anchor) and vertical
+ * position (`bottomPx`) across varying tick heights so adjacent or coincident
+ * coins never collide. Drivers (named in the verdict) are placed first and
+ * never dropped: one that would overflow the headroom hangs beside its own tick
+ * top instead. Other labels (the extremes) drop when there is no room.
  */
 function placeLabels(
   ticks: readonly RunLineTick[],
@@ -85,24 +102,39 @@ function placeLabels(
   rulePct: number | null,
   plotHeightPx: number,
 ): PlacedLabel[] {
-  const placed: Array<PlacedLabel & { level: number }> = [];
+  const placed: PlacedLabel[] = [];
+  const maxTopPx = plotHeightPx + LABEL_HEADROOM_PX;
   const ordered = [...ticks].sort(
     (a, b) => Number(driverIds.has(b.id)) - Number(driverIds.has(a.id)) || a.score - b.score,
   );
   for (const tick of ordered) {
     const pct = toPct(tick.score);
     const tickTopPx = tickHeightPx(tick.weightUsd, maxWeightUsd, plotHeightPx);
-    let level = 0;
-    while (placed.some((label) => label.level === level && Math.abs(label.pct - pct) < LABEL_MIN_GAP_PCT)) level += 1;
     const nearRule = rulePct != null && Math.abs(pct - rulePct) < RULE_CLEARANCE_PCT;
-    if (tickTopPx + 4 + level * LABEL_LINE_PX + LABEL_LINE_PX > plotHeightPx + LABEL_HEADROOM_PX) {
+    const anchor: PlacedLabel["anchor"] =
+      pct < 4 ? "left" : pct > 96 ? "right" : !nearRule ? "center" : pct >= rulePct ? "left" : "right";
+    let bottomPx = tickTopPx + 4;
+    while (true) {
+      const blocker = placed.find((other) => labelsOverlap(other, { pct, bottomPx, anchor }));
+      if (!blocker) break;
+      bottomPx = blocker.bottomPx + LABEL_LINE_PX;
+    }
+    if (bottomPx + LABEL_LINE_PX > maxTopPx) {
       if (!driverIds.has(tick.id)) continue;
-      const side = rulePct != null && nearRule ? (pct >= rulePct ? "left" : "right") : pct > 50 ? "right" : "left";
-      placed.push({ id: tick.id, symbol: tick.symbol, pct, bottomPx: tickTopPx + 4, anchor: side, level: -1 });
+      const side: PlacedLabel["anchor"] =
+        rulePct != null && nearRule ? (pct >= rulePct ? "left" : "right") : pct > 50 ? "right" : "left";
+      let sideBottomPx = Math.max(2, tickTopPx + 4 - LABEL_LINE_PX);
+      while (sideBottomPx >= 2) {
+        const blocker = placed.find((other) => labelsOverlap(other, { pct, bottomPx: sideBottomPx, anchor: side }));
+        if (!blocker) break;
+        const nextBottom = blocker.bottomPx - LABEL_LINE_PX;
+        if (nextBottom < 2) break;
+        sideBottomPx = nextBottom;
+      }
+      placed.push({ id: tick.id, symbol: tick.symbol, pct, bottomPx: sideBottomPx, anchor: side });
       continue;
     }
-    const anchor = pct < 4 ? "left" : pct > 96 ? "right" : !nearRule ? "center" : pct >= rulePct ? "left" : "right";
-    placed.push({ id: tick.id, symbol: tick.symbol, pct, bottomPx: tickTopPx + 4 + level * LABEL_LINE_PX, anchor, level });
+    placed.push({ id: tick.id, symbol: tick.symbol, pct, bottomPx, anchor });
   }
   return placed;
 }
@@ -215,7 +247,17 @@ function GutterStubs({
   );
 }
 
-export function FlowRunLine({ model, className }: { model: RunLineModel; className?: string }) {
+export function FlowRunLine({
+  model,
+  className,
+  selectedCoinId = null,
+  onSelectCoin,
+}: {
+  model: RunLineModel;
+  className?: string;
+  selectedCoinId?: string | null;
+  onSelectCoin?: (coinId: string) => void;
+}) {
   const { ticks, stubs, maxWeightUsd, score, band } = model;
   const drivers = selectRunLineDrivers(model);
   const driverIds = new Set([...drivers.down, ...drivers.up].map((tick) => tick.id));
@@ -240,15 +282,16 @@ export function FlowRunLine({ model, className }: { model: RunLineModel; classNa
         </p>
       </div>
 
-      <div role="img" aria-label={describeRunLine(model)} className="flex gap-3 sm:gap-4">
+      <div className="flex gap-3 sm:gap-4">
         <div className="min-w-0 flex-1">
           <div className="relative" style={{ height: plotHeightPx + LABEL_HEADROOM_PX }}>
             <svg
+              role="img"
+              aria-label={describeRunLine(model)}
               className="absolute inset-x-0 bottom-0 w-full overflow-visible"
               style={{ height: plotHeightPx }}
               viewBox={`0 0 200 ${plotHeightPx}`}
               preserveAspectRatio="none"
-              aria-hidden="true"
             >
               {/* Structural guides: band edges dashed, the 30-day norm (0) solid. */}
               <g className="text-border">
@@ -276,35 +319,26 @@ export function FlowRunLine({ model, className }: { model: RunLineModel; classNa
                 />
               </g>
               {/* Primary marks: one tick per scored coin. */}
-              {ticks.map((tick) => (
-                // Coin ticks stay muted so the gauge rule is the only full-ink mark.
-                <g key={tick.id} className="text-muted-foreground/60">
-                  <line
-                    x1={tick.score + 100}
-                    x2={tick.score + 100}
-                    y1={plotHeightPx}
-                    y2={plotHeightPx - tickHeightPx(tick.weightUsd, maxWeightUsd, plotHeightPx)}
-                    stroke="currentColor"
-                    strokeWidth={1.5}
-                    vectorEffect="non-scaling-stroke"
-                  />
-                  {/* A wider transparent hit line gives the native hover title a usable target. */}
-                  <line
-                    x1={tick.score + 100}
-                    x2={tick.score + 100}
-                    y1={plotHeightPx}
-                    y2={plotHeightPx - Math.max(tickHeightPx(tick.weightUsd, maxWeightUsd, plotHeightPx), 16)}
-                    stroke="transparent"
-                    strokeWidth={9}
-                    vectorEffect="non-scaling-stroke"
+              {ticks.map((tick) => {
+                const isSelected = selectedCoinId === tick.id;
+                return (
+                  // Coin ticks stay muted so the gauge rule is the only full-ink mark unless selected.
+                  <g
+                    key={tick.id}
+                    className={isSelected ? "text-brand-accent-text" : "text-muted-foreground/60"}
                   >
-                    <title>
-                      {`${tick.symbol}: ${formatAxis(Math.round(tick.score))}`}
-                      {tick.weightUsd != null ? ` · weight ${formatCurrency(tick.weightUsd, 1)}` : ""}
-                    </title>
-                  </line>
-                </g>
-              ))}
+                    <line
+                      x1={tick.score + 100}
+                      x2={tick.score + 100}
+                      y1={plotHeightPx}
+                      y2={plotHeightPx - tickHeightPx(tick.weightUsd, maxWeightUsd, plotHeightPx)}
+                      stroke="currentColor"
+                      strokeWidth={isSelected ? 2.5 : 1.5}
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  </g>
+                );
+              })}
               {score != null ? (
                 <line
                   x1={score + 100}
@@ -319,10 +353,33 @@ export function FlowRunLine({ model, className }: { model: RunLineModel; classNa
               ) : null}
             </svg>
 
+            {/* Focusable, clickable tick buttons positioned identically over each scored coin mark. */}
+            {ticks.map((tick) => {
+              const isSelected = selectedCoinId === tick.id;
+              const hitHeight = Math.max(tickHeightPx(tick.weightUsd, maxWeightUsd, plotHeightPx), 24);
+              const detail = `${tick.symbol}: ${formatAxis(Math.round(tick.score))}${tick.weightUsd != null ? ` · weight ${formatCurrency(tick.weightUsd, 1)}` : ""}`;
+              return (
+                <button
+                  key={tick.id}
+                  type="button"
+                  data-run-line-coin-id={tick.id}
+                  aria-pressed={isSelected}
+                  aria-label={onSelectCoin ? `${detail}. Jump to ${tick.symbol} in table` : detail}
+                  title={detail}
+                  onClick={() => onSelectCoin?.(tick.id)}
+                  className={cn(
+                    "pharos-focus-ring absolute bottom-0 w-3.5 -translate-x-1/2 cursor-pointer rounded-t-xs bg-transparent transition-colors hover:bg-brand-accent/20 focus-visible:bg-brand-accent/20",
+                    isSelected ? "bg-brand-accent/20" : "",
+                  )}
+                  style={{ left: `${toPct(tick.score)}%`, height: hitHeight }}
+                />
+              );
+            })}
+
             {rulePct != null ? (
               // A cap marks the rule as the gauge, distinct from any tall coin tick beside it.
               <span
-                className="absolute h-0.5 w-3 -translate-x-1/2 bg-foreground"
+                className="pointer-events-none absolute h-0.5 w-3 -translate-x-1/2 bg-foreground"
                 style={{ left: `${rulePct}%`, top: LABEL_HEADROOM_PX }}
                 aria-hidden="true"
               />
@@ -330,7 +387,7 @@ export function FlowRunLine({ model, className }: { model: RunLineModel; classNa
             {rulePct != null ? (
               <span
                 className={cn(
-                  "absolute top-0 whitespace-nowrap text-2xs font-semibold text-foreground",
+                  "pointer-events-none absolute top-0 whitespace-nowrap text-2xs font-semibold text-foreground",
                   ruleLabelLeft ? "-translate-x-full pr-1.5" : "pl-1.5",
                 )}
                 style={{ left: `${rulePct}%` }}
@@ -339,7 +396,7 @@ export function FlowRunLine({ model, className }: { model: RunLineModel; classNa
                 Gauge
               </span>
             ) : (
-              <span className="absolute left-0 top-0 text-2xs text-muted-foreground" aria-hidden="true">
+              <span className="pointer-events-none absolute left-0 top-0 text-2xs text-muted-foreground" aria-hidden="true">
                 Gauge not rated
               </span>
             )}
@@ -347,10 +404,11 @@ export function FlowRunLine({ model, className }: { model: RunLineModel; classNa
               <span
                 key={label.id}
                 className={cn(
-                  "pharos-numeric absolute whitespace-nowrap text-2xs text-foreground/85",
+                  "pharos-numeric pointer-events-none absolute whitespace-nowrap text-2xs",
+                  selectedCoinId === label.id ? "font-semibold text-brand-accent-text" : "text-foreground/85",
                   label.anchor === "center" ? "-translate-x-1/2" : label.anchor === "left" ? "pl-1" : "-translate-x-full pr-1",
                 )}
-                style={{ left: `${label.pct}%`, bottom: label.anchor === "center" ? label.bottomPx : label.bottomPx - LABEL_LINE_PX }}
+                style={{ left: `${label.pct}%`, bottom: label.bottomPx }}
                 aria-hidden="true"
               >
                 {label.symbol}

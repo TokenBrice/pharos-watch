@@ -55,6 +55,14 @@ export default function DocsIndexPage() {
       leadParagraphs={[
         "Methodology and API references for Pharos. Every page is also served as plain markdown for agents.",
       ]}
+      headerSupplement={
+        <p className="text-sm text-muted-foreground">
+          Want the guided overview with Reader/Analyst mode and worked examples?{" "}
+          <Link href="/methodology/" className="pharos-prose-link text-foreground">
+            Open the Methodology manual &rarr;
+          </Link>
+        </p>
+      }
     >
       <div className="space-y-10">
         <section aria-labelledby="docs-start-here" className="space-y-4 border-y border-border/60 py-5">
@@ -73,7 +81,7 @@ export default function DocsIndexPage() {
               className="pharos-focus-ring group block border-t border-border/60 pt-4 md:border-t-0 md:pt-0"
             >
               <p className="pharos-label text-muted-foreground/80">{FEATURED_API_REFERENCE.label}</p>
-              <h3 className="mt-1 text-sm font-semibold text-foreground transition-colors group-hover:text-frost-blue">
+              <h3 className="mt-1 text-sm font-semibold text-foreground transition-colors group-hover:text-brand-accent-text">
                 {FEATURED_API_REFERENCE.title}
               </h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{FEATURED_API_REFERENCE.description}</p>
@@ -88,7 +96,7 @@ export default function DocsIndexPage() {
                   className="pharos-focus-ring group block border-t border-border/60 pt-4 md:border-t-0 md:pt-0"
                 >
                   <p className="pharos-label text-muted-foreground/80">{featured.label}</p>
-                  <h3 className="mt-1 text-sm font-semibold text-foreground transition-colors group-hover:text-frost-blue">
+                  <h3 className="mt-1 text-sm font-semibold text-foreground transition-colors group-hover:text-brand-accent-text">
                     {doc.title}
                   </h3>
                   <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{featured.description}</p>
@@ -99,7 +107,12 @@ export default function DocsIndexPage() {
         </section>
         {DOC_GROUPS.map((group) => (
           <section key={group} className="space-y-4">
-            <h2 className="pharos-display text-2xl font-bold tracking-tight text-foreground">{GROUP_TITLES[group]}</h2>
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="pharos-display text-2xl font-bold tracking-tight text-foreground">{GROUP_TITLES[group]}</h2>
+              <Link href="/methodology/" className="pharos-prose-link text-sm text-muted-foreground hover:text-foreground">
+                Interactive Methodology manual &rarr;
+              </Link>
+            </div>
             <ul className="space-y-3">
               {byGroup[group].map((doc) => (
                 <li key={doc.slug} className="border-b border-border/50 pb-3 last:border-b-0">

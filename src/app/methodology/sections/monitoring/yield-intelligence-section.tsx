@@ -42,7 +42,7 @@ const YIELD_PIPELINE = {
       { wrapperClassName: "flex flex-col gap-2 flex-1", cards: [
           { className: "flex-1", title: "Row utility", subtitle: "Effective yield ÷ source risk" },
           { className: "flex-1", title: "Yield efficiency", subtitle: "Row utility ÷ curved safety penalty" },
-          { className: "flex-1", title: "Sustainability", subtitle: "penalises high variance" },
+          { className: "flex-1", title: "Sustainability", subtitle: "penalizes high variance" },
         ] },
       { cards: [{ className: "w-32 flex flex-shrink-0 flex-col justify-center", title: "PYS Score", subtitle: "0–100" }] },
     ],
@@ -60,7 +60,7 @@ const YIELD_PIPELINE = {
       { wrapperClassName: "grid grid-cols-3 gap-2 w-full", cards: [
           { title: "Row utility", titleClassName: "text-xs text-foreground font-medium", subtitle: "yield ÷ source risk", subtitleClassName: "text-xs text-muted-foreground" },
           { title: "Efficiency", titleClassName: "text-xs text-foreground font-medium", subtitle: "utility ÷ safety", subtitleClassName: "text-xs text-muted-foreground" },
-          { title: "Sustainability", titleClassName: "text-xs text-foreground font-medium", subtitle: "penalises variance", subtitleClassName: "text-xs text-muted-foreground" },
+          { title: "Sustainability", titleClassName: "text-xs text-foreground font-medium", subtitle: "penalizes variance", subtitleClassName: "text-xs text-muted-foreground" },
         ] },
       { cards: [{ className: "w-full", title: "PYS Score", subtitle: "0–100" }] },
     ],
@@ -344,17 +344,17 @@ export function YieldIntelligenceMethodologySection() {
                     </li>
                     <li>
                       <span className="text-foreground">Yield efficiency</span> rewards higher APY relative to the
-                      opportunity and coin risk profile &mdash; source-risk-adjusted row utility is divided by the curved
+                      opportunity and coin risk profile: source-risk-adjusted row utility is divided by the curved
                       safety penalty so weaker safety grades need much more effective yield to compete
                     </li>
                     <li>
                       <span className="text-foreground">Consistency</span> penalizes volatile trailing yields while
-                      favouring measured consistent returns. It is unavailable, and PYS is NR, until at least two trailing
+                      favoring measured consistent returns. It is unavailable, and PYS is NR, until at least two trailing
                       observations exist; a near-zero mean or non-finite variation also withholds the score. Measured zero
                       variance keeps full credit
                     </li>
                     <li>
-                      <span className="text-foreground">Scaling factor</span> is a global constant that normalises scores
+                      <span className="text-foreground">Scaling factor</span> is a global constant that normalizes scores
                       into a readable 0&ndash;100 range after the steeper safety curve is applied
                     </li>
                   </ul>

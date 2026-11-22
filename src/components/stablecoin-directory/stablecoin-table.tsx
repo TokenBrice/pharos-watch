@@ -21,7 +21,9 @@ import { buildLiveCompareUrl } from "@/lib/compare-links";
 import type { StablecoinTableSortKey, StablecoinTableSourceGenerations } from "@/components/stablecoin-directory/stablecoin-table-logic";
 import { ColumnFitToggle } from "@/components/stablecoin-directory/stablecoin-table-columns";
 import { useStablecoinTableColumns, useStablecoinTableRows } from "@/components/stablecoin-directory/stablecoin-table-model";
-import { StablecoinTableView } from "@/components/stablecoin-directory/stablecoin-table-view";
+import { StablecoinTableView, StablecoinOverviewSkeleton } from "@/components/stablecoin-directory/stablecoin-table-view";
+
+export { StablecoinOverviewSkeleton };
 
 const EMPTY_PINNED_STABLECOIN_IDS: readonly string[] = [];
 
@@ -132,6 +134,7 @@ export function StablecoinTable({
     density: columns.density,
     densityConfig: columns.densityConfig,
     scrollRef: columns.scrollRef,
+    surfaceRef: tableRef,
   });
 
   const fitControl = columns.showFitControl ? (
@@ -151,6 +154,8 @@ export function StablecoinTable({
       onVisibleColumnsChange={columns.setVisibleColumns}
       onResetColumns={columns.resetColumns}
       defaultColumns={columns.deviceDefault}
+      hiddenByFit={columns.hiddenByFit}
+      onShowAllColumns={columns.hiddenByFit.length > 0 ? () => columns.setFitToWidth(false) : undefined}
       onExport={rows.handleCsvExport}
       exportDisabled={rows.displayed.length === 0}
       additionalActions={
@@ -181,7 +186,7 @@ export function StablecoinTable({
   const watchlist = useWatchlist();
   const { activateCursorAtIndex, activeCursorIndex } = useRowCursor<StablecoinData>({
     rows: rows.displayedRows,
-    virtualizer: rows.virtualizer as unknown as Virtualizer<HTMLElement, Element>,
+    virtualizer: rows.virtualizer as unknown as Virtualizer<HTMLElement, Element> | null,
     getRowId: (coin) => coin.id,
     onOpen: (coin) => router.push(buildStablecoinUrl(coin.id)),
     onToggleStar: (coin) => watchlist.toggle(coin.id),
@@ -196,6 +201,8 @@ export function StablecoinTable({
   return (
     <StablecoinTableView
       isLoading={isLoading}
+      isVirtualized={rows.isVirtualized}
+      needsHorizontalScroll={columns.needsHorizontalScroll}
       variant={toolbarVariant}
       density={columns.density}
       tableMinWidthPx={columns.tableMinWidthPx}

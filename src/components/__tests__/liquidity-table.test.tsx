@@ -36,7 +36,7 @@ describe("LiquidityTable", () => {
     expect(link.getAttribute("href")).toBe(`/stablecoin/${rated.id}/`);
     expect(row.getAttribute("tabindex")).toBeNull();
     expect(screen.getAllByRole("row")).toContain(row);
-    expect(screen.getAllByRole("columnheader")).toHaveLength(14);
+    expect(screen.getAllByRole("columnheader")).toHaveLength(15);
     fireEvent.focus(link);
     fireEvent.mouseEnter(row);
     expect(prefetch.mock.calls).toEqual([[rated.id], [rated.id]]);
@@ -73,5 +73,21 @@ describe("LiquidityTable", () => {
 
     expect(rowFor(withBound.symbol).textContent).toContain("≥ $1.23K");
     expect(rowFor(emptyBound.symbol).textContent).not.toContain("≥");
+  });
+
+  it("renders null-safe Depth/MCap ratios without producing 0% or Infinity for unavailable supply", () => {
+    const [observed, unavailable, zeroSupply] = CLIENT_ACTIVE_STABLECOINS;
+    renderTable([
+      { meta: observed, liq: makeDexLiquidityData({ liquidityScore: 70, totalTvlUsd: 25_000_000 }), mcapUsd: 100_000_000 },
+      { meta: unavailable, liq: makeDexLiquidityData({ liquidityScore: 60, totalTvlUsd: 10_000_000 }), mcapUsd: null },
+      { meta: zeroSupply, liq: makeDexLiquidityData({ liquidityScore: 50, totalTvlUsd: 5_000_000 }), mcapUsd: 0 },
+    ]);
+
+    const headers = screen.getAllByRole("columnheader");
+    const depthColIdx = headers.findIndex((h) => h.textContent?.includes("Depth/MCap"));
+    expect(depthColIdx).toBeGreaterThan(-1);
+    expect(within(rowFor(observed.symbol)).getAllByRole("cell")[depthColIdx]?.textContent).toBe("25.0%");
+    expect(within(rowFor(unavailable.symbol)).getAllByRole("cell")[depthColIdx]?.textContent).toBe("—");
+    expect(within(rowFor(zeroSupply.symbol)).getAllByRole("cell")[depthColIdx]?.textContent).toBe("—");
   });
 });

@@ -664,7 +664,7 @@ describe("DepegResolverModule", () => {
     expect(screen.getByText("on time")).toBeTruthy();
   });
 
-  it("renders no-call and invalidated v2 rows as accountability states", () => {
+  it("renders no-call and invalidated v2 rows as accountability states with sealed insufficient signal label", () => {
     const { rerender } = render(
       <DepegResolverModule
         data={response({
@@ -674,6 +674,8 @@ describe("DepegResolverModule", () => {
     );
 
     expect(screen.getByText("No-call at lock")).toBeTruthy();
+    expect(screen.getByText("Insufficient signal (sealed)")).toBeTruthy();
+    expect(screen.queryByText("No-call locked")).toBeNull();
     expect(screen.getByText("no usable live price")).toBeTruthy();
     expect(screen.queryByText("DDR does not expect this depeg to recover.")).toBeNull();
 
@@ -687,6 +689,72 @@ describe("DepegResolverModule", () => {
 
     expect(screen.getByText("Prediction invalidated by erratum")).toBeTruthy();
     expect(screen.getByText("Erratum and original outcome")).toBeTruthy();
+  });
+
+  it("surfaces fired kill signals inline on terminal DDR cards without requiring disclosure expansion", () => {
+    const terminalWithKill = lockedUnder("4.3", makePredictionRow(
+      makeSourceRow({
+        resolution: {
+          tier: "recovery_unlikely",
+          factors: [
+            {
+              code: "K6_wind_down",
+              kind: "kill",
+              severity: "severe",
+              label: "Issuer announced orderly wind-down",
+            },
+          ],
+        },
+        duration: {
+          suppressed: true,
+          suppressedReason: "verdict_terminal",
+          stratum: null,
+          medianSec: null,
+          iqrSec: null,
+          ageStatus: null,
+          horizons: [],
+        },
+      }),
+    ));
+    const { container } = render(<DepegResolverModule data={response({ rows: [terminalWithKill] })} />);
+
+    const inlineBlock = container.querySelector("[data-ddr-terminal-signals]");
+    expect(inlineBlock).not.toBeNull();
+    expect(inlineBlock?.textContent).toContain("Fired kill signal");
+    expect(inlineBlock?.textContent).toContain("Issuer announced orderly wind-down");
+    expect(inlineBlock?.textContent).toContain("Severe");
+    expect(screen.queryByText("Will it recover?")).toBeNull();
+  });
+
+  it("normalizes mixed v5 and pre-v5 tier counts in the header and renders DDRR track record", () => {
+    const v5A = makePredictionRow(makeSourceRow({ stablecoinId: "v5-a", eventId: 11, resolution: { tier: "recovery_likely", factors: [] } }));
+    const v5B = makePredictionRow(makeSourceRow({ stablecoinId: "v5-b", eventId: 12, resolution: { tier: "recovery_likely", factors: [] } }));
+    const legacyA = lockedUnder("4.3", makePredictionRow(makeSourceRow({ stablecoinId: "leg-a", eventId: 13, resolution: { tier: "recovery_likely", factors: [] } })));
+    const legacyB = lockedUnder("4.3", makePredictionRow(makeSourceRow({ stablecoinId: "leg-b", eventId: 14, resolution: { tier: "recovery_likely", factors: [] } })));
+    const review = {
+      headlineScope: "current_policy",
+      headlineLabel: "Current public prediction policy",
+      headline: {
+        recoveryLikelihoodCorrectCount: 61,
+        recoveryLikelihoodScoredCount: 74,
+        recoveryLikelihoodAccuracyPct: 61 / 74,
+        accuracyDenominatorLabel: "scored",
+      },
+      byPredictionPolicy: [],
+    } as unknown as Parameters<typeof DepegResolverModule>[0]["review"];
+
+    const { container } = render(
+      <DepegResolverModule data={response({ rows: [v5A, v5B, legacyA, legacyB] })} review={review} />,
+    );
+
+    expect(screen.getByText("Recovery outlook · DDR")).toBeTruthy();
+    expect(screen.getByText("Forecast track record · DDRR")).toBeTruthy();
+    expect(screen.getByText("Recovery calls correct: 61/74")).toBeTruthy();
+    expect(screen.getByText("see the grading")).toBeTruthy();
+    // Normalized into a single aggregate pill (`4 no break signals`) rather than two green chips.
+    const pill = screen.getByTitle(/2 no break signals \(current\) · 2 recovery likely \(pre-v5\)/);
+    expect(pill.textContent).toBe("4no break signals");
+    expect(container.textContent).not.toContain("2no break signals");
   });
 
   it("labels an invalidated no-call from its authoritative original kind", () => {

@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { ChartSkeleton } from "@/components/chart-skeleton";
-import { ChartCrosshairOverlay } from "@/components/chart-primitives/sync";
+import { ChartCrosshairMountedContext, ChartCrosshairOverlay } from "@/components/chart-primitives/sync";
 import { ScreenReaderDataTable, type ChartDataTableColumn } from "@/components/chart-primitives/data-table";
 
 interface ChartCrosshairProps {
@@ -53,7 +53,9 @@ export function ChartFigure<T>({
     <div className={`relative ${heightClassName}`}>
       <div ref={containerRef} className="h-full" role="figure" aria-label={ariaLabel}>
         <ScreenReaderDataTable data={data} columns={columns} caption={caption} />
-        {isReady ? renderChart() : <ChartSkeleton className="h-full w-full" />}
+        <ChartCrosshairMountedContext.Provider value={Boolean(crosshair)}>
+          {isReady ? renderChart() : <ChartSkeleton className="h-full w-full" />}
+        </ChartCrosshairMountedContext.Provider>
       </div>
       {crosshair ? (
         <ChartCrosshairOverlay

@@ -16,9 +16,21 @@ export interface LiquidityStatsData {
   highConfidenceCoverage: number;
   fallbackCoverage: number;
   totalTracked: number;
-  /** Pool-TVL-weighted 7d change over coins with a 7d baseline, not the global total's own change.
-   *  Null when any observed member's prior TVL is non-invertible; never a survivor-only aggregate. */
+  /** Pool-TVL-weighted 7d change over coins with a 7d baseline, or global 7d change when published.
+   *  Null when no global 7d change exists and any observed member's prior TVL is non-invertible. */
   agg7dChange: number | null;
+  /** Basis for `agg7dChange`: published global row vs coin-weighted sum. */
+  agg7dChangeBasis?: "global" | "weighted" | null;
+  /** Exact all-member median 7d TVL change across every coin with a finite 7d baseline (including -100%). */
+  median7dChange?: number | null;
+  /** Count of observed coins with a finite 7d TVL change. */
+  change7dCoinCount?: number;
+  /** Deduped global DEX TVL divided by total circulating supply when every observed DEX coin has positive supply; null otherwise. */
+  aggDepthToMcapRatio?: number | null;
+  /** Exact per-coin median DEX TVL / circulating supply across observed DEX coins with positive supply (immune to cross-coin pool overlap). */
+  medianDepthToMcapRatio?: number | null;
+  /** Coins with valid positive circulating supply among observed DEX coins. */
+  aggDepthToMcapObservedCount?: number;
   avgBalance: number | null;
   avgOrganic: number | null;
 }

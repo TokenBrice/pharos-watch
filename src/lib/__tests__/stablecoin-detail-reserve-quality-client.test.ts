@@ -134,7 +134,7 @@ describe("projectReserveQualityClientSummary", () => {
       { name: "Deposits", pct: 11.1, risk: "low", assetClass: "bank-deposit", liquidityHorizon: "one-day" },
     ]))!;
     expect(wholeLiquid.liquidWithinOneDayPct).toBe(100);
-    expect(wholeLiquid.lede).toBe("3 reviewed reserve slices — 100% convertible within one day.");
+    expect(wholeLiquid.lede).toBe("3 reviewed reserve slices: 100% convertible within one day.");
     expect(wholeLiquid.chipLabel).toBe("Highly liquid");
 
     const wholeUnknown = projectReserveQualityClientSummary(coinWith([
@@ -143,7 +143,7 @@ describe("projectReserveQualityClientSummary", () => {
       { name: "Deposits", pct: 11.1, risk: "low", assetClass: "bank-deposit", liquidityHorizon: "unknown" },
     ]))!;
     expect(wholeUnknown.unknownHorizonPct).toBe(100);
-    expect(wholeUnknown.lede).toBe("3 reviewed reserve slices — no published exit timeline for any of the basket.");
+    expect(wholeUnknown.lede).toBe("3 reviewed reserve slices: no published exit timeline for any of the basket.");
   });
 
 
@@ -204,7 +204,7 @@ describe("projectReserveQualityClientSummary", () => {
     expect(summary!.populationId).toBe("test-coin");
     expect(summary!.chipLabel).toBe("Highly liquid");
     expect(summary!.chipToneClass).toContain("state-positive");
-    expect(summary!.lede).toBe("2 reviewed reserve slices — 100% convertible within one day.");
+    expect(summary!.lede).toBe("2 reviewed reserve slices: 100% convertible within one day.");
     expect(summary!.ladder).toEqual([
       { key: "immediate", label: "Immediate", pct: 20 },
       { key: "one-day", label: "≤ 1 day", pct: 80 },
@@ -273,7 +273,7 @@ describe("projectReserveQualityClientSummary", () => {
       ]),
     );
     expect(summary!.lede).toBe(
-      "2 reviewed reserve slices — none of the disclosed basket converts within one day; 40% has no published exit timeline.",
+      "2 reviewed reserve slices: none of the disclosed basket converts within one day; 40% has no published exit timeline.",
     );
   });
 
@@ -345,7 +345,7 @@ describe("projectReserveQualityClientSummary", () => {
     expect(summary!.topPositionName).toBeNull();
     expect(projectReserveQualityClientSummary(coinWith(USDC_LIKE_SLICES))).toMatchObject({ topPositionName: null, topPositionPct: null });
     expect(projectReserveQualityClientSummary(coinWith([{ name: "Book", pct: 100, risk: "high", assetClass: "hedged-crypto", liquidityHorizon: "seven-days" }])))
-      .toMatchObject({ topPositionName: null, topPositionPct: null, lede: expect.stringContaining("1 reviewed reserve slice —") });
+      .toMatchObject({ topPositionName: null, topPositionPct: null, lede: expect.stringContaining("1 reviewed reserve slice:") });
   });
 
 

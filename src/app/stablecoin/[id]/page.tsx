@@ -43,6 +43,13 @@ import { deriveLiquidationEngine } from "@/components/stablecoin-detail/mechanis
 import { readDetailSnapshot } from "@/lib/stablecoin-detail-snapshot-reader";
 import { projectFrozenSnapshotLiveSummary } from "@/lib/frozen-snapshot-live-summary";
 import { getStablecoinDetailDataBootstrapScript } from "@/lib/data-bootstrap-script";
+import { getCurrentRedemptionConfig } from "@/lib/redemption-review-currency";
+import type { HeroPassportItemViewModel } from "@/lib/stablecoin-detail-passport";
+import {
+  formatRedemptionRouteStatus,
+  REDEMPTION_ACCESS_LABELS,
+  REDEMPTION_ACCESS_PASSPORT_LABELS,
+} from "@shared/lib/classification";
 import type { StablecoinAiSummariesById } from "@shared/types/editorial";
 import type { FailureScenariosById } from "@shared/types/failure-scenarios";
 import { selectFailureScenario } from "@shared/lib/failure-scenarios";
@@ -51,6 +58,27 @@ const typedSummaries = aiSummaries as StablecoinAiSummariesById;
 const typedFailureScenarios = failureScenarios as FailureScenariosById;
 /** Only a permanent event page may take a preview row's link. */
 const PERMANENT_DEPEG_EVENT_SLUGS: ReadonlySet<string> = new Set(DEPEG_EVENT_ENTRIES.map((event) => event.slug));
+
+function buildInitialRedeemability(id: string): HeroPassportItemViewModel | null {
+  const config = getCurrentRedemptionConfig(id);
+  if (!config) return null;
+  const accessLabel = REDEMPTION_ACCESS_LABELS[config.accessModel];
+  const routeStatus = config.routeStatus ?? (config.routeSuspension ? "suspended" : "open");
+  const stopped = routeStatus === "suspended";
+  const statusLabel = formatRedemptionRouteStatus(routeStatus);
+  return {
+    key: "redeemability",
+    category: "Redeemability",
+    value: stopped
+      ? `${statusLabel.charAt(0).toUpperCase()}${statusLabel.slice(1)}`
+      : REDEMPTION_ACCESS_PASSPORT_LABELS[config.accessModel],
+    href: "#redemption",
+    ...(stopped ? { valueClass: "text-state-warn" } : {}),
+    ariaLabel: stopped
+      ? `Redeemability: ${accessLabel} route ${statusLabel} - jump to redemption route`
+      : `Redeemability: ${accessLabel} - jump to redemption route`,
+  };
+}
 
 function DetailPageShellFallback({
   coin,
@@ -124,7 +152,7 @@ function StablecoinResearchContext({
           <li key={link.href}>
             <IntentLink
               href={link.href}
-              className="pharos-focus-ring rounded-sm text-frost-blue underline-offset-2 hover:underline"
+              className="pharos-focus-ring rounded-sm text-brand-accent-text underline-offset-2 hover:underline"
             >
               {link.label}
             </IntentLink>
@@ -134,7 +162,7 @@ function StablecoinResearchContext({
           <li key={link.href}>
             <IntentLink
               href={link.href}
-              className="pharos-focus-ring rounded-sm text-frost-blue underline-offset-2 hover:underline"
+              className="pharos-focus-ring rounded-sm text-brand-accent-text underline-offset-2 hover:underline"
             >
               {link.shortTitle}
             </IntentLink>
@@ -195,10 +223,18 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
 
   if (coin.status === "quarantined" || coin.status === "delisted") {
     const faqItems = buildStablecoinFaqItems(coin);
+    const activePeers = coin.status === "quarantined"
+      ? getRelatedStablecoins(coin, { candidates: CLIENT_ACTIVE_STABLECOINS })
+      : [];
     return (
       <>
         <div className="space-y-6">
-          <StablecoinDetailSeoContent coin={coin} summary={summary} />
+          <StablecoinDetailSeoContent
+            coin={coin}
+            summary={summary}
+            activePeers={activePeers}
+            logos={logosById}
+          />
           <FaqSection items={faqItems} title={`${coin.symbol} quick answers`} includeJsonLd />
           <StablecoinResearchContext
             symbol={coin.symbol}
@@ -245,6 +281,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
   // whenever the live detail row is unavailable.
   const frozenSnapshot = coin.status === "frozen" ? FROZEN_SNAPSHOTS_BY_ID.get(id) : undefined;
   const archivedLiveSummary = frozenSnapshot ? projectFrozenSnapshotLiveSummary(frozenSnapshot) : null;
+  const initialRedeemability = coin.status === "frozen" ? null : buildInitialRedeemability(id);
   // Only an approved, hash-bound, unexpired, unfalsified record publishes; a
   // local dev server also previews drafts, marked as such. The static export
   // is a production build, so it never ships a draft.
@@ -308,6 +345,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
           }
           snapshot={detailSnapshot}
           archivedLiveSummary={archivedLiveSummary}
+          initialRedeemability={initialRedeemability}
         />
       </Suspense>
       {/* Outside the boundary, so the static profile and the FAQ (with its

@@ -10,14 +10,13 @@ import { Button } from "@/components/ui/button";
 import { buildStablecoinTableInputs } from "@/lib/stablecoin-table-inputs";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import {
-  BLACKLIST_STATUS_BUCKET_DESCRIPTIONS,
-  BLACKLIST_STATUS_BUCKET_LABELS,
   filterStablecoinsByBlacklistStatus,
   type BlacklistStatusBucketKey,
 } from "@shared/lib/blacklist-status-buckets";
 import type { StablecoinData } from "@shared/types/supply";
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 import type { StablecoinTableSourceGenerations } from "@/components/stablecoin-directory/stablecoin-table-logic";
+import { FREEZEWATCH_BUCKET_DESCRIPTIONS, FREEZEWATCH_BUCKET_LABELS } from "./bucket-display";
 
 interface BlacklistStatusDrilldownProps {
   status: BlacklistStatusBucketKey;
@@ -65,20 +64,22 @@ export function BlacklistStatusDrilldown({
     [stablecoins, status],
   );
 
+  const statusLabel = FREEZEWATCH_BUCKET_LABELS[status];
+
   return (
     <section
       id="blacklist-status-drilldown"
-      aria-label={`${BLACKLIST_STATUS_BUCKET_LABELS[status]} stablecoins`}
+      aria-label={`${statusLabel} stablecoins`}
       className="space-y-3 animate-in fade-in duration-300"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
           <h2 className="pharos-label">Status drilldown</h2>
           <p className="text-sm text-foreground">
-            Stablecoins with Freezable status:{" "}
-            <span className="font-medium">{BLACKLIST_STATUS_BUCKET_LABELS[status]}</span>
+            Stablecoins in tier:{" "}
+            <span className="font-medium">{statusLabel}</span>
           </p>
-          <p className="text-sm text-muted-foreground">{BLACKLIST_STATUS_BUCKET_DESCRIPTIONS[status]}</p>
+          <p className="text-sm text-muted-foreground">{FREEZEWATCH_BUCKET_DESCRIPTIONS[status]}</p>
         </div>
         <Button
           type="button"

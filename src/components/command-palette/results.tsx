@@ -16,6 +16,10 @@ import {
   Layers,
   Activity,
   PlayCircle,
+  Wallet,
+  Star,
+  StarOff,
+  Bell,
 } from "lucide-react";
 import {
   buildCommandPaletteResultDescriptors,
@@ -29,7 +33,7 @@ import {
   type CommandPaletteStablecoinLiveMetadata,
   type CommandPaletteHistoryItem,
 } from "@/components/command-palette/command-palette-model";
-import { buildCompareHrefFromCoinIds } from "@/lib/command-palette-verbs";
+import { buildCompareHrefFromCoinIds, buildPortfolioHrefFromCoinIds } from "@/lib/command-palette-verbs";
 import { copyText } from "@/lib/clipboard";
 import type { CommandPaletteVerbPreview } from "@/components/command-palette/command-palette-actions";
 
@@ -63,6 +67,7 @@ interface BuildCommandPaletteSearchResultsOptions {
   isDark: boolean;
   watchlistCount: number;
   watchlistIds: readonly string[];
+  pathname?: string | null;
   logos: Record<string, string> | undefined;
   router: ReturnType<typeof useRouter>;
   closePalette: () => void;
@@ -73,6 +78,8 @@ interface BuildCommandPaletteSearchResultsOptions {
     sublabel: string | undefined,
     href: string,
   ) => void;
+  addToWatchlist: (stablecoinId: string) => void;
+  removeFromWatchlist: (stablecoinId: string) => void;
   toggleTheme: () => void;
   setQuery: (next: string) => void;
   stablecoinLiveMetadata: ReadonlyMap<string, CommandPaletteStablecoinLiveMetadata>;
@@ -97,6 +104,14 @@ function getActionIcon(icon: CommandPaletteActionIcon): ReactNode {
       return <KeyRound className="h-4 w-4" />;
     case "compare-watchlist":
       return <GitCompare className="h-4 w-4" />;
+    case "portfolio-watchlist":
+      return <Wallet className="h-4 w-4" />;
+    case "watch":
+      return <Star className="h-4 w-4" />;
+    case "unwatch":
+      return <StarOff className="h-4 w-4" />;
+    case "alerts":
+      return <Bell className="h-4 w-4" />;
     case "verb-hint":
       return <Terminal className="h-4 w-4" />;
     case "run-command":
@@ -138,15 +153,25 @@ function buildSearchResult(
     router,
     closePalette,
     addToHistory,
+    addToWatchlist,
+    removeFromWatchlist,
     toggleTheme,
     watchlistIds,
     setQuery,
   }: Pick<
     BuildCommandPaletteSearchResultsOptions,
-    "logos" | "router" | "closePalette" | "addToHistory" | "toggleTheme" | "watchlistIds" | "setQuery"
+    | "logos"
+    | "router"
+    | "closePalette"
+    | "addToHistory"
+    | "addToWatchlist"
+    | "removeFromWatchlist"
+    | "toggleTheme"
+    | "watchlistIds"
+    | "setQuery"
   >,
 ): CommandPaletteSearchResult {
-  const selectAction = (actionId: CommandPaletteActionId) => {
+  const selectAction = (actionId: CommandPaletteActionId, contextCoinId?: string) => {
     switch (actionId) {
       case "theme":
         toggleTheme();
@@ -174,6 +199,37 @@ function buildSearchResult(
         closePalette();
         return;
       }
+      case "portfolio-watchlist": {
+        if (watchlistIds.length === 0) return;
+        router.push(buildPortfolioHrefFromCoinIds(watchlistIds));
+        closePalette();
+        return;
+      }
+      case "context-watch": {
+        if (!contextCoinId) return;
+        if (watchlistIds.includes(contextCoinId)) removeFromWatchlist(contextCoinId);
+        else addToWatchlist(contextCoinId);
+        closePalette();
+        return;
+      }
+      case "context-portfolio": {
+        if (!contextCoinId) return;
+        router.push(buildPortfolioHrefFromCoinIds([contextCoinId]));
+        closePalette();
+        return;
+      }
+      case "context-compare": {
+        if (!contextCoinId) return;
+        router.push(buildCompareHrefFromCoinIds([contextCoinId]));
+        closePalette();
+        return;
+      }
+      case "context-alerts": {
+        if (!contextCoinId) return;
+        router.push(`/pharoswatchbot/?coin=${encodeURIComponent(contextCoinId)}`);
+        closePalette();
+        return;
+      }
     }
   };
 
@@ -184,7 +240,7 @@ function buildSearchResult(
       return;
     }
     if (descriptor.actionId) {
-      selectAction(descriptor.actionId);
+      selectAction(descriptor.actionId, descriptor.contextCoinId);
       return;
     }
     if (!descriptor.href) return;
@@ -243,10 +299,13 @@ export function buildCommandPaletteSearchResults({
   isDark,
   watchlistCount,
   watchlistIds,
+  pathname,
   logos,
   router,
   closePalette,
   addToHistory,
+  addToWatchlist,
+  removeFromWatchlist,
   toggleTheme,
   setQuery,
   stablecoinLiveMetadata,
@@ -259,6 +318,8 @@ export function buildCommandPaletteSearchResults({
     router,
     closePalette,
     addToHistory,
+    addToWatchlist,
+    removeFromWatchlist,
     toggleTheme,
     watchlistIds,
     setQuery,
@@ -269,6 +330,8 @@ export function buildCommandPaletteSearchResults({
     history,
     isDark,
     watchlistCount,
+    watchlistIds,
+    pathname,
     stablecoinLiveMetadata,
   }).map((descriptor) => buildSearchResult(descriptor, ctx));
 

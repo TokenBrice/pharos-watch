@@ -67,7 +67,7 @@ describe("SupplyMovesCard", () => {
     render(<SupplyMovesCard />);
 
     const peakLink = screen.getByRole("link", {
-      name: "USDR — peak 7-day supply mover: +202%",
+      name: "USDR, peak 7-day supply mover: +202%",
     });
     expect(peakLink.getAttribute("href")).toBe("/stablecoin/usdr-real");
     expect(peakLink.textContent).toContain("USDR");
@@ -90,7 +90,7 @@ describe("SupplyMovesCard", () => {
     useStablecoinsMock.mockReturnValue({ data: { peggedAssets: [{ ...legacy, supplyChangeBaselines }] }, isLoading: false, dataUpdatedAt: Date.now() });
     render(<SupplyMovesCard />);
     if (supplyChangeBaselines === undefined) {
-      expect(screen.getByRole("link", { name: "USDC — peak 7-day supply mover: +25.0%" })).toBeTruthy();
+      expect(screen.getByRole("link", { name: "USDC, peak 7-day supply mover: +25.0%" })).toBeTruthy();
     } else {
       expect(screen.getByText("7-day supply moves unavailable")).toBeTruthy();
     }
@@ -103,7 +103,7 @@ describe("SupplyMovesCard", () => {
     else coin.circulatingNative = null;
     useStablecoinsMock.mockReturnValue({ data: { peggedAssets: [coin] }, isLoading: false, dataUpdatedAt: Date.now() });
     render(<SupplyMovesCard />);
-    expect(screen.getByRole("link", { name: "USDC — peak 7-day supply mover: +25.0%" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "USDC, peak 7-day supply mover: +25.0%" })).toBeTruthy();
   });
 
   it.each(["current", "previous week"] as const)("skips coins with unavailable %s supply", (unavailable) => {
@@ -132,7 +132,7 @@ describe("SupplyMovesCard", () => {
     render(<SupplyMovesCard />);
 
     expect(screen.queryByRole("link", { name: /USDR/ })).toBeNull();
-    expect(screen.getByRole("link", { name: "USDC — peak 7-day supply mover: +20.0%" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "USDC, peak 7-day supply mover: +20.0%" })).toBeTruthy();
   });
 
   it.each([true, undefined] as const)("excludes partial-chain coins from mover ranking (explicit partial=%s)", (partialCoverage) => {
@@ -147,7 +147,7 @@ describe("SupplyMovesCard", () => {
     render(<SupplyMovesCard />);
 
     expect(screen.queryByRole("link", { name: /USDR/ })).toBeNull();
-    expect(screen.getByRole("link", { name: "USDC — peak 7-day supply mover: +20.0%" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "USDC, peak 7-day supply mover: +20.0%" })).toBeTruthy();
   });
 
   it.each([
@@ -167,14 +167,14 @@ describe("SupplyMovesCard", () => {
 
     render(<SupplyMovesCard />);
 
-    expect(screen.getByRole("link", { name: `USDR — peak 7-day supply mover: ${change}` })).toBeTruthy();
+    expect(screen.getByRole("link", { name: `USDR, peak 7-day supply mover: ${change}` })).toBeTruthy();
   });
 
   // USDai's reviewed protocol-internal burn happened at 2026-09-23T20:48:00Z.
   it.each([
-    ["seven days after the burn", "2026-09-30T20:48:00Z", "USDC — peak 7-day supply mover: +20.0%"],
-    ["just inside the eight-day window", "2026-10-01T20:47:59Z", "USDC — peak 7-day supply mover: +20.0%"],
-    ["once the burn leaves the window", "2026-10-01T20:48:01Z", "USDAI — peak 7-day supply mover: -29.1%"],
+    ["seven days after the burn", "2026-09-30T20:48:00Z", "USDC, peak 7-day supply mover: +20.0%"],
+    ["just inside the eight-day window", "2026-10-01T20:47:59Z", "USDC, peak 7-day supply mover: +20.0%"],
+    ["once the burn leaves the window", "2026-10-01T20:48:01Z", "USDAI, peak 7-day supply mover: -29.1%"],
   ])("ranks a coin with a reviewed protocol-internal burn only outside its window: %s", (_label, now, peakName) => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date(now));
@@ -224,7 +224,7 @@ describe("SupplyMovesCard", () => {
     render(<SupplyMovesCard />);
 
     expect(screen.queryByRole("link", { name: /USDAI/ })).toBeNull();
-    expect(screen.getByRole("link", { name: "USDC — peak 7-day supply mover: +20.0%" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "USDC, peak 7-day supply mover: +20.0%" })).toBeTruthy();
   });
 
   it.each([

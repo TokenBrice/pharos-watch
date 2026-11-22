@@ -1,6 +1,6 @@
 import Link from "next/link";
+import { ChartSkeleton } from "@/components/chart-skeleton";
 import { FaqSection } from "@/components/faq-section";
-import { Skeleton } from "@/components/ui/skeleton";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import content from "./content.json";
 
@@ -43,7 +43,7 @@ const route = createClientFeaturePage({
     description: content.description,
   },
   loadClient: () => import("./client").then((m) => ({ default: m.DependencyMapClient })),
-  loading: <Skeleton className="h-[600px] w-full rounded-lg" />,
+  loading: <ChartSkeleton className="h-[520px] rounded-xl" />,
   shell: {
     breadcrumbName: content.title,
     title: content.title,

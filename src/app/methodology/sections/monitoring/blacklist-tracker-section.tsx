@@ -67,7 +67,7 @@ export function BlacklistTrackerMethodologySection() {
               <p>
                 Blacklistability uses the report-card four-status model: Yes, Upstream, Possible, and No. The sourced
                 `blacklistabilityReview.reviewedStatus` is the sole status authority; the generated client status is a
-                direct projection, while Safety Score V10 consumes the review as evidence rather than a fallback verdict.
+                direct projection, while the Safety Score consumes the review as evidence rather than a fallback verdict.
               </p>
               <p>
                 Reviews measure each deployment against the Safety Score material-supply threshold (currently 10%),

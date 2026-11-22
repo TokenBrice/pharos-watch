@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode, Ref } from "react";
-import { ChartPie, Scale, Unlink } from "lucide-react";
+import { ChartPie, Unlink } from "lucide-react";
 import { NoticeStack, placeCoinNotices } from "@/components/coin-notice";
 import { AccessPosturePanel } from "@/components/stablecoin-detail/access-posture-panel";
 import { BACKING_METRICS_ANCHOR_ID, BackingMetricsCard } from "@/components/stablecoin-detail/backing-metrics-card";
@@ -62,7 +62,7 @@ interface DetailRiskContextSectionsProps {
   parentLiquidationEngine: boolean | null;
   sharedModules: DetailSharedModules;
   transferReview: TransferReviewView | null;
-  overviewGateRef: Ref<HTMLDivElement>;
+  overviewGateRef: Ref<HTMLElement>;
   variantRelationshipCard: ReactNode;
   viewModel: ReadyDetailViewModel;
 }
@@ -485,35 +485,18 @@ export function DetailRiskContextSections({
 
   return (
     <>
-      {/* Risk zone = the Safety Score's spine: the Mechanism primer, the
-          score beside Reserves, the live stress layer, then each pillar's
-          evidence board in pillar order. It opens on its own centred divider,
-          like every other zone; the divider's heading owns `#overview`. */}
-      <div ref={overviewGateRef} className="space-y-6">
-        <SectionBanner id="overview" label="Risk" icon={Scale} active={activeBannerId === "overview"} />
-        {/* `#info` is the passport strip's fallback target for facts that live
-            in the strip itself (launch date, jurisdiction without a regulatory
-            review), so the section keeps the id even when the coin has no peg
-            mechanism to render. Mechanism stays ahead of the score: it is the
-            "how this coin holds its peg" primer the pillars assume. */}
-        <section id="info" className="scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6">
-          {viewModel.coin.pegMechanism ? (
-            <PegStabilityCard
-              meta={viewModel.coin}
-              resolvedMechanismArchetype={resolvedMechanismArchetype}
-              isWrapper={isWrapperVariant}
-              parentSymbol={isWrapperVariant ? viewModel.variantParent?.symbol : null}
-              parentArchetype={parentArchetype}
-              parentNavToken={isWrapperVariant ? (viewModel.variantParent?.flags?.navToken ?? null) : null}
-              parentLiquidationEngine={isWrapperVariant ? parentLiquidationEngine : null}
-              parentBacking={isWrapperVariant ? (viewModel.variantParent?.flags?.backing ?? null) : null}
-              variantKind={viewModel.coin.variantKind ?? null}
-              hasReviewedReserves={hasReviewedSlices}
-              mechanismBacking={mechanismBacking}
-              mechanismReview={sharedModules.mechanismReview}
-            />
-          ) : null}
-        </section>
+      {/* Risk zone = the Safety Score's spine: the score beside Reserves, the
+          live stress layer, then the Mechanism primer and each pillar's
+          evidence board in pillar order. The active Risk tab already opens the
+          zone above, so the section owns `#overview` directly with a
+          screen-reader heading instead of repeating a visible Risk banner. */}
+      <section
+        ref={overviewGateRef}
+        id="overview"
+        aria-labelledby="overview-heading"
+        className={cn("space-y-6", SECTION_SCROLL_MT)}
+      >
+        <h2 id="overview-heading" className="sr-only">Risk</h2>
         {/* Score left, Reserves right at lg+ when both exist and Reserves has
             a short reviewed composition; otherwise each takes the full
             width, stacked. Paired cards share one height so the row reads
@@ -554,14 +537,37 @@ export function DetailRiskContextSections({
             <StablecoinDepegResolverCard stablecoinId={viewModel.id} logoSrc={viewModel.logoSrc} />
           </div>
         ) : null}
-        {/* The live stress layer sits beside the structural score, before the
-            pillar evidence (decision S4). A frozen archive or a NAV token has
-            no peg stress layer, so nothing mounts. */}
+        {/* The live stress layer follows quantitative risk before the Mechanism
+            primer and pillar evidence. A frozen archive or a NAV token has no
+            peg stress layer, so nothing mounts. */}
         {sharedModules.showDews ? (
           <LazySection minHeight={320}>
             <DEWSDetail stablecoinId={viewModel.id} />
           </LazySection>
         ) : null}
+        {/* `#info` is the passport strip's fallback target for facts that live
+            in the strip itself (launch date, jurisdiction without a regulatory
+            review), so the section keeps the id even when the coin has no peg
+            mechanism to render. Mechanism sits below quantitative risk so
+            return readers hit Safety Score, Reserves, and DEWS first. */}
+        <section id="info" className="scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6">
+          {viewModel.coin.pegMechanism ? (
+            <PegStabilityCard
+              meta={viewModel.coin}
+              resolvedMechanismArchetype={resolvedMechanismArchetype}
+              isWrapper={isWrapperVariant}
+              parentSymbol={isWrapperVariant ? viewModel.variantParent?.symbol : null}
+              parentArchetype={parentArchetype}
+              parentNavToken={isWrapperVariant ? (viewModel.variantParent?.flags?.navToken ?? null) : null}
+              parentLiquidationEngine={isWrapperVariant ? parentLiquidationEngine : null}
+              parentBacking={isWrapperVariant ? (viewModel.variantParent?.flags?.backing ?? null) : null}
+              variantKind={viewModel.coin.variantKind ?? null}
+              hasReviewedReserves={hasReviewedSlices}
+              mechanismBacking={mechanismBacking}
+              mechanismReview={sharedModules.mechanismReview}
+            />
+          ) : null}
+        </section>
 
         <BackingBoard shared={sharedModules} visibility={evidenceAnchors.backing} />
         <ExitBoard
@@ -588,7 +594,7 @@ export function DetailRiskContextSections({
             </LazySection>
           </>
         ) : null}
-      </div>
+      </section>
 
       {/* How it breaks: a curated hypothetical failure path, rendered only for
           a publishable record. It follows the Risk zone's evidence (the

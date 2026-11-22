@@ -2,7 +2,7 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, afterAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { InstrumentPanel } from "./instrument-panel";
+import { InstrumentPanel, TelegramSocialProofChip } from "./instrument-panel";
 import { useTelegramPulse } from "@/hooks/api-hooks";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
@@ -314,5 +314,24 @@ describe("InstrumentPanel", () => {
     expect(unavailable.getAttribute("aria-live")).toBe("polite");
     expect(unavailable.getAttribute("aria-busy")).toBe("false");
     expect(screen.getByText(/temporarily unavailable/i)).toBeTruthy();
+  });
+
+  it("suppresses zero daily lifecycle deltas and renders the inline social-proof chip", () => {
+    mockPulse({
+      ...pulse,
+      newWatchersToday: 0,
+      reactivatedWatchersToday: 0,
+      churnedWatchersToday: 4,
+    });
+    const { unmount } = render(<InstrumentPanel />);
+    expect(screen.queryByText("New today")).toBeNull();
+    expect(screen.queryByText("Reactivated today")).toBeNull();
+    expect(screen.getByText("Churned today")).toBeTruthy();
+    unmount();
+
+    render(<TelegramSocialProofChip />);
+    const chip = screen.getByRole("link", { name: /1,842 active watchers/ });
+    expect(chip.getAttribute("href")).toBe("#panel");
+    expect(chip.textContent).toContain("5,621 follows");
   });
 });

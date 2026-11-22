@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { DependencyHubsBoard, LiveIncidentsUpstream } from "./dependency-hubs-board";
 import { buildDependencyHubsModel } from "@shared/lib/dependency-hubs-model";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
@@ -69,6 +69,27 @@ describe("DependencyHubsBoard", () => {
     // Deadlines, like pre-launch, are scheduled, not incidents.
     const deadline = { kind: "deadline" as const, notice: { type: "warning" as const, title: "M", deadline: "2026-12-01" }, daysToDeadline: 13 };
     expect(render(<LiveIncidentsUpstream model={model} coinStates={new Map([["coin-1", [deadline]]])} />).container.textContent).toBe("");
+  });
+  it("caps LiveIncidentsUpstream to top 3 rows with a Show all toggle and styled Trace exposure pills", () => {
+    const onExposure = vi.fn();
+    const states = new Map(
+      cards.slice(0, 5).map((card) => [
+        card.id,
+        [{ kind: "dews" as const, band: "ALERT" as const }],
+      ]),
+    );
+    const { container } = render(<LiveIncidentsUpstream model={model} coinStates={states} onExposure={onExposure} />);
+    expect(container.textContent).toContain("5 published upstreams are in an exceptional state now");
+    expect(within(container).getAllByRole("listitem")).toHaveLength(3);
+    const traceBtn = within(container).getByRole("button", { name: "Trace exposure from Coin 0" });
+    expect(traceBtn.textContent).toContain("Trace exposure →");
+    fireEvent.click(traceBtn);
+    expect(onExposure).toHaveBeenCalledWith("coin-0");
+    const toggle = within(container).getByRole("button", { name: /Show all 5/ });
+    fireEvent.click(toggle);
+    expect(within(container).getAllByRole("listitem")).toHaveLength(5);
+    fireEvent.click(within(container).getByRole("button", { name: /Show top 3/ }));
+    expect(within(container).getAllByRole("listitem")).toHaveLength(3);
   });
   it("does not publish a board for a graph with no dependents", () => {
     const model = buildDependencyHubsModel({ cards, edges: [], mcapMap: new Map() });

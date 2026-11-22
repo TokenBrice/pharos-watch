@@ -307,7 +307,7 @@ describe("StablecoinDetailClient", () => {
     const overview = container.querySelector("#overview")!;
     const banner = container.querySelector("#how-it-breaks")!;
     expect(overview.compareDocumentPosition(banner) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getAllByText("Draft — not approved").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Draft · not approved").length).toBeGreaterThan(0);
     const branchStages = scenario.branchPoint?.branches.flatMap((branch) => branch.stages) ?? [];
     expect(container.querySelectorAll("#failure-scenario details[data-scenario-step]")).toHaveLength(
       scenario.stages.length + branchStages.length,
@@ -317,17 +317,17 @@ describe("StablecoinDetailClient", () => {
 
 
   it.each([
-    { name: "activity near", near: [false, true, false], redemption: false, flows: true, blacklist: true, reserves: false },
-    { name: "overview near", near: [true, false, false], redemption: true, flows: true, blacklist: false, reserves: true },
-    { name: "all lanes offscreen", near: [false, false, false], redemption: false, flows: false, blacklist: false, reserves: false },
-  ])("keeps hero queries eager with $name", ({ near, redemption, flows, blacklist, reserves }) => {
+    { name: "activity near", near: [false, true, false], flows: true, blacklist: true },
+    { name: "overview near", near: [true, false, false], flows: true, blacklist: false },
+    { name: "all lanes offscreen", near: [false, false, false], flows: false, blacklist: false },
+  ])("keeps hero and first-fold rail queries eager with $name", ({ near, flows, blacklist }) => {
     nearViewportValues.push(...near);
     renderDetail();
     expect(useStablecoinDetailViewModelMock).toHaveBeenCalledWith(expect.objectContaining({
       supplementalQueryControls: {
         ...DISABLED_DETAIL_QUERY_CONTROLS,
-        liquidity: true, reportCards: true, yield: true, stress: true,
-        redemption, flows, blacklist, reserves,
+        liquidity: true, reportCards: true, redemption: true, yield: true, stress: true, reserves: true,
+        flows, blacklist,
       },
     }));
   });
@@ -675,14 +675,16 @@ describe("StablecoinDetailClient", () => {
     expect(container.querySelector('[data-evidence-state="not-applicable"]')).toBeNull();
   });
 
-  it("opens the Risk zone on its own centred divider, which owns #overview", () => {
+  it("opens the Risk zone on #overview with Safety Score ahead of Mechanism and no duplicate Risk banner", () => {
     const { container } = renderDetail();
 
-    const heading = container.querySelector("#overview")!;
-    expect(heading.tagName).toBe("H2");
-    expect(heading.textContent).toContain("Risk");
+    const overview = container.querySelector("#overview")!;
+    expect(overview.tagName).toBe("SECTION");
+    expect(overview.querySelector("#overview-heading")?.textContent).toBe("Risk");
+    const reportCard = container.querySelector("#report-card")!;
     const mechanism = container.querySelector("#info")!;
-    expect(heading.compareDocumentPosition(mechanism) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(overview.contains(reportCard)).toBe(true);
+    expect(reportCard.compareDocumentPosition(mechanism) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
 
@@ -923,7 +925,7 @@ describe("StablecoinDetailClient (frozen S14)", () => {
 });
 
 describe("StablecoinDetailClient lead slot", () => {
-  it("orders lead-slot notices around the hero", () => {
+  it("orders lead-slot notices around the hero and routes secondary refresh failures to the header ops chip", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
       coin: { ...coin, notices: [
@@ -936,9 +938,55 @@ describe("StablecoinDetailClient lead slot", () => {
     renderDetail(coin);
     const stacks = screen.getAllByTestId("notice-stack");
     expect(stacks.map((stack) => stack.textContent)).toEqual(["Danger", "Paused", "Deadline"]);
-    // Danger and paused lead the hero; the rest, then the lane's warning, follow it.
-    const order = [stacks[1]!, screen.getByTestId("hero-card"), stacks[2]!, document.querySelector("[data-health-state]")!];
+    // Danger and paused lead the hero; Deadline follows it without an adjacent secondary banner.
+    const order = [stacks[1]!, screen.getByTestId("hero-card"), stacks[2]!];
     expect(order.slice(1).every((next, i) => order[i]!.compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+    // Secondary refresh failure renders in the header OpsStatusChip, never colliding with body notices.
+    const headerToolbar = screen.getByTestId("hero-identity-toolbar");
+    const secondaryChip = headerToolbar.querySelector("[data-secondary-ops-chip][data-health-state='error']");
+    expect(secondaryChip).not.toBeNull();
+    expect(secondaryChip?.textContent).toContain("Partial refresh");
+  });
+
+  it("hoists sticky section tabs above AiSummary and prioritizes Contracts and Key links at the top of the rail", () => {
+    const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
+      coin,
+      hero: {
+        signalRailItems: [
+          {
+            key: "grade",
+            label: "Safety Score",
+            primary: "B+",
+            secondary: "79/100",
+            href: "#report-card",
+            colorClass: "text-foreground",
+          },
+        ],
+      },
+      summary: {
+        title: "USDC summary",
+        text: "Fiat-backed US dollar stablecoin issued by Circle.",
+        updatedAt: "2026-11-20",
+      },
+    }));
+    const { container } = renderDetail(coin);
+    const nav = screen.getByTestId("scrollspy");
+    const summaryCard = screen.getByTestId("ai-summary");
+    expect(nav.compareDocumentPosition(summaryCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    const rail = container.querySelector('aside[aria-label="Coin summary rail"]')!;
+    const safety = Array.from(rail.querySelectorAll("h2")).find((heading) => heading.textContent === "Safety Score") ?? null;
+    const contracts = rail.querySelector('[data-anchor-twin="contracts"]')!;
+    const keyLinks = rail.querySelector('[aria-label="Key links"]')!;
+    const price = rail.querySelector('[data-testid="price-transparency-card"]')!;
+    expect(safety).not.toBeNull();
+    expect(safety!.compareDocumentPosition(contracts) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(contracts.compareDocumentPosition(keyLinks) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(keyLinks.compareDocumentPosition(price) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    // Bottom-of-dossier Report issue button keeps exact accessible name reachable.
+    expect(screen.getByRole("button", { name: "Report issue" })).toBeTruthy();
   });
 });
 

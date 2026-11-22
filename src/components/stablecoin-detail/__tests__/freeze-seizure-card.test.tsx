@@ -117,7 +117,7 @@ describe("FreezeSeizureModule", () => {
 
   it("names the possible classification Restrictable in the badge, rail and spoken rail, matching its verdict", () => {
     const summary = { ...SUMMARY, status: "possible" as const, statusLabel: "Possible" };
-    renderModule({ summary });
+    renderModule({ summary, transferReview: TRANSFER_REVIEW });
     const drawn = rail();
     expect(drawn.textContent).toContain("Restrictable");
     expect(drawn.getAttribute("aria-label")).toContain("restrictable, no holder-targeted freeze");
@@ -127,6 +127,12 @@ describe("FreezeSeizureModule", () => {
     const root = document.getElementById("freeze-seizure")!;
     expect(root.querySelector("[data-slot='badge']")?.textContent).toBe("Restrictable");
     expect(root.textContent).toMatch(/No power to freeze one holder was found, but an admin control/);
+  });
+
+  it("omits the Power and scope visual fold when only a single station would repeat the header badge", () => {
+    renderModule();
+    expect(screen.queryByText("Power and scope")).toBeNull();
+    expect(screen.queryByRole("img")).toBeNull();
   });
 
   it.each([
@@ -150,8 +156,10 @@ describe("FreezeSeizureModule", () => {
 
   it("keeps an unnamed inherited power to one station rather than inventing an upstream", () => {
     renderModule({ summary: { ...SUMMARY, status: "inherited", statusLabel: "Upstream", upstreamLabel: null } });
-    expect(rail().textContent).toContain("Upstream");
-    expect(rail().textContent).not.toMatch(/via /i);
+    const root = document.getElementById("freeze-seizure")!;
+    expect(root.querySelector("[data-slot='badge']")?.textContent).toBe("Upstream freeze risk");
+    expect(screen.queryByRole("img")).toBeNull();
+    expect(root.textContent).not.toMatch(/via /i);
   });
 
   it("groups the transfer review by scope and posture and lists every deployment in a fold", () => {
@@ -169,22 +177,22 @@ describe("FreezeSeizureModule", () => {
 
   it("omits the used station for a coin the freeze tracker does not watch, without fetching", () => {
     usageResult(statsFor("DAI", { events: 4, addresses: 2, frozen: 500, destroyed: 0 }));
-    renderModule({ symbol: "DAI" });
+    renderModule({ symbol: "DAI", transferReview: TRANSFER_REVIEW });
     expect(rail().textContent).not.toMatch(/used/i);
     expect(vi.mocked(useBlacklistSummary).mock.calls.every(([options]) => options?.enabled === false)).toBe(true);
   });
 
   it("never prints a zero while a watched coin's usage is loading or unavailable", () => {
     usageResult({ isLoading: true });
-    const { unmount } = renderModule();
+    const { unmount } = renderModule({ transferReview: TRANSFER_REVIEW });
     expect(rail().textContent).not.toMatch(/used/i);
-    expect(rail().textContent).not.toMatch(/\d/);
+    expect(rail().textContent).not.toMatch(/\b0\b/);
     unmount();
 
     usageResult({ error: new Error("offline") });
-    renderModule();
+    renderModule({ transferReview: TRANSFER_REVIEW });
     expect(rail().textContent).not.toMatch(/used/i);
-    expect(rail().textContent).not.toMatch(/\d/);
+    expect(rail().textContent).not.toMatch(/\b0\b/);
   });
 
   it("draws observed usage for a watched coin and drops zero-valued figures", () => {
@@ -233,8 +241,8 @@ describe("FreezeSeizureModule", () => {
     expect(link?.closest("details")).toBe(fold);
     // Two notes plus one source.
     expect(fold?.querySelector("summary")?.textContent).toContain("(3)");
-    // The power/scope rail fold plus the merged provenance fold.
-    expect(document.querySelectorAll("details")).toHaveLength(2);
+    // Single-station omits the redundant Power and scope fold, leaving only the merged provenance fold.
+    expect(document.querySelectorAll("details")).toHaveLength(1);
   });
 
   it("keeps the merged provenance fold for a source-free review and states the missing source inside it", () => {
@@ -249,8 +257,8 @@ describe("FreezeSeizureModule", () => {
     expect(summaryLine).toContain("(2)");
     expect(screen.getByText("No public source.").closest("details")).toBe(fold);
     expect(screen.getByText(/Resolved by the resolver\./).closest("details")).toBe(fold);
-    // The power/scope rail fold plus the merged provenance fold.
-    expect(document.querySelectorAll("details")).toHaveLength(2);
+    // Single-station omits the redundant Power and scope fold, leaving only the merged provenance fold.
+    expect(document.querySelectorAll("details")).toHaveLength(1);
   });
 });
 

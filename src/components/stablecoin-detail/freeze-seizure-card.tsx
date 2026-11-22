@@ -282,8 +282,8 @@ function StationConnector() {
   return (
     <>
       <span aria-hidden="true" className="ml-23 flex h-3 w-3 flex-col items-center @[35rem]/freeze:hidden">
-        <span className="h-full w-px bg-border" />
-        <span className="border-x-[3px] border-t-4 border-x-transparent border-t-border" />
+        <span className="h-full w-px bg-muted-foreground/55" />
+        <span className="border-x-[3px] border-t-4 border-x-transparent border-t-muted-foreground/55" />
       </span>
       <div className="hidden @[35rem]/freeze:flex @[35rem]/freeze:min-w-8 @[35rem]/freeze:flex-1">
         <RailArrow />
@@ -381,6 +381,9 @@ export function FreezeSeizureModule({
     ...(transferReview && transferReview.deployments.length > 0 ? [buildScopeStation(transferReview)] : []),
     ...(usedStation ? [usedStation] : []),
   ];
+  // A lone Power station merely repeats the header badge; show the rail fold
+  // only when upstream provenance, deployment scope, or usage adds a second station.
+  const showVisual = stations.length > 1;
 
   // The merged provenance fold always carries the source question: with no
   // cited source it says so first-hand, with the review's rationale when one
@@ -427,8 +430,8 @@ export function FreezeSeizureModule({
           ) : null}
         </>
       }
-      visual={<FreezePowerRail stations={stations} />}
-      visualFold="Power and scope"
+      visual={showVisual ? <FreezePowerRail stations={stations} /> : undefined}
+      visualFold={showVisual ? "Power and scope" : undefined}
       // The usage-stats gate rides on the always-visible verdict: the visual
       // sits in a closed fold, where it has no box to intersect.
       verdict={

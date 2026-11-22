@@ -109,13 +109,15 @@ describe("coin-agnostic failure scenarios", () => {
     expect(within(stamp).getByText("26,138,725").classList.contains("pharos-numeric")).toBe(true);
     expect(within(container.querySelector("#failure-scenario-sources")! as HTMLElement).getByText("Approved by Fixture Maintainer.")).toBeDefined();
     expect(container.textContent).not.toMatch(/re-review|expir/i);
-    expect(screen.queryByText("Draft — not approved")).toBeNull();
+    expect(screen.getByText("Hypothetical · unscored")).toBeDefined();
+    expect(screen.queryByText("Draft · not approved")).toBeNull();
     expect(screen.queryByRole("note", { name: "Draft scenario" })).toBeNull();
   });
 
   it("retains the draft chip and development notice without a reviewed date", () => {
     render(<FailureScenarioModule selection={{ scenario: LINEAR, isDraft: true }} />);
-    expect(screen.getByText("Draft — not approved")).toBeDefined();
+    expect(screen.getByText("Hypothetical · unscored")).toBeDefined();
+    expect(screen.getByText("Draft · not approved")).toBeDefined();
     expect(screen.getByRole("note", { name: "Draft scenario" }).textContent)
       .toContain("Draft, not approved: development preview only.");
     expect(screen.queryByText(/^Reviewed/)).toBeNull();

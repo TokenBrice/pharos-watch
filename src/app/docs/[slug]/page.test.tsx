@@ -64,4 +64,40 @@ describe("DocPage", () => {
       expect(`${title} | Pharos`.length).toBeLessThanOrEqual(62);
     }
   });
+
+  it("renders the Updated date, Plain Markdown link, /methodology/ bridge, and 100% matching H2 TOC anchors across all public docs", async () => {
+    for (const doc of PUBLIC_DOCS) {
+      const html = renderToStaticMarkup(await DocPage({ params: Promise.resolve({ slug: doc.slug }) }));
+      if (doc.slug === "depeg-detection") {
+        expect(html).toMatch(/Updated <time[^>]*>\d{4}-\d{2}-\d{2}<\/time>/);
+        expect(html).toContain('href="/docs/depeg-detection/index.md"');
+        expect(html).toContain("Plain Markdown");
+        expect(html).toContain('href="/methodology/"');
+      }
+
+      const articleMatch = /<article[^>]*>([\s\S]*?)<\/article>/.exec(html);
+      expect(articleMatch, `${doc.slug} missing <article>`).not.toBeNull();
+      const renderedH2s = Array.from(
+        articleMatch![1]!.matchAll(/<h2\b[^>]*\bid="([^"]+)"[^>]*>([\s\S]*?)<\/h2>/g),
+        ([, id, inner]) => ({ id: id!, text: inner!.replace(/<[^>]+>/g, "").trim() }),
+      );
+
+      if (doc.slug === "mint-burn-flows" || doc.slug === "yield-intelligence") {
+        for (const h2 of renderedH2s) {
+          expect(h2.text, `${doc.slug} rendered prose paragraph as Setext h2`).not.toMatch(
+            /syncMintBurn\(\) returns|Parsed rows are not inserted|Version deltas live|Benchmark descriptors in/,
+          );
+        }
+      }
+
+      const navMatch = /<nav aria-label="On this page"[^>]*>([\s\S]*?)<\/nav>/.exec(html);
+      if (renderedH2s.length >= 2) {
+        expect(navMatch, `${doc.slug} missing TOC nav`).not.toBeNull();
+        const tocIds = Array.from(navMatch![1]!.matchAll(/href="#([^"]+)"/g), ([, id]) => id!);
+        expect(tocIds, `${doc.slug} TOC ids diverged from rehype-slug h2 ids`).toEqual(
+          renderedH2s.map((h2) => h2.id),
+        );
+      }
+    }
+  });
 });

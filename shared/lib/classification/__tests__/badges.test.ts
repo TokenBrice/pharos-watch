@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "../../../types/stablecoin-meta-schemas";
-import { POR_BADGE_STYLES, POR_NEUTRAL_REPORT_LABEL, getProofOfReservesStyle } from "../badges";
+import {
+  POR_BADGE_STYLES,
+  POR_NEUTRAL_REPORT_LABEL,
+  YIELD_ZONE_DESCRIPTIONS,
+  YIELD_ZONE_LABELS,
+  getProofOfReservesStyle,
+} from "../badges";
 
 type ProofOfReserves = NonNullable<StablecoinMeta["proofOfReserves"]>;
 type AssuranceMethod = NonNullable<ProofOfReserves["latestReport"]>["assuranceMethod"];
@@ -78,5 +84,14 @@ describe("getProofOfReservesStyle", () => {
     expect(POR_NEUTRAL_REPORT_LABEL).toBe("Independent Report");
     expect(POR_BADGE_STYLES["independent-audit"].label).toBe(POR_NEUTRAL_REPORT_LABEL);
     expect(POR_BADGE_STYLES["independent-audit"].cls).not.toContain("bg-blue-500");
+  });
+});
+
+describe("yield zone labels and descriptions", () => {
+  it("uses claim-safe copy without bare safe wording", () => {
+    expect(YIELD_ZONE_LABELS["play-it-safe"]).toBe("High grade, modest APY");
+    for (const copy of [...Object.values(YIELD_ZONE_LABELS), ...Object.values(YIELD_ZONE_DESCRIPTIONS)]) {
+      expect(copy).not.toMatch(/\bsafe\b/i);
+    }
   });
 });

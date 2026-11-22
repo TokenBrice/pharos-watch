@@ -11,9 +11,11 @@ interface HoverTarget {
 interface HoverContextValue {
   hoveredCoinId: string | null;
   hoveredPeg: PegCurrency | null;
+  selectedPeg: PegCurrency | null;
   setHoveredCoin: (target: HoverTarget | null) => void;
   isHovered: (coinId: string) => boolean;
   isSibling: (target: HoverTarget) => boolean;
+  isSelectedPeg: (peg: PegCurrency) => boolean;
   isDimmed: (target: HoverTarget) => boolean;
 }
 
@@ -23,13 +25,21 @@ const HoverDispatchContext = createContext<HoverContextValue["setHoveredCoin"] |
 const FALLBACK: HoverContextValue = {
   hoveredCoinId: null,
   hoveredPeg: null,
+  selectedPeg: null,
   setHoveredCoin: () => {},
   isHovered: () => false,
   isSibling: () => false,
+  isSelectedPeg: () => false,
   isDimmed: () => false,
 };
 
-export function HoverProvider({ children }: { children: ReactNode }) {
+export function HoverProvider({
+  children,
+  selectedPeg = null,
+}: {
+  children: ReactNode;
+  selectedPeg?: PegCurrency | null;
+}) {
   const [hovered, setHovered] = useState<HoverTarget | null>(null);
 
   const setHoveredCoin = useCallback((target: HoverTarget | null) => {
@@ -44,16 +54,19 @@ export function HoverProvider({ children }: { children: ReactNode }) {
   const value = useMemo<HoverContextValue>(() => {
     const hoveredCoinId = hovered?.id ?? null;
     const hoveredPeg = hovered?.pegCurrency ?? null;
+    const activeSpotlightPeg = hoveredPeg ?? selectedPeg;
     return {
       hoveredCoinId,
       hoveredPeg,
+      selectedPeg,
       setHoveredCoin,
       isHovered: (id) => hoveredCoinId === id,
       isSibling: (t) =>
         hoveredPeg !== null && t.pegCurrency === hoveredPeg && t.id !== hoveredCoinId,
-      isDimmed: (t) => hoveredPeg !== null && t.pegCurrency !== hoveredPeg,
+      isSelectedPeg: (peg) => selectedPeg !== null && peg === selectedPeg,
+      isDimmed: (t) => activeSpotlightPeg !== null && t.pegCurrency !== activeSpotlightPeg,
     };
-  }, [hovered, setHoveredCoin]);
+  }, [hovered, selectedPeg, setHoveredCoin]);
 
   return (
     <HoverDispatchContext.Provider value={setHoveredCoin}>

@@ -3,11 +3,10 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { AlertTriangle, ArrowLeft, ArrowLeftRight } from "lucide-react";
+import { AlertTriangle, ArrowLeftRight } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LazySection } from "@/components/lazy-section";
-import { Button } from "@/components/ui/button";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DataHealthBanner } from "@/components/data-health-banner";
 import { NoticeStack, placeCoinNotices } from "@/components/coin-notice";
@@ -15,8 +14,10 @@ import { useUtcDayNowMs } from "@/hooks/use-utc-day-clock";
 import { isSpentDeadline } from "@shared/lib/coin-state";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { SafetyGradeBadge } from "@/components/safety-scores/safety-grade-badge";
 import { PysBreakdown } from "@/components/yield/pys-breakdown";
 import { YieldSourceRiskCard } from "@/components/yield/yield-source-risk-card";
+import { YieldWatchlistStar } from "@/components/yield/yield-watchlist-star";
 import { useYieldHistory, useYieldRankings } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useFreshnessBoundary } from "@/hooks/use-freshness-boundary";
@@ -261,6 +262,16 @@ function StablecoinYieldDetailHeader({
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="pharos-page-title text-2xl sm:text-3xl">{staticCoin.name}</h1>
                 <span className="font-mono tabular-nums text-base text-muted-foreground">{staticCoin.symbol}</span>
+                {ranking?.safetyGrade ? (
+                  <SafetyGradeBadge
+                    grade={ranking.safetyGrade}
+                    score={ranking.safetyScore}
+                    size="sm"
+                    versionTopic="safetyScore"
+                    versionVariant="tooltip-only"
+                  />
+                ) : null}
+                <YieldWatchlistStar stablecoinId={staticCoin.id} symbol={staticCoin.symbol} />
               </div>
               <p className="text-sm text-muted-foreground">
                 {GOVERNANCE_LABELS[staticCoin.flags.governance] ?? staticCoin.flags.governance} ·{" "}
@@ -325,12 +336,20 @@ function YieldAnalysisFrame({
   const alerts = [...placed.critical, ...placed.paused, ...placed.rest.filter((notice) => notice.kind === "deadline" && (nowSec === null || !isSpentDeadline(notice, nowSec)))];
   return (
     <div className="space-y-6">
-      <Button variant="ghost" asChild className="w-fit">
-        <Link href={buildStablecoinUrl(id)}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to {staticCoin.symbol} detail
+      <nav aria-label={`${staticCoin.symbol} workspace navigation`} className="pharos-segmented w-fit">
+        <Link
+          href={buildStablecoinUrl(id)}
+          className="pharos-focus-ring pharos-segmented-item min-h-11 px-3.5 text-sm md:min-h-8"
+        >
+          Dossier
         </Link>
-      </Button>
+        <span
+          aria-current="page"
+          className="pharos-segmented-item min-h-11 px-3.5 text-sm md:min-h-8"
+        >
+          Yield workbench
+        </span>
+      </nav>
       <NoticeStack notices={alerts} archive={TRACKED_META_BY_ID.get(id)?.status === "frozen"} />
       <StablecoinYieldDetailHeader staticCoin={staticCoin} logoSrc={logoSrc} model={model} />
       {children}
@@ -554,7 +573,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc, notices }
   } else if (detailModel.status === "pre-launch") {
     stateBody = (
       <EmptyStateCard
-        title="Pre-launch — no yield data yet"
+        title="Pre-launch: no yield data yet"
         message={`${staticCoin.name} is in pre-launch tracking. Yield history will appear here once the stablecoin is live and the cron has observed source data.`}
       />
     );
@@ -567,7 +586,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc, notices }
     );
   } else if (!readyModel || !ranking) {
     const reason = detailModel.status === "frozen"
-      ? "This stablecoin is frozen — historical yield data is no longer being refreshed."
+      ? "This stablecoin is frozen; historical yield data is no longer being refreshed."
       : detailModel.status === "unavailable" && detailModel.shouldHaveYieldData
         ? "Yield tracking is expected for this stablecoin, but the latest ranking snapshot is not available yet."
         : "This stablecoin doesn't currently have yield data tracked. The protocol may not expose a yield-bearing pool, or the source is not on the curated allowlist.";
@@ -640,12 +659,13 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc, notices }
         </CardContent>
       </Card>
 
+      {historyBanner}
+
       <Card id="warning-signals" className="pharos-card-shell scroll-mt-24">
         <CardHeader className="pb-2">
           <DetailSectionTitle>Warning signals timeline</DetailSectionTitle>
         </CardHeader>
         <CardContent>
-          {historyBanner ? <div className="mb-3">{historyBanner}</div> : null}
           {historyQuery.isLoading && !hasHistoryData ? (
             <Skeleton className="h-[160px] w-full rounded-xl" />
           ) : historyQuery.error && !hasHistoryData ? (
@@ -723,7 +743,6 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc, notices }
           <DetailSectionTitle>Source-switch history</DetailSectionTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {historyBanner}
           {historyQuery.isLoading && !hasHistoryData ? (
             <Skeleton className="h-[120px] w-full rounded-xl" />
           ) : historyQuery.error && !hasHistoryData ? (

@@ -218,10 +218,12 @@
   --radius: 0.5rem;
   --mobile-bottom-nav-height: 4rem;
   --mobile-bottom-nav-safe-height: calc(var(--mobile-bottom-nav-height) + env(safe-area-inset-bottom));
-  /* Bottom edge of the sticky site header, where sticky table headers pin:
-     the 3px regime line plus the 57px mobile Header (768–1023px) or the 56px
-     desktop TopNav (lg+, below). The phone breakpoint redefines it. */
-  --table-header-top: 60px;
+  /* Regime bar seam above interior headers (0px on / where RegimeBarChrome is unmounted). */
+  --regime-bar-offset: 3px;
+  /* Shared sticky anchor for interior sub-bars and page-level sticky table headers:
+     3px regime line (0px on /) plus the 56px border-box site header (<Header> & <TopNav>). */
+  --sticky-header-bottom: calc(var(--regime-bar-offset, 3px) + 3.5rem);
+  --table-header-top: var(--sticky-header-bottom);
   /* 2.4.11 Focus Not Obscured (Minimum) — keep focused rows clear of the
      sticky chrome and the mobile utility dock. */
   scroll-padding-top: var(--table-header-top, 0px);
@@ -235,11 +237,11 @@
   --popover-foreground: var(--text-primary);
   --primary: oklch(0.205 0 0);
   --primary-foreground: var(--p-neutral-50);
-  --secondary: var(--p-neutral-100);
+  --secondary: oklch(0.94 0.003 260);
   --secondary-foreground: oklch(0.205 0 0);
-  --muted: var(--p-neutral-100);
+  --muted: oklch(0.94 0.003 260);
   --muted-foreground: var(--text-secondary);
-  --accent: var(--p-neutral-100);
+  --accent: oklch(0.94 0.003 260);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: var(--p-red-600);
   --border: var(--border-default);
@@ -250,7 +252,6 @@
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.170 84.429);
   --chart-5: oklch(0.769 0.166 70.08);
-  --surface-raised: var(--p-neutral-100);
   --page-glow-top: none;
   --page-glow-bottom: none;
 
@@ -258,6 +259,17 @@
   --graph-canvas-bg: oklch(0.985 0 0);
   --graph-panel-bg: oklch(1 0 0);
   --graph-grid-line: oklch(0.92 0 0);
+}
+
+:root[data-regime-bar="off"],
+:root:has([data-regime-bar="off"]) {
+  --regime-bar-offset: 0px;
+}
+
+[data-regime-bar="off"] {
+  --regime-bar-offset: 0px;
+  --sticky-header-bottom: calc(var(--regime-bar-offset, 3px) + 3.5rem);
+  --table-header-top: var(--sticky-header-bottom);
 }
 
 .dark {
@@ -270,17 +282,16 @@
   --popover-foreground: var(--text-primary);
   --primary: var(--p-neutral-200);
   --primary-foreground: oklch(0.205 0 0);
-  --secondary: var(--p-neutral-900);
+  --secondary: oklch(0.255 0.004 260);
   --secondary-foreground: var(--p-neutral-50);
-  --muted: var(--p-neutral-900);
+  --muted: oklch(0.255 0.004 260);
   --muted-foreground: var(--text-secondary);
-  --accent: var(--p-neutral-900);
+  --accent: oklch(0.255 0.004 260);
   --accent-foreground: var(--p-neutral-50);
   --destructive: var(--p-red-400);
   --border: var(--border-default);
   --input: var(--border-strong);
   --ring: var(--p-blue-400);
-  --surface-raised: var(--p-neutral-850);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.151 162.48);
   --chart-3: oklch(0.769 0.166 70.08);
@@ -592,6 +603,14 @@
     font-variant-numeric: tabular-nums slashed-zero;
   }
 
+  /* Canonical rail-page hero KPI figure: neutral ink unless a semantic scale
+     explicitly colors it. Replaces copied HERO_KPI_VALUE_CLASS strings. */
+  .pharos-hero-kpi {
+    font-family: var(--font-geist-mono), ui-monospace, monospace;
+    font-variant-numeric: tabular-nums slashed-zero;
+    @apply text-[2.1rem] font-semibold leading-none tracking-tight text-foreground sm:text-[2.45rem];
+  }
+
   /* Telegram Mini App scope: native-feeling system font, Telegram-themed bridge
      tokens, and a single selection accent derived from the live Telegram theme.
      Telegram theme vars are injected at runtime by telegram-sdk.ts; fallbacks
@@ -651,12 +670,10 @@
 
   /* Label register (two variants, one tracking token). `.pharos-label` is the
      default: sentence-case sans for section labels, card kickers, stat and
-     field labels. `.pharos-kicker` is its legacy name (same rule; the sweep
-     renames call sites). `.pharos-eyebrow` is the one restrained uppercase
-     variant, for a short route or hero eyebrow above a title only. Mono stays
-     with figures, tickers, addresses and codes (`.pharos-numeric`). */
-  .pharos-label,
-  .pharos-kicker {
+     field labels. `.pharos-eyebrow` is the one restrained uppercase variant,
+     for a short route or hero eyebrow above a title only. Mono stays with
+     figures, tickers, addresses and codes (`.pharos-numeric`). */
+  .pharos-label {
     @apply text-xs font-semibold text-muted-foreground;
     line-height: 1.25;
     letter-spacing: normal;
@@ -810,7 +827,13 @@
   }
 
   .pharos-mobile-utility-safe {
-    padding-bottom: calc(1.5rem + var(--mobile-utility-safe-offset, 0px));
+    padding-bottom: calc(0.75rem + var(--mobile-utility-safe-offset, 0px));
+  }
+
+  /* Root <main> sits above <Footer> and the layout bottom-nav spacer, so
+     avoid stacking a second --mobile-utility-safe-offset on <main>. */
+  main.pharos-mobile-utility-safe {
+    padding-bottom: 1.5rem;
   }
 
   .pharos-interactive-card {
@@ -849,35 +872,10 @@
     background: color-mix(in oklab, var(--control-pill-bg) 82%, var(--interactive-hover));
   }
 
-  /* The single selected-pill style (tokens in semantic.css); toggle and
-     tab pills below share it. */
-  .pharos-control-pill-active {
-    color: var(--control-pill-active-text);
-    background: var(--control-pill-active-bg);
-    border-color: transparent;
-    box-shadow: inset 0 0 0 1px var(--control-pill-active-ring);
-  }
-
-  .pharos-toggle-pill {
-    @apply inline-flex items-center rounded-xl border px-3 py-1.5 text-xs font-medium text-muted-foreground;
-    min-height: 2.25rem;
-    background: color-mix(in oklab, var(--control-pill-bg) 84%, transparent);
-    border-color: color-mix(in oklab, var(--control-pill-border) 92%, transparent);
-    box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.05);
-    transition:
-      color var(--motion-duration-fast) var(--motion-ease-standard),
-      border-color var(--motion-duration-fast) var(--motion-ease-standard),
-      background-color var(--motion-duration-fast) var(--motion-ease-standard),
-      box-shadow var(--motion-duration-fast) var(--motion-ease-standard);
-  }
-
-  .pharos-toggle-pill:hover {
-    color: var(--text-primary);
-    background: color-mix(in oklab, var(--control-pill-bg) 76%, var(--interactive-hover));
-    border-color: color-mix(in oklab, var(--control-pill-border) 76%, var(--border-strong));
-  }
-
-  .pharos-toggle-pill[data-state="on"] {
+  /* The single selected-pill style (tokens in semantic.css); segmented items
+     and tab pills below share it. */
+  .pharos-control-pill-active,
+  .pharos-control-pill[aria-pressed="true"] {
     color: var(--control-pill-active-text);
     background: var(--control-pill-active-bg);
     border-color: transparent;
@@ -1045,7 +1043,8 @@
   }
 
   .pharos-segmented-item[aria-pressed="true"],
-  .pharos-segmented-item[aria-selected="true"] {
+  .pharos-segmented-item[aria-selected="true"],
+  .pharos-segmented-item[aria-current="page"] {
     color: var(--control-pill-active-text);
     background-color: var(--control-pill-active-bg);
     box-shadow: inset 0 0 0 1px var(--control-pill-active-ring);
@@ -1066,25 +1065,26 @@
     font-family: var(--font-mono, monospace);
   }
 
+  /* Non-interactive chart legend items render as clean borderless swatch + label
+     rows so they never compete with clickable filter pills. */
   .pharos-chart-legend-chip {
-    @apply inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs text-muted-foreground;
-    background: var(--control-pill-bg);
-    border-color: var(--control-pill-border);
+    @apply inline-flex items-center gap-1.5 text-xs text-muted-foreground;
   }
 
   .pharos-table-shell {
-    @apply overflow-hidden rounded-xl border;
+    @apply overflow-clip rounded-xl border;
     background-color: var(--card-bg);
     background-image: var(--card-shell-highlight), var(--card-shell-bg);
     border-color: var(--card-border);
     box-shadow: var(--card-shadow);
   }
 
-  .pharos-home-footer .container {
+  .pharos-home-footer .container,
+  .pharos-home-footer footer > div {
     max-width: none;
     padding-left: 0.25rem;
     padding-right: 0.25rem;
-    padding-bottom: 0 !important;
+    padding-bottom: 0;
   }
 
   .pharos-table-toolbar {
@@ -1092,141 +1092,10 @@
     background: var(--panel-header-bg);
   }
 
-  .pharos-overview-table-toolbar {
-    --overview-control-bg: oklch(1 0 0 / 0.82);
-    @apply flex flex-wrap items-center gap-2;
-  }
-
-  .dark .pharos-overview-table-toolbar {
-    --overview-control-bg: oklch(1 0 0 / 0.06);
-  }
-
-  .pharos-overview-table-toolbar input,
-  .pharos-overview-table-toolbar button {
-    background-color: var(--overview-control-bg);
-  }
-
-  .pharos-overview-table-shell {
-    --overview-table-bg: oklch(1 0 0);
-    --overview-table-header-bg: oklch(0.965 0 0);
-    --overview-table-row-alt: oklch(0.975 0 0);
-    --overview-table-footer-bg: oklch(0.96 0 0);
-    --overview-table-border: oklch(0 0 0 / 0.08);
-    --overview-control-bg: oklch(1 0 0 / 0.82);
-    @apply rounded-xl border;
-    background: var(--overview-table-bg);
-    background-image: none;
-    border-color: var(--overview-table-border);
-    box-shadow: none;
-  }
-
-  .pharos-overview-table-shell.pharos-density-compact {
-    --overview-table-font-size: 0.75rem;
-    --overview-table-line-height: 1rem;
-    --overview-table-head-height: 2rem;
-    --overview-table-cell-padding-x: 0.5rem;
-    --overview-table-cell-padding-y: 0.25rem;
-    --overview-table-row-height: 2.625rem;
-  }
-
-  .pharos-overview-table-shell.pharos-density-spacious {
-    --overview-table-font-size: 0.875rem;
-    --overview-table-line-height: 1.25rem;
-    --overview-table-head-height: 2.375rem;
-    --overview-table-cell-padding-x: 0.75rem;
-    --overview-table-cell-padding-y: 0.375rem;
-    --overview-table-row-height: 3.5rem;
-  }
-
-  .dark .pharos-overview-table-shell {
-    --overview-table-bg: oklch(0.105 0 0);
-    --overview-table-header-bg: oklch(0.15 0 0);
-    --overview-table-row-alt: oklch(1 0 0 / 0.035);
-    --overview-table-footer-bg: oklch(0.15 0 0);
-    --overview-table-border: oklch(1 0 0 / 0.095);
-    --overview-control-bg: oklch(1 0 0 / 0.06);
-  }
-
-  .pharos-overview-table-viewport {
-    max-height: 712px;
-    overflow-x: auto;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    padding: 0;
-    scrollbar-width: none;
-  }
-
-  .pharos-overview-table-viewport::-webkit-scrollbar {
-    width: 0;
-    height: 0;
-  }
-
-  .pharos-overview-table-shell [data-slot="table"].text-sm {
-    font-size: var(--overview-table-font-size) !important;
-    line-height: var(--overview-table-line-height) !important;
-  }
-
-  .pharos-overview-table-shell [data-slot="table-head"] {
-    height: var(--overview-table-head-height) !important;
-    padding-inline: var(--overview-table-cell-padding-x) !important;
-    color: var(--text-tertiary);
-    font-size: var(--overview-table-font-size) !important;
-    font-weight: 500;
-    line-height: var(--overview-table-line-height) !important;
-  }
-
-  .pharos-overview-table-shell [data-slot="table-cell"] {
-    padding-inline: var(--overview-table-cell-padding-x) !important;
-    padding-block: var(--overview-table-cell-padding-y) !important;
-    font-size: var(--overview-table-font-size) !important;
-    line-height: var(--overview-table-line-height) !important;
-  }
-
-  .pharos-overview-table-header,
-  .pharos-overview-table-header tr {
-    background: var(--overview-table-header-bg) !important;
-  }
-
-  .pharos-overview-table-row {
-    height: var(--overview-table-row-height) !important;
-    border-left-color: transparent;
-  }
-
-  @media (hover: hover) {
-    .pharos-overview-table-shell [data-slot="table-row"]:hover {
-      transform: none;
-    }
-  }
-
-  .pharos-table-striped-indexed.pharos-overview-table-shell tbody tr[data-row-striped="true"] {
-    background-color: var(--overview-table-row-alt);
-  }
-
-  .pharos-overview-table-footer {
-    @apply flex min-h-14 items-center justify-between gap-3 border-t px-3 py-2 text-sm text-muted-foreground;
-    background: var(--overview-table-footer-bg);
-    border-color: var(--overview-table-border);
-  }
-
-  .pharos-overview-pagination-button {
-    @apply inline-flex min-h-8 items-center gap-1.5 rounded-md border px-3 py-1 text-sm font-medium text-foreground transition-colors disabled:cursor-not-allowed disabled:opacity-45;
-    background: var(--overview-control-bg, var(--background));
-    border-color: var(--overview-table-border);
-  }
-
-  .pharos-overview-pagination-button:focus-visible {
-    outline: 2px solid var(--ring);
-    outline-offset: 2px;
-  }
-
-  .pharos-overview-pagination-button:not(:disabled):hover {
-    background: var(--table-row-hover);
-  }
-
   .pharos-peg-browse-shell {
     @apply overflow-hidden rounded-xl border;
-    background: var(--overview-table-bg, var(--card-bg));
-    border-color: var(--overview-table-border, var(--card-border));
+    background: var(--card-bg);
+    border-color: var(--card-border);
     box-shadow: none;
   }
 
@@ -1240,7 +1109,7 @@
   }
 
   .pharos-empty-note {
-    @apply rounded-xl border border-dashed border-border/70 bg-muted/10 px-4 py-4 text-sm text-muted-foreground;
+    @apply rounded-lg border border-dashed border-border/70 bg-muted/10 px-4 py-4 text-sm text-muted-foreground;
   }
 
   .pharos-stagger-entrance > * {
@@ -1395,46 +1264,27 @@
   }
 
 
-  /* Confidence typography — visual weight reflects data confidence */
+  /* Confidence typography — visual weight reflects data confidence without
+     dashed underlines that collide with interactive <Term> dotted triggers. */
   .pharos-confidence-high {
     /* No modification — full rendering is the default */
   }
   .pharos-confidence-single-source {
-    opacity: 0.78;
-    text-decoration: underline;
-    text-decoration-style: dashed;
-    text-decoration-color: var(--border-default);
-    text-underline-offset: 3px;
-    text-decoration-thickness: 1px;
+    opacity: 0.82;
+    font-style: italic;
   }
   .pharos-confidence-low {
-    opacity: 0.62;
-    text-decoration: underline;
-    text-decoration-style: dashed;
-    text-decoration-color: var(--border-strong);
-    text-underline-offset: 3px;
-    text-decoration-thickness: 1px;
+    opacity: 0.68;
+    font-style: italic;
   }
   .pharos-confidence-fallback {
-    opacity: 0.5;
-    text-decoration: underline;
-    text-decoration-style: dashed;
-    text-decoration-color: var(--border-strong);
-    text-underline-offset: 3px;
-    text-decoration-thickness: 1px;
+    opacity: 0.56;
     font-style: italic;
   }
 }
 
-@media (min-width: 1024px) {
+@media (max-width: 1023px) {
   :root {
-    --table-header-top: 59px;
-  }
-}
-
-@media (max-width: 767px) {
-  :root {
-    --table-header-top: 56px;
     --mobile-utility-safe-offset: calc(4.5rem + env(safe-area-inset-bottom));
   }
 }
@@ -1489,6 +1339,18 @@
        becomes sticky on scroll. */
     transition: box-shadow 200ms var(--motion-ease-decelerate);
   }
+  /* Whenever a table viewport scrolls horizontally (`overflow-x: auto`), CSS
+     makes that viewport the sticky scroll container; zeroing `--table-header-top`
+     prevents the page-header offset from pushing `<thead>` down over row 1. */
+  [data-slot="table-viewport"][data-scroll-x="true"],
+  [data-slot="table-viewport"][data-scroll-x="responsive"] {
+    --table-header-top: 0px;
+  }
+  @media (min-width: 1024px) {
+    [data-slot="table-viewport"][data-scroll-x="responsive"] {
+      --table-header-top: var(--sticky-header-bottom, 3.75rem);
+    }
+  }
   .table-header-sticky thead tr {
     background: var(--table-header-bg);
     box-shadow: var(--table-header-shadow);
@@ -1510,12 +1372,6 @@
 
   :where(.pharos-density-compact, .pharos-density-spacious) :where([data-slot="table-head"]).h-10 {
     height: var(--pharos-table-head-height);
-  }
-
-  @media (hover: hover) {
-    [data-slot="table-row"]:where([data-row-intent="interactive"], :not([data-row-intent])):hover {
-      transform: translateX(1px);
-    }
   }
 
   [data-slot="table-row"]:where([data-row-intent="interactive"], :not([data-row-intent])):hover {
@@ -1551,8 +1407,8 @@
   }
   .scroll-shadow {
     background:
-      linear-gradient(to right, var(--background) 30%, transparent) left center,
-      linear-gradient(to left, var(--background) 30%, transparent) right center,
+      linear-gradient(to right, var(--card-bg) 30%, transparent) left center,
+      linear-gradient(to left, var(--card-bg) 30%, transparent) right center,
       radial-gradient(farthest-side at 0 50%, oklch(0 0 0 / 0.15), transparent) left center,
       radial-gradient(farthest-side at 100% 50%, oklch(0 0 0 / 0.15), transparent) right center;
     background-repeat: no-repeat;
@@ -1587,8 +1443,8 @@
 
   .dark .scroll-shadow {
     background:
-      linear-gradient(to right, var(--background) 30%, transparent) left center,
-      linear-gradient(to left, var(--background) 30%, transparent) right center,
+      linear-gradient(to right, var(--card-bg) 30%, transparent) left center,
+      linear-gradient(to left, var(--card-bg) 30%, transparent) right center,
       radial-gradient(farthest-side at 0 50%, oklch(1 0 0 / 0.12), transparent) left center,
       radial-gradient(farthest-side at 100% 50%, oklch(1 0 0 / 0.12), transparent) right center;
     background-repeat: no-repeat;
@@ -1796,24 +1652,15 @@
   }
 
   .skeleton-shimmer {
-    background: linear-gradient(90deg, var(--p-neutral-200) 0%, var(--p-neutral-100) 50%, var(--p-neutral-200) 100%);
+    background: linear-gradient(90deg, var(--skeleton-base) 0%, var(--skeleton-highlight) 50%, var(--skeleton-base) 100%);
     background-size: 200% 100%;
     animation: pharos-shimmer 1.5s ease-in-out infinite;
   }
 
-  .dark .skeleton-shimmer {
-    background: linear-gradient(90deg, var(--p-neutral-800) 0%, var(--p-neutral-700) 50%, var(--p-neutral-800) 100%);
-    background-size: 200% 100%;
-  }
-
-
   @media (prefers-reduced-motion: reduce) {
     .skeleton-shimmer {
       animation: none;
-      background: var(--p-neutral-200);
-    }
-    .dark .skeleton-shimmer {
-      background: var(--p-neutral-800);
+      background: var(--skeleton-base);
     }
   }
 
@@ -1858,7 +1705,6 @@
   [data-slot="table-row"]:where([data-row-intent="interactive"], [data-row-intent="scan"], :not([data-row-intent])) {
     transition:
       background-color var(--motion-duration-fast) var(--motion-ease-standard),
-      transform var(--motion-duration-fast) var(--motion-ease-standard),
       border-color var(--motion-duration-fast) var(--motion-ease-standard);
   }
 
@@ -1876,9 +1722,6 @@
   @media (prefers-reduced-motion: reduce) {
     [data-slot="table-row"] {
       transition: none;
-    }
-    [data-slot="table-row"]:where([data-row-intent="interactive"], :not([data-row-intent])):hover {
-      transform: none;
     }
   }
 }
@@ -1899,7 +1742,16 @@
   scroll-behavior: auto !important;
 }
 
-:root[data-motion="reduced"] [data-slot="table-row"]:hover {
+:root[data-motion="reduced"] [data-slot="table-row"]:hover,
+:root[data-motion="reduced"] .pharos-interactive-card:hover,
+:root[data-motion="reduced"] .pharos-interactive-card:active,
+:root[data-motion="reduced"] [data-slot="button"]:not(:disabled):active,
+:root[data-motion="reduced"] [data-slot="button"][data-size="icon"]:not(:disabled):hover,
+:root[data-motion="reduced"] [data-slot="button"][data-size="icon-sm"]:not(:disabled):hover,
+:root[data-motion="reduced"] [data-slot="button"][data-size="icon-xs"]:not(:disabled):hover,
+:root[data-motion="reduced"] [data-slot="button"][data-size="icon"]:not(:disabled):active,
+:root[data-motion="reduced"] [data-slot="button"][data-size="icon-sm"]:not(:disabled):active,
+:root[data-motion="reduced"] [data-slot="button"][data-size="icon-xs"]:not(:disabled):active {
   transform: none !important;
 }
 
@@ -1915,8 +1767,17 @@
     scroll-behavior: auto !important;
   }
 
-  /* Preserve essential motion for interaction feedback */
-  :root:not([data-motion="full"]) [data-slot="table-row"]:hover {
+  /* Suppress hover/press transforms on interactive cards, icon buttons, and table rows */
+  :root:not([data-motion="full"]) [data-slot="table-row"]:hover,
+  :root:not([data-motion="full"]) .pharos-interactive-card:hover,
+  :root:not([data-motion="full"]) .pharos-interactive-card:active,
+  :root:not([data-motion="full"]) [data-slot="button"]:not(:disabled):active,
+  :root:not([data-motion="full"]) [data-slot="button"][data-size="icon"]:not(:disabled):hover,
+  :root:not([data-motion="full"]) [data-slot="button"][data-size="icon-sm"]:not(:disabled):hover,
+  :root:not([data-motion="full"]) [data-slot="button"][data-size="icon-xs"]:not(:disabled):hover,
+  :root:not([data-motion="full"]) [data-slot="button"][data-size="icon"]:not(:disabled):active,
+  :root:not([data-motion="full"]) [data-slot="button"][data-size="icon-sm"]:not(:disabled):active,
+  :root:not([data-motion="full"]) [data-slot="button"][data-size="icon-xs"]:not(:disabled):active {
     transform: none !important;
   }
 }

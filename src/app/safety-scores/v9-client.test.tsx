@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 
-import { act, fireEvent, render as renderSync, screen } from "@testing-library/react";
+import { act, fireEvent, render as rtlRender, screen, within } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanupFrontendTest, createNextLinkMock } from "@/test-utils/frontend";
+import { cleanupFrontendTest, createNextLinkMock, installMatchMediaMock } from "@/test-utils/frontend";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import type { SafetyScoresPreview } from "@/lib/safety-grade-snapshot";
@@ -102,9 +103,19 @@ function makePreview(overrides: Partial<SafetyScoresPreview> = {}): SafetyScores
   };
 }
 
-async function render(ui: Parameters<typeof renderSync>[0]) {
-  let result!: ReturnType<typeof renderSync>;
-  await act(async () => { result = renderSync(ui); await import("@/components/safety-scores/report-card-mini-v9"); });
+function renderSync(ui: Parameters<typeof rtlRender>[0]) {
+  const queryClient = new QueryClient();
+  return rtlRender(ui, {
+    wrapper: ({ children }) => <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>,
+  });
+}
+
+async function render(ui: Parameters<typeof rtlRender>[0]) {
+  let result!: ReturnType<typeof rtlRender>;
+  await act(async () => {
+    result = renderSync(ui);
+    await import("@/components/safety-scores/report-card-mini-v9");
+  });
   return result;
 }
 
@@ -121,6 +132,11 @@ function expectPreviewFacts() {
   expect(screen.getByText("90/100")).toBeTruthy();
 }
 
+function getMatrixRows() {
+  const table = screen.getByTestId("safety-scores-matrix-table");
+  return within(table).getAllByTestId("safety-matrix-row");
+}
+
 describe("ReportCardsV9Client", () => {
   beforeEach(() => {
     window.history.replaceState(null, "", "/safety-scores/");
@@ -131,19 +147,136 @@ describe("ReportCardsV9Client", () => {
       ],
     })));
     mocks.useStablecoins.mockReturnValue(query({ peggedAssets: [
-      { id: "asset-a", pegType: "peggedUSD" },
-      { id: "asset-b", pegType: "peggedEUR" },
+      { id: "asset-a", pegType: "peggedUSD", circulating: { peggedUSD: 2_500_000_000 } },
+      { id: "asset-b", pegType: "peggedEUR", circulating: { peggedEUR: 500_000_000 } },
     ] }));
   });
 
   afterEach(cleanupFrontendTest);
 
-  it("reserves height until live cards load", async () => {
+  it("reserves height until live grid cards load when opened in grid view", async () => {
+    window.history.replaceState(null, "", "/safety-scores/?view=grid");
     renderSync(<ReportCardsV9Client />);
     expect(screen.getAllByLabelText("Loading safety card")).toHaveLength(2);
     expect(screen.getAllByLabelText("Loading safety card")[0].className).toContain("h-[274px]");
     expect((await screen.findAllByTestId("v9-card"))).toHaveLength(2);
     expect(screen.queryByText(/Ratings are held at the last verified snapshot/)).toBeNull();
+  });
+
+  it("defaults to the sortable Matrix Table with all 9 columns and toggles to Grid view", async () => {
+    await render(<ReportCardsV9Client />);
+
+    const table = screen.getByTestId("safety-scores-matrix-table");
+    const rows = within(table).getAllByTestId("safety-matrix-row");
+    expect(rows).toHaveLength(2);
+    expect(within(table).getByRole("columnheader", { name: /Coin/ })).toBeTruthy();
+    expect(within(table).getByRole("columnheader", { name: /Grade \/ Score/ })).toBeTruthy();
+    expect(within(table).getByRole("columnheader", { name: /Backing/ })).toBeTruthy();
+    expect(within(table).getByRole("columnheader", { name: /Exit/ })).toBeTruthy();
+    expect(within(table).getByRole("columnheader", { name: /Control/ })).toBeTruthy();
+    expect(within(table).getByRole("columnheader", { name: /Top Driver \/ Cap/ })).toBeTruthy();
+    expect(within(table).getByRole("columnheader", { name: /MCap/ })).toBeTruthy();
+    expect(within(table).getByRole("columnheader", { name: /Peg/ })).toBeTruthy();
+    expect(screen.queryByTestId("v9-card")).toBeNull();
+
+    // Switch to Grid view via segmented toggle
+    fireEvent.click(screen.getAllByRole("button", { name: "Grid" })[0]);
+    expect(window.location.search).toContain("view=grid");
+    expect(await screen.findAllByTestId("v9-card")).toHaveLength(2);
+    expect(screen.queryByTestId("safety-scores-matrix-table")).toBeNull();
+
+    // Switch back to Table view and drop default view param
+    fireEvent.click(screen.getAllByRole("button", { name: "Table" })[0]);
+    expect(window.location.search).not.toContain("view=");
+    expect(screen.getByTestId("safety-scores-matrix-table")).toBeTruthy();
+  });
+
+  it("supports inline search, URL filter sync, column sorting, and compare selection", async () => {
+    mocks.useReportCardsV9.mockReturnValue(query(makeReportCardsV9Response({
+      cards: [
+        makeV9Card({ id: "usdc-circle", grade: "A", score: 90 }),
+        makeV9Card({ id: "usdt-tether", grade: "B", score: 75 }),
+        makeV9Card({ id: "eurs-stasis", grade: "C", score: 60 }),
+      ],
+    })));
+    await render(<ReportCardsV9Client />);
+
+    // Inline search filters rows and syncs ?q=
+    const searchInput = screen.getByLabelText(/Search safety scores/);
+    fireEvent.change(searchInput, { target: { value: "tether" } });
+    expect(window.location.search).toContain("q=tether");
+    expect(getMatrixRows()).toHaveLength(1);
+    expect(getMatrixRows()[0].textContent).toContain("USDT");
+
+    // Clear search
+    fireEvent.change(searchInput, { target: { value: "" } });
+    expect(getMatrixRows()).toHaveLength(3);
+
+    // Select 2 coins to compare and verify direct /compare/?coins=... link
+    const table = screen.getByTestId("safety-scores-matrix-table");
+    fireEvent.click(within(table).getByLabelText(/Select USD Coin \(USDC\) to compare/));
+    fireEvent.click(within(table).getByLabelText(/Select Tether \(USDT\) to compare/));
+    const compareBar = screen.getByTestId("safety-compare-bar");
+    const compareLink = within(compareBar).getByRole("link", { name: /Compare 2 coins/ });
+    expect(compareLink.getAttribute("href")).toBe("/compare/?coins=usdc-circle,usdt-tether");
+
+    // Sort by Grade / Score ascending via column header
+    fireEvent.click(within(table).getByRole("button", { name: "Sort by Grade / Score" }));
+    expect(window.location.search).toContain("dir=asc");
+    const sortedRows = getMatrixRows();
+    expect(sortedRows[0].textContent).toContain("EURS");
+  });
+
+  it("hydrates active grade, peg, sort, search, and view state from URL query params", async () => {
+    window.history.replaceState(null, "", "/safety-scores/?grade=B&peg=usd&sort=backing&dir=asc&view=grid&q=usdt");
+    mocks.useReportCardsV9.mockReturnValue(query(makeReportCardsV9Response({
+      cards: [
+        makeV9Card({ id: "usdc-circle", grade: "A", score: 90 }),
+        makeV9Card({ id: "usdt-tether", grade: "B", score: 75 }),
+      ],
+    })));
+    await render(<ReportCardsV9Client />);
+    expect(await screen.findAllByTestId("v9-card")).toHaveLength(1);
+    expect(screen.getByTestId("v9-card").textContent).toBe("usdt-tether");
+    expect((screen.getByLabelText(/Search safety scores/) as HTMLInputElement).value).toBe("usdt");
+  });
+
+  it("filters the matrix when clicking a grade segment in SafetyGradeDistributionBar", async () => {
+    await render(<ReportCardsV9Client />);
+    expect(getMatrixRows()).toHaveLength(2);
+
+    const segment = screen.getAllByRole("button", { name: /Filter by grade B/ })[0];
+    fireEvent.click(segment);
+
+    expect(window.location.search).toContain("grade=B");
+    expect(getMatrixRows()).toHaveLength(1);
+    expect(getMatrixRows()[0].textContent).toContain("asset-b");
+
+    // Clicking the active grade again clears the filter
+    fireEvent.click(screen.getAllByRole("button", { name: /Filter by grade B/ })[0]);
+    expect(window.location.search).not.toContain("grade=");
+    expect(getMatrixRows()).toHaveLength(2);
+  });
+
+  it("paginates large sets and displays Page X of Y controls", async () => {
+    const manyCards = Array.from({ length: 55 }, (_, i) =>
+      makeV9Card({ id: `coin-${String(i).padStart(3, "0")}`, grade: "B", score: 75 - (i % 10) }),
+    );
+    mocks.useReportCardsV9.mockReturnValue(query(makeReportCardsV9Response({ cards: manyCards })));
+    await render(<ReportCardsV9Client />);
+
+    expect(getMatrixRows()).toHaveLength(48);
+    expect(screen.getAllByText("Page 1 of 2").length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Go to next page" })[0]);
+    expect(getMatrixRows()).toHaveLength(7);
+    expect(screen.getAllByText("Page 2 of 2").length).toBeGreaterThan(0);
+  });
+
+  it("never leaks raw (A) or (B) cause codes in the scoring note", async () => {
+    await render(<ReportCardsV9Client />);
+    expect(document.body.textContent).not.toMatch(/\(A\)|\(B\)/);
+    expect(document.body.textContent).toContain("Unavailable data feeds and public data awaiting curation do not score.");
   });
 
   it.each(["loading", "failed"])("keeps the hero map without numeric stats while ratings are %s", async (state) => {
@@ -226,7 +359,8 @@ describe("ReportCardsV9Client", () => {
     expect(screen.queryByText(/Ratings are held at the last verified snapshot/)).toBeNull();
     expect(document.body.textContent).not.toContain("assessment-failed");
     expect(document.body.textContent).not.toContain("internal assessment detail");
-    expect(screen.getByTestId("v9-card").textContent).toBe("asset-a");
+    expect(getMatrixRows()).toHaveLength(1);
+    expect(getMatrixRows()[0].textContent).toContain("asset-a");
   });
 
   it("filters technical gaps separately from NR while retaining rated partial cards", async () => {
@@ -237,11 +371,14 @@ describe("ReportCardsV9Client", () => {
     ] })));
     await render(<ReportCardsV9Client />);
     fireEvent.click(screen.getAllByRole("button", { name: "Pipeline gap (1)" })[0]);
-    expect(screen.getByTestId("v9-card").textContent).toBe("gap");
+    expect(getMatrixRows()).toHaveLength(1);
+    expect(getMatrixRows()[0].textContent).toContain("gap");
     fireEvent.click(screen.getAllByRole("button", { name: "NR (1)" })[0]);
-    expect(screen.getByTestId("v9-card").textContent).toBe("nr");
+    expect(getMatrixRows()).toHaveLength(1);
+    expect(getMatrixRows()[0].textContent).toContain("nr");
     fireEvent.click(screen.getAllByRole("button", { name: "B (1)" })[0]);
-    expect(screen.getByTestId("v9-card").textContent).toBe("partial");
+    expect(getMatrixRows()).toHaveLength(1);
+    expect(getMatrixRows()[0].textContent).toContain("partial");
   });
 
   it("labels the non-USD, non-commodity peg bucket as other pegs", async () => {
@@ -255,8 +392,8 @@ describe("ReportCardsV9Client", () => {
 
     fireEvent.click(screen.getAllByRole("button", { name: "Other pegs" })[0]);
 
-    expect(screen.getAllByTestId("v9-card")).toHaveLength(1);
-    expect(screen.getByTestId("v9-card").textContent).toBe("eurs-stasis");
+    expect(getMatrixRows()).toHaveLength(1);
+    expect(getMatrixRows()[0].textContent).toContain("EURS");
     expect(screen.getByText(/· other peg/)).toBeTruthy();
   });
 
@@ -272,21 +409,22 @@ describe("ReportCardsV9Client", () => {
     await render(<ReportCardsV9Client />);
     fireEvent.click(screen.getAllByRole("button", { name: "USD" })[0]);
 
-    expect(screen.getAllByTestId("v9-card")).toHaveLength(2);
+    expect(getMatrixRows()).toHaveLength(2);
     expect(screen.queryByText(/No coins match this filter/)).toBeNull();
   });
 
-  it("shows V9 unavailable without a V8 fallback", async () => {
+  it("shows Safety Score unavailable without legacy engine fallback or V9/V10 labels", async () => {
     mocks.useReportCardsV9.mockReturnValue({
       ...query(undefined),
-      error: new Error("V9 unavailable"),
+      error: new Error("Ratings unavailable"),
     });
 
     await render(<ReportCardsV9Client />);
 
-    expect(screen.getByRole("alert").textContent).toContain(
-      "V8 ratings are not used as a fallback",
-    );
+    const alertText = screen.getByRole("alert").textContent ?? "";
+    expect(alertText).toContain("Safety Score ratings are temporarily unavailable");
+    expect(alertText).toContain("Legacy ratings are not used as a fallback");
+    expect(alertText).not.toMatch(/V8|V9|V10/);
   });
 
   it.each(["loading", "failed"])("keeps ratings visible when the independent supply query is %s", async (state) => {
@@ -295,7 +433,7 @@ describe("ReportCardsV9Client", () => {
       error: state === "failed" ? new Error("Supply unavailable") : null,
     });
     await render(<ReportCardsV9Client />);
-    expect(screen.getAllByTestId("v9-card")).toHaveLength(2);
+    expect(getMatrixRows()).toHaveLength(2);
     expect(screen.getAllByText("Supply unavailable")).toHaveLength(2);
     expect(screen.queryByRole("img", { name: /by supply/ })).toBeNull();
     expect(screen.queryByText("0%")).toBeNull();
@@ -308,7 +446,7 @@ describe("ReportCardsV9Client", () => {
       { id: "asset-b", pegType: "peggedEUR", circulating: {} },
     ] }));
     await render(<ReportCardsV9Client />);
-    expect(screen.getAllByTestId("v9-card")).toHaveLength(2);
+    expect(getMatrixRows()).toHaveLength(2);
     expect(screen.getByText("Known supply in A/B")).toBeTruthy();
     expect(screen.getByText(/1\/2 rated assets observed/)).toBeTruthy();
     expect(screen.queryByText("Supply in A/B")).toBeNull();
@@ -325,7 +463,7 @@ describe("ReportCardsV9Client", () => {
     await render(<ReportCardsV9Client />);
     expect(screen.getByText("$0.00")).toBeTruthy();
     expect(screen.queryByText("0%")).toBeNull();
-    expect(screen.getAllByTestId("v9-card")).toHaveLength(2);
+    expect(getMatrixRows()).toHaveLength(2);
   });
 
   it("preserves focus and map fallback through live handoff", async () => {
@@ -362,7 +500,7 @@ describe("ReportCardsV9Client", () => {
     expect(document.activeElement).toBe(screen.getByRole("link", { name: "Open the Safety Score Map" }));
     expect(container.querySelector("img")?.getAttribute("src")).toBe("/safety-scores/map.png");
     expect(screen.queryByText("Grades as of 2026-10-27")).toBeNull();
-    expect(await screen.findAllByTestId("v9-card")).toHaveLength(1);
+    expect(getMatrixRows()).toHaveLength(1);
   });
 
   it("keeps focus on the preview coin link when a paused ratings request resumes", async () => {
@@ -406,7 +544,7 @@ describe("ReportCardsV9Client", () => {
     })));
     await renderPreview();
     expect(screen.queryByText("Grades as of 2026-10-27")).toBeNull();
-    expect(screen.getAllByTestId("v9-card")).toHaveLength(1);
+    expect(getMatrixRows()).toHaveLength(1);
   });
 
   it("never regresses to the build preview after a refetch failure with accepted live data", async () => {
@@ -419,7 +557,7 @@ describe("ReportCardsV9Client", () => {
     });
     await renderPreview();
     expect(screen.queryByText("Grades as of 2026-10-27")).toBeNull();
-    expect(screen.getAllByTestId("v9-card")).toHaveLength(1);
+    expect(getMatrixRows()).toHaveLength(1);
   });
 
   it("keeps the dated preview when the live publication is older, and lets a changed methodology win", async () => {
@@ -439,7 +577,7 @@ describe("ReportCardsV9Client", () => {
     }));
     await renderPreview();
     expect(screen.queryByText(/Grades as of 2026-10-27/)).toBeNull();
-    expect(screen.getAllByTestId("v9-card")).toHaveLength(1);
+    expect(getMatrixRows()).toHaveLength(1);
   });
 
   it.each([
@@ -462,7 +600,7 @@ describe("ReportCardsV9Client", () => {
     act(() => vi.advanceTimersByTime(1));
     expect(screen.queryByText(/Grades as of 2026-10-27/)).toBeNull();
     if (state !== "loading") {
-      expect(screen.getByRole("alert").textContent).toContain("V8 ratings are not used as a fallback");
+      expect(screen.getByRole("alert").textContent).toContain("Legacy ratings are not used as a fallback");
     }
     vi.useRealTimers();
   });
@@ -477,12 +615,28 @@ describe("ReportCardsV9Client", () => {
       vi.advanceTimersByTime(0);
     });
     expect(screen.queryByText(/Grades as of 2026-10-27/)).toBeNull();
-    expect(screen.getByRole("alert").textContent).toContain("V8 ratings are not used as a fallback");
+    expect(screen.getByRole("alert").textContent).toContain("Legacy ratings are not used as a fallback");
     vi.useRealTimers();
   });
+
   it("uses Control for the compact pillar sort label", async () => {
     await render(<ReportCardsV9Client />);
     expect(screen.getAllByRole("button", { name: "Control" })).toHaveLength(2);
     expect(screen.queryByRole("button", { name: "Econ. Control" })).toBeNull();
+  });
+
+  it("gates the Compact/Spacious density toggle to desktop table view (>= 1024px)", async () => {
+    installMatchMediaMock(false);
+    const { unmount } = await render(<ReportCardsV9Client />);
+    expect(screen.getAllByRole("radiogroup", { name: "Table density" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("radio", { name: "Compact rows" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("radio", { name: "Spacious rows" }).length).toBeGreaterThan(0);
+    unmount();
+
+    installMatchMediaMock(true);
+    await render(<ReportCardsV9Client />);
+    expect(screen.queryByRole("radiogroup", { name: "Table density" })).toBeNull();
+    expect(screen.queryByRole("radio", { name: "Compact rows" })).toBeNull();
+    expect(screen.queryByRole("radio", { name: "Spacious rows" })).toBeNull();
   });
 });
