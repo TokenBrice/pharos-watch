@@ -181,6 +181,10 @@ import source164 from "./coins/dotusd-polkadot.json";
 import source165 from "./coins/jpydf-deltaforesight.json";
 import source166 from "./coins/ustx-tx.json";
 import source167 from "./coins/swanusd-swan.json";
+import source168 from "./coins/usdfr-forest-road.json";
+import source169 from "./coins/usdb-bridge.json";
+import source170 from "./coins/xaut-tether.json";
+import source171 from "./coins/chfs-safirum.json";
 
 type CuratedAnnotationSource = Readonly<Record<string, unknown>>;
 type CuratedAnnotationSourceAsset = readonly CuratedAnnotationSource[];
@@ -353,6 +357,10 @@ const CURATED_SOURCES: Readonly<Record<string, CuratedAnnotationSourceAsset>> = 
   "jpydf-deltaforesight": source165,
   "ustx-tx": source166,
   "swanusd-swan": source167,
+  "usdfr-forest-road": source168,
+  "usdb-bridge": source169,
+  "xaut-tether": source170,
+  "chfs-safirum": source171,
 };
 
 const KNOWN_STABLECOIN_IDS = new Set(canonicalOrderAsset as readonly string[]);

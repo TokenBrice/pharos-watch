@@ -1,0 +1,10 @@
+[
+  {
+    "date": "2026-10-29",
+    "kind": "blacklist-surge",
+    "label": "Tether freezes 12,574 XAUT on Ethereum after Binance hack",
+    "severity": "high",
+    "href": "https://eth.blockscout.com/tx/0x2d3c345297a3e8716a36992f2bf742afdb176fd6ceab1397ddc356e8cb78f650",
+    "note": "At Ethereum block 26301003 (2026-10-29 21:11:23 UTC), Tether blacklisted address 0x5227f603C1eE34CE3C06eFe6477003BDfCCB2f8c on the XAUT contract, locking 12,574.05 XAUT (about $50M at late October 2026 gold prices) taken during the October 29 Binance hack."
+  }
+]

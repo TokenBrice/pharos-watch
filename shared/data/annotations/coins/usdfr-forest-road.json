@@ -1,0 +1,10 @@
+[
+  {
+    "date": "2026-09-18",
+    "kind": "governance",
+    "label": "Forest Road deploys USDfr on Ethereum mainnet",
+    "severity": "med",
+    "href": "https://eth.blockscout.com/tx/0x0e8fd3954d94bdc94fa9aaed5582627617fc266e0caba45e7d63a258c627ca8e",
+    "note": "Exact USDfr proxy creation executed at Ethereum block 26006843 (2026-09-18 20:40:59 UTC). Forest Road Vault's live deployment status page confirms Ethereum V2 mainnet lending with $5.04M in performing credit facilities and KYC-gated primary minting and redemption."
+  }
+]

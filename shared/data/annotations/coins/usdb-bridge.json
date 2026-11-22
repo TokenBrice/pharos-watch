@@ -1,0 +1,10 @@
+[
+  {
+    "date": "2026-09-30",
+    "kind": "governance",
+    "label": "Bridge restricts USDB to closed-loop API use as Open USD launches",
+    "severity": "med",
+    "href": "https://apidocs.bridge.xyz/platform/issuance/usdb.md",
+    "note": "With Open USD launching on September 30 as Bridge's open-loop dollar token, Bridge documentation scoped USDB to closed-loop API settlement and directed open-loop issuers to OUSD without publishing a USDB sunset date. Pharos subsequently delisted USDB as out of scope on October 25."
+  }
+]

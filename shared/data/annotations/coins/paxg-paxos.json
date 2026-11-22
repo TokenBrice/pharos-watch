@@ -1,4 +1,5 @@
 [
   {"date":"2019-09-05","kind":"regulatory","label":"PAXG launch, the first NYDFS-approved tokenized gold","severity":"med"},
-  {"date":"2026-06-25","kind":"governance","label":"PAXG extends to Solana, its first deployment beyond Ethereum","severity":"low","href":"https://www.paxos.com/blog/bringing-paxg-to-solana","note":"2026-06-25: Paxos extends PAXG to Solana as a Token-2022 mint with Sunrise DeFi; Ethereum holders can bridge via the Paxos platform or LayerZero Stargate."}
+  {"date":"2026-06-25","kind":"governance","label":"PAXG extends to Solana, its first deployment beyond Ethereum","severity":"low","href":"https://www.paxos.com/blog/bringing-paxg-to-solana","note":"2026-06-25: Paxos extends PAXG to Solana as a Token-2022 mint with Sunrise DeFi; Ethereum holders can bridge via the Paxos platform or LayerZero Stargate."},
+  {"date":"2026-10-29","kind":"blacklist-surge","label":"Paxos freezes 1,907 PAXG on Ethereum after Binance hack","severity":"med","href":"https://eth.blockscout.com/tx/0x2ba37ae7e5c74ef650705954fc9d16ce2cdb00b85c14bca6cbc1dce25d6c699e","note":"At Ethereum block 26301400 (2026-10-29 22:30:47 UTC), Paxos froze address 0x5227f603C1eE34CE3C06eFe6477003BDfCCB2f8c on the PAXG contract, locking 1,906.67 PAXG (about $7.6M at late October 2026 gold prices) linked to the October 29 Binance hack."}
 ]
