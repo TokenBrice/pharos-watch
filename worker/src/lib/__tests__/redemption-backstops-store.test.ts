@@ -11,6 +11,7 @@ import {
   normalizeRedemptionBackstopRunMetadata,
   RedemptionBackstopSnapshotUnavailableError,
   resolveSnapshotMethodologyVersion,
+  selectAdmittedRedemptionBackstopRun,
   upsertRedemptionBackstopSnapshots,
 } from "../redemption-backstops-store";
 import { pruneRedemptionBackstopRunRetention, validateRedemptionBackstopSnapshot } from "../redemption-backstops-store-write";
@@ -199,6 +200,55 @@ describe("loadRedemptionBackstopSnapshot", () => {
         { stablecoin_id: "coin-00", immediate_capacity_ratio: null, route_family: "offchain-issuer", updated_at: older },
       ]);
     } finally { sqlite.close(); vi.useRealTimers(); }
+  });
+
+  it("uses keyset paging on cold admission, caches admitted runs for targeted reads, and evicts on decode failure", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const nowSec = 1_800_000_000;
+      const records = Array.from({ length: 51 }, (_, i) => makeRedemptionWriteRecord({
+        stablecoinId: `coin-${String(i).padStart(2, "0")}`, updatedAt: nowSec + i,
+      }));
+      await upsertRedemptionBackstopSnapshots(db, records, { runId: "admitted-51", nowSec });
+      const queries: Array<{ sql: string; binds: unknown[] }> = [];
+      const prepare = db.prepare.bind(db);
+      db.prepare = ((sql: string) => {
+        const stmt = prepare(sql);
+        const bind = stmt.bind.bind(stmt);
+        stmt.bind = (...binds: unknown[]) => {
+          queries.push({ sql, binds });
+          return bind(...binds);
+        };
+        return stmt;
+      }) as typeof db.prepare;
+
+      const cold = await selectAdmittedRedemptionBackstopRun(db, new Set(["coin-00"]));
+      expect(cold.run.run_id).toBe("admitted-51");
+      expect(Object.keys(cold.map)).toEqual(["coin-00"]);
+      const coldRowQueries = queries.filter((q) => q.sql.includes("FROM redemption_backstop_run_rows"));
+      expect(coldRowQueries.some((q) => q.sql.includes("OFFSET"))).toBe(false);
+      expect(coldRowQueries.map((q) => q.binds)).toEqual([["admitted-51", "", 50], ["admitted-51", "coin-49", 50]]);
+
+      queries.length = 0;
+      const warm = await selectAdmittedRedemptionBackstopRun(db, new Set(["coin-00", "coin-50"]));
+      expect(Object.keys(warm.map).sort()).toEqual(["coin-00", "coin-50"]);
+      const warmRowQueries = queries.filter((q) => q.sql.includes("FROM redemption_backstop_run_rows"));
+      expect(warmRowQueries).toHaveLength(1);
+      expect(warmRowQueries[0].sql).toContain("stablecoin_id IN (?,?)");
+      expect(warmRowQueries[0].binds).toEqual(["admitted-51", "coin-00", "coin-50"]);
+
+      // Corrupting a selected row evicts the cached run instead of serving corrupt data.
+      sqlite.prepare("UPDATE redemption_backstop_run_rows SET details_json = 'not-json' WHERE snapshot_run_id = 'admitted-51' AND stablecoin_id = 'coin-00'").run();
+      await expect(selectAdmittedRedemptionBackstopRun(db, new Set(["coin-00"]))).rejects.toBeInstanceOf(
+        RedemptionBackstopSnapshotUnavailableError,
+      );
+      // Rejected runs are never cached: a subsequent retry still re-checks instead of using IN ().
+      queries.length = 0;
+      await expect(selectAdmittedRedemptionBackstopRun(db, new Set(["coin-00"]))).rejects.toBeInstanceOf(
+        RedemptionBackstopSnapshotUnavailableError,
+      );
+      expect(queries.some((q) => q.sql.includes("stablecoin_id > ?"))).toBe(true);
+    } finally { sqlite.close(); }
   });
 
   it("prefers the latest completed run when loading a snapshot", async () => {

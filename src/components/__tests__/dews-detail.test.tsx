@@ -44,7 +44,7 @@ afterEach(() => {
 });
 
 const COMPUTED_AT = 1_800_000_000;
-const SIX_HOURS_MS = 21_600_000;
+const TWELVE_HOURS_MS = 43_200_000;
 
 function retainedDetail(overrides: Record<string, unknown> = {}) {
   return {
@@ -107,7 +107,7 @@ describe("DEWSDetail retained evidence", () => {
     expect(screen.queryByText("Depeg Early Warning")).toBeNull();
   });
 
-  it("ages this detail's own generation and warns only past the shared six-hour band", () => {
+  it("ages this detail's own generation and warns only past the shared twelve-hour band", () => {
     vi.useFakeTimers({ now: COMPUTED_AT * 1000 + 2 * 3_600_000, toFake: ["setTimeout", "clearTimeout", "Date"] });
     const refetch = vi.fn();
     useDetailMock.mockReturnValue({ isLoading: false, error: null, data: retainedDetail(), meta: undefined, refetch });
@@ -115,7 +115,7 @@ describe("DEWSDetail retained evidence", () => {
     const banner = () => container.querySelector("[data-health-state]");
     act(() => vi.advanceTimersByTime(0));
     expect(banner()).toBeNull();
-    act(() => vi.advanceTimersByTime(SIX_HOURS_MS - 2 * 3_600_000));
+    act(() => vi.advanceTimersByTime(TWELVE_HOURS_MS - 2 * 3_600_000));
     expect(banner()).toBeNull();
     act(() => vi.advanceTimersByTime(1));
     expect(banner()?.getAttribute("data-health-state")).toBe("stale");

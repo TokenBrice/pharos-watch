@@ -6,7 +6,9 @@ import {
   getPrevWeekRawOrNull,
   getPrevMonthRawOrNull,
   hasDatedUsdValuation,
+  matchesSupplySnapshotDay,
   projectUsdMarketCapBaselineBuckets,
+  SUPPLY_SNAPSHOT_MAX_AGE_SEC,
 } from "../supply";
 import { makeStablecoin } from "../../test-utils/stablecoin";
 import { NUMERIC_INPUT_STATES } from "../../test-utils/boundary-contract-vectors.test-support";
@@ -20,6 +22,14 @@ describe("dated USD supply valuations", () => {
     expect(hasDatedUsdValuation("onchain-total-supply", stockAt, 1.1, stockAt - 86400, stockAt)).toBe(false);
     expect(hasDatedUsdValuation("onchain-total-supply", stockAt, 1.1, stockAt + 1, stockAt)).toBe(false);
     expect(hasDatedUsdValuation("onchain-total-supply", stockAt, 1.1, stockAt - 60, stockAt)).toBe(true);
+    // Live xaut-tether finalized-block straddles across UTC midnight (969s and 1099s <= 1800s).
+    expect(hasDatedUsdValuation("onchain-circulating-supply", 1795131863, 4100, 1795132832, 1795308315)).toBe(true);
+    expect(hasDatedUsdValuation("onchain-circulating-supply", 1795219031, 4100, 1795220130, 1795308315)).toBe(true);
+    expect(hasDatedUsdValuation("onchain-total-supply", 1795308315, 0.00005, 1795308315 - 87_884, 1795308315)).toBe(false);
+    const nov21 = Date.parse("2026-11-21T00:00:00Z") / 1000;
+    expect(matchesSupplySnapshotDay(nov21 - SUPPLY_SNAPSHOT_MAX_AGE_SEC, nov21, nov21)).toBe(true);
+    expect(matchesSupplySnapshotDay(nov21 - SUPPLY_SNAPSHOT_MAX_AGE_SEC - 1, nov21, nov21)).toBe(false);
+    expect(matchesSupplySnapshotDay(nov21 - 60, nov21, nov21 - 86_400)).toBe(false);
   });
   it("preserves both a matching multi-peg allocation and an unattributed historical total for old readers", () => {
     const asset = { circulating: { peggedUSD: 70, peggedEUR: 40 }, supplyChangeBaselines: {

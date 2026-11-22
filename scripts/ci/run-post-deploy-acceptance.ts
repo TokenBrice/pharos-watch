@@ -38,6 +38,14 @@ export interface PostDeployAcceptanceRun {
 export interface PostDeployAcceptanceDependencies {
   collectWorkerProbes?: typeof collectWorkerHttpProbes;
   fetchJson?: typeof fetchJsonProbe;
+  sleep?: (ms: number) => Promise<void>;
+}
+
+const POST_DEPLOY_RETRY_AFTER_CAP_MS = 10_000;
+const defaultSleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+interface RouteProbeAttempt extends PostDeployRouteProbe {
+  retryAfterSec?: number | null;
 }
 
 /**
@@ -48,6 +56,7 @@ export interface PostDeployAcceptanceDependencies {
 async function collectRouteSweepProbes(
   fetchJson: typeof fetchJsonProbe,
   apiKey: string,
+  sleep: (ms: number) => Promise<void>,
 ): Promise<PostDeployRouteProbe[]> {
   const results: PostDeployRouteProbe[] = new Array(POST_DEPLOY_ROUTE_SWEEP_PATHS.length);
   const deadlineAt = Date.now() + POST_DEPLOY_ROUTE_SWEEP_DEADLINE_MS;
@@ -56,14 +65,20 @@ async function collectRouteSweepProbes(
     apiKey,
     noCache: true,
   };
-  async function probe(path: string, timeoutMs = POST_DEPLOY_ROUTE_SWEEP_TIMEOUT_MS): Promise<PostDeployRouteProbe> {
+  async function probe(path: string, timeoutMs = POST_DEPLOY_ROUTE_SWEEP_TIMEOUT_MS): Promise<RouteProbeAttempt> {
     try {
-      const { status, error } = await fetchJson({ ...probeArgs, timeoutMs }, path);
-      return { path, status, ...(error ? { error } : {}) };
+      const { status, error, retryAfterSec } = await fetchJson({ ...probeArgs, timeoutMs }, path);
+      return { path, status, ...(error ? { error } : {}), ...(retryAfterSec != null ? { retryAfterSec } : {}) };
     } catch (error) {
       return { path, status: 0, error: error instanceof Error ? error.message : String(error) };
     }
   }
+  const toRouteProbe = (attempt: RouteProbeAttempt, retried?: boolean): PostDeployRouteProbe => ({
+    path: attempt.path,
+    status: attempt.status,
+    ...(attempt.error ? { error: attempt.error } : {}),
+    ...(retried ? { retried: true } : {}),
+  });
 
   await Promise.all(POST_DEPLOY_ROUTE_WARMUP_PATHS.map((path) => probe(path, POST_DEPLOY_ROUTE_WARMUP_TIMEOUT_MS)));
   let nextIndex = 0;
@@ -79,9 +94,17 @@ async function collectRouteSweepProbes(
       }
       const first = await probe(path);
       const retryable = first.status === 0 || (first.status >= 500 && first.status <= 599);
-      results[index] = retryable && Date.now() < deadlineAt
-        ? { ...await probe(path), retried: true }
-        : first;
+      if (retryable && Date.now() < deadlineAt) {
+        if (first.status === 503 && first.retryAfterSec != null && first.retryAfterSec > 0) {
+          const waitMs = Math.min(first.retryAfterSec * 1000, Math.max(0, deadlineAt - Date.now()), POST_DEPLOY_RETRY_AFTER_CAP_MS);
+          if (waitMs > 0) await sleep(waitMs);
+        }
+        if (Date.now() < deadlineAt) {
+          results[index] = toRouteProbe(await probe(path), true);
+          continue;
+        }
+      }
+      results[index] = toRouteProbe(first);
     }
   };
 
@@ -102,6 +125,7 @@ async function collectRouteSweepProbes(
 export async function runPostDeployAcceptance({
   collectWorkerProbes = collectWorkerHttpProbes,
   fetchJson = fetchJsonProbe,
+  sleep = defaultSleep,
   pagesDeployed = false,
   workerDeployed = false,
   expectedPagesCommit,
@@ -201,7 +225,7 @@ export async function runPostDeployAcceptance({
         });
         continue;
       }
-      const sweep = summarizePostDeployRouteSweep(await collectRouteSweepProbes(fetchJson, apiKey));
+      const sweep = summarizePostDeployRouteSweep(await collectRouteSweepProbes(fetchJson, apiKey, sleep));
       if (sweep.outcome === "failed") operationalFailures.push(`worker-route-sweep: ${sweep.detail}`);
       results.push({ ...probe, detail: sweep.detail, outcome: sweep.outcome });
     }

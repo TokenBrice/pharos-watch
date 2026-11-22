@@ -219,3 +219,55 @@ it.each(["dirty", "unsupported"])("keeps %s evidence unavailable without archive
   expect(leg.status).not.toBe("ok");
   expect(fetchEvmBlockHeader).not.toHaveBeenCalled();
 });
+it("stops cleanly on shared 24-request exhaustion without writing false boundary-evidence-missing or advancing cursor", async () => {
+  const second = MINT_BURN_CONFIGS.find((c) => c.stablecoinId === "usdai-usd-ai")!;
+  const ordered = [config, second].sort((a, b) => mintBurnConfigKey(a).localeCompare(mintBurnConfigKey(b)));
+  const [firstCfg, secondCfg] = ordered;
+  const fixture = await setup(firstCfg);
+  const { db, sqlite } = fixture;
+  await upsertMintBurnSyncState(db, mintBurnConfigKey(secondCfg), 110, "monotonic-max", {
+    configKey: mintBurnConfigKey(secondCfg), configFingerprint: mintBurnScanFingerprint(secondCfg), chainId: secondCfg.chain.chainId,
+    fromBlock: 99, toBlock: 110, fromTimestamp: start - 1, toTimestamp: start + 5 * day,
+    finalizedBlock: 110, acceptedAt: start + 5 * day,
+  });
+  sqlite.prepare(`INSERT INTO mint_burn_events
+    (id,stablecoin_id,symbol,chain_id,direction,amount,amount_raw,flow_type,tx_hash,block_number,timestamp,explorer_tx_url)
+    VALUES ('s0',?,'TOK',?,'mint',1,'10','standard','tx',101,?,'url')`)
+    .run(secondCfg.stablecoinId, secondCfg.chain.chainId, start + 100);
+  // Seed a newer cached block (> day) on secondCfg's chain so calibrationBlock can be drawn from cache.
+  sqlite.prepare("INSERT INTO block_timestamp_cache (chain_id, block_number, timestamp, updated_at) VALUES (?, 108, ?, ?)")
+    .run(secondCfg.chain.chainId, start + 3 * day, start);
+  sqlite.prepare("INSERT INTO block_timestamp_cache (chain_id, block_number, timestamp, updated_at) VALUES (?, 109, ?, ?)")
+    .run(secondCfg.chain.chainId, start + 4 * day, start);
+
+  let secondSawCalibration = false;
+  vi.mocked(closestBlock).mockImplementation(async (chain, timestamp, cache, options) => {
+    if (chain === secondCfg.chain.chainId) {
+      secondSawCalibration = options?.calibrationBlock != null || cache.blockTimestampByNumber.size >= 2;
+      cache.blockTimestampByNumber.set(104, start + day);
+      while (options?.beforeRequest?.("https://rpc.example")) { /* exhaust shared 24-request budget */ }
+      return null;
+    }
+    return 100 + Math.floor((timestamp - (start - 1)) / (day / 2));
+  });
+
+  const input = {
+    ...fixture.input,
+    configs: [firstCfg, secondCfg],
+    now: start + day + 3600,
+    heads: new Map([[firstCfg.chain.chainId, 110], [secondCfg.chain.chainId, 110]]),
+  };
+  const result = await runMintBurnSupplyReconciliation(input);
+  expect(result.processed).toBe(1);
+  expect(result.requests).toBe(24);
+  expect(secondSawCalibration).toBe(true);
+  // Config #2 must NOT have persisted a false unavailable/boundary-evidence-missing row.
+  const rows = sqlite.prepare("SELECT config_key, status FROM mint_burn_supply_reconciliation").all() as Array<{ config_key: string; status: string }>;
+  expect(rows).toEqual([{ config_key: mintBurnConfigKey(firstCfg), status: "ok" }]);
+  // Cursor must pause at index 1 (secondCfg) instead of advancing past it.
+  const state = JSON.parse(String(sqlite.prepare("SELECT value FROM cache WHERE key = 'mint-burn:daily-reconciliation-state'").get()!.value)) as { cursor: number };
+  expect(state.cursor).toBe(1);
+  // Partial block_timestamp_cache probe from config #2 must survive for the next run.
+  const cachedProbe = sqlite.prepare("SELECT timestamp FROM block_timestamp_cache WHERE chain_id = ? AND block_number = 104").get(secondCfg.chain.chainId) as { timestamp: number } | undefined;
+  expect(cachedProbe?.timestamp).toBe(start + day);
+});

@@ -11,7 +11,7 @@ import {
   KRAKEN_MARKETS,
 } from "@shared/lib/pricing-provider-config";
 import { isUnsignedDecimalLiteral } from "@shared/lib/decimal-literal";
-import { CEX_MAX_BID_ASK_SPREAD_BPS } from "@shared/lib/pricing-source-policy";
+import { CEX_MAX_BID_ASK_SPREAD_BPS, CEX_UPSTREAM_MAX_FUTURE_SKEW_SEC } from "@shared/lib/pricing-source-policy";
 import { isRecord } from "@shared/lib/type-guards";
 import { parseIsoDateOrUtcInstantSec } from "@shared/types/date-primitives";
 import { throwIfAborted } from "./abort";
@@ -208,6 +208,7 @@ async function fetchCexJson<T>(
   url: string,
   signal?: AbortSignal,
 ): Promise<{ payload: T | null; transportOk: boolean; status: number | null }> {
+  let responseStatus: number | null = null;
   const result = await fetchJsonWithRetry<T>(
     url,
     {
@@ -215,10 +216,13 @@ async function fetchCexJson<T>(
       headers: { Accept: "application/json", "User-Agent": USER_AGENT },
     },
     CEX_REQUEST_RETRIES,
-    { timeoutMs: CEX_REQUEST_TIMEOUT_MS },
+    {
+      timeoutMs: CEX_REQUEST_TIMEOUT_MS,
+      onResponse: (response) => { responseStatus = response.status; },
+    },
   );
   if (!result?.response.ok) {
-    return { payload: null, transportOk: false, status: result?.response.status ?? null };
+    return { payload: null, transportOk: false, status: result?.response.status ?? responseStatus };
   }
   return { payload: result.body, transportOk: true, status: result.response.status };
 }
@@ -698,7 +702,7 @@ export async function fetchCoinbasePrices(
           value.quoteAssetBySymbol.set(product.symbol, product.quoteAsset);
           value.clockBySymbol.set(product.symbol, clock);
         };
-        const { payload: book } = await fetchCexJson<{
+        const { payload: book, transportOk: bookTransportOk, status: bookStatus } = await fetchCexJson<{
           bids?: [string, string, number][];
           asks?: [string, string, number][];
           time?: string;
@@ -706,16 +710,51 @@ export async function fetchCoinbasePrices(
         }>(`${productUrl}/book?level=1`, signal);
         const bookQuote = midpointFromBidAsk(book?.bids?.[0]?.[0], book?.asks?.[0]?.[0]);
         const bookTime = parseCoinbaseTime(book?.time);
-        if (bookQuote && bookTime != null && !book?.auction_mode && validatePricingSourceFreshness({
-          source: "coinbase", observedAt: bookTime, maxFutureSkewSec: 0,
-        }).accepted) {
+        const bookFreshness = bookTime != null
+          ? validatePricingSourceFreshness({
+            source: "coinbase", observedAt: bookTime, maxFutureSkewSec: CEX_UPSTREAM_MAX_FUTURE_SKEW_SEC,
+          })
+          : null;
+        if (bookQuote && bookFreshness?.accepted && !book?.auction_mode) {
           if (bookQuote.wideSpread) {
             wideBooks++;
             return;
           }
-          storeQuote(bookQuote.midpoint, bookTime, "book");
+          storeQuote(bookQuote.midpoint, bookTime!, "book");
           return;
         }
+        const bookRejectReason: PricingProviderRejectionReason = !bookTransportOk
+          ? (bookStatus != null ? "non-ok" : "upstream-error")
+          : book?.auction_mode
+            ? "price-rejected"
+            : !bookQuote
+              ? "missing-quote"
+              : bookFreshness && !bookFreshness.accepted && bookFreshness.reason === "stale_observed_at"
+                ? "stale"
+                : "invalid-shape";
+        const bookErrorClass = !bookTransportOk
+          ? "http_error"
+          : book?.auction_mode
+            ? "auction_mode"
+            : !bookQuote
+              ? "missing_book_quote"
+              : bookTime == null
+                ? "missing_observed_at"
+                : bookFreshness && !bookFreshness.accepted
+                  ? bookFreshness.reason
+                  : "book_unavailable";
+        value.diagnostics.push({
+          source: "coinbase",
+          stage: "primary",
+          endpoint: endpointLabel(`${productUrl}/book`),
+          status: bookStatus,
+          ok: bookTransportOk,
+          success: false,
+          candidateCount: 1,
+          resolvedCount: 0,
+          rejectionReasonCounts: { [bookRejectReason]: 1 },
+          errorClass: bookErrorClass,
+        });
 
         const result = await fetchJsonWithRetry<{ bid?: string; ask?: string; price?: string; time?: string }>(
           `${productUrl}/ticker`,
@@ -751,7 +790,7 @@ export async function fetchCoinbasePrices(
         const lastTrade = parseCexPrice(payload.price);
         const observedAt = parseCoinbaseTime(payload.time);
         if (lastTrade != null && observedAt != null && validatePricingSourceFreshness({
-          source: "coinbase", observedAt, maxFutureSkewSec: 0,
+          source: "coinbase", observedAt, maxFutureSkewSec: CEX_UPSTREAM_MAX_FUTURE_SKEW_SEC,
         }).accepted) {
           storeQuote(lastTrade, observedAt, "trade");
         }

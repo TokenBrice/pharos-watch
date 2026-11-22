@@ -1482,6 +1482,8 @@ export const PUBLIC_API_RESPONSE_EXAMPLES: Record<
               immediateCapacityUsd: 5_000_000_000,
               feeBps: 0,
               marketPhase: "normal",
+              capacitySemantics: "immediate-bounded",
+              eventualRedeemabilityScore: null,
               unavailableReason: null,
             },
             controls: {

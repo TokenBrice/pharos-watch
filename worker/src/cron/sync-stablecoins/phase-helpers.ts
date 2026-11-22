@@ -3,7 +3,10 @@ import { CURATED_AGGREGATE_ESCROW_RESIDUALS, isKinesisWrapperSupplyId } from "@s
 import { LEGACY_SOLOMON_USDV_ID } from "../../lib/solomon-usdv-identity";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_META_BY_ID, FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { admitSupplyBuckets, getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull, getPrevMonthRawOrNull, hasDatedUsdValuation, type SupplyBucketInvalidReason, type SupplyChangeBaselines } from "@shared/lib/supply";
+import { admitSupplyBuckets, getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull, getPrevMonthRawOrNull, hasDatedUsdValuation, matchesSupplySnapshotDay, type SupplyBucketInvalidReason, type SupplyChangeBaselines } from "@shared/lib/supply";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
+import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { CHAIN_CIRCULATING_KEYS, canonicalizeChainCirculating, normalizeChainSupplyValue } from "@shared/lib/chains/circulating";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { isRecord } from "@shared/lib/type-guards";
@@ -338,6 +341,65 @@ function priorCountsStoredGap(asset: PeggedAsset, gap: GuardChain[] | undefined,
   }) ?? false;
 }
 
+function isCorroboratedPublishedConsensusPrice(asset: PeggedAsset): boolean {
+  if (!isObservedPrice(asset)) return false;
+  if (asset.priceConfidence !== "high") return false;
+  if (typeof asset.price !== "number" || !Number.isFinite(asset.price) || asset.price <= 0) return false;
+  if (
+    typeof asset.priceSource !== "string" ||
+    asset.priceSource.length === 0 ||
+    asset.priceSource === "cached" ||
+    asset.priceSource === "missing"
+  ) {
+    return false;
+  }
+  const parts = normalizePricingSourceKeys(asset.priceSource);
+  if (parts.length < 2) return false;
+  if (parts.every((part) => getPricingSourceRegistryEntry(part)?.isListAggregator === true)) return false;
+  return true;
+}
+
+/**
+ * Pricing v6.91: when DefiLlama list intake rejected a `peggedUSD` quote solely for being
+ * exact par (`exact_par_list_price_requires_corroboration`), derive `circulatingNative` after
+ * primary consensus resolves a corroborated `high`-confidence multi-source price (not all
+ * list aggregators). Stamps `valuationObservedAtSec` only for genuine `upstream` clocks (R6).
+ */
+export function deriveExactParListNativeQuantities(
+  assets: PeggedAsset[],
+  exactParUsdListObservations: ReadonlyMap<string, number> | undefined,
+  nowSec: number,
+): number {
+  if (!exactParUsdListObservations || exactParUsdListObservations.size === 0) return 0;
+  let derivedCount = 0;
+  for (const asset of assets) {
+    const deferredUsd = exactParUsdListObservations.get(asset.id);
+    if (deferredUsd == null) continue;
+    if (asset.circulatingNative != null || asset.valuationPriceUsd != null) continue;
+    if (asset.pegType !== "peggedUSD") continue;
+    if (asset.supplySource != null && asset.supplySource !== "defillama") continue;
+    if (asset.frozen || asset.supplyRestored || asset.supplyGapFill || isKinesisWrapperSupplyId(asset.id)) continue;
+    const guard = asset.supplyChainGuard;
+    if (guard && (guard.status !== "chains-unavailable" || guard.partialCoverage)) continue;
+    const currentUsd = getCirculatingRawOrNull(asset);
+    if (currentUsd == null || currentUsd !== deferredUsd) continue;
+    if (!isCorroboratedPublishedConsensusPrice(asset)) continue;
+    const price = asset.price as number;
+    const native = deferredUsd / price;
+    if (!Number.isFinite(native) || native < 0 ||
+      Math.abs(native * price - deferredUsd) > 1e-12 * Math.max(deferredUsd, 1)) {
+      continue;
+    }
+    const priceClock = asset.priceObservedAtMode === "upstream" ? asset.priceObservedAt : null;
+    asset.circulatingNative = native;
+    asset.valuationPriceUsd = price;
+    asset.valuationObservedAtSec = priceClock != null && Number.isSafeInteger(priceClock) &&
+      priceClock > 0 && priceClock <= nowSec ? priceClock : null;
+    derivedCount++;
+  }
+  return derivedCount;
+}
+
 export async function fillMissingSupplyHistory(
   db: D1Database,
   assets: PeggedAsset[],
@@ -553,7 +615,7 @@ export async function fillMissingSupplyHistory(
         const point = baselines[window];
         if (point === undefined && !assessed && !rejectedAll && !requiresDatedClose) continue;
         // Revalidate the carried close against its original stock. A carry cannot adopt a replacement.
-        if (point && comparable && targetDate === bucketUnixSecondsToUtcDay(point.observedAt) &&
+        if (point && comparable && targetDate != null && matchesSupplySnapshotDay(point.observedAt, targetDate) &&
           !isAmbiguousSupplyPerimeterDay(asset.id, targetDate) &&
           isEarlierSupplyPerimeter(asset.id, point.observedAt) === currentPerimeter && (pending || point.circulatingUsd === readLegacy(asset))) {
           if (!assessed && !requiresDatedClose) continue;
@@ -640,7 +702,7 @@ export async function fillMissingSupplyHistory(
         if ((missingOwnedWindow || sameProducerOnly) && candidate.source !== asset.supplySource) continue;
         if (!wrapper && (isAmbiguousSupplyPerimeterDay(asset.id, candidate.snapshotDate) ||
           isEarlierSupplyPerimeter(asset.id, candidate.snapshotDate) !== currentPerimeter)) continue;
-        if (bucketUnixSecondsToUtcDay(candidate.observedAt) === targetDate && (!best || candidate.observedAt > best.observedAt)) best = candidate;
+        if (matchesSupplySnapshotDay(candidate.observedAt, targetDate, candidate.snapshotDate) && (!best || candidate.observedAt > best.observedAt)) best = candidate;
         const distance = Math.abs(candidate.observedAt - target);
         if (distance < nearestDistance || (distance === nearestDistance && nearest && candidate.observedAt < nearest.observedAt)) {
           nearestDistance = distance;

@@ -229,15 +229,17 @@ describe("source-owned supply history publication", () => {
   ] as const)("preserves unavailable %s through fresh and carried CoinGecko publication", async (bucket, field, readHistory) => {
     const nowMs = Date.now();
     const original = makePeggedAsset({
-      id: "eurcv-societe-generale-forge", name: "EUR CoinVertible", symbol: "EURCV",
+      id: "europ-schuman", name: "Schuman EUROP", symbol: "EUROP",
       pegType: "peggedEUR", pegMechanism: "fiat-backed", price: 1, priceSource: "coingecko",
       supplySource: "defillama", circulating: { peggedEUR: 100 },
       circulatingPrevDay: { peggedEUR: 90 }, circulatingPrevWeek: { peggedEUR: 80 }, circulatingPrevMonth: { peggedEUR: 70 },
       chainCirculating: {
-        Ethereum: { current: 60, circulatingPrevDay: 54, circulatingPrevWeek: 48, circulatingPrevMonth: 42 },
-        Solana: { current: 30, circulatingPrevDay: 27, circulatingPrevWeek: 24, circulatingPrevMonth: 21 },
-        Stellar: { current: 10, circulatingPrevDay: 9, circulatingPrevWeek: 8, circulatingPrevMonth: 7 },
-      }, chains: ["Ethereum", "Solana", "Stellar"],
+        Ethereum: { current: 50, circulatingPrevDay: 45, circulatingPrevWeek: 40, circulatingPrevMonth: 35 },
+        Polygon: { current: 20, circulatingPrevDay: 18, circulatingPrevWeek: 16, circulatingPrevMonth: 14 },
+        Avalanche: { current: 10, circulatingPrevDay: 9, circulatingPrevWeek: 8, circulatingPrevMonth: 7 },
+        Plasma: { current: 10, circulatingPrevDay: 9, circulatingPrevWeek: 8, circulatingPrevMonth: 7 },
+        Solana: { current: 10, circulatingPrevDay: 9, circulatingPrevWeek: 8, circulatingPrevMonth: 7 },
+      }, chains: ["Ethereum", "Polygon", "Avalanche", "Plasma", "Solana"],
     });
     original[field] = null;
     expect([0, 2e9].map((t) => pairs.reviewedGapFillDecision("usdf-falcon", "solana", t))).toEqual(["eligible", "refused"]);
@@ -245,7 +247,7 @@ describe("source-owned supply history publication", () => {
     vi.spyOn(fetchRetry, "fetchTextWithRetry").mockImplementation(async (url) => ({
       response: new Response(null, { status: 200 }),
       body: JSON.stringify(String(url).includes("/simple/price")
-        ? { "societe-generale-forge-eurcv": { usd_market_cap: 130, last_updated_at: Math.floor(nowMs / 1000) } }
+        ? { "schuman-europ": { usd_market_cap: 130, last_updated_at: Math.floor(nowMs / 1000) } }
         : { market_caps: [[nowMs - 30 * 86400_000, 70], [nowMs - 7 * 86400_000, 80], [nowMs - 86400_000, 90], [nowMs, 130]] }),
     }));
     expect((await reconcileTrackedSupplyGaps([original])).totalReconciled).toBe(1);

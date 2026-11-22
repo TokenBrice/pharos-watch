@@ -2,7 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import type { BlacklistSummaryResponse } from "@shared/types/blacklist";
-import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../blacklist-summary-service";
+import {
+  BLACKLIST_SUMMARY_REQUEST_CLAIM_STALE_SEC,
+  handleBlacklistSummary,
+  materializeBlacklistSummarySnapshot,
+} from "../blacklist-summary-service";
 import { loadBlacklistCurrentBalanceMap, upsertBlacklistCurrentBalance } from "../blacklist-current-balances";
 import { CONTRACT_CONFIGS, getBlacklistConfigsForSymbolAndChain } from "../blacklist-contracts";
 import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
@@ -427,9 +431,13 @@ describe("blacklist summary freeze aggregates", () => {
     const claimKey = "blacklist-summary:request-materialization-claim";
     let successor: { gate: ReturnType<typeof pauseSummaryWrite>; pending: Promise<Response> } | undefined;
     if (race === "invalidation") await invalidateBlacklistDerivedCaches(db);
-    else if (race === "expiry") clock += 120;
-    else sqlite.prepare(`UPDATE cache SET value = json_set(value, '$.claimedAt', unixepoch() - 120),
-      updated_at = unixepoch() - 120 WHERE key = ?`).run(claimKey);
+    else if (race === "expiry") clock += BLACKLIST_SUMMARY_REQUEST_CLAIM_STALE_SEC;
+    else sqlite.prepare(`UPDATE cache SET value = json_set(value, '$.claimedAt', unixepoch() - ?),
+      updated_at = unixepoch() - ? WHERE key = ?`).run(
+      BLACKLIST_SUMMARY_REQUEST_CLAIM_STALE_SEC,
+      BLACKLIST_SUMMARY_REQUEST_CLAIM_STALE_SEC,
+      claimKey,
+    );
     if (race === "takeover") {
       const gate = pauseSummaryWrite(db);
       successor = { gate, pending: handleBlacklistSummary(db) };
@@ -442,6 +450,7 @@ describe("blacklist summary freeze aggregates", () => {
     expect(response.status).toBe(503);
     expect(await response.json()).toMatchObject({ error: "blacklist-summary-superseded" });
     expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("Retry-After")).toBe("5");
     if (race === "takeover") expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(claimKey)).toEqual(claim);
     expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY)).toEqual(winner);
     successor?.gate.resume();
@@ -554,5 +563,45 @@ describe("blacklist summary freeze aggregates", () => {
     await vi.runAllTimersAsync();
     expect(await pending).toMatchObject({ written: true });
     expect(Date.now() - started).toBeGreaterThanOrEqual(10_000);
+  });
+
+  it("returns uncached 503 with Retry-After when concurrent waiters exhaust polling while a claim is active", async () => {
+    vi.useFakeTimers();
+    const { sqlite, db } = sqliteFixtures.open();
+    const now = Math.floor(Date.now() / 1000);
+    expect(BLACKLIST_SUMMARY_REQUEST_CLAIM_STALE_SEC).toBe(45);
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+      "blacklist-summary:request-materialization-claim",
+      JSON.stringify({ version: 1, bucket: 0, state: "claimed", generation: `0:${now}:active`, claimedAt: now }),
+      now,
+    );
+    const pending = handleBlacklistSummary(db);
+    await vi.runAllTimersAsync();
+    const response = await pending;
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: "blacklist-summary-rebuilding" });
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("Retry-After")).toBe("5");
+  });
+
+  it("registers the winning request build and claim release on execCtx.waitUntil", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const gate = pauseSummaryWrite(db);
+    const waitUntilPromises: Promise<unknown>[] = [];
+    const execCtx = {
+      waitUntil: vi.fn((promise: Promise<unknown>) => { waitUntilPromises.push(promise); }),
+      passThroughOnException: vi.fn(),
+      props: {},
+    } as unknown as ExecutionContext;
+    const pending = handleBlacklistSummary(db, execCtx);
+    await gate.paused;
+    expect(execCtx.waitUntil).toHaveBeenCalledTimes(1);
+    gate.resume();
+    await Promise.all(waitUntilPromises);
+    expect((await pending).status).toBe(200);
+    const claimRow = sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+      .get("blacklist-summary:request-materialization-claim") as { value: string };
+    expect(JSON.parse(claimRow.value)).toMatchObject({ state: "failed" });
+    expect((await handleBlacklistSummary(db)).status).toBe(200);
   });
 });

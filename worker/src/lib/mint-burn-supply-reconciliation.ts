@@ -259,7 +259,8 @@ async function boundary(input: PassInput, config: MintBurnContractConfig, day: n
         SELECT block_number, timestamp FROM block_timestamp_cache WHERE chain_id = ? AND block_number <= ?)
         SELECT block_number, timestamp FROM headers WHERE block_number IN (
           SELECT block_number FROM (SELECT block_number FROM headers WHERE timestamp < ? ORDER BY timestamp DESC LIMIT 1)
-          UNION SELECT block_number FROM (SELECT block_number FROM headers WHERE timestamp >= ? ORDER BY timestamp LIMIT 1))`)
+          UNION SELECT block_number FROM (SELECT block_number FROM headers WHERE timestamp >= ? ORDER BY timestamp LIMIT 1)
+          UNION SELECT block_number FROM (SELECT block_number FROM headers ORDER BY block_number DESC LIMIT 1))`)
         .bind(chainId, input.heads.get(chainId) ?? 0, day, day).all<{ block_number: number; timestamp: number }>();
       cache = { latestBlockNumber: input.heads.get(chainId), blockTimestampByNumber: new Map(rows.results.map((row) => [row.block_number, row.timestamp])) };
       caches.set(pinKey, cache);
@@ -269,7 +270,27 @@ async function boundary(input: PassInput, config: MintBurnContractConfig, day: n
     if (anchor && !cache.blockTimestampByNumber.has(anchor.number)) {
       cache.blockTimestampByNumber.set(anchor.number, anchor.timestamp);
     }
-    number = await resolveClosestBlockAtOrBeforeTimestamp(chainId, day - 1, cache, options) ?? undefined;
+    const hasLowerBound = [...cache.blockTimestampByNumber.values()].some((ts) => ts < day);
+    let calibrationBlock: EvmRpcOptions["calibrationBlock"];
+    if (!hasLowerBound && cache.blockTimestampByNumber.size > 0) {
+      let maxBlock = -1;
+      let maxTs = 0;
+      for (const [blockNum, ts] of cache.blockTimestampByNumber.entries()) {
+        if (blockNum > maxBlock) {
+          maxBlock = blockNum;
+          maxTs = ts;
+        }
+      }
+      if (maxBlock >= 0 && maxTs > 0) {
+        calibrationBlock = { blockNumber: maxBlock, timestamp: maxTs };
+      }
+    }
+    number = await resolveClosestBlockAtOrBeforeTimestamp(
+      chainId,
+      day - 1,
+      cache,
+      calibrationBlock ? { ...options, calibrationBlock } : options,
+    ) ?? undefined;
     // Persist probes even on a capped search: the next opportunity continues its bracket.
     if (cache.blockTimestampByNumber.size) await input.db.batch([...cache.blockTimestampByNumber].map(([block, timestamp]) =>
       input.db.prepare(`INSERT OR IGNORE INTO block_timestamp_cache
@@ -315,12 +336,20 @@ export async function runMintBurnSupplyReconciliation(input: PassInput): Promise
   const pins = new Map<string, Omit<Checkpoint, "supplyRaw">>();
   const initialRequests = input.budget.count;
   const deadlineMs = Math.min(input.deadlineMs, Date.now() + 45_000);
+  let budgetExhausted = false;
+  const hasRequestBudget = () =>
+    input.budget.count < input.budget.limit &&
+    input.budget.count - initialRequests < MAX_REQUESTS &&
+    Date.now() < deadlineMs;
   const optionsFor = (config: MintBurnContractConfig): EvmRpcOptions => ({
     chainRpcs: new Map([[config.chain.chainId, { chainId: config.chain.chainId, chainName: config.chain.chainId, type: "evm",
       explorerUrl: config.chain.explorerUrl, endpoints: [...(input.rpcEndpointsByChain.get(config.chain.chainId) ?? [])] }]]),
     signal, deadlineMs, timeoutMs: 5_000, maxRetries: 0, observedHeadBlock: input.heads.get(config.chain.chainId),
     beforeRequest: () => {
-      if (input.budget.count >= input.budget.limit || input.budget.count - initialRequests >= MAX_REQUESTS || Date.now() >= deadlineMs) return false;
+      if (!hasRequestBudget()) {
+        budgetExhausted = true;
+        return false;
+      }
       input.budget.count++;
       return true;
     },
@@ -330,7 +359,7 @@ export async function runMintBurnSupplyReconciliation(input: PassInput): Promise
   let reason: string | undefined;
   for (; visited < Math.min(MAX_CONFIGS, ordered.length); visited++) {
     throwIfAborted(signal);
-    if (Date.now() >= deadlineMs || input.budget.count - initialRequests >= MAX_REQUESTS || input.budget.count >= input.budget.limit) break;
+    if (!hasRequestBudget()) break;
     const config = ordered[(state.cursor + visited) % ordered.length]!;
     const key = mintBurnConfigKey(config);
     const stored = await db.prepare(`SELECT config_key, day_ts, checked_at, status, receipt_json FROM mint_burn_supply_reconciliation
@@ -345,11 +374,16 @@ export async function runMintBurnSupplyReconciliation(input: PassInput): Promise
     }
     const unsupported = lawReason(config);
     const siblings = configs.filter((c) => c.stablecoinId === config.stablecoinId && c.chain.chainId === config.chain.chainId);
+    const priorRecheckDay = recheckDays[key];
+    const restoreRecheckDay = () => {
+      if (priorRecheckDay === undefined) delete recheckDays[key];
+      else recheckDays[key] = priorRecheckDay;
+    };
     if (day == null) {
       const canRecheckSettled = !unsupported && siblings.length === 1;
       const candidates = stored.results.filter((row) => row.day_ts >= floor
         && (row.status === "unavailable" ? row.checked_at < now - 6 * 3600 : canRecheckSettled));
-      const lastRecheck = recheckDays[key] ?? floor - POLICY.daySec;
+      const lastRecheck = priorRecheckDay ?? floor - POLICY.daySec;
       day = (candidates.find((row) => row.day_ts > lastRecheck) ?? candidates[0])?.day_ts;
       if (day != null) recheckDays[key] = day;
     }
@@ -386,8 +420,16 @@ export async function runMintBurnSupplyReconciliation(input: PassInput): Promise
           const prior = receipts.get(day - POLICY.daySec);
           const previous = prior && prior.status !== "unavailable" && prior.status !== "unsupported-law" ? prior.closing ?? undefined : undefined;
           receipt.opening = await boundary(input, config, day, caches, pins, options, previous);
+          if (!receipt.opening && (budgetExhausted || signal?.aborted)) {
+            restoreRecheckDay();
+            break;
+          }
           receipt.closing = await boundary(input, config, day + POLICY.daySec, caches, pins, options, undefined,
             receipt.opening ?? undefined);
+          if ((!receipt.opening || !receipt.closing) && (budgetExhausted || signal?.aborted)) {
+            restoreRecheckDay();
+            break;
+          }
           receipt.priceUsd = current?.priceUsd ?? resolveMintBurnEventPrice(config.stablecoinId, now, input.priceContext)?.price ?? null;
           receipt = reconcileMintBurnSupplyReceipt(receipt, rows, falseZeroLaw);
           ledgerSnapshot = JSON.stringify(rows.map((row) =>
@@ -395,6 +437,10 @@ export async function runMintBurnSupplyReconciliation(input: PassInput): Promise
         }
       } catch (error) {
         rethrowIfAborted(error, signal);
+        if (budgetExhausted) {
+          restoreRecheckDay();
+          break;
+        }
         receipt = { ...baseReceipt(config, day, now), reason: "daily-reconciliation-read-failed" };
       }
     }

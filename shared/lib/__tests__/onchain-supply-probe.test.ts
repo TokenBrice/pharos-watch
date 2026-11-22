@@ -11,6 +11,7 @@ import {
   isZephyrScannerSupplyId,
   onchainSupplyProbeFamily,
   prefersOnChainSupplyMcap,
+  prefersReviewedNativeFiatSupply,
   REVIEWED_ONCHAIN_SUPPLY_PLANS,
   selectCuratedAggregateOnchainSupplyProbeContracts,
   selectSingleOnchainSupplyProbeContract,
@@ -151,6 +152,11 @@ describe("curated on-chain supply paths", () => {
     { id: "apyusd-apyx", chains: ["ethereum", "base", "bsc", "solana"], zero: [], canonical: "ethereum" },
     { id: "susdai-usd-ai", chains: ["arbitrum", "ethereum", "base", "plasma", "solana", "arc"], zero: [] },
     { id: "reusd-re-protocol", chains: ["ethereum", "avalanche", "arbitrum", "base", "bsc", "ink", "plasma", "katana", "tempo", "solana", "berachain", "monad", "sei", "megaeth", "tempo"], zero: ["berachain", "megaeth"] },
+    { id: "eurcv-societe-generale-forge", chains: ["ethereum", "xrpl", "stellar", "solana"], zero: [] },
+    { id: "jpysc-sbi-startale", chains: ["ethereum"], zero: [] },
+    { id: "brla-brla-digital", chains: ["polygon", "gnosis", "celo", "moonbeam"], zero: ["moonbeam"] },
+    { id: "zchf-frankencoin", chains: ["ethereum", "optimism", "gnosis", "base", "arbitrum", "polygon", "avalanche", "sonic"], zero: ["avalanche", "sonic"] },
+    { id: "euri-banking-circle", chains: ["ethereum", "bsc"], zero: [] },
   ])("requires the complete reviewed NAV roster and accounting policy for $id", ({ id, chains, zero, canonical }) => {
     const meta = TRACKED_META_BY_ID.get(id)!;
     const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta);
@@ -199,7 +205,15 @@ describe("curated on-chain supply paths", () => {
     expect(prefersOnChainSupplyMcap(meta)).toBe(true);
     expect(prefersOnChainSupplyMcap(TRACKED_META_BY_ID.get("mxne-real-mxn")!)).toBe(true);
     expect(prefersOnChainSupplyMcap(TRACKED_META_BY_ID.get("jtrsy-anemoy")!)).toBe(true);
+    expect(prefersOnChainSupplyMcap(TRACKED_META_BY_ID.get("usdcx-movement")!)).toBe(true);
     expect(selectSingleOnchainSupplyProbeContract(meta)?.chain).toBe("ethereum");
+    for (const id of ["eurcv-societe-generale-forge", "jpysc-sbi-startale", "brla-brla-digital", "zchf-frankencoin", "euri-banking-circle"]) {
+      expect(prefersReviewedNativeFiatSupply(TRACKED_META_BY_ID.get(id)!)).toBe(true);
+    }
+    expect(prefersReviewedNativeFiatSupply(TRACKED_META_BY_ID.get("kau-kinesis")!)).toBe(false);
+    const eurcvStellar = TRACKED_META_BY_ID.get("eurcv-societe-generale-forge")!.contracts!.find((c) => c.chain === "stellar")!;
+    expect(onchainSupplyProbeFamily(eurcvStellar)).toBeNull();
+    expect(onchainSupplyProbeFamily(eurcvStellar, "EURCV")).toBe("stellar");
   });
 
   it.each(["ylds-figure", "sfrxusd-frax"])(

@@ -1,7 +1,7 @@
 import { getPublishedLegacyPegReference } from "@shared/lib/current-peg-observations";
 import { includePsiEventDeviation } from "../lib/psi-recompute";
 import { logWorkerEventArgs } from "../lib/structured-log";
-import { getCirculatingRawOrNull, getUsdMarketCapBaselineOrNull, hasDatedUsdValuation, isOutageFallbackCarry } from "@shared/lib/supply";
+import { getCirculatingRawOrNull, getUsdMarketCapBaselineOrNull, hasDatedUsdValuation, isOutageFallbackCarry, matchesSupplySnapshotDay } from "@shared/lib/supply";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "@shared/lib/depeg-closure";
@@ -155,7 +155,7 @@ export async function computeAndStoreStabilityIndex(
     const pairedStock = isRecord(week) && typeof week.observedAt === "number" && Number.isSafeInteger(week.observedAt) &&
       week.observedAt > 0 && typeof clock === "number" && Number.isSafeInteger(clock) && clock <= now &&
       clock > 0 && now - clock <= DAY_SECONDS &&
-      bucketUnixSecondsToUtcDay(clock) - bucketUnixSecondsToUtcDay(week.observedAt) === 7 * DAY_SECONDS &&
+      matchesSupplySnapshotDay(week.observedAt, bucketUnixSecondsToUtcDay(clock) - 7 * DAY_SECONDS) &&
       !isOutageFallbackCarry(coin) && !isAmbiguousSupplyPerimeterDay(coin.id, week.observedAt) &&
       !isAmbiguousSupplyPerimeterDay(coin.id, clock) &&
       isEarlierSupplyPerimeter(coin.id, clock) === isEarlierSupplyPerimeter(coin.id, week.observedAt);

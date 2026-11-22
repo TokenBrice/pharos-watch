@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import type { PeggedAsset } from "../enrich-prices";
 import type * as StablecoinRegistry from "@shared/lib/stablecoins/registry";
+import type * as OnchainSupplyProbe from "@shared/lib/onchain-supply-probe";
+import type * as SupplyPerimeterChanges from "@shared/lib/supply-perimeter-changes";
 import type * as OnchainSupply from "../supplemental-assets/onchain-supply";
 import type * as FetchRetry from "../../../lib/fetch-retry";
 import type * as StructuredLog from "../../../lib/structured-log";
@@ -36,6 +38,26 @@ vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) => {
     ACTIVE_META_BY_ID.set(id, { ...eurcv, id });
   }
   return { ...actual, ACTIVE_META_BY_ID };
+});
+
+vi.mock("@shared/lib/onchain-supply-probe", async (importOriginal) => {
+  const actual = await importOriginal<typeof OnchainSupplyProbe>();
+  return {
+    ...actual,
+    prefersOnChainSupplyMcap: (meta: Parameters<typeof OnchainSupplyProbe.prefersOnChainSupplyMcap>[0]) =>
+      meta.id === "eurcv-societe-generale-forge" ? false : actual.prefersOnChainSupplyMcap(meta),
+  };
+});
+
+vi.mock("@shared/lib/supply-perimeter-changes", async (importOriginal) => {
+  const actual = await importOriginal<typeof SupplyPerimeterChanges>();
+  return {
+    ...actual,
+    isEarlierSupplyPerimeter: (id: string, observedAt: number) =>
+      id === "eurcv-societe-generale-forge" ? false : actual.isEarlierSupplyPerimeter(id, observedAt),
+    isAmbiguousSupplyPerimeterDay: (id: string, observedAt: number) =>
+      id === "eurcv-societe-generale-forge" ? false : actual.isAmbiguousSupplyPerimeterDay(id, observedAt),
+  };
 });
 
 vi.mock("../supplemental-assets/onchain-supply", async (importOriginal) => ({

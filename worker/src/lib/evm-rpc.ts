@@ -66,6 +66,8 @@ export interface EvmRpcOptions {
   multicallFallbackBlockHash?: `0x${string}`;
   /** Chain RPC config map (built via buildChainRpcs). Required for RPC URL resolution. */
   chainRpcs?: Map<string, ChainRpcConfig>;
+  /** Optional known block/timestamp pair on the same chain used to estimate block rate on cold searches. */
+  calibrationBlock?: { blockNumber: number; timestamp: number };
 }
 
 export interface EvmBlockHeaderOptions extends EvmRpcOptions {
@@ -1304,39 +1306,118 @@ export async function resolveClosestBlockAtOrBeforeTimestamp(
   // Known anchors bracket the target; interpolation converges on a fast-block
   // chain's boundary in a few probes before the exact binary search below. Each
   // probe only narrows the bracket, never decides it.
-  for (let step = 0; step < 6 && low > 0 && high > low + 1; step++) {
-    const lowTimestamp = cache.blockTimestampByNumber.get(low);
-    const highTimestamp = cache.blockTimestampByNumber.get(high);
-    if (lowTimestamp == null || highTimestamp == null || highTimestamp <= lowTimestamp) break;
-    const ratio = (targetTimestamp - lowTimestamp) / (highTimestamp - lowTimestamp);
-    const guess = Math.min(high - 1, Math.max(low + 1, low + Math.floor(ratio * (high - low))));
-    const timestamp = await getTimestamp(guess);
-    if (timestamp == null) return null;
-    if (timestamp <= targetTimestamp) low = guess;
-    else high = guess;
-  }
+  const narrowWithInterpolation = async (): Promise<boolean> => {
+    for (let step = 0; step < 6 && low > 0 && high > low + 1; step++) {
+      const lowTimestamp = cache.blockTimestampByNumber.get(low);
+      const highTimestamp = cache.blockTimestampByNumber.get(high);
+      if (lowTimestamp == null || highTimestamp == null || highTimestamp <= lowTimestamp) break;
+      const ratio = (targetTimestamp - lowTimestamp) / (highTimestamp - lowTimestamp);
+      const guess = Math.min(high - 1, Math.max(low + 1, low + Math.floor(ratio * (high - low))));
+      const timestamp = await getTimestamp(guess);
+      if (timestamp == null) return false;
+      if (timestamp <= targetTimestamp) low = guess;
+      else high = guess;
+    }
+    return true;
+  };
+
+  if (!(await narrowWithInterpolation())) return null;
 
   // A scoring clock captured immediately before this lookup is commonly only
-  // seconds behind the chain tip. Starting an unbounded binary search at block
-  // zero makes the first probe deep history, which non-archive public RPCs may
-  // have pruned even though every block needed for the near-tip lookup is still
-  // available. Find a retained lower bound by walking back exponentially from
-  // the closest known upper bound, then binary-search only that bracket.
+  // seconds to minutes behind the chain tip. Starting an unbounded binary search
+  // at block zero makes the first probe deep history, which non-archive public
+  // RPCs may have pruned even though every block needed for the near-tip lookup
+  // is still available. For deeper historical cold lookups (>1h behind the
+  // tightest upper bound) or callers providing a calibration anchor, estimate
+  // an empirical block rate and extrapolate into the lower bracket before
+  // falling back to exponential walkback.
   if (low === 0 && high > 0) {
-    const upperAnchor = high;
-    let offset = 1;
-    while (true) {
-      const candidate = Math.max(0, upperAnchor - offset);
-      const timestamp = await getTimestamp(candidate);
-      if (timestamp == null) return null;
-      if (timestamp <= targetTimestamp) {
-        low = candidate;
+    const initialHighTs = cache.blockTimestampByNumber.get(high);
+    let refBlock: number | undefined;
+    let refTs: number | undefined;
+    const cal = options?.calibrationBlock;
+    if (
+      cal &&
+      initialHighTs != null &&
+      Number.isSafeInteger(cal.blockNumber) &&
+      cal.blockNumber >= 0 &&
+      Number.isSafeInteger(cal.timestamp) &&
+      cal.timestamp > 0 &&
+      cal.blockNumber !== high &&
+      cal.timestamp !== initialHighTs
+    ) {
+      refBlock = cal.blockNumber;
+      refTs = cal.timestamp;
+    } else if (initialHighTs != null && initialHighTs - targetTimestamp > 3_600) {
+      let bestSpan = 0;
+      for (const [blockNumber, timestamp] of cache.blockTimestampByNumber.entries()) {
+        const span = Math.abs(blockNumber - high);
+        if (span > bestSpan && timestamp !== initialHighTs) {
+          bestSpan = span;
+          refBlock = blockNumber;
+          refTs = timestamp;
+        }
+      }
+    }
+
+    let usedColdExtrapolation = refBlock != null;
+    if (refBlock == null && high > 1 && initialHighTs != null && initialHighTs - targetTimestamp > 3_600) {
+      usedColdExtrapolation = true;
+      const sampleSpan = Math.min(high - 1, Math.max(1, Math.min(10_000, Math.floor((initialHighTs - targetTimestamp) / 4))));
+      const sampleBlock = Math.max(1, high - sampleSpan);
+      const sampleTs = await getTimestamp(sampleBlock);
+      if (sampleTs == null) return null;
+      if (sampleTs <= targetTimestamp) {
+        low = sampleBlock;
+      } else {
+        if (sampleTs < initialHighTs) {
+          refBlock = high;
+          refTs = initialHighTs;
+        }
+        high = sampleBlock;
+      }
+    }
+
+    for (let step = 0; step < 3 && low === 0 && high > 1 && refBlock != null && refTs != null; step++) {
+      const curHighTs = cache.blockTimestampByNumber.get(high);
+      if (curHighTs == null || curHighTs <= targetTimestamp) break;
+      const rawSecPerBlock = Math.abs(refTs - curHighTs) / Math.abs(refBlock - high);
+      if (!Number.isFinite(rawSecPerBlock) || rawSecPerBlock <= 0) break;
+      const secPerBlock = Math.min(60, Math.max(0.05, rawSecPerBlock));
+      const estimatedDistance = Math.ceil(((curHighTs - targetTimestamp) / secPerBlock) * 1.25);
+      const guess = Math.max(1, high - Math.max(estimatedDistance, 1));
+      if (guess >= high) break;
+      const guessTs = await getTimestamp(guess);
+      if (guessTs == null) return null;
+      if (guessTs <= targetTimestamp) {
+        low = guess;
         break;
       }
-      high = candidate;
-      if (candidate === 0) return null;
-      offset = Math.min(upperAnchor, offset * 2);
+      if (guessTs < curHighTs) {
+        refBlock = high;
+        refTs = curHighTs;
+      }
+      high = guess;
     }
+
+    if (low === 0 && high > 0) {
+      const upperAnchor = high;
+      let offset = 1;
+      while (true) {
+        const candidate = Math.max(0, upperAnchor - offset);
+        const timestamp = await getTimestamp(candidate);
+        if (timestamp == null) return null;
+        if (timestamp <= targetTimestamp) {
+          low = candidate;
+          break;
+        }
+        high = candidate;
+        if (candidate === 0) return null;
+        offset = Math.min(upperAnchor, offset * 2);
+      }
+    }
+
+    if (usedColdExtrapolation && !(await narrowWithInterpolation())) return null;
   }
 
   while (low + 1 < high) {

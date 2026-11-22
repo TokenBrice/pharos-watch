@@ -20,7 +20,7 @@ The runtime now uses three HTTP lanes:
 
 - `https://api.pharos.watch` is the external integration API. Protected public routes require `X-API-Key`.
 - `https://site-api.pharos.watch` requires `X-Pharos-Site-Proxy-Secret` for allowlisted `GET` reads and internal `GET /api/stablecoin-detail-snapshot-inputs`. The build-input read is denied through browser `/_site-data/*` and the public API host. After those checks the Worker verifies `X-Pharos-Site-Session` using the current or previous signing key. `SITE_SESSION_ENFORCEMENT` defaults to `observe`; only exact `enforce` rejects invalid sessions (`401`, `X-Pharos-Session: required`, `Cache-Control: no-store`), or a missing signing key (`503`). Valid browser sessions have native per-session (`90/min`) and client-network (`600/min`) budgets; enforce returns `429` with `Retry-After: 60` over budget or `503` on binding failure, while observe logs and continues. Automation tokens skip these budgets.
-- `/_site-data/*` is the same-origin Pages Functions proxy used by browsers on `pharos.watch`, `ops.pharos.watch`, and subdomains of `stablecoin-dashboard.pages.dev`. Document requests to the bare `stablecoin-dashboard.pages.dev` host answer `301` to the same path and query on `pharos.watch`, except `/__pharos_release.json`; `/_site-data/*`, `/_next/*` and Functions-excluded assets such as `/sitemap.xml` are not redirected by the middleware. Its `Origin` / `Referer` gate is a caller-shape signal, not authentication, so admitted reads also carry a per-isolate, per-client-IP ceiling of `1,200` requests per `60` seconds (`429` with `Retry-After: 60`); see [Worker & API Limits](./worker-and-api-limits.md#worker-runtime).
+- `/_site-data/*` is the same-origin Pages Functions proxy used by browsers on `pharos.watch`, `ops.pharos.watch`, and subdomains of `stablecoin-dashboard.pages.dev`. Document requests to the bare `stablecoin-dashboard.pages.dev` host answer `301` to the same path and query on `pharos.watch`, except `/__pharos_release.json`; `/_site-data/*`, `/_next/*` and Functions-excluded assets such as `/sitemap.xml` are not redirected by the middleware. Its `Origin` / `Referer` gate is a caller-shape signal, not authentication, so admitted reads also carry a per-isolate, per-client-IP ceiling of `600` requests per `60` seconds (`429` with `Retry-After: 60`); see [Worker & API Limits](./worker-and-api-limits.md#worker-runtime).
 
 Static dataset exports are served from the public website, not from the Worker API, and do not require `X-API-Key`. The Stablecoin Cemetery export is JSON at `https://pharos.watch/datasets/stablecoin-cemetery.json` and CSV at `https://pharos.watch/datasets/stablecoin-cemetery.csv`.
 
@@ -946,8 +946,8 @@ No-key availability canary for the public API host; it is not the operator statu
       "producerIntervalSec": 7200
     },
     "dews": {
-      "maxAge": 1800,
-      "endpointMaxAge": 1800,
+      "maxAge": 3600,
+      "endpointMaxAge": 3600,
       "producerIntervalSec": 1800
     }
   }
@@ -1199,7 +1199,7 @@ DEWS-style stress signals for the stablecoin universe or one selected asset. [Fu
 - **Success response schema:** [`StressSignalsResponse`](https://pharos.watch/openapi.json#/components/schemas/StressSignalsResponse)
 - **Policy:** authentication `X-API-Key` required; shared endpoint caching allowed (`cacheBypass: false`).
 
-Freshness threshold: 1800 s.
+Freshness threshold: 3600 s.
 
 **Current methodology example**
 

@@ -498,7 +498,7 @@ function buildSupplyGapCandidates(
   for (const asset of assets) {
     const assetId = String(asset.id);
     const meta = ACTIVE_META_BY_ID.get(assetId);
-    if (!meta || meta.detailProvider !== "defillama") continue;
+    if (!meta || meta.detailProvider !== "defillama" || (asset.supplySource != null && asset.supplySource !== "defillama")) continue;
 
     const pegKey = pegTypeFromCurrency(meta.flags.pegCurrency);
     if (!pegKey) continue;

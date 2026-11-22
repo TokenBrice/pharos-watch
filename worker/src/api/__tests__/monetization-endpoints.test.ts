@@ -163,10 +163,12 @@ function buildRiskCheckMockDb(nowSec: number, options?: {
   heldSafety?: boolean;
   missingPegAnalytics?: boolean;
   malformedRedemptionCoinId?: string;
+  eventualOnlyRedemptionCoinId?: string;
   activeDdrCoinId?: string;
   ddrErratum?: boolean;
   stablecoinsAgeSec?: number;
   redemptionAgeSec?: number;
+  dewsAgeSec?: number;
   malformedStablecoinEntry?: boolean;
   nullStablecoinPriceFor?: string;
   activeDepegRows?: Record<string, unknown>[];
@@ -176,6 +178,7 @@ function buildRiskCheckMockDb(nowSec: number, options?: {
   const freshAt = nowSec - 60;
   const stablecoinsAt = nowSec - (options?.stablecoinsAgeSec ?? 60);
   const redemptionAt = nowSec - (options?.redemptionAgeSec ?? 60);
+  const dewsAt = nowSec - (options?.dewsAgeSec ?? 60);
   const stablecoinsPayload = {
     peggedAssets: [
       {
@@ -454,7 +457,7 @@ function buildRiskCheckMockDb(nowSec: number, options?: {
   };
 
   const dewsPointer = {
-    updatedAt: freshAt,
+    updatedAt: dewsAt,
     source: "compute-dews",
     publishStatus: "published",
     coverageVersion: 2,
@@ -468,11 +471,31 @@ function buildRiskCheckMockDb(nowSec: number, options?: {
       ? []
       : [{ key: "peg-analytics", value: JSON.stringify(pegAnalyticsPayload), updated_at: freshAt }]),
     { key: "depeg-resolver:snapshot", value: JSON.stringify(ddrEnvelope), updated_at: freshAt },
-    { key: "dews:published-generation", value: JSON.stringify(dewsPointer), updated_at: freshAt },
+    { key: "dews:published-generation", value: JSON.stringify(dewsPointer), updated_at: dewsAt },
   ];
 
   const redemptionRows = [
-    makeValidRedemptionRow("usdc-circle", redemptionAt),
+    options?.eventualOnlyRedemptionCoinId === "usdc-circle"
+      ? {
+          ...makeValidRedemptionRow("usdc-circle", redemptionAt),
+          score: null,
+          capacity_score: null,
+          immediate_capacity_usd: null,
+          immediate_capacity_ratio: null,
+          details_json: JSON.stringify({
+            resolutionState: "resolved",
+            capacityConfidence: "documented-bound",
+            capacitySemantics: "eventual-only",
+            eventualRedeemabilityScore: 72,
+            feeConfidence: "fixed",
+            feeModelKind: "fixed-bps",
+            modelConfidence: "high",
+            routeStatus: "open",
+            routeStatusSource: "static-config",
+            holderEligibility: "verified-customer",
+          }),
+        }
+      : makeValidRedemptionRow("usdc-circle", redemptionAt),
     options?.malformedRedemptionCoinId === "usdt-tether"
       ? {
           ...makeValidRedemptionRow("usdt-tether", redemptionAt),
@@ -599,13 +622,13 @@ function buildRiskCheckMockDb(nowSec: number, options?: {
     {
       match: "FROM stress_signal_publication_rows",
       rows: [
-        { stablecoin_id: "usdc-circle", score: 8, band: "CALM", computed_at: freshAt },
-        { stablecoin_id: "usdt-tether", score: 11, band: "CALM", computed_at: freshAt },
+        { stablecoin_id: "usdc-circle", score: 8, band: "CALM", computed_at: dewsAt },
+        { stablecoin_id: "usdt-tether", score: 11, band: "CALM", computed_at: dewsAt },
       ],
     },
     {
       match: "FROM redemption_backstop_run_rows",
-      matchBinds: ["run-0", 50, 0],
+      matchBinds: ["run-0", "", 50],
       rows: previousRedemptionRows,
     },
     {
@@ -1021,6 +1044,29 @@ describe("Wave 2 endpoints: compliance, resolve, risk-check", () => {
     const lateSMaxAge = Number(/s-maxage=(\d+)/.exec(lateCacheControl)?.[1]);
     expect(lateSMaxAge).toBeGreaterThan(0);
     expect(lateSMaxAge).toBeLessThanOrEqual(30);
+  });
+
+  it("discloses eventual-only redemption semantics and keeps /api/risk-check fresh past 30m DEWS cadence", async () => {
+    const nowSec = 1_795_300_000;
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(nowSec * 1000);
+
+    const { db } = buildRiskCheckMockDb(nowSec, {
+      eventualOnlyRedemptionCoinId: "usdc-circle",
+      dewsAgeSec: 1900,
+    });
+    const res = await handleRiskCheck(db, new URL("https://api.pharos.watch/api/risk-check?ids=usdc-circle"));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toContain("s-maxage=");
+    const body = RiskCheckResponseSchema.parse(await res.json());
+    expect(body._meta.status).toBe("fresh");
+    expect(body._meta.dependencies?.dews).toMatchObject({ status: "fresh", ageSeconds: 1900, freshBudgetSec: 3600 });
+    expect(body.assets["usdc-circle"].redemption).toMatchObject({
+      score: null,
+      capacitySemantics: "eventual-only",
+      eventualRedeemabilityScore: 72,
+      unavailableReason: "eventual-only",
+    });
   });
 
   it("quarantines per asset on /api/risk-check: degraded stablecoins, one price producer, unreadable depeg rows, DEX admission", async () => {

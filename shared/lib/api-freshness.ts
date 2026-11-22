@@ -79,8 +79,8 @@ export const API_FRESHNESS_MAX_AGE_SEC = {
   nonUsdShare: DAY_SECONDS,
 } as const;
 
-/** Last-valid DEWS presentation window; not the endpoint freshness SLO. */
-export const STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC = API_FRESHNESS_MAX_AGE_SEC.stressSignals * 8;
+/** Last-valid DEWS presentation window; decoupled from endpointMaxAgeSec to stay fixed at 4 hours. */
+export const STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC = 4 * 3600;
 
 /**
  * Machine reason for the designed detail history fallback: the detail response is served from the

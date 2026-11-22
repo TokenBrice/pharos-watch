@@ -102,7 +102,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/chain-rpc-registry.ts",
-      "sha256": "f756d3e979425e04eab23c083c4a3bc7b400efd284b2e506e4e442c7db9702bd"
+      "sha256": "415408d1b526c900c1fe10f291916c218e79628b44192ad407349bf02f50e188"
     },
     {
       "path": "shared/lib/classification/pegs.ts",
@@ -262,7 +262,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/pricing-source-policy.ts",
-      "sha256": "f395e25e818da8861ed17929a3d5a8cc1dffaab33f3b3606d87b4d8605c8b8c8"
+      "sha256": "85521ad376e5f64dc2de00c161649ddfb1c52b266fa1bf7dbee9be1d530e075d"
     },
     {
       "path": "shared/lib/pricing-source-registry-aggregators.ts",
@@ -746,7 +746,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/supply.ts",
-      "sha256": "06daed432ff2de54cee60ceac5a4fe9d48e56a3af7d4d4300dd975f3dfb4acba"
+      "sha256": "1eb891430c0847bd580c9343b5bf7c305a15763252b1cf5942f037f357d3a78e"
     },
     {
       "path": "shared/lib/time-buckets.ts",
@@ -1363,7 +1363,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-22-block-26470421-shock-coverage.json.gz"
     }
   ],
-  "digest": "0e7677fa4c315e619f6fb79ebfd233d678df5555798a81304821ba59945761fb"
+  "digest": "966ffd2a24efeb08e2f58a1fd5310402f88e5b5b4dba9620eb3edd22536706e3"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

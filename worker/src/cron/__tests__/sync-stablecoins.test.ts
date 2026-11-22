@@ -53,7 +53,7 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
   const stablecoins: StablecoinMeta[] = [
     makeStablecoinMeta({ id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", llamaId: "1", detailProvider: "defillama", flags: fiat }),
     makeStablecoinMeta({ id: "usdc-circle", name: "USD Coin", symbol: "USDC", geckoId: "usd-coin", llamaId: "2", detailProvider: "defillama", flags: fiat }),
-    makeStablecoinMeta({ id: "eurcv-societe-generale-forge", name: "EUR CoinVertible", symbol: "EURCV", geckoId: "societe-generale-forge-eurcv", detailProvider: "defillama", flags: { ...fiat, pegCurrency: "EUR" } }),
+    makeStablecoinMeta({ id: "eurc-circle", name: "EURC", symbol: "EURC", geckoId: "euro-coin", detailProvider: "defillama", flags: { ...fiat, pegCurrency: "EUR" } }),
     makeStablecoinMeta({ id: "tryb-bilira", name: "BiLira", symbol: "TRYB", geckoId: "bilira", llamaId: "300", detailProvider: "defillama", flags: { ...fiat, pegCurrency: "TRY" } }),
     ...fallback,
   ];

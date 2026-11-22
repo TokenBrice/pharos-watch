@@ -1028,7 +1028,7 @@ describe("handleStressSignals contract tests", () => {
     expect(res.headers.get("X-Data-Age")).toBeNull();
   });
 
-  it.each([[1800, "fresh"], [1801, "lagging"], [14400, "lagging"], [14401, "stale"]])(
+  it.each([[3600, "fresh"], [3601, "lagging"], [14400, "lagging"], [14401, "stale"]])(
     "classifies a current row aged %i seconds as %s",
     async (age, expected) => {
       vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);

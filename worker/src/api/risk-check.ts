@@ -6,6 +6,7 @@ import {
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { RISK_CHECK_MAX_ASSETS } from "@shared/lib/api-endpoints/queries";
 import { API_FRESHNESS_MAX_AGE_SEC, STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
 import { parseContractTuple } from "@shared/lib/deployment-resolver";
 import { applyDurationStaleness, validateDdrPublicCacheContract } from "@shared/lib/depeg-resolver/public-contract";
 import { parseDexVolumeAvailabilityRecord, readStoredDexVolumeWindow } from "@shared/lib/dex-volume-availability";
@@ -208,7 +209,11 @@ function gradeDependency(
     ? options.forced.reason
     : producerDegraded
       ? options.degradedReason ?? null
-      : freshness.status === "fresh" ? null : `${policy.cacheKey}-${freshness.status}`;
+      : freshness.status === "fresh"
+        ? null
+        : freshness.status === "degraded" && options.degradedReason != null
+          ? options.degradedReason
+          : `${policy.cacheKey}-${freshness.status}`;
   return {
     meta: {
       updatedAt: freshness.updatedAt,
@@ -819,9 +824,19 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
         immediateCapacityUsd: null,
         feeBps: null,
         marketPhase,
+        capacitySemantics: null,
+        eventualRedeemabilityScore: null,
         unavailableReason: !redemptionAdmission.ok ? "redemption-snapshot-unavailable" : "row-not-published",
       };
     } else {
+      const redemptionUnavailableReason =
+        redemptionEntry.resolutionState !== "resolved"
+          ? redemptionEntry.resolutionState
+          : redemptionEntry.score === null
+            ? redemptionEntry.capacitySemantics === "eventual-only"
+              ? "eventual-only"
+              : "score-unavailable"
+            : null;
       redemptionBlock = {
         score: redemptionEntry.score,
         routeFamily: redemptionEntry.routeFamily,
@@ -829,7 +844,9 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
         immediateCapacityUsd: redemptionEntry.immediateCapacityUsd,
         feeBps: redemptionEntry.feeBps,
         marketPhase,
-        unavailableReason: redemptionEntry.resolutionState === "resolved" ? null : redemptionEntry.resolutionState,
+        capacitySemantics: redemptionEntry.capacitySemantics ?? null,
+        eventualRedeemabilityScore: redemptionEntry.eventualRedeemabilityScore ?? null,
+        unavailableReason: redemptionUnavailableReason,
       };
     }
 
@@ -977,8 +994,17 @@ export async function handleRiskCheck(db: D1Database, url: URL): Promise<Respons
   const ddrDependencyReason = ddrCacheLoad.kind !== "ok"
     ? ddrCacheLoad.reason
     : ddrContractReason ?? (ddrOverlay && !ddrOverlay.ok ? ddrOverlay.reason : null);
+  const ddrExpiresBudgetSec = ddrSnapshot
+    ? Math.max(0, ddrSnapshot._meta.expiresAt - ddrSnapshot._meta.computedAt)
+    : undefined;
+  const ddrPolicy: DependencyPolicy = ddrExpiresBudgetSec != null
+    ? {
+        ...DEPEG_RESOLVER_POLICY,
+        freshBudgetSec: Math.min(DEPEG_RESOLVER_POLICY.maxAgeSec * FRESHNESS_RATIOS.FRESH, ddrExpiresBudgetSec),
+      }
+    : DEPEG_RESOLVER_POLICY;
   const ddrDep = ddrSnapshot && ddrView && ddrDependencyReason == null
-    ? gradeDependency(DEPEG_RESOLVER_POLICY, ddrSnapshot._meta.computedAt, nowSec, {
+    ? gradeDependency(ddrPolicy, ddrSnapshot._meta.computedAt, nowSec, {
         generationId: ddrSnapshot._meta.snapshotGeneration != null ? String(ddrSnapshot._meta.snapshotGeneration) : null,
         degradedReason: ddrExpired
           ? "stale-cache"

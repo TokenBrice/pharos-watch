@@ -1,9 +1,13 @@
 import type { StablecoinData, SupplyRestoreMode } from "../types/supply";
+import { CRON_INTERVALS } from "./cron-jobs";
 import { bucketUnixSecondsToUtcDay } from "./time-buckets";
 
 export type SupplyChangeBaselines = NonNullable<StablecoinData["supplyChangeBaselines"]>;
 
-/** A directly reported USD cap carries its stock clock. A separate valuation must belong to that UTC date. */
+/** Maximum lead before UTC midnight / snapshot cache age accepted for a daily supply close (2 × sync-stablecoins interval). */
+export const SUPPLY_SNAPSHOT_MAX_AGE_SEC = 2 * CRON_INTERVALS["sync-stablecoins"];
+
+/** A directly reported USD cap carries its stock clock. A separate valuation must belong to that UTC date or fall within the midnight-lead snapshot window. */
 export function hasDatedUsdValuation(
   supplySource: string | null | undefined,
   stockAt: number,
@@ -16,7 +20,33 @@ export function hasDatedUsdValuation(
   }
   return valuationPrice != null && Number.isFinite(valuationPrice) && valuationPrice > 0 &&
     valuationAt != null && Number.isSafeInteger(valuationAt) && valuationAt > 0 && valuationAt <= asOf &&
-    bucketUnixSecondsToUtcDay(valuationAt) === bucketUnixSecondsToUtcDay(stockAt);
+    (bucketUnixSecondsToUtcDay(valuationAt) === bucketUnixSecondsToUtcDay(stockAt) ||
+      Math.abs(valuationAt - stockAt) <= SUPPLY_SNAPSHOT_MAX_AGE_SEC);
+}
+
+/**
+ * Whether a stock observation timestamp belongs to `targetDate` (UTC midnight),
+ * admitting finalized-block captures within the midnight-lead snapshot window
+ * (`[targetDate - SUPPLY_SNAPSHOT_MAX_AGE_SEC, targetDate)`). When `snapshotDate`
+ * is provided, a midnight-lead capture belongs exclusively to its own `snapshotDate`
+ * so a `D+1` snapshot captured at `D 23:57 UTC` cannot displace `D`'s own close.
+ */
+export function matchesSupplySnapshotDay(
+  observedAt: number,
+  targetDate: number,
+  snapshotDate?: number | null,
+): boolean {
+  if (snapshotDate != null) {
+    const effectiveDay =
+      observedAt >= snapshotDate - SUPPLY_SNAPSHOT_MAX_AGE_SEC && observedAt < snapshotDate
+        ? snapshotDate
+        : bucketUnixSecondsToUtcDay(observedAt);
+    return effectiveDay === targetDate;
+  }
+  return (
+    bucketUnixSecondsToUtcDay(observedAt) === targetDate ||
+    (observedAt >= targetDate - SUPPLY_SNAPSHOT_MAX_AGE_SEC && observedAt < targetDate)
+  );
 }
 
 /**

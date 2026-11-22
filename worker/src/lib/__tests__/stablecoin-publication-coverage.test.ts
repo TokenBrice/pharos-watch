@@ -66,8 +66,16 @@ describe("evaluateStablecoinPublicationCoverage", () => {
     });
   });
 
-  it("has no default publication waivers", () => {
-    expect(PUBLICATION_WAIVERS).toEqual([]);
+  it("registers only dated, expiring owner-approved publication waivers", () => {
+    expect(PUBLICATION_WAIVERS.map((waiver) => waiver.stablecoinId)).toEqual(["wm-m0"]);
+    const wm = PUBLICATION_WAIVERS[0]!;
+    expect(wm).toMatchObject({ owner: "ops", expiresAt: Date.UTC(2026, 10, 26, 12, 0) / 1000 });
+    expect(publicationCoverage(activeIds.filter((id) => id !== "wm-m0"), wm.expiresAt - 1)).toMatchObject({
+      complete: true, waivedActiveIds: ["wm-m0"], missingActiveIds: [],
+    });
+    expect(publicationCoverage(activeIds.filter((id) => id !== "wm-m0"), wm.expiresAt)).toMatchObject({
+      complete: false, waivedActiveIds: [], missingActiveIds: ["wm-m0"], expiredWaiverIds: ["wm-m0"],
+    });
   });
 
   it("accepts only owned, reasoned, unexpired waivers", () => {

@@ -1268,6 +1268,24 @@ describe("computeAndStoreStabilityIndex", () => {
     expect(persistedSampleCount(db)).toBe(0);
   });
 
+  it("pairs a 7d baseline whose finalized stock clock straddled UTC midnight", async () => {
+    vi.setSystemTime(new Date("2026-11-27T12:00:00Z"));
+    const now = Math.floor(Date.now() / 1000);
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce(cacheOk([
+      makeStabilityAsset({
+        id: "xaut-tether", symbol: "XAUT", pegType: "peggedGOLD",
+        supplySource: "onchain-circulating-supply", supplyObservedAt: now - 900,
+        circulating: { peggedGOLD: 3_100_000_000 }, circulatingNative: 752_000,
+        valuationPriceUsd: 4122.34, valuationObservedAtSec: now - 60,
+        supplyChangeBaselines: { week: { observedAt: 1795131863, circulatingUsd: 3_072_000_000, circulatingNative: 749_423.56 } },
+      }),
+    ], now));
+    const db = makeDb({ depegRows: [] });
+    const result = await computeAndStoreStabilityIndex(db);
+    expect(result.status).toBe("ok");
+    expect(metadataOf(result).trendUnavailableIds).toEqual([]);
+  });
+
   afterEach(() => {
     fixtures.closeAll();
     vi.useRealTimers();

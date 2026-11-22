@@ -60,7 +60,7 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     stateNames: ["siteDataRequestTimestampsByIpHash"],
     owner: "Pages site-data read limiter",
     kind: "limiter",
-    resetOrTtl: "60-second sliding window, 1,200 requests per IP hash, capped at 5,000 tracked hashes; resets with the isolate.",
+    resetOrTtl: "60-second sliding window, 600 requests per IP hash, capped at 5,000 tracked hashes; resets with the isolate.",
     durableTruth: "No durable counter: this is a best-effort local read throttle; Worker edge caching and the lane secret remain authoritative.",
   },
   {
@@ -411,6 +411,14 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     kind: "cache",
     resetOrTtl: "Last computed rollup per window; a newer D1 memo replaces the local one, and everything resets with the isolate.",
     durableTruth: "The D1 cache rows reserve-sync-reliability-rollup:v1 (memo with computedAt) and its refresh-attempt marker are authoritative; the marker's atomic claim, not this state, limits refreshes to one per hour across isolates.",
+  },
+  {
+    sourcePath: "worker/src/lib/redemption-backstops-store.ts",
+    stateNames: ["admittedRedemptionBackstopRunsByDb"],
+    owner: "Redemption backstop run admission cache",
+    kind: "cache",
+    resetOrTtl: "WeakMap keyed by D1 binding holding at most 5 positively admitted completed run IDs with oldest-entry eviction; full-scan census failure or row-decode failure evicts the run ID, and all entries reset with the isolate.",
+    durableTruth: "Completed immutable rows in redemption_backstop_runs and redemption_backstop_run_rows are authoritative; the cache only skips repeating full-run row censuses for already-admitted completed runs.",
   },
 ] as const satisfies readonly IsolateLocalStateRegistryEntry[];
 
