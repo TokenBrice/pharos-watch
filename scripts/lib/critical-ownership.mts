@@ -4,6 +4,7 @@ import { dirname, extname, isAbsolute, join, relative, resolve } from "node:path
 
 import { collectSourceFilesUnderRoot, collectSourceFilesUnderRoots } from "./source-files.mts";
 import { cachedGlobMatcher } from "./glob-matcher.mts";
+import { isNightlyTestFile } from "./nightly-test-tier.mts";
 import { resolveLocalPackageImport } from "./package-imports.mts";
 
 const TEST_SCAN_ROOTS = [
@@ -154,6 +155,8 @@ export function collectWorkerSharedTestFiles(cwd = process.cwd()): string[] {
   })
     .filter((file) => file.split("/").includes("__tests__") && TEST_FILE_PATTERN.test(file))
     .filter((file) => !THREADED_WORKER_TESTS.includes(file))
+    // Nightly-only suites never enter the PR tier and stay in the isolated `worker` project.
+    .filter((file) => !isNightlyTestFile(file))
     .filter((file) => !Object.hasOwn(WORKER_SHARED_ISOLATED_OVERRIDES, file))
     .filter((file) => {
       try {

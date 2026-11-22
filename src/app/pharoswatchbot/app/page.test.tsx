@@ -130,19 +130,22 @@ function nativeButton() {
   const callbacks: Array<() => void> = [];
   const live = new Set<() => void>();
   let visible = false;
+  let active = true;
   let text: string | undefined;
   return {
     callbacks,
     live,
     get isVisible() { return visible; },
+    get isActive() { return visible && active; },
     get text() { return visible ? text : undefined; },
     show: vi.fn(() => { visible = true; }),
     hide: vi.fn(() => { visible = false; }),
     onClick: vi.fn((callback: () => void) => { callbacks.push(callback); live.add(callback); }),
     offClick: vi.fn((callback: () => void) => { live.delete(callback); }),
-    setParams: vi.fn((params: { text?: string; is_visible?: boolean }) => {
+    setParams: vi.fn((params: { text?: string; is_visible?: boolean; is_active?: boolean }) => {
       if (params.text != null) text = params.text;
       if (params.is_visible != null) visible = params.is_visible;
+      if (params.is_active != null) active = params.is_active;
     }),
     showProgress: vi.fn(),
     hideProgress: vi.fn(),
@@ -579,19 +582,30 @@ describe("PharosWatchBotMiniAppPage", () => {
     }
     fireEvent.click(screen.getByRole("button", { name: "Undo" }));
     fireEvent.change(search, { target: { value: "usd" } });
-    await waitFor(() => expect(main.text).toBe("Add 1 coin"));
+    const ready = (label: string, calls?: number) => waitFor(() => {
+      if (calls != null) expect(fetchMock).toHaveBeenCalledTimes(calls);
+      expect([main.text, main.isActive, main.live.size]).toEqual([label, true, 1]);
+    });
+    await ready("Add 1 coin", 3);
     expect(screen.getByRole("checkbox", { name: "USDC USD Coin, following" }).getAttribute("aria-checked")).toBe("true");
     fireEvent.click(screen.getByRole("checkbox", { name: "USDC USD Coin, following" }));
+    await ready("Save 2 changes");
     const selection = { addStablecoinIds: ["usd0-usual"], removeStablecoinIds: ["usdc-circle"] };
     if (failure === "confirm") fetchMock.mockResolvedValueOnce(preview(selection.addStablecoinIds, selection.removeStablecoinIds));
     fetchMock.mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) });
     act(() => main.click());
     await screen.findByText(/We couldn't confirm that change/);
+    const failedCalls = failure === "confirm" ? 5 : 4;
+    await ready("Save 2 changes", failedCalls);
     expect(screen.getByRole("checkbox", { name: "USDC USD Coin, will be removed" }).getAttribute("aria-checked")).toBe("false");
     expect(screen.getByRole("checkbox", { name: "USD0 Usual USD, will be added" }).getAttribute("aria-checked")).toBe("true");
     fetchMock.mockResolvedValueOnce(preview(selection.addStablecoinIds, selection.removeStablecoinIds)).mockResolvedValueOnce(ok(state));
     act(() => main.click());
-    await waitFor(() => expectMutationRequest(fetchMock, { kind: "confirm-bulk-watchlist", ...selection, expectedPreferenceGeneration: 1, previewFingerprint: "preview-v1-12-deadbeef" }));
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(failedCalls + 2);
+      expectMutationRequest(fetchMock, { kind: "confirm-bulk-watchlist", ...selection, expectedPreferenceGeneration: 1, previewFingerprint: "preview-v1-12-deadbeef" }, failedCalls + 2);
+    });
+    await screen.findByText("Added 1 coin, removed 1.");
   });
 
   it("follows a preset from Follow a preset through the MainButton", async () => {

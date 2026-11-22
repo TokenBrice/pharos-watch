@@ -204,7 +204,7 @@ describe("buildStablecoinTableRowModel supply changes", () => {
   }
 
   // Pricing v6.90: a matched perimeter compares only its own windows.
-  it.each([[true], [undefined], [undefined, ["week"] as const]])("withholds partial-chain changes and incompatible sparkline (explicit partial=%s, matched=%s)", (partialCoverage, matched?) => {
+  it.each([[true as const], [undefined], [undefined, ["week"] as const]])("withholds partial-chain changes and incompatible sparkline (explicit partial=%s, matched=%s)", (partialCoverage, matched?) => {
     const model = buildStablecoinTableRowModel({
       coin: makeStablecoin({
         circulating: { peggedUSD: 50 },

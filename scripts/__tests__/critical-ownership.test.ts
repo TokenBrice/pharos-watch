@@ -294,6 +294,7 @@ describe("worker-shared eligibility", () => {
     const libTests = join(cwd, "worker/src/lib/__tests__");
     mkdirSync(libTests, { recursive: true });
     writeFileSync(join(libTests, "clean.test.ts"), 'import { it } from "vitest";\nit("x", () => {});\n');
+    writeFileSync(join(libTests, "clean.nightly.test.ts"), 'import { it } from "vitest";\nit("x", () => {});\n');
     for (const outside of ["worker/src/other", "worker/src/handlers", "worker/src/routes"]) {
       mkdirSync(join(cwd, outside, "__tests__"), { recursive: true });
       writeFileSync(join(cwd, outside, "__tests__/clean.test.ts"), 'import { it } from "vitest";\n');
