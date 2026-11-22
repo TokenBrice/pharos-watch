@@ -27,7 +27,22 @@ const query = (data: unknown, extra: Record<string, unknown> = {}) => ({
 });
 
 const PREVIEW_PUBLISHED_AT_SEC = Date.parse("2026-10-27T08:00:00Z") / 1000;
-const MAP_PRELOAD = '<link rel="preload" as="image" href="/safety-scores/map.webp" fetchPriority="high"';
+function expectMediaScopedMapPreloads(html: string) {
+  const links = html.match(/<link\b[^>]*rel="preload"[^>]*>/gi) ?? [];
+  const mapLinks = links.filter((tag) => tag.includes("/safety-scores/map.webp"));
+  expect(mapLinks).toHaveLength(2);
+  expect(mapLinks.some((tag) =>
+    tag.includes('href="/safety-scores/map.webp?w=400"')
+    && tag.includes('media="(max-width: 1023px)"')
+    && /fetchPriority="high"/i.test(tag),
+  )).toBe(true);
+  expect(mapLinks.some((tag) =>
+    tag.includes('href="/safety-scores/map.webp"')
+    && tag.includes('media="(min-width: 1024px)"')
+    && /fetchPriority="high"/i.test(tag),
+  )).toBe(true);
+  expect(mapLinks.every((tag) => tag.includes('media="'))).toBe(true);
+}
 
 function makePreview(overrides: Partial<SafetyScoresPreview> = {}): SafetyScoresPreview {
   return {
@@ -195,7 +210,7 @@ describe("ReportCardsV9Client", () => {
   it.each(["loading", "failed"])("keeps the hero map without numeric stats while ratings are %s", async (state) => {
     mocks.useReportCardsV9.mockReturnValue(query(undefined, { isLoading: state === "loading", error: state === "failed" ? new Error("Ratings unavailable") : null }));
     const html = renderToStaticMarkup(<ReportCardsV9Client />);
-    expect(html).toContain(MAP_PRELOAD);
+    expectMediaScopedMapPreloads(html);
     expect(html.match(/<img\b[^>]*src="\/safety-scores\/map\.webp"/g)).toHaveLength(1);
     const { container } = await render(<ReportCardsV9Client />);
     const hero = screen.getByRole("group", { name: "Ecosystem safety overview" });
@@ -229,9 +244,12 @@ describe("ReportCardsV9Client", () => {
     const preview = screen.getByRole("link", { name: "Open the Safety Score Map" });
     const image = preview.querySelector("img")!;
     expect([image.getAttribute("src"), image.getAttribute("fetchPriority")]).toEqual(["/safety-scores/map.webp", "high"]);
+    expect(preview.querySelector('picture > source[srcset="/safety-scores/map.webp?w=400"]')).not.toBeNull();
+    expect(preview.querySelectorAll("img")).toHaveLength(1);
 
     fireEvent.error(image);
     expect([image.getAttribute("src"), image.getAttribute("fetchPriority"), image.getAttribute("alt")]).toEqual(["/safety-scores/map.png", "high", ""]);
+    expect(preview.querySelector("picture > source")).toBeNull();
     expect(preview.querySelectorAll("img")).toHaveLength(1);
     expect(preview.textContent).not.toContain("Full market map");
 
@@ -334,7 +352,7 @@ describe("ReportCardsV9Client", () => {
     const page = () => <Island initialPreview={preview}><Loading preview={preview} /></Island>;
 
     const html = renderToStaticMarkup(page());
-    expect(html).toContain(MAP_PRELOAD);
+    expectMediaScopedMapPreloads(html);
     expect(html).toContain("Grades as of 2026-10-27");
     expect(html).toContain('href="/stablecoin/asset-a/"');
     mocks.useReportCardsV9.mockClear();

@@ -34,4 +34,22 @@ describe("weekly curation coverage", () => {
     expect(report).not.toMatch(/NaN|Infinity|WARN:/);
     expect(report).toContain("Queue file `agents/annotation-candidates.md` not present");
   });
+
+  it("reports populated annotation queue health without the retired last-swept line", () => {
+    const report = renderDigest({
+      queue: [
+        "# Annotation Candidates",
+        "",
+        "## 2026-06-15",
+        "- usdc-circle | depeg | Sample event",
+        "- usdt-tether | governance | Another event",
+        "",
+      ].join("\n"),
+    });
+    const queue = report.split("## Annotation queue health")[1];
+    expect(queue).toContain("Rows pending review: 2");
+    expect(queue).toContain("Oldest dated row: 2026-06-15");
+    expect(queue).not.toContain("Last swept:");
+    expect(queue).not.toContain("(never recorded)");
+  });
 });

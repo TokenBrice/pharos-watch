@@ -71,6 +71,7 @@ function writeRenderedState(directory: string, overrides: Partial<SafetyMapPubli
   const manifestPath = join(directory, "kv-manifest.json");
   writeFileSync(pngPath, "png bytes");
   writeFileSync(join(directory, "latest.webp"), "webp bytes");
+  writeFileSync(join(directory, "latest-400.webp"), "mobile webp");
   writeFileSync(altPath, "alt bytes");
   writeFileSync(manifestPath, "manifest bytes");
   const state: SafetyMapPublishState = {
@@ -91,7 +92,7 @@ function writeRenderedState(directory: string, overrides: Partial<SafetyMapPubli
       updatedAt: "2026-07-27T07:59:00.000Z",
       publicationHealth: { status: "held" },
       counts: { graded: 42, notRated: 3 },
-      bytes: { png: 9, alt: 9, webp: 10 },
+      bytes: { png: 9, alt: 9, webp: 10, webpMobile: 11 },
     },
     ...overrides,
   };
@@ -109,12 +110,16 @@ describe("Safety Map publication CLI", () => {
     const result = await publishSafetyMapPublication({ adapter, outDir: directory, statePath });
 
     expect(result.phase).toBe("published");
-    expect(buildSafetyMapSummary(result, "success")).toContain("### Published keys");
+    const summary = buildSafetyMapSummary(result, "success");
+    expect(summary).toContain("### Published keys");
+    expect(summary).toContain("WebP teaser (800×450)");
+    expect(summary).toContain("WebP mobile teaser (400×225)");
     expect(adapter.puts.map(({ key }) => key)).toEqual([
       "safety-map:alt:latest",
       "safety-map:2026-07-27.png",
       "safety-map:latest.png",
       "safety-map:latest.webp",
+      "safety-map:latest-400.webp",
       "safety-map:latest.json",
     ]);
   });
@@ -193,6 +198,10 @@ describe("Safety Map publication CLI", () => {
     const teaser = await sharp(join(directory, "latest.webp")).metadata();
     expect([teaser.width, teaser.height, teaser.format]).toEqual([800, 450, "webp"]);
     expect(rendered.manifest?.bytes.webp).toBeLessThan(300_000);
+    const mobileTeaser = await sharp(join(directory, "latest-400.webp")).metadata();
+    expect([mobileTeaser.width, mobileTeaser.height, mobileTeaser.format]).toEqual([400, 225, "webp"]);
+    expect(rendered.manifest?.bytes.webpMobile).toBeGreaterThan(0);
+    expect(rendered.manifest?.bytes.webpMobile).toBeLessThan(300_000);
     expect(renderCommand).toBe(`npm run build:safety-score-map -- --out '${join(directory, "latest.png")}'`);
   });
 

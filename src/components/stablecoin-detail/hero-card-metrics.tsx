@@ -92,7 +92,7 @@ function SupplyRestoredNotice({ coinData, className }: { coinData?: Pick<DetailQ
     const excluded = coinData?.supplyExcludedChains;
     return excluded?.length ? <p className={className}>Partial supply · excludes {excluded.join(", ")}</p> : null;
   }
-  // Neutral provenance: the page health banner owns material supply staleness (ADR-42).
+  // Neutral provenance: the header status chip owns material supply staleness (ADR-42).
   const supplyRestoredAsOf = formatSupplyRestoredAsOf(coinData);
   return <p className={cn(className, "text-muted-foreground")}>{supplyRestoredAsOf ? `Supply as of ${supplyRestoredAsOf}` : "Supply date unavailable"}</p>;
 }

@@ -1485,11 +1485,30 @@ function validateSafetyScoresPreview(pageRecords, errors, warnings, expectation)
   const document = fs.readFileSync(record.filePath, "utf8");
   const head = collectElementTags(document.slice(0, document.indexOf("</head>")));
   const scripts = head.filter((tag) => tag.name === "script" && tag.attrs.get("src")?.startsWith("/_next/static/"));
-  const preload = head.find((tag) => tag.name === "link" && tag.attrs.get("rel") === "preload"
-    && tag.attrs.get("as") === "image" && tag.attrs.get("href") === "/safety-scores/map.webp"
-    && tag.attrs.get("fetchpriority") === "high");
-  if (!preload || (scripts[0] && preload.start > scripts[0].start)) {
-    errors.push(`${route}: high-priority map preload must precede head script chunks`);
+  const mapPreloads = head.filter((tag) =>
+    tag.name === "link"
+    && tag.attrs.get("rel") === "preload"
+    && tag.attrs.get("as") === "image"
+    && (tag.attrs.get("href") === "/safety-scores/map.webp" || tag.attrs.get("href") === "/safety-scores/map.webp?w=400"),
+  );
+  const mobilePreload = mapPreloads.find((tag) =>
+    tag.attrs.get("href") === "/safety-scores/map.webp?w=400"
+    && tag.attrs.get("media") === "(max-width: 1023px)"
+    && tag.attrs.get("fetchpriority") === "high",
+  );
+  const desktopPreload = mapPreloads.find((tag) =>
+    tag.attrs.get("href") === "/safety-scores/map.webp"
+    && tag.attrs.get("media") === "(min-width: 1024px)"
+    && tag.attrs.get("fetchpriority") === "high",
+  );
+  const unscopedPreload = mapPreloads.find((tag) => !tag.attrs.get("media"));
+  if (
+    !mobilePreload
+    || !desktopPreload
+    || unscopedPreload
+    || (scripts[0] && (mobilePreload.start > scripts[0].start || desktopPreload.start > scripts[0].start))
+  ) {
+    errors.push(`${route}: media-scoped high-priority map preloads (mobile ?w=400 and desktop) must precede head script chunks without an un-scoped duplicate`);
   }
   if (scripts.some((tag) => tag.attrs.get("src").includes("/recharts-vendor-"))) {
     errors.push(`${route}: live card charts must not be eager head scripts`);

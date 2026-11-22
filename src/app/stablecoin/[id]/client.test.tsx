@@ -378,6 +378,38 @@ describe("StablecoinDetailClient", () => {
     expect(screen.getByRole("button", { name: "Retry reserves" }).hasAttribute("disabled")).toBe(true);
   });
 
+  it("reserves the paired score column while pending or carrying a saved grade, then collapses on failure or frozen", () => {
+    const coin = { ...TRACKED_META_BY_ID.get("usdt-tether")!, reserves: [{ name: "T-Bills", pct: 100, risk: "very-low" as const }], reserveQualitySummary: undefined, reserveLookThrough: undefined };
+    const staticCoin = buildStablecoinStaticMeta(coin);
+    const grid = (el: HTMLElement) => el.querySelector("#report-card")!.parentElement!;
+    const slot = (el: HTMLElement) => el.querySelector("#report-card [data-score-card-placeholder]");
+    const card = makeV9Card({ id: coin.id });
+    const renderState = (vm: Record<string, unknown>, rerender?: (ui: Parameters<typeof render>[0]) => void) => {
+      useViewModelMock.mockReturnValue(vm);
+      const ui = <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={staticCoin} />;
+      return rerender ? (rerender(ui), null) : render(ui);
+    };
+
+    const { container, rerender } = renderState(makeReadyViewModel({ coin, gradeRead: "pending" }))!;
+    expect(grid(container).className).toContain("lg:grid-cols-2");
+    expect(slot(container)).not.toBeNull();
+
+    renderState(makeReadyViewModel({ coin, gradeRead: "settled", reportCardsResponse: undefined, hero: { savedGrade: { grade: "C", score: 54, asOfMs: 1_780_000_000_000 }, signalRailItems: [] } }), rerender);
+    expect(grid(container).className).toContain("lg:grid-cols-2");
+    expect(slot(container)).not.toBeNull();
+
+    renderState(makeReadyViewModel({ coin, reportCard: card, reportCardsResponse: makeReportCardsV9Response({ cards: [card] }) }), rerender);
+    expect(grid(container).className).toContain("lg:grid-cols-2");
+    expect(slot(container)).toBeNull();
+    expect(screen.getByTestId("report-card")).toBeTruthy();
+
+    for (const vm of [makeReadyViewModel({ coin, gradeRead: "failed" }), { ...makeFrozenViewModel(coin), gradeRead: "pending" }]) {
+      renderState(vm, rerender);
+      expect(grid(container).className).not.toContain("lg:grid-cols-2");
+      expect(slot(container)).toBeNull();
+    }
+  });
+
   it.each([false, true])("mounts #chart for USD assets with supply history (yieldBearing=%s)", (yieldBearing) => {
     const coin = yieldBearing ? { ...USDS, flags: { ...USDS.flags, yieldBearing: true, navToken: false, pegCurrency: "USD" as const } } : USDS;
     mockReady({ coin, isNavToken: false, supplyHistory: [{ date: "2026-01-01", mcap: 100, price: yieldBearing ? 1.01 : 1, supply: yieldBearing ? 99 : 100 }] });
@@ -562,6 +594,18 @@ describe("StablecoinDetailClient lead slot", () => {
     expect(order.slice(1).every((next, i) => followsNode(order[i]!, next))).toBe(true);
     const chip = screen.getByTestId("hero-identity-toolbar").querySelector("[data-secondary-ops-chip][data-health-state='error']");
     expect(chip?.textContent).toContain("Partial refresh");
+  });
+
+  it("routes stale restored supply into the header ops chip rather than a top-of-hero banner", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    useViewModelMock.mockReturnValue(makeReadyViewModel({
+      coin,
+      staleQueries: [{ label: "Supply", secondary: true, staleTime: 600_000, dataUpdatedAt: 1_700_000_000_000, error: null, hasData: true, meta: { updatedAt: 1_700_000_000, ageSeconds: 10_000, status: "stale" } }],
+    }));
+    const { container } = renderDetail(coin);
+    const chip = screen.getByTestId("hero-identity-toolbar").querySelector("[data-secondary-ops-chip][data-health-state='stale']");
+    expect(chip?.textContent).toContain("Older snapshot");
+    expect(container.querySelector("[role='status']")).toBeNull();
   });
 
   it("hoists sticky section tabs above AiSummary and prioritizes Contracts and Key links at the top of the rail", () => {

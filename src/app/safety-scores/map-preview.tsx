@@ -1,13 +1,18 @@
 "use client";
 
 import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
+import { preload } from "react-dom";
 import Link from "next/link";
 import { ArrowUpRight, Map as MapIcon } from "lucide-react";
 import { useImageUnavailable } from "@/hooks/use-image-unavailable";
+import { SAFETY_MAP_TEASER_MOBILE_WIDTH } from "@shared/lib/safety-map-artifacts";
 
 const SAFETY_MAP_PATH = "/safety-scores/map/";
 const SAFETY_MAP_IMAGE_PATH = "/safety-scores/map.webp";
+const SAFETY_MAP_MOBILE_IMAGE_PATH = `/safety-scores/map.webp?w=${SAFETY_MAP_TEASER_MOBILE_WIDTH}`;
 const SAFETY_MAP_FALLBACK_IMAGE_PATH = "/safety-scores/map.png";
+const SAFETY_MAP_MOBILE_MEDIA = "(max-width: 1023px)";
+const SAFETY_MAP_DESKTOP_MEDIA = "(min-width: 1024px)";
 
 function useSafetyMapImage() {
   const [imagePath, setImagePath] = useState(SAFETY_MAP_IMAGE_PATH);
@@ -37,6 +42,23 @@ export function SafetyMapPreview() {
   const shared = useContext(SafetyMapImageContext);
   const local = useSafetyMapImage();
   const { imagePath, unavailable, handleImageError, checkAlreadyFailed } = shared ?? local;
+  const usingWebp = imagePath === SAFETY_MAP_IMAGE_PATH;
+  if (!unavailable && usingWebp) {
+    // `<picture>` suppresses React 19's un-scoped `<img>` auto-preload so mobile
+    // never double-downloads the 800px desktop teaser; emit media-scoped hints instead.
+    preload(SAFETY_MAP_MOBILE_IMAGE_PATH, {
+      as: "image",
+      type: "image/webp",
+      media: SAFETY_MAP_MOBILE_MEDIA,
+      fetchPriority: "high",
+    });
+    preload(SAFETY_MAP_IMAGE_PATH, {
+      as: "image",
+      type: "image/webp",
+      media: SAFETY_MAP_DESKTOP_MEDIA,
+      fetchPriority: "high",
+    });
+  }
   return (
     <Link
       href={SAFETY_MAP_PATH}
@@ -50,18 +72,27 @@ export function SafetyMapPreview() {
             <span className="pharos-label text-white/60">Full market map</span>
           </div>
         ) : (
-          <img
-            ref={checkAlreadyFailed}
-            src={imagePath}
-            alt=""
-            width={800}
-            height={450}
-            loading="eager"
-            fetchPriority="high"
-            decoding="async"
-            className="h-full min-h-32 w-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.02]"
-            onError={handleImageError}
-          />
+          <picture className="block h-full min-h-32 w-full">
+            {usingWebp ? (
+              <source
+                media={SAFETY_MAP_MOBILE_MEDIA}
+                srcSet={SAFETY_MAP_MOBILE_IMAGE_PATH}
+                type="image/webp"
+              />
+            ) : null}
+            <img
+              ref={checkAlreadyFailed}
+              src={imagePath}
+              alt=""
+              width={800}
+              height={450}
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
+              className="h-full min-h-32 w-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.02]"
+              onError={handleImageError}
+            />
+          </picture>
         )}
       </div>
       <div className="flex items-center justify-between gap-3 border-t border-border/60 px-4 py-3">

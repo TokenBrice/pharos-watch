@@ -909,7 +909,10 @@ function safetyPreviewRegion({
   return `${region}${Array.from({ length: regionCount - 1 }, () => region).join("")}`;
 }
 
-const MAP_PRELOAD = '<link rel="preload" as="image" href="/safety-scores/map.webp" fetchpriority="high">';
+const MAP_PRELOAD_MOBILE = '<link rel="preload" as="image" href="/safety-scores/map.webp?w=400" media="(max-width: 1023px)" fetchpriority="high">';
+const MAP_PRELOAD_DESKTOP = '<link rel="preload" as="image" href="/safety-scores/map.webp" media="(min-width: 1024px)" fetchpriority="high">';
+const MAP_PRELOAD_UNSCOPED = '<link rel="preload" as="image" href="/safety-scores/map.webp" fetchpriority="high">';
+const MAP_PRELOAD = MAP_PRELOAD_MOBILE + MAP_PRELOAD_DESKTOP;
 const HEAD_CHUNK = '<script src="/_next/static/chunks/app/safety-scores/page.js"></script>';
 
 async function writeSafetyScoresPage(root: string, extraMain: string, extraHead = MAP_PRELOAD + HEAD_CHUNK) {
@@ -922,7 +925,10 @@ describe("safety scores dated preview", () => {
   it.each([
     HEAD_CHUNK,
     HEAD_CHUNK + MAP_PRELOAD,
-    MAP_PRELOAD.replace('="high"', '="low"') + HEAD_CHUNK,
+    MAP_PRELOAD_DESKTOP + HEAD_CHUNK,
+    MAP_PRELOAD_MOBILE + HEAD_CHUNK,
+    MAP_PRELOAD + MAP_PRELOAD_UNSCOPED + HEAD_CHUNK,
+    MAP_PRELOAD_MOBILE + MAP_PRELOAD_DESKTOP.replace('="high"', '="low"') + HEAD_CHUNK,
     MAP_PRELOAD + '<script src="/_next/static/chunks/recharts-vendor-abc.js"></script>',
   ])("rejects late/missing image priority or eager live charts: %s", async (head) => {
     const root = await makeOutDir();

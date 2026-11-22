@@ -278,7 +278,9 @@ function reserveStaleQuery(
 /**
  * A restored supply value ages on its own original observation clock against the shared
  * stablecoins base, so an old retained figure surfaces past the public band even beside a
- * fresh summary. A missing clock never inherits receipt time.
+ * fresh summary. A missing clock never inherits receipt time. Marked secondary so staleness
+ * consolidates into the header OpsStatusChip (paired with the inline hero "Supply as of …"
+ * note) rather than mounting a banner above HeroIdentityHeader and shifting mobile layouts.
  */
 function restoredSupplyStaleQuery(
   liveSummary: StablecoinDetailViewModelQueryInputs["liveSummary"],
@@ -289,6 +291,7 @@ function restoredSupplyStaleQuery(
   const summaryAt = liveSummary.meta?.updatedAt;
   return {
     label: "Supply",
+    secondary: true,
     staleTime: API_FRESHNESS_MAX_AGE_SEC.stablecoins * 1000,
     dataUpdatedAt: observedAt != null ? observedAt * 1000 : 0,
     error: null,
