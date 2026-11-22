@@ -3,7 +3,7 @@
     "version": "7.54",
     "title": "SundaeSwap 24h volume, Curve CryptoSwap closure marks, and placeholder-safe rejection baselines",
     "date": "2026-11-22",
-    "effectiveAt": 1795351800,
+    "effectiveAt": 1795356972,
     "summary": "Valued SundaeSwap stable-counter pools now read 24-hour volume from hourly ticks with version-specific leg normalization and an explicit asOf observation clock. Curve CryptoSwap measured execution targets resolve closed-reference marks on both tokenIn and tokenOut, pool-rejection health baselines walk back past unobserved placeholder generations, and the reviewed sUSDat anchor reset tolerates up to 5% decayed long-tail TVL beside a live primary pool.",
     "impact": [
       "SundaeSwap's pools.byAsset query now inlines current.asOf and 25 hours of Hourly ticks denominated in AssetA with zero extra HTTP requests. Valued two-asset stable-counter pools sum the 24 complete hourly buckets ending at the current hourly window, dividing V4 double-leg totals by 2 while keeping V1, V3 and Stableswaps at 1x. Partial GraphQL errors, stale asOf clocks, unknown versions, malformed ticks and >50x turnover preflight failures withhold volume. The hourly window end persists as sundaeswapVolumeWindowEndSec past four-hour raw-payload cleanup and governs volume freshness; legacy rows without it fail closed to unmeasured. On 2026-11-22 live data, USDrf's USDCx/USDrf pool gains ~$6.56K/day (exiting activity-missing so USDrf can be rated) and USDM's 24h volume coverage rises from 88.3% to 100%. ADA pairs remain unvalued.",

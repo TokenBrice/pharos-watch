@@ -3,14 +3,14 @@
     "version": "8.61",
     "title": "Morpho V1 Vault Net APY on REST v0",
     "date": "2026-11-22",
-    "effectiveAt": 1795392000,
+    "effectiveAt": 1795359359,
     "summary": "Gauntlet USDC Prime V1 (gtUSDC) and Smokehouse USDC V1 (bbqUSDC) migrate off Morpho's retiring GraphQL endpoint to Morpho REST v0, reading the latest timestamped six-hour realized post-fee native APY and valuing on-chain vault assets with Morpho's USDC price feed.",
     "impact": [
       "`fetchMorphoNetVaultSource` now reads `/v0/vaults-v1/1:{address}`, `/state`, `/apy/history?lookback=six_hours`, and `/v0/tokens/1:0xa0b8…/price` serially, verifying Ethereum vault identity, USDC asset/decimals, positive `fee_wad`, and non-future clocks within the six-hour budget.",
       "Because Morpho REST v0 reports realized post-fee native vault yield without external Merkl incentives (0 bps on both vaults at migration time), `apyBase` now equals the published APY and `apyReward` stays null, resolving `rewardShare` to 0 rather than unknown.",
       "Measured USD TVL is derived from raw `total_assets` scaled by 6 decimals times the verified Morpho USDC token price; stale, future, or missing prices fail closed.",
       "Source keys (`protocol-api:morpho-net:ethereum:…`), DeFiLlama comparison rows, on-chain/price-derived fallbacks, USDC linked-variant projection, PYS weights, and supplemental Morpho discovery are unchanged.",
-      "Planned activation is provisionally 2026-11-23 00:00 UTC (1795392000), following the next-UTC-midnight convention; re-date effectiveAt at release."
+      "Activated 2026-11-22 14:55:59 UTC (1795359359), the first `sync-yield-data` run on the released Worker."
     ],
     "commits": [],
     "reconstructed": false
