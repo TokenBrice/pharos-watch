@@ -64,7 +64,7 @@ const EXPECTED_SURFACE_POLICY: Record<string, Record<string, unknown>> = {
     apiPath: "/api/stress-signals",
     queryKey: ["stress-signals"],
     producerIntervalSec: 1800,
-    endpointMaxAgeSec: 1800,
+    endpointMaxAgeSec: 3600,
     producerJob: "compute-dews",
     cacheKey: "dews",
     freshnessSentinelKey: "freshness:dews",
@@ -180,7 +180,7 @@ describe("data surface descriptors", () => {
       stablecoins: { label: "Prices", staleTime: 600_000 },
       dexLiquidity: { label: "Liquidity", staleTime: 14_400_000 },
       yieldRankings: { label: "Yield Rankings", staleTime: 7_200_000 },
-      stressSignals: { label: "DEWS", staleTime: 1_800_000 },
+      stressSignals: { label: "DEWS", staleTime: 3_600_000 },
       reportCards: { label: "Report Cards", staleTime: 7_200_000 },
     });
   });

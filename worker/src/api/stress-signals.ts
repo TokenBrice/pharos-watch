@@ -203,7 +203,10 @@ export const handleStressSignals = async (db: D1Database, url: URL): Promise<Res
       const responseHeaders = currentComputedAt != null
         ? addFreshnessHeaders({
             "Cache-Control": CACHE_PROFILES.standard,
-          }, currentComputedAt, STRESS_SIGNALS_MAX_AGE_SEC)
+          }, currentComputedAt, STRESS_SIGNALS_MAX_AGE_SEC, {
+            assessedAt: nowSec,
+            freshBudgetSec: STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC,
+          })
         : buildUnavailableHeaders("DEWS current row unavailable");
 
       return jsonResponse({
@@ -332,7 +335,10 @@ export const handleStressSignals = async (db: D1Database, url: URL): Promise<Res
     const responseHeaders = updatedAt > 0
       ? addFreshnessHeaders({
           "Cache-Control": CACHE_PROFILES.standard,
-        }, updatedAt, STRESS_SIGNALS_MAX_AGE_SEC)
+        }, updatedAt, STRESS_SIGNALS_MAX_AGE_SEC, {
+          assessedAt: nowSec,
+          freshBudgetSec: STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC,
+        })
       : buildUnavailableHeaders("DEWS current rows unavailable");
 
     return jsonResponse({ signals, updatedAt, oldestComputedAt: oldestComputedAt ?? undefined, eligibleCount, computedCount, missingCount, malformedRows, coverageRatio, coverageStatus: coverage.status, coverageReasons: coverage.reasons, methodology: buildMethodologyEnvelope({

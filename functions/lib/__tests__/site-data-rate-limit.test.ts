@@ -35,6 +35,7 @@ describe("site-data per-source read ceiling", () => {
   });
 
   it("throttles a single client-IP source only after the full window budget", async () => {
+    expect(SITE_DATA_RATE_LIMIT_MAX_PER_WINDOW).toBe(600);
     await fillBudget("203.0.113.77");
 
     expect(await isSiteDataRateLimited(request("203.0.113.77"), env)).toBe(true);

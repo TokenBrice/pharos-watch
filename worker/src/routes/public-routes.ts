@@ -14,7 +14,10 @@ export const PUBLIC_STATIC_ROUTES = [
   defineLazyDbUrlRoute("stablecoin-detail-snapshot-inputs", () => import("../api/stablecoin-detail/snapshot-inputs").then(({ handleDetailSnapshotInputs }) => handleDetailSnapshotInputs)),
   defineLazyDbRoute("stablecoin-charts", () => import("../api/cache-handlers").then(({ handleStablecoinCharts }) => handleStablecoinCharts)),
   defineLazyDbUrlRoute("blacklist", () => import("../api/blacklist").then(({ handleBlacklist }) => handleBlacklist)),
-  defineLazyDbRoute("blacklist-summary", () => import("../lib/blacklist-summary-service").then(({ handleBlacklistSummary }) => handleBlacklistSummary)),
+  defineLazyStaticRoute("blacklist-summary", async () => {
+    const { handleBlacklistSummary } = await import("../lib/blacklist-summary-service");
+    return ({ db, execCtx }) => handleBlacklistSummary(db, execCtx);
+  }),
   defineLazyDbUrlRoute("depeg-events", () => import("../api/depeg-events").then(({ handleDepegEvents }) => handleDepegEvents)),
   defineLazyDbUrlRoute("events", () => import("../api/events").then(({ handleEvents }) => handleEvents)),
   defineLazyDbRoute("peg-summary", () => import("../api/peg-summary").then(({ handlePegSummary }) => handlePegSummary)),

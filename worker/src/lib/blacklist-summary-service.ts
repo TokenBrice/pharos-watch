@@ -86,9 +86,16 @@ interface CachedBlacklistSummarySnapshot {
 }
 
 const BLACKLIST_SUMMARY_REQUEST_CLAIM_KEY = "blacklist-summary:request-materialization-claim";
-const BLACKLIST_SUMMARY_REQUEST_CLAIM_STALE_SEC = 120;
+export const BLACKLIST_SUMMARY_REQUEST_CLAIM_STALE_SEC = 45;
 const BLACKLIST_SUMMARY_REQUEST_WAIT_ATTEMPTS = 100;
 const BLACKLIST_SUMMARY_REQUEST_WAIT_MS = 20;
+const BLACKLIST_SUMMARY_RETRY_AFTER_SEC = 5;
+const BLACKLIST_SUMMARY_RETRYABLE_ERRORS = new Set([
+  "blacklist-summary-aggregate-missing",
+  "blacklist-gap-aggregate-missing",
+  "blacklist-summary-superseded",
+  "blacklist-summary-rebuilding",
+]);
 
 type BlacklistChartPoint = { quarter: string; total: number } & Record<BlacklistStablecoin, number>;
 
@@ -877,6 +884,7 @@ export async function materializeBlacklistSummarySnapshot(
 async function materializeBlacklistSummaryForRequest(
   db: D1Database,
   now: number,
+  execCtx?: ExecutionContext,
 ): Promise<CachedBlacklistSummarySnapshot> {
   for (let claimAttempt = 0; claimAttempt < 2; claimAttempt++) {
     const claim = await claimCadenceBucket(db, {
@@ -886,20 +894,26 @@ async function materializeBlacklistSummaryForRequest(
       staleClaimAfterSec: BLACKLIST_SUMMARY_REQUEST_CLAIM_STALE_SEC,
     });
     if (claim.kind === "claimed") {
-      try {
-        const fence = await captureBlacklistSummaryFence(db);
-        const incumbent = await readBlacklistSummarySnapshot(db);
-        if (incumbent) return incumbent;
-        const { configStates } = await loadBlacklistConfigStates(db);
-        const { oldestSuccessAt } = getOldestBlacklistSuccessAt(configStates);
-        const result = await buildAndWriteBlacklistSummarySnapshot(db, now, fence, oldestSuccessAt, undefined, claim.claim);
-        if (result.written) return result.snapshot;
-        const winner = await readBlacklistSummarySnapshot(db);
-        if (winner) return winner;
-        throw new Error("blacklist-summary-superseded");
-      } finally {
-        await failCadenceBucket(db, claim.claim, now).catch(() => false);
-      }
+      const buildPromise = (async () => {
+        try {
+          const fence = await captureBlacklistSummaryFence(db);
+          const incumbent = await readBlacklistSummarySnapshot(db);
+          if (incumbent) return incumbent;
+          const { configStates } = await loadBlacklistConfigStates(db);
+          const { oldestSuccessAt } = getOldestBlacklistSuccessAt(configStates);
+          const result = await buildAndWriteBlacklistSummarySnapshot(db, now, fence, oldestSuccessAt, undefined, claim.claim);
+          if (result.written) return result.snapshot;
+          const winner = await readBlacklistSummarySnapshot(db);
+          if (winner) return winner;
+          throw new Error("blacklist-summary-superseded");
+        } finally {
+          const releaseAtSec = Math.max(now, Math.floor(Date.now() / 1000));
+          await failCadenceBucket(db, claim.claim, releaseAtSec).catch(() => false);
+        }
+      })();
+      // Keep the winning build and claim release alive past a client disconnect/timeout.
+      execCtx?.waitUntil(buildPromise.then(() => undefined, () => undefined));
+      return await buildPromise;
     }
 
     for (let waitAttempt = 0; waitAttempt < BLACKLIST_SUMMARY_REQUEST_WAIT_ATTEMPTS; waitAttempt++) {
@@ -908,7 +922,7 @@ async function materializeBlacklistSummaryForRequest(
       if (snapshot) return snapshot;
     }
   }
-  throw new Error("Blacklist summary materialization claim did not publish a snapshot");
+  throw new Error("blacklist-summary-rebuilding");
 }
 
 
@@ -925,16 +939,21 @@ function blacklistSummaryHeaders(snapshot: CachedBlacklistSummarySnapshot, now: 
   );
 }
 
-export const handleBlacklistSummary = async (db: D1Database): Promise<Response> => {
+export const handleBlacklistSummary = async (
+  db: D1Database,
+  execCtx?: ExecutionContext,
+): Promise<Response> => {
   const now = Math.floor(Date.now() / 1000);
   try {
     const snapshot = await readBlacklistSummarySnapshot(db)
-      ?? await materializeBlacklistSummaryForRequest(db, now);
+      ?? await materializeBlacklistSummaryForRequest(db, now, execCtx);
     return jsonResponseWithHeaders(snapshot.payload, blacklistSummaryHeaders(snapshot, now));
   } catch (error) {
-    if (error instanceof Error
-      && ["blacklist-summary-aggregate-missing", "blacklist-gap-aggregate-missing", "blacklist-summary-superseded"].includes(error.message)) {
-      return errorResponse(503, error.message, { noStore: true });
+    if (error instanceof Error && BLACKLIST_SUMMARY_RETRYABLE_ERRORS.has(error.message)) {
+      return errorResponse(503, error.message, {
+        noStore: true,
+        retryAfterSec: BLACKLIST_SUMMARY_RETRY_AFTER_SEC,
+      });
     }
     throw error;
   }

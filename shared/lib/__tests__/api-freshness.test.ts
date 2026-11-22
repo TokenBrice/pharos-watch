@@ -4,17 +4,20 @@ import {
   CACHE_AVAILABILITY_MAX_AGE_SEC,
   CACHE_FRESHNESS_LANES,
   FRESHNESS_SENTINEL_CACHE_KEYS,
+  STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC,
   getCacheFreshnessLane,
 } from "../api-freshness";
 import { isFreshnessWarningHeader, isScheduledRefreshWarning } from "../warning-headers";
 import { CRON_INTERVALS } from "../cron-jobs";
 
 describe("api-freshness", () => {
-  it("keeps DEWS endpoint and availability freshness aligned to the compute cadence", () => {
-    expect(API_FRESHNESS_MAX_AGE_SEC.stressSignals).toBe(CRON_INTERVALS["compute-dews"]);
-    expect(CACHE_AVAILABILITY_MAX_AGE_SEC.dews).toBe(CRON_INTERVALS["compute-dews"]);
-    expect(CACHE_FRESHNESS_LANES.dews.endpointMaxAgeSec).toBe(CRON_INTERVALS["compute-dews"]);
-    expect(CACHE_FRESHNESS_LANES.dews.availabilityMaxAgeSec).toBe(CRON_INTERVALS["compute-dews"]);
+  it("keeps DEWS endpoint and availability freshness at 2x compute cadence with decoupled 4h degraded cutoff", () => {
+    expect(API_FRESHNESS_MAX_AGE_SEC.stressSignals).toBe(2 * CRON_INTERVALS["compute-dews"]);
+    expect(CACHE_AVAILABILITY_MAX_AGE_SEC.dews).toBe(2 * CRON_INTERVALS["compute-dews"]);
+    expect(CACHE_FRESHNESS_LANES.dews.producerIntervalSec).toBe(CRON_INTERVALS["compute-dews"]);
+    expect(CACHE_FRESHNESS_LANES.dews.endpointMaxAgeSec).toBe(2 * CRON_INTERVALS["compute-dews"]);
+    expect(CACHE_FRESHNESS_LANES.dews.availabilityMaxAgeSec).toBe(2 * CRON_INTERVALS["compute-dews"]);
+    expect(STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC).toBe(4 * 3600);
   });
 
   it("preserves intentional endpoint-vs-availability budget differences", () => {

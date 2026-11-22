@@ -16,6 +16,7 @@ interface WorkerHttpProbeResult {
   payload?: unknown;
   /** Producer/update clock carried by the response, when the route publishes one. */
   updatedAt?: number | null;
+  retryAfterSec?: number | null;
   error?: string;
 }
 
@@ -40,6 +41,12 @@ function readUpdatedAtHeader(response: Response): number | null {
   return Number(raw);
 }
 
+function readRetryAfterSecHeader(response: Response): number | null {
+  const raw = response.headers.get("Retry-After")?.trim();
+  if (!raw || !/^\d+$/.test(raw)) return null;
+  return Number(raw);
+}
+
 export async function fetchJsonProbe(
   args: WorkerProbeArgs,
   path: string,
@@ -51,6 +58,7 @@ export async function fetchJsonProbe(
   try {
     const response = await fetch(url, { method: "GET", headers: accessHeaders(args), signal });
     const updatedAt = readUpdatedAtHeader(response);
+    const retryAfterSec = readRetryAfterSecHeader(response);
     const text = await response.text();
     let payload: unknown = null;
     try {
@@ -65,6 +73,7 @@ export async function fetchJsonProbe(
       latencyMs: Date.now() - startedAt,
       payload,
       updatedAt,
+      retryAfterSec,
     };
   } catch (error) {
     return {

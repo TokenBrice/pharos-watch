@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ApiMetaEnvelopeSchema } from "@pharos/contracts/api-meta";
+import { RedemptionCapacitySemanticsSchema } from "./redemption";
 
 const RiskCheckUnresolvedInputSchema = z.object({
   input: z.string(),
@@ -86,6 +87,8 @@ const RiskCheckAssetSchema = z.object({
     immediateCapacityUsd: z.number().nullable(),
     feeBps: z.number().nullable(),
     marketPhase: z.string().nullable(),
+    capacitySemantics: RedemptionCapacitySemanticsSchema.nullable(),
+    eventualRedeemabilityScore: z.number().nullable(),
     unavailableReason: z.string().nullable(),
   }),
   controls: z.object({

@@ -77,17 +77,17 @@ describe("worker HTTP probes", () => {
   it("normalizes unsuccessful JSON and empty responses", async () => {
     mockFetch([{
       match: "https://api.example.test/api/health",
-      respond: () => Response.json({ error: "unavailable" }, { status: 503 }),
+      respond: () => Response.json({ error: "unavailable" }, { status: 503, headers: { "Retry-After": "5" } }),
     }], { requireMatch: true });
     await expect(fetchJsonProbe(args, "/api/health")).resolves.toMatchObject({
-      status: 503, ok: false, payload: { error: "unavailable" },
+      status: 503, ok: false, payload: { error: "unavailable" }, retryAfterSec: 5,
     });
     mockFetch([{
       match: "https://api.example.test/api/health",
       respond: () => new Response(null, { status: 204 }),
     }], { requireMatch: true });
     await expect(fetchJsonProbe(args, "/api/health")).resolves.toMatchObject({
-      status: 204, ok: true, payload: null,
+      status: 204, ok: true, payload: null, retryAfterSec: null,
     });
   });
 

@@ -16,6 +16,7 @@ interface ProbeResponse {
   latencyMs: number;
   ok: boolean;
   payload: unknown;
+  retryAfterSec?: number | null;
   status: number;
   url: string;
 }
@@ -301,6 +302,32 @@ describe("runPostDeployAcceptance", () => {
 
     expect(attempts).toBe(2);
     expect(run.probes.find((probe) => probe.id === "worker-route-sweep")).toMatchObject({ outcome: "passed" });
+    expect(run.acceptance.outcome).toBe("passed");
+    expect(run.exitCode).toBe(0);
+  });
+
+  it("sleeps a bounded Retry-After delay before retrying a 503 route", async () => {
+    const deps = dependencies();
+    const sleep = vi.fn(async (_ms: number) => {});
+    const attemptsByPath = new Map<string, number>();
+    deps.fetchJson.mockImplementation(async (_args: unknown, path: string) => {
+      if (path !== "/api/blacklist-summary" && path !== "/api/depeg-events") return routeResponse(path);
+      const count = (attemptsByPath.get(path) ?? 0) + 1;
+      attemptsByPath.set(path, count);
+      return count === 1
+        ? { ...routeResponse(path, 503), retryAfterSec: path === "/api/blacklist-summary" ? 5 : 60 }
+        : routeResponse(path, 200);
+    });
+    const run = await runPostDeployAcceptance({
+      ...deps,
+      sleep,
+      workerDeployed: true,
+      expectedWorkerVersion: WORKER_VERSION,
+      observedWorkerVersion: WORKER_VERSION,
+      apiKey: "ci-key",
+    });
+
+    expect(sleep.mock.calls.map(([ms]) => ms).sort((a, b) => a - b)).toEqual([5_000, 10_000]);
     expect(run.acceptance.outcome).toBe("passed");
     expect(run.exitCode).toBe(0);
   });

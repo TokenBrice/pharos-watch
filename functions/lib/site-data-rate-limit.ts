@@ -17,12 +17,12 @@ export interface SiteDataRateLimitEnv {
  *
  * One reader's first paint is roughly 15-20 same-origin reads, a navigation
  * adds about the same, and the fastest polls refetch on a multi-minute
- * cadence, so 1,200/minute leaves more than an order of magnitude of headroom
- * for several tabs. The largest legitimate single-source burst in this repo is
- * the credentialless standalone detail-snapshot generator: 426 active/frozen
- * assets x (detail + supply history) = 852 reads plus at most 48 stale-refresh
- * reads, which still fits inside one window. The ceiling caps one source at 20
- * reads/second instead of unbounded.
+ * cadence, so 600/minute (10 reads/second per hashed IP) leaves more than an
+ * order of magnitude of headroom for multi-tab browsing and aligns the Pages
+ * isolate ceiling with the Worker's enforced `SITE_SOURCE_RATE_LIMIT`
+ * (`600/60s` per client network). Detail-snapshot generation uses credentialed
+ * `bulk` (`site-api.pharos.watch`) or keyed `api.pharos.watch` instead of
+ * uncredentialed `/_site-data` bursts.
  *
  * Isolate-local state is best-effort (resets on isolate recycle, not shared
  * across colos) and mirrors the selector-snapshot write limiter: it bounds the
@@ -31,7 +31,7 @@ export interface SiteDataRateLimitEnv {
  * `shared/lib/isolate-local-state-registry.ts`.
  */
 export const SITE_DATA_RATE_LIMIT_WINDOW_MS = 60_000;
-export const SITE_DATA_RATE_LIMIT_MAX_PER_WINDOW = 1_200;
+export const SITE_DATA_RATE_LIMIT_MAX_PER_WINDOW = 600;
 export const SITE_DATA_RATE_LIMIT_MAX_TRACKED_IPS = 5_000;
 
 const siteDataRequestTimestampsByIpHash = new Map<string, number[]>();

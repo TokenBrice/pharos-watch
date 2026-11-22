@@ -47,6 +47,7 @@ import {
 } from "@shared/lib/redemption-backstop-providers";
 import { buildMethodologyEnvelope } from "./api-methodology";
 import { decodeJsonString, type JsonDecodeResult } from "./cache-json";
+import { buildInClause, chunkArray } from "./db";
 import { SNAPSHOT_ROW_COLUMNS } from "./redemption-backstops-store-write";
 export { upsertRedemptionBackstopSnapshots } from "./redemption-backstops-store-write";
 
@@ -448,6 +449,36 @@ async function getRecentCompletedRedemptionBackstopRuns(
 }
 
 const REDEMPTION_ADMISSION_PAGE_SIZE = 50;
+const REDEMPTION_SELECTED_ROWS_CHUNK_SIZE = 80;
+const MAX_ADMITTED_REDEMPTION_RUN_CACHE_ENTRIES = 5;
+const admittedRedemptionBackstopRunsByDb = new WeakMap<D1Database, Map<string, true>>();
+
+function isAdmittedRedemptionRunCached(db: D1Database, runId: string): boolean {
+  const entries = admittedRedemptionBackstopRunsByDb.get(db);
+  if (!entries?.has(runId)) return false;
+  entries.delete(runId);
+  entries.set(runId, true);
+  return true;
+}
+
+function rememberAdmittedRedemptionRun(db: D1Database, runId: string): void {
+  let entries = admittedRedemptionBackstopRunsByDb.get(db);
+  if (!entries) {
+    entries = new Map<string, true>();
+    admittedRedemptionBackstopRunsByDb.set(db, entries);
+  }
+  entries.delete(runId);
+  entries.set(runId, true);
+  while (entries.size > MAX_ADMITTED_REDEMPTION_RUN_CACHE_ENTRIES) {
+    const oldest = entries.keys().next().value;
+    if (oldest === undefined) break;
+    entries.delete(oldest);
+  }
+}
+
+function forgetAdmittedRedemptionRun(db: D1Database, runId: string): void {
+  admittedRedemptionBackstopRunsByDb.get(db)?.delete(runId);
+}
 
 async function queryRedemptionBackstopMapFromRunRows(
   db: D1Database,
@@ -458,14 +489,15 @@ async function queryRedemptionBackstopMapFromRunRows(
   const validIds: Record<string, true> = {};
   const rowRejectionReasons: string[] = [];
   let rawRowCount = 0;
+  let afterStablecoinId = "";
   try {
     for (;;) {
       const rows = await db.prepare(
         `SELECT ${REDEMPTION_BACKSTOP_ROW_COLUMNS}
            FROM redemption_backstop_run_rows
-          WHERE snapshot_run_id = ?
-          ORDER BY stablecoin_id LIMIT ? OFFSET ?`,
-      ).bind(runId, REDEMPTION_ADMISSION_PAGE_SIZE, rawRowCount).all<RedemptionBackstopRow>();
+          WHERE snapshot_run_id = ? AND stablecoin_id > ?
+          ORDER BY stablecoin_id LIMIT ?`,
+      ).bind(runId, afterStablecoinId, REDEMPTION_ADMISSION_PAGE_SIZE).all<RedemptionBackstopRow>();
       const page = rows.results ?? [];
       rawRowCount += page.length;
       for (const row of page) {
@@ -478,6 +510,7 @@ async function queryRedemptionBackstopMapFromRunRows(
         }
       }
       if (page.length < REDEMPTION_ADMISSION_PAGE_SIZE) break;
+      afterStablecoinId = page[page.length - 1].stablecoin_id;
     }
   } catch (error) {
     throw new RedemptionBackstopSnapshotUnavailableError("Failed to load immutable redemption backstop run rows", {
@@ -485,6 +518,39 @@ async function queryRedemptionBackstopMapFromRunRows(
     });
   }
   return { map, rawRowCount, validRowCount: Object.keys(validIds).length, rowRejectionReasons };
+}
+
+async function querySelectedRedemptionBackstopRows(
+  db: D1Database,
+  runId: string,
+  stablecoinIds: ReadonlySet<string>,
+): Promise<{ ok: true; map: RedemptionBackstopMap } | { ok: false; reason: string }> {
+  const map: RedemptionBackstopMap = {};
+  const ids = [...stablecoinIds];
+  if (ids.length === 0) return { ok: true, map };
+  const rowRejectionReasons: string[] = [];
+  try {
+    for (const chunk of chunkArray(ids, REDEMPTION_SELECTED_ROWS_CHUNK_SIZE)) {
+      const clause = buildInClause(chunk);
+      const rows = await db.prepare(
+        `SELECT ${REDEMPTION_BACKSTOP_ROW_COLUMNS}
+           FROM redemption_backstop_run_rows
+          WHERE snapshot_run_id = ? AND stablecoin_id IN (${clause.sql})`,
+      ).bind(runId, ...clause.binds).all<RedemptionBackstopRow>();
+      for (const row of rows.results ?? []) {
+        const entry = toEntry(row, runId, rowRejectionReasons);
+        if (!entry) {
+          return { ok: false, reason: rowRejectionReasons.join(",") || `${row.stablecoin_id}:invalid-entry` };
+        }
+        if (stablecoinIds.has(row.stablecoin_id)) {
+          map[row.stablecoin_id] = entry;
+        }
+      }
+    }
+  } catch (error) {
+    return { ok: false, reason: toErrorMessage(error) };
+  }
+  return { ok: true, map };
 }
 
 export interface RedemptionBackstopLiveSignalRow {
@@ -541,6 +607,17 @@ export async function selectAdmittedRedemptionBackstopRun(
         continue;
       }
 
+      if (retainMap !== true && isAdmittedRedemptionRunCached(db, run.run_id)) {
+        if (retainMap === false) {
+          return { run, map: {} };
+        }
+        const selected = await querySelectedRedemptionBackstopRows(db, run.run_id, retainMap);
+        if (selected.ok) {
+          return { run, map: selected.map };
+        }
+        forgetAdmittedRedemptionRun(db, run.run_id);
+      }
+
       let map: RedemptionBackstopMap;
       let rawRowCount: number;
       let validRowCount: number;
@@ -548,6 +625,7 @@ export async function selectAdmittedRedemptionBackstopRun(
       try {
         ({ map, rawRowCount, validRowCount, rowRejectionReasons } = await queryRedemptionBackstopMapFromRunRows(db, run.run_id, retainMap));
       } catch (error) {
+        forgetAdmittedRedemptionRun(db, run.run_id);
         rowReadError ??= error;
         const message = toErrorMessage(error);
         rejectionReasons.push(`${run.run_id}: query failed (${message})`);
@@ -556,10 +634,12 @@ export async function selectAdmittedRedemptionBackstopRun(
 
       const rowCount = validRowCount;
       if (rawRowCount !== run.written_count || rowCount !== run.written_count) {
+        forgetAdmittedRedemptionRun(db, run.run_id);
         rejectionReasons.push(`${run.run_id}: run-row count mismatch (${rowCount}/${run.written_count}); row-rejections=${rowRejectionReasons.join(",")}`);
         continue;
       }
 
+      rememberAdmittedRedemptionRun(db, run.run_id);
       return { run, map };
     }
 
@@ -603,6 +683,7 @@ async function loadRedemptionBackstopCoinSnapshot(
   const rejections: string[] = [];
   const map = decodeBackstopRows(selectedRows, "Failed to decode immutable redemption backstop coin row", run.run_id, rejections);
   if (Object.keys(map).length !== selectedRows.length) {
+    forgetAdmittedRedemptionRun(db, run.run_id);
     throw new RedemptionBackstopSnapshotUnavailableError("Failed to decode admitted redemption backstop coin row");
   }
   return {
