@@ -68,6 +68,11 @@
       "chain": "solana",
       "address": "Ex8hKasfFCfj3yGuN5TyYRUjHePgVs3uYUJRT8geT7rv",
       "decimals": 6
+    },
+    {
+      "chain": "monad",
+      "address": "0xfd957d7e27d239da5455b82303b2f618f73a9c49",
+      "decimals": 18
     }
   ],
   "collateralQuality": "rwa",

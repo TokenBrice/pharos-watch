@@ -28221,6 +28221,45 @@
         "source:0f8c787eb417866dbfb619d1",
         "source:1fc1b0e8dd067e43d757d42d"
       ]
+    },
+    {
+      "reviewId": "issuer-surface-syrupusdg-maple-20261122",
+      "assetId": "syrupusdg-maple",
+      "scope": {
+        "kind": "issuer-surface",
+        "coveredRoutes": [
+          "arbitrum:0xe1b0dc5a21b10f1634fbfbe9976fba2ee2e1c762",
+          "ethereum:0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a",
+          "ink:0xebe9ed66efe0948d0c1b72b0157fc17733667018",
+          "robinhood:0x40858070814a57fdf33a613ae84fe0a8b4a874f7",
+          "solana:CYB6WRi2YuV4Ui6q1dieP5Raev6ah7qftGsQAxJiZo8f"
+        ]
+      },
+      "reviewedAt": "2026-11-22T15:52:00Z",
+      "reviewer": "Issue #1683 Part 1 issuer-surface review (syrupusdg-maple), 2026-11-22",
+      "windowStartSec": 1782864000,
+      "windowEndSec": 1795362720,
+      "conclusion": "no-known-incident",
+      "sourcesRefs": [
+        "source:b705cc00c8887baa085fe993",
+        "source:22ce8726d86f334036bb15f6",
+        "source:f9a287d344106a6480728190",
+        "source:5031e2baafab6cf3e0fc2cbd",
+        "source:0c866cfd10d46be0dab2897f",
+        "source:09cdd4d8d062a4e49e776007",
+        "source:0b4de347fe05633552f9d936",
+        "source:c757897d71dc2afe8b88488a"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:4a4ee351f38ab54443e90fb9",
+        "surface:6c7fb30b9416654dae998924",
+        "surface:481b09d76993d10066cdf170",
+        "surface:ab2df274e2361fbcd49c25ba",
+        "surface:b4ec44637bc023da3882f74a",
+        "surface:0855a45e0a205f2766d91f76",
+        "surface:06691d9fdaebdbb5b9ec38ac",
+        "surface:1bdb336165318e702b7fb13c"
+      ]
     }
   ],
   "sourceObservations": [
@@ -66673,6 +66712,86 @@
         "location": "match, compilation, abi, proxyResolution and deployment fields",
         "excerpt": "ThBillOFT (contracts/ThBillOFT.sol), runtime exact_match, not a proxy; admin events EnforcedOptionSet, MsgInspectorSet, OwnershipTransferred, PeerSet, PreCrimeSet; no pause, freeze, blacklist or rate-limit function; no deployment record."
       }
+    },
+    {
+      "id": "source:b705cc00c8887baa085fe993",
+      "value": {
+        "label": "Maple security: audits, bug bounty, invariant monitoring, emergency pause",
+        "url": "https://docs.maple.finance/technical-resources/security/security.md",
+        "observedAt": "2026-11-22T15:52:00Z",
+        "location": "Audits table (November 2026 release section), Bug Bounty, Critical Monitoring, Emergency Pause Function",
+        "excerpt": "In the case of a critical incident, a multisig is able to trigger a protocol pause."
+      }
+    },
+    {
+      "id": "source:22ce8726d86f334036bb15f6",
+      "value": {
+        "label": "Maple known issues and operational controls register",
+        "url": "https://docs.maple.finance/technical-resources/security/known-issues-and-operational-controls.md",
+        "observedAt": "2026-11-22T15:52:00Z",
+        "location": "Sections Pools and withdrawals, Permissions, Open-term loans, Strategy Managers, Strategies, Deployment and governance",
+        "excerpt": "Some protocol behaviours are handled by operating procedure rather than by code."
+      }
+    },
+    {
+      "id": "source:f9a287d344106a6480728190",
+      "value": {
+        "label": "Maple insights news index (recent updates through 2026-11-20)",
+        "url": "https://maple.finance/insights",
+        "observedAt": "2026-11-22T15:52:00Z",
+        "location": "Published posts index through 2026-11-20 (Robinhood Chain credit 2026-11-20, Q4-26 update 2026-11-13, leadership update 2026-11-11, CCIP 2.0 upgrade 2026-09-28)",
+        "excerpt": "syrupUSD Assets Are Upgrading to Chainlink CCIP 2.0"
+      }
+    },
+    {
+      "id": "source:5031e2baafab6cf3e0fc2cbd",
+      "value": {
+        "label": "Maple crosschain docs: exact syrupUSDG token and CCIP pool addresses",
+        "url": "https://docs.maple.finance/integrate/crosschain/syrupusd-crosschain.md",
+        "observedAt": "2026-11-22T15:52:00Z",
+        "location": "Mainnet Addresses, syrupUSDG, Ethereum/Arbitrum/Ink/Robinhood/Solana rows",
+        "excerpt": "0xe1b0dc5a21b10f1634fbfbe9976fba2ee2e1c762"
+      }
+    },
+    {
+      "id": "source:0c866cfd10d46be0dab2897f",
+      "value": {
+        "label": "Chainlink CCIP Directory - syrupUSDG exact five-network deployment table",
+        "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG",
+        "observedAt": "2026-11-22T15:52:00Z",
+        "location": "Mainnet token syrupUSDG networks table (Ethereum LockRelease 1.6.1, Arbitrum BurnMint 2.0.0, Ink BurnMint 2.0.0, Robinhood BurnMint 1.6.1, Solana BurnMint)",
+        "excerpt": "0x5355292a5c36c4094b93fb62aa1fefca6e28b75f"
+      }
+    },
+    {
+      "id": "source:09cdd4d8d062a4e49e776007",
+      "value": {
+        "label": "Maple Snapshot governance space",
+        "url": "https://snapshot.org/#/mapledao.eth",
+        "observedAt": "2026-11-22T15:52:00Z",
+        "location": "Snapshot GraphQL proposals query for space mapledao.eth, 13 proposals total, newest created 2026-07-13",
+        "excerpt": "MIP-021: A Rules-Based Buyback That Scales With Revenue"
+      }
+    },
+    {
+      "id": "source:0b4de347fe05633552f9d936",
+      "value": {
+        "label": "DefiLlama hacks dataset, complete serialized response",
+        "url": "https://api.llama.fi/hacks",
+        "observedAt": "2026-11-22T15:52:00Z",
+        "location": "Full dataset (1,373 rows, 2011-06-19 to 2026-11-21)",
+        "excerpt": "1,373 rows read 2026-11-22 and filtered for maple|syrup|ccip: zero rows naming Maple, syrupUSDG or a covered lane. Tracker omissions are not proof of absence."
+      }
+    },
+    {
+      "id": "source:c757897d71dc2afe8b88488a",
+      "value": {
+        "label": "Pinned Arbitrum and Ethereum CCIP lane state for syrupUSDG",
+        "url": "https://arb1.arbitrum.io/rpc",
+        "observedAt": "2026-11-22T15:51:29Z",
+        "location": "Arbitrum block 526552416 (hash 0x9461879161df387780503df155a5e4c1b2b287cc28d807bb900f85b6344570eb, 2026-11-22T15:29:17Z) and Ethereum block 26471570 (hash 0x45711a6f3d1aff45ca6714be1651188e3cd4b1ea01eaa5cf18800d68097d691f, 2026-11-22T15:31:35Z) via https://eth-mainnet.g.alchemy.com/v2/",
+        "excerpt": "Arbitrum syrupUSDG totalSupply 141741031.172779, pool 0x5355292a5c36c4094b93fb62aa1fefca6e28b75f (BurnMintTokenPool 2.0.0) reciprocally peered to Ethereum LockRelease 0x120391e1512287f0eb8036037d464de2da602543 (1.6.1), owner RBACTimelock 0x8a89770722c84b60ce02989aedb22ac4791f8c7f"
+      }
     }
   ],
   "searchedSurfaceObservations": [
@@ -82042,6 +82161,70 @@
         "kind": "explorer-events",
         "url": "https://api-stable-mainnet.n.dwellir.com",
         "finding": "Pinned reads of thBILL Stable OFT 0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a, never latest. Creation: code first present at block 1875980 (2025-11-13T18:45:10Z); Sourcify has no deployment record, so the block comes from a code-presence search. A local run of the production lane screener (screenLaneAdminEvents through the Worker RPC registry) over blocks 46917476-46967475 (finalized head hash 0xa0c61c54b229719f720702ac24b5416822f88caafd948d2f5a94ba711e93f553, 2026-11-15T14:56:09Z) found no EnforcedOptionSet, MsgInspectorSet, OwnershipTransferred, PeerSet or PreCrimeSet event, the five admin events of the Sourcify-verified ThBillOFT ABI, with runtime code sha256 a6adb7c034823fcfe39a55c6af9a5d9f963c8721040a90ebbffbbc1d88e5bbbf matching the reviewed pin. The verified ABI exposes no pause, freeze, blacklist or rate-limit state, so no emergency-state read exists. Lane certificates are runtime rows joined at evaluation; this review binds none."
+      }
+    },
+    {
+      "id": "surface:4a4ee351f38ab54443e90fb9",
+      "value": {
+        "kind": "issuer-announcements",
+        "url": "https://docs.maple.finance/technical-resources/security/security.md",
+        "finding": "Maple security page re-read 2026-11-22 covering the syrupUSDG window from launch (2026-07-01) through 2026-11-22: publishes audits through the November 2026 release, active bug bounty, Tenderly invariant monitoring with PagerDuty escalation, and Emergency Pause multisig. No incident report, post-mortem, pause notice, or loss disclosure appears. Because this is a security-practices page rather than a dedicated incident log, this is bounded evidence."
+      }
+    },
+    {
+      "id": "surface:6c7fb30b9416654dae998924",
+      "value": {
+        "kind": "issuer-announcements",
+        "url": "https://docs.maple.finance/technical-resources/security/known-issues-and-operational-controls.md",
+        "finding": "Maple known-issues and operational-controls register re-read 2026-11-22: documents accepted design and operational controls (impairment pricing, withdrawal queue, permission bitmaps, open-term loan calls, strategy managers, PSM halts, governor-timelock controls). None is a security incident, unbacked mint, admin compromise, or realized loss."
+      }
+    },
+    {
+      "id": "surface:481b09d76993d10066cdf170",
+      "value": {
+        "kind": "issuer-announcements",
+        "url": "https://maple.finance/insights",
+        "finding": "Maple insights index reviewed 2026-11-22 through the 2026-11-20 post (Robinhood Chain credit expansion, Q4-26 update 2026-11-13, leadership update 2026-11-11, and planned Chainlink CCIP 2.0 pool-replacement rollout 2026-09-28). No smart-contract exploit, bridge compromise, unbacked mint, emergency pause, withdrawal freeze, or holder loss disclosure appears for syrupUSDG or any of its five covered routes; the planned CCIP 2.0 pool migration and leadership transition are recorded as non-incident operational updates."
+      }
+    },
+    {
+      "id": "surface:ab2df274e2361fbcd49c25ba",
+      "value": {
+        "kind": "issuer-announcements",
+        "url": "https://docs.maple.finance/integrate/crosschain/syrupusd-crosschain.md",
+        "finding": "Maple crosschain integration documentation and the Chainlink CCIP directory re-read 2026-11-22 confirm all five authored syrupUSDG routes: canonical Ethereum MaplePool 0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a (LockReleaseTokenPool 1.6.1 0x120391e1512287f0eb8036037d464de2da602543), Arbitrum 0xe1b0dc5a21b10f1634fbfbe9976fba2ee2e1c762 (BurnMintTokenPool 2.0.0 0x5355292a5c36c4094b93fb62aa1fefca6e28b75f), Ink 0xebe9ed66efe0948d0c1b72b0157fc17733667018 (BurnMintTokenPool 2.0.0 0x376d6f0e7718b6f5642d92f13ca516c8b4f5a91f), Robinhood 0x40858070814a57fdf33a613ae84fe0a8b4a874f7 (BurnMintTokenPool 1.6.1 0x01fa676ecc8662e6923fdf06ba5278a96ccd725c), and Solana CYB6WRi2YuV4Ui6q1dieP5Raev6ah7qftGsQAxJiZo8f."
+      }
+    },
+    {
+      "id": "surface:b4ec44637bc023da3882f74a",
+      "value": {
+        "kind": "issuer-status",
+        "url": "https://status.maple.finance",
+        "finding": "No Maple issuer status page exists: DNS resolution returned ENOTFOUND on 2026-11-22. The absence of a dedicated status surface is recorded honestly and never treated as proof of absence of incidents."
+      }
+    },
+    {
+      "id": "surface:0855a45e0a205f2766d91f76",
+      "value": {
+        "kind": "governance",
+        "url": "https://snapshot.org/#/mapledao.eth",
+        "finding": "Maple Snapshot governance space mapledao.eth queried via GraphQL on 2026-11-22: 13 proposals total, newest MIP-021 (2026-07-13, rules-based revenue buyback). No governance proposal requests emergency pause, exploit response, recapitalization, or compensation for syrupUSDG or any covered route."
+      }
+    },
+    {
+      "id": "surface:06691d9fdaebdbb5b9ec38ac",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://arb1.arbitrum.io/rpc",
+        "finding": "Pinned current-state and reciprocal-peer reads at Arbitrum block 526552416 (2026-11-22T15:29:17Z) and Ethereum block 26471570 (2026-11-22T15:31:35Z) confirm Arbitrum BurnMintERC20 0xe1b0dc5a21b10f1634fbfbe9976fba2ee2e1c762 (totalSupply 141,741,031.172779, DEFAULT_ADMIN_ROLE held by GovernorTimelock 0x2efff88747eb5a3ff00d4d8d0f0800e306c0426b, MINTER_ROLE/BURNER_ROLE held by BurnMintTokenPool 2.0.0 0x5355292a5c36c4094b93fb62aa1fefca6e28b75f, pool owner RBACTimelock 0x8a89770722c84b60ce02989aedb22ac4791f8c7f) reciprocally peered to Ethereum LockReleaseTokenPool 1.6.1 0x120391e1512287f0eb8036037d464de2da602543 (owner RBACTimelock 0x44835bbba9d40deda9b64858095ecfb2693c9449). Point-in-time state read only, not an event-history screening certificate; automated CCIP lane screening remains separately blocked by uncovered admin events under frozen LANE_ADMIN_EVENT_TOPICS."
+      }
+    },
+    {
+      "id": "surface:1bdb336165318e702b7fb13c",
+      "value": {
+        "kind": "incident-tracker",
+        "url": "https://api.llama.fi/hacks",
+        "finding": "Full DefiLlama hacks dataset read 2026-11-22 (1,373 rows, 2011-06-19 to 2026-11-21): zero rows naming Maple, syrupUSDG, Chainlink CCIP, or any covered route. Tracker omissions are not proof of absence."
       }
     }
   ]

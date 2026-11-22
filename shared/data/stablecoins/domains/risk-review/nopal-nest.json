@@ -105,7 +105,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "nOPAL has four reviewed independent native-issuance routes on Ethereum, Plume, BSC, and Plasma, plus reviewed LayerZero OFT representations on Solana, World Chain, and Avalanche. The issuer registry and explorer records identify the exact deployments. Structured controls record the Solana OFT mint-authority/program-admin path and World Chain/Avalanche bridge-mint, peer-configuration, and upgrade paths. Complete LayerZero DVN configuration, controller key custody, route limits, and recovery remain undisclosed. Arc ownership and selected current role/authorization paths are pinned, including direct enter/exit/manage alternatives to the owner timelock; Arc issuance-versus-representation accounting, full authority closure and incident state remain unresolved.",
+    "summary": "nOPAL has four reviewed independent native-issuance routes on Ethereum, Plume, BSC, and Plasma, plus reviewed LayerZero OFT representations on Solana, World Chain, and Avalanche. The issuer registry and explorer records identify the exact deployments. Structured controls record the Solana OFT mint-authority/program-admin path and World Chain/Avalanche bridge-mint, peer-configuration, and upgrade paths. Complete LayerZero DVN configuration, controller key custody, route limits, and recovery remain undisclosed. Arc ownership and selected current role/authorization paths are pinned, including direct enter/exit/manage alternatives to the owner timelock; Arc issuance-versus-representation accounting, full authority closure and incident state remain unresolved. On 2026-11-22, structured owner controls were also pinned for Monad and Robinhood (shared NestShareOFT + NestVault + RolesAuthority + TimelockController 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062 stack, also observed as the migrated owner on Avalanche and World Chain); arc, monad, and robinhood remain reviewDisposition unresolved fail-closed.",
     "reviewedAt": "2026-09-21",
     "reviewer": "Claude curation campaign 2026-09-21 (Ctrl4)",
     "confidence": "verified",
@@ -300,11 +300,11 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At worldchain block 34645982 (2026-09-05T17:00:03.000Z, hash 0x07a5129b27fca11df9e8a4a73d001992a673e01e540e7f53e8c431d9757db487), the exact NestShareOFT proxy owner() returned 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a; EIP-1967 slots identify implementation 0x9c0ea3cdfed77032fcfa07e9cbd3628a9c5c39bb and ProxyAdmin 0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2, whose owner() returned the same controller. Proxy, implementation, ProxyAdmin and controller code are nonempty. Read-only eth_call simulations from that controller succeed for setPeer(30101, existing peer) and ProxyAdmin.upgradeAndCall(proxy, current implementation, 0x); both reject unrelated address 0x0000000000000000000000000000000000000001 with OwnableUnauthorizedAccount. This proves distinct OFT-owner and proxy-upgrade authority paths, not controller signer topology or effective delay: getMinDelay() returns 172800 seconds, but proposer/executor roles and bypasses were not inventoried. Controller identity is recorded conservatively as a contract. Complete peer/DVN configuration, limits, custody and recovery remain unverified. Implementation code hex-text SHA-256 9cad6178eb3db3c314e7539c0b1dbd2ed7b20cfebb42eaa6a195201e3c345567; raw block/read/simulation export SHA-256 389ad4220296f7e430aafb6db990a1b484a8cff3dc874f4b53f4ab671cf5b907. Deployed implementation bytecode exactly matches the explorer verified-source record.",
+        "reviewNote": "At worldchain block 34645982 (2026-09-05T17:00:03.000Z, hash 0x07a5129b27fca11df9e8a4a73d001992a673e01e540e7f53e8c431d9757db487), the exact NestShareOFT proxy owner() returned 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a; EIP-1967 slots identify implementation 0x9c0ea3cdfed77032fcfa07e9cbd3628a9c5c39bb and ProxyAdmin 0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2, whose owner() returned the same controller. Proxy, implementation, ProxyAdmin and controller code are nonempty. Read-only eth_call simulations from that controller succeed for setPeer(30101, existing peer) and ProxyAdmin.upgradeAndCall(proxy, current implementation, 0x); both reject unrelated address 0x0000000000000000000000000000000000000001 with OwnableUnauthorizedAccount. This proves distinct OFT-owner and proxy-upgrade authority paths, not controller signer topology or effective delay: getMinDelay() returns 172800 seconds, but proposer/executor roles and bypasses were not inventoried. Controller identity is recorded conservatively as a contract. Complete peer/DVN configuration, limits, custody and recovery remain unverified. Implementation code hex-text SHA-256 9cad6178eb3db3c314e7539c0b1dbd2ed7b20cfebb42eaa6a195201e3c345567; raw block/read/simulation export SHA-256 389ad4220296f7e430aafb6db990a1b484a8cff3dc874f4b53f4ab671cf5b907. Deployed implementation bytecode exactly matches the explorer verified-source record. Re-read 2026-11-22 at block 38012816: owner(), ProxyAdmin.owner(), and RolesAuthority.owner() migrated from 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a to TimelockController 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062 (172800s delay); note that the 2026-10-11 negative-incident review predates this timelock migration.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-09-05",
+        "observedAt": "2026-11-22",
         "canonicalChain": "ethereum",
-        "observedBlock": 34645982,
+        "observedBlock": 38012816,
         "sources": [
           {
             "label": "World Chain explorer address record (verified NestShareOFT implementation)",
@@ -328,10 +328,10 @@
           }
         ],
         "controllerChain": "worldchain",
-        "controllerAddress": "0x8faacdc65de5d78975df4f9dc4b6548979ceb23a",
+        "controllerAddress": "0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062",
         "failureDomainKeys": [
           "protocol:layerzero-v2",
-          "contract:worldchain:0x8faacdc65de5d78975df4f9dc4b6548979ceb23a",
+          "contract:worldchain:0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062",
           "contract:worldchain:0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2"
         ]
       },
@@ -346,11 +346,11 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At avalanche block 94543958 (2026-09-05T17:00:02.000Z, hash 0xadc42641e7043b845342ad03175bd4c6752ebd3e2bc495b0faf2479b3f3cc2e9), the exact NestShareOFT proxy owner() returned 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a; EIP-1967 slots identify implementation 0x03ff1b3d6c973b9de3f7916b8585a4065c53bb34 and ProxyAdmin 0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2, whose owner() returned the same controller. Proxy, implementation, ProxyAdmin and controller code are nonempty. Read-only eth_call simulations from that controller succeed for setPeer(30101, existing peer) and ProxyAdmin.upgradeAndCall(proxy, current implementation, 0x); both reject unrelated address 0x0000000000000000000000000000000000000001 with OwnableUnauthorizedAccount. This proves distinct OFT-owner and proxy-upgrade authority paths, not controller signer topology or effective delay: getMinDelay() returns 172800 seconds, but proposer/executor roles and bypasses were not inventoried. Controller identity is recorded conservatively as a contract. Complete peer/DVN configuration, limits, custody and recovery remain unverified. Implementation code hex-text SHA-256 0ed3c45e173218032fa98a702ee8f9e4fd66e6d9cb763af5321a1eec64e77d53; raw block/read/simulation export SHA-256 6554d2db922c085300b9ce56ccc71d4e9e07ba92ab4ad022e780f36d0fc0d090.",
+        "reviewNote": "At avalanche block 94543958 (2026-09-05T17:00:02.000Z, hash 0xadc42641e7043b845342ad03175bd4c6752ebd3e2bc495b0faf2479b3f3cc2e9), the exact NestShareOFT proxy owner() returned 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a; EIP-1967 slots identify implementation 0x03ff1b3d6c973b9de3f7916b8585a4065c53bb34 and ProxyAdmin 0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2, whose owner() returned the same controller. Proxy, implementation, ProxyAdmin and controller code are nonempty. Read-only eth_call simulations from that controller succeed for setPeer(30101, existing peer) and ProxyAdmin.upgradeAndCall(proxy, current implementation, 0x); both reject unrelated address 0x0000000000000000000000000000000000000001 with OwnableUnauthorizedAccount. This proves distinct OFT-owner and proxy-upgrade authority paths, not controller signer topology or effective delay: getMinDelay() returns 172800 seconds, but proposer/executor roles and bypasses were not inventoried. Controller identity is recorded conservatively as a contract. Complete peer/DVN configuration, limits, custody and recovery remain unverified. Implementation code hex-text SHA-256 0ed3c45e173218032fa98a702ee8f9e4fd66e6d9cb763af5321a1eec64e77d53; raw block/read/simulation export SHA-256 6554d2db922c085300b9ce56ccc71d4e9e07ba92ab4ad022e780f36d0fc0d090. Re-read 2026-11-22 at block 101082907: owner(), ProxyAdmin.owner(), and RolesAuthority.owner() migrated from 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a to TimelockController 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062 (172800s delay); note that the 2026-10-11 negative-incident review predates this timelock migration.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-09-05",
+        "observedAt": "2026-11-22",
         "canonicalChain": "ethereum",
-        "observedBlock": 94543958,
+        "observedBlock": 101082907,
         "sources": [
           {
             "label": "nOPAL on Avalanche explorer",
@@ -370,10 +370,10 @@
           }
         ],
         "controllerChain": "avalanche",
-        "controllerAddress": "0x8faacdc65de5d78975df4f9dc4b6548979ceb23a",
+        "controllerAddress": "0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062",
         "failureDomainKeys": [
           "protocol:layerzero-v2",
-          "contract:avalanche:0x8faacdc65de5d78975df4f9dc4b6548979ceb23a",
+          "contract:avalanche:0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062",
           "contract:avalanche:0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2"
         ]
       },
@@ -436,10 +436,10 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Deployment verified 2026-10-25 against the exact issuer registry. At monad block 116569132, the token returned Nest BlackOpal LiquidStone II Vault/nOPAL/6 decimals and 5.830799 shares. Registered local NestVault share()/asset() and RolesAuthority.canCall(vault,share,enter) bind a local deposit path; token()=self, approvalRequired()=false and the issuer all-chain supply partition support additive share accounting. Native mint-controller completeness, upgrade reach, LayerZero peers/DVNs, caps and incident state remain unreviewed; no route-risk certification is implied.",
+        "reviewNote": "Deployment verified 2026-10-25 against the exact issuer registry. At monad block 116569132, the token returned Nest BlackOpal LiquidStone II Vault/nOPAL/6 decimals and 5.830799 shares. Registered local NestVault share()/asset() and RolesAuthority.canCall(vault,share,enter) bind a local deposit path; token()=self, approvalRequired()=false and the issuer all-chain supply partition support additive share accounting. Native mint-controller completeness, upgrade reach, LayerZero peers/DVNs, caps and incident state remain unreviewed; no route-risk certification is implied. Re-read 2026-11-22 at Monad block 124473582 (2026-11-22T15:47:13Z, hash 0xb6774de769e542b9cda42f1b42ec3ce33d576bd9bbfe2f72095652b5e0207c69, https://rpc.monad.xyz): totalSupply 5.830799, EIP-1967 implementation 0x12597b66a15f5d94b5a651acb642256c9841b6a3 (unverified on Sourcify), ProxyAdmin 0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2, RolesAuthority 0x4e9be1e471a9cf3a1c17e9f15a4a7aa724349a24, and NestShareOFT all owned by TimelockController 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062 (172800s delay); NestVault USDC 0xd258029c... enter/exit enabled; stays unresolved pending source verification, native-versus-representation partition, complete holder reach, and incident closure.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-25",
-        "observedBlock": 116569132,
+        "observedAt": "2026-11-22",
+        "observedBlock": 124473582,
         "sources": [
           {
             "label": "Nest exact nOPAL deployment and local deposit registry",
@@ -453,7 +453,9 @@
             "label": "monad pinned deployment and local mint-binding reads",
             "url": "https://rpc.monad.xyz"
           }
-        ]
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062"
       },
       {
         "id": "robinhood:0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
@@ -466,10 +468,10 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Deployment verified 2026-10-25 against the exact issuer registry. At robinhood block 97875493, the token returned Nest BlackOpal LiquidStone II Vault/nOPAL/6 decimals and 2.719498 shares. Registered local NestVault share()/asset() and RolesAuthority.canCall(vault,share,enter) bind a local deposit path; token()=self, approvalRequired()=false and the issuer all-chain supply partition support additive share accounting. Native mint-controller completeness, upgrade reach, LayerZero peers/DVNs, caps and incident state remain unreviewed; no route-risk certification is implied.",
+        "reviewNote": "Deployment verified 2026-10-25 against the exact issuer registry. At robinhood block 97875493, the token returned Nest BlackOpal LiquidStone II Vault/nOPAL/6 decimals and 2.719498 shares. Registered local NestVault share()/asset() and RolesAuthority.canCall(vault,share,enter) bind a local deposit path; token()=self, approvalRequired()=false and the issuer all-chain supply partition support additive share accounting. Native mint-controller completeness, upgrade reach, LayerZero peers/DVNs, caps and incident state remain unreviewed; no route-risk certification is implied. Re-read 2026-11-22 at Robinhood block 120733839 (2026-11-22T15:51:24Z, https://rpc.mainnet.chain.robinhood.com): totalSupply 5,868.743420, Sourcify-verified NestShareOFT implementation 0x6fc7882592b2979b942d5450aff910a11d9e8179, ProxyAdmin 0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2, RolesAuthority 0x4e9be1e471a9cf3a1c17e9f15a4a7aa724349a24, and NestShareOFT all owned by TimelockController 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062 (172800s delay); NestVault USDG 0x437157515e274e8b150a52d9d1fabcf701529b8f enter/exit enabled; stays unresolved pending native-versus-representation partition, complete holder reach, LayerZero DVN verification, and incident closure.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-25",
-        "observedBlock": 97875493,
+        "observedAt": "2026-11-22",
+        "observedBlock": 120733839,
         "sources": [
           {
             "label": "Nest exact nOPAL deployment and local deposit registry",
@@ -483,7 +485,9 @@
             "label": "robinhood pinned deployment and local mint-binding reads",
             "url": "https://rpc.mainnet.chain.robinhood.com"
           }
-        ]
+        ],
+        "controllerChain": "robinhood",
+        "controllerAddress": "0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062"
       }
     ],
     "controls": [
@@ -546,13 +550,13 @@
           "upgrade"
         ],
         "controllerChain": "worldchain",
-        "controllerAddress": "0x8faacdc65de5d78975df4f9dc4b6548979ceb23a",
+        "controllerAddress": "0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062",
         "authorityType": "timelock",
         "timelockDelaySec": 172800,
         "modulesOrGuardsStatus": "not-applicable",
         "failureDomainKeys": [
           "protocol:layerzero-v2",
-          "contract:worldchain:0x8faacdc65de5d78975df4f9dc4b6548979ceb23a",
+          "contract:worldchain:0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062",
           "contract:worldchain:0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2"
         ],
         "routeChecks": {
@@ -560,8 +564,8 @@
           "pausersAdminsUpgraders": "The same Timelock owns ProxyAdmin 0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2; a read-only upgradeAndCall simulation using the current implementation succeeded from that controller and rejected an unrelated caller. getMinDelay() returned 172800 seconds, but role topology and bypasses were not enumerated.",
           "unsupportedReason": "Complete LayerZero DVN configuration, route limits, and recovery controls were not published."
         },
-        "observedAt": "2026-10-01",
-        "observedBlock": 35750988,
+        "observedAt": "2026-11-22",
+        "observedBlock": 38012816,
         "sources": [
           {
             "label": "World Chain verified nOPAL proxy record",
@@ -572,7 +576,7 @@
             "url": "https://worldchain-mainnet.g.alchemy.com/public"
           }
         ],
-        "evidence": "At World Chain block 35750988 on 2026-10-01, owner() and ProxyAdmin.owner() both resolved to Nest Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a, and getMinDelay() returned 172800 seconds. Correct EIP-1967 implementation and admin slots retained 0x9c0ea3cdfed77032fcfa07e9cbd3628a9c5c39bb and 0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2. Calls from the controller to setPeer and upgradeAndCall succeeded in read-only simulation, while an unrelated caller was rejected. These reads do not prove effective timelock enforcement or complete route configuration."
+        "evidence": "At World Chain block 35750988 on 2026-10-01, owner() and ProxyAdmin.owner() both resolved to Nest Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a, and getMinDelay() returned 172800 seconds. Correct EIP-1967 implementation and admin slots retained 0x9c0ea3cdfed77032fcfa07e9cbd3628a9c5c39bb and 0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2. Calls from the controller to setPeer and upgradeAndCall succeeded in read-only simulation, while an unrelated caller was rejected. These reads do not prove effective timelock enforcement or complete route configuration. Re-read 2026-11-22 at block 38012816: owner(), ProxyAdmin.owner(), and RolesAuthority.owner() migrated from 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a to TimelockController 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062 (getMinDelay=172800s); the 2026-10-11 incident review predates this migration."
       },
       {
         "id": "nopal-avalanche-oft-owner",
@@ -587,13 +591,13 @@
           "upgrade"
         ],
         "controllerChain": "avalanche",
-        "controllerAddress": "0x8faacdc65de5d78975df4f9dc4b6548979ceb23a",
+        "controllerAddress": "0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062",
         "authorityType": "timelock",
         "timelockDelaySec": 172800,
         "modulesOrGuardsStatus": "not-applicable",
         "failureDomainKeys": [
           "protocol:layerzero-v2",
-          "contract:avalanche:0x8faacdc65de5d78975df4f9dc4b6548979ceb23a",
+          "contract:avalanche:0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062",
           "contract:avalanche:0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2"
         ],
         "routeChecks": {
@@ -601,8 +605,8 @@
           "pausersAdminsUpgraders": "The same Timelock owns ProxyAdmin 0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2; a read-only upgradeAndCall simulation using the current implementation succeeded from that controller and rejected an unrelated caller. getMinDelay() returned 172800 seconds, but role topology and bypasses were not enumerated.",
           "unsupportedReason": "Complete LayerZero DVN configuration, route limits, and recovery controls were not published."
         },
-        "observedAt": "2026-10-01",
-        "observedBlock": 96511209,
+        "observedAt": "2026-11-22",
+        "observedBlock": 101082907,
         "sources": [
           {
             "label": "Avalanche nOPAL explorer record",
@@ -613,7 +617,7 @@
             "url": "https://api.avax.network/ext/bc/C/rpc"
           }
         ],
-        "evidence": "At Avalanche block 96511209 on 2026-10-01, owner() and ProxyAdmin.owner() both resolved to Nest Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a, and getMinDelay() returned 172800 seconds. Correct EIP-1967 implementation and admin slots retained 0x03ff1b3d6c973b9de3f7916b8585a4065c53bb34 and 0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2. Calls from the controller to setPeer and upgradeAndCall succeeded in read-only simulation, while an unrelated caller was rejected. These reads do not prove effective timelock enforcement or complete route configuration."
+        "evidence": "At Avalanche block 96511209 on 2026-10-01, owner() and ProxyAdmin.owner() both resolved to Nest Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a, and getMinDelay() returned 172800 seconds. Correct EIP-1967 implementation and admin slots retained 0x03ff1b3d6c973b9de3f7916b8585a4065c53bb34 and 0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2. Calls from the controller to setPeer and upgradeAndCall succeeded in read-only simulation, while an unrelated caller was rejected. These reads do not prove effective timelock enforcement or complete route configuration. Re-read 2026-11-22 at block 101082907: owner(), ProxyAdmin.owner(), and RolesAuthority.owner() migrated from 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a to TimelockController 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062 (getMinDelay=172800s); the 2026-10-11 incident review predates this migration."
       },
       {
         "id": "nopal-arc-oft-owner",
@@ -698,6 +702,96 @@
           }
         ],
         "evidence": "Sol curation campaign 2026-10-09 (W2L17Nest): observed 2026-10-09T11:38:41.288Z and 2026-10-09T11:41:18.643Z at Arc block 25057559, hash 0x39c65f0577614654a78f84c41c224f31ef140e7f24641fe16c77f7b1267f185b, timestamp 2026-10-09T10:35:23Z, using https://api-arc-mainnet.n.dwellir.com. RolesAuthority owner is the same TimelockController as token/ProxyAdmin, and its authority is zero. Positive hasRole reads confirm external DEFAULT_ADMIN 0x442fc59547ec00018a395c7416ed12d88a9082e6, Safe proposer/canceller, and address-zero executor; negative reads confirm the timelock and constructor admin lack DEFAULT_ADMIN. Explorer discovery reaches deployment with 32 timelock events and 74 authority events across two pages; it is a discovery census, not independent pinned log-completeness proof. Pinned canCall independently confirms direct enter/exit for role-15 holder 0xf6c00a6ac137680a5e9ecc7ab342df2c4d190510 and both arbitrary manage overloads for role-2 holder 0x4371e7ec29bbb60872e15c5123c3cac948967eb7. Exact verified source allows zero-asset issuance and arbitrary external calls without delay on those authorized paths. The 172800-second owner/upgrade delay grants no aggregate delay or bypass-absence credit. Incident closure, signer/executor identity closure, LayerZero configuration and native-versus-representation liability accounting remain unresolved."
+      },
+      {
+        "id": "nopal-monad-oft-owner",
+        "label": "nOPAL Monad share owner and proxy administrator",
+        "routeRefs": [
+          "monad:0x119dd7daff816f29d7ee47596ae5e4bdc4299165"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "admin",
+          "peer-config",
+          "upgrade"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062",
+        "authorityType": "timelock",
+        "timelockDelaySec": 172800,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:monad:0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062",
+          "contract:monad:0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2",
+          "contract:monad:0x4e9be1e46366e0f255ca7578467e3e0bbe7514de",
+          "contract:monad:0xd258029cf5a177e3306e09fbea63424543a505c0"
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Monad block 124473582 (2026-11-22T15:47:13Z), endpoint() returned 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, token() returned self, approvalRequired() was false, and peers(30101) and peers(30370) were zero. Point reads do not prove an exhaustive peer/DVN or historical bridge-transfer census.",
+          "pausersAdminsUpgraders": "At Monad block 124473582, EIP-1967 implementation is 0x12597b66a15f5d94b5a651acb642256c9841b6a3 (unverified on Sourcify) and ProxyAdmin is 0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2. Token owner(), ProxyAdmin owner(), RolesAuthority 0x4e9be1e46366e0f255ca7578467e3e0bbe7514de owner(), and NestVault 0xd258029cf5a177e3306e09fbea63424543a505c0 owner() all resolve to TimelockController 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062 (getMinDelay()=172800s); RolesAuthority.authority() is zero. Pinned canCall confirms NestVault holds direct enter (0x39d6ba32) and exit (0x18457e61) authorization without timelock delay; full timelock and RolesAuthority role-holder enumeration remains unresolved.",
+          "unsupportedReason": "Implementation source verification on Sourcify, complete RolesAuthority and TimelockController role-holder reach, native-versus-representation liability partition, LayerZero DVN configuration, and incident history remain unresolved."
+        },
+        "observedAt": "2026-11-22",
+        "observedBlock": 124473582,
+        "sources": [
+          {
+            "label": "Nest exact nOPAL deployment registry",
+            "url": "https://api.nest.credit/v1/vaults/nest-opal-vault"
+          },
+          {
+            "label": "Monad pinned RPC reads (block 124473582)",
+            "url": "https://rpc.monad.xyz"
+          }
+        ],
+        "evidence": "At Monad block 124473582 (hash 0xb6774de769e542b9cda42f1b42ec3ce33d576bd9bbfe2f72095652b5e0207c69, 2026-11-22T15:47:13Z), nOPAL proxy 0x119dd7daff816f29d7ee47596ae5e4bdc4299165 (totalSupply 5.830799, 6dp) has implementation 0x12597b66a15f5d94b5a651acb642256c9841b6a3, ProxyAdmin 0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2, authority RolesAuthority 0x4e9be1e46366e0f255ca7578467e3e0bbe7514de, and owner TimelockController 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062 (getMinDelay 172800s). ProxyAdmin, RolesAuthority, and NestVault 0xd258029cf5a177e3306e09fbea63424543a505c0 (asset USDC 0x754704bc059f8c67012fed69bc8a327a5aafb603) all share that same timelock owner, and RolesAuthority.canCall authorizes NestVault for both enter and exit. Implementation bytecode returned 404 on Sourcify; complete role-holder census, LayerZero configuration, native-vs-representation partition, and incident state remain unresolved."
+      },
+      {
+        "id": "nopal-robinhood-oft-owner",
+        "label": "nOPAL Robinhood share owner and proxy administrator",
+        "routeRefs": [
+          "robinhood:0x119dd7daff816f29d7ee47596ae5e4bdc4299165"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "admin",
+          "peer-config",
+          "upgrade"
+        ],
+        "controllerChain": "robinhood",
+        "controllerAddress": "0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062",
+        "authorityType": "timelock",
+        "timelockDelaySec": 172800,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:robinhood:0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062",
+          "contract:robinhood:0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2",
+          "contract:robinhood:0x4e9be1e46366e0f255ca7578467e3e0bbe7514de",
+          "contract:robinhood:0x437157515e274e8b150a52d9d1fabcf701529b8f"
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Robinhood blocks 120733839 and 120735168 (2026-11-22T15:51:24Z / 15:53:58Z), endpoint() returned 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, token() returned self, approvalRequired() was false, and peers across all eight probed LayerZero EIDs (30101, 30370, 30102, 30106, 30168, 30319, 30383, 30390) were zero. Point reads do not prove an exhaustive peer/DVN or historical bridge-transfer census.",
+          "pausersAdminsUpgraders": "At Robinhood block 120733839, EIP-1967 implementation is Sourcify-verified NestShareOFT 0x6fc7882592b2979b942d5450aff910a11d9e8179 and ProxyAdmin is 0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2. Token owner(), ProxyAdmin owner(), RolesAuthority 0x4e9be1e46366e0f255ca7578467e3e0bbe7514de owner(), and USDG NestVault 0x437157515e274e8b150a52d9d1fabcf701529b8f owner() all resolve to TimelockController 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062 (getMinDelay()=172800s); RolesAuthority.authority() is zero. Pinned canCall confirms NestVault holds direct enter (0x39d6ba32) and exit (0x18457e61) authorization without timelock delay; full timelock and RolesAuthority role-holder enumeration remains unresolved.",
+          "unsupportedReason": "Complete RolesAuthority and TimelockController role-holder reach, native-versus-representation liability partition, LayerZero DVN configuration, and incident history remain unresolved."
+        },
+        "observedAt": "2026-11-22",
+        "observedBlock": 120733839,
+        "sources": [
+          {
+            "label": "Nest exact nOPAL deployment registry",
+            "url": "https://api.nest.credit/v1/vaults/nest-opal-vault"
+          },
+          {
+            "label": "Robinhood pinned RPC reads (blocks 120733839 and 120735168)",
+            "url": "https://rpc.mainnet.chain.robinhood.com"
+          },
+          {
+            "label": "Sourcify verified Robinhood NestShareOFT implementation",
+            "url": "https://sourcify.dev/server/v2/contract/46630/0x6fc7882592b2979b942d5450aff910a11d9e8179"
+          }
+        ],
+        "evidence": "At Robinhood blocks 120733839 (hash 0xb4dcdde2df4472e434d6b1599d74ad84e43e57cd49208dd0e6b8c67eb2e7343a, 2026-11-22T15:51:24Z) and 120735168 (hash 0x6ed29b64625cf16d805f838229543ff3eaf60c9b27de366f627144591ad2c117, 2026-11-22T15:53:58Z), nOPAL proxy 0x119dd7daff816f29d7ee47596ae5e4bdc4299165 (totalSupply 5,868.743420, 6dp) resolved to Sourcify-verified NestShareOFT implementation 0x6fc7882592b2979b942d5450aff910a11d9e8179, ProxyAdmin 0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2, authority RolesAuthority 0x4e9be1e46366e0f255ca7578467e3e0bbe7514de, and owner TimelockController 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062 (getMinDelay 172800s). ProxyAdmin, RolesAuthority, and USDG NestVault 0x437157515e274e8b150a52d9d1fabcf701529b8f (asset 0x5fc5360d0400a0fd4f2af552add042d716f1d168) all share that same timelock owner, and RolesAuthority.canCall authorizes NestVault for both enter and exit. Complete role-holder census, LayerZero configuration, native-vs-representation partition, and incident state remain unresolved."
       }
     ]
   }

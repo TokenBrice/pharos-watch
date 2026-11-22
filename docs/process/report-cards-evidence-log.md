@@ -17,6 +17,28 @@ The existing wrapper allocation/local-review schemas carry scoped rationale and 
 
 Because no public exact-fund BPM LLP engagement report or audit PDF is accessible without investor login, `ousg-ondo-finance` remains outside `scripts/lib/independent-assurance-profiles/registry.ts` (preserving its existing `proofOfReserves.attestorTier: "regional"` metadata from `#2191`). This observation does not grant independent-assurance credit or alter scoring inputs.
 
+## Issue #1683 Follow-up — 2026-11-22
+
+[#1683](https://github.com/TokenBrice/pharos-watch/issues/1683): Reconciled the accepted supply partition for `nopal-nest`, pinned reciprocal CCIP pairing for `apyusd-apyx` on Monad, and audited three-witness closure for `syrupusdg-maple` on Arbitrum from accepted production capture `report-cards:v9:v1:1bba5662560d11bf6294e69557f793f661061d53c5010002f830e27ea0cf09a0` (`clockSec: 1795357031`, `2026-11-22T15:37:11Z`) and fresh `2026-11-22` pinned RPC reads. This follow-up preserves every historical record and fail-closed blocker in the `2026-11-20` section below.
+
+### nOPAL — accepted supply partition reconciled across all 10 rows
+
+The `2026-11-20` API-auth blocker is resolved using the accepted `2026-11-22` production capture (`$113,177,065.26` total across 10 routes, `0` provider-row exclusions, `unknownRouteSupplyShare: 0`, `unmatchedRowIdentities: []`, `unreviewedRouteSupplyShare: 0.0035428681337543013` / `$400,971.42`):
+
+- Reviewed native routes: `ethereum` (`$37,381,477.65`, `33.03%`), `bsc` (`$25,639,931.29`, `22.65%`), `plume` (`$17,117,919.88`, `15.12%`), `plasma` (`$0.00`, `0%`).
+- Reviewed controlled routes: `solana` (`$27,433,185.06`, `24.24%`, `bounded-unknown`, sole binding driver of `selected-bridge-route-unresolved` and blocking subthreshold relaxation because the unresolved cohort is `24.59% >= 10%`), `avalanche` (`$5,203,553.19`, `4.60%`, compiled `status: "known"`, `incidentState: "none"`), `worldchain` (`$26.77`, `0.000024%`, compiled `status: "known"`, `incidentState: "none"`).
+- Exact sole contributors to `unreviewedRouteSupplyShare` (`nonmaterial-bridge-supply-unmatched`): `arc` (`$394,401.16`, `0.34848%`), `robinhood` (`$6,563.74`, `0.00580%`), and `monad` (`$6.52`, `0.0000058%`).
+
+Pinned `2026-11-22` reads across all five non-native EVM deployments (`avalanche@101082907`, `worldchain@38012816`, `arc@32587360`, `robinhood@120733839`, `monad@124473582`) confirmed the shared hybrid `NestShareOFT` plus local `NestVault` plus `RolesAuthority` plus `TimelockController 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062` (`172800s` delay) stack, including live owner migration from `0x8faacdc65de5d78975df4f9dc4b6548979ceb23a` to `0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062` on Avalanche and World Chain (noting that their `2026-10-11` negative-incident reviews predate that migration). Structured controls `nopal-monad-oft-owner` and `nopal-robinhood-oft-owner` are now authored in `shared/data/stablecoins/domains/risk-review/nopal-nest.json`, while `arc`, `monad`, and `robinhood` stay `reviewDisposition: "unresolved"` fail-closed pending native-versus-representation partition, complete `RolesAuthority`/`TimelockController` holder reach, Monad source verification, and incident closure; `solana` stays fail-closed pending non-EVM descriptor tooling and witnesses.
+
+### apyUSD — Monad CCIP pairing pinned; residual conserved fail-closed
+
+At synchronized `2026-11-22` pins (`ethereum@26471685`, `base@60862782`, `bsc@135106708`, `monad@124475220`, `solana@472598665`), Ethereum `LockReleaseTokenPool 1.6.1` (`0x0f1bac2ea0311130da778c1ca287204338739f73`) and Monad `BurnMintTokenPool 1.6.1` (`0xd404a80641ba5490db15e0863d46fdd61f0b4cf7`, token `0xfd957d7e27d239da5455b82303b2f618f73a9c49`) are reciprocally paired and Monad `totalSupply` (`286,435.525285382615833952 apyUSD`) reconciles `99.9996%` of the prior `286,436.663261988704869122 apyUSD` unattributed escrow residual. Monad is registered in `coins/apyusd-apyx.json`, `shared/lib/onchain-supply-probe.ts`, and `domains/risk-review/apyusd-apyx.json`, while `escrowResidual` stays active fail-closed for the remaining `1.137976606089035170 apyUSD` pool excess.
+
+### syrupUSDG — Arbitrum issuer-surface witness authored; lane screening blocked by ABI vocabulary
+
+On `syrupusdg-maple`, `arbitrum:0xe1b0dc5a21b10f1634fbfbe9976fba2ee2e1c762` (`49.77%` supply) is the sole binding unresolved route (`ethereum` and `robinhood` already resolve `incidentState: "none"` downstream). Witness 1 (`provider-chainlink-ccip-rmn-set-20261029`) is current and Witness 2 (`issuer-surface-syrupusdg-maple-20261122`) is now authored, while Witness 3 remains fail-closed because `BurnMintERC20`, `BurnMintTokenPool 2.0.0`, and cross-chain `LockReleaseTokenPool 1.6.1` emit admin events outside the frozen `LANE_ADMIN_EVENT_TOPICS` vocabulary (`abi-not-covered`) and cross-chain screening also requires an admitted Ethereum certificate.
+
 ## YLDS September 30, 2026 Form 10-Q Observation — 2026-11-20
 
 [#1685](https://github.com/TokenBrice/pharos-watch/issues/1685): Figure Certificate Company's Form 10-Q for the quarter ended September 30, 2026 is retained here as a supplemental historical observation, outside `ylds-figure`'s audited reserve-review source list. The v9 named-report admission merges every `reserveReview.sources` entry into Backing evidence stamped with the audited period end (2025-12-31) and publication date (2026-03-20), and a source-label caveat never reaches that compiled evidence, so an unaudited interim filing must not sit in that list. This observation renews neither the KPMG-audited December 31, 2025 composition nor its clock.

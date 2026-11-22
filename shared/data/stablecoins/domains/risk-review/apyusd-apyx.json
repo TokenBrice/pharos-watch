@@ -65,7 +65,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "apyUSD is an ERC-4626 wrapper over canonical Ethereum apxUSD. The Chainlink directory observed at 2026-10-09T10:38:09Z identifies Ethereum LockRelease pool 0x0f1bac2ea0311130da778c1ca287204338739f73 and BurnMint pools on Base, BNB Chain, and Solana. Those destination tokens represent locked Ethereum shares, so the end-to-end bridge risk tier is external-lock-mint even though remote pools burn and mint locally. Exact published pools remain Base 0xed23fc184a3fe5d12ca92ca4f5cefa640decf21d, BNB Chain 0x363332b186a4afce7a754a49f34d1543aec5e786, and Solana H8om8rLRoDiGgveP6rbdQ2irWgjzdfanSe9tdCr6FYxE. This directory review establishes route identity and pool mechanics only; it does not refresh historical controller pins, establish current authority closure, or supply runtime materiality shares.",
+    "summary": "apyUSD is an ERC-4626 wrapper over canonical Ethereum apxUSD. The Chainlink directory observed at 2026-10-09T10:38:09Z identifies Ethereum LockRelease pool 0x0f1bac2ea0311130da778c1ca287204338739f73 and BurnMint pools on Base, BNB Chain, and Solana. Those destination tokens represent locked Ethereum shares, so the end-to-end bridge risk tier is external-lock-mint even though remote pools burn and mint locally. Exact published pools remain Base 0xed23fc184a3fe5d12ca92ca4f5cefa640decf21d, BNB Chain 0x363332b186a4afce7a754a49f34d1543aec5e786, and Solana H8om8rLRoDiGgveP6rbdQ2irWgjzdfanSe9tdCr6FYxE. This directory review establishes route identity and pool mechanics only; it does not refresh historical controller pins, establish current authority closure, or supply runtime materiality shares. On 2026-11-22 (Ethereum blocks 26471570/26471685 and Monad blocks 124473582/124475220), Monad BurnMintTokenPool 1.6.1 0xd404a80641ba5490db15e0863d46fdd61f0b4cf7 and token 0xfd957d7e27d239da5455b82303b2f618f73a9c49 were reciprocally peer-verified against the Ethereum LockRelease pool, reconciling 99.9996% of the prior unattributed escrow residual while conserving the remaining 1.138 apyUSD in escrowResidual.",
     "reviewedAt": "2026-10-09",
     "reviewer": "Sol curation campaign 2026-10-09 (Lane16Vaneck)",
     "confidence": "verified",
@@ -237,6 +237,52 @@
             "url": "https://docs.chain.link/ccip/directory/mainnet/token/apyUSD"
           }
         ]
+      },
+      {
+        "id": "monad:0xfd957d7e27d239da5455b82303b2f618f73a9c49",
+        "destinationChain": "monad",
+        "contractAddress": "0xfd957d7e27d239da5455b82303b2f618f73a9c49",
+        "protocol": "Chainlink CCIP (BurnMintTokenPool)",
+        "providerKeys": [
+          "chainlink-ccip"
+        ],
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Monad block 124473582 (2026-11-22T15:47:13Z, hash 0xb6774de769e542b9cda42f1b42ec3ce33d576bd9bbfe2f72095652b5e0207c69), ERC1967Proxy 0xfd957d7e27d239da5455b82303b2f618f73a9c49 resolved to Sourcify-verified BridgedApyxToken implementation 0xa14556f13516c53ff035858ffd21e1625e7eadfd; getCCIPPool() returned BurnMintTokenPool 1.6.1 0xd404a80641ba5490db15e0863d46fdd61f0b4cf7, getToken() returned this token, owner() returned the Apyx 3/6 Safe 0xf9862efc1704ac05e687f66e5cd8c130e5663ce2, Monad TokenAdminRegistry 0x11acd984dd680363117b310f6ebdf78fd6c0195f mapped this token to that pool, and getSupportedChains()/getRemotePools()/getRemoteToken() proved reciprocal Ethereum-Monad CCIP pairing against Ethereum LockReleaseTokenPool 0x0f1bac2ea0311130da778c1ca287204338739f73 (blocks 26471570 and 26471685). Verified BridgedApyxToken gates mint(), burn(), and burnFrom() exclusively to onlyCCIPPool under a 100,000,000 apyUSD supply cap. At synchronized five-chain pins, Monad totalSupply (286,435.525285382615833952 apyUSD) reconciles 99.9996% of the prior unattributed escrow residual; 1.137976606089035170 apyUSD remains conserved in escrowResidual.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-22",
+        "observedBlock": 124473582,
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "monad",
+        "controllerAddress": "0xd404a80641ba5490db15e0863d46fdd61f0b4cf7",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:monad:0xd404a80641ba5490db15e0863d46fdd61f0b4cf7",
+          "safe:apyx:0xf9862efc1704ac05e687f66e5cd8c130e5663ce2"
+        ],
+        "sources": [
+          {
+            "label": "Chainlink CCIP Directory - apyUSD",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/apyUSD"
+          },
+          {
+            "label": "Monad pinned RPC reads (blocks 124473582 and 124475220)",
+            "url": "https://rpc.monad.xyz"
+          },
+          {
+            "label": "Sourcify verified Monad BridgedApyxToken implementation",
+            "url": "https://sourcify.dev/server/v2/contract/143/0xa14556f13516c53ff035858ffd21e1625e7eadfd"
+          },
+          {
+            "label": "Sourcify verified Monad BurnMintTokenPool 1.6.1",
+            "url": "https://sourcify.dev/server/v2/contract/143/0xd404a80641ba5490db15e0863d46fdd61f0b4cf7"
+          }
+        ]
       }
     ],
     "controls": [
@@ -402,6 +448,102 @@
           }
         ],
         "evidence": "Observed 2026-09-21: Chainlink's official CCIP directory maps Solana apyUSD mint Ex8hKasfFCfj3yGuN5TyYRUjHePgVs3uYUJRT8geT7rv to Burn/Mint token pool H8om8rLRoDiGgveP6rbdQ2irWgjzdfanSe9tdCr6FYxE."
+      },
+      {
+        "id": "apyusd-monad-ccip-pool",
+        "label": "apyUSD Monad CCIP BurnMintTokenPool",
+        "routeRefs": [
+          "monad:0xfd957d7e27d239da5455b82303b2f618f73a9c49"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0xd404a80641ba5490db15e0863d46fdd61f0b4cf7",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:monad:0xd404a80641ba5490db15e0863d46fdd61f0b4cf7",
+          "safe:apyx:0xf9862efc1704ac05e687f66e5cd8c130e5663ce2"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Monad block 124473582 (2026-11-22T15:47:13Z), BurnMintTokenPool 1.6.1 0xd404a80641ba5490db15e0863d46fdd61f0b4cf7 returned getToken()=0xfd957d7e27d239da5455b82303b2f618f73a9c49, owner()=0xf9862efc1704ac05e687f66e5cd8c130e5663ce2, getSupportedChains()=[5009297550715157269] (Ethereum only), getRemotePools(eth)=[0x0f1bac2ea0311130da778c1ca287204338739f73], and getRemoteToken(eth)=0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a, reciprocally matching Ethereum LockReleaseTokenPool at block 26471570.",
+          "caps": "Sourcify-verified BridgedApyxToken gates mint(), burn(), and burnFrom() solely to onlyCCIPPool and enforces a 100,000,000 apyUSD supplyCap() (totalSupply 286,435.525285382615833952 at block 124473582).",
+          "pausersAdminsUpgraders": "The pool supplies bridge mint/burn capability only; AccessManager and 3-of-6 Safe controls for setCCIPPool, setCCIPAdmin, upgrades, cap changes, pause, and unpause are recorded separately."
+        },
+        "capDescription": "Monad destination supply cap: 100,000,000 apyUSD; the pool cannot raise it.",
+        "canRaiseCap": false,
+        "observedAt": "2026-11-22",
+        "observedBlock": 124473582,
+        "sources": [
+          {
+            "label": "Chainlink CCIP Directory - apyUSD",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/apyUSD"
+          },
+          {
+            "label": "Monad pinned RPC reads (block 124473582)",
+            "url": "https://rpc.monad.xyz"
+          },
+          {
+            "label": "Sourcify verified Monad BurnMintTokenPool 1.6.1",
+            "url": "https://sourcify.dev/server/v2/contract/143/0xd404a80641ba5490db15e0863d46fdd61f0b4cf7"
+          }
+        ],
+        "evidence": "At Monad block 124473582 (hash 0xb6774de769e542b9cda42f1b42ec3ce33d576bd9bbfe2f72095652b5e0207c69, 2026-11-22T15:47:13Z), pool 0xd404a80641ba5490db15e0863d46fdd61f0b4cf7 returned typeAndVersion()=BurnMintTokenPool 1.6.1, getToken()=0xfd957d7e27d239da5455b82303b2f618f73a9c49, owner()=0xf9862efc1704ac05e687f66e5cd8c130e5663ce2, and reciprocal Ethereum LockReleaseTokenPool 0x0f1bac2ea0311130da778c1ca287204338739f73 peering; Monad TokenAdminRegistry 0x11acd984dd680363117b310f6ebdf78fd6c0195f returns this pool."
+      },
+      {
+        "id": "apyusd-monad-access-manager-safe",
+        "label": "apyUSD Monad representation AccessManager and Apyx Safe",
+        "routeRefs": [
+          "monad:0xfd957d7e27d239da5455b82303b2f618f73a9c49"
+        ],
+        "capabilities": [
+          "admin",
+          "upgrade",
+          "pause"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:monad:0x5f48866016eb8735a2ea450e66314828bdde6edc",
+          "safe:apyx:0xf9862efc1704ac05e687f66e5cd8c130e5663ce2"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "version": "1.4.1",
+          "observedBlock": 124473582,
+          "observedAt": "2026-11-22",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Role 25 governs setCCIPPool (0x569bfaf2) and setCCIPAdmin (0xa8fa343c) on Monad AccessManager 0x5f48866016eb8735a2ea450e66314828bdde6edc with a 604800-second delay.",
+          "caps": "Role 24 governs setSupplyCap (0xb6a3f59a) with a 259200-second delay; current destination supplyCap() is 100,000,000 apyUSD.",
+          "pausersAdminsUpgraders": "Role 25 governs upgradeToAndCall (0x4f1ef286) with a 604800-second delay; role 21 pauses (0x8456cb59) immediately (0s delay) and role 22 unpauses (0x3f4ba83a) after 14400 seconds."
+        },
+        "capDescription": "Monad representation cap is changeable by delayed role 24; this is bridge-route administration, not native Ethereum issuance.",
+        "canRaiseCap": true,
+        "observedAt": "2026-11-22",
+        "observedBlock": 124473582,
+        "sources": [
+          {
+            "label": "Monad pinned RPC reads (block 124473582)",
+            "url": "https://rpc.monad.xyz"
+          },
+          {
+            "label": "Sourcify verified Monad AccessManager",
+            "url": "https://sourcify.dev/server/v2/contract/143/0x5f48866016eb8735a2ea450e66314828bdde6edc"
+          }
+        ],
+        "evidence": "At Monad block 124473582 (hash 0xb6774de769e542b9cda42f1b42ec3ce33d576bd9bbfe2f72095652b5e0207c69, 2026-11-22T15:47:13Z), AccessManager 0x5f48866016eb8735a2ea450e66314828bdde6edc mapped setCCIPPool (0x569bfaf2), setCCIPAdmin (0xa8fa343c), and upgradeToAndCall (0x4f1ef286) to role 25 (held by Safe 0xf9862efc1704ac05e687f66e5cd8c130e5663ce2, 604800s delay), setSupplyCap (0xb6a3f59a) to role 24 (259200s delay), pause (0x8456cb59) to role 21 (0s delay), and unpause (0x3f4ba83a) to role 22 (14400s delay). Safe 0xf9862efc1704ac05e687f66e5cd8c130e5663ce2 returned version 1.4.1, threshold 3, six owners, no enabled modules, and zero guard slot. Key custody and complete role-0 admin history remain unverified."
       }
     ]
   }

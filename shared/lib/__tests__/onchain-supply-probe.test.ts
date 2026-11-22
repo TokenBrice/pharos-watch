@@ -149,7 +149,7 @@ describe("curated on-chain supply paths", () => {
     { id: "brlv-crown", chains: ["base", "ethereum", "tempo"], zero: ["ethereum", "tempo"] },
     { id: "chfau-allunity", chains: ["ethereum", "polygon", "base", "tempo", "solana", "arc"], zero: ["ethereum", "polygon", "base", "tempo", "solana", "arc"] },
     { id: "susn-noon", chains: ["ethereum", "zksync", "sophon", "starknet", "hyperevm", "base", "citrea", "berachain", "tac"], zero: [], canonical: "ethereum" },
-    { id: "apyusd-apyx", chains: ["ethereum", "base", "bsc", "solana"], zero: [], canonical: "ethereum" },
+    { id: "apyusd-apyx", chains: ["ethereum", "base", "bsc", "monad", "solana"], zero: [], canonical: "ethereum" },
     { id: "susdai-usd-ai", chains: ["arbitrum", "ethereum", "base", "plasma", "solana", "arc"], zero: [] },
     { id: "reusd-re-protocol", chains: ["ethereum", "avalanche", "arbitrum", "base", "bsc", "ink", "plasma", "katana", "tempo", "solana", "berachain", "monad", "sei", "megaeth", "tempo"], zero: ["berachain", "megaeth"] },
     { id: "eurcv-societe-generale-forge", chains: ["ethereum", "xrpl", "stellar", "solana"], zero: [] },
