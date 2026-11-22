@@ -130,9 +130,10 @@ describe("production deployment baseline gate", () => {
     const workflow = parseYaml(readFileSync(new URL("../../.github/workflows/deploy-cloudflare.yml", import.meta.url), "utf8"));
     const job = workflow.jobs["deploy-worker"];
     const steps = job.steps as Array<{ name?: string; run?: string; if?: string; env?: Record<string, string>; "continue-on-error"?: boolean }>;
-    const preflight = steps.findIndex((step) => step.run === "npm run check:remote-d1-baseline-ledger");
+    const preflight = steps.findIndex((step) => step.run?.includes("npm run check:remote-d1-baseline-ledger"));
     const apply = steps.findIndex((step) => step.run?.includes("d1 migrations apply"));
-    expect(preflight).toBeGreaterThan(steps.findIndex((step) => step.run === "npm run check:worker-package"));
+    expect(preflight).toBeGreaterThan(-1);
+    expect(steps[preflight].run).toContain("npm run check:worker-package");
     expect(apply).toBe(preflight + 1);
     expect(steps.filter((step) => step.run?.includes("d1 migrations apply"))).toHaveLength(1);
     expect(steps[preflight].if).toBeUndefined();

@@ -41,12 +41,9 @@ jobs:
           fetch-depth: 0
           filter: blob:none
           persist-credentials: false
-      - uses: $/.github/actions/setup-workspace
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "24.16.0"
-          cache-npm: "false"
-          install-deps: "false"
-          bootstrap-generated: "false"
       - id: classify
         name: Select production surfaces
         env:
@@ -99,22 +96,55 @@ jobs:
         with:
           # Deploy jobs hold production credentials: plain npm ci, no cache.
           node-modules-cache: "false"
-      - name: Check Worker migrations
-        run: npm run check:migrations
-      - name: Package both Workers before D1 mutation
-        run: npm run check:worker-package
-      - name: Verify pre-provisioned reserve Queue and dead-letter Queue
+          bootstrap-generated: "false"
+      - name: Bootstrap Worker generated artifacts
+        run: |
+          npm run bootstrap:generated:worker
+          node --input-type=module -e 'import { assertBootstrapTrackedOutputsUnchanged } from "./scripts/lib/bootstrap-tracked-outputs.mts"; assertBootstrapTrackedOutputsUnchanged();'
+      - name: Run read-only Worker preflights before D1 mutation
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          npx --no-install wrangler queues info pharos-reserve-continuation --config worker/wrangler.toml
-          npx --no-install wrangler queues info pharos-reserve-continuation-dlq --config worker/wrangler.toml
-      - name: Preflight remote D1 baseline adoption
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npm run check:remote-d1-baseline-ledger
+          preflight_dir="${RUNNER_TEMP}/worker-preflight"
+          mkdir -p "${preflight_dir}"
+
+          # Local checks run with Cloudflare credentials scrubbed from their env.
+          env -u CLOUDFLARE_API_TOKEN -u CLOUDFLARE_ACCOUNT_ID npm run check:migrations > "${preflight_dir}/migrations.log" 2>&1 &
+          migrations_pid=$!
+
+          env -u CLOUDFLARE_API_TOKEN -u CLOUDFLARE_ACCOUNT_ID npm run check:worker-package > "${preflight_dir}/package.log" 2>&1 &
+          package_pid=$!
+
+          npx --no-install wrangler queues info pharos-reserve-continuation --config worker/wrangler.toml > "${preflight_dir}/queue-main.log" 2>&1 &
+          queue_main_pid=$!
+
+          npx --no-install wrangler queues info pharos-reserve-continuation-dlq --config worker/wrangler.toml > "${preflight_dir}/queue-dlq.log" 2>&1 &
+          queue_dlq_pid=$!
+
+          npm run check:remote-d1-baseline-ledger > "${preflight_dir}/d1-baseline.log" 2>&1 &
+          baseline_pid=$!
+
+          failed=0
+          for entry in \
+            "migrations:${migrations_pid}:Check Worker migrations" \
+            "package:${package_pid}:Package both Workers before D1 mutation" \
+            "queue-main:${queue_main_pid}:Verify reserve Queue" \
+            "queue-dlq:${queue_dlq_pid}:Verify reserve dead-letter Queue" \
+            "d1-baseline:${baseline_pid}:Preflight remote D1 baseline adoption"
+          do
+            IFS=: read -r slug pid label <<< "${entry}"
+            status=0
+            wait "${pid}" || status=$?
+            echo "::group::${label} (exit ${status})"
+            cat "${preflight_dir}/${slug}.log"
+            echo "::endgroup::"
+            if [[ "${status}" != "0" ]]; then
+              echo "::error::Worker preflight failed: ${label} (exit ${status})"
+              failed=1
+            fi
+          done
+          exit "${failed}"
       - name: Apply production D1 migrations
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -243,12 +273,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: $/.github/actions/setup-workspace
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "24.16.0"
-          cache-npm: "false"
-          install-deps: "false"
-          bootstrap-generated: "false"
       - id: verify-worker-identity
         name: Re-verify active public Worker release identity
         if: ${{ needs.deploy-worker.result == 'success' }}

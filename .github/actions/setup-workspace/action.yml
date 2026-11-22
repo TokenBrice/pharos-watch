@@ -2,6 +2,10 @@ name: Setup Workspace
 description: Shared Node, scoped CI caches, and optional npm install scaffolding for GitHub Actions jobs.
 
 inputs:
+  setup-node:
+    description: Whether to run actions/setup-node (set to false when the caller already installed Node).
+    required: false
+    default: "true"
   node-version:
     description: Node.js version to install.
     required: false
@@ -68,14 +72,14 @@ outputs:
 runs:
   using: composite
   steps:
-    - if: ${{ inputs.cache-npm == 'true' }}
+    - if: ${{ inputs.setup-node == 'true' && inputs.cache-npm == 'true' && inputs.node-modules-cache != 'true' }}
       uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
       with:
         node-version: ${{ inputs.node-version }}
         cache: npm
         cache-dependency-path: package-lock.json
 
-    - if: ${{ inputs.cache-npm != 'true' }}
+    - if: ${{ inputs.setup-node == 'true' && (inputs.cache-npm != 'true' || inputs.node-modules-cache == 'true') }}
       uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
       with:
         node-version: ${{ inputs.node-version }}
@@ -180,11 +184,15 @@ runs:
       shell: bash
       run: npm ci
 
-    - if: ${{ inputs.install-deps == 'true' && inputs.bootstrap-generated == 'true' }}
+    - if: ${{ inputs.install-deps == 'true' && inputs.bootstrap-generated == 'true' && inputs.bootstrap-history == 'true' }}
+      shell: bash
+      run: npm run bootstrap:generated:all
+
+    - if: ${{ inputs.install-deps == 'true' && inputs.bootstrap-generated == 'true' && inputs.bootstrap-history != 'true' }}
       shell: bash
       run: npm run bootstrap:generated
 
-    - if: ${{ inputs.install-deps == 'true' && inputs.bootstrap-history == 'true' }}
+    - if: ${{ inputs.install-deps == 'true' && inputs.bootstrap-generated != 'true' && inputs.bootstrap-history == 'true' }}
       shell: bash
       run: npm run bootstrap:generated:history
 

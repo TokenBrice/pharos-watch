@@ -121,6 +121,7 @@ jobs:
           fi
       - uses: ./.github/actions/setup-workspace # zizmor: ignore[self-repository] see the note above `jobs:`
         with:
+          bootstrap-generated: "true"
           bootstrap-history: "true"
           node-modules-cache: "true"
           workspace-artifact: none
@@ -131,71 +132,97 @@ jobs:
           DEPLOY_EVENT_NAME: push
           DEPLOY_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --classify
-      - name: Plan PR tests once
-        if: ${{ steps.classify.outputs.docs_only != 'true' }}
-        env:
-          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: |
-          args=(--base="${PR_BASE_SHA}" --plan-out=.tmp/pr-test-plan.json)
-          if [[ -s .tmp/test-timings.json ]]; then args+=(--timings=.tmp/test-timings.json); fi
-          npm run test:pr -- "${args[@]}"
-      - name: Verify donor credit continuity against the published ledger
-        env:
-          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: |
-          if ! git diff --quiet "$PR_BASE_SHA" -- shared/data/funding/donations.json; then
-            git show "${PR_BASE_SHA}:shared/data/funding/donations.json" | node --import tsx scripts/ci/check-donation-ledger-transition.ts
-          fi
-      - name: Check incident review keys
-        # Data check lane, run once per PR instead of per validation shard:
-        # reads only the committed reviews, the migration artefact and the
-        # authoring metadata, so there is no generated input and no network.
-        run: npm run check:incident-review-keys
-      - name: Check test corpus budget
-        # Anti-creep (H2/H3), once per PR and never inside check:structural:
-        # that selection skips test-only PRs, which are exactly the ones this
-        # gate exists for. File stats plus the frozen-base ceilings, the frozen
-        # base's own sizes and the net add diff; no generated input. Base blobs
-        # the blob:none clone lacks are fetched lazily, so bound the step.
-        # Non-fatal here on purpose: its exit code is published as a step output
-        # and enforced by `PR gate`, so a budget failure cannot skip the
-        # validation lanes that say whether the PR is otherwise sound.
+      - name: Plan PR tests and run prepare checks
+        # Runs the test planner (unless docs-only) concurrently with the four
+        # per-PR data/budget gates. Unconditional so test-only PRs still run
+        # test-corpus-budget; its exit code is non-fatal here and enforced by
+        # `PR gate` so a budget failure cannot hide validation lane outcomes.
         id: test-corpus-budget
-        continue-on-error: true
         timeout-minutes: 5
         env:
+          DOCS_ONLY: ${{ steps.classify.outputs.docs_only }}
+          GIT_OPTIONAL_LOCKS: "0"
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           TEST_BUDGET_OVERRIDE: ${{ contains(github.event.pull_request.labels.*.name, 'test-budget-override') }}
+          NEW_ASSET_GATE_OVERRIDE: ${{ contains(github.event.pull_request.labels.*.name, 'new-asset-gate-override') }}
         run: |
-          args=()
-          if [[ "${TEST_BUDGET_OVERRIDE}" == "true" ]]; then args+=(--override); fi
           mkdir -p .tmp
-          set -o pipefail
-          status=0
-          npm run check:test-corpus-budget -- "${args[@]}" 2>&1 \
-            | tee .tmp/test-corpus-budget.log || status=$?
-          echo "exit-code=${status}" >> "${GITHUB_OUTPUT}"
-          if [[ "${status}" != "0" ]]; then
+          plan_pid=""
+          if [[ "${DOCS_ONLY}" != "true" ]]; then
+            plan_args=(--base="${PR_BASE_SHA}" --plan-out=.tmp/pr-test-plan.json)
+            if [[ -s .tmp/test-timings.json ]]; then plan_args+=(--timings=.tmp/test-timings.json); fi
+            npm run test:pr -- "${plan_args[@]}" > .tmp/prepare-plan.log 2>&1 &
+            plan_pid=$!
+          fi
+
+          (
+            if ! git diff --quiet "$PR_BASE_SHA" -- shared/data/funding/donations.json; then
+              git show "${PR_BASE_SHA}:shared/data/funding/donations.json" | node --import tsx scripts/ci/check-donation-ledger-transition.ts
+            fi
+          ) > .tmp/prepare-donor.log 2>&1 &
+          donor_pid=$!
+
+          npm run check:incident-review-keys > .tmp/prepare-incident-keys.log 2>&1 &
+          incident_pid=$!
+
+          budget_args=()
+          if [[ "${TEST_BUDGET_OVERRIDE}" == "true" ]]; then budget_args+=(--override); fi
+          npm run check:test-corpus-budget -- "${budget_args[@]}" > .tmp/test-corpus-budget.log 2>&1 &
+          budget_pid=$!
+
+          new_asset_args=()
+          if [[ "${NEW_ASSET_GATE_OVERRIDE}" == "true" ]]; then new_asset_args+=(--override); fi
+          npm run check:new-asset-evidence-packet -- "${new_asset_args[@]}" > .tmp/prepare-new-asset.log 2>&1 &
+          new_asset_pid=$!
+
+          plan_status=0
+          if [[ -n "${plan_pid}" ]]; then
+            wait "${plan_pid}" || plan_status=$?
+            echo "::group::Plan PR tests (exit ${plan_status})"
+            cat .tmp/prepare-plan.log
+            echo "::endgroup::"
+          fi
+
+          donor_status=0
+          wait "${donor_pid}" || donor_status=$?
+          if [[ -s .tmp/prepare-donor.log || "${donor_status}" != "0" ]]; then
+            echo "::group::Donor credit continuity (exit ${donor_status})"
+            cat .tmp/prepare-donor.log
+            echo "::endgroup::"
+          fi
+
+          incident_status=0
+          wait "${incident_pid}" || incident_status=$?
+          echo "::group::Incident review keys (exit ${incident_status})"
+          cat .tmp/prepare-incident-keys.log
+          echo "::endgroup::"
+
+          budget_status=0
+          wait "${budget_pid}" || budget_status=$?
+          echo "::group::Test corpus budget (exit ${budget_status})"
+          cat .tmp/test-corpus-budget.log
+          echo "::endgroup::"
+          echo "exit-code=${budget_status}" >> "${GITHUB_OUTPUT}"
+          if [[ "${budget_status}" != "0" ]]; then
             {
-              echo "### Test corpus budget failed (exit ${status})"
+              echo "### Test corpus budget failed (exit ${budget_status})"
               echo ""
               echo '```'
               tail -n 40 .tmp/test-corpus-budget.log
               echo '```'
             } >> "${GITHUB_STEP_SUMMARY}"
           fi
-      - name: Check new-asset evidence packet
-        # One invocation on the prepared workspace, never per validation shard:
-        # the receipt is bound to the post-addition registry fingerprint, so the
-        # gate needs the bootstrapped coins.generated.json plus the fetched base.
-        # The owner label bypasses only the open-question count.
-        env:
-          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          NEW_ASSET_GATE_OVERRIDE: ${{ contains(github.event.pull_request.labels.*.name, 'new-asset-gate-override') }}
-        run: |
-          args=()
-          if [[ "${NEW_ASSET_GATE_OVERRIDE}" == "true" ]]; then args+=(--override); fi
-          npm run check:new-asset-evidence-packet -- "${args[@]}"
+
+          new_asset_status=0
+          wait "${new_asset_pid}" || new_asset_status=$?
+          echo "::group::New-asset evidence packet (exit ${new_asset_status})"
+          cat .tmp/prepare-new-asset.log
+          echo "::endgroup::"
+
+          if [[ "${plan_status}" != "0" || "${donor_status}" != "0" || "${incident_status}" != "0" || "${new_asset_status}" != "0" ]]; then
+            echo "::error::Prepare checks failed: plan=${plan_status}, donor=${donor_status}, incident-keys=${incident_status}, new-asset=${new_asset_status}"
+            exit 1
+          fi
       - name: Generate validation matrix
         id: matrix
         env:
@@ -292,8 +319,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          fetch-depth: 0
-          filter: blob:none
+          fetch-depth: 1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "24.16.0"
@@ -307,8 +333,11 @@ jobs:
           PAGES_RELEASE_DATA_DIR: ${{ runner.temp }}/pharos-pages-release-data
           NODE_OPTIONS: ""
         run: |
-          # A missing base object must fail here: only a base that truly lacks
-          # the helper may fall back to explicit degraded data.
+          # Shallow checkout lacks the PR base commit; fetch only the exact
+          # trusted base commit/tree without blobs, then fail closed if missing.
+          if ! git cat-file -e "${TRUSTED_PAGES_BASE_SHA}^{commit}" 2>/dev/null; then
+            git fetch --no-tags --depth=1 --filter=blob:none origin "${TRUSTED_PAGES_BASE_SHA}"
+          fi
           git cat-file -e "${TRUSTED_PAGES_BASE_SHA}^{commit}"
           if git cat-file -e "${TRUSTED_PAGES_BASE_SHA}:scripts/lib/pages-release-data.mts"; then
             git show "${TRUSTED_PAGES_BASE_SHA}:scripts/lib/pages-release-data.mts" > "${TRUSTED_PAGES_MODULE_PATH}"
@@ -334,6 +363,7 @@ jobs:
           NODE
       - uses: ./.github/actions/setup-workspace # zizmor: ignore[self-repository] see the note above `jobs:`
         with:
+          setup-node: "false"
           cache-npm: "false"
           install-deps: "false"
           workspace-artifact: restore

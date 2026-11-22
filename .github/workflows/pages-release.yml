@@ -45,16 +45,13 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # Keep history for post-refresh git fallbacks and artifact checks;
-          # history-derived compile inputs arrive in the prepared workspace.
-          fetch-depth: 0
-          filter: blob:none
+          # History-derived compile inputs arrive in the prepared workspace;
+          # post-refresh, build, gates, and deploy read no Git history.
+          fetch-depth: 1
           persist-credentials: false
-      - uses: $/.github/actions/setup-workspace
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          bootstrap-generated: "false"
-          install-deps: "false"
-          cache-npm: "false"
+          node-version: "24.16.0"
       - name: Validate prepared workspace artifact name
         env:
           WORKSPACE_ARTIFACT_NAME: ${{ inputs.workspace_artifact_name }}
@@ -71,10 +68,11 @@ jobs:
         run: tar --zstd -xf "${RUNNER_TEMP}/pharos-pages-workspace/workspace.tar.zst" --same-permissions
       - name: Refresh API-backed release data
         env:
+          SITE_API_SHARED_SECRET: ${{ secrets.SITE_API_SHARED_SECRET }}
           SITE_SESSION_SIGNING_KEY: ${{ secrets.SITE_SESSION_SIGNING_KEY }}
-          DIGEST_API_URL: https://stablecoin-dashboard.pages.dev/_site-data
-          DEPEG_EVENTS_API_URL: https://stablecoin-dashboard.pages.dev/_site-data
-          PUBLIC_DATASETS_API_URL: https://stablecoin-dashboard.pages.dev/_site-data
+          DIGEST_API_URL: https://site-api.pharos.watch
+          DEPEG_EVENTS_API_URL: https://site-api.pharos.watch
+          PUBLIC_DATASETS_API_URL: https://site-api.pharos.watch
           PUBLIC_DATASETS_REQUIRE_API: "1"
         run: node --import tsx scripts/maintenance/refresh-pages-release-data.ts
       - name: Build clean production export
@@ -120,13 +118,21 @@ jobs:
             echo "::error::Site session signing key found in exported site."
             exit 1
           fi
-      - name: Archive non-secret post-refresh release data
+      - name: Validate Pages artifact gates (size, CSS integrity, flags, phishing, SEO/continuity)
         env:
           PAGES_RELEASE_DATA_ARCHIVE_PATH: ${{ runner.temp }}/pages-release-data.tar.zst
-        run: >-
-          node --import tsx --input-type=module -e
-          'import { createPagesReleaseDataArchive } from "./scripts/lib/pages-release-data.mts";
-          createPagesReleaseDataArchive(process.cwd(), process.env.PAGES_RELEASE_DATA_ARCHIVE_PATH);'
+          SEO_PREVIOUS_SITEMAP_URL: https://stablecoin-dashboard.pages.dev/sitemap.xml
+        # Includes feature-flag, direct-upload size, phishing-signature, and
+        # static SEO gates over the exact release artifact, overlapped with
+        # archiving the non-secret post-refresh replay inputs (both read-only).
+        run: |
+          npm run check:pages-release & gates_pid=$!
+          node --import tsx --input-type=module -e 'import { createPagesReleaseDataArchive } from "./scripts/lib/pages-release-data.mts"; createPagesReleaseDataArchive(process.cwd(), process.env.PAGES_RELEASE_DATA_ARCHIVE_PATH);' & archive_pid=$!
+          gates_status=0
+          wait "$gates_pid" || gates_status=$?
+          archive_status=0
+          wait "$archive_pid" || archive_status=$?
+          [ "$gates_status" -eq 0 ] && [ "$archive_status" -eq 0 ]
       - name: Retain post-refresh data for Pages PR and local replay
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -136,12 +142,6 @@ jobs:
           if-no-files-found: error
           compression-level: 0
           retention-days: 14
-      - name: Validate Pages artifact gates (size, CSS integrity, flags, phishing, SEO/continuity)
-        env:
-          SEO_PREVIOUS_SITEMAP_URL: https://stablecoin-dashboard.pages.dev/sitemap.xml
-        # Includes feature-flag, direct-upload size, phishing-signature, and
-        # static SEO gates over the exact release artifact.
-        run: npm run check:pages-release
       - name: Write release marker
         run: |
           cat > out/__pharos_release.json <<EOF

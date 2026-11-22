@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import type { ScheduledWorkerRole } from "@shared/lib/scheduled-runner-registry";
-import { API_HOSTNAME, OPS_API_HOSTNAME, SITE_API_HOSTNAME, API_ORIGIN, SITE_API_ORIGIN, SITE_ORIGIN, PAGES_APP_ORIGIN } from "@shared/lib/runtime-origins";
+import { API_HOSTNAME, OPS_API_HOSTNAME, SITE_API_HOSTNAME, API_ORIGIN, SITE_API_ORIGIN, SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { parse as parseYaml } from "yaml";
 
 const EXPECTED_CUSTOM_DOMAINS = [API_HOSTNAME, OPS_API_HOSTNAME, SITE_API_HOSTNAME].sort();
@@ -266,9 +266,9 @@ export function checkWorkerWranglerConfig(
   // Workflow literals cannot import the runtime owner; guard their projections here.
   const workflowOrigins = {
     "pages-release.yml": {
-      DIGEST_API_URL: `${PAGES_APP_ORIGIN}/_site-data`,
-      DEPEG_EVENTS_API_URL: `${PAGES_APP_ORIGIN}/_site-data`,
-      PUBLIC_DATASETS_API_URL: `${PAGES_APP_ORIGIN}/_site-data`,
+      DIGEST_API_URL: SITE_API_ORIGIN,
+      DEPEG_EVENTS_API_URL: SITE_API_ORIGIN,
+      PUBLIC_DATASETS_API_URL: SITE_API_ORIGIN,
     },
     "production-canaries.yml": {
       SMOKE_API_BASE: API_ORIGIN,
