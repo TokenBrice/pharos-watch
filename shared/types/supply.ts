@@ -51,6 +51,8 @@ export const StablecoinDetailResponseSchema = z.object({
   currentSupplyRestored: z.boolean().optional(),
   /** Canonical partial coverage: chain labels excluded (unavailable) from the admitted current supply. */
   currentSupplyExcludedChains: z.array(z.string()).min(1).optional(),
+  /** Canonical matched comparison perimeter (Pricing v6.90): chain labels excluded from both ends of a change. */
+  currentSupplyComparisonExcludedChains: z.array(z.string()).min(1).optional(),
   /**
    * Canonical producer refusal: consumers must not substitute the provider's
    * dated history for current unavailable supply.
@@ -137,6 +139,12 @@ export const SupplyChainGuardProvenanceSchema = z.object({
    * material drop holds the vetted whole-asset total.
    */
   concurrentGainUsd: z.number().finite().nonnegative().optional(),
+  /**
+   * Pricing v6.90: windows whose live provider baseline excludes this guard's unavailable chains from both
+   * ends (a gap below the 2% materiality bound that the provider reads as zero or omits). Only the row's own
+   * comparison stands; stored history across the gap keeps partial comparison coverage.
+   */
+  matchedComparisonWindows: z.array(z.enum(["day", "week", "month"])).min(1).optional(),
   chains: z.array(z.object({
     chainId: z.string().optional(),
     chainLabel: z.string(),

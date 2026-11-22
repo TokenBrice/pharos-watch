@@ -92,6 +92,25 @@ export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse, s
   }
   if (supplyUnavailable || currentNative == null || !Number.isFinite(currentNative) || currentNative < 0) currentNative = null;
   const baselineAsset = { circulating, supplyChangeBaselines: detail.supplyChangeBaselines };
+  const circulatingPrevWeek = supplyObservedAt == null ? {} : projectUsdMarketCapBaselineBuckets(
+    baselineAsset, "week", hasCurrentSupply && detail.currentCirculatingPrevWeekUSD !== undefined
+      ? admittedDetailBuckets(detail.currentCirculatingPrevWeekUSD)
+      : detailBucketsAt(detail, supplyObservedAt - 7 * 86_400, "totalCirculatingUSD", stablecoinId),
+  );
+  const circulatingPrevMonth = supplyObservedAt == null ? {} : projectUsdMarketCapBaselineBuckets(
+    baselineAsset, "month", hasCurrentSupply && detail.currentCirculatingPrevMonthUSD !== undefined
+      ? admittedDetailBuckets(detail.currentCirculatingPrevMonthUSD)
+      : detailBucketsAt(detail, supplyObservedAt - 30 * 86_400, "totalCirculatingUSD", stablecoinId),
+  );
+  // Provider token history still counts the chains a matched comparison perimeter excludes (Pricing v6.90), so
+  // its prior quantity values the canonical prior bucket at the current quantity's own valuation.
+  const currentUsd = sumPegBucketsOrNull(circulating);
+  const matchedPerimeter = hasCurrentSupply && detail.currentSupplyComparisonExcludedChains !== undefined;
+  const priorNative = (prior: Record<string, number>, targetDate: number) => {
+    if (!matchedPerimeter) return sumPegBucketsOrNull(detailBucketsAt(detail, targetDate, "totalCirculating", stablecoinId));
+    const priorUsd = sumPegBucketsOrNull(prior);
+    return priorUsd == null || currentNative == null || currentUsd == null || currentUsd <= 0 ? null : priorUsd * currentNative / currentUsd;
+  };
 
   return normalizeStablecoinLiveSummary(StablecoinLiveSummarySchema.parse({
     price: detail.price ?? null,
@@ -113,24 +132,16 @@ export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse, s
     ...(detail.supplyChangeBaselines !== undefined ? { supplyChangeBaselines: detail.supplyChangeBaselines } : {}),
     circulatingPrevDay: supplyUnavailable ? {} : hasCurrentSupply ? admittedDetailBuckets(detail.currentCirculatingPrevDayUSD)
       : historyObservedAt == null ? {} : detailBucketsAt(detail, historyObservedAt - 86_400, "totalCirculatingUSD", stablecoinId),
-    circulatingPrevWeek: supplyObservedAt == null ? {} : projectUsdMarketCapBaselineBuckets(
-      baselineAsset, "week", hasCurrentSupply && detail.currentCirculatingPrevWeekUSD !== undefined
-        ? admittedDetailBuckets(detail.currentCirculatingPrevWeekUSD)
-        : detailBucketsAt(detail, supplyObservedAt - 7 * 86_400, "totalCirculatingUSD", stablecoinId),
-    ),
-    circulatingPrevMonth: supplyObservedAt == null ? {} : projectUsdMarketCapBaselineBuckets(
-      baselineAsset, "month", hasCurrentSupply && detail.currentCirculatingPrevMonthUSD !== undefined
-        ? admittedDetailBuckets(detail.currentCirculatingPrevMonthUSD)
-        : detailBucketsAt(detail, supplyObservedAt - 30 * 86_400, "totalCirculatingUSD", stablecoinId),
-    ),
+    circulatingPrevWeek,
+    circulatingPrevMonth,
     nativeSupply: {
       current: currentNative,
       prevWeek: currentNative == null || supplyObservedAt == null
         ? null
-        : sumPegBucketsOrNull(detailBucketsAt(detail, supplyObservedAt - 7 * 86_400, "totalCirculating", stablecoinId)),
+        : priorNative(circulatingPrevWeek, supplyObservedAt - 7 * 86_400),
       prevMonth: currentNative == null || supplyObservedAt == null
         ? null
-        : sumPegBucketsOrNull(detailBucketsAt(detail, supplyObservedAt - 30 * 86_400, "totalCirculating", stablecoinId)),
+        : priorNative(circulatingPrevMonth, supplyObservedAt - 30 * 86_400),
     },
   }));
 }

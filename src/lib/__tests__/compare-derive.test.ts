@@ -9,7 +9,7 @@ import {
   type CompareRadarCardEntry,
 } from "@/lib/compare-derive";
 import { COMPARE_COLORS } from "@/lib/compare-config";
-import { makeStablecoin } from "@shared/test-utils/stablecoin";
+import { makeChainGapGuard, makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { makeV9Pillars } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
@@ -265,19 +265,7 @@ describe("deriveComparisonCoins", () => {
 const partialProvenance: NonNullable<SupplyHistoryPoint["supplyProvenance"]> = {
   supplySource: null,
   supplyObservedAt: null,
-  supplyChainGuard: {
-    reason: "supply-chain-dropout",
-    status: "chains-unavailable",
-    partialCoverage: true,
-    chains: [{
-      chainLabel: "HyperEVM",
-      listCurrentUsd: null,
-      baselineUsd: 40_000,
-      baselineObservedAt: 1_699_000_000,
-      baselineSource: "seed",
-      resolution: "unavailable",
-    }],
-  },
+  supplyChainGuard: makeChainGapGuard(true),
 };
 
 describe("deriveSupplySeries", () => {

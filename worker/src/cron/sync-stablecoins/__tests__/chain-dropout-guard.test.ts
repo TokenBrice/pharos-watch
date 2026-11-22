@@ -4,7 +4,8 @@ import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { aggregateChains } from "@shared/lib/chains/aggregator";
 import { chainCirculatingForDisplay } from "@shared/lib/chains/circulating";
 import { buildSupplyObservationProvenance, classifySupplyCoverage } from "@shared/lib/supply-provenance";
-import { StablecoinListResponseSchema, SupplyChainGuardProvenanceSchema, SupplyGapFillProvenanceSchema } from "@shared/types/supply";
+import { StablecoinListResponseSchema, SupplyChainGuardProvenanceSchema, SupplyGapFillProvenanceSchema, type StablecoinDetailResponse } from "@shared/types/supply";
+import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
 import {
   getCirculatingRawOrNull,
   getPrevDayRawOrNull,
@@ -66,6 +67,8 @@ function usdgXlayer(): PeggedAsset {
 function runGuard(asset: PeggedAsset, options: Partial<Omit<Parameters<typeof guardChainDropouts>[0], "assets">> = {}) {
   return guardChainDropouts({ assets: [asset], now: NOW, state: { version: 1, pairs: {} }, ...options });
 }
+
+const publish = (asset: PeggedAsset) => StablecoinListResponseSchema.parse(normalizeStablecoinsPayload({ peggedAssets: [asset] })).peggedAssets[0];
 
 function savedState(assetId: string, ...pairs: Omit<ChainDropoutState["pairs"][string], "assetId" | "baselineSource">[]): ChainDropoutState {
   return { version: 1, pairs: Object.fromEntries(pairs.map((pair) => [JSON.stringify([assetId, pair.chainId]), {
@@ -140,7 +143,7 @@ describe("chain dropout guard", () => {
     expect(asset.supplyRestored).toBe(carried ? true : undefined);
     expect([getPrevDayRawOrNull(asset), getPrevWeekRawOrNull(asset), getPrevMonthRawOrNull(asset)]).toEqual([null, null, null]);
     expect(Object.values(asset.chainCirculating!).map((row) => row.current)).toEqual(labels.map(() => admitted ? 114_000_000 : null));
-    const published = StablecoinListResponseSchema.parse(normalizeStablecoinsPayload({ peggedAssets: [asset] })).peggedAssets[0];
+    const published = publish(asset);
     expect(published).toMatchObject({ circulating: asset.circulating });
     expect(published.supplyUnavailableReason).toBe(admitted || carried ? undefined : "supply-chain-dropout");
     if (carried) {
@@ -351,7 +354,7 @@ describe("chain dropout guard", () => {
 
     await runGuard(asset, { state });
 
-    const published = StablecoinListResponseSchema.parse(normalizeStablecoinsPayload({ peggedAssets: [asset] })).peggedAssets[0];
+    const published = publish(asset);
     const headline = getCirculatingRawOrNull(published)!;
     expect(headline).toBeCloseTo(observedTotal + tempoBaselineUsd, 2);
     expect(published.supplyChainGuard).toMatchObject({ status: "quarantined", chains: [{ chainId: "tempo", resolution: "carried-baseline" }] });
@@ -397,7 +400,7 @@ describe("chain dropout guard", () => {
       }
       if (expected !== observedTotal) continue;
       expect(result).toMatchObject({ quarantinedAssetIds: [], unavailableAssetIds: [], historyFetches: 0 });
-      const released = StablecoinListResponseSchema.parse(normalizeStablecoinsPayload({ peggedAssets: [next] })).peggedAssets[0];
+      const released = publish(next);
       expect(released.supplyRestored).toBeUndefined();
       expect(classifySupplyCoverage(buildSupplyObservationProvenance(released))).toBe("partial");
       expect(released.supplyChainGuard).toMatchObject({ status: "chains-unavailable", partialCoverage: true, quarantinedSince: incident,
@@ -703,7 +706,7 @@ describe("chain dropout guard", () => {
     expect(asset.supplyRestored).toBeUndefined();
     expect(asset.chainCirculating!.Ethereum.current).toBe(46_000_000);
     expect(result.state.pairs[key]).toMatchObject({ baselineUsd: 50_505, baselineObservedAt: now, quarantinedSince: null, releasedAt: now });
-    expect(StablecoinListResponseSchema.parse(normalizeStablecoinsPayload({ peggedAssets: [asset] })).peggedAssets[0].supplyChainGuard)
+    expect(publish(asset).supplyChainGuard)
       .toEqual(asset.supplyChainGuard);
   });
 
@@ -870,7 +873,7 @@ describe("chain dropout guard", () => {
     // Oldest component observation: the repair read (sync clock) and, when named, the list clock.
     const aggregateClock = listObservedAt == null ? NOW : Math.min(NOW, listObservedAt);
     expect(asset.supplyObservedAt).toBe(aggregateClock);
-    const published = StablecoinListResponseSchema.parse(normalizeStablecoinsPayload({ peggedAssets: [asset] })).peggedAssets[0];
+    const published = publish(asset);
     expect(published.supplyChainGuard?.chains[0]).toMatchObject({ observedAt: NOW, observedAtKind: "local-read" });
     expect(published.supplyObservedAt).toBe(aggregateClock);
     expect(mocks.onchain.mock.calls[0][1]).toBe(xlayerContract.address);
@@ -1012,9 +1015,9 @@ describe("chain dropout guard", () => {
     expect(xlayer.releasedAt).toBeUndefined();
   });
 
-  it("nulls an immaterial flagged chain without changing aggregate or restored status", async () => {
-    const asset = usdg();
-    asset.chainCirculating = { "Hyperliquid L1": asset.chainCirculating!["Hyperliquid L1"] };
+  it.each([0, 600_000])("nulls an immaterial flagged chain without changing aggregate or restored status (list %s)", async (listCurrent) => {
+    const asset: PeggedAsset = { ...usdg(), circulatingNative: 1_645_300_000,
+      chainCirculating: { "Hyperliquid L1": leg(listCurrent, 1_200_000, 1_100_000, 1_000_000) } };
     const before = { ...asset.circulating };
     const result = await runGuard(asset);
     expect(asset.circulating).toEqual(before);
@@ -1022,6 +1025,22 @@ describe("chain dropout guard", () => {
     expect(asset.chainCirculating!["Hyperliquid L1"].current).toBeNull();
     expect(asset.supplyChainGuard?.status).toBe("chains-unavailable");
     expect(result.quarantinedAssetIds).toEqual([]);
+    // Pricing v6.90: an uncounted gap compares the same chains at both ends.
+    await fillMissingSupplyHistory(mockD1([{ match: "FROM supply_history",
+      rows: [{ stablecoin_id: asset.id, snapshot_date: NOW - NOW % DAY - DAY, circulating_usd: 1 }] }]), [asset]);
+    const wire = publish(asset);
+    const matched = listCurrent === 0;
+    expect([wire.supplyChainGuard?.matchedComparisonWindows, getUsdMarketCapBaselineOrNull(wire, "day"), getPrevMonthRawOrNull(wire)])
+      .toEqual(matched ? [["day", "week", "month"], 3_132_800_000, 2_899_000_000] : [undefined, null, null]);
+    const detail = await (await overlayCanonicalDetail({} as D1Database, asset.id, new Response("{}"),
+      { kind: "ok", updatedAt: NOW, payload: { peggedAssets: [wire] } })).json() as StablecoinDetailResponse;
+    expect([detail.currentSupplyComparisonExcludedChains, projectStablecoinLiveSummary(detail, asset.id).nativeSupply.prevWeek])
+      .toEqual(matched ? [["Hyperliquid L1"], 2_998_900_000] : [undefined, null]);
+    // After recovery a stored gap withholds only a prior that counts it.
+    const recovered: PeggedAsset = { ...usdg(), chainCirculating: { "Hyperliquid L1": leg(1_200_000, listCurrent || 1_200_000) } };
+    await fillMissingSupplyHistory(mockD1([{ match: "FROM supply_history", rows: [{ stablecoin_id: asset.id,
+      snapshot_date: NOW - NOW % DAY - DAY, circulating_usd: 1, supply_provenance: JSON.stringify(buildSupplyObservationProvenance(asset)) }] }]), [recovered]);
+    expect(getUsdMarketCapBaselineOrNull(publish(recovered), "day")).toBe(matched ? 3_134_000_000 : null);
   });
 
   it.each([-DAY, 0, DAY])("releases an immaterial pair only after a later low daily point (offset=%s)", async (pointOffset) => {

@@ -203,13 +203,14 @@ describe("buildStablecoinTableRowModel supply changes", () => {
     };
   }
 
-  it.each([true, undefined] as const)("withholds partial-chain changes and incompatible sparkline (explicit partial=%s)", (partialCoverage) => {
+  // Pricing v6.90: a matched perimeter compares only its own windows.
+  it.each([[true], [undefined], [undefined, ["week"] as const]])("withholds partial-chain changes and incompatible sparkline (explicit partial=%s, matched=%s)", (partialCoverage, matched?) => {
     const model = buildStablecoinTableRowModel({
       coin: makeStablecoin({
         circulating: { peggedUSD: 50 },
         circulatingPrevDay: { peggedUSD: 100 },
         circulatingPrevWeek: { peggedUSD: 100 },
-        supplyChainGuard: makeChainGapGuard(partialCoverage),
+        supplyChainGuard: { ...makeChainGapGuard(partialCoverage), matchedComparisonWindows: matched && [...matched] },
         supplyChangeBaselines: baselines(100, 100),
       }),
       density: "spacious",
@@ -217,7 +218,7 @@ describe("buildStablecoinTableRowModel supply changes", () => {
     });
     expect(model.circulating).toBe(50);
     expect(model.change24h).toBeNull();
-    expect(model.change7d).toBeNull();
+    expect(model.change7d).toBe(matched ? -50 : null);
     expect(model.supplySparklineValues).toEqual([]);
   });
 
