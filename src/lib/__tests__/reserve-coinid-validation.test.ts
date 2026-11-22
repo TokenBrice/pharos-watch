@@ -221,10 +221,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "VNDC reports this as a mixed issuer-disclosed USDT/USDC collateral pool without stablecoin-level weights, so no single tracked coinId is representative.",
   ],
   [
-    "weusd-picwe::PicWe WEUSD backing (docs 100% USDC claim; Movement dual MOVE+stablecoin mint-state; unreconciled)::USDC",
-    "PicWe's Phase-1 100% USDC documentation conflicts with the on-chain Movement dual MOVE+stablecoin mint state and with EVM mint USDC balances that do not match issued supply, so no dated inventory splits the basket.",
-  ],
-  [
     "buidl-blackrock::BlackRock BUIDL fund shares::BUIDL",
     "The reserve label names the subject fund itself, not an upstream BUIDL dependency edge.",
   ],
@@ -245,8 +241,16 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "Erebor Bank deposit account holding frxUSD reserve cash; a banking relationship and subject self exposure, not an upstream frxUSD dependency edge.",
   ],
   [
-    "usdh-hubble::kUSDH-USDC Orca kToken CDP collateral::USDC",
-    "Kamino kToken position over an Orca USDH-USDC LP; a protocol position whose USDC leg is not separable as a direct USDC holding.",
+    "usdh-hubble::USDH self-collateral in Kamino kUSDH-USDC vault (market2)::USDC",
+    "The 0.1130% USDC leg of the deprecated Kamino kUSDH-USDC vault is separately linked to usdc-circle; this 1.5962% slice is self-referential USDH collateral only.",
+  ],
+  [
+    "weusd-picwe::PicWe WEUSD backing (docs 100% USDC claim; Movement legacy dual MOVE+USDT mint-state and cross-chain V2 USDC escrows unreconciled)::USDC",
+    "94.68% of WEUSD supply sits on the legacy Movement package without reconciled escrows; a USDC coinId would overstate the backing dependency.",
+  ],
+  [
+    "weusd-picwe::PicWe WEUSD backing (docs 100% USDC claim; Movement legacy dual MOVE+USDT mint-state and cross-chain V2 USDC escrows unreconciled)::USDT",
+    "94.68% of WEUSD supply sits on the legacy Movement package without reconciled escrows; a USDT coinId would overstate the backing dependency.",
   ],
   [
     "trusd-tori::Unverified USDC Morpho dust on Base::USDC",
