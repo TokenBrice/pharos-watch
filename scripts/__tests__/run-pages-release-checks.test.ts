@@ -3,18 +3,18 @@ import { runPagesReleaseChecks } from "../maintenance/run-pages-release-checks.t
 import type { NpmScriptCommand } from "../lib/command-runner.mts";
 
 describe("Pages artifact gate results", () => {
-  it("names the failing size/CSS leaf and does not run SEO after a prerequisite fails", async () => {
+  it("runs all four gates in parallel and reports each independent outcome when one fails", async () => {
     const report = vi.fn();
     const runCommandImpl = vi.fn(async (command: NpmScriptCommand) => command.scriptName === "check:build-size" ? 1 : 0);
     expect(await runPagesReleaseChecks({ runCommandImpl, report, readSnapshots: () => [] })).toBe(1);
     expect(runCommandImpl.mock.calls.map(([command]) => command.scriptName)).toEqual([
-      "check:feature-flag-inlining", "check:build-size", "check:phishing-signatures",
+      "check:feature-flag-inlining", "check:build-size", "check:phishing-signatures", "seo:check",
     ]);
     expect(report.mock.calls[0][0]).toContain("| build-size / CSS integrity | npm run check:build-size | failed | exit 1 |");
-    expect(report.mock.calls[0][0]).toContain("| SEO / published archive continuity | npm run seo:check | skipped |");
+    expect(report.mock.calls[0][0]).toContain("| SEO / published archive continuity | npm run seo:check | passed | exit 0 |");
   });
 
-  it("starts prerequisite gates concurrently and names a later SEO failure", async () => {
+  it("starts all four artifact gates concurrently and names a failing SEO gate", async () => {
     const report = vi.fn();
     const started: string[] = [];
     const pending: Array<() => void> = [];
@@ -24,7 +24,7 @@ describe("Pages artifact gate results", () => {
       await new Promise<void>((resolve) => pending.push(resolve));
       return 0;
     } });
-    expect(started).toEqual(["check:feature-flag-inlining", "check:build-size", "check:phishing-signatures"]);
+    expect(started).toEqual(["check:feature-flag-inlining", "check:build-size", "check:phishing-signatures", "seo:check"]);
     for (const resolve of pending) resolve();
     expect(await promise).toBe(1);
     expect(report.mock.calls[0][0]).toContain("| SEO / published archive continuity | npm run seo:check | failed | exit 1 |");

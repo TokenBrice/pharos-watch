@@ -5,6 +5,7 @@ import { runInNewContext } from "node:vm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   collectCriticalCssPages,
+  compileCriticalCssPlans,
   criticalCssWorkerCount,
   GATE_SCOPED_LARGEST_HTML_PAGES,
   optimizeCriticalCssPages,
@@ -248,6 +249,44 @@ describe("critical CSS worker pool", () => {
     const after = readFileSync(file, "utf8");
     expect(after).toContain(chrome);
     expect(after).not.toContain(".unused");
+  });
+
+  it("compiles chunk CSS, strips @font-face unicode-range rules, and preserves nested/:root rules with exact matching", async () => {
+    const outDir = fixture();
+    const chunkCssPath = path.join(outDir, "_next/static/chunks/layout.css");
+    mkdirSync(path.dirname(chunkCssPath), { recursive: true });
+    const chunkCss = [
+      '@font-face{font-family:"Inter";src:url(/fonts/inter.woff2) format("woff2");unicode-range:U+0000-00FF}',
+      ":root{--brand:#123456}",
+      "@media(min-width:64rem){.container{width:100%}}",
+      ".coin{color:blue}",
+      ".unused-only{display:none}",
+    ].join("");
+    writeFileSync(chunkCssPath, chunkCss);
+
+    const { plans } = compileCriticalCssPlans(outDir);
+    expect(plans.map((plan) => plan[1])).toEqual([
+      "/_next/static/chunks/layout.css",
+      "/_next/static/css/app.css",
+    ]);
+    expect(JSON.stringify(plans)).not.toContain("@font-face");
+    expect(JSON.stringify(plans)).not.toContain("unicode-range");
+
+    const file = path.join(outDir, "depeg/index.html");
+    writeFileSync(
+      file,
+      '<!DOCTYPE html><html><head><link rel="stylesheet" href="/_next/static/chunks/layout.css"></head><body><div class="container"><main class="coin">Page</main></div></body></html>',
+    );
+
+    await optimizeCriticalCssPages(outDir, [file], 1);
+
+    const after = readFileSync(file, "utf8");
+    expect(after).toContain(":root{--brand:#123456}");
+    expect(after).toContain(".container{width:100%}");
+    expect(after).toContain(".coin{color:blue}");
+    expect(after).not.toContain("@font-face");
+    expect(after).not.toContain(".unused-only");
+    expect(after).toMatch(/<link\b[^>]*href="\/_next\/static\/chunks\/layout\.css"[^>]*data-pharos-critical-css="async"/);
   });
 });
 

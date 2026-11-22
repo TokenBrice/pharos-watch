@@ -93,41 +93,28 @@ function hasSrcAttribute(openTag: string): boolean {
   return false;
 }
 
-function isScriptTagOpen(lowerHtml: string, openStart: number): boolean {
-  const next = lowerHtml[openStart + "<script".length] ?? "";
-  return next === "" || /[\s/>]/.test(next);
-}
-
-function findNextScriptOpen(html: string, lowerHtml: string, searchFrom: number): number {
-  while (true) {
-    const openStart = lowerHtml.indexOf("<script", searchFrom);
-    if (openStart < 0) return -1;
-
-    const commentStart = html.indexOf("<!--", searchFrom);
-    if (commentStart >= 0 && commentStart < openStart) {
-      const commentEnd = html.indexOf("-->", commentStart + "<!--".length);
-      if (commentEnd < 0) return -1;
-      searchFrom = commentEnd + "-->".length;
-      continue;
-    }
-
-    if (isScriptTagOpen(lowerHtml, openStart)) return openStart;
-    searchFrom = openStart + "<script".length;
-  }
-}
+// Matches HTML comments so `<script>` inside comments is skipped cleanly, or
+// an actual `<script` tag opening (case-insensitively without copying/lowercasing
+// the full HTML document, keeping indexes aligned with `html`).
+const COMMENT_OR_SCRIPT_OPEN_PATTERN = /<!--[\s\S]*?-->|<script(?=[\s/>]|$)/gi;
+const SCRIPT_CLOSE_PATTERN = /<\/script/gi;
 
 function extractInlineScripts(html: string): string[] {
   const scripts: string[] = [];
-  // ASCII-only lowercasing keeps indexes aligned with `html` ("İ" lowercases to two units).
-  const lowerHtml = html.replace(/[A-Z]+/g, (run) => run.toLowerCase());
-  let searchFrom = 0;
-  while (true) {
-    const openStart = findNextScriptOpen(html, lowerHtml, searchFrom);
-    if (openStart < 0) break;
-    const openEnd = lowerHtml.indexOf(">", openStart);
+  COMMENT_OR_SCRIPT_OPEN_PATTERN.lastIndex = 0;
+  let match = COMMENT_OR_SCRIPT_OPEN_PATTERN.exec(html);
+  while (match) {
+    if (match[0].startsWith("<!--")) {
+      match = COMMENT_OR_SCRIPT_OPEN_PATTERN.exec(html);
+      continue;
+    }
+    const openStart = match.index;
+    const openEnd = html.indexOf(">", openStart + "<script".length);
     if (openEnd < 0) break;
-    const closeStart = lowerHtml.indexOf("</script", openEnd + 1);
-    if (closeStart < 0) break;
+    SCRIPT_CLOSE_PATTERN.lastIndex = openEnd + 1;
+    const closeMatch = SCRIPT_CLOSE_PATTERN.exec(html);
+    if (!closeMatch) break;
+    const closeStart = closeMatch.index;
 
     const openTag = html.slice(openStart, openEnd + 1);
     if (!hasSrcAttribute(openTag)) {
@@ -136,7 +123,8 @@ function extractInlineScripts(html: string): string[] {
         scripts.push(body);
       }
     }
-    searchFrom = closeStart + "</script".length;
+    COMMENT_OR_SCRIPT_OPEN_PATTERN.lastIndex = closeStart + "</script".length;
+    match = COMMENT_OR_SCRIPT_OPEN_PATTERN.exec(html);
   }
   return scripts;
 }
