@@ -61,6 +61,9 @@ describe("SafetyScoresContentLoadingState", () => {
     expect(html).toContain('data-chart-skeleton-variant="bars"');
     const { container } = render(<SafetyScoresContentLoadingState />);
     expect(container.querySelectorAll('img[src="/safety-scores/map.webp"]')).toHaveLength(1);
+    const mobileSource = container.querySelector('picture > source[media="(max-width: 1023px)"]');
+    expect(mobileSource?.getAttribute("srcset")).toBe("/safety-scores/map.webp?w=400");
+    expect(mobileSource?.getAttribute("type")).toBe("image/webp");
   });
 
   it("renders one dated results region when a retained preview is passed and omits raw (A)/(B) cause codes", () => {

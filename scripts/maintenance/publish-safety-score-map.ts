@@ -20,6 +20,9 @@ import {
   SAFETY_MAP_MANIFEST_KEY as MANIFEST_KEY,
   SAFETY_MAP_MANIFEST_MAX_BYTES as MAX_MANIFEST_BYTES,
   SAFETY_MAP_TEASER_KEY,
+  SAFETY_MAP_TEASER_MOBILE_HEIGHT,
+  SAFETY_MAP_TEASER_MOBILE_KEY,
+  SAFETY_MAP_TEASER_MOBILE_WIDTH,
   safetyMapArchiveKey,
 } from "@shared/lib/safety-map-artifacts";
 import { parseStrictCliArgs, assertCliUsage, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
@@ -62,7 +65,7 @@ interface SafetyMapManifest {
   publicationHealth: unknown;
   counts: Record<string, unknown>;
   mapSummary?: unknown;
-  bytes: { png: number; alt: number; webp: number };
+  bytes: { png: number; alt: number; webp: number; webpMobile?: number };
 }
 
 export type SafetyMapPlanMode = "force" | "ensure";
@@ -306,7 +309,12 @@ function buildManifest(outDir: string): { manifest: SafetyMapManifest; manifestP
     publicationHealth: meta.publicationHealth ?? null,
     counts: requireObject(meta.counts, "latest.manifest.json counts must be an object"),
     ...(meta.mapSummary === undefined ? {} : { mapSummary: meta.mapSummary }),
-    bytes: { png: statSync(png).size, alt: statSync(alt).size, webp: statSync(join(outDir, "latest.webp")).size },
+    bytes: {
+      png: statSync(png).size,
+      alt: statSync(alt).size,
+      webp: statSync(join(outDir, "latest.webp")).size,
+      webpMobile: statSync(join(outDir, "latest-400.webp")).size,
+    },
   };
   const manifestText = `${JSON.stringify(manifest, null, 2)}\n`;
   if (Buffer.byteLength(manifestText, "utf8") >= MAX_MANIFEST_BYTES) throw new Error(`KV manifest is ${Buffer.byteLength(manifestText, "utf8")} bytes; it must stay under ${MAX_MANIFEST_BYTES} bytes.`);
@@ -339,12 +347,17 @@ export async function renderSafetyMapPublication({
     writeState(statePath, state);
     throw new Error(`Safety Map render failed with status ${status}`);
   }
-  // The site teaser is a derivative of this exact render, never a separate
+  // The site teasers are derivatives of this exact render, never a separate
   // data fetch or a checked-in snapshot with a different publication clock.
-  await sharp(join(outDir, "latest.png"))
+  const latestPngPath = join(outDir, "latest.png");
+  await sharp(latestPngPath)
     .resize(800, 450)
-    .webp({ quality: 78 })
+    .webp({ quality: 78, effort: 6 })
     .toFile(join(outDir, "latest.webp"));
+  await sharp(latestPngPath)
+    .resize(SAFETY_MAP_TEASER_MOBILE_WIDTH, SAFETY_MAP_TEASER_MOBILE_HEIGHT)
+    .webp({ quality: 74, effort: 6 })
+    .toFile(join(outDir, "latest-400.webp"));
   const { manifest, manifestPath } = buildManifest(outDir);
   Object.assign(state, { phase: "rendered", manifest, manifestPath, renderSeconds: Math.floor((Date.now() - started) / 1000) });
   writeState(statePath, state);
@@ -359,6 +372,7 @@ export function safetyMapPublicationEntries(state: SafetyMapPublishState, outDir
     { key: safetyMapArchiveKey(state.manifest.date), path: join(outDir, "latest.png"), verify: true },
     { key: SAFETY_MAP_LATEST_KEY, path: join(outDir, "latest.png") },
     { key: SAFETY_MAP_TEASER_KEY, path: join(outDir, "latest.webp") },
+    { key: SAFETY_MAP_TEASER_MOBILE_KEY, path: join(outDir, "latest-400.webp") },
     { key: MANIFEST_KEY, path: state.manifestPath },
   ];
 }
@@ -421,6 +435,8 @@ export function buildSafetyMapSummary(state: SafetyMapPublishState | null, jobSt
     `| Graded coins | ${value(manifest?.counts.graded)} |`,
     `| Not rated | ${value(manifest?.counts.notRated)} |`,
     `| PNG | ${value(manifest?.bytes.png)} bytes |`,
+    `| WebP teaser (800×450) | ${value(manifest?.bytes.webp)} bytes |`,
+    `| WebP mobile teaser (${SAFETY_MAP_TEASER_MOBILE_WIDTH}×${SAFETY_MAP_TEASER_MOBILE_HEIGHT}) | ${value(manifest?.bytes.webpMobile)} bytes |`,
     `| Alt text | ${value(manifest?.bytes.alt)} bytes |`,
     `| Prior manifest existed | ${value(state?.hadManifest ?? "unknown")} |`, "",
   ];

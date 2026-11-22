@@ -31,7 +31,7 @@ export const DEWSDetail = dynamic(
 );
 export const StablecoinSafetyScoreV9Card = dynamic(
   () => import("@/components/stablecoin-detail/stablecoin-safety-score-v9-card").then((mod) => mod.StablecoinSafetyScoreV9Card),
-  { loading: () => <Skeleton className="h-[420px] w-full rounded-xl" /> },
+  { loading: () => <Skeleton className="min-h-[580px] w-full rounded-xl" /> },
 );
 export const ReservesSection = dynamic(
   () => import("@/components/stablecoin-detail/reserves-section").then((mod) => mod.ReservesSection),

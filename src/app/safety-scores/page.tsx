@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { preload } from "react-dom";
 import { Bell, GitCompareArrows, Map as MapIcon, Network } from "lucide-react";
 import { AlertsHeaderLink } from "@/components/alerts-header-link";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ import {
   SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
   SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/methodology-versions/constants";
+import { SAFETY_MAP_TEASER_MOBILE_WIDTH } from "@shared/lib/safety-map-artifacts";
 
 const reportCardsDescription =
   "Compare stablecoin safety ratings across backing, exit, economic control, evidence quality, dependencies, and structural caps.";
@@ -63,6 +65,18 @@ export const metadata = buildPageMetadata({
 });
 
 export default function SafetyScoresPage() {
+  preload(`/safety-scores/map.webp?w=${SAFETY_MAP_TEASER_MOBILE_WIDTH}`, {
+    as: "image",
+    type: "image/webp",
+    media: "(max-width: 1023px)",
+    fetchPriority: "high",
+  });
+  preload("/safety-scores/map.webp", {
+    as: "image",
+    type: "image/webp",
+    media: "(min-width: 1024px)",
+    fetchPriority: "high",
+  });
   return (
     <FeaturePageShell
       path="/safety-scores/"

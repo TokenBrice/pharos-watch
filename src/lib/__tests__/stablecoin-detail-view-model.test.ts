@@ -326,14 +326,16 @@ describe("stablecoin detail view-model builder", () => {
     const summary = params.queries.liveSummary.data!;
     params.queries.liveSummary = { ...params.queries.liveSummary, dataUpdatedAt: now, meta: { updatedAt: nowSec, ageSeconds: 0, status: "fresh" }, data: { ...summary, supplyRestored: true, supplyObservedAt: nowSec - 3600 } };
     const recent = supplyLane()!;
-    expect(recent).toMatchObject({ dataUpdatedAt: (nowSec - 3600) * 1000, hasData: true, staleTime: 600_000 });
+    expect(recent).toMatchObject({ dataUpdatedAt: (nowSec - 3600) * 1000, hasData: true, staleTime: 600_000, secondary: true });
     expect(isPublicWarning(deriveDataHealth({ ...recent, label: "Supply", staleTime: recent.staleTime! }, now))).toBe(false);
     params.queries.liveSummary.data = { ...summary, supplyRestored: true, supplyObservedAt: nowSec - 7201 };
-    expect(deriveDataHealth({ ...supplyLane()!, label: "Supply", staleTime: supplyLane()!.staleTime! }, now).state).toBe("stale");
+    const old = supplyLane()!;
+    expect(old.secondary).toBe(true);
+    expect(deriveDataHealth({ ...old, label: "Supply", staleTime: old.staleTime! }, now).state).toBe("stale");
     params.queries.liveSummary.data = { ...summary, supplyRestored: true, supplyObservedAt: null };
-    expect(supplyLane()).toMatchObject({ dataUpdatedAt: 0, meta: { updatedAt: null, status: "stale" } });
+    expect(supplyLane()).toMatchObject({ dataUpdatedAt: 0, secondary: true, meta: { updatedAt: null, status: "stale" } });
     params.queries.liveSummary.data = { ...summary, supplyRestored: true, supplyObservedAt: nowSec - 60, circulating: { peggedUSD: 0 } };
-    expect(supplyLane()).toMatchObject({ hasData: true });
+    expect(supplyLane()).toMatchObject({ hasData: true, secondary: true });
   });
 
   it.each([

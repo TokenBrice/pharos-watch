@@ -27,6 +27,7 @@ import { SectionBanner } from "@/components/stablecoin-detail/section-banner";
 import { DETAIL_MODULE_TITLE_CLASS, SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
 import { LazySection } from "@/components/lazy-section";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
 import { useUtcDayNowMs } from "@/hooks/use-utc-day-clock";
 import { describeReserveScoreAdmission } from "@/lib/reserve-score-admission";
@@ -465,6 +466,23 @@ export function DetailRiskContextSections({
     ? reportCardsResponse.documentationOnlyLimited
     : undefined;
   const showScoreCard = reportCard != null && reportCardsResponse != null;
+  // Active (non-frozen) coins with an in-flight report-card fetch or a saved
+  // build-time grade signal reserve the paired score column from first paint so
+  // the score+reserves row never flips 1-col -> 2-col or shifts `#how-it-breaks`.
+  // Frozen coins, failed fetches, and settled-empty cards collapse cleanly.
+  const hasGradeSignal =
+    viewModel.hero.savedGrade != null
+    || viewModel.hero.signalRailItems.some(
+      (item) => item.key === "safety" && item.primary !== "—",
+    );
+  const reserveScoreCardSlot =
+    !showScoreCard
+    && viewModel.coin.status !== "frozen"
+    && (
+      viewModel.gradeRead === "pending"
+      || (viewModel.reportCardsResponse == null && viewModel.gradeRead !== "failed" && hasGradeSignal)
+    );
+  const hasScoreCardSlot = showScoreCard || reserveScoreCardSlot;
   const reserveScoreNote = describeReserveScoreAdmission(
     viewModel.coin.reserveAdmissionSummary,
     reportCard,
@@ -480,7 +498,7 @@ export function DetailRiskContextSections({
     viewModel.coin.reserves?.length ?? 0,
     viewModel.coin.reserveLookThrough?.slices.length ?? 0,
   );
-  const pairScoreAndReserves = showScoreCard && hasReviewedSlices && reviewedSliceCount <= PAIRED_RESERVES_MAX_SLICES;
+  const pairScoreAndReserves = hasScoreCardSlot && hasReviewedSlices && reviewedSliceCount <= PAIRED_RESERVES_MAX_SLICES;
   const evidenceAnchors = resolvePillarEvidenceAnchors(sharedModules);
 
   return (
@@ -513,6 +531,8 @@ export function DetailRiskContextSections({
                 evidenceAnchors={evidenceAnchors}
                 documentationOnlyLimited={documentationOnlyLimited}
               />
+            ) : reserveScoreCardSlot ? (
+              <Skeleton aria-hidden="true" data-score-card-placeholder="" className="min-h-[580px] w-full rounded-xl" />
             ) : null}
           </section>
           {showReserves ? (
