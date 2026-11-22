@@ -39,6 +39,7 @@ export function SortableTableHead<T extends string = string>({
     <TableHead
       scope={scope}
       className={cn(
+        "px-2",
         className,
         isActive && "text-foreground shadow-[inset_0_-2px_0_0_var(--brand-accent)]",
       )}

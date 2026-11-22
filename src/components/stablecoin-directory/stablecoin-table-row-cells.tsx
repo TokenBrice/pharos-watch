@@ -55,7 +55,7 @@ function MiniSparkline({ values }: { values: (number | null)[] }) {
 function PinnedCell({ row, model }: RowCellsProps) {
   if (!row.showPinnedControl) return null;
   return (
-    <TableCell className="text-center">
+    <TableCell className="overflow-visible px-1 text-center">
       {row.onTogglePinned ? (
         <button
           type="button"
