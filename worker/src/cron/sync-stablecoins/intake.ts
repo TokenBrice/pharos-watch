@@ -74,6 +74,7 @@ interface StablecoinsIntakeMainResult extends StablecoinsFxSelection {
   supplyGapReconciliation: SupplyGapReconciliationResult;
   supplyChainGuard: SupplyChainGuardResult;
   trackedCoverage: TrackedCoverageRestoreResult;
+  exactParUsdListObservations: Map<string, number>;
 }
 
 interface StablecoinsIntakeFallbackResult {
@@ -514,18 +515,27 @@ export async function loadStablecoinsIntake(
     delete asset.valuationObservedAtSec;
   }
   const validationContexts = createValidationContextResolver();
-  const listObservations = new Map(assets.filter((asset) => !asset.frozen).map((asset) => [
-    asset, {
-      usd: getCirculatingRawOrNull(asset),
-      price: !asset.priceListFillDefault && isObservedPrice(asset) && validatePublishedAssetPrice({
+  const listObservations = new Map(assets.filter((asset) => !asset.frozen).map((asset) => {
+    const validatable = !asset.priceListFillDefault && isObservedPrice(asset) &&
+      typeof asset.price === "number" && Number.isFinite(asset.price) && asset.price > 0;
+    const decision = validatable
+      ? validatePublishedAssetPrice({
         asset,
         validationContext: validationContexts.get(asset),
         validationReferences,
         previousTrustedPrice: previousTrustedPrices.get(asset.id),
-      }).accepted ? asset.price : null,
-      priceObservedAt: asset.priceObservedAtMode === "upstream" ? asset.priceObservedAt : null,
-    },
-  ]));
+      })
+      : null;
+    return [
+      asset, {
+        usd: getCirculatingRawOrNull(asset),
+        price: decision?.accepted ? asset.price : null,
+        priceObservedAt: asset.priceObservedAtMode === "upstream" ? asset.priceObservedAt : null,
+        exactParOnlyRejected: asset.pegType === "peggedUSD" && decision != null && !decision.accepted &&
+          decision.reason === "exact_par_list_price_requires_corroboration",
+      },
+    ];
+  }));
   const supplementalResolution = mergeSupplementalLastKnownGood(
     supplementalAssets,
     previousAssetsById,
@@ -662,6 +672,7 @@ export async function loadStablecoinsIntake(
     });
   }
 
+  const exactParUsdListObservations = new Map<string, number>();
   for (const asset of assets) {
     const observation = listObservations.get(asset);
     // An immaterial chain gap leaves the provider amount complete (v6.78), so its token quantity stands too (v6.90).
@@ -676,6 +687,13 @@ export async function loadStablecoinsIntake(
       asset.circulatingNative = null;
       asset.valuationPriceUsd = null;
       asset.valuationObservedAtSec = null;
+      if (
+        observation.exactParOnlyRejected &&
+        asset.pegType === "peggedUSD" &&
+        (asset.supplySource == null || asset.supplySource === "defillama")
+      ) {
+        exactParUsdListObservations.set(asset.id, observation.usd);
+      }
       continue;
     }
     const priceClock = observation.priceObservedAt;
@@ -711,5 +729,6 @@ export async function loadStablecoinsIntake(
     supplyGapReconciliation,
     supplyChainGuard,
     trackedCoverage,
+    exactParUsdListObservations,
   };
 }

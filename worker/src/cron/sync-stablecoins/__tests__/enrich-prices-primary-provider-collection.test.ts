@@ -386,7 +386,7 @@ describe("critical publication provider collection", () => {
     }));
   });
 
-  it.each([[60, true], [601, false], [null, false]] as const)(
+  it.each([[60, true], [-1, true], [-6, false], [601, false], [null, false]] as const)(
     "requires a fresh independent USDC/USD anchor for Coinbase (anchor age %s)", async (age, accepted) => {
       vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) =>
         source === CIRCUIT_SOURCE.COINBASE_PRICES || source === CIRCUIT_SOURCE.BITSTAMP_PRICES);
@@ -409,7 +409,7 @@ describe("critical publication provider collection", () => {
       }));
       if (accepted) {
         expect(quoteMaps.coinbasePrices.get("AUDD")).toBeCloseTo(0.65, 8);
-        expect(quoteMaps.coinbaseObservedAtBySymbol.get("AUDD")).toBe(now - age!);
+        expect(quoteMaps.coinbaseObservedAtBySymbol.get("AUDD")).toBe(Math.min(now - 20, now - age!));
       }
     },
   );

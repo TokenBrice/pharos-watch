@@ -13,6 +13,13 @@ export const FIXED_PEG_SEVERE_DOWNSIDE_RATIO = 0.5;
 export const CEX_MAX_BID_ASK_SPREAD_BPS = 100;
 
 /**
+ * Maximum forward clock skew (seconds) tolerated on direct CEX upstream quote
+ * timestamps. Tolerates normal NTP and Cloudflare Workers coarsened `Date.now()`
+ * boundary offsets without admitting genuinely future clocks.
+ */
+export const CEX_UPSTREAM_MAX_FUTURE_SKEW_SEC = 5;
+
+/**
  * Whether provenance permits treating a price as observed. Callers still validate
  * the value and freshness; absent legacy modes retain their existing semantics.
  */

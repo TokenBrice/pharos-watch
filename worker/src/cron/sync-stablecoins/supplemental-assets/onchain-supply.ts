@@ -65,7 +65,7 @@ const EXCLUDED_BALANCE_READ_CONCURRENCY = 1;
 const MOVEMENT_USDCX_ID = "usdcx-movement";
 const MOVEMENT_XRESERVE = "0x8888888199b2Df864bf678259607d6D5EBb4e3Ce";
 const MOVEMENT_XRESERVE_CALL = "0xc47cf5ef000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb480000000000000000000000000000000000000000000000000000000000002715";
-const MOVEMENT_XRESERVE_TOLERANCE_BPS = 1n;
+const MOVEMENT_XRESERVE_EXCESS_TOLERANCE_BPS = 500n;
 const JOINED_SUPPLY_OBSERVATION_MAX_AGE_SEC = 5 * 60;
 // Calibrated 2026-10-25: 45 candidates in band across three passes ($8.74B); frozen for this rollout.
 export const ONCHAIN_PARTITION_POLICY = {
@@ -465,15 +465,18 @@ async function fetchOnChainSupplyForContract(input: {
         contract: MOVEMENT_XRESERVE,
         data: MOVEMENT_XRESERVE_CALL,
         signal: supplySignal,
+        ctx: { chainRpcs: input.chainRpcs },
         rpcUrl: primaryRpcUrl(ethereumRpc),
         fallbackRpcUrl: registryRpcUrls(ethereumRpc)[1],
         rpcMode: "public-rpc",
         chain: "ethereum",
       });
       if (backingRaw == null) throw new Error("Movement xReserve backing read is unavailable");
+      // Under-collateralization (0 bps tolerance) fails closed; bounded excess backing
+      // tolerates asynchronous xReserve deposit and burn-release settlement lag.
       if (backingRaw < raw) throw new OnchainSupplyValidationError("Movement supply exceeds xReserve backing");
-      if ((backingRaw - raw) * 10_000n > raw * MOVEMENT_XRESERVE_TOLERANCE_BPS) {
-        throw new OnchainSupplyValidationError("Movement supply does not reconcile to xReserve within one basis point");
+      if ((backingRaw - raw) * 10_000n > raw * MOVEMENT_XRESERVE_EXCESS_TOLERANCE_BPS) {
+        throw new OnchainSupplyValidationError("Movement xReserve excess backing exceeds 500 basis points");
       }
     }
 

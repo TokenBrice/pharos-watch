@@ -76,6 +76,16 @@ export const SUPPLY_PERIMETER_CHANGES = [
     evidenceUrl: "https://github.com/TokenBrice/pharos-watch/pull/2157",
     marketWide: false,
   },
+  // Movement USDCx, 2026-11-22: Pricing v6.91 prefers Movement's pinned-ledger ConcurrentSupply reconciled to
+  // Ethereum Circle xReserve (562,714.44 USDCx vs 568,408.47 USDC, +101.19 bps excess) over CoinGecko's
+  // stalled market cap ($600,982 frozen since 2026-11-14T00:41:51Z). Provisional activation; re-date at deploy.
+  {
+    stablecoinId: "usdcx-movement",
+    changedAt: Date.parse("2026-11-22T12:30:00Z") / 1000,
+    chainIds: ["movement"],
+    evidenceUrl: "https://github.com/TokenBrice/pharos-watch/issues/2145",
+    marketWide: false,
+  },
 ] as const;
 
 /** A reviewed perimeter record enables the Kinesis wrapper publication and snapshot together. */

@@ -13,7 +13,7 @@ import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getCirculatingRawOrNull, getUsdMarketCapBaselineOrNull } from "@shared/lib/supply";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { StablecoinDataSchema } from "@shared/types/supply";
-import { dedupeCanonicalAssets, fillMissingSupplyHistory } from "../phase-helpers";
+import { dedupeCanonicalAssets, deriveExactParListNativeQuantities, fillMissingSupplyHistory } from "../phase-helpers";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { fetchFiatCoinGeckoTokens, FIAT_CG_METAS } from "../supplemental-assets/fiat-cg";
 import * as supplementalPrices from "../supplemental-assets/shared";
@@ -571,5 +571,75 @@ describe("stablecoin intake admission", () => {
     expect(result).toMatchObject({ kind: "withheld", result: { status: "degraded", itemCount: 0 } });
     if (result.kind !== "withheld") throw new Error("Expected a withheld generation");
     expect(JSON.parse(String(result.result.metadata))).toEqual({ reason: "supply-chain-guard-baselines-unavailable", previousCacheState: "malformed" });
+  });
+
+  it("defers exact-par USD list native derivation until high multi-source consensus", async () => {
+    const syncStartSec = 1_795_347_918;
+    const { db } = fixtures.open();
+    const baseRows = Array.from({ length: MIN_VALID_ASSET_COUNT }, (_, i) => makePeggedAsset({
+      id: `intake-fixture-${i}`, price: 0.9999 - i * 1e-6, circulating: { peggedUSD: 100 },
+    }));
+    const usdc = makePeggedAsset({ id: "2", symbol: "USDC", pegType: "peggedUSD", price: 1, priceSource: "defillama", circulating: { peggedUSD: 60_000_000_000 } });
+    const eurc = makePeggedAsset({ id: "50", symbol: "EURC", pegType: "peggedEUR", price: 1.08, priceSource: "defillama", circulating: { peggedEUR: 500_000_000 } });
+    upstream({ peggedAssets: [...baseRows, usdc, eurc] });
+    const intake = await loadStablecoinsIntake({ db, syncStartSec, fallbackToCoingecko: async () => fallbackResult });
+    if (intake.kind !== "main") throw new Error("Expected main intake");
+    expect(intake.exactParUsdListObservations.get("usdc-circle")).toBe(60_000_000_000);
+    expect(intake.exactParUsdListObservations.has("eurc-circle")).toBe(false);
+
+    // 5+ rows at 1.0 triggers response-level fill default and must NOT be deferred.
+    const fillRows = baseRows.map((row, i) => (i < 5 ? { ...row, price: 1 } : row));
+    upstream({ peggedAssets: [...fillRows, { ...usdc }] });
+    const fillIntake = await loadStablecoinsIntake({ db, syncStartSec, fallbackToCoingecko: async () => fallbackResult });
+    if (fillIntake.kind !== "main") throw new Error("Expected main intake");
+    expect(fillIntake.exactParUsdListObservations.has("usdc-circle")).toBe(false);
+
+    const target = intake.assets.find((a) => a.id === "usdc-circle")!;
+    const obs = intake.exactParUsdListObservations;
+    for (const bad of [
+      { price: 0.9999, priceSource: "coingecko", priceConfidence: "single-source" as const },
+      { price: 0.9999, priceSource: "coingecko+defillama-list", priceConfidence: "high" as const },
+      { price: 0.9999, priceSource: "bitstamp+coingecko", priceConfidence: "low" as const },
+      { price: 0.9999, priceSource: "cached", priceConfidence: "fallback" as const },
+      { price: 1, priceSource: "protocol-par+bitstamp", priceConfidence: "high" as const, priceObservedAtMode: "nominal_reference" as const },
+      { price: 0.9999, priceSource: "bitstamp+coingecko+kraken", priceConfidence: "high" as const, supplyRestored: true },
+    ]) {
+      const clone = { ...target, ...bad };
+      expect(deriveExactParListNativeQuantities([clone], obs, syncStartSec + 45)).toBe(0);
+      expect(clone.circulatingNative).toBeNull();
+    }
+    const localFetch = { ...target, price: 0.99985, priceSource: "bitstamp+coingecko+kraken", priceConfidence: "high" as const, priceObservedAt: syncStartSec + 36, priceObservedAtMode: "local_fetch" as const };
+    const upstreamClock = { ...target, id: "usdt-tether", price: 0.9999, priceSource: "coinbase+coingecko", priceConfidence: "high" as const, priceObservedAt: syncStartSec + 36, priceObservedAtMode: "upstream" as const };
+    const map = new Map([["usdc-circle", 60_000_000_000], ["usdt-tether", 60_000_000_000]]);
+    expect(deriveExactParListNativeQuantities([localFetch, upstreamClock], map, syncStartSec + 45)).toBe(2);
+    expect(localFetch).toMatchObject({ circulatingNative: 60_000_000_000 / 0.99985, valuationPriceUsd: 0.99985, valuationObservedAtSec: null });
+    expect(upstreamClock).toMatchObject({ circulatingNative: 60_000_000_000 / 0.9999, valuationPriceUsd: 0.9999, valuationObservedAtSec: syncStartSec + 36 });
+  });
+
+  it("pairs midnight-straddling finalized XAUT supply_history rows for 24h and 7d baselines", async () => {
+    const { db, sqlite } = fixtures.open();
+    const insert = sqlite.prepare(`INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd,
+      circulating_native, valuation_price_usd, valuation_observed_at_sec, supply_provenance) VALUES (?, ?, ?, ?, ?, ?, ?)`);
+    insert.run("xaut-tether", 1795132800, 3_072_000_000, 749_423.56, 4100, 1795132832, historyProvenance("onchain-circulating-supply", 1795131863));
+    insert.run("xaut-tether", 1795219200, 3_080_000_000, 750_000, 4106.67, 1795220130, historyProvenance("onchain-circulating-supply", 1795219031));
+    const nov22Now = 1795347918;
+    vi.spyOn(Date, "now").mockReturnValue(nov22Now * 1000);
+    const nov22 = makePeggedAsset({
+      id: "xaut-tether", pegType: "peggedGOLD", supplySource: "onchain-circulating-supply",
+      supplyObservedAt: 1795307351, circulating: { peggedGOLD: 3_090_000_000 },
+      circulatingNative: 751_000, valuationPriceUsd: 4114.51, valuationObservedAtSec: 1795308315,
+    });
+    await fillMissingSupplyHistory(db, [nov22], undefined, nov22Now);
+    expect(nov22.supplyChangeBaselines?.day).toEqual({ observedAt: 1795219031, circulatingUsd: 3_080_000_000, circulatingNative: 750_000 });
+
+    const nov27Now = Date.parse("2026-11-27T12:00:00Z") / 1000;
+    vi.spyOn(Date, "now").mockReturnValue(nov27Now * 1000);
+    const nov27 = makePeggedAsset({
+      id: "xaut-tether", pegType: "peggedGOLD", supplySource: "onchain-circulating-supply",
+      supplyObservedAt: nov27Now - 900, circulating: { peggedGOLD: 3_100_000_000 },
+      circulatingNative: 752_000, valuationPriceUsd: 4122.34, valuationObservedAtSec: nov27Now - 60,
+    });
+    await fillMissingSupplyHistory(db, [nov27], undefined, nov27Now);
+    expect(nov27.supplyChangeBaselines?.week).toEqual({ observedAt: 1795131863, circulatingUsd: 3_072_000_000, circulatingNative: 749_423.56 });
   });
 });

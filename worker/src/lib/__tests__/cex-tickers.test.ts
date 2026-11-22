@@ -311,6 +311,44 @@ describe("fetchCoinbasePrices", () => {
     expect(fetchSpy).toHaveBeenCalledOnce();
   });
 
+  it("admits AUDD-USDC /book?level=1 with 1s forward skew, rejects >5s skew with diagnostic, and keeps wide-book refusal", async () => {
+    const nowSec = Math.floor(Date.parse("2026-11-22T12:01:31Z") / 1000);
+    vi.setSystemTime(nowSec * 1_000);
+    const staleTrade = new Date((nowSec - 7_200) * 1_000).toISOString();
+    const skewedFetch = mockFetch([
+      { match: "/products/AUDD-USDC/book", body: { bids: [["0.6582", "100", 1]], asks: [["0.6606", "100", 1]], time: new Date((nowSec + 1) * 1_000 + 200).toISOString() } },
+      { match: "/products/AUDD-USDC/ticker", body: { price: "0.6584", time: staleTrade } },
+    ], { requireMatch: true });
+    const admitted = await fetchCoinbasePrices(["AUDD"]);
+    expect(admitted.kind).toBe("ok");
+    expect(admitted.value.prices.get("AUDD")).toBeCloseTo(0.6594, 6);
+    expect(admitted.value.clockBySymbol.get("AUDD")).toBe("book");
+    expect(admitted.value.observedAtBySymbol.get("AUDD")).toBe(nowSec + 1);
+    expect(skewedFetch).toHaveBeenCalledOnce();
+
+    mockFetch([
+      { match: "/products/AUDD-USDC/book", body: { bids: [["0.6582", "100", 1]], asks: [["0.6606", "100", 1]], time: new Date((nowSec + 6) * 1_000).toISOString() } },
+      { match: "/products/AUDD-USDC/ticker", body: { price: "0.6584", time: staleTrade } },
+    ], { requireMatch: true });
+    const rejected = await fetchCoinbasePrices(["AUDD"]);
+    expect(rejected.kind).toBe("no-data");
+    expect(rejected.value.diagnostics).toContainEqual(expect.objectContaining({
+      source: "coinbase",
+      endpoint: "api.exchange.coinbase.com/products/AUDD-USDC/book",
+      ok: true,
+      success: false,
+      errorClass: "future_observed_at",
+    }));
+
+    const wideFetch = mockFetch([
+      { match: "/products/AUDD-USDC/book", body: { bids: [["0.6400", "100", 1]], asks: [["0.6800", "100", 1]], time: new Date((nowSec + 1) * 1_000).toISOString() } },
+      { match: "/products/AUDD-USDC/ticker", body: { price: "0.6584", time: new Date(nowSec * 1_000).toISOString() } },
+    ], { requireMatch: true });
+    const wide = await fetchCoinbasePrices(["AUDD"]);
+    expect(wide.kind).toBe("no-data");
+    expect(wideFetch).toHaveBeenCalledOnce();
+  });
+
   it.each([null, tradeTime])("does not date an eligible midpoint with the trade clock when book time is %s", async (time) => {
     vi.setSystemTime(Date.parse(tradeTime) + 601_000);
     mockFetch([
@@ -339,6 +377,18 @@ describe("fetchCoinbasePrices", () => {
     expect(outcome.kind).toBe("no-data");
     expect(outcome.value.prices.has("USDT")).toBe(false);
     expect(outcome.value.diagnostics).toEqual([
+      {
+        source: "coinbase",
+        stage: "primary",
+        endpoint: "api.exchange.coinbase.com/products/USDT-USD/book",
+        status: 404,
+        ok: false,
+        success: false,
+        candidateCount: 1,
+        resolvedCount: 0,
+        rejectionReasonCounts: { "non-ok": 1 },
+        errorClass: "http_error",
+      },
       {
         source: "coinbase",
         stage: "primary",
@@ -381,7 +431,15 @@ describe("fetchCoinbasePrices", () => {
 
     expect(outcome.kind).toBe("ok");
     expect(outcome.value.prices.get("USDT")).toBeCloseTo(0.9998, 4);
-    expect(outcome.value.diagnostics).toEqual([
+    expect(outcome.value.diagnostics).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        source: "coinbase",
+        endpoint: "api.exchange.coinbase.com/products/AUDD-USDC/book",
+        status: 404,
+        ok: false,
+        success: false,
+        errorClass: "http_error",
+      }),
       {
         source: "coinbase",
         stage: "primary",
@@ -390,15 +448,9 @@ describe("fetchCoinbasePrices", () => {
         ok: false,
         success: false,
       },
-      {
-        source: "coinbase",
-        stage: "primary",
-        endpoint: "api.exchange.coinbase.com/products/{product}/ticker",
-        status: 404,
-        ok: false,
-        success: false,
-      },
-    ]);
+    ]));
+    expect(outcome.value.diagnostics.filter((d) => d.endpoint.endsWith("/ticker"))).toHaveLength(2);
+    expect(outcome.value.diagnostics.filter((d) => d.endpoint.endsWith("/book"))).toHaveLength(3);
   });
 
   it.each([

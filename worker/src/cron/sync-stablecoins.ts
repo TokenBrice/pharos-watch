@@ -17,6 +17,7 @@ import { createBinanceFetchSession } from "../lib/cex-tickers";
 import { createNativePegQuoteSession } from "../lib/native-peg-quotes";
 import { createD1CostTracker } from "../lib/d1-cost";
 import { loadStablecoinsIntake } from "./sync-stablecoins/intake";
+import { deriveExactParListNativeQuantities } from "./sync-stablecoins/phase-helpers";
 import { syncViaCoingeckoFallback } from "./sync-stablecoins/fallback";
 
 const PUBLISH_FX_REFERENCE_EVIDENCE = false;
@@ -105,12 +106,14 @@ export async function syncStablecoins(
     previousCacheState,
     fxFallbackRates, fxReferenceObservations, detectionFxState,
     validationReferences,
+    replayPriceCache,
+    exactParUsdListObservations,
   } = intake;
   const { state: _guardState, ...supplyChainGuardMetadata } = supplyChainGuard;
   const { previousActivePriceCoverage, previousMissingGenerationsById } =
     await loadStablecoinsPublicationContinuity(db, syncStartSec);
   const pricingStage = await runStablecoinsPricingStage({
-    replayPriceCache: intake.replayPriceCache,
+    replayPriceCache,
     db,
     assets,
     previousAssetsById,
@@ -126,6 +129,11 @@ export async function syncStablecoins(
     nativePegSession,
   });
   if (!("priceCacheEntries" in pricingStage)) return withD1Cost(pricingStage);
+  deriveExactParListNativeQuantities(
+    assets,
+    exactParUsdListObservations,
+    Math.max(syncStartSec, Math.floor(Date.now() / 1000)),
+  );
   const { metadata: pricingMetadata, priceCacheEntries, providerDiagnostics } = pricingStage;
   return runStablecoinsPostIntakePublication({
     assets,

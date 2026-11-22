@@ -31,7 +31,15 @@ export interface StablecoinPriceGapReview {
  * asset stays listed as missing and re-alerts the moment the review expires;
  * acknowledgement never waives the row itself and never applies to a depeg or
  * to an asset that has a price. */
-export const STABLECOIN_PUBLICATION_WAIVERS: readonly StablecoinPublicationWaiver[] = [];
+export const STABLECOIN_PUBLICATION_WAIVERS: readonly StablecoinPublicationWaiver[] = [
+  {
+    stablecoinId: "wm-m0",
+    owner: "ops",
+    reason:
+      "Owner-approved dated waiver 2026-11-22 (issue #2145 Option A): CoinGecko wrappedm-by-m0 stalled at 2026-11-15T05:39:11Z ($70,354,848), DefiLlama returns {}, and the 7-day carry-forward expired 2026-11-22T05:39:11Z. Keep wM honestly withheld from /api/stablecoins until CoinGecko resumes or a reviewed 12-chain native supply plan (with M0 Portal zero-escrow proof) is approved. Re-check by 2026-11-26 12:00 UTC.",
+    expiresAt: Date.UTC(2026, 10, 26, 12, 0) / 1000,
+  },
+];
 
 /** Census-only reviews for off-catalog PSI historical members; never active-price coverage. */
 export const PSI_HISTORICAL_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] = [
@@ -208,6 +216,33 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     ],
     reviewedAt: Date.UTC(2026, 10, 22, 12, 38) / 1000,
     expiresAt: Date.UTC(2026, 11, 6, 12, 38) / 1000,
+  },
+  {
+    stablecoinId: "wm-m0",
+    owner: "ops",
+    reason:
+      "Reviewed 2026-11-22 12:00 UTC (issue #2145 Option A): CoinGecko wrappedm-by-m0 remains frozen at 2026-11-15T05:39:11Z ($70,354,848) and DefiLlama returns {}, so wM has no admitted live market price and its 7-day supply carry expired 2026-11-22T05:39:11Z. Live 12-chain on-chain totalSupply/getTokenSupply read 70,633,435.96 wM (+0.40% vs stalled CG), proving the token remains alive on-chain. Owner decision 2026-11-22: keep price missing and supply withheld under dated waiver until CoinGecko resumes or M0 Portal zero-escrow native supply review completes; all admission gates preserved. Re-check by 2026-11-26 12:00 UTC.",
+    sources: [
+      "https://api.coingecko.com/api/v3/simple/price?ids=wrappedm-by-m0&vs_currencies=usd&include_market_cap=true&include_last_updated_at=true",
+      "https://docs.m0.org/",
+      "https://github.com/TokenBrice/pharos-watch/issues/2145",
+    ],
+    reviewedAt: Date.UTC(2026, 10, 22, 12, 0) / 1000,
+    expiresAt: Date.UTC(2026, 10, 26, 12, 0) / 1000,
+  },
+  {
+    stablecoinId: "usdcx-movement",
+    owner: "ops",
+    reason:
+      "Reviewed 2026-11-22 12:00 UTC (issue #2145 Sub-option A1): CoinGecko usdcx-movement remains frozen at 2026-11-14T00:41:51Z ($600,982) and DefiLlama returns {}, leaving every admitted live price lane empty. Movement pinned-ledger ConcurrentSupply (ledger_version 240627708) read 562,714.444846 USDCx reconciled against 568,408.465646 USDC in Ethereum Circle xReserve (+101.19 bps excess), so Pricing v6.91 restores on-chain supply with preferMcap: true while keeping price honestly null under R1. All admission gates preserved; owner ops re-checks CoinGecko or an admitted observed market by 2026-12-06 12:00 UTC.",
+    sources: [
+      "https://api.coingecko.com/api/v3/simple/price?ids=usdcx-movement&vs_currencies=usd&include_market_cap=true&include_last_updated_at=true",
+      "https://mainnet.movementnetwork.xyz/v1/accounts/0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e/resource/0x1::fungible_asset::ConcurrentSupply",
+      "https://developers.circle.com/xreserve/concepts/how-xreserve-works",
+      "https://github.com/TokenBrice/pharos-watch/issues/2145",
+    ],
+    reviewedAt: Date.UTC(2026, 10, 22, 12, 0) / 1000,
+    expiresAt: Date.UTC(2026, 11, 6, 12, 0) / 1000,
   },
 ];
 

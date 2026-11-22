@@ -33,6 +33,7 @@ import {
 import { fetchCurveOnchainPrices, fetchCurveOracleEma } from "../../lib/curve-onchain";
 import { CURVE_POOL_CONFIGS } from "@shared/lib/curve-pool-configs";
 import { CEX_PROVIDER_AUDIT_CONFIG, COINBASE_PRODUCTS } from "@shared/lib/pricing-provider-config";
+import { CEX_UPSTREAM_MAX_FUTURE_SKEW_SEC } from "@shared/lib/pricing-source-policy";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
@@ -474,7 +475,7 @@ export async function collectPrimaryProviderQuotes(params: {
       const usdcPrice = quoteMaps.bitstampPrices.get("USDC");
       const usdcObservedAt = quoteMaps.bitstampObservedAtBySymbol.get("USDC");
       const usdcUsd = usdcPrice != null && Number.isFinite(usdcPrice) && usdcPrice > 0 && usdcObservedAt != null &&
-        validatePricingSourceFreshness({ source: "bitstamp", observedAt: usdcObservedAt, maxFutureSkewSec: 0 }).accepted
+        validatePricingSourceFreshness({ source: "bitstamp", observedAt: usdcObservedAt, maxFutureSkewSec: CEX_UPSTREAM_MAX_FUTURE_SKEW_SEC }).accepted
         ? { price: usdcPrice, observedAt: usdcObservedAt }
         : null;
 

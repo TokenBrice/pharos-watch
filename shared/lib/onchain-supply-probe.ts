@@ -414,9 +414,13 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
   },
   // Movement USDCx is a Circle xReserve representation. Its fungible-asset
   // supply is admitted only after the Worker reconciles it to the matching
-  // Ethereum xReserve domain balance within one basis point.
+  // Ethereum xReserve domain balance (0 bps under-collateralized fail-closed,
+  // up to 500 bps excess backing for asynchronous deposit/burn settlement).
+  // Reviewed 2026-11-22 (owner-approved): prefer xReserve-reconciled Movement
+  // stock over stalled CoinGecko market caps.
   "usdcx-movement": {
     aggregateContracts: [{ chain: "movement" }],
+    preferMcap: true,
   },
   // Reviewed issuer-native USDon deployments: each separately minted stock is
   // additive, not an Ethereum lockbox plus representation. The complete roster

@@ -1,8 +1,10 @@
 import { isKinesisWrapperSupplyId } from "@shared/lib/onchain-supply-probe";
-import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
+import { SUPPLY_SNAPSHOT_MAX_AGE_SEC } from "@shared/lib/supply";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { classifySupplyCoverage, parseSupplyObservationProvenance } from "@shared/lib/supply-provenance";
 import { isAmbiguousSupplyPerimeterDay, isEarlierSupplyPerimeter } from "@shared/lib/supply-perimeter-changes";
+
+export { SUPPLY_SNAPSHOT_MAX_AGE_SEC };
 
 export interface NativeSupplyHistoryRow {
   stablecoin_id: string;
@@ -10,8 +12,6 @@ export interface NativeSupplyHistoryRow {
   circulating_native?: number | null;
   supply_provenance?: string | null;
 }
-
-export const SUPPLY_SNAPSHOT_MAX_AGE_SEC = 2 * CACHE_FRESHNESS_LANES.stablecoins.producerIntervalSec;
 
 export function isDailyStockObservation(id: string, day: number, observedAt: number, through: number): boolean {
   return Number.isSafeInteger(observedAt) && observedAt > 0 && observedAt <= through &&
