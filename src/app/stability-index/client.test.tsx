@@ -389,8 +389,12 @@ describe("StabilityIndexClient", () => {
     expect(screen.getByRole("link", { name: "Stress breadth" }).getAttribute("href")).toMatch(/^\/depeg\/?#dews-radar$/);
     expect(screen.getByRole("link", { name: "Trend" }).getAttribute("href")).toMatch(/^\/flows\/?$/);
 
-    // ShowYourWorkToggle is present.
+    // ShowYourWorkToggle and hero Top current drags summary are present.
     expect(screen.getByRole("button", { name: /show inputs/i })).toBeTruthy();
+    const topDrags = screen.getByTestId("psi-hero-top-drags");
+    expect(topDrags.textContent).toContain("Top current drags");
+    expect(topDrags.textContent).toContain("USDC");
+    expect(topDrags.querySelector('a[href="#psi-contributors"]')).not.toBeNull();
 
     // Contributor row uses crisp driver badge (never verbatim "Open incident, counted by size").
     expect(container.textContent).not.toContain("Open incident, counted by size");

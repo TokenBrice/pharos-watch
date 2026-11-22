@@ -172,24 +172,28 @@ function PsiRegimeScaleBar({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
         {REGIME_SCALE_BANDS.map((segment) => {
           const active = segment.band === band;
           return (
             <div
               key={segment.band}
               className={cn(
-                "flex items-center gap-1.5 text-2xs",
-                active ? "font-semibold text-foreground" : "text-muted-foreground",
+                "flex items-center justify-between gap-1.5 rounded-md border px-2.5 py-1.5 text-2xs",
+                active
+                  ? "border-border bg-card font-semibold text-foreground"
+                  : "border-border/50 bg-muted/20 text-muted-foreground",
               )}
             >
-              <span
-                className="h-2 w-2 shrink-0 rounded-full"
-                style={{ backgroundColor: segment.color, opacity: !isCurrent ? 0.45 : active ? 1 : 0.65 }}
-                aria-hidden="true"
-              />
-              <span className="truncate">{segment.band}</span>
-              <span className="ml-auto pharos-numeric text-3xs text-muted-foreground">{segment.rangeLabel}</span>
+              <span className="inline-flex min-w-0 items-center gap-1.5">
+                <span
+                  className="h-2 w-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: segment.color, opacity: !isCurrent ? 0.45 : active ? 1 : 0.65 }}
+                  aria-hidden="true"
+                />
+                <span className="truncate">{segment.band}</span>
+              </span>
+              <span className="shrink-0 pharos-numeric text-3xs text-muted-foreground">{segment.rangeLabel}</span>
             </div>
           );
         })}
@@ -252,6 +256,72 @@ export function StabilityIndexEmptyState() {
   );
 }
 
+const HERO_TOP_DRAGS_LIMIT = 4;
+
+function PsiHeroTopDrags({
+  rows,
+  logos,
+  isCurrent,
+}: {
+  rows: readonly PsiContributorRow[];
+  logos?: Record<string, string>;
+  isCurrent: boolean;
+}) {
+  const top = rows.slice(0, HERO_TOP_DRAGS_LIMIT);
+  return (
+    <div className="mt-4 border-t border-border/50 pt-3.5" data-testid="psi-hero-top-drags">
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="pharos-label">Top current drags</p>
+        {rows.length > 0 ? (
+          <a
+            href="#psi-contributors"
+            className="pharos-focus-ring rounded-sm text-2xs text-muted-foreground transition-colors hover:text-brand-accent-text hover:underline"
+          >
+            {rows.length > top.length ? `All ${rows.length} →` : "Details →"}
+          </a>
+        ) : null}
+      </div>
+      {top.length === 0 ? (
+        <p className="mt-2 text-xs text-muted-foreground">
+          {isCurrent ? "No active depeg drags in the current sample." : "Contributor breakdown retained from last coherent sample."}
+        </p>
+      ) : (
+        <ul className="mt-1.5 space-y-0.5">
+          {top.map((row) => (
+            <li key={row.id}>
+              <Link
+                prefetch={false}
+                href={buildStablecoinUrl(row.id)}
+                title={
+                  row.driver === "breadth"
+                    ? `${row.symbol}: breadth-driven open incident (−${row.total.toFixed(2)} pts)`
+                    : `${row.symbol}: severity-driven depeg impact (−${row.total.toFixed(2)} pts)`
+                }
+                className="pharos-focus-ring -mx-1.5 flex min-h-11 items-center gap-2 rounded-md px-1.5 text-xs transition-colors hover:bg-muted/50 sm:min-h-8"
+              >
+                <StablecoinLogo src={logos?.[row.id]} name={row.symbol} size={18} />
+                <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{row.symbol}</span>
+                <span
+                  className={cn(
+                    "pharos-numeric shrink-0 whitespace-nowrap text-right",
+                    row.bps < 0 ? DEPEG_DIRECTION_CLASSES.below.text : DEPEG_DIRECTION_CLASSES.above.text,
+                  )}
+                >
+                  {row.bps > 0 ? "+" : ""}
+                  {(row.bps / 100).toFixed(2)}%
+                </span>
+                <span className="pharos-numeric shrink-0 whitespace-nowrap text-right font-medium text-foreground">
+                  −{row.total.toFixed(2)} pts
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export function StabilityIndexPanel({
   band,
   score,
@@ -261,6 +331,8 @@ export function StabilityIndexPanel({
   delta,
   daysInBand,
   historyStats,
+  contributors = [],
+  logos,
   lanes,
   componentData,
   beaconState,
@@ -273,6 +345,8 @@ export function StabilityIndexPanel({
   delta: number | null;
   daysInBand: number;
   historyStats: HistoryStatItem[];
+  contributors?: readonly PsiContributorRow[];
+  logos?: Record<string, string>;
   lanes: PsiBeamDimmerLane[];
   componentData: PsiComponentPoint[];
   beaconState: PsiBeaconState;
@@ -327,7 +401,12 @@ export function StabilityIndexPanel({
           </div>
         }
         subKicker="30-day range"
-        sub={<PsiHistoryStatsGrid items={historyStats} />}
+        sub={
+          <>
+            <PsiHistoryStatsGrid items={historyStats} />
+            <PsiHeroTopDrags rows={contributors} logos={logos} isCurrent={isCurrent} />
+          </>
+        }
         footer={
           <PsiRegimeScaleBar
             score={score}
@@ -339,12 +418,12 @@ export function StabilityIndexPanel({
           />
         }
       >
-        <div className="flex h-full flex-col justify-between gap-3 p-5 sm:p-6 lg:p-7">
+        <div className="flex h-full flex-col justify-between gap-3 p-5 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="pharos-label">The Beacon</p>
             <span className="pharos-meta">Updated every 30 min</span>
           </div>
-          <div className="mx-auto w-full max-w-2xl">
+          <div className="mx-auto w-full max-w-lg">
             <PsiBeacon state={beaconState} showComponents={false} />
           </div>
         </div>
@@ -524,7 +603,7 @@ export function PsiContributorsTableCard({
   logos?: Record<string, string>;
 }) {
   return (
-    <Card className="rounded-xl animate-in fade-in duration-300">
+    <Card id="psi-contributors" className="scroll-mt-24 rounded-xl animate-in fade-in duration-300">
       <CardHeader className="pb-2">
         <CardTitle as="h2" className="pharos-label">Top contributors</CardTitle>
       </CardHeader>

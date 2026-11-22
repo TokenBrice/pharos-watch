@@ -220,6 +220,8 @@ export function StabilityIndexClient() {
         delta={delta}
         daysInBand={headlineAggregates.daysInBand}
         historyStats={historyStats}
+        contributors={contributorRows}
+        logos={logos}
         lanes={beamDimmerLanes}
         componentData={componentData}
         beaconState={beacon.state}
