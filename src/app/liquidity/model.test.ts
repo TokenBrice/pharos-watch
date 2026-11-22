@@ -317,8 +317,31 @@ describe("liquidity page model", () => {
       agg7dChange: null,
       median7dChange: 10,
       change7dCoinCount: 3,
-      aggDepthToMcapRatio: 0.3,
+      // Only 1 of 3 observed DEX coins has positive supply, so deduped aggregate
+      // Depth/MCap is withheld and per-coin median is published instead (R7).
+      aggDepthToMcapRatio: null,
+      medianDepthToMcapRatio: 0.3,
       aggDepthToMcapObservedCount: 1,
+    });
+
+    // When every observed DEX coin has positive supply, aggregate Depth/MCap uses
+    // cross-coin deduped global TVL (500), never the summed gross per-coin TVLs (900).
+    const overlapMap: DexLiquidityMap = {
+      ...map,
+      [deepCurve.id]: makeLiquidity({ liquidityScore: 82, totalTvlUsd: 300 }),
+      [thinFluid.id]: makeLiquidity({ liquidityScore: 30, totalTvlUsd: 300 }),
+      [nrOther.id]: makeLiquidity({ liquidityScore: null, totalTvlUsd: 300 }),
+    };
+    const completeMcap = new Map<string, number | null>([
+      [deepCurve.id, 1_000],
+      [thinFluid.id, 500],
+      [nrOther.id, 500],
+    ]);
+    const matched = buildLiquidityViewModel(overlapMap, "all", "", { mcapById: completeMcap });
+    expect(matched.summaryStats).toMatchObject({
+      aggDepthToMcapRatio: 0.25,
+      medianDepthToMcapRatio: 0.6,
+      aggDepthToMcapObservedCount: 3,
     });
 
     const thinOnly = buildLiquidityViewModel(map, "all", "", { mcapById, triageFilter: "thin" });

@@ -19,6 +19,7 @@ Reviewed asset and source holds exclude affected opportunities from current rank
 **Open release gates:** Activation dates, version deltas and provisional-date re-dating requirements live in the [structured public changelog](https://pharos.watch/methodology/yield-changelog/). v8.49 still requires fresh admitted observations and a valid comparison anchor. For v8.48, fixed-clock input/output comparison and owner review of changed outcomes remain release gates, separate from fresh producer observations and production resource evidence. Replay cannot reconstruct pruned mint evidence or unknown legacy Midas observation clocks. These are obligations, not claims of completed replay, deployment or production health.
 
 Version deltas live in the [structured public changelog](https://pharos.watch/methodology/yield-changelog/), not a second release diary here. The [PYS contract](#pharos-yield-score-pys) owns score qualification, the [benchmark registry](#benchmark-registry) owns independent benchmark clocks, and [Persistence And Publication](#persistence-and-publication) owns migration-first ordering and final admission.
+
 ---
 
 ## Tracked Coins
@@ -524,6 +525,7 @@ Hourly benchmark catch-up refreshes when USD market evidence is missing/older th
 
 
 Benchmark descriptors in `worker/src/cron/tbill-sources/providers.ts` have independent `TREASURY_RATES:<descriptor>` circuit keys: an open circuit applies only that currency's retained/hardcoded fallback policy while other descriptors continue. SGD is a null registry slot, not a fetched feed. Retry admission uses retained market-fetch and observation age, not registry cache-write time; a running supplemental catch-up defers the slot's benchmark retry.
+
 ---
 
 ## Warning Signals (Phase 2)

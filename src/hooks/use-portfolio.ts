@@ -54,7 +54,14 @@ function saveToStorage(holdings: PortfolioHolding[]): void {
   writeJsonStorageValue(getWindowStorage("local"), STORAGE_KEY, holdings);
 }
 
-function getInitialPortfolioState(initialUrlParam?: string): {
+export interface UsePortfolioOptions {
+  ignoreUrl?: boolean;
+}
+
+function getInitialPortfolioState(
+  initialUrlParam?: string | null,
+  ignoreUrl = false,
+): {
   holdings: PortfolioHolding[];
   isFromUrl: boolean;
   initialized: boolean;
@@ -62,19 +69,21 @@ function getInitialPortfolioState(initialUrlParam?: string): {
   if (typeof window === "undefined") {
     return { holdings: [], isFromUrl: false, initialized: false };
   }
-  // Prefer a router-sourced param from the caller; fall back to the location
-  // bar only when the caller does not supply one.
-  const urlParam =
-    initialUrlParam ?? mergeCoinsParam(
-      parseStringSearchParam(window.location.search, "p"),
-      parseStringSearchParam(window.location.search, "coins"),
-    );
-  if (urlParam) {
-    return {
-      holdings: parsePortfolioUrlParam(urlParam),
-      isFromUrl: true,
-      initialized: true,
-    };
+  if (!ignoreUrl) {
+    // Prefer a router-sourced param from the caller; fall back to the location
+    // bar only when the caller does not supply one.
+    const urlParam =
+      initialUrlParam ?? mergeCoinsParam(
+        parseStringSearchParam(window.location.search, "p"),
+        parseStringSearchParam(window.location.search, "coins"),
+      );
+    if (urlParam) {
+      return {
+        holdings: parsePortfolioUrlParam(urlParam),
+        isFromUrl: true,
+        initialized: true,
+      };
+    }
   }
   return {
     holdings: loadFromStorage(),
@@ -84,11 +93,15 @@ function getInitialPortfolioState(initialUrlParam?: string): {
 }
 
 export function usePortfolio(
-  initialUrlParam?: string,
+  initialUrlParam?: string | null,
   urlReady = true,
+  options?: UsePortfolioOptions,
 ): PortfolioState {
+  const ignoreUrl = options?.ignoreUrl ?? false;
   // During hydration the caller has a server snapshot, not an empty shared URL.
-  const [bootState] = useState(() => getInitialPortfolioState(urlReady ? initialUrlParam : undefined));
+  const [bootState] = useState(() =>
+    getInitialPortfolioState(urlReady ? initialUrlParam : undefined, ignoreUrl),
+  );
   const [holdings, setHoldings] = useState<PortfolioHolding[]>(bootState.holdings);
   const [isFromUrl] = useState(bootState.isFromUrl);
   const initialized = bootState.initialized && urlReady;
@@ -132,6 +145,7 @@ export function usePortfolio(
     const encoded = encodePortfolioHoldings(holdings);
     if (typeof window === "undefined") return "";
     const url = new URL(window.location.href);
+    url.searchParams.delete("coins");
     if (encoded) {
       url.searchParams.set("p", encoded);
     } else {

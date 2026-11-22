@@ -35,6 +35,7 @@ import { STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE } from "@/components/stablecoin-de
 import { copyText } from "@/lib/clipboard";
 import { buildComparePrefillUrl } from "@/lib/compare-links";
 import { formatDataHealthTimestamp } from "@/lib/data-health";
+import { buildPortfolioCoinsHref, encodePortfolioHoldings } from "@/lib/portfolio-codec";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { usePortfolio } from "@/hooks/use-portfolio";
 import { useWatchlist } from "@/hooks/use-watchlist";
@@ -160,7 +161,14 @@ function HeroPortfolioAction({
   const [open, setOpen] = useState(false);
   const [amountInput, setAmountInput] = useState("10000");
 
-  const existing = hydrated ? portfolio.holdings.find((holding) => holding.coinId === coinId) ?? null : null;
+  const hydratedHoldings = hydrated ? portfolio.holdings : [];
+  const existing = hydratedHoldings.find((holding) => holding.coinId === coinId) ?? null;
+  const portfolioHref = existing !== null
+    ? "/portfolio/"
+    : buildPortfolioCoinsHref(
+        [coinId],
+        hydratedHoldings.length > 0 ? encodePortfolioHoldings(hydratedHoldings) : null,
+      );
 
   function handleOpenChange(nextOpen: boolean) {
     setOpen(nextOpen);
@@ -200,7 +208,7 @@ function HeroPortfolioAction({
             {existing ? `${coinSymbol} in portfolio` : `Add ${coinSymbol} to portfolio`}
           </p>
           <IntentLink
-            href="/portfolio/"
+            href={portfolioHref}
             className="pharos-focus-ring inline-flex items-center gap-0.5 rounded-sm text-xs font-medium text-brand-accent-text underline-offset-2 hover:underline"
           >
             Open

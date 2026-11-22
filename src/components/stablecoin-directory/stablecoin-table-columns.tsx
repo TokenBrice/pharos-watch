@@ -131,7 +131,7 @@ export const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
     label: "Peg",
     sortKey: "peg",
     className: "w-[92px] text-right",
-    title: "Sort by peg deviation — ascending shows tightest pegs first, descending shows worst depegs first",
+    title: "Sort by peg deviation: ascending shows tightest pegs first, descending shows worst depegs first",
   },
   { id: "mcap", label: "Market cap", sortKey: "mcap", className: "w-[144px] text-right" },
   { id: "change24h", label: "MCap 24h", sortKey: "change24h", className: "w-[92px] text-right", title: "24-hour market cap change" },
@@ -142,7 +142,7 @@ export const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
     headerAdornment: <MethodologyHint topic="safetyScore" />,
     sortKey: "grade",
     className: "w-[124px] text-center",
-    title: "Pharos Grade: V10 safety score across Backing, Exit, and Economic Control, then constrained by peg behavior, dependencies, evidence, and structural caps",
+    title: "Pharos Grade: Safety Score across Backing, Exit, and Economic Control, then constrained by peg behavior, dependencies, evidence, and structural caps",
   },
   {
     id: "stability",
@@ -167,7 +167,7 @@ export const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
     headerAdornment: <MethodologyHint topic="mintAuthorityScore" />,
     sortKey: "mintAuthority",
     className: "w-[160px] text-center",
-    title: "Safety V10 mint-control component (0-100): reviewed privileged-mint evidence within Economic Control.",
+    title: "Safety Score mint-control component (0-100): reviewed privileged-mint evidence within Economic Control.",
   },
   { id: "backing", label: "Backing", className: "w-[92px] text-center", title: "Collateral backing type" },
   { id: "type", label: "Type", className: "w-[92px] text-center", title: "Stablecoin mechanism type" },
@@ -285,7 +285,7 @@ export function ColumnFitToggle({
       className={compact ? "h-11 rounded-md px-2.5 sm:h-8 sm:px-3" : "min-h-11 rounded-md sm:min-h-8"}
       onClick={onToggle}
       title={fitToWidth
-        ? `${hiddenCount} column${plural} hidden to fit the width — show all with horizontal scroll`
+        ? `${hiddenCount} column${plural} hidden to fit the width · show all with horizontal scroll`
         : "Hide overflow columns so the table fits without horizontal scroll"}
     >
       {fitToWidth ? `+${hiddenCount} column${plural}` : "Fit columns"}

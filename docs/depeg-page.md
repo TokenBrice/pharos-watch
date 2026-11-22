@@ -72,7 +72,7 @@ With the default-on DDR/DDRR feature flags enabled, the order is deliberate:
 The route reads answer → table to act on → evidence/audit: the board follows the forecast worklist
 so incident readers see the live verdict before scanning every tracked asset, and grading follows
 the board so audit evidence never separates the forecasts from the table a reader acts on. Grading
-is always rendered before the history handoff; the hero's track-record block links to
+is always rendered before the history handoff; the resolver header's track-record block links to
 `#forecast-grading`. See [Forecast Grading](#forecast-grading).
 
 ---
@@ -107,11 +107,12 @@ KPI" shape required by `design-language.md#feature-page-heroes`.
 
 ### Metric ownership
 
-The hero owns route-level headline figures: active depegs, worst live move, at-peg
-split, catalog DEWS alerts, DDR verdict split, and DDRR accuracy. Lower modules
-must not repeat verdict or accuracy headlines. The resolver header does repeat
-book size, new-worst count, and calibration lineage; the embedded alert queue
-suppresses its own count.
+The `Now`-only hero owns live route-level headline figures: active depegs, worst live
+move, awaiting confirmations, catalog DEWS alerts, at-peg split, and median deviation.
+`DepegResolverModule` owns the **Recovery outlook · DDR** verdict split and **Forecast
+track record · DDRR** headline accuracy alongside book size, new-worst count, and
+calibration lineage; lower modules must not repeat those headlines, and the embedded
+alert queue suppresses its own count.
 
 The control board's attention count is scoped to its filtered rows: confirmed active
 or pending incidents, plus validated DEWS bands at `THREAT_BAND_ORDER.ALERT` or above.
@@ -170,9 +171,10 @@ behind an explicit toggle that mounts them only when opened.
   withhold all three even if retained rows exist. Explicit `stale-cache` responses with rows
   retain frozen forecasts without refreshing any clock; age admission belongs only to the route's
   shared DDR/DDRR freshness notice (ADR-42), and live-fact captions omit serving-path reasons.
-- **Header scope:** the verdict split belongs to the hero. This header shows
-  forecast and incident-row counts, the visible slice, new-worst count, and
-  calibration lineage/coin count. A four-card slice is not the whole book.
+- **Header scope:** this header owns the DDR recovery-outlook verdict split and DDRR
+  headline accuracy alongside forecast and incident-row counts, the visible slice,
+  new-worst count, and calibration lineage/coin count. A four-card slice is not the
+  whole book.
   Lineage reads `_meta.lineage.incidentCount` as "historical incidents": the full
   calibration corpus (recovered, terminal and censored open incidents), not the recovered
   subset or a forecast's matched duration support.
@@ -232,11 +234,13 @@ Unrelated query parameters are preserved by the shared hook.
 ## Forecast Grading
 
 `DepegResolverReviewerModule` sits in `#forecast-grading` directly after the control
-board and is **always displayed** (there is no show/hide toggle). A cold
-`#forecast-grading` URL re-aligns the anchor once the ledger mounts after the
-bounded hero loading state.
+board and renders as a collapsed 1-row `Track Record` disclosure by default (showing the
+DDRR summary badge and stored-readout count beside the `Track Record · View full grading
+audit` toggle); dense calibration ledgers, the track-record timeline, and reviewed
+readout rows mount only when expanded. A cold `#forecast-grading` URL re-aligns the
+anchor once the disclosure mounts after the bounded hero loading state.
 
-The reviewer query runs with the page whenever the DDRR flag is on. Before its first read, the hero's track record says “Loading…” after the gate releases, without
+The reviewer query runs with the page whenever the DDRR flag is on. Before its first read, the resolver header's track-record block says “Loading DDRR…” after the gate releases, without
 claiming an empty or safe ledger. Retained review evidence keeps its original clock
 and freshness notice. DDR/DDRR feature flags still gate the section and query.
 
@@ -341,8 +345,8 @@ history anchor; the API, tracker, detail history and feeds retain the full event
 | `usePegSummary()` | `/api/peg-summary` | hero figures, board rows |
 | `useStressSignals()` | `/api/stress-signals` | radar, alert queue, board DEWS column |
 | `useInfiniteDepegEvents({ includePending: true })` | `/api/depeg-events` | crossings awaiting confirmation, recent feed |
-| `useDepegResolver()` | `/api/depeg-resolver` | forecast worklist, the hero's recovery posture and open-incident verdicts |
-| `useDepegResolverReview()` | `/api/depeg-resolver-review` | hero forecast track record; full ledger behind the grading disclosure |
+| `useDepegResolver()` | `/api/depeg-resolver` | forecast worklist, the resolver header's recovery outlook and open-incident verdicts |
+| `useDepegResolverReview()` | `/api/depeg-resolver-review` | resolver header's forecast track record; full ledger behind the 1-row `Track Record` disclosure |
 
 `DEWSRadarPanel` additionally reads `useStablecoins()` for market-cap mark sizing through the shared
 query cache; the route's own read of that list supplies circulating supply (`getCirculatingRawOrNull()`) to the hero's exposure ranking, the worklist order and the cap labels on cards and board rows.
@@ -365,7 +369,7 @@ The feed uses a title only; the control board pairs kicker/title with attention
 counts; the archive pairs its title with permanent-page/latest-month metadata.
 
 Titles use `pharos-section-title`, never a hand-copied size/weight recipe. Labels use
-`pharos-kicker`; metadata uses `pharos-meta`; figures keep `pharos-numeric`.
+`pharos-label`; metadata uses `pharos-meta`; figures keep `pharos-numeric`.
 
 ---
 

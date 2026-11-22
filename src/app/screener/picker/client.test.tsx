@@ -630,6 +630,45 @@ describe("SelectorClient — snapshot recall", () => {
 
     vi.unstubAllGlobals();
   });
+
+  it("keeps progress trail steps disabled on error snapshots and derives profile/steps from loaded ?sid= output", async () => {
+    // Error snapshot: renderResult is true and output is null — steps must not be clickable.
+    setUrlSearch("sid=not-a-valid-sid");
+    const { unmount } = render(<SelectorClient />);
+    expect(await screen.findByText(/snapshot id is invalid/i)).toBeTruthy();
+    const errorTrail = screen.getByRole("navigation", { name: "Picker progress" });
+    expect(errorTrail.querySelectorAll("button")).toHaveLength(0);
+    unmount();
+
+    // Loaded sid-only Treasury 5-step snapshot: trail uses output.profile ("Rails") and 5 steps,
+    // and clicking a completed step hydrates state from output.input instead of blanking the page.
+    installSnapshotFetch(
+      mockSelectorOutput({
+        profile: "treasury",
+        input: {
+          ...mockSelectorOutput().input,
+          profile: "treasury",
+          horizon: "6mplus",
+          depegTolerance: "zero",
+        },
+      }),
+    );
+    setUrlSearch("sid=00112233445566778899aabbccddeeff");
+    render(<SelectorClient />);
+
+    expect(await screen.findByText("USDC")).toBeTruthy();
+    const trail = screen.getByRole("navigation", { name: "Picker progress" });
+    expect(trail.querySelectorAll("li")).toHaveLength(5);
+    expect(trail.textContent).toContain("Rails");
+    expect(trail.textContent).not.toContain("Exit");
+
+    fireEvent.click(screen.getByRole("button", { name: /Step 2: Peg \(completed\)/i }));
+    expect(window.location.search).not.toContain("sid=");
+    expect(window.location.search).toContain("p=treasury");
+    expect((await screen.findAllByText(/Which peg currency should it target/i)).length).toBeGreaterThan(0);
+
+    vi.unstubAllGlobals();
+  });
 });
 
 describe("SelectorClient — adjust flow", () => {

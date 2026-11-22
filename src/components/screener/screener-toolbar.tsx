@@ -298,7 +298,7 @@ export function ScreenerToolbar({
 
       {pickerShortlist ? (
         <p className="rounded-md border border-frost-blue/25 bg-frost-blue/5 px-3 py-2 text-sm text-foreground">
-          Showing the exact {filters.coins.length}-coin Picker shortlist. Reset filters to restore the full universe.
+          Showing an exact {filters.coins.length}-coin selection. Reset filters to restore the full universe.
         </p>
       ) : null}
 
@@ -307,10 +307,10 @@ export function ScreenerToolbar({
         <FilterSearchInput
           value={searchQuery}
           onValueChange={(value) => onSearchChange?.(value)}
-          placeholder="Search coin or ticker…"
+          placeholder="Search coin..."
           ariaLabel="Search stablecoins by name or ticker"
-          className="relative w-full sm:w-48 lg:w-52"
-          inputClassName="h-11 pl-8 pr-8 text-xs sm:h-8"
+          className="relative w-full sm:w-48 sm:min-w-[180px] lg:w-52"
+          inputClassName="h-11 pl-8 pr-3 text-xs sm:h-8"
         />
 
         {/* 1-click preset pills */}

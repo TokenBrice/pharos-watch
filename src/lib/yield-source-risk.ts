@@ -230,9 +230,9 @@ export function getYieldSourceRiskDrivers(params: {
   const venueConfidence = sourceRisk?.venueRiskConfidence ?? null;
   const confidenceNote =
     venueConfidence === "low"
-      ? " Venue score is low-confidence — a conservative estimate where audit/admin facts were unverifiable."
+      ? " Venue score is low-confidence: a conservative estimate where audit/admin facts were unverifiable."
       : venueConfidence === "partial"
-        ? " Venue score is partial-confidence — some audit or admin facts are unverified."
+        ? " Venue score is partial-confidence: some audit or admin facts are unverified."
         : "";
   const lowConfidenceSuffix = venueConfidence === "low" ? " · low confidence" : "";
   if (sourceRisk?.venueRiskTier === "high") {

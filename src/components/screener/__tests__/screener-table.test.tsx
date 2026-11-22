@@ -221,6 +221,42 @@ describe("ScreenerTable desktop table and batch selection tray", () => {
     fireEvent.click(tray.getByRole("button", { name: "Clear batch selection" }));
     expect(screen.queryByTestId("screener-batch-tray")).toBeNull();
   });
+
+  it("discloses the 8-coin cap on Copy link and uses short mechanism labels with full title tooltips", () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    const tenRows = Array.from({ length: 10 }, (_, index) => ({
+      ...row,
+      id: `coin-${index}`,
+      name: `Coin ${index}`,
+      symbol: `C${index}`,
+      mechanism: index === 0 ? ("fiat-cash" as const) : null,
+    }));
+
+    render(
+      <ScreenerTable
+        rows={tenRows}
+        selectedIds={tenRows.map((entry) => entry.id)}
+        dataState="ready"
+        hasActiveFilters={false}
+        sort={makeSort()}
+      />,
+    );
+
+    const table = within(screen.getByTestId("stablecoin-screener-table"));
+    const mechanismCell = table.getByText("Custodial Cash").closest("td");
+    expect(mechanismCell?.getAttribute("title")).toBe("Custodial Cash and Cash-Equivalents");
+
+    const tray = within(screen.getByTestId("screener-batch-tray"));
+    expect(tray.getByRole("link", { name: "Compare (5)" })).toBeTruthy();
+    const copyButton = tray.getByRole("button", { name: "Copy link (8)" });
+    expect(copyButton.getAttribute("title")).toBe("Copies a link to the first 8 selected stablecoins");
+    fireEvent.click(copyButton);
+    expect(writeText).toHaveBeenCalledWith(
+      expect.stringContaining("/screener/?coins=coin-0,coin-1,coin-2,coin-3,coin-4,coin-5,coin-6,coin-7"),
+    );
+    expect(writeText).not.toHaveBeenCalledWith(expect.stringContaining("coin-8"));
+  });
 });
 
 describe("ScreenerTable pagination", () => {

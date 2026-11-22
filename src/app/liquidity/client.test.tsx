@@ -13,9 +13,12 @@ import { LiquidityClient } from "./client";
 const response = vi.hoisted(() => ({
   data: {} as DexLiquidityMap,
   peggedAssets: [] as StablecoinData[],
+  dexMeta: null as { updatedAt: number | null } | null,
+  stablecoinsMeta: null as { updatedAt: number | null } | null,
+  lastExportProps: null as { asOfISO: string; sourceGenerations?: Record<string, string | null> } | null,
 }));
 vi.mock("@/hooks/api-hooks", () => ({
-  useDexLiquidity: () => ({ data: response.data, isLoading: false, error: null, dataUpdatedAt: 0, refetch: vi.fn(), meta: null }),
+  useDexLiquidity: () => ({ data: response.data, isLoading: false, error: null, dataUpdatedAt: 0, refetch: vi.fn(), meta: response.dexMeta }),
 }));
 vi.mock("@/hooks/use-stablecoins", () => ({
   useStablecoins: () => ({
@@ -24,9 +27,19 @@ vi.mock("@/hooks/use-stablecoins", () => ({
     error: null,
     dataUpdatedAt: 0,
     refetch: vi.fn(),
-    meta: null,
+    meta: response.stablecoinsMeta,
   }),
 }));
+vi.mock("@/components/table-export-menu", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/components/table-export-menu")>();
+  return {
+    ...actual,
+    TableExportMenu: (props: Parameters<typeof actual.TableExportMenu>[0]) => {
+      response.lastExportProps = { asOfISO: props.asOfISO, sourceGenerations: props.sourceGenerations };
+      return actual.TableExportMenu(props);
+    },
+  };
+});
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("next/link", async () => {
   // The mock factory is hoisted, so the shared Link helper cannot be a static import.
@@ -129,5 +142,33 @@ describe("LiquidityClient bidirectional route filtering and triage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Thin exit" }));
     expect(screen.getByRole("link", { name: `Open ${fluidCoin.symbol} liquidity detail` })).toBeTruthy();
     expect(screen.queryByRole("link", { name: `Open ${curveCoin.symbol} liquidity detail` })).toBeNull();
+  });
+
+  it("stamps mixed-source export asOfISO with the oldest producer clock or unknown when incomplete", () => {
+    const [coin] = CLIENT_ACTIVE_STABLECOINS;
+    response.data = {
+      [coin.id]: makeDexLiquidityData({ totalTvlUsd: 1_000, liquidityScore: 70 }),
+    };
+    response.dexMeta = { updatedAt: 1_800_003_600 };
+    response.stablecoinsMeta = { updatedAt: 1_800_000_000 };
+    renderClient();
+    expect(response.lastExportProps).toEqual({
+      asOfISO: new Date(1_800_000_000 * 1000).toISOString(),
+      sourceGenerations: {
+        dexLiquidity: new Date(1_800_003_600 * 1000).toISOString(),
+        stablecoins: new Date(1_800_000_000 * 1000).toISOString(),
+      },
+    });
+
+    response.stablecoinsMeta = null;
+    renderClient();
+    expect(response.lastExportProps).toEqual({
+      asOfISO: "unknown",
+      sourceGenerations: {
+        dexLiquidity: new Date(1_800_003_600 * 1000).toISOString(),
+        stablecoins: null,
+      },
+    });
+    response.dexMeta = null;
   });
 });

@@ -384,9 +384,9 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
               <ClampBadge
                 mode={mode}
                 label={`default ${PYS_DEFAULT_SAFETY_SCORE}`}
-                tooltip={`No safety grade available — defaulted to ${PYS_DEFAULT_SAFETY_SCORE} (D-tier)`}
+                tooltip={`No safety grade available, defaulted to ${PYS_DEFAULT_SAFETY_SCORE} (D-tier)`}
                 toneClass={CLAMP_BADGE_SLATE_CLASS}
-                ariaLabel={`No safety grade available — defaulted to ${PYS_DEFAULT_SAFETY_SCORE}`}
+                ariaLabel={`No safety grade available, defaulted to ${PYS_DEFAULT_SAFETY_SCORE}`}
               />
             ) : null}
           </span>

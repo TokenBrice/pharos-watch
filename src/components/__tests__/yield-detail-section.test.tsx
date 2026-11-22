@@ -524,7 +524,7 @@ describe("YieldDetailSection", () => {
 
     expect(screen.getByText("Movement vs last publication")).toBeTruthy();
     expect(screen.getByText("Current movement unavailable")).toBeTruthy();
-    expect(screen.queryByText("Stable — no movement since last publication.")).toBeNull();
+    expect(screen.queryByText("Stable: no movement since last publication.")).toBeNull();
   });
 
   it("renders stable for an explicitly unchanged publication comparison", () => {
@@ -536,7 +536,7 @@ describe("YieldDetailSection", () => {
 
     render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
-    expect(screen.getByText("Stable — no movement since last publication.")).toBeTruthy();
+    expect(screen.getByText("Stable: no movement since last publication.")).toBeTruthy();
   });
 
   it("withdraws cached movement when an unreturned peer's evidence expires", () => {
@@ -551,9 +551,9 @@ describe("YieldDetailSection", () => {
       mockRankingsQuery({ data });
       render(<YieldDetailSection stablecoinId="usdn-smardex" />);
       act(() => vi.advanceTimersByTime(1999));
-      expect(screen.getByText("Stable — no movement since last publication.")).toBeTruthy();
+      expect(screen.getByText("Stable: no movement since last publication.")).toBeTruthy();
       act(() => vi.advanceTimersByTime(1));
-      expect(screen.queryByText("Stable — no movement since last publication.")).toBeNull();
+      expect(screen.queryByText("Stable: no movement since last publication.")).toBeNull();
       expect(screen.getByText("Current movement unavailable")).toBeTruthy();
       expect(screen.getByLabelText(/Pharos Yield Score 72 out of 100/)).toBeTruthy();
     } finally {

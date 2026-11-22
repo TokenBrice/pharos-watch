@@ -238,7 +238,7 @@ export function YieldDetailSectionAltSources({
             <TableHead
               scope="col"
               className="h-auto px-0 pb-2 text-right font-medium"
-              title="Difference vs the canonical source's 30d APY. Positive means this alternate has a higher APY than the canonical — but canonical selection weights confidence, not raw APY."
+              title="Difference vs the canonical source's 30d APY. Positive means this alternate has a higher APY than the canonical, but canonical selection weights confidence, not raw APY."
             >
               Δ APY
             </TableHead>

@@ -7,7 +7,26 @@ import { cn } from "@/lib/utils";
 import { GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES, GENIUS_STATUS_SEGMENT_CLASSES } from "@shared/lib/genius";
 import { MICA_STATUS_BADGE_STYLES, MICA_STATUS_SEGMENT_CLASSES } from "@shared/lib/mica";
 import type { GeniusAuthorizationStatus, MicaStatus } from "@shared/types/compliance-vocabulary";
-import type { ComplianceStatusDistribution } from "@/lib/compliance-model";
+import {
+  isGeniusAuthorizationStatus,
+  isMicaStatus,
+  normalizeComplianceRegimeFilter,
+  normalizeMicaTokenTypeFilter,
+  type ComplianceRegimeFilter,
+  type ComplianceStatusDistribution,
+} from "@/lib/compliance-model";
+
+function inferRegimeFromFilters(
+  rawRegime: string,
+  rawStatus: string,
+  rawTokenType: string,
+): ComplianceRegimeFilter {
+  const normalizedRegime = normalizeComplianceRegimeFilter(rawRegime);
+  if (rawRegime) return normalizedRegime;
+  if (isMicaStatus(rawStatus) || normalizeMicaTokenTypeFilter(rawTokenType) !== "all") return "mica";
+  if (isGeniusAuthorizationStatus(rawStatus)) return "genius";
+  return normalizedRegime;
+}
 
 interface DistributionSegment {
   regime: "mica" | "genius";
@@ -149,8 +168,8 @@ export function ComplianceStatusDistributionBars({
   distribution: ComplianceStatusDistribution;
 }) {
   const { getParam, setParams } = useUrlFilters();
-  const activeRegime = getParam("regime");
   const activeStatus = getParam("status");
+  const activeRegime = inferRegimeFromFilters(getParam("regime"), activeStatus, getParam("type"));
 
   const handleSelect = (
     segment: DistributionSegment,

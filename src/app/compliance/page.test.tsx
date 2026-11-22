@@ -15,6 +15,8 @@ describe("CompliancePage summary copy", () => {
     expect(html).toMatch(/\d+% of \d+ in-scope/);
     expect(html).toMatch(/of \d+ active stablecoins assessed for MiCA/);
     expect(html).toContain("GENIUS Active Signals");
+    expect(html).toMatch(/href="\/compliance\/?\?regime=genius#data"/);
+    expect(html).not.toMatch(/href="\/compliance\/?\?regime=genius&amp;status=[^"]+#data"/);
     expect(html).not.toContain("Authorized share of active MiCA rows");
     expect(html).not.toContain("Assessed regime rows");
     expect(html).not.toContain("EU-assessed");

@@ -95,10 +95,10 @@ describe("HomeAltYieldOverview", () => {
     ];
     useYieldRankingsSummaryMock.mockReturnValue({ data, isLoading: false });
     render(<HomeAltYieldOverview />);
-    const opportunity = screen.getByLabelText(`Yield safety B+ — ${YIELD_OPPORTUNITY_SAFETY_DESCRIPTION}`);
+    const opportunity = screen.getByLabelText(`Yield safety B+: ${YIELD_OPPORTUNITY_SAFETY_DESCRIPTION}`);
     expect(opportunity.textContent).toContain("†");
     expect(opportunity.getAttribute("title")).toContain(YIELD_OPPORTUNITY_SAFETY_DESCRIPTION);
-    expect(screen.getByLabelText("No safety grade available — defaulted to 40").textContent).toBe("—");
+    expect(screen.getByLabelText("No safety grade available, defaulted to 40").textContent).toBe("—");
     expect(screen.getByLabelText("Yield safety B+").textContent).not.toContain("†");
     expect(screen.getByLabelText("Yield safety B+ (default safety)").textContent).not.toContain("†");
   });

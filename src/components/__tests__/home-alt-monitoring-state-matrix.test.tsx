@@ -21,6 +21,7 @@ const {
   useActiveDepegEventsMock,
   useBlacklistEventsPageMock,
   useBlacklistSummaryMock,
+  useCoinStatesMock,
   useDexLiquidityMock,
   useHomeAltFiltersMock,
   useMintBurnFlowsMock,
@@ -35,6 +36,7 @@ const {
   useActiveDepegEventsMock: vi.fn(),
   useBlacklistEventsPageMock: vi.fn(),
   useBlacklistSummaryMock: vi.fn(),
+  useCoinStatesMock: vi.fn(),
   useDexLiquidityMock: vi.fn(),
   useHomeAltFiltersMock: vi.fn(),
   useMintBurnFlowsMock: vi.fn(),
@@ -73,7 +75,7 @@ vi.mock("@/hooks/use-blacklist-events", () => ({
 }));
 vi.mock("@/hooks/use-depeg-events", () => ({ useActiveDepegEvents: useActiveDepegEventsMock }));
 vi.mock("@/hooks/use-depeg-resolver-surfaces", () => ({ useDepegResolverSurfaces: () => ({ resolver: { data: undefined } }) }));
-vi.mock("@/hooks/use-coin-states", () => ({ useCoinStates: () => ({ byId: new Map(), liveReady: false }) }));
+vi.mock("@/hooks/use-coin-states", () => ({ useCoinStates: useCoinStatesMock }));
 vi.mock("@/hooks/use-home-alt-filters", () => ({ useHomeAltFilters: useHomeAltFiltersMock }));
 vi.mock("@/hooks/use-mint-burn-flows", () => ({ useMintBurnFlows: useMintBurnFlowsMock }));
 vi.mock("@/hooks/use-pinned-stablecoins", () => ({ usePinnedStablecoins: usePinnedStablecoinsMock }));
@@ -83,8 +85,16 @@ vi.mock("@/lib/stablecoin-static-data", async (importOriginal) => ({
   ACTIVE_STABLECOIN_ID_SET: new Set(["usdc-circle"]),
 }));
 vi.mock("@/components/homepage/homepage-client-view-model", () => ({
-  buildHomepageCriticalViewModel: ({ stablecoinsData }: { stablecoinsData?: { peggedAssets?: unknown[] } }) => ({
-    filteredRowCount: stablecoinsData ? stablecoinsData.peggedAssets?.length ?? 0 : 0,
+  buildHomepageCriticalViewModel: ({
+    stablecoinsData,
+    eligibleIds,
+  }: {
+    stablecoinsData?: { peggedAssets?: Array<{ id?: string }> };
+    eligibleIds?: ReadonlySet<string>;
+  }) => ({
+    filteredRowCount: stablecoinsData
+      ? (stablecoinsData.peggedAssets ?? []).filter((coin) => !eligibleIds || (coin.id ? eligibleIds.has(coin.id) : false)).length
+      : 0,
     pegScores: new Map(),
   }),
   buildHomepageOptionalViewModel: () => ({ reportCardMap: {} }),
@@ -283,6 +293,7 @@ const SURFACES: SurfaceCase[] = [
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(UPDATED_AT);
+  useCoinStatesMock.mockReturnValue({ byId: new Map(), liveReady: false, clockReady: true });
 });
 
 afterEach(() => {
@@ -404,6 +415,45 @@ describe("HomeAltRankingsSection loading and quick filters", () => {
     fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
     expect(starredBtn.getAttribute("aria-pressed")).toBe("false");
     expect(setActivePeg).toHaveBeenCalledWith("all");
+  });
+
+  it("keeps coin-state signals passive on cold load, fetches on Active alerts, and avoids false zero-alert claims while pending", () => {
+    useHomeAltFiltersMock.mockReturnValue({
+      activeFilters: [],
+      activePeg: "all",
+      setActivePeg: vi.fn(),
+      activeUniverse: "core",
+      setActiveUniverse: vi.fn(),
+    });
+    usePinnedStablecoinsMock.mockReturnValue({ pinnedIds: [], togglePinned: vi.fn() });
+    useStablecoinsMock.mockReturnValue(queryFor("ready", stablecoinReady, { peggedAssets: [] }));
+    usePegSummaryMock.mockReturnValue(queryFor("empty", pegEmpty, pegEmpty));
+    useDexLiquidityMock.mockReturnValue(queryFor("ready", {}, {}));
+    useReportCardsV9Mock.mockReturnValue(queryFor("ready", { cards: [] }, { cards: [] }));
+    useCoinStatesMock.mockReturnValue({ byId: new Map(), liveReady: false, clockReady: true });
+
+    const view = render(<HomeAltRankingsSection titleId="rankings-title" />);
+    expect(useCoinStatesMock).toHaveBeenLastCalledWith({ enabled: false });
+
+    fireEvent.click(screen.getByRole("button", { name: "Active alerts" }));
+    expect(useCoinStatesMock).toHaveBeenLastCalledWith({ enabled: true });
+    expect(screen.getByText("Updating active alerts…")).toBeTruthy();
+    expect(screen.getByText("Active alert signals are updating.")).toBeTruthy();
+    expect(view.container.textContent).not.toMatch(/Showing 0/);
+    expect(screen.queryByTestId("stablecoin-table")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByRole("status")).toBeNull();
+
+    useCoinStatesMock.mockReturnValue({
+      byId: new Map([["usdc-circle", [{ kind: "dews", band: "ALERT", score: 55 }]]]),
+      liveReady: true,
+      clockReady: true,
+    });
+    view.rerender(<HomeAltRankingsSection titleId="rankings-title" />);
+    expect(screen.queryByText("Updating active alerts…")).toBeNull();
+    expect(screen.getByTestId("stablecoin-table")).toBeTruthy();
+    const lastTableProps = stablecoinTablePropsMock.mock.calls.at(-1)?.[0] as { eligibleIds?: ReadonlySet<string> };
+    expect(lastTableProps.eligibleIds?.has("usdc-circle")).toBe(true);
   });
 });
 

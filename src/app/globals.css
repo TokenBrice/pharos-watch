@@ -218,12 +218,12 @@
   --radius: 0.5rem;
   --mobile-bottom-nav-height: 4rem;
   --mobile-bottom-nav-safe-height: calc(var(--mobile-bottom-nav-height) + env(safe-area-inset-bottom));
-  /* Bottom edge of the sticky site header, where sticky table headers pin:
-     the 3px regime line plus the 57px mobile Header (768–1023px) or the 56px
-     desktop TopNav (lg+, below). The phone breakpoint redefines it. */
-  --table-header-top: 60px;
-  /* Shared sticky anchor for interior sub-bars and page-level sticky table headers. */
-  --sticky-header-bottom: calc(env(safe-area-inset-top) + 3px + 3.5rem);
+  /* Regime bar seam above interior headers (0px on / where RegimeBarChrome is unmounted). */
+  --regime-bar-offset: 3px;
+  /* Shared sticky anchor for interior sub-bars and page-level sticky table headers:
+     3px regime line (0px on /) plus the 56px border-box site header (<Header> & <TopNav>). */
+  --sticky-header-bottom: calc(var(--regime-bar-offset, 3px) + 3.5rem);
+  --table-header-top: var(--sticky-header-bottom);
   /* 2.4.11 Focus Not Obscured (Minimum) — keep focused rows clear of the
      sticky chrome and the mobile utility dock. */
   scroll-padding-top: var(--table-header-top, 0px);
@@ -259,6 +259,17 @@
   --graph-canvas-bg: oklch(0.985 0 0);
   --graph-panel-bg: oklch(1 0 0);
   --graph-grid-line: oklch(0.92 0 0);
+}
+
+:root[data-regime-bar="off"],
+:root:has([data-regime-bar="off"]) {
+  --regime-bar-offset: 0px;
+}
+
+[data-regime-bar="off"] {
+  --regime-bar-offset: 0px;
+  --sticky-header-bottom: calc(var(--regime-bar-offset, 3px) + 3.5rem);
+  --table-header-top: var(--sticky-header-bottom);
 }
 
 .dark {
@@ -1272,21 +1283,9 @@
   }
 }
 
-@media (min-width: 1024px) {
-  :root {
-    --table-header-top: 59px;
-  }
-}
-
 @media (max-width: 1023px) {
   :root {
     --mobile-utility-safe-offset: calc(4.5rem + env(safe-area-inset-bottom));
-  }
-}
-
-@media (max-width: 767px) {
-  :root {
-    --table-header-top: 56px;
   }
 }
 

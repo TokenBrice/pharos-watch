@@ -7,7 +7,9 @@ import GithubSlugger from "github-slugger";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeSlug from "rehype-slug";
 import remarkGfm from "remark-gfm";
+import remarkParse from "remark-parse";
 import ReactMarkdown from "react-markdown";
+import { unified } from "unified";
 import { ChevronDown } from "lucide-react";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { JsonLdScript } from "@/components/json-ld-script";
@@ -115,53 +117,47 @@ interface DocTocHeading {
   text: string;
 }
 
-function stripInlineMarkdown(raw: string): string {
-  return raw
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-    .replace(/`([^`]+)`/g, "$1")
-    .replace(/[*_~]+/g, "")
-    .replace(/<[^>]+>/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+interface MdastNode {
+  type: string;
+  depth?: number;
+  value?: string;
+  children?: MdastNode[];
+}
+
+function extractMdastText(node: MdastNode): string {
+  if (node.type === "text" || node.type === "inlineCode") {
+    return node.value ?? "";
+  }
+  if (node.type === "break") return "\n";
+  return (node.children ?? []).map(extractMdastText).join("");
 }
 
 /**
- * Extracts level-2 (`##`) headings using the exact GithubSlugger sequence
- * `rehype-slug` walks across all headings so every TOC anchor matches its DOM id.
+ * Extracts level-2 (`##`) headings from the parsed CommonMark/GFM AST using the
+ * exact `GithubSlugger` sequence `rehype-slug` walks across all headings (depth
+ * 1..6) so every TOC anchor matches its rendered DOM `id`.
  */
 function extractMarkdownH2Headings(markdown: string): DocTocHeading[] {
+  const tree = unified().use(remarkParse).use(remarkGfm).parse(markdown) as MdastNode;
   const slugger = new GithubSlugger();
   const headings: DocTocHeading[] = [];
-  let inFence = false;
-  let fenceMarker = "";
 
-  for (const rawLine of markdown.split(/\r?\n/)) {
-    const trimmed = rawLine.trim();
-    const fenceMatch = /^(`{3,}|~{3,})/.exec(trimmed);
-    if (fenceMatch) {
-      const marker = fenceMatch[1]![0]!;
-      if (!inFence) {
-        inFence = true;
-        fenceMarker = marker;
-      } else if (marker === fenceMarker) {
-        inFence = false;
-        fenceMarker = "";
+  const visit = (node: MdastNode): void => {
+    if (node.type === "heading") {
+      const rawText = extractMdastText(node);
+      const id = slugger.slug(rawText);
+      const text = rawText.replace(/\s+/g, " ").trim();
+      if (node.depth === 2 && text) {
+        headings.push({ id, text });
       }
-      continue;
+      return;
     }
-    if (inFence) continue;
+    for (const child of node.children ?? []) {
+      visit(child);
+    }
+  };
 
-    const headingMatch = /^(#{1,6})\s+(.+?)\s*#*$/.exec(trimmed);
-    if (!headingMatch) continue;
-    const level = headingMatch[1]!.length;
-    const text = stripInlineMarkdown(headingMatch[2]!);
-    if (!text) continue;
-    const id = slugger.slug(text);
-    if (level === 2) {
-      headings.push({ id, text });
-    }
-  }
+  visit(tree);
   return headings;
 }
 

@@ -308,6 +308,13 @@ describe("TopNav", () => {
       const { rerender } = render(<TopNav />);
       const searchBtn = screen.getByRole("button", { name: "Search" });
       expect(searchBtn.querySelector("kbd")?.textContent).toBe("Ctrl K");
+      // Search uses mutually exclusive named breakpoints (xl vs 2xl) so only one label renders at any width.
+      const searchLabelSpans = [...searchBtn.querySelectorAll("span")];
+      expect(searchLabelSpans.map((span) => [span.textContent, span.className])).toEqual([
+        ["Search", "hidden xl:inline 2xl:hidden"],
+        ["Coin or page", "hidden 2xl:inline"],
+      ]);
+      expect(searchBtn.className).not.toContain("min-[1440px]:");
 
       // After hydration on Apple user agent: switches to ⌘K.
       hydratedMock.current = true;

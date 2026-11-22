@@ -2,9 +2,10 @@
 
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import type { ComponentProps, ReactElement, ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { Header } from "@/components/header";
 import { NAV_GROUPS } from "@/lib/nav-config";
+import { openCommandPalette } from "@/lib/command-palette";
 import { openNavDrawer } from "@/lib/nav-drawer";
 
 vi.mock("next/navigation", () => ({
@@ -40,15 +41,29 @@ vi.mock("@/components/ui/button", () => ({
   ),
 }));
 
+const { sheetCloseEvents } = vi.hoisted(() => ({
+  sheetCloseEvents: [] as Array<{ defaultPrevented: boolean }>,
+}));
+
 vi.mock("@/components/ui/sheet", async () => {
-  const { cloneElement } = await import("react");
+  const { cloneElement, useEffect, useRef } = await import("react");
   let open = false;
   let setOpen: (open: boolean) => void = () => {};
+  let latestCloseAutoFocus: ((event: Event) => void) | undefined;
 
   return {
     Sheet: ({ children, open: nextOpen, onOpenChange }: { children: ReactNode; open: boolean; onOpenChange: (open: boolean) => void }) => {
+      const wasOpenRef = useRef(false);
       open = nextOpen;
       setOpen = onOpenChange;
+      useEffect(() => {
+        if (wasOpenRef.current && !nextOpen && latestCloseAutoFocus) {
+          const event = new Event("focus", { cancelable: true });
+          latestCloseAutoFocus(event);
+          sheetCloseEvents.push({ defaultPrevented: event.defaultPrevented });
+        }
+        wasOpenRef.current = nextOpen;
+      }, [nextOpen]);
       return <>{children}</>;
     },
     SheetTrigger: ({ children }: { children: ReactElement<{ onClick?: () => void }> }) =>
@@ -58,7 +73,10 @@ vi.mock("@/components/ui/sheet", async () => {
           setOpen(true);
         },
       }),
-    SheetContent: ({ children }: { children: ReactNode }) => open ? <div data-testid="mobile-drawer">{children}</div> : null,
+    SheetContent: ({ children, onCloseAutoFocus }: { children: ReactNode; onCloseAutoFocus?: (event: Event) => void }) => {
+      latestCloseAutoFocus = onCloseAutoFocus;
+      return open ? <div data-testid="mobile-drawer">{children}</div> : null;
+    },
     SheetDescription: ({ children, ...props }: ComponentProps<"p">) => <p {...props}>{children}</p>,
     SheetTitle: ({ children, ...props }: ComponentProps<"h2">) => <h2 {...props}>{children}</h2>,
   };
@@ -88,6 +106,11 @@ function openDrawer() {
 }
 
 describe("Header mobile drawer", () => {
+  afterEach(() => {
+    sheetCloseEvents.length = 0;
+    vi.clearAllMocks();
+  });
+
   it("drills into config-derived categories, returns with focus, and resets after closing", () => {
     render(<Header />);
     expect(screen.queryByRole("button", { name: "Menu" })).toBeNull();
@@ -143,6 +166,49 @@ describe("Header mobile drawer", () => {
       "Portfolio",
       "Alert Bot",
     ]);
+  });
+
+  it("uses exact h-14 border-box height on header and clears opener focus on drawer Search and navigation", () => {
+    render(
+      <>
+        <button type="button" data-testid="bottom-menu-opener">Menu</button>
+        <input data-testid="palette-input" />
+        <Header />
+      </>,
+    );
+
+    const header = document.querySelector("header")!;
+    expect(header.className).toContain("h-14");
+
+    const opener = screen.getByTestId("bottom-menu-opener");
+    const paletteInput = screen.getByTestId("palette-input");
+
+    // Closing via Close menu restores focus to the opener.
+    opener.focus();
+    openDrawer();
+    paletteInput.focus();
+    fireEvent.click(screen.getByRole("button", { name: "Close menu" }));
+    expect(document.activeElement).toBe(opener);
+
+    // Opening Search from the drawer must NOT steal focus back to the opener on close.
+    opener.focus();
+    openDrawer();
+    const drawer = screen.getByTestId("mobile-drawer");
+    const drawerSearchBtn = [...drawer.querySelectorAll("button")].find((btn) => btn.textContent?.trim() === "Search")!;
+    paletteInput.focus();
+    fireEvent.click(drawerSearchBtn);
+    expect(openCommandPalette).toHaveBeenCalledTimes(1);
+    expect(document.activeElement).toBe(paletteInput);
+    expect(sheetCloseEvents.at(-1)?.defaultPrevented).toBe(true);
+
+    // Navigating via a drawer link must NOT restore focus back to the opener on close.
+    opener.focus();
+    openDrawer();
+    const quickLink = screen.getByTestId("mobile-drawer").querySelector<HTMLAnchorElement>("a[href]")!;
+    paletteInput.focus();
+    fireEvent.click(quickLink);
+    expect(document.activeElement).toBe(paletteInput);
+    expect(sheetCloseEvents.at(-1)?.defaultPrevented).toBe(true);
   });
 
 });

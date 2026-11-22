@@ -77,4 +77,46 @@ describe("usePortfolio", () => {
     expect(result.current.isFromUrl).toBe(true);
     expect(result.current.holdings).toEqual([{ coinId: "usdc-circle", amount: 0 }]);
   });
+
+  it("ignores ?p= and ?coins= URL params when ignoreUrl is true and waits for urlReady", () => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify([{ coinId: "usde-ethena", amount: 500 }]));
+    window.history.replaceState(null, "", "/pharoswatchbot/?coins=usdc-circle&p=usdt-tether:100");
+
+    const { result, rerender } = renderHook(
+      ({ ready }: { ready: boolean }) => usePortfolio(null, ready, { ignoreUrl: true }),
+      { initialProps: { ready: false } },
+    );
+
+    expect(result.current.initialized).toBe(false);
+    expect(result.current.holdings).toEqual([]);
+
+    rerender({ ready: true });
+    expect(result.current.initialized).toBe(true);
+    expect(result.current.isFromUrl).toBe(false);
+    expect(result.current.holdings).toEqual([{ coinId: "usde-ethena", amount: 500 }]);
+  });
+
+  it("strips ?coins= from shareUrl() after removing or clearing handoff holdings", () => {
+    window.history.replaceState(null, "", "/portfolio/?coins=usdc-circle,usdt-tether");
+    const { result } = renderHook(() => usePortfolio());
+
+    expect(result.current.holdings).toEqual([
+      { coinId: "usdc-circle", amount: 0 },
+      { coinId: "usdt-tether", amount: 0 },
+    ]);
+
+    act(() => {
+      result.current.removeCoin("usdc-circle");
+    });
+    const afterRemove = new URL(result.current.shareUrl());
+    expect(afterRemove.searchParams.has("coins")).toBe(false);
+    expect(afterRemove.searchParams.get("p")).toBe("usdt-tether:0");
+
+    act(() => {
+      result.current.clearAll();
+    });
+    const afterClear = new URL(result.current.shareUrl());
+    expect(afterClear.searchParams.has("coins")).toBe(false);
+    expect(afterClear.searchParams.has("p")).toBe(false);
+  });
 });

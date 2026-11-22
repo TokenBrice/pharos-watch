@@ -73,9 +73,15 @@ describe("ScreenerToolbar primary bar and collapsible All filters drawer", () =>
     const panel = document.getElementById(toggle.getAttribute("aria-controls")!)!;
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
     expect(panel.classList.contains("hidden")).toBe(true);
+    expect(
+      screen.getByText("Showing an exact 1-coin selection. Reset filters to restore the full universe."),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Picker shortlist/i)).toBeNull();
 
     // Primary search + 1-click preset pills work while the drawer stays collapsed.
-    fireEvent.change(screen.getByLabelText(/Search stablecoins by name or ticker/i), {
+    const searchInput = screen.getByLabelText(/Search stablecoins by name or ticker/i);
+    expect(searchInput.getAttribute("placeholder")).toBe("Search coin...");
+    fireEvent.change(searchInput, {
       target: { value: "usdc" },
     });
     expect(onSearchChange).toHaveBeenCalledWith("usdc");

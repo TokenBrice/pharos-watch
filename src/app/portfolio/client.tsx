@@ -72,7 +72,7 @@ export function PortfolioClient() {
 
   // Wait for the browser URL snapshot before exposing or writing holdings;
   // the portfolio bootstrap preserves incoming shares during hydration.
-  const { getParam, isReady, setParam } = useUrlFilters();
+  const { getParam, isReady, setParams } = useUrlFilters();
   const portfolio = usePortfolio(mergeCoinsParam(getParam("p"), getParam("coins")), isReady);
   const {
     data: reportData,
@@ -101,8 +101,8 @@ export function PortfolioClient() {
     if (!portfolio.initialized) return;
 
     const encoded = encodePortfolioHoldings(portfolio.holdings);
-    setParam("p", encoded);
-  }, [portfolio.holdings, portfolio.initialized, setParam]);
+    setParams({ p: encoded, coins: "" });
+  }, [portfolio.holdings, portfolio.initialized, setParams]);
 
   const heldCardIds = useMemo(() => buildHeldCardIds(portfolio.holdings), [portfolio.holdings]);
 

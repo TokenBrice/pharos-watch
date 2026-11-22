@@ -6,6 +6,7 @@ import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-sc
 import { useDependencyGraph } from "@/hooks/use-dependency-graph";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { projectDependencyGraph } from "@shared/types/dependency-graph";
+import { readDependencyMapView, writeDependencyMapView } from "@/lib/dependency-watershed/view-url";
 
 vi.mock("@/hooks/use-dependency-graph", () => ({
   useDependencyGraph: vi.fn(),
@@ -105,6 +106,29 @@ describe("DependencyMapClient", () => {
     fireEvent.click(screen.getByRole("button", { name: "Network" }));
     expect(await screen.findByRole("figure", { name: /Dependency graph showing/ })).toBeTruthy();
     expect(new URLSearchParams(window.location.search).get("view")).toBe("network");
+
+    fireEvent.click(screen.getByRole("button", { name: "Watershed" }));
+    expect(await screen.findByRole("group", { name: /Dependency watershed/ })).toBeTruthy();
+    const afterParams = new URLSearchParams(window.location.search);
+    expect(afterParams.has("view")).toBe(false);
+    expect(afterParams.has("focus")).toBe(false);
+    expect(afterParams.has("trace")).toBe(false);
+    expect(afterParams.has("type")).toBe(false);
+    expect(afterParams.has("limit")).toBe(false);
+    expect(readDependencyMapView(window.location.search)).toBe("watershed");
+  });
+
+  it("clears Network-scoped query params when writing watershed view while preserving unrelated params", () => {
+    const cleaned = writeDependencyMapView("?focus=all&type=all&limit=25&view=network", "watershed");
+    expect(cleaned).toBe("");
+    expect(readDependencyMapView(cleaned)).toBe("watershed");
+
+    const preserved = writeDependencyMapView(
+      "?mode=exposure&root=usdc-circle&focus=hub&trace=usdc-circle&type=collateral&limit=50&view=network",
+      "watershed",
+    );
+    expect(preserved).toBe("?mode=exposure&root=usdc-circle");
+    expect(readDependencyMapView(preserved)).toBe("watershed");
   });
 
   it("feeds the live coin-state layer to the incidents list and the graph nodes", async () => {

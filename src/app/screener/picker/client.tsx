@@ -84,6 +84,10 @@ export function SelectorClient() {
   }
   const profile = state.profile;
   const totalSteps = computeTotalSteps(state.profile, state.horizon, state.depegTolerance);
+  const effectiveProfile = output?.profile ?? state.profile;
+  const trailTotalSteps = output
+    ? computeTotalSteps(output.input.profile, output.input.horizon, output.input.depegTolerance)
+    : totalSteps;
   const restorableRun = useMemo(
     () => (hydrated && !restoreDismissed && isInitialSelectorState(state) ? readStoredSelectorRun() : null),
     [hydrated, restoreDismissed, state],
@@ -204,11 +208,19 @@ export function SelectorClient() {
 
       <PickerProgressTrail
         currentStep={renderResult ? "result" : state.step}
-        totalSteps={totalSteps}
-        profile={profile}
+        totalSteps={trailTotalSteps}
+        profile={effectiveProfile}
+        disableCompleted={renderResult && !output}
         onSelectStep={(targetStep) => {
-          if (renderResult && output) {
+          if (output) {
             handleEditAnswer(targetStep, output);
+            return;
+          }
+          if (state.profile == null) {
+            dispatch({
+              type: "restore-session",
+              state: { ...state, step: 1, sid: null, ev: null },
+            });
             return;
           }
           dispatch({
@@ -322,11 +334,13 @@ function PickerProgressTrail({
   currentStep,
   totalSteps,
   profile,
+  disableCompleted = false,
   onSelectStep,
 }: {
   currentStep: SelectorStep;
   totalSteps: number;
   profile: SelectorProfile | null;
+  disableCompleted?: boolean;
   onSelectStep: (step: Exclude<SelectorStep, "result">) => void;
 }) {
   const steps: Array<{ step: Exclude<SelectorStep, "result">; label: string }> = [
@@ -345,7 +359,7 @@ function PickerProgressTrail({
     <nav aria-label="Picker progress" className="overflow-x-auto">
       <ol className="flex min-w-fit items-center gap-1.5 text-xs">
         {steps.map((item, index) => {
-          const isCompleted = isResult || item.step < activeStepNumber;
+          const isCompleted = disableCompleted ? false : (isResult || item.step < activeStepNumber);
           const isCurrent = !isResult && item.step === activeStepNumber;
           return (
             <li key={item.step} className="flex items-center gap-1.5">

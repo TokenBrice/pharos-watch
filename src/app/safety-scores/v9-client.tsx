@@ -15,6 +15,7 @@ import {
   SafetyScoresMatrixTable,
 } from "@/components/safety-scores/safety-scores-matrix-table";
 import { useReportCardsV9Table } from "@/hooks/api-hooks";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useTablePagination } from "@/hooks/use-table-pagination";
 import { useUrlFilters } from "@/hooks/use-url-filters";
@@ -368,6 +369,7 @@ export function ReportCardsV9Client({
   const viewMode = parseViewParam(getParam("view", "table"));
 
   const [density, setDensity] = useState<TableDensity>("compact");
+  const isDesktopTable = !useIsMobile(1024, false);
   const [selectedCompareIds, setSelectedCompareIds] = useState<string[]>([]);
 
   // Hydration-stable first render uses the build clock; after hydration,
@@ -656,13 +658,14 @@ export function ReportCardsV9Client({
     showControls: pagination.totalPages > 1,
   };
 
+  const showDensityToggle = viewMode === "table" && isDesktopTable;
   const toolbarNode = (
     <TableToolbar<V9ConsumerCard>
       eyebrow={viewMode === "table" ? "Safety Score Matrix" : "Safety Score Grid"}
       description={null}
       meta={`${filteredCards.length.toLocaleString("en-US")} of ${totalCards.toLocaleString("en-US")} coins`}
-      density={viewMode === "table" ? density : undefined}
-      onDensityChange={viewMode === "table" ? setDensity : undefined}
+      density={showDensityToggle ? density : undefined}
+      onDensityChange={showDensityToggle ? setDensity : undefined}
       exportMenu={exportMenu}
       additionalActions={
         <ViewModeToggle viewMode={viewMode} onChange={handleViewModeChange} />

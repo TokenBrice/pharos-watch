@@ -99,7 +99,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const pathname = usePathname();
   const { isDark, toggleTheme } = useThemeToggle();
   const logos = logosById;
-  const { data: stablecoinsData, meta, dataUpdatedAt, error } = useStablecoins();
+  const { data: stablecoinsData, meta, dataUpdatedAt, error } = useStablecoins({ enabled: open });
   // Cache-only grade reads: reuse any already-populated safety-score query
   // without issuing unsolicited network requests on static/editorial routes.
   const { data: reportCardsTableData } = useReportCardsV9Table({ enabled: false });

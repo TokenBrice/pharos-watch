@@ -53,7 +53,7 @@ export function RedemptionBackstopMethodologySection() {
         existing routes. Avalon, Youves, hyUSD and wARS retain unquantified capacity; Solayer&apos;s USDC
         holder path is queued QLP fulfillment, not atomic redemption. pathUSD&apos;s processing target is
         not a completed-payout maximum. The existing-route bound review grants no new config-only upgrade.
-        Exact smaller-probe receipts under Safety v10.18 prove only executed input, not full-request completion
+        Exact smaller-probe receipts under the Safety Score prove only executed input, not full-request completion
         or exhaustion. Weights and ladders are unchanged; fresh observations and final fixed-clock comparison
         remain required. Activation: October 14, 2026 12:40 UTC (release cut; 1791981600).
       </p>

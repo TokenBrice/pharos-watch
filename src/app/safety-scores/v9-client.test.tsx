@@ -4,7 +4,7 @@ import { act, fireEvent, render as rtlRender, screen, within } from "@testing-li
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanupFrontendTest, createNextLinkMock } from "@/test-utils/frontend";
+import { cleanupFrontendTest, createNextLinkMock, installMatchMediaMock } from "@/test-utils/frontend";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import type { SafetyScoresPreview } from "@/lib/safety-grade-snapshot";
@@ -623,5 +623,20 @@ describe("ReportCardsV9Client", () => {
     await render(<ReportCardsV9Client />);
     expect(screen.getAllByRole("button", { name: "Control" })).toHaveLength(2);
     expect(screen.queryByRole("button", { name: "Econ. Control" })).toBeNull();
+  });
+
+  it("gates the Compact/Spacious density toggle to desktop table view (>= 1024px)", async () => {
+    installMatchMediaMock(false);
+    const { unmount } = await render(<ReportCardsV9Client />);
+    expect(screen.getAllByRole("radiogroup", { name: "Table density" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("radio", { name: "Compact rows" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("radio", { name: "Spacious rows" }).length).toBeGreaterThan(0);
+    unmount();
+
+    installMatchMediaMock(true);
+    await render(<ReportCardsV9Client />);
+    expect(screen.queryByRole("radiogroup", { name: "Table density" })).toBeNull();
+    expect(screen.queryByRole("radio", { name: "Compact rows" })).toBeNull();
+    expect(screen.queryByRole("radio", { name: "Spacious rows" })).toBeNull();
   });
 });

@@ -204,8 +204,8 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
                 title="External opportunities are scored at the market level; the underlying stablecoin's report card is one input, not the score"
               >
                 {opportunityRisk.opportunitySafetyScore != null
-                  ? `${YIELD_OPPORTUNITY_CLASS_LABELS[opportunityRisk.opportunityClass]} opportunity — safety ${opportunityRisk.opportunitySafetyScore} after a ${opportunityRisk.opportunitySafetyPenalty ?? 0}-point market adjustment to the underlying's ${opportunityRisk.underlyingSafetyScore}`
-                  : `${YIELD_OPPORTUNITY_CLASS_LABELS[opportunityRisk.opportunityClass]} opportunity — not rated: missing ${opportunityRisk.missingCriticalEvidence.map((code) => YIELD_OPPORTUNITY_EVIDENCE_LABELS[code]).join(", ")}`}
+                  ? `${YIELD_OPPORTUNITY_CLASS_LABELS[opportunityRisk.opportunityClass]} opportunity: safety ${opportunityRisk.opportunitySafetyScore} after a ${opportunityRisk.opportunitySafetyPenalty ?? 0}-point market adjustment to the underlying's ${opportunityRisk.underlyingSafetyScore}`
+                  : `${YIELD_OPPORTUNITY_CLASS_LABELS[opportunityRisk.opportunityClass]} opportunity · not rated: missing ${opportunityRisk.missingCriticalEvidence.map((code) => YIELD_OPPORTUNITY_EVIDENCE_LABELS[code]).join(", ")}`}
               </p>
             ) : null}
             <YieldDecisionLedgerCard ledger={ranking.decisionLedger} variant="inline" className="mt-2" />

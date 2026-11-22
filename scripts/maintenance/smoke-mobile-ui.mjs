@@ -419,6 +419,22 @@ function buildRouteCaptureScript() {
       return { left: 0, right: window.innerWidth, top: 0, bottom: window.innerHeight };
     };
 
+    const getHorizontalClipAncestor = (el) => {
+      let current = el.parentElement;
+      while (current && current !== document.body) {
+        const style = getComputedStyle(current);
+        const overflowX = style.overflowX || style.overflow || "visible";
+        if (overflowX === "auto" || overflowX === "scroll") {
+          return null;
+        }
+        if (overflowX === "clip" || overflowX === "hidden") {
+          return current;
+        }
+        current = current.parentElement;
+      }
+      return null;
+    };
+
     const hasCollidingInlineChildren = (cell) => {
       const cellRect = cell.getBoundingClientRect();
       if (cellRect.width <= 0) return false;
@@ -488,6 +504,18 @@ function buildRouteCaptureScript() {
         const isFixedTable =
           getComputedStyle(table).tableLayout === "fixed" || table.classList.contains("table-fixed");
         const tableViewport = getHorizontalViewport(table);
+        const clipAncestor = getHorizontalClipAncestor(table);
+        if (clipAncestor) {
+          const clipWidth = clipAncestor.clientWidth || Math.round(clipAncestor.getBoundingClientRect().width);
+          const tableWidth = Math.max(table.scrollWidth, Math.round(tableRect.width));
+          if (clipWidth > 0 && tableWidth > clipWidth + 2) {
+            tableScan.issues.push({
+              kind: "table-clipped-by-ancestor",
+              selector: shortSelector(table),
+              detail: \`table width \${Math.round(tableWidth)}px clipped by \${shortSelector(clipAncestor)} (\${Math.round(clipWidth)}px)\`,
+            });
+          }
+        }
         const headerCells = Array.from(table.querySelectorAll("thead th")).filter(isElementVisible);
         const visibleHeaderCells = headerCells
           .map((cell) => ({ cell, rect: cell.getBoundingClientRect() }))

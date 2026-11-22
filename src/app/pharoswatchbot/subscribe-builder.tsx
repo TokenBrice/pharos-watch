@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Briefcase, Check, Copy, ExternalLink, Send, Star, X } from "lucide-react";
 import { CoinSelector } from "@/components/coin-selector";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Button } from "@/components/ui/button";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { usePortfolio } from "@/hooks/use-portfolio";
+import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useWatchlist } from "@/hooks/use-watchlist";
 import { copyText } from "@/lib/clipboard";
 import type { CoinOption } from "@/lib/compare-types";
@@ -65,9 +67,7 @@ function resolveCoinToken(raw: string): string | null {
   return UNIQUE_ACTIVE_ID_BY_SYMBOL.get(trimmed.toLowerCase()) ?? null;
 }
 
-function parseUrlCoinIds(search: string): string[] {
-  if (!search) return [];
-  const params = new URLSearchParams(search);
+function parseUrlCoinIds(params: URLSearchParams): string[] {
   const rawTokens = [...params.getAll("coin"), ...params.getAll("coins")]
     .flatMap((value) => value.split(","));
   const seen = new Set<string>();
@@ -87,28 +87,15 @@ function commandTargetToken(coin: CoinOption): string {
   return count === 1 ? coin.symbol : coin.id;
 }
 
-function subscribeSearch(onStoreChange: () => void): () => void {
-  if (typeof window === "undefined") return () => {};
-  window.addEventListener("popstate", onStoreChange);
-  return () => window.removeEventListener("popstate", onStoreChange);
-}
-
-function getSearchSnapshot(): string {
-  return typeof window === "undefined" ? "" : window.location.search;
-}
-
-function getServerSearchSnapshot(): string {
-  return "";
-}
-
 /**
  * Client-side subscribe command builder supporting `?coin=` / `?coins=` deep
  * links, saved Watchlist import, Portfolio holdings import, and Private vs
  * Group command syntax.
  */
 export function SubscribeCommandBuilder() {
-  const search = useSyncExternalStore(subscribeSearch, getSearchSnapshot, getServerSearchSnapshot);
-  const urlCoinIds = useMemo(() => parseUrlCoinIds(search), [search]);
+  const hydrated = useHydrated();
+  const { searchParams } = useUrlFilters();
+  const urlCoinIds = useMemo(() => parseUrlCoinIds(searchParams), [searchParams]);
   const [editedCoinIds, setEditedCoinIds] = useState<string[] | null>(null);
   const [selectedFamilies, setSelectedFamilies] = useState<TelegramLiveAlertType[]>([...DEFAULT_FAMILIES]);
   const [chatScope, setChatScope] = useState<"private" | "group">("private");
@@ -116,7 +103,7 @@ export function SubscribeCommandBuilder() {
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { ids: watchlistIds } = useWatchlist();
-  const { holdings } = usePortfolio();
+  const { holdings } = usePortfolio(null, hydrated, { ignoreUrl: true });
 
   useEffect(() => () => {
     if (copyTimer.current) clearTimeout(copyTimer.current);
@@ -127,8 +114,10 @@ export function SubscribeCommandBuilder() {
     [watchlistIds],
   );
   const activePortfolioIds = useMemo(
-    () => holdings.map((holding) => holding.coinId).filter((id) => ACTIVE_COIN_BY_ID.has(id)).slice(0, MAX_BUILDER_COINS),
-    [holdings],
+    () => (hydrated
+      ? holdings.map((holding) => holding.coinId).filter((id) => ACTIVE_COIN_BY_ID.has(id)).slice(0, MAX_BUILDER_COINS)
+      : []),
+    [hydrated, holdings],
   );
 
   const selectedIds = editedCoinIds ?? urlCoinIds;

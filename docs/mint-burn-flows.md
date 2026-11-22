@@ -46,6 +46,7 @@ Extended-lane health is a **full-pass verdict**, not a per-config age clock. `up
 Extended placement precedes the `:22/:52` Safety Score fence to avoid overlapping its publication chain. Each physical alias is hourly: combining aliases into one sub-hourly expression would reduce Cloudflare's CPU class to 30 seconds, the exhaustion mode recorded as `platform-abandoned`. The [schedule and dispatch owner](https://github.com/TokenBrice/pharos-watch/blob/main/docs/worker-infrastructure.md#cron-scheduling) owns expressions; [per-job timeouts](https://github.com/TokenBrice/pharos-watch/blob/main/docs/worker-and-api-limits.md#per-job-cron-timeouts) own runtime ceilings.
 
 `syncMintBurn()` returns actual inserted rows as `itemCount`, plus status and bounded lane/config coverage diagnostics. When a targeted sync warning exists, the UI suppresses a duplicate generic stale banner. Cached fallback preserves freshness-derived headers, not an extra transient-query warning while the dataset is fresh.
+
 ---
 
 ## Constants & Thresholds
@@ -603,6 +604,7 @@ Operator arguments, execution/atomic-import guards, scope, batch progression, co
 The scheduled slot adds `providerOutcomes` from invocation-scoped RPC observations: provider/circuit identity, request success/failure/neutral counts, blocked requests, `terminalFailures` and machine-readable reason counts. Request counters are diagnostics; `terminalFailures` counts failed admitted config/head scopes after retries, not failed requests. The Access-protected cron detail endpoint retains this metadata. Publication membership and pending progress are separately exposed by the flow response's `publication` block.
 
 Parsed rows are not inserted rows. NULL backlog counts with `nullPriceBacklogAvailable: false` mean a failed retried read, not no debt. `recalcFailed` means cursors did not commit even if event inserts succeeded. A saturated sweep can leave backlog beyond this run. These distinctions govern repair; metadata field definitions are source-owned.
+
 ---
 
 ## Frontend

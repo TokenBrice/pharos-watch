@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { hydrateRoot, type Root } from "react-dom/client";
+import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   TELEGRAM_BOT_COMMANDS,
@@ -16,8 +18,14 @@ vi.mock("@/lib/clipboard", () => ({
   copyText: copyTextMock,
 }));
 
+const roots: Root[] = [];
+
 afterEach(() => {
+  act(() => {
+    for (const root of roots.splice(0)) root.unmount();
+  });
   cleanup();
+  document.body.innerHTML = "";
   copyTextMock.mockClear();
   window.localStorage.removeItem(WATCHLIST_STORAGE_KEY);
   window.localStorage.removeItem("pharos:portfolio");
@@ -65,6 +73,61 @@ describe("CommandManual", () => {
 });
 
 describe("SubscribeCommandBuilder", () => {
+  it("hydrates without mismatch on ?coins=, ignores URL params as portfolio state, and tracks SPA navigation", async () => {
+    window.history.replaceState(null, "", "/pharoswatchbot/?coins=usdc-circle");
+    const container = document.createElement("div");
+    container.innerHTML = renderToString(<SubscribeCommandBuilder />);
+    document.body.append(container);
+    expect(container.textContent).not.toContain("Import my Portfolio");
+
+    const errors: unknown[] = [];
+    await act(async () => {
+      roots.push(hydrateRoot(container, <SubscribeCommandBuilder />, {
+        onRecoverableError: (error) => errors.push(error),
+      }));
+    });
+    expect(errors).toEqual([]);
+
+    const view = within(container);
+    await waitFor(() => {
+      expect(view.getByTestId("telegram-subscribe-command").textContent).toBe("/subscribe dews,depeg,safety USDC");
+    });
+    // Wait past hydration frames to confirm ?coins= never produces a false Portfolio import button.
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    expect(view.queryByRole("button", { name: /Import my Portfolio/i })).toBeNull();
+
+    // SPA navigation via history.pushState updates the builder command without a full reload.
+    await act(async () => {
+      window.history.pushState(null, "", "/pharoswatchbot/?coins=dai-makerdao");
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(view.getByTestId("telegram-subscribe-command").textContent).toBe("/subscribe dews,depeg,safety DAI");
+    });
+  });
+
+  it("hydrates cleanly with saved localStorage portfolio and imports storage holdings rather than ?coins=", async () => {
+    window.history.replaceState(null, "", "/pharoswatchbot/?coins=usdc-circle");
+    window.localStorage.setItem("pharos:portfolio", JSON.stringify([{ coinId: "usde-ethena", amount: 500 }]));
+    const container = document.createElement("div");
+    container.innerHTML = renderToString(<SubscribeCommandBuilder />);
+    document.body.append(container);
+    expect(container.textContent).not.toContain("Import my Portfolio");
+
+    const errors: unknown[] = [];
+    await act(async () => {
+      roots.push(hydrateRoot(container, <SubscribeCommandBuilder />, {
+        onRecoverableError: (error) => errors.push(error),
+      }));
+    });
+    expect(errors).toEqual([]);
+
+    const view = within(container);
+    const portfolioButton = await view.findByRole("button", { name: "Import my Portfolio (1)" });
+    fireEvent.click(portfolioButton);
+    expect(view.getByTestId("telegram-subscribe-command").textContent).toBe("/subscribe dews,depeg,safety USDe");
+  });
+
   it("reads ?coin= from the URL, imports Watchlist and Portfolio, and switches Private/Group syntax", async () => {
     window.history.replaceState(null, "", "/pharoswatchbot/?coin=usdc-circle");
     window.localStorage.setItem(WATCHLIST_STORAGE_KEY, JSON.stringify(["usdt-tether", "dai-makerdao"]));
@@ -77,7 +140,7 @@ describe("SubscribeCommandBuilder", () => {
     fireEvent.click(screen.getByRole("button", { name: "Import my Watchlist (2)" }));
     expect(cmd()).toBe("/subscribe dews,depeg,safety USDT DAI");
 
-    fireEvent.click(screen.getByRole("button", { name: "Import my Portfolio (1)" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Import my Portfolio (1)" }));
     expect(cmd()).toBe("/subscribe dews,depeg,safety USDe");
 
     fireEvent.click(screen.getByRole("button", { name: "Group" }));

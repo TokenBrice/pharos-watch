@@ -25,9 +25,11 @@ export interface LiquidityStatsData {
   median7dChange?: number | null;
   /** Count of observed coins with a finite 7d TVL change. */
   change7dCoinCount?: number;
-  /** Aggregate DEX TVL divided by circulating supply over coins with both observed TVL and valid positive supply. */
+  /** Deduped global DEX TVL divided by total circulating supply when every observed DEX coin has positive supply; null otherwise. */
   aggDepthToMcapRatio?: number | null;
-  /** Coins contributing to `aggDepthToMcapRatio` vs total observed DEX coins. */
+  /** Exact per-coin median DEX TVL / circulating supply across observed DEX coins with positive supply (immune to cross-coin pool overlap). */
+  medianDepthToMcapRatio?: number | null;
+  /** Coins with valid positive circulating supply among observed DEX coins. */
   aggDepthToMcapObservedCount?: number;
   avgBalance: number | null;
   avgOrganic: number | null;

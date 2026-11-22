@@ -272,14 +272,14 @@ export function TopNav() {
     <header
       aria-label="Primary"
       className={cn(
-        "sticky z-chrome-header hidden h-14 w-full items-center gap-2 border-b border-border/70 bg-background/85 px-4 backdrop-blur-md lg:flex min-[1440px]:px-6",
+        "sticky z-chrome-header hidden h-14 w-full items-center gap-1.5 border-b border-border/70 bg-background/85 px-3 backdrop-blur-md lg:flex xl:gap-2 xl:px-4 2xl:px-6",
         topOffsetClass,
       )}
     >
       <Link
         href="/"
         prefetch={false}
-        className="pharos-focus-ring flex shrink-0 items-center gap-2 rounded-lg pr-1 min-[1440px]:gap-2.5 min-[1440px]:pr-2"
+        className="pharos-focus-ring flex shrink-0 items-center gap-2 rounded-lg pr-0.5 xl:pr-1 2xl:gap-2.5 2xl:pr-2"
         aria-label="Pharos home"
       >
         <PharosLogo size={28} className="rounded-full shadow-sm" priority />
@@ -292,7 +292,7 @@ export function TopNav() {
       {/* Destinations sit left of the fold; browsing sits on the right, next to
           search: one direction for "go", one for "explore". */}
       <nav aria-label="Quick links" className="flex shrink-0 items-center gap-0.5">
-        <span className="flex items-center gap-0 rounded-lg bg-muted/35 p-0.5 min-[1440px]:gap-0.5">
+        <span className="flex items-center gap-0 rounded-lg bg-muted/35 p-0.5 2xl:gap-0.5">
           {QUICK_NAV_ITEMS.map((item) => {
             const isActive = isNavItemActive(pathname, item);
             const Icon = item.icon;
@@ -306,7 +306,7 @@ export function TopNav() {
                 title={item.description}
                 onClick={() => trackEvent("nav_click", { surface: "rail", group: "rail", href: item.href })}
                 className={cn(
-                  "pharos-focus-ring inline-flex h-8 items-center gap-1 rounded-md px-1.5 text-sm font-semibold whitespace-nowrap transition-colors min-[1440px]:gap-1.5 min-[1440px]:px-2.5",
+                  "pharos-focus-ring inline-flex h-8 items-center gap-1 rounded-md px-1.5 text-sm font-semibold whitespace-nowrap transition-colors 2xl:gap-1.5 2xl:px-2.5",
                   isActive
                     ? "bg-background text-foreground ring-1 ring-border/70 dark:bg-card dark:ring-1 dark:ring-border/80"
                     : "text-muted-foreground hover:bg-background/70 hover:text-foreground",
@@ -318,10 +318,11 @@ export function TopNav() {
                 {/* Three label tiers keep six items inside the masthead next to
                     the menus and search: compact below 1280px (xl:), short
                     ("Stability", "FreezeWatch") from 1280px to 1679px,
-                    canonical from 1680px. */}
+                    canonical from 1680px (105rem — rem unit matches xl's 80rem
+                    so Tailwind v4 media-query ordering stays deterministic). */}
                 <span className="xl:hidden">{item.compactLabel ?? item.shortLabel ?? item.label}</span>
-                <span className="hidden xl:inline min-[1680px]:hidden">{item.shortLabel ?? item.label}</span>
-                <span className="hidden min-[1680px]:inline">{item.label}</span>
+                <span className="hidden xl:inline min-[105rem]:hidden">{item.shortLabel ?? item.label}</span>
+                <span className="hidden min-[105rem]:inline">{item.label}</span>
                 {/* A 16px glyph is too small to carry a count; it reads as a neutral pill after the label. */}
                 {badge ? (
                   <span
@@ -339,7 +340,7 @@ export function TopNav() {
       </nav>
 
       {/* Right cluster reads menus -> divider -> PSI -> shortcuts -> appearance -> search. */}
-      <div className="ml-auto flex shrink-0 items-center gap-1 min-[1440px]:gap-2">
+      <div className="ml-auto flex min-w-0 shrink-0 items-center gap-1 2xl:gap-2">
         <nav ref={sectionNavRef} aria-label="Sections" className="flex shrink-0 items-center gap-0.5">
           {TOP_MENUS.map((menu) => {
             const isActive = menu.items.some((item) => isNavItemActive(pathname, item));
@@ -413,7 +414,7 @@ export function TopNav() {
                 }}
                   onClick={() => activateMenu(menu.key)}
                   className={cn(
-                    "pharos-focus-ring inline-flex h-8 items-center gap-1 rounded-md px-1.5 text-sm font-medium whitespace-nowrap transition-colors min-[1440px]:px-3",
+                    "pharos-focus-ring inline-flex h-8 items-center gap-1 rounded-md px-1.5 text-sm font-medium whitespace-nowrap transition-colors 2xl:px-3",
                     isActive
                       ? "bg-muted/60 text-foreground ring-1 ring-border/70 dark:bg-card dark:ring-1 dark:ring-border/80"
                       : isOpen
@@ -511,7 +512,7 @@ export function TopNav() {
                 cancelClose();
                 hoverOpenRef.current = false;
               }}
-              className="pharos-focus-ring inline-flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
+              className="pharos-focus-ring inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground 2xl:size-9"
             >
               <SunMoon className="size-4" aria-hidden />
             </button>
@@ -533,12 +534,14 @@ export function TopNav() {
           onClick={openCommandPalette}
           aria-label="Search"
           // Icon-only below xl: at 1024px the six-item rail and menus fill the
-          // masthead, so the text label and shortcut hint wait for xl (1280px).
-          className="pharos-focus-ring inline-flex h-9 w-9 items-center justify-center gap-2 rounded-lg border border-border/70 bg-muted/20 text-sm text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground xl:w-40 xl:justify-start xl:px-2.5 min-[1440px]:w-[15rem] min-[1440px]:px-3 2xl:w-72"
+          // masthead; xl (1280-1535px) fits "Search" + shortcut; 2xl (1536px+)
+          // expands to the fuller "Coin or page" prompt. Both xl and 2xl are
+          // named breakpoints so only one label is ever displayed.
+          className="pharos-focus-ring inline-flex h-9 w-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-border/70 bg-muted/20 text-sm text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground xl:w-40 xl:justify-start xl:px-2.5 2xl:w-60 2xl:gap-2 2xl:px-3"
         >
           <Search className="size-4 shrink-0" aria-hidden />
-          <span className="hidden xl:inline min-[1440px]:hidden">Search</span>
-          <span className="hidden min-[1440px]:inline">Coin or page</span>
+          <span className="hidden xl:inline 2xl:hidden">Search</span>
+          <span className="hidden 2xl:inline">Coin or page</span>
           <kbd className="ml-auto hidden shrink-0 rounded-sm border border-border/70 bg-background px-1.5 font-mono text-3xs whitespace-nowrap text-muted-foreground xl:inline">
             {searchShortcutLabel}
           </kbd>

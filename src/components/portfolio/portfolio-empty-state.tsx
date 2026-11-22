@@ -1,6 +1,6 @@
 "use client";
 
-import { Lock, ShieldCheck } from "lucide-react";
+import { Lock } from "lucide-react";
 import { EmptyStateSurface } from "@/components/empty-state-surface";
 import { buildPresetPreview, PresetCard } from "@/components/preset-card";
 import { ECONOMIC_CONTROL_LABEL } from "@shared/lib/classification";
@@ -89,21 +89,6 @@ export function PortfolioEmptyState({ presets, logos, onApplyPreset }: Portfolio
             description: "The result counts the modeled upstream exposure routes your holdings share.",
           },
         ]}
-        actions={
-          <div className="flex flex-wrap gap-2">
-            {presets.slice(0, 3).map((preset) => (
-              <button
-                key={preset.title}
-                type="button"
-                onClick={() => onApplyPreset(preset)}
-                className="pharos-focus-ring pharos-control-pill min-h-11 gap-2 px-4 text-sm sm:min-h-9"
-              >
-                <ShieldCheck className="h-4 w-4 text-primary/80" />
-                {preset.title}
-              </button>
-            ))}
-          </div>
-        }
         preview={<PortfolioPreview />}
         footnote={
           <div className="flex items-start gap-2">

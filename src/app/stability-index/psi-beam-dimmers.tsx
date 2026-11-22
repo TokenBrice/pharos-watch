@@ -27,7 +27,7 @@ const METHODOLOGY_TOPICS = {
 const LANE_DRILLDOWN_HREF: Record<PsiBeamDimmerKey, string> = {
   severity: "/depeg/",
   breadth: "/depeg/",
-  stressBreadth: "/depeg/#dews",
+  stressBreadth: "/depeg/#dews-radar",
   trend: "/flows/",
 };
 

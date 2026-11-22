@@ -92,8 +92,9 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
   const { data: dexLiquidity } = dexLiquidityQuery;
   const { data: reportCardsData } = reportCardsQuery;
   const pinned = usePinnedStablecoins();
-  // Passive: chips read the peg/resolver/stress entries other homepage sections already load; this table fetches none.
-  const coinStates = useCoinStates({ enabled: false }).byId;
+  // Cold `/` load stays passive (zero extra requests); enabling Active alerts fetches DEWS & peg signals on demand.
+  const coinStatesResult = useCoinStates({ enabled: alertsOnly });
+  const coinStates = coinStatesResult.byId;
 
   const universeEligibleIds =
     activeUniverse === "core"
@@ -160,6 +161,14 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
     error: stablecoinsQuery.error,
     isEmpty: stablecoinsData?.peggedAssets.length === 0,
   });
+  // R2: when Active alerts is on and live peg/DEWS signals have not settled,
+  // hold off on claiming zero matching alerts.
+  const alertsSignalsPending =
+    alertsOnly
+    && !coinStatesResult.liveReady
+    && stablecoinsState !== "loading"
+    && stablecoinsState !== "unavailable"
+    && filteredRowCount === 0;
 
   return (
     <div className="space-y-4">
@@ -170,6 +179,8 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
           </h2>
           {stablecoinsState === "unavailable" ? (
             <p className="text-sm text-muted-foreground">Stablecoin rankings are updating.</p>
+          ) : alertsSignalsPending ? (
+            <p className="text-sm text-muted-foreground">Active alert signals are updating.</p>
           ) : stablecoinsState === "loading" ? (
             <p className="text-sm text-muted-foreground">
               Compare market size, peg health, liquidity, and safety across the stablecoin market.
@@ -268,35 +279,44 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
       </div>
 
       {stablecoinsState !== "unavailable" ? (
-        <StablecoinTable
-          data={stablecoinsData?.peggedAssets}
-          isLoading={isLoading}
-          activeFilters={filters.activeFilters}
-          eligibleIds={effectiveEligibleIds}
-          logos={logos}
-          pegScores={pegScores}
-          coinStates={coinStates}
-          dexLiquidity={dexLiquidity ?? undefined}
-          reportCards={reportCardMap}
-          reportCardsMethodologyVersion={reportCardsData?.safetyScoreIdentity?.methodologyVersion ?? null}
-          sourceGenerations={{
-            stablecoins: stablecoinsQuery.meta?.updatedAt,
-            pegSummary: pegSummaryQuery.meta?.updatedAt,
-            dexLiquidity: dexLiquidityQuery.meta?.updatedAt,
-            reportCards: reportCardsQuery.meta?.updatedAt,
-          }}
-          initialVisibleColumns={HOME_ALT_DEFAULT_COLUMNS}
-          columnPreferenceNamespace={HOME_ALT_COLUMN_PREFERENCE_NAMESPACE}
-          pinnedStablecoinIds={pinned.pinnedIds}
-          onTogglePinnedStablecoin={pinned.togglePinned}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          onClearSearch={() => setSearchQuery("")}
-          onClearFilters={handleClearFilters}
-          toolbarEyebrow=""
-          toolbarDescription={null}
-          toolbarVariant="figmaOverview"
-        />
+        alertsSignalsPending ? (
+          <div className="pharos-card-shell flex min-h-48 flex-col items-center justify-center gap-1.5 px-6 py-12 text-center">
+            <p className="text-sm font-medium text-foreground">Updating active alerts…</p>
+            <p className="max-w-md text-xs text-muted-foreground">
+              Live peg and DEWS stress signals are updating.
+            </p>
+          </div>
+        ) : (
+          <StablecoinTable
+            data={stablecoinsData?.peggedAssets}
+            isLoading={isLoading}
+            activeFilters={filters.activeFilters}
+            eligibleIds={effectiveEligibleIds}
+            logos={logos}
+            pegScores={pegScores}
+            coinStates={coinStates}
+            dexLiquidity={dexLiquidity ?? undefined}
+            reportCards={reportCardMap}
+            reportCardsMethodologyVersion={reportCardsData?.safetyScoreIdentity?.methodologyVersion ?? null}
+            sourceGenerations={{
+              stablecoins: stablecoinsQuery.meta?.updatedAt,
+              pegSummary: pegSummaryQuery.meta?.updatedAt,
+              dexLiquidity: dexLiquidityQuery.meta?.updatedAt,
+              reportCards: reportCardsQuery.meta?.updatedAt,
+            }}
+            initialVisibleColumns={HOME_ALT_DEFAULT_COLUMNS}
+            columnPreferenceNamespace={HOME_ALT_COLUMN_PREFERENCE_NAMESPACE}
+            pinnedStablecoinIds={pinned.pinnedIds}
+            onTogglePinnedStablecoin={pinned.togglePinned}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            onClearSearch={() => setSearchQuery("")}
+            onClearFilters={handleClearFilters}
+            toolbarEyebrow=""
+            toolbarDescription={null}
+            toolbarVariant="figmaOverview"
+          />
+        )
       ) : null}
       <PegBrowseStrip pegs={ACTIVE_PEGS} pegCoinCount={pegCoinCount} />
     </div>

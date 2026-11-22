@@ -117,6 +117,22 @@ describe("ReportCardMiniV9 viewport radar", () => {
     expect(cappedHtml).not.toContain("Evidence age"); // the table projection carries no freshness verdict
     expect(cappedHtml.match(/<a /g)).toHaveLength(1); // the chip never nests a link in the card link
     expect(renderToStaticMarkup(<ReportCardMiniV9 card={uncapped} identity={identity} />)).not.toMatch(/Binding cap|Weakest pillar|Score withheld/);
+
+    const rawTokenCapped = {
+      ...uncapped,
+      score: 40,
+      bindingCap: {
+        kind: "parent:cap",
+        limit: 40,
+        source: "parent" as const,
+        reason: "v9 materialSupplyShare unresolved on chain:solana.",
+        binding: true,
+      },
+    };
+    const humanizedHtml = renderToStaticMarkup(<ReportCardMiniV9 card={rawTokenCapped} identity={identity} />);
+    expect(humanizedHtml).toContain("bridged supply share");
+    expect(humanizedHtml).not.toContain("materialSupplyShare");
+    expect(humanizedHtml).not.toContain("chain:solana");
   });
 
   it("keeps data-pipeline-unavailable wording only for cause A and hides the radar below two pillars", () => {

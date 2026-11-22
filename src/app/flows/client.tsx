@@ -87,9 +87,13 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
   const [highlightedCoinId, setHighlightedCoinId] = useState<string | null>(null);
   const [highlightRequestKey, setHighlightRequestKey] = useState(0);
   const handleSelectRunLineCoin = useCallback((coinId: string) => {
+    if (highlightedCoinId === coinId) {
+      setHighlightedCoinId(null);
+      return;
+    }
     setHighlightedCoinId(coinId);
     setHighlightRequestKey((count) => count + 1);
-  }, []);
+  }, [highlightedCoinId]);
   const {
     data: summaryData,
     meta: summaryMeta,

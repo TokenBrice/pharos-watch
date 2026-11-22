@@ -155,6 +155,8 @@ describe("BackToSource", () => {
 
     const link = screen.getByRole("link", { name: `Back to ${expectedLabel}` });
     expect(link.getAttribute("href")).toBe(sourceUrl);
+    expect(link.className).toContain("min-h-11");
+    expect(link.className).toContain("sm:min-h-0");
   });
 
   it("recognizes every documented hub and tracker root", () => {

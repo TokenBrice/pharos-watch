@@ -49,13 +49,21 @@ export function LiquidityHero({
       : change === null && (stats.change7dCoinCount ?? 0) === 0
         ? undefined
         : undefined;
-  const depthRatio = stats.aggDepthToMcapRatio;
-  const depthRatioDetail =
-    depthRatio != null &&
-    stats.aggDepthToMcapObservedCount != null &&
-    stats.aggDepthToMcapObservedCount < stats.withLiquidity
-      ? `${stats.aggDepthToMcapObservedCount.toLocaleString("en-US")} of ${stats.withLiquidity.toLocaleString("en-US")} with supply`
-      : "DEX TVL / circulating supply";
+  const aggDepthRatio = stats.aggDepthToMcapRatio;
+  const hasAggDepthRatio = aggDepthRatio != null && Number.isFinite(aggDepthRatio);
+  const medianDepthRatio = stats.medianDepthToMcapRatio;
+  const useMedianDepthRatio = !hasAggDepthRatio && medianDepthRatio != null && Number.isFinite(medianDepthRatio);
+  const depthRatio = hasAggDepthRatio ? aggDepthRatio : useMedianDepthRatio ? medianDepthRatio : null;
+  const depthRatioLabel = useMedianDepthRatio ? "Median depth / MCap" : "Depth / MCap";
+  const depthRatioDetail = hasAggDepthRatio
+    ? "deduped DEX TVL / circulating supply"
+    : useMedianDepthRatio
+      ? stats.aggDepthToMcapObservedCount != null && stats.aggDepthToMcapObservedCount < stats.withLiquidity
+        ? `${stats.aggDepthToMcapObservedCount.toLocaleString("en-US")} of ${stats.withLiquidity.toLocaleString("en-US")} with supply`
+        : stats.aggDepthToMcapObservedCount != null
+          ? `across ${stats.aggDepthToMcapObservedCount.toLocaleString("en-US")} coins`
+          : "per-coin DEX TVL / circulating supply"
+      : undefined;
 
   return (
     <FeatureHeroSplit
@@ -105,7 +113,7 @@ export function LiquidityHero({
           />
           {depthRatio != null && Number.isFinite(depthRatio) ? (
             <HeroMetricRow
-              label="Depth / MCap"
+              label={depthRatioLabel}
               value={depthRatio > 0 && depthRatio < 0.0005 ? "<0.1%" : formatPercent(depthRatio * 100, 1)}
               detail={depthRatioDetail}
             />

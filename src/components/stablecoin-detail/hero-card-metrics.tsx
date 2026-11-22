@@ -136,7 +136,7 @@ function formatPriceReferenceLine({
   referenceNote: string | null;
   isNavToken: boolean;
 }): string {
-  if (isNavToken) return "NAV token — no fixed peg";
+  if (isNavToken) return "NAV token · no fixed peg";
   if (referenceNote) return referenceNote;
   if (pegReferenceUnavailable) return "Peg reference unavailable";
   return deviationBps == null ? "N/A" : formatBps(deviationBps);

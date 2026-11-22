@@ -213,10 +213,27 @@ describe("LiquidityHero", () => {
     expect(screen.getByText("7d change, coins with 7d history").parentElement?.textContent).toContain("↑3.2%");
     expect(screen.getByText("7d change, coins with 7d history").parentElement?.textContent).toContain("median across 42 coins");
     expect(screen.getByText("Depth / MCap").parentElement?.textContent).toContain("8.4%");
+    expect(screen.getByText("Depth / MCap").parentElement?.textContent).toContain("deduped DEX TVL / circulating supply");
     expect(screen.getByTestId("exit-route-dashed-key").textContent).toContain("< 70%");
     expect(screen.getByTestId("exit-route-dashed-key").textContent).toContain("< 60%");
 
     fireEvent.click(screen.getByTestId("protocol-door-curve"));
     expect(onRouteFilterChange).toHaveBeenCalledWith({ kind: "protocol", key: "curve", label: "Curve" });
+  });
+
+  it("falls back to labeled per-coin median depth/MCap when aggregate cohorts diverge", () => {
+    render(createElement(LiquidityHero, {
+      stats: makeStats({
+        withLiquidity: 4,
+        aggDepthToMcapRatio: null,
+        medianDepthToMcapRatio: 0.024,
+        aggDepthToMcapObservedCount: 3,
+      }),
+      liquidityMap: { [DEX_GLOBAL_KEY]: TAIL_GLOBAL },
+    }));
+
+    const row = screen.getByText("Median depth / MCap").parentElement as HTMLElement;
+    expect(row.textContent).toContain("2.4%");
+    expect(row.textContent).toContain("3 of 4 with supply");
   });
 });

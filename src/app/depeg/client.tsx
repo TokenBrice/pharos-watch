@@ -302,7 +302,7 @@ export function DepegClient() {
 
   const pipelineSteps = [
     { href: "#dews-radar", label: "1. Early Stress (DEWS)" },
-    { href: "#data", label: "2. Live Incidents" },
+    { href: "#live-outlook", label: "2. Live Incidents" },
     ...(resolverEnabled ? [{ href: "#recovery-forecast", label: "3. Recovery Forecast (DDR)" }] : []),
     { href: "#peg-history", label: resolverEnabled ? "4. Peg History" : "3. Peg History" },
   ];

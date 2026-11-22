@@ -82,7 +82,7 @@ export function DailyDigestCard(): React.JSX.Element {
                   {editionPrefix ? (
                     <>
                       <span className="text-teal-700 dark:text-teal-400">{editionPrefix}</span>
-                      {` — ${title}`}
+                      {`: ${title}`}
                     </>
                   ) : (
                     title
@@ -142,7 +142,7 @@ function DigestArchiveLeaf({ entry }: { entry: DigestPromoEdition }): React.JSX.
         >
           {editionDate ? `${editionDate} · ` : null}
           {editionPrefix ? <span className="text-teal-700 dark:text-teal-400">{editionPrefix}</span> : null}
-          {editionPrefix ? ` — ${title}` : title}
+          {editionPrefix ? `: ${title}` : title}
         </p>
       </Link>
     </li>

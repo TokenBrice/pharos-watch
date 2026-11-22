@@ -316,4 +316,19 @@ describe("CommandPalette", () => {
     fireEvent.keyDown(screen.getByRole("combobox", { name: "Search" }), { key: "Enter" });
     expect(pushMock).toHaveBeenCalledWith("/stablecoin/usdc-circle/#reserves");
   });
+
+  it("does not fetch stablecoins while closed", () => {
+    const fetchSpy = vi.fn(() => new Promise<Response>(() => {}));
+    vi.stubGlobal("fetch", fetchSpy);
+    queryClient.clear();
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <CommandPalette open={false} onOpenChange={vi.fn()} />
+      </QueryClientProvider>,
+    );
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(useCoinStatesMock).toHaveBeenCalledWith({ enabled: false });
+  });
 });

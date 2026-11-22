@@ -157,8 +157,8 @@ export const ScoreChart = memo(function ScoreChart({
                 columns={PSI_TABLE_COLUMNS}
                 caption={(rows, truncated, total) =>
                   truncated
-                    ? `PSI score history — most recent ${rows.length} of ${total} data points`
-                    : `PSI score history — ${total} data points`
+                    ? `PSI score history: most recent ${rows.length} of ${total} data points`
+                    : `PSI score history: ${total} data points`
                 }
               />
               {isChartReady ? (

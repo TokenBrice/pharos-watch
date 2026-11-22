@@ -273,7 +273,7 @@ export function PegStabilityCard({
     />
   ) : (
     <div className="max-w-2xl space-y-1.5 rounded-lg border border-border/50 bg-muted/20 px-4 py-3">
-      <p className="text-sm font-semibold">Custom design — no archetype assigned</p>
+      <p className="text-sm font-semibold">Custom design · no archetype assigned</p>
       <p className="text-sm leading-relaxed text-muted-foreground">
         This coin doesn&apos;t fit the tracked archetypes. See the description below and the{" "}
         <IntentLink

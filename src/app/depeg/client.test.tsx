@@ -229,7 +229,7 @@ describe("DepegClient", () => {
     const links = [...nav.querySelectorAll("a")].map((link) => [link.textContent, link.getAttribute("href")]);
     expect(links).toEqual([
       ["1. Early Stress (DEWS)", "#dews-radar"],
-      ["2. Live Incidents", "#data"],
+      ["2. Live Incidents", "#live-outlook"],
       ["3. Recovery Forecast (DDR)", "#recovery-forecast"],
       ["4. Peg History", "#peg-history"],
     ]);

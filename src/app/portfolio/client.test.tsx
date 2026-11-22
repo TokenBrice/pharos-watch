@@ -386,6 +386,45 @@ describe("PortfolioClient URL sync and risk workspace", () => {
     });
   });
 
+  it("consumes ?coins= handoff into ?p= and clears ?coins= when holdings are removed or cleared", async () => {
+    window.history.replaceState(null, "", "/portfolio/?coins=usdc-circle,usdt-tether");
+    portfolioState = {
+      ...basePortfolioState(),
+      holdings: [
+        { coinId: "usdc-circle", amount: 0 },
+        { coinId: "usdt-tether", amount: 0 },
+      ],
+    };
+
+    const { rerender } = render(<PortfolioClient />);
+
+    await waitFor(() => {
+      const params = new URLSearchParams(window.location.search);
+      expect(params.has("coins")).toBe(false);
+      expect(params.get("p")).toBe("usdc-circle:0,usdt-tether:0");
+    });
+
+    portfolioState = {
+      ...basePortfolioState(),
+      holdings: [{ coinId: "usdt-tether", amount: 0 }],
+    };
+    rerender(<PortfolioClient />);
+    await waitFor(() => {
+      const params = new URLSearchParams(window.location.search);
+      expect(params.has("coins")).toBe(false);
+      expect(params.get("p")).toBe("usdt-tether:0");
+    });
+
+    portfolioState = {
+      ...basePortfolioState(),
+      holdings: [],
+    };
+    rerender(<PortfolioClient />);
+    await waitFor(() => {
+      expect(window.location.search).toBe("");
+    });
+  });
+
   it("labels partial score and pillar averages by their own known-only holding coverage", () => {
     portfolioState = { ...basePortfolioState(), holdings: [{ coinId: "usdc-circle", amount: 100 }, { coinId: "usdt-tether", amount: 300 }] };
     const complete = makeV9Card({ id: "usdc-circle", score: 80, pillars: {

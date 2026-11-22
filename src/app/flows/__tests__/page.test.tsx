@@ -1,15 +1,15 @@
 // @vitest-environment jsdom
 
 import type { ReactNode } from "react";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MintBurnFlowsResponse } from "@shared/types/mint-burn";
 import { ApiFetchError } from "@/lib/api";
 import { makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
 
 const useMintBurnFlowsMock = vi.hoisted(() => vi.fn());
-const flowGaugeHeroMock = vi.hoisted(() => vi.fn(() => null));
-const flowTableMock = vi.hoisted(() => vi.fn(() => null));
+const flowGaugeHeroMock = vi.hoisted(() => vi.fn((_props?: unknown) => null));
+const flowTableMock = vi.hoisted(() => vi.fn((_props?: unknown) => null));
 
 vi.mock("@/hooks/use-mint-burn-flows", () => ({
   useMintBurnFlows: useMintBurnFlowsMock,
@@ -140,5 +140,29 @@ describe("FlowsClient", () => {
     expect(screen.queryByText("Waiting for first sync")).toBeNull();
     expect(flowGaugeHeroMock).not.toHaveBeenCalled();
     expect(flowTableMock).not.toHaveBeenCalled();
+  });
+
+  it("toggles Run Line selection off on repeat click without incrementing highlightRequestKey", () => {
+    render(<FlowsClient faqItems={[]} />);
+    const getLastHeroProps = () =>
+      flowGaugeHeroMock.mock.calls.at(-1)?.[0] as { selectedCoinId: string | null; onSelectCoin: (id: string) => void };
+    const getLastTableProps = () =>
+      flowTableMock.mock.calls.at(-1)?.[0] as { highlightedCoinId: string | null; highlightRequestKey: number };
+
+    expect(getLastHeroProps().selectedCoinId).toBeNull();
+    expect(getLastTableProps()).toMatchObject({ highlightedCoinId: null, highlightRequestKey: 0 });
+
+    act(() => {
+      getLastHeroProps().onSelectCoin("usdc-circle");
+    });
+    expect(getLastHeroProps().selectedCoinId).toBe("usdc-circle");
+    expect(getLastTableProps()).toMatchObject({ highlightedCoinId: "usdc-circle", highlightRequestKey: 1 });
+
+    // Re-selecting the active coin clears selection without triggering a scroll/filter reset.
+    act(() => {
+      getLastHeroProps().onSelectCoin("usdc-circle");
+    });
+    expect(getLastHeroProps().selectedCoinId).toBeNull();
+    expect(getLastTableProps()).toMatchObject({ highlightedCoinId: null, highlightRequestKey: 1 });
   });
 });

@@ -191,7 +191,26 @@ export function LiquidityClient() {
 
   const searchActive = deferredSearch.trim().length > 0;
   const hasAnyFilter = pegFilter !== "all" || triageFilter !== "all" || routeFilter != null || searchActive;
-  const exportAsOfISO = meta?.updatedAt != null ? new Date(meta.updatedAt * 1000).toISOString() : "";
+  const dexUpdatedAt =
+    typeof meta?.updatedAt === "number" && Number.isFinite(meta.updatedAt) && meta.updatedAt > 0
+      ? meta.updatedAt
+      : null;
+  const stablecoinsUpdatedAt =
+    typeof stablecoinsQuery.meta?.updatedAt === "number" &&
+    Number.isFinite(stablecoinsQuery.meta.updatedAt) &&
+    stablecoinsQuery.meta.updatedAt > 0
+      ? stablecoinsQuery.meta.updatedAt
+      : null;
+  const sourceGenerations = {
+    dexLiquidity: dexUpdatedAt != null ? new Date(dexUpdatedAt * 1000).toISOString() : null,
+    stablecoins: stablecoinsUpdatedAt != null ? new Date(stablecoinsUpdatedAt * 1000).toISOString() : null,
+  };
+  // Conservative mixed-source clock (R3): Depth/MCap (%) joins dex-liquidity with
+  // stablecoins supply, so stamp the oldest participating producer only when both are known.
+  const exportAsOfISO =
+    dexUpdatedAt != null && stablecoinsUpdatedAt != null
+      ? new Date(Math.min(dexUpdatedAt, stablecoinsUpdatedAt) * 1000).toISOString()
+      : "unknown";
 
   const leaderboardToolbar = (
     <div className="space-y-2.5">
@@ -229,10 +248,7 @@ export function LiquidityClient() {
             asOfISO={exportAsOfISO}
             endpoint="dex-liquidity"
             methodologyLabel={`dex-liquidity ${LIQUIDITY_METHODOLOGY_VERSION_LABEL}`}
-            sourceGenerations={{
-              dexLiquidity: meta?.updatedAt != null ? new Date(meta.updatedAt * 1000).toISOString() : null,
-              stablecoins: stablecoinsQuery.meta?.updatedAt != null ? new Date(stablecoinsQuery.meta.updatedAt * 1000).toISOString() : null,
-            }}
+            sourceGenerations={sourceGenerations}
             disabled={leaderboardRows.length === 0}
           />
         </div>

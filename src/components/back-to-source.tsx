@@ -91,7 +91,7 @@ export function BackToSource({ className }: { className?: string }) {
     <Link
       href={backLink.href}
       className={cn(
-        "pharos-focus-ring inline-flex items-center gap-1.5 rounded-sm text-xs text-muted-foreground transition-colors hover:text-foreground",
+        "pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-sm text-xs text-muted-foreground transition-colors hover:text-foreground sm:min-h-0",
         className,
       )}
     >

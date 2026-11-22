@@ -320,6 +320,48 @@ describe("smoke-mobile-ui table scan", () => {
     expect(getTouchScanOutcome(summary.touchScan, { strictTouchTargets: true }).failCount).toBe(2);
     dom.window.close();
   });
+
+  it("flags wide tables clipped by an overflow-x clip/hidden ancestor when no horizontal scroll viewport intervenes", async () => {
+    const tableMarkup = (id: string, width: number, top: number) => `
+      <table id="${id}" data-rect="0,${top},${width},${top + 80}">
+        <thead>
+          <tr><th data-rect="0,${top},120,${top + 20}">Coin</th><th data-rect="120,${top},240,${top + 20}">Peg</th><th data-rect="240,${top},360,${top + 20}">MCap</th></tr>
+        </thead>
+        <tbody>
+          <tr data-rect="0,${top + 20},${width},${top + 40}">
+            <td data-rect="0,${top + 20},120,${top + 40}">USDC</td>
+            <td data-rect="120,${top + 20},240,${top + 40}">$1.00</td>
+            <td data-rect="240,${top + 20},360,${top + 40}">$60B</td>
+          </tr>
+        </tbody>
+      </table>`;
+    const html = `
+      <div id="clip-shell" data-overflow-x="clip" data-rect="0,0,1000,120">
+        <div data-overflow-x="visible" data-rect="0,0,1000,120">${tableMarkup("clipped-wide", 1180, 0)}</div>
+      </div>
+      <div id="scroll-shell" data-overflow-x="clip" data-rect="0,150,1000,270">
+        <div id="scroll-viewport" data-overflow-x="auto" data-rect="0,150,1000,270">${tableMarkup("scrolled-wide", 1180, 150)}</div>
+      </div>
+      <div id="fit-shell" data-overflow-x="hidden" data-rect="0,300,1000,420">
+        <div data-overflow-x="visible" data-rect="0,300,1000,420">${tableMarkup("fits-clip", 960, 300)}</div>
+      </div>`;
+    const { dom, win } = makeFixture(html, { stubGeometry: true });
+    win.innerWidth = 1024;
+    for (const id of ["clip-shell", "scroll-shell", "scroll-viewport", "fit-shell"]) {
+      Object.defineProperty(win.document.getElementById(id)!, "clientWidth", { configurable: true, value: 1000 });
+    }
+    Object.defineProperty(win.document.getElementById("scroll-viewport")!, "scrollWidth", { configurable: true, value: 1180 });
+    Object.defineProperty(win.document.getElementById("clipped-wide")!, "scrollWidth", { configurable: true, value: 1180 });
+    Object.defineProperty(win.document.getElementById("scrolled-wide")!, "scrollWidth", { configurable: true, value: 1180 });
+    Object.defineProperty(win.document.getElementById("fits-clip")!, "scrollWidth", { configurable: true, value: 960 });
+
+    const summary = await runTableScan(win);
+    expect(summary.tableScan.checked).toBe(3);
+    expect(summary.tableScan.issues.map((issue: { kind: string; selector: string }) => [issue.kind, issue.selector])).toEqual([
+      ["table-clipped-by-ancestor", "table#clipped-wide"],
+    ]);
+    dom.window.close();
+  });
 });
 
 describe("getOverflowWorkerCount", () => {

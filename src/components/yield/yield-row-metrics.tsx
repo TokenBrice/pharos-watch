@@ -224,8 +224,8 @@ export function YieldSafetyBadge({
     </span>
   ) : null;
   const describe = (base: string) =>
-    opportunityDerived ? `${base} — ${YIELD_OPPORTUNITY_SAFETY_DESCRIPTION}` : base;
-  const defaultSafetyLabel = `No safety grade available — defaulted to ${PYS_DEFAULT_SAFETY_SCORE}`;
+    opportunityDerived ? `${base}: ${YIELD_OPPORTUNITY_SAFETY_DESCRIPTION}` : base;
+  const defaultSafetyLabel = `No safety grade available, defaulted to ${PYS_DEFAULT_SAFETY_SCORE}`;
 
   if (grade && grade !== "NR") {
     return (

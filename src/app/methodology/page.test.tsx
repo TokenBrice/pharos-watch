@@ -403,4 +403,25 @@ describe("MethodologyPage", () => {
     expect(text).not.toContain("`safety-unrated` or `opportunity-evidence-missing` remain estimated");
   });
 
+  it("uses reader-facing Safety Score wording instead of internal V9/V10 engine prefixes in current prose", () => {
+    const root = methodologyDocument();
+    const internalPrefix = /\b(?:Safety Score V10|Safety v10\.18|In V10 Exit|Any V10 Exit|canonical V10|accepted V10|invalid V10|V9 exit capacity|V9 grade context|Safety Score v10\.(?:3[1-9]|4\d))\b/;
+    for (const sectionId of [
+      "safety-scores-methodology",
+      "mint-authority-score",
+      "liquidity-methodology",
+      "redemption-backstop-methodology",
+      "mint-burn-flow-methodology",
+      "blacklist-tracker-methodology",
+      "depeg-resolver-methodology",
+      "chain-health-score",
+    ]) {
+      const text = root.querySelector(`#${sectionId}`)!.textContent!;
+      expect(text, `#${sectionId} retained internal engine prefix`).not.toMatch(internalPrefix);
+    }
+    expect(SAFETY_SCORES_SECTION_CONTENT.markdown).not.toMatch(internalPrefix);
+    // Historical V8.17 archive disclosure remains intact.
+    expect(root.querySelector("#safety-scores-methodology")!.textContent).toContain("Historical V8.17 methodology");
+  });
+
 });

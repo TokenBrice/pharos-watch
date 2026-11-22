@@ -6,7 +6,8 @@ import { LazySection } from "@/components/lazy-section";
 import { Card, CardContent } from "@/components/ui/card";
 import { CompareRadarV9 } from "@/components/compare/radar-chart-v9";
 import { SafetyGradeBadge } from "@/components/safety-scores/safety-grade-badge";
-import { SafetyScoreTopDriver, type SafetyScoreTopDriverProps } from "@/components/safety-scores/safety-score-top-driver";
+import { SafetyScoreTopDriver } from "@/components/safety-scores/safety-score-top-driver";
+import { resolveSafetyCardTopDriver } from "@/app/safety-scores/v9-view-model";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { GRADE_RADAR_COLORS, PEG_METADATA } from "@shared/lib/classification";
@@ -34,20 +35,6 @@ function pillarMicroBarFillClass(score: number): string {
   if (score < 40) return "bg-[var(--severity-severe)]";
   if (score < 60) return "bg-[var(--severity-moderate)]";
   return "bg-meter-neutral";
-}
-
-// The table projection names a binding cap or a withheld score, but not the
-// peg multiplier, so an uncapped card shows no driver rather than a weakest
-// pillar that may not be what set its grade. It carries no evidence-freshness
-// verdict either, so the chip names no evidence age (the dossier owns it).
-function cardTopDriver(card: V9ConsumerCard): SafetyScoreTopDriverProps["driver"] {
-  if (card.ratingStatus === "not-rated") {
-    return { kind: "withheld", label: null, value: null, reason: card.nrReasons[0]?.message ?? "Required evidence is withheld." };
-  }
-  if (card.bindingCap !== null) {
-    return { kind: "cap-bound", label: card.bindingCap.kind, value: card.bindingCap.limit, reason: card.bindingCap.reason };
-  }
-  return null;
 }
 
 export const ReportCardMiniV9 = memo(function ReportCardMiniV9({
@@ -106,7 +93,7 @@ export const ReportCardMiniV9 = memo(function ReportCardMiniV9({
               <span className="sr-only">. {partial.summary}</span>
             </p>
           ) : null}
-          <SafetyScoreTopDriver driver={cardTopDriver(card)} coinId={card.id} subjectLabel={symbol} link={false} />
+          <SafetyScoreTopDriver driver={resolveSafetyCardTopDriver(card)} coinId={card.id} subjectLabel={symbol} link={false} />
 
           {hasPlottableV9RadarPillars(card) ? (
             <div className="w-full max-w-[11rem]">

@@ -386,7 +386,7 @@ describe("StabilityIndexClient", () => {
     expect(useTimeRangeFilterSpy).toHaveBeenCalledWith("ts", undefined, { initialRange: "30d" });
     expect(screen.getByRole("link", { name: "Severity" }).getAttribute("href")).toMatch(/^\/depeg\/?$/);
     expect(screen.getByRole("link", { name: "Breadth" }).getAttribute("href")).toMatch(/^\/depeg\/?$/);
-    expect(screen.getByRole("link", { name: "Stress breadth" }).getAttribute("href")).toMatch(/^\/depeg\/?#dews$/);
+    expect(screen.getByRole("link", { name: "Stress breadth" }).getAttribute("href")).toMatch(/^\/depeg\/?#dews-radar$/);
     expect(screen.getByRole("link", { name: "Trend" }).getAttribute("href")).toMatch(/^\/flows\/?$/);
 
     // ShowYourWorkToggle is present.

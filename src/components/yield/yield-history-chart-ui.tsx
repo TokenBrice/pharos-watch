@@ -387,8 +387,8 @@ export function SourceStrip({
                 transform: widthPct > 0 ? undefined : leftPct >= 100 ? "translateX(-100%)" : "translateX(-50%)",
               }}
               title={segment.startTs === segment.endTs
-                ? `${segment.sourceLabel} — observed ${formatChartDate(segment.startTs, "short")}`
-                : `${segment.sourceLabel} — ${formatChartDate(segment.startTs, "short")} to ${formatChartDate(segment.endTs, "short")}`}
+                ? `${segment.sourceLabel} · observed ${formatChartDate(segment.startTs, "short")}`
+                : `${segment.sourceLabel}: ${formatChartDate(segment.startTs, "short")} – ${formatChartDate(segment.endTs, "short")}`}
             />
           );
         })}

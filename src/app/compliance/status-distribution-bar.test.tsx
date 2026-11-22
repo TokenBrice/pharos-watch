@@ -57,4 +57,39 @@ describe("ComplianceStatusDistributionBars", () => {
     expect(new URLSearchParams(window.location.search).get("regime")).toBe("genius");
     expect(new URLSearchParams(window.location.search).get("status")).toBeNull();
   });
+
+  it("infers the active regime from status-only URLs so matching bar and legend segments highlight", () => {
+    window.history.replaceState(null, "", "/compliance/?status=authorized");
+    const { container, unmount } = render(
+      <ComplianceStatusDistributionBars
+        distribution={{
+          mica: [
+            { status: "authorized", count: 12 },
+            { status: "pending", count: 3 },
+          ],
+          genius: [{ status: "issuer-announced-intent", count: 4 }],
+        }}
+      />,
+    );
+
+    expect(container.querySelector('[data-status="authorized"]')?.getAttribute("aria-current")).toBe("true");
+    expect(container.querySelector('[data-legend-status="authorized"]')?.getAttribute("aria-current")).toBe("true");
+    expect(container.querySelector('[data-status="pending"]')?.className).toContain("opacity-45");
+    unmount();
+
+    window.history.replaceState(null, "", "/compliance/?status=issuer-announced-intent");
+    const geniusView = render(
+      <ComplianceStatusDistributionBars
+        distribution={{
+          mica: [{ status: "authorized", count: 12 }],
+          genius: [
+            { status: "issuer-announced-intent", count: 4 },
+            { status: "unknown", count: 2 },
+          ],
+        }}
+      />,
+    );
+    expect(geniusView.container.querySelector('[data-status="issuer-announced-intent"]')?.getAttribute("aria-current")).toBe("true");
+    expect(geniusView.container.querySelector('[data-legend-status="issuer-announced-intent"]')?.getAttribute("aria-current")).toBe("true");
+  });
 });

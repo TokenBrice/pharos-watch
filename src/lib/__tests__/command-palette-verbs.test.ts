@@ -130,17 +130,22 @@ describe("palette verb coin resolution", () => {
   });
 
   it.each([
-    ["usdc reserves", "/stablecoin/usdc-circle/#reserves"],
-    ["reserves usdc", "/stablecoin/usdc-circle/#reserves"],
-    ["usdc liquidity", "/stablecoin/usdc-circle/#liquidity"],
-    ["usdc history", "/stablecoin/usdc-circle/#history"],
-    ["depeg usdc", "/stablecoin/usdc-circle/#history"],
-    ["usdc freeze", "/stablecoin/usdc-circle/#activity"],
-  ])("resolves deep section intent %s -> %s", (input, expectedHref) => {
+    ["usdc reserves", "/stablecoin/usdc-circle/#reserves", "Reserves"],
+    ["reserves usdc", "/stablecoin/usdc-circle/#reserves", "Reserves"],
+    ["usdc liquidity", "/stablecoin/usdc-circle/#liquidity", "Liquidity"],
+    ["usdc history", "/stablecoin/usdc-circle/#history", "History"],
+    ["depeg usdc", "/stablecoin/usdc-circle/#history", "Depeg history"],
+    ["usdc freeze", "/stablecoin/usdc-circle/#freeze-seizure", "Freeze & Seizure"],
+    ["freezes usdc", "/stablecoin/usdc-circle/#freeze-seizure", "Freeze & Seizure"],
+    ["usdc blacklist", "/stablecoin/usdc-circle/#blacklist", "Blacklist Events"],
+    ["blacklist usdc", "/stablecoin/usdc-circle/#blacklist", "Blacklist Events"],
+    ["dai blacklist", "/stablecoin/dai-makerdao/#freeze-seizure", "Freeze & Seizure"],
+  ])("resolves deep section intent %s -> %s (%s)", (input, expectedHref, expectedLabel) => {
     const parsed = parsePaletteInput(input);
     expect(parsed.kind).toBe("section");
     if (parsed.kind !== "section") return;
     expect(parsed.href).toBe(expectedHref);
+    expect(parsed.sectionLabel).toBe(expectedLabel);
   });
 
   it("keeps bare section keywords as normal page searches while trailing space prompts for a ticker", () => {
@@ -148,11 +153,19 @@ describe("palette verb coin resolution", () => {
     expect(parsePaletteInput("reserves")).toEqual({ kind: "none" });
     expect(parsePaletteInput("liquidity")).toEqual({ kind: "none" });
     expect(parsePaletteInput("freeze")).toEqual({ kind: "none" });
+    expect(parsePaletteInput("blacklist")).toEqual({ kind: "none" });
 
     const prompt = parsePaletteInput("reserves ");
     expect(prompt.kind).toBe("section");
     if (prompt.kind === "section") {
       expect(prompt.resolvedCoinId).toBeNull();
+    }
+
+    const blacklistPrompt = parsePaletteInput("blacklist ");
+    expect(blacklistPrompt.kind).toBe("section");
+    if (blacklistPrompt.kind === "section") {
+      expect(blacklistPrompt.resolvedCoinId).toBeNull();
+      expect(blacklistPrompt.sectionLabel).toBe("Blacklist Events");
     }
   });
 });

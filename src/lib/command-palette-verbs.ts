@@ -20,6 +20,7 @@ import { buildLiveCompareUrl, buildStaticComparisonSlug, STATIC_COMPARE_PAIRS } 
 import { mergeCoinsParam } from "@/lib/portfolio-codec";
 import { decodeState, encodeState } from "@/lib/url-state";
 import { buildStablecoinUrl } from "@shared/lib/urls";
+import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
 import {
   SCREENER_URL_SCHEMA,
   type ScreenerFilters,
@@ -168,10 +169,13 @@ const STABLECOIN_META_BY_ID = new Map<string, { name: string; symbol: string }>(
   COMMAND_PALETTE_STABLECOINS.map(([id, name, symbol]) => [id, { name, symbol }]),
 );
 
+const BLACKLIST_SYMBOL_SET: ReadonlySet<string> = new Set(BLACKLIST_STABLECOINS);
+
 interface SectionIntentSpec {
   sectionKey: CommandPaletteDossierSectionKey;
   sectionLabel: string;
   hash: string;
+  resolveTarget?: (meta: { name: string; symbol: string } | null) => { sectionLabel: string; hash: string };
 }
 
 const SECTION_INTENT_BY_TOKEN: Readonly<Record<string, SectionIntentSpec>> = {
@@ -184,9 +188,19 @@ const SECTION_INTENT_BY_TOKEN: Readonly<Record<string, SectionIntentSpec>> = {
   history: { sectionKey: "history", sectionLabel: "History", hash: "#history" },
   depeg: { sectionKey: "history", sectionLabel: "Depeg history", hash: "#history" },
   depegs: { sectionKey: "history", sectionLabel: "Depeg history", hash: "#history" },
-  freeze: { sectionKey: "freeze", sectionLabel: "Freeze & Blacklist", hash: "#activity" },
-  freezes: { sectionKey: "freeze", sectionLabel: "Freeze & Blacklist", hash: "#activity" },
-  blacklist: { sectionKey: "freeze", sectionLabel: "Freeze & Blacklist", hash: "#activity" },
+  freeze: { sectionKey: "freeze", sectionLabel: "Freeze & Seizure", hash: "#freeze-seizure" },
+  freezes: { sectionKey: "freeze", sectionLabel: "Freeze & Seizure", hash: "#freeze-seizure" },
+  blacklist: {
+    sectionKey: "freeze",
+    sectionLabel: "Blacklist Events",
+    hash: "#blacklist",
+    resolveTarget: (meta) => {
+      if (!meta || BLACKLIST_SYMBOL_SET.has(meta.symbol)) {
+        return { sectionLabel: "Blacklist Events", hash: "#blacklist" };
+      }
+      return { sectionLabel: "Freeze & Seizure", hash: "#freeze-seizure" };
+    },
+  },
 };
 
 /**
@@ -203,16 +217,17 @@ function buildSectionVerb(
   const trimmedCoin = coinQuery.trim();
   const resolvedCoinId = trimmedCoin ? resolveCoinIdFromToken(trimmedCoin) : null;
   const meta = resolvedCoinId ? STABLECOIN_META_BY_ID.get(resolvedCoinId) ?? null : null;
+  const resolvedTarget = spec.resolveTarget ? spec.resolveTarget(meta) : spec;
   return {
     kind: "section",
     sectionKey: spec.sectionKey,
-    sectionLabel: spec.sectionLabel,
+    sectionLabel: resolvedTarget.sectionLabel,
     coinQuery: trimmedCoin,
     resolvedCoinId,
     resolvedCoinName: meta?.name ?? null,
     resolvedCoinSymbol: meta?.symbol ?? null,
-    hash: spec.hash,
-    href: resolvedCoinId ? `${buildStablecoinUrl(resolvedCoinId)}${spec.hash}` : "",
+    hash: resolvedTarget.hash,
+    href: resolvedCoinId ? `${buildStablecoinUrl(resolvedCoinId)}${resolvedTarget.hash}` : "",
   };
 }
 

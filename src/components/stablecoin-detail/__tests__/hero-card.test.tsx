@@ -21,6 +21,44 @@ const hydration = vi.hoisted(() => ({ hydrated: false }));
 vi.mock("@/hooks/use-hydrated", () => ({ useHydrated: () => hydration.hydrated }));
 const clock = vi.hoisted(() => ({ nowMs: null as number | null }));
 vi.mock("@/hooks/use-utc-day-clock", () => ({ useUtcDayNowMs: () => clock.nowMs }));
+const portfolioFixture = vi.hoisted(() => ({
+  forceOpen: false,
+  holdings: [] as Array<{ coinId: string; amount: number }>,
+}));
+
+vi.mock("@/hooks/use-portfolio", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/hooks/use-portfolio")>();
+  return {
+    ...actual,
+    usePortfolio: (initialUrlParam?: string, urlReady?: boolean) =>
+      portfolioFixture.forceOpen
+        ? {
+            initialized: true,
+            holdings: portfolioFixture.holdings,
+            totalUsd: portfolioFixture.holdings.reduce((sum, item) => sum + item.amount, 0),
+            isFromUrl: false,
+            addCoin: vi.fn(),
+            removeCoin: vi.fn(),
+            setAmount: vi.fn(),
+            clearAll: vi.fn(),
+            shareUrl: vi.fn(() => ""),
+          }
+        : actual.usePortfolio(initialUrlParam, urlReady),
+  };
+});
+
+vi.mock("@/components/ui/popover", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/components/ui/popover")>();
+  return {
+    ...actual,
+    Popover: (props: React.ComponentProps<typeof actual.Popover>) =>
+      portfolioFixture.forceOpen ? <div>{props.children}</div> : <actual.Popover {...props} />,
+    PopoverTrigger: (props: React.ComponentProps<typeof actual.PopoverTrigger>) =>
+      portfolioFixture.forceOpen ? <>{props.children}</> : <actual.PopoverTrigger {...props} />,
+    PopoverContent: (props: React.ComponentProps<typeof actual.PopoverContent>) =>
+      portfolioFixture.forceOpen ? <div>{props.children}</div> : <actual.PopoverContent {...props} />,
+  };
+});
 
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
@@ -438,7 +476,7 @@ describe("HeroCard", () => {
     const html = renderHero({ referenceNote: "Reference market closed", deviationBps: null });
     expect(html).toContain("Reference market closed");
     // A missing peg state outranks the closure: a NAV token keeps its own label.
-    expect(renderHero({ referenceNote: "Reference market closed", deviationBps: null, isNavToken: true })).toContain("NAV token — no fixed peg");
+    expect(renderHero({ referenceNote: "Reference market closed", deviationBps: null, isNavToken: true })).toContain("NAV token · no fixed peg");
   });
 
   it.each(["card", "cell"] as const)("withholds the %s peg deviation when its observed price is unusable", (variant) => {
@@ -539,9 +577,9 @@ describe("HeroCard", () => {
       verdict: { archetype: "yield-bearing-hybrid", label: "Yield-Bearing Hybrid" },
     });
 
-    expect(html).toContain("NAV token — no fixed peg");
+    expect(html).toContain("NAV token · no fixed peg");
     // No peg, so no tone: the line is neutral context, not a green "healthy" reading.
-    expect(html.split("NAV token — no fixed peg")[0]!.slice(-160)).not.toContain("text-green");
+    expect(html.split("NAV token · no fixed peg")[0]!.slice(-160)).not.toContain("text-green");
     // No DEWS or Peg reading applies: those tiles are left out, not filled with N/A.
     expect(html).not.toContain(">DEWS<");
     expect(html).not.toContain(">Peg<");
@@ -729,6 +767,28 @@ describe("HeroIdentityHeader", () => {
     } finally {
       hydration.hydrated = false;
       vi.restoreAllMocks();
+    }
+  });
+
+  it("preserves coin context on the Portfolio popover Open link when not yet held, and keeps /portfolio/ when held", () => {
+    hydration.hydrated = true;
+    portfolioFixture.forceOpen = true;
+    try {
+      portfolioFixture.holdings = [];
+      expect(renderHeader()).toContain('href="/portfolio/?coins=usdc-circle"');
+
+      portfolioFixture.holdings = [{ coinId: "usdt-tether", amount: 5000 }];
+      expect(renderHeader()).toContain('href="/portfolio/?p=usdt-tether%3A5000%2Cusdc-circle%3A0"');
+
+      portfolioFixture.holdings = [{ coinId: "usdc-circle", amount: 10000 }];
+      const heldHeader = renderHeader();
+      expect(heldHeader).toContain('href="/portfolio/"');
+      expect(heldHeader).not.toContain("/portfolio/?coins=");
+      expect(heldHeader).not.toContain("/portfolio/?p=");
+    } finally {
+      portfolioFixture.forceOpen = false;
+      portfolioFixture.holdings = [];
+      hydration.hydrated = false;
     }
   });
 });

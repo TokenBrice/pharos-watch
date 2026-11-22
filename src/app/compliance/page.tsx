@@ -31,9 +31,6 @@ const GENIUS_ACTIVE_SIGNALS = COMPLIANCE_STATUS_DISTRIBUTION.genius.reduce(
   (sum, item) => (GENIUS_ACTIVE_SIGNAL_STATUSES.has(item.status) ? sum + item.count : sum),
   0,
 );
-const GENIUS_PRIMARY_SIGNAL_STATUS =
-  COMPLIANCE_STATUS_DISTRIBUTION.genius.find((item) => GENIUS_ACTIVE_SIGNAL_STATUSES.has(item.status))?.status ??
-  "issuer-announced-intent";
 
 const complianceDescription = `${COMPLIANCE_SUMMARY.micaAuthorized} of ${MICA_IN_SCOPE} in-scope active stablecoins (${COMPLIANCE_SUMMARY.micaAssessed} assessed) hold MiCA authorization. ${GENIUS_ACTIVE_SIGNALS} GENIUS Act active signals across ${COMPLIANCE_SUMMARY.geniusTracked} tracked coins (effective ${GENIUS_REGIME_STATE.effectiveDate}).`;
 
@@ -117,7 +114,7 @@ const COMPLIANCE_HERO = (
         ) : null}
         {GENIUS_ACTIVE_SIGNALS > 0 ? (
           <Link
-            href={`/compliance/?regime=genius&status=${GENIUS_PRIMARY_SIGNAL_STATUS}#data`}
+            href="/compliance/?regime=genius#data"
             className="pharos-focus-ring pharos-control-pill min-h-11 px-3 text-xs font-medium sm:min-h-8"
           >
             GENIUS Active Signals ({GENIUS_ACTIVE_SIGNALS.toLocaleString()})

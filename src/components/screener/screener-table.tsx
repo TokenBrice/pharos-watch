@@ -34,6 +34,7 @@ import { SafetyScoreTopDriver, type SafetyScoreTopDriverProps } from "@/componen
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatCompactUsd } from "@shared/lib/format";
 import {
+  MECHANISM_ARCHETYPE_SHORT_LABELS,
   MINT_AUTHORITY_STATUS_CONFIG,
   PEG_METADATA,
   getMechanismArchetypeLabel,
@@ -67,8 +68,10 @@ function getRowSupplySeries(row: ScreenerRow): ReadonlyArray<number | null> {
   return row.supplySeries ?? [];
 }
 
+const COPY_LINK_LIMIT = 8;
+
 const DATA_COLUMNS: readonly DataTableColumn<ScreenerSortKey>[] = [
-  { id: "name", label: "Name", sortKey: "name", className: "min-w-[160px]" },
+  { id: "name", label: "Name", sortKey: "name", className: "min-w-[150px] max-w-[196px]" },
   { id: "supply", label: "Supply", sortKey: "supply", className: "text-right whitespace-nowrap" },
   {
     id: "pegScore",
@@ -101,21 +104,21 @@ const DATA_COLUMNS: readonly DataTableColumn<ScreenerSortKey>[] = [
   {
     id: "safetyProfile",
     label: "Safety Profile",
-    className: "w-[15rem] max-w-[15rem] text-center",
+    className: "w-[12.5rem] max-w-[12.5rem] text-center",
     title: "Safety Score pillars: Backing / Exit / Economic Control. The weakest published pillar is highlighted.",
   },
-  { id: "mechanism", label: "Mechanism", className: "text-left" },
+  { id: "mechanism", label: "Mechanism", className: "max-w-[140px] text-left" },
   { id: "peg", label: "Peg", className: "text-left whitespace-nowrap" },
   {
     id: "peg30d",
     label: "Peg range",
-    className: "text-right w-[112px] hidden xl:table-cell whitespace-nowrap",
+    className: "text-right w-[100px] hidden xl:table-cell whitespace-nowrap",
     title: "Peg range: worst / current deviation (±bps around the peg)",
   },
   {
     id: "supply30d",
     label: "30d Supply",
-    className: "text-right w-[112px] hidden xl:table-cell whitespace-nowrap",
+    className: "text-right w-[100px] hidden xl:table-cell whitespace-nowrap",
     title: "30-day supply trajectory",
   },
 ] as const;
@@ -229,7 +232,7 @@ export function ScreenerTable({
             />
           </label>
         ),
-        className: "w-11 text-center",
+        className: "w-10 text-center",
         title: "Select rows for Compare, Portfolio, or link sharing",
       },
       ...DATA_COLUMNS,
@@ -400,7 +403,8 @@ function ScreenerBatchTray({
   const compareIds = selectedIds.slice(0, MAX_COMPARE_COINS);
   const compareHref = buildLiveCompareUrl(compareIds);
   const portfolioHref = buildPortfolioCoinsHref(selectedIds);
-  const shareableIds = selectedIds.slice(0, 8);
+  const shareableIds = selectedIds.slice(0, COPY_LINK_LIMIT);
+  const copyLinkCapped = selectedIds.length > COPY_LINK_LIMIT;
 
   const handleCopyLink = async () => {
     if (typeof window === "undefined") return;
@@ -457,6 +461,11 @@ function ScreenerBatchTray({
 
           <button
             type="button"
+            title={
+              copyLinkCapped
+                ? `Copies a link to the first ${COPY_LINK_LIMIT} selected stablecoins`
+                : undefined
+            }
             onClick={() => {
               void handleCopyLink();
             }}
@@ -467,7 +476,9 @@ function ScreenerBatchTray({
             ) : (
               <Copy className="h-3.5 w-3.5" aria-hidden="true" />
             )}
-            <span>{copied ? "Copied" : "Copy link"}</span>
+            <span>
+              {copied ? "Copied" : copyLinkCapped ? `Copy link (${COPY_LINK_LIMIT})` : "Copy link"}
+            </span>
           </button>
 
           <button
@@ -665,7 +676,7 @@ function ScreenerTableRow({
       data-state={selected ? "selected" : undefined}
       className="data-[cursor=true]:bg-muted/40 data-[cursor=true]:shadow-[inset_3px_0_0_0_var(--brand-accent)]"
     >
-      <TableCell className="w-11 text-center">
+      <TableCell className="w-10 text-center">
         <label className="inline-flex size-8 cursor-pointer items-center justify-center">
           <input
             type="checkbox"
@@ -676,12 +687,12 @@ function ScreenerTableRow({
           />
         </label>
       </TableCell>
-      <TableCell className="min-w-[160px]">
+      <TableCell className="min-w-[150px] max-w-[196px]">
         <StablecoinIdentityTransition id={row.id}>
           <Link
             href={buildStablecoinUrl(row.id)}
             data-screener-open={row.id}
-            className="pharos-focus-ring inline-flex min-w-0 items-center gap-2 rounded-sm"
+            className="pharos-focus-ring inline-flex min-w-0 max-w-full items-center gap-2 rounded-sm"
           >
             <StablecoinIdentity
               layout="contents"
@@ -718,39 +729,42 @@ function ScreenerTableRow({
           <span className="text-muted-foreground">—</span>
         )}
       </TableCell>
-      <TableCell className="w-[15rem] max-w-[15rem] text-center">
+      <TableCell className="w-[12.5rem] max-w-[12.5rem] text-center">
         <div className="flex min-w-0 max-w-full flex-col items-center gap-1">
           <SafetyProfile row={row} />
           <SafetyScoreTopDriver driver={topDriver} coinId={row.id} subjectLabel={row.symbol} />
         </div>
       </TableCell>
-      <TableCell className="text-left text-muted-foreground">
-        {row.mechanism ? getMechanismArchetypeLabel(row.mechanism) : "—"}
+      <TableCell
+        className="max-w-[140px] text-left text-muted-foreground"
+        title={row.mechanism ? getMechanismArchetypeLabel(row.mechanism) : undefined}
+      >
+        {row.mechanism ? MECHANISM_ARCHETYPE_SHORT_LABELS[row.mechanism] : "—"}
       </TableCell>
       <TableCell className="whitespace-nowrap text-left text-muted-foreground">
         {PEG_METADATA[row.peg]?.filterLabel ?? row.peg}
       </TableCell>
       <TableCell
         data-column-id="peg30d"
-        className="hidden w-[112px] text-right xl:table-cell"
+        className="hidden w-[100px] text-right xl:table-cell"
       >
         <RowSparkline
           data={getRowPegDeviationSeries(row)}
           signed
           referenceValue={0}
           ariaLabel={`Peg range: worst / current for ${row.symbol}`}
-          width={96}
+          width={80}
           height={16}
         />
       </TableCell>
       <TableCell
         data-column-id="supply30d"
-        className="hidden w-[112px] text-right xl:table-cell"
+        className="hidden w-[100px] text-right xl:table-cell"
       >
         <RowSparkline
           data={getRowSupplySeries(row)}
           ariaLabel={`30-day supply trajectory for ${row.symbol}`}
-          width={96}
+          width={80}
           height={16}
         />
       </TableCell>

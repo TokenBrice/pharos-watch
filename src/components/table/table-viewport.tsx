@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
@@ -29,12 +31,60 @@ export function TableViewport({
 }: TableViewportProps) {
   const isPageSticky = !vertical && stickyMode === "page";
   const isViewportSticky = vertical || stickyMode === "viewport";
+  const autoMeasureOverflow = isPageSticky && horizontal === undefined;
+  const internalRef = React.useRef<HTMLDivElement | null>(null);
+  const [measuredOverflow, setMeasuredOverflow] = React.useState<boolean | null>(null);
+
+  const setViewportRef = React.useCallback(
+    (node: HTMLDivElement | null) => {
+      internalRef.current = node;
+      if (ref == null) return;
+      if (typeof ref === "function") {
+        ref(node);
+      } else {
+        ref.current = node;
+      }
+    },
+    [ref],
+  );
+
+  React.useEffect(() => {
+    if (!autoMeasureOverflow) return;
+    const viewport = internalRef.current;
+    if (!viewport) return;
+
+    const measure = () => {
+      if (viewport.clientWidth <= 0) return;
+      const table = viewport.querySelector("table");
+      if (!table) return;
+      const nextOverflows = table.scrollWidth > viewport.clientWidth + 1;
+      setMeasuredOverflow((current) => (current === nextOverflows ? current : nextOverflows));
+    };
+
+    if (typeof ResizeObserver !== "undefined") {
+      const observer = new ResizeObserver(measure);
+      observer.observe(viewport);
+      const table = viewport.querySelector("table");
+      if (table) observer.observe(table);
+      return () => observer.disconnect();
+    }
+
+    const rafId = window.requestAnimationFrame(measure);
+    return () => window.cancelAnimationFrame(rafId);
+  }, [autoMeasureOverflow]);
+
+  const activeOverflow = autoMeasureOverflow ? measuredOverflow : null;
+
   const horizontalOverflowClass = isPageSticky
     ? horizontal === true
       ? "overflow-x-auto"
       : horizontal === false
         ? undefined
-        : "overflow-x-auto lg:overflow-visible"
+        : activeOverflow === true
+          ? "overflow-x-auto"
+          : activeOverflow === false
+            ? "overflow-visible"
+            : "overflow-x-auto lg:overflow-visible"
     : (horizontal ?? true)
       ? "overflow-x-auto"
       : undefined;
@@ -45,7 +95,11 @@ export function TableViewport({
         ? "scroll-shadow"
         : horizontal === false
           ? undefined
-          : "scroll-shadow lg:bg-none"
+          : activeOverflow === true
+            ? "scroll-shadow"
+            : activeOverflow === false
+              ? undefined
+              : "scroll-shadow lg:bg-none"
       : "scroll-shadow";
 
   return (
@@ -57,7 +111,7 @@ export function TableViewport({
       ) : null}
       <div
         {...props}
-        ref={ref}
+        ref={setViewportRef}
         data-slot="table-viewport"
         data-sticky-mode={stickyMode}
         className={cn(

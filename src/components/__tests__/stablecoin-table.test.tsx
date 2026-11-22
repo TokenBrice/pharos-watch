@@ -571,4 +571,16 @@ describe("StablecoinTable", () => {
       expect(scrollToIndexMock).toHaveBeenCalledWith(1);
     });
   });
+
+  it("renders Grade and Mint Score column tooltips without V10 version prefixes", () => {
+    localStorage.setItem("pharos-table-columns", JSON.stringify(["name", "grade", "mintAuthority"]));
+    render(<StablecoinTable data={[coin]} isLoading={false} activeFilters={[]} />);
+
+    const gradeHeader = screen.getByRole("columnheader", { name: /Grade/ });
+    const mintHeader = screen.getByRole("columnheader", { name: /Mint Score/ });
+    expect(gradeHeader.getAttribute("title")).toContain("Safety Score across Backing");
+    expect(gradeHeader.getAttribute("title")).not.toContain("V10");
+    expect(mintHeader.getAttribute("title")).toContain("Safety Score mint-control component");
+    expect(mintHeader.getAttribute("title")).not.toContain("V10");
+  });
 });

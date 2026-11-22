@@ -520,7 +520,7 @@ export function YieldRankMovementCard({ attribution }: { attribution: YieldRankC
         <p className="pharos-label">
           Movement vs last publication
         </p>
-        <p className="mt-1.5 text-sm text-muted-foreground">Stable — no movement since last publication.</p>
+        <p className="mt-1.5 text-sm text-muted-foreground">Stable: no movement since last publication.</p>
       </div>
     );
   }
@@ -601,7 +601,7 @@ export function YieldRankMovementCard({ attribution }: { attribution: YieldRankC
                 <li key={key}>
                   <span className="text-foreground">{label.short}</span>:{" "}
                   <span className="font-mono tabular-nums text-foreground">{formatYieldDriverContext(key, value)}</span>{" "}
-                  <span className="text-muted-foreground/80">— {label.long}</span>
+                  <span className="text-muted-foreground/80">· {label.long}</span>
                 </li>
               );
             })}

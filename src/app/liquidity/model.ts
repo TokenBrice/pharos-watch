@@ -4,6 +4,7 @@ import type { PegCurrency } from "@shared/types/core";
 import { DEX_GLOBAL_KEY } from "@shared/types/dex-liquidity";
 import type { LiquidityStatsData } from "@/components/liquidity/liquidity-stats-types";
 import type { LiquidityRow } from "@/components/liquidity/liquidity-table";
+import { computeDepthToMcapRatio } from "@/components/liquidity/liquidity-table-logic";
 import { parseDataHealthWarnings } from "@/lib/data-health";
 
 export const PEG_FILTERS: { value: PegCurrency | "all"; label: string }[] = [
@@ -63,12 +64,17 @@ function matchesExitRouteFilter(
   return entries.some(([key, value]) => key.toLowerCase() === target && value > 0);
 }
 
-function computeMedian(values: readonly number[]): number | null {
+function computeRawMedian(values: readonly number[]): number | null {
   if (values.length === 0) return null;
   const sorted = [...values].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
   const raw = sorted.length % 2 === 1 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
-  return Number.isFinite(raw) ? Math.round(raw * 10) / 10 : null;
+  return Number.isFinite(raw) ? raw : null;
+}
+
+function computeMedian(values: readonly number[]): number | null {
+  const raw = computeRawMedian(values);
+  return raw != null ? Math.round(raw * 10) / 10 : null;
 }
 
 export interface LiquidityViewModel {
@@ -136,9 +142,9 @@ function computeLiquidityStats(
   let totalOrganic = 0;
   let organicWeight = 0;
   const change7dValues: number[] = [];
-  let depthRatioTvlSum = 0;
   let depthRatioMcapSum = 0;
   let aggDepthToMcapObservedCount = 0;
+  const depthToMcapValues: number[] = [];
 
   for (const { liq, mcapUsd } of allRows) {
     if (isUnavailableDexEvidence(liq)) continue;
@@ -149,10 +155,11 @@ function computeLiquidityStats(
       if (liq.liquidityScore == null) nrObservedCount++;
       if (liq.coverageClass === "primary" || liq.coverageClass === "mixed") highConfidenceCoverage++;
       if (liq.coverageClass === "fallback") fallbackCoverage++;
-      if (mcapUsd != null && Number.isFinite(mcapUsd) && mcapUsd > 0 && Number.isFinite(liq.totalTvlUsd) && liq.totalTvlUsd >= 0) {
-        depthRatioTvlSum += liq.totalTvlUsd;
+      const coinDepthRatio = computeDepthToMcapRatio(liq.totalTvlUsd, mcapUsd);
+      if (coinDepthRatio != null && mcapUsd != null) {
         depthRatioMcapSum += mcapUsd;
         aggDepthToMcapObservedCount++;
+        depthToMcapValues.push(coinDepthRatio);
       }
     }
     if (liq.tvlChange7d != null && Number.isFinite(liq.tvlChange7d) && liq.totalTvlUsd > 0) {
@@ -194,10 +201,20 @@ function computeLiquidityStats(
   const agg7dChangeBasis =
     publishedGlobal7d != null ? "global" as const : weighted7d != null ? "weighted" as const : null;
   const median7dChange = computeMedian(change7dValues);
+  // Per-coin totalTvlUsd is gross (multi-stablecoin pools count full pool TVL in every
+  // constituent coin), while globalData.totalTvlUsd is cross-coin deduped. Publish the
+  // aggregate ratio only from deduped global TVL when every observed DEX coin has positive
+  // supply so numerator and denominator share the exact same cohort (R7). Otherwise fall
+  // back to the per-coin median, which never double-counts shared pools across coins.
   const aggDepthToMcapRatio =
-    depthRatioMcapSum > 0 && Number.isFinite(depthRatioTvlSum / depthRatioMcapSum)
-      ? depthRatioTvlSum / depthRatioMcapSum
+    totalTvl != null &&
+    withLiquidity > 0 &&
+    aggDepthToMcapObservedCount === withLiquidity &&
+    depthRatioMcapSum > 0 &&
+    Number.isFinite(totalTvl / depthRatioMcapSum)
+      ? totalTvl / depthRatioMcapSum
       : null;
+  const medianDepthToMcapRatio = computeRawMedian(depthToMcapValues);
 
   return {
     totalTvl,
@@ -217,6 +234,7 @@ function computeLiquidityStats(
     median7dChange,
     change7dCoinCount: change7dValues.length,
     aggDepthToMcapRatio,
+    medianDepthToMcapRatio,
     aggDepthToMcapObservedCount,
     avgBalance: balanceWeight > 0 ? Math.round((totalBalance / balanceWeight) * 100) : null,
     avgOrganic: organicWeight > 0 ? Math.round((totalOrganic / organicWeight) * 100) : null,

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import * as React from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -452,5 +452,68 @@ describe("Pharos table primitives", () => {
     expect(screen.getByText("Page 2 of 5")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Go to previous page" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Go to next page" })).toBeTruthy();
+  });
+
+  it("keeps page-sticky TableViewport horizontally scrollable when the table exceeds viewport width and restores overflow-visible once it fits", () => {
+    const originalResizeObserver = globalThis.ResizeObserver;
+    let triggerResize: (() => void) | null = null;
+    const observed: Element[] = [];
+
+    class MockResizeObserver {
+      private readonly callback: ResizeObserverCallback;
+      constructor(callback: ResizeObserverCallback) {
+        this.callback = callback;
+        triggerResize = () => this.callback([], this as unknown as ResizeObserver);
+      }
+      observe(target: Element) {
+        observed.push(target);
+      }
+      unobserve() {}
+      disconnect() {}
+    }
+
+    globalThis.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
+    try {
+      render(
+        <TableFrame tableId="wide-page-sticky" stickyHeader stickyMode="page">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Coin</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow>
+              <TableCell>USDC</TableCell>
+            </TableRow>
+          </TableBody>
+        </TableFrame>,
+      );
+
+      const table = screen.getByRole("table");
+      const viewport = table.parentElement as HTMLDivElement;
+      expect(observed).toContain(viewport);
+      expect(observed).toContain(table);
+
+      Object.defineProperty(viewport, "clientWidth", { configurable: true, value: 1000 });
+      Object.defineProperty(table, "scrollWidth", { configurable: true, value: 1180 });
+      act(() => {
+        triggerResize?.();
+      });
+
+      expect(viewport.className).toContain("overflow-x-auto");
+      expect(viewport.className).toContain("scroll-shadow");
+      expect(viewport.className).not.toContain("overflow-visible");
+
+      Object.defineProperty(table, "scrollWidth", { configurable: true, value: 980 });
+      act(() => {
+        triggerResize?.();
+      });
+
+      expect(viewport.className).toContain("overflow-visible");
+      expect(viewport.className).not.toContain("overflow-x-auto");
+      expect(viewport.className).not.toContain("scroll-shadow");
+    } finally {
+      globalThis.ResizeObserver = originalResizeObserver;
+    }
   });
 });

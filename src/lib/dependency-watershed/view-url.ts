@@ -14,11 +14,18 @@ export function readDependencyMapView(search: string): DependencyMapView {
   return "watershed";
 }
 
-/** Writes `view=network` only for the non-default Network view; other parameters are preserved. */
+/** Writes `view=network` only for the non-default Network view; switching back to Watershed clears Network-scoped params while preserving unrelated parameters. */
 export function writeDependencyMapView(search: string, view: DependencyMapView): string {
   const params = new URLSearchParams(search);
   params.delete("view");
-  if (view === "network") params.set("view", view);
+  if (view === "network") {
+    params.set("view", view);
+  } else {
+    params.delete("focus");
+    params.delete("trace");
+    params.delete("type");
+    params.delete("limit");
+  }
   const query = params.toString();
   return query ? `?${query}` : "";
 }

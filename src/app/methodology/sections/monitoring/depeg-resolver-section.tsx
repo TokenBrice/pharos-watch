@@ -37,7 +37,7 @@ export function DepegResolverMethodologySection() {
         strong non-inflatable-supply or hard-collateral/redemption anchor on a break deeper than 1,000 bps (the worse
         of the stored peak and live deviation), is Terminal evidence. Any other below-peg kill signal, or a deep break
         with none, reads as Stress signals. Static exit thinness &mdash; a thin route, no viable route, thin liquidity,
-        or thin redemption capacity &mdash; caps at elevated: V9 exit capacity is measured against the
+        or thin redemption capacity &mdash; caps at elevated: Safety Score exit capacity is measured against the
         dislocation&rsquo;s value gap (supply times break depth) instead of the Safety Score stress request and its $1M
         floor, which made small-float coins look exhausted in calm periods too. Exit collapse is severe only when DEX
         TVL falls at least 40% from the event&rsquo;s onset baseline on a thin market.
@@ -56,7 +56,7 @@ export function DepegResolverMethodologySection() {
         Stage 1 is a calibrated mechanistic rubric, not fitted machine learning. The terminal-label corpus is roughly 90
         mostly month-precision deaths that do not join to a clean feature vector at the depeg moment, so the thresholds
         are tuned and backtested against that corpus, DDRR reviewed outcomes, and the recovered-event set rather than
-        learned as weights. DDRv4 added issuer wind-down evidence, mechanism-gated backing impairment, V9 grade context,
+        learned as weights. DDRv4 added issuer wind-down evidence, mechanism-gated backing impairment, Safety Score grade context,
         and event-time mint/burn context to the terminality read. Forecast readiness is a publication trigger, not a
         probability or confidence level. Structural mint risk reads the published Safety Score mint posture, with
         curated fallback when unavailable. A finding of no mint authority on a wrapper does not establish that its

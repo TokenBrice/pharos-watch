@@ -354,6 +354,7 @@
   --color-meter-neutral: var(--meter-neutral-fill);
   --color-meter-track: var(--meter-track-bg);
   --color-meter-track-border: var(--meter-track-border);
+  --color-brand-accent: var(--brand-accent);
   --color-brand-accent-text: var(--brand-accent-text);
 }
 

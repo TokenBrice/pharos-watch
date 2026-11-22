@@ -491,11 +491,11 @@ const pharosBoundaryPlugin = {
         },
       },
       create(context) {
-        // Foreground text utilities on frost-blue (`text-frost-blue`,
-        // `hover:text-frost-blue`, `text-frost-blue/80`, `!text-frost-blue`) fail
-        // WCAG AA contrast on light surfaces. Explicit `dark:`-prefixed variants
-        // (`dark:text-frost-blue`, `dark:hover:text-frost-blue`) stay legal.
-        const corePattern = /^!?text-frost-blue(?:\/|!|$)/;
+        // Foreground text utilities on frost-blue / brand-accent (`text-frost-blue`,
+        // `text-brand-accent`, `text-[var(--brand-accent)]`, `hover:text-frost-blue`,
+        // `text-frost-blue/80`, `!text-frost-blue`) fail WCAG AA contrast on light
+        // surfaces. Explicit `dark:`-prefixed variants stay legal.
+        const corePattern = /^!?text-(?:frost-blue|brand-accent|\[var\(--(?:frost-blue|brand-accent)\)\])(?:\/|!|$)/;
         function check(node, text) {
           if (typeof text !== "string") return;
           for (const token of text.split(/\s|["'`]/)) {

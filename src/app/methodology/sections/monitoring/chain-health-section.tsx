@@ -116,8 +116,8 @@ export function ChainHealthMethodologySection() {
       </p>
 
       <p>
-        Only a fresh, accepted V10 publication contributes Safety quality. Missing, held, stale, or invalid V10 leaves
-        quality and the composite NR; Chain Health never falls back to V8 or a stale score map.
+        Only a fresh, accepted Safety Score publication contributes Safety quality. Missing, held, stale, or invalid Safety Score data leaves
+        quality and the composite NR; Chain Health never falls back to a legacy model or a stale score map.
       </p>
 
       <p className="text-xs text-muted-foreground">
