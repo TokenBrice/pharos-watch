@@ -203,6 +203,7 @@ export async function handleHttpRequestImpl(
       env,
       execCtx: ctx,
       trustedAdmin: isAdmin,
+      requestLane,
       routeDependencies: resolvedRoute.routeMatch.dependencies,
     }),
     resolvedRoute,

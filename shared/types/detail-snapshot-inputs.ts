@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { StablecoinLiveSummarySchema } from "./stablecoin-live-summary";
 import { SupplyHistoryResponseSchema } from "./supply";
-// Wire-contract batch bound; producers and consumers import this same authority.
+// Wire-contract batch bounds; producers and consumers import this same authority.
 export const DETAIL_SNAPSHOT_INPUT_BATCH_SIZE = 10;
+export const DETAIL_SNAPSHOT_INPUT_MAX_BATCH_SIZE = 20;
 
 const SourceClockSchema = z.number().finite().nonnegative().nullable();
 const SourcesSchema = z.object({
@@ -29,6 +30,15 @@ const DetailSnapshotInputEntrySchema = z.discriminatedUnion("status", [
   }),
   z.object({
     id: z.string().min(1),
+    status: z.literal("history-only"),
+    reason: z.literal("detail-cache-missing"),
+    supplyHistory: SupplyHistoryResponseSchema,
+    updatedAt: z.object({ supplyHistory: z.number().finite().nonnegative() }),
+    freshness: z.object({ supplyHistory: FreshnessSchema }),
+    sources: SourcesSchema,
+  }),
+  z.object({
+    id: z.string().min(1),
     status: z.literal("unavailable"),
     reason: z.enum(["unknown-id", "detail-cache-missing", "detail-cache-invalid-clock", "detail-cache-too-old", "publication-unavailable", "supply-marker-missing", "source-clock-unavailable", "invalid-cache-input", "entry-too-large", "cache-read-failed"]),
     sources: SourcesSchema,
@@ -37,5 +47,5 @@ const DetailSnapshotInputEntrySchema = z.discriminatedUnion("status", [
 export type DetailSnapshotInputEntry = z.infer<typeof DetailSnapshotInputEntrySchema>;
 export const DetailSnapshotInputsResponseSchema = z.object({
   version: z.literal(1),
-  entries: z.array(DetailSnapshotInputEntrySchema).min(1).max(DETAIL_SNAPSHOT_INPUT_BATCH_SIZE),
+  entries: z.array(DetailSnapshotInputEntrySchema).min(1).max(DETAIL_SNAPSHOT_INPUT_MAX_BATCH_SIZE),
 });

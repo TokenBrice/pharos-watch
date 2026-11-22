@@ -6,7 +6,7 @@ import { resolve } from "node:path";
 import { Worker } from "node:worker_threads";
 import sharp, { type Sharp } from "sharp";
 import { SOCIAL_PREVIEW_HEIGHT, SOCIAL_PREVIEW_WIDTH, type SocialPreviewImage } from "../../shared/lib/social-preview";
-import { assertSocialPreviewPng } from "../../shared/lib/social-preview-asset";
+import { assertSocialPreviewPng, socialPreviewAssetIdentity } from "../../shared/lib/social-preview-asset";
 import type { SocialCardAssets, SocialCardLogo } from "../../shared/lib/social-card/parts";
 import type { SocialCardSpec, SocialScorecardCard } from "../../shared/lib/social-card/spec";
 import { createSocialCardMeasurer, type HarfBuzzApi } from "../../shared/lib/social-card/text";
@@ -33,6 +33,7 @@ import {
 } from "./social-card-render";
 
 export const SOCIAL_PREVIEW_MAP_PATH = "src/generated/social-preview-images.json";
+export const DEFAULT_SOCIAL_PREVIEW_OUT_DIR = "public/og/v2";
 /** The rasterizer joins every drawn identity, as do the satori and resvg package versions. */
 const RASTER_SOURCE = "scripts/lib/og-resvg-render.mts";
 const WARN_BYTES = 300_000;
@@ -74,6 +75,8 @@ export interface SocialPreviewCardTask {
 
 export interface SocialPreviewWorkerPayload {
   repoRoot: string;
+  /** Resolved target directory for PNG writes; omitted when returning PNG buffers in memory. */
+  outputDir?: string;
   background: string;
   fontBuffersByFace: readonly Uint8Array[];
   resvgFontBuffers: readonly Uint8Array[];
@@ -84,6 +87,7 @@ export interface SocialPreviewWorkerPayload {
 export interface SocialPreviewWorkerResult {
   rendered: number;
   warnings: { url: string; message: string }[];
+  buffers?: [string, Uint8Array][];
 }
 
 /** Static leaves are discovered, not copied into another hand-maintained route inventory. */
@@ -325,12 +329,22 @@ function buildWorkerRenderAssets(
   };
 }
 
+function outputPathForPreviewUrl(outputDir: string, url: string): string {
+  if (!url.startsWith("/og/v2/")) throw new Error(`Unexpected social preview URL: ${url}`);
+  const filename = url.slice("/og/v2/".length);
+  if (!filename || filename.includes("/") || filename.includes("\\") || filename === "." || filename === "..") {
+    throw new Error(`Unsafe social preview filename in URL: ${url}`);
+  }
+  return resolve(outputDir, filename);
+}
+
 /** Worker-thread entrypoint: renders one partition of missing drawn cards with preloaded fonts and logos. */
 export async function renderSocialPreviewWorkerBatch(payload: SocialPreviewWorkerPayload): Promise<SocialPreviewWorkerResult> {
   const hb = await (createRequire(import.meta.url)("harfbuzzjs") as Promise<HarfBuzzApi>);
   const assets = buildWorkerRenderAssets(hb, payload.fontBuffersByFace, payload.logos);
   const resvgFontBuffers = payload.resvgFontBuffers.map((raw) => new Uint8Array(raw.buffer, raw.byteOffset, raw.byteLength));
   const warnings: { url: string; message: string }[] = [];
+  const buffers: [string, Uint8Array][] | undefined = payload.outputDir === undefined ? [] : undefined;
   for (const { url, spec } of payload.tasks) {
     const svg = await renderSocialCardSvg(spec, assets);
     const bytes = await renderSvgPngWithResvg({
@@ -340,9 +354,10 @@ export async function renderSocialPreviewWorkerBatch(payload: SocialPreviewWorke
       width: SOCIAL_PREVIEW_WIDTH,
     });
     admitPng(bytes, url, (message) => warnings.push({ url, message }));
-    atomicWriteFileSync(resolve(payload.repoRoot, `public${url}`), bytes);
+    if (payload.outputDir !== undefined) atomicWriteFileSync(outputPathForPreviewUrl(payload.outputDir, url), bytes);
+    else buffers!.push([url, bytes]);
   }
-  return { rendered: payload.tasks.length, warnings };
+  return buffers ? { rendered: payload.tasks.length, warnings, buffers } : { rendered: payload.tasks.length, warnings };
 }
 
 function partitionTasksRoundRobin<T>(tasks: readonly T[], poolSize: number): T[][] {
@@ -353,13 +368,9 @@ function partitionTasksRoundRobin<T>(tasks: readonly T[], poolSize: number): T[]
   return partitions.filter((partition) => partition.length > 0);
 }
 
-/**
- * Renders missing drawn social cards in-process (when poolSize === 1) or across
- * `node:worker_threads` sharing preloaded font buffers and only the logos each
- * worker's cards reference.
- */
-export async function renderSocialPreviewCards({
+async function runSocialPreviewCardTasks({
   repoRoot,
+  outputDir,
   tasks,
   renderAssets,
   resvgFontBuffers = [],
@@ -367,13 +378,15 @@ export async function renderSocialPreviewCards({
   workerCount = Math.min(8, Math.max(1, availableParallelism())),
 }: {
   repoRoot: string;
+  outputDir?: string;
   tasks: readonly SocialPreviewCardTask[];
   renderAssets: SocialCardRenderAssets;
   resvgFontBuffers?: readonly Uint8Array[];
   background?: string;
   workerCount?: number;
-}): Promise<{ rendered: number }> {
-  if (tasks.length === 0) return { rendered: 0 };
+}): Promise<{ rendered: number; buffers: Map<string, Buffer> }> {
+  const buffers = new Map<string, Buffer>();
+  if (tasks.length === 0) return { rendered: 0, buffers };
   if (!Number.isSafeInteger(workerCount) || workerCount < 1) {
     throw new Error(`Invalid social preview worker count: ${workerCount}`);
   }
@@ -388,9 +401,10 @@ export async function renderSocialPreviewCards({
         width: SOCIAL_PREVIEW_WIDTH,
       });
       admitPng(bytes, url);
-      atomicWriteFileSync(resolve(repoRoot, `public${url}`), bytes);
+      if (outputDir !== undefined) atomicWriteFileSync(outputPathForPreviewUrl(outputDir, url), bytes);
+      else buffers.set(url, Buffer.from(bytes));
     }
-    return { rendered: tasks.length };
+    return { rendered: tasks.length, buffers };
   }
 
   const partitions = partitionTasksRoundRobin(tasks, poolSize);
@@ -407,6 +421,7 @@ export async function renderSocialPreviewCards({
       });
       const workerData: SocialPreviewWorkerPayload = {
         repoRoot,
+        outputDir,
         background,
         fontBuffersByFace: renderAssets.fontBuffers,
         resvgFontBuffers,
@@ -436,32 +451,62 @@ export async function renderSocialPreviewCards({
       .flatMap((result) => result.warnings)
       .sort((left, right) => left.url.localeCompare(right.url));
     for (const warning of warnings) console.warn(warning.message);
+    for (const result of results) {
+      for (const [url, bytes] of result.buffers ?? []) buffers.set(url, Buffer.from(bytes));
+    }
     const rendered = results.reduce((sum, result) => sum + result.rendered, 0);
     if (rendered !== tasks.length) {
       throw new Error(`Worker render left ${tasks.length - rendered} social previews unrendered`);
     }
-    return { rendered };
+    return { rendered, buffers };
   } finally {
     await Promise.all(workers.map((worker) => worker.terminate()));
   }
+}
+
+/**
+ * Renders missing drawn social cards in-process (when poolSize === 1) or across
+ * `node:worker_threads` sharing preloaded font buffers and only the logos each
+ * worker's cards reference.
+ */
+export async function renderSocialPreviewCards({
+  repoRoot,
+  outDir = DEFAULT_SOCIAL_PREVIEW_OUT_DIR,
+  tasks,
+  renderAssets,
+  resvgFontBuffers = [],
+  background = DARK.ground,
+  workerCount = Math.min(8, Math.max(1, availableParallelism())),
+}: {
+  repoRoot: string;
+  outDir?: string;
+  tasks: readonly SocialPreviewCardTask[];
+  renderAssets: SocialCardRenderAssets;
+  resvgFontBuffers?: readonly Uint8Array[];
+  background?: string;
+  workerCount?: number;
+}): Promise<{ rendered: number }> {
+  const { rendered } = await runSocialPreviewCardTasks({
+    repoRoot,
+    outputDir: resolve(repoRoot, outDir),
+    tasks,
+    renderAssets,
+    resvgFontBuffers,
+    background,
+    workerCount,
+  });
+  return { rendered };
 }
 
 function matchesShard(url: string, shard?: { index: number; count: number }): boolean {
   return !shard || Number.parseInt(url.slice(-12, -4), 16) % shard.count === shard.index;
 }
 
-/**
- * `check` validates in memory and reads no ignored output; `map` (bootstrap)
- * also writes the route map; `render` also rasterizes every current image that
- * public/og/v2 lacks. A URL hashes its inputs, so an existing file is that image.
- */
-export async function buildSocialPreviewImages({ repoRoot, mode, load = loadSocialPreviewEntries, shard, workers }: {
-  repoRoot: string; mode: "check" | "map" | "render"; load?: (repoRoot: string) => Promise<SocialPreviewEntries>;
-  /** Render only the K-th of N slices of the missing images and write no map: kept for CLI compatibility and tests. */
-  shard?: { index: number; count: number };
-  /** Optional worker count override for default worker_threads rendering. */
-  workers?: number;
-}): Promise<{ routes: number; images: number; rendered: number }> {
+function computeCatalogDrawnEntries(repoRoot: string): {
+  catalog: ReturnType<typeof buildSocialCardCatalog>;
+  drawnByUrl: Map<string, SocialCardSpec>;
+  routeDrawnMap: Record<string, SocialPreviewImage>;
+} {
   const digests = new Map<string, string>();
   const hashFile = (file: string): string => {
     let digest = digests.get(file);
@@ -473,26 +518,114 @@ export async function buildSocialPreviewImages({ repoRoot, mode, load = loadSoci
     satori: (require("satori/package.json") as { version: string }).version,
     "@cf-wasm/resvg": (require("@cf-wasm/resvg/package.json") as { version: string }).version,
   };
+  const catalog = buildSocialCardCatalog(discoverSocialPreviewPages(repoRoot));
+  const drawnByUrl = new Map<string, SocialCardSpec>();
+  const routeDrawnMap: Record<string, SocialPreviewImage> = {};
+  for (const card of catalog.cards) {
+    const { path, copy, ...drawn } = card;
+    const inputs = [...SOCIAL_CARD_RENDER_SOURCES, ...identitiesOf(card).flatMap((identity) => (identity.logoPath ? [`public${identity.logoPath}`] : []))];
+    const files = [...new Set([RASTER_SOURCE, ...inputs].map(hashFile))].sort();
+    const url = `/og/v2/image-${sha256(stableJsonStringifyV1({ drawn, files, packages }))}.png`;
+    if (!drawnByUrl.has(url)) drawnByUrl.set(url, card);
+    routeDrawnMap[path] = { ...copy, url, width: SOCIAL_PREVIEW_WIDTH, height: SOCIAL_PREVIEW_HEIGHT, type: "image/png" };
+  }
+  return { catalog, drawnByUrl, routeDrawnMap };
+}
 
+/**
+ * Renders ONLY the requested missing R2 keys (`evergreen/v2/image-<sha256>.png`)
+ * into admitted in-memory PNG buffers, loading only the logos those cards use.
+ * Handles both drawn cards and authored covers, failing closed on any unknown key.
+ */
+export async function renderMissingSocialPreviewBuffers(
+  repoRoot: string,
+  missingKeys: ReadonlySet<string>,
+  { workers }: { workers?: number } = {},
+): Promise<Map<string, Buffer>> {
+  const result = new Map<string, Buffer>();
+  if (missingKeys.size === 0) return result;
+
+  const { catalog, drawnByUrl } = computeCatalogDrawnEntries(repoRoot);
+  const missingDrawn: SocialPreviewCardTask[] = [];
+  const matchedKeys = new Set<string>();
+  for (const [url, spec] of drawnByUrl) {
+    const identity = socialPreviewAssetIdentity(url);
+    if (!identity || !missingKeys.has(identity.key)) continue;
+    matchedKeys.add(identity.key);
+    missingDrawn.push({ url, spec });
+  }
+
+  if (matchedKeys.size < missingKeys.size) {
+    const uniqueAuthored = [...new Set(catalog.authored.map(({ sourcePath }) => `public${sourcePath}`))];
+    const admittedAuthored = await Promise.all(
+      uniqueAuthored.map(async (authored) => {
+        const warnings: string[] = [];
+        const bytes = await admitAuthoredPng(repoRoot, authored, (message) => warnings.push(message));
+        return { url: `/og/v2/image-${sha256(bytes)}.png`, bytes, warnings };
+      }),
+    );
+    for (const entry of admittedAuthored) {
+      const identity = socialPreviewAssetIdentity(entry.url);
+      if (!identity || !missingKeys.has(identity.key) || matchedKeys.has(identity.key)) continue;
+      for (const message of entry.warnings) console.warn(message);
+      matchedKeys.add(identity.key);
+      result.set(identity.key, entry.bytes);
+    }
+  }
+
+  const unmatched = [...missingKeys].filter((key) => !matchedKeys.has(key));
+  if (unmatched.length > 0) {
+    throw new Error(`Cannot render unknown social preview identities absent from current catalog: ${unmatched.slice(0, 5).join(", ")}`);
+  }
+
+  if (missingDrawn.length > 0) {
+    const renderAssets = await loadSocialCardAssets(repoRoot, missingDrawn.map(({ spec }) => spec));
+    for (const { spec } of missingDrawn) validateSocialCardSpec(spec, renderAssets);
+    const effectiveWorkers = workers ?? (missingDrawn.length <= 4 ? 1 : Math.min(8, Math.max(1, availableParallelism())));
+    const { buffers } = await runSocialPreviewCardTasks({
+      repoRoot,
+      tasks: missingDrawn,
+      renderAssets,
+      resvgFontBuffers: [],
+      background: DARK.ground,
+      workerCount: effectiveWorkers,
+    });
+    for (const { url } of missingDrawn) {
+      const identity = socialPreviewAssetIdentity(url)!;
+      const bytes = buffers.get(url);
+      if (!bytes) throw new Error(`Social preview render produced no bytes for ${identity.key}`);
+      result.set(identity.key, bytes);
+    }
+  }
+  return result;
+}
+
+/**
+ * `check` validates in memory and reads no ignored output; `map` (bootstrap)
+ * also writes the route map; `render` also rasterizes every current image that
+ * `outDir` (default `public/og/v2`) lacks. A URL hashes its inputs, so an existing file is that image.
+ */
+export async function buildSocialPreviewImages({ repoRoot, mode, load = loadSocialPreviewEntries, outDir = DEFAULT_SOCIAL_PREVIEW_OUT_DIR, shard, workers }: {
+  repoRoot: string; mode: "check" | "map" | "render"; load?: (repoRoot: string) => Promise<SocialPreviewEntries>;
+  /** Output directory for rendered PNGs (relative to `repoRoot` or absolute; default `public/og/v2`). */
+  outDir?: string;
+  /** Render only the K-th of N slices of the missing images and write no map: kept for CLI compatibility and tests. */
+  shard?: { index: number; count: number };
+  /** Optional worker count override for default worker_threads rendering. */
+  workers?: number;
+}): Promise<{ routes: number; images: number; rendered: number }> {
+  const outputDir = resolve(repoRoot, outDir);
   const map: Record<string, SocialPreviewImage> = {};
   let imageCount = 0;
   let rendered = 0;
 
   if (load === loadSocialPreviewEntries) {
-    const catalog = buildSocialCardCatalog(discoverSocialPreviewPages(repoRoot));
-    const drawnByUrl = new Map<string, SocialCardSpec>();
-    for (const card of catalog.cards) {
-      const { path, copy, ...drawn } = card;
-      const inputs = [...SOCIAL_CARD_RENDER_SOURCES, ...identitiesOf(card).flatMap((identity) => (identity.logoPath ? [`public${identity.logoPath}`] : []))];
-      const files = [...new Set([RASTER_SOURCE, ...inputs].map(hashFile))].sort();
-      const url = `/og/v2/image-${sha256(stableJsonStringifyV1({ drawn, files, packages }))}.png`;
-      if (!drawnByUrl.has(url)) drawnByUrl.set(url, card);
-      map[path] = { ...copy, url, width: SOCIAL_PREVIEW_WIDTH, height: SOCIAL_PREVIEW_HEIGHT, type: "image/png" };
-    }
+    const { catalog, drawnByUrl, routeDrawnMap } = computeCatalogDrawnEntries(repoRoot);
+    Object.assign(map, routeDrawnMap);
 
     const missingDrawn: SocialPreviewCardTask[] = mode === "render"
       ? [...drawnByUrl.entries()]
-        .filter(([url]) => !existsSync(resolve(repoRoot, `public${url}`)) && matchesShard(url, shard))
+        .filter(([url]) => !existsSync(outputPathForPreviewUrl(outputDir, url)) && matchesShard(url, shard))
         .map(([url, spec]) => ({ url, spec }))
       : [];
 
@@ -522,16 +655,18 @@ export async function buildSocialPreviewImages({ repoRoot, mode, load = loadSoci
     imageCount = new Set([...drawnByUrl.keys(), ...authoredByUrl.keys()]).size;
 
     if (mode === "render") {
-      mkdirSync(resolve(repoRoot, "public/og/v2"), { recursive: true });
+      mkdirSync(outputDir, { recursive: true });
       for (const [url, bytes] of authoredByUrl) {
-        if (existsSync(resolve(repoRoot, `public${url}`)) || !matchesShard(url, shard)) continue;
+        const destination = outputPathForPreviewUrl(outputDir, url);
+        if (existsSync(destination) || !matchesShard(url, shard)) continue;
         admitPng(bytes, url);
-        atomicWriteFileSync(resolve(repoRoot, `public${url}`), bytes);
+        atomicWriteFileSync(destination, bytes);
         rendered++;
       }
       if (missingDrawn.length > 0 && renderAssets) {
         const result = await renderSocialPreviewCards({
           repoRoot,
+          outDir: outputDir,
           tasks: missingDrawn,
           renderAssets,
           resvgFontBuffers: [],
@@ -542,6 +677,17 @@ export async function buildSocialPreviewImages({ repoRoot, mode, load = loadSoci
       }
     }
   } else {
+    const digests = new Map<string, string>();
+    const hashFile = (file: string): string => {
+      let digest = digests.get(file);
+      if (digest === undefined) digests.set(file, digest = sha256(readFileSync(resolve(repoRoot, file))));
+      return digest;
+    };
+    const require = createRequire(import.meta.url);
+    const packages = {
+      satori: (require("satori/package.json") as { version: string }).version,
+      "@cf-wasm/resvg": (require("@cf-wasm/resvg/package.json") as { version: string }).version,
+    };
     const { entries, fonts, background } = await load(repoRoot);
     const uniqueAuthoredFiles = [...new Set(entries.flatMap((entry) => ("authored" in entry ? [entry.authored] : [])))];
     const admittedAuthored = new Map(
@@ -577,15 +723,15 @@ export async function buildSocialPreviewImages({ repoRoot, mode, load = loadSoci
 
     if (mode === "render") {
       const fontBuffers = fonts.map((file) => readFileSync(resolve(repoRoot, file)));
-      mkdirSync(resolve(repoRoot, "public/og/v2"), { recursive: true });
+      mkdirSync(outputDir, { recursive: true });
       // Slices follow the URL's content hash, so they stay stable whatever a sibling already wrote.
-      const missing = [...images].filter(([url]) => !existsSync(resolve(repoRoot, `public${url}`)) && matchesShard(url, shard));
+      const missing = [...images].filter(([url]) => !existsSync(outputPathForPreviewUrl(outputDir, url)) && matchesShard(url, shard));
       for (const [url, image] of missing) {
         const bytes = "bytes" in image
           ? image.bytes
           : await renderSvgPngWithResvg({ svg: await image.svg(), fontBuffers, background, width: SOCIAL_PREVIEW_WIDTH });
         admitPng(bytes, url);
-        atomicWriteFileSync(resolve(repoRoot, `public${url}`), bytes);
+        atomicWriteFileSync(outputPathForPreviewUrl(outputDir, url), bytes);
         rendered++;
       }
     }

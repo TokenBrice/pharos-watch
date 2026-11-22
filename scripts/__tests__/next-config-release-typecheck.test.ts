@@ -13,7 +13,6 @@ import { collectModuleSpecifiers, resolveModulePattern, resolveModuleSpecifier }
 
 const fixtures: string[] = [];
 
-/** A file-level `"use client"` directive after leading comments and whitespace. */
 function hasClientDirective(source: string): boolean {
   let rest = source.replace(/^\uFEFF/u, "");
   while (rest.length > 0) {
@@ -46,17 +45,12 @@ function writeFixtureFile(root: string, path: string, contents: string): void {
   writeFileSync(join(root, path), contents);
 }
 
-/** Materialize every excluded member, which is a file or a directory by shape. */
 function writeExcludedPaths(root: string, contents: string): void {
   for (const path of BUILD_ID_EXCLUDED_PATHS) {
-    const nested = path.endsWith(".ts") || path.endsWith(".json") || path.endsWith("_redirects")
-      ? path
-      : `${path}/usdc-circle.json`;
-    writeFixtureFile(root, nested, contents);
+    writeFixtureFile(root, /(?:\.(?:ts|json|md)|_redirects)$/u.test(path) ? path : `${path}/usdc-circle.json`, contents);
   }
 }
 
-/** Every `"use client"` module under `src/` and `shared/`, where client bundles can start. */
 function collectClientModules(cwd = process.cwd()): string[] {
   const modules: string[] = [];
   const walk = (relative: string): void => {
@@ -78,12 +72,7 @@ function collectClientModules(cwd = process.cwd()): string[] {
   return modules.sort();
 }
 
-interface ClientDependencies {
-  dependencies: Map<string, string[]>;
-  unresolved: string[];
-}
-
-function buildClientDependencies(cwd: string, clientModules: readonly string[]): ClientDependencies {
+function buildClientDependencies(cwd: string, clientModules: readonly string[]) {
   const dependencies = new Map<string, string[]>();
   const unresolved: string[] = [];
   const pending = [...clientModules];
@@ -122,7 +111,6 @@ function isExcludedPath(path: string, excluded: readonly string[] = BUILD_ID_EXC
   return excluded.some((member) => path === member || path.startsWith(`${member}/`));
 }
 
-/** Import chains from a client module to a release-refreshed path. */
 function findExcludedClientImports(
   clientModules: readonly string[],
   dependencies: ReadonlyMap<string, readonly string[]>,
@@ -191,33 +179,40 @@ describe("deterministic Next.js build ID", () => {
     expect(nextBuildId(root, {})).toBe(changed);
   });
 
-  it("does not rotate for the release-refreshed data paths", () => {
+  it("ignores excluded paths while rotating on client-visible siblings", () => {
     const root = buildInputFixture();
     writeExcludedPaths(root, "committed\n");
-    const baseline = nextBuildId(root, {});
-
+    let prev = nextBuildId(root, {});
     writeExcludedPaths(root, "refreshed\n");
-    expect(nextBuildId(root, {})).toBe(baseline);
+    expect(nextBuildId(root, {})).toBe(prev);
+    for (const p of [
+      "shared/data/methodology-changelogs/depeg-resolver/v1.json",
+      "shared/data/safety-score-v9/chain-maturity-reviews-v1.ts",
+      "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
+    ]) {
+      writeFixtureFile(root, p, "client\n");
+      const next = nextBuildId(root, {});
+      expect(next).not.toBe(prev);
+      prev = next;
+    }
   });
 
   it("fails closed when a hashed input is missing", () => {
     const root = mkdtempSync(join(tmpdir(), "pharos-next-build-id-empty-"));
     fixtures.push(root);
-
     expect(() => nextBuildId(root, {})).toThrow();
   });
 
   it("rotates with inlined NEXT_PUBLIC_* values only", () => {
     const root = buildInputFixture();
     const baseline = nextBuildId(root, { NODE_ENV: "production" });
-
     expect(nextBuildId(root, { NODE_ENV: "production", NEXT_PUBLIC_GA_ID: "G-A" })).not.toBe(baseline);
     expect(nextBuildId(root, { NODE_ENV: "production", PATH: "/usr/bin" })).toBe(baseline);
   });
 });
 
-describe("client bundle excludes release-refreshed data", () => {
-  it("never reaches a release-refreshed path", () => {
+describe("client bundle honors build-ID exclusions", () => {
+  it("never reaches an excluded path", () => {
     const clientModules = collectClientModules();
     expect(clientModules.length).toBeGreaterThan(100);
     const { dependencies, unresolved } = buildClientDependencies(process.cwd(), clientModules);

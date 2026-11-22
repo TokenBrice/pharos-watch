@@ -10,6 +10,7 @@ import {
   emitGithubOutputs,
   hasCriticalCssPipelineImpact,
   hasDeployImpact,
+  hasOgRenderImpact,
   hasPagesDeployImpact,
   hasPagesPublishImpact,
   hasWorkerDeployImpact,
@@ -37,27 +38,13 @@ describe("contracts workspace deployment selection", () => {
 
 describe("Pages artifact selection", () => {
   it.each([
-    "src/app/page.tsx",
-    "src/components/header.tsx",
-    "src/styles/tokens/semantic.css",
-    "src/assets/fonts/Geist-Regular.woff2",
-    "src/data/blog/posts/pharos-at-six-months.md",
-    "src/app/favicon.ico",
-    "src/app/robots.ts",
-    "next.config.mjs",
-    "tailwind.config.ts",
-    "postcss.config.cjs",
-    "shared/contracts/package.json",
-    "scripts/build-data/build-stablecoin-detail-snapshots.ts",
-    "scripts/maintenance/generate-depeg-event-search-data.ts",
-    "scripts/build-data/generate-stablecoin-client-projections.ts",
-    "scripts/maintenance/inline-homepage-critical-css.ts",
-    "scripts/maintenance/critical-css-worker.mjs",
-    "scripts/maintenance/report-build-size.mjs",
-    "scripts/ci/check-seo-static.mjs",
-    "scripts/ci/check-feature-flag-inlining.ts",
-    "scripts/ci/check-phishing-signatures.ts",
-    "scripts/ci/run-pages-artifact-lane.ts",
+    "src/app/page.tsx", "src/components/header.tsx", "src/styles/tokens/semantic.css", "src/assets/fonts/Geist-Regular.woff2",
+    "src/data/blog/posts/pharos-at-six-months.md", "src/app/favicon.ico", "src/app/robots.ts", "next.config.mjs",
+    "tailwind.config.ts", "postcss.config.cjs", "shared/contracts/package.json", "scripts/build-data/build-stablecoin-detail-snapshots.ts",
+    "scripts/maintenance/generate-depeg-event-search-data.ts", "scripts/build-data/generate-stablecoin-client-projections.ts",
+    "scripts/maintenance/inline-homepage-critical-css.ts", "scripts/maintenance/critical-css-worker.mjs",
+    "scripts/maintenance/report-build-size.mjs", "scripts/ci/check-seo-static.mjs", "scripts/ci/check-feature-flag-inlining.ts",
+    "scripts/ci/check-phishing-signatures.ts", "scripts/ci/run-pages-artifact-lane.ts",
   ])("requires the artifact lane for Pages/build-pipeline path %s", (path) => {
     expect(classifyChangedFiles([path])).toMatchObject({ pagesChanged: true, pagesArtifactRequired: true });
   });
@@ -263,57 +250,52 @@ describe("critical CSS pipeline selection", () => {
   });
 });
 
+describe("OG render check selection", () => {
+  it.each([
+    "scripts/lib/social-card-render.ts", "scripts/lib/social-preview-build.ts", "scripts/lib/social-preview-worker.mjs",
+    "scripts/lib/social-card-catalog.ts", "scripts/lib/og-resvg-render.mts", "scripts/maintenance/build-og-evergreen.ts",
+    "shared/lib/social-card/templates.ts", "shared/lib/social-preview-asset.ts", "worker/assets/fonts/social-card/BricolageGrotesque-Bold.ttf",
+    "public/logos/usdc.png", "public/chains/ethereum.png", "public/dexes/curve.png",
+    "public/pharos-mark-on-dark.svg", "public/og-cemetery.png", "public/blog/post-cover.png", "data/logos.json", "package-lock.json",
+  ])("selects full OG render check for %s", (path) => {
+    expect(classifyChangedFiles([path]).pagesOgRenderCheck).toBe(true);
+    expect(hasOgRenderImpact([path])).toBe(true);
+  });
+
+  it.each(["src/app/page.tsx", "src/components/header.tsx", "shared/data/stablecoins/coins/usdc-circle.json", "docs/testing.md"])(
+    "skips full OG render check for ordinary path %s", (path) => {
+      expect(classifyChangedFiles([path]).pagesOgRenderCheck).toBe(false);
+    },
+  );
+
+  it.each([[[]], [[""]], [["../outside.ts"]], [["/outside/page.tsx"]], [["src//app/page.tsx"]]])(
+    "fails closed for malformed OG render diff %j", (files) => {
+      expect(hasOgRenderImpact(files)).toBe(true);
+    },
+  );
+});
+
 describe("V9 resource selection", () => {
   it.each([
-    "shared/lib/safety-score-v9/compile.ts",
-    "shared/lib/safety-score-v9/new-module.ts",
-    "worker/src/lib/safety-score-v9/publication-store.ts",
-    "worker/src/lib/safety-score-v9/native-input.ts",
-    "worker/src/lib/db-cache.ts",
-    "worker/src/lib/report-cards-snapshot.ts",
-    "worker/src/cron/compute-safety-score-v9.ts",
-    "worker/src/lib/native-token-supply.ts",
-    "worker/src/test-helpers/v9-fixed-input.ts",
-    "worker/migrations/0263_safety_score_capture_archive.sql",
-    "shared/test-utils/sqlite-d1.ts",
-    "shared/lib/supply.ts",
-    "shared/lib/stablecoins/full-catalog.ts",
-    // Sources of generated artifacts the probe bundles (derived from the
-    // registry's outputs inside the lane closure, not a restated artifact id).
-    "shared/lib/classification.ts",
-    "shared/data/dead-stablecoins.json",
-    "shared/types/core.ts",
-    "shared/data/stablecoins/coins/usdc-circle.json",
-    "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
-    "scripts/maintenance/run-v9-resource-lane.ts",
-    "scripts/lib/lane-input-closure.mts",
-    "scripts/build-data/generate-worker-stablecoin-catalog.ts",
-    "scripts/ci/select-generated-artifacts.mts",
-    "scripts/lib/changed-files.mts",
-    "scripts/lib/local-bin.mts",
-    "scripts/lib/wrangler-toml.mjs",
-    "worker/scripts/measure-v9-resource.ts",
-    "worker/src/lib/__tests__/safety-score-v9-resource-budget.test-support.ts",
-    "worker/src/lib/__tests__/safety-score-v9-resource-fixture.test-support.ts",
-    "worker/src/lib/__tests__/safety-score-v9-resource-probe.test-support.ts",
-    "worker/wrangler.heavy.toml",
-    ".ci/safety-score-v9-resource-budget.json",
-    "package-lock.json",
-    ".nvmrc",
-    "tsconfig.test-typecheck.json",
+    "shared/lib/safety-score-v9/compile.ts", "shared/lib/safety-score-v9/new-module.ts", "worker/src/lib/safety-score-v9/publication-store.ts",
+    "worker/src/lib/safety-score-v9/native-input.ts", "worker/src/lib/db-cache.ts", "worker/src/lib/report-cards-snapshot.ts",
+    "worker/src/cron/compute-safety-score-v9.ts", "worker/src/lib/native-token-supply.ts", "worker/src/test-helpers/v9-fixed-input.ts",
+    "worker/migrations/0263_safety_score_capture_archive.sql", "shared/test-utils/sqlite-d1.ts", "shared/lib/supply.ts",
+    "shared/lib/stablecoins/full-catalog.ts", "shared/lib/classification.ts", "shared/data/dead-stablecoins.json",
+    "shared/types/core.ts", "shared/data/stablecoins/coins/usdc-circle.json", "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
+    "scripts/maintenance/run-v9-resource-lane.ts", "scripts/lib/lane-input-closure.mts", "scripts/build-data/generate-worker-stablecoin-catalog.ts",
+    "scripts/ci/select-generated-artifacts.mts", "scripts/lib/changed-files.mts", "scripts/lib/local-bin.mts",
+    "scripts/lib/wrangler-toml.mjs", "worker/scripts/measure-v9-resource.ts", "worker/src/lib/__tests__/safety-score-v9-resource-budget.test-support.ts",
+    "worker/src/lib/__tests__/safety-score-v9-resource-fixture.test-support.ts", "worker/src/lib/__tests__/safety-score-v9-resource-probe.test-support.ts",
+    "worker/wrangler.heavy.toml", ".ci/safety-score-v9-resource-budget.json", "package-lock.json", ".nvmrc", "tsconfig.test-typecheck.json",
   ])("selects the audited source/data/harness/toolchain input %s", (file) => {
     expect(classifyChangedFiles([file]).v9ResourceRequired).toBe(true);
   });
 
   it.each([
-    "src/components/header.tsx",
-    "worker/src/api/health.ts",
-    "worker/src/cron/sync-blacklist.ts",
-    "worker/src/cron/dex-liquidity/persistence.ts",
-    "worker/src/cron/sync-stablecoins/enrich-prices-shared.ts",
-    "worker/scripts/list-curation-expiry-queue.ts",
-    "scripts/build-data/build-stablecoin-detail-snapshots.ts",
-    "docs/testing.md",
+    "src/components/header.tsx", "worker/src/api/health.ts", "worker/src/cron/sync-blacklist.ts",
+    "worker/src/cron/dex-liquidity/persistence.ts", "worker/src/cron/sync-stablecoins/enrich-prices-shared.ts",
+    "worker/scripts/list-curation-expiry-queue.ts", "scripts/build-data/build-stablecoin-detail-snapshots.ts", "docs/testing.md",
   ])("does not select the resource lane for unrelated input %s", (file) => {
     expect(classifyChangedFiles([file]).v9ResourceRequired).toBe(false);
   });
@@ -355,7 +337,7 @@ describe("V9 resource selection", () => {
 });
 
 describe("emitGithubOutputs", () => {
-  it("emits only the seven consumed workflow outputs while retaining classification fields", () => {
+  it("emits only the eight consumed workflow outputs while retaining classification fields", () => {
     const write = vi.spyOn(process.stdout, "write").mockReturnValue(true);
     try {
       const classification = classifyChangedFiles(["package-lock.json"]);
@@ -365,16 +347,12 @@ describe("emitGithubOutputs", () => {
         "pages_artifact_required=true\n",
         "pages_critical_css_full_pass=true\n",
         "pages_deploy_required=true\n",
+        "pages_og_render_check=true\n",
         "playwright_firefox_required=false\n",
         "v9_resource_required=true\n",
         "worker_deploy_required=true\n",
       ]);
-      expect(classification).toMatchObject({
-        deployRequired: true,
-        docsChanged: false,
-        pagesChanged: true,
-        workerChanged: true,
-      });
+      expect(classification).toMatchObject({ deployRequired: true, docsChanged: false, pagesChanged: true, workerChanged: true });
     } finally {
       write.mockRestore();
     }
@@ -422,53 +400,35 @@ describe("hasWorkerDeployImpact", () => {
 
 describe("hasPagesDeployImpact", () => {
   it("returns true for frontend, shared, and deploy-infra changes", () => {
-    expect(hasPagesDeployImpact(["src/app/page.tsx"])).toBe(true);
-    expect(hasPagesDeployImpact(["src/lib/api.ts"])).toBe(true);
-    expect(hasPagesDeployImpact(["src/hooks/use-stablecoins.ts"])).toBe(true);
-    expect(hasPagesDeployImpact(["functions/api/admin/[[path]].ts"])).toBe(true);
-    expect(hasPagesDeployImpact(["shared/data/stablecoins/coins/usdc-circle.json"])).toBe(true);
-    expect(hasPagesDeployImpact([".github/workflows/deploy-cloudflare.yml"])).toBe(true);
-    expect(hasPagesDeployImpact([".github/workflows/pages-release.yml"])).toBe(true);
-    expect(hasPagesDeployImpact([".github/workflows/pages-prepare.yml"])).toBe(true);
-    expect(hasPagesDeployImpact([".github/workflows/rebuild-pages.yml"])).toBe(true);
-    expect(hasPagesDeployImpact(["scripts/maintenance/generate-llms-txt.ts"])).toBe(true);
-    expect(hasPagesDeployImpact(["scripts/maintenance/generate-docs-metadata.ts"])).toBe(true);
-    expect(hasPagesDeployImpact(["scripts/maintenance/build-world-map-svg.ts"])).toBe(true);
-    expect(hasPagesDeployImpact(["scripts/maintenance/generate-markdown-exports.ts"])).toBe(true);
-    expect(hasPagesDeployImpact(["scripts/maintenance/generate-openapi-spec.ts"])).toBe(true);
-    expect(hasPagesDeployImpact(["scripts/maintenance/generate-postman-collection.ts"])).toBe(true);
-    expect(hasPagesDeployImpact(["scripts/maintenance/wait-pages-release-marker.ts"])).toBe(true);
+    for (const file of [
+      "src/app/page.tsx", "src/lib/api.ts", "src/hooks/use-stablecoins.ts", "functions/api/admin/[[path]].ts",
+      "shared/data/stablecoins/coins/usdc-circle.json", ".github/workflows/deploy-cloudflare.yml",
+      ".github/workflows/pages-release.yml", ".github/workflows/pages-prepare.yml", ".github/workflows/rebuild-pages.yml",
+      "scripts/maintenance/generate-llms-txt.ts", "scripts/maintenance/generate-docs-metadata.ts",
+      "scripts/maintenance/build-world-map-svg.ts", "scripts/maintenance/generate-markdown-exports.ts",
+      "scripts/maintenance/generate-openapi-spec.ts", "scripts/maintenance/generate-postman-collection.ts",
+      "scripts/maintenance/wait-pages-release-marker.ts",
+    ]) expect(hasPagesDeployImpact([file]), file).toBe(true);
   });
 
   it("validates tests without treating them as publishable Pages changes", () => {
-    const files = [
-      "src/components/__tests__/header.test.tsx",
-      "shared/lib/classification.spec.ts",
-      "functions/__tests__/proxy.test.ts",
-    ];
-
+    const files = ["src/components/__tests__/header.test.tsx", "shared/lib/classification.spec.ts", "functions/__tests__/proxy.test.ts"];
     expect(hasPagesDeployImpact(files)).toBe(true);
     expect(hasPagesPublishImpact(files)).toBe(false);
   });
-
 });
 
 describe("hasWorkerReleaseImpact", () => {
   it("returns true for Worker runtime, config, D1 migrations, root packages, and shared runtime changes", () => {
-    expect(hasWorkerReleaseImpact(["worker/src/api/health.ts"])).toBe(true);
-    expect(hasWorkerReleaseImpact(["worker/wrangler.toml"])).toBe(true);
-    expect(hasWorkerReleaseImpact(["worker/migrations/0107_example.sql"])).toBe(true);
-    expect(hasWorkerReleaseImpact(["shared/data/stablecoins/coins/usdc-circle.json"])).toBe(true);
-    expect(hasWorkerReleaseImpact(["shared/lib/classification.ts"])).toBe(true);
-    expect(hasWorkerReleaseImpact(["package.json", "package-lock.json"])).toBe(true);
+    for (const files of [
+      ["worker/src/api/health.ts"], ["worker/wrangler.toml"], ["worker/migrations/0107_example.sql"],
+      ["shared/data/stablecoins/coins/usdc-circle.json"], ["shared/lib/classification.ts"], ["package.json", "package-lock.json"],
+    ]) expect(hasWorkerReleaseImpact(files)).toBe(true);
   });
 
   it("releases both surfaces for the donation ledger consumed by supporter claims", () => {
     expect(classifyChangedFiles(["shared/data/funding/donations.json"])).toMatchObject({
-      workerChanged: true,
-      workerDeployRequired: true,
-      pagesChanged: true,
-      pagesDeployRequired: true,
+      workerChanged: true, workerDeployRequired: true, pagesChanged: true, pagesDeployRequired: true,
     });
   });
 });
@@ -523,29 +483,19 @@ describe("classifyDeployChanges", () => {
   });
 
   it("runs the full worker deploy path for non-push events", () => {
-    const result = classifyDeployChanges({ eventName: "workflow_dispatch" });
-    expect(result.deployRequired).toBe(true);
-    expect(result.workerChanged).toBe(true);
-    expect(result.workerDeployRequired).toBe(true);
-    expect(result.pagesChanged).toBe(true);
-    expect(result.pagesDeployRequired).toBe(true);
-    expect(result.pagesCriticalCssFullPass).toBe(true);
-    expect(result.docsOnly).toBe(false);
+    expect(classifyDeployChanges({ eventName: "workflow_dispatch" })).toMatchObject({
+      deployRequired: true, workerChanged: true, workerDeployRequired: true, pagesChanged: true,
+      pagesDeployRequired: true, pagesCriticalCssFullPass: true, pagesOgRenderCheck: true, docsOnly: false,
+    });
   });
 
   it("falls back to full worker deploy when the push base sha is unavailable", () => {
-    const result = classifyDeployChanges({
-      baseSha: "0000000000000000000000000000000000000000",
-      eventName: "push",
-      headSha: "25197af364c3c9ada9f9f394e4d65f62e6554f6e",
+    expect(classifyDeployChanges({
+      baseSha: "0000000000000000000000000000000000000000", eventName: "push", headSha: "25197af364c3c9ada9f9f394e4d65f62e6554f6e",
+    })).toMatchObject({
+      deployRequired: true, workerChanged: true, workerDeployRequired: true, pagesChanged: true,
+      pagesArtifactRequired: true, pagesCriticalCssFullPass: true, pagesOgRenderCheck: true, pagesDeployRequired: true,
     });
-    expect(result.deployRequired).toBe(true);
-    expect(result.workerChanged).toBe(true);
-    expect(result.workerDeployRequired).toBe(true);
-    expect(result.pagesChanged).toBe(true);
-    expect(result.pagesArtifactRequired).toBe(true);
-    expect(result.pagesCriticalCssFullPass).toBe(true);
-    expect(result.pagesDeployRequired).toBe(true);
   });
 
   it.each([

@@ -27,15 +27,68 @@ export const BUILD_ID_INPUT_FILES = [
   "tsconfig.base.json",
 ] as const;
 /**
- * The Pages release rewrites these paths on every publish. They change rendered
- * HTML/RSC and served datasets, never the client bundle, so they must not rotate
- * the ID — a data-only publish then re-uploads only the pages whose bytes
- * changed. `scripts/lib/pages-release-data.mts` owns both archived public
- * inputs and derived server-only outputs rebuilt after replay. The
- * client-closure guard in `scripts/__tests__/next-config-release-typecheck.test.ts`
- * fails if a client module imports any excluded path.
+ * Server-only and Worker-only `shared/data/` inputs that never enter client
+ * JavaScript/CSS (`src/app/globals.css` already excludes `shared/data/` from
+ * Tailwind scanning). Client-imported siblings stay hashed so client bundle
+ * changes still rotate the ID: `methodology-changelogs/depeg-resolver`,
+ * `safety-score-v9/chain-maturity-reviews-v1.ts`,
+ * `safety-score-v9/methodology-policy-candidate-v1.json`, and the client
+ * `stablecoins/` catalogs (`canonical-order`, `coins.client.*`,
+ * `coins.compliance.*`, `coins.telegram-mini-app.*`, `listing-decisions`).
  */
-export const BUILD_ID_EXCLUDED_PATHS: readonly string[] = PAGES_RELEASE_BUILD_ID_EXCLUSIONS;
+const SERVER_ONLY_SHARED_BUILD_ID_EXCLUSIONS = [
+  "shared/data/annotations",
+  "shared/data/methodology-changelogs/blacklist-tracker",
+  "shared/data/methodology-changelogs/chain-health",
+  "shared/data/methodology-changelogs/depeg-dews",
+  "shared/data/methodology-changelogs/liquidity-score",
+  "shared/data/methodology-changelogs/mint-authority",
+  "shared/data/methodology-changelogs/mint-burn-flow",
+  "shared/data/methodology-changelogs/pricing-pipeline",
+  "shared/data/methodology-changelogs/redemption-backstop",
+  "shared/data/methodology-changelogs/safety-score",
+  "shared/data/methodology-changelogs/stability-index",
+  "shared/data/methodology-changelogs/yield-methodology",
+  "shared/data/safety-score-v9/AGENTS.md",
+  "shared/data/safety-score-v9/access-lookthrough-reviews-v1.json",
+  "shared/data/safety-score-v9/evaluation-build-manifest-v1.ts",
+  "shared/data/safety-score-v9/evidence-gap-classifications-v1.json",
+  "shared/data/safety-score-v9/exit-execution-model-reviews-v1.json",
+  "shared/data/safety-score-v9/golden-scenarios-v1.ts",
+  "shared/data/safety-score-v9/incident-review-key-migration-v1.generated.json",
+  "shared/data/safety-score-v9/incident-reviews-v1.json",
+  "shared/data/safety-score-v9/incident-runtime-v1.generated.json",
+  "shared/data/safety-score-v9/lane-emitter-descriptors-v1.generated.json",
+  "shared/data/safety-score-v9/lane-screening-emitter-inventory-v1.json",
+  "shared/data/safety-score-v9/lender-collateral-classes-v1.json",
+  "shared/data/safety-score-v9/mechanism-measurements",
+  "shared/data/safety-score-v9/mechanism-review-overlays-v1.json",
+  "shared/data/safety-score-v9/reserve-bound-facts-v1.json",
+  "shared/data/safety-score-v9/shock-coverage-measurements-v1.json",
+  "shared/data/safety-score-v9/shock-coverage-replay-attestations-v1.json",
+  "shared/data/safety-score-v9/shock-coverage-targets.json",
+  "shared/data/safety-score-v9/supply-attribution-reviews-v1.json",
+  "shared/data/safety-score-v9/transfer-review-overlays-v1.json",
+  "shared/data/safety-score-v9/wrapper-allocation-reviews-v1.json",
+  "shared/data/stablecoins/coins",
+  "shared/data/stablecoins/domains",
+  "shared/data/stablecoins/coins.generated.json",
+  "shared/data/stablecoins/coins.worker-full.generated.json",
+  "shared/data/stablecoins/coins.worker-runtime.generated.json",
+] as const;
+
+/**
+ * Paths excluded from the content-derived build ID because they never alter
+ * client JavaScript/CSS: release-refreshed public inputs and derived server
+ * outputs owned by `scripts/lib/pages-release-data.mts`, plus explicit
+ * server-only/Worker-only `shared/data/` inputs above. The client-closure guard
+ * in `scripts/__tests__/next-config-release-typecheck.test.ts` fails if any
+ * `"use client"` module reaches an excluded path.
+ */
+export const BUILD_ID_EXCLUDED_PATHS: readonly string[] = [
+  ...PAGES_RELEASE_BUILD_ID_EXCLUSIONS,
+  ...SERVER_ONLY_SHARED_BUILD_ID_EXCLUSIONS,
+];
 /**
  * Read at build time by `src/lib/feature-flags.ts`, `src/lib/api-url.ts`,
  * `src/app/layout.tsx` and `src/lib/safety-grade-snapshot.ts`. Every

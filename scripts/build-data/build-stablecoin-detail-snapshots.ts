@@ -392,8 +392,8 @@ export async function generateSnapshots(
   const assessedAt = options.generatedAt ?? Date.now();
   const acquisition: Array<{
     id: string;
-    source: "per-coin" | "bulk-cache-only" | "bulk-unavailable-fallback" | "bulk-unavailable-history-only"
-      | "bulk-stale-refresh";
+    source: "per-coin" | "bulk-cache-only" | "bulk-history-only" | "bulk-unavailable-fallback"
+      | "bulk-unavailable-history-only" | "bulk-stale-refresh";
     updatedAt: SnapshotCoinLanes["updatedAt"];
     bulkUpdatedAt?: SnapshotCoinLanes["updatedAt"];
     bulkSources?: DetailSnapshotInputEntry["sources"];
@@ -442,11 +442,20 @@ export async function generateSnapshots(
       // route's inactive 404, so the reviewed fallback reads the history lane alone.
       const historyOnly = entry.status === "unavailable" && entry.reason === DETAIL_CACHE_ABSENT_REASON
         && !detailGenerationRefreshable(entry.id);
-      const source: (typeof acquisition)[number]["source"] = entry.status === "unavailable"
-        ? (historyOnly ? "bulk-unavailable-history-only" : "bulk-unavailable-fallback")
-        : refresh ? "bulk-stale-refresh" : "bulk-cache-only";
+      const source: (typeof acquisition)[number]["source"] = entry.status === "history-only"
+        ? "bulk-history-only"
+        : entry.status === "unavailable"
+          ? (historyOnly ? "bulk-unavailable-history-only" : "bulk-unavailable-fallback")
+          : refresh ? "bulk-stale-refresh" : "bulk-cache-only";
       let lane: SnapshotCoinLanes;
-      if (historyOnly) {
+      if (entry.status === "history-only") {
+        lane = {
+          id: entry.id,
+          liveSummary: null,
+          supplyHistory: entry.supplyHistory,
+          updatedAt: entry.updatedAt,
+        };
+      } else if (historyOnly) {
         console.warn(`[stablecoin-detail-snapshots] ${source} for ${entry.id}; fetching supply history only`);
         lane = await fetchCoin(entry.id, false);
       } else if (entry.status === "unavailable" || refresh) {
@@ -464,7 +473,11 @@ export async function generateSnapshots(
       }
       return { lane, provenance: {
         id: entry.id, source, updatedAt: lane.updatedAt, bulkSources: entry.sources,
-        ...(entry.status === "available" ? { bulkUpdatedAt: entry.updatedAt } : { reason: entry.reason }),
+        ...(entry.status === "available"
+          ? { bulkUpdatedAt: entry.updatedAt }
+          : entry.status === "history-only"
+            ? { bulkUpdatedAt: entry.updatedAt, reason: entry.reason }
+            : { reason: entry.reason }),
       } };
     });
     lanes.push(...acquired.map(({ lane }) => lane));

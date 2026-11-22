@@ -8,10 +8,12 @@ import {
   discoverSocialPreviewPages,
   loadSocialCardValidationAssets,
   loadSocialPreviewEntries,
+  renderMissingSocialPreviewBuffers,
   renderSocialPreviewCards,
   SOCIAL_PREVIEW_MAP_PATH,
   type SocialPreviewEntry,
 } from "../lib/social-preview-build";
+import { assertSocialPreviewPng, socialPreviewAssetIdentity } from "../../shared/lib/social-preview-asset";
 import { loadSocialCardAssets, renderSocialCardSvg } from "../lib/social-card-render";
 import { renderSvgPngWithResvg } from "../lib/og-resvg-render.mts";
 import { DARK } from "../../shared/lib/social-card/tokens";
@@ -77,6 +79,12 @@ describe("evergreen destination previews", () => {
     expect(svg).toHaveBeenCalledTimes(3);
     expect(readdirSync(join(root, "public/og/v2")).sort()).toEqual(Object.values(map()).map(({ url }) => url.slice(7)).filter((url, index, urls) => urls.indexOf(url) === index).sort());
     await expect(build("render")).resolves.toMatchObject({ rendered: 0 });
+    const altOut = join(makeTempDir(), "custom-og");
+    await expect(buildSocialPreviewImages({
+      repoRoot: root, mode: "render", outDir: altOut,
+      load: async () => ({ entries, fonts: ["font.ttf"], background: "#101e2b" }),
+    })).resolves.toMatchObject({ images: 4, rendered: 4 });
+    expect(readdirSync(altOut).sort()).toEqual(readdirSync(join(root, "public/og/v2")).sort());
     const sh = makeTempDir();
     for (const [f, c] of Object.entries(files)) { mkdirSync(join(sh, f, ".."), { recursive: true }); writeFileSync(join(sh, f), c); }
     const [s0, s1] = await Promise.all([0, 1].map((index) => buildSocialPreviewImages({ repoRoot: sh, mode: "render", load: async () => ({ entries, fonts: ["font.ttf"], background: "#101e2b" }), shard: { index, count: 2 } })));
@@ -84,6 +92,18 @@ describe("evergreen destination previews", () => {
     const noise = await sharp(randomBytes(1200 * 630 * 3), { raw: { width: 1200, height: 630, channels: 3 } }).png().toBuffer();
     writeFileSync(join(root, "public/cover.png"), noise);
     await expect(build("check")).rejects.toThrow("Social preview exceeds 500 KB: public/cover.png");
+  });
+
+  it("renders only requested missing drawn and authored keys in memory and rejects unknown keys", async () => {
+    expect((await renderMissingSocialPreviewBuffers(process.cwd(), new Set())).size).toBe(0);
+    const previewMap = JSON.parse(readFileSync(join(process.cwd(), SOCIAL_PREVIEW_MAP_PATH), "utf8")) as Record<string, { url: string }>;
+    const drawnKey = socialPreviewAssetIdentity(previewMap["/about/"]!.url)!.key;
+    const authoredKey = socialPreviewAssetIdentity(previewMap["/cemetery/"]!.url)!.key;
+    const buffers = await renderMissingSocialPreviewBuffers(process.cwd(), new Set([drawnKey, authoredKey]), { workers: 1 });
+    expect([...buffers.keys()].sort()).toEqual([authoredKey, drawnKey].sort());
+    for (const buf of buffers.values()) expect(() => assertSocialPreviewPng(buf)).not.toThrow();
+    await expect(renderMissingSocialPreviewBuffers(process.cwd(), new Set([`evergreen/v2/image-${"0".repeat(64)}.png`])))
+      .rejects.toThrow("unknown social preview identities");
   });
 
   it("keeps WebP logos visible and matches worker_threads and validation-only mode", async () => {
