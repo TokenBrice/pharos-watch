@@ -49,14 +49,14 @@ const USN_NOON = "0xda67b4284609d2d48e5d10cfac411572727dc1ed";
 
 const CODE_HASH_BY_ADDRESS: Record<string, string> = {
   [EARN_VAULT]: "0x864cc9ad53b338b82da1f7cab85ab0b3d5c8861acb422b6fec63cf36234f36a6",
-  "0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e":
-    "0x4448a74aff5a6b95fe30cebf1187f9dc647d81413ae7e06410e7772b4b64efc4",
+  "0xd0ac2cd802604702df874bc45aee88e8884b896d":
+    "0x740c8ffb95fd1cbfbaeae31d19808a5ae9a0000e4b696954a8b7b2a5b1b77eb8",
   [EARN_VALIDATOR]: "0x864cc9ad53b338b82da1f7cab85ab0b3d5c8861acb422b6fec63cf36234f36a6",
-  "0x2bebb55c0ca126b0d883fb94843c0a2c13102522":
-    "0x537bb88a640ed963c5848c27bdb3ac3b7da135642908db377b4c9a362cdd61f9",
+  "0x5ad0f3f05181fff16ecb9c57d0128908edf6a501":
+    "0xf0a9c4d15b616bebb64bbc17cc63f136fcd992fe5463948390d95799eb885037",
   [EARN_PROTOCOL_CONFIG]: "0x864cc9ad53b338b82da1f7cab85ab0b3d5c8861acb422b6fec63cf36234f36a6",
-  "0x540db273e41587a748365f01f35adb095b58bfeb":
-    "0x2c629d0cdee4894f27ca680a5d168a46ae8ed829e6d5e0c424f5d3e12dc866c7",
+  "0xf65f23f12810b934e7d561c51ebf959b89c73d70":
+    "0xcbafb5b3b5d63b031422fe385a4b3e405d82b52741c70555f1eebb559cac66aa",
   [DSTAKE_TOKEN]: "0xe5e3693157141608a301682c8c228c0277eac7efc0b98b57f874ca49752b5fd8",
   "0x9c278036c3c4529472751502dfc71bb1f0a3bfd4":
     "0xf3d6aec9f278be5b2140dcca59bfd109bd57bdf4d928e11d2a7b3863bb1b796d",
@@ -72,9 +72,9 @@ const CODE_HASH_BY_ADDRESS: Record<string, string> = {
 };
 
 const IMPLEMENTATION_BY_PROXY: Record<string, string> = {
-  [EARN_VAULT]: "0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e",
-  [EARN_VALIDATOR]: "0x2bebb55c0ca126b0d883fb94843c0a2c13102522",
-  [EARN_PROTOCOL_CONFIG]: "0x540db273e41587a748365f01f35adb095b58bfeb",
+  [EARN_VAULT]: "0xd0ac2cd802604702df874bc45aee88e8884b896d",
+  [EARN_VALIDATOR]: "0x5ad0f3f05181fff16ecb9c57d0128908edf6a501",
+  [EARN_PROTOCOL_CONFIG]: "0xf65f23f12810b934e7d561c51ebf959b89c73d70",
   [DSTAKE_TOKEN]: "0x9c278036c3c4529472751502dfc71bb1f0a3bfd4",
   [NOON_SUSN_VAULT]: NOON_SUSN_VAULT_IMPL,
 };
@@ -97,6 +97,7 @@ const EXPECTED_REQUESTS = {
   "earn-min-withdrawable-shares": request(EARN_VAULT, EARN_VAULT_ABI, "minWithdrawableShares"),
   "earn-withdrawal-fee": request(EARN_VALIDATOR, EARN_VALIDATOR_ABI, "withdrawalFee", [EARN_VAULT]),
   "earn-deposit-allow-list-count": request(EARN_VALIDATOR, EARN_VALIDATOR_ABI, "depositAllowListCount", [EARN_VAULT]),
+  "earn-withdraw-allow-list-count": request(EARN_VALIDATOR, EARN_VALIDATOR_ABI, "withdrawAllowListCount", [EARN_VAULT]),
   "earn-protocol-paused": request(EARN_PROTOCOL_CONFIG, EARN_PROTOCOL_CONFIG_ABI, "getProtocolPauseStatus"),
   "earn-idle-usdc": request(USDC, erc20Abi, "balanceOf", [EARN_VAULT]),
   "earn-asset-decimals": request(USDC, erc20Abi, "decimals"),
@@ -146,6 +147,7 @@ function verifyRequests(calls: readonly EvmMulticall3Call[]) {
 
 interface EarnOverrides {
   withdrawalsPaused?: boolean;
+  withdrawAllowListCount?: bigint;
 }
 
 function earnResults(calls: readonly EvmMulticall3Call[], overrides: EarnOverrides = {}): EvmMulticall3Result[] {
@@ -191,6 +193,11 @@ function earnResults(calls: readonly EvmMulticall3Call[], overrides: EarnOverrid
       abi: EARN_VALIDATOR_ABI,
       functionName: "depositAllowListCount",
       result: 0n,
+    }),
+    "earn-withdraw-allow-list-count": encodeFunctionResult({
+      abi: EARN_VALIDATOR_ABI,
+      functionName: "withdrawAllowListCount",
+      result: overrides.withdrawAllowListCount ?? 0n,
     }),
     "earn-protocol-paused": encodeFunctionResult({
       abi: EARN_PROTOCOL_CONFIG_ABI,
@@ -672,30 +679,34 @@ describe("specialized executable redemption observers", () => {
     },
   );
 
-  it("measures eEARN queue state and fee without treating idle USDC as immediate capacity", async () => {
-    const observation = await observeExecutableRedemptionRoute(
-      "eearn-ember",
-      EARN_VAULT,
-      new AbortController().signal,
-      undefined,
-      { client: client("earn"), nowSec: NOW },
-    );
+  it.each([[0n, "any-holder"], [1n, "whitelisted-primary"]] as const)(
+    "measures eEARN queue state and fee with %s allowed holders without counting idle USDC",
+    async (withdrawAllowListCount, holderEligibility) => {
+      const observation = await observeExecutableRedemptionRoute(
+        "eearn-ember",
+        EARN_VAULT,
+        new AbortController().signal,
+        undefined,
+        { client: client("earn", { earnOverrides: { withdrawAllowListCount } }), nowSec: NOW },
+      );
 
-    expect(observation).toMatchObject({
-      capacityRaw: 0n,
-      capacitySource: "eearn-operator-batched-no-immediate-capacity",
-      settlementBoundUnproven: true,
-      routeStatus: "open",
-      feeBps: 0,
-      blockNumber: BLOCK,
-      sourceTimestamp: NOW - 30,
-      diagnostics: {
-        idleUnderlyingBalanceRaw: "199000000",
-        idleUnderlyingUsedAsCapacity: false,
-        minWithdrawableSharesRaw: "100000",
-      },
-    });
-  });
+      expect(observation).toMatchObject({
+        capacityRaw: 0n,
+        capacitySource: "eearn-operator-batched-no-immediate-capacity",
+        settlementBoundUnproven: true,
+        routeStatus: "open",
+        holderEligibility,
+        feeBps: 0,
+        blockNumber: BLOCK,
+        sourceTimestamp: NOW - 30,
+        diagnostics: {
+          idleUnderlyingBalanceRaw: "199000000",
+          idleUnderlyingUsedAsCapacity: false,
+          minWithdrawableSharesRaw: "100000",
+        },
+      });
+    },
+  );
 
   it("withholds the unproven-settlement-bound marker when eEARN withdrawals are paused", async () => {
     const observation = await observeExecutableRedemptionRoute(
@@ -721,7 +732,7 @@ describe("specialized executable redemption observers", () => {
         undefined,
         {
           client: client("earn", {
-            driftAddress: "0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e",
+            driftAddress: "0xd0ac2cd802604702df874bc45aee88e8884b896d",
           }),
           nowSec: NOW,
         },

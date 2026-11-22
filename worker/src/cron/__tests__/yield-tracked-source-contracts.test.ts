@@ -95,30 +95,64 @@ describe("tracked holder source contracts", () => {
     const reader = TRACKED_OPTIONAL_SOURCE_REGISTRY.find((entry) => entry.sourceKey === sourceKey)!;
     const { startSec } = baseEvaluationInput();
     const observedAt = startSec - 60;
-    const state = { fee: 0.05, netApy: 0.03, totalAssetsUsd: 1_000_000 };
+    const usdc = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
+    const baseUrl = `https://api.morpho.org/v0/vaults-v1/1:${vaultAddress}`;
+    const priceUrl = `https://api.morpho.org/v0/tokens/1:${usdc.toLowerCase()}/price`;
     const fetchSource = vi.spyOn(fetchRetry, "fetchJsonWithRetry");
-    const respond = (address: string, vaultState: unknown) => fetchSource.mockResolvedValueOnce({
-      response: new Response("{}"), body: { data: { vaultByAddress: { address, chain: { id: 1 }, state: vaultState } } },
-    });
+    const mockRest = (overrides: { vault?: unknown; state?: unknown; history?: unknown; price?: unknown } = {}) => {
+      const vault = overrides.vault ?? {
+        data: { chain_id: 1, address: vaultAddress.toUpperCase().replace("0X", "0x"), fee_wad: "50000000000000000", asset: { address: usdc, decimals: 6 } },
+      };
+      const state = overrides.state ?? { data: { chain_id: 1, address: vaultAddress, total_assets: "16733458593643" } };
+      const history = overrides.history ?? {
+        params: { chain_id: "1", vault_address: vaultAddress },
+        data: [{ timestamp: observedAt - 3600, apy: 0.025 }, { timestamp: observedAt, apy: 0.03 }],
+      };
+      const price = overrides.price ?? { data: { chain_id: 1, address: usdc, price: 0.99993280325, timestamp: String(observedAt) } };
+      fetchSource.mockImplementation(async (url) => {
+        if (url === baseUrl) return { response: new Response("{}"), body: vault };
+        if (url === `${baseUrl}/state`) return { response: new Response("{}"), body: state };
+        if (url === `${baseUrl}/apy/history?lookback=six_hours`) return { response: new Response("{}"), body: history };
+        if (url === priceUrl) return { response: new Response("{}"), body: price };
+        throw new Error(`Unexpected Morpho URL: ${url}`);
+      });
+    };
     const { db, sqlite } = createLatestSchemaSqlite();
     try {
       const onOutcome = vi.fn();
       for (const timestamp of [null, startSec + 1, startSec - STALE_THRESHOLD_MS / 1000 - 1]) {
-        respond(vaultAddress, { ...state, timestamp });
+        mockRest({ history: { params: { chain_id: "1", vault_address: vaultAddress }, data: [{ timestamp, apy: 0.03 }] } });
         await expect(reader.run({ db, startSec, onOutcome })).resolves.toBeNull();
       }
-      respond(vaultAddress, null);
-      await expect(reader.run({ db, startSec, onOutcome })).resolves.toBeNull();
+      for (const overrides of [
+        { state: { data: null } },
+        { vault: { data: { chain_id: 1, address: vaultAddress, fee_wad: "0", asset: { address: usdc, decimals: 6 } } } },
+        { history: { params: { chain_id: "1", vault_address: vaultAddress }, data: [] } },
+        { history: { params: { chain_id: "1", vault_address: vaultAddress }, data: [{ timestamp: observedAt, apy: null }] } },
+        { price: { data: { chain_id: 1, address: usdc, price: 1, timestamp: String(startSec - STALE_THRESHOLD_MS / 1000 - 1) } } },
+        { price: { data: { chain_id: 1, address: usdc, price: 1, timestamp: String(startSec + 301) } } },
+      ]) {
+        mockRest(overrides);
+        await expect(reader.run({ db, startSec, onOutcome })).resolves.toBeNull();
+      }
       expect(onOutcome).not.toHaveBeenCalled();
-      for (const [address, vaultState] of [["0xwrong", { ...state, timestamp: observedAt }], [vaultAddress, []], [vaultAddress, {}]] as const) {
+      for (const overrides of [
+        { vault: { data: { chain_id: 1, address: "0xwrong", fee_wad: "50000000000000000", asset: { address: usdc, decimals: 6 } } } },
+        { vault: { data: { chain_id: 1, address: vaultAddress, fee_wad: "50000000000000000", asset: { address: "0xwrong", decimals: 6 } } } },
+        { state: { data: [] } },
+        { state: { data: { chain_id: 1, address: vaultAddress } } },
+        { history: { params: { chain_id: "1", vault_address: "0xwrong" }, data: [{ timestamp: observedAt, apy: 0.03 }] } },
+        { price: { data: { chain_id: 1, address: "0xwrong", price: 1, timestamp: String(observedAt) } } },
+      ]) {
         onOutcome.mockClear();
-        respond(address, vaultState);
+        mockRest(overrides);
         await expect(reader.run({ db, startSec, onOutcome })).resolves.toBeNull();
         expect.soft(onOutcome.mock.calls).toEqual([[{ label: config.timeoutLabel, outcome: "failed" }]]);
       }
-      respond(vaultAddress, { ...state, timestamp: observedAt });
+      mockRest();
       const quote = (await reader.run({ db, startSec }))!;
-      expect(quote).toMatchObject({ currentApy: 3, sourceKey, sourceObservedAt: observedAt });
+      expect(quote).toMatchObject({ currentApy: 3, apyBase: 3, apyReward: null, sourceKey, sourceObservedAt: observedAt });
+      expect(quote.sourceTvlUsd).toBeCloseTo(16_732_334.16, 2);
       const row = { id, symbol: "USDC" };
       const dl = { ...row, yield: { ...quote, sourceKey: corroboratingPoolId, dataSource: "defillama" as const, currentApy: 4, sourceObservedAt: null } };
       const onchain = { ...row, yield: { ...quote, sourceKey: `onchain:${id}`, dataSource: "onchain" as const, currentApy: 5 } };

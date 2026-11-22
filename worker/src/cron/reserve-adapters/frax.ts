@@ -5,6 +5,7 @@ import { CHAIN_META, resolveChainId } from "@shared/types/chain-identity";
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { getLiveReserveAdapterMaxUnknownExposurePct, parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { sha256Hex } from "@shared/lib/sha256";
 import { rethrowIfAborted } from "../../lib/abort";
 import { DECIMALS_SELECTOR, encodeBalanceOfCallData } from "../../lib/evm-selectors";
@@ -203,6 +204,34 @@ const REVIEWED_FRAX_FERRY_TOKENS = new Set(
   REVIEWED_FRAX_FERRY_POSITIONS.map(([chain, , token]) => `${chain}:${token}`),
 );
 
+const FRAX_SIBLING_ASSET_IDS = {
+  frxUSD: "frxusd-frax",
+  sfrxUSD: "sfrxusd-frax",
+  FPI: "fpi-frax",
+} as const;
+type FraxSiblingSymbol = keyof typeof FRAX_SIBLING_ASSET_IDS;
+export type FraxSiblingDeployments = Partial<Record<FraxSiblingSymbol, ReserveAdapterCoin["contracts"]>>;
+
+function getDefaultFraxSiblingDeployments(): FraxSiblingDeployments {
+  return {
+    frxUSD: WORKER_TRACKED_META_BY_ID.get(FRAX_SIBLING_ASSET_IDS.frxUSD)?.contracts,
+    sfrxUSD: WORKER_TRACKED_META_BY_ID.get(FRAX_SIBLING_ASSET_IDS.sfrxUSD)?.contracts,
+    FPI: WORKER_TRACKED_META_BY_ID.get(FRAX_SIBLING_ASSET_IDS.FPI)?.contracts,
+  };
+}
+
+function matchesDeployment(
+  deployments: ReserveAdapterCoin["contracts"] | undefined,
+  chain: string,
+  token: string,
+  isEvm: boolean,
+): boolean {
+  return deployments?.some((row) =>
+    row.chain === chain
+    && (isEvm ? canonicalEvmAddress(row.address, { allowZero: false }) : row.address) === token,
+  ) ?? false;
+}
+
 function hasReconciledFraxQuantity(row: BalanceSheetAsset, reportedPrice: number | undefined): boolean {
   const sign = row.category === "asset:contra" ? -1 : 1;
   const quantity = typeof row.tokenQuantity === "number" ? nonnegativeFinite(sign * row.tokenQuantity) : undefined;
@@ -222,6 +251,7 @@ export function adaptFraxBalanceSheet(
   payload: FraxBalanceSheetResponse,
   subjectId?: string,
   deployments?: ReserveAdapterCoin["contracts"],
+  siblingDeployments: FraxSiblingDeployments = getDefaultFraxSiblingDeployments(),
 ): AdapterResult {
   const assets = payload.assets;
   if (!assets?.length || !payload.totalAssets || payload.totalAssets <= 0) {
@@ -275,9 +305,12 @@ export function adaptFraxBalanceSheet(
       const isEvm = chain !== null && CHAIN_META[chain]?.type === "evm";
       const token = isEvm ? canonicalEvmAddress(asset.tokenAddress, { allowZero: false })
         : typeof asset.tokenAddress === "string" ? asset.tokenAddress : null;
-      const registered = !!token && deployments?.some(row => row.chain === chain &&
-        (isEvm ? canonicalEvmAddress(row.address) : row.address) === token);
-      const usableToken = token && (isEvm || registered ||
+      const registered = !!chain && !!token && matchesDeployment(deployments, chain, token, isEvm);
+      const siblingSymbol: FraxSiblingSymbol | null =
+        symbol === "frxUSD" || symbol === "sfrxUSD" || symbol === "FPI" ? symbol : null;
+      const matchesSibling = !!chain && !!token && siblingSymbol !== null
+        && matchesDeployment(siblingDeployments[siblingSymbol], chain, token, isEvm);
+      const usableToken = token && (isEvm || registered || matchesSibling ||
         (chain === "solana" && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(token)));
       if ((!chain || !usableToken) && /^(?:[sL]?FRAX|s?frxUSD|FPI)$/.test(symbol)) {
         warnings.push(reserveFatalWarning("asset-coverage-incomplete",
@@ -306,6 +339,13 @@ export function adaptFraxBalanceSheet(
         warnings.push(reserveFatalWarning("asset-coverage-incomplete",
           `Frax balance-sheet FRAX asset token ${token} on ${chain} matches no verified FRAX deployment`));
         continue;
+      }
+      if (!ownClaim && (symbol === "frxUSD" || symbol === "sfrxUSD" || symbol === "FPI")) {
+        if (!chain || !token || !matchesDeployment(siblingDeployments[symbol], chain, token, isEvm)) {
+          warnings.push(reserveFatalWarning("asset-coverage-incomplete",
+            `Frax balance-sheet ${symbol} asset token ${token} on ${chain} matches no verified ${symbol} deployment`));
+          continue;
+        }
       }
     }
     if (!contractKey && subjectId === "frax-frax" && (symbol === "sFRAX" || symbol === "LFRAX")) {

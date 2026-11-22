@@ -340,7 +340,7 @@ export const YIELD_POOL_DELIVERY_PARAGRAPH = "DeFiLlama pool quotes can qualify 
 export const YIELD_REVIEWED_HOLD_DESCRIPTION =
   "Reviewed source holds remove affected opportunities from current rankings. If the latest yield observation is held, history leaves the current APY unavailable and keeps the dated observation.";
 export const MORPHO_NET_YIELD_DESCRIPTION =
-  "For Gauntlet USDC Prime V1 and Smokehouse USDC V1, Pharos prefers Morpho’s timestamped APY after the vault fee. DeFiLlama supplies a comparison rate. An eligible on-chain share-price return or price-derived APY can cover a missing or stale Morpho quote. Each USDC deposit opportunity uses the source, APYs and clocks selected for its vault shares.";
+  "For Gauntlet USDC Prime V1 and Smokehouse USDC V1, Pharos prefers Morpho’s timestamped six-hour realized native APY after the vault fee (excluding external incentives) from Morpho REST v0. DeFiLlama supplies a comparison rate. An eligible on-chain share-price return or price-derived APY can cover a missing or stale Morpho quote. Each USDC deposit opportunity uses the source, APYs and clocks selected for its vault shares.";
 
 export const YIELD_SECTION_CONTENT = defineMethodologySectionContent({
   id: "yield-intelligence-methodology",
