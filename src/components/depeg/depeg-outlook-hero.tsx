@@ -223,15 +223,24 @@ export function DepegOutlookHero({
           <DEWSRadarPanel
             logos={logos}
             activeDepegIds={activeDepegIds}
-            maxHeight={420}
+            maxHeight={368}
             reserveSpace={reserveRadar}
             reserveLegend={reserveQueue}
           />
-          {/* The precursor queue is the radar's detail layer, so it sits under it and balances
-              the rail's depeg column instead of lengthening it. */}
-          {queue || reserveQueue ? <div className={cn("border-t border-border/60 pt-3", reserveQueue && "min-h-84 sm:min-h-76")}>{queue}</div> : null}
         </div>
       </div>
+      {/* The precursor queue spans full width under the 2-part hero so the left
+          command rail and right DEWS radar stay balanced in height on desktop. */}
+      {queue || reserveQueue ? (
+        <div
+          className={cn(
+            "border-t border-border/60 px-5 py-4 sm:px-6",
+            reserveQueue && "min-h-84 sm:min-h-76 lg:min-h-40",
+          )}
+        >
+          {queue}
+        </div>
+      ) : null}
       {footer ? <div className="border-t border-border/60 px-5 py-4 sm:px-6">{footer}</div> : null}
     </section>
   );

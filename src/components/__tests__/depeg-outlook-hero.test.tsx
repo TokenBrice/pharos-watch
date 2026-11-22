@@ -58,7 +58,7 @@ describe("DepegOutlookHero source availability", () => {
     const v = render(<DepegOutlookHero {...baseProps} pendingSources={pending(loading)} />);
     for (let i = 0; i < 2; i++) {
       expect(v.container.querySelectorAll('[class*="min-h-"]:not(button)')).toHaveLength(loading ? 8 : 0);
-      for (const slot of ["min-h-20", "min-h-67 sm:min-h-52", "border-t border-border/60 pt-3 min-h-84 sm:min-h-76"])
+      for (const slot of ["min-h-20", "min-h-67 sm:min-h-52", "border-t border-border/60 px-5 py-4 sm:px-6 min-h-84 sm:min-h-76 lg:min-h-40"])
         expect(v.container.innerHTML.includes(`class="${slot}"`)).toBe(loading);
       v.rerender(<DepegOutlookHero {...baseProps} />);
     }

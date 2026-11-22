@@ -80,12 +80,12 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className, embedded,
         ) : (
           <h2 className="pharos-section-title pb-3">DEWS alert queue</h2>
         )}
-        <div className={reserveSpace ? "space-y-1.5" : "space-y-2"}>
+        <div className={cn(embedded ? "grid grid-cols-1 gap-2 lg:grid-cols-3 lg:gap-3" : reserveSpace ? "space-y-1.5" : "space-y-2")}>
           <Skeleton className={reserveSpace ? "h-[66px] rounded-lg" : "h-12 rounded-lg"} />
           <Skeleton className={reserveSpace ? "h-[66px] rounded-lg" : "h-12 rounded-lg"} />
           <Skeleton className={reserveSpace ? "h-[66px] rounded-lg" : "h-12 rounded-lg"} />
         </div>
-        {reserveSpace ? <div aria-hidden="true" className="-mb-4 mt-2 min-h-17 sm:min-h-10" /> : null}
+        {reserveSpace ? <div aria-hidden="true" className={cn(embedded ? "mt-3 pt-2" : "-mb-4 mt-2", "min-h-17 sm:min-h-10")} /> : null}
       </div>
     );
   }
@@ -102,9 +102,15 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className, embedded,
             put the same figure twice inside one shell. */}
         {embedded ? null : <span className="pharos-meta">{alertCoins.length} at alert or worse</span>}
       </div>
-      <div className="grid flex-1 grid-cols-1 gap-y-1.5" aria-live="polite">
+      <div
+        className={cn(
+          "grid flex-1 grid-cols-1",
+          embedded ? "gap-2 lg:grid-cols-3 lg:gap-3" : "gap-y-1.5",
+        )}
+        aria-live="polite"
+      >
         {alertCoins.length === 0 ? (
-          <p className="pharos-empty-note">All peg-catalog assets with DEWS coverage are below ALERT.</p>
+          <p className={cn("pharos-empty-note", embedded && "lg:col-span-3")}>All peg-catalog assets with DEWS coverage are below ALERT.</p>
         ) : (
           pageCoins.map((coin) => {
             const top = getTopDewsContributors(coin.entry.signals, 2);
@@ -113,7 +119,12 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className, embedded,
             <Link
               key={coin.id}
               href={buildStablecoinUrl(coin.id)}
-              className="pharos-focus-ring flex items-center justify-between gap-3 py-2 px-2 min-h-11 rounded-lg hover:bg-accent/50 transition-colors group"
+              className={cn(
+                "pharos-focus-ring flex items-center justify-between gap-3 min-h-11 rounded-lg hover:bg-accent/50 transition-colors group",
+                embedded
+                  ? "border border-border/60 bg-muted/20 px-3 py-2.5"
+                  : "px-2 py-2",
+              )}
               onMouseEnter={() => prefetch(coin.id)}
             >
               <div className="flex items-center gap-3 min-w-0">
@@ -140,7 +151,13 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className, embedded,
         )}
       </div>
       {(totalPages > 1 || reserveSpace) && (
-        <div className={cn("-mx-4 -mb-4 mt-2 flex items-center justify-between border-t border-border/60 px-4 py-2", reserveSpace && "min-h-17 sm:min-h-10")}>
+        <div
+          className={cn(
+            "flex items-center justify-between border-t border-border/60",
+            embedded ? "mt-3 pt-2.5" : "-mx-4 -mb-4 mt-2 px-4 py-2",
+            reserveSpace && "min-h-17 sm:min-h-10",
+          )}
+        >
           {totalPages > 1 ? (
             <>
               <button

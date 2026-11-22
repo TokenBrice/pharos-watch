@@ -88,13 +88,14 @@ KPI" shape required by `design-language.md#feature-page-heroes`.
   **Open incidents** — the census the headline counts (peg-summary `activeDepeg` rows) ranked by `rankOpenIncidents()` on holder exposure (circulating supply × |live deviation|, unavailable exposure last), naming the top five as `Top 5 of N` with live deviation in basis points (as the worst-move chip), compact DDR verdict and market cap, each linking to the dossier's `#depeg-resolver`;
   a four-cell figure grid (awaiting confirmation, meaning the `pending[]` threshold crossings; DEWS ALERT-or-worse; holding peg; median deviation). **Recovery outlook · DDR** and **Forecast track record · DDRR** summaries live in `DepegResolverModule` below the hero (with dense DDRR grading tables collapsed behind a 1-row `Track Record` disclosure linked to `#forecast-grading`). Supporting
   figures stay neutral. `DEPEG_PENDING_STATE_LABELS` (`shared/lib/classification/depeg.ts`) keeps the two pending states apart: crossings read “Awaiting confirmation” (board pill `awaiting`) and DDR `pending_lock` rows “Forecast not locked yet”, never a bare “pending”.
-- **Right field:** `DEWSRadarPanel` (`src/components/dews/dews-summary.tsx`), then the DEWS alert queue (`DEWSAlertFeed embedded`) under it as the radar's detail layer, so the precursor column balances the depeg rail. Radial ring encodes DEWS band, mark size encodes market cap, mark colour encodes
+- **Right field:** `DEWSRadarPanel` (`src/components/dews/dews-summary.tsx`) paired beside the left command rail so both halves balance in height on desktop. Radial ring encodes DEWS band, mark size encodes market cap, mark colour encodes
   band, and a **single `+4px` ring marks an elevated coin that also has an open confirmed incident**
   (`PegSummaryCoin.activeDepeg` intersected with the radar's elevated set — see
   [Universe scope](#universe-scope)). Every shape carries a field.
   Unavailable supply retains a neutral, band-based size rather than the measured-small tier.
   Tooltip and keyboard announcements name missing supply; an explicit observed zero remains a
   measured-zero cap, and unavailable caps sort after observations within each severity band.
+- **Full-width alert queue band:** `DEWSAlertFeed embedded` spans the full hero width under the two-part rail/radar split (`3` horizontal cards per page on desktop, stacked below `lg`), eliminating empty space under the command rail while keeping the precursor queue inside the hero shell.
 - **Footer band:** unused on this route. DEWS age reaches readers only through the route's shared
   `stressSignals` notice, aged by the oldest retained generation (`oldestComputedAt`) (ADR-42);
   malformed-row and coverage counts stay in the API and operator diagnostics.
