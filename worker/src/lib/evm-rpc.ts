@@ -1303,13 +1303,33 @@ export async function resolveClosestBlockAtOrBeforeTimestamp(
     }
   }
 
+  // Known anchors bracket the target; interpolation converges on a fast-block
+  // chain's boundary in a few probes before the exact binary search below. Each
+  // probe only narrows the bracket, never decides it.
+  const narrowWithInterpolation = async (): Promise<boolean> => {
+    for (let step = 0; step < 6 && low > 0 && high > low + 1; step++) {
+      const lowTimestamp = cache.blockTimestampByNumber.get(low);
+      const highTimestamp = cache.blockTimestampByNumber.get(high);
+      if (lowTimestamp == null || highTimestamp == null || highTimestamp <= lowTimestamp) break;
+      const ratio = (targetTimestamp - lowTimestamp) / (highTimestamp - lowTimestamp);
+      const guess = Math.min(high - 1, Math.max(low + 1, low + Math.floor(ratio * (high - low))));
+      const timestamp = await getTimestamp(guess);
+      if (timestamp == null) return false;
+      if (timestamp <= targetTimestamp) low = guess;
+      else high = guess;
+    }
+    return true;
+  };
+
+  if (!(await narrowWithInterpolation())) return null;
+
   // A scoring clock captured immediately before this lookup is commonly only
-  // seconds behind the chain tip. Starting an unbounded binary search at block
-  // zero makes the first probe deep history, which non-archive public RPCs may
-  // have pruned even though every block needed for the near-tip lookup is still
-  // available. For deeper historical cold lookups (>60s behind the tightest
-  // upper bound), estimate an empirical block rate from a calibration anchor or
-  // one bounded near-upper probe and extrapolate into the lower bracket before
+  // seconds to minutes behind the chain tip. Starting an unbounded binary search
+  // at block zero makes the first probe deep history, which non-archive public
+  // RPCs may have pruned even though every block needed for the near-tip lookup
+  // is still available. For deeper historical cold lookups (>1h behind the
+  // tightest upper bound) or callers providing a calibration anchor, estimate
+  // an empirical block rate and extrapolate into the lower bracket before
   // falling back to exponential walkback.
   if (low === 0 && high > 0) {
     const initialHighTs = cache.blockTimestampByNumber.get(high);
@@ -1328,7 +1348,7 @@ export async function resolveClosestBlockAtOrBeforeTimestamp(
     ) {
       refBlock = cal.blockNumber;
       refTs = cal.timestamp;
-    } else if (initialHighTs != null) {
+    } else if (initialHighTs != null && initialHighTs - targetTimestamp > 3_600) {
       let bestSpan = 0;
       for (const [blockNumber, timestamp] of cache.blockTimestampByNumber.entries()) {
         const span = Math.abs(blockNumber - high);
@@ -1340,7 +1360,9 @@ export async function resolveClosestBlockAtOrBeforeTimestamp(
       }
     }
 
-    if (refBlock == null && high > 1 && initialHighTs != null && initialHighTs - targetTimestamp > 60) {
+    let usedColdExtrapolation = refBlock != null;
+    if (refBlock == null && high > 1 && initialHighTs != null && initialHighTs - targetTimestamp > 3_600) {
+      usedColdExtrapolation = true;
       const sampleSpan = Math.min(high - 1, Math.max(1, Math.min(10_000, Math.floor((initialHighTs - targetTimestamp) / 4))));
       const sampleBlock = Math.max(1, high - sampleSpan);
       const sampleTs = await getTimestamp(sampleBlock);
@@ -1394,21 +1416,8 @@ export async function resolveClosestBlockAtOrBeforeTimestamp(
         offset = Math.min(upperAnchor, offset * 2);
       }
     }
-  }
 
-  // Known or freshly bracketed anchors; interpolation converges on a fast-block
-  // chain's boundary in a few probes before the exact binary search below. Each
-  // probe only narrows the bracket, never decides it.
-  for (let step = 0; step < 6 && low > 0 && high > low + 1; step++) {
-    const lowTimestamp = cache.blockTimestampByNumber.get(low);
-    const highTimestamp = cache.blockTimestampByNumber.get(high);
-    if (lowTimestamp == null || highTimestamp == null || highTimestamp <= lowTimestamp) break;
-    const ratio = (targetTimestamp - lowTimestamp) / (highTimestamp - lowTimestamp);
-    const guess = Math.min(high - 1, Math.max(low + 1, low + Math.floor(ratio * (high - low))));
-    const timestamp = await getTimestamp(guess);
-    if (timestamp == null) return null;
-    if (timestamp <= targetTimestamp) low = guess;
-    else high = guess;
+    if (usedColdExtrapolation && !(await narrowWithInterpolation())) return null;
   }
 
   while (low + 1 < high) {

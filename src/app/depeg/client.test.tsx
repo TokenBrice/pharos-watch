@@ -434,11 +434,11 @@ describe("DepegClient", () => {
   });
 
   describe("DEWS hero and shared notice", () => {
-    const SIX_HOURS_MS = 21_600_000;
+    const TWELVE_HOURS_MS = 43_200_000;
     const transport = (updatedAt: number): ApiMeta => ({ updatedAt, ageSeconds: 0, status: "fresh" });
     const usable = { "coin-a": { band: "CALM" } };
 
-    it("ages the oldest signal generation against the shared six-hour band, not a private hour", () => {
+    it("ages the oldest signal generation against the shared twelve-hour band, not a private hour", () => {
       fakeClock();
       const { dews } = mountDepegRoute({
         signals: { signals: usable, oldestComputedAt: NOW_SEC - 2 * 3600, updatedAt: NOW_SEC, meta: transport(NOW_SEC) },
@@ -447,7 +447,7 @@ describe("DepegClient", () => {
       advanceTime(0);
       expect(banner()).toBeNull();
       expect(screen.queryByText(/oldest DEWS signal|Coverage caveats/)).toBeNull();
-      advanceTime(SIX_HOURS_MS - 2 * 3_600_000);
+      advanceTime(TWELVE_HOURS_MS - 2 * 3_600_000);
       expect(banner()).toBeNull();
       advanceTime(1);
       expect(banner()?.getAttribute("data-health-state")).toBe("stale");
@@ -457,7 +457,7 @@ describe("DepegClient", () => {
     it("keeps the transported verdict, budgets and age offset while selecting the oldest clock", () => {
       const meta: ApiMeta = {
         updatedAt: NOW_SEC, ageSeconds: 60, status: "degraded", warning: "199 - \"partial\"",
-        freshBudgetSec: 1800, degradedBudgetSec: 21_600,
+        freshBudgetSec: 3600, degradedBudgetSec: 43_200,
       };
       mountDepegRoute({ signals: { signals: usable, oldestComputedAt: NOW_SEC - 600, meta } });
       const query = (mocks.QueryFreshnessNotices.mock.calls.at(-1)![0] as { queries: StaleQuery[] }).queries
@@ -497,7 +497,7 @@ describe("DepegClient", () => {
     it("falls back to the body producer clock for legacy bodies, never receipt time", () => {
       fakeClock();
       mountDepegRoute({
-        signals: { signals: usable, updatedAt: NOW_SEC - SIX_HOURS_MS / 1000, dataUpdatedAt: NOW_SEC * 1000 },
+        signals: { signals: usable, updatedAt: NOW_SEC - TWELVE_HOURS_MS / 1000, dataUpdatedAt: NOW_SEC * 1000 },
       });
       const banner = renderCapturedNotices(["stressSignals"]);
       advanceTime(0);

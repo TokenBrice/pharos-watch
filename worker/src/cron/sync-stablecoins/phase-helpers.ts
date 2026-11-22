@@ -367,10 +367,10 @@ function isCorroboratedPublishedConsensusPrice(asset: PeggedAsset): boolean {
  */
 export function deriveExactParListNativeQuantities(
   assets: PeggedAsset[],
-  exactParUsdListObservations: ReadonlyMap<string, number>,
+  exactParUsdListObservations: ReadonlyMap<string, number> | undefined,
   nowSec: number,
 ): number {
-  if (exactParUsdListObservations.size === 0) return 0;
+  if (!exactParUsdListObservations || exactParUsdListObservations.size === 0) return 0;
   let derivedCount = 0;
   for (const asset of assets) {
     const deferredUsd = exactParUsdListObservations.get(asset.id);

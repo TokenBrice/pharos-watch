@@ -510,8 +510,8 @@ describe("buildCacheStatuses sentinel validation", () => {
       freshnessSource: "freshness-sentinel",
       producerJob: "compute-dews",
       producerIntervalSec: 1800,
-      endpointMaxAge: 1800,
-      availabilityMaxAge: 1800,
+      endpointMaxAge: 3600,
+      availabilityMaxAge: 3600,
     });
     expect(diagnostics).toEqual([]);
     expect(warnings).toEqual([]);
@@ -1211,9 +1211,9 @@ describe("buildCacheStatuses", () => {
 
     expect(caches.dews).toMatchObject({
       ageSeconds: 3_473,
-      maxAge: 1_800,
+      maxAge: 3_600,
       healthyMaxRatio: 12,
-      healthyMaxAge: 21_600,
+      healthyMaxAge: 43_200,
       healthy: true,
     });
     expect(caches["yield-data"]).toMatchObject({

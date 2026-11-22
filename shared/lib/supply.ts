@@ -1,11 +1,11 @@
 import type { StablecoinData, SupplyRestoreMode } from "../types/supply";
-import { CACHE_FRESHNESS_LANES } from "./api-freshness";
+import { CRON_INTERVALS } from "./cron-jobs";
 import { bucketUnixSecondsToUtcDay } from "./time-buckets";
 
 export type SupplyChangeBaselines = NonNullable<StablecoinData["supplyChangeBaselines"]>;
 
 /** Maximum lead before UTC midnight / snapshot cache age accepted for a daily supply close (2 × sync-stablecoins interval). */
-export const SUPPLY_SNAPSHOT_MAX_AGE_SEC = 2 * CACHE_FRESHNESS_LANES.stablecoins.producerIntervalSec;
+export const SUPPLY_SNAPSHOT_MAX_AGE_SEC = 2 * CRON_INTERVALS["sync-stablecoins"];
 
 /** A directly reported USD cap carries its stock clock. A separate valuation must belong to that UTC date or fall within the midnight-lead snapshot window. */
 export function hasDatedUsdValuation(
