@@ -114,7 +114,7 @@
         "threshold": 2,
         "modulesOrGuardsStatus": "present",
         "canRaiseCap": false,
-        "evidence": "At Ethereum block 26101011 (2026-10-02), Vault strategistAddr() remains this Safe, with eight owners, threshold 2, five enabled modules and zero guard. All five module runtimes exactly match their Blockscout verified deployed bytecode. AutoWithdrawalModule 0x90d588fc0ec3db9c4b417db4537fe08e063d2ae5 has immutable OUSD Vault/USDC/Safe targets and an external EOA operator 0x739212d5bafe6aac8be49a60b7d003bd41dbf38b. The operator can bypass the Safe's two-signature transaction flow for withdrawFromStrategy(address,address[],uint256[]) (0xae69f3cb), moving supported-strategy USDC back into the Vault to fund its withdrawal queue, bounded dynamically by min(queue shortfall, strategy balance). A pinned one-USDC eth_call as the Safe succeeds. This is verified reserve-transfer reach, not noninterference; it does not itself expose OUSD mint or upgrade selectors, arbitrary recipients, or delegatecall. Other modules automate mutable bribe targets, strategy rewards and OETH bridging; their complete transitive OUSD reach is not certified. No module-presence waiver, unbounded-loss claim or backing-horizon change is authored. Re-read 2026-10-27 at Ethereum block 26282972 (hash 0xdef03506e753852cf624d4103305513a8f7e0a6f48b38a35113755b329c84625, timestamp 2026-10-27T08:53:23Z, ethereum-rpc.publicnode.com): the Safe (version 1.4.1, singleton 0x41675c099f32341bf84bfc5382af534df5c7461a) still has the same eight owners, threshold 2, the same five enabled modules with empty terminal pagination, zero guard and fallback handler 0x2f55e8b20d0b9fefa187aa7d00b6cbe563605bf5; Vault 0xE75D77B1865Ae93c7eaa3040B038D7aA7BC02F70 strategistAddr() is still this Safe. The runtime-code text SHA-256 of the Safe proxy, all five modules and the fallback handler is identical to the recorded values. AutoWithdrawalModule safeContract() is this Safe, its OPERATOR_ROLE members are this Safe and EOA 0x739212d5bafe6aac8be49a60b7d003bd41dbf38b, and DEFAULT_ADMIN_ROLE has the single member this Safe. Module source re-verification and the transitive reach of the other modules were not repeated; the partial certificate and its closure flags are unchanged.",
+        "evidence": "At Ethereum block 26101011 (2026-10-02), Vault strategistAddr() remains this Safe, with eight owners, threshold 2, five enabled modules and zero guard. All five module runtimes exactly match their Blockscout verified deployed bytecode. AutoWithdrawalModule 0x90d588fc0ec3db9c4b417db4537fe08e063d2ae5 has immutable OUSD Vault/USDC/Safe targets and an external EOA operator 0x739212d5bafe6aac8be49a60b7d003bd41dbf38b. The operator can bypass the Safe's two-signature transaction flow for withdrawFromStrategy(address,address[],uint256[]) (0xae69f3cb), moving supported-strategy USDC back into the Vault to fund its withdrawal queue, bounded dynamically by min(queue shortfall, strategy balance). A pinned one-USDC eth_call as the Safe succeeds. This is verified reserve-transfer reach, not noninterference; it does not itself expose OUSD mint or upgrade selectors, arbitrary recipients, or delegatecall. Other modules automate mutable bribe targets, strategy rewards and OETH bridging; their complete transitive OUSD reach is not certified. No module-presence waiver, unbounded-loss claim or backing-horizon change is authored. Re-read 2026-10-27 at Ethereum block 26282972 (hash 0xdef03506e753852cf624d4103305513a8f7e0a6f48b38a35113755b329c84625, timestamp 2026-10-27T08:53:23Z, ethereum-rpc.publicnode.com): the Safe (version 1.4.1, singleton 0x41675c099f32341bf84bfc5382af534df5c7461a) still has the same eight owners, threshold 2, the same five enabled modules with empty terminal pagination, zero guard and fallback handler 0x2f55e8b20d0b9fefa187aa7d00b6cbe563605bf5; Vault 0xE75D77B1865Ae93c7eaa3040B038D7aA7BC02F70 strategistAddr() is still this Safe. The runtime-code text SHA-256 of the Safe proxy, all five modules and the fallback handler is identical to the recorded values. AutoWithdrawalModule safeContract() is this Safe, its OPERATOR_ROLE members are this Safe and EOA 0x739212d5bafe6aac8be49a60b7d003bd41dbf38b, and DEFAULT_ADMIN_ROLE has the single member this Safe. Module source re-verification and the transitive reach of the other modules were not repeated; the partial certificate and its closure flags are unchanged. Re-read 2026-11-22 at pinned Ethereum block 26471665 (hash 0x74c8c2a37821736862ce355c7c0995911a74bd9128d1ec2f9c0b53b817b81f68, 2026-11-22T15:50:47.000Z, https://eth-mainnet.g.alchemy.com/v2/): Safe v1.4.1 proxy/singleton, 8 owners, threshold 2, zero guards, fallback handler, and remaining 4 modules unchanged; module 0x630c1763d38abe76301f58909fa174e7b84a7ecd was disabled via DisabledModule at Ethereum block 26327980 (tx 0x94be2c86cc4488bceea702aa09bdc82d559324942f05b4ebb6c6cdaeb474c22f).",
         "safe": {
           "owners": [
             "0x052c01a2a88fa6cba8fc2dbef39a442a140a35e3",
@@ -131,22 +131,21 @@
             "0x6241f5e4ad5af39ef3ae54801e0ae431e0b70369",
             "0x6320db7a3c1b95fd5684dc725c2cda9b82fa20fa",
             "0x90d588fc0ec3db9c4b417db4537fe08e063d2ae5",
-            "0x1b84e64279d63f48ddd88b9b2a7871e817152a44",
-            "0x630c1763d38abe76301f58909fa174e7b84a7ecd"
+            "0x1b84e64279d63f48ddd88b9b2a7871e817152a44"
           ],
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0x2f55e8b20d0b9fefa187aa7d00b6cbe563605bf5",
           "version": "1.4.1",
-          "observedBlock": 26300242,
+          "observedBlock": 26471665,
           "source": "onchain",
-          "observedAt": "2026-10-29"
+          "observedAt": "2026-11-22"
         },
         "executionScope": {
           "controllerDeployment": "ethereum:0x4ff1b9d9ba8558f5eafcec096318ea0d8b541971",
-          "reviewedAt": "2026-10-29",
-          "observedAt": "2026-10-29",
-          "expiresAt": "2026-11-28",
-          "reviewer": "R-MINT-6 renewal 2026-10-29",
+          "reviewedAt": "2026-11-22",
+          "observedAt": "2026-11-22",
+          "expiresAt": "2026-12-22",
+          "reviewer": "Pharos #945 Wave B renewal 2026-11-22",
           "confidence": "partial",
           "sources": [
             {
@@ -182,25 +181,29 @@
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1b84e64279d63f48ddd88b9b2a7871e817152a44"
             },
             {
-              "label": "Runtime-matched Ethereum bridge helper: operator mint/wrap/redeem and bridge calls",
+              "label": "Historical Ethereum bridge helper module 0x630c1763... (disabled via DisabledModule at Ethereum block 26327980, tx 0x94be2c86...)",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x630c1763d38abe76301f58909fa174e7b84a7ecd"
             },
             {
               "label": "Runtime-matched ExtensibleFallbackHandler: Safe-configured dynamic selector handlers remain unclosed",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2f55e8b20d0b9fefa187aa7d00b6cbe563605bf5"
+            },
+            {
+              "label": "Pinned Ethereum block 26471665 (2026-11-22T15:50:47.000Z, hash 0x74c8c2a37821736862ce355c7c0995911a74bd9128d1ec2f9c0b53b817b81f68): Safe v1.4.1 proxy/singleton, 8 owners, threshold 2, zero guards, fallback handler, and 4 active modules verified; module 0x630c1763 disabled at block 26327980",
+              "url": "https://eth-mainnet.g.alchemy.com/v2/"
             }
           ],
           "pin": {
-            "position": "26300242",
-            "hash": "0x6ce5e1d1acccb5baa2342eef615cb1c22db85f723189415aa955d76657eae44b",
+            "position": "26471665",
+            "hash": "0x74c8c2a37821736862ce355c7c0995911a74bd9128d1ec2f9c0b53b817b81f68",
             "runtimeIdentity": "sha256-rpc-code-text:c7404fa90f9417f24a7f3e1ee736d3f7843f419188a98921fa385dac0e8a693b",
-            "signerIdentity": "getOwners/getThreshold:8-owners:2-signatures:block-26300242"
+            "signerIdentity": "getOwners/getThreshold:8-owners:2-signatures:block-26471665"
           },
           "observedState": {
-            "position": "26300242",
-            "hash": "0x6ce5e1d1acccb5baa2342eef615cb1c22db85f723189415aa955d76657eae44b",
+            "position": "26471665",
+            "hash": "0x74c8c2a37821736862ce355c7c0995911a74bd9128d1ec2f9c0b53b817b81f68",
             "runtimeIdentity": "sha256-rpc-code-text:c7404fa90f9417f24a7f3e1ee736d3f7843f419188a98921fa385dac0e8a693b",
-            "signerIdentity": "getOwners/getThreshold:8-owners:2-signatures:block-26300242"
+            "signerIdentity": "getOwners/getThreshold:8-owners:2-signatures:block-26471665"
           },
           "inventory": "partial",
           "closure": {
@@ -217,16 +220,27 @@
               "id": "auto-withdrawal-vault-call",
               "targetDeployment": "ethereum:0xe75d77b1865ae93c7eaa3040b038d7aa7bc02f70",
               "entrypointKind": "evm-selector",
-              "entrypoints": ["0xae69f3cb"],
+              "entrypoints": [
+                "0xae69f3cb"
+              ],
               "callMode": "call",
-              "capabilities": ["custody-transfer"],
-              "capSemantics": {"kind": "unknown", "bound": null},
+              "capabilities": [
+                "custody-transfer"
+              ],
+              "capSemantics": {
+                "kind": "unknown",
+                "bound": null
+              },
               "claimImpairment": "unknown",
               "economicLossScope": "reserve-claim",
               "unavoidableDelaySec": 0,
               "activation": "active",
-              "affectedLiabilityIds": ["ousd-origin-protocol"],
-              "affectedDeployments": ["ethereum:0xe75d77b1865ae93c7eaa3040b038d7aa7bc02f70"],
+              "affectedLiabilityIds": [
+                "ousd-origin-protocol"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xe75d77b1865ae93c7eaa3040b038d7aa7bc02f70"
+              ],
               "reach": "root",
               "controlRefs": [],
               "reactivationRefs": [],
@@ -258,19 +272,14 @@
                 "deployment": "ethereum:0x90d588fc0ec3db9c4b417db4537fe08e063d2ae5",
                 "runtimeIdentity": "sha256-rpc-code-text:6381c80da8cd56d5ffb0a84731e828ce11ea5153b353a8126565338dc40c8e5a",
                 "kind": "module",
-                "pathRefs": ["auto-withdrawal-vault-call"],
+                "pathRefs": [
+                  "auto-withdrawal-vault-call"
+                ],
                 "mutableReachClosed": false
               },
               {
                 "deployment": "ethereum:0x1b84e64279d63f48ddd88b9b2a7871e817152a44",
                 "runtimeIdentity": "sha256-rpc-code-text:86e7c9bdc578ccb8b5c60113256f0f3c57a8cf515ba82bd3b6797b95c60236f5",
-                "kind": "module",
-                "pathRefs": [],
-                "mutableReachClosed": false
-              },
-              {
-                "deployment": "ethereum:0x630c1763d38abe76301f58909fa174e7b84a7ecd",
-                "runtimeIdentity": "sha256-rpc-code-text:1fa1544fe4b5264a43f0cc873619e6414e21a757de9331f842bce5ed87d65a7e",
                 "kind": "module",
                 "pathRefs": [],
                 "mutableReachClosed": false
@@ -291,8 +300,8 @@
             "url": "https://eth.blockscout.com/address/0x4ff1b9d9ba8558f5eafcec096318ea0d8b541971"
           }
         ],
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300242
+        "observedAt": "2026-11-22",
+        "observedBlock": 26471665
       }
     ],
     "economicCapSemantics": "unbounded",

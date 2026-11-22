@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it } from "vitest";
-import reviews from "@shared/data/safety-score-v9/supply-attribution-reviews-v1.json";
 import { ReviewedProviderRowExclusionSchema } from "@shared/types/safety-score-v9-supply-attribution";
 import { unresolvedDeploymentCohort } from "@shared/lib/safety-score-v9/control-bridge-join";
 import type { V9EconomicControlAssetFacts } from "@shared/lib/safety-score-v9/control-primitives";
@@ -8,7 +7,7 @@ import type { SafetyScoreV9CompilerInput } from "../safety-score-v9/native-input
 import type { SafetyScoreV9FactSetExtensionV2 } from "../safety-score-v9/fact-set-schema";
 import { evaluateV9EconomicControl } from "@shared/lib/safety-score-v9/control";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { boundedUnknown, makeDeploymentControl, makeEconomicControlFacts, noBridgeReview, noMintReview, noOracleReview, requiredKnown } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";
+import { boundedUnknown, FRAX_PROVIDER_ROW_EXCLUSION_FIXTURE, makeDeploymentControl, makeEconomicControlFacts, noBridgeReview, noMintReview, noOracleReview, requiredKnown } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";
 import { adaptBridgeReview } from "../safety-score-v9/extension-bridge";
 import type { V9ExtensionRegistryMeta } from "../safety-score-v9/extension-shared";
 import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
@@ -19,7 +18,7 @@ import { buildSafetyScoreV9SupplyReview, type ReviewedProviderRowExclusionRow } 
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 
-const original = structuredClone(reviews.providerRowExclusionReviews) as ReviewedProviderRowExclusionRow[];
+const original = [structuredClone(FRAX_PROVIDER_ROW_EXCLUSION_FIXTURE)] as ReviewedProviderRowExclusionRow[];
 let authoredExclusions: ReviewedProviderRowExclusionRow[] = structuredClone(original);
 afterEach(() => {
   authoredExclusions = structuredClone(original);

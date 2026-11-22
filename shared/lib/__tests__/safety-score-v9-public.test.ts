@@ -28,9 +28,8 @@ import {
   SafetyScoreV9PillarSchema,
 } from "../../types/safety-score-v9-public";
 import { SafetyScoreV9CurrentResponseSchema } from "../../types/safety-score-v9-publication-response";
-import { makeDeploymentControl, makeCompiledVotingControl, makeOperationalIssuanceProcess } from "./safety-score-v9-fixtures.test-support";
+import { makeDeploymentControl, makeCompiledVotingControl, makeOperationalIssuanceProcess, FRAX_PROVIDER_ROW_EXCLUSION_FIXTURE } from "./safety-score-v9-fixtures.test-support";
 import { reviewedScope, weightedQuorum } from "./safety-score-v9-control-scope.test-support";
-import supplyAttributionReviews from "../../data/safety-score-v9/supply-attribution-reviews-v1.json";
 import { ReviewedProviderRowExclusionSchema } from "../../types/safety-score-v9-supply-attribution";
 import { isV9OperationallyGovernedIssuanceQualified } from "../safety-score-v9/control-primitives";
 import type { V1005ProcessDiagnostic } from "../../types/safety-score-v9-facts";
@@ -948,7 +947,7 @@ describe("Safety Score v9 public projection", () => {
     const baseline = JSON.stringify(projectCard(input));
     input.providerRowExclusions = [];
     expect(JSON.stringify(projectCard(input))).toBe(baseline);
-    const review = ReviewedProviderRowExclusionSchema.parse(supplyAttributionReviews.providerRowExclusionReviews[0]!);
+    const review = ReviewedProviderRowExclusionSchema.parse(FRAX_PROVIDER_ROW_EXCLUSION_FIXTURE);
     input.providerRowExclusions = [{ review, deploymentRouteKey: "unmatched-chain:frax-frax:fraxtal", supplyShare: 0.097 }];
     const card = SafetyScoreV9CurrentCardSchema.parse(projectCard(input));
     expect(card.scoreTrace.providerRowExclusions).toEqual([{ review, deploymentRouteKey: "unmatched-chain:frax-frax:fraxtal", supplyShare: 0.097 }]);

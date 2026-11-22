@@ -677,27 +677,31 @@
         "canRaiseCap": true,
         "executionScope": {
           "controllerDeployment": "bsc:0x5515be1db2a513888f5cf375bf5c7956ee93c779",
-          "reviewedAt": "2026-10-29",
-          "observedAt": "2026-10-29",
-          "expiresAt": "2026-11-28",
-          "reviewer": "R-MINT-6 renewal 2026-10-29",
+          "reviewedAt": "2026-11-22",
+          "observedAt": "2026-11-22",
+          "expiresAt": "2026-12-22",
+          "reviewer": "Pharos #945 Wave B renewal 2026-11-22",
           "confidence": "partial",
           "sources": [
             {
               "label": "BSC IDRX DEFAULT_ADMIN role and grantRole simulation at block 125139388",
               "url": "https://bscscan.com/address/0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
+            },
+            {
+              "label": "Pinned BSC block 135108436 (2026-11-22T16:08:28.000Z, hash 0x454d44d7b90db370795e2b375a244f2ba55522cb9478b826469ec184085d4eb6): proxy implementation 0x20fad183, eth_getCode=0x, DEFAULT_ADMIN_ROLE=true, MINTER_ROLE=false, grantRole simulation succeeds; EOA nonce 0x1b after 4 MINTER_ROLE mutations",
+              "url": "https://bnb-mainnet.g.alchemy.com/v2/"
             }
           ],
           "pin": {
-            "position": "130515000",
-            "hash": "0x164a1ecc0227c3a074a50d5af746d92062a9366f115a2bbd86982be0728fa18d",
-            "runtimeIdentity": "eth_getCode=0x; nonce=0x17; DEFAULT_ADMIN_ROLE=true; MINTER_ROLE=false; grantRole(MINTER_ROLE,dead) eth_call succeeds",
+            "position": "135108436",
+            "hash": "0x454d44d7b90db370795e2b375a244f2ba55522cb9478b826469ec184085d4eb6",
+            "runtimeIdentity": "eth_getCode=0x; nonce=0x1b; DEFAULT_ADMIN_ROLE=true; MINTER_ROLE=false; grantRole(MINTER_ROLE,dead) eth_call succeeds",
             "signerIdentity": "single-key address; key custody unknown"
           },
           "observedState": {
-            "position": "130515000",
-            "hash": "0x164a1ecc0227c3a074a50d5af746d92062a9366f115a2bbd86982be0728fa18d",
-            "runtimeIdentity": "eth_getCode=0x; nonce=0x17; DEFAULT_ADMIN_ROLE=true; MINTER_ROLE=false; grantRole(MINTER_ROLE,dead) eth_call succeeds",
+            "position": "135108436",
+            "hash": "0x454d44d7b90db370795e2b375a244f2ba55522cb9478b826469ec184085d4eb6",
+            "runtimeIdentity": "eth_getCode=0x; nonce=0x1b; DEFAULT_ADMIN_ROLE=true; MINTER_ROLE=false; grantRole(MINTER_ROLE,dead) eth_call succeeds",
             "signerIdentity": "single-key address; key custody unknown"
           },
           "inventory": "partial",
@@ -746,7 +750,7 @@
             }
           ]
         },
-        "evidence": "Resolved 2026-07-30 from the complete BSC role history: DEFAULT_ADMIN_ROLE granted 2025-09-26 and the original deployer fully revoked; hasRole(DEFAULT_ADMIN_ROLE) = true at block 113086546; eth_getCode = 0x (EOA). Also holds PAUSER_ROLE and BLACKLIST_ROLE. DEFAULT_ADMIN can grant/revoke MINTER_ROLE and UPGRADER_ROLE without delay. Sol curation campaign 2026-10-09 (W2L11Idrx) independently observed at 2026-10-09T11:50:44Z: BSC block 126630688, hash 0x83844aae0fd3e4a43bd278cc4dd405ec72cc21e824da4c17b6aeb5fd52e0b154, timestamp 2026-10-09T11:49:46Z; hasRole(DEFAULT_ADMIN_ROLE)=true, hasRole(MINTER_ROLE)=false, hasRole(UPGRADER_ROLE)=false and eth_getCode=0x. The target proxy implementation slot resolves to 0x20fad183dc35f4ae0d1d125ae2f3c4c43a53bbd0 at the same pin. The July PAUSER/BLACKLIST history and October 1 grantRole simulation are not re-observed by this limited call set. Aggregate review dates, historical role census and both partial execution certificates remain unchanged. Re-read 2026-10-27 at BSC block 130060505 (hash 0xa04a3ee08a5191484c24dfe6bab158658560e01f966b77452bd64c9eca5af474, timestamp 2026-10-27T08:51:12Z, bsc-rpc.publicnode.com): on proxy 0x649a2da7b28e0d54c13d5eff95d3a660652742cc this EOA still holds DEFAULT_ADMIN_ROLE, PAUSER_ROLE and BLACKLIST_ROLE and does not hold MINTER_ROLE or UPGRADER_ROLE; eth_getCode is still 0x and nonce 23 (0x17); the implementation slot is still 0x20fad183dc35f4ae0d1d125ae2f3c4c43a53bbd0. The grantRole simulation and role-grant history were not re-run, so both partial execution certificates keep their closure flags.",
+        "evidence": "Resolved 2026-07-30 from the complete BSC role history: DEFAULT_ADMIN_ROLE granted 2025-09-26 and the original deployer fully revoked; hasRole(DEFAULT_ADMIN_ROLE) = true at block 113086546; eth_getCode = 0x (EOA). Also holds PAUSER_ROLE and BLACKLIST_ROLE. DEFAULT_ADMIN can grant/revoke MINTER_ROLE and UPGRADER_ROLE without delay. Sol curation campaign 2026-10-09 (W2L11Idrx) independently observed at 2026-10-09T11:50:44Z: BSC block 126630688, hash 0x83844aae0fd3e4a43bd278cc4dd405ec72cc21e824da4c17b6aeb5fd52e0b154, timestamp 2026-10-09T11:49:46Z; hasRole(DEFAULT_ADMIN_ROLE)=true, hasRole(MINTER_ROLE)=false, hasRole(UPGRADER_ROLE)=false and eth_getCode=0x. The target proxy implementation slot resolves to 0x20fad183dc35f4ae0d1d125ae2f3c4c43a53bbd0 at the same pin. The July PAUSER/BLACKLIST history and October 1 grantRole simulation are not re-observed by this limited call set. Aggregate review dates, historical role census and both partial execution certificates remain unchanged. Re-read 2026-10-27 at BSC block 130060505 (hash 0xa04a3ee08a5191484c24dfe6bab158658560e01f966b77452bd64c9eca5af474, timestamp 2026-10-27T08:51:12Z, bsc-rpc.publicnode.com): on proxy 0x649a2da7b28e0d54c13d5eff95d3a660652742cc this EOA still holds DEFAULT_ADMIN_ROLE, PAUSER_ROLE and BLACKLIST_ROLE and does not hold MINTER_ROLE or UPGRADER_ROLE; eth_getCode is still 0x and nonce 23 (0x17); the implementation slot is still 0x20fad183dc35f4ae0d1d125ae2f3c4c43a53bbd0. The grantRole simulation and role-grant history were not re-run, so both partial execution certificates keep their closure flags. Re-read 2026-11-22 at pinned BSC block 135108436 (hash 0x454d44d7b90db370795e2b375a244f2ba55522cb9478b826469ec184085d4eb6, 2026-11-22T16:08:28.000Z, https://bnb-mainnet.g.alchemy.com/v2/): proxy implementation 0x20fad183dc35f4ae0d1d125ae2f3c4c43a53bbd0, eth_getCode=0x, DEFAULT_ADMIN_ROLE=true, MINTER_ROLE=false, UPGRADER_ROLE=false, PAUSER_ROLE=true, BLACKLIST_ROLE=true, and grantRole(MINTER_ROLE,dead) eth_call unchanged; EOA nonce advanced from 0x17 to 0x1b following 4 BSC MINTER_ROLE transactions (revoked 0xf80fdf24 at 131940931 and 0xfcdd2816 at 131940992; granted Safe 1.5.0 proxies 0x74fc44f2 2-of-6 at 134627818 and 0x691e35e2 2-of-7 at 134627897).",
         "sources": [
           {
             "label": "Sol curation campaign 2026-10-11 (C06USDTB), observed 2026-10-11T00:49:27Z: historical BSC block 125139388, hash 0xc10af77e5abbaec57fdeae395acc81b6eb6a2d3e071e02ebe522b04d53eaa10d, timestamp 2026-10-01T17:20:09Z; admin address eth_getCode=0x and nonce=0x17; no current role, signer-custody or execution-closure refresh",
@@ -765,8 +769,8 @@
             "url": "https://api-bsc-mainnet-full.n.dwellir.com"
           }
         ],
-        "observedAt": "2026-10-29",
-        "observedBlock": 130515000
+        "observedAt": "2026-11-22",
+        "observedBlock": 135108436
       },
       {
         "chain": "bsc",

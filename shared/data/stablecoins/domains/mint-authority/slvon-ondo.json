@@ -326,28 +326,153 @@
         "signerCount": 7,
         "modulesOrGuardsStatus": "not-applicable",
         "timelockDelaySec": 7200,
-        "observedAt": "2026-10-03",
-        "observedBlock": 453074463,
-        "evidence": "Historical slot453074463 and GM transaction 5XVxqQtnB44vcJXtMBfobzBzufc6ryVa7YGx4Mf2xNi2GJcMYFpqMq328KMWvxVy8fz8eUCYvNA9XLU2tnVRY8Zp remain retained without renewal. New exact archive slot459474170 (2026-10-21T03:10:44Z; hash2m9schg65a7aBNYZnF1Ev4YXChmwE6MXTpJp2wdkbqpE) binds this vault0/PDA, current GM/Squads binaries and 4-of-7/mask7/zero-config-authority/7200-second topology. Independently hashed ELF matches completed source builds and exact verification-PDA parameters; Squads is immutable, with vendor historical-requester trusted:false disclosed separately from byte correspondence. Finalized response-context census152/SpendingLimits0 was followed by exact archive of all76 proposals. Stale Approved ConfigTx3 cannot execute; Approved VaultTx35 is fixed revoke_role(AdminRoleOndoSanityCheck), whose role PDA is currently null and can be recreated by authorized governance. Future arbitrary CPI, consensus changes and GM upgrades remain reachable. Partial scope preserves that adverse reach: mutableTargets and complete liability inventory are not promoted; existing conservative-maximal downstream-domain support is EVM-only. Human key custody/independence remains unknown. Original observation pins, review starts and economic-posture fields are unchanged.",
+        "observedAt": "2026-11-22",
+        "observedBlock": 472602264,
+        "evidence": "Historical slot453074463 and GM transaction 5XVxqQtnB44vcJXtMBfobzBzufc6ryVa7YGx4Mf2xNi2GJcMYFpqMq328KMWvxVy8fz8eUCYvNA9XLU2tnVRY8Zp remain retained without renewal. New exact archive slot459474170 (2026-10-21T03:10:44Z; hash2m9schg65a7aBNYZnF1Ev4YXChmwE6MXTpJp2wdkbqpE) binds this vault0/PDA, current GM/Squads binaries and 4-of-7/mask7/zero-config-authority/7200-second topology. Independently hashed ELF matches completed source builds and exact verification-PDA parameters; Squads is immutable, with vendor historical-requester trusted:false disclosed separately from byte correspondence. Finalized response-context census152/SpendingLimits0 was followed by exact archive of all76 proposals. Stale Approved ConfigTx3 cannot execute; Approved VaultTx35 is fixed revoke_role(AdminRoleOndoSanityCheck), whose role PDA is currently null and can be recreated by authorized governance. Future arbitrary CPI, consensus changes and GM upgrades remain reachable. Partial scope preserves that adverse reach: mutableTargets and complete liability inventory are not promoted; existing conservative-maximal downstream-domain support is EVM-only. Human key custody/independence remains unknown. Original observation pins, review starts and economic-posture fields are unchanged. Re-read 2026-11-22 at pinned Solana slot 472602264 (blockhash BsXh74skDrSqwzgUUYtMPiRe3vLAp23m53ijJB7791f5, 2026-11-22T16:08:27.000Z, https://solana-mainnet.g.alchemy.com/v2/): Global Markets ProgramData lastDeploySlot 458991585, GM and immutable Squads v4 ELF SHA-256 unchanged, Squads multisig EfMUASGwCsPBafiPi8rwdZfUJSUt7pxAoxayR39PVpMr 4-of-7 permissions=7 timeLock=7200 configAuthority=none unchanged (txIndex 82, stale 67), mint authorities and paused=false unchanged.",
         "executionScope": {
           "controllerDeployment": "solana:9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM",
-          "reviewedAt": "2026-10-29", "observedAt": "2026-10-29", "expiresAt": "2026-11-28",
+          "reviewedAt": "2026-11-22",
+          "observedAt": "2026-11-22",
+          "expiresAt": "2026-12-22",
           "confidence": "partial",
           "sources": [
-            {"label": "Exact immutable Squads completed source build; vendor requester trust is separately false", "url": "https://verify.osec.io/job/80f5742f-fdcb-4a6d-b8b4-aa6aeda0d824"},
-            {"label": "Current exact GM executable/source match", "url": "https://verify.osec.io/status/XzTT4XB8m7sLD2xi6snefSasaswsKCxx5Tifjondogm"},
-            {"label": "Exact Squads permission, configuration, batch and spending-limit source", "url": "https://github.com/Squads-Protocol/v4/tree/2a47b4cc76068fb8accec3d5a599e6020c50f796/programs/squads_multisig_program/src"},
-            {"label": "Exact archive slot459474170; current finalized discovery censuses retained separately", "url": "https://solana-mainnet.g.alchemy.com/v2/"}
+            {
+              "label": "Exact immutable Squads completed source build; vendor requester trust is separately false",
+              "url": "https://verify.osec.io/job/80f5742f-fdcb-4a6d-b8b4-aa6aeda0d824"
+            },
+            {
+              "label": "Current exact GM executable/source match",
+              "url": "https://verify.osec.io/status/XzTT4XB8m7sLD2xi6snefSasaswsKCxx5Tifjondogm"
+            },
+            {
+              "label": "Exact Squads permission, configuration, batch and spending-limit source",
+              "url": "https://github.com/Squads-Protocol/v4/tree/2a47b4cc76068fb8accec3d5a599e6020c50f796/programs/squads_multisig_program/src"
+            },
+            {
+              "label": "Exact archive slot459474170; current finalized discovery censuses retained separately",
+              "url": "https://solana-mainnet.g.alchemy.com/v2/"
+            },
+            {
+              "label": "Pinned Solana slot 472602264 (2026-11-22T16:08:27.000Z, blockhash BsXh74skDrSqwzgUUYtMPiRe3vLAp23m53ijJB7791f5): Global Markets ProgramData lastDeploySlot 458991585, GM/Squads v4 ELF SHA-256, 4-of-7 multisig (timeLock 7200, configAuthority none, txIndex 82, stale 67), and mint authorities unchanged",
+              "url": "https://solana-mainnet.g.alchemy.com/v2/"
+            }
           ],
-          "pin": {"position": "462975000", "hash": "Ai81oVb3rPaijq6riGzV1Bjg1FizhU5iR82fazYjt3k5", "runtimeIdentity": "squads-v4:sha256:d48660833989ecea3145ff726164fe640bd90696f03ce00dfd0cda258cbf2fac;gm:sha256:dc49355e579318b7e33e1ded2bec04a22853177a5acecd35fdd304d9b2b22ec8;vault:0", "signerIdentity": "multisig:EfMUASGwCsPBafiPi8rwdZfUJSUt7pxAoxayR39PVpMr:4-of-7:permissions=7:timelockSec=7200:configAuthority=none"},
-          "observedState": {"position": "462975000", "hash": "Ai81oVb3rPaijq6riGzV1Bjg1FizhU5iR82fazYjt3k5", "runtimeIdentity": "squads-v4:sha256:d48660833989ecea3145ff726164fe640bd90696f03ce00dfd0cda258cbf2fac;gm:sha256:dc49355e579318b7e33e1ded2bec04a22853177a5acecd35fdd304d9b2b22ec8;vault:0", "signerIdentity": "multisig:EfMUASGwCsPBafiPi8rwdZfUJSUt7pxAoxayR39PVpMr:4-of-7:permissions=7:timelockSec=7200:configAuthority=none"},
-          "reviewer": "R-MINT-6 renewal 2026-10-29",
+          "pin": {
+            "position": "472602264",
+            "hash": "BsXh74skDrSqwzgUUYtMPiRe3vLAp23m53ijJB7791f5",
+            "runtimeIdentity": "squads-v4:sha256:d48660833989ecea3145ff726164fe640bd90696f03ce00dfd0cda258cbf2fac;gm:sha256:dc49355e579318b7e33e1ded2bec04a22853177a5acecd35fdd304d9b2b22ec8;vault:0",
+            "signerIdentity": "multisig:EfMUASGwCsPBafiPi8rwdZfUJSUt7pxAoxayR39PVpMr:4-of-7:permissions=7:timelockSec=7200:configAuthority=none"
+          },
+          "observedState": {
+            "position": "472602264",
+            "hash": "BsXh74skDrSqwzgUUYtMPiRe3vLAp23m53ijJB7791f5",
+            "runtimeIdentity": "squads-v4:sha256:d48660833989ecea3145ff726164fe640bd90696f03ce00dfd0cda258cbf2fac;gm:sha256:dc49355e579318b7e33e1ded2bec04a22853177a5acecd35fdd304d9b2b22ec8;vault:0",
+            "signerIdentity": "multisig:EfMUASGwCsPBafiPi8rwdZfUJSUt7pxAoxayR39PVpMr:4-of-7:permissions=7:timelockSec=7200:configAuthority=none"
+          },
+          "reviewer": "Pharos #945 Wave B renewal 2026-11-22",
           "inventory": "partial",
-          "closure": {"entrypoints": true, "mutableTargets": false, "delegateAndFallback": true, "permissions": true, "upgrades": true, "bypasses": true, "liabilityInventory": false},
+          "closure": {
+            "entrypoints": true,
+            "mutableTargets": false,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": false
+          },
           "paths": [
-            {"id": "vault-cpi", "targetDeployment": "solana:SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf", "entrypointKind": "solana-instruction", "entrypoints": ["vault_transaction_execute", "batch_execute_transaction"], "callMode": "native", "capabilities": ["upgrade", "parameter-change"], "capSemantics": {"kind": "unbounded", "bound": null}, "claimImpairment": "unbounded", "economicLossScope": "global-claim", "unavoidableDelaySec": 7200, "activation": "active", "affectedLiabilityIds": [], "affectedDeployments": [], "reach": "root", "controlRefs": ["configuration"], "reactivationRefs": [], "permissionChangeRefs": ["configuration"], "upgradeRefs": [], "bypassRefs": []},
-            {"id": "configuration", "targetDeployment": "solana:SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf", "entrypointKind": "solana-instruction", "entrypoints": ["config_transaction_execute"], "callMode": "native", "capabilities": ["parameter-change"], "capSemantics": {"kind": "raiseable", "bound": null}, "claimImpairment": "unknown", "economicLossScope": "unknown", "unavoidableDelaySec": 7200, "activation": "active", "affectedLiabilityIds": [], "affectedDeployments": [], "reach": "root", "controlRefs": [], "reactivationRefs": [], "permissionChangeRefs": [], "upgradeRefs": [], "bypassRefs": []},
-            {"id": "approved-revocation-35", "targetDeployment": "solana:XzTT4XB8m7sLD2xi6snefSasaswsKCxx5Tifjondogm", "entrypointKind": "solana-instruction", "entrypoints": ["revoke_role:AdminRoleOndoSanityCheck"], "callMode": "native", "capabilities": ["parameter-change"], "capSemantics": {"kind": "not-applicable", "bound": null}, "claimImpairment": "none", "economicLossScope": "access-only", "unavoidableDelaySec": 0, "activation": "disabled-reactivatable", "affectedLiabilityIds": [], "affectedDeployments": [], "reach": "root", "controlRefs": [], "reactivationRefs": ["vault-cpi"], "permissionChangeRefs": [], "upgradeRefs": [], "bypassRefs": []}
+            {
+              "id": "vault-cpi",
+              "targetDeployment": "solana:SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf",
+              "entrypointKind": "solana-instruction",
+              "entrypoints": [
+                "vault_transaction_execute",
+                "batch_execute_transaction"
+              ],
+              "callMode": "native",
+              "capabilities": [
+                "upgrade",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 7200,
+              "activation": "active",
+              "affectedLiabilityIds": [],
+              "affectedDeployments": [],
+              "reach": "root",
+              "controlRefs": [
+                "configuration"
+              ],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [
+                "configuration"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "configuration",
+              "targetDeployment": "solana:SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf",
+              "entrypointKind": "solana-instruction",
+              "entrypoints": [
+                "config_transaction_execute"
+              ],
+              "callMode": "native",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "raiseable",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": 7200,
+              "activation": "active",
+              "affectedLiabilityIds": [],
+              "affectedDeployments": [],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "approved-revocation-35",
+              "targetDeployment": "solana:XzTT4XB8m7sLD2xi6snefSasaswsKCxx5Tifjondogm",
+              "entrypointKind": "solana-instruction",
+              "entrypoints": [
+                "revoke_role:AdminRoleOndoSanityCheck"
+              ],
+              "callMode": "native",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "not-applicable",
+                "bound": null
+              },
+              "claimImpairment": "none",
+              "economicLossScope": "access-only",
+              "unavoidableDelaySec": 0,
+              "activation": "disabled-reactivatable",
+              "affectedLiabilityIds": [],
+              "affectedDeployments": [],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [
+                "vault-cpi"
+              ],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
           ]
         },
         "sources": [
