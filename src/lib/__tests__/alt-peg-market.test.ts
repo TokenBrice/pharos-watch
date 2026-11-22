@@ -4,6 +4,7 @@ import { CORE_NON_USD_IDS, coreNonUsdRows } from "@shared/test-utils/alt-peg-fix
 import { getCoreNonUsdPeg } from "@shared/lib/alt-peg-snapshot";
 import { NonUsdShareResponseSchema } from "@shared/types/supply";
 import { buildAltPegSnapshot, buildAltPegTrendStats, parseAltPegParam } from "@/lib/alt-peg-market";
+import { coinEmblemSize, FIAT_MAP_SIZE_CEIL, SIZE_CEIL, SIZE_FLOOR, sizeCapMarketCap } from "@/lib/alt-peg-sizing";
 
 
 describe("alt-peg-market", () => {
@@ -169,5 +170,29 @@ describe("alt-peg-market", () => {
     expect(parseAltPegParam("usd")).toBeNull();
     expect(parseAltPegParam("nope")).toBeNull();
     expect(parseAltPegParam(null)).toBeNull();
+  });
+});
+
+describe("coinEmblemSize", () => {
+  it("returns SIZE_FLOOR for 0, negative, or NaN market cap and clamps very large mcaps to SIZE_CEIL", () => {
+    expect(coinEmblemSize(0)).toBe(SIZE_FLOOR);
+    expect(coinEmblemSize(-1)).toBe(SIZE_FLOOR);
+    expect(coinEmblemSize(Number.NaN)).toBe(SIZE_FLOOR);
+    expect(coinEmblemSize(100_000_000_000)).toBe(SIZE_CEIL);
+  });
+
+  it("keeps the leading euro coins apart on the map: the map ceiling sits above $1B", () => {
+    expect(sizeCapMarketCap(FIAT_MAP_SIZE_CEIL)).toBeGreaterThan(1_000_000_000);
+    const [eurc, eutbl] = [497_000_000, 638_000_000].map((cap) => coinEmblemSize(cap, { ceil: FIAT_MAP_SIZE_CEIL }));
+    expect(eutbl).toBeGreaterThan(eurc!);
+    expect(coinEmblemSize(1_700_000_000, { ceil: FIAT_MAP_SIZE_CEIL })).toBeGreaterThan(eutbl!);
+  });
+
+  it("keeps unknown supply neutral and scales monotonically between $1M and $500M", () => {
+    expect(coinEmblemSize(null, { ceil: FIAT_MAP_SIZE_CEIL })).toBeGreaterThan(SIZE_FLOOR);
+    const sizes = [1_000_000, 10_000_000, 100_000_000, 500_000_000].map((marketCapUsd) => coinEmblemSize(marketCapUsd));
+    for (let i = 1; i < sizes.length; i++) {
+      expect(sizes[i]).toBeGreaterThan(sizes[i - 1]);
+    }
   });
 });

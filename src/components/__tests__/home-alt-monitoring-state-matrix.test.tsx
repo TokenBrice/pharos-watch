@@ -3,7 +3,6 @@
 import type { ComponentType } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
 import { HomeAltRankingsSection } from "@/components/homepage/home-alt-rankings-section";
 import { ActiveDepegsCard } from "@/components/home-alt-mini-cards/active-depegs-card";
 import { MintBurnCard } from "@/components/home-alt-mini-cards/mint-burn-card";
@@ -16,85 +15,39 @@ import { makeInactiveMintBurnFlowCoin, makeMintBurnCoinValuation } from "@/test-
 
 type MonitoringState = "loading" | "ready" | "empty" | "unavailable" | "stale-with-data";
 
-const {
-  stablecoinTablePropsMock,
-  useActiveDepegEventsMock,
-  useBlacklistEventsPageMock,
-  useBlacklistSummaryMock,
-  useCoinStatesMock,
-  useDexLiquidityMock,
-  useHomeAltFiltersMock,
-  useMintBurnFlowsMock,
-  usePegSummaryMock,
-  usePinnedStablecoinsMock,
-  useReportCardsV9Mock,
-  useStabilityIndexMock,
-  useStablecoinsMock,
-  useStressSignalsMock,
-} = vi.hoisted(() => ({
-  stablecoinTablePropsMock: vi.fn(),
-  useActiveDepegEventsMock: vi.fn(),
-  useBlacklistEventsPageMock: vi.fn(),
-  useBlacklistSummaryMock: vi.fn(),
-  useCoinStatesMock: vi.fn(),
-  useDexLiquidityMock: vi.fn(),
-  useHomeAltFiltersMock: vi.fn(),
-  useMintBurnFlowsMock: vi.fn(),
-  usePegSummaryMock: vi.fn(),
-  usePinnedStablecoinsMock: vi.fn(),
-  useReportCardsV9Mock: vi.fn(),
-  useStabilityIndexMock: vi.fn(),
-  useStablecoinsMock: vi.fn(),
-  useStressSignalsMock: vi.fn(),
+const m = vi.hoisted(() => ({
+  tableProps: vi.fn(), activeDepegs: vi.fn(), blEvents: vi.fn(), blSummary: vi.fn(),
+  coinStates: vi.fn(), dex: vi.fn(), filters: vi.fn(), flows: vi.fn(),
+  peg: vi.fn(), pinned: vi.fn(), reportCards: vi.fn(), psi: vi.fn(),
+  stablecoins: vi.fn(), stress: vi.fn(),
 }));
 
 vi.mock("next/dynamic", () => ({
-  default: () => {
-    function MockStablecoinTable(props: Record<string, unknown>) {
-      stablecoinTablePropsMock(props);
-      return <div data-testid="stablecoin-table">{props.isLoading ? "table loading" : "table ready"}</div>;
-    }
-    return MockStablecoinTable;
+  default: () => function MockStablecoinTable(props: Record<string, unknown>) {
+    m.tableProps(props);
+    return <div data-testid="stablecoin-table">{props.isLoading ? "table loading" : "table ready"}</div>;
   },
 }));
-
-vi.mock("next/image", () => ({
-  default: ({ alt = "", ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => <img alt={alt} {...props} />,
-}));
-
+vi.mock("next/image", () => ({ default: ({ alt = "", ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => <img alt={alt} {...props} /> }));
 vi.mock("@/hooks/api-hooks", () => ({
-  useDexLiquidityTable: useDexLiquidityMock,
-  usePegSummary: usePegSummaryMock,
-  useReportCardsV9Table: useReportCardsV9Mock,
-  useStabilityIndex: useStabilityIndexMock,
-  useStressSignals: useStressSignalsMock,
+  useDexLiquidityTable: m.dex, usePegSummary: m.peg, useReportCardsV9Table: m.reportCards,
+  useStabilityIndex: m.psi, useStressSignals: m.stress,
 }));
-vi.mock("@/hooks/use-blacklist-events", () => ({
-  useBlacklistEventsPage: useBlacklistEventsPageMock,
-  useBlacklistSummary: useBlacklistSummaryMock,
-}));
-vi.mock("@/hooks/use-depeg-events", () => ({ useActiveDepegEvents: useActiveDepegEventsMock }));
+vi.mock("@/hooks/use-blacklist-events", () => ({ useBlacklistEventsPage: m.blEvents, useBlacklistSummary: m.blSummary }));
+vi.mock("@/hooks/use-depeg-events", () => ({ useActiveDepegEvents: m.activeDepegs }));
 vi.mock("@/hooks/use-depeg-resolver-surfaces", () => ({ useDepegResolverSurfaces: () => ({ resolver: { data: undefined } }) }));
-vi.mock("@/hooks/use-coin-states", () => ({ useCoinStates: useCoinStatesMock }));
-vi.mock("@/hooks/use-home-alt-filters", () => ({ useHomeAltFilters: useHomeAltFiltersMock }));
-vi.mock("@/hooks/use-mint-burn-flows", () => ({ useMintBurnFlows: useMintBurnFlowsMock }));
-vi.mock("@/hooks/use-pinned-stablecoins", () => ({ usePinnedStablecoins: usePinnedStablecoinsMock }));
-vi.mock("@/hooks/use-stablecoins", () => ({ useStablecoins: useStablecoinsMock }));
+vi.mock("@/hooks/use-coin-states", () => ({ useCoinStates: m.coinStates }));
+vi.mock("@/hooks/use-home-alt-filters", () => ({ useHomeAltFilters: m.filters }));
+vi.mock("@/hooks/use-mint-burn-flows", () => ({ useMintBurnFlows: m.flows }));
+vi.mock("@/hooks/use-pinned-stablecoins", () => ({ usePinnedStablecoins: m.pinned }));
+vi.mock("@/hooks/use-stablecoins", () => ({ useStablecoins: m.stablecoins }));
 vi.mock("@/lib/stablecoin-static-data", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/stablecoin-static-data")>()),
   ACTIVE_STABLECOIN_ID_SET: new Set(["usdc-circle"]),
 }));
 vi.mock("@/components/homepage/homepage-client-view-model", () => ({
-  buildHomepageCriticalViewModel: ({
-    stablecoinsData,
-    eligibleIds,
-  }: {
-    stablecoinsData?: { peggedAssets?: Array<{ id?: string }> };
-    eligibleIds?: ReadonlySet<string>;
-  }) => ({
-    filteredRowCount: stablecoinsData
-      ? (stablecoinsData.peggedAssets ?? []).filter((coin) => !eligibleIds || (coin.id ? eligibleIds.has(coin.id) : false)).length
-      : 0,
+  buildHomepageCriticalViewModel: ({ stablecoinsData, eligibleIds }: { stablecoinsData?: { peggedAssets?: Array<{ id?: string }> }; eligibleIds?: ReadonlySet<string> }) => ({
+    filteredRowCount: stablecoinsData ? (stablecoinsData.peggedAssets ?? []).filter((coin) => !eligibleIds || (coin.id ? eligibleIds.has(coin.id) : false)).length : 0,
     pegScores: new Map(),
   }),
   buildHomepageOptionalViewModel: () => ({ reportCardMap: {} }),
@@ -115,89 +68,48 @@ function queryFor<T>(state: MonitoringState, readyData: T, emptyData: T) {
   };
 }
 
-const pegReady = {
-  coins: [{ id: "usdc-circle", activeDepeg: true, currentDeviationBps: -75 }],
-  summary: { activeDepegCount: 1, coinsAtPeg: 0, medianDeviationBps: 75 as number | null, totalTracked: 1 },
-};
-const pegEmpty = {
-  coins: [],
-  summary: { activeDepegCount: 0, coinsAtPeg: 0, medianDeviationBps: null, totalTracked: 0 },
-};
-const activeReady = {
-  events: [{
-    id: 1,
-    stablecoinId: "usdc-circle",
-    symbol: "USDC",
-    startedAt: 1_699_999_900,
-  }],
-};
+function expectNoBanners(noRetry = false) {
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect(screen.queryByRole("status")).toBeNull();
+  if (noRetry) expect(screen.queryByRole("button", { name: /retry/i })).toBeNull();
+}
+
+function setupRankings(stablecoinState: MonitoringState, pegState: MonitoringState = stablecoinState, opts: { setActivePeg?: ReturnType<typeof vi.fn>; pinnedIds?: string[] } = {}) {
+  m.filters.mockReturnValue({ activeFilters: [], activePeg: "all", setActivePeg: opts.setActivePeg ?? vi.fn(), activeUniverse: "core", setActiveUniverse: vi.fn() });
+  m.pinned.mockReturnValue({ pinnedIds: opts.pinnedIds ?? [], togglePinned: vi.fn() });
+  m.stablecoins.mockReturnValue(queryFor(stablecoinState, stablecoinReady, { peggedAssets: [] }));
+  m.peg.mockReturnValue(queryFor(pegState, pegReady, pegEmpty));
+  m.dex.mockReturnValue(queryFor(stablecoinState === "loading" ? "ready" : stablecoinState, {}, {}));
+  m.reportCards.mockReturnValue(queryFor(stablecoinState === "loading" ? "ready" : stablecoinState, { cards: [] }, { cards: [] }));
+  m.stress.mockReturnValue(queryFor(stablecoinState === "loading" ? "ready" : stablecoinState, { signals: {} }, { signals: {} }));
+}
+
+const pegReady = { coins: [{ id: "usdc-circle", activeDepeg: true, currentDeviationBps: -75 }], summary: { activeDepegCount: 1, coinsAtPeg: 0, medianDeviationBps: 75 as number | null, totalTracked: 1 } };
+const pegEmpty = { coins: [], summary: { activeDepegCount: 0, coinsAtPeg: 0, medianDeviationBps: null, totalTracked: 0 } };
+const activeReady = { events: [{ id: 1, stablecoinId: "usdc-circle", symbol: "USDC", startedAt: 1_699_999_900 }] };
 const psiReady = {
-  current: {
-    avg24h: 39,
-    avg24hBand: "BEDROCK",
-    band: "BEDROCK",
-    components: { breadth: 1, severity: 1, stressBreadth: 1, trend: 1 },
-    computedAt: 1_700_000_000,
-    contributors: [],
-    methodologyVersion: "test",
-    score: 40,
-    totalMcapUsd: 1,
-  },
+  current: { avg24h: 39, avg24hBand: "BEDROCK", band: "BEDROCK", components: { breadth: 1, severity: 1, stressBreadth: 1, trend: 1 }, computedAt: 1_700_000_000, contributors: [], methodologyVersion: "test", score: 40, totalMcapUsd: 1 },
   history: [{ date: 1_699_913_600, score: 38, band: "BEDROCK", methodologyVersion: "test" }],
 };
-const flowReady = {
-  coins: [{ has24hActivity: true, netFlow24hUsd: 1_000_000, stablecoinId: "usdc-circle", symbol: "USDC" }],
-  gauge: { band: "MINTING", score: 10 },
-};
+const flowReady = { coins: [{ has24hActivity: true, netFlow24hUsd: 1_000_000, stablecoinId: "usdc-circle", symbol: "USDC" }], gauge: { band: "MINTING", score: 10 } };
 const flowEmpty = { coins: [], gauge: { band: "NEUTRAL", score: 0 } };
 const stablecoinReady = {
   peggedAssets: [{
-    circulating: { peggedUSD: 20_000_000 },
-    circulatingNative: 20_000_000,
-    supplyObservedAt: UPDATED_AT / 1000,
-    supplyChangeBaselines: {
-      week: { observedAt: UPDATED_AT / 1000 - 7 * 86400, circulatingUsd: 10_000_000, circulatingNative: 10_000_000 },
-    },
-    id: "usdc-circle",
-    name: "USD Coin",
-    symbol: "USDC",
+    circulating: { peggedUSD: 20_000_000 }, circulatingNative: 20_000_000, supplyObservedAt: UPDATED_AT / 1000,
+    supplyChangeBaselines: { week: { observedAt: UPDATED_AT / 1000 - 7 * 86400, circulatingUsd: 10_000_000, circulatingNative: 10_000_000 } },
+    id: "usdc-circle", name: "USD Coin", symbol: "USDC",
   }],
 };
-const stablecoinQuiet = {
-  peggedAssets: stablecoinReady.peggedAssets.map((coin) => ({
-    ...coin,
-    circulating: { peggedUSD: 10_000_000 },
-    circulatingNative: 10_000_000,
-  })),
-};
-const freezesReady = {
-  events: [{
-    amountUsdAtEvent: 1_000,
-    eventType: "blacklist",
-    id: "freeze-1",
-    stablecoin: "USDC",
-    stablecoinId: "usdc-circle",
-    timestamp: Math.floor(UPDATED_AT / 1000) - 60,
-  }],
-};
-const freezeSummaryReady = {
+const stablecoinQuiet = { peggedAssets: stablecoinReady.peggedAssets.map((c) => ({ ...c, circulating: { peggedUSD: 10_000_000 }, circulatingNative: 10_000_000 })) };
+const freezesReady = { events: [{ amountUsdAtEvent: 1_000, eventType: "blacklist", id: "freeze-1", stablecoin: "USDC", stablecoinId: "usdc-circle", timestamp: Math.floor(UPDATED_AT / 1000) - 60 }] };
+const makeFreezeSummary = (c24: number, a24: number, c7 = c24, a7 = a24) => ({
   stats: {
-    recentFreezeCount24h: 1,
-    recentFreezeCount7d: 1,
-    recentFreezeAmount24hUsd: 1_000,
-    recentFreezeAmount7dUsd: 1_000,
-    valuationCoverage: { recent24h: { knownCount: 1, unavailableCount: 0 }, recent7d: { knownCount: 1, unavailableCount: 0 } },
+    recentFreezeCount24h: c24, recentFreezeCount7d: c7, recentFreezeAmount24hUsd: a24, recentFreezeAmount7dUsd: a7,
+    valuationCoverage: { recent24h: { knownCount: c24, unavailableCount: 0 }, recent7d: { knownCount: c7, unavailableCount: 0 } },
   },
-};
-const freezeSummaryEmpty = {
-  stats: {
-    recentFreezeCount24h: 0,
-    recentFreezeCount7d: 0,
-    recentFreezeAmount24hUsd: 0,
-    recentFreezeAmount7dUsd: 0,
-    valuationCoverage: { recent24h: { knownCount: 0, unavailableCount: 0 }, recent7d: { knownCount: 0, unavailableCount: 0 } },
-  },
-};
+});
+const freezeSummaryReady = makeFreezeSummary(1, 1_000);
+const freezeSummaryEmpty = makeFreezeSummary(0, 0);
 
 interface SurfaceCase {
   Component: ComponentType;
@@ -205,9 +117,7 @@ interface SurfaceCase {
   emptyText: string | RegExp;
   emptyExtraText?: string;
   readyText: string;
-  /** Exact copy the unavailable placeholder must show, when the card has one. */
   unavailableText?: string;
-  /** States whose output the card's own owner test already asserts. */
   statesOwnedElsewhere?: MonitoringState[];
 }
 
@@ -216,169 +126,108 @@ const SURFACES: SurfaceCase[] = [
     Component: ActiveDepegsCard,
     configure(state) {
       const active = queryFor(state, activeReady, { events: [] });
-      useActiveDepegEventsMock.mockReturnValue({
-        ...active,
-        loadedCount: active.data?.events.length ?? 0,
-      });
-      usePegSummaryMock.mockReturnValue(queryFor(state, pegReady, pegEmpty));
-      useStablecoinsMock.mockReturnValue(queryFor(state, stablecoinReady, { peggedAssets: [] }));
+      m.activeDepegs.mockReturnValue({ ...active, loadedCount: active.data?.events.length ?? 0 });
+      m.peg.mockReturnValue(queryFor(state, pegReady, pegEmpty));
+      m.stablecoins.mockReturnValue(queryFor(state, stablecoinReady, { peggedAssets: [] }));
     },
-    emptyText: "No open confirmed incidents",
-    readyText: "USDC",
-    // home-alt-active-depegs-card.test.tsx pins the open-incident row and the zero-state copy.
-    statesOwnedElsewhere: ["ready", "empty"],
+    emptyText: "No open confirmed incidents", readyText: "USDC", statesOwnedElsewhere: ["ready", "empty"],
   },
-  {
-    Component: PegHealthCard,
-    configure(state) {
-      usePegSummaryMock.mockReturnValue(queryFor(state, pegReady, pegEmpty));
-    },
-    emptyText: "No coin-level deviation rows",
-    readyText: "Mild",
-  },
-  {
-    Component: PsiBandCard,
-    configure(state) {
-      useStabilityIndexMock.mockReturnValue(
-        queryFor<Record<string, unknown>>(state, psiReady, { current: null, history: [] }),
-      );
-    },
-    emptyText: /90d/,
-    readyText: "39.0",
-    // home-alt-psi-band-card.test.tsx pins the ready score and band figures.
-    statesOwnedElsewhere: ["ready"],
-  },
-  {
-    Component: MintBurnCard,
-    configure(state) {
-      useMintBurnFlowsMock.mockReturnValue(queryFor(state, flowReady, flowEmpty));
-    },
-    emptyText: "No 24h activity",
-    readyText: "USDC",
-  },
-  {
-    Component: SupplyMovesCard,
-    configure(state) {
-      useStablecoinsMock.mockReturnValue(queryFor(state, stablecoinReady, stablecoinQuiet));
-    },
-    emptyText: "No qualifying 7-day supply moves",
-    readyText: "USDC",
-  },
+  { Component: PegHealthCard, configure: (state) => { m.peg.mockReturnValue(queryFor(state, pegReady, pegEmpty)); }, emptyText: "No coin-level deviation rows", readyText: "Mild" },
+  { Component: PsiBandCard, configure: (state) => { m.psi.mockReturnValue(queryFor<Record<string, unknown>>(state, psiReady, { current: null, history: [] })); }, emptyText: /90d/, readyText: "39.0", statesOwnedElsewhere: ["ready"] },
+  { Component: MintBurnCard, configure: (state) => { m.flows.mockReturnValue(queryFor(state, flowReady, flowEmpty)); }, emptyText: "No 24h activity", readyText: "USDC" },
+  { Component: SupplyMovesCard, configure: (state) => { m.stablecoins.mockReturnValue(queryFor(state, stablecoinReady, stablecoinQuiet)); }, emptyText: "No qualifying 7-day supply moves", readyText: "USDC" },
   {
     Component: RecentFreezesCard,
     configure(state) {
-      useBlacklistEventsPageMock.mockReturnValue(queryFor(state, freezesReady, { events: [] }));
-      useBlacklistSummaryMock.mockReturnValue(queryFor(state, freezeSummaryReady, freezeSummaryEmpty));
-      useStablecoinsMock.mockReturnValue(queryFor(state, stablecoinReady, { peggedAssets: [] }));
+      m.blEvents.mockReturnValue(queryFor(state, freezesReady, { events: [] }));
+      m.blSummary.mockReturnValue(queryFor(state, freezeSummaryReady, freezeSummaryEmpty));
+      m.stablecoins.mockReturnValue(queryFor(state, stablecoinReady, { peggedAssets: [] }));
     },
-    emptyText: "$0",
-    emptyExtraText: "0 freezes",
-    readyText: "$1K",
+    emptyText: "$0", emptyExtraText: "0 freezes", readyText: "$1K",
   },
   {
     Component: (() => <HomeAltRankingsSection titleId="rankings-title" />) as ComponentType,
     configure(state) {
-      useStablecoinsMock.mockReturnValue(queryFor(state, stablecoinReady, { peggedAssets: [] }));
-      usePegSummaryMock.mockReturnValue(queryFor(state, pegReady, pegEmpty));
-      useDexLiquidityMock.mockReturnValue(queryFor(state, {}, {}));
-      useReportCardsV9Mock.mockReturnValue(queryFor(state, { cards: [] }, { cards: [] }));
-      useStressSignalsMock.mockReturnValue(queryFor(state, { signals: {} }, { signals: {} }));
+      m.stablecoins.mockReturnValue(queryFor(state, stablecoinReady, { peggedAssets: [] }));
+      m.peg.mockReturnValue(queryFor(state, pegReady, pegEmpty));
+      m.dex.mockReturnValue(queryFor(state, {}, {}));
+      m.reportCards.mockReturnValue(queryFor(state, { cards: [] }, { cards: [] }));
+      m.stress.mockReturnValue(queryFor(state, { signals: {} }, { signals: {} }));
     },
-    emptyText: "table ready",
-    readyText: "table ready",
-    unavailableText: "Stablecoin rankings are updating.",
+    emptyText: "table ready", readyText: "table ready", unavailableText: "Stablecoin rankings are updating.",
   },
 ];
+
+const CARD_HOOKS = [m.activeDepegs, m.peg, m.flows, m.psi, m.stablecoins, m.blEvents, m.blSummary];
+function attachMeta(meta: ApiMeta) {
+  for (const hook of CARD_HOOKS) {
+    const result = hook.getMockImplementation()?.();
+    if (result) hook.mockReturnValue({ ...result, dataUpdatedAt: UPDATED_AT, meta });
+  }
+}
 
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(UPDATED_AT);
-  useCoinStatesMock.mockReturnValue({ byId: new Map(), liveReady: false, clockReady: true });
+  m.coinStates.mockReturnValue({ byId: new Map(), liveReady: false, clockReady: true });
 });
+afterEach(() => { vi.clearAllMocks(); vi.useRealTimers(); });
 
-afterEach(() => {
-  vi.clearAllMocks();
-  vi.useRealTimers();
+describe.each(SURFACES)("$Component.name semantic query states", ({ Component, configure, emptyText, emptyExtraText, readyText, unavailableText, statesOwnedElsewhere = [] }) => {
+  function renderState(state: MonitoringState) {
+    m.filters.mockReturnValue({ activeFilters: [], activePeg: "all", setActivePeg: vi.fn(), activeUniverse: "core", setActiveUniverse: vi.fn() });
+    m.pinned.mockReturnValue({ pinnedIds: [], togglePinned: vi.fn() });
+    configure(state);
+    return render(<Component />);
+  }
+
+  it("renders loading without making a status claim", () => {
+    const view = renderState("loading");
+    expect(view.container.querySelector('[data-slot="skeleton"], [data-testid="stablecoin-table"]')).toBeTruthy();
+    expectNoBanners();
+  });
+
+  it.skipIf(statesOwnedElsewhere.includes("ready"))("renders ready data", () => {
+    renderState("ready");
+    expect(screen.queryAllByText(readyText).length).toBeGreaterThan(0);
+    expectNoBanners();
+  });
+
+  it.skipIf(statesOwnedElsewhere.includes("empty"))("renders a valid empty state", () => {
+    renderState("empty");
+    expect(screen.queryAllByText(emptyText).length).toBeGreaterThan(0);
+    if (emptyExtraText) expect(screen.getByText(emptyExtraText)).toBeTruthy();
+    expectNoBanners();
+  });
+
+  it("renders unavailable as a neutral placeholder without a healthy or empty claim", () => {
+    renderState("unavailable");
+    expect(screen.queryAllByText(/^Updating$|rankings are updating/).length).toBeGreaterThan(0);
+    if (unavailableText) expect(screen.queryAllByText(unavailableText).length).toBeGreaterThan(0);
+    expect(screen.queryAllByText(emptyText)).toHaveLength(0);
+    expectNoBanners(true);
+  });
+
+  it("keeps retained data visible without a stale warning", () => {
+    renderState("stale-with-data");
+    expect(screen.queryAllByText(readyText).length).toBeGreaterThan(0);
+    expectNoBanners(true);
+  });
 });
-
-describe.each(SURFACES)(
-  "$Component.name semantic query states",
-  ({ Component, configure, emptyText, emptyExtraText, readyText, unavailableText, statesOwnedElsewhere = [] }) => {
-    function renderState(state: MonitoringState) {
-      useHomeAltFiltersMock.mockReturnValue({
-        activeFilters: [],
-        activePeg: "all",
-        setActivePeg: vi.fn(),
-        activeUniverse: "core",
-        setActiveUniverse: vi.fn(),
-      });
-      usePinnedStablecoinsMock.mockReturnValue({ pinnedIds: [], togglePinned: vi.fn() });
-      configure(state);
-      return render(<Component />);
-    }
-
-    it("renders loading without making a status claim", () => {
-      const view = renderState("loading");
-      expect(view.container.querySelector('[data-slot="skeleton"], [data-testid="stablecoin-table"]')).toBeTruthy();
-      expect(screen.queryByRole("alert")).toBeNull();
-      expect(screen.queryByRole("status")).toBeNull();
-    });
-
-    it.skipIf(statesOwnedElsewhere.includes("ready"))("renders ready data", () => {
-      renderState("ready");
-      expect(screen.queryAllByText(readyText).length).toBeGreaterThan(0);
-      expect(screen.queryByRole("alert")).toBeNull();
-      expect(screen.queryByRole("status")).toBeNull();
-    });
-
-    it.skipIf(statesOwnedElsewhere.includes("empty"))("renders a valid empty state", () => {
-      renderState("empty");
-      expect(screen.queryAllByText(emptyText).length).toBeGreaterThan(0);
-      if (emptyExtraText) expect(screen.getByText(emptyExtraText)).toBeTruthy();
-      expect(screen.queryByRole("alert")).toBeNull();
-      expect(screen.queryByRole("status")).toBeNull();
-    });
-
-    // Homepage rule (docs/homepage.md): no data-health UI, ever.
-    it("renders unavailable as a neutral placeholder without a healthy or empty claim", () => {
-      renderState("unavailable");
-      expect(screen.queryAllByText(/^Updating$|rankings are updating/).length).toBeGreaterThan(0);
-      if (unavailableText) expect(screen.queryAllByText(unavailableText).length).toBeGreaterThan(0);
-      expect(screen.queryAllByText(emptyText)).toHaveLength(0);
-      expect(screen.queryByRole("alert")).toBeNull();
-      expect(screen.queryByRole("status")).toBeNull();
-      expect(screen.queryByRole("button", { name: /retry/i })).toBeNull();
-    });
-
-    it("keeps retained data visible without a stale warning", () => {
-      renderState("stale-with-data");
-      expect(screen.queryAllByText(readyText).length).toBeGreaterThan(0);
-      expect(screen.queryByRole("alert")).toBeNull();
-      expect(screen.queryByRole("status")).toBeNull();
-      expect(screen.queryByRole("button", { name: /retry/i })).toBeNull();
-    });
-  },
-);
 
 describe("PegHealthCard median availability", () => {
   it("renders an unavailable median without losing the observed empty cohort", () => {
-    usePegSummaryMock.mockReturnValue(queryFor("empty", pegEmpty, pegEmpty));
+    m.peg.mockReturnValue(queryFor("empty", pegEmpty, pegEmpty));
     const view = render(<PegHealthCard />);
-
     expect(screen.getByText("—").closest("p")?.textContent).toContain("At peg (per-coin threshold) · — median");
     expect(screen.getByText("No coin-level deviation rows")).toBeTruthy();
-    expect(view.container.textContent).not.toContain("0 bps median");
-    expect(view.container.textContent).not.toContain("Updating");
+    expect(view.container.textContent).not.toMatch(/0 bps median|Updating/);
   });
 
   it("retains a measured zero median for a live observation at parity", () => {
-    const atParity = {
-      coins: [{ id: "usdc-circle", activeDepeg: false, currentDeviationBps: 0 }],
-      summary: { activeDepegCount: 0, coinsAtPeg: 1, medianDeviationBps: 0, totalTracked: 1 },
-    };
-    usePegSummaryMock.mockReturnValue(queryFor("ready", atParity, atParity));
+    const atParity = { coins: [{ id: "usdc-circle", activeDepeg: false, currentDeviationBps: 0 }], summary: { activeDepegCount: 0, coinsAtPeg: 1, medianDeviationBps: 0, totalTracked: 1 } };
+    m.peg.mockReturnValue(queryFor("ready", atParity, atParity));
     render(<PegHealthCard />);
-
     expect(screen.getByText("0 bps").closest("p")?.textContent).toContain("At peg (per-coin threshold) · 0 bps median");
     expect(screen.getByText("priced non-NAV coins")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Open Depeg monitor" }).getAttribute("href")).toMatch(/^\/depeg\/?$/);
@@ -390,20 +239,7 @@ describe("PegHealthCard median availability", () => {
 describe("HomeAltRankingsSection loading and quick filters", () => {
   it("suppresses Showing 0 while loading and wires peg + triage quick filters", () => {
     const setActivePeg = vi.fn();
-    useHomeAltFiltersMock.mockReturnValue({
-      activeFilters: [],
-      activePeg: "all",
-      setActivePeg,
-      activeUniverse: "core",
-      setActiveUniverse: vi.fn(),
-    });
-    usePinnedStablecoinsMock.mockReturnValue({ pinnedIds: ["usdc-circle"], togglePinned: vi.fn() });
-    useStablecoinsMock.mockReturnValue(queryFor("loading", stablecoinReady, { peggedAssets: [] }));
-    usePegSummaryMock.mockReturnValue(queryFor("ready", pegReady, pegEmpty));
-    useDexLiquidityMock.mockReturnValue(queryFor("ready", {}, {}));
-    useReportCardsV9Mock.mockReturnValue(queryFor("ready", { cards: [] }, { cards: [] }));
-    useStressSignalsMock.mockReturnValue(queryFor("ready", { signals: {} }, { signals: {} }));
-
+    setupRankings("loading", "ready", { setActivePeg, pinnedIds: ["usdc-circle"] });
     const view = render(<HomeAltRankingsSection titleId="rankings-title" />);
     expect(view.container.textContent).not.toMatch(/Showing 0/);
     fireEvent.click(screen.getByRole("button", { name: "USD" }));
@@ -411,73 +247,41 @@ describe("HomeAltRankingsSection loading and quick filters", () => {
     const starredBtn = screen.getByRole("button", { name: /Starred/ });
     fireEvent.click(starredBtn);
     expect(starredBtn.getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByRole("button", { name: "Clear filters" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
     expect(starredBtn.getAttribute("aria-pressed")).toBe("false");
     expect(setActivePeg).toHaveBeenCalledWith("all");
   });
 
   it("keeps coin-state signals passive on cold load, fetches on Active alerts, and avoids false zero-alert claims while pending", () => {
-    useHomeAltFiltersMock.mockReturnValue({
-      activeFilters: [],
-      activePeg: "all",
-      setActivePeg: vi.fn(),
-      activeUniverse: "core",
-      setActiveUniverse: vi.fn(),
-    });
-    usePinnedStablecoinsMock.mockReturnValue({ pinnedIds: [], togglePinned: vi.fn() });
-    useStablecoinsMock.mockReturnValue(queryFor("ready", stablecoinReady, { peggedAssets: [] }));
-    usePegSummaryMock.mockReturnValue(queryFor("empty", pegEmpty, pegEmpty));
-    useDexLiquidityMock.mockReturnValue(queryFor("ready", {}, {}));
-    useReportCardsV9Mock.mockReturnValue(queryFor("ready", { cards: [] }, { cards: [] }));
-    useCoinStatesMock.mockReturnValue({ byId: new Map(), liveReady: false, clockReady: true });
-
+    setupRankings("ready", "empty");
     const view = render(<HomeAltRankingsSection titleId="rankings-title" />);
-    expect(useCoinStatesMock).toHaveBeenLastCalledWith({ enabled: false });
+    expect(m.coinStates).toHaveBeenLastCalledWith({ enabled: false });
 
     fireEvent.click(screen.getByRole("button", { name: "Active alerts" }));
-    expect(useCoinStatesMock).toHaveBeenLastCalledWith({ enabled: true });
+    expect(m.coinStates).toHaveBeenLastCalledWith({ enabled: true });
     expect(screen.getByText("Updating active alerts…")).toBeTruthy();
     expect(screen.getByText("Active alert signals are updating.")).toBeTruthy();
     expect(view.container.textContent).not.toMatch(/Showing 0/);
     expect(screen.queryByTestId("stablecoin-table")).toBeNull();
-    expect(screen.queryByRole("alert")).toBeNull();
-    expect(screen.queryByRole("status")).toBeNull();
+    expectNoBanners();
 
-    useCoinStatesMock.mockReturnValue({
-      byId: new Map([["usdc-circle", [{ kind: "dews", band: "ALERT", score: 55 }]]]),
-      liveReady: true,
-      clockReady: true,
-    });
+    m.coinStates.mockReturnValue({ byId: new Map([["usdc-circle", [{ kind: "dews", band: "ALERT", score: 55 }]]]), liveReady: true, clockReady: true });
     view.rerender(<HomeAltRankingsSection titleId="rankings-title" />);
     expect(screen.queryByText("Updating active alerts…")).toBeNull();
     expect(screen.getByTestId("stablecoin-table")).toBeTruthy();
-    const lastTableProps = stablecoinTablePropsMock.mock.calls.at(-1)?.[0] as { eligibleIds?: ReadonlySet<string> };
-    expect(lastTableProps.eligibleIds?.has("usdc-circle")).toBe(true);
+    expect((m.tableProps.mock.calls.at(-1)?.[0] as { eligibleIds?: ReadonlySet<string> }).eligibleIds?.has("usdc-circle")).toBe(true);
   });
 });
 
 describe("RecentFreezesCard authoritative totals", () => {
   it("labels the row order and never rounds a sub-dollar freeze to $0", () => {
     const nowSec = Math.floor(UPDATED_AT / 1000);
-    useBlacklistEventsPageMock.mockReturnValue(queryFor("ready", {
-      events: [
-        { amountUsdAtEvent: 0.4, eventType: "blacklist", id: "dust", stablecoin: "USDT", stablecoinId: "usdt-tether", timestamp: nowSec - 60 },
-        { amountUsdAtEvent: 3_000_000, eventType: "blacklist", id: "big", stablecoin: "USDT", stablecoinId: "usdt-tether", timestamp: nowSec - 120 },
-      ],
-    }, { events: [] }));
-    useBlacklistSummaryMock.mockReturnValue(queryFor("ready", {
-      stats: {
-        recentFreezeCount24h: 2,
-        recentFreezeCount7d: 2,
-        recentFreezeAmount24hUsd: 3_000_000.4,
-        recentFreezeAmount7dUsd: 3_000_000.4,
-        valuationCoverage: { recent24h: { knownCount: 2, unavailableCount: 0 }, recent7d: { knownCount: 2, unavailableCount: 0 } },
-      },
-    }, freezeSummaryEmpty));
-
+    m.blEvents.mockReturnValue(queryFor("ready", { events: [
+      { amountUsdAtEvent: 0.4, eventType: "blacklist", id: "dust", stablecoin: "USDT", stablecoinId: "usdt-tether", timestamp: nowSec - 60 },
+      { amountUsdAtEvent: 3_000_000, eventType: "blacklist", id: "big", stablecoin: "USDT", stablecoinId: "usdt-tether", timestamp: nowSec - 120 },
+    ] }, { events: [] }));
+    m.blSummary.mockReturnValue(queryFor("ready", makeFreezeSummary(2, 3_000_000.4), freezeSummaryEmpty));
     render(<RecentFreezesCard />);
-
     expect(screen.getByRole("list", { name: "Latest valued freezes, newest first" })).toBeTruthy();
     expect(screen.getByText("<$1")).toBeTruthy();
     expect(screen.queryByText("$0")).toBeNull();
@@ -485,44 +289,15 @@ describe("RecentFreezesCard authoritative totals", () => {
   });
 
   it("uses freeze-only summary windows when a release and later freezes saturate the 200-row page", () => {
+    const nowSec = Math.floor(UPDATED_AT / 1000);
     const pageEvents = [
-      {
-        amountUsdAtEvent: 1,
-        eventType: "unblacklist",
-        id: "release",
-        stablecoin: "USDC",
-        stablecoinId: "usdc-circle",
-        timestamp: Math.floor(UPDATED_AT / 1000) - 1,
-      },
-      ...Array.from({ length: 199 }, (_, index) => ({
-        amountUsdAtEvent: 10,
-        eventType: "blacklist",
-        id: `freeze-${index}`,
-        stablecoin: "USDC",
-        stablecoinId: "usdc-circle",
-        timestamp: Math.floor(UPDATED_AT / 1000) - index - 2,
-      })),
+      { amountUsdAtEvent: 1, eventType: "unblacklist", id: "release", stablecoin: "USDC", stablecoinId: "usdc-circle", timestamp: nowSec - 1 },
+      ...Array.from({ length: 199 }, (_, i) => ({ amountUsdAtEvent: 10, eventType: "blacklist", id: `freeze-${i}`, stablecoin: "USDC", stablecoinId: "usdc-circle", timestamp: nowSec - i - 2 })),
     ];
-    useBlacklistEventsPageMock.mockReturnValue(queryFor("ready", { events: pageEvents }, { events: [] }));
-    useBlacklistSummaryMock.mockReturnValue(
-      queryFor(
-        "ready",
-        {
-          stats: {
-            recentFreezeCount24h: 200,
-            recentFreezeCount7d: 350,
-            recentFreezeAmount24hUsd: 123_456,
-            recentFreezeAmount7dUsd: 456_789,
-            valuationCoverage: { recent24h: { knownCount: 200, unavailableCount: 0 }, recent7d: { knownCount: 350, unavailableCount: 0 } },
-          },
-        },
-        freezeSummaryEmpty,
-      ),
-    );
-
+    m.blEvents.mockReturnValue(queryFor("ready", { events: pageEvents }, { events: [] }));
+    m.blSummary.mockReturnValue(queryFor("ready", makeFreezeSummary(200, 123_456, 350, 456_789), freezeSummaryEmpty));
     render(<RecentFreezesCard />);
-
-    expect(useBlacklistEventsPageMock).toHaveBeenCalledWith(expect.objectContaining({ limit: 200 }));
+    expect(m.blEvents).toHaveBeenCalledWith(expect.objectContaining({ limit: 200 }));
     expect(screen.getByText("200 freezes")).toBeTruthy();
     expect(screen.getByText("$123K")).toBeTruthy();
     expect(screen.queryByText("199 freezes")).toBeNull();
@@ -535,15 +310,12 @@ describe("RecentFreezesCard authoritative totals", () => {
 
 describe.each(SURFACES.slice(0, 6))("$Component.name producer health stays off the homepage", ({ Component, configure, emptyText }) => {
   it.each([
-    ["old generation", { updatedAt: UPDATED_AT / 1000 - 7 * 86400, ageSeconds: 7 * 86400, status: "fresh" }],
-    ["quality warning", { updatedAt: UPDATED_AT / 1000, ageSeconds: 0, status: "fresh", warning: "199 pharos source degraded" }],
-    ["non-fresh dependency", { updatedAt: UPDATED_AT / 1000, ageSeconds: 0, status: "fresh", dependencies: { source: { updatedAt: UPDATED_AT / 1000, ageSeconds: 0, status: "stale" } } }],
+    ["old generation", { updatedAt: UPDATED_AT / 1000 - 7 * 86400, ageSeconds: 7 * 86400, status: "fresh" } satisfies ApiMeta],
+    ["quality warning", { updatedAt: UPDATED_AT / 1000, ageSeconds: 0, status: "fresh", warning: "199 pharos source degraded" } satisfies ApiMeta],
+    ["non-fresh dependency", { updatedAt: UPDATED_AT / 1000, ageSeconds: 0, status: "fresh", dependencies: { source: { updatedAt: UPDATED_AT / 1000, ageSeconds: 0, status: "stale" } } } satisfies ApiMeta],
   ] as const)("renders a successful response with %s without a homepage warning", (_case, meta) => {
     configure("ready");
-    for (const hook of [useActiveDepegEventsMock, usePegSummaryMock, useMintBurnFlowsMock, useStabilityIndexMock, useStablecoinsMock, useBlacklistEventsPageMock, useBlacklistSummaryMock]) {
-      const result = hook.getMockImplementation()?.();
-      if (result) hook.mockReturnValue({ ...result, dataUpdatedAt: UPDATED_AT, meta });
-    }
+    attachMeta(meta);
     const view = render(<Component />);
     expect(screen.queryByRole("status")).toBeNull();
     expect(view.container.textContent).not.toMatch(/quality warning|older snapshot/i);
@@ -551,10 +323,7 @@ describe.each(SURFACES.slice(0, 6))("$Component.name producer health stays off t
 
   it("renders an observed empty result under a degraded producer without a warning", () => {
     configure("empty");
-    for (const hook of [useActiveDepegEventsMock, usePegSummaryMock, useMintBurnFlowsMock, useStabilityIndexMock, useStablecoinsMock, useBlacklistEventsPageMock, useBlacklistSummaryMock]) {
-      const result = hook.getMockImplementation()?.();
-      if (result) hook.mockReturnValue({ ...result, meta: { updatedAt: UPDATED_AT / 1000, ageSeconds: 0, status: "degraded" } satisfies ApiMeta });
-    }
+    attachMeta({ updatedAt: UPDATED_AT / 1000, ageSeconds: 0, status: "degraded" });
     render(<Component />);
     expect(screen.queryByRole("status")).toBeNull();
     expect(screen.queryAllByText(emptyText).length).toBeGreaterThan(0);
@@ -574,22 +343,12 @@ describe("MintBurnCard activity and valuation", () => {
   ] as const)("distinguishes %s", (_label, overrides, expected, state?: MonitoringState) => {
     const activity = makeInactiveMintBurnFlowCoin(overrides);
     const data = {
-      coins: [{
-        ...activity,
-        valuation: makeMintBurnCoinValuation({
-          completeness: activity.netFlow24hUsd == null ? "partial" : "complete",
-          unpricedMintEventCount: activity.netFlow24hUsd == null ? 1 : 0,
-        }),
-      }],
+      coins: [{ ...activity, valuation: makeMintBurnCoinValuation({ completeness: activity.netFlow24hUsd == null ? "partial" : "complete", unpricedMintEventCount: activity.netFlow24hUsd == null ? 1 : 0 }) }],
       gauge: { band: "NEUTRAL", score: 0 },
     };
-    useMintBurnFlowsMock.mockReturnValue(queryFor(state ?? "ready", data, flowEmpty));
-
+    m.flows.mockReturnValue(queryFor(state ?? "ready", data, flowEmpty));
     render(<MintBurnCard />);
-
     expect(screen.getByText(expected)).toBeTruthy();
-    for (const other of [quiet, balanced, unavailable]) {
-      if (other !== expected) expect(screen.queryByText(other)).toBeNull();
-    }
+    for (const other of [quiet, balanced, unavailable]) if (other !== expected) expect(screen.queryByText(other)).toBeNull();
   });
 });

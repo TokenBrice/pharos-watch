@@ -5,6 +5,7 @@ import { useState } from "react";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
+import { PEG_LABELS_SHORT } from "@shared/lib/classification";
 import atlasManifest from "@/lib/cemetery-logo-atlas.generated.json";
 import { buildCemeteryPlotMap } from "@/lib/cemetery-plot-map";
 import { toPlotLogoAtlas, toPlotMapInput } from "@/lib/cemetery-plot-map-input";
@@ -14,6 +15,7 @@ import { CemeterySelectionProvider, type CemeterySelectionHandler } from "../cem
 import type * as CemeterySelectionModule from "../cemetery/cemetery-selection-context";
 import type { PlotMapPortraitSlotProps } from "../cemetery/plot-map-portrait-slot";
 import { PlotMapHero } from "../cemetery/plot-map-hero";
+import { PlotMapRecordCard } from "../cemetery/plot-map-record-card";
 import { desktopPlotLayout } from "../cemetery/plot-map-scene";
 
 // vi.mock factories are hoisted above the imports, so the helper loads lazily inside it.
@@ -354,5 +356,24 @@ describe("PlotMapHero beam motion", () => {
     fireEvent.pointerOver(grave("mim-abracadabra"));
     expect(hero.querySelector("[data-plot-beam]")?.getAttribute("data-beam")).toBe("aim");
     expect(hero.querySelector<SVGGElement>("[data-plot-beam] > g")?.style.getPropertyValue("transition")).toBe("");
+  });
+});
+
+describe("PlotMapRecordCard", () => {
+  const rowByPeg = new Map(rows.map((row) => [row.pegCurrency, row]));
+
+  it.each([...rowByPeg.keys()])("prints the shared peg label for %s instead of the raw peg enum", (pegCurrency) => {
+    render(
+      <PlotMapRecordCard
+        row={rowByPeg.get(pegCurrency)!}
+        flowers={0}
+        onLeaveFlower={() => {}}
+        onReadRegister={() => {}}
+        onClose={() => {}}
+        variant="sheet"
+      />,
+    );
+    expect(screen.getByText("Peg").nextElementSibling?.textContent).toBe(PEG_LABELS_SHORT[pegCurrency]);
+    expect(screen.queryByText(pegCurrency)).toBeNull();
   });
 });
