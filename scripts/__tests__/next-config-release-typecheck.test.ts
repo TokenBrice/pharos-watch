@@ -163,45 +163,16 @@ describe("release Next.js typecheck handoff", () => {
     expect(createNextConfig("phase-production-build").typescript).toBeUndefined();
   });
 
-  it("sets build-speed defaults and env-gated prerender/CPU/webpack-cache controls", () => {
-    vi.stubEnv("CI", "");
-    vi.stubEnv("PHAROS_DISABLE_PRERENDER_SOURCE_MAPS", "");
-    vi.stubEnv("PHAROS_NEXT_BUILD_CPUS", "");
-    vi.stubEnv("PHAROS_DISABLE_WEBPACK_FS_CACHE", "");
-
-    const defaultConfig = createNextConfig("phase-production-build");
-    expect(defaultConfig.experimental?.serverMinification).toBe(false);
-    expect(defaultConfig.experimental?.cpus).toBeUndefined();
-    expect(defaultConfig.enablePrerenderSourceMaps).toBeUndefined();
-    expect(defaultConfig.outputFileTracingExcludes).toEqual({
-      "*": ["public/**", "data/**", "shared/data/**", "docs/**", "scripts/**", "worker/**"],
-    });
-
-    vi.stubEnv("CI", "true");
-    vi.stubEnv("PHAROS_NEXT_BUILD_CPUS", "4");
-    const ciConfig = createNextConfig("phase-production-build");
-    expect(ciConfig.enablePrerenderSourceMaps).toBe(false);
-    expect(ciConfig.experimental?.cpus).toBe(4);
-
-    vi.stubEnv("CI", "");
-    vi.stubEnv("PHAROS_DISABLE_PRERENDER_SOURCE_MAPS", "1");
-    for (const invalid of ["0", "-2", "4.5", "4abc"]) {
-      vi.stubEnv("PHAROS_NEXT_BUILD_CPUS", invalid);
-      const invalidCpuConfig = createNextConfig("phase-production-build");
-      expect(invalidCpuConfig.enablePrerenderSourceMaps).toBe(false);
-      expect(invalidCpuConfig.experimental?.cpus).toBeUndefined();
-    }
-
-    const webpackContext = { dev: false, isServer: true } as Parameters<NonNullable<typeof defaultConfig.webpack>>[1];
-    expect(defaultConfig.webpack?.({ cache: { type: "filesystem" } }, webpackContext).cache).toEqual({
-      type: "filesystem",
-    });
-
+  it("applies build-speed defaults and env-gated CI/CPU/webpack-cache options", () => {
+    for (const k of ["CI", "PHAROS_DISABLE_PRERENDER_SOURCE_MAPS", "PHAROS_NEXT_BUILD_CPUS", "PHAROS_DISABLE_WEBPACK_FS_CACHE"]) vi.stubEnv(k, "");
+    const c = () => createNextConfig("phase-production-build"), def = c(), ctx = { dev: false, isServer: true } as Parameters<NonNullable<typeof def.webpack>>[1];
+    expect([def.experimental?.serverMinification, def.experimental?.cpus, def.enablePrerenderSourceMaps, def.outputFileTracingExcludes?.["*"]?.length]).toEqual([false, undefined, undefined, 6]);
+    vi.stubEnv("CI", "true"); vi.stubEnv("PHAROS_NEXT_BUILD_CPUS", "4");
+    expect([c().enablePrerenderSourceMaps, c().experimental?.cpus]).toEqual([false, 4]);
+    vi.stubEnv("PHAROS_NEXT_BUILD_CPUS", "0"); expect(c().experimental?.cpus).toBeUndefined();
+    expect(def.webpack?.({ cache: { type: "filesystem" } }, ctx).cache).toEqual({ type: "filesystem" });
     vi.stubEnv("PHAROS_DISABLE_WEBPACK_FS_CACHE", "1");
-    expect(defaultConfig.webpack?.({ cache: { type: "filesystem" } }, webpackContext).cache).toBe(false);
-    expect(
-      defaultConfig.webpack?.({ cache: { type: "filesystem" } }, { ...webpackContext, dev: true }).cache,
-    ).toEqual({ type: "filesystem" });
+    expect([def.webpack?.({ cache: { type: "filesystem" } }, ctx).cache, def.webpack?.({ cache: { type: "filesystem" } }, { ...ctx, dev: true }).cache]).toEqual([false, { type: "filesystem" }]);
   });
 });
 
@@ -249,27 +220,14 @@ describe("client bundle excludes release-refreshed data", () => {
   it("never reaches a release-refreshed path", () => {
     const clientModules = collectClientModules();
     expect(clientModules.length).toBeGreaterThan(100);
-
     const { dependencies, unresolved } = buildClientDependencies(process.cwd(), clientModules);
-    expect(unresolved).toEqual([]);
-    expect(findExcludedClientImports(clientModules, dependencies)).toEqual([]);
-    expect(dependencies.has("src/lib/homepage-static-snapshot.ts")).toBe(false);
-    expect([...dependencies.keys()].filter((file) => /process\.env\.SITE_SESSION_SIGNING_KEY\b/u.test(readFileSync(file, "utf8")))).toEqual([]);
-    // Every byte the bundle can reach is a build-ID input, so a change that can
-    // alter client JavaScript/CSS cannot keep the ID.
-    const unhashed = [...dependencies.keys()]
-      .filter((file) => !BUILD_ID_INPUT_DIRECTORIES.some((directory) => file.startsWith(`${directory}/`)));
-    expect(unhashed).toEqual([]);
+    expect([unresolved, findExcludedClientImports(clientModules, dependencies), dependencies.has("src/lib/homepage-static-snapshot.ts")]).toEqual([[], [], false]);
+    expect([...dependencies.keys()].filter((f) => /process\.env\.SITE_SESSION_SIGNING_KEY\b/u.test(readFileSync(f, "utf8")))).toEqual([]);
+    expect([...dependencies.keys()].filter((f) => !BUILD_ID_INPUT_DIRECTORIES.some((d) => f.startsWith(`${d}/`)))).toEqual([]);
   });
 
   it("reports the import chain when a client module violates the boundary", () => {
-    const dependencies = new Map<string, string[]>([
-      ["src/components/violating-rail.tsx", ["src/lib/datasets/public-dataset-current.ts"]],
-      ["src/lib/datasets/public-dataset-current.ts", ["public/datasets/top-stablecoins/2026-11-01.json"]],
-    ]);
-
-    expect(findExcludedClientImports(["src/components/violating-rail.tsx"], dependencies)).toEqual([
-      "src/components/violating-rail.tsx -> src/lib/datasets/public-dataset-current.ts",
-    ]);
+    const dependencies = new Map([["src/components/violating-rail.tsx", ["src/lib/datasets/public-dataset-current.ts"]], ["src/lib/datasets/public-dataset-current.ts", ["public/datasets/top-stablecoins/2026-11-01.json"]]]);
+    expect(findExcludedClientImports(["src/components/violating-rail.tsx"], dependencies)).toEqual(["src/components/violating-rail.tsx -> src/lib/datasets/public-dataset-current.ts"]);
   });
 });

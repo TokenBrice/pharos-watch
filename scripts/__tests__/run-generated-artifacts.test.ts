@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -54,279 +54,91 @@ const run = (argv: string[], runCommandImpl: (command: string) => Promise<number
 describe("generated-artifact runner lifecycle selection", () => {
   const refreshArgv = ["--build-lifecycle=post-refresh"];
   const mockSchedulingPlan = () => vi.spyOn(automationRegistry, "buildGeneratedArtifactPhases").mockReturnValue([
-    { phase: 0, artifacts: [
-      { id: "upstream", command: "fixture:upstream" },
-      { id: "independent", command: "fixture:independent" },
-    ] },
-    { phase: 1, artifacts: [
-      { id: "dependent", command: "fixture:dependent", dependsOn: ["upstream"] },
-      { id: "independent-later", command: "fixture:independent-later" },
-    ] },
-    { phase: 2, artifacts: [
-      { id: "transitive", command: "fixture:transitive", dependsOn: ["dependent"] },
-    ] },
+    { phase: 0, artifacts: [{ id: "upstream", command: "fixture:upstream" }, { id: "independent", command: "fixture:independent" }] },
+    { phase: 1, artifacts: [{ id: "dependent", command: "fixture:dependent", dependsOn: ["upstream"] }, { id: "independent-later", command: "fixture:independent-later" }] },
+    { phase: 2, artifacts: [{ id: "transitive", command: "fixture:transitive", dependsOn: ["dependent"] }] },
   ]);
   const rejectsDownstream = (calls: [string, ...unknown[]][]) => {
-    for (const command of ["fixture:dependent", "fixture:transitive"]) {
-      expect(calls.some(([cmd]) => cmd === command)).toBe(false);
-    }
+    for (const c of ["fixture:dependent", "fixture:transitive"]) expect(calls.some(([cmd]) => cmd === c)).toBe(false);
   };
   it.each(["runbook-index,sitemap-dates"])("rejects CLI request %s without filesystem writes", (ids) => {
     withTempRepo("uncheckable", {}, (cwd) => {
-      const result = spawnSync(process.execPath, [
-        "--import", resolve("node_modules/tsx/dist/loader.mjs"),
-        resolve("scripts/maintenance/run-generated-artifacts.ts"),
-        "--check", `--only=${ids}`,
-      ], { cwd, encoding: "utf8" });
-      expect(result.status).toBe(2);
-      expect(result.stderr).toContain("bootstrap:generated:history");
-      expect(readdirSync(cwd)).toEqual([]);
+      const result = spawnSync(process.execPath, ["--import", resolve("node_modules/tsx/dist/loader.mjs"), resolve("scripts/maintenance/run-generated-artifacts.ts"), "--check", `--only=${ids}`], { cwd, encoding: "utf8" });
+      expect([result.status, result.stderr.includes("bootstrap:generated:history"), readdirSync(cwd)]).toEqual([2, true, []]);
     });
   });
 
   it.each(["sitemap-dates", "runbook-index,sitemap-dates"])("rejects explicit uncheckable selection %s before any child executes", async (ids) => {
     const child = vi.fn(async () => 0);
-    await expect(run(["--check", `--only=${ids}`], child))
-      .rejects.toThrow(/sitemap-dates.*git-history-derived.*bootstrap:generated:history/);
+    await expect(run(["--check", `--only=${ids}`], child)).rejects.toThrow(/sitemap-dates.*git-history-derived.*bootstrap:generated:history/);
     expect(child).not.toHaveBeenCalled();
   });
 
   it("reports a legitimate empty intersection without running children", async () => {
-    const log = vi.fn();
-    const child = vi.fn(async () => 0);
-    const result = await run(["--check", "--only=runbook-index", "--phase=2"], child, log);
-    expect(result).toMatchObject({ status: 0, results: [] });
+    const log = vi.fn(), child = vi.fn(async () => 0);
+    expect(await run(["--check", "--only=runbook-index", "--phase=2"], child, log)).toMatchObject({ status: 0, results: [] });
     expect(child).not.toHaveBeenCalled();
     expect(log).toHaveBeenCalledWith(expect.stringContaining("no checks executed"));
   });
 
-  it("schedules ready DAG nodes without phase barriers while waiting for declared upstream deps", async () => {
+  it("schedules ready DAG nodes without phase barriers and bounds concurrency", async () => {
     using _plan = mockSchedulingPlan();
-    const upstream = Promise.withResolvers<number>();
-    const entered = Promise.withResolvers<void>();
-    const independentLaterEntered = Promise.withResolvers<void>();
-    const dependent = Promise.withResolvers<number>();
-    const dependentEntered = Promise.withResolvers<void>();
-    const child = vi.fn(async (command: string) => {
-      if (command === "fixture:upstream") {
-        entered.resolve();
-        return upstream.promise;
-      }
-      if (command === "fixture:independent-later") {
-        independentLaterEntered.resolve();
-        return 0;
-      }
-      if (command === "fixture:dependent") {
-        dependentEntered.resolve();
-        return dependent.promise;
-      }
-      return 0;
-    });
+    const u = Promise.withResolvers<number>(), ue = Promise.withResolvers<void>(), il = Promise.withResolvers<void>(), d = Promise.withResolvers<number>(), de = Promise.withResolvers<void>();
+    const child = vi.fn(async (c: string) => c === "fixture:upstream" ? (ue.resolve(), u.promise) : c === "fixture:independent-later" ? (il.resolve(), 0) : c === "fixture:dependent" ? (de.resolve(), d.promise) : 0);
     const pending = run(refreshArgv, child);
     expect(_plan).toHaveBeenCalledWith(expect.objectContaining({ buildLifecycles: ["post-refresh"] }));
-    await Promise.all([entered.promise, independentLaterEntered.promise]);
-    // Phase-1 independent node started without waiting for phase-0 `upstream`,
-    // while declared dependents remain blocked on `upstream`.
+    await Promise.all([ue.promise, il.promise]);
     rejectsDownstream(child.mock.calls);
-    upstream.resolve(0);
-    await dependentEntered.promise;
-    expect(child.mock.calls.some(([command]) => command === "fixture:transitive")).toBe(false);
-    dependent.resolve(0);
-    const result = await pending;
-    expect(result.status).toBe(0);
-    expect(result.results.map(({ id }) => id))
-      .toEqual(["upstream", "independent", "dependent", "independent-later", "transitive"]);
-    expect(result.results.every(({ status, statusLabel, taintedBy }) =>
-      status === 0 && statusLabel === "passed" && taintedBy.length === 0)).toBe(true);
+    u.resolve(0); await de.promise;
+    expect(child.mock.calls.some(([c]) => c === "fixture:transitive")).toBe(false);
+    d.resolve(0);
+    const r = await pending;
+    expect([r.status, r.results.map((x) => x.id), r.results.every((x) => x.status === 0 && x.statusLabel === "passed" && x.taintedBy.length === 0)])
+      .toEqual([0, ["upstream", "independent", "dependent", "independent-later", "transitive"], true]);
   });
 
-  it("enforces GENERATED_ARTIFACTS_MAX_PARALLEL across DAG ready nodes", async () => {
-    using _plan = vi.spyOn(automationRegistry, "buildGeneratedArtifactPhases").mockReturnValue([
-      {
-        phase: 0,
-        artifacts: Array.from({ length: GENERATED_ARTIFACTS_MAX_PARALLEL + 2 }, (_, idx) => ({
-          id: `node-${idx}`,
-          command: `fixture:node-${idx}`,
-        })),
-      },
-    ]);
-    let inFlight = 0;
-    let peak = 0;
-    const child = vi.fn(async () => {
-      inFlight += 1;
-      peak = Math.max(peak, inFlight);
-      await new Promise((resolveDelay) => setTimeout(resolveDelay, 10));
-      inFlight -= 1;
-      return 0;
-    });
-    const result = await run(refreshArgv, child);
-    expect(result.status).toBe(0);
-    expect(peak).toBe(GENERATED_ARTIFACTS_MAX_PARALLEL);
-    expect(child).toHaveBeenCalledTimes(GENERATED_ARTIFACTS_MAX_PARALLEL + 2);
-  });
-
-  it.each([
-    ["stops dependent nodes after an upstream failure", false],
-    ["retains the failure and propagates transitive taint without tainting independent artifacts", true],
-  ] as const)("%s", async (_name, continued) => {
-    using _plan = mockSchedulingPlan();
-    const child = vi.fn(async (command: string) => command === "fixture:upstream" ? 7 : 0);
-    const result = await run([...refreshArgv, ...(continued ? ["--continue-on-error"] : [])], child);
-    expect(result).toMatchObject({ status: 7, failedCmd: "fixture:upstream" });
-    if (!continued) {
-      rejectsDownstream(child.mock.calls);
-      expect(result.results.find(({ id }) => id === "upstream"))
-        .toMatchObject({ status: 7, statusLabel: "failed", taintedBy: [] });
-    } else {
-      expect(result.results.map(({ id, statusLabel, taintedBy }) => [id, statusLabel, taintedBy])).toEqual([
-        ["upstream", "failed", []],
-        ["independent", "passed", []],
-        ["dependent", "tainted", ["upstream"]],
-        ["independent-later", "passed", []],
-        ["transitive", "tainted", ["upstream"]],
+  it("bounds DAG concurrency and skips existing transitive deps fail-closed", async () => {
+    let cur = 0, peak = 0;
+    {
+      using _p = vi.spyOn(automationRegistry, "buildGeneratedArtifactPhases").mockReturnValue([
+        { phase: 0, artifacts: Array.from({ length: GENERATED_ARTIFACTS_MAX_PARALLEL + 2 }, (_, i) => ({ id: `n${i}`, command: `f:n${i}` })) },
       ]);
-      expect(result.failures.map(({ unit, status }) => [unit.id, status])).toEqual([["upstream", 7]]);
+      expect([(await run(refreshArgv, async () => { peak = Math.max(peak, ++cur); await new Promise((r) => setTimeout(r, 5)); cur--; return 0; })).status, peak]).toEqual([0, GENERATED_ARTIFACTS_MAX_PARALLEL]);
     }
-  });
-});
-
-describe("skip-existing-deps mode", () => {
-  const mockChainPlan = (overrides: Partial<Record<"root" | "mid" | "target", Record<string, unknown>>> = {}) =>
-    vi.spyOn(automationRegistry, "buildGeneratedArtifactPhases").mockReturnValue([
-      {
-        phase: 0,
-        artifacts: [
-          {
-            id: "root",
-            buildLifecycle: "compile-input",
-            command: "fixture:root",
-            outputPaths: ["out/root.json"],
-            ...overrides.root,
-          },
-        ],
-      },
-      {
-        phase: 1,
-        artifacts: [
-          {
-            id: "mid",
-            buildLifecycle: "compile-input",
-            command: "fixture:mid",
-            dependsOn: ["root"],
-            outputPaths: ["out/mid.json", "out/mid-dir"],
-            ...overrides.mid,
-          },
-        ],
-      },
-      {
-        phase: 2,
-        artifacts: [
-          {
-            id: "target",
-            buildLifecycle: "post-refresh",
-            command: "fixture:target",
-            dependsOn: ["mid"],
-            outputPaths: ["out/target.json"],
-            ...overrides.target,
-          },
-        ],
-      },
-    ]);
-
-  it.each([
-    ["CLI --skip-existing-deps", ["--only=target", "--skip-existing-deps"], { NODE_ENV: "test" }],
-    ["env PHAROS_GENERATED_SKIP_EXISTING_DEPS=1", ["--build-lifecycle=post-refresh"], { NODE_ENV: "test", PHAROS_GENERATED_SKIP_EXISTING_DEPS: "1" }],
-  ] as const)("skips existing transitive deps via %s without skipping direct targets", async (_label, argv, env) => {
-    await withTempRepo("skip-existing-deps-hit", {
-      "out/root.json": "{}",
-      "out/mid.json": "{}",
-      "out/mid-dir/item.json": "{}",
-      "out/target.json": "{}",
-    }, async (cwd) => {
-      using _plan = mockChainPlan();
-      const child = vi.fn(async (_cmd: string) => 0);
-      const log = vi.fn();
-      const result = await runGeneratedArtifacts({ argv: [...argv], cwd, env, log, runCommandImpl: child });
-      expect(result.status).toBe(0);
-      expect(child.mock.calls.map(([cmd]) => cmd)).toEqual(["fixture:target"]);
-      expect(log).toHaveBeenCalledWith(expect.stringContaining("Skipping 2 existing transitive dependency artifact(s): root, mid"));
+    const exec = async (cwd: string, argv: string[], env: NodeJS.ProcessEnv = { NODE_ENV: "test" }, out?: string[]) => {
+      using _p = vi.spyOn(automationRegistry, "buildGeneratedArtifactPhases").mockReturnValue([
+        { phase: 0, artifacts: [{ id: "r", buildLifecycle: "compile-input", command: "f:r", outputPaths: ["o/r"] }] },
+        { phase: 1, artifacts: [{ id: "m", buildLifecycle: "compile-input", command: "f:m", dependsOn: ["r"], outputPaths: out ?? ["o/m", "o/d"] }] },
+        { phase: 2, artifacts: [{ id: "t", buildLifecycle: "post-refresh", command: "f:t", dependsOn: ["m"], outputPaths: ["o/t"] }] },
+      ]);
+      const cmds: string[] = [];
+      await runGeneratedArtifacts({ argv, cwd, env, log: () => {}, runCommandImpl: async (c) => (cmds.push(c), 0) });
+      return cmds;
+    };
+    await withTempRepo("skip", { "o/r": "1", "o/m": "1", "o/d/a": "1", "o/t": "1" }, async (cwd) => {
+      const s = ["--only=t", "--skip-existing-deps"];
+      expect(await exec(cwd, s)).toEqual(["f:t"]);
+      expect(await exec(cwd, ["--build-lifecycle=post-refresh"], { NODE_ENV: "test", PHAROS_GENERATED_SKIP_EXISTING_DEPS: "1" })).toEqual(["f:t"]);
+      expect(await exec(cwd, ["--check", ...s])).toEqual(["f:r", "f:m", "f:t"]);
+      for (const bad of [["o/*"], []]) expect(await exec(cwd, s, undefined, bad)).toEqual(["f:m", "f:t"]);
+      rmSync(join(cwd, "o/d/a")); expect(await exec(cwd, s)).toEqual(["f:m", "f:t"]);
+      rmSync(join(cwd, "o/r")); expect(await exec(cwd, s)).toEqual(["f:r", "f:m", "f:t"]);
     });
   });
 
-  it("fails closed when a transitive dep output is missing, empty dir, glob, or undeclared", async () => {
-    await withTempRepo("skip-existing-deps-fail-closed", {
-      "out/root.json": "{}",
-      "out/mid.json": "{}",
-      "out/target.json": "{}",
-    }, async (cwd) => {
-      // Missing second output (`out/mid-dir`): root can skip, mid + target must run.
-      {
-        using _plan = mockChainPlan();
-        const child = vi.fn(async (_cmd: string) => 0);
-        await runGeneratedArtifacts({ argv: ["--only=target", "--skip-existing-deps"], cwd, env: { NODE_ENV: "test" }, log: () => {}, runCommandImpl: child });
-        expect(child.mock.calls.map(([cmd]) => cmd)).toEqual(["fixture:mid", "fixture:target"]);
-      }
-
-      // Empty directory fails closed.
-      mkdirSync(join(cwd, "out/mid-dir"), { recursive: true });
-      {
-        using _plan = mockChainPlan();
-        const child = vi.fn(async (_cmd: string) => 0);
-        await runGeneratedArtifacts({ argv: ["--only=target", "--skip-existing-deps"], cwd, env: { NODE_ENV: "test" }, log: () => {}, runCommandImpl: child });
-        expect(child.mock.calls.map(([cmd]) => cmd)).toEqual(["fixture:mid", "fixture:target"]);
-      }
-
-      // Glob outputPath fails closed.
-      writeFileSync(join(cwd, "out/mid-dir/item.json"), "{}");
-      {
-        using _plan = mockChainPlan({ mid: { outputPaths: ["out/mid-*.json"] } });
-        const child = vi.fn(async (_cmd: string) => 0);
-        await runGeneratedArtifacts({ argv: ["--only=target", "--skip-existing-deps"], cwd, env: { NODE_ENV: "test" }, log: () => {}, runCommandImpl: child });
-        expect(child.mock.calls.map(([cmd]) => cmd)).toEqual(["fixture:mid", "fixture:target"]);
-      }
-
-      // Empty/undeclared outputPaths fails closed.
-      {
-        using _plan = mockChainPlan({ mid: { outputPaths: [] } });
-        const child = vi.fn(async (_cmd: string) => 0);
-        await runGeneratedArtifacts({ argv: ["--only=target", "--skip-existing-deps"], cwd, env: { NODE_ENV: "test" }, log: () => {}, runCommandImpl: child });
-        expect(child.mock.calls.map(([cmd]) => cmd)).toEqual(["fixture:mid", "fixture:target"]);
-      }
-    });
-  });
-
-  it("rebuilds downstream transitive deps whenever an upstream dep must run", async () => {
-    await withTempRepo("skip-existing-deps-chain", {
-      // `root` output is missing, even though `mid` outputs exist.
-      "out/mid.json": "{}",
-      "out/mid-dir/item.json": "{}",
-      "out/target.json": "{}",
-    }, async (cwd) => {
-      using _plan = mockChainPlan();
-      const child = vi.fn(async (_cmd: string) => 0);
-      await runGeneratedArtifacts({ argv: ["--only=target", "--skip-existing-deps"], cwd, env: { NODE_ENV: "test" }, log: () => {}, runCommandImpl: child });
-      expect(child.mock.calls.map(([cmd]) => cmd)).toEqual(["fixture:root", "fixture:mid", "fixture:target"]);
-    });
-  });
-
-  it("never skips dependencies in --check mode", async () => {
-    await withTempRepo("skip-existing-deps-check", {
-      "out/root.json": "{}",
-      "out/mid.json": "{}",
-      "out/mid-dir/item.json": "{}",
-      "out/target.json": "{}",
-    }, async (cwd) => {
-      using _plan = mockChainPlan();
-      const child = vi.fn(async (_cmd: string) => 0);
-      await runGeneratedArtifacts({
-        argv: ["--check", "--only=target", "--skip-existing-deps"],
-        cwd,
-        env: { NODE_ENV: "test", PHAROS_GENERATED_SKIP_EXISTING_DEPS: "1" },
-        log: () => {},
-        runCommandImpl: child,
-      });
-      expect(child.mock.calls.map(([cmd]) => cmd)).toEqual(["fixture:root", "fixture:mid", "fixture:target"]);
-    });
+  it.each([false, true])("handles upstream failure (continueOnError=%s)", async (continued) => {
+    using _p = mockSchedulingPlan();
+    const child = vi.fn(async (c: string) => c === "fixture:upstream" ? 7 : 0);
+    const r = await run([...refreshArgv, ...(continued ? ["--continue-on-error"] : [])], child);
+    expect(r).toMatchObject({ status: 7, failedCmd: "fixture:upstream" });
+    if (!continued) { rejectsDownstream(child.mock.calls); expect(r.results.find((x) => x.id === "upstream")).toMatchObject({ status: 7, statusLabel: "failed", taintedBy: [] }); }
+    else {
+      expect(r.results.map(({ id, statusLabel, taintedBy }) => [id, statusLabel, taintedBy])).toEqual([
+        ["upstream", "failed", []], ["independent", "passed", []], ["dependent", "tainted", ["upstream"]],
+        ["independent-later", "passed", []], ["transitive", "tainted", ["upstream"]],
+      ]);
+      expect(r.failures.map(({ unit, status }) => [unit.id, status])).toEqual([["upstream", 7]]);
+    }
   });
 });
 

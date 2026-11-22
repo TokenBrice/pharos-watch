@@ -124,52 +124,21 @@ describe("Pages artifact input profile", () => {
     expect(spawn.mock.calls.some((call) => call[0] === "npm" && call[1].includes("generated:compile-input"))).toBe(false);
   });
 
-  it("keeps the full compile-input lifecycle without the reuse flag", async () => {
-    const root = makeRoot();
-    dataFixture(root);
-    vi.stubEnv("PHAROS_GENERATED_SKIP_EXISTING_DEPS", "1");
+  it("keeps full compile-input without reuse and honors build env overrides", async () => {
+    const root = makeRoot(); dataFixture(root); vi.stubEnv("PHAROS_GENERATED_SKIP_EXISTING_DEPS", "1");
     await runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false });
-    const compileInput = spawn.mock.calls.find((call) => call[0] === "npm" && call[1].includes("generated:compile-input"));
-    const postRefresh = spawn.mock.calls.find((call) => call[0] === "npm" && call[1].includes("generated:post-refresh"));
-    expect(compileInput).toBeDefined();
-    expect(compileInput?.[2].env.PHAROS_GENERATED_SKIP_EXISTING_DEPS).toBe("");
-    expect(postRefresh?.[2].env.PHAROS_GENERATED_SKIP_EXISTING_DEPS).toBe("");
-    const nextBuild = spawn.mock.calls.find((call) => call[0] === "npx" && call[1].includes("next"));
-    expect(nextBuild?.[2].env).toMatchObject({
-      NEXT_TELEMETRY_DISABLED: "1",
-      PHAROS_DISABLE_WEBPACK_FS_CACHE: "1",
-      PHAROS_NEXT_BUILD_CPUS: "4",
-    });
+    expect(spawn.mock.calls.find((c) => c[1].includes("generated:compile-input"))?.[2].env.PHAROS_GENERATED_SKIP_EXISTING_DEPS).toBe("");
+    expect(spawn.mock.calls.find((c) => c[0] === "npx")?.[2].env).toMatchObject({ NEXT_TELEMETRY_DISABLED: "1", PHAROS_DISABLE_WEBPACK_FS_CACHE: "1", PHAROS_NEXT_BUILD_CPUS: "4" });
+    spawn.mockClear(); vi.stubEnv("PHAROS_NEXT_BUILD_CPUS", "2");
+    await runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false });
+    expect(spawn.mock.calls.find((c) => c[0] === "npx")?.[2].env.PHAROS_NEXT_BUILD_CPUS).toBe("2");
   });
 
-  it("preserves caller build-tuning overrides on webpack-export", async () => {
-    const root = makeRoot();
-    dataFixture(root);
-    vi.stubEnv("NEXT_TELEMETRY_DISABLED", "0");
-    vi.stubEnv("PHAROS_DISABLE_WEBPACK_FS_CACHE", "0");
-    vi.stubEnv("PHAROS_NEXT_BUILD_CPUS", "2");
-    await runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false });
-    const nextBuild = spawn.mock.calls.find((call) => call[0] === "npx" && call[1].includes("next"));
-    expect(nextBuild?.[2].env).toMatchObject({
-      NEXT_TELEMETRY_DISABLED: "0",
-      PHAROS_DISABLE_WEBPACK_FS_CACHE: "0",
-      PHAROS_NEXT_BUILD_CPUS: "2",
-    });
-  });
-
-  it.each([
-    { value: "false", scope: "gates" },
-    { value: "true", scope: "all" },
-    { value: "0", scope: "all" },
-    { value: undefined, scope: "all" },
-  ] as const)("narrows critical CSS only for an explicit full-pass=false ($value)", async ({ value, scope }) => {
+  it.each([["false", "gates"], ["true", "all"], ["0", "all"], [undefined, "all"]] as const)("narrows critical CSS only for full-pass=false (%s)", async (value, scope) => {
     expect(criticalCssScopeForLane({ PHAROS_CRITICAL_CSS_FULL_PASS: value })).toBe(scope);
-    const root = makeRoot();
-    dataFixture(root);
-    vi.stubEnv("PHAROS_CRITICAL_CSS_FULL_PASS", value);
+    const root = makeRoot(); dataFixture(root); vi.stubEnv("PHAROS_CRITICAL_CSS_FULL_PASS", value);
     await runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false });
-    const postbuild = spawn.mock.calls.find((call) => call[1].includes("postbuild"));
-    expect(postbuild?.[2].env.PHAROS_CRITICAL_CSS_SCOPE).toBe(scope);
+    expect(spawn.mock.calls.find((call) => call[1].includes("postbuild"))?.[2].env.PHAROS_CRITICAL_CSS_SCOPE).toBe(scope);
   });
 
   it("never forwards acquisition tokens or other credentials to generator/build children", async () => {

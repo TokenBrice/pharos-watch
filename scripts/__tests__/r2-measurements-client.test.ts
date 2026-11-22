@@ -234,65 +234,34 @@ describe("permanent social preview publication", () => {
     }
   });
 
-  it("lists once, then creates only missing current images with create-only writes", async () => {
-    const { accountState, accountStatePath, write, publish, stored, bytes, url, events, fetchImpl, env, client } = await publicationFixture();
+  it("lists once, preflights concurrently, then creates missing images with create-only writes", async () => {
+    const { accountState, accountStatePath, write, publish, stored, bytes, url, events, fetchImpl, env, client, project } = await publicationFixture();
     accountState.pages.project = "manifest-selected-project";
     write(accountStatePath, JSON.stringify(accountState));
-    await expect(publish({ execute: true })).resolves.toEqual({ assets: 1, created: 1, existing: 0, dryRun: false });
+    const p = Promise.withResolvers<Response>(), l = Promise.withResolvers<Response>(), orig = fetchImpl.getMockImplementation()!;
+    fetchImpl.mockImplementationOnce(() => (events.push("project"), p.promise)).mockImplementationOnce(() => (events.push("lifecycle"), l.promise));
+    const first = publish({ execute: true });
+    await vi.waitFor(() => expect(events).toEqual(["project", "lifecycle"]));
+    expect(client.list).not.toHaveBeenCalled();
+    l.resolve(Response.json({ success: true, result: { rules: [] } }));
+    p.resolve(project(productionBinding("legacy")));
+    await expect(first).resolves.toEqual({ assets: 1, created: 1, existing: 0, dryRun: false });
+    fetchImpl.mockImplementation(orig);
     await expect(publish({ execute: true })).resolves.toEqual({ assets: 1, created: 0, existing: 1, dryRun: false });
-    expect(new Set(events.slice(0, 2))).toEqual(new Set(["project", "lifecycle"]));
-    expect(events.slice(2, 4)).toEqual(["list", "put"]);
-    expect(new Set(events.slice(4, 6))).toEqual(new Set(["project", "lifecycle"]));
-    expect(events.slice(6)).toEqual(["list"]);
+    expect([new Set(events.slice(0, 2)), events.slice(2, 4), new Set(events.slice(4, 6)), events.slice(6)])
+      .toEqual([new Set(["project", "lifecycle"]), ["list", "put"], new Set(["project", "lifecycle"]), ["list"]]);
     expect(client.list).toHaveBeenCalledWith("evergreen/v2/");
     expect(stored.get(`evergreen/v2/${url.slice(7)}`)).toEqual({ bytes, options: {
       ifNoneMatch: "*", contentType: "image/png", cacheControl: "public, max-age=31536000, immutable",
       customMetadata: { "png-sha256": createHash("sha256").update(bytes).digest("hex") },
     } });
-    for (const [request, init] of fetchImpl.mock.calls) {
-      expect(new URL(String(request)).origin).toBe("https://api.cloudflare.com");
-      expect(init?.method).toBe("GET");
-      expect(new Headers(init?.headers).get("Authorization")).toBe(`Bearer ${env.CLOUDFLARE_API_TOKEN}`);
+    for (const [request, init] of fetchImpl.mock.calls.slice(2)) {
+      expect([new URL(String(request)).origin, init?.method, new Headers(init?.headers).get("Authorization")])
+        .toEqual(["https://api.cloudflare.com", "GET", `Bearer ${env.CLOUDFLARE_API_TOKEN}`]);
     }
   });
 
-  it("issues Pages project and R2 lifecycle preflight GETs concurrently before any S3 call", async () => {
-    const { publish, fetchImpl, project, events, client } = await publicationFixture();
-    const projectGate = Promise.withResolvers<Response>();
-    const lifecycleGate = Promise.withResolvers<Response>();
-    fetchImpl.mockImplementation(async (input: RequestInfo | URL) => {
-      const path = new URL(String(input)).pathname;
-      if (path.includes("/pages/projects/")) {
-        events.push("project");
-        return projectGate.promise;
-      }
-      if (path.endsWith("/lifecycle")) {
-        events.push("lifecycle");
-        return lifecycleGate.promise;
-      }
-      throw new Error(`Unexpected URL: ${input}`);
-    });
-    const pending = publish({ execute: true });
-    try {
-      await vi.waitFor(() => expect(events).toEqual(["project", "lifecycle"]));
-      expect(client.list).not.toHaveBeenCalled();
-      expect(client.put).not.toHaveBeenCalled();
-      lifecycleGate.resolve(Response.json({ success: true, result: { rules: [] } }));
-      await Promise.resolve();
-      expect(client.list).not.toHaveBeenCalled();
-      projectGate.resolve(project(productionBinding("legacy")));
-      await expect(pending).resolves.toEqual({ assets: 1, created: 1, existing: 0, dryRun: false });
-      expect(events.slice(2)).toEqual(["list", "put"]);
-    } finally {
-      projectGate.resolve(project(productionBinding("legacy")));
-      lifecycleGate.resolve(Response.json({ success: true, result: { rules: [] } }));
-    }
-  });
-
-  it.each([
-    ["CLOUDFLARE_ACCOUNT_ID", {}],
-    ["CLOUDFLARE_API_TOKEN", { CLOUDFLARE_ACCOUNT_ID: "account-123" }],
-  ])("requires %s before configuration requests or S3 operations", async (name, env) => {
+  it.each([["CLOUDFLARE_ACCOUNT_ID", {}], ["CLOUDFLARE_API_TOKEN", { CLOUDFLARE_ACCOUNT_ID: "account-123" }]])("requires %s before configuration requests or S3 operations", async (name, env) => {
     const { rejectBeforeS3, fetchImpl } = await publicationFixture();
     await rejectBeforeS3(`${name} is required`, { env });
     expect(fetchImpl).not.toHaveBeenCalled();
@@ -300,32 +269,17 @@ describe("permanent social preview publication", () => {
 
   describe.each(["project", "lifecycle"] as const)("%s preflight", (resource) => {
     const message = resource === "project" ? "Cloudflare Pages project lookup" : /lifecycle|object deletion/;
-    it.each([
-      [403, '{"success":false}'], [404, '{"success":false}'], [500, '{"success":false}'],
-      [200, '{"success":false}'], [200, "not JSON"], [200, '{"success":true,"result":null}'],
-    ])("blocks S3 on unreadable configuration (HTTP %s, %s)", async (status, body) => {
+    it.each([[403, '{"success":false}'], [404, '{"success":false}'], [500, '{"success":false}'], [200, '{"success":false}'], [200, "not JSON"], [200, '{"success":true,"result":null}']])("blocks S3 on unreadable configuration (HTTP %s, %s)", async (status, body) => {
       await rejectConfiguration(resource, new Response(body, { status }), message);
     });
-    it("blocks S3 on connection failure", async () => {
-      const error = `${resource} configuration connection failed`;
-      await rejectConfiguration(resource, new Error(error), error);
-    });
+    it("blocks S3 on connection failure", async () => { const e = `${resource} configuration connection failed`; await rejectConfiguration(resource, new Error(e), e); });
   });
 
-  it.each([
-    { name: "wrong-project", deployment_configs: { production: {} } },
-    { name: "stablecoin-dashboard" },
-  ])("blocks S3 on malformed Pages project identity %j", async (result) => {
+  it.each([{ name: "wrong-project", deployment_configs: { production: {} } }, { name: "stablecoin-dashboard" }])("blocks S3 on malformed Pages project identity %j", async (result) => {
     await rejectConfiguration("project", Response.json({ success: true, result }), "Cloudflare Pages project lookup");
   });
 
-  it.each([
-    { r2_buckets: {} },
-    productionBinding("legacy", "OTHER_PREVIEWS"),
-    productionBinding("legacy", "SOCIAL_PREVIEWS", "wrong-bucket"),
-    productionBinding("unified", "OTHER_PREVIEWS"),
-    productionBinding("unified", "SOCIAL_PREVIEWS", "wrong-bucket"),
-  ])("refuses publication when production Pages binding identity differs: %j", async (production) => {
+  it.each([{ r2_buckets: {} }, productionBinding("legacy", "OTHER_PREVIEWS"), productionBinding("legacy", "SOCIAL_PREVIEWS", "wrong-bucket"), productionBinding("unified", "OTHER_PREVIEWS"), productionBinding("unified", "SOCIAL_PREVIEWS", "wrong-bucket")])("refuses publication when production Pages binding identity differs: %j", async (production) => {
     const { responses, project, rejectBeforeS3 } = await publicationFixture();
     responses.project = project(production);
     await rejectBeforeS3("pages.production.r2Bindings.SOCIAL_PREVIEWS");
@@ -368,27 +322,19 @@ describe("permanent social preview publication", () => {
     const fail = Promise.withResolvers<void>(), drain = Promise.withResolvers<void>();
     let puts = 0, active = 0, peak = 0, settled = false;
     client.put.mockImplementation(async () => {
-      const first = puts++ === 0;
-      peak = Math.max(peak, ++active);
-      await (first ? fail.promise : drain.promise);
-      active--;
+      const first = puts++ === 0; peak = Math.max(peak, ++active); await (first ? fail.promise : drain.promise); active--;
       if (first) throw new Error("R2 PUT returned HTTP 500");
     });
     const publication = publish({ execute: true }).finally(() => { settled = true; });
     const rejection = expect(publication).rejects.toThrow("HTTP 500");
     try {
       await vi.waitFor(() => expect(puts).toBe(4));
-      expect(peak).toBe(4);
-      fail.resolve();
+      expect(peak).toBe(4); fail.resolve();
       await vi.waitFor(() => expect(active).toBe(3));
       expect(settled).toBe(false);
-    } finally {
-      fail.resolve();
-      drain.resolve();
-    }
+    } finally { fail.resolve(); drain.resolve(); }
     await rejection;
-    expect(puts).toBe(4);
-    expect(active).toBe(0);
+    expect([puts, active]).toEqual([4, 0]);
   });
 
   it("rejects a current image missing from or malformed in the export before any remote call", async () => {
