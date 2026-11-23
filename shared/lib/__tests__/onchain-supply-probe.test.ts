@@ -684,10 +684,30 @@ it("fails a canonical roster closed on an unselected registered deployment unles
   })).not.toBeNull();
 });
 
+const WITHHELD_INCOMPLETE_ROSTER_IDS = new Set([
+  "bc3m-backed", // registered fantom deployment not in aggregateContracts
+  "bib01-backed", // registered fantom deployment not in aggregateContracts
+  "cadd-cad-digital", // registered solana and tempo deployments not in aggregateContracts
+  "dgld-gold-token-sa", // registered solana deployment not in aggregateContracts
+  "hlscope-hamilton-lane", // registered tron deployment has no supported probe family
+  "jpym-mento", // registered monad deployment not in aggregateContracts
+  "mxnb-juno", // registered arc deployment not in aggregateContracts
+  "sdusd-dtrinity", // registered sonic deployment not in aggregateContracts
+  "vnxau-vnx", // registered stellar and tezos (no probe family) deployments not in aggregateContracts
+  "witry-brix", // registered robinhood deployment not in aggregateContracts
+]);
+
 it("keeps every tracked curated roster either complete or explicitly excused across the whole registry", () => {
+  const unresolved: string[] = [];
+  const staleWithheld: string[] = [];
   for (const meta of TRACKED_META_BY_ID.values()) {
     const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta);
-    if (selected == null) continue;
+    if (selected == null) {
+      if ((REVIEWED_ONCHAIN_SUPPLY_PLANS[meta.id]?.aggregateContracts?.length ?? 0) > 0
+        && !WITHHELD_INCOMPLETE_ROSTER_IDS.has(meta.id)) unresolved.push(meta.id);
+      continue;
+    }
+    if (WITHHELD_INCOMPLETE_ROSTER_IDS.has(meta.id)) staleWithheld.push(meta.id);
     expect(new Set(selected.map(({ contract }) => `${contract.chain}:${contract.address}`)).size).toBe(selected.length);
     const unselectedCount = meta.contracts?.filter(
       (contract) => !selected.some((entry) => entry.contract === contract),
@@ -699,6 +719,20 @@ it("keeps every tracked curated roster either complete or explicitly excused acr
       `${meta.id} publishes a curated roster with ${unselectedCount} unselected registered deployments and no reviewed accounting exclusion`,
     ).toBe(true);
   }
+  expect(unresolved, "aggregateContracts plans must resolve non-null unless in WITHHELD_INCOMPLETE_ROSTER_IDS").toEqual([]);
+  expect(staleWithheld, "WITHHELD_INCOMPLETE_ROSTER_IDS entries now resolve non-null; remove them").toEqual([]);
+  expect(
+    [...WITHHELD_INCOMPLETE_ROSTER_IDS].filter(
+      (id) => !TRACKED_META_BY_ID.has(id) || (REVIEWED_ONCHAIN_SUPPLY_PLANS[id]?.aggregateContracts?.length ?? 0) === 0,
+    ),
+    "WITHHELD_INCOMPLETE_ROSTER_IDS entries must reference tracked aggregateContracts plans",
+  ).toEqual([]);
+  expect(
+    Object.entries(REVIEWED_ONCHAIN_SUPPLY_PLANS)
+      .filter(([id, plan]) => (plan.aggregateContracts?.length ?? 0) > 0 && !TRACKED_META_BY_ID.has(id))
+      .map(([id]) => id),
+    "REVIEWED_ONCHAIN_SUPPLY_PLANS aggregateContracts entries must reference tracked assets",
+  ).toEqual([]);
 });
 
 it("does not publish cNGN destination float as a global on-chain total without Bantu accounting", () => {
