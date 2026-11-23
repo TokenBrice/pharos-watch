@@ -26,16 +26,10 @@ import { CASE_STUDY_LIST } from "../../src/lib/case-studies";
 import { BLOG_POSTS } from "../../src/data/blog";
 import {
   ALL_PEG_SLUGS,
-  BACKING_SLUGS,
-  buildBackingTaxonomyUrl,
-  buildGovernanceTaxonomyUrl,
-  buildInfrastructureTaxonomyUrl,
   countStablecoinsByChain,
-  GOVERNANCE_SLUGS,
-  INFRASTRUCTURE_SLUGS,
   MIN_INDEXABLE_CHAIN_STABLECOINS,
   selectPegHubCurrencies,
-  type InfrastructureTaxonomyValue,
+  selectStablecoinTaxonomyCohorts,
 } from "../../src/lib/stablecoin-taxonomy-urls";
 import { getActiveChainIds } from "../../shared/lib/chains";
 import {
@@ -45,9 +39,8 @@ import {
   isActiveStablecoinMeta,
   isPreLaunchStablecoinMeta,
 } from "../../shared/lib/stablecoins/status";
-import type { BackingType, PegCurrency } from "../../shared/types/core";
+import type { PegCurrency } from "../../shared/types/core";
 import type { StablecoinMeta } from "../../shared/types/stablecoin-meta-schemas";
-import type { GovernanceType } from "../../shared/types/stablecoin-taxonomy";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "../..");
@@ -228,32 +221,12 @@ function addPegHubDates(
 
 function addTaxonomyDates(dates: Record<string, string>, activeCoins: readonly StablecoinMeta[]): void {
   const sharedLastModified = latestIso(...TAXONOMY_SOURCES.map((path) => getLastModified(join(REPO_ROOT, path))));
-  const governancePages = (Object.keys(GOVERNANCE_SLUGS) as GovernanceType[])
-    .map((value) => ({
-      kind: "governance" as const,
-      href: buildGovernanceTaxonomyUrl(value),
-      count: activeCoins.filter((coin) => coin.flags.governance === value).length,
-    }))
-    .sort((left, right) => right.count - left.count);
-  const backingPages = (Object.keys(BACKING_SLUGS) as BackingType[])
-    .map((value) => ({
-      kind: "backing" as const,
-      href: buildBackingTaxonomyUrl(value),
-      count: activeCoins.filter((coin) => coin.flags.backing === value).length,
-    }))
-    .filter((page) => page.count > 0)
-    .sort((left, right) => right.count - left.count);
-  const infrastructurePages = (Object.keys(INFRASTRUCTURE_SLUGS) as InfrastructureTaxonomyValue[])
-    .map((value) => ({
-      kind: "infrastructure" as const,
-      href: buildInfrastructureTaxonomyUrl(value),
-      count: activeCoins.filter((coin) => (coin.infrastructures ?? []).includes(value)).length,
-    }))
-    .sort((left, right) => right.count - left.count);
-
-  for (const page of [...governancePages, ...backingPages, ...infrastructurePages]) {
-    const routeLastModified = getLastModified(join(APP_DIR, "stablecoins", page.kind, `[${page.kind}]`));
-    dates[page.href] = latestIso(sharedLastModified, routeLastModified);
+  const cohorts = selectStablecoinTaxonomyCohorts(activeCoins);
+  for (const kind of ["governance", "backing", "infrastructure"] as const) {
+    for (const { href } of cohorts[kind]) {
+      const routeLastModified = getLastModified(join(APP_DIR, "stablecoins", kind, `[${kind}]`));
+      dates[href] = latestIso(sharedLastModified, routeLastModified);
+    }
   }
 }
 
