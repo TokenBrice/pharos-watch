@@ -51,7 +51,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: "24.16.0"
+          node-version-file: .nvmrc
       - name: Validate prepared workspace artifact name
         env:
           WORKSPACE_ARTIFACT_NAME: ${{ inputs.workspace_artifact_name }}
@@ -138,6 +138,23 @@ jobs:
           archive_status=0
           wait "$archive_pid" || archive_status=$?
           [ "$gates_status" -eq 0 ] && [ "$archive_status" -eq 0 ]
+      - name: Reject secrets in retained release data
+        env:
+          PAGES_RELEASE_DATA_ARCHIVE_PATH: ${{ runner.temp }}/pages-release-data.tar.zst
+          SITE_SESSION_SIGNING_KEY: ${{ secrets.SITE_SESSION_SIGNING_KEY }}
+          SITE_API_SHARED_SECRET: ${{ secrets.SITE_API_SHARED_SECRET }}
+        # The artifact is downloadable from the public repository; scan the
+        # uncompressed tar stream (a file, so grep -q cannot SIGPIPE zstd).
+        run: |
+          release_data_tar="${RUNNER_TEMP}/pages-release-data.tar"
+          zstd -dqf -o "$release_data_tar" -- "$PAGES_RELEASE_DATA_ARCHIVE_PATH"
+          for secret in "$SITE_SESSION_SIGNING_KEY" "$SITE_API_SHARED_SECRET"; do
+            if [ -n "$secret" ] && grep -aqF -- "$secret" "$release_data_tar"; then
+              echo "::error::A site secret was found in the retained release data archive."
+              exit 1
+            fi
+          done
+          rm -f -- "$release_data_tar"
       - name: Retain post-refresh data for Pages PR and local replay
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

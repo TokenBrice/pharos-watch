@@ -104,6 +104,8 @@ export function overlayPagesReleaseData(repoRoot: string, archivePath: string, s
 
 const TRUSTED_WORKFLOW_FILES = ["deploy-cloudflare.yml", "rebuild-pages.yml"] as const;
 const TRUSTED_WORKFLOW_PATHS: readonly string[] = TRUSTED_WORKFLOW_FILES.map((file) => `.github/workflows/${file}`);
+type TrustedWorkflowFile = typeof TRUSTED_WORKFLOW_FILES[number];
+type PartialRunListingReason = `partial-run-listing:${TrustedWorkflowFile}`;
 const TRUSTED_EVENTS: readonly string[] = ["push", "schedule", "workflow_dispatch"];
 
 interface ReleaseArtifact {
@@ -152,25 +154,29 @@ export function selectPagesReleaseRuns(runs: readonly ReleaseRun[]): ReleaseRun[
 
 interface AcquiredReleaseData { archive: string; name: string }
 
-function acquireReleaseData(directory: string, repoRoot: string): AcquiredReleaseData | undefined {
+function acquireReleaseData(directory: string, repoRoot: string): AcquiredReleaseData | PartialRunListingReason | undefined {
   const gh = (args: string[]) => execFileSync("gh", args, { cwd: repoRoot, stdio: ["ignore", "pipe", "pipe"], maxBuffer: 128 * 1024 * 1024 });
   // No ambient repo inference: forks still replay only successful trusted-main
   // release data. Every GitHub operation below is GET-only.
   const runs: ReleaseRun[] = [];
-  let succeededWorkflows = 0;
+  const failedWorkflows: TrustedWorkflowFile[] = [];
   let lastWorkflowError: unknown;
   for (const workflow of TRUSTED_WORKFLOW_FILES) {
     try {
       const response = JSON.parse(
         gh(["api", "--method", "GET", `repos/${REPOSITORY}/actions/workflows/${workflow}/runs?branch=main&status=success&per_page=30`]).toString(),
       ) as { workflow_runs?: ReleaseRun[] };
-      succeededWorkflows += 1;
       if (Array.isArray(response.workflow_runs)) runs.push(...response.workflow_runs);
     } catch (error) {
+      failedWorkflows.push(workflow);
       lastWorkflowError = error;
     }
   }
-  if (succeededWorkflows === 0 && lastWorkflowError) throw lastWorkflowError;
+  if (failedWorkflows.length === TRUSTED_WORKFLOW_FILES.length) throw lastWorkflowError;
+  // A failed listing can hide the newest trusted run, so the surviving listing
+  // could replay older data: name the gap as degraded data, never a snapshot
+  // that earns the PR replay age waiver.
+  if (failedWorkflows.length > 0) return `partial-run-listing:${failedWorkflows[0]}`;
   for (const run of selectPagesReleaseRuns(runs)) {
     const expectedName = `pages-release-data-${run.head_sha}`;
     const response = JSON.parse(
@@ -195,7 +201,7 @@ export interface PagesReleaseDataAcquisitionResult {
   schemaVersion: 1;
   dataStatus: "release-snapshot" | "degraded-data";
   artifactName?: string;
-  reason?: "pages-artifact-data-unavailable";
+  reason?: "pages-artifact-data-unavailable" | PartialRunListingReason;
 }
 
 /** Dependency-free acquisition owner, snapshotted from the trusted PR base. */
@@ -204,7 +210,8 @@ export function preparePagesReleaseData(directory: string, repoRoot: string): Pa
   let result: PagesReleaseDataAcquisitionResult = { schemaVersion: 1, dataStatus: "degraded-data", reason: "pages-artifact-data-unavailable" };
   try {
     const retained = acquireReleaseData(directory, repoRoot);
-    if (retained) result = { schemaVersion: 1, dataStatus: "release-snapshot", artifactName: retained.name };
+    if (typeof retained === "string") result = { ...result, reason: retained };
+    else if (retained) result = { schemaVersion: 1, dataStatus: "release-snapshot", artifactName: retained.name };
   } catch (error) {
     if (error instanceof Error && error.message.startsWith("pages-artifact-data-invalid:")) throw error;
     // Unavailable gh/auth/API has the same explicit fallback locally and in CI.
