@@ -17,6 +17,7 @@ import { CompiledV9FactSetV3Schema } from "@shared/types/safety-score-v9-facts";
 import { resolveV9EvidenceCause } from "@shared/lib/safety-score-v9/evidence";
 import { internV9PublicWitnessTexts } from "@shared/lib/safety-score-v9/public-witness-texts";
 import { loadV9MethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
+import { CHAIN_MATURITY_REVIEWS_V1 } from "@shared/data/safety-score-v9/chain-maturity-reviews-v1";
 import { V9_MECHANISM_FIELDS } from "@shared/lib/safety-score-v9/mechanism-fields";
 import {
   makeReportCardsV9Card,
@@ -689,7 +690,11 @@ describe("Safety Score v9 missing-data work routing", () => {
   });
 
   it("resolves the policy at the replay asOfSec clock and rejects default-clock drift", () => {
-    const asOfSec = Date.parse("2026-11-24T00:00:00.000Z") / 1_000;
+    // Derive a clock after every chain-maturity review lapses so the policy
+    // drifts from the default clock regardless of the next quarterly renewal.
+    const asOfSec = Math.max(
+      ...CHAIN_MATURITY_REVIEWS_V1.map((review) => Date.parse(`${review.nextReviewAt}T00:00:00.000Z`) / 1_000),
+    );
     const defaultPolicy = loadV9MethodologyPolicy(policyAsset);
     const clockPolicy = loadV9MethodologyPolicy(policyAsset, asOfSec);
     expect(clockPolicy.semanticDigest).not.toBe(defaultPolicy.semanticDigest);
