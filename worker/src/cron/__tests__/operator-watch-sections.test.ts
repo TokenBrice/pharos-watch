@@ -12,7 +12,7 @@ import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
 import { includeActiveTrackedIds } from "../shared/exclude-frozen";
 import { BLACKLIST_CONFIG_STALE_AGE_SEC, loadBlacklistConfigWatchConditions } from "../operator-watch-blacklist";
-import { loadCanaryOperatorWatch } from "../operator-watch-canary";
+import { loadCanaryOperatorWatch, OPERATOR_CANARY_LABEL_MAX_CHARS } from "../operator-watch-canary";
 import {
   loadDexYieldWatchConditions,
   loadMeasuredExecutionChainWatch,
@@ -256,14 +256,20 @@ describe("loadCanaryOperatorWatch", () => {
   it("keeps the check id and truncates an over-long error detail", async () => {
     const { db, sqlite } = seedCanaryChecks();
     try {
-      const condition = (await loadCanaryOperatorWatch(db, NOW + 60, "status"))
-        .conditions.find((entry) => entry.id === ERROR_ID);
-      const label = condition?.label ?? "";
+      const generationId = `report-cards:v9:v1:${"a".repeat(64)}`;
+      sqlite.prepare("UPDATE worker_canary_runs SET status = 'error', severity = 'error', error = ? WHERE check_id = ?")
+        .run(`v9-publication-stale: age 7201s > budget 7200s; generation ${generationId}`, "safety-score-v9-publication");
+      const evidence = await loadCanaryOperatorWatch(db, NOW + 60, "status");
+      const label = evidence.conditions.find((entry) => entry.id === ERROR_ID)?.label ?? "";
       // The section helper drops any label too long for its line budget, so the
-      // id must survive truncation.
+      // id must survive truncation while structured V9 stale details fit intact.
       expect(label.startsWith(ERROR_ID)).toBe(true);
       expect(label).toContain("...");
-      expect(label.length).toBeLessThanOrEqual(100);
+      expect(label.length).toBeLessThanOrEqual(OPERATOR_CANARY_LABEL_MAX_CHARS);
+      const v9Label = evidence.conditions.find((entry) => entry.id === "safety-score-v9-publication")?.label ?? "";
+      expect(v9Label).toContain("v9-publication-stale: age 7201s > budget 7200s");
+      expect(v9Label).toContain(`generation ${generationId}`);
+      expect(v9Label).not.toContain("...");
     } finally {
       sqlite.close();
     }
