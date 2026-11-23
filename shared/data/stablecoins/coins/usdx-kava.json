@@ -73,7 +73,13 @@
       "primary": {
         "kind": "http-json",
         "url": "https://api.kava.io/kava/cdp/v1beta1/totalCollateral"
-      }
+      },
+      "fallbacks": [
+        {
+          "kind": "http-json",
+          "url": "https://api.data.kava.io/kava/cdp/v1beta1/totalCollateral"
+        }
+      ]
     },
     "params": {}
   },

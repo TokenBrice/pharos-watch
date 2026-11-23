@@ -413,7 +413,7 @@ Frax signed totals reconcile both directions; contra rows offset their own symbo
 
 ### Native-chain collateral censuses
 
-Youves needs every engine/branch at one Tezos level; malformed pages cannot become filtered completeness and LP conversion is actual, not nominal. External quote clocks remain independent. [Kava's complete-book boundary](#adapter-specific-evidence-boundaries) withholds unpriced positive scope; supported principal share is attempt context only, not a reserve weight or proxy value. USDX uses market price and borrower repayment grants no holder route.
+Youves needs every engine/branch at one Tezos level; malformed pages cannot become filtered completeness and LP conversion is actual, not nominal. External quote clocks remain independent. [Kava's complete-book boundary](#adapter-specific-evidence-boundaries) withholds unpriced positive scope; supported principal share is attempt context only, not a reserve weight or proxy value. `kava-cdp` tries its configured LCD inputs in order (official pruning primary, archive fallback), reading all six module and latest-block endpoints from the same origin per attempt and failing closed if every origin fails. USDX uses market price and borrower repayment grants no holder route.
 
 HCHF requires complete same-block collateral/debt/supply and fresh header/CHF reference; TCR is route guard, not capacity/fee/delay. Djed Koios tip is context, not same-tip state proof: bounded complete census/unique bank NFT, net unissued DJED, no SHEN backing, qualified ADA/DJED prices. Cached supply comparison uses the matching generation's price, never replaces on-chain units; missing evidence stays unavailable. Yamato unreadable predicates cannot claim live open.
 
