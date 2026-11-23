@@ -538,7 +538,12 @@ function assertPreviousReaderSource() {
   // (optional priorVerifiedEmptyExitCeiling fact) and safety-score-v9.ts + policy.semantic.exit
   // (verifiedEmptyCarryMaxAgeSec = 172800). No public card, breakdown, or trace schema changed;
   // strict public objects and refinements remain byte-identical for all pre-dust inputs.
-  if (hash.digest("hex") !== "e4db44efbb710b6f731a2466464f0b531765dbfbc12ed59bc3e4669b6474cc4a") throw new Error("Pre-dust reader source/refinement inputs changed");
+  // V9 capacity Release 1 refresh (#1827): report-cards-v9-materialization.ts raises
+  // V9_PUBLIC_REPRESENTATION_MAX_BYTES 16 -> 24 MiB and exports V9_SITE_MATERIALIZATIONS_MAX_BYTES.
+  // The cap only bounds the materialization manifest `bytes` field (a looser max); no card,
+  // breakdown or trace schema changed, so every pre-dust input still parses identically
+  // (verified by substituting origin/main's file, which restores the prior e4db44ef… digest).
+  if (hash.digest("hex") !== "29c92c0f55e9c6ad11e7371b3c5347784bef0c52d27ae2f316f6fe486163e300") throw new Error("Pre-dust reader source/refinement inputs changed");
 }
 
 export async function previousReader() {

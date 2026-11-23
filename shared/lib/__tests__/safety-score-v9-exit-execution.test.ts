@@ -230,8 +230,10 @@ describe("exact-request execution certificate admission", () => {
       holder: "any-holder", reviewedAt: "2026-11-01T00:00:00.000Z", expiresAt: "2027-11-01T00:00:00.000Z",
       evidenceIds: ["fixture-eur-review"], sourceUrls: ["https://example.com/vault"],
       producer: {
-        kind: "erc4626-instant", chain: "ethereum", contract: "0x0000000000000000000000000000000000000011",
+        kind: "erc4626-instant", chain: "ethereum", chainId: 1, contract: "0x0000000000000000000000000000000000000011",
         outputToken: "0x0000000000000000000000000000000000000012", inputDecimals: 6, outputDecimals: 6, codeSha256: "1".repeat(64),
+        balanceStorage: { slot: `0x${"0".repeat(64)}`, keyOrder: "account-slot" }, maxFunctions: "binding",
+        unrestrictedGateSelectors: [], multicallCodeSha256: "2".repeat(64),
       },
     };
     const model = V9_CANDIDATE_POLICY_V1.policy.semantic.exit.executionModels["erc4626-instant"]!;

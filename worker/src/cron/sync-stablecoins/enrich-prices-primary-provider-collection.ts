@@ -20,7 +20,6 @@ import {
   fetchCoinbasePrices,
   fetchKrakenPrices,
   type BinanceFetchSession,
-  type KrakenBookSnapshot,
 } from "../../lib/cex-tickers";
 import { isSuccessfulOutcome } from "../../lib/fetcher-result";
 import { validatePricingSourceFreshness } from "../../lib/pricing-source-freshness";
@@ -85,7 +84,7 @@ export interface PrimaryConsensusQuoteMaps {
   binanceObservedAt: number | null;
   krakenPrices: Map<string, number>;
   krakenObservedAt: number | null;
-  krakenBookSnapshots: Map<string, KrakenBookSnapshot>;
+  krakenObservedAtBySymbol: Map<string, number>;
   krakenQuoteBasisBySymbol: Map<string, NonNullable<PeggedAsset["priceQuoteBasis"]>>;
   bitstampPrices: Map<string, number>;
   bitstampObservedAtBySymbol: Map<string, number>;
@@ -107,7 +106,7 @@ export function createEmptyPrimaryConsensusQuoteMaps(): PrimaryConsensusQuoteMap
     binanceObservedAt: null,
     krakenPrices: new Map(),
     krakenObservedAt: null,
-    krakenBookSnapshots: new Map(),
+    krakenObservedAtBySymbol: new Map(),
     krakenQuoteBasisBySymbol: new Map(),
     bitstampPrices: new Map(),
     bitstampObservedAtBySymbol: new Map(),
@@ -449,9 +448,11 @@ export async function collectPrimaryProviderQuotes(params: {
           for (const [symbol, price] of outcome.value.prices) {
             quoteMaps.krakenPrices.set(symbol, price);
           }
-          if (outcome.value.bookSnapshotsBySymbol) quoteMaps.krakenBookSnapshots = outcome.value.bookSnapshotsBySymbol;
+          for (const [symbol, observedAt] of outcome.value.observedAtBySymbol) {
+            quoteMaps.krakenObservedAtBySymbol.set(symbol, observedAt);
+          }
           if (outcome.value.quoteBasisBySymbol) quoteMaps.krakenQuoteBasisBySymbol = outcome.value.quoteBasisBySymbol;
-          if (outcome.value.prices.size > 0) {
+          if (outcome.value.prices.size > outcome.value.observedAtBySymbol.size) {
             quoteMaps.krakenObservedAt = Math.floor(Date.now() / 1000);
           }
           return isSuccessfulOutcome(outcome);

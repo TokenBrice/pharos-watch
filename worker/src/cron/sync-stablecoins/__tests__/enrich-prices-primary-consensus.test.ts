@@ -284,25 +284,31 @@ describe("buildPrimaryConsensusResults", () => {
     expect(undated).toMatchObject({ price: 0.991, agreeSources: ["bitstamp"], confidence: "single-source",
       observedAt: nowSec - 12, allPrices: { bitstamp: 0.991 }, diagnosticPrices: { kraken: 0.987 } });
     expect(undated?.allPrices).not.toHaveProperty("kraken");
-    quoteMaps.krakenBookSnapshots.set("USDT", { price: 0.987, observedAt: nowSec - 20 });
+    quoteMaps.krakenObservedAtBySymbol.set("USDT", nowSec - 20);
     const dated = consensusFor(asset, quoteMaps);
     expect(dated).toMatchObject({ price: 0.989, confidence: "high", observedAt: nowSec - 20 });
     expect(new Set(dated?.agreeSources)).toEqual(new Set(["bitstamp", "kraken"]));
   });
 
-  it("preserves the oldest clock and weakest clock mode in Kraken composites", () => {
+  it("preserves the oldest clock and weakest clock mode in Kraken composites and never re-clocks stale Depth books", () => {
     const now = 1_800_000_000;
     const asset = { id: "paxg-paxos", name: "PAX Gold", symbol: "PAXG", geckoId: "pax-gold", pegType: "peggedGOLD" };
     const quotes = createEmptyPrimaryConsensusQuoteMaps();
     quotes.krakenPrices.set("PAXG", 3_000);
-    quotes.krakenBookSnapshots.set("PAXG", { price: 3_000, observedAt: now - 100 });
+    quotes.krakenObservedAtBySymbol.set("PAXG", now - 100);
     quotes.krakenQuoteBasisBySymbol.set("PAXG", "bid-ask-midpoint");
     quotes.cgQuotes.set("pax-gold", { price: 3_001, observedAt: now - 20, observedAtMode: "upstream" });
     expect(consensusFor(asset, quotes)).toMatchObject({
       source: "coingecko+kraken", confidence: "high", observedAt: now - 100, observedAtMode: "upstream",
     });
-    quotes.krakenBookSnapshots.clear();
+    // Stale Depth book (> 600s) is rejected rather than re-clocked to krakenObservedAt (local_fetch).
     quotes.krakenObservedAt = now - 5;
+    quotes.krakenObservedAtBySymbol.set("PAXG", now - 601);
+    expect(consensusFor(asset, quotes)).toMatchObject({
+      source: "coingecko", confidence: "single-source", observedAt: now - 20, observedAtMode: "upstream",
+    });
+    // Non-Depth Ticker quotes still use local_fetch when krakenObservedAtBySymbol has no entry.
+    quotes.krakenObservedAtBySymbol.clear();
     expect(consensusFor(asset, quotes)).toMatchObject({
       source: "coingecko+kraken", confidence: "high", observedAt: now - 20, observedAtMode: "local_fetch",
     });
@@ -314,13 +320,13 @@ describe("buildPrimaryConsensusResults", () => {
   // Pharos publication captured at 00:38:40 UTC and Kraken books at 00:41:14 UTC on 2026-11-20.
   // The public median and oldest clock stand in for unpublished legs, with a controlled dated reference.
   it.each([
-    ["eurc-circle", 1.0967139057919377, 1795134643, 1.097285, 1795135274, 1.0967582021062146, 501.5e6, "cg"],
+    ["eurc-circle", 1.0967139057919377, 1795134643, 1.097285, 1795135274, 1.0967582021062146, 501.5e6, "cg+cb"],
     ["zchf-frankencoin", 1.1841783666300865, 1795134643, 1.18456, 1795135204, 1.1844481951970627, 38.2e6, "cg"],
     ["xaut-tether", 3607.1463280560174, 1795134623, 3594.9, 1795135274, 3616.2728131424715, 2702e6, "cg"],
     ["paxg-paxos", 3602.8, 1795134643, 3590.555, 1795135274, 3616.2728131424715, 1613e6, "cg+cb"],
     ["europ-schuman", 1.0959010027968699, 1795134643, 1.0965, 1795135182, 1.0967582021062146, 14.8e6, "cg"],
     ["audx-aussie-dollar-token", 0.665475, 1795134649, 0.66519, 1795135207, 0.6655512028506889, 2.28e6, ""],
-    ["tgbp-tokenised", 1.30921901164242, 1795134643, 1.308765, 1795135268, 1.308556256796314, 26e6, "cg"],
+    ["tgbp-tokenised", 1.30921901164242, 1795134643, 1.308765, 1795135268, 1.308556256796314, 26e6, "cg+cb"],
     ["qcad-stablecorp", 0.69725, 1795134649, 0.69735, 1795135155, 0.6971186691168064, 1.44e6, ""],
     ["mxnb-juno", 0.052458002522130134, 1795134623, 0.052365, 1795135167, 0.052371087912464864, 4.48e6, "cg"],
     ["brl1-brl1", 0.16755573336961216, 1795134643, 0.167275, 1795135262, 0.16849199663016007, 3.2e6, "cg"],
@@ -342,25 +348,40 @@ describe("buildPrimaryConsensusResults", () => {
     const pegRates = { [pegType]: reference };
     const fx = referenceState(pegRates, baselineAt);
     const referenceContext = attachDetectionReferenceContext(pegRates, [], new Map(), new Set(), fx, fx.repricingByPeg);
-    const detectorVerdict = (now: number, expectedKrakenPrice: number) => {
+    const detectorVerdict = (now: number, expectedKrakenPrice: number | undefined) => {
       const primary = consensusFor(asset, quotes, { nowSec: now })!;
       expect(primary.allPrices?.kraken).toBe(expectedKrakenPrice);
-      return decideDepegAsset({ now, meta, pegRates, pegRateSources: { [pegType]: "fx" }, pegRateCounts: {}, referenceContext,
-        asset: { ...asset, price: primary.price, priceSource: primary.source, priceConfidence: primary.confidence,
-          priceObservedAt: primary.observedAt, priceObservedAtMode: primary.observedAtMode, priceQuoteBasis: primary.priceQuoteBasis,
-          agreeSources: primary.agreeSources } }).observation;
+      return {
+        primary,
+        observation: decideDepegAsset({ now, meta, pegRates, pegRateSources: { [pegType]: "fx" }, pegRateCounts: {}, referenceContext,
+          asset: { ...asset, price: primary.price, priceSource: primary.source, priceConfidence: primary.confidence,
+            priceObservedAt: primary.observedAt, priceObservedAtMode: primary.observedAtMode, priceQuoteBasis: primary.priceQuoteBasis,
+            agreeSources: primary.agreeSources } }).observation,
+      };
     };
-    expect(detectorVerdict(1795135120, baselinePrice)).toEqual({ kind: "unavailable", reason: "invalid-reference" });
-    quotes.krakenBookSnapshots.set(symbol, { price, observedAt });
-    expect(detectorVerdict(bookCaptureAt, price)).toEqual({ kind: "observed" });
+    expect(detectorVerdict(1795135120, baselinePrice).observation).toEqual({ kind: "unavailable", reason: "invalid-reference" });
+    quotes.krakenPrices.set(symbol, price);
+    quotes.krakenObservedAtBySymbol.set(symbol, observedAt);
+    const clocked = detectorVerdict(bookCaptureAt, price);
+    expect(clocked.observation).toEqual({ kind: "observed" });
+    expect(clocked.primary.observedAtMode).toBe("upstream");
+    if (id === "tgbp-tokenised") {
+      // Mixed-case `tGBP` must resolve both Coinbase (with Bitstamp anchor) and Kraken venue keys.
+      quotes.cgQuotes.clear();
+      quotes.coinbaseObservedAtBySymbol.set(symbol, observedAt);
+      const venueOnly = consensusFor(asset, quotes, { nowSec: bookCaptureAt })!;
+      expect(venueOnly.upstreamKeys).toEqual(["venue:bitstamp", "venue:coinbase", "venue:kraken"]);
+    }
     if (symbol === "ZCHF") {
+      // Once the Kraken Depth clock expires (> 600s) and CG has also aged out, Kraken stays withheld
+      // rather than being re-clocked to krakenObservedAt (local_fetch).
       quotes.krakenObservedAt = observedAt + 601;
-      expect(detectorVerdict(quotes.krakenObservedAt, baselinePrice)).toEqual({ kind: "unavailable", reason: "invalid-reference" });
+      expect(consensusFor(asset, quotes, { nowSec: observedAt + 601 })).toBeUndefined();
     }
   });
 
   it.each([["audx-aussie-dollar-token", "AUDX"], ["qcad-stablecorp", "QCAD"]])(
-    "counts one venue for the reviewed %s mirror", (id, symbol) => {
+    "counts one venue for the reviewed %s mirror and withholds expired Depth books", (id, symbol) => {
       const nowSec = 1_800_000_000;
       const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
       quoteMaps.krakenPrices.set(symbol, 1.02);
@@ -373,15 +394,17 @@ describe("buildPrimaryConsensusResults", () => {
         price: 1.02, confidence: "single-source", agreeSources: ["kraken"],
         candidateSources: ["kraken", "coingecko"], diagnosticPrices: { coingecko: 1.021 }, allPrices: { kraken: 1.02 },
       });
-      quoteMaps.krakenBookSnapshots.set(symbol, { price: 1.019, observedAt: nowSec - 599 });
+      quoteMaps.krakenPrices.set(symbol, 1.019);
+      quoteMaps.krakenObservedAtBySymbol.set(symbol, nowSec - 599);
       expect(consensusFor(asset, quoteMaps)).toMatchObject({
         price: 1.019, source: "kraken", confidence: "single-source", agreeSources: ["kraken"],
         observedAt: nowSec - 599, observedAtMode: "upstream", priceQuoteBasis: "bid-ask-midpoint",
       });
+      // Once the Depth book ages out (> 600s), it is rejected rather than re-clocked to local_fetch.
       quoteMaps.krakenObservedAt = nowSec + 3;
       expect(consensusFor(asset, quoteMaps, { nowSec: nowSec + 3 })).toMatchObject({
-        price: 1.02, source: "kraken", confidence: "single-source", agreeSources: ["kraken"],
-        observedAt: nowSec + 3, observedAtMode: "local_fetch", priceQuoteBasis: "bid-ask-midpoint",
+        price: 1.021, source: "coingecko", confidence: "single-source", agreeSources: ["coingecko"],
+        observedAt: nowSec, observedAtMode: "upstream",
       });
     },
   );

@@ -70,6 +70,7 @@ describe("runPruneCronHistory", () => {
     expect(Object.keys(metadata.retentionTruncated)).toEqual(expect.arrayContaining([
       "cronRuns", "producerHistory", "repairTasks", "canaryRuns", "recoveryCheckpoints",
       "selectorSnapshotDailyQuota", "blockTimestampCache", "mintBurnSupplyReconciliation", "slotExecutions", "reserveContinuationExecutions",
+      "v9EvalQueueExecutions", "v9EvalRuns",
       "apiRequestConsumerStats", "siteDataRequestStats", "apiKeyRequestStats",
       "apiRequestSourceSamples", "siteDataRequestSamples",
       "safetyScoreJournal", "safetyScoreAttempts", "safetyScoreCaptureArchive",
@@ -168,6 +169,42 @@ describe("runPruneCronHistory", () => {
     expect(select(sqlite, "SELECT attempt_key AS id FROM reserve_continuation_child_attempts ORDER BY attempt_key")).toEqual(retained);
     expect(result.itemCount).toBe(1);
     expect(JSON.parse(result.metadata!)).toMatchObject({ retentionTruncated: { reserveContinuationExecutions: false } });
+  });
+
+  it("prunes expired terminal V9 eval runs and finished Queue executions and cascades staged chunks", async () => {
+    const { db, sqlite } = createTestDb();
+    const now = nowSec();
+    const cutoff = now - TWO_WEEKS_SEC;
+    for (const [runId, stage, state, finishedAt] of [
+      ["expired-done", "completed", "completed", cutoff - 1],
+      ["expired-failed", "failed", "failed", cutoff - 1],
+      ["boundary-sup", "superseded", "superseded", cutoff],
+      ["active-run", "evaluating", "active", null],
+    ] as const) {
+      insert(sqlite, `INSERT INTO v9_eval_runs
+        (run_id, schedule_key, slot_started_at, clock_sec, source_generation, base_input_generation_id,
+         registry_fingerprint, evaluation_build_digest, plan_digest, policy_digest, chunk_count,
+         stage, state, execution_owner, created_at, updated_at, finished_at)
+        VALUES (?, 'v9PublicationOffset', ?, ?, 'src', 'base', 'reg', 'eval', 'plan', 'pol', 4, ?, ?, 'owner', ?, ?, ?)`,
+      runId, cutoff - 100, cutoff - 100, stage, state, cutoff - 100, cutoff - 100, finishedAt);
+      insert(sqlite, `INSERT INTO v9_eval_chunks
+        (run_id, chunk_kind, chunk_index, part_index, encoding, payload, payload_bytes, payload_sha256, created_at)
+        VALUES (?, 'card_shard', 0, 0, 'json', '{}', 2, 'sha', ?)`, runId, cutoff - 100);
+      insert(sqlite, `INSERT INTO v9_eval_queue_executions
+        (delivery_id, run_id, schedule_key, slot_started_at, stage, chunk_index, attempt_no, source_invocation_id,
+         execution_owner, execution_generation, invocation_id, state, started_at, updated_at, deadline_ms, finished_at)
+        VALUES (?, ?, 'v9PublicationOffset', ?, 'eval', 0, 1, 'src', 'owner', 1, ?, ?, ?, ?, ?, ?)`,
+      `del-${runId}`, runId, cutoff - 100, `inv-${runId}`, finishedAt == null ? "running" : "finished",
+      cutoff - 100, cutoff - 100, (cutoff - 1) * 1000, finishedAt);
+    }
+    const result = await runPruneCronHistory(db);
+    expect(select(sqlite, "SELECT run_id AS id FROM v9_eval_runs ORDER BY run_id"))
+      .toEqual([{ id: "active-run" }, { id: "boundary-sup" }]);
+    expect(select(sqlite, "SELECT run_id AS id FROM v9_eval_chunks ORDER BY run_id"))
+      .toEqual([{ id: "active-run" }, { id: "boundary-sup" }]);
+    expect(select(sqlite, "SELECT delivery_id AS id FROM v9_eval_queue_executions ORDER BY delivery_id"))
+      .toEqual([{ id: "del-active-run" }, { id: "del-boundary-sup" }]);
+    expect(JSON.parse(result.metadata!)).toMatchObject({ retentionTruncated: { v9EvalQueueExecutions: false, v9EvalRuns: false } });
   });
 
   it("surfaces a missing repair table rather than treating the failed batch as empty", async () => {

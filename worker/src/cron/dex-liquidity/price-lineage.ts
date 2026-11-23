@@ -94,18 +94,19 @@ export function admitsRollbackDexVote(upstreamKeys: readonly string[] | undefine
 
 /** Coinbase stablecoin-quoted books also depend on the Bitstamp USD conversion. */
 export function directUsdVenueKeys(source: string, symbol: string | undefined): string[] | undefined {
-  if (!symbol) return;
-  if (source === "binance" && BINANCE_MARKETS.some((row) => row.symbol === symbol && row.pair === symbol + "USD")) {
+  const normalizedSymbol = symbol?.trim().toUpperCase();
+  if (!normalizedSymbol) return;
+  if (source === "binance" && BINANCE_MARKETS.some((row) => row.symbol === normalizedSymbol && row.pair === normalizedSymbol + "USD")) {
     return ["venue:binance"];
   }
-  if (source === "kraken" && KRAKEN_MARKETS.some((row) => row.symbol === symbol && row.requestPair === symbol + "USD")) {
+  if (source === "kraken" && KRAKEN_MARKETS.some((row) => row.symbol === normalizedSymbol && row.requestPair === normalizedSymbol + "USD")) {
     return ["venue:kraken"];
   }
-  if (source === "bitstamp" && BITSTAMP_MARKETS.some((row) => row.symbol === symbol && row.pair === symbol + "/USD")) {
+  if (source === "bitstamp" && BITSTAMP_MARKETS.some((row) => row.symbol === normalizedSymbol && row.pair === normalizedSymbol + "/USD")) {
     return ["venue:bitstamp"];
   }
   if (source !== "coinbase") return;
-  const product = COINBASE_PRODUCTS.find((row) => row.symbol === symbol);
+  const product = COINBASE_PRODUCTS.find((row) => row.symbol === normalizedSymbol);
   if (product?.quoteAsset === "USD") return ["venue:coinbase"];
   if (product?.quoteAsset === "USDC") return ["venue:coinbase", "venue:bitstamp"];
 }

@@ -65,6 +65,10 @@ crons = [
 # public fragments; flip only after every public reader tolerates unselected
 # staged rows (shipped with the reader in the same release as this flag).
 SAFETY_V9_DEFERRED_MATERIALIZATION = "on"
+# Safety Score V9 Queue continuation switch (ADR-26 Release 1: inert, off).
+# Release 2 adds the heavy pharos-v9-continuation Queue producer/consumer bindings
+# after account-level queue provisioning.
+WORKER_V9_QUEUE_MODE = "off"
 
 [[d1_databases]]
 binding = "DB"

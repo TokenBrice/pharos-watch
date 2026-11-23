@@ -145,6 +145,7 @@
     "verify:failure-scenarios": "node --import tsx scripts/maintenance/verify-failure-scenarios.ts",
     "check:dependency-review-gaps": "tsx scripts/ci/check-dependency-review-gaps.ts",
     "report-cards:capture-fixed-input": "tsx worker/scripts/capture-report-cards-fixed-input.ts",
+    "safety-score-v9:admit-receipt": "node --import tsx worker/scripts/build-safety-score-v9-admission-receipt.ts",
     "safety-score-v9:replay": "node --import tsx worker/scripts/replay-safety-score-v9.ts",
     "safety-score-v9:diff": "node --import tsx worker/scripts/diff-safety-score-v9-replays.ts",
     "safety-score-v9:movers": "node --import tsx worker/scripts/diff-safety-score-v9-movers.ts",

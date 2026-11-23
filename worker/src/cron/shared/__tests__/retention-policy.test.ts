@@ -79,8 +79,11 @@ describe("retention policy registry", () => {
     for (const table of ["api_key_donor_credits", "api_key_donor_transfer_credits"]) {
       expect(registered(table)).toMatchObject({ permanent: true, timestampColumn: "credited_at", windowSec: null });
     }
-    for (const table of ["mint_burn_writer_epoch_coverage", "mint_burn_writer_epoch_hours", "telegram_reference_alert_plans"]) {
+    for (const table of ["mint_burn_writer_epoch_coverage", "mint_burn_writer_epoch_hours", "telegram_reference_alert_plans", "v9_eval_chunks"]) {
       expect(RETENTION_NON_APPEND_TABLES[table]).toBeTruthy();
+    }
+    for (const table of ["v9_eval_queue_executions", "v9_eval_runs"]) {
+      expect(registered(table)).toMatchObject({ owner: "prune-cron-history", windowSec: 14 * 86_400, timestampColumn: "finished_at" });
     }
   });
 

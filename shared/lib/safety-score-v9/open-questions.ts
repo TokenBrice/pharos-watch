@@ -101,6 +101,28 @@ export interface V9OpenEvidenceCounter {
   finish(): V9OpenEvidence;
 }
 
+/** One reason-code tally behind a projected card question. */
+export interface V9CardOpenQuestionCode {
+  readonly code: V9ReasonCode;
+  readonly obligations: number;
+  readonly documentation: boolean;
+}
+
+/** One question carried by a card, using the cohort bucket and root attribution. */
+export interface V9CardOpenQuestion {
+  readonly questionKey: V9QuestionKey;
+  readonly bucket: V9OpenQuestionBucket;
+  readonly inherited: boolean;
+  readonly obligations: number;
+  readonly codes: readonly V9CardOpenQuestionCode[];
+}
+
+/** Exact per-card open-evidence projection: the `byCard` row plus its question audit trail. */
+export interface V9CardOpenEvidenceProjection {
+  readonly card: V9OpenEvidenceByCard;
+  readonly questions: readonly V9CardOpenQuestion[];
+}
+
 /** Root asset of a gap id: the prefix before `:gap:`, else null (the card is the root). */
 export function v9QuestionRootAssetId(gapId: string | null | undefined): string | null {
   if (gapId === null || gapId === undefined) return null;
@@ -283,9 +305,60 @@ function accumulateQuestion(
   return created;
 }
 
+function indexOpenEvidenceAssets(assets: readonly V9OpenEvidenceAsset[]): {
+  gapsById: Map<string, V9FactGapV3>;
+  authoredControlScopeByKey: Map<string, string>;
+} {
+  const gapsById = new Map<string, V9FactGapV3>();
+  const authoredControlScopeByKey = new Map<string, string>();
+  for (const asset of assets) {
+    for (const gap of asset.gaps) gapsById.set(gap.gapId, gap);
+    for (const control of asset.controls ?? []) {
+      if (control.authoredControlId === undefined) continue;
+      const scope = `control:${control.controlKey}`;
+      const identity = `authored:${asset.assetId}|${control.deploymentKey}|${control.authoredControlId}`;
+      authoredControlScopeByKey.set(`${asset.assetId}\u0000${scope}`, identity);
+    }
+  }
+  return { gapsById, authoredControlScopeByKey };
+}
+
+function authoredControlScopeForGap(
+  authoredControlScopeByKey: ReadonlyMap<string, string>,
+  cardId: string,
+  gap: V9FactGapV3,
+): string | null {
+  const scope = gap.causeScope;
+  if (scope === undefined || scope.pillar !== "control" || !scope.componentKey.startsWith("control:")) return null;
+  const root = v9QuestionRootAssetId(gap.gapId) ?? cardId;
+  return authoredControlScopeByKey.get(`${root}\u0000${scope.componentKey}`) ?? null;
+}
+
+function resolveObligationQuestion(
+  cardId: string,
+  obligation: V9OpenQuestionObligation,
+  authoredControlScopeByKey: ReadonlyMap<string, string>,
+  isDocumentationGap: V9DocumentationGapClassifier,
+): {
+  gap: V9FactGapV3 | null;
+  documentationReason: V9DocumentationReason | null;
+  questionKey: V9QuestionKey;
+} {
+  const gap = obligation.gap;
+  const documentationReason = gap === null ? null : isDocumentationGap(gap);
+  const authoredControlScope = gap === null ? null : authoredControlScopeForGap(authoredControlScopeByKey, cardId, gap);
+  const root = v9QuestionRootAssetId(gap?.gapId) ?? cardId;
+  const questionKey = documentationReason === "reserve-dust"
+    ? residualQuestionKey(root)
+    : gap === null || gap.causeScope === undefined
+      ? `${root}|path|${obligation.reasonCode}`
+      : questionKeyForScope(root, gap.causeScope, authoredControlScope);
+  return { gap, documentationReason, questionKey };
+}
+
 class OpenEvidenceCounter implements V9OpenEvidenceCounter {
-  private readonly gapsById = new Map<string, V9FactGapV3>();
-  private readonly authoredControlScopeByKey = new Map<string, string>();
+  private readonly gapsById: Map<string, V9FactGapV3>;
+  private readonly authoredControlScopeByKey: Map<string, string>;
   private readonly isDocumentationGap: V9DocumentationGapClassifier;
   private readonly questions = new Map<string, QuestionAccumulator>();
   private readonly cardQuestions = new Map<string, Map<string, CardQuestionAccumulator>>();
@@ -296,15 +369,9 @@ class OpenEvidenceCounter implements V9OpenEvidenceCounter {
 
   constructor(assets: readonly V9OpenEvidenceAsset[], isDocumentationGap: V9DocumentationGapClassifier) {
     this.isDocumentationGap = isDocumentationGap;
-    for (const asset of assets) {
-      for (const gap of asset.gaps) this.gapsById.set(gap.gapId, gap);
-      for (const control of asset.controls ?? []) {
-        if (control.authoredControlId === undefined) continue;
-        const scope = `control:${control.controlKey}`;
-        const identity = `authored:${asset.assetId}|${control.deploymentKey}|${control.authoredControlId}`;
-        this.authoredControlScopeByKey.set(`${asset.assetId}\u0000${scope}`, identity);
-      }
-    }
+    const indexed = indexOpenEvidenceAssets(assets);
+    this.gapsById = indexed.gapsById;
+    this.authoredControlScopeByKey = indexed.authoredControlScopeByKey;
   }
 
   add(asset: V9OpenEvidenceEvaluatedAsset): void {
@@ -315,15 +382,12 @@ class OpenEvidenceCounter implements V9OpenEvidenceCounter {
     this.cards.add(asset.assetId);
     const cardQuestions = new Map<string, CardQuestionAccumulator>();
     for (const obligation of obligationsForCard(asset.trace.unresolvedFacts, this.gapsById)) {
-      const gap = obligation.gap;
-      const documentationReason = gap === null ? null : this.isDocumentationGap(gap);
-      const authoredControlScope = gap === null ? null : this.authoredControlScopeFor(asset.assetId, gap);
-      const root = v9QuestionRootAssetId(gap?.gapId) ?? asset.assetId;
-      const questionKey = documentationReason === "reserve-dust"
-        ? residualQuestionKey(root)
-        : gap === null || gap.causeScope === undefined
-          ? `${root}|path|${obligation.reasonCode}`
-          : questionKeyForScope(root, gap.causeScope, authoredControlScope);
+      const { gap, documentationReason, questionKey } = resolveObligationQuestion(
+        asset.assetId,
+        obligation,
+        this.authoredControlScopeByKey,
+        this.isDocumentationGap,
+      );
 
       const question = accumulateQuestion(this.questions, questionKey);
       question.obligations++;
@@ -511,13 +575,149 @@ class OpenEvidenceCounter implements V9OpenEvidenceCounter {
     this.cards.clear();
     return this.block;
   }
+}
 
-  private authoredControlScopeFor(cardId: string, gap: V9FactGapV3): string | null {
-    const scope = gap.causeScope;
-    if (scope === undefined || scope.pillar !== "control" || !scope.componentKey.startsWith("control:")) return null;
-    const root = v9QuestionRootAssetId(gap.gapId) ?? cardId;
-    return this.authoredControlScopeByKey.get(`${root}\u0000${scope.componentKey}`) ?? null;
+const QUESTION_BUCKET_ORDER: Readonly<Record<V9OpenQuestionBucket, number>> = {
+  open: 0,
+  issuer: 1,
+  documentation: 2,
+};
+
+interface ProjectedCardQuestionAccumulator extends CardQuestionAccumulator {
+  readonly codes: Map<string, { code: V9ReasonCode; obligations: number; documentation: boolean }>;
+}
+
+/**
+ * Per-card open-evidence projection over the same cohort accounting
+ * `countV9OpenEvidence` runs. Returns every evaluated card (including zero-
+ * obligation cards with `questions: []`), using the cohort-wide question bucket
+ * so `card` reconciles identically to `openEvidence.byCard` and `questions[]`
+ * carries the exact per-datum documentation flag without mirroring
+ * `obligationsForCard`.
+ */
+export function projectV9CardOpenEvidence(
+  input: V9OpenEvidenceInput,
+): ReadonlyMap<string, V9CardOpenEvidenceProjection> {
+  const { gapsById, authoredControlScopeByKey } = indexOpenEvidenceAssets(input.assets);
+  const cohortQuestions = new Map<V9QuestionKey, {
+    obligations: number;
+    documentationObligations: number;
+    hasIssuerCause: boolean;
+  }>();
+  const cardQuestionsByAsset = new Map<string, Map<V9QuestionKey, ProjectedCardQuestionAccumulator>>();
+
+  for (const asset of input.evaluated) {
+    if (cardQuestionsByAsset.has(asset.assetId)) {
+      throw new Error(`Open-evidence counting received ${asset.assetId} twice`);
+    }
+    const cardQuestions = new Map<V9QuestionKey, ProjectedCardQuestionAccumulator>();
+    for (const obligation of obligationsForCard(asset.trace.unresolvedFacts, gapsById)) {
+      const { gap, documentationReason, questionKey } = resolveObligationQuestion(
+        asset.assetId,
+        obligation,
+        authoredControlScopeByKey,
+        input.isDocumentationGap,
+      );
+      const cohortQuestion = cohortQuestions.get(questionKey) ?? {
+        obligations: 0,
+        documentationObligations: 0,
+        hasIssuerCause: false,
+      };
+      cohortQuestion.obligations++;
+      const cardQuestion = cardQuestions.get(questionKey) ?? {
+        obligations: 0,
+        documentationObligations: 0,
+        issuerReviewedAtSec: null,
+        codes: new Map(),
+      };
+      cardQuestion.obligations++;
+      const isDocumentation = documentationReason !== null;
+      if (isDocumentation) {
+        cohortQuestion.documentationObligations++;
+        cardQuestion.documentationObligations++;
+      } else if (obligation.cause === "C") {
+        cohortQuestion.hasIssuerCause = true;
+        const reviewed = reviewedAtSec(gap);
+        if (reviewed !== null && (cardQuestion.issuerReviewedAtSec === null || reviewed < cardQuestion.issuerReviewedAtSec)) {
+          cardQuestion.issuerReviewedAtSec = reviewed;
+        }
+      }
+      const codeKey = `${obligation.reasonCode}\u0000${isDocumentation ? "1" : "0"}`;
+      const existingCode = cardQuestion.codes.get(codeKey);
+      if (existingCode === undefined) {
+        cardQuestion.codes.set(codeKey, {
+          code: obligation.reasonCode,
+          obligations: 1,
+          documentation: isDocumentation,
+        });
+      } else {
+        existingCode.obligations++;
+      }
+      cohortQuestions.set(questionKey, cohortQuestion);
+      cardQuestions.set(questionKey, cardQuestion);
+    }
+    cardQuestionsByAsset.set(asset.assetId, cardQuestions);
   }
+
+  const buckets = new Map<V9QuestionKey, V9OpenQuestionBucket>();
+  for (const [questionKey, question] of cohortQuestions) {
+    buckets.set(
+      questionKey,
+      bucketFor(question.obligations, question.documentationObligations, question.hasIssuerCause),
+    );
+  }
+
+  const projections = new Map<string, V9CardOpenEvidenceProjection>();
+  for (const cardId of [...cardQuestionsByAsset.keys()].sort(compareText)) {
+    const cardQuestions = cardQuestionsByAsset.get(cardId)!;
+    let openBucketQuestionsCarried = 0;
+    let inheritedOpenBucketQuestionsCarried = 0;
+    let openBucketObligationsCarried = 0;
+    let documentationObligationsCarried = 0;
+    let issuerNondisclosureReviewedAtSec: number | null = null;
+    const questions: V9CardOpenQuestion[] = [];
+
+    for (const [questionKey, counts] of cardQuestions) {
+      const bucket = buckets.get(questionKey)!;
+      const inherited = rootOfQuestionKey(questionKey) !== cardId;
+      if (bucket === "open") {
+        openBucketQuestionsCarried++;
+        openBucketObligationsCarried += counts.obligations;
+        if (inherited) inheritedOpenBucketQuestionsCarried++;
+      } else if (bucket === "issuer" && counts.issuerReviewedAtSec !== null) {
+        if (issuerNondisclosureReviewedAtSec === null || counts.issuerReviewedAtSec < issuerNondisclosureReviewedAtSec) {
+          issuerNondisclosureReviewedAtSec = counts.issuerReviewedAtSec;
+        }
+      }
+      documentationObligationsCarried += counts.documentationObligations;
+      questions.push({
+        questionKey,
+        bucket,
+        inherited,
+        obligations: counts.obligations,
+        codes: [...counts.codes.values()].sort(
+          (left, right) => compareText(left.code, right.code) || Number(left.documentation) - Number(right.documentation),
+        ),
+      });
+    }
+    questions.sort(
+      (left, right) =>
+        QUESTION_BUCKET_ORDER[left.bucket] - QUESTION_BUCKET_ORDER[right.bucket] ||
+        compareText(left.questionKey, right.questionKey),
+    );
+    projections.set(cardId, {
+      card: {
+        id: cardId,
+        openBucketQuestionsCarried,
+        inheritedOpenBucketQuestionsCarried,
+        openBucketObligationsCarried,
+        documentationObligationsCarried,
+        ...(issuerNondisclosureReviewedAtSec === null ? {} : { issuerNondisclosureReviewedAtSec }),
+      },
+      questions,
+    });
+  }
+  return projections;
 }
 
 /**

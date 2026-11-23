@@ -1,5 +1,21 @@
 [
   {
+    "version": "6.92",
+    "title": "Clocked Kraken REST Depth, Coinbase request pacing, and EURC/tGBP Coinbase books",
+    "date": "2026-11-23",
+    "effectiveAt": 1795457700,
+    "summary": "Ten reviewed Kraken USD markets switch from unclocked REST /0/public/Ticker (and the retired Worker-blocked WebSocket v2 snapshot path) to Kraken's clocked REST /0/public/Depth?count=1 endpoint; Coinbase Exchange requests gain serial inter-request pacing and Retry-After cooldowns to eliminate burst HTTP 429s; Coinbase EURC-USDC and TGBP-USDC join COINBASE_PRODUCTS; and directUsdVenueKeys() normalizes symbol case for mixed-case symbols such as tGBP and USDsui.",
+    "impact": [
+      "Kraken clocked REST Depth (#2144): the ten reviewed Kraken markets (AUDX, BRL1, EURC, EUROP, MXNB, PAXG, QCAD, tGBP, XAUT, ZCHF) move exclusively from batched /0/public/Ticker to serial single-pair /0/public/Depth?count=1 reads (Kraken Depth rejects multi-pair queries with EQuery:Unknown asset pair). Per-quote observedAt is the older of the best bid and best ask level timestamps, judged upstream under Kraken's 600-second freshness window and CEX_UPSTREAM_MAX_FUTURE_SKEW_SEC (5s) with the existing 100-bps spread and crossed-book guards. Stale or rejected depth books stay withheld and are never re-clocked to local fetch time. The remaining thirteen USD-pegged Kraken markets stay on one batched /0/public/Ticker call (Kraken total: 1 to 11 requests/run, serial on 1 connection with 250ms inter-request spacing on Depth).",
+      "Coinbase request pacing (#2144, #2258): serial Coinbase product fetches (COINBASE_PRODUCT_FETCH_CONCURRENCY = 1) previously issued back-to-back requests with zero delay, bursting against Coinbase Exchange's 10 req/s per-IP public token bucket on shared Worker egress and hitting HTTP 429 on 1 to 3 of 6 /book?level=1 calls in 12 of 12 observed runs. Enforcing a 500ms minimum inter-request interval caps Pharos at <= 2 req/s across /book?level=1 and /ticker calls, while HTTP 429 responses honor Retry-After (up to 10s, 2s fallback cooldown) before issuing the next request and surface retryAfterSec in diagnostics.",
+      "Coinbase FX-stablecoin additions (#2144 D7): EURC-USDC and TGBP-USDC join COINBASE_PRODUCTS (6 to 8 products; +2 nominal /book?level=1 requests/run) with quoteAsset: \"USDC\", pinning Circle's EURC Ethereum contract (0x1abaea1f...) to eurc-circle and Tokenised GBP's Base/Ethereum contract (0x27f6c828...) to tgbp-tokenised and translating through Bitstamp's dated USDC/USD anchor at the older eligible input clock. Because Kraken now supplies upstream clocks for all ten reviewed coins, multi-source composites including Kraken and Coinbase publish observedAtMode: \"upstream\" instead of downgrading to local_fetch under pickConservativeObservedAtMode().",
+      "Lineage case-sensitivity fix: directUsdVenueKeys() now uppercases symbol inputs before matching CEX market configs so mixed-case symbols (tGBP, USDsui) retain venue upstreamKeys across primary consensus, DEX observation lineage, and depeg detection.",
+      "Quarter-hourly sync-stablecoins stays at its unchanged 4/6 static connection peak (1 serial connection inside the CEX wave). Activation is provisionally 2026-11-23 17:00 UTC (1795453200); re-date effectiveAt at release."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.91",
     "title": "Deferred exact-par USD quantities, midnight-straddle supply pairing, CEX skew tolerance, and Movement USDCx preferred supply",
     "date": "2026-11-22",

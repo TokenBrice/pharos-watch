@@ -12,11 +12,11 @@ import {
 } from "@shared/lib/pricing-provider-config";
 import { isUnsignedDecimalLiteral } from "@shared/lib/decimal-literal";
 import { CEX_MAX_BID_ASK_SPREAD_BPS, CEX_UPSTREAM_MAX_FUTURE_SKEW_SEC } from "@shared/lib/pricing-source-policy";
+import { parseRetryAfterSeconds } from "@shared/lib/retry-after";
 import { isRecord } from "@shared/lib/type-guards";
-import { parseIsoDateOrUtcInstantSec } from "@shared/types/date-primitives";
-import { throwIfAborted } from "./abort";
+import { sleepWithSignal, throwIfAborted } from "./abort";
 import { USER_AGENT } from "./constants";
-import { fetchJsonWithRetry, fetchTextWithRetry } from "./fetch-retry";
+import { fetchJsonWithRetry, fetchTextWithRetry, resolveRateLimitDelayMs } from "./fetch-retry";
 import { mapWithConcurrency } from "./concurrency";
 import {
   endpointLabel,
@@ -38,12 +38,16 @@ import { validatePricingSourceFreshness } from "./pricing-source-freshness";
 const CEX_REQUEST_TIMEOUT_MS = 10_000;
 const CEX_REQUEST_RETRIES = 1;
 const COINBASE_PRODUCT_FETCH_CONCURRENCY = 1;
+// Coinbase public REST enforces 10 req/s per IP (15 burst, lazy-fill token bucket)
+// across shared Worker egress; 500ms serial spacing caps our rate at <= 2 req/s.
+const COINBASE_REQUEST_INTERVAL_MS = 500;
+const COINBASE_RATE_LIMIT_COOLDOWN_MS = 2_000;
+const COINBASE_MAX_RETRY_DELAY_MS = 10_000;
 const KRAKEN_TICKER_ENDPOINT = "api.kraken.com/0/public/Ticker";
-const KRAKEN_BBO_ENDPOINT = "ws.kraken.com/v2";
-const KRAKEN_BBO_SNAPSHOTS_ENABLED = false;
-const KRAKEN_BBO_DEADLINE_MS = 2_000;
-const KRAKEN_BBO_MAX_MESSAGES = 64;
-const KRAKEN_BBO_MAX_BYTES = 32 * 1024;
+const KRAKEN_DEPTH_ENDPOINT = "api.kraken.com/0/public/Depth";
+// Kraken `/0/public/Depth` rejects multi-pair queries and rate-limits by IP;
+// 250ms serial spacing caps the 10-pair sweep at <= 4 req/s on 1 connection.
+const KRAKEN_DEPTH_REQUEST_INTERVAL_MS = 250;
 const BITSTAMP_TICKER_ENDPOINT = "www.bitstamp.net/api/v2/ticker/";
 const COINBASE_TICKER_ENDPOINT = "api.exchange.coinbase.com/products/{product}/ticker";
 const COINBASE_BOOK_ENDPOINT = "api.exchange.coinbase.com/products/{product}/book";
@@ -107,8 +111,8 @@ function isBinanceProviderBlocked(diagnostics: readonly PricingProviderAttemptDi
 }
 
 function midpointFromBidAsk(
-  bid: string | number | null | undefined,
-  ask: string | number | null | undefined,
+  bid: unknown,
+  ask: unknown,
 ): { midpoint: number; wideSpread: boolean } | null {
   const parsedBid = parseCexPrice(bid);
   const parsedAsk = parseCexPrice(ask);
@@ -204,11 +208,41 @@ function parseCoinbaseTime(value: string | null | undefined): number | null {
   return sec > 0 ? sec : null;
 }
 
+function createCexRequestPacer(
+  intervalMs: number,
+  rateLimitCooldownMs: number,
+  maxRetryDelayMs: number,
+  signal?: AbortSignal,
+) {
+  let nextRequestAtMs = 0;
+  return {
+    wait: async () => {
+      const waitMs = nextRequestAtMs - Date.now();
+      if (waitMs > 0) await sleepWithSignal(waitMs, signal);
+      throwIfAborted(signal);
+      nextRequestAtMs = Date.now() + intervalMs;
+    },
+    onResponse: (response: Response) => {
+      if (response.status === 429) {
+        const cooldownMs = resolveRateLimitDelayMs(response, rateLimitCooldownMs, maxRetryDelayMs);
+        nextRequestAtMs = Math.max(nextRequestAtMs, Date.now() + cooldownMs);
+      } else if (response.ok) {
+        nextRequestAtMs = Date.now() + intervalMs;
+      }
+    },
+  };
+}
+
 async function fetchCexJson<T>(
   url: string,
   signal?: AbortSignal,
-): Promise<{ payload: T | null; transportOk: boolean; status: number | null }> {
+  options?: {
+    onResponse?: (response: Response) => void;
+    maxRetryDelayMs?: number;
+  },
+): Promise<{ payload: T | null; transportOk: boolean; status: number | null; retryAfterSec?: number }> {
   let responseStatus: number | null = null;
+  let retryAfterSec: number | undefined;
   const result = await fetchJsonWithRetry<T>(
     url,
     {
@@ -218,11 +252,29 @@ async function fetchCexJson<T>(
     CEX_REQUEST_RETRIES,
     {
       timeoutMs: CEX_REQUEST_TIMEOUT_MS,
-      onResponse: (response) => { responseStatus = response.status; },
+      maxRetryDelayMs: options?.maxRetryDelayMs,
+      onResponse: (response) => {
+        responseStatus = response.status;
+        if (response.status === 429) {
+          const parsedRetryAfter = parseRetryAfterSeconds(response.headers?.get?.("Retry-After"), {
+            allowNumericPrefix: true,
+            numericRounding: "floor",
+          });
+          retryAfterSec = parsedRetryAfter != null && parsedRetryAfter > 0 ? parsedRetryAfter : undefined;
+        } else {
+          retryAfterSec = undefined;
+        }
+        options?.onResponse?.(response);
+      },
     },
   );
   if (!result?.response.ok) {
-    return { payload: null, transportOk: false, status: result?.response.status ?? responseStatus };
+    return {
+      payload: null,
+      transportOk: false,
+      status: result?.response.status ?? responseStatus,
+      ...(retryAfterSec != null ? { retryAfterSec } : {}),
+    };
   }
   return { payload: result.body, transportOk: true, status: result.response.status };
 }
@@ -403,16 +455,10 @@ export function fetchBinancePricesForRun(
   return session.outcome;
 }
 
-export interface KrakenBookSnapshot {
-  price: number;
-  observedAt: number;
-}
-
 export interface CexTickerBatch {
   prices: Map<string, number>;
   quoteBasisBySymbol?: Map<string, "bid-ask-midpoint" | "last-trade">;
   observedAtBySymbol: Map<string, number>;
-  bookSnapshotsBySymbol?: Map<string, KrakenBookSnapshot>;
   diagnostics: PricingProviderAttemptDiagnostic[];
 }
 
@@ -421,203 +467,256 @@ export interface CoinbaseQuoteBatch extends CexTickerBatch {
   clockBySymbol: Map<string, "book" | "trade">;
 }
 
-async function fetchKrakenRestPrices(
-  symbols: string[],
-  signal?: AbortSignal,
-): Promise<FetcherOutcome<CexTickerBatch>> {
-  const prices = new Map<string, number>();
-  const observedAtBySymbol = new Map<string, number>();
-  const rejectionReasonCounts: Partial<Record<PricingProviderRejectionReason, number>> = {};
-  // The batch Ticker response has no trade timestamp. Its last-trade fallback
-  // stays undated, even when the HTTP request and its order book are current.
-  const quoteBasisBySymbol = new Map<string, "bid-ask-midpoint" | "last-trade">();
-  const value: CexTickerBatch = { prices, quoteBasisBySymbol, observedAtBySymbol, diagnostics: [] };
-  const requestedPairs = KRAKEN_MARKETS.filter((market) => symbols.includes(market.symbol)).map(
-    (market) => market.requestPair,
-  );
-  if (requestedPairs.length === 0) return { kind: "no-data", value };
+type KrakenDepthValidationResult =
+  | { ok: true; price: number; observedAt: number }
+  | { ok: false; reason: PricingProviderRejectionReason };
 
-  try {
-    const { payload, transportOk, status } = await fetchCexJson<{
-      error?: string[];
-      result?: Record<string, { a?: string[]; b?: string[]; c?: string[] }>;
-    }>(`https://api.kraken.com/0/public/Ticker?pair=${requestedPairs.join(",")}`, signal);
-    if (!transportOk || !payload) {
-      return { kind: "upstream-error", value, reason: "Kraken ticker HTTP error" };
-    }
-    if (Array.isArray(payload.error) && payload.error.length > 0) {
-      logWorkerEvent({ scope: "lib", level: "warn", event: "cex_kraken_api_error", message: "Kraken ticker API returned an error", provider: "kraken", metadata: { errors: payload.error } });
-      return { kind: "upstream-error", value, reason: payload.error.join("; ") };
-    }
-
-    applyTickerRows(
-      Object.entries(payload.result ?? {}),
-      prices,
-      ([responseKey]) => KRAKEN_RESPONSE_KEY_TO_SYMBOL.get(responseKey),
-      ([, market]) => market.b?.[0],
-      ([, market]) => market.a?.[0],
-      ([, market]) => market.c?.[0],
-      { rejectionReasonCounts, quoteBasisBySymbol },
-    );
-
-    const rejectionCount = rejectionReasonCounts["wide-spread"] ?? 0;
-    if (rejectionCount > 0) {
-      value.diagnostics.push(
-        wideSpreadDiagnostic("kraken", KRAKEN_TICKER_ENDPOINT, rejectionCount, prices.size > 0, status),
-      );
-    }
-  } catch (err) {
-    if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-    logWorkerEvent({ scope: "lib", level: "warn", event: "cex_kraken_fetch_failed", message: "Kraken ticker fetch failed", provider: "kraken", error: err });
-    return { kind: "upstream-error", value, reason: errorMessageFor(err) };
-  }
-
-  return prices.size > 0 ? { kind: "ok", value } : { kind: "no-data", value };
+function parseKrakenDepthTimestamp(value: unknown): number | null {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0 ? value : null;
 }
 
-function validateKrakenBook(row: Record<string, unknown>): KrakenBookSnapshot | PricingProviderRejectionReason {
-  const quote = typeof row.bid === "number" && typeof row.ask === "number"
-    ? midpointFromBidAsk(row.bid, row.ask) : null;
-  if (!quote || !Number.isFinite(quote.midpoint)) return "invalid-shape";
-  if (quote.wideSpread) return "wide-spread";
+function validateKrakenDepthBook(
+  result: unknown,
+  responseKeys: readonly string[],
+): KrakenDepthValidationResult {
+  if (!isRecord(result)) return { ok: false, reason: "invalid-shape" };
+  const matchingKey = responseKeys.find((key) => key in result);
+  const book = matchingKey ? result[matchingKey] : undefined;
+  if (!isRecord(book)) return { ok: false, reason: "missing-quote" };
 
-  const timestamp = typeof row.timestamp === "string"
-    ? /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:Z|(\.\d+)Z)$/.exec(row.timestamp) : null;
-  if (!timestamp) return "invalid-shape";
-  // Check the fractional timestamp before normalizing it to publication seconds.
-  const observedAt = parseIsoDateOrUtcInstantSec(`${timestamp[1]}Z`) + Number(timestamp[2] ?? 0);
-  const now = Date.now() / 1000;
-  if (observedAt > now) return "invalid-shape";
-  const freshness = validatePricingSourceFreshness({
-    source: "kraken", observedAt, nowSec: Math.floor(now), requireObservedAt: true, maxFutureSkewSec: 0,
+  const topBid = Array.isArray(book.bids) ? book.bids[0] : undefined;
+  const topAsk = Array.isArray(book.asks) ? book.asks[0] : undefined;
+  if (!Array.isArray(topBid) || !Array.isArray(topAsk)) return { ok: false, reason: "missing-quote" };
+
+  const quote = midpointFromBidAsk(topBid[0], topAsk[0]);
+  if (!quote || !Number.isFinite(quote.midpoint)) return { ok: false, reason: "invalid-shape" };
+  if (quote.wideSpread) return { ok: false, reason: "wide-spread" };
+
+  const bidTs = parseKrakenDepthTimestamp(topBid[2]);
+  const askTs = parseKrakenDepthTimestamp(topAsk[2]);
+  if (bidTs == null || askTs == null) return { ok: false, reason: "invalid-shape" };
+
+  const observedAt = Math.min(bidTs, askTs);
+  const newestAt = Math.max(bidTs, askTs);
+  const nowSec = Math.floor(Date.now() / 1000);
+  // Reject future skew on either top-of-book side before judging staleness by the older level.
+  const newestFreshness = validatePricingSourceFreshness({
+    source: "kraken",
+    observedAt: newestAt,
+    observedAtMode: "upstream",
+    nowSec,
+    requireObservedAt: true,
+    maxFutureSkewSec: CEX_UPSTREAM_MAX_FUTURE_SKEW_SEC,
   });
-  if (!freshness.accepted) return freshness.reason === "stale_observed_at" ? "stale" : "invalid-shape";
-  return freshness.observedAt == null ? "invalid-shape" : { price: quote.midpoint, observedAt: freshness.observedAt };
-}
-
-async function readKrakenBookSnapshots(pending: Map<string, string>, parent?: AbortSignal) {
-  throwIfAborted(parent);
-  const quotes = new Map<string, KrakenBookSnapshot>();
-  const rejectionReasonCounts: Partial<Record<PricingProviderRejectionReason, number>> = {};
-  const candidateCount = pending.size;
-  const deadline = new AbortController();
-  const signal = parent ? AbortSignal.any([parent, deadline.signal]) : deadline.signal;
-  const timer = setTimeout(() => deadline.abort(), KRAKEN_BBO_DEADLINE_MS);
-  let socket: WebSocket | null = null;
-  let status: number | null = null;
-  let errorClass: string | undefined;
-  try {
-    const response = await fetch(`https://${KRAKEN_BBO_ENDPOINT}`, {
-      headers: { Upgrade: "websocket" },
-      redirect: "manual",
-      signal,
-    });
-    status = response.status;
-    const ws = response.webSocket;
-    if (!ws) {
-      await response.body?.cancel();
-      errorClass = "upgrade-rejected";
-    } else {
-      ws.accept();
-      socket = ws;
-      errorClass = await new Promise<string | undefined>((resolve) => {
-        const encoder = new TextEncoder();
-        let bytes = 0;
-        let messages = 0;
-        const finish = (reason?: string) => {
-          ws.removeEventListener("message", onMessage);
-          ws.removeEventListener("close", onClose);
-          ws.removeEventListener("error", onError);
-          signal.removeEventListener("abort", onAbort);
-          resolve(reason);
-        };
-        const onAbort = () => finish("timeout");
-        const onClose = () => finish("socket-closed");
-        const onError = () => finish("socket-error");
-        function onMessage({ data }: MessageEvent) {
-          if (++messages > KRAKEN_BBO_MAX_MESSAGES) return finish("message-cap");
-          if (typeof data !== "string") return finish("invalid-shape");
-          if (data.length > KRAKEN_BBO_MAX_BYTES - bytes) return finish("byte-cap");
-          bytes += encoder.encode(data).byteLength;
-          if (bytes > KRAKEN_BBO_MAX_BYTES) return finish("byte-cap");
-          let message: unknown;
-          try {
-            message = JSON.parse(data);
-          } catch {
-            incrementRejectionReason(rejectionReasonCounts, "malformed-json");
-            return;
-          }
-          if (!isRecord(message)) return;
-          if (message.method === "subscribe" && message.success === false && isRecord(message.result)
-            && typeof message.result.symbol === "string" && pending.delete(message.result.symbol)) {
-            incrementRejectionReason(rejectionReasonCounts, "upstream-error");
-          }
-          if (message.channel === "ticker" && message.type === "snapshot" && Array.isArray(message.data)) {
-            for (const row of message.data) {
-              if (!isRecord(row) || typeof row.symbol !== "string") continue;
-              const symbol = pending.get(row.symbol);
-              if (!symbol) continue;
-              pending.delete(row.symbol);
-
-              const quote = validateKrakenBook(row);
-              if (typeof quote === "string") incrementRejectionReason(rejectionReasonCounts, quote);
-              else quotes.set(symbol, quote);
-            }
-          }
-          if (pending.size === 0) finish();
-        }
-
-        if (signal.aborted) return onAbort();
-        ws.addEventListener("message", onMessage);
-        ws.addEventListener("close", onClose);
-        ws.addEventListener("error", onError);
-        signal.addEventListener("abort", onAbort, { once: true });
-        try {
-          ws.send(JSON.stringify({
-            method: "subscribe",
-            params: { channel: "ticker", symbol: [...pending.keys()], event_trigger: "bbo", snapshot: true },
-          }));
-        } catch {
-          finish("socket-error");
-        }
-      });
-    }
-  } catch {
-    errorClass = signal.aborted ? "timeout" : "socket-error";
-  } finally {
-    clearTimeout(timer);
-    socket?.close(1000);
+  if (!newestFreshness.accepted) {
+    return { ok: false, reason: newestFreshness.reason === "stale_observed_at" ? "stale" : "invalid-shape" };
   }
-  throwIfAborted(parent);
-  if (pending.size > 0) rejectionReasonCounts["missing-quote"] = pending.size;
-  const diagnostic: PricingProviderAttemptDiagnostic = {
-    source: "kraken", stage: "primary", endpoint: KRAKEN_BBO_ENDPOINT, status,
-    ok: errorClass === undefined, success: quotes.size > 0,
-    candidateCount, resolvedCount: quotes.size, rejectionReasonCounts, errorClass,
-  };
-  return { quotes, diagnostic };
+  const freshness = validatePricingSourceFreshness({
+    source: "kraken",
+    observedAt,
+    observedAtMode: "upstream",
+    nowSec,
+    requireObservedAt: true,
+    maxFutureSkewSec: CEX_UPSTREAM_MAX_FUTURE_SKEW_SEC,
+  });
+  if (!freshness.accepted || freshness.observedAt == null) {
+    return {
+      ok: false,
+      reason: !freshness.accepted && freshness.reason === "stale_observed_at" ? "stale" : "invalid-shape",
+    };
+  }
+  return { ok: true, price: quote.midpoint, observedAt: freshness.observedAt };
 }
 
 export async function fetchKrakenPrices(
   symbols: string[],
   signal?: AbortSignal,
-  enableBookSnapshots = KRAKEN_BBO_SNAPSHOTS_ENABLED,
 ): Promise<FetcherOutcome<CexTickerBatch>> {
-  if (!enableBookSnapshots) return fetchKrakenRestPrices(symbols, signal);
-  const requested = new Map<string, string>();
-  for (const market of KRAKEN_MARKETS) {
-    if ("snapshotPair" in market && symbols.includes(market.symbol)) requested.set(market.snapshotPair, market.symbol);
-  }
-  if (requested.size === 0) return fetchKrakenRestPrices(symbols, signal);
+  const prices = new Map<string, number>();
+  const observedAtBySymbol = new Map<string, number>();
+  const tickerRejectionReasons: Partial<Record<PricingProviderRejectionReason, number>> = {};
+  // The batch Ticker response has no upstream timestamp (last-trade fallback stays
+  // undated). Reviewed `clockedDepth` markets read `/0/public/Depth?count=1`
+  // exclusively and never fall back to `/0/public/Ticker` or local fetch time.
+  const quoteBasisBySymbol = new Map<string, "bid-ask-midpoint" | "last-trade">();
+  const value: CexTickerBatch = { prices, quoteBasisBySymbol, observedAtBySymbol, diagnostics: [] };
+  const requestedMarkets = KRAKEN_MARKETS.filter((market) => symbols.includes(market.symbol));
+  if (requestedMarkets.length === 0) return { kind: "no-data", value };
 
-  const { quotes, diagnostic } = await readKrakenBookSnapshots(requested, signal);
-  throwIfAborted(signal);
-  // REST still owns the availability breaker even when a clocked snapshot was admitted.
-  const outcome = await fetchKrakenRestPrices(symbols, signal);
-  throwIfAborted(signal);
-  outcome.value.bookSnapshotsBySymbol = quotes;
-  outcome.value.diagnostics.push(diagnostic);
-  return outcome;
+  const depthMarkets = requestedMarkets.filter((market) => "clockedDepth" in market && market.clockedDepth);
+  const tickerMarkets = requestedMarkets.filter((market) => !("clockedDepth" in market && market.clockedDepth));
+
+  let transportAttempts = 0;
+  let transportFailures = 0;
+  let lastFailureReason: string | undefined;
+
+  if (tickerMarkets.length > 0) {
+    transportAttempts++;
+    const requestedPairs = tickerMarkets.map((market) => market.requestPair);
+    try {
+      const { payload, transportOk, status } = await fetchCexJson<{
+        error?: string[];
+        result?: Record<string, { a?: string[]; b?: string[]; c?: string[] }>;
+      }>(`https://api.kraken.com/0/public/Ticker?pair=${requestedPairs.join(",")}`, signal);
+      if (!transportOk || !payload) {
+        transportFailures++;
+        lastFailureReason ??= "Kraken ticker HTTP error";
+        value.diagnostics.push({
+          source: "kraken",
+          stage: "primary",
+          endpoint: KRAKEN_TICKER_ENDPOINT,
+          status,
+          ok: false,
+          success: false,
+          candidateCount: tickerMarkets.length,
+          resolvedCount: 0,
+          rejectionReasonCounts: { [status != null ? "non-ok" : "upstream-error"]: 1 },
+          errorClass: status != null ? "http_error" : "upstream_error",
+        });
+      } else if (Array.isArray(payload.error) && payload.error.length > 0) {
+        transportFailures++;
+        lastFailureReason ??= payload.error.join("; ");
+        logWorkerEvent({ scope: "lib", level: "warn", event: "cex_kraken_api_error", message: "Kraken ticker API returned an error", provider: "kraken", metadata: { errors: payload.error } });
+        value.diagnostics.push({
+          source: "kraken",
+          stage: "primary",
+          endpoint: KRAKEN_TICKER_ENDPOINT,
+          status,
+          ok: false,
+          success: false,
+          candidateCount: tickerMarkets.length,
+          resolvedCount: 0,
+          rejectionReasonCounts: { "upstream-error": 1 },
+          errorClass: "api_error",
+        });
+      } else {
+        const allowedTickerSymbols = new Set<string>(tickerMarkets.map((market) => market.symbol));
+        applyTickerRows(
+          Object.entries(payload.result ?? {}),
+          prices,
+          ([responseKey]) => {
+            const symbol = KRAKEN_RESPONSE_KEY_TO_SYMBOL.get(responseKey);
+            return symbol && allowedTickerSymbols.has(symbol) ? symbol : undefined;
+          },
+          ([, market]) => market.b?.[0],
+          ([, market]) => market.a?.[0],
+          ([, market]) => market.c?.[0],
+          { rejectionReasonCounts: tickerRejectionReasons, quoteBasisBySymbol },
+        );
+
+        const rejectionCount = tickerRejectionReasons["wide-spread"] ?? 0;
+        if (rejectionCount > 0) {
+          value.diagnostics.push(
+            wideSpreadDiagnostic("kraken", KRAKEN_TICKER_ENDPOINT, rejectionCount, prices.size > 0, status),
+          );
+        }
+      }
+    } catch (err) {
+      if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+      transportFailures++;
+      lastFailureReason ??= errorMessageFor(err);
+      logWorkerEvent({ scope: "lib", level: "warn", event: "cex_kraken_fetch_failed", message: "Kraken ticker fetch failed", provider: "kraken", error: err });
+    }
+  }
+
+  if (depthMarkets.length > 0) {
+    const depthRejectionReasons: Partial<Record<PricingProviderRejectionReason, number>> = {};
+    let depthResolved = 0;
+    let depthTransportErrors = 0;
+    let lastDepthStatus: number | null = null;
+    let depthErrorClass: string | undefined;
+    const pacer = createCexRequestPacer(
+      KRAKEN_DEPTH_REQUEST_INTERVAL_MS,
+      COINBASE_RATE_LIMIT_COOLDOWN_MS,
+      COINBASE_MAX_RETRY_DELAY_MS,
+      signal,
+    );
+
+    for (const market of depthMarkets) {
+      await pacer.wait();
+      transportAttempts++;
+
+      try {
+        const { payload, transportOk, status } = await fetchCexJson<{
+          error?: string[];
+          result?: Record<string, unknown>;
+        }>(`https://api.kraken.com/0/public/Depth?pair=${market.requestPair}&count=1`, signal, {
+          onResponse: pacer.onResponse,
+          maxRetryDelayMs: COINBASE_MAX_RETRY_DELAY_MS,
+        });
+        if (status != null) lastDepthStatus = status;
+
+        if (!transportOk || !payload) {
+          transportFailures++;
+          depthTransportErrors++;
+          lastFailureReason ??= status != null ? `Kraken depth HTTP ${status}` : "Kraken depth HTTP error";
+          depthErrorClass ??= status != null ? "http_error" : "upstream_error";
+          incrementRejectionReason(depthRejectionReasons, status != null ? "non-ok" : "upstream-error");
+          continue;
+        }
+        if (Array.isArray(payload.error) && payload.error.length > 0) {
+          transportFailures++;
+          depthTransportErrors++;
+          lastFailureReason ??= payload.error.join("; ");
+          depthErrorClass ??= "api_error";
+          incrementRejectionReason(depthRejectionReasons, "upstream-error");
+          logWorkerEvent({
+            scope: "lib",
+            level: "warn",
+            event: "cex_kraken_depth_api_error",
+            message: "Kraken depth API returned an error",
+            provider: "kraken",
+            metadata: { pair: market.requestPair, errors: payload.error },
+          });
+          continue;
+        }
+
+        const validated = validateKrakenDepthBook(payload.result, market.responseKeys);
+        if (!validated.ok) {
+          incrementRejectionReason(depthRejectionReasons, validated.reason);
+          continue;
+        }
+        prices.set(market.symbol, validated.price);
+        observedAtBySymbol.set(market.symbol, validated.observedAt);
+        quoteBasisBySymbol.set(market.symbol, "bid-ask-midpoint");
+        depthResolved++;
+      } catch (err) {
+        if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+        transportFailures++;
+        depthTransportErrors++;
+        lastFailureReason ??= errorMessageFor(err);
+        depthErrorClass ??= errorClassFor(err);
+        incrementRejectionReason(depthRejectionReasons, "upstream-error");
+        logWorkerEvent({
+          scope: "lib",
+          level: "warn",
+          event: "cex_kraken_depth_fetch_failed",
+          message: "Kraken depth fetch failed",
+          provider: "kraken",
+          error: err,
+          metadata: { pair: market.requestPair },
+        });
+      }
+    }
+
+    value.diagnostics.push({
+      source: "kraken",
+      stage: "primary",
+      endpoint: KRAKEN_DEPTH_ENDPOINT,
+      status: lastDepthStatus,
+      ok: depthTransportErrors === 0,
+      success: depthResolved > 0,
+      candidateCount: depthMarkets.length,
+      resolvedCount: depthResolved,
+      ...(Object.keys(depthRejectionReasons).length > 0 ? { rejectionReasonCounts: depthRejectionReasons } : {}),
+      ...(depthErrorClass ? { errorClass: depthErrorClass } : {}),
+    });
+  }
+
+  if (transportAttempts > 0 && transportFailures === transportAttempts) {
+    return { kind: "upstream-error", value, reason: lastFailureReason ?? "Kraken REST HTTP error" };
+  }
+  return prices.size > 0 ? { kind: "ok", value } : { kind: "no-data", value };
 }
 
 export async function fetchBitstampPrices(signal?: AbortSignal): Promise<FetcherOutcome<CexTickerBatch>> {
@@ -687,13 +786,18 @@ export async function fetchCoinbasePrices(
   const requestedProducts = COINBASE_PRODUCTS.filter((product) => symbols.includes(product.symbol));
   let transportFailures = 0;
   let transportAttempts = 0;
+  const pacer = createCexRequestPacer(
+    COINBASE_REQUEST_INTERVAL_MS,
+    COINBASE_RATE_LIMIT_COOLDOWN_MS,
+    COINBASE_MAX_RETRY_DELAY_MS,
+    signal,
+  );
 
   await mapWithConcurrency(
     requestedProducts,
     COINBASE_PRODUCT_FETCH_CONCURRENCY,
     async (product) => {
       transportAttempts++;
-      let responseStatus: number | null = null;
       try {
         const productUrl = `${CEX_PROVIDER_AUDIT_CONFIG.coinbase.metadataUrl}/${product.productId}`;
         const storeQuote = (price: number, observedAt: number, clock: "book" | "trade") => {
@@ -702,12 +806,21 @@ export async function fetchCoinbasePrices(
           value.quoteAssetBySymbol.set(product.symbol, product.quoteAsset);
           value.clockBySymbol.set(product.symbol, clock);
         };
-        const { payload: book, transportOk: bookTransportOk, status: bookStatus } = await fetchCexJson<{
+        await pacer.wait();
+        const {
+          payload: book,
+          transportOk: bookTransportOk,
+          status: bookStatus,
+          retryAfterSec: bookRetryAfterSec,
+        } = await fetchCexJson<{
           bids?: [string, string, number][];
           asks?: [string, string, number][];
           time?: string;
           auction_mode?: boolean;
-        }>(`${productUrl}/book?level=1`, signal);
+        }>(`${productUrl}/book?level=1`, signal, {
+          onResponse: pacer.onResponse,
+          maxRetryDelayMs: COINBASE_MAX_RETRY_DELAY_MS,
+        });
         const bookQuote = midpointFromBidAsk(book?.bids?.[0]?.[0], book?.asks?.[0]?.[0]);
         const bookTime = parseCoinbaseTime(book?.time);
         const bookFreshness = bookTime != null
@@ -754,34 +867,37 @@ export async function fetchCoinbasePrices(
           resolvedCount: 0,
           rejectionReasonCounts: { [bookRejectReason]: 1 },
           errorClass: bookErrorClass,
+          ...(bookRetryAfterSec != null ? { retryAfterSec: bookRetryAfterSec } : {}),
         });
 
-        const result = await fetchJsonWithRetry<{ bid?: string; ask?: string; price?: string; time?: string }>(
+        await pacer.wait();
+        const {
+          payload,
+          transportOk: tickerTransportOk,
+          status: tickerStatus,
+          retryAfterSec: tickerRetryAfterSec,
+        } = await fetchCexJson<{ bid?: string; ask?: string; price?: string; time?: string }>(
           `${productUrl}/ticker`,
+          signal,
           {
-            signal,
-            headers: { Accept: "application/json", "User-Agent": USER_AGENT },
-          },
-          CEX_REQUEST_RETRIES,
-          {
-            timeoutMs: CEX_REQUEST_TIMEOUT_MS,
-            onResponse: (response) => { responseStatus = response.status; },
+            onResponse: pacer.onResponse,
+            maxRetryDelayMs: COINBASE_MAX_RETRY_DELAY_MS,
           },
         );
-        if (!result?.response.ok) {
+        if (!tickerTransportOk || !payload) {
           transportFailures++;
           value.diagnostics.push({
             source: "coinbase",
             stage: "primary",
             endpoint: COINBASE_TICKER_ENDPOINT,
-            status: result?.response.status ?? responseStatus,
+            status: tickerStatus,
             ok: false,
             success: false,
+            ...(tickerRetryAfterSec != null ? { retryAfterSec: tickerRetryAfterSec } : {}),
           });
           return;
         }
 
-        const payload = result.body;
         const quote = midpointFromBidAsk(payload.bid, payload.ask);
         if (quote?.wideSpread) {
           incrementRejectionReason(rejectionReasonCounts, "wide-spread");

@@ -84,6 +84,7 @@
         "shared/data/failure-scenarios/**",
         "scripts/ci/check-failure-scenarios.ts",
         "scripts/ci/check-new-asset-evidence-packet.ts",
+        "worker/scripts/build-safety-score-v9-admission-receipt.ts",
         ".github/artifacts/new-asset-evidence-packet/**",
         "scripts/maintenance/approve-failure-scenario.ts",
         "scripts/maintenance/verify-failure-scenarios.ts",
@@ -115,6 +116,7 @@
         {
           "sources": [
             "scripts/ci/check-new-asset-evidence-packet.ts",
+            "worker/scripts/build-safety-score-v9-admission-receipt.ts",
             ".github/artifacts/new-asset-evidence-packet/**"
           ],
           "local": [
@@ -135,6 +137,16 @@
         {
           "sources": ["data/ai-summaries.json"],
           "tests": ["shared/lib/__tests__/ai-summary-claims.test.ts"]
+        },
+        {
+          "sources": [
+            "scripts/ci/check-new-asset-evidence-packet.ts",
+            "worker/scripts/build-safety-score-v9-admission-receipt.ts"
+          ],
+          "tests": [
+            "scripts/__tests__/check-new-asset-evidence-packet.test.ts",
+            "worker/scripts/__tests__/replay-safety-score-v9.test.ts"
+          ]
         }
       ],
       "background": ["docs/listing-policy.md", "docs/about-page.md", "docs/shadow-stablecoins.md", "docs/freezing-stablecoins.md"],
@@ -1121,6 +1133,7 @@
       "risk": "high",
       "sources": [
         "shared/lib/safety-score-v9/**",
+        "shared/lib/safety-score-v9-capacity-limits.ts",
         "shared/types/safety-score-v9*.ts",
         "shared/types/digest*.ts",
         "shared/data/safety-score-v9/**",
@@ -1173,7 +1186,7 @@
       ],
       "reading": [
         {
-          "sources": ["shared/lib/safety-score-v9/**", "shared/types/safety-score-v9*.ts", "worker/src/lib/safety-score-v9/**", "worker/src/cron/prepare-safety-score-v9-input.ts", "worker/src/cron/compute-safety-score-v9.ts", "worker/src/cron/snapshot-safety-grade-history.ts"],
+          "sources": ["shared/lib/safety-score-v9/**", "shared/lib/safety-score-v9-capacity-limits.ts", "shared/types/safety-score-v9*.ts", "worker/src/lib/safety-score-v9/**", "worker/src/cron/prepare-safety-score-v9-input.ts", "worker/src/cron/compute-safety-score-v9.ts", "worker/src/cron/snapshot-safety-grade-history.ts"],
           "local": [
             { "path": "docs/report-cards.md", "anchor": "v10-model" },
             { "path": "docs/process/report-cards-appendix.md", "anchor": "scoped-evidence-and-exit-evaluation" }
@@ -1283,8 +1296,10 @@
       "background": [
         {"path": "docs/digest-pipeline.md", "anchor": "generation-implementation-appendix"},
         { "path": "docs/architecture.md", "anchor": "adr-19" },
+        { "path": "docs/architecture.md", "anchor": "adr-26" },
         { "path": "docs/architecture.md", "anchor": "adr-35" },
         { "path": "docs/architecture.md", "anchor": "adr-37" },
+        { "path": "docs/report-cards.md", "anchor": "capacity-scaling-and-chunked-publication-adr-26" },
         "docs/tape-page.md",
         {"path": "docs/process/safety-score-equivalence-harness.md", "anchor": "when-to-use-it"},
         {"path": "docs/process/safety-score-curation-expiry-sweep.md", "anchor": "1-capture-the-current-production-input"},
@@ -1300,7 +1315,7 @@
           "tests": ["scripts/__tests__/generate-safety-score-v9-evaluation-build-manifest.test.ts"]
         },
         {
-          "sources": ["shared/lib/safety-score-v9/**", "worker/src/lib/safety-score-v9/**", "worker/src/cron/compute-safety-score-v9.ts"],
+          "sources": ["shared/lib/safety-score-v9/**", "shared/lib/safety-score-v9-capacity-limits.ts", "worker/src/lib/safety-score-v9/**", "worker/src/cron/compute-safety-score-v9.ts"],
           "tests": ["worker/src/lib/__tests__/safety-score-v9-resource-budget.test.ts"]
         },
         {

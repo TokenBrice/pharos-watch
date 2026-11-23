@@ -1,11 +1,11 @@
+import {
+  SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS,
+  SAFETY_SCORE_V9_CATALOG_MAX_ASSETS,
+} from "@shared/lib/safety-score-v9-capacity-limits";
 import type { ResourcePressure } from "@shared/types/status/cron";
 import { buildResourcePressure } from "../cron-resource-pressure";
 import { REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES } from "../report-cards-fixed-input-cache-codec";
 
-// Reviewed full catalog and active publication cardinalities. Never truncate a
-// catalog or card inventory to satisfy these admission limits.
-const SAFETY_SCORE_V9_CATALOG_MAX_ASSETS = 560;
-const SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS = 397;
 const SAFETY_SCORE_V9_INPUT_WARNING_RATIO = 0.75;
 
 export function assessSafetyScoreV9ResourceBudget(input: {
