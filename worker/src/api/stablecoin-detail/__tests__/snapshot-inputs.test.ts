@@ -161,14 +161,22 @@ describe("cache-only detail snapshot inputs", () => {
     });
   });
 
-  it("inlines frozen detail-cache-missing coins as history-only and fails closed without history or marker", async () => {
+  it("inlines frozen detail-cache-missing coins as history-only (including empty 90d history) and fails closed on missing clock or marker", async () => {
     const db = makeDb({ historyRows: [{ stablecoin_id: FROZEN, snapshot_date: NOW - DAY, circulating_usd: 50, price: 0.2, supply_provenance: PROV }] });
     expect(Schema.parse(await bulkJson(db, [FROZEN])).entries[0]).toMatchObject({
       id: FROZEN, status: "history-only", reason: "detail-cache-missing",
       supplyHistory: [{ date: NOW - DAY, circulatingUsd: 50, price: 0.2 }],
       updatedAt: { supplyHistory: HCLK * 1000 }, freshness: { supplyHistory: { status: "fresh", maxAgeSec: 86_400 } },
     });
-    expect(await bulkJson(makeDb({ historyRows: [] }), [FROZEN])).toMatchObject({ entries: [{ id: FROZEN, status: "unavailable", reason: "detail-cache-missing" }] });
+    expect(Schema.parse(await bulkJson(makeDb({ historyRows: [] }), [FROZEN])).entries[0]).toMatchObject({
+      id: FROZEN, status: "history-only", reason: "detail-cache-missing",
+      supplyHistory: [], updatedAt: {},
+      freshness: { supplyHistory: { status: "unknown", reason: "empty-supply-history", maxAgeSec: 86_400 } },
+    });
+    vi.spyOn(supplyHistoryApi, "resolveSupplyHistoryUpdatedAtMs").mockReturnValueOnce(null);
+    expect(Schema.parse(await bulkJson(db, [FROZEN])).entries[0]).toMatchObject({
+      id: FROZEN, status: "unavailable", reason: "source-clock-unavailable",
+    });
     expect(await bulkJson(makeDb({ marker: false }), [FROZEN])).toMatchObject({ entries: [{ id: FROZEN, status: "unavailable", reason: "supply-marker-missing" }] });
     expect(fetch).not.toHaveBeenCalled();
   });

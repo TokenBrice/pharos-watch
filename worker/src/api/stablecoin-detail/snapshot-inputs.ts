@@ -122,7 +122,25 @@ export async function handleDetailSnapshotInputs(db: D1Database, url: URL): Prom
           const now = Math.floor(Date.now() / 1000);
           const { supplyHistory, updatedAt: supplyHistoryUpdatedAt } = readHistoryLane(id, now);
           if (supplyHistoryUpdatedAt === null) {
-            entries.push({ id, status: "unavailable", reason: "detail-cache-missing", sources });
+            if (supplyHistory.length > 0) {
+              entries.push({ id, status: "unavailable", reason: "source-clock-unavailable", sources });
+              continue;
+            }
+            entries.push(boundSnapshotEntry({
+              id,
+              status: "history-only",
+              reason: "detail-cache-missing",
+              supplyHistory: [],
+              updatedAt: {},
+              freshness: {
+                supplyHistory: {
+                  status: "unknown",
+                  reason: "empty-supply-history",
+                  maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.supplyHistory,
+                },
+              },
+              sources,
+            }, sources));
             continue;
           }
           entries.push(boundSnapshotEntry({
