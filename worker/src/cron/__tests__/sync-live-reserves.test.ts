@@ -385,7 +385,10 @@ describe("syncLiveReserves", () => {
     vi.doMock("../../lib/live-reserves/store", () => ({ ...actual, [op]: vi.fn(async () => { throw new Error(error); }) }));
     const db = mockD1(), res = await runSync(db), meta = JSON.parse(res.metadata!);
     expect(res.status).toBe("ok");
-    if (op === "cleanupStaleLiveReserveArtifacts") expect(meta).toMatchObject({ artifactCleanup: null, artifactCleanupWarningCount: 1, artifactCleanupWarnings: [{ eventType, message: "Ghost live-reserve artifact cleanup failed.", error }] });
+    if (op === "cleanupStaleLiveReserveArtifacts") {
+      expect(meta).toMatchObject({ artifactCleanup: null, artifactCleanupWarningCount: 1 });
+      expect(meta.artifactCleanupWarnings).toEqual([{ eventType, message: "Ghost live-reserve artifact cleanup failed.", error }]);
+    }
     else { expect(meta.historyPrune).toBeUndefined(); expect(meta.historyPruneSkipped).toBe(false); }
     const ev = db.getHistory().find((e) => e.sql.includes("INSERT INTO cache") && e.binds[0] === `cron:event:sync-live-reserves:${eventType}`);
     expect(ev).toBeDefined();
@@ -554,8 +557,9 @@ describe("syncLiveReserves", () => {
     const res = await finalizeRun({ db, total: synced + failed + circuitSkipped, runStartedAt: now, runStartedMs: (s.budget ? now - 3600 : now) * 1000, counts: { synced, failed, persistenceFailed: s.uncertain || s.unconfirmed ? 1 : 0, skipped: circuitSkipped, circuitSkipped, deferredCoins: 0, deferredSkipped: 0, attemptedCoins: synced + failed + circuitSkipped, ...(synced ? { latestPublishedAt: now - 2 } : {}) }, persistedFailures: s.unconfirmed ? [] : [failure], coinsWithErrors: failed ? [rev.stablecoinId] : [] });
     expect(res.status).toBe(s.expected); expect(failure).toEqual(orig);
     const meta = JSON.parse(res.metadata!), ack = s.expected === "ok" || (s.remaining ?? 0) > 0;
-    expect(meta).toMatchObject({ failed, skipped: circuitSkipped, synced, unacknowledgedFailed: failed - (ack && !s.circuit ? 1 : 0), unacknowledgedCircuitSkipped: circuitSkipped - (ack && s.circuit ? 1 : 0), adapterFailureBudget: { attemptedFeeds: synced + failed - Number(ack && !s.circuit) } });
-    if (ack) expect(meta.quality).toMatchObject({ reason: "reserve-feed-failure-reviewed", acknowledgedFeedIds: [rev.stablecoinId], acknowledgedFeeds: [rev] });
+    expect(meta).toMatchObject({ failed, skipped: circuitSkipped, synced, unacknowledgedFailed: failed - (ack && !s.circuit ? 1 : 0), unacknowledgedCircuitSkipped: circuitSkipped - (ack && s.circuit ? 1 : 0) });
+    expect(meta.adapterFailureBudget.attemptedFeeds).toBe(synced + failed - Number(ack && !s.circuit));
+    if (ack) { expect(meta.quality).toMatchObject({ reason: "reserve-feed-failure-reviewed", acknowledgedFeedIds: [rev.stablecoinId] }); expect(meta.quality.acknowledgedFeeds).toEqual([rev]); }
     else expect(meta.quality).toBeUndefined();
     expect(meta.reason).toBe(s.expected === "ok" ? undefined : s.circuit ? "reserve-circuit-open" : "reserve-adapter-or-persistence-failed");
     expect(res.productivity).toEqual({ productive: synced > 0 }); expect(meta.outputPublishedAt).toBe(synced ? now - 2 : undefined);
@@ -581,7 +585,8 @@ describe("syncLiveReserves", () => {
     const nowMs = Date.now(), res = await finalizeRun({ db: mockD1(), total: 100, runStartedAt: Math.floor(nowMs / 1000), runStartedMs: nowMs, counts: { ...counts, persistenceFailed, attemptedCoins: counts.synced + counts.failed + counts.circuitSkipped, ...(counts.synced > 0 ? { latestPublishedAt: 1_000 } : {}) } });
     const meta = JSON.parse(res.metadata ?? "{}");
     expect(res).toMatchObject({ status, itemCount: counts.synced, productivity: { productive: counts.synced > 0 } });
-    expect(meta).toMatchObject({ reasons, failed: counts.failed, unacknowledgedFailed: counts.failed, persistenceFailed, runBudgetTruncated: counts.deferredCoins > 0, adapterFailureBudget: { maxFailureRatio: 0.25, attemptedFeeds: counts.synced + counts.failed, failedFeeds: counts.failed - persistenceFailed } });
+    expect(meta).toMatchObject({ reasons, failed: counts.failed, unacknowledgedFailed: counts.failed, persistenceFailed, runBudgetTruncated: counts.deferredCoins > 0 });
+    expect(meta.adapterFailureBudget).toEqual({ maxFailureRatio: 0.25, attemptedFeeds: counts.synced + counts.failed, failedFeeds: counts.failed - persistenceFailed });
     expect(meta.reason).toBe(reason);
     expect(meta.outputPublishedAt).toBe(counts.synced > 0 ? 1_000 : undefined);
     if (counts.failed > 0 && persistenceFailed === 0 && counts.failed <= (counts.synced + counts.failed) * 0.25) expect(meta.quality.reasons).toEqual(["reserve-adapter-or-persistence-failed"]);
@@ -601,7 +606,8 @@ describe("syncLiveReserves", () => {
     const res = await finalizeRun({ db: mockD1(), total: s.synced + s.failed, runStartedAt: Math.floor(nowMs / 1000), runStartedMs: nowMs, counts: { synced: s.synced, failed: s.failed, persistenceFailed: 0, skipped: 0, circuitSkipped: 0, deferredCoins: 0, deferredSkipped: 0, attemptedCoins: s.synced + s.failed }, cohortItemsDoneBeforeRun: prefix, cohortGradingBeforeRun: s.missing ? undefined : { itemsDone: prefix - Number(s.mismatch === true), complete: true, synced: s.priorSynced, failed: s.priorFailed, persistenceFailed: s.priorPersistence ?? 0, circuitSkipped: 0, attemptedCoins: prefix }, checkpointOwned: true });
     expect(res.status).toBe(s.status);
     const meta = JSON.parse(res.metadata!);
-    expect(meta).toMatchObject({ failed: s.failed, synced: s.synced, unacknowledgedFailed: s.failed, adapterFailureBudget: { maxFailureRatio: 0.25, attemptedFeeds: complete ? prefix + s.synced + s.failed : null, failedFeeds: complete ? s.priorFailed + s.failed - (s.priorPersistence ?? 0) : null } });
+    expect(meta).toMatchObject({ failed: s.failed, synced: s.synced, unacknowledgedFailed: s.failed });
+    expect(meta.adapterFailureBudget).toEqual({ maxFailureRatio: 0.25, attemptedFeeds: complete ? prefix + s.synced + s.failed : null, failedFeeds: complete ? s.priorFailed + s.failed - (s.priorPersistence ?? 0) : null });
     if (complete) expect(meta.cohortGrading).toMatchObject({ failed: s.priorFailed + s.failed, itemsDone: prefix + s.synced + s.failed });
     else expect(meta).toMatchObject({ cohortGrading: null, cohortGradingUnavailableReason: "checkpoint-grading-frontier-unavailable" });
   });

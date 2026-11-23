@@ -115,7 +115,8 @@ describe("syncBluechip", () => {
     mockFetch([{ match: () => true, respond: (req) => req.url.includes("/coin-data/tether") ? tRes : uRes }]);
     const db = mockD1(), r = await syncBluechip(db);
     expect(r).toMatchObject({ status: "degraded", itemCount: 0 });
-    expect(jp(r.metadata ?? "{}")).toMatchObject({ reason: "upstream-no-ratings", failedSlugs: [{ slug: "tether", reason: "http-500" }, { slug: "usdc", reason: "http-500" }] });
+    const m = jp(r.metadata ?? "{}");
+    expect(m.reason).toBe("upstream-no-ratings"); expect(m.failedSlugs).toEqual([{ slug: "tether", reason: "http-500" }, { slug: "usdc", reason: "http-500" }]);
     expect(getIns(db as MockD1Database)).toBeUndefined(); expect([tRes.bodyUsed, uRes.bodyUsed]).toEqual([true, true]);
   });
 
@@ -124,7 +125,9 @@ describe("syncBluechip", () => {
     const db = cacheDb({ "usdc-circle": { grade: "B", slug: "usdc", collateralization: 88, smartContractAudit: true, dateOfRating: "2026-02-20", dateLastChange: null, smidge: { ...emptySmidge, management: "managed" } } });
     const r = await syncBluechip(db);
     expect(r.status).toBe("ok");
-    expect(jp(r.metadata ?? "{}")).toMatchObject({ quality: { reason: "partial-cache-merge" }, ratingsFetched: 1, ratingsPublished: 2, fallbackMode: "partial-cache-merge", failedSlugs: [{ slug: "usdc", reason: "http-500" }] });
+    const m = jp(r.metadata ?? "{}");
+    expect(m.quality).toEqual({ reason: "partial-cache-merge" }); expect(m.failedSlugs).toEqual([{ slug: "usdc", reason: "http-500" }]);
+    expect(m).toMatchObject({ ratingsFetched: 1, ratingsPublished: 2, fallbackMode: "partial-cache-merge" });
     expect(recordOutcomeSafe).toHaveBeenCalledWith(db, "bluechip-api", true);
     expect(cachedOf(db as MockD1Database)).toMatchObject({ "usdt-tether": { grade: "A" }, "usdc-circle": { grade: "B" } });
   });
@@ -133,7 +136,8 @@ describe("syncBluechip", () => {
     mockFetch([{ match: "/coin-data/tether", body: bcRes() }, { match: "/coin-data/usdc", body: { error: "down" }, status: 500 }]);
     const db = cacheDb({ "usdc-circle": { grade: "B" } }), r = await syncBluechip(db);
     expect(r.status).toBe("ok");
-    expect(jp(r.metadata ?? "{}")).toMatchObject({ quality: { reason: "partial-cache-merge" }, ratingsFetched: 1, ratingsPublished: 1, retainedFromCache: 0 });
+    const m = jp(r.metadata ?? "{}");
+    expect(m.quality).toEqual({ reason: "partial-cache-merge" }); expect(m).toMatchObject({ ratingsFetched: 1, ratingsPublished: 1, retainedFromCache: 0 });
     expect(cachedOf(db as MockD1Database)).toEqual({ "usdt-tether": expect.objectContaining({ grade: "A" }) });
   });
 
@@ -143,7 +147,8 @@ describe("syncBluechip", () => {
     const db = cacheDb({ "usdt-tether": { grade: "A", slug: "tether", collateralization: 95, smartContractAudit: true, dateOfRating: "2026-02-20", dateLastChange: null, smidge: emptySmidge } });
     const r = await syncBluechip(db);
     expect(r.status).toBe("ok");
-    expect(jp(r.metadata ?? "{}")).toMatchObject({ quality: { reason: "partial-cache-merge" }, invalidPayloads: 1, failedSlugs: [{ slug: "tether", reason: "json-parse-failed" }] });
+    const m = jp(r.metadata ?? "{}");
+    expect(m.quality).toEqual({ reason: "partial-cache-merge" }); expect(m.failedSlugs).toEqual([{ slug: "tether", reason: "json-parse-failed" }]); expect(m.invalidPayloads).toBe(1);
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("[bluechip] Failed to parse JSON for tether:"));
   });
 
@@ -152,7 +157,8 @@ describe("syncBluechip", () => {
     mockFetch([{ match: "/coin-data/tether", body: { data: [{ collateralization: 99 }] } }, { match: "/coin-data/usdc", body: { data: [] } }]);
     const db = mockD1(), r = await syncBluechip(db);
     expect(r).toMatchObject({ status: "degraded", itemCount: 0 });
-    expect(jp(r.metadata ?? "{}")).toMatchObject({ reason: "upstream-no-ratings", failedSlugs: [{ slug: "tether", reason: "no-grade" }, { slug: "usdc", reason: "empty-data" }] });
+    const m = jp(r.metadata ?? "{}");
+    expect(m.reason).toBe("upstream-no-ratings"); expect(m.failedSlugs).toEqual([{ slug: "tether", reason: "no-grade" }, { slug: "usdc", reason: "empty-data" }]);
     expect(getIns(db as MockD1Database)).toBeUndefined();
   });
 

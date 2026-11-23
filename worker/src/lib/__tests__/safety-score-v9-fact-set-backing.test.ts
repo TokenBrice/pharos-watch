@@ -783,7 +783,7 @@ describe("v10.19 frozen lender-book fact admission", () => {
     if (capped.status !== "ok") throw new Error("Expected admitted capped book");
     expect(capped.contentSha256).not.toBe(obs.contentSha256);
     const fact = buildBook(context(capped))!;
-    expect(fact).toMatchObject({ status: { observationState: "known" }, observation: capped });
+    expect(fact.status.observationState).toBe("known"); expect(fact.observation).toEqual(capped);
     expect(evalBook(fact, 90, POL)?.reserveQuality).toBeCloseTo(80.0154, 8);
     for (const bad of [{ undistributedAssetsRaw: "99" }, { realAssetsRaw: undefined }, { totalAssetsRaw: "1001" }]) {
       expect(BookSchema.safeParse({ ...capped, deployments: capped.deployments.map((d) => ({ ...d, ...bad })) }).success).toBe(false);

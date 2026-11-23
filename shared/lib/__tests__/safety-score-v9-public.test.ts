@@ -755,7 +755,8 @@ describe("Safety Score v9 public projection", () => {
     const capped = fx("capped", { score: 49, grade: "D", caps: [cap("track-record:under-24-months", 84, "track-record", "Implementation age is under 24 months.", false), cap("active-depeg:d", 49, "active-depeg", "A current severe depeg binds.", true)] });
     const dep = fx("dependency", { score: 75, grade: "B+", caps: [cap("parent", 75, "parent", "Required parent ceiling.", true)], dependency: { assetId: "dependency", serial: [{ upstreamAssetId: "upstream", score: 75, blocked: false }], basket: [], cycleBlocked: false } });
     const resp = publish([fxNr("not-rated"), dep, comp, capped, fx("pipeline-gap", { score: null, grade: null, pillars: { backing: null, exit: null, control: 94 } })]);
-    expect(resp).toMatchObject({ model: "v9-critical-path", schemaVersion: 8, lifecycle: "active", completeness: { expectedCount: 5, ratedCount: 3, notRatedCount: 1, notRatedIds: ["not-rated"], pipelineGapCount: 1, pipelineGapIds: ["pipeline-gap"] } });
+    expect(resp).toMatchObject({ model: "v9-critical-path", schemaVersion: 8, lifecycle: "active" });
+    expect(resp.completeness).toEqual({ expectedCount: 5, ratedCount: 3, notRatedCount: 1, notRatedIds: ["not-rated"], pipelineGapCount: 1, pipelineGapIds: ["pipeline-gap"] });
     expect(resp.cards.map((c) => c.id)).toEqual(["capped", "complete", "dependency", "not-rated", "pipeline-gap"]);
     expect(resp.cards[0]?.caps).toHaveLength(2); expect(resp.cards[0]?.bindingCap?.kind).toBe("active-depeg:d");
     expect(resp.cards[1]?.breakdowns).toMatchObject({

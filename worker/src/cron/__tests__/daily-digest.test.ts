@@ -187,7 +187,7 @@ describe("intelligence, prompt, and regime contracts", () => {
   const cur: DigestInputData = { ...BASE, editorialCandidates: [{ id: "depeg:usdt-tether:active", kind: "depeg", title: "USDT active 175 bps below peg", symbols: ["USDT"], impactScore: 17.5, novelty: "worsening", confidence: "high", artifactRisk: "low", headlineFacts: ["175 bps below peg"], whyItMatters: "Active peg stress is relevant." }, { id: "supply:usdc:accelerating", kind: "supply", title: "USDC supply accelerating", symbols: ["USDC"], impactScore: 12, novelty: "accelerating", confidence: "high", artifactRisk: "low", headlineFacts: ["+$12M in 1d"], whyItMatters: "Supply velocity shows allocation." }] };
   cur.dataQuality = { generatedAt: 200_000, stablecoinsCacheUpdatedAt: 200_000, stablecoinsCacheAgeSec: 0, windows: { blacklistActivity: { label: "24h", start: 113_600, end: 200_000 }, mintBurnFlows: { label: "24h", start: 113_600, end: 200_000 }, supplyVelocity: { label: "UTC", dates: [] }, psi: { label: "latest", sampleAt: 200_000, dailySnapshotAt: null } } };
   cur.topDepegs = [{ ...cur.topDepegs[0], currentBps: -175, severityBasis: "current", startedAt: 1, pegReference: 1, priceObservedAt: 200_000 }];
-  const prev: DigestInputData = { ...cur, topDepegs: [{ ...cur.topDepegs[0], bps: -100, currentBps: -100, priceObservedAt: 113_600 }], dataQuality: { ...cur.dataQuality, generatedAt: 113_600 }, stabilityIndex: { score: 91, band: "BEDROCK", components: { severity: 2, breadth: 1, trend: 0 } }, nextTriggers: [{ id: "trigger:depeg:usdt", label: "USDT depeg widening", metric: "depeg-bps", comparator: "abs-gte", thresholdValue: 125, thresholdLabel: "125 bps off peg", symbol: "USDT", rationale: "Wider deviation raises severity.", detail: "If USDT reaches 125 bps off peg, severity rises." }] };
+  const prev: DigestInputData = { ...cur, topDepegs: [{ ...cur.topDepegs[0], currentBps: -100, priceObservedAt: 113_600 }], dataQuality: { ...cur.dataQuality, generatedAt: 113_600 }, stabilityIndex: { score: 91, band: "BEDROCK", components: { severity: 2, breadth: 1, trend: 0 } }, nextTriggers: [{ id: "trigger:depeg:usdt", label: "USDT depeg widening", metric: "depeg-bps", comparator: "abs-gte", thresholdValue: 125, thresholdLabel: "125 bps off peg", symbol: "USDT", rationale: "Wider deviation raises severity.", detail: "If USDT reaches 125 bps off peg, severity rises." }] };
 
   it("builds change, trigger, risk, and calm-frame intelligence and expires stale triggers", () => {
     const intel = buildIntel(cur, prev);
@@ -568,8 +568,8 @@ describe("market and risk collectors", () => {
   it("tracks a monitored variant without putting it in core aggregates", async () => {
     const ctx = ctxFor(depegTbl([{ stablecoin_id: "susds-sky", symbol: "sUSDS", direction: "below", peak_deviation_bps: -125, started_at: 0 }])), v = makeAsset({ id: "susds-sky", symbol: "sUSDS", circulating: { peggedUSD: 1e9 } });
     ctx.trackedStablecoinAssets.push(v); track(ctx, v, 1e9);
-    expect(ctx.coreAggregateStablecoinIds.has(v.id)).toBe(false);
-    expect((await colDepegs(ctx)).value.topDepegs[0]).toMatchObject({ stablecoinId: "susds-sky", symbol: "sUSDS" });
+    const r = await colDepegs(ctx); expect(ctx.coreAggregateStablecoinIds.has(v.id)).toBe(false);
+    expect(r.value.topDepegs[0]).toMatchObject({ stablecoinId: "susds-sky", symbol: "sUSDS" });
   });
 
   it.each(["unknown", "publish-clock"] as const)("keeps the stored USD peak for an %s quote", async (mode) => {

@@ -140,7 +140,10 @@ describe("buildRedemptionBackstopEntry", () => {
         expect(JSON.parse(row.details_json).executionRouteFailures).toEqual(expFail);
       }
       for (const proj of [(await loadSnap(db)).map[id], (await buildSnap(db, id)).coins[id]]) {
-        expect(proj).toMatchObject({ executionRouteFailures: expFail, exitRouteObservationCoverage: { unsupportedReasons: { "execution-price-leg-stale:output": 1 } }, score: base.score, capacityProfile: base.capacityProfile });
+        expect(proj.executionRouteFailures).toEqual(expFail);
+        expect(proj.exitRouteObservationCoverage?.unsupportedReasons).toEqual({ "execution-price-leg-stale:output": 1 });
+        expect(proj.score).toBe(base.score);
+        expect(proj.capacityProfile).toEqual(base.capacityProfile);
       }
     } finally { sqlite.close(); }
   });
@@ -755,7 +758,7 @@ describe("mergeRedemptionRouteStatus", () => {
   it.each([
     ["yusd-yieldfi", 12, "2026-10-11", null, "unknown"], ["yusd-yieldfi", 12, "2026-10-11", 1e8, "unknown"],
     ["eurr-stablr", 8, "2026-10-07", null, "unknown"], ["eurr-stablr", 8, "2026-10-07", 1e6, "degraded"],
-  ] as const)("withholds %s suspended channel (supply=%s, market=%s)", async (id, day, rev, sup, mkt) => {
+  ] as const)("withholds %s suspended channel (day=%s, rev=%s, supply=%s, market=%s)", async (id, day, rev, sup, mkt) => {
     const db = d1(), e = await buildMerged(db, id, cfg(id), sup, null, utc(2026, 9, day), { reserveSnapshotMetadata: null, routeAvailability: mktEv({ routeStatus: mkt }) });
     expect(e).toMatchObject({ routeStatus: "suspended", routeStatusSource: "operator-notice", routeStatusReviewedAt: rev, resolutionState: "impaired", score: null, capacityScore: null, immediateCapacityUsd: null, capsApplied: ["reviewed-route-suspension"] });
     if (sup == null) expect(e.capacityProfile).toBeUndefined();
