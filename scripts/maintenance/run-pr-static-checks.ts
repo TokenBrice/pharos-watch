@@ -69,6 +69,7 @@ const ROOT_TYPECHECK_EXCLUDED_PATH =
 
 interface PrStaticCheckOptions {
   argv?: readonly string[];
+  changedFiles?: readonly string[];
   env?: NodeJS.ProcessEnv;
   runCommandImpl?: CommandImplementation<NpmScriptCommand>;
   stderr?: OutputWriter;
@@ -90,12 +91,43 @@ const COMPILE_STATIC_CHECKS: Record<string, true> = {
   "typecheck:worker": true,
 };
 
-const PARALLEL_STATIC_CHECKS = new Set([
-  "typecheck",
-  "typecheck:worker",
-  "check:structural",
-  "check:unused-code",
-  "check:generated-artifacts",
+// ESLint stays on the dedicated sequential track so `compile` runs it alongside
+// the compiler pool (`typecheck`, `typecheck:worker`). Every `guards` check is
+// read-only over repository state (or writes only to its own isolated temp or
+// `.cache/release-check/worker-bundle-*` directory) and runs in the worker pool.
+const SEQUENTIAL_STATIC_CHECKS = new Set([
+  "lint",
+  "lint:changed",
+]);
+
+// Estimated hosted CI wall-time weights (seconds on 4-vCPU runners) for
+// Longest-Processing-Time-First (LPT) scheduling of the parallel worker pool.
+// Heavy poles launch at t=0 so short checks backfill idle slots without
+// stranding guards in a single sequential chain; unknown checks default to 1
+// and ties preserve declaration order.
+const PARALLEL_STATIC_CHECK_WEIGHTS = new Map<string, number>([
+  ["check:structural", 75],
+  ["check:unused-code", 65],
+  ["check:dependency-audit", 63],
+  ["doc-ownership-invariants", 40],
+  ["check:generated-artifacts", 38],
+  ["check:env-contract", 25],
+  ["typecheck", 20],
+  ["check:critical-coverage-completeness", 15],
+  ["check:worker-package", 13],
+  ["check:verified-doc-links", 12],
+  ["typecheck:worker", 8],
+  ["check:stablecoin-data", 5],
+  ["check:migrations", 3],
+  ["audit:deps", 3],
+  ["check:sql-safety", 2],
+  ["check:doc-sync", 2],
+  ["check:html-fixture-metadata", 1],
+  ["check:sensitive-page-copy", 1],
+  ["check:homepage-health-copy", 1],
+  ["check:worker-config", 1],
+  ["check:cron-connections", 1],
+  ["check:site-csp-sync", 1],
 ]);
 
 export const STRUCTURAL_CHECKS = [
@@ -239,9 +271,23 @@ export function hasOwnedDocsImpact(changedFiles: readonly string[]): boolean {
 }
 
 export function partitionPrStaticCheckPlan(commands: readonly PrStaticCheckCommand[]) {
+  const sequential: PrStaticCheckCommand[] = [];
+  const parallel: Array<{ command: PrStaticCheckCommand; index: number; weight: number }> = [];
+  for (const [index, command] of commands.entries()) {
+    if (SEQUENTIAL_STATIC_CHECKS.has(command.name)) {
+      sequential.push(command);
+    } else {
+      parallel.push({
+        command,
+        index,
+        weight: PARALLEL_STATIC_CHECK_WEIGHTS.get(command.name) ?? 1,
+      });
+    }
+  }
+  parallel.sort((left, right) => right.weight - left.weight || left.index - right.index);
   return {
-    sequential: commands.filter((command) => !PARALLEL_STATIC_CHECKS.has(command.name)),
-    parallel: commands.filter((command) => PARALLEL_STATIC_CHECKS.has(command.name)),
+    sequential,
+    parallel: parallel.map(({ command }) => command),
   };
 }
 
@@ -376,6 +422,7 @@ export function createPrStaticLeafCommand(command: PrStaticCheckCommand, args: r
 
 export async function runPrStaticChecks({
   argv = process.argv.slice(2),
+  changedFiles: suppliedChangedFiles,
   env = process.env,
   runCommandImpl = runSpawnCommand,
   stderr = process.stderr,
@@ -397,7 +444,7 @@ export async function runPrStaticChecks({
   const group: PrStaticCheckGroup | undefined = groupValue;
   const unknownOptions = rest.filter((arg) => arg !== "--json" && arg !== groupOption);
   if (unknownOptions.length > 0) throw new Error(`Unknown option(s): ${unknownOptions.join(", ")}`);
-  const changedFiles = collectChangedFiles({ base, head });
+  const changedFiles = suppliedChangedFiles ? [...suppliedChangedFiles] : collectChangedFiles({ base, head });
   const { classification, commands } = buildPrStaticCheckPlan(changedFiles, { group });
   const logOutput = json ? stderr : stdout;
   const log = (message: string) => logOutput.write(message + "\n");
