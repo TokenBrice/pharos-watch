@@ -16,17 +16,13 @@ import { HOMEPAGE_TOP_CORE_STABLECOINS } from "@/lib/stablecoin-static-data";
 function MiniCardGridFallback() {
   return (
     <>
-      <div className="space-y-2.5 md:hidden">
-        <div className="grid grid-cols-2 gap-2.5">
-          <Skeleton className="h-[104px] w-full rounded-xl" />
-          <Skeleton className="h-[104px] w-full rounded-xl" />
-          <Skeleton className="h-[104px] w-full rounded-xl" />
-          <Skeleton className="h-[104px] w-full rounded-xl" />
-        </div>
-        <div className="grid grid-cols-2 gap-2.5">
-          <Skeleton className="h-11 w-full rounded-xl" />
-          <Skeleton className="h-11 w-full rounded-xl" />
-        </div>
+      <div className="grid grid-cols-2 gap-2.5 md:hidden">
+        <Skeleton className="h-[106px] w-full rounded-xl" />
+        <Skeleton className="h-[106px] w-full rounded-xl" />
+        <Skeleton className="h-[104px] w-full rounded-xl" />
+        <Skeleton className="h-[104px] w-full rounded-xl" />
+        <Skeleton className="h-[104px] w-full rounded-xl" />
+        <Skeleton className="h-[104px] w-full rounded-xl" />
       </div>
       <div className="@container hidden space-y-3 md:block">
         <div className="grid grid-cols-1 gap-3 @xl:grid-cols-2 @4xl:grid-cols-3">
@@ -297,9 +293,9 @@ export function HomeAltClient({
   return (
     <div id="data" tabIndex={-1}>
       {/* Band 3: Market Pulse Grid (Row 1 permanently leads with Active depegs;
-          mobile compresses into a dense 2x2 KPI grid). */}
+          mobile compresses into a dense 2x3 KPI tile grid). */}
       <div className="space-y-3">
-        <BelowFold forced={false} reserveClassName="min-h-[340px] md:min-h-[600px]" rootMargin="0px">
+        <BelowFold forced={false} reserveClassName="min-h-[334px] md:min-h-[600px]" rootMargin="0px">
           <HomeAltMiniCardGrid />
         </BelowFold>
       </div>
