@@ -163,6 +163,7 @@ function producerEdges(artifacts = registry, read = (file: string) => readFileSy
 describe("cold-output producer deps", () => {
   it("orders producers; consumes exceptions", () => {
     expect(producerEdges()).toEqual([]);
+    expect(registry.find((a) => a.id === "sitemap-dates")).toMatchObject({ phase: 0, dependsOn: [] });
   });
 
   // Frozen closures: c21e7bb1b^, 323475db5^.

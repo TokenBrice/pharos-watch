@@ -13,7 +13,11 @@ import {
   PRE_LAUNCH_STABLECOINS,
   TRACKED_STABLECOINS,
 } from "@shared/lib/stablecoins/registry";
-import { PEG_CURRENCY_VALUES, type PegCurrency } from "@shared/types/core";
+import {
+  getPegRouteOrder,
+  PRE_LAUNCH_HUB_MIN_COINS,
+  selectPegHubCurrencies,
+} from "../../src/lib/stablecoin-taxonomy-urls";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
@@ -22,20 +26,7 @@ const REPO_ROOT = resolve(__dirname, "../..");
 const STATIC_OUTPUT = resolve(REPO_ROOT, "src/generated/stablecoin-static-data.ts");
 const PALETTE_OUTPUT = resolve(REPO_ROOT, "src/generated/command-palette-search-data.ts");
 
-// Keep the schema vocabulary authoritative while preserving the established
-// route order for currencies displayed outside their schema position.
-const PEG_ORDER: PegCurrency[] = [...PEG_CURRENCY_VALUES];
-for (const [currency, before] of [
-  ["SGD", "MYR"],
-  ["PHP", "CNY"],
-  ["RUB", "CNY"],
-  ["IDR", "GOLD"],
-  ["INR", "GOLD"],
-  ["HKD", "GOLD"],
-] as const) {
-  PEG_ORDER.splice(PEG_ORDER.indexOf(currency), 1);
-  PEG_ORDER.splice(PEG_ORDER.indexOf(before), 0, currency);
-}
+const PEG_ORDER = getPegRouteOrder();
 
 // Preserve the established serialized key order independently from the route
 // order above. New active peg currencies fall back to registry encounter order.
@@ -75,12 +66,7 @@ const PEG_COUNT_ORDER = [
   "AED",
 ] as const;
 
-/**
- * A peg with no active coin still gets a `/stablecoins/<peg>/` hub once this
- * many pre-launch coins share it (owner decision D3, 2026-10-25). `OTHER` is
- * not a currency and never gets a hub.
- */
-export const PRE_LAUNCH_HUB_MIN_COINS = 2;
+export { PRE_LAUNCH_HUB_MIN_COINS };
 
 export interface StablecoinClientProjectionCoin {
   id: string;
@@ -116,31 +102,18 @@ export function buildStablecoinClientProjections({
   pegOrder = PEG_ORDER,
   pegCountOrder = PEG_COUNT_ORDER,
 }: StablecoinClientProjectionSources) {
-  const rawPegCurrencyCounts: Record<string, number> = {};
-  for (const coin of active) {
-    const peg = coin.flags.pegCurrency;
-    rawPegCurrencyCounts[peg] = (rawPegCurrencyCounts[peg] ?? 0) + 1;
-  }
+  const {
+    rawActivePegCurrencyCounts,
+    activePegCurrencies,
+    preLaunchHubPegCurrencies,
+  } = selectPegHubCurrencies({ active, preLaunch, pegOrder });
 
   const activePegCurrencyCounts: Record<string, number> = {};
-  for (const peg of [...pegCountOrder, ...Object.keys(rawPegCurrencyCounts)]) {
-    if (rawPegCurrencyCounts[peg] != null && activePegCurrencyCounts[peg] == null) {
-      activePegCurrencyCounts[peg] = rawPegCurrencyCounts[peg];
+  for (const peg of [...pegCountOrder, ...Object.keys(rawActivePegCurrencyCounts)]) {
+    if (rawActivePegCurrencyCounts[peg] != null && activePegCurrencyCounts[peg] == null) {
+      activePegCurrencyCounts[peg] = rawActivePegCurrencyCounts[peg];
     }
   }
-
-  const activePegCurrencies = pegOrder.filter((peg) => activePegCurrencyCounts[peg] != null);
-  const preLaunchPegCurrencyCounts: Record<string, number> = {};
-  for (const coin of preLaunch) {
-    const peg = coin.flags.pegCurrency;
-    preLaunchPegCurrencyCounts[peg] = (preLaunchPegCurrencyCounts[peg] ?? 0) + 1;
-  }
-  const preLaunchHubPegCurrencies = pegOrder.filter(
-    (peg) =>
-      peg !== "OTHER"
-      && activePegCurrencyCounts[peg] == null
-      && (preLaunchPegCurrencyCounts[peg] ?? 0) >= PRE_LAUNCH_HUB_MIN_COINS,
-  );
   const commandPaletteStablecoins = tracked.map((coin) => {
     const row: string[] = [coin.id, coin.name, coin.symbol];
     if (coin.status != null && coin.status !== "active") {

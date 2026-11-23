@@ -5,6 +5,7 @@ import {
   ACTIVE_PEG_CURRENCY_COUNTS,
   PRE_LAUNCH_HUB_PEG_CURRENCIES,
 } from "@/lib/stablecoin-static-data";
+import { ALL_PEG_SLUGS } from "@/lib/stablecoin-taxonomy-urls";
 
 const ACTIVE_PEG_COUNTS: Partial<Record<PegCurrency, number>> = ACTIVE_PEG_CURRENCY_COUNTS;
 
@@ -12,54 +13,12 @@ const ACTIVE_PEG_COUNTS: Partial<Record<PegCurrency, number>> = ACTIVE_PEG_CURRE
 // Slug ↔ PegCurrency mapping
 // ---------------------------------------------------------------------------
 
-const ALL_SLUGS: Record<PegCurrency, string> = {
-  USD: "usd",
-  EUR: "eur",
-  GBP: "gbp",
-  CHF: "chf",
-  BRL: "brl",
-  JPY: "jpy",
-  KRW: "krw",
-  SGD: "sgd",
-  MYR: "myr",
-  TRY: "try",
-  AUD: "aud",
-  ZAR: "zar",
-  CAD: "cad",
-  PHP: "php",
-  RUB: "rub",
-  CNY: "cny",
-  CNH: "cnh",
-  MXN: "mxn",
-  VND: "vnd",
-  UAH: "uah",
-  ARS: "ars",
-  KGS: "kgs",
-  NGN: "ngn",
-  XOF: "xof",
-  COP: "cop",
-  CLP: "clp",
-  GHS: "ghs",
-  KES: "kes",
-  PEN: "pen",
-  CZK: "czk",
-  PLN: "pln",
-  AED: "aed",
-  IDR: "idr",
-  INR: "inr",
-  HKD: "hkd",
-  GOLD: "gold",
-  SILVER: "silver",
-  VAR: "cpi",
-  OTHER: "other",
-};
-
 /** Only pegs with at least one tracked stablecoin. */
 export const ACTIVE_PEGS: PegCurrency[] = [...ACTIVE_PEG_CURRENCIES];
 
 /** PegCurrency → URL slug (only active pegs). */
 export const PEG_SLUGS: Partial<Record<PegCurrency, string>> = Object.fromEntries(
-  ACTIVE_PEGS.map((peg) => [peg, ALL_SLUGS[peg]]),
+  ACTIVE_PEGS.map((peg) => [peg, ALL_PEG_SLUGS[peg]]),
 );
 
 /**
@@ -73,7 +32,7 @@ export const PEG_HUB_PEGS: PegCurrency[] = [...ACTIVE_PEGS, ...PRE_LAUNCH_HUB_PE
 
 /** PegCurrency → URL slug for every peg hub. */
 export const PEG_HUB_SLUGS: Partial<Record<PegCurrency, string>> = Object.fromEntries(
-  PEG_HUB_PEGS.map((peg) => [peg, ALL_SLUGS[peg]]),
+  PEG_HUB_PEGS.map((peg) => [peg, ALL_PEG_SLUGS[peg]]),
 );
 
 /** Number of tracked stablecoins per peg currency. */

@@ -339,4 +339,45 @@ describe("generated sitemap dates are independent of checkout time", () => {
 
     expect(changedRoutes(baseline, edited).sort()).toEqual(expected.sort());
   });
+
+  it("derives chain, peg-hub and taxonomy routes from the supplied per-coin entries", async () => {
+    const template = entries[0]!;
+    const makeEntry = (
+      id: string,
+      overrides: Omit<Partial<typeof template.coin>, "flags"> & { flags?: Partial<typeof template.coin.flags> } = {},
+    ) => ({
+      ...template,
+      id,
+      coin: {
+        ...template.coin,
+        ...overrides,
+        id,
+        flags: { ...template.coin.flags, ...overrides.flags },
+      },
+    });
+    const syntheticEntries = [
+      makeEntry("a-usd", { status: "active", contracts: [{ chain: "ethereum", address: "0x1", decimals: 6 }], flags: { pegCurrency: "USD", backing: "algorithmic", governance: "decentralized" } }),
+      makeEntry("b-usd", { status: "active", contracts: [{ chain: "ethereum", address: "0x2", decimals: 6 }], flags: { pegCurrency: "USD", backing: "rwa-backed", governance: "centralized" } }),
+      makeEntry("c-usd", { status: "active", contracts: [{ chain: "ethereum", address: "0x3", decimals: 6 }, { chain: "arbitrum", address: "0x4", decimals: 6 }], flags: { pegCurrency: "USD", backing: "rwa-backed", governance: "centralized" } }),
+      makeEntry("d-inr-1", { status: "pre-launch", contracts: [{ chain: "arbitrum", address: "0x5", decimals: 6 }], flags: { pegCurrency: "INR" } }),
+      makeEntry("d-inr-2", { status: "pre-launch", contracts: [{ chain: "arbitrum", address: "0x6", decimals: 6 }], flags: { pegCurrency: "INR" } }),
+      makeEntry("d-other-1", { status: "pre-launch", contracts: [], flags: { pegCurrency: "OTHER" } }),
+      makeEntry("d-other-2", { status: "pre-launch", contracts: [], flags: { pegCurrency: "OTHER" } }),
+    ];
+
+    generator.gitLog = gitLogFor(files);
+    generator.mtime = new Date("2026-10-27T09:00:00.000Z");
+    generator.written = null;
+    generateSitemapDates({ freshGitDateIndex: true, entries: syntheticEntries });
+    const result = generator.written!;
+
+    expect(Object.keys(result).filter((route) => route.startsWith("/chains/"))).toEqual(["/chains/", "/chains/ethereum/"]);
+    expect(result["/stablecoins/usd/"]).toBe(BASE_COMMIT);
+    expect(result["/stablecoins/inr/"]).toBe(BASE_COMMIT);
+    expect(result["/stablecoins/other/"]).toBeUndefined();
+    expect(result["/stablecoins/eur/"]).toBeUndefined();
+    expect(result["/stablecoins/backing/algorithmic/"]).toBe(BASE_COMMIT);
+    expect(result["/stablecoins/backing/rwa/"]).toBe(BASE_COMMIT);
+    expect(result["/stablecoins/backing/crypto/"]).toBeUndefined();
+  });
 });
