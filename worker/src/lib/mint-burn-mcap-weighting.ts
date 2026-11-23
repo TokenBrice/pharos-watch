@@ -8,8 +8,10 @@
 
 import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "./mint-burn-contracts";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import type { MintBurnWindowStartSupply } from "@shared/types/mint-burn";
 import {
   canonicalizeChainCirculating,
+  type ChainCirculatingPoint,
   type RawChainCirculating,
 } from "@shared/lib/chains/circulating";
 
@@ -68,4 +70,48 @@ export function sumMcapForTrackedChains(
     total += entry.current;
   }
   return total;
+}
+
+type TrackedChainHistoricalBucket = "circulatingPrevDay" | "circulatingPrevWeek" | "circulatingPrevMonth";
+
+function sumTrackedChainBucket(
+  trackedChains: readonly string[],
+  canonical: ReadonlyMap<string, ChainCirculatingPoint>,
+  bucket: TrackedChainHistoricalBucket,
+): number | null {
+  if (trackedChains.length === 0 || canonical.size === 0) return null;
+  let total = 0;
+  for (const chainId of trackedChains) {
+    const value = canonical.get(chainId)?.[bucket];
+    if (value == null) return null;
+    total += value;
+  }
+  return Number.isFinite(total) ? total : null;
+}
+
+/**
+ * Returns observed tracked-chain circulating supply (USD) at the start of each
+ * flow window (`24h`, `7d`, `30d`, `90d`), restricted to the caller's admitted
+ * tracked chains.
+ *
+ * Applies the same fail-closed all-chains-observed rule as `sumMcapForTrackedChains`
+ * for chain breakdowns: every admitted tracked chain must have an observed
+ * `circulatingPrev{Day,Week,Month}` entry, with no global all-chain fallback
+ * (which would mix untracked chains into a tracked-chain flow share). Observed
+ * zero remains `0` (ADR-28 / R1); missing or null chains yield `null`.
+ * `window90d` is `null` because Pharos stores no 90-day per-chain supply series.
+ */
+export function sumWindowStartSupplyForTrackedChains(
+  stablecoinId: string,
+  chainCirculating: RawChainCirculating | null | undefined,
+  configs?: readonly MintBurnContractConfig[],
+): MintBurnWindowStartSupply {
+  const trackedChains = getMintBurnTrackedChains(stablecoinId, configs);
+  const canonical = canonicalizeChainCirculating(chainCirculating);
+  return {
+    window24h: sumTrackedChainBucket(trackedChains, canonical, "circulatingPrevDay"),
+    window7d: sumTrackedChainBucket(trackedChains, canonical, "circulatingPrevWeek"),
+    window30d: sumTrackedChainBucket(trackedChains, canonical, "circulatingPrevMonth"),
+    window90d: null,
+  };
 }

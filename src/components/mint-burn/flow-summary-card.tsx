@@ -210,11 +210,55 @@ interface NetCell {
   isPartial: boolean;
 }
 
-function supplyShare(cell: NetCell, supplyUsd: number | null): string | null {
-  if (cell.net.valueUsd == null || cell.isPartial || supplyUsd == null) return null;
-  const pct = (cell.net.valueUsd / supplyUsd) * 100;
-  if (pct !== 0 && Math.abs(pct) < 0.005) return "<0.01% of supply";
-  return `${formatSignedPercent(pct, 2).replace("-", "−")} of supply`;
+type SupplyShareView =
+  | { kind: "value"; label: string; title: string }
+  | { kind: "unavailable"; reason: string }
+  | { kind: "none" };
+
+function resolveSupplyShare(coin: MintBurnCoinFlow, cell: NetCell): SupplyShareView {
+  if (cell.net.valueUsd == null) return { kind: "none" };
+  if (cell.isPartial) {
+    return {
+      kind: "unavailable",
+      reason: `${WINDOW_ADJECTIVE[cell.window]} coverage is incomplete, so share of window-start supply is unavailable.`,
+    };
+  }
+  const startSupplyUsd = coin.windowStartSupplyUsd?.[SCAN_KEY[cell.window]] ?? null;
+  if (startSupplyUsd == null) {
+    if (cell.window === "90d" && cell.net.completeness === "unknown") {
+      return {
+        kind: "unavailable",
+        reason: "90-day tracked-chain start supply is unavailable and this window includes hours before pricing checks began.",
+      };
+    }
+    return {
+      kind: "unavailable",
+      reason: `${WINDOW_ADJECTIVE[cell.window]} window-start tracked-chain supply is unavailable.`,
+    };
+  }
+  if (cell.net.completeness !== "complete") {
+    return {
+      kind: "unavailable",
+      reason: cell.net.completeness === "unknown"
+        ? "Includes hours recorded before pricing checks began; share of window-start supply is unavailable."
+        : "Some events are unpriced; share of window-start supply is unavailable.",
+    };
+  }
+  if (!Number.isFinite(startSupplyUsd) || startSupplyUsd <= 0) {
+    return {
+      kind: "unavailable",
+      reason: `Tracked-chain supply at the start of the ${WINDOW_ADJECTIVE[cell.window]} window was zero, so share is undefined.`,
+    };
+  }
+  const pct = (cell.net.valueUsd / startSupplyUsd) * 100;
+  const label = pct !== 0 && Math.abs(pct) < 0.005
+    ? "<0.01% of supply"
+    : `${formatSignedPercent(pct, 2).replace("-", "−")} of supply`;
+  return {
+    kind: "value",
+    label,
+    title: `Net flow divided by tracked-chain supply at the start of the ${WINDOW_ADJECTIVE[cell.window]} window.`,
+  };
 }
 
 function NetValue({ cell, className }: { cell: NetCell; className?: string }) {
@@ -234,14 +278,15 @@ function hasNetFigure(net: MintBurnSignedNetView): boolean {
 }
 
 /** Only windows with a figure get a cell; the card's note names the withheld ones. */
-function NetStrip({ cells, coin, supplyUsd }: { cells: readonly NetCell[]; coin: MintBurnCoinFlow; supplyUsd: number | null }) {
+function NetStrip({ cells, coin }: { cells: readonly NetCell[]; coin: MintBurnCoinFlow }) {
   return (
     <dl
       className={cn("grid overflow-hidden rounded-lg border border-border/60", STRIP_GRID_CLASS[cells.length])}
       aria-label="Net mint minus burn by window"
     >
       {cells.map((cell, index) => {
-        const subline = supplyShare(cell, supplyUsd) ?? describeWindowGap(coin, cell.window, cell.net);
+        const share = resolveSupplyShare(coin, cell);
+        const gap = share.kind === "none" ? describeWindowGap(coin, cell.window, cell.net) : null;
         return (
           <div
             key={cell.window}
@@ -258,7 +303,16 @@ function NetStrip({ cells, coin, supplyUsd }: { cells: readonly NetCell[]; coin:
             <dd className={cn("mt-1 pharos-numeric text-lg font-semibold leading-tight text-foreground", cell.isPartial && "opacity-70")}>
               <NetValue cell={cell} />
             </dd>
-            {subline ? <dd className="mt-0.5 text-xs text-muted-foreground">{subline}</dd> : null}
+            {share.kind === "value" ? (
+              <dd className="mt-0.5 text-xs text-muted-foreground" title={share.title}>{share.label}</dd>
+            ) : share.kind === "unavailable" ? (
+              <dd className="mt-0.5 text-xs text-muted-foreground" title={share.reason}>
+                <span aria-hidden="true">—</span>
+                <span className="sr-only">{share.reason}</span>
+              </dd>
+            ) : gap ? (
+              <dd className="mt-0.5 text-xs text-muted-foreground">{gap}</dd>
+            ) : null}
           </div>
         );
       })}
@@ -342,7 +396,6 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
   const netSignal = getFlowDirectionUi(netDirection);
   const baselineDailyNetUsd = resolveBaselineDailyNetUsd(coin);
   const window24h = resolveMintBurnValuation(coin.valuation?.window24h);
-  const supplyUsd = coin.gaugeWeightUsd != null && coin.gaugeWeightUsd > 0 ? coin.gaugeWeightUsd : null;
   // A balance of lower-bound volumes bounds nothing (v6.27): the bar is drawn
   // only from a fully scanned, classified and valued 24h window.
   const balance = coin.classification?.window24h.unavailableReason
@@ -382,6 +435,20 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
   const activeCells = netCells.slice(quietRun + 1);
   // The quiet sentence already states the zero windows, so the strip holds only the rest.
   const stripCells = isQuiet ? activeCells.filter((cell) => hasNetFigure(cell.net)) : figureCells;
+  const quietSingleCell = isQuiet && activeCells.length === 1 ? activeCells[0] : null;
+  const quietSingleShare = quietSingleCell ? resolveSupplyShare(coin, quietSingleCell) : null;
+  const renderedShareViews = quietSingleCell
+    ? (quietSingleShare ? [quietSingleShare] : [])
+    : stripCells.map((cell) => resolveSupplyShare(coin, cell));
+  const hasAnySupplyShare = renderedShareViews.some((view) => view.kind === "value");
+  const hasUnavailableSupplyShare = !quietSingleCell && renderedShareViews.some((view) => view.kind === "unavailable");
+  const supplyShareFootnote = hasAnySupplyShare && hasUnavailableSupplyShare
+    ? " Supply shares use tracked-chain supply at each window's start; — marks windows without complete valuation or start-supply history."
+    : hasAnySupplyShare
+      ? " Supply shares use tracked-chain supply at each window's start."
+      : hasUnavailableSupplyShare
+        ? " Supply shares (—) require complete valuation and tracked-chain supply at each window's start."
+        : "";
   // Withheld figures get no tile and no placeholder: one quiet line names them.
   const gapNotes = [
     ...describeHiddenWindows(coin, (isQuiet ? activeCells : netCells).filter((cell) => !hasNetFigure(cell.net))),
@@ -454,12 +521,12 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
               No mints or burns in the last 24 hours
               {quietRun > 0 ? `, and no net supply change over ${WINDOW_LONG_LABEL[netCells[quietRun].window]}` : ""}.
             </p>
-            {activeCells.length === 1 ? (
+            {quietSingleCell ? (
               <p className="text-foreground">
-                {WINDOW_ADJECTIVE[activeCells[0].window]} net:{" "}
-                <NetValue cell={activeCells[0]} className="pharos-numeric font-semibold" />
-                {supplyShare(activeCells[0], supplyUsd) ? (
-                  <span className="text-muted-foreground"> ({supplyShare(activeCells[0], supplyUsd)})</span>
+                {WINDOW_ADJECTIVE[quietSingleCell.window]} net:{" "}
+                <NetValue cell={quietSingleCell} className="pharos-numeric font-semibold" />
+                {quietSingleShare?.kind === "value" ? (
+                  <span className="text-muted-foreground" title={quietSingleShare.title}> ({quietSingleShare.label})</span>
                 ) : null}
               </p>
             ) : null}
@@ -513,11 +580,11 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
         )}
 
         {(!isQuiet || activeCells.length > 1) && stripCells.length > 0 ? (
-          <NetStrip cells={stripCells} coin={coin} supplyUsd={supplyUsd} />
+          <NetStrip cells={stripCells} coin={coin} />
         ) : null}
 
         <p className="text-xs leading-relaxed text-muted-foreground">
-          Tracked chains only; excludes bridge transfers.{supplyUsd != null ? " Supply shares use current tracked-chain supply." : ""}
+          Tracked chains only; excludes bridge transfers.{supplyShareFootnote}
           {hasCoverageUnknown ? " * Includes hours recorded before pricing checks began, so the total may miss unpriced events." : ""}
           {gapNotes.length > 0 ? <span data-flow-gap-note=""> {gapNotes.join(" ")}</span> : null}
         </p>
