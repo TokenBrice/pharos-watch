@@ -153,6 +153,12 @@ describe("FlowSummaryCard", () => {
         pressureShiftScore: score,
         pressureShiftState: state,
         gaugeWeightUsd: 100_000_000,
+        windowStartSupplyUsd: {
+          window24h: 100_000_000,
+          window7d: 105_000_000,
+          window30d: 108_000_000,
+          window90d: null,
+        },
         valuation: makeMintBurnCoinValuation({}, { netFlow90d: "unknown" }),
       })] },
       dataUpdatedAt: 1_700_000_000_000, error: null, isLoading: false, refetch: vi.fn(),
@@ -173,8 +179,101 @@ describe("FlowSummaryCard", () => {
     expect(screen.getByText("Burning").closest("span")?.className).toContain("text-red-700");
     expect(screen.getAllByText("−$3.00M")[0]!.className).toContain("text-red-700");
     expect(screen.getByText("−3.00% of supply")).toBeTruthy();
+    expect(screen.getByTitle(/90-day tracked-chain start supply is unavailable/)).toBeTruthy();
+    expect(container.textContent).toContain("Supply shares use tracked-chain supply at each window's start");
     expect(container.textContent).toMatch(/\* Includes hours recorded before pricing checks began/);
     expect(container.textContent).not.toMatch(/\bNR\b/);
+  });
+
+  it("uses window-start tracked-chain supply for large contractions (USDS-like) and withholds 90d*", () => {
+    useMintBurnFlowsMock.mockReturnValue({
+      data: { coins: [makeMintBurnFlowCoin({
+        stablecoinId: "usds-sky",
+        symbol: "USDS",
+        pressureShiftScore: 26,
+        pressureShiftState: "improving",
+        netFlowDirection24h: "minting",
+        gaugeWeightUsd: 3_217_038_523,
+        windowStartSupplyUsd: {
+          window24h: 3_098_830_292,
+          window7d: 5_347_528_879,
+          window30d: 6_729_591_624,
+          window90d: null,
+        },
+        netFlow24hUsd: 9_014_020,
+        mintVolume24hUsd: 198_610_820,
+        burnVolume24hUsd: 189_596_800,
+        netFlow7dUsd: -2_005_233_746,
+        netFlow30dUsd: -3_610_299_466,
+        netFlow90dUsd: -3_424_521_682,
+        valuation: makeMintBurnCoinValuation({}, { netFlow90d: "unknown" }),
+      })] },
+      dataUpdatedAt: 1_700_000_000_000, error: null, isLoading: false, refetch: vi.fn(),
+    });
+    const { container } = render(<FlowSummaryCard stablecoinId="usds-sky" />);
+    expect(screen.getByText("+0.29% of supply")).toBeTruthy();
+    expect(screen.getByText("−37.50% of supply")).toBeTruthy();
+    expect(screen.getByText("−53.65% of supply")).toBeTruthy();
+    // Never divides by current tracked-chain supply ($3.22B → −112.22% / −106.45%).
+    expect(container.textContent).not.toContain("112.22%");
+    expect(container.textContent).not.toContain("106.45%");
+    expect(screen.getByTitle("90-day tracked-chain start supply is unavailable and this window includes hours before pricing checks began.")).toBeTruthy();
+    expect(container.textContent).toContain("Supply shares use tracked-chain supply at each window's start; — marks windows without complete valuation or start-supply history.");
+  });
+
+  it("uses window-start tracked-chain supply for growing coins (higher % than current-supply basis)", () => {
+    useMintBurnFlowsMock.mockReturnValue({
+      data: { coins: [makeMintBurnFlowCoin({
+        stablecoinId: "u-united-stables",
+        symbol: "U",
+        pressureShiftScore: 18,
+        pressureShiftState: "improving",
+        netFlowDirection24h: "minting",
+        gaugeWeightUsd: 511_621_104,
+        windowStartSupplyUsd: {
+          window24h: 506_621_398,
+          window7d: 498_121_897,
+          window30d: 447_624_768,
+          window90d: null,
+        },
+        netFlow24hUsd: 5_000_038,
+        mintVolume24hUsd: 5_000_038,
+        burnVolume24hUsd: 0,
+        netFlow7dUsd: 10_497_614,
+        netFlow30dUsd: 62_956_448,
+        netFlow90dUsd: 287_063_569,
+        valuation: makeMintBurnCoinValuation({}, { netFlow90d: "unknown" }),
+      })] },
+      dataUpdatedAt: 1_700_000_000_000, error: null, isLoading: false, refetch: vi.fn(),
+    });
+    render(<FlowSummaryCard stablecoinId="u-united-stables" />);
+    expect(screen.getByText("+0.99% of supply")).toBeTruthy();
+    expect(screen.getByText("+2.11% of supply")).toBeTruthy();
+    expect(screen.getByText("+14.06% of supply")).toBeTruthy();
+    expect(screen.getByTitle(/90-day tracked-chain start supply is unavailable/)).toBeTruthy();
+  });
+
+  it("renders unavailable shares (—) for missing history, zero start supply, and unknown valuation without falling back to current supply", () => {
+    useMintBurnFlowsMock.mockReturnValue({
+      data: { coins: [makeMintBurnFlowCoin({
+        gaugeWeightUsd: 100_000_000,
+        windowStartSupplyUsd: {
+          window24h: 0,
+          window7d: null,
+          window30d: 80_000_000,
+          window90d: null,
+        },
+        valuation: makeMintBurnCoinValuation({}, { netFlow30d: "unknown", netFlow90d: "complete" }),
+      })] },
+      dataUpdatedAt: 1_700_000_000_000, error: null, isLoading: false, refetch: vi.fn(),
+    });
+    const { container } = render(<FlowSummaryCard stablecoinId="usdc-circle" />);
+    expect(screen.getByTitle("Tracked-chain supply at the start of the 24-hour window was zero, so share is undefined.")).toBeTruthy();
+    expect(screen.getByTitle("7-day window-start tracked-chain supply is unavailable.")).toBeTruthy();
+    expect(screen.getByTitle("Includes hours recorded before pricing checks began; share of window-start supply is unavailable.")).toBeTruthy();
+    expect(screen.getByTitle("90-day window-start tracked-chain supply is unavailable.")).toBeTruthy();
+    expect(container.textContent).not.toContain("% of supply");
+    expect(container.textContent).toContain("Supply shares (—) require complete valuation and tracked-chain supply at each window's start.");
   });
 
   it("collapses a quiet coin to plain lines without zeros, NR or an illustration", () => {
@@ -182,15 +281,23 @@ describe("FlowSummaryCard", () => {
       data: { coins: [makeInactiveMintBurnFlowCoin({
         baselineDailyNetUsd: 0,
         baselineDataDays: 30,
+        netFlow30dUsd: 0,
         netFlow90dUsd: 495_710_000,
         gaugeWeightUsd: 3_111_000_000,
+        windowStartSupplyUsd: {
+          window24h: 3_111_000_000,
+          window7d: 3_111_000_000,
+          window30d: 3_111_000_000,
+          window90d: null,
+        },
         valuation: makeMintBurnCoinValuation(),
       })] },
       dataUpdatedAt: 1_700_000_000_000, error: null, isLoading: false, refetch: vi.fn(),
     });
     const { container } = render(<FlowSummaryCard stablecoinId="usdc-circle" />);
     expect(container.textContent).toContain("No mints or burns in the last 24 hours, and no net supply change over 30 days.");
-    expect(container.textContent).toContain("90-day net: +$495.71M (+15.93% of supply)");
+    expect(container.textContent).toContain("90-day net: +$495.71M");
+    expect(container.textContent).not.toContain("15.93%");
     // One sentence needs no status chip or leaderboard link beside it.
     expect(screen.queryByText("No activity")).toBeNull();
     expect(screen.queryByRole("link", { name: /View all flows/ })).toBeNull();

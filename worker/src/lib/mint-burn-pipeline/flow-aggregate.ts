@@ -8,7 +8,7 @@ import { loadStablecoinsCache } from "../stablecoins-cache";
 import type { StablecoinData } from "@shared/types/supply";
 import { MINT_BURN_FTQ_DEPENDENCY_KEY, MintBurnFlowsResponseSchema } from "@shared/types/mint-burn";
 import { resolveMintBurnValuation } from "@shared/lib/mint-burn-valuation";
-import { sumMcapForTrackedChains } from "../mint-burn-mcap-weighting";
+import { sumMcapForTrackedChains, sumWindowStartSupplyForTrackedChains } from "../mint-burn-mcap-weighting";
 import { buildFlightToQualityClassificationFromV9Snapshot } from "../flight-to-quality-classification";
 import { isRecord } from "@shared/lib/type-guards";
 import { formatElapsedSeconds } from "@shared/lib/format";
@@ -41,7 +41,7 @@ import {
 import { addMintBurnClassificationTally, emptyMintBurnClassificationTally, summarizeMintBurnClassification,
   type MintBurnClassificationTally } from "@shared/lib/mint-burn-classification";
 import { hasMintBurnClassificationReview } from "../mint-burn-classification";
-import type { MintBurnClassification, MintBurnCoinFlow, MintBurnValuation, MintBurnWatermark } from "@shared/types/mint-burn";
+import type { MintBurnClassification, MintBurnCoinFlow, MintBurnValuation, MintBurnWatermark, MintBurnWindowStartSupply } from "@shared/types/mint-burn";
 import { decodeMintBurnScanCoverage, prepareMintBurnScanCoverage, mintBurnWindowAdmits, type MintBurnLegacySpan, type MintBurnScanSegment } from "./scan-coverage";
 import { getLatestSuccessfulCronTimestampResult, type CronTimestampLookupResult } from "../api-freshness";
 import type { FlightToQualityClassification } from "../flight-to-quality-classification";
@@ -388,10 +388,18 @@ export async function fetchAggregateData(
  * (`scoredMcapUsd`), so consumers can bound what the withheld weight could do
  * to the score.
  */
+const UNAVAILABLE_WINDOW_START_SUPPLY: MintBurnWindowStartSupply = {
+  window24h: null,
+  window7d: null,
+  window30d: null,
+  window90d: null,
+};
+
 export function buildCoinSummaries(
   data: AggregateData,
   mcapById: Map<string, number>,
   gradeClassification: FlightToQualityClassification | null,
+  windowStartSupplyById: ReadonlyMap<string, MintBurnWindowStartSupply> = new Map(),
 ): {
   coins: CoinFlowSummary[];
   gaugeInputs: Array<{ intensity: number | null; mcap: number }>;
@@ -523,6 +531,7 @@ export function buildCoinSummaries(
       baselineDailyAbsUsd: partialScope || baselineValuation !== "complete" || baselineClassification.completeness !== "complete" ? null : baseline?.avgAbs ?? null,
       baselineDataDays: baseline?.dataDays ?? null,
       gaugeWeightUsd: mcap,
+      windowStartSupplyUsd: windowStartSupplyById.get(id) ?? UNAVAILABLE_WINDOW_START_SUPPLY,
       netFlow24hUsd: !classificationComplete || !has24hWindow || valuation24h.completeness === "partial" ? null : knownNetFlow24h,
       mintVolume24hUsd: agg?.mintVolume ?? 0,
       burnVolume24hUsd: agg?.burnVolume ?? 0,
@@ -600,6 +609,7 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
   // Load stablecoins cache for mcap lookup. Only observed weights enter the map;
   // an absent id is an unavailable weight, counted by buildCoinSummaries.
   const mcapById = new Map<string, number>();
+  const windowStartSupplyById = new Map<string, MintBurnWindowStartSupply>();
   const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient" });
   if (stablecoinsCacheResult.kind !== "ok") {
     const cached = await getCache(db, cacheKey);
@@ -617,6 +627,10 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
     if (trackedIds.has(asset.id)) {
       const mcap = sumMcapForTrackedChains(asset.id, asset.chainCirculating, asset.circulating, data.configs);
       if (mcap !== null) mcapById.set(asset.id, mcap);
+      windowStartSupplyById.set(
+        asset.id,
+        sumWindowStartSupplyForTrackedChains(asset.id, asset.chainCirculating, data.configs),
+      );
     }
   }
 
@@ -635,6 +649,7 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
     data,
     mcapById,
     gradeClassification,
+    windowStartSupplyById,
   );
 
   const gaugeScanCoverage = {

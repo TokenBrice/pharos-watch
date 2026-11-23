@@ -182,6 +182,54 @@ describe("handleMintBurnFlows contract tests", () => {
       error: "Stablecoins data not yet available",
     });
   });
+
+  it("publishes tracked-chain windowStartSupplyUsd from chainCirculating in aggregate responses", async () => {
+    const scenarioDb = mintBurnScenario({
+      nowSec,
+      rows: { hourly: [makeFlowHourlyRow(nowSec)] },
+      stablecoinsCache: JSON.stringify({
+        peggedAssets: [
+          {
+            id: "usds-sky",
+            symbol: "USDS",
+            circulating: { peggedUSD: 3_225_687_137 },
+            chainCirculating: {
+              Ethereum: {
+                current: 3_217_038_523,
+                circulatingPrevDay: 3_098_830_292,
+                circulatingPrevWeek: 5_347_528_879,
+                circulatingPrevMonth: 6_729_591_624,
+              },
+              Base: {
+                current: 4_023_973,
+                circulatingPrevDay: 4_023_973,
+                circulatingPrevWeek: 3_923_965,
+                circulatingPrevMonth: 3_396_663,
+              },
+            },
+          },
+        ],
+      }),
+    });
+    const res = await handleMintBurnFlows(scenarioDb, new URL("https://x/api/mint-burn-flows"));
+    const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
+    const usds = body.coins.find((coin) => coin.stablecoinId === "usds-sky");
+    expect(usds?.gaugeWeightUsd).toBe(3_217_038_523);
+    expect(usds?.windowStartSupplyUsd).toEqual({
+      window24h: 3_098_830_292,
+      window7d: 5_347_528_879,
+      window30d: 6_729_591_624,
+      window90d: null,
+    });
+    // Coins absent from stablecoins cache publish explicit nulls rather than omitting keys.
+    const usdc = body.coins.find((coin) => coin.stablecoinId === "usdc-circle");
+    expect(usdc?.windowStartSupplyUsd).toEqual({
+      window24h: null,
+      window7d: null,
+      window30d: null,
+      window90d: null,
+    });
+  });
 });
 
 const ftqRoster = [...ACTIVE_MINT_BURN_CONFIGS];

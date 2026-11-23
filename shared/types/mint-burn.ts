@@ -247,6 +247,22 @@ const MintBurnCoinValuationSchema = z.object({
   netFlow90dBound: MintBurnSignedNetBoundSchema.nullable().optional(),
 });
 
+/**
+ * Observed tracked-chain circulating supply (USD) at the start of each flow window,
+ * restricted to the same admitted tracked chains as `gaugeWeightUsd` and requiring
+ * every admitted chain to have an observed historical bucket. `null` when that
+ * window's tracked-chain history is unavailable (including `window90d`, because no
+ * 90-day per-chain supply series is stored). Absent on payloads produced before the
+ * field existed.
+ */
+const MintBurnWindowStartSupplySchema = z.object({
+  window24h: z.number().finite().nonnegative().nullable(),
+  window7d: z.number().finite().nonnegative().nullable(),
+  window30d: z.number().finite().nonnegative().nullable(),
+  window90d: z.number().finite().nonnegative().nullable(),
+});
+export type MintBurnWindowStartSupply = z.infer<typeof MintBurnWindowStartSupplySchema>;
+
 export const MintBurnCoinFlowSchema = z.object({
   stablecoinId: z.string(),
   symbol: z.string(),
@@ -269,6 +285,13 @@ export const MintBurnCoinFlowSchema = z.object({
    * `pressureShiftScore` is non-null. Absent on payloads produced before the field existed.
    */
   gaugeWeightUsd: z.number().finite().nonnegative().nullable().optional(),
+  /**
+   * Observed tracked-chain circulating supply (USD) at the start of each flow window
+   * (`24h`, `7d`, `30d`, `90d`) in the same admitted tracked-chain scope as `gaugeWeightUsd`.
+   * Each window is `null` when any admitted chain lacks that historical bucket (and `window90d`
+   * is `null` because no 90-day tracked-chain supply series is stored). Absent on legacy payloads.
+   */
+  windowStartSupplyUsd: MintBurnWindowStartSupplySchema.optional(),
   /**
    * Signed nets are `null` when scan-window evidence is unavailable or valuation is `partial`
    * (a partial signed net is not a bound in either direction). An `unknown` valuation window
