@@ -40,6 +40,17 @@ The reviewed frontend→worker waivers are listed in `FRONTEND_TO_WORKER_WAIVED_
   - The optional `--d1` mode issues paginated event-ledger SELECTs. Results are written to the CLI's output directory.
 - **Retirement plan:** Remove the waiver if the production lifecycle exposes a runtime-neutral replay entrypoint with equivalent evidence and persistence semantics, or when the tool is retired.
 
+### 3. `scripts/maintenance/weekly-curation-digest.mjs`
+
+- **Waiver ID:** `curation-digest-expiry-lookahead`
+- **Status:** Active for the offline weekly curation digest.
+- **Reason:** The weekly curation digest (`npm run digest:curation`) prints a 14-day expiry lookahead across every dated operational review and disposition registry, reusing each registry's own exported data without re-declaring dates. Several dated registries (`STABLECOIN_PUBLICATION_WAIVERS`, `STABLECOIN_PRICE_GAP_REVIEWS`, `PSI_HISTORICAL_PRICE_GAP_REVIEWS`, `STABLECOIN_MARKET_HOURS_CALENDARS`, `REVIEWED_SUPPLY_VALUE_REBASELINES`, `REVIEWED_SUPPLY_CARRIES`, `REVIEWED_CHAIN_SUPPLY_COLLAPSES`, `DEPEG_NO_PARITY_QUOTE_REVIEWS`, `DEPEG_BLIND_EVENT_REVIEWS`, `RESERVE_FEED_REVIEWS`, `REVIEWED_CHAIN_TVL_DISPOSITIONS`, `REVIEWED_POOL_REJECTION_ANCHOR_CORRECTION`, `YIELD_OPPORTUNITY_EXCLUSIONS`, and `YIELD_ADAPTER_LIFECYCLE`) live in `worker/src/` beside the cron and health evaluators that enforce them.
+- **What was tried:** Shared registries (`CHAIN_MATURITY_REVIEWS_V1`, `YIELD_RISK_CONFIG`, `YIELD_DEPENDENCY_CONCENTRATION`, and `DEX_COVERAGE_WAIVERS`) are imported directly from `shared/`. Moving the remaining Worker-resident operational review tables into `shared/` would touch ~10 Worker runtime modules and their reachability graphs without removing the digest's read-only role; duplicating dates in `scripts/` would violate the single-authority rule.
+- **Mitigations:**
+  - The waiver names this exact entrypoint and its header comment points to this document.
+  - The script is an offline maintenance CLI (`npm run digest:curation`) that never ships in any deployed bundle and never runs as a CI gate.
+- **Retirement plan:** Drop individual Worker imports if a registry moves to `shared/`, and retire the waiver if all dated operational review registries become shared.
+
 ## Adding a Waiver
 
 1. Confirm the cross-layer import cannot be replaced by promoting metadata into `shared/`.

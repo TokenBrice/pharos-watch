@@ -10,6 +10,7 @@ import { runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli
 import { tronBase58ToHex } from "../src/lib/tron-address";
 import { chunkArray } from "../src/lib/collections";
 import { CONTRACT_CONFIGS } from "../src/lib/blacklist-contracts";
+import { TRON_RELEASE_AMOUNT_NOT_TRACKED_REASON } from "../src/lib/blacklist/shared";
 import { BLACKLIST_DERIVED_GENERATION_ROTATION_SQL, getBlacklistDerivedCacheKeys } from "../src/lib/blacklist-cache-keys";
 import { fetchKycRipRows, parsePositiveInteger, type KycRipCurrentBalanceRow } from "./lib/kyc-rip";
 import { parseDestructiveOperationArgs } from "./lib/destructive-operation-guard";
@@ -703,7 +704,11 @@ function eventUpsertStatement(
   const timestamp = Math.floor(event.blockTimestampMs / 1000);
   const methodologyVersion = getMethodologyVersionAt("blacklist-tracker", timestamp);
   const amountSource = amountNative == null ? "unavailable" : "event";
-  const amountStatus = amountNative == null ? "recoverable_pending" : "resolved";
+  const tronReleaseUntracked = amountNative == null && event.eventType === "unblacklist";
+  const amountStatus = amountNative == null
+    ? (tronReleaseUntracked ? "permanently_unavailable" : "recoverable_pending")
+    : "resolved";
+  const amountLastErrorClassSql = tronReleaseUntracked ? sqlString(TRON_RELEASE_AMOUNT_NOT_TRACKED_REASON) : "NULL";
   return `INSERT INTO blacklist_events
     (id, stablecoin, chain_id, chain_name, event_type, address, amount_native,
      amount_usd_at_event, amount_source, amount_status, tx_hash, block_number, timestamp,
@@ -716,7 +721,7 @@ function eventUpsertStatement(
      ${amountNative ?? "NULL"}, ${sqlString(amountSource)}, ${sqlString(amountStatus)},
      ${sqlString(event.txHash)}, ${event.blockNumber}, ${timestamp}, ${sqlString(methodologyVersion)},
      ${sqlString(manifest.contractAddress)}, ${sqlString(manifest.configKey)},
-     ${sqlString(event.eventSignature)}, NULL, NULL, 0, NULL, NULL, NULL,
+     ${sqlString(event.eventSignature)}, NULL, NULL, 0, NULL, ${amountLastErrorClassSql}, NULL,
      ${sqlString(`https://tronscan.org/#/transaction/${event.txHash}`)},
      ${sqlString(`https://tronscan.org/#/address/${event.address}`)},
      ${belongsToManifest ? sqlString(manifest.manifestId) : "NULL"}, ${sqlString(runId)},

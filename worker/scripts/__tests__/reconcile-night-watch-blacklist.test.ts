@@ -320,11 +320,15 @@ describe("Night Watch blacklist reconciliation", () => {
     expect(stored.count).toBe(86);
     for (const event of frozenManifest.events) {
       const native = amountNative(event);
-      expect(sqlite.prepare("SELECT amount_native, amount_usd_at_event, amount_source, amount_status FROM blacklist_events WHERE id = ?").get(event.id)).toEqual({
+      const tronReleaseUntracked = native == null && event.eventType === "unblacklist";
+      expect(
+        sqlite.prepare("SELECT amount_native, amount_usd_at_event, amount_source, amount_status, amount_last_error_class FROM blacklist_events WHERE id = ?").get(event.id),
+      ).toEqual({
         amount_native: native,
         amount_usd_at_event: native,
         amount_source: native == null ? "unavailable" : "event",
-        amount_status: native == null ? "recoverable_pending" : "resolved",
+        amount_status: native == null ? (tronReleaseUntracked ? "permanently_unavailable" : "recoverable_pending") : "resolved",
+        amount_last_error_class: tronReleaseUntracked ? "tron_release_amount_not_tracked" : null,
       });
     }
     const tail = sqlite

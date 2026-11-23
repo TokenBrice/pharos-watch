@@ -669,6 +669,56 @@ function seedPreMigrationFixture(db: DatabaseSync, targets: readonly string[]): 
       `);
       continue;
     }
+    if (target === "blacklist_events") {
+      db.exec(`
+        INSERT OR IGNORE INTO blacklist_events (
+          id, stablecoin, chain_id, chain_name, event_type, address, tx_hash,
+          block_number, timestamp, explorer_tx_url, explorer_address_url,
+          amount_native, amount_usd_at_event, amount_source, amount_status,
+          suppression_reason
+        ) VALUES
+          ('tron-unblacklist-pending', 'USDT', 'tron', 'Tron', 'unblacklist',
+            '0x1111111111111111111111111111111111111111', '0x' || hex(zeroblob(32)),
+            100, 1776816000, 'https://tronscan.org/#/transaction/1', 'https://tronscan.org/#/address/1',
+            NULL, NULL, 'unavailable', 'recoverable_pending', NULL),
+          ('tron-blacklist-pending', 'USDT', 'tron', 'Tron', 'blacklist',
+            '0x2222222222222222222222222222222222222222', '0x' || hex(zeroblob(32)),
+            101, 1776816100, 'https://tronscan.org/#/transaction/2', 'https://tronscan.org/#/address/2',
+            NULL, NULL, 'unavailable', 'recoverable_pending', NULL),
+          ('eth-unblacklist-pending', 'USDT', 'ethereum', 'Ethereum', 'unblacklist',
+            '0x3333333333333333333333333333333333333333', '0x' || hex(zeroblob(32)),
+            102, 1776816200, 'https://etherscan.io/tx/3', 'https://etherscan.io/address/3',
+            NULL, NULL, 'unavailable', 'recoverable_pending', NULL),
+          ('tron-unblacklist-suppressed', 'USDT', 'tron', 'Tron', 'unblacklist',
+            '0x4444444444444444444444444444444444444444', '0x' || hex(zeroblob(32)),
+            103, 1776816300, 'https://tronscan.org/#/transaction/4', 'https://tronscan.org/#/address/4',
+            NULL, NULL, 'unavailable', 'recoverable_pending', 'duplicate_log_identity');
+      `);
+      continue;
+    }
+    if (target === "blacklist_amount_repair_queue") {
+      db.exec(`
+        INSERT OR IGNORE INTO blacklist_events (
+          id, stablecoin, chain_id, chain_name, event_type, address, tx_hash,
+          block_number, timestamp, explorer_tx_url, explorer_address_url,
+          amount_native, amount_usd_at_event, amount_source, amount_status
+        ) VALUES
+          ('tron-unblacklist-pending', 'USDT', 'tron', 'Tron', 'unblacklist',
+            '0x1111111111111111111111111111111111111111', '0x' || hex(zeroblob(32)),
+            100, 1776816000, 'https://tronscan.org/#/transaction/1', 'https://tronscan.org/#/address/1',
+            NULL, NULL, 'unavailable', 'recoverable_pending'),
+          ('tron-blacklist-pending', 'USDT', 'tron', 'Tron', 'blacklist',
+            '0x2222222222222222222222222222222222222222', '0x' || hex(zeroblob(32)),
+            101, 1776816100, 'https://tronscan.org/#/transaction/2', 'https://tronscan.org/#/address/2',
+            NULL, NULL, 'unavailable', 'recoverable_pending');
+        INSERT OR IGNORE INTO blacklist_amount_repair_queue (
+          event_id, status, priority, reason, attempt_count, available_at, created_at, updated_at
+        ) VALUES
+          ('tron-unblacklist-pending', 'pending', 20, 'missing-event-amount', 0, 0, 1776816000, 1776816000),
+          ('tron-blacklist-pending', 'pending', 20, 'missing-event-amount', 0, 0, 1776816100, 1776816100);
+      `);
+      continue;
+    }
     if (target === "tape_events") {
       db.exec(`
         INSERT INTO tape_events (

@@ -94,6 +94,7 @@ const frontendToWorkerRestrictedImportPatterns = [
 const FRONTEND_TO_WORKER_WAIVED_FILES = [
   "scripts/ci/check-frozen-invariants.ts",
   "scripts/maintenance/replay-reference-closures.ts", // Runs the Worker lifecycle against captured evidence.
+  "scripts/maintenance/weekly-curation-digest.mjs", // Reads Worker-resident dated review registries for the offline expiry lookahead.
 ];
 
 function isWithinPath(parentDir, candidatePath) {

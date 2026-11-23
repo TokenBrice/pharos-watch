@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Boundary waiver: curation-digest-expiry-lookahead. See docs/process/boundary-waivers.md.
 /**
  * Human-readable weekly curation rollup. Prints a structured markdown
  * digest covering each editorial stream tracked by Pharos:
@@ -8,6 +9,7 @@
  *   3. proofOfReserves.attestorTier coverage (independent-audit cohort)
  *   4. AI summary staleness (>180 days for active coins)
  *   5. Chart annotation queue health
+ *   6. Dated-review expiry lookahead (14 days, across all dated registries)
  *
  * Pure stdout by default. With --write the digest is also archived to
  * `agents/curation-digest-<date>.md`.
@@ -19,6 +21,34 @@
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { CHAIN_MATURITY_REVIEWS_V1 } from "../../shared/data/safety-score-v9/chain-maturity-reviews-v1.ts";
+import { DEX_COVERAGE_WAIVERS } from "../../shared/lib/dex-deployment-coverage.ts";
+import {
+  VENUE_RISK_SCORE_MAX_AGE_DAYS,
+  YIELD_DEPENDENCY_CONCENTRATION,
+  YIELD_RISK_CONFIG,
+  findStaleVenueRiskScoresByEntries,
+} from "../../shared/lib/yield-source-risk-registry.ts";
+import { REVIEWED_CHAIN_TVL_DISPOSITIONS } from "../../worker/src/cron/dex-liquidity/orchestrator-drift.ts";
+import { REVIEWED_POOL_REJECTION_ANCHOR_CORRECTION } from "../../worker/src/cron/dex-liquidity/reviewed-anchor-correction.ts";
+import { REVIEWED_CHAIN_SUPPLY_COLLAPSES } from "../../worker/src/cron/sync-stablecoins/chain-dropout-seed.ts";
+import {
+  DEPEG_BLIND_EVENT_REVIEWS,
+  DEPEG_NO_PARITY_QUOTE_REVIEWS,
+} from "../../worker/src/lib/canary-checks-depeg.ts";
+import { RESERVE_FEED_REVIEWS } from "../../worker/src/lib/reserve-feed-reviews.ts";
+import {
+  PSI_HISTORICAL_PRICE_GAP_REVIEWS,
+  STABLECOIN_MARKET_HOURS_CALENDARS,
+  STABLECOIN_PRICE_GAP_REVIEWS,
+  STABLECOIN_PUBLICATION_WAIVERS,
+} from "../../worker/src/lib/stablecoin-publication-reviews.ts";
+import {
+  REVIEWED_SUPPLY_CARRIES,
+  REVIEWED_SUPPLY_VALUE_REBASELINES,
+} from "../../worker/src/lib/supply-integrity.ts";
+import { YIELD_ADAPTER_LIFECYCLE } from "../../worker/src/lib/yield-config/yield-config-rate-sources.ts";
+import { YIELD_OPPORTUNITY_EXCLUSIONS } from "../../worker/src/lib/yield-config/yield-opportunity-exclusions.ts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const ROOT = process.cwd();
@@ -28,11 +58,13 @@ const BASELINE_FILE = resolve(ROOT, "scripts/lib/curation-baseline-caps.json");
 const CANDIDATES_FILE = resolve(ROOT, "agents/annotation-candidates.md");
 const CURATED_ANNOTATIONS_DIR = resolve(ROOT, "shared/data/annotations/coins");
 
+const DAY_MS = 24 * 60 * 60 * 1000;
 const AI_SUMMARY_STALENESS_DAYS = 180;
 const QUEUE_WARN_ROW_THRESHOLD = 30;
 const QUEUE_WARN_AGE_DAYS = 60;
 const ANNOTATION_STALE_YEARS = 2;
 const QUARTERLY_HAND_CHECK_DAYS = 90;
+export const EXPIRY_LOOKAHEAD_DAYS = 14;
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, "utf8"));
@@ -340,6 +372,214 @@ function renderQueueHealth(report) {
   return lines.join("\n");
 }
 
+function parseExpiryMs(value) {
+  if (typeof value === "number") return Number.isFinite(value) ? value * 1000 : Number.NaN;
+  if (typeof value === "string") {
+    return /^\d{4}-\d{2}-\d{2}$/.test(value) ? Date.parse(`${value}T00:00:00Z`) : Date.parse(value);
+  }
+  return Number.NaN;
+}
+
+function venueRiskExpiries(entries, horizonMs) {
+  return findStaleVenueRiskScoresByEntries(entries, horizonMs).map((stale) => {
+    const reviewedMs = Date.parse(`${stale.reviewedAt}T00:00:00Z`);
+    const expiryMs = reviewedMs + (VENUE_RISK_SCORE_MAX_AGE_DAYS + 1) * DAY_MS;
+    return { id: stale.protocol, expiresAt: new Date(expiryMs).toISOString().slice(0, 10) };
+  });
+}
+
+function buildDatedReviewRegistries(horizonMs) {
+  return [
+    {
+      registry: "Chain-maturity reviews (CHAIN_MATURITY_REVIEWS_V1)",
+      entries: CHAIN_MATURITY_REVIEWS_V1.map((entry) => ({ id: entry.chainSlug, expiresAt: entry.nextReviewAt })),
+    },
+    {
+      registry: "Stablecoin publication waivers (STABLECOIN_PUBLICATION_WAIVERS)",
+      entries: STABLECOIN_PUBLICATION_WAIVERS.map((entry) => ({ id: entry.stablecoinId, expiresAt: entry.expiresAt })),
+    },
+    {
+      registry: "Stablecoin price-gap reviews (STABLECOIN_PRICE_GAP_REVIEWS)",
+      entries: STABLECOIN_PRICE_GAP_REVIEWS.map((entry) => ({ id: entry.stablecoinId, expiresAt: entry.expiresAt })),
+    },
+    {
+      registry: "PSI historical price-gap reviews (PSI_HISTORICAL_PRICE_GAP_REVIEWS)",
+      entries: PSI_HISTORICAL_PRICE_GAP_REVIEWS.map((entry) => ({ id: entry.stablecoinId, expiresAt: entry.expiresAt })),
+    },
+    {
+      registry: "Market-hours calendar reviews (STABLECOIN_MARKET_HOURS_CALENDARS)",
+      entries: STABLECOIN_MARKET_HOURS_CALENDARS.map((entry) => ({ id: entry.calendarId, expiresAt: entry.reviewDeadline })),
+    },
+    {
+      registry: "Supply-integrity value re-baselines (REVIEWED_SUPPLY_VALUE_REBASELINES)",
+      entries: REVIEWED_SUPPLY_VALUE_REBASELINES.map((entry) => ({ id: entry.stablecoinId, expiresAt: entry.expiresAt })),
+    },
+    {
+      registry: "Supply-integrity carry reviews (REVIEWED_SUPPLY_CARRIES)",
+      entries: REVIEWED_SUPPLY_CARRIES.map((entry) => ({ id: entry.stablecoinId, expiresAt: entry.expiresAt })),
+    },
+    {
+      registry: "Chain-dropout omitted exclusions (REVIEWED_CHAIN_SUPPLY_COLLAPSES)",
+      entries: REVIEWED_CHAIN_SUPPLY_COLLAPSES
+        .filter((entry) => entry.policy === "exclude-omitted")
+        .map((entry) => ({ id: `${entry.assetId}:${entry.chainId}`, expiresAt: entry.excludeOmittedUntil })),
+    },
+    {
+      registry: "Depeg canary no-parity-quote reviews (DEPEG_NO_PARITY_QUOTE_REVIEWS)",
+      entries: DEPEG_NO_PARITY_QUOTE_REVIEWS.map((entry) => ({ id: entry.stablecoinId, expiresAt: entry.expiresAt })),
+    },
+    {
+      registry: "Depeg canary blind-event reviews (DEPEG_BLIND_EVENT_REVIEWS)",
+      entries: DEPEG_BLIND_EVENT_REVIEWS.map((entry) => ({ id: `${entry.stablecoinId}#${entry.eventId}`, expiresAt: entry.expiresAt })),
+    },
+    {
+      registry: "Reserve-feed reviews (RESERVE_FEED_REVIEWS)",
+      entries: RESERVE_FEED_REVIEWS.map((entry) => ({ id: `${entry.stablecoinId}:${entry.adapterKey}`, expiresAt: entry.expiresAt })),
+    },
+    {
+      registry: "Yield venue-risk scores (YIELD_RISK_CONFIG)",
+      entries: venueRiskExpiries(YIELD_RISK_CONFIG, horizonMs),
+    },
+    {
+      registry: "Yield dependency-concentration reviews (YIELD_DEPENDENCY_CONCENTRATION)",
+      entries: venueRiskExpiries(YIELD_DEPENDENCY_CONCENTRATION, horizonMs),
+    },
+    {
+      registry: "DEX chain-TVL dispositions (REVIEWED_CHAIN_TVL_DISPOSITIONS)",
+      entries: REVIEWED_CHAIN_TVL_DISPOSITIONS.map((entry) => ({ id: entry.flag, expiresAt: entry.expiresAt })),
+    },
+    {
+      registry: "DEX anchor-correction review (REVIEWED_POOL_REJECTION_ANCHOR_CORRECTION)",
+      entries: [{
+        id: REVIEWED_POOL_REJECTION_ANCHOR_CORRECTION.stablecoinId,
+        expiresAt: REVIEWED_POOL_REJECTION_ANCHOR_CORRECTION.expiresAt,
+      }],
+    },
+    {
+      registry: "DEX coverage waivers (DEX_COVERAGE_WAIVERS)",
+      entries: DEX_COVERAGE_WAIVERS.map((entry) => ({ id: `${entry.stablecoinId}:${entry.chain}`, expiresAt: entry.expiresAt })),
+    },
+    {
+      registry: "Yield opportunity exclusions (YIELD_OPPORTUNITY_EXCLUSIONS)",
+      entries: YIELD_OPPORTUNITY_EXCLUSIONS.map((entry) => ({
+        id: entry.assetSources ? `${entry.projects[0]}:${entry.assetSources.stablecoinId}` : entry.projects.join(","),
+        expiresAt: entry.nextReviewAt,
+      })),
+    },
+    {
+      registry: "Yield adapter lifecycle reviews (YIELD_ADAPTER_LIFECYCLE)",
+      entries: Object.entries(YIELD_ADAPTER_LIFECYCLE)
+        .filter(([, entry]) => Boolean(entry.reason?.nextReviewAt))
+        .map(([id, entry]) => ({ id, expiresAt: entry.reason.nextReviewAt })),
+    },
+  ];
+}
+
+/**
+ * @param {readonly { registry: string; entries: readonly { id: string; expiresAt: string | number | null | undefined }[] }[]} registries
+ * @param {number} [nowMs]
+ * @param {number} [lookaheadDays]
+ */
+export function analyzeDatedReviewExpiries(registries, nowMs = Date.now(), lookaheadDays = EXPIRY_LOOKAHEAD_DAYS) {
+  const horizonMs = nowMs + lookaheadDays * DAY_MS;
+  const horizonDate = new Date(horizonMs).toISOString().slice(0, 10);
+  const groups = [];
+  let totalEntries = 0;
+  let totalExpired = 0;
+  let totalInvalid = 0;
+
+  for (const { registry, entries } of registries) {
+    const items = [];
+    for (const entry of entries) {
+      const expiryMs = parseExpiryMs(entry.expiresAt);
+      if (!Number.isFinite(expiryMs)) {
+        items.push({
+          id: entry.id,
+          expiryDate: "(invalid)",
+          expiryMs: Number.NEGATIVE_INFINITY,
+          expired: false,
+          invalid: true,
+          daysDelta: null,
+        });
+        totalInvalid += 1;
+        continue;
+      }
+      if (expiryMs > horizonMs) continue;
+      const deltaMs = expiryMs - nowMs;
+      const expired = deltaMs <= 0;
+      const daysDelta = expired
+        ? Math.floor(-deltaMs / DAY_MS)
+        : Math.ceil(deltaMs / DAY_MS);
+      if (expired) totalExpired += 1;
+      items.push({
+        id: entry.id,
+        expiryDate: new Date(expiryMs).toISOString().slice(0, 10),
+        expiryMs,
+        expired,
+        invalid: false,
+        daysDelta,
+      });
+    }
+    if (items.length === 0) continue;
+    items.sort((a, b) => a.expiryMs - b.expiryMs || a.id.localeCompare(b.id));
+    totalEntries += items.length;
+    groups.push({ registry, items });
+  }
+
+  return {
+    lookaheadDays,
+    horizonDate,
+    totalRegistries: registries.length,
+    totalEntries,
+    totalExpired,
+    totalInvalid,
+    groups,
+  };
+}
+
+/**
+ * @param {number} [nowMs]
+ * @param {number} [lookaheadDays]
+ */
+export function collectDatedReviewExpiries(nowMs = Date.now(), lookaheadDays = EXPIRY_LOOKAHEAD_DAYS) {
+  const horizonMs = nowMs + lookaheadDays * DAY_MS;
+  return analyzeDatedReviewExpiries(buildDatedReviewRegistries(horizonMs), nowMs, lookaheadDays);
+}
+
+/**
+ * @param {ReturnType<typeof analyzeDatedReviewExpiries>} report
+ */
+export function renderDatedReviewExpiries(report) {
+  const lines = [`## Dated-review expiry lookahead (${report.lookaheadDays}d)`, ""];
+  if (report.groups.length === 0) {
+    lines.push(
+      `Status: **OK** — 0 dated review entries expiring on or before ${report.horizonDate} across ${report.totalRegistries} registries.`,
+    );
+    lines.push("");
+    return lines.join("\n");
+  }
+  const summaryParts = [
+    `${report.totalEntries} ${report.totalEntries === 1 ? "entry" : "entries"} across ${report.groups.length} of ${report.totalRegistries} registries`,
+  ];
+  if (report.totalExpired > 0) summaryParts.push(`${report.totalExpired} already expired`);
+  if (report.totalInvalid > 0) summaryParts.push(`${report.totalInvalid} invalid date`);
+  lines.push(`Expiring on or before ${report.horizonDate}: ${summaryParts.join("; ")}.`);
+  lines.push("");
+  for (const group of report.groups) {
+    lines.push(`### ${group.registry}`);
+    for (const item of group.items) {
+      const statusTag = item.invalid
+        ? "invalid date"
+        : item.expired
+          ? (item.daysDelta === 0 ? "expired today" : `expired ${item.daysDelta}d ago`)
+          : `in ${item.daysDelta}d`;
+      lines.push(`- ${item.id} — ${item.expiryDate} (${statusTag})`);
+    }
+    lines.push("");
+  }
+  return lines.join("\n");
+}
+
 function quarterlyDueIn(curatedTimestamps) {
   // Anchor to the digest file's mtime is unreliable across machines; instead
   // we anchor to the most recent date inserted into the curated JSON assets. The
@@ -366,6 +606,7 @@ function main() {
   const attestor = analyzeAttestorTier(coins);
   const summary = analyzeSummaryStaleness(coins, summaries);
   const queue = analyzeAnnotationQueue(queueText, curatedTimestamps);
+  const expiries = collectDatedReviewExpiries();
   const dueIn = quarterlyDueIn(curatedTimestamps);
 
   const out = [
@@ -375,6 +616,7 @@ function main() {
     renderAttestor(attestor),
     renderSummary(summary),
     renderQueueHealth(queue),
+    renderDatedReviewExpiries(expiries),
   ].join("\n");
 
   process.stdout.write(out);

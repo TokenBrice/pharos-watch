@@ -775,7 +775,7 @@ export function resolveReviewedYieldRiskConfig(venueProtocol: string | null | un
  * only set where the concentration is documented, so missing entries stay
  * neutral. See the source-risk section of `docs/yield-intelligence.md`.
  */
-const YIELD_DEPENDENCY_CONCENTRATION: Record<string, YieldDependencyConcentration> = {
+export const YIELD_DEPENDENCY_CONCENTRATION: Record<string, YieldDependencyConcentration> = {
   // The former near-total Sky allocation has diversified; retain its identity
   // as the largest ecosystem without a concentration penalty.
   "yvusdc-yearn": {
@@ -842,7 +842,7 @@ export function resolveDependencyConcentration(
 }
 
 /** Quarterly review bound for venue-risk and dependency-concentration evidence (yield v8.292). */
-const VENUE_RISK_SCORE_MAX_AGE_DAYS = 90;
+export const VENUE_RISK_SCORE_MAX_AGE_DAYS = 90;
 
 export interface StaleVenueRiskScore<K extends string = string> {
   protocol: K;
