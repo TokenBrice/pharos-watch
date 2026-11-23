@@ -19,7 +19,7 @@ import {
 import { ETHERSCAN_V2_BASE } from "../constants";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { fetchJsonWithRetry } from "../fetch-retry";
-import type { BlacklistRow } from "./shared";
+import type { BlacklistRow, TRON_RELEASE_AMOUNT_NOT_TRACKED_REASON } from "./shared";
 import { blacklistRuntimeBudgetReached, blacklistSubrequestBudgetReached, type BlacklistRunBudget } from "./run-budget";
 import { buildBlacklistAmountRepairQueueUpdate, refreshBlacklistAmountRepairQueue, MAX_LEGACY_EVM_REVIEW_ATTEMPTS } from "./amount-repair-queue";
 import {
@@ -52,7 +52,8 @@ export type BlacklistRecoveryErrorClass =
   | "history_over_cap"
   | "state_raced"
   | "runtime_budget"
-  | "budget_exhausted";
+  | "budget_exhausted"
+  | typeof TRON_RELEASE_AMOUNT_NOT_TRACKED_REASON;
 
 export type BlacklistRecoveryProvider =
   "etherscan" | "drpc" | "chain_rpc" | "event_receipt" | "trongrid" | "none";
@@ -114,8 +115,9 @@ export async function enrichRowBalances(opts: {
     if (row.amount_status === "permanently_unavailable") continue;
     if (row.event_type !== "blacklist" && row.event_type !== "unblacklist" && row.event_type !== "destroy") continue;
     if (config.chain.type === "tron") {
-      // Tron blacklist/unblacklist events do not contain event-time balances.
-      // Keep them unresolved rather than substituting a current balance.
+      // Tron freeze events do not contain event-time balances and wait for
+      // confirmed transfer-ledger replay; amountless Tron releases are already
+      // terminalized as permanently_unavailable above.
       continue;
     } else if (config.chain.evmChainId != null) {
       // Deferred rows keep their pending status and attempt clock for post-scan repair.

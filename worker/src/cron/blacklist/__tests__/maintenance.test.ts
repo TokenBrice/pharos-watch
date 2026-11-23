@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { buildBlacklistAmountRepairQueueUpdate, refreshBlacklistAmountRepairQueue } from "../../../lib/blacklist/amount-repair-queue";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
@@ -54,14 +56,28 @@ describe("blacklist amount repair queue", () => {
       .toEqual({ status: "unrecoverable", attempt_count: 3 });
   });
 
-  it("enqueues eligible EVM and Tron events and legacy zeros but excludes resolved amounts", async () => {
+  it("enqueues eligible EVM and Tron events and legacy zeros while excluding resolved amounts and Tron releases", async () => {
     const { db, sqlite } = fixtures.open();
     await insertBlacklistRows(db, [
       makePendingBlacklistRow({ id: "pending", amount_status: "recoverable_pending" }),
       makePendingBlacklistRow({ id: "failed", amount_status: "provider_failed" }),
       makePendingBlacklistRow({ id: "ambiguous", amount_status: "ambiguous" }),
       makePendingBlacklistRow({ id: "destroy", event_type: "destroy", amount_status: "recoverable_pending" }),
+      makePendingBlacklistRow({ id: "evm-release", event_type: "unblacklist", amount_status: "recoverable_pending" }),
       makePendingBlacklistRow({ id: "tron", chain_id: "tron", amount_status: "recoverable_pending" }),
+      makePendingBlacklistRow({
+        id: "tron-release-terminal",
+        chain_id: "tron",
+        event_type: "unblacklist",
+        amount_status: "permanently_unavailable",
+        amount_last_error_class: "tron_release_amount_not_tracked",
+      }),
+      makePendingBlacklistRow({
+        id: "tron-release-legacy-pending",
+        chain_id: "tron",
+        event_type: "unblacklist",
+        amount_status: "recoverable_pending",
+      }),
       makePendingBlacklistRow({ id: "resolved", amount_native: 10, amount_source: "derived", amount_status: "resolved" }),
       makePendingBlacklistRow({ id: "legacy-zero", amount_native: 0, amount_source: "derived", amount_status: "resolved" }),
     ]);
@@ -69,6 +85,7 @@ describe("blacklist amount repair queue", () => {
     expect(sqlite.prepare("SELECT event_id, priority, reason FROM blacklist_amount_repair_queue ORDER BY event_id").all()).toEqual([
       { event_id: "ambiguous", priority: 30, reason: "missing-event-amount" },
       { event_id: "destroy", priority: 10, reason: "missing-event-amount" },
+      { event_id: "evm-release", priority: 20, reason: "missing-event-amount" },
       { event_id: "failed", priority: 40, reason: "missing-event-amount" },
       { event_id: "legacy-zero", priority: 40, reason: "legacy-derived-zero" },
       { event_id: "pending", priority: 20, reason: "missing-event-amount" },
@@ -95,5 +112,48 @@ describe("blacklist amount repair queue", () => {
       status: "unrecoverable", attempt_count: 3, available_at: 1200, updated_at: 1200,
       completed_at: 1200, last_error_class: "unsupported",
     });
+  });
+
+  it("backfill migration 0322 terminalizes only unsuppressed amountless Tron releases and closes their queue rows", async () => {
+    const { db, sqlite } = fixtures.open();
+    await insertBlacklistRows(db, [
+      makePendingBlacklistRow({ id: "tron-release-pending", chain_id: "tron", chain_name: "Tron", event_type: "unblacklist", amount_status: "recoverable_pending" }),
+      makePendingBlacklistRow({ id: "tron-release-failed", chain_id: "tron", chain_name: "Tron", event_type: "unblacklist", amount_status: "provider_failed" }),
+      makePendingBlacklistRow({ id: "tron-release-suppressed", chain_id: "tron", chain_name: "Tron", event_type: "unblacklist", amount_status: "recoverable_pending", suppression_reason: "duplicate_log_identity" }),
+      makePendingBlacklistRow({ id: "tron-freeze-pending", chain_id: "tron", chain_name: "Tron", event_type: "blacklist", amount_status: "recoverable_pending" }),
+      makePendingBlacklistRow({ id: "evm-release-pending", chain_id: "ethereum", chain_name: "Ethereum", event_type: "unblacklist", amount_status: "recoverable_pending" }),
+    ]);
+    sqlite.exec(`
+      INSERT INTO blacklist_amount_repair_queue (event_id, status, priority, reason, attempt_count, available_at, claim_token, lease_expires_at, created_at, updated_at) VALUES
+        ('tron-release-pending', 'pending', 20, 'missing-event-amount', 0, 0, NULL, NULL, 1000, 1000),
+        ('tron-release-failed', 'running', 40, 'missing-event-amount', 1, 0, 'claim-1', 2000, 1000, 1000),
+        ('tron-freeze-pending', 'pending', 20, 'missing-event-amount', 0, 0, NULL, NULL, 1000, 1000),
+        ('evm-release-pending', 'pending', 20, 'missing-event-amount', 0, 0, NULL, NULL, 1000, 1000);
+    `);
+
+    const migrationSql = readFileSync(
+      resolve(process.cwd(), "worker/migrations/0322_tron_unblacklist_amount_status.sql"),
+      "utf8",
+    );
+    sqlite.exec(migrationSql);
+    sqlite.exec(migrationSql);
+
+    expect(
+      sqlite.prepare("SELECT id, amount_status, amount_last_error_class, amount_attempt_count FROM blacklist_events ORDER BY id").all(),
+    ).toEqual([
+      { id: "evm-release-pending", amount_status: "recoverable_pending", amount_last_error_class: null, amount_attempt_count: 0 },
+      { id: "tron-freeze-pending", amount_status: "recoverable_pending", amount_last_error_class: null, amount_attempt_count: 0 },
+      { id: "tron-release-failed", amount_status: "permanently_unavailable", amount_last_error_class: "tron_release_amount_not_tracked", amount_attempt_count: 0 },
+      { id: "tron-release-pending", amount_status: "permanently_unavailable", amount_last_error_class: "tron_release_amount_not_tracked", amount_attempt_count: 0 },
+      { id: "tron-release-suppressed", amount_status: "recoverable_pending", amount_last_error_class: null, amount_attempt_count: 0 },
+    ]);
+    expect(
+      sqlite.prepare("SELECT event_id, status, last_error_class, claim_token, lease_expires_at, completed_at IS NOT NULL AS has_completed_at FROM blacklist_amount_repair_queue ORDER BY event_id").all(),
+    ).toEqual([
+      { event_id: "evm-release-pending", status: "pending", last_error_class: null, claim_token: null, lease_expires_at: null, has_completed_at: 0 },
+      { event_id: "tron-freeze-pending", status: "pending", last_error_class: null, claim_token: null, lease_expires_at: null, has_completed_at: 0 },
+      { event_id: "tron-release-failed", status: "unrecoverable", last_error_class: "tron_release_amount_not_tracked", claim_token: null, lease_expires_at: null, has_completed_at: 1 },
+      { event_id: "tron-release-pending", status: "unrecoverable", last_error_class: "tron_release_amount_not_tracked", claim_token: null, lease_expires_at: null, has_completed_at: 1 },
+    ]);
   });
 });

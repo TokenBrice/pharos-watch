@@ -12,6 +12,9 @@ import { blacklistCanonicalEventFilterSql } from "@shared/lib/blacklist-event-or
 
 export const BLACKLIST_PUBLIC_EVENT_SQL = blacklistCanonicalEventFilterSql();
 
+/** Terminal reason for amountless Tron unblacklist events: transfer replay is freeze-only. */
+export const TRON_RELEASE_AMOUNT_NOT_TRACKED_REASON = "tron_release_amount_not_tracked" as const;
+
 export function shouldSuppressAsMirrorZero(
   stablecoin: string,
   eventType: string,
@@ -121,6 +124,7 @@ export function buildBlacklistRow({
   eventTopic0,
 }: BuildBlacklistRowOptions): BlacklistRow {
   const amountResolved = amount != null;
+  const tronReleaseUntracked = !amountResolved && chain.type === "tron" && eventType === "unblacklist";
 
   return {
     id,
@@ -132,7 +136,11 @@ export function buildBlacklistRow({
     amount_native: amount,
     amount_usd_at_event: computeBlacklistAmountUsdAtEvent(stablecoin, amount),
     amount_source: amountResolved ? "event" : "unavailable",
-    amount_status: amountResolved ? "resolved" : "recoverable_pending",
+    amount_status: amountResolved
+      ? "resolved"
+      : tronReleaseUntracked
+        ? "permanently_unavailable"
+        : "recoverable_pending",
     tx_hash: txHash,
     block_number: blockNumber,
     timestamp,
@@ -144,7 +152,7 @@ export function buildBlacklistRow({
     suppression_reason: null,
     amount_attempt_count: 0,
     amount_last_attempted_at: null,
-    amount_last_error_class: null,
+    amount_last_error_class: tronReleaseUntracked ? TRON_RELEASE_AMOUNT_NOT_TRACKED_REASON : null,
     amount_last_provider: null,
     explorer_tx_url: buildExplorerTxUrl(chain, txHash),
     explorer_address_url: buildExplorerAddressUrl(chain, address),

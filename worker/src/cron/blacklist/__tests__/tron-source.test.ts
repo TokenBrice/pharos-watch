@@ -49,6 +49,41 @@ describe("parseTronEvent", () => {
     expect(row!.event_type).toBe("blacklist");
     expect(row!.address).toBe("0xaa".padEnd(42, "a"));
     expect(row!.amount_status).toBe("recoverable_pending");
+    expect(row!.amount_last_error_class).toBeNull();
+  });
+
+  it("marks amountless Tron unblacklist events permanently unavailable with an explicit reason", () => {
+    const usdtRow = parseTronEvent(findConfig("usdt-tether"), {
+      block_number: 150,
+      block_timestamp: 1_700_000_050_000,
+      transaction_id: "bc".repeat(32),
+      event_index: 0,
+      event_name: "RemovedBlackList",
+      result: { _user: "0xaa".padEnd(42, "a") },
+    });
+    expect(usdtRow).toMatchObject({
+      event_type: "unblacklist",
+      amount_native: null,
+      amount_source: "unavailable",
+      amount_status: "permanently_unavailable",
+      amount_last_error_class: "tron_release_amount_not_tracked",
+    });
+
+    const usd1Row = parseTronEvent(findConfig("usd1-world-liberty-financial"), {
+      block_number: 151,
+      block_timestamp: 1_700_000_060_000,
+      transaction_id: "bd".repeat(32),
+      event_index: 0,
+      event_name: "Unfreeze",
+      result: { caller: "0x11".padEnd(42, "1"), account: "0x22".padEnd(42, "2") },
+    });
+    expect(usd1Row).toMatchObject({
+      event_type: "unblacklist",
+      amount_native: null,
+      amount_source: "unavailable",
+      amount_status: "permanently_unavailable",
+      amount_last_error_class: "tron_release_amount_not_tracked",
+    });
   });
 
   it("parses legacy USDT DestroyedBlackFunds with amount from _balance", () => {

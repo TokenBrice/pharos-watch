@@ -150,9 +150,17 @@ describe("Tron freeze JSON-RPC row parity", () => {
     expect(parseTronEvent(usd1, event)?.amount_native).toBe(25 / 10 ** usd1.decimals);
   });
 
-  it("keeps amount-less freezes unavailable and accepts only an emitted zero as zero", () => {
+  it("keeps amount-less freezes unavailable, terminalizes releases, and accepts only an emitted zero as zero", () => {
     const freeze = parseTronRpcEvent(usdt, normalize(captured[0].rpcLog), BASE_SEC, 1);
-    expect(freeze).toMatchObject({ amount_native: null, amount_source: "unavailable", amount_status: "recoverable_pending" });
+    expect(freeze).toMatchObject({
+      amount_native: null, amount_source: "unavailable", amount_status: "recoverable_pending",
+      amount_last_error_class: null,
+    });
+    const release = parseTronRpcEvent(usdt, normalize(captured[2].rpcLog), BASE_SEC, 1);
+    expect(release).toMatchObject({
+      event_type: "unblacklist", amount_native: null, amount_source: "unavailable",
+      amount_status: "permanently_unavailable", amount_last_error_class: "tron_release_amount_not_tracked",
+    });
     const destroy = { ...normalize(captured[1].rpcLog), data: `0x${"0".repeat(64)}` };
     expect(parseTronRpcEvent(usdt, destroy, BASE_SEC, 1)).toMatchObject({
       amount_native: 0, amount_source: "event", amount_status: "resolved",

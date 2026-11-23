@@ -36,6 +36,7 @@ export async function refreshBlacklistAmountRepairQueue(db: D1Database, now: num
        FROM blacklist_events
        WHERE event_type IN ('blacklist', 'unblacklist', 'destroy')
          AND suppression_reason IS NULL
+         AND NOT (chain_id = 'tron' AND event_type = 'unblacklist')
          AND (
            amount_status IN ('recoverable_pending', 'provider_failed', 'ambiguous')
            OR (amount_source = 'derived' AND amount_native = 0 AND amount_status = 'resolved'
