@@ -1297,4 +1297,54 @@ describe("cron staleness watchdog", () => {
     expect(sendToChatMock).toHaveBeenCalledTimes(1);
     expect(sendToChatMock.mock.calls[0]?.[1]).toContain("/api/mint-burn-flows");
   });
+
+  it("pages once when safety-score-v9-publication exceeds consumer max age and follows cooldown on recovery", async () => {
+    startClock();
+    const now = Math.floor(Date.now() / 1000);
+    const generationId = `report-cards:v9:v1:${"b".repeat(64)}`;
+    const canaryRows = (staleError: string | null, observedAt: number) => ACTIVE_CANARY_CHECK_IDS.map((checkId) => ({
+      check_id: checkId,
+      status: checkId === "safety-score-v9-publication" && staleError ? "error" : "ok",
+      severity: checkId === "safety-score-v9-publication" && staleError ? "error" : "info",
+      observed_at: observedAt,
+      duration_ms: 1,
+      metadata_json: JSON.stringify({ executionStatus: "completed" }),
+      error: checkId === "safety-score-v9-publication" ? staleError : null,
+    }));
+    const watch = {
+      canaryRows: canaryRows(`v9-publication-stale: age 7201s > budget 7200s; generation ${generationId}`, now),
+      probeRow: { created_at: now, details_json: JSON.stringify({ persistentProbeFailures: [] }) },
+    };
+    const db = fakeDb([], undefined, watch);
+    mockCacheStatus({});
+
+    const raised = await runCronStalenessWatchdog(db, undefined, canaryOptions);
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
+    const raisedText = String(sendToChatMock.mock.calls[0]?.[1] ?? "");
+    expect(raisedText).toContain("Canary findings raised");
+    expect(raisedText).toContain("safety-score-v9-publication");
+    expect(raisedText).toContain("v9-publication-stale: age 7201s &gt; budget 7200s");
+    expect(raisedText).toContain(`generation ${generationId}`);
+    expect(JSON.parse(raised.metadata ?? "{}").alertTransitions).toMatchObject({
+      stale: ["canary:safety-score-v9-publication"],
+      sent: true,
+    });
+
+    // Steady-state stale does not re-page on the next 15-minute run.
+    vi.setSystemTime((now + 900) * 1_000);
+    watch.canaryRows = canaryRows(`v9-publication-stale: age 8101s > budget 7200s; generation ${generationId}`, now + 900);
+    await runCronStalenessWatchdog(db, undefined, canaryOptions);
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
+
+    // Recovery after the shared 30-minute cooldown emits one recovery page.
+    vi.setSystemTime((now + CRON_STALENESS_ALERT_COOLDOWN_SEC + 1) * 1_000);
+    watch.canaryRows = canaryRows(null, now + CRON_STALENESS_ALERT_COOLDOWN_SEC + 1);
+    const recovered = await runCronStalenessWatchdog(db, undefined, canaryOptions);
+    expect(sendToChatMock).toHaveBeenCalledTimes(2);
+    expect(String(sendToChatMock.mock.calls[1]?.[1] ?? "")).toContain("Canary findings recovered</b>: safety-score-v9-publication");
+    expect(JSON.parse(recovered.metadata ?? "{}").alertTransitions).toMatchObject({
+      recovered: ["canary:safety-score-v9-publication"],
+      sent: true,
+    });
+  });
 });
