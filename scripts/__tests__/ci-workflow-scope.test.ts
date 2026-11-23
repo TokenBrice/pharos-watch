@@ -707,12 +707,11 @@ describe("CI workflow scope", () => {
     expect(pagesSetup?.with).toMatchObject({ "setup-node": "false", "install-deps": "false", "workspace-artifact": "restore" });
     expect(pr.jobs.prepare.outputs?.pages_critical_css_full_pass)
       .toBe("${{ steps.classify.outputs.pages_critical_css_full_pass }}");
-    expect(pr.jobs.prepare.outputs?.pages_og_render_check)
-      .toBe("${{ steps.classify.outputs.pages_og_render_check }}");
+    expect(pr.jobs.prepare.outputs?.pages_og_render_check).toBeUndefined();
     const replay = pr.jobs["pages-artifact"].steps?.find((step) => step.env?.PR_LANE_ID === "pages-artifact");
     expect(replay?.env).toMatchObject({
       PHAROS_CRITICAL_CSS_FULL_PASS: "${{ needs.prepare.outputs.pages_critical_css_full_pass }}",
-      PHAROS_OG_RENDER_CHECK: "${{ needs.prepare.outputs.pages_og_render_check }}",
+      PHAROS_OG_RENDER_CHECK: "false",
       PHAROS_PAGES_REUSE_PREPARED_WORKSPACE: "1",
     });
   });

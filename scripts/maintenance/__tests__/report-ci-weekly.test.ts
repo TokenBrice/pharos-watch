@@ -98,7 +98,7 @@ describe("weekly CI report", () => {
     const { rows, excludedLaneJobs } = buildLaneBudgets(runs, jobs);
     const byLane = Object.fromEntries(rows.map((row) => [row.lane, row]));
     expect(rows.map((row) => row.lane)).toEqual([
-      "prepare", "v9-resource", "static-guards", "tests", "static-compile", "pages-artifact",
+      "prepare", "v9-resource", "static-guards", "og-render-check", "tests", "static-compile", "pages-artifact",
     ]);
     expect(byLane.prepare).toEqual({ lane: "prepare", budgetSeconds: 90, samples: 2, p50Seconds: 90, p90Seconds: 90, overBudget: 0 });
     expect(byLane.tests).toEqual({ lane: "tests", budgetSeconds: 200, samples: 3, p50Seconds: 240, p90Seconds: 280, overBudget: 2 });
