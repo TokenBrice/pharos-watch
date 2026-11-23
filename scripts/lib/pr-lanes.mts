@@ -15,16 +15,20 @@ function hostedTimeoutMinutes(job: string): number {
   return value;
 }
 
-export type PrLaneSelector = "always" | "code" | "pages-artifact" | "v9-resource";
+export type PrLaneSelector = "always" | "code" | "og-render-check" | "pages-artifact" | "v9-resource";
 
 export type PrLaneId =
   | "preflight"
   | "static-compile"
   | "static-guards"
+  | "og-render-check"
   | "tests"
   | "v9-resource"
   | "pages-artifact"
   | "gate";
+
+/** Gitignored temporary directory used by the PR `og-render-check` lane. */
+export const OG_RENDER_CHECK_OUT_DIR = ".tmp/og-render-check";
 
 export interface PrLaneDefinition {
   /**
@@ -56,6 +60,7 @@ export interface PrLaneCommandDefinition {
 
 export interface PrLaneSelection {
   docsOnly: boolean;
+  ogRenderCheckRequired?: boolean;
   pagesArtifactRequired?: boolean;
   testShards?: number;
   /** Missing classification selects the resource lane conservatively. */
@@ -87,8 +92,9 @@ export const PR_DOC_COMMANDS: readonly PrLaneCommandDefinition[] = [
 
 /**
  * Lane budgets are the owner's measured PR targets (test shard 200 s, Pages
- * 250 s, V9 220 s, guards 120 s, compile 150 s), not timeouts. `preflight` and
- * `gate` are seconds-long bookkeeping jobs and carry none.
+ * 250 s, V9 220 s, guards 120 s, OG render 120 s, compile 150 s), not
+ * timeouts. `preflight` and `gate` are seconds-long bookkeeping jobs and carry
+ * none.
  */
 export const PR_LANES: readonly PrLaneDefinition[] = [
   {
@@ -120,6 +126,17 @@ export const PR_LANES: readonly PrLaneDefinition[] = [
     budgetSeconds: 120,
     timeoutMinutes: 20,
     commands: [{ id: "pr-static-guards", program: "npm", args: ["run", "check:pr:static", "--", "--group=guards"] }],
+  },
+  {
+    id: "og-render-check",
+    selector: "og-render-check",
+    budgetSeconds: 120,
+    timeoutMinutes: 10,
+    commands: [{
+      id: "og-render-check",
+      program: "node",
+      args: ["--import", "tsx", "scripts/maintenance/build-og-evergreen.ts", "--out-dir", OG_RENDER_CHECK_OUT_DIR],
+    }],
   },
   {
     id: "tests",
@@ -156,6 +173,7 @@ export function isPrLaneSelected(lane: PrLaneDefinition, selection: PrLaneSelect
   switch (lane.selector) {
     case "always": return true;
     case "code": return !selection.docsOnly;
+    case "og-render-check": return selection.ogRenderCheckRequired === true;
     case "pages-artifact": return selection.pagesArtifactRequired === true;
     case "v9-resource": return selection.v9ResourceRequired !== false;
   }

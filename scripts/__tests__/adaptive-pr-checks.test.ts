@@ -190,7 +190,7 @@ describe("adaptive PR checks", () => {
       .toBe(false);
   });
 
-  it("keeps both compilers concurrent while moving every non-compile check to guards", () => {
+  it("keeps both compilers concurrent and schedules every guard in LPT parallel order", () => {
     const changedFiles = [
       "worker/src/lib/safety-score-v9/extension.ts",
       "src/lib/classification.ts",
@@ -203,6 +203,8 @@ describe("adaptive PR checks", () => {
     const partition = partitionPrStaticCheckPlan(compile.commands);
     expect(names(partition.parallel)).toEqual(["typecheck", "typecheck:worker"]);
     expect(names(partition.sequential)).toEqual(["lint:changed"]);
+    const fullLintCompile = buildPrStaticCheckPlan(["eslint.config.mjs", "worker/src/cron/x.ts"], { group: "compile" });
+    expect(names(partitionPrStaticCheckPlan(fullLintCompile.commands).sequential)).toEqual(["lint"]);
 
     const guards = buildPrStaticCheckPlan(changedFiles, { group: "guards" });
     expect(names(guards.commands)).toEqual(expect.arrayContaining([
@@ -211,9 +213,111 @@ describe("adaptive PR checks", () => {
       "check:cron-connections", "check:migrations", "check:sql-safety",
       "check:worker-config", "check:worker-package",
     ]));
-    expect(names(partitionPrStaticCheckPlan(guards.commands).parallel)).toEqual([
-      "check:generated-artifacts", "check:structural", "check:unused-code",
+    const guardPartition = partitionPrStaticCheckPlan(guards.commands);
+    expect(guardPartition.sequential).toEqual([]);
+    expect(names(guardPartition.parallel)).toEqual([
+      "check:structural",
+      "check:unused-code",
+      "check:generated-artifacts",
+      "check:env-contract",
+      "check:critical-coverage-completeness",
+      "check:worker-package",
+      "check:stablecoin-data",
+      "check:migrations",
+      "check:doc-sync",
+      "check:sql-safety",
+      "check:site-csp-sync",
+      "check:cron-connections",
+      "check:worker-config",
     ]);
+
+    const mixedDocsAndDeps = buildPrStaticCheckPlan(
+      ["package.json", "README.md", "worker/src/cron/sync-stablecoins.ts"],
+      { group: "guards" },
+    );
+    const mixedPartition = partitionPrStaticCheckPlan(mixedDocsAndDeps.commands);
+    expect(mixedPartition.sequential).toEqual([]);
+    expect(names(mixedPartition.parallel).slice(0, 8)).toEqual([
+      "check:structural",
+      "check:unused-code",
+      "check:dependency-audit",
+      "doc-ownership-invariants",
+      "check:env-contract",
+      "check:critical-coverage-completeness",
+      "check:worker-package",
+      "check:verified-doc-links",
+    ]);
+  });
+
+  it("runs guards concurrently in LPT order, preserves declaration-order lane reports, and aborts siblings on failure", async () => {
+    const changedFiles = ["worker/src/cron/sync-stablecoins.ts", "README.md"];
+    const expected = buildPrStaticCheckPlan(changedFiles, { group: "guards" }).commands;
+    const expectedLptOrder = names(partitionPrStaticCheckPlan(expected).parallel);
+
+    const started: string[] = [];
+    let active = 0;
+    let maxActive = 0;
+    const stdout = { write: vi.fn<(chunk: string) => unknown>() };
+    const code = await runPrStaticChecks({
+      argv: ["--json", "--group=guards", "--base=HEAD", "--head=HEAD"],
+      changedFiles,
+      env: { ...process.env, PR_STATIC_MAX_PARALLEL: "3" },
+      stderr: { write: vi.fn() },
+      stdout,
+      runCommandImpl: async (command) => {
+        started.push(command.scriptName);
+        active += 1;
+        maxActive = Math.max(maxActive, active);
+        // Earlier-launched heavy guards finish after later lightweight guards.
+        let ticks = expectedLptOrder.length - expectedLptOrder.indexOf(command.scriptName);
+        while (ticks-- > 0) await Promise.resolve();
+        active -= 1;
+        return { status: 0, aborted: false, output: "" };
+      },
+    });
+    expect(code).toBe(0);
+    expect(maxActive).toBe(3);
+    expect(started.slice(0, 3)).toEqual(["check:structural", "check:unused-code", "doc-ownership-invariants"]);
+    const report = JSON.parse(stdout.write.mock.calls.map(([chunk]) => chunk).join(""));
+    expect(report.lanes.map((lane: { id: string }) => lane.id)).toEqual(names(expected));
+    expect(report.lanes.every((lane: { status: string }) => lane.status === "passed")).toBe(true);
+
+    const abortedSiblings: string[] = [];
+    const failStarted: string[] = [];
+    const failStdout = { write: vi.fn<(chunk: string) => unknown>() };
+    const failCode = await runPrStaticChecks({
+      argv: ["--json", "--group=guards", "--base=HEAD", "--head=HEAD"],
+      changedFiles,
+      env: { ...process.env, PR_STATIC_MAX_PARALLEL: "3" },
+      stderr: { write: vi.fn() },
+      stdout: failStdout,
+      runCommandImpl: (command, _env, options) => {
+        failStarted.push(command.scriptName);
+        if (command.scriptName === "check:unused-code") {
+          return Promise.resolve({ status: 1, aborted: false, output: "unused export" });
+        }
+        return new Promise((resolve) => {
+          const onAbort = () => {
+            abortedSiblings.push(command.scriptName);
+            resolve({ status: 130, aborted: true, output: "" });
+          };
+          if (options?.signal?.aborted) onAbort();
+          else options?.signal?.addEventListener("abort", onAbort, { once: true });
+        });
+      },
+    });
+    expect(failCode).toBe(1);
+    expect(failStarted).toEqual(["check:structural", "check:unused-code", "doc-ownership-invariants"]);
+    expect(abortedSiblings.sort()).toEqual(["check:structural", "doc-ownership-invariants"]);
+    const failReport = JSON.parse(failStdout.write.mock.calls.map(([chunk]) => chunk).join(""));
+    expect(failReport.status).toBe("failed");
+    expect(failReport.lanes.map((lane: { id: string }) => lane.id)).toEqual(names(expected));
+    expect(failReport.lanes.find((lane: { id: string }) => lane.id === "check:unused-code")?.status).toBe("failed");
+    expect(
+      failReport.lanes
+        .filter((lane: { id: string }) => lane.id !== "check:unused-code")
+        .every((lane: { status: string }) => lane.status === "skipped"),
+    ).toBe(true);
   });
 
   it.each(["compile", "guards"] as const)("executes only the %s group with unchanged range arguments", async (group) => {

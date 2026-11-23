@@ -1,2502 +1,986 @@
 import { describe, expect, it } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { DEX_ROUTE_CAPABILITY_MATRIX_VERSION } from "@shared/lib/p4-exit-route-capability-policy";
-import { DEX_MEASURED_ADAPTER_PROFILE_IDS } from "@shared/types/measured-execution";
-import { evaluateV9Exit, projectV9ExitEvaluationRoute, resolveV9DistinctExitCapacity } from "@shared/lib/safety-score-v9/exit";
-import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import {
-  getRedemptionBackstopConfig,
-  resolveReviewedRedemptionSettlement,
-  type RedemptionBackstopConfig,
-} from "@shared/lib/redemption-backstops";
+import { DEX_MEASURED_ADAPTER_PROFILE_IDS as PROF_IDS } from "@shared/types/measured-execution";
+import { evaluateV9Exit as evalExit, projectV9ExitEvaluationRoute as projExit, resolveV9DistinctExitCapacity as distCap } from "@shared/lib/safety-score-v9/exit";
+import { V9_CANDIDATE_POLICY_V1 as POL } from "@shared/lib/safety-score-v9/policy";
+import { getRedemptionBackstopConfig as getCfg, resolveReviewedRedemptionSettlement as resSettle, type RedemptionBackstopConfig as Cfg } from "@shared/lib/redemption-backstops";
 import { fixedFee } from "@shared/lib/redemption-backstop-configs/shared";
-import type { ExitExecutionCertificate, ExitRouteObservation } from "@shared/types/exit-route";
-import { asRawDeviationBps, type ReferenceAdmission } from "@shared/types/reference-admission";
-import { evaluateReferenceAdmission, REFERENCE_INTRADAY_BUDGET_SEC } from "@shared/lib/reference-admission";
-import type { RedemptionBackstopEntry } from "@shared/types/redemption";
-import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
-import type { SafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
-import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
-import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension";
-import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
-import { makeV9FixedInput, makeV9Extension, makeV9QueuedRedemptionFixedInput } from "../../test-helpers/v9-fixed-input";
+import type { ExitExecutionCertificate as ExecCert, ExitRouteObservation as RouteObs } from "@shared/types/exit-route";
+import { asRawDeviationBps, type ReferenceAdmission as RefAdm } from "@shared/types/reference-admission";
+import { evaluateReferenceAdmission as evalRef, REFERENCE_INTRADAY_BUDGET_SEC as INTRADAY_SEC } from "@shared/lib/reference-admission";
+import type { RedemptionBackstopEntry as RedEnt } from "@shared/types/redemption";
+import type { ReportCardsFixedInput as FixedIn } from "../report-cards-fixed-input";
+import type { SafetyScoreV9CompilerInput as CompIn } from "../safety-score-v9/native-input";
+import { createReportCardsFixedInput as mkFixedIn } from "../../test-helpers/report-cards-fixed-input";
+import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput as buildBaseExt } from "../safety-score-v9/extension";
+import { compileSafetyScoreV9FactSetFromFixedInput as compileFacts } from "../safety-score-v9/fact-set";
+import { makeV9FixedInput as mkFixed, makeV9Extension as mkExt, makeV9QueuedRedemptionFixedInput as mkQueued } from "../../test-helpers/v9-fixed-input";
 import { rebuildFixed } from "./safety-score-v9-fact-set.test-support";
-import {
-  buildSafetyScoreV9RetainedRedemptionRoutes,
-  buildSafetyScoreV9RetainedRoutes,
-  buildSafetyScoreV9RouteReviews,
-} from "../safety-score-v9/extension-routes";
-import { buildRedemptionExitRouteObservation } from "../redemption-exit-route-observations";
-import { makeSupplyFullRedemption } from "./redemption-backstops-store.test-support";
-import { dexRouteObservation, withRedemptionBackstopConfig } from "./safety-score-v9-extension-routes.test-support";
+import { buildSafetyScoreV9RetainedRedemptionRoutes as retRed, buildSafetyScoreV9RetainedRoutes as retRoutes, buildSafetyScoreV9RouteReviews as routeRevs } from "../safety-score-v9/extension-routes";
+import { buildRedemptionExitRouteObservation as buildRedObs } from "../redemption-exit-route-observations";
+import { makeSupplyFullRedemption as mkFull } from "./redemption-backstops-store.test-support";
+import { dexRouteObservation as dexObs, withRedemptionBackstopConfig as withCfg } from "./safety-score-v9-extension-routes.test-support";
 import { makeExitRoute } from "@shared/lib/__tests__/safety-score-v9-exit.test-support";
-import { makeExecutionCertificate } from "@shared/lib/__tests__/safety-score-v9-exit-execution.test-support";
-import { exitExecutionInputGenerationId, exitExecutionReviewDigest, validateExitExecutionModelReviews } from "@shared/lib/safety-score-v9/exit-execution";
+import { makeExecutionCertificate as mkCert } from "@shared/lib/__tests__/safety-score-v9-exit-execution.test-support";
+import { exitExecutionInputGenerationId as execInGen, exitExecutionReviewDigest as execRevDig, validateExitExecutionModelReviews as valExecRevs } from "@shared/lib/safety-score-v9/exit-execution";
 import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import executionReviews from "@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json";
 
-const NOW = Date.UTC(2026, 6, 13) / 1_000;
-const V9_FIXTURE_CLOCK = Date.UTC(2027, 0, 1) / 1_000;
+const utc = (...a: Parameters<typeof Date.UTC>) => Date.UTC(...a) / 1e3;
+const iso = (s: string) => Date.parse(s) / 1e3;
+const NOW = utc(2026, 6, 13), V9_CLK = utc(2027, 0, 1), DAY = 86_400;
+const USDC = "usdc-circle", USDT = "usdt-tether", DAI = "dai-makerdao", THBILL = "thbill-theo", EURC = "eurc-circle", USDAF = "usdaf-asymmetry";
+const USD = { kind: "fiat" as const, currency: "USD" };
+const trk = (...trackedAssetIds: string[]) => ({ kind: "tracked-stablecoin" as const, trackedAssetIds });
+const outPx = (priceUsd: number, ov: Record<string, unknown> = {}) => ({ priceUsd, sourceId: "coingecko", observedAtSec: NOW, confidence: "high" as const, admission: "multi-source" as const, ...ov });
+const rev0 = (input: CompIn, id: string) => routeRevs(input, id)[0]!;
+const val0 = (input: CompIn, id: string) => rev0(input, id)?.output?.valuation;
+const setObs = (r: RedEnt, obs: RouteObs[]) => { r.capacityProfile = { ...r.capacityProfile!, exitRouteObservations: obs }; };
+const setRawPeg = (f: FixedIn, p: Record<string, unknown>) => { (f as { pegDataById: Record<string, unknown> }).pegDataById = p; };
+const setDex = (f: FixedIn, m: Record<string, unknown>) => { (f as { dexLiqMap: Record<string, unknown> }).dexLiqMap = m; };
+const costPts = (pairs: readonly [number, number][]) => pairs.map(([requestedNotionalUsd, executionCostBps]) => ({ requestedNotionalUsd, maxCostBps: 200, executionCostBps }));
 
-function singleObservationDexLiquidity(route: ExitRouteObservation): Record<string, unknown> {
-  return {
-    exitRouteObservations: [route],
-    exitRouteObservationCoverage: {
-      status: "populated",
-      capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION,
-      retainedPoolCount: 1,
-      observationCount: 1,
-      scoreEligibleObservationCount: 1,
-      scoreEligiblePoolCount: 1,
-      scoreEligibleCapabilityPoolCount: 1,
-      unsupportedPoolCount: 0,
-      evidenceCounts: { "reserve-based-amm-simulation": 1 },
-      unsupportedReasons: {},
-    },
-  };
+const singleDex = (route: RouteObs): Record<string, unknown> => ({
+  exitRouteObservations: [route],
+  exitRouteObservationCoverage: {
+    status: "populated", capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION, retainedPoolCount: 1,
+    observationCount: 1, scoreEligibleObservationCount: 1, scoreEligiblePoolCount: 1, scoreEligibleCapabilityPoolCount: 1,
+    unsupportedPoolCount: 0, evidenceCounts: { "reserve-based-amm-simulation": 1 }, unsupportedReasons: {},
+  },
+});
+
+const stub = (row: RedEnt | undefined, clockSec = NOW): FixedIn => ({
+  clockSec, dexGenerationId: "dex-liquidity-1", redemptionGenerationId: "redemption-backstops-1",
+  dexLiqMap: {}, redemptionBackstopMap: row ? { [row.stablecoinId]: row } : {}, pegDataById: {},
+}) as unknown as FixedIn;
+
+const obs0 = (row: RedEnt, clockSec = NOW) => retRed(stub(row, clockSec), row.stablecoinId)[0]!.observation;
+
+function setPeg(f: FixedIn, map: Record<string, unknown>): void {
+  setRawPeg(f, Object.fromEntries(Object.entries(map).map(([id, peg]) => [id, { priceObservedAt: f.clockSec - 30, ...(peg as object) }])));
 }
 
-function fixedInputStub(
-  row: RedemptionBackstopEntry | undefined,
-  clockSec = NOW,
-): ReportCardsFixedInput {
-  return {
-    clockSec,
-    dexGenerationId: "dex-liquidity-1",
-    redemptionGenerationId: "redemption-backstops-1",
-    dexLiqMap: {},
-    redemptionBackstopMap: row ? { [row.stablecoinId]: row } : {},
-    pegDataById: {},
-  } as unknown as ReportCardsFixedInput;
+function withFx(f: FixedIn, id: string) {
+  const c = f.clockSec;
+  return Object.assign(f, { pegEvidenceById: { [id]: { referenceAdmission: {
+    status: "admitted", reason: "live-reference", kind: "fx", source: "openExchangeRates", cadence: "intraday",
+    quoteObservedAtSec: f.pegDataById[id]!.priceObservedAt!, referenceObservedAtSec: c - 60,
+    decisionAtSec: c, budgetSec: 21_600, generation: "fixture-fx", sessionOpenedAtSec: null, policyVersion: 1,
+  } satisfies RefAdm } } });
 }
 
-function setPegData(fixedInput: ReportCardsFixedInput, pegDataById: Record<string, unknown>): void {
-  const mutableFixedInput = fixedInput as unknown as { pegDataById: Record<string, unknown> };
-  mutableFixedInput.pegDataById = Object.fromEntries(Object.entries(pegDataById).map(([id, peg]) =>
-    [id, { priceObservedAt: fixedInput.clockSec - 30, ...(peg as object) }]));
-}
-
-function withCurrentFx(fixedInput: ReportCardsFixedInput, assetId: string) {
-  const clock = fixedInput.clockSec;
-  const quoteObservedAtSec = fixedInput.pegDataById[assetId]!.priceObservedAt!;
-  return Object.assign(fixedInput, { pegEvidenceById: { [assetId]: { referenceAdmission: {
-    status: "admitted", reason: "live-reference", kind: "fx", source: "openExchangeRates",
-    cadence: "intraday", quoteObservedAtSec, referenceObservedAtSec: clock - 60,
-    decisionAtSec: clock, budgetSec: 21_600, generation: "fixture-fx", sessionOpenedAtSec: null, policyVersion: 1,
-  } satisfies ReferenceAdmission } } });
-}
-
-function redemptionPegFixture({
-  rowOverrides,
-  output,
-  pegDataById,
-  clockSec = NOW,
-  observationClockSec,
-}: {
-  rowOverrides: Partial<RedemptionBackstopEntry>;
-  output?: ExitRouteObservation["output"];
-  pegDataById?: Record<string, unknown>;
-  clockSec?: number;
-  observationClockSec?: number;
+function redFx({ rowOverrides, output, pegDataById, clockSec = NOW, observationClockSec }: {
+  rowOverrides: Partial<RedEnt>; output?: RouteObs["output"]; pegDataById?: Record<string, unknown>; clockSec?: number; observationClockSec?: number;
 }) {
-  const row = makeSupplyFullRedemption(rowOverrides);
-  const observationInput = fixedInputStub(row, observationClockSec ?? clockSec);
-  const observation = buildSafetyScoreV9RetainedRedemptionRoutes(
-    observationInput,
-    row.stablecoinId,
-  )[0]!.observation;
-  row.capacityProfile = {
-    ...row.capacityProfile!,
-    exitRouteObservations: [{ ...observation, ...(output ? { output } : {}) }],
-  };
-  const fixedInput = fixedInputStub(row, clockSec);
-  setPegData(fixedInput, pegDataById ?? {});
+  const row = mkFull(rowOverrides);
+  setObs(row, [{ ...obs0(row, observationClockSec ?? clockSec), ...(output ? { output } : {}) }]);
+  const fixedInput = stub(row, clockSec);
+  setPeg(fixedInput, pegDataById ?? {});
   return { fixedInput, row };
 }
 
-describe("reviewed settlement output binding", () => {
-  it("keys a venue-scoped redemption observation by venue and protocol so shared inventory dedupes", () => {
-    const row = makeSupplyFullRedemption({ stablecoinId: "usdc-circle" });
-    const observation = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(row), row.stablecoinId)[0]!.observation;
-    row.capacityProfile = { ...row.capacityProfile!, exitRouteObservations: [{
-      ...observation, scope: { kind: "venue", venue: "reservoir-psm", protocol: "reservoir" },
-    }] };
-    const review = buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]!;
-    // A redemption observation whose reviewed scope is a venue shares the
-    // venue/protocol physical inventory rather than inventing a new resource.
-    expect(review.physicalResourceKeys).toContain("venue:reservoir-psm:reservoir");
-  });
-
-  it("deduplicates Reservoir wrappers against one shared physical PSM inventory", () => {
-    const key = "ethereum:reservoir-psm:0x4809010926aec940b550d34a46a52739f996d75d";
-    const routes = ["rusd-reservoir", "srusd-reservoir", "wsrusd-reservoir"].map((stablecoinId) => {
-      const row = makeSupplyFullRedemption({ stablecoinId });
-      const observation = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(row), stablecoinId)[0]!.observation;
-      row.capacityProfile = { ...row.capacityProfile!, exitRouteObservations: [{
-        ...observation, sharedResourceKey: key,
-      }] };
-      const review = buildSafetyScoreV9RouteReviews(fixedInputStub(row), stablecoinId)[0]!;
-      expect(review.physicalResourceKeys).toContain(key);
-      return makeExitRoute({ routeKey: stablecoinId, routeId: observation.routeId,
-        physicalResourceKeys: review.physicalResourceKeys });
-    });
-    const capacity = resolveV9DistinctExitCapacity(routes, {
-      requestedNotionalUsd: 100_000, maxCostBps: 200, comparisonWindowSec: 300, rawSupplyRequestUsd: 100_000,
-    }, V9_CANDIDATE_POLICY_V1);
-    expect(capacity.includedRouteKeys).toHaveLength(3);
-    expect(capacity.valuedExecutableUsd).toBe(100_000);
-  });
-  it.each([
-    { output: { kind: "fiat" as const, currency: "USD" }, sla: null },
-    { output: { kind: "tracked-stablecoin" as const, trackedAssetIds: ["usdc-circle"] }, sla: null },
-    { output: { kind: "tracked-stablecoin" as const, trackedAssetIds: ["usdon-ondo"] }, sla: 3600 },
-  ])("does not lend the USDon instant SLA to a different captured endpoint ($output.kind)", ({ output, sla }) => {
-    const { fixedInput } = redemptionPegFixture({
-      rowOverrides: { stablecoinId: "slvon-ondo", settlementModel: "days", outputAssetType: "nav" },
-      output,
-      clockSec: Date.UTC(2026, 9, 5, 12) / 1_000,
-    });
-    const review = buildSafetyScoreV9RouteReviews(fixedInput, "slvon-ondo")[0]!;
-    expect(review.settlementSlaSec).toBe(sla);
-    expect(review.settlementModel).toBe("bounded-delay");
-  });
-});
-
-function dexPegFixture({
-  assetId,
-  routeOverrides,
-  pegDataById = {},
-  clockSec = NOW,
-}: {
-  assetId: string;
-  routeOverrides: Pick<ExitRouteObservation, "routeId" | "output"> & Partial<ExitRouteObservation>;
-  pegDataById?: Record<string, unknown>;
-  clockSec?: number;
+function dexFx({ assetId, routeOverrides, pegDataById = {}, clockSec = NOW }: {
+  assetId: string; routeOverrides: Pick<RouteObs, "routeId" | "output"> & Partial<RouteObs>; pegDataById?: Record<string, unknown>; clockSec?: number;
 }) {
-  const fixedInput = fixedInputStub(undefined, clockSec);
-  const route = dexRouteObservation(clockSec, routeOverrides);
-  (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = {
-    [assetId]: singleObservationDexLiquidity(route),
-  };
-  setPegData(fixedInput, pegDataById);
+  const fixedInput = stub(undefined, clockSec), route = dexObs(clockSec, routeOverrides);
+  setDex(fixedInput, { [assetId]: singleDex(route) });
+  setPeg(fixedInput, pegDataById);
   return { fixedInput, route };
 }
 
-function certifiedDexFixture() {
-  const { fixedInput, route } = dexPegFixture({
-    assetId: "alpha",
-    routeOverrides: {
-      routeId: "dex:alpha:certified-basket",
-      maxCostBps: 500,
-      output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdc-circle", "usdt-tether"] },
-    },
-  });
-  const outputLeg = {
-    assetKey: "usdc-circle", deployment: "ethereum:usdc", rawUnits: "300000000000",
-    decimals: 6, unitValueUsd: 0.9, expectedUnitValueUsd: 1, sourceId: "fixture:price",
-    sourceGenerationId: "fixture:price:1", observedAtSec: NOW - 5,
-  };
-  const certificate: ExitExecutionCertificate = {
+function certDexFx() {
+  const { fixedInput, route } = dexFx({ assetId: "alpha", routeOverrides: { routeId: "dex:alpha:certified-basket", maxCostBps: 500, output: trk(USDC, USDT) } });
+  const leg = { assetKey: USDC, deployment: "ethereum:usdc", rawUnits: "300000000000", decimals: 6, unitValueUsd: 0.9, expectedUnitValueUsd: 1, sourceId: "fixture:price", sourceGenerationId: "fixture:price:1", observedAtSec: NOW - 5 };
+  const certificate: ExecCert = {
     modelId: "stable-basket-withdraw", reviewDigest: "a".repeat(64),
-    identity: {
-      assetId: "alpha", deployment: "ethereum:alpha", endpoint: "withdraw",
-      outputAssetKeys: ["usdc-circle", "usdt-tether"], implementationIdentity: "fixture:implementation",
-    },
-    inputGenerationId: "fixture:input:1", observationGenerationId: "fixture:execution:1",
-    observedAtSec: NOW, sourceMaxAgeSec: 300, priceMaxAgeSec: 300,
+    identity: { assetId: "alpha", deployment: "ethereum:alpha", endpoint: "withdraw", outputAssetKeys: [USDC, USDT], implementationIdentity: "fixture:implementation" },
+    inputGenerationId: "fixture:input:1", observationGenerationId: "fixture:execution:1", observedAtSec: NOW, sourceMaxAgeSec: 300, priceMaxAgeSec: 300,
     source: { kind: "block", number: 100, hash: "fixture:block", timestamp: NOW, complete: true, truncated: false },
     holder: "any-holder", prerequisites: [],
     gates: [{ gateId: "execution", verdict: "passed", evidenceId: "fixture:execution", observedAtSec: NOW, reason: null }],
-    inputReference: { ...outputLeg, assetKey: "alpha", deployment: "ethereum:alpha", unitValueUsd: 1 },
-    feeReferences: [],
+    inputReference: { ...leg, assetKey: "alpha", deployment: "ethereum:alpha", unitValueUsd: 1 }, feeReferences: [],
     points: [{
-      requestedNotionalUsd: route.requestedNotionalUsd, maxCostBps: route.maxCostBps,
-      requestedRawInput: "1000000000000", executedRawInput: "900000000000",
-      executableUsd: 900_000, executionCostBps: 20, allInCostBps: 400, fees: [],
-      outputs: [
-        outputLeg,
-        { ...outputLeg, assetKey: "usdt-tether", deployment: "ethereum:usdt",
-          rawUnits: "300000000000000000000000", decimals: 18,
-          unitValueUsd: 2, expectedUnitValueUsd: 2, observedAtSec: NOW - 10 },
-      ],
-      certification: "exact-lower-bound", reason: null,
+      requestedNotionalUsd: route.requestedNotionalUsd, maxCostBps: route.maxCostBps, requestedRawInput: "1000000000000", executedRawInput: "900000000000",
+      executableUsd: 9e5, executionCostBps: 20, allInCostBps: 400, fees: [], certification: "exact-lower-bound", reason: null,
+      outputs: [leg, { ...leg, assetKey: USDT, deployment: "ethereum:usdt", rawUnits: "300000000000000000000000", decimals: 18, unitValueUsd: 2, expectedUnitValueUsd: 2, observedAtSec: NOW - 10 }],
     }],
-    capacityBasis: "transaction-simulation",
-    settlement: { endpoint: "withdraw", maximumCompletionSec: 0, evidenceId: "fixture:settlement" },
+    capacityBasis: "transaction-simulation", settlement: { endpoint: "withdraw", maximumCompletionSec: 0, evidenceId: "fixture:settlement" },
     resourceKeys: ["pool:ethereum:certified-basket"], failureDomainKeys: ["protocol:fixture"],
   };
   route.executionCertificate = certificate;
   return { fixedInput, route, certificate };
 }
 
-describe("same-resource Exit alternatives", () => {
-  function compileAlternatives(observations: ExitRouteObservation[]) {
-    const fixed = makeV9FixedInput({
-      clockSec: NOW, aggregateCirculating: { peggedUSD: 2_000_000 },
-      chainSupplyByChain: { ethereum: {
-        current: 2_000_000, circulatingPrevDay: 2_000_000,
-        circulatingPrevWeek: 2_000_000, circulatingPrevMonth: 2_000_000,
-      } },
+const withTerms = <T,>(id: string, v9RouteReviewTerms: NonNullable<Cfg["v9RouteReviewTerms"]>, run: () => T): T => withCfg(id, { v9RouteReviewTerms }, run);
+const FAST_SETTLE = { settlementModel: "days", settlementDelaySec: 2 * DAY, reviewedAt: "2026-07-01", docs: [{ label: "Issuer redemption terms", url: "https://example.com/redemption-terms", supports: ["settlement"] }] } satisfies NonNullable<Cfg["v9RouteReviewTerms"]>;
+
+function navOutputIn(navObservedAtSec: number): FixedIn {
+  const route = dexObs(V9_CLK, { routeId: `dex:${USDAF}:dl:ethereum%3Apool:ethereum%3Athbill-output`, output: trk(THBILL) });
+  return mkFixedIn({
+    captureKind: "public-reconstruction", activeAssetIds: [USDAF], capturedAt: new Date(V9_CLK * 1e3).toISOString(),
+    sourceGeneration: "report-cards:nav-output-fixture", dexGenerationId: "dex-liquidity-nav-output-fixture", redemptionGenerationId: "redemption-backstops-unavailable",
+    registryRevision: "registry:nav-output-fixture", methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION, clockSec: V9_CLK, updatedAt: V9_CLK,
+    liquidityStale: false, redemptionStale: true,
+    inputFreshness: { dexLiquidity: { updatedAt: V9_CLK, ageSeconds: 0, stale: false }, redemptionBackstops: { updatedAt: null, ageSeconds: null, stale: true } },
+    pegDataById: {}, navPriceById: { [THBILL]: { priceUsd: 1.0188, sourceId: "defillama-contract", observedAtSec: navObservedAtSec, confidence: "high" } },
+    activeDepegPeakBpsById: {},
+    dexLiqMap: { [USDAF]: { liquidityScore: 50, concentrationHhi: 0.5, poolCount: 1, chainCount: 1, ...singleDex(route), methodologyVersion: "dex:fixture-v1", updatedAt: V9_CLK } },
+    redemptionBackstopMap: {}, bluechipMap: {}, resolvedBlacklistStatuses: { [USDAF]: false },
+    liveReserveMap: {}, liveReserveProvenanceMap: {}, chainCirculatingById: {}, dexDeploymentSupplyCoverageById: {}, collateralDriftCoins: [], liveToFallbackCoins: [],
+  });
+}
+
+function liveDirect(routeStatusSource: RedEnt["routeStatusSource"]): RedEnt {
+  const row = mkFull();
+  return {
+    ...row, sourceMode: "dynamic", capacityConfidence: "live-direct", capacityKind: "live-direct-bounded", routeStatusSource, modelConfidence: "high",
+    capacityProfile: { ...row.capacityProfile!, exitRouteObservations: [{ ...obs0(row), evidenceKind: "onchain-contract-state", confidence: "high", scoreEligible: true }] },
+  };
+}
+
+describe("reviewed settlement output binding", () => {
+  it("keys a venue-scoped redemption observation by venue and protocol so shared inventory dedupes", () => {
+    const row = mkFull({ stablecoinId: USDC });
+    setObs(row, [{ ...obs0(row), scope: { kind: "venue", venue: "reservoir-psm", protocol: "reservoir" } }]);
+    expect(rev0(stub(row), USDC).physicalResourceKeys).toContain("venue:reservoir-psm:reservoir");
+  });
+
+  it("deduplicates Reservoir wrappers against one shared physical PSM inventory", () => {
+    const key = "ethereum:reservoir-psm:0x4809010926aec940b550d34a46a52739f996d75d";
+    const routes = ["rusd-reservoir", "srusd-reservoir", "wsrusd-reservoir"].map((id) => {
+      const row = mkFull({ stablecoinId: id }), obs = obs0(row);
+      setObs(row, [{ ...obs, sharedResourceKey: key }]);
+      const rev = rev0(stub(row), id);
+      expect(rev.physicalResourceKeys).toContain(key);
+      return makeExitRoute({ routeKey: id, routeId: obs.routeId, physicalResourceKeys: rev.physicalResourceKeys });
     });
+    const cap = distCap(routes, { requestedNotionalUsd: 1e5, maxCostBps: 200, comparisonWindowSec: 300, rawSupplyRequestUsd: 1e5 }, POL);
+    expect(cap.includedRouteKeys).toHaveLength(3); expect(cap.valuedExecutableUsd).toBe(1e5);
+  });
+
+  it.each([[USD, null], [trk(USDC), null], [trk("usdon-ondo"), 3600]] as const)("does not lend the USDon instant SLA to a different captured endpoint (%j)", (output, sla) => {
+    const { fixedInput } = redFx({ rowOverrides: { stablecoinId: "slvon-ondo", settlementModel: "days", outputAssetType: "nav" }, output, clockSec: utc(2026, 9, 5, 12) });
+    expect(rev0(fixedInput, "slvon-ondo")).toMatchObject({ settlementSlaSec: sla, settlementModel: "bounded-delay" });
+  });
+});
+
+describe("same-resource Exit alternatives", () => {
+  function compileAlts(observations: RouteObs[]) {
+    const fixed = mkFixed({ clockSec: NOW, aggregateCirculating: { peggedUSD: 2e6 }, chainSupplyByChain: { ethereum: { current: 2e6, circulatingPrevDay: 2e6, circulatingPrevWeek: 2e6, circulatingPrevMonth: 2e6 } } });
     fixed.dexLiqMap.alpha!.exitRouteObservations = observations;
-    const coverage = fixed.dexLiqMap.alpha!.exitRouteObservationCoverage!;
-    coverage.observationCount = observations.length;
-    coverage.scoreEligibleObservationCount = observations.filter((route) => route.scoreEligible).length;
-    const rebuilt = rebuildFixed(fixed);
-    const extension = makeV9Extension({ clockSec: NOW, registryFingerprint: rebuilt.registryFingerprint });
-    extension.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(rebuilt, "alpha");
-    const asset = compileSafetyScoreV9FactSetFromFixedInput(rebuilt, extension).assets[0]!;
-    const routes = asset.exitRoutes.map((route) => ({ ...projectV9ExitEvaluationRoute(route), gaps: asset.gaps }));
-    const result = evaluateV9Exit({
-      circulatingUsd: asset.supply.circulatingUsd, portfolioStatus: "reviewed-complete",
-      routes, gaps: asset.gaps,
-    }, V9_CANDIDATE_POLICY_V1);
-    return { routes, result };
+    const cov = fixed.dexLiqMap.alpha!.exitRouteObservationCoverage!;
+    cov.observationCount = observations.length; cov.scoreEligibleObservationCount = observations.filter((r) => r.scoreEligible).length;
+    const reb = rebuildFixed(fixed), ext = mkExt({ clockSec: NOW, registryFingerprint: reb.registryFingerprint });
+    ext.assets[0]!.routeReviews = routeRevs(reb, "alpha");
+    const asset = compileFacts(reb, ext).assets[0]!;
+    const routes = asset.exitRoutes.map((r) => ({ ...projExit(r), gaps: asset.gaps }));
+    return { routes, result: evalExit({ circulatingUsd: asset.supply.circulatingUsd, portfolioStatus: "reviewed-complete", routes, gaps: asset.gaps }, POL) };
   }
 
-  it.each(["stale", "diagnostic", "weaker"] as const)(
-    "keeps the current stronger singleton when a %s observation shares its pool",
-    (kind) => {
-      for (const reverseIds of [false, true]) {
-        const strong = dexRouteObservation(NOW, {
-          routeId: reverseIds ? "dex:a" : "dex:z", requestedNotionalUsd: 100_000,
-          executableUsd: 90_000, completionRatio: 0.9, executionCostBps: 10,
-          output: { kind: "fiat", currency: "USD" },
-        });
-        const other = { ...strong, routeId: reverseIds ? "dex:z" : "dex:a",
-          executableUsd: 10_000, completionRatio: 0.1,
-          ...(kind === "stale" ? { observedAt: NOW - 501, freshnessSeconds: 501 } : {}),
-          ...(kind === "diagnostic" ? { scoreEligible: false } : {}),
-        };
-        const singleton = compileAlternatives([strong]);
-        for (const observations of [[other, strong], [strong, other]]) {
-          const { routes, result } = compileAlternatives(observations);
-          expect(result).toMatchObject({
-            score: singleton.result.score, primaryRouteKey: singleton.result.primaryRouteKey,
-            diversificationRouteKey: null, diversificationBonus: 0,
-          });
-          expect(result.primaryRouteKey).not.toBeNull();
-          expect(result.routes.find((route) => route.routeKey === singleton.result.primaryRouteKey)!.included).toBe(true);
-          const capacity = resolveV9DistinctExitCapacity(routes, result.stressRequest!, V9_CANDIDATE_POLICY_V1);
-          expect(capacity.valuedExecutableUsd).toBe(90_000);
-          if (kind !== "weaker") expect(capacity.includedRouteKeys).toHaveLength(1);
-          else expect(capacity.includedRouteKeys).toHaveLength(2);
-        }
+  it.each(["stale", "diagnostic", "weaker"] as const)("keeps the current stronger singleton when a %s observation shares its pool", (kind) => {
+    for (const rev of [false, true]) {
+      const strong = dexObs(NOW, { routeId: rev ? "dex:a" : "dex:z", requestedNotionalUsd: 1e5, executableUsd: 9e4, completionRatio: 0.9, executionCostBps: 10, output: USD });
+      const other = { ...strong, routeId: rev ? "dex:z" : "dex:a", executableUsd: 1e4, completionRatio: 0.1, ...(kind === "stale" ? { observedAt: NOW - 501, freshnessSeconds: 501 } : {}), ...(kind === "diagnostic" ? { scoreEligible: false } : {}) };
+      const single = compileAlts([strong]);
+      for (const list of [[other, strong], [strong, other]]) {
+        const { routes, result } = compileAlts(list);
+        expect(result).toMatchObject({ score: single.result.score, primaryRouteKey: single.result.primaryRouteKey, diversificationRouteKey: null, diversificationBonus: 0 });
+        expect(result.primaryRouteKey).not.toBeNull();
+        expect(result.routes.find((r) => r.routeKey === single.result.primaryRouteKey)!.included).toBe(true);
+        const cap = distCap(routes, result.stressRequest!, POL);
+        expect(cap.valuedExecutableUsd).toBe(9e4); expect(cap.includedRouteKeys).toHaveLength(kind === "weaker" ? 2 : 1);
       }
-    },
-  );
+    }
+  });
 
-  it.each(["neither", "dex", "redemption", "both"] as const)(
-    "preserves cross-lane alternatives without duplicate capacity (%s certified)",
-    (certifiedLane) => {
-      const review = validateExitExecutionModelReviews(executionReviews, V9_CANDIDATE_POLICY_V1)
-        .find((entry) => entry.identity.assetId === "susds-sky")!;
-      const clockSec = Math.ceil(Date.parse(review.reviewedAt) / 1000);
-      const model = V9_CANDIDATE_POLICY_V1.policy.semantic.exit.executionModels[review.modelId]!;
-      const certificate = makeExecutionCertificate();
-      Object.assign(certificate, {
-        modelId: review.modelId, identity: review.identity, holder: review.holder,
-        reviewDigest: exitExecutionReviewDigest(review), observedAtSec: clockSec,
-        sourceMaxAgeSec: model.sourceMaxAgeSec, priceMaxAgeSec: model.priceMaxAgeSec,
-        resourceKeys: ["pool:ethereum:pool"],
+  it.each(["neither", "dex", "redemption", "both"] as const)("preserves cross-lane alternatives without duplicate capacity (%s certified)", (certLane) => {
+    const rev = valExecRevs(executionReviews, POL).find((e) => e.identity.assetId === "susds-sky")!;
+    const clk = Math.ceil(iso(rev.reviewedAt)), mod = POL.policy.semantic.exit.executionModels[rev.modelId]!, cert = mkCert();
+    Object.assign(cert, { modelId: rev.modelId, identity: rev.identity, holder: rev.holder, reviewDigest: execRevDig(rev), observedAtSec: clk, sourceMaxAgeSec: mod.sourceMaxAgeSec, priceMaxAgeSec: mod.priceMaxAgeSec, resourceKeys: ["pool:ethereum:pool"] });
+    cert.source.timestamp = clk;
+    cert.observationGenerationId = domainDigest("safety-score-v10.exit-execution-source.v1", cert.source);
+    Object.assign(cert.inputReference, { assetKey: rev.identity.assetId, deployment: rev.identity.deployment, decimals: rev.producer.inputDecimals, observedAtSec: clk });
+    cert.inputGenerationId = execInGen(rev.identity.assetId, { requestedNotionalUsd: 1e5, maxCostBps: 200 }, cert.inputReference);
+    cert.gates = mod.requiredGates.map((gateId) => ({ gateId, verdict: "passed", evidenceId: `observed:${gateId}`, observedAtSec: clk, reason: null }));
+    Object.assign(cert.points[0]!, { requestedRawInput: "100000000000000000000000", executedRawInput: "100000000000000000000000", fees: [] });
+    Object.assign(cert.points[0]!.outputs[0]!, { assetKey: rev.identity.outputAssetKeys[0], deployment: `${rev.producer.chain}:${rev.producer.outputToken}`, decimals: rev.producer.outputDecimals, observedAtSec: clk, rawUnits: "99900000000000000000000" });
+    const obsList = (["dex", "redemption"] as const).map((lane) => dexObs(clk, {
+      routeId: `${lane}:alternative`, routeFamily: lane === "dex" ? "dex-amm" : "protocol-redemption",
+      requestedNotionalUsd: 1e5, executableUsd: 1e5, completionRatio: 1, executionCostBps: 10, output: USD,
+      ...(certLane === lane || certLane === "both" ? { executionCertificate: cert } : {}),
+    }));
+    const row = mkFull({ stablecoinId: rev.identity.assetId });
+    setObs(row, [obsList[1]!]);
+    const fixed = stub(row, clk);
+    Object.assign(fixed.dexLiqMap, { [row.stablecoinId]: singleDex(obsList[0]!) });
+    const revs = routeRevs(fixed, row.stablecoinId);
+    expect(revs).toHaveLength(2); expect(revs.every((r) => r.coverageClass !== "diagnostic")).toBe(true);
+    const routes = revs.map((r) => {
+      const obs = obsList.find((e) => e.routeId === r.routeId)!;
+      return makeExitRoute({
+        lane: r.lane, routeId: r.routeId, routeKey: `${r.lane}:${r.routeId}`, routeFamily: obs.routeFamily,
+        evidenceKind: r.lane === "dex" ? "reserve-based-amm-simulation" : "onchain-contract-state",
+        coverageClass: r.coverageClass, physicalResourceKeys: r.physicalResourceKeys, failureDomains: [`domain:${r.lane}`],
+        ...(obs.executionCertificate ? { executionModelId: cert.modelId, executionCertificate: cert, capacityCurve: [{ requestedNotionalUsd: 1e5, maxCostBps: 200, executableUsd: 1e5, completionRatio: 1, executionCostBps: 10 }] } : {}),
       });
-      certificate.source.timestamp = clockSec;
-      certificate.observationGenerationId = domainDigest("safety-score-v10.exit-execution-source.v1", certificate.source);
-      Object.assign(certificate.inputReference, {
-        assetKey: review.identity.assetId, deployment: review.identity.deployment,
-        decimals: review.producer.inputDecimals, observedAtSec: clockSec,
-      });
-      certificate.inputGenerationId = exitExecutionInputGenerationId(review.identity.assetId,
-        { requestedNotionalUsd: 100_000, maxCostBps: 200 }, certificate.inputReference);
-      certificate.gates = model.requiredGates.map((gateId) => ({
-        gateId, verdict: "passed", evidenceId: `observed:${gateId}`, observedAtSec: clockSec, reason: null,
-      }));
-      Object.assign(certificate.points[0]!, {
-        requestedRawInput: "100000000000000000000000", executedRawInput: "100000000000000000000000", fees: [],
-      });
-      Object.assign(certificate.points[0]!.outputs[0]!, {
-        assetKey: review.identity.outputAssetKeys[0], deployment: `${review.producer.chain}:${review.producer.outputToken}`,
-        decimals: review.producer.outputDecimals, observedAtSec: clockSec, rawUnits: "99900000000000000000000",
-      });
-      const observations = (["dex", "redemption"] as const).map((lane) => dexRouteObservation(clockSec, {
-        routeId: `${lane}:alternative`, routeFamily: lane === "dex" ? "dex-amm" : "protocol-redemption",
-        requestedNotionalUsd: 100_000, executableUsd: 100_000, completionRatio: 1,
-        executionCostBps: 10, output: { kind: "fiat", currency: "USD" },
-        ...(certifiedLane === lane || certifiedLane === "both" ? { executionCertificate: certificate } : {}),
-      }));
-      const row = makeSupplyFullRedemption({ stablecoinId: review.identity.assetId });
-      row.capacityProfile = { ...row.capacityProfile!, exitRouteObservations: [observations[1]!] };
-      const fixed = fixedInputStub(row, clockSec);
-      Object.assign(fixed.dexLiqMap, {
-        [row.stablecoinId]: singleObservationDexLiquidity(observations[0]!),
-      });
-      const reviews = buildSafetyScoreV9RouteReviews(fixed, row.stablecoinId);
-      expect(reviews).toHaveLength(2);
-      expect(reviews.every((route) => route.coverageClass !== "diagnostic")).toBe(true);
-      const routes = reviews.map((route) => {
-        const observation = observations.find((entry) => entry.routeId === route.routeId)!;
-        return makeExitRoute({
-          lane: route.lane, routeId: route.routeId, routeKey: `${route.lane}:${route.routeId}`,
-          routeFamily: observation.routeFamily,
-          evidenceKind: route.lane === "dex" ? "reserve-based-amm-simulation" : "onchain-contract-state",
-          coverageClass: route.coverageClass, physicalResourceKeys: route.physicalResourceKeys,
-          // Disjoint domains isolate the physical-resource guard.
-          failureDomains: [`domain:${route.lane}`],
-          ...(observation.executionCertificate ? {
-            executionModelId: certificate.modelId, executionCertificate: certificate,
-            capacityCurve: [{ requestedNotionalUsd: 100_000, maxCostBps: 200,
-              executableUsd: 100_000, completionRatio: 1, executionCostBps: 10 }],
-          } : {}),
-        });
-      });
-      const evaluate = (alternatives: typeof routes) => evaluateV9Exit({
-        circulatingUsd: 2_000_000, assetId: row.stablecoinId, clockSec, routes: alternatives,
-      }, V9_CANDIDATE_POLICY_V1);
-      const result = evaluate(routes);
-      expect(result.routes.every((route) => route.included)).toBe(true);
-      expect(result.score).toBe(Math.max(...routes.map((route) => evaluate([route]).score!)));
-      expect(result).toMatchObject({ diversificationRouteKey: null, diversificationBonus: 0 });
-      expect(evaluate([...routes].reverse())).toEqual(result);
-      expect(resolveV9DistinctExitCapacity(routes, result.stressRequest!, V9_CANDIDATE_POLICY_V1)
-        .valuedExecutableUsd).toBe(certifiedLane === "both" ? 100_000 : 1_000_000);
-      if (certifiedLane === "dex") {
-        const legacy = routes.filter((route) => route.lane === "redemption");
-        for (const fault of ["expired", "diagnostic"] as const) {
-          certificate.observedAtSec = fault === "expired" ? clockSec - model.sourceMaxAgeSec - 1 : clockSec;
-          certificate.points[0]!.certification = fault === "diagnostic" ? "diagnostic" : "exact-lower-bound";
-          certificate.points[0]!.reason = fault === "diagnostic" ? "execution-unavailable" : null;
-          expect(evaluate(routes)).toMatchObject({
-            score: evaluate(legacy).score, primaryRouteKey: legacy[0]!.routeKey,
-            diversificationRouteKey: null, diversificationBonus: 0,
-          });
-        }
+    });
+    const ev = (alts: typeof routes) => evalExit({ circulatingUsd: 2e6, assetId: row.stablecoinId, clockSec: clk, routes: alts }, POL);
+    const res = ev(routes);
+    expect(res.routes.every((r) => r.included)).toBe(true);
+    expect(res.score).toBe(Math.max(...routes.map((r) => ev([r]).score!)));
+    expect(res).toMatchObject({ diversificationRouteKey: null, diversificationBonus: 0 });
+    expect(ev([...routes].reverse())).toEqual(res);
+    expect(distCap(routes, res.stressRequest!, POL).valuedExecutableUsd).toBe(certLane === "both" ? 1e5 : 1e6);
+    if (certLane === "dex") {
+      const leg = routes.filter((r) => r.lane === "redemption");
+      for (const f of ["expired", "diagnostic"] as const) {
+        cert.observedAtSec = f === "expired" ? clk - mod.sourceMaxAgeSec - 1 : clk;
+        cert.points[0]!.certification = f === "diagnostic" ? "diagnostic" : "exact-lower-bound";
+        cert.points[0]!.reason = f === "diagnostic" ? "execution-unavailable" : null;
+        expect(ev(routes)).toMatchObject({ score: ev(leg).score, primaryRouteKey: leg[0]!.routeKey, diversificationRouteKey: null, diversificationBonus: 0 });
       }
-    },
-  );
+    }
+  });
 });
 
 describe("certified execution route outputs", () => {
   it("values raw output quantities across decimals and weights the basket by expected USD, not token units", () => {
-    const { fixedInput } = certifiedDexFixture();
-    const review = buildSafetyScoreV9RouteReviews(fixedInput, "alpha")[0]!;
-    expect(review).toMatchObject({
-      coverageClass: "exact-lower-bound", holderAccess: "permissionless",
-      capacityScoringHorizon: "immediate", settlementModel: "atomic",
-      output: {
-        kind: "basket", assetKeys: ["usdc-circle", "usdt-tether"],
-        basketWeights: [
-          { assetKey: "usdc-circle", weight: 1 / 3 },
-          { assetKey: "usdt-tether", weight: 2 / 3 },
-        ],
-        valuation: {
-          expectedUnitValueUsd: 1, observedAtSec: NOW - 10,
-          sourceGenerationId: "fixture:execution:1", maxAgeSec: 300,
-        },
-      },
+    const r = rev0(certDexFx().fixedInput, "alpha");
+    expect(r).toMatchObject({
+      coverageClass: "exact-lower-bound", holderAccess: "permissionless", capacityScoringHorizon: "immediate", settlementModel: "atomic",
+      output: { kind: "basket", assetKeys: [USDC, USDT], basketWeights: [{ assetKey: USDC, weight: 1 / 3 }, { assetKey: USDT, weight: 2 / 3 }], valuation: { expectedUnitValueUsd: 1, observedAtSec: NOW - 10, sourceGenerationId: "fixture:execution:1", maxAgeSec: 300 } },
     });
-    expect(review.output!.valuation!.unitValueUsd).toBeCloseTo(29 / 30);
+    expect(r.output!.valuation!.unitValueUsd).toBeCloseTo(29 / 30);
   });
 
-  it.each(["different-notional", "different-cost", "diagnostic", "no-outputs", "zero-basket"] as const)(
-    "does not invent an output valuation for %s execution proof",
-    (fault) => {
-      const { fixedInput, certificate } = certifiedDexFixture();
-      const point = certificate.points[0]!;
-      if (fault === "different-notional") {
-        point.requestedNotionalUsd *= 2;
-        point.requestedRawInput = (BigInt(point.requestedRawInput) * 2n).toString();
-      }
-      if (fault === "different-cost") point.maxCostBps++;
-      if (fault === "diagnostic") { point.certification = "diagnostic"; point.reason = "execution-unavailable"; }
-      if (fault === "no-outputs") point.outputs = [];
-      if (fault === "no-outputs" || fault === "zero-basket") {
-        point.executableUsd = 0;
-        point.executedRawInput = "0";
-        for (const leg of point.outputs) leg.rawUnits = "0";
-      }
-      const review = buildSafetyScoreV9RouteReviews(fixedInput, "alpha")[0]!;
-      expect(review.output).toBeNull();
-      if (fault === "different-notional" || fault === "different-cost" || fault === "diagnostic") {
-        expect(review.coverageClass).toBe("diagnostic");
-      }
-    },
-  );
+  it.each(["different-notional", "different-cost", "diagnostic", "no-outputs", "zero-basket"] as const)("does not invent an output valuation for %s execution proof", (fault) => {
+    const { fixedInput, certificate } = certDexFx(), pt = certificate.points[0]!;
+    if (fault === "different-notional") { pt.requestedNotionalUsd *= 2; pt.requestedRawInput = (BigInt(pt.requestedRawInput) * 2n).toString(); }
+    if (fault === "different-cost") pt.maxCostBps++;
+    if (fault === "diagnostic") { pt.certification = "diagnostic"; pt.reason = "execution-unavailable"; }
+    if (fault === "no-outputs") pt.outputs = [];
+    if (fault === "no-outputs" || fault === "zero-basket") { pt.executableUsd = 0; pt.executedRawInput = "0"; for (const l of pt.outputs) l.rawUnits = "0"; }
+    const r = rev0(fixedInput, "alpha");
+    expect(r.output).toBeNull();
+    if (fault === "different-notional" || fault === "different-cost" || fault === "diagnostic") expect(r.coverageClass).toBe("diagnostic");
+  });
 
   it("retains observed single-output downside even when executable capacity is zero", () => {
-    const { fixedInput, certificate } = certifiedDexFixture();
-    const point = certificate.points[0]!;
-    point.outputs = [{ ...point.outputs[1]!, rawUnits: "0", unitValueUsd: 1.9 }];
-    point.executedRawInput = "0";
-    point.executableUsd = 0;
-    certificate.identity.outputAssetKeys = ["usdt-tether"];
-    const review = buildSafetyScoreV9RouteReviews(fixedInput, "alpha")[0]!;
-    expect(review.output).toMatchObject({
-      kind: "tracked-stablecoin", assetKeys: ["usdt-tether"], basketWeights: [],
-      valuation: { unitValueUsd: 0.95, expectedUnitValueUsd: 1 },
-    });
+    const { fixedInput, certificate } = certDexFx(), pt = certificate.points[0]!;
+    pt.outputs = [{ ...pt.outputs[1]!, rawUnits: "0", unitValueUsd: 1.9 }];
+    pt.executedRawInput = "0"; pt.executableUsd = 0; certificate.identity.outputAssetKeys = [USDT];
+    expect(rev0(fixedInput, "alpha").output).toMatchObject({ kind: "tracked-stablecoin", assetKeys: [USDT], basketWeights: [], valuation: { unitValueUsd: 0.95, expectedUnitValueUsd: 1 } });
   });
 });
 
 describe("reviewed undisclosed output valuation", () => {
-  it.each(["mixed-collateral", "stable-single"] as const)(
-    "does not assign implicit collateral or fiat par to undisclosed %s output", (outputAssetType) => {
-      const assetId = "usdc-circle";
-      const row = makeSupplyFullRedemption({ stablecoinId: assetId, outputAssetType });
-      withRedemptionBackstopConfig(assetId, {
-        outputAssetType, outputAssets: undefined, unresolvedOutputAssetKeys: undefined,
-        unresolvedOutputDisposition: "issuer-undisclosed", reviewedAt: "2026-07-01",
-      }, () => {
-        const fixed = fixedInputStub(row);
-        const retained = buildSafetyScoreV9RetainedRedemptionRoutes(fixed, assetId);
-        expect(retained[0]!.observation.output).toEqual({ kind: "unresolved-asset" });
-        const review = buildSafetyScoreV9RouteReviews(fixed, assetId)[0]!;
-        expect(review).toMatchObject({ output: null, unresolvedOutputResponsibility: "issuer-undisclosed" });
-      });
-    },
-  );
+  it.each(["mixed-collateral", "stable-single"] as const)("does not assign implicit collateral or fiat par to undisclosed %s output", (outputAssetType) => {
+    const row = mkFull({ stablecoinId: USDC, outputAssetType });
+    withCfg(USDC, { outputAssetType, outputAssets: undefined, unresolvedOutputAssetKeys: undefined, unresolvedOutputDisposition: "issuer-undisclosed", reviewedAt: "2026-07-01" }, () => {
+      const f = stub(row);
+      expect(retRed(f, USDC)[0]!.observation.output).toEqual({ kind: "unresolved-asset" });
+      expect(rev0(f, USDC)).toMatchObject({ output: null, unresolvedOutputResponsibility: "issuer-undisclosed" });
+    });
+  });
 });
 
 describe("buildSafetyScoreV9RouteReviews physical-commodity outputs", () => {
-  const metalBenchmark = (time: number, value: number, preCloseUsdPerUnit = value - 1): NonNullable<SafetyScoreV9CompilerInput["directMetalReferences"]> => ({
-    peggedGOLD: { observation: { pegKey: "peggedGOLD", source: "gold-api.com", cadence: "intraday",
-      observedAtSec: time, usdPerUnit: value }, generation: "fixture-metal", preCloseUsdPerUnit },
+  const metalRef = (time: number, val: number, pre = val - 1): NonNullable<CompIn["directMetalReferences"]> => ({
+    peggedGOLD: { observation: { pegKey: "peggedGOLD", source: "gold-api.com", cadence: "intraday", observedAtSec: time, usdPerUnit: val }, generation: "fixture-metal", preCloseUsdPerUnit: pre },
   });
+
   it.each([
-    ["2026-10-01T12:00:00Z", "2026-10-01T11:55:00Z", true, false],
-    ["2026-10-04T12:00:00Z", "2026-10-02T20:59:00Z", true, false],
-    ["2026-10-04T12:00:00Z", "2026-10-04T11:55:00Z", false, false],
-    ["2026-10-01T12:00:00Z", null, false, false],
+    ["2026-10-01T12:00:00Z", "2026-10-01T11:55:00Z", true, false], ["2026-10-04T12:00:00Z", "2026-10-02T20:59:00Z", true, false],
+    ["2026-10-04T12:00:00Z", "2026-10-04T11:55:00Z", false, false], ["2026-10-01T12:00:00Z", null, false, false],
     ["2026-10-04T22:10:00Z", "2026-10-04T22:05:00Z", false, true],
-  ] as const)("uses the open-market or held-close metal observation %s / %s for physical capacity", (clock, observed, admitted, heartbeat) => {
-    const id = "paxg-paxos";
-    const clockSec = Date.parse(clock) / 1000;
-    const observedAtSec = observed === null ? null : Date.parse(observed) / 1000;
-    const row = makeSupplyFullRedemption({ stablecoinId: id, routeFamily: "offchain-issuer", routeStatus: "open", holderEligibility: "verified-customer" });
-    const fixed = Object.assign(fixedInputStub(row, clockSec), {
-      aggregateCirculatingById: { [id]: { circulating: { peggedUSD: 20_000_000 } } },
-      directMetalReferences: observedAtSec === null ? {} : metalBenchmark(observedAtSec, 1000, heartbeat ? 1000 : 999),
-    });
-    fixed.pegDataById[id] = {
-      pegCurrency: "GOLD",
-      priceObservedAt: clockSec - 86_400,
-      pegReference: { valueUsd: 1010, usdPerTroyOunce: 1010, source: "median", contributorCount: 3, asOf: clockSec },
-    } as ReportCardsFixedInput["pegDataById"][string];
-    const physicalToUsd = structuredClone(getRedemptionBackstopConfig(id)!.physicalToUsd!);
-    physicalToUsd.fees = { issuerFeeBps: 0, issuerFixedUsd: 0, deliveryUsdPerLot: 0, insuranceBps: 0, assayUsdPerLot: 0, taxBps: 0, conversionBps: 0 };
-    physicalToUsd.settlementLegs = [{ leg: "issuer-release", maximumBusinessDays: 1 }];
-    withRedemptionBackstopConfig(id, { physicalToUsd }, () => {
-      const route = buildSafetyScoreV9RouteReviews(fixed, id).find((entry) => entry.routeId === `physical-to-usd:${id}`);
-      expect(route?.coverageClass).toBe(admitted ? "modelled-terms-lower-bound" : "diagnostic");
-      if (admitted) expect(route?.output?.valuation).toMatchObject({ observedAtSec, sourceGenerationId: "fixture-metal" });
-      else expect(route?.output).toBeNull();
-      if (observedAtSec === null) {
-        Reflect.deleteProperty(fixed, "directMetalReferences");
-        const legacy = buildSafetyScoreV9RouteReviews(fixed, id).find((entry) => entry.routeId === `physical-to-usd:${id}`);
-        expect(legacy?.output?.valuation).toMatchObject({ observedAtSec: clockSec, sourceId: "physical-to-usd-modelled-endpoint" });
-      }
+  ] as const)("uses the open-market or held-close metal observation %s / %s for physical capacity", (clock, obs, adm, hb) => {
+    const id = "paxg-paxos", clk = iso(clock), obsAt = obs === null ? null : iso(obs);
+    const row = mkFull({ stablecoinId: id, routeFamily: "offchain-issuer", routeStatus: "open", holderEligibility: "verified-customer" });
+    const fixed = Object.assign(stub(row, clk), { aggregateCirculatingById: { [id]: { circulating: { peggedUSD: 2e7 } } }, directMetalReferences: obsAt === null ? {} : metalRef(obsAt, 1e3, hb ? 1e3 : 999) });
+    fixed.pegDataById[id] = { pegCurrency: "GOLD", priceObservedAt: clk - DAY, pegReference: { valueUsd: 1010, usdPerTroyOunce: 1010, source: "median", contributorCount: 3, asOf: clk } } as FixedIn["pegDataById"][string];
+    const p2u = structuredClone(getCfg(id)!.physicalToUsd!);
+    p2u.fees = { issuerFeeBps: 0, issuerFixedUsd: 0, deliveryUsdPerLot: 0, insuranceBps: 0, assayUsdPerLot: 0, taxBps: 0, conversionBps: 0 };
+    p2u.settlementLegs = [{ leg: "issuer-release", maximumBusinessDays: 1 }];
+    withCfg(id, { physicalToUsd: p2u }, () => {
+      const find = () => routeRevs(fixed, id).find((e) => e.routeId === `physical-to-usd:${id}`);
+      const r = find();
+      expect(r?.coverageClass).toBe(adm ? "modelled-terms-lower-bound" : "diagnostic");
+      if (adm) expect(r?.output?.valuation).toMatchObject({ observedAtSec: obsAt, sourceGenerationId: "fixture-metal" });
+      else expect(r?.output).toBeNull();
+      if (obsAt === null) { Reflect.deleteProperty(fixed, "directMetalReferences"); expect(find()?.output?.valuation).toMatchObject({ observedAtSec: clk, sourceId: "physical-to-usd-modelled-endpoint" }); }
       row.routeStatus = "paused";
-      expect(buildSafetyScoreV9RouteReviews(fixed, id).find((route) => route.routeId === `physical-to-usd:${id}`))
-        .toMatchObject({ coverageClass: "diagnostic", output: null });
+      expect(find()).toMatchObject({ coverageClass: "diagnostic", output: null });
     });
   });
+
   it("values reviewed physical outputs without token-price or fiat substitution", () => {
-    const id = "dgld-gold-token-sa";
-    const row = makeSupplyFullRedemption({ stablecoinId: id, routeFamily: "offchain-issuer", settlementModel: "days", outputAssetType: "bluechip-collateral" });
-    const fixed = Object.assign(fixedInputStub(row), { directMetalReferences: metalBenchmark(NOW, 5_000) });
-    fixed.pegDataById[id] = {
-      pegCurrency: "GOLD",
-      pegReference: { valueUsd: 10_000, usdPerTroyOunce: 5_000, source: "fallback", contributorCount: 0, asOf: NOW },
-    } as ReportCardsFixedInput["pegDataById"][string];
-
-    withRedemptionBackstopConfig(id, { reviewedAt: "2026-07-13", physicalToUsd: undefined }, () => {
-      expect(buildSafetyScoreV9RouteReviews(fixed, id)[0]?.output).toBeNull();
-    });
-
-    withRedemptionBackstopConfig(id, {
-      reviewedAt: "2026-07-12",
-      physicalToUsd: undefined,
-      outputAssetType: "physical-commodity-delivery",
-      physicalCommodityDelivery: {
-        commodity: "XAU", deliverableOuncesPerToken: 1, minimumDeliveryTokens: 1,
-        deliveryTermsUnbounded: false,
-        feeModel: { bps: 100, flatUsd: 100, deliveryUsd: 100 }, sameNotionalEligible: false,
-      },
-    }, (config) => {
+    const id = "dgld-gold-token-sa", row = mkFull({ stablecoinId: id, routeFamily: "offchain-issuer", settlementModel: "days", outputAssetType: "bluechip-collateral" });
+    const fixed = Object.assign(stub(row), { directMetalReferences: metalRef(NOW, 5e3) });
+    fixed.pegDataById[id] = { pegCurrency: "GOLD", pegReference: { valueUsd: 1e4, usdPerTroyOunce: 5e3, source: "fallback", contributorCount: 0, asOf: NOW } } as FixedIn["pegDataById"][string];
+    withCfg(id, { reviewedAt: "2026-07-13", physicalToUsd: undefined }, () => expect(rev0(fixed, id)?.output).toBeNull());
+    withCfg(id, { reviewedAt: "2026-07-12", physicalToUsd: undefined, outputAssetType: "physical-commodity-delivery", physicalCommodityDelivery: { commodity: "XAU", deliverableOuncesPerToken: 1, minimumDeliveryTokens: 1, deliveryTermsUnbounded: false, feeModel: { bps: 100, flatUsd: 100, deliveryUsd: 100 }, sameNotionalEligible: false } }, (c) => {
       row.outputAssetType = "physical-commodity-delivery";
-      const output = buildSafetyScoreV9RouteReviews(fixed, id)[0]?.output;
-      expect(output).toMatchObject({
-        kind: "physical-commodity-delivery", sameNotionalEligible: false,
-        valuation: { basis: "commodity-delivery", expectedUnitValueUsd: 5_000 },
-      });
-      expect(output?.valuation?.unitValueUsd).toBeLessThan(5_000);
-
-      config.physicalCommodityDelivery!.deliveryTermsUnbounded = true;
-      const unbounded = buildSafetyScoreV9RouteReviews(fixed, id)[0]?.output;
-      expect(unbounded).toMatchObject({ unboundedDeliveryCap: 55, sameNotionalEligible: false });
-      expect(unbounded!.valuation!.unitValueUsd).toBeGreaterThan(output!.valuation!.unitValueUsd);
-
+      const out = rev0(fixed, id)?.output;
+      expect(out).toMatchObject({ kind: "physical-commodity-delivery", sameNotionalEligible: false, valuation: { basis: "commodity-delivery", expectedUnitValueUsd: 5e3 } });
+      expect(out?.valuation?.unitValueUsd).toBeLessThan(5e3);
+      c.physicalCommodityDelivery!.deliveryTermsUnbounded = true;
+      const unb = rev0(fixed, id)?.output;
+      expect(unb).toMatchObject({ unboundedDeliveryCap: 55, sameNotionalEligible: false });
+      expect(unb!.valuation!.unitValueUsd).toBeGreaterThan(out!.valuation!.unitValueUsd);
       delete fixed.directMetalReferences.peggedGOLD;
-      expect(buildSafetyScoreV9RouteReviews(fixed, id)[0]?.output).toBeNull();
+      expect(rev0(fixed, id)?.output).toBeNull();
       Reflect.deleteProperty(fixed, "directMetalReferences");
-      expect(buildSafetyScoreV9RouteReviews(fixed, id)[0]?.output?.valuation).toMatchObject({
-        expectedUnitValueUsd: 5_000, observedAtSec: NOW, sourceId: "commodity-usd-per-troy-ounce:fallback",
-      });
+      expect(val0(fixed, id)).toMatchObject({ expectedUnitValueUsd: 5e3, observedAtSec: NOW, sourceId: "commodity-usd-per-troy-ounce:fallback" });
     });
   });
 });
 
-function withV9RouteReviewTerms<T>(
-  stablecoinId: string,
-  terms: NonNullable<RedemptionBackstopConfig["v9RouteReviewTerms"]>,
-  run: () => T,
-): T {
-  return withRedemptionBackstopConfig(stablecoinId, { v9RouteReviewTerms: terms }, run);
-}
-
-const FASTER_REVIEWED_SETTLEMENT = {
-  settlementModel: "days",
-  settlementDelaySec: 2 * 86_400,
-  reviewedAt: "2026-07-01",
-  docs: [
-    {
-      label: "Issuer redemption terms",
-      url: "https://example.com/redemption-terms",
-      supports: ["settlement"],
-    },
-  ],
-} satisfies NonNullable<RedemptionBackstopConfig["v9RouteReviewTerms"]>;
-
-function capturedNavOutputInput(navObservedAtSec: number): ReportCardsFixedInput {
-  const route = dexRouteObservation(V9_FIXTURE_CLOCK, {
-    routeId: "dex:usdaf-asymmetry:dl:ethereum%3Apool:ethereum%3Athbill-output",
-    output: { kind: "tracked-stablecoin", trackedAssetIds: ["thbill-theo"] },
-  });
-  return createReportCardsFixedInput({
-    captureKind: "public-reconstruction",
-    activeAssetIds: ["usdaf-asymmetry"],
-    capturedAt: new Date(V9_FIXTURE_CLOCK * 1_000).toISOString(),
-    sourceGeneration: "report-cards:nav-output-fixture",
-    dexGenerationId: "dex-liquidity-nav-output-fixture",
-    redemptionGenerationId: "redemption-backstops-unavailable",
-    registryRevision: "registry:nav-output-fixture",
-    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-    clockSec: V9_FIXTURE_CLOCK,
-    updatedAt: V9_FIXTURE_CLOCK,
-    liquidityStale: false,
-    redemptionStale: true,
-    inputFreshness: {
-      dexLiquidity: { updatedAt: V9_FIXTURE_CLOCK, ageSeconds: 0, stale: false },
-      redemptionBackstops: { updatedAt: null, ageSeconds: null, stale: true },
-    },
-    pegDataById: {},
-    navPriceById: {
-      "thbill-theo": {
-        priceUsd: 1.0188,
-        sourceId: "defillama-contract",
-        observedAtSec: navObservedAtSec,
-        confidence: "high",
-      },
-    },
-    activeDepegPeakBpsById: {},
-    dexLiqMap: {
-      "usdaf-asymmetry": {
-        liquidityScore: 50,
-        concentrationHhi: 0.5,
-        poolCount: 1,
-        chainCount: 1,
-        ...singleObservationDexLiquidity(route),
-        methodologyVersion: "dex:fixture-v1",
-        updatedAt: V9_FIXTURE_CLOCK,
-      },
-    },
-    redemptionBackstopMap: {},
-    bluechipMap: {},
-    resolvedBlacklistStatuses: { "usdaf-asymmetry": false },
-    liveReserveMap: {},
-    liveReserveProvenanceMap: {},
-    chainCirculatingById: {},
-    dexDeploymentSupplyCoverageById: {},
-    collateralDriftCoins: [],
-    liveToFallbackCoins: [],
-  });
-}
-
-function liveDirectRow(routeStatusSource: RedemptionBackstopEntry["routeStatusSource"]): RedemptionBackstopEntry {
-  const row = makeSupplyFullRedemption();
-  const observation = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(row), row.stablecoinId)[0]!.observation;
-  return {
-    ...row,
-    sourceMode: "dynamic",
-    capacityConfidence: "live-direct",
-    capacityKind: "live-direct-bounded",
-    routeStatusSource,
-    modelConfidence: "high",
-    capacityProfile: {
-      ...row.capacityProfile!,
-      exitRouteObservations: [
-        {
-          ...observation,
-          evidenceKind: "onchain-contract-state",
-          confidence: "high",
-          scoreEligible: true,
-        },
-      ],
-    },
-  };
-}
-
 describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
   it("derives one retained route for a full-supply row without observations", () => {
-    const retained = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(makeSupplyFullRedemption()), "usdc-circle");
-    expect(retained).toHaveLength(1);
-    expect(retained[0]).toMatchObject({
-      lane: "redemption",
-      disposition: "observed",
-      rejection: null,
-      observation: {
-        routeId: "redemption:usdc-circle:offchain-issuer",
-        routeFamily: "issuer-redemption",
-        scoreEligible: true,
-        evidenceKind: "documented-terms",
-      },
-    });
+    const ret = retRed(stub(mkFull()), USDC);
+    expect(ret).toHaveLength(1);
+    expect(ret[0]).toMatchObject({ lane: "redemption", disposition: "observed", rejection: null, observation: { routeId: `redemption:${USDC}:offchain-issuer`, routeFamily: "issuer-redemption", scoreEligible: true, evidenceKind: "documented-terms" } });
   });
 
   it("pairs every retained route with a matching route review", () => {
-    const fixedInput = fixedInputStub(makeSupplyFullRedemption());
-    const retained = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput, "usdc-circle");
-    const reviews = buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle");
-    expect(reviews.map((review) => `${review.lane}:${review.routeId}`)).toEqual(
-      retained.map((route) => `${route.lane}:${route.observation.routeId}`),
-    );
-    expect(reviews[0]).toMatchObject({
-      settlementModel: "atomic",
-      settlementSlaSec: 0,
-      modelConfidence: "medium",
-    });
+    const f = stub(mkFull()), ret = retRed(f, USDC), revs = routeRevs(f, USDC);
+    expect(revs.map((r) => `${r.lane}:${r.routeId}`)).toEqual(ret.map((r) => `${r.lane}:${r.observation.routeId}`));
+    expect(revs[0]).toMatchObject({ settlementModel: "atomic", settlementSlaSec: 0, modelConfidence: "medium" });
   });
 
   it("keeps an unmarked documented-bound route scoreable under the existing projection", () => {
-    const row = makeSupplyFullRedemption();
-    const fixedInput = fixedInputStub(row);
-
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]).toMatchObject({
-      lane: "redemption",
-      coverageClass: "exact-lower-bound",
-    });
-    expect(buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput, row.stablecoinId)[0]).toMatchObject({
-      observation: { evidenceKind: "documented-terms", scoreEligible: true },
-    });
+    const row = mkFull(), f = stub(row);
+    expect(rev0(f, row.stablecoinId)).toMatchObject({ lane: "redemption", coverageClass: "exact-lower-bound" });
+    expect(retRed(f, row.stablecoinId)[0]).toMatchObject({ observation: { evidenceKind: "documented-terms", scoreEligible: true } });
   });
 
   it("retains legal entitlement diagnostics without mutating the frozen redemption row", () => {
-    const row = makeSupplyFullRedemption({
-      stablecoinId: "xo-exodus",
-      settlementModel: "same-day",
-      feeBps: 0,
-    });
-    const frozenRow = structuredClone(row);
-    const fixedInput = fixedInputStub(row, Date.UTC(2026, 9, 7) / 1_000);
-    // Freeze the single-gap scenario independently of current XO curation.
-    withRedemptionBackstopConfig(row.stablecoinId, {
+    const row = mkFull({ stablecoinId: "xo-exodus", settlementModel: "same-day", feeBps: 0 }), frozen = structuredClone(row), f = stub(row, utc(2026, 9, 7));
+    withCfg(row.stablecoinId, {
       costModel: fixedFee(0, "Fixture same-request cost bound"),
-      v9RouteReviewTerms: {
-        scoringDisposition: "bounded-terms-gap",
-        missingScoringFields: ["settlement"],
-        reviewedAt: "2026-07-01",
-        rationale: "Fixture terms establish cost but not a completed settlement bound.",
-        docs: [{ label: "Fixture terms", url: "https://issuer.example/terms", supports: ["settlement"] }],
-      },
+      v9RouteReviewTerms: { scoringDisposition: "bounded-terms-gap", missingScoringFields: ["settlement"], reviewedAt: "2026-07-01", rationale: "Fixture terms establish cost but not a completed settlement bound.", docs: [{ label: "Fixture terms", url: "https://issuer.example/terms", supports: ["settlement"] }] },
     }, () => {
-    const retained = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput, row.stablecoinId)[0]!;
-    const review = buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!;
-
-    expect(getRedemptionBackstopConfig(row.stablecoinId)?.v9RouteReviewTerms).toMatchObject({
-      scoringDisposition: "bounded-terms-gap",
-      missingScoringFields: ["settlement"],
-    });
-    expect(retained.observation).toMatchObject({
-      evidenceKind: "documented-terms",
-      scoreEligible: false,
-      executableUsd: 5_000_000,
-    });
-    expect(review).toMatchObject({
-      lane: "redemption",
-      coverageClass: "diagnostic",
-      executionCosts: expect.arrayContaining([
-        expect.objectContaining({ executionCostBps: 0 }),
-      ]),
-    });
-    expect(row).toEqual(frozenRow);
-    expect(row).not.toHaveProperty("v9RouteReviewTerms");
-    expect(row).not.toHaveProperty("scoringDisposition");
+      expect(getCfg(row.stablecoinId)?.v9RouteReviewTerms).toMatchObject({ scoringDisposition: "bounded-terms-gap", missingScoringFields: ["settlement"] });
+      expect(retRed(f, row.stablecoinId)[0]!.observation).toMatchObject({ evidenceKind: "documented-terms", scoreEligible: false, executableUsd: 5e6 });
+      expect(rev0(f, row.stablecoinId)).toMatchObject({ lane: "redemption", coverageClass: "diagnostic", executionCosts: expect.arrayContaining([expect.objectContaining({ executionCostBps: 0 })]) });
+      expect(row).toEqual(frozen); expect(row).not.toHaveProperty("v9RouteReviewTerms"); expect(row).not.toHaveProperty("scoringDisposition");
     });
   });
 
-  it.each([
-    { missingFields: ["capacity"] },
-    { missingFields: ["settlement"] },
-    { missingFields: ["cost"] },
-  ] as const)("retains captured terms while keeping only a $missingFields capacity gap diagnostic", ({ missingFields }) => {
-    const row = makeSupplyFullRedemption({ feeBps: 7 });
-    const fixed = fixedInputStub(row);
-    expect(buildSafetyScoreV9RouteReviews(fixed, row.stablecoinId)[0]?.coverageClass).toBe("exact-lower-bound");
-    const retainedBefore = buildSafetyScoreV9RetainedRedemptionRoutes(fixed, row.stablecoinId);
-    const frozen = structuredClone(row);
-    withV9RouteReviewTerms(row.stablecoinId, {
-      scoringDisposition: "bounded-terms-gap",
-      missingScoringFields: [...missingFields],
-      reviewedAt: "2026-07-01",
-      rationale: "The omitted terms have no reviewed bound.",
-      docs: [{ label: "Terms", url: "https://example.com/terms", supports: ["settlement"] }],
-    }, () => {
-      const retained = buildSafetyScoreV9RetainedRedemptionRoutes(fixed, row.stablecoinId);
-      const reviews = buildSafetyScoreV9RouteReviews(fixed, row.stablecoinId);
-      expect(retained).toEqual(retainedBefore);
-      expect(retained).toMatchObject([{ observation: { executableUsd: 5_000_000 } }]);
-      expect(reviews).toMatchObject([{
-        coverageClass: missingFields.some((field) => field === "capacity") ? "diagnostic" : "exact-lower-bound",
-        settlementModel: "atomic", settlementSlaSec: 0,
-      }]);
-      expect([...reviews[0]!.executionCosts].sort((a, b) => a.requestedNotionalUsd - b.requestedNotionalUsd)).toEqual(
-        [100_000, 1_000_000, 5_000_000, 25_000_000].map((requestedNotionalUsd) => ({
-          requestedNotionalUsd, maxCostBps: 200, executionCostBps: 7,
-        })),
-      );
+  it.each([["capacity"], ["settlement"], ["cost"]] as const)("retains captured terms while keeping only a %s capacity gap diagnostic", (field) => {
+    const row = mkFull({ feeBps: 7 }), f = stub(row), frozen = structuredClone(row);
+    expect(rev0(f, row.stablecoinId)?.coverageClass).toBe("exact-lower-bound");
+    const before = retRed(f, row.stablecoinId);
+    withTerms(row.stablecoinId, { scoringDisposition: "bounded-terms-gap", missingScoringFields: [field], reviewedAt: "2026-07-01", rationale: "The omitted terms have no reviewed bound.", docs: [{ label: "Terms", url: "https://example.com/terms", supports: ["settlement"] }] }, () => {
+      const ret = retRed(f, row.stablecoinId), revs = routeRevs(f, row.stablecoinId);
+      expect(ret).toEqual(before); expect(ret).toMatchObject([{ observation: { executableUsd: 5e6 } }]);
+      expect(revs).toMatchObject([{ coverageClass: field === "capacity" ? "diagnostic" : "exact-lower-bound", settlementModel: "atomic", settlementSlaSec: 0 }]);
+      expect([...revs[0]!.executionCosts].sort((a, b) => a.requestedNotionalUsd - b.requestedNotionalUsd)).toEqual(costPts([[1e5, 7], [1e6, 7], [5e6, 7], [25e6, 7]]));
       expect(row).toEqual(frozen);
     });
   });
+
   it("uses each request point's cost before a scalar and recomputes unlike legacy requests", () => {
-    const row = makeSupplyFullRedemption({ feeBps: null });
-    const observation = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(row), row.stablecoinId)[0]!.observation;
-    observation.requestedNotionalUsd = 1_000_000;
-    observation.executionCostBps = 12;
-    observation.capacityCurve = [
-      { requestedNotionalUsd: 100_000, maxCostBps: 200, executableUsd: 100_000, completionRatio: 1, executionCostBps: 111 },
-      { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd: 1_000_000, completionRatio: 1 },
-      { requestedNotionalUsd: 5_000_000, maxCostBps: 200, executableUsd: 5_000_000, completionRatio: 1 },
-      { requestedNotionalUsd: 1_000_000, maxCostBps: 100, executableUsd: 1_000_000, completionRatio: 1 },
+    const row = mkFull({ feeBps: null }), obs = obs0(row);
+    obs.requestedNotionalUsd = 1e6; obs.executionCostBps = 12;
+    obs.capacityCurve = [
+      { requestedNotionalUsd: 1e5, maxCostBps: 200, executableUsd: 1e5, completionRatio: 1, executionCostBps: 111 },
+      { requestedNotionalUsd: 1e6, maxCostBps: 200, executableUsd: 1e6, completionRatio: 1 },
+      { requestedNotionalUsd: 5e6, maxCostBps: 200, executableUsd: 5e6, completionRatio: 1 },
+      { requestedNotionalUsd: 1e6, maxCostBps: 100, executableUsd: 1e6, completionRatio: 1 },
     ];
-    row.capacityProfile = { ...row.capacityProfile!, exitRouteObservations: [observation] };
-    withRedemptionBackstopConfig(row.stablecoinId, {
-      costModel: { kind: "fee-bps", feeBps: 10, minFeeUsd: 1_000, gasOrBridgeCostUsd: 100 },
-    }, () => {
-      expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]!.executionCosts)
-        .toEqual(expect.arrayContaining([
-          { requestedNotionalUsd: 100_000, maxCostBps: 200, executionCostBps: 111 },
-          { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executionCostBps: 12 },
-          { requestedNotionalUsd: 5_000_000, maxCostBps: 200, executionCostBps: expect.closeTo(10.2, 10) },
-          { requestedNotionalUsd: 1_000_000, maxCostBps: 100, executionCostBps: 11 },
-        ]));
+    setObs(row, [obs]);
+    withCfg(row.stablecoinId, { costModel: { kind: "fee-bps", feeBps: 10, minFeeUsd: 1e3, gasOrBridgeCostUsd: 100 } }, () => {
+      expect(rev0(stub(row), row.stablecoinId).executionCosts).toEqual(expect.arrayContaining([
+        { requestedNotionalUsd: 1e5, maxCostBps: 200, executionCostBps: 111 }, { requestedNotionalUsd: 1e6, maxCostBps: 200, executionCostBps: 12 },
+        { requestedNotionalUsd: 5e6, maxCostBps: 200, executionCostBps: expect.closeTo(10.2, 10) }, { requestedNotionalUsd: 1e6, maxCostBps: 100, executionCostBps: 11 },
+      ]));
     });
   });
-  it.each([{ feeBpsMin: 25 }, { minFeeUsd: 1_000 }])(
-    "withholds a same-notional cost bound for minimum-only fees %j", (minimum) => {
-      const row = makeSupplyFullRedemption({ feeBps: null });
-      withRedemptionBackstopConfig(row.stablecoinId, {
-        costModel: { kind: "dynamic-or-unclear", confidence: "formula", feeModelKind: "formula", ...minimum },
-        v9RouteCostTerms: undefined,
-      }, () => {
-        expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0])
-          .toMatchObject({ feeEvidence: "disclosed-unquantified" });
-      });
-    },
-  );
+
+  it.each([{ feeBpsMin: 25 }, { minFeeUsd: 1e3 }])("withholds a same-notional cost bound for minimum-only fees %j", (min) => {
+    const row = mkFull({ feeBps: null });
+    withCfg(row.stablecoinId, { costModel: { kind: "dynamic-or-unclear", confidence: "formula", feeModelKind: "formula", ...min }, v9RouteCostTerms: undefined }, () => {
+      expect(rev0(stub(row), row.stablecoinId)).toMatchObject({ feeEvidence: "disclosed-unquantified" });
+    });
+  });
 
   it("preserves the captured redemption model-confidence rollup", () => {
-    const fixedInput = fixedInputStub(makeSupplyFullRedemption({ modelConfidence: "high" }));
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]).toMatchObject({
-      lane: "redemption",
-      executionCertainty: "bounded",
-      modelConfidence: "high",
-    });
+    expect(rev0(stub(mkFull({ modelConfidence: "high" })), USDC)).toMatchObject({ lane: "redemption", executionCertainty: "bounded", modelConfidence: "high" });
   });
 
   it("projects reviewed fixed and minimum fees when captured rows omit feeBps", () => {
-    const row = makeSupplyFullRedemption({
-      stablecoinId: "usdt-tether",
-      feeBps: null,
-      feeConfidence: "undisclosed-reviewed",
-      feeModelKind: "documented-variable",
-    });
-    const review = buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]!;
-
-    expect(review.executionCosts).toEqual(
-      expect.arrayContaining([
-        { requestedNotionalUsd: 100_000, maxCostBps: 200, executionCostBps: 100 },
-        { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executionCostBps: 10 },
-        { requestedNotionalUsd: 5_000_000, maxCostBps: 200, executionCostBps: 10 },
-        { requestedNotionalUsd: 25_000_000, maxCostBps: 200, executionCostBps: 10 },
-      ]),
-    );
-
-    const fixedFeeRow = makeSupplyFullRedemption({
-      stablecoinId: "ousd-origin-protocol",
-      feeBps: null,
-    });
-    const fixedFeeReview = buildSafetyScoreV9RouteReviews(
-      fixedInputStub(fixedFeeRow),
-      fixedFeeRow.stablecoinId,
-    )[0]!;
-    expect([...fixedFeeReview.executionCosts].sort((a, b) => a.requestedNotionalUsd - b.requestedNotionalUsd)).toEqual(
-      [100_000, 1_000_000, 5_000_000, 25_000_000].map((requestedNotionalUsd) => ({
-        requestedNotionalUsd, maxCostBps: 200, executionCostBps: 25,
-      })),
-    );
+    const u = mkFull({ stablecoinId: USDT, feeBps: null, feeConfidence: "undisclosed-reviewed", feeModelKind: "documented-variable" });
+    expect(rev0(stub(u), USDT).executionCosts).toEqual(expect.arrayContaining(costPts([[1e5, 100], [1e6, 10], [5e6, 10], [25e6, 10]])));
+    const o = mkFull({ stablecoinId: "ousd-origin-protocol", feeBps: null });
+    expect([...rev0(stub(o), o.stablecoinId).executionCosts].sort((a, b) => a.requestedNotionalUsd - b.requestedNotionalUsd)).toEqual(costPts([[1e5, 25], [1e6, 25], [5e6, 25], [25e6, 25]]));
   });
 
   it("projects conservative USDT-only reviewed constraints without changing the captured row", () => {
-    const row = makeSupplyFullRedemption({
-      stablecoinId: "usdt-tether",
-      settlementModel: "same-day",
-      settlementDelaySec: undefined,
-      minRedeemUsd: undefined,
-      holderEligibility: "verified-customer",
-    });
-    const review = buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]!;
-
+    const row = mkFull({ stablecoinId: USDT, settlementModel: "same-day", settlementDelaySec: undefined, minRedeemUsd: undefined, holderEligibility: "verified-customer" });
+    expect(rev0(stub(row), USDT)).toMatchObject({ holderAccess: "institutional-eligible", settlementModel: "bounded-delay", settlementSlaSec: null, settlementHorizonSec: 14 * DAY, minRedeemUsd: 1e5 });
     expect(row).toMatchObject({ settlementModel: "same-day", holderEligibility: "verified-customer" });
     expect(row.minRedeemUsd).toBeUndefined();
-    expect(review).toMatchObject({
-      holderAccess: "institutional-eligible",
-      settlementModel: "bounded-delay",
-      settlementSlaSec: null,
-      settlementHorizonSec: 14 * 86_400,
-      minRedeemUsd: 100_000,
-    });
   });
 
   it.each([
-    {
-      scenario: "current review",
-      clockSec: NOW,
-      expectedReview: { settlementModel: "bounded-delay", settlementSlaSec: 2 * 86_400 },
-      retainedHorizonSec: 14 * 86_400,
-    },
-    {
-      scenario: "expired review",
-      clockSec: Date.UTC(2027, 6, 2) / 1_000,
-      expectedReview: {
-        settlementModel: "bounded-delay", settlementSlaSec: null, settlementHorizonSec: 14 * 86_400,
-      },
-      retainedHorizonSec: null,
-    },
-  ] as const)(
-    "projects $scenario settlement terms without widening captured bounds",
-    ({ clockSec, expectedReview, retainedHorizonSec }) => {
-      const row = makeSupplyFullRedemption({
-        stablecoinId: "msusd-main-street", settlementModel: "days", settlementDelaySec: undefined,
-      });
-      const fixedInput = fixedInputStub(row, clockSec);
-      withV9RouteReviewTerms(row.stablecoinId, FASTER_REVIEWED_SETTLEMENT, () => {
-        expect(buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]).toMatchObject(expectedReview);
-        if (retainedHorizonSec !== null) {
-          expect(buildSafetyScoreV9RetainedRedemptionRoutes(
-            fixedInput, row.stablecoinId,
-          )[0]?.observation.settlementHorizonSec).toBe(retainedHorizonSec);
-          expect(buildSafetyScoreV9RouteReviews(
-            fixedInput, row.stablecoinId,
-          )[0]?.settlementHorizonSec).toBe(2 * 86_400);
-        }
-      });
-    },
-  );
+    ["current review", NOW, { settlementModel: "bounded-delay", settlementSlaSec: 2 * DAY }, 14 * DAY],
+    ["expired review", utc(2027, 6, 2), { settlementModel: "bounded-delay", settlementSlaSec: null, settlementHorizonSec: 14 * DAY }, null],
+  ] as const)("projects %s settlement terms without widening captured bounds", (_sc, clk, exp, retH) => {
+    const row = mkFull({ stablecoinId: "msusd-main-street", settlementModel: "days", settlementDelaySec: undefined }), f = stub(row, clk);
+    withTerms(row.stablecoinId, FAST_SETTLE, () => {
+      expect(rev0(f, row.stablecoinId)).toMatchObject(exp);
+      if (retH !== null) { expect(retRed(f, row.stablecoinId)[0]?.observation.settlementHorizonSec).toBe(retH); expect(rev0(f, row.stablecoinId)?.settlementHorizonSec).toBe(2 * DAY); }
+    });
+  });
 
   it("expires a favorable settlement after the producer persisted its current reviewed model", () => {
-    const stablecoinId = "usdy-ondo-finance";
-    withV9RouteReviewTerms(stablecoinId, {
-      ...FASTER_REVIEWED_SETTLEMENT, settlementModel: "atomic", settlementDelaySec: 0,
-    }, () => {
-    const config = getRedemptionBackstopConfig(stablecoinId)!;
-    const currentClock = Date.UTC(2026, 7, 26) / 1_000;
-    const staleClock = Date.UTC(2027, 7, 26) / 1_000;
-    const producerSettlement = resolveReviewedRedemptionSettlement(config, currentClock);
-    const row = makeSupplyFullRedemption({
-      stablecoinId,
-      settlementModel: producerSettlement,
-      settlementDelaySec: 0,
-    });
-
-    expect(producerSettlement).toBe("atomic");
-    expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row, currentClock), stablecoinId)[0]).toMatchObject({
-      settlementModel: "atomic",
-      settlementSlaSec: 0,
-    });
-    expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row, staleClock), stablecoinId)[0]).toMatchObject({
-      settlementModel: "bounded-delay",
-      settlementSlaSec: null,
-      settlementHorizonSec: 14 * 86_400,
-    });
+    const id = "usdy-ondo-finance";
+    withTerms(id, { ...FAST_SETTLE, settlementModel: "atomic", settlementDelaySec: 0 }, () => {
+      const cur = utc(2026, 7, 26), stale = utc(2027, 7, 26), ps = resSettle(getCfg(id)!, cur);
+      const row = mkFull({ stablecoinId: id, settlementModel: ps, settlementDelaySec: 0 });
+      expect(ps).toBe("atomic");
+      expect(rev0(stub(row, cur), id)).toMatchObject({ settlementModel: "atomic", settlementSlaSec: 0 });
+      expect(rev0(stub(row, stale), id)).toMatchObject({ settlementModel: "bounded-delay", settlementSlaSec: null, settlementHorizonSec: 14 * DAY });
     });
   });
 
   it("keeps pinned redemption fee and output valuation separate in the route review", () => {
-    const row = makeSupplyFullRedemption({ stablecoinId: "fpi-frax", feeBps: null });
-    const observation = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(row), row.stablecoinId)[0]!
-      .observation;
-    row.capacityProfile = {
-      ...row.capacityProfile!,
-      exitRouteObservations: [
-        {
-          ...observation,
-          output: { kind: "tracked-stablecoin", trackedAssetIds: ["frax-frax"] },
-          evidenceKind: "onchain-contract-state",
-          executionCostBps: 30,
-          outputUnitValueUsd: 0.98836526,
-          outputUnitValueSourceId: "protocol-redeem",
-          outputUnitValueObservedAt: NOW,
-          observedAt: NOW,
-          confidence: "high",
-          allInCostBps: 145.9983578,
-          modelConfidence: "high",
-          scoreEligible: true,
-        },
-      ],
-    };
-    const fixedInput = fixedInputStub(row);
-    (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = {
-      "frax-frax": { currentDeviationBps: -500, priceObservedAt: NOW },
-    };
-    const review = buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!;
-
-    expect(review.executionCosts).toEqual(
-      [[100_000, 200], [1_000_000, 200], [5_000_000, 30], [25_000_000, 200]]
-        .map(([requestedNotionalUsd, executionCostBps]) => ({ requestedNotionalUsd, maxCostBps: 200, executionCostBps })),
-    );
-    expect(review).toMatchObject({ executionCertainty: "bounded", modelConfidence: "high" });
-    expect(review.output).toMatchObject({
-      kind: "tracked-stablecoin",
-      valuation: {
-        basis: "price",
-        referenceAssetKey: "frax-frax",
-        unitValueUsd: 0.98836526,
-        sourceId: "protocol-redeem",
-        confidence: "high",
-      },
-    });
+    const row = mkFull({ stablecoinId: "fpi-frax", feeBps: null });
+    setObs(row, [{ ...obs0(row), output: trk("frax-frax"), evidenceKind: "onchain-contract-state", executionCostBps: 30, outputUnitValueUsd: 0.98836526, outputUnitValueSourceId: "protocol-redeem", outputUnitValueObservedAt: NOW, observedAt: NOW, confidence: "high", allInCostBps: 145.9983578, modelConfidence: "high", scoreEligible: true }]);
+    const f = stub(row);
+    setRawPeg(f, { "frax-frax": { currentDeviationBps: -500, priceObservedAt: NOW } });
+    const rev = rev0(f, row.stablecoinId);
+    expect(rev.executionCosts).toEqual(costPts([[1e5, 200], [1e6, 200], [5e6, 30], [25e6, 200]]));
+    expect(rev).toMatchObject({ executionCertainty: "bounded", modelConfidence: "high", output: { kind: "tracked-stablecoin", valuation: { basis: "price", referenceAssetKey: "frax-frax", unitValueUsd: 0.98836526, sourceId: "protocol-redeem", confidence: "high" } } });
   });
 
   it("keeps HBD payout cost unquantified even when a frozen row claims a zero fixed fee", () => {
-    const config = getRedemptionBackstopConfig("hbd-hive")!;
-    expect(config.costModel).toMatchObject({ kind: "dynamic-or-unclear", confidence: "formula", feeModelKind: "formula" });
-    const row = makeSupplyFullRedemption({
-      stablecoinId: "hbd-hive", settlementModel: "days", feeBps: 0,
-      feeConfidence: "fixed", feeModelKind: "fixed-bps",
-    });
-    const fixed = fixedInputStub(row, Date.UTC(2026, 9, 6) / 1_000);
-    const review = buildSafetyScoreV9RouteReviews(fixed, row.stablecoinId)[0]!;
-    expect(review).toMatchObject({ feeEvidence: "disclosed-unquantified", settlementSlaSec: null });
-    expect(review.executionCosts.length).toBeGreaterThan(0);
-    expect(review.executionCosts.every((point) => point.executionCostBps === point.maxCostBps)).toBe(true);
+    expect(getCfg("hbd-hive")!.costModel).toMatchObject({ kind: "dynamic-or-unclear", confidence: "formula", feeModelKind: "formula" });
+    const row = mkFull({ stablecoinId: "hbd-hive", settlementModel: "days", feeBps: 0, feeConfidence: "fixed", feeModelKind: "fixed-bps" });
+    const rev = rev0(stub(row, utc(2026, 9, 6)), row.stablecoinId);
+    expect(rev).toMatchObject({ feeEvidence: "disclosed-unquantified", settlementSlaSec: null });
+    expect(rev.executionCosts.length).toBeGreaterThan(0);
+    expect(rev.executionCosts.every((p) => p.executionCostBps === p.maxCostBps)).toBe(true);
     expect(row).toMatchObject({ feeBps: 0, feeModelKind: "fixed-bps" });
   });
 
   it("admits live execution without requiring an onchain status-source label", () => {
-    const row = liveDirectRow("static-config");
+    const row = liveDirect("static-config");
     expect(row.capacityProfile?.exitRouteObservations?.[0]?.scoreEligible).toBe(true);
-    expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]).toMatchObject({
-      lane: "redemption",
-      coverageClass: "exact-lower-bound",
-      modelConfidence: "high",
-    });
+    expect(rev0(stub(row), row.stablecoinId)).toMatchObject({ lane: "redemption", coverageClass: "exact-lower-bound", modelConfidence: "high" });
   });
 
-  it.each([
-    { routeStatus: "unknown", routeStatusSource: "static-config" },
-  ] as const)("admits positive execution despite $routeStatus/$routeStatusSource labels", ({ routeStatus, routeStatusSource }) => {
-    const row = liveDirectRow(routeStatusSource);
-    row.routeStatus = routeStatus;
-    row.capacityProfile!.exitRouteObservations![0]!.scoreEligible = false;
-    row.capacityProfile!.exitRouteObservations![0]!.observedAt = NOW;
-    row.capacityProfile!.exitRouteObservations![0]!.freshnessSeconds = 0;
-    const fixed = makeV9FixedInput({ assetId: row.stablecoinId, clockSec: NOW });
-    fixed.redemptionBackstopMap = { [row.stablecoinId]: row };
-    fixed.redemptionGenerationId = "redemption:unscored-positive-capacity";
-    fixed.redemptionStale = false;
+  it.each([["unknown", "static-config"]] as const)("admits positive execution despite %s/%s labels", (rs, rss) => {
+    const row = liveDirect(rss);
+    row.routeStatus = rs;
+    Object.assign(row.capacityProfile!.exitRouteObservations![0]!, { scoreEligible: false, observedAt: NOW, freshnessSeconds: 0 });
+    const fixed = mkFixed({ assetId: row.stablecoinId, clockSec: NOW });
+    Object.assign(fixed, { redemptionBackstopMap: { [row.stablecoinId]: row }, redemptionGenerationId: "redemption:unscored-positive-capacity", redemptionStale: false });
     fixed.inputFreshness.redemptionBackstops = { updatedAt: NOW, ageSeconds: 0, stale: false };
-    const coverage = fixed.dexLiqMap[row.stablecoinId]!.exitRouteObservationCoverage!;
     fixed.dexLiqMap[row.stablecoinId]!.exitRouteObservations = [];
-    coverage.retainedPoolCount = 0;
-    coverage.observationCount = 0;
-    coverage.scoreEligibleObservationCount = 0;
-    coverage.scoreEligiblePoolCount = 0;
-    coverage.scoreEligibleCapabilityPoolCount = 0;
-    const rebuilt = rebuildFixed(fixed);
-    const reviewed = makeV9Extension({ assetId: row.stablecoinId, clockSec: NOW, registryFingerprint: rebuilt.registryFingerprint });
-    reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(rebuilt, row.stablecoinId);
-    reviewed.assets[0]!.retainedRoutes = buildSafetyScoreV9RetainedRedemptionRoutes(rebuilt, row.stablecoinId);
-    const compiled = compileSafetyScoreV9FactSetFromFixedInput(rebuilt, reviewed).assets[0]!;
-    const result = evaluateV9Exit({
-      circulatingUsd: compiled.supply.circulatingUsd,
-      portfolioStatus: "reviewed-complete",
-      routes: compiled.exitRoutes.map(projectV9ExitEvaluationRoute),
-    }, V9_CANDIDATE_POLICY_V1);
-
-    expect(compiled.exitRoutes[0]!).toMatchObject({ scoreEligible: false, coverageClass: "exact-lower-bound" });
-    expect(compiled.exitRoutes[0]!.capacityCurve.some((point) => point.executableUsd > 0)).toBe(true);
-    expect(result.routes[0]).toMatchObject({ included: true });
-    expect(result.score).toBeGreaterThan(0);
-    expect(result.reasons).not.toContain("no-viable-exit-path");
+    Object.assign(fixed.dexLiqMap[row.stablecoinId]!.exitRouteObservationCoverage!, { retainedPoolCount: 0, observationCount: 0, scoreEligibleObservationCount: 0, scoreEligiblePoolCount: 0, scoreEligibleCapabilityPoolCount: 0 });
+    const reb = rebuildFixed(fixed), reviewed = mkExt({ assetId: row.stablecoinId, clockSec: NOW, registryFingerprint: reb.registryFingerprint });
+    reviewed.assets[0]!.routeReviews = routeRevs(reb, row.stablecoinId);
+    reviewed.assets[0]!.retainedRoutes = retRed(reb, row.stablecoinId);
+    const comp = compileFacts(reb, reviewed).assets[0]!;
+    const res = evalExit({ circulatingUsd: comp.supply.circulatingUsd, portfolioStatus: "reviewed-complete", routes: comp.exitRoutes.map(projExit) }, POL);
+    expect(comp.exitRoutes[0]!).toMatchObject({ scoreEligible: false, coverageClass: "exact-lower-bound" });
+    expect(comp.exitRoutes[0]!.capacityCurve.some((p) => p.executableUsd > 0)).toBe(true);
+    expect(res.routes[0]).toMatchObject({ included: true }); expect(res.score).toBeGreaterThan(0); expect(res.reasons).not.toContain("no-viable-exit-path");
   });
 
-  it.each([
-    { routeStatusSource: "onchain" },
-    { routeStatusSource: "protocol-api" },
-  ] as const)(
-    "keeps $routeStatusSource-sourced live-direct evidence scoreable",
-    ({ routeStatusSource }) => {
-      const row = liveDirectRow(routeStatusSource);
-      expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]).toMatchObject({
-        lane: "redemption",
-        coverageClass: "exact-lower-bound",
-        modelConfidence: "high",
-      });
-    },
-  );
+  it.each(["onchain", "protocol-api"] as const)("keeps %s-sourced live-direct evidence scoreable", (rss) => {
+    const row = liveDirect(rss);
+    expect(rev0(stub(row), row.stablecoinId)).toMatchObject({ lane: "redemption", coverageClass: "exact-lower-bound", modelConfidence: "high" });
+  });
 
   it("carries a live 30-day queue and its capacity constraints into the v9 route review", () => {
-    const row = liveDirectRow("protocol-api");
-    const observation = row.capacityProfile!.exitRouteObservations![0]!;
-    row.settlementModel = "queued";
-    row.queueEnabled = true;
-    row.settlementDelaySec = 30 * 86_400;
-    row.queueDepthUsd = 12_000_000;
-    row.dailyLimitUsd = 5_000_000;
-    row.minRedeemUsd = 100_000;
-    row.capacityProfile = {
-      ...row.capacityProfile!,
-      scoringHorizon: "queued",
-      dailyLimitUsd: 5_000_000,
-      queuedUsd: 12_000_000,
-      exitRouteObservations: [
-        {
-          ...observation,
-          settlementHorizonSec: 30 * 86_400,
-          scoreEligible: false,
-        },
-      ],
-    };
-
-    expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]).toMatchObject({
-      lane: "redemption",
-      capacityScoringHorizon: "queued",
-      settlementModel: "queued",
-      settlementSlaSec: 30 * 86_400,
-      queueDepthUsd: 12_000_000,
-      dailyLimitUsd: 5_000_000,
-      minRedeemUsd: 100_000,
-    });
+    const row = liveDirect("protocol-api"), obs = row.capacityProfile!.exitRouteObservations![0]!;
+    Object.assign(row, { settlementModel: "queued", queueEnabled: true, settlementDelaySec: 30 * DAY, queueDepthUsd: 12e6, dailyLimitUsd: 5e6, minRedeemUsd: 1e5 });
+    row.capacityProfile = { ...row.capacityProfile!, scoringHorizon: "queued", dailyLimitUsd: 5e6, queuedUsd: 12e6, exitRouteObservations: [{ ...obs, settlementHorizonSec: 30 * DAY, scoreEligible: false }] };
+    expect(rev0(stub(row), row.stablecoinId)).toMatchObject({ lane: "redemption", capacityScoringHorizon: "queued", settlementModel: "queued", settlementSlaSec: 30 * DAY, queueDepthUsd: 12e6, dailyLimitUsd: 5e6, minRedeemUsd: 1e5 });
   });
 
   it("projects the eEARN atomic producer route onto its unbounded queued v9 review", () => {
-    const row = liveDirectRow("onchain");
-    const observation = row.capacityProfile!.exitRouteObservations![0]!;
+    const row = liveDirect("onchain"), obs = row.capacityProfile!.exitRouteObservations![0]!;
     row.stablecoinId = "eearn-ember";
-    row.capacityProfile = {
-      ...row.capacityProfile!,
-      exitRouteObservations: [
-        {
-          ...observation,
-          routeId: "redemption:eearn-ember:stablecoin-redeem",
-          scope: { kind: "protocol", protocol: "eearn-ember", chain: "ethereum" },
-          output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdc-circle"] },
-          settlementHorizonSec: 300,
-          settlementBoundUnproven: true,
-          scoreEligible: false,
-        },
-      ],
-    };
-
+    setObs(row, [{ ...obs, routeId: "redemption:eearn-ember:stablecoin-redeem", scope: { kind: "protocol", protocol: "eearn-ember", chain: "ethereum" }, output: trk(USDC), settlementHorizonSec: 300, settlementBoundUnproven: true, scoreEligible: false }]);
     expect(row).toMatchObject({ settlementModel: "atomic", queueEnabled: false });
-    expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]).toMatchObject({
-      lane: "redemption",
-      settlementModel: "queued",
-      settlementSlaSec: null,
-      settlementHorizonSec: 30 * 86_400,
-      coverageClass: "exact-lower-bound",
-    });
+    expect(rev0(stub(row), row.stablecoinId)).toMatchObject({ lane: "redemption", settlementModel: "queued", settlementSlaSec: null, settlementHorizonSec: 30 * DAY, coverageClass: "exact-lower-bound" });
     expect(row.capacityProfile?.exitRouteObservations?.[0]?.settlementBoundUnproven).toBe(true);
   });
 
   it("values a resolved stable-basket output at the weakest component's price", () => {
-    const { fixedInput, row } = redemptionPegFixture({
-      rowOverrides: { stablecoinId: "dai-makerdao" },
-      output: {
-        kind: "tracked-stablecoin",
-        trackedAssetIds: ["usdc-circle", "usdt-tether"],
-      },
-      pegDataById: {
-        "usdc-circle": { currentDeviationBps: 2, priceObservedAt: NOW },
-        "usdt-tether": { currentDeviationBps: -14, priceObservedAt: NOW },
-      },
-    });
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!.output).toMatchObject({
-      kind: "tracked-stablecoin",
-      assetKeys: ["usdc-circle", "usdt-tether"],
-      valuation: {
-        basis: "price", referenceAssetKey: "usdt-tether",
-        unitValueUsd: 1 - 14 / 10_000, confidence: "medium",
-      },
-    });
-    setPegData(fixedInput, {
-      "usdc-circle": { currentDeviationBps: 2, priceObservedAt: NOW },
-    });
-    expect(buildSafetyScoreV9RouteReviews(
-      fixedInput, row.stablecoinId,
-    )[0]!.output?.valuation).toBeNull();
+    const { fixedInput } = redFx({ rowOverrides: { stablecoinId: DAI }, output: trk(USDC, USDT), pegDataById: { [USDC]: { currentDeviationBps: 2, priceObservedAt: NOW }, [USDT]: { currentDeviationBps: -14, priceObservedAt: NOW } } });
+    expect(rev0(fixedInput, DAI).output).toMatchObject({ kind: "tracked-stablecoin", assetKeys: [USDC, USDT], valuation: { basis: "price", referenceAssetKey: USDT, unitValueUsd: 1 - 14 / 1e4, confidence: "medium" } });
+    setPeg(fixedInput, { [USDC]: { currentDeviationBps: 2, priceObservedAt: NOW } });
+    expect(val0(fixedInput, DAI)).toBeNull();
   });
 
   it("compares non-USD basket components by value-to-expectation ratio", () => {
-    const { fixedInput, row } = redemptionPegFixture({
-      rowOverrides: { stablecoinId: "dai-makerdao" },
-      output: {
-        kind: "tracked-stablecoin",
-        trackedAssetIds: ["thbill-theo", "usdt-tether"],
-      },
-      pegDataById: {
-        "usdt-tether": { currentDeviationBps: -14, priceObservedAt: NOW },
-      },
-    });
-    fixedInput.navPriceById = {
-      "thbill-theo": {
-        priceUsd: 0.8, sourceId: "non-usd-nav-fixture", observedAtSec: NOW, confidence: "high",
-      },
-    };
-    expect(buildSafetyScoreV9RouteReviews(
-      fixedInput, row.stablecoinId,
-    )[0]?.output?.valuation).toMatchObject({
-      referenceAssetKey: "usdt-tether",
-      unitValueUsd: 1 - 14 / 10_000,
-      expectedUnitValueUsd: 1,
-    });
+    const { fixedInput } = redFx({ rowOverrides: { stablecoinId: DAI }, output: trk(THBILL, USDT), pegDataById: { [USDT]: { currentDeviationBps: -14, priceObservedAt: NOW } } });
+    fixedInput.navPriceById = { [THBILL]: { priceUsd: 0.8, sourceId: "non-usd-nav-fixture", observedAtSec: NOW, confidence: "high" } };
+    expect(val0(fixedInput, DAI)).toMatchObject({ referenceAssetKey: USDT, unitValueUsd: 1 - 14 / 1e4, expectedUnitValueUsd: 1 });
   });
 
   it("preserves USD0 mixed-collateral identities through the reviewed route output", () => {
-    const row = makeSupplyFullRedemption({
-      stablecoinId: "usd0-usual",
-      routeFamily: "stablecoin-redeem",
-      outputAssetType: "mixed-collateral",
-    });
-    const derived = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(row), row.stablecoinId)[0]!;
-    row.capacityProfile = {
-      ...row.capacityProfile!,
-      exitRouteObservations: [derived.observation],
-    };
-
-    const review = buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]!;
-    expect(review.output).toMatchObject({
-      kind: "collateral",
-      assetKeys: ["asset:m", "asset:ustbl", "asset:usyc"],
-      valuation: {
-        referenceAssetKey: "asset:m",
-        unitValueUsd: 1,
-        expectedUnitValueUsd: 1,
-        sourceId: "report-cards-dex-usd-normalized",
-      },
-    });
+    const row = mkFull({ stablecoinId: "usd0-usual", routeFamily: "stablecoin-redeem", outputAssetType: "mixed-collateral" });
+    setObs(row, [obs0(row)]);
+    expect(rev0(stub(row), row.stablecoinId).output).toMatchObject({ kind: "collateral", assetKeys: ["asset:m", "asset:ustbl", "asset:usyc"], valuation: { referenceAssetKey: "asset:m", unitValueUsd: 1, expectedUnitValueUsd: 1, sourceId: "report-cards-dex-usd-normalized" } });
   });
 
+  const dtrinity = { stablecoinId: "dusd-dtrinity", routeFamily: "stablecoin-redeem" as const, accessModel: "permissionless-onchain" as const, executionModel: "deterministic-basket" as const, outputAssetType: "stable-basket" as const };
 
-  it.each([
-    { clockSec: Date.UTC(2026, 6, 13, 12) / 1_000, expectedResponsibility: undefined },
-    { clockSec: Date.UTC(2026, 6, 27, 12) / 1_000, expectedResponsibility: undefined },
-    { clockSec: Date.UTC(2026, 6, 28, 0, 0, 1) / 1_000, expectedResponsibility: "producer-failed" },
-  ] as const)(
-    "projects unresolved-output ownership at $clockSec",
-    ({ clockSec, expectedResponsibility }) => {
-      const { fixedInput, row } = redemptionPegFixture({
-        rowOverrides: {
-          stablecoinId: "dusd-dtrinity",
-          routeFamily: "stablecoin-redeem",
-          accessModel: "permissionless-onchain",
-          executionModel: "deterministic-basket",
-          outputAssetType: "stable-basket",
-        },
-        clockSec,
-        observationClockSec: Date.UTC(2026, 6, 13, 12) / 1_000,
-      });
-      expect(buildSafetyScoreV9RouteReviews(
-        fixedInput, row.stablecoinId,
-      )[0]?.unresolvedOutputResponsibility).toBe(expectedResponsibility);
+  it.each([[utc(2026, 6, 13, 12), undefined], [utc(2026, 6, 27, 12), undefined], [utc(2026, 6, 28, 0, 0, 1), "producer-failed"]] as const)(
+    "projects unresolved-output ownership at %s",
+    (clockSec, exp) => {
+      const { fixedInput, row } = redFx({ rowOverrides: dtrinity, clockSec, observationClockSec: utc(2026, 6, 13, 12) });
+      expect(rev0(fixedInput, row.stablecoinId)?.unresolvedOutputResponsibility).toBe(exp);
     },
   );
 
   it("prices the dTRINITY vault-bridge receipt basket through each receipt's underlying", () => {
-    const pegDataById = Object.fromEntries(
-      ([
-        ["usdc-circle", 3], ["usdt-tether", -21], ["usds-sky", 1],
-        ["susds-sky", 4], ["frxusd-frax", -2], ["sfrxusd-frax", 5],
-        ["dai-makerdao", -4], ["sdai-sky", 6], ["ausd-agora", -1],
-      ] as const).map(([assetId, currentDeviationBps]) => [
-        assetId, { currentDeviationBps, priceObservedAt: NOW },
-      ]),
-    );
-    const { fixedInput, row } = redemptionPegFixture({
-      rowOverrides: {
-        stablecoinId: "dusd-dtrinity",
-        routeFamily: "stablecoin-redeem",
-        accessModel: "permissionless-onchain",
-        executionModel: "deterministic-basket",
-        outputAssetType: "stable-basket",
-      },
-      pegDataById,
+    const pegDataById = Object.fromEntries(([[USDC, 3], [USDT, -21], ["usds-sky", 1], ["susds-sky", 4], ["frxusd-frax", -2], ["sfrxusd-frax", 5], [DAI, -4], ["sdai-sky", 6], ["ausd-agora", -1]] as const).map(([id, currentDeviationBps]) => [id, { currentDeviationBps, priceObservedAt: NOW }]));
+    const { fixedInput, row } = redFx({ rowOverrides: dtrinity, pegDataById });
+    expect(rev0(fixedInput, row.stablecoinId).output).toMatchObject({
+      kind: "basket", assetKeys: ["asset:vbusdc", "asset:vbusdt", "ausd-agora", DAI, "frxusd-frax", "sdai-sky", "sfrxusd-frax", "susds-sky", USDC, "usds-sky", USDT],
+      valuation: { basis: "price", referenceAssetKey: "asset:vbusdt", unitValueUsd: 1 - 21 / 1e4, expectedUnitValueUsd: 1, sourceId: "safety-score-v9-extension-fixed-rate-receipt", confidence: "medium" },
     });
-
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!.output).toMatchObject({
-      kind: "basket",
-      assetKeys: [
-        "asset:vbusdc",
-        "asset:vbusdt",
-        "ausd-agora",
-        "dai-makerdao",
-        "frxusd-frax",
-        "sdai-sky",
-        "sfrxusd-frax",
-        "susds-sky",
-        "usdc-circle",
-        "usds-sky",
-        "usdt-tether",
-      ],
-      valuation: {
-        basis: "price",
-        referenceAssetKey: "asset:vbusdt",
-        unitValueUsd: 1 - 21 / 10_000,
-        expectedUnitValueUsd: 1,
-        sourceId: "safety-score-v9-extension-fixed-rate-receipt",
-        confidence: "medium",
-      },
-    });
-
-    const { "usdt-tether": _dropped, ...withoutUnderlying } = fixedInput.pegDataById;
-    setPegData(fixedInput, withoutUnderlying);
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!.output).toBeNull();
+    const { [USDT]: _d, ...rest } = fixedInput.pegDataById;
+    setPeg(fixedInput, rest);
+    expect(rev0(fixedInput, row.stablecoinId).output).toBeNull();
   });
 
   it("leaves an unresolved basket unresolved when a leg has no reviewed conversion", () => {
-    const { fixedInput, row } = redemptionPegFixture({
-      rowOverrides: {
-        stablecoinId: "dusd-dtrinity",
-        routeFamily: "stablecoin-redeem",
-        accessModel: "permissionless-onchain",
-        executionModel: "deterministic-basket",
-        outputAssetType: "stable-basket",
-      },
-      pegDataById: {
-        "usdc-circle": { currentDeviationBps: -5, priceObservedAt: NOW },
-      },
-      clockSec: Date.UTC(2026, 6, 28, 0, 0, 1) / 1_000,
-    });
-    const review = buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!;
-    expect(review).toMatchObject({ output: null, unresolvedOutputResponsibility: "producer-failed" });
-    expect((review.physicalResourceKeys ?? []).some((key) => key.startsWith("execution-endpoint:"))).toBe(false);
+    const { fixedInput, row } = redFx({ rowOverrides: dtrinity, pegDataById: { [USDC]: { currentDeviationBps: -5, priceObservedAt: NOW } }, clockSec: utc(2026, 6, 28, 0, 0, 1) });
+    const rev = rev0(fixedInput, row.stablecoinId);
+    expect(rev).toMatchObject({ output: null, unresolvedOutputResponsibility: "producer-failed" });
+    expect((rev.physicalResourceKeys ?? []).some((k) => k.startsWith("execution-endpoint:"))).toBe(false);
   });
 
   it("admits dEURO's source-bound nine-member EUR output valuation without calling it fiat", () => {
-    const row = makeSupplyFullRedemption({
-      stablecoinId: "deuro-deuro", routeFamily: "collateral-redeem",
-      accessModel: "permissionless-onchain", executionModel: "deterministic-basket",
-      outputAssetType: "stable-basket", feeBps: 0,
-    });
-    const baseObservation = buildSafetyScoreV9RetainedRedemptionRoutes(
-      fixedInputStub(row), row.stablecoinId,
-    )[0]!.observation;
-    const assetKeys = [
-      "asset:eura", "asset:eure-legacy-ethereum", "asset:eurt", "asset:veur",
-      "eurc-circle", "euri-banking-circle", "europ-schuman", "eurr-stablr", "eurs-stasis",
-    ];
-    row.capacityConfidence = "live-direct";
-    row.capacityKind = "live-direct-bounded";
-    row.modelConfidence = "high";
-    row.capacityProfile = {
-      ...row.capacityProfile!,
-      scoringUsd: 500_000,
-      scoringHorizon: "immediate",
-      exitRouteObservations: [{
-        ...baseObservation,
-        output: {
-          kind: "unresolved-basket",
-          assetKeys,
-          basketWeights: assetKeys.map((assetId, index) => ({ assetId, weight: index === 4 ? 1 : 0 })),
-        },
-        routeFamily: "protocol-redemption",
-        evidenceKind: "onchain-contract-state",
-        confidence: "high",
-        executionCostBps: 0,
-        outputUnitValueUsd: 1.15,
-        outputExpectedUnitValueUsd: 1.15,
-        outputUnitValueSourceId: "collateral-positions-api:deuro-bridge-basket:test",
-        outputUnitValueObservedAt: NOW,
-        allInCostBps: 0,
-        scoreEligible: true,
-        observedAt: NOW,
-        freshnessSeconds: 0,
-      }],
-    };
-    expect(buildSafetyScoreV9RouteReviews(
-      fixedInputStub(row), row.stablecoinId,
-    )[0]?.output).toMatchObject({
-      kind: "basket",
-      assetKeys,
-      basketWeights: [{ assetKey: "eurc-circle", weight: 1 }],
-      valuation: {
-        basis: "price", unitValueUsd: 1.15, expectedUnitValueUsd: 1.15,
-        sourceId: "collateral-positions-api:deuro-bridge-basket:test", confidence: "high",
-      },
-    });
+    const row = mkFull({ stablecoinId: "deuro-deuro", routeFamily: "collateral-redeem", accessModel: "permissionless-onchain", executionModel: "deterministic-basket", outputAssetType: "stable-basket", feeBps: 0 });
+    const base = obs0(row), assetKeys = ["asset:eura", "asset:eure-legacy-ethereum", "asset:eurt", "asset:veur", EURC, "euri-banking-circle", "europ-schuman", "eurr-stablr", "eurs-stasis"];
+    Object.assign(row, { capacityConfidence: "live-direct", capacityKind: "live-direct-bounded", modelConfidence: "high" });
+    row.capacityProfile = { ...row.capacityProfile!, scoringUsd: 5e5, scoringHorizon: "immediate", exitRouteObservations: [{ ...base, output: { kind: "unresolved-basket", assetKeys, basketWeights: assetKeys.map((assetId, i) => ({ assetId, weight: i === 4 ? 1 : 0 })) }, routeFamily: "protocol-redemption", evidenceKind: "onchain-contract-state", confidence: "high", executionCostBps: 0, outputUnitValueUsd: 1.15, outputExpectedUnitValueUsd: 1.15, outputUnitValueSourceId: "collateral-positions-api:deuro-bridge-basket:test", outputUnitValueObservedAt: NOW, allInCostBps: 0, scoreEligible: true, observedAt: NOW, freshnessSeconds: 0 }] };
+    expect(rev0(stub(row), row.stablecoinId)?.output).toMatchObject({ kind: "basket", assetKeys, basketWeights: [{ assetKey: EURC, weight: 1 }], valuation: { basis: "price", unitValueUsd: 1.15, expectedUnitValueUsd: 1.15, sourceId: "collateral-positions-api:deuro-bridge-basket:test", confidence: "high" } });
   });
 
   it.each([
-    {
-      stablecoinId: "srusd-reservoir",
-      outputAssetId: "usdc-circle",
-      rowOverrides: {},
-      pegDataById: { "usdc-circle": { currentDeviationBps: -3, priceObservedAt: NOW } },
-      expectedUnitValueUsd: 0.9997,
-    },
-    {
-      stablecoinId: "zys-zephyr-protocol",
-      outputAssetId: "zsd-zephyr-protocol",
-      rowOverrides: { outputAssetType: "stable-single" as const },
-      pegDataById: {
-        "zsd-zephyr-protocol": {
-          currentDeviationBps: 0, priceObservedAt: NOW,
-          pegScore: 100, activeDepeg: false, eventCount: 0, worstDeviationBps: null,
-        },
-      },
-      expectedUnitValueUsd: 1,
-    },
-  ] as const)(
-    "values $stablecoinId through its tracked $outputAssetId output",
-    ({ stablecoinId, outputAssetId, rowOverrides, pegDataById, expectedUnitValueUsd }) => {
-      const { fixedInput } = redemptionPegFixture({
-        rowOverrides: {
-          stablecoinId, routeFamily: "stablecoin-redeem",
-          accessModel: "permissionless-onchain", holderEligibility: "any-holder", ...rowOverrides,
-        },
-        output: { kind: "tracked-stablecoin", trackedAssetIds: [outputAssetId] },
-        pegDataById,
-      });
-      expect(buildSafetyScoreV9RouteReviews(fixedInput, stablecoinId)[0]?.output).toMatchObject({
-        kind: "tracked-stablecoin",
-        assetKeys: [outputAssetId],
-        valuation: {
-          basis: "price",
-          referenceAssetKey: outputAssetId,
-          unitValueUsd: expectedUnitValueUsd,
-          expectedUnitValueUsd: 1,
-          sourceId: "report-cards-peg-summary",
-        },
-      });
-    },
-  );
+    ["srusd-reservoir", USDC, {}, { [USDC]: { currentDeviationBps: -3, priceObservedAt: NOW } }, 0.9997],
+    ["zys-zephyr-protocol", "zsd-zephyr-protocol", { outputAssetType: "stable-single" as const }, { "zsd-zephyr-protocol": { currentDeviationBps: 0, priceObservedAt: NOW, pegScore: 100, activeDepeg: false, eventCount: 0, worstDeviationBps: null } }, 1],
+  ] as const)("values %s through its tracked %s output", (id, outId, ov, pegDataById, expVal) => {
+    const { fixedInput } = redFx({ rowOverrides: { stablecoinId: id, routeFamily: "stablecoin-redeem", accessModel: "permissionless-onchain", holderEligibility: "any-holder", ...ov }, output: trk(outId), pegDataById });
+    expect(rev0(fixedInput, id)?.output).toMatchObject({ kind: "tracked-stablecoin", assetKeys: [outId], valuation: { basis: "price", referenceAssetKey: outId, unitValueUsd: expVal, expectedUnitValueUsd: 1, sourceId: "report-cards-peg-summary" } });
+  });
 
   it("retains ZYS's tracked ZSD identity without inventing a price from quiet peg history", () => {
-    const { fixedInput } = redemptionPegFixture({
-      rowOverrides: {
-        stablecoinId: "zys-zephyr-protocol", routeFamily: "stablecoin-redeem",
-        accessModel: "permissionless-onchain", holderEligibility: "any-holder",
-        outputAssetType: "stable-single",
-      },
-      output: { kind: "tracked-stablecoin", trackedAssetIds: ["zsd-zephyr-protocol"] },
-      pegDataById: { "zsd-zephyr-protocol": {
-        currentDeviationBps: null, pegScore: 100, activeDepeg: false,
-        eventCount: 0, worstDeviationBps: null,
-      } },
-    });
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, "zys-zephyr-protocol")[0]?.output).toMatchObject({
-      kind: "tracked-stablecoin", assetKeys: ["zsd-zephyr-protocol"], valuation: null,
-    });
+    const { fixedInput } = redFx({ rowOverrides: { stablecoinId: "zys-zephyr-protocol", routeFamily: "stablecoin-redeem", accessModel: "permissionless-onchain", holderEligibility: "any-holder", outputAssetType: "stable-single" }, output: trk("zsd-zephyr-protocol"), pegDataById: { "zsd-zephyr-protocol": { currentDeviationBps: null, pegScore: 100, activeDepeg: false, eventCount: 0, worstDeviationBps: null } } });
+    expect(rev0(fixedInput, "zys-zephyr-protocol")?.output).toMatchObject({ kind: "tracked-stablecoin", assetKeys: ["zsd-zephyr-protocol"], valuation: null });
   });
 
   it("uses a complete source-bound producer valuation for CUSD when WTGXX has no peg row", () => {
-    const reviewedRow = makeSupplyFullRedemption({
-      stablecoinId: "cusd-cap",
-      routeFamily: "basket-redeem",
-      accessModel: "permissionless-onchain",
-      settlementModel: "atomic",
-      executionModel: "deterministic-basket",
-      outputAssetType: "stable-basket",
-      feeBps: 0,
-    });
-    const observation = buildSafetyScoreV9RetainedRedemptionRoutes(
-      fixedInputStub(reviewedRow),
-      reviewedRow.stablecoinId,
-    )[0]!.observation;
-    const row = {
-      ...reviewedRow,
-      sourceMode: "dynamic",
-      routeStatusSource: "onchain",
-      capacityConfidence: "live-direct",
-      capacityKind: "live-direct-bounded",
-      modelConfidence: "high",
-    } satisfies RedemptionBackstopEntry;
-    row.capacityProfile = {
-      ...row.capacityProfile!,
-      scoringUsd: 30_000_000,
-      scoringHorizon: "immediate",
-      exitRouteObservations: [
-        {
-          ...observation,
-          output: {
-            kind: "tracked-stablecoin",
-            trackedAssetIds: ["usdc-circle", "wtgxx-wisdomtree"],
-            basketWeights: [
-              { assetId: "usdc-circle", weight: 0.93 },
-              { assetId: "wtgxx-wisdomtree", weight: 0.07 },
-            ],
-          },
-          evidenceKind: "onchain-contract-state",
-          confidence: "high",
-          executionCostBps: 0,
-          outputUnitValueUsd: 0.999983,
-          outputUnitValueSourceId:
-            "cap-vault:chainlink-nav:0xd13cb763c43b5c058e7ec40176962c5030f4eb49",
-          outputUnitValueObservedAt: NOW - 120,
-          allInCostBps: 0.17,
-          scoreEligible: true,
-          observedAt: NOW,
-          freshnessSeconds: 0,
-        },
-      ],
-    };
-    const fixedInput = fixedInputStub(row);
-    (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = {
-      "usdc-circle": { currentDeviationBps: 2, priceObservedAt: NOW },
-    };
-
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, "cusd-cap")[0]?.output).toMatchObject({
-      basketWeights: [
-        { assetKey: "usdc-circle", weight: 0.93 },
-        { assetKey: "wtgxx-wisdomtree", weight: 0.07 },
-      ],
-      valuation: {
-        basis: "price",
-        referenceAssetKey: "basket:redemption:cusd-cap:basket-redeem",
-        unitValueUsd: 0.999983,
-        expectedUnitValueUsd: 1,
-        sourceId: "cap-vault:chainlink-nav:0xd13cb763c43b5c058e7ec40176962c5030f4eb49",
-        observedAtSec: NOW - 120,
-        confidence: "high",
-      },
-    });
-
-    (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = {
-      "usdc-circle": { currentDeviationBps: -5, priceObservedAt: NOW },
-    };
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, "cusd-cap")[0]?.output?.valuation).toMatchObject({
-      referenceAssetKey: "usdc-circle",
-      unitValueUsd: 0.9995,
-      sourceId: "report-cards-peg-summary",
-      confidence: "medium",
-    });
+    const reviewed = mkFull({ stablecoinId: "cusd-cap", routeFamily: "basket-redeem", accessModel: "permissionless-onchain", settlementModel: "atomic", executionModel: "deterministic-basket", outputAssetType: "stable-basket", feeBps: 0 });
+    const row = { ...reviewed, sourceMode: "dynamic", routeStatusSource: "onchain", capacityConfidence: "live-direct", capacityKind: "live-direct-bounded", modelConfidence: "high" } satisfies RedEnt;
+    row.capacityProfile = { ...row.capacityProfile!, scoringUsd: 3e7, scoringHorizon: "immediate", exitRouteObservations: [{ ...obs0(reviewed), output: { ...trk(USDC, "wtgxx-wisdomtree"), basketWeights: [{ assetId: USDC, weight: 0.93 }, { assetId: "wtgxx-wisdomtree", weight: 0.07 }] }, evidenceKind: "onchain-contract-state", confidence: "high", executionCostBps: 0, outputUnitValueUsd: 0.999983, outputUnitValueSourceId: "cap-vault:chainlink-nav:0xd13cb763c43b5c058e7ec40176962c5030f4eb49", outputUnitValueObservedAt: NOW - 120, allInCostBps: 0.17, scoreEligible: true, observedAt: NOW, freshnessSeconds: 0 }] };
+    const f = stub(row);
+    setRawPeg(f, { [USDC]: { currentDeviationBps: 2, priceObservedAt: NOW } });
+    expect(rev0(f, "cusd-cap")?.output).toMatchObject({ basketWeights: [{ assetKey: USDC, weight: 0.93 }, { assetKey: "wtgxx-wisdomtree", weight: 0.07 }], valuation: { basis: "price", referenceAssetKey: "basket:redemption:cusd-cap:basket-redeem", unitValueUsd: 0.999983, expectedUnitValueUsd: 1, sourceId: "cap-vault:chainlink-nav:0xd13cb763c43b5c058e7ec40176962c5030f4eb49", observedAtSec: NOW - 120, confidence: "high" } });
+    setRawPeg(f, { [USDC]: { currentDeviationBps: -5, priceObservedAt: NOW } });
+    expect(val0(f, "cusd-cap")).toMatchObject({ referenceAssetKey: USDC, unitValueUsd: 0.9995, sourceId: "report-cards-peg-summary", confidence: "medium" });
   });
 
   it("values production-shaped tracked DEX output aliases by canonical stablecoin id", () => {
-    const { fixedInput, route } = dexPegFixture({
+    const { fixedInput, route } = dexFx({
       assetId: "asset-input",
-      routeOverrides: {
-        routeId: "dex:asset-input:dl:ethereum%3Afp%3Aethereum%3Acurve%3Apool:ethereum%3A0xfa2b947eec368f42195f24f36d2af29f7c24cec2",
-        output: {
-          kind: "tracked-stablecoin",
-          trackedAssetIds: ["usdf-falcon"],
-          assetKeys: ["ethereum:0xfa2b947eec368f42195f24f36d2af29f7c24cec2"],
-        },
-        outputUnitValueUsd: 0.95,
-        outputUnitValueSourceId: "dex-amm-output-reference:curve:tracked-market",
-        outputUnitValueObservedAt: NOW,
-      },
-      pegDataById: {
-        "usdf-falcon": { pegCurrency: "USD", currentDeviationBps: -12, priceObservedAt: NOW },
-      },
+      routeOverrides: { routeId: "dex:asset-input:dl:ethereum%3Afp%3Aethereum%3Acurve%3Apool:ethereum%3A0xfa2b947eec368f42195f24f36d2af29f7c24cec2", output: { ...trk("usdf-falcon"), assetKeys: ["ethereum:0xfa2b947eec368f42195f24f36d2af29f7c24cec2"] }, outputUnitValueUsd: 0.95, outputUnitValueSourceId: "dex-amm-output-reference:curve:tracked-market", outputUnitValueObservedAt: NOW },
+      pegDataById: { "usdf-falcon": { pegCurrency: "USD", currentDeviationBps: -12, priceObservedAt: NOW } },
     });
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, "asset-input")).toEqual([
-      expect.objectContaining({
-        lane: "dex", routeId: route.routeId, modelConfidence: "medium", coverageClass: "exact-complete",
-        output: expect.objectContaining({
-          kind: "tracked-stablecoin",
-          assetKeys: ["usdf-falcon"],
-          valuation: expect.objectContaining({
-            referenceAssetKey: "usdf-falcon",
-            unitValueUsd: 0.9988,
-            expectedUnitValueUsd: 1,
-            sourceId: "report-cards-peg-summary",
-          }),
-        }),
-      }),
-    ]);
+    expect(routeRevs(fixedInput, "asset-input")).toEqual([expect.objectContaining({ lane: "dex", routeId: route.routeId, modelConfidence: "medium", coverageClass: "exact-complete", output: expect.objectContaining({ kind: "tracked-stablecoin", assetKeys: ["usdf-falcon"], valuation: expect.objectContaining({ referenceAssetKey: "usdf-falcon", unitValueUsd: 0.9988, expectedUnitValueUsd: 1, sourceId: "report-cards-peg-summary" }) }) })]);
   });
 
   it("uses a source-bound exact DEX output reference when peg and NAV valuation are unavailable", () => {
-    const { fixedInput, route } = dexPegFixture({
+    const { fixedInput, route } = dexFx({
       assetId: "scrvusd-curve",
-      routeOverrides: {
-        routeId: "dex:scrvusd-curve:dl:ethereum%3Ausdaf-output",
-        executableUsd: 31_206.39,
-        completionRatio: 0.03120639,
-        output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdaf-asymmetry"] },
-        outputUnitValueUsd: 0.9975,
-        outputUnitValueSourceId: "dex-amm-output-reference:curve:tracked-market",
-        outputUnitValueObservedAt: NOW - 30,
-      },
-      pegDataById: {
-        "usdaf-asymmetry": {
-          pegCurrency: "USD", currentDeviationBps: null, pegScore: 75,
-          activeDepeg: false, eventCount: 103, worstDeviationBps: -223,
-        },
-      },
+      routeOverrides: { routeId: "dex:scrvusd-curve:dl:ethereum%3Ausdaf-output", executableUsd: 31_206.39, completionRatio: 0.03120639, output: trk(USDAF), outputUnitValueUsd: 0.9975, outputUnitValueSourceId: "dex-amm-output-reference:curve:tracked-market", outputUnitValueObservedAt: NOW - 30 },
+      pegDataById: { [USDAF]: { pegCurrency: "USD", currentDeviationBps: null, pegScore: 75, activeDepeg: false, eventCount: 103, worstDeviationBps: -223 } },
     });
-    const outputValuation = (input: SafetyScoreV9CompilerInput = fixedInput) =>
-      buildSafetyScoreV9RouteReviews(input, "scrvusd-curve")[0]?.output?.valuation;
-    expect(outputValuation()).toMatchObject({
-      basis: "price",
-      referenceAssetKey: "usdaf-asymmetry",
-      unitValueUsd: 0.9975,
-      expectedUnitValueUsd: 1,
-      sourceId: "dex-amm-output-reference:curve:tracked-market",
-      observedAtSec: NOW - 30,
-      confidence: "high",
-    });
-    route.outputUnitValueObservedAt = NOW + 61;
-    expect(outputValuation()).toBeNull();
+    const v = (i: CompIn = fixedInput) => val0(i, "scrvusd-curve");
+    expect(v()).toMatchObject({ basis: "price", referenceAssetKey: USDAF, unitValueUsd: 0.9975, expectedUnitValueUsd: 1, sourceId: "dex-amm-output-reference:curve:tracked-market", observedAtSec: NOW - 30, confidence: "high" });
+    route.outputUnitValueObservedAt = NOW + 61; expect(v()).toBeNull();
     route.outputUnitValueObservedAt = NOW - 30;
-    setPegData(fixedInput, {
-      "usdaf-asymmetry": { pegCurrency: "EUR", currentDeviationBps: null, pegReference: null },
-    });
-    expect(outputValuation()).toBeNull();
+    setPeg(fixedInput, { [USDAF]: { pegCurrency: "EUR", currentDeviationBps: null, pegReference: null } }); expect(v()).toBeNull();
     route.outputUnitValueUsd = 1.1583;
-    setPegData(fixedInput, {
-      "usdaf-asymmetry": {
-        pegCurrency: "EUR",
-        currentDeviationBps: null,
-        pegReference: { valueUsd: 1.17, source: "fx", contributorCount: 1, asOf: NOW - 60 },
-      },
-    });
-    expect(outputValuation()).toMatchObject({ expectedUnitValueUsd: 1.17 });
-    const historyOnly = Object.assign(fixedInput, { pegEvidenceById: { other: { lastAffectedAtSec: NOW - 600 } } });
-    expect(outputValuation(historyOnly)).toMatchObject({ expectedUnitValueUsd: 1.17 });
-    fixedInput.pegDataById.other = { ...fixedInput.pegDataById["usdaf-asymmetry"]!, admittedDeviationBps: null };
-    expect(outputValuation()).toBeNull();
+    setPeg(fixedInput, { [USDAF]: { pegCurrency: "EUR", currentDeviationBps: null, pegReference: { valueUsd: 1.17, source: "fx", contributorCount: 1, asOf: NOW - 60 } } });
+    expect(v()).toMatchObject({ expectedUnitValueUsd: 1.17 });
+    expect(v(Object.assign(fixedInput, { pegEvidenceById: { other: { lastAffectedAtSec: NOW - 600 } } }))).toMatchObject({ expectedUnitValueUsd: 1.17 });
+    fixedInput.pegDataById.other = { ...fixedInput.pegDataById[USDAF]!, admittedDeviationBps: null }; expect(v()).toBeNull();
     delete fixedInput.pegDataById.other;
-    expect(outputValuation(Object.assign(fixedInput, { pegEvidenceById: {} }))).toBeNull();
-    expect(outputValuation(withCurrentFx(fixedInput, "usdaf-asymmetry"))).toMatchObject({
-      unitValueUsd: 1.1583,
-      expectedUnitValueUsd: 1.17,
-      sourceId: "dex-amm-output-reference:curve:tracked-market",
-    });
+    expect(v(Object.assign(fixedInput, { pegEvidenceById: {} }))).toBeNull();
+    expect(v(withFx(fixedInput, USDAF))).toMatchObject({ unitValueUsd: 1.1583, expectedUnitValueUsd: 1.17, sourceId: "dex-amm-output-reference:curve:tracked-market" });
   });
 
   it.each([
-    { pin: {}, valid: true },
-    { pin: { outputUnitValueUsd: undefined }, valid: false },
-    { pin: { outputUnitValueSourceId: undefined }, valid: false },
-    { pin: { outputUnitValueSourceId: "protocol-par" }, valid: false },
-    { pin: { outputUnitValueObservedAt: undefined }, valid: false },
-    { pin: { outputUnitValueObservedAt: NOW - 1801 }, valid: false },
-    { pin: { outputUnitValueObservedAt: NOW + 1 }, valid: false },
-    { pin: { observedAt: NOW - 61 }, valid: false },
-    { pin: { outputUnitValueUsd: 2.01 }, valid: false },
-    { pin: { outputUnitValueSourceId: "dex-amm-output-reference:curve:source-token-usd" }, valid: true, dexOnlyRejection: true },
-  ])("shares tracked pin admission without sharing lane precedence: %o", ({ pin, valid, dexOnlyRejection }) => {
+    [{}, true, false], [{ outputUnitValueUsd: undefined }, false, false], [{ outputUnitValueSourceId: undefined }, false, false],
+    [{ outputUnitValueSourceId: "protocol-par" }, false, false], [{ outputUnitValueObservedAt: undefined }, false, false],
+    [{ outputUnitValueObservedAt: NOW - 1801 }, false, false], [{ outputUnitValueObservedAt: NOW + 1 }, false, false],
+    [{ observedAt: NOW - 61 }, false, false], [{ outputUnitValueUsd: 2.01 }, false, false],
+    [{ outputUnitValueSourceId: "dex-amm-output-reference:curve:source-token-usd" }, true, true],
+  ])("shares tracked pin admission without sharing lane precedence: %o", (pin, valid, dexOnlyRej) => {
     for (const lane of ["dex", "redemption"] as const) {
-      const output = { kind: "tracked-stablecoin" as const, trackedAssetIds: ["usdt-tether"] };
-      const pegDataById = { "usdt-tether": { pegCurrency: "USD", currentDeviationBps: null } };
-      const dex = lane === "dex" ? dexPegFixture({
-        assetId: "dai-makerdao", routeOverrides: { routeId: "dex:dai-makerdao:pin", output }, pegDataById,
-      }) : null;
-      const redemption = lane === "redemption" ? redemptionPegFixture({
-        rowOverrides: { stablecoinId: "dai-makerdao" }, output, pegDataById,
-      }) : null;
-      const fixedInput = dex?.fixedInput ?? redemption!.fixedInput;
-      const observation = dex?.route ?? redemption!.row.capacityProfile!.exitRouteObservations![0]!;
-      Object.assign(observation, { outputUnitValueUsd: 0.99,
-        outputUnitValueSourceId: "dex-amm-output-reference:curve:tracked-market",
-        outputUnitValueObservedAt: NOW, observedAt: NOW }, pin);
-      const valuation = buildSafetyScoreV9RouteReviews(fixedInput, "dai-makerdao")[0]?.output?.valuation;
-      if (valid && !(dexOnlyRejection && lane === "dex")) {
-        expect(valuation).toMatchObject({ basis: "price", unitValueUsd: 0.99, expectedUnitValueUsd: 1,
-          observedAtSec: NOW, sourceId: observation.outputUnitValueSourceId });
-      } else expect(valuation).toBeNull();
+      const output = trk(USDT), pegDataById = { [USDT]: { pegCurrency: "USD", currentDeviationBps: null } };
+      const dex = lane === "dex" ? dexFx({ assetId: DAI, routeOverrides: { routeId: `dex:${DAI}:pin`, output }, pegDataById }) : null;
+      const red = lane === "redemption" ? redFx({ rowOverrides: { stablecoinId: DAI }, output, pegDataById }) : null;
+      const fixed = dex?.fixedInput ?? red!.fixedInput, obs = dex?.route ?? red!.row.capacityProfile!.exitRouteObservations![0]!;
+      Object.assign(obs, { outputUnitValueUsd: 0.99, outputUnitValueSourceId: "dex-amm-output-reference:curve:tracked-market", outputUnitValueObservedAt: NOW, observedAt: NOW }, pin);
+      const val = val0(fixed, DAI);
+      if (valid && !(dexOnlyRej && lane === "dex")) expect(val).toMatchObject({ basis: "price", unitValueUsd: 0.99, expectedUnitValueUsd: 1, observedAtSec: NOW, sourceId: obs.outputUnitValueSourceId });
+      else expect(val).toBeNull();
     }
   });
 
-  it.each(["dex", "redemption"] as const)(
-    "preserves tracked output valuation in a pre-census fixed input for %s", (lane) => {
-      const output = { kind: "tracked-stablecoin" as const, trackedAssetIds: ["usdc-circle", "usdt-tether"] };
-      // Dated USD summaries can value the output without an exact-price census.
-      const pegDataById = {
-        "usdc-circle": { pegCurrency: "USD", currentDeviationBps: -2 },
-        "usdt-tether": { pegCurrency: "USD", currentDeviationBps: -9 },
-      };
-      const fixedInput = lane === "dex"
-        ? dexPegFixture({
-            assetId: "dai-makerdao", pegDataById,
-            routeOverrides: { routeId: "dex:dai:tracked-basket", output },
-          }).fixedInput
-        : redemptionPegFixture({
-            rowOverrides: { stablecoinId: "dai-makerdao" }, output, pegDataById,
-          }).fixedInput;
-      expect(fixedInput.exitOutputPriceById).toBeUndefined();
-      expect(buildSafetyScoreV9RouteReviews(fixedInput, "dai-makerdao")[0]?.output?.valuation).toMatchObject({
-        basis: "price", referenceAssetKey: "usdt-tether", unitValueUsd: 0.9991,
-        expectedUnitValueUsd: 1, confidence: "medium", sourceId: "report-cards-peg-summary",
-        maxAgeSec: 365 * 86_400,
-      });
-    },
-  );
+  it.each(["dex", "redemption"] as const)("preserves tracked output valuation in a pre-census fixed input for %s", (lane) => {
+    const output = trk(USDC, USDT), pegDataById = { [USDC]: { pegCurrency: "USD", currentDeviationBps: -2 }, [USDT]: { pegCurrency: "USD", currentDeviationBps: -9 } };
+    const f = lane === "dex" ? dexFx({ assetId: DAI, pegDataById, routeOverrides: { routeId: "dex:dai:tracked-basket", output } }).fixedInput : redFx({ rowOverrides: { stablecoinId: DAI }, output, pegDataById }).fixedInput;
+    expect(f.exitOutputPriceById).toBeUndefined();
+    expect(val0(f, DAI)).toMatchObject({ basis: "price", referenceAssetKey: USDT, unitValueUsd: 0.9991, expectedUnitValueUsd: 1, confidence: "medium", sourceId: "report-cards-peg-summary", maxAgeSec: 365 * DAY });
+  });
 
-  it.each([false, true])("retains the legacy payout clock and enforces its explicit removal (exact price %s)", (withDatedPrice) => {
-    const { fixedInput } = dexPegFixture({
-      assetId: "asset-input", routeOverrides: { routeId: "dex:asset-input:usdc", output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdc-circle"] } },
-      pegDataById: { "usdc-circle": { pegCurrency: "USD", currentDeviationBps: -200, priceObservedAt: undefined } },
-    });
-    if (withDatedPrice) fixedInput.exitOutputPriceById = {
-      "usdc-circle": { priceUsd: 0.997, sourceId: "coingecko", observedAtSec: NOW - 500,
-        confidence: "high", admission: "multi-source" },
-    };
-    const peg = fixedInput.pegDataById["usdc-circle"]!;
+  const dexUsdc = (peg: Record<string, unknown>, extra: Partial<RouteObs> = {}) =>
+    dexFx({ assetId: "asset-input", routeOverrides: { routeId: "dex:asset-input:usdc", output: trk(USDC), ...extra }, pegDataById: { [USDC]: peg } });
+
+  it.each([false, true])("retains the legacy payout clock and enforces its explicit removal (exact price %s)", (dated) => {
+    const { fixedInput: f } = dexUsdc({ pegCurrency: "USD", currentDeviationBps: -200, priceObservedAt: undefined });
+    if (dated) f.exitOutputPriceById = { [USDC]: outPx(0.997, { observedAtSec: NOW - 500 }) };
+    const peg = f.pegDataById[USDC]!;
     delete peg.priceObservedAt;
-    const valuation = () => buildSafetyScoreV9RouteReviews(fixedInput, "asset-input")[0]?.output?.valuation;
-    expect(valuation()).toMatchObject({ unitValueUsd: 0.98, sourceId: "report-cards-peg-summary" });
-    peg.priceUpdatedAt = NOW - 3_600;
-    expect(valuation()?.observedAtSec).toBe(NOW - 3_600);
+    expect(val0(f, "asset-input")).toMatchObject({ unitValueUsd: 0.98, sourceId: "report-cards-peg-summary" });
+    peg.priceUpdatedAt = NOW - 3600;
+    expect(val0(f, "asset-input")?.observedAtSec).toBe(NOW - 3600);
     peg.priceObservedAt = null;
-    const value = valuation();
-    if (withDatedPrice) expect(value).toMatchObject({ unitValueUsd: 0.997, observedAtSec: NOW - 500 });
-    else expect(value).toBeNull();
+    if (dated) expect(val0(f, "asset-input")).toMatchObject({ unitValueUsd: 0.997, observedAtSec: NOW - 500 });
+    else expect(val0(f, "asset-input")).toBeNull();
   });
 
   it("withholds an FX exit valuation when the current or retained token quote exceeds six hours", () => {
-    const assetId = "eurcv-societe-generale-forge";
-    const outputId = "eurc-circle";
-    const clockSec = Date.UTC(2026, 10, 12, 12) / 1000;
-    const quoteObservedAtSec = clockSec - REFERENCE_INTRADAY_BUDGET_SEC - 3600;
-    const referenceObservedAtSec = clockSec - 5 * 3600;
-    const { fixedInput } = dexPegFixture({
-      assetId, clockSec,
-      routeOverrides: { routeId: `dex:${assetId}:eurc`, output: { kind: "tracked-stablecoin", trackedAssetIds: [outputId] } },
-      pegDataById: { [outputId]: {
-        pegCurrency: "EUR", priceObservedAt: quoteObservedAtSec, currentDeviationBps: -300,
-        pegReference: { valueUsd: 1.1, source: "fx", contributorCount: 1, asOf: referenceObservedAtSec },
-      } },
-    });
-    const admitAt = (decisionAtSec: number) => evaluateReferenceAdmission({
-      kind: "fx", purpose: "current", quoteObservedAtSec, decisionAtSec, rawDeviationBps: asRawDeviationBps(-300),
-      preCloseUsdPerUnit: 1.11, generation: "fixture-fx",
-      observation: { pegKey: "peggedEUR", source: "openExchangeRates", cadence: "intraday", usdPerUnit: 1.1, observedAtSec: referenceObservedAtSec },
-    });
-    const valuation = (input: SafetyScoreV9CompilerInput) => buildSafetyScoreV9RouteReviews(input, assetId)[0]?.output?.valuation;
-    const boundary = clockSec - 3600;
-    const retained = admitAt(boundary);
-    const expired = admitAt(clockSec);
-    expect(retained.status).toBe("admitted");
-    expect(expired).toMatchObject({ status: "stale-reference", reason: "quote-over-budget", budgetSec: REFERENCE_INTRADAY_BUDGET_SEC });
-    expect(valuation(fixedInput)?.unitValueUsd).toBeCloseTo(1.067);
-    const withAdmission = (referenceAdmission: ReferenceAdmission, clockSec: number): SafetyScoreV9CompilerInput => ({
-      ...fixedInput, clockSec, pegEvidenceById: { [outputId]: { referenceAdmission, admittedDeviationBps: -300 } },
-    });
-    expect(valuation(withAdmission(retained, boundary))?.unitValueUsd).toBeCloseTo(1.067);
-    expect(valuation(withAdmission(retained, clockSec))).toBeNull();
-    expect(valuation(withAdmission(expired, clockSec))).toBeNull();
+    const id = "eurcv-societe-generale-forge", clk = utc(2026, 10, 12, 12), qAt = clk - INTRADAY_SEC - 3600, rAt = clk - 5 * 3600;
+    const { fixedInput: f } = dexFx({ assetId: id, clockSec: clk, routeOverrides: { routeId: `dex:${id}:eurc`, output: trk(EURC) }, pegDataById: { [EURC]: { pegCurrency: "EUR", priceObservedAt: qAt, currentDeviationBps: -300, pegReference: { valueUsd: 1.1, source: "fx", contributorCount: 1, asOf: rAt } } } });
+    const adm = (decisionAtSec: number) => evalRef({ kind: "fx", purpose: "current", quoteObservedAtSec: qAt, decisionAtSec, rawDeviationBps: asRawDeviationBps(-300), preCloseUsdPerUnit: 1.11, generation: "fixture-fx", observation: { pegKey: "peggedEUR", source: "openExchangeRates", cadence: "intraday", usdPerUnit: 1.1, observedAtSec: rAt } });
+    const bnd = clk - 3600, ret = adm(bnd), exp = adm(clk);
+    expect(ret.status).toBe("admitted");
+    expect(exp).toMatchObject({ status: "stale-reference", reason: "quote-over-budget", budgetSec: INTRADAY_SEC });
+    expect(val0(f, id)?.unitValueUsd).toBeCloseTo(1.067);
+    const wA = (referenceAdmission: RefAdm, clockSec: number): CompIn => ({ ...f, clockSec, pegEvidenceById: { [EURC]: { referenceAdmission, admittedDeviationBps: -300 } } });
+    expect(val0(wA(ret, bnd), id)?.unitValueUsd).toBeCloseTo(1.067);
+    expect(val0(wA(ret, clk), id)).toBeNull(); expect(val0(wA(exp, clk), id)).toBeNull();
   });
 
   it.each([
-    { assetId: "xaut-tether", pegCurrency: "GOLD", referenceUsd: 4_181.47, deviationBps: -4, held: false },
-    { assetId: "silver-fixture", pegCurrency: "SILVER", referenceUsd: 50, deviationBps: -10, held: true },
-    { assetId: "xaut-tether", pegCurrency: "GOLD", referenceUsd: 4_181.47, deviationBps: -4, held: undefined },
-  ])("values $assetId by the captured reference evidence, hold $held", ({
-    assetId, pegCurrency, referenceUsd, deviationBps, held,
-  }) => {
-    const { fixedInput } = dexPegFixture({
-      assetId: "asset-input",
-      routeOverrides: {
-        routeId: `dex:asset-input:${assetId}`,
-        output: { kind: "tracked-stablecoin", trackedAssetIds: [assetId] },
-      },
-      pegDataById: { [assetId]: {
-        pegCurrency, currentDeviationBps: deviationBps,
-        pegReference: { valueUsd: referenceUsd, source: "median", contributorCount: 10, asOf: NOW - 91 },
-      } },
-    });
-    const time = NOW - 30;
-    const captured = held === undefined ? fixedInput : Object.assign(fixedInput, {
-      pegEvidenceById: { [assetId]: { admittedDeviationBps: held ? null : deviationBps, referenceAdmission: {
-        ...(held ? { status: "held-closed-session", reason: "reference-market-closed" } : { status: "admitted", reason: "live-reference" }),
-        kind: "median", source: "peer-median", cadence: "intraday", generation: "fixture-commodity",
-        quoteObservedAtSec: time, referenceObservedAtSec: time, decisionAtSec: time,
-        budgetSec: 21_600, sessionOpenedAtSec: null, policyVersion: 1,
-      } satisfies ReferenceAdmission } },
-    });
-    const valuation = buildSafetyScoreV9RouteReviews(captured, "asset-input")[0]?.output?.valuation;
-    if (held === true) { expect(valuation).toBeNull(); return; }
-    expect(valuation).toMatchObject({
-      expectedUnitValueUsd: referenceUsd, sourceId: "report-cards-peg-summary",
-    });
-    expect(valuation!.unitValueUsd / valuation!.expectedUnitValueUsd).toBeCloseTo(1 + deviationBps / 10_000);
+    ["xaut-tether", "GOLD", 4_181.47, -4, false], ["silver-fixture", "SILVER", 50, -10, true], ["xaut-tether", "GOLD", 4_181.47, -4, undefined],
+  ] as const)("values %s by the captured reference evidence, hold %s", (id, pegCurrency, refUsd, bps, held) => {
+    const { fixedInput: f } = dexFx({ assetId: "asset-input", routeOverrides: { routeId: `dex:asset-input:${id}`, output: trk(id) }, pegDataById: { [id]: { pegCurrency, currentDeviationBps: bps, pegReference: { valueUsd: refUsd, source: "median", contributorCount: 10, asOf: NOW - 91 } } } });
+    const t = NOW - 30;
+    const cap = held === undefined ? f : Object.assign(f, { pegEvidenceById: { [id]: { admittedDeviationBps: held ? null : bps, referenceAdmission: { ...(held ? { status: "held-closed-session", reason: "reference-market-closed" } : { status: "admitted", reason: "live-reference" }), kind: "median", source: "peer-median", cadence: "intraday", generation: "fixture-commodity", quoteObservedAtSec: t, referenceObservedAtSec: t, decisionAtSec: t, budgetSec: 21_600, sessionOpenedAtSec: null, policyVersion: 1 } satisfies RefAdm } } });
+    const v = val0(cap, "asset-input");
+    if (held === true) { expect(v).toBeNull(); return; }
+    expect(v).toMatchObject({ expectedUnitValueUsd: refUsd, sourceId: "report-cards-peg-summary" });
+    expect(v!.unitValueUsd / v!.expectedUnitValueUsd).toBeCloseTo(1 + bps / 1e4);
   });
 
-  it.each(["fresh"] as const)(
-    "keeps the admitted summary path when the additional capture is %s", () => {
-      const { fixedInput } = dexPegFixture({
-        assetId: "asset-input",
-        routeOverrides: {
-          routeId: "dex:asset-input:usdc",
-          output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdc-circle"] },
-        },
-        pegDataById: { "usdc-circle": { pegCurrency: "USD", currentDeviationBps: -2 } },
-      });
-      fixedInput.exitOutputPriceById = {
-        "usdc-circle": {
-          priceUsd: 0.99, sourceId: "coingecko",
-          observedAtSec: NOW,
-          confidence: "high", admission: "multi-source",
-        },
-      };
-      expect(buildSafetyScoreV9RouteReviews(fixedInput, "asset-input")[0]?.output?.valuation).toMatchObject({
-        unitValueUsd: 0.9998, expectedUnitValueUsd: 1, sourceId: "report-cards-peg-summary",
-        maxAgeSec: 365 * 86_400,
-      });
-    },
-  );
+  it.each(["fresh"] as const)("keeps the admitted summary path when the additional capture is %s", () => {
+    const { fixedInput: f } = dexUsdc({ pegCurrency: "USD", currentDeviationBps: -2 });
+    f.exitOutputPriceById = { [USDC]: outPx(0.99) };
+    expect(val0(f, "asset-input")).toMatchObject({ unitValueUsd: 0.9998, expectedUnitValueUsd: 1, sourceId: "report-cards-peg-summary", maxAgeSec: 365 * DAY });
+  });
 
   it("does not replace an already admitted DEX output pin with the additional current-price capture", () => {
-    const { fixedInput } = dexPegFixture({
-      assetId: "asset-input",
-      routeOverrides: {
-        routeId: "dex:asset-input:usdc",
-        output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdc-circle"] },
-        outputUnitValueUsd: 0.9975,
-        outputUnitValueSourceId: "dex-amm-output-reference:curve:tracked-market",
-        outputUnitValueObservedAt: NOW - 30,
-      },
-      pegDataById: { "usdc-circle": { pegCurrency: "USD", currentDeviationBps: null } },
-    });
-    fixedInput.exitOutputPriceById = { "usdc-circle": {
-      priceUsd: 0.99, sourceId: "coingecko", observedAtSec: NOW,
-      confidence: "high", admission: "multi-source",
-    } };
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, "asset-input")[0]?.output?.valuation).toMatchObject({
-      unitValueUsd: 0.9975, expectedUnitValueUsd: 1, observedAtSec: NOW - 30,
-      sourceId: "dex-amm-output-reference:curve:tracked-market",
-    });
+    const { fixedInput: f } = dexUsdc({ pegCurrency: "USD", currentDeviationBps: null }, { outputUnitValueUsd: 0.9975, outputUnitValueSourceId: "dex-amm-output-reference:curve:tracked-market", outputUnitValueObservedAt: NOW - 30 });
+    f.exitOutputPriceById = { [USDC]: outPx(0.99) };
+    expect(val0(f, "asset-input")).toMatchObject({ unitValueUsd: 0.9975, expectedUnitValueUsd: 1, observedAtSec: NOW - 30, sourceId: "dex-amm-output-reference:curve:tracked-market" });
   });
 
   it("keeps an admitted summary when a redemption pin lacks independent provenance", () => {
-    const { fixedInput, row } = redemptionPegFixture({
-      rowOverrides: { stablecoinId: "dai-makerdao" },
-      output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdc-circle"] },
-      pegDataById: { "usdc-circle": { pegCurrency: "USD", currentDeviationBps: -2 } },
-    });
+    const { fixedInput: f, row } = redFx({ rowOverrides: { stablecoinId: DAI }, output: trk(USDC), pegDataById: { [USDC]: { pegCurrency: "USD", currentDeviationBps: -2 } } });
     row.capacityProfile!.exitRouteObservations![0]!.outputUnitValueUsd = 0.95;
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]?.output?.valuation).toMatchObject({
-      unitValueUsd: 0.9998, sourceId: "report-cards-peg-summary",
-    });
-    setPegData(fixedInput, {});
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]?.output?.valuation).toBeNull();
+    expect(val0(f, DAI)).toMatchObject({ unitValueUsd: 0.9998, sourceId: "report-cards-peg-summary" });
+    setPeg(f, {}); expect(val0(f, DAI)).toBeNull();
   });
 
   it("retains the original NAV capture's admitted valuation independently of the optional census", () => {
-    const { fixedInput } = dexPegFixture({
-      assetId: "asset-input",
-      routeOverrides: {
-        routeId: "dex:asset-input:thbill", observedAt: NOW - 3_600,
-        output: { kind: "tracked-stablecoin", trackedAssetIds: ["thbill-theo"] },
-      },
-    });
-    fixedInput.navPriceById = {
-      "thbill-theo": {
-        priceUsd: 1.0188, sourceId: "defillama-contract", observedAtSec: NOW - 3_600, confidence: "high",
-      },
-    };
-    fixedInput.exitOutputPriceById = {};
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, "asset-input")[0]?.output?.valuation).toMatchObject({
-      basis: "nav", unitValueUsd: 1.0188, expectedUnitValueUsd: 1.0188,
-      sourceId: "defillama-contract", observedAtSec: NOW - 3_600, maxAgeSec: 365 * 86_400,
-    });
+    const { fixedInput: f } = dexFx({ assetId: "asset-input", routeOverrides: { routeId: "dex:asset-input:thbill", observedAt: NOW - 3600, output: trk(THBILL) } });
+    f.navPriceById = { [THBILL]: { priceUsd: 1.0188, sourceId: "defillama-contract", observedAtSec: NOW - 3600, confidence: "high" } };
+    f.exitOutputPriceById = {};
+    expect(val0(f, "asset-input")).toMatchObject({ basis: "nav", unitValueUsd: 1.0188, expectedUnitValueUsd: 1.0188, sourceId: "defillama-contract", observedAtSec: NOW - 3600, maxAgeSec: 365 * DAY });
   });
 
   it("values a tracked output from its exact captured USD price despite unavailable peg deviation", () => {
-    const { fixedInput } = dexPegFixture({
-      assetId: "asset-input",
-      routeOverrides: {
-        routeId: "dex:asset-input:eurc",
-        output: { kind: "tracked-stablecoin", trackedAssetIds: ["eurc-circle"] },
-      },
-      pegDataById: { "eurc-circle": {
-        pegCurrency: "EUR", currentDeviationBps: null,
-        pegReference: { valueUsd: 1.17, source: "fx", contributorCount: 1, asOf: NOW - 60 },
-      } },
-    });
-    fixedInput.exitOutputPriceById = { "eurc-circle": {
-      priceUsd: 1.1583, sourceId: "coingecko", observedAtSec: NOW - 30,
-      confidence: "high", admission: "multi-source",
-    } };
-    expect(buildSafetyScoreV9RouteReviews(withCurrentFx(fixedInput, "eurc-circle"), "asset-input")[0]?.output?.valuation).toMatchObject({
-      unitValueUsd: 1.1583, expectedUnitValueUsd: 1.17, observedAtSec: NOW - 30,
-      sourceId: "coingecko", maxAgeSec: 1_800,
-    });
+    const { fixedInput: f } = dexFx({ assetId: "asset-input", routeOverrides: { routeId: "dex:asset-input:eurc", output: trk(EURC) }, pegDataById: { [EURC]: { pegCurrency: "EUR", currentDeviationBps: null, pegReference: { valueUsd: 1.17, source: "fx", contributorCount: 1, asOf: NOW - 60 } } } });
+    f.exitOutputPriceById = { [EURC]: outPx(1.1583, { observedAtSec: NOW - 30 }) };
+    expect(val0(withFx(f, EURC), "asset-input")).toMatchObject({ unitValueUsd: 1.1583, expectedUnitValueUsd: 1.17, observedAtSec: NOW - 30, sourceId: "coingecko", maxAgeSec: 1800 });
   });
 
   it("values an sUSN output using the admitted fresh protocol NAV, not USN parity", () => {
-    const { fixedInput } = dexPegFixture({
-      assetId: "usn-noon",
-      routeOverrides: {
-        routeId: "dex:usn-noon:susn",
-        output: { kind: "tracked-stablecoin", trackedAssetIds: ["susn-noon"] },
-      },
-    });
-    fixedInput.exitOutputPriceById = { "susn-noon": {
-      priceUsd: 1.0837, sourceId: "protocol-redeem", observedAtSec: NOW - 30,
-      confidence: "high", admission: "guarded-nav",
-    } };
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, "usn-noon")[0]?.output?.valuation).toMatchObject({
-      basis: "nav", unitValueUsd: 1.0837, expectedUnitValueUsd: 1.0837,
-      sourceId: "protocol-redeem", observedAtSec: NOW - 30,
-    });
+    const { fixedInput: f } = dexFx({ assetId: "usn-noon", routeOverrides: { routeId: "dex:usn-noon:susn", output: trk("susn-noon") } });
+    f.exitOutputPriceById = { "susn-noon": outPx(1.0837, { sourceId: "protocol-redeem", observedAtSec: NOW - 30, admission: "guarded-nav" }) };
+    expect(val0(f, "usn-noon")).toMatchObject({ basis: "nav", unitValueUsd: 1.0837, expectedUnitValueUsd: 1.0837, sourceId: "protocol-redeem", observedAtSec: NOW - 30 });
   });
 
-  it.each(["stale", "future", "nominal", "rejected"] as const)(
-    "withholds newly valued tracked outputs for a %s current capture price", (fault) => {
-      const { fixedInput } = dexPegFixture({
-        assetId: "asset-input",
-        routeOverrides: {
-          routeId: "dex:asset-input:usdc",
-          output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdc-circle"] },
-        },
-        pegDataById: { "usdc-circle": { pegCurrency: "USD", currentDeviationBps: null } },
-      });
-      fixedInput.exitOutputPriceById = { "usdc-circle": {
-        priceUsd: 0.99, sourceId: fault === "nominal" ? "protocol-par" : "coingecko",
-        observedAtSec: fault === "stale" ? NOW - 1_801 : fault === "future" ? NOW + 1 : NOW,
-        confidence: "high", admission: "multi-source",
-      } };
-      if (fault === "rejected") fixedInput.exitOutputPriceById = {};
-      expect(buildSafetyScoreV9RouteReviews(fixedInput, "asset-input")[0]?.output?.valuation).toBeNull();
-    },
-  );
+  it.each(["stale", "future", "nominal", "rejected"] as const)("withholds newly valued tracked outputs for a %s current capture price", (fault) => {
+    const { fixedInput: f } = dexUsdc({ pegCurrency: "USD", currentDeviationBps: null });
+    f.exitOutputPriceById = fault === "rejected" ? {} : { [USDC]: outPx(0.99, { sourceId: fault === "nominal" ? "protocol-par" : "coingecko", observedAtSec: fault === "stale" ? NOW - 1801 : fault === "future" ? NOW + 1 : NOW }) };
+    expect(val0(f, "asset-input")).toBeNull();
+  });
 
-  it.each(["unavailable", "nominal", "future", "expired"] as const)(
-    "does not revive a %s summary merely because a deviation is retained", (fault) => {
-      const { fixedInput } = dexPegFixture({
-        assetId: "asset-input",
-        routeOverrides: {
-          routeId: "dex:asset-input:usdc",
-          output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdc-circle"] },
-        },
-        pegDataById: { "usdc-circle": {
-          pegCurrency: "USD", currentDeviationBps: -2,
-          currentPriceUnavailable: fault === "unavailable",
-          priceSource: fault === "nominal" ? "protocol-par" : "coingecko",
-          priceObservedAt: fault === "future" ? NOW + 1 :
-            fault === "expired" ? NOW - 365 * 86_400 - 1 : NOW,
-        } },
-      });
-      expect(buildSafetyScoreV9RouteReviews(fixedInput, "asset-input")[0]?.output?.valuation).toBeNull();
-    },
-  );
+  it.each(["unavailable", "nominal", "future", "expired"] as const)("does not revive a %s summary merely because a deviation is retained", (fault) => {
+    const { fixedInput: f } = dexUsdc({ pegCurrency: "USD", currentDeviationBps: -2, currentPriceUnavailable: fault === "unavailable", priceSource: fault === "nominal" ? "protocol-par" : "coingecko", priceObservedAt: fault === "future" ? NOW + 1 : fault === "expired" ? NOW - 365 * DAY - 1 : NOW });
+    expect(val0(f, "asset-input")).toBeNull();
+  });
 
   it("does not value a quiet peg history without a current observed price", () => {
-    const { fixedInput } = dexPegFixture({
-      assetId: "asset-input",
-      routeOverrides: {
-        routeId: "dex:asset-input:usdc",
-        output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdc-circle"] },
-      },
-      pegDataById: { "usdc-circle": {
-        pegCurrency: "USD", currentDeviationBps: null, pegScore: 100,
-        activeDepeg: false, eventCount: 0, worstDeviationBps: null, currentPriceUnavailable: true,
-      } },
-    });
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, "asset-input")[0]?.output?.valuation).toBeNull();
+    expect(val0(dexUsdc({ pegCurrency: "USD", currentDeviationBps: null, pegScore: 100, activeDepeg: false, eventCount: 0, worstDeviationBps: null, currentPriceUnavailable: true }).fixedInput, "asset-input")).toBeNull();
   });
 
   it("keeps a tracked basket unvalued when a leg has neither a summary nor an admitted current price", () => {
-    const { fixedInput, row } = redemptionPegFixture({
-      rowOverrides: { stablecoinId: "dai-makerdao" },
-      output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdc-circle", "usdt-tether"] },
-      pegDataById: {
-        "usdc-circle": { pegCurrency: "USD", currentDeviationBps: null },
-        "usdt-tether": { pegCurrency: "USD", currentDeviationBps: null },
-      },
-    });
-    fixedInput.exitOutputPriceById = { "usdc-circle": {
-      priceUsd: 0.99, sourceId: "coingecko", observedAtSec: NOW,
-      confidence: "high", admission: "multi-source",
-    } };
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]?.output?.valuation).toBeNull();
+    const { fixedInput: f } = redFx({ rowOverrides: { stablecoinId: DAI }, output: trk(USDC, USDT), pegDataById: { [USDC]: { pegCurrency: "USD", currentDeviationBps: null }, [USDT]: { pegCurrency: "USD", currentDeviationBps: null } } });
+    f.exitOutputPriceById = { [USDC]: outPx(0.99) };
+    expect(val0(f, DAI)).toBeNull();
   });
 
   it("values a complete basket using the existing summary plus an additional admitted output price", () => {
-    const { fixedInput, row } = redemptionPegFixture({
-      rowOverrides: { stablecoinId: "dai-makerdao" },
-      output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdc-circle", "usdt-tether"] },
-      pegDataById: {
-        "usdc-circle": { pegCurrency: "USD", currentDeviationBps: null },
-        "usdt-tether": { pegCurrency: "USD", currentDeviationBps: -9 },
-      },
-    });
-    fixedInput.exitOutputPriceById = { "usdc-circle": {
-      priceUsd: 0.99, sourceId: "coingecko", observedAtSec: NOW - 30,
-      confidence: "high", admission: "multi-source",
-    } };
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]?.output?.valuation).toMatchObject({
-      referenceAssetKey: "usdc-circle", unitValueUsd: 0.99, expectedUnitValueUsd: 1,
-      observedAtSec: NOW - 30, sourceId: "coingecko", maxAgeSec: 1_800,
-    });
+    const { fixedInput: f } = redFx({ rowOverrides: { stablecoinId: DAI }, output: trk(USDC, USDT), pegDataById: { [USDC]: { pegCurrency: "USD", currentDeviationBps: null }, [USDT]: { pegCurrency: "USD", currentDeviationBps: -9 } } });
+    f.exitOutputPriceById = { [USDC]: outPx(0.99, { observedAtSec: NOW - 30 }) };
+    expect(val0(f, DAI)).toMatchObject({ referenceAssetKey: USDC, unitValueUsd: 0.99, expectedUnitValueUsd: 1, observedAtSec: NOW - 30, sourceId: "coingecko", maxAgeSec: 1800 });
   });
 
   it("includes captured NAV observations in V9 peg-source provenance", () => {
-    const olderInput = capturedNavOutputInput(V9_FIXTURE_CLOCK - 60);
-    const newerInput = capturedNavOutputInput(V9_FIXTURE_CLOCK - 30);
-    const olderExtension = buildSafetyScoreV9BaselineExtensionFromNormalizedInput(olderInput);
-    const newerExtension = buildSafetyScoreV9BaselineExtensionFromNormalizedInput(newerInput);
-
-    expect(newerInput.baseInputGenerationId).not.toBe(olderInput.baseInputGenerationId);
-    expect(newerExtension.sources.peg.observedAtSec).toBe(V9_FIXTURE_CLOCK - 30);
-    expect(newerExtension.sources.peg.generationId).not.toBe(olderExtension.sources.peg.generationId);
-    expect(newerExtension.assets[0]?.routeReviews[0]?.output?.valuation).toMatchObject({
-      basis: "nav",
-      sourceId: "defillama-contract",
-      observedAtSec: V9_FIXTURE_CLOCK - 30,
-    });
+    const oIn = navOutputIn(V9_CLK - 60), nIn = navOutputIn(V9_CLK - 30), oExt = buildBaseExt(oIn), nExt = buildBaseExt(nIn);
+    expect(nIn.baseInputGenerationId).not.toBe(oIn.baseInputGenerationId);
+    expect(nExt.sources.peg.observedAtSec).toBe(V9_CLK - 30);
+    expect(nExt.sources.peg.generationId).not.toBe(oExt.sources.peg.generationId);
+    expect(nExt.assets[0]?.routeReviews[0]?.output?.valuation).toMatchObject({ basis: "nav", sourceId: "defillama-contract", observedAtSec: V9_CLK - 30 });
   });
 
   it("binds exact output prices and their original clocks into both capture and peg-source identity", () => {
-    const makeInput = (priceUsd: number) => {
-      const { baseInputGenerationId: _baseInputGenerationId, ...draft } =
-        capturedNavOutputInput(V9_FIXTURE_CLOCK - 60);
-      return createReportCardsFixedInput({
-        ...draft,
-        navPriceById: {},
-        exitOutputPriceById: { "thbill-theo": {
-          priceUsd, sourceId: "protocol-redeem", observedAtSec: V9_FIXTURE_CLOCK - 30,
-          confidence: "high", admission: "guarded-nav",
-        } },
-      });
+    const mk = (priceUsd: number) => {
+      const { baseInputGenerationId: _id, ...draft } = navOutputIn(V9_CLK - 60);
+      return mkFixedIn({ ...draft, navPriceById: {}, exitOutputPriceById: { [THBILL]: outPx(priceUsd, { sourceId: "protocol-redeem", observedAtSec: V9_CLK - 30, admission: "guarded-nav" }) } });
     };
-    const first = makeInput(1.0188);
-    const second = makeInput(1.0191);
-    const firstExtension = buildSafetyScoreV9BaselineExtensionFromNormalizedInput(first);
-    const secondExtension = buildSafetyScoreV9BaselineExtensionFromNormalizedInput(second);
-    expect(second.baseInputGenerationId).not.toBe(first.baseInputGenerationId);
-    expect(secondExtension.sources.peg.generationId).not.toBe(firstExtension.sources.peg.generationId);
-    expect(secondExtension.sources.peg.observedAtSec).toBe(V9_FIXTURE_CLOCK - 30);
-    expect(secondExtension.assets[0]?.routeReviews[0]?.output?.valuation).toMatchObject({
-      basis: "nav", unitValueUsd: 1.0191, observedAtSec: V9_FIXTURE_CLOCK - 30,
-    });
+    const a = mk(1.0188), b = mk(1.0191), aE = buildBaseExt(a), bE = buildBaseExt(b);
+    expect(b.baseInputGenerationId).not.toBe(a.baseInputGenerationId);
+    expect(bE.sources.peg.generationId).not.toBe(aE.sources.peg.generationId);
+    expect(bE.sources.peg.observedAtSec).toBe(V9_CLK - 30);
+    expect(bE.assets[0]?.routeReviews[0]?.output?.valuation).toMatchObject({ basis: "nav", unitValueUsd: 1.0191, observedAtSec: V9_CLK - 30 });
   });
 
   it("derives nothing when the row already carries observations or is absent", () => {
-    const withObservation = makeSupplyFullRedemption();
-    const derived = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(withObservation), "usdc-circle")[0]!;
-    withObservation.capacityProfile = {
-      ...withObservation.capacityProfile!,
-      exitRouteObservations: [derived.observation],
-    };
-    expect(buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(withObservation), "usdc-circle")).toEqual([]);
-    expect(buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(undefined), "usdc-circle")).toEqual([]);
+    const w = mkFull();
+    setObs(w, [obs0(w)]);
+    expect(retRed(stub(w), USDC)).toEqual([]);
+    expect(retRed(stub(undefined), USDC)).toEqual([]);
   });
 });
 
 describe("buildSafetyScoreV9RetainedRoutes composed DEX exits", () => {
   it("composes a reviewed atomic wrap with captured intermediate market depth", () => {
-    const fixedInput = fixedInputStub(undefined);
-    // Synthetic admitted route: current M curation no longer asserts public wrapping.
-    withRedemptionBackstopConfig("m-m0", {
-      v9ComposedDexExit: {
-        intermediateAssetId: "wm-m0",
-        conversionModel: "permissionless-atomic-wrap",
-        chain: "ethereum",
-        wrapperContract: "0x437cc33344a0B27A429f795ff6B469C72698B291",
-        reviewedAt: "2026-07-01",
-        docs: [{ label: "Fixture wrap", url: "https://issuer.example/wrap", supports: ["route", "fees", "access", "settlement"] }],
-      },
+    const f = stub(undefined);
+    withCfg("m-m0", {
+      v9ComposedDexExit: { intermediateAssetId: "wm-m0", conversionModel: "permissionless-atomic-wrap", chain: "ethereum", wrapperContract: "0x437cc33344a0B27A429f795ff6B469C72698B291", reviewedAt: "2026-07-01", docs: [{ label: "Fixture wrap", url: "https://issuer.example/wrap", supports: ["route", "fees", "access", "settlement"] }] },
     }, () => {
-    const source: ExitRouteObservation = {
-      routeId: "dex:wm-m0:uniswap-v3:wm-usdc",
-      routeFamily: "dex-amm",
-      scope: {
-        kind: "chain-contract",
-        chain: "ethereum",
-        contractOrPoolId: "0x970a7749ecaa4394c8b2bf5f2471f41fd6b79288",
-        protocol: "uniswap-v3",
-      },
-      requestedNotionalUsd: 1_000_000,
-      settlementHorizonSec: 300,
-      maxCostBps: 200,
-      executableUsd: 1_000_000,
-      completionRatio: 1,
-      output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdc-circle"] },
-      evidenceKind: "measured-executable-depth",
-      adapterProfileId: "uniswap-v3-quoter",
-      executionCostBps: 1.6,
-      confidence: "high",
-      scoreEligible: true,
-      observedAt: NOW,
-      freshnessSeconds: 0,
-      commonModeKeys: ["chain:ethereum", "protocol:uniswap-v3"],
-      capacityCurve: [
-        {
-          requestedNotionalUsd: 1_000_000,
-          maxCostBps: 200,
-          executableUsd: 1_000_000,
-          completionRatio: 1,
-          executionCostBps: 1.6,
-        },
-      ],
-    };
-    (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = {
-      "wm-m0": { exitRouteObservations: [source] },
-    };
-    (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = {
-      "usdc-circle": { currentDeviationBps: 0, priceObservedAt: NOW },
-    };
-
-    const retained = buildSafetyScoreV9RetainedRoutes(fixedInput, "m-m0");
-    expect(retained).toHaveLength(1);
-    expect(retained[0]).toMatchObject({
-      lane: "dex",
-      observation: {
-        routeId: `composed:m-m0:${source.routeId}`,
-        executableUsd: 1_000_000,
-        output: { trackedAssetIds: ["usdc-circle"] },
-      },
-    });
-    expect(source.routeId).toBe("dex:wm-m0:uniswap-v3:wm-usdc");
-
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, "m-m0")).toEqual([
-      expect.objectContaining({
-        lane: "dex",
-        routeId: `composed:m-m0:${source.routeId}`,
-        holderAccess: "permissionless",
-        settlementModel: "atomic",
-        executionCosts: [
-          {
-            requestedNotionalUsd: 1_000_000,
-            maxCostBps: 200,
-            executionCostBps: 1.6,
-          },
-        ],
-        physicalResourceKeys: [
-          "pool:ethereum:0x970a7749ecaa4394c8b2bf5f2471f41fd6b79288",
-          "wrapper:ethereum:0x437cc33344a0b27a429f795ff6b469c72698b291",
-        ],
-        failureDomains: [
-          {
-            kind: "redemption-rail",
-            key: "wrapper:ethereum:0x437cc33344a0b27a429f795ff6b469c72698b291",
-          },
-        ],
-      }),
-    ]);
+      const src: RouteObs = {
+        routeId: "dex:wm-m0:uniswap-v3:wm-usdc", routeFamily: "dex-amm",
+        scope: { kind: "chain-contract", chain: "ethereum", contractOrPoolId: "0x970a7749ecaa4394c8b2bf5f2471f41fd6b79288", protocol: "uniswap-v3" },
+        requestedNotionalUsd: 1e6, settlementHorizonSec: 300, maxCostBps: 200, executableUsd: 1e6, completionRatio: 1,
+        output: trk(USDC), evidenceKind: "measured-executable-depth", adapterProfileId: "uniswap-v3-quoter", executionCostBps: 1.6, confidence: "high", scoreEligible: true,
+        observedAt: NOW, freshnessSeconds: 0, commonModeKeys: ["chain:ethereum", "protocol:uniswap-v3"],
+        capacityCurve: [{ requestedNotionalUsd: 1e6, maxCostBps: 200, executableUsd: 1e6, completionRatio: 1, executionCostBps: 1.6 }],
+      };
+      setDex(f, { "wm-m0": { exitRouteObservations: [src] } });
+      setRawPeg(f, { [USDC]: { currentDeviationBps: 0, priceObservedAt: NOW } });
+      const ret = retRoutes(f, "m-m0");
+      expect(ret).toHaveLength(1);
+      expect(ret[0]).toMatchObject({ lane: "dex", observation: { routeId: `composed:m-m0:${src.routeId}`, executableUsd: 1e6, output: { trackedAssetIds: [USDC] } } });
+      expect(src.routeId).toBe("dex:wm-m0:uniswap-v3:wm-usdc");
+      expect(routeRevs(f, "m-m0")).toEqual([expect.objectContaining({
+        lane: "dex", routeId: `composed:m-m0:${src.routeId}`, holderAccess: "permissionless", settlementModel: "atomic",
+        executionCosts: [{ requestedNotionalUsd: 1e6, maxCostBps: 200, executionCostBps: 1.6 }],
+        physicalResourceKeys: ["pool:ethereum:0x970a7749ecaa4394c8b2bf5f2471f41fd6b79288", "wrapper:ethereum:0x437cc33344a0b27a429f795ff6b469c72698b291"],
+        failureDomains: [{ kind: "redemption-rail", key: "wrapper:ethereum:0x437cc33344a0b27a429f795ff6b469c72698b291" }],
+      })]);
     });
   });
 });
 
 describe("buildDexRouteReview model-confidence derivation", () => {
-  function dexObservation(
-    evidenceKind: ExitRouteObservation["evidenceKind"],
-    mature = false,
-    adapterProfileId?: string,
-  ): ExitRouteObservation {
-    const observation = dexRouteObservation(NOW, {
-      routeId: `dex:usdc-circle:dl:ethereum%3Apool:${evidenceKind}`,
-      scope: { kind: "chain-contract", chain: "ethereum", contractOrPoolId: `pool-${evidenceKind}`, protocol: "curve" },
-      maxCostBps: 50,
-      executableUsd: 950_000,
-      completionRatio: 0.95,
-      output: { kind: "fiat", currency: "USD" },
-      evidenceKind,
-      ...(adapterProfileId ? { adapterProfileId } : {}),
-    });
-    if (evidenceKind === "measured-executable-depth" && mature) {
-      const conservativeCapacityCurve = [
-        {
-          requestedNotionalUsd: observation.requestedNotionalUsd,
-          maxCostBps: observation.maxCostBps,
-          executableUsd: observation.executableUsd,
-          completionRatio: observation.completionRatio,
-        },
-      ];
-      observation.observationHistory = {
-        completeProducerCycleCount: 2,
-        successfulObservationCount: 2,
-        consecutiveSuccessCount: 2,
-        observationWindowStartedAt: NOW - 1_800,
-        observationWindowEndedAt: NOW,
-        latestOperationalFailureAt: null,
-        conservativeStatistic: "pointwise-minimum",
-        conservativeCapacityCurve,
-      };
-      observation.capacityCurve = conservativeCapacityCurve;
+  function dObs(ev: RouteObs["evidenceKind"], mature = false, adapterProfileId?: string): RouteObs {
+    const o = dexObs(NOW, { routeId: `dex:${USDC}:dl:ethereum%3Apool:${ev}`, scope: { kind: "chain-contract", chain: "ethereum", contractOrPoolId: `pool-${ev}`, protocol: "curve" }, maxCostBps: 50, executableUsd: 95e4, completionRatio: 0.95, output: USD, evidenceKind: ev, ...(adapterProfileId ? { adapterProfileId } : {}) });
+    if (ev === "measured-executable-depth" && mature) {
+      const curve = [{ requestedNotionalUsd: o.requestedNotionalUsd, maxCostBps: o.maxCostBps, executableUsd: o.executableUsd, completionRatio: o.completionRatio }];
+      o.observationHistory = { completeProducerCycleCount: 2, successfulObservationCount: 2, consecutiveSuccessCount: 2, observationWindowStartedAt: NOW - 1800, observationWindowEndedAt: NOW, latestOperationalFailureAt: null, conservativeStatistic: "pointwise-minimum", conservativeCapacityCurve: curve };
+      o.capacityCurve = curve;
     }
-    return observation;
+    return o;
   }
-
-  function dexReviewFor(evidenceKind: ExitRouteObservation["evidenceKind"], mature = false) {
-    const fixedInput = fixedInputStub(undefined);
-    (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = {
-      "usdc-circle": { exitRouteObservations: [dexObservation(evidenceKind, mature)] },
-    };
-    return buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]!;
-  }
+  const dRevs = (obs: RouteObs[]) => { const f = stub(undefined); setDex(f, { [USDC]: { exitRouteObservations: obs } }); return routeRevs(f, USDC); };
 
   it("bounds a single measured cycle at medium model confidence", () => {
-    expect(dexReviewFor("measured-executable-depth")).toMatchObject({
-      lane: "dex",
-      executionCertainty: "bounded",
-      modelConfidence: "medium",
-    });
+    expect(dRevs([dObs("measured-executable-depth")])[0]).toMatchObject({ lane: "dex", executionCertainty: "bounded", modelConfidence: "medium" });
   });
 
   it("uses realized measured cost and preserves the legacy request-bound fallback", () => {
-    const fixedInput = fixedInputStub(undefined);
-    const realized = dexObservation("measured-executable-depth");
-    realized.capacityCurve = [
-      {
-        requestedNotionalUsd: realized.requestedNotionalUsd,
-        maxCostBps: realized.maxCostBps,
-        executableUsd: realized.executableUsd,
-        completionRatio: realized.completionRatio,
-        executionCostBps: 37,
-      },
-    ];
-    (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = {
-      "usdc-circle": { exitRouteObservations: [realized] },
-    };
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]?.executionCosts).toEqual([
-      { requestedNotionalUsd: 1_000_000, maxCostBps: 50, executionCostBps: 37 },
-    ]);
-
-    delete realized.capacityCurve[0]!.executionCostBps;
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]?.executionCosts).toEqual([
-      { requestedNotionalUsd: 1_000_000, maxCostBps: 50, executionCostBps: 50 },
-    ]);
+    const o = dObs("measured-executable-depth");
+    o.capacityCurve = [{ requestedNotionalUsd: o.requestedNotionalUsd, maxCostBps: o.maxCostBps, executableUsd: o.executableUsd, completionRatio: o.completionRatio, executionCostBps: 37 }];
+    expect(dRevs([o])[0]?.executionCosts).toEqual([{ requestedNotionalUsd: 1e6, maxCostBps: 50, executionCostBps: 37 }]);
+    delete o.capacityCurve[0]!.executionCostBps;
+    expect(dRevs([o])[0]?.executionCosts).toEqual([{ requestedNotionalUsd: 1e6, maxCostBps: 50, executionCostBps: 50 }]);
   });
 
   it("grades repeated measured executable depth as high model confidence", () => {
-    expect(dexReviewFor("measured-executable-depth", true)).toMatchObject({
-      lane: "dex",
-      executionCertainty: "bounded",
-      modelConfidence: "high",
-    });
+    expect(dRevs([dObs("measured-executable-depth", true)])[0]).toMatchObject({ lane: "dex", executionCertainty: "bounded", modelConfidence: "high" });
   });
 
   it("uses the uniform three-hour measured-adapter confidence window", () => {
-    const fixedInput = fixedInputStub(undefined);
-    const observation = dexObservation(
-      "measured-executable-depth",
-      true,
-      DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwap,
-    );
-    observation.observationHistory = {
-      ...observation.observationHistory!,
-      completeProducerCycleCount: 3,
-      successfulObservationCount: 3,
-      consecutiveSuccessCount: 3,
-      observationWindowStartedAt: NOW - 10_800,
-      observationWindowEndedAt: NOW - 7_199,
-    };
-    (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = {
-      "usdc-circle": { exitRouteObservations: [observation] },
-    };
-
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]).toMatchObject({
-      modelConfidence: "high",
-    });
-
-    delete observation.adapterProfileId;
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]).toMatchObject({
-      modelConfidence: "high",
-    });
-
-    observation.observationHistory = {
-      ...observation.observationHistory!,
-      observationWindowStartedAt: NOW - 10_900,
-      observationWindowEndedAt: NOW - 10_801,
-    };
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]).toMatchObject({
-      modelConfidence: "medium",
-    });
+    const o = dObs("measured-executable-depth", true, PROF_IDS.curveStableSwap);
+    o.observationHistory = { ...o.observationHistory!, completeProducerCycleCount: 3, successfulObservationCount: 3, consecutiveSuccessCount: 3, observationWindowStartedAt: NOW - 10_800, observationWindowEndedAt: NOW - 7_199 };
+    expect(dRevs([o])[0]).toMatchObject({ modelConfidence: "high" });
+    delete o.adapterProfileId;
+    expect(dRevs([o])[0]).toMatchObject({ modelConfidence: "high" });
+    o.observationHistory = { ...o.observationHistory!, observationWindowStartedAt: NOW - 10_900, observationWindowEndedAt: NOW - 10_801 };
+    expect(dRevs([o])[0]).toMatchObject({ modelConfidence: "medium" });
   });
 
-  it.each([
-    { evidenceKind: "reserve-based-amm-simulation" },
-  ] as const)("keeps $evidenceKind evidence at medium model confidence", ({ evidenceKind }) => {
-    expect(dexReviewFor(evidenceKind)).toMatchObject({
-      lane: "dex",
-      executionCertainty: "bounded",
-      modelConfidence: "medium",
-    });
+  it.each(["reserve-based-amm-simulation"] as const)("keeps %s evidence at medium model confidence", (ev) => {
+    expect(dRevs([dObs(ev)])[0]).toMatchObject({ lane: "dex", executionCertainty: "bounded", modelConfidence: "medium" });
   });
 
   it("lifts only the measured route when evidence kinds are mixed", () => {
-    const fixedInput = fixedInputStub(undefined);
-    (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = {
-      "usdc-circle": {
-        exitRouteObservations: [
-          dexObservation("reserve-based-amm-simulation"),
-          dexObservation("measured-executable-depth", true),
-        ],
-      },
-    };
-    const reviews = buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle");
-    expect(reviews).toHaveLength(2);
-    expect(reviews.find((review) => review.routeId.includes("measured-executable-depth"))).toMatchObject({
-      modelConfidence: "high",
-    });
-    expect(reviews.find((review) => review.routeId.includes("reserve-based-amm-simulation"))).toMatchObject({
-      modelConfidence: "medium",
-    });
+    const r = dRevs([dObs("reserve-based-amm-simulation"), dObs("measured-executable-depth", true)]);
+    expect(r).toHaveLength(2);
+    expect(r.find((x) => x.routeId.includes("measured-executable-depth"))).toMatchObject({ modelConfidence: "high" });
+    expect(r.find((x) => x.routeId.includes("reserve-based-amm-simulation"))).toMatchObject({ modelConfidence: "medium" });
   });
 });
 
 describe("issuer stablecoin payout valuation", () => {
   it("requires actual captured USDC prices rather than synthesizing fiat par", () => {
-    withRedemptionBackstopConfig("usdo-openeden", {
-      outputAssetType: "stable-single",
-      outputAssets: ["usdc-circle"],
-      reviewedAt: "2026-07-13",
-    }, () => {
-      const { fixedInput, row } = redemptionPegFixture({
-        rowOverrides: { stablecoinId: "usdo-openeden", routeFamily: "offchain-issuer" },
-        pegDataById: {
-          "usdc-circle": { currentDeviationBps: -100, priceObservedAt: NOW },
-        },
-      });
-      expect(buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!.output).toMatchObject({
-        kind: "tracked-stablecoin",
-        assetKeys: ["usdc-circle"],
-        valuation: { basis: "price", unitValueUsd: 0.99, expectedUnitValueUsd: 1 },
-      });
-      setPegData(fixedInput, {});
-      expect(buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!.output?.valuation).toBeNull();
+    withCfg("usdo-openeden", { outputAssetType: "stable-single", outputAssets: [USDC], reviewedAt: "2026-07-13" }, () => {
+      const { fixedInput: f, row } = redFx({ rowOverrides: { stablecoinId: "usdo-openeden", routeFamily: "offchain-issuer" }, pegDataById: { [USDC]: { currentDeviationBps: -100, priceObservedAt: NOW } } });
+      expect(rev0(f, row.stablecoinId).output).toMatchObject({ kind: "tracked-stablecoin", assetKeys: [USDC], valuation: { basis: "price", unitValueUsd: 0.99, expectedUnitValueUsd: 1 } });
+      setPeg(f, {}); expect(val0(f, row.stablecoinId)).toBeNull();
     });
   });
 
   it("withholds basket valuation when one issuer payout has no price", () => {
-    withRedemptionBackstopConfig("hlusd-hela", { reviewedAt: "2026-07-13" }, () => {
-      const { fixedInput, row } = redemptionPegFixture({
-        rowOverrides: {
-          stablecoinId: "hlusd-hela", routeFamily: "offchain-issuer", outputAssetType: "stable-basket",
-        },
-        pegDataById: {
-          "usdc-circle": { currentDeviationBps: 0, priceObservedAt: NOW },
-        },
-      });
-      const review = buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!;
-      expect(review.output).toMatchObject({
-        kind: "tracked-stablecoin", assetKeys: ["usdc-circle", "usdt-tether"], valuation: null,
-      });
+    withCfg("hlusd-hela", { reviewedAt: "2026-07-13" }, () => {
+      const { fixedInput: f, row } = redFx({ rowOverrides: { stablecoinId: "hlusd-hela", routeFamily: "offchain-issuer", outputAssetType: "stable-basket" }, pegDataById: { [USDC]: { currentDeviationBps: 0, priceObservedAt: NOW } } });
+      expect(rev0(f, row.stablecoinId).output).toMatchObject({ kind: "tracked-stablecoin", assetKeys: [USDC, USDT], valuation: null });
     });
   });
 });
 
 describe("Theo executed eligible-cohort rail", () => {
-  it.each([
-    ["onchain", 5, "exact-lower-bound"],
-    ["static-config", 5, "exact-lower-bound"],
-  ] as const)("projects %s openness with %s bps costs as %s", (routeStatusSource, feeBps, coverageClass) => {
-    const clock = 1790748096;
-    const row = makeSupplyFullRedemption({
-      stablecoinId: "thusd-theo", routeFamily: "stablecoin-redeem",
-      accessModel: "whitelisted-onchain", holderEligibility: "whitelisted-primary",
-      settlementModel: "immediate", settlementDelaySec: 0, executionModel: "deterministic-onchain",
-      outputAssetType: "stable-basket", sourceMode: "dynamic", provider: "reserve-sync-metadata",
-      capacityKind: "live-direct-bounded", capacityConfidence: "live-direct",
+  it.each([["onchain", 5, "exact-lower-bound"], ["static-config", 5, "exact-lower-bound"]] as const)("projects %s openness with %s bps costs as %s", (routeStatusSource, feeBps, coverageClass) => {
+    const clk = 1790748096, row = mkFull({
+      stablecoinId: "thusd-theo", routeFamily: "stablecoin-redeem", accessModel: "whitelisted-onchain", holderEligibility: "whitelisted-primary",
+      settlementModel: "immediate", settlementDelaySec: 0, executionModel: "deterministic-onchain", outputAssetType: "stable-basket",
+      sourceMode: "dynamic", provider: "reserve-sync-metadata", capacityKind: "live-direct-bounded", capacityConfidence: "live-direct",
       freshnessKind: "same-run-onchain", capacitySemantics: "immediate-bounded",
-      capacityProfile: {
-        immediateUsd: 220400, scoringUsd: 220400, scoringHorizon: "immediate",
-        capacityProfileConfidence: "live-direct", modeledExitSizeUsd: 10_000_000,
-      },
-      modelConfidence: "high", routeStatus: "open", routeStatusSource,
-      feeBps, feeModelKind: "fixed-bps", feeConfidence: "fixed",
-      immediateCapacityUsd: 220400, updatedAt: clock, sourceTimestamp: clock,
+      capacityProfile: { immediateUsd: 220400, scoringUsd: 220400, scoringHorizon: "immediate", capacityProfileConfidence: "live-direct", modeledExitSizeUsd: 1e7 },
+      modelConfidence: "high", routeStatus: "open", routeStatusSource, feeBps, feeModelKind: "fixed-bps", feeConfidence: "fixed",
+      immediateCapacityUsd: 220400, updatedAt: clk, sourceTimestamp: clk,
     });
-    const fixed = fixedInputStub(row, clock);
-    const observation = buildRedemptionExitRouteObservation({
-      stablecoinId: row.stablecoinId,
-      config: getRedemptionBackstopConfig(row.stablecoinId)!,
-      capacityProfile: row.capacityProfile,
-      scoringCapacityUsd: row.immediateCapacityUsd,
-      supplyUsd: 132_370_676.056526,
-      routeStatus: row.routeStatus,
-      resolutionState: row.resolutionState,
-      sourceMode: row.sourceMode,
-      capacityConfidence: row.capacityConfidence,
-      capacityKind: row.capacityKind,
-      freshnessKind: row.freshnessKind,
-      evidenceObservedAt: clock,
-      settlementDelaySec: row.settlementDelaySec,
-      resolvedFeeBps: row.feeBps,
-      now: clock,
+    const f = stub(row, clk), obs = buildRedObs({
+      stablecoinId: row.stablecoinId, config: getCfg(row.stablecoinId)!, capacityProfile: row.capacityProfile,
+      scoringCapacityUsd: row.immediateCapacityUsd, supplyUsd: 132_370_676.056526, routeStatus: row.routeStatus, resolutionState: row.resolutionState,
+      sourceMode: row.sourceMode, capacityConfidence: row.capacityConfidence, capacityKind: row.capacityKind, freshnessKind: row.freshnessKind,
+      evidenceObservedAt: clk, settlementDelaySec: row.settlementDelaySec, resolvedFeeBps: row.feeBps, now: clk,
     });
-    expect(observation).not.toBeNull();
-    row.capacityProfile = {
-      ...row.capacityProfile!,
-      immediateUsd: 220400, scoringUsd: 220400, scoringHorizon: "immediate",
-      exitRouteObservations: [{
-        ...observation!, modelConfidence: "high",
-      }],
-    };
-    setPegData(fixed, {
-      "usdc-circle": { currentDeviationBps: 0, priceObservedAt: clock },
-      "usdt-tether": { currentDeviationBps: 0, priceObservedAt: clock },
-    });
-    const review = buildSafetyScoreV9RouteReviews(fixed, row.stablecoinId)[0]!;
-    expect(review).toMatchObject({
-      coverageClass, settlementModel: "bounded-delay", settlementSlaSec: 0,
-      minRedeemUsd: 1, modelConfidence: "high",
-    });
-    expect(review.output).toMatchObject({ kind: "tracked-stablecoin", assetKeys: ["usdc-circle", "usdt-tether"] });
-    expect(review.executionCosts).toContainEqual({ requestedNotionalUsd: 10_000_000, maxCostBps: 200, executionCostBps: feeBps });
-    expect(getRedemptionBackstopConfig("thusd-theo")?.v9RouteReviewTerms?.scoringDisposition).toBeUndefined();
+    expect(obs).not.toBeNull();
+    row.capacityProfile = { ...row.capacityProfile!, immediateUsd: 220400, scoringUsd: 220400, scoringHorizon: "immediate", exitRouteObservations: [{ ...obs!, modelConfidence: "high" }] };
+    setPeg(f, { [USDC]: { currentDeviationBps: 0, priceObservedAt: clk }, [USDT]: { currentDeviationBps: 0, priceObservedAt: clk } });
+    const rev = rev0(f, row.stablecoinId);
+    expect(rev).toMatchObject({ coverageClass, settlementModel: "bounded-delay", settlementSlaSec: 0, minRedeemUsd: 1, modelConfidence: "high", output: { kind: "tracked-stablecoin", assetKeys: [USDC, USDT] } });
+    expect(rev.executionCosts).toContainEqual({ requestedNotionalUsd: 1e7, maxCostBps: 200, executionCostBps: feeBps });
+    expect(getCfg("thusd-theo")?.v9RouteReviewTerms?.scoringDisposition).toBeUndefined();
   });
 });
 
 describe("explicit holder restrictions remain separate from route evidence", () => {
-  it.each([
-    ["verified-customer", "institutional-eligible"],
-    ["whitelisted-primary", "allowlisted"],
-    ["issuer-discretionary", "issuer-only"],
-    ["unknown", "unknown"],
-  ] as const)("preserves %s access instead of inferring permissionless eligibility", (eligibility, holderAccess) => {
-    const fixed = makeV9QueuedRedemptionFixedInput(300, true);
-    fixed.redemptionBackstopMap.alpha!.holderEligibility = eligibility;
-    const review = buildSafetyScoreV9RouteReviews(fixed, "alpha").find((route) => route.lane === "redemption")!;
-    expect(review.holderAccess).toBe(holderAccess);
-    expect(review).toMatchObject({ queueDepthUsd: 1_500_000, dailyLimitUsd: 1_000_000, minRedeemUsd: 1_000_000 });
-  });
+  it.each([["verified-customer", "institutional-eligible"], ["whitelisted-primary", "allowlisted"], ["issuer-discretionary", "issuer-only"], ["unknown", "unknown"]] as const)(
+    "preserves %s access instead of inferring permissionless eligibility",
+    (elig, holderAccess) => {
+      const f = mkQueued(300, true);
+      f.redemptionBackstopMap.alpha!.holderEligibility = elig;
+      expect(routeRevs(f, "alpha").find((r) => r.lane === "redemption")!).toMatchObject({ holderAccess, queueDepthUsd: 1.5e6, dailyLimitUsd: 1e6, minRedeemUsd: 1e6 });
+    },
+  );
 });
 
 describe("captured local-fiat output and cost references", () => {
-  const reference = { valueUsd: 1.25, source: "fx", contributorCount: 0, asOf: NOW - 60 };
+  const ref = { valueUsd: 1.25, source: "fx", contributorCount: 0, asOf: NOW - 60 };
 
   it.each(["CHF"])("values %s fiat with the captured currency reference, not USD par", (currency) => {
-    const { fixedInput } = redemptionPegFixture({
-      rowOverrides: { stablecoinId: "usdc-circle" },
-      output: { kind: "fiat", currency },
-      pegDataById: { captured: { pegCurrency: currency, pegReference: reference } },
-    });
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]!.output?.valuation).toMatchObject({
-      unitValueUsd: 1.25, expectedUnitValueUsd: 1.25, observedAtSec: NOW - 60,
-      sourceId: "captured-fiat-fx-reference", maxAgeSec: 86_400,
-    });
+    const { fixedInput: f } = redFx({ rowOverrides: { stablecoinId: USDC }, output: { kind: "fiat", currency }, pegDataById: { captured: { pegCurrency: currency, pegReference: ref } } });
+    expect(val0(f, USDC)).toMatchObject({ unitValueUsd: 1.25, expectedUnitValueUsd: 1.25, observedAtSec: NOW - 60, sourceId: "captured-fiat-fx-reference", maxAgeSec: DAY });
   });
 
   it("resolves unpinned producer output at fact-build time and fails closed without captured FX", () => {
-    const { fixedInput, row } = redemptionPegFixture({
-      rowOverrides: { stablecoinId: "usdc-circle" },
-      pegDataById: { captured: { pegCurrency: "EUR", pegReference: reference } },
-    });
-    const config: RedemptionBackstopConfig = {
-      routeFamily: "offchain-issuer", accessModel: "issuer-api", settlementModel: "atomic",
-      executionModel: "rules-based-nav", outputAssetType: "stable-single",
-      unresolvedOutputAssetKeys: ["fiat:EUR"],
-      capacityModel: { kind: "fixed-usd", amountUsd: 100_000_000, confidence: "documented-bound" },
-      costModel: { kind: "fee-bps", feeBps: 10 },
-      docs: [{ label: "Synthetic terms", url: "https://example.com/terms", supports: ["capacity", "fees", "settlement"] }],
-      reviewedAt: "2026-07-01",
-    };
-    const observation = buildRedemptionExitRouteObservation({
-      stablecoinId: row.stablecoinId, config,
-      capacityProfile: { ...row.capacityProfile!, scoringHorizon: "immediate" },
-      scoringCapacityUsd: 100_000_000, supplyUsd: 100_000_000,
-      routeStatus: "open", resolutionState: "resolved", sourceMode: "dynamic",
-      capacityConfidence: "live-direct", capacityKind: "live-direct", freshnessKind: "same-run-api",
-      evidenceObservedAt: NOW - 600, resolvedFeeBps: null, now: NOW,
-      fiatReferences: { clockSec: NOW, pegDataById: {
-        captured: { pegCurrency: "EUR", pegReference: { ...reference, source: "fx" } },
-      } },
-    })!;
-    expect(observation).not.toHaveProperty("outputUnitValueUsd");
-    row.capacityProfile!.exitRouteObservations = [observation];
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!.output?.valuation).toMatchObject({
-      unitValueUsd: 1.25, expectedUnitValueUsd: 1.25, observedAtSec: reference.asOf,
-      sourceId: "captured-fiat-fx-reference", maxAgeSec: 86_400,
-    });
-    setPegData(fixedInput, {});
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!.output).toBeNull();
+    const { fixedInput: f, row } = redFx({ rowOverrides: { stablecoinId: USDC }, pegDataById: { captured: { pegCurrency: "EUR", pegReference: ref } } });
+    const config: Cfg = { routeFamily: "offchain-issuer", accessModel: "issuer-api", settlementModel: "atomic", executionModel: "rules-based-nav", outputAssetType: "stable-single", unresolvedOutputAssetKeys: ["fiat:EUR"], capacityModel: { kind: "fixed-usd", amountUsd: 1e8, confidence: "documented-bound" }, costModel: { kind: "fee-bps", feeBps: 10 }, docs: [{ label: "Synthetic terms", url: "https://example.com/terms", supports: ["capacity", "fees", "settlement"] }], reviewedAt: "2026-07-01" };
+    const obs = buildRedObs({ stablecoinId: USDC, config, capacityProfile: { ...row.capacityProfile!, scoringHorizon: "immediate" }, scoringCapacityUsd: 1e8, supplyUsd: 1e8, routeStatus: "open", resolutionState: "resolved", sourceMode: "dynamic", capacityConfidence: "live-direct", capacityKind: "live-direct", freshnessKind: "same-run-api", evidenceObservedAt: NOW - 600, resolvedFeeBps: null, now: NOW, fiatReferences: { clockSec: NOW, pegDataById: { captured: { pegCurrency: "EUR", pegReference: { ...ref, source: "fx" } } } } })!;
+    expect(obs).not.toHaveProperty("outputUnitValueUsd");
+    row.capacityProfile!.exitRouteObservations = [obs];
+    expect(val0(f, USDC)).toMatchObject({ unitValueUsd: 1.25, expectedUnitValueUsd: 1.25, observedAtSec: ref.asOf, sourceId: "captured-fiat-fx-reference", maxAgeSec: DAY });
+    setPeg(f, {}); expect(rev0(f, USDC).output).toBeNull();
   });
 
   it("retains the fee-clock fiat quote instead of switching to a later FX generation", () => {
-    const { fixedInput, row } = redemptionPegFixture({
-      rowOverrides: { stablecoinId: "usdc-circle" }, output: { kind: "fiat", currency: "CHF" },
-      pegDataById: { captured: { pegCurrency: "CHF", pegReference: { ...reference, valueUsd: 2 } } },
-    });
-    const observation = row.capacityProfile!.exitRouteObservations![0]!;
-    Object.assign(observation, { outputUnitValueUsd: 1.25, outputExpectedUnitValueUsd: 1.25,
-      outputUnitValueObservedAt: NOW - 60, outputUnitValueSourceId: "captured-fiat-fx-reference:CHF",
-      executionCostBps: 10, allInCostBps: 10 });
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]!.output?.valuation?.unitValueUsd).toBe(1.25);
-    observation.outputUnitValueObservedAt = NOW - 86_401;
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]!.output).toBeNull();
+    const { fixedInput: f, row } = redFx({ rowOverrides: { stablecoinId: USDC }, output: { kind: "fiat", currency: "CHF" }, pegDataById: { captured: { pegCurrency: "CHF", pegReference: { ...ref, valueUsd: 2 } } } });
+    const obs = row.capacityProfile!.exitRouteObservations![0]!;
+    Object.assign(obs, { outputUnitValueUsd: 1.25, outputExpectedUnitValueUsd: 1.25, outputUnitValueObservedAt: NOW - 60, outputUnitValueSourceId: "captured-fiat-fx-reference:CHF", executionCostBps: 10, allInCostBps: 10 });
+    expect(val0(f, USDC)?.unitValueUsd).toBe(1.25);
+    obs.outputUnitValueObservedAt = NOW - DAY - 1;
+    expect(rev0(f, USDC).output).toBeNull();
   });
 
-  it.each([undefined, { ...reference, asOf: NOW + 1 }, { ...reference, asOf: NOW - 86_401 },
-    { ...reference, source: "fallback" }, { ...reference, source: "median", contributorCount: 1 },
-  ])("withholds non-USD fiat output for missing, future, stale or unadmitted FX", (pegReference) => {
-    const { fixedInput } = redemptionPegFixture({
-      rowOverrides: { stablecoinId: "usdc-circle" }, output: { kind: "fiat", currency: "CHF" },
-      pegDataById: { captured: { pegCurrency: "CHF", pegReference } },
-    });
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]!.output).toBeNull();
-  });
-
-  it.each(["issuer-redemption", "eventual-redemption"] as const)(
-    "values an explicit single external fiat identity on a %s issuer route",
-    (routeFamily) => {
-      withRedemptionBackstopConfig("usdc-circle", { unresolvedOutputAssetKeys: ["fiat:JPY"] }, () => {
-        const { fixedInput, row } = redemptionPegFixture({
-          rowOverrides: { stablecoinId: "usdc-circle" },
-          output: { kind: "unresolved-asset", assetKeys: ["fiat:JPY"] },
-          pegDataById: { captured: { pegCurrency: "JPY", pegReference: reference } },
-        });
-        row.capacityProfile!.exitRouteObservations![0]!.routeFamily = routeFamily;
-        expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]!.output).toMatchObject({
-          kind: "fiat", assetKeys: ["fiat:JPY"], valuation: { unitValueUsd: 1.25 },
-        });
-      });
+  it.each([undefined, { ...ref, asOf: NOW + 1 }, { ...ref, asOf: NOW - DAY - 1 }, { ...ref, source: "fallback" }, { ...ref, source: "median", contributorCount: 1 }])(
+    "withholds non-USD fiat output for missing, future, stale or unadmitted FX",
+    (pegReference) => {
+      const { fixedInput: f } = redFx({ rowOverrides: { stablecoinId: USDC }, output: { kind: "fiat", currency: "CHF" }, pegDataById: { captured: { pegCurrency: "CHF", pegReference } } });
+      expect(rev0(f, USDC).output).toBeNull();
     },
   );
 
+  it.each(["issuer-redemption", "eventual-redemption"] as const)("values an explicit single external fiat identity on a %s issuer route", (rf) => {
+    withCfg(USDC, { unresolvedOutputAssetKeys: ["fiat:JPY"] }, () => {
+      const { fixedInput: f, row } = redFx({ rowOverrides: { stablecoinId: USDC }, output: { kind: "unresolved-asset", assetKeys: ["fiat:JPY"] }, pegDataById: { captured: { pegCurrency: "JPY", pegReference: ref } } });
+      row.capacityProfile!.exitRouteObservations![0]!.routeFamily = rf;
+      expect(rev0(f, USDC).output).toMatchObject({ kind: "fiat", assetKeys: ["fiat:JPY"], valuation: { unitValueUsd: 1.25 } });
+    });
+  });
+
   it("keeps delayed protocol fiat identities and ambiguous issuer outputs unresolved", () => {
-    withRedemptionBackstopConfig("usdc-circle", { unresolvedOutputAssetKeys: ["fiat:JPY", "fiat:CHF"] }, () => {
-      const { fixedInput, row } = redemptionPegFixture({
-        rowOverrides: { stablecoinId: "usdc-circle" },
-        output: { kind: "unresolved-asset", assetKeys: ["fiat:JPY"] },
-        pegDataById: { captured: { pegCurrency: "JPY", pegReference: reference } },
-      });
-      const observation = row.capacityProfile!.exitRouteObservations![0]!;
-      observation.routeFamily = "eventual-redemption";
-      observation.scope = { kind: "protocol", protocol: "synthetic-vault" };
-      expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]!.output).toBeNull();
-      observation.scope = { kind: "issuer", issuerId: "usdc-circle" };
-      observation.output = { kind: "unresolved-asset", assetKeys: ["fiat:JPY", "fiat:CHF"] };
-      expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]!.output).toBeNull();
-      observation.output = { kind: "unresolved-asset", assetKeys: ["fiat:JPY"] };
-      setPegData(fixedInput, {});
-      expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]!.output).toBeNull();
+    withCfg(USDC, { unresolvedOutputAssetKeys: ["fiat:JPY", "fiat:CHF"] }, () => {
+      const { fixedInput: f, row } = redFx({ rowOverrides: { stablecoinId: USDC }, output: { kind: "unresolved-asset", assetKeys: ["fiat:JPY"] }, pegDataById: { captured: { pegCurrency: "JPY", pegReference: ref } } });
+      const obs = row.capacityProfile!.exitRouteObservations![0]!;
+      obs.routeFamily = "eventual-redemption"; obs.scope = { kind: "protocol", protocol: "synthetic-vault" };
+      expect(rev0(f, USDC).output).toBeNull();
+      obs.scope = { kind: "issuer", issuerId: USDC }; obs.output = { kind: "unresolved-asset", assetKeys: ["fiat:JPY", "fiat:CHF"] };
+      expect(rev0(f, USDC).output).toBeNull();
+      obs.output = { kind: "unresolved-asset", assetKeys: ["fiat:JPY"] }; setPeg(f, {});
+      expect(rev0(f, USDC).output).toBeNull();
     });
   });
 
   it("fails closed on local cost FX even when a reusable zero-bps fallback exists", () => {
-    withRedemptionBackstopConfig("usdc-circle", { costModel: { kind: "fee-bps", feeBps: 0,
-      feeComponents: [{ currency: "CHF", terms: { flatAmount: 30 } }] } }, (config) => {
-      const { fixedInput, row } = redemptionPegFixture({ rowOverrides: { stablecoinId: "usdc-circle", feeBps: 0 } });
-      const observation = row.capacityProfile!.exitRouteObservations![0]!;
-      row.capacityProfile!.exitRouteObservations = [{ ...observation, executionCostBps: undefined,
-        capacityCurve: observation.capacityCurve?.map((point) => ({ ...point, executionCostBps: undefined })) }];
-      expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]!.feeEvidence).toBe("disclosed-unquantified");
-      setPegData(fixedInput, { captured: { pegCurrency: "CHF", pegReference: reference } });
-      const review = buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]!;
-      expect(review.executionCosts.find((point) => point.requestedNotionalUsd === observation.requestedNotionalUsd)?.executionCostBps)
-        .toBe(37.5 / observation.requestedNotionalUsd * 10_000);
-      const produced = buildRedemptionExitRouteObservation({
-        stablecoinId: "usdc-circle", config, capacityProfile: row.capacityProfile,
-        scoringCapacityUsd: 1_000_000, supplyUsd: 1_000_000, routeStatus: "open", resolutionState: "resolved",
-        sourceMode: "static", capacityConfidence: "documented-bound", resolvedFeeBps: 0, now: NOW,
-      });
-      expect(produced).toMatchObject({ feeEvidence: "disclosed-unquantified", scoreEligible: false });
+    withCfg(USDC, { costModel: { kind: "fee-bps", feeBps: 0, feeComponents: [{ currency: "CHF", terms: { flatAmount: 30 } }] } }, (config) => {
+      const { fixedInput: f, row } = redFx({ rowOverrides: { stablecoinId: USDC, feeBps: 0 } }), obs = row.capacityProfile!.exitRouteObservations![0]!;
+      row.capacityProfile!.exitRouteObservations = [{ ...obs, executionCostBps: undefined, capacityCurve: obs.capacityCurve?.map((p) => ({ ...p, executionCostBps: undefined })) }];
+      expect(rev0(f, USDC).feeEvidence).toBe("disclosed-unquantified");
+      setPeg(f, { captured: { pegCurrency: "CHF", pegReference: ref } });
+      expect(rev0(f, USDC).executionCosts.find((p) => p.requestedNotionalUsd === obs.requestedNotionalUsd)?.executionCostBps).toBe(37.5 / obs.requestedNotionalUsd * 1e4);
+      expect(buildRedObs({ stablecoinId: USDC, config, capacityProfile: row.capacityProfile, scoringCapacityUsd: 1e6, supplyUsd: 1e6, routeStatus: "open", resolutionState: "resolved", sourceMode: "static", capacityConfidence: "documented-bound", resolvedFeeBps: 0, now: NOW })).toMatchObject({ feeEvidence: "disclosed-unquantified", scoreEligible: false });
     });
   });
 });

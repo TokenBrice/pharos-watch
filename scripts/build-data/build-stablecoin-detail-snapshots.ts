@@ -50,8 +50,8 @@ export const DETAIL_SNAPSHOT_TARGET_BYTES = 12 * 1024;
 const MAX_PARALLEL_COIN_REQUESTS = 3;
 // Match the six-connection budget; bulk bodies finish before fallback reads begin.
 const MAX_PARALLEL_BULK_REQUESTS = 6;
-// A just-invalidated detail cache makes fallback reads more expensive; 3 coins x 2 lanes = 6 sockets.
-const MAX_PARALLEL_FALLBACK_REQUESTS = 3;
+// Weighted socket cap for post-bulk stale refreshes (1 socket) and unavailable fallbacks (1 or 2 sockets).
+const MAX_PARALLEL_FALLBACK_SOCKETS = 6;
 // This is the UI stale band, not the endpoint's much stricter advisory budget.
 export const DETAIL_SNAPSHOT_UI_STALE_AFTER_MS =
   API_FRESHNESS_MAX_AGE_SEC.stablecoins * FRESHNESS_RATIOS.DEGRADED * 1000;
@@ -328,6 +328,50 @@ async function mapWithConcurrency<T, R>(
   return results;
 }
 
+class WeightedSemaphore {
+  private available: number;
+  private readonly capacity: number;
+  private readonly waiters: Array<{ permits: number; resolve: () => void }> = [];
+
+  constructor(capacity: number) {
+    if (!Number.isInteger(capacity) || capacity <= 0) {
+      throw new Error(`Semaphore capacity must be a positive integer, received ${capacity}`);
+    }
+    this.capacity = capacity;
+    this.available = capacity;
+  }
+
+  async acquire(permits: number): Promise<void> {
+    if (!Number.isInteger(permits) || permits < 0 || permits > this.capacity) {
+      throw new Error(`Semaphore permits must be an integer from 0 to ${this.capacity}, received ${permits}`);
+    }
+    if (permits === 0) return;
+    if (this.waiters.length === 0 && this.available >= permits) {
+      this.available -= permits;
+      return;
+    }
+    await new Promise<void>((resolve) => {
+      this.waiters.push({ permits, resolve });
+    });
+  }
+
+  release(permits: number): void {
+    if (!Number.isInteger(permits) || permits < 0 || permits > this.capacity) {
+      throw new Error(`Semaphore permits must be an integer from 0 to ${this.capacity}, received ${permits}`);
+    }
+    if (permits === 0) return;
+    this.available += permits;
+    if (this.available > this.capacity) {
+      throw new Error("Semaphore released more permits than its capacity");
+    }
+    while (this.waiters.length > 0 && this.available >= this.waiters[0].permits) {
+      const next = this.waiters.shift()!;
+      this.available -= next.permits;
+      next.resolve();
+    }
+  }
+}
+
 export interface DetailSnapshotGenerationOptions {
   source?: "per-coin" | "bulk";
   generatedAt?: number;
@@ -475,64 +519,95 @@ export async function generateSnapshots(
       assessedAt,
       options.staleRefreshLimit,
     ));
-    // Stale refreshes and unavailable fallbacks share slots through body reads and retries.
-    const acquired = await mapWithConcurrency(entries, MAX_PARALLEL_FALLBACK_REQUESTS, async (entry) => {
+    // Stale refreshes (1 socket) and unavailable fallbacks (1 or 2 sockets) share a FIFO 6-permit
+    // socket semaphore through body reads and retries; cache-only and history-only rows take 0 permits.
+    const semaphore = new WeightedSemaphore(MAX_PARALLEL_FALLBACK_SOCKETS);
+    let acquisitionFailed = false;
+    const buildProvenance = (
+      entry: DetailSnapshotInputEntry,
+      entrySource: (typeof acquisition)[number]["source"],
+      lane: SnapshotCoinLanes,
+    ) => ({
+      id: entry.id,
+      source: entrySource,
+      updatedAt: lane.updatedAt,
+      bulkSources: entry.sources,
+      ...(entry.status === "available"
+        ? { bulkUpdatedAt: entry.updatedAt }
+        : entry.status === "history-only"
+          ? { bulkUpdatedAt: lane.updatedAt, reason: entry.reason }
+          : { reason: entry.reason }),
+    });
+    const acquired = await Promise.all(entries.map((entry) => {
       const refresh = refreshIds.has(entry.id);
       // An inactive record with no cached detail row can only be answered by the
       // route's inactive 404, so the reviewed fallback reads the history lane alone.
       const historyOnly = entry.status === "unavailable" && entry.reason === DETAIL_CACHE_ABSENT_REASON
         && !detailGenerationRefreshable(entry.id);
-      const source: (typeof acquisition)[number]["source"] = entry.status === "history-only"
+      const entrySource: (typeof acquisition)[number]["source"] = entry.status === "history-only"
         ? "bulk-history-only"
         : entry.status === "unavailable"
           ? (historyOnly ? "bulk-unavailable-history-only" : "bulk-unavailable-fallback")
           : refresh ? "bulk-stale-refresh" : "bulk-cache-only";
-      let lane: SnapshotCoinLanes;
       if (entry.status === "history-only") {
-        lane = {
+        const lane: SnapshotCoinLanes = {
           id: entry.id,
           liveSummary: null,
           supplyHistory: entry.supplyHistory,
-          updatedAt: entry.updatedAt,
+          updatedAt: entry.updatedAt.supplyHistory != null
+            ? { supplyHistory: entry.updatedAt.supplyHistory }
+            : {},
         };
-      } else if (historyOnly) {
-        console.warn(`[stablecoin-detail-snapshots] ${source} for ${entry.id}; fetching supply history only`);
-        lane = await fetchCoin(entry.id, false);
-      } else if (entry.status === "unavailable") {
-        console.warn(`[stablecoin-detail-snapshots] ${source} for ${entry.id}; fetching per-coin`);
-        lane = await fetchCoin(entry.id);
-      } else if (refresh) {
-        console.warn(`[stablecoin-detail-snapshots] ${source} for ${entry.id}; refreshing detail lane`);
-        // The route may serve the original generation while revalidating. Do not
-        // mistake a successful GET for a new producer generation or re-stamp it.
-        // Reuse the bulk supplyHistory lane and clock instead of re-fetching /api/supply-history.
-        const detail = await fetchDetailLane(entry.id);
-        lane = {
-          id: entry.id,
-          liveSummary: detail ? projectStablecoinLiveSummary(detail.data, entry.id) : null,
-          supplyHistory: entry.supplyHistory,
-          updatedAt: {
-            ...(detail?.updatedAt != null ? { liveSummary: detail.updatedAt } : {}),
-            supplyHistory: entry.updatedAt.supplyHistory,
-          },
-        };
-      } else {
-        lane = {
+        return { lane, provenance: buildProvenance(entry, entrySource, lane) };
+      }
+      if (entry.status === "available" && !refresh) {
+        const lane: SnapshotCoinLanes = {
           id: entry.id,
           liveSummary: normalizeStablecoinLiveSummary(entry.liveSummary),
           supplyHistory: entry.supplyHistory,
           updatedAt: entry.updatedAt,
         };
+        return { lane, provenance: buildProvenance(entry, entrySource, lane) };
       }
-      return { lane, provenance: {
-        id: entry.id, source, updatedAt: lane.updatedAt, bulkSources: entry.sources,
-        ...(entry.status === "available"
-          ? { bulkUpdatedAt: entry.updatedAt }
-          : entry.status === "history-only"
-            ? { bulkUpdatedAt: entry.updatedAt, reason: entry.reason }
-            : { reason: entry.reason }),
-      } };
-    });
+      const permits = entry.status === "unavailable" && !historyOnly ? 2 : 1;
+      return (async () => {
+        await semaphore.acquire(permits);
+        try {
+          if (acquisitionFailed) {
+            throw new Error(`Aborted ${entrySource} for ${entry.id} after earlier fallback failure`);
+          }
+          let lane: SnapshotCoinLanes;
+          if (historyOnly) {
+            console.warn(`[stablecoin-detail-snapshots] ${entrySource} for ${entry.id}; fetching supply history only`);
+            lane = await fetchCoin(entry.id, false);
+          } else if (entry.status === "unavailable") {
+            console.warn(`[stablecoin-detail-snapshots] ${entrySource} for ${entry.id}; fetching per-coin`);
+            lane = await fetchCoin(entry.id);
+          } else {
+            console.warn(`[stablecoin-detail-snapshots] ${entrySource} for ${entry.id}; refreshing detail lane`);
+            // The route may serve the original generation while revalidating. Do not
+            // mistake a successful GET for a new producer generation or re-stamp it.
+            // Reuse the bulk supplyHistory lane and clock instead of re-fetching /api/supply-history.
+            const detail = await fetchDetailLane(entry.id);
+            lane = {
+              id: entry.id,
+              liveSummary: detail ? projectStablecoinLiveSummary(detail.data, entry.id) : null,
+              supplyHistory: entry.supplyHistory,
+              updatedAt: {
+                ...(detail?.updatedAt != null ? { liveSummary: detail.updatedAt } : {}),
+                supplyHistory: entry.updatedAt.supplyHistory,
+              },
+            };
+          }
+          return { lane, provenance: buildProvenance(entry, entrySource, lane) };
+        } catch (error) {
+          acquisitionFailed = true;
+          throw error;
+        } finally {
+          semaphore.release(permits);
+        }
+      })();
+    }));
     lanes.push(...acquired.map(({ lane }) => lane));
     acquisition.push(...acquired.map(({ provenance }) => provenance));
   }

@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { appendFileSync } from "node:fs";
+import { appendFileSync, rmSync } from "node:fs";
 import { assertCliUsage, parseStrictCliArgs, runDirectCli } from "../lib/cli-args.mjs";
 import { PR_TEST_PLAN_PATH, readPrTestPlan } from "../lib/pr-test-plan.mts";
 import {
+  OG_RENDER_CHECK_OUT_DIR,
   PR_LANES,
   PR_DOC_COMMANDS,
   buildPrLaneCommandArgs,
@@ -53,18 +54,24 @@ function runLane(laneId: PrLaneId | "docs-inline", env: NodeJS.ProcessEnv): numb
   const commands = laneId === "docs-inline" ? PR_DOC_COMMANDS : getPrLane(laneId).commands;
   const shard = env.PR_LANE_SHARD ? Number(env.PR_LANE_SHARD) : undefined;
   const shardCount = env.PR_LANE_SHARD_COUNT ? Number(env.PR_LANE_SHARD_COUNT) : undefined;
-  for (const command of commands) {
-    const program = command.program === "npm" ? "npm" : process.execPath;
-    const result = spawnSync(program, buildPrLaneCommandArgs(command, {
-      base: env.PR_BASE_SHA,
-      head: env.PR_HEAD_SHA,
-      shard,
-      shardCount,
-    }), { env, stdio: "inherit" });
-    if (result.error) throw result.error;
-    if (result.status !== 0) return result.status ?? 1;
+  const cleanOgOutDir = laneId === "og-render-check";
+  if (cleanOgOutDir) rmSync(OG_RENDER_CHECK_OUT_DIR, { recursive: true, force: true });
+  try {
+    for (const command of commands) {
+      const program = command.program === "npm" ? "npm" : process.execPath;
+      const result = spawnSync(program, buildPrLaneCommandArgs(command, {
+        base: env.PR_BASE_SHA,
+        head: env.PR_HEAD_SHA,
+        shard,
+        shardCount,
+      }), { env, stdio: "inherit" });
+      if (result.error) throw result.error;
+      if (result.status !== 0) return result.status ?? 1;
+    }
+    return 0;
+  } finally {
+    if (cleanOgOutDir) rmSync(OG_RENDER_CHECK_OUT_DIR, { recursive: true, force: true });
   }
-  return 0;
 }
 
 function runClassify(env: NodeJS.ProcessEnv): number {
@@ -94,6 +101,7 @@ function main(argv: readonly string[] = process.argv.slice(2), env: NodeJS.Proce
     const docsOnly = bool(env.DOCS_ONLY);
     const outputs = formatPrWorkflowOutputs({
       docsOnly,
+      ogRenderCheckRequired: bool(env.PAGES_OG_RENDER_CHECK),
       pagesArtifactRequired: bool(env.PAGES_ARTIFACT_REQUIRED),
       v9ResourceRequired: env.V9_RESOURCE_REQUIRED !== "false",
       ...(docsOnly ? {} : { testShards: readPrTestPlan(PR_TEST_PLAN_PATH).shardCount }),

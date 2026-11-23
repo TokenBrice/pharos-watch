@@ -24,12 +24,30 @@ import {
 } from "../lib/sitemap-detail-dates";
 import { CASE_STUDY_LIST } from "../../src/lib/case-studies";
 import { BLOG_POSTS } from "../../src/data/blog";
-import { getIndexableChainIds } from "../../src/lib/chain-indexing";
-import { PEG_HUB_PEGS, PEG_HUB_SLUGS } from "../../src/lib/peg-landing";
-import { ALL_STABLECOIN_TAXONOMY_PAGES } from "../../src/lib/stablecoin-taxonomy";
+import {
+  ALL_PEG_SLUGS,
+  BACKING_SLUGS,
+  buildBackingTaxonomyUrl,
+  buildGovernanceTaxonomyUrl,
+  buildInfrastructureTaxonomyUrl,
+  countStablecoinsByChain,
+  GOVERNANCE_SLUGS,
+  INFRASTRUCTURE_SLUGS,
+  MIN_INDEXABLE_CHAIN_STABLECOINS,
+  selectPegHubCurrencies,
+  type InfrastructureTaxonomyValue,
+} from "../../src/lib/stablecoin-taxonomy-urls";
+import { getActiveChainIds } from "../../shared/lib/chains";
 import {
   METHODOLOGY_CHANGELOG_REGISTRY,
 } from "../../shared/lib/methodology-versions/registry";
+import {
+  isActiveStablecoinMeta,
+  isPreLaunchStablecoinMeta,
+} from "../../shared/lib/stablecoins/status";
+import type { BackingType, PegCurrency } from "../../shared/types/core";
+import type { StablecoinMeta } from "../../shared/types/stablecoin-meta-schemas";
+import type { GovernanceType } from "../../shared/types/stablecoin-taxonomy";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "../..");
@@ -136,7 +154,7 @@ function walkPages(dir: string, prefix: string, dates: Record<string, string>): 
 
 function addStablecoinDetailDates(
   dates: Record<string, string>,
-  entries: ReturnType<typeof loadPerCoinStablecoinEntries> = loadPerCoinStablecoinEntries(REPO_ROOT),
+  entries: ReturnType<typeof loadPerCoinStablecoinEntries>,
 ): void {
   Object.assign(
     dates,
@@ -182,24 +200,58 @@ function addMethodologyChangelogDates(dates: Record<string, string>): void {
   }
 }
 
-function addChainProfileDates(dates: Record<string, string>): void {
+function addChainProfileDates(dates: Record<string, string>, activeCoins: readonly StablecoinMeta[]): void {
   const sharedLastModified = latestIso(...CHAIN_PROFILE_SOURCES.map((path) => getLastModified(join(REPO_ROOT, path))));
-  for (const chainId of getIndexableChainIds()) {
-    dates[`/chains/${chainId}/`] = sharedLastModified;
+  const countsByChain = countStablecoinsByChain(activeCoins);
+  for (const chainId of getActiveChainIds()) {
+    if ((countsByChain.get(chainId) ?? 0) >= MIN_INDEXABLE_CHAIN_STABLECOINS) {
+      dates[`/chains/${chainId}/`] = sharedLastModified;
+    }
   }
 }
 
-function addPegHubDates(dates: Record<string, string>): void {
+function addPegHubDates(
+  dates: Record<string, string>,
+  activeCoins: readonly StablecoinMeta[],
+  preLaunchCoins: readonly StablecoinMeta[],
+): void {
   const sharedLastModified = latestIso(...PEG_HUB_SOURCES.map((path) => getLastModified(join(REPO_ROOT, path))));
-  for (const peg of PEG_HUB_PEGS) {
-    const slug = PEG_HUB_SLUGS[peg];
+  const { activePegCurrencies, preLaunchHubPegCurrencies } = selectPegHubCurrencies({
+    active: activeCoins,
+    preLaunch: preLaunchCoins,
+  });
+  for (const peg of [...activePegCurrencies, ...preLaunchHubPegCurrencies]) {
+    const slug = ALL_PEG_SLUGS[peg as PegCurrency];
     if (slug) dates[`/stablecoins/${slug}/`] = sharedLastModified;
   }
 }
 
-function addTaxonomyDates(dates: Record<string, string>): void {
+function addTaxonomyDates(dates: Record<string, string>, activeCoins: readonly StablecoinMeta[]): void {
   const sharedLastModified = latestIso(...TAXONOMY_SOURCES.map((path) => getLastModified(join(REPO_ROOT, path))));
-  for (const page of ALL_STABLECOIN_TAXONOMY_PAGES) {
+  const governancePages = (Object.keys(GOVERNANCE_SLUGS) as GovernanceType[])
+    .map((value) => ({
+      kind: "governance" as const,
+      href: buildGovernanceTaxonomyUrl(value),
+      count: activeCoins.filter((coin) => coin.flags.governance === value).length,
+    }))
+    .sort((left, right) => right.count - left.count);
+  const backingPages = (Object.keys(BACKING_SLUGS) as BackingType[])
+    .map((value) => ({
+      kind: "backing" as const,
+      href: buildBackingTaxonomyUrl(value),
+      count: activeCoins.filter((coin) => coin.flags.backing === value).length,
+    }))
+    .filter((page) => page.count > 0)
+    .sort((left, right) => right.count - left.count);
+  const infrastructurePages = (Object.keys(INFRASTRUCTURE_SLUGS) as InfrastructureTaxonomyValue[])
+    .map((value) => ({
+      kind: "infrastructure" as const,
+      href: buildInfrastructureTaxonomyUrl(value),
+      count: activeCoins.filter((coin) => (coin.infrastructures ?? []).includes(value)).length,
+    }))
+    .sort((left, right) => right.count - left.count);
+
+  for (const page of [...governancePages, ...backingPages, ...infrastructurePages]) {
     const routeLastModified = getLastModified(join(APP_DIR, "stablecoins", page.kind, `[${page.kind}]`));
     dates[page.href] = latestIso(sharedLastModified, routeLastModified);
   }
@@ -220,17 +272,22 @@ export interface GenerateSitemapDatesOptions {
 export function generateSitemapDates(options: GenerateSitemapDatesOptions = {}): Record<string, string> {
   if (options.freshGitDateIndex) gitDateIndex = undefined;
 
+  const entries = options.entries ?? loadPerCoinStablecoinEntries(REPO_ROOT);
+  const coins = entries.map((entry) => entry.coin);
+  const activeCoins = coins.filter(isActiveStablecoinMeta);
+  const preLaunchCoins = coins.filter(isPreLaunchStablecoinMeta);
+
   const dates: Record<string, string> = {};
   walkPages(APP_DIR, "/", dates);
   // walkPages only descends into directories; the root page owns "/".
   dates["/"] = getLastModified(join(APP_DIR, "page.tsx"));
-  addStablecoinDetailDates(dates, options.entries);
+  addStablecoinDetailDates(dates, entries);
   addCaseStudyDates(dates);
   addBlogDates(dates);
   addMethodologyChangelogDates(dates);
-  addChainProfileDates(dates);
-  addPegHubDates(dates);
-  addTaxonomyDates(dates);
+  addChainProfileDates(dates, activeCoins);
+  addPegHubDates(dates, activeCoins, preLaunchCoins);
+  addTaxonomyDates(dates, activeCoins);
 
   // The mechanism explainer hub date must move when any archetype content
   // module under the cluster changes — per-archetype Article JSON-LD sources

@@ -224,7 +224,7 @@ export async function runPagesArtifactLane({ repoRoot = REPO_ROOT, acquireReleas
     const criticalCssScope = criticalCssScopeForLane(process.env);
     report(`- Critical CSS: ${criticalCssScope === "gates" ? "gate-measured routes only" : "full public pass"}`);
     const ogRenderCheck = ogRenderCheckForLane(process.env);
-    report(`- Evergreen OG render check: ${ogRenderCheck ? "temp-dir full render" : "map-only (no OG render input change)"}`);
+    report(`- Evergreen OG render check: ${ogRenderCheck ? "temp-dir full render" : "map-only (handled separately or not selected)"}`);
     const reusePreparedWorkspace = process.env.PHAROS_PAGES_REUSE_PREPARED_WORKSPACE === "1";
     const skipExistingDepsEnv: Partial<NodeJS.ProcessEnv> = reusePreparedWorkspace
       ? { PHAROS_GENERATED_SKIP_EXISTING_DEPS: "1" }

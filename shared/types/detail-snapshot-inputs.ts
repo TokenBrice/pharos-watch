@@ -17,6 +17,14 @@ const FreshnessSchema = z.object({
   status: z.enum(["fresh", "stale"]),
   maxAgeSec: z.number().finite().positive(),
 });
+const HistoryOnlyFreshnessSchema = z.discriminatedUnion("status", [
+  FreshnessSchema,
+  z.object({
+    status: z.literal("unknown"),
+    reason: z.string().min(1),
+    maxAgeSec: z.number().finite().positive(),
+  }),
+]);
 const DetailSnapshotInputEntrySchema = z.discriminatedUnion("status", [
   z.object({
     id: z.string().min(1),
@@ -34,8 +42,8 @@ const DetailSnapshotInputEntrySchema = z.discriminatedUnion("status", [
     status: z.literal("history-only"),
     reason: z.literal("detail-cache-missing"),
     supplyHistory: SupplyHistoryResponseSchema,
-    updatedAt: z.object({ supplyHistory: z.number().finite().nonnegative() }),
-    freshness: z.object({ supplyHistory: FreshnessSchema }),
+    updatedAt: z.object({ supplyHistory: z.number().finite().nonnegative().optional() }),
+    freshness: z.object({ supplyHistory: HistoryOnlyFreshnessSchema }),
     sources: SourcesSchema,
   }),
   z.object({

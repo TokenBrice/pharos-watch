@@ -36,17 +36,18 @@ const missingWorkspaceTools = [
 
 describe("PR lane manifest", () => {
   it("is the workflow matrix source of truth", () => {
-    expect(PR_LANES.map((lane) => lane.id)).toEqual(["preflight", "v9-resource", "static-guards", "tests", "static-compile", "pages-artifact", "gate"]);
+    expect(PR_LANES.map((lane) => lane.id)).toEqual(["preflight", "v9-resource", "static-guards", "og-render-check", "tests", "static-compile", "pages-artifact", "gate"]);
     const prepare = WORKFLOW.jobs.prepare;
     const validation = WORKFLOW.jobs.validation;
     const generator = prepare.steps.find((step) => step.id === "matrix");
     expect(generator?.run).toMatch(/^node [^\n]*generate-pr-workflow-matrix\.ts --matrix$/);
+    expect(generator?.env.PAGES_OG_RENDER_CHECK).toBe("${{ steps.classify.outputs.pages_og_render_check }}");
     expect(generator?.env.V9_RESOURCE_REQUIRED).toBe("${{ steps.classify.outputs.v9_resource_required }}");
     expect(prepare.outputs?.matrix).toBe("${{ steps.matrix.outputs.matrix }}");
     expect(Object.keys(WORKFLOW.jobs)).toEqual(["secrets", "prepare", "validation", "pages-artifact", "pr-gate"]);
     expect(WORKFLOW.jobs["pr-gate"].needs).toEqual(["secrets", "prepare", "validation", "pages-artifact"]);
     expect(Object.keys(prepare.outputs ?? {})).toEqual([
-      "docs_only", "docs_inline_succeeded", "matrix", "pages_critical_css_full_pass", "pages_og_render_check",
+      "docs_only", "docs_inline_succeeded", "matrix", "pages_critical_css_full_pass",
       "playwright_firefox_required", "pages_artifact_required", "test_corpus_budget", "workspace_artifact_name",
     ]);
     expect(validation.needs).toBe("prepare");
@@ -102,12 +103,14 @@ describe("PR lane manifest", () => {
   });
 
   it.each([
-    { name: "V9-impact", files: ["shared/lib/safety-score-v9/engine.ts"], selected: true },
-    { name: "unrelated", files: ["src/components/header.tsx"], selected: false },
-  ])("selects the resource lane for $name changes through the classifier", ({ files, selected }) => {
+    { name: "V9-impact", files: ["shared/lib/safety-score-v9/engine.ts"], v9: true, og: false },
+    { name: "OG-impact", files: ["scripts/lib/social-card-render.ts"], v9: false, og: true },
+    { name: "unrelated", files: ["src/components/header.tsx"], v9: false, og: false },
+  ])("selects conditional lanes for $name changes through the classifier", ({ files, v9, og }) => {
     const classification = classifyChangedFiles(files);
-    const matrix = buildPrWorkflowMatrix({ ...classification, testShards: 4 }).include;
-    expect(matrix.some((entry) => entry.lane === "v9-resource")).toBe(selected);
+    const matrix = buildPrWorkflowMatrix({ ...classification, ogRenderCheckRequired: classification.pagesOgRenderCheck, testShards: 4 }).include;
+    expect(matrix.some((entry) => entry.lane === "v9-resource")).toBe(v9);
+    expect(matrix.filter((entry) => entry.lane === "og-render-check")).toEqual(og ? [{ lane: "og-render-check", timeout: 10 }] : []);
   });
 
   it("declares report-only lane budgets below each job timeout", () => {
@@ -115,12 +118,13 @@ describe("PR lane manifest", () => {
       preflight: null,
       "v9-resource": 220,
       "static-guards": 120,
+      "og-render-check": 120,
       tests: 200,
       "static-compile": 150,
       "pages-artifact": 250,
       gate: null,
     });
-    expect(PR_LANES.map((lane) => lane.timeoutMinutes)).toEqual([15, 8, 20, 15, 20, 20, 5]);
+    expect(PR_LANES.map((lane) => lane.timeoutMinutes)).toEqual([15, 8, 20, 10, 15, 20, 20, 5]);
     for (const [lane, job] of [["preflight", "secrets"], ["pages-artifact", "pages-artifact"], ["gate", "pr-gate"]] as const) {
       expect(getPrLane(lane).timeoutMinutes).toBe(WORKFLOW.jobs[job]["timeout-minutes"]);
     }
