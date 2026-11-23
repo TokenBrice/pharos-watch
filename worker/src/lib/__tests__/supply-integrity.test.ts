@@ -482,16 +482,17 @@ describe("supply integrity", () => {
 
   it("honours reviewed re-baselines", async () => {
     const a = normalAssets();
-    a[0] = { ...a[0], id: "iauon-ondo", current: 1_747_207.06, previous: 3_900_000 };
+    a[0] = { ...a[0], id: "ethenausdc-steakhouse", current: 4_536_003.46, previous: 44_945_335 };
     a[1] = { ...a[1], id: "usdglo-glo", current: 300_000, previous: 300_000 };
     const r = await loadReport({
       assets: a,
-      confirmState: { "value-drift": { signature: "x", runs: 2, held: { "iauon-ondo": 3_900_000, "usdglo-glo": 2_900_000 } } },
-    }, 1_794_512_040);
+      confirmState: { "value-drift": { signature: "x", runs: 2, held: { "ethenausdc-steakhouse": 44_945_335, "usdglo-glo": 2_900_000 } } },
+    }, Date.parse("2026-11-23T12:54:00Z") / 1000);
     expect(r.value).toMatchObject({ driftFindings: [], heldDriftFindings: [{ stablecoinId: "usdglo-glo" }] });
     const epoch = Date.parse("2026-11-07T19:48:00Z") / 1000;
     for (const [id, current, previous, start = epoch] of [
       ["sparkusdtbc-spark", 850_692.45, 50_307_247.03],
+      ["sparkusdc-spark", 3_574_943.02, 164_420_938.01, Date.parse("2026-11-23T12:54:00Z") / 1000],
       ["frnt-wyoming", 397_773.24, 967_404.4, 1_794_512_040],
       ["wmxn-ripio", 664_412.56, 176_542.38, 1_794_557_520],
       ["wcop-ripio", 534_854.52, 191_358.13, 1_794_557_520],
