@@ -135,7 +135,7 @@ describe("exact external-share custodian runtime witness", () => {
     Object.assign(state, { [field]: value });
     await expect(observeErc4626InstantExit(args)).rejects.toThrow(reason);
   });
-  it("publishes the exact primary rail certificate, then rejects omitted gas or stale native FX at consumption", async () => {
+  it("publishes the exact primary rail certificate, enforces nativeUsdFeed.maxAgeSec at capture, and ages gas against priceMaxAgeSec at evaluation", async () => {
     const envelope = loadV9CandidateMethodologyPolicy(CLOCK);
     const request = selectV9ExitStressRequest(1_000_000, envelope)!;
     const produced = await observeReviewedExitExecutionRoutes({ assetId: "fixture-custodian", circulatingUsd: 1_000_000, clockSec: CLOCK,
@@ -151,7 +151,35 @@ describe("exact external-share custodian runtime witness", () => {
     const missingGas = structuredClone(certificate);
     missingGas.points[0]!.fees = missingGas.points[0]!.fees.filter(fee => fee.kind !== "gas");
     expect(admit(missingGas)).toMatchObject({ state: "unavailable", reason: "execution-custodian-gas-unproven" });
-    expect(admit(certificate, CLOCK + 3601)).toMatchObject({ state: "unavailable", reason: "execution-custodian-gas-unproven" });
+    // Capture-fresh gas leg stays admitted past nativeUsdFeed.maxAgeSec (3600s) while inside priceMaxAgeSec (18000s).
+    expect(admit(certificate, CLOCK + 3601)).toMatchObject({ state: "observed", priceFreshness: { budgetSec: 18_000, budgetBasis: "policy-price-max-age" } });
+    expect(admit(certificate, CLOCK + 7200).state).toBe("observed");
+    // Feed at exact capture heartbeat (3600s) is admitted up to priceMaxAgeSec (18000s) and rejected 1s past it.
+    const captureBoundary = structuredClone(certificate);
+    captureBoundary.feeReferences[0]!.observedAtSec = CLOCK - 3600;
+    expect(admit(captureBoundary, CLOCK + 14_400)).toMatchObject({ state: "observed", priceFreshness: { sourceId: `chainlink:${FEED}`, budgetSec: 18_000, ageSec: 18_000 } });
+    expect(admit(captureBoundary, CLOCK + 14_401)).toMatchObject({ state: "unavailable", reason: "execution-price-stale", priceFreshness: { sourceId: `chainlink:${FEED}`, budgetSec: 18_000, ageSec: 18_001 } });
+    // Capture-stale and capture-future feeds fail closed at capture and later evaluation clocks.
+    const captureStale = structuredClone(certificate);
+    captureStale.feeReferences[0]!.observedAtSec = CLOCK - 3601;
+    expect(admit(captureStale)).toMatchObject({ state: "unavailable", reason: "execution-custodian-gas-unproven" });
+    expect(admit(captureStale, CLOCK + 7200)).toMatchObject({ state: "unavailable", reason: "execution-custodian-gas-unproven" });
+    const captureFuture = structuredClone(certificate);
+    captureFuture.feeReferences[0]!.observedAtSec = CLOCK + 61;
+    expect(admit(captureFuture)).toMatchObject({ state: "unavailable", reason: "execution-custodian-gas-unproven" });
+    expect(admit(captureFuture, CLOCK + 7200)).toMatchObject({ state: "unavailable", reason: "execution-custodian-gas-unproven" });
+    // Eval-future feed (within capture skew but past eval skew) fails via shared leg-freshness helper.
+    const evalFuture = structuredClone(certificate);
+    evalFuture.observedAtSec = CLOCK + 60;
+    evalFuture.feeReferences[0]!.observedAtSec = CLOCK + 61;
+    expect(admit(evalFuture, CLOCK)).toMatchObject({ state: "unavailable", reason: "execution-price-future", priceFreshness: { sourceId: `chainlink:${FEED}` } });
+    // Runtime capture also rejects a feed that aged past nativeUsdFeed.maxAgeSec by certificate.observedAtSec.
+    state.nativeAge = 3600;
+    vi.setSystemTime((CLOCK + 1) * 1000);
+    const runtimeStale = await observeReviewedExitExecutionRoutes({ assetId: "fixture-custodian", circulatingUsd: 1_000_000, clockSec: CLOCK,
+      envelope, reviews: [review], inputReference, outputReference });
+    expect(runtimeStale.observations[0]!.scoreEligible).toBe(false);
+    expect(runtimeStale.failures).toContainEqual(expect.objectContaining({ reason: "execution-custodian-gas-unproven" }));
     const changedRequest = { ...request, requestedNotionalUsd: request.requestedNotionalUsd + 1 };
     expect(admitExitExecutionCertificate({ certificate, envelope, assetId: "fixture-custodian", clockSec: CLOCK, request: changedRequest, reviews: [review],
       observationGenerationId: certificate.observationGenerationId, inputGenerationId: exitExecutionInputGenerationId("fixture-custodian", changedRequest, inputReference) }))
