@@ -21,6 +21,7 @@ import { loadFxRateState, persistFxRateState } from "../../../lib/fx-rate-state"
 import { loadStablecoinsCache, prepareStablecoinsGenerationCompanion } from "../../../lib/stablecoins-cache";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { getPriceCache } from "../../../lib/price-cache";
 import { makePeggedAsset } from "./_fixtures";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
@@ -573,6 +574,25 @@ describe("validateAndWriteStablecoinsCache", () => {
     expect((JSON.parse(companion.body) as typeof canonical).peggedAssets[0]?.chainCirculating)
       .toEqual(expectedChains);
     expect(sqlite.prepare("SELECT key FROM cache WHERE key = ?").all("stablecoins:invalid-last")).toHaveLength(1);
+
+    // Withheld, carried, and archived frozen rows cannot satisfy the post-quarantine floor (R2).
+    const floorDb = fixtures.open().db;
+    const frozenId = [...FROZEN_IDS][0];
+    const nonObserved = [
+      publishable("eurc-circle", { pegType: "peggedEUR", supplySource: "onchain-supply-withheld", circulating: {}, price: null }),
+      publishable("restored-peer", { supplyRestored: true, supplyObservedAt: syncStartSec - 60 }),
+      ...(frozenId ? [publishable(frozenId, { frozen: true })] : []),
+    ];
+    const blocked = await publish({
+      assets: [...healthy.slice(0, 49), ...nonObserved, invalid],
+      db: floorDb,
+      syncStartSec,
+      validationContext: "main",
+    });
+    expect(blocked).toMatchObject({ written: false, blockedResult: { metadata: "blocked" }, quarantinedAssets: [] });
+    expect(await getCache(floorDb, "stablecoins")).toBeNull();
+    const diagnostic = await getCache(floorDb, "stablecoins:invalid-last");
+    expect(diagnostic && JSON.parse(diagnostic.value).validationIssues).toContain("floor: 49 observed valid rows < 50");
   });
   it("strips upstream frozen fields from non-registry assets before publishing", async () => {
     const { db } = fixtures.open();

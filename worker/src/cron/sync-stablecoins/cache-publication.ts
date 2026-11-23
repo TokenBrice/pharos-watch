@@ -2,6 +2,7 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import { FROZEN_IDS, FROZEN_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { formatSchemaLikeIssues } from "@shared/lib/schema-like";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { derivePegRates, normalizePegType, type PegRatesResult } from "@shared/lib/peg-rates";
 import { readRecord } from "@shared/lib/type-guards";
 import { getCommodityOuncesAtQuote } from "@shared/lib/commodity-median";
@@ -74,9 +75,10 @@ type PublicationAdmission =
  * DEC-03 publication boundary. Each normalized row is validated on its own against the published row
  * schema; a schema-invalid row is quarantined with its issues while valid peers publish. The whole list is
  * held only for a global failure: an invalid envelope (FX map), a duplicate published id (identity), or a
- * quarantine that leaves fewer admitted rows than the `MIN_VALID_ASSET_COUNT` intake floor (the cohort-wide
- * schema drift that would otherwise publish a near-empty list). Intake already enforced that floor, so a
- * cohort without quarantined rows is never re-held here.
+ * quarantine that leaves fewer freshly observed non-withheld rows than the `MIN_VALID_ASSET_COUNT` intake
+ * floor (the cohort-wide schema drift that would otherwise publish a near-empty list). Withheld stubs,
+ * carried rows (`supplyRestored`), and archived `frozen` rows cannot satisfy that floor (R2). Intake
+ * already enforced the floor, so a cohort without quarantined rows is never re-held here.
  */
 function admitPublishableAssets(payload: StablecoinsPayload, fxReferenceObservations?: FxReferenceEvidenceMap): PublicationAdmission {
   const envelope = StablecoinListResponseSchema.safeParse({
@@ -107,11 +109,17 @@ function admitPublishableAssets(payload: StablecoinsPayload, fxReferenceObservat
   if (duplicateIds.size > 0) {
     return { ok: false, issues: `identity: duplicate published ids ${[...duplicateIds].join(", ")}` };
   }
-  if (quarantined.length > 0 && admitted.length < MIN_VALID_ASSET_COUNT) {
+  const observedAdmittedCount = admitted.filter((row) =>
+    !row.frozen &&
+    row.supplyRestored !== true &&
+    row.supplySource !== "onchain-supply-withheld" &&
+    getCirculatingRawOrNull(row) !== null,
+  ).length;
+  if (quarantined.length > 0 && observedAdmittedCount < MIN_VALID_ASSET_COUNT) {
     const detail = quarantined.slice(0, 5).map((row) => `${row.id ?? "<no id>"}: ${row.issues}`).join("; ");
     return {
       ok: false,
-      issues: `floor: ${admitted.length} valid rows < ${MIN_VALID_ASSET_COUNT}${detail ? `; ${detail}` : ""}`,
+      issues: `floor: ${observedAdmittedCount} observed valid rows < ${MIN_VALID_ASSET_COUNT}${detail ? `; ${detail}` : ""}`,
     };
   }
   return {

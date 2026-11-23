@@ -4,7 +4,9 @@ import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type * as FetchRetry from "../../lib/fetch-retry";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
+import { prefersReviewedNativeFiatSupply } from "@shared/lib/onchain-supply-probe";
 import { mockCircuitBreaker, mockCircuitOutcomeRecord, mockFetchRetry, mockRegistry } from "../../test-helpers/cron";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   defaultSyncRoutes,
   makeDlResponse,
@@ -111,6 +113,11 @@ vi.mock("../../lib/stablecoin-publication-coverage", async (importOriginal) => {
   };
 });
 
+// Mocked active coins enrolled in REVIEWED_ONCHAIN_SUPPLY_PLANS (preferMcap: true)
+// are absent from the synthetic DefiLlama/CoinGecko fixtures with no mocked RPCs,
+// so intake and fallback legitimately emit one onchain-supply-withheld row each.
+const WITHHELD_PREFERRED_NATIVE_COUNT = ACTIVE_STABLECOINS.filter(prefersReviewedNativeFiatSupply).length;
+
 function publishedAssets(writes: Array<{ key: string; value: string }>): PeggedAsset[] {
   const write = writes.find((candidate) => candidate.key === "stablecoins");
   return write ? (JSON.parse(write.value) as { peggedAssets: PeggedAsset[] }).peggedAssets : [];
@@ -151,7 +158,7 @@ describe("syncStablecoins", () => {
     const result = await syncStablecoins(db, controller.signal, {
       reportProgress: async (update) => { if (update.stage === stage) controller.abort("cancelled"); },
     });
-    expect(result).toMatchObject({ status: "degraded", itemCount: stage.startsWith("fallback") ? 50 : 60, abortResultPolicy: "preserve-committed-publication",
+    expect(result).toMatchObject({ status: "degraded", itemCount: (stage.startsWith("fallback") ? 50 : 60) + WITHHELD_PREFERRED_NATIVE_COUNT, abortResultPolicy: "preserve-committed-publication",
       productivity: { productive: true, publications: [{ surface: "stablecoins", generationId: expect.any(String) }] } });
     expect(JSON.parse(result.metadata!)).toMatchObject({ reason: "aborted-after-publication", cacheWriteMode: "published",
       ...(stage === "complete" ? {} : { quality: { depegObservation: null, depegObservationUnavailableReason: "aborted" } }),
@@ -202,14 +209,14 @@ describe("syncStablecoins", () => {
     mockFetchWithRetry(defaultSyncRoutes(makeDlResponse(60)));
     const result = await syncStablecoins(db);
     const metadata = JSON.parse(result.metadata ?? "{}");
-    expect(result).toMatchObject({ itemCount: 60, productivity: { productive: true, reason: "stablecoins-cache-published" } });
+    expect(result).toMatchObject({ itemCount: 60 + WITHHELD_PREFERRED_NATIVE_COUNT, productivity: { productive: true, reason: "stablecoins-cache-published" } });
     expect(metadata).toMatchObject({ cacheWriteMode: "published", casSkipped: false, downstreamSafe: true, upstreamFetchOk: true });
     expect(metadata.onchainPartition).toEqual({ candidates: 0, entered: 0, retained: 0, carried: 0,
       divergent: 0, unreadable: 0, deadlineSkipped: 0, carryExpired: 0, divergences: [], divergencesTruncated: 0 });
     expect(assertCost(result).bindingCalls).toBeGreaterThan(0);
     expect(prepare.mock.calls.filter(([sql]) => String(sql).includes("INSERT INTO cache")).length).toBeGreaterThan(0);
     const primaryCall = vi.mocked(fetchPrimaryPrices).mock.calls[0];
-    expect(primaryCall?.[0]).toHaveLength(60);
+    expect(primaryCall?.[0]).toHaveLength(60 + WITHHELD_PREFERRED_NATIVE_COUNT);
     const trackedDb = primaryCall?.[1];
     expect(trackedDb).toBeDefined();
     expect(trackedDb).not.toBe(db);
@@ -341,7 +348,7 @@ describe("syncStablecoins", () => {
     vi.mocked(detectDepegEvents).mockRejectedValueOnce(new Error("depeg crash"));
     mockFetchWithRetry(defaultSyncRoutes(makeDlResponse(60)));
     const result = await syncStablecoins(makeSyncDb());
-    expect(result).toMatchObject({ itemCount: 60, status: "degraded" });
+    expect(result).toMatchObject({ itemCount: 60 + WITHHELD_PREFERRED_NATIVE_COUNT, status: "degraded" });
     const metadata = JSON.parse(result.metadata ?? "{}");
     expect(metadata).toMatchObject({ depegPipelineSucceeded: false, depegErrorCount: 1 });
     expect(metadata.quality).toMatchObject({
@@ -394,7 +401,7 @@ describe("syncStablecoins", () => {
     }
     mockFetchWithRetry(defaultSyncRoutes(data));
     const result = await syncStablecoins(db);
-    expect(result).toMatchObject({ itemCount: 60, status: "degraded" });
+    expect(result).toMatchObject({ itemCount: 60 + WITHHELD_PREFERRED_NATIVE_COUNT, status: "degraded" });
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ validationFailures: 1, cacheWriteMode: "blocked-invalid-payload", downstreamSafe: false });
     expect(writes.map((write) => write.key)).toContain("stablecoins:invalid-last");
     expect(writes.map((write) => write.key)).not.toContain("stablecoins");
@@ -424,7 +431,7 @@ describe("syncStablecoins", () => {
 
     const published = publishedAssets(writes);
     const publishedIds = published.map((asset) => asset.id);
-    expect(publishedIds).toHaveLength(61);
+    expect(publishedIds).toHaveLength(61 + WITHHELD_PREFERRED_NATIVE_COUNT);
     expect(publishedIds).toContain("zero-supply");
     for (const quarantined of ["empty-supply", "negative-supply", "overflow-supply", "no-mechanism"]) {
       expect(publishedIds).not.toContain(quarantined);
@@ -440,9 +447,9 @@ describe("syncStablecoins", () => {
     expect(companion!.value).toBe(encodeResponseReadyCacheValue(companionBody, RESPONSE_READY_CACHE_SCHEMA_IDS.stablecoins));
     expect((JSON.parse(companionBody) as { peggedAssets: PeggedAsset[] }).peggedAssets.find((asset) => asset.id === "usdt-tether")?.chainCirculating)
       .toEqual({ Ethereum: { current: 1_000_000, circulatingPrevDay: null, circulatingPrevWeek: 0 } });
-    expect(result).toMatchObject({ itemCount: 61, productivity: { publications: [expect.objectContaining({ candidateRows: 62, publishedRows: 61 })] } });
+    expect(result).toMatchObject({ itemCount: 61 + WITHHELD_PREFERRED_NATIVE_COUNT, productivity: { publications: [expect.objectContaining({ candidateRows: 62 + WITHHELD_PREFERRED_NATIVE_COUNT, publishedRows: 61 + WITHHELD_PREFERRED_NATIVE_COUNT })] } });
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ rowsRead: 68, rowsDropped: 6 });
-    expect(vi.mocked(detectDepegEvents).mock.calls[0]?.[1]).toHaveLength(61);
+    expect(vi.mocked(detectDepegEvents).mock.calls[0]?.[1]).toHaveLength(61 + WITHHELD_PREFERRED_NATIVE_COUNT);
     const inRunAssets = vi.mocked(detectDepegEvents).mock.calls[0]?.[1] as PeggedAsset[] | undefined;
     expect(inRunAssets?.find((asset) => asset.id === "usdt-tether")?.chainCirculating).toEqual({
       Ethereum: { current: 1_000_000, circulatingPrevDay: null, circulatingPrevWeek: 0 },
@@ -593,7 +600,7 @@ describe("syncStablecoins", () => {
     const pending = syncStablecoins(makeSyncDb());
     const assertion = error
       ? expect(pending).rejects.toThrow(error)
-      : expect(pending).resolves.toMatchObject({ itemCount: 60 });
+      : expect(pending).resolves.toMatchObject({ itemCount: 60 + WITHHELD_PREFERRED_NATIVE_COUNT });
     await vi.runAllTimersAsync();
     await assertion;
     expect(dlAttempts).toBe(attempts);
