@@ -62,7 +62,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: "24.16.0"
+          node-version-file: .nvmrc
 
       # The gitleaks version + tarball SHA-256 pin lives only in
       # scripts/ci/run-gitleaks.ts, which downloads and checksum-verifies the
@@ -208,7 +208,7 @@ jobs:
           filter: blob:none
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: "24.16.0"
+          node-version-file: .nvmrc
 
       # Keep the GitHub token out of the renderer and dependency installation.
       - name: Fetch the reporting window

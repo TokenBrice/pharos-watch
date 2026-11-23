@@ -43,7 +43,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: "24.16.0"
+          node-version-file: .nvmrc
       - id: classify
         name: Select production surfaces
         env:
@@ -275,7 +275,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: "24.16.0"
+          node-version-file: .nvmrc
       - id: verify-worker-identity
         name: Re-verify active public Worker release identity
         if: ${{ needs.deploy-worker.result == 'success' }}

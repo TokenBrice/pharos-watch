@@ -11,10 +11,12 @@ import {
 import { buildGeneratedArtifactPhases } from "../lib/automation-registry.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { CliUsageError } from "../lib/cli-args.mjs";
+import { cachedGlobMatcher } from "../lib/glob-matcher.mts";
 
 // Artifacts run through a topological ready-queue DAG scheduler respecting
-// declared `dependsOn` edges. Four-way concurrency keeps heavy builders from
-// stacking up on constrained runners.
+// declared `dependsOn` edges plus plan-order edges between artifacts whose
+// paths overlap (see buildOverlapRunAfter). Four-way concurrency keeps heavy
+// builders from stacking up on constrained runners.
 export const GENERATED_ARTIFACTS_MAX_PARALLEL = 4;
 
 interface GeneratedArtifactOptions {
@@ -37,6 +39,7 @@ interface GeneratedArtifactDefinition {
   dependsOn?: string[];
   outputPaths?: string[];
   requiresGitHistory?: boolean;
+  sourcePaths?: string[];
 }
 
 interface GeneratedArtifactPhase {
@@ -48,6 +51,7 @@ interface ArtifactExecutionUnit {
   id: string;
   commands: string[];
   dependsOn?: string[];
+  runAfter?: string[];
 }
 
 interface ArtifactExecutionPhase {
@@ -94,6 +98,50 @@ function hasExistingOutputs(outputPaths: readonly string[] | undefined, cwd: str
   return true;
 }
 
+function globPrefix(pattern: string): string {
+  const index = pattern.search(OUTPUT_GLOB_PATTERN);
+  return index < 0 ? pattern : pattern.slice(0, index);
+}
+
+// Conservative: a directory contains its paths, and two globs overlap when one
+// static prefix contains the other.
+function pathsOverlap(left: string, right: string): boolean {
+  const leftIsGlob = OUTPUT_GLOB_PATTERN.test(left);
+  const rightIsGlob = OUTPUT_GLOB_PATTERN.test(right);
+  if (leftIsGlob && rightIsGlob) {
+    const leftPrefix = globPrefix(left);
+    const rightPrefix = globPrefix(right);
+    return leftPrefix.startsWith(rightPrefix) || rightPrefix.startsWith(leftPrefix);
+  }
+  if (leftIsGlob || rightIsGlob) {
+    const [path, pattern] = leftIsGlob ? [right, left] : [left, right];
+    return cachedGlobMatcher(pattern)(path) || globPrefix(pattern).startsWith(`${path}/`);
+  }
+  return left === right || left.startsWith(`${right}/`) || right.startsWith(`${left}/`);
+}
+
+/**
+ * Phase barriers once ordered every cross-phase pair, so a lower-phase consumer
+ * read the previous on-disk output before a later-phase producer rewrote it.
+ * Keep that plan order (phase, then registry order) for any two artifacts where
+ * one writes a path the other reads or writes, even without a declared
+ * `dependsOn` edge. These edges only order work: they neither select artifacts
+ * nor taint results.
+ */
+function buildOverlapRunAfter(artifacts: readonly GeneratedArtifactDefinition[]): Map<string, string[]> {
+  const runAfter = new Map<string, string[]>();
+  artifacts.forEach((later, index) => {
+    const laterOutputs = later.outputPaths ?? [];
+    const laterPaths = [...(later.sourcePaths ?? []), ...laterOutputs];
+    runAfter.set(later.id, artifacts.slice(0, index)
+      .filter((earlier) =>
+        (earlier.outputPaths ?? []).some((path) => laterPaths.some((other) => pathsOverlap(path, other)))
+        || (earlier.sourcePaths ?? []).some((path) => laterOutputs.some((other) => pathsOverlap(path, other))))
+      .map(({ id }) => id));
+  });
+  return runAfter;
+}
+
 function planGeneratedArtifactExecutionPhases({
   bootstrap = false,
   buildLifecycles = [],
@@ -118,6 +166,7 @@ function planGeneratedArtifactExecutionPhases({
     only: [...only],
     phases: [...phases],
   });
+  const runAfterById = buildOverlapRunAfter(registryPhases.flatMap(({ artifacts }) => artifacts));
 
   const skippedIds: string[] = [];
   const effectiveSkipExistingDeps = skipExistingDeps && !check && (only.length > 0 || buildLifecycles.length > 0);
@@ -129,6 +178,7 @@ function planGeneratedArtifactExecutionPhases({
           createExecutionUnit([artifact.command], {
             dependsOn: artifact.dependsOn ?? [],
             id: artifact.id,
+            runAfter: runAfterById.get(artifact.id) ?? [],
           }),
         ),
       })),
@@ -194,6 +244,7 @@ function planGeneratedArtifactExecutionPhases({
         createExecutionUnit([artifact.command], {
           dependsOn: artifact.dependsOn ?? [],
           id: artifact.id,
+          runAfter: runAfterById.get(artifact.id) ?? [],
         }),
       );
     }
@@ -410,7 +461,8 @@ async function runGeneratedArtifactDag(
   const readyQueue: ScheduledArtifact[] = [];
 
   for (const item of scheduled) {
-    const inPlanDeps = [...new Set((item.unit.dependsOn ?? []).filter((depId) => scheduledById.has(depId)))];
+    const inPlanDeps = [...new Set([...(item.unit.dependsOn ?? []), ...(item.unit.runAfter ?? [])]
+      .filter((depId) => scheduledById.has(depId)))];
     remainingDeps.set(item.unit.id, inPlanDeps.length);
     if (inPlanDeps.length === 0) {
       readyQueue.push(item);

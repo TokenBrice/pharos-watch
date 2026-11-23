@@ -92,9 +92,11 @@ const COMPILE_STATIC_CHECKS: Record<string, true> = {
 };
 
 // ESLint stays on the dedicated sequential track so `compile` runs it alongside
-// the compiler pool (`typecheck`, `typecheck:worker`). Every `guards` check is
-// read-only over repository state (or writes only to its own isolated temp or
-// `.cache/release-check/worker-bundle-*` directory) and runs in the worker pool.
+// the compiler pool (`typecheck`, `typecheck:worker`). Every `guards` check runs
+// in the worker pool and is read-only over repository state, writing only its own
+// isolated temp or `.cache/release-check/worker-bundle-*` directory, except
+// `doc-ownership-invariants`: its pharos-change-contract suite briefly creates and
+// removes a uniquely named `.pharos-policy-*` directory in the repo root.
 const SEQUENTIAL_STATIC_CHECKS = new Set([
   "lint",
   "lint:changed",

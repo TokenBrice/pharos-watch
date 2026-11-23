@@ -45,7 +45,11 @@ const DetailSnapshotInputEntrySchema = z.discriminatedUnion("status", [
     updatedAt: z.object({ supplyHistory: z.number().finite().nonnegative().optional() }),
     freshness: z.object({ supplyHistory: HistoryOnlyFreshnessSchema }),
     sources: SourcesSchema,
-  }),
+  }).refine(({ supplyHistory, updatedAt, freshness }) => {
+    // Unknown freshness is exactly a clockless lane, and only an empty lane may be clockless.
+    const unknown = freshness.supplyHistory.status === "unknown";
+    return (updatedAt.supplyHistory === undefined) === unknown && (!unknown || supplyHistory.length === 0);
+  }, { message: "History-only supply clock must be absent exactly when freshness is unknown, which requires empty history" }),
   z.object({
     id: z.string().min(1),
     status: z.literal("unavailable"),

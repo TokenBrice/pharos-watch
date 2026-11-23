@@ -79,7 +79,7 @@ describe("DocPage", () => {
       expect(articleMatch, `${doc.slug} missing <article>`).not.toBeNull();
       const renderedH2s = Array.from(
         articleMatch![1]!.matchAll(/<h2\b[^>]*\bid="([^"]+)"[^>]*>([\s\S]*?)<\/h2>/g),
-        ([, id, inner]) => ({ id: id!, text: inner!.replace(/<[^>]+>/g, "").trim() }),
+        ([tag, id, inner]) => ({ id: id!, text: inner!.replace(/<[^>]+>/g, "").trim(), srOnly: /^<h2\b[^>]*\bclass="[^"]*\bsr-only\b/.test(tag!) }),
       );
 
       if (doc.slug === "mint-burn-flows" || doc.slug === "yield-intelligence") {
@@ -95,7 +95,7 @@ describe("DocPage", () => {
         expect(navMatch, `${doc.slug} missing TOC nav`).not.toBeNull();
         const tocIds = Array.from(navMatch![1]!.matchAll(/href="#([^"]+)"/g), ([, id]) => id!);
         expect(tocIds, `${doc.slug} TOC ids diverged from rehype-slug h2 ids`).toEqual(
-          renderedH2s.map((h2) => h2.id),
+          renderedH2s.filter((h2) => !h2.srOnly).map((h2) => h2.id),
         );
       }
     }

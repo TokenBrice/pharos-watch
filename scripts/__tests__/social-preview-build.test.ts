@@ -21,6 +21,20 @@ import type { SocialCardDossier } from "../../shared/lib/social-card/spec";
 
 import { createTempRepoTracker } from "./helpers/test-state";
 
+// Keeps every catalog entry unless a case samples it: the full catalog makes path-parity runs registry-wide.
+const catalogSample = vi.hoisted(() => ({ every: 1 }));
+vi.mock("../lib/social-card-catalog", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../lib/social-card-catalog")>();
+  const sample = <T,>(items: readonly T[]) => items.filter((_, index) => index % catalogSample.every === 0);
+  return {
+    ...actual,
+    buildSocialCardCatalog: (paths: readonly string[]) => {
+      const catalog = actual.buildSocialCardCatalog(paths);
+      return { ...catalog, cards: sample(catalog.cards), authored: sample(catalog.authored) };
+    },
+  };
+});
+
 const { makeRoot: makeTempDir, cleanup } = createTempRepoTracker("pharos-social-preview-build");
 afterEach(() => { vi.restoreAllMocks(); cleanup(); });
 
@@ -92,6 +106,24 @@ describe("evergreen destination previews", () => {
     const noise = await sharp(randomBytes(1200 * 630 * 3), { raw: { width: 1200, height: 630, channels: 3 } }).png().toBuffer();
     writeFileSync(join(root, "public/cover.png"), noise);
     await expect(build("check")).rejects.toThrow("Social preview exceeds 500 KB: public/cover.png");
+  });
+
+  it("names every route identically on the catalog fast path and the injected-entries path", async () => {
+    const root = makeTempDir();
+    mkdirSync(join(root, "src"));
+    for (const dir of ["public", "scripts", "shared", "worker", "src/app"]) symlinkSync(join(process.cwd(), dir), join(root, dir));
+    const map = async (load?: typeof loadSocialPreviewEntries) => {
+      await buildSocialPreviewImages({ repoRoot: root, mode: "map", load });
+      return JSON.parse(readFileSync(join(root, SOCIAL_PREVIEW_MAP_PATH), "utf8")) as Record<string, { url: string }>;
+    };
+    catalogSample.every = 40;
+    try {
+      const fast = await map();
+      expect(Object.keys(fast).length).toBeGreaterThan(30);
+      expect(await map((repoRoot) => loadSocialPreviewEntries(repoRoot, { includePngBuffers: false }))).toEqual(fast);
+    } finally {
+      catalogSample.every = 1;
+    }
   });
 
   it("renders only requested missing drawn and authored keys in memory and rejects unknown keys", async () => {

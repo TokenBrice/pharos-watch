@@ -67,8 +67,15 @@ function detailGenerationRefreshable(coinId: string): boolean {
   return meta != null && isActiveStablecoinMeta(meta);
 }
 
-/** The bulk reason that proves the detail cache row itself is absent. */
-const DETAIL_CACHE_ABSENT_REASON = "detail-cache-missing" satisfies Extract<DetailSnapshotInputEntry, { status: "unavailable" }>["reason"];
+/**
+ * Bulk reasons a non-active record reports when its detail cache row is absent:
+ * the row itself, or the inline history lane failing closed (missing supply
+ * marker, non-empty rows without a clock). The latter two also follow a cached
+ * row, so only a null `sources.detailCacheUpdatedAt` proves the absence.
+ */
+const DETAIL_CACHE_ABSENT_REASONS = new Set<Extract<DetailSnapshotInputEntry, { status: "unavailable" }>["reason"]>([
+  "detail-cache-missing", "supply-marker-missing", "source-clock-unavailable",
+]);
 /**
  * Supply-history numbers keep 10 significant digits: far finer than any chart,
  * delta or depeg reading, and 1-1.5 KB lighter on a 90-day history, so the
@@ -542,8 +549,8 @@ export async function generateSnapshots(
       const refresh = refreshIds.has(entry.id);
       // An inactive record with no cached detail row can only be answered by the
       // route's inactive 404, so the reviewed fallback reads the history lane alone.
-      const historyOnly = entry.status === "unavailable" && entry.reason === DETAIL_CACHE_ABSENT_REASON
-        && !detailGenerationRefreshable(entry.id);
+      const historyOnly = entry.status === "unavailable" && DETAIL_CACHE_ABSENT_REASONS.has(entry.reason)
+        && entry.sources.detailCacheUpdatedAt === null && !detailGenerationRefreshable(entry.id);
       const entrySource: (typeof acquisition)[number]["source"] = entry.status === "history-only"
         ? "bulk-history-only"
         : entry.status === "unavailable"

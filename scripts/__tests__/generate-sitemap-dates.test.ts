@@ -7,6 +7,7 @@ import { GIT_DATE_SCAN_PATHS, SITEMAP_COMMIT_DERIVED_SOURCE_PATHS } from "../lib
 import { BLOG_POSTS } from "../../src/data/blog";
 import { getIndexableChainIds } from "../../src/lib/chain-indexing";
 import { PEG_HUB_PEGS, PEG_HUB_SLUGS } from "../../src/lib/peg-landing";
+import { PUBLIC_ROUTE_FAMILY_PATHS } from "../../src/lib/public-route-inventory";
 import { ALL_STABLECOIN_TAXONOMY_PAGES } from "../../src/lib/stablecoin-taxonomy";
 
 const generator = vi.hoisted(() => ({
@@ -338,6 +339,11 @@ describe("generated sitemap dates are independent of checkout time", () => {
     const expected = ALL_STABLECOIN_TAXONOMY_PAGES.map((page) => page.href);
 
     expect(changedRoutes(baseline, edited).sort()).toEqual(expected.sort());
+  });
+
+  it("dates every chain, peg-hub and taxonomy route in the public route inventory", () => {
+    const { chains, pegHubs, taxonomies } = PUBLIC_ROUTE_FAMILY_PATHS;
+    expect([...chains, ...pegHubs, ...taxonomies].filter((path) => !(path in baseline))).toEqual([]);
   });
 
   it("derives chain, peg-hub and taxonomy routes from the supplied per-coin entries", async () => {

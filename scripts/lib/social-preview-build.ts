@@ -41,6 +41,8 @@ const MAX_BYTES = 500_000;
 const TRANSPARENT = { r: 0, g: 0, b: 0, alpha: 0 };
 const VALIDATION_LOGO_PLACEHOLDER = "validation-only:logo";
 const FONT_FACES = Object.keys(SOCIAL_CARD_FONTS) as SocialCardFace[];
+/** Satori outlines every glyph, so resvg rasterizes without fonts; the font files join identity via the render sources. */
+const RESVG_FONTS: readonly string[] = [];
 
 /** One canonical destination: a drawn card or an authored PNG kept as-is. */
 export type SocialPreviewEntry = {
@@ -241,6 +243,36 @@ async function loadDefaultSocialCardAssets(
   };
 }
 
+/** A card's identity fields: every drawn field (never path or copy) and the files whose bytes shape its pixels. */
+function describeSocialCard(card: SocialCardSpec): { path: string; copy: SocialCardSpec["copy"]; drawn: unknown; inputs: string[] } {
+  const { path, copy, ...drawn } = card;
+  const logos = identitiesOf(card).flatMap((identity) => (identity.logoPath ? [`public${identity.logoPath}`] : []));
+  return { path, copy, drawn, inputs: [...SOCIAL_CARD_RENDER_SOURCES, ...logos] };
+}
+
+/**
+ * The one `/og/v2/` URL identity of a drawn image, shared by the catalog fast
+ * path and injected entries: drawn fields, the bytes of the rasterizer, resvg
+ * fonts and inputs, and the satori and resvg versions.
+ */
+function drawnPreviewUrls(repoRoot: string, fonts: readonly string[]): (drawn: unknown, inputs: readonly string[]) => string {
+  const digests = new Map<string, string>();
+  const hashFile = (file: string): string => {
+    let digest = digests.get(file);
+    if (digest === undefined) digests.set(file, digest = sha256(readFileSync(resolve(repoRoot, file))));
+    return digest;
+  };
+  const require = createRequire(import.meta.url);
+  const packages = {
+    satori: (require("satori/package.json") as { version: string }).version,
+    "@cf-wasm/resvg": (require("@cf-wasm/resvg/package.json") as { version: string }).version,
+  };
+  return (drawn, inputs) => {
+    const files = [...new Set([RASTER_SOURCE, ...fonts, ...inputs].map(hashFile))].sort();
+    return `/og/v2/image-${sha256(stableJsonStringifyV1({ drawn, files, packages }))}.png`;
+  };
+}
+
 /**
  * Adapter boundary: the catalog and renderer plug in here and nowhere else.
  * Identity, rasterization, storage and the route map never inspect a spec.
@@ -253,17 +285,12 @@ export async function loadSocialPreviewEntries(
   const renderAssets = includePngBuffers ? await loadSocialCardAssets(repoRoot, catalog.cards) : null;
   const assets: SocialCardAssets = renderAssets ?? await loadSocialCardValidationAssets(repoRoot, catalog.cards);
   return {
-    // Satori outlines every glyph, so resvg rasterizes without fonts; the font files join identity via the render sources.
-    fonts: [],
+    fonts: RESVG_FONTS,
     background: DARK.ground,
     entries: [
       ...catalog.cards.map((card): SocialPreviewEntry => {
-        const { path, copy, ...drawn } = card;
         return {
-          path,
-          copy,
-          drawn,
-          inputs: [...SOCIAL_CARD_RENDER_SOURCES, ...identitiesOf(card).flatMap((identity) => identity.logoPath ? [`public${identity.logoPath}`] : [])],
+          ...describeSocialCard(card),
           validate: () => validateSocialCardSpec(card, assets),
           svg: () => {
             if (!renderAssets) {
@@ -507,25 +534,13 @@ function computeCatalogDrawnEntries(repoRoot: string): {
   drawnByUrl: Map<string, SocialCardSpec>;
   routeDrawnMap: Record<string, SocialPreviewImage>;
 } {
-  const digests = new Map<string, string>();
-  const hashFile = (file: string): string => {
-    let digest = digests.get(file);
-    if (digest === undefined) digests.set(file, digest = sha256(readFileSync(resolve(repoRoot, file))));
-    return digest;
-  };
-  const require = createRequire(import.meta.url);
-  const packages = {
-    satori: (require("satori/package.json") as { version: string }).version,
-    "@cf-wasm/resvg": (require("@cf-wasm/resvg/package.json") as { version: string }).version,
-  };
+  const drawnUrl = drawnPreviewUrls(repoRoot, RESVG_FONTS);
   const catalog = buildSocialCardCatalog(discoverSocialPreviewPages(repoRoot));
   const drawnByUrl = new Map<string, SocialCardSpec>();
   const routeDrawnMap: Record<string, SocialPreviewImage> = {};
   for (const card of catalog.cards) {
-    const { path, copy, ...drawn } = card;
-    const inputs = [...SOCIAL_CARD_RENDER_SOURCES, ...identitiesOf(card).flatMap((identity) => (identity.logoPath ? [`public${identity.logoPath}`] : []))];
-    const files = [...new Set([RASTER_SOURCE, ...inputs].map(hashFile))].sort();
-    const url = `/og/v2/image-${sha256(stableJsonStringifyV1({ drawn, files, packages }))}.png`;
+    const { path, copy, drawn, inputs } = describeSocialCard(card);
+    const url = drawnUrl(drawn, inputs);
     if (!drawnByUrl.has(url)) drawnByUrl.set(url, card);
     routeDrawnMap[path] = { ...copy, url, width: SOCIAL_PREVIEW_WIDTH, height: SOCIAL_PREVIEW_HEIGHT, type: "image/png" };
   }
@@ -586,7 +601,7 @@ export async function renderMissingSocialPreviewBuffers(
       repoRoot,
       tasks: missingDrawn,
       renderAssets,
-      resvgFontBuffers: [],
+      resvgFontBuffers: RESVG_FONTS.map((font) => readFileSync(resolve(repoRoot, font))),
       background: DARK.ground,
       workerCount: effectiveWorkers,
     });
@@ -669,7 +684,7 @@ export async function buildSocialPreviewImages({ repoRoot, mode, load = loadSoci
           outDir: outputDir,
           tasks: missingDrawn,
           renderAssets,
-          resvgFontBuffers: [],
+          resvgFontBuffers: RESVG_FONTS.map((font) => readFileSync(resolve(repoRoot, font))),
           background: DARK.ground,
           workerCount: shard ? 1 : workers,
         });
@@ -677,18 +692,8 @@ export async function buildSocialPreviewImages({ repoRoot, mode, load = loadSoci
       }
     }
   } else {
-    const digests = new Map<string, string>();
-    const hashFile = (file: string): string => {
-      let digest = digests.get(file);
-      if (digest === undefined) digests.set(file, digest = sha256(readFileSync(resolve(repoRoot, file))));
-      return digest;
-    };
-    const require = createRequire(import.meta.url);
-    const packages = {
-      satori: (require("satori/package.json") as { version: string }).version,
-      "@cf-wasm/resvg": (require("@cf-wasm/resvg/package.json") as { version: string }).version,
-    };
     const { entries, fonts, background } = await load(repoRoot);
+    const drawnUrl = drawnPreviewUrls(repoRoot, fonts);
     const uniqueAuthoredFiles = [...new Set(entries.flatMap((entry) => ("authored" in entry ? [entry.authored] : [])))];
     const admittedAuthored = new Map(
       await Promise.all(
@@ -709,8 +714,7 @@ export async function buildSocialPreviewImages({ repoRoot, mode, load = loadSoci
         url = `/og/v2/image-${sha256(admitted.bytes)}.png`;
         images.set(url, { bytes: admitted.bytes });
       } else {
-        const files = [...new Set([RASTER_SOURCE, ...fonts, ...entry.inputs].map(hashFile))].sort();
-        url = `/og/v2/image-${sha256(stableJsonStringifyV1({ drawn: entry.drawn, files, packages }))}.png`;
+        url = drawnUrl(entry.drawn, entry.inputs);
         // Each drawing is validated once (budgets, glyphs, fit, logos) without rendering.
         if (!images.has(url)) {
           entry.validate();

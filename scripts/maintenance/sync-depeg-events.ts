@@ -19,6 +19,7 @@ import {
 } from "@shared/types/peg";
 import { formatIsoDate } from "@shared/lib/format";
 import { SITE_API_ORIGIN } from "@shared/lib/runtime-origins";
+import { DEPEG_EVENTS_SITE_API_MAX_LIMIT as SITE_API_DEPEG_SYNC_LIMIT } from "@shared/lib/api-endpoints/queries";
 import { DEPEG_LEDGER_PAGE_SIZE } from "@shared/types/depeg-event-projection";
 import { DdrResponseSchema, DdrV2BaseRowSchema, DdrV2LiveOverlaySchema } from "@shared/types/depeg-resolver";
 import { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
@@ -73,7 +74,6 @@ const DepegArchiveLineageSchema = DdrResponseSchema.pick({ rows: true }).extend(
 type DepegArchiveLineage = z.infer<typeof DepegArchiveLineageSchema>["rows"];
 
 const MAX_DEPEG_SYNC_PAGES = 1000;
-const SITE_API_DEPEG_SYNC_LIMIT = 5000;
 
 export interface DepegSyncCliOptions {
   allowArchiveShrink: boolean;

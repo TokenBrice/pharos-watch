@@ -4,12 +4,7 @@ import type { BackingType } from "@shared/types/core";
 import type { FilterTag } from "@shared/types/stablecoin-meta-primitives";
 import type { GovernanceType } from "@shared/types/stablecoin-taxonomy";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
-import {
-  BACKING_SLUGS,
-  GOVERNANCE_SLUGS,
-  INFRASTRUCTURE_SLUGS,
-  type InfrastructureTaxonomyValue,
-} from "@/lib/stablecoin-taxonomy-urls";
+import { selectStablecoinTaxonomyCohorts, type InfrastructureTaxonomyValue } from "@/lib/stablecoin-taxonomy-urls";
 
 export type { InfrastructureTaxonomyValue };
 
@@ -120,51 +115,45 @@ export function getTopCohortCoinIds(coins: readonly StablecoinMeta[], limit = 4)
   return (primaryCoins.length > 0 ? primaryCoins : coins).slice(0, limit).map((coin) => coin.id);
 }
 
-export const GOVERNANCE_TAXONOMY_PAGES = (Object.entries(GOVERNANCE_SLUGS) as [GovernanceType, string][])
-  .map(([value, slug]) => {
-    const content = GOVERNANCE_CONTENT[value];
-    const coins = ACTIVE_STABLECOINS.filter((coin) => coin.flags.governance === value);
-    return {
-      kind: "governance" as const,
-      slug,
-      value,
-      href: `/stablecoins/governance/${slug}/`,
-      title: buildCohortTitle(content.hubTitle, coins.length),
-      shortLabel: GOVERNANCE_LABELS_SHORT[value],
-      description: content.description(coins.length),
-      intro: content.intro,
-      filterTag: value,
-      coins,
-    };
-  })
-  .sort((left, right) => right.coins.length - left.coins.length);
+const TAXONOMY_COHORTS = selectStablecoinTaxonomyCohorts(ACTIVE_STABLECOINS);
 
-export const BACKING_TAXONOMY_PAGES = (Object.entries(BACKING_SLUGS) as [BackingType, string][])
-  .map(([value, slug]) => {
-    const content = BACKING_CONTENT[value];
-    const coins = ACTIVE_STABLECOINS.filter((coin) => coin.flags.backing === value);
-    return {
-      kind: "backing" as const,
-      slug,
-      value,
-      href: `/stablecoins/backing/${slug}/`,
-      title: buildCohortTitle(content.hubTitle, coins.length),
-      shortLabel: BACKING_LABELS_SHORT[value],
-      description: content.description(coins.length),
-      intro: content.intro,
-      filterTag: value,
-      coins,
-    };
-  })
-  .filter((page) => page.coins.length > 0)
-  .sort((left, right) => right.coins.length - left.coins.length);
+export const GOVERNANCE_TAXONOMY_PAGES = TAXONOMY_COHORTS.governance.map(({ value, slug, href, coins }) => {
+  const content = GOVERNANCE_CONTENT[value];
+  return {
+    kind: "governance" as const,
+    slug,
+    value,
+    href,
+    title: buildCohortTitle(content.hubTitle, coins.length),
+    shortLabel: GOVERNANCE_LABELS_SHORT[value],
+    description: content.description(coins.length),
+    intro: content.intro,
+    filterTag: value,
+    coins,
+  };
+});
+
+export const BACKING_TAXONOMY_PAGES = TAXONOMY_COHORTS.backing.map(({ value, slug, href, coins }) => {
+  const content = BACKING_CONTENT[value];
+  return {
+    kind: "backing" as const,
+    slug,
+    value,
+    href,
+    title: buildCohortTitle(content.hubTitle, coins.length),
+    shortLabel: BACKING_LABELS_SHORT[value],
+    description: content.description(coins.length),
+    intro: content.intro,
+    filterTag: value,
+    coins,
+  };
+});
 
 const STABLECOIN_TAXONOMY_PAGES = [...GOVERNANCE_TAXONOMY_PAGES, ...BACKING_TAXONOMY_PAGES];
 
 const INFRASTRUCTURE_CONTENT: Record<
   InfrastructureTaxonomyValue,
   {
-    slug: string;
     title: string;
     shortLabel: string;
     intro: string;
@@ -172,7 +161,6 @@ const INFRASTRUCTURE_CONTENT: Record<
   }
 > = {
   "liquity-v1": {
-    slug: INFRASTRUCTURE_SLUGS["liquity-v1"],
     title: "Liquity v1 Infrastructure Stablecoins",
     shortLabel: "Liquity v1",
     intro:
@@ -181,7 +169,6 @@ const INFRASTRUCTURE_CONTENT: Record<
       `${count} Liquity v1 stablecoin${count !== 1 ? "s" : ""} tracked by Pharos. Compare classic zero-interest Liquity-style CDP designs in one place.`,
   },
   "liquity-v2": {
-    slug: INFRASTRUCTURE_SLUGS["liquity-v2"],
     title: "Liquity v2 Infrastructure Stablecoins",
     shortLabel: "Liquity v2",
     intro:
@@ -190,7 +177,6 @@ const INFRASTRUCTURE_CONTENT: Record<
       `${count} Liquity v2 stablecoin${count !== 1 ? "s" : ""} tracked by Pharos. Compare BOLD-style CDP designs with user-set rates and Stability Pools.`,
   },
   m0: {
-    slug: INFRASTRUCTURE_SLUGS.m0,
     title: "M0 Infrastructure Stablecoins",
     shortLabel: "M0",
     intro:
@@ -200,27 +186,21 @@ const INFRASTRUCTURE_CONTENT: Record<
   },
 };
 
-export const INFRASTRUCTURE_TAXONOMY_PAGES = (
-  Object.entries(INFRASTRUCTURE_CONTENT) as Array<
-    [InfrastructureTaxonomyValue, (typeof INFRASTRUCTURE_CONTENT)[InfrastructureTaxonomyValue]]
-  >
-)
-  .map(([value, content]) => {
-    const coins = ACTIVE_STABLECOINS.filter((coin) => (coin.infrastructures ?? []).includes(value));
-    return {
-      kind: "infrastructure" as const,
-      slug: content.slug,
-      value,
-      href: `/stablecoins/infrastructure/${content.slug}/`,
-      title: buildCohortTitle(content.title, coins.length),
-      shortLabel: content.shortLabel,
-      description: content.description(coins.length),
-      intro: content.intro,
-      filterTag: `infrastructure-${value}` as FilterTag,
-      coins,
-    };
-  })
-  .sort((left, right) => right.coins.length - left.coins.length);
+export const INFRASTRUCTURE_TAXONOMY_PAGES = TAXONOMY_COHORTS.infrastructure.map(({ value, slug, href, coins }) => {
+  const content = INFRASTRUCTURE_CONTENT[value];
+  return {
+    kind: "infrastructure" as const,
+    slug,
+    value,
+    href,
+    title: buildCohortTitle(content.title, coins.length),
+    shortLabel: content.shortLabel,
+    description: content.description(coins.length),
+    intro: content.intro,
+    filterTag: `infrastructure-${value}` as FilterTag,
+    coins,
+  };
+});
 
 export const STABLECOIN_TAXONOMY_HUB_ROUTES = {
   backing: {

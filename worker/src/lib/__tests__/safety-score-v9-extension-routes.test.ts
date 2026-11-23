@@ -679,7 +679,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
 
   it.each([
     ["xaut-tether", "GOLD", 4_181.47, -4, false], ["silver-fixture", "SILVER", 50, -10, true], ["xaut-tether", "GOLD", 4_181.47, -4, undefined],
-  ] as const)("values %s by the captured reference evidence, hold %s", (id, pegCurrency, refUsd, bps, held) => {
+  ] as const)("values %s (%s, ref %s, %s bps) by the captured reference evidence, held=%s", (id, pegCurrency, refUsd, bps, held) => {
     const { fixedInput: f } = dexFx({ assetId: "asset-input", routeOverrides: { routeId: `dex:asset-input:${id}`, output: trk(id) }, pegDataById: { [id]: { pegCurrency, currentDeviationBps: bps, pegReference: { valueUsd: refUsd, source: "median", contributorCount: 10, asOf: NOW - 91 } } } });
     const t = NOW - 30;
     const cap = held === undefined ? f : Object.assign(f, { pegEvidenceById: { [id]: { admittedDeviationBps: held ? null : bps, referenceAdmission: { ...(held ? { status: "held-closed-session", reason: "reference-market-closed" } : { status: "admitted", reason: "live-reference" }), kind: "median", source: "peer-median", cadence: "intraday", generation: "fixture-commodity", quoteObservedAtSec: t, referenceObservedAtSec: t, decisionAtSec: t, budgetSec: 21_600, sessionOpenedAtSec: null, policyVersion: 1 } satisfies RefAdm } } });
@@ -945,7 +945,7 @@ describe("captured local-fiat output and cost references", () => {
   });
 
   it.each([undefined, { ...ref, asOf: NOW + 1 }, { ...ref, asOf: NOW - DAY - 1 }, { ...ref, source: "fallback" }, { ...ref, source: "median", contributorCount: 1 }])(
-    "withholds non-USD fiat output for missing, future, stale or unadmitted FX",
+    "withholds non-USD fiat output for missing, future, stale or unadmitted FX (case %#)",
     (pegReference) => {
       const { fixedInput: f } = redFx({ rowOverrides: { stablecoinId: USDC }, output: { kind: "fiat", currency: "CHF" }, pegDataById: { captured: { pegCurrency: "CHF", pegReference } } });
       expect(rev0(f, USDC).output).toBeNull();

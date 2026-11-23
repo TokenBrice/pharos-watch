@@ -649,7 +649,11 @@ describe("handleDepegEvents", () => {
     expect(res.headers.get("X-Data-Age")).toBe("45");
   });
 
-  it("rejects oversized limits instead of coercing them and allows limit=5000 only on site-api", async () => {
+  it("rejects oversized limits instead of coercing them and allows limit=5000 only on direct site-api", async () => {
+    const direct = (db: D1Database, q: string) => {
+      const url = new URL(`https://x/api/depeg-events?${q}`);
+      return handleDepegEvents(db, url, "site-api", new Request(url));
+    };
     for (const lane of [undefined, "public-api"] as const) {
       const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }]);
       const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?limit=1001"), lane);
@@ -658,12 +662,15 @@ describe("handleDepegEvents", () => {
       expect(db.getHistory()).toEqual([]);
     }
     const okDb = mockEvents([row], 1);
-    expect((await handleDepegEvents(okDb, new URL("https://x/api/depeg-events?limit=5000"), "site-api")).status).toBe(200);
+    expect((await direct(okDb, "limit=5000")).status).toBe(200);
     const badSiteDb = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }]);
-    const over = await handleDepegEvents(badSiteDb, new URL("https://x/api/depeg-events?limit=5001"), "site-api");
+    const over = await direct(badSiteDb, "limit=5001");
     expect(over.status).toBe(400);
     await expect(over.json()).resolves.toEqual({ error: "Invalid limit: must be between 1 and 5000" });
-    expect((await handleDepegEvents(badSiteDb, new URL("https://x/api/depeg-events?limit=5000&ledgerGeneration=latest"), "site-api")).status).toBe(400);
+    expect((await direct(badSiteDb, "limit=5000&ledgerGeneration=latest")).status).toBe(400);
+    // A site-api call without its request cannot prove it is direct: fail closed to the public cap.
+    const missingRequest = await handleDepegEvents(badSiteDb, new URL("https://x/api/depeg-events?limit=5000"), "site-api");
+    await expect(missingRequest.json()).resolves.toEqual({ error: "Invalid limit: must be between 1 and 1000" });
     expect(badSiteDb.getHistory()).toEqual([]);
   });
 
@@ -838,6 +845,12 @@ describe("handleDepegEvents", () => {
     expect((await handleDepegEvents(db, offsetUrl, "site-api", new Request(offsetUrl))).status).toBe(400);
     const directUrl = new URL("https://site-api.pharos.watch/api/depeg-events?limit=5000");
     expect((await handleDepegEvents(db, directUrl, "site-api", new Request(directUrl))).status).toBe(200);
+    // The edge-cache key has no lane dimension: only pages within the shared 1,000-row cap may be stored.
+    const freshDb = mockEvents([], 0, [{ match: "cron_runs", rows: [], first: { started_at: Math.floor(Date.now() / 1000) - 45 } }]);
+    for (const [limit, cacheControl] of [[1000, /^public, s-maxage=/], [5000, /^no-store$/]] as const) {
+      const url = new URL(`https://site-api.pharos.watch/api/depeg-events?limit=${limit}`);
+      expect((await handleDepegEvents(freshDb, url, "site-api", new Request(url))).headers.get("Cache-Control")).toMatch(cacheControl);
+    }
     const missingDb = mockEvents([], 0, [{ match: "FROM cache WHERE key = ?", rows: [] }]);
     const missingRes = await handleDepegEvents(missingDb, new URL("https://x/api/depeg-events?limit=1000&includeTotal=true&ledgerGeneration=latest"));
     expect(await readJsonResponse(missingRes, 503)).toMatchObject({ reason: "ledger-manifest-unavailable" });

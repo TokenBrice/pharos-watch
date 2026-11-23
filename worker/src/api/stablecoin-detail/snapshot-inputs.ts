@@ -17,7 +17,7 @@ import { isCoinGeckoHistoryAllowed } from "../../lib/solomon-usdv-identity";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { getCompletedSupplySnapshot } from "../../lib/supply-snapshot-completion";
 import { logWorkerEventArgs } from "../../lib/structured-log";
-import { loadBatchedSupplyHistory, mapSupplyHistoryRow, resolveSupplyHistoryUpdatedAtMs } from "../supply-history";
+import { loadBatchedSupplyHistory, mapSupplyHistoryRow, resolveSupplyHistoryUpdatedAtMs } from "../../lib/supply-history-rows";
 import { buildCacheFallbackTokens } from "./cache-fallback";
 import { overlayCanonicalDetailObject } from "./price";
 import {
@@ -51,7 +51,8 @@ function boundSnapshotEntry(
  * enforced by the ordinary API/site-key gates before dispatch. No waitUntil, provider
  * fetch, refresh slot, or cache write occurs here. One full detail body at a time,
  * one frozen publication, supply marker, and batched 90-day supply_history query per
- * batch, at most one D1 read in flight.
+ * batch, plus a per-coin full-history fallback read for each D1-only coin without a
+ * detail cache row; at most one D1 read in flight.
  */
 export async function handleDetailSnapshotInputs(db: D1Database, url: URL): Promise<Response> {
   const rawIds = url.searchParams.getAll("ids");

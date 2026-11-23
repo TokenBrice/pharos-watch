@@ -5,6 +5,7 @@ import { getCache } from "../lib/db-cache";
 import { sha256Hex } from "../lib/hash";
 import { DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
+import { DEPEG_EVENTS_SITE_API_MAX_LIMIT } from "@shared/lib/api-endpoints/queries";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { resolveOrReject, parseBooleanParam } from "../lib/api-params";
 import { buildMethodologyEnvelope } from "../lib/api-methodology";
@@ -308,14 +309,15 @@ export const handleDepegEvents = async (
     if (includePending instanceof Response) {
       return includePending;
     }
-    // Larger pages (up to 5,000 rows) are restricted to direct authenticated site-api
-    // callers (CI/release sync) with offset=0; browser-proxied /_site-data traffic
-    // always carries SITE_DATA_CLIENT_IP_HEADER and remains bounded to 1,000 rows.
-    const isDirectSiteApi = requestLane === "site-api" && !request?.headers.has(SITE_DATA_CLIENT_IP_HEADER);
+    // Pages above 1,000 rows are admitted only for direct authenticated site-api callers
+    // (CI/release sync) with offset=0. Browser-proxied /_site-data requests carry
+    // SITE_DATA_CLIENT_IP_HEADER, and a site-api call without its request fails closed.
+    const isDirectSiteApi = requestLane === "site-api" && request != null
+      && !request.headers.has(SITE_DATA_CLIENT_IP_HEADER);
     const pagination = {
       defaultLimit: 100,
       minLimit: 1,
-      maxLimit: isDirectSiteApi ? 5000 : 1000,
+      maxLimit: isDirectSiteApi ? DEPEG_EVENTS_SITE_API_MAX_LIMIT : 1000,
       maxOffset: 50_000,
     };
     const cursor = {
@@ -329,7 +331,8 @@ export const handleDepegEvents = async (
     if (parsedPagination instanceof Response) {
       return parsedPagination;
     }
-    if (parsedPagination.limit > 1000 && parsedPagination.offset !== 0) {
+    const largePage = parsedPagination.limit > 1000;
+    if (largePage && parsedPagination.offset !== 0) {
       return errorResponse(400, "Parameter 'offset' cannot be combined with 'limit' > 1000; use cursor pagination");
     }
 
@@ -404,7 +407,9 @@ export const handleDepegEvents = async (
         producerJob: "sync-stablecoins",
         maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegEvents,
       },
-      cacheControl: CACHE_PROFILES.producerBacked,
+      // The edge-cache key has no lane dimension and is read before this handler, so a
+      // stored large page would be replayed to public and browser-proxied callers.
+      cacheControl: largePage ? CACHE_PROFILES.noStore : CACHE_PROFILES.producerBacked,
       buildExtraBody: async (events) => {
         const latestEventTs = events[0]?.startedAt ?? Math.floor(Date.now() / 1000);
         const methodologyVersion = getMethodologyVersionAt("depeg-dews", latestEventTs);

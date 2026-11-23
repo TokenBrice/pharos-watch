@@ -196,7 +196,7 @@ jobs:
           fetch-depth: 1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: "24.16.0"
+          node-version-file: .nvmrc
       - name: Download the shard timing reports
         # Telemetry must never mask the suite result: a shard that died before
         # writing its report simply contributes nothing.

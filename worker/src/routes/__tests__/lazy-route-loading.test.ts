@@ -1,3 +1,5 @@
+import { fileURLToPath, URL as NodeURL } from "node:url";
+import { build } from "esbuild";
 import { describe, expect, it, vi } from "vitest";
 import type { FullRouteContext } from "../shared";
 
@@ -82,5 +84,17 @@ describe("lazy route loading", () => {
       await load();
       expect(forbidden).not.toHaveBeenCalled();
     }
+  });
+
+  it("keeps the detail snapshot-inputs route graph free of the full stablecoin catalog", async () => {
+    // Bundle-level graph, static and dynamic edges: a reachable #pharos-full-catalog
+    // resolves to full-catalog.ts through the package imports map (or fails the build).
+    const { metafile } = await build({
+      absWorkingDir: fileURLToPath(new NodeURL("../../../../", import.meta.url)),
+      entryPoints: ["worker/src/api/stablecoin-detail/snapshot-inputs.ts"], tsconfig: "worker/tsconfig.json",
+      bundle: true, write: false, metafile: true, format: "esm", platform: "neutral",
+      mainFields: ["module", "main"], external: ["node:*"], logLevel: "silent",
+    });
+    expect(Object.keys(metafile.inputs)).not.toContain("shared/lib/stablecoins/full-catalog.ts");
   });
 });

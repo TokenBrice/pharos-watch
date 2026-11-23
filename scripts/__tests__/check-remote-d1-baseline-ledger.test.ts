@@ -134,6 +134,9 @@ describe("production deployment baseline gate", () => {
     const apply = steps.findIndex((step) => step.run?.includes("d1 migrations apply"));
     expect(preflight).toBeGreaterThan(-1);
     expect(steps[preflight].run).toContain("npm run check:worker-package");
+    // Any failed preflight (package or baseline included) exits non-zero, so the unconditional apply never runs.
+    expect(steps[preflight].run?.trim().split("\n").at(-1)).toBe('exit "${failed}"');
+    expect(steps[apply].if).toBeUndefined();
     expect(apply).toBe(preflight + 1);
     expect(steps.filter((step) => step.run?.includes("d1 migrations apply"))).toHaveLength(1);
     expect(steps[preflight].if).toBeUndefined();

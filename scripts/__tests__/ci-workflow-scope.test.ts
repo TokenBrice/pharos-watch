@@ -69,6 +69,12 @@ describe("CI workflow scope", () => {
     expect(steps[gate].run).toContain('if [[ "${NEW_ASSET_GATE_OVERRIDE}" == "true" ]]; then new_asset_args+=(--override); fi');
     expect(steps[gate].run).toContain('echo "exit-code=${budget_status}" >> "${GITHUB_OUTPUT}"');
     expect(steps[gate].run).toContain("GITHUB_STEP_SUMMARY");
+    // `wait` captures every background status; the closing gate fails on all but the budget.
+    for (const check of ["plan", "donor", "incident", "budget", "new_asset"]) expect(steps[gate].run).toContain(`wait "\${${check}_pid}" || ${check}_status=$?`);
+    expect(steps[gate].run!.trim().split("\n").map((line) => line.trim()).slice(-4)).toEqual([
+      'if [[ "${plan_status}" != "0" || "${donor_status}" != "0" || "${incident_status}" != "0" || "${new_asset_status}" != "0" ]]; then',
+      expect.stringContaining("::error::Prepare checks failed"), "exit 1", "fi",
+    ]);
     expect(workflow.jobs.prepare.outputs?.test_corpus_budget).toBe("${{ steps.test-corpus-budget.outputs.exit-code }}");
     const prGate = workflow.jobs["pr-gate"];
     expect(prGate.env?.TEST_CORPUS_BUDGET).toBe("${{ needs.prepare.outputs.test_corpus_budget }}");
@@ -327,7 +333,7 @@ describe("CI workflow scope", () => {
   });
 
   it.each([
-    ["pages-release.yml", ["Refresh API-backed release data", "Build clean production export", "Reject signing key in exported site"]],
+    ["pages-release.yml", ["Refresh API-backed release data", "Build clean production export", "Reject signing key in exported site", "Reject secrets in retained release data"]],
     ["production-canaries.yml", ["Check live production Pages assets", "Check live direct and same-origin API Cache-Control", "Capture home and detail viewport matrix"]],
     ["weekly-validation.yml", ["Capture production dependency coverage"]],
   ])("scopes the session signing key to lane readers in %s", (file, consumers) => {
@@ -351,7 +357,7 @@ describe("CI workflow scope", () => {
     }>;
     expect(steps.find((s) => s.uses?.startsWith("actions/checkout@"))?.with?.["fetch-depth"]).toBe(1);
     const setupNode = steps.find((s) => s.uses?.startsWith("actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1"));
-    expect(setupNode?.with).toEqual({ "node-version": "24.16.0" });
+    expect(setupNode?.with).toEqual({ "node-version-file": ".nvmrc" });
     expect(steps.some((s) => s.uses?.includes("setup-workspace") || s.uses?.startsWith("actions/cache"))).toBe(false);
     const restore = steps.findIndex((s) => s.run?.includes("tar --zstd -xf"));
     const refresh = steps.findIndex((s) => s.run === "node --import tsx scripts/maintenance/refresh-pages-release-data.ts");
@@ -362,8 +368,12 @@ describe("CI workflow scope", () => {
     expect(refresh).toBeGreaterThan(restore);
     expect(build).toBeGreaterThan(refresh);
     expect(check).toBeGreaterThan(build);
-    expect(retain).toBe(check + 1);
+    expect(steps[check + 1].name).toBe("Reject secrets in retained release data");
+    expect(retain).toBe(check + 2);
     expect(steps[check].run).toContain("createPagesReleaseDataArchive");
+    const gates = steps[check].run!.trim().split("\n");
+    expect(gates).toEqual(expect.arrayContaining(['wait "$gates_pid" || gates_status=$?', 'wait "$archive_pid" || archive_status=$?']));
+    expect(gates.at(-1)).toBe('[ "$gates_status" -eq 0 ] && [ "$archive_status" -eq 0 ]');
     expect(steps[refresh].env).toMatchObject({
       SITE_API_SHARED_SECRET: "${{ secrets.SITE_API_SHARED_SECRET }}",
       DIGEST_API_URL: "https://site-api.pharos.watch",
@@ -379,7 +389,7 @@ describe("CI workflow scope", () => {
     expect(steps[build].run).toContain("env -u SITE_API_SHARED_SECRET npx --no-install next build --webpack");
     expect(steps[build].run).toContain("env -u SITE_API_SHARED_SECRET -u SITE_SESSION_SIGNING_KEY npm run postbuild");
     expect(steps.filter((s) => s.env?.SITE_API_SHARED_SECRET != null).map((s) => s.name)).toEqual([
-      "Refresh API-backed release data", "Build clean production export", "Reject signing key in exported site",
+      "Refresh API-backed release data", "Build clean production export", "Reject signing key in exported site", "Reject secrets in retained release data",
     ]);
   });
 
@@ -388,6 +398,23 @@ describe("CI workflow scope", () => {
       expect(readRepoFile(`.github/workflows/${workflow}`)).not.toContain("PHAROS_PAGES_REPLAY");
     },
   );
+
+  it("takes every pinned setup-node version from .nvmrc after checkout", () => {
+    expect(parseYaml(readRepoFile(".github/actions/setup-workspace/action.yml")).inputs["node-version"].default).toBe(readRepoFile(".nvmrc").trim());
+    const jobs: string[] = [];
+    for (const file of ["deploy-cloudflare.yml", "pages-release.yml", "pull-request-checks.yml", "weekly-validation.yml", "nightly-validation.yml"]) {
+      for (const [name, job] of Object.entries((parseYaml(readRepoFile(`.github/workflows/${file}`)) as Workflow).jobs)) {
+        const steps = job.steps ?? [], setup = steps.findIndex((step) => step.uses?.startsWith("actions/setup-node@"));
+        if (setup < 0) continue;
+        jobs.push(name);
+        expect(steps[setup].with).toEqual({ "node-version-file": ".nvmrc" });
+        const checkout = steps.findIndex((step) => step.uses?.startsWith("actions/checkout@"));
+        expect(checkout).toBeGreaterThanOrEqual(0);
+        expect(checkout).toBeLessThan(setup);
+      }
+    }
+    expect(jobs).toEqual(["plan", "post-deploy-acceptance", "pages-release", "secrets", "pages-artifact", "gitleaks", "ci-report", "test-timings"]);
+  });
 
   it("rejects absent bulk credentials before running release generators", () => {
     const workflow = parseYaml(readRepoFile(".github/workflows/pages-release.yml"));
@@ -506,6 +533,8 @@ describe("CI workflow scope", () => {
       "wrangler queues info pharos-reserve-continuation-dlq --config worker/wrangler.toml",
       "npm run check:remote-d1-baseline-ledger",
     ]) expect(steps[packageStep].run).toContain(cmd);
+    for (const pid of ["migrations", "package", "queue_main", "queue_dlq", "baseline"]) expect(steps[packageStep].run).toContain(`:\${${pid}_pid}:`);
+    expect(steps[packageStep].run!.split("\n").map((line) => line.trim())).toEqual(expect.arrayContaining(['wait "${pid}" || status=$?', "failed=1"]));
     expect(migrations).toHaveLength(1);
     expect(migrations[0]).toBeGreaterThan(packageStep);
     expect(heavyDeploy).toBeGreaterThan(migrations[0]);
@@ -568,7 +597,7 @@ describe("CI workflow scope", () => {
     expect(heavyIdentity?.if).toBe("${{ always() && needs.deploy-worker.result == 'success' }}");
     expect(job.steps?.some((step) => step.name === "Require unchanged heavy activation identity")).toBe(false);
     const setupNode = job.steps?.find((step) => step.uses?.startsWith("actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1"));
-    expect(setupNode?.with).toEqual({ "node-version": "24.16.0" });
+    expect(setupNode?.with).toEqual({ "node-version-file": ".nvmrc" });
     expect(job.steps?.some((step) => step.uses?.includes("setup-workspace"))).toBe(false);
     expect(job.steps?.some((step) => /npm|npx|wrangler/.test(step.run ?? ""))).toBe(false);
     expect(acceptance?.env).toMatchObject({
@@ -1146,6 +1175,9 @@ describe("Cloudflare deployment credential scope", () => {
     expect(guard?.step.run).toContain('grep -rqF -- "$SITE_SESSION_SIGNING_KEY" out');
     expect(guard?.step.run).toContain('[ -n "$SITE_SESSION_SIGNING_KEY" ]');
     expect(effective.indexOf(guard!)).toBe(effective.indexOf(build!) + 1);
+    const archiveGuard = effective.find(({ step }) => step.name === "Reject secrets in retained release data");
+    expect(archiveGuard?.step.run).toContain('[ -n "$secret" ] && grep -aqF -- "$secret" "$release_data_tar"');
+    expect(effective[effective.indexOf(archiveGuard!) + 1]?.step.name).toBe("Retain post-refresh data for Pages PR and local replay");
     const marker = effective.find(({ step }) => step.name === "Verify deployment release marker");
     expect(marker?.env.CLOUDFLARE_API_TOKEN).toBeUndefined();
     const publisherName = "Publish immutable preview objects before Pages activation";

@@ -3,19 +3,19 @@ import type { GovernanceType, Infrastructure } from "@shared/types/stablecoin-ta
 
 export type InfrastructureTaxonomyValue = Infrastructure;
 
-export const GOVERNANCE_SLUGS: Record<GovernanceType, string> = {
+const GOVERNANCE_SLUGS: Record<GovernanceType, string> = {
   centralized: "cefi",
   "centralized-dependent": "cefi-dependent",
   decentralized: "defi",
 };
 
-export const BACKING_SLUGS: Record<BackingType, string> = {
+const BACKING_SLUGS: Record<BackingType, string> = {
   "rwa-backed": "rwa",
   "crypto-backed": "crypto",
   algorithmic: "algorithmic",
 };
 
-export const INFRASTRUCTURE_SLUGS: Record<InfrastructureTaxonomyValue, string> = {
+const INFRASTRUCTURE_SLUGS: Record<InfrastructureTaxonomyValue, string> = {
   "liquity-v1": "liquity-v1",
   "liquity-v2": "liquity-v2",
   m0: "m0",
@@ -31,6 +31,59 @@ export function buildBackingTaxonomyUrl(value: BackingType): string {
 
 export function buildInfrastructureTaxonomyUrl(value: InfrastructureTaxonomyValue): string {
   return `/stablecoins/infrastructure/${INFRASTRUCTURE_SLUGS[value]}/`;
+}
+
+export interface StablecoinTaxonomyCohort<TValue, TCoin> {
+  value: TValue;
+  slug: string;
+  href: string;
+  coins: TCoin[];
+}
+
+/**
+ * The one rule for which taxonomy cohort pages exist, in display order: every
+ * governance and infrastructure cohort, backing cohorts only when an active
+ * coin has that backing, each kind sorted by descending membership. Pure over
+ * the coins it is given, so the phase-0 sitemap-dates generator shares it.
+ */
+export function selectStablecoinTaxonomyCohorts<
+  TCoin extends {
+    flags: { governance: GovernanceType; backing: BackingType };
+    infrastructures?: readonly InfrastructureTaxonomyValue[];
+  },
+>(activeCoins: readonly TCoin[]): {
+  governance: StablecoinTaxonomyCohort<GovernanceType, TCoin>[];
+  backing: StablecoinTaxonomyCohort<BackingType, TCoin>[];
+  infrastructure: StablecoinTaxonomyCohort<InfrastructureTaxonomyValue, TCoin>[];
+} {
+  const byMembership = (left: { coins: TCoin[] }, right: { coins: TCoin[] }) => right.coins.length - left.coins.length;
+  return {
+    governance: (Object.keys(GOVERNANCE_SLUGS) as GovernanceType[])
+      .map((value) => ({
+        value,
+        slug: GOVERNANCE_SLUGS[value],
+        href: buildGovernanceTaxonomyUrl(value),
+        coins: activeCoins.filter((coin) => coin.flags.governance === value),
+      }))
+      .sort(byMembership),
+    backing: (Object.keys(BACKING_SLUGS) as BackingType[])
+      .map((value) => ({
+        value,
+        slug: BACKING_SLUGS[value],
+        href: buildBackingTaxonomyUrl(value),
+        coins: activeCoins.filter((coin) => coin.flags.backing === value),
+      }))
+      .filter((cohort) => cohort.coins.length > 0)
+      .sort(byMembership),
+    infrastructure: (Object.keys(INFRASTRUCTURE_SLUGS) as InfrastructureTaxonomyValue[])
+      .map((value) => ({
+        value,
+        slug: INFRASTRUCTURE_SLUGS[value],
+        href: buildInfrastructureTaxonomyUrl(value),
+        coins: activeCoins.filter((coin) => (coin.infrastructures ?? []).includes(value)),
+      }))
+      .sort(byMembership),
+  };
 }
 
 /** PegCurrency → URL slug mapping shared by runtime peg hubs and build-time route generation. */

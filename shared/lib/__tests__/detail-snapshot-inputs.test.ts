@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { detailSnapshotSourceUpdatedAt } from "../detail-snapshot-inputs";
+import { DetailSnapshotInputsResponseSchema } from "../../types/detail-snapshot-inputs";
 
 // docs/api-reference.md:124 and docs/process/worker-infrastructure-appendix.md:408
 // admit legacy reconstruction only from a valid `Date`; producer clocks more than
@@ -30,5 +31,26 @@ describe("detail snapshot legacy Date provenance", () => {
       "X-Data-Age": "30",
       Age: "12",
     }))).toBe(sourceDateMs - 42_000);
+  });
+});
+
+describe("history-only detail snapshot input entries", () => {
+  const row = { date: 1_793_000_000, circulatingUsd: 50, price: 0.2, supplyProvenance: null };
+  const unknown = { status: "unknown", reason: "empty-supply-history", maxAgeSec: 86_400 };
+  const fresh = { status: "fresh", maxAgeSec: 86_400 };
+  const clock = { supplyHistory: 1_793_000_000_000 };
+  it.each([
+    ["clockless empty unknown", [], {}, unknown, true],
+    ["clocked fresh", [row], clock, fresh, true],
+    ["clockless non-empty fresh", [row], {}, fresh, false],
+    ["clockless empty fresh", [], {}, fresh, false],
+    ["clocked unknown", [], clock, unknown, false],
+    ["clockless non-empty unknown", [row], {}, unknown, false],
+  ] as const)("ties the clock to freshness: %s", (_case, supplyHistory, updatedAt, supplyHistoryFreshness, valid) => {
+    const sources = { detailCacheUpdatedAt: null, publicationUpdatedAt: null, supplySnapshotUpdatedAt: null, supplySnapshotDate: null };
+    expect(DetailSnapshotInputsResponseSchema.safeParse({ version: 1, entries: [{
+      id: "fixture", status: "history-only", reason: "detail-cache-missing",
+      supplyHistory, updatedAt, freshness: { supplyHistory: supplyHistoryFreshness }, sources,
+    }] }).success).toBe(valid);
   });
 });

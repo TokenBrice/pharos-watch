@@ -142,6 +142,15 @@ describe("Pages artifact input profile", () => {
     }
   });
 
+  it("reports the trusted acquisition's degraded reason without a replay waiver", async () => {
+    const r = fixtureRoot(), acq = join(r, "acquisition"), reason = "partial-run-listing:deploy-cloudflare.yml";
+    write(acq, "release-data-result.json", JSON.stringify({ schemaVersion: 1, dataStatus: "degraded-data", reason }));
+    stub("PAGES_RELEASE_DATA_DIR", acq); stub("GITHUB_STEP_SUMMARY", join(r, "summary.md"));
+    await expect(runPagesArtifactLane({ repoRoot: r })).resolves.toEqual({ dataStatus: "degraded-data" });
+    expect(read(r, "summary.md")).toContain(`Reason: \`${reason}\``);
+    for (const c of spawn.mock.calls) expect(c[2].env.PHAROS_PAGES_REPLAY).toBe("");
+  });
+
   it("waives only wall-clock age after validating and overlaying retained release data", async () => {
     const r = makeRoot(), rel = join(r, "release"), cand = join(r, "candidate"), acq = join(r, "acquisition"), name = `pages-release-data-${"a".repeat(40)}`;
     dataFixture(rel); dataFixture(cand);
@@ -265,12 +274,15 @@ describe("Pages artifact input profile", () => {
       `${API}/runs/10/artifacts?name=pages-release-data-${sA}&per_page=100`,
       `${API}/artifacts/1/zip`,
     ]);
-    gh.mockClear()
-      .mockReturnValueOnce(buf({ workflow_runs: [run(10, sA)] }))
-      .mockImplementationOnce(() => { throw new Error("rebuild API 500"); })
-      .mockReturnValueOnce(buf({ artifacts: [a1] }))
-      .mockImplementationOnce(() => { throw new Error("pages-artifact-data-invalid: survived rebuild fault"); });
-    expect(() => preparePagesReleaseData(makeRoot(), makeRoot())).toThrow("survived rebuild fault");
+    // A failed listing can hide the newest trusted run: degrade with its reason instead of replaying the survivor.
+    for (const failing of ["deploy-cloudflare.yml", "rebuild-pages.yml"]) {
+      const listed = () => buf({ workflow_runs: [run(10, sA)] }), fault = () => { throw new Error("API 500"); };
+      gh.mockClear().mockImplementation(() => { throw new Error("pages-artifact-data-invalid: replayed survivor"); })
+        .mockImplementationOnce(failing === "deploy-cloudflare.yml" ? fault : listed)
+        .mockImplementationOnce(failing === "rebuild-pages.yml" ? fault : listed);
+      expect(preparePagesReleaseData(makeRoot(), makeRoot())).toEqual({ schemaVersion: 1, dataStatus: "degraded-data", reason: `partial-run-listing:${failing}` });
+      expect(gh).toHaveBeenCalledTimes(2);
+    }
     gh.mockClear().mockImplementation(() => { throw new Error("gh network down"); });
     expect(preparePagesReleaseData(makeRoot(), makeRoot()).dataStatus).toBe("degraded-data");
     gh.mockReset();

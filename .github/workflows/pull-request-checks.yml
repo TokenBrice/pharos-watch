@@ -30,7 +30,7 @@ jobs:
           fetch-depth: 1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: "24.16.0"
+          node-version-file: .nvmrc
       - name: Snapshot the trusted base scanner and policy
         run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/run-gitleaks.ts --snapshot-trusted="$RUNNER_TEMP/trusted-gitleaks"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -322,7 +322,7 @@ jobs:
           fetch-depth: 1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: "24.16.0"
+          node-version-file: .nvmrc
       - name: Acquire release data with the trusted base helper
         # Execute before candidate workspace setup; never give the token to
         # candidate npm scripts, generators, or build commands.
