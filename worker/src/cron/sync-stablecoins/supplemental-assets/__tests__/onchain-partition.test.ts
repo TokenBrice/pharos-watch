@@ -47,7 +47,8 @@ vi.mock("../../../reserve-adapters/helpers", () => ({
   fetchOnchainUint256: (...args: unknown[]) => mocks.escrow(...args),
   fetchIcrcLedgerTotalSupply: vi.fn(), fetchStarknetTotalSupply: vi.fn(),
 }));
-vi.mock("../../../../lib/chain-observation", () => ({
+vi.mock("../../../../lib/chain-observation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../../lib/chain-observation")>()),
   fetchSolanaTokenSupply: (_contract: string, signal: AbortSignal) => mocks.read("solana", undefined, signal),
   fetchMoveFungibleAssetSupply: vi.fn(),
 }));

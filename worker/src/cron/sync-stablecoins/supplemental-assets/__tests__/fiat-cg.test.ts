@@ -55,7 +55,8 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
   });
 });
 
-vi.mock("../../../../lib/chain-observation", () => ({
+vi.mock("../../../../lib/chain-observation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../../lib/chain-observation")>()),
   fetchSolanaTokenSupply: () => probeTrackedTokenSupplyMock(undefined, { kind: "onchain-solana" }),
 }));
 

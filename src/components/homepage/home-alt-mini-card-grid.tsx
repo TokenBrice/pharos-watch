@@ -9,7 +9,12 @@ import { MintBurnCard } from "@/components/home-alt-mini-cards/mint-burn-card";
 import { PegHealthCard } from "@/components/home-alt-mini-cards/peg-health-card";
 import { PsiBandCard } from "@/components/home-alt-mini-cards/psi-band-card";
 import { RecentFreezesCard } from "@/components/home-alt-mini-cards/recent-freezes-card";
-import { SupplyMovesCard } from "@/components/home-alt-mini-cards/supply-moves-card";
+import {
+  SupplyMovesCard,
+  computeSupplyMovers,
+  formatSupplyMovePct,
+  selectPeakSupplyMover,
+} from "@/components/home-alt-mini-cards/supply-moves-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePegSummary, useStabilityIndex } from "@/hooks/api-hooks";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
@@ -82,9 +87,9 @@ function MobilePulseTile({
 }
 
 /**
- * Dense mobile (< md) 2x2 primary Pulse KPI block + 2-column secondary strip
- * (Q7): cuts mobile pre-table scroll height while sharing every desktop query
- * cache with zero extra network calls.
+ * Dense mobile (< md) 2x3 Pulse KPI tile grid (Q7): cuts mobile pre-table
+ * scroll height while sharing every desktop query cache with zero extra
+ * network calls.
  */
 function MobilePulseKpiGrid(): React.JSX.Element {
   const pegQuery = usePegSummary();
@@ -135,129 +140,158 @@ function MobilePulseKpiGrid(): React.JSX.Element {
   const flowBand = flowsQuery.data?.gauge?.band;
   const flowBandLabel = flowBand ? flowBand.charAt(0) + flowBand.slice(1).toLowerCase() : "—";
 
+  const { supplyMovePeak, supplyMoveUpCount, supplyMoveDownCount, supplyMovesEvaluated } = useMemo(() => {
+    const payloadObservedAtSec = stablecoinsQuery.meta?.updatedAt ?? Math.floor((stablecoinsQuery.dataUpdatedAt ?? 0) / 1000);
+    const { ups, downs, upCount, downCount, evaluated } = computeSupplyMovers(
+      stablecoinsQuery.data?.peggedAssets ?? [],
+      payloadObservedAtSec,
+    );
+    return {
+      supplyMovePeak: selectPeakSupplyMover(ups, downs),
+      supplyMoveUpCount: upCount,
+      supplyMoveDownCount: downCount,
+      supplyMovesEvaluated: evaluated,
+    };
+  }, [stablecoinsQuery.data, stablecoinsQuery.meta?.updatedAt, stablecoinsQuery.dataUpdatedAt]);
+
   const freezable = useMemo(
     () => computeFreezableSummary(stablecoinsQuery.data ? buildBlacklistStatusBuckets(stablecoinsQuery.data.peggedAssets) : null),
     [stablecoinsQuery.data],
   );
   const freezeCount24h = blacklistSummaryQuery.data?.stats.recentFreezeCount24h ?? null;
+  const freezableShareAvailable = freezable.freezableShare != null && freezable.coverage !== "unavailable";
 
   return (
-    <div className="space-y-2.5 md:hidden" data-testid="mobile-pulse-kpi-grid">
-      <div className="grid grid-cols-2 gap-2.5">
-        <MobilePulseTile
-          href="/depeg/"
-          label="Active depegs"
-          isLoading={pegQuery.isLoading && !pegQuery.data}
-          unavailable={!pegQuery.data || activeCount === null}
-          value={activeCount ?? "—"}
-          subline={
-            activeCount === 0 ? (
-              <span className={DIRECTION_TONE_CLASSES.up}>No open incidents</span>
-            ) : leadDepeg ? (
-              <span>
-                {leadDepeg.symbol}{" "}
-                <span className={leadDepeg.bps < 0 ? DEPEG_DIRECTION_CLASSES.below.text : DEPEG_DIRECTION_CLASSES.above.text}>
-                  {leadDepeg.bps < 0 ? "↓" : "↑"}{Math.abs(leadDepeg.bps).toFixed(0)} bps
-                </span>
+    <div className="grid grid-cols-2 gap-2.5 md:hidden" data-testid="mobile-pulse-kpi-grid">
+      <MobilePulseTile
+        href="/depeg/"
+        label="Active depegs"
+        isLoading={pegQuery.isLoading && !pegQuery.data}
+        unavailable={!pegQuery.data || activeCount === null}
+        value={activeCount ?? "—"}
+        subline={
+          activeCount === 0 ? (
+            <span className={DIRECTION_TONE_CLASSES.up}>No open incidents</span>
+          ) : leadDepeg ? (
+            <span>
+              {leadDepeg.symbol}{" "}
+              <span className={leadDepeg.bps < 0 ? DEPEG_DIRECTION_CLASSES.below.text : DEPEG_DIRECTION_CLASSES.above.text}>
+                {leadDepeg.bps < 0 ? "↓" : "↑"}{Math.abs(leadDepeg.bps).toFixed(0)} bps
               </span>
-            ) : (
-              "Confirmed incidents"
-            )
-          }
-        />
-
-        <MobilePulseTile
-          href="/depeg/"
-          label="Peg health"
-          isLoading={pegQuery.isLoading && !pegSummary}
-          unavailable={!pegSummary}
-          value={
-            pegSummary ? (
-              <>
-                {pegSummary.coinsAtPeg}
-                <span className="mx-0.5 text-base font-normal text-muted-foreground/60">/</span>
-                <span className="text-lg font-semibold text-muted-foreground">{pegSummary.totalTracked}</span>
-              </>
-            ) : "—"
-          }
-          subline={
-            pegSummary?.medianDeviationBps != null
-              ? `${pegSummary.medianDeviationBps.toFixed(0)} bps median`
-              : "Priced non-NAV"
-          }
-          extra={
-            pegBucketTotal > 0 ? (
-              <div className="mt-1 flex h-1.5 w-full gap-0.5 overflow-hidden rounded-full bg-muted/60" aria-hidden="true">
-                {(["healthy", "mild", "moderate", "severe"] as const).map((level) => {
-                  const count = pegBuckets[level];
-                  if (count === 0) return null;
-                  return (
-                    <span
-                      key={level}
-                      className={PEG_DEVIATION_TONE_CLASSES[level].bar}
-                      style={{ width: `${(count / pegBucketTotal) * 100}%` }}
-                    />
-                  );
-                })}
-              </div>
-            ) : null
-          }
-        />
-
-        <MobilePulseTile
-          href="/stability-index/"
-          label="Stability Index"
-          isLoading={psiQuery.isLoading && !displayedPsi}
-          unavailable={!displayedPsi}
-          value={displayedPsi ? formatScore(displayedPsi.score) : "—"}
-          subline={
-            psiBandLabel ? (
-              <span className={`font-medium ${psiBandClass}`}>{psiBandLabel}</span>
-            ) : "PSI regime"
-          }
-        />
-
-        <MobilePulseTile
-          href="/flows/"
-          label="Mint / Burn"
-          isLoading={flowsQuery.isLoading && !flowsQuery.data}
-          unavailable={!flowsQuery.data}
-          value={flowBandLabel}
-          subline={
-            !hasFlowActivity
-              ? "No 24h activity"
-              : flowNetUsd != null
-                ? `Net ${formatSignedCompactUsd(flowNetUsd)}`
-                : "24h flows"
-          }
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-2.5">
-        <Link
-          prefetch={false}
-          href="/flows/"
-          className="pharos-card-shell pharos-focus-ring flex min-h-11 items-center justify-between gap-2 px-3 py-2 text-xs transition-colors hover:border-border"
-        >
-          <span className="truncate font-medium text-muted-foreground">Supply moves (7d)</span>
-          <ArrowUpRight aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
-        </Link>
-        <Link
-          prefetch={false}
-          href="/freezewatch/"
-          className="pharos-card-shell pharos-focus-ring flex min-h-11 items-center justify-between gap-2 px-3 py-2 text-xs transition-colors hover:border-border"
-        >
-          <span className="truncate text-muted-foreground">
-            <span className="font-medium text-foreground">
-              {freezable.freezableShare != null && freezable.coverage !== "unavailable"
-                ? formatShare(freezable.freezableShare)
-                : "FreezeWatch"}
             </span>
-            {freezeCount24h != null ? ` · ${freezeCount24h} 24h` : ""}
-          </span>
-          <ArrowUpRight aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
-        </Link>
-      </div>
+          ) : (
+            "Confirmed incidents"
+          )
+        }
+      />
+
+      <MobilePulseTile
+        href="/depeg/"
+        label="Peg health"
+        isLoading={pegQuery.isLoading && !pegSummary}
+        unavailable={!pegSummary}
+        value={
+          pegSummary ? (
+            <>
+              {pegSummary.coinsAtPeg}
+              <span className="mx-0.5 text-base font-normal text-muted-foreground/60">/</span>
+              <span className="text-lg font-semibold text-muted-foreground">{pegSummary.totalTracked}</span>
+            </>
+          ) : "—"
+        }
+        subline={
+          pegSummary?.medianDeviationBps != null
+            ? `${pegSummary.medianDeviationBps.toFixed(0)} bps median`
+            : "Priced non-NAV"
+        }
+        extra={
+          pegBucketTotal > 0 ? (
+            <div className="mt-1 flex h-1.5 w-full gap-0.5 overflow-hidden rounded-full bg-muted/60" aria-hidden="true">
+              {(["healthy", "mild", "moderate", "severe"] as const).map((level) => {
+                const count = pegBuckets[level];
+                if (count === 0) return null;
+                return (
+                  <span
+                    key={level}
+                    className={PEG_DEVIATION_TONE_CLASSES[level].bar}
+                    style={{ width: `${(count / pegBucketTotal) * 100}%` }}
+                  />
+                );
+              })}
+            </div>
+          ) : null
+        }
+      />
+
+      <MobilePulseTile
+        href="/stability-index/"
+        label="Stability Index"
+        isLoading={psiQuery.isLoading && !displayedPsi}
+        unavailable={!displayedPsi}
+        value={displayedPsi ? formatScore(displayedPsi.score) : "—"}
+        subline={
+          psiBandLabel ? (
+            <span className={`font-medium ${psiBandClass}`}>{psiBandLabel}</span>
+          ) : "PSI regime"
+        }
+      />
+
+      <MobilePulseTile
+        href="/flows/"
+        label="Mint / Burn"
+        isLoading={flowsQuery.isLoading && !flowsQuery.data}
+        unavailable={!flowsQuery.data}
+        value={flowBandLabel}
+        subline={
+          !hasFlowActivity
+            ? "No 24h activity"
+            : flowNetUsd != null
+              ? `Net ${formatSignedCompactUsd(flowNetUsd)}`
+              : "24h flows"
+        }
+      />
+
+      <MobilePulseTile
+        href="/flows/"
+        label="Biggest move (7d)"
+        isLoading={stablecoinsQuery.isLoading && !stablecoinsQuery.data}
+        unavailable={!stablecoinsQuery.data || !supplyMovesEvaluated}
+        value={
+          supplyMovePeak ? (
+            <span className={supplyMovePeak.pctChange >= 0 ? DIRECTION_TONE_CLASSES.up : DIRECTION_TONE_CLASSES.down}>
+              {formatSupplyMovePct(supplyMovePeak.pctChange)}
+            </span>
+          ) : (
+            "0%"
+          )
+        }
+        subline={
+          supplyMovePeak ? (
+            <span>
+              {supplyMovePeak.symbol}
+              {" · "}
+              {supplyMoveUpCount}↑ {supplyMoveDownCount}↓
+            </span>
+          ) : (
+            "No 7d moves"
+          )
+        }
+      />
+
+      <MobilePulseTile
+        href="/freezewatch/"
+        label="Freezable supply"
+        isLoading={stablecoinsQuery.isLoading && !stablecoinsQuery.data}
+        unavailable={!stablecoinsQuery.data || !freezableShareAvailable}
+        value={freezableShareAvailable ? formatShare(freezable.freezableShare!) : "—"}
+        subline={
+          freezeCount24h != null
+            ? `${freezeCount24h.toLocaleString("en-US")} ${freezeCount24h === 1 ? "freeze" : "freezes"} 24h`
+            : freezable.coverage === "partial"
+              ? "Observed supply"
+              : "Tracked supply"
+        }
+      />
     </div>
   );
 }
@@ -266,7 +300,7 @@ function MobilePulseKpiGrid(): React.JSX.Element {
 // - Desktop/tablet (md+): Row 1 permanently leads with Active depegs, Peg health,
 //   and the stacked PSI + Mint/Burn pair (no Row-2 swap, no clipped Digest slot).
 //   Row 2 holds Supply moves and FreezeWatch side by side.
-// - Mobile (< md): dense 2x2 primary KPI grid + compact Supply/Freeze strip.
+// - Mobile (< md): dense 2x3 Pulse KPI tile grid.
 export function HomeAltMiniCardGrid(): React.JSX.Element {
   return (
     <HomeSectionErrorBoundary name="mini-card grid">

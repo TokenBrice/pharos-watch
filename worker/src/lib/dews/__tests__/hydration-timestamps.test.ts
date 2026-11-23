@@ -304,6 +304,41 @@ describe("DEWS hydration timestamp admission", () => {
     });
   });
 
+  it("activates D5 native DEWS velocity anchors for EURC, BRLA and EURCV only after their cutover day", async () => {
+    const nov22 = Date.parse("2026-11-22T00:00:00Z") / 1000;
+    const nov23 = Date.parse("2026-11-23T00:00:00Z") / 1000;
+    const nov24 = Date.parse("2026-11-24T00:00:00Z") / 1000;
+    const nov25 = Date.parse("2026-11-25T00:00:00Z") / 1000;
+    const db = nativeHistoryDb([
+      ["brla-brla-digital", nov22, 316_000_000],
+      ["brla-brla-digital", nov23, 324_000_000],
+      ["eurcv-societe-generale-forge", nov22, 168_000_000],
+      ["eurcv-societe-generale-forge", nov23, 167_000_000],
+      ["eurc-circle", nov23, 457_000_000],
+      ["eurc-circle", nov24, 459_760_000],
+    ]);
+    const mk = (id: string, supplySource: string, clock: number, circulatingNative: number) =>
+      ({ id, supplySource, supplyObservedAt: clock, circulatingNative }) as StablecoinData;
+
+    // On 2026-11-24: BRLA/EURCV have their first valid post-cutover 1d anchor (Nov 23); EURC's Nov 23 cutover day stays withheld.
+    const onNov24 = await loadDewsNativeHistory(db, [
+      mk("brla-brla-digital", "onchain-total-supply", nov24 + 60, 325_000_000),
+      mk("eurcv-societe-generale-forge", "onchain-total-supply", nov24 + 60, 167_500_000),
+      mk("eurc-circle", "onchain-circulating-supply", nov24 + 60, 460_000_000),
+    ], nov24 + 180);
+    expect(Object.fromEntries(onNov24)).toEqual({
+      "brla-brla-digital": { day: 324_000_000, week: null },
+      "eurcv-societe-generale-forge": { day: 167_000_000, week: null },
+      "eurc-circle": { day: null, week: null },
+    });
+
+    // On 2026-11-25: EURC's first post-cutover anchor (Nov 24) activates 1d velocity.
+    const onNov25 = await loadDewsNativeHistory(db, [
+      mk("eurc-circle", "onchain-circulating-supply", nov25 + 60, 461_000_000),
+    ], nov25 + 180);
+    expect(onNov25.get("eurc-circle")).toEqual({ day: 459_760_000, week: null });
+  });
+
   it.each([[30, true], [90, false], [undefined, false]] as const)("checks asset clock offset %s against the DEWS read", async (offset, admitted) => {
     const asset = { id: "xaut-tether", circulatingNative: 809_363,
       supplySource: "onchain-circulating-supply", supplyObservedAt: offset == null ? undefined : RUN_AT + offset } as StablecoinData;

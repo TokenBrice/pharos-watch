@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchStellarSupply } from "../stellar-supply";
+import { fetchStellarSupply, observeStellarSupply } from "../stellar-supply";
 
 const issuer = "GAJMPX5NBOG6TQFPQGRABJEEB2YE7RFRLUKJDZAZGAD5GFX4J7TADAZ6";
 const contract = "CBOOCGZSVRSZFRE4U2NWR2B4RXYVJWRCBTGOUD2JPI2TDJPWMTJX7FZP";
@@ -128,6 +128,25 @@ describe("Stellar supply", () => {
       }
     },
   );
+  it("returns the on-chain ledger close timestamp for classic Horizon and Soroban observations", async () => {
+    vi.useFakeTimers();
+    const nowSec = Math.floor(Date.parse("2026-11-23T14:00:00Z") / 1000);
+    vi.setSystemTime(nowSec * 1000);
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(Response.json(horizon(12)))
+      .mockResolvedValueOnce(Response.json(fixture())));
+    await expect(observeStellarSupply(`USDY-${issuer}`, 7, signal())).resolves.toEqual({
+      rawSupply: 1200000003n, observedAt: nowSec - 12,
+    });
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(Response.json(ledger(18)))
+      .mockResolvedValueOnce(Response.json(simulation(3, 5n)))
+      .mockResolvedValueOnce(Response.json(simulation(10, 42n))));
+    await expect(observeStellarSupply(contract, 5, signal())).resolves.toEqual({
+      rawSupply: 42n, observedAt: nowSec - 18,
+    });
+  });
+
   it("propagates caller cancellation", async () => {
     const controller = new AbortController(); controller.abort(new Error("cancelled"));
     vi.stubGlobal("fetch", vi.fn());

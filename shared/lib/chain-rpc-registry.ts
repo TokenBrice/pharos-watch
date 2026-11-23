@@ -93,7 +93,7 @@ export const SUPPLY_RPC_DEFAULTS = {
   // state returned missing trie node. No archive/log capability is inferred.
   "flare": { rpcUrl: "https://flare-api.flare.network/ext/C/rpc" },
   "plume": { rpcUrl: PUBLIC_RPC_URLS["plume"], fallbackRpcUrl: "https://plume.drpc.org" },
-  "plasma": { rpcUrl: PUBLIC_RPC_URLS["plasma"], fallbackRpcUrl: "https://plasma.drpc.org" },
+  "plasma": { rpcUrl: PUBLIC_RPC_URLS["plasma"] },
   "monad": { rpcUrl: PUBLIC_RPC_URLS["monad"], fallbackRpcUrl: "https://rpc-mainnet.monadinfra.com" },
   "etherlink": { rpcUrl: PUBLIC_RPC_URLS["etherlink"] },
   "berachain": { rpcUrl: "https://rpc.berachain.com", fallbackRpcUrl: "https://berachain-rpc.publicnode.com" },
@@ -120,7 +120,8 @@ export const SUPPLY_RPC_DEFAULTS = {
   "sonic": { rpcUrl: PUBLIC_RPC_URLS["sonic"], fallbackRpcUrl: EXTRA_FALLBACK_RPC_URLS["sonic"][0] },
   "unichain": { rpcUrl: "https://mainnet.unichain.org" },
   "sei": { rpcUrl: "https://evm-rpc.sei-apis.com", fallbackRpcUrl: "https://sei-evm-rpc.publicnode.com" },
-  "worldchain": { rpcUrl: "https://worldchain-mainnet.g.alchemy.com/public" },
+  // Keyless World Chain endpoints; EIP-1898 hash-pinned EURC totalSupply() verified 2026-11-23.
+  "worldchain": { rpcUrl: "https://worldchain-mainnet.g.alchemy.com/public", fallbackRpcUrl: "https://480.rpc.thirdweb.com" },
   "pharos": { rpcUrl: "https://api.zan.top/public/pharos-mainnet", fallbackRpcUrl: "https://pharos.drpc.org" },
   "megaeth": { rpcUrl: "https://mainnet.megaeth.com/rpc", fallbackRpcUrl: "https://megaeth.drpc.org" },
   "klaytn": { rpcUrl: "https://public-en.node.kaia.io" },
@@ -142,6 +143,8 @@ export const SUPPLY_RPC_DEFAULTS = {
   "harmony": { rpcUrl: "https://api.harmony.one", fallbackRpcUrl: "https://api.s0.t.hmny.io" },
   // Keyless Moonbeam endpoints, eth_chainId (0x504) and BRLA totalSupply() verified 2026-11-22.
   "moonbeam": { rpcUrl: "https://moonbeam.api.onfinality.io/public", fallbackRpcUrl: "https://moonbeam.api.pocket.network" },
+  // Keyless Cronos mainnet endpoints, eth_chainId (0x19) and EURC totalSupply() verified 2026-11-23.
+  "cronos": { rpcUrl: "https://evm.cronos.org", fallbackRpcUrl: "https://cronos-evm-rpc.publicnode.com" },
 } as const;
 
 // V9 reviewed Centrifuge reads use rpc1, not the supply profile's monadinfra.
