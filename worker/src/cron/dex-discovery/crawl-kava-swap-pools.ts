@@ -13,7 +13,10 @@ import {
   type DexDeploymentProviderCheck,
 } from "./types";
 
-const KAVA_SWAP_API_BASE = "https://api.kava.io";
+const KAVA_SWAP_API_BASES = [
+  "https://api.kava.io",
+  "https://api.data.kava.io",
+] as const;
 const KAVA_SWAP_PARAMS_PATH = "/kava/swap/v1beta1/params";
 const KAVA_SWAP_POOLS_PATH = "/kava/swap/v1beta1/pools";
 const KAVA_SWAP_USDX_DENOM = KAVA_SWAP_USDX_DISCOVERY_ADDRESS;
@@ -156,15 +159,58 @@ function parseKavaSwapPools(body: unknown): { pools: KavaSwapPool[]; degraded: b
   return { pools, degraded };
 }
 
-function fetchKavaSwapEndpoint(path: string, signal: AbortSignal) {
+function fetchKavaSwapEndpoint(apiBase: string, path: string, signal: AbortSignal) {
   return fetchDexDiscoveryJsonEndpoint({
-    url: `${KAVA_SWAP_API_BASE}${path}`,
+    url: `${apiBase}${path}`,
     signal,
     maxRetries: KAVA_SWAP_REQUEST_MAX_RETRIES,
     maxResponseBytes: KAVA_SWAP_MAX_RESPONSE_BYTES,
     timeoutMs: KAVA_SWAP_STAGE_TIMEOUT_MS,
   });
 }
+
+type KavaSwapHostAttempt =
+  | { kind: "success"; params: KavaSwapParams; pools: { pools: KavaSwapPool[]; degraded: boolean } }
+  | { kind: "degraded" }
+  | { kind: "failure"; retryable?: true }
+  | { kind: "stopped-early" };
+
+async function attemptKavaSwapHost(
+  apiBase: string,
+  context: CrawlStageContext,
+): Promise<KavaSwapHostAttempt> {
+  if (context.timeExceeded()) return { kind: "stopped-early" };
+
+  const paramsResult = await fetchKavaSwapEndpoint(
+    apiBase,
+    KAVA_SWAP_PARAMS_PATH,
+    context.buildStageSignal(KAVA_SWAP_STAGE_TIMEOUT_MS),
+  );
+  if (context.signal?.aborted) throw context.signal.reason;
+  if (context.timeExceeded()) return { kind: "stopped-early" };
+  if (paramsResult.kind === "failure") {
+    return { kind: "failure", retryable: paramsResult.retryable };
+  }
+  const params = parseKavaSwapParams(paramsResult.body);
+  if (params == null) return { kind: "degraded" };
+
+  if (context.timeExceeded()) return { kind: "stopped-early" };
+  const poolsResult = await fetchKavaSwapEndpoint(
+    apiBase,
+    KAVA_SWAP_POOLS_PATH,
+    context.buildStageSignal(KAVA_SWAP_STAGE_TIMEOUT_MS),
+  );
+  if (context.signal?.aborted) throw context.signal.reason;
+  if (context.timeExceeded()) return { kind: "stopped-early" };
+  if (poolsResult.kind === "failure") {
+    return { kind: "failure", retryable: poolsResult.retryable };
+  }
+  const pools = parseKavaSwapPools(poolsResult.body);
+  if (pools == null) return { kind: "degraded" };
+
+  return { kind: "success", params, pools };
+}
+
 function stageKavaSwapPool(
   pool: KavaSwapPool,
   target: ContractDeployment,
@@ -211,51 +257,40 @@ export async function crawlKavaSwapPoolsStage(input: {
   if (input.context.timeExceeded()) return { providerChecks: [], stoppedEarly: true };
 
   const target = targets[0]!;
-  const paramsResult = await fetchKavaSwapEndpoint(
-    KAVA_SWAP_PARAMS_PATH,
-    input.context.buildStageSignal(KAVA_SWAP_STAGE_TIMEOUT_MS),
-  );
-  if (input.context.signal?.aborted) throw input.context.signal.reason;
-  if (paramsResult.kind === "failure") {
-    return {
-      providerChecks: targets.map((target) =>
-        makeDexDeploymentProviderCheck(target, KAVA_SWAP_PROVIDER, "failure", { retryable: paramsResult.retryable }),
-      ),
-    };
+  let retryableFailure = false;
+  let successfulAttempt: Extract<KavaSwapHostAttempt, { kind: "success" }> | null = null;
+
+  for (const apiBase of KAVA_SWAP_API_BASES) {
+    const attempt = await attemptKavaSwapHost(apiBase, input.context);
+    if (attempt.kind === "stopped-early") {
+      return { providerChecks: [], stoppedEarly: true };
+    }
+    if (attempt.kind === "degraded") {
+      return {
+        providerChecks: targets.map((t) =>
+          makeDexDeploymentProviderCheck(t, KAVA_SWAP_PROVIDER, "degraded"),
+        ),
+      };
+    }
+    if (attempt.kind === "failure") {
+      if (attempt.retryable) retryableFailure = true;
+      continue;
+    }
+    successfulAttempt = attempt;
+    break;
   }
-  const params = parseKavaSwapParams(paramsResult.body);
-  if (params == null) {
+
+  if (successfulAttempt == null) {
     return {
-      providerChecks: targets.map((target) =>
-        makeDexDeploymentProviderCheck(target, KAVA_SWAP_PROVIDER, "degraded"),
+      providerChecks: targets.map((t) =>
+        makeDexDeploymentProviderCheck(t, KAVA_SWAP_PROVIDER, "failure", {
+          retryable: retryableFailure ? true : undefined,
+        }),
       ),
     };
   }
 
-  if (input.context.timeExceeded()) return { providerChecks: [], stoppedEarly: true };
-  const poolsResult = await fetchKavaSwapEndpoint(
-    KAVA_SWAP_POOLS_PATH,
-    input.context.buildStageSignal(KAVA_SWAP_STAGE_TIMEOUT_MS),
-  );
-  if (input.context.signal?.aborted) throw input.context.signal.reason;
-
-  if (input.context.timeExceeded()) return { providerChecks: [], stoppedEarly: true };
-  if (poolsResult.kind === "failure") {
-    return {
-      providerChecks: targets.map((target) =>
-        makeDexDeploymentProviderCheck(target, KAVA_SWAP_PROVIDER, "failure", { retryable: poolsResult.retryable }),
-      ),
-    };
-  }
-  const pools = parseKavaSwapPools(poolsResult.body);
-  if (pools == null) {
-    return {
-      providerChecks: targets.map((target) =>
-        makeDexDeploymentProviderCheck(target, KAVA_SWAP_PROVIDER, "degraded"),
-      ),
-    };
-  }
-
+  const { params, pools } = successfulAttempt;
   let observedPoolCount = 0;
   for (const pool of pools.pools) {
     if (!pool.denoms.includes(KAVA_SWAP_USDX_DENOM)) continue;
@@ -265,8 +300,8 @@ export async function crawlKavaSwapPoolsStage(input: {
   }
 
   return {
-    providerChecks: targets.map((target) =>
-      makeDexDeploymentProviderCheck(target, KAVA_SWAP_PROVIDER, pools.degraded ? "degraded" : "success", {
+    providerChecks: targets.map((t) =>
+      makeDexDeploymentProviderCheck(t, KAVA_SWAP_PROVIDER, pools.degraded ? "degraded" : "success", {
         observedPoolCount: pools.degraded && observedPoolCount === 0 ? undefined : observedPoolCount,
       }),
     ),
