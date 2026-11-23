@@ -131,15 +131,45 @@ describe("Safety Score v9 chain-maturity registry", () => {
       expect(chainMaturityReviewForSlug("ethereum", clock)?.state).toBe("not-yet-admitted");
     }
     expect(resolveChainMaturityAdmissionsAt(accessBoundary).admittedChainSlugs).toEqual(EXPECTED_ADMITTED);
-    const expiry = Date.parse(chainMaturityReviewForSlug("ethereum")!.nextReviewAt + "T00:00:00Z") / 1000;
-    expect(chainMaturityReviewForSlug("ethereum", expiry - 1)?.state).toBe("admitted");
-    expect(chainMaturityReviewForSlug("ethereum", expiry)?.state).toBe("expired");
+
+    const handoffBoundary = Date.parse("2026-11-24T00:00:00Z") / 1000;
+    const firstPostMidnightCycle = Date.parse("2026-11-24T00:22:00Z") / 1000;
+    expect(resolveChainMaturityAdmissionsAt(handoffBoundary - 1).admittedChainSlugs).toEqual(EXPECTED_ADMITTED);
+    expect(chainMaturityReviewForSlug("ethereum", handoffBoundary - 1)).toMatchObject({
+      reviewedAt: "2026-08-24",
+      nextReviewAt: "2026-11-24",
+      state: "admitted",
+    });
+    for (const clock of [handoffBoundary, firstPostMidnightCycle]) {
+      expect(resolveChainMaturityAdmissionsAt(clock).admittedChainSlugs).toEqual(EXPECTED_ADMITTED);
+      for (const slug of EXPECTED_ADMITTED) {
+        const renewed = chainMaturityReviewForSlug(slug, clock);
+        expect(renewed, slug).toMatchObject({
+          reviewedAt: "2026-11-23",
+          nextReviewAt: "2027-02-23",
+          admission: "admit",
+          state: "admitted",
+        });
+        for (const gateId of CHAIN_MATURITY_GATE_IDS) {
+          for (const evidence of renewed!.gates[gateId].sources) {
+            expect(evidence.verification?.accessedAt, `${slug}/${gateId}`).toBe("2026-11-23");
+          }
+        }
+      }
+    }
+    expect(CHAIN_MATURITY_ADMISSION_TEST_V1.verificationAt).toBe("2026-09-21");
+
+    const renewedExpiry = Date.parse("2027-02-23T00:00:00Z") / 1000;
+    expect(chainMaturityReviewForSlug("ethereum", renewedExpiry - 1)?.state).toBe("admitted");
+    expect(chainMaturityReviewForSlug("ethereum", renewedExpiry)?.state).toBe("expired");
+    expect(resolveChainMaturityAdmissionsAt(renewedExpiry).admittedChainSlugs).toEqual([]);
   });
 
   it.each(["missing-verification", "missing-access", "null-access"] as const)(
     "holds an otherwise passing review when a gate source has %s",
     (missingField) => {
       const review = CHAIN_MATURITY_REVIEWS_V1.find((candidate) => candidate.chainSlug === "ethereum")!;
+      const activeClock = Date.parse(`${review.reviewedAt}T00:00:00Z`) / 1000 + 86_400;
       const evidence = review.gates.continuity.sources[0]!;
       const verification = evidence.verification!;
       try {
@@ -150,7 +180,7 @@ describe("Safety Score v9 chain-maturity registry", () => {
             ? undefined
             : { ...verification, accessedAt: missingField === "null-access" ? null : undefined },
         );
-        const resolution = resolveChainMaturityAdmissionsAt();
+        const resolution = resolveChainMaturityAdmissionsAt(activeClock);
         expect(resolution.admittedChainSlugs).toEqual(["base", "hedera"]);
         expect(resolution.reviews.find((candidate) => candidate.chainSlug === "ethereum")).toMatchObject({
           state: "not-yet-admitted",
@@ -159,7 +189,7 @@ describe("Safety Score v9 chain-maturity registry", () => {
       } finally {
         Reflect.set(evidence, "verification", verification);
       }
-      expect(chainMaturityReviewForSlug("ethereum")?.state).toBe("admitted");
+      expect(chainMaturityReviewForSlug("ethereum", activeClock)?.state).toBe("admitted");
     },
   );
 
