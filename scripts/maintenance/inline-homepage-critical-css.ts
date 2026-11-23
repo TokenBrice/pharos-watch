@@ -192,61 +192,92 @@ function extractMandatorySelectorSegments(selector: string): string {
   return out;
 }
 
-function stripAndCollectClasses(input: string, classes: Set<string>): string {
-  let out = "";
-  let index = 0;
-  while (index < input.length) {
-    if (input[index] !== ".") {
-      out += input[index]!;
-      index += 1;
-      continue;
-    }
-    let cursor = index + 1;
-    while (cursor < input.length) {
-      const ch = input[cursor]!;
-      if (ch === "\\") {
-        cursor += 1;
-        let hexCount = 0;
-        while (cursor < input.length && hexCount < 6 && /[0-9a-fA-F]/.test(input[cursor]!)) {
-          cursor += 1;
-          hexCount += 1;
-        }
-        if (hexCount > 0) {
-          if (cursor < input.length && input[cursor] === " ") cursor += 1;
-        } else if (cursor < input.length) {
-          cursor += 1;
-        }
-        continue;
-      }
-      if (!/[A-Za-z0-9_-]/.test(ch)) break;
+// Index just past the CSS identifier at `start`. Backslash escapes (`\[`,
+// `\32 `) stay inside it, so a Tailwind class such as
+// `.group-data-\[expanded\=false\]\/evidence\:hidden` is one token.
+function cssIdentEnd(input: string, start: number): number {
+  let cursor = start;
+  while (cursor < input.length) {
+    const ch = input[cursor]!;
+    if (ch === "\\") {
       cursor += 1;
-    }
-    if (cursor === index + 1) {
-      out += ".";
-      index += 1;
+      let hexCount = 0;
+      while (cursor < input.length && hexCount < 6 && /[0-9a-fA-F]/.test(input[cursor]!)) {
+        cursor += 1;
+        hexCount += 1;
+      }
+      if (hexCount > 0) {
+        if (cursor < input.length && /\s/.test(input[cursor]!)) cursor += 1;
+      } else if (cursor < input.length) {
+        cursor += 1;
+      }
       continue;
     }
-    const unescaped = unescapeCssIdent(input.slice(index + 1, cursor));
-    if (unescaped) classes.add(unescaped);
-    out += " ";
-    index = cursor;
+    if (!/[A-Za-z0-9_-]/.test(ch)) break;
+    cursor += 1;
   }
-  return out;
+  return cursor;
 }
+
+// Index just past the `]` or `)` that closes `input[start]`, stepping over
+// escapes and quoted strings.
+function blockEnd(input: string, start: number): number {
+  const open = input[start]!;
+  const close = open === "[" ? "]" : ")";
+  let depth = 0;
+  let quote = "";
+  for (let cursor = start; cursor < input.length; cursor += 1) {
+    const ch = input[cursor]!;
+    if (ch === "\\") cursor += 1;
+    else if (quote) quote = ch === quote ? "" : quote;
+    else if (ch === '"' || ch === "'") quote = ch;
+    else if (ch === open) depth += 1;
+    else if (ch === close && --depth === 0) return cursor + 1;
+  }
+  return input.length;
+}
+
+// Pseudo-classes whose arguments are selectors (`:not(...)` is already removed
+// by `extractMandatorySelectorSegments`). Other arguments (`:nth-child(odd)`,
+// `:lang(en)`, `::part(x)`) are skipped, never read as tags.
+const SELECTOR_ARGUMENT_PSEUDOS = new Set(["is", "where", "has"]);
 
 export function narrowFunctionalSelectorMatch(selector: string): SelectorMatch {
   const mandatory = extractMandatorySelectorSegments(selector);
-  const attrs = new Set<string>();
-  const withoutAttrs = mandatory.replace(/\[\s*([a-zA-Z_-][a-zA-Z0-9_-]*)(?:[^\]]*)\]/g, (_, name: string) => {
-    attrs.add(name.toLowerCase());
-    return " ";
-  });
   const classes = new Set<string>();
-  const withoutClasses = stripAndCollectClasses(withoutAttrs, classes);
-  const withoutPseudos = withoutClasses.replace(/:{1,2}[a-zA-Z-]+/g, " ");
+  const attrs = new Set<string>();
   const tags = new Set<string>();
-  for (const match of withoutPseudos.matchAll(/(?:^|[\s(>+,~])([a-z][a-z0-9-]*)(?=[\s)>+,~]|$)/g)) {
-    tags.add(match[1]!);
+  let compoundStart = true;
+  let index = 0;
+  while (index < mandatory.length) {
+    const ch = mandatory[index]!;
+    if (ch === "." || ch === "#") {
+      const end = cssIdentEnd(mandatory, index + 1);
+      if (ch === "." && end > index + 1) classes.add(unescapeCssIdent(mandatory.slice(index + 1, end)));
+      index = end;
+      compoundStart = false;
+    } else if (ch === "[") {
+      let nameStart = index + 1;
+      while (/\s/.test(mandatory[nameStart] ?? "")) nameStart += 1;
+      const nameEnd = cssIdentEnd(mandatory, nameStart);
+      if (nameEnd > nameStart) attrs.add(unescapeCssIdent(mandatory.slice(nameStart, nameEnd)).toLowerCase());
+      index = blockEnd(mandatory, index);
+      compoundStart = false;
+    } else if (ch === ":") {
+      const nameStart = mandatory[index + 1] === ":" ? index + 2 : index + 1;
+      index = cssIdentEnd(mandatory, nameStart);
+      const name = mandatory.slice(nameStart, index).toLowerCase();
+      if (mandatory[index] === "(" && !SELECTOR_ARGUMENT_PSEUDOS.has(name)) index = blockEnd(mandatory, index);
+      compoundStart = false;
+    } else if (compoundStart && /[a-zA-Z]/.test(ch)) {
+      const end = cssIdentEnd(mandatory, index);
+      tags.add(unescapeCssIdent(mandatory.slice(index, end)).toLowerCase());
+      index = end;
+      compoundStart = false;
+    } else {
+      compoundStart = /[\s(>+,~]/.test(ch);
+      index += 1;
+    }
   }
   if (classes.size === 0 && attrs.size === 0 && tags.size === 0) return true;
   return {
@@ -296,6 +327,13 @@ export function compileCriticalCssPlans(outDir: string): { plans: CompactPlan[];
   }
   return { plans, warnings };
 }
+
+// beasties/runtime scans `html.toLowerCase()` but slices attribute values from
+// the original by the same indices. U+0130 is the only code point whose
+// lowercase changes UTF-16 length, so each one would shift every later class
+// read; a same-length noncharacter without case mapping stands in for it.
+const LENGTH_CHANGING_LOWERCASE = "\u0130";
+const LOWERCASE_PLACEHOLDER = "\uFDD0";
 
 function resolveLogThreshold(): number {
   const raw = process.env.BEASTIES_LOG_LEVEL || "error";
@@ -422,6 +460,9 @@ function optimizePage(
 
   const htmlTag = before.match(/<html\b[^>]*>/i)?.[0];
   if (!htmlTag) throw new Error(`${label}: missing HTML root for theme extraction.`);
+  if (before.includes(LOWERCASE_PLACEHOLDER)) {
+    throw new Error(`${label}: contains U+FDD0, the reserved U+0130 placeholder.`);
+  }
   // Match runtime dark variants without shipping a forced theme to the browser.
   const darkHtmlTag = /\sclass\s*=/i.test(htmlTag)
     ? htmlTag.replace(/(\sclass\s*=\s*)(["'])(.*?)\2/i, "$1$2$3 dark$2")
@@ -430,7 +471,10 @@ function optimizePage(
   const extractionHtmlTag = before.includes('src="/portfolio-bootstrap.js"')
     ? darkHtmlTag.replace(/>$/, " data-portfolio-empty>")
     : darkHtmlTag;
-  let after = processor.process(before.replace(htmlTag, extractionHtmlTag))
+  let after = processor.process(
+    before.replace(htmlTag, extractionHtmlTag).replaceAll(LENGTH_CHANGING_LOWERCASE, LOWERCASE_PLACEHOLDER),
+  )
+    .replaceAll(LOWERCASE_PLACEHOLDER, LENGTH_CHANGING_LOWERCASE)
     .replace(/<html\b[^>]*>/i, htmlTag);
 
   // Scope async stylesheet rewriting and loader insertion to <head> so huge

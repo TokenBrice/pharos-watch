@@ -15,6 +15,7 @@ import {
 import { gatedHtmlRoutes } from "../maintenance/report-build-size.mjs";
 
 const temporaryRoots: string[] = [];
+const evidenceRule = String.raw`:is(:where(.group\/evidence)[data-expanded=false] .group-data-\[expanded\=false\]\/evidence\:hidden)`;
 const stylesheet = ".home{color:red}.coin{color:blue}.yield{color:green}.dark{color-scheme:dark;--background:black}.unused{padding:2rem}";
 const pageNames = ["index.html", "stablecoin/alpha/index.html", "stablecoin/alpha/yield/index.html", "stablecoin/beta/index.html", "stablecoin/beta/yield/index.html", "stablecoin/gamma/index.html", "stablecoin/delta/index.html", "depeg/index.html", "about/index.html", "stablecoin/alpha/history/index.html", "methodology/scoring/example/index.html", "digest/index.html", "digest/2026-10-25/index.html", "404.html", "archive/legacy.html", "admin-guide/index.html"];
 
@@ -224,6 +225,18 @@ describe("critical CSS worker pool", () => {
     expect(after).not.toContain(".unused");
   });
 
+  it("keeps classes after U+0130, whose lowercase is two code units, and rejects its placeholder", async () => {
+    const outDir = fixture();
+    const file = path.join(outDir, "depeg/index.html");
+    writeFileSync(path.join(outDir, "_next/static/css/app.css"), `${stylesheet}.flex{display:flex}.gap-2{gap:.5rem}`);
+    writeFileSync(file, '<html><head><link rel="stylesheet" href="/_next/static/css/app.css"></head><body><p class="coin">İsbank</p><div class="flex gap-2">x</div></body></html>');
+    await optimizeCriticalCssPages(outDir, [file], 1);
+    const after = readFileSync(file, "utf8");
+    expect([after.includes(".flex{display:flex}.gap-2{gap:.5rem}"), after.includes('<p class="coin">İsbank</p><div class="flex gap-2">')]).toEqual([true, true]);
+    writeFileSync(file, "<html>\uFDD0</html>");
+    await expect(optimizeCriticalCssPages(outDir, [file], 1)).rejects.toThrow("out/depeg/index.html: contains U+FDD0");
+  });
+
   it("narrows :where/:is selectors to mandatory DOM tokens and defers @media (hover:hover) rules", async () => {
     expect(narrowFunctionalSelectorMatch(":where(.space-y-6>:not(:last-child))")).toEqual({ classes: ["space-y-6"] });
     expect(narrowFunctionalSelectorMatch(":where(.\\32 xl\\:space-y-4>:not(:last-child))")).toEqual({ classes: ["2xl:space-y-4"] });
@@ -237,6 +250,12 @@ describe("critical CSS worker pool", () => {
       .toEqual({ tags: ["select", "optgroup"] });
     expect(narrowFunctionalSelectorMatch(":is(.coin,.home)>p")).toEqual({ tags: ["p"] });
     expect(narrowFunctionalSelectorMatch(":is(.a,.b)")).toBe(true);
+    // Escaped brackets stay inside class names; pseudo-class arguments are never tags.
+    expect(narrowFunctionalSelectorMatch(evidenceRule))
+      .toEqual({ classes: ["group/evidence", "group-data-[expanded=false]/evidence:hidden"], attrs: ["data-expanded"] });
+    expect(narrowFunctionalSelectorMatch(":is(.data-\\[variant\\=destructive\\]\\:\\*\\:\\[svg\\]\\:\\!x[data-variant=destructive]>*):is(svg)"))
+      .toEqual({ classes: ["data-[variant=destructive]:*:[svg]:!x"], attrs: ["data-variant"], tags: ["svg"] });
+    expect(narrowFunctionalSelectorMatch(":where(.a>li:nth-child(2n+1):lang(en) :dir(rtl)::part(x))")).toEqual({ classes: ["a"], tags: ["li"] });
 
     const outDir = fixture();
     const css = [
@@ -245,10 +264,11 @@ describe("critical CSS worker pool", () => {
       ":where(.space-y-12>:not(:last-child)){margin-top:3rem}",
       ":is([data-theme=dark],.dark) :where(.react-tweet-theme){--tweet-bg:#000}",
       "@media (hover:hover){.hover\\:underline:hover{text-decoration:underline}}",
+      `${evidenceRule}{display:none}`, `${evidenceRule.replaceAll("false", "true")}{rotate:180deg}`,
     ].join("");
     writeFileSync(path.join(outDir, "_next/static/css/app.css"), css);
     const file = path.join(outDir, "depeg/index.html");
-    writeFileSync(file, '<!DOCTYPE html><html><head><link rel="stylesheet" href="/_next/static/css/app.css"></head><body><main class="coin space-y-2 hover:underline">Page</main></body></html>');
+    writeFileSync(file, '<!DOCTYPE html><html><head><link rel="stylesheet" href="/_next/static/css/app.css"></head><body><main class="coin space-y-2 hover:underline group/evidence" data-expanded="false"><p class="group-data-[expanded=false]/evidence:hidden">Page</p></main></body></html>');
 
     await optimizeCriticalCssPages(outDir, [file], 1);
     const after = readFileSync(file, "utf8");
@@ -257,6 +277,7 @@ describe("critical CSS worker pool", () => {
     expect(after).not.toContain("space-y-12");
     expect(after).not.toContain("react-tweet-theme");
     expect(after).not.toContain("hover:hover");
+    expect([after.includes(`${evidenceRule}{display:none}`), after.includes("expanded\\=true")]).toEqual([true, false]);
     expect(readFileSync(path.join(outDir, "_next/static/css/app.css"), "utf8")).toBe(css);
   });
 });
