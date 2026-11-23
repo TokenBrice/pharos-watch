@@ -3,7 +3,7 @@
     "version": "10.52",
     "title": "Capture-clock gas-feed freshness bound for external-share execution certificates",
     "date": "2026-11-23",
-    "effectiveAt": 1795461720,
+    "effectiveAt": 1795465320,
     "summary": "Enforce an external-share ERC-4626 review's nativeUsdFeed.maxAgeSec (for example the 3,600 s Chainlink ETH/USD heartbeat) relative to the certificate's own capture clock (certificate.observedAtSec) rather than the evaluation clock, while evaluation-time freshness of the gas-price leg continues to be judged against the certificate's policy priceMaxAgeSec (18,000 s) through the shared price-leg freshness helper. Capture-stale and future-dated feeds continue to fail closed with unchanged machine-readable reasons.",
     "impact": [
       "Fixes false execution-custodian-gas-unproven rejections on frxusd-frax's admitted erc4626-instant certificate after the first hour of each four-hour sync-redemption-backstops cycle, allowing the live frxUSD/USDC custodian route to remain admitted across the full certificate window.",
