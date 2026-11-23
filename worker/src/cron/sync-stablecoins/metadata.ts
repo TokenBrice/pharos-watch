@@ -187,7 +187,11 @@ function preferredNativeSupplyQuality(assets: readonly PeggedAsset[]) {
     if (!prefersOnChainSupplyMcap(asset) || getOnchainSupplyHoldReason(asset.id)) continue;
     const supply = getCirculatingRawOrNull(asset);
     if (asset.supplySource === "onchain-supply-withheld" && supply === null) unavailableIds.push(asset.id);
-    else if (asset.supplySource === "onchain-total-supply" && asset.supplyRestored === true && supply !== null) {
+    else if (
+      (asset.supplySource === "onchain-total-supply" || asset.supplySource === "onchain-circulating-supply")
+      && asset.supplyRestored === true
+      && supply !== null
+    ) {
       restoredIds.push(asset.id);
     }
   }

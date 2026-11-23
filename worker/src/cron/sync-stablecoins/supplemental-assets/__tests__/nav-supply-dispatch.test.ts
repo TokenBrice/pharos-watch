@@ -6,7 +6,13 @@ import { fetchCuratedAggregateOnChainMcap } from "../onchain-supply";
 const readers = vi.hoisted(() => ({
   evm: vi.fn(), solana: vi.fn(), solanaObserved: vi.fn(), stellar: vi.fn(), noble: vi.fn(), sui: vi.fn(), aptos: vi.fn(), starknet: vi.fn(),
 }));
-vi.mock("../stellar-supply", () => ({ fetchStellarSupply: readers.stellar }));
+vi.mock("../stellar-supply", () => ({
+  fetchStellarSupply: readers.stellar,
+  observeStellarSupply: async (...args: unknown[]) => ({
+    rawSupply: await readers.stellar(...args),
+    observedAt: Math.floor(Date.now() / 1000) - 25,
+  }),
+}));
 vi.mock("../noble-supply", () => ({ fetchNobleSupply: readers.noble }));
 vi.mock("../usdy-sui-supply", () => ({ fetchUsdySuiSupply: readers.sui }));
 vi.mock("../usdy-aptos-supply", () => ({ fetchAptosSupply: readers.aptos }));
@@ -14,7 +20,10 @@ vi.mock("../../../reserve-adapters/helpers", () => ({
   fetchErc20TotalSupply: readers.evm, fetchStarknetTotalSupply: readers.starknet,
   probeTrackedTokenSupply: (_meta: unknown, input: { kind: string }) => input.kind === "onchain-solana" ? readers.solana() : readers.evm(input),
 }));
-vi.mock("../../../../lib/chain-observation", () => ({ fetchSolanaTokenSupply: readers.solana }));
+vi.mock("../../../../lib/chain-observation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../../lib/chain-observation")>()),
+  fetchSolanaTokenSupply: readers.solana,
+}));
 vi.mock("../../../../lib/native-token-supply", () => ({ observeSolanaTokenSupply: readers.solanaObserved }));
 beforeEach(() => {
   vi.clearAllMocks();

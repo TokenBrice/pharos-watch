@@ -2,7 +2,7 @@ import { LIVE_RESERVE_FRESHNESS_SEC } from "../../../lib/live-reserve-policy";
 import { fetchEearnSuiSupply } from "./sui-vault-supply";
 import { fetchUsdySuiSupply } from "./usdy-sui-supply";
 import { fetchAptosSupply } from "./usdy-aptos-supply";
-import { fetchStellarSupply } from "./stellar-supply";
+import { fetchStellarSupply, observeStellarSupply } from "./stellar-supply";
 import { fetchNobleSupply } from "./noble-supply";
 import { fetchXrplSupply, XrplSupplyValidationError } from "./xrpl-supply";
 import { logWorkerEventArgs } from "../../../lib/structured-log";
@@ -18,6 +18,7 @@ import { isKinesisWrapperSupplyCutoverActive } from "@shared/lib/supply-perimete
 import {
   CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS,
   CURATED_AGGREGATE_ESCROW_RESIDUALS,
+  NAV_SUPPLY_LEDGER_FRESHNESS,
   SFRAX_STOCK_PERIMETER,
   reviewedOnchainSupplyReader,
   onchainSupplyProbeFamily,
@@ -51,7 +52,13 @@ import {
   fetchStarknetTotalSupply,
   probeTrackedTokenSupply,
 } from "../../reserve-adapters/helpers";
-import { fetchMoveFungibleAssetSupply, fetchSolanaTokenSupply } from "../../../lib/chain-observation";
+import {
+  fetchMoveFungibleAssetSupply,
+  fetchSolanaAccounts,
+  fetchSolanaTokenSupply,
+  readSolanaMint,
+  readSolanaTokenAccount,
+} from "../../../lib/chain-observation";
 import { observeSolanaTokenSupply } from "../../../lib/native-token-supply";
 import { jsonRequestExecutor } from "../../../lib/json-request";
 import { mapWithConcurrency } from "../../../lib/concurrency";
@@ -351,6 +358,40 @@ async function adjustOnChainSupplyForExcludedBalances(input: {
   };
 }
 
+async function readClockedSolanaExcludedSupply(input: {
+  mintAddress: string;
+  decimals: number;
+  excludedTokenAccounts: readonly string[];
+  signal: AbortSignal;
+  chainRpcs?: Map<string, ChainRpcConfig>;
+}): Promise<{ rawSupply: bigint; observedAt: number; supplySource: "onchain-circulating-supply" }> {
+  const census = await fetchSolanaAccounts(
+    [input.mintAddress, ...input.excludedTokenAccounts],
+    input.signal,
+    { chainRpcs: input.chainRpcs },
+  );
+  const observedAt = census.observedBlock.timestamp;
+  const mintAccount = census.accounts.get(input.mintAddress);
+  let mint: ReturnType<typeof readSolanaMint>;
+  let excludedBalances: bigint[];
+  try {
+    mint = readSolanaMint(mintAccount, observedAt);
+    if (mint.decimals !== input.decimals || mint.scaledUi) {
+      throw new Error("Solana mint decimals or scaled-UI accounting mismatch");
+    }
+    excludedBalances = input.excludedTokenAccounts.map((accountAddress) =>
+      readSolanaTokenAccount(census.accounts.get(accountAddress), input.mintAddress, mintAccount!.owner).amount,
+    );
+  } catch (error) {
+    throw new OnchainSupplyValidationError(error instanceof Error ? error.message : String(error));
+  }
+  const adjustedRaw = computeExcludedBalanceAdjustedSupplyRaw(mint.rawSupply, excludedBalances);
+  if (adjustedRaw == null) {
+    throw new OnchainSupplyValidationError("configured Solana excluded balances are greater than or equal to total supply");
+  }
+  return { rawSupply: adjustedRaw, observedAt, supplySource: "onchain-circulating-supply" };
+}
+
 interface ContractOnChainMcapResult {
   mcap: number;
   nativeSupply?: number;
@@ -370,7 +411,14 @@ async function fetchOnChainSupplyForContract(input: {
   chainRpcs?: Map<string, ChainRpcConfig>;
   dwellirNative?: DwellirNativeCapability;
   signal?: AbortSignal;
-  curated?: { rpcUrl?: string; fallbackRpcUrl?: string; allowZeroSupply?: boolean; hotwallet?: readonly string[]; stellarAssetCode?: string };
+  curated?: {
+    rpcUrl?: string;
+    fallbackRpcUrl?: string;
+    allowZeroSupply?: boolean;
+    hotwallet?: readonly string[];
+    stellarAssetCode?: string;
+    excludedTokenAccounts?: readonly string[];
+  };
   observedBlocks?: Map<string, EvmBlockHeader>;
   onFailure?: (reason: PartitionReadFailure) => void;
 }): Promise<ContractOnChainMcapResult | null> {
@@ -409,7 +457,9 @@ async function fetchOnChainSupplyForContract(input: {
     const decimals = supplyContract.decimals;
     const rpcOptions = joinedSupplyRpcOptions({ ...input, signal: supplySignal });
     const stateClockRequired = input.meta.id === "buidl-blackrock" || isKinesisWrapperSupplyId(input.meta.id)
-      || input.meta.id === "susds-sky" || input.meta.id === "paxg-paxos";
+      || input.meta.id === "susds-sky" || input.meta.id === "paxg-paxos"
+      || input.meta.id === "eurc-circle" || input.meta.id === "eurcv-societe-generale-forge"
+      || input.meta.id === "brla-brla-digital";
     const needsJoinedBlock = family === "evm" && (
       stateClockRequired || !!CURATED_ONCHAIN_SUPPLY_EXCLUSIONS[input.meta.id] ||
       (!!CURATED_AGGREGATE_ESCROW_RESIDUALS[input.meta.id] &&
@@ -421,22 +471,44 @@ async function fetchOnChainSupplyForContract(input: {
       observedBlock = number == null ? undefined : await fetchEvmBlockHeader(supplyContract.chain, number, rpcOptions) ?? undefined;
       const nowSec = Math.floor(Date.now() / 1000);
       if (!observedBlock) throw new Error("joined supply observation block unavailable");
+      // Fast PoS validators (e.g. Polygon) occasionally stamp head blocks 1-2s ahead of wall clock;
+      // step back one canonical block instead of relaxing the non-future invariant.
+      if (observedBlock.timestamp > nowSec && observedBlock.timestamp <= nowSec + 5 && observedBlock.number > 0) {
+        const parent = await fetchEvmBlockHeader(supplyContract.chain, observedBlock.number - 1, rpcOptions);
+        if (parent && parent.number === observedBlock.number - 1) observedBlock = parent;
+      }
       if (observedBlock.timestamp > nowSec || nowSec - observedBlock.timestamp > JOINED_SUPPLY_OBSERVATION_MAX_AGE_SEC)
         throw new OnchainSupplyValidationError("joined supply observation block stale or future");
       input.observedBlocks?.set(supplyContract.chain, observedBlock);
     }
     if (observedBlock) observedAt = observedBlock.timestamp;
     const reader = reviewedOnchainSupplyReader(input.meta, supplyContract);
-    const clockedSupply = family === "solana" && stateClockRequired
-      ? await observeSolanaTokenSupply(supplyContract.address, supplySignal, { jsonRequestExecutor }, rpcUrl, fallbackRpcUrl)
-      : reader === "buidl-aptos" || reader === "usdy-aptos"
-        ? await fetchAptosSupply(supplyContract.address, decimals, supplySignal, reader === "buidl-aptos" ? "BUIDL" : "USDY")
-        : undefined;
+    const stellarAddress = input.curated?.stellarAssetCode
+      ? `${input.curated.stellarAssetCode}-${supplyContract.address}`
+      : supplyContract.address;
+    const hasSolanaExcludedAccounts = family === "solana" && Boolean(input.curated?.excludedTokenAccounts?.length);
+    const clockedSupply: { rawSupply: bigint; observedAt: number; supplySource?: SupplementalOnChainSupplySource } | null | undefined =
+      hasSolanaExcludedAccounts
+        ? await readClockedSolanaExcludedSupply({
+          mintAddress: supplyContract.address,
+          decimals,
+          excludedTokenAccounts: input.curated!.excludedTokenAccounts!,
+          signal: supplySignal,
+          chainRpcs: input.curated?.rpcUrl ? undefined : input.chainRpcs,
+        })
+        : family === "solana" && stateClockRequired
+          ? await observeSolanaTokenSupply(supplyContract.address, supplySignal, { jsonRequestExecutor }, rpcUrl, fallbackRpcUrl)
+          : family === "stellar" && stateClockRequired
+            ? await observeStellarSupply(stellarAddress, decimals, supplySignal)
+            : reader === "buidl-aptos" || reader === "usdy-aptos"
+              ? await fetchAptosSupply(supplyContract.address, decimals, supplySignal, reader === "buidl-aptos" ? "BUIDL" : "USDY")
+              : undefined;
     if (clockedSupply === null) return reject("state-clock-unavailable", undefined, "legs-unreadable");
     if (clockedSupply) {
       observedAt = clockedSupply.observedAt;
       const stateAge = Math.floor(Date.now() / 1000) - observedAt;
-      if (stateClockRequired && (stateAge < 0 || stateAge > JOINED_SUPPLY_OBSERVATION_MAX_AGE_SEC)) {
+      const maxFutureSkew = family === "solana" || family === "stellar" ? NAV_SUPPLY_LEDGER_FRESHNESS.maxFutureSkewSec : 0;
+      if ((stateClockRequired || hasSolanaExcludedAccounts) && (stateAge < -maxFutureSkew || stateAge > JOINED_SUPPLY_OBSERVATION_MAX_AGE_SEC)) {
         return reject("supply-state-stale-or-future");
       }
     }
@@ -496,7 +568,7 @@ async function fetchOnChainSupplyForContract(input: {
       })
       : null;
     const supplyRaw = adjustment?.raw ?? raw;
-    const supplySource = adjustment?.supplySource ?? "onchain-total-supply";
+    const supplySource = adjustment?.supplySource ?? clockedSupply?.supplySource ?? "onchain-total-supply";
     const supply = Number(supplyRaw) / 10 ** decimals;
     const mcap = supply * input.priceUsd;
     if (observedBlock) await confirmJoinedSupplyBlock(supplyContract.chain, observedBlock, rpcOptions);
@@ -605,6 +677,10 @@ export async function fetchOnChainMcap(
     dwellirNative,
     onFailure,
   });
+  if (result && result.observedAt > Math.floor(Date.now() / 1000)) {
+    onFailure?.("partition-invalid");
+    return null;
+  }
   return result
     ? {
         mcap: result.mcap,
@@ -646,7 +722,8 @@ export async function fetchCuratedAggregateOnChainMcap(
   if (!selectedContracts) {
     return null;
   }
-  let observedAt = Math.floor(Date.now() / 1000);
+  let observedAt: number | null = null;
+  let supplySource: SupplementalOnChainSupplySource = "onchain-total-supply";
   const observedBlocks = new Map<string, EvmBlockHeader>();
 
   let totalMcap = 0;
@@ -684,12 +761,13 @@ export async function fetchCuratedAggregateOnChainMcap(
       })));
     for (let index = 0; index < batchResults.length; index++) {
       const result = batchResults[index];
-      if (!result || result.supplySource !== "onchain-total-supply") {
+      if (!result || (result.supplySource !== "onchain-total-supply" && result.supplySource !== "onchain-circulating-supply")) {
         // Keep the first in-roster failure when a batch reads more than one leg.
         if (!result) onFailure?.(batchFailures[index] ?? "partition-invalid");
         return null;
       }
-      observedAt = Math.min(observedAt, result.observedAt);
+      if (result.supplySource === "onchain-circulating-supply") supplySource = "onchain-circulating-supply";
+      observedAt = observedAt == null ? result.observedAt : Math.min(observedAt, result.observedAt);
 
       if (canonicalSupplyChain) {
         if (result.chain === canonicalSupplyChain) {
@@ -795,14 +873,17 @@ export async function fetchCuratedAggregateOnChainMcap(
     }
   }
 
-  if (!Number.isFinite(totalMcap) || totalMcap < 0 || (totalMcap === 0 && !isKinesisWrapperSupplyId(meta.id))) {
+  if (
+    !Number.isFinite(totalMcap) || totalMcap < 0 || (totalMcap === 0 && !isKinesisWrapperSupplyId(meta.id)) ||
+    observedAt == null || observedAt > Math.floor(Date.now() / 1000)
+  ) {
     onFailure?.("partition-invalid");
     return null;
   }
   return {
     mcap: totalMcap,
     nativeSupply: Number.isFinite(totalNativeSupply) ? totalNativeSupply : undefined,
-    supplySource: "onchain-total-supply",
+    supplySource,
     observedAt,
     chainCirculating,
   };

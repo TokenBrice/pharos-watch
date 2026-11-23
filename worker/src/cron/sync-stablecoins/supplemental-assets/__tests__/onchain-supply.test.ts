@@ -3,6 +3,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import * as supplyPerimeter from "@shared/lib/supply-perimeter-changes";
+import * as onchainSupplyProbe from "@shared/lib/onchain-supply-probe";
 import { CURATED_AGGREGATE_ESCROW_RESIDUALS } from "@shared/lib/onchain-supply-probe";
 import { buildChainRpcs, type ChainRpcConfig } from "../../../../lib/chain-registry";
 import { createDwellirNativeCapability } from "../../../../lib/dwellir-native";
@@ -10,6 +11,9 @@ import * as evmRpc from "../../../../lib/evm-rpc";
 import * as nativeSupply from "../../../../lib/native-token-supply";
 import { TOTAL_SUPPLY_SELECTOR } from "../../../../lib/evm-selectors";
 import { CURATED_ONCHAIN_SUPPLY_EXCLUSIONS } from "../../../../lib/onchain-supply-exclusions";
+import { publicKeyBytes } from "../../../dex-liquidity/solana/program-address";
+import { SOLANA_TOKEN_PROGRAM, type SolanaAccount } from "../../../../lib/solana-observation";
+import { restorePreferredNativeSupply } from "../../shared";
 
 const fetchEearnSuiSupplyMock = vi.hoisted(() => vi.fn());
 vi.mock("../sui-vault-supply", () => ({ fetchEearnSuiSupply: fetchEearnSuiSupplyMock }));
@@ -17,11 +21,16 @@ const fetchErc20TotalSupplyMock = vi.fn();
 const probeTrackedTokenSupplyMock = vi.fn();
 const fetchOnchainUint256Mock = vi.fn();
 const fetchSolanaTokenSupplyMock = vi.fn();
+const fetchSolanaAccountsMock = vi.fn();
 const fetchStarknetTotalSupplyMock = vi.fn();
 const fetchIcrcLedgerTotalSupplyMock = vi.fn();
 const fetchMoveFungibleAssetSupplyMock = vi.fn();
 const fetchStellarSupplyMock = vi.hoisted(() => vi.fn());
-vi.mock("../stellar-supply", () => ({ fetchStellarSupply: fetchStellarSupplyMock }));
+const observeStellarSupplyMock = vi.hoisted(() => vi.fn());
+vi.mock("../stellar-supply", () => ({
+  fetchStellarSupply: fetchStellarSupplyMock,
+  observeStellarSupply: observeStellarSupplyMock,
+}));
 
 vi.mock("../../../reserve-adapters/helpers", () => ({
   fetchErc20TotalSupply: (...args: unknown[]) => fetchErc20TotalSupplyMock(...args),
@@ -31,8 +40,10 @@ vi.mock("../../../reserve-adapters/helpers", () => ({
   probeTrackedTokenSupply: (...args: unknown[]) => probeTrackedTokenSupplyMock(...args),
 }));
 
-vi.mock("../../../../lib/chain-observation", () => ({
+vi.mock("../../../../lib/chain-observation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../../lib/chain-observation")>()),
   fetchSolanaTokenSupply: (...args: unknown[]) => fetchSolanaTokenSupplyMock(...args),
+  fetchSolanaAccounts: (...args: unknown[]) => fetchSolanaAccountsMock(...args),
   fetchMoveFungibleAssetSupply: (...args: unknown[]) => fetchMoveFungibleAssetSupplyMock(...args),
 }));
 
@@ -1203,24 +1214,198 @@ describe("discovery native supply aggregates", () => {
     )).resolves.toBeNull();
   });
 
-  it("prefixes bare EURCV Stellar issuer with curated stellarAssetCode across its 4-chain native aggregate", async () => {
+  it("enforces on-chain clocks across EURCV's 4-chain aggregate and prefixes its bare Stellar issuer", async () => {
     const meta = TRACKED_META_BY_ID.get("eurcv-societe-generale-forge")!;
-    const xrplObs = Math.floor(Date.now() / 1000) - 20;
-    probeTrackedTokenSupplyMock.mockImplementation(async (_meta, input) =>
-      input.kind === "onchain-solana" ? 2_000_000n * 100n : 140_000_000n * 10n ** 18n,
-    );
-    fetchSolanaTokenSupplyMock.mockResolvedValue(2_000_000n * 100n);
-    fetchStellarSupplyMock.mockReset().mockResolvedValue(15_000_000n * 10n ** 7n);
+    const nowSec = Math.floor(Date.now() / 1000);
+    const evmObs = nowSec - 30;
+    const xrplObs = nowSec - 20;
+    const stellarObs = nowSec - 45;
+    const solanaObs = nowSec - 15;
+    probeTrackedTokenSupplyMock.mockResolvedValue(140_000_000n * 10n ** 18n);
+    observeStellarSupplyMock.mockReset().mockResolvedValue({ rawSupply: 15_000_000n * 10n ** 7n, observedAt: stellarObs });
     vi.spyOn(xrplSupply, "fetchXrplSupply").mockResolvedValue({ supply: 10_000_000, observedAt: xrplObs });
+    const solanaRead = vi.spyOn(nativeSupply, "observeSolanaTokenSupply").mockResolvedValue({
+      rawSupply: 2_000_000n * 100n, slot: 472_979_542, observedAt: solanaObs,
+    });
 
     const result = await fetchCuratedAggregateOnChainMcap(meta, 1.1, buildChainRpcs());
-    expect(fetchStellarSupplyMock).toHaveBeenCalledWith(
+    expect(observeStellarSupplyMock).toHaveBeenCalledWith(
       "EURCV-GCEYGIVOLAVBF2TG2RUSGTUJCIN75KEX3NGLMY4VPL4GFE5L355AXW3G",
       7,
       expect.any(AbortSignal),
     );
+    expect(vi.mocked(evmRpc.fetchEvmUint256AtBlock)).toHaveBeenCalledWith(
+      "ethereum", meta.contracts![0].address, TOTAL_SUPPLY_SELECTOR, 123, expect.objectContaining({ stateBlockHash: BLOCK_HASH }),
+    );
+    expect(result?.supplySource).toBe("onchain-total-supply");
     expect(result?.nativeSupply).toBeCloseTo(167_000_000, 6);
     expect(result?.mcap).toBeCloseTo(167_000_000 * 1.1, 4);
-    expect(result?.observedAt).toBe(xrplObs);
+    expect(result?.observedAt).toBe(Math.min(evmObs, xrplObs, stellarObs, solanaObs));
+
+    solanaRead.mockResolvedValueOnce(null);
+    await expect(fetchCuratedAggregateOnChainMcap(meta, 1.1, buildChainRpcs())).resolves.toBeNull();
+  });
+
+  it("reads EURC's 9 native chains with atomic Solana pre-mint exclusion, R6 clocks, and restore continuity", async () => {
+    const meta = TRACKED_META_BY_ID.get("eurc-circle")!;
+    const nowSec = Math.floor(Date.now() / 1000);
+    const mintAddr = "HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr";
+    const premints = [
+      "89LjSs8wP3EZNCKcs8aCxngQaEuyhUyGE4STkFwNgRT3",
+      "HQHDva1bR4vqxvz6Y8yaLvqkD4AeWCDso8aJ9v5rfLHY",
+      "A6sLLUWebvoUUnQoCiB45ktetd34iamfD8kwTsBSReAb",
+    ] as const;
+    const makeMint = (supply: bigint, decimals = 6): SolanaAccount => {
+      const data = new Uint8Array(82);
+      const view = new DataView(data.buffer);
+      view.setBigUint64(36, supply, true);
+      data[44] = decimals;
+      data[45] = 1;
+      return { owner: SOLANA_TOKEN_PROGRAM, data };
+    };
+    const makeTokenAccount = (mint: string, amount: bigint, state = 1): SolanaAccount => {
+      const data = new Uint8Array(165);
+      data.set(publicKeyBytes(mint), 0);
+      new DataView(data.buffer).setBigUint64(64, amount, true);
+      data[108] = state;
+      return { owner: SOLANA_TOKEN_PROGRAM, data };
+    };
+    const evmSupplies: Record<string, bigint> = {
+      ethereum: 320_000_000_000_000n, base: 48_000_000_000_000n, avalanche: 3_600_000_000_000n,
+      worldchain: 400_000_000_000n, cronos: 270_000_000_000n, plasma: 230_000_000_000n, arc: 10_500_000_000_000n,
+    };
+    vi.mocked(evmRpc.fetchEvmUint256AtBlock).mockImplementation(async (chain) => (chain ? evmSupplies[chain] ?? null : null));
+    observeStellarSupplyMock.mockReset().mockResolvedValue({ rawSupply: 4_500_000n * 10n ** 7n, observedAt: nowSec - 40 });
+    fetchSolanaAccountsMock.mockReset().mockResolvedValue({
+      accounts: new Map<string, SolanaAccount | null>([
+        [mintAddr, makeMint(115_000_000_000_000n)],
+        [premints[0], makeTokenAccount(mintAddr, 25_000_000_000_000n)],
+        [premints[1], makeTokenAccount(mintAddr, 20_000_000_000n)],
+        [premints[2], makeTokenAccount(mintAddr, 19_980_000_000_000n)],
+      ]),
+      // Solana finalized cluster clock may drift +2s ahead of UTC; aggregate observedAt stays <= nowSec.
+      observedBlock: { chain: "solana", number: 472_979_263, timestamp: nowSec + 2 },
+    });
+
+    const result = await fetchCuratedAggregateOnChainMcap(meta, 1.1, buildChainRpcs());
+    expect(result?.supplySource).toBe("onchain-circulating-supply");
+    expect(result?.observedAt).toBe(nowSec - 40);
+    // 320 + 48 + 3.6 + 0.4 + 0.27 + 0.23 + 10.5 (EVM = 383) + 4.5 (Stellar) + 70 (Solana net) = 457.5M EURC
+    expect(result?.nativeSupply).toBeCloseTo(457_500_000, 6);
+    expect(result?.mcap).toBeCloseTo(457_500_000 * 1.1, 4);
+    expect(Object.keys(result?.chainCirculating ?? {}).sort()).toEqual([
+      "Arc", "Avalanche", "Base", "Cronos", "Ethereum", "Plasma", "Solana", "Stellar", "World Chain",
+    ]);
+    expect(result?.chainCirculating?.Solana?.current).toBeCloseTo(70_000_000 * 1.1, 4);
+
+    // Preferred-native carry/restore must accept EURC's onchain-circulating-supply aggregate packet.
+    const restored = restorePreferredNativeSupply(
+      { id: meta.id, name: meta.name, symbol: meta.symbol, circulating: {} },
+      {
+        id: meta.id, name: meta.name, symbol: meta.symbol,
+        circulating: { peggedEUR: result!.mcap },
+        chainCirculating: Object.fromEntries(
+          Object.entries(result!.chainCirculating!).map(([k, v]) => [k, { chainId: v.chainId, current: v.current }]),
+        ),
+        supplySource: result!.supplySource, supplyObservedAt: result!.observedAt,
+      },
+      nowSec + 60,
+    );
+    expect(restored).toMatchObject({
+      supplySource: "onchain-circulating-supply",
+      supplyObservedAt: result!.observedAt,
+      supplyRestored: true,
+    });
+
+    // Fail closed when a pre-mint account is missing, bound to another mint, or exceeds total supply.
+    for (const badAccounts of [
+      new Map<string, SolanaAccount | null>([
+        [mintAddr, makeMint(115_000_000_000_000n)], [premints[0], null],
+        [premints[1], makeTokenAccount(mintAddr, 0n)], [premints[2], makeTokenAccount(mintAddr, 0n)],
+      ]),
+      new Map<string, SolanaAccount | null>([
+        [mintAddr, makeMint(115_000_000_000_000n)],
+        [premints[0], makeTokenAccount("So11111111111111111111111111111111111111112", 1n)],
+        [premints[1], makeTokenAccount(mintAddr, 0n)], [premints[2], makeTokenAccount(mintAddr, 0n)],
+      ]),
+      new Map<string, SolanaAccount | null>([
+        [mintAddr, makeMint(10_000_000_000_000n)],
+        [premints[0], makeTokenAccount(mintAddr, 10_000_000_000_000n)],
+        [premints[1], makeTokenAccount(mintAddr, 0n)], [premints[2], makeTokenAccount(mintAddr, 0n)],
+      ]),
+    ]) {
+      fetchSolanaAccountsMock.mockResolvedValueOnce({
+        accounts: badAccounts, observedBlock: { chain: "solana", number: 472_979_264, timestamp: nowSec - 10 },
+      });
+      await expect(fetchCuratedAggregateOnChainMcap(meta, 1.1, buildChainRpcs())).resolves.toBeNull();
+    }
+
+    // Slot freshness is enforced unconditionally for Solana excluded-account reads,
+    // even for coins outside the hardcoded stateClockRequired list.
+    const validAccounts = new Map<string, SolanaAccount | null>([
+      [mintAddr, makeMint(115_000_000_000_000n)],
+      [premints[0], makeTokenAccount(mintAddr, 25_000_000_000_000n)],
+    ]);
+    const syntheticMeta = makeMeta({
+      id: "synthetic-solana-excluded",
+      name: "Synthetic",
+      symbol: "SYN",
+      contracts: [{ chain: "solana", address: mintAddr, decimals: 6 }],
+    });
+    vi.spyOn(onchainSupplyProbe, "selectCuratedAggregateOnchainSupplyProbeContracts").mockReturnValue([
+      {
+        config: { chain: "solana", excludedTokenAccounts: [premints[0]] },
+        contract: syntheticMeta.contracts![0],
+      },
+    ]);
+    for (const staleOrFutureTs of [nowSec - 301, nowSec + 61]) {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      fetchSolanaAccountsMock.mockResolvedValueOnce({
+        accounts: validAccounts, observedBlock: { chain: "solana", number: 472_979_265, timestamp: staleOrFutureTs },
+      });
+      await expect(fetchCuratedAggregateOnChainMcap(syntheticMeta, 1, buildChainRpcs())).resolves.toBeNull();
+      expect(warn.mock.calls.map(([line]) => JSON.parse(String(line)))).toContainEqual(expect.objectContaining({
+        event: "onchain-supply-contract-withheld",
+        metadata: expect.objectContaining({
+          stablecoinId: "synthetic-solana-excluded",
+          chain: "solana",
+          reason: "supply-state-stale-or-future",
+        }),
+      }));
+      warn.mockRestore();
+    }
+    fetchSolanaAccountsMock.mockResolvedValueOnce({
+      accounts: validAccounts, observedBlock: { chain: "solana", number: 472_979_266, timestamp: nowSec - 10 },
+    });
+    await expect(fetchCuratedAggregateOnChainMcap(syntheticMeta, 1, buildChainRpcs())).resolves.toMatchObject({
+      supplySource: "onchain-circulating-supply",
+      nativeSupply: 90_000_000,
+      observedAt: nowSec - 10,
+    });
+  });
+
+  it("enforces EIP-1898 clocks across BRLA's live EVM chains and steps back on 1s Polygon validator skew", async () => {
+    const meta = TRACKED_META_BY_ID.get("brla-brla-digital")!;
+    const nowSec = Math.floor(Date.now() / 1000);
+    const parentHash = `0x${"3".repeat(64)}` as const;
+    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (chain, block) => {
+      if (chain === "polygon" && block === 123) return { number: 123, hash: BLOCK_HASH, timestamp: nowSec + 1 };
+      if (chain === "polygon" && block === 122) return { number: 122, hash: parentHash, timestamp: nowSec - 1 };
+      return { number: 123, hash: BLOCK_HASH, timestamp: nowSec - 25 };
+    });
+    vi.mocked(evmRpc.fetchEvmUint256AtBlock).mockImplementation(async (chain) => (
+      chain === "polygon" ? 19_000_000n * 10n ** 18n
+        : chain === "gnosis" ? 3_000_000n * 10n ** 18n
+          : chain === "celo" ? 295_000_000n * 10n ** 18n : null
+    ));
+
+    const result = await fetchCuratedAggregateOnChainMcap(meta, 0.19, buildChainRpcs());
+    expect(result?.supplySource).toBe("onchain-total-supply");
+    expect(result?.nativeSupply).toBeCloseTo(317_000_000, 6);
+    expect(result?.observedAt).toBe(nowSec - 25);
+    expect(Object.keys(result?.chainCirculating ?? {}).sort()).toEqual(["Celo", "Gnosis", "Polygon"]);
+    expect(vi.mocked(evmRpc.fetchEvmUint256AtBlock)).toHaveBeenCalledWith(
+      "polygon", meta.contracts![0].address, TOTAL_SUPPLY_SELECTOR, 122, expect.objectContaining({ stateBlockHash: parentHash }),
+    );
   });
 });

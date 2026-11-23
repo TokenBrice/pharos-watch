@@ -441,9 +441,9 @@ describe("stablecoin intake admission", () => {
       VALUES (?, ?, ?, ?)`);
     const close = (days: number) => historyProvenance("coingecko-fallback", now - days * DAY_SECONDS);
     for (const [days, usd, provenance] of [[1, 514, listed], [2, 600, close(2)], [7, 519, close(7)], [30, 480, "malformed"]] as const) {
-      for (const id of ["eurc-circle", "usd"]) insert.run(id, bucketUnixSecondsToUtcDay(now) - days * DAY_SECONDS, usd, provenance);
+      for (const id of ["europ-schuman", "usd"]) insert.run(id, bucketUnixSecondsToUtcDay(now) - days * DAY_SECONDS, usd, provenance);
     }
-    const list = (id = "eurc-circle", pegType = "peggedEUR") => makePeggedAsset({ id, pegType, supplySource: "defillama",
+    const list = (id = "europ-schuman", pegType = "peggedEUR") => makePeggedAsset({ id, pegType, supplySource: "defillama",
       circulating: { x: 503 }, circulatingPrevDay: { x: 513 }, circulatingPrevWeek: { x: 512 }, circulatingPrevMonth: { x: 511 } });
     const windows = ["day", "week", "month"] as const;
     const rows = [list(), list("unhistoried"), list("usd", "peggedUSD")];
@@ -498,6 +498,7 @@ describe("stablecoin intake admission", () => {
     { label: "BUIDL native beats relisted supply", id: "buidl-blackrock", primary: 100, supplemental: 200, expected: 200, source: "onchain-total-supply", observedAt: 1_777_000_000 },
     { label: "BUIDL skipped native beats relisted supply", id: "buidl-blackrock", primary: 100, supplemental: null, expected: undefined, source: "onchain-supply-withheld", observedAt: undefined },
     { label: "EURCV preferred native beats DefiLlama list supply", id: "eurcv-societe-generale-forge", primary: 100, supplemental: 200, expected: 200, source: "onchain-total-supply", observedAt: 1_777_000_000 },
+    { label: "EURC preferred circulating native beats DefiLlama list supply", id: "eurc-circle", primary: 100, supplemental: 200, expected: 200, source: "onchain-circulating-supply", observedAt: 1_777_000_000 },
     { label: "positive primary beats positive supplemental", primary: 100, supplemental: 200, expected: 100, source: "defillama", observedAt: 1_776_999_940 },
     { label: "observed zero beats positive supplemental", primary: 0, supplemental: 200, expected: 0, source: "defillama", observedAt: 1_776_999_940 },
     { label: "observed zero beats zero supplemental", primary: 0, supplemental: 0, expected: 0, source: "defillama", observedAt: 1_776_999_940 },
@@ -519,7 +520,8 @@ describe("stablecoin intake admission", () => {
     vi.mocked(supplemental.fetchSupplementalTrackedTokens).mockResolvedValue({
       goldTokens: [], silverTokens: [], fiatCgTokens: supplementalSupply === null ? [] : [makePeggedAsset({
         id, circulating: supplementalSupply === undefined ? {} : { peggedUSD: supplementalSupply },
-        supplySource: id === "buidl-blackrock" || id === "eurcv-societe-generale-forge" ? "onchain-total-supply" : "coingecko-fallback", supplyObservedAt: 1_777_000_000,
+        supplySource: id === "eurc-circle" ? "onchain-circulating-supply"
+          : id === "buidl-blackrock" || id === "eurcv-societe-generale-forge" ? "onchain-total-supply" : "coingecko-fallback", supplyObservedAt: 1_777_000_000,
       })],
     });
     upstream({ peggedAssets: rows });

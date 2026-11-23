@@ -706,7 +706,7 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
 
   it.each([
     ["usdc-circle", "peggedUSD", 91e6, 1],
-    ["eurc-circle", "peggedEUR", 99e6, 1.125],
+    ["europ-schuman", "peggedEUR", 99e6, 1.125],
   ] as const)("retains %s's admitted weekly close across a five-minute carry until D1 rejects it", async (id, pegType, cap, valuation) => {
     const { db, sqlite } = fixtures.open();
     const now = Date.parse("2026-11-18T14:00:00Z") / 1000;

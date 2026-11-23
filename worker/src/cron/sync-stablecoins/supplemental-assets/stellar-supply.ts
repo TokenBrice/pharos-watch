@@ -69,21 +69,28 @@ function readScVal(encoded: string, type: 3 | 10): bigint {
   return raw;
 }
 
-export async function fetchStellarSupply(address: string, decimals: number, signal: AbortSignal): Promise<bigint> {
+export interface StellarSupplyObservation {
+  rawSupply: bigint;
+  observedAt: number;
+}
+
+export async function observeStellarSupply(address: string, decimals: number, signal: AbortSignal): Promise<StellarSupplyObservation> {
   const classic = /^([a-zA-Z0-9]{1,12})-(G[A-Z2-7]{55})$/.exec(address);
   if (classic) {
     const [, code, issuer] = classic;
     strKeyBytes(issuer, 48);
     if (decimals !== 7) throw new Error("stellar-classic-decimals-mismatch");
     const ledger = HorizonSchema.parse(await fetchJsonWithRetry<unknown>(STELLAR_HORIZON_API, signal, 10_000, undefined, BOUNDED_READ));
-    requireFreshLedger(Date.parse(ledger.history_latest_ledger_closed_at) / 1000);
+    const observedAt = Math.floor(Date.parse(ledger.history_latest_ledger_closed_at) / 1000);
+    requireFreshLedger(observedAt);
     const query = new URLSearchParams({ asset_code: code, asset_issuer: issuer, limit: "2" });
     const response = await fetchJsonWithRetry<unknown>(`${STELLAR_HORIZON_API}/assets?${query}`, signal, 10_000, undefined, BOUNDED_READ);
     const [asset] = AssetResponseSchema.parse(response)._embedded.records;
     if (asset.asset_code !== code || asset.asset_issuer !== issuer) throw new Error("stellar-asset-identity-mismatch");
     // Disjoint Horizon custody buckets; do not add the deprecated amount field.
-    return [...Object.values(asset.balances), asset.claimable_balances_amount, asset.liquidity_pools_amount, asset.contracts_amount]
+    const rawSupply = [...Object.values(asset.balances), asset.claimable_balances_amount, asset.liquidity_pools_amount, asset.contracts_amount]
       .reduce((sum, amount) => sum + BigInt(amount.replace(".", "")), 0n);
+    return { rawSupply, observedAt };
   }
   const contract = address.slice(address.lastIndexOf("-") + 1);
   const contractBytes = strKeyBytes(contract, 16);
@@ -91,7 +98,8 @@ export async function fetchStellarSupply(address: string, decimals: number, sign
   const ledger = LedgerSchema.parse(await fetchJsonPostWithRetry<unknown>(
     STELLAR_RPC, { jsonrpc: "2.0", id: 1, method: "getHealth" }, signal, 10_000, undefined, BOUNDED_READ,
   )).result;
-  requireFreshLedger(Number(ledger.latestLedgerCloseTime));
+  const observedAt = Number(ledger.latestLedgerCloseTime);
+  requireFreshLedger(observedAt);
   const simulate = async (method: "total_supply" | "decimals") => SimulationSchema.parse(await fetchJsonPostWithRetry<unknown>(
     STELLAR_RPC, { jsonrpc: "2.0", id: 1, method: "simulateTransaction", params: { transaction: readEnvelope(contractBytes, method) } },
     signal, 10_000, undefined, BOUNDED_READ,
@@ -101,5 +109,9 @@ export async function fetchStellarSupply(address: string, decimals: number, sign
   if (readScVal(scale.results[0].xdr, 3) !== BigInt(decimals)) throw new Error("stellar-contract-decimals-mismatch");
   const supply = await simulate("total_supply");
   if (supply.latestLedger < scale.latestLedger) throw new Error("stellar-ledger-regressed");
-  return readScVal(supply.results[0].xdr, 10);
+  return { rawSupply: readScVal(supply.results[0].xdr, 10), observedAt };
+}
+
+export async function fetchStellarSupply(address: string, decimals: number, signal: AbortSignal): Promise<bigint> {
+  return (await observeStellarSupply(address, decimals, signal)).rawSupply;
 }

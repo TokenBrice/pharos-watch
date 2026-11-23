@@ -74,7 +74,7 @@ async function applyCanonicalDetailOverlay(
     }
     // Only the admitted publication can set canonical checkpoints and provenance.
     if ("currentSupplyRestored" in detail || "currentSupplyUnavailableReason" in detail || "currentSupplyExcludedChains" in detail
-      || "currentSupplyComparisonExcludedChains" in detail
+      || "currentSupplyComparisonExcludedChains" in detail || "currentSupplySource" in detail
       || "currentCirculatingPrevWeekUSD" in detail || "currentCirculatingPrevMonthUSD" in detail
       || "currentCirculatingNative" in detail || "supplyChangeBaselines" in detail || "priceDerivation" in detail || "nominalPriceReference" in detail || "currentPeg" in detail) {
       delete detail.currentPeg;
@@ -84,6 +84,7 @@ async function applyCanonicalDetailOverlay(
       delete detail.currentSupplyUnavailableReason;
       delete detail.currentSupplyExcludedChains;
       delete detail.currentSupplyComparisonExcludedChains;
+      delete detail.currentSupplySource;
       delete detail.currentCirculatingNative;
       delete detail.currentCirculatingPrevWeekUSD;
       delete detail.currentCirculatingPrevMonthUSD;
@@ -127,6 +128,7 @@ async function applyCanonicalDetailOverlay(
     if (hasCurrentSupply) {
       detail.currentCirculatingUSD = coin.circulating;
       if (coin.circulatingNative !== undefined) detail.currentCirculatingNative = coin.circulatingNative;
+      if (coin.supplySource !== undefined) detail.currentSupplySource = coin.supplySource;
       detail.currentSupplyRestored = coin.supplyRestored === true;
       if (coin.supplyChainGuard?.partialCoverage === true) {
         detail.currentSupplyExcludedChains = coin.supplyChainGuard.chains
