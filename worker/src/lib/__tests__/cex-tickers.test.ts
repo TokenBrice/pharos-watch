@@ -500,58 +500,114 @@ describe("fetchCoinbasePrices", () => {
     expect(fetchMock).toHaveBeenCalledTimes(5);
     expect(maxInFlight).toBe(1);
     expect(sleepWithSignalMock).toHaveBeenCalledTimes(4);
-    expect(sleepWithSignalMock.mock.calls.every(([ms]) => ms === 500)).toBe(true);
+    expect(sleepWithSignalMock.mock.calls.every(([ms]) => ms === 1_000)).toBe(true);
   });
 
-  it("honors Retry-After on 429 retries and cools down before ticker fallback and next product", async () => {
+  it("retries /book once after Retry-After/cooldown on 429 and recovers book-clocked quote without hitting /ticker", async () => {
     const fetchMock = mockFetch([
+      {
+        match: "/products/USDT-USD/book",
+        body: { bids: [["0.9999", "100", 1]], asks: [["1.0001", "100", 1]], time: tradeTime },
+      },
       {
         match: "/products/AUDD-USDC/book",
         outcomes: [
           { body: { message: "Public rate limit exceeded" }, status: 429, headers: { "Retry-After": "3" } },
           { body: { message: "Public rate limit exceeded" }, status: 429, headers: { "Retry-After": "4" } },
+          { body: { bids: [["0.6600", "100", 1]], asks: [["0.6604", "100", 1]], time: tradeTime }, status: 200 },
         ],
       },
       {
-        match: "/products/AUDD-USDC/ticker",
-        outcomes: [
-          { body: { message: "Public rate limit exceeded" }, status: 429 },
-          { body: { bid: "0.6600", ask: "0.6604", price: "0.6602", time: tradeTime }, status: 200 },
-        ],
-      },
-      {
-        match: "/products/USDT-USD/book",
-        body: { bids: [["0.9999", "100", 1]], asks: [["1.0001", "100", 1]], time: tradeTime },
+        match: "/products/XSGD-USDC/book",
+        body: { bids: [["0.7820", "100", 1]], asks: [["0.7824", "100", 1]], time: tradeTime },
       },
     ], { requireMatch: true });
 
-    const outcome = await fetchCoinbasePrices(["USDT", "AUDD"]);
+    const outcome = await fetchCoinbasePrices(["USDT", "AUDD", "XSGD"]);
     expect(outcome.kind).toBe("ok");
     expect(fetchMock).toHaveBeenCalledTimes(5);
     expect(outcome.value.prices.get("USDT")).toBeCloseTo(1, 6);
     expect(outcome.value.prices.get("AUDD")).toBeCloseTo(0.6602, 6);
-    expect(outcome.value.clockBySymbol.get("AUDD")).toBe("trade");
-    expect(outcome.value.diagnostics).toContainEqual(expect.objectContaining({
-      source: "coinbase",
-      endpoint: "api.exchange.coinbase.com/products/AUDD-USDC/book",
-      status: 429,
-      ok: false,
-      success: false,
-      retryAfterSec: 4,
-      errorClass: "http_error",
-    }));
-    // USDT->AUDD spacing (500), AUDD /book retry (Retry-After: 3 -> 3000),
-    // AUDD /book->/ticker cooldown (Retry-After: 4 -> 4000), AUDD /ticker retry fallback (5000).
-    expect(sleepWithSignalMock.mock.calls.map(([ms]) => ms)).toEqual([500, 3000, 4000, 5000]);
+    expect(outcome.value.prices.get("XSGD")).toBeCloseTo(0.7822, 6);
+    expect(outcome.value.clockBySymbol.get("AUDD")).toBe("book");
+    expect(outcome.value.diagnostics).toEqual([]);
+    // USDT->AUDD spacing (1000), AUDD /book retry #1 (Retry-After: 3 -> 3000),
+    // AUDD /book post-cooldown retry #2 (Retry-After: 4 -> 4000), AUDD->XSGD spacing (1000).
+    expect(sleepWithSignalMock.mock.calls.map(([ms]) => ms)).toEqual([1000, 3000, 4000, 1000]);
   });
 
-  it("applies the fallback post-429 cooldown before ticker fallback when Retry-After is absent", async () => {
-    mockFetch([
+  it("skips /ticker fallback after repeated /book 429s, cools down before the next product, and returns upstream-error when all products 429", async () => {
+    const partialFetch = mockFetch([
+      {
+        match: "/products/AUDD-USDC/book",
+        outcomes: [
+          { body: { message: "Public rate limit exceeded" }, status: 429 },
+          { body: { message: "Public rate limit exceeded" }, status: 429 },
+          { body: { message: "Public rate limit exceeded" }, status: 429 },
+        ],
+      },
+      {
+        match: "/products/XSGD-USDC/book",
+        body: { bids: [["0.7820", "100", 1]], asks: [["0.7824", "100", 1]], time: tradeTime },
+      },
+    ], { requireMatch: true });
+
+    const partial = await fetchCoinbasePrices(["AUDD", "XSGD"]);
+    expect(partial.kind).toBe("ok");
+    expect(partialFetch).toHaveBeenCalledTimes(4);
+    expect(partial.value.prices.has("AUDD")).toBe(false);
+    expect(partial.value.prices.get("XSGD")).toBeCloseTo(0.7822, 6);
+    expect(partial.value.diagnostics).toEqual([
+      expect.objectContaining({
+        source: "coinbase",
+        endpoint: "api.exchange.coinbase.com/products/AUDD-USDC/book",
+        status: 429,
+        ok: false,
+        success: false,
+        errorClass: "http_error",
+      }),
+    ]);
+    // AUDD /book retry #1 (5000 fallback), post-429 cooldown before retry #2 (3000),
+    // post-429 cooldown before XSGD (3000). No /ticker request fired.
+    expect(sleepWithSignalMock.mock.calls.map(([ms]) => ms)).toEqual([5000, 3000, 3000]);
+
+    sleepWithSignalMock.mockClear();
+    const allFailedFetch = mockFetch([
+      {
+        match: "/products/AUDD-USDC/book",
+        outcomes: [
+          { body: { message: "Public rate limit exceeded" }, status: 429, headers: { "Retry-After": "4" } },
+          { body: { message: "Public rate limit exceeded" }, status: 429, headers: { "Retry-After": "4" } },
+          { body: { message: "Public rate limit exceeded" }, status: 429, headers: { "Retry-After": "6" } },
+        ],
+      },
+    ], { requireMatch: true });
+
+    const allFailed = await fetchCoinbasePrices(["AUDD"]);
+    expect(allFailed.kind).toBe("upstream-error");
+    expect(allFailedFetch).toHaveBeenCalledTimes(3);
+    expect(allFailed.value.diagnostics).toEqual([
+      expect.objectContaining({
+        source: "coinbase",
+        endpoint: "api.exchange.coinbase.com/products/AUDD-USDC/book",
+        status: 429,
+        retryAfterSec: 6,
+        ok: false,
+        success: false,
+        errorClass: "http_error",
+      }),
+    ]);
+    expect(sleepWithSignalMock.mock.calls.map(([ms]) => ms)).toEqual([4000, 4000]);
+  });
+
+  it("still falls back to /ticker when the post-429 /book retry returns a non-429 error", async () => {
+    const fetchMock = mockFetch([
       {
         match: "/products/AUDD-USDC/book",
         outcomes: [
           { body: { message: "rate limited" }, status: 429 },
           { body: { message: "rate limited" }, status: 429 },
+          { body: {}, status: 404 },
         ],
       },
       {
@@ -562,9 +618,12 @@ describe("fetchCoinbasePrices", () => {
 
     const outcome = await fetchCoinbasePrices(["AUDD"]);
     expect(outcome.kind).toBe("ok");
+    expect(fetchMock).toHaveBeenCalledTimes(4);
     expect(outcome.value.prices.get("AUDD")).toBeCloseTo(0.6602, 6);
-    // /book retry fallback (5000), then post-429 fallback cooldown before /ticker (2000).
-    expect(sleepWithSignalMock.mock.calls.map(([ms]) => ms)).toEqual([5000, 2000]);
+    expect(outcome.value.clockBySymbol.get("AUDD")).toBe("trade");
+    // /book retry #1 (5000), post-429 cooldown before /book retry #2 (3000),
+    // normal pacing before /ticker fallback after 404 (1000).
+    expect(sleepWithSignalMock.mock.calls.map(([ms]) => ms)).toEqual([5000, 3000, 1000]);
   });
 
 });

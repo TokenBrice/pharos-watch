@@ -39,15 +39,17 @@ const CEX_REQUEST_TIMEOUT_MS = 10_000;
 const CEX_REQUEST_RETRIES = 1;
 const COINBASE_PRODUCT_FETCH_CONCURRENCY = 1;
 // Coinbase public REST enforces 10 req/s per IP (15 burst, lazy-fill token bucket)
-// across shared Worker egress; 500ms serial spacing caps our rate at <= 2 req/s.
-const COINBASE_REQUEST_INTERVAL_MS = 500;
-const COINBASE_RATE_LIMIT_COOLDOWN_MS = 2_000;
+// across shared Worker egress; 1000ms serial spacing caps our rate at <= 1 req/s
+// (at most one Pharos request per 1s refill window).
+const COINBASE_REQUEST_INTERVAL_MS = 1_000;
+const COINBASE_RATE_LIMIT_COOLDOWN_MS = 3_000;
 const COINBASE_MAX_RETRY_DELAY_MS = 10_000;
 const KRAKEN_TICKER_ENDPOINT = "api.kraken.com/0/public/Ticker";
 const KRAKEN_DEPTH_ENDPOINT = "api.kraken.com/0/public/Depth";
 // Kraken `/0/public/Depth` rejects multi-pair queries and rate-limits by IP;
 // 250ms serial spacing caps the 10-pair sweep at <= 4 req/s on 1 connection.
 const KRAKEN_DEPTH_REQUEST_INTERVAL_MS = 250;
+const KRAKEN_DEPTH_RATE_LIMIT_COOLDOWN_MS = 2_000;
 const BITSTAMP_TICKER_ENDPOINT = "www.bitstamp.net/api/v2/ticker/";
 const COINBASE_TICKER_ENDPOINT = "api.exchange.coinbase.com/products/{product}/ticker";
 const COINBASE_BOOK_ENDPOINT = "api.exchange.coinbase.com/products/{product}/book";
@@ -239,6 +241,7 @@ async function fetchCexJson<T>(
   options?: {
     onResponse?: (response: Response) => void;
     maxRetryDelayMs?: number;
+    retries?: number;
   },
 ): Promise<{ payload: T | null; transportOk: boolean; status: number | null; retryAfterSec?: number }> {
   let responseStatus: number | null = null;
@@ -249,7 +252,7 @@ async function fetchCexJson<T>(
       signal,
       headers: { Accept: "application/json", "User-Agent": USER_AGENT },
     },
-    CEX_REQUEST_RETRIES,
+    options?.retries ?? CEX_REQUEST_RETRIES,
     {
       timeoutMs: CEX_REQUEST_TIMEOUT_MS,
       maxRetryDelayMs: options?.maxRetryDelayMs,
@@ -627,7 +630,7 @@ export async function fetchKrakenPrices(
     let depthErrorClass: string | undefined;
     const pacer = createCexRequestPacer(
       KRAKEN_DEPTH_REQUEST_INTERVAL_MS,
-      COINBASE_RATE_LIMIT_COOLDOWN_MS,
+      KRAKEN_DEPTH_RATE_LIMIT_COOLDOWN_MS,
       COINBASE_MAX_RETRY_DELAY_MS,
       signal,
     );
@@ -806,21 +809,35 @@ export async function fetchCoinbasePrices(
           value.quoteAssetBySymbol.set(product.symbol, product.quoteAsset);
           value.clockBySymbol.set(product.symbol, clock);
         };
+        const bookUrl = `${productUrl}/book?level=1`;
+        type CoinbaseBookPayload = {
+          bids?: [string, string, number][];
+          asks?: [string, string, number][];
+          time?: string;
+          auction_mode?: boolean;
+        };
         await pacer.wait();
+        let bookResult = await fetchCexJson<CoinbaseBookPayload>(bookUrl, signal, {
+          onResponse: pacer.onResponse,
+          maxRetryDelayMs: COINBASE_MAX_RETRY_DELAY_MS,
+        });
+        if (!bookResult.transportOk && bookResult.status === 429) {
+          // Shared Cloudflare egress IPs can see multi-second external bursts on
+          // Coinbase's per-IP public bucket. Retry `/book?level=1` once after the
+          // Retry-After / cooldown window instead of immediately falling back to `/ticker`.
+          await pacer.wait();
+          bookResult = await fetchCexJson<CoinbaseBookPayload>(bookUrl, signal, {
+            onResponse: pacer.onResponse,
+            maxRetryDelayMs: COINBASE_MAX_RETRY_DELAY_MS,
+            retries: 0,
+          });
+        }
         const {
           payload: book,
           transportOk: bookTransportOk,
           status: bookStatus,
           retryAfterSec: bookRetryAfterSec,
-        } = await fetchCexJson<{
-          bids?: [string, string, number][];
-          asks?: [string, string, number][];
-          time?: string;
-          auction_mode?: boolean;
-        }>(`${productUrl}/book?level=1`, signal, {
-          onResponse: pacer.onResponse,
-          maxRetryDelayMs: COINBASE_MAX_RETRY_DELAY_MS,
-        });
+        } = bookResult;
         const bookQuote = midpointFromBidAsk(book?.bids?.[0]?.[0], book?.asks?.[0]?.[0]);
         const bookTime = parseCoinbaseTime(book?.time);
         const bookFreshness = bookTime != null
@@ -869,6 +886,14 @@ export async function fetchCoinbasePrices(
           errorClass: bookErrorClass,
           ...(bookRetryAfterSec != null ? { retryAfterSec: bookRetryAfterSec } : {}),
         });
+
+        if (!bookTransportOk && bookStatus === 429) {
+          // `/ticker` shares Coinbase's per-IP public REST bucket with `/book`;
+          // skipping it after repeated 429s avoids extra burst pressure and leaves
+          // the post-429 pacer cooldown armed for the next product.
+          transportFailures++;
+          return;
+        }
 
         await pacer.wait();
         const {
