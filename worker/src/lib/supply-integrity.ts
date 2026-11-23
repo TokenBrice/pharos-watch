@@ -36,7 +36,7 @@ const REVIEWED_REBASELINE_TOLERANCE = 0.02;
  * accepted level: it is not a fresh finding and its held baseline is dropped.
  * Any other value, or an expired review, keeps the ordinary 0.5-2x band.
  */
-const REVIEWED_SUPPLY_VALUE_REBASELINES: readonly {
+export const REVIEWED_SUPPLY_VALUE_REBASELINES: readonly {
   stablecoinId: string;
   baselineUsd: number;
   reviewedAt: number;
