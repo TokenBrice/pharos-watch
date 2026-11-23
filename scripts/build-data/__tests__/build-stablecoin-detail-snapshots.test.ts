@@ -10,6 +10,7 @@ import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summar
 import {
   DETAIL_SNAPSHOT_INPUT_BATCH_SIZE as BATCH_SIZE,
   DETAIL_SNAPSHOT_INPUT_LEGACY_BATCH_SIZE as LEGACY_BATCH_SIZE,
+  DetailSnapshotInputsResponseSchema,
   type DetailSnapshotInputEntry,
 } from "@shared/types/detail-snapshot-inputs";
 import {
@@ -593,6 +594,77 @@ describe("stablecoin detail snapshot generator", () => {
     await expect(generateSnapshots(false, { source: "bulk", generatedAt: now })).rejects.toThrow(/No detail snapshot lanes were available/);
   });
 
+  it("matches empty inline history-only snapshots byte-for-byte with history-only per-coin fallback on unknown clock", async () => {
+    credentials("fixture-key", "fixture-site-secret");
+    clearApiUrls();
+    const log = silence("log");
+    silence();
+    const now = 1_800_000_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now);
+    const frozenId = COINS.find((coin) => coin.status === "frozen")!.id;
+    const inlineEmptyEntry: DetailSnapshotInputEntry = {
+      id: frozenId,
+      status: "history-only",
+      reason: "detail-cache-missing",
+      supplyHistory: [],
+      updatedAt: {},
+      freshness: { supplyHistory: { status: "unknown", reason: "empty-supply-history", maxAgeSec: 86_400 } },
+      sources: EMPTY_SOURCES,
+    };
+    expect(DetailSnapshotInputsResponseSchema.safeParse({ version: 1, entries: [inlineEmptyEntry] }).success).toBe(true);
+    expect(DetailSnapshotInputsResponseSchema.safeParse({
+      version: 1,
+      entries: [{ ...inlineEmptyEntry, freshness: { supplyHistory: { status: "unknown", maxAgeSec: 86_400 } } }],
+    }).success).toBe(false);
+    expect(DetailSnapshotInputsResponseSchema.safeParse({
+      version: 1,
+      entries: [{ ...inlineEmptyEntry, updatedAt: { supplyHistory: null } }],
+    }).success).toBe(false);
+
+    let mode: "fallback" | "inline" = "fallback";
+    const perCoin: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (raw: string) => {
+      const { url, history, id } = coinRequest(raw);
+      if (url.pathname.endsWith("/stablecoin-detail-snapshot-inputs")) {
+        return bulkResponse(url, (entryId) => entryId === frozenId
+          ? (mode === "inline"
+            ? inlineEmptyEntry
+            : { id: entryId, status: "unavailable", reason: "detail-cache-missing", sources: EMPTY_SOURCES })
+          : bulkEntry(entryId, now - 60_000));
+      }
+      perCoin.push(`${history ? "history" : "detail"}:${id}`);
+      return Response.json([], { headers: { "X-Data-Updated-At": "unknown" } });
+    }));
+
+    const fallbackSnapshots = await generateSnapshots(false, { source: "bulk", generatedAt: now });
+    expect(perCoin).toEqual([`history:${frozenId}`]);
+    perCoin.length = 0;
+
+    mode = "inline";
+    const inlineSnapshots = await generateSnapshots(false, { source: "bulk", generatedAt: now });
+    expect(perCoin).toEqual([]);
+
+    const fallbackSnapshot = snapshotFor(fallbackSnapshots, frozenId);
+    const inlineSnapshot = snapshotFor(inlineSnapshots, frozenId);
+    expect(JSON.stringify(inlineSnapshot)).toBe(JSON.stringify(fallbackSnapshot));
+    expect(inlineSnapshot).toEqual({
+      version: 1,
+      stablecoinId: frozenId,
+      generatedAt: now,
+      updatedAt: {},
+      lanes: { supplyHistory: [] },
+    });
+    expect("supplyHistory" in inlineSnapshot.updatedAt).toBe(false);
+    expect(validateSnapshot(inlineSnapshot)).toEqual(inlineSnapshot);
+    const evidence = JSON.parse(log.mock.calls.at(-1)![0] as string).detailSnapshotAcquisition;
+    expect(entryFor(evidence.entries, frozenId)).toMatchObject({
+      source: "bulk-history-only",
+      reason: "detail-cache-missing",
+      updatedAt: {},
+      bulkUpdatedAt: {},
+    });
+  });
+
 });
 
 describe("bounded stale bulk refresh", () => {
@@ -698,6 +770,101 @@ describe("bounded stale bulk refresh", () => {
     expect(entryFor(evidence.entries, frozenId)).toMatchObject({ source: "bulk-cache-only", updatedAt: { liveSummary: staleClocks.get(frozenId) } });
     expect(entryFor(evidence.entries, activeIds[2])).toMatchObject({ source: "bulk-cache-only" });
     expect(entryFor(evidence.entries, activeIds[1])).toMatchObject({ source: "bulk-stale-refresh" });
+  });
+
+  it("allows 6 concurrent 1-socket stale refreshes and bounds mixed 1- and 2-socket fallbacks to <= 6 sockets in FIFO order", async () => {
+    credentials("", "fixture-site-secret");
+    clearApiUrls();
+    const log = silence("log");
+    silence();
+    const now = 1_800_000_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now);
+    const activeIds = COINS.filter((c) => c.status == null || c.status === "active").slice(0, 8).map((c) => c.id);
+    const [frozenFallbackId, frozenInlineId] = COINS.filter((c) => c.status === "frozen").map((c) => c.id);
+    const delayTick = () => new Promise<void>((resolve) => { setTimeout(resolve, 0); });
+
+    // Part 1: 8 single-socket stale refreshes fill all 6 semaphore permits concurrently.
+    const staleOnlyClocks = new Map(activeIds.map((id, i) => [id, now - UI_STALE_MS - (8 - i) * 1000]));
+    let openSockets = 0, peakSockets = 0;
+    vi.stubGlobal("fetch", vi.fn(async (raw: string) => {
+      const { url, history } = coinRequest(raw);
+      if (url.pathname.endsWith("/stablecoin-detail-snapshot-inputs")) {
+        return bulkResponse(url, (id) => bulkEntry(id, staleOnlyClocks.get(id) ?? now - 60_000));
+      }
+      expect(history).toBe(false);
+      openSockets++;
+      peakSockets = Math.max(peakSockets, openSockets);
+      expect(openSockets).toBeLessThanOrEqual(6);
+      const response = Response.json({ price: 2 }, { headers: { "X-Data-Updated-At": String((now - 30_000) / 1000) } });
+      const consume = response.json.bind(response);
+      vi.spyOn(response, "json").mockImplementation(async () => {
+        await delayTick();
+        const body = await consume();
+        openSockets--;
+        return body;
+      });
+      return response;
+    }));
+    const refreshOnlySnapshots = await generateSnapshots(false, { source: "bulk", generatedAt: now, staleRefreshLimit: 8 });
+    expect(peakSockets).toBe(6);
+    expect(openSockets).toBe(0);
+    expect(refreshOnlySnapshots.map((s) => s.stablecoinId)).toEqual(COINS.map((c) => c.id));
+
+    // Part 2: Mixed 1-socket refreshes, 1-socket history-only fallback, 2-socket full fallbacks,
+    // and 0-socket cache-only/history-only entries stay <= 6 sockets without starving 2-socket waiters.
+    // Catalog order of activeIds[0..6]: [1, 2, 1, 2] (= 6 permits) followed by [2, 1, 2] queued FIFO.
+    const twoSocketIds = new Set([activeIds[1], activeIds[3], activeIds[4], activeIds[6]]);
+    const mixedStaleIds = new Set([activeIds[0], activeIds[2], activeIds[5]]);
+    openSockets = 0;
+    peakSockets = 0;
+    const startOrder: string[] = [];
+    const seenStart = new Set<string>();
+    vi.stubGlobal("fetch", vi.fn(async (raw: string) => {
+      const { url, history, id } = coinRequest(raw);
+      if (url.pathname.endsWith("/stablecoin-detail-snapshot-inputs")) {
+        return bulkResponse(url, (entryId) => {
+          if (entryId === frozenInlineId) {
+            return {
+              id: entryId, status: "history-only", reason: "detail-cache-missing", supplyHistory: [], updatedAt: {},
+              freshness: { supplyHistory: { status: "unknown", reason: "empty-supply-history", maxAgeSec: 86_400 } },
+              sources: EMPTY_SOURCES,
+            };
+          }
+          if (entryId === frozenFallbackId || twoSocketIds.has(entryId)) {
+            return { id: entryId, status: "unavailable", reason: "detail-cache-missing", sources: EMPTY_SOURCES };
+          }
+          return bulkEntry(entryId, mixedStaleIds.has(entryId) ? now - UI_STALE_MS - 5000 : now - 60_000);
+        });
+      }
+      if (!seenStart.has(id)) {
+        seenStart.add(id);
+        startOrder.push(id);
+      }
+      openSockets++;
+      peakSockets = Math.max(peakSockets, openSockets);
+      expect(openSockets).toBeLessThanOrEqual(6);
+      const response = Response.json(history ? [] : { price: 2 }, { headers: { "X-Data-Updated-At": String((now - 30_000) / 1000) } });
+      const consume = response.json.bind(response);
+      vi.spyOn(response, "json").mockImplementation(async () => {
+        await delayTick();
+        const body = await consume();
+        openSockets--;
+        return body;
+      });
+      return response;
+    }));
+    const mixedSnapshots = await generateSnapshots(false, { source: "bulk", generatedAt: now, staleRefreshLimit: 8 });
+    expect(peakSockets).toBe(6);
+    expect(openSockets).toBe(0);
+    // FIFO anti-starvation: 2-socket activeIds[4] is queued ahead of 1-socket activeIds[5] and must start first.
+    expect(startOrder.indexOf(activeIds[4])).toBeGreaterThan(-1);
+    expect(startOrder.indexOf(activeIds[5])).toBeGreaterThan(-1);
+    expect(startOrder.indexOf(activeIds[4])).toBeLessThan(startOrder.indexOf(activeIds[5]));
+    expect(startOrder).not.toContain(frozenInlineId);
+    expect(startOrder).toContain(frozenFallbackId);
+    expect(mixedSnapshots.map((s) => s.stablecoinId)).toEqual(COINS.map((c) => c.id));
+    const mixedEvidence = JSON.parse(log.mock.calls.at(-1)![0] as string).detailSnapshotAcquisition;
+    expect(mixedEvidence.entries.map((e: { id: string }) => e.id)).toEqual(LIVE_IDS);
   });
 
   it("reports producer-age percentiles and the UI budget without substituting artifact time or unavailable clocks", () => {
