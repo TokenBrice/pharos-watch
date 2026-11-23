@@ -64,7 +64,10 @@ export function runPrepareWorkspace({ env = process.env, runCommand = spawnSync 
   }
 
   for (const [command, args] of commands) {
-    const result = runCommand(command, args, { env, stdio: "inherit" });
+    const commandEnv = args[1] === "bootstrap:generated:history"
+      ? { ...env, PHAROS_GENERATED_SKIP_EXISTING_DEPS: "1" }
+      : env;
+    const result = runCommand(command, args, { env: commandEnv, stdio: "inherit" });
     if (result.error) {
       throw result.error;
     }

@@ -7,10 +7,9 @@ import {
 import { DETAIL_SNAPSHOT_INPUT_MAX_BATCH_SIZE } from "@shared/types/detail-snapshot-inputs";
 import type { DetailSnapshotInputEntry } from "@shared/types/detail-snapshot-inputs";
 import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID, type WorkerRuntimeStablecoinMeta } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { StablecoinDetailResponseSchema, SupplyHistoryResponseSchema } from "@shared/types/supply";
 import { errorResponse, jsonResponse } from "../../lib/api-response";
 import { getCache } from "../../lib/db-cache";
@@ -31,7 +30,7 @@ import {
   getLatestDetailTokenDate,
 } from "./shared";
 
-function isD1OnlyCacheBackedActiveCoin(meta: StablecoinMeta): boolean {
+function isD1OnlyCacheBackedActiveCoin(meta: WorkerRuntimeStablecoinMeta): boolean {
   if (!isActiveStablecoinMeta(meta)) return false;
   const isCommodity = (meta.flags.pegCurrency === "GOLD" || meta.flags.pegCurrency === "SILVER") && Boolean(meta.geckoId);
   if (isCommodity) return false;
@@ -68,7 +67,7 @@ export async function handleDetailSnapshotInputs(db: D1Database, url: URL): Prom
   const completedSnapshot = await getCompletedSupplySnapshot(db);
   const supplyHistoryIds = completedSnapshot
     ? ids.filter((id) => {
-        const meta = TRACKED_META_BY_ID.get(id);
+        const meta = WORKER_TRACKED_META_BY_ID.get(id);
         return meta != null && (!isActiveStablecoinMeta(meta) || publication.kind === "ok");
       })
     : [];
@@ -106,7 +105,7 @@ export async function handleDetailSnapshotInputs(db: D1Database, url: URL): Prom
       supplySnapshotUpdatedAt: completedSnapshot?.updatedAt ?? null,
       supplySnapshotDate: completedSnapshot?.snapshotDate ?? null,
     };
-    const meta = TRACKED_META_BY_ID.get(id);
+    const meta = WORKER_TRACKED_META_BY_ID.get(id);
     if (!meta) {
       entries.push({ id, status: "unavailable", reason: "unknown-id", sources });
       continue;

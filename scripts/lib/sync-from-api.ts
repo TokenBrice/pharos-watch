@@ -246,9 +246,13 @@ export function resolveApiPathUrl(apiBaseOrEndpoint: string, apiPath: string): s
  * Build request headers (`Accept` + optional `X-API-Key`) from the first
  * non-empty API key among `envNames`.
  */
-export async function apiFetchHeaders(envNames: readonly string[], options: { url?: string } = {}): Promise<Record<string, string>> {
-  const apiKey = envNames.map((name) => process.env[name]?.trim()).find((value) => value);
-  const siteApiSharedSecret = process.env.SITE_API_SHARED_SECRET?.trim();
+export async function apiFetchHeaders(
+  envNames: readonly string[],
+  options: { url?: string; env?: NodeJS.ProcessEnv } = {},
+): Promise<Record<string, string>> {
+  const sourceEnv = options.env ?? process.env;
+  const apiKey = envNames.map((name) => sourceEnv[name]?.trim()).find((value) => value);
+  const siteApiSharedSecret = sourceEnv.SITE_API_SHARED_SECRET?.trim();
   const fetchUrl = parseFetchUrl(options.url);
   const isSiteDataRequest = isSiteDataRequestUrl(fetchUrl);
   const shouldSendSiteApiSecret = !isSiteDataRequest && isTrustedSiteApiSecretUrl(fetchUrl);
@@ -266,8 +270,8 @@ export function resolveGeneratorApiBase(): string | null {
   return resolveApiBaseFromEnv(GENERATOR_API_URL_ENV_NAMES);
 }
 
-export function generatorFetchHeaders(url?: string): Promise<Record<string, string>> {
-  return apiFetchHeaders(GENERATOR_API_KEY_ENV_NAMES, { url });
+export function generatorFetchHeaders(url?: string, env?: NodeJS.ProcessEnv): Promise<Record<string, string>> {
+  return apiFetchHeaders(GENERATOR_API_KEY_ENV_NAMES, { url, env });
 }
 
 export function shouldAllowExistingDataOnFetchFailure(envNames: readonly string[] = []): boolean {

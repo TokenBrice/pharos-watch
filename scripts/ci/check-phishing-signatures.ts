@@ -96,7 +96,7 @@ function hasSrcAttribute(openTag: string): boolean {
 // Matches HTML comments so `<script>` inside comments is skipped cleanly, or
 // an actual `<script` tag opening (case-insensitively without copying/lowercasing
 // the full HTML document, keeping indexes aligned with `html`).
-const COMMENT_OR_SCRIPT_OPEN_PATTERN = /<!--[\s\S]*?-->|<script(?=[\s/>]|$)/gi;
+const COMMENT_OR_SCRIPT_OPEN_PATTERN = /<!--(?:>|->|[\s\S]*?--!?>)|<script(?=[\s/>]|$)/gi;
 const SCRIPT_CLOSE_PATTERN = /<\/script/gi;
 
 function extractInlineScripts(html: string): string[] {

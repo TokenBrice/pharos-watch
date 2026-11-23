@@ -84,6 +84,19 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
 
+    - name: Verify preinstalled Node version
+      if: ${{ inputs.setup-node != 'true' }}
+      shell: bash
+      env:
+        EXPECTED_NODE_VERSION: ${{ inputs.node-version }}
+      run: |
+        actual="$(node -v)"
+        expected="${EXPECTED_NODE_VERSION#v}"
+        if [[ "${actual#v}" != "${expected}" && "${actual#v}" != "${expected}."* ]]; then
+          echo "::error::setup-node=false requires Node ${expected} (found ${actual})."
+          exit 1
+        fi
+
     - if: ${{ inputs.static-cache == 'true' || inputs.browser-cache == 'true' }}
       id: cache-key
       shell: bash

@@ -1976,12 +1976,12 @@ export function collectSeoStaticCheckResult({
     }
   }
 
-  const knownSocialPreviewUrls = new Set();
+  const socialPreviewUrlByRoute = new Map();
   const socialPreviewMap = readJsonFile(socialPreviewMapPath);
   if (socialPreviewMap && typeof socialPreviewMap === "object" && !Array.isArray(socialPreviewMap)) {
-    for (const entry of Object.values(socialPreviewMap)) {
+    for (const [routeKey, entry] of Object.entries(socialPreviewMap)) {
       if (typeof entry?.url === "string" && socialPreviewAssetIdentity(entry.url)) {
-        knownSocialPreviewUrls.add(entry.url);
+        socialPreviewUrlByRoute.set(routeKey, entry.url);
       }
     }
   }
@@ -2008,14 +2008,23 @@ export function collectSeoStaticCheckResult({
         continue;
       }
       const filePath = path.join(outDir, localPath.replace(/^\/+/, ""));
-      // R2-first exports omit out/og/v2/: admit any canonical /og/v2/ identity
-      // registered in the generated preview map, or present in out/ for local builds.
-      const isMappedEvergreenPreview =
+      // R2-first exports omit out/og/v2/: admit a canonical /og/v2/ identity only
+      // when it matches this route's registered preview-map entry (allowing
+      // /depeg/ hub fallback for unverified-peak /depeg/<event>/ pages and "/"
+      // fallback on non-public chrome routes absent from the map), or exists on
+      // disk in out/. Never poison other routes via missingOgImagePaths on a
+      // route-specific /og/v2/ mismatch.
+      const routePreviewUrl = socialPreviewUrlByRoute.get(record.route);
+      const isAllowedMappedEvergreenPreview =
         localPath.startsWith("/og/v2/")
         && socialPreviewAssetIdentity(localPath) !== null
-        && knownSocialPreviewUrls.has(localPath);
-      if (!isMappedEvergreenPreview && !fs.existsSync(filePath)) {
-        missingOgImagePaths.add(localPath);
+        && (
+          routePreviewUrl === localPath
+          || (record.route.startsWith("/depeg/") && socialPreviewUrlByRoute.get("/depeg/") === localPath)
+          || (!socialPreviewUrlByRoute.has(record.route) && socialPreviewUrlByRoute.get("/") === localPath)
+        );
+      if (!isAllowedMappedEvergreenPreview && !fs.existsSync(filePath)) {
+        if (!localPath.startsWith("/og/v2/")) missingOgImagePaths.add(localPath);
         errors.push(`${record.route}: ${field} references missing file ${localPath}`);
       }
     }

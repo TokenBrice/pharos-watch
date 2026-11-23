@@ -145,8 +145,7 @@ export function selectPagesReleaseRuns(runs: readonly ReleaseRun[]): ReleaseRun[
     seen.add(run.id);
     return true;
   }).sort((a, b) =>
-    (b.updated_at || b.created_at || "").localeCompare(a.updated_at || a.created_at || "")
-    || (b.created_at || "").localeCompare(a.created_at || "")
+    (b.created_at || "").localeCompare(a.created_at || "")
     || b.id - a.id,
   );
 }
@@ -157,12 +156,21 @@ function acquireReleaseData(directory: string, repoRoot: string): AcquiredReleas
   const gh = (args: string[]) => execFileSync("gh", args, { cwd: repoRoot, stdio: ["ignore", "pipe", "pipe"], maxBuffer: 128 * 1024 * 1024 });
   // No ambient repo inference: forks still replay only successful trusted-main
   // release data. Every GitHub operation below is GET-only.
-  const runs = TRUSTED_WORKFLOW_FILES.flatMap((workflow) => {
-    const response = JSON.parse(
-      gh(["api", "--method", "GET", `repos/${REPOSITORY}/actions/workflows/${workflow}/runs?branch=main&status=success&per_page=10`]).toString(),
-    ) as { workflow_runs?: ReleaseRun[] };
-    return Array.isArray(response.workflow_runs) ? response.workflow_runs : [];
-  });
+  const runs: ReleaseRun[] = [];
+  let succeededWorkflows = 0;
+  let lastWorkflowError: unknown;
+  for (const workflow of TRUSTED_WORKFLOW_FILES) {
+    try {
+      const response = JSON.parse(
+        gh(["api", "--method", "GET", `repos/${REPOSITORY}/actions/workflows/${workflow}/runs?branch=main&status=success&per_page=30`]).toString(),
+      ) as { workflow_runs?: ReleaseRun[] };
+      succeededWorkflows += 1;
+      if (Array.isArray(response.workflow_runs)) runs.push(...response.workflow_runs);
+    } catch (error) {
+      lastWorkflowError = error;
+    }
+  }
+  if (succeededWorkflows === 0 && lastWorkflowError) throw lastWorkflowError;
   for (const run of selectPagesReleaseRuns(runs)) {
     const expectedName = `pages-release-data-${run.head_sha}`;
     const response = JSON.parse(

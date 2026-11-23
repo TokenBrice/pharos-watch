@@ -209,6 +209,10 @@ describe("permanent evergreen preview assets", () => {
     expect(ctx.next).not.toHaveBeenCalled(); expect(ctx.get).not.toHaveBeenCalled();
     const notMod = await serveEvergreenPreview({ ...ctx, request: new Request(ctx.request.url, { headers: { "If-None-Match": `W/"${ctx.hash}"` } }) });
     expect([notMod.status, await notMod.text()]).toEqual([304, ""]);
+    store.get(`https://pharos.watch/og/v2/${ctx.filename}`)!.headers.set("etag", `W/"${ctx.hash}"`);
+    const weakHit = await serveEvergreenPreview({ ...ctx, request: new Request(ctx.request.url, { headers: { "If-None-Match": `"${ctx.hash}"` } }) });
+    expect(weakHit.status).toBe(304);
+    store.get(`https://pharos.watch/og/v2/${ctx.filename}`)!.headers.set("etag", `"${ctx.hash}"`);
     const head = await serveEvergreenPreview({ ...ctx, request: new Request(ctx.request.url, { method: "HEAD" }) });
     expect([head.status, await head.text(), head.headers.get("etag")]).toEqual([200, "", `"${ctx.hash}"`]);
     expect(ctx.next).not.toHaveBeenCalled();

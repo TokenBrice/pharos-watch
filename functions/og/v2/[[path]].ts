@@ -27,11 +27,14 @@ export async function onRequest({ request, env, next, waitUntil }: Context): Pro
   if (request.method !== "GET" && request.method !== "HEAD") return fail(405);
   const identity = socialPreviewAssetIdentity(new URL(request.url).pathname);
   if (!identity) return fail(404);
-  const matchesIfNoneMatch = (etag: string | null): boolean =>
-    Boolean(etag && request.headers.get("if-none-match")?.split(",").some((value) => {
+  const matchesIfNoneMatch = (etag: string | null): boolean => {
+    if (!etag) return false;
+    const target = etag.replace(/^W\//, "");
+    return Boolean(request.headers.get("if-none-match")?.split(",").some((value) => {
       const candidate = value.trim();
-      return candidate === "*" || candidate.replace(/^W\//, "") === etag;
+      return candidate === "*" || candidate.replace(/^W\//, "") === target;
     }));
+  };
   const canonicalUrl = new URL(`/og/v2/${identity.filename}`, request.url).toString();
   const cacheKey = new Request(canonicalUrl, { method: "GET" });
   const edgeCache = (globalThis as { caches?: { default?: EdgeCache } }).caches?.default;

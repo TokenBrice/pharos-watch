@@ -829,4 +829,18 @@ describe("handleDepegEvents", () => {
     const pendingQuery = db.getHistory().find((entry) => entry.sql.includes("FROM depeg_pending"));
     expect(pendingQuery?.binds).toEqual(["usdc-circle"]);
   });
+
+  it("confines limit=5000 to direct offset=0 site-api calls and preflights missing ledger manifests", async () => {
+    const db = mockEvents([], 0);
+    const proxied = new Request("https://site-api.pharos.watch/api/depeg-events?limit=5000", { headers: { "X-Pharos-Client-IP": "1.2.3.4" } });
+    expect((await handleDepegEvents(db, new URL(proxied.url), "site-api", proxied)).status).toBe(400);
+    const offsetUrl = new URL("https://site-api.pharos.watch/api/depeg-events?limit=5000&offset=10");
+    expect((await handleDepegEvents(db, offsetUrl, "site-api", new Request(offsetUrl))).status).toBe(400);
+    const directUrl = new URL("https://site-api.pharos.watch/api/depeg-events?limit=5000");
+    expect((await handleDepegEvents(db, directUrl, "site-api", new Request(directUrl))).status).toBe(200);
+    const missingDb = mockEvents([], 0, [{ match: "FROM cache WHERE key = ?", rows: [] }]);
+    const missingRes = await handleDepegEvents(missingDb, new URL("https://x/api/depeg-events?limit=1000&includeTotal=true&ledgerGeneration=latest"));
+    expect(await readJsonResponse(missingRes, 503)).toMatchObject({ reason: "ledger-manifest-unavailable" });
+    expect(missingDb.getHistory().some((entry) => entry.sql.includes("depeg_events_public"))).toBe(false);
+  });
 });

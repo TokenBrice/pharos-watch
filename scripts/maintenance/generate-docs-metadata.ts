@@ -44,11 +44,14 @@ function getFirstGitDate(filePath: string): string {
 
 /**
  * Single reverse-chronological `git log -M --name-status -z -- docs/` pass.
- * Tracks rename chains inside `docs/` from HEAD back to root; any doc missing
- * or renamed from outside `docs/` falls back to per-file `git log --follow`.
+ * Tracks rename chains inside `docs/` from HEAD back to root. Because `-- docs/`
+ * filters trees before `-M` rename detection, any `A` commit for a tracked doc
+ * terminates path tracking (preventing an earlier deleted doc at the same path
+ * from clobbering `dateCreated`) and is checked in one batched `git show -M`
+ * pass to detect cross-directory moves from outside `docs/` into `docs/`.
  */
 function collectDocsMetadataFromSinglePass(): { found: Map<string, DocMetadata>; needsFallback: Set<string> } {
-  const output = gitLog(["log", "-M", `--format=${COMMIT_MARKER}%cI%x09%aI`, "--name-status", "-z", "--", "docs/"]);
+  const output = gitLog(["log", "-M", `--format=${COMMIT_MARKER}%H%x09%cI%x09%aI`, "--name-status", "-z", "--", "docs/"]);
   const trackedPaths = new Map<string, Set<string>>();
   for (const doc of PUBLIC_DOCS) {
     const gitPath = `docs/${doc.source}`;
@@ -59,6 +62,7 @@ function collectDocsMetadataFromSinglePass(): { found: Map<string, DocMetadata>;
 
   const found = new Map<string, DocMetadata>();
   const needsFallback = new Set<string>();
+  const addedAtByCommit = new Map<string, Map<string, Set<string>>>();
   const recordTouch = (slug: string, committerDate: string, authorDate: string) => {
     const existing = found.get(slug);
     if (existing) {
@@ -73,12 +77,15 @@ function collectDocsMetadataFromSinglePass(): { found: Map<string, DocMetadata>;
     const headerEnd = block.indexOf("\0");
     if (headerEnd === -1) continue;
     const header = block.slice(0, headerEnd).trim();
-    const tabIdx = header.indexOf("\t");
-    if (tabIdx === -1) continue;
-    const committerDate = header.slice(0, tabIdx);
-    const authorDate = header.slice(tabIdx + 1);
+    const firstTab = header.indexOf("\t");
+    const secondTab = firstTab === -1 ? -1 : header.indexOf("\t", firstTab + 1);
+    if (firstTab === -1 || secondTab === -1) continue;
+    const commitHash = header.slice(0, firstTab);
+    const committerDate = header.slice(firstTab + 1, secondTab);
+    const authorDate = header.slice(secondTab + 1);
 
     const tokens = block.slice(headerEnd + 1).split("\0");
+    const pendingAdds: Array<{ path: string; slugs: Set<string> }> = [];
     const pendingRenames: Array<{ oldPath: string; newPath: string; slugs: Set<string> }> = [];
     let i = 0;
     while (i < tokens.length) {
@@ -105,10 +112,28 @@ function collectDocsMetadataFromSinglePass(): { found: Map<string, DocMetadata>;
         const slugs = trackedPaths.get(path);
         if (slugs) {
           for (const slug of slugs) recordTouch(slug, committerDate, authorDate);
+          if (code === "A") {
+            const snapshot = new Set(slugs);
+            pendingAdds.push({ path, slugs: snapshot });
+            let byPath = addedAtByCommit.get(commitHash);
+            if (!byPath) {
+              byPath = new Map();
+              addedAtByCommit.set(commitHash, byPath);
+            }
+            const targetSlugs = byPath.get(path) ?? new Set<string>();
+            for (const slug of snapshot) targetSlugs.add(slug);
+            byPath.set(path, targetSlugs);
+          }
         }
       }
     }
 
+    for (const { path, slugs } of pendingAdds) {
+      const current = trackedPaths.get(path);
+      if (!current) continue;
+      for (const slug of slugs) current.delete(slug);
+      if (current.size === 0) trackedPaths.delete(path);
+    }
     for (const { newPath, slugs } of pendingRenames) {
       const current = trackedPaths.get(newPath);
       if (!current) continue;
@@ -123,6 +148,50 @@ function collectDocsMetadataFromSinglePass(): { found: Map<string, DocMetadata>;
       const target = trackedPaths.get(oldPath) ?? new Set<string>();
       for (const slug of slugs) target.add(slug);
       trackedPaths.set(oldPath, target);
+    }
+  }
+
+  // Batched unfiltered rename check on the bounded set of `A` commits touching
+  // tracked docs (at most PUBLIC_DOCS.length commits) to catch cross-directory
+  // moves from outside `docs/` into `docs/`.
+  if (addedAtByCommit.size > 0) {
+    const showOutput = gitLog([
+      "show",
+      "-M",
+      `--format=${COMMIT_MARKER}%H`,
+      "--name-status",
+      "-z",
+      ...addedAtByCommit.keys(),
+    ]);
+    for (const block of showOutput.split(COMMIT_MARKER)) {
+      if (!block) continue;
+      const headerEnd = block.indexOf("\0");
+      if (headerEnd === -1) continue;
+      const commitHash = block.slice(0, headerEnd).trim();
+      const byPath = addedAtByCommit.get(commitHash);
+      if (!byPath) continue;
+      const tokens = block.slice(headerEnd + 1).split("\0");
+      let i = 0;
+      while (i < tokens.length) {
+        const status = tokens[i].replace(/^\r?\n/, "");
+        if (!status) {
+          i += 1;
+          continue;
+        }
+        const code = status[0];
+        if (code === "R" || code === "C") {
+          if (i + 2 >= tokens.length) break;
+          const oldPath = tokens[i + 1];
+          const newPath = tokens[i + 2];
+          i += 3;
+          const slugs = byPath.get(newPath);
+          if (slugs && code === "R" && !oldPath.startsWith("docs/")) {
+            for (const slug of slugs) needsFallback.add(slug);
+          }
+        } else {
+          i += 2;
+        }
+      }
     }
   }
 

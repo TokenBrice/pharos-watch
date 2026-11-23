@@ -108,14 +108,19 @@ jobs:
             exit 1
           fi
           npm run generated:post-refresh
-          npx --no-install next build --webpack
-          npm run postbuild
+          env -u SITE_API_SHARED_SECRET npx --no-install next build --webpack
+          env -u SITE_API_SHARED_SECRET -u SITE_SESSION_SIGNING_KEY npm run postbuild
       - name: Reject signing key in exported site
         env:
           SITE_SESSION_SIGNING_KEY: ${{ secrets.SITE_SESSION_SIGNING_KEY }}
+          SITE_API_SHARED_SECRET: ${{ secrets.SITE_API_SHARED_SECRET }}
         run: |
           if [ -n "$SITE_SESSION_SIGNING_KEY" ] && grep -rqF -- "$SITE_SESSION_SIGNING_KEY" out; then
             echo "::error::Site session signing key found in exported site."
+            exit 1
+          fi
+          if [ -n "$SITE_API_SHARED_SECRET" ] && grep -rqF -- "$SITE_API_SHARED_SECRET" out; then
+            echo "::error::Site API shared secret found in exported site."
             exit 1
           fi
       - name: Validate Pages artifact gates (size, CSS integrity, flags, phishing, SEO/continuity)

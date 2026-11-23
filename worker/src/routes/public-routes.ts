@@ -20,7 +20,7 @@ export const PUBLIC_STATIC_ROUTES = [
   }),
   defineLazyStaticRoute("depeg-events", async () => {
     const { handleDepegEvents } = await import("../api/depeg-events");
-    return ({ db, url, requestLane }) => handleDepegEvents(db, url, requestLane);
+    return ({ db, url, request, requestLane }) => handleDepegEvents(db, url, requestLane, request);
   }),
   defineLazyDbUrlRoute("events", () => import("../api/events").then(({ handleEvents }) => handleEvents)),
   defineLazyDbRoute("peg-summary", () => import("../api/peg-summary").then(({ handlePegSummary }) => handlePegSummary)),

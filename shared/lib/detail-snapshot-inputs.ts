@@ -2,7 +2,7 @@ import { STATUS_ALLOWED_FUTURE_SKEW_SEC } from "./status-thresholds";
 import { isRecord } from "./type-guards";
 
 // Sequential cache reads keep full detail bodies out of the batch working set.
-// Ten compact entries, each <=128 KiB, also fit comfortably under the Pages proxy cap.
+// Bounded compact entries (each <=128 KiB) fit comfortably under the Worker/proxy cap.
 export const DETAIL_SNAPSHOT_INPUT_ENTRY_MAX_BYTES = 128 * 1024;
 export const DETAIL_SNAPSHOT_SUPPLY_HISTORY_DAYS = 90;
 

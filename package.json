@@ -27,7 +27,7 @@
     "ci:census": "node --import tsx scripts/maintenance/ci-failure-census.ts",
     "bootstrap:generated": "node --import tsx scripts/maintenance/run-generated-artifacts.ts --bootstrap",
     "bootstrap:generated:all": "node --import tsx scripts/maintenance/run-generated-artifacts.ts --bootstrap --include-history",
-    "bootstrap:generated:history": "node --import tsx scripts/maintenance/run-generated-artifacts.ts --only=docs-metadata,sitemap-dates --skip-existing-deps",
+    "bootstrap:generated:history": "node --import tsx scripts/maintenance/run-generated-artifacts.ts --only=docs-metadata,sitemap-dates",
     "bootstrap:generated:worker": "node --import tsx scripts/maintenance/run-generated-artifacts.ts --only=report-card-registry-fingerprint,safety-score-v9-evaluation-build",
     "generated:compile-input": "node --import tsx scripts/maintenance/run-generated-artifacts.ts --build-lifecycle=compile-input",
     "generated:post-refresh": "node --import tsx scripts/maintenance/run-generated-artifacts.ts --build-lifecycle=post-refresh",

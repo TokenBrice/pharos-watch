@@ -3,7 +3,6 @@ import fs from "node:fs";
 import path from "node:path";
 import type React from "react";
 import Link from "next/link";
-import GithubSlugger from "github-slugger";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeSlug from "rehype-slug";
 import remarkGfm from "remark-gfm";
@@ -115,36 +114,32 @@ interface DocTocHeading {
   text: string;
 }
 
-interface MdastNode {
+interface HastNode {
   type: string;
-  depth?: number;
+  tagName?: string;
+  properties?: { id?: unknown };
   value?: string;
-  children?: MdastNode[];
+  children?: HastNode[];
 }
 
-function extractMdastText(node: MdastNode): string {
-  if (node.type === "text" || node.type === "inlineCode") {
-    return node.value ?? "";
-  }
-  if (node.type === "break") return "\n";
-  return (node.children ?? []).map(extractMdastText).join("");
+function extractHastText(node: HastNode): string {
+  if (node.type === "text") return node.value ?? "";
+  return (node.children ?? []).map(extractHastText).join("");
 }
 
 /**
- * Collects level-2 (`##`) headings during `ReactMarkdown`'s single CommonMark/GFM
- * pass using the exact `GithubSlugger` sequence `rehype-slug` walks across all
- * headings (depth 1..6) so every TOC anchor matches its rendered DOM `id`.
+ * Collects level-2 (`<h2>`) headings in `rehypePlugins` immediately after
+ * `rehypeSlug`, reading each rendered DOM `id` directly so TOC anchors match
+ * rendered headings by construction without a second markdown or slugger pass.
  */
-function remarkCollectH2Headings(headings: DocTocHeading[]) {
-  return () => (tree: MdastNode): void => {
-    const slugger = new GithubSlugger();
-
-    const visit = (node: MdastNode): void => {
-      if (node.type === "heading") {
-        const rawText = extractMdastText(node);
-        const id = slugger.slug(rawText);
-        const text = rawText.replace(/\s+/g, " ").trim();
-        if (node.depth === 2 && text) {
+function rehypeCollectH2Headings(headings: DocTocHeading[]) {
+  return () => (tree: HastNode): void => {
+    headings.length = 0;
+    const visit = (node: HastNode): void => {
+      if (node.type === "element" && node.tagName === "h2") {
+        const id = typeof node.properties?.id === "string" ? node.properties.id : "";
+        const text = extractHastText(node).replace(/\s+/g, " ").trim();
+        if (id && text) {
           headings.push({ id, text });
         }
         return;
@@ -169,8 +164,8 @@ function renderDoc(doc: (typeof PUBLIC_DOC_BY_SLUG extends ReadonlyMap<string, i
   const renderedMarkdown = ReactMarkdown({
     children: source,
     components: mdxComponents,
-    remarkPlugins: [remarkGfm, remarkCollectH2Headings(headings)],
-    rehypePlugins: [rehypeSlug, [rehypeAutolinkHeadings, { behavior: "wrap" }]],
+    remarkPlugins: [remarkGfm],
+    rehypePlugins: [rehypeSlug, rehypeCollectH2Headings(headings), [rehypeAutolinkHeadings, { behavior: "wrap" }]],
   });
   const hasToc = headings.length >= 2;
 
