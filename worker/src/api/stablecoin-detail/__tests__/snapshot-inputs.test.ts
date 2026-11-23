@@ -10,7 +10,7 @@ import { handleStablecoinDetail } from "../../stablecoin-detail";
 import { evaluateAccessGate } from "../../../handlers/http/gates";
 import { createWorkerEnv } from "../../../test-helpers/__shared/worker-env";
 import { PUBLIC_STATIC_ROUTES } from "../../../routes/public-routes";
-import * as supplyHistoryApi from "../../supply-history";
+import * as supplyHistoryRows from "../../../lib/supply-history-rows";
 import * as detailPrice from "../price";
 import { createFreshCacheHitHeaders, createFreshCacheHitResponse } from "../shared";
 
@@ -123,7 +123,7 @@ describe("cache-only detail snapshot inputs", () => {
         ok: true, status: 200, statusText: "", headers: new Headers(), detail: { price: 1 }, mutated: true,
       });
     } else {
-      vi.spyOn(supplyHistoryApi, "resolveSupplyHistoryUpdatedAtMs").mockReturnValueOnce(null);
+      vi.spyOn(supplyHistoryRows, "resolveSupplyHistoryUpdatedAtMs").mockReturnValueOnce(null);
     }
     const body = Schema.parse(await bulkJson(makeDb({ healthyUsdc: true }), ["usdt-tether", "usdc-circle"]));
     expect(body.entries[0]).toMatchObject({ id: "usdt-tether", status: "unavailable", reason: "source-clock-unavailable" });
@@ -168,12 +168,14 @@ describe("cache-only detail snapshot inputs", () => {
       supplyHistory: [{ date: NOW - DAY, circulatingUsd: 50, price: 0.2 }],
       updatedAt: { supplyHistory: HCLK * 1000 }, freshness: { supplyHistory: { status: "fresh", maxAgeSec: 86_400 } },
     });
-    expect(Schema.parse(await bulkJson(makeDb({ historyRows: [] }), [FROZEN])).entries[0]).toMatchObject({
-      id: FROZEN, status: "history-only", reason: "detail-cache-missing",
-      supplyHistory: [], updatedAt: {},
+    const empty = Schema.parse(await bulkJson(makeDb({ historyRows: [] }), [FROZEN])).entries[0];
+    expect(empty).toMatchObject({
+      id: FROZEN, status: "history-only", reason: "detail-cache-missing", supplyHistory: [],
       freshness: { supplyHistory: { status: "unknown", reason: "empty-supply-history", maxAgeSec: 86_400 } },
     });
-    vi.spyOn(supplyHistoryApi, "resolveSupplyHistoryUpdatedAtMs").mockReturnValueOnce(null);
+    // toMatchObject treats {} as "any object"; the clockless lane must carry no clock at all.
+    expect(empty.status === "history-only" && empty.updatedAt).toEqual({});
+    vi.spyOn(supplyHistoryRows, "resolveSupplyHistoryUpdatedAtMs").mockReturnValueOnce(null);
     expect(Schema.parse(await bulkJson(db, [FROZEN])).entries[0]).toMatchObject({
       id: FROZEN, status: "unavailable", reason: "source-clock-unavailable",
     });
