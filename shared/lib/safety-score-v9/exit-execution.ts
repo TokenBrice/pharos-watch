@@ -1,10 +1,191 @@
 import { z } from "zod";
 import { ExitExecutionCertificateSchema, ExitExecutionModelReviewSchema, type ExitExecutionCertificate, type ExitExecutionModelReview, type ExitExecutionRequestPoint } from "../../types/exit-route";
 import type { V9ValidatedPolicyEnvelope } from "../../types/safety-score-v9";
+import { V9_EVIDENCE_PRODUCER_INTERVAL_SEC } from "../cron-cadences";
+import { getPegTaxonomyByType } from "../peg-taxonomy";
+import { REFERENCE_INTRADAY_BUDGET_SEC } from "../reference-admission";
+import { getReferenceMarket, getReferenceSessionState, type ReferenceMarket } from "../reference-market-hours";
 import { domainDigest } from "./primitives";
 import { stableJsonStringifyV1 } from "../stable-json";
 import reviewedModels from "../../data/safety-score-v9/exit-execution-model-reviews-v1.json";
 import { exitRawUsd, requestedExitRawInput } from "./exit-execution-units";
+
+const EXIT_EXECUTION_FX_LEG_SOURCE_PATTERN = /\+fx-rates:(pegged[A-Z]+)$/;
+const EXIT_EXECUTION_CERTIFICATE_PRODUCER_CADENCE_SEC =
+  V9_EVIDENCE_PRODUCER_INTERVAL_SEC["sync-redemption-backstops"];
+
+export type ExitExecutionPriceLegBudgetBasis = "policy-price-max-age" | "fx-closure-intraday";
+
+export interface ExitExecutionPriceLegFreshness {
+  status: "ok" | "stale" | "future";
+  reason: null | "execution-price-stale" | "execution-price-future";
+  budgetSec: number;
+  budgetBasis: ExitExecutionPriceLegBudgetBasis;
+  generationId: string;
+  sourceId: string;
+  observedAtSec: number;
+  ageSec: number;
+  closureStartSec: number | null;
+}
+
+/** Identify a certificate price leg valued through an FX reference clock (e.g. `coingecko+fx-rates:peggedEUR` or `erc4626-nav:coingecko+fx-rates:peggedEUR`). */
+function getExitExecutionFxLegMarket(sourceId: string): ReferenceMarket | null {
+  const match = EXIT_EXECUTION_FX_LEG_SOURCE_PATTERN.exec(sourceId);
+  if (!match) return null;
+  const peg = getPegTaxonomyByType(match[1]);
+  const market = getReferenceMarket(peg?.currency);
+  return market === "fx" ? market : null;
+}
+
+/**
+ * Single freshness-budget authority for certificate price legs.
+ * When a certificate was captured during an FX market closure, an FX-valued leg
+ * whose print was observed within that closure (`closureStartSec <= observedAtSec < nextOpenSec`)
+ * uses the shared intraday FX freshness budget (`REFERENCE_INTRADAY_BUDGET_SEC`)
+ * while the evaluation clock remains before `nextOpenSec` plus one certificate
+ * producer cadence (`V9_EVIDENCE_PRODUCER_INTERVAL_SEC["sync-redemption-backstops"]`).
+ * Post-reopen certificates, clocks at or past that grace window, pre-closure prints,
+ * weekday runs, and non-FX legs keep the policy `baseMaxAgeSec` unchanged.
+ */
+export function resolveExitExecutionPriceLegBudget(
+  leg: Pick<ExitExecutionCertificate["inputReference"], "sourceId" | "observedAtSec">,
+  clockSec: number,
+  baseMaxAgeSec: number,
+  certificateObservedAtSec: number = clockSec,
+): {
+  budgetSec: number;
+  budgetBasis: ExitExecutionPriceLegBudgetBasis;
+  closureStartSec: number | null;
+} {
+  const market = getExitExecutionFxLegMarket(leg.sourceId);
+  if (
+    market === "fx" &&
+    Number.isFinite(clockSec) &&
+    Number.isFinite(leg.observedAtSec) &&
+    Number.isFinite(certificateObservedAtSec)
+  ) {
+    const anchorSession = getReferenceSessionState(market, certificateObservedAtSec);
+    if (!anchorSession.open) {
+      const withinClosureWindow =
+        leg.observedAtSec >= anchorSession.closureStartSec &&
+        leg.observedAtSec < anchorSession.nextOpenSec;
+      const withinGraceClock =
+        clockSec >= anchorSession.closureStartSec &&
+        clockSec < anchorSession.nextOpenSec + EXIT_EXECUTION_CERTIFICATE_PRODUCER_CADENCE_SEC;
+      if (withinClosureWindow && withinGraceClock) {
+        const fxClosureBudgetSec = Math.max(baseMaxAgeSec, REFERENCE_INTRADAY_BUDGET_SEC);
+        return {
+          budgetSec: fxClosureBudgetSec,
+          budgetBasis: fxClosureBudgetSec > baseMaxAgeSec ? "fx-closure-intraday" : "policy-price-max-age",
+          closureStartSec: anchorSession.closureStartSec,
+        };
+      }
+      return {
+        budgetSec: baseMaxAgeSec,
+        budgetBasis: "policy-price-max-age",
+        closureStartSec: anchorSession.closureStartSec,
+      };
+    }
+    return { budgetSec: baseMaxAgeSec, budgetBasis: "policy-price-max-age", closureStartSec: null };
+  }
+  return { budgetSec: baseMaxAgeSec, budgetBasis: "policy-price-max-age", closureStartSec: null };
+}
+
+function assessExitExecutionPriceLegFreshness(
+  leg: Pick<ExitExecutionCertificate["inputReference"], "sourceId" | "sourceGenerationId" | "observedAtSec">,
+  clockSec: number,
+  baseMaxAgeSec: number,
+  futureSkewSec = 0,
+  certificateObservedAtSec: number = clockSec,
+): ExitExecutionPriceLegFreshness {
+  const { budgetSec, budgetBasis, closureStartSec } = resolveExitExecutionPriceLegBudget(
+    leg,
+    clockSec,
+    baseMaxAgeSec,
+    certificateObservedAtSec,
+  );
+  const ageSec = clockSec - leg.observedAtSec;
+  if (leg.observedAtSec > clockSec + futureSkewSec) {
+    return {
+      status: "future",
+      reason: "execution-price-future",
+      budgetSec,
+      budgetBasis,
+      generationId: leg.sourceGenerationId,
+      sourceId: leg.sourceId,
+      observedAtSec: leg.observedAtSec,
+      ageSec,
+      closureStartSec,
+    };
+  }
+  if (ageSec > budgetSec) {
+    return {
+      status: "stale",
+      reason: "execution-price-stale",
+      budgetSec,
+      budgetBasis,
+      generationId: leg.sourceGenerationId,
+      sourceId: leg.sourceId,
+      observedAtSec: leg.observedAtSec,
+      ageSec,
+      closureStartSec,
+    };
+  }
+  return {
+    status: "ok",
+    reason: null,
+    budgetSec,
+    budgetBasis,
+    generationId: leg.sourceGenerationId,
+    sourceId: leg.sourceId,
+    observedAtSec: leg.observedAtSec,
+    ageSec,
+    closureStartSec,
+  };
+}
+
+export function selectBindingExitExecutionPriceLegFreshness(
+  legs: readonly Pick<ExitExecutionCertificate["inputReference"], "sourceId" | "sourceGenerationId" | "observedAtSec">[],
+  clockSec: number,
+  baseMaxAgeSec: number,
+  futureSkewSec = 0,
+  certificateObservedAtSec: number = clockSec,
+): ExitExecutionPriceLegFreshness {
+  if (legs.length === 0) throw new RangeError("At least one exit execution price leg is required");
+  let binding = assessExitExecutionPriceLegFreshness(
+    legs[0]!,
+    clockSec,
+    baseMaxAgeSec,
+    futureSkewSec,
+    certificateObservedAtSec,
+  );
+  for (let index = 1; index < legs.length; index += 1) {
+    const next = assessExitExecutionPriceLegFreshness(
+      legs[index]!,
+      clockSec,
+      baseMaxAgeSec,
+      futureSkewSec,
+      certificateObservedAtSec,
+    );
+    if (binding.status === "ok" && next.status !== "ok") {
+      binding = next;
+      continue;
+    }
+    if (binding.status !== "ok" && next.status === "ok") continue;
+    if (binding.status === "future" || next.status === "future") {
+      if (binding.status !== "future" || (next.status === "future" && next.observedAtSec > binding.observedAtSec)) {
+        binding = next;
+      }
+      continue;
+    }
+    const bindingMargin = binding.budgetSec - binding.ageSec;
+    const nextMargin = next.budgetSec - next.ageSec;
+    if (nextMargin < bindingMargin || (nextMargin === bindingMargin && next.observedAtSec < binding.observedAtSec)) {
+      binding = next;
+    }
+  }
+  return binding;
+}
 
 /** Bind model inputs and the exact measured request, independently of later stress sizing. */
 export function exitExecutionInputGenerationId(
@@ -73,8 +254,18 @@ export function resolveExitExecutionBoundPoint(
 }
 
 export type ExitExecutionAdmission =
-  | { state: "observed" | "adverse"; point: ExitExecutionRequestPoint; certificate: ExitExecutionCertificate }
-  | { state: "unavailable"; responsibility: "method-unsupported" | "producer-failed" | "issuer-undisclosed"; reason: string };
+  | {
+      state: "observed" | "adverse";
+      point: ExitExecutionRequestPoint;
+      certificate: ExitExecutionCertificate;
+      priceFreshness: ExitExecutionPriceLegFreshness;
+    }
+  | {
+      state: "unavailable";
+      responsibility: "method-unsupported" | "producer-failed" | "issuer-undisclosed";
+      reason: string;
+      priceFreshness?: ExitExecutionPriceLegFreshness;
+    };
 
 /**
  * The exact request is sized in raw input units; a clamped or otherwise bounded
@@ -152,8 +343,21 @@ export function admitExitExecutionCertificate(args: {
     const executionCost = Number(((executedValue > expectedOutputValue ? executedValue - expectedOutputValue : 0n) + additionalFeeValue) * 1_000_000n / executedValue) / 100;
     if (point.allInCostBps + 0.01 < allInCost || point.executionCostBps + 0.01 < executionCost) return unavailable("execution-cost-understated");
   }
-  if (!fresh(certificate.inputReference.observedAtSec, model.priceMaxAgeSec) ||
-      [...point.outputs, ...certificate.feeReferences].some((leg) => !fresh(leg.observedAtSec, model.priceMaxAgeSec))) return unavailable("execution-price-stale");
+  const priceFreshness = selectBindingExitExecutionPriceLegFreshness(
+    [certificate.inputReference, ...point.outputs, ...certificate.feeReferences],
+    args.clockSec,
+    model.priceMaxAgeSec,
+    model.futureSkewSec,
+    certificate.observedAtSec,
+  );
+  if (priceFreshness.status !== "ok") {
+    return {
+      state: "unavailable",
+      reason: priceFreshness.reason ?? "execution-price-stale",
+      responsibility: "producer-failed",
+      priceFreshness,
+    };
+  }
   if (!model.permittedBases.includes(certificate.capacityBasis) || certificate.capacityBasis === "documented-only" || point.certification === "diagnostic" || model.maximumCertification === "diagnostic" || (model.maximumCertification === "exact-lower-bound" && point.certification === "exact-complete")) return unavailable(point.reason ?? "execution-proof-insufficient");
   for (const gateId of model.requiredGates) {
     const gate = certificate.gates.find((entry) => entry.gateId === gateId);
@@ -163,7 +367,7 @@ export function admitExitExecutionCertificate(args: {
   }
   if (certificate.gates.some((gate) => gate.verdict === "unavailable" || gate.verdict === "unsupported" || (gate.verdict === "closed" && point.executableUsd > 0))) return unavailable("execution-gate-unproven");
   if (certificate.settlement.maximumCompletionSec === null) return unavailable("execution-settlement-unproven");
-  return { state: point.executableUsd === 0 && point.certification === "exact-complete" ? "adverse" : "observed", point, certificate };
+  return { state: point.executableUsd === 0 && point.certification === "exact-complete" ? "adverse" : "observed", point, certificate, priceFreshness };
 }
 
 /** Public projection deliberately has no account identifiers, calldata or private source URLs. */

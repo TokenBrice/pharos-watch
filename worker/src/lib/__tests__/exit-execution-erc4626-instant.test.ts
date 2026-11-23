@@ -828,4 +828,94 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
       loadV9CandidateMethodologyPolicy(clockSec));
     expect(evaluated.routes[0]?.included).toBe(hasBasis);
   });
+
+  it("applies FX-closure freshness across capture, compile, output valuation and exit evaluation for EUR FX legs", async () => {
+    const captureSec = Date.parse("2026-10-03T08:14:00Z") / 1000;
+    const fxPrintSec = Date.parse("2026-10-03T07:04:00Z") / 1000;
+    const evalSec = Date.parse("2026-10-03T12:16:00Z") / 1000;
+    vi.setSystemTime(captureSec * 1000);
+    state.blockTimestamp = captureSec;
+    const makeEurEnv = (clockSec: number, eurFxSec: number, tokenQuoteSec = clockSec - 60) => {
+      const cache: StablecoinsCacheLoadOk = {
+        kind: "ok", updatedAt: clockSec - 30,
+        payload: { peggedAssets: [
+          makeAsset({ id: "fixture-vault", price: null, priceSource: null, priceObservedAt: null }),
+          makeAsset({ id: "fixture-underlying", pegType: "peggedEUR", price: 1.15, priceSource: "coingecko", priceObservedAt: tokenQuoteSec }),
+        ] },
+      };
+      const fxRateState: FxRateState = {
+        rates: { peggedEUR: 1.15 }, usableSyncAt: clockSec - 20, usableAgeSec: 20, mode: "live",
+        sourceUpdatedAtByPeg: { peggedEUR: eurFxSec }, sourceModeByPeg: { peggedEUR: "live" },
+        sourceCadenceByPeg: { peggedEUR: "intraday" }, sourceDateByPeg: { peggedEUR: new Date(eurFxSec * 1000).toISOString().slice(0, 10) },
+        sourceLastSuccessAtBySource: {}, metadataIdentity: "verified", consecutiveFallbackRuns: 0,
+      };
+      return { assetId: "fixture-vault", circulatingUsd: 210_000_000, clockSec, stablecoinsCache: cache, fxRateState, reviews: [review] };
+    };
+    // 1. Capture margin during FX closure: 11,400s in-closure FX print admitted, 14,401s rejected (budget 14,400);
+    //    stale 24/7 token quote, pre-closure FX print, and weekday FX print stay on 10,800s.
+    expect((await observeReviewedExitExecutionRoutes(makeEurEnv(captureSec, captureSec - 11_400))).failures).toEqual([]);
+    expect((await observeReviewedExitExecutionRoutes(makeEurEnv(captureSec, captureSec - 14_401))).failures)
+      .toContainEqual(expect.objectContaining({ reason: "execution-price-leg-stale:output", priceLeg: expect.objectContaining({ capturePriceMaxAgeSec: 14_400 }) }));
+    expect((await observeReviewedExitExecutionRoutes(makeEurEnv(captureSec, captureSec - 60, captureSec - 11_400))).failures)
+      .toContainEqual(expect.objectContaining({ reason: "execution-price-leg-stale:output", priceLeg: expect.objectContaining({ capturePriceMaxAgeSec: 10_800, sourceId: "coingecko" }) }));
+    const earlyClosureSec = Date.parse("2026-10-03T00:00:00Z") / 1000;
+    state.blockTimestamp = earlyClosureSec; vi.setSystemTime(earlyClosureSec * 1000);
+    expect((await observeReviewedExitExecutionRoutes(makeEurEnv(earlyClosureSec, Date.parse("2026-10-02T20:50:00Z") / 1000))).failures)
+      .toContainEqual(expect.objectContaining({ reason: "execution-price-leg-stale:output", priceLeg: expect.objectContaining({ capturePriceMaxAgeSec: 10_800 }) }));
+    const weekdaySec = Date.parse("2026-10-06T08:14:00Z") / 1000;
+    state.blockTimestamp = weekdaySec; vi.setSystemTime(weekdaySec * 1000);
+    expect((await observeReviewedExitExecutionRoutes(makeEurEnv(weekdaySec, weekdaySec - 11_400))).failures)
+      .toContainEqual(expect.objectContaining({ reason: "execution-price-leg-stale:output", priceLeg: expect.objectContaining({ capturePriceMaxAgeSec: 10_800 }) }));
+
+    // 2. Capture 08:14 with 07:04 EUR print, then compile + evaluate at 12:16 (18,720s old):
+    //    admitted in-closure with output freshness maxAgeSec = 21,600; stale at reopen & weekday.
+    state.blockTimestamp = captureSec; vi.setSystemTime(captureSec * 1000);
+    const produced = await observeReviewedExitExecutionRoutes(makeEurEnv(captureSec, fxPrintSec));
+    expect(produced.failures).toEqual([]);
+    const observation = produced.observations[0]!;
+    const evaluateCompiled = (obs: typeof observation, atSec: number, updatedAtSec = captureSec) => {
+      const draft = makeV9FixedInput({ assetId: "fixture-vault", clockSec: atSec, includeDexObservations: false, includeDexCoverage: false, aggregateCirculating: { peggedUSD: 210_000_000 } });
+      draft.redemptionGenerationId = "redemption:fixture-eur-closure";
+      draft.redemptionStale = false;
+      draft.inputFreshness.redemptionBackstops = { updatedAt: updatedAtSec, ageSeconds: atSec - updatedAtSec, stale: false };
+      const row = makeSupplyFullRedemption({ stablecoinId: "fixture-vault", updatedAt: updatedAtSec });
+      row.capacityProfile = { ...row.capacityProfile!, exitRouteObservations: [obs] };
+      draft.redemptionBackstopMap[row.stablecoinId] = row;
+      const fixed = rebuildFixed(draft);
+      const extension = makeV9Extension({ assetId: "fixture-vault", clockSec: atSec, registryFingerprint: fixed.registryFingerprint });
+      extension.routeFreshness.redemptionMaxAgeSec = 21_600;
+      extension.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, "fixture-vault");
+      const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!;
+      const route = asset.exitRoutes.find((entry) => entry.routeId === obs.routeId)!;
+      const evaluated = evaluateV9Exit({ assetId: "fixture-vault", clockSec: atSec, circulatingUsd: 210_000_000, routes: [projectV9ExitEvaluationRoute(route)] }, loadV9CandidateMethodologyPolicy(atSec));
+      return { asset, route, evaluated };
+    };
+    const inClosure = evaluateCompiled(observation, evalSec);
+    expect(inClosure.route).toMatchObject({ scoreEligible: true, status: { observationState: "known" }, output: { status: { observationState: "known" }, valuation: { freshness: { state: "current", maxAgeSec: 21_600 } } } });
+    expect(inClosure.evaluated.routes[0]?.included).toBe(true);
+    // 3. Closure-time certificate evaluated after Sunday EDT reopen (21:00Z) within one producer cadence (< 01:00Z) is admitted;
+    //    at nextOpen + cadence + 1s (01:00:01Z) and for a post-reopen certificate with a post-reopen print, 18,000s applies.
+    const graceCaptureSec = Date.parse("2026-10-04T20:18:54Z") / 1000;
+    const graceEvalSec = Date.parse("2026-10-05T00:17:44Z") / 1000;
+    state.blockTimestamp = graceCaptureSec; vi.setSystemTime(graceCaptureSec * 1000);
+    const graceObs = (await observeReviewedExitExecutionRoutes(makeEurEnv(graceCaptureSec, Date.parse("2026-10-04T19:05:27Z") / 1000))).observations[0]!;
+    const withinGrace = evaluateCompiled(graceObs, graceEvalSec, graceCaptureSec);
+    expect(withinGrace.route).toMatchObject({ scoreEligible: true, status: { observationState: "known" }, output: { status: { observationState: "known" }, valuation: { freshness: { state: "current", maxAgeSec: 21_600 } } } });
+    expect(withinGrace.evaluated.routes[0]?.included).toBe(true);
+    const lateClosureCaptureSec = Date.parse("2026-10-04T20:59:59Z") / 1000;
+    const pastGraceEvalSec = Date.parse("2026-10-05T01:00:01Z") / 1000;
+    state.blockTimestamp = lateClosureCaptureSec; vi.setSystemTime(lateClosureCaptureSec * 1000);
+    const lateClosureObs = (await observeReviewedExitExecutionRoutes(makeEurEnv(lateClosureCaptureSec, Date.parse("2026-10-04T20:00:00Z") / 1000))).observations[0]!;
+    const pastGrace = evaluateCompiled(lateClosureObs, pastGraceEvalSec, lateClosureCaptureSec);
+    expect(pastGrace.route).toMatchObject({ scoreEligible: false, status: { observationState: "unsupported" } });
+    expect(pastGrace.evaluated.routes[0]?.included).toBe(false);
+    const postReopenCaptureSec = Date.parse("2026-10-04T21:15:00Z") / 1000;
+    state.blockTimestamp = postReopenCaptureSec; vi.setSystemTime(postReopenCaptureSec * 1000);
+    expect((await observeReviewedExitExecutionRoutes(makeEurEnv(postReopenCaptureSec, postReopenCaptureSec - 11_400))).failures)
+      .toContainEqual(expect.objectContaining({ reason: "execution-price-leg-stale:output", priceLeg: expect.objectContaining({ capturePriceMaxAgeSec: 10_800 }) }));
+    const postReopenObs = (await observeReviewedExitExecutionRoutes(makeEurEnv(postReopenCaptureSec, Date.parse("2026-10-04T21:05:00Z") / 1000))).observations[0]!;
+    const postReopenStale = evaluateCompiled(postReopenObs, Date.parse("2026-10-05T02:05:01Z") / 1000, postReopenCaptureSec);
+    expect(postReopenStale.route).toMatchObject({ scoreEligible: false, status: { observationState: "unsupported" } });
+    expect(postReopenStale.evaluated.routes[0]?.included).toBe(false);
+  });
 });
