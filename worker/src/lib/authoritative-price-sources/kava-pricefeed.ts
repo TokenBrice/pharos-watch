@@ -8,7 +8,7 @@ import { KavaBlockSchema, parseFinitePositiveDecimal, parseTimestampSec, validat
 import type { CurrentPriceOverride, LivePriceContext, PriceSourceProvider } from "./helpers";
 
 // Live state needs the official pruning endpoints, not the archive service.
-const KAVA_API_BASE = "https://api.kava.io";
+const KAVA_API_BASE = "https://api.data.kava.io";
 const KAVA_HEADER_URL = "https://rpc.kava.io/header";
 const KavaRpcHeaderSchema = z.object({ result: KavaBlockSchema.shape.block });
 const KAVA_USDX_ID = "usdx-kava";

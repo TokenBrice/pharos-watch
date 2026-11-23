@@ -63,9 +63,9 @@ describe("Kava USDX pricefeed", () => {
 
     expect(fetchJsonWithRetryMock.mock.calls.map(([url]) => url)).toEqual([
       "https://rpc.kava.io/header",
-      "https://api.kava.io/kava/pricefeed/v1beta1/markets",
-      "https://api.kava.io/kava/pricefeed/v1beta1/prices/usdx:usd",
-      "https://api.kava.io/kava/pricefeed/v1beta1/rawprices/usdx:usd",
+      "https://api.data.kava.io/kava/pricefeed/v1beta1/markets",
+      "https://api.data.kava.io/kava/pricefeed/v1beta1/prices/usdx:usd",
+      "https://api.data.kava.io/kava/pricefeed/v1beta1/rawprices/usdx:usd",
     ]);
     for (const [, , retries, options] of fetchJsonWithRetryMock.mock.calls) {
       expect(retries).toBe(0);
@@ -251,9 +251,9 @@ describe("Kava USDX pricefeed", () => {
 
   it.each([
     "https://rpc.kava.io/header",
-    "https://api.kava.io/kava/pricefeed/v1beta1/markets",
-    "https://api.kava.io/kava/pricefeed/v1beta1/prices/usdx:usd",
-    "https://api.kava.io/kava/pricefeed/v1beta1/rawprices/usdx:usd",
+    "https://api.data.kava.io/kava/pricefeed/v1beta1/markets",
+    "https://api.data.kava.io/kava/pricefeed/v1beta1/prices/usdx:usd",
+    "https://api.data.kava.io/kava/pricefeed/v1beta1/rawprices/usdx:usd",
   ])("fails closed without further requests when %s returns the incident's HTTP 502", async (failedUrl) => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
     installFixtureResponses();

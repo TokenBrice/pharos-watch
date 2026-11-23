@@ -7,7 +7,7 @@ import type {
   KavaPricefeedPricesPayload,
 } from "../kava-cdp";
 
-const LCD_ORIGIN = "https://api.kava.io";
+const LCD_ORIGIN = "https://api.data.kava.io";
 const TOTAL_COLLATERAL_URL = `${LCD_ORIGIN}/kava/cdp/v1beta1/totalCollateral`;
 
 // Captured 2026-09-09 from the public Kava LCD (https://api.data.kava.io).
