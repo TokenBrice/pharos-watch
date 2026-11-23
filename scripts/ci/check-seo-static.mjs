@@ -2009,17 +2009,22 @@ export function collectSeoStaticCheckResult({
       }
       const filePath = path.join(outDir, localPath.replace(/^\/+/, ""));
       // R2-first exports omit out/og/v2/: admit a canonical /og/v2/ identity only
-      // when it matches this route's registered preview-map entry (or "/" fallback
-      // on non-public chrome routes absent from the map), or exists on disk in out/.
-      const expectedRoutePreviewUrl = socialPreviewUrlByRoute.has(record.route)
-        ? socialPreviewUrlByRoute.get(record.route)
-        : socialPreviewUrlByRoute.get("/");
-      const isMappedEvergreenPreview =
+      // when it matches this route's registered preview-map entry (allowing
+      // /depeg/ hub fallback for unverified-peak /depeg/<event>/ pages and "/"
+      // fallback on non-public chrome routes absent from the map), or exists on
+      // disk in out/. Never poison other routes via missingOgImagePaths on a
+      // route-specific /og/v2/ mismatch.
+      const routePreviewUrl = socialPreviewUrlByRoute.get(record.route);
+      const isAllowedMappedEvergreenPreview =
         localPath.startsWith("/og/v2/")
         && socialPreviewAssetIdentity(localPath) !== null
-        && expectedRoutePreviewUrl === localPath;
-      if (!isMappedEvergreenPreview && !fs.existsSync(filePath)) {
-        missingOgImagePaths.add(localPath);
+        && (
+          routePreviewUrl === localPath
+          || (record.route.startsWith("/depeg/") && socialPreviewUrlByRoute.get("/depeg/") === localPath)
+          || (!socialPreviewUrlByRoute.has(record.route) && socialPreviewUrlByRoute.get("/") === localPath)
+        );
+      if (!isAllowedMappedEvergreenPreview && !fs.existsSync(filePath)) {
+        if (!localPath.startsWith("/og/v2/")) missingOgImagePaths.add(localPath);
         errors.push(`${record.route}: ${field} references missing file ${localPath}`);
       }
     }
