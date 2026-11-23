@@ -625,20 +625,29 @@ async function checkDewsLatestSignal(db: D1Database, observedAt: number) {
   }
 }
 
-export async function checkSafetyScoreV9Publication(db: D1Database) {
-  const active = await loadActiveSafetyScoreCohort(db);
+export async function checkSafetyScoreV9Publication(
+  db: D1Database,
+  observedAt = nowSec(),
+  _context?: CanaryCheckContext,
+  signal?: AbortSignal,
+) {
+  const active = await loadActiveSafetyScoreCohort(db, signal);
   if (active.kind === "error") {
     return failedResult(`active Safety Score source ${active.reason}`, {
       reason: active.reason,
       maxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
     });
   }
-  const ageSec = Math.max(
-    0,
-    Math.floor(Date.now() / 1_000) - active.snapshot.updatedAt,
+  const freshness = classifyCanaryFreshness(
+    active.snapshot.updatedAt,
+    observedAt,
+    SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
   );
+  const acceptedGenerationId = active.snapshot.safetyScoreIdentity.publicationGenerationId;
   const metadata = {
     updatedAt: active.snapshot.updatedAt,
+    ageSec: freshness.ageSec,
+    acceptedGenerationId,
     scoreCount: active.snapshot.cards.length,
     ratedCount: active.snapshot.completeness.ratedCount,
     notRatedCount: active.snapshot.completeness.notRatedCount,
@@ -648,15 +657,31 @@ export async function checkSafetyScoreV9Publication(db: D1Database) {
     safetyScoreIdentity: active.snapshot.safetyScoreIdentity,
     publicationHealth: active.snapshot.publicationHealth,
     maxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
+    ...(freshness.timestampReason ? { timestampReason: freshness.timestampReason } : {}),
   };
-  if (active.kind === "held") {
-    return degradedResult("Safety Score V9 publication is held", metadata);
+  if (freshness.state !== "fresh") {
+    const reason = freshness.timestampReason
+      ? `v9-publication-${freshness.timestampReason}`
+      : "v9-publication-stale";
+    const detail = freshness.ageSec == null
+      ? `age unavailable; budget ${SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC}s`
+      : `age ${freshness.ageSec}s > budget ${SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC}s`;
+    return errorResult(
+      `${reason}: ${detail}; generation ${acceptedGenerationId}`,
+      { ...metadata, reason },
+    );
   }
-  if (!isFreshAt(active.snapshot.updatedAt, Math.floor(Date.now() / 1_000), SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC)) {
-    return degradedResult("Safety Score V9 publication is stale", { ...metadata, ageSec });
+  if (active.kind === "held") {
+    return degradedResult("Safety Score V9 publication is held", {
+      ...metadata,
+      reason: active.reason,
+    });
   }
   if (active.snapshot.cards.length === 0) {
-    return degradedResult("Safety Score V9 publication has no score entries", metadata);
+    return degradedResult("Safety Score V9 publication has no score entries", {
+      ...metadata,
+      reason: "v9-publication-empty",
+    });
   }
   return okResult(metadata);
 }
