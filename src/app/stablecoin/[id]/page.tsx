@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { resolve } from "node:path";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -12,12 +11,9 @@ import { getStaticComparisonPagesForCoin } from "@/lib/compare-pages";
 import { DEPEG_EVENT_ENTRIES, buildExploreDepegEventLinks } from "@/lib/depeg-event-page-data";
 import { buildStablecoinDetailHistorySnapshot } from "@/lib/stablecoin-detail-history-snapshot";
 import { DepegHistoryPreview } from "@/components/stablecoin-detail/depeg-history-preview";
-import { buildStablecoinDetailMetadata, hasRedundantName, normalizeWhitespace } from "@/lib/page-metadata";
-import { stripTermMarkup } from "@/lib/term-markup";
+import { buildStablecoinDetailMetadata, hasRedundantName } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
 import { getRelatedStablecoins } from "@/lib/related-stablecoins";
-import { StablecoinDetailLoadingShell } from "@/components/stablecoin-detail/loading-shell";
-import { Skeleton } from "@/components/ui/skeleton";
 import StablecoinDetailClient from "./client";
 import { ExploreNextSection } from "@/components/stablecoin-detail/explore-next-section";
 import { PreLaunchDetail } from "@/components/upcoming/pre-launch-detail";
@@ -29,7 +25,7 @@ import {
   buildStablecoinBreadcrumbItems,
   buildStablecoinDatasetJsonLd,
 } from "@/lib/stablecoin-detail-json-ld";
-import { buildStablecoinStaticMeta, type StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
+import { buildStablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import { buildStablecoinFaqItems, StablecoinDetailSeoContent } from "@/components/stablecoin-detail/static-seo-content";
 import { FaqSection } from "@/components/faq-section";
 import { buildStablecoinDetailClientCoin } from "@/lib/stablecoin-detail-client-coin";
@@ -78,53 +74,6 @@ function buildInitialRedeemability(id: string): HeroPassportItemViewModel | null
       ? `Redeemability: ${accessLabel} route ${statusLabel} - jump to redemption route`
       : `Redeemability: ${accessLabel} - jump to redemption route`,
   };
-}
-
-function DetailPageShellFallback({
-  coin,
-  oneLiner,
-  logoSrc,
-}: {
-  coin: StablecoinStaticMeta;
-  oneLiner?: string;
-  logoSrc?: string;
-}) {
-  return (
-    <div className="space-y-6">
-      <div className="space-y-6" aria-hidden="true" data-nosnippet>
-        <StablecoinDetailLoadingShell
-          coin={coin}
-          logoSrc={logoSrc}
-          description={oneLiner ? normalizeWhitespace(stripTermMarkup(oneLiner)) : "Price, safety, liquidity, flows, and historical context."}
-          statusLabel="Research dossier"
-        />
-
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,0.7fr)]">
-          <div className="space-y-6">
-            <div className="pharos-card-shell p-4">
-              <Skeleton className="h-5 w-32" />
-              <Skeleton className="mt-4 h-[320px] w-full rounded-xl" />
-            </div>
-            <div className="pharos-card-shell p-4">
-              <Skeleton className="h-5 w-28" />
-              <Skeleton className="mt-4 h-[260px] w-full rounded-xl" />
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <div className="pharos-card-shell p-4">
-              <Skeleton className="h-5 w-24" />
-              <Skeleton className="mt-4 h-[220px] w-full rounded-xl" />
-            </div>
-            <div className="pharos-card-shell p-4">
-              <Skeleton className="h-5 w-36" />
-              <Skeleton className="mt-4 h-[180px] w-full rounded-xl" />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 function StablecoinResearchContext({
@@ -305,50 +254,51 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
       {coin.status !== "frozen" ? (
         <script id="pharos-detail-data-bootstrap" dangerouslySetInnerHTML={{ __html: getStablecoinDetailDataBootstrapScript(id) }} />
       ) : null}
-      {/* The fallback holds no content or links: a reveal discards it. */}
-      <Suspense fallback={<DetailPageShellFallback coin={staticCoin} oneLiner={coin.oneLiner} logoSrc={getLogoSrc(logosById, coin.id)} />}>
-        <StablecoinDetailClient
-          key={id}
-          id={id}
-          coin={clientCoin}
-          summary={summary}
-          heading={heading}
-          staticCoin={staticCoin}
-          logoSrc={getLogoSrc(logosById, coin.id)}
-          mechanismBacking={buildMechanismBackingView(id)}
-          mechanismCollateralization={buildMechanismCollateralizationView(id)}
-          mechanismReview={buildMechanismReviewView(id)}
-          parentLiquidationEngine={parentLiquidationEngine}
-          backingParent={backingParent}
-          transferReview={buildTransferReviewView(id)}
-          failureScenario={failureScenario}
-          depegHistoryPreview={depegHistoryPreview}
-          exploreNextContent={
-            <ExploreNextSection
-              coin={coin}
-              related={related}
-              staticComparisonPages={staticComparisonPages.map((page) => {
-                const counterpart = page.left.id === coin.id ? page.right : page.left;
-                return {
-                  href: page.href,
-                  shortTitle: page.shortTitle,
-                  leftId: page.left.id,
-                  rightId: page.right.id,
-                  counterpartId: counterpart.id,
-                  counterpartSymbol: counterpart.symbol,
-                  counterpartName: counterpart.name,
-                };
-              })}
-              depegEvents={buildExploreDepegEventLinks(id, coin.symbol)}
-              logos={logosById}
-            />
-          }
-          // Zero volatile artifact provenance across the RSC boundary so unchanged snapshots emit identical HTML/RSC bytes.
-          snapshot={detailSnapshot ? { ...detailSnapshot, generatedAt: 0 } : detailSnapshot}
-          archivedLiveSummary={archivedLiveSummary}
-          initialRedeemability={initialRedeemability}
-        />
-      </Suspense>
+      {/* No page-level Suspense: a boundary here made static export emit a
+          throwaway skeleton into <main> and outline the entire dossier into a
+          hidden streamed segment. Nothing below uses useSearchParams or
+          suspense queries; lazy charts and modals own their own boundaries. */}
+      <StablecoinDetailClient
+        key={id}
+        id={id}
+        coin={clientCoin}
+        summary={summary}
+        heading={heading}
+        staticCoin={staticCoin}
+        logoSrc={getLogoSrc(logosById, coin.id)}
+        mechanismBacking={buildMechanismBackingView(id)}
+        mechanismCollateralization={buildMechanismCollateralizationView(id)}
+        mechanismReview={buildMechanismReviewView(id)}
+        parentLiquidationEngine={parentLiquidationEngine}
+        backingParent={backingParent}
+        transferReview={buildTransferReviewView(id)}
+        failureScenario={failureScenario}
+        depegHistoryPreview={depegHistoryPreview}
+        exploreNextContent={
+          <ExploreNextSection
+            coin={coin}
+            related={related}
+            staticComparisonPages={staticComparisonPages.map((page) => {
+              const counterpart = page.left.id === coin.id ? page.right : page.left;
+              return {
+                href: page.href,
+                shortTitle: page.shortTitle,
+                leftId: page.left.id,
+                rightId: page.right.id,
+                counterpartId: counterpart.id,
+                counterpartSymbol: counterpart.symbol,
+                counterpartName: counterpart.name,
+              };
+            })}
+            depegEvents={buildExploreDepegEventLinks(id, coin.symbol)}
+            logos={logosById}
+          />
+        }
+        // Zero volatile artifact provenance across the RSC boundary so unchanged snapshots emit identical HTML/RSC bytes.
+        snapshot={detailSnapshot ? { ...detailSnapshot, generatedAt: 0 } : detailSnapshot}
+        archivedLiveSummary={archivedLiveSummary}
+        initialRedeemability={initialRedeemability}
+      />
       {/* Outside the boundary, so the static profile and the FAQ (with its
           FAQPage JSON-LD, once) are plain HTML for every crawler and survive
           the dossier's reveal and hydration. The FAQ folds behind one counted

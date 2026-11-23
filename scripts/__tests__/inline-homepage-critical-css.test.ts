@@ -8,6 +8,7 @@ import {
   compileCriticalCssPlans,
   criticalCssWorkerCount,
   GATE_SCOPED_LARGEST_HTML_PAGES,
+  narrowFunctionalSelectorMatch,
   optimizeCriticalCssPages,
   selectCriticalCssPages,
 } from "../maintenance/inline-homepage-critical-css";
@@ -221,6 +222,42 @@ describe("critical CSS worker pool", () => {
     const after = readFileSync(file, "utf8");
     expect(after).toContain(chrome);
     expect(after).not.toContain(".unused");
+  });
+
+  it("narrows :where/:is selectors to mandatory DOM tokens and defers @media (hover:hover) rules", async () => {
+    expect(narrowFunctionalSelectorMatch(":where(.space-y-6>:not(:last-child))")).toEqual({ classes: ["space-y-6"] });
+    expect(narrowFunctionalSelectorMatch(":where(.\\32 xl\\:space-y-4>:not(:last-child))")).toEqual({ classes: ["2xl:space-y-4"] });
+    expect(narrowFunctionalSelectorMatch(":is(:where(.group\\/step):is([open],:popover-open,:open) .group-open\\/step\\:rotate-180)"))
+      .toEqual({ classes: ["group/step", "group-open/step:rotate-180"] });
+    expect(narrowFunctionalSelectorMatch(":is([data-theme=dark],.dark) :where(.react-tweet-theme)"))
+      .toEqual({ classes: ["react-tweet-theme"] });
+    expect(narrowFunctionalSelectorMatch(":where(.pharos-density-compact,.pharos-density-spacious) :where([data-slot=table-cell]).py-2"))
+      .toEqual({ classes: ["py-2"], attrs: ["data-slot"] });
+    expect(narrowFunctionalSelectorMatch(":where(select:is([multiple],[size])) optgroup"))
+      .toEqual({ tags: ["select", "optgroup"] });
+    expect(narrowFunctionalSelectorMatch(":is(.coin,.home)>p")).toEqual({ tags: ["p"] });
+    expect(narrowFunctionalSelectorMatch(":is(.a,.b)")).toBe(true);
+
+    const outDir = fixture();
+    const css = [
+      stylesheet,
+      ":where(.space-y-2>:not(:last-child)){margin-top:.5rem}",
+      ":where(.space-y-12>:not(:last-child)){margin-top:3rem}",
+      ":is([data-theme=dark],.dark) :where(.react-tweet-theme){--tweet-bg:#000}",
+      "@media (hover:hover){.hover\\:underline:hover{text-decoration:underline}}",
+    ].join("");
+    writeFileSync(path.join(outDir, "_next/static/css/app.css"), css);
+    const file = path.join(outDir, "depeg/index.html");
+    writeFileSync(file, '<!DOCTYPE html><html><head><link rel="stylesheet" href="/_next/static/css/app.css"></head><body><main class="coin space-y-2 hover:underline">Page</main></body></html>');
+
+    await optimizeCriticalCssPages(outDir, [file], 1);
+    const after = readFileSync(file, "utf8");
+    expect(after).toContain(".dark{color-scheme:dark;--background:black}");
+    expect(after).toContain(":where(.space-y-2>:not(:last-child))");
+    expect(after).not.toContain("space-y-12");
+    expect(after).not.toContain("react-tweet-theme");
+    expect(after).not.toContain("hover:hover");
+    expect(readFileSync(path.join(outDir, "_next/static/css/app.css"), "utf8")).toBe(css);
   });
 });
 
