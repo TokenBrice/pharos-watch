@@ -23,26 +23,26 @@
     "attestorJurisdiction": "South Africa",
     "attestorLicense": "IRBA-registered auditors",
     "latestReport": {
-      "periodEnd": "2026-09-30",
-      "publishedAt": "2026-10-13",
+      "periodEnd": "2026-10-31",
+      "publishedAt": "2026-11-18",
       "publishedAtBasis": "explicit",
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "partial",
-      "reviewer": "Safety unknowns campaign 2026-11-06 — c2-3; Kempen's publication page independently dates the October 1 report to October 13, 2026",
+      "reviewer": "Reserve report refresh 2026-11-23 (#2143); Kempen's publication page independently dates the November 1 report to November 18, 2026",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Kempen ZARP agreed-upon procedures report dated October 1, 2026, covering September 30 reserve balances",
-          "url": "https://kempengroup.co.za/wp-content/uploads/2026/10/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-10-01-signed.pdf"
+          "label": "Kempen ZARP agreed-upon procedures report dated November 1, 2026, covering October 31 reserve balances",
+          "url": "https://kempengroup.co.za/wp-content/uploads/2026/11/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-11-01-signed.pdf"
         },
         {
-          "label": "ZARP transparency report index",
-          "url": "https://www.zarpstablecoin.com/transparency/"
+          "label": "Kempen Audit publication feed (ZARP report index)",
+          "url": "https://kempengroup.co.za/category/kempen-audit/feed/"
         },
         {
-          "label": "Kempen publication page: October 13, 2026, linking the October 1 signed ZARP agreed-upon-procedures report",
-          "url": "https://kempengroup.co.za/zarp-stablecoin-digital-report-october-2026/"
+          "label": "Kempen publication page: November 18, 2026, linking the November 1 signed ZARP agreed-upon-procedures report",
+          "url": "https://kempengroup.co.za/zarp-stablecoin-digital-report-november-2026/"
         }
       ]
     }
@@ -110,7 +110,7 @@
     "inputs": {
       "primary": {
         "kind": "http-html",
-        "url": "https://www.zarpstablecoin.com/transparency/"
+        "url": "https://kempengroup.co.za/category/kempen-audit/feed/"
       }
     },
     "params": {
@@ -129,9 +129,10 @@
           "liquidityHorizon": "immediate"
         }
       ],
+      "linkMatch": "ZARP-Stablecoin",
       "reviewedReport": {
-        "url": "https://kempengroup.co.za/wp-content/uploads/2026/10/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-10-01-signed.pdf",
-        "balanceDate": "2026-09-30"
+        "url": "https://kempengroup.co.za/wp-content/uploads/2026/11/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-11-01-signed.pdf",
+        "balanceDate": "2026-10-31"
       }
     }
   },
