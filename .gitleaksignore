@@ -383,3 +383,9 @@ c76f039048dc6d2decc65d6ea8e752557fa50493:shared/data/safety-score-v9/transfer-re
 # the test line is a canonical scheduler literal. Neither is a credential.
 aa117604c0ad6f7f352ac0e65fd6395374ae6a36:docs/runbooks/blacklist-sync.md:generic-api-key:53
 e9ffbf3f450f9f461080c069472f7144b29a843e:worker/src/lib/__tests__/scheduler-liveness.test.ts:generic-api-key:68
+# generic-api-key reads a TypeScript field annotation whose type is the V9
+# question-key type name (entropy 3.55) as a credential assignment; added by the
+# admission receipt v3 export of the per-card question projection (#1662).
+# Not a credential.
+84bfb13e175f8eacda78b3152d8c2ddc66e98b06:shared/lib/safety-score-v9/open-questions.ts:generic-api-key:113
+84bfb13e175f8eacda78b3152d8c2ddc66e98b06:shared/lib/safety-score-v9/open-questions.ts:generic-api-key:345
