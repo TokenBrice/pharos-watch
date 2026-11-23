@@ -90,6 +90,12 @@ export function cronHistoryRetentionPolicies(
     reserveContinuationExecutions: policy("reserve_continuation_executions", "finished_at", 14 * DAY, {
       predicate: "state = 'finished'", batchLimit: limits.smallBatchLimit, runLimit: limits.smallRunLimit,
     }),
+    v9EvalQueueExecutions: policy("v9_eval_queue_executions", "finished_at", 14 * DAY, {
+      predicate: "state = 'finished'", batchLimit: limits.smallBatchLimit, runLimit: limits.smallRunLimit,
+    }),
+    v9EvalRuns: policy("v9_eval_runs", "finished_at", 14 * DAY, {
+      predicate: "state IN ('completed', 'failed', 'superseded')", batchLimit: limits.smallBatchLimit, runLimit: limits.smallRunLimit,
+    }),
     apiRequestConsumerStats: policy("api_request_consumer_stats", "bucket_start", REQUEST_ATTRIBUTION_RETENTION_DAYS * DAY, { batchLimit: limits.smallBatchLimit }),
     siteDataRequestStats: policy("site_data_request_stats", "bucket_start", REQUEST_ATTRIBUTION_RETENTION_DAYS * DAY, { batchLimit: limits.smallBatchLimit }),
     apiKeyRequestStats: policy("api_key_request_stats", "bucket_start", REQUEST_ATTRIBUTION_RETENTION_DAYS * DAY, { batchLimit: limits.smallBatchLimit }),
@@ -399,6 +405,7 @@ export const RETENTION_NON_APPEND_TABLES: Readonly<Record<string, string>> = {
   telegram_transport_circuit: TELEGRAM_RETIRED_TABLE,
   telegram_transport_failure_observations: TELEGRAM_RETIRED_TABLE,
   telegram_webhook_operation_mutations: TELEGRAM_RETIRED_TABLE,
+  v9_eval_chunks: "run-owned V9 evaluation staging blobs; pruned on select/supersession, >1h sweep at Seed/:52, and ON DELETE CASCADE from v9_eval_runs",
   worker_producer_heads: "current producer summaries",
   worker_producer_retained_counts: "trigger-maintained current retained-history counters per producer identity; zero rows persist with heads, no independent age delete",
   yield_coverage_review_dispositions: "mutable reviewed evidence dispositions",

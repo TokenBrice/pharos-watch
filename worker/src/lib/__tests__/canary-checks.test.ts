@@ -978,8 +978,43 @@ describe("worker data invariant canaries", () => {
       status: "degraded",
       severity: "warning",
       error: "Safety Score V9 publication is held",
-      metadata: { safetyScoreIdentity: { model: "v9" } },
+      metadata: { safetyScoreIdentity: { model: "v9" }, reason: "v9-publication-held" },
     });
+  });
+
+  it.each([
+    { label: "at exact consumer max age", ageSec: 7_200, held: false, status: "ok", severity: "info" },
+    { label: "past consumer max age", ageSec: 7_201, held: false, status: "error", severity: "error" },
+    { label: "held past consumer max age", ageSec: 7_201, held: true, status: "error", severity: "error" },
+    { label: "future-dated", ageSec: -3_600, held: false, status: "error", severity: "error" },
+  ] as const)("classifies canonical V9 publication $label", async ({ ageSec, held, status, severity }) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(NOW * 1000));
+    const v9 = activeV9({ held, updatedAt: NOW - ageSec });
+    const generationId = v9.snapshot.safetyScoreIdentity.publicationGenerationId;
+    vi.mocked(activeSafetyScoreSource.loadActiveSafetyScoreCohort).mockResolvedValueOnce(v9);
+    const summary = await runCanaryChecks(healthyD1(), { observedAt: NOW, mode: "status" });
+    const check = summary.results.find((result) => result.checkId === "safety-score-v9-publication");
+
+    expect(check).toMatchObject({
+      status,
+      severity,
+      executionStatus: "completed",
+      executionFailureReason: null,
+      metadata: {
+        ageSec: ageSec < 0 ? null : ageSec,
+        maxAgeSec: 7_200,
+        acceptedGenerationId: generationId,
+        ...(status === "error"
+          ? { reason: ageSec < 0 ? "v9-publication-future-timestamp" : "v9-publication-stale" }
+          : {}),
+      },
+    });
+    if (status === "error") {
+      expect(check?.error).toContain(ageSec < 0 ? "v9-publication-future-timestamp" : "v9-publication-stale");
+      expect(check?.error).toContain(ageSec < 0 ? "age unavailable" : `age ${ageSec}s > budget 7200s`);
+      expect(check?.error).toContain(`generation ${generationId}`);
+    }
   });
 
   it("fails closed when the canonical V9 publication is unavailable", async () => {

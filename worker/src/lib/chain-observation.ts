@@ -11,7 +11,7 @@ import {
   type MoveFungibleAssetSupplyReadOptions,
 } from "./native-token-supply";
 
-export { readSolanaMint, solanaPublicKey, SOLANA_TOKEN_PROGRAM, type SolanaAccount } from "./solana-observation";
+export { readSolanaMint, readSolanaTokenAccount, solanaPublicKey, SOLANA_TOKEN_PROGRAM, type SolanaAccount } from "./solana-observation";
 export type { MoveFungibleAssetSupplyObservation } from "./native-token-supply";
 
 function observationContext(ctx?: ChainObservationOptions): ChainObservationContext {

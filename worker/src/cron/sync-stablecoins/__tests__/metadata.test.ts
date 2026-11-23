@@ -181,8 +181,10 @@ describe("stablecoins pricing metadata", () => {
     const assets: PeggedAsset[] = ACTIVE_STABLECOINS.map((coin): PeggedAsset => ({
       ...identity(coin), price: 1,
       circulating: coin.id === "stac-securitize" || coin.id === "sfrax-frax" ? {} : { peggedUSD: coin.id === "myrc-blox" ? 0 : 1 },
-      supplySource: coin.id === "stac-securitize" || coin.id === "sfrax-frax" ? "onchain-supply-withheld" : "onchain-total-supply",
-      ...(coin.id === "myrc-blox" ? { supplyRestored: true } : {}),
+      supplySource: coin.id === "stac-securitize" || coin.id === "sfrax-frax"
+        ? "onchain-supply-withheld"
+        : coin.id === "eurc-circle" ? "onchain-circulating-supply" : "onchain-total-supply",
+      ...(coin.id === "myrc-blox" || coin.id === "eurc-circle" ? { supplyRestored: true } : {}),
     }));
     const input = {
       ...syncInput(assets), providerDiagnostics: [], cacheKey: "stablecoins", syncStartSec: 1_777_000_000,
@@ -194,10 +196,13 @@ describe("stablecoins pricing metadata", () => {
       : buildFallbackStablecoinsSyncResult({ ...input, stalenessCheckFailed });
     const result = build(false);
     const metadata = JSON.parse(result.metadata!);
+    const expectedRestoredIds = ACTIVE_STABLECOINS
+      .filter((coin) => coin.id === "myrc-blox" || coin.id === "eurc-circle")
+      .map((coin) => coin.id);
     const finding = {
       reason: "preferred-native-supply-unavailable",
       unavailableIds: { ids: ["stac-securitize"], total: 1, truncated: 0 },
-      restoredIds: { ids: ["myrc-blox"], total: 1, truncated: 0 },
+      restoredIds: { ids: expectedRestoredIds, total: 2, truncated: 0 },
     };
     expect(result.status).toBe("ok");
     expect(metadata.reason).toBeUndefined();
@@ -226,7 +231,9 @@ describe("stablecoins pricing metadata", () => {
     const assets: PeggedAsset[] = ACTIVE_STABLECOINS.map((coin): PeggedAsset => ({
       ...identity(coin), price: 1,
       circulating: coin.id === "sfrax-frax" ? {} : { peggedUSD: coin.id === "stac-securitize" ? 0 : 1 },
-      supplySource: coin.id === "sfrax-frax" ? "onchain-supply-withheld" : "onchain-total-supply",
+      supplySource: coin.id === "sfrax-frax"
+        ? "onchain-supply-withheld"
+        : coin.id === "eurc-circle" ? "onchain-circulating-supply" : "onchain-total-supply",
     }));
     const input = {
       ...syncInput(assets), providerDiagnostics: [], cacheKey: "stablecoins", syncStartSec: 1_777_000_000,

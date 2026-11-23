@@ -19,6 +19,8 @@ export interface CuratedOnchainSupplyContractConfig {
   hotwallet?: readonly string[];
   /** Explicit classic Stellar asset code when catalog metadata stores only the bare issuer G-account. */
   stellarAssetCode?: string;
+  /** Issuer-documented Solana pre-mint/treasury SPL token accounts subtracted atomically at the same finalized slot. */
+  excludedTokenAccounts?: readonly string[];
   /**
    * Some reviewed native deployments are live with zero supply. Keep this
    * opt-in so ordinary aggregate paths still fail closed on empty reads.
@@ -1629,17 +1631,18 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
     preferMcap: true,
     aggregateContracts: [{ chain: "ethereum" }],
   },
-  // BRLA: Avenia issuer-native OPERATOR_ROLE mint/redeem across four EVM chains (no lockbox).
-  // Verified live 2026-11-22: Polygon 19,008,139.84 + Gnosis 2,959,038.35 + Celo 294,839,691.11
-  // + Moonbeam 4,293.52 (0.0014%, allowZeroSupply) = 316,811,162.82 BRLA (+0.0736% vs DefiLlama
-  // implied 316,578,144.91, which reported Moonbeam at 0).
+  // BRLA: Avenia issuer-native OPERATOR_ROLE mint/redeem across EVM chains (no lockbox).
+  // Verified live 2026-11-22 (Wave 1) and re-verified 2026-11-23 (D5 on-chain state clocks):
+  // Moonbeam halted at final block 16796699 (2026-08-10T11:36:12Z); its frozen 4,294.09 BRLA
+  // (0.0013% of 324.46M supply; DefiLlama reported 0) stays outside the live clocked perimeter in
+  // unreadableDeployments so Polygon, Gnosis and Celo enforce fresh EIP-1898 block clocks.
   "brla-brla-digital": {
     preferMcap: true,
+    unreadableDeployments: [{ chain: "moonbeam", address: "0xfeb25f3fddad13f82c4d6dbc1481516f62236429" }],
     aggregateContracts: [
       { chain: "polygon" },
       { chain: "gnosis" },
       { chain: "celo" },
-      supplyProbeChain("moonbeam", { allowZeroSupply: true }),
     ],
   },
   // ZCHF: Frankencoin native Ethereum + seven Chainlink CCIP BurnMintTokenPool 1.5.1 L2 spokes.
@@ -1668,6 +1671,44 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
     aggregateContracts: [
       { chain: "ethereum" },
       { chain: "bsc" },
+    ],
+  },
+  // === #2169 D5: EURC reviewed on-chain circulating supply checkpoints ===
+  // Circle issuer-native across nine chains; five lock/mint bridge representations (Polygon,
+  // Sonic, Tempo, Cardano, Optimism) remain conserved in Ethereum totalSupply(). On Solana,
+  // Circle holds unreleased pre-mint inventory in three published SPL token accounts
+  // (circlefin/centre-ecosystem eurc/solana/minters.json) that must be subtracted atomically
+  // at the same finalized slot. Verified live 2026-11-23: Ethereum 322,465,823.79 + Base
+  // 48,557,235.90 + Avalanche 3,661,692.96 + World Chain 417,589.73 + Stellar 4,571,572.20 +
+  // Solana 69,162,684.27 (115,017,211.83 gross - 45,854,527.56 pre-mint) + Cronos 274,243.04 +
+  // Plasma 231,394.28 + Arc 10,418,885.19 = 459,761,121.36 EURC (-0.000055% vs Circle API
+  // 459,761,376.36).
+  "eurc-circle": {
+    preferMcap: true,
+    aggregateContracts: [
+      { chain: "ethereum" },
+      { chain: "base" },
+      { chain: "avalanche" },
+      supplyProbeChain("worldchain"),
+      { chain: "stellar" },
+      {
+        chain: "solana",
+        excludedTokenAccounts: [
+          "89LjSs8wP3EZNCKcs8aCxngQaEuyhUyGE4STkFwNgRT3",
+          "HQHDva1bR4vqxvz6Y8yaLvqkD4AeWCDso8aJ9v5rfLHY",
+          "A6sLLUWebvoUUnQoCiB45ktetd34iamfD8kwTsBSReAb",
+        ],
+      },
+      supplyProbeChain("cronos"),
+      { chain: "plasma" },
+      supplyProbeChain("arc"),
+    ],
+    excludedRepresentations: [
+      { chain: "polygon", address: "0x8a037dbca8134ffc72c362e394e35e0cad618f85", canonicalChain: "ethereum" },
+      { chain: "sonic", address: "0xe715cba7b5ccb33790cebff1436809d36cb17e57", canonicalChain: "ethereum" },
+      { chain: "tempo", address: "0x20c0000000000000000000001621e21f71cf12fb", canonicalChain: "ethereum" },
+      { chain: "cardano", address: "25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff93545555243", canonicalChain: "ethereum" },
+      { chain: "optimism", address: "0xdcb612005417dc906ff72c87df732e5a90d49e11", canonicalChain: "ethereum" },
     ],
   },
 };

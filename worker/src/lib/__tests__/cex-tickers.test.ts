@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 const { sleepWithSignalMock } = vi.hoisted(() => ({
-  sleepWithSignalMock: vi.fn(async () => undefined),
+  sleepWithSignalMock: vi.fn(async (_ms: number, _signal?: AbortSignal) => undefined),
 }));
 
 vi.mock("../abort", async () => {
@@ -293,6 +293,8 @@ describe("fetchCoinbasePrices", () => {
   it.each([
     ["AUDD", "0.7075", "0.7036", "0.7036", "2026-09-26T22:28:40.333586513Z", 0.70555],
     ["XSGD", "0.7831", "0.7821", "0.783", "2026-10-30T21:18:48.841299403Z", 0.7826],
+    ["EURC", "1.0944", "1.0942", "1.0945", "2026-11-23T12:59:08.922863079Z", 1.0943],
+    ["TGBP", "1.3083", "1.308", "1.3078", "2026-11-23T12:59:03.987405502Z", 1.30815],
   ] as const)("prices the %s-USDC FX-stablecoin product from its bid/ask midpoint", async (symbol, ask, bid, price, time, expected) => {
     const bookAt = Date.parse(time) + 600_000;
     vi.setSystemTime(bookAt + 1_000);
@@ -497,169 +499,276 @@ describe("fetchCoinbasePrices", () => {
     expect(outcome.kind).toBe("ok");
     expect(fetchMock).toHaveBeenCalledTimes(5);
     expect(maxInFlight).toBe(1);
+    expect(sleepWithSignalMock).toHaveBeenCalledTimes(4);
+    expect(sleepWithSignalMock.mock.calls.every(([ms]) => ms === 500)).toBe(true);
+  });
+
+  it("honors Retry-After on 429 retries and cools down before ticker fallback and next product", async () => {
+    const fetchMock = mockFetch([
+      {
+        match: "/products/AUDD-USDC/book",
+        outcomes: [
+          { body: { message: "Public rate limit exceeded" }, status: 429, headers: { "Retry-After": "3" } },
+          { body: { message: "Public rate limit exceeded" }, status: 429, headers: { "Retry-After": "4" } },
+        ],
+      },
+      {
+        match: "/products/AUDD-USDC/ticker",
+        outcomes: [
+          { body: { message: "Public rate limit exceeded" }, status: 429 },
+          { body: { bid: "0.6600", ask: "0.6604", price: "0.6602", time: tradeTime }, status: 200 },
+        ],
+      },
+      {
+        match: "/products/USDT-USD/book",
+        body: { bids: [["0.9999", "100", 1]], asks: [["1.0001", "100", 1]], time: tradeTime },
+      },
+    ], { requireMatch: true });
+
+    const outcome = await fetchCoinbasePrices(["USDT", "AUDD"]);
+    expect(outcome.kind).toBe("ok");
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect(outcome.value.prices.get("USDT")).toBeCloseTo(1, 6);
+    expect(outcome.value.prices.get("AUDD")).toBeCloseTo(0.6602, 6);
+    expect(outcome.value.clockBySymbol.get("AUDD")).toBe("trade");
+    expect(outcome.value.diagnostics).toContainEqual(expect.objectContaining({
+      source: "coinbase",
+      endpoint: "api.exchange.coinbase.com/products/AUDD-USDC/book",
+      status: 429,
+      ok: false,
+      success: false,
+      retryAfterSec: 4,
+      errorClass: "http_error",
+    }));
+    // USDT->AUDD spacing (500), AUDD /book retry (Retry-After: 3 -> 3000),
+    // AUDD /book->/ticker cooldown (Retry-After: 4 -> 4000), AUDD /ticker retry fallback (5000).
+    expect(sleepWithSignalMock.mock.calls.map(([ms]) => ms)).toEqual([500, 3000, 4000, 5000]);
+  });
+
+  it("applies the fallback post-429 cooldown before ticker fallback when Retry-After is absent", async () => {
+    mockFetch([
+      {
+        match: "/products/AUDD-USDC/book",
+        outcomes: [
+          { body: { message: "rate limited" }, status: 429 },
+          { body: { message: "rate limited" }, status: 429 },
+        ],
+      },
+      {
+        match: "/products/AUDD-USDC/ticker",
+        body: { bid: "0.6600", ask: "0.6604", price: "0.6602", time: tradeTime },
+      },
+    ], { requireMatch: true });
+
+    const outcome = await fetchCoinbasePrices(["AUDD"]);
+    expect(outcome.kind).toBe("ok");
+    expect(outcome.value.prices.get("AUDD")).toBeCloseTo(0.6602, 6);
+    // /book retry fallback (5000), then post-429 fallback cooldown before /ticker (2000).
+    expect(sleepWithSignalMock.mock.calls.map(([ms]) => ms)).toEqual([5000, 2000]);
   });
 
 });
 
 describe("fetchKrakenPrices", () => {
-  function mockKrakenSocket(rest: unknown, onSubscribe: (socket: EventTarget) => void) {
-    const socket = Object.assign(new EventTarget(), {
-      accept: vi.fn(),
-      close: vi.fn(),
-      send: vi.fn((_subscription: string) => onSubscribe(socket)),
-    });
-    const fetch = vi.fn(async (url: string) => {
-      if (url === "https://ws.kraken.com/v2") return { status: 101, webSocket: socket };
-      expect(socket.close).toHaveBeenCalledOnce();
-      return Response.json(rest);
-    });
-    vi.stubGlobal("fetch", fetch);
-    return { socket, fetch };
-  }
+  const depthPairs = ["AUDX", "BRL1", "EURC", "EUROP", "MXNB", "PAXG", "QCAD", "TGBP", "XAUT", "ZCHF"] as const;
 
-  function snapshot(socket: EventTarget, rows: object[], type = "snapshot") {
-    socket.dispatchEvent(new MessageEvent("message", { data: JSON.stringify({ channel: "ticker", type, data: rows }) }));
-  }
-
-  it("retains the QCAD REST book when the snapshot ages out during collection", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1_000);
+  it("reads the ten clocked Kraken markets from /0/public/Depth?count=1 using the older top-of-book timestamp and keeps other markets on batched /0/public/Ticker", async () => {
+    const nowSec = 1_800_000_000;
+    const clock = vi.spyOn(Date, "now").mockReturnValue(nowSec * 1_000);
     try {
-      mockKrakenSocket({ result: { QCADUSD: { b: ["0.7"], a: ["0.7"] } } }, (ws) => {
-        snapshot(ws, [{ symbol: "QCAD/USD", bid: 0.69, ask: 0.69, timestamp: new Date((now - 599) * 1_000).toISOString() }]);
-        clock.mockReturnValue((now + 3) * 1_000);
+      const requestedUrls: string[] = [];
+      mockFetch([{
+        match: (request) => {
+          requestedUrls.push(request.url);
+          return true;
+        },
+        respond: (request) => {
+          const url = new URL(request.url);
+          if (url.pathname === "/0/public/Ticker") {
+            return Response.json({
+              error: [],
+              result: {
+                USDTZUSD: { c: ["1.0002"] },
+                USDCUSD: { c: ["0.9998"] },
+                DAIUSD: { c: ["1.0000"] },
+                // Must be ignored by Ticker even if returned, because EURC is depth-owned.
+                EURCUSD: { a: ["1.1000"], b: ["1.1000"], c: ["1.1000"] },
+                BTCUSD: { c: ["65000"] },
+              },
+            });
+          }
+          const pair = url.searchParams.get("pair")!;
+          expect(url.pathname).toBe("/0/public/Depth");
+          expect(url.searchParams.get("count")).toBe("1");
+          if (pair === "MXNBUSD") {
+            // Live-style stale bid (764s old) beside fresh ask (71s old): must reject as stale, never re-clock.
+            return Response.json({
+              error: [],
+              result: { MXNBUSD: { bids: [["0.05224", "573269", nowSec - 764]], asks: [["0.05230", "62972", nowSec - 71]] } },
+            });
+          }
+          if (pair === "TGBPUSD") {
+            // Ask timestamp is older than bid timestamp; older timestamp governs observedAt.
+            return Response.json({
+              error: [],
+              result: { TGBPUSD: { bids: [["1.3018", "350", nowSec - 5]], asks: [["1.3022", "768", nowSec - 45]] } },
+            });
+          }
+          if (pair === "EURCUSD") {
+            // 2s forward skew within CEX_UPSTREAM_MAX_FUTURE_SKEW_SEC (5s) is admitted without mutating clock.
+            return Response.json({
+              error: [],
+              result: { EURCUSD: { bids: [["1.0900", "100", nowSec + 2]], asks: [["1.0902", "100", nowSec + 3]] } },
+            });
+          }
+          return Response.json({
+            error: [],
+            result: { [pair]: { bids: [["1.0000", "100", nowSec - 20]], asks: [["1.0002", "100", nowSec - 10]] } },
+          });
+        },
+      }], { requireMatch: true });
+
+      const outcome = await fetchKrakenPrices([...depthPairs, "USDT", "USDC", "DAI"]);
+      expect(outcome.kind).toBe("ok");
+      expect(requestedUrls).toEqual([
+        "https://api.kraken.com/0/public/Ticker?pair=DAIUSD,USDCUSD,USDTUSD",
+        ...depthPairs.map((symbol) => `https://api.kraken.com/0/public/Depth?pair=${symbol}USD&count=1`),
+      ]);
+      // 9 inter-request pacing sleeps across 10 serial Depth calls.
+      expect(sleepWithSignalMock).toHaveBeenCalledTimes(9);
+      expect(sleepWithSignalMock.mock.calls.every(([ms]) => ms === 250)).toBe(true);
+
+      // Batched Ticker markets remain undated / local_fetch.
+      expect(outcome.value.prices.get("USDT")).toBeCloseTo(1.0002, 4);
+      expect(outcome.value.prices.get("USDC")).toBeCloseTo(0.9998, 4);
+      expect(outcome.value.prices.get("DAI")).toBeCloseTo(1.0, 4);
+      expect(outcome.value.quoteBasisBySymbol?.get("USDC")).toBe("last-trade");
+      expect(outcome.value.observedAtBySymbol.has("USDC")).toBe(false);
+      expect(outcome.value.prices.has("BTC")).toBe(false);
+
+      // Clocked Depth markets carry upstream older-of-(bid, ask) timestamps.
+      expect(outcome.value.prices.get("TGBP")).toBeCloseTo(1.302, 6);
+      expect(outcome.value.observedAtBySymbol.get("TGBP")).toBe(nowSec - 45);
+      expect(outcome.value.quoteBasisBySymbol?.get("TGBP")).toBe("bid-ask-midpoint");
+      expect(outcome.value.prices.get("EURC")).toBeCloseTo(1.0901, 6);
+      expect(outcome.value.observedAtBySymbol.get("EURC")).toBe(nowSec + 2);
+      // Stale MXNB book stays withheld and is never re-clocked to fetch time.
+      expect(outcome.value.prices.has("MXNB")).toBe(false);
+      expect(outcome.value.observedAtBySymbol.has("MXNB")).toBe(false);
+      expect(outcome.value.diagnostics).toContainEqual({
+        source: "kraken",
+        stage: "primary",
+        endpoint: "api.kraken.com/0/public/Depth",
+        status: 200,
+        ok: true,
+        success: true,
+        candidateCount: 10,
+        resolvedCount: 9,
+        rejectionReasonCounts: { stale: 1 },
       });
-      const { value } = await fetchKrakenPrices(["QCAD"], undefined, true);
-      expect(value.prices.get("QCAD")).toBe(0.7);
-      expect(value.quoteBasisBySymbol?.get("QCAD")).toBe("bid-ask-midpoint");
-      expect(value.bookSnapshotsBySymbol?.get("QCAD")).toEqual({ price: 0.69, observedAt: now - 599 });
     } finally {
       clock.mockRestore();
     }
   });
 
-  it("collects only exact, fresh, two-sided BBO snapshots and keeps REST quotes", async () => {
-    const now = Date.now();
-    const row = { bid: 1.10, ask: 1.102, timestamp: new Date(now - 10_000).toISOString().replace(/Z$/, "123Z") };
-    const pairs = ["AUDX", "BRL1", "EURC", "EUROP", "MXNB", "PAXG", "QCAD", "TGBP", "XAUT", "ZCHF"];
-    const result = Object.fromEntries([...pairs, "USDC"].map((symbol) => [symbol + "USD", { c: ["1.05"] }]));
-    const { socket, fetch } = mockKrakenSocket({ result }, (ws) => {
-      snapshot(ws, [{ ...row, symbol: "EURC/USD", bid: 9, ask: 9 }], "update");
-      snapshot(ws, [
-        { ...row, symbol: "EURC/EUR" },
-        { ...row, symbol: "USDC/USD" },
-        { ...row, symbol: "EURC/USD" },
-        { ...row, symbol: "AUDX/USD", bid: 0 },
-        { ...row, symbol: "BRL1/USD", timestamp: "2026-11-20" },
-        { ...row, symbol: "EUROP/USD", timestamp: new Date(now + 60_000).toISOString() },
-        { ...row, symbol: "ZCHF/USD", timestamp: new Date(now - 601_000).toISOString() },
-        { ...row, symbol: "MXNB/USD", bid: 1.12 },
-        { ...row, symbol: "TGBP/USD", ask: 1.2 },
-        ...["PAXG", "QCAD", "XAUT"].map((symbol) => ({ ...row, symbol: symbol + "/USD" })),
-      ]);
-    });
-    const { kind, value } = await fetchKrakenPrices([...pairs, "USDC"], undefined, true);
-    expect(kind).toBe("ok");
-    expect(fetch).toHaveBeenCalledTimes(2);
-    expect(socket.send).toHaveBeenCalledOnce();
-    expect(JSON.parse(socket.send.mock.calls[0][0])).toEqual({
-      method: "subscribe", params: { channel: "ticker", symbol: pairs.map((s) => s + "/USD"), event_trigger: "bbo", snapshot: true },
-    });
-    expect([...value.bookSnapshotsBySymbol!.keys()]).toEqual(["EURC", "PAXG", "QCAD", "XAUT"]);
-    expect(value.bookSnapshotsBySymbol?.get("EURC")).toEqual({
-      price: expect.closeTo(1.101, 9), observedAt: Math.floor((now - 10_000) / 1000),
-    });
-    for (const symbol of [...pairs, "USDC"]) {
-      expect(value.prices.get(symbol)).toBe(1.05);
-      expect(value.quoteBasisBySymbol?.get(symbol)).toBe("last-trade");
-    }
-    expect(value.diagnostics).toEqual([expect.objectContaining({
-      endpoint: "ws.kraken.com/v2", candidateCount: 10, resolvedCount: 4,
-      rejectionReasonCounts: { "invalid-shape": 3, stale: 1, "wide-spread": 2 },
-    })]);
-  });
-
-  it.each(["timeout", "abort", "message-cap", "byte-cap"] as const)("cleans up a partial subscription on %s", async (stop) => {
-    vi.useFakeTimers();
+  it("enforces spread, crossed-book, skew, shape, and freshness guards on Kraken Depth without falling back to Ticker", async () => {
+    const nowSec = 1_800_000_000;
+    const clock = vi.spyOn(Date, "now").mockReturnValue(nowSec * 1_000);
     try {
-      const controller = new AbortController();
-      const { socket, fetch } = mockKrakenSocket({ result: { QCADUSD: { c: ["0.7"] } } }, (ws) => {
-        snapshot(ws, [{ symbol: "AUDX/USD", bid: 0.6, ask: 0.6, timestamp: new Date().toISOString() }]);
-        if (stop === "abort") controller.abort();
-        const heartbeat = (data: string) => ws.dispatchEvent(new MessageEvent("message", { data }));
-        if (stop === "message-cap") for (let i = 0; i < 64; i++) heartbeat("{}");
-        if (stop === "byte-cap") heartbeat("€".repeat(12_000));
-      });
-      const outcome = fetchKrakenPrices(["AUDX", "QCAD"], controller.signal, true);
-      if (stop === "abort") {
-        await expect(outcome).rejects.toThrow();
-        expect(fetch).toHaveBeenCalledOnce();
-      } else {
-        if (stop === "timeout") await vi.advanceTimersByTimeAsync(2_000);
-        const { value } = await outcome;
-        expect([...value.prices]).toEqual([["QCAD", 0.7]]);
-        expect(value.bookSnapshotsBySymbol).toEqual(new Map([["AUDX", { price: 0.6, observedAt: expect.any(Number) }]]));
-        expect(value.diagnostics[0]).toMatchObject({ errorClass: stop, rejectionReasonCounts: { "missing-quote": 1 } });
-      }
-      expect(socket.close).toHaveBeenCalledOnce();
-      expect(vi.getTimerCount()).toBe(0);
+      const fetchSpy = mockFetch([{
+        match: "/0/public/Depth",
+        respond: (request) => {
+          const pair = new URL(request.url).searchParams.get("pair")!;
+          const payloads: Record<string, unknown> = {
+            // Wide spread (> 100 bps)
+            AUDXUSD: { error: [], result: { AUDXUSD: { bids: [["0.6500", "10", nowSec - 10]], asks: [["0.6700", "10", nowSec - 10]] } } },
+            // Crossed book (ask < bid)
+            BRL1USD: { error: [], result: { BRL1USD: { bids: [["0.1700", "10", nowSec - 10]], asks: [["0.1690", "10", nowSec - 10]] } } },
+            // Future skew > 5s on ask even though bid is current
+            EURCUSD: { error: [], result: { EURCUSD: { bids: [["1.0900", "10", nowSec - 5]], asks: [["1.0902", "10", nowSec + 6]] } } },
+            // Stale older level (> 600s)
+            EUROPUSD: { error: [], result: { EUROPUSD: { bids: [["1.0900", "10", nowSec - 601]], asks: [["1.0902", "10", nowSec - 5]] } } },
+            // Missing ask side
+            MXNBUSD: { error: [], result: { MXNBUSD: { bids: [["0.0520", "10", nowSec - 5]], asks: [] } } },
+            // Non-integer timestamp
+            PAXGUSD: { error: [], result: { PAXGUSD: { bids: [["3600", "1", nowSec - 5]], asks: [["3601", "1", "bad-ts"]] } } },
+            // Wrong pair response key
+            QCADUSD: { error: [], result: { WRONGKEY: { bids: [["0.7000", "10", nowSec - 5]], asks: [["0.7002", "10", nowSec - 5]] } } },
+          };
+          return Response.json(payloads[pair]);
+        },
+      }], { requireMatch: true });
+
+      const outcome = await fetchKrakenPrices(["AUDX", "BRL1", "EURC", "EUROP", "MXNB", "PAXG", "QCAD"]);
+      expect(outcome.kind).toBe("no-data");
+      expect(outcome.value.prices.size).toBe(0);
+      expect(outcome.value.observedAtBySymbol.size).toBe(0);
+      expect(fetchSpy).toHaveBeenCalledTimes(7);
+      expect(outcome.value.diagnostics).toEqual([{
+        source: "kraken",
+        stage: "primary",
+        endpoint: "api.kraken.com/0/public/Depth",
+        status: 200,
+        ok: true,
+        success: false,
+        candidateCount: 7,
+        resolvedCount: 0,
+        rejectionReasonCounts: {
+          "wide-spread": 2,
+          "invalid-shape": 2,
+          stale: 1,
+          "missing-quote": 2,
+        },
+      }]);
     } finally {
-      vi.useRealTimers();
+      clock.mockRestore();
     }
   });
 
-  it("applies the same deadline to a stalled upgrade before using REST", async () => {
-    vi.useFakeTimers();
+  it("keeps healthy Kraken Depth quotes when one pair returns an API error and fails upstream-error when all fail", async () => {
+    const nowSec = 1_800_000_000;
+    const clock = vi.spyOn(Date, "now").mockReturnValue(nowSec * 1_000);
     try {
-      const fetch = vi.fn(async (_url: string, options: RequestInit) => {
-        if (new Headers(options.headers).has("Upgrade")) {
-          return new Promise<Response>((_, reject) => options.signal?.addEventListener("abort", () => reject(options.signal?.reason)));
-        }
-        return Response.json({ result: { AUDXUSD: { c: ["0.66"] } } });
-      });
-      vi.stubGlobal("fetch", fetch);
-      const outcome = fetchKrakenPrices(["AUDX"], undefined, true);
-      await vi.advanceTimersByTimeAsync(2_000);
-      expect((await outcome).value).toMatchObject({
-        prices: new Map([["AUDX", 0.66]]), observedAtBySymbol: new Map(),
-        diagnostics: [expect.objectContaining({ status: null, errorClass: "timeout" })],
-      });
-      expect(fetch).toHaveBeenCalledTimes(2);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("returns ok outcome mapping pair keys to tracked symbols", async () => {
-    const fetch = mockFetch([{
-      match: () => true,
-      body: {
+      mockFetch([{
+        match: "/0/public/Depth",
+        respond: (request) => {
+          const pair = new URL(request.url).searchParams.get("pair")!;
+          if (pair === "AUDXUSD") return Response.json({ error: ["EGeneral:Temporary lockout"], result: {} });
+          return Response.json({
             error: [],
-            result: {
-              USDTZUSD: { c: ["1.0002"] },
-              USDCUSD: { c: ["0.9998"] },
-              DAIUSD: { c: ["1.0000"] },
-              TGBPUSD: { a: ["1.3538"], b: ["1.3535"], c: ["1.3531"] },
-              // Live shape probed 2026-09-26: MXNBUSD bid/ask midpoint preferred over last.
-              MXNBUSD: { a: ["0.056620"], b: ["0.056580"], c: ["0.056530"] },
-              BTCUSD: { c: ["65000"] },
-            },
-      },
-    }]);
+            result: { QCADUSD: { bids: [["0.6960", "10", nowSec - 30]], asks: [["0.6964", "10", nowSec - 20]] } },
+          });
+        },
+      }], { requireMatch: true });
 
-    const outcome = await fetchKrakenPrices(["USDT", "USDC", "DAI", "TGBP", "MXNB"], undefined, false);
-    expect(fetch).toHaveBeenCalledOnce();
-    expect(fetch.mock.calls[0]?.[0]).toContain("https://api.kraken.com/0/public/Ticker");
-    expect(outcome.kind).toBe("ok");
-    expect(outcome.value.prices.get("USDT")).toBeCloseTo(1.0002, 4);
-    expect(outcome.value.prices.get("USDC")).toBeCloseTo(0.9998, 4);
-    expect(outcome.value.prices.get("DAI")).toBeCloseTo(1.0, 4);
-    expect(outcome.value.prices.get("TGBP")).toBeCloseTo(1.35365, 5);
-    expect(outcome.value.prices.get("MXNB")).toBeCloseTo(0.0566, 8);
-    expect(outcome.value.quoteBasisBySymbol?.get("MXNB")).toBe("bid-ask-midpoint");
-    expect(outcome.value.quoteBasisBySymbol?.get("USDC")).toBe("last-trade");
-    expect(outcome.value.observedAtBySymbol.has("USDC")).toBe(false);
-    expect(outcome.value.prices.has("BTC")).toBe(false);
+      const partial = await fetchKrakenPrices(["AUDX", "QCAD"]);
+      expect(partial.kind).toBe("ok");
+      expect(partial.value.prices.has("AUDX")).toBe(false);
+      expect(partial.value.prices.get("QCAD")).toBeCloseTo(0.6962, 6);
+      expect(partial.value.observedAtBySymbol.get("QCAD")).toBe(nowSec - 30);
+      expect(partial.value.diagnostics).toEqual([{
+        source: "kraken",
+        stage: "primary",
+        endpoint: "api.kraken.com/0/public/Depth",
+        status: 200,
+        ok: false,
+        success: true,
+        candidateCount: 2,
+        resolvedCount: 1,
+        rejectionReasonCounts: { "upstream-error": 1 },
+        errorClass: "api_error",
+      }]);
+
+      mockFetch([{
+        match: "/0/public/Depth",
+        body: { error: ["EGeneral:Temporary lockout"], result: {} },
+      }], { requireMatch: true });
+      const allFailed = await fetchKrakenPrices(["AUDX"]);
+      expect(allFailed.kind).toBe("upstream-error");
+      expect(allFailed).toMatchObject({ reason: "EGeneral:Temporary lockout" });
+    } finally {
+      clock.mockRestore();
+    }
   });
 
   it("rejects a wide two-sided book without falling back to its last trade", async () => {
@@ -755,49 +864,71 @@ describe("fetchKrakenPrices", () => {
     expect(outcome.value.prices.size).toBe(2);
   });
 
-  it("requests the 2026-10-30 reviewed Kraken books and prefers their bid/ask midpoints", async () => {
-    const requestedUrls: string[] = [];
-    mockFetch([{
-      match: (request) => {
-        requestedUrls.push(request.url);
-        return true;
-      },
-      body: {
-        error: [],
-        result: {
-          // Live ticker shapes observed 2026-10-30.
-          AUDXUSD: { a: ["0.70372000", "107413"], b: ["0.70318000", "15000"], c: ["0.70330000", "599.98546851"] },
-          BRL1USD: { a: ["0.18285000", "8656"], b: ["0.18241000", "2787"], c: ["0.18287000", "2593.34863638"] },
-          EUROPUSD: { a: ["1.11580000", "13974"], b: ["1.11450000", "1000"], c: ["1.11450000", "94.76470"] },
-          QCADUSD: { a: ["0.71510000", "69954"], b: ["0.71440000", "69964"], c: ["0.71510000", "16769.00000000"] },
-          USDPTUSD: { a: ["1.00044000", "100000"], b: ["0.99955000", "100000"], c: ["1.00044000", "247.41593"] },
-          USDSMUSD: { a: ["1.00050000", "24985"], b: ["0.99950000", "23177"], c: ["0.99950000", "6.03650"] },
-          USDSUIUSD: { a: ["1.00039000", "9974"], b: ["1.00020000", "12813"], c: ["1.00014000", "9973.75794"] },
-          ZCHFUSD: { a: ["1.21152000", "4116"], b: ["1.20987000", "417"], c: ["1.21003000", "4.59130"] },
+  it("requests the 2026-10-30 reviewed Kraken books on Ticker (USD) and Depth (clocked FX)", async () => {
+    const nowSec = 1_800_000_000;
+    const clock = vi.spyOn(Date, "now").mockReturnValue(nowSec * 1_000);
+    try {
+      const requestedUrls: string[] = [];
+      mockFetch([{
+        match: (request) => {
+          requestedUrls.push(request.url);
+          return true;
         },
-      },
-    }]);
+        respond: (request) => {
+          const url = new URL(request.url);
+          if (url.pathname === "/0/public/Ticker") {
+            return Response.json({
+              error: [],
+              result: {
+                USDPTUSD: { a: ["1.00044000", "100000"], b: ["0.99955000", "100000"], c: ["1.00044000", "247.41593"] },
+                USDSMUSD: { a: ["1.00050000", "24985"], b: ["0.99950000", "23177"], c: ["0.99950000", "6.03650"] },
+                USDSUIUSD: { a: ["1.00039000", "9974"], b: ["1.00020000", "12813"], c: ["1.00014000", "9973.75794"] },
+              },
+            });
+          }
+          const pair = url.searchParams.get("pair")!;
+          const depthByPair: Record<string, { bids: [string, string, number][]; asks: [string, string, number][] }> = {
+            AUDXUSD: { asks: [["0.70372000", "107413", nowSec - 15]], bids: [["0.70318000", "15000", nowSec - 25]] },
+            BRL1USD: { asks: [["0.18285000", "8656", nowSec - 20]], bids: [["0.18241000", "2787", nowSec - 10]] },
+            EUROPUSD: { asks: [["1.11580000", "13974", nowSec - 30]], bids: [["1.11450000", "1000", nowSec - 30]] },
+            QCADUSD: { asks: [["0.71510000", "69954", nowSec - 40]], bids: [["0.71440000", "69964", nowSec - 50]] },
+            ZCHFUSD: { asks: [["1.21152000", "4116", nowSec - 5]], bids: [["1.20987000", "417", nowSec - 60]] },
+          };
+          return Response.json({ error: [], result: { [pair]: depthByPair[pair] } });
+        },
+      }], { requireMatch: true });
 
-    const symbols = ["ZCHF", "USDSM", "USDSUI", "USDPT", "EUROP", "QCAD", "AUDX", "BRL1"];
-    const outcome = await fetchKrakenPrices(symbols, undefined, false);
+      const symbols = ["ZCHF", "USDSM", "USDSUI", "USDPT", "EUROP", "QCAD", "AUDX", "BRL1"];
+      const outcome = await fetchKrakenPrices(symbols);
 
-    for (const symbol of symbols) expect(KRAKEN_KNOWN_SYMBOLS).toContain(symbol);
-    expect(requestedUrls).toEqual([
-      `https://api.kraken.com/0/public/Ticker?pair=${[
-        "AUDXUSD", "BRL1USD", "EUROPUSD", "QCADUSD",
-        "USDPTUSD", "USDSMUSD", "USDSUIUSD", "ZCHFUSD",
-      ].join(",")}`,
-    ]);
-    expect(outcome.kind).toBe("ok");
-    expect(outcome.value.prices.get("AUDX")).toBeCloseTo(0.70345, 8);
-    expect(outcome.value.prices.get("BRL1")).toBeCloseTo(0.18263, 8);
-    expect(outcome.value.prices.get("EUROP")).toBeCloseTo(1.11515, 8);
-    expect(outcome.value.prices.get("QCAD")).toBeCloseTo(0.71475, 8);
-    expect(outcome.value.prices.get("USDPT")).toBeCloseTo(0.999995, 8);
-    expect(outcome.value.prices.get("USDSM")).toBeCloseTo(1.0, 8);
-    expect(outcome.value.prices.get("USDSUI")).toBeCloseTo(1.000295, 8);
-    expect(outcome.value.prices.get("ZCHF")).toBeCloseTo(1.210695, 8);
-    expect(outcome.value.prices.size).toBe(8);
+      for (const symbol of symbols) expect(KRAKEN_KNOWN_SYMBOLS).toContain(symbol);
+      expect(requestedUrls).toEqual([
+        "https://api.kraken.com/0/public/Ticker?pair=USDPTUSD,USDSMUSD,USDSUIUSD",
+        "https://api.kraken.com/0/public/Depth?pair=AUDXUSD&count=1",
+        "https://api.kraken.com/0/public/Depth?pair=BRL1USD&count=1",
+        "https://api.kraken.com/0/public/Depth?pair=EUROPUSD&count=1",
+        "https://api.kraken.com/0/public/Depth?pair=QCADUSD&count=1",
+        "https://api.kraken.com/0/public/Depth?pair=ZCHFUSD&count=1",
+      ]);
+      expect(outcome.kind).toBe("ok");
+      expect(outcome.value.prices.get("AUDX")).toBeCloseTo(0.70345, 8);
+      expect(outcome.value.observedAtBySymbol.get("AUDX")).toBe(nowSec - 25);
+      expect(outcome.value.prices.get("BRL1")).toBeCloseTo(0.18263, 8);
+      expect(outcome.value.observedAtBySymbol.get("BRL1")).toBe(nowSec - 20);
+      expect(outcome.value.prices.get("EUROP")).toBeCloseTo(1.11515, 8);
+      expect(outcome.value.observedAtBySymbol.get("EUROP")).toBe(nowSec - 30);
+      expect(outcome.value.prices.get("QCAD")).toBeCloseTo(0.71475, 8);
+      expect(outcome.value.observedAtBySymbol.get("QCAD")).toBe(nowSec - 50);
+      expect(outcome.value.prices.get("USDPT")).toBeCloseTo(0.999995, 8);
+      expect(outcome.value.prices.get("USDSM")).toBeCloseTo(1.0, 8);
+      expect(outcome.value.prices.get("USDSUI")).toBeCloseTo(1.000295, 8);
+      expect(outcome.value.prices.get("ZCHF")).toBeCloseTo(1.210695, 8);
+      expect(outcome.value.observedAtBySymbol.get("ZCHF")).toBe(nowSec - 60);
+      expect(outcome.value.observedAtBySymbol.has("USDPT")).toBe(false);
+      expect(outcome.value.prices.size).toBe(8);
+    } finally {
+      clock.mockRestore();
+    }
   });
 
   it("returns upstream-error outcome when Kraken returns an API error", async () => {

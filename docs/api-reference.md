@@ -1128,7 +1128,7 @@ Yield-bearing stablecoin rankings with safety, benchmark-aware context, and opti
 ```json
 {
   "currentVersion": "8.61",
-  "methodologyVersion": "10.50"
+  "methodologyVersion": "10.51"
 }
 ```
 
@@ -1316,7 +1316,7 @@ Read the [peg-summary admission verdict](#peg-summary-admission) for the same qu
 
 ### Stablecoin detail
 
-When the canonical list supplies dated `supplyChangeBaselines`, detail forwards the map with its admitted current supply. Detail and the compact live summary use the list publisher's previous-day bucket projection. It keeps the published attribution when the buckets match the dated total and uses `unattributed` when a dated total cannot be apportioned. An omitted map or day key falls back to the admitted legacy buckets. An empty map or explicit null day returns an empty previous-day bucket.
+When the canonical list supplies dated `supplyChangeBaselines`, detail forwards the map alongside `currentSupplySource` with its admitted current supply. Detail and the compact live summary use the list publisher's previous-day bucket projection. It keeps the published attribution when the buckets match the dated total and uses `unattributed` when a dated total cannot be apportioned. An omitted map or day key falls back to the admitted legacy buckets. An empty map or explicit null day returns an empty previous-day bucket. For Pharos native-supply sources (`onchain-total-supply`, `onchain-circulating-supply`, `zephyr-scanner`), the compact live summary also reads 7D/30D `nativeSupply` anchors from `supplyChangeBaselines[window].circulatingNative` (or `null` when unavailable) instead of provider token history.
 
 Commodity detail history overlays canonical native quantities on compatible completed checkpoints. Each wrapper checkpoint retains its own observation clock. Market-price admission requires the dated same-day quote, while a separately dated valuation can support its supply valuation. For native quantities derived from protocol TVL, use the latest eligible quote from the same UTC day at or before the TVL timestamp. If no quote qualifies, the row keeps its USD TVL and omits the native bucket. During a wrapper history gap the endpoint can serve current wrapper stock with the historical trend unavailable. The quantity fields are optional and have the same legacy semantics as [supply history](#get-apisupply-history).
 

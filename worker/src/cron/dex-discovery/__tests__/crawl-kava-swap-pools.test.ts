@@ -8,6 +8,8 @@ import { crawlKavaSwapPoolsStage, isKavaSwapDiscoveryDeployment } from "../crawl
 const KAVA_USDX_ADDRESS = "usdx";
 const KAVA_SWAP_PARAMS_URL = "https://api.kava.io/kava/swap/v1beta1/params";
 const KAVA_SWAP_POOLS_URL = "https://api.kava.io/kava/swap/v1beta1/pools";
+const KAVA_SWAP_ARCHIVE_PARAMS_URL = "https://api.data.kava.io/kava/swap/v1beta1/params";
+const KAVA_SWAP_ARCHIVE_POOLS_URL = "https://api.data.kava.io/kava/swap/v1beta1/pools";
 
 function target(chain = "kava", address = KAVA_USDX_ADDRESS): ContractDeployment {
   return { chain, address, decimals: 6 };
@@ -152,9 +154,10 @@ describe("Kava swap pool discovery", () => {
     expect(stageContext.pools).toEqual([]);
   });
 
-  it("treats a retired or unavailable params endpoint as provider failure", async () => {
-    mockFetch([
+  it("treats a retired or unavailable params endpoint across both hosts as provider failure", async () => {
+    const fetchMock = mockFetch([
       { match: KAVA_SWAP_PARAMS_URL, body: { error: "not found" }, status: 404 },
+      { match: KAVA_SWAP_ARCHIVE_PARAMS_URL, body: { error: "not found" }, status: 404 },
     ], { requireMatch: true, strictUrl: true });
     const stageContext = context();
 
@@ -163,6 +166,10 @@ describe("Kava swap pool discovery", () => {
       context: stageContext.value,
     });
 
+    expect(fetchMock.getHistory().map(({ url }) => url)).toEqual([
+      KAVA_SWAP_PARAMS_URL,
+      KAVA_SWAP_ARCHIVE_PARAMS_URL,
+    ]);
     expect(result.providerChecks).toEqual([
       {
         chain: "kava",
@@ -172,6 +179,135 @@ describe("Kava swap pool discovery", () => {
       },
     ]);
     expect(stageContext.pools).toEqual([]);
+  });
+
+  it("fails over to api.data.kava.io when api.kava.io returns HTTP 502 on params", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const ukavaUsdx = pool("ukava:usdx", "ukava", "532718097661", "usdx", "33684838465");
+      const fetchMock = mockFetch([
+        { match: KAVA_SWAP_PARAMS_URL, body: "Bad Gateway", status: 502 },
+        { match: KAVA_SWAP_ARCHIVE_PARAMS_URL, body: params() },
+        { match: KAVA_SWAP_ARCHIVE_POOLS_URL, body: { pools: [ukavaUsdx], pagination: { next_key: null, total: "1" } } },
+      ], { requireMatch: true, strictUrl: true });
+      const stageContext = context();
+
+      const pending = crawlKavaSwapPoolsStage({
+        coinTargets: [target()],
+        context: stageContext.value,
+      });
+      await vi.runAllTimersAsync();
+      const result = await pending;
+
+      expect(result.providerChecks).toEqual([
+        {
+          chain: "kava",
+          address: KAVA_USDX_ADDRESS,
+          provider: "kava-swap",
+          status: "success",
+          observedPoolCount: 1,
+        },
+      ]);
+      expect(stageContext.pools.map((entry) => entry.poolId)).toEqual(["kava:ukava:usdx"]);
+      expect(fetchMock.getHistory().map(({ url }) => url)).toEqual([
+        KAVA_SWAP_PARAMS_URL,
+        KAVA_SWAP_PARAMS_URL,
+        KAVA_SWAP_ARCHIVE_PARAMS_URL,
+        KAVA_SWAP_ARCHIVE_POOLS_URL,
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("never mixes params and pools across hosts when api.kava.io pools returns HTTP 502", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const ukavaUsdx = pool("ukava:usdx", "ukava", "532718097661", "usdx", "33684838465");
+      const fetchMock = mockFetch([
+        { match: KAVA_SWAP_PARAMS_URL, body: params([]) },
+        { match: KAVA_SWAP_POOLS_URL, body: "Bad Gateway", status: 502 },
+        {
+          match: KAVA_SWAP_ARCHIVE_PARAMS_URL,
+          body: {
+            params: {
+              allowed_pools: [{ token_a: "ukava", token_b: "usdx" }],
+              swap_fee: "0.002000000000000000",
+            },
+          },
+        },
+        { match: KAVA_SWAP_ARCHIVE_POOLS_URL, body: { pools: [ukavaUsdx], pagination: { next_key: null, total: "1" } } },
+      ], { requireMatch: true, strictUrl: true });
+      const stageContext = context();
+
+      const pending = crawlKavaSwapPoolsStage({
+        coinTargets: [target()],
+        context: stageContext.value,
+      });
+      await vi.runAllTimersAsync();
+      const result = await pending;
+
+      expect(result.providerChecks).toEqual([
+        {
+          chain: "kava",
+          address: KAVA_USDX_ADDRESS,
+          provider: "kava-swap",
+          status: "success",
+          observedPoolCount: 1,
+        },
+      ]);
+      expect(stageContext.pools).toHaveLength(1);
+      expect(stageContext.pools[0]?.feeTier).toBe(20);
+      expect(fetchMock.getHistory().map(({ url }) => url)).toEqual([
+        KAVA_SWAP_PARAMS_URL,
+        KAVA_SWAP_POOLS_URL,
+        KAVA_SWAP_POOLS_URL,
+        KAVA_SWAP_ARCHIVE_PARAMS_URL,
+        KAVA_SWAP_ARCHIVE_POOLS_URL,
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("returns retryable failure when both Kava LCD hosts return HTTP 502", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const fetchMock = mockFetch([
+        { match: KAVA_SWAP_PARAMS_URL, body: "Bad Gateway", status: 502 },
+        { match: KAVA_SWAP_ARCHIVE_PARAMS_URL, body: "Bad Gateway", status: 502 },
+      ], { requireMatch: true, strictUrl: true });
+      const stageContext = context();
+
+      const pending = crawlKavaSwapPoolsStage({
+        coinTargets: [target()],
+        context: stageContext.value,
+      });
+      await vi.runAllTimersAsync();
+      const result = await pending;
+
+      expect(result.providerChecks).toEqual([
+        {
+          chain: "kava",
+          address: KAVA_USDX_ADDRESS,
+          provider: "kava-swap",
+          status: "failure",
+          retryable: true,
+        },
+      ]);
+      expect(stageContext.pools).toEqual([]);
+      expect(fetchMock.getHistory().map(({ url }) => url)).toEqual([
+        KAVA_SWAP_PARAMS_URL,
+        KAVA_SWAP_PARAMS_URL,
+        KAVA_SWAP_ARCHIVE_PARAMS_URL,
+        KAVA_SWAP_ARCHIVE_PARAMS_URL,
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("degrades partial pages and inconsistent totals instead of certifying empty", async () => {

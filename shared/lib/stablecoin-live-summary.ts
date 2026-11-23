@@ -5,6 +5,11 @@ import { admitSupplyBuckets, projectUsdMarketCapBaselineBuckets, sumPegBucketsOr
 import { isAmbiguousSupplyPerimeterDay, isEarlierSupplyPerimeter } from "./supply-perimeter-changes";
 
 const DETAIL_BUCKET_MAX_BACKFILL_SEC = 86_400;
+const NATIVE_SUPPLY_BASELINE_SOURCES = new Set([
+  "onchain-total-supply",
+  "onchain-circulating-supply",
+  "zephyr-scanner",
+]);
 
 /** Nominal references never become observed display prices, regardless of transport. */
 export function normalizeStablecoinLiveSummary(summary: StablecoinLiveSummary): StablecoinLiveSummary {
@@ -104,9 +109,17 @@ export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse, s
   );
   // Provider token history still counts the chains a matched comparison perimeter excludes (Pricing v6.90), so
   // its prior quantity values the canonical prior bucket at the current quantity's own valuation.
+  // Native on-chain/scanner supplies must compare against same-producer D1 baselines rather than provider history.
   const currentUsd = sumPegBucketsOrNull(circulating);
   const matchedPerimeter = hasCurrentSupply && detail.currentSupplyComparisonExcludedChains !== undefined;
-  const priorNative = (prior: Record<string, number>, targetDate: number) => {
+  const usesNativeSupplyBaselines = hasCurrentSupply
+    && typeof detail.currentSupplySource === "string"
+    && NATIVE_SUPPLY_BASELINE_SOURCES.has(detail.currentSupplySource);
+  const priorNative = (window: "week" | "month", prior: Record<string, number>, targetDate: number) => {
+    if (usesNativeSupplyBaselines) {
+      const baselineNative = detail.supplyChangeBaselines?.[window]?.circulatingNative;
+      return typeof baselineNative === "number" && Number.isFinite(baselineNative) && baselineNative >= 0 ? baselineNative : null;
+    }
     if (!matchedPerimeter) return sumPegBucketsOrNull(detailBucketsAt(detail, targetDate, "totalCirculating", stablecoinId));
     const priorUsd = sumPegBucketsOrNull(prior);
     return priorUsd == null || currentNative == null || currentUsd == null || currentUsd <= 0 ? null : priorUsd * currentNative / currentUsd;
@@ -138,10 +151,10 @@ export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse, s
       current: currentNative,
       prevWeek: currentNative == null || supplyObservedAt == null
         ? null
-        : priorNative(circulatingPrevWeek, supplyObservedAt - 7 * 86_400),
+        : priorNative("week", circulatingPrevWeek, supplyObservedAt - 7 * 86_400),
       prevMonth: currentNative == null || supplyObservedAt == null
         ? null
-        : priorNative(circulatingPrevMonth, supplyObservedAt - 30 * 86_400),
+        : priorNative("month", circulatingPrevMonth, supplyObservedAt - 30 * 86_400),
     },
   }));
 }

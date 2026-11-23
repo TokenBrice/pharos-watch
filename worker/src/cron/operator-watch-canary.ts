@@ -16,9 +16,10 @@ export interface CanaryOperatorWatchEvidence {
 /**
  * Every operator section line is budgeted for the Telegram chunk cap, so the
  * free-form reason is truncated here: the check id must stay visible even when
- * the stored error is `MAX_CANARY_ERROR_CHARS` long.
+ * the stored error is `MAX_CANARY_ERROR_CHARS` long, while structured R3/R4
+ * findings (reason, age, budget, and full 83-char V9 generation id) fit intact.
  */
-const OPERATOR_CANARY_LABEL_MAX_CHARS = 100;
+export const OPERATOR_CANARY_LABEL_MAX_CHARS = 220;
 /** A whole missing cohort lists every id; keep the bounded count visible. */
 const OPERATOR_CANARY_COHORT_DETAIL_MAX_CHARS = 80;
 /** `boundedText` appends a three-character ellipsis past its slice budget. */

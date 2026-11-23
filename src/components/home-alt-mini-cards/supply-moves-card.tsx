@@ -30,19 +30,21 @@ const MIN_TRACKED_MCAP_USD = 10_000_000;
 // value is a daily point, so the window reaches back eight days, not seven.
 const REVIEWED_INTERNAL_FLOW_LOOKBACK_SEC = 8 * DAY_SECONDS;
 
-interface Mover {
+export interface SupplyMover {
   id: string;
   symbol: string;
   name: string;
   pctChange: number;
 }
 
-function computeSupplyMovers(coins: readonly StablecoinData[], payloadObservedAtSec: number): {
-  ups: Mover[];
-  downs: Mover[];
+export function computeSupplyMovers(coins: readonly StablecoinData[], payloadObservedAtSec: number): {
+  ups: SupplyMover[];
+  downs: SupplyMover[];
+  upCount: number;
+  downCount: number;
   evaluated: boolean;
 } {
-  const movers: Mover[] = [];
+  const movers: SupplyMover[] = [];
   let evaluated = false;
   for (const c of coins) {
     if (!ACTIVE_STABLECOIN_ID_SET.has(c.id)) continue;
@@ -72,12 +74,30 @@ function computeSupplyMovers(coins: readonly StablecoinData[], payloadObservedAt
     if (pctChange === 0) continue;
     movers.push({ id: c.id, symbol: c.symbol, name: c.name, pctChange });
   }
-  const ups = movers.filter((mover) => mover.pctChange > 0).sort((a, b) => b.pctChange - a.pctChange).slice(0, 4);
-  const downs = movers.filter((mover) => mover.pctChange < 0).sort((a, b) => a.pctChange - b.pctChange).slice(0, 4);
-  return { ups, downs, evaluated };
+  const allUps = movers.filter((mover) => mover.pctChange > 0).sort((a, b) => b.pctChange - a.pctChange);
+  const allDowns = movers.filter((mover) => mover.pctChange < 0).sort((a, b) => a.pctChange - b.pctChange);
+  return {
+    ups: allUps.slice(0, 4),
+    downs: allDowns.slice(0, 4),
+    upCount: allUps.length,
+    downCount: allDowns.length,
+    evaluated,
+  };
 }
 
-function formatPct(pct: number): string {
+export function selectPeakSupplyMover(
+  ups: readonly SupplyMover[],
+  downs: readonly SupplyMover[],
+): SupplyMover | null {
+  const top = ups[0];
+  const bottom = downs[0];
+  if (!top && !bottom) return null;
+  if (!top) return bottom!;
+  if (!bottom) return top;
+  return Math.abs(top.pctChange) >= Math.abs(bottom.pctChange) ? top : bottom;
+}
+
+export function formatSupplyMovePct(pct: number): string {
   const sign = pct >= 0 ? "+" : "";
   if (Math.abs(pct) >= 100) return `${sign}${pct.toFixed(0)}%`;
   return `${sign}${pct.toFixed(1)}%`;
@@ -95,14 +115,7 @@ export function SupplyMovesCard(): React.JSX.Element {
     const payloadObservedAtSec = query.meta?.updatedAt ?? Math.floor(query.dataUpdatedAt / 1000);
     return computeSupplyMovers(data?.peggedAssets ?? [], payloadObservedAtSec);
   }, [data, query.meta?.updatedAt, query.dataUpdatedAt]);
-  const peak = useMemo<Mover | null>(() => {
-    const top = ups[0];
-    const bottom = downs[0];
-    if (!top && !bottom) return null;
-    if (!top) return bottom!;
-    if (!bottom) return top;
-    return Math.abs(top.pctChange) >= Math.abs(bottom.pctChange) ? top : bottom;
-  }, [ups, downs]);
+  const peak = useMemo(() => selectPeakSupplyMover(ups, downs), [ups, downs]);
   const peakInUps = peak !== null && peak.id === ups[0]?.id;
   const peakLogoSrc = peak === null ? undefined : getLogoSrc(logoMap, peak.id);
   const upsDisplay = peakInUps ? ups.slice(1, 4) : ups.slice(0, 3);
@@ -141,7 +154,7 @@ export function SupplyMovesCard(): React.JSX.Element {
           prefetch={false}
           href={buildStablecoinUrl(peak.id)}
           className="pharos-focus-ring -mx-1 flex items-center justify-between gap-3 rounded-sm px-1 py-0.5 transition-colors hover:bg-muted/50"
-          aria-label={`${peak.symbol}, peak 7-day supply mover: ${formatPct(peak.pctChange)}`}
+          aria-label={`${peak.symbol}, peak 7-day supply mover: ${formatSupplyMovePct(peak.pctChange)}`}
         >
           <span className="flex min-w-0 items-center gap-2.5">
             {peakLogoSrc && (
@@ -164,7 +177,7 @@ export function SupplyMovesCard(): React.JSX.Element {
               peak.pctChange >= 0 ? DIRECTION_TONE_CLASSES.up : DIRECTION_TONE_CLASSES.down
             }`}
           >
-            {formatPct(peak.pctChange)}
+            {formatSupplyMovePct(peak.pctChange)}
           </span>
         </Link>
       )}
@@ -186,7 +199,7 @@ function MoverList({
   logoMap,
 }: {
   label: string;
-  rows: Mover[];
+  rows: SupplyMover[];
   logoMap: Record<string, string>;
 }): React.JSX.Element {
   return (
@@ -212,7 +225,7 @@ function MoverList({
                     row.pctChange >= 0 ? DIRECTION_TONE_CLASSES.up : DIRECTION_TONE_CLASSES.down
                   }`}
                 >
-                  {formatPct(row.pctChange)}
+                  {formatSupplyMovePct(row.pctChange)}
                 </span>
               </Link>
             </li>

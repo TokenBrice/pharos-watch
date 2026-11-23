@@ -131,6 +131,34 @@ export function readSolanaMint(account: SolanaAccount | null | undefined, observ
   };
 }
 
+/** Decode an SPL Token (or Token-2022) account and bind it to its mint and token program. */
+export function readSolanaTokenAccount(
+  account: SolanaAccount | null | undefined,
+  expectedMint: string,
+  expectedOwner: string,
+): { mint: string; owner: string; amount: bigint; state: 1 | 2 } {
+  if (!account || account.executable || account.owner !== expectedOwner
+    || (expectedOwner !== SOLANA_TOKEN_PROGRAM && expectedOwner !== SOLANA_TOKEN_2022_PROGRAM)) {
+    throw new Error("Solana token account program identity mismatch");
+  }
+  const data = account.data;
+  const validLength = expectedOwner === SOLANA_TOKEN_PROGRAM
+    ? data.length === 165
+    : data.length === 165 || (data.length >= 166 && data[165] === 2);
+  if (!validLength || (data[108] !== 1 && data[108] !== 2)) {
+    throw new Error("Solana token account layout or state mismatch");
+  }
+  const mint = solanaPublicKey(data.subarray(0, 32));
+  if (mint !== expectedMint) throw new Error("Solana token account mint mismatch");
+  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  return {
+    mint,
+    owner: solanaPublicKey(data.subarray(32, 64)),
+    amount: view.getBigUint64(64, true),
+    state: data[108] as 1 | 2,
+  };
+}
+
 /** Match Token-2022's float multiply then truncate, bounded to exact JS integers. */
 export function scaledSolanaRawAmount(raw: bigint, multiplier: number): bigint {
   if (raw < 0n || raw > BigInt(Number.MAX_SAFE_INTEGER) || !Number.isFinite(multiplier) || multiplier <= 0) throw new Error("Solana scaled amount is not safely representable");

@@ -4,7 +4,7 @@ import { ExitRouteObservationSchema } from "@shared/types/exit-route";
 import type { V9ValidatedPolicyEnvelope } from "@shared/types/safety-score-v9";
 import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
 import { selectV9ExitStressRequest } from "@shared/lib/safety-score-v9/exit";
-import { admitExitExecutionCertificate, exitExecutionEurVaultReviewDigest, exitExecutionInKindReviewDigest, exitExecutionInputGenerationId, exitExecutionReviewDigest, validateExitExecutionModelReviews } from "@shared/lib/safety-score-v9/exit-execution";
+import { admitExitExecutionCertificate, exitExecutionEurVaultReviewDigest, exitExecutionInKindReviewDigest, exitExecutionInputGenerationId, exitExecutionReviewDigest, resolveExitExecutionPriceLegBudget, validateExitExecutionModelReviews } from "@shared/lib/safety-score-v9/exit-execution";
 import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import reviewedModels from "@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json";
 import { observeSecuritizeOffRampExit } from "./securitize-offramp";
@@ -69,6 +69,7 @@ export async function observeReviewedExitExecutionRoutes(args: {
       let outputReference = args.outputReference;
       let inputPrice = null;
       let outputPrice = null;
+      let outputFxObservedAtSec: number | null = null;
       let eurVaultPayout: { expectedUsd: number; sourceId: string; observedAtSec: number } | null | undefined;
       const isVault = review.producer.kind === "erc4626-instant";
       const externalShares = review.producer.kind === "erc4626-instant" ? review.producer.externalShareToken : undefined;
@@ -111,11 +112,21 @@ export async function observeReviewedExitExecutionRoutes(args: {
           } else if (output.pegType === "peggedEUR") {
             if (fxRateState === undefined) fxRateState = args.db ? await loadFxRateState(args.db) : null;
             const sourceTime = fxRateState?.sourceUpdatedAtByPeg.peggedEUR;
-            if (getFxReferenceTypeFromState(fxRateState ?? null, "peggedEUR", policy.priceMaxAgeSec, args.clockSec) === "fresh" &&
+            const fxLegBudget = sourceTime != null
+              ? resolveExitExecutionPriceLegBudget(
+                  { sourceId: `${output.priceSource!}+fx-rates:peggedEUR`, observedAtSec: sourceTime },
+                  args.clockSec,
+                  policy.priceMaxAgeSec,
+                  args.clockSec,
+                )
+              : null;
+            if (fxLegBudget &&
+                getFxReferenceTypeFromState(fxRateState ?? null, "peggedEUR", fxLegBudget.budgetSec, args.clockSec) === "fresh" &&
                 (!legacyPayoutReference || fxRateState?.rates.peggedEUR === legacyPayoutReference.valueUsd) &&
-                sourceTime != null && sourceTime <= args.clockSec && args.clockSec - sourceTime <= policy.priceMaxAgeSec) {
+                sourceTime != null && sourceTime <= args.clockSec && args.clockSec - sourceTime <= fxLegBudget.budgetSec) {
               expectedUnitValueUsd = fxRateState!.rates.peggedEUR!;
               fxObservedAtSec = sourceTime;
+              outputFxObservedAtSec = sourceTime;
             }
           }
           if (expectedUnitValueUsd !== null) outputReference = {
@@ -133,11 +144,48 @@ export async function observeReviewedExitExecutionRoutes(args: {
       // Capture only asserts freshness now; the generation evaluates later. A leg
       // inside `priceMaxAgeSec` here can age past it before evaluation, so the
       // capture margin withholds it earlier and names the binding leg.
-      const capturePriceMaxAgeSec = policy.priceMaxAgeSec - (policy.evaluationLagSec ?? 0);
+      const evaluationLagSec = policy.evaluationLagSec ?? 0;
+      const baseCapturePriceMaxAgeSec = policy.priceMaxAgeSec - evaluationLagSec;
+      const capturePriceMaxAgeForLeg = (reference: ExitExecutionCertificate["inputReference"] | undefined): number => (
+        reference
+          ? Math.max(
+              0,
+              resolveExitExecutionPriceLegBudget(
+                reference,
+                args.clockSec,
+                policy.priceMaxAgeSec,
+                args.clockSec,
+              ).budgetSec - evaluationLagSec,
+            )
+          : baseCapturePriceMaxAgeSec
+      );
+      const outputCapturePriceMaxAgeSec = capturePriceMaxAgeForLeg(outputReference);
+      const inputCapturePriceMaxAgeSec = capturePriceMaxAgeForLeg(inputReference);
+      // Keep the 24/7 token market quote on the policy capture margin even when
+      // an FX-valued output leg qualifies for the FX-closure intraday budget.
+      const outputMarketStale = outputFxObservedAtSec !== null &&
+        outputPrice?.priceObservedAt != null &&
+        outputPrice.priceObservedAt <= args.clockSec &&
+        args.clockSec - outputPrice.priceObservedAt > baseCapturePriceMaxAgeSec;
       const priceFailure = (leg: "input" | "output"): ExitExecutionRuntimeFailure => {
         const reference = leg === "input" ? inputReference : outputReference;
         const price = leg === "input" ? inputPrice : outputPrice;
+        if (leg === "output" && outputMarketStale && outputPrice) {
+          return {
+            modelId: review.modelId,
+            reason: "execution-price-leg-stale:output",
+            responsibility: "producer-failed",
+            priceLeg: {
+              leg: "output",
+              observedAtSec: outputPrice.priceObservedAt ?? null,
+              capturePriceMaxAgeSec: baseCapturePriceMaxAgeSec,
+              sourceId: outputPrice.priceSource ?? null,
+              sourceGenerationId: cache?.kind === "ok" ? `stablecoins:${cache.updatedAt}` : null,
+            },
+          };
+        }
         const observedAtSec = reference?.observedAtSec ?? price?.priceObservedAt ?? null;
+        const capturePriceMaxAgeSec = leg === "input" ? inputCapturePriceMaxAgeSec : outputCapturePriceMaxAgeSec;
         return {
           modelId: review.modelId,
           reason: reference ? `execution-price-leg-stale:${leg}`
@@ -151,10 +199,10 @@ export async function observeReviewedExitExecutionRoutes(args: {
           },
         };
       };
-      const outputFresh = !!outputReference && outputReference.observedAtSec <= args.clockSec &&
-        args.clockSec - outputReference.observedAtSec <= capturePriceMaxAgeSec;
+      const outputFresh = !!outputReference && !outputMarketStale && outputReference.observedAtSec <= args.clockSec &&
+        args.clockSec - outputReference.observedAtSec <= outputCapturePriceMaxAgeSec;
       const inputFresh = !!inputReference && inputReference.observedAtSec <= args.clockSec &&
-        args.clockSec - inputReference.observedAtSec <= capturePriceMaxAgeSec;
+        args.clockSec - inputReference.observedAtSec <= inputCapturePriceMaxAgeSec;
       // A vault without an external share token re-derives a stale share price
       // from pinned NAV and the fresh output leg instead of admitting the old leg.
       const refreshInputFromOutput = isVault && !externalShares && outputFresh && !inputFresh;

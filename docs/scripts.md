@@ -134,6 +134,8 @@ replays against the capture-time registry.
 
 `npm run safety-score-v9:movers` resolves to `worker/scripts/diff-safety-score-v9-movers.ts`. Like replay and diff, this is Worker-bound tooling because full-artifact admission uses the native/legacy capture contracts. Keep its implementation under `worker/scripts/`, outside the root TypeScript program; the npm alias and flags remain unchanged.
 
+`npm run safety-score-v9:admit-receipt` resolves to `worker/scripts/build-safety-score-v9-admission-receipt.ts` (strict CLI, Worker-bound). It projects `schemaVersion: 3` new-asset admission receipts from `projectV9CardOpenEvidence` in two modes: default `prospective-offline` (`--asset <id> --supply-observations <path> [--clock <time>]`), compiling `{asset} ∪ transitiveAncestors` inside an evidence-free native v4 shell whose DEX, redemption, peg, live-reserve, and chain-supply lanes are explicitly unavailable (never verified-empty); and `production-capture` (`--from-replay <replay.json> --asset <id>`). `--verify <receipt-path> [--now <time>] [--json]` recomputes a committed `prospective-offline` receipt against the checkout and is spawned by `check:new-asset-evidence-packet` (see [Adding a Stablecoin §5j](./process/adding-a-stablecoin.md#5j-safety-score-admission-receipt-new-asset-evidence-packet)).
+
 Use `jq '(.fixedInput // .).clockSec'` to read either export shape. The [equivalence harness](./process/safety-score-equivalence-harness.md#capture-time-registry-replay) owns snapshot admission, trusted-Git execution, production-digest limitations, and the `--registry-ref`, `--normalized-only`, and `--allow-registry-mismatch` mode contracts.
 
 ## HTTP Route Telemetry

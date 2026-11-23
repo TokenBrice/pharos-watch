@@ -622,7 +622,11 @@ function hasReconciledCuratedAggregateSupplyPacket(
   expectedCirculatingBucket: string,
   freshAggregateSupply?: number | null,
 ): boolean {
-  if (asset.supplySource !== "onchain-total-supply" && !(asset.supplySource === "coingecko-fallback" && asset.chainPartition)) return false;
+  if (
+    asset.supplySource !== "onchain-total-supply" &&
+    asset.supplySource !== "onchain-circulating-supply" &&
+    !(asset.supplySource === "coingecko-fallback" && asset.chainPartition)
+  ) return false;
   const aggregateSupply = getCirculatingRawOrNull(asset);
   const chainCirculating = asset.chainCirculating;
   const observedChainLabels = Object.keys(chainCirculating ?? {}).sort();

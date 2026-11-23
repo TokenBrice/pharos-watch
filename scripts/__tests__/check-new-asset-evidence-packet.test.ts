@@ -2,15 +2,20 @@ import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { REPORT_CARDS_BASE_INPUT_GENERATION_ID_PREFIX } from "@shared/lib/report-cards-base-input-identity";
+import { SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS } from "@shared/lib/safety-score-v9-capacity-limits";
 import {
+  NEW_ASSET_ADMISSION_CLOCK_MAX_AGE_SEC,
   NEW_ASSET_GATE_OVERRIDE_LABEL,
   NEW_ASSET_OPEN_QUESTION_LIMIT,
   NEW_ASSET_RECEIPT_DIR,
   NewAssetAdmissionReceiptSchema,
+  PROSPECTIVE_ABSENT_RUNTIME_LANES,
+  PROSPECTIVE_ADMISSION_INPUT_ID_PREFIX,
   classifyNewAssetGateCandidates,
   evaluateNewAssetEvidencePacket,
   isPerCoinAssetPath,
   parseCoinAdmissionSnapshot,
+  type EvaluateNewAssetEvidencePacketInput,
   type NewAssetGateCandidate,
   type NewAssetGateReport,
 } from "../ci/check-new-asset-evidence-packet";
@@ -19,6 +24,8 @@ const REGISTRY_FINGERPRINT = "a".repeat(64);
 const EVALUATION_BUILD_DIGEST = "e".repeat(64);
 const CAPTURE_ID = "20261029T1814Z";
 const CAPTURE_CLOCK_SEC = 1_793_294_244;
+const NOW_SEC = 1_795_440_000;
+const PROSPECTIVE_INPUT_ID = `${PROSPECTIVE_ADMISSION_INPUT_ID_PREFIX}${"d".repeat(64)}`;
 
 type FixtureBucket = "open" | "issuer" | "documentation";
 
@@ -30,30 +37,9 @@ interface QuestionFixture {
   codes?: Array<{ code: string; obligations?: number; documentation?: boolean }>;
 }
 
-function receiptJson({
-  schemaVersion = 2,
-  assetId = "newcoin-test",
-  registryFingerprint = REGISTRY_FINGERPRINT,
-  evaluationBuildDigest = EVALUATION_BUILD_DIGEST,
-  questions,
-  card = {},
-}: {
-  schemaVersion?: 1 | 2;
-  assetId?: string;
-  registryFingerprint?: string;
-  evaluationBuildDigest?: string;
-  questions: QuestionFixture[];
-  card?: Record<string, unknown>;
-}): string {
+function buildCardAndQuestions(assetId: string, questions: QuestionFixture[], card: Record<string, unknown> = {}) {
   const open = questions.filter((question) => question.bucket === "open");
-  return JSON.stringify({
-    schemaVersion,
-    kind: "safety-score-v9-new-asset-admission-receipt",
-    assetId,
-    captureId: CAPTURE_ID,
-    captureClockSec: CAPTURE_CLOCK_SEC,
-    registryFingerprint,
-    ...(schemaVersion === 2 ? { evaluationBuildDigest } : {}),
+  return {
     card: {
       id: assetId,
       openBucketQuestionsCarried: open.length,
@@ -78,6 +64,77 @@ function receiptJson({
         documentation: code.documentation === true,
       })),
     })),
+  };
+}
+
+function receiptJson({
+  schemaVersion = 3,
+  assetId = "newcoin-test",
+  registryFingerprint = REGISTRY_FINGERPRINT,
+  evaluationBuildDigest = EVALUATION_BUILD_DIGEST,
+  questions,
+  card = {},
+}: {
+  schemaVersion?: 1 | 2 | 3;
+  assetId?: string;
+  registryFingerprint?: string;
+  evaluationBuildDigest?: string;
+  questions: QuestionFixture[];
+  card?: Record<string, unknown>;
+}): string {
+  return JSON.stringify({
+    schemaVersion,
+    ...(schemaVersion === 3 ? { receiptMode: "production-capture" } : {}),
+    kind: "safety-score-v9-new-asset-admission-receipt",
+    assetId,
+    captureId: CAPTURE_ID,
+    captureClockSec: CAPTURE_CLOCK_SEC,
+    registryFingerprint,
+    ...(schemaVersion >= 2 ? { evaluationBuildDigest } : {}),
+    ...buildCardAndQuestions(assetId, questions, card),
+  });
+}
+
+function prospectiveReceiptJson({
+  assetId = "newcoin-test",
+  admissionClockSec = NOW_SEC - 3_600,
+  observedAtSec = NOW_SEC - 7_200,
+  retrievedAtSec = NOW_SEC - 3_600,
+  evaluatedCohortIds = [assetId],
+  registryFingerprint = REGISTRY_FINGERPRINT,
+  evaluationBuildDigest = EVALUATION_BUILD_DIGEST,
+  questions = openQuestions(2, assetId),
+  card = {},
+}: {
+  assetId?: string;
+  admissionClockSec?: number;
+  observedAtSec?: number | null;
+  retrievedAtSec?: number;
+  evaluatedCohortIds?: string[];
+  registryFingerprint?: string;
+  evaluationBuildDigest?: string;
+  questions?: QuestionFixture[];
+  card?: Record<string, unknown>;
+} = {}): string {
+  return JSON.stringify({
+    schemaVersion: 3,
+    receiptMode: "prospective-offline",
+    kind: "safety-score-v9-new-asset-admission-receipt",
+    assetId,
+    prospectiveInputId: PROSPECTIVE_INPUT_ID,
+    admissionClockSec,
+    evaluatedCohortIds,
+    absentRuntimeLanes: [...PROSPECTIVE_ABSENT_RUNTIME_LANES],
+    supplyObservation: {
+      circulating: { peggedUSD: 1_500_000 },
+      observedAtSec,
+      url: "https://api.example/supply",
+      field: "circulating.peggedUSD",
+      retrievedAtSec,
+    },
+    registryFingerprint,
+    evaluationBuildDigest,
+    ...buildCardAndQuestions(assetId, questions, card),
   });
 }
 
@@ -95,14 +152,31 @@ function openQuestions(count: number, prefix = "newcoin-test"): QuestionFixture[
 
 function evaluate(
   receipt: string | null,
-  { override = false, assetId = "newcoin-test", evaluationBuildDigest = EVALUATION_BUILD_DIGEST } = {},
+  {
+    override = false,
+    assetId = "newcoin-test",
+    evaluationBuildDigest = EVALUATION_BUILD_DIGEST,
+    activeAssetCount = SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS,
+    nowSec = NOW_SEC,
+    verifyProspectiveReceipt,
+  }: {
+    override?: boolean;
+    assetId?: string;
+    evaluationBuildDigest?: string;
+    activeAssetCount?: number;
+    nowSec?: number;
+    verifyProspectiveReceipt?: EvaluateNewAssetEvidencePacketInput["verifyProspectiveReceipt"];
+  } = {},
 ) {
   return evaluateNewAssetEvidencePacket({
     candidates: [candidate(assetId)],
     registryFingerprint: REGISTRY_FINGERPRINT,
     evaluationBuildDigest,
+    activeAssetCount,
+    nowSec,
     override,
     readReceipt: () => receipt,
+    ...(verifyProspectiveReceipt === undefined ? {} : { verifyProspectiveReceipt }),
   });
 }
 
@@ -206,26 +280,103 @@ describe("new-asset evidence packet gate", () => {
     expect(NewAssetAdmissionReceiptSchema.safeParse(JSON.parse(receiptJson({ questions: openQuestions(1) }))).success).toBe(true);
   });
 
-  it("rejects a mismatched evaluationBuildDigest or legacy v1 receipt on a newly gated asset even under override", () => {
+  it("rejects a mismatched evaluationBuildDigest or historical v1/v2 receipt on a newly gated asset even under override", () => {
     const staleBuild = receiptJson({
       evaluationBuildDigest: "f".repeat(64),
       questions: openQuestions(1),
     });
-    const legacyV1 = receiptJson({
-      schemaVersion: 1,
-      questions: openQuestions(1),
-    });
+    const legacyV1 = receiptJson({ schemaVersion: 1, questions: openQuestions(1) });
+    const legacyV2 = receiptJson({ schemaVersion: 2, questions: openQuestions(1) });
 
     expect(NewAssetAdmissionReceiptSchema.safeParse(JSON.parse(legacyV1)).success).toBe(true);
+    expect(NewAssetAdmissionReceiptSchema.safeParse(JSON.parse(legacyV2)).success).toBe(true);
     for (const override of [false, true]) {
-      const staleReport = evaluate(staleBuild, { override });
-      expect(failKinds(staleReport)).toEqual(["stale-evaluation-build"]);
-      expect(staleReport.passed).toEqual([]);
-
-      const legacyReport = evaluate(legacyV1, { override });
-      expect(failKinds(legacyReport)).toEqual(["stale-evaluation-build"]);
-      expect(legacyReport.passed).toEqual([]);
+      for (const receipt of [staleBuild, legacyV1, legacyV2]) {
+        const report = evaluate(receipt, { override });
+        expect(failKinds(report)).toEqual(["stale-evaluation-build"]);
+        expect(report.passed).toEqual([]);
+      }
     }
+  });
+
+  it("enforces SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS without override", () => {
+    const valid = receiptJson({ questions: openQuestions(1) });
+    expect(failKinds(evaluate(valid, { activeAssetCount: SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS }))).toEqual([]);
+    for (const override of [false, true]) {
+      const exceeded = evaluate(valid, {
+        activeAssetCount: SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS + 1,
+        override,
+      });
+      expect(failKinds(exceeded)).toEqual(["active-capacity-exceeded"]);
+      expect(exceeded.passed).toEqual([]);
+    }
+  });
+
+  it("verifies prospective-offline receipts fail-closed and enforces the dedicated 7d admission clock bound", () => {
+    expect(NEW_ASSET_ADMISSION_CLOCK_MAX_AGE_SEC).toBe(7 * 86_400);
+    const valid = prospectiveReceiptJson();
+
+    const admitted = evaluate(valid, { verifyProspectiveReceipt: () => ({ ok: true }) });
+    expect(admitted.failures).toEqual([]);
+    expect(admitted.passed[0]).toMatchObject({
+      assetId: "newcoin-test",
+      receiptMode: "prospective-offline",
+      captureId: null,
+      prospectiveInputId: PROSPECTIVE_INPUT_ID,
+      openQuestions: 2,
+    });
+
+    // Fail-closed when verifier is omitted or returns a typed refusal (never overridable).
+    for (const override of [false, true]) {
+      expect(failKinds(evaluate(valid, { override }))).toEqual(["recomputed-receipt-mismatch"]);
+      for (const kind of [
+        "recomputed-receipt-mismatch",
+        "prospective-asset-quarantined",
+        "prospective-parent-pipeline-gap",
+      ] as const) {
+        const refused = evaluate(valid, {
+          override,
+          verifyProspectiveReceipt: () => ({ ok: false, kind, message: `refused:${kind}` }),
+        });
+        expect(failKinds(refused)).toEqual([kind]);
+        expect(refused.passed).toEqual([]);
+      }
+    }
+
+    // Clock bounds: future, >7d stale, and supply observation after min(admissionClockSec, retrievedAtSec).
+    const staleCases = [
+      prospectiveReceiptJson({ admissionClockSec: NOW_SEC + 1 }),
+      prospectiveReceiptJson({ admissionClockSec: NOW_SEC - NEW_ASSET_ADMISSION_CLOCK_MAX_AGE_SEC - 1 }),
+      prospectiveReceiptJson({ admissionClockSec: NOW_SEC - 3_600, retrievedAtSec: NOW_SEC - 1_800, observedAtSec: NOW_SEC - 3_599 }),
+      prospectiveReceiptJson({ admissionClockSec: NOW_SEC - 1_800, retrievedAtSec: NOW_SEC - 3_600, observedAtSec: NOW_SEC - 3_599 }),
+    ];
+    for (const receipt of staleCases) {
+      const report = evaluate(receipt, { override: true, verifyProspectiveReceipt: () => ({ ok: true }) });
+      expect(failKinds(report)).toEqual(["stale-admission-clock"]);
+    }
+
+    // Exact 7d boundary and clockless supply observation (observedAtSec: null) are admitted.
+    const boundary = prospectiveReceiptJson({
+      admissionClockSec: NOW_SEC - NEW_ASSET_ADMISSION_CLOCK_MAX_AGE_SEC,
+      observedAtSec: null,
+    });
+    expect(failKinds(evaluate(boundary, { verifyProspectiveReceipt: () => ({ ok: true }) }))).toEqual([]);
+  });
+
+  it("allows mixed documentation/counted datums for the same reason code on one question", () => {
+    const mixed = receiptJson({
+      questions: [{
+        questionKey: "newcoin-test|component|economic-control:mint",
+        bucket: "open",
+        obligations: 2,
+        codes: [
+          { code: "missing-mint-authority", obligations: 1, documentation: false },
+          { code: "missing-mint-authority", obligations: 1, documentation: true },
+        ],
+      }],
+    });
+    expect(NewAssetAdmissionReceiptSchema.safeParse(JSON.parse(mixed)).success).toBe(true);
+    expect(failKinds(evaluate(mixed))).toEqual(["missing-mint-authority"]);
   });
 
   it("keeps every committed historical receipt parseable under NewAssetAdmissionReceiptSchema", () => {

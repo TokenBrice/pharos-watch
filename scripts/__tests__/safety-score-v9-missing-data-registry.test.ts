@@ -5,6 +5,7 @@ import {
   compileNativeV3FactSet,
   compileV9FactSetV3,
   coreFixture,
+  createV9EvidenceReference,
   createV9FactGap,
   createV9FactGapV3,
   createV9FactStatus,
@@ -16,6 +17,7 @@ import { CompiledV9FactSetV3Schema } from "@shared/types/safety-score-v9-facts";
 import { resolveV9EvidenceCause } from "@shared/lib/safety-score-v9/evidence";
 import { internV9PublicWitnessTexts } from "@shared/lib/safety-score-v9/public-witness-texts";
 import { loadV9MethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
+import { CHAIN_MATURITY_REVIEWS_V1 } from "@shared/data/safety-score-v9/chain-maturity-reviews-v1";
 import { V9_MECHANISM_FIELDS } from "@shared/lib/safety-score-v9/mechanism-fields";
 import {
   makeReportCardsV9Card,
@@ -105,7 +107,7 @@ function generateExitProjectionFixture(
     activeAssetIds: [assetId],
     assets: [asset],
   });
-  const policy = loadV9MethodologyPolicy(policyAsset);
+  const policy = loadV9MethodologyPolicy(policyAsset, compiledFacts.asOfSec);
   const pillars = makeReportCardsV9Pillars({ backing: 80, exit: 80, control: 80 });
   pillars.exit.reasons = reasonCodes.map((code) => ({
     code,
@@ -263,7 +265,7 @@ function generateCertifiedProjectionFixture() {
     gapIds: [gap.gapId],
   });
   const compiledFacts = compileV9FactSetV3(core);
-  const policy = loadV9MethodologyPolicy(policyAsset);
+  const policy = loadV9MethodologyPolicy(policyAsset, compiledFacts.asOfSec);
   const pillars = makeReportCardsV9Pillars({ backing: 80, exit: 80, control: 80 });
   pillars.exit.reasons = [{
     code: "unproven-settlement-bound",
@@ -381,7 +383,7 @@ function generateOptionalExitOutputFixture(route: { included: boolean; scoringDi
   const compiledFacts = compileNativeV3FactSet({
     ...coreFixture(), activeAssetIds: [assetId], assets: [asset],
   });
-  const policy = loadV9MethodologyPolicy(policyAsset);
+  const policy = loadV9MethodologyPolicy(policyAsset, compiledFacts.asOfSec);
   const registry = generateV9MissingDataRegistry({
     replay: {
       pipeline: {
@@ -466,7 +468,7 @@ describe("Safety Score v9 missing-data work routing", () => {
     const compiledFacts = compileNativeV3FactSet({
       ...coreFixture(), activeAssetIds: ids, assets: ids.map(id => minimalAsset(id)),
     });
-    const policy = loadV9MethodologyPolicy(policyAsset);
+    const policy = loadV9MethodologyPolicy(policyAsset, compiledFacts.asOfSec);
     const completeness = {
       expectedCount: gapOnly ? 1 : 3, ratedCount: gapOnly ? 0 : 1, notRatedCount: gapOnly ? 0 : 1,
       notRatedIds: gapOnly ? [] : ["economic-nr"], pipelineGapCount: 1, pipelineGapIds: ["technical-gap"],
@@ -684,6 +686,52 @@ describe("Safety Score v9 missing-data work routing", () => {
   it("fails closed when a score projection reason has no typed routing metadata", () => {
     expect(() => classifyV9ScoreProjectionWorkType("unregistered-projection-reason")).toThrow(
       /Missing agent work-type definition/,
+    );
+  });
+
+  it("resolves the policy at the replay asOfSec clock and rejects default-clock drift", () => {
+    // Derive a clock after every chain-maturity review lapses so the policy
+    // drifts from the default clock regardless of the next quarterly renewal.
+    const asOfSec = Math.max(
+      ...CHAIN_MATURITY_REVIEWS_V1.map((review) => Date.parse(`${review.nextReviewAt}T00:00:00.000Z`) / 1_000),
+    );
+    const defaultPolicy = loadV9MethodologyPolicy(policyAsset);
+    const clockPolicy = loadV9MethodologyPolicy(policyAsset, asOfSec);
+    expect(clockPolicy.semanticDigest).not.toBe(defaultPolicy.semanticDigest);
+
+    const assetId = "clock-fixture";
+    const asset = minimalAsset(assetId);
+    asset.evidence = [createV9EvidenceReference({
+      evidenceId: "evidence:base", sourceId: "fixture-source", sourceGenerationId: "fixture:g1",
+      disposition: "published", observedAtSec: asOfSec - 100, publishedAtSec: asOfSec - 90, maxAgeSec: 200,
+    }, asOfSec)];
+    const compiledFacts = compileNativeV3FactSet({
+      ...coreFixture(), asOfSec, compiledAtSec: asOfSec + 1, activeAssetIds: [assetId], assets: [asset],
+    });
+    const makeReplay = (policy: ReturnType<typeof loadV9MethodologyPolicy>) => ({
+      replay: {
+        pipeline: {
+          compiledFacts,
+          candidate: {
+            model: "v9-critical-path", schemaVersion: 7, lifecycle: "active", candidateId: "safety-score-v9:fixture",
+            policyVersion: policy.policy.releaseVersion, publicationGenerationId: "report-cards:v9:fixture",
+            baseInputGenerationId: compiledFacts.baseInputGenerationId, factSetDigest: compiledFacts.v9FactSetDigest,
+            resultDigest: "b".repeat(64), policy: { id: policy.policy.policyId, semanticDigest: policy.semanticDigest },
+            evaluationBuildDigest: "c".repeat(64), sourceGenerations: { fixture: "fixture:g1" },
+            asOfSec, publishedAtSec: asOfSec,
+            completeness: { expectedCount: 1, ratedCount: 1, notRatedCount: 0, notRatedIds: [], pipelineGapCount: 0, pipelineGapIds: [] },
+            foreignCauseGaps: [], cards: [makeReportCardsV9Card({ id: assetId })],
+          },
+          evaluatedSet: { assets: [{ assetId, scoreInput: { pillars: { backing: { reasons: [] }, exit: { reasons: [] }, control: { reasons: [] } } }, exit: { routes: [] } }] },
+        },
+      },
+      policy: policyAsset,
+      catalogEntries: [{ id: assetId, file: `shared/data/stablecoins/coins/${assetId}.json`, coin: makeCoin(assetId) }],
+    });
+
+    expect(generateV9MissingDataRegistry(makeReplay(clockPolicy)).snapshot.policyDigest).toBe(clockPolicy.semanticDigest);
+    expect(() => generateV9MissingDataRegistry(makeReplay(defaultPolicy))).toThrow(
+      "Replay candidate, compiled facts, and policy do not share the same immutable bindings",
     );
   });
 });

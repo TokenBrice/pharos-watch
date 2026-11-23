@@ -420,7 +420,7 @@ return lines.join("\n");
 function collectDocumentationGaps(replay, policy) {
   const queue = buildV9EvidenceGapQueue({
     factSet: replay.pipeline.compiledFacts,
-    policy: loadV9MethodologyPolicy(policy),
+    policy: loadV9MethodologyPolicy(policy, replay.pipeline.compiledFacts.asOfSec),
   });
   const documentationGaps = new Map();
   for (const entry of queue.entries) {

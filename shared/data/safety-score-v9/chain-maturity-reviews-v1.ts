@@ -52,6 +52,7 @@ export interface ResolvedChainMaturityReview extends ChainMaturityReview {
 }
 
 const REVIEWED_AT = "2026-08-24";
+const RENEWED_REVIEWED_AT_2026_11 = "2026-11-23";
 const VERIFICATION_ACCESSED_AT = "2026-09-21";
 const DAY_SEC = 86_400;
 
@@ -93,7 +94,10 @@ const SOURCES = {
   avalancheAcps: source("Avalanche Community Proposals", "https://build.avax.network/docs/acps/overview", null),
   baseNetwork: source("Base network information", "https://docs.base.org/chain/network-information", null),
   baseStatus: source("Base status history", "https://status.base.org/history", null),
+  baseStatusIncidents: source("Base status incident history API", "https://status.base.org/api/v2/incidents.json", null),
+  baseStatusSummary: source("Base status summary API", "https://status.base.org/api/v2/summary.json", null),
   baseRisk: source("L2BEAT Base risk analysis", "https://l2beat.com/scaling/projects/base", null),
+  baseRiskEthbeat: source("ETHBEAT (formerly L2BEAT) Base Chain risk analysis", "https://ethbeat.org/layer2s/projects/base", null),
   bscHistory: source(
     "BNB Smart Chain genesis announcement",
     "https://www.bnbchain.org/en/blog/binance-smart-chain-mainnet-is-live",
@@ -110,15 +114,20 @@ const SOURCES = {
     "https://docs.bnbchain.org/bnb-smart-chain/governance/",
     null,
   ),
-  ethereumHistory: source("Ethereum history", "https://ethereum.org/en/history/", null),
-  ethereumLiveness: source("Ethereum ten-year uptime record", "https://ethereum.org/10years/", "2026-08-06"),
-  ethereumNetwork: source("Ethereum networks", "https://ethereum.org/en/developers/docs/networks/", null),
+  ethereumHistory: source("Ethereum history", "https://ethereum.org/en/history/", "2026-10-25"),
+  ethereumLiveness: source("Ethereum ten-year uptime record", "https://ethereum.org/10years/", "2026-11-19"),
+  ethereumBeaconFinalized: source(
+    "Ethereum Beacon Chain finalized header (PublicNode)",
+    "https://ethereum-beacon-api.publicnode.com/eth/v1/beacon/headers/finalized",
+    null,
+  ),
+  ethereumNetwork: source("Ethereum networks", "https://ethereum.org/en/developers/docs/networks/", "2026-09-23"),
   ethereumPos: source(
     "Ethereum proof-of-stake consensus",
     "https://ethereum.org/en/developers/docs/consensus-mechanisms/pos/",
-    null,
+    "2026-10-07",
   ),
-  ethereumGovernance: source("Ethereum governance", "https://ethereum.org/en/governance/", null),
+  ethereumGovernance: source("Ethereum governance", "https://ethereum.org/en/governance/", "2026-10-25"),
   hyperliquidHistory: source(
     "Hyperliquid L1 documentation",
     "https://hyperliquid.gitbook.io/hyperliquid-docs/hypercore/hyperliquid-l1",
@@ -206,13 +215,20 @@ const SOURCES = {
   gnosisValidators: source("Gnosis Chain validators", "https://docs.gnosischain.com/node/", null),
   gnosisGovernance: source("Gnosis governance", "https://docs.gnosischain.com/concepts/governance/", null),
   gnosisBridge: source("Gnosis bridges", "https://docs.gnosischain.com/bridges/", null),
-  hederaJourney: source("Hedera journey", "https://hedera.com/journey/", null),
+  hederaJourney: source("Hedera journey", "https://hedera.com/journey/", "2026-11-11"),
   hederaStatus: source("Hedera status history", "https://status.hedera.com/history", null),
+  hederaStatusIncidents: source("Hedera status incident history API", "https://status.hedera.com/api/v2/incidents.json", null),
+  hederaStatusSummary: source("Hedera status summary API", "https://status.hedera.com/api/v2/summary.json", null),
   hederaNodes: source("Hedera network nodes", "https://docs.hedera.com/hedera/networks/mainnet/mainnet-nodes", null),
+  hederaMirrorNodes: source(
+    "Hedera mainnet consensus nodes address book (Mirror Node API)",
+    "https://mainnet-public.mirrornode.hedera.com/api/v1/network/nodes?limit=100",
+    null,
+  ),
   hederaRelease: source(
     "Hedera release-cycle overview",
     "https://hedera.com/blog/hedera-release-cycle-overview/",
-    "2025",
+    "2025-04-01",
   ),
   hederaConsensus: source(
     "Hedera hashgraph consensus",
@@ -351,13 +367,36 @@ const AUTHORED_CHAIN_MATURITY_REVIEWS_V1 = [
     chainSlug: "base",
     displayName: "Base",
     admission: "admit",
-    reviewedAt: REVIEWED_AT,
+    reviewedAt: RENEWED_REVIEWED_AT_2026_11,
     gates: {
-      continuity: gate("pass", "The reviewed production lineage and security model exceed the continuity threshold.", SOURCES.baseNetwork, SOURCES.baseRisk),
-      liveness: gate("pass", "The public incident record covers the review window with no active sunset.", SOURCES.baseStatus),
-      "block-production-finality": gate("pass", "Ethereum finality and the documented user escape path prevent one L2 operator from finalizing arbitrary state.", SOURCES.baseRisk),
-      "change-control": gate("pass", "The reviewed rollup is Stage 1 or stronger and exposes a user-enforceable delay and exit path.", SOURCES.baseRisk),
-      "dependency-exit": gate("pass", "The Ethereum, data-availability, bridge, and forced-exit dependencies are documented.", SOURCES.baseRisk),
+      continuity: gate(
+        "pass",
+        "Production history exceeds 36 months (mainnet block 1 on 2023-06-15, launch 2023-07-13, continuous L1 batches from 2023-06-06) and retained Ethereum L1 DA and Stage 1 forced-exit continuity across Azul, Beryl, Cobalt, and Denim (2026-11-05).",
+        SOURCES.baseNetwork,
+        SOURCES.baseRiskEthbeat,
+      ),
+      liveness: gate(
+        "pass",
+        "The public incident history spans 2025-03-20 through 2026-11-17 (>365 days) with all systems operational, zero unresolved incidents, no active sunset, and no ongoing ETHBEAT liveness anomalies.",
+        SOURCES.baseStatus,
+        SOURCES.baseStatusIncidents,
+        SOURCES.baseStatusSummary,
+      ),
+      "block-production-finality": gate(
+        "pass",
+        "Ethereum L1 finality and onchain DA, 12h L1 forced inclusion via OptimismPortal2, and permissionless AggregateVerifier ZK state proposals/challenges (passes ETHBEAT walkaway test) prevent any single L2 operator from finalizing arbitrary state.",
+        SOURCES.baseRiskEthbeat,
+      ),
+      "change-control": gate(
+        "pass",
+        "ETHBEAT (formerly L2BEAT) Stage 1 (8/8 requirements met, walkaway test passes) with escape-preserving onchain Ethereum L1 DA; every ProxyAdmin upgrade requires 2/2 Base Governance Multisig (3/6 Coinbase Coordinator + 8/11 Base Security Council = 9/12 entities, 75%), preventing unilateral instant upgrades and satisfying Stage 1's >=7d exit rule against actors more centralized than the Security Council (normal 2/2 upgrades have no on-chain timelock, unchanged from the Stage 1 baseline).",
+        SOURCES.baseRiskEthbeat,
+      ),
+      "dependency-exit": gate(
+        "pass",
+        "Ethereum L1 settlement, onchain blob/calldata DA, canonical OptimismPortal2/L1StandardBridge contracts, 2/2 Base Governance Multisig thresholds, and the 12h forced-inclusion plus permissionless ZK exit path are documented.",
+        SOURCES.baseRiskEthbeat,
+      ),
     },
   },
   {
@@ -377,13 +416,34 @@ const AUTHORED_CHAIN_MATURITY_REVIEWS_V1 = [
     chainSlug: "ethereum",
     displayName: "Ethereum",
     admission: "admit",
-    reviewedAt: REVIEWED_AT,
+    reviewedAt: RENEWED_REVIEWED_AT_2026_11,
     gates: {
-      continuity: gate("pass", "Production history exceeds 36 months and the PoS transition retained ledger continuity.", SOURCES.ethereumHistory),
-      liveness: gate("pass", "The dated public uptime record covers the review window with no active sunset.", SOURCES.ethereumLiveness),
-      "block-production-finality": gate("pass", "Validator participation is permissionless and economically secured by stake and slashing.", SOURCES.ethereumPos),
-      "change-control": gate("pass", "Protocol adoption is multi-client and social rather than controlled by an instant unilateral upgrade key.", SOURCES.ethereumGovernance),
-      "dependency-exit": gate("pass", "Native assets transact and exit on the L1 without an upstream canonical bridge or external DA custodian.", SOURCES.ethereumNetwork),
+      continuity: gate(
+        "pass",
+        "Production history exceeds 36 months since Frontier genesis (2015-07-30) and preserved ledger continuity through The Merge (2022-09-15), Pectra (2025-05-07), and Fusaka (2025-12-03).",
+        SOURCES.ethereumHistory,
+      ),
+      liveness: gate(
+        "pass",
+        "Official uptime record (0 downtime) and finalized Beacon/L1 execution production (2,620,212 blocks from 2025-11-23 block 23,857,897 to 2026-11-23 finalized block 26,478,109, 99.55% 12s slot fill; finalized slot 15,718,016) cover >365 days with no active sunset or unresolved halt.",
+        SOURCES.ethereumLiveness,
+        SOURCES.ethereumBeaconFinalized,
+      ),
+      "block-production-finality": gate(
+        "pass",
+        "Validator participation is permissionless (32 ETH deposit) and economically secured by stake, slashing, and >2/3 supermajority Casper FFG finality with no single entity able to halt or finalize.",
+        SOURCES.ethereumPos,
+      ),
+      "change-control": gate(
+        "pass",
+        "Protocol adoption is off-chain social/EIP-driven across multiple independent client implementations and node operators rather than controlled by an instant unilateral upgrade key.",
+        SOURCES.ethereumGovernance,
+      ),
+      "dependency-exit": gate(
+        "pass",
+        "Native assets transact and exit directly on Ethereum Mainnet L1 without an upstream canonical bridge or external DA custodian.",
+        SOURCES.ethereumNetwork,
+      ),
     },
   },
   {
@@ -517,13 +577,38 @@ const AUTHORED_CHAIN_MATURITY_REVIEWS_V1 = [
     chainSlug: "hedera",
     displayName: "Hedera",
     admission: "admit",
-    reviewedAt: REVIEWED_AT,
+    reviewedAt: RENEWED_REVIEWED_AT_2026_11,
     gates: {
-      continuity: gate("pass", "Public production history exceeds 36 months.", SOURCES.hederaJourney),
-      liveness: gate("pass", "The public incident record covers the review window with no active sunset.", SOURCES.hederaStatus),
-      "block-production-finality": gate("pass", "Council-operated consensus uses at least 21 separately operated nodes with documented economic and governance accountability.", SOURCES.hederaNodes, SOURCES.hederaConsensus),
-      "change-control": gate("pass", "Mainnet upgrades are on-chain transactions signed by a council majority rather than one instant unilateral key.", SOURCES.hederaRelease),
-      "dependency-exit": gate("pass", "Native holders transact directly through the council-node ledger without an upstream bridge or DA custodian.", SOURCES.hederaNodes, SOURCES.hederaConsensus),
+      continuity: gate(
+        "pass",
+        "Public production history exceeds 36 months (mainnet live 2018-08-24, open access 2019-09-16; Mirror Node block 0 on 2019-09-13 through block 102,684,715 on 2026-11-23) with no security-model reset.",
+        SOURCES.hederaJourney,
+      ),
+      liveness: gate(
+        "pass",
+        "Public incident history spans 2019-08-30 through 2026-05-20 (>365 days, plus scheduled upgrades through v0.79 on 2026-11-18) with Hedera Mainnet Network Uptime operational, zero unresolved incidents, no active sunset, and 15,112,432 continuous blocks over 365.57 days (3 individual nodes in partial_outage represent 10.22% stake, well below the 1/3 aBFT threshold).",
+        SOURCES.hederaStatus,
+        SOURCES.hederaStatusIncidents,
+        SOURCES.hederaStatusSummary,
+      ),
+      "block-production-finality": gate(
+        "pass",
+        "Hedera Council operates 31 independent mainnet consensus nodes (>=21 threshold) across 31 distinct organizations under open-source Apache 2.0 aBFT hashgraph consensus (max single-node consensus stake 3.60% of 12.50B staked HBAR, so no single entity can halt or finalize).",
+        SOURCES.hederaNodes,
+        SOURCES.hederaMirrorNodes,
+        SOURCES.hederaConsensus,
+      ),
+      "change-control": gate(
+        "pass",
+        "Phased monthly Linux Foundation Hiero releases roll through previewnet and testnet (>=2 weeks ahead) with public advance notice, and mainnet upgrades execute via an on-chain transaction signed by a Hedera Council majority rather than one instant unilateral key.",
+        SOURCES.hederaRelease,
+      ),
+      "dependency-exit": gate(
+        "pass",
+        "Native holders transact and settle directly on the council-operated L1 hashgraph ledger without an upstream canonical bridge or external DA custodian.",
+        SOURCES.hederaNodes,
+        SOURCES.hederaConsensus,
+      ),
     },
   },
   {
@@ -789,8 +874,8 @@ const UNREACHABLE_SOURCE_URLS = new Set([
 ]);
 
 // Sources re-verified after the batch access date carry their own access date.
-const REVERIFIED_SOURCE_ACCESSED_AT: Readonly<Record<string, string | undefined>> = Object.fromEntries(
-  [
+const REVERIFIED_SOURCE_ACCESSED_AT: Readonly<Record<string, string | undefined>> = Object.fromEntries([
+  ...[
     SOURCES.tronGenesisBlock,
     SOURCES.tronLivenessStartBlock,
     SOURCES.tronLivenessEndBlock,
@@ -798,19 +883,95 @@ const REVERIFIED_SOURCE_ACCESSED_AT: Readonly<Record<string, string | undefined>
     SOURCES.tronValidators,
     SOURCES.tronActiveWitnesses,
     SOURCES.tronCommittee,
-  ].map((evidence) => [evidence.url, "2026-09-23"]),
-);
+  ].map((evidence): readonly [string, string] => [evidence.url, "2026-09-23"]),
+  ...[
+    SOURCES.baseNetwork,
+    SOURCES.baseStatus,
+    SOURCES.baseStatusIncidents,
+    SOURCES.baseStatusSummary,
+    SOURCES.baseRiskEthbeat,
+    SOURCES.ethereumHistory,
+    SOURCES.ethereumLiveness,
+    SOURCES.ethereumBeaconFinalized,
+    SOURCES.ethereumNetwork,
+    SOURCES.ethereumPos,
+    SOURCES.ethereumGovernance,
+    SOURCES.hederaJourney,
+    SOURCES.hederaStatus,
+    SOURCES.hederaStatusIncidents,
+    SOURCES.hederaStatusSummary,
+    SOURCES.hederaNodes,
+    SOURCES.hederaMirrorNodes,
+    SOURCES.hederaRelease,
+    SOURCES.hederaConsensus,
+  ].map((evidence): readonly [string, string] => [evidence.url, RENEWED_REVIEWED_AT_2026_11]),
+]);
+
+// Superseded 2026-08-24 reviews retained solely for clocks strictly before a
+// renewal's next-UTC-day admission boundary so historical replays and
+// renewal-day runs stay contiguous without importing future reviews.
+const PRIOR_AUTHORED_CHAIN_MATURITY_REVIEWS_V1 = [
+  {
+    chainSlug: "base",
+    displayName: "Base",
+    admission: "admit",
+    reviewedAt: REVIEWED_AT,
+    gates: {
+      continuity: gate("pass", "The reviewed production lineage and security model exceed the continuity threshold.", SOURCES.baseNetwork, SOURCES.baseRisk),
+      liveness: gate("pass", "The public incident record covers the review window with no active sunset.", SOURCES.baseStatus),
+      "block-production-finality": gate("pass", "Ethereum finality and the documented user escape path prevent one L2 operator from finalizing arbitrary state.", SOURCES.baseRisk),
+      "change-control": gate("pass", "The reviewed rollup is Stage 1 or stronger and exposes a user-enforceable delay and exit path.", SOURCES.baseRisk),
+      "dependency-exit": gate("pass", "The Ethereum, data-availability, bridge, and forced-exit dependencies are documented.", SOURCES.baseRisk),
+    },
+  },
+  {
+    chainSlug: "ethereum",
+    displayName: "Ethereum",
+    admission: "admit",
+    reviewedAt: REVIEWED_AT,
+    gates: {
+      continuity: gate("pass", "Production history exceeds 36 months and the PoS transition retained ledger continuity.", source("Ethereum history", "https://ethereum.org/en/history/", null)),
+      liveness: gate("pass", "The dated public uptime record covers the review window with no active sunset.", source("Ethereum ten-year uptime record", "https://ethereum.org/10years/", "2026-08-06")),
+      "block-production-finality": gate("pass", "Validator participation is permissionless and economically secured by stake and slashing.", source("Ethereum proof-of-stake consensus", "https://ethereum.org/en/developers/docs/consensus-mechanisms/pos/", null)),
+      "change-control": gate("pass", "Protocol adoption is multi-client and social rather than controlled by an instant unilateral upgrade key.", source("Ethereum governance", "https://ethereum.org/en/governance/", null)),
+      "dependency-exit": gate("pass", "Native assets transact and exit on the L1 without an upstream canonical bridge or external DA custodian.", source("Ethereum networks", "https://ethereum.org/en/developers/docs/networks/", null)),
+    },
+  },
+  {
+    chainSlug: "hedera",
+    displayName: "Hedera",
+    admission: "admit",
+    reviewedAt: REVIEWED_AT,
+    gates: {
+      continuity: gate("pass", "Public production history exceeds 36 months.", source("Hedera journey", "https://hedera.com/journey/", null)),
+      liveness: gate("pass", "The public incident record covers the review window with no active sunset.", SOURCES.hederaStatus),
+      "block-production-finality": gate("pass", "Council-operated consensus uses at least 21 separately operated nodes with documented economic and governance accountability.", SOURCES.hederaNodes, SOURCES.hederaConsensus),
+      "change-control": gate("pass", "Mainnet upgrades are on-chain transactions signed by a council majority rather than one instant unilateral key.", source("Hedera release-cycle overview", "https://hedera.com/blog/hedera-release-cycle-overview/", "2025")),
+      "dependency-exit": gate("pass", "Native holders transact directly through the council-node ledger without an upstream bridge or DA custodian.", SOURCES.hederaNodes, SOURCES.hederaConsensus),
+    },
+  },
+] as const;
 
 function nextReviewAt(reviewedAt: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(reviewedAt)) {
+    throw new Error(`Invalid chain-maturity review date ${reviewedAt}`);
+  }
   const reviewedAtSec = Date.parse(`${reviewedAt}T00:00:00.000Z`) / 1000;
-  if (!Number.isInteger(reviewedAtSec)) throw new Error(`Invalid chain-maturity review date ${reviewedAt}`);
+  if (!Number.isInteger(reviewedAtSec) || new Date(reviewedAtSec * 1000).toISOString().slice(0, 10) !== reviewedAt) {
+    throw new Error(`Invalid chain-maturity review date ${reviewedAt}`);
+  }
   return new Date((reviewedAtSec + CHAIN_MATURITY_ADMISSION_TEST_V1.maxAgeSec) * 1000)
     .toISOString()
     .slice(0, 10);
 }
 
+type AuthoredChainMaturityReview =
+  | (typeof AUTHORED_CHAIN_MATURITY_REVIEWS_V1)[number]
+  | (typeof PRIOR_AUTHORED_CHAIN_MATURITY_REVIEWS_V1)[number];
+
 function materializeReview(
-  authored: (typeof AUTHORED_CHAIN_MATURITY_REVIEWS_V1)[number],
+  authored: AuthoredChainMaturityReview,
+  accessedAtOverride?: string,
 ): ChainMaturityReview {
   const gates = {} as Record<ChainMaturityGateId, ChainMaturityGateReview>;
   const reviewed = VERIFIED_CHAIN_SLUGS.has(authored.chainSlug);
@@ -831,7 +992,9 @@ function materializeReview(
         ...evidence,
         verification: {
           assertedText: reviewedGate.finding,
-          accessedAt: reviewed ? (REVERIFIED_SOURCE_ACCESSED_AT[evidence.url] ?? VERIFICATION_ACCESSED_AT) : null,
+          accessedAt: reviewed
+            ? (accessedAtOverride ?? REVERIFIED_SOURCE_ACCESSED_AT[evidence.url] ?? VERIFICATION_ACCESSED_AT)
+            : null,
           reviewerOutcome,
           httpStatus: reviewed ? (unreachable ? 404 : 200) : null,
         },
@@ -857,17 +1020,23 @@ function materializeReview(
   };
 }
 
-export const CHAIN_MATURITY_REVIEWS_V1 = AUTHORED_CHAIN_MATURITY_REVIEWS_V1.map(materializeReview) satisfies
-  readonly ChainMaturityReview[];
+export const CHAIN_MATURITY_REVIEWS_V1 = AUTHORED_CHAIN_MATURITY_REVIEWS_V1.map((review) =>
+  materializeReview(review),
+) satisfies readonly ChainMaturityReview[];
+
+const PRIOR_CHAIN_MATURITY_REVIEWS_V1 = PRIOR_AUTHORED_CHAIN_MATURITY_REVIEWS_V1.map((review) =>
+  materializeReview(review, VERIFICATION_ACCESSED_AT),
+) satisfies readonly ChainMaturityReview[];
+
+const PRIOR_CHAIN_MATURITY_REVIEWS_BY_SLUG: ReadonlyMap<string, ChainMaturityReview> = new Map(
+  PRIOR_CHAIN_MATURITY_REVIEWS_V1.map((review) => [review.chainSlug, review]),
+);
 
 function validateChainMaturityReviews(reviews: readonly ChainMaturityReview[]): void {
   const slugs = new Set<string>();
   for (const review of reviews) {
     if (slugs.has(review.chainSlug)) throw new Error(`Duplicate chain-maturity review for ${review.chainSlug}`);
     slugs.add(review.chainSlug);
-    if (review.reviewedAt !== CHAIN_MATURITY_ADMISSION_TEST_V1.reviewedAt) {
-      throw new Error(`Chain-maturity review date mismatch for ${review.chainSlug}`);
-    }
     if (review.nextReviewAt !== nextReviewAt(review.reviewedAt)) {
       throw new Error(`Chain-maturity next-review date mismatch for ${review.chainSlug}`);
     }
@@ -897,6 +1066,13 @@ function validateChainMaturityReviews(reviews: readonly ChainMaturityReview[]): 
 }
 
 validateChainMaturityReviews(CHAIN_MATURITY_REVIEWS_V1);
+validateChainMaturityReviews(PRIOR_CHAIN_MATURITY_REVIEWS_V1);
+for (const prior of PRIOR_CHAIN_MATURITY_REVIEWS_V1) {
+  const current = CHAIN_MATURITY_REVIEWS_V1.find((review) => review.chainSlug === prior.chainSlug);
+  if (!current || prior.reviewedAt >= current.reviewedAt) {
+    throw new Error(`Prior chain-maturity review for ${prior.chainSlug} must precede its current review`);
+  }
+}
 
 export const CHAIN_MATURITY_POLICY_DEFAULT_EVALUATION_CLOCK_SEC =
   Date.parse(`${VERIFICATION_ACCESSED_AT}T00:00:00.000Z`) / 1000;
@@ -907,6 +1083,42 @@ export interface ChainMaturityResolution {
   readonly reviews: readonly ResolvedChainMaturityReview[];
 }
 
+function resolveSingleChainMaturityReviewAt(
+  review: ChainMaturityReview,
+  evaluationClockSec: number,
+): ResolvedChainMaturityReview {
+  const expired = evaluationClockSec >= Date.parse(`${review.nextReviewAt}T00:00:00.000Z`) / 1000;
+  // Review dates become usable after the UTC day; missing source access
+  // holds admission, and recorded access cannot support earlier captures.
+  const admissionStartsAtSec = Math.max(
+    Date.parse(`${review.reviewedAt}T00:00:00.000Z`) / 1000 + DAY_SEC,
+    ...CHAIN_MATURITY_GATE_IDS.flatMap((gateId) =>
+      review.gates[gateId].sources.map((source) =>
+        source.verification?.accessedAt == null
+          ? Number.POSITIVE_INFINITY
+          : Date.parse(`${source.verification.accessedAt}T00:00:00.000Z`) / 1000,
+      ),
+    ),
+  );
+  const hasFailure = CHAIN_MATURITY_GATE_IDS.some((gateId) => review.gates[gateId].result === "fail");
+  const hasPending = CHAIN_MATURITY_GATE_IDS.some((gateId) => review.gates[gateId].result === "pending");
+  const state: ResolvedChainMaturityReview["state"] = hasFailure
+    ? "failed"
+    : hasPending
+      ? "pending"
+      : expired
+        ? "expired"
+        : evaluationClockSec < admissionStartsAtSec
+          ? "not-yet-admitted"
+          : "admitted";
+  return {
+    ...review,
+    admission: state === "admitted" ? "admit" : "exclude",
+    state,
+    evaluationClockSec,
+  };
+}
+
 function resolveChainMaturityReviewsAt(
   evaluationClockSec = CHAIN_MATURITY_POLICY_DEFAULT_EVALUATION_CLOCK_SEC,
 ): readonly ResolvedChainMaturityReview[] {
@@ -914,36 +1126,11 @@ function resolveChainMaturityReviewsAt(
     throw new Error("Chain-maturity evaluation clock must be a non-negative integer");
   }
   return CHAIN_MATURITY_REVIEWS_V1.map((review) => {
-    const expired = evaluationClockSec >= Date.parse(`${review.nextReviewAt}T00:00:00.000Z`) / 1000;
-    // Review dates become usable after the UTC day; missing source access
-    // holds admission, and recorded access cannot support earlier captures.
-    const admissionStartsAtSec = Math.max(
-      Date.parse(`${review.reviewedAt}T00:00:00.000Z`) / 1000 + DAY_SEC,
-      ...CHAIN_MATURITY_GATE_IDS.flatMap((gateId) =>
-        review.gates[gateId].sources.map((source) =>
-          source.verification?.accessedAt == null
-            ? Number.POSITIVE_INFINITY
-            : Date.parse(`${source.verification.accessedAt}T00:00:00.000Z`) / 1000,
-        ),
-      ),
-    );
-    const hasFailure = CHAIN_MATURITY_GATE_IDS.some((gateId) => review.gates[gateId].result === "fail");
-    const hasPending = CHAIN_MATURITY_GATE_IDS.some((gateId) => review.gates[gateId].result === "pending");
-    const state: ResolvedChainMaturityReview["state"] = hasFailure
-      ? "failed"
-      : hasPending
-        ? "pending"
-        : expired
-          ? "expired"
-          : evaluationClockSec < admissionStartsAtSec
-            ? "not-yet-admitted"
-            : "admitted";
-    return {
-      ...review,
-      admission: state === "admitted" ? "admit" : "exclude",
-      state,
-      evaluationClockSec,
-    };
+    const currentReviewDayEndSec = Date.parse(`${review.reviewedAt}T00:00:00.000Z`) / 1000 + DAY_SEC;
+    const prior = evaluationClockSec < currentReviewDayEndSec
+      ? PRIOR_CHAIN_MATURITY_REVIEWS_BY_SLUG.get(review.chainSlug)
+      : undefined;
+    return resolveSingleChainMaturityReviewAt(prior ?? review, evaluationClockSec);
   });
 }
 

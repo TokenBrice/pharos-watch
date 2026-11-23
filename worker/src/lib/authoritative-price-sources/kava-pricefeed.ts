@@ -1,4 +1,4 @@
-import { logWorkerEventArgs } from "../structured-log";
+import { logWorkerEvent, logWorkerEventArgs } from "../structured-log";
 import { z } from "zod";
 import { median } from "@shared/lib/stats";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
@@ -7,9 +7,20 @@ import { fetchJsonWithRetry } from "../fetch-retry";
 import { KavaBlockSchema, parseFinitePositiveDecimal, parseTimestampSec, validateKavaBlockHeader } from "../kava-lcd";
 import type { CurrentPriceOverride, LivePriceContext, PriceSourceProvider } from "./helpers";
 
-// Live state needs the official pruning endpoints, not the archive service.
-const KAVA_API_BASE = "https://api.kava.io";
-const KAVA_HEADER_URL = "https://rpc.kava.io/header";
+type KavaHostFamilyName = "pruning" | "archive";
+
+interface KavaHostFamily {
+  readonly name: KavaHostFamilyName;
+  readonly rpc: string;
+  readonly api: string;
+}
+
+// Try official pruning endpoints first and fail over to the archive host family
+// if pruning is unavailable or fails validation; never mix hosts across families.
+const KAVA_HOST_FAMILIES: readonly KavaHostFamily[] = [
+  { name: "pruning", rpc: "https://rpc.kava.io", api: "https://api.kava.io" },
+  { name: "archive", rpc: "https://rpc.data.kava.io", api: "https://api.data.kava.io" },
+];
 const KavaRpcHeaderSchema = z.object({ result: KavaBlockSchema.shape.block });
 const KAVA_USDX_ID = "usdx-kava";
 const KAVA_USDX_MARKET_ID = "usdx:usd";
@@ -60,7 +71,11 @@ interface KavaUsdxPriceResult {
   dispersionBps: number;
 }
 
-async function fetchKavaJson(url: string, signal?: AbortSignal): Promise<unknown | null> {
+async function fetchKavaJson(
+  url: string,
+  family: KavaHostFamilyName,
+  signal?: AbortSignal,
+): Promise<unknown | null> {
   const result = await fetchJsonWithRetry<unknown>(
     url,
     {
@@ -77,70 +92,82 @@ async function fetchKavaJson(url: string, signal?: AbortSignal): Promise<unknown
     },
   );
   if (!result?.response.ok) {
-    logWorkerEventArgs("lib", "warn", `[kava-pricefeed] request failed with status ${result?.response.status ?? "no response"}`);
+    logWorkerEventArgs(
+      "lib",
+      "warn",
+      `[kava-pricefeed] (${family}) request failed with status ${result?.response.status ?? "no response"}`,
+    );
     return null;
   }
   return result.body;
 }
 
-export async function fetchKavaUsdxPrice(signal?: AbortSignal): Promise<KavaUsdxPriceResult | null> {
-  const nowSec = Math.floor(Date.now() / 1_000);
-
+async function fetchKavaUsdxPriceFromFamily(
+  family: KavaHostFamily,
+  nowSec: number,
+  signal?: AbortSignal,
+): Promise<KavaUsdxPriceResult | null> {
   // Keep these reads serial: each response body is consumed before the next
   // request opens, preserving the cron trigger's shared connection budget.
   // The native header endpoint avoids downloading the block's variable-size transaction body.
-  const blockPayload = await fetchKavaJson(KAVA_HEADER_URL, signal);
+  const blockPayload = await fetchKavaJson(`${family.rpc}/header`, family.name, signal);
+  if (blockPayload == null) return null;
   const blockResult = KavaRpcHeaderSchema.safeParse(blockPayload);
   if (!blockResult.success) {
-    logWorkerEventArgs("lib", "warn", "[kava-pricefeed] latest block response failed schema validation");
+    logWorkerEventArgs("lib", "warn", `[kava-pricefeed] (${family.name}) latest block response failed schema validation`);
     return null;
   }
 
   const { header } = blockResult.data.result;
   const blockPin = validateKavaBlockHeader(header, nowSec);
   if (blockPin == null) {
-    logWorkerEventArgs("lib", "warn", "[kava-pricefeed] latest block identity or freshness validation failed");
+    logWorkerEventArgs("lib", "warn", `[kava-pricefeed] (${family.name}) latest block identity or freshness validation failed`);
     return null;
   }
   const { blockHeight, blockTimeSec: blockTime } = blockPin;
 
-  const marketsPayload = await fetchKavaJson(`${KAVA_API_BASE}/kava/pricefeed/v1beta1/markets`, signal);
+  const marketsPayload = await fetchKavaJson(`${family.api}/kava/pricefeed/v1beta1/markets`, family.name, signal);
+  if (marketsPayload == null) return null;
   const marketsResult = KavaMarketsSchema.safeParse(marketsPayload);
   if (!marketsResult.success) {
-    logWorkerEventArgs("lib", "warn", "[kava-pricefeed] markets response failed schema validation");
+    logWorkerEventArgs("lib", "warn", `[kava-pricefeed] (${family.name}) markets response failed schema validation`);
     return null;
   }
 
   const matchingMarkets = marketsResult.data.markets.filter((market) => market.market_id === KAVA_USDX_MARKET_ID);
   const market = matchingMarkets.length === 1 ? matchingMarkets[0] : null;
   if (!market?.active || market.base_asset !== "usdx" || market.quote_asset !== "usd" || market.oracles.length === 0) {
-    logWorkerEventArgs("lib", "warn", "[kava-pricefeed] USDX market identity or active-oracle validation failed");
+    logWorkerEventArgs("lib", "warn", `[kava-pricefeed] (${family.name}) USDX market identity or active-oracle validation failed`);
     return null;
   }
   const authorizedOracles = new Set(market.oracles);
 
   const aggregatePayload = await fetchKavaJson(
-    `${KAVA_API_BASE}/kava/pricefeed/v1beta1/prices/${KAVA_USDX_MARKET_ID}`,
+    `${family.api}/kava/pricefeed/v1beta1/prices/${KAVA_USDX_MARKET_ID}`,
+    family.name,
     signal,
   );
+  if (aggregatePayload == null) return null;
   const aggregateResult = KavaAggregatePriceSchema.safeParse(aggregatePayload);
   if (!aggregateResult.success || aggregateResult.data.price.market_id !== KAVA_USDX_MARKET_ID) {
-    logWorkerEventArgs("lib", "warn", "[kava-pricefeed] USDX aggregate response failed schema or market validation");
+    logWorkerEventArgs("lib", "warn", `[kava-pricefeed] (${family.name}) USDX aggregate response failed schema or market validation`);
     return null;
   }
   const aggregatePrice = parseFinitePositiveDecimal(aggregateResult.data.price.price);
   if (aggregatePrice == null) {
-    logWorkerEventArgs("lib", "warn", "[kava-pricefeed] USDX aggregate price is not finite and positive");
+    logWorkerEventArgs("lib", "warn", `[kava-pricefeed] (${family.name}) USDX aggregate price is not finite and positive`);
     return null;
   }
 
   const rawPayload = await fetchKavaJson(
-    `${KAVA_API_BASE}/kava/pricefeed/v1beta1/rawprices/${KAVA_USDX_MARKET_ID}`,
+    `${family.api}/kava/pricefeed/v1beta1/rawprices/${KAVA_USDX_MARKET_ID}`,
+    family.name,
     signal,
   );
+  if (rawPayload == null) return null;
   const rawResult = KavaRawPricesSchema.safeParse(rawPayload);
   if (!rawResult.success || rawResult.data.raw_prices.some((entry) => entry.market_id !== KAVA_USDX_MARKET_ID)) {
-    logWorkerEventArgs("lib", "warn", "[kava-pricefeed] USDX raw-price response failed schema or market validation");
+    logWorkerEventArgs("lib", "warn", `[kava-pricefeed] (${family.name}) USDX raw-price response failed schema or market validation`);
     return null;
   }
 
@@ -158,7 +185,7 @@ export async function fetchKavaUsdxPrice(signal?: AbortSignal): Promise<KavaUsdx
     return [{ price, expiry }];
   });
   if (activeRawPrices.length === 0) {
-    logWorkerEventArgs("lib", "warn", "[kava-pricefeed] USDX has no authorized raw oracle valid through the cache trust window");
+    logWorkerEventArgs("lib", "warn", `[kava-pricefeed] (${family.name}) USDX has no authorized raw oracle valid through the cache trust window`);
     return null;
   }
 
@@ -173,7 +200,7 @@ export async function fetchKavaUsdxPrice(signal?: AbortSignal): Promise<KavaUsdx
     dispersionBps > KAVA_MAX_ORACLE_DISPERSION_BPS ||
     aggregateDeviationBps > KAVA_MAX_AGGREGATE_MEDIAN_DEVIATION_BPS
   ) {
-    logWorkerEventArgs("lib", "warn", "[kava-pricefeed] USDX aggregate and active raw oracles do not agree within bounds");
+    logWorkerEventArgs("lib", "warn", `[kava-pricefeed] (${family.name}) USDX aggregate and active raw oracles do not agree within bounds`);
     return null;
   }
 
@@ -187,11 +214,37 @@ export async function fetchKavaUsdxPrice(signal?: AbortSignal): Promise<KavaUsdx
   };
 }
 
+export async function fetchKavaUsdxPrice(signal?: AbortSignal): Promise<KavaUsdxPriceResult | null> {
+  for (const family of KAVA_HOST_FAMILIES) {
+    const nowSec = Math.floor(Date.now() / 1_000);
+    const result = await fetchKavaUsdxPriceFromFamily(family, nowSec, signal);
+    if (result) {
+      logWorkerEvent({
+        scope: "lib",
+        level: "info",
+        event: "kava_pricefeed_served",
+        provider: KAVA_PRICEFEED_SOURCE,
+        source: KAVA_PRICEFEED_SOURCE,
+        message: `[kava-pricefeed] served USDX price from ${family.name} host family`,
+        metadata: {
+          hostFamily: family.name,
+          blockHeight: result.blockHeight,
+          activeOracleCount: result.activeOracleCount,
+          dispersionBps: result.dispersionBps,
+        },
+      });
+      return result;
+    }
+  }
+  return null;
+}
+
 export const kavaUsdxPricefeedProvider: PriceSourceProvider = {
   source: KAVA_PRICEFEED_SOURCE,
   liveCircuitSource: CIRCUIT_SOURCE.KAVA_PRICEFEED,
   livePriority: 1,
-  // Four serial body-consumed reads must fit inside the candidate deadline.
+  // Four serial body-consumed reads per host family (up to two ordered families)
+  // must fit inside the candidate deadline.
   liveTimeoutMs: 6_000,
   recordNullLiveResultAsCircuitFailure: true,
   matches(stablecoinId: string): boolean {

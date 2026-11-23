@@ -561,7 +561,7 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
   const replay = ReplayArtifactSchema.parse(input.replay).pipeline;
   const factSetRead = readCompiledV9FactSetForEvaluation(replay.compiledFacts);
   const facts = factSetRead.factSet;
-  const policyEnvelope = loadV9MethodologyPolicy(input.policy);
+  const policyEnvelope = loadV9MethodologyPolicy(input.policy, facts.asOfSec);
   const queue = V9EvidenceGapQueueV3Schema.parse(
     buildV9EvidenceGapQueue({ factSet: replay.compiledFacts, policy: policyEnvelope }),
   );

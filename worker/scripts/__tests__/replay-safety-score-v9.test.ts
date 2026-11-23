@@ -7,6 +7,7 @@ import { spawnSync } from "node:child_process";
 import { describe, expect, it, vi } from "vitest";
 import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { buildFixedInputCacheEntry } from "../../src/lib/report-cards-fixed-input-cache-codec";
 import { buildSafetyScoreV9BaselineExtension } from "../../src/lib/safety-score-v9/extension";
 import { buildNativeV9InputCacheEntry, computeNativeDexLiquidityPayloadFingerprint } from "../../src/lib/safety-score-v9/native-input";
@@ -41,6 +42,22 @@ import { deriveSupplyModelExitRouteObservation } from "../../src/lib/redemption-
 import { computeRedemptionPayloadFingerprint, projectReportCardsFixedInputMethodologyVersions } from "@shared/lib/report-cards-fixed-input-identity";
 import { SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v9/evaluation-build-manifest-v1";
 import { normalizeSafetyScoreV9CompilerInput } from "../../src/lib/safety-score-v9/native-input";
+import {
+  NEW_ASSET_ADMISSION_CLOCK_MAX_AGE_SEC,
+  NewAssetAdmissionReceiptSchema,
+  PROSPECTIVE_ABSENT_RUNTIME_LANES,
+} from "../../../scripts/ci/check-new-asset-evidence-packet";
+import {
+  buildProductionCaptureAdmissionReceipt,
+  buildProspectiveAdmissionReceipt,
+  buildProspectiveOfflineFixedInput,
+  collectProspectiveCohortIds,
+  computeProspectiveAdmissionInputId,
+  maxCuratedReviewSecForCohort,
+  projectReceiptEvidenceFromPipeline,
+  runSafetyScoreV9AdmissionReceiptCli,
+  verifyProspectiveAdmissionReceipt,
+} from "../build-safety-score-v9-admission-receipt";
 
 const CLOCK_SEC = v9TestClockSec();
 const PUBLISHED_AT_SEC = CLOCK_SEC + 10;
@@ -754,4 +771,278 @@ describe("mechanism capture replay resolution", () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+});
+
+describe("Safety Score V9 admission receipt builder and verifier", () => {
+  const SUPPLY_OBS = (admissionClockSec: number, observedAtSec: number | null = admissionClockSec - 60) => ({
+    circulating: { peggedUSD: 5_000_000 },
+    observedAtSec,
+    url: "https://api.example/phase1a-supply",
+    field: "circulating.peggedUSD",
+    retrievedAtSec: admissionClockSec,
+  });
+
+  it("marks DEX explicitly unavailable (never verified-empty) and counts missing-runtime-route-evidence", () => {
+    const assetId = "usdc-circle";
+    const cohort = collectProspectiveCohortIds(assetId);
+    const maxReview = maxCuratedReviewSecForCohort(cohort);
+    const nowSec = Math.max(maxReview + 3_600, Math.floor(Date.now() / 1_000));
+    const admissionClockSec = nowSec - 600;
+    const supplyObservation = SUPPLY_OBS(admissionClockSec);
+
+    const built = buildProspectiveAdmissionReceipt({
+      assetId,
+      admissionClockSec,
+      supplyObservation,
+      nowSec,
+    });
+    expect(built.ok).toBe(true);
+    if (!built.ok) return;
+
+    const { receipt, pipeline } = built;
+    expect(NewAssetAdmissionReceiptSchema.safeParse(receipt).success).toBe(true);
+    expect(receipt.schemaVersion).toBe(3);
+    expect(receipt.receiptMode).toBe("prospective-offline");
+    expect(receipt.absentRuntimeLanes).toEqual([...PROSPECTIVE_ABSENT_RUNTIME_LANES]);
+    expect(receipt.evaluationBuildDigest).toBe(SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST);
+    expect(receipt.prospectiveInputId).toBe(computeProspectiveAdmissionInputId({
+      assetId,
+      admissionClockSec,
+      evaluatedCohortIds: receipt.evaluatedCohortIds,
+      supplyObservation,
+      registryFingerprint: receipt.registryFingerprint,
+      evaluationBuildDigest: receipt.evaluationBuildDigest,
+    }));
+
+    // REVIEW-1 #1: offline shell marks DEX unavailable, never verified-empty.
+    expect(pipeline.fixedInput.v9PublicationInputHealth.dex.state).toBe("unavailable");
+    expect(pipeline.fixedInput.liquidityStale).toBe(true);
+    const evaluatedUsdc = pipeline.evaluatedSet.assets.find((asset) => asset.assetId === assetId)!;
+    expect(evaluatedUsdc.trace.unresolvedFacts.some((fact) => fact.code === "no-viable-exit-path")).toBe(false);
+    const cardIndex = pipeline.candidate.cards.findIndex((entry) => entry.id === assetId);
+    expect(cardIndex).toBeGreaterThanOrEqual(0);
+    expect(pipeline.candidate.pillarFreshness?.dexObservedAtSec[cardIndex]).toBe(0);
+    expect(receipt.questions.some(
+      (question) =>
+        question.bucket === "open" &&
+        !question.inherited &&
+        question.codes.some((code) => code.code === "missing-runtime-route-evidence" && !code.documentation),
+    )).toBe(true);
+
+    // Also prove DEX-only coins (no configured redemption backstop) stay unavailable, never verified-empty.
+    const dexOnlyId = "usdx-axis";
+    const dexOnlyClock = Math.max(maxCuratedReviewSecForCohort(collectProspectiveCohortIds(dexOnlyId)) + 600, admissionClockSec);
+    const dexOnlyBuilt = buildProspectiveAdmissionReceipt({
+      assetId: dexOnlyId,
+      admissionClockSec: dexOnlyClock,
+      supplyObservation: SUPPLY_OBS(dexOnlyClock),
+      nowSec: Math.max(nowSec, dexOnlyClock + 60),
+    });
+    expect(dexOnlyBuilt.ok).toBe(true);
+    if (dexOnlyBuilt.ok) {
+      const evaluatedDexOnly = dexOnlyBuilt.pipeline.evaluatedSet.assets.find((asset) => asset.assetId === dexOnlyId)!;
+      expect(evaluatedDexOnly.scoreInput.pillars.exit.score).toBeNull();
+      expect(evaluatedDexOnly.scoreInput.pillars.exit.aggregationDisposition).toBe("unavailable");
+      expect(evaluatedDexOnly.trace.unresolvedFacts.some((fact) => fact.code === "no-viable-exit-path")).toBe(false);
+      expect(dexOnlyBuilt.receipt.questions.some(
+        (question) => question.questionKey === `${dexOnlyId}|component|exit-routes` && question.bucket === "open",
+      )).toBe(true);
+    }
+
+    // Offline recomputation passes untouched and fails closed on tampering.
+    expect(verifyProspectiveAdmissionReceipt(receipt, { nowSec })).toMatchObject({ ok: true, assetId });
+    const tampered = {
+      ...receipt,
+      card: { ...receipt.card, openBucketQuestionsCarried: Math.max(0, receipt.card.openBucketQuestionsCarried - 1) },
+    };
+    expect(verifyProspectiveAdmissionReceipt(tampered, { nowSec })).toMatchObject({
+      ok: false,
+      kind: "recomputed-receipt-mismatch",
+    });
+    const tamperedQuestions = {
+      ...receipt,
+      questions: receipt.questions.slice(1),
+      card: {
+        ...receipt.card,
+        openBucketQuestionsCarried: receipt.questions.slice(1).filter((q) => q.bucket === "open").length,
+        inheritedOpenBucketQuestionsCarried: receipt.questions.slice(1).filter((q) => q.bucket === "open" && q.inherited).length,
+        openBucketObligationsCarried: receipt.questions.slice(1).filter((q) => q.bucket === "open").reduce((s, q) => s + q.obligations, 0),
+        documentationObligationsCarried: receipt.questions.slice(1).reduce((s, q) => s + q.codes.filter((c) => c.documentation).reduce((ds, c) => ds + c.obligations, 0), 0),
+      },
+    };
+    expect(verifyProspectiveAdmissionReceipt(tamperedQuestions, { nowSec })).toMatchObject({
+      ok: false,
+      kind: "recomputed-receipt-mismatch",
+    });
+  }, 60_000);
+
+  it("enforces admission clock bounds and preserves clockless supply as null canonical supply", () => {
+    const assetId = "usdc-circle";
+    const maxReview = maxCuratedReviewSecForCohort(collectProspectiveCohortIds(assetId));
+    const nowSec = Math.max(maxReview + 7_200, Math.floor(Date.now() / 1_000));
+
+    expect(buildProspectiveAdmissionReceipt({
+      assetId,
+      admissionClockSec: nowSec + 1,
+      supplyObservation: SUPPLY_OBS(nowSec),
+      nowSec,
+    })).toMatchObject({ ok: false, kind: "stale-admission-clock" });
+
+    expect(buildProspectiveAdmissionReceipt({
+      assetId,
+      admissionClockSec: nowSec - NEW_ASSET_ADMISSION_CLOCK_MAX_AGE_SEC - 1,
+      supplyObservation: SUPPLY_OBS(nowSec - NEW_ASSET_ADMISSION_CLOCK_MAX_AGE_SEC - 1),
+      nowSec,
+    })).toMatchObject({ ok: false, kind: "stale-admission-clock" });
+
+    if (maxReview > 1) {
+      expect(buildProspectiveAdmissionReceipt({
+        assetId,
+        admissionClockSec: maxReview - 1,
+        supplyObservation: SUPPLY_OBS(maxReview - 1),
+        nowSec: maxReview + 60,
+      })).toMatchObject({ ok: false, kind: "stale-admission-clock" });
+    }
+
+    const clockless = buildProspectiveAdmissionReceipt({
+      assetId,
+      admissionClockSec: nowSec - 60,
+      supplyObservation: SUPPLY_OBS(nowSec - 60, null),
+      nowSec,
+    });
+    expect(clockless.ok).toBe(true);
+    if (clockless.ok) {
+      const compiled = clockless.pipeline.compiledFacts.assets.find((asset) => asset.assetId === assetId)!;
+      expect(compiled.supply.circulatingUsd).toBeNull();
+      expect(compiled.supply.replayObservation?.observedAtSec).toBeNull();
+    }
+  }, 60_000);
+
+  it("refuses quarantined candidates and transitive parents in pipeline-gap", () => {
+    const usdc = structuredClone(ACTIVE_META_BY_ID.get("usdc-circle")!);
+    const nowSec = Math.max(maxCuratedReviewSecForCohort(["usdc-circle"]) + 3_600, Math.floor(Date.now() / 1_000));
+    const admissionClockSec = nowSec - 60;
+
+    // Non-quarantined parent with <2 supported pillars offline (no redemption config, no control subject)
+    // resolves to ratingStatus="pipeline-gap", which must fail prospective-parent-pipeline-gap.
+    const brokenParent: StablecoinMeta = {
+      ...structuredClone(usdc),
+      id: "parent-gap-test",
+      mintAuthority: undefined,
+      contracts: undefined,
+      bridgeRouteRisk: undefined,
+      reserves: undefined,
+      reserveReview: undefined,
+    };
+    const child = {
+      ...structuredClone(usdc),
+      id: "child-of-gap-test",
+      variantOf: "parent-gap-test",
+      variantKind: "pure-wrapper" as const,
+      dependencies: [{ id: "parent-gap-test", weight: 1, type: "wrapper" as const }],
+    };
+    const parentGapMeta = new Map<string, StablecoinMeta>([
+      [brokenParent.id, brokenParent],
+      [child.id, child],
+    ]);
+    const parentRefusal = buildProspectiveAdmissionReceipt({
+      assetId: child.id,
+      admissionClockSec,
+      supplyObservation: SUPPLY_OBS(admissionClockSec),
+      nowSec,
+      metaById: parentGapMeta,
+      registryFingerprint: "c".repeat(64),
+    });
+    expect(parentRefusal).toMatchObject({ ok: false, kind: "prospective-parent-pipeline-gap" });
+
+    // Candidate whose extension review fails compilation quarantines fail-closed.
+    const quarantinedCandidate: StablecoinMeta = {
+      ...structuredClone(usdc),
+      id: "quarantine-test",
+      mintAuthority: {
+        ...structuredClone(usdc.mintAuthority!),
+        review: {
+          ...structuredClone(usdc.mintAuthority!.review),
+          reviewedAt: "not-a-date",
+        },
+      },
+    };
+    const quarantineRefusal = buildProspectiveAdmissionReceipt({
+      assetId: quarantinedCandidate.id,
+      admissionClockSec,
+      supplyObservation: SUPPLY_OBS(admissionClockSec),
+      nowSec,
+      metaById: new Map([[quarantinedCandidate.id, quarantinedCandidate]]),
+      registryFingerprint: "d".repeat(64),
+    });
+    expect(quarantineRefusal).toMatchObject({ ok: false, kind: "prospective-asset-quarantined" });
+  }, 60_000);
+
+  it("emits production-capture receipts from replay artifacts and runs strict CLI --verify", async () => {
+    const artifact = buildSafetyScoreV9ReplayArtifact({
+      fixedInput: exactFixedInput(),
+      publishedAtSec: PUBLISHED_AT_SEC,
+    });
+    const captureReceipt = buildProductionCaptureAdmissionReceipt(artifact, "usdc-circle");
+    expect(NewAssetAdmissionReceiptSchema.safeParse(captureReceipt).success).toBe(true);
+    expect(captureReceipt.schemaVersion).toBe(3);
+    expect(captureReceipt.receiptMode).toBe("production-capture");
+    expect(captureReceipt.card).toEqual(projectReceiptEvidenceFromPipeline(artifact.pipeline, "usdc-circle").card);
+
+    // Offline shell helper emits unavailable DEX generation.
+    const shell = buildProspectiveOfflineFixedInput({
+      assetId: "usdc-circle",
+      admissionClockSec: PUBLISHED_AT_SEC,
+      cohortIds: ["usdc-circle"],
+      supplyObservation: SUPPLY_OBS(PUBLISHED_AT_SEC),
+    });
+    expect(shell.dexGenerationId).toBe("dex-liquidity-0");
+    expect(shell.v9PublicationInputHealth.dex.state).toBe("unavailable");
+
+    const dir = mkdtempSync(resolve(tmpdir(), "pharos-v9-admit-cli-"));
+    try {
+      const nowSec = Math.max(maxCuratedReviewSecForCohort(["usdc-circle"]) + 3_600, Math.floor(Date.now() / 1_000));
+      const supplyPath = resolve(dir, "supply.json");
+      const receiptPath = resolve(dir, "usdc-circle.json");
+      writeFileSync(supplyPath, JSON.stringify({ "usdc-circle": SUPPLY_OBS(nowSec - 60) }), "utf8");
+
+      const exitBuild = await runSafetyScoreV9AdmissionReceiptCli([
+        "--asset", "usdc-circle",
+        "--supply-observations", supplyPath,
+        "--clock", String(nowSec - 60),
+        "--now", String(nowSec),
+        "--output", receiptPath,
+      ]);
+      expect(exitBuild).toBe(0);
+      expect(existsSync(receiptPath)).toBe(true);
+
+      const verifySpawn = spawnSync(
+        process.execPath,
+        [
+          "--import", "tsx",
+          resolve(import.meta.dirname, "../build-safety-score-v9-admission-receipt.ts"),
+          "--verify", receiptPath,
+          "--now", String(nowSec),
+          "--json",
+        ],
+        { encoding: "utf8", timeout: 60_000 },
+      );
+      expect(verifySpawn.status, verifySpawn.stderr).toBe(0);
+      expect(JSON.parse(verifySpawn.stdout)).toMatchObject({ ok: true, assetId: "usdc-circle" });
+
+      const usageSpawn = spawnSync(
+        process.execPath,
+        [
+          "--import", "tsx",
+          resolve(import.meta.dirname, "../build-safety-score-v9-admission-receipt.ts"),
+          "--verify", receiptPath,
+          "--asset", "usdc-circle",
+        ],
+        { encoding: "utf8", timeout: 30_000 },
+      );
+      expect(usageSpawn.status).toBe(2);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 60_000);
 });

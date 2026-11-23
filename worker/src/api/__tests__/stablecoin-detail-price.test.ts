@@ -391,8 +391,14 @@ describe("missing detail price enrichment", () => {
       expect(summary.supplyRestored).toBeUndefined();
 
       const forged = await overlayCanonicalDetail(makeDb({ circulating: { peggedUSD: 100 } }), "usdt-tether",
-        makeResponse(JSON.stringify({ tokens, currentSupplyExcludedChains: ["Ethereum"] })));
-      expect(await forged.json()).not.toHaveProperty("currentSupplyExcludedChains");
+        makeResponse(JSON.stringify({ tokens, currentSupplyExcludedChains: ["Ethereum"], currentSupplySource: "onchain-total-supply" })));
+      const forgedBody = await forged.json() as Record<string, unknown>;
+      expect(forgedBody).not.toHaveProperty("currentSupplyExcludedChains");
+      expect(forgedBody).not.toHaveProperty("currentSupplySource");
+      const canonical = await overlayCanonicalDetail(makeDb({
+        circulating: { peggedUSD: 100 }, supplySource: "onchain-circulating-supply",
+      }), "usdt-tether", makeResponse(JSON.stringify({ tokens, currentSupplySource: "defillama" })));
+      expect(await canonical.json()).toMatchObject({ currentSupplySource: "onchain-circulating-supply" });
     });
 
     it("ignores a provider-supplied unavailability marker when canonical supply is observed", async () => {

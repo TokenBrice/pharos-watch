@@ -327,6 +327,14 @@ index	idx_tpa_not_before
 index	idx_tpa_priority_ready
 index	idx_tpa_ready
 index	idx_ttfo_retention
+index	idx_v9_eval_chunks_created_at
+index	idx_v9_eval_queue_executions_invocation
+index	idx_v9_eval_queue_executions_recovery
+index	idx_v9_eval_queue_executions_retention
+index	idx_v9_eval_queue_executions_run
+index	idx_v9_eval_runs_retention
+index	idx_v9_eval_runs_slot
+index	idx_v9_eval_runs_state_updated
 index	idx_worker_canary_runs_check_observed
 index	idx_worker_canary_runs_mode_check_observed
 index	idx_worker_canary_runs_observed_at
@@ -554,6 +562,9 @@ table	telegram_usage_daily
 table	telegram_watcher_lifecycle_daily
 table	telegram_watcher_lifecycle_events_daily
 table	telegram_webhook_operation_mutations
+table	v9_eval_chunks
+table	v9_eval_queue_executions
+table	v9_eval_runs
 table	worker_canary_runs
 table	worker_producer_heads
 table	worker_producer_history

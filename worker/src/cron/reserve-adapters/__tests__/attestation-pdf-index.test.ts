@@ -366,16 +366,27 @@ describe("adaptAttestationPdfIndex", () => {
     expect(result.metadata).not.toHaveProperty("collateralizationRatio");
   });
 
-  it("uses ZARP's reviewed September balances rather than the October report date", () => {
+  it("uses ZARP's reviewed October balances from Kempen's audit feed rather than the November report date", () => {
     const params = parseLiveReserveAdapterParams("attestation-pdf-index", zarp.liveReservesConfig.params);
-    const result = adaptAttestationPdfIndex(`<a href="${params.reviewedReport!.url}">October 2026 report</a>`, params);
+    const feedXml = `<?xml version="1.0" encoding="UTF-8"?><rss><channel>
+      <item><content:encoded><![CDATA[<p><a href="https://kempengroup.co.za/wp-content/uploads/2026/11/Other-Client-Report-2026-11-20.pdf">Download Report</a></p>]]></content:encoded></item>
+      <item><content:encoded><![CDATA[<p><a href="${params.reviewedReport!.url}">Download Report</a></p>]]></content:encoded></item>
+      <item><content:encoded><![CDATA[<p><a href="https://kempengroup.co.za/wp-content/uploads/2026/10/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-10-01-signed.pdf">Download Report</a></p>]]></content:encoded></item>
+    </channel></rss>`;
+    const result = adaptAttestationPdfIndex(feedXml, params, {
+      indexUrl: zarp.liveReservesConfig.inputs.primary.url,
+    });
     expect(result.metadata).toMatchObject({
-      sourceTimestamp: Date.UTC(2026, 8, 30) / 1000,
-      reportBalanceDate: "2026-09-30",
-      reportDate: "2026-10-01",
+      sourceTimestamp: Date.UTC(2026, 9, 31) / 1000,
+      reportBalanceDate: "2026-10-31",
+      reportDate: "2026-11-01",
+      reportPdfUrl: params.reviewedReport!.url,
       freshnessMode: "verified",
     });
-    const validation = expectValidAdapterOutput("attestation-pdf-index", result, { now: Date.UTC(2026, 9, 13) / 1000 });
+    const validation = expectValidAdapterOutput("attestation-pdf-index", result, {
+      now: Date.UTC(2026, 10, 23) / 1000,
+      maxSourceAgeSec: zarp.liveReservesConfig.scoring?.maxSourceAgeSec,
+    });
     expect(validation.warnings).toEqual([]);
     expect(result.metadata).not.toHaveProperty("redemption");
   });

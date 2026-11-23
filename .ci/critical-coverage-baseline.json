@@ -23,6 +23,7 @@
     "shared/lib/redemption-backstop-scoring.ts": 100,
     "shared/lib/safety-score-capture-archive.ts": 100,
     "shared/lib/safety-score-publication.ts": 100,
+    "shared/lib/safety-score-v9-capacity-limits.ts": 100,
     "shared/lib/safety-score-v9-input-identity.ts": 100,
     "shared/lib/safety-score-v9-publication-limits.ts": 100,
     "shared/lib/safety-score-v9-research.ts": 100,

@@ -9,6 +9,7 @@ import {
   classifyV9OpenQuestion,
   countV9OpenEvidence,
   createV9OpenEvidenceCounter,
+  projectV9CardOpenEvidence,
   questionKeyForGap,
   questionKeyForScope,
   residualQuestionKey,
@@ -402,5 +403,95 @@ describe("countV9OpenEvidence", () => {
     const digest = count({ assets: [asset("usdc-circle", [bridgeGap])], evaluated }).block;
     expect(authored.totals).toEqual(digest.totals);
     expect(V9OpenEvidenceSchema.parse(authored).totals).toEqual(digest.totals);
+  });
+});
+
+describe("projectV9CardOpenEvidence", () => {
+  it("reconciles per-card rows and question trails with countV9OpenEvidence, including mixed-documentation codes", () => {
+    const parentGap = gap({
+      gapId: "parent:gap:economic-control:oracle",
+      causeScope: scope({ componentKey: "economic-control:oracle", requiredDatum: "economic-control:oracle" }),
+    });
+    const mintCounted = gap({ gapId: "child:gap:economic-control:mint:authority", causeScope: scope({ factorKey: "authority" }) });
+    const mintDoc = gap({ gapId: "child:gap:economic-control:mint:supervision", causeScope: scope({ factorKey: "supervision" }) });
+    const issuerGap = gap({
+      gapId: "child:gap:reserve-composition",
+      causeScope: scope({ pillar: "backing", componentKey: "reserve-composition", requiredDatum: "reserve-composition" }),
+      cause: "C",
+      reviewedAt: "2026-10-01",
+    });
+    const dustGap = gap({
+      gapId: "child:gap:reserve:reserve:aaaa:maturity",
+      causeScope: scope({ pillar: "backing", componentKey: "reserve-exposure", factorKey: "maturity", exposureId: "reserve:aaaa", requiredDatum: "maturityDaysMax" }),
+    });
+    const isDocumentationGap: V9DocumentationGapClassifier = (value) =>
+      value.gapId === mintDoc.gapId ? "unknown-scores-as-no-credit"
+        : value.gapId === dustGap.gapId ? "reserve-dust"
+          : null;
+    const input = {
+      assets: [asset("parent", [parentGap]), asset("child", [mintCounted, mintDoc, issuerGap, dustGap]), asset("clean", [])],
+      evaluated: [
+        card("parent", [fact({ code: "missing-oracle-profile", sourceGapId: parentGap.gapId })]),
+        card("child", [
+          fact({ code: "missing-oracle-profile", sourceGapId: parentGap.gapId }),
+          fact({ code: "missing-mint-authority", sourceGapId: mintCounted.gapId }),
+          fact({ code: "missing-mint-authority", sourceGapId: mintDoc.gapId }),
+          fact({ code: "missing-reserve-composition", sourceGapId: issuerGap.gapId, responsibility: "issuer-undisclosed", cause: "C" }),
+          fact({ code: "material-reserve-slice-unstructured", sourceGapId: dustGap.gapId }),
+        ]),
+        card("clean", []),
+      ],
+      isDocumentationGap,
+    };
+
+    const block = countV9OpenEvidence(input);
+    const projected = projectV9CardOpenEvidence(input);
+
+    for (const row of block.byCard) {
+      expect(projected.get(row.id)?.card).toEqual(row);
+    }
+    expect(projected.get("clean")).toEqual({
+      card: {
+        id: "clean",
+        openBucketQuestionsCarried: 0,
+        inheritedOpenBucketQuestionsCarried: 0,
+        openBucketObligationsCarried: 0,
+        documentationObligationsCarried: 0,
+      },
+      questions: [],
+    });
+    expect(projected.get("child")?.questions).toEqual([
+      {
+        questionKey: "child|component|economic-control:mint",
+        bucket: "open",
+        inherited: false,
+        obligations: 2,
+        codes: [
+          { code: "missing-mint-authority", obligations: 1, documentation: false },
+          { code: "missing-mint-authority", obligations: 1, documentation: true },
+        ],
+      },
+      {
+        questionKey: "parent|component|economic-control:oracle",
+        bucket: "open",
+        inherited: true,
+        obligations: 1,
+        codes: [{ code: "missing-oracle-profile", obligations: 1, documentation: false }],
+      },
+      {
+        questionKey: "child|component|reserve-composition",
+        bucket: "issuer",
+        inherited: false,
+        obligations: 1,
+        codes: [{ code: "missing-reserve-composition", obligations: 1, documentation: false }],
+      },
+      {
+        questionKey: residualQuestionKey("child"),
+        bucket: "documentation",
+        inherited: false,
+        obligations: 1,
+        codes: [{ code: "material-reserve-slice-unstructured", obligations: 1, documentation: true }],
+      },
+    ]);
   });
 });

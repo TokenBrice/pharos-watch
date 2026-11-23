@@ -527,54 +527,71 @@ stale until the rotated identity is regenerated and committed.
 
 ### 5j. Safety Score admission receipt (new-asset evidence packet)
 
-Listing a stablecoin, and promoting a pre-launch row to active, must pass the new-asset evidence packet gate. Unlike the branches above, this is a binary admission gate: a gated asset has no "not applicable" or "intentional gap" disposition — close the questions or use the owner override below. Only two PR shapes are gated: an added `shared/data/stablecoins/coins/<id>.json` whose status is active (`status` omitted or `"active"`), and a modified coin file whose status moves `"pre-launch"` -> active. A pre-launch stub publishes no scored open questions, and an ordinary edit of an existing asset is not gated. The check is `scripts/ci/check-new-asset-evidence-packet.ts`. It never re-derives the counting model — `shared/lib/safety-score-v9/open-questions.ts` owns question keys and buckets — and it reads the asset's counted questions from a committed receipt. A coin file whose status is unreadable or unrecognized is skipped here and fails `check:stablecoin-data`, which stays the catalog-validity authority.
+Listing a stablecoin, and promoting a pre-launch row to active, must pass the new-asset evidence packet gate. Unlike the branches above, this is a binary admission gate: a gated asset has no "not applicable" or "intentional gap" disposition — close the questions or use the owner override below. Only two PR shapes are gated: an added `shared/data/stablecoins/coins/<id>.json` whose status is active (`status` omitted or `"active"`), and a modified coin file whose status moves `"pre-launch"` -> active. A pre-launch stub publishes no scored open questions, and an ordinary edit of an existing asset is not gated. The check is `scripts/ci/check-new-asset-evidence-packet.ts`. It never re-derives the counting model — `shared/lib/safety-score-v9/open-questions.ts` owns question keys, buckets, and the `projectV9CardOpenEvidence` per-card projection — and it enforces committed `schemaVersion: 3` receipts plus the active-capacity guard (`SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS` in `shared/lib/safety-score-v9-capacity-limits.ts`). A coin file whose status is unreadable or unrecognized is skipped here and fails `check:stablecoin-data`, which stays the catalog-validity authority.
 
 #### Receipt
 
-Commit one `schemaVersion: 2` receipt per gated asset at `.github/artifacts/new-asset-evidence-packet/<id>.json`, named by the canonical asset id (lowercase `ticker-issuer`; the file name and `assetId` must agree). `NewAssetAdmissionReceiptSchema` in the gate is the field authority and prints exact errors; historical committed `schemaVersion: 1` receipts stay parseable in-repo without rewrites, while newly gated listings and promotions must submit `schemaVersion: 2`. `card` is the replay's `openEvidence.byCard[]` row for the asset — the same counts the publication shows — and the schema rejects a `questions[]` list that contradicts it. `questions[]` holds one row per question the card carries across all three buckets (`open`, `issuer`, `documentation`), with `inherited` set only when the key is rooted at another asset; the gate's open-question and mint-authority checks read this audit trail, and only the open-bucket counts and documentation obligations are cross-checked mechanically. `registryFingerprint` must be the branch tree's registry fingerprint **after** the listing or promotion, and `evaluationBuildDigest` must match the branch checkout's `SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST`. Replay after the last coin, overlay, or scorer edit: a second gated asset changes the registry fingerprint and stales the first receipt, and any Safety Score evaluation-build change rotates `evaluationBuildDigest` and stales the receipt. `captureId` and `captureClockSec` are provenance, not a freshness budget.
+Commit one `schemaVersion: 3` receipt per gated asset at `.github/artifacts/new-asset-evidence-packet/<id>.json`, named by the canonical asset id (lowercase `ticker-issuer`; the file name and `assetId` must agree). `NewAssetAdmissionReceiptSchema` in the gate is the field authority and prints exact errors; historical committed `schemaVersion: 1` and `schemaVersion: 2` receipts stay parseable in-repo without rewrites, while newly gated listings and promotions must submit `schemaVersion: 3`.
+
+`schemaVersion: 3` is discriminated by `receiptMode`:
+
+- `prospective-offline` (default for unshipped coins, no production D1 capture required): binds `prospectiveInputId` (`prospective-admission:v1:<sha256>` over asset ID, clock, cohort, supply observation, registry fingerprint, and evaluation build digest), `admissionClockSec`, `evaluatedCohortIds` (`{assetId} ∪ transitiveAncestors`), `absentRuntimeLanes` (`chain-supply`, `dex`, `live-reserves`, `peg`, `redemption`), and the Phase 1a `supplyObservation` (`circulating`, `url`, `field`, `retrievedAtSec`, nullable `observedAtSec`). The offline native v4 shell marks DEX explicitly unavailable (`updatedAt: 0`, `dexGenerationId: "dex-liquidity-0"`, `liquidityStale: true`, `v9PublicationInputHealth.dex.state: "unavailable"`, no coverage rows, no prior accepted baseline), so absent DEX never reads as verified-empty coverage and counts `missing-runtime-route-evidence` against the gate.
+- `production-capture`: binds `captureId` and `captureClockSec` from a completed `safety-score-v9:replay` artifact (required for live-reserve-only wrappers whose transitive parent collapses to `pipeline-gap` in the offline shell).
+
+In both modes, `card` is the `openEvidence.byCard[]` row for the asset — projected by `projectV9CardOpenEvidence` and cross-checked against `pipeline.candidate.openEvidence.byCard` — and `questions[]` holds one row per question the card carries across all three buckets (`open`, `issuer`, `documentation`), with `inherited` set only when the key is rooted at another asset. `registryFingerprint` must be the branch tree's registry fingerprint **after** the listing or promotion, and `evaluationBuildDigest` must match the branch checkout's `SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST`. Regenerate receipts after the last coin, overlay, or scorer edit: a second gated asset changes the registry fingerprint and stales the first receipt, and any Safety Score evaluation-build change rotates `evaluationBuildDigest` and stales the receipt.
 
 #### Gate conditions
 
 The gate fails an asset when:
 
+- active registry cardinality exceeds `SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS` (397; `active-capacity-exceeded`, no override);
 - the receipt is missing, is not valid JSON, fails the schema, or names another asset;
-- the receipt uses historical `schemaVersion: 1` instead of `schemaVersion: 2`, or its `evaluationBuildDigest` differs from the checkout's `SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST` (`stale-evaluation-build`);
-- its `registryFingerprint` differs from the PR checkout's fingerprint, recomputed over the loaded registry with the same authority the replay snapshot uses;
+- the receipt uses historical `schemaVersion: 1` or `2` instead of `schemaVersion: 3`, or its `evaluationBuildDigest` differs from the checkout's `SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST` (`stale-evaluation-build`);
+- its `registryFingerprint` differs from the PR checkout's fingerprint, recomputed over the loaded registry with the same authority the replay snapshot uses (`stale-receipt`);
+- for `prospective-offline` receipts:
+  - `admissionClockSec` is in the future, older than `NEW_ASSET_ADMISSION_CLOCK_MAX_AGE_SEC` (7 days), predates the evaluated cohort's latest curated review timestamp, or `supplyObservation.observedAtSec` exceeds `min(admissionClockSec, retrievedAtSec)` (`stale-admission-clock`, no override);
+  - the candidate is quarantined during offline compilation (`prospective-asset-quarantined`, no override) or any transitive parent in `evaluatedCohortIds` is quarantined or resolves to `pipeline-gap` (`prospective-parent-pipeline-gap`, no override; fall back to `production-capture`);
+  - CI recomputation via `worker/scripts/build-safety-score-v9-admission-receipt.ts --verify <receipt>` disagrees on `prospectiveInputId`, `evaluatedCohortIds`, `absentRuntimeLanes`, `card`, or `questions[]` (`recomputed-receipt-mismatch`, no override);
 - the asset's own open questions exceed `NEW_ASSET_OPEN_QUESTION_LIMIT` (6). Own means `bucket: "open"` with `inherited: false`, i.e. `openBucketQuestionsCarried` minus `inheritedOpenBucketQuestionsCarried`. Inherited questions are counted once at their root: the pass line discloses them, and a non-documentation `missing-mint-authority` datum on an inherited question is a warning, not a failure;
 - any of the asset's own questions carries a `missing-mint-authority` datum with `documentation: false`. The condition is per datum, not per code: a `missing-mint-authority` datum the documentation classifier assigned a documentation reason (`documentation: true`, a documentation-only gap such as a narrow reconciliation or supervision item) passes; a whole-profile, authority or topology gap stays counted.
 
-The failure kinds are `invalid-asset-id`, `missing-receipt`, `invalid-receipt`, `mismatched-receipt`, `stale-receipt`, `stale-evaluation-build`, `open-question-limit`, and `missing-mint-authority`.
+The failure kinds are `invalid-asset-id`, `missing-receipt`, `invalid-receipt`, `mismatched-receipt`, `stale-receipt`, `stale-evaluation-build`, `stale-admission-clock`, `recomputed-receipt-mismatch`, `prospective-asset-quarantined`, `prospective-parent-pipeline-gap`, `active-capacity-exceeded`, `open-question-limit`, and `missing-mint-authority`.
 
 #### Override
 
-The `new-asset-gate-override` owner label (the check's `--override`) bypasses the open-question count only. It never waives the receipt, its `schemaVersion: 2` / `evaluationBuildDigest` build binding, its fingerprint binding, or the mint-authority condition, and the pass line marks the asset as overridden. Reserve it for an owner-approved addition whose remaining open questions are deliberately accepted, and say why in the reviewer notes.
+The `new-asset-gate-override` owner label (the check's `--override`) bypasses the open-question count only. It never waives the receipt, its `schemaVersion: 3` / `evaluationBuildDigest` build binding, its fingerprint binding, `prospective-offline` clock bounds or CI recomputation, candidate quarantine or parent `pipeline-gap` guards, `SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS`, or the mint-authority condition, and the pass line marks the asset as overridden. Reserve it for an owner-approved addition whose remaining open questions are deliberately accepted, and say why in the reviewer notes.
 
 #### Authoring the receipt
 
-The gate trusts a committed, reviewed receipt: it does not re-run the replay. The counting authority publishes aggregates and `byCard`, not per-question rows (`V9OpenEvidenceCounter` exposes `add`/`finish` only), and the gate does not re-implement `obligationsForCard`. Until a per-question projection exists, produce `questions[]` from the replay that generated the capture and review it against the replay's `openEvidence` block; never hand-estimate the rows. Replay the newest production capture with `npm run safety-score-v9:replay` (see [Capture-Time Replay](../scripts.md#safety-score-capture-time-replay)).
+Emit receipts with `npm run safety-score-v9:admit-receipt` (`worker/scripts/build-safety-score-v9-admission-receipt.ts`), which calls `projectV9CardOpenEvidence` directly; never hand-author `questions[]`.
 
-Use the newest production [prepare-time base export](./safety-score-equivalence-harness.md#prepare-time-base-only) with `--normalized-only`. Run the scenario against the regenerated local registry and pin `--published-at` to the capture's `clockSec`.
+**Prospective-offline mode (default for unshipped coins):** supply the Phase 1a external supply observation JSON (keyed by asset ID, or a single observation object) containing `circulating` (observed USD peg buckets validated via `getCirculatingRawOrNull()`), `url`, `field`, `retrievedAtSec`, and `observedAtSec` (`null` when the source has no observation clock — a clockless observation retains its amount in `replayObservation` and leaves canonical supply `null`).
+
+```bash
+npm run safety-score-v9:admit-receipt -- \
+  --asset "$asset_id" \
+  --supply-observations "$supply_observations_json"
+```
+
+Pass `--clock <iso-or-unix-sec>` to pin a specific admission clock within `[maxCuratedReviewSec(cohort), nowSec]` (at most `NEW_ASSET_ADMISSION_CLOCK_MAX_AGE_SEC` = 7 days old). The command writes `.github/artifacts/new-asset-evidence-packet/<asset_id>.json` by default (`--output` or `--receipt-dir` overrides). Verify the committed receipt offline with:
+
+```bash
+npm run safety-score-v9:admit-receipt -- --verify ".github/artifacts/new-asset-evidence-packet/${asset_id}.json"
+```
+
+**Production-capture mode (live-reserve-only wrappers or captured replay):** replay the newest production [prepare-time base export](./safety-score-equivalence-harness.md#prepare-time-base-only) with `--normalized-only`, pinning `--published-at` to the capture's `clockSec`, then emit the `schemaVersion: 3` `production-capture` receipt from the replay artifact (see [Capture-Time Replay](../scripts.md#safety-score-capture-time-replay)):
 
 ```bash
 npm run safety-score-v9:replay -- \
   --input "$capture" --output "$replay" --published-at "$clock_sec" \
-  --allow-registry-mismatch --admit-asset "$asset_id"
+  --allow-registry-mismatch --admit-asset "$asset_id" \
+  --supply-observations "$supply_observations_json"
+
+npm run safety-score-v9:admit-receipt -- \
+  --from-replay "$replay" --asset "$asset_id"
 ```
 
-Repeat `--admit-asset` for a batch. Each ID must be active locally and absent from the captured active set. The scenario preserves captured aggregate and chain supply rows, adds the producer's evidence-free DEX row when needed, and re-derives the DEX payload fingerprint and base input generation. It uses the captured peg, redemption, and reserve inputs. Missing producer rows can add questions such as `missing-peg-input` that resolve on the first production cycle. Compare the scenario with the unchanged input replayed at the capture's `--registry-ref` and account for any changes to existing cards.
-
-If an admitted asset has neither a captured aggregate observation nor chain supply eligible under the compiler’s rules, pass `--supply-observations <path>`. An observed aggregate zero satisfies the captured-supply requirement. Supply a JSON object keyed by the assets that need a fallback. Each entry needs `circulating` (the observed USD peg buckets), `url` (the public source), `field` (the exact source field), `retrievedAtSec`, and `observedAtSec` in Unix seconds. Use `null` for `observedAtSec` when the source supplies no observation clock. For example, for a DefiLlama list row, record its `circulating` field in USD as returned. Keep the retrieval clock even if it follows the capture. A clockless fallback retains its amount in `replayObservation` and leaves canonical supply null in the compiled fact, card, and missing-data registry. To rerun the scenario, pass the original capture and the same admission arguments. Production cache reads and writes reject scenario supply observations.
-
-For each `schemaVersion: 2` receipt, build `captureId` from the prepare-time input generation and the asset's admission suffix. Copy `replayScenario.registryFingerprint` and `replayScenario.evaluationBuildDigest` (equal to `pipeline.candidateIdentity.evaluationBuildDigest`) into the receipt.
-
-```bash
-jq -er --arg id "$asset_id" '.replayScenario | {
-  captureId: ((.sourceBaseInputGenerationId | strings) +
-    (.assets[] | select(.assetId == $id) | .captureIdSuffix | strings)),
-  registryFingerprint: (.registryFingerprint | strings),
-  evaluationBuildDigest: (.evaluationBuildDigest | strings)
-}' "$replay"
-```
+Repeat `--admit-asset` for a batch on `safety-score-v9:replay` and run `safety-score-v9:admit-receipt --from-replay` once per asset. Omit `--supply-observations` on `safety-score-v9:replay` when the asset already has a captured aggregate observation or eligible chain supply (an observed aggregate zero satisfies the captured-supply requirement). Compare the replay scenario with the unchanged input replayed at the capture's `--registry-ref` and account for any changes to existing cards. Production cache reads and writes reject scenario supply observations.
 
 #### Run it locally
 

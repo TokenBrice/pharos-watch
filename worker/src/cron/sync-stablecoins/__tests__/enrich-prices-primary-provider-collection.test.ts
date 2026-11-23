@@ -195,24 +195,26 @@ describe("critical publication provider collection", () => {
     expect(warnings.mock.calls.flat().join(" ")).not.toContain("[primary-prices] CG price API failed:");
   });
 
-  it("carries the Kraken book clock and reports the REST availability outcome", async () => {
+  it("carries Kraken Depth upstream clocks without stamping local-fetch time on Depth-only batches", async () => {
     const db = mockD1([]);
     vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, key) => key === CIRCUIT_SOURCE.KRAKEN_PRICES);
     const plan = await buildPrimaryPricePlan([{ ...TEST_ASSET, id: "eurc-circle", symbol: "EURC" }], db);
     const observedAt = plan.nowSec - 12;
     vi.mocked(fetchKrakenPrices).mockResolvedValue({
-      kind: "upstream-error", reason: "REST unavailable",
+      kind: "ok",
       value: {
-        prices: new Map(), observedAtBySymbol: new Map(), diagnostics: [],
-        bookSnapshotsBySymbol: new Map([["EURC", { price: 1.1, observedAt }]]),
+        prices: new Map([["EURC", 1.1]]),
+        observedAtBySymbol: new Map([["EURC", observedAt]]),
+        quoteBasisBySymbol: new Map([["EURC", "bid-ask-midpoint"]]),
+        diagnostics: [],
       },
     });
     const outcomes = vi.spyOn(circuit, "recordOutcomeSafe");
     const { quoteMaps } = await collectPrimaryProviderQuotes({ db, plan });
-    expect(quoteMaps.krakenPrices.size).toBe(0);
+    expect(quoteMaps.krakenPrices.get("EURC")).toBe(1.1);
+    expect(quoteMaps.krakenObservedAtBySymbol.get("EURC")).toBe(observedAt);
     expect(quoteMaps.krakenObservedAt).toBeNull();
-    expect(quoteMaps.krakenBookSnapshots.get("EURC")).toEqual({ price: 1.1, observedAt });
-    expect(outcomes.mock.calls.map(([, key, ok]) => [key, ok])).toEqual([[CIRCUIT_SOURCE.KRAKEN_PRICES, false]]);
+    expect(outcomes.mock.calls.map(([, key, ok]) => [key, ok])).toEqual([[CIRCUIT_SOURCE.KRAKEN_PRICES, true]]);
   });
 
   it("keeps a collected quote when no-candidate breaker recovery cannot persist its circuit record", async () => {
@@ -413,6 +415,69 @@ describe("critical publication provider collection", () => {
       }
     },
   );
+
+  it("collects and converts Coinbase EURC-USDC and TGBP-USDC book quotes with upstream clocks", async () => {
+    const now = 1_800_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    vi.spyOn(circuit, "recordOutcomeSafe").mockResolvedValue(null);
+    vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) =>
+      source === CIRCUIT_SOURCE.COINBASE_PRICES || source === CIRCUIT_SOURCE.BITSTAMP_PRICES);
+    const db = mockD1([]);
+    const assets: PeggedAsset[] = [
+      { id: "eurc-circle", name: "EURC", symbol: "EURC", pegType: "peggedEUR" },
+      { id: "tgbp-tokenised", name: "Tokenised GBP", symbol: "tGBP", pegType: "peggedGBP" },
+    ];
+    const plan = await buildPrimaryPricePlan(assets, db);
+    expect(plan.coinbaseSymbols).toEqual(["EURC", "TGBP"]);
+    expect(plan.shouldFetchBitstamp).toBe(true);
+
+    vi.mocked(fetchBitstampPrices).mockResolvedValue({
+      kind: "ok",
+      value: {
+        prices: new Map([["USDC", 0.9998]]),
+        observedAtBySymbol: new Map([["USDC", now - 30]]),
+        diagnostics: [],
+      },
+    });
+    vi.mocked(fetchCoinbasePrices).mockResolvedValue({
+      kind: "ok",
+      value: {
+        prices: new Map([["EURC", 1.0943], ["TGBP", 1.30815]]),
+        observedAtBySymbol: new Map([["EURC", now - 10], ["TGBP", now - 45]]),
+        quoteAssetBySymbol: new Map([["EURC", "USDC"], ["TGBP", "USDC"]]),
+        clockBySymbol: new Map([["EURC", "book"], ["TGBP", "book"]]),
+        diagnostics: [],
+      },
+    });
+
+    const { results, providerDiagnostics } = await fetchPrimaryPrices(assets, db);
+    expect(results.get("eurc-circle")).toMatchObject({
+      source: "coinbase",
+      observedAt: now - 30,
+      observedAtMode: "upstream",
+    });
+    expect(results.get("eurc-circle")?.price).toBeCloseTo(1.0943 * 0.9998, 8);
+    expect(results.get("tgbp-tokenised")).toMatchObject({
+      source: "coinbase",
+      observedAt: now - 45,
+      observedAtMode: "upstream",
+    });
+    expect(results.get("tgbp-tokenised")?.price).toBeCloseTo(1.30815 * 0.9998, 8);
+    expect(providerDiagnostics).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        endpoint: "api.exchange.coinbase.com/products/EURC-USDC/book",
+        quoteClock: "book",
+        quoteObservedAt: now - 10,
+        resolvedCount: 1,
+      }),
+      expect.objectContaining({
+        endpoint: "api.exchange.coinbase.com/products/TGBP-USDC/book",
+        quoteClock: "book",
+        quoteObservedAt: now - 45,
+        resolvedCount: 1,
+      }),
+    ]));
+  });
 
   it.each([
     ["coinbase", "book", 1], ["coinbase", "trade", 1], ["coinbase", "trade", 2],
