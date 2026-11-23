@@ -5,7 +5,7 @@ import { availableParallelism } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Worker } from "node:worker_threads";
-import { compileSheet, encodePlan, type CompactPlan } from "beasties/compiler";
+import { compileSheet, encodePlan, type CompactPlan, type SelectorMatch } from "beasties/compiler";
 import { createProcessor } from "beasties/runtime";
 import { runDirectCli } from "../lib/cli-args.mjs";
 import { gatedHtmlRoutes } from "./report-build-size.mjs";
@@ -105,10 +105,13 @@ export interface PageOptimizationResult extends OptimizationResult {
   logs: OptimizationLog[];
 }
 
-// Keep theme tokens even on pages without dark utility classes.
-// Beasties strips leading selector functions, losing Tailwind spacing/dividers.
+// Beasties drops leading selector functions (`:where(...)`, `:is(...)`) unless
+// listed in `allowRules`; `compileCriticalCssPlans` keeps them during parsing
+// and immediately narrows each `match[i] === true` entry to a DOM token check.
+// `.dark` theme tokens are matched naturally via `<html class="dark">` without
+// forcing unused `.dark:*` utility classes onto every page.
 const CRITICAL_CSS_ALLOW_RULES: Array<string | RegExp> = [
-  ".dark", /^:(?:where|is)\(/,
+  /^:(?:where|is)\(/,
   // Header's portalled Sheet is absent from SSR; keep its viewport, rail and motion rules.
   ".fixed", ".inset-0", ".inset-y-0", ".left-0", ".z-modal", ".h-full", ".w-full", ".sm\\:max-w-full",
   ".overflow-y-auto", ".min-h-16", ".min-w-14", ".grid-cols-2", ".gap-4", ".mt-2",
@@ -119,6 +122,139 @@ const CRITICAL_CSS_ALLOW_RULES: Array<string | RegExp> = [
   /^\.(?:motion-reduce\\:)?data-\\\[state\\=(?:open|closed)\\\]\\:(?:animate-|duration-|fade-|slide-)/,
   ".motion-reduce\\:animate-none",
 ];
+
+function unescapeCssIdent(value: string): string {
+  return value.replace(/\\([0-9a-fA-F]{1,6}\s?|.)/g, (_, group: string) =>
+    group.length > 1 && /^[0-9a-fA-F]/.test(group)
+      ? String.fromCodePoint(Number.parseInt(group.trim(), 16))
+      : group,
+  );
+}
+
+/**
+ * Keeps only strictly conjunctive selector segments: drops `:not(...)`
+ * arguments and any parenthesized group containing a top-level `,` alternation
+ * so every extracted token is mandatory across all matching branches.
+ */
+function extractMandatorySelectorSegments(selector: string): string {
+  let out = "";
+  let index = 0;
+  while (index < selector.length) {
+    const ch = selector[index]!;
+    if (ch === "\\") {
+      out += selector.slice(index, index + 2);
+      index += 2;
+      continue;
+    }
+    if (ch === "[") {
+      let cursor = index + 1;
+      while (cursor < selector.length && selector[cursor] !== "]") {
+        cursor += selector[cursor] === "\\" ? 2 : 1;
+      }
+      out += selector.slice(index, Math.min(cursor + 1, selector.length));
+      index = Math.min(cursor + 1, selector.length);
+      continue;
+    }
+    if (ch === "(") {
+      let depth = 1;
+      let cursor = index + 1;
+      let inBrackets = false;
+      let hasTopLevelComma = false;
+      while (cursor < selector.length && depth > 0) {
+        const c = selector[cursor]!;
+        if (c === "\\") {
+          cursor += 2;
+          continue;
+        }
+        if (c === "[") inBrackets = true;
+        else if (c === "]") inBrackets = false;
+        else if (!inBrackets) {
+          if (c === "(") depth += 1;
+          else if (c === ")") depth -= 1;
+          else if (c === "," && depth === 1) hasTopLevelComma = true;
+        }
+        cursor += 1;
+      }
+      const inner = selector.slice(index + 1, cursor - 1);
+      if (/:not$/i.test(out)) {
+        out = out.slice(0, -4);
+      } else if (!hasTopLevelComma) {
+        out += `(${extractMandatorySelectorSegments(inner)})`;
+      } else {
+        out += " ";
+      }
+      index = cursor;
+      continue;
+    }
+    out += ch;
+    index += 1;
+  }
+  return out;
+}
+
+function stripAndCollectClasses(input: string, classes: Set<string>): string {
+  let out = "";
+  let index = 0;
+  while (index < input.length) {
+    if (input[index] !== ".") {
+      out += input[index]!;
+      index += 1;
+      continue;
+    }
+    let cursor = index + 1;
+    while (cursor < input.length) {
+      const ch = input[cursor]!;
+      if (ch === "\\") {
+        cursor += 1;
+        let hexCount = 0;
+        while (cursor < input.length && hexCount < 6 && /[0-9a-fA-F]/.test(input[cursor]!)) {
+          cursor += 1;
+          hexCount += 1;
+        }
+        if (hexCount > 0) {
+          if (cursor < input.length && input[cursor] === " ") cursor += 1;
+        } else if (cursor < input.length) {
+          cursor += 1;
+        }
+        continue;
+      }
+      if (!/[A-Za-z0-9_-]/.test(ch)) break;
+      cursor += 1;
+    }
+    if (cursor === index + 1) {
+      out += ".";
+      index += 1;
+      continue;
+    }
+    const unescaped = unescapeCssIdent(input.slice(index + 1, cursor));
+    if (unescaped) classes.add(unescaped);
+    out += " ";
+    index = cursor;
+  }
+  return out;
+}
+
+export function narrowFunctionalSelectorMatch(selector: string): SelectorMatch {
+  const mandatory = extractMandatorySelectorSegments(selector);
+  const attrs = new Set<string>();
+  const withoutAttrs = mandatory.replace(/\[\s*([a-zA-Z_-][a-zA-Z0-9_-]*)(?:[^\]]*)\]/g, (_, name: string) => {
+    attrs.add(name.toLowerCase());
+    return " ";
+  });
+  const classes = new Set<string>();
+  const withoutClasses = stripAndCollectClasses(withoutAttrs, classes);
+  const withoutPseudos = withoutClasses.replace(/:{1,2}[a-zA-Z-]+/g, " ");
+  const tags = new Set<string>();
+  for (const match of withoutPseudos.matchAll(/(?:^|[\s(>+,~])([a-z][a-z0-9-]*)(?=[\s)>+,~]|$)/g)) {
+    tags.add(match[1]!);
+  }
+  if (classes.size === 0 && attrs.size === 0 && tags.size === 0) return true;
+  return {
+    ...(classes.size > 0 ? { classes: [...classes] } : {}),
+    ...(attrs.size > 0 ? { attrs: [...attrs] } : {}),
+    ...(tags.size > 0 ? { tags: [...tags] } : {}),
+  };
+}
 
 function collectStylesheetFiles(outDir: string): string[] {
   return readdirSync(outDir, { withFileTypes: true, recursive: true })
@@ -141,7 +277,20 @@ export function compileCriticalCssPlans(outDir: string): { plans: CompactPlan[];
     // Fonts are never inlined or preloaded (`fonts: false, inlineFonts: false`).
     // Dropping @font-face rules also prevents beasties/runtime from enabling
     // full-text unicode-range codepoint scanning and busting its page cache.
-    sheet.rules = sheet.rules.filter((rule) => !rule.fontFace);
+    // Pointer-hover rules (`@media (hover:hover)`) cannot affect initial paint
+    // and activate as soon as the async stylesheet loads.
+    sheet.rules = sheet.rules.filter(
+      (rule) => !rule.fontFace && !rule.wrap?.some((wrap) => /\(\s*hover\s*:\s*hover\s*\)/i.test(wrap)),
+    );
+    for (const rule of sheet.rules) {
+      if (!rule.selectors || !rule.match) continue;
+      for (let index = 0; index < rule.selectors.length; index += 1) {
+        const selector = rule.selectors[index]!;
+        if (rule.match[index] === true && /^:(?:where|is)\(/.test(selector)) {
+          rule.match[index] = narrowFunctionalSelectorMatch(selector);
+        }
+      }
+    }
     warnings.push(...sheet.warnings);
     plans.push(encodePlan(sheet));
   }
