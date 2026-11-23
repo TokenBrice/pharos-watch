@@ -18,7 +18,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/chain-maturity-reviews-v1.ts",
-      "sha256": "1826b7bb824bfe612d2790a20e7e9a7e7fb30e6badef957cdadb9e739ee3bdae"
+      "sha256": "189b5b5b38faf146af72d38c471ced5ad8ec46d0e415e213c6544ad96e2650c9"
     },
     {
       "path": "shared/data/safety-score-v9/evidence-gap-classifications-v1.json",
@@ -1363,7 +1363,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-22-block-26470421-shock-coverage.json.gz"
     }
   ],
-  "digest": "7b7d44250d66434bd21b5432980ca9d9b4b4aeb16bb4565c25cc76220f6107b2"
+  "digest": "b6ee4c7fe2bfb7091e367285c8ed895de4c83976f34c6817eb4914f24791502c"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
