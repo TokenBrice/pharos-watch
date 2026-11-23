@@ -553,14 +553,14 @@ describe("stablecoin detail snapshot generator", () => {
     expect(fetch).toHaveBeenCalledTimes(6);
   });
 
-  it("reads only the history lane for unavailable inactive rows and inlines history-only bulk entries", async () => {
+  it.each(["detail-cache-missing", "supply-marker-missing", "source-clock-unavailable"] as const)("reads only the history lane for cache-absent inactive %s rows and inlines history-only bulk entries", async (reason) => {
     credentials("fixture-key", "fixture-site-secret");
     clearApiUrls();
     const log = silence("log");
     silence();
     const now = 1_800_000_000_000;
     vi.spyOn(Date, "now").mockReturnValue(now);
-    const [frozenId, inlineFrozenId] = COINS.filter((coin) => coin.status === "frozen").map((coin) => coin.id);
+    const [frozenId, inlineFrozenId, cachedFrozenId] = COINS.filter((coin) => coin.status === "frozen").map((coin) => coin.id);
     const activeId = COINS.find((coin) => coin.status == null || coin.status === "active")!.id;
     const sources = EMPTY_SOURCES, perCoin: string[] = [];
     let historyAvailable = true;
@@ -570,8 +570,9 @@ describe("stablecoin detail snapshot generator", () => {
         return bulkResponse(url, (id) => id === inlineFrozenId
           ? { id, status: "history-only", reason: "detail-cache-missing", supplyHistory: [], updatedAt: { supplyHistory: 1_799_999_900_000 },
             freshness: { supplyHistory: { status: "fresh", maxAgeSec: 86_400 } }, sources }
-          : id === frozenId || id === activeId
-            ? { id, status: "unavailable", reason: "detail-cache-missing", sources }
+          : id === frozenId || id === activeId || id === cachedFrozenId
+            // A cached inactive row still serves its detail read: only a null cache clock proves absence.
+            ? { id, status: "unavailable", reason, sources: id === cachedFrozenId ? { ...sources, detailCacheUpdatedAt: 1_799_999_000 } : sources }
             : bulkEntry(id, now - 60_000));
       }
       perCoin.push(`${history ? "history" : "detail"}:${id}`);
@@ -584,12 +585,15 @@ describe("stablecoin detail snapshot generator", () => {
     expect(perCoin).not.toContain(`history:${inlineFrozenId}`);
     expect(perCoin).toContain(`history:${frozenId}`);
     expect(perCoin).toContain(`detail:${activeId}`);
-    expect(snapshotFor(snapshots, frozenId)).toMatchObject({ lanes: { supplyHistory: [] }, updatedAt: { supplyHistory: 1_799_999_900_000 } });
-    expect(snapshotFor(snapshots, inlineFrozenId)).toMatchObject({ lanes: { supplyHistory: [] }, updatedAt: { supplyHistory: 1_799_999_900_000 } });
+    expect(perCoin).toContain(`detail:${cachedFrozenId}`);
+    for (const id of [frozenId, inlineFrozenId]) {
+      expect(snapshotFor(snapshots, id)).toEqual({ version: 1, stablecoinId: id, generatedAt: now, updatedAt: { supplyHistory: 1_799_999_900_000 }, lanes: { supplyHistory: [] } });
+    }
     const evidence = JSON.parse(log.mock.calls[0][0] as string).detailSnapshotAcquisition;
     expect(entryFor(evidence.entries, inlineFrozenId)).toMatchObject({ source: "bulk-history-only", reason: "detail-cache-missing", updatedAt: { supplyHistory: 1_799_999_900_000 } });
-    expect(entryFor(evidence.entries, frozenId)).toMatchObject({ source: "bulk-unavailable-history-only", reason: "detail-cache-missing", updatedAt: { supplyHistory: 1_799_999_900_000 } });
+    expect(entryFor(evidence.entries, frozenId)).toMatchObject({ source: "bulk-unavailable-history-only", reason, updatedAt: { supplyHistory: 1_799_999_900_000 } });
     expect(entryFor(evidence.entries, activeId)).toMatchObject({ source: "bulk-unavailable-fallback" });
+    expect(entryFor(evidence.entries, cachedFrozenId)).toMatchObject({ source: "bulk-unavailable-fallback" });
     historyAvailable = false;
     await expect(generateSnapshots(false, { source: "bulk", generatedAt: now })).rejects.toThrow(/No detail snapshot lanes were available/);
   });

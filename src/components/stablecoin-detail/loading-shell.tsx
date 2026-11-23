@@ -25,8 +25,7 @@ const subscribeNever = () => () => {};
 /**
  * The identity morph's dossier end, rendered only by a fresh client render
  * (a row → dossier navigation). The prerendered HTML and its hydration pass
- * carry no shared pair, so revealing the streamed dossier on a document load
- * never starts a view transition.
+ * carry no shared pair, so a document load never starts a view transition.
  */
 function ClientNavigationIdentityTransition({ id, children }: { id: string; children: ReactNode }) {
   const clientRender = useSyncExternalStore(subscribeNever, () => true, () => false);
