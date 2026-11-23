@@ -2803,20 +2803,24 @@
         "implementationIdentity": "sha256:b6a9e0c5b0dda3784aab28c6d6ce90b90e1493ead65a5854e2a87058ddd853ea"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-11-06T18:29:30.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-11-23T12:55:09.544Z",
+      "expiresAt": "2026-12-23T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:FrxUSDCustodianUsdc:0.2.8",
-        "verified-source:FrxUSD3:erc20-balances-account-slot-0",
-        "pinned-identity:ethereum:26356959:0x7ef25ec11653595d0747b17c9a79ae06748bb62a3c294088dcccf9ffa5adcbc8"
+        "verified-source:FrxUSD:3.0.1:ce9cce07c7199a4dc091eac41969a4c7e321b632c998cd4e744db593e3282296",
+        "balance-layout:account-slot:0x0000000000000000000000000000000000000000000000000000000000000000",
+        "pinned-identity:ethereum:26477856:0x4756ef76b2df3d16ca8a2cfca47304f89408a5c6b2cd093ec27c5990d720a245",
+        "pinned-ordinary-holder-simulation:ethereum:26477856:0xca11bde05977b3631167028862be2a173976ca11:redeem(1000000000000000000)"
       ],
       "sourceUrls": [
         "https://docs.frax.com/frxusd/mint-and-redeem-quickstarts/usdc",
         "https://eth.blockscout.com/api/v2/smart-contracts/0x0a2d27a86a2ea07bcc34e457c65aeca7631c0f10",
         "https://eth.blockscout.com/api/v2/smart-contracts/0xcacd6fd266af91b8aed52accc382b4e165586e29",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x0000000048d2c8baf31742f6765383278bada4d5",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x5c19d7c2838769ed3c5a1e506600940e62ff901f",
+        "https://sourcify.dev/server/v2/contract/1/0x5c19d7c2838769ed3c5a1e506600940e62ff901f",
         "https://api-ethereum-mainnet-erigon.n.dwellir.com",
-        "https://api-ethereum-mainnet.n.dwellir.com"
+        "https://api-ethereum-mainnet.n.dwellir.com",
+        "https://eth-mainnet.g.alchemy.com/v2/"
       ],
       "producer": {
         "kind": "erc4626-instant",
@@ -2843,8 +2847,8 @@
           "address": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
           "codeSha256": "ed16761ddf9f0ac92ab0dd2c0b4826908f2687715e05d8b089ab2ed276e219ce",
           "implementation": {
-            "address": "0x0000000048d2c8baf31742f6765383278bada4d5",
-            "codeSha256": "cc37e9672b9a362c16f250168b464dd931600a5e6c1a95f3c9600bbae4801164"
+            "address": "0x5c19d7c2838769ed3c5a1e506600940e62ff901f",
+            "codeSha256": "0350f13edf6e8f7d0a820c0f944cce91f70da546f3ab1047b469993bacdd2723"
           },
           "identitySelector": "0x3b1c4f4a",
           "primaryRedemptionRouteId": "redemption:frxusd-frax:stablecoin-redeem",
