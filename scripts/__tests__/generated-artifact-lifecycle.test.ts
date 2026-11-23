@@ -60,7 +60,7 @@ describe("generated artifact lifecycle", () => {
   });
 
   it("records the atomic writer as a source of every artifact that publishes through it", () => {
-    for (const id of [catalog, "stablecoin-client-registry"]) {
+    for (const id of [catalog, "stablecoin-client-registry", "public-datasets"]) {
       expect(registry.find((a) => a.id === id)?.sourcePaths).toContain("scripts/lib/atomic-artifact-write.mts");
     }
   });

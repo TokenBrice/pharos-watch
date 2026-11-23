@@ -34,7 +34,7 @@
  * explicit local placeholder regeneration.
  */
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PUBLIC_DATASET_TOPICS, type PublicDatasetTopic } from "@shared/lib/api-endpoints/datasets";
@@ -42,6 +42,7 @@ import { formatUtcDateOnly } from "@shared/lib/format";
 import type { DepegEvent } from "@shared/types/peg";
 import { PublicSnapshotEnvelopeSchema } from "@shared/types/public-snapshot";
 import { DEPEG_EVENT_DATA_DIR, readDepegEventSnapshot } from "../../src/lib/depeg-event-snapshot";
+import { atomicWriteFileSync } from "../lib/atomic-artifact-write.mts";
 import { assertCliUsage, parseStrictCliArgs, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { projectRetiredPublicRouteRedirects } from "../lib/retired-public-routes.mjs";
@@ -129,7 +130,8 @@ function writeArtifact(path: string, contents: string): { changed: boolean } {
     return { changed: false };
   }
   ensureDir(dirname(path));
-  writeFileSync(path, contents, "utf8");
+  // Concurrent generated-artifact readers see the old or new bytes, never a partial write.
+  atomicWriteFileSync(path, contents);
   return { changed: true };
 }
 

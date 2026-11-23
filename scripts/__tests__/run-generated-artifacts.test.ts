@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
+import { join, matchesGlob, relative, resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
   buildGeneratedArtifactExecutionUnits,
@@ -95,6 +95,37 @@ describe("generated-artifact runner lifecycle selection", () => {
     const r = await pending;
     expect([r.status, r.results.map((x) => x.id), r.results.every((x) => x.status === 0 && x.statusLabel === "passed" && x.taintedBy.length === 0)])
       .toEqual([0, ["upstream", "independent", "dependent", "independent-later", "transitive"], true]);
+  });
+
+  it("starts an overlapping later-phase writer only after the earlier reader finishes", async () => {
+    using _p = vi.spyOn(automationRegistry, "buildGeneratedArtifactPhases").mockReturnValue([
+      { phase: 0, artifacts: [{ id: "reader", command: "f:reader", sourcePaths: ["o/x"] }, { id: "free", command: "f:free" }] },
+      { phase: 1, artifacts: [{ id: "writer", command: "f:writer", outputPaths: ["o/**"] }] },
+    ]);
+    const log: string[] = [];
+    await run(refreshArgv, async (c) => { log.push(c); await new Promise((r) => setTimeout(r, c === "f:reader" ? 10 : 0)); log.push(`${c}:done`); return 0; });
+    expect(log.indexOf("f:writer")).toBeGreaterThan(log.indexOf("f:reader:done"));
+    expect(log.indexOf("f:free:done")).toBeLessThan(log.indexOf("f:reader:done"));
+  });
+
+  // Phase barriers ran each overlapping pair in plan order (a lower-phase consumer read the old bytes first).
+  it("keeps plan order for every registry pair whose outputs and sources overlap", () => {
+    const units = buildGeneratedArtifactExecutionUnits(), at = new Map(units.map((u, i) => [u.id, i]));
+    const edges = (id: string) => [...units[at.get(id)!].dependsOn ?? [], ...units[at.get(id)!].runAfter ?? []];
+    const after = (id: string, seen = new Set<string>()): Set<string> => {
+      for (const dep of edges(id)) if (!seen.has(dep)) after(dep, seen.add(dep));
+      return seen;
+    };
+    const overlap = (a: string, b: string) => a === b || a.startsWith(`${b}/`) || b.startsWith(`${a}/`) || matchesGlob(a, b) || matchesGlob(b, a);
+    const registry = automationRegistry.GENERATED_ARTIFACT_REGISTRY as { id: string; sourcePaths: string[]; outputPaths: string[] }[];
+    for (const { id } of units) for (const dep of edges(id)) expect(at.get(dep), `${dep} -> ${id}`).toBeLessThan(at.get(id)!);
+    for (const w of registry) for (const r of registry) {
+      if (w === r || !w.outputPaths.some((o) => r.sourcePaths.some((s) => overlap(o, s)))) continue;
+      const [first, second] = [w.id, r.id].sort((x, y) => at.get(x)! - at.get(y)!);
+      expect(after(second).has(first), `${first} before ${second}`).toBe(true);
+    }
+    expect([...after("public-datasets")]).toEqual(expect.arrayContaining(["legacy-stablecoin-redirects", "stablecoin-detail-snapshots"]));
+    expect(after("doc-contracts").has("docs-metadata")).toBe(true);
   });
 
   it("bounds DAG concurrency and skips existing transitive deps fail-closed", async () => {
