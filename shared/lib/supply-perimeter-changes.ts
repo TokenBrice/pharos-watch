@@ -131,11 +131,12 @@ export const SUPPLY_PERIMETER_CHANGES = [
   // Transition from undated DefiLlama USD cap to clocked 9-chain issuer-native circulating supply
   // (Solana minus Circle's three official pre-mint treasury accounts; five Ethereum-escrowed
   // bridge representations conserved in Ethereum totalSupply). Live parity verified 2026-11-23
-  // within -0.000055% of Circle's API (459,761,121.36 vs 459,761,376.36 EURC). Tighten changedAt
-  // to the first production sync-stablecoins run clock after release.
+  // within -0.000055% of Circle's API (459,761,121.36 vs 459,761,376.36 EURC). Released so the
+  // Worker deploy completes before the 16:45 UTC quarter-hourly sync-stablecoins slot, the first
+  // production run on the new perimeter.
   {
     stablecoinId: "eurc-circle",
-    changedAt: Date.parse("2026-11-23T15:00:00Z") / 1000,
+    changedAt: Date.parse("2026-11-23T16:45:00Z") / 1000,
     chainIds: [
       "ethereum", "base", "avalanche", "worldchain", "stellar", "solana", "cronos", "plasma", "arc",
       "polygon", "sonic", "tempo", "cardano", "optimism",
