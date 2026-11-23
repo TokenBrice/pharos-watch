@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { directUsdVenueKeys } from "../../cron/dex-liquidity/price-lineage";
 import { buildPrimarySourceCandidates, type PrimaryCollectedQuotes } from "../primary-price-collector";
 
 function makeCollected(overrides: Partial<PrimaryCollectedQuotes> = {}): PrimaryCollectedQuotes {
@@ -632,5 +633,27 @@ describe("buildPrimarySourceCandidates", () => {
         reason: "future_source_timestamp",
       },
     ]);
+  });
+
+  it("normalizes mixed-case symbols in directUsdVenueKeys and primary source lineage", () => {
+    expect(directUsdVenueKeys("coinbase", "tGBP")).toEqual(["venue:coinbase", "venue:bitstamp"]);
+    expect(directUsdVenueKeys("kraken", "tGBP")).toEqual(["venue:kraken"]);
+    expect(directUsdVenueKeys("kraken", "USDsui")).toEqual(["venue:kraken"]);
+    expect(directUsdVenueKeys("coinbase", "EURC")).toEqual(["venue:coinbase", "venue:bitstamp"]);
+
+    const nowSec = 1_800_000_000;
+    const { sources } = buildPrimarySourceCandidates(
+      { id: "tgbp-tokenised", symbol: "tGBP" },
+      makeCollected({
+        coinbasePrice: 1.308,
+        coinbaseObservedAt: nowSec - 10,
+        krakenPrice: 1.3081,
+        krakenMarketObservedAt: nowSec - 15,
+        krakenQuoteBasis: "bid-ask-midpoint",
+      }),
+      { nowSec },
+    );
+    expect(sources.find((s) => s.source === "coinbase")?.upstreamKeys).toEqual(["venue:coinbase", "venue:bitstamp"]);
+    expect(sources.find((s) => s.source === "kraken")?.upstreamKeys).toEqual(["venue:kraken"]);
   });
 });

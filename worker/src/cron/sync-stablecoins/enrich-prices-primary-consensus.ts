@@ -9,7 +9,11 @@ import {
 import { getDexAggregateRejectionReason } from "../../lib/depeg-trust-policy";
 import { computePriceConsensus, type SourcePrice } from "../../lib/price-consensus";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
-import { isHardPricingTrustTier, isListAggregatorOnlyPair } from "@shared/lib/pricing-source-policy";
+import {
+  CEX_UPSTREAM_MAX_FUTURE_SKEW_SEC,
+  isHardPricingTrustTier,
+  isListAggregatorOnlyPair,
+} from "@shared/lib/pricing-source-policy";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { validatePricingSourceFreshness } from "../../lib/pricing-source-freshness";
 import {
@@ -70,12 +74,18 @@ export function buildPrimaryConsensusResults(params: {
     const cgQuote = geckoId ? (params.quoteMaps.cgQuotes.get(geckoId) ?? null) : null;
     const cgPrice = cgQuote?.price ?? null;
     const symbol = asset.symbol.toUpperCase();
-    const krakenSnapshot = params.quoteMaps.krakenBookSnapshots.get(symbol);
-    // The book may age out while the remaining providers are collected.
-    const freshKrakenSnapshot = krakenSnapshot && validatePricingSourceFreshness({
-      source: "kraken", observedAt: krakenSnapshot.observedAt, nowSec: params.nowSec,
-      requireObservedAt: true, maxFutureSkewSec: 0,
-    }).accepted ? krakenSnapshot : undefined;
+    const krakenUpstreamObservedAt = params.quoteMaps.krakenObservedAtBySymbol.get(symbol);
+    const hasKrakenUpstreamClock = krakenUpstreamObservedAt != null;
+    // The depth book may age out while the remaining providers are collected;
+    // a stale book stays rejected and is never re-clocked to local fetch time.
+    const freshKrakenUpstreamClock = hasKrakenUpstreamClock && validatePricingSourceFreshness({
+      source: "kraken",
+      observedAt: krakenUpstreamObservedAt,
+      observedAtMode: "upstream",
+      nowSec: params.nowSec,
+      requireObservedAt: true,
+      maxFutureSkewSec: CEX_UPSTREAM_MAX_FUTURE_SKEW_SEC,
+    }).accepted ? krakenUpstreamObservedAt : undefined;
     const collectedQuotes: PrimaryCollectedQuotes = {
       cgPrice: cgQuote?.observedAtMode === "upstream" ? cgPrice : null,
       cgObservedAt: cgQuote?.observedAt ?? null,
@@ -83,10 +93,14 @@ export function buildPrimaryConsensusResults(params: {
       dlListQuote,
       binancePrice: params.quoteMaps.binancePrices.get(asset.symbol.toUpperCase()) ?? null,
       binanceObservedAt: params.quoteMaps.binanceObservedAt,
-      krakenPrice: freshKrakenSnapshot?.price ?? params.quoteMaps.krakenPrices.get(symbol) ?? null,
-      krakenObservedAt: params.quoteMaps.krakenObservedAt,
-      krakenMarketObservedAt: freshKrakenSnapshot?.observedAt,
-      krakenQuoteBasis: freshKrakenSnapshot ? "bid-ask-midpoint" : params.quoteMaps.krakenQuoteBasisBySymbol.get(symbol),
+      krakenPrice: hasKrakenUpstreamClock
+        ? (freshKrakenUpstreamClock != null ? (params.quoteMaps.krakenPrices.get(symbol) ?? null) : null)
+        : (params.quoteMaps.krakenPrices.get(symbol) ?? null),
+      krakenObservedAt: hasKrakenUpstreamClock ? null : params.quoteMaps.krakenObservedAt,
+      krakenMarketObservedAt: freshKrakenUpstreamClock,
+      krakenQuoteBasis: hasKrakenUpstreamClock
+        ? (freshKrakenUpstreamClock != null ? "bid-ask-midpoint" : undefined)
+        : params.quoteMaps.krakenQuoteBasisBySymbol.get(symbol),
       bitstampPrice: params.quoteMaps.bitstampPrices.get(asset.symbol.toUpperCase()) ?? null,
       bitstampObservedAt: params.quoteMaps.bitstampObservedAtBySymbol.get(asset.symbol.toUpperCase()) ?? null,
       coinbasePrice: params.quoteMaps.coinbasePrices.get(asset.symbol.toUpperCase()) ?? null,

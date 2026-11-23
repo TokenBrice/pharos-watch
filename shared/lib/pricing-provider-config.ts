@@ -9,18 +9,18 @@ export const BINANCE_MARKETS: readonly {
 export const KRAKEN_MARKETS = [
   // 2026-10-30: Kraken's online AUDX/USD book is the Aussie Dollar Token; the
   // CoinGecko `aussie-dollar-token` ticker set is exactly this Kraken market.
-  { symbol: "AUDX", requestPair: "AUDXUSD", responseKeys: ["AUDXUSD"], snapshotPair: "AUDX/USD" },
+  { symbol: "AUDX", requestPair: "AUDXUSD", responseKeys: ["AUDXUSD"], clockedDepth: true },
   // 2026-10-30: Kraken's BRL1/USD book is the BRL1 consortium real; CoinGecko's
   // `brl1` ticker set lists this exact market at Kraken's own 24h volume.
-  { symbol: "BRL1", requestPair: "BRL1USD", responseKeys: ["BRL1USD"], snapshotPair: "BRL1/USD" },
+  { symbol: "BRL1", requestPair: "BRL1USD", responseKeys: ["BRL1USD"], clockedDepth: true },
   // 2026-10-30: Kraken's CASH/USD book is the Solana CASH mint Phantom documents
   // for Kraken deposits; CoinGecko's `cash-4` ticker set includes this exact market.
   { symbol: "CASH", requestPair: "CASHUSD", responseKeys: ["CASHUSD"] },
   { symbol: "DAI", requestPair: "DAIUSD", responseKeys: ["DAIUSD"] },
-  { symbol: "EURC", requestPair: "EURCUSD", responseKeys: ["EURCUSD"], snapshotPair: "EURC/USD" },
+  { symbol: "EURC", requestPair: "EURCUSD", responseKeys: ["EURCUSD"], clockedDepth: true },
   // 2026-10-30: Kraken lists Schuman Financial's EUROP; CoinGecko's `schuman-europ`
   // ticker set includes this exact market, and Kraken publishes no contract address.
-  { symbol: "EUROP", requestPair: "EUROPUSD", responseKeys: ["EUROPUSD"], snapshotPair: "EUROP/USD" },
+  { symbol: "EUROP", requestPair: "EUROPUSD", responseKeys: ["EUROPUSD"], clockedDepth: true },
   // Kraken's FRNT/USD book is the same Wyoming token listed by CoinGecko;
   // its live bid/ask survives quiet trading that leaves CG's last trade stale.
   { symbol: "FRNT", requestPair: "FRNTUSD", responseKeys: ["FRNTUSD"] },
@@ -28,16 +28,16 @@ export const KRAKEN_MARKETS = [
   // `mxnb` ticker set includes this exact market, so the hard-market voice
   // corroborates mxnb-juno instead of leaving it a pool-challenge-downgraded
   // single-source CoinGecko row.
-  { symbol: "MXNB", requestPair: "MXNBUSD", responseKeys: ["MXNBUSD"], snapshotPair: "MXNB/USD" },
-  { symbol: "PAXG", requestPair: "PAXGUSD", responseKeys: ["PAXGUSD"], snapshotPair: "PAXG/USD" },
+  { symbol: "MXNB", requestPair: "MXNBUSD", responseKeys: ["MXNBUSD"], clockedDepth: true },
+  { symbol: "PAXG", requestPair: "PAXGUSD", responseKeys: ["PAXGUSD"], clockedDepth: true },
   { symbol: "PYUSD", requestPair: "PYUSDUSD", responseKeys: ["PYUSDUSD"] },
   // 2026-10-30: Kraken's QCAD/USD book is Stablecorp QCAD; CoinGecko's
   // `stablecorp-qcad` ticker set contains only this exact Kraken market.
-  { symbol: "QCAD", requestPair: "QCADUSD", responseKeys: ["QCADUSD"], snapshotPair: "QCAD/USD" },
+  { symbol: "QCAD", requestPair: "QCADUSD", responseKeys: ["QCADUSD"], clockedDepth: true },
   // 2026-10-05: Kraken's online SOFID/USD market matches SoFiUSD's
   // CoinGecko ticker identity and provides the existing hard-market voice.
   { symbol: "SOFID", requestPair: "SOFIDUSD", responseKeys: ["SOFIDUSD"] },
-  { symbol: "TGBP", requestPair: "TGBPUSD", responseKeys: ["TGBPUSD"], snapshotPair: "TGBP/USD" },
+  { symbol: "TGBP", requestPair: "TGBPUSD", responseKeys: ["TGBPUSD"], clockedDepth: true },
   { symbol: "USD1", requestPair: "USD1USD", responseKeys: ["USD1USD"] },
   { symbol: "USDC", requestPair: "USDCUSD", responseKeys: ["USDCUSD"] },
   // 2026-10-30: Kraken lists OSL/Anchorage USDGO as USDGO/USD; CoinGecko's `usdgo`
@@ -56,10 +56,10 @@ export const KRAKEN_MARKETS = [
   { symbol: "USDT", requestPair: "USDTUSD", responseKeys: ["USDTUSD", "USDTZUSD"] },
   // 2026-10-30: Kraken's online XAUT/USD book is the Tether Gold token in
   // CoinGecko's xaut-tether ticker set, mirroring PAXG's hard-market voice.
-  { symbol: "XAUT", requestPair: "XAUTUSD", responseKeys: ["XAUTUSD"], snapshotPair: "XAUT/USD" },
+  { symbol: "XAUT", requestPair: "XAUTUSD", responseKeys: ["XAUTUSD"], clockedDepth: true },
   // 2026-10-30: Kraken lists Frankencoin (ZCHF) as ZCHFUSD; CoinGecko's
   // `frankencoin` ticker set contains this exact market. CHF peg, direct USD book.
-  { symbol: "ZCHF", requestPair: "ZCHFUSD", responseKeys: ["ZCHFUSD"], snapshotPair: "ZCHF/USD" },
+  { symbol: "ZCHF", requestPair: "ZCHFUSD", responseKeys: ["ZCHFUSD"], clockedDepth: true },
 ] as const;
 
 export const BITSTAMP_MARKETS = [
@@ -85,6 +85,14 @@ export const COINBASE_PRODUCTS = [
   { symbol: "AUDD", productId: "AUDD-USDC", quoteAsset: "USDC" },
   // 2026-10-30: Coinbase's XSGD asset pins the tracked StraitsX Ethereum contract.
   { symbol: "XSGD", productId: "XSGD-USDC", quoteAsset: "USDC" },
+  // 2026-11-23 (#2144 D7): Coinbase lists EURC on its USDC-quoted FX-stablecoin book
+  // (`fx_stablecoin: true`); Coinbase's EURC asset pins the Circle Ethereum contract
+  // 0x1abaea1f..., matching eurc-circle.
+  { symbol: "EURC", productId: "EURC-USDC", quoteAsset: "USDC" },
+  // 2026-11-23 (#2144 D7): Coinbase lists TGBP on its USDC-quoted FX-stablecoin book
+  // (`fx_stablecoin: true`); Coinbase's TGBP asset pins the Tokenised GBP Base/Ethereum
+  // contract 0x27f6c828..., matching tgbp-tokenised.
+  { symbol: "TGBP", productId: "TGBP-USDC", quoteAsset: "USDC" },
 ] as const;
 
 // 2026-10-30 venue inventory identified Kraken USD as the only CoinGecko market for each asset.

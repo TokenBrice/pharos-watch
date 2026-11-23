@@ -408,10 +408,10 @@ Domain applications: [R8 redemption admission](process/architecture-appendix.md#
 
 #### ADR-46
 
-**Status:** Accepted; enabled and switched off again on 2026-11-20 because the upgrade is rejected from Worker egress · **Relations:** [ADR-10](#adr-10), [ADR-30](#adr-30), [ADR-33](#adr-33)
+**Status:** Accepted; WebSocket v2 upgrade retired on 2026-11-23 and replaced by serial REST `Depth` in the same stage (#2144) · **Relations:** [ADR-10](#adr-10), [ADR-30](#adr-30), [ADR-33](#adr-33)
 
-- **ADR-46 — Share the existing Kraken provider stage for dated snapshots.** Consolidate the opt-in Kraken upgrade into the serial CEX stage of the public quarter-hourly slot. It uses one connection, closes before the existing batched ticker starts and retains the primary collector's two-way concurrency inside the slot's declared `4/6` peak. Scheduled job identities, trigger expressions and CPU placement stay fixed.
-- The upgrade adds up to two seconds of wall time inside the eight-minute `sync-stablecoins` deadline. One subscription covers the reviewed pairs and uses bounded intake. Enablement requires the measured rate-limit and slot-latency review in [Kraken snapshot rollout](./deployment-process.md#kraken-snapshot-rollout).
+- **ADR-46 — Share the existing Kraken provider stage for clocked top-of-book reads.** Consolidate the ten clocked Kraken reads (`AUDX`, `BRL1`, `EURC`, `EUROP`, `MXNB`, `PAXG`, `QCAD`, `tGBP`, `XAUT`, `ZCHF`) into the serial CEX stage of the public quarter-hourly slot. Because Kraken rejects WebSocket v2 upgrades from Worker egress (429/526 on 2026-11-20) and `/0/public/Depth` rejects multi-pair queries, the stage runs one batched `/0/public/Ticker` call for the thirteen USD-pegged markets plus ten serial `/0/public/Depth?count=1` calls spaced at `250ms` (`<= 4 req/s`), using one connection at a time inside the slot's declared `4/6` peak. Scheduled job identities, trigger expressions and CPU placement stay fixed.
+- Serial Depth pacing adds about 2.25–4 seconds of wall time inside the eight-minute `sync-stablecoins` deadline, with no relay outside Cloudflare. Post-deploy verification follows [Kraken snapshot rollout](./deployment-process.md#kraken-snapshot-rollout).
 
 #### ADR-5
 
