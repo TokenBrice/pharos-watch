@@ -120,6 +120,7 @@ interface HastNode {
   properties?: { id?: unknown };
   value?: string;
   children?: HastNode[];
+  position?: unknown;
 }
 
 function extractHastText(node: HastNode): string {
@@ -139,7 +140,8 @@ function rehypeCollectH2Headings(headings: DocTocHeading[]) {
       if (node.type === "element" && node.tagName === "h2") {
         const id = typeof node.properties?.id === "string" ? node.properties.id : "";
         const text = extractHastText(node).replace(/\s+/g, " ").trim();
-        if (id && text) {
+        // Renderer-generated headings (GFM's sr-only footnote label) have no source position.
+        if (id && text && node.position) {
           headings.push({ id, text });
         }
         return;
