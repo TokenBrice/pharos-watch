@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { admitExitExecutionCertificate, exitExecutionInputGenerationId, exitExecutionReviewDigest, projectExitExecutionCertificate, resolveExitExecutionRequestPoint } from "../safety-score-v9/exit-execution";
+import { admitExitExecutionCertificate, exitExecutionInKindReviewDigest, exitExecutionInputGenerationId, exitExecutionReviewDigest, projectExitExecutionCertificate, resolveExitExecutionRequestPoint } from "../safety-score-v9/exit-execution";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import { evaluateV9Exit, selectV9ExitStressRequest } from "../safety-score-v9/exit";
 import { makeExitRoute } from "./safety-score-v9-exit.test-support";
 import { executionClockSec, executionReview, makeExecutionCertificate } from "./safety-score-v9-exit-execution.test-support";
-import { ExitExecutionPublicCertificateSchema, type ExitExecutionCertificate } from "../../types/exit-route";
+import { ExitExecutionPublicCertificateSchema, type ExitExecutionCertificate, type ExitExecutionModelReview } from "../../types/exit-route";
 
 function admission(certificate: ExitExecutionCertificate, clockSec = executionClockSec, requestedNotionalUsd = 100_000) {
   const request = { requestedNotionalUsd, maxCostBps: 200 };
@@ -205,5 +205,57 @@ describe("exact-request execution certificate admission", () => {
     const legacy = projectExitExecutionCertificate(makeExecutionCertificate());
     expect(legacy.points[0]).not.toHaveProperty("canonicalAttempt");
     expect(legacy.settlement).not.toHaveProperty("scope");
+  });
+
+  it.each([
+    { label: "weekday no-op", clock: "2026-11-24T12:16:00Z", capture: "2026-11-24T08:14:00Z", leg: "2026-11-24T07:04:00Z", sourceId: "coingecko+fx-rates:peggedEUR", state: "unavailable", reason: "execution-price-stale", budgetSec: 18_000, budgetBasis: "policy-price-max-age" },
+    { label: "weekend production 08:14/07:04 at 12:16", clock: "2026-11-21T12:16:00Z", capture: "2026-11-21T08:14:00Z", leg: "2026-11-21T07:04:00Z", sourceId: "coingecko+fx-rates:peggedEUR", state: "observed", reason: null, budgetSec: 21_600, budgetBasis: "fx-closure-intraday" },
+    { label: "in-closure print at exact closure start (21,600s)", clock: "2026-11-21T04:00:00Z", capture: "2026-11-21T00:00:00Z", leg: "2026-11-20T22:00:00Z", sourceId: "coingecko+fx-rates:peggedEUR", state: "observed", reason: null, budgetSec: 21_600, budgetBasis: "fx-closure-intraday" },
+    { label: "in-closure print 1s past 6h FX budget", clock: "2026-11-21T04:00:01Z", capture: "2026-11-21T00:00:00Z", leg: "2026-11-20T22:00:00Z", sourceId: "coingecko+fx-rates:peggedEUR", state: "unavailable", reason: "execution-price-stale", budgetSec: 21_600, budgetBasis: "fx-closure-intraday" },
+    { label: "in-closure print predating closure start", clock: "2026-11-21T03:00:00Z", capture: "2026-11-20T23:00:00Z", leg: "2026-11-20T21:59:59Z", sourceId: "coingecko+fx-rates:peggedEUR", state: "unavailable", reason: "execution-price-stale", budgetSec: 18_000, budgetBasis: "policy-price-max-age" },
+    { label: "1s before Sunday FX reopen", clock: "2026-11-22T21:59:59Z", capture: "2026-11-22T18:00:00Z", leg: "2026-11-22T16:47:59Z", sourceId: "coingecko+fx-rates:peggedEUR", state: "observed", reason: null, budgetSec: 21_600, budgetBasis: "fx-closure-intraday" },
+    { label: "post-reopen production 20:18:54/19:05:27 at 00:17:44", clock: "2026-11-23T00:17:44Z", capture: "2026-11-22T20:18:54Z", leg: "2026-11-22T19:05:27Z", sourceId: "coingecko+fx-rates:peggedEUR", state: "observed", reason: null, budgetSec: 21_600, budgetBasis: "fx-closure-intraday" },
+    { label: "closure cert at nextOpen + cadence + 1s", clock: "2026-11-23T02:00:01Z", capture: "2026-11-22T21:59:59Z", leg: "2026-11-22T21:00:00Z", sourceId: "coingecko+fx-rates:peggedEUR", state: "unavailable", reason: "execution-price-stale", budgetSec: 18_000, budgetBasis: "policy-price-max-age" },
+    { label: "post-reopen cert with post-reopen print", clock: "2026-11-23T03:05:01Z", capture: "2026-11-22T22:15:00Z", leg: "2026-11-22T22:05:00Z", sourceId: "coingecko+fx-rates:peggedEUR", state: "unavailable", reason: "execution-price-stale", budgetSec: 18_000, budgetBasis: "policy-price-max-age" },
+    { label: "post-reopen cert inside grace with closure print", clock: "2026-11-23T01:00:00Z", capture: "2026-11-22T22:00:00Z", leg: "2026-11-22T19:59:59Z", sourceId: "coingecko+fx-rates:peggedEUR", state: "unavailable", reason: "execution-price-stale", budgetSec: 18_000, budgetBasis: "policy-price-max-age" },
+    { label: "non-FX leg during FX closure", clock: "2026-11-21T12:16:00Z", capture: "2026-11-21T08:14:00Z", leg: "2026-11-21T07:04:00Z", sourceId: "coingecko", state: "unavailable", reason: "execution-price-stale", budgetSec: 18_000, budgetBasis: "policy-price-max-age" },
+    { label: "future FX leg during FX closure", clock: "2026-11-21T12:16:00Z", capture: "2026-11-21T08:14:00Z", leg: "2026-11-21T12:17:01Z", sourceId: "coingecko+fx-rates:peggedEUR", state: "unavailable", reason: "execution-price-future", budgetSec: 21_600, budgetBasis: "fx-closure-intraday" },
+  ])("applies FX-closure freshness to FX-valued certificate legs: $label", ({ clock, capture, leg, sourceId, state, reason, budgetSec, budgetBasis }) => {
+    const clockSec = Date.parse(clock) / 1000;
+    const captureSec = Date.parse(capture) / 1000;
+    const legSec = Date.parse(leg) / 1000;
+    const fxReview: ExitExecutionModelReview = {
+      modelId: "erc4626-instant",
+      identity: { assetId: "fixture-eur-vault", deployment: "ethereum:0x0000000000000000000000000000000000000011", endpoint: "ethereum:0x0000000000000000000000000000000000000011", outputAssetKeys: ["fixture-eur"], implementationIdentity: `sha256:${"1".repeat(64)}` },
+      holder: "any-holder", reviewedAt: "2026-11-01T00:00:00.000Z", expiresAt: "2027-11-01T00:00:00.000Z",
+      evidenceIds: ["fixture-eur-review"], sourceUrls: ["https://example.com/vault"],
+      producer: {
+        kind: "erc4626-instant", chain: "ethereum", contract: "0x0000000000000000000000000000000000000011",
+        outputToken: "0x0000000000000000000000000000000000000012", inputDecimals: 6, outputDecimals: 6, codeSha256: "1".repeat(64),
+      },
+    };
+    const model = V9_CANDIDATE_POLICY_V1.policy.semantic.exit.executionModels["erc4626-instant"]!;
+    const request = { requestedNotionalUsd: 1_000_000, maxCostBps: 200 };
+    const source = { kind: "block" as const, timestamp: captureSec, number: 1, hash: `0x${"1".repeat(64)}`, complete: true, truncated: false };
+    const inputReference = { assetKey: "fixture-eur-vault", deployment: fxReview.identity.deployment, rawUnits: "0", decimals: 6, unitValueUsd: 1.15, expectedUnitValueUsd: 1.15, sourceId: `erc4626-nav:${sourceId}`, sourceGenerationId: "fx-gen-1", observedAtSec: legSec };
+    const certificate: ExitExecutionCertificate = {
+      modelId: "erc4626-instant", reviewDigest: exitExecutionInKindReviewDigest(fxReview), identity: fxReview.identity,
+      inputGenerationId: exitExecutionInputGenerationId("fixture-eur-vault", request, inputReference),
+      observationGenerationId: "obs-gen-1", observedAtSec: captureSec, sourceMaxAgeSec: model.sourceMaxAgeSec, priceMaxAgeSec: model.priceMaxAgeSec,
+      source, holder: "any-holder", prerequisites: ["counterfactual-share-balance-only", "ordinary-synchronous-redeem", "network-gas-excluded-as-dex"],
+      gates: model.requiredGates.map((gateId) => ({ gateId, verdict: "passed", evidenceId: `observed:${gateId}`, observedAtSec: captureSec, reason: null })),
+      inputReference, feeReferences: [],
+      points: [{ requestedNotionalUsd: 1_000_000, maxCostBps: 200, requestedRawInput: "869565217392", executedRawInput: "869565217392", executableUsd: 1_000_000, executionCostBps: 0, allInCostBps: 0, fees: [], outputs: [{ assetKey: "fixture-eur", deployment: "ethereum:0x0000000000000000000000000000000000000012", rawUnits: "869565217392", decimals: 6, unitValueUsd: 1.15, expectedUnitValueUsd: 1.15, sourceId, sourceGenerationId: "fx-gen-1", observedAtSec: legSec }], certification: "exact-complete", reason: null }],
+      capacityBasis: "transaction-simulation", settlement: { endpoint: "ethereum:0x0000000000000000000000000000000000000012", maximumCompletionSec: 0, evidenceId: "observed-transfer", scope: "executed-input-only" },
+      resourceKeys: ["exit-resource:fixture-eur-vault"], failureDomainKeys: ["provider:fixture-eur-vault"],
+    };
+    const verdict = admitExitExecutionCertificate({
+      certificate, envelope: V9_CANDIDATE_POLICY_V1, assetId: "fixture-eur-vault", clockSec,
+      inputGenerationId: certificate.inputGenerationId, observationGenerationId: certificate.observationGenerationId,
+      request, reviews: [fxReview],
+    });
+    expect(verdict.state).toBe(state);
+    expect(verdict.priceFreshness).toMatchObject({ budgetSec, budgetBasis, generationId: "fx-gen-1", reason });
+    if (verdict.state === "unavailable") expect(verdict.reason).toBe(reason);
   });
 });

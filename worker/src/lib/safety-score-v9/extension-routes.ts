@@ -23,7 +23,7 @@ import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitive
 import { resolveRedemptionFiatReference, REDEMPTION_FIAT_REFERENCE_MAX_AGE_SEC } from "@shared/lib/redemption-fiat-reference";
 import executionModelReviews from "@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json";
 import { ExitExecutionModelReviewSchema, type ExitRouteObservation, type ExitRouteOutput } from "@shared/types/exit-route";
-import { exitExecutionEurVaultReviewDigest } from "@shared/lib/safety-score-v9/exit-execution";
+import { exitExecutionEurVaultReviewDigest, selectBindingExitExecutionPriceLegFreshness } from "@shared/lib/safety-score-v9/exit-execution";
 import { exitRawUsd, exitUsdBoundary } from "@shared/lib/safety-score-v9/exit-execution-units";
 import { canonicalV9ExecutionCostKey } from "@shared/types/safety-score-v9-fact-primitives";
 import {
@@ -338,6 +338,13 @@ function buildOutputReview(
       exitUsdBoundary(point.outputs.reduce((sum, leg) => sum + exitRawUsd(BigInt(leg.rawUnits), leg.decimals, leg.unitValueUsd), 0n));
     if (!Number.isFinite(expectedUsd) || !Number.isFinite(actualUsd) || expectedUsd <= 0 || actualUsd <= 0) return null;
     const assetKeys = [...new Set(point.outputs.map((leg) => leg.assetKey))].sort(compareText);
+    const bindingOutputFreshness = selectBindingExitExecutionPriceLegFreshness(
+      point.outputs,
+      fixedInput.clockSec,
+      certificate.priceMaxAgeSec,
+      0,
+      certificate.observedAtSec,
+    );
     return {
       kind: output.kind === "fiat" ? "fiat" : assetKeys.length > 1 ? "basket" : "tracked-stablecoin",
       assetKeys,
@@ -347,9 +354,9 @@ function buildOutputReview(
       valuation: {
         basis: "price", referenceAssetKey: assetKeys.join("+"),
         unitValueUsd: actualUsd / expectedUsd, expectedUnitValueUsd: 1,
-        confidence: "medium", observedAtSec: Math.min(...point.outputs.map((leg) => leg.observedAtSec)),
+        confidence: "medium", observedAtSec: bindingOutputFreshness.observedAtSec,
         sourceId: "exit-execution-output-legs", sourceGenerationId: certificate.observationGenerationId,
-        maxAgeSec: certificate.priceMaxAgeSec, url: null, contentSha256: null,
+        maxAgeSec: bindingOutputFreshness.budgetSec, url: null, contentSha256: null,
       },
     };
   }

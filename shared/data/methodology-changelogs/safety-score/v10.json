@@ -1,5 +1,20 @@
 [
   {
+    "version": "10.51",
+    "title": "FX-closure freshness budget for execution-certificate FX legs",
+    "date": "2026-11-23",
+    "effectiveAt": 1795447320,
+    "summary": "When an execution certificate is captured during an FX market closure (shared reference-market calendar), an FX-valued price leg observed within that closure window (closureStartSec <= observedAtSec < nextOpenSec) uses the shared intraday FX freshness budget (REFERENCE_INTRADAY_BUDGET_SEC = 21,600 s; capture margin 14,400 s after the 7,200 s evaluation lag) until nextOpenSec plus one sync-redemption-backstops producer cadence (14,400 s from V9_EVIDENCE_PRODUCER_INTERVAL_SEC), bridging through the first post-reopen certificate slot without failing at 18,000 s. Post-reopen certificates, clocks at or past that grace boundary, pre-closure prints, weekday runs, non-FX legs, and 24/7 token quotes remain on the unchanged 18,000 s policy budget and 10,800 s capture margin.",
+    "impact": [
+      "Eliminates repeated weekend 4-hour-boundary and Sunday-reopen false execution-price-stale rejections on steakeurcv-steakhouse (whose only Exit route is an erc4626-instant certificate valued through the EUR FX clock, where sparse weekend EUR prints crossed 18,000 s before the next sync-redemption-backstops run — including the 2026-11-23T00:17:44Z post-reopen boundary carrying the 20:18:54Z closure-time certificate — and dropped the score from 66 to 55 across the 2026-11-21..23 closure).",
+      "Reuses the exact FX market-hours calendar (getReferenceMarket / getReferenceSessionState), intraday FX freshness threshold (REFERENCE_INTRADAY_BUDGET_SEC), and producer cadence authority (V9_EVIDENCE_PRODUCER_INTERVAL_SEC[\"sync-redemption-backstops\"]) shared with Liquidity v7.53 through one authority in exit-execution.ts, read by certificate admission, Safety V9 route-output review, and the redemption-backstop capture producer.",
+      "Pre-closure FX prints, post-reopen certificates, evaluations at or after nextOpenSec + producerCadence, weekday runs, non-FX legs, and 24/7 token market quotes keep their original policy budgets; freshness verdicts name their effective budget and source generation (R3), and non-ok legs retain machine-readable reasons (R4).",
+      "Activation is provisionally 2026-11-23 15:00 UTC (1795446000), to be aligned to the first accepted production publication after deployment; production-capture replay (weekend closure, Sunday post-reopen boundary, and independent weekday captures) and first-cycle/next-closure observation govern acceptance."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "10.50",
     "title": "Bounded verified-empty Exit ceiling prevents transient DEX read failures from inflating zero-exit scores",
     "date": "2026-11-22",
