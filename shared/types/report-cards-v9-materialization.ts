@@ -6,7 +6,8 @@ import { Sha256Schema } from "./safety-schema-primitives";
 export const V9_PUBLIC_REPRESENTATION_VERSION = 3;
 export const V9_PUBLIC_MATERIALIZATION_CACHE_KEY = "report-cards:v9:public-materialization";
 export const V9_PUBLIC_FRAGMENT_MAX_BYTES = 256 * 1024;
-export const V9_PUBLIC_REPRESENTATION_MAX_BYTES = 16 * 1024 * 1024;
+export const V9_PUBLIC_REPRESENTATION_MAX_BYTES = 24 * 1024 * 1024;
+export const V9_SITE_MATERIALIZATIONS_MAX_BYTES = 96 * 1024 * 1024;
 export const V9_PUBLIC_REPRESENTATION_MAX_FRAGMENTS = 128;
 export const V9_PUBLIC_READ_GRACE_SEC = 300;
 export const V9PublicRepresentationManifestSchema = z.object({

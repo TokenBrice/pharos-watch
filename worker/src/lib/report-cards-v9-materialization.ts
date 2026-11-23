@@ -5,7 +5,8 @@ import { stableJsonStringifyChunksV1, stableJsonStringifyV1 } from "@shared/lib/
 import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-publication";
 import {
   V9PublicRepresentationManifestSchema, V9_PUBLIC_FRAGMENT_MAX_BYTES,
-  V9_PUBLIC_REPRESENTATION_MAX_BYTES, V9_PUBLIC_REPRESENTATION_MAX_FRAGMENTS,
+  V9_PUBLIC_REPRESENTATION_MAX_BYTES, V9_SITE_MATERIALIZATIONS_MAX_BYTES,
+  V9_PUBLIC_REPRESENTATION_MAX_FRAGMENTS,
   V9_PUBLIC_REPRESENTATION_VERSION, V9_PUBLIC_READ_GRACE_SEC,
   V9_PUBLIC_MATERIALIZATION_CACHE_KEY,
   type V9PublicRepresentationManifest,
@@ -67,7 +68,7 @@ function* buildV9PublicMaterializations(
   let siteBytes = 0;
   const boundedSite = (artifact: V9PublicMaterialization) => {
     siteBytes += artifact.manifest.bytes;
-    if (siteBytes > 64 * 1024 * 1024) throw new Error("v9-site-materializations-oversized");
+    if (siteBytes > V9_SITE_MATERIALIZATIONS_MAX_BYTES) throw new Error("v9-site-materializations-oversized");
     return artifact;
   };
   yield boundedSite(buildMaterialization(table, publication, payloadSha256));

@@ -16,7 +16,10 @@ import { ReportCardsV9CurrentResponseSchema } from "\@shared/types/report-cards-
 import { ReportCardsV9TableResponseSchema, ReportCardsV9DetailResponseSchema } from "@shared/types/report-cards-v9-projections";
 import type { V9PublicationHealth } from "@shared/types/report-cards-v9";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
-import { V9_PUBLIC_READ_GRACE_SEC, V9_PUBLIC_FRAGMENT_MAX_BYTES } from "@shared/types/report-cards-v9-materialization";
+import {
+  V9PublicRepresentationManifestSchema, V9_PUBLIC_READ_GRACE_SEC,
+  V9_PUBLIC_FRAGMENT_MAX_BYTES, V9_PUBLIC_REPRESENTATION_MAX_BYTES, V9_SITE_MATERIALIZATIONS_MAX_BYTES,
+} from "@shared/types/report-cards-v9-materialization";
 import { makeReportCardsV9Response, makeWorkerSafetyScoreV9Publication, serializeSafetyScoreV9PublicationWithEncoding } from "../../test-helpers/report-cards-v9";
 import { currentInput, persistAndMaterialize } from "../../lib/__tests__/safety-score-v9-publication-store.test-support";
 import { persistSafetyScoreV9Publication } from "../../lib/safety-score-v9/publication-store";
@@ -1120,5 +1123,21 @@ describe("generation-bound compact Safety Scores", () => {
     const { db } = await seed();
     expect((await handleReportCardsV9Detail(db, new URL("https://example.com/api/report-cards/v9-detail"))).status).toBe(400);
     expect((await handleReportCardsV9Detail(db, new URL("https://example.com/api/report-cards/v9-detail?stablecoin=usdc-circle&stablecoin=usdt-tether"))).status).toBe(400);
+  });
+
+  it("admits up to 24 MiB public representations and exposes the 96 MiB site aggregate ceiling", async () => {
+    expect(V9_PUBLIC_REPRESENTATION_MAX_BYTES).toBe(24 * 1024 * 1024);
+    expect(V9_SITE_MATERIALIZATIONS_MAX_BYTES).toBe(96 * 1024 * 1024);
+    const { sqlite } = await seed();
+    const base = readManifest(sqlite);
+    const fragSha = "a".repeat(64);
+    const maxFragments = Array.from({ length: 96 }, () => ({ bytes: V9_PUBLIC_FRAGMENT_MAX_BYTES, sha256: fragSha }));
+    expect(V9PublicRepresentationManifestSchema.safeParse({
+      ...base, bytes: V9_PUBLIC_REPRESENTATION_MAX_BYTES, fragments: maxFragments,
+    }).success).toBe(true);
+    expect(V9PublicRepresentationManifestSchema.safeParse({
+      ...base, bytes: V9_PUBLIC_REPRESENTATION_MAX_BYTES + 1,
+      fragments: [...maxFragments, { bytes: 1, sha256: fragSha }],
+    }).success).toBe(false);
   });
 });
